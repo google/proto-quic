@@ -1,0 +1,42 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/config.gni")
+import("//build/config/chrome_build.gni")
+import("//build/config/chromecast_build.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+declare_args() {
+  # How many symbols to include in the build. This affects the performance of
+  # the build since the symbols are large and dealing with them is slow.
+  #   2 means regular build with symbols.
+  #   1 means minimal symbols, usually enough for backtraces only.
+  #   0 means no symbols.
+  #   -1 means auto-set according to debug/release and platform.
+  symbol_level = -1
+
+  # Compile in such a way as to enable profiling of the generated code. For
+  # example, don't omit the frame pointer and leave in symbols.
+  enable_profiling = false
+}
+
+# If it wasn't manually set, set to an appropriate default.
+assert(symbol_level >= -1 && symbol_level <= 2, "Invalid symbol_level")
+if (symbol_level == -1) {
+  if (is_android && use_order_profiling) {
+    # With instrumentation enabled, debug info puts libchrome.so over 4gb, which
+    # causes the linker to produce an invalid ELF. http://crbug.com/574476
+    symbol_level = 0
+  } else if (!is_linux || is_debug || is_official_build || is_chromecast) {
+    # Linux is slowed by having symbols as part of the target binary, whereas
+    # Mac and Windows have them separate, so in Release Linux, default them off,
+    # but keep them on for Official builds and Chromecast builds.
+    symbol_level = 2
+  } else if (using_sanitizer) {
+    # Sanitizers require symbols for filename suppressions to work.
+    symbol_level = 1
+  } else {
+    symbol_level = 0
+  }
+}

@@ -1,0 +1,59 @@
+diff --git a/source/data/locales/ar.txt b/source/data/locales/ar.txt
+index 0d497b8..d3a028a 100644
+--- a/source/data/locales/ar.txt
++++ b/source/data/locales/ar.txt
+@@ -40,7 +40,7 @@ ar{
+                 minusSign{"‏-"}
+                 nan{"ليس رقم"}
+                 perMille{"؉"}
+-                percentSign{"٪"}
++                percentSign{"‏٪"}
+                 plusSign{"‏+"}
+                 superscriptingExponent{"×"}
+                 timeSeparator{":"}
+diff --git a/source/data/locales/en_AU.txt b/source/data/locales/en_AU.txt
+index ea25a1f..129a5dd 100644
+--- a/source/data/locales/en_AU.txt
++++ b/source/data/locales/en_AU.txt
+@@ -32,7 +32,7 @@ en_AU{
+                     d{"E, d MMM – E, d MMM"}
+                 }
+                 yMMMEd{
+-                    d{"E, d MMM – E, dMMM, y G"}
++                    d{"E, d MMM – E, d MMM y G"}
+                 }
+             }
+         }
+@@ -55,8 +55,8 @@ en_AU{
+                 "h:mm:ss a",
+                 "h:mm a",
+                 "EEEE, d MMMM y",
+-                "dMMMM,y",
+-                "dMMM,y",
++                "d MMMM y",
++                "d MMM y",
+                 "d/M/yy",
+                 "{1}, {0}",
+                 "{1} 'at' {0}",
+@@ -66,7 +66,7 @@ en_AU{
+             }
+             availableFormats{
+                 M{"LL"}
+-                yMMMEd{"E, d MMM,y"}
++                yMMMEd{"E, d MMM y"}
+             }
+             dayNames{
+                 format{
+diff --git a/source/data/locales/fa.txt b/source/data/locales/fa.txt
+index 8a79dff..594881e 100644
+--- a/source/data/locales/fa.txt
++++ b/source/data/locales/fa.txt
+@@ -52,7 +52,7 @@ fa{
+                 minusSign{"‎−"}
+                 nan{"ناعدد"}
+                 perMille{"؉"}
+-                percentSign{"٪"}
++                percentSign{"‏٪"}
+                 plusSign{"‎+‎"}
+                 superscriptingExponent{"×"}
+                 timeSeparator{":"}

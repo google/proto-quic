@@ -1,0 +1,14 @@
+Builders switching from make to ninja will clobber on this.
+Need to clobber everything due to an IDL change in r154579 (blink)
+Need to clobber everything due to gen file moves in r175513 (Blink)
+Clobber to get rid of obselete test plugin after r248358
+Clobber to rebuild GN files for V8
+Clobber to get rid of stale generated mojom.h files
+Need to clobber everything due to build_nexe change in nacl r13424
+[chromium-dev] PSA: clobber build needed for IDR_INSPECTOR_* compil...
+blink_resources.grd changed: crbug.com/400860
+ninja dependency cycle: crbug.com/408192
+Clobber to fix missing NaCl gyp dependencies (crbug.com/427427).
+Another clobber for missing NaCl gyp deps (crbug.com/427427).
+Clobber to fix GN not picking up increased ID range (crbug.com/444902)
+Remove NaCl toolchains from the output dir (crbug.com/456902)

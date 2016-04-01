@@ -1,0 +1,25 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/win/message_compiler.gni")
+
+assert(is_win, "This only runs on Windows.")
+
+message_compiler("chrome_events_win") {
+  visibility = [
+    "//base/*",
+    "//chrome:main_dll",
+  ]
+
+  sources = [
+    "chrome_events_win.man",
+  ]
+
+  user_mode_logging = true
+
+  # TOOD(brucedawson) bug 569989: Enable ETW manifest and compile and link it
+  # into the proper places. Enabling as-is may add the resources to too many
+  # targets. See the bug for more information.
+  compile_generated_code = false
+}

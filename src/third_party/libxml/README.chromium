@@ -1,0 +1,55 @@
+Name: libxml
+URL: http://xmlsoft.org
+Version: 2.9.3
+License: MIT
+License File: src/Copyright
+Security Critical: yes
+
+Description:
+
+libxml2 from libxml.org.
+
+Modifications:
+- Import https://git.gnome.org/browse/libxml2/commit/?id=a7a94612aa3b16779e2c74e1fa353b5d9786c602 from upstream
+- Add helper classes in chromium/libxml_utils.cc and
+  chromium/include/libxml/libxml_utils.h.
+- Include fix for runtime blowups on larger xpath expressions, https://bugzilla.gnome.org/show_bug.cgi?id=760325
+- Fix printf format specifiers, https://chromium.googlesource.com/chromium/src/+/d31995076e55f1aac2f935c53b585a90ece27a11
+
+To import a new snapshot:
+
+On Linux, get the latest tar, untar, and replace src/ with libxml2-X.Y.Z/.
+
+Generate config.h, include/libxml/xmlversion.h, and xml2-config:
+
+cd linux
+../src/configure --without-iconv --with-icu --without-ftp --without-http \
+    --without-lzma
+cd ..
+Patch config.h to not define HAVE_RAND_R since we use this file on Android
+and it does not have it.
+
+On a Mac, do the same in the mac/ subdir for config.h and
+include/libxml/xmlversion.h and copy those to the Linux box in mac/
+
+On a Windows box:
+cd libxml2-2.9.2\win32
+cscript //E:jscript configure.js compiler=msvc iconv=no icu=yes ftp=no http=no
+Then copy VC10/config.h and include/libxml/xmlversion.h to win32/ on Linux.
+Patch win32/config.h to wrap the #define snprintf with:
+  #if _MSC_VER < 1900
+  #endif
+
+Remove:
+  src/doc/
+  src/example/
+  src/macos/libxml2.mcp.xml.sit.hqx
+  src/os400/
+  src/python/
+  src/result/
+  src/test/
+  src/vms/
+  src/win32/wince
+  src/VxWorks/
+
+Update BUILD.gn and libxml.gyp as necessary to add/remove files, etc.

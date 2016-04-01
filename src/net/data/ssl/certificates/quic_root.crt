@@ -1,0 +1,74 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+    Signature Algorithm: sha1WithRSAEncryption
+        Issuer: O=Acme Co, CN=Root CA
+        Validity
+            Not Before: Jan  1 10:00:00 2013 GMT
+            Not After : Dec 31 10:00:00 2023 GMT
+        Subject: O=Acme Co, CN=Root CA
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:e4:2b:91:c7:7d:ab:32:b7:38:e1:38:ae:c8:b9:
+                    0b:15:1c:64:76:47:84:5d:cb:e7:e7:0c:30:77:84:
+                    6a:8e:75:95:42:b2:78:c8:88:10:ac:98:47:97:38:
+                    d1:3a:7f:86:0d:20:f1:1d:70:84:a2:9d:ed:1a:28:
+                    af:5e:43:dd:31:a3:bb:b8:5c:c4:83:79:b8:83:9a:
+                    e7:a9:63:04:59:93:b6:26:67:2d:dd:e6:2d:bb:e4:
+                    13:eb:d5:17:0b:de:63:46:76:6f:10:05:40:b0:16:
+                    fc:ea:f4:97:1c:d6:dc:fe:37:72:d5:40:df:e3:b4:
+                    d5:ac:cf:c9:ae:7c:21:49:01:1e:7e:d4:c1:e1:2a:
+                    11:01:b4:70:3a:31:3d:9a:33:b7:7f:20:f2:8b:e7:
+                    54:8e:06:f2:4b:5f:f0:e2:b9:8f:64:1f:50:bd:b3:
+                    a5:ac:69:44:42:6c:12:e9:11:9d:74:b4:49:77:e3:
+                    0f:8b:9c:94:53:17:0c:23:ba:61:fa:70:3d:93:8d:
+                    ad:5f:dd:4f:32:84:5b:07:50:e4:58:c7:00:45:82:
+                    1f:21:14:4c:bf:43:92:76:fb:24:09:33:df:58:8d:
+                    be:87:ee:b5:54:e4:d3:32:f6:b1:2d:69:74:86:ad:
+                    1f:57:7e:9b:05:11:74:b5:c4:68:ac:9a:80:74:7a:
+                    34:89
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Certificate Sign
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+    Signature Algorithm: sha1WithRSAEncryption
+         96:cd:db:46:6e:5b:de:fa:f1:d3:1c:e0:fe:47:67:2a:59:d5:
+         f8:c4:0b:25:14:0b:06:8d:82:67:f4:a9:36:e8:53:bc:eb:40:
+         51:05:8a:42:09:e7:48:a3:7c:42:6d:c1:37:06:49:cf:58:87:
+         d0:0e:c7:9e:4b:0e:34:72:f8:65:65:b2:c4:68:ca:a3:14:e9:
+         11:5c:da:78:4e:74:80:43:dc:b8:b6:ce:a8:0c:a2:8f:52:59:
+         89:e0:5a:01:e5:e9:b8:4b:31:91:25:bf:7d:e1:7c:86:e9:36:
+         c1:5b:10:e5:2c:cc:6f:99:c4:66:79:30:41:1f:0b:f9:4b:ea:
+         1e:8a:45:73:3c:79:21:20:c8:80:c4:f4:e9:4f:85:69:7c:2e:
+         61:80:3a:4f:5b:92:be:97:12:75:9e:43:09:01:b6:b3:a1:c1:
+         5f:2d:86:be:d1:6c:55:ee:27:f8:bf:3a:bc:fb:b2:42:8a:6f:
+         51:a0:d3:46:54:f6:1e:73:42:2a:95:5e:eb:bc:40:6b:71:bf:
+         90:94:62:f4:90:17:82:e5:1e:33:db:f4:50:11:e5:55:10:09:
+         6a:11:a9:1e:d4:07:60:58:f7:16:b1:bd:8b:29:f6:3d:61:ad:
+         73:da:ae:e3:e4:6e:59:46:7f:c0:fb:fa:be:6d:7c:31:94:86:
+         2e:b3:29:7b
+-----BEGIN CERTIFICATE-----
+MIIC9zCCAeGgAwIBAgIBATALBgkqhkiG9w0BAQUwJDEQMA4GA1UEChMHQWNtZSBD
+bzEQMA4GA1UEAxMHUm9vdCBDQTAeFw0xMzAxMDExMDAwMDBaFw0yMzEyMzExMDAw
+MDBaMCQxEDAOBgNVBAoTB0FjbWUgQ28xEDAOBgNVBAMTB1Jvb3QgQ0EwggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDkK5HHfasytzjhOK7IuQsVHGR2R4Rd
+y+fnDDB3hGqOdZVCsnjIiBCsmEeXONE6f4YNIPEdcISine0aKK9eQ90xo7u4XMSD
+ebiDmuepYwRZk7YmZy3d5i275BPr1RcL3mNGdm8QBUCwFvzq9Jcc1tz+N3LVQN/j
+tNWsz8mufCFJAR5+1MHhKhEBtHA6MT2aM7d/IPKL51SOBvJLX/DiuY9kH1C9s6Ws
+aURCbBLpEZ10tEl34w+LnJRTFwwjumH6cD2Tja1f3U8yhFsHUORYxwBFgh8hFEy/
+Q5J2+yQJM99Yjb6H7rVU5NMy9rEtaXSGrR9XfpsFEXS1xGismoB0ejSJAgMBAAGj
+ODA2MA4GA1UdDwEB/wQEAwIABDATBgNVHSUEDDAKBggrBgEFBQcDATAPBgNVHRMB
+Af8EBTADAQH/MAsGCSqGSIb3DQEBBQOCAQEAls3bRm5b3vrx0xzg/kdnKlnV+MQL
+JRQLBo2CZ/SpNuhTvOtAUQWKQgnnSKN8Qm3BNwZJz1iH0A7HnksONHL4ZWWyxGjK
+oxTpEVzaeE50gEPcuLbOqAyij1JZieBaAeXpuEsxkSW/feF8huk2wVsQ5SzMb5nE
+ZnkwQR8L+UvqHopFczx5ISDIgMT06U+FaXwuYYA6T1uSvpcSdZ5DCQG2s6HBXy2G
+vtFsVe4n+L86vPuyQopvUaDTRlT2HnNCKpVe67xAa3G/kJRi9JAXguUeM9v0UBHl
+VRAJahGpHtQHYFj3FrG9iyn2PWGtc9qu4+RuWUZ/wPv6vm18MZSGLrMpew==
+-----END CERTIFICATE-----

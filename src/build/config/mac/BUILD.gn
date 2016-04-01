@@ -1,0 +1,88 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/sysroot.gni")
+import("//build/config/mac/mac_sdk.gni")
+
+# This is included by reference in the //build/config/compiler config that
+# is applied to all targets. It is here to separate out the logic.
+#
+# This is applied to BOTH desktop Mac and iOS targets.
+config("compiler") {
+  # These flags are shared between the C compiler and linker.
+  common_mac_flags = []
+
+  # CPU architecture.
+  if (current_cpu == "x64") {
+    common_mac_flags += [
+      "-arch",
+      "x86_64",
+    ]
+  } else if (current_cpu == "x86") {
+    common_mac_flags += [
+      "-arch",
+      "i386",
+    ]
+  } else if (current_cpu == "arm") {
+    # TODO(GYP): we may need to distinguish between "arm64", "armv7",
+    # and "armv7s" for iOS, and hence need multiple current_cpu values
+    # rather than just "arm".
+    common_mac_flags += [
+      "-arch",
+      "arm64",
+      "-arch",
+      "armv7",
+    ]
+  }
+
+  asmflags = common_mac_flags
+  cflags = common_mac_flags
+
+  # Without this, the constructors and destructors of a C++ object inside
+  # an Objective C struct won't be called, which is very bad.
+  cflags_objcc = [ "-fobjc-call-cxx-cdtors" ]
+
+  cflags_c = [ "-std=c99" ]
+  cflags_objc = cflags_c
+
+  ldflags = common_mac_flags
+}
+
+# This is included by reference in the //build/config/compiler:runtime_library
+# config that is applied to all targets. It is here to separate out the logic
+# that is Mac-only. Please see that target for advice on what should go in
+# :runtime_library vs. :compiler.
+config("runtime_library") {
+  common_flags = [
+    "-isysroot",
+    sysroot,
+    "-mmacosx-version-min=$mac_deployment_target",
+  ]
+
+  asmflags = common_flags
+  cflags = common_flags
+  ldflags = common_flags
+}
+
+# On Mac, this is used for everything except static libraries.
+config("mac_dynamic_flags") {
+  ldflags = []
+
+  if (is_component_build) {
+    ldflags += [
+      # Path for loading shared libraries for unbundled binaries.
+      "-Wl,-rpath,@loader_path/.",
+
+      # Path for loading shared libraries for bundled binaries. Get back from
+      # Binary.app/Contents/MacOS.
+      "-Wl,-rpath,@loader_path/../../..",
+    ]
+  }
+}
+
+# On Mac, this is used only for executables.
+config("mac_executable_flags") {
+  # Remove this when targeting >=10.7 since it is the default in that config.
+  ldflags = [ "-Wl,-pie" ]  # Position independent.
+}

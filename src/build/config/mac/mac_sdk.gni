@@ -1,0 +1,43 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/chrome_build.gni")
+
+# See https://bugs.chromium.org/p/webrtc/issues/detail?id=5453.
+# We can drop the rtc_require_mac_10_7_deployment flag when Chromium
+# also requires a 10.7 deployment target.
+import("//build_overrides/build.gni")
+
+declare_args() {
+  # Minimum supported version of the Mac SDK.
+  mac_sdk_min = mac_sdk_min_build_override
+
+  # Minimum supported version of OSX.
+  mac_deployment_target = mac_deployment_target_build_override
+
+  # Path to a specific version of the Mac SDK, not including a backslash at
+  # the end. If empty, the path to the lowest version greater than or equal to
+  # mac_sdk_min is used.
+  mac_sdk_path = ""
+}
+
+find_sdk_args = [ "--print_sdk_path" ]
+if (is_chrome_branded && is_official_build) {
+  find_sdk_args += [
+    "--verify",
+    mac_sdk_min,
+    "--sdk_path=" + mac_sdk_path,
+  ]
+} else {
+  find_sdk_args += [ mac_sdk_min ]
+}
+
+# The tool will print the SDK path on the first line, and the version on the
+# second line.
+find_sdk_lines =
+    exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
+mac_sdk_version = find_sdk_lines[1]
+if (mac_sdk_path == "") {
+  mac_sdk_path = find_sdk_lines[0]
+}

@@ -1,0 +1,296 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/chrome_build.gni")
+import("//build/config/chromecast_build.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+# Contains the dependencies needed for sanitizers to link into executables and
+# shared_libraries. Unconditionally depend upon this target as it is empty if
+# |is_asan|, |is_lsan|, |is_tsan|, |is_msan| and |use_custom_libcxx| are false.
+group("deps") {
+  if (using_sanitizer) {
+    public_configs = [
+      ":sanitizer_options_link_helper",
+
+      # Even when a target removes default_sanitizer_flags, it may be depending
+      # on a library that did not remove default_sanitizer_flags. Thus, we need
+      # to add the ldflags here as well as in default_sanitizer_flags.
+      ":default_sanitizer_ldflags",
+    ]
+    deps = [
+      ":options_sources",
+    ]
+
+    if (use_prebuilt_instrumented_libraries) {
+      deps += [ "//third_party/instrumented_libraries:deps" ]
+    }
+    if (use_custom_libcxx) {
+      deps += [ "//buildtools/third_party/libc++:libcxx_proxy" ]
+    }
+  }
+}
+
+config("sanitizer_options_link_helper") {
+  ldflags = [ "-Wl,-u_sanitizer_options_link_helper" ]
+}
+
+source_set("options_sources") {
+  visibility = [
+    ":deps",
+    "//:gn_visibility",
+  ]
+  sources = [
+    "//build/sanitizers/sanitizer_options.cc",
+  ]
+
+  # Don't compile this target with any sanitizer code. It can be called from
+  # the sanitizer runtimes, so instrumenting these functions could cause
+  # recursive calls into the runtime if there is an error.
+  configs -= [ "//build/config/sanitizers:default_sanitizer_flags" ]
+  configs -= [ "//build/config/sanitizers:default_sanitizer_coverage_flags" ]
+
+  if (is_asan) {
+    sources += [ "//build/sanitizers/asan_suppressions.cc" ]
+  }
+
+  if (is_lsan) {
+    sources += [ "//build/sanitizers/lsan_suppressions.cc" ]
+  }
+
+  if (is_tsan) {
+    sources += [ "//build/sanitizers/tsan_suppressions.cc" ]
+  }
+}
+
+# Applies linker flags necessary when either :deps or :default_sanitizer_flags
+# are used.
+config("default_sanitizer_ldflags") {
+  visibility = [
+    ":default_sanitizer_flags",
+    ":deps",
+  ]
+
+  if (is_posix) {
+    ldflags = []
+    if (is_asan) {
+      ldflags += [ "-fsanitize=address" ]
+    }
+    if (is_lsan) {
+      ldflags += [ "-fsanitize=leak" ]
+    }
+    if (is_tsan) {
+      ldflags += [ "-fsanitize=thread" ]
+    }
+    if (is_msan) {
+      ldflags += [ "-fsanitize=memory" ]
+    }
+    if (is_ubsan) {
+      ldflags += [ "-fsanitize=undefined" ]
+    }
+    if (is_ubsan_vptr) {
+      ldflags += [ "-fsanitize=vptr" ]
+    }
+    if (is_lto && !is_nacl) {
+      ldflags += [ "-flto" ]
+
+      # Apply a lower LTO optimization level as the default is too slow.
+      if (is_linux) {
+        ldflags += [ "-Wl,-plugin-opt,O1" ]
+      } else if (is_mac) {
+        ldflags += [ "-Wl,-mllvm,-O1" ]
+      }
+
+      # Work-around for http://openradar.appspot.com/20356002
+      if (is_mac) {
+        ldflags += [ "-Wl,-all_load" ]
+      }
+
+      # Without this flag, LTO produces a .text section that is larger
+      # than the maximum call displacement, preventing the linker from
+      # relocating calls (http://llvm.org/PR22999).
+      if (current_cpu == "arm") {
+        ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
+      }
+
+      if (is_cfi) {
+        ldflags += [
+          "-fsanitize=cfi-vcall",
+          "-fsanitize=cfi-derived-cast",
+          "-fsanitize=cfi-unrelated-cast",
+        ]
+      }
+
+      if (use_cfi_diag) {
+        ldflags += [
+          "-fno-sanitize-trap=cfi",
+          "-fsanitize-recover=cfi",
+        ]
+      }
+    }
+  }
+}
+
+# This config is applied by default to all targets. It sets the compiler flags
+# for sanitizer usage, or, if no sanitizer is set, does nothing.
+#
+# This needs to be in a separate config so that targets can opt out of
+# sanitizers (by removing the config) if they desire. Even if a target
+# removes this config, executables & shared libraries should still depend on
+# :deps if any of their dependencies have not opted out of sanitizers.
+config("default_sanitizer_flags") {
+  cflags = []
+  cflags_cc = []
+  defines = []
+  configs = [ ":default_sanitizer_ldflags" ]
+
+  # Only works on Posix-like platforms.
+  # FIXME: this is not true, remove the conditional.
+  if (is_posix) {
+    # Common options for AddressSanitizer, LeakSanitizer, ThreadSanitizer,
+    # MemorySanitizer and non-official CFI builds.
+    if (using_sanitizer || (is_lto && !is_official_build)) {
+      cflags += [
+        "-fno-omit-frame-pointer",
+        "-gline-tables-only",
+      ]
+    }
+    if (is_asan) {
+      asan_blacklist_path =
+          rebase_path("//tools/memory/asan/blacklist.txt", root_build_dir)
+      cflags += [
+        "-fsanitize=address",
+        "-fsanitize-blacklist=$asan_blacklist_path",
+      ]
+      if (is_android) {
+        # Android build relies on -Wl,--gc-sections removing unreachable code.
+        # ASan instrumentation for globals inhibits this and results in a
+        # library with unresolvable relocations.
+        # TODO(eugenis): find a way to reenable this.
+        cflags += [
+          "-mllvm",
+          "-asan-globals=0",
+        ]
+      } else if (is_mac) {
+        # http://crbug.com/352073
+        cflags += [
+          "-mllvm",
+          "-asan-globals=0",
+        ]
+        # TODO(GYP): deal with mac_bundles.
+      }
+    }
+    if (is_lsan) {
+      cflags += [ "-fsanitize=leak" ]
+    }
+    if (is_tsan) {
+      tsan_blacklist_path =
+          rebase_path("//tools/memory/tsan_v2/ignores.txt", root_build_dir)
+      cflags += [
+        "-fsanitize=thread",
+        "-fsanitize-blacklist=$tsan_blacklist_path",
+      ]
+    }
+    if (is_msan) {
+      msan_blacklist_path =
+          rebase_path("//tools/msan/blacklist.txt", root_build_dir)
+      cflags += [
+        "-fsanitize=memory",
+        "-fsanitize-memory-track-origins=$msan_track_origins",
+        "-fsanitize-blacklist=$msan_blacklist_path",
+      ]
+    }
+    if (is_ubsan) {
+      ubsan_blacklist_path =
+          rebase_path("//tools/ubsan/blacklist.txt", root_build_dir)
+      cflags += [
+        # Yasm dies with an "Illegal instruction" error when bounds checking is
+        # enabled. See http://crbug.com/489901
+        # "-fsanitize=bounds",
+        "-fsanitize=float-divide-by-zero",
+        "-fsanitize=integer-divide-by-zero",
+        "-fsanitize=null",
+        "-fsanitize=object-size",
+        "-fsanitize=return",
+        "-fsanitize=returns-nonnull-attribute",
+        "-fsanitize=shift-exponent",
+        "-fsanitize=signed-integer-overflow",
+        "-fsanitize=unreachable",
+        "-fsanitize=vla-bound",
+        "-fsanitize-blacklist=$ubsan_blacklist_path",
+      ]
+
+      # Chromecast ubsan builds fail to compile with these
+      # experimental flags, so only add them to non-chromecast ubsan builds.
+      if (!is_chromecast) {
+        cflags += [
+          # Employ the experimental PBQP register allocator to avoid slow
+          # compilation on files with too many basic blocks.
+          # See http://crbug.com/426271.
+          "-mllvm",
+          "-regalloc=pbqp",
+
+          # Speculatively use coalescing to slightly improve the code generated
+          # by PBQP regallocator. May increase compile time.
+          "-mllvm",
+          "-pbqp-coalescing",
+        ]
+      }
+    }
+    if (is_ubsan_vptr) {
+      ubsan_vptr_blacklist_path =
+          rebase_path("//tools/ubsan/vptr_blacklist.txt", root_build_dir)
+      cflags += [
+        "-fsanitize=vptr",
+        "-fsanitize-blacklist=$ubsan_vptr_blacklist_path",
+      ]
+    }
+    if (is_lto && !is_nacl) {
+      cflags += [ "-flto" ]
+
+      if (is_cfi) {
+        cfi_blacklist_path =
+            rebase_path("//tools/cfi/blacklist.txt", root_build_dir)
+        cflags += [
+          "-fsanitize=cfi-vcall",
+          "-fsanitize=cfi-derived-cast",
+          "-fsanitize=cfi-unrelated-cast",
+          "-fsanitize-blacklist=$cfi_blacklist_path",
+        ]
+      }
+
+      if (use_cfi_diag) {
+        cflags += [
+          "-fno-sanitize-trap=cfi",
+          "-fsanitize-recover=cfi",
+          "-fno-inline-functions",
+          "-fno-inline",
+          "-fno-omit-frame-pointer",
+          "-O1",
+        ]
+      } else {
+        defines += [ "CFI_ENFORCEMENT" ]
+      }
+    }
+
+    if (use_custom_libcxx) {
+      prefix = "//buildtools/third_party"
+      include = "trunk/include"
+      cflags_cc += [
+        "-nostdinc++",
+        "-isystem" + rebase_path("$prefix/libc++/$include", root_build_dir),
+        "-isystem" + rebase_path("$prefix/libc++abi/$include", root_build_dir),
+      ]
+    }
+  }
+}
+
+config("default_sanitizer_coverage_flags") {
+  cflags = []
+
+  if (use_sanitizer_coverage) {
+    # FIXME: make this configurable.
+    cflags += [ "-fsanitize-coverage=edge,indirect-calls,8bit-counters" ]
+  }
+}

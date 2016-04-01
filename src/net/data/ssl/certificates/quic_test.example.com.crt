@@ -1,0 +1,77 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 3 (0x3)
+    Signature Algorithm: sha1WithRSAEncryption
+        Issuer: O=Acme Co, CN=Intermediate CA
+        Validity
+            Not Before: Jan  1 10:00:00 2013 GMT
+            Not After : Dec 31 10:00:00 2023 GMT
+        Subject: O=Acme Co, CN=Leaf certificate
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:d5:ca:19:79:8e:a9:ab:46:f0:4e:b7:58:6d:b3:
+                    a3:9a:68:10:52:af:f0:00:94:ae:34:bd:b4:50:1f:
+                    a3:26:a4:9e:1c:90:37:5b:3d:e8:d7:3b:bc:93:fb:
+                    00:fb:c7:49:54:9b:f1:d0:9a:f2:51:84:7b:59:8b:
+                    bd:66:f3:ae:92:5a:b9:63:8c:64:a7:d0:9e:e3:0c:
+                    50:d2:cf:93:9d:e9:4a:11:57:93:c1:de:af:7b:5a:
+                    44:1d:0a:8c:22:a6:1d:c6:ad:e9:8f:16:8d:4e:91:
+                    f1:d3:f1:f3:82:fe:f6:55:dc:72:f1:11:07:75:ec:
+                    bb:e9:3a:35:87:43:81:5e:dc:43:4a:b7:7c:a1:1a:
+                    d5:d2:c1:40:39:69:7d:89:ad:64:1b:31:34:a8:ea:
+                    9e:5e:26:fc:71:d2:c6:6b:e5:c2:73:30:3f:59:a7:
+                    35:8d:a9:a5:e9:3d:43:41:bd:54:f2:2a:e1:15:0c:
+                    35:30:6b:8b:f2:77:ca:5c:07:8f:58:f4:54:77:5e:
+                    af:ce:b1:c1:2b:a7:bb:c0:e9:7d:ef:1a:d7:03:ee:
+                    8f:67:ad:c6:e6:1d:a9:e7:91:3f:41:e7:d6:86:20:
+                    8c:53:b3:d8:79:09:e2:4b:15:5a:d8:92:3b:62:4f:
+                    68:e4:cb:d0:a4:4e:b6:7d:3e:5f:b0:24:ea:62:61:
+                    cf:7b
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Subject Alternative Name: 
+                DNS:test.example.com
+    Signature Algorithm: sha1WithRSAEncryption
+         58:c3:dc:e3:4d:ec:76:c6:62:99:ba:ba:6d:da:e4:2f:ec:00:
+         f8:fb:2a:e3:f6:a4:bc:37:c9:53:0f:73:2e:a6:79:8f:6b:ef:
+         87:16:56:7b:9e:6d:ac:1a:ec:8b:49:71:7d:f2:11:11:a4:0d:
+         5e:6e:be:93:6b:fe:cb:44:1b:4e:99:2a:d2:eb:d8:91:80:d7:
+         c8:87:fd:c8:fa:cf:c2:68:06:07:2d:60:ae:56:c4:3c:49:4d:
+         e3:05:3f:1b:15:a8:a9:ea:85:d8:af:d3:f5:be:b5:71:28:23:
+         8d:04:f1:c6:e1:fb:0c:1b:ac:5a:2d:e0:7f:fb:4e:79:47:29:
+         b3:9c:27:09:7d:3c:84:0b:59:0a:03:c5:86:a9:aa:90:49:89:
+         0b:bc:8e:0e:2e:b1:67:ed:99:be:37:ee:75:7f:a9:fa:62:95:
+         44:02:1c:99:26:fa:a7:17:61:d2:ec:e1:ca:42:2b:69:97:8f:
+         71:dc:1b:41:7b:91:a8:d6:b2:82:05:ef:d0:0b:3c:46:a3:9d:
+         7c:06:81:da:de:b6:54:ad:97:bd:c2:03:02:ff:1b:64:17:25:
+         4a:4c:9b:85:c1:bb:6f:26:3a:b5:ba:9b:2d:17:b9:bd:36:b1:
+         43:48:29:f7:da:88:8d:ce:f0:ac:7f:03:a7:93:e1:e9:c1:58:
+         15:b3:30:22
+-----BEGIN CERTIFICATE-----
+MIIDIjCCAgygAwIBAgIBAzALBgkqhkiG9w0BAQUwLDEQMA4GA1UEChMHQWNtZSBD
+bzEYMBYGA1UEAxMPSW50ZXJtZWRpYXRlIENBMB4XDTEzMDEwMTEwMDAwMFoXDTIz
+MTIzMTEwMDAwMFowLTEQMA4GA1UEChMHQWNtZSBDbzEZMBcGA1UEAxMQTGVhZiBj
+ZXJ0aWZpY2F0ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANXKGXmO
+qatG8E63WG2zo5poEFKv8ACUrjS9tFAfoyaknhyQN1s96Nc7vJP7APvHSVSb8dCa
+8lGEe1mLvWbzrpJauWOMZKfQnuMMUNLPk53pShFXk8Her3taRB0KjCKmHcat6Y8W
+jU6R8dPx84L+9lXccvERB3Xsu+k6NYdDgV7cQ0q3fKEa1dLBQDlpfYmtZBsxNKjq
+nl4m/HHSxmvlwnMwP1mnNY2ppek9Q0G9VPIq4RUMNTBri/J3ylwHj1j0VHder86x
+wSunu8Dpfe8a1wPuj2etxuYdqeeRP0Hn1oYgjFOz2HkJ4ksVWtiSO2JPaOTL0KRO
+tn0+X7Ak6mJhz3sCAwEAAaNSMFAwDgYDVR0PAQH/BAQDAgCgMBMGA1UdJQQMMAoG
+CCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwGwYDVR0RBBQwEoIQdGVzdC5leGFtcGxl
+LmNvbTALBgkqhkiG9w0BAQUDggEBAFjD3ONN7HbGYpm6um3a5C/sAPj7KuP2pLw3
+yVMPcy6meY9r74cWVnuebawa7ItJcX3yERGkDV5uvpNr/stEG06ZKtLr2JGA18iH
+/cj6z8JoBgctYK5WxDxJTeMFPxsVqKnqhdiv0/W+tXEoI40E8cbh+wwbrFot4H/7
+TnlHKbOcJwl9PIQLWQoDxYapqpBJiQu8jg4usWftmb437nV/qfpilUQCHJkm+qcX
+YdLs4cpCK2mXj3HcG0F7kajWsoIF79ALPEajnXwGgdretlStl73CAwL/G2QXJUpM
+m4XBu28mOrW6my0Xub02sUNIKffaiI3O8Kx/A6eT4enBWBWzMCI=
+-----END CERTIFICATE-----

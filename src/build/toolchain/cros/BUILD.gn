@@ -1,0 +1,71 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/gcc_toolchain.gni")
+
+# CrOS builds must cross-compile on a Linux host for the actual CrOS
+# device target. There are many different CrOS devices so the build
+# system provides configuration variables that permit a CrOS build to
+# control the cross-compilation tool chain. However, requiring such
+# fine-grain specification is tedious for build-bots and developers.
+# Consequently, the CrOS build system defaults to a convenience
+# compilation mode where the compilation host is also the build target.
+#
+# Chrome can be compiled in this way with the gn variable:
+#
+# target_os = "chromeos"
+#
+# To perform a board-specific build, first obtain the correct system
+# root (http://goo.gl/aFB4XH) for the board. Then configure GN to use it
+# by setting appropriate cross-compilation variables.
+#
+# For example, to compile a Chrome source tree in /g/src for an
+# auron_paine CrOS device with the system root cached in /g/.cros_cache,
+# the following GN arguments must be provided to configure
+# cross-compilation with Goma acceleration. (NB: additional variables
+# will be necessary to successfully compile a working CrOS Chrome. See
+# the definition of GYP_DEFINES inside a sysroot shell.)
+#
+# goma_dir = "/g/.cros_cache/common/goma+2"
+# target_sysroot= /g/.cros_cache/chrome-sdk/tarballs/auron_paine+7644.0.0+sysroot_chromeos-base_chromeos-chrome.tar.xz"
+# cros_target_cc = "x86_64-cros-linux-gnu-gcc -B/g/.cros_cache/chrome-sdk/tarballs/auron_paine+7657.0.0+target_toolchain/usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.25.51-gold"
+# cros_target_cxx = "x86_64-cros-linux-gnu-g++ -B/g/.cros_cache/chrome-sdk/tarballs/auron_paine+7657.0.0+target_toolchain/usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.25.51-gold"
+# cros_target_ar = "x86_64-cros-linux-gnu-gcc-ar"
+# target_cpu = "x64"
+
+declare_args() {
+  # These must be specified for a board-specific build.
+  cros_target_cc = ""
+  cros_target_cxx = ""
+  cros_target_ar = ""
+}
+
+clang_toolchain("clang_target") {
+  toolchain_cpu = target_cpu
+  toolchain_os = "linux"
+}
+
+gcc_toolchain("target") {
+  # These defaults permit building on a Linux host as described above.
+  cc = "gcc"
+  cxx = "g++"
+  ar = "ar"
+
+  # But to build for a specific board, the cros_* args will need to be defined.
+  if (cros_target_cc != "") {
+    cc = "${cros_target_cc}"
+  }
+  if (cros_target_cxx != "") {
+    cxx = "${cros_target_cxx}"
+  }
+  if (cros_target_ar != "") {
+    ar = "${cros_target_ar}"
+  }
+  ld = cxx
+
+  toolchain_cpu = target_cpu
+  toolchain_os = "linux"
+  is_clang = is_clang
+  cc_wrapper = ""
+}

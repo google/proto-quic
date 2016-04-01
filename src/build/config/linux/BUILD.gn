@@ -1,0 +1,160 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/linux/pkg_config.gni")
+import("//build/config/features.gni")
+import("//build/config/sysroot.gni")
+import("//build/config/ui.gni")
+
+# This is included by reference in the //build/config/compiler config that
+# is applied to all targets. It is here to separate out the logic that is
+# Linux-only. This is not applied to Android, but is applied to ChromeOS.
+config("compiler") {
+  cflags = [ "-pthread" ]
+  ldflags = [ "-pthread" ]
+}
+
+# This is included by reference in the //build/config/compiler:runtime_library
+# config that is applied to all targets. It is here to separate out the logic
+# that is Linux-only. Please see that target for advice on what should go in
+# :runtime_library vs. :compiler.
+config("runtime_library") {
+  # Set here because OS_CHROMEOS cannot be autodetected in build_config.h like
+  # OS_LINUX and the like.
+  if (is_chromeos) {
+    defines = [ "OS_CHROMEOS" ]
+  }
+}
+
+config("fontconfig") {
+  visibility = [ "//build/linux:fontconfig" ]
+
+  libs = [ "fontconfig" ]
+}
+
+pkg_config("freetype2") {
+  visibility = [ "//build/linux:freetype2" ]
+
+  packages = [ "freetype2" ]
+}
+
+pkg_config("glib") {
+  packages = [
+    "glib-2.0",
+    "gmodule-2.0",
+    "gobject-2.0",
+    "gthread-2.0",
+  ]
+}
+
+if (use_pango || use_cairo) {
+  pkg_config("pangocairo") {
+    packages = [ "pangocairo" ]
+  }
+}
+
+if (use_pango) {
+  pkg_config("pangoft2") {
+    packages = [ "pangoft2" ]
+  }
+}
+
+# Note: if your target also depends on //dbus, you don't need to add this
+# config (it will get added automatically if you depend on //dbus).
+pkg_config("dbus") {
+  packages = [ "dbus-1" ]
+}
+
+pkg_config("libffi") {
+  packages = [ "libffi" ]
+}
+
+config("x11") {
+  libs = [
+    "X11",
+    "Xcomposite",
+    "Xcursor",
+    "Xdamage",
+    "Xext",
+    "Xfixes",
+    "Xi",
+    "Xrender",
+    "Xtst",
+  ]
+}
+
+config("xcomposite") {
+  libs = [ "Xcomposite" ]
+}
+
+config("xext") {
+  libs = [ "Xext" ]
+}
+
+config("xrandr") {
+  libs = [ "Xrandr" ]
+}
+
+config("xscrnsaver") {
+  libs = [ "Xss" ]
+}
+
+config("xfixes") {
+  libs = [ "Xfixes" ]
+}
+
+config("libcap") {
+  libs = [ "cap" ]
+}
+
+config("xi") {
+  libs = [ "Xi" ]
+}
+
+config("xtst") {
+  libs = [ "Xtst" ]
+}
+
+config("libresolv") {
+  libs = [ "resolv" ]
+}
+
+# CrOS doesn't install GTK, gconf or any gnome packages.
+if (!is_chromeos && use_gconf) {
+  # These packages should _only_ be expected when building for a target.
+  # If these extra checks are not run, gconf is required when building host
+  # tools for a CrOS build.
+  if (current_toolchain == default_toolchain) {
+    pkg_config("atk") {
+      packages = [ "atk" ]
+      atk_lib_dir = exec_script(pkg_config_script,
+                                pkg_config_args + [
+                                      "--libdir",
+                                      "atk",
+                                    ],
+                                "string")
+      defines = [ "ATK_LIB_DIR=\"$atk_lib_dir\"" ]
+    }
+
+    # gn orders flags on a target before flags from configs. The default config
+    # adds -Wall, and these flags have to be after -Wall -- so they need to
+    # come from a config and can't be on the target directly.
+    config("atk_warnings") {
+      cflags = [
+        # glib uses the pre-c++11 typedef-as-static_assert hack.
+        "-Wno-unused-local-typedef",
+
+        # G_DEFINE_TYPE automatically generates a *get_instance_private
+        # inline function after glib 2.37. That's unused. Prevent to
+        # complain about it.
+        "-Wno-unused-function",
+      ]
+    }
+
+    pkg_config("gconf") {
+      packages = [ "gconf-2.0" ]
+      defines = [ "USE_GCONF" ]
+    }
+  }
+}

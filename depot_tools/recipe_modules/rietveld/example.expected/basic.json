@@ -1,0 +1,31 @@
+[
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "[DEPOT_TOOLS]/apply_issue.py",
+      "-r",
+      "[SLAVE_BUILD]/foo/bar",
+      "-i",
+      "1",
+      "-p",
+      "1",
+      "-s",
+      "http://review_tool.url",
+      "-E",
+      "[BUILD]/site_config/.rietveld_client_email",
+      "-k",
+      "[BUILD]/site_config/.rietveld_secret_key"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "apply_issue",
+    "~followup_annotations": [
+      "@@@STEP_LINK@Applied issue 1@http://review_tool.url/1@@@"
+    ]
+  },
+  {
+    "name": "$result",
+    "recipe_result": null,
+    "status_code": 0
+  }
+]

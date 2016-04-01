@@ -1,0 +1,1 @@
+{'wheel': {'version': '0.24.0', 'gs': 'c02262299489646af253067e8136c060a93572e3.tar.gz', 'build': '0'}, 'protobuf': {'repo': 'external/github.com/google/protobuf', 'version': '2.6.0', 'rev': '629a556879cc84e0f52546f0484b65b72ce44fe8', 'build': '0'}}

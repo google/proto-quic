@@ -1,0 +1,108 @@
+[
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "[BUILD]/scripts/slave/git_setup.py",
+      "--path",
+      "[TMP_BASE]/patch_tmp_1",
+      "--url",
+      "http://patch.url/"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "patch git setup"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "johndoe#123.diff"
+    ],
+    "cwd": "[TMP_BASE]/patch_tmp_1",
+    "name": "patch fetch"
+  },
+  {
+    "cmd": [
+      "git",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[TMP_BASE]/patch_tmp_1",
+    "name": "patch clean"
+  },
+  {
+    "cmd": [
+      "git",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[TMP_BASE]/patch_tmp_1",
+    "name": "patch git checkout"
+  },
+  {
+    "cmd": [
+      "patch",
+      "--dir",
+      "[SLAVE_BUILD]",
+      "--force",
+      "--forward",
+      "--remove-empty-files",
+      "--strip",
+      "0",
+      "--input",
+      "[TMP_BASE]/patch_tmp_1/patch.diff"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "apply patch"
+  },
+  {
+    "cmd": [
+      "rm",
+      "-rf",
+      "[TMP_BASE]/patch_tmp_1"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "remove patch"
+  },
+  {
+    "cmd": [
+      "git",
+      "diff",
+      "--cached",
+      "--name-only"
+    ],
+    "cwd": "[SLAVE_BUILD]/v8",
+    "name": "git diff to analyze patch",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@files@v8/foo.cc@@@",
+      "@@@STEP_LOG_END@files@@@",
+      "@@@SET_BUILD_PROPERTY@failure_type@\"INVALID_TEST_RESULTS\"@@@",
+      "@@@SET_BUILD_PROPERTY@subproject_tag@\"v8\"@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "import sys; sys.exit(1)"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "fail",
+    "~followup_annotations": [
+      "step returned non-zero exit code: 1",
+      "@@@STEP_TEXT@foo@@@",
+      "@@@STEP_FAILURE@@@",
+      "@@@SET_BUILD_PROPERTY@failure_hash@\"c2311ad770732eade3d2f48247abd147e40a70e7\"@@@"
+    ]
+  },
+  {
+    "name": "$result",
+    "reason": "Step('fail') failed with return_code 1",
+    "status_code": 1
+  }
+]

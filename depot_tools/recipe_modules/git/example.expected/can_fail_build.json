@@ -1,0 +1,154 @@
+[
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "RECIPE_MODULE[depot_tools::git]/resources/git_setup.py",
+      "--path",
+      "[SLAVE_BUILD]/src",
+      "--url",
+      "https://chromium.googlesource.com/chromium/src.git"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "git setup"
+  },
+  {
+    "cmd": [
+      "git",
+      "retry",
+      "fetch",
+      "origin",
+      "master",
+      "--recurse-submodules"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git fetch"
+  },
+  {
+    "cmd": [
+      "git",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git checkout"
+  },
+  {
+    "cmd": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "read revision",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@<br/>checked out 'deadbeef'<br/>@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git clean"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "sync"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "submodule sync"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "update",
+      "--init",
+      "--recursive"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "submodule update"
+  },
+  {
+    "cmd": [
+      "git",
+      "-c",
+      "foo=bar",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "count-objects",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "git",
+      "config",
+      "--get",
+      "remote.origin.url"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git config remote.origin.url",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@foo@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "show",
+      "HEAD",
+      "--format=%at",
+      "-s"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git show",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "--tags"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git fetch tags"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git status"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git status can_fail_build",
+    "~followup_annotations": [
+      "step returned non-zero exit code: 1",
+      "@@@STEP_EXCEPTION@@@"
+    ]
+  },
+  {
+    "name": "$result",
+    "reason": "Infra Failure: Step('git status can_fail_build') returned 1",
+    "status_code": 1
+  }
+]

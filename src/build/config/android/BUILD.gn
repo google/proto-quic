@@ -1,0 +1,229 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/config.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+import("//build/config/sysroot.gni")
+
+assert(is_android)
+
+# This is included by reference in the //build/config/compiler config that
+# is applied to all targets. It is here to separate out the logic that is
+# Android-only.
+config("compiler") {
+  cflags = [
+    "-ffunction-sections",
+    "-fno-short-enums",
+  ]
+  defines = [
+    "ANDROID",
+
+    # The NDK has these things, but doesn't define the constants to say that it
+    # does. Define them here instead.
+    "HAVE_SYS_UIO_H",
+  ]
+  ldflags = []
+
+  if (!is_clang) {
+    # Clang doesn't support these flags.
+    cflags += [ "-finline-limit=64" ]
+  }
+  if (is_clang) {
+    rebased_android_toolchain_root =
+        rebase_path(android_toolchain_root, root_build_dir)
+    assert(rebased_android_toolchain_root != "")  # Mark as used.
+    if (current_cpu == "mipsel") {
+      cflags += [
+        # TODO(gordanac) Enable integrated-as.
+        "-no-integrated-as",
+        "-B${rebased_android_toolchain_root}/bin",  # Else /usr/bin/as gets picked up.
+      ]
+    }
+  }
+
+  # Use gold for Android for most CPU architectures.
+  if (current_cpu == "x86" || current_cpu == "x64" || current_cpu == "arm") {
+    ldflags += [ "-fuse-ld=gold" ]
+    if (is_clang) {
+      # Let clang find the ld.gold in the NDK.
+      ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
+    }
+
+    # Use -mstackrealign due to a bug on ia32 Jelly Bean.
+    # See crbug.com/521527
+    if (current_cpu == "x86") {
+      cflags += [ "-mstackrealign" ]
+    }
+  }
+
+  if (current_cpu == "mipsel" && is_clang) {
+    # Let clang find the ld.bfd in the NDK.
+    ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
+  }
+
+  ldflags += [
+    "-Wl,--build-id=sha1",
+    "-Wl,--no-undefined",
+
+    # Don't allow visible symbols from libgcc or libc++ to be
+    # re-exported.
+    "-Wl,--exclude-libs=libgcc.a",
+    "-Wl,--exclude-libs=libc++_static.a",
+
+    # Don't allow visible symbols from libraries that contain
+    # assembly code with symbols that aren't hidden properly.
+    # http://crbug.com/448386
+    "-Wl,--exclude-libs=libvpx_assembly_arm.a",
+  ]
+  if (current_cpu == "arm" && !use_order_profiling) {
+    ldflags += [
+      # Enable identical code folding to reduce size.
+      "-Wl,--icf=all",
+    ]
+  }
+
+  if (is_clang) {
+    if (current_cpu == "arm") {
+      abi_target = "arm-linux-androideabi"
+    } else if (current_cpu == "x86") {
+      abi_target = "i686-linux-androideabi"
+    } else if (current_cpu == "arm64") {
+      # Place holder for arm64 support, not tested.
+      # TODO: Enable clang support for Android Arm64. http://crbug.com/539781
+      abi_target = "aarch64-linux-androideabi"
+    } else if (current_cpu == "x64") {
+      # Place holder for x64 support, not tested.
+      # TODO: Enable clang support for Android x64. http://crbug.com/539781
+      abi_target = "x86_64-linux-androideabi"
+    } else if (current_cpu == "mipsel") {
+      abi_target = "mipsel-linux-android"
+    } else if (current_cpu == "mips64el") {
+      # Place holder for mips64 support, not tested.
+      abi_target = "mips64el-linux-androideabi"
+    } else {
+      assert(false, "Architecture not supported")
+    }
+    cflags += [
+      "-target",
+      abi_target,
+    ]
+    ldflags += [
+      "-target",
+      abi_target,
+    ]
+  }
+
+  # Assign any flags set for the C compiler to asmflags so that they are sent
+  # to the assembler.
+  asmflags = cflags
+}
+
+# This is included by reference in the //build/config/compiler:runtime_library
+# config that is applied to all targets. It is here to separate out the logic
+# that is Android-only. Please see that target for advice on what should go in
+# :runtime_library vs. :compiler.
+config("runtime_library") {
+  # NOTE: The libc++ header include paths below are specified in cflags_cc
+  # rather than include_dirs because they need to come after include_dirs.
+  # Think of them like system headers, but don't use '-isystem' because the
+  # arm-linux-androideabi-4.4.3 toolchain (circa Gingerbread) will exhibit
+  # strange errors. The include ordering here is important; change with
+  # caution.
+  cflags_cc = [
+    "-isystem" +
+        rebase_path("$android_libcpp_root/libcxx/include", root_build_dir),
+    "-isystem" + rebase_path(
+            "$android_ndk_root/sources/cxx-stl/llvm-libc++abi/libcxxabi/include",
+            root_build_dir),
+    "-isystem" +
+        rebase_path("$android_ndk_root/sources/android/support/include",
+                    root_build_dir),
+  ]
+
+  defines = [ "__GNU_SOURCE=1" ]  # Necessary for clone().
+  ldflags = [ "-nostdlib" ]
+  lib_dirs = [ "$android_libcpp_root/libs/$android_app_abi" ]
+
+  # The libc++ runtime library (must come first).
+  # ASan needs to dynamically link to libc++ even in static builds so
+  # that it can interpose operator new.
+  if (is_component_build || is_asan) {
+    libs = [ "c++_shared" ]
+  } else {
+    libs = [ "c++_static" ]
+  }
+
+  # Manually link the libgcc.a that the cross compiler uses. This is
+  # absolute because the linker will look inside the sysroot if it's not.
+  libs += [
+    rebase_path(android_libgcc_file),
+    "c",
+  ]
+
+  # Clang with libc++ does not require an explicit atomic library reference.
+  if (!is_clang) {
+    libs += [ "atomic" ]
+  }
+
+  if (is_clang) {
+    # Work around incompatibilities between bionic and clang headers.
+    defines += [
+      "__compiler_offsetof=__builtin_offsetof",
+      "nan=__builtin_nan",
+    ]
+  }
+
+  # TODO(jdduke) Re-enable on mips after resolving linking
+  # issues with libc++ (crbug.com/456380).
+  if (current_cpu != "mipsel" && current_cpu != "mips64el") {
+    ldflags += [ "-Wl,--warn-shared-textrel" ]
+  }
+}
+
+config("executable_config") {
+  cflags = [ "-fPIE" ]
+  asmflags = [ "-fPIE" ]
+  ldflags = [ "-pie" ]
+}
+
+config("hide_native_jni_exports") {
+  ldflags = [ "-Wl,--version-script=" +
+              rebase_path("//build/android/android_no_jni_exports.lst") ]
+}
+
+# Instrumentation -------------------------------------------------------------
+#
+# The BUILDCONFIG file sets the "default_cygprofile_instrumentation" config on
+# targets by default. You can override whether the cygprofile instrumentation is
+# used on a per-target basis:
+#
+# configs -= [ "//build/config/android:default_cygprofile_instrumentation" ]
+# configs += [ "//build/config/android:no_cygprofile_instrumentation" ]
+
+config("default_cygprofile_instrumentation") {
+  if (use_order_profiling) {
+    configs = [ ":cygprofile_instrumentation" ]
+  } else {
+    configs = [ ":no_cygprofile_instrumentation" ]
+  }
+}
+
+config("cygprofile_instrumentation") {
+  defines = [ "CYGPROFILE_INSTRUMENTATION=1" ]
+  cflags = [ "-finstrument-functions" ]
+
+  if (!is_clang) {
+    cflags += [
+      # Allow mmx intrinsics to inline, so that the compiler can expand the intrinsics.
+      "-finstrument-functions-exclude-file-list=mmintrin.h",
+
+      # Avoid errors with current NDK:
+      # "third_party/android_tools/ndk/toolchains/arm-linux-androideabi-4.6/prebuilt/linux-x86_64/bin/../lib/gcc/arm-linux-androideabi/4.6/include/arm_neon.h:3426:3: error: argument must be a constant"
+      "-finstrument-functions-exclude-file-list=arm_neon.h",
+    ]
+  }
+}
+
+config("no_cygprofile_instrumentation") {
+}

@@ -1,0 +1,54 @@
+diff --git a/source/common/ucnv_bld.cpp b/source/common/ucnv_bld.cpp
+index 3c6b0e3..77fd0e6 100644
+--- a/source/common/ucnv_bld.cpp
++++ b/source/common/ucnv_bld.cpp
+@@ -65,11 +65,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
+ 
+     &_Latin1Data,
+     &_UTF8Data, &_UTF16BEData, &_UTF16LEData,
+-#if UCONFIG_ONLY_HTML_CONVERSION
+-    NULL, NULL,
+-#else
+     &_UTF32BEData, &_UTF32LEData,
+-#endif
+     NULL,
+ 
+ #if UCONFIG_NO_LEGACY_CONVERSION
+@@ -103,7 +99,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
+ 
+     &_ASCIIData,
+ #if UCONFIG_ONLY_HTML_CONVERSION
+-    NULL, NULL, &_UTF16Data, NULL, NULL, NULL,
++    NULL, NULL, &_UTF16Data, &_UTF32Data, NULL, NULL,
+ #else
+     &_UTF7Data, &_Bocu1Data, &_UTF16Data, &_UTF32Data, &_CESU8Data, &_IMAPData,
+ #endif
+@@ -168,7 +164,6 @@ static struct {
+   { "utf16oppositeendian", UCNV_UTF16_BigEndian},
+   { "utf16platformendian", UCNV_UTF16_LittleEndian },
+ #endif
+-#if !UCONFIG_ONLY_HTML_CONVERSION
+   { "utf32", UCNV_UTF32 },
+   { "utf32be", UCNV_UTF32_BigEndian },
+   { "utf32le", UCNV_UTF32_LittleEndian },
+@@ -179,7 +174,6 @@ static struct {
+   { "utf32oppositeendian", UCNV_UTF32_BigEndian },
+   { "utf32platformendian", UCNV_UTF32_LittleEndian },
+ #endif
+-#endif
+ #if !UCONFIG_ONLY_HTML_CONVERSION
+   { "utf7", UCNV_UTF7 },
+ #endif
+diff --git a/source/common/ucnv_u32.c b/source/common/ucnv_u32.c
+index b6804ca..9bee9a4 100644
+--- a/source/common/ucnv_u32.c
++++ b/source/common/ucnv_u32.c
+@@ -16,7 +16,7 @@
+ 
+ #include "unicode/utypes.h"
+ 
+-#if !UCONFIG_NO_CONVERSION && !UCONFIG_ONLY_HTML_CONVERSION
++#if !UCONFIG_NO_CONVERSION
+ 
+ #include "unicode/ucnv.h"
+ #include "unicode/utf.h"

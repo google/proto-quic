@@ -1,0 +1,758 @@
+// Copyright 2013 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "net/socket/tcp_socket.h"
+
+#include <errno.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+
+#include "base/bind.h"
+#include "base/files/file_path.h"
+#include "base/files/file_util.h"
+#include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
+#include "base/posix/eintr_wrapper.h"
+#include "base/task_runner_util.h"
+#include "base/threading/worker_pool.h"
+#include "net/base/address_list.h"
+#include "net/base/connection_type_histograms.h"
+#include "net/base/io_buffer.h"
+#include "net/base/ip_endpoint.h"
+#include "net/base/net_errors.h"
+#include "net/base/network_activity_monitor.h"
+#include "net/base/network_change_notifier.h"
+#include "net/base/sockaddr_storage.h"
+#include "net/socket/socket_net_log_params.h"
+#include "net/socket/socket_posix.h"
+
+// If we don't have a definition for TCPI_OPT_SYN_DATA, create one.
+#ifndef TCPI_OPT_SYN_DATA
+#define TCPI_OPT_SYN_DATA 32
+#endif
+
+namespace net {
+
+namespace {
+
+// True if OS supports TCP FastOpen.
+bool g_tcp_fastopen_supported = false;
+// True if TCP FastOpen is user-enabled for all connections.
+// TODO(jri): Change global variable to param in HttpNetworkSession::Params.
+bool g_tcp_fastopen_user_enabled = false;
+// True if TCP FastOpen connect-with-write has failed at least once.
+bool g_tcp_fastopen_has_failed = false;
+
+// SetTCPKeepAlive sets SO_KEEPALIVE.
+bool SetTCPKeepAlive(int fd, bool enable, int delay) {
+  // Enabling TCP keepalives is the same on all platforms.
+  int on = enable ? 1 : 0;
+  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on))) {
+    PLOG(ERROR) << "Failed to set SO_KEEPALIVE on fd: " << fd;
+    return false;
+  }
+
+  // If we disabled TCP keep alive, our work is done here.
+  if (!enable)
+    return true;
+
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  // Setting the keepalive interval varies by platform.
+
+  // Set seconds until first TCP keep alive.
+  if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &delay, sizeof(delay))) {
+    PLOG(ERROR) << "Failed to set TCP_KEEPIDLE on fd: " << fd;
+    return false;
+  }
+  // Set seconds between TCP keep alives.
+  if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &delay, sizeof(delay))) {
+    PLOG(ERROR) << "Failed to set TCP_KEEPINTVL on fd: " << fd;
+    return false;
+  }
+#elif defined(OS_MACOSX) || defined(OS_IOS)
+  if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &delay, sizeof(delay))) {
+    PLOG(ERROR) << "Failed to set TCP_KEEPALIVE on fd: " << fd;
+    return false;
+  }
+#endif
+  return true;
+}
+
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+// Checks if the kernel supports TCP FastOpen.
+bool SystemSupportsTCPFastOpen() {
+  const base::FilePath::CharType kTCPFastOpenProcFilePath[] =
+      "/proc/sys/net/ipv4/tcp_fastopen";
+  std::string system_supports_tcp_fastopen;
+  if (!base::ReadFileToString(base::FilePath(kTCPFastOpenProcFilePath),
+                              &system_supports_tcp_fastopen)) {
+    return false;
+  }
+  // The read from /proc should return '1' if TCP FastOpen is enabled in the OS.
+  if (system_supports_tcp_fastopen.empty() ||
+      (system_supports_tcp_fastopen[0] != '1')) {
+    return false;
+  }
+  return true;
+}
+
+void RegisterTCPFastOpenIntentAndSupport(bool user_enabled,
+                                         bool system_supported) {
+  g_tcp_fastopen_supported = system_supported;
+  g_tcp_fastopen_user_enabled = user_enabled;
+}
+#endif
+
+#if defined(TCP_INFO)
+bool GetTcpInfo(SocketDescriptor fd, tcp_info* info) {
+  socklen_t info_len = sizeof(tcp_info);
+  return getsockopt(fd, IPPROTO_TCP, TCP_INFO, info, &info_len) == 0 &&
+         info_len == sizeof(tcp_info);
+}
+#endif  // defined(TCP_INFO)
+
+}  // namespace
+
+//-----------------------------------------------------------------------------
+
+bool IsTCPFastOpenSupported() {
+  return g_tcp_fastopen_supported;
+}
+
+bool IsTCPFastOpenUserEnabled() {
+  return g_tcp_fastopen_user_enabled;
+}
+
+// This is asynchronous because it needs to do file IO, and it isn't allowed to
+// do that on the IO thread.
+void CheckSupportAndMaybeEnableTCPFastOpen(bool user_enabled) {
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  base::PostTaskAndReplyWithResult(
+      base::WorkerPool::GetTaskRunner(/*task_is_slow=*/false).get(),
+      FROM_HERE,
+      base::Bind(SystemSupportsTCPFastOpen),
+      base::Bind(RegisterTCPFastOpenIntentAndSupport, user_enabled));
+#endif
+}
+
+TCPSocketPosix::TCPSocketPosix(NetLog* net_log, const NetLog::Source& source)
+    : use_tcp_fastopen_(false),
+      tcp_fastopen_write_attempted_(false),
+      tcp_fastopen_connected_(false),
+      tcp_fastopen_status_(TCP_FASTOPEN_STATUS_UNKNOWN),
+      logging_multiple_connect_attempts_(false),
+      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_SOCKET)) {
+  net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
+                      source.ToEventParametersCallback());
+}
+
+TCPSocketPosix::~TCPSocketPosix() {
+  net_log_.EndEvent(NetLog::TYPE_SOCKET_ALIVE);
+  Close();
+}
+
+int TCPSocketPosix::Open(AddressFamily family) {
+  DCHECK(!socket_);
+  socket_.reset(new SocketPosix);
+  int rv = socket_->Open(ConvertAddressFamily(family));
+  if (rv != OK)
+    socket_.reset();
+  return rv;
+}
+
+int TCPSocketPosix::AdoptConnectedSocket(int socket_fd,
+                                         const IPEndPoint& peer_address) {
+  DCHECK(!socket_);
+
+  SockaddrStorage storage;
+  if (!peer_address.ToSockAddr(storage.addr, &storage.addr_len) &&
+      // For backward compatibility, allows the empty address.
+      !(peer_address == IPEndPoint())) {
+    return ERR_ADDRESS_INVALID;
+  }
+
+  socket_.reset(new SocketPosix);
+  int rv = socket_->AdoptConnectedSocket(socket_fd, storage);
+  if (rv != OK)
+    socket_.reset();
+  return rv;
+}
+
+int TCPSocketPosix::Bind(const IPEndPoint& address) {
+  DCHECK(socket_);
+
+  SockaddrStorage storage;
+  if (!address.ToSockAddr(storage.addr, &storage.addr_len))
+    return ERR_ADDRESS_INVALID;
+
+  return socket_->Bind(storage);
+}
+
+int TCPSocketPosix::Listen(int backlog) {
+  DCHECK(socket_);
+  return socket_->Listen(backlog);
+}
+
+int TCPSocketPosix::Accept(scoped_ptr<TCPSocketPosix>* tcp_socket,
+                           IPEndPoint* address,
+                           const CompletionCallback& callback) {
+  DCHECK(tcp_socket);
+  DCHECK(!callback.is_null());
+  DCHECK(socket_);
+  DCHECK(!accept_socket_);
+
+  net_log_.BeginEvent(NetLog::TYPE_TCP_ACCEPT);
+
+  int rv = socket_->Accept(
+      &accept_socket_,
+      base::Bind(&TCPSocketPosix::AcceptCompleted, base::Unretained(this),
+                 tcp_socket, address, callback));
+  if (rv != ERR_IO_PENDING)
+    rv = HandleAcceptCompleted(tcp_socket, address, rv);
+  return rv;
+}
+
+int TCPSocketPosix::Connect(const IPEndPoint& address,
+                            const CompletionCallback& callback) {
+  DCHECK(socket_);
+
+  if (!logging_multiple_connect_attempts_)
+    LogConnectBegin(AddressList(address));
+
+  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+                      CreateNetLogIPEndPointCallback(&address));
+
+  SockaddrStorage storage;
+  if (!address.ToSockAddr(storage.addr, &storage.addr_len))
+    return ERR_ADDRESS_INVALID;
+
+  if (use_tcp_fastopen_) {
+    // With TCP FastOpen, we pretend that the socket is connected.
+    DCHECK(!tcp_fastopen_write_attempted_);
+    socket_->SetPeerAddress(storage);
+    return OK;
+  }
+
+  int rv =
+      socket_->Connect(storage, base::Bind(&TCPSocketPosix::ConnectCompleted,
+                                           base::Unretained(this), callback));
+  if (rv != ERR_IO_PENDING)
+    rv = HandleConnectCompleted(rv);
+  return rv;
+}
+
+bool TCPSocketPosix::IsConnected() const {
+  if (!socket_)
+    return false;
+
+  if (use_tcp_fastopen_ && !tcp_fastopen_write_attempted_ &&
+      socket_->HasPeerAddress()) {
+    // With TCP FastOpen, we pretend that the socket is connected.
+    // This allows GetPeerAddress() to return peer_address_.
+    return true;
+  }
+
+  return socket_->IsConnected();
+}
+
+bool TCPSocketPosix::IsConnectedAndIdle() const {
+  // TODO(wtc): should we also handle the TCP FastOpen case here,
+  // as we do in IsConnected()?
+  return socket_ && socket_->IsConnectedAndIdle();
+}
+
+int TCPSocketPosix::Read(IOBuffer* buf,
+                         int buf_len,
+                         const CompletionCallback& callback) {
+  DCHECK(socket_);
+  DCHECK(!callback.is_null());
+
+  int rv = socket_->Read(
+      buf, buf_len,
+      base::Bind(&TCPSocketPosix::ReadCompleted,
+                 // Grab a reference to |buf| so that ReadCompleted() can still
+                 // use it when Read() completes, as otherwise, this transfers
+                 // ownership of buf to socket.
+                 base::Unretained(this), make_scoped_refptr(buf), callback));
+  if (rv != ERR_IO_PENDING)
+    rv = HandleReadCompleted(buf, rv);
+  return rv;
+}
+
+int TCPSocketPosix::Write(IOBuffer* buf,
+                          int buf_len,
+                          const CompletionCallback& callback) {
+  DCHECK(socket_);
+  DCHECK(!callback.is_null());
+
+  CompletionCallback write_callback =
+      base::Bind(&TCPSocketPosix::WriteCompleted,
+                 // Grab a reference to |buf| so that WriteCompleted() can still
+                 // use it when Write() completes, as otherwise, this transfers
+                 // ownership of buf to socket.
+                 base::Unretained(this), make_scoped_refptr(buf), callback);
+  int rv;
+
+  if (use_tcp_fastopen_ && !tcp_fastopen_write_attempted_) {
+    rv = TcpFastOpenWrite(buf, buf_len, write_callback);
+  } else {
+    rv = socket_->Write(buf, buf_len, write_callback);
+  }
+
+  if (rv != ERR_IO_PENDING)
+    rv = HandleWriteCompleted(buf, rv);
+  return rv;
+}
+
+int TCPSocketPosix::GetLocalAddress(IPEndPoint* address) const {
+  DCHECK(address);
+
+  if (!socket_)
+    return ERR_SOCKET_NOT_CONNECTED;
+
+  SockaddrStorage storage;
+  int rv = socket_->GetLocalAddress(&storage);
+  if (rv != OK)
+    return rv;
+
+  if (!address->FromSockAddr(storage.addr, storage.addr_len))
+    return ERR_ADDRESS_INVALID;
+
+  return OK;
+}
+
+int TCPSocketPosix::GetPeerAddress(IPEndPoint* address) const {
+  DCHECK(address);
+
+  if (!IsConnected())
+    return ERR_SOCKET_NOT_CONNECTED;
+
+  SockaddrStorage storage;
+  int rv = socket_->GetPeerAddress(&storage);
+  if (rv != OK)
+    return rv;
+
+  if (!address->FromSockAddr(storage.addr, storage.addr_len))
+    return ERR_ADDRESS_INVALID;
+
+  return OK;
+}
+
+int TCPSocketPosix::SetDefaultOptionsForServer() {
+  DCHECK(socket_);
+  return SetAddressReuse(true);
+}
+
+void TCPSocketPosix::SetDefaultOptionsForClient() {
+  DCHECK(socket_);
+
+  // This mirrors the behaviour on Windows. See the comment in
+  // tcp_socket_win.cc after searching for "NODELAY".
+  // If SetTCPNoDelay fails, we don't care.
+  SetTCPNoDelay(socket_->socket_fd(), true);
+
+  // TCP keep alive wakes up the radio, which is expensive on mobile. Do not
+  // enable it there. It's useful to prevent TCP middleboxes from timing out
+  // connection mappings. Packets for timed out connection mappings at
+  // middleboxes will either lead to:
+  // a) Middleboxes sending TCP RSTs. It's up to higher layers to check for this
+  // and retry. The HTTP network transaction code does this.
+  // b) Middleboxes just drop the unrecognized TCP packet. This leads to the TCP
+  // stack retransmitting packets per TCP stack retransmission timeouts, which
+  // are very high (on the order of seconds). Given the number of
+  // retransmissions required before killing the connection, this can lead to
+  // tens of seconds or even minutes of delay, depending on OS.
+#if !defined(OS_ANDROID) && !defined(OS_IOS)
+  const int kTCPKeepAliveSeconds = 45;
+
+  SetTCPKeepAlive(socket_->socket_fd(), true, kTCPKeepAliveSeconds);
+#endif
+}
+
+int TCPSocketPosix::SetAddressReuse(bool allow) {
+  DCHECK(socket_);
+
+  // SO_REUSEADDR is useful for server sockets to bind to a recently unbound
+  // port. When a socket is closed, the end point changes its state to TIME_WAIT
+  // and wait for 2 MSL (maximum segment lifetime) to ensure the remote peer
+  // acknowledges its closure. For server sockets, it is usually safe to
+  // bind to a TIME_WAIT end point immediately, which is a widely adopted
+  // behavior.
+  //
+  // Note that on *nix, SO_REUSEADDR does not enable the TCP socket to bind to
+  // an end point that is already bound by another socket. To do that one must
+  // set SO_REUSEPORT instead. This option is not provided on Linux prior
+  // to 3.9.
+  //
+  // SO_REUSEPORT is provided in MacOS X and iOS.
+  int boolean_value = allow ? 1 : 0;
+  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_REUSEADDR,
+                      &boolean_value, sizeof(boolean_value));
+  if (rv < 0)
+    return MapSystemError(errno);
+  return OK;
+}
+
+int TCPSocketPosix::SetReceiveBufferSize(int32_t size) {
+  DCHECK(socket_);
+  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_RCVBUF,
+                      reinterpret_cast<const char*>(&size), sizeof(size));
+  return (rv == 0) ? OK : MapSystemError(errno);
+}
+
+int TCPSocketPosix::SetSendBufferSize(int32_t size) {
+  DCHECK(socket_);
+  int rv = setsockopt(socket_->socket_fd(), SOL_SOCKET, SO_SNDBUF,
+                      reinterpret_cast<const char*>(&size), sizeof(size));
+  return (rv == 0) ? OK : MapSystemError(errno);
+}
+
+bool TCPSocketPosix::SetKeepAlive(bool enable, int delay) {
+  DCHECK(socket_);
+  return SetTCPKeepAlive(socket_->socket_fd(), enable, delay);
+}
+
+bool TCPSocketPosix::SetNoDelay(bool no_delay) {
+  DCHECK(socket_);
+  return SetTCPNoDelay(socket_->socket_fd(), no_delay);
+}
+
+void TCPSocketPosix::Close() {
+  socket_.reset();
+
+  // Record and reset TCP FastOpen state.
+  if (tcp_fastopen_write_attempted_ ||
+      tcp_fastopen_status_ == TCP_FASTOPEN_PREVIOUSLY_FAILED) {
+    UMA_HISTOGRAM_ENUMERATION("Net.TcpFastOpenSocketConnection",
+                              tcp_fastopen_status_, TCP_FASTOPEN_MAX_VALUE);
+  }
+  use_tcp_fastopen_ = false;
+  tcp_fastopen_connected_ = false;
+  tcp_fastopen_write_attempted_ = false;
+  tcp_fastopen_status_ = TCP_FASTOPEN_STATUS_UNKNOWN;
+}
+
+void TCPSocketPosix::EnableTCPFastOpenIfSupported() {
+  if (!IsTCPFastOpenSupported())
+    return;
+
+  // Do not enable TCP FastOpen if it had previously failed.
+  // This check conservatively avoids middleboxes that may blackhole
+  // TCP FastOpen SYN+Data packets; on such a failure, subsequent sockets
+  // should not use TCP FastOpen.
+  if (!g_tcp_fastopen_has_failed)
+    use_tcp_fastopen_ = true;
+  else
+    tcp_fastopen_status_ = TCP_FASTOPEN_PREVIOUSLY_FAILED;
+}
+
+bool TCPSocketPosix::IsValid() const {
+  return socket_ != NULL && socket_->socket_fd() != kInvalidSocket;
+}
+
+void TCPSocketPosix::DetachFromThread() {
+  socket_->DetachFromThread();
+}
+
+void TCPSocketPosix::StartLoggingMultipleConnectAttempts(
+    const AddressList& addresses) {
+  if (!logging_multiple_connect_attempts_) {
+    logging_multiple_connect_attempts_ = true;
+    LogConnectBegin(addresses);
+  } else {
+    NOTREACHED();
+  }
+}
+
+void TCPSocketPosix::EndLoggingMultipleConnectAttempts(int net_error) {
+  if (logging_multiple_connect_attempts_) {
+    LogConnectEnd(net_error);
+    logging_multiple_connect_attempts_ = false;
+  } else {
+    NOTREACHED();
+  }
+}
+
+void TCPSocketPosix::AcceptCompleted(scoped_ptr<TCPSocketPosix>* tcp_socket,
+                                     IPEndPoint* address,
+                                     const CompletionCallback& callback,
+                                     int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  callback.Run(HandleAcceptCompleted(tcp_socket, address, rv));
+}
+
+int TCPSocketPosix::HandleAcceptCompleted(
+    scoped_ptr<TCPSocketPosix>* tcp_socket,
+    IPEndPoint* address,
+    int rv) {
+  if (rv == OK)
+    rv = BuildTcpSocketPosix(tcp_socket, address);
+
+  if (rv == OK) {
+    net_log_.EndEvent(NetLog::TYPE_TCP_ACCEPT,
+                      CreateNetLogIPEndPointCallback(address));
+  } else {
+    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_ACCEPT, rv);
+  }
+
+  return rv;
+}
+
+int TCPSocketPosix::BuildTcpSocketPosix(scoped_ptr<TCPSocketPosix>* tcp_socket,
+                                        IPEndPoint* address) {
+  DCHECK(accept_socket_);
+
+  SockaddrStorage storage;
+  if (accept_socket_->GetPeerAddress(&storage) != OK ||
+      !address->FromSockAddr(storage.addr, storage.addr_len)) {
+    accept_socket_.reset();
+    return ERR_ADDRESS_INVALID;
+  }
+
+  tcp_socket->reset(new TCPSocketPosix(net_log_.net_log(), net_log_.source()));
+  (*tcp_socket)->socket_.reset(accept_socket_.release());
+  return OK;
+}
+
+void TCPSocketPosix::ConnectCompleted(const CompletionCallback& callback,
+                                      int rv) const {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  callback.Run(HandleConnectCompleted(rv));
+}
+
+int TCPSocketPosix::HandleConnectCompleted(int rv) const {
+  // Log the end of this attempt (and any OS error it threw).
+  if (rv != OK) {
+    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+                      NetLog::IntCallback("os_error", errno));
+  } else {
+    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT);
+  }
+
+  // Give a more specific error when the user is offline.
+  if (rv == ERR_ADDRESS_UNREACHABLE && NetworkChangeNotifier::IsOffline())
+    rv = ERR_INTERNET_DISCONNECTED;
+
+  if (!logging_multiple_connect_attempts_)
+    LogConnectEnd(rv);
+
+  return rv;
+}
+
+void TCPSocketPosix::LogConnectBegin(const AddressList& addresses) const {
+  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT,
+                      addresses.CreateNetLogCallback());
+}
+
+void TCPSocketPosix::LogConnectEnd(int net_error) const {
+  if (net_error != OK) {
+    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, net_error);
+    return;
+  }
+
+  UpdateConnectionTypeHistograms(CONNECTION_ANY);
+
+  SockaddrStorage storage;
+  int rv = socket_->GetLocalAddress(&storage);
+  if (rv != OK) {
+    PLOG(ERROR) << "GetLocalAddress() [rv: " << rv << "] error: ";
+    NOTREACHED();
+    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, rv);
+    return;
+  }
+
+  net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT,
+                    CreateNetLogSourceAddressCallback(storage.addr,
+                                                      storage.addr_len));
+}
+
+void TCPSocketPosix::ReadCompleted(const scoped_refptr<IOBuffer>& buf,
+                                   const CompletionCallback& callback,
+                                   int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  callback.Run(HandleReadCompleted(buf.get(), rv));
+}
+
+int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
+  if (tcp_fastopen_write_attempted_ && !tcp_fastopen_connected_) {
+    // A TCP FastOpen connect-with-write was attempted. This read was a
+    // subsequent read, which either succeeded or failed. If the read
+    // succeeded, the socket is considered connected via TCP FastOpen.
+    // If the read failed, TCP FastOpen is (conservatively) turned off for all
+    // subsequent connections. TCP FastOpen status is recorded in both cases.
+    // TODO (jri): This currently results in conservative behavior, where TCP
+    // FastOpen is turned off on _any_ error. Implement optimizations,
+    // such as turning off TCP FastOpen on more specific errors, and
+    // re-attempting TCP FastOpen after a certain amount of time has passed.
+    if (rv >= 0)
+      tcp_fastopen_connected_ = true;
+    else
+      g_tcp_fastopen_has_failed = true;
+    UpdateTCPFastOpenStatusAfterRead();
+  }
+
+  if (rv < 0) {
+    net_log_.AddEvent(NetLog::TYPE_SOCKET_READ_ERROR,
+                      CreateNetLogSocketErrorCallback(rv, errno));
+    return rv;
+  }
+  net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED, rv,
+                                buf->data());
+  NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
+
+  return rv;
+}
+
+void TCPSocketPosix::WriteCompleted(const scoped_refptr<IOBuffer>& buf,
+                                    const CompletionCallback& callback,
+                                    int rv) {
+  DCHECK_NE(ERR_IO_PENDING, rv);
+  callback.Run(HandleWriteCompleted(buf.get(), rv));
+}
+
+int TCPSocketPosix::HandleWriteCompleted(IOBuffer* buf, int rv) {
+  if (rv < 0) {
+    if (tcp_fastopen_write_attempted_ && !tcp_fastopen_connected_) {
+      // TCP FastOpen connect-with-write was attempted, and the write failed
+      // for unknown reasons. Record status and (conservatively) turn off
+      // TCP FastOpen for all subsequent connections.
+      // TODO (jri): This currently results in conservative behavior, where TCP
+      // FastOpen is turned off on _any_ error. Implement optimizations,
+      // such as turning off TCP FastOpen on more specific errors, and
+      // re-attempting TCP FastOpen after a certain amount of time has passed.
+      tcp_fastopen_status_ = TCP_FASTOPEN_ERROR;
+      g_tcp_fastopen_has_failed = true;
+    }
+    net_log_.AddEvent(NetLog::TYPE_SOCKET_WRITE_ERROR,
+                      CreateNetLogSocketErrorCallback(rv, errno));
+    return rv;
+  }
+  net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, rv,
+                                buf->data());
+  NetworkActivityMonitor::GetInstance()->IncrementBytesSent(rv);
+  return rv;
+}
+
+int TCPSocketPosix::TcpFastOpenWrite(IOBuffer* buf,
+                                     int buf_len,
+                                     const CompletionCallback& callback) {
+  SockaddrStorage storage;
+  int rv = socket_->GetPeerAddress(&storage);
+  if (rv != OK)
+    return rv;
+
+  int flags = 0x20000000;  // Magic flag to enable TCP_FASTOPEN.
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  // sendto() will fail with EPIPE when the system doesn't implement TCP
+  // FastOpen, and with EOPNOTSUPP when the system implements TCP FastOpen
+  // but it is disabled. Theoretically these shouldn't happen
+  // since the caller should check for system support on startup, but
+  // users may dynamically disable TCP FastOpen via sysctl.
+  flags |= MSG_NOSIGNAL;
+#endif // defined(OS_LINUX) || defined(OS_ANDROID)
+  rv = HANDLE_EINTR(sendto(socket_->socket_fd(),
+                           buf->data(),
+                           buf_len,
+                           flags,
+                           storage.addr,
+                           storage.addr_len));
+  tcp_fastopen_write_attempted_ = true;
+
+  if (rv >= 0) {
+    tcp_fastopen_status_ = TCP_FASTOPEN_FAST_CONNECT_RETURN;
+    return rv;
+  }
+
+  DCHECK_NE(EPIPE, errno);
+
+  // If errno == EINPROGRESS, that means the kernel didn't have a cookie
+  // and would block. The kernel is internally doing a connect() though.
+  // Remap EINPROGRESS to EAGAIN so we treat this the same as our other
+  // asynchronous cases. Note that the user buffer has not been copied to
+  // kernel space.
+  if (errno == EINPROGRESS) {
+    rv = ERR_IO_PENDING;
+  } else {
+    rv = MapSystemError(errno);
+  }
+
+  if (rv != ERR_IO_PENDING) {
+    // TCP FastOpen connect-with-write was attempted, and the write failed
+    // since TCP FastOpen was not implemented or disabled in the OS.
+    // Record status and turn off TCP FastOpen for all subsequent connections.
+    // TODO (jri): This is almost certainly too conservative, since it blanket
+    // turns off TCP FastOpen on any write error. Two things need to be done
+    // here: (i) record a histogram of write errors; in particular, record
+    // occurrences of EOPNOTSUPP and EPIPE, and (ii) afterwards, consider
+    // turning off TCP FastOpen on more specific errors.
+    tcp_fastopen_status_ = TCP_FASTOPEN_ERROR;
+    g_tcp_fastopen_has_failed = true;
+    return rv;
+  }
+
+  tcp_fastopen_status_ = TCP_FASTOPEN_SLOW_CONNECT_RETURN;
+  return socket_->WaitForWrite(buf, buf_len, callback);
+}
+
+void TCPSocketPosix::UpdateTCPFastOpenStatusAfterRead() {
+  DCHECK(tcp_fastopen_status_ == TCP_FASTOPEN_FAST_CONNECT_RETURN ||
+         tcp_fastopen_status_ == TCP_FASTOPEN_SLOW_CONNECT_RETURN);
+
+  if (tcp_fastopen_write_attempted_ && !tcp_fastopen_connected_) {
+    // TCP FastOpen connect-with-write was attempted, and failed.
+    tcp_fastopen_status_ =
+        (tcp_fastopen_status_ == TCP_FASTOPEN_FAST_CONNECT_RETURN ?
+            TCP_FASTOPEN_FAST_CONNECT_READ_FAILED :
+            TCP_FASTOPEN_SLOW_CONNECT_READ_FAILED);
+    return;
+  }
+
+  bool getsockopt_success = false;
+  bool server_acked_data = false;
+#if defined(TCP_INFO)
+  // Probe to see the if the socket used TCP FastOpen.
+  tcp_info info;
+  getsockopt_success = GetTcpInfo(socket_->socket_fd(), &info);
+  server_acked_data =
+      getsockopt_success && (info.tcpi_options & TCPI_OPT_SYN_DATA);
+#endif  // defined(TCP_INFO)
+
+  if (getsockopt_success) {
+    if (tcp_fastopen_status_ == TCP_FASTOPEN_FAST_CONNECT_RETURN) {
+      tcp_fastopen_status_ = (server_acked_data ?
+                              TCP_FASTOPEN_SYN_DATA_ACK :
+                              TCP_FASTOPEN_SYN_DATA_NACK);
+    } else {
+      tcp_fastopen_status_ = (server_acked_data ?
+                              TCP_FASTOPEN_NO_SYN_DATA_ACK :
+                              TCP_FASTOPEN_NO_SYN_DATA_NACK);
+    }
+  } else {
+    tcp_fastopen_status_ =
+        (tcp_fastopen_status_ == TCP_FASTOPEN_FAST_CONNECT_RETURN ?
+         TCP_FASTOPEN_SYN_DATA_GETSOCKOPT_FAILED :
+         TCP_FASTOPEN_NO_SYN_DATA_GETSOCKOPT_FAILED);
+  }
+}
+
+bool TCPSocketPosix::GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const {
+  DCHECK(out_rtt);
+  if (!socket_)
+    return false;
+
+#if defined(TCP_INFO)
+  tcp_info info;
+  if (GetTcpInfo(socket_->socket_fd(), &info)) {
+    // tcpi_rtt is zero when the kernel doesn't have an RTT estimate,
+    // and possibly in other cases such as connections to localhost.
+    if (info.tcpi_rtt > 0) {
+      *out_rtt = base::TimeDelta::FromMicroseconds(info.tcpi_rtt);
+      return true;
+    }
+  }
+#endif  // defined(TCP_INFO)
+  return false;
+}
+
+}  // namespace net

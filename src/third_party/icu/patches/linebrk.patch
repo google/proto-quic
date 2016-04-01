@@ -1,0 +1,75 @@
+diff --git a/source/data/brkitr/fi.txt b/source/data/brkitr/fi.txt
+index fddbbb9..f06fb21 100644
+--- a/source/data/brkitr/fi.txt
++++ b/source/data/brkitr/fi.txt
+@@ -9,9 +9,9 @@
+ fi{
+     Version{"2.1.19.14"}
+     boundaries{
+-        line:process(dependency){"line_fi.brk"}
+-        line_loose:process(dependency){"line_loose_fi.brk"}
++        line:process(dependency){"line_normal_fi.brk"}
++        line_loose:process(dependency){"line_normal_fi.brk"}
+         line_normal:process(dependency){"line_normal_fi.brk"}
+-        line_strict:process(dependency){"line_fi.brk"}
++        line_strict:process(dependency){"line_normal_fi.brk"}
+     }
+ }
+diff --git a/source/data/brkitr/ja.txt b/source/data/brkitr/ja.txt
+index 616db63..f9f986e 100644
+--- a/source/data/brkitr/ja.txt
++++ b/source/data/brkitr/ja.txt
+@@ -10,7 +10,7 @@ ja{
+     Version{"2.1.19.14"}
+     boundaries{
+         line:process(dependency){"line_normal.brk"}
+-        line_loose:process(dependency){"line_loose_cj.brk"}
++        line_loose:process(dependency){"line_normal_cj.brk"}
+         line_normal:process(dependency){"line_normal_cj.brk"}
+         line_strict:process(dependency){"line.brk"}
+     }
+diff --git a/source/data/brkitr/root.txt b/source/data/brkitr/root.txt
+index 193f7c2..77ddd14 100644
+--- a/source/data/brkitr/root.txt
++++ b/source/data/brkitr/root.txt
+@@ -10,8 +10,8 @@ root{
+     Version{"2.1.20.0"}
+     boundaries{
+         grapheme:process(dependency){"char.brk"}
+-        line:process(dependency){"line.brk"}
+-        line_loose:process(dependency){"line_loose.brk"}
++        line:process(dependency){"line_normal.brk"}
++        line_loose:process(dependency){"line_normal.brk"}
+         line_normal:process(dependency){"line_normal.brk"}
+         line_strict:process(dependency){"line.brk"}
+         sentence:process(dependency){"sent.brk"}
+diff --git a/source/data/brkitr/zh.txt b/source/data/brkitr/zh.txt
+index 47b5fce..bdf3ce7 100644
+--- a/source/data/brkitr/zh.txt
++++ b/source/data/brkitr/zh.txt
+@@ -9,8 +9,8 @@
+ zh{
+     Version{"2.1.19.14"}
+     boundaries{
+-        line:process(dependency){"line.brk"}
+-        line_loose:process(dependency){"line_loose_cj.brk"}
++        line:process(dependency){"line_normal.brk"}
++        line_loose:process(dependency){"line_normal_cj.brk"}
+         line_normal:process(dependency){"line_normal_cj.brk"}
+         line_strict:process(dependency){"line.brk"}
+     }
+diff --git a/source/data/brkitr/zh_Hant.txt b/source/data/brkitr/zh_Hant.txt
+index 36e9146..33907e7 100644
+--- a/source/data/brkitr/zh_Hant.txt
++++ b/source/data/brkitr/zh_Hant.txt
+@@ -9,8 +9,8 @@
+ zh_Hant{
+     Version{"2.1.19.14"}
+     boundaries{
+-        line:process(dependency){"line.brk"}
+-        line_loose:process(dependency){"line_loose_cj.brk"}
++        line:process(dependency){"line_normal.brk"}
++        line_loose:process(dependency){"line_normal_cj.brk"}
+         line_normal:process(dependency){"line_normal_cj.brk"}
+         line_strict:process(dependency){"line.brk"}
+     }

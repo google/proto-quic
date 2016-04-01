@@ -1,0 +1,12 @@
+-keep @**.MainDex class * {
+  *;
+}
+
+-keepclasseswithmembers class * {
+  public static ** asInterface(android.os.IBinder);
+}
+
+# Required when code coverage is enabled.
+-keep class com.vladium.** {
+    *;
+}

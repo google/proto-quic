@@ -1,0 +1,6 @@
+Currently proto-quic is supported by Google developers: any code changes should be
+submitted to upstream Chrome, and pulled locally.
+
+Should this change, any contributors must sign the google CLA
+(https://cla.developers.google.com/clas) before participating in work on
+proto-quic.

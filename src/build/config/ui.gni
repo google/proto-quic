@@ -1,0 +1,90 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains UI-related build flags (see features.gni for Chrome
+# feature-related ones). These should theoretically be moved to the ui
+# directory.
+#
+# However, today we have many "bad" dependencies on some of these flags from,
+# e.g. base, so they need to be global to match the GYP configuration. Also,
+# anything that needs a grit define must be in either this file or features.gni.
+#
+# PLEASE TRY TO AVOID ADDING FLAGS TO THIS FILE in cases where grit isn't
+# required. See the declare_args block of BUILDCONFIG.gn for advice on how
+# to set up feature flags.
+
+import("//build/config/chromecast_build.gni")
+import("//build/config/headless_build.gni")
+
+declare_args() {
+  # Indicates if Ash is enabled. Ash is the Aura Shell which provides a
+  # desktop-like environment for Aura. Requires use_aura = true
+  use_ash = is_chromeos && !is_chromecast && !is_headless
+
+  # Indicates if Ozone is enabled. Ozone is a low-level library layer for Linux
+  # that does not require X11. Enabling this feature disables use of glib, x11,
+  # Pango, and Cairo. Default to false on non-Chromecast builds.
+  use_ozone = (is_chromecast || is_headless) && !is_android
+
+  # Indicates if Aura is enabled. Aura is a low-level windowing library, sort
+  # of a replacement for GDI or GTK.
+  use_aura = is_win || is_linux
+
+  # True means the UI is built using the "views" framework.
+  toolkit_views =
+      (is_mac || is_win || is_chromeos || use_aura) && !is_chromecast
+
+  # Whether the entire browser uses toolkit-views on Mac instead of Cocoa.
+  mac_views_browser = false
+
+  # Whether we should use GTKv3 instead of GTKv2.
+  use_gtk3 = false
+
+  # Optional system libraries.
+  use_xkbcommon = false
+
+  # Whether we should use glib, a low level C utility library.
+  use_glib = is_linux
+
+  # Indicates if material design elements in the top chrome of the browser are
+  # enabled.
+  enable_topchrome_md = is_chromeos || is_win || is_linux || is_mac
+
+  # Indicates if Wayland display server support is enabled.
+  enable_wayland_server = is_chromeos
+
+  # Enable experimental vulkan backend.
+  enable_vulkan = false
+}
+
+# Additional dependent variables -----------------------------------------------
+#
+# These variables depend on other variables and can't be set externally.
+
+# Use GPU accelerated cross process image transport by default on linux builds
+# with the Aura window manager.
+ui_compositor_image_transport = use_aura && is_linux
+
+use_default_render_theme = use_aura && !is_android
+
+# Indicates if the UI toolkit depends on X11.
+use_x11 = is_linux && !use_ozone
+
+# Turn off glib if Ozone is enabled.
+if (use_ozone) {
+  use_glib = false
+}
+
+if (is_linux && !use_ozone) {
+  use_cairo = true
+  use_pango = true
+} else {
+  use_cairo = false
+  use_pango = false
+}
+
+# Whether to use atk, the Accessibility ToolKit library
+use_atk = is_desktop_linux && use_x11
+
+use_clipboard_aurax11 = is_linux && use_aura && use_x11

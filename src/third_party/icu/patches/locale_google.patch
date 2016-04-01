@@ -1,0 +1,4250 @@
+diff --git a/source/data/curr/en.txt b/source/data/curr/en.txt
+index e8ba841..9f7a1ec 100644
+--- a/source/data/curr/en.txt
++++ b/source/data/curr/en.txt
+@@ -793,7 +793,7 @@ en{
+             "Papua New Guinean Kina",
+         }
+         PHP{
+-            "PHP",
++            "Php",
+             "Philippine Peso",
+         }
+         PKR{
+diff --git a/source/data/curr/ru.txt b/source/data/curr/ru.txt
+index 01744eb..38596ae 100644
+--- a/source/data/curr/ru.txt
++++ b/source/data/curr/ru.txt
+@@ -913,7 +913,7 @@ ru{
+             "Танзанийский шиллинг",
+         }
+         UAH{
+-            "₴",
++            "грн.",
+             "Украинская гривна",
+         }
+         UAK{
+@@ -1202,7 +1202,6 @@ ru{
+     Currencies%variant{
+         GEL{"₾"}
+         TRY{"TL"}
+-        UAH{"грн."}
+     }
+     CurrencyPlurals{
+         ADP{
+diff --git a/source/data/curr/uk.txt b/source/data/curr/uk.txt
+index fe52f50..2dac7df 100644
+--- a/source/data/curr/uk.txt
++++ b/source/data/curr/uk.txt
+@@ -913,7 +913,7 @@ uk{
+             "танзанійський шилінг",
+         }
+         UAH{
+-            "₴",
++            "грн.",
+             "українська гривня",
+         }
+         UAK{
+@@ -1202,7 +1202,6 @@ uk{
+     Currencies%variant{
+         GEL{"₾"}
+         TRY{"TL"}
+-        UAH{"грн."}
+     }
+     CurrencyPlurals{
+         ADP{
+diff --git a/source/data/locales/bn.txt b/source/data/locales/bn.txt
+index efc7a09..e8fd67c 100644
+--- a/source/data/locales/bn.txt
++++ b/source/data/locales/bn.txt
+@@ -370,8 +370,8 @@ bn{
+         }
+         gregorian{
+             AmPmMarkers{
+-                "AM",
+-                "অপরাহ্ণ",
++                "am",
++                "pm",
+             }
+             AmPmMarkersAbbr{
+                 "AM",
+diff --git a/source/data/locales/en.txt b/source/data/locales/en.txt
+index 3cbca24..0b0accb 100644
+--- a/source/data/locales/en.txt
++++ b/source/data/locales/en.txt
+@@ -398,18 +398,18 @@ en{
+                         "Mo12",
+                     }
+                     wide{
+-                        "Month1",
+-                        "Month2",
+-                        "Month3",
+-                        "Month4",
+-                        "Month5",
+-                        "Month6",
+-                        "Month7",
+-                        "Month8",
+-                        "Month9",
+-                        "Month10",
+-                        "Month11",
+-                        "Month12",
++                        "1",
++                        "2",
++                        "3",
++                        "4",
++                        "5",
++                        "6",
++                        "7",
++                        "8",
++                        "9",
++                        "10",
++                        "11",
++                        "12",
+                     }
+                 }
+             }
+diff --git a/source/data/locales/hi.txt b/source/data/locales/hi.txt
+index 101db57..e13bc05 100644
+--- a/source/data/locales/hi.txt
++++ b/source/data/locales/hi.txt
+@@ -386,16 +386,16 @@ hi{
+         }
+         gregorian{
+             AmPmMarkers{
+-                "पूर्वाह्न",
+-                "अपराह्न",
++                "am",
++                "pm",
+             }
+             AmPmMarkersAbbr{
+                 "पूर्व",
+                 "अपर",
+             }
+             AmPmMarkersNarrow{
+-                "पू",
+-                "अ",
++                "am",
++                "pm",
+             }
+             DateTimePatterns{
+                 "h:mm:ss a zzzz",
+@@ -550,14 +550,14 @@ hi{
+                     narrow{
+                         afternoon1{"अपराह्न"}
+                         evening1{"शाम"}
+-                        midnight{"आधी रात"}
++                        midnight{"m"}
+                         morning1{"सुबह"}
+                         night1{"शाम"}
+                     }
+                     wide{
+                         afternoon1{"अपराह्न"}
+                         evening1{"शाम"}
+-                        midnight{"मध्यरात्रि"}
++                        midnight{"midnight"}
+                         morning1{"सुबह"}
+                         night1{"रात"}
+                     }
+diff --git a/source/data/locales/ta.txt b/source/data/locales/ta.txt
+index 6d85435..8a54a2d 100644
+--- a/source/data/locales/ta.txt
++++ b/source/data/locales/ta.txt
+@@ -475,8 +475,8 @@ ta{
+                 "பிற்பகல்",
+             }
+             AmPmMarkersAbbr{
+-                "முற்பகல்",
+-                "பிற்பகல்",
++                "AM",
++                "PM",
+             }
+             AmPmMarkersNarrow{
+                 "மு.ப",
+diff --git a/source/data/locales/tr_CY.txt b/source/data/locales/tr_CY.txt
+index 590309d..d4ba9a4 100755
+--- a/source/data/locales/tr_CY.txt
++++ b/source/data/locales/tr_CY.txt
+@@ -18,7 +18,7 @@ tr_CY{
+                 "d MMMM y EEEE",
+                 "d MMMM y",
+                 "d MMM y",
+-                "d.MM.y",
++                "d MM y",
+                 "{1} {0}",
+                 "{1} {0}",
+                 "{1} {0}",
+diff --git a/source/data/misc/likelySubtags.txt b/source/data/misc/likelySubtags.txt
+index ed77e61..2ce147c 100644
+--- a/source/data/misc/likelySubtags.txt
++++ b/source/data/misc/likelySubtags.txt
+@@ -279,7 +279,6 @@ likelySubtags:table(nofallback){
+     ja{"ja_Jpan_JP"}
+     jam{"jam_Latn_JM"}
+     jgo{"jgo_Latn_CM"}
+-    ji{"ji_Hebr_UA"}
+     jmc{"jmc_Latn_TZ"}
+     jml{"jml_Deva_NP"}
+     jut{"jut_Latn_DK"}
+@@ -343,6 +342,7 @@ likelySubtags:table(nofallback){
+     ksh{"ksh_Latn_DE"}
+     ku{"ku_Latn_TR"}
+     ku_Arab{"ku_Arab_IQ"}
++    ku_IR{"ku_Arab_IR"}
+     ku_LB{"ku_Arab_LB"}
+     kum{"kum_Cyrl_RU"}
+     kv{"kv_Cyrl_RU"}
+@@ -579,6 +579,7 @@ likelySubtags:table(nofallback){
+     sg{"sg_Latn_CF"}
+     sga{"sga_Ogam_IE"}
+     sgs{"sgs_Latn_LT"}
++    sh{"sr_Latn_RS"}
+     shi{"shi_Tfng_MA"}
+     shn{"shn_Mymr_MM"}
+     si{"si_Sinh_LK"}
+@@ -980,7 +981,7 @@ likelySubtags:table(nofallback){
+     und_NE{"ha_Latn_NE"}
+     und_NI{"es_Latn_NI"}
+     und_NL{"nl_Latn_NL"}
+-    und_NO{"nb_Latn_NO"}
++    und_NO{"no_Latn_NO"}
+     und_NP{"ne_Deva_NP"}
+     und_Narb{"xna_Narb_SA"}
+     und_Nbat{"arc_Nbat_JO"}
+@@ -1027,7 +1028,7 @@ likelySubtags:table(nofallback){
+     und_SD{"ar_Arab_SD"}
+     und_SE{"sv_Latn_SE"}
+     und_SI{"sl_Latn_SI"}
+-    und_SJ{"nb_Latn_SJ"}
++    und_SJ{"no_Latn_SJ"}
+     und_SK{"sk_Latn_SK"}
+     und_SM{"it_Latn_SM"}
+     und_SN{"fr_Latn_SN"}
+diff --git a/source/data/misc/metadata.txt b/source/data/misc/metadata.txt
+index 6b0d8bb..f8301c0 100755
+--- a/source/data/misc/metadata.txt
++++ b/source/data/misc/metadata.txt
+@@ -4140,6 +4140,8 @@ metadata:table(nofallback){
+         "ksb_TZ",
+         "ksf_CM",
+         "ksh_DE",
++        "ku_Arab",
++        "ku_Latn_SY",
+         "ku_TR",
+         "kw_GB",
+         "ky_KG",
+diff --git a/source/data/misc/supplementalData.txt b/source/data/misc/supplementalData.txt
+index e031bb7..e7fae8e 100644
+--- a/source/data/misc/supplementalData.txt
++++ b/source/data/misc/supplementalData.txt
+@@ -15789,6 +15789,12 @@ supplementalData:table(nofallback){
+                 "1",
+             }
+             {
++                "nb",
++                "no",
++                "99",
++                "0",
++            }
++            {
+                 "ne_Deva",
+                 "en_Latn",
+                 "90",
+@@ -15804,18 +15810,12 @@ supplementalData:table(nofallback){
+                 "nn",
+                 "nb",
+                 "90",
+-                "0",
++                "1",
+             }
+             {
+                 "nn",
+                 "no",
+                 "90",
+-                "1",
+-            }
+-            {
+-                "no",
+-                "nb",
+-                "99",
+                 "0",
+             }
+             {
+@@ -29820,7 +29820,7 @@ supplementalData:table(nofallback){
+             kk_Cyrl{
+                 populationShareF:int{44700000}
+             }
+-            ku_Latn{
++            ku{
+                 populationShareF:int{48550000}
+             }
+             ky_Latn{
+diff --git a/source/data/region/af.txt b/source/data/region/af.txt
+index 0ecd2ca..0a64a37 100644
+--- a/source/data/region/af.txt
++++ b/source/data/region/af.txt
+@@ -138,7 +138,7 @@ af{
+         GU{"Guam"}
+         GW{"Guinee-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong SAS Sjina"}
++        HK{"Hongkong"}
+         HM{"Heard- en McDonaldeilande"}
+         HN{"Honduras"}
+         HR{"Kroasië"}
+@@ -192,7 +192,7 @@ af{
+         ML{"Mali"}
+         MM{"Mianmar (Birma)"}
+         MN{"Mongolië"}
+-        MO{"Macau SAS Sjina"}
++        MO{"Macau"}
+         MP{"Noord-Mariane-eilande"}
+         MQ{"Martinique"}
+         MR{"Mauritanië"}
+@@ -227,7 +227,7 @@ af{
+         PM{"St. Pierre en Miquelon"}
+         PN{"Pitcairneilande"}
+         PR{"Puerto Rico"}
+-        PS{"Palestynse gebiede"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ af{
+     }
+     Countries%short{
+         GB{"VK"}
+-        HK{"Hongkong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"VSA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/am.txt b/source/data/region/am.txt
+index d9c77b0..a4ad52b 100644
+--- a/source/data/region/am.txt
++++ b/source/data/region/am.txt
+@@ -138,7 +138,7 @@ am{
+         GU{"ጉዋም"}
+         GW{"ጊኒ ቢሳኦ"}
+         GY{"ጉያና"}
+-        HK{"ሆንግ ኮንግ SAR ቻይና"}
++        HK{"ሆንግ ኮንግ"}
+         HM{"ኽርድ ደሴቶችና ማክዶናልድ ደሴቶች"}
+         HN{"ሆንዱራስ"}
+         HR{"ክሮኤሽያ"}
+@@ -192,7 +192,7 @@ am{
+         ML{"ማሊ"}
+         MM{"ማይናማር(በርማ)"}
+         MN{"ሞንጎሊያ"}
+-        MO{"ማካኡ ልዩ የአስተዳደር ክልል ቻይና"}
++        MO{"ማካኡ"}
+         MP{"የሰሜናዊ ማሪያና ደሴቶች"}
+         MQ{"ማርቲኒክ"}
+         MR{"ሞሪቴኒያ"}
+@@ -227,7 +227,7 @@ am{
+         PM{"ቅዱስ ፒዬር እና ሚኩኤሎን"}
+         PN{"ፒትካኢርን አይስላንድ"}
+         PR{"ፖርታ ሪኮ"}
+-        PS{"የፍልስጤም ግዛት"}
++        PS{"ፍልስጥኤም"}
+         PT{"ፖርቱጋል"}
+         PW{"ፓላው"}
+         PY{"ፓራጓይ"}
+@@ -301,9 +301,6 @@ am{
+     }
+     Countries%short{
+         GB{"ዩናይትድ ኪንግደም"}
+-        HK{"ሆንግ ኮንግ"}
+-        MO{"ማካኡ"}
+-        PS{"ፍልስጥኤም"}
+         US{"ዩ ኤስ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ar.txt b/source/data/region/ar.txt
+index 3d798ea..e260e4b 100644
+--- a/source/data/region/ar.txt
++++ b/source/data/region/ar.txt
+@@ -138,7 +138,7 @@ ar{
+         GU{"غوام"}
+         GW{"غينيا بيساو"}
+         GY{"غيانا"}
+-        HK{"هونغ كونغ الصينية"}
++        HK{"هونغ كونغ"}
+         HM{"جزيرة هيرد وجزر ماكدونالد"}
+         HN{"هندوراس"}
+         HR{"كرواتيا"}
+@@ -192,7 +192,7 @@ ar{
+         ML{"مالي"}
+         MM{"ميانمار -بورما"}
+         MN{"منغوليا"}
+-        MO{"مكاو الصينية (منطقة إدارية خاصة)"}
++        MO{"مكاو"}
+         MP{"جزر ماريانا الشمالية"}
+         MQ{"مارتينيك"}
+         MR{"موريتانيا"}
+@@ -227,7 +227,7 @@ ar{
+         PM{"سانت بيير وميكولون"}
+         PN{"جزر بيتكيرن"}
+         PR{"بورتوريكو"}
+-        PS{"الأراضي الفلسطينية"}
++        PS{"فلسطين"}
+         PT{"البرتغال"}
+         PW{"بالاو"}
+         PY{"باراغواي"}
+@@ -301,9 +301,6 @@ ar{
+     }
+     Countries%short{
+         GB{"المملكة المتحدة"}
+-        HK{"هونغ كونغ"}
+-        MO{"مكاو"}
+-        PS{"فلسطين"}
+         US{"الولايات المتحدة"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/az.txt b/source/data/region/az.txt
+index b9bdaec..2eef526 100644
+--- a/source/data/region/az.txt
++++ b/source/data/region/az.txt
+@@ -138,7 +138,7 @@ az{
+         GU{"Quam"}
+         GW{"Qvineya-Bisau"}
+         GY{"Qviyana"}
+-        HK{"Honq Konq Xüsusi İnzibati Ərazi Çin"}
++        HK{"Honq Konq"}
+         HM{"Herd və Mak Donald Adaları"}
+         HN{"Honduras"}
+         HR{"Xorvatiya"}
+@@ -192,7 +192,7 @@ az{
+         ML{"Mali"}
+         MM{"Myanma"}
+         MN{"Monqoliya"}
+-        MO{"Makao Xüsusi İnzibati Ərazi Çin"}
++        MO{"Makao"}
+         MP{"Şimali Mariana Adaları"}
+         MQ{"Martinik"}
+         MR{"Mavritaniya"}
+@@ -227,7 +227,7 @@ az{
+         PM{"San Pier və Mikelon"}
+         PN{"Pitkern Adaları"}
+         PR{"Puerto Riko"}
+-        PS{"Fələstin Əraziləri"}
++        PS{"Fələstin"}
+         PT{"Portuqal"}
+         PW{"Palau"}
+         PY{"Paraqvay"}
+@@ -301,9 +301,6 @@ az{
+     }
+     Countries%short{
+         GB{"B.K."}
+-        HK{"Honq Konq"}
+-        MO{"Makao"}
+-        PS{"Fələstin"}
+         US{"A.B.Ş."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/be.txt b/source/data/region/be.txt
+index f8c56c9..f136443 100644
+--- a/source/data/region/be.txt
++++ b/source/data/region/be.txt
+@@ -138,7 +138,7 @@ be{
+         GU{"Гуам"}
+         GW{"Гвінея-Бісау"}
+         GY{"Гаяна"}
+-        HK{"Ганконг, САР (Кітай)"}
++        HK{"Ганконг"}
+         HM{"Востраў Херд і астравы Макдональд"}
+         HN{"Гандурас"}
+         HR{"Харватыя"}
+@@ -192,7 +192,7 @@ be{
+         ML{"Малі"}
+         MM{"М’янма (Бірма)"}
+         MN{"Манголія"}
+-        MO{"Макаа, САР (Кітай)"}
++        MO{"Макаа"}
+         MP{"Паўночныя Марыянскія астравы"}
+         MQ{"Марцініка"}
+         MR{"Маўрытанія"}
+@@ -227,7 +227,7 @@ be{
+         PM{"Сен-П’ер і Мікелон"}
+         PN{"Астравы Піткэрн"}
+         PR{"Пуэрта-Рыка"}
+-        PS{"Палестынскія тэрыторыі"}
++        PS{"Палесціна"}
+         PT{"Партугалія"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -301,9 +301,6 @@ be{
+     }
+     Countries%short{
+         GB{"Брытанія"}
+-        HK{"Ганконг"}
+-        MO{"Макаа"}
+-        PS{"Палесціна"}
+         US{"ЗША"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/bg.txt b/source/data/region/bg.txt
+index 0499691..de5a593 100644
+--- a/source/data/region/bg.txt
++++ b/source/data/region/bg.txt
+@@ -138,7 +138,7 @@ bg{
+         GU{"Гуам"}
+         GW{"Гвинея-Бисау"}
+         GY{"Гаяна"}
+-        HK{"Хонконг, САР на Китай"}
++        HK{"Хонконг"}
+         HM{"остров Хърд и острови Макдоналд"}
+         HN{"Хондурас"}
+         HR{"Хърватия"}
+@@ -192,7 +192,7 @@ bg{
+         ML{"Мали"}
+         MM{"Мианмар (Бирма)"}
+         MN{"Монголия"}
+-        MO{"Макао, САР на Китай"}
++        MO{"Макао"}
+         MP{"Северни Мариански острови"}
+         MQ{"Мартиника"}
+         MR{"Мавритания"}
+@@ -227,7 +227,7 @@ bg{
+         PM{"Сен Пиер и Микелон"}
+         PN{"Острови Питкерн"}
+         PR{"Пуерто Рико"}
+-        PS{"Палестински територии"}
++        PS{"Палестина"}
+         PT{"Португалия"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -301,9 +301,6 @@ bg{
+     }
+     Countries%short{
+         GB{"Обединеното кралство"}
+-        HK{"Хонконг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"САЩ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/bn.txt b/source/data/region/bn.txt
+index 68d7a1a..ab68a78 100644
+--- a/source/data/region/bn.txt
++++ b/source/data/region/bn.txt
+@@ -138,7 +138,7 @@ bn{
+         GU{"গুয়াম"}
+         GW{"গিনি-বিসাউ"}
+         GY{"গিয়ানা"}
+-        HK{"হংকং এসএআর চীনা"}
++        HK{"হংকং"}
+         HM{"হার্ড দ্বীপ এবং ম্যাকডোনাল্ড দ্বীপপুঞ্জ"}
+         HN{"হণ্ডুরাস"}
+         HR{"ক্রোয়েশিয়া"}
+@@ -192,7 +192,7 @@ bn{
+         ML{"মালি"}
+         MM{"মায়ানমার (বার্মা)"}
+         MN{"মঙ্গোলিয়া"}
+-        MO{"ম্যাকাও এস এ আর চায়না"}
++        MO{"ম্যাকাও"}
+         MP{"উত্তরাঞ্চলীয় মারিয়ানা দ্বীপপুঞ্জ"}
+         MQ{"মার্টিনিক"}
+         MR{"মরিতানিয়া"}
+@@ -227,7 +227,7 @@ bn{
+         PM{"সেন্ট পিয়ের ও মিকুয়েলন"}
+         PN{"পিটকেয়ার্ন দ্বীপপুঞ্জ"}
+         PR{"পুয়ের্তো রিকো"}
+-        PS{"ফিলিস্তিন অঞ্চলসমূহ"}
++        PS{"ফিলিস্তিন"}
+         PT{"পর্তুগাল"}
+         PW{"পালাউ"}
+         PY{"প্যারাগুয়ে"}
+@@ -301,9 +301,6 @@ bn{
+     }
+     Countries%short{
+         GB{"ইউ. কে"}
+-        HK{"হংকং"}
+-        MO{"ম্যাকাও"}
+-        PS{"ফিলিস্তিন"}
+         US{"ইউ এস"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/br.txt b/source/data/region/br.txt
+index e35be87..72cc22d 100755
+--- a/source/data/region/br.txt
++++ b/source/data/region/br.txt
+@@ -138,7 +138,7 @@ br{
+         GU{"Guam"}
+         GW{"Ginea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong RMD Sina"}
++        HK{"Hong Kong"}
+         HM{"Inizi Heard ha McDonald"}
+         HN{"Honduras"}
+         HR{"Kroatia"}
+@@ -192,7 +192,7 @@ br{
+         ML{"Mali"}
+         MM{"Myanmar (Birmania)"}
+         MN{"Mongolia"}
+-        MO{"Macau RMD Sina"}
++        MO{"Macau"}
+         MP{"Inizi Mariana an Norzh"}
+         MQ{"Martinik"}
+         MR{"Maouritania"}
+@@ -227,7 +227,7 @@ br{
+         PM{"Sant-Pêr-ha-Mikelon"}
+         PN{"Enez Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Tiriadoù Palestina"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ br{
+     }
+     Countries%short{
+         GB{"RU"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"SU"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/bs.txt b/source/data/region/bs.txt
+index 84b21a2..679f4aa 100644
+--- a/source/data/region/bs.txt
++++ b/source/data/region/bs.txt
+@@ -138,7 +138,7 @@ bs{
+         GU{"Guam"}
+         GW{"Gvineja-Bisao"}
+         GY{"Gvajana"}
+-        HK{"Hong Kong (S. A. R. Kina)"}
++        HK{"Hong Kong"}
+         HM{"Heard i arhipelag McDonald"}
+         HN{"Honduras"}
+         HR{"Hrvatska"}
+@@ -192,7 +192,7 @@ bs{
+         ML{"Mali"}
+         MM{"Mijanmar"}
+         MN{"Mongolija"}
+-        MO{"Makao (S. A. R. Kina)"}
++        MO{"Makao"}
+         MP{"Sjeverna Marijanska Ostrva"}
+         MQ{"Martinik"}
+         MR{"Mauritanija"}
+@@ -227,7 +227,7 @@ bs{
+         PM{"Sveti Petar i Mikelon"}
+         PN{"Pitkern"}
+         PR{"Porto Riko"}
+-        PS{"Palestinska Teritorija"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paragvaj"}
+@@ -301,9 +301,6 @@ bs{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Palestina"}
+         US{"SAD"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/bs_Cyrl.txt b/source/data/region/bs_Cyrl.txt
+index 47c3334..dc837ff 100755
+--- a/source/data/region/bs_Cyrl.txt
++++ b/source/data/region/bs_Cyrl.txt
+@@ -137,7 +137,7 @@ bs_Cyrl{
+         GU{"Гуам"}
+         GW{"Гвинеја-Бисао"}
+         GY{"Гвајана"}
+-        HK{"Хонг Конг С. А. Р. Кина"}
++        HK{"Хонг Конг"}
+         HM{"Херд и Мекдоналд Острва"}
+         HN{"Хондурас"}
+         HR{"Хрватска"}
+@@ -191,7 +191,7 @@ bs_Cyrl{
+         ML{"Мали"}
+         MM{"Мијанмар (Бурма)"}
+         MN{"Монголија"}
+-        MO{"Макао С. А. Р. Кина"}
++        MO{"Макао"}
+         MP{"Северна Маријанска Острва"}
+         MQ{"Мартиник"}
+         MR{"Мауританија"}
+@@ -295,10 +295,6 @@ bs_Cyrl{
+         ZW{"Зимбабве"}
+         ZZ{"Непозната или неважећа област"}
+     }
+-    Countries%short{
+-        HK{"Хонг Конг"}
+-        MO{"Макао"}
+-    }
+     Countries%variant{
+         CD{"Конго (ДРК)"}
+         CG{"Конго (Република)"}
+diff --git a/source/data/region/ca.txt b/source/data/region/ca.txt
+index 100fc3f..3ee9b5d 100644
+--- a/source/data/region/ca.txt
++++ b/source/data/region/ca.txt
+@@ -138,7 +138,7 @@ ca{
+         GU{"Guam"}
+         GW{"Guinea Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong (RAE Xina)"}
++        HK{"Hong Kong"}
+         HM{"Illa Heard i Illes McDonald"}
+         HN{"Hondures"}
+         HR{"Croàcia"}
+@@ -192,7 +192,7 @@ ca{
+         ML{"Mali"}
+         MM{"Myanmar (Birmània)"}
+         MN{"Mongòlia"}
+-        MO{"Macau (RAE Xina)"}
++        MO{"Macau"}
+         MP{"Illes Mariannes del Nord"}
+         MQ{"Martinica"}
+         MR{"Mauritània"}
+@@ -301,9 +301,6 @@ ca{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"EUA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ce.txt b/source/data/region/ce.txt
+index 0819664..c6acdb9 100755
+--- a/source/data/region/ce.txt
++++ b/source/data/region/ce.txt
+@@ -137,7 +137,7 @@ ce{
+         GU{"Гуам"}
+         GW{"Гвиней-Бисау"}
+         GY{"Гайана"}
+-        HK{"Гонконг (ша-къаьстина кӀошт)"}
++        HK{"Гонконг"}
+         HM{"Херд гӀайре а, Макдональд гӀайренаш а"}
+         HN{"Гондурас"}
+         HR{"Хорвати"}
+@@ -191,7 +191,7 @@ ce{
+         ML{"Мали"}
+         MM{"Мьянма (Бирма)"}
+         MN{"Монголи"}
+-        MO{"Макао (ша-къаьстина кӀошт)"}
++        MO{"Макао"}
+         MP{"Къилбаседа Марианан гӀайренаш"}
+         MQ{"Мартиника"}
+         MR{"Мавритани"}
+@@ -226,7 +226,7 @@ ce{
+         PM{"Сен-Пьер а, Микелон а"}
+         PN{"Питкэрн гӀайренаш"}
+         PR{"Пуэрто-Рико"}
+-        PS{"Палестинан латтанаш"}
++        PS{"Палестина"}
+         PT{"Португали"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -300,9 +300,6 @@ ce{
+     }
+     Countries%short{
+         GB{"Йоккха Британи"}
+-        HK{"Гонконг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"АЦШ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/chr.txt b/source/data/region/chr.txt
+index 7cf9852..ec28b79 100755
+--- a/source/data/region/chr.txt
++++ b/source/data/region/chr.txt
+@@ -154,7 +154,7 @@ chr{
+         ML{"ᎹᎵ"}
+         MM{"ᎹᏯᎹᎵ"}
+         MN{"ᎹᏂᎪᎵᎠ"}
+-        MO{"ᎹᎧᎣ (ᎤᏓᏤᎵᏓ ᏧᏂᎸᏫᏍᏓᏁᏗ ᎢᎬᎾᏕᎾ) ᏣᎢ"}
++        MO{"ᎹᎧᎣ"}
+         MP{"ᎾᏍᎩ ᎤᏴᏢ ᏗᏜ ᎹᎵᎠᎾ ᏚᎦᏚᏛ"}
+         MQ{"ᎹᏘᏂᎨ"}
+         MR{"ᎹᏘᎢᏯ"}
+@@ -210,9 +210,6 @@ chr{
+         US{"ᎠᎹᏰᏟ"}
+         ZZ{"ᏄᏬᎵᏍᏛᎾ ᎤᏔᏂᏗᎦᏙᎯ"}
+     }
+-    Countries%short{
+-        MO{"ᎹᎧᎣ"}
+-    }
+     Countries%variant{
+         FK{"ᏩᎩ ᎤᎦᏚᏛ (ᎢᏍᎳᏍ ᎹᎸᏫᎾᏍ)"}
+     }
+diff --git a/source/data/region/cs.txt b/source/data/region/cs.txt
+index 81a0232..db8ad10 100644
+--- a/source/data/region/cs.txt
++++ b/source/data/region/cs.txt
+@@ -138,7 +138,7 @@ cs{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong – ZAO Číny"}
++        HK{"Hongkong"}
+         HM{"Heardův ostrov a McDonaldovy ostrovy"}
+         HN{"Honduras"}
+         HR{"Chorvatsko"}
+@@ -192,7 +192,7 @@ cs{
+         ML{"Mali"}
+         MM{"Myanmar (Barma)"}
+         MN{"Mongolsko"}
+-        MO{"Macao – ZAO Číny"}
++        MO{"Macao"}
+         MP{"Severní Mariany"}
+         MQ{"Martinik"}
+         MR{"Mauritánie"}
+@@ -227,7 +227,7 @@ cs{
+         PM{"Saint-Pierre a Miquelon"}
+         PN{"Pitcairnovy ostrovy"}
+         PR{"Portoriko"}
+-        PS{"Palestinská území"}
++        PS{"Palestina"}
+         PT{"Portugalsko"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ cs{
+     }
+     Countries%short{
+         GB{"VB"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/cy.txt b/source/data/region/cy.txt
+index e90f7be..4692226 100644
+--- a/source/data/region/cy.txt
++++ b/source/data/region/cy.txt
+@@ -138,7 +138,7 @@ cy{
+         GU{"Guam"}
+         GW{"Guiné-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong RhGA Tsieina"}
++        HK{"Hong Kong"}
+         HM{"Ynys Heard ac Ynysoedd McDonald"}
+         HN{"Honduras"}
+         HR{"Croatia"}
+@@ -192,7 +192,7 @@ cy{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macau RhGA Tsieina"}
++        MO{"Macau"}
+         MP{"Ynysoedd Gogledd Mariana"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ cy{
+         PM{"Saint-Pierre-et-Miquelon"}
+         PN{"Ynysoedd Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Tiriogaethau Palesteinaidd"}
++        PS{"Palesteina"}
+         PT{"Portiwgal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ cy{
+     }
+     Countries%short{
+         GB{"DU"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palesteina"}
+         US{"UDA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/da.txt b/source/data/region/da.txt
+index 0094950..582eccb 100644
+--- a/source/data/region/da.txt
++++ b/source/data/region/da.txt
+@@ -138,7 +138,7 @@ da{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong SAR"}
++        HK{"Hongkong"}
+         HM{"Heard Island og McDonald Islands"}
+         HN{"Honduras"}
+         HR{"Kroatien"}
+@@ -192,7 +192,7 @@ da{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongoliet"}
+-        MO{"Macao SAR"}
++        MO{"Macao"}
+         MP{"Nordmarianerne"}
+         MQ{"Martinique"}
+         MR{"Mauretanien"}
+@@ -227,7 +227,7 @@ da{
+         PM{"Saint Pierre og Miquelon"}
+         PN{"Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"De palæstinensiske områder"}
++        PS{"Palæstina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ da{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palæstina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/de.txt b/source/data/region/de.txt
+index b33017f..95dc22f 100644
+--- a/source/data/region/de.txt
++++ b/source/data/region/de.txt
+@@ -138,7 +138,7 @@ de{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Sonderverwaltungszone Hongkong"}
++        HK{"Hongkong"}
+         HM{"Heard und McDonaldinseln"}
+         HN{"Honduras"}
+         HR{"Kroatien"}
+@@ -192,7 +192,7 @@ de{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolei"}
+-        MO{"Sonderverwaltungsregion Macau"}
++        MO{"Macau"}
+         MP{"Nördliche Marianen"}
+         MQ{"Martinique"}
+         MR{"Mauretanien"}
+@@ -227,7 +227,7 @@ de{
+         PM{"St. Pierre und Miquelon"}
+         PN{"Pitcairninseln"}
+         PR{"Puerto Rico"}
+-        PS{"Palästinensische Autonomiegebiete"}
++        PS{"Palästina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ de{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hongkong"}
+-        MO{"Macau"}
+-        PS{"Palästina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/dsb.txt b/source/data/region/dsb.txt
+index ea40ac7..a3aac2a 100644
+--- a/source/data/region/dsb.txt
++++ b/source/data/region/dsb.txt
+@@ -137,7 +137,7 @@ dsb{
+         GU{"Guam"}
+         GW{"Gineja-Bissau"}
+         GY{"Guyana"}
+-        HK{"Wósebna zastojnstwowa cona Hongkong"}
++        HK{"Hongkong"}
+         HM{"Heardowa kupa a McDonaldowe kupy"}
+         HN{"Honduras"}
+         HR{"Chorwatska"}
+@@ -191,7 +191,7 @@ dsb{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolska"}
+-        MO{"Wósebna zastojnstwowa cona Macao"}
++        MO{"Macao"}
+         MP{"Pódpołnocne Mariany"}
+         MQ{"Martinique"}
+         MR{"Mawretańska"}
+@@ -226,7 +226,7 @@ dsb{
+         PM{"St. Pierre a Miquelon"}
+         PN{"Pitcairnowe kupy"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinski awtonomny teritorium"}
++        PS{"Palestina"}
+         PT{"Portugalska"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -300,9 +300,6 @@ dsb{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/dz.txt b/source/data/region/dz.txt
+index 074c414..2d96232 100755
+--- a/source/data/region/dz.txt
++++ b/source/data/region/dz.txt
+@@ -137,7 +137,7 @@ dz{
+         GU{"གུ་འམ་ མཚོ་གླིང"}
+         GW{"གྷི་ནི་ བྷི་སཱའུ"}
+         GY{"གྷ་ཡ་ན"}
+-        HK{"ཧོང་ཀོང་ཅཱའི་ན"}
++        HK{"ཧོང་ཀོང"}
+         HM{"ཧཱརཌ་མཚོ་གླིང་ དང་ མེཀ་ཌོ་ནལཌ྄་གླིང་ཚོམ"}
+         HN{"ཧཱན་ཌུ་རཱས྄"}
+         HR{"ཀྲོ་ཨེ་ཤ"}
+@@ -191,7 +191,7 @@ dz{
+         ML{"མཱ་ལི"}
+         MM{"མི་ཡཱན་མར་ (བྷར་མ)"}
+         MN{"སོག་པོ་ཡུལ"}
+-        MO{"མཀ་ཨའུ་ཅཱའི་ན"}
++        MO{"མཀ་ཨའུ"}
+         MP{"བྱང་ཕྱོགས་ཀྱི་མ་ར་ཡ་ན་གླིང་ཚོམ"}
+         MQ{"མཱར་ཊི་ནིཀ"}
+         MR{"མོ་རི་ཊེ་ནི་ཡ"}
+@@ -297,10 +297,6 @@ dz{
+         ZW{"ཛིམ་བྷབ་ཝེ"}
+         ZZ{"ངོ་མ་ཤེས་པའི་ལུང་ཕྱོགས"}
+     }
+-    Countries%short{
+-        HK{"ཧོང་ཀོང"}
+-        MO{"མཀ་ཨའུ"}
+-    }
+     Countries%variant{
+         CD{"ཌེ་མོ་ཀེརེ་ཊིཀ་ རི་པབ་ལིཀ་ ཨོཕ་ ཀོང་གྷོ"}
+         CG{"རི་པབ་ལིཀ་ ཨོཕ་ ཀོང་གྷོ"}
+diff --git a/source/data/region/ee.txt b/source/data/region/ee.txt
+index 025f926..08e3052 100755
+--- a/source/data/region/ee.txt
++++ b/source/data/region/ee.txt
+@@ -136,7 +136,7 @@ ee{
+         GU{"Guam nutome"}
+         GW{"Gini-Bisao nutome"}
+         GY{"Guyanadu"}
+-        HK{"Hɔng Kɔng SAR Tsaina nutome"}
++        HK{"Hɔng Kɔng nutome"}
+         HM{"Heard kple Mcdonald ƒudomekpowo nutome"}
+         HN{"Hondurasdu"}
+         HR{"Kroatsia nutome"}
+@@ -190,7 +190,7 @@ ee{
+         ML{"Mali nutome"}
+         MM{"Myanmar (Burma) nutome"}
+         MN{"Mongolia nutome"}
+-        MO{"Macau SAR Tsaina nutome"}
++        MO{"Macau nutome"}
+         MP{"Dziehe Marina ƒudomekpowo nutome"}
+         MQ{"Martiniki nutome"}
+         MR{"Mauritania nutome"}
+@@ -293,10 +293,6 @@ ee{
+         ZW{"Zimbabwe nutome"}
+         ZZ{"nutome manya"}
+     }
+-    Countries%short{
+-        HK{"Hɔng Kɔng nutome"}
+-        MO{"Macau nutome"}
+-    }
+     Countries%variant{
+         CD{"Kongo demokratik repɔblik nutome"}
+         CG{"Kongo repɔblik nutome"}
+diff --git a/source/data/region/el.txt b/source/data/region/el.txt
+index f3af768..8d29ae6 100644
+--- a/source/data/region/el.txt
++++ b/source/data/region/el.txt
+@@ -138,7 +138,7 @@ el{
+         GU{"Γκουάμ"}
+         GW{"Γουινέα Μπισάου"}
+         GY{"Γουιάνα"}
+-        HK{"Χονγκ Κονγκ ΕΔΠ Κίνας"}
++        HK{"Χονγκ Κονγκ"}
+         HM{"Νήσοι Χερντ και Μακντόναλντ"}
+         HN{"Ονδούρα"}
+         HR{"Κροατία"}
+@@ -192,7 +192,7 @@ el{
+         ML{"Μάλι"}
+         MM{"Μιανμάρ/Βιρμανία"}
+         MN{"Μογγολία"}
+-        MO{"Μακάο ΕΔΠ Κίνας"}
++        MO{"Μακάο"}
+         MP{"Νήσοι Βόρειες Μαριάνες"}
+         MQ{"Μαρτινίκα"}
+         MR{"Μαυριτανία"}
+@@ -227,7 +227,7 @@ el{
+         PM{"Σεν Πιερ και Μικελόν"}
+         PN{"Νήσοι Πίτκερν"}
+         PR{"Πουέρτο Ρίκο"}
+-        PS{"Παλαιστινιακά Εδάφη"}
++        PS{"Παλαιστίνη"}
+         PT{"Πορτογαλία"}
+         PW{"Παλάου"}
+         PY{"Παραγουάη"}
+@@ -301,9 +301,6 @@ el{
+     }
+     Countries%short{
+         GB{"ΗΒ"}
+-        HK{"Χονγκ Κονγκ"}
+-        MO{"Μακάο"}
+-        PS{"Παλαιστίνη"}
+         US{"ΗΠΑ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/en.txt b/source/data/region/en.txt
+index aadddb5..d43b920 100644
+--- a/source/data/region/en.txt
++++ b/source/data/region/en.txt
+@@ -79,9 +79,9 @@ en{
+         BZ{"Belize"}
+         CA{"Canada"}
+         CC{"Cocos (Keeling) Islands"}
+-        CD{"Congo - Kinshasa"}
++        CD{"Congo (DRC)"}
+         CF{"Central African Republic"}
+-        CG{"Congo - Brazzaville"}
++        CG{"Congo (Republic)"}
+         CH{"Switzerland"}
+         CI{"Côte d’Ivoire"}
+         CK{"Cook Islands"}
+@@ -115,7 +115,7 @@ en{
+         EU{"European Union"}
+         FI{"Finland"}
+         FJ{"Fiji"}
+-        FK{"Falkland Islands"}
++        FK{"Falkland Islands (Islas Malvinas)"}
+         FM{"Micronesia"}
+         FO{"Faroe Islands"}
+         FR{"France"}
+@@ -138,7 +138,7 @@ en{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong SAR China"}
++        HK{"Hong Kong"}
+         HM{"Heard & McDonald Islands"}
+         HN{"Honduras"}
+         HR{"Croatia"}
+@@ -188,11 +188,11 @@ en{
+         MF{"St. Martin"}
+         MG{"Madagascar"}
+         MH{"Marshall Islands"}
+-        MK{"Macedonia"}
++        MK{"Macedonia (FYROM)"}
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macau SAR China"}
++        MO{"Macau"}
+         MP{"Northern Mariana Islands"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ en{
+         PM{"St. Pierre & Miquelon"}
+         PN{"Pitcairn Islands"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinian Territories"}
++        PS{"Palestine"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -302,10 +302,7 @@ en{
+     Countries%short{
+         BA{"Bosnia"}
+         GB{"UK"}
+-        HK{"Hong Kong"}
+         MM{"Myanmar"}
+-        MO{"Macau"}
+-        PS{"Palestine"}
+         US{"US"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/es.txt b/source/data/region/es.txt
+index 6383312..ad2d71e 100644
+--- a/source/data/region/es.txt
++++ b/source/data/region/es.txt
+@@ -138,7 +138,7 @@ es{
+         GU{"Guam"}
+         GW{"Guinea-Bisáu"}
+         GY{"Guyana"}
+-        HK{"RAE de Hong Kong (China)"}
++        HK{"Hong Kong"}
+         HM{"Islas Heard y McDonald"}
+         HN{"Honduras"}
+         HR{"Croacia"}
+@@ -192,7 +192,7 @@ es{
+         ML{"Mali"}
+         MM{"Myanmar (Birmania)"}
+         MN{"Mongolia"}
+-        MO{"RAE de Macao (China)"}
++        MO{"Macao"}
+         MP{"Islas Marianas del Norte"}
+         MQ{"Martinica"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ es{
+         PM{"San Pedro y Miquelón"}
+         PN{"Islas Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Territorios Palestinos"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palaos"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ es{
+     }
+     Countries%short{
+         GB{"RU"}
+-        HK{"Hong Kong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"EE. UU."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/et.txt b/source/data/region/et.txt
+index 4ca3f0b..63f4d2c 100644
+--- a/source/data/region/et.txt
++++ b/source/data/region/et.txt
+@@ -138,7 +138,7 @@ et{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkongi erihalduspiirkond"}
++        HK{"Hongkong"}
+         HM{"Heardi ja McDonaldi saared"}
+         HN{"Honduras"}
+         HR{"Horvaatia"}
+@@ -192,7 +192,7 @@ et{
+         ML{"Mali"}
+         MM{"Myanmar (Birma)"}
+         MN{"Mongoolia"}
+-        MO{"Macau erihalduspiirkond"}
++        MO{"Macau"}
+         MP{"Põhja-Mariaanid"}
+         MQ{"Martinique"}
+         MR{"Mauritaania"}
+@@ -227,7 +227,7 @@ et{
+         PM{"Saint Pierre ja Miquelon"}
+         PN{"Pitcairni saared"}
+         PR{"Puerto Rico"}
+-        PS{"Palestiina alad"}
++        PS{"Palestiina"}
+         PT{"Portugal"}
+         PW{"Belau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ et{
+     }
+     Countries%short{
+         GB{"ÜK"}
+-        HK{"Hongkong"}
+-        MO{"Macau"}
+-        PS{"Palestiina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/eu.txt b/source/data/region/eu.txt
+index dc199f9..2638524 100644
+--- a/source/data/region/eu.txt
++++ b/source/data/region/eu.txt
+@@ -138,7 +138,7 @@ eu{
+         GU{"Guam"}
+         GW{"Ginea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong AEB Txina"}
++        HK{"Hong Kong"}
+         HM{"Heard eta McDonald uharteak"}
+         HN{"Honduras"}
+         HR{"Kroazia"}
+@@ -192,7 +192,7 @@ eu{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolia"}
+-        MO{"Macau AEB Txina"}
++        MO{"Macau"}
+         MP{"Iparraldeko Mariana uharteak"}
+         MQ{"Martinika"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ eu{
+         PM{"Saint-Pierre eta Mikelune"}
+         PN{"Pitcairn uharteak"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinako Lurraldeak"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguai"}
+@@ -301,9 +301,6 @@ eu{
+     }
+     Countries%short{
+         GB{"EB"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"AEB"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/fa.txt b/source/data/region/fa.txt
+index a3c4756..5f9dad5 100644
+--- a/source/data/region/fa.txt
++++ b/source/data/region/fa.txt
+@@ -138,7 +138,7 @@ fa{
+         GU{"گوام"}
+         GW{"گینهٔ بیسائو"}
+         GY{"گویان"}
+-        HK{"هنگ‌کنگ، ناحیهٔ ویژهٔ حکومتی چین"}
++        HK{"هنگ‌کنگ"}
+         HM{"جزیرهٔ هرد و جزایر مک‌دونالد"}
+         HN{"هندوراس"}
+         HR{"کرواسی"}
+@@ -192,7 +192,7 @@ fa{
+         ML{"مالی"}
+         MM{"میانمار (برمه)"}
+         MN{"مغولستان"}
+-        MO{"ماکائو، ناحیهٔ ویژهٔ حکومتی چین"}
++        MO{"ماکائو"}
+         MP{"جزایر ماریانای شمالی"}
+         MQ{"مارتینیک"}
+         MR{"موریتانی"}
+@@ -227,7 +227,7 @@ fa{
+         PM{"سن پیر و میکلن"}
+         PN{"جزایر پیت‌کرن"}
+         PR{"پورتوریکو"}
+-        PS{"سرزمین‌های فلسطینی"}
++        PS{"فلسطین"}
+         PT{"پرتغال"}
+         PW{"پالائو"}
+         PY{"پاراگوئه"}
+@@ -301,9 +301,6 @@ fa{
+     }
+     Countries%short{
+         GB{"بریتانیا"}
+-        HK{"هنگ‌کنگ"}
+-        MO{"ماکائو"}
+-        PS{"فلسطین"}
+         SA{"عربستان"}
+         US{"ایالات متحده"}
+     }
+diff --git a/source/data/region/fi.txt b/source/data/region/fi.txt
+index 2bb20ec..e030dc9 100644
+--- a/source/data/region/fi.txt
++++ b/source/data/region/fi.txt
+@@ -138,7 +138,7 @@ fi{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong – Kiinan e.h.a."}
++        HK{"Hongkong"}
+         HM{"Heard ja McDonaldinsaaret"}
+         HN{"Honduras"}
+         HR{"Kroatia"}
+@@ -192,7 +192,7 @@ fi{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macao – Kiinan e.h.a."}
++        MO{"Macao"}
+         MP{"Pohjois-Mariaanit"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ fi{
+         PM{"Saint-Pierre ja Miquelon"}
+         PN{"Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Palestiinalaisalueet"}
++        PS{"Palestiina"}
+         PT{"Portugali"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ fi{
+     }
+     Countries%short{
+         GB{"Britannia"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestiina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/fil.txt b/source/data/region/fil.txt
+index cf1e7a5..3ce2f04 100755
+--- a/source/data/region/fil.txt
++++ b/source/data/region/fil.txt
+@@ -138,7 +138,7 @@ fil{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong SAR China"}
++        HK{"Hong Kong"}
+         HM{"Heard Island and McDonald Islands"}
+         HN{"Honduras"}
+         HR{"Croatia"}
+@@ -192,7 +192,7 @@ fil{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macau SAR China"}
++        MO{"Macau"}
+         MP{"Northern Mariana Islands"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ fil{
+         PM{"Saint Pierre and Miquelon"}
+         PN{"Pitcairn Islands"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinian Territories"}
++        PS{"Palestine"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ fil{
+     }
+     Countries%short{
+         GB{"U.K."}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestine"}
+         US{"U.S."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/fo.txt b/source/data/region/fo.txt
+index 5c336e3..9b438e5 100644
+--- a/source/data/region/fo.txt
++++ b/source/data/region/fo.txt
+@@ -138,7 +138,7 @@ fo{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Gujana"}
+-        HK{"Hong Kong SAR Kina"}
++        HK{"Hong Kong"}
+         HM{"Heard og McDonaldoyggjar"}
+         HN{"Honduras"}
+         HR{"Kroatia"}
+@@ -192,7 +192,7 @@ fo{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Makao SAR Kina"}
++        MO{"Makao"}
+         MP{"Norðaru Mariuoyggjar"}
+         MQ{"Martinique"}
+         MR{"Móritania"}
+@@ -227,7 +227,7 @@ fo{
+         PM{"Saint Pierre og Miquelon"}
+         PN{"Pitcairnoyggjar"}
+         PR{"Puerto Riko"}
+-        PS{"Palestinskt landøki"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguai"}
+@@ -301,9 +301,6 @@ fo{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/fr.txt b/source/data/region/fr.txt
+index 984c2ce..44d2c26 100644
+--- a/source/data/region/fr.txt
++++ b/source/data/region/fr.txt
+@@ -138,7 +138,7 @@ fr{
+         GU{"Guam"}
+         GW{"Guinée-Bissau"}
+         GY{"Guyana"}
+-        HK{"R.A.S. chinoise de Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Îles Heard et McDonald"}
+         HN{"Honduras"}
+         HR{"Croatie"}
+@@ -192,7 +192,7 @@ fr{
+         ML{"Mali"}
+         MM{"Myanmar (Birmanie)"}
+         MN{"Mongolie"}
+-        MO{"R.A.S. chinoise de Macao"}
++        MO{"Macao"}
+         MP{"Îles Mariannes du Nord"}
+         MQ{"Martinique"}
+         MR{"Mauritanie"}
+@@ -227,7 +227,7 @@ fr{
+         PM{"Saint-Pierre-et-Miquelon"}
+         PN{"Îles Pitcairn"}
+         PR{"Porto Rico"}
+-        PS{"Territoires palestiniens"}
++        PS{"Palestine"}
+         PT{"Portugal"}
+         PW{"Palaos"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ fr{
+     }
+     Countries%short{
+         GB{"R.-U."}
+-        HK{"Hong Kong"}
+-        MO{"Macao"}
+-        PS{"Palestine"}
+         US{"É.-U."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/fur.txt b/source/data/region/fur.txt
+index 7c32780..aab5a82 100644
+--- a/source/data/region/fur.txt
++++ b/source/data/region/fur.txt
+@@ -135,7 +135,7 @@ fur{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Regjon aministrative speciâl de Cine di Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Isule Heard e Isulis McDonald"}
+         HN{"Honduras"}
+         HR{"Cravuazie"}
+@@ -189,7 +189,7 @@ fur{
+         ML{"Mali"}
+         MM{"Birmanie"}
+         MN{"Mongolie"}
+-        MO{"Regjon aministrative speciâl de Cine di Macao"}
++        MO{"Macao"}
+         MP{"Isulis Mariana dal Nord"}
+         MQ{"Martiniche"}
+         MR{"Mauritanie"}
+@@ -293,10 +293,6 @@ fur{
+         ZW{"Zimbabwe"}
+         ZZ{"Regjon no cognossude o no valide"}
+     }
+-    Countries%short{
+-        HK{"Hong Kong"}
+-        MO{"Macao"}
+-    }
+     Countries%variant{
+         CD{"Congo (RDC)"}
+         CG{"Congo (Republiche)"}
+diff --git a/source/data/region/fy.txt b/source/data/region/fy.txt
+index 20fe191..01e838b 100644
+--- a/source/data/region/fy.txt
++++ b/source/data/region/fy.txt
+@@ -138,7 +138,7 @@ fy{
+         GU{"Guam"}
+         GW{"Guinee-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong SAR van Sina"}
++        HK{"Hongkong"}
+         HM{"Heard- en McDonaldeilannen"}
+         HN{"Honduras"}
+         HR{"Kroatië"}
+@@ -192,7 +192,7 @@ fy{
+         ML{"Mali"}
+         MM{"Myanmar (Birma)"}
+         MN{"Mongolië"}
+-        MO{"Macao SAR van Sina"}
++        MO{"Macao"}
+         MP{"Noardlike Marianeneilannen"}
+         MQ{"Martinique"}
+         MR{"Mauritanië"}
+@@ -227,7 +227,7 @@ fy{
+         PM{"Saint-Pierre en Miquelon"}
+         PN{"Pitcairneilannen"}
+         PR{"Puerto Rico"}
+-        PS{"Palestynske gebieten"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ fy{
+     }
+     Countries%short{
+         GB{"VK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"VS"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ga.txt b/source/data/region/ga.txt
+index 4079e12..41b95b7 100644
+--- a/source/data/region/ga.txt
++++ b/source/data/region/ga.txt
+@@ -138,7 +138,7 @@ ga{
+         GU{"Guam"}
+         GW{"Guine Bissau"}
+         GY{"An Ghuáin"}
+-        HK{"S.R.R. na Síne Hong Cong"}
++        HK{"Hong Cong"}
+         HM{"Oileán Heard agus Oileáin McDonald"}
+         HN{"Hondúras"}
+         HR{"An Chróit"}
+@@ -192,7 +192,7 @@ ga{
+         ML{"Mailí"}
+         MM{"Maenmar (Burma)"}
+         MN{"An Mhongóil"}
+-        MO{"S.R.R. na Síne Macao"}
++        MO{"Macao"}
+         MP{"Na hOileáin Mháirianacha Thuaidh"}
+         MQ{"Martinique"}
+         MR{"An Mháratáin"}
+@@ -227,7 +227,7 @@ ga{
+         PM{"Saint-Pierre-et-Miquelon"}
+         PN{"Oileáin Pitcairn"}
+         PR{"Portó Ríce"}
+-        PS{"Na Críocha Palaistíneacha"}
++        PS{"An Phalaistín"}
+         PT{"An Phortaingéil"}
+         PW{"Palau"}
+         PY{"Paragua"}
+@@ -301,9 +301,6 @@ ga{
+     }
+     Countries%short{
+         GB{"RA"}
+-        HK{"Hong Cong"}
+-        MO{"Macao"}
+-        PS{"An Phalaistín"}
+         US{"SAM"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/gd.txt b/source/data/region/gd.txt
+index 7fd04b7..2484a82 100644
+--- a/source/data/region/gd.txt
++++ b/source/data/region/gd.txt
+@@ -138,7 +138,7 @@ gd{
+         GU{"Guam"}
+         GW{"Gini-Bioso"}
+         GY{"Guidheàna"}
+-        HK{"Hong Kong SAR na Sìne"}
++        HK{"Hong Kong"}
+         HM{"Eilean Heard is MhicDhòmhnaill"}
+         HN{"Hondùras"}
+         HR{"A’ Chròthais"}
+@@ -192,7 +192,7 @@ gd{
+         ML{"Màili"}
+         MM{"Miànmar"}
+         MN{"Dùthaich nam Mongol"}
+-        MO{"Macàthu SAR na Sìne"}
++        MO{"Macàthu"}
+         MP{"Na h-Eileanan Mairianach a Tuath"}
+         MQ{"Mairtinic"}
+         MR{"Moratàinea"}
+@@ -227,7 +227,7 @@ gd{
+         PM{"Saint Pierre agus Miquelon"}
+         PN{"Eilean Peit a’ Chàirn"}
+         PR{"Porto Rìceo"}
+-        PS{"Na Ranntairean Palastaineach"}
++        PS{"Palastain"}
+         PT{"A’ Phortagail"}
+         PW{"Palabh"}
+         PY{"Paraguaidh"}
+@@ -301,9 +301,6 @@ gd{
+     }
+     Countries%short{
+         GB{"RA"}
+-        HK{"Hong Kong"}
+-        MO{"Macàthu"}
+-        PS{"Palastain"}
+         US{"SA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/gl.txt b/source/data/region/gl.txt
+index 9081b3d..7114e9c 100644
+--- a/source/data/region/gl.txt
++++ b/source/data/region/gl.txt
+@@ -138,7 +138,7 @@ gl{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Güiana"}
+-        HK{"Hong Kong RAE de China"}
++        HK{"Hong Kong"}
+         HM{"Illa Heard e Illas McDonald"}
+         HN{"Honduras"}
+         HR{"Croacia"}
+@@ -192,7 +192,7 @@ gl{
+         ML{"Mali"}
+         MM{"Myanmar (Birmania)"}
+         MN{"Mongolia"}
+-        MO{"Macau RAE de China"}
++        MO{"Macau"}
+         MP{"Illas Marianas do norte"}
+         MQ{"Martinica"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ gl{
+         PM{"San Pedro e Miguelón"}
+         PN{"Illas Pitcairn"}
+         PR{"Porto Rico"}
+-        PS{"Territorios palestinos"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguai"}
+@@ -301,9 +301,6 @@ gl{
+     }
+     Countries%short{
+         GB{"RU"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"EUA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/gsw.txt b/source/data/region/gsw.txt
+index 4b8eb49..80c3cc0 100644
+--- a/source/data/region/gsw.txt
++++ b/source/data/region/gsw.txt
+@@ -132,7 +132,7 @@ gsw{
+         GU{"Guam"}
+         GW{"Gineea-Bissau"}
+         GY{"Guäjaana"}
+-        HK{"Sonderverwaltigszone Hongkong"}
++        HK{"Hongkong"}
+         HM{"Höörd- und MäcDonald-Insle"}
+         HN{"Honduras"}
+         HR{"Kroaazie"}
+@@ -185,7 +185,7 @@ gsw{
+         ML{"Maali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolei"}
+-        MO{"Sonderverwaltigszone Macao"}
++        MO{"Macao"}
+         MP{"Nördlichi Mariaane"}
+         MQ{"Martinigg"}
+         MR{"Mauretaanie"}
+@@ -288,10 +288,6 @@ gsw{
+         ZW{"Simbabwe"}
+         ZZ{"Unbekannti oder ungültigi Regioon"}
+     }
+-    Countries%short{
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-    }
+     Countries%variant{
+         MK{"Mazedoonie (EJRM)"}
+     }
+diff --git a/source/data/region/gu.txt b/source/data/region/gu.txt
+index 5333ee4..21d4302 100644
+--- a/source/data/region/gu.txt
++++ b/source/data/region/gu.txt
+@@ -138,7 +138,7 @@ gu{
+         GU{"ગ્વામ"}
+         GW{"ગિની-બિસાઉ"}
+         GY{"ગયાના"}
+-        HK{"હોંગકોંગ SAR ચીન"}
++        HK{"હોંગ કોંગ"}
+         HM{"હર્ડ અને મેકડોનાલ્ડ આઇલેન્ડ્સ"}
+         HN{"હોન્ડુરસ"}
+         HR{"ક્રોએશિયા"}
+@@ -192,7 +192,7 @@ gu{
+         ML{"માલી"}
+         MM{"મ્યાંમાર (બર્મા)"}
+         MN{"મંગોલિયા"}
+-        MO{"મકાઉ SAR ચીન"}
++        MO{"મકાઉ"}
+         MP{"ઉત્તરીય મારિયાના આઇલેન્ડ્સ"}
+         MQ{"માર્ટીનીક"}
+         MR{"મૌરિટાનિયા"}
+@@ -227,7 +227,7 @@ gu{
+         PM{"સેન્ટ પિયર અને મીક્વેલન"}
+         PN{"પીટકૈર્ન આઇલેન્ડ્સ"}
+         PR{"પ્યુઅર્ટો રિકો"}
+-        PS{"પેલેસ્ટિનિયન ટેરિટરી"}
++        PS{"પેલેસ્ટાઇન"}
+         PT{"પોર્ટુગલ"}
+         PW{"પલાઉ"}
+         PY{"પેરાગ્વે"}
+@@ -301,9 +301,6 @@ gu{
+     }
+     Countries%short{
+         GB{"યુ.કે."}
+-        HK{"હોંગ કોંગ"}
+-        MO{"મકાઉ"}
+-        PS{"પેલેસ્ટાઇન"}
+         US{"યુ.એસ."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/he.txt b/source/data/region/he.txt
+index 2b7188a..bb82d03 100644
+--- a/source/data/region/he.txt
++++ b/source/data/region/he.txt
+@@ -138,7 +138,7 @@ he{
+         GU{"גואם"}
+         GW{"גיניאה-ביסאו"}
+         GY{"גיאנה"}
+-        HK{"הונג קונג - מחוז מנהלי מיוחד של סין"}
++        HK{"הונג קונג"}
+         HM{"האי הרד ואיי מקדונלד"}
+         HN{"הונדורס"}
+         HR{"קרואטיה"}
+@@ -192,7 +192,7 @@ he{
+         ML{"מאלי"}
+         MM{"מיאנמאר (בורמה)‎"}
+         MN{"מונגוליה"}
+-        MO{"מקאו - מחוז מנהלי מיוחד של סין"}
++        MO{"מקאו"}
+         MP{"איי מריאנה הצפוניים"}
+         MQ{"מרטיניק"}
+         MR{"מאוריטניה"}
+@@ -227,7 +227,7 @@ he{
+         PM{"סנט פייר ומיקלון"}
+         PN{"איי פיטקרן"}
+         PR{"פוארטו ריקו"}
+-        PS{"השטחים הפלסטיניים"}
++        PS{"פלסטין"}
+         PT{"פורטוגל"}
+         PW{"פאלאו"}
+         PY{"פרגוואי"}
+@@ -301,9 +301,6 @@ he{
+     }
+     Countries%short{
+         GB{"בריטניה"}
+-        HK{"הונג קונג"}
+-        MO{"מקאו"}
+-        PS{"פלסטין"}
+         US{"ארה״ב"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/hi.txt b/source/data/region/hi.txt
+index 059ebff..3a99721 100644
+--- a/source/data/region/hi.txt
++++ b/source/data/region/hi.txt
+@@ -138,7 +138,7 @@ hi{
+         GU{"गुआम"}
+         GW{"गिनी-बिसाउ"}
+         GY{"गयाना"}
+-        HK{"हाँग काँग (चीन विशेष प्रशासनिक क्षेत्र)"}
++        HK{"हाँग काँग"}
+         HM{"हर्ड द्वीप और मैकडोनॉल्ड द्वीपसमूह"}
+         HN{"होंडूरास"}
+         HR{"क्रोएशिया"}
+@@ -192,7 +192,7 @@ hi{
+         ML{"माली"}
+         MM{"म्यांमार (बर्मा)"}
+         MN{"मंगोलिया"}
+-        MO{"मकाऊ (विशेष प्रशासनिक क्षेत्र चीन)"}
++        MO{"मकाऊ"}
+         MP{"उत्तरी मारियाना द्वीपसमूह"}
+         MQ{"मार्टीनिक"}
+         MR{"मॉरिटानिया"}
+@@ -227,7 +227,7 @@ hi{
+         PM{"सेंट पिएरे और मिक्वेलान"}
+         PN{"पिटकैर्न द्वीपसमूह"}
+         PR{"पोर्टो रिको"}
+-        PS{"फ़िलिस्तीनी क्षेत्र"}
++        PS{"फ़िलिस्तीन"}
+         PT{"पुर्तगाल"}
+         PW{"पलाऊ"}
+         PY{"पेराग्वे"}
+@@ -301,9 +301,6 @@ hi{
+     }
+     Countries%short{
+         GB{"यू.के."}
+-        HK{"हाँग काँग"}
+-        MO{"मकाऊ"}
+-        PS{"फ़िलिस्तीन"}
+         US{"अमेरिका"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/hr.txt b/source/data/region/hr.txt
+index 70b6723..46d823c 100644
+--- a/source/data/region/hr.txt
++++ b/source/data/region/hr.txt
+@@ -138,7 +138,7 @@ hr{
+         GU{"Guam"}
+         GW{"Gvineja Bisau"}
+         GY{"Gvajana"}
+-        HK{"Hong Kong PUP Kina"}
++        HK{"Hong Kong"}
+         HM{"Otoci Heard i McDonald"}
+         HN{"Honduras"}
+         HR{"Hrvatska"}
+@@ -192,7 +192,7 @@ hr{
+         ML{"Mali"}
+         MM{"Mijanmar (Burma)"}
+         MN{"Mongolija"}
+-        MO{"Makao PUP Kina"}
++        MO{"Makao"}
+         MP{"Sjeverni Marijanski Otoci"}
+         MQ{"Martinique"}
+         MR{"Mauritanija"}
+@@ -227,7 +227,7 @@ hr{
+         PM{"Sveti Petar i Mikelon"}
+         PN{"Otoci Pitcairn"}
+         PR{"Portoriko"}
+-        PS{"Palestinsko Područje"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paragvaj"}
+@@ -301,9 +301,6 @@ hr{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Palestina"}
+         US{"SAD"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/hsb.txt b/source/data/region/hsb.txt
+index d8bf0c9..f4ee307 100644
+--- a/source/data/region/hsb.txt
++++ b/source/data/region/hsb.txt
+@@ -137,7 +137,7 @@ hsb{
+         GU{"Guam"}
+         GW{"Gineja-Bissau"}
+         GY{"Guyana"}
+-        HK{"Wosebita zarjadniska cona Hongkong"}
++        HK{"Hongkong"}
+         HM{"Heardowa kupa a McDonaldowe kupy"}
+         HN{"Honduras"}
+         HR{"Chorwatska"}
+@@ -191,7 +191,7 @@ hsb{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolska"}
+-        MO{"Wosebita zarjadniska cona Macao"}
++        MO{"Macao"}
+         MP{"Sewjerne Mariany"}
+         MQ{"Martinique"}
+         MR{"Mawretanska"}
+@@ -226,7 +226,7 @@ hsb{
+         PM{"St. Pierre a Miquelon"}
+         PN{"Pitcairnowe kupy"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinski awtonomny teritorij"}
++        PS{"Palestina"}
+         PT{"Portugalska"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -300,9 +300,6 @@ hsb{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/hu.txt b/source/data/region/hu.txt
+index 86bb733..b79427d 100644
+--- a/source/data/region/hu.txt
++++ b/source/data/region/hu.txt
+@@ -138,7 +138,7 @@ hu{
+         GU{"Guam"}
+         GW{"Bissau-Guinea"}
+         GY{"Guyana"}
+-        HK{"Hongkong SAR Kína"}
++        HK{"Hongkong"}
+         HM{"Heard-sziget és McDonald-szigetek"}
+         HN{"Honduras"}
+         HR{"Horvátország"}
+@@ -192,7 +192,7 @@ hu{
+         ML{"Mali"}
+         MM{"Mianmar (Burma)"}
+         MN{"Mongólia"}
+-        MO{"Makaó SAR Kína"}
++        MO{"Makaó"}
+         MP{"Északi Mariana-szigetek"}
+         MQ{"Martinique"}
+         MR{"Mauritánia"}
+@@ -227,7 +227,7 @@ hu{
+         PM{"Saint Pierre és Miquelon"}
+         PN{"Pitcairn-szigetek"}
+         PR{"Puerto Rico"}
+-        PS{"Palesztin Terület"}
++        PS{"Palesztina"}
+         PT{"Portugália"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ hu{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hongkong"}
+-        MO{"Makaó"}
+-        PS{"Palesztina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/hy.txt b/source/data/region/hy.txt
+index 2dd5768..f358f58 100644
+--- a/source/data/region/hy.txt
++++ b/source/data/region/hy.txt
+@@ -137,7 +137,7 @@ hy{
+         GU{"Գուամ"}
+         GW{"Գվինեա-Բիսաու"}
+         GY{"Գայանա"}
+-        HK{"Հոնկոնգի ՀՎՇ"}
++        HK{"Հոնկոնգ"}
+         HM{"Հերդ կղզի և ՄակԴոնալդի կղզիներ"}
+         HN{"Հոնդուրաս"}
+         HR{"Խորվաթիա"}
+@@ -191,7 +191,7 @@ hy{
+         ML{"Մալի"}
+         MM{"Մյանմա (Բիրմա)"}
+         MN{"Մոնղոլիա"}
+-        MO{"Չինաստանի Մակաո ՀՎՇ"}
++        MO{"Մակաո"}
+         MP{"Հյուսիսային Մարիանյան կղզիներ"}
+         MQ{"Մարտինիկա"}
+         MR{"Մավրիտանիա"}
+@@ -226,7 +226,7 @@ hy{
+         PM{"Սեն Պիեռ և Միքելոն"}
+         PN{"Պիտկեռն կղզիներ"}
+         PR{"Պուերտո Ռիկո"}
+-        PS{"Պաղեստինյան տարածքներ"}
++        PS{"Պաղեստին"}
+         PT{"Պորտուգալիա"}
+         PW{"Պալաու"}
+         PY{"Պարագվայ"}
+@@ -300,9 +300,6 @@ hy{
+     }
+     Countries%short{
+         GB{"Բրիտանիա"}
+-        HK{"Հոնկոնգ"}
+-        MO{"Մակաո"}
+-        PS{"Պաղեստին"}
+         US{"ԱՄՆ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/id.txt b/source/data/region/id.txt
+index 4940d66..15e6806 100644
+--- a/source/data/region/id.txt
++++ b/source/data/region/id.txt
+@@ -138,7 +138,7 @@ id{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong SAR China"}
++        HK{"Hong Kong"}
+         HM{"Pulau Heard dan Kepulauan McDonald"}
+         HN{"Honduras"}
+         HR{"Kroasia"}
+@@ -192,7 +192,7 @@ id{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Makau SAR China"}
++        MO{"Makau"}
+         MP{"Kepulauan Mariana Utara"}
+         MQ{"Martinik"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ id{
+         PM{"Saint Pierre dan Miquelon"}
+         PN{"Kepulauan Pitcairn"}
+         PR{"Puerto Riko"}
+-        PS{"Wilayah Palestina"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ id{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hong Kong"}
+-        MO{"Makau"}
+-        PS{"Palestina"}
+         US{"A.S."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/is.txt b/source/data/region/is.txt
+index ef5703a..e17c6b9 100644
+--- a/source/data/region/is.txt
++++ b/source/data/region/is.txt
+@@ -138,7 +138,7 @@ is{
+         GU{"Gvam"}
+         GW{"Gínea-Bissá"}
+         GY{"Gvæjana"}
+-        HK{"Sjálfstjórnarsvæðið Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Heard og McDonaldseyjar"}
+         HN{"Hondúras"}
+         HR{"Króatía"}
+@@ -192,7 +192,7 @@ is{
+         ML{"Malí"}
+         MM{"Mjanmar (Búrma)"}
+         MN{"Mongólía"}
+-        MO{"Sjálfstjórnarsvæðið Makaó"}
++        MO{"Makaó"}
+         MP{"Norður-Maríanaeyjar"}
+         MQ{"Martiník"}
+         MR{"Máritanía"}
+@@ -227,7 +227,7 @@ is{
+         PM{"Sankti Pierre og Miquelon"}
+         PN{"Pitcairn-eyjar"}
+         PR{"Púertó Ríkó"}
+-        PS{"Heimastjórnarsvæði Palestínumanna"}
++        PS{"Palestína"}
+         PT{"Portúgal"}
+         PW{"Palá"}
+         PY{"Paragvæ"}
+@@ -301,9 +301,6 @@ is{
+     }
+     Countries%short{
+         GB{"Bretland"}
+-        HK{"Hong Kong"}
+-        MO{"Makaó"}
+-        PS{"Palestína"}
+         US{"BNA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/it.txt b/source/data/region/it.txt
+index cab6ac8..5721130 100644
+--- a/source/data/region/it.txt
++++ b/source/data/region/it.txt
+@@ -138,7 +138,7 @@ it{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"RAS di Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Isole Heard e McDonald"}
+         HN{"Honduras"}
+         HR{"Croazia"}
+@@ -192,7 +192,7 @@ it{
+         ML{"Mali"}
+         MM{"Myanmar (Birmania)"}
+         MN{"Mongolia"}
+-        MO{"RAS di Macao"}
++        MO{"Macao"}
+         MP{"Isole Marianne settentrionali"}
+         MQ{"Martinica"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ it{
+         PM{"Saint Pierre e Miquelon"}
+         PN{"Isole Pitcairn"}
+         PR{"Portorico"}
+-        PS{"Territori palestinesi"}
++        PS{"Palestina"}
+         PT{"Portogallo"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ it{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hong Kong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ja.txt b/source/data/region/ja.txt
+index 11cbd8c..fcaea99 100644
+--- a/source/data/region/ja.txt
++++ b/source/data/region/ja.txt
+@@ -138,7 +138,7 @@ ja{
+         GU{"グアム"}
+         GW{"ギニアビサウ"}
+         GY{"ガイアナ"}
+-        HK{"中華人民共和国香港特別行政区"}
++        HK{"香港"}
+         HM{"ハード島・マクドナルド諸島"}
+         HN{"ホンジュラス"}
+         HR{"クロアチア"}
+@@ -192,7 +192,7 @@ ja{
+         ML{"マリ"}
+         MM{"ミャンマー"}
+         MN{"モンゴル"}
+-        MO{"中華人民共和国マカオ特別行政区"}
++        MO{"マカオ"}
+         MP{"北マリアナ諸島"}
+         MQ{"マルティニーク"}
+         MR{"モーリタニア"}
+@@ -301,9 +301,6 @@ ja{
+     }
+     Countries%short{
+         GB{"英国"}
+-        HK{"香港"}
+-        MO{"マカオ"}
+-        PS{"パレスチナ"}
+         US{"アメリカ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ka.txt b/source/data/region/ka.txt
+index 547ff07..406ffa5 100644
+--- a/source/data/region/ka.txt
++++ b/source/data/region/ka.txt
+@@ -138,7 +138,7 @@ ka{
+         GU{"გუამი"}
+         GW{"გვინეა-ბისაუ"}
+         GY{"გაიანა"}
+-        HK{"ჰონკონგის სპეციალური ადმინისტრაციული რეგიონი ჩინეთი"}
++        HK{"ჰონკონგი"}
+         HM{"ჰერდი და მაკდონალდის კუნძულები"}
+         HN{"ჰონდურასი"}
+         HR{"ხორვატია"}
+@@ -192,7 +192,7 @@ ka{
+         ML{"მალი"}
+         MM{"მიანმარი (ბირმა)"}
+         MN{"მონღოლეთი"}
+-        MO{"მაკაოს სპეციალური ადმინისტრაციული რეგიონი ჩინეთი"}
++        MO{"მაკაო"}
+         MP{"ჩრდილოეთ მარიანას კუნძულები"}
+         MQ{"მარტინიკა"}
+         MR{"მავრიტანია"}
+@@ -227,7 +227,7 @@ ka{
+         PM{"სენ-პიერი და მიკელონი"}
+         PN{"პიტკერნის კუნძულები"}
+         PR{"პუერტო-რიკო"}
+-        PS{"პალესტინის ტერიტორიები"}
++        PS{"პალესტინა"}
+         PT{"პორტუგალია"}
+         PW{"პალაუ"}
+         PY{"პარაგვაი"}
+@@ -301,9 +301,6 @@ ka{
+     }
+     Countries%short{
+         GB{"გაერთ.სამ."}
+-        HK{"ჰონკონგი"}
+-        MO{"მაკაო"}
+-        PS{"პალესტინა"}
+         US{"აშშ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/kea.txt b/source/data/region/kea.txt
+index 8910513..b69e271 100755
+--- a/source/data/region/kea.txt
++++ b/source/data/region/kea.txt
+@@ -138,7 +138,7 @@ kea{
+         GU{"Guam"}
+         GW{"Gine-Bisau"}
+         GY{"Giana"}
+-        HK{"Rejiãu Administrativu Special di Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Ilha Heard i Ilhas McDonald"}
+         HN{"Onduras"}
+         HR{"Kroasia"}
+@@ -192,7 +192,7 @@ kea{
+         ML{"Mali"}
+         MM{"Mianmar"}
+         MN{"Mongolia"}
+-        MO{"Rejiãu Administrativu Special di Makau"}
++        MO{"Makau"}
+         MP{"Ilhas Marianas di Norti"}
+         MQ{"Martinika"}
+         MR{"Mauritania"}
+@@ -301,8 +301,6 @@ kea{
+     }
+     Countries%short{
+         GB{"R.U."}
+-        HK{"Hong Kong"}
+-        MO{"Makau"}
+         US{"S.U."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/kk.txt b/source/data/region/kk.txt
+index d67ef7c..851de2f 100644
+--- a/source/data/region/kk.txt
++++ b/source/data/region/kk.txt
+@@ -78,7 +78,7 @@ kk{
+         BZ{"Белиз"}
+         CA{"Канада"}
+         CC{"Кокос (Килинг) аралдары"}
+-        CD{"Конго"}
++        CD{"Конго Демократиялық Республикасы"}
+         CF{"Орталық Африка Республикасы"}
+         CG{"Конго-Браззавиль Республикасы"}
+         CH{"Швейцария"}
+@@ -137,7 +137,7 @@ kk{
+         GU{"Гуам"}
+         GW{"Гвинея-Бисау"}
+         GY{"Гайана"}
+-        HK{"Қытай Халық Республикасының Гонг-Конг арнайы әкімшілік ауданы"}
++        HK{"Гонконг"}
+         HM{"Херд аралы мен Макдональд аралдары"}
+         HN{"Гондурас"}
+         HR{"Хорватия"}
+@@ -191,7 +191,7 @@ kk{
+         ML{"Мали"}
+         MM{"Мьянма (Бирма)"}
+         MN{"Моңғолия"}
+-        MO{"Қытай Халық Республикасының Макао арнайы әкімшілік ауданы"}
++        MO{"Макао"}
+         MP{"Солтүстік Мариан аралдары"}
+         MQ{"Мартиника"}
+         MR{"Мавритания"}
+@@ -226,7 +226,7 @@ kk{
+         PM{"Сен-Пьер және Микелон"}
+         PN{"Питкэрн аралдары"}
+         PR{"Пуэрто-Рико"}
+-        PS{"Палестина аймақтары"}
++        PS{"Палестина"}
+         PT{"Португалия"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -300,9 +300,6 @@ kk{
+     }
+     Countries%short{
+         GB{"Біріккен Корольдік"}
+-        HK{"Гонконг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"АҚШ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/km.txt b/source/data/region/km.txt
+index 48b328d..d2e6b58 100644
+--- a/source/data/region/km.txt
++++ b/source/data/region/km.txt
+@@ -226,7 +226,7 @@ km{
+         PM{"សង់ព្យែរ និង​មីគីឡុង"}
+         PN{"កោះ​ភីតខារិន"}
+         PR{"ព័រតូរីកូ"}
+-        PS{"ដែន​ប៉ាលេស្ទីន"}
++        PS{"ប៉ាលេស្ទីន"}
+         PT{"ព័រទុយហ្កាល់"}
+         PW{"ផៅឡូ"}
+         PY{"ប៉ារ៉ាហ្គាយ"}
+@@ -300,9 +300,6 @@ km{
+     }
+     Countries%short{
+         GB{"ច.អ."}
+-        HK{"ហុងកុង"}
+-        MO{"ម៉ាកាវ"}
+-        PS{"ប៉ាលេស្ទីន"}
+         US{"ស.រ.អ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/kn.txt b/source/data/region/kn.txt
+index 4827600..75be6eb 100644
+--- a/source/data/region/kn.txt
++++ b/source/data/region/kn.txt
+@@ -138,7 +138,7 @@ kn{
+         GU{"ಗುಯಾಮ್"}
+         GW{"ಗಿನಿ-ಬಿಸ್ಸಾವ್"}
+         GY{"ಗಯಾನಾ"}
+-        HK{"ಹಾಂಗ್ ಕಾಂಗ್ SAR ಚೈನಾ"}
++        HK{"ಹಾಂಗ್ ಕಾಂಗ್"}
+         HM{"ಹರ್ಡ್ ದ್ವೀಪ ಮತ್ತು ಮ್ಯಾಕ್‍ಡೊನಾಲ್ಡ್ ದ್ವೀಪಗಳು"}
+         HN{"ಹೊಂಡುರಾಸ್"}
+         HR{"ಕ್ರೊಯೇಶಿಯಾ"}
+@@ -192,7 +192,7 @@ kn{
+         ML{"ಮಾಲಿ"}
+         MM{"ಮಯನ್ಮಾರ್ (ಬರ್ಮಾ)"}
+         MN{"ಮೊಂಗೋಲಿಯಾ"}
+-        MO{"ಮಖಾವ್ (SAR) ಚೈನಾ"}
++        MO{"ಮಖಾವ್"}
+         MP{"ಉತ್ತರ ಮರಿಯಾನಾ ದ್ವೀಪಗಳು"}
+         MQ{"ಮಾರ್ಟಿನಿಕ್"}
+         MR{"ಮಾರಿಟೇನಿಯಾ"}
+@@ -227,7 +227,7 @@ kn{
+         PM{"ಸೇಂಟ್ ಪಿಯರೆ ಮತ್ತು ಮಿಕೆಲನ್"}
+         PN{"ಪಿಟ್‌ಕೈರ್ನ್ ದ್ವೀಪಗಳು"}
+         PR{"ಪ್ಯೂರ್ಟೋ ರಿಕೊ"}
+-        PS{"ಪ್ಯಾಲೇಸ್ಟೇನಿಯನ್ ಪ್ರದೇಶ"}
++        PS{"ಪ್ಯಾಲೆಸ್ಟೇನ್"}
+         PT{"ಪೋರ್ಚುಗಲ್"}
+         PW{"ಪಲಾವು"}
+         PY{"ಪರಾಗ್ವೇ"}
+@@ -301,9 +301,6 @@ kn{
+     }
+     Countries%short{
+         GB{"ಯು.ಕೆ."}
+-        HK{"ಹಾಂಗ್ ಕಾಂಗ್"}
+-        MO{"ಮಖಾವ್"}
+-        PS{"ಪ್ಯಾಲೆಸ್ಟೇನ್"}
+         US{"ಯು.ಎಸ್"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ko.txt b/source/data/region/ko.txt
+index 22012e3..e2ded7a 100644
+--- a/source/data/region/ko.txt
++++ b/source/data/region/ko.txt
+@@ -138,7 +138,7 @@ ko{
+         GU{"괌"}
+         GW{"기니비사우"}
+         GY{"가이아나"}
+-        HK{"홍콩(중국 특별행정구)"}
++        HK{"홍콩"}
+         HM{"허드 맥도널드 제도"}
+         HN{"온두라스"}
+         HR{"크로아티아"}
+@@ -192,7 +192,7 @@ ko{
+         ML{"말리"}
+         MM{"미얀마"}
+         MN{"몽골"}
+-        MO{"마카오(중국 특별행정구)"}
++        MO{"마카오"}
+         MP{"북마리아나제도"}
+         MQ{"마르티니크"}
+         MR{"모리타니"}
+@@ -227,7 +227,7 @@ ko{
+         PM{"생피에르 미클롱"}
+         PN{"핏케언 섬"}
+         PR{"푸에르토리코"}
+-        PS{"팔레스타인 지구"}
++        PS{"팔레스타인"}
+         PT{"포르투갈"}
+         PW{"팔라우"}
+         PY{"파라과이"}
+@@ -301,9 +301,6 @@ ko{
+     }
+     Countries%short{
+         GB{"영국"}
+-        HK{"홍콩"}
+-        MO{"마카오"}
+-        PS{"팔레스타인"}
+         US{"미국"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ksh.txt b/source/data/region/ksh.txt
+index 43f06fa..4f84185 100644
+--- a/source/data/region/ksh.txt
++++ b/source/data/region/ksh.txt
+@@ -301,8 +301,6 @@ ksh{
+     }
+     Countries%short{
+         GB{"Jruußbrettannije"}
+-        HK{"Hongkong"}
+-        MO{"Makau"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ky.txt b/source/data/region/ky.txt
+index 962cea8..b57a3e6 100755
+--- a/source/data/region/ky.txt
++++ b/source/data/region/ky.txt
+@@ -137,7 +137,7 @@ ky{
+         GU{"Гуам"}
+         GW{"Гвинея-Бисау"}
+         GY{"Гайана"}
+-        HK{"Гонконг Кытай ААА"}
++        HK{"Гонконг"}
+         HM{"Херд жана Макдоналд аралдары"}
+         HN{"Гондурас"}
+         HR{"Хорватия"}
+@@ -191,7 +191,7 @@ ky{
+         ML{"Мали"}
+         MM{"Мьянма (Бирма)"}
+         MN{"Монголия"}
+-        MO{"Макау Кытай ААА"}
++        MO{"Макау"}
+         MP{"Түндүк Мариана аралдары"}
+         MQ{"Мартиника"}
+         MR{"Мавритания"}
+@@ -226,7 +226,7 @@ ky{
+         PM{"Сен-Пьер жана Микелон"}
+         PN{"Питкэрн аралдары"}
+         PR{"Пуэрто-Рико"}
+-        PS{"Палестина аймактары"}
++        PS{"Палестина"}
+         PT{"Португалия"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -300,9 +300,6 @@ ky{
+     }
+     Countries%short{
+         GB{"УБ"}
+-        HK{"Гонконг"}
+-        MO{"Макау"}
+-        PS{"Палестина"}
+         US{"АКШ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/lb.txt b/source/data/region/lb.txt
+index 9ef0947..6bb8c33 100644
+--- a/source/data/region/lb.txt
++++ b/source/data/region/lb.txt
+@@ -137,7 +137,7 @@ lb{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Spezialverwaltungszon Hong Kong"}
++        HK{"Hong Kong"}
+         HM{"Heard- a McDonald-Inselen"}
+         HN{"Honduras"}
+         HR{"Kroatien"}
+@@ -191,7 +191,7 @@ lb{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolei"}
+-        MO{"Spezialverwaltungszon Macau"}
++        MO{"Macau"}
+         MP{"Nërdlech Marianen"}
+         MQ{"Martinique"}
+         MR{"Mauretanien"}
+@@ -226,7 +226,7 @@ lb{
+         PM{"St. Pierre a Miquelon"}
+         PN{"Pitcairninselen"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinensesch Autonomiegebidder"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -300,9 +300,6 @@ lb{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"US"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/lo.txt b/source/data/region/lo.txt
+index b414ffd..37c583d 100755
+--- a/source/data/region/lo.txt
++++ b/source/data/region/lo.txt
+@@ -137,7 +137,7 @@ lo{
+         GU{"ກວມ"}
+         GW{"ກິນີ-ບິສເຊົາ"}
+         GY{"ກາຍຢານາ"}
+-        HK{"ຮອງກົງ ເຂດປົກຄອງພິເສດ ຈີນ"}
++        HK{"ຮອງກົງ"}
+         HM{"ໝູ່ເກາະເຮີດ & ແມັກໂດນອລ"}
+         HN{"ຮອນດູຣັສ"}
+         HR{"ໂຄຣເອເທຍ"}
+@@ -191,7 +191,7 @@ lo{
+         ML{"ມາລິ"}
+         MM{"ມຽນມາ (ເບີມາ)"}
+         MN{"ມົງໂກລີ"}
+-        MO{"ມາເກົ້າ ເຂດປົກຄອງພິເສດ ຈີນ"}
++        MO{"ມາເກົ້າ"}
+         MP{"ຫມູ່ເກາະມາແຊວຕອນເຫນືອ"}
+         MQ{"ມາຕິນີກ"}
+         MR{"ມົວຣິເທເນຍ"}
+@@ -226,7 +226,7 @@ lo{
+         PM{"ເຊນ ປີແອ ມິເກວລອນ"}
+         PN{"ໝູ່ເກາະພິດແຄນ"}
+         PR{"ເພືອໂຕ ຣິໂກ"}
+-        PS{"ດິນແດນ ປາເລສຕິນຽນ"}
++        PS{"ປາເລສຕິນ"}
+         PT{"ພອລທູໂກ"}
+         PW{"ປາເລົາ"}
+         PY{"ພາຣາກວຍ"}
+@@ -300,9 +300,6 @@ lo{
+     }
+     Countries%short{
+         GB{"ສະຫະລາດຊະອະນາຈັກຯ"}
+-        HK{"ຮອງກົງ"}
+-        MO{"ມາເກົ້າ"}
+-        PS{"ປາເລສຕິນ"}
+         US{"ສະຫະລັດຯ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/lt.txt b/source/data/region/lt.txt
+index fa92d1d..858d49f 100644
+--- a/source/data/region/lt.txt
++++ b/source/data/region/lt.txt
+@@ -138,7 +138,7 @@ lt{
+         GU{"Guamas"}
+         GW{"Bisau Gvinėja"}
+         GY{"Gajana"}
+-        HK{"Ypatingasis Administracinis Kinijos Regionas Honkongas"}
++        HK{"Honkongas"}
+         HM{"Herdo ir Makdonaldo Salos"}
+         HN{"Hondūras"}
+         HR{"Kroatija"}
+@@ -192,7 +192,7 @@ lt{
+         ML{"Malis"}
+         MM{"Mianmaras (Birma)"}
+         MN{"Mongolija"}
+-        MO{"Ypatingasis Administracinis Kinijos Regionas Makao"}
++        MO{"Makao"}
+         MP{"Marianos Šiaurinės Salos"}
+         MQ{"Martinika"}
+         MR{"Mauritanija"}
+@@ -227,7 +227,7 @@ lt{
+         PM{"Sen Pjeras ir Mikelonas"}
+         PN{"Pitkernas"}
+         PR{"Puerto Rikas"}
+-        PS{"Palestinos teritorija"}
++        PS{"Palestina"}
+         PT{"Portugalija"}
+         PW{"Palau"}
+         PY{"Paragvajus"}
+@@ -301,9 +301,6 @@ lt{
+     }
+     Countries%short{
+         GB{"Didžioji Britanija"}
+-        HK{"Honkongas"}
+-        MO{"Makao"}
+-        PS{"Palestina"}
+         US{"JAV"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/lv.txt b/source/data/region/lv.txt
+index db30f0e..2a42cad 100644
+--- a/source/data/region/lv.txt
++++ b/source/data/region/lv.txt
+@@ -138,7 +138,7 @@ lv{
+         GU{"Guama"}
+         GW{"Gvineja-Bisava"}
+         GY{"Gajāna"}
+-        HK{"Ķīnas īpašās pārvaldes apgabals Honkonga"}
++        HK{"Honkonga"}
+         HM{"Hērda un Makdonalda salas"}
+         HN{"Hondurasa"}
+         HR{"Horvātija"}
+@@ -192,7 +192,7 @@ lv{
+         ML{"Mali"}
+         MM{"Mjanma (Birma)"}
+         MN{"Mongolija"}
+-        MO{"Ķīnas īpašās pārvaldes apgabals Makao"}
++        MO{"Makao"}
+         MP{"Ziemeļu Marianas salas"}
+         MQ{"Martinika"}
+         MR{"Mauritānija"}
+@@ -301,9 +301,6 @@ lv{
+     }
+     Countries%short{
+         GB{"Lielbritānija"}
+-        HK{"Honkonga"}
+-        MO{"Makao"}
+-        PS{"Palestīna"}
+         US{"ASV"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/mk.txt b/source/data/region/mk.txt
+index bcfe918..f7fdc36 100644
+--- a/source/data/region/mk.txt
++++ b/source/data/region/mk.txt
+@@ -138,7 +138,7 @@ mk{
+         GU{"Гвам"}
+         GW{"Гвинеја-Бисау"}
+         GY{"Гвајана"}
+-        HK{"Хонг Конг С.А.Р Кина"}
++        HK{"Хонг Конг"}
+         HM{"Остров Херд и Острови Макдоналд"}
+         HN{"Хондурас"}
+         HR{"Хрватска"}
+@@ -192,7 +192,7 @@ mk{
+         ML{"Мали"}
+         MM{"Мјанмар (Бурма)"}
+         MN{"Монголија"}
+-        MO{"Макао С.А.Р Кина"}
++        MO{"Макао"}
+         MP{"Северни Маријански Острови"}
+         MQ{"Мартиник"}
+         MR{"Мавританија"}
+@@ -227,7 +227,7 @@ mk{
+         PM{"Сент Пјер и Микелан"}
+         PN{"Питкернски Острови"}
+         PR{"Порторико"}
+-        PS{"Палестински територии"}
++        PS{"Палестина"}
+         PT{"Португалија"}
+         PW{"Палау"}
+         PY{"Парагвај"}
+@@ -301,9 +301,6 @@ mk{
+     }
+     Countries%short{
+         GB{"ОК"}
+-        HK{"Хонг Конг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"САД"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ml.txt b/source/data/region/ml.txt
+index ad0a586..2a19bc7 100644
+--- a/source/data/region/ml.txt
++++ b/source/data/region/ml.txt
+@@ -138,7 +138,7 @@ ml{
+         GU{"ഗ്വാം"}
+         GW{"ഗിനിയ-ബിസൗ"}
+         GY{"ഗയാന"}
+-        HK{"ഹോങ്കോങ്ങ് (SAR) ചൈന"}
++        HK{"ഹോങ്കോങ്ങ്"}
+         HM{"ഹിയേർഡും മക്‌ഡൊണാൾഡ് ദ്വീപുകളും"}
+         HN{"ഹോണ്ടുറാസ്"}
+         HR{"ക്രൊയേഷ്യ"}
+@@ -192,7 +192,7 @@ ml{
+         ML{"മാലി"}
+         MM{"മ്യാൻമാർ (ബർമ്മ)"}
+         MN{"മംഗോളിയ"}
+-        MO{"മക്കാവു (SAR) ചൈന"}
++        MO{"മക്കാവു"}
+         MP{"ഉത്തര മറിയാനാ ദ്വീപുകൾ"}
+         MQ{"മാർട്ടിനിക്ക്"}
+         MR{"മൗറിറ്റാനിയ"}
+@@ -227,7 +227,7 @@ ml{
+         PM{"സെന്റ് പിയറിയും മിക്കലണും"}
+         PN{"പിറ്റ്‌കെയ്‌ൻ ദ്വീപുകൾ"}
+         PR{"പ്യൂർട്ടോ റിക്കോ"}
+-        PS{"പാലസ്‌തീൻ പ്രദേശങ്ങൾ"}
++        PS{"പലസ്‌തീൻ"}
+         PT{"പോർച്ചുഗൽ"}
+         PW{"പലാവു"}
+         PY{"പരാഗ്വേ"}
+@@ -301,9 +301,6 @@ ml{
+     }
+     Countries%short{
+         GB{"യു.കെ."}
+-        HK{"ഹോങ്കോങ്ങ്"}
+-        MO{"മക്കാവു"}
+-        PS{"പലസ്‌തീൻ"}
+         US{"യു.എസ്"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/mn.txt b/source/data/region/mn.txt
+index 984449c..4a3b440 100755
+--- a/source/data/region/mn.txt
++++ b/source/data/region/mn.txt
+@@ -137,7 +137,7 @@ mn{
+         GU{"Гуам"}
+         GW{"Гвиней-Бисау"}
+         GY{"Гайана"}
+-        HK{"БНХАУ-ын Тусгай захиргааны бүс Хонг Конг"}
++        HK{"Хонг Конг"}
+         HM{"Хэрд болон Макдоналд Арлууд"}
+         HN{"Гондурас"}
+         HR{"Хорват"}
+@@ -191,7 +191,7 @@ mn{
+         ML{"Мали"}
+         MM{"Мьянмар (Бурма)"}
+         MN{"Монгол"}
+-        MO{"БНХАУ-ын Тусгай захиргааны бүс Макао"}
++        MO{"Макао"}
+         MP{"Хойд Марианы Арлууд"}
+         MQ{"Мартиник"}
+         MR{"Мавритани"}
+@@ -226,7 +226,7 @@ mn{
+         PM{"Сэнт Пьер ба Микелон"}
+         PN{"Питкэрн Арлууд"}
+         PR{"Пуэрто Рико"}
+-        PS{"Палестины нутаг дэвсгэрүүд"}
++        PS{"Палестин"}
+         PT{"Португал"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -300,9 +300,6 @@ mn{
+     }
+     Countries%short{
+         GB{"ИБ"}
+-        HK{"Хонг Конг"}
+-        MO{"Макао"}
+-        PS{"Палестин"}
+         US{"АНУ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/mr.txt b/source/data/region/mr.txt
+index f13aa19..cb033b6 100644
+--- a/source/data/region/mr.txt
++++ b/source/data/region/mr.txt
+@@ -138,7 +138,7 @@ mr{
+         GU{"गुआम"}
+         GW{"गिनी-बिसाउ"}
+         GY{"गयाना"}
+-        HK{"हाँगकाँग एसएआर चीन"}
++        HK{"हाँगकाँग"}
+         HM{"हर्ड आणि मॅक्डोनाल्ड बेटे"}
+         HN{"होंडुरास"}
+         HR{"क्रोएशिया"}
+@@ -192,7 +192,7 @@ mr{
+         ML{"माली"}
+         MM{"म्यानमार (बर्मा)"}
+         MN{"मंगोलिया"}
+-        MO{"मकाओ एसएआर चीन"}
++        MO{"मकाओ"}
+         MP{"उत्तरी मारियाना बेटे"}
+         MQ{"मार्टिनिक"}
+         MR{"मॉरिटानिया"}
+@@ -227,7 +227,7 @@ mr{
+         PM{"सेंट पियरे आणि मिक्वेलोन"}
+         PN{"पिटकैर्न बेटे"}
+         PR{"प्युएर्तो रिको"}
+-        PS{"पॅलेस्टिनियन प्रदेश"}
++        PS{"पॅलेस्टाईन"}
+         PT{"पोर्तुगाल"}
+         PW{"पलाऊ"}
+         PY{"पराग्वे"}
+@@ -301,9 +301,6 @@ mr{
+     }
+     Countries%short{
+         GB{"यू.के."}
+-        HK{"हाँगकाँग"}
+-        MO{"मकाओ"}
+-        PS{"पॅलेस्टाईन"}
+         US{"यू.एस."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ms.txt b/source/data/region/ms.txt
+index a7a98ee..6f3ce9d 100644
+--- a/source/data/region/ms.txt
++++ b/source/data/region/ms.txt
+@@ -138,7 +138,7 @@ ms{
+         GU{"Guam"}
+         GW{"Guinea Bissau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong SAR China"}
++        HK{"Hong Kong"}
+         HM{"Kepulauan Heard & McDonald"}
+         HN{"Honduras"}
+         HR{"Croatia"}
+@@ -192,7 +192,7 @@ ms{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macau SAR China"}
++        MO{"Macau"}
+         MP{"Kepulauan Mariana Utara"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ ms{
+         PM{"Saint Pierre dan Miquelon"}
+         PN{"Kepulauan Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Wilayah Palestin"}
++        PS{"Palestin"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ ms{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestin"}
+         US{"A.S"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/my.txt b/source/data/region/my.txt
+index 5838bfb..b98b3c0 100644
+--- a/source/data/region/my.txt
++++ b/source/data/region/my.txt
+@@ -137,7 +137,7 @@ my{
+         GU{"ဂူအမ်"}
+         GW{"ဂီရာနာ-ဘီစ်စာဥ"}
+         GY{"ဂူရာနာ"}
+-        HK{"တရုတ်၏ အထူးအုပ်ချုပ်ခွင့်ရ ဟောင်ကောင်"}
++        HK{"ဟောင်ကောင်"}
+         HM{"ဟတ်ကျွန်းနှင့်မက်ဒေါနယ်ကျွန်းစု"}
+         HN{"ဟွန်ဒူးရပ်စ်"}
+         HR{"ခရိုအေးရှား"}
+@@ -191,7 +191,7 @@ my{
+         ML{"မာလီ"}
+         MM{"မြန်မာ"}
+         MN{"မွန်ဂိုးလီးယား"}
+-        MO{"တရုတ်၏ အထူးအုပ်ချုပ်ခွင့်ရ မကာအို"}
++        MO{"မကာအို"}
+         MP{"တောင်ပိုင်းမာရီအာနာကျွန်းစု"}
+         MQ{"မာတီနီကီ"}
+         MR{"မောရီတာနီအာ"}
+@@ -226,7 +226,7 @@ my{
+         PM{"စိန့်ပီအဲရီနှင့်မီကွီလွန်"}
+         PN{"ပစ်တ်ကိန်းကျွန်းစု"}
+         PR{"ပေါ်တူရီကို"}
+-        PS{"ပါလက်စတိုင်း ပိုင်နက်"}
++        PS{"ပါလက်စတိုင်း"}
+         PT{"ပေါ်တူဂီ"}
+         PW{"ပလောင်"}
+         PY{"ပါရာဂွေး"}
+@@ -300,9 +300,6 @@ my{
+     }
+     Countries%short{
+         GB{"ယူကေ"}
+-        HK{"ဟောင်ကောင်"}
+-        MO{"မကာအို"}
+-        PS{"ပါလက်စတိုင်း"}
+         US{"ယူအက်စ်"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/mzn.txt b/source/data/region/mzn.txt
+index b26f91a..e8eec1e 100755
+--- a/source/data/region/mzn.txt
++++ b/source/data/region/mzn.txt
+@@ -137,7 +137,7 @@ mzn{
+         GU{"گوئام"}
+         GW{"گینه بیسائو"}
+         GY{"گویان"}
+-        HK{"هنگ کنگ"}
++        HK{"هونگ کونگ"}
+         HM{"هارد و مک‌دونالد جزایر"}
+         HN{"هندوراس"}
+         HR{"کرواسی"}
+@@ -191,7 +191,7 @@ mzn{
+         ML{"مالی"}
+         MM{"میانمار"}
+         MN{"مغولستون"}
+-        MO{"ماکائو (چین دله)"}
++        MO{"ماکائو"}
+         MP{"شمالی ماریانا جزایر"}
+         MQ{"مارتینیک جزیره‌ئون"}
+         MR{"موریتانی"}
+@@ -226,7 +226,7 @@ mzn{
+         PM{"سن پییر و میکلن"}
+         PN{"پیتکارین جزایر"}
+         PR{"پورتوریکو"}
+-        PS{"فلسطین ِسرزمین"}
++        PS{"فلسطین"}
+         PT{"پرتغال"}
+         PW{"پالائو"}
+         PY{"پاراگوئه"}
+@@ -300,9 +300,6 @@ mzn{
+     }
+     Countries%short{
+         GB{"بریتانیا"}
+-        HK{"هونگ کونگ"}
+-        MO{"ماکائو"}
+-        PS{"فلسطین"}
+         US{"آمریکا متحده ایالات"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/nb.txt b/source/data/region/nb.txt
+index bfc7ce1..2638947 100644
+--- a/source/data/region/nb.txt
++++ b/source/data/region/nb.txt
+@@ -138,7 +138,7 @@ nb{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong S.A.R. Kina"}
++        HK{"Hongkong"}
+         HM{"Heard- og McDonaldøyene"}
+         HN{"Honduras"}
+         HR{"Kroatia"}
+@@ -192,7 +192,7 @@ nb{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macao S.A.R. Kina"}
++        MO{"Macao"}
+         MP{"Nord-Marianene"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ nb{
+         PM{"St. Pierre og Miquelon"}
+         PN{"Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Det palestinske området"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ nb{
+     }
+     Countries%short{
+         GB{"Storbritannia"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ne.txt b/source/data/region/ne.txt
+index da87f53..1b7deff 100644
+--- a/source/data/region/ne.txt
++++ b/source/data/region/ne.txt
+@@ -138,7 +138,7 @@ ne{
+         GU{"गुवाम"}
+         GW{"गिनी-बिसाउ"}
+         GY{"गुयाना"}
+-        HK{"हङकङ चिनिया समाजवादी स्वायत्त क्षेत्र"}
++        HK{"हङकङ"}
+         HM{"हर्ड टापु एण्ड म्याकडोनाल्ड टापुहरु"}
+         HN{"हन्डुरास"}
+         HR{"क्रोएशिया"}
+@@ -192,7 +192,7 @@ ne{
+         ML{"माली"}
+         MM{"म्यान्मार (बर्मा)"}
+         MN{"मङ्गोलिया"}
+-        MO{"मकावो चिनिँया स्वशासित क्षेत्र"}
++        MO{"मकावो"}
+         MP{"उत्तरी मारिआना टापु"}
+         MQ{"मार्टिनिक"}
+         MR{"माउरिटानिया"}
+@@ -227,7 +227,7 @@ ne{
+         PM{"सेन्ट पिर्रे र मिक्केलोन"}
+         PN{"पिटकाइर्न टापुहरु"}
+         PR{"पुएर्टो रिको"}
+-        PS{"प्यालेस्टनी भू-भागहरु"}
++        PS{"प्यालेसटाइन"}
+         PT{"पोर्चुगल"}
+         PW{"पलाउ"}
+         PY{"प्याराग्वे"}
+@@ -301,9 +301,6 @@ ne{
+     }
+     Countries%short{
+         GB{"बेलायत"}
+-        HK{"हङकङ"}
+-        MO{"मकावो"}
+-        PS{"प्यालेसटाइन"}
+         US{"अमेरिका"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/nl.txt b/source/data/region/nl.txt
+index c4a3cb7..ae57547 100644
+--- a/source/data/region/nl.txt
++++ b/source/data/region/nl.txt
+@@ -138,7 +138,7 @@ nl{
+         GU{"Guam"}
+         GW{"Guinee-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong SAR van China"}
++        HK{"Hongkong"}
+         HM{"Heard en McDonaldeilanden"}
+         HN{"Honduras"}
+         HR{"Kroatië"}
+@@ -192,7 +192,7 @@ nl{
+         ML{"Mali"}
+         MM{"Myanmar (Birma)"}
+         MN{"Mongolië"}
+-        MO{"Macau SAR van China"}
++        MO{"Macau"}
+         MP{"Noordelijke Marianen"}
+         MQ{"Martinique"}
+         MR{"Mauritanië"}
+@@ -227,7 +227,7 @@ nl{
+         PM{"Saint-Pierre en Miquelon"}
+         PN{"Pitcairneilanden"}
+         PR{"Puerto Rico"}
+-        PS{"Palestijnse gebieden"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ nl{
+     }
+     Countries%short{
+         GB{"VK"}
+-        HK{"Hongkong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"VS"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/nn.txt b/source/data/region/nn.txt
+index bdf7c78..a39ba98 100644
+--- a/source/data/region/nn.txt
++++ b/source/data/region/nn.txt
+@@ -136,7 +136,7 @@ nn{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong S.A.R. Kina"}
++        HK{"Hongkong"}
+         HM{"Heard- og McDonaldsøyane"}
+         HN{"Honduras"}
+         HR{"Kroatia"}
+@@ -190,7 +190,7 @@ nn{
+         ML{"Mali"}
+         MM{"Myanmar"}
+         MN{"Mongolia"}
+-        MO{"Macao S.A.R. Kina"}
++        MO{"Macao"}
+         MP{"Nord-Marianane"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -294,9 +294,5 @@ nn{
+         ZW{"Zimbabwe"}
+         ZZ{"ukjent område"}
+     }
+-    Countries%short{
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-    }
+     Version{"2.1.19.14"}
+ }
+diff --git a/source/data/region/pa.txt b/source/data/region/pa.txt
+index 71bbf42..ba5a4f0 100644
+--- a/source/data/region/pa.txt
++++ b/source/data/region/pa.txt
+@@ -137,7 +137,7 @@ pa{
+         GU{"ਗੁਆਮ"}
+         GW{"ਗਿਨੀ-ਬਿਸਾਉ"}
+         GY{"ਗੁਯਾਨਾ"}
+-        HK{"ਹਾਂਗ ਕਾਂਗ ਐਸਏਆਰ ਚੀਨ"}
++        HK{"ਹਾਂਗ ਕਾਂਗ"}
+         HM{"ਹਰਡ ਤੇ ਮੈਕਡੋਨਾਲਡ ਟਾਪੂ"}
+         HN{"ਹੋਂਡੁਰਸ"}
+         HR{"ਕਰੋਏਸ਼ੀਆ"}
+@@ -191,7 +191,7 @@ pa{
+         ML{"ਮਾਲੀ"}
+         MM{"ਮਿਆਂਮਾਰ (ਬਰਮਾ)"}
+         MN{"ਮੰਗੋਲੀਆ"}
+-        MO{"ਮਕਾਉ ਐਸਏਆਰ ਚੀਨ"}
++        MO{"ਮਕਾਉ"}
+         MP{"ਉੱਤਰੀ ਮਾਰੀਆਨਾ ਟਾਪੂ"}
+         MQ{"ਮਾਰਟੀਨਿਕ"}
+         MR{"ਮੋਰਿਟਾਨੀਆ"}
+@@ -226,7 +226,7 @@ pa{
+         PM{"ਸੈਂਟ ਪੀਅਰੇ ਐਂਡ ਮਿਕੇਲਨ"}
+         PN{"ਪਿਟਕੇਰਨ ਟਾਪੂ"}
+         PR{"ਪਿਊਰਟੋ ਰਿਕੋ"}
+-        PS{"ਫਿਲੀਸਤੀਨੀ ਖੇਤਰ"}
++        PS{"ਫਿਲੀਸਤੀਨ"}
+         PT{"ਪੁਰਤਗਾਲ"}
+         PW{"ਪਲਾਉ"}
+         PY{"ਪੈਰਾਗਵੇ"}
+@@ -300,9 +300,6 @@ pa{
+     }
+     Countries%short{
+         GB{"ਯੂ.ਕੇ."}
+-        HK{"ਹਾਂਗ ਕਾਂਗ"}
+-        MO{"ਮਕਾਉ"}
+-        PS{"ਫਿਲੀਸਤੀਨ"}
+         US{"ਯੂ.ਐਸ."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/pl.txt b/source/data/region/pl.txt
+index ec45863..e1726dd 100644
+--- a/source/data/region/pl.txt
++++ b/source/data/region/pl.txt
+@@ -138,7 +138,7 @@ pl{
+         GU{"Guam"}
+         GW{"Gwinea Bissau"}
+         GY{"Gujana"}
+-        HK{"SRA Hongkong (Chiny)"}
++        HK{"Hongkong"}
+         HM{"Wyspy Heard i McDonalda"}
+         HN{"Honduras"}
+         HR{"Chorwacja"}
+@@ -192,7 +192,7 @@ pl{
+         ML{"Mali"}
+         MM{"Mjanma (Birma)"}
+         MN{"Mongolia"}
+-        MO{"SRA Makau (Chiny)"}
++        MO{"Makau"}
+         MP{"Mariany Północne"}
+         MQ{"Martynika"}
+         MR{"Mauretania"}
+@@ -227,7 +227,7 @@ pl{
+         PM{"Saint-Pierre i Miquelon"}
+         PN{"Pitcairn"}
+         PR{"Portoryko"}
+-        PS{"Terytoria Palestyńskie"}
++        PS{"Palestyna"}
+         PT{"Portugalia"}
+         PW{"Palau"}
+         PY{"Paragwaj"}
+@@ -301,9 +301,6 @@ pl{
+     }
+     Countries%short{
+         GB{"GB"}
+-        HK{"Hongkong"}
+-        MO{"Makau"}
+-        PS{"Palestyna"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/pt.txt b/source/data/region/pt.txt
+index f2ee2e0..f27baf8 100644
+--- a/source/data/region/pt.txt
++++ b/source/data/region/pt.txt
+@@ -138,7 +138,7 @@ pt{
+         GU{"Guam"}
+         GW{"Guiné-Bissau"}
+         GY{"Guiana"}
+-        HK{"Hong Kong, RAE da China"}
++        HK{"Hong Kong"}
+         HM{"Ilhas Heard e McDonald"}
+         HN{"Honduras"}
+         HR{"Croácia"}
+@@ -192,7 +192,7 @@ pt{
+         ML{"Mali"}
+         MM{"Mianmar (Birmânia)"}
+         MN{"Mongólia"}
+-        MO{"Macau, RAE da China"}
++        MO{"Macau"}
+         MP{"Ilhas Marianas do Norte"}
+         MQ{"Martinica"}
+         MR{"Mauritânia"}
+@@ -227,7 +227,7 @@ pt{
+         PM{"Saint Pierre e Miquelon"}
+         PN{"Ilhas Pitcairn"}
+         PR{"Porto Rico"}
+-        PS{"Territórios palestinos"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguai"}
+@@ -301,9 +301,6 @@ pt{
+     }
+     Countries%short{
+         GB{"Reino Unido"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"EUA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ro.txt b/source/data/region/ro.txt
+index eaecfd3..215df2a 100644
+--- a/source/data/region/ro.txt
++++ b/source/data/region/ro.txt
+@@ -138,7 +138,7 @@ ro{
+         GU{"Guam"}
+         GW{"Guineea-Bissau"}
+         GY{"Guyana"}
+-        HK{"R.A.S. Hong Kong a Chinei"}
++        HK{"Hong Kong"}
+         HM{"Insula Heard și Insulele McDonald"}
+         HN{"Honduras"}
+         HR{"Croația"}
+@@ -192,7 +192,7 @@ ro{
+         ML{"Mali"}
+         MM{"Myanmar (Birmania)"}
+         MN{"Mongolia"}
+-        MO{"R.A.S. Macao a Chinei"}
++        MO{"Macao"}
+         MP{"Insulele Mariane de Nord"}
+         MQ{"Martinica"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ ro{
+         PM{"Saint-Pierre și Miquelon"}
+         PN{"Insulele Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Teritoriile Palestiniene"}
++        PS{"Palestina"}
+         PT{"Portugalia"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ ro{
+     }
+     Countries%short{
+         GB{"Regatul Unit"}
+-        HK{"Hong Kong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"S.U.A."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ru.txt b/source/data/region/ru.txt
+index 0e4d20c..a46de30 100644
+--- a/source/data/region/ru.txt
++++ b/source/data/region/ru.txt
+@@ -138,7 +138,7 @@ ru{
+         GU{"Гуам"}
+         GW{"Гвинея-Бисау"}
+         GY{"Гайана"}
+-        HK{"Гонконг (специальный административный район)"}
++        HK{"Гонконг"}
+         HM{"о-ва Херд и Макдональд"}
+         HN{"Гондурас"}
+         HR{"Хорватия"}
+@@ -192,7 +192,7 @@ ru{
+         ML{"Мали"}
+         MM{"Мьянма (Бирма)"}
+         MN{"Монголия"}
+-        MO{"Макао (специальный административный район)"}
++        MO{"Макао"}
+         MP{"Северные Марианские о-ва"}
+         MQ{"Мартиника"}
+         MR{"Мавритания"}
+@@ -227,7 +227,7 @@ ru{
+         PM{"Сен-Пьер и Микелон"}
+         PN{"острова Питкэрн"}
+         PR{"Пуэрто-Рико"}
+-        PS{"Палестинские территории"}
++        PS{"Палестина"}
+         PT{"Португалия"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -301,9 +301,6 @@ ru{
+     }
+     Countries%short{
+         GB{"Британия"}
+-        HK{"Гонконг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"США"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/se.txt b/source/data/region/se.txt
+index cfbaba9..fa636e7 100644
+--- a/source/data/region/se.txt
++++ b/source/data/region/se.txt
+@@ -295,9 +295,6 @@ se{
+     }
+     Countries%short{
+         GB{"Stuorra-Británnia"}
+-        HK{"Hongkong"}
+-        MO{"Makáo"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Version{"2.1.19.14"}
+diff --git a/source/data/region/si.txt b/source/data/region/si.txt
+index d9f024c..7b407d1 100644
+--- a/source/data/region/si.txt
++++ b/source/data/region/si.txt
+@@ -138,7 +138,7 @@ si{
+         GU{"ගුවාම්"}
+         GW{"ගිනි බිසව්"}
+         GY{"ගයනාව"}
+-        HK{"හොංකොං චීන විශේෂ පරිපාලන කලාපය"}
++        HK{"හොංකොං"}
+         HM{"හර්ඩ් දූපත සහ මැක්ඩොනල්ඩ් දූපත්"}
+         HN{"හොන්ඩුරාස්"}
+         HR{"ක්‍රොඒෂියාව"}
+@@ -192,7 +192,7 @@ si{
+         ML{"මාලි"}
+         MM{"මියන්මාරය (බුරුමය)"}
+         MN{"මොන්ගෝලියාව"}
+-        MO{"මකාවු චීන විශේෂ පරිපාලන කලාපය"}
++        MO{"මකාවු"}
+         MP{"උතුරු මරියානා දූපත්"}
+         MQ{"මර්ටිනික්"}
+         MR{"මොරිටේනියාව"}
+@@ -227,7 +227,7 @@ si{
+         PM{"ශාන්ත පියරේ සහ මැකෝලන්"}
+         PN{"පිට්කෙය්න් දූපත්"}
+         PR{"පුවර්ටෝ රිකෝ"}
+-        PS{"පලස්තීන රාජ්‍යය"}
++        PS{"පලස්තීනය"}
+         PT{"පෘතුගාලය"}
+         PW{"පලාවු"}
+         PY{"පැරගුවේ"}
+@@ -301,9 +301,6 @@ si{
+     }
+     Countries%short{
+         GB{"එ.රා"}
+-        HK{"හොංකොං"}
+-        MO{"මකාවු"}
+-        PS{"පලස්තීනය"}
+         US{"එ.ජ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sk.txt b/source/data/region/sk.txt
+index a8cd283..27fecf0 100644
+--- a/source/data/region/sk.txt
++++ b/source/data/region/sk.txt
+@@ -138,7 +138,7 @@ sk{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guayana"}
+-        HK{"Hongkong – OAO Číny"}
++        HK{"Hongkong"}
+         HM{"Heardov ostrov a McDonaldove ostrovy"}
+         HN{"Honduras"}
+         HR{"Chorvátsko"}
+@@ -192,7 +192,7 @@ sk{
+         ML{"Mali"}
+         MM{"Mjanmarsko"}
+         MN{"Mongolsko"}
+-        MO{"Macao – OAO Číny"}
++        MO{"Macao"}
+         MP{"Severné Mariány"}
+         MQ{"Martinik"}
+         MR{"Mauritánia"}
+@@ -227,7 +227,7 @@ sk{
+         PM{"Saint Pierre a Miquelon"}
+         PN{"Pitcairnove ostrovy"}
+         PR{"Portoriko"}
+-        PS{"Palestínske územia"}
++        PS{"Palestína"}
+         PT{"Portugalsko"}
+         PW{"Palau"}
+         PY{"Paraguaj"}
+@@ -301,9 +301,6 @@ sk{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestína"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sl.txt b/source/data/region/sl.txt
+index 08754d5..31292bd 100644
+--- a/source/data/region/sl.txt
++++ b/source/data/region/sl.txt
+@@ -138,7 +138,7 @@ sl{
+         GU{"Guam"}
+         GW{"Gvineja Bissau"}
+         GY{"Gvajana"}
+-        HK{"Posebno administrativno območje LR Kitajske Hong Kong"}
++        HK{"Hongkong"}
+         HM{"Heardov otok in McDonaldovi otoki"}
+         HN{"Honduras"}
+         HR{"Hrvaška"}
+@@ -192,7 +192,7 @@ sl{
+         ML{"Mali"}
+         MM{"Mjanmar (Burma)"}
+         MN{"Mongolija"}
+-        MO{"Posebno administrativno območje LR Kitajske Macao"}
++        MO{"Macao"}
+         MP{"Severni Marianski otoki"}
+         MQ{"Martinik"}
+         MR{"Mavretanija"}
+@@ -227,7 +227,7 @@ sl{
+         PM{"Saint Pierre in Miquelon"}
+         PN{"Pitcairn"}
+         PR{"Portoriko"}
+-        PS{"Palestinsko ozemlje"}
++        PS{"Palestina"}
+         PT{"Portugalska"}
+         PW{"Palau"}
+         PY{"Paragvaj"}
+@@ -301,9 +301,6 @@ sl{
+     }
+     Countries%short{
+         GB{"ZK"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"ZDA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sq.txt b/source/data/region/sq.txt
+index 9977030..2d81be6 100644
+--- a/source/data/region/sq.txt
++++ b/source/data/region/sq.txt
+@@ -137,7 +137,7 @@ sq{
+         GU{"Guam"}
+         GW{"Guine-Bisau"}
+         GY{"Guajanë"}
+-        HK{"RVAK i Hong Kongut"}
++        HK{"Hong Kong"}
+         HM{"Ishulli Hërd dhe Ishujt Mekdonaldë"}
+         HN{"Honduras"}
+         HR{"Kroaci"}
+@@ -191,7 +191,7 @@ sq{
+         ML{"Mali"}
+         MM{"Mianmar (Burma)"}
+         MN{"Mongoli"}
+-        MO{"RVAK i Makaos"}
++        MO{"Makao"}
+         MP{"Ishujt e Marianës Veriore"}
+         MQ{"Martinik"}
+         MR{"Mauritani"}
+@@ -226,7 +226,7 @@ sq{
+         PM{"Shën-Peir dhe Mikuelon"}
+         PN{"Ishujt Pitkernë"}
+         PR{"Porto-Riko"}
+-        PS{"Territoret Palestineze"}
++        PS{"Palestinë"}
+         PT{"Portugali"}
+         PW{"Palau"}
+         PY{"Paraguai"}
+@@ -300,9 +300,6 @@ sq{
+     }
+     Countries%short{
+         GB{"Mbretëria e Bashkuar"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Palestinë"}
+         US{"SHBA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sr.txt b/source/data/region/sr.txt
+index b69e601..6b41fde 100644
+--- a/source/data/region/sr.txt
++++ b/source/data/region/sr.txt
+@@ -138,7 +138,7 @@ sr{
+         GU{"Гуам"}
+         GW{"Гвинеја-Бисао"}
+         GY{"Гвајана"}
+-        HK{"САР Хонгконг (Кина)"}
++        HK{"Хонг Конг"}
+         HM{"Острва Херд и Мекдоналд"}
+         HN{"Хондурас"}
+         HR{"Хрватска"}
+@@ -192,7 +192,7 @@ sr{
+         ML{"Мали"}
+         MM{"Мијанмар (Бурма)"}
+         MN{"Монголија"}
+-        MO{"САР Макао (Кина)"}
++        MO{"Макао"}
+         MP{"Северна Маријанска Острва"}
+         MQ{"Мартиник"}
+         MR{"Мауританија"}
+@@ -227,7 +227,7 @@ sr{
+         PM{"Сен Пјер и Микелон"}
+         PN{"Питкерн"}
+         PR{"Порторико"}
+-        PS{"Палестинске територије"}
++        PS{"Палестина"}
+         PT{"Португал"}
+         PW{"Палау"}
+         PY{"Парагвај"}
+@@ -301,9 +301,6 @@ sr{
+     }
+     Countries%short{
+         GB{"УК"}
+-        HK{"Хонг Конг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"САД"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sr_Latn.txt b/source/data/region/sr_Latn.txt
+index 7a922ae..296d521 100644
+--- a/source/data/region/sr_Latn.txt
++++ b/source/data/region/sr_Latn.txt
+@@ -139,7 +139,7 @@ sr_Latn{
+         GU{"Guam"}
+         GW{"Gvineja-Bisao"}
+         GY{"Gvajana"}
+-        HK{"SAR Hongkong (Kina)"}
++        HK{"Hong Kong"}
+         HM{"Ostrva Herd i Mekdonald"}
+         HN{"Honduras"}
+         HR{"Hrvatska"}
+@@ -193,7 +193,7 @@ sr_Latn{
+         ML{"Mali"}
+         MM{"Mijanmar (Burma)"}
+         MN{"Mongolija"}
+-        MO{"SAR Makao (Kina)"}
++        MO{"Makao"}
+         MP{"Severna Marijanska Ostrva"}
+         MQ{"Martinik"}
+         MR{"Mauritanija"}
+@@ -228,7 +228,7 @@ sr_Latn{
+         PM{"Sen Pjer i Mikelon"}
+         PN{"Pitkern"}
+         PR{"Portoriko"}
+-        PS{"Palestinske teritorije"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paragvaj"}
+@@ -302,9 +302,6 @@ sr_Latn{
+     }
+     Countries%short{
+         GB{"UK"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Palestina"}
+         US{"SAD"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sv.txt b/source/data/region/sv.txt
+index ed73d08..40ae1c5 100644
+--- a/source/data/region/sv.txt
++++ b/source/data/region/sv.txt
+@@ -138,7 +138,7 @@ sv{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hongkong, S.A.R. Kina"}
++        HK{"Hongkong"}
+         HM{"Heardön och McDonaldöarna"}
+         HN{"Honduras"}
+         HR{"Kroatien"}
+@@ -192,7 +192,7 @@ sv{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongoliet"}
+-        MO{"Macao, S.A.R. Kina"}
++        MO{"Macao"}
+         MP{"Nordmarianerna"}
+         MQ{"Martinique"}
+         MR{"Mauretanien"}
+@@ -227,7 +227,7 @@ sv{
+         PM{"S:t Pierre och Miquelon"}
+         PN{"Pitcairnöarna"}
+         PR{"Puerto Rico"}
+-        PS{"Palestinska territorierna"}
++        PS{"Palestina"}
+         PT{"Portugal"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ sv{
+     }
+     Countries%short{
+         GB{"Storbritannien"}
+-        HK{"Hongkong"}
+-        MO{"Macao"}
+-        PS{"Palestina"}
+         US{"USA"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/sw.txt b/source/data/region/sw.txt
+index a68e51d..741f133 100644
+--- a/source/data/region/sw.txt
++++ b/source/data/region/sw.txt
+@@ -138,7 +138,7 @@ sw{
+         GU{"Gwam"}
+         GW{"Ginebisau"}
+         GY{"Guyana"}
+-        HK{"Hong Kong SAR China"}
++        HK{"Hong Kong"}
+         HM{"Kisiwa cha Heard na Visiwa vya McDonald"}
+         HN{"Hondurasi"}
+         HR{"Korasia"}
+@@ -192,7 +192,7 @@ sw{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Mongolia"}
+-        MO{"Macau SAR China"}
++        MO{"Macau"}
+         MP{"Visiwa vya Mariana vya Kaskazini"}
+         MQ{"Martiniki"}
+         MR{"Moritania"}
+@@ -227,7 +227,7 @@ sw{
+         PM{"Santapierre na Miquelon"}
+         PN{"Visiwa vya Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Maeneo ya Palestina"}
++        PS{"Palestina"}
+         PT{"Ureno"}
+         PW{"Palau"}
+         PY{"Paragwai"}
+@@ -301,9 +301,6 @@ sw{
+     }
+     Countries%short{
+         GB{"Uingereza"}
+-        HK{"Hong Kong"}
+-        MO{"Macau"}
+-        PS{"Palestina"}
+         US{"US"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ta.txt b/source/data/region/ta.txt
+index f74c9c3..d2f8318 100644
+--- a/source/data/region/ta.txt
++++ b/source/data/region/ta.txt
+@@ -138,7 +138,7 @@ ta{
+         GU{"குவாம்"}
+         GW{"கினியா-பிஸ்ஸாவ்"}
+         GY{"கயானா"}
+-        HK{"ஹாங்காங் எஸ்ஏஆர் சீனா"}
++        HK{"ஹாங்காங்"}
+         HM{"ஹேர்ட் மற்றும் மெக்டொனால்டு தீவுகள்"}
+         HN{"ஹோண்டூராஸ்"}
+         HR{"குரேஷியா"}
+@@ -192,7 +192,7 @@ ta{
+         ML{"மாலி"}
+         MM{"மியான்மார் (பர்மா)"}
+         MN{"மங்கோலியா"}
+-        MO{"மகாவ் எஸ்ஏஆர் சீனா"}
++        MO{"மகாவ்"}
+         MP{"வடக்கு மரியானா தீவுகள்"}
+         MQ{"மார்டினிக்"}
+         MR{"மௌரிடானியா"}
+@@ -227,7 +227,7 @@ ta{
+         PM{"செயின்ட் பியர் & மிக்வேலான்"}
+         PN{"பிட்கெய்ர்ன் தீவுகள்"}
+         PR{"பியூர்டோ ரிகோ"}
+-        PS{"பாலஸ்தீனிய பிரதேசங்கள்"}
++        PS{"பாலஸ்தீனம்"}
+         PT{"போர்ச்சுக்கல்"}
+         PW{"பாலோ"}
+         PY{"பராகுவே"}
+@@ -301,9 +301,6 @@ ta{
+     }
+     Countries%short{
+         GB{"யூகே"}
+-        HK{"ஹாங்காங்"}
+-        MO{"மகாவ்"}
+-        PS{"பாலஸ்தீனம்"}
+         US{"யூஎஸ்"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/te.txt b/source/data/region/te.txt
+index e1ac6cf..5893c6e 100644
+--- a/source/data/region/te.txt
++++ b/source/data/region/te.txt
+@@ -138,7 +138,7 @@ te{
+         GU{"గ్వామ్"}
+         GW{"గినియా-బిస్సావ్"}
+         GY{"గయానా"}
+-        HK{"హాంకాంగ్ ఎస్ఏఆర్ చైనా"}
++        HK{"హాంకాంగ్"}
+         HM{"హెర్డ్ & మెక్ డొనాల్డ్ దీవులు"}
+         HN{"హోండురాస్"}
+         HR{"క్రోయేషియా"}
+@@ -192,7 +192,7 @@ te{
+         ML{"మాలి"}
+         MM{"మయన్మార్ (బర్మా)"}
+         MN{"మంగోలియా"}
+-        MO{"మాకావ్ ఎస్ఏఆర్ చైనా"}
++        MO{"మకావు"}
+         MP{"ఉత్తర మరియానా దీవులు"}
+         MQ{"మార్టినిక్"}
+         MR{"మౌరిటేనియా"}
+@@ -227,7 +227,7 @@ te{
+         PM{"సెంట్ పియెర్ మరియు మికెలాన్"}
+         PN{"పిట్‌కెయిర్న్ దీవులు"}
+         PR{"ఫ్యూర్టో రికో"}
+-        PS{"పాలస్తీనియన్ ప్రాంతాలు"}
++        PS{"పాలస్తీనా"}
+         PT{"పోర్చుగల్"}
+         PW{"పలావు"}
+         PY{"పరాగ్వే"}
+@@ -301,9 +301,6 @@ te{
+     }
+     Countries%short{
+         GB{"యు.కె."}
+-        HK{"హాంకాంగ్"}
+-        MO{"మకావు"}
+-        PS{"పాలస్తీనా"}
+         US{"యు.ఎస్."}
+     }
+     Countries%variant{
+diff --git a/source/data/region/th.txt b/source/data/region/th.txt
+index 7f2a1cc..8f53917 100644
+--- a/source/data/region/th.txt
++++ b/source/data/region/th.txt
+@@ -138,7 +138,7 @@ th{
+         GU{"กวม"}
+         GW{"กินี-บิสเซา"}
+         GY{"กายอานา"}
+-        HK{"เขตปกครองพิเศษฮ่องกงแห่งสาธารณรัฐประชาชนจีน"}
++        HK{"ฮ่องกง"}
+         HM{"เกาะเฮิร์ดและหมู่เกาะแมกดอนัลด์"}
+         HN{"ฮอนดูรัส"}
+         HR{"โครเอเชีย"}
+@@ -192,7 +192,7 @@ th{
+         ML{"มาลี"}
+         MM{"เมียนม่าร์ (พม่า)"}
+         MN{"มองโกเลีย"}
+-        MO{"เขตปกครองพิเศษมาเก๊าแห่งสาธารณรัฐประชาชนจีน"}
++        MO{"มาเก๊า"}
+         MP{"หมู่เกาะนอร์เทิร์นมาเรียนา"}
+         MQ{"มาร์ตินีก"}
+         MR{"มอริเตเนีย"}
+@@ -227,7 +227,7 @@ th{
+         PM{"แซงปีแยร์และมีเกอลง"}
+         PN{"หมู่เกาะพิตแคร์น"}
+         PR{"เปอร์โตริโก"}
+-        PS{"ดินแดนปาเลสไตน์"}
++        PS{"ปาเลสไตน์"}
+         PT{"โปรตุเกส"}
+         PW{"ปาเลา"}
+         PY{"ปารากวัย"}
+@@ -301,9 +301,6 @@ th{
+     }
+     Countries%short{
+         GB{"อังกฤษ"}
+-        HK{"ฮ่องกง"}
+-        MO{"มาเก๊า"}
+-        PS{"ปาเลสไตน์"}
+         US{"สหรัฐฯ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/to.txt b/source/data/region/to.txt
+index 702244b..2a522ea 100755
+--- a/source/data/region/to.txt
++++ b/source/data/region/to.txt
+@@ -138,7 +138,7 @@ to{
+         GU{"Kuamu"}
+         GW{"Kini-Pisau"}
+         GY{"Kuiana"}
+-        HK{"Hongi Kongi SAR Siaina"}
++        HK{"Hongi Kongi"}
+         HM{"ʻOtumotu Heati mo Makitonali"}
+         HN{"Honitulasi"}
+         HR{"Kuloisia"}
+@@ -192,7 +192,7 @@ to{
+         ML{"Māli"}
+         MM{"Pema"}
+         MN{"Mongokōlia"}
+-        MO{"Makau SAR Siaina"}
++        MO{"Makau"}
+         MP{"ʻOtumotu Maliana tokelau"}
+         MQ{"Māteniki"}
+         MR{"Maulitenia"}
+@@ -227,7 +227,7 @@ to{
+         PM{"Sā Piea mo Mikeloni"}
+         PN{"ʻOtumotu Pitikeni"}
+         PR{"Pueto Liko"}
+-        PS{"Potu Palesitaine"}
++        PS{"Palesitaine"}
+         PT{"Potukali"}
+         PW{"Palau"}
+         PY{"Palakuai"}
+@@ -301,9 +301,6 @@ to{
+     }
+     Countries%short{
+         GB{"Pilitānia"}
+-        HK{"Hongi Kongi"}
+-        MO{"Makau"}
+-        PS{"Palesitaine"}
+         US{"ʻAmelika"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/tr.txt b/source/data/region/tr.txt
+index b930c83..3081652 100644
+--- a/source/data/region/tr.txt
++++ b/source/data/region/tr.txt
+@@ -138,7 +138,7 @@ tr{
+         GU{"Guam"}
+         GW{"Gine-Bissau"}
+         GY{"Guyana"}
+-        HK{"Çin Hong Kong ÖYB"}
++        HK{"Hong Kong"}
+         HM{"Heard Adası ve McDonald Adaları"}
+         HN{"Honduras"}
+         HR{"Hırvatistan"}
+@@ -192,7 +192,7 @@ tr{
+         ML{"Mali"}
+         MM{"Myanmar (Burma)"}
+         MN{"Moğolistan"}
+-        MO{"Çin Makao ÖYB"}
++        MO{"Makao"}
+         MP{"Kuzey Mariana Adaları"}
+         MQ{"Martinik"}
+         MR{"Moritanya"}
+@@ -227,7 +227,7 @@ tr{
+         PM{"Saint Pierre ve Miquelon"}
+         PN{"Pitcairn Adaları"}
+         PR{"Porto Riko"}
+-        PS{"Filistin Bölgeleri"}
++        PS{"Filistin"}
+         PT{"Portekiz"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ tr{
+     }
+     Countries%short{
+         GB{"BK"}
+-        HK{"Hong Kong"}
+-        MO{"Makao"}
+-        PS{"Filistin"}
+         US{"ABD"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ug.txt b/source/data/region/ug.txt
+index a603559..7a8a531 100755
+--- a/source/data/region/ug.txt
++++ b/source/data/region/ug.txt
+@@ -137,7 +137,7 @@ ug{
+         GU{"گۇئام"}
+         GW{"گىۋىنېيە-بىسسائۇ"}
+         GY{"گىۋىيانا"}
+-        HK{"شياڭگاڭ ئالاھىدە مەمۇرىي رايونى (جۇڭگو)"}
++        HK{"شياڭگاڭ"}
+         HM{"خېرد ۋە ماك-دونالد ئارىلى"}
+         HN{"ھوندۇراس"}
+         HR{"كىرودىيە"}
+@@ -191,7 +191,7 @@ ug{
+         ML{"مالى"}
+         MM{"بىرما"}
+         MN{"موڭغۇلىيە"}
+-        MO{"ئاۋمېن ئالاھىدە مەمۇرىي رايونى (جۇڭگو)"}
++        MO{"ئاۋمېن"}
+         MP{"شىمالىي مارىيانا ئاراللىرى"}
+         MQ{"مارتىنىكا"}
+         MR{"ماۋرىتانىيە"}
+@@ -226,7 +226,7 @@ ug{
+         PM{"ساينىت-پىئېر ۋە مىكېلون ئاراللىرى"}
+         PN{"پىتكاير ئاراللىرى"}
+         PR{"پۇئېرتو-رىكو"}
+-        PS{"پەلەستىن زېمىنى"}
++        PS{"پەلەستىن"}
+         PT{"پورتۇگالىيە"}
+         PW{"پالاۋ"}
+         PY{"پاراگۋاي"}
+@@ -300,9 +300,6 @@ ug{
+     }
+     Countries%short{
+         GB{"ئەنگلىيە"}
+-        HK{"شياڭگاڭ"}
+-        MO{"ئاۋمېن"}
+-        PS{"پەلەستىن"}
+         US{"ئا ق ش"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/uk.txt b/source/data/region/uk.txt
+index 6ffbad4..a31021e 100644
+--- a/source/data/region/uk.txt
++++ b/source/data/region/uk.txt
+@@ -116,7 +116,7 @@ uk{
+         FI{"Фінляндія"}
+         FJ{"Фіджі"}
+         FK{"Фолклендські острови"}
+-        FM{"Мікронезія"}
++        FM{"Мікронезія Федеративні Штати"}
+         FO{"Фарерські острови"}
+         FR{"Франція"}
+         GA{"Габон"}
+@@ -138,7 +138,7 @@ uk{
+         GU{"Гуам"}
+         GW{"Гвінея-Бісау"}
+         GY{"Гаяна"}
+-        HK{"Гонконг, О.А.Р. Китаю"}
++        HK{"Гонконг"}
+         HM{"Острови Херд і Мак-Дональд"}
+         HN{"Гондурас"}
+         HR{"Хорватія"}
+@@ -192,7 +192,7 @@ uk{
+         ML{"Малі"}
+         MM{"Мʼянма (Бірма)"}
+         MN{"Монголія"}
+-        MO{"Макао, О.А.Р Китаю"}
++        MO{"Макао"}
+         MP{"Північні Маріанські острови"}
+         MQ{"Мартиніка"}
+         MR{"Мавританія"}
+@@ -227,7 +227,7 @@ uk{
+         PM{"Сен-Пʼєр і Мікелон"}
+         PN{"Острови Піткерн"}
+         PR{"Пуерто-Рико"}
+-        PS{"Палестинські території"}
++        PS{"Палестина"}
+         PT{"Португалія"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -301,9 +301,6 @@ uk{
+     }
+     Countries%short{
+         GB{"Велика Британія"}
+-        HK{"Гонконг"}
+-        MO{"Макао"}
+-        PS{"Палестина"}
+         US{"США"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/ur.txt b/source/data/region/ur.txt
+index 38405d8..30b0678 100644
+--- a/source/data/region/ur.txt
++++ b/source/data/region/ur.txt
+@@ -138,7 +138,7 @@ ur{
+         GU{"گوآم"}
+         GW{"گنی بساؤ"}
+         GY{"گیانا"}
+-        HK{"ہانگ کانگ SAR چین"}
++        HK{"ہانگ کانگ"}
+         HM{"ہیئرڈ آئلینڈ اور میکڈونالڈ آئلینڈز"}
+         HN{"ہونڈاروس"}
+         HR{"کروشیا"}
+@@ -192,7 +192,7 @@ ur{
+         ML{"مالی"}
+         MM{"میانمار (برما)"}
+         MN{"منگولیا"}
+-        MO{"مکاؤ SAR چین"}
++        MO{"مکاؤ"}
+         MP{"شمالی ماریانا آئلینڈز"}
+         MQ{"مارٹینک"}
+         MR{"موریطانیہ"}
+@@ -227,7 +227,7 @@ ur{
+         PM{"سینٹ پیئر اور میکلیئون"}
+         PN{"پٹکائرن جزائر"}
+         PR{"پیورٹو ریکو"}
+-        PS{"فلسطینی خطے"}
++        PS{"فلسطین"}
+         PT{"پرتگال"}
+         PW{"پلاؤ"}
+         PY{"پیراگوئے"}
+@@ -301,9 +301,6 @@ ur{
+     }
+     Countries%short{
+         GB{"یو کے"}
+-        HK{"ہانگ کانگ"}
+-        MO{"مکاؤ"}
+-        PS{"فلسطین"}
+         US{"امریکا"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/uz.txt b/source/data/region/uz.txt
+index 43d5469..195666a 100644
+--- a/source/data/region/uz.txt
++++ b/source/data/region/uz.txt
+@@ -137,7 +137,7 @@ uz{
+         GU{"Guam"}
+         GW{"Gvineya-Bisau"}
+         GY{"Gayana"}
+-        HK{"Gonkong (Xitoy MMH)"}
++        HK{"Gonkong"}
+         HM{"Xerd va Makdonald orollari"}
+         HN{"Gonduras"}
+         HR{"Xorvatiya"}
+@@ -191,7 +191,7 @@ uz{
+         ML{"Mali"}
+         MM{"Myanma (Birma)"}
+         MN{"Mongoliya"}
+-        MO{"Makao (Xitoy MMH)"}
++        MO{"Makao"}
+         MP{"Shimoliy Mariana orollari"}
+         MQ{"Martinika"}
+         MR{"Mavritaniya"}
+@@ -226,7 +226,7 @@ uz{
+         PM{"Sent-Pyer va Mikelon"}
+         PN{"Pitkern orollari"}
+         PR{"Puerto-Riko"}
+-        PS{"Falastin hududi"}
++        PS{"Falastin"}
+         PT{"Portugaliya"}
+         PW{"Palau"}
+         PY{"Paragvay"}
+@@ -300,9 +300,6 @@ uz{
+     }
+     Countries%short{
+         GB{"B.Q."}
+-        HK{"Gonkong"}
+-        MO{"Makao"}
+-        PS{"Falastin"}
+         US{"AQSH"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/uz_Cyrl.txt b/source/data/region/uz_Cyrl.txt
+index 89fb22e..15f4493 100644
+--- a/source/data/region/uz_Cyrl.txt
++++ b/source/data/region/uz_Cyrl.txt
+@@ -138,7 +138,7 @@ uz_Cyrl{
+         GU{"Гуам"}
+         GW{"Гвинея-Бисау"}
+         GY{"Гаяна"}
+-        HK{"Гонконг Хитой ММҲ"}
++        HK{"Гонконг"}
+         HM{"Герд ороли ва МакДоналд ороллари"}
+         HN{"Гондурас"}
+         HR{"Хорватия"}
+@@ -192,7 +192,7 @@ uz_Cyrl{
+         ML{"Мали"}
+         MM{"Мьянма (Бирма)"}
+         MN{"Муғулистон"}
+-        MO{"Макао Хитой ММҲ"}
++        MO{"Макао"}
+         MP{"Шимолий Марианна ороллари"}
+         MQ{"Мартиника"}
+         MR{"Мавритания"}
+@@ -227,7 +227,7 @@ uz_Cyrl{
+         PM{"Сент-Пьер ва Микелон"}
+         PN{"Питкарин ороллари"}
+         PR{"Пуэрто-Рико"}
+-        PS{"Фаластин ҳудуди"}
++        PS{"Фаластина"}
+         PT{"Португалия"}
+         PW{"Палау"}
+         PY{"Парагвай"}
+@@ -301,9 +301,6 @@ uz_Cyrl{
+     }
+     Countries%short{
+         GB{"Бирлашган Қироллик"}
+-        HK{"Гонконг"}
+-        MO{"Макао"}
+-        PS{"Фаластина"}
+         US{"АКШ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/vi.txt b/source/data/region/vi.txt
+index 1073c10..f19d77a 100644
+--- a/source/data/region/vi.txt
++++ b/source/data/region/vi.txt
+@@ -138,7 +138,7 @@ vi{
+         GU{"Guam"}
+         GW{"Guinea-Bissau"}
+         GY{"Guyana"}
+-        HK{"Hồng Kông, Trung Quốc"}
++        HK{"Hồng Kông"}
+         HM{"Quần đảo Heard và McDonald"}
+         HN{"Honduras"}
+         HR{"Croatia"}
+@@ -192,7 +192,7 @@ vi{
+         ML{"Mali"}
+         MM{"Myanmar (Miến Điện)"}
+         MN{"Mông Cổ"}
+-        MO{"Macao, Trung Quốc"}
++        MO{"Macao"}
+         MP{"Quần đảo Bắc Mariana"}
+         MQ{"Martinique"}
+         MR{"Mauritania"}
+@@ -227,7 +227,7 @@ vi{
+         PM{"Saint Pierre và Miquelon"}
+         PN{"Quần đảo Pitcairn"}
+         PR{"Puerto Rico"}
+-        PS{"Lãnh thổ Palestine"}
++        PS{"Palestine"}
+         PT{"Bồ Đào Nha"}
+         PW{"Palau"}
+         PY{"Paraguay"}
+@@ -301,9 +301,6 @@ vi{
+     }
+     Countries%short{
+         GB{"Vương quốc Anh"}
+-        HK{"Hồng Kông"}
+-        MO{"Macao"}
+-        PS{"Palestine"}
+         US{"Hoa Kỳ"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/wae.txt b/source/data/region/wae.txt
+index 320a41d..0e7e746 100644
+--- a/source/data/region/wae.txt
++++ b/source/data/region/wae.txt
+@@ -136,7 +136,7 @@ wae{
+         GU{"Guam"}
+         GW{"Ginea Bissau"}
+         GY{"Guyana"}
+-        HK{"Sonderverwaltigszona Hongkong"}
++        HK{"Hongkong"}
+         HM{"Heard- und McDonald-Inslä"}
+         HN{"Honduras"}
+         HR{"Kroatie"}
+@@ -190,7 +190,7 @@ wae{
+         ML{"Mali"}
+         MM{"Burma"}
+         MN{"Mongolei"}
+-        MO{"Sonderverwaltigszona Makau"}
++        MO{"Makau"}
+         MP{"Nördliči Mariane"}
+         MQ{"Martinique"}
+         MR{"Mauretanie"}
+@@ -294,10 +294,6 @@ wae{
+         ZW{"Simbabwe"}
+         ZZ{"Unbekannti Regio"}
+     }
+-    Countries%short{
+-        HK{"Hongkong"}
+-        MO{"Makau"}
+-    }
+     Countries%variant{
+         CD{"Kongo (Demokratiši Rebublik)"}
+         CG{"Kongo (Rebublik)"}
+diff --git a/source/data/region/zh.txt b/source/data/region/zh.txt
+index 21d2730..3c68b7e 100644
+--- a/source/data/region/zh.txt
++++ b/source/data/region/zh.txt
+@@ -138,7 +138,7 @@ zh{
+         GU{"关岛"}
+         GW{"几内亚比绍"}
+         GY{"圭亚那"}
+-        HK{"中国香港特别行政区"}
++        HK{"香港"}
+         HM{"赫德岛和麦克唐纳群岛"}
+         HN{"洪都拉斯"}
+         HR{"克罗地亚"}
+@@ -192,7 +192,7 @@ zh{
+         ML{"马里"}
+         MM{"缅甸"}
+         MN{"蒙古"}
+-        MO{"中国澳门特别行政区"}
++        MO{"澳门"}
+         MP{"北马里亚纳群岛"}
+         MQ{"马提尼克"}
+         MR{"毛里塔尼亚"}
+@@ -227,7 +227,7 @@ zh{
+         PM{"圣皮埃尔和密克隆群岛"}
+         PN{"皮特凯恩群岛"}
+         PR{"波多黎各"}
+-        PS{"巴勒斯坦领土"}
++        PS{"巴勒斯坦"}
+         PT{"葡萄牙"}
+         PW{"帕劳"}
+         PY{"巴拉圭"}
+@@ -301,9 +301,6 @@ zh{
+     }
+     Countries%short{
+         GB{"英国"}
+-        HK{"香港"}
+-        MO{"澳门"}
+-        PS{"巴勒斯坦"}
+         US{"美国"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/zh_Hant.txt b/source/data/region/zh_Hant.txt
+index 066d826..a8a37d4 100644
+--- a/source/data/region/zh_Hant.txt
++++ b/source/data/region/zh_Hant.txt
+@@ -139,7 +139,7 @@ zh_Hant{
+         GU{"關島"}
+         GW{"幾內亞比索"}
+         GY{"蓋亞那"}
+-        HK{"中華人民共和國香港特別行政區"}
++        HK{"香港"}
+         HM{"赫德島和麥克唐納群島"}
+         HN{"宏都拉斯"}
+         HR{"克羅埃西亞"}
+@@ -193,7 +193,7 @@ zh_Hant{
+         ML{"馬利"}
+         MM{"緬甸"}
+         MN{"蒙古"}
+-        MO{"中華人民共和國澳門特別行政區"}
++        MO{"澳門"}
+         MP{"北馬里亞納群島"}
+         MQ{"馬丁尼克島"}
+         MR{"茅利塔尼亞"}
+@@ -228,7 +228,7 @@ zh_Hant{
+         PM{"聖皮埃爾和密克隆群島"}
+         PN{"皮特肯群島"}
+         PR{"波多黎各"}
+-        PS{"巴勒斯坦自治區"}
++        PS{"巴勒斯坦"}
+         PT{"葡萄牙"}
+         PW{"帛琉"}
+         PY{"巴拉圭"}
+@@ -302,9 +302,6 @@ zh_Hant{
+     }
+     Countries%short{
+         GB{"英國"}
+-        HK{"香港"}
+-        MO{"澳門"}
+-        PS{"巴勒斯坦"}
+         US{"美國"}
+     }
+     Countries%variant{
+diff --git a/source/data/region/zu.txt b/source/data/region/zu.txt
+index c517c88..d6e3af4 100644
+--- a/source/data/region/zu.txt
++++ b/source/data/region/zu.txt
+@@ -138,7 +138,7 @@ zu{
+         GU{"i-Guam"}
+         GW{"i-Guinea-Bissau"}
+         GY{"i-Guyana"}
+-        HK{"i-Hong Kong SAR China"}
++        HK{"i-Hong Kong"}
+         HM{"i-Heard Island ne-McDonald Islands"}
+         HN{"i-Honduras"}
+         HR{"i-Croatia"}
+@@ -192,7 +192,7 @@ zu{
+         ML{"iMali"}
+         MM{"i-Myanmar (Burma)"}
+         MN{"i-Mongolia"}
+-        MO{"i-Macau SAR China"}
++        MO{"i-Macau"}
+         MP{"i-Northern Mariana Islands"}
+         MQ{"i-Martinique"}
+         MR{"i-Mauritania"}
+@@ -227,7 +227,7 @@ zu{
+         PM{"i-Saint Pierre kanye ne-Miquelon"}
+         PN{"i-Pitcairn Islands"}
+         PR{"i-Puerto Rico"}
+-        PS{"i-Palestinian Territories"}
++        PS{"i-Phalestine"}
+         PT{"i-Portugal"}
+         PW{"i-Palau"}
+         PY{"i-Paraguay"}
+@@ -301,9 +301,6 @@ zu{
+     }
+     Countries%short{
+         GB{"i-U.K."}
+-        HK{"i-Hong Kong"}
+-        MO{"i-Macau"}
+-        PS{"i-Phalestine"}
+         US{"i-U.S"}
+     }
+     Countries%variant{
+diff --git a/source/data/zone/ko.txt b/source/data/zone/ko.txt
+index c433a09..10d79bc 100644
+--- a/source/data/zone/ko.txt
++++ b/source/data/zone/ko.txt
+@@ -1614,9 +1614,9 @@ ko{
+             ls{"서부 카자흐스탄 시간"}
+         }
+         "meta:Korea"{
+-            ld{"대한민국 하계 표준시"}
+-            lg{"대한민국 시간"}
+-            ls{"대한민국 표준시"}
++            ld{"한국 하계 표준시"}
++            lg{"한국 시간"}
++            ls{"한국 표준시"}
+         }
+         "meta:Kosrae"{
+             ls{"코스라에섬 시간"}
+diff --git a/source/data/zone/zh.txt b/source/data/zone/zh.txt
+index a345520..5794758 100644
+--- a/source/data/zone/zh.txt
++++ b/source/data/zone/zh.txt
+@@ -833,6 +833,12 @@ zh{
+         }
+         "Asia:Taipei"{
+             ec{"台北"}
++            ld{"台北夏令时间"}
++            lg{"台北时间"}
++            ls{"台北标准时间"}
++            sd{"台北"}
++            sg{"台北"}
++            ss{"台北"}
+         }
+         "Asia:Tashkent"{
+             ec{"塔什干"}
+diff --git a/source/data/zone/zh_Hant.txt b/source/data/zone/zh_Hant.txt
+index e36b9dd..287ab40 100644
+--- a/source/data/zone/zh_Hant.txt
++++ b/source/data/zone/zh_Hant.txt
+@@ -834,6 +834,12 @@ zh_Hant{
+         }
+         "Asia:Taipei"{
+             ec{"台北"}
++            ld{"台北夏令時間"}
++            lg{"台北時間"}
++            ls{"台北標準時間"}
++            sd{"台北"}
++            sg{"台北"}
++            ss{"台北"}
+         }
+         "Asia:Tashkent"{
+             ec{"塔什干"}

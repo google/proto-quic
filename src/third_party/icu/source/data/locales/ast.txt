@@ -1,0 +1,17 @@
+// ***************************************************************************
+// *
+// * Copyright (C) 2016 International Business Machines
+// * Corporation and others.  All Rights Reserved.
+// *
+// ***************************************************************************
+/**
+ *  Chrome Note: This locale data is the minimum to add 'ast' to the
+ *  Accept-Language menu. ExemplarCharacters is based on
+ *  https://en.wikipedia.org/wiki/Asturian_language#Alphabet.
+ */
+ast{
+    ExemplarCharacters{"[a-i l-p r-v x-z ñ ḥ ḷ]"}
+    LocaleScript{
+        "Latn",
+    }
+}

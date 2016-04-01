@@ -1,0 +1,251 @@
+[
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "RECIPE_MODULE[depot_tools::git]/resources/git_setup.py",
+      "--path",
+      "[SLAVE_BUILD]/src",
+      "--url",
+      "https://chromium.googlesource.com/chromium/src.git"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "git setup"
+  },
+  {
+    "cmd": [
+      "git",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "count-objects before git fetch",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@result@  count: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  packs: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  in_pack: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  size-pack: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  size-garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  prune-packable: 1000@@@",
+      "@@@STEP_LOG_LINE@result@  size: 1000@@@",
+      "@@@STEP_LOG_END@result@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "retry",
+      "fetch",
+      "origin",
+      "master",
+      "--recurse-submodules"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git fetch"
+  },
+  {
+    "cmd": [
+      "git",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "count-objects after git fetch",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@size delta: +1.95 MiB@@@",
+      "@@@STEP_LOG_LINE@result@  count: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  garbage: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  packs: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  in_pack: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  size-pack: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  size-garbage: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  prune-packable: 2000@@@",
+      "@@@STEP_LOG_LINE@result@  size: 2000@@@",
+      "@@@STEP_LOG_END@result@@@",
+      "@@@STEP_LOG_LINE@delta@before:@@@",
+      "@@@STEP_LOG_LINE@delta@  count: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  packs: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  in_pack: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-pack: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  prune-packable: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@@@@",
+      "@@@STEP_LOG_LINE@delta@after:@@@",
+      "@@@STEP_LOG_LINE@delta@  count: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  garbage: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  packs: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  in_pack: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-pack: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-garbage: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  prune-packable: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@  size: 2000@@@",
+      "@@@STEP_LOG_LINE@delta@@@@",
+      "@@@STEP_LOG_LINE@delta@delta:@@@",
+      "@@@STEP_LOG_LINE@delta@  count: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  packs: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  prune-packable: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-pack: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size-garbage: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  in_pack: 1000@@@",
+      "@@@STEP_LOG_LINE@delta@  size: 1000@@@",
+      "@@@STEP_LOG_END@delta@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git checkout"
+  },
+  {
+    "cmd": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "read revision",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@<br/>checked out 'deadbeef'<br/>@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git clean"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "sync"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "submodule sync"
+  },
+  {
+    "cmd": [
+      "git",
+      "submodule",
+      "update",
+      "--init",
+      "--recursive"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "submodule update"
+  },
+  {
+    "cmd": [
+      "git",
+      "-c",
+      "foo=bar",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "count-objects",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "git",
+      "config",
+      "--get",
+      "remote.origin.url"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git config remote.origin.url",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@foo@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "git",
+      "show",
+      "HEAD",
+      "--format=%at",
+      "-s"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git show",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "git",
+      "fetch",
+      "origin",
+      "--tags"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git fetch tags"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git status"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git status can_fail_build"
+  },
+  {
+    "cmd": [
+      "git",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git status cannot_fail_build"
+  },
+  {
+    "cmd": [
+      "git",
+      "rebase",
+      "origin/master"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "my repo rebase"
+  },
+  {
+    "cmd": [
+      "git",
+      "bundle",
+      "create",
+      "[SLAVE_BUILD]/all.bundle",
+      "--all"
+    ],
+    "cwd": "[SLAVE_BUILD]/src",
+    "name": "git bundle"
+  },
+  {
+    "name": "$result",
+    "recipe_result": null,
+    "status_code": 0
+  }
+]

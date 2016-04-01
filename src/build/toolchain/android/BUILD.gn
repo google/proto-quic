@@ -1,0 +1,114 @@
+# Copyright 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/sysroot.gni")  # Imports android/config.gni.
+import("//build/toolchain/gcc_toolchain.gni")
+
+# The Android GCC toolchains share most of the same parameters, so we have this
+# wrapper around gcc_toolchain to avoid duplication of logic.
+#
+# Parameters:
+#  - android_ndk_sysroot
+#      Sysroot for this architecture.
+#  - android_ndk_lib_dir
+#      Subdirectory inside of android_ndk_sysroot where libs go.
+#  - toolchain_cpu
+#      Same as gcc_toolchain
+template("android_gcc_toolchain") {
+  gcc_toolchain(target_name) {
+    # Make our manually injected libs relative to the build dir.
+    android_ndk_lib = rebase_path(
+            invoker.android_ndk_sysroot + "/" + invoker.android_ndk_lib_dir,
+            root_build_dir)
+
+    libs_section_prefix = "$android_ndk_lib/crtbegin_dynamic.o"
+    libs_section_postfix = "$android_ndk_lib/crtend_android.o"
+
+    solink_libs_section_prefix = "$android_ndk_lib/crtbegin_so.o"
+    solink_libs_section_postfix = "$android_ndk_lib/crtend_so.o"
+
+    # The tools should be run relative to the build dir.
+    tool_prefix = rebase_path("$android_tool_prefix", root_build_dir)
+
+    is_clang = invoker.is_clang
+    if (is_clang) {
+      prefix = rebase_path("//third_party/llvm-build/Release+Asserts/bin",
+                           root_build_dir)
+      cc = "$prefix/clang"
+      cxx = "$prefix/clang++"
+    } else {
+      cc = "${tool_prefix}gcc"
+      cxx = "${tool_prefix}g++"
+    }
+    ar = tool_prefix + "ar"
+    ld = cxx
+    readelf = tool_prefix + "readelf"
+    nm = tool_prefix + "nm"
+    strip = "${tool_prefix}strip"
+
+    # Don't use .cr.so for loadable_modules since they are always loaded via
+    # absolute path.
+    loadable_module_extension = ".so"
+
+    toolchain_os = "android"
+    toolchain_cpu = invoker.toolchain_cpu
+  }
+}
+
+template("android_gcc_toolchains_helper") {
+  android_gcc_toolchain(target_name) {
+    android_ndk_sysroot = invoker.android_ndk_sysroot
+    android_ndk_lib_dir = invoker.android_ndk_lib_dir
+    toolchain_cpu = invoker.toolchain_cpu
+  }
+
+  android_gcc_toolchain("clang_$target_name") {
+    android_ndk_sysroot = invoker.android_ndk_sysroot
+    android_ndk_lib_dir = invoker.android_ndk_lib_dir
+    toolchain_cpu = invoker.toolchain_cpu
+    is_clang = true
+  }
+}
+
+android_gcc_toolchains_helper("x86") {
+  android_ndk_sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib"
+
+  toolchain_cpu = "x86"
+}
+
+android_gcc_toolchains_helper("arm") {
+  android_ndk_sysroot = "$android_ndk_root/$arm_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib"
+
+  toolchain_cpu = "arm"
+}
+
+android_gcc_toolchains_helper("mipsel") {
+  android_ndk_sysroot = "$android_ndk_root/$mips_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib"
+
+  toolchain_cpu = "mipsel"
+}
+
+android_gcc_toolchains_helper("x64") {
+  android_ndk_sysroot = "$android_ndk_root/$x86_64_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib64"
+
+  toolchain_cpu = "x86_64"
+}
+
+android_gcc_toolchains_helper("arm64") {
+  android_ndk_sysroot = "$android_ndk_root/$arm64_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib"
+
+  toolchain_cpu = "aarch64"
+}
+
+android_gcc_toolchains_helper("mips64el") {
+  android_ndk_sysroot = "$android_ndk_root/$mips64_android_sysroot_subdir"
+  android_ndk_lib_dir = "usr/lib64"
+
+  toolchain_cpu = "mipsel64el"
+}

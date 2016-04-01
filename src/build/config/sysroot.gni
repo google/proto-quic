@@ -1,0 +1,79 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This header file defines the "sysroot" variable which is the absolute path
+# of the sysroot. If no sysroot applies, the variable will be an empty string.
+
+import("//build/config/chrome_build.gni")
+
+declare_args() {
+  # The absolute path of the sysroot that is applied when compiling using
+  # the target toolchain.
+  target_sysroot = ""
+  use_sysroot = true
+}
+
+if (current_toolchain == default_toolchain && target_sysroot != "") {
+  sysroot = target_sysroot
+} else if (is_android) {
+  import("//build/config/android/config.gni")
+  if (current_cpu == "x86") {
+    sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
+  } else if (current_cpu == "arm") {
+    sysroot = "$android_ndk_root/$arm_android_sysroot_subdir"
+  } else if (current_cpu == "mipsel") {
+    sysroot = "$android_ndk_root/$mips_android_sysroot_subdir"
+  } else if (current_cpu == "x64") {
+    sysroot = "$android_ndk_root/$x86_64_android_sysroot_subdir"
+  } else if (current_cpu == "arm64") {
+    sysroot = "$android_ndk_root/$arm64_android_sysroot_subdir"
+  } else if (current_cpu == "mips64") {
+    sysroot = "$android_ndk_root/$mips64_android_sysroot_subdir"
+  } else {
+    sysroot = ""
+  }
+} else if (is_linux && !is_chromeos && use_sysroot) {
+  # By default build against a sysroot image downloaded from Cloud Storage
+  # during gclient runhooks.
+  if (current_cpu == "x64") {
+    sysroot = "//build/linux/debian_wheezy_amd64-sysroot"
+  } else if (current_cpu == "x86") {
+    sysroot = "//build/linux/debian_wheezy_i386-sysroot"
+  } else if (current_cpu == "mipsel") {
+    sysroot = "//build/linux/debian_wheezy_mips-sysroot"
+  } else if (current_cpu == "arm") {
+    sysroot = "//build/linux/debian_wheezy_arm-sysroot"
+  } else {
+    # Any other builds don't use a sysroot.
+    sysroot = ""
+  }
+
+  if (sysroot != "") {
+    # Our sysroot images only contains gcc 4.6 headers, but chromium requires
+    # gcc 4.9. Clang is able to detect and work with the 4.6 headers while
+    # gcc is not. This check can be removed if we ever update to a more modern
+    # sysroot.
+    assert(is_clang, "sysroot images require clang (try use_sysroot=false)")
+
+    _script_arch = current_cpu
+    if (_script_arch == "x86") {
+      _script_arch = "i386"
+    } else if (_script_arch == "x64") {
+      _script_arch = "amd64"
+    }
+    assert(
+        exec_script("//build/dir_exists.py",
+                    [ rebase_path(sysroot) ],
+                    "string") == "True",
+        "Missing sysroot ($sysroot). To fix, run: build/linux/sysroot_scripts/install-sysroot.py --arch=$_script_arch")
+  }
+} else if (is_mac) {
+  import("//build/config/mac/mac_sdk.gni")
+  sysroot = mac_sdk_path
+} else if (is_ios) {
+  import("//build/config/ios/ios_sdk.gni")
+  sysroot = ios_sdk_path
+} else {
+  sysroot = ""
+}

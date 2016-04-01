@@ -1,0 +1,29 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+{
+  'variables': {
+    'files': [
+      '../../build/util/lib/common/',
+      '../../third_party/android_tools/sdk/build-tools/',
+      '../../third_party/android_tools/sdk/platform-tools/',
+      '../../third_party/appurify-python/',
+      '../../third_party/catapult/',
+      '../../third_party/requests/',
+      '../../tools/swarming_client/',
+      '<(PRODUCT_DIR)/icudtl.dat',
+      '<(PRODUCT_DIR)/lib.java/chromium_commands.dex.jar',
+      '<(PRODUCT_DIR)/host_forwarder',
+      '<(PRODUCT_DIR)/forwarder_dist/',
+      '<(PRODUCT_DIR)/md5sum_bin_host',
+      '<(PRODUCT_DIR)/md5sum_dist/',
+      'devil_chromium.json',
+      'devil_chromium.py',
+      'gyp/util/',
+      'incremental_install/',
+      'lighttpd_server.py',
+      'pylib/',
+      'test_runner.py',
+    ]
+  }
+}

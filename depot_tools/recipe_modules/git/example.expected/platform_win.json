@@ -1,0 +1,180 @@
+[
+  {
+    "cmd": [
+      "python",
+      "-u",
+      "RECIPE_MODULE[depot_tools::git]\\resources\\git_setup.py",
+      "--path",
+      "[SLAVE_BUILD]\\src",
+      "--url",
+      "https://chromium.googlesource.com/chromium/src.git",
+      "--git_cmd_path",
+      "RECIPE_PACKAGE[depot_tools]\\git.bat"
+    ],
+    "cwd": "[SLAVE_BUILD]",
+    "name": "git setup"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "retry",
+      "fetch",
+      "origin",
+      "master",
+      "--recurse-submodules"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git fetch"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "checkout",
+      "-f",
+      "FETCH_HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git checkout"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "read revision",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@<br/>checked out 'deadbeef'<br/>@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "clean",
+      "-f",
+      "-d",
+      "-x"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git clean"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "submodule",
+      "sync"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "submodule sync"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "submodule",
+      "update",
+      "--init",
+      "--recursive"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "submodule update"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "-c",
+      "foo=bar",
+      "count-objects",
+      "-v"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "count-objects",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "config",
+      "--get",
+      "remote.origin.url"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git config remote.origin.url",
+    "stdout": "/path/to/tmp/",
+    "~followup_annotations": [
+      "@@@STEP_TEXT@foo@@@"
+    ]
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "show",
+      "HEAD",
+      "--format=%at",
+      "-s"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git show",
+    "stdout": "/path/to/tmp/"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "fetch",
+      "origin",
+      "--tags"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git fetch tags"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git status"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git status can_fail_build"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "status"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git status cannot_fail_build"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "rebase",
+      "origin/master"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "my repo rebase"
+  },
+  {
+    "cmd": [
+      "RECIPE_PACKAGE[depot_tools]\\git.bat",
+      "bundle",
+      "create",
+      "[SLAVE_BUILD]\\all.bundle",
+      "--all"
+    ],
+    "cwd": "[SLAVE_BUILD]\\src",
+    "name": "git bundle"
+  },
+  {
+    "name": "$result",
+    "recipe_result": null,
+    "status_code": 0
+  }
+]
