@@ -1,7 +1,10 @@
-proto-quic is intended as a standalone library for QUIC.
+proto-quic
+==========
+
+proto-quic is intended as a standalone library for [QUIC](https://www.chromium.org/quic).
 
 It contains the subset of Chromium code and dependencies required for QUIC so
-folks can use the Chromium code without depending on all of Chromium.  Is it
+folks can use the Chromium code without depending on all of Chromium.  It is
 intended to be a cross-platform library, but will only support the set (or a
 strict subset) of platforms which Chromium already supports.
 
@@ -14,14 +17,22 @@ community can just clone the repo and continue updates on their own.
 Currently, the only supported platform is Linux (and the only tested version is
 Google's Ubuntu clone) but Windows and iOS should be coming soon.
 
-To do a Linux build:
+Building on Linux
+-----------------
 
-  check out the code
-  Set PATH to include $QUIC/depot_tools
-  run src/build/install-build-deps.sh
+0. Clone this repository and install dependencies
+   ```
+   git clone https://github.com/google/proto-quic.git
+   cd proto-quic
+   export PATH=$PATH:`pwd`/depot_tools
+  ./src/build/install-build-deps.sh
+   ```
 
-  cd $QUIC/src/
-  gclient runhooks && ninja -C out/Release quic_client quic_server net_unittests
+0. Build the QUIC client, server, and tests
+   ```
+   cd src
+   gclient runhooks && ninja -C out/Release quic_client quic_server net_unittests
+   ```
 
 From then on you can follow the usual Chromium instructions for playing with the
 toy client and server:
