@@ -12,6 +12,8 @@
 #include "net/quic/quic_spdy_session.h"
 #include "net/quic/reliable_quic_stream.h"
 
+using std::string;
+
 namespace net {
 
 QuicServerSessionBase::QuicServerSessionBase(

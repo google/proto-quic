@@ -39,11 +39,6 @@ class BASE_EXPORT TaskAnnotator {
   DISALLOW_COPY_AND_ASSIGN(TaskAnnotator);
 };
 
-#define TRACE_TASK_EXECUTION(run_function, task)           \
-  TRACE_EVENT2("toplevel", (run_function), "src_file",     \
-               (task).posted_from.file_name(), "src_func", \
-               (task).posted_from.function_name());
-
 }  // namespace debug
 }  // namespace base
 

@@ -49,25 +49,13 @@
               'AdditionalOptions': ['/ignore:4006'],
             },
           },
-          'dependencies': [
-            'libcmt',
-          ],
           'include_dirs': [
             '../..',
           ],
           'sources': [
             'allocator_shim_win.cc',
+            'allocator_shim_win.h',
           ],
-          'link_settings': {
-            'msvs_settings': {
-              'VCLinkerTool': {
-                'IgnoreDefaultLibraryNames': ['libcmtd.lib', 'libcmt.lib'],
-                'AdditionalDependencies': [
-                  '<(SHARED_INTERMEDIATE_DIR)/allocator/libcmt.lib'
-                ],
-              },
-            },
-          },
           'configurations': {
             'Debug_Base': {
               'msvs_settings': {
@@ -393,33 +381,6 @@
     },  # 'allocator_features' target.
   ],  # targets.
   'conditions': [
-    ['OS=="win" and win_use_allocator_shim==1', {
-      'targets': [
-        {
-          'target_name': 'libcmt',
-          'toolsets': ['host', 'target'],
-          'type': 'none',
-          'actions': [
-            {
-              'action_name': 'libcmt',
-              'inputs': [
-                'prep_libc.py',
-              ],
-              'outputs': [
-                '<(SHARED_INTERMEDIATE_DIR)/allocator/libcmt.lib',
-              ],
-              'action': [
-                'python',
-                'prep_libc.py',
-                '$(VCInstallDir)lib',
-                '<(SHARED_INTERMEDIATE_DIR)/allocator',
-                '<(target_arch)',
-              ],
-            },
-          ],
-        },
-      ],
-    }],
     ['use_experimental_allocator_shim==1', {
       'targets': [
         {

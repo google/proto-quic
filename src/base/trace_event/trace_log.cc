@@ -461,15 +461,12 @@ void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
     enabled_flag |= ENABLED_FOR_EVENT_CALLBACK;
   }
 
-  // TODO(rtenneti): enable TraceEventETWExport code.
-#if 0
 #if defined(OS_WIN)
   if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
           category_group)) {
     enabled_flag |= ENABLED_FOR_ETW_EXPORT;
   }
 #endif
-#endif  // 0
 
   g_category_group_enabled[category_index] = enabled_flag;
 }
@@ -1237,8 +1234,6 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
     }
   }
 
-  // TODO(rtenneti): enable TraceEventETWExport code.
-#if 0
 #if defined(OS_WIN)
   // This is done sooner rather than later, to avoid creating the event and
   // acquiring the lock, which is not needed for ETW as it's already threadsafe.
@@ -1247,7 +1242,6 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
                                   num_args, arg_names, arg_types, arg_values,
                                   convertable_values);
 #endif  // OS_WIN
-#endif  // 0
 
   std::string console_message;
   if (*category_group_enabled & ENABLED_FOR_RECORDING) {
@@ -1429,14 +1423,11 @@ void TraceLog::UpdateTraceEventDuration(
   ThreadTicks thread_now = ThreadNow();
   TimeTicks now = OffsetNow();
 
-  // TODO(rtenneti): enable TraceEventETWExport code.
-#if 0
 #if defined(OS_WIN)
   // Generate an ETW event that marks the end of a complete event.
   if (category_group_enabled_local & ENABLED_FOR_ETW_EXPORT)
     TraceEventETWExport::AddCompleteEndEvent(name);
 #endif  // OS_WIN
-#endif  // 0
 
   std::string console_message;
   if (category_group_enabled_local & ENABLED_FOR_RECORDING) {
@@ -1687,8 +1678,6 @@ TraceBuffer* TraceLog::CreateTraceBuffer() {
       kTraceEventVectorBufferChunks);
 }
 
-  // TODO(rtenneti): enable TraceEventETWExport code.
-#if 0
 #if defined(OS_WIN)
 void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
   AutoLock lock(lock_);
@@ -1707,7 +1696,6 @@ void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
   }
 }
 #endif  // defined(OS_WIN)
-#endif  // 0
 
 void ConvertableToTraceFormat::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {

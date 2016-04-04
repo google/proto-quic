@@ -14,8 +14,6 @@
 #include "net/http/http_auth_preferences.h"
 #include "net/http/http_auth_sspi_win.h"
 
-#pragma comment(lib, "secur32.lib")
-
 namespace net {
 
 HttpAuthHandlerNTLM::HttpAuthHandlerNTLM(

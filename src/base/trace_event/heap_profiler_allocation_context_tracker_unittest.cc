@@ -7,6 +7,7 @@
 #include <iterator>
 
 #include "base/memory/ref_counted.h"
+#include "base/pending_task.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 #include "base/trace_event/trace_event.h"
@@ -227,6 +228,54 @@ TEST_F(AllocationContextTrackerTest, BacktraceTakesTop) {
     ASSERT_EQ(kCupcake, ctx.backtrace.frames[0]);
     ASSERT_EQ(kFroyo, ctx.backtrace.frames[11]);
   }
+}
+
+TEST_F(AllocationContextTrackerTest, SetCurrentThreadName) {
+  TRACE_EVENT0("Testing", kCupcake);
+
+  // Test if the thread name is inserted into backtrace.
+  const char kThread1[] = "thread1";
+  AllocationContextTracker::SetCurrentThreadName(kThread1);
+  AllocationContext ctx1 =
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->GetContextSnapshot();
+  ASSERT_EQ(kThread1, ctx1.backtrace.frames[0]);
+  ASSERT_EQ(kCupcake, ctx1.backtrace.frames[1]);
+
+  // Test if the thread name is reset.
+  const char kThread2[] = "thread2";
+  AllocationContextTracker::SetCurrentThreadName(kThread2);
+  AllocationContext ctx2 =
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->GetContextSnapshot();
+  ASSERT_EQ(kThread2, ctx2.backtrace.frames[0]);
+  ASSERT_EQ(kCupcake, ctx2.backtrace.frames[1]);
+}
+
+TEST_F(AllocationContextTrackerTest, TrackTaskContext) {
+  const char kContext1[] = "context1";
+  const char kContext2[] = "context2";
+  {
+    // The context from the scoped task event should be used as type name.
+    TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT event1(kContext1);
+    AllocationContext ctx1 =
+        AllocationContextTracker::GetInstanceForCurrentThread()
+            ->GetContextSnapshot();
+    ASSERT_EQ(kContext1, ctx1.type_name);
+
+    // In case of nested events, the last event's context should be used.
+    TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT event2(kContext2);
+    AllocationContext ctx2 =
+        AllocationContextTracker::GetInstanceForCurrentThread()
+            ->GetContextSnapshot();
+    ASSERT_EQ(kContext2, ctx2.type_name);
+  }
+
+  // Type should be nullptr without task event.
+  AllocationContext ctx =
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->GetContextSnapshot();
+  ASSERT_FALSE(ctx.type_name);
 }
 
 }  // namespace trace_event

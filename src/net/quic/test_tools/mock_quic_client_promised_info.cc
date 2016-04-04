@@ -4,6 +4,8 @@
 
 #include "net/quic/test_tools/mock_quic_client_promised_info.h"
 
+using std::string;
+
 namespace net {
 namespace test {
 

@@ -18,6 +18,7 @@
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "base/trace_event/common/trace_event_common.h"
+#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 #include "base/trace_event/trace_log.h"
 #include "build/build_config.h"
@@ -209,6 +210,10 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
 
 #define TRACE_EVENT_API_THREAD_BUCKET(thread_bucket)                           \
     g_trace_state[thread_bucket]
+
+// Scoped tracker for task execution context in the heap profiler.
+#define TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT \
+  trace_event_internal::ScopedTaskExecutionEvent
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1043,6 +1048,31 @@ class TraceEventSamplingStateScope {
 
  private:
   const char* previous_state_;
+};
+
+// ScopedTaskExecutionEvent records the current task's context in the heap
+// profiler.
+class ScopedTaskExecutionEvent {
+ public:
+  explicit ScopedTaskExecutionEvent(const char* task_context)
+      : context_(task_context) {
+    if (UNLIKELY(
+            base::trace_event::AllocationContextTracker::capture_enabled())) {
+      base::trace_event::AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PushCurrentTaskContext(context_);
+    }
+  }
+
+  ~ScopedTaskExecutionEvent() {
+    if (UNLIKELY(
+            base::trace_event::AllocationContextTracker::capture_enabled())) {
+      base::trace_event::AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PopCurrentTaskContext(context_);
+    }
+  }
+
+ private:
+  const char* context_;
 };
 
 }  // namespace trace_event_internal

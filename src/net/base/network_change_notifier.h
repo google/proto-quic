@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "base/macros.h"
+#include "base/memory/scoped_ptr.h"
 #include "base/observer_list_threadsafe.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"

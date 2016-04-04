@@ -18,25 +18,28 @@ class NET_EXPORT_PRIVATE DatagramClientSocket : public DatagramSocket,
  public:
   ~DatagramClientSocket() override {}
 
-  // Binds this socket to |network|. All data traffic on the socket will be sent
-  // and received via |network|. Must be called before Connect(). This call will
-  // fail if |network| has disconnected. Communication using this socket will
-  // fail if |network| disconnects.
-  // Returns a net error code.
-  virtual int BindToNetwork(NetworkChangeNotifier::NetworkHandle network) = 0;
-
-  // Same as BindToNetwork, except that the current default network is used.
-  // Returns a net error code.
-  virtual int BindToDefaultNetwork() = 0;
-
-  // Returns the network that either BindToNetwork() or BindToDefaultNetwork()
-  // bound this socket to. Returns NetworkChangeNotifier::kInvalidNetworkHandle
-  // if not explicitly bound via BindToNetwork() or BindToDefaultNetwork().
-  virtual NetworkChangeNotifier::NetworkHandle GetBoundNetwork() const = 0;
-
   // Initialize this socket as a client socket to server at |address|.
   // Returns a network error code.
   virtual int Connect(const IPEndPoint& address) = 0;
+
+  // Binds this socket to |network| and initializes socket as a client socket
+  // to server at |address|. All data traffic on the socket will be sent and
+  // received via |network|. This call will fail if |network| has disconnected.
+  // Communication using this socket will fail if |network| disconnects.
+  // Returns a net error code.
+  virtual int ConnectUsingNetwork(NetworkChangeNotifier::NetworkHandle network,
+                                  const IPEndPoint& address) = 0;
+
+  // Same as ConnectUsingNetwork, except that the current default network is
+  // used. Returns a net error code.
+  virtual int ConnectUsingDefaultNetwork(const IPEndPoint& address) = 0;
+
+  // Returns the network that either ConnectUsingNetwork() or
+  // ConnectUsingDefaultNetwork() bound this socket to. Returns
+  // NetworkChangeNotifier::kInvalidNetworkHandle if not explicitly bound via
+  // ConnectUsingNetwork() or ConnectUsingDefaultNetwork().
+  virtual NetworkChangeNotifier::NetworkHandle GetBoundNetwork() const = 0;
+
 };
 
 }  // namespace net

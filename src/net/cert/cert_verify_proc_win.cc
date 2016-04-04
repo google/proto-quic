@@ -27,8 +27,6 @@
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_certificate_known_roots_win.h"
 
-#pragma comment(lib, "crypt32.lib")
-
 #if !defined(CERT_TRUST_HAS_WEAK_SIGNATURE)
 // This was introduced in Windows 8 / Windows Server 2012, but retroactively
 // ported as far back as Windows XP via system update.

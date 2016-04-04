@@ -193,6 +193,19 @@ bool ParseCIDRBlock(const std::string& cidr_literal,
   return true;
 }
 
+bool ParseURLHostnameToAddress(const std::string& hostname,
+                               IPAddress* ip_address) {
+  if (hostname.size() >= 2 && hostname.front() == '[' &&
+      hostname.back() == ']') {
+    // Strip the square brackets that surround IPv6 literals.
+    auto ip_literal =
+        base::StringPiece(hostname).substr(1, hostname.size() - 2);
+    return ip_address->AssignFromIPLiteral(ip_literal) && ip_address->IsIPv6();
+  }
+
+  return ip_address->AssignFromIPLiteral(hostname) && ip_address->IsIPv4();
+}
+
 unsigned CommonPrefixLength(const IPAddress& a1, const IPAddress& a2) {
   return CommonPrefixLength(a1.bytes(), a2.bytes());
 }

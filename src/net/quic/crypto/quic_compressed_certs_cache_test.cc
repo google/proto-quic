@@ -11,6 +11,7 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using std::string;
 using std::vector;
 
 namespace net {

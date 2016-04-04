@@ -13,8 +13,9 @@
 #include "net/quic/spdy_utils.h"
 
 using base::StringPiece;
-using std::min;
 using net::SpdyPriority;
+using std::min;
+using std::string;
 
 namespace net {
 

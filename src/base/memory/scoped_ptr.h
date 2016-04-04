@@ -11,10 +11,15 @@
 
 #include <memory>
 
-// TODO(dcheng): Temporary, to facilitate transition off scoped_ptr.
-#include "base/memory/ptr_util.h"
-
 template <typename T, typename D = std::default_delete<T>>
 using scoped_ptr = std::unique_ptr<T, D>;
+
+// A function to convert T* into scoped_ptr<T>
+// Doing e.g. make_scoped_ptr(new FooBarBaz<type>(arg)) is a shorter notation
+// for scoped_ptr<FooBarBaz<type> >(new FooBarBaz<type>(arg))
+template <typename T>
+scoped_ptr<T> make_scoped_ptr(T* ptr) {
+  return scoped_ptr<T>(ptr);
+}
 
 #endif  // BASE_MEMORY_SCOPED_PTR_H_

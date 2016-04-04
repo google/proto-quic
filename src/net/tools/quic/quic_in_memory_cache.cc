@@ -18,6 +18,7 @@
 using base::FilePath;
 using base::IntToString;
 using base::StringPiece;
+using std::list;
 using std::string;
 
 namespace net {
@@ -26,7 +27,8 @@ namespace {
 
 class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
  public:
-  ResourceFileImpl(const base::FilePath& file_name) : ResourceFile(file_name) {}
+  explicit ResourceFileImpl(const base::FilePath& file_name)
+      : ResourceFile(file_name) {}
 
   void Read() override {
     base::ReadFileToString(FilePath(file_name_), &file_contents_);
@@ -53,7 +55,7 @@ class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
     StringPiece x_push_url("X-Push-Url");
     if (http_headers_->HasHeader(x_push_url)) {
       size_t iter = 0;
-      std::unique_ptr<std::string> push_url(new string());
+      std::unique_ptr<string> push_url(new string());
       while (
           http_headers_->EnumerateHeader(&iter, x_push_url, push_url.get())) {
         push_urls_.push_back(StringPiece(*push_url));
@@ -70,8 +72,8 @@ class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
 
  private:
   scoped_refptr<HttpResponseHeaders> http_headers_;
-  std::string url_;
-  std::list<std::unique_ptr<string>> push_url_values_;
+  string url_;
+  list<std::unique_ptr<string>> push_url_values_;
 
   DISALLOW_COPY_AND_ASSIGN(ResourceFileImpl);
 };

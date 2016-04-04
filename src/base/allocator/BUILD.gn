@@ -6,10 +6,6 @@ import("//build/buildflag_header.gni")
 import("//build/config/allocator.gni")
 import("//build/config/compiler/compiler.gni")
 
-if (is_win) {
-  import("//build/config/win/visual_studio_version.gni")
-}
-
 declare_args() {
   # Provide a way to force disable debugallocation in Debug builds,
   # e.g. for profiling (it's more rare to profile Debug builds,
@@ -17,19 +13,21 @@ declare_args() {
   enable_debugallocation = is_debug
 }
 
+# Allocator shim is only enabled for Release static builds.
+win_use_allocator_shim = is_win && !is_component_build && !is_debug
+
 # This "allocator" meta-target will forward to the default allocator according
 # to the build settings.
 group("allocator") {
+  public_deps = []
   deps = []
 
   if (use_allocator == "tcmalloc") {
     deps += [ ":tcmalloc" ]
   }
 
-  # This condition expresses the win_use_allocator_shim in the GYP build.
-  if (is_win && !is_component_build && visual_studio_version != "2015") {
-    deps += [ ":allocator_shim" ]
-    all_dependent_configs = [ ":nocmt" ]
+  if (win_use_allocator_shim) {
+    public_deps += [ ":allocator_shim" ]
   }
 }
 
@@ -40,7 +38,7 @@ group("allocator") {
 # assumes that the library using it will eventually be linked with
 # //base/allocator in the default way. Clean this up and delete this.
 config("allocator_shim_define") {
-  if (is_win && !is_component_build && visual_studio_version != "2015") {
+  if (win_use_allocator_shim) {
     defines = [ "ALLOCATOR_SHIM" ]
   }
 }
@@ -76,46 +74,15 @@ config("tcmalloc_flags") {
   }
 }
 
-# This config and libc modification are only used on Windows.
-if (is_win) {
-  config("nocmt") {
-    ldflags = [
-      "/NODEFAULTLIB:libcmt",
-      "/NODEFAULTLIB:libcmtd",
+# This config is only used on Windows static release builds for the
+# allocator shim.
+if (win_use_allocator_shim) {
+  source_set("allocator_shim") {
+    sources = [
+      "allocator_shim_win.cc",
+      "allocator_shim_win.h",
     ]
-    libs = [ rebase_path("$target_gen_dir/allocator/libcmt.lib") ]
-  }
-
-  if (!is_component_build && visual_studio_version != "2015") {
-    action("prep_libc") {
-      script = "prep_libc.py"
-      outputs = [
-        "$target_gen_dir/allocator/libcmt.lib",
-      ]
-      args = [
-        visual_studio_path + "/vc/lib",
-        rebase_path("$target_gen_dir/allocator"),
-        current_cpu,
-
-        # The environment file in the build directory. This is required because
-        # the Windows toolchain setup saves the VC paths and such so that
-        # running "mc.exe" will work with the configured toolchain. This file
-        # is in the root build dir.
-        "environment.$current_cpu",
-      ]
-    }
-
-    source_set("allocator_shim") {
-      sources = [
-        "allocator_shim_win.cc",
-      ]
-      configs -= [ "//build/config/compiler:chromium_code" ]
-      configs += [ "//build/config/compiler:no_chromium_code" ]
-
-      deps = [
-        ":prep_libc",
-      ]
-    }
+    configs += [ ":allocator_shim_define" ]
   }
 }
 

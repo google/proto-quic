@@ -7,6 +7,8 @@
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_headers_stream.h"
 
+using std::string;
+
 namespace net {
 
 QuicSpdySession::QuicSpdySession(QuicConnection* connection,

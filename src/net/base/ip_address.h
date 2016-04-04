@@ -182,6 +182,14 @@ NET_EXPORT bool ParseCIDRBlock(const std::string& cidr_literal,
                                IPAddress* ip_address,
                                size_t* prefix_length_in_bits);
 
+// Parses a URL-safe IP literal (see RFC 3986, Sec 3.2.2) to its numeric value.
+// Returns true on success, and fills |ip_address| with the numeric value.
+// In other words, |hostname| must be an IPv4 literal, or an IPv6 literal
+// surrounded by brackets as in [::1].
+NET_EXPORT bool ParseURLHostnameToAddress(const std::string& hostname,
+                                          IPAddress* ip_address)
+    WARN_UNUSED_RESULT;
+
 // Returns number of matching initial bits between the addresses |a1| and |a2|.
 unsigned CommonPrefixLength(const IPAddress& a1, const IPAddress& a2);
 

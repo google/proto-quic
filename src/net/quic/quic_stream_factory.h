@@ -8,8 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <deque>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -106,7 +108,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   QuicStreamFactory* factory_;
   HostPortPair host_port_pair_;
   std::string origin_host_;
-  string url_;
+  std::string url_;
   PrivacyMode privacy_mode_;
   BoundNetLog net_log_;
   CompletionCallback callback_;

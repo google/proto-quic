@@ -10,8 +10,10 @@
 
 #include <limits>
 
+#include "base/allocator/allocator_check.h"
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
+#include "base/memory/aligned_memory.h"
 #include "base/strings/stringprintf.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -47,26 +49,6 @@ typedef long ssize_t;
 typedef BOOL (WINAPI* HeapQueryFn)  \
     (HANDLE, HEAP_INFORMATION_CLASS, PVOID, SIZE_T, PSIZE_T);
 
-const int kConstantInModule = 42;
-
-TEST(ProcessMemoryTest, GetModuleFromAddress) {
-  // Since the unit tests are their own EXE, this should be
-  // equivalent to the EXE's HINSTANCE.
-  //
-  // kConstantInModule is a constant in this file and
-  // therefore within the unit test EXE.
-  EXPECT_EQ(::GetModuleHandle(NULL),
-            base::GetModuleFromAddress(
-                const_cast<int*>(&kConstantInModule)));
-
-  // Any address within the kernel32 module should return
-  // kernel32's HMODULE.  Our only assumption here is that
-  // kernel32 is larger than 4 bytes.
-  HMODULE kernel32 = ::GetModuleHandle(L"kernel32.dll");
-  HMODULE kernel32_from_address =
-      base::GetModuleFromAddress(reinterpret_cast<DWORD*>(kernel32) + 1);
-  EXPECT_EQ(kernel32, kernel32_from_address);
-}
 #endif  // defined(OS_WIN)
 
 #if defined(OS_MACOSX)
@@ -95,6 +77,10 @@ TEST(ProcessMemoryTest, MacTerminateOnHeapCorruption) {
 }
 
 #endif  // defined(OS_MACOSX)
+
+TEST(MemoryTest, AllocatorShimWorking) {
+  ASSERT_TRUE(base::allocator::IsAllocatorInitialized());
+}
 
 // Android doesn't implement set_new_handler, so we can't use the
 // OutOfMemoryTest cases. OpenBSD does not support these tests either.
@@ -176,6 +162,23 @@ TEST_F(OutOfMemoryDeathTest, Calloc) {
     }, kOomRegex);
 }
 
+TEST_F(OutOfMemoryDeathTest, AlignedAlloc) {
+  ASSERT_DEATH({
+      SetUpInDeathAssert();
+      value_ = base::AlignedAlloc(test_size_, 8);
+    }, kOomRegex);
+}
+
+// POSIX does not define an aligned realloc function.
+#if defined(OS_WIN)
+TEST_F(OutOfMemoryDeathTest, AlignedRealloc) {
+  ASSERT_DEATH({
+      SetUpInDeathAssert();
+      value_ = _aligned_realloc(NULL, test_size_, 8);
+    }, kOomRegex);
+}
+#endif  // defined(OS_WIN)
+
 // OS X has no 2Gb allocation limit.
 // See https://crbug.com/169327.
 #if !defined(OS_MACOSX)
@@ -213,6 +216,23 @@ TEST_F(OutOfMemoryDeathTest, SecurityCalloc) {
       value_ = calloc(1024, insecure_test_size_ / 1024L);
     }, kOomRegex);
 }
+
+TEST_F(OutOfMemoryDeathTest, SecurityAlignedAlloc) {
+  ASSERT_DEATH({
+      SetUpInDeathAssert();
+      value_ = base::AlignedAlloc(insecure_test_size_, 8);
+    }, kOomRegex);
+}
+
+// POSIX does not define an aligned realloc function.
+#if defined(OS_WIN)
+TEST_F(OutOfMemoryDeathTest, SecurityAlignedRealloc) {
+  ASSERT_DEATH({
+      SetUpInDeathAssert();
+      value_ = _aligned_realloc(NULL, insecure_test_size_, 8);
+    }, kOomRegex);
+}
+#endif  // defined(OS_WIN)
 #endif  // !defined(OS_MACOSX)
 
 #if defined(OS_LINUX)

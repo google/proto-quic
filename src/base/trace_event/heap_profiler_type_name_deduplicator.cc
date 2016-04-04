@@ -16,6 +16,33 @@
 namespace base {
 namespace trace_event {
 
+namespace {
+
+// Extract directory name if |type_name| was file name. Otherwise, return
+// |type_name|.
+StringPiece ExtractDirNameFromFileName(const char* type_name) {
+  StringPiece result(type_name);
+  size_t last_seperator = result.find_last_of("\\/");
+
+  // If |type_name| was a not a file path, the seperator will not be found, so
+  // the whole type name is returned.
+  if (last_seperator == StringPiece::npos)
+    return result;
+
+  // Remove the file name from the path.
+  result.remove_suffix(result.length() - last_seperator);
+
+  // Remove the parent directory references.
+  const char kParentDirectory[] = "..";
+  const size_t kParentDirectoryLength = 3; // '../' or '..\'.
+  while (result.starts_with(kParentDirectory)) {
+    result.remove_prefix(kParentDirectoryLength);
+  }
+  return result;
+}
+
+}  // namespace
+
 TypeNameDeduplicator::TypeNameDeduplicator() {
   // A null pointer has type ID 0 ("unknown type");
   type_ids_.insert(std::make_pair(nullptr, 0));
@@ -53,9 +80,13 @@ void TypeNameDeduplicator::AppendAsTraceFormat(std::string* out) const {
     // a dictionary.
     SStringPrintf(&buffer, ",\"%d\":", it->second);
 
+    // TODO(ssid): crbug.com/594803 the type name is misused for file name in
+    // some cases.
+    StringPiece type_info = ExtractDirNameFromFileName(it->first);
+
     // |EscapeJSONString| appends, it does not overwrite |buffer|.
     bool put_in_quotes = true;
-    EscapeJSONString(it->first, put_in_quotes, &buffer);
+    EscapeJSONString(type_info, put_in_quotes, &buffer);
     out->append(buffer);
   }
 

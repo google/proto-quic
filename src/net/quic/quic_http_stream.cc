@@ -153,7 +153,7 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
   DCHECK(success);
   DCHECK(ssl_info_.cert.get());
 
-  string url(request_info->url.spec());
+  std::string url(request_info->url.spec());
   QuicClientPromisedInfo* promised =
       session_->push_promise_index()->GetPromised(url);
   if (promised) {

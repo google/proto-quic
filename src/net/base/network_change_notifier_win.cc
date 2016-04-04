@@ -17,8 +17,6 @@
 #include "net/base/winsock_util.h"
 #include "net/dns/dns_config_service.h"
 
-#pragma comment(lib, "iphlpapi.lib")
-
 namespace net {
 
 namespace {

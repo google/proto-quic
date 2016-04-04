@@ -6,6 +6,10 @@
 
 #include "build/build_config.h"
 
+#if defined(OS_WIN)
+#include "base/allocator/allocator_shim_win.h"
+#endif
+
 #if defined(OS_LINUX)
 #include <malloc.h>
 #endif
@@ -13,15 +17,9 @@
 namespace base {
 namespace allocator {
 
-// Defined in allocator_shim_win.cc .
-// TODO(primiano): replace with an include once base can depend on allocator.
-#if defined(OS_WIN) && defined(ALLOCATOR_SHIM)
-extern bool g_is_win_shim_layer_initialized;
-#endif
-
 bool IsAllocatorInitialized() {
 #if defined(OS_WIN) && defined(ALLOCATOR_SHIM)
-  // Set by allocator_shim_win.cc when the shimmed _heap_init() is called.
+  // Set by allocator_shim_win.cc when the shimmed _set_new_mode() is called.
   return g_is_win_shim_layer_initialized;
 #elif defined(OS_LINUX) && defined(USE_TCMALLOC) && \
     !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)

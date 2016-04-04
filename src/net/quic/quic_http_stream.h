@@ -9,6 +9,8 @@
 #include <stdint.h>
 
 #include <list>
+#include <string>
+#include <vector>
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -107,7 +109,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   void OnIOComplete(int rv);
   void DoCallback(int rv);
 
-  int DoLoop(int);
+  int DoLoop(int rv);
   int DoStreamRequest();
   int DoSetRequestPriority();
   int DoSendHeaders();

@@ -17,10 +17,10 @@
 #include "net/tools/quic/quic_simple_server_session.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 
-namespace net {
-
-using std::make_pair;
 using base::StringPiece;
+using std::string;
+
+namespace net {
 
 namespace {
 

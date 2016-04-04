@@ -13,8 +13,6 @@
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_stream_sequencer_buffer.h"
 
-using std::string;
-
 namespace net {
 
 namespace test {

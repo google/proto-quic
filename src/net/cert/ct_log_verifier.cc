@@ -137,7 +137,7 @@ bool CTLogVerifier::VerifyConsistencyProof(
     return proof.nodes.empty();
 
   // Implement the algorithm described in
-  // https://tools.ietf.org/html/draft-ietf-trans-rfc6962-bis-11#section-9.4.2
+  // https://tools.ietf.org/html/draft-ietf-trans-rfc6962-bis-12#section-9.4.2
   //
   // It maintains a pair of hashes |fr| and |sr|, initialized to the same
   // value. Each node in |proof| will be hashed to the left of both |fr| and
@@ -179,10 +179,7 @@ bool CTLogVerifier::VerifyConsistencyProof(
 
   // 5. For each subsequent value "c" in the "consistency_path" array:
   for (; iter != proof.nodes.end(); ++iter) {
-    // The proof should end exactly when |sn| becomes zero. This check is
-    // missing from the draft specification. It and the additional check below
-    // ensure the proof is consistent with the tree sizes but is not necessary
-    // to ensure |old_tree_hash| is a prefix of |new_tree_hash|.
+    // If "sn" is 0, stop the iteration and fail the proof verification.
     if (sn == 0)
       return false;
     // If "LSB(fn)" is set, or if "fn" is equal to "sn", then:
@@ -210,13 +207,8 @@ bool CTLogVerifier::VerifyConsistencyProof(
 
   // 6. After completing iterating through the "consistency_path" array as
   // described above, verify that the "fr" calculated is equal to the
-  // "first_hash" supplied and that the "sr" calculated is equal to the
-  // "second_hash" supplied.
-  //
-  // The proof should also end exactly when |sn| becomes zero. This check is
-  // missing from the draft specification. It and the additional check above
-  // ensure the proof is consistent with the tree sizes but is not necessary to
-  // ensure |old_tree_hash| is a prefix of |new_tree_hash|.
+  // "first_hash" supplied, that the "sr" calculated is equal to the
+  // "second_hash" supplied and that "sn" is 0.
   return fr == old_tree_hash && sr == new_tree_hash && sn == 0;
 }
 

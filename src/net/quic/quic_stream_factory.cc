@@ -1463,19 +1463,17 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
 #endif
   }
 
-  // If caller leaves network unspecified, use current default.
   int rv;
   if (migrate_sessions_on_network_change_) {
+    // If caller leaves network unspecified, use current default network.
     if (network == NetworkChangeNotifier::kInvalidNetworkHandle) {
-      rv = socket->BindToDefaultNetwork();
+      rv = socket->ConnectUsingDefaultNetwork(addr);
     } else {
-      rv = socket->BindToNetwork(network);
+      rv = socket->ConnectUsingNetwork(network, addr);
     }
-    if (rv != OK)
-      return rv;
+  } else {
+    rv = socket->Connect(addr);
   }
-
-  rv = socket->Connect(addr);
   if (rv != OK) {
     HistogramCreateSessionFailure(CREATION_ERROR_CONNECTING_SOCKET);
     return rv;

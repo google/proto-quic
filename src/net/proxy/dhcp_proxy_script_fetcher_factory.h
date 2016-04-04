@@ -6,6 +6,7 @@
 #define NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
 
 #include "base/macros.h"
+#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"

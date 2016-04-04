@@ -21,10 +21,6 @@
 #include "net/spdy/spdy_framer.h"
 #include "url/gurl.h"
 
-using base::StringPiece;
-using std::string;
-using std::list;
-
 namespace base {
 
 template <typename Type>
@@ -51,12 +47,12 @@ class QuicInMemoryCache {
     ServerPushInfo(GURL request_url,
                    const SpdyHeaderBlock& headers,
                    SpdyPriority priority,
-                   string body);
+                   std::string body);
     ServerPushInfo(const ServerPushInfo& other);
     GURL request_url;
     SpdyHeaderBlock headers;
     SpdyPriority priority;
-    string body;
+    std::string body;
   };
 
   enum SpecialResponseType {
@@ -106,15 +102,15 @@ class QuicInMemoryCache {
     virtual void Read() = 0;
     void SetHostPathFromBase(base::StringPiece base);
 
-    StringPiece host() { return host_; }
+    base::StringPiece host() { return host_; }
     void set_host(base::StringPiece host) { host_ = host; }
 
-    StringPiece path() { return path_; }
+    base::StringPiece path() { return path_; }
     void set_path(base::StringPiece path) { path_ = path; }
 
     SpdyHeaderBlock spdy_headers() { return spdy_headers_; }
 
-    StringPiece body() { return body_; }
+    base::StringPiece body() { return body_; }
 
     const std::vector<base::StringPiece>& push_urls() { return push_urls_; }
 
@@ -123,12 +119,12 @@ class QuicInMemoryCache {
    protected:
     void HandleXOriginalUrl();
     void HandlePushUrls(const std::vector<base::StringPiece>& push_urls);
-    StringPiece RemoveScheme(base::StringPiece url);
+    base::StringPiece RemoveScheme(base::StringPiece url);
 
-    const string cache_directory_;
+    const std::string cache_directory_;
     const base::FilePath file_name_;
     const std::string file_name_string_;
-    string file_contents_;
+    std::string file_contents_;
     base::StringPiece body_;
     SpdyHeaderBlock spdy_headers_;
     base::StringPiece x_original_url_;
@@ -191,10 +187,10 @@ class QuicInMemoryCache {
   void AddDefaultResponse(Response* response);
 
   // |cache_cirectory| can be generated using `wget -p --save-headers <url>`.
-  void InitializeFromDirectory(const string& cache_directory);
+  void InitializeFromDirectory(const std::string& cache_directory);
 
   // Find all the server push resources associated with |request_url|.
-  list<ServerPushInfo> GetServerPushResources(string request_url);
+  std::list<ServerPushInfo> GetServerPushResources(std::string request_url);
 
  private:
   typedef std::unordered_map<std::string, Response*> ResponseMap;
@@ -214,7 +210,7 @@ class QuicInMemoryCache {
                        base::StringPiece response_body,
                        const SpdyHeaderBlock& response_trailers);
 
-  string GetKey(base::StringPiece host, base::StringPiece path) const;
+  std::string GetKey(base::StringPiece host, base::StringPiece path) const;
 
   // Add some server push urls with given responses for specified
   // request if these push resources are not associated with this request yet.
@@ -224,7 +220,7 @@ class QuicInMemoryCache {
 
   // Check if push resource(push_host/push_path) associated with given request
   // url already exists in server push map.
-  bool PushResourceExistsInCache(string original_request_url,
+  bool PushResourceExistsInCache(std::string original_request_url,
                                  ServerPushInfo resource);
 
   // Cached responses.
@@ -234,7 +230,7 @@ class QuicInMemoryCache {
   scoped_ptr<Response> default_response_;
 
   // A map from request URL to associated server push responses (if any).
-  std::multimap<string, ServerPushInfo> server_push_resources_;
+  std::multimap<std::string, ServerPushInfo> server_push_resources_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicInMemoryCache);
 };

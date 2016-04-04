@@ -812,7 +812,7 @@ void QuicChromiumClientSession::OnRstStream(const QuicRstStreamFrame& frame) {
 
 void QuicChromiumClientSession::OnConnectionClosed(
     QuicErrorCode error,
-    const string& error_details,
+    const std::string& error_details,
     ConnectionCloseSource source) {
   DCHECK(!connection()->connected());
   logger_->OnConnectionClosed(error, error_details, source);

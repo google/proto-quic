@@ -6,11 +6,24 @@
 
 #include "base/atomicops.h"
 #include "base/logging.h"
-#include "base/process/memory.h"
 
 namespace {
 
 base::win::WinProcExceptionFilter s_exception_filter = NULL;
+
+HMODULE GetModuleFromWndProc(WNDPROC window_proc) {
+  HMODULE instance = NULL;
+  // Converting a pointer-to-function to a void* is undefined behavior, but
+  // Windows (and POSIX) APIs require it to work.
+  void* address = reinterpret_cast<void*>(window_proc);
+  if (!::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            static_cast<char*>(address),
+                            &instance)) {
+    NOTREACHED();
+  }
+  return instance;
+}
 
 }  // namespace.
 
@@ -47,7 +60,9 @@ BASE_EXPORT void InitializeWindowClass(
   class_out->lpfnWndProc = window_proc;
   class_out->cbClsExtra = class_extra;
   class_out->cbWndExtra = window_extra;
-  class_out->hInstance = base::GetModuleFromAddress(window_proc);
+  // RegisterClassEx uses a handle of the module containing the window procedure
+  // to distinguish identically named classes registered in different modules.
+  class_out->hInstance = GetModuleFromWndProc(window_proc);
   class_out->hIcon = large_icon;
   class_out->hCursor = cursor;
   class_out->hbrBackground = background;

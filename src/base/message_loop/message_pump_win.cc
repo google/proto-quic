@@ -11,9 +11,9 @@
 
 #include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram.h"
-#include "base/process/memory.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/trace_event.h"
+#include "base/win/current_module.h"
 #include "base/win/wrapped_window_proc.h"
 
 namespace base {
@@ -89,8 +89,7 @@ MessagePumpForUI::MessagePumpForUI()
 
 MessagePumpForUI::~MessagePumpForUI() {
   DestroyWindow(message_hwnd_);
-  UnregisterClass(MAKEINTATOM(atom_),
-                  GetModuleFromAddress(&WndProcThunk));
+  UnregisterClass(MAKEINTATOM(atom_), CURRENT_MODULE());
 }
 
 void MessagePumpForUI::ScheduleWork() {
@@ -198,7 +197,7 @@ void MessagePumpForUI::InitMessageWnd() {
   // Generate a unique window class name.
   string16 class_name = StringPrintf(kWndClassFormat, this);
 
-  HINSTANCE instance = GetModuleFromAddress(&WndProcThunk);
+  HINSTANCE instance = CURRENT_MODULE();
   WNDCLASSEX wc = {0};
   wc.cbSize = sizeof(wc);
   wc.lpfnWndProc = base::win::WrappedWindowProc<WndProcThunk>;
@@ -236,9 +235,10 @@ void MessagePumpForUI::WaitForWork() {
     // The WaitMessage call below is a workaround to give the child window
     // some time to process its input messages.
     MSG msg = {0};
-    DWORD queue_status = GetQueueStatus(QS_MOUSE);
-    if (HIWORD(queue_status) & QS_MOUSE &&
-        !PeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_NOREMOVE)) {
+    bool has_pending_sent_message =
+        (HIWORD(GetQueueStatus(QS_SENDMESSAGE)) & QS_SENDMESSAGE) != 0;
+    if (!has_pending_sent_message &&
+        !PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
       WaitMessage();
     }
     return;

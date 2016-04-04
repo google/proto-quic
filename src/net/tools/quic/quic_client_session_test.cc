@@ -38,6 +38,7 @@ using net::test::ValueRestore;
 using net::test::kClientDataStreamId1;
 using net::test::kServerDataStreamId1;
 using net::test::kTestPort;
+using std::string;
 using testing::AnyNumber;
 using testing::Invoke;
 using testing::Truly;

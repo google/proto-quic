@@ -15,6 +15,7 @@
 using testing::_;
 using testing::Return;
 using testing::StrictMock;
+using std::string;
 
 namespace net {
 namespace test {

@@ -8,6 +8,8 @@
 #include "net/quic/quic_flags.h"
 #include "net/quic/spdy_utils.h"
 
+using std::string;
+
 namespace net {
 
 QuicClientSessionBase::QuicClientSessionBase(

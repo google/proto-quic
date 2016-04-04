@@ -10,6 +10,7 @@
 #include "net/quic/spdy_utils.h"
 
 using net::SpdyHeaderBlock;
+using std::string;
 
 namespace net {
 

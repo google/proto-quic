@@ -58,11 +58,6 @@ NET_EXPORT std::string IPAddressToStringWithPort(const IPAddressNumber& addr,
 // Returns the address as a sequence of bytes in network-byte-order.
 NET_EXPORT std::string IPAddressToPackedString(const IPAddressNumber& addr);
 
-// Parses a URL-safe IP literal (see RFC 3986, Sec 3.2.2) to its numeric value.
-// Returns true on success, and fills |ip_number| with the numeric value
-NET_EXPORT bool ParseURLHostnameToNumber(const std::string& hostname,
-                                         IPAddressNumber* ip_number);
-
 // Parses an IP address literal (either IPv4 or IPv6) to its numeric value.
 // Returns true on success and fills |ip_number| with the numeric value.
 NET_EXPORT bool ParseIPLiteralToNumber(const base::StringPiece& ip_literal,

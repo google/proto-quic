@@ -4,8 +4,6 @@
 
 #include "net/base/network_interfaces_win.h"
 
-#pragma comment(lib, "iphlpapi.lib")
-
 #include <algorithm>
 
 #include "base/files/file_path.h"

@@ -14,6 +14,8 @@
 #include "net/tools/quic/quic_simple_server_stream.h"
 #include "url/gurl.h"
 
+using std::string;
+
 namespace net {
 
 QuicSimpleServerSession::QuicSimpleServerSession(

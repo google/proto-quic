@@ -11,8 +11,6 @@
 #include "net/base/net_errors.h"
 #include "net/cert/x509_certificate.h"
 
-#pragma comment(lib, "crypt32.lib")
-
 namespace net {
 
 CertDatabase::CertDatabase()

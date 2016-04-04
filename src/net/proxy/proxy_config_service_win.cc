@@ -21,8 +21,6 @@
 #include "net/base/net_errors.h"
 #include "net/proxy/proxy_config.h"
 
-#pragma comment(lib, "winhttp.lib")
-
 namespace net {
 
 namespace {

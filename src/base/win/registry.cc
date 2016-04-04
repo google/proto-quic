@@ -415,7 +415,7 @@ bool RegKey::StartWatching(const ChangeCallback& callback) {
   if (!key_watcher_)
     key_watcher_.reset(new Watcher(this));
 
-  if (!key_watcher_.get()->StartWatching(key_, callback))
+  if (!key_watcher_->StartWatching(key_, callback))
     return false;
 
   return true;

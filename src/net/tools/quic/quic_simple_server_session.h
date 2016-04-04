@@ -113,7 +113,7 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
   // Copying the rest headers ensures they are the same as the original
   // request, especially cookies.
   SpdyHeaderBlock SynthesizePushRequestHeaders(
-      string request_url,
+      std::string request_url,
       QuicInMemoryCache::ServerPushInfo resource,
       const SpdyHeaderBlock& original_request_headers);
 
@@ -153,4 +153,4 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
 
 }  // namespace net
 
-#endif  // NET_TOOLS_QUIC_QUIC_SERVER_SESSION_H_
+#endif  // NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_SESSION_H_
