@@ -50,7 +50,6 @@ full_copy_directories =[
                  'third_party/icu',
                  'third_party/instrumented_libraries',
                  'third_party/libxml/',
-                 'third_party/llvm-build',
                  'third_party/modp_b64',
                  'third_party/protobuf',
                  'third_party/tcmalloc',
