@@ -28,7 +28,8 @@ class TestDelegate : public QuicAlarm::Delegate {
 
 class QuicEpollConnectionHelperTest : public ::testing::Test {
  protected:
-  QuicEpollConnectionHelperTest() : helper_(&epoll_server_) {}
+  QuicEpollConnectionHelperTest()
+      : helper_(&epoll_server_, QuicAllocator::BUFFER_POOL) {}
 
   MockEpollServer epoll_server_;
   QuicEpollConnectionHelper helper_;

@@ -5,12 +5,12 @@
 #ifndef NET_WEBSOCKETS_WEBSOCKET_BASIC_STREAM_H_
 #define NET_WEBSOCKETS_WEBSOCKET_BASIC_STREAM_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/callback.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/websockets/websocket_frame_parser.h"
 #include "net/websockets/websocket_stream.h"
 
@@ -32,21 +32,20 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
   // This class should not normally be constructed directly; see
   // WebSocketStream::CreateAndConnectStream() and
   // WebSocketBasicHandshakeStream::Upgrade().
-  WebSocketBasicStream(
-      scoped_ptr<ClientSocketHandle> connection,
-      const scoped_refptr<GrowableIOBuffer>& http_read_buffer,
-      const std::string& sub_protocol,
-      const std::string& extensions);
+  WebSocketBasicStream(std::unique_ptr<ClientSocketHandle> connection,
+                       const scoped_refptr<GrowableIOBuffer>& http_read_buffer,
+                       const std::string& sub_protocol,
+                       const std::string& extensions);
 
   // The destructor has to make sure the connection is closed when we finish so
   // that it does not get returned to the pool.
   ~WebSocketBasicStream() override;
 
   // WebSocketStream implementation.
-  int ReadFrames(std::vector<scoped_ptr<WebSocketFrame>>* frames,
+  int ReadFrames(std::vector<std::unique_ptr<WebSocketFrame>>* frames,
                  const CompletionCallback& callback) override;
 
-  int WriteFrames(std::vector<scoped_ptr<WebSocketFrame>>* frames,
+  int WriteFrames(std::vector<std::unique_ptr<WebSocketFrame>>* frames,
                   const CompletionCallback& callback) override;
 
   void Close() override;
@@ -58,8 +57,9 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
   ////////////////////////////////////////////////////////////////////////////
   // Methods for testing only.
 
-  static scoped_ptr<WebSocketBasicStream> CreateWebSocketBasicStreamForTesting(
-      scoped_ptr<ClientSocketHandle> connection,
+  static std::unique_ptr<WebSocketBasicStream>
+  CreateWebSocketBasicStreamForTesting(
+      std::unique_ptr<ClientSocketHandle> connection,
       const scoped_refptr<GrowableIOBuffer>& http_read_buffer,
       const std::string& sub_protocol,
       const std::string& extensions,
@@ -79,23 +79,23 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
   // Attempts to parse the output of a read as WebSocket frames. On success,
   // returns OK and places the frame(s) in |frames|.
   int HandleReadResult(int result,
-                       std::vector<scoped_ptr<WebSocketFrame>>* frames);
+                       std::vector<std::unique_ptr<WebSocketFrame>>* frames);
 
   // Converts the chunks in |frame_chunks| into frames and writes them to
   // |frames|. |frame_chunks| is destroyed in the process. Returns
   // ERR_WS_PROTOCOL_ERROR if an invalid chunk was found. If one or more frames
   // was added to |frames|, then returns OK, otherwise returns ERR_IO_PENDING.
   int ConvertChunksToFrames(
-      std::vector<scoped_ptr<WebSocketFrameChunk>>* frame_chunks,
-      std::vector<scoped_ptr<WebSocketFrame>>* frames);
+      std::vector<std::unique_ptr<WebSocketFrameChunk>>* frame_chunks,
+      std::vector<std::unique_ptr<WebSocketFrame>>* frames);
 
   // Converts a |chunk| to a |frame|. |*frame| should be NULL on entry to this
   // method. If |chunk| is an incomplete control frame, or an empty middle
   // frame, then |*frame| may still be NULL on exit. If an invalid control frame
   // is found, returns ERR_WS_PROTOCOL_ERROR and the stream is no longer
   // usable. Otherwise returns OK (even if frame is still NULL).
-  int ConvertChunkToFrame(scoped_ptr<WebSocketFrameChunk> chunk,
-                          scoped_ptr<WebSocketFrame>* frame);
+  int ConvertChunkToFrame(std::unique_ptr<WebSocketFrameChunk> chunk,
+                          std::unique_ptr<WebSocketFrame>* frame);
 
   // Creates a frame based on the value of |is_final_chunk|, |data| and
   // |current_frame_header_|. Clears |current_frame_header_| if |is_final_chunk|
@@ -104,7 +104,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
   // returned frame will be NULL. Otherwise, |current_frame_header_->opcode| is
   // set to Continuation after use if it was Text or Binary, in accordance with
   // WebSocket RFC6455 section 5.4.
-  scoped_ptr<WebSocketFrame> CreateFrame(
+  std::unique_ptr<WebSocketFrame> CreateFrame(
       bool is_final_chunk,
       const scoped_refptr<IOBufferWithSize>& data);
 
@@ -115,7 +115,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
 
   // Called when a read completes. Parses the result and (unless no complete
   // header has been received) calls |callback|.
-  void OnReadComplete(std::vector<scoped_ptr<WebSocketFrame>>* frames,
+  void OnReadComplete(std::vector<std::unique_ptr<WebSocketFrame>>* frames,
                       const CompletionCallback& callback,
                       int result);
 
@@ -126,14 +126,14 @@ class NET_EXPORT_PRIVATE WebSocketBasicStream : public WebSocketStream {
 
   // The connection, wrapped in a ClientSocketHandle so that we can prevent it
   // from being returned to the pool.
-  scoped_ptr<ClientSocketHandle> connection_;
+  std::unique_ptr<ClientSocketHandle> connection_;
 
   // Frame header for the frame currently being received. Only non-NULL while we
   // are processing the frame. If the frame arrives in multiple chunks, it can
   // remain non-NULL until additional chunks arrive. If the header of the frame
   // was invalid, this is set to NULL, the channel is failed, and subsequent
   // chunks of the same frame will be ignored.
-  scoped_ptr<WebSocketFrameHeader> current_frame_header_;
+  std::unique_ptr<WebSocketFrameHeader> current_frame_header_;
 
   // Although it should rarely happen in practice, a control frame can arrive
   // broken into chunks. This variable provides storage for a partial control

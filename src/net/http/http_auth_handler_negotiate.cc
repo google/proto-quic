@@ -25,10 +25,10 @@ namespace net {
 
 namespace {
 
-scoped_ptr<base::Value> NetLogParameterChannelBindings(
+std::unique_ptr<base::Value> NetLogParameterChannelBindings(
     const std::string& channel_binding_token,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict;
+  std::unique_ptr<base::DictionaryValue> dict;
   if (!capture_mode.include_socket_bytes())
     return std::move(dict);
 
@@ -64,7 +64,7 @@ int HttpAuthHandlerNegotiate::Factory::CreateAuthHandler(
     CreateReason reason,
     int digest_nonce_count,
     const BoundNetLog& net_log,
-    scoped_ptr<HttpAuthHandler>* handler) {
+    std::unique_ptr<HttpAuthHandler>* handler) {
 #if defined(OS_WIN)
   if (is_unsupported_ || reason == CREATE_PREEMPTIVE)
     return ERR_UNSUPPORTED_AUTH_SCHEME;
@@ -78,7 +78,7 @@ int HttpAuthHandlerNegotiate::Factory::CreateAuthHandler(
   }
   // TODO(cbentzel): Move towards model of parsing in the factory
   //                 method and only constructing when valid.
-  scoped_ptr<HttpAuthHandler> tmp_handler(
+  std::unique_ptr<HttpAuthHandler> tmp_handler(
       new HttpAuthHandlerNegotiate(auth_library_.get(), max_token_length_,
                                    http_auth_preferences(), resolver_));
 #elif defined(OS_ANDROID)
@@ -88,7 +88,7 @@ int HttpAuthHandlerNegotiate::Factory::CreateAuthHandler(
     return ERR_UNSUPPORTED_AUTH_SCHEME;
   // TODO(cbentzel): Move towards model of parsing in the factory
   //                 method and only constructing when valid.
-  scoped_ptr<HttpAuthHandler> tmp_handler(
+  std::unique_ptr<HttpAuthHandler> tmp_handler(
       new HttpAuthHandlerNegotiate(http_auth_preferences(), resolver_));
 #elif defined(OS_POSIX)
   if (is_unsupported_)
@@ -99,7 +99,7 @@ int HttpAuthHandlerNegotiate::Factory::CreateAuthHandler(
   }
   // TODO(ahendrickson): Move towards model of parsing in the factory
   //                     method and only constructing when valid.
-  scoped_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerNegotiate(
+  std::unique_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerNegotiate(
       auth_library_.get(), http_auth_preferences(), resolver_));
 #endif
   if (!tmp_handler->InitFromChallenge(challenge, target, ssl_info, origin,

@@ -110,7 +110,7 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
  protected:
   MockConnectionHelper helper_;
   MockConnection* connection_;
-  scoped_ptr<MockQuicSpdySession> session_;
+  std::unique_ptr<MockQuicSpdySession> session_;
 
   // Owned by the |session_|.
   TestStream* stream_;
@@ -138,6 +138,22 @@ TEST_P(QuicSpdyStreamTest, ProcessHeaders) {
   EXPECT_FALSE(stream_->IsDoneReading());
 }
 
+TEST_P(QuicSpdyStreamTest, ProcessHeaderList) {
+  Initialize(kShouldProcessData);
+
+  size_t total_bytes = 0;
+  QuicHeaderList headers;
+  for (auto p : headers_) {
+    headers.OnHeader(p.first, p.second);
+    total_bytes += p.first.size() + p.second.size();
+  }
+  stream_->OnStreamHeadersPriority(kV3HighestPriority);
+  stream_->OnStreamHeaderList(false, total_bytes, headers);
+  EXPECT_EQ("", stream_->data());
+  EXPECT_FALSE(stream_->header_list().empty());
+  EXPECT_FALSE(stream_->IsDoneReading());
+}
+
 TEST_P(QuicSpdyStreamTest, ProcessHeadersWithFin) {
   Initialize(kShouldProcessData);
 
@@ -150,6 +166,23 @@ TEST_P(QuicSpdyStreamTest, ProcessHeadersWithFin) {
   EXPECT_EQ(kV3HighestPriority, stream_->priority());
   EXPECT_EQ("", stream_->data());
   EXPECT_EQ(headers, stream_->decompressed_headers());
+  EXPECT_FALSE(stream_->IsDoneReading());
+  EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
+}
+
+TEST_P(QuicSpdyStreamTest, ProcessHeaderListWithFin) {
+  Initialize(kShouldProcessData);
+
+  size_t total_bytes = 0;
+  QuicHeaderList headers;
+  for (auto p : headers_) {
+    headers.OnHeader(p.first, p.second);
+    total_bytes += p.first.size() + p.second.size();
+  }
+  stream_->OnStreamHeadersPriority(kV3HighestPriority);
+  stream_->OnStreamHeaderList(true, total_bytes, headers);
+  EXPECT_EQ("", stream_->data());
+  EXPECT_FALSE(stream_->header_list().empty());
   EXPECT_FALSE(stream_->IsDoneReading());
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
 }

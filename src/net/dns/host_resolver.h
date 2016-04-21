@@ -8,10 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/host_port_pair.h"
@@ -178,17 +178,17 @@ class NET_EXPORT HostResolver {
 
   // Returns the current DNS configuration |this| is using, as a Value, or
   // nullptr if it's configured to always use the system host resolver.
-  virtual scoped_ptr<base::Value> GetDnsConfigAsValue() const;
+  virtual std::unique_ptr<base::Value> GetDnsConfigAsValue() const;
 
   // Creates a HostResolver implementation that queries the underlying system.
   // (Except if a unit-test has changed the global HostResolverProc using
   // ScopedHostResolverProc to intercept requests to the system).
-  static scoped_ptr<HostResolver> CreateSystemResolver(
+  static std::unique_ptr<HostResolver> CreateSystemResolver(
       const Options& options,
       NetLog* net_log);
 
   // As above, but uses default parameters.
-  static scoped_ptr<HostResolver> CreateDefaultResolver(NetLog* net_log);
+  static std::unique_ptr<HostResolver> CreateDefaultResolver(NetLog* net_log);
 
  protected:
   HostResolver();

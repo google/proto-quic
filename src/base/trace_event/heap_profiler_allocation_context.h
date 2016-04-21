@@ -45,6 +45,12 @@ struct BASE_EXPORT Backtrace {
   StackFrame frames[12];
 };
 
+// Struct to store the size and count of the allocations.
+struct AllocationMetrics {
+  size_t size;
+  size_t count;
+};
+
 bool BASE_EXPORT operator==(const Backtrace& lhs, const Backtrace& rhs);
 
 // The |AllocationContext| is context metadata that is kept for every allocation

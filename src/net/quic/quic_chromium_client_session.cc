@@ -8,6 +8,7 @@
 
 #include "base/callback_helpers.h"
 #include "base/location.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/single_thread_task_runner.h"
@@ -115,12 +116,12 @@ void RecordHandshakeState(HandshakeState state) {
                             NUM_HANDSHAKE_STATES);
 }
 
-scoped_ptr<base::Value> NetLogQuicClientSessionCallback(
+std::unique_ptr<base::Value> NetLogQuicClientSessionCallback(
     const QuicServerId* server_id,
     int cert_verify_flags,
     bool require_confirmation,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("host", server_id->host());
   dict->SetInteger("port", server_id->port());
   dict->SetBoolean("privacy_mode",
@@ -130,10 +131,10 @@ scoped_ptr<base::Value> NetLogQuicClientSessionCallback(
   return std::move(dict);
 }
 
-scoped_ptr<base::ListValue> SpdyHeaderBlockToListValue(
+std::unique_ptr<base::ListValue> SpdyHeaderBlockToListValue(
     const SpdyHeaderBlock& headers,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::ListValue> headers_list(new base::ListValue());
+  std::unique_ptr<base::ListValue> headers_list(new base::ListValue());
   for (const auto& it : headers) {
     headers_list->AppendString(
         it.first.as_string() + ": " +
@@ -143,12 +144,12 @@ scoped_ptr<base::ListValue> SpdyHeaderBlockToListValue(
   return headers_list;
 }
 
-scoped_ptr<base::Value> NetLogQuicPushPromiseReceivedCallback(
+std::unique_ptr<base::Value> NetLogQuicPushPromiseReceivedCallback(
     const SpdyHeaderBlock* headers,
     SpdyStreamId stream_id,
     SpdyStreamId promised_stream_id,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
   dict->SetInteger("id", stream_id);
   dict->SetInteger("promised_stream_id", promised_stream_id);
@@ -199,12 +200,12 @@ void QuicChromiumClientSession::StreamRequest::OnRequestCompleteFailure(
 
 QuicChromiumClientSession::QuicChromiumClientSession(
     QuicConnection* connection,
-    scoped_ptr<DatagramClientSocket> socket,
+    std::unique_ptr<DatagramClientSocket> socket,
     QuicStreamFactory* stream_factory,
     QuicCryptoClientStreamFactory* crypto_client_stream_factory,
     QuicClock* clock,
     TransportSecurityState* transport_security_state,
-    scoped_ptr<QuicServerInfo> server_info,
+    std::unique_ptr<QuicServerInfo> server_info,
     const QuicServerId& server_id,
     int yield_after_packets,
     QuicTime::Delta yield_after_duration,
@@ -215,7 +216,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
     base::TimeTicks dns_resolution_end_time,
     QuicClientPushPromiseIndex* push_promise_index,
     base::TaskRunner* task_runner,
-    scoped_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log)
     : QuicClientSessionBase(connection, push_promise_index, config),
       server_id_(server_id),
@@ -239,12 +240,12 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       streams_pushed_and_claimed_count_(0),
       weak_factory_(this) {
   sockets_.push_back(std::move(socket));
-  packet_readers_.push_back(make_scoped_ptr(new QuicChromiumPacketReader(
+  packet_readers_.push_back(base::WrapUnique(new QuicChromiumPacketReader(
       sockets_.back().get(), clock, this, yield_after_packets,
       yield_after_duration, net_log_)));
   crypto_stream_.reset(
       crypto_client_stream_factory->CreateQuicCryptoClientStream(
-          server_id, this, make_scoped_ptr(new ProofVerifyContextChromium(
+          server_id, this, base::WrapUnique(new ProofVerifyContextChromium(
                                cert_verify_flags, net_log_)),
           crypto_config));
   connection->set_debug_visitor(logger_.get());
@@ -529,10 +530,6 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
     case kAESG:
       cipher_suite = 0xc02f;  // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
       security_bits = 128;
-      break;
-    case kCC12:
-      cipher_suite = 0xcc13;  // TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-      security_bits = 256;
       break;
     case kCC20:
       cipher_suite = 0xcc13;  // TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
@@ -821,6 +818,12 @@ void QuicChromiumClientSession::OnConnectionClosed(
       UMA_HISTOGRAM_SPARSE_SLOWLY(
           "Net.QuicSession.ConnectionCloseErrorCodeServer.HandshakeConfirmed",
           error);
+      base::HistogramBase* histogram = base::SparseHistogram::FactoryGet(
+          "Net.QuicSession.StreamCloseErrorCodeServer.HandshakeConfirmed",
+          base::HistogramBase::kUmaTargetedHistogramFlag);
+      size_t num_streams = GetNumActiveStreams();
+      if (num_streams > 0)
+        histogram->AddCount(error, num_streams);
     }
     UMA_HISTOGRAM_SPARSE_SLOWLY(
         "Net.QuicSession.ConnectionCloseErrorCodeServer", error);
@@ -829,6 +832,12 @@ void QuicChromiumClientSession::OnConnectionClosed(
       UMA_HISTOGRAM_SPARSE_SLOWLY(
           "Net.QuicSession.ConnectionCloseErrorCodeClient.HandshakeConfirmed",
           error);
+      base::HistogramBase* histogram = base::SparseHistogram::FactoryGet(
+          "Net.QuicSession.StreamCloseErrorCodeClient.HandshakeConfirmed",
+          base::HistogramBase::kUmaTargetedHistogramFlag);
+      size_t num_streams = GetNumActiveStreams();
+      if (num_streams > 0)
+        histogram->AddCount(error, num_streams);
     }
     UMA_HISTOGRAM_SPARSE_SLOWLY(
         "Net.QuicSession.ConnectionCloseErrorCodeClient", error);
@@ -946,7 +955,7 @@ void QuicChromiumClientSession::OnProofVerifyDetailsAvailable(
   cert_verify_result_.reset(new CertVerifyResult);
   cert_verify_result_->CopyFrom(verify_details_chromium->cert_verify_result);
   pinning_failure_log_ = verify_details_chromium->pinning_failure_log;
-  scoped_ptr<ct::CTVerifyResult> ct_verify_result_copy(
+  std::unique_ptr<ct::CTVerifyResult> ct_verify_result_copy(
       new ct::CTVerifyResult(verify_details_chromium->ct_verify_result));
   ct_verify_result_ = std::move(ct_verify_result_copy);
   logger_->OnCertificateVerified(*cert_verify_result_);
@@ -1012,12 +1021,12 @@ void QuicChromiumClientSession::CloseAllObservers(int net_error) {
   }
 }
 
-scoped_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
+std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
     const std::set<HostPortPair>& aliases) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("version", QuicVersionToString(connection()->version()));
   dict->SetInteger("open_streams", GetNumOpenOutgoingStreams());
-  scoped_ptr<base::ListValue> stream_list(new base::ListValue());
+  std::unique_ptr<base::ListValue> stream_list(new base::ListValue());
   for (StreamMap::const_iterator it = dynamic_streams().begin();
        it != dynamic_streams().end(); ++it) {
     stream_list->Append(
@@ -1036,7 +1045,7 @@ scoped_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
   SSLInfo ssl_info;
   dict->SetBoolean("secure", GetSSLInfo(&ssl_info) && ssl_info.cert.get());
 
-  scoped_ptr<base::ListValue> alias_list(new base::ListValue());
+  std::unique_ptr<base::ListValue> alias_list(new base::ListValue());
   for (std::set<HostPortPair>::const_iterator it = aliases.begin();
        it != aliases.end(); it++) {
     alias_list->Append(new base::StringValue(it->ToString()));
@@ -1129,9 +1138,9 @@ void QuicChromiumClientSession::OnConnectTimeout() {
 }
 
 bool QuicChromiumClientSession::MigrateToSocket(
-    scoped_ptr<DatagramClientSocket> socket,
-    scoped_ptr<QuicChromiumPacketReader> reader,
-    scoped_ptr<QuicPacketWriter> writer) {
+    std::unique_ptr<DatagramClientSocket> socket,
+    std::unique_ptr<QuicChromiumPacketReader> reader,
+    std::unique_ptr<QuicPacketWriter> writer) {
   DCHECK_EQ(sockets_.size(), packet_readers_.size());
   if (sockets_.size() >= kMaxReadersPerQuicSession) {
     return false;

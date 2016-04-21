@@ -65,6 +65,10 @@ void QuicSimpleServerSession::PromisePushResources(
     const std::list<QuicInMemoryCache::ServerPushInfo>& resources,
     QuicStreamId original_stream_id,
     const SpdyHeaderBlock& original_request_headers) {
+  if (!server_push_enabled()) {
+    return;
+  }
+
   for (QuicInMemoryCache::ServerPushInfo resource : resources) {
     SpdyHeaderBlock headers = SynthesizePushRequestHeaders(
         request_url, resource, original_request_headers);

@@ -5,13 +5,13 @@
 #ifndef BASE_FILE_VERSION_INFO_WIN_H_
 #define BASE_FILE_VERSION_INFO_WIN_H_
 
+#include <memory>
 #include <string>
 
 #include "base/base_export.h"
 #include "base/file_version_info.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
-#include "base/memory/scoped_ptr.h"
 
 struct tagVS_FIXEDFILEINFO;
 typedef tagVS_FIXEDFILEINFO VS_FIXEDFILEINFO;
@@ -51,7 +51,7 @@ class BASE_EXPORT FileVersionInfoWin : public FileVersionInfo {
   VS_FIXEDFILEINFO* fixed_file_info() { return fixed_file_info_; }
 
  private:
-  scoped_ptr<char, base::FreeDeleter> data_;
+  std::unique_ptr<char, base::FreeDeleter> data_;
   WORD language_;
   WORD code_page_;
   // This is a pointer into the data_ if it exists. Otherwise NULL.

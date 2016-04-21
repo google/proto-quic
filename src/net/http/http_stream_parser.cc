@@ -81,12 +81,12 @@ bool HeadersContainMultipleCopiesOfField(const HttpResponseHeaders& headers,
   return false;
 }
 
-scoped_ptr<base::Value> NetLogSendRequestBodyCallback(
+std::unique_ptr<base::Value> NetLogSendRequestBodyCallback(
     uint64_t length,
     bool is_chunked,
     bool did_merge,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("length", static_cast<int>(length));
   dict->SetBoolean("is_chunked", is_chunked);
   dict->SetBoolean("did_merge", did_merge);
@@ -593,6 +593,9 @@ int HttpStreamParser::DoReadHeaders() {
 }
 
 int HttpStreamParser::DoReadHeadersComplete(int result) {
+  // DoReadHeadersComplete is called with the result of Socket::Read, which is a
+  // (byte_count | error), and returns (error | OK).
+
   result = HandleReadHeaderResult(result);
 
   // TODO(mmenke):  The code below is ugly and hacky.  A much better and more
@@ -617,7 +620,7 @@ int HttpStreamParser::DoReadHeadersComplete(int result) {
     // cases, can normally go to other states after an error reading headers.
     io_state_ = STATE_DONE;
     // Don't let caller see the headers.
-    response_->headers = NULL;
+    response_->headers = nullptr;
     return upload_error_;
   }
 
@@ -635,7 +638,7 @@ int HttpStreamParser::DoReadHeadersComplete(int result) {
   // Nothing else to do.
   io_state_ = STATE_DONE;
   // Don't let caller see the headers.
-  response_->headers = NULL;
+  response_->headers = nullptr;
   return upload_error_;
 }
 
@@ -843,7 +846,7 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
 
   read_buf_->set_offset(read_buf_->offset() + result);
   DCHECK_LE(read_buf_->offset(), read_buf_->capacity());
-  DCHECK_GE(result,  0);
+  DCHECK_GT(result, 0);
 
   int end_of_header_offset = FindAndParseResponseHeaders();
 
@@ -893,7 +896,7 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
     read_buf_unused_offset_ = end_of_header_offset;
     // Now waiting for the body to be read.
   }
-  return result;
+  return OK;
 }
 
 int HttpStreamParser::FindAndParseResponseHeaders() {

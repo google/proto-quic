@@ -12,21 +12,21 @@
 
 namespace net {
 
-scoped_ptr<base::Value> NetLogSdchResourceProblemCallback(
+std::unique_ptr<base::Value> NetLogSdchResourceProblemCallback(
     SdchProblemCode problem,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("sdch_problem_code", problem);
   dict->SetInteger("net_error", ERR_FAILED);
   return std::move(dict);
 }
 
-scoped_ptr<base::Value> NetLogSdchDictionaryFetchProblemCallback(
+std::unique_ptr<base::Value> NetLogSdchDictionaryFetchProblemCallback(
     SdchProblemCode problem,
     const GURL& url,
     bool is_error,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("sdch_problem_code", problem);
   dict->SetString("dictionary_url", url.spec());
   if (is_error)

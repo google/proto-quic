@@ -135,7 +135,7 @@ class MockHostResolverBase : public HostResolver,
   bool synchronous_mode_;
   bool ondemand_mode_;
   scoped_refptr<RuleBasedHostResolverProc> rules_;
-  scoped_ptr<HostCache> cache_;
+  std::unique_ptr<HostCache> cache_;
   RequestMap requests_;
   size_t next_request_id_;
 

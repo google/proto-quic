@@ -5,9 +5,9 @@
 #ifndef NET_QUIC_QUIC_CRYPTO_CLIENT_STREAM_FACTORY_H_
 #define NET_QUIC_QUIC_CRYPTO_CLIENT_STREAM_FACTORY_H_
 
+#include <memory>
 #include <string>
 
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -27,7 +27,7 @@ class NET_EXPORT QuicCryptoClientStreamFactory {
   virtual QuicCryptoClientStream* CreateQuicCryptoClientStream(
       const QuicServerId& server_id,
       QuicChromiumClientSession* session,
-      scoped_ptr<ProofVerifyContext> proof_verify_context,
+      std::unique_ptr<ProofVerifyContext> proof_verify_context,
       QuicCryptoClientConfig* crypto_config) = 0;
 
   static QuicCryptoClientStreamFactory* GetDefaultFactory();

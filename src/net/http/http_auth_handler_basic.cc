@@ -115,10 +115,10 @@ int HttpAuthHandlerBasic::Factory::CreateAuthHandler(
     CreateReason reason,
     int digest_nonce_count,
     const BoundNetLog& net_log,
-    scoped_ptr<HttpAuthHandler>* handler) {
+    std::unique_ptr<HttpAuthHandler>* handler) {
   // TODO(cbentzel): Move towards model of parsing in the factory
   //                 method and only constructing when valid.
-  scoped_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerBasic());
+  std::unique_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerBasic());
   if (!tmp_handler->InitFromChallenge(challenge, target, ssl_info, origin,
                                       net_log))
     return ERR_INVALID_RESPONSE;

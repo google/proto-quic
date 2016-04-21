@@ -5,13 +5,13 @@
 #ifndef NET_WEBSOCKETS_WEBSOCKET_STREAM_H_
 #define NET_WEBSOCKETS_WEBSOCKET_STREAM_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/callback_forward.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -68,7 +68,7 @@ class NET_EXPORT_PRIVATE WebSocketStream {
     virtual ~ConnectDelegate();
     // Called on successful connection. The parameter is an object derived from
     // WebSocketStream.
-    virtual void OnSuccess(scoped_ptr<WebSocketStream> stream) = 0;
+    virtual void OnSuccess(std::unique_ptr<WebSocketStream> stream) = 0;
 
     // Called on failure to connect.
     // |message| contains defails of the failure.
@@ -76,17 +76,17 @@ class NET_EXPORT_PRIVATE WebSocketStream {
 
     // Called when the WebSocket Opening Handshake starts.
     virtual void OnStartOpeningHandshake(
-        scoped_ptr<WebSocketHandshakeRequestInfo> request) = 0;
+        std::unique_ptr<WebSocketHandshakeRequestInfo> request) = 0;
 
     // Called when the WebSocket Opening Handshake ends.
     virtual void OnFinishOpeningHandshake(
-        scoped_ptr<WebSocketHandshakeResponseInfo> response) = 0;
+        std::unique_ptr<WebSocketHandshakeResponseInfo> response) = 0;
 
     // Called when there is an SSL certificate error. Should call
     // ssl_error_callbacks->ContinueSSLRequest() or
     // ssl_error_callbacks->CancelSSLRequest().
     virtual void OnSSLCertificateError(
-        scoped_ptr<WebSocketEventInterface::SSLErrorCallbacks>
+        std::unique_ptr<WebSocketEventInterface::SSLErrorCallbacks>
             ssl_error_callbacks,
         const SSLInfo& ssl_info,
         bool fatal) = 0;
@@ -104,13 +104,13 @@ class NET_EXPORT_PRIVATE WebSocketStream {
   // required, the caller should keep the WebSocketStreamRequest object alive
   // until connect_delegate->OnSuccess() or OnFailure() have been called, then
   // it is safe to delete.
-  static scoped_ptr<WebSocketStreamRequest> CreateAndConnectStream(
+  static std::unique_ptr<WebSocketStreamRequest> CreateAndConnectStream(
       const GURL& socket_url,
       const std::vector<std::string>& requested_subprotocols,
       const url::Origin& origin,
       URLRequestContext* url_request_context,
       const BoundNetLog& net_log,
-      scoped_ptr<ConnectDelegate> connect_delegate);
+      std::unique_ptr<ConnectDelegate> connect_delegate);
 
   // Derived classes must make sure Close() is called when the stream is not
   // closed on destruction.
@@ -158,7 +158,7 @@ class NET_EXPORT_PRIVATE WebSocketStream {
   // Extensions which use reserved header bits should clear them when they are
   // set correctly. If the reserved header bits are set incorrectly, it is okay
   // to leave it to the caller to report the error.
-  virtual int ReadFrames(std::vector<scoped_ptr<WebSocketFrame>>* frames,
+  virtual int ReadFrames(std::vector<std::unique_ptr<WebSocketFrame>>* frames,
                          const CompletionCallback& callback) = 0;
 
   // Writes WebSocket frame data.
@@ -175,7 +175,7 @@ class NET_EXPORT_PRIVATE WebSocketStream {
   // object. Implementations of WriteFrames() should be robust against
   // this. This generally means returning to the event loop immediately after
   // calling the callback.
-  virtual int WriteFrames(std::vector<scoped_ptr<WebSocketFrame>>* frames,
+  virtual int WriteFrames(std::vector<std::unique_ptr<WebSocketFrame>>* frames,
                           const CompletionCallback& callback) = 0;
 
   // Closes the stream. All pending I/O operations (if any) are cancelled
@@ -218,15 +218,15 @@ void WebSocketDispatchOnFinishOpeningHandshake(
 // use only. The differences are the use of a |create_helper| argument in place
 // of |requested_subprotocols| and taking |timer| as the handshake timeout
 // timer. Implemented in websocket_stream.cc.
-NET_EXPORT_PRIVATE scoped_ptr<WebSocketStreamRequest>
+NET_EXPORT_PRIVATE std::unique_ptr<WebSocketStreamRequest>
 CreateAndConnectStreamForTesting(
     const GURL& socket_url,
-    scoped_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
+    std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
     const url::Origin& origin,
     URLRequestContext* url_request_context,
     const BoundNetLog& net_log,
-    scoped_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
-    scoped_ptr<base::Timer> timer);
+    std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
+    std::unique_ptr<base::Timer> timer);
 
 }  // namespace net
 

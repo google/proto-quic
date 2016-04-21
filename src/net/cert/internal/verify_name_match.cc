@@ -4,6 +4,7 @@
 
 #include "net/cert/internal/verify_name_match.h"
 
+#include "base/strings/string_util.h"
 #include "base/tuple.h"
 #include "net/cert/internal/parse_name.h"
 #include "net/der/input.h"
@@ -79,7 +80,7 @@ WARN_UNUSED_RESULT bool NormalizeDirectoryString(
       std::string::const_iterator next_iter = read_iter + 1;
       if (next_iter != output->end() && *next_iter != ' ')
         *(write_iter++) = ' ';
-    } else if (c >= 'A' && c <= 'Z') {
+    } else if (base::IsAsciiUpper(c)) {
       // Fold case.
       *(write_iter++) = c + ('a' - 'A');
     } else {
@@ -89,7 +90,7 @@ WARN_UNUSED_RESULT bool NormalizeDirectoryString(
         case ENFORCE_PRINTABLE_STRING:
           // See NormalizePrintableStringValue comment for the acceptable list
           // of characters.
-          if (!((c >= 'a' && c <= 'z') || (c >= '\'' && c <= ':') || c == '=' ||
+          if (!(base::IsAsciiLower(c) || (c >= '\'' && c <= ':') || c == '=' ||
                 c == '?'))
             return false;
           break;

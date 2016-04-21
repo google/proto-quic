@@ -184,7 +184,7 @@ bool InitializeICUWithFileDescriptorInternal(
     return false;
   }
 
-  scoped_ptr<MemoryMappedFile> icudtl_mapped_file(new MemoryMappedFile());
+  std::unique_ptr<MemoryMappedFile> icudtl_mapped_file(new MemoryMappedFile());
   if (!icudtl_mapped_file->Initialize(File(data_fd), data_region)) {
     g_debug_icu_load = 2;  // To debug http://crbug.com/445616.
     LOG(ERROR) << "Couldn't mmap icu data file";
@@ -310,7 +310,7 @@ bool InitializeICU() {
 // when requested.
 #if defined(OS_LINUX) && !defined(OS_CHROMEOS)
   if (result)
-    scoped_ptr<icu::TimeZone> zone(icu::TimeZone::createDefault());
+    std::unique_ptr<icu::TimeZone> zone(icu::TimeZone::createDefault());
 #endif
   return result;
 }

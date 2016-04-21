@@ -4,11 +4,11 @@
 
 #include "net/quic/quic_crypto_stream.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/crypto/crypto_handshake.h"
 #include "net/quic/crypto/crypto_protocol.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
@@ -64,7 +64,7 @@ class QuicCryptoStreamTest : public ::testing::Test {
   MockQuicSpdySession session_;
   MockQuicCryptoStream stream_;
   CryptoHandshakeMessage message_;
-  scoped_ptr<QuicData> message_data_;
+  std::unique_ptr<QuicData> message_data_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoStreamTest);

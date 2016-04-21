@@ -61,10 +61,12 @@ class QuicEpollAlarm : public QuicAlarm {
 
 }  // namespace
 
-QuicEpollConnectionHelper::QuicEpollConnectionHelper(EpollServer* epoll_server)
+QuicEpollConnectionHelper::QuicEpollConnectionHelper(EpollServer* epoll_server,
+                                                     QuicAllocator type)
     : epoll_server_(epoll_server),
       clock_(epoll_server),
-      random_generator_(QuicRandom::GetInstance()) {}
+      random_generator_(QuicRandom::GetInstance()),
+      allocator_type_(type) {}
 
 QuicEpollConnectionHelper::~QuicEpollConnectionHelper() {}
 
@@ -94,7 +96,12 @@ QuicArenaScopedPtr<QuicAlarm> QuicEpollConnectionHelper::CreateAlarm(
 }
 
 QuicBufferAllocator* QuicEpollConnectionHelper::GetBufferAllocator() {
-  return &buffer_allocator_;
+  if (allocator_type_ == QuicAllocator::BUFFER_POOL) {
+    return &buffer_allocator_;
+  } else {
+    DCHECK(allocator_type_ == QuicAllocator::SIMPLE);
+    return &simple_buffer_allocator_;
+  }
 }
 
 }  // namespace net

@@ -143,7 +143,8 @@ QuicDefaultPacketWriter* QuicServer::CreateWriter(int fd) {
 
 QuicDispatcher* QuicServer::CreateQuicDispatcher() {
   return new QuicDispatcher(config_, &crypto_config_, supported_versions_,
-                            new QuicEpollConnectionHelper(&epoll_server_));
+                            new QuicEpollConnectionHelper(
+                                &epoll_server_, QuicAllocator::BUFFER_POOL));
 }
 
 void QuicServer::WaitForEvents() {

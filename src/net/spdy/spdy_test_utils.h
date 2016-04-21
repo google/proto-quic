@@ -37,11 +37,11 @@ void CompareCharArraysWithHexError(
     const unsigned char* expected,
     const int expected_len);
 
-void SetFrameFlags(SpdyFrame* frame,
+void SetFrameFlags(SpdySerializedFrame* frame,
                    uint8_t flags,
                    SpdyMajorVersion spdy_version);
 
-void SetFrameLength(SpdyFrame* frame,
+void SetFrameLength(SpdySerializedFrame* frame,
                     size_t length,
                     SpdyMajorVersion spdy_version);
 

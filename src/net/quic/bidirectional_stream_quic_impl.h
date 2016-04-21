@@ -7,8 +7,9 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/quic/quic_chromium_client_session.h"
@@ -39,7 +40,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
              BidirectionalStreamImpl::Delegate* delegate,
-             scoped_ptr<base::Timer> timer) override;
+             std::unique_ptr<base::Timer> timer) override;
   int ReadData(IOBuffer* buffer, int buffer_len) override;
   void SendData(IOBuffer* data, int length, bool end_stream) override;
   void Cancel() override;

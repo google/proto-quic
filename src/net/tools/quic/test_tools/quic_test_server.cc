@@ -148,9 +148,10 @@ QuicTestServer::QuicTestServer(ProofSource* proof_source,
                  supported_versions) {}
 
 QuicDispatcher* QuicTestServer::CreateQuicDispatcher() {
-  return new QuicTestDispatcher(config(), &crypto_config(),
-                                supported_versions(),
-                                new QuicEpollConnectionHelper(epoll_server()));
+  return new QuicTestDispatcher(
+      config(), &crypto_config(), supported_versions(),
+      new QuicEpollConnectionHelper(epoll_server(),
+                                    QuicAllocator::BUFFER_POOL));
 }
 
 void QuicTestServer::SetSessionFactory(SessionFactory* factory) {

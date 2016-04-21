@@ -129,6 +129,10 @@ class NET_EXPORT ParsedCookie {
   // |index| refers to a position in |pairs_|.
   void ClearAttributePair(size_t index);
 
+  // Returns false if a 'SameSite' attribute is present, but has an unrecognized
+  // value. In particular, this includes attributes with empty values.
+  bool IsSameSiteAttributeValid() const;
+
   PairList pairs_;
   // These will default to 0, but that should never be valid since the
   // 0th index is the user supplied token/value, not an attribute.

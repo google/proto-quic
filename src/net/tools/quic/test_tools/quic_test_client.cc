@@ -43,6 +43,7 @@ class RecordingProofVerifier : public ProofVerifier {
  public:
   // ProofVerifier interface.
   QuicAsyncStatus VerifyProof(const string& hostname,
+                              const uint16_t port,
                               const string& server_config,
                               QuicVersion quic_version,
                               StringPiece chlo_hash,
@@ -560,6 +561,7 @@ void QuicTestClient::OnClose(QuicSpdyStream* stream) {
     // Always close the stream, regardless of whether it was the last stream
     // written.
     client()->OnClose(stream);
+    ++num_responses_;
   }
   if (stream_ != stream) {
     return;
@@ -580,7 +582,6 @@ void QuicTestClient::OnClose(QuicSpdyStream* stream) {
   response_header_size_ = response_headers_.GetSizeForWriteBuffer();
   response_body_size_ = stream_->data().size();
   stream_ = nullptr;
-  ++num_responses_;
 }
 
 bool QuicTestClient::CheckVary(const SpdyHeaderBlock& client_request,

@@ -10,12 +10,12 @@
 #ifndef NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
 #define NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
 
+#include <memory>
 #include <set>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "net/base/net_export.h"
@@ -62,9 +62,10 @@ class NET_EXPORT URLRequestContext
   // session.
   const HttpNetworkSession::Params* GetNetworkSessionParams() const;
 
-  scoped_ptr<URLRequest> CreateRequest(const GURL& url,
-                                       RequestPriority priority,
-                                       URLRequest::Delegate* delegate) const;
+  std::unique_ptr<URLRequest> CreateRequest(
+      const GURL& url,
+      RequestPriority priority,
+      URLRequest::Delegate* delegate) const;
 
   NetLog* net_log() const {
     return net_log_;
@@ -267,7 +268,7 @@ class NET_EXPORT URLRequestContext
   // be added to CopyFrom.
   // ---------------------------------------------------------------------------
 
-  scoped_ptr<std::set<const URLRequest*> > url_requests_;
+  std::unique_ptr<std::set<const URLRequest*>> url_requests_;
   bool has_known_mismatched_cookie_store_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);

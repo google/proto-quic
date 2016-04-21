@@ -5,10 +5,11 @@
 #ifndef NET_SOCKET_SOCKET_POSIX_H_
 #define NET_SOCKET_SOCKET_POSIX_H_
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
 #include "base/threading/thread_checker.h"
 #include "net/base/completion_callback.h"
@@ -39,7 +40,7 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   int Bind(const SockaddrStorage& address);
 
   int Listen(int backlog);
-  int Accept(scoped_ptr<SocketPosix>* socket,
+  int Accept(std::unique_ptr<SocketPosix>* socket,
              const CompletionCallback& callback);
 
   // Connects socket. On non-ERR_IO_PENDING error, sets errno and returns a net
@@ -87,7 +88,7 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   void OnFileCanReadWithoutBlocking(int fd) override;
   void OnFileCanWriteWithoutBlocking(int fd) override;
 
-  int DoAccept(scoped_ptr<SocketPosix>* socket);
+  int DoAccept(std::unique_ptr<SocketPosix>* socket);
   void AcceptCompleted();
 
   int DoConnect();
@@ -104,7 +105,7 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   SocketDescriptor socket_fd_;
 
   base::MessageLoopForIO::FileDescriptorWatcher accept_socket_watcher_;
-  scoped_ptr<SocketPosix>* accept_socket_;
+  std::unique_ptr<SocketPosix>* accept_socket_;
   CompletionCallback accept_callback_;
 
   base::MessageLoopForIO::FileDescriptorWatcher read_socket_watcher_;
@@ -123,7 +124,7 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   // called when connect is complete.
   bool waiting_connect_;
 
-  scoped_ptr<SockaddrStorage> peer_address_;
+  std::unique_ptr<SockaddrStorage> peer_address_;
 
   base::ThreadChecker thread_checker_;
 

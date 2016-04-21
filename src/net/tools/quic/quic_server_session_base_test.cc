@@ -175,6 +175,16 @@ INSTANTIATE_TEST_CASE_P(Tests,
                         QuicServerSessionBaseTest,
                         ::testing::ValuesIn(QuicSupportedVersions()));
 
+TEST_P(QuicServerSessionBaseTest, ServerPushDisabledByDefault) {
+  // Without the client explicitly sending kSPSH, server push will be disabled
+  // at the server.
+  EXPECT_FALSE(
+      session_->config()->HasReceivedConnectionOptions() &&
+      ContainsQuicTag(session_->config()->ReceivedConnectionOptions(), kSPSH));
+  session_->OnConfigNegotiated();
+  EXPECT_FALSE(session_->server_push_enabled());
+}
+
 TEST_P(QuicServerSessionBaseTest, CloseStreamDueToReset) {
   // Open a stream, then reset it.
   // Send two bytes of payload to open it.
@@ -322,6 +332,15 @@ TEST_P(QuicServerSessionBaseTest, MaxAvailableStreams) {
   // violates the quota.
   EXPECT_FALSE(QuicServerSessionBasePeer::GetOrCreateDynamicStream(
       session_.get(), kLimitingStreamId + 4));
+}
+
+TEST_P(QuicServerSessionBaseTest, EnableServerPushThroughConnectionOption) {
+  // Assume server received server push connection option.
+  QuicTagVector copt;
+  copt.push_back(kSPSH);
+  QuicConfigPeer::SetReceivedConnectionOptions(session_->config(), copt);
+  session_->OnConfigNegotiated();
+  EXPECT_TRUE(session_->server_push_enabled());
 }
 
 TEST_P(QuicServerSessionBaseTest, GetEvenIncomingError) {

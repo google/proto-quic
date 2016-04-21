@@ -4,11 +4,11 @@
 
 #include "net/cert/cert_verify_proc_win.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/memory/free_deleter.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/sha1.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -61,10 +61,10 @@ struct FreeCertContextFunctor {
 typedef crypto::ScopedCAPIHandle<HCERTCHAINENGINE, FreeChainEngineFunctor>
     ScopedHCERTCHAINENGINE;
 
-typedef scoped_ptr<const CERT_CHAIN_CONTEXT, FreeCertChainContextFunctor>
+typedef std::unique_ptr<const CERT_CHAIN_CONTEXT, FreeCertChainContextFunctor>
     ScopedPCCERT_CHAIN_CONTEXT;
 
-typedef scoped_ptr<const CERT_CONTEXT, FreeCertContextFunctor>
+typedef std::unique_ptr<const CERT_CONTEXT, FreeCertContextFunctor>
     ScopedPCCERT_CONTEXT;
 
 //-----------------------------------------------------------------------------
@@ -199,7 +199,8 @@ bool CertSubjectCommonNameHasNull(PCCERT_CONTEXT cert) {
                            &name_info,
                            &name_info_size);
   if (rv) {
-    scoped_ptr<CERT_NAME_INFO, base::FreeDeleter> scoped_name_info(name_info);
+    std::unique_ptr<CERT_NAME_INFO, base::FreeDeleter> scoped_name_info(
+        name_info);
 
     // The Subject field may have multiple common names.  According to the
     // "PKI Layer Cake" paper, CryptoAPI uses every common name in the
@@ -359,7 +360,7 @@ void GetCertChainInfo(PCCERT_CHAIN_CONTEXT chain_context,
 // structure and stores it in *output.
 void GetCertPoliciesInfo(
     PCCERT_CONTEXT cert,
-    scoped_ptr<CERT_POLICIES_INFO, base::FreeDeleter>* output) {
+    std::unique_ptr<CERT_POLICIES_INFO, base::FreeDeleter>* output) {
   PCERT_EXTENSION extension = CertFindExtension(szOID_CERT_POLICIES,
                                                 cert->pCertInfo->cExtension,
                                                 cert->pCertInfo->rgExtension);
@@ -470,7 +471,7 @@ CRLSetResult CheckRevocationWithCRLSet(CRLSet* crl_set,
   // Compute the subject's serial.
   const CRYPT_INTEGER_BLOB* serial_blob =
       &subject_cert->pCertInfo->SerialNumber;
-  scoped_ptr<uint8_t[]> serial_bytes(new uint8_t[serial_blob->cbData]);
+  std::unique_ptr<uint8_t[]> serial_bytes(new uint8_t[serial_blob->cbData]);
   // The bytes of the serial number are stored little-endian.
   // Note: While MSDN implies that bytes are stripped from this serial,
   // they are not - only CertCompareIntegerBlob actually removes bytes.
@@ -908,7 +909,7 @@ int CertVerifyProcWin::VerifyInternal(
       const_cast<LPSTR*>(usage);
 
   // Get the certificatePolicies extension of the certificate.
-  scoped_ptr<CERT_POLICIES_INFO, base::FreeDeleter> policies_info;
+  std::unique_ptr<CERT_POLICIES_INFO, base::FreeDeleter> policies_info;
   LPSTR ev_policy_oid = NULL;
   if (flags & CertVerifier::VERIFY_EV_CERT) {
     GetCertPoliciesInfo(cert_handle, &policies_info);

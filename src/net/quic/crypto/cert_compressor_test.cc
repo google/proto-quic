@@ -47,7 +47,7 @@ TEST(CertCompressor, Common) {
   vector<string> chain;
   chain.push_back("testcert");
   static const uint64_t set_hash = 42;
-  scoped_ptr<CommonCertSets> common_sets(
+  std::unique_ptr<CommonCertSets> common_sets(
       CryptoTestUtils::MockCommonCertSets(chain[0], set_hash, 1));
   const string compressed = CertCompressor::CompressChain(
       chain,
@@ -127,7 +127,7 @@ TEST(CertCompressor, BadInputs) {
                       without_a_common_cert_set.size()),
       cached_certs, nullptr, &chain));
 
-  scoped_ptr<CommonCertSets> common_sets(
+  std::unique_ptr<CommonCertSets> common_sets(
       CryptoTestUtils::MockCommonCertSets("foo", 42, 1));
 
   /* incorrect hash and index */

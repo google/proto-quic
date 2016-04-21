@@ -5,13 +5,13 @@
 #ifndef NET_QUIC_CRYPTO_PROOF_VERIFIER_CHROMIUM_H_
 #define NET_QUIC_CRYPTO_PROOF_VERIFIER_CHROMIUM_H_
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/ct_verify_result.h"
@@ -65,17 +65,19 @@ class NET_EXPORT_PRIVATE ProofVerifierChromium : public ProofVerifier {
   ~ProofVerifierChromium() override;
 
   // ProofVerifier interface
-  QuicAsyncStatus VerifyProof(const std::string& hostname,
-                              const std::string& server_config,
-                              QuicVersion quic_version,
-                              base::StringPiece chlo_hash,
-                              const std::vector<std::string>& certs,
-                              const std::string& cert_sct,
-                              const std::string& signature,
-                              const ProofVerifyContext* verify_context,
-                              std::string* error_details,
-                              scoped_ptr<ProofVerifyDetails>* verify_details,
-                              ProofVerifierCallback* callback) override;
+  QuicAsyncStatus VerifyProof(
+      const std::string& hostname,
+      const uint16_t port,
+      const std::string& server_config,
+      QuicVersion quic_version,
+      base::StringPiece chlo_hash,
+      const std::vector<std::string>& certs,
+      const std::string& cert_sct,
+      const std::string& signature,
+      const ProofVerifyContext* verify_context,
+      std::string* error_details,
+      std::unique_ptr<ProofVerifyDetails>* verify_details,
+      ProofVerifierCallback* callback) override;
 
  private:
   class Job;

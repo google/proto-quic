@@ -5,10 +5,10 @@
 #ifndef NET_CERT_CERT_VERIFIER_H_
 #define NET_CERT_CERT_VERIFIER_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 
@@ -121,7 +121,7 @@ class NET_EXPORT CertVerifier {
                      CRLSet* crl_set,
                      CertVerifyResult* verify_result,
                      const CompletionCallback& callback,
-                     scoped_ptr<Request>* out_req,
+                     std::unique_ptr<Request>* out_req,
                      const BoundNetLog& net_log) = 0;
 
   // Returns true if this CertVerifier supports stapled OCSP responses.
@@ -129,7 +129,7 @@ class NET_EXPORT CertVerifier {
 
   // Creates a CertVerifier implementation that verifies certificates using
   // the preferred underlying cryptographic libraries.
-  static scoped_ptr<CertVerifier> CreateDefault();
+  static std::unique_ptr<CertVerifier> CreateDefault();
 };
 
 }  // namespace net

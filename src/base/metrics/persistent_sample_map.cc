@@ -5,6 +5,8 @@
 #include "base/metrics/persistent_sample_map.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
+#include "base/metrics/persistent_histogram_allocator.h"
 #include "base/stl_util.h"
 
 namespace base {
@@ -92,22 +94,25 @@ const uint32_t kTypeIdSampleRecord = 0x8FE6A69F + 1;  // SHA1(SampleRecord) v1
 
 PersistentSampleMap::PersistentSampleMap(
     uint64_t id,
-    PersistentMemoryAllocator* allocator,
+    PersistentHistogramAllocator* allocator,
     Metadata* meta)
-    : HistogramSamples(id, meta),
-      allocator_(allocator) {
-  // This is created once but will continue to return new iterables even when
-  // it has previously reached the end.
-  allocator->CreateIterator(&sample_iter_);
+    : PersistentSampleMap(id, allocator->UseSampleMapRecords(id, this), meta) {}
 
-  // Load all existing samples during construction. It's no worse to do it
-  // here than at some point in the future and could be better if construction
-  // takes place on some background thread. New samples could be created at
-  // any time by parallel threads; if so, they'll get loaded when needed.
-  ImportSamples(kAllSamples);
+PersistentSampleMap::PersistentSampleMap(
+    uint64_t id,
+    PersistentSparseHistogramDataManager* manager,
+    Metadata* meta)
+    : PersistentSampleMap(id, manager->UseSampleMapRecords(id, this), meta) {}
+
+PersistentSampleMap::PersistentSampleMap(
+    uint64_t id,
+    PersistentSampleMapRecords* records,
+    Metadata* meta)
+    : HistogramSamples(id, meta), records_(records) {}
+
+PersistentSampleMap::~PersistentSampleMap() {
+  records_->Release(this);
 }
-
-PersistentSampleMap::~PersistentSampleMap() {}
 
 void PersistentSampleMap::Accumulate(Sample value, Count count) {
   *GetOrCreateSampleCountStorage(value) += count;
@@ -135,11 +140,51 @@ Count PersistentSampleMap::TotalCount() const {
   return count;
 }
 
-scoped_ptr<SampleCountIterator> PersistentSampleMap::Iterator() const {
+std::unique_ptr<SampleCountIterator> PersistentSampleMap::Iterator() const {
   // Have to override "const" in order to make sure all samples have been
   // loaded before trying to iterate over the map.
   const_cast<PersistentSampleMap*>(this)->ImportSamples(kAllSamples);
-  return make_scoped_ptr(new PersistentSampleMapIterator(sample_counts_));
+  return WrapUnique(new PersistentSampleMapIterator(sample_counts_));
+}
+
+// static
+PersistentMemoryAllocator::Reference
+PersistentSampleMap::GetNextPersistentRecord(
+    PersistentMemoryAllocator::Iterator& iterator,
+    uint64_t* sample_map_id) {
+  PersistentMemoryAllocator::Reference ref =
+      iterator.GetNextOfType(kTypeIdSampleRecord);
+  const SampleRecord* record =
+      iterator.GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+  if (!record)
+    return 0;
+
+  *sample_map_id = record->id;
+  return ref;
+}
+
+// static
+PersistentMemoryAllocator::Reference
+PersistentSampleMap::CreatePersistentRecord(
+    PersistentMemoryAllocator* allocator,
+    uint64_t sample_map_id,
+    Sample value) {
+  PersistentMemoryAllocator::Reference ref =
+      allocator->Allocate(sizeof(SampleRecord), kTypeIdSampleRecord);
+  SampleRecord* record =
+      allocator->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+
+  if (!record) {
+    NOTREACHED() << "full=" << allocator->IsFull()
+                 << ", corrupt=" << allocator->IsCorrupt();
+    return 0;
+  }
+
+  record->id = sample_map_id;
+  record->value = value;
+  record->count = 0;
+  allocator->MakeIterable(ref);
+  return ref;
 }
 
 bool PersistentSampleMap::AddSubtractImpl(SampleCountIterator* iter,
@@ -177,25 +222,16 @@ Count* PersistentSampleMap::GetOrCreateSampleCountStorage(Sample value) {
     return count_pointer;
 
   // Create a new record in persistent memory for the value.
-  PersistentMemoryAllocator::Reference ref =
-      allocator_->Allocate(sizeof(SampleRecord), kTypeIdSampleRecord);
-  SampleRecord* record =
-      allocator_->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
-  if (!record) {
-    // If the allocator was unable to create a record then it is full or
-    // corrupt. Instead, allocate the counter from the heap. This sample will
-    // not be persistent, will not be shared, and will leak but it's better
-    // than crashing.
-    NOTREACHED() << "full=" << allocator_->IsFull()
-                 << ", corrupt=" << allocator_->IsCorrupt();
+  PersistentMemoryAllocator::Reference ref = records_->CreateNew(value);
+  if (!ref) {
+    // If a new record could not be created then the underlying allocator is
+    // full or corrupt. Instead, allocate the counter from the heap. This
+    // sample will not be persistent, will not be shared, and will leak...
+    // but it's better than crashing.
     count_pointer = new Count(0);
     sample_counts_[value] = count_pointer;
     return count_pointer;
   }
-  record->id = id();
-  record->value = value;
-  record->count = 0;  // Should already be zero but don't trust other processes.
-  allocator_->MakeIterable(ref);
 
   // A race condition between two independent processes (i.e. two independent
   // histogram objects sharing the same sample data) could cause two of the
@@ -212,53 +248,30 @@ Count* PersistentSampleMap::GetOrCreateSampleCountStorage(Sample value) {
 }
 
 Count* PersistentSampleMap::ImportSamples(Sample until_value) {
-  // TODO(bcwhite): This import operates in O(V+N) total time per sparse
-  // histogram where V is the number of values for this object and N is
-  // the number of other iterable objects in the allocator. This becomes
-  // O(S*(SV+N)) or O(S^2*V + SN) overall where S is the number of sparse
-  // histograms.
-  //
-  // This is actually okay when histograms are expected to exist for the
-  // lifetime of the program, spreading the cost out, and S and V are
-  // relatively small, as is the current case.
-  //
-  // However, it is not so good for objects that are created, detroyed, and
-  // recreated on a periodic basis, such as when making a snapshot of
-  // sparse histograms owned by another, ongoing process. In that case, the
-  // entire cost is compressed into a single sequential operation... on the
-  // UI thread no less.
-  //
-  // This will be addressed in a future CL.
-
-  uint32_t type_id;
   PersistentMemoryAllocator::Reference ref;
-  while ((ref = allocator_->GetNextIterable(&sample_iter_, &type_id)) != 0) {
-    if (type_id == kTypeIdSampleRecord) {
-      SampleRecord* record =
-          allocator_->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
-      if (!record)
-        continue;
+  while ((ref = records_->GetNext()) != 0) {
+    SampleRecord* record =
+        records_->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+    if (!record)
+      continue;
 
-      // A sample record has been found but may not be for this histogram.
-      if (record->id != id())
-        continue;
+    DCHECK_EQ(id(), record->id);
 
-      // Check if the record's value is already known.
-      if (!ContainsKey(sample_counts_, record->value)) {
-        // No: Add it to map of known values if the value is valid.
-        if (record->value >= 0)
-          sample_counts_[record->value] = &record->count;
-      } else {
-        // Yes: Ignore it; it's a duplicate caused by a race condition -- see
-        // code & comment in GetOrCreateSampleCountStorage() for details.
-        // Check that nothing ever operated on the duplicate record.
-        DCHECK_EQ(0, record->count);
-      }
-
-      // Stop if it's the value being searched for.
-      if (record->value == until_value)
-        return &record->count;
+    // Check if the record's value is already known.
+    if (!ContainsKey(sample_counts_, record->value)) {
+      // No: Add it to map of known values if the value is valid.
+      if (record->value >= 0)
+        sample_counts_[record->value] = &record->count;
+    } else {
+      // Yes: Ignore it; it's a duplicate caused by a race condition -- see
+      // code & comment in GetOrCreateSampleCountStorage() for details.
+      // Check that nothing ever operated on the duplicate record.
+      DCHECK_EQ(0, record->count);
     }
+
+    // Stop if it's the value being searched for.
+    if (record->value == until_value)
+      return &record->count;
   }
 
   return nullptr;

@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -94,11 +95,12 @@ class NET_EXPORT WebSocketEventInterface {
 
   // Called when the browser starts the WebSocket Opening Handshake.
   virtual ChannelState OnStartOpeningHandshake(
-      scoped_ptr<WebSocketHandshakeRequestInfo> request) WARN_UNUSED_RESULT = 0;
+      std::unique_ptr<WebSocketHandshakeRequestInfo> request)
+      WARN_UNUSED_RESULT = 0;
 
   // Called when the browser finishes the WebSocket Opening Handshake.
   virtual ChannelState OnFinishOpeningHandshake(
-      scoped_ptr<WebSocketHandshakeResponseInfo> response)
+      std::unique_ptr<WebSocketHandshakeResponseInfo> response)
       WARN_UNUSED_RESULT = 0;
 
   // Callbacks to be used in response to a call to OnSSLCertificateError. Very
@@ -122,7 +124,7 @@ class NET_EXPORT WebSocketEventInterface {
   // make the actual decision. The callbacks must not be called after the
   // WebSocketChannel has been destroyed.
   virtual ChannelState OnSSLCertificateError(
-      scoped_ptr<SSLErrorCallbacks> ssl_error_callbacks,
+      std::unique_ptr<SSLErrorCallbacks> ssl_error_callbacks,
       const GURL& url,
       const SSLInfo& ssl_info,
       bool fatal) WARN_UNUSED_RESULT = 0;

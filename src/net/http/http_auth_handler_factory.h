@@ -6,11 +6,11 @@
 #define NET_HTTP_HTTP_AUTH_HANDLER_FACTORY_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/http/http_auth.h"
 #include "net/http/url_security_manager.h"
@@ -89,7 +89,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
                                 CreateReason create_reason,
                                 int digest_nonce_count,
                                 const BoundNetLog& net_log,
-                                scoped_ptr<HttpAuthHandler>* handler) = 0;
+                                std::unique_ptr<HttpAuthHandler>* handler) = 0;
 
   // Creates an HTTP authentication handler based on the authentication
   // challenge string |challenge|.
@@ -101,7 +101,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
                                   const SSLInfo& ssl_info,
                                   const GURL& origin,
                                   const BoundNetLog& net_log,
-                                  scoped_ptr<HttpAuthHandler>* handler);
+                                  std::unique_ptr<HttpAuthHandler>* handler);
 
   // Creates an HTTP authentication handler based on the authentication
   // challenge string |challenge|.
@@ -114,7 +114,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
       const GURL& origin,
       int digest_nonce_count,
       const BoundNetLog& net_log,
-      scoped_ptr<HttpAuthHandler>* handler);
+      std::unique_ptr<HttpAuthHandler>* handler);
 
   // Creates a standard HttpAuthHandlerRegistryFactory. The caller is
   // responsible for deleting the factory.
@@ -125,7 +125,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
   // non-NULL.  |resolver| must remain valid for the lifetime of the
   // HttpAuthHandlerRegistryFactory and any HttpAuthHandlers created by said
   // factory.
-  static scoped_ptr<HttpAuthHandlerRegistryFactory> CreateDefault(
+  static std::unique_ptr<HttpAuthHandlerRegistryFactory> CreateDefault(
       HostResolver* resolver);
 
  private:
@@ -175,7 +175,7 @@ class NET_EXPORT HttpAuthHandlerRegistryFactory
   // CNAME lookups to generate a Kerberos SPN for the server. If the "negotiate"
   // scheme is used and |negotiate_disable_cname_lookup| is false,
   // |host_resolver| must not be NULL.
-  static scoped_ptr<HttpAuthHandlerRegistryFactory> Create(
+  static std::unique_ptr<HttpAuthHandlerRegistryFactory> Create(
       const HttpAuthPreferences* prefs,
       HostResolver* host_resolver);
   // Creates an auth handler by dispatching out to the registered factories
@@ -187,10 +187,11 @@ class NET_EXPORT HttpAuthHandlerRegistryFactory
                         CreateReason reason,
                         int digest_nonce_count,
                         const BoundNetLog& net_log,
-                        scoped_ptr<HttpAuthHandler>* handler) override;
+                        std::unique_ptr<HttpAuthHandler>* handler) override;
 
  private:
-  using FactoryMap = std::map<std::string, scoped_ptr<HttpAuthHandlerFactory>>;
+  using FactoryMap =
+      std::map<std::string, std::unique_ptr<HttpAuthHandlerFactory>>;
 
   FactoryMap factory_map_;
   DISALLOW_COPY_AND_ASSIGN(HttpAuthHandlerRegistryFactory);

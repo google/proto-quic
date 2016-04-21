@@ -4,8 +4,9 @@
 
 #include "net/quic/crypto/cert_compressor.h"
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/quic_utils.h"
 #include "third_party/zlib/zlib.h"
 
@@ -564,7 +565,7 @@ bool CertCompressor::DecompressChain(StringPiece in,
   }
   DCHECK_EQ(entries.size(), out_certs->size());
 
-  scoped_ptr<uint8_t[]> uncompressed_data;
+  std::unique_ptr<uint8_t[]> uncompressed_data;
   StringPiece uncompressed;
 
   if (!in.empty()) {

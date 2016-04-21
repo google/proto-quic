@@ -4,6 +4,8 @@
 
 #include "net/cert/internal/verify_certificate_chain.h"
 
+#include <memory>
+
 #include "base/logging.h"
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
@@ -27,7 +29,7 @@ struct FullyParsedCert {
   ParsedCertificate cert;
   ParsedTbsCertificate tbs;
 
-  scoped_ptr<SignatureAlgorithm> signature_algorithm;
+  std::unique_ptr<SignatureAlgorithm> signature_algorithm;
 
   // Standard extensions that were parsed.
   bool has_basic_constraints = false;
@@ -36,7 +38,7 @@ struct FullyParsedCert {
   bool has_key_usage = false;
   der::BitString key_usage;
 
-  scoped_ptr<GeneralNames> subject_alt_names;
+  std::unique_ptr<GeneralNames> subject_alt_names;
 
   bool has_name_constraints = false;
   ParsedExtension name_constraints_extension;
@@ -231,7 +233,7 @@ WARN_UNUSED_RESULT bool VerifyTimeValidity(const FullyParsedCert& cert,
 // RSA with SHA1.
 WARN_UNUSED_RESULT bool IsRsaWithSha1SignatureAlgorithm(
     const der::Input& signature_algorithm_tlv) {
-  scoped_ptr<SignatureAlgorithm> algorithm =
+  std::unique_ptr<SignatureAlgorithm> algorithm =
       SignatureAlgorithm::CreateFromDer(signature_algorithm_tlv);
 
   return algorithm &&
@@ -278,7 +280,8 @@ WARN_UNUSED_RESULT bool BasicCertificateProcessing(
     const der::GeneralizedTime& time,
     const der::Input& working_spki,
     const der::Input& working_issuer_name,
-    const std::vector<scoped_ptr<NameConstraints>>& name_constraints_list) {
+    const std::vector<std::unique_ptr<NameConstraints>>&
+        name_constraints_list) {
   // Check that the signature algorithms in Certificate vs TBSCertificate
   // match. This isn't part of RFC 5280 section 6.1.3, but is mandated by
   // sections 4.1.1.2 and 4.1.2.3.
@@ -333,7 +336,7 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
     size_t* max_path_length_ptr,
     der::Input* working_spki,
     der::Input* working_issuer_name,
-    std::vector<scoped_ptr<NameConstraints>>* name_constraints_list) {
+    std::vector<std::unique_ptr<NameConstraints>>* name_constraints_list) {
   // TODO(eroman): Steps a-b are omitted, as policy constraints are not yet
   // implemented.
 
@@ -353,9 +356,10 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
 
   // From RFC 5280 section 6.1.4 step g:
   if (cert.has_name_constraints) {
-    scoped_ptr<NameConstraints> name_constraints(NameConstraints::CreateFromDer(
-        cert.name_constraints_extension.value,
-        cert.name_constraints_extension.critical));
+    std::unique_ptr<NameConstraints> name_constraints(
+        NameConstraints::CreateFromDer(
+            cert.name_constraints_extension.value,
+            cert.name_constraints_extension.critical));
     if (!name_constraints)
       return false;
     name_constraints_list->push_back(std::move(name_constraints));
@@ -501,6 +505,7 @@ WARN_UNUSED_RESULT bool WrapUp(const FullyParsedCert& cert) {
 TrustAnchor::~TrustAnchor() {}
 
 TrustStore::TrustStore() {}
+TrustStore::TrustStore(const TrustStore& other) = default;
 TrustStore::~TrustStore() {}
 
 // This implementation is structured to mimic the description of certificate
@@ -516,7 +521,7 @@ bool VerifyCertificateChain(const std::vector<der::Input>& certs_der,
   // Will contain a NameConstraints for each previous cert in the chain which
   // had nameConstraints. This corresponds to the permitted_subtrees and
   // excluded_subtrees state variables from RFC 5280.
-  std::vector<scoped_ptr<NameConstraints>> name_constraints_list;
+  std::vector<std::unique_ptr<NameConstraints>> name_constraints_list;
 
   // |working_spki| is an amalgamation of 3 separate variables from RFC 5280:
   //    * working_public_key

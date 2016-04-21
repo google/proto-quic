@@ -271,8 +271,8 @@ bool HttpStreamFactoryImpl::Request::HasSpdySessionKey() const {
 // request which spawned it).
 void HttpStreamFactoryImpl::Request::OnNewSpdySessionReady(
     Job* job,
-    scoped_ptr<HttpStream> stream,
-    scoped_ptr<BidirectionalStreamImpl> bidirectional_stream_impl,
+    std::unique_ptr<HttpStream> stream,
+    std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl,
     const base::WeakPtr<SpdySession>& spdy_session,
     bool direct) {
   DCHECK(job);

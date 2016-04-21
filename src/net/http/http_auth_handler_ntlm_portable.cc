@@ -719,14 +719,14 @@ int HttpAuthHandlerNTLM::Factory::CreateAuthHandler(
     CreateReason reason,
     int digest_nonce_count,
     const BoundNetLog& net_log,
-    scoped_ptr<HttpAuthHandler>* handler) {
+    std::unique_ptr<HttpAuthHandler>* handler) {
   if (reason == CREATE_PREEMPTIVE)
     return ERR_UNSUPPORTED_AUTH_SCHEME;
   // TODO(cbentzel): Move towards model of parsing in the factory
   //                 method and only constructing when valid.
   // NOTE: Default credentials are not supported for the portable implementation
   // of NTLM.
-  scoped_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerNTLM);
+  std::unique_ptr<HttpAuthHandler> tmp_handler(new HttpAuthHandlerNTLM);
   if (!tmp_handler->InitFromChallenge(challenge, target, ssl_info, origin,
                                       net_log))
     return ERR_INVALID_RESPONSE;

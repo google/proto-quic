@@ -34,10 +34,11 @@ namespace net {
 namespace {
 
 // Callback for TYPE_URL_REQUEST_FILTERS_SET net-internals event.
-scoped_ptr<base::Value> FiltersSetCallback(
+std::unique_ptr<base::Value> FiltersSetCallback(
     Filter* filter,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> event_params(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> event_params(
+      new base::DictionaryValue());
   event_params->SetString("filters", filter->OrderedFilterList());
   return std::move(event_params);
 }

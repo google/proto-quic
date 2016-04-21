@@ -9,7 +9,6 @@
 
 #include <map>
 
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_session.h"

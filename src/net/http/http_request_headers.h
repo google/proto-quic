@@ -153,8 +153,9 @@ class NET_EXPORT HttpRequestHeaders {
 
   // Takes in the request line and returns a Value for use with the NetLog
   // containing both the request line and all headers fields.
-  scoped_ptr<base::Value> NetLogCallback(const std::string* request_line,
-                                         NetLogCaptureMode capture_mode) const;
+  std::unique_ptr<base::Value> NetLogCallback(
+      const std::string* request_line,
+      NetLogCaptureMode capture_mode) const;
 
   // Takes in a Value created by the above function, and attempts to extract the
   // request line and create a copy of the original headers.  Returns true on

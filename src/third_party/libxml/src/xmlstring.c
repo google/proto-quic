@@ -821,6 +821,13 @@ xmlCheckUTF8(const unsigned char *utf)
  * the first 'len' characters of ARRAY
  */
 
+#if _MSC_FULL_VER && _MSC_FULL_VER == 190023918
+// Workaround for a /O1 ("s") optimization bug in VS 2015 Update 2, remove once
+// the fix is released. crbug.com/599427
+// https://connect.microsoft.com/VisualStudio/feedback/details/2582138
+#pragma optimize("t", on)
+#endif
+
 int
 xmlUTF8Strsize(const xmlChar *utf, int len) {
     const xmlChar   *ptr=utf;
@@ -844,6 +851,10 @@ xmlUTF8Strsize(const xmlChar *utf, int len) {
     return (ptr - utf);
 }
 
+#if _MSC_FULL_VER && _MSC_FULL_VER == 190023918
+// Restore the original optimization settings.
+#pragma optimize("", on)
+#endif
 
 /**
  * xmlUTF8Strndup:

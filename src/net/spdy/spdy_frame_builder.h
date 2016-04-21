@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/base/net_export.h"
@@ -74,13 +74,13 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
                      SpdyStreamId stream_id);
 
   // Takes the buffer from the SpdyFrameBuilder.
-  SpdyFrame* take() {
+  SpdySerializedFrame take() {
     if (version_ == HTTP2) {
       DLOG_IF(DFATAL, SpdyConstants::GetFrameMaximumSize(version_) < length_)
           << "Frame length " << length_
           << " is longer than the maximum allowed length.";
     }
-    SpdyFrame* rv = new SpdyFrame(buffer_.release(), length(), true);
+    SpdySerializedFrame rv(buffer_.release(), length(), true);
     capacity_ = 0;
     length_ = 0;
     offset_ = 0;
@@ -138,7 +138,7 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   // write of given size, in bytes.
   bool CanWrite(size_t length) const;
 
-  scoped_ptr<char[]> buffer_;
+  std::unique_ptr<char[]> buffer_;
   size_t capacity_;  // Allocation size of payload, set by constructor.
   size_t length_;    // Length of the latest frame in the buffer.
   size_t offset_;    // Position at which the latest frame begins.

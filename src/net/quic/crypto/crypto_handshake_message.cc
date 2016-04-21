@@ -304,7 +304,7 @@ string CryptoHandshakeMessage::DebugStringInternal(size_t indent) const {
       case kSCFG:
         // nested messages.
         if (!it->second.empty()) {
-          scoped_ptr<CryptoHandshakeMessage> msg(
+          std::unique_ptr<CryptoHandshakeMessage> msg(
               CryptoFramer::ParseMessage(it->second));
           if (msg.get()) {
             ret += "\n";

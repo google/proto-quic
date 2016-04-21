@@ -33,7 +33,7 @@ void QuicTestPacketMaker::set_hostname(const std::string& host) {
   host_.assign(host);
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePingPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePingPacket(
     QuicPacketNumber num,
     bool include_version) {
   QuicPacketHeader header;
@@ -47,10 +47,11 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePingPacket(
   header.fec_group = 0;
 
   QuicPingFrame ping;
-  return scoped_ptr<QuicReceivedPacket>(MakePacket(header, QuicFrame(ping)));
+  return std::unique_ptr<QuicReceivedPacket>(
+      MakePacket(header, QuicFrame(ping)));
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
     QuicPacketNumber num,
     bool include_version,
     QuicStreamId stream_id,
@@ -58,7 +59,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
   return MakeRstPacket(num, include_version, stream_id, error_code, 0);
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
     QuicPacketNumber num,
     bool include_version,
     QuicStreamId stream_id,
@@ -76,10 +77,11 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
 
   QuicRstStreamFrame rst(stream_id, error_code, bytes_written);
   DVLOG(1) << "Adding frame: " << QuicFrame(&rst);
-  return scoped_ptr<QuicReceivedPacket>(MakePacket(header, QuicFrame(&rst)));
+  return std::unique_ptr<QuicReceivedPacket>(
+      MakePacket(header, QuicFrame(&rst)));
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
     QuicPacketNumber num,
     bool include_version,
     QuicStreamId stream_id,
@@ -118,7 +120,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
 
   QuicFramer framer(SupportedVersions(version_), clock_->Now(),
                     Perspective::IS_CLIENT);
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
@@ -126,10 +128,10 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
                                                 buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, QuicTime::Zero(), false);
-  return scoped_ptr<QuicReceivedPacket>(encrypted.Clone());
+  return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
 }
 
-scoped_ptr<QuicReceivedPacket>
+std::unique_ptr<QuicReceivedPacket>
 QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
     QuicPacketNumber num,
     bool include_version,
@@ -171,7 +173,7 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
 
   QuicFramer framer(SupportedVersions(version_), clock_->Now(),
                     Perspective::IS_CLIENT);
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
@@ -179,11 +181,11 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
                                                 buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
-  return scoped_ptr<QuicReceivedPacket>(encrypted.Clone());
+  return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeConnectionClosePacket(
-    QuicPacketNumber num) {
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeConnectionClosePacket(QuicPacketNumber num) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.reset_flag = false;
@@ -197,10 +199,11 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeConnectionClosePacket(
   QuicConnectionCloseFrame close;
   close.error_code = QUIC_CRYPTO_VERSION_NOT_SUPPORTED;
   close.error_details = "Time to panic!";
-  return scoped_ptr<QuicReceivedPacket>(MakePacket(header, QuicFrame(&close)));
+  return std::unique_ptr<QuicReceivedPacket>(
+      MakePacket(header, QuicFrame(&close)));
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeGoAwayPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeGoAwayPacket(
     QuicPacketNumber num,
     QuicErrorCode error_code,
     std::string reason_phrase) {
@@ -218,12 +221,13 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeGoAwayPacket(
   goaway.error_code = error_code;
   goaway.last_good_stream_id = 0;
   goaway.reason_phrase = reason_phrase;
-  return scoped_ptr<QuicReceivedPacket>(MakePacket(header, QuicFrame(&goaway)));
+  return std::unique_ptr<QuicReceivedPacket>(
+      MakePacket(header, QuicFrame(&goaway)));
 }
 
 // Sets both least_unacked fields in stop waiting frame and ack frame
 // to be |least_unacked|.
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
     QuicPacketNumber packet_number,
     QuicPacketNumber largest_received,
     QuicPacketNumber least_unacked,
@@ -232,7 +236,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
                        least_unacked, send_feedback);
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
     QuicPacketNumber packet_number,
     QuicPacketNumber largest_received,
     QuicPacketNumber ack_least_unacked,
@@ -263,7 +267,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   stop_waiting.least_unacked = stop_least_unacked;
   frames.push_back(QuicFrame(&stop_waiting));
 
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
@@ -271,11 +275,11 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
                                                 buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
-  return scoped_ptr<QuicReceivedPacket>(encrypted.Clone());
+  return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
 }
 
 // Returns a newly created packet to send kData on stream 1.
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeDataPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeDataPacket(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
     bool should_include_version,
@@ -287,7 +291,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeDataPacket(
   return MakePacket(header_, QuicFrame(&frame));
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
     QuicPacketNumber packet_number,
     bool include_version,
     QuicStreamId stream_id,
@@ -316,7 +320,8 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
   return MakeMultipleFramesPacket(header_, frames);
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRequestHeadersPacket(
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeRequestHeadersPacket(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
     bool should_include_version,
@@ -331,44 +336,44 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRequestHeadersPacket(
 
 // If |offset| is provided, will use the value when creating the packet.
 // Will also update the value after packet creation.
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRequestHeadersPacket(
-    QuicPacketNumber packet_number,
-    QuicStreamId stream_id,
-    bool should_include_version,
-    bool fin,
-    SpdyPriority priority,
-    const SpdyHeaderBlock& headers,
-    size_t* spdy_headers_frame_length,
-    QuicStreamOffset* offset) {
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeRequestHeadersPacket(QuicPacketNumber packet_number,
+                                              QuicStreamId stream_id,
+                                              bool should_include_version,
+                                              bool fin,
+                                              SpdyPriority priority,
+                                              const SpdyHeaderBlock& headers,
+                                              size_t* spdy_headers_frame_length,
+                                              QuicStreamOffset* offset) {
   InitializeHeader(packet_number, should_include_version);
-  scoped_ptr<SpdySerializedFrame> spdy_frame;
+  SpdySerializedFrame spdy_frame;
   if (spdy_request_framer_.protocol_version() == SPDY3) {
     SpdySynStreamIR syn_stream(stream_id);
     syn_stream.set_header_block(headers);
     syn_stream.set_fin(fin);
     syn_stream.set_priority(priority);
-    spdy_frame.reset(spdy_request_framer_.SerializeSynStream(syn_stream));
+    spdy_frame = spdy_request_framer_.SerializeSynStream(syn_stream);
   } else {
     SpdyHeadersIR headers_frame(stream_id);
     headers_frame.set_header_block(headers);
     headers_frame.set_fin(fin);
     headers_frame.set_priority(priority);
     headers_frame.set_has_priority(true);
-    spdy_frame.reset(spdy_request_framer_.SerializeFrame(headers_frame));
+    spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
   }
   if (spdy_headers_frame_length) {
-    *spdy_headers_frame_length = spdy_frame->size();
+    *spdy_headers_frame_length = spdy_frame.size();
   }
   if (offset != nullptr) {
     QuicStreamFrame frame(
         kHeadersStreamId, false, *offset,
-        base::StringPiece(spdy_frame->data(), spdy_frame->size()));
-    *offset += spdy_frame->size();
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
+    *offset += spdy_frame.size();
     return MakePacket(header_, QuicFrame(&frame));
   } else {
     QuicStreamFrame frame(
         kHeadersStreamId, false, 0,
-        base::StringPiece(spdy_frame->data(), spdy_frame->size()));
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
 
     return MakePacket(header_, QuicFrame(&frame));
   }
@@ -376,7 +381,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRequestHeadersPacket(
 
 // Convenience method for calling MakeRequestHeadersPacket with nullptr for
 // |spdy_headers_frame_length|.
-scoped_ptr<QuicReceivedPacket>
+std::unique_ptr<QuicReceivedPacket>
 QuicTestPacketMaker::MakeRequestHeadersPacketWithOffsetTracking(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
@@ -392,7 +397,8 @@ QuicTestPacketMaker::MakeRequestHeadersPacketWithOffsetTracking(
 
 // If |offset| is provided, will use the value when creating the packet.
 // Will also update the value after packet creation.
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeResponseHeadersPacket(
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeResponseHeadersPacket(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
     bool should_include_version,
@@ -401,36 +407,37 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeResponseHeadersPacket(
     size_t* spdy_headers_frame_length,
     QuicStreamOffset* offset) {
   InitializeHeader(packet_number, should_include_version);
-  scoped_ptr<SpdySerializedFrame> spdy_frame;
+  SpdySerializedFrame spdy_frame;
   if (spdy_response_framer_.protocol_version() == SPDY3) {
     SpdySynReplyIR syn_reply(stream_id);
     syn_reply.set_header_block(headers);
     syn_reply.set_fin(fin);
-    spdy_frame.reset(spdy_response_framer_.SerializeSynReply(syn_reply));
+    spdy_frame = spdy_response_framer_.SerializeSynReply(syn_reply);
   } else {
     SpdyHeadersIR headers_frame(stream_id);
     headers_frame.set_header_block(headers);
     headers_frame.set_fin(fin);
-    spdy_frame.reset(spdy_response_framer_.SerializeFrame(headers_frame));
+    spdy_frame = spdy_response_framer_.SerializeFrame(headers_frame);
   }
   if (spdy_headers_frame_length) {
-    *spdy_headers_frame_length = spdy_frame->size();
+    *spdy_headers_frame_length = spdy_frame.size();
   }
   if (offset != nullptr) {
     QuicStreamFrame frame(
         kHeadersStreamId, false, *offset,
-        base::StringPiece(spdy_frame->data(), spdy_frame->size()));
-    *offset += spdy_frame->size();
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
+    *offset += spdy_frame.size();
     return MakePacket(header_, QuicFrame(&frame));
   } else {
     QuicStreamFrame frame(
         kHeadersStreamId, false, 0,
-        base::StringPiece(spdy_frame->data(), spdy_frame->size()));
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
     return MakePacket(header_, QuicFrame(&frame));
   }
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeResponseHeadersPacket(
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeResponseHeadersPacket(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
     bool should_include_version,
@@ -444,7 +451,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeResponseHeadersPacket(
 
 // Convenience method for calling MakeResponseHeadersPacket with nullptr for
 // |spdy_headers_frame_length|.
-scoped_ptr<QuicReceivedPacket>
+std::unique_ptr<QuicReceivedPacket>
 QuicTestPacketMaker::MakeResponseHeadersPacketWithOffsetTracking(
     QuicPacketNumber packet_number,
     QuicStreamId stream_id,
@@ -487,7 +494,7 @@ SpdyHeaderBlock QuicTestPacketMaker::GetResponseHeaders(
   return headers;
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePacket(
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePacket(
     const QuicPacketHeader& header,
     const QuicFrame& frame) {
   QuicFrames frames;
@@ -495,12 +502,12 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePacket(
   return MakeMultipleFramesPacket(header, frames);
 }
 
-scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeMultipleFramesPacket(
-    const QuicPacketHeader& header,
-    const QuicFrames& frames) {
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeMultipleFramesPacket(const QuicPacketHeader& header,
+                                              const QuicFrames& frames) {
   QuicFramer framer(SupportedVersions(version_), clock_->Now(),
                     Perspective::IS_CLIENT);
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
@@ -508,7 +515,7 @@ scoped_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeMultipleFramesPacket(
                                                 buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
-  return scoped_ptr<QuicReceivedPacket>(encrypted.Clone());
+  return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
 }
 
 void QuicTestPacketMaker::InitializeHeader(QuicPacketNumber packet_number,

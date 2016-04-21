@@ -4,8 +4,9 @@
 
 #include "net/quic/congestion_control/pacing_sender.h"
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -100,7 +101,7 @@ class PacingSenderTest : public ::testing::Test {
   MockClock clock_;
   QuicPacketNumber packet_number_;
   StrictMock<MockSendAlgorithm>* mock_sender_;
-  scoped_ptr<PacingSender> pacing_sender_;
+  std::unique_ptr<PacingSender> pacing_sender_;
 };
 
 TEST_F(PacingSenderTest, NoSend) {

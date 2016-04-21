@@ -85,6 +85,93 @@ The general intent is to push local changes upstream so that over
 time we no longer need any forked files.
 
 
+Unified allocator shim
+----------------------
+On most platform, Chrome overrides the malloc / operator new symbols (and
+corresponding free / delete and other variants). This is to enforce security
+checks and lately to enable the
+[memory-infra heap profiler][url-memory-infra-heap-profiler].  
+Historically each platform had its special logic for defining the allocator
+symbols in different places of the codebase. The unified allocator shim is
+a project aimed to unify the symbol definition and allocator routing logic in
+a central place.
+
+ - Full documentation: [Allocator shim design doc][url-allocator-shim].
+ - Current state: Available and enabled by default on Linux, CrOS and Android.
+ - Tracking bug: [https://crbug.com/550886][crbug.com/550886].
+ - Build-time flag: `use_experimental_allocator_shim`.
+
+**Overview of the unified allocator shim**  
+The allocator shim consists of three stages:
+```
++-------------------------+    +-----------------------+    +----------------+
+|     malloc & friends    | -> |       shim layer      | -> |   Routing to   |
+|    symbols definition   |    |     implementation    |    |    allocator   |
++-------------------------+    +-----------------------+    +----------------+
+| - libc symbols (malloc, |    | - Security checks     |    | - tcmalloc     |
+|   calloc, free, ...)    |    | - Chain of dispatchers|    | - glibc        |
+| - C++ symbols (operator |    |   that can intercept  |    | - Android      |
+|   new, delete, ...)     |    |   and override        |    |   bionic       |
+| - glibc weak symbols    |    |   allocations         |    | - WinHeap      |
+|   (__libc_malloc, ...)  |    +-----------------------+    +----------------+
++-------------------------+
+```
+
+**1. malloc symbols definition**  
+This stage takes care of overriding the symbols `malloc`, `free`,
+`operator new`, `operator delete` and friends and routing those calls inside the
+allocator shim (next point).
+This is taken care of by the headers in `allocator_shim_override_*`.
+
+*On Linux/CrOS*: the allocator symbols are defined as exported global symbols
+in `allocator_shim_override_libc_symbols.h` (for `malloc`, `free` and friends)
+and in `allocator_shim_override_cpp_symbols.h` (for `operator new`,
+`operator delete` and friends).
+This enables proper interposition of malloc symbols referenced by the main
+executable and any third party libraries. Symbol resolution on Linux is a breadth first search that starts from the root link unit, that is the executable
+(see EXECUTABLE AND LINKABLE FORMAT (ELF) - Portable Formats Specification).
+Additionally, when tcmalloc is the default allocator, some extra glibc symbols
+are also defined in `allocator_shim_override_glibc_weak_symbols.h`, for subtle
+reasons explained in that file.
+The Linux/CrOS shim was introduced by
+[crrev.com/1675143004](https://crrev.com/1675143004).
+
+*On Android*: load-time symbol interposition (unlike the Linux/CrOS case) is not
+possible. This is because Android processes are `fork()`-ed from the Android
+zygote, which pre-loads libc.so and only later native code gets loaded via
+`dlopen()` (symbols from `dlopen()`-ed libraries get a different resolution
+scope).
+In this case, the approach instead of wrapping symbol resolution at link time
+(i.e. during the build), via the `--Wl,-wrap,malloc` linker flag.
+The use of this wrapping flag causes:
+ - All references to allocator symbols in the Chrome codebase to be rewritten as
+   references to `__wrap_malloc` and friends. The `__wrap_malloc` symbols are
+   defined in the `allocator_shim_override_linker_wrapped_symbols.h` and
+   route allocator calls inside the shim layer.
+ - The reference to the original `malloc` symbols (which typically is defined by
+   the system's libc.so) are accessible via the special `__real_malloc` and
+   friends symbols (which will be relocated, at load time, against `malloc`).
+
+In summary, this approach is transparent to the dynamic loader, which still sees
+undefined symbol references to malloc symbols.
+These symbols will be resolved against libc.so as usual.
+More details in [crrev.com/1719433002](https://crrev.com/1719433002).
+
+**2. Shim layer implementation**  
+This stage contains the actual shim implementation. This consists of:
+- A singly linked list of dispatchers (structs with function pointers to `malloc`-like functions). Dispatchers can be dynamically inserted at runtime
+(using the `InsertAllocatorDispatch` API). They can intercept and override
+allocator calls.
+- The security checks (suicide on malloc-failure via `std::new_handler`, etc).
+This happens inside `allocator_shim.cc`
+
+**3. Final allocator routing**  
+The final element of the aforementioned dispatcher chain is statically defined
+at build time and ultimately routes the allocator calls to the actual allocator
+(as described in the *Background* section above). This is taken care of by the
+headers in `allocator_shim_default_dispatch_to_*` files.
+
+
 Appendixes
 ----------
 **How does the Windows shim layer replace the malloc symbols?**  
@@ -99,8 +186,11 @@ See the script `preb_libc.py` in this folder.
 
 Related links
 -------------
-- [Allocator Cleanup Doc - Jan 2016][url-allocator-cleanup]
+- [Unified allocator shim doc - Feb 2016][url-allocator-shim]
+- [Allocator cleanup doc - Jan 2016][url-allocator-cleanup]
 - [Proposal to use PartitionAlloc as default allocator](https://crbug.com/339604)
 - [Memory-Infra: Tools to profile memory usage in Chrome](components/tracing/docs/memory_infra.md)
 
 [url-allocator-cleanup]: https://docs.google.com/document/d/1V77Kgp_4tfaaWPEZVxNevoD02wXiatnAv7Ssgr0hmjg/edit?usp=sharing
+[url-memory-infra-heap-profiler]: components/tracing/docs/heap_profiler.md
+[url-allocator-shim]: https://docs.google.com/document/d/1yKlO1AO4XjpDad9rjcBOI15EKdAGsuGO_IeZy0g0kxo/edit?usp=sharing

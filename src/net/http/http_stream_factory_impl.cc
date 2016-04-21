@@ -244,6 +244,9 @@ AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceFor(
     if (!session_->params().enable_quic)
       continue;
 
+    if (!IsQuicWhitelistedForHost(origin.host()))
+      continue;
+
     if (stream_type == HttpStreamRequest::BIDIRECTIONAL_STREAM &&
         session_->params().quic_disable_bidirectional_streams) {
       continue;
@@ -263,9 +266,6 @@ AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceFor(
     if (session_->quic_stream_factory()->CanUseExistingSession(
             server_id, request_info.privacy_mode, origin_host))
       return alternative_service;
-
-    if (!IsQuicWhitelistedForHost(destination.host()))
-      continue;
 
     // Cache this entry if we don't have a non-broken Alt-Svc yet.
     if (first_alternative_service.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL)

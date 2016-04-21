@@ -7,9 +7,10 @@
 
 #include <windows.h>
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/timer/timer.h"
@@ -96,7 +97,7 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierWin
   int sequential_failures_;
 
   // Thread on which we can run DnsConfigService.
-  scoped_ptr<DnsConfigServiceThread> dns_config_service_thread_;
+  std::unique_ptr<DnsConfigServiceThread> dns_config_service_thread_;
 
   mutable base::Lock last_computed_connection_type_lock_;
   ConnectionType last_computed_connection_type_;

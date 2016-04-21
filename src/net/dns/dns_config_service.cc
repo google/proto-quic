@@ -12,87 +12,6 @@
 
 namespace net {
 
-NameServerClassifier::NameServerClassifier() {
-  // Google Public DNS addresses from:
-  // https://developers.google.com/speed/public-dns/docs/using
-  AddRule("8.8.8.8", NAME_SERVERS_TYPE_GOOGLE_PUBLIC_DNS);
-  AddRule("8.8.4.4", NAME_SERVERS_TYPE_GOOGLE_PUBLIC_DNS);
-  AddRule("2001:4860:4860:0:0:0:0:8888", NAME_SERVERS_TYPE_GOOGLE_PUBLIC_DNS),
-  AddRule("2001:4860:4860:0:0:0:0:8844", NAME_SERVERS_TYPE_GOOGLE_PUBLIC_DNS),
-
-  // Count localhost as private, since we don't know what upstream it uses:
-  AddRule("127.*.*.*", NAME_SERVERS_TYPE_PRIVATE);
-  AddRule("0:0:0:0:0:0:0:1", NAME_SERVERS_TYPE_PRIVATE);
-
-  // RFC 1918 private addresses:
-  AddRule("10.*.*.*", NAME_SERVERS_TYPE_PRIVATE);
-  AddRule("172.[16-31].*.*", NAME_SERVERS_TYPE_PRIVATE);
-  AddRule("192.168.*.*", NAME_SERVERS_TYPE_PRIVATE);
-
-  // IPv4 link-local addresses:
-  AddRule("169.254.*.*", NAME_SERVERS_TYPE_PRIVATE);
-
-  // IPv6 link-local addresses:
-  AddRule("fe80:*:*:*:*:*:*:*", NAME_SERVERS_TYPE_PRIVATE);
-
-  // Anything else counts as public:
-  AddRule("*.*.*.*", NAME_SERVERS_TYPE_PUBLIC);
-  AddRule("*:*:*:*:*:*:*:*", NAME_SERVERS_TYPE_PUBLIC);
-}
-
-NameServerClassifier::~NameServerClassifier() {}
-
-NameServerClassifier::NameServersType NameServerClassifier::GetNameServersType(
-    const std::vector<IPEndPoint>& nameservers) const {
-  NameServersType type = NAME_SERVERS_TYPE_NONE;
-  for (std::vector<IPEndPoint>::const_iterator it = nameservers.begin();
-       it != nameservers.end();
-       ++it) {
-    type = MergeNameServersTypes(type, GetNameServerType(it->address()));
-  }
-  return type;
-}
-
-struct NameServerClassifier::NameServerTypeRule {
-  NameServerTypeRule(const char* pattern_string, NameServersType type)
-      : type(type) {
-    bool parsed = pattern.ParsePattern(pattern_string);
-    DCHECK(parsed);
-  }
-
-  IPPattern pattern;
-  NameServersType type;
-};
-
-void NameServerClassifier::AddRule(const char* pattern_string,
-                                   NameServersType address_type) {
-  rules_.push_back(new NameServerTypeRule(pattern_string, address_type));
-}
-
-NameServerClassifier::NameServersType NameServerClassifier::GetNameServerType(
-    const IPAddress& address) const {
-  for (ScopedVector<NameServerTypeRule>::const_iterator it = rules_.begin();
-       it != rules_.end();
-       ++it) {
-    if ((*it)->pattern.Match(address))
-      return (*it)->type;
-  }
-  NOTREACHED();
-  return NAME_SERVERS_TYPE_NONE;
-}
-
-NameServerClassifier::NameServersType
-NameServerClassifier::MergeNameServersTypes(NameServersType a,
-                                            NameServersType b) {
-  if (a == NAME_SERVERS_TYPE_NONE)
-    return b;
-  if (b == NAME_SERVERS_TYPE_NONE)
-    return a;
-  if (a == b)
-    return a;
-  return NAME_SERVERS_TYPE_MIXED;
-}
-
 // Default values are taken from glibc resolv.h except timeout which is set to
 // |kDnsDefaultTimeoutMs|.
 DnsConfig::DnsConfig()
@@ -140,8 +59,8 @@ void DnsConfig::CopyIgnoreHosts(const DnsConfig& d) {
   use_local_ipv6 = d.use_local_ipv6;
 }
 
-scoped_ptr<base::Value> DnsConfig::ToValue() const {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+std::unique_ptr<base::Value> DnsConfig::ToValue() const {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
   base::ListValue* list = new base::ListValue();
   for (size_t i = 0; i < nameservers.size(); ++i)
@@ -236,10 +155,6 @@ void DnsConfigService::OnConfigRead(const DnsConfig& config) {
                              base::TimeTicks::Now() - last_sent_empty_time_);
   }
   UMA_HISTOGRAM_BOOLEAN("AsyncDNS.ConfigChange", changed);
-  UMA_HISTOGRAM_ENUMERATION(
-      "AsyncDNS.NameServersType",
-      classifier_.GetNameServersType(dns_config_.nameservers),
-      NameServerClassifier::NAME_SERVERS_TYPE_MAX_VALUE);
 
   have_config_ = true;
   if (have_hosts_ || watch_failed_)

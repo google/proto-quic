@@ -5,12 +5,12 @@
 #ifndef NET_SOCKET_CLIENT_SOCKET_HANDLE_H_
 #define NET_SOCKET_CLIENT_SOCKET_HANDLE_H_
 
+#include <memory>
 #include <string>
 
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/ip_endpoint.h"
@@ -132,7 +132,7 @@ class NET_EXPORT ClientSocketHandle {
   //
   // SetSocket() may also be used if this handle is used as simply for
   // socket storage (e.g., http://crbug.com/37810).
-  void SetSocket(scoped_ptr<StreamSocket> s);
+  void SetSocket(std::unique_ptr<StreamSocket> s);
   void set_reuse_type(SocketReuseType reuse_type) { reuse_type_ = reuse_type; }
   void set_idle_time(base::TimeDelta idle_time) { idle_time_ = idle_time; }
   void set_pool_id(int id) { pool_id_ = id; }
@@ -176,7 +176,7 @@ class NET_EXPORT ClientSocketHandle {
 
   // SetSocket() must be called with a new socket before this handle
   // is destroyed if is_initialized() is true.
-  scoped_ptr<StreamSocket> PassSocket();
+  std::unique_ptr<StreamSocket> PassSocket();
 
   // These may only be used if is_initialized() is true.
   const std::string& group_name() const { return group_name_; }
@@ -210,7 +210,7 @@ class NET_EXPORT ClientSocketHandle {
   bool is_initialized_;
   ClientSocketPool* pool_;
   HigherLayeredPool* higher_pool_;
-  scoped_ptr<StreamSocket> socket_;
+  std::unique_ptr<StreamSocket> socket_;
   std::string group_name_;
   SocketReuseType reuse_type_;
   CompletionCallback callback_;
@@ -220,7 +220,7 @@ class NET_EXPORT ClientSocketHandle {
   bool is_ssl_error_;
   HttpResponseInfo ssl_error_response_info_;
   SSLFailureState ssl_failure_state_;
-  scoped_ptr<ClientSocketHandle> pending_http_proxy_connection_;
+  std::unique_ptr<ClientSocketHandle> pending_http_proxy_connection_;
   std::vector<ConnectionAttempt> connection_attempts_;
   base::TimeTicks init_time_;
   base::TimeDelta setup_time_;

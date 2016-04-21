@@ -25,21 +25,6 @@ NetworkInterface::NetworkInterface(const std::string& name,
                                    const std::string& friendly_name,
                                    uint32_t interface_index,
                                    NetworkChangeNotifier::ConnectionType type,
-                                   const IPAddressNumber& address,
-                                   uint32_t prefix_length,
-                                   int ip_address_attributes)
-    : NetworkInterface(name,
-                       friendly_name,
-                       interface_index,
-                       type,
-                       IPAddress(address),
-                       prefix_length,
-                       ip_address_attributes) {}
-
-NetworkInterface::NetworkInterface(const std::string& name,
-                                   const std::string& friendly_name,
-                                   uint32_t interface_index,
-                                   NetworkChangeNotifier::ConnectionType type,
                                    const IPAddress& address,
                                    uint32_t prefix_length,
                                    int ip_address_attributes)

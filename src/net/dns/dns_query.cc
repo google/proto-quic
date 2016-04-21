@@ -5,6 +5,7 @@
 #include "net/dns/dns_query.h"
 
 #include "base/big_endian.h"
+#include "base/memory/ptr_util.h"
 #include "base/sys_byteorder.h"
 #include "net/base/io_buffer.h"
 #include "net/dns/dns_protocol.h"
@@ -38,8 +39,8 @@ DnsQuery::DnsQuery(uint16_t id, const base::StringPiece& qname, uint16_t qtype)
 DnsQuery::~DnsQuery() {
 }
 
-scoped_ptr<DnsQuery> DnsQuery::CloneWithNewId(uint16_t id) const {
-  return make_scoped_ptr(new DnsQuery(*this, id));
+std::unique_ptr<DnsQuery> DnsQuery::CloneWithNewId(uint16_t id) const {
+  return base::WrapUnique(new DnsQuery(*this, id));
 }
 
 uint16_t DnsQuery::id() const {

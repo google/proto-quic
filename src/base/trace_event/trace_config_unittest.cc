@@ -292,7 +292,8 @@ TEST(TraceConfigTest, TraceConfigFromDict) {
   EXPECT_FALSE(tc.IsArgumentFilterEnabled());
   EXPECT_STREQ("", tc.ToCategoryFilterString().c_str());
 
-  scoped_ptr<Value> default_value(JSONReader::Read(kDefaultTraceConfigString));
+  std::unique_ptr<Value> default_value(
+      JSONReader::Read(kDefaultTraceConfigString));
   DCHECK(default_value);
   const DictionaryValue* default_dict = nullptr;
   bool is_dict = default_value->GetAsDictionary(&default_dict);
@@ -305,7 +306,8 @@ TEST(TraceConfigTest, TraceConfigFromDict) {
   EXPECT_FALSE(default_tc.IsArgumentFilterEnabled());
   EXPECT_STREQ("-*Debug,-*Test", default_tc.ToCategoryFilterString().c_str());
 
-  scoped_ptr<Value> custom_value(JSONReader::Read(kCustomTraceConfigString));
+  std::unique_ptr<Value> custom_value(
+      JSONReader::Read(kCustomTraceConfigString));
   DCHECK(custom_value);
   const DictionaryValue* custom_dict = nullptr;
   is_dict = custom_value->GetAsDictionary(&custom_dict);

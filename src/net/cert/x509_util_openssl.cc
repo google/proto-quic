@@ -10,6 +10,7 @@
 #include <openssl/mem.h>
 
 #include <algorithm>
+#include <memory>
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
@@ -297,7 +298,7 @@ bool GetDER(X509* x509, base::StringPiece* der_cache) {
   DERCache* internal_cache = static_cast<DERCache*>(
       X509_get_ex_data(x509, x509_der_cache_index));
   if (!internal_cache) {
-    scoped_ptr<DERCache> new_cache(new DERCache);
+    std::unique_ptr<DERCache> new_cache(new DERCache);
     if (!DerEncodeCert(x509, &new_cache->data))
       return false;
     internal_cache = new_cache.get();
@@ -321,7 +322,7 @@ bool GetTLSServerEndPointChannelBinding(const X509Certificate& certificate,
                         &parsed_certificate))
     return false;
 
-  scoped_ptr<SignatureAlgorithm> signature_algorithm =
+  std::unique_ptr<SignatureAlgorithm> signature_algorithm =
       SignatureAlgorithm::CreateFromDer(
           parsed_certificate.signature_algorithm_tlv);
   if (!signature_algorithm)

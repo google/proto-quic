@@ -77,7 +77,7 @@ void StackFrameDeduplicator::AppendAsTraceFormat(std::string* out) const {
     SStringPrintf(&stringify_buffer, "\"%d\":", i);
     out->append(stringify_buffer);
 
-    scoped_ptr<TracedValue> frame_node_value(new TracedValue);
+    std::unique_ptr<TracedValue> frame_node_value(new TracedValue);
     frame_node_value->SetString("name", frame_node->frame);
     if (frame_node->parent_frame_index >= 0) {
       SStringPrintf(&stringify_buffer, "%d", frame_node->parent_frame_index);

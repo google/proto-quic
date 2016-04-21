@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -17,7 +18,6 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "net/base/host_port_pair.h"
@@ -97,6 +97,7 @@ enum SpdyProtocolErrorDetails {
   SPDY_ERROR_INVALID_DATA_FRAME_FLAGS = 8,
   SPDY_ERROR_INVALID_CONTROL_FRAME_FLAGS = 9,
   SPDY_ERROR_UNEXPECTED_FRAME = 31,
+  SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE = 37,
   // SpdyRstStreamStatus mappings.
   // RST_STREAM_INVALID not mapped.
   STATUS_CODE_PROTOCOL_ERROR = 11,
@@ -125,7 +126,7 @@ enum SpdyProtocolErrorDetails {
   PROTOCOL_ERROR_RECEIVE_WINDOW_VIOLATION = 28,
 
   // Next free value.
-  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 37,
+  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 38,
 };
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
     MapFramerErrorToProtocolError(SpdyFramer::SpdyError error);
@@ -136,7 +137,7 @@ SpdyGoAwayStatus NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
 
 // If these compile asserts fail then SpdyProtocolErrorDetails needs
 // to be updated with new values, as do the mapping functions above.
-static_assert(12 == SpdyFramer::LAST_ERROR,
+static_assert(13 == SpdyFramer::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
 static_assert(17 == RST_STREAM_NUM_STATUS_CODES,
               "SpdyProtocolErrorDetails / RstStreamStatus mismatch");
@@ -337,7 +338,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // The session begins reading from |connection| on a subsequent event loop
   // iteration, so the SpdySession may close immediately afterwards if the first
   // read of |connection| fails.
-  void InitializeWithSocket(scoped_ptr<ClientSocketHandle> connection,
+  void InitializeWithSocket(std::unique_ptr<ClientSocketHandle> connection,
                             SpdySessionPool* pool,
                             bool is_secure,
                             int certificate_error_code);
@@ -363,10 +364,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // producer is used to produce its frame.
   void EnqueueStreamWrite(const base::WeakPtr<SpdyStream>& stream,
                           SpdyFrameType frame_type,
-                          scoped_ptr<SpdyBufferProducer> producer);
+                          std::unique_ptr<SpdyBufferProducer> producer);
 
   // Creates and returns a SYN frame for |stream_id|.
-  scoped_ptr<SpdyFrame> CreateSynStream(
+  std::unique_ptr<SpdySerializedFrame> CreateSynStream(
       SpdyStreamId stream_id,
       RequestPriority priority,
       SpdyControlFlags flags,
@@ -374,10 +375,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   // Creates and returns a SpdyBuffer holding a data frame with the
   // given data. May return NULL if stalled by flow control.
-  scoped_ptr<SpdyBuffer> CreateDataBuffer(SpdyStreamId stream_id,
-                                          IOBuffer* data,
-                                          int len,
-                                          SpdyDataFlags flags);
+  std::unique_ptr<SpdyBuffer> CreateDataBuffer(SpdyStreamId stream_id,
+                                               IOBuffer* data,
+                                               int len,
+                                               SpdyDataFlags flags);
 
   // Close the stream with the given ID, which must exist and be
   // active. Note that that stream may hold the last reference to the
@@ -453,7 +454,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   // Retrieves information on the current state of the SPDY session as a
   // Value.
-  scoped_ptr<base::Value> GetInfoAsValue() const;
+  std::unique_ptr<base::Value> GetInfoAsValue() const;
 
   // Indicates whether the session is being reused after having successfully
   // used to send/receive data in the past or if the underlying socket was idle
@@ -789,29 +790,29 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // queue for the session.
   void EnqueueSessionWrite(RequestPriority priority,
                            SpdyFrameType frame_type,
-                           scoped_ptr<SpdyFrame> frame);
+                           std::unique_ptr<SpdySerializedFrame> frame);
 
   // Puts |producer| associated with |stream| onto the write queue
   // with the given priority.
   void EnqueueWrite(RequestPriority priority,
                     SpdyFrameType frame_type,
-                    scoped_ptr<SpdyBufferProducer> producer,
+                    std::unique_ptr<SpdyBufferProducer> producer,
                     const base::WeakPtr<SpdyStream>& stream);
 
   // Inserts a newly-created stream into |created_streams_|.
-  void InsertCreatedStream(scoped_ptr<SpdyStream> stream);
+  void InsertCreatedStream(std::unique_ptr<SpdyStream> stream);
 
   // Activates |stream| (which must be in |created_streams_|) by
   // assigning it an ID and returns it.
-  scoped_ptr<SpdyStream> ActivateCreatedStream(SpdyStream* stream);
+  std::unique_ptr<SpdyStream> ActivateCreatedStream(SpdyStream* stream);
 
   // Inserts a newly-activated stream into |active_streams_|.
-  void InsertActivatedStream(scoped_ptr<SpdyStream> stream);
+  void InsertActivatedStream(std::unique_ptr<SpdyStream> stream);
 
   // Remove all internal references to |stream|, call OnClose() on it,
   // and process any pending stream requests before deleting it.  Note
   // that |stream| may hold the last reference to the session.
-  void DeleteStream(scoped_ptr<SpdyStream> stream, int status);
+  void DeleteStream(std::unique_ptr<SpdyStream> stream, int status);
 
   // Check if we have a pending pushed-stream for this url
   // Returns the stream if found (and returns it from the pending
@@ -1021,7 +1022,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   TransportSecurityState* transport_security_state_;
 
   // The socket handle for this session.
-  scoped_ptr<ClientSocketHandle> connection_;
+  std::unique_ptr<ClientSocketHandle> connection_;
 
   // The read buffer used to read data from the socket.
   scoped_refptr<IOBuffer> read_buffer_;
@@ -1071,7 +1072,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Data for the frame we are currently sending.
 
   // The buffer we're currently writing.
-  scoped_ptr<SpdyBuffer> in_flight_write_;
+  std::unique_ptr<SpdyBuffer> in_flight_write_;
   // The type of the frame in |in_flight_write_|.
   SpdyFrameType in_flight_write_frame_type_;
   // The size of the frame in |in_flight_write_|.
@@ -1087,7 +1088,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   int certificate_error_code_;
 
   // Spdy Frame state.
-  scoped_ptr<BufferedSpdyFramer> buffered_spdy_framer_;
+  std::unique_ptr<BufferedSpdyFramer> buffered_spdy_framer_;
 
   // The state variables.
   AvailabilityState availability_state_;

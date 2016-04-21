@@ -12,12 +12,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
-#include "base/containers/hash_tables.h"
 #include "base/containers/mru_cache.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_error_details.h"
@@ -117,12 +116,12 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // TODO(rch): decouple the factory from the session via a Delegate interface.
   QuicChromiumClientSession(
       QuicConnection* connection,
-      scoped_ptr<DatagramClientSocket> socket,
+      std::unique_ptr<DatagramClientSocket> socket,
       QuicStreamFactory* stream_factory,
       QuicCryptoClientStreamFactory* crypto_client_stream_factory,
       QuicClock* clock,
       TransportSecurityState* transport_security_state,
-      scoped_ptr<QuicServerInfo> server_info,
+      std::unique_ptr<QuicServerInfo> server_info,
       const QuicServerId& server_id,
       int yield_after_packets,
       QuicTime::Delta yield_after_duration,
@@ -133,7 +132,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
       base::TimeTicks dns_resolution_end_time,
       QuicClientPushPromiseIndex* push_promise_index,
       base::TaskRunner* task_runner,
-      scoped_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log);
   ~QuicChromiumClientSession() override;
 
@@ -219,7 +218,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void CloseSessionOnErrorAndNotifyFactoryLater(int error,
                                                 QuicErrorCode quic_error);
 
-  scoped_ptr<base::Value> GetInfoAsValue(const std::set<HostPortPair>& aliases);
+  std::unique_ptr<base::Value> GetInfoAsValue(
+      const std::set<HostPortPair>& aliases);
 
   const BoundNetLog& net_log() const { return net_log_; }
 
@@ -245,9 +245,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // session and the session was successfully migrated to using the new socket.
   // Returns false if number of migrations exceeds kMaxReadersPerQuicSession.
   // Takes ownership of |socket|, |reader|, and |writer|.
-  bool MigrateToSocket(scoped_ptr<DatagramClientSocket> socket,
-                       scoped_ptr<QuicChromiumPacketReader> reader,
-                       scoped_ptr<QuicPacketWriter> writer);
+  bool MigrateToSocket(std::unique_ptr<DatagramClientSocket> socket,
+                       std::unique_ptr<QuicChromiumPacketReader> reader,
+                       std::unique_ptr<QuicPacketWriter> writer);
 
   // Populates network error details for this session.
   void PopulateNetErrorDetails(NetErrorDetails* details);
@@ -320,13 +320,13 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   QuicServerId server_id_;
   bool require_confirmation_;
-  scoped_ptr<QuicCryptoClientStream> crypto_stream_;
+  std::unique_ptr<QuicCryptoClientStream> crypto_stream_;
   QuicStreamFactory* stream_factory_;
-  std::vector<scoped_ptr<DatagramClientSocket>> sockets_;
+  std::vector<std::unique_ptr<DatagramClientSocket>> sockets_;
   TransportSecurityState* transport_security_state_;
-  scoped_ptr<QuicServerInfo> server_info_;
-  scoped_ptr<CertVerifyResult> cert_verify_result_;
-  scoped_ptr<ct::CTVerifyResult> ct_verify_result_;
+  std::unique_ptr<QuicServerInfo> server_info_;
+  std::unique_ptr<CertVerifyResult> cert_verify_result_;
+  std::unique_ptr<ct::CTVerifyResult> ct_verify_result_;
   std::string pinning_failure_log_;
   ObserverSet observers_;
   StreamRequestQueue stream_requests_;
@@ -334,10 +334,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   size_t num_total_streams_;
   base::TaskRunner* task_runner_;
   BoundNetLog net_log_;
-  std::vector<scoped_ptr<QuicChromiumPacketReader>> packet_readers_;
+  std::vector<std::unique_ptr<QuicChromiumPacketReader>> packet_readers_;
   base::TimeTicks dns_resolution_end_time_;
   base::TimeTicks handshake_start_;  // Time the handshake was started.
-  scoped_ptr<QuicConnectionLogger> logger_;
+  std::unique_ptr<QuicConnectionLogger> logger_;
   // True when the session is going away, and streams may no longer be created
   // on this session. Existing stream will continue to be processed.
   bool going_away_;

@@ -53,7 +53,7 @@ QuicCryptoClientStream::ChannelIDSourceCallbackImpl::
     ~ChannelIDSourceCallbackImpl() {}
 
 void QuicCryptoClientStream::ChannelIDSourceCallbackImpl::Run(
-    scoped_ptr<ChannelIDKey>* channel_id_key) {
+    std::unique_ptr<ChannelIDKey>* channel_id_key) {
   if (stream_ == nullptr) {
     return;
   }
@@ -81,7 +81,7 @@ QuicCryptoClientStream::ProofVerifierCallbackImpl::
 void QuicCryptoClientStream::ProofVerifierCallbackImpl::Run(
     bool ok,
     const string& error_details,
-    scoped_ptr<ProofVerifyDetails>* details) {
+    std::unique_ptr<ProofVerifyDetails>* details) {
   if (stream_ == nullptr) {
     return;
   }
@@ -312,6 +312,10 @@ void QuicCryptoClientStream::DoSendCHLO(
   // This call and function should be removed after removing QUIC_VERSION_25.
   AppendFixed(&out);
 
+  // Send a local timestamp to the server.
+  out.SetValue(kCTIM,
+               session()->connection()->clock()->WallNow().ToUNIXSeconds());
+
   if (!cached->IsComplete(session()->connection()->clock()->WallNow())) {
     crypto_config_->FillInchoateClientHello(
         server_id_, session()->connection()->supported_versions().front(),
@@ -477,7 +481,7 @@ QuicAsyncStatus QuicCryptoClientStream::DoVerifyProof(
   verify_ok_ = false;
 
   QuicAsyncStatus status = verifier->VerifyProof(
-      server_id_.host(), cached->server_config(),
+      server_id_.host(), server_id_.port(), cached->server_config(),
       session()->connection()->version(), chlo_hash_, cached->certs(),
       cached->cert_sct(), cached->signature(), verify_context_.get(),
       &verify_error_details_, &verify_details_, proof_verify_callback);

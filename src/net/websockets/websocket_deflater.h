@@ -8,11 +8,11 @@
 #include <stddef.h>
 
 #include <deque>
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 extern "C" struct z_stream_s;
@@ -65,7 +65,7 @@ class NET_EXPORT_PRIVATE WebSocketDeflater {
   void ResetContext();
   int Deflate(int flush);
 
-  scoped_ptr<z_stream_s> stream_;
+  std::unique_ptr<z_stream_s> stream_;
   ContextTakeOverMode mode_;
   std::deque<char> buffer_;
   std::vector<char> fixed_buffer_;

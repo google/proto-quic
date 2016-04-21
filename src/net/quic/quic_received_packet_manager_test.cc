@@ -300,47 +300,7 @@ TEST_F(QuicReceivedPacketManagerTest, DontWaitForPacketsBefore) {
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(6u));
 }
 
-TEST_F(QuicReceivedPacketManagerTest, UpdateReceivedPacketInfo) {
-  FLAGS_quic_dont_copy_acks = false;
-  QuicPacketHeader header;
-  header.packet_number = 2u;
-  QuicTime two_ms = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(2));
-  EXPECT_FALSE(received_manager_.ack_frame_updated());
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
-  EXPECT_TRUE(received_manager_.ack_frame_updated());
-
-  QuicAckFrame ack;
-  received_manager_.UpdateReceivedPacketInfo(&ack, QuicTime::Zero());
-  EXPECT_FALSE(received_manager_.ack_frame_updated());
-  // When UpdateReceivedPacketInfo with a time earlier than the time of the
-  // largest observed packet, make sure that the delta is 0, not negative.
-  EXPECT_EQ(QuicTime::Delta::Zero(), ack.ack_delay_time);
-  EXPECT_EQ(1u, ack.received_packet_times.size());
-
-  QuicTime four_ms = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(4));
-  received_manager_.UpdateReceivedPacketInfo(&ack, four_ms);
-  EXPECT_FALSE(received_manager_.ack_frame_updated());
-  // When UpdateReceivedPacketInfo after not having received a new packet,
-  // the delta should still be accurate.
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(2), ack.ack_delay_time);
-  EXPECT_EQ(0u, ack.received_packet_times.size());
-
-  header.packet_number = 999u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
-  header.packet_number = 4u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
-  header.packet_number = 1000u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
-  EXPECT_TRUE(received_manager_.ack_frame_updated());
-  received_manager_.UpdateReceivedPacketInfo(&ack, two_ms);
-  EXPECT_FALSE(received_manager_.ack_frame_updated());
-  // UpdateReceivedPacketInfo should discard any times which can't be
-  // expressed on the wire.
-  EXPECT_EQ(2ul, ack.received_packet_times.size());
-}
-
 TEST_F(QuicReceivedPacketManagerTest, GetUpdatedAckFrame) {
-  FLAGS_quic_dont_copy_acks = true;
   QuicPacketHeader header;
   header.packet_number = 2u;
   QuicTime two_ms = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(2));

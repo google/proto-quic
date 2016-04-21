@@ -386,10 +386,6 @@ class QuicSimpleServerSessionServerPushTest
   const size_t kStreamFlowControlWindowSize = 32 * 1024;  // 32KB.
 
   QuicSimpleServerSessionServerPushTest() : QuicSimpleServerSessionTest() {
-    // This flag has to be true for negotiation of max number of outgoing
-    // streams to work correctly.
-    FLAGS_quic_different_max_num_open_streams = true;
-
     config_.SetMaxStreamsPerConnection(kMaxStreamsForTest, kMaxStreamsForTest);
 
     // Reset stream level flow control window to be 32KB.
@@ -400,6 +396,10 @@ class QuicSimpleServerSessionServerPushTest
     // control blocks it.
     QuicConfigPeer::SetReceivedInitialSessionFlowControlWindow(
         &config_, kInitialSessionFlowControlWindowForTest);
+    // Enable server push.
+    QuicTagVector copt;
+    copt.push_back(kSPSH);
+    QuicConfigPeer::SetReceivedConnectionOptions(&config_, copt);
 
     connection_ = new StrictMock<MockConnectionWithSendStreamData>(
         &helper_, Perspective::IS_SERVER, SupportedVersions(GetParam()));
@@ -407,7 +407,7 @@ class QuicSimpleServerSessionServerPushTest
                                                &crypto_config_,
                                                &compressed_certs_cache_));
     session_->Initialize();
-    // Needed to make new session flow control window work.
+    // Needed to make new session flow control window and server push work.
     session_->OnConfigNegotiated();
 
     visitor_ = QuicConnectionPeer::GetVisitor(connection_);

@@ -19,7 +19,6 @@
 #include "base/command_line.h"
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram.h"
 #include "base/process/kill.h"
@@ -46,14 +45,14 @@ const DWORD kProcessKilledExitCode = 1;
 bool GetAppOutputInternal(const StringPiece16& cl,
                           bool include_stderr,
                           std::string* output) {
-  HANDLE out_read = NULL;
-  HANDLE out_write = NULL;
+  HANDLE out_read = nullptr;
+  HANDLE out_write = nullptr;
 
   SECURITY_ATTRIBUTES sa_attr;
   // Set the bInheritHandle flag so pipe handles are inherited.
   sa_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
   sa_attr.bInheritHandle = TRUE;
-  sa_attr.lpSecurityDescriptor = NULL;
+  sa_attr.lpSecurityDescriptor = nullptr;
 
   // Create the pipe for the child process's STDOUT.
   if (!CreatePipe(&out_read, &out_write, &sa_attr, 0)) {
@@ -89,11 +88,10 @@ bool GetAppOutputInternal(const StringPiece16& cl,
 
   // Create the child process.
   PROCESS_INFORMATION temp_process_info = {};
-  if (!CreateProcess(NULL,
-                     &writable_command_line_string[0],
-                     NULL, NULL,
+  if (!CreateProcess(nullptr, &writable_command_line_string[0], nullptr,
+                     nullptr,
                      TRUE,  // Handles are inherited.
-                     0, NULL, NULL, &start_info, &temp_process_info)) {
+                     0, nullptr, nullptr, &start_info, &temp_process_info)) {
     NOTREACHED() << "Failed to start process";
     return false;
   }
@@ -109,7 +107,8 @@ bool GetAppOutputInternal(const StringPiece16& cl,
 
   for (;;) {
     DWORD bytes_read = 0;
-    BOOL success = ReadFile(out_read, buffer, kBufferSize, &bytes_read, NULL);
+    BOOL success =
+        ReadFile(out_read, buffer, kBufferSize, &bytes_read, nullptr);
     if (!success || bytes_read == 0)
       break;
     output->append(buffer, bytes_read);
@@ -185,7 +184,7 @@ void RouteStdioToConsole(bool create_console_if_not_found) {
   enum { kOutputBufferSize = 64 * 1024 };
 
   if (freopen("CONOUT$", "w", stdout)) {
-    setvbuf(stdout, NULL, _IOLBF, kOutputBufferSize);
+    setvbuf(stdout, nullptr, _IOLBF, kOutputBufferSize);
     // Overwrite FD 1 for the benefit of any code that uses this FD
     // directly.  This is safe because the CRT allocates FDs 0, 1 and
     // 2 at startup even if they don't have valid underlying Windows
@@ -194,7 +193,7 @@ void RouteStdioToConsole(bool create_console_if_not_found) {
     _dup2(_fileno(stdout), 1);
   }
   if (freopen("CONOUT$", "w", stderr)) {
-    setvbuf(stderr, NULL, _IOLBF, kOutputBufferSize);
+    setvbuf(stderr, nullptr, _IOLBF, kOutputBufferSize);
     _dup2(_fileno(stderr), 2);
   }
 
@@ -287,22 +286,24 @@ Process LaunchProcess(const string16& cmdline,
 
   PROCESS_INFORMATION temp_process_info = {};
 
+  LPCTSTR current_directory = options.current_directory.empty()
+                                  ? nullptr
+                                  : options.current_directory.value().c_str();
+
   string16 writable_cmdline(cmdline);
   if (options.as_user) {
     flags |= CREATE_UNICODE_ENVIRONMENT;
-    void* enviroment_block = NULL;
+    void* enviroment_block = nullptr;
 
     if (!CreateEnvironmentBlock(&enviroment_block, options.as_user, FALSE)) {
       DPLOG(ERROR);
       return Process();
     }
 
-    BOOL launched =
-        CreateProcessAsUser(options.as_user, NULL,
-                            &writable_cmdline[0],
-                            NULL, NULL, inherit_handles, flags,
-                            enviroment_block, NULL, startup_info,
-                            &temp_process_info);
+    BOOL launched = CreateProcessAsUser(
+        options.as_user, nullptr, &writable_cmdline[0], nullptr, nullptr,
+        inherit_handles, flags, enviroment_block, current_directory,
+        startup_info, &temp_process_info);
     DestroyEnvironmentBlock(enviroment_block);
     if (!launched) {
       DPLOG(ERROR) << "Command line:" << std::endl << UTF16ToUTF8(cmdline)
@@ -310,9 +311,8 @@ Process LaunchProcess(const string16& cmdline,
       return Process();
     }
   } else {
-    if (!CreateProcess(NULL,
-                       &writable_cmdline[0], NULL, NULL,
-                       inherit_handles, flags, NULL, NULL,
+    if (!CreateProcess(nullptr, &writable_cmdline[0], nullptr, nullptr,
+                       inherit_handles, flags, nullptr, current_directory,
                        startup_info, &temp_process_info)) {
       DPLOG(ERROR) << "Command line:" << std::endl << UTF16ToUTF8(cmdline)
                    << std::endl;
@@ -351,9 +351,9 @@ Process LaunchElevatedProcess(const CommandLine& cmdline,
   shex_info.lpVerb = L"runas";
   shex_info.lpFile = file.c_str();
   shex_info.lpParameters = arguments.c_str();
-  shex_info.lpDirectory = NULL;
+  shex_info.lpDirectory = nullptr;
   shex_info.nShow = options.start_hidden ? SW_HIDE : SW_SHOW;
-  shex_info.hInstApp = NULL;
+  shex_info.hInstApp = nullptr;
 
   if (!ShellExecuteEx(&shex_info)) {
     DPLOG(ERROR);

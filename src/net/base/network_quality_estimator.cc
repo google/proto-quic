@@ -15,10 +15,13 @@
 #include "base/metrics/histogram.h"
 #include "base/metrics/histogram_base.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/thread_task_runner_handle.h"
+#include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 #include "net/base/load_flags.h"
 #include "net/base/load_timing_info.h"
 #include "net/base/network_interfaces.h"
+#include "net/base/socket_performance_watcher.h"
 #include "net/base/url_util.h"
 #include "net/url_request/url_request.h"
 #include "url/gurl.h"
@@ -117,10 +120,85 @@ base::HistogramBase* GetHistogram(
 
 namespace net {
 
+// SocketWatcher implements SocketPerformanceWatcher, and notifies
+// NetworkQualityEstimator of various socket performance events. SocketWatcher
+// is not thread-safe.
+class NetworkQualityEstimator::SocketWatcher : public SocketPerformanceWatcher {
+ public:
+  SocketWatcher(
+      SocketPerformanceWatcherFactory::Protocol protocol,
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+      const base::WeakPtr<NetworkQualityEstimator>& network_quality_estimator)
+      : protocol_(protocol),
+        task_runner_(std::move(task_runner)),
+        network_quality_estimator_(network_quality_estimator) {}
+
+  ~SocketWatcher() override {}
+
+  // SocketPerformanceWatcher implementation:
+  bool ShouldNotifyUpdatedRTT() const override {
+    DCHECK(thread_checker_.CalledOnValidThread());
+
+    return true;
+  }
+
+  void OnUpdatedRTTAvailable(const base::TimeDelta& rtt) override {
+    DCHECK(thread_checker_.CalledOnValidThread());
+
+    task_runner_->PostTask(
+        FROM_HERE, base::Bind(&NetworkQualityEstimator::OnUpdatedRTTAvailable,
+                              network_quality_estimator_, protocol_, rtt));
+  }
+
+  void OnConnectionChanged() override {
+    DCHECK(thread_checker_.CalledOnValidThread());
+  }
+
+ private:
+  // Transport layer protocol used by the socket that |this| is watching.
+  const SocketPerformanceWatcherFactory::Protocol protocol_;
+
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+
+  base::WeakPtr<NetworkQualityEstimator> network_quality_estimator_;
+
+  base::ThreadChecker thread_checker_;
+
+  DISALLOW_COPY_AND_ASSIGN(SocketWatcher);
+};
+
+// SocketWatcherFactory implements SocketPerformanceWatcherFactory, and is
+// owned by NetworkQualityEstimator. SocketWatcherFactory is thread safe.
+class NetworkQualityEstimator::SocketWatcherFactory
+    : public SocketPerformanceWatcherFactory {
+ public:
+  SocketWatcherFactory(
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+      const base::WeakPtr<NetworkQualityEstimator>& network_quality_estimator)
+      : task_runner_(std::move(task_runner)),
+        network_quality_estimator_(network_quality_estimator) {}
+
+  ~SocketWatcherFactory() override {}
+
+  // SocketPerformanceWatcherFactory implementation:
+  std::unique_ptr<SocketPerformanceWatcher> CreateSocketPerformanceWatcher(
+      const Protocol protocol) override {
+    return std::unique_ptr<SocketPerformanceWatcher>(
+        new SocketWatcher(protocol, task_runner_, network_quality_estimator_));
+  }
+
+ private:
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+
+  base::WeakPtr<NetworkQualityEstimator> network_quality_estimator_;
+
+  DISALLOW_COPY_AND_ASSIGN(SocketWatcherFactory);
+};
+
 const int32_t NetworkQualityEstimator::kInvalidThroughput = 0;
 
 NetworkQualityEstimator::NetworkQualityEstimator(
-    scoped_ptr<ExternalEstimateProvider> external_estimates_provider,
+    std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
     const std::map<std::string, std::string>& variation_params)
     : NetworkQualityEstimator(std::move(external_estimates_provider),
                               variation_params,
@@ -128,7 +206,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
                               false) {}
 
 NetworkQualityEstimator::NetworkQualityEstimator(
-    scoped_ptr<ExternalEstimateProvider> external_estimates_provider,
+    std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
     const std::map<std::string, std::string>& variation_params,
     bool allow_local_host_requests_for_tests,
     bool allow_smaller_responses_for_tests)
@@ -141,7 +219,8 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       downstream_throughput_kbps_observations_(
           GetWeightMultiplierPerSecond(variation_params)),
       rtt_observations_(GetWeightMultiplierPerSecond(variation_params)),
-      external_estimate_provider_(std::move(external_estimates_provider)) {
+      external_estimate_provider_(std::move(external_estimates_provider)),
+      weak_ptr_factory_(this) {
   static_assert(kMinRequestDurationMicroseconds > 0,
                 "Minimum request duration must be > 0");
   static_assert(kDefaultHalfLifeSeconds > 0,
@@ -166,6 +245,9 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   }
   current_network_id_ = GetCurrentNetworkID();
   AddDefaultEstimates();
+
+  watcher_factory_.reset(new SocketWatcherFactory(
+      base::ThreadTaskRunnerHandle::Get(), weak_ptr_factory_.GetWeakPtr()));
 }
 
 // static
@@ -240,6 +322,8 @@ NetworkQualityEstimator::~NetworkQualityEstimator() {
 }
 
 void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+               "NetworkQualityEstimator::NotifyHeadersReceived");
   DCHECK(thread_checker_.CalledOnValidThread());
 
   if (!RequestProvidesUsefulObservations(request))
@@ -291,6 +375,8 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
 
 void NetworkQualityEstimator::NotifyRequestCompleted(
     const URLRequest& request) {
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+               "NetworkQualityEstimator::NotifyRequestCompleted");
   DCHECK(thread_checker_.CalledOnValidThread());
 
   if (!RequestProvidesUsefulObservations(request))
@@ -374,6 +460,13 @@ void NetworkQualityEstimator::RemoveThroughputObserver(
     ThroughputObserver* throughput_observer) {
   DCHECK(thread_checker_.CalledOnValidThread());
   throughput_observer_list_.RemoveObserver(throughput_observer);
+}
+
+SocketPerformanceWatcherFactory*
+NetworkQualityEstimator::GetSocketPerformanceWatcherFactory() {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  return watcher_factory_.get();
 }
 
 void NetworkQualityEstimator::RecordRTTUMA(int32_t estimated_value_msec,
@@ -904,25 +997,16 @@ void NetworkQualityEstimator::CacheNetworkQualityEstimate() {
             static_cast<size_t>(kMaximumNetworkQualityCacheSize));
 }
 
-scoped_ptr<SocketPerformanceWatcher>
-NetworkQualityEstimator::CreateSocketPerformanceWatcher(
-    const Protocol protocol) {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  return scoped_ptr<SocketPerformanceWatcher>(
-      new SocketPerformanceWatcher(protocol, this));
-}
-
 void NetworkQualityEstimator::OnUpdatedRTTAvailable(
-    const Protocol protocol,
+    SocketPerformanceWatcherFactory::Protocol protocol,
     const base::TimeDelta& rtt) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   switch (protocol) {
-    case PROTOCOL_TCP:
+    case SocketPerformanceWatcherFactory::PROTOCOL_TCP:
       NotifyObserversOfRTT(RttObservation(rtt, base::TimeTicks::Now(), TCP));
       return;
-    case PROTOCOL_QUIC:
+    case SocketPerformanceWatcherFactory::PROTOCOL_QUIC:
       NotifyObserversOfRTT(RttObservation(rtt, base::TimeTicks::Now(), QUIC));
       return;
     default:

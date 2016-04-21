@@ -5,7 +5,8 @@
 #ifndef NET_HTTP_HTTP_TRANSACTION_FACTORY_H_
 #define NET_HTTP_HTTP_TRANSACTION_FACTORY_H_
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
 
@@ -23,7 +24,7 @@ class NET_EXPORT HttpTransactionFactory {
   // Creates a HttpTransaction object. On success, saves the new
   // transaction to |*trans| and returns OK.
   virtual int CreateTransaction(RequestPriority priority,
-                                scoped_ptr<HttpTransaction>* trans) = 0;
+                                std::unique_ptr<HttpTransaction>* trans) = 0;
 
   // Returns the associated cache if any (may be NULL).
   virtual HttpCache* GetCache() = 0;

@@ -25,7 +25,7 @@ size_t SpdyReadQueue::GetTotalSize() const {
   return total_size_;
 }
 
-void SpdyReadQueue::Enqueue(scoped_ptr<SpdyBuffer> buffer) {
+void SpdyReadQueue::Enqueue(std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK_GT(buffer->GetRemainingSize(), 0u);
   total_size_ += buffer->GetRemainingSize();
   queue_.push_back(buffer.release());

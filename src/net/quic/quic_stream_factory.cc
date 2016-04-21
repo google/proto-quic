@@ -10,6 +10,7 @@
 
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
@@ -19,6 +20,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/thread_task_runner_handle.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
@@ -64,6 +66,7 @@
 #endif
 
 using std::min;
+using std::vector;
 using NetworkHandle = net::NetworkChangeNotifier::NetworkHandle;
 
 namespace net {
@@ -133,10 +136,9 @@ class QuicStreamFactory::Job {
  public:
   Job(QuicStreamFactory* factory,
       HostResolver* host_resolver,
-      const HostPortPair& host_port_pair,
+      const QuicServerId& server_id,
       bool server_and_origin_have_same_host,
       bool was_alternative_service_recently_broken,
-      PrivacyMode privacy_mode,
       int cert_verify_flags,
       bool is_post,
       QuicServerInfo* server_info,
@@ -195,7 +197,7 @@ class QuicStreamFactory::Job {
   bool server_and_origin_have_same_host_;
   bool is_post_;
   bool was_alternative_service_recently_broken_;
-  scoped_ptr<QuicServerInfo> server_info_;
+  std::unique_ptr<QuicServerInfo> server_info_;
   bool started_another_job_;
   const BoundNetLog net_log_;
   int num_sent_client_hellos_;
@@ -210,10 +212,9 @@ class QuicStreamFactory::Job {
 
 QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
                             HostResolver* host_resolver,
-                            const HostPortPair& host_port_pair,
+                            const QuicServerId& server_id,
                             bool server_and_origin_have_same_host,
                             bool was_alternative_service_recently_broken,
-                            PrivacyMode privacy_mode,
                             int cert_verify_flags,
                             bool is_post,
                             QuicServerInfo* server_info,
@@ -221,7 +222,7 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
     : io_state_(STATE_RESOLVE_HOST),
       factory_(factory),
       host_resolver_(host_resolver),
-      server_id_(host_port_pair, privacy_mode),
+      server_id_(server_id),
       cert_verify_flags_(cert_verify_flags),
       server_and_origin_have_same_host_(server_and_origin_have_same_host),
       is_post_(is_post),
@@ -267,6 +268,7 @@ int QuicStreamFactory::Job::Run(const CompletionCallback& callback) {
 }
 
 int QuicStreamFactory::Job::DoLoop(int rv) {
+  TRACE_EVENT0("net", "QuicStreamFactory::Job::DoLoop");
   do {
     IoState state = io_state_;
     io_state_ = STATE_NONE;
@@ -553,17 +555,17 @@ base::TimeDelta QuicStreamRequest::GetTimeDelayForWaitingJob() const {
       QuicServerId(host_port_pair_, privacy_mode_));
 }
 
-scoped_ptr<QuicHttpStream> QuicStreamRequest::CreateStream() {
+std::unique_ptr<QuicHttpStream> QuicStreamRequest::CreateStream() {
   if (!session_)
     return nullptr;
-  return make_scoped_ptr(new QuicHttpStream(session_));
+  return base::WrapUnique(new QuicHttpStream(session_));
 }
 
-scoped_ptr<BidirectionalStreamImpl>
+std::unique_ptr<BidirectionalStreamImpl>
 QuicStreamRequest::CreateBidirectionalStreamImpl() {
   if (!session_)
     return nullptr;
-  return make_scoped_ptr(new BidirectionalStreamQuicImpl(session_));
+  return base::WrapUnique(new BidirectionalStreamQuicImpl(session_));
 }
 
 QuicStreamFactory::QuicStreamFactory(
@@ -668,6 +670,7 @@ QuicStreamFactory::QuicStreamFactory(
   DCHECK(http_server_properties_);
   crypto_config_.set_user_agent_id(user_agent_id);
   crypto_config_.AddCanonicalSuffix(".c.youtube.com");
+  crypto_config_.AddCanonicalSuffix(".ggpht.com");
   crypto_config_.AddCanonicalSuffix(".googlevideo.com");
   crypto_config_.AddCanonicalSuffix(".googleusercontent.com");
   // TODO(rtenneti): http://crbug.com/487355. Temporary fix for b/20760730 until
@@ -830,8 +833,7 @@ int QuicStreamFactory::Create(const HostPortPair& host_port_pair,
   if (quic_server_info_factory_.get()) {
     bool load_from_disk_cache = !disable_disk_cache_;
     MaybeInitialize();
-    if (!ContainsKey(quic_supported_servers_at_startup_,
-                     server_id.host_port_pair())) {
+    if (!ContainsKey(quic_supported_servers_at_startup_, host_port_pair)) {
       // If there is no entry for QUIC, consider that as a new server and
       // don't wait for Cache thread to load the data for that server.
       load_from_disk_cache = false;
@@ -842,10 +844,10 @@ int QuicStreamFactory::Create(const HostPortPair& host_port_pair,
   }
 
   bool server_and_origin_have_same_host = host_port_pair.host() == url.host();
-  scoped_ptr<Job> job(new Job(
-      this, host_resolver_, host_port_pair, server_and_origin_have_same_host,
-      WasQuicRecentlyBroken(server_id), privacy_mode, cert_verify_flags,
-      method == "POST" /* is_post */, quic_server_info, net_log));
+  std::unique_ptr<Job> job(
+      new Job(this, host_resolver_, server_id, server_and_origin_have_same_host,
+              WasQuicRecentlyBroken(server_id), cert_verify_flags,
+              method == "POST" /* is_post */, quic_server_info, net_log));
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
@@ -876,10 +878,10 @@ void QuicStreamFactory::CreateAuxilaryJob(const QuicServerId server_id,
                                           bool server_and_origin_have_same_host,
                                           bool is_post,
                                           const BoundNetLog& net_log) {
-  Job* aux_job = new Job(
-      this, host_resolver_, server_id.host_port_pair(),
-      server_and_origin_have_same_host, WasQuicRecentlyBroken(server_id),
-      server_id.privacy_mode(), cert_verify_flags, is_post, nullptr, net_log);
+  Job* aux_job =
+      new Job(this, host_resolver_, server_id, server_and_origin_have_same_host,
+              WasQuicRecentlyBroken(server_id), cert_verify_flags, is_post,
+              nullptr, net_log);
   active_jobs_[server_id].insert(aux_job);
   task_runner_->PostTask(FROM_HERE,
                          base::Bind(&QuicStreamFactory::Job::RunAuxilaryJob,
@@ -970,9 +972,10 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
   job_requests_map_.erase(server_id);
 }
 
-scoped_ptr<QuicHttpStream> QuicStreamFactory::CreateFromSession(
+std::unique_ptr<QuicHttpStream> QuicStreamFactory::CreateFromSession(
     QuicChromiumClientSession* session) {
-  return scoped_ptr<QuicHttpStream>(new QuicHttpStream(session->GetWeakPtr()));
+  return std::unique_ptr<QuicHttpStream>(
+      new QuicHttpStream(session->GetWeakPtr()));
 }
 
 QuicChromiumClientSession::QuicDisabledReason
@@ -1247,9 +1250,9 @@ void QuicStreamFactory::CloseAllSessions(int error, QuicErrorCode quic_error) {
   DCHECK(all_sessions_.empty());
 }
 
-scoped_ptr<base::Value> QuicStreamFactory::QuicStreamFactoryInfoToValue()
+std::unique_ptr<base::Value> QuicStreamFactory::QuicStreamFactoryInfoToValue()
     const {
-  scoped_ptr<base::ListValue> list(new base::ListValue());
+  std::unique_ptr<base::ListValue> list(new base::ListValue());
 
   for (SessionMap::const_iterator it = active_sessions_.begin();
        it != active_sessions_.end(); ++it) {
@@ -1394,7 +1397,7 @@ void QuicStreamFactory::MigrateSessionToNetwork(
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
   // using the PortSuggester since the connection is being migrated
   // and not being newly created.
-  scoped_ptr<DatagramClientSocket> socket(
+  std::unique_ptr<DatagramClientSocket> socket(
       client_socket_factory_->CreateDatagramClientSocket(
           DatagramSocket::DEFAULT_BIND, RandIntCallback(),
           session->net_log().net_log(), session->net_log().source()));
@@ -1405,10 +1408,11 @@ void QuicStreamFactory::MigrateSessionToNetwork(
     HistogramMigrationStatus(MIGRATION_STATUS_INTERNAL_ERROR);
     return;
   }
-  scoped_ptr<QuicChromiumPacketReader> new_reader(new QuicChromiumPacketReader(
-      socket.get(), clock_.get(), session, yield_after_packets_,
-      yield_after_duration_, session->net_log()));
-  scoped_ptr<QuicPacketWriter> new_writer(
+  std::unique_ptr<QuicChromiumPacketReader> new_reader(
+      new QuicChromiumPacketReader(socket.get(), clock_.get(), session,
+                                   yield_after_packets_, yield_after_duration_,
+                                   session->net_log()));
+  std::unique_ptr<QuicPacketWriter> new_writer(
       new QuicChromiumPacketWriter(socket.get()));
 
   if (!session->MigrateToSocket(std::move(socket), std::move(new_reader),
@@ -1507,13 +1511,15 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
   return OK;
 }
 
-int QuicStreamFactory::CreateSession(const QuicServerId& server_id,
-                                     int cert_verify_flags,
-                                     scoped_ptr<QuicServerInfo> server_info,
-                                     const AddressList& address_list,
-                                     base::TimeTicks dns_resolution_end_time,
-                                     const BoundNetLog& net_log,
-                                     QuicChromiumClientSession** session) {
+int QuicStreamFactory::CreateSession(
+    const QuicServerId& server_id,
+    int cert_verify_flags,
+    std::unique_ptr<QuicServerInfo> server_info,
+    const AddressList& address_list,
+    base::TimeTicks dns_resolution_end_time,
+    const BoundNetLog& net_log,
+    QuicChromiumClientSession** session) {
+  TRACE_EVENT0("net", "QuicStreamFactory::CreateSession");
   IPEndPoint addr = *address_list.begin();
   bool enable_port_selection = enable_port_selection_;
   if (enable_port_selection && ContainsKey(gone_away_aliases_, server_id)) {
@@ -1530,7 +1536,7 @@ int QuicStreamFactory::CreateSession(const QuicServerId& server_id,
                             :            // Use our callback.
           DatagramSocket::DEFAULT_BIND;  // Use OS to randomize.
 
-  scoped_ptr<DatagramClientSocket> socket(
+  std::unique_ptr<DatagramClientSocket> socket(
       client_socket_factory_->CreateDatagramClientSocket(
           bind_type, base::Bind(&PortSuggester::SuggestPort, port_suggester),
           net_log.net_log(), net_log.source()));
@@ -1586,7 +1592,7 @@ int QuicStreamFactory::CreateSession(const QuicServerId& server_id,
 
   // Use the factory to create a new socket performance watcher, and pass the
   // ownership to QuicChromiumClientSession.
-  scoped_ptr<SocketPerformanceWatcher> socket_performance_watcher;
+  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher;
   if (socket_performance_watcher_factory_) {
     socket_performance_watcher =
         socket_performance_watcher_factory_->CreateSocketPerformanceWatcher(
@@ -1655,7 +1661,7 @@ bool QuicStreamFactory::CryptoConfigCacheIsEmpty(
 
 void QuicStreamFactory::InitializeCachedStateInCryptoConfig(
     const QuicServerId& server_id,
-    const scoped_ptr<QuicServerInfo>& server_info,
+    const std::unique_ptr<QuicServerInfo>& server_info,
     QuicConnectionId* connection_id) {
   QuicCryptoClientConfig::CachedState* cached =
       crypto_config_.LookupOrCreate(server_id);
@@ -1709,12 +1715,18 @@ void QuicStreamFactory::MaybeInitialize() {
   if (http_server_properties_->max_server_configs_stored_in_properties() == 0)
     return;
   // Create a temporary QuicServerInfo object to deserialize and to populate the
-  // in-memory crypto server config cache.
-  scoped_ptr<QuicServerInfo> server_info;
+  // in-memory crypto server config cache in the MRU order.
+  std::unique_ptr<QuicServerInfo> server_info;
   CompletionCallback callback;
-  for (const auto& key_value :
-       http_server_properties_->quic_server_info_map()) {
-    const QuicServerId& server_id = key_value.first;
+  // Get the list of servers to be deserialized first because WaitForDataReady
+  // touches quic_server_info_map.
+  const QuicServerInfoMap& quic_server_info_map =
+      http_server_properties_->quic_server_info_map();
+  vector<QuicServerId> server_list(quic_server_info_map.size());
+  for (const auto& key_value : quic_server_info_map)
+    server_list.push_back(key_value.first);
+  for (auto it = server_list.rbegin(); it != server_list.rend(); ++it) {
+    const QuicServerId& server_id = *it;
     server_info.reset(quic_server_info_factory_->GetForServer(server_id));
     if (server_info->WaitForDataReady(callback) == OK) {
       DVLOG(1) << "Initialized server config for: " << server_id.ToString();

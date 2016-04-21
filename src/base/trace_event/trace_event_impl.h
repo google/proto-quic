@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <stack>
 #include <string>
 #include <vector>
@@ -17,7 +18,6 @@
 #include "base/callback.h"
 #include "base/containers/hash_tables.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
@@ -92,7 +92,7 @@ class BASE_EXPORT TraceEvent {
   TraceEvent();
   ~TraceEvent();
 
-  void MoveFrom(scoped_ptr<TraceEvent> other);
+  void MoveFrom(std::unique_ptr<TraceEvent> other);
 
   void Initialize(int thread_id,
                   TimeTicks timestamp,
@@ -107,7 +107,7 @@ class BASE_EXPORT TraceEvent {
                   const char** arg_names,
                   const unsigned char* arg_types,
                   const unsigned long long* arg_values,
-                  scoped_ptr<ConvertableToTraceFormat>* convertable_values,
+                  std::unique_ptr<ConvertableToTraceFormat>* convertable_values,
                   unsigned int flags);
 
   void Reset();
@@ -163,10 +163,11 @@ class BASE_EXPORT TraceEvent {
   unsigned long long id_;
   TraceValue arg_values_[kTraceMaxNumArgs];
   const char* arg_names_[kTraceMaxNumArgs];
-  scoped_ptr<ConvertableToTraceFormat> convertable_values_[kTraceMaxNumArgs];
+  std::unique_ptr<ConvertableToTraceFormat>
+      convertable_values_[kTraceMaxNumArgs];
   const unsigned char* category_group_enabled_;
   const char* name_;
-  scoped_ptr<std::string> parameter_copy_storage_;
+  std::unique_ptr<std::string> parameter_copy_storage_;
   // Depending on TRACE_EVENT_FLAG_HAS_PROCESS_ID the event will have either:
   //  tid: thread_id_, pid: current_process_id (default case).
   //  tid: -1, pid: process_id_ (when flags_ & TRACE_EVENT_FLAG_HAS_PROCESS_ID).

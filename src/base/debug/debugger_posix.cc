@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "base/debug/debugger.h"
-#include "base/macros.h"
-#include "build/build_config.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -16,7 +14,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <memory>
 #include <vector>
+
+#include "base/macros.h"
+#include "build/build_config.h"
 
 #if defined(__GLIBCXX__)
 #include <cxxabi.h>
@@ -38,7 +40,6 @@
 
 #include "base/debug/alias.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/string_piece.h"
 

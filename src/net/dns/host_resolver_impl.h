@@ -9,9 +9,9 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/threading/non_thread_safe.h"
@@ -128,7 +128,7 @@ class NET_EXPORT HostResolverImpl
   // HostResolverProc from ProcTaskParams will be queried. If the DnsClient is
   // not pre-configured with a valid DnsConfig, a new config is fetched from
   // NetworkChangeNotifier.
-  void SetDnsClient(scoped_ptr<DnsClient> dns_client);
+  void SetDnsClient(std::unique_ptr<DnsClient> dns_client);
 
   // HostResolver methods:
   int Resolve(const RequestInfo& info,
@@ -143,7 +143,7 @@ class NET_EXPORT HostResolverImpl
   void CancelRequest(RequestHandle req) override;
   void SetDnsClientEnabled(bool enabled) override;
   HostCache* GetHostCache() override;
-  scoped_ptr<base::Value> GetDnsConfigAsValue() const override;
+  std::unique_ptr<base::Value> GetDnsConfigAsValue() const override;
 
   void set_proc_params_for_test(const ProcTaskParams& proc_params) {
     proc_params_ = proc_params;
@@ -266,13 +266,13 @@ class NET_EXPORT HostResolverImpl
   }
 
   // Cache of host resolution results.
-  scoped_ptr<HostCache> cache_;
+  std::unique_ptr<HostCache> cache_;
 
   // Map from HostCache::Key to a Job.
   JobMap jobs_;
 
   // Starts Jobs according to their priority and the configured limits.
-  scoped_ptr<PrioritizedDispatcher> dispatcher_;
+  std::unique_ptr<PrioritizedDispatcher> dispatcher_;
 
   // Limit on the maximum number of jobs queued in |dispatcher_|.
   size_t max_queued_jobs_;
@@ -283,7 +283,7 @@ class NET_EXPORT HostResolverImpl
   NetLog* net_log_;
 
   // If present, used by DnsTask and ServeFromHosts to resolve requests.
-  scoped_ptr<DnsClient> dns_client_;
+  std::unique_ptr<DnsClient> dns_client_;
 
   // True if received valid config from |dns_config_service_|. Temporary, used
   // to measure performance of DnsConfigService: http://crbug.com/125599

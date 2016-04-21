@@ -321,6 +321,17 @@ OPENSSL_EXPORT int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, uint8_t *EM,
                                                   const EVP_MD *mgf1Hash,
                                                   int sLen);
 
+/* RSA_padding_add_PKCS1_OAEP_mgf1 writes an OAEP padding of |from| to |to|
+ * with the given parameters and hash functions. If |md| is NULL then SHA-1 is
+ * used. If |mgf1md| is NULL then the value of |md| is used (which means SHA-1
+ * if that, in turn, is NULL).
+ *
+ * It returns one on success or zero on error. */
+OPENSSL_EXPORT int RSA_padding_add_PKCS1_OAEP_mgf1(
+    uint8_t *to, unsigned to_len, const uint8_t *from, unsigned from_len,
+    const uint8_t *param, unsigned param_len, const EVP_MD *md,
+    const EVP_MD *mgf1md);
+
 /* RSA_add_pkcs1_prefix builds a version of |msg| prefixed with the DigestInfo
  * header for the given hash function and sets |out_msg| to point to it. On
  * successful return, |*out_msg| may be allocated memory and, if so,
@@ -408,9 +419,7 @@ OPENSSL_EXPORT void *RSA_get_ex_data(const RSA *r, int idx);
 /* RSA_FLAG_NO_BLINDING disables blinding of private operations. */
 #define RSA_FLAG_NO_BLINDING 8
 
-/* RSA_FLAG_EXT_PKEY means that private key operations will be handled by
- * |mod_exp| and that they do not depend on the private key components being
- * present: for example a key stored in external hardware. */
+/* RSA_FLAG_EXT_PKEY is deprecated and ignored. */
 #define RSA_FLAG_EXT_PKEY 0x20
 
 /* RSA_FLAG_SIGN_VER causes the |sign| and |verify| functions of |rsa_meth_st|
@@ -476,6 +485,15 @@ OPENSSL_EXPORT int RSA_verify_PKCS1_PSS(RSA *rsa, const uint8_t *mHash,
                                         const EVP_MD *Hash, const uint8_t *EM,
                                         int sLen);
 
+/* RSA_padding_add_PKCS1_OAEP acts like |RSA_padding_add_PKCS1_OAEP_mgf1| but
+ * the |md| and |mgf1md| paramaters of the latter are implicitly set to NULL,
+ * which means SHA-1. */
+OPENSSL_EXPORT int RSA_padding_add_PKCS1_OAEP(uint8_t *to, unsigned to_len,
+                                              const uint8_t *from,
+                                              unsigned from_len,
+                                              const uint8_t *param,
+                                              unsigned param_len);
+
 
 struct rsa_meth_st {
   struct openssl_method_common_st common;
@@ -521,8 +539,8 @@ struct rsa_meth_st {
   int (*private_transform)(RSA *rsa, uint8_t *out, const uint8_t *in,
                            size_t len);
 
-  int (*mod_exp)(BIGNUM *r0, const BIGNUM *I, RSA *rsa,
-                 BN_CTX *ctx); /* Can be null */
+  /* mod_exp is deprecated and ignored. Set it to NULL. */
+  int (*mod_exp)(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx);
 
   /* bn_mod_exp is deprecated and ignored. Set it to NULL. */
   int (*bn_mod_exp)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,

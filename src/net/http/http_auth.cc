@@ -30,17 +30,17 @@ void HttpAuth::ChooseBestChallenge(
     const GURL& origin,
     const std::set<Scheme>& disabled_schemes,
     const BoundNetLog& net_log,
-    scoped_ptr<HttpAuthHandler>* handler) {
+    std::unique_ptr<HttpAuthHandler>* handler) {
   DCHECK(http_auth_handler_factory);
   DCHECK(handler->get() == NULL);
 
   // Choose the challenge whose authentication handler gives the maximum score.
-  scoped_ptr<HttpAuthHandler> best;
+  std::unique_ptr<HttpAuthHandler> best;
   const std::string header_name = GetChallengeHeaderName(target);
   std::string cur_challenge;
   size_t iter = 0;
   while (response_headers.EnumerateHeader(&iter, header_name, &cur_challenge)) {
-    scoped_ptr<HttpAuthHandler> cur;
+    std::unique_ptr<HttpAuthHandler> cur;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         cur_challenge, target, ssl_info, origin, net_log, &cur);
     if (rv != OK) {

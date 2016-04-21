@@ -5,6 +5,7 @@
 #include "net/cert/multi_threaded_cert_verifier.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -12,6 +13,7 @@
 #include "base/callback_helpers.h"
 #include "base/compiler_specific.h"
 #include "base/containers/linked_list.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
@@ -19,6 +21,7 @@
 #include "base/stl_util.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/hash_value.h"
 #include "net/base/net_errors.h"
@@ -82,10 +85,10 @@ const unsigned kMaxCacheEntries = 256;
 // The number of seconds to cache entries.
 const unsigned kTTLSecs = 1800;  // 30 minutes.
 
-scoped_ptr<base::Value> CertVerifyResultCallback(
+std::unique_ptr<base::Value> CertVerifyResultCallback(
     const CertVerifyResult& verify_result,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> results(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> results(new base::DictionaryValue());
   results->SetBoolean("has_md5", verify_result.has_md5);
   results->SetBoolean("has_md2", verify_result.has_md2);
   results->SetBoolean("has_md4", verify_result.has_md4);
@@ -100,7 +103,7 @@ scoped_ptr<base::Value> CertVerifyResultCallback(
                NetLogX509CertificateCallback(verify_result.verified_cert.get(),
                                              capture_mode));
 
-  scoped_ptr<base::ListValue> hashes(new base::ListValue());
+  std::unique_ptr<base::ListValue> hashes(new base::ListValue());
   for (std::vector<HashValue>::const_iterator it =
            verify_result.public_key_hashes.begin();
        it != verify_result.public_key_hashes.end();
@@ -234,6 +237,7 @@ void DoVerifyOnWorkerThread(const scoped_refptr<CertVerifyProc>& verify_proc,
                             const CertificateList& additional_trust_anchors,
                             int* error,
                             CertVerifyResult* result) {
+  TRACE_EVENT0("net", "DoVerifyOnWorkerThread");
   *error = verify_proc->Verify(cert.get(), hostname, ocsp_response, flags,
                                crl_set.get(), additional_trust_anchors, result);
 
@@ -284,7 +288,7 @@ class CertVerifierJob {
              const scoped_refptr<CRLSet>& crl_set,
              const CertificateList& additional_trust_anchors) {
     // Owned by the bound reply callback.
-    scoped_ptr<MultiThreadedCertVerifier::CachedResult> owned_result(
+    std::unique_ptr<MultiThreadedCertVerifier::CachedResult> owned_result(
         new MultiThreadedCertVerifier::CachedResult());
 
     // Parameter evaluation order is undefined in C++. Ensure the pointer value
@@ -318,11 +322,11 @@ class CertVerifierJob {
   }
 
   // Creates and attaches a request to the Job.
-  scoped_ptr<CertVerifierRequest> CreateRequest(
+  std::unique_ptr<CertVerifierRequest> CreateRequest(
       const CompletionCallback& callback,
       CertVerifyResult* verify_result,
       const BoundNetLog& net_log) {
-    scoped_ptr<CertVerifierRequest> request(
+    std::unique_ptr<CertVerifierRequest> request(
         new CertVerifierRequest(this, callback, verify_result, net_log));
 
     request->net_log().AddEvent(
@@ -358,8 +362,10 @@ class CertVerifierJob {
   }
 
   void OnJobCompleted(
-      scoped_ptr<MultiThreadedCertVerifier::CachedResult> verify_result) {
-    scoped_ptr<CertVerifierJob> keep_alive = cert_verifier_->RemoveJob(this);
+      std::unique_ptr<MultiThreadedCertVerifier::CachedResult> verify_result) {
+    TRACE_EVENT0("net", "CertVerifierJob::OnJobCompleted");
+    std::unique_ptr<CertVerifierJob> keep_alive =
+        cert_verifier_->RemoveJob(this);
 
     LogMetrics(*verify_result);
     cert_verifier_->SaveResultToCache(key_, *verify_result);
@@ -416,7 +422,7 @@ int MultiThreadedCertVerifier::Verify(X509Certificate* cert,
                                       CRLSet* crl_set,
                                       CertVerifyResult* verify_result,
                                       const CompletionCallback& callback,
-                                      scoped_ptr<Request>* out_req,
+                                      std::unique_ptr<Request>* out_req,
                                       const BoundNetLog& net_log) {
   out_req->reset();
 
@@ -450,7 +456,7 @@ int MultiThreadedCertVerifier::Verify(X509Certificate* cert,
     inflight_joins_++;
   } else {
     // Need to make a new job.
-    scoped_ptr<CertVerifierJob> new_job(
+    std::unique_ptr<CertVerifierJob> new_job(
         new CertVerifierJob(key, net_log.net_log(), cert, this));
 
     if (!new_job->Start(verify_proc_, cert, hostname, ocsp_response, flags,
@@ -467,7 +473,7 @@ int MultiThreadedCertVerifier::Verify(X509Certificate* cert,
       job->set_is_first_job(true);
   }
 
-  scoped_ptr<CertVerifierRequest> request =
+  std::unique_ptr<CertVerifierRequest> request =
       job->CreateRequest(callback, verify_result, net_log);
   *out_req = std::move(request);
   return ERR_IO_PENDING;
@@ -556,12 +562,12 @@ void MultiThreadedCertVerifier::SaveResultToCache(const RequestParams& key,
                           start_time + base::TimeDelta::FromSeconds(kTTLSecs)));
 }
 
-scoped_ptr<CertVerifierJob> MultiThreadedCertVerifier::RemoveJob(
+std::unique_ptr<CertVerifierJob> MultiThreadedCertVerifier::RemoveJob(
     CertVerifierJob* job) {
   DCHECK(CalledOnValidThread());
   bool erased_job = inflight_.erase(job) == 1;
   DCHECK(erased_job);
-  return make_scoped_ptr(job);
+  return base::WrapUnique(job);
 }
 
 void MultiThreadedCertVerifier::OnCACertChanged(

@@ -6,10 +6,11 @@
 
 #include <windows.h>
 
+#include <memory>
+
 #include "base/file_version_info_win.h"
 #include "base/files/file_path.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/win/registry.h"
 
@@ -60,7 +61,7 @@ Version MajorMinorBuildToVersion(int major, int minor, int build) {
 // compatibility mode for a down-level version of the OS, the file version of
 // kernel32 will still be the "real" version.
 Version GetVersionFromKernel32() {
-  scoped_ptr<FileVersionInfoWin> file_version_info(
+  std::unique_ptr<FileVersionInfoWin> file_version_info(
       static_cast<FileVersionInfoWin*>(
           FileVersionInfoWin::CreateFileVersionInfo(
               base::FilePath(FILE_PATH_LITERAL("kernel32.dll")))));

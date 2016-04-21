@@ -48,9 +48,10 @@ class BASE_EXPORT ProcessMemoryDump {
   // Maps allocator dumps absolute names (allocator_name/heap/subheap) to
   // MemoryAllocatorDump instances.
   using AllocatorDumpsMap =
-      std::unordered_map<std::string, scoped_ptr<MemoryAllocatorDump>>;
+      std::unordered_map<std::string, std::unique_ptr<MemoryAllocatorDump>>;
 
-  using HeapDumpsMap = std::unordered_map<std::string, scoped_ptr<TracedValue>>;
+  using HeapDumpsMap =
+      std::unordered_map<std::string, std::unique_ptr<TracedValue>>;
 
 #if defined(COUNT_RESIDENT_BYTES_SUPPORTED)
   // Returns the number of bytes in a kernel memory page. Some platforms may
@@ -119,7 +120,7 @@ class BASE_EXPORT ProcessMemoryDump {
   // must have the correct format. |trace_event::HeapDumper| will generate such
   // a value from a |trace_event::AllocationRegister|.
   void AddHeapDump(const std::string& absolute_name,
-                   scoped_ptr<TracedValue> heap_dump);
+                   std::unique_ptr<TracedValue> heap_dump);
 
   // Adds an ownership relationship between two MemoryAllocatorDump(s) with the
   // semantics: |source| owns |target|, and has the effect of attributing
@@ -175,7 +176,7 @@ class BASE_EXPORT ProcessMemoryDump {
 
  private:
   MemoryAllocatorDump* AddAllocatorDumpInternal(
-      scoped_ptr<MemoryAllocatorDump> mad);
+      std::unique_ptr<MemoryAllocatorDump> mad);
 
   ProcessMemoryTotals process_totals_;
   bool has_process_totals_;

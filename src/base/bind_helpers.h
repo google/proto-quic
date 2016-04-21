@@ -121,10 +121,11 @@
 //
 // EXAMPLE OF Passed():
 //
-//   void TakesOwnership(scoped_ptr<Foo> arg) { }
-//   scoped_ptr<Foo> CreateFoo() { return scoped_ptr<Foo>(new Foo()); }
+//   void TakesOwnership(std::unique_ptr<Foo> arg) { }
+//   std::unique_ptr<Foo> CreateFoo() { return std::unique_ptr<Foo>(new Foo());
+//   }
 //
-//   scoped_ptr<Foo> f(new Foo());
+//   std::unique_ptr<Foo> f(new Foo());
 //
 //   // |cb| is given ownership of Foo(). |f| is now NULL.
 //   // You can use std::move(f) in place of &f, but it's more verbose.
@@ -353,7 +354,7 @@ struct IgnoreResultHelper<Callback<T> > {
 
 // An alternate implementation is to avoid the destructive copy, and instead
 // specialize ParamTraits<> for OwnedWrapper<> to change the StorageType to
-// a class that is essentially a scoped_ptr<>.
+// a class that is essentially a std::unique_ptr<>.
 //
 // The current implementation has the benefit though of leaving ParamTraits<>
 // fully in callback_internal.h as well as avoiding type conversions during

@@ -5,6 +5,8 @@
 #include "net/dns/address_sorter_posix.h"
 
 #include <netinet/in.h>
+
+#include <memory>
 #include <utility>
 
 #if defined(OS_MACOSX) || defined(OS_BSD)
@@ -20,7 +22,6 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_errors.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/udp/datagram_client_socket.h"
@@ -184,8 +185,8 @@ struct DestinationInfo {
 
 // Returns true iff |dst_a| should precede |dst_b| in the address list.
 // RFC 3484, section 6.
-bool CompareDestinations(const scoped_ptr<DestinationInfo>& dst_a,
-                         const scoped_ptr<DestinationInfo>& dst_b) {
+bool CompareDestinations(const std::unique_ptr<DestinationInfo>& dst_a,
+                         const std::unique_ptr<DestinationInfo>& dst_b) {
   // Rule 1: Avoid unusable destinations.
   // Unusable destinations are already filtered out.
   DCHECK(dst_a->src);
@@ -255,21 +256,19 @@ AddressSorterPosix::~AddressSorterPosix() {
 void AddressSorterPosix::Sort(const AddressList& list,
                               const CallbackType& callback) const {
   DCHECK(CalledOnValidThread());
-  std::vector<scoped_ptr<DestinationInfo>> sort_list;
+  std::vector<std::unique_ptr<DestinationInfo>> sort_list;
 
   for (size_t i = 0; i < list.size(); ++i) {
-    scoped_ptr<DestinationInfo> info(new DestinationInfo());
+    std::unique_ptr<DestinationInfo> info(new DestinationInfo());
     info->address = list[i].address();
     info->scope = GetScope(ipv4_scope_table_, info->address);
     info->precedence = GetPolicyValue(precedence_table_, info->address);
     info->label = GetPolicyValue(label_table_, info->address);
 
     // Each socket can only be bound once.
-    scoped_ptr<DatagramClientSocket> socket(
+    std::unique_ptr<DatagramClientSocket> socket(
         socket_factory_->CreateDatagramClientSocket(
-            DatagramSocket::DEFAULT_BIND,
-            RandIntCallback(),
-            NULL /* NetLog */,
+            DatagramSocket::DEFAULT_BIND, RandIntCallback(), NULL /* NetLog */,
             NetLog::Source()));
 
     // Even though no packets are sent, cannot use port 0 in Connect.
@@ -391,8 +390,8 @@ void AddressSorterPosix::FillPolicy(const IPAddress& address,
 }
 
 // static
-scoped_ptr<AddressSorter> AddressSorter::CreateAddressSorter() {
-  return scoped_ptr<AddressSorter>(
+std::unique_ptr<AddressSorter> AddressSorter::CreateAddressSorter() {
+  return std::unique_ptr<AddressSorter>(
       new AddressSorterPosix(ClientSocketFactory::GetDefaultFactory()));
 }
 

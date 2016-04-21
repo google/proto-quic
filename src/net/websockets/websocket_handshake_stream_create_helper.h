@@ -5,11 +5,11 @@
 #ifndef NET_WEBSOCKETS_WEBSOCKET_HANDSHAKE_STREAM_CREATE_HELPER_H_
 #define NET_WEBSOCKETS_WEBSOCKET_HANDSHAKE_STREAM_CREATE_HELPER_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
 #include "net/websockets/websocket_stream.h"
@@ -38,7 +38,7 @@ class NET_EXPORT_PRIVATE WebSocketHandshakeStreamCreateHelper
 
   // Create a WebSocketBasicHandshakeStream.
   WebSocketHandshakeStreamBase* CreateBasicStream(
-      scoped_ptr<ClientSocketHandle> connection,
+      std::unique_ptr<ClientSocketHandle> connection,
       bool using_proxy) override;
 
   // Unimplemented as of November 2013.
@@ -48,7 +48,7 @@ class NET_EXPORT_PRIVATE WebSocketHandshakeStreamCreateHelper
 
   // Call Upgrade() on the WebSocketHandshakeStream and return the result. This
   // must only be called if the handshake succeeded.
-  scoped_ptr<WebSocketStream> Upgrade();
+  std::unique_ptr<WebSocketStream> Upgrade();
 
   // Set a pointer to the std::string into which to write any failure messages
   // that are encountered. This method must be called before CreateBasicStream()

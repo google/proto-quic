@@ -26,9 +26,10 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
-        dispatcher_(config_,
-                    &crypto_config_,
-                    new QuicEpollConnectionHelper(&eps_)) {
+        dispatcher_(
+            config_,
+            &crypto_config_,
+            new QuicEpollConnectionHelper(&eps_, QuicAllocator::BUFFER_POOL)) {
     dispatcher_.InitializeWithWriter(new QuicDefaultPacketWriter(1234));
   }
 

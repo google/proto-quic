@@ -9,8 +9,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/nss_util.h"
 #include "crypto/rsa_private_key.h"
 
@@ -50,7 +51,7 @@ SignatureCreator::~SignatureCreator() {
 // static
 SignatureCreator* SignatureCreator::Create(RSAPrivateKey* key,
                                            HashAlgorithm hash_alg) {
-  scoped_ptr<SignatureCreator> result(new SignatureCreator);
+  std::unique_ptr<SignatureCreator> result(new SignatureCreator);
   result->sign_context_ = SGN_NewContext(ToNSSSigOid(hash_alg), key->key());
   if (!result->sign_context_) {
     NOTREACHED();

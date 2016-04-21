@@ -50,7 +50,7 @@ class BASE_EXPORT TraceEventETWExport {
       const char** arg_names,
       const unsigned char* arg_types,
       const unsigned long long* arg_values,
-      const scoped_ptr<ConvertableToTraceFormat>* convertable_values);
+      const std::unique_ptr<ConvertableToTraceFormat>* convertable_values);
 
   // Exports an ETW event that marks the end of a complete event.
   static void AddCompleteEndEvent(const char* name);
@@ -87,7 +87,7 @@ class BASE_EXPORT TraceEventETWExport {
 
   // Background thread that monitors changes to the ETW keyword and updates
   // the enabled categories when a change occurs.
-  scoped_ptr<ETWKeywordUpdateThread> keyword_update_thread_;
+  std::unique_ptr<ETWKeywordUpdateThread> keyword_update_thread_;
   PlatformThreadHandle keyword_update_thread_handle_;
 
   DISALLOW_COPY_AND_ASSIGN(TraceEventETWExport);

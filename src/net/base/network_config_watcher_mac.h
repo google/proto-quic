@@ -7,9 +7,10 @@
 
 #include <SystemConfiguration/SCDynamicStore.h>
 
+#include <memory>
+
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 
 namespace base {
 class Thread;
@@ -52,7 +53,7 @@ class NetworkConfigWatcherMac {
   // The thread used to listen for notifications.  This relays the notification
   // to the registered observers without posting back to the thread the object
   // was created on.
-  scoped_ptr<base::Thread> notifier_thread_;
+  std::unique_ptr<base::Thread> notifier_thread_;
 
   DISALLOW_COPY_AND_ASSIGN(NetworkConfigWatcherMac);
 };

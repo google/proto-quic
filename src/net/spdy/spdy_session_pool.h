@@ -86,7 +86,7 @@ class NET_EXPORT SpdySessionPool
   // immediately afterwards if the first read of |connection| fails.
   base::WeakPtr<SpdySession> CreateAvailableSessionFromSocket(
       const SpdySessionKey& key,
-      scoped_ptr<ClientSocketHandle> connection,
+      std::unique_ptr<ClientSocketHandle> connection,
       const BoundNetLog& net_log,
       int certificate_error_code,
       bool is_secure);
@@ -131,7 +131,7 @@ class NET_EXPORT SpdySessionPool
                                        SpdySession* spdy_session);
 
   // Creates a Value summary of the state of the spdy session pool.
-  scoped_ptr<base::Value> SpdySessionPoolInfoToValue() const;
+  std::unique_ptr<base::Value> SpdySessionPoolInfoToValue() const;
 
   base::WeakPtr<HttpServerProperties> http_server_properties() {
     return http_server_properties_;

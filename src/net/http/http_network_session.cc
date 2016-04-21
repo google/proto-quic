@@ -48,7 +48,8 @@ ClientSocketPoolManager* CreateSocketPoolManager(
       params.net_log,
       params.client_socket_factory ? params.client_socket_factory
                                    : ClientSocketFactory::GetDefaultFactory(),
-      params.host_resolver, params.cert_verifier, params.channel_id_service,
+      params.socket_performance_watcher_factory, params.host_resolver,
+      params.cert_verifier, params.channel_id_service,
       params.transport_security_state, params.cert_transparency_verifier,
       params.ct_policy_enforcer, ssl_session_cache_shard,
       params.ssl_config_service, pool_type);
@@ -90,7 +91,7 @@ HttpNetworkSession::Params::Params()
       enable_tcp_fast_open_for_ssl(false),
       enable_spdy_ping_based_connection_checking(true),
       spdy_default_protocol(kProtoUnknown),
-      enable_spdy31(true),
+      enable_spdy31(false),
       enable_http2(true),
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
       spdy_stream_max_recv_window_size(kSpdyStreamMaxRecvWindowSize),
@@ -294,23 +295,24 @@ SSLClientSocketPool* HttpNetworkSession::GetSocketPoolForSSLWithProxy(
       proxy_server);
 }
 
-scoped_ptr<base::Value> HttpNetworkSession::SocketPoolInfoToValue() const {
+std::unique_ptr<base::Value> HttpNetworkSession::SocketPoolInfoToValue() const {
   // TODO(yutak): Should merge values from normal pools and WebSocket pools.
   return normal_socket_pool_manager_->SocketPoolInfoToValue();
 }
 
-scoped_ptr<base::Value> HttpNetworkSession::SpdySessionPoolInfoToValue() const {
+std::unique_ptr<base::Value> HttpNetworkSession::SpdySessionPoolInfoToValue()
+    const {
   return spdy_session_pool_.SpdySessionPoolInfoToValue();
 }
 
-scoped_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", params_.enable_quic);
   dict->SetBoolean("quic_enabled_for_proxies", params_.enable_quic_for_proxies);
   dict->SetBoolean("enable_quic_port_selection",
                    params_.enable_quic_port_selection);
-  scoped_ptr<base::ListValue> connection_options(new base::ListValue);
+  std::unique_ptr<base::ListValue> connection_options(new base::ListValue);
   for (QuicTagVector::const_iterator it =
            params_.quic_connection_options.begin();
        it != params_.quic_connection_options.end(); ++it) {
@@ -318,7 +320,8 @@ scoped_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   }
   dict->Set("connection_options", std::move(connection_options));
 
-  scoped_ptr<base::ListValue> origins_to_force_quic_on(new base::ListValue);
+  std::unique_ptr<base::ListValue> origins_to_force_quic_on(
+      new base::ListValue);
   for (const auto& origin : params_.origins_to_force_quic_on) {
     origins_to_force_quic_on->AppendString("'" + origin.ToString() + "'");
   }

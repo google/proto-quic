@@ -237,7 +237,7 @@ void TraceEventETWExport::AddEvent(
     const char** arg_names,
     const unsigned char* arg_types,
     const unsigned long long* arg_values,
-    const scoped_ptr<ConvertableToTraceFormat>* convertable_values) {
+    const std::unique_ptr<ConvertableToTraceFormat>* convertable_values) {
   // We bail early in case exporting is disabled or no consumer is listening.
   auto* instance = GetInstance();
   if (!instance || !instance->etw_export_enabled_ || !EventEnabledChromeEvent())

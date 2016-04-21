@@ -5,6 +5,7 @@
 #include "base/trace_event/blame_context.h"
 
 #include "base/json/json_writer.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/run_loop.h"
 #include "base/test/trace_event_analyzer.h"
@@ -71,7 +72,7 @@ class BlameContextTest : public testing::Test {
  public:
   void StartTracing();
   void StopTracing();
-  scoped_ptr<trace_analyzer::TraceAnalyzer> CreateTraceAnalyzer();
+  std::unique_ptr<trace_analyzer::TraceAnalyzer> CreateTraceAnalyzer();
 };
 
 void BlameContextTest::StartTracing() {
@@ -83,7 +84,7 @@ void BlameContextTest::StopTracing() {
   trace_event::TraceLog::GetInstance()->SetDisabled();
 }
 
-scoped_ptr<trace_analyzer::TraceAnalyzer>
+std::unique_ptr<trace_analyzer::TraceAnalyzer>
 BlameContextTest::CreateTraceAnalyzer() {
   trace_event::TraceResultBuffer buffer;
   trace_event::TraceResultBuffer::SimpleOutput trace_output;
@@ -95,7 +96,7 @@ BlameContextTest::CreateTraceAnalyzer() {
   run_loop.Run();
   buffer.Finish();
 
-  return make_scoped_ptr(
+  return WrapUnique(
       trace_analyzer::TraceAnalyzer::Create(trace_output.json_output));
 }
 
@@ -109,7 +110,8 @@ TEST_F(BlameContextTest, EnterAndLeave) {
     blame_context.Leave();
   }
   StopTracing();
-  scoped_ptr<trace_analyzer::TraceAnalyzer> analyzer = CreateTraceAnalyzer();
+  std::unique_ptr<trace_analyzer::TraceAnalyzer> analyzer =
+      CreateTraceAnalyzer();
 
   trace_analyzer::TraceEventVector events;
   Query q = Query::EventPhaseIs(TRACE_EVENT_PHASE_ENTER_CONTEXT) ||
@@ -143,7 +145,8 @@ TEST_F(BlameContextTest, DifferentCategories) {
     disabled_blame_context.Leave();
   }
   StopTracing();
-  scoped_ptr<trace_analyzer::TraceAnalyzer> analyzer = CreateTraceAnalyzer();
+  std::unique_ptr<trace_analyzer::TraceAnalyzer> analyzer =
+      CreateTraceAnalyzer();
 
   trace_analyzer::TraceEventVector events;
   Query q = Query::EventPhaseIs(TRACE_EVENT_PHASE_ENTER_CONTEXT) ||
@@ -173,7 +176,8 @@ TEST_F(BlameContextTest, TakeSnapshot) {
     blame_context.TakeSnapshot();
   }
   StopTracing();
-  scoped_ptr<trace_analyzer::TraceAnalyzer> analyzer = CreateTraceAnalyzer();
+  std::unique_ptr<trace_analyzer::TraceAnalyzer> analyzer =
+      CreateTraceAnalyzer();
 
   trace_analyzer::TraceEventVector events;
   Query q = Query::EventPhaseIs(TRACE_EVENT_PHASE_SNAPSHOT_OBJECT);

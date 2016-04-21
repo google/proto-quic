@@ -59,7 +59,8 @@ SOCKSConnectJob::SOCKSConnectJob(
 
 SOCKSConnectJob::~SOCKSConnectJob() {
   // We don't worry about cancelling the tcp socket since the destructor in
-  // scoped_ptr<ClientSocketHandle> transport_socket_handle_ will take care of
+  // std::unique_ptr<ClientSocketHandle> transport_socket_handle_ will take care
+  // of
   // it.
 }
 
@@ -166,12 +167,12 @@ int SOCKSConnectJob::ConnectInternal() {
   return DoLoop(OK);
 }
 
-scoped_ptr<ConnectJob>
+std::unique_ptr<ConnectJob>
 SOCKSClientSocketPool::SOCKSConnectJobFactory::NewConnectJob(
     const std::string& group_name,
     const PoolBase::Request& request,
     ConnectJob::Delegate* delegate) const {
-  return scoped_ptr<ConnectJob>(new SOCKSConnectJob(
+  return std::unique_ptr<ConnectJob>(new SOCKSConnectJob(
       group_name, request.priority(), request.respect_limits(),
       request.params(), ConnectionTimeout(), transport_pool_, host_resolver_,
       delegate, net_log_));
@@ -188,6 +189,7 @@ SOCKSClientSocketPool::SOCKSClientSocketPool(
     int max_sockets_per_group,
     HostResolver* host_resolver,
     TransportClientSocketPool* transport_pool,
+    SocketPerformanceWatcherFactory*,
     NetLog* net_log)
     : transport_pool_(transport_pool),
       base_(
@@ -236,7 +238,7 @@ void SOCKSClientSocketPool::CancelRequest(const std::string& group_name,
 }
 
 void SOCKSClientSocketPool::ReleaseSocket(const std::string& group_name,
-                                          scoped_ptr<StreamSocket> socket,
+                                          std::unique_ptr<StreamSocket> socket,
                                           int id) {
   base_.ReleaseSocket(group_name, std::move(socket), id);
 }
@@ -263,13 +265,13 @@ LoadState SOCKSClientSocketPool::GetLoadState(
   return base_.GetLoadState(group_name, handle);
 }
 
-scoped_ptr<base::DictionaryValue> SOCKSClientSocketPool::GetInfoAsValue(
+std::unique_ptr<base::DictionaryValue> SOCKSClientSocketPool::GetInfoAsValue(
     const std::string& name,
     const std::string& type,
     bool include_nested_pools) const {
-  scoped_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
+  std::unique_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
   if (include_nested_pools) {
-    scoped_ptr<base::ListValue> list(new base::ListValue());
+    std::unique_ptr<base::ListValue> list(new base::ListValue());
     list->Append(transport_pool_->GetInfoAsValue("transport_socket_pool",
                                                  "transport_socket_pool",
                                                  false));

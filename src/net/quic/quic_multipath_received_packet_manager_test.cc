@@ -127,26 +127,6 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, IsAwaitingPacket) {
       "Check whether a packet is awaited on a non-existent path");
 }
 
-TEST_F(QuicMultipathReceivedPacketManagerTest, UpdateReceivedPacketInfo) {
-  FLAGS_quic_dont_copy_acks = false;
-  std::vector<QuicAckFrame> ack_frames;
-  EXPECT_EQ(static_cast<size_t>(0), ack_frames.size());
-  EXPECT_CALL(*manager_0_, ack_frame_updated()).WillOnce(Return(false));
-  EXPECT_CALL(*manager_1_, ack_frame_updated()).WillRepeatedly(Return(false));
-  multipath_manager_.UpdateReceivedPacketInfo(&ack_frames, QuicTime::Zero(),
-                                              /*force_all_paths=*/false);
-  EXPECT_EQ(static_cast<size_t>(0), ack_frames.size());
-  EXPECT_CALL(*manager_0_, ack_frame_updated()).WillOnce(Return(true));
-  multipath_manager_.UpdateReceivedPacketInfo(&ack_frames, QuicTime::Zero(),
-                                              /*force_all_paths=*/false);
-  EXPECT_EQ(static_cast<size_t>(1), ack_frames.size());
-
-  std::vector<QuicAckFrame> ack_frames_all;
-  multipath_manager_.UpdateReceivedPacketInfo(&ack_frames_all, QuicTime::Zero(),
-                                              /*force_all_paths=*/true);
-  EXPECT_EQ(static_cast<size_t>(2), ack_frames_all.size());
-}
-
 TEST_F(QuicMultipathReceivedPacketManagerTest,
        UpdatePacketInformationSentByPeer) {
   std::vector<QuicStopWaitingFrame> stop_waitings;

@@ -15,6 +15,7 @@ Modifications:
   chromium/include/libxml/libxml_utils.h.
 - Include fix for runtime blowups on larger xpath expressions, https://bugzilla.gnome.org/show_bug.cgi?id=760325
 - Fix printf format specifiers, https://chromium.googlesource.com/chromium/src/+/d31995076e55f1aac2f935c53b585a90ece27a11
+- Add workaround for VS 2015 Update 2 code-gen bug - crbug.com/599427
 
 To import a new snapshot:
 

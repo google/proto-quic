@@ -7,9 +7,10 @@
 
 #include <windows.h>
 
+#include <memory>
+
 #include "base/base_export.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/win/scoped_handle.h"
 
 namespace base {
@@ -84,14 +85,14 @@ class BASE_EXPORT Win32StackFrameUnwinder {
 
  private:
   // This function is for internal and test purposes only.
-  Win32StackFrameUnwinder(scoped_ptr<UnwindFunctions> unwind_functions);
+  Win32StackFrameUnwinder(std::unique_ptr<UnwindFunctions> unwind_functions);
   friend class Win32StackFrameUnwinderTest;
 
   // State associated with each stack unwinding.
   bool at_top_frame_;
   bool unwind_info_present_for_all_frames_;
 
-  scoped_ptr<UnwindFunctions> unwind_functions_;
+  std::unique_ptr<UnwindFunctions> unwind_functions_;
 
   DISALLOW_COPY_AND_ASSIGN(Win32StackFrameUnwinder);
 };

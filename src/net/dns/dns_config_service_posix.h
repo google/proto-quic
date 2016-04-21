@@ -64,7 +64,7 @@ class NET_EXPORT_PRIVATE DnsConfigServicePosix : public DnsConfigService {
   void OnConfigChanged(bool succeeded);
   void OnHostsChanged(bool succeeded);
 
-  scoped_ptr<Watcher> watcher_;
+  std::unique_ptr<Watcher> watcher_;
   // Allow a mock hosts file for testing purposes.
   const base::FilePath::CharType* file_path_hosts_;
   // Allow a mock DNS server for testing purposes.

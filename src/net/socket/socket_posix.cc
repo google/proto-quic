@@ -13,6 +13,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/posix/eintr_wrapper.h"
+#include "base/trace_event/trace_event.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -141,7 +142,7 @@ int SocketPosix::Listen(int backlog) {
   return OK;
 }
 
-int SocketPosix::Accept(scoped_ptr<SocketPosix>* socket,
+int SocketPosix::Accept(std::unique_ptr<SocketPosix>* socket,
                         const CompletionCallback& callback) {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_NE(kInvalidSocket, socket_fd_);
@@ -348,6 +349,7 @@ void SocketPosix::DetachFromThread() {
 }
 
 void SocketPosix::OnFileCanReadWithoutBlocking(int fd) {
+  TRACE_EVENT0("net", "SocketPosix::OnFileCanReadWithoutBlocking");
   DCHECK(!accept_callback_.is_null() || !read_callback_.is_null());
   if (!accept_callback_.is_null()) {
     AcceptCompleted();
@@ -365,7 +367,7 @@ void SocketPosix::OnFileCanWriteWithoutBlocking(int fd) {
   }
 }
 
-int SocketPosix::DoAccept(scoped_ptr<SocketPosix>* socket) {
+int SocketPosix::DoAccept(std::unique_ptr<SocketPosix>* socket) {
   SockaddrStorage new_peer_address;
   int new_socket = HANDLE_EINTR(accept(socket_fd_,
                                        new_peer_address.addr,
@@ -373,7 +375,7 @@ int SocketPosix::DoAccept(scoped_ptr<SocketPosix>* socket) {
   if (new_socket < 0)
     return MapAcceptError(errno);
 
-  scoped_ptr<SocketPosix> accepted_socket(new SocketPosix);
+  std::unique_ptr<SocketPosix> accepted_socket(new SocketPosix);
   int rv = accepted_socket->AdoptConnectedSocket(new_socket, new_peer_address);
   if (rv != OK)
     return rv;

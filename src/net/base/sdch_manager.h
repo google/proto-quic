@@ -14,13 +14,13 @@
 #define NET_BASE_SDCH_MANAGER_H_
 
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/threading/thread_checker.h"
 #include "net/base/net_export.h"
@@ -146,7 +146,7 @@ class NET_EXPORT SdchManager {
   // for encoding responses for the given URL. The return set will not
   // include expired dictionaries. If no dictionaries
   // are appropriate to use with the target_url, NULL is returned.
-  scoped_ptr<DictionarySet> GetDictionarySet(const GURL& target_url);
+  std::unique_ptr<DictionarySet> GetDictionarySet(const GURL& target_url);
 
   // Get a handle to a specific dictionary, by its server hash, confirming
   // that that specific dictionary is appropriate to use with |target_url|.
@@ -154,7 +154,7 @@ class NET_EXPORT SdchManager {
   // hash exists that is usable with |target_url|, NULL is returned.
   // If there is a usability problem, |*error_code| is set to the
   // appropriate problem code.
-  scoped_ptr<DictionarySet> GetDictionarySetByHash(
+  std::unique_ptr<DictionarySet> GetDictionarySetByHash(
       const GURL& target_url,
       const std::string& server_hash,
       SdchProblemCode* problem_code);
@@ -173,7 +173,7 @@ class NET_EXPORT SdchManager {
 
   void SetAllowLatencyExperiment(const GURL& url, bool enable);
 
-  scoped_ptr<base::Value> SdchInfoToValue() const;
+  std::unique_ptr<base::Value> SdchInfoToValue() const;
 
   // Add an SDCH dictionary to our list of availible
   // dictionaries. This addition will fail if addition is illegal
@@ -194,7 +194,7 @@ class NET_EXPORT SdchManager {
   void AddObserver(SdchObserver* observer);
   void RemoveObserver(SdchObserver* observer);
 
-  static scoped_ptr<DictionarySet> CreateEmptyDictionarySetForTesting();
+  static std::unique_ptr<DictionarySet> CreateEmptyDictionarySetForTesting();
 
  private:
   struct BlacklistInfo {

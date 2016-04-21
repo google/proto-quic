@@ -65,6 +65,9 @@ struct BASE_EXPORT LaunchOptions {
   // If true, wait for the process to complete.
   bool wait;
 
+  // If not empty, change to this directory before executing the new process.
+  base::FilePath current_directory;
+
 #if defined(OS_WIN)
   bool start_hidden;
 
@@ -151,9 +154,6 @@ struct BASE_EXPORT LaunchOptions {
 #endif  // defined(OS_LINUX)
 
 #if defined(OS_POSIX)
-  // If not empty, change to this directory before execing the new process.
-  base::FilePath current_directory;
-
   // If non-null, a delegate to be run immediately prior to executing the new
   // program in the child process.
   //

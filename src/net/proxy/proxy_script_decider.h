@@ -103,7 +103,7 @@ class NET_EXPORT_PRIVATE ProxyScriptDecider {
     // Returns a Value representing the PacSource.  |effective_pac_url| must
     // be non-NULL and point to the URL derived from information contained in
     // |this|, if Type is not WPAD_DHCP.
-    scoped_ptr<base::Value> NetLogCallback(
+    std::unique_ptr<base::Value> NetLogCallback(
         const GURL* effective_pac_url,
         NetLogCaptureMode capture_mode) const;
 
@@ -199,7 +199,7 @@ class NET_EXPORT_PRIVATE ProxyScriptDecider {
 
   AddressList wpad_addresses_;
   base::OneShotTimer quick_check_timer_;
-  scoped_ptr<SingleRequestHostResolver> host_resolver_;
+  std::unique_ptr<SingleRequestHostResolver> host_resolver_;
   base::Time quick_check_start_time_;
 
   DISALLOW_COPY_AND_ASSIGN(ProxyScriptDecider);

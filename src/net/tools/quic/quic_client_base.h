@@ -156,6 +156,12 @@ class QuicClientBase {
 
   ProofVerifier* proof_verifier() const;
 
+  void set_session(QuicClientSession* session) { session_.reset(session); }
+
+  QuicClientPushPromiseIndex* push_promise_index() {
+    return &push_promise_index_;
+  }
+
  protected:
   virtual QuicClientSession* CreateQuicClientSession(
       QuicConnection* connection);

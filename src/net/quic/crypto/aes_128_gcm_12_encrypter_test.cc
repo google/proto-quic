@@ -158,7 +158,7 @@ QuicData* EncryptWithNonce(Aes128Gcm12Encrypter* encrypter,
                            StringPiece associated_data,
                            StringPiece plaintext) {
   size_t ciphertext_size = encrypter->GetCiphertextSize(plaintext.length());
-  scoped_ptr<char[]> ciphertext(new char[ciphertext_size]);
+  std::unique_ptr<char[]> ciphertext(new char[ciphertext_size]);
 
   if (!encrypter->Encrypt(nonce, associated_data, plaintext,
                           reinterpret_cast<unsigned char*>(ciphertext.get()))) {
@@ -199,7 +199,7 @@ TEST(Aes128Gcm12EncrypterTest, Encrypt) {
 
       Aes128Gcm12Encrypter encrypter;
       ASSERT_TRUE(encrypter.SetKey(key));
-      scoped_ptr<QuicData> encrypted(EncryptWithNonce(
+      std::unique_ptr<QuicData> encrypted(EncryptWithNonce(
           &encrypter, iv,
           // This deliberately tests that the encrypter can handle an AAD that
           // is set to nullptr, as opposed to a zero-length, non-nullptr

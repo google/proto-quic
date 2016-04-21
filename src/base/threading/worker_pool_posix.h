@@ -24,6 +24,7 @@
 #ifndef BASE_THREADING_WORKER_POOL_POSIX_H_
 #define BASE_THREADING_WORKER_POOL_POSIX_H_
 
+#include <memory>
 #include <queue>
 #include <string>
 
@@ -31,7 +32,6 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/pending_task.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
@@ -88,7 +88,7 @@ class BASE_EXPORT PosixDynamicThreadPool
   bool terminated_;
   // Only used for tests to ensure correct thread ordering.  It will always be
   // NULL in non-test code.
-  scoped_ptr<ConditionVariable> num_idle_threads_cv_;
+  std::unique_ptr<ConditionVariable> num_idle_threads_cv_;
 
   DISALLOW_COPY_AND_ASSIGN(PosixDynamicThreadPool);
 };

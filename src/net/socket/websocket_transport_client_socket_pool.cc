@@ -241,6 +241,7 @@ WebSocketTransportClientSocketPool::WebSocketTransportClientSocketPool(
                                 max_sockets_per_group,
                                 host_resolver,
                                 client_socket_factory,
+                                NULL,
                                 net_log),
       connect_job_delegate_(this),
       pool_net_log_(net_log),
@@ -309,7 +310,7 @@ int WebSocketTransportClientSocketPool::RequestSocket(
     return ERR_IO_PENDING;
   }
 
-  scoped_ptr<WebSocketTransportConnectJob> connect_job(
+  std::unique_ptr<WebSocketTransportConnectJob> connect_job(
       new WebSocketTransportConnectJob(
           group_name, priority, respect_limits, casted_params,
           ConnectionTimeout(), callback, client_socket_factory_, host_resolver_,
@@ -332,7 +333,7 @@ int WebSocketTransportClientSocketPool::RequestSocket(
     // TODO(ricea): Implement backup job timer?
     AddJob(handle, std::move(connect_job));
   } else {
-    scoped_ptr<StreamSocket> error_socket;
+    std::unique_ptr<StreamSocket> error_socket;
     connect_job->GetAdditionalErrorState(handle);
     error_socket = connect_job->PassSocket();
     if (error_socket) {
@@ -362,7 +363,7 @@ void WebSocketTransportClientSocketPool::CancelRequest(
   DCHECK(!handle->is_initialized());
   if (DeleteStalledRequest(handle))
     return;
-  scoped_ptr<StreamSocket> socket = handle->PassSocket();
+  std::unique_ptr<StreamSocket> socket = handle->PassSocket();
   if (socket)
     ReleaseSocket(handle->group_name(), std::move(socket), handle->id());
   if (!DeleteJob(handle))
@@ -373,7 +374,7 @@ void WebSocketTransportClientSocketPool::CancelRequest(
 
 void WebSocketTransportClientSocketPool::ReleaseSocket(
     const std::string& group_name,
-    scoped_ptr<StreamSocket> socket,
+    std::unique_ptr<StreamSocket> socket,
     int id) {
   WebSocketEndpointLockManager::GetInstance()->UnlockSocket(socket.get());
   CHECK_GT(handed_out_socket_count_, 0);
@@ -431,12 +432,12 @@ LoadState WebSocketTransportClientSocketPool::GetLoadState(
   return LookupConnectJob(handle)->GetLoadState();
 }
 
-scoped_ptr<base::DictionaryValue>
-    WebSocketTransportClientSocketPool::GetInfoAsValue(
-        const std::string& name,
-        const std::string& type,
-        bool include_nested_pools) const {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+std::unique_ptr<base::DictionaryValue>
+WebSocketTransportClientSocketPool::GetInfoAsValue(
+    const std::string& name,
+    const std::string& type,
+    bool include_nested_pools) const {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("name", name);
   dict->SetString("type", type);
   dict->SetInteger("handed_out_socket_count", handed_out_socket_count_);
@@ -461,7 +462,7 @@ void WebSocketTransportClientSocketPool::OnConnectJobComplete(
     WebSocketTransportConnectJob* job) {
   DCHECK_NE(ERR_IO_PENDING, result);
 
-  scoped_ptr<StreamSocket> socket = job->PassSocket();
+  std::unique_ptr<StreamSocket> socket = job->PassSocket();
 
   // See comment in FlushWithError.
   if (flushing_) {
@@ -526,7 +527,7 @@ bool WebSocketTransportClientSocketPool::ReachedMaxSocketsLimit() const {
 }
 
 void WebSocketTransportClientSocketPool::HandOutSocket(
-    scoped_ptr<StreamSocket> socket,
+    std::unique_ptr<StreamSocket> socket,
     const LoadTimingInfo::ConnectTiming& connect_timing,
     ClientSocketHandle* handle,
     const BoundNetLog& net_log) {
@@ -546,7 +547,7 @@ void WebSocketTransportClientSocketPool::HandOutSocket(
 
 void WebSocketTransportClientSocketPool::AddJob(
     ClientSocketHandle* handle,
-    scoped_ptr<WebSocketTransportConnectJob> connect_job) {
+    std::unique_ptr<WebSocketTransportConnectJob> connect_job) {
   bool inserted =
       pending_connects_.insert(PendingConnectsMap::value_type(
                                    handle, connect_job.release())).second;

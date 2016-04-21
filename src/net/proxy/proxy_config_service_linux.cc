@@ -504,7 +504,7 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
   guint system_http_proxy_id_;
 
   ProxyConfigServiceLinux::Delegate* notify_delegate_;
-  scoped_ptr<base::OneShotTimer> debounce_timer_;
+  std::unique_ptr<base::OneShotTimer> debounce_timer_;
 
   // Task runner for the thread that we make gconf calls on. It should
   // be the UI thread and all our methods should be called on this
@@ -774,7 +774,7 @@ class SettingGetterImplGSettings
   GSettings* ftp_client_;
   GSettings* socks_client_;
   ProxyConfigServiceLinux::Delegate* notify_delegate_;
-  scoped_ptr<base::OneShotTimer> debounce_timer_;
+  std::unique_ptr<base::OneShotTimer> debounce_timer_;
 
   // Task runner for the thread that we make gsettings calls on. It should
   // be the UI thread and all our methods should be called on this
@@ -1334,7 +1334,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
   int inotify_fd_;
   base::MessagePumpLibevent::FileDescriptorWatcher inotify_watcher_;
   ProxyConfigServiceLinux::Delegate* notify_delegate_;
-  scoped_ptr<base::OneShotTimer> debounce_timer_;
+  std::unique_ptr<base::OneShotTimer> debounce_timer_;
   base::FilePath kde_config_dir_;
   bool indirect_manual_;
   bool auto_no_pac_;
@@ -1538,12 +1538,12 @@ ProxyConfigServiceLinux::Delegate::Delegate(base::Environment* env_var_getter)
     case base::nix::DESKTOP_ENVIRONMENT_UNITY:
 #if defined(USE_GIO)
       {
-        scoped_ptr<SettingGetterImplGSettings> gs_getter(
-            new SettingGetterImplGSettings());
-        // We have to load symbols and check the GNOME version in use to decide
-        // if we should use the gsettings getter. See LoadAndCheckVersion().
-        if (gs_getter->LoadAndCheckVersion(env_var_getter))
-          setting_getter_.reset(gs_getter.release());
+      std::unique_ptr<SettingGetterImplGSettings> gs_getter(
+          new SettingGetterImplGSettings());
+      // We have to load symbols and check the GNOME version in use to decide
+      // if we should use the gsettings getter. See LoadAndCheckVersion().
+      if (gs_getter->LoadAndCheckVersion(env_var_getter))
+        setting_getter_.reset(gs_getter.release());
       }
 #endif
 #if defined(USE_GCONF)

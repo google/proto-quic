@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -15,7 +16,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/quic/quic_protocol.h"
@@ -530,9 +530,9 @@ class NET_EXPORT_PRIVATE QuicFramer {
   // skipped as necessary).
   QuicVersionVector supported_versions_;
   // Primary decrypter used to decrypt packets during parsing.
-  scoped_ptr<QuicDecrypter> decrypter_;
+  std::unique_ptr<QuicDecrypter> decrypter_;
   // Alternative decrypter that can also be used to decrypt packets.
-  scoped_ptr<QuicDecrypter> alternative_decrypter_;
+  std::unique_ptr<QuicDecrypter> alternative_decrypter_;
   // The encryption level of |decrypter_|.
   EncryptionLevel decrypter_level_;
   // The encryption level of |alternative_decrypter_|.
@@ -542,7 +542,7 @@ class NET_EXPORT_PRIVATE QuicFramer {
   // decrypter.
   bool alternative_decrypter_latch_;
   // Encrypters used to encrypt packets via EncryptPayload().
-  scoped_ptr<QuicEncrypter> encrypter_[NUM_ENCRYPTION_LEVELS];
+  std::unique_ptr<QuicEncrypter> encrypter_[NUM_ENCRYPTION_LEVELS];
   // Tracks if the framer is being used by the entity that received the
   // connection or the entity that initiated it.
   Perspective perspective_;

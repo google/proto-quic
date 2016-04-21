@@ -5,12 +5,14 @@
 #include "net/dns/dns_session.h"
 
 #include <stdint.h>
+
 #include <limits>
 #include <utility>
 
 #include "base/bind.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sample_vector.h"
@@ -70,7 +72,7 @@ struct DnsSession::ServerStats {
   base::TimeDelta rtt_deviation;
 
   // A histogram of observed RTT .
-  scoped_ptr<base::SampleVector> rtt_histogram;
+  std::unique_ptr<base::SampleVector> rtt_histogram;
 
   DISALLOW_COPY_AND_ASSIGN(ServerStats);
 };
@@ -83,9 +85,10 @@ DnsSession::RttBuckets::RttBuckets() : base::BucketRanges(kRTTBucketCount + 1) {
   base::Histogram::InitializeBucketRanges(1, kRTTMaxMs, this);
 }
 
-DnsSession::SocketLease::SocketLease(scoped_refptr<DnsSession> session,
-                                     unsigned server_index,
-                                     scoped_ptr<DatagramClientSocket> socket)
+DnsSession::SocketLease::SocketLease(
+    scoped_refptr<DnsSession> session,
+    unsigned server_index,
+    std::unique_ptr<DatagramClientSocket> socket)
     : session_(session),
       server_index_(server_index),
       socket_(std::move(socket)) {}
@@ -95,7 +98,7 @@ DnsSession::SocketLease::~SocketLease() {
 }
 
 DnsSession::DnsSession(const DnsConfig& config,
-                       scoped_ptr<DnsSocketPool> socket_pool,
+                       std::unique_ptr<DnsSocketPool> socket_pool,
                        const RandIntCallback& rand_int_callback,
                        NetLog* net_log)
     : config_(config),
@@ -129,7 +132,7 @@ void DnsSession::UpdateTimeouts(NetworkChangeNotifier::ConnectionType type) {
 void DnsSession::InitializeServerStats() {
   server_stats_.clear();
   for (size_t i = 0; i < config_.nameservers.size(); ++i) {
-    server_stats_.push_back(make_scoped_ptr(
+    server_stats_.push_back(base::WrapUnique(
         new ServerStats(initial_timeout_, rtt_buckets_.Pointer())));
   }
 }
@@ -264,29 +267,31 @@ base::TimeDelta DnsSession::NextTimeout(unsigned server_index, int attempt) {
 }
 
 // Allocate a socket, already connected to the server address.
-scoped_ptr<DnsSession::SocketLease> DnsSession::AllocateSocket(
-    unsigned server_index, const NetLog::Source& source) {
-  scoped_ptr<DatagramClientSocket> socket;
+std::unique_ptr<DnsSession::SocketLease> DnsSession::AllocateSocket(
+    unsigned server_index,
+    const NetLog::Source& source) {
+  std::unique_ptr<DatagramClientSocket> socket;
 
   socket = socket_pool_->AllocateSocket(server_index);
   if (!socket.get())
-    return scoped_ptr<SocketLease>();
+    return std::unique_ptr<SocketLease>();
 
   socket->NetLog().BeginEvent(NetLog::TYPE_SOCKET_IN_USE,
                               source.ToEventParametersCallback());
 
   SocketLease* lease = new SocketLease(this, server_index, std::move(socket));
-  return scoped_ptr<SocketLease>(lease);
+  return std::unique_ptr<SocketLease>(lease);
 }
 
-scoped_ptr<StreamSocket> DnsSession::CreateTCPSocket(
-    unsigned server_index, const NetLog::Source& source) {
+std::unique_ptr<StreamSocket> DnsSession::CreateTCPSocket(
+    unsigned server_index,
+    const NetLog::Source& source) {
   return socket_pool_->CreateTCPSocket(server_index, source);
 }
 
 // Release a socket.
 void DnsSession::FreeSocket(unsigned server_index,
-                            scoped_ptr<DatagramClientSocket> socket) {
+                            std::unique_ptr<DatagramClientSocket> socket) {
   DCHECK(socket.get());
 
   socket->NetLog().EndEvent(NetLog::TYPE_SOCKET_IN_USE);

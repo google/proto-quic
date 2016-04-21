@@ -12,23 +12,38 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/histogram_base.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/persistent_memory_allocator.h"
 
 namespace base {
 
+class PersistentHistogramAllocator;
+class PersistentSampleMapRecords;
+class PersistentSparseHistogramDataManager;
+
 // The logic here is similar to that of SampleMap but with different data
 // structures. Changes here likely need to be duplicated there.
 class BASE_EXPORT PersistentSampleMap : public HistogramSamples {
  public:
+  // Constructs a persistent sample map using any of a variety of persistent
+  // data sources. Really, the first two are just convenience methods for
+  // getting at the PersistentSampleMapRecords object for the specified |id|.
+  // The source objects must live longer than this object.
   PersistentSampleMap(uint64_t id,
-                      PersistentMemoryAllocator* allocator,
+                      PersistentHistogramAllocator* allocator,
                       Metadata* meta);
+  PersistentSampleMap(uint64_t id,
+                      PersistentSparseHistogramDataManager* manager,
+                      Metadata* meta);
+  PersistentSampleMap(uint64_t id,
+                      PersistentSampleMapRecords* records,
+                      Metadata* meta);
+
   ~PersistentSampleMap() override;
 
   // HistogramSamples:
@@ -36,7 +51,21 @@ class BASE_EXPORT PersistentSampleMap : public HistogramSamples {
                   HistogramBase::Count count) override;
   HistogramBase::Count GetCount(HistogramBase::Sample value) const override;
   HistogramBase::Count TotalCount() const override;
-  scoped_ptr<SampleCountIterator> Iterator() const override;
+  std::unique_ptr<SampleCountIterator> Iterator() const override;
+
+  // Uses a persistent-memory |iterator| to locate and return information about
+  // the next record holding information for a PersistentSampleMap. The record
+  // could be for any Map so return the |sample_map_id| as well.
+  static PersistentMemoryAllocator::Reference GetNextPersistentRecord(
+      PersistentMemoryAllocator::Iterator& iterator,
+      uint64_t* sample_map_id);
+
+  // Creates a new record in an |allocator| storing count information for a
+  // specific sample |value| of a histogram with the given |sample_map_id|.
+  static PersistentMemoryAllocator::Reference CreatePersistentRecord(
+      PersistentMemoryAllocator* allocator,
+      uint64_t sample_map_id,
+      HistogramBase::Sample value);
 
  protected:
   // Performs arithemetic. |op| is ADD or SUBTRACT.
@@ -63,12 +92,14 @@ class BASE_EXPORT PersistentSampleMap : public HistogramSamples {
   HistogramBase::Count* ImportSamples(HistogramBase::Sample until_value);
 
   // All created/loaded sample values and their associated counts. The storage
-  // for the actual Count numbers is owned by the |allocator_|.
+  // for the actual Count numbers is owned by the |records_| object and its
+  // underlying allocator.
   std::map<HistogramBase::Sample, HistogramBase::Count*> sample_counts_;
 
-  // The persistent memory allocator holding samples and an iterator through it.
-  PersistentMemoryAllocator* allocator_;
-  PersistentMemoryAllocator::Iterator sample_iter_;
+  // The object that manages records inside persistent memory. This is owned
+  // externally (typically by a PersistentHistogramAllocator) and is expected
+  // to live beyond the life of this object.
+  PersistentSampleMapRecords* records_;
 
   DISALLOW_COPY_AND_ASSIGN(PersistentSampleMap);
 };

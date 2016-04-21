@@ -4,11 +4,11 @@
 
 #include "net/quic/quic_connection.h"
 
+#include <memory>
 #include <ostream>
 
 #include "base/bind.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
@@ -699,13 +699,8 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   QuicVersion version() { return GetParam().version; }
 
   QuicAckFrame* outgoing_ack() {
-    if (FLAGS_quic_dont_copy_acks) {
-      QuicFrame ack_frame =
-          QuicConnectionPeer::GetUpdatedAckFrame(&connection_);
-      ack_ = *ack_frame.ack_frame;
-    } else {
-      QuicConnectionPeer::PopulateAckFrame(&connection_, &ack_);
-    }
+    QuicFrame ack_frame = QuicConnectionPeer::GetUpdatedAckFrame(&connection_);
+    ack_ = *ack_frame.ack_frame;
     return &ack_;
   }
 
@@ -771,7 +766,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     header.packet_number = number;
     QuicFrames frames;
     frames.push_back(frame);
-    scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+    std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
 
     char buffer[kMaxPacketSize];
     size_t encrypted_length = framer_.EncryptPayload(
@@ -794,7 +789,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
                                   bool entropy_flag,
                                   bool has_stop_waiting,
                                   EncryptionLevel level) {
-    scoped_ptr<QuicPacket> packet(
+    std::unique_ptr<QuicPacket> packet(
         ConstructDataPacket(path_id, number, entropy_flag, has_stop_waiting));
     char buffer[kMaxPacketSize];
     size_t encrypted_length = framer_.EncryptPayload(
@@ -809,7 +804,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   }
 
   void ProcessClosePacket(QuicPathId path_id, QuicPacketNumber number) {
-    scoped_ptr<QuicPacket> packet(ConstructClosePacket(number));
+    std::unique_ptr<QuicPacket> packet(ConstructClosePacket(number));
     char buffer[kMaxPacketSize];
     size_t encrypted_length = framer_.EncryptPayload(
         ENCRYPTION_NONE, path_id, number, *packet, buffer, kMaxPacketSize);
@@ -999,9 +994,9 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   MockClock clock_;
   MockRandom random_generator_;
   SimpleBufferAllocator buffer_allocator_;
-  scoped_ptr<TestConnectionHelper> helper_;
+  std::unique_ptr<TestConnectionHelper> helper_;
   QuicPacketCreator peer_creator_;
-  scoped_ptr<TestPacketWriter> writer_;
+  std::unique_ptr<TestPacketWriter> writer_;
   TestConnection connection_;
   QuicPacketCreator* creator_;
   QuicPacketGenerator* generator_;
@@ -1092,7 +1087,7 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSize) {
   QuicPaddingFrame padding;
   frames.push_back(QuicFrame(&frame1_));
   frames.push_back(QuicFrame(padding));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -1126,7 +1121,7 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSizeWhileWriterLimited) {
   QuicPaddingFrame padding;
   frames.push_back(QuicFrame(&frame1_));
   frames.push_back(QuicFrame(padding));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -3914,9 +3909,9 @@ TEST_P(QuicConnectionTest, PublicReset) {
   header.public_header.reset_flag = true;
   header.public_header.version_flag = false;
   header.rejected_packet_number = 10101;
-  scoped_ptr<QuicEncryptedPacket> packet(
+  std::unique_ptr<QuicEncryptedPacket> packet(
       framer_.BuildPublicResetPacket(header));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PUBLIC_RESET, _,
                                            ConnectionCloseSource::FROM_PEER));
@@ -4067,7 +4062,7 @@ TEST_P(QuicConnectionTest, ServerSendsVersionNegotiationPacket) {
 
   QuicFrames frames;
   frames.push_back(QuicFrame(&frame1_));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -4102,7 +4097,7 @@ TEST_P(QuicConnectionTest, ServerSendsVersionNegotiationPacketSocketBlocked) {
 
   QuicFrames frames;
   frames.push_back(QuicFrame(&frame1_));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -4144,7 +4139,7 @@ TEST_P(QuicConnectionTest,
 
   QuicFrames frames;
   frames.push_back(QuicFrame(&frame1_));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encryped_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -4166,10 +4161,10 @@ TEST_P(QuicConnectionTest, ClientHandlesVersionNegotiation) {
       ->set_version_for_tests(QUIC_VERSION_UNSUPPORTED);
 
   // Send a version negotiation packet.
-  scoped_ptr<QuicEncryptedPacket> encrypted(
+  std::unique_ptr<QuicEncryptedPacket> encrypted(
       framer_.BuildVersionNegotiationPacket(connection_id_,
                                             QuicSupportedVersions()));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*encrypted, QuicTime::Zero()));
   connection_.ProcessUdpPacket(kSelfAddress, kPeerAddress, *received);
 
@@ -4182,7 +4177,7 @@ TEST_P(QuicConnectionTest, ClientHandlesVersionNegotiation) {
   header.public_header.version_flag = false;
   QuicFrames frames;
   frames.push_back(QuicFrame(&frame1_));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
@@ -4202,10 +4197,10 @@ TEST_P(QuicConnectionTest, BadVersionNegotiation) {
   EXPECT_CALL(visitor_,
               OnConnectionClosed(QUIC_INVALID_VERSION_NEGOTIATION_PACKET, _,
                                  ConnectionCloseSource::FROM_SELF));
-  scoped_ptr<QuicEncryptedPacket> encrypted(
+  std::unique_ptr<QuicEncryptedPacket> encrypted(
       framer_.BuildVersionNegotiationPacket(connection_id_,
                                             QuicSupportedVersions()));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*encrypted, QuicTime::Zero()));
   connection_.ProcessUdpPacket(kSelfAddress, kPeerAddress, *received);
 }
@@ -4270,7 +4265,7 @@ TEST_P(QuicConnectionTest, ProcessFramesIfPacketClosedConnection) {
   QuicFrames frames;
   frames.push_back(QuicFrame(&frame1_));
   frames.push_back(QuicFrame(&qccf));
-  scoped_ptr<QuicPacket> packet(ConstructPacket(header, frames));
+  std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   EXPECT_TRUE(nullptr != packet.get());
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
@@ -4503,7 +4498,7 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckOfNackedPacket) {
 TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
   QuicPacketHeader header;
 
-  scoped_ptr<MockQuicConnectionDebugVisitor> debug_visitor(
+  std::unique_ptr<MockQuicConnectionDebugVisitor> debug_visitor(
       new MockQuicConnectionDebugVisitor());
   connection_.set_debug_visitor(debug_visitor.get());
   EXPECT_CALL(*debug_visitor, OnPacketHeader(Ref(header))).Times(1);

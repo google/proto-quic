@@ -5,11 +5,11 @@
 #ifndef NET_HTTP_HTTP_PROXY_CLIENT_SOCKET_POOL_H_
 #define NET_HTTP_HTTP_PROXY_CLIENT_SOCKET_POOL_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "net/base/host_port_pair.h"
@@ -126,9 +126,9 @@ class HttpProxyConnectJob : public ConnectJob {
 
   int HandleConnectResult(int result);
 
-  scoped_ptr<HttpProxyClientSocketWrapper> client_socket_;
+  std::unique_ptr<HttpProxyClientSocketWrapper> client_socket_;
 
-  scoped_ptr<HttpResponseInfo> error_response_info_;
+  std::unique_ptr<HttpResponseInfo> error_response_info_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpProxyConnectJob);
 };
@@ -165,7 +165,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
                      ClientSocketHandle* handle) override;
 
   void ReleaseSocket(const std::string& group_name,
-                     scoped_ptr<StreamSocket> socket,
+                     std::unique_ptr<StreamSocket> socket,
                      int id) override;
 
   void FlushWithError(int error) override;
@@ -179,7 +179,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
   LoadState GetLoadState(const std::string& group_name,
                          const ClientSocketHandle* handle) const override;
 
-  scoped_ptr<base::DictionaryValue> GetInfoAsValue(
+  std::unique_ptr<base::DictionaryValue> GetInfoAsValue(
       const std::string& name,
       const std::string& type,
       bool include_nested_pools) const override;
@@ -206,7 +206,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
                                NetLog* net_log);
 
     // ClientSocketPoolBase::ConnectJobFactory methods.
-    scoped_ptr<ConnectJob> NewConnectJob(
+    std::unique_ptr<ConnectJob> NewConnectJob(
         const std::string& group_name,
         const PoolBase::Request& request,
         ConnectJob::Delegate* delegate) const override;

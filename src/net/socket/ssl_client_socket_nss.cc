@@ -784,7 +784,7 @@ class SSLClientSocketNSS::Core : public base::RefCountedThreadSafe<Core> {
   // prior to invoking OnHandshakeIOComplete.
   // Read on the NSS task runner when once OnHandshakeIOComplete is invoked
   // on the NSS task runner.
-  scoped_ptr<crypto::ECPrivateKey> channel_id_key_;
+  std::unique_ptr<crypto::ECPrivateKey> channel_id_key_;
 
   DISALLOW_COPY_AND_ASSIGN(Core);
 };
@@ -2354,7 +2354,7 @@ void SSLClientSocketNSS::Core::SetChannelIDProvided() {
 }
 
 SSLClientSocketNSS::SSLClientSocketNSS(
-    scoped_ptr<ClientSocketHandle> transport_socket,
+    std::unique_ptr<ClientSocketHandle> transport_socket,
     const HostPortPair& host_and_port,
     const SSLConfig& ssl_config,
     const SSLClientSocketContext& context)

@@ -5,9 +5,7 @@
 #ifndef NET_BASE_SOCKET_PERFORMANCE_WATCHER_H_
 #define NET_BASE_SOCKET_PERFORMANCE_WATCHER_H_
 
-#include "base/macros.h"
 #include "net/base/net_export.h"
-#include "net/base/socket_performance_watcher_factory.h"
 
 namespace base {
 class TimeDelta;
@@ -16,32 +14,28 @@ class TimeDelta;
 namespace net {
 
 // SocketPerformanceWatcher is the base class for recording and aggregating
-// socket statistics.
+// per-socket statistics. SocketPerformanceWatcher must be used on a single
+// thread.
 class NET_EXPORT_PRIVATE SocketPerformanceWatcher {
  public:
-  // |socket_performance_watcher_factory| is the factory that constructed
-  // |this| watcher.
-  SocketPerformanceWatcher(
-      const SocketPerformanceWatcherFactory::Protocol protocol,
-      SocketPerformanceWatcherFactory* socket_performance_watcher_factory);
+  virtual ~SocketPerformanceWatcher() {}
 
-  virtual ~SocketPerformanceWatcher();
+  // Returns true if |this| SocketPerformanceWatcher is interested in receiving
+  // an updated RTT estimate (via OnUpdatedRTTAvailable).
+  virtual bool ShouldNotifyUpdatedRTT() const = 0;
 
-  // Called when updated transport layer RTT information is available. This
-  // must be the transport layer RTT from this device to the remote transport
-  // layer endpoint. This method is called immediately after the observation is
-  // made, hence no timestamp.
-  void OnUpdatedRTTAvailable(const base::TimeDelta& rtt) const;
+  // Notifies |this| SocketPerformanceWatcher of updated transport layer RTT
+  // from this device to the remote transport layer endpoint. This method is
+  // called immediately after the observation is made, hence no timestamp.
+  // There is no guarantee that OnUpdatedRTTAvailable will be called every time
+  // an updated RTT is available as the socket may throttle the
+  // OnUpdatedRTTAvailable call for various reasons, including performance.
+  virtual void OnUpdatedRTTAvailable(const base::TimeDelta& rtt) = 0;
 
- private:
-  // Transport layer protocol used by the socket that |this| is watching.
-  const SocketPerformanceWatcherFactory::Protocol protocol_;
-
-  // |socket_performance_watcher_factory_| is the factory that created
-  // |this| watcher.
-  SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SocketPerformanceWatcher);
+  // Notifies that |this| watcher will be reused to watch a socket that belongs
+  // to a different transport layer connection. Note: The new connection shares
+  // the same protocol as the previously watched socket.
+  virtual void OnConnectionChanged() = 0;
 };
 
 }  // namespace net

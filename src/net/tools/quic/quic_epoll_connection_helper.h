@@ -33,9 +33,11 @@ class TimeoutAlarm;
 
 using QuicStreamBufferAllocator = SimpleBufferAllocator;
 
+enum class QuicAllocator { SIMPLE, BUFFER_POOL };
+
 class QuicEpollConnectionHelper : public QuicConnectionHelperInterface {
  public:
-  explicit QuicEpollConnectionHelper(EpollServer* eps);
+  QuicEpollConnectionHelper(EpollServer* eps, QuicAllocator allocator);
   ~QuicEpollConnectionHelper() override;
 
   // QuicEpollConnectionHelperInterface
@@ -57,7 +59,10 @@ class QuicEpollConnectionHelper : public QuicConnectionHelperInterface {
 
   const QuicEpollClock clock_;
   QuicRandom* random_generator_;
+  // Set up both allocators.  They take up minimal memory before use.
   QuicStreamBufferAllocator buffer_allocator_;
+  SimpleBufferAllocator simple_buffer_allocator_;
+  QuicAllocator allocator_type_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicEpollConnectionHelper);
 };

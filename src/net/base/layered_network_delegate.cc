@@ -9,7 +9,7 @@
 namespace net {
 
 LayeredNetworkDelegate::LayeredNetworkDelegate(
-    scoped_ptr<NetworkDelegate> nested_network_delegate)
+    std::unique_ptr<NetworkDelegate> nested_network_delegate)
     : nested_network_delegate_(std::move(nested_network_delegate)) {}
 
 LayeredNetworkDelegate::~LayeredNetworkDelegate() {

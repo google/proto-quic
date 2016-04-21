@@ -51,7 +51,7 @@ void BidirectionalStreamSpdyImpl::Start(
     const BidirectionalStreamRequestInfo* request_info,
     const BoundNetLog& net_log,
     BidirectionalStreamImpl::Delegate* delegate,
-    scoped_ptr<base::Timer> timer) {
+    std::unique_ptr<base::Timer> timer) {
   DCHECK(!stream_);
   DCHECK(timer);
 
@@ -153,7 +153,7 @@ SpdyResponseHeadersStatus BidirectionalStreamSpdyImpl::OnResponseHeadersUpdated(
 }
 
 void BidirectionalStreamSpdyImpl::OnDataReceived(
-    scoped_ptr<SpdyBuffer> buffer) {
+    std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK(stream_);
   DCHECK(!stream_closed_);
 
@@ -207,7 +207,7 @@ void BidirectionalStreamSpdyImpl::OnClose(int status) {
 }
 
 void BidirectionalStreamSpdyImpl::SendRequestHeaders() {
-  scoped_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
+  std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
   HttpRequestInfo http_request_info;
   http_request_info.url = request_info_->url;
   http_request_info.method = request_info_->method;

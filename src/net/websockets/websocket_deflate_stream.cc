@@ -5,7 +5,9 @@
 #include "net/websockets/websocket_deflate_stream.h"
 
 #include <stdint.h>
+
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,7 +15,6 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -37,9 +38,9 @@ const size_t kChunkSize = 4 * 1024;
 }  // namespace
 
 WebSocketDeflateStream::WebSocketDeflateStream(
-    scoped_ptr<WebSocketStream> stream,
+    std::unique_ptr<WebSocketStream> stream,
     const WebSocketDeflateParameters& params,
-    scoped_ptr<WebSocketDeflatePredictor> predictor)
+    std::unique_ptr<WebSocketDeflatePredictor> predictor)
     : stream_(std::move(stream)),
       deflater_(params.client_context_take_over_mode()),
       inflater_(kChunkSize, kChunkSize),
@@ -62,7 +63,7 @@ WebSocketDeflateStream::WebSocketDeflateStream(
 WebSocketDeflateStream::~WebSocketDeflateStream() {}
 
 int WebSocketDeflateStream::ReadFrames(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames,
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames,
     const CompletionCallback& callback) {
   int result = stream_->ReadFrames(
       frames,
@@ -79,7 +80,7 @@ int WebSocketDeflateStream::ReadFrames(
 }
 
 int WebSocketDeflateStream::WriteFrames(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames,
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames,
     const CompletionCallback& callback) {
   int result = Deflate(frames);
   if (result != OK)
@@ -100,7 +101,7 @@ std::string WebSocketDeflateStream::GetExtensions() const {
 }
 
 void WebSocketDeflateStream::OnReadComplete(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames,
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames,
     const CompletionCallback& callback,
     int result) {
   if (result != OK) {
@@ -115,11 +116,11 @@ void WebSocketDeflateStream::OnReadComplete(
 }
 
 int WebSocketDeflateStream::Deflate(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames) {
-  std::vector<scoped_ptr<WebSocketFrame>> frames_to_write;
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames) {
+  std::vector<std::unique_ptr<WebSocketFrame>> frames_to_write;
   // Store frames of the currently processed message if writing_state_ equals to
   // WRITING_POSSIBLY_COMPRESSED_MESSAGE.
-  std::vector<scoped_ptr<WebSocketFrame>> frames_of_message;
+  std::vector<std::unique_ptr<WebSocketFrame>> frames_of_message;
   for (size_t i = 0; i < frames->size(); ++i) {
     DCHECK(!(*frames)[i]->header.reserved1);
     if (!WebSocketFrameHeader::IsKnownDataOpCode((*frames)[i]->header.opcode)) {
@@ -129,7 +130,7 @@ int WebSocketDeflateStream::Deflate(
     if (writing_state_ == NOT_WRITING)
       OnMessageStart(*frames, i);
 
-    scoped_ptr<WebSocketFrame> frame(std::move((*frames)[i]));
+    std::unique_ptr<WebSocketFrame> frame(std::move((*frames)[i]));
     predictor_->RecordInputDataFrame(frame.get());
 
     if (writing_state_ == WRITING_UNCOMPRESSED_MESSAGE) {
@@ -183,7 +184,7 @@ int WebSocketDeflateStream::Deflate(
 }
 
 void WebSocketDeflateStream::OnMessageStart(
-    const std::vector<scoped_ptr<WebSocketFrame>>& frames,
+    const std::vector<std::unique_ptr<WebSocketFrame>>& frames,
     size_t index) {
   WebSocketFrame* frame = frames[index].get();
   current_writing_opcode_ = frame->header.opcode;
@@ -208,7 +209,7 @@ void WebSocketDeflateStream::OnMessageStart(
 
 int WebSocketDeflateStream::AppendCompressedFrame(
     const WebSocketFrameHeader& header,
-    std::vector<scoped_ptr<WebSocketFrame>>* frames_to_write) {
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames_to_write) {
   const WebSocketFrameHeader::OpCode opcode = current_writing_opcode_;
   scoped_refptr<IOBufferWithSize> compressed_payload =
       deflater_.GetOutput(deflater_.CurrentOutputSize());
@@ -217,7 +218,7 @@ int WebSocketDeflateStream::AppendCompressedFrame(
              << "deflater_.GetOutput() returns an error.";
     return ERR_WS_PROTOCOL_ERROR;
   }
-  scoped_ptr<WebSocketFrame> compressed(new WebSocketFrame(opcode));
+  std::unique_ptr<WebSocketFrame> compressed(new WebSocketFrame(opcode));
   compressed->header.CopyFrom(header);
   compressed->header.opcode = opcode;
   compressed->header.final = header.final;
@@ -233,8 +234,8 @@ int WebSocketDeflateStream::AppendCompressedFrame(
 }
 
 int WebSocketDeflateStream::AppendPossiblyCompressedMessage(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames,
-    std::vector<scoped_ptr<WebSocketFrame>>* frames_to_write) {
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames,
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames_to_write) {
   DCHECK(!frames->empty());
 
   const WebSocketFrameHeader::OpCode opcode = current_writing_opcode_;
@@ -261,14 +262,14 @@ int WebSocketDeflateStream::AppendPossiblyCompressedMessage(
       static_cast<uint64_t>(compressed_payload->size())) {
     // Compression is not effective. Use the original frames.
     for (size_t i = 0; i < frames->size(); ++i) {
-      scoped_ptr<WebSocketFrame> frame = std::move((*frames)[i]);
+      std::unique_ptr<WebSocketFrame> frame = std::move((*frames)[i]);
       predictor_->RecordWrittenDataFrame(frame.get());
       frames_to_write->push_back(std::move(frame));
     }
     frames->clear();
     return OK;
   }
-  scoped_ptr<WebSocketFrame> compressed(new WebSocketFrame(opcode));
+  std::unique_ptr<WebSocketFrame> compressed(new WebSocketFrame(opcode));
   compressed->header.CopyFrom((*frames)[0]->header);
   compressed->header.opcode = opcode;
   compressed->header.final = true;
@@ -282,12 +283,12 @@ int WebSocketDeflateStream::AppendPossiblyCompressedMessage(
 }
 
 int WebSocketDeflateStream::Inflate(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames) {
-  std::vector<scoped_ptr<WebSocketFrame>> frames_to_output;
-  std::vector<scoped_ptr<WebSocketFrame>> frames_passed;
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames) {
+  std::vector<std::unique_ptr<WebSocketFrame>> frames_to_output;
+  std::vector<std::unique_ptr<WebSocketFrame>> frames_passed;
   frames->swap(frames_passed);
   for (size_t i = 0; i < frames_passed.size(); ++i) {
-    scoped_ptr<WebSocketFrame> frame(std::move(frames_passed[i]));
+    std::unique_ptr<WebSocketFrame> frame(std::move(frames_passed[i]));
     frames_passed[i] = NULL;
     DVLOG(3) << "Input frame: opcode=" << frame->header.opcode
              << " final=" << frame->header.final
@@ -342,7 +343,7 @@ int WebSocketDeflateStream::Inflate(
       while (inflater_.CurrentOutputSize() >= kChunkSize ||
              frame->header.final) {
         size_t size = std::min(kChunkSize, inflater_.CurrentOutputSize());
-        scoped_ptr<WebSocketFrame> inflated(
+        std::unique_ptr<WebSocketFrame> inflated(
             new WebSocketFrame(WebSocketFrameHeader::kOpCodeText));
         scoped_refptr<IOBufferWithSize> data = inflater_.GetOutput(size);
         bool is_final = !inflater_.CurrentOutputSize() && frame->header.final;
@@ -375,7 +376,7 @@ int WebSocketDeflateStream::Inflate(
 }
 
 int WebSocketDeflateStream::InflateAndReadIfNecessary(
-    std::vector<scoped_ptr<WebSocketFrame>>* frames,
+    std::vector<std::unique_ptr<WebSocketFrame>>* frames,
     const CompletionCallback& callback) {
   int result = Inflate(frames);
   while (result == ERR_IO_PENDING) {

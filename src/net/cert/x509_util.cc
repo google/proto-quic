@@ -4,7 +4,8 @@
 
 #include "net/cert/x509_util.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "base/time/time.h"
 #include "crypto/ec_private_key.h"
 #include "crypto/rsa_private_key.h"
@@ -61,9 +62,9 @@ bool CreateKeyAndSelfSignedCert(const std::string& subject,
                                 uint32_t serial_number,
                                 base::Time not_valid_before,
                                 base::Time not_valid_after,
-                                scoped_ptr<crypto::RSAPrivateKey>* key,
+                                std::unique_ptr<crypto::RSAPrivateKey>* key,
                                 std::string* der_cert) {
-  scoped_ptr<crypto::RSAPrivateKey> new_key(
+  std::unique_ptr<crypto::RSAPrivateKey> new_key(
       crypto::RSAPrivateKey::Create(kRSAKeyLength));
   if (!new_key.get())
     return false;

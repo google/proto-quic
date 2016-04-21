@@ -6,9 +6,9 @@
 #define NET_SPDY_SPDY_WRITE_QUEUE_H_
 
 #include <deque>
+#include <memory>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
@@ -38,7 +38,7 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
   // must remain non-NULL until the write is dequeued or removed.
   void Enqueue(RequestPriority priority,
                SpdyFrameType frame_type,
-               scoped_ptr<SpdyBufferProducer> frame_producer,
+               std::unique_ptr<SpdyBufferProducer> frame_producer,
                const base::WeakPtr<SpdyStream>& stream);
 
   // Dequeues the frame producer with the highest priority that was
@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
   // fills in |frame_type|, |frame_producer|, and |stream| if
   // successful -- otherwise, just returns false.
   bool Dequeue(SpdyFrameType* frame_type,
-               scoped_ptr<SpdyBufferProducer>* frame_producer,
+               std::unique_ptr<SpdyBufferProducer>* frame_producer,
                base::WeakPtr<SpdyStream>* stream);
 
   // Removes all pending writes for the given stream, which must be

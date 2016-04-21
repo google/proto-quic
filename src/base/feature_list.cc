@@ -143,7 +143,7 @@ std::vector<std::string> FeatureList::SplitFeatureListString(
 }
 
 // static
-void FeatureList::InitializeInstance(const std::string& enable_features,
+bool FeatureList::InitializeInstance(const std::string& enable_features,
                                      const std::string& disable_features) {
   // We want to initialize a new instance here to support command-line features
   // in testing better. For example, we initialize a dummy instance in
@@ -153,17 +153,20 @@ void FeatureList::InitializeInstance(const std::string& enable_features,
   // For example, we initialize an instance in chrome/browser/
   // chrome_browser_main.cc and do not override it in content/browser/
   // browser_main_loop.cc.
+  bool instance_existed_before = false;
   if (g_instance) {
     if (g_instance->initialized_from_command_line_)
-      return;
+      return false;
 
     delete g_instance;
     g_instance = nullptr;
+    instance_existed_before = true;
   }
 
-  scoped_ptr<base::FeatureList> feature_list(new base::FeatureList);
+  std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
   feature_list->InitializeFromCommandLine(enable_features, disable_features);
   base::FeatureList::SetInstance(std::move(feature_list));
+  return !instance_existed_before;
 }
 
 // static
@@ -172,7 +175,7 @@ FeatureList* FeatureList::GetInstance() {
 }
 
 // static
-void FeatureList::SetInstance(scoped_ptr<FeatureList> instance) {
+void FeatureList::SetInstance(std::unique_ptr<FeatureList> instance) {
   DCHECK(!g_instance);
   instance->FinalizeInitialization();
 

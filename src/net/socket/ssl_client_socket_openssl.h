@@ -10,13 +10,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/containers/mru_cache.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "build/build_config.h"
 #include "net/base/completion_callback.h"
@@ -53,7 +53,7 @@ class SSLClientSocketOpenSSL : public SSLClientSocket {
   // The given hostname will be compared with the name(s) in the server's
   // certificate during the SSL handshake.  ssl_config specifies the SSL
   // settings.
-  SSLClientSocketOpenSSL(scoped_ptr<ClientSocketHandle> transport_socket,
+  SSLClientSocketOpenSSL(std::unique_ptr<ClientSocketHandle> transport_socket,
                          const HostPortPair& host_and_port,
                          const SSLConfig& ssl_config,
                          const SSLClientSocketContext& context);
@@ -279,7 +279,7 @@ class SSLClientSocketOpenSSL : public SSLClientSocket {
   int transport_write_error_;
 
   // Set when Connect finishes.
-  scoped_ptr<PeerCertificateChain> server_cert_chain_;
+  std::unique_ptr<PeerCertificateChain> server_cert_chain_;
   scoped_refptr<X509Certificate> server_cert_;
   CertVerifyResult server_cert_verify_result_;
   bool completed_connect_;
@@ -296,7 +296,7 @@ class SSLClientSocketOpenSSL : public SSLClientSocket {
   std::vector<SSLClientCertType> cert_key_types_;
 
   CertVerifier* const cert_verifier_;
-  scoped_ptr<CertVerifier::Request> cert_verifier_request_;
+  std::unique_ptr<CertVerifier::Request> cert_verifier_request_;
   base::TimeTicks start_cert_verification_time_;
 
   // Certificate Transparency: Verifier and result holder.
@@ -313,7 +313,7 @@ class SSLClientSocketOpenSSL : public SSLClientSocket {
   SSL* ssl_;
   BIO* transport_bio_;
 
-  scoped_ptr<ClientSocketHandle> transport_;
+  std::unique_ptr<ClientSocketHandle> transport_;
   const HostPortPair host_and_port_;
   SSLConfig ssl_config_;
   // ssl_session_cache_shard_ is an opaque string that partitions the SSL
@@ -338,7 +338,7 @@ class SSLClientSocketOpenSSL : public SSLClientSocket {
   NextProtoStatus npn_status_;
   std::string npn_proto_;
   // Written by the |channel_id_service_|.
-  scoped_ptr<crypto::ECPrivateKey> channel_id_key_;
+  std::unique_ptr<crypto::ECPrivateKey> channel_id_key_;
   // True if a channel ID was sent.
   bool channel_id_sent_;
   // True if the current session was newly-established, but the certificate had

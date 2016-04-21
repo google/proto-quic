@@ -40,7 +40,7 @@ class QuicStreamFactoryPeer {
       QuicStreamFactory* factory,
       const HostPortPair& host_port_pair);
 
-  static scoped_ptr<QuicHttpStream> CreateFromSession(
+  static std::unique_ptr<QuicHttpStream> CreateFromSession(
       QuicStreamFactory* factory,
       QuicChromiumClientSession* session);
 

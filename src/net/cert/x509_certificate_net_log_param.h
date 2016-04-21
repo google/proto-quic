@@ -5,6 +5,8 @@
 #ifndef NET_BASE_X509_CERT_NET_LOG_PARAM_H_
 #define NET_BASE_X509_CERT_NET_LOG_PARAM_H_
 
+#include <memory>
+
 #include "net/log/net_log.h"
 
 namespace net {
@@ -12,7 +14,7 @@ namespace net {
 class X509Certificate;
 
 // Creates NetLog parameter to describe an X509Certificate.
-scoped_ptr<base::Value> NetLogX509CertificateCallback(
+std::unique_ptr<base::Value> NetLogX509CertificateCallback(
     const X509Certificate* certificate,
     NetLogCaptureMode capture_mode);
 

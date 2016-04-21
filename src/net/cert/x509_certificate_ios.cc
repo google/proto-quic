@@ -6,7 +6,6 @@
 
 #include <CommonCrypto/CommonDigest.h>
 #include <Security/Security.h>
-
 #include <cert.h>
 #include <cryptohi.h>
 #include <keyhi.h>
@@ -19,11 +18,11 @@
 #include <secerr.h>
 #include <sslerr.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/logging.h"
 #include "base/mac/scoped_cftyperef.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/time/time.h"

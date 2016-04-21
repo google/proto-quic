@@ -4,9 +4,10 @@
 
 #include "net/cert/x509_certificate.h"
 
+#include <memory>
+
 #include "base/logging.h"
 #include "base/memory/free_deleter.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/sha1.h"
@@ -41,7 +42,7 @@ typedef crypto::ScopedCAPIHandle<
 // structure and stores it in *output.
 void GetCertSubjectAltName(
     PCCERT_CONTEXT cert,
-    scoped_ptr<CERT_ALT_NAME_INFO, base::FreeDeleter>* output) {
+    std::unique_ptr<CERT_ALT_NAME_INFO, base::FreeDeleter>* output) {
   PCERT_EXTENSION extension = CertFindExtension(szOID_SUBJECT_ALT_NAME2,
                                                 cert->pCertInfo->cExtension,
                                                 cert->pCertInfo->rgExtension);
@@ -152,7 +153,7 @@ void X509Certificate::Initialize() {
   ca_fingerprint_ = CalculateCAFingerprint(intermediate_ca_certs_);
 
   const CRYPT_INTEGER_BLOB* serial = &cert_handle_->pCertInfo->SerialNumber;
-  scoped_ptr<uint8_t[]> serial_bytes(new uint8_t[serial->cbData]);
+  std::unique_ptr<uint8_t[]> serial_bytes(new uint8_t[serial->cbData]);
   for (unsigned i = 0; i < serial->cbData; i++)
     serial_bytes[i] = serial->pbData[serial->cbData - i - 1];
   serial_number_ = std::string(
@@ -170,7 +171,7 @@ void X509Certificate::GetSubjectAltName(
   if (!cert_handle_)
     return;
 
-  scoped_ptr<CERT_ALT_NAME_INFO, base::FreeDeleter> alt_name_info;
+  std::unique_ptr<CERT_ALT_NAME_INFO, base::FreeDeleter> alt_name_info;
   GetCertSubjectAltName(cert_handle_, &alt_name_info);
   CERT_ALT_NAME_INFO* alt_name = alt_name_info.get();
   if (alt_name) {

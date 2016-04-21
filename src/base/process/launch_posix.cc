@@ -22,6 +22,7 @@
 
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <set>
 
 #include "base/command_line.h"
@@ -32,7 +33,6 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/process/process.h"
 #include "base/process/process_metrics.h"
@@ -202,7 +202,7 @@ struct ScopedDIRClose {
 };
 
 // Automatically closes |DIR*|s.
-typedef scoped_ptr<DIR, ScopedDIRClose> ScopedDIR;
+typedef std::unique_ptr<DIR, ScopedDIRClose> ScopedDIR;
 
 #if defined(OS_LINUX)
 static const char kFDDir[] = "/proc/self/fd";
@@ -301,13 +301,13 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   fd_shuffle1.reserve(fd_shuffle_size);
   fd_shuffle2.reserve(fd_shuffle_size);
 
-  scoped_ptr<char* []> argv_cstr(new char* [argv.size() + 1]);
+  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
   for (size_t i = 0; i < argv.size(); i++) {
     argv_cstr[i] = const_cast<char*>(argv[i].c_str());
   }
   argv_cstr[argv.size()] = NULL;
 
-  scoped_ptr<char*[]> new_environ;
+  std::unique_ptr<char* []> new_environ;
   char* const empty_environ = NULL;
   char* const* old_environ = GetEnvironment();
   if (options.clear_environ)
@@ -552,7 +552,7 @@ static GetAppOutputInternalResult GetAppOutputInternal(
   int pipe_fd[2];
   pid_t pid;
   InjectiveMultimap fd_shuffle1, fd_shuffle2;
-  scoped_ptr<char*[]> argv_cstr(new char*[argv.size() + 1]);
+  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
 
   fd_shuffle1.reserve(3);
   fd_shuffle2.reserve(3);

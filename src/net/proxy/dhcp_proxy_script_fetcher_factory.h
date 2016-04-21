@@ -5,8 +5,9 @@
 #ifndef NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
 #define NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -42,7 +43,7 @@ class NET_EXPORT DhcpProxyScriptFetcherFactory {
   // reference to |url_request_context|. Be careful not to create cycles
   // between the fetcher and the context; you can break such cycles by calling
   // Cancel().
-  scoped_ptr<DhcpProxyScriptFetcher> Create(
+  std::unique_ptr<DhcpProxyScriptFetcher> Create(
       URLRequestContext* url_request_context);
 
   // Attempts to enable/disable the DHCP WPAD feature.  Does nothing

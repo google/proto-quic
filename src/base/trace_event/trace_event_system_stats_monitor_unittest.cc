@@ -36,7 +36,7 @@ TEST_F(TraceSystemStatsMonitorTest, TraceEventSystemStatsMonitor) {
   EXPECT_EQ(0u, TraceLog::GetInstance()->GetObserverCountForTest());
 
   // Creating a system stats monitor adds it to the TraceLog observer list.
-  scoped_ptr<TraceEventSystemStatsMonitor> system_stats_monitor(
+  std::unique_ptr<TraceEventSystemStatsMonitor> system_stats_monitor(
       new TraceEventSystemStatsMonitor(message_loop.task_runner()));
   EXPECT_EQ(1u, TraceLog::GetInstance()->GetObserverCountForTest());
   EXPECT_TRUE(

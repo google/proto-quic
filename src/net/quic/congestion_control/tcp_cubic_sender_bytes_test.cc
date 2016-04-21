@@ -5,9 +5,9 @@
 #include "net/quic/congestion_control/tcp_cubic_sender_bytes.h"
 
 #include <algorithm>
+#include <memory>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/congestion_control/rtt_stats.h"
 #include "net/quic/crypto/crypto_protocol.h"
 #include "net/quic/proto/cached_network_parameters.pb.h"
@@ -123,7 +123,7 @@ class TcpCubicSenderBytesTest : public ::testing::Test {
 
   const QuicTime::Delta one_ms_;
   MockClock clock_;
-  scoped_ptr<TcpCubicSenderBytesPeer> sender_;
+  std::unique_ptr<TcpCubicSenderBytesPeer> sender_;
   QuicPacketNumber packet_number_;
   QuicPacketNumber acked_packet_number_;
   QuicByteCount bytes_in_flight_;

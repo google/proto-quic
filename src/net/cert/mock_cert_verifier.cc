@@ -4,6 +4,8 @@
 
 #include "net/cert/mock_cert_verifier.h"
 
+#include <memory>
+
 #include "base/memory/ref_counted.h"
 #include "base/strings/pattern.h"
 #include "base/strings/string_util.h"
@@ -44,7 +46,7 @@ int MockCertVerifier::Verify(X509Certificate* cert,
                              CRLSet* crl_set,
                              CertVerifyResult* verify_result,
                              const CompletionCallback& callback,
-                             scoped_ptr<Request>* out_req,
+                             std::unique_ptr<Request>* out_req,
                              const BoundNetLog& net_log) {
   RuleList::const_iterator it;
   for (it = rules_.begin(); it != rules_.end(); ++it) {

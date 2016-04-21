@@ -137,8 +137,8 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   QuicErrorCode error_;
   bool has_header_;
   QuicPacketHeader header_;
-  scoped_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
-  scoped_ptr<QuicPublicResetPacket> public_reset_packet_;
+  std::unique_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
+  std::unique_ptr<QuicPublicResetPacket> public_reset_packet_;
   vector<QuicAckFrame> ack_frames_;
   vector<QuicStopWaitingFrame> stop_waiting_frames_;
   vector<QuicPingFrame> ping_frames_;

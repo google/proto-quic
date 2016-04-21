@@ -46,7 +46,7 @@ void BidirectionalStreamQuicImpl::Start(
     const BidirectionalStreamRequestInfo* request_info,
     const BoundNetLog& net_log,
     BidirectionalStreamImpl::Delegate* delegate,
-    scoped_ptr<base::Timer> /* timer */) {
+    std::unique_ptr<base::Timer> /* timer */) {
   DCHECK(!stream_);
 
   if (!session_) {

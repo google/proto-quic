@@ -6,11 +6,11 @@
 #define NET_DNS_DNS_CONFIG_SERVICE_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/scoped_vector.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
@@ -33,37 +33,6 @@ class IPAddress;
 // Default to 1 second timeout (before exponential backoff).
 const int64_t kDnsDefaultTimeoutMs = 1000;
 
-// Classifies nameserver address lists for histograms.
-class NET_EXPORT_PRIVATE NameServerClassifier {
- public:
-  // This is used in a histogram (AsyncDNS.NameServersType); add new entries
-  // right before MAX_VALUE.
-  enum NameServersType {
-    NAME_SERVERS_TYPE_NONE,
-    NAME_SERVERS_TYPE_GOOGLE_PUBLIC_DNS,
-    NAME_SERVERS_TYPE_PRIVATE,
-    NAME_SERVERS_TYPE_PUBLIC,
-    NAME_SERVERS_TYPE_MIXED,
-    NAME_SERVERS_TYPE_MAX_VALUE
-  };
-
-  NameServerClassifier();
-  ~NameServerClassifier();
-
-  NameServersType GetNameServersType(
-      const std::vector<IPEndPoint>& nameservers) const;
-
- private:
-  struct NameServerTypeRule;
-
-  void AddRule(const char* pattern_string, NameServersType type);
-  NameServersType GetNameServerType(const IPAddress& address) const;
-  static NameServersType MergeNameServersTypes(NameServersType a,
-                                               NameServersType b);
-
-  ScopedVector<NameServerTypeRule> rules_;
-};
-
 // DnsConfig stores configuration of the system resolver.
 struct NET_EXPORT_PRIVATE DnsConfig {
   DnsConfig();
@@ -78,7 +47,7 @@ struct NET_EXPORT_PRIVATE DnsConfig {
 
   // Returns a Value representation of |this|. For performance reasons, the
   // Value only contains the number of hosts rather than the full list.
-  scoped_ptr<base::Value> ToValue() const;
+  std::unique_ptr<base::Value> ToValue() const;
 
   bool IsValid() const {
     return !nameservers.empty();
@@ -133,7 +102,7 @@ class NET_EXPORT_PRIVATE DnsConfigService
   typedef base::Callback<void(const DnsConfig& config)> CallbackType;
 
   // Creates the platform-specific DnsConfigService.
-  static scoped_ptr<DnsConfigService> CreateSystemService();
+  static std::unique_ptr<DnsConfigService> CreateSystemService();
 
   DnsConfigService();
   virtual ~DnsConfigService();
@@ -206,8 +175,6 @@ class NET_EXPORT_PRIVATE DnsConfigService
 
   // Started in Invalidate*, cleared in On*Read.
   base::OneShotTimer timer_;
-
-  NameServerClassifier classifier_;
 
   DISALLOW_COPY_AND_ASSIGN(DnsConfigService);
 };

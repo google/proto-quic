@@ -5,10 +5,10 @@
 #ifndef NET_HTTP_HTTP_AUTH_H_
 #define NET_HTTP_HTTP_AUTH_H_
 
+#include <memory>
 #include <set>
 #include <string>
 
-#include "base/memory/scoped_ptr.h"
 #include "net/base/auth.h"
 #include "net/base/net_export.h"
 #include "net/http/http_util.h"
@@ -143,7 +143,7 @@ class NET_EXPORT_PRIVATE HttpAuth {
       const GURL& origin,
       const std::set<Scheme>& disabled_schemes,
       const BoundNetLog& net_log,
-      scoped_ptr<HttpAuthHandler>* handler);
+      std::unique_ptr<HttpAuthHandler>* handler);
 
   // Handle a 401/407 response from a server/proxy after a previous
   // authentication attempt. For connection-based authentication schemes, the

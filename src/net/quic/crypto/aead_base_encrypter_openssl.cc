@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/quic/crypto/aead_base_encrypter.h"
-
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <string.h>
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
+#include "net/quic/crypto/aead_base_encrypter.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_utils.h"
 

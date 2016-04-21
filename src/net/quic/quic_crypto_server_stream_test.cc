@@ -5,9 +5,9 @@
 #include "net/quic/quic_crypto_server_stream.h"
 
 #include <map>
+#include <memory>
 #include <vector>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/crypto/crypto_framer.h"
@@ -185,7 +185,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
 
   // Server state
   PacketSavingConnection* server_connection_;
-  scoped_ptr<TestQuicSpdyServerSession> server_session_;
+  std::unique_ptr<TestQuicSpdyServerSession> server_session_;
   QuicCryptoServerConfig server_crypto_config_;
   QuicCompressedCertsCache server_compressed_certs_cache_;
   QuicServerId server_id_;
@@ -193,10 +193,10 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // Client state
   PacketSavingConnection* client_connection_;
   QuicCryptoClientConfig client_crypto_config_;
-  scoped_ptr<TestQuicSpdyClientSession> client_session_;
+  std::unique_ptr<TestQuicSpdyClientSession> client_session_;
 
   CryptoHandshakeMessage message_;
-  scoped_ptr<QuicData> message_data_;
+  std::unique_ptr<QuicData> message_data_;
   CryptoTestUtils::FakeClientOptions client_options_;
   DelayedVerifyStrikeRegisterClient* strike_register_client_;
 

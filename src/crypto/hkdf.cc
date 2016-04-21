@@ -7,8 +7,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/hmac.h"
 
 namespace crypto {
@@ -55,7 +56,7 @@ HKDF::HKDF(const base::StringPiece& secret,
   output_.resize(n * kSHA256HashLength);
   base::StringPiece previous;
 
-  scoped_ptr<char[]> buf(new char[kSHA256HashLength + info.size() + 1]);
+  std::unique_ptr<char[]> buf(new char[kSHA256HashLength + info.size() + 1]);
   uint8_t digest[kSHA256HashLength];
 
   HMAC hmac(HMAC::SHA256);

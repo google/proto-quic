@@ -189,10 +189,6 @@ class QuicClient : public QuicClientBase,
                      const IPEndPoint& peer_address,
                      const QuicReceivedPacket& packet) override;
 
-  QuicClientPushPromiseIndex* push_promise_index() {
-    return &push_promise_index_;
-  }
-
   virtual QuicPacketWriter* CreateQuicPacketWriter();
 
   // If |fd| is an open UDP socket, unregister and close it. Otherwise, do
@@ -263,9 +259,6 @@ class QuicClient : public QuicClientBase,
   // Map mapping created UDP sockets to their addresses. By using linked hash
   // map, the order of socket creation can be recorded.
   linked_hash_map<int, IPEndPoint> fd_address_map_;
-
-  // For requests to claim matching push promised streams.
-  QuicClientPushPromiseIndex push_promise_index_;
 
   // Listens for full responses.
   scoped_ptr<ResponseListener> response_listener_;

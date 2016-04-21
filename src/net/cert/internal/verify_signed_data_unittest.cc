@@ -4,6 +4,7 @@
 
 #include "net/cert/internal/verify_signed_data.h"
 
+#include <memory>
 #include <set>
 
 #include "net/cert/internal/signature_algorithm.h"
@@ -60,7 +61,7 @@ void RunTestCaseUsingPolicy(VerifyResult expected_result,
 
   ASSERT_TRUE(ReadTestDataFromPemFile(path, mappings));
 
-  scoped_ptr<SignatureAlgorithm> signature_algorithm =
+  std::unique_ptr<SignatureAlgorithm> signature_algorithm =
       SignatureAlgorithm::CreateFromDer(der::Input(&algorithm));
   ASSERT_TRUE(signature_algorithm);
 

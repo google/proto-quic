@@ -7,11 +7,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/pickle.h"
 #include "base/strings/string_piece.h"
 #include "base/trace_event/trace_event_impl.h"
@@ -67,13 +67,13 @@ class BASE_EXPORT TracedValue : public ConvertableToTraceFormat {
   // a copy-and-translation of the base::Value into the equivalent TracedValue.
   // TODO(primiano): migrate the (three) existing clients to the cheaper
   // SetValue(TracedValue) API. crbug.com/495628.
-  void SetValue(const char* name, scoped_ptr<base::Value> value);
+  void SetValue(const char* name, std::unique_ptr<base::Value> value);
   void SetBaseValueWithCopiedName(base::StringPiece name,
                                   const base::Value& value);
   void AppendBaseValue(const base::Value& value);
 
   // Public for tests only.
-  scoped_ptr<base::Value> ToBaseValue() const;
+  std::unique_ptr<base::Value> ToBaseValue() const;
 
  private:
   Pickle pickle_;

@@ -559,8 +559,8 @@ SystemMemoryInfoKB::SystemMemoryInfoKB() {
 SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
     default;
 
-scoped_ptr<Value> SystemMemoryInfoKB::ToValue() const {
-  scoped_ptr<DictionaryValue> res(new DictionaryValue());
+std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
+  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
 
   res->SetInteger("total", total);
   res->SetInteger("free", free);
@@ -772,8 +772,8 @@ SystemDiskInfo::SystemDiskInfo() {
 
 SystemDiskInfo::SystemDiskInfo(const SystemDiskInfo& other) = default;
 
-scoped_ptr<Value> SystemDiskInfo::ToValue() const {
-  scoped_ptr<DictionaryValue> res(new DictionaryValue());
+std::unique_ptr<Value> SystemDiskInfo::ToValue() const {
+  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.
@@ -898,8 +898,8 @@ bool GetSystemDiskInfo(SystemDiskInfo* diskinfo) {
 }
 
 #if defined(OS_CHROMEOS)
-scoped_ptr<Value> SwapInfo::ToValue() const {
-  scoped_ptr<DictionaryValue> res(new DictionaryValue());
+std::unique_ptr<Value> SwapInfo::ToValue() const {
+  std::unique_ptr<DictionaryValue> res(new DictionaryValue());
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.

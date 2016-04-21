@@ -5,10 +5,10 @@
 #ifndef NET_CERT_INTERNAL_PARSE_OCSP_H_
 #define NET_CERT_INTERNAL_PARSE_OCSP_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "base/memory/scoped_ptr.h"
 #include "net/base/hash_value.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
@@ -212,7 +212,7 @@ struct NET_EXPORT OCSPResponse {
 
   ResponseStatus status;
   der::Input data;
-  scoped_ptr<SignatureAlgorithm> signature_algorithm;
+  std::unique_ptr<SignatureAlgorithm> signature_algorithm;
   der::BitString signature;
   bool has_certs;
   std::vector<der::Input> certs;

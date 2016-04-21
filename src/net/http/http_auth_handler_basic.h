@@ -28,7 +28,7 @@ class NET_EXPORT_PRIVATE HttpAuthHandlerBasic : public HttpAuthHandler {
                           CreateReason reason,
                           int digest_nonce_count,
                           const BoundNetLog& net_log,
-                          scoped_ptr<HttpAuthHandler>* handler) override;
+                          std::unique_ptr<HttpAuthHandler>* handler) override;
   };
 
   HttpAuth::AuthorizationResult HandleAnotherChallenge(

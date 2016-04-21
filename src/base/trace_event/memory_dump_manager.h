@@ -94,7 +94,8 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   //  - The |mdp| will be deleted at some point in the near future.
   //  - Its deletion will not happen concurrently with the OnMemoryDump() call.
   // Note that OnMemoryDump() calls can still happen after this method returns.
-  void UnregisterAndDeleteDumpProviderSoon(scoped_ptr<MemoryDumpProvider> mdp);
+  void UnregisterAndDeleteDumpProviderSoon(
+      std::unique_ptr<MemoryDumpProvider> mdp);
 
   // Requests a memory dump. The dump might happen or not depending on the
   // filters and categories specified when enabling tracing.
@@ -181,7 +182,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
 
     // Used to transfer ownership for UnregisterAndDeleteDumpProviderSoon().
     // nullptr in all other cases.
-    scoped_ptr<MemoryDumpProvider> owned_dump_provider;
+    std::unique_ptr<MemoryDumpProvider> owned_dump_provider;
 
     // Human readable name, for debugging and testing. Not necessarily unique.
     const char* const name;
@@ -226,7 +227,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
     // being dumped from the current process. Typically each process dumps only
     // for itself, unless dump providers specify a different |target_process| in
     // MemoryDumpProvider::Options.
-    std::map<ProcessId, scoped_ptr<ProcessMemoryDump>> process_dumps;
+    std::map<ProcessId, std::unique_ptr<ProcessMemoryDump>> process_dumps;
 
     // The arguments passed to the initial CreateProcessDump() request.
     const MemoryDumpRequestArgs req_args;
@@ -269,7 +270,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
 
   static void SetInstanceForTesting(MemoryDumpManager* instance);
   static void FinalizeDumpAndAddToTrace(
-      scoped_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
+      std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
 
   // Enable heap profiling if kEnableHeapProfiling is specified.
   void EnableHeapProfilingIfNeeded();
@@ -285,7 +286,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   // the MDP while registration. On failure to do so, skips and continues to
   // next MDP.
   void SetupNextMemoryDump(
-      scoped_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
+      std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
 
   // Invokes OnMemoryDump() of the next MDP and calls SetupNextMemoryDump() at
   // the end to continue the ProcessMemoryDump. Should be called on the MDP task
@@ -328,7 +329,7 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
 
   // Thread used for MemoryDumpProviders which don't specify a task runner
   // affinity.
-  scoped_ptr<Thread> dump_thread_;
+  std::unique_ptr<Thread> dump_thread_;
 
   // The unique id of the child process. This is created only for tracing and is
   // expected to be valid only when tracing is enabled.

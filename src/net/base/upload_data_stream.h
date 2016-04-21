@@ -7,10 +7,10 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 
@@ -89,7 +89,7 @@ class NET_EXPORT UploadDataStream {
   virtual bool IsInMemory() const;
 
   // Returns a list of element readers owned by |this|, if it has any.
-  virtual const std::vector<scoped_ptr<UploadElementReader>>*
+  virtual const std::vector<std::unique_ptr<UploadElementReader>>*
   GetElementReaders() const;
 
  protected:

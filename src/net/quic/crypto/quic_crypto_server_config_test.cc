@@ -9,6 +9,7 @@
 #include "base/stl_util.h"
 #include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/crypto/cert_compressor.h"
+#include "net/quic/crypto/chacha20_poly1305_rfc7539_encrypter.h"
 #include "net/quic/crypto/crypto_handshake_message.h"
 #include "net/quic/crypto/crypto_secret_boxer.h"
 #include "net/quic/crypto/crypto_server_config_protobuf.h"
@@ -233,7 +234,7 @@ TEST(QuicCryptoServerConfigTest, ServerConfig) {
                                 CryptoTestUtils::ProofSourceForTesting());
   MockClock clock;
 
-  scoped_ptr<CryptoHandshakeMessage> message(server.AddDefaultConfig(
+  std::unique_ptr<CryptoHandshakeMessage> message(server.AddDefaultConfig(
       rand, &clock, QuicCryptoServerConfig::ConfigOptions()));
 
   // The default configuration should have AES-GCM and at least one ChaCha20
@@ -243,7 +244,11 @@ TEST(QuicCryptoServerConfigTest, ServerConfig) {
   ASSERT_EQ(QUIC_NO_ERROR, message->GetTaglist(kAEAD, &aead_tags, &aead_len));
   vector<QuicTag> aead(aead_tags, aead_tags + aead_len);
   EXPECT_THAT(aead, ::testing::Contains(kAESG));
-  EXPECT_LE(2u, aead.size());
+  if (ChaCha20Poly1305Rfc7539Encrypter::IsSupported()) {
+    EXPECT_LE(2u, aead.size());
+  } else {
+    EXPECT_LE(1u, aead.size());
+  }
 }
 
 TEST(QuicCryptoServerConfigTest, ServerConfigDisableChaCha) {
@@ -254,7 +259,7 @@ TEST(QuicCryptoServerConfigTest, ServerConfigDisableChaCha) {
                                 CryptoTestUtils::ProofSourceForTesting());
   MockClock clock;
 
-  scoped_ptr<CryptoHandshakeMessage> message(server.AddDefaultConfig(
+  std::unique_ptr<CryptoHandshakeMessage> message(server.AddDefaultConfig(
       rand, &clock, QuicCryptoServerConfig::ConfigOptions()));
 
   // The default configuration should only contain AES-GCM when ChaCha20 has
@@ -277,7 +282,7 @@ TEST(QuicCryptoServerConfigTest, GetOrbitIsCalledWithoutTheStrikeRegisterLock) {
   server.SetStrikeRegisterClient(strike_register);
 
   QuicCryptoServerConfig::ConfigOptions options;
-  scoped_ptr<CryptoHandshakeMessage> message(
+  std::unique_ptr<CryptoHandshakeMessage> message(
       server.AddDefaultConfig(rand, &clock, options));
   EXPECT_TRUE(strike_register->is_known_orbit_called());
 }
@@ -367,7 +372,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
 
   // Compress a similar certs which only differs in common certs field.
   static const uint64_t set_hash = 42;
-  scoped_ptr<CommonCertSets> common_sets(
+  std::unique_ptr<CommonCertSets> common_sets(
       CryptoTestUtils::MockCommonCertSets(certs[0], set_hash, 1));
   StringPiece different_common_certs(reinterpret_cast<const char*>(&set_hash),
                                      sizeof(set_hash));
@@ -458,9 +463,9 @@ class SourceAddressTokenTest : public ::testing::Test {
   QuicCryptoServerConfig server_;
   QuicCryptoServerConfigPeer peer_;
   // Stores the primary config.
-  scoped_ptr<CryptoHandshakeMessage> primary_config_;
-  scoped_ptr<QuicServerConfigProtobuf> override_config_protobuf_;
-  scoped_ptr<CryptoHandshakeMessage> override_config_;
+  std::unique_ptr<CryptoHandshakeMessage> primary_config_;
+  std::unique_ptr<QuicServerConfigProtobuf> override_config_protobuf_;
+  std::unique_ptr<CryptoHandshakeMessage> override_config_;
 };
 
 // Test basic behavior of source address tokens including being specific
@@ -567,7 +572,7 @@ TEST(QuicCryptoServerConfigTest, ValidateServerNonce) {
 
   StringPiece message("hello world");
   const size_t key_size = CryptoSecretBoxer::GetKeySize();
-  scoped_ptr<uint8_t[]> key(new uint8_t[key_size]);
+  std::unique_ptr<uint8_t[]> key(new uint8_t[key_size]);
   memset(key.get(), 0x11, key_size);
 
   CryptoSecretBoxer boxer;

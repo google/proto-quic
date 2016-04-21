@@ -5,6 +5,7 @@
 #include "net/cert/ct_policy_enforcer.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -206,11 +207,11 @@ struct EVComplianceDetails {
   base::Version whitelist_version;
 };
 
-scoped_ptr<base::Value> NetLogEVComplianceCheckResultCallback(
+std::unique_ptr<base::Value> NetLogEVComplianceCheckResultCallback(
     X509Certificate* cert,
     EVComplianceDetails* details,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("certificate", NetLogX509CertificateCallback(cert, capture_mode));
   dict->SetBoolean("policy_enforcement_required", true);
   dict->SetBoolean("build_timely", details->build_timely);
@@ -224,12 +225,12 @@ scoped_ptr<base::Value> NetLogEVComplianceCheckResultCallback(
   return std::move(dict);
 }
 
-scoped_ptr<base::Value> NetLogCertComplianceCheckResultCallback(
+std::unique_ptr<base::Value> NetLogCertComplianceCheckResultCallback(
     X509Certificate* cert,
     bool build_timely,
     ct::CertPolicyCompliance compliance,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("certificate", NetLogX509CertificateCallback(cert, capture_mode));
   dict->SetBoolean("build_timely", build_timely);
   dict->SetString("ct_compliance_status",

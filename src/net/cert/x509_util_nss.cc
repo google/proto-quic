@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/cert/x509_util.h"
 #include "net/cert/x509_util_nss.h"
 
 #include <cert.h>  // Must be included before certdb.h
@@ -15,9 +14,10 @@
 #include <secmod.h>
 #include <secport.h>
 
+#include <memory>
+
 #include "base/debug/leak_annotations.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/pickle.h"
 #include "base/strings/stringprintf.h"
@@ -28,6 +28,7 @@
 #include "crypto/scoped_nss_types.h"
 #include "crypto/third_party/nss/chromium-nss.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 
 namespace net {
 

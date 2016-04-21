@@ -847,7 +847,7 @@ int HttpAuthGSSAPI::GetNextSecurityToken(const std::string& spn,
   ScopedName scoped_name(principal_name, library_);
 
   std::vector<char> channel_bindings_data;
-  scoped_ptr<gss_channel_bindings_struct> gss_channel_bindings;
+  std::unique_ptr<gss_channel_bindings_struct> gss_channel_bindings;
   if (!channel_bindings.empty()) {
     gss_channel_bindings.reset(new gss_channel_bindings_struct);
     memset(gss_channel_bindings.get(), 0, sizeof(gss_channel_bindings_struct));

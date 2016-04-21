@@ -104,8 +104,8 @@ bool Thread::StartWithOptions(const Options& options) {
     type = MessageLoop::TYPE_CUSTOM;
 
   message_loop_timer_slack_ = options.timer_slack;
-  scoped_ptr<MessageLoop> message_loop = MessageLoop::CreateUnbound(
-      type, options.message_pump_factory);
+  std::unique_ptr<MessageLoop> message_loop =
+      MessageLoop::CreateUnbound(type, options.message_pump_factory);
   message_loop_ = message_loop.get();
   start_event_.Reset();
 
@@ -227,13 +227,13 @@ void Thread::ThreadMain() {
 
   // Lazily initialize the message_loop so that it can run on this thread.
   DCHECK(message_loop_);
-  scoped_ptr<MessageLoop> message_loop(message_loop_);
+  std::unique_ptr<MessageLoop> message_loop(message_loop_);
   message_loop_->BindToCurrentThread();
   message_loop_->set_thread_name(name_);
   message_loop_->SetTimerSlack(message_loop_timer_slack_);
 
 #if defined(OS_WIN)
-  scoped_ptr<win::ScopedCOMInitializer> com_initializer;
+  std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
   if (com_status_ != NONE) {
     com_initializer.reset((com_status_ == STA) ?
         new win::ScopedCOMInitializer() :

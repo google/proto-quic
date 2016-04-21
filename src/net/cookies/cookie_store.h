@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "base/callback.h"
+#include "base/callback_forward.h"
 #include "base/callback_list.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
@@ -43,6 +43,7 @@ class NET_EXPORT CookieStore {
   typedef base::CallbackList<void(const CanonicalCookie& cookie, bool removed)>
       CookieChangedCallbackList;
   typedef CookieChangedCallbackList::Subscription CookieChangedSubscription;
+  typedef base::Callback<bool(const CanonicalCookie& cookie)> CookiePredicate;
 
   virtual ~CookieStore();
 
@@ -150,21 +151,21 @@ class NET_EXPORT CookieStore {
 
   // Deletes all of the cookies that have a creation_date greater than or equal
   // to |delete_begin| and less than |delete_end|
-  // Returns the number of cookies that have been deleted.
+  // Calls |callback| with the number of cookies deleted.
   virtual void DeleteAllCreatedBetweenAsync(const base::Time& delete_begin,
                                             const base::Time& delete_end,
                                             const DeleteCallback& callback) = 0;
 
-  // Deletes all of the cookies that match the host of the given URL
-  // regardless of path and that have a creation_date greater than or
-  // equal to |delete_begin| and less then |delete_end|. This includes
-  // all http_only and secure cookies, but does not include any domain
-  // cookies that may apply to this host.
-  // Returns the number of cookies deleted.
-  virtual void DeleteAllCreatedBetweenForHostAsync(
-      const base::Time delete_begin,
-      const base::Time delete_end,
-      const GURL& url,
+  // Deletes all of the cookies that match the given predicate and that have a
+  // creation_date greater than or equal to |delete_begin| and less then
+  // |delete_end|. This includes all http_only and secure cookies. Avoid
+  // deleting cookies that could leave websites with a partial set of visible
+  // cookies.
+  // Calls |callback| with the number of cookies deleted.
+  virtual void DeleteAllCreatedBetweenWithPredicateAsync(
+      const base::Time& delete_begin,
+      const base::Time& delete_end,
+      const CookiePredicate& predicate,
       const DeleteCallback& callback) = 0;
 
   virtual void DeleteSessionCookiesAsync(const DeleteCallback&) = 0;

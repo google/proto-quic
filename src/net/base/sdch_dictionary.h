@@ -7,11 +7,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <set>
 #include <string>
 
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/base/sdch_problem_codes.h"

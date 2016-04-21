@@ -149,7 +149,7 @@ class BASE_EXPORT RegKey {
 
   HKEY key_;  // The registry key being iterated.
   REGSAM wow64access_;
-  scoped_ptr<Watcher> key_watcher_;
+  std::unique_ptr<Watcher> key_watcher_;
 
   DISALLOW_COPY_AND_ASSIGN(RegKey);
 };

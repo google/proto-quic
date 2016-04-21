@@ -5,6 +5,7 @@
 #include "base/metrics/sample_map.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 
 namespace base {
@@ -102,8 +103,8 @@ Count SampleMap::TotalCount() const {
   return count;
 }
 
-scoped_ptr<SampleCountIterator> SampleMap::Iterator() const {
-  return make_scoped_ptr(new SampleMapIterator(sample_counts_));
+std::unique_ptr<SampleCountIterator> SampleMap::Iterator() const {
+  return WrapUnique(new SampleMapIterator(sample_counts_));
 }
 
 bool SampleMap::AddSubtractImpl(SampleCountIterator* iter, Operator op) {

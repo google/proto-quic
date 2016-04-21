@@ -150,7 +150,7 @@ class QuicStreamSequencerTest : public ::testing::Test {
   MockClock clock_;
   MockQuicSpdySession session_;
   testing::StrictMock<MockStream> stream_;
-  scoped_ptr<QuicStreamSequencer> sequencer_;
+  std::unique_ptr<QuicStreamSequencer> sequencer_;
 };
 
 // TODO(rch): reorder these tests so they build on each other.

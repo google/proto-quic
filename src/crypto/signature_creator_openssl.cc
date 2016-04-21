@@ -9,8 +9,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/openssl_util.h"
 #include "crypto/rsa_private_key.h"
 #include "crypto/scoped_openssl_types.h"
@@ -45,7 +46,7 @@ int ToOpenSSLDigestType(SignatureCreator::HashAlgorithm hash_alg) {
 SignatureCreator* SignatureCreator::Create(RSAPrivateKey* key,
                                            HashAlgorithm hash_alg) {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  scoped_ptr<SignatureCreator> result(new SignatureCreator);
+  std::unique_ptr<SignatureCreator> result(new SignatureCreator);
   const EVP_MD* const digest = ToOpenSSLDigest(hash_alg);
   DCHECK(digest);
   if (!digest) {

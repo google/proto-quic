@@ -4,11 +4,11 @@
 
 #include "net/base/ip_pattern.h"
 
+#include <memory>
 #include <string>
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -126,7 +126,7 @@ bool IPPattern::ParsePattern(const std::string& ip_pattern) {
       return false;
     }
     // We'll need a pattern to match this bracketed component.
-    scoped_ptr<ComponentPattern> component_pattern(new ComponentPattern);
+    std::unique_ptr<ComponentPattern> component_pattern(new ComponentPattern);
     // Trim leading and trailing bracket before calling for parsing.
     if (!ParseComponentPattern(component.substr(1, component.size() - 2),
                                component_pattern.get())) {

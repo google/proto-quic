@@ -129,8 +129,8 @@ class AddressSorterWin : public AddressSorter {
 
     const CallbackType callback_;
     const size_t buffer_size_;
-    scoped_ptr<SOCKET_ADDRESS_LIST, base::FreeDeleter> input_buffer_;
-    scoped_ptr<SOCKET_ADDRESS_LIST, base::FreeDeleter> output_buffer_;
+    std::unique_ptr<SOCKET_ADDRESS_LIST, base::FreeDeleter> input_buffer_;
+    std::unique_ptr<SOCKET_ADDRESS_LIST, base::FreeDeleter> output_buffer_;
     bool success_;
 
     DISALLOW_COPY_AND_ASSIGN(Job);
@@ -193,10 +193,10 @@ class AddressSorterWinXP : public AddressSorter {
 }  // namespace
 
 // static
-scoped_ptr<AddressSorter> AddressSorter::CreateAddressSorter() {
+std::unique_ptr<AddressSorter> AddressSorter::CreateAddressSorter() {
   if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return scoped_ptr<AddressSorter>(new AddressSorterWinXP());
-  return scoped_ptr<AddressSorter>(new AddressSorterWin());
+    return std::unique_ptr<AddressSorter>(new AddressSorterWinXP());
+  return std::unique_ptr<AddressSorter>(new AddressSorterWin());
 }
 
 }  // namespace net

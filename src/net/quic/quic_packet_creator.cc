@@ -444,24 +444,10 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
   if (!possibly_truncated_by_length) {
     DCHECK_EQ(packet_size_, length);
   }
-  size_t encrypted_length = 0;
-  if (FLAGS_quic_inplace_encryption2) {
-    const size_t ad_len = GetStartOfEncryptedData(header);
-    encrypted_length = framer_->EncryptInPlace(
-        packet_.encryption_level, packet_.path_id, packet_.packet_number,
-        ad_len, length, encrypted_buffer_len, encrypted_buffer);
-  } else {
-    QuicPacket packet(
-        encrypted_buffer, length,
-        /* owns_buffer */ false, header.public_header.connection_id_length,
-        header.public_header.version_flag, header.public_header.multipath_flag,
-        header.public_header.packet_number_length);
-    // Immediately encrypt the packet, to ensure we don't encrypt the same
-    // packet number multiple times.
-    encrypted_length = framer_->EncryptPayload(
-        packet_.encryption_level, packet_.path_id, packet_.packet_number,
-        packet, encrypted_buffer, encrypted_buffer_len);
-  }
+  const size_t encrypted_length = framer_->EncryptInPlace(
+      packet_.encryption_level, packet_.path_id, packet_.packet_number,
+      GetStartOfEncryptedData(header), length, encrypted_buffer_len,
+      encrypted_buffer);
   if (encrypted_length == 0) {
     QUIC_BUG << "Failed to encrypt packet number " << packet_.packet_number;
     return;

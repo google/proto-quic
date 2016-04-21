@@ -9,16 +9,25 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <memory>
 #include <new>
 #include <vector>
 
 #include "base/atomicops.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_local.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+// Some new Android NDKs (64 bit) does not expose (p)valloc anymore. These
+// functions are implemented at the shim-layer level.
+#if defined(OS_ANDROID)
+extern "C" {
+void* valloc(size_t size);
+void* pvalloc(size_t size);
+}
+#endif
 
 namespace base {
 namespace allocator {
@@ -126,7 +135,7 @@ class AllocatorShimTest : public testing::Test {
   size_t reallocs_intercepted_by_size[kMaxSizeTracked];
   size_t reallocs_intercepted_by_addr[kMaxSizeTracked];
   size_t frees_intercepted_by_addr[kMaxSizeTracked];
-  scoped_ptr<ThreadLocalBoolean> did_fail_realloc_0x42_once;
+  std::unique_ptr<ThreadLocalBoolean> did_fail_realloc_0x42_once;
   subtle::Atomic32 num_new_handler_calls;
 
  private:

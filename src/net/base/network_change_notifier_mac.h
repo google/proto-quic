@@ -7,10 +7,11 @@
 
 #include <SystemConfiguration/SystemConfiguration.h>
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "net/base/network_change_notifier.h"
@@ -70,9 +71,9 @@ class NetworkChangeNotifierMac: public NetworkChangeNotifier {
   base::ScopedCFTypeRef<CFRunLoopRef> run_loop_;
 
   Forwarder forwarder_;
-  scoped_ptr<const NetworkConfigWatcherMac> config_watcher_;
+  std::unique_ptr<const NetworkConfigWatcherMac> config_watcher_;
 
-  scoped_ptr<DnsConfigServiceThread> dns_config_service_thread_;
+  std::unique_ptr<DnsConfigServiceThread> dns_config_service_thread_;
 
   DISALLOW_COPY_AND_ASSIGN(NetworkChangeNotifierMac);
 };

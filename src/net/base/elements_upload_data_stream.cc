@@ -15,7 +15,7 @@
 namespace net {
 
 ElementsUploadDataStream::ElementsUploadDataStream(
-    std::vector<scoped_ptr<UploadElementReader>> element_readers,
+    std::vector<std::unique_ptr<UploadElementReader>> element_readers,
     int64_t identifier)
     : UploadDataStream(false, identifier),
       element_readers_(std::move(element_readers)),
@@ -26,12 +26,12 @@ ElementsUploadDataStream::ElementsUploadDataStream(
 ElementsUploadDataStream::~ElementsUploadDataStream() {
 }
 
-scoped_ptr<UploadDataStream> ElementsUploadDataStream::CreateWithReader(
-    scoped_ptr<UploadElementReader> reader,
+std::unique_ptr<UploadDataStream> ElementsUploadDataStream::CreateWithReader(
+    std::unique_ptr<UploadElementReader> reader,
     int64_t identifier) {
-  std::vector<scoped_ptr<UploadElementReader>> readers;
+  std::vector<std::unique_ptr<UploadElementReader>> readers;
   readers.push_back(std::move(reader));
-  return scoped_ptr<UploadDataStream>(
+  return std::unique_ptr<UploadDataStream>(
       new ElementsUploadDataStream(std::move(readers), identifier));
 }
 
@@ -47,14 +47,14 @@ int ElementsUploadDataStream::ReadInternal(
 }
 
 bool ElementsUploadDataStream::IsInMemory() const {
-  for (const scoped_ptr<UploadElementReader>& it : element_readers_) {
+  for (const std::unique_ptr<UploadElementReader>& it : element_readers_) {
     if (!it->IsInMemory())
       return false;
   }
   return true;
 }
 
-const std::vector<scoped_ptr<UploadElementReader>>*
+const std::vector<std::unique_ptr<UploadElementReader>>*
 ElementsUploadDataStream::GetElementReaders() const {
   return &element_readers_;
 }
@@ -82,7 +82,7 @@ int ElementsUploadDataStream::InitElements(size_t start_index) {
   }
 
   uint64_t total_size = 0;
-  for (const scoped_ptr<UploadElementReader>& it : element_readers_) {
+  for (const std::unique_ptr<UploadElementReader>& it : element_readers_) {
     total_size += it->GetContentLength();
   }
   SetSize(total_size);

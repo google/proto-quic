@@ -6,7 +6,8 @@
 
 #include <windows.h>
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "base/time/time.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/windows_version.h"
@@ -44,7 +45,7 @@ IntegrityLevel GetCurrentProcessIntegrityLevel() {
     return INTEGRITY_UNKNOWN;
   }
 
-  scoped_ptr<char[]> token_label_bytes(new char[token_info_length]);
+  std::unique_ptr<char[]> token_label_bytes(new char[token_info_length]);
   if (!token_label_bytes.get())
     return INTEGRITY_UNKNOWN;
 

@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -64,7 +65,7 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
              CRLSet* crl_set,
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
-             scoped_ptr<Request>* out_req,
+             std::unique_ptr<Request>* out_req,
              const BoundNetLog& net_log) override;
 
   bool SupportsOCSPStapling() override;
@@ -159,7 +160,7 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
 
   // Removes |job| from the inflight set, and passes ownership back to the
   // caller. |job| must already be |inflight_|.
-  scoped_ptr<CertVerifierJob> RemoveJob(CertVerifierJob* job);
+  std::unique_ptr<CertVerifierJob> RemoveJob(CertVerifierJob* job);
 
   // For unit testing.
   void ClearCache() { cache_.Clear(); }

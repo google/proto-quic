@@ -5,11 +5,11 @@
 #include "net/spdy/spdy_test_utils.h"
 
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "base/base64.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/sys_byteorder.h"
 #include "net/http/transport_security_state.h"
@@ -68,7 +68,7 @@ void CompareCharArraysWithHexError(const string& description,
                                    const int expected_len) {
   const int min_len = std::min(actual_len, expected_len);
   const int max_len = std::max(actual_len, expected_len);
-  scoped_ptr<bool[]> marks(new bool[max_len]);
+  std::unique_ptr<bool[]> marks(new bool[max_len]);
   bool identical = (actual_len == expected_len);
   for (int i = 0; i < min_len; ++i) {
     if (actual[i] != expected[i]) {
@@ -91,7 +91,7 @@ void CompareCharArraysWithHexError(const string& description,
       << HexDumpWithMarks(actual, actual_len, marks.get(), max_len);
 }
 
-void SetFrameFlags(SpdyFrame* frame,
+void SetFrameFlags(SpdySerializedFrame* frame,
                    uint8_t flags,
                    SpdyMajorVersion spdy_version) {
   switch (spdy_version) {
@@ -104,7 +104,7 @@ void SetFrameFlags(SpdyFrame* frame,
   }
 }
 
-void SetFrameLength(SpdyFrame* frame,
+void SetFrameLength(SpdySerializedFrame* frame,
                     size_t length,
                     SpdyMajorVersion spdy_version) {
   switch (spdy_version) {

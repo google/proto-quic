@@ -30,11 +30,6 @@ typedef std::vector<unsigned char> IPAddressNumber;
 static const size_t kIPv4AddressSize = 4;
 static const size_t kIPv6AddressSize = 16;
 
-// Returns true if an IP address hostname is in a range reserved by the IANA.
-// Works with both IPv4 and IPv6 addresses, and only compares against a given
-// protocols's reserved ranges.
-NET_EXPORT bool IsIPAddressReserved(const IPAddressNumber& address);
-
 // Returns the string representation of an IP address.
 // For example: "192.168.0.1" or "::1". Returns the empty string when |address|
 // is invalid.
@@ -75,20 +70,6 @@ NET_EXPORT_PRIVATE bool IsIPv4Mapped(const IPAddressNumber& address);
 // on IPv4-mapped IPv6 addresses.
 NET_EXPORT_PRIVATE IPAddressNumber ConvertIPv4MappedToIPv4(
     const IPAddressNumber& address);
-
-// Compares an IP address to see if it falls within the specified IP block.
-// Returns true if it does, false otherwise.
-//
-// The IP block is given by (|ip_prefix|, |prefix_length_in_bits|) -- any
-// IP address whose |prefix_length_in_bits| most significant bits match
-// |ip_prefix| will be matched.
-//
-// In cases when an IPv4 address is being compared to an IPv6 address prefix
-// and vice versa, the IPv4 addresses will be converted to IPv4-mapped
-// (IPv6) addresses.
-NET_EXPORT_PRIVATE bool IPNumberMatchesPrefix(const IPAddressNumber& ip_number,
-                                              const IPAddressNumber& ip_prefix,
-                                              size_t prefix_length_in_bits);
 
 // Returns number of matching initial bits between the addresses |a1| and |a2|.
 unsigned CommonPrefixLength(const IPAddressNumber& a1,

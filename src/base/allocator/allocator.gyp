@@ -406,10 +406,31 @@
                 'allocator_shim_override_glibc_weak_symbols.h',
               ],
             }],
-            ['OS=="linux" and use_allocator=="none"', {
+            ['use_allocator=="none" and (OS=="linux" or (OS=="android" and _toolset == "host" and host_os == "linux"))', {
               'sources': [
                 'allocator_shim_default_dispatch_to_glibc.cc',
               ],
+            }],
+            ['OS=="android" and _toolset == "target"', {
+              'sources': [
+                'allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc',
+                'allocator_shim_override_linker_wrapped_symbols.h',
+              ],
+              # On Android all references to malloc & friends symbols are
+              # rewritten, at link time, and routed to the shim.
+              # See //base/allocator/README.md.
+              'all_dependent_settings': {
+                'ldflags': [
+                  '-Wl,-wrap,calloc',
+                  '-Wl,-wrap,free',
+                  '-Wl,-wrap,malloc',
+                  '-Wl,-wrap,memalign',
+                  '-Wl,-wrap,posix_memalign',
+                  '-Wl,-wrap,pvalloc',
+                  '-Wl,-wrap,realloc',
+                  '-Wl,-wrap,valloc',
+                ],
+              },
             }],
           ]
         },  # 'unified_allocator_shim' target.

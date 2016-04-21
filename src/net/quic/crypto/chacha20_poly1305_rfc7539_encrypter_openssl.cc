@@ -16,7 +16,7 @@ const size_t kNoncePrefixSize = 4;
 }  // namespace
 
 ChaCha20Poly1305Rfc7539Encrypter::ChaCha20Poly1305Rfc7539Encrypter()
-    : AeadBaseEncrypter(EVP_aead_chacha20_poly1305_rfc7539(),
+    : AeadBaseEncrypter(EVP_aead_chacha20_poly1305(),
                         kKeySize,
                         kAuthTagSize,
                         kNoncePrefixSize) {

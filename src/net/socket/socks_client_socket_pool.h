@@ -5,12 +5,12 @@
 #ifndef NET_SOCKET_SOCKS_CLIENT_SOCKET_POOL_H_
 #define NET_SOCKET_SOCKS_CLIENT_SOCKET_POOL_H_
 
+#include <memory>
 #include <string>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/host_port_pair.h"
 #include "net/dns/host_resolver.h"
@@ -20,6 +20,7 @@
 namespace net {
 
 class ConnectJobFactory;
+class SocketPerformanceWatcherFactory;
 class TransportClientSocketPool;
 class TransportSocketParams;
 
@@ -96,8 +97,8 @@ class SOCKSConnectJob : public ConnectJob {
 
   State next_state_;
   CompletionCallback callback_;
-  scoped_ptr<ClientSocketHandle> transport_socket_handle_;
-  scoped_ptr<StreamSocket> socket_;
+  std::unique_ptr<ClientSocketHandle> transport_socket_handle_;
+  std::unique_ptr<StreamSocket> socket_;
 
   DISALLOW_COPY_AND_ASSIGN(SOCKSConnectJob);
 };
@@ -107,12 +108,12 @@ class NET_EXPORT_PRIVATE SOCKSClientSocketPool
  public:
   typedef SOCKSSocketParams SocketParams;
 
-  SOCKSClientSocketPool(
-      int max_sockets,
-      int max_sockets_per_group,
-      HostResolver* host_resolver,
-      TransportClientSocketPool* transport_pool,
-      NetLog* net_log);
+  SOCKSClientSocketPool(int max_sockets,
+                        int max_sockets_per_group,
+                        HostResolver* host_resolver,
+                        TransportClientSocketPool* transport_pool,
+                        SocketPerformanceWatcherFactory*,
+                        NetLog* net_log);
 
   ~SOCKSClientSocketPool() override;
 
@@ -134,7 +135,7 @@ class NET_EXPORT_PRIVATE SOCKSClientSocketPool
                      ClientSocketHandle* handle) override;
 
   void ReleaseSocket(const std::string& group_name,
-                     scoped_ptr<StreamSocket> socket,
+                     std::unique_ptr<StreamSocket> socket,
                      int id) override;
 
   void FlushWithError(int error) override;
@@ -148,7 +149,7 @@ class NET_EXPORT_PRIVATE SOCKSClientSocketPool
   LoadState GetLoadState(const std::string& group_name,
                          const ClientSocketHandle* handle) const override;
 
-  scoped_ptr<base::DictionaryValue> GetInfoAsValue(
+  std::unique_ptr<base::DictionaryValue> GetInfoAsValue(
       const std::string& name,
       const std::string& type,
       bool include_nested_pools) const override;
@@ -180,7 +181,7 @@ class NET_EXPORT_PRIVATE SOCKSClientSocketPool
     ~SOCKSConnectJobFactory() override {}
 
     // ClientSocketPoolBase::ConnectJobFactory methods.
-    scoped_ptr<ConnectJob> NewConnectJob(
+    std::unique_ptr<ConnectJob> NewConnectJob(
         const std::string& group_name,
         const PoolBase::Request& request,
         ConnectJob::Delegate* delegate) const override;

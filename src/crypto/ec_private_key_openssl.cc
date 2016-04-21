@@ -13,8 +13,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
@@ -65,7 +66,7 @@ ECPrivateKey::~ECPrivateKey() {
 }
 
 ECPrivateKey* ECPrivateKey::Copy() const {
-  scoped_ptr<ECPrivateKey> copy(new ECPrivateKey);
+  std::unique_ptr<ECPrivateKey> copy(new ECPrivateKey);
   if (key_)
     copy->key_ = EVP_PKEY_up_ref(key_);
   return copy.release();
@@ -79,7 +80,7 @@ ECPrivateKey* ECPrivateKey::Create() {
   if (!ec_key.get() || !EC_KEY_generate_key(ec_key.get()))
     return NULL;
 
-  scoped_ptr<ECPrivateKey> result(new ECPrivateKey());
+  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey());
   result->key_ = EVP_PKEY_new();
   if (!result->key_ || !EVP_PKEY_set1_EC_KEY(result->key_, ec_key.get()))
     return NULL;
@@ -128,7 +129,7 @@ ECPrivateKey* ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
     return NULL;
 
   // Create a new EVP_PKEY for it.
-  scoped_ptr<ECPrivateKey> result(new ECPrivateKey);
+  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey);
   result->key_ = EVP_PKCS82PKEY(p8_decrypted.get());
   if (!result->key_ || EVP_PKEY_type(result->key_->type) != EVP_PKEY_EC)
     return NULL;

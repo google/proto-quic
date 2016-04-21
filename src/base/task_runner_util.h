@@ -7,7 +7,6 @@
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
-#include "base/callback_internal.h"
 #include "base/logging.h"
 #include "base/task_runner.h"
 
@@ -32,7 +31,7 @@ void ReplyAdapter(const Callback<void(ReplyArgType)>& callback,
   // current code that relies on this API softness has been removed.
   // http://crbug.com/162712
   if (!callback.is_null())
-    callback.Run(CallbackForward(*result));
+    callback.Run(std::move(*result));
 }
 
 }  // namespace internal

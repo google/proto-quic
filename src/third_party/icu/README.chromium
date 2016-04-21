@@ -308,3 +308,11 @@ D. Local Modifications
         http://unicode.org/cldr/trac/ticket/7969 (percent sign in ar and fa)
   - Android patch for the 2nd bug
         https://android.googlesource.com/platform/external/icu/+/56b2b8b
+
+13. Add Emoji properties support by cherry-picking from 57.1
+  - patches/emoji_props.patch
+  - Upstream change cherry-picked
+        http://bugs.icu-project.org/trac/changeset/38183
+  - source/data/in/{pnames,uprops}.icu were copied from the upstream,
+    but they're just for the record. Their contents are hard-coded
+    in the source files patched by the above patch.

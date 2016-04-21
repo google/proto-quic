@@ -4,6 +4,7 @@
 
 #include "net/cert/x509_certificate_net_log_param.h"
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,11 +14,11 @@
 
 namespace net {
 
-scoped_ptr<base::Value> NetLogX509CertificateCallback(
+std::unique_ptr<base::Value> NetLogX509CertificateCallback(
     const X509Certificate* certificate,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  scoped_ptr<base::ListValue> certs(new base::ListValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::ListValue> certs(new base::ListValue());
   std::vector<std::string> encoded_chain;
   certificate->GetPEMEncodedChain(&encoded_chain);
   for (size_t i = 0; i < encoded_chain.size(); ++i)

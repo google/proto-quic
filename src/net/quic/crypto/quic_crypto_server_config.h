@@ -9,12 +9,12 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 #include "net/base/ip_address.h"
@@ -432,7 +432,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
     // Holds the override source_address_token_boxer instance if the
     // Config is not using the default source address token boxer
     // instance provided by QuicCryptoServerConfig.
-    scoped_ptr<CryptoSecretBoxer> source_address_token_boxer_storage;
+    std::unique_ptr<CryptoSecretBoxer> source_address_token_boxer_storage;
 
    private:
     friend class base::RefCounted<Config>;
@@ -599,13 +599,13 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // active config will be promoted to primary.
   mutable QuicWallTime next_config_promotion_time_;
   // Callback to invoke when the primary config changes.
-  scoped_ptr<PrimaryConfigChangedCallback> primary_config_changed_cb_;
+  std::unique_ptr<PrimaryConfigChangedCallback> primary_config_changed_cb_;
 
   // Protects access to the pointer held by strike_register_client_.
   mutable base::Lock strike_register_client_lock_;
   // strike_register_ contains a data structure that keeps track of previously
   // observed client nonces in order to prevent replay attacks.
-  mutable scoped_ptr<StrikeRegisterClient> strike_register_client_;
+  mutable std::unique_ptr<StrikeRegisterClient> strike_register_client_;
 
   // Default source_address_token_boxer_ used to protect the
   // source-address tokens that are given to clients.  Individual
@@ -625,15 +625,15 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // server_nonce_strike_register_ contains a data structure that keeps track of
   // previously observed server nonces from this server, in order to prevent
   // replay attacks.
-  mutable scoped_ptr<StrikeRegister> server_nonce_strike_register_;
+  mutable std::unique_ptr<StrikeRegister> server_nonce_strike_register_;
 
   // proof_source_ contains an object that can provide certificate chains and
   // signatures.
-  scoped_ptr<ProofSource> proof_source_;
+  std::unique_ptr<ProofSource> proof_source_;
 
   // ephemeral_key_source_ contains an object that caches ephemeral keys for a
   // short period of time.
-  scoped_ptr<EphemeralKeySource> ephemeral_key_source_;
+  std::unique_ptr<EphemeralKeySource> ephemeral_key_source_;
 
   // These fields store configuration values. See the comments for their
   // respective setter functions.

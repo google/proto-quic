@@ -235,7 +235,7 @@ QuicCryptoServerConfig::QuicCryptoServerConfig(
   server_nonce_entropy->RandBytes(server_nonce_orbit_,
                                   sizeof(server_nonce_orbit_));
   const size_t key_size = server_nonce_boxer_.GetKeySize();
-  scoped_ptr<uint8_t[]> key_bytes(new uint8_t[key_size]);
+  std::unique_ptr<uint8_t[]> key_bytes(new uint8_t[key_size]);
   server_nonce_entropy->RandBytes(key_bytes.get(), key_size);
 
   server_nonce_boxer_.SetKeys(
@@ -255,7 +255,7 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
 
   const string curve25519_private_key =
       Curve25519KeyExchange::NewPrivateKey(rand);
-  scoped_ptr<Curve25519KeyExchange> curve25519(
+  std::unique_ptr<Curve25519KeyExchange> curve25519(
       Curve25519KeyExchange::New(curve25519_private_key));
   StringPiece curve25519_public_value = curve25519->public_value();
 
@@ -274,7 +274,8 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
   string p256_private_key;
   if (options.p256) {
     p256_private_key = P256KeyExchange::NewPrivateKey();
-    scoped_ptr<P256KeyExchange> p256(P256KeyExchange::New(p256_private_key));
+    std::unique_ptr<P256KeyExchange> p256(
+        P256KeyExchange::New(p256_private_key));
     StringPiece p256_public_value = p256->public_value();
 
     DCHECK_LT(p256_public_value.size(), (1U << 24));
@@ -294,12 +295,9 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
   } else {
     msg.SetTaglist(kKEXS, kC255, 0);
   }
-  if (FLAGS_quic_crypto_server_config_default_has_chacha20) {
-    if (ChaCha20Poly1305Rfc7539Encrypter::IsSupported()) {
-      msg.SetTaglist(kAEAD, kAESG, kCC12, kCC20, 0);
-    } else {
-      msg.SetTaglist(kAEAD, kAESG, kCC12, 0);
-    }
+  if (FLAGS_quic_crypto_server_config_default_has_chacha20 &&
+      ChaCha20Poly1305Rfc7539Encrypter::IsSupported()) {
+    msg.SetTaglist(kAEAD, kAESG, kCC20, 0);
   } else {
     msg.SetTaglist(kAEAD, kAESG, 0);
   }
@@ -335,9 +333,9 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
   if (options.id.empty()) {
     // We need to ensure that the SCID changes whenever the server config does
     // thus we make it a hash of the rest of the server config.
-    scoped_ptr<QuicData> serialized(
+    std::unique_ptr<QuicData> serialized(
         CryptoFramer::ConstructHandshakeMessage(msg));
-    scoped_ptr<SecureHash> hash(SecureHash::Create(SecureHash::SHA256));
+    std::unique_ptr<SecureHash> hash(SecureHash::Create(SecureHash::SHA256));
     hash->Update(serialized->data(), serialized->length());
 
     char scid_bytes[16];
@@ -350,9 +348,11 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
   // everything but itself and so extra tags should be added prior to the
   // preceeding if block.
 
-  scoped_ptr<QuicData> serialized(CryptoFramer::ConstructHandshakeMessage(msg));
+  std::unique_ptr<QuicData> serialized(
+      CryptoFramer::ConstructHandshakeMessage(msg));
 
-  scoped_ptr<QuicServerConfigProtobuf> config(new QuicServerConfigProtobuf);
+  std::unique_ptr<QuicServerConfigProtobuf> config(
+      new QuicServerConfigProtobuf);
   config->set_config(serialized->AsStringPiece());
   QuicServerConfigProtobuf::PrivateKey* curve25519_key = config->add_key();
   curve25519_key->set_tag(kC255);
@@ -370,7 +370,7 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
 CryptoHandshakeMessage* QuicCryptoServerConfig::AddConfig(
     QuicServerConfigProtobuf* protobuf,
     const QuicWallTime now) {
-  scoped_ptr<CryptoHandshakeMessage> msg(
+  std::unique_ptr<CryptoHandshakeMessage> msg(
       CryptoFramer::ParseMessage(protobuf->config()));
 
   if (!msg.get()) {
@@ -406,7 +406,7 @@ CryptoHandshakeMessage* QuicCryptoServerConfig::AddDefaultConfig(
     QuicRandom* rand,
     const QuicClock* clock,
     const ConfigOptions& options) {
-  scoped_ptr<QuicServerConfigProtobuf> config(
+  std::unique_ptr<QuicServerConfigProtobuf> config(
       GenerateConfig(rand, clock, options));
   return AddConfig(config.get(), clock->WallNow());
 }
@@ -694,7 +694,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
   }
 
   if (!info.sni.empty()) {
-    scoped_ptr<char[]> sni_tmp(new char[info.sni.length() + 1]);
+    std::unique_ptr<char[]> sni_tmp(new char[info.sni.length() + 1]);
     memcpy(sni_tmp.get(), info.sni.data(), info.sni.length());
     sni_tmp[info.sni.length()] = 0;
     params->sni = CryptoUtils::NormalizeHostname(sni_tmp.get());
@@ -755,7 +755,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
       *error_details = "CETV decryption failure";
       return QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER;
     }
-    scoped_ptr<CryptoHandshakeMessage> cetv(
+    std::unique_ptr<CryptoHandshakeMessage> cetv(
         CryptoFramer::ParseMessage(StringPiece(plaintext, plaintext_length)));
     if (!cetv.get()) {
       *error_details = "CETV parse error";
@@ -796,7 +796,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
             key_exchange, rand, clock->ApproximateNow(), public_value,
             &forward_secure_public_value);
   } else {
-    scoped_ptr<KeyExchange> forward_secure_key_exchange(
+    std::unique_ptr<KeyExchange> forward_secure_key_exchange(
         key_exchange->NewKeyPair(rand));
     forward_secure_public_value =
         forward_secure_key_exchange->public_value().as_string();
@@ -1320,7 +1320,7 @@ const string QuicCryptoServerConfig::CompressChain(
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfig::ParseConfigProtobuf(
     QuicServerConfigProtobuf* protobuf) {
-  scoped_ptr<CryptoHandshakeMessage> msg(
+  std::unique_ptr<CryptoHandshakeMessage> msg(
       CryptoFramer::ParseMessage(protobuf->config()));
 
   if (msg->tag() != kSCFG) {
@@ -1456,7 +1456,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
       return nullptr;
     }
 
-    scoped_ptr<KeyExchange> ka;
+    std::unique_ptr<KeyExchange> ka;
     switch (tag) {
       case kC255:
         ka.reset(Curve25519KeyExchange::New(private_key));

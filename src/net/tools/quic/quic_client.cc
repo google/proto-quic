@@ -63,11 +63,12 @@ QuicClient::QuicClient(IPEndPoint server_address,
                        const QuicConfig& config,
                        EpollServer* epoll_server,
                        ProofVerifier* proof_verifier)
-    : QuicClientBase(server_id,
-                     supported_versions,
-                     config,
-                     new QuicEpollConnectionHelper(epoll_server),
-                     proof_verifier),
+    : QuicClientBase(
+          server_id,
+          supported_versions,
+          config,
+          new QuicEpollConnectionHelper(epoll_server, QuicAllocator::SIMPLE),
+          proof_verifier),
       server_address_(server_address),
       local_port_(0),
       epoll_server_(epoll_server),
@@ -280,7 +281,7 @@ void QuicClient::SendRequest(const BalsaHeaders& headers,
                              StringPiece body,
                              bool fin) {
   QuicClientPushPromiseIndex::TryHandle* handle;
-  QuicAsyncStatus rv = push_promise_index_.Try(
+  QuicAsyncStatus rv = push_promise_index()->Try(
       SpdyBalsaUtils::RequestHeadersToSpdyHeaders(headers), this, &handle);
   if (rv == QUIC_SUCCESS)
     return;

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/macros.h"
 #include "base/profiler/win32_stack_frame_unwinder.h"
 
 #include <windows.h>
+
 #include <utility>
+
+#include "base/macros.h"
+#include "base/memory/ptr_util.h"
 
 namespace base {
 
@@ -109,8 +112,7 @@ Win32StackFrameUnwinder::UnwindFunctions::~UnwindFunctions() {}
 Win32StackFrameUnwinder::UnwindFunctions::UnwindFunctions() {}
 
 Win32StackFrameUnwinder::Win32StackFrameUnwinder()
-    : Win32StackFrameUnwinder(make_scoped_ptr(new Win32UnwindFunctions)) {
-}
+    : Win32StackFrameUnwinder(WrapUnique(new Win32UnwindFunctions)) {}
 
 Win32StackFrameUnwinder::~Win32StackFrameUnwinder() {}
 
@@ -178,8 +180,7 @@ bool Win32StackFrameUnwinder::TryUnwind(CONTEXT* context,
 }
 
 Win32StackFrameUnwinder::Win32StackFrameUnwinder(
-    scoped_ptr<UnwindFunctions> unwind_functions)
-    : at_top_frame_(true),
-      unwind_functions_(std::move(unwind_functions)) {}
+    std::unique_ptr<UnwindFunctions> unwind_functions)
+    : at_top_frame_(true), unwind_functions_(std::move(unwind_functions)) {}
 
 }  // namespace base

@@ -4,15 +4,16 @@
 
 #include "crypto/rsa_private_key.h"
 
-#include <openssl/bytestring.h>
 #include <openssl/bn.h>
+#include <openssl/bytestring.h>
 #include <openssl/evp.h>
 #include <openssl/mem.h>
 #include <openssl/rsa.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
@@ -31,7 +32,7 @@ RSAPrivateKey* RSAPrivateKey::Create(uint16_t num_bits) {
   if (!RSA_generate_key_ex(rsa_key.get(), num_bits, bn.get(), NULL))
     return NULL;
 
-  scoped_ptr<RSAPrivateKey> result(new RSAPrivateKey);
+  std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
   result->key_ = EVP_PKEY_new();
   if (!result->key_ || !EVP_PKEY_set1_RSA(result->key_, rsa_key.get()))
     return NULL;
@@ -50,7 +51,7 @@ RSAPrivateKey* RSAPrivateKey::CreateFromPrivateKeyInfo(
   if (!pkey || CBS_len(&cbs) != 0 || EVP_PKEY_id(pkey.get()) != EVP_PKEY_RSA)
     return nullptr;
 
-  scoped_ptr<RSAPrivateKey> result(new RSAPrivateKey);
+  std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
   result->key_ = pkey.release();
   return result.release();
 }
@@ -75,7 +76,7 @@ RSAPrivateKey::~RSAPrivateKey() {
 }
 
 RSAPrivateKey* RSAPrivateKey::Copy() const {
-  scoped_ptr<RSAPrivateKey> copy(new RSAPrivateKey());
+  std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey());
   ScopedRSA rsa(EVP_PKEY_get1_RSA(key_));
   if (!rsa)
     return NULL;

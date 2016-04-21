@@ -5,9 +5,10 @@
 #include <windows.h>
 #include <sddl.h>
 
+#include <memory>
+
 #include "base/command_line.h"
 #include "base/memory/free_deleter.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/shared_memory.h"
 #include "base/process/process.h"
 #include "base/rand_util.h"
@@ -88,7 +89,8 @@ win::ScopedHandle ReadHandleFromPipe(HANDLE pipe) {
 void WriteHandleToPipe(HANDLE pipe, HANDLE handle) {
   uint32_t handle_as_int = base::win::HandleToUint32(handle);
 
-  scoped_ptr<char, base::FreeDeleter> buffer(static_cast<char*>(malloc(1000)));
+  std::unique_ptr<char, base::FreeDeleter> buffer(
+      static_cast<char*>(malloc(1000)));
   size_t index = 0;
   while (handle_as_int > 0) {
     buffer.get()[index] = handle_as_int % 10;

@@ -11,6 +11,7 @@
 #include "base/time/time.h"
 #include "net/base/host_mapping_rules.h"
 #include "net/base/host_port_pair.h"
+#include "net/base/parse_number.h"
 #include "net/base/port_util.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_response_headers.h"
@@ -168,7 +169,8 @@ void HttpStreamFactory::ProcessAlternateProtocol(
       break;
     }
 
-    if (!base::StringToInt(port_protocol_vector[0], &port) ||
+    if (!ParseInt32(port_protocol_vector[0], ParseIntFormat::NON_NEGATIVE,
+                    &port) ||
         port == 0 || !IsPortValid(port)) {
       DVLOG(1) << kAlternateProtocolHeader
                << " header has unrecognizable port: "

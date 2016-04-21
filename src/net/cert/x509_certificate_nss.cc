@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/cert/x509_certificate.h"
-
 #include <cert.h>
 #include <cryptohi.h>
 #include <keyhi.h>
@@ -14,14 +12,16 @@
 #include <secder.h>
 #include <sechash.h>
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
+#include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_nss.h"
 
 namespace net {

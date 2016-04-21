@@ -80,7 +80,7 @@ bool WinHeapDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   //
   // This is inherently racy as is, but it's not something that we observe a lot
   // in Chrome, the heaps tend to be created at startup only.
-  scoped_ptr<HANDLE[]> all_heaps(new HANDLE[number_of_heaps]);
+  std::unique_ptr<HANDLE[]> all_heaps(new HANDLE[number_of_heaps]);
   if (::GetProcessHeaps(number_of_heaps, all_heaps.get()) != number_of_heaps)
     return false;
 

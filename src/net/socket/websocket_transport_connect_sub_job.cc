@@ -137,7 +137,7 @@ int WebSocketTransportConnectSubJob::DoTransportConnect() {
   next_state_ = STATE_TRANSPORT_CONNECT_COMPLETE;
   AddressList one_address(CurrentAddress());
   transport_socket_ = client_socket_factory()->CreateTransportClientSocket(
-      one_address, net_log().net_log(), net_log().source());
+      one_address, nullptr, net_log().net_log(), net_log().source());
   // This use of base::Unretained() is safe because transport_socket_ is
   // destroyed in the destructor.
   return transport_socket_->Connect(base::Bind(

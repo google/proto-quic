@@ -22,13 +22,13 @@
 #include <deque>
 #include <list>
 #include <map>
+#include <memory>
 #include <queue>
 #include <string>
 #include <vector>
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
@@ -455,7 +455,6 @@ class NET_EXPORT_PRIVATE QuicConnection
   // QuicPacketGenerator::DelegateInterface
   bool ShouldGeneratePacket(HasRetransmittableData retransmittable,
                             IsHandshake handshake) override;
-  void PopulateAckFrame(QuicAckFrame* ack) override;
   const QuicFrame GetUpdatedAckFrame() override;
   void PopulateStopWaitingFrame(QuicStopWaitingFrame* stop_waiting) override;
 
@@ -910,7 +909,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool save_crypto_packets_as_termination_packets_;
 
   // Contains the connection close packets if the connection has been closed.
-  scoped_ptr<std::vector<QuicEncryptedPacket*>> termination_packets_;
+  std::unique_ptr<std::vector<QuicEncryptedPacket*>> termination_packets_;
 
   // Determines whether or not a connection close packet is sent to the peer
   // after idle timeout due to lack of network activity.

@@ -62,7 +62,7 @@ string P256KeyExchange::NewPrivateKey() {
     DVLOG(1) << "Can't convert private key to string";
     return string();
   }
-  scoped_ptr<uint8_t[]> private_key(new uint8_t[key_len]);
+  std::unique_ptr<uint8_t[]> private_key(new uint8_t[key_len]);
   uint8_t* keyp = private_key.get();
   if (!i2d_ECPrivateKey(key.get(), &keyp)) {
     DVLOG(1) << "Can't convert private key to string.";

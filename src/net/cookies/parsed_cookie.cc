@@ -179,7 +179,7 @@ ParsedCookie::~ParsedCookie() {
 }
 
 bool ParsedCookie::IsValid() const {
-  return !pairs_.empty();
+  return !pairs_.empty() && IsSameSiteAttributeValid();
 }
 
 CookieSameSite ParsedCookie::SameSite() const {
@@ -504,6 +504,10 @@ void ParsedCookie::ClearAttributePair(size_t index) {
       --*indexes[i];
   }
   pairs_.erase(pairs_.begin() + index);
+}
+
+bool ParsedCookie::IsSameSiteAttributeValid() const {
+  return same_site_index_ == 0 || SameSite() != CookieSameSite::DEFAULT_MODE;
 }
 
 }  // namespace

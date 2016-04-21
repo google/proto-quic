@@ -16,12 +16,12 @@ SpdyBufferProducer::SpdyBufferProducer() {}
 
 SpdyBufferProducer::~SpdyBufferProducer() {}
 
-SimpleBufferProducer::SimpleBufferProducer(scoped_ptr<SpdyBuffer> buffer)
+SimpleBufferProducer::SimpleBufferProducer(std::unique_ptr<SpdyBuffer> buffer)
     : buffer_(std::move(buffer)) {}
 
 SimpleBufferProducer::~SimpleBufferProducer() {}
 
-scoped_ptr<SpdyBuffer> SimpleBufferProducer::ProduceBuffer() {
+std::unique_ptr<SpdyBuffer> SimpleBufferProducer::ProduceBuffer() {
   DCHECK(buffer_);
   return std::move(buffer_);
 }

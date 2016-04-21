@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -72,7 +72,7 @@ struct NET_EXPORT WebSocketFrameHeader {
         payload_length(0) {}
 
   // Create a clone of this object on the heap.
-  scoped_ptr<WebSocketFrameHeader> Clone() const;
+  std::unique_ptr<WebSocketFrameHeader> Clone() const;
 
   // Overwrite this object with the fields from |source|.
   void CopyFrom(const WebSocketFrameHeader& source);
@@ -130,7 +130,7 @@ struct NET_EXPORT WebSocketFrameChunk {
 
   // Non-null |header| is provided only if this chunk is the first part of
   // a series of chunks.
-  scoped_ptr<WebSocketFrameHeader> header;
+  std::unique_ptr<WebSocketFrameHeader> header;
 
   // Indicates this part is the last chunk of a frame.
   bool final_chunk;

@@ -176,7 +176,7 @@ class NET_EXPORT ProxyConfig {
   void ClearAutomaticSettings();
 
   // Creates a Value dump of this configuration.
-  scoped_ptr<base::DictionaryValue> ToValue() const;
+  std::unique_ptr<base::DictionaryValue> ToValue() const;
 
   ProxyRules& proxy_rules() {
     return proxy_rules_;

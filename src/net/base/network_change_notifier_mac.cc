@@ -54,7 +54,7 @@ class NetworkChangeNotifierMac::DnsConfigServiceThread : public base::Thread {
   void CleanUp() override { service_.reset(); }
 
  private:
-  scoped_ptr<DnsConfigService> service_;
+  std::unique_ptr<DnsConfigService> service_;
 
   DISALLOW_COPY_AND_ASSIGN(DnsConfigServiceThread);
 };

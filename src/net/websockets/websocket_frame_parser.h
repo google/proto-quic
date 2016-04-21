@@ -8,11 +8,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/websockets/websocket_errors.h"
 #include "net/websockets/websocket_frame.h"
@@ -40,7 +40,7 @@ class NET_EXPORT WebSocketFrameParser {
   // websocket_frame.h for more details.
   bool Decode(const char* data,
               size_t length,
-              std::vector<scoped_ptr<WebSocketFrameChunk>>* frame_chunks);
+              std::vector<std::unique_ptr<WebSocketFrameChunk>>* frame_chunks);
 
   // Returns kWebSocketNormalClosure if the parser has not failed to decode
   // WebSocket frames. Otherwise returns WebSocketError which is defined in
@@ -63,7 +63,7 @@ class NET_EXPORT WebSocketFrameParser {
   // available at this moment, so the receiver could make use of frame header
   // information. If the end of frame is reached, this function clears
   // |current_frame_header_|, |frame_offset_| and |masking_key_|.
-  scoped_ptr<WebSocketFrameChunk> DecodeFramePayload(bool first_chunk);
+  std::unique_ptr<WebSocketFrameChunk> DecodeFramePayload(bool first_chunk);
 
   // Internal buffer to store the data to parse.
   std::vector<char> buffer_;
@@ -73,7 +73,7 @@ class NET_EXPORT WebSocketFrameParser {
 
   // Frame header and masking key of the current frame.
   // |masking_key_| is filled with zeros if the current frame is not masked.
-  scoped_ptr<WebSocketFrameHeader> current_frame_header_;
+  std::unique_ptr<WebSocketFrameHeader> current_frame_header_;
   WebSocketMaskingKey masking_key_;
 
   // Amount of payload data read so far for the current frame.

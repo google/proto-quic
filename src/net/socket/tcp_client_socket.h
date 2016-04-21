@@ -7,9 +7,10 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/address_list.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -20,19 +21,23 @@
 
 namespace net {
 
+class SocketPerformanceWatcher;
+
 // A client socket that uses TCP as the transport layer.
 class NET_EXPORT TCPClientSocket : public StreamSocket {
  public:
   // The IP address(es) and port number to connect to.  The TCP socket will try
   // each IP address in the list until it succeeds in establishing a
   // connection.
-  TCPClientSocket(const AddressList& addresses,
-                  net::NetLog* net_log,
-                  const net::NetLog::Source& source);
+  TCPClientSocket(
+      const AddressList& addresses,
+      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+      net::NetLog* net_log,
+      const net::NetLog::Source& source);
 
   // Adopts the given, connected socket and then acts as if Connect() had been
   // called. This function is used by TCPServerSocket and for testing.
-  TCPClientSocket(scoped_ptr<TCPSocket> connected_socket,
+  TCPClientSocket(std::unique_ptr<TCPSocket> connected_socket,
                   const IPEndPoint& peer_address);
 
   ~TCPClientSocket() override;
@@ -104,11 +109,18 @@ class NET_EXPORT TCPClientSocket : public StreamSocket {
   // disconnected.
   void EmitTCPMetricsHistogramsOnDisconnect();
 
-  scoped_ptr<TCPSocket> socket_;
+  // Socket performance statistics (such as RTT) are reported to the
+  // |socket_performance_watcher_|. May be nullptr.
+  // |socket_performance_watcher_| is owned by |socket_|. If non-null,
+  // |socket_performance_watcher_| is guaranteed to be destroyed when |socket_|
+  // is destroyed.
+  SocketPerformanceWatcher* socket_performance_watcher_;
+
+  std::unique_ptr<TCPSocket> socket_;
 
   // Local IP address and port we are bound to. Set to NULL if Bind()
   // wasn't called (in that case OS chooses address/port).
-  scoped_ptr<IPEndPoint> bind_address_;
+  std::unique_ptr<IPEndPoint> bind_address_;
 
   // The list of addresses we should try in order to establish a connection.
   AddressList addresses_;

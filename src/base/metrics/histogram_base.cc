@@ -6,11 +6,11 @@
 
 #include <limits.h>
 
+#include <memory>
 #include <utility>
 
 #include "base/json/json_string_value_serializer.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/histogram.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/sparse_histogram.h"
@@ -105,9 +105,9 @@ uint32_t HistogramBase::FindCorruption(const HistogramSamples& samples) const {
 void HistogramBase::WriteJSON(std::string* output) const {
   Count count;
   int64_t sum;
-  scoped_ptr<ListValue> buckets(new ListValue());
+  std::unique_ptr<ListValue> buckets(new ListValue());
   GetCountAndBucketData(&count, &sum, buckets.get());
-  scoped_ptr<DictionaryValue> parameters(new DictionaryValue());
+  std::unique_ptr<DictionaryValue> parameters(new DictionaryValue());
   GetParameters(parameters.get());
 
   JSONStringValueSerializer serializer(output);

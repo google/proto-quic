@@ -21,7 +21,7 @@ class ChannelIDService;
 class NET_EXPORT_PRIVATE ChannelIDKeyChromium : public ChannelIDKey {
  public:
   explicit ChannelIDKeyChromium(
-      scoped_ptr<crypto::ECPrivateKey> ec_private_key);
+      std::unique_ptr<crypto::ECPrivateKey> ec_private_key);
   ~ChannelIDKeyChromium() override;
 
   // ChannelIDKey interface
@@ -30,7 +30,7 @@ class NET_EXPORT_PRIVATE ChannelIDKeyChromium : public ChannelIDKey {
   std::string SerializeKey() const override;
 
  private:
-  scoped_ptr<crypto::ECPrivateKey> ec_private_key_;
+  std::unique_ptr<crypto::ECPrivateKey> ec_private_key_;
 };
 
 // ChannelIDSourceChromium implements the QUIC ChannelIDSource interface.
@@ -41,7 +41,7 @@ class ChannelIDSourceChromium : public ChannelIDSource {
 
   // ChannelIDSource interface
   QuicAsyncStatus GetChannelIDKey(const std::string& hostname,
-                                  scoped_ptr<ChannelIDKey>* channel_id_key,
+                                  std::unique_ptr<ChannelIDKey>* channel_id_key,
                                   ChannelIDSourceCallback* callback) override;
 
  private:

@@ -56,7 +56,7 @@ TraceEvent::TraceEvent()
 TraceEvent::~TraceEvent() {
 }
 
-void TraceEvent::MoveFrom(scoped_ptr<TraceEvent> other) {
+void TraceEvent::MoveFrom(std::unique_ptr<TraceEvent> other) {
   timestamp_ = other->timestamp_;
   thread_timestamp_ = other->thread_timestamp_;
   duration_ = other->duration_;
@@ -94,7 +94,7 @@ void TraceEvent::Initialize(
     const char** arg_names,
     const unsigned char* arg_types,
     const unsigned long long* arg_values,
-    scoped_ptr<ConvertableToTraceFormat>* convertable_values,
+    std::unique_ptr<ConvertableToTraceFormat>* convertable_values,
     unsigned int flags) {
   timestamp_ = timestamp;
   thread_timestamp_ = thread_timestamp;
@@ -293,10 +293,10 @@ void TraceEvent::AppendAsJSON(
   // Category group checked at category creation time.
   DCHECK(!strchr(name_, '"'));
   StringAppendF(out, "{\"pid\":%i,\"tid\":%i,\"ts\":%" PRId64
-                     ","
-                     "\"ph\":\"%c\",\"cat\":\"%s\",\"name\":\"%s\",\"args\":",
-                process_id, thread_id, time_int64, phase_, category_group_name,
-                name_);
+                     ",\"ph\":\"%c\",\"cat\":\"%s\",\"name\":",
+                process_id, thread_id, time_int64, phase_, category_group_name);
+  EscapeJSONString(name_, true, out);
+  *out += ",\"args\":";
 
   // Output argument names and values, stop at first NULL argument name.
   // TODO(oysteine): The dual predicates here is a bit ugly; if the filtering

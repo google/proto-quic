@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/memory/shared_memory.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/atomicops.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
-#include "base/memory/shared_memory.h"
 #include "base/memory/shared_memory_handle.h"
 #include "base/process/kill.h"
 #include "base/rand_util.h"
@@ -246,8 +248,8 @@ TEST(SharedMemoryTest, MultipleThreads) {
   int threadcounts[] = { 1, kNumThreads };
   for (size_t i = 0; i < arraysize(threadcounts); i++) {
     int numthreads = threadcounts[i];
-    scoped_ptr<PlatformThreadHandle[]> thread_handles;
-    scoped_ptr<MultipleThreadMain*[]> thread_delegates;
+    std::unique_ptr<PlatformThreadHandle[]> thread_handles;
+    std::unique_ptr<MultipleThreadMain* []> thread_delegates;
 
     thread_handles.reset(new PlatformThreadHandle[numthreads]);
     thread_delegates.reset(new MultipleThreadMain*[numthreads]);
@@ -279,8 +281,8 @@ TEST(SharedMemoryTest, AnonymousPrivate) {
   bool rv;
   const uint32_t kDataSize = 8192;
 
-  scoped_ptr<SharedMemory[]> memories(new SharedMemory[count]);
-  scoped_ptr<int*[]> pointers(new int*[count]);
+  std::unique_ptr<SharedMemory[]> memories(new SharedMemory[count]);
+  std::unique_ptr<int* []> pointers(new int*[count]);
   ASSERT_TRUE(memories.get());
   ASSERT_TRUE(pointers.get());
 

@@ -5,9 +5,10 @@
 #ifndef NET_CERT_CERT_DATABASE_H_
 #define NET_CERT_CERT_DATABASE_H_
 
+#include <memory>
+
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
 
@@ -115,7 +116,7 @@ class NET_EXPORT CertDatabase {
 #if defined(OS_MACOSX) && !defined(OS_IOS)
   class Notifier;
   friend class Notifier;
-  scoped_ptr<Notifier> notifier_;
+  std::unique_ptr<Notifier> notifier_;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(CertDatabase);

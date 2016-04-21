@@ -14,22 +14,29 @@
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
+#include "net/base/socket_performance_watcher.h"
 
 namespace net {
 
-TCPClientSocket::TCPClientSocket(const AddressList& addresses,
-                                 net::NetLog* net_log,
-                                 const net::NetLog::Source& source)
-    : socket_(new TCPSocket(net_log, source)),
+TCPClientSocket::TCPClientSocket(
+    const AddressList& addresses,
+    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+    net::NetLog* net_log,
+    const net::NetLog::Source& source)
+    : socket_performance_watcher_(socket_performance_watcher.get()),
+      socket_(new TCPSocket(std::move(socket_performance_watcher),
+                            net_log,
+                            source)),
       addresses_(addresses),
       current_address_index_(-1),
       next_connect_state_(CONNECT_STATE_NONE),
       previously_disconnected_(false),
       total_received_bytes_(0) {}
 
-TCPClientSocket::TCPClientSocket(scoped_ptr<TCPSocket> connected_socket,
+TCPClientSocket::TCPClientSocket(std::unique_ptr<TCPSocket> connected_socket,
                                  const IPEndPoint& peer_address)
-    : socket_(std::move(connected_socket)),
+    : socket_performance_watcher_(nullptr),
+      socket_(std::move(connected_socket)),
       addresses_(AddressList(peer_address)),
       current_address_index_(0),
       next_connect_state_(CONNECT_STATE_NONE),
@@ -151,6 +158,11 @@ int TCPClientSocket::DoConnect() {
       }
     }
   }
+
+  // Notify |socket_performance_watcher_| only if the |socket_| is reused to
+  // connect to a different IP Address.
+  if (socket_performance_watcher_ && current_address_index_ != 0)
+    socket_performance_watcher_->OnConnectionChanged();
 
   // |socket_| is owned by this class and the callback won't be run once
   // |socket_| is gone. Therefore, it is safe to use base::Unretained() here.

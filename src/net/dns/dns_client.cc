@@ -31,7 +31,7 @@ class DnsClientImpl : public DnsClient {
     session_ = NULL;
     if (config.IsValid() && !config.unhandled_options) {
       ClientSocketFactory* factory = ClientSocketFactory::GetDefaultFactory();
-      scoped_ptr<DnsSocketPool> socket_pool(
+      std::unique_ptr<DnsSocketPool> socket_pool(
           config.randomize_ports ? DnsSocketPool::CreateDefault(factory)
                                  : DnsSocketPool::CreateNull(factory));
       session_ = new DnsSession(config, std::move(socket_pool),
@@ -52,8 +52,8 @@ class DnsClientImpl : public DnsClient {
 
  private:
   scoped_refptr<DnsSession> session_;
-  scoped_ptr<DnsTransactionFactory> factory_;
-  scoped_ptr<AddressSorter> address_sorter_;
+  std::unique_ptr<DnsTransactionFactory> factory_;
+  std::unique_ptr<AddressSorter> address_sorter_;
 
   NetLog* net_log_;
 };
@@ -61,8 +61,8 @@ class DnsClientImpl : public DnsClient {
 }  // namespace
 
 // static
-scoped_ptr<DnsClient> DnsClient::CreateClient(NetLog* net_log) {
-  return scoped_ptr<DnsClient>(new DnsClientImpl(net_log));
+std::unique_ptr<DnsClient> DnsClient::CreateClient(NetLog* net_log) {
+  return std::unique_ptr<DnsClient>(new DnsClientImpl(net_log));
 }
 
 }  // namespace net

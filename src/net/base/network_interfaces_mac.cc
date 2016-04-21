@@ -7,12 +7,13 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <set>
 #include <sys/types.h>
+
+#include <memory>
+#include <set>
 
 #include "base/files/file_path.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
@@ -204,12 +205,12 @@ bool GetNetworkListImpl(NetworkInterfaceList* networks,
         }
         IPEndPoint netmask;
         if (netmask.FromSockAddr(interface->ifa_netmask, addr_size)) {
-          prefix_length = MaskPrefixLength(netmask.address().bytes());
+          prefix_length = MaskPrefixLength(netmask.address());
         }
       }
       networks->push_back(NetworkInterface(
           name, name, if_nametoindex(name.c_str()), connection_type,
-          address.address().bytes(), prefix_length, ip_attributes));
+          address.address(), prefix_length, ip_attributes));
     }
   }
 
@@ -231,7 +232,7 @@ bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
     return false;
   }
 
-  scoped_ptr<internal::IPAttributesGetterMac> ip_attributes_getter;
+  std::unique_ptr<internal::IPAttributesGetterMac> ip_attributes_getter;
 
 #if !defined(OS_IOS)
   ip_attributes_getter.reset(new IPAttributesGetterMacImpl());

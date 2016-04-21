@@ -5,7 +5,8 @@
 #ifndef NET_DNS_DNS_CLIENT_H_
 #define NET_DNS_DNS_CLIENT_H_
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "net/base/net_export.h"
 
 namespace net {
@@ -36,7 +37,7 @@ class NET_EXPORT DnsClient {
   virtual AddressSorter* GetAddressSorter() = 0;
 
   // Creates default client.
-  static scoped_ptr<DnsClient> CreateClient(NetLog* net_log);
+  static std::unique_ptr<DnsClient> CreateClient(NetLog* net_log);
 };
 
 }  // namespace net

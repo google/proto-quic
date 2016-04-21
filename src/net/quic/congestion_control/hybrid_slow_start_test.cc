@@ -4,8 +4,9 @@
 
 #include "net/quic/congestion_control/hybrid_slow_start.h"
 
+#include <memory>
+
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -19,7 +20,7 @@ class HybridSlowStartTest : public ::testing::Test {
   void SetUp() override { slow_start_.reset(new HybridSlowStart()); }
   const QuicTime::Delta one_ms_;
   const QuicTime::Delta rtt_;
-  scoped_ptr<HybridSlowStart> slow_start_;
+  std::unique_ptr<HybridSlowStart> slow_start_;
 };
 
 TEST_F(HybridSlowStartTest, Simple) {

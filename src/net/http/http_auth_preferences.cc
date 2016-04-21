@@ -62,9 +62,9 @@ bool HttpAuthPreferences::CanDelegate(const GURL& auth_origin) const {
 void HttpAuthPreferences::set_server_whitelist(
     const std::string& server_whitelist) {
   if (server_whitelist.empty()) {
-    security_manager_->SetDefaultWhitelist(scoped_ptr<HttpAuthFilter>());
+    security_manager_->SetDefaultWhitelist(std::unique_ptr<HttpAuthFilter>());
   } else {
-    security_manager_->SetDefaultWhitelist(scoped_ptr<HttpAuthFilter>(
+    security_manager_->SetDefaultWhitelist(std::unique_ptr<HttpAuthFilter>(
         new net::HttpAuthFilterWhitelist(server_whitelist)));
   }
 }
@@ -72,9 +72,9 @@ void HttpAuthPreferences::set_server_whitelist(
 void HttpAuthPreferences::set_delegate_whitelist(
     const std::string& delegate_whitelist) {
   if (delegate_whitelist.empty()) {
-    security_manager_->SetDelegateWhitelist(scoped_ptr<HttpAuthFilter>());
+    security_manager_->SetDelegateWhitelist(std::unique_ptr<HttpAuthFilter>());
   } else {
-    security_manager_->SetDelegateWhitelist(scoped_ptr<HttpAuthFilter>(
+    security_manager_->SetDelegateWhitelist(std::unique_ptr<HttpAuthFilter>(
         new net::HttpAuthFilterWhitelist(delegate_whitelist)));
   }
 }

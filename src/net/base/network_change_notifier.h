@@ -7,10 +7,10 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list_threadsafe.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
@@ -562,13 +562,13 @@ class NET_EXPORT NetworkChangeNotifier {
       network_observer_list_;
 
   // The current network state. Hosts DnsConfig, exposed via GetDnsConfig.
-  scoped_ptr<NetworkState> network_state_;
+  std::unique_ptr<NetworkState> network_state_;
 
   // A little-piggy-back observer that simply logs UMA histogram data.
-  scoped_ptr<HistogramWatcher> histogram_watcher_;
+  std::unique_ptr<HistogramWatcher> histogram_watcher_;
 
   // Computes NetworkChange signal from IPAddress and ConnectionType signals.
-  scoped_ptr<NetworkChangeCalculator> network_change_calculator_;
+  std::unique_ptr<NetworkChangeCalculator> network_change_calculator_;
 
   // Set true to disable non-test notifications (to prevent flakes in tests).
   static bool test_notifications_only_;

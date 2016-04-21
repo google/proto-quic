@@ -37,6 +37,11 @@ class BASE_EXPORT MessagePumpWin : public MessagePump {
 
     // Used to count how many Run() invocations are on the stack.
     int run_depth;
+
+    // Used to help diagnose hangs.
+    // TODO(stanisc): crbug.com/596190: Remove these once the bug is fixed.
+    int schedule_work_error_count;
+    Time last_schedule_work_error_time;
   };
 
   virtual void DoRunLoop() = 0;

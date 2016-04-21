@@ -8,11 +8,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -67,7 +67,7 @@ class NET_EXPORT ChunkedUploadDataStream : public UploadDataStream {
   // allowed.  All writers write to the same stream, and once one of them
   // appends data with |is_done| being true, no other writers may be used to
   // append data.
-  scoped_ptr<Writer> CreateWriter();
+  std::unique_ptr<Writer> CreateWriter();
 
   // Adds data to the stream. |is_done| should be true if this is the last
   // data to be appended. |data_len| must not be 0 unless |is_done| is true.
@@ -92,7 +92,7 @@ class NET_EXPORT ChunkedUploadDataStream : public UploadDataStream {
   // True once all data has been appended to the stream.
   bool all_data_appended_;
 
-  std::vector<scoped_ptr<std::vector<char>>> upload_data_;
+  std::vector<std::unique_ptr<std::vector<char>>> upload_data_;
 
   // Buffer to write the next read's data to. Only set when a call to
   // ReadInternal reads no data.

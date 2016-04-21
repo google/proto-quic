@@ -5,11 +5,11 @@
 #ifndef NET_PROXY_PROXY_RESOLVER_FACTORY_H_
 #define NET_PROXY_PROXY_RESOLVER_FACTORY_H_
 
+#include <memory>
 #include <set>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/proxy/proxy_resolver_script_data.h"
@@ -40,9 +40,9 @@ class NET_EXPORT ProxyResolverFactory {
   // the ProxyResolverFactory is deleted.
   virtual int CreateProxyResolver(
       const scoped_refptr<ProxyResolverScriptData>& pac_script,
-      scoped_ptr<ProxyResolver>* resolver,
+      std::unique_ptr<ProxyResolver>* resolver,
       const net::CompletionCallback& callback,
-      scoped_ptr<Request>* request) = 0;
+      std::unique_ptr<Request>* request) = 0;
 
   // The PAC script backend can be specified to the ProxyResolverFactory either
   // via URL, or via the javascript text itself. If |expects_pac_bytes| is true,

@@ -7,10 +7,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 // TODO(wtc): replace scoped_array by std::vector.
-#include "base/memory/scoped_ptr.h"
 #include "base/sys_byteorder.h"
 
 namespace crypto {
@@ -171,7 +171,7 @@ bool GenerateHMACKey(size_t key_size_in_bits,
                      ALG_ID alg,
                      ScopedHCRYPTPROV* provider,
                      ScopedHCRYPTKEY* key,
-                     scoped_ptr<BYTE[]>* raw_key) {
+                     std::unique_ptr<BYTE[]>* raw_key) {
   DCHECK(provider);
   DCHECK(key);
   DCHECK(raw_key);
@@ -188,7 +188,7 @@ bool GenerateHMACKey(size_t key_size_in_bits,
     return false;
 
   DWORD key_size_in_bytes = static_cast<DWORD>(key_size_in_bits / 8);
-  scoped_ptr<BYTE[]> random(new BYTE[key_size_in_bytes]);
+  std::unique_ptr<BYTE[]> random(new BYTE[key_size_in_bytes]);
   ok = CryptGenRandom(safe_provider, key_size_in_bytes, random.get());
   if (!ok)
     return false;
@@ -323,7 +323,7 @@ SymmetricKey* SymmetricKey::GenerateRandomKey(Algorithm algorithm,
   ScopedHCRYPTKEY key;
 
   bool ok = false;
-  scoped_ptr<BYTE[]> raw_key;
+  std::unique_ptr<BYTE[]> raw_key;
 
   switch (algorithm) {
     case AES:

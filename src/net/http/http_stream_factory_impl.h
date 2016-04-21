@@ -121,8 +121,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   // Called when the Preconnect completes. Used for testing.
   virtual void OnPreconnectsCompleteInternal() {}
 
-  // Returns true if QUIC is whitelisted for |host|, which should be
-  // the result of calling ApplyHostMappingRules().
+  // Returns true if QUIC is whitelisted for |host|.
   bool IsQuicWhitelistedForHost(const std::string& host);
 
   HttpNetworkSession* const session_;

@@ -4,10 +4,10 @@
 
 #include "net/websockets/websocket_handshake_stream_create_helper.h"
 
+#include <memory>
 #include <utility>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/spdy/spdy_session.h"
@@ -29,7 +29,7 @@ WebSocketHandshakeStreamCreateHelper::~WebSocketHandshakeStreamCreateHelper() {}
 
 WebSocketHandshakeStreamBase*
 WebSocketHandshakeStreamCreateHelper::CreateBasicStream(
-    scoped_ptr<ClientSocketHandle> connection,
+    std::unique_ptr<ClientSocketHandle> connection,
     bool using_proxy) {
   DCHECK(failure_message_) << "set_failure_message() must be called";
   // The list of supported extensions and parameters is hard-coded.
@@ -54,7 +54,8 @@ WebSocketHandshakeStreamCreateHelper::CreateSpdyStream(
   return NULL;
 }
 
-scoped_ptr<WebSocketStream> WebSocketHandshakeStreamCreateHelper::Upgrade() {
+std::unique_ptr<WebSocketStream>
+WebSocketHandshakeStreamCreateHelper::Upgrade() {
   DCHECK(stream_);
   WebSocketHandshakeStreamBase* stream = stream_;
   stream_ = NULL;

@@ -14,8 +14,10 @@
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
+#include "base/profiler/scoped_tracker.h"
 #include "base/task_runner_util.h"
 #include "base/threading/worker_pool.h"
+#include "base/time/default_tick_clock.h"
 #include "net/base/address_list.h"
 #include "net/base/connection_type_histograms.h"
 #include "net/base/io_buffer.h"
@@ -136,8 +138,14 @@ void CheckSupportAndMaybeEnableTCPFastOpen(bool user_enabled) {
 #endif
 }
 
-TCPSocketPosix::TCPSocketPosix(NetLog* net_log, const NetLog::Source& source)
-    : use_tcp_fastopen_(false),
+TCPSocketPosix::TCPSocketPosix(
+    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+    NetLog* net_log,
+    const NetLog::Source& source)
+    : socket_performance_watcher_(std::move(socket_performance_watcher)),
+      tick_clock_(new base::DefaultTickClock()),
+      rtt_notifications_minimum_interval_(base::TimeDelta::FromSeconds(1)),
+      use_tcp_fastopen_(false),
       tcp_fastopen_write_attempted_(false),
       tcp_fastopen_connected_(false),
       tcp_fastopen_status_(TCP_FASTOPEN_STATUS_UNKNOWN),
@@ -194,7 +202,7 @@ int TCPSocketPosix::Listen(int backlog) {
   return socket_->Listen(backlog);
 }
 
-int TCPSocketPosix::Accept(scoped_ptr<TCPSocketPosix>* tcp_socket,
+int TCPSocketPosix::Accept(std::unique_ptr<TCPSocketPosix>* tcp_socket,
                            IPEndPoint* address,
                            const CompletionCallback& callback) {
   DCHECK(tcp_socket);
@@ -474,16 +482,22 @@ void TCPSocketPosix::EndLoggingMultipleConnectAttempts(int net_error) {
   }
 }
 
-void TCPSocketPosix::AcceptCompleted(scoped_ptr<TCPSocketPosix>* tcp_socket,
-                                     IPEndPoint* address,
-                                     const CompletionCallback& callback,
-                                     int rv) {
+void TCPSocketPosix::SetTickClockForTesting(
+    std::unique_ptr<base::TickClock> tick_clock) {
+  tick_clock_ = std::move(tick_clock);
+}
+
+void TCPSocketPosix::AcceptCompleted(
+    std::unique_ptr<TCPSocketPosix>* tcp_socket,
+    IPEndPoint* address,
+    const CompletionCallback& callback,
+    int rv) {
   DCHECK_NE(ERR_IO_PENDING, rv);
   callback.Run(HandleAcceptCompleted(tcp_socket, address, rv));
 }
 
 int TCPSocketPosix::HandleAcceptCompleted(
-    scoped_ptr<TCPSocketPosix>* tcp_socket,
+    std::unique_ptr<TCPSocketPosix>* tcp_socket,
     IPEndPoint* address,
     int rv) {
   if (rv == OK)
@@ -499,8 +513,9 @@ int TCPSocketPosix::HandleAcceptCompleted(
   return rv;
 }
 
-int TCPSocketPosix::BuildTcpSocketPosix(scoped_ptr<TCPSocketPosix>* tcp_socket,
-                                        IPEndPoint* address) {
+int TCPSocketPosix::BuildTcpSocketPosix(
+    std::unique_ptr<TCPSocketPosix>* tcp_socket,
+    IPEndPoint* address) {
   DCHECK(accept_socket_);
 
   SockaddrStorage storage;
@@ -510,24 +525,26 @@ int TCPSocketPosix::BuildTcpSocketPosix(scoped_ptr<TCPSocketPosix>* tcp_socket,
     return ERR_ADDRESS_INVALID;
   }
 
-  tcp_socket->reset(new TCPSocketPosix(net_log_.net_log(), net_log_.source()));
+  tcp_socket->reset(
+      new TCPSocketPosix(nullptr, net_log_.net_log(), net_log_.source()));
   (*tcp_socket)->socket_.reset(accept_socket_.release());
   return OK;
 }
 
 void TCPSocketPosix::ConnectCompleted(const CompletionCallback& callback,
-                                      int rv) const {
+                                      int rv) {
   DCHECK_NE(ERR_IO_PENDING, rv);
   callback.Run(HandleConnectCompleted(rv));
 }
 
-int TCPSocketPosix::HandleConnectCompleted(int rv) const {
+int TCPSocketPosix::HandleConnectCompleted(int rv) {
   // Log the end of this attempt (and any OS error it threw).
   if (rv != OK) {
     net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
                       NetLog::IntCallback("os_error", errno));
   } else {
     net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT);
+    NotifySocketPerformanceWatcher();
   }
 
   // Give a more specific error when the user is offline.
@@ -597,6 +614,11 @@ int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
                       CreateNetLogSocketErrorCallback(rv, errno));
     return rv;
   }
+
+  // Notify the watcher only if at least 1 byte was read.
+  if (rv > 0)
+    NotifySocketPerformanceWatcher();
+
   net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED, rv,
                                 buf->data());
   NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
@@ -628,6 +650,11 @@ int TCPSocketPosix::HandleWriteCompleted(IOBuffer* buf, int rv) {
                       CreateNetLogSocketErrorCallback(rv, errno));
     return rv;
   }
+
+  // Notify the watcher only if at least 1 byte was written.
+  if (rv > 0)
+    NotifySocketPerformanceWatcher();
+
   net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, rv,
                                 buf->data());
   NetworkActivityMonitor::GetInstance()->IncrementBytesSent(rv);
@@ -693,6 +720,45 @@ int TCPSocketPosix::TcpFastOpenWrite(IOBuffer* buf,
 
   tcp_fastopen_status_ = TCP_FASTOPEN_SLOW_CONNECT_RETURN;
   return socket_->WaitForWrite(buf, buf_len, callback);
+}
+
+void TCPSocketPosix::NotifySocketPerformanceWatcher() {
+#if defined(TCP_INFO)
+  // TODO(tbansal): Remove ScopedTracker once crbug.com/590254 is fixed.
+  tracked_objects::ScopedTracker tracking_profile(
+      FROM_HERE_WITH_EXPLICIT_FUNCTION(
+          "590254 TCPSocketPosix::NotifySocketPerformanceWatcher"));
+
+  const base::TimeTicks now_ticks = tick_clock_->NowTicks();
+  // Do not notify |socket_performance_watcher_| if the last notification was
+  // recent than |rtt_notifications_minimum_interval_| ago. This helps in
+  // reducing the overall overhead of the tcp_info syscalls.
+  if (now_ticks - last_rtt_notification_ < rtt_notifications_minimum_interval_)
+    return;
+
+  // Check if |socket_performance_watcher_| is interested in receiving a RTT
+  // update notification.
+  if (!socket_performance_watcher_ ||
+      !socket_performance_watcher_->ShouldNotifyUpdatedRTT()) {
+    return;
+  }
+
+  tcp_info info;
+  if (!GetTcpInfo(socket_->socket_fd(), &info))
+    return;
+
+  // Only notify the |socket_performance_watcher_| if the RTT in |tcp_info|
+  // struct was populated. A value of 0 may be valid in certain cases
+  // (on very fast networks), but it is discarded. This means that
+  // some of the RTT values may be missed, but the values that are kept are
+  // guaranteed to be correct.
+  if (info.tcpi_rtt == 0 && info.tcpi_rttvar == 0)
+    return;
+
+  socket_performance_watcher_->OnUpdatedRTTAvailable(
+      base::TimeDelta::FromMicroseconds(info.tcpi_rtt));
+  last_rtt_notification_ = now_ticks;
+#endif  // defined(TCP_INFO)
 }
 
 void TCPSocketPosix::UpdateTCPFastOpenStatusAfterRead() {

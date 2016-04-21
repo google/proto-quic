@@ -4,7 +4,8 @@
 
 #include "net/http/http_basic_stream.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_body_drainer.h"
 #include "net/http/http_stream_parser.h"

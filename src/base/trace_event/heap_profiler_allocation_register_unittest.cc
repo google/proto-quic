@@ -59,17 +59,20 @@ TEST_F(AllocationRegisterTest, InsertRemove) {
   AllocationRegister reg;
   AllocationContext ctx = AllocationContext::Empty();
 
+  // Zero-sized allocations should be discarded.
+  reg.Insert(reinterpret_cast<void*>(1), 0, ctx);
+
   EXPECT_EQ(0u, OrAllAddresses(reg));
 
-  reg.Insert(reinterpret_cast<void*>(1), 0, ctx);
+  reg.Insert(reinterpret_cast<void*>(1), 1, ctx);
 
   EXPECT_EQ(1u, OrAllAddresses(reg));
 
-  reg.Insert(reinterpret_cast<void*>(2), 0, ctx);
+  reg.Insert(reinterpret_cast<void*>(2), 1, ctx);
 
   EXPECT_EQ(3u, OrAllAddresses(reg));
 
-  reg.Insert(reinterpret_cast<void*>(4), 0, ctx);
+  reg.Insert(reinterpret_cast<void*>(4), 1, ctx);
 
   EXPECT_EQ(7u, OrAllAddresses(reg));
 
@@ -90,8 +93,8 @@ TEST_F(AllocationRegisterTest, DoubleFreeIsAllowed) {
   AllocationRegister reg;
   AllocationContext ctx = AllocationContext::Empty();
 
-  reg.Insert(reinterpret_cast<void*>(1), 0, ctx);
-  reg.Insert(reinterpret_cast<void*>(2), 0, ctx);
+  reg.Insert(reinterpret_cast<void*>(1), 1, ctx);
+  reg.Insert(reinterpret_cast<void*>(2), 1, ctx);
   reg.Remove(reinterpret_cast<void*>(1));
   reg.Remove(reinterpret_cast<void*>(1));  // Remove for the second time.
   reg.Remove(reinterpret_cast<void*>(4));  // Remove never inserted address.
@@ -179,7 +182,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
   uint32_t initial_water_mark = GetHighWaterMark(reg);
 
   for (uintptr_t i = 2; i < prime; i++) {
-    size_t size = i % 31;
+    size_t size = i % 31 + 1;
     expected_sum += size;
     reg.Insert(reinterpret_cast<void*>(i), size, ctx);
   }
@@ -189,7 +192,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
 
   // Iterate the numbers 2, 3, ..., prime - 1 in pseudorandom order.
   for (uintptr_t i = generator; i != 1; i = (i * generator) % prime) {
-    size_t size = i % 31;
+    size_t size = i % 31 + 1;
     expected_sum -= size;
     reg.Remove(reinterpret_cast<void*>(i));
     EXPECT_EQ(expected_sum, SumAllSizes(reg));
@@ -200,12 +203,12 @@ TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
   // Insert |prime - 2| entries again. This should use cells from the free list,
   // so the |next_unused_cell_| index should not change.
   for (uintptr_t i = 2; i < prime; i++)
-    reg.Insert(reinterpret_cast<void*>(i), 0, ctx);
+    reg.Insert(reinterpret_cast<void*>(i), 1, ctx);
 
   ASSERT_EQ(prime - 2, GetHighWaterMark(reg) - initial_water_mark);
 
   // Inserting one more entry should use a fresh cell again.
-  reg.Insert(reinterpret_cast<void*>(prime), 0, ctx);
+  reg.Insert(reinterpret_cast<void*>(prime), 1, ctx);
   ASSERT_EQ(prime - 1, GetHighWaterMark(reg) - initial_water_mark);
 }
 
@@ -268,7 +271,7 @@ TEST_F(AllocationRegisterTest, OverflowDeathTest) {
   // minus 1 elements are inserted, because cell 0 is unused, so this should
   // fill up the available cells exactly.
   for (i = 1; i < GetNumCells(reg); i++) {
-    reg.Insert(reinterpret_cast<void*>(i), 0, ctx);
+    reg.Insert(reinterpret_cast<void*>(i), 1, ctx);
   }
 
   // Adding just one extra element might still work because the allocated memory
@@ -277,7 +280,7 @@ TEST_F(AllocationRegisterTest, OverflowDeathTest) {
   const size_t cells_per_page = GetNumCellsPerPage();
 
   ASSERT_DEATH(for (size_t j = 0; j < cells_per_page; j++) {
-    reg.Insert(reinterpret_cast<void*>(i + j), 0, ctx);
+    reg.Insert(reinterpret_cast<void*>(i + j), 1, ctx);
   }, "");
 }
 #endif

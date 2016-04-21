@@ -5,9 +5,10 @@
 #ifndef NET_SPDY_SPDY_BUFFER_PRODUCER_H_
 #define NET_SPDY_SPDY_BUFFER_PRODUCER_H_
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -22,7 +23,7 @@ class NET_EXPORT_PRIVATE SpdyBufferProducer {
   SpdyBufferProducer();
 
   // Produces the buffer to be written. Will be called at most once.
-  virtual scoped_ptr<SpdyBuffer> ProduceBuffer() = 0;
+  virtual std::unique_ptr<SpdyBuffer> ProduceBuffer() = 0;
 
   virtual ~SpdyBufferProducer();
 
@@ -33,14 +34,14 @@ class NET_EXPORT_PRIVATE SpdyBufferProducer {
 // A simple wrapper around a single SpdyBuffer.
 class NET_EXPORT_PRIVATE SimpleBufferProducer : public SpdyBufferProducer {
  public:
-  explicit SimpleBufferProducer(scoped_ptr<SpdyBuffer> buffer);
+  explicit SimpleBufferProducer(std::unique_ptr<SpdyBuffer> buffer);
 
   ~SimpleBufferProducer() override;
 
-  scoped_ptr<SpdyBuffer> ProduceBuffer() override;
+  std::unique_ptr<SpdyBuffer> ProduceBuffer() override;
 
  private:
-  scoped_ptr<SpdyBuffer> buffer_;
+  std::unique_ptr<SpdyBuffer> buffer_;
 
   DISALLOW_COPY_AND_ASSIGN(SimpleBufferProducer);
 };

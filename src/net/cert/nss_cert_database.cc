@@ -9,13 +9,14 @@
 #include <keyhi.h>
 #include <pk11pub.h>
 #include <secmod.h>
+
+#include <memory>
 #include <utility>
 
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list_threadsafe.h"
 #include "base/task_runner.h"
 #include "base/task_runner_util.h"
@@ -106,8 +107,9 @@ void NSSCertDatabase::ListCertsSync(CertificateList* certs) {
 }
 
 void NSSCertDatabase::ListCerts(
-    const base::Callback<void(scoped_ptr<CertificateList> certs)>& callback) {
-  scoped_ptr<CertificateList> certs(new CertificateList());
+    const base::Callback<void(std::unique_ptr<CertificateList> certs)>&
+        callback) {
+  std::unique_ptr<CertificateList> certs(new CertificateList());
 
   // base::Passed will NULL out |certs|, so cache the underlying pointer here.
   CertificateList* raw_certs = certs.get();
@@ -122,7 +124,7 @@ void NSSCertDatabase::ListCerts(
 void NSSCertDatabase::ListCertsInSlot(const ListCertsCallback& callback,
                                       PK11SlotInfo* slot) {
   DCHECK(slot);
-  scoped_ptr<CertificateList> certs(new CertificateList());
+  std::unique_ptr<CertificateList> certs(new CertificateList());
 
   // base::Passed will NULL out |certs|, so cache the underlying pointer here.
   CertificateList* raw_certs = certs.get();

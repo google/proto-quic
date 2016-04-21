@@ -22,13 +22,14 @@ ConvertQuicPriorityToRequestPriority(SpdyPriority priority) {
                          : static_cast<RequestPriority>(HIGHEST - priority);
 }
 
-scoped_ptr<base::Value> QuicRequestNetLogCallback(
+std::unique_ptr<base::Value> QuicRequestNetLogCallback(
     QuicStreamId stream_id,
     const SpdyHeaderBlock* headers,
     SpdyPriority priority,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(static_cast<base::DictionaryValue*>(
-      SpdyHeaderBlockNetLogCallback(headers, capture_mode).release()));
+  std::unique_ptr<base::DictionaryValue> dict(
+      static_cast<base::DictionaryValue*>(
+          SpdyHeaderBlockNetLogCallback(headers, capture_mode).release()));
   dict->SetInteger("quic_priority", static_cast<int>(priority));
   dict->SetInteger("quic_stream_id", static_cast<int>(stream_id));
   return std::move(dict);

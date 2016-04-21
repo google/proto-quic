@@ -6,9 +6,9 @@
 #define BASE_TRACE_EVENT_MALLOC_DUMP_PROVIDER_H_
 
 #include <istream>
+#include <memory>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/platform_thread.h"
@@ -52,7 +52,7 @@ class BASE_EXPORT MallocDumpProvider : public MemoryDumpProvider {
 
   // For heap profiling.
   bool heap_profiler_enabled_;
-  scoped_ptr<AllocationRegister> allocation_register_;
+  std::unique_ptr<AllocationRegister> allocation_register_;
   Lock allocation_register_lock_;
 
   // When in OnMemoryDump(), this contains the current thread ID.

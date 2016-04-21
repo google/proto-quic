@@ -9,11 +9,11 @@
 // instantiate this class in your main function and call its Run method to run
 // any gtest based tests that are linked into your executable.
 
+#include <memory>
 #include <string>
 
 #include "base/at_exit.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/test/trace_to_file.h"
 #include "build/build_config.h"
 
@@ -67,7 +67,7 @@ class TestSuite {
 
   // Make sure that we setup an AtExitManager so Singleton objects will be
   // destroyed.
-  scoped_ptr<base::AtExitManager> at_exit_manager_;
+  std::unique_ptr<base::AtExitManager> at_exit_manager_;
 
  private:
   void InitializeFromCommandLine(int argc, char** argv);
@@ -81,6 +81,8 @@ class TestSuite {
   test::TraceToFile trace_to_file_;
 
   bool initialized_command_line_;
+
+  bool created_feature_list_;
 
   DISALLOW_COPY_AND_ASSIGN(TestSuite);
 };

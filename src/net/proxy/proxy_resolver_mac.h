@@ -21,9 +21,9 @@ class NET_EXPORT ProxyResolverFactoryMac : public ProxyResolverFactory {
 
   int CreateProxyResolver(
       const scoped_refptr<ProxyResolverScriptData>& pac_script,
-      scoped_ptr<ProxyResolver>* resolver,
+      std::unique_ptr<ProxyResolver>* resolver,
       const CompletionCallback& callback,
-      scoped_ptr<Request>* request) override;
+      std::unique_ptr<Request>* request) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ProxyResolverFactoryMac);

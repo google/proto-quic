@@ -7,11 +7,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/string16.h"
 #include "base/threading/non_thread_safe.h"
@@ -178,7 +178,7 @@ class NET_EXPORT_PRIVATE DhcpProxyScriptAdapterFetcher
   CompletionCallback callback_;
 
   // Fetcher to retrieve PAC files once URL is known.
-  scoped_ptr<ProxyScriptFetcher> script_fetcher_;
+  std::unique_ptr<ProxyScriptFetcher> script_fetcher_;
 
   // Implements a timeout on the call to the Win32 DHCP API.
   base::OneShotTimer wait_timer_;

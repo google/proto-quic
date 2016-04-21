@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 
@@ -52,7 +51,7 @@ struct NET_EXPORT_PRIVATE SpdyPinnableBufferPiece {
   const char * buffer_;
   size_t length_;
   // Null iff |buffer_| isn't pinned.
-  scoped_ptr<char[]> storage_;
+  std::unique_ptr<char[]> storage_;
 };
 
 }  // namespace net

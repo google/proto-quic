@@ -19,14 +19,14 @@
 namespace net {
 
 ChannelIDKeyChromium::ChannelIDKeyChromium(
-    scoped_ptr<crypto::ECPrivateKey> ec_private_key)
+    std::unique_ptr<crypto::ECPrivateKey> ec_private_key)
     : ec_private_key_(std::move(ec_private_key)) {}
 
 ChannelIDKeyChromium::~ChannelIDKeyChromium() {}
 
 bool ChannelIDKeyChromium::Sign(base::StringPiece signed_data,
                                 std::string* out_signature) const {
-  scoped_ptr<crypto::ECSignatureCreator> sig_creator(
+  std::unique_ptr<crypto::ECSignatureCreator> sig_creator(
       crypto::ECSignatureCreator::Create(ec_private_key_.get()));
   if (!sig_creator) {
     return false;
@@ -69,7 +69,7 @@ class ChannelIDSourceChromium::Job {
   // Starts the channel ID lookup.  If |QUIC_PENDING| is returned, then
   // |callback| will be invoked asynchronously when the operation completes.
   QuicAsyncStatus GetChannelIDKey(const std::string& hostname,
-                                  scoped_ptr<ChannelIDKey>* channel_id_key,
+                                  std::unique_ptr<ChannelIDKey>* channel_id_key,
                                   ChannelIDSourceCallback* callback);
 
  private:
@@ -89,15 +89,15 @@ class ChannelIDSourceChromium::Job {
 
   ChannelIDService* const channel_id_service_;
 
-  scoped_ptr<crypto::ECPrivateKey> channel_id_crypto_key_;
+  std::unique_ptr<crypto::ECPrivateKey> channel_id_crypto_key_;
   ChannelIDService::Request channel_id_request_;
 
   // |hostname| specifies the hostname for which we need a channel ID.
   std::string hostname_;
 
-  scoped_ptr<ChannelIDSourceCallback> callback_;
+  std::unique_ptr<ChannelIDSourceCallback> callback_;
 
-  scoped_ptr<ChannelIDKey> channel_id_key_;
+  std::unique_ptr<ChannelIDKey> channel_id_key_;
 
   State next_state_;
 
@@ -112,7 +112,7 @@ ChannelIDSourceChromium::Job::Job(ChannelIDSourceChromium* channel_id_source,
 
 QuicAsyncStatus ChannelIDSourceChromium::Job::GetChannelIDKey(
     const std::string& hostname,
-    scoped_ptr<ChannelIDKey>* channel_id_key,
+    std::unique_ptr<ChannelIDKey>* channel_id_key,
     ChannelIDSourceCallback* callback) {
   DCHECK(channel_id_key);
   DCHECK(callback);
@@ -166,7 +166,7 @@ int ChannelIDSourceChromium::Job::DoLoop(int last_result) {
 void ChannelIDSourceChromium::Job::OnIOComplete(int result) {
   int rv = DoLoop(result);
   if (rv != ERR_IO_PENDING) {
-    scoped_ptr<ChannelIDSourceCallback> callback(callback_.release());
+    std::unique_ptr<ChannelIDSourceCallback> callback(callback_.release());
     callback->Run(&channel_id_key_);
     // Will delete |this|.
     channel_id_source_->OnJobComplete(this);
@@ -206,9 +206,9 @@ ChannelIDSourceChromium::~ChannelIDSourceChromium() {
 
 QuicAsyncStatus ChannelIDSourceChromium::GetChannelIDKey(
     const std::string& hostname,
-    scoped_ptr<ChannelIDKey>* channel_id_key,
+    std::unique_ptr<ChannelIDKey>* channel_id_key,
     ChannelIDSourceCallback* callback) {
-  scoped_ptr<Job> job(new Job(this, channel_id_service_));
+  std::unique_ptr<Job> job(new Job(this, channel_id_service_));
   QuicAsyncStatus status =
       job->GetChannelIDKey(hostname, channel_id_key, callback);
   if (status == QUIC_PENDING) {

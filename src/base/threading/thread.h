@@ -7,12 +7,12 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
 #include "base/message_loop/timer_slack.h"
 #include "base/single_thread_task_runner.h"
@@ -41,7 +41,7 @@ class MessagePump;
 class BASE_EXPORT Thread : PlatformThread::Delegate {
  public:
   struct BASE_EXPORT Options {
-    typedef Callback<scoped_ptr<MessagePump>()> MessagePumpFactory;
+    typedef Callback<std::unique_ptr<MessagePump>()> MessagePumpFactory;
 
     Options();
     Options(MessageLoop::Type type, size_t size);

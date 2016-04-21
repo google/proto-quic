@@ -4,6 +4,8 @@
 
 #include "base/supports_user_data.h"
 
+#include "base/memory/ptr_util.h"
+
 namespace base {
 
 SupportsUserData::SupportsUserData() {
@@ -21,7 +23,7 @@ SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
 
 void SupportsUserData::SetUserData(const void* key, Data* data) {
   DCHECK(thread_checker_.CalledOnValidThread());
-  user_data_[key] = make_scoped_ptr(data);
+  user_data_[key] = WrapUnique(data);
 }
 
 void SupportsUserData::RemoveUserData(const void* key) {

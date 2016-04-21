@@ -123,7 +123,7 @@ QuicData* DecryptWithNonce(ChaCha20Poly1305Rfc7539Decrypter* decrypter,
   path_id = static_cast<QuicPathId>(
       packet_number >> 8 * (sizeof(packet_number) - sizeof(path_id)));
   packet_number &= UINT64_C(0x00FFFFFFFFFFFFFF);
-  scoped_ptr<char[]> output(new char[ciphertext.length()]);
+  std::unique_ptr<char[]> output(new char[ciphertext.length()]);
   size_t output_length = 0;
   const bool success = decrypter->DecryptPacket(
       path_id, packet_number, associated_data, ciphertext, output.get(),
@@ -161,7 +161,7 @@ TEST(ChaCha20Poly1305Rfc7539DecrypterTest, Decrypt) {
 
     ChaCha20Poly1305Rfc7539Decrypter decrypter;
     ASSERT_TRUE(decrypter.SetKey(key));
-    scoped_ptr<QuicData> decrypted(DecryptWithNonce(
+    std::unique_ptr<QuicData> decrypted(DecryptWithNonce(
         &decrypter, fixed + iv,
         // This deliberately tests that the decrypter can handle an AAD that
         // is set to nullptr, as opposed to a zero-length, non-nullptr pointer.

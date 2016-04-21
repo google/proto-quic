@@ -7,8 +7,9 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/socket/next_proto.h"
 
@@ -91,7 +92,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
   virtual void Start(const BidirectionalStreamRequestInfo* request_info,
                      const BoundNetLog& net_log,
                      BidirectionalStreamImpl::Delegate* delegate,
-                     scoped_ptr<base::Timer> timer) = 0;
+                     std::unique_ptr<base::Timer> timer) = 0;
 
   // Reads at most |buf_len| bytes into |buf|. Returns the number of bytes read,
   // ERR_IO_PENDING if the read is to be completed asynchronously, or an error

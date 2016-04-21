@@ -5,7 +5,6 @@
 #include "base/process/process.h"
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/process/kill.h"
 #include "base/win/windows_version.h"

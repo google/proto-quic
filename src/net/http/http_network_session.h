@@ -244,14 +244,14 @@ class NET_EXPORT HttpNetworkSession
   }
 
   // Creates a Value summary of the state of the socket pools.
-  scoped_ptr<base::Value> SocketPoolInfoToValue() const;
+  std::unique_ptr<base::Value> SocketPoolInfoToValue() const;
 
   // Creates a Value summary of the state of the SPDY sessions.
-  scoped_ptr<base::Value> SpdySessionPoolInfoToValue() const;
+  std::unique_ptr<base::Value> SpdySessionPoolInfoToValue() const;
 
   // Creates a Value summary of the state of the QUIC sessions and
   // configuration.
-  scoped_ptr<base::Value> QuicInfoToValue() const;
+  std::unique_ptr<base::Value> QuicInfoToValue() const;
 
   void CloseAllConnections();
   void CloseIdleConnections();
@@ -283,12 +283,12 @@ class NET_EXPORT HttpNetworkSession
 
   HttpAuthCache http_auth_cache_;
   SSLClientAuthCache ssl_client_auth_cache_;
-  scoped_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
-  scoped_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
+  std::unique_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
+  std::unique_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
   QuicStreamFactory quic_stream_factory_;
   SpdySessionPool spdy_session_pool_;
-  scoped_ptr<HttpStreamFactory> http_stream_factory_;
-  scoped_ptr<HttpStreamFactory> http_stream_factory_for_websocket_;
+  std::unique_ptr<HttpStreamFactory> http_stream_factory_;
+  std::unique_ptr<HttpStreamFactory> http_stream_factory_for_websocket_;
   std::set<HttpResponseBodyDrainer*> response_drainers_;
 
   NextProtoVector next_protos_;

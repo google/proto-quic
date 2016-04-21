@@ -4,12 +4,13 @@
 
 #include "net/quic/spdy_utils.h"
 
+#include <memory>
 #include <vector>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
+#include "base/strings/string_util.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
@@ -28,8 +29,8 @@ string SpdyUtils::SerializeUncompressedHeaders(const SpdyHeaderBlock& headers) {
   SpdyFrameBuilder builder(length, spdy_version);
   SpdyFramer framer(spdy_version);
   framer.SerializeHeaderBlockWithoutCompression(&builder, headers);
-  scoped_ptr<SpdyFrame> block(builder.take());
-  return string(block->data(), length);
+  SpdySerializedFrame block(builder.take());
+  return string(block.data(), length);
 }
 
 // static
@@ -104,6 +105,52 @@ bool SpdyUtils::ParseTrailers(const char* data,
   }
 
   DVLOG(1) << "Successfully parsed Trailers.";
+  return true;
+}
+
+bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
+                                        size_t* final_byte_offset,
+                                        SpdyHeaderBlock* trailers) {
+  for (const auto& p : header_list) {
+    const string& name = p.first;
+    if (name.empty() || name[0] == ':') {
+      DVLOG(1) << "Trailers must not be empty, and must not contain pseudo-"
+               << "headers. Found: '" << name << "'";
+      return false;
+    }
+
+    if (std::any_of(name.begin(), name.end(), base::IsAsciiUpper<char>)) {
+      DVLOG(1) << "Malformed header: Header name " << name
+               << " contains upper-case characters.";
+      return false;
+    }
+
+    if (trailers->find(name) != trailers->end()) {
+      DVLOG(1) << "Duplicate header '" << name << "' found in trailers.";
+      return false;
+    }
+
+    (*trailers)[name] = p.second;
+  }
+
+  if (trailers->empty()) {
+    DVLOG(1) << "Request Trailers are invalid.";
+    return false;  // Trailers were invalid.
+  }
+
+  // Pull out the final offset pseudo header which indicates the number of
+  // response body bytes expected.
+  auto it = trailers->find(kFinalOffsetHeaderKey);
+  if (it == trailers->end() || !StringToSizeT(it->second, final_byte_offset)) {
+    DVLOG(1) << "Required key '" << kFinalOffsetHeaderKey << "' not present";
+    return false;
+  }
+  // The final offset header is no longer needed.
+  trailers->erase(it->first);
+
+  // TODO(rjshade): Check for other forbidden keys, following the HTTP/2 spec.
+
+  DVLOG(1) << "Successfully parsed Trailers: " << trailers->DebugString();
   return true;
 }
 

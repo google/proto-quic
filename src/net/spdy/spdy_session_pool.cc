@@ -10,6 +10,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/stl_util.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/address_list.h"
 #include "net/http/http_network_session.h"
@@ -84,17 +85,18 @@ SpdySessionPool::~SpdySessionPool() {
 
 base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
     const SpdySessionKey& key,
-    scoped_ptr<ClientSocketHandle> connection,
+    std::unique_ptr<ClientSocketHandle> connection,
     const BoundNetLog& net_log,
     int certificate_error_code,
     bool is_secure) {
+  TRACE_EVENT0("net", "SpdySessionPool::CreateAvailableSessionFromSocket");
   DCHECK_GE(default_protocol_, kProtoSPDYMinimumVersion);
   DCHECK_LE(default_protocol_, kProtoSPDYMaximumVersion);
 
   UMA_HISTOGRAM_ENUMERATION(
       "Net.SpdySessionGet", IMPORTED_FROM_SOCKET, SPDY_SESSION_GET_MAX);
 
-  scoped_ptr<SpdySession> new_session(new SpdySession(
+  std::unique_ptr<SpdySession> new_session(new SpdySession(
       key, http_server_properties_, transport_security_state_,
       verify_domain_authentication_, enable_sending_initial_data_,
       enable_ping_based_connection_checking_, enable_priority_dependencies_,
@@ -252,7 +254,7 @@ void SpdySessionPool::RemoveUnavailableSession(
 
   SessionSet::iterator it = sessions_.find(unavailable_session.get());
   CHECK(it != sessions_.end());
-  scoped_ptr<SpdySession> owned_session(*it);
+  std::unique_ptr<SpdySession> owned_session(*it);
   sessions_.erase(it);
 }
 
@@ -324,8 +326,9 @@ void SpdySessionPool::UnregisterUnclaimedPushedStream(
   DCHECK_EQ(1u, removed);
 }
 
-scoped_ptr<base::Value> SpdySessionPool::SpdySessionPoolInfoToValue() const {
-  scoped_ptr<base::ListValue> list(new base::ListValue());
+std::unique_ptr<base::Value> SpdySessionPool::SpdySessionPoolInfoToValue()
+    const {
+  std::unique_ptr<base::ListValue> list(new base::ListValue());
 
   for (AvailableSessionMap::const_iterator it = available_sessions_.begin();
        it != available_sessions_.end(); ++it) {

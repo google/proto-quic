@@ -535,7 +535,7 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   QuicFramer framer(versions != nullptr ? *versions : QuicSupportedVersions(),
                     QuicTime::Zero(), Perspective::IS_CLIENT);
 
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   EXPECT_TRUE(packet != nullptr);
   char* buffer = new char[kMaxPacketSize];
@@ -586,7 +586,7 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
   QuicFramer framer(versions != nullptr ? *versions : QuicSupportedVersions(),
                     QuicTime::Zero(), Perspective::IS_CLIENT);
 
-  scoped_ptr<QuicPacket> packet(
+  std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   EXPECT_TRUE(packet != nullptr);
 
@@ -611,7 +611,7 @@ void CompareCharArraysWithHexError(const string& description,
   EXPECT_EQ(actual_len, expected_len);
   const int min_len = min(actual_len, expected_len);
   const int max_len = max(actual_len, expected_len);
-  scoped_ptr<bool[]> marks(new bool[max_len]);
+  std::unique_ptr<bool[]> marks(new bool[max_len]);
   bool identical = (actual_len == expected_len);
   for (int i = 0; i < min_len; ++i) {
     if (actual[i] != expected[i]) {
@@ -651,7 +651,8 @@ static QuicPacket* ConstructPacketFromHandshakeMessage(
     const CryptoHandshakeMessage& message,
     bool should_include_version) {
   CryptoFramer crypto_framer;
-  scoped_ptr<QuicData> data(crypto_framer.ConstructHandshakeMessage(message));
+  std::unique_ptr<QuicData> data(
+      crypto_framer.ConstructHandshakeMessage(message));
   QuicFramer quic_framer(QuicSupportedVersions(), QuicTime::Zero(),
                          Perspective::IS_CLIENT);
 

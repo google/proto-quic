@@ -9,6 +9,8 @@
 #include <pk11pub.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/logging.h"
 #include "crypto/nss_util.h"
 
@@ -29,7 +31,7 @@ struct PublicKeyInfoDeleter {
   }
 };
 
-typedef scoped_ptr<CERTSubjectPublicKeyInfo, PublicKeyInfoDeleter>
+typedef std::unique_ptr<CERTSubjectPublicKeyInfo, PublicKeyInfoDeleter>
     ScopedPublicKeyInfo;
 
 // Decodes |input| as a SubjectPublicKeyInfo and returns a SECItem containing

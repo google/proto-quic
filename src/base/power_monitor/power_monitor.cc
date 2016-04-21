@@ -12,7 +12,7 @@ namespace base {
 
 static PowerMonitor* g_power_monitor = NULL;
 
-PowerMonitor::PowerMonitor(scoped_ptr<PowerMonitorSource> source)
+PowerMonitor::PowerMonitor(std::unique_ptr<PowerMonitorSource> source)
     : observers_(new ObserverListThreadSafe<PowerObserver>()),
       source_(std::move(source)) {
   DCHECK(!g_power_monitor);

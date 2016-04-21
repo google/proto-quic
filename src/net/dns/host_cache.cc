@@ -5,9 +5,11 @@
 #include "net/dns/host_cache.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/trace_event/trace_event.h"
 #include "net/base/net_errors.h"
 
 namespace net {
@@ -53,6 +55,7 @@ void HostCache::Set(const Key& key,
                     const Entry& entry,
                     base::TimeTicks now,
                     base::TimeDelta ttl) {
+  TRACE_EVENT0("net", "HostCache::Set");
   DCHECK(CalledOnValidThread());
   if (caching_is_disabled())
     return;
@@ -82,8 +85,8 @@ const HostCache::EntryMap& HostCache::entries() const {
 }
 
 // static
-scoped_ptr<HostCache> HostCache::CreateDefaultCache() {
-  // Cache capacity is determined by the field trial.
+std::unique_ptr<HostCache> HostCache::CreateDefaultCache() {
+// Cache capacity is determined by the field trial.
 #if defined(ENABLE_BUILT_IN_DNS)
   const size_t kDefaultMaxEntries = 1000;
 #else
@@ -95,7 +98,7 @@ scoped_ptr<HostCache> HostCache::CreateDefaultCache() {
                       &max_entries);
   if ((max_entries == 0) || (max_entries > kSaneMaxEntries))
     max_entries = kDefaultMaxEntries;
-  return make_scoped_ptr(new HostCache(max_entries));
+  return base::WrapUnique(new HostCache(max_entries));
 }
 
 void HostCache::EvictionHandler::Handle(

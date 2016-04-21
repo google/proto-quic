@@ -12,9 +12,10 @@
 #include <secmod.h>
 #include <secport.h>
 
+#include <memory>
+
 #include "base/debug/leak_annotations.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
@@ -55,7 +56,8 @@ CollectCertsCallback(void* arg, SECItem** certs, int num_certs) {
   return SECSuccess;
 }
 
-typedef scoped_ptr<CERTName, crypto::NSSDestroyer<CERTName, CERT_DestroyName>>
+typedef std::unique_ptr<CERTName,
+                        crypto::NSSDestroyer<CERTName, CERT_DestroyName>>
     ScopedCERTName;
 
 // Create a new CERTName object from its encoded representation.

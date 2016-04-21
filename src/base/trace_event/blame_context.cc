@@ -57,12 +57,13 @@ void BlameContext::TakeSnapshot() {
   DCHECK(WasInitialized());
   if (!*category_group_enabled_)
     return;
-  scoped_ptr<trace_event::TracedValue> snapshot(new trace_event::TracedValue);
+  std::unique_ptr<trace_event::TracedValue> snapshot(
+      new trace_event::TracedValue);
   AsValueInto(snapshot.get());
   static const char* kArgName = "snapshot";
   const int kNumArgs = 1;
   unsigned char arg_types[1] = {TRACE_VALUE_TYPE_CONVERTABLE};
-  scoped_ptr<trace_event::ConvertableToTraceFormat> arg_values[1] = {
+  std::unique_ptr<trace_event::ConvertableToTraceFormat> arg_values[1] = {
       std::move(snapshot)};
   TRACE_EVENT_API_ADD_TRACE_EVENT(TRACE_EVENT_PHASE_SNAPSHOT_OBJECT,
                                   category_group_enabled_, type_, scope_, id_,

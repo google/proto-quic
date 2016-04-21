@@ -4,7 +4,8 @@
 
 #include "net/quic/crypto/curve25519_key_exchange.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "base/strings/string_piece.h"
 #include "net/quic/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -24,9 +25,10 @@ TEST(Curve25519KeyExchange, SharedKey) {
     const string alice_key(Curve25519KeyExchange::NewPrivateKey(rand));
     const string bob_key(Curve25519KeyExchange::NewPrivateKey(rand));
 
-    scoped_ptr<Curve25519KeyExchange> alice(
+    std::unique_ptr<Curve25519KeyExchange> alice(
         Curve25519KeyExchange::New(alice_key));
-    scoped_ptr<Curve25519KeyExchange> bob(Curve25519KeyExchange::New(bob_key));
+    std::unique_ptr<Curve25519KeyExchange> bob(
+        Curve25519KeyExchange::New(bob_key));
 
     const StringPiece alice_public(alice->public_value());
     const StringPiece bob_public(bob->public_value());

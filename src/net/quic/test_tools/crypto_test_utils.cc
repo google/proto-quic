@@ -4,6 +4,7 @@
 
 #include "net/quic/test_tools/crypto_test_utils.h"
 
+#include "base/strings/string_util.h"
 #include "net/quic/crypto/channel_id.h"
 #include "net/quic/crypto/common_cert_set.h"
 #include "net/quic/crypto/crypto_handshake.h"
@@ -83,7 +84,7 @@ class AsyncTestChannelIDSource : public ChannelIDSource,
 
   // ChannelIDSource implementation.
   QuicAsyncStatus GetChannelIDKey(const string& hostname,
-                                  scoped_ptr<ChannelIDKey>* channel_id_key,
+                                  std::unique_ptr<ChannelIDKey>* channel_id_key,
                                   ChannelIDSourceCallback* callback) override {
     // Synchronous mode.
     if (!callback) {
@@ -109,9 +110,9 @@ class AsyncTestChannelIDSource : public ChannelIDSource,
   }
 
  private:
-  scoped_ptr<ChannelIDSource> sync_source_;
-  scoped_ptr<ChannelIDSourceCallback> callback_;
-  scoped_ptr<ChannelIDKey> channel_id_key_;
+  std::unique_ptr<ChannelIDSource> sync_source_;
+  std::unique_ptr<ChannelIDSourceCallback> callback_;
+  std::unique_ptr<ChannelIDKey> channel_id_key_;
 };
 
 }  // anonymous namespace
@@ -196,7 +197,7 @@ int CryptoTestUtils::HandshakeWithFakeClient(
   CompareClientAndServerKeys(client_session.GetCryptoStream(), server);
 
   if (options.channel_id_enabled) {
-    scoped_ptr<ChannelIDKey> channel_id_key;
+    std::unique_ptr<ChannelIDKey> channel_id_key;
     QuicAsyncStatus status = crypto_config.channel_id_source()->GetChannelIDKey(
         server_id.host(), &channel_id_key, nullptr);
     EXPECT_EQ(QUIC_SUCCESS, status);
@@ -220,7 +221,7 @@ void CryptoTestUtils::SetupCryptoServerConfigForTest(
   QuicCryptoServerConfig::ConfigOptions options;
   options.channel_id_enabled = true;
   options.token_binding_enabled = fake_options.token_binding_enabled;
-  scoped_ptr<CryptoHandshakeMessage> scfg(
+  std::unique_ptr<CryptoHandshakeMessage> scfg(
       crypto_config->AddDefaultConfig(rand, clock, options));
 }
 
@@ -574,7 +575,7 @@ CryptoHandshakeMessage CryptoTestUtils::Message(const char* message_tag, ...) {
       len--;
 
       CHECK_EQ(0u, len % 2);
-      scoped_ptr<uint8_t[]> buf(new uint8_t[len / 2]);
+      std::unique_ptr<uint8_t[]> buf(new uint8_t[len / 2]);
 
       for (size_t i = 0; i < len / 2; i++) {
         uint8_t v = 0;
@@ -594,8 +595,8 @@ CryptoHandshakeMessage CryptoTestUtils::Message(const char* message_tag, ...) {
 
   // The CryptoHandshakeMessage needs to be serialized and parsed to ensure
   // that any padding is included.
-  scoped_ptr<QuicData> bytes(CryptoFramer::ConstructHandshakeMessage(msg));
-  scoped_ptr<CryptoHandshakeMessage> parsed(
+  std::unique_ptr<QuicData> bytes(CryptoFramer::ConstructHandshakeMessage(msg));
+  std::unique_ptr<CryptoHandshakeMessage> parsed(
       CryptoFramer::ParseMessage(bytes->AsStringPiece()));
   CHECK(parsed.get());
 

@@ -9,12 +9,12 @@
 #include <stdint.h>
 
 #include <deque>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_export.h"
@@ -138,7 +138,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
     // a network error code otherwise.
     //
     // May cause the stream to be closed.
-    virtual void OnDataReceived(scoped_ptr<SpdyBuffer> buffer) = 0;
+    virtual void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) = 0;
 
     // Called when data is sent. Must not cause the stream to be
     // closed.
@@ -321,7 +321,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   //
   // |length| is the number of bytes received (at most 2^24 - 1) or 0 if
   //          the stream is being closed.
-  void OnDataReceived(scoped_ptr<SpdyBuffer> buffer);
+  void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer);
 
   // Called by the SpdySession when padding is consumed to allow for the stream
   // receiving window to be updated.
@@ -373,7 +373,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // bidirectional streams; for request/response streams, it must be
   // MORE_DATA_TO_SEND if the request has data to upload, or
   // NO_MORE_DATA_TO_SEND if not.
-  int SendRequestHeaders(scoped_ptr<SpdyHeaderBlock> request_headers,
+  int SendRequestHeaders(std::unique_ptr<SpdyHeaderBlock> request_headers,
                          SpdySendStatus send_status);
 
   // Sends a DATA frame. The delegate will be notified via
@@ -481,12 +481,12 @@ class NET_EXPORT_PRIVATE SpdyStream {
 
   // Produces the SYN_STREAM frame for the stream. The stream must
   // already be activated.
-  scoped_ptr<SpdyFrame> ProduceSynStreamFrame();
+  std::unique_ptr<SpdySerializedFrame> ProduceSynStreamFrame();
 
   // Produce the initial HEADER frame for the stream with the given
   // block. The stream must already be activated.
-  scoped_ptr<SpdyFrame> ProduceHeaderFrame(
-      scoped_ptr<SpdyHeaderBlock> header_block);
+  std::unique_ptr<SpdySerializedFrame> ProduceHeaderFrame(
+      std::unique_ptr<SpdyHeaderBlock> header_block);
 
   // Queues the send for next frame of the remaining data in
   // |pending_send_data_|. Must be called only when
@@ -536,7 +536,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   //
   // TODO(akalin): Hang onto this only until we send it. This
   // necessitates stashing the URL separately.
-  scoped_ptr<SpdyHeaderBlock> request_headers_;
+  std::unique_ptr<SpdyHeaderBlock> request_headers_;
 
   // Data waiting to be sent, and the close state of the local endpoint
   // after the data is fully written.
@@ -547,7 +547,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // after the data is fully read. Specifically, data received before the
   // delegate is attached must be buffered and later replayed. A remote FIN
   // is represented by a final, zero-length buffer.
-  std::vector<scoped_ptr<SpdyBuffer>> pending_recv_data_;
+  std::vector<std::unique_ptr<SpdyBuffer>> pending_recv_data_;
 
   // The time at which the request was made that resulted in this response.
   // For cached responses, this time could be "far" in the past.

@@ -6,6 +6,7 @@
 #define NET_CERT_MOCK_CERT_VERIFIER_H_
 
 #include <list>
+#include <memory>
 
 #include "net/cert/cert_verifier.h"
 #include "net/cert/cert_verify_result.h"
@@ -32,7 +33,7 @@ class MockCertVerifier : public CertVerifier {
              CRLSet* crl_set,
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
-             scoped_ptr<Request>* out_req,
+             std::unique_ptr<Request>* out_req,
              const BoundNetLog& net_log) override;
 
   // Sets the default return value for Verify() for certificates/hosts that do

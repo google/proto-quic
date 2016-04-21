@@ -4,9 +4,10 @@
 
 #include "net/proxy/polling_proxy_config_service.h"
 
+#include <memory>
+
 #include "base/bind.h"
 #include "base/location.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"

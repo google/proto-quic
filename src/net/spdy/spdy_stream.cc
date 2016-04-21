@@ -14,6 +14,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/values.h"
@@ -25,24 +26,24 @@ namespace net {
 
 namespace {
 
-scoped_ptr<base::Value> NetLogSpdyStreamErrorCallback(
+std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     SpdyStreamId stream_id,
     int status,
     const std::string* description,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
   dict->SetInteger("status", status);
   dict->SetString("description", *description);
   return std::move(dict);
 }
 
-scoped_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
+std::unique_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
     SpdyStreamId stream_id,
     int32_t delta,
     int32_t window_size,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("stream_id", stream_id);
   dict->SetInteger("delta", delta);
   dict->SetInteger("window_size", window_size);
@@ -50,12 +51,7 @@ scoped_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
 }
 
 bool ContainsUppercaseAscii(const std::string& str) {
-  for (std::string::const_iterator i(str.begin()); i != str.end(); ++i) {
-    if (*i >= 'A' && *i <= 'Z') {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(str.begin(), str.end(), base::IsAsciiUpper<char>);
 }
 
 }  // namespace
@@ -72,13 +68,13 @@ class SpdyStream::SynStreamBufferProducer : public SpdyBufferProducer {
 
   ~SynStreamBufferProducer() override {}
 
-  scoped_ptr<SpdyBuffer> ProduceBuffer() override {
+  std::unique_ptr<SpdyBuffer> ProduceBuffer() override {
     if (!stream_.get()) {
       NOTREACHED();
-      return scoped_ptr<SpdyBuffer>();
+      return std::unique_ptr<SpdyBuffer>();
     }
     DCHECK_GT(stream_->stream_id(), 0u);
-    return scoped_ptr<SpdyBuffer>(
+    return std::unique_ptr<SpdyBuffer>(
         new SpdyBuffer(stream_->ProduceSynStreamFrame()));
   }
 
@@ -181,7 +177,7 @@ void SpdyStream::PushedStreamReplay() {
 
   while (!pending_recv_data_.empty()) {
     // Take ownership of the first element of |pending_recv_data_|.
-    scoped_ptr<SpdyBuffer> buffer = std::move(pending_recv_data_.at(0));
+    std::unique_ptr<SpdyBuffer> buffer = std::move(pending_recv_data_.at(0));
     pending_recv_data_.erase(pending_recv_data_.begin());
 
     bool eof = (buffer == NULL);
@@ -203,7 +199,7 @@ void SpdyStream::PushedStreamReplay() {
   }
 }
 
-scoped_ptr<SpdyFrame> SpdyStream::ProduceSynStreamFrame() {
+std::unique_ptr<SpdySerializedFrame> SpdyStream::ProduceSynStreamFrame() {
   CHECK_EQ(io_state_, STATE_IDLE);
   CHECK(request_headers_);
   CHECK_GT(stream_id_, 0u);
@@ -211,7 +207,7 @@ scoped_ptr<SpdyFrame> SpdyStream::ProduceSynStreamFrame() {
   SpdyControlFlags flags =
       (pending_send_status_ == NO_MORE_DATA_TO_SEND) ?
       CONTROL_FLAG_FIN : CONTROL_FLAG_NONE;
-  scoped_ptr<SpdyFrame> frame(session_->CreateSynStream(
+  std::unique_ptr<SpdySerializedFrame> frame(session_->CreateSynStream(
       stream_id_, priority_, flags, *request_headers_));
   send_time_ = base::TimeTicks::Now();
   return frame;
@@ -477,7 +473,7 @@ void SpdyStream::OnPushPromiseHeadersReceived(const SpdyHeaderBlock& headers) {
   request_headers_.reset(new SpdyHeaderBlock(headers));
 }
 
-void SpdyStream::OnDataReceived(scoped_ptr<SpdyBuffer> buffer) {
+void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK(session_->IsStreamActive(stream_id_));
 
   // If we're still buffering data for a push stream, we will do the
@@ -688,8 +684,9 @@ base::WeakPtr<SpdyStream> SpdyStream::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-int SpdyStream::SendRequestHeaders(scoped_ptr<SpdyHeaderBlock> request_headers,
-                                   SpdySendStatus send_status) {
+int SpdyStream::SendRequestHeaders(
+    std::unique_ptr<SpdyHeaderBlock> request_headers,
+    SpdySendStatus send_status) {
   CHECK_NE(type_, SPDY_PUSH_STREAM);
   CHECK_EQ(pending_send_status_, MORE_DATA_TO_SEND);
   CHECK(!request_headers_);
@@ -697,10 +694,9 @@ int SpdyStream::SendRequestHeaders(scoped_ptr<SpdyHeaderBlock> request_headers,
   CHECK_EQ(io_state_, STATE_IDLE);
   request_headers_ = std::move(request_headers);
   pending_send_status_ = send_status;
-  session_->EnqueueStreamWrite(
-      GetWeakPtr(), SYN_STREAM,
-      scoped_ptr<SpdyBufferProducer>(
-          new SynStreamBufferProducer(GetWeakPtr())));
+  session_->EnqueueStreamWrite(GetWeakPtr(), SYN_STREAM,
+                               std::unique_ptr<SpdyBufferProducer>(
+                                   new SynStreamBufferProducer(GetWeakPtr())));
   return ERR_IO_PENDING;
 }
 
@@ -836,11 +832,9 @@ void SpdyStream::QueueNextDataFrame() {
   SpdyDataFlags flags =
       (pending_send_status_ == NO_MORE_DATA_TO_SEND) ?
       DATA_FLAG_FIN : DATA_FLAG_NONE;
-  scoped_ptr<SpdyBuffer> data_buffer(
-      session_->CreateDataBuffer(stream_id_,
-                                 pending_send_data_.get(),
-                                 pending_send_data_->BytesRemaining(),
-                                 flags));
+  std::unique_ptr<SpdyBuffer> data_buffer(
+      session_->CreateDataBuffer(stream_id_, pending_send_data_.get(),
+                                 pending_send_data_->BytesRemaining(), flags));
   // We'll get called again by PossiblyResumeIfSendStalled().
   if (!data_buffer)
     return;
@@ -864,7 +858,7 @@ void SpdyStream::QueueNextDataFrame() {
 
   session_->EnqueueStreamWrite(
       GetWeakPtr(), DATA,
-      scoped_ptr<SpdyBufferProducer>(
+      std::unique_ptr<SpdyBufferProducer>(
           new SimpleBufferProducer(std::move(data_buffer))));
 }
 

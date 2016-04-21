@@ -147,7 +147,7 @@ QuicCryptoClientConfig::CachedState::SetServerConfig(StringPiece server_config,
 
   // Even if the new server config matches the existing one, we still wish to
   // reject it if it has expired.
-  scoped_ptr<CryptoHandshakeMessage> new_scfg_storage;
+  std::unique_ptr<CryptoHandshakeMessage> new_scfg_storage;
   const CryptoHandshakeMessage* new_scfg;
 
   if (!matches_existing) {
@@ -384,7 +384,6 @@ void QuicCryptoClientConfig::SetDefaults() {
   if (ChaCha20Poly1305Rfc7539Encrypter::IsSupported()) {
     aead.push_back(kCC20);
   }
-  aead.push_back(kCC12);
   aead.push_back(kAESG);
 
   disable_ecdsa_ = false;
@@ -660,7 +659,7 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
     const QuicData& cetv_plaintext = cetv.GetSerialized();
     const size_t encrypted_len =
         crypters.encrypter->GetCiphertextSize(cetv_plaintext.length());
-    scoped_ptr<char[]> output(new char[encrypted_len]);
+    std::unique_ptr<char[]> output(new char[encrypted_len]);
     size_t output_size = 0;
     if (!crypters.encrypter->EncryptPacket(
             kDefaultPathId /* path id */, 0 /* packet number */,

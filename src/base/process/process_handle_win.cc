@@ -7,7 +7,6 @@
 #include <windows.h>
 #include <tlhelp32.h>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/windows_version.h"
 

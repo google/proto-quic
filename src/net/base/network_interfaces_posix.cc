@@ -4,10 +4,10 @@
 
 #include "net/base/network_interfaces.h"
 
-#include <set>
 #include <sys/types.h>
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+#include <set>
 
 #if !defined(OS_NACL)
 #include "net/base/network_interfaces_posix.h"
@@ -74,8 +74,8 @@ WifiPHYLayerProtocol GetWifiPHYLayerProtocol() {
   return WIFI_PHY_LAYER_PROTOCOL_UNKNOWN;
 }
 
-scoped_ptr<ScopedWifiOptions> SetWifiOptions(int options) {
-  return scoped_ptr<ScopedWifiOptions>();
+std::unique_ptr<ScopedWifiOptions> SetWifiOptions(int options) {
+  return std::unique_ptr<ScopedWifiOptions>();
 }
 
 

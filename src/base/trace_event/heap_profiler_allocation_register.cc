@@ -36,6 +36,8 @@ void AllocationRegister::Insert(void* address,
                                 size_t size,
                                 AllocationContext context) {
   DCHECK(address != nullptr);
+  if (size == 0)
+    return;
 
   CellIndex* idx_ptr = Lookup(address);
 

@@ -149,7 +149,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
  protected:
   MockConnectionHelper helper_;
   MockConnection* connection_;
-  scoped_ptr<MockQuicSpdySession> session_;
+  std::unique_ptr<MockQuicSpdySession> session_;
   TestStream* stream_;
   SpdyHeaderBlock headers_;
   QuicWriteBlockedList* write_blocked_list_;

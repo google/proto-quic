@@ -5,11 +5,11 @@
 #ifndef NET_SOCKET_TRANSPORT_CLIENT_SOCKET_POOL_H_
 #define NET_SOCKET_TRANSPORT_CLIENT_SOCKET_POOL_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/host_port_pair.h"
@@ -22,6 +22,7 @@
 namespace net {
 
 class ClientSocketFactory;
+class SocketPerformanceWatcherFactory;
 
 typedef base::Callback<int(const AddressList&, const BoundNetLog& net_log)>
 OnHostResolutionCallback;
@@ -153,15 +154,17 @@ class NET_EXPORT_PRIVATE TransportConnectJobHelper {
 // a headstart) and return the one that completes first to the socket pool.
 class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
  public:
-  TransportConnectJob(const std::string& group_name,
-                      RequestPriority priority,
-                      ClientSocketPool::RespectLimits respect_limits,
-                      const scoped_refptr<TransportSocketParams>& params,
-                      base::TimeDelta timeout_duration,
-                      ClientSocketFactory* client_socket_factory,
-                      HostResolver* host_resolver,
-                      Delegate* delegate,
-                      NetLog* net_log);
+  TransportConnectJob(
+      const std::string& group_name,
+      RequestPriority priority,
+      ClientSocketPool::RespectLimits respect_limits,
+      const scoped_refptr<TransportSocketParams>& params,
+      base::TimeDelta timeout_duration,
+      ClientSocketFactory* client_socket_factory,
+      SocketPerformanceWatcherFactory* socket_performance_watcher_factory,
+      HostResolver* host_resolver,
+      Delegate* delegate,
+      NetLog* net_log);
   ~TransportConnectJob() override;
 
   // ConnectJob methods.
@@ -199,12 +202,13 @@ class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
 
   TransportConnectJobHelper helper_;
 
-  scoped_ptr<StreamSocket> transport_socket_;
+  std::unique_ptr<StreamSocket> transport_socket_;
 
-  scoped_ptr<StreamSocket> fallback_transport_socket_;
-  scoped_ptr<AddressList> fallback_addresses_;
+  std::unique_ptr<StreamSocket> fallback_transport_socket_;
+  std::unique_ptr<AddressList> fallback_addresses_;
   base::TimeTicks fallback_connect_start_time_;
   base::OneShotTimer fallback_timer_;
+  SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
 
   // Track the interval between this connect and previous connect.
   ConnectInterval interval_between_connects_;
@@ -231,6 +235,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
       int max_sockets_per_group,
       HostResolver* host_resolver,
       ClientSocketFactory* client_socket_factory,
+      SocketPerformanceWatcherFactory* socket_performance_watcher_factory,
       NetLog* net_log);
 
   ~TransportClientSocketPool() override;
@@ -250,7 +255,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
   void ReleaseSocket(const std::string& group_name,
-                     scoped_ptr<StreamSocket> socket,
+                     std::unique_ptr<StreamSocket> socket,
                      int id) override;
   void FlushWithError(int error) override;
   void CloseIdleSockets() override;
@@ -258,7 +263,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
   int IdleSocketCountInGroup(const std::string& group_name) const override;
   LoadState GetLoadState(const std::string& group_name,
                          const ClientSocketHandle* handle) const override;
-  scoped_ptr<base::DictionaryValue> GetInfoAsValue(
+  std::unique_ptr<base::DictionaryValue> GetInfoAsValue(
       const std::string& name,
       const std::string& type,
       bool include_nested_pools) const override;
@@ -281,10 +286,14 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
   class TransportConnectJobFactory
       : public PoolBase::ConnectJobFactory {
    public:
-    TransportConnectJobFactory(ClientSocketFactory* client_socket_factory,
-                         HostResolver* host_resolver,
-                         NetLog* net_log)
+    TransportConnectJobFactory(
+        ClientSocketFactory* client_socket_factory,
+        HostResolver* host_resolver,
+        SocketPerformanceWatcherFactory* socket_performance_watcher_factory,
+        NetLog* net_log)
         : client_socket_factory_(client_socket_factory),
+          socket_performance_watcher_factory_(
+              socket_performance_watcher_factory),
           host_resolver_(host_resolver),
           net_log_(net_log) {}
 
@@ -292,7 +301,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
 
     // ClientSocketPoolBase::ConnectJobFactory methods.
 
-    scoped_ptr<ConnectJob> NewConnectJob(
+    std::unique_ptr<ConnectJob> NewConnectJob(
         const std::string& group_name,
         const PoolBase::Request& request,
         ConnectJob::Delegate* delegate) const override;
@@ -301,6 +310,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
 
    private:
     ClientSocketFactory* const client_socket_factory_;
+    SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
     HostResolver* const host_resolver_;
     NetLog* net_log_;
 

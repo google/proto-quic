@@ -195,7 +195,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // If the client provides CachedNetworkParameters in the STK in the CHLO, then
   // store here, and send back in future STKs if we have no better bandwidth
   // estimate to send.
-  scoped_ptr<CachedNetworkParameters> previous_cached_network_params_;
+  std::unique_ptr<CachedNetworkParameters> previous_cached_network_params_;
 
   // Contains any source address tokens which were present in the CHLO.
   SourceAddressTokens previous_source_address_tokens_;

@@ -36,7 +36,7 @@ int HttpBasicState::Initialize(const HttpRequestInfo* request_info,
   return OK;
 }
 
-scoped_ptr<ClientSocketHandle> HttpBasicState::ReleaseConnection() {
+std::unique_ptr<ClientSocketHandle> HttpBasicState::ReleaseConnection() {
   return std::move(connection_);
 }
 

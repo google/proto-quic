@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/quic/test_tools/crypto_test_utils.h"
-
+#include <memory>
 #include <utility>
 
 #include "base/callback_helpers.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
 #include "net/base/net_errors.h"
@@ -30,6 +29,7 @@
 #include "net/quic/crypto/crypto_utils.h"
 #include "net/quic/crypto/proof_source_chromium.h"
 #include "net/quic/crypto/proof_verifier_chromium.h"
+#include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/test/cert_test_util.h"
 
@@ -47,9 +47,9 @@ namespace {
 class TestProofVerifierChromium : public ProofVerifierChromium {
  public:
   TestProofVerifierChromium(
-      scoped_ptr<CertVerifier> cert_verifier,
-      scoped_ptr<TransportSecurityState> transport_security_state,
-      scoped_ptr<CTVerifier> cert_transparency_verifier,
+      std::unique_ptr<CertVerifier> cert_verifier,
+      std::unique_ptr<TransportSecurityState> transport_security_state,
+      std::unique_ptr<CTVerifier> cert_transparency_verifier,
       const std::string& cert_file)
       : ProofVerifierChromium(cert_verifier.get(),
                               nullptr,
@@ -70,9 +70,9 @@ class TestProofVerifierChromium : public ProofVerifierChromium {
 
  private:
   ScopedTestRoot scoped_root_;
-  scoped_ptr<CertVerifier> cert_verifier_;
-  scoped_ptr<TransportSecurityState> transport_security_state_;
-  scoped_ptr<CTVerifier> cert_transparency_verifier_;
+  std::unique_ptr<CertVerifier> cert_verifier_;
+  std::unique_ptr<TransportSecurityState> transport_security_state_;
+  std::unique_ptr<CTVerifier> cert_transparency_verifier_;
 };
 
 const char kSignature[] = "signature";
@@ -138,10 +138,11 @@ class FakeProofSource : public ProofSource {
 
 class FakeProofVerifier : public TestProofVerifierChromium {
  public:
-  FakeProofVerifier(scoped_ptr<CertVerifier> cert_verifier,
-                    scoped_ptr<TransportSecurityState> transport_security_state,
-                    scoped_ptr<CTVerifier> cert_transparency_verifier,
-                    const std::string& cert_file)
+  FakeProofVerifier(
+      std::unique_ptr<CertVerifier> cert_verifier,
+      std::unique_ptr<TransportSecurityState> transport_security_state,
+      std::unique_ptr<CTVerifier> cert_transparency_verifier,
+      const std::string& cert_file)
       : TestProofVerifierChromium(std::move(cert_verifier),
                                   std::move(transport_security_state),
                                   std::move(cert_transparency_verifier),
@@ -149,19 +150,21 @@ class FakeProofVerifier : public TestProofVerifierChromium {
   ~FakeProofVerifier() override {}
 
   // ProofVerifier interface
-  QuicAsyncStatus VerifyProof(const std::string& hostname,
-                              const std::string& server_config,
-                              QuicVersion quic_version,
-                              StringPiece chlo_hash,
-                              const std::vector<std::string>& certs,
-                              const std::string& cert_sct,
-                              const std::string& signature,
-                              const ProofVerifyContext* verify_context,
-                              std::string* error_details,
-                              scoped_ptr<ProofVerifyDetails>* verify_details,
-                              ProofVerifierCallback* callback) override {
+  QuicAsyncStatus VerifyProof(
+      const std::string& hostname,
+      const uint16_t port,
+      const std::string& server_config,
+      QuicVersion quic_version,
+      StringPiece chlo_hash,
+      const std::vector<std::string>& certs,
+      const std::string& cert_sct,
+      const std::string& signature,
+      const ProofVerifyContext* verify_context,
+      std::string* error_details,
+      std::unique_ptr<ProofVerifyDetails>* verify_details,
+      ProofVerifierCallback* callback) override {
     error_details->clear();
-    scoped_ptr<ProofVerifyDetailsChromium> verify_details_chromium(
+    std::unique_ptr<ProofVerifyDetailsChromium> verify_details_chromium(
         new ProofVerifyDetailsChromium);
     DCHECK(!certs.empty());
     // Convert certs to X509Certificate.
@@ -182,7 +185,7 @@ class FakeProofVerifier : public TestProofVerifierChromium {
 
     const ProofVerifyContextChromium* chromium_context =
         reinterpret_cast<const ProofVerifyContextChromium*>(verify_context);
-    scoped_ptr<CertVerifier::Request> cert_verifier_request_;
+    std::unique_ptr<CertVerifier::Request> cert_verifier_request_;
     TestCompletionCallback test_callback;
     int result = cert_verifier()->Verify(
         x509_cert.get(), hostname, std::string(),
@@ -234,7 +237,7 @@ ProofSource* CryptoTestUtils::ProofSourceForTesting() {
 // static
 ProofVerifier* ProofVerifierForTestingInternal(bool use_real_proof_verifier) {
   // TODO(rch): use a real cert verifier?
-  scoped_ptr<MockCertVerifier> cert_verifier(new MockCertVerifier());
+  std::unique_ptr<MockCertVerifier> cert_verifier(new MockCertVerifier());
   net::CertVerifyResult verify_result;
   verify_result.verified_cert =
       ImportCertFromFile(GetTestCertsDirectory(), "quic_test.example.com.crt");
@@ -246,17 +249,17 @@ ProofVerifier* ProofVerifierForTestingInternal(bool use_real_proof_verifier) {
                                          "test.example.com", verify_result, OK);
   if (use_real_proof_verifier) {
     return new TestProofVerifierChromium(
-        std::move(cert_verifier), make_scoped_ptr(new TransportSecurityState),
-        make_scoped_ptr(new MultiLogCTVerifier), "quic_root.crt");
+        std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
+        base::WrapUnique(new MultiLogCTVerifier), "quic_root.crt");
   }
 #if defined(USE_OPENSSL)
   return new TestProofVerifierChromium(
-      std::move(cert_verifier), make_scoped_ptr(new TransportSecurityState),
-      make_scoped_ptr(new MultiLogCTVerifier), "quic_root.crt");
+      std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
+      base::WrapUnique(new MultiLogCTVerifier), "quic_root.crt");
 #else
   return new FakeProofVerifier(
-      std::move(cert_verifier), make_scoped_ptr(new TransportSecurityState),
-      make_scoped_ptr(new MultiLogCTVerifier), "quic_root.crt");
+      std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
+      base::WrapUnique(new MultiLogCTVerifier), "quic_root.crt");
 #endif
 }
 

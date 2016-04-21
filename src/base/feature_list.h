@@ -6,13 +6,13 @@
 #define BASE_FEATURE_LIST_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/base_export.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 
@@ -147,10 +147,10 @@ class BASE_EXPORT FeatureList {
 
   // Initializes and sets an instance of FeatureList with feature overrides via
   // command-line flags |enable_features| and |disable_features| if one has not
-  // already been set from command-line flags. No-op otherwise. See
-  // InitializeFromCommandLine for more details about |enable_features| and
-  // |disable_features| parameters.
-  static void InitializeInstance(const std::string& enable_features,
+  // already been set from command-line flags. Returns true if an instance did
+  // not previously exist. See InitializeFromCommandLine() for more details
+  // about |enable_features| and |disable_features| parameters.
+  static bool InitializeInstance(const std::string& enable_features,
                                  const std::string& disable_features);
 
   // Returns the singleton instance of FeatureList. Will return null until an
@@ -159,7 +159,7 @@ class BASE_EXPORT FeatureList {
 
   // Registers the given |instance| to be the singleton feature list for this
   // process. This should only be called once and |instance| must not be null.
-  static void SetInstance(scoped_ptr<FeatureList> instance);
+  static void SetInstance(std::unique_ptr<FeatureList> instance);
 
   // Clears the previously-registered singleton instance for tests.
   static void ClearInstanceForTesting();

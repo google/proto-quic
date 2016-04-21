@@ -5,13 +5,14 @@
 #include "net/http/transport_security_state.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "base/base64.h"
 #include "base/build_time.h"
 #include "base/json/json_writer.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/sha1.h"
@@ -40,6 +41,11 @@ const size_t kMaxHPKPReportCacheEntries = 50;
 const int kTimeToRememberHPKPReportsMins = 60;
 const size_t kReportCacheKeyLength = 16;
 
+void RecordUMAForHPKPReportFailure(const GURL& report_uri, int net_error) {
+  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.PublicKeyPinReportSendingFailure",
+                              net_error);
+}
+
 std::string TimeToISO8601(const base::Time& t) {
   base::Time::Exploded exploded;
   t.UTCExplode(&exploded);
@@ -49,16 +55,16 @@ std::string TimeToISO8601(const base::Time& t) {
       exploded.millisecond);
 }
 
-scoped_ptr<base::ListValue> GetPEMEncodedChainAsList(
+std::unique_ptr<base::ListValue> GetPEMEncodedChainAsList(
     const net::X509Certificate* cert_chain) {
   if (!cert_chain)
-    return make_scoped_ptr(new base::ListValue());
+    return base::WrapUnique(new base::ListValue());
 
-  scoped_ptr<base::ListValue> result(new base::ListValue());
+  std::unique_ptr<base::ListValue> result(new base::ListValue());
   std::vector<std::string> pem_encoded_chain;
   cert_chain->GetPEMEncodedChain(&pem_encoded_chain);
   for (const std::string& cert : pem_encoded_chain)
-    result->Append(make_scoped_ptr(new base::StringValue(cert)));
+    result->Append(base::WrapUnique(new base::StringValue(cert)));
 
   return result;
 }
@@ -94,16 +100,16 @@ bool GetHPKPReport(const HostPortPair& host_port_pair,
   report.SetBoolean("include-subdomains", pkp_state.include_subdomains);
   report.SetString("noted-hostname", pkp_state.domain);
 
-  scoped_ptr<base::ListValue> served_certificate_chain_list =
+  std::unique_ptr<base::ListValue> served_certificate_chain_list =
       GetPEMEncodedChainAsList(served_certificate_chain);
-  scoped_ptr<base::ListValue> validated_certificate_chain_list =
+  std::unique_ptr<base::ListValue> validated_certificate_chain_list =
       GetPEMEncodedChainAsList(validated_certificate_chain);
   report.Set("served-certificate-chain",
              std::move(served_certificate_chain_list));
   report.Set("validated-certificate-chain",
              std::move(validated_certificate_chain_list));
 
-  scoped_ptr<base::ListValue> known_pin_list(new base::ListValue());
+  std::unique_ptr<base::ListValue> known_pin_list(new base::ListValue());
   for (const auto& hash_value : pkp_state.spki_hashes) {
     std::string known_pin;
 
@@ -124,7 +130,7 @@ bool GetHPKPReport(const HostPortPair& host_port_pair,
     known_pin += "\"" + base64_value + "\"";
 
     known_pin_list->Append(
-        scoped_ptr<base::Value>(new base::StringValue(known_pin)));
+        std::unique_ptr<base::Value>(new base::StringValue(known_pin)));
   }
 
   report.Set("known-pins", std::move(known_pin_list));
@@ -689,6 +695,8 @@ void TransportSecurityState::SetReportSender(
     TransportSecurityState::ReportSender* report_sender) {
   DCHECK(CalledOnValidThread());
   report_sender_ = report_sender;
+  if (report_sender_)
+    report_sender_->SetErrorCallback(base::Bind(RecordUMAForHPKPReportFailure));
 }
 
 void TransportSecurityState::SetExpectCTReporter(

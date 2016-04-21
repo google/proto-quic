@@ -7,10 +7,11 @@
 #include <windows.h>
 #include <winhttp.h>
 
+#include <memory>
+
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
@@ -95,7 +96,7 @@ void ProxyConfigServiceWin::StartWatchingRegistryForChanges() {
 
 bool ProxyConfigServiceWin::AddKeyToWatchList(HKEY rootkey,
                                               const wchar_t* subkey) {
-  scoped_ptr<base::win::RegKey> key(new base::win::RegKey);
+  std::unique_ptr<base::win::RegKey> key(new base::win::RegKey);
   if (key->Create(rootkey, subkey, KEY_NOTIFY) != ERROR_SUCCESS)
     return false;
 

@@ -81,23 +81,6 @@ bool QuicMultipathReceivedPacketManager::IsAwaitingPacket(
   return manager->IsAwaitingPacket(packet_number);
 }
 
-void QuicMultipathReceivedPacketManager::UpdateReceivedPacketInfo(
-    std::vector<QuicAckFrame>* ack_frames,
-    QuicTime approximate_now,
-    bool force_all_paths) {
-  QuicAckFrame ack_frame;
-  for (std::pair<QuicPathId, QuicReceivedPacketManager*>
-           per_path_received_packet_manager : path_managers_) {
-    if (!force_all_paths &&
-        !per_path_received_packet_manager.second->ack_frame_updated()) {
-      continue;
-    }
-    per_path_received_packet_manager.second->UpdateReceivedPacketInfo(
-        &ack_frame, approximate_now);
-    ack_frames->push_back(ack_frame);
-  }
-}
-
 void QuicMultipathReceivedPacketManager::UpdatePacketInformationSentByPeer(
     const std::vector<QuicStopWaitingFrame>& stop_waitings) {
   for (QuicStopWaitingFrame stop_waiting : stop_waitings) {

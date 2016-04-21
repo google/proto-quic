@@ -5,9 +5,10 @@
 #ifndef NET_DNS_ADDRESS_SORTER_H_
 #define NET_DNS_ADDRESS_SORTER_H_
 
+#include <memory>
+
 #include "base/callback.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -32,7 +33,7 @@ class NET_EXPORT AddressSorter {
                     const CallbackType& callback) const = 0;
 
   // Creates platform-dependent AddressSorter.
-  static scoped_ptr<AddressSorter> CreateAddressSorter();
+  static std::unique_ptr<AddressSorter> CreateAddressSorter();
 
  protected:
   AddressSorter() {}

@@ -5,14 +5,14 @@
 #include "net/quic/quic_framer.h"
 
 #include <stdint.h>
+
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "base/containers/hash_tables.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/crypto/quic_encrypter.h"
@@ -22,7 +22,6 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
 
-using base::hash_set;
 using base::StringPiece;
 using std::make_pair;
 using std::map;
@@ -313,10 +312,10 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
   bool accept_packet_;
   bool accept_public_header_;
 
-  scoped_ptr<QuicPacketHeader> header_;
-  scoped_ptr<QuicPacketPublicHeader> public_header_;
-  scoped_ptr<QuicPublicResetPacket> public_reset_packet_;
-  scoped_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
+  std::unique_ptr<QuicPacketHeader> header_;
+  std::unique_ptr<QuicPacketPublicHeader> public_header_;
+  std::unique_ptr<QuicPublicResetPacket> public_reset_packet_;
+  std::unique_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
   vector<QuicStreamFrame*> stream_frames_;
   vector<QuicAckFrame*> ack_frames_;
   vector<QuicStopWaitingFrame*> stop_waiting_frames_;
@@ -2537,7 +2536,7 @@ TEST_P(QuicFramerTest, AckFrameNoNacks) {
   // Verify that the packet re-serializes identically.
   QuicFrames frames;
   frames.push_back(QuicFrame(frame));
-  scoped_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -2608,7 +2607,7 @@ TEST_P(QuicFramerTest, AckFrame500Nacks) {
   // Verify that the packet re-serializes identically.
   QuicFrames frames;
   frames.push_back(QuicFrame(frame));
-  scoped_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -2677,7 +2676,7 @@ TEST_P(QuicFramerTest, AckFrame500NacksVersion32) {
   // Verify that the packet re-serializes identically.
   QuicFrames frames;
   frames.push_back(QuicFrame(frame));
-  scoped_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3374,7 +3373,7 @@ TEST_P(QuicFramerTest, BuildPaddingFramePacket) {
                           !kIncludePathId, PACKET_6BYTE_PACKET_NUMBER);
   memset(packet + header_size + 1, 0x00, kMaxPacketSize - header_size - 1);
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3421,7 +3420,7 @@ TEST_P(QuicFramerTest, Build4ByteSequenceNumberPaddingFramePacket) {
                           !kIncludePathId, PACKET_4BYTE_PACKET_NUMBER);
   memset(packet + header_size + 1, 0x00, kMaxPacketSize - header_size - 1);
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3468,7 +3467,7 @@ TEST_P(QuicFramerTest, Build2ByteSequenceNumberPaddingFramePacket) {
                           !kIncludePathId, PACKET_2BYTE_PACKET_NUMBER);
   memset(packet + header_size + 1, 0x00, kMaxPacketSize - header_size - 1);
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3515,7 +3514,7 @@ TEST_P(QuicFramerTest, Build1ByteSequenceNumberPaddingFramePacket) {
                           !kIncludePathId, PACKET_1BYTE_PACKET_NUMBER);
   memset(packet + header_size + 1, 0x00, kMaxPacketSize - header_size - 1);
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3566,7 +3565,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3615,7 +3614,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   // clang-format on
 
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3670,7 +3669,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithMultipathFlag) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3728,7 +3727,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   // clang-format on
 
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -3749,8 +3748,9 @@ TEST_P(QuicFramerTest, BuildVersionNegotiationPacket) {
   // clang-format on
 
   QuicConnectionId connection_id = kConnectionId;
-  scoped_ptr<QuicEncryptedPacket> data(framer_.BuildVersionNegotiationPacket(
-      connection_id, SupportedVersions(GetParam())));
+  std::unique_ptr<QuicEncryptedPacket> data(
+      framer_.BuildVersionNegotiationPacket(connection_id,
+                                            SupportedVersions(GetParam())));
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
                                       data->length(), AsChars(packet),
                                       arraysize(packet));
@@ -3839,7 +3839,7 @@ TEST_P(QuicFramerTest, BuildAckFramePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   if (framer_.version() <= QUIC_VERSION_31) {
@@ -4035,7 +4035,7 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameLargePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   if (framer_.version() <= QUIC_VERSION_31) {
@@ -4136,7 +4136,7 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
   // clang-format on
 
   if (framer_.version() <= QUIC_VERSION_31) {
-    scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames, 37u));
+    std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames, 37u));
     ASSERT_TRUE(data != nullptr);
     // Expect 1 byte unused since at least 2 bytes are needed to fit more nacks.
     EXPECT_EQ(36u, data->length());
@@ -4144,7 +4144,7 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
                                         data->length(), AsChars(packet),
                                         arraysize(packet));
   } else {
-    scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames, 36u));
+    std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames, 36u));
     ASSERT_TRUE(data != nullptr);
     // Expect 1 byte unused since at least 2 bytes are needed to fit more nacks.
     EXPECT_EQ(35u, data->length());
@@ -4193,7 +4193,7 @@ TEST_P(QuicFramerTest, BuildStopWaitingPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4244,7 +4244,7 @@ TEST_P(QuicFramerTest, BuildRstFramePacketQuic) {
   QuicFrames frames;
   frames.push_back(QuicFrame(&rst_frame));
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4296,7 +4296,7 @@ TEST_P(QuicFramerTest, BuildCloseFramePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4351,7 +4351,7 @@ TEST_P(QuicFramerTest, BuildGoAwayPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4399,7 +4399,7 @@ TEST_P(QuicFramerTest, BuildWindowUpdatePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4443,7 +4443,7 @@ TEST_P(QuicFramerTest, BuildBlockedPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4484,7 +4484,7 @@ TEST_P(QuicFramerTest, BuildPingPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4529,7 +4529,7 @@ TEST_P(QuicFramerTest, BuildPathClosePacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4571,7 +4571,7 @@ TEST_P(QuicFramerTest, BuildMtuDiscoveryPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> data(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
   test::CompareCharArraysWithHexError("constructed packet", data->data(),
@@ -4615,7 +4615,7 @@ TEST_P(QuicFramerTest, BuildPublicResetPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicEncryptedPacket> data(
+  std::unique_ptr<QuicEncryptedPacket> data(
       framer_.BuildPublicResetPacket(reset_packet));
   ASSERT_TRUE(data != nullptr);
 
@@ -4669,7 +4669,7 @@ TEST_P(QuicFramerTest, BuildPublicResetPacketWithClientAddress) {
   };
   // clang-format on
 
-  scoped_ptr<QuicEncryptedPacket> data(
+  std::unique_ptr<QuicEncryptedPacket> data(
       framer_.BuildPublicResetPacket(reset_packet));
   ASSERT_TRUE(data != nullptr);
 
@@ -4701,7 +4701,7 @@ TEST_P(QuicFramerTest, EncryptPacket) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> raw(new QuicPacket(
+  std::unique_ptr<QuicPacket> raw(new QuicPacket(
       AsChars(packet), arraysize(packet), false, PACKET_8BYTE_CONNECTION_ID,
       !kIncludeVersion, !kIncludePathId, PACKET_6BYTE_PACKET_NUMBER));
   char buffer[kMaxPacketSize];
@@ -4738,7 +4738,7 @@ TEST_P(QuicFramerTest, EncryptPacketWithVersionFlag) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> raw(new QuicPacket(
+  std::unique_ptr<QuicPacket> raw(new QuicPacket(
       AsChars(packet), arraysize(packet), false, PACKET_8BYTE_CONNECTION_ID,
       kIncludeVersion, !kIncludePathId, PACKET_6BYTE_PACKET_NUMBER));
   char buffer[kMaxPacketSize];
@@ -4775,7 +4775,7 @@ TEST_P(QuicFramerTest, EncryptPacketWithMultipathFlag) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> raw(new QuicPacket(
+  std::unique_ptr<QuicPacket> raw(new QuicPacket(
       AsChars(packet), arraysize(packet), false, PACKET_8BYTE_CONNECTION_ID,
       !kIncludeVersion, kIncludePathId, PACKET_6BYTE_PACKET_NUMBER));
   char buffer[kMaxPacketSize];
@@ -4813,7 +4813,7 @@ TEST_P(QuicFramerTest, EncryptPacketWithBothVersionFlagAndMultipathFlag) {
   };
   // clang-format on
 
-  scoped_ptr<QuicPacket> raw(new QuicPacket(
+  std::unique_ptr<QuicPacket> raw(new QuicPacket(
       AsChars(packet), arraysize(packet), false, PACKET_8BYTE_CONNECTION_ID,
       kIncludeVersion, kIncludePathId, PACKET_6BYTE_PACKET_NUMBER));
   char buffer[kMaxPacketSize];
@@ -4843,7 +4843,7 @@ TEST_P(QuicFramerTest, AckTruncationLargePacket) {
   frames.push_back(frame);
 
   // Build an ack packet with truncation due to limit in number of nack ranges.
-  scoped_ptr<QuicPacket> raw_ack_packet(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> raw_ack_packet(BuildDataPacket(header, frames));
   ASSERT_TRUE(raw_ack_packet != nullptr);
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
@@ -4881,7 +4881,8 @@ TEST_P(QuicFramerTest, AckTruncationSmallPacket) {
   frames.push_back(frame);
 
   // Build an ack packet with truncation due to limit in number of nack ranges.
-  scoped_ptr<QuicPacket> raw_ack_packet(BuildDataPacket(header, frames, 500));
+  std::unique_ptr<QuicPacket> raw_ack_packet(
+      BuildDataPacket(header, frames, 500));
   ASSERT_TRUE(raw_ack_packet != nullptr);
   char buffer[kMaxPacketSize];
   size_t encrypted_length = framer_.EncryptPayload(
@@ -4921,7 +4922,7 @@ TEST_P(QuicFramerTest, CleanTruncation) {
   QuicFrames frames;
   frames.push_back(frame);
 
-  scoped_ptr<QuicPacket> raw_ack_packet(BuildDataPacket(header, frames));
+  std::unique_ptr<QuicPacket> raw_ack_packet(BuildDataPacket(header, frames));
   ASSERT_TRUE(raw_ack_packet != nullptr);
 
   char buffer[kMaxPacketSize];
@@ -5067,7 +5068,7 @@ TEST_P(QuicFramerTest, ConstructEncryptedPacket) {
   framer_.SetDecrypter(ENCRYPTION_NONE, QuicDecrypter::Create(kNULL));
   framer_.SetEncrypter(ENCRYPTION_NONE, QuicEncrypter::Create(kNULL));
 
-  scoped_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
       42, false, false, false, kDefaultPathId, kTestQuicStreamId, kTestString,
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER));
 
@@ -5100,7 +5101,7 @@ TEST_P(QuicFramerTest, ConstructMisFramedEncryptedPacket) {
   framer_.SetDecrypter(ENCRYPTION_NONE, QuicDecrypter::Create(kNULL));
   framer_.SetEncrypter(ENCRYPTION_NONE, QuicEncrypter::Create(kNULL));
 
-  scoped_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
       42, false, false, false, kDefaultPathId, kTestQuicStreamId, kTestString,
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, nullptr));
 

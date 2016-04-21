@@ -331,6 +331,7 @@ army, 0
 arna.no, 0
 arpa, 0
 arq.br, 0
+art, 0
 art.br, 0
 art.do, 0
 art.dz, 0
@@ -615,6 +616,7 @@ biz.at, 4
 biz.az, 0
 biz.bb, 0
 biz.cy, 0
+biz.dk, 4
 biz.et, 0
 biz.id, 0
 biz.ki, 0
@@ -1132,6 +1134,7 @@ co.cm, 0
 co.com, 4
 co.cr, 0
 co.cz, 4
+co.dk, 4
 co.gg, 0
 co.gl, 0
 co.gy, 0
@@ -1420,6 +1423,8 @@ cy.eu.org, 4
 cyber.museum, 0
 cymru, 0
 cymru.museum, 0
+cyon.link, 4
+cyon.site, 4
 cyou, 0
 cz, 0
 cz.eu.org, 4
@@ -1933,6 +1938,7 @@ firebaseapp.com, 4
 firenze.it, 0
 firestone, 0
 firm.co, 0
+firm.dk, 4
 firm.ht, 0
 firm.in, 0
 firm.nf, 0
@@ -4500,6 +4506,7 @@ mydrobo.com, 4
 myds.me, 4
 mykolaiv.ua, 0
 myoko.niigata.jp, 0
+mypep.link, 4
 mypets.ws, 4
 myphotos.cc, 4
 mytis.ru, 0
@@ -5360,6 +5367,7 @@ ovre-eiker.no, 0
 owani.aomori.jp, 0
 owariasahi.aichi.jp, 0
 oxford.museum, 0
+oy.lc, 4
 oyabe.toyama.jp, 0
 oyama.tochigi.jp, 0
 oyamazaki.kyoto.jp, 0
@@ -5393,7 +5401,7 @@ pamperedchef, 0
 panama.museum, 0
 panasonic, 0
 panerai, 0
-pantheon.io, 4
+pantheonsite.io, 4
 parachuting.aero, 0
 paragliding.aero, 0
 paris, 0
@@ -5689,6 +5697,7 @@ red, 0
 red.sv, 0
 redstone, 0
 redumbrella, 0
+reg.dk, 4
 reggio-calabria.it, 0
 reggio-emilia.it, 0
 reggiocalabria.it, 0
@@ -6179,6 +6188,7 @@ shoo.okayama.jp, 0
 shop.ht, 0
 shop.hu, 0
 shop.pl, 0
+shopping, 0
 shouji, 0
 show, 0
 show.aero, 0
@@ -6373,6 +6383,7 @@ stord.no, 0
 stordal.no, 0
 store, 0
 store.bb, 0
+store.dk, 4
 store.nf, 0
 store.ro, 0
 store.st, 0
@@ -7397,6 +7408,7 @@ xn--djty4k.jp, 0
 xn--dnna-gra.no, 0
 xn--drbak-wua.no, 0
 xn--dyry-ira.no, 0
+xn--e1a4c, 0
 xn--eckvdtc9d, 0
 xn--efvn9s.jp, 0
 xn--efvy88h, 0

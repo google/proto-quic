@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,7 +15,6 @@
 #include "base/environment.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "net/base/net_export.h"
 #include "net/proxy/proxy_config.h"
@@ -241,8 +241,8 @@ class NET_EXPORT_PRIVATE ProxyConfigServiceLinux : public ProxyConfigService {
     // This method is run on the getter's notification thread.
     void SetUpNotifications();
 
-    scoped_ptr<base::Environment> env_var_getter_;
-    scoped_ptr<SettingGetter> setting_getter_;
+    std::unique_ptr<base::Environment> env_var_getter_;
+    std::unique_ptr<SettingGetter> setting_getter_;
 
     // Cached proxy configuration, to be returned by
     // GetLatestProxyConfig. Initially populated from the UI thread, but

@@ -7,7 +7,7 @@
 
 #include <cert.h>
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
 
 namespace net {
 
@@ -17,7 +17,8 @@ struct FreeCERTCertificate {
   }
 };
 
-typedef scoped_ptr<CERTCertificate, FreeCERTCertificate> ScopedCERTCertificate;
+typedef std::unique_ptr<CERTCertificate, FreeCERTCertificate>
+    ScopedCERTCertificate;
 
 }  // namespace net
 

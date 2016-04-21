@@ -6,6 +6,8 @@
 
 #include <limits.h>
 
+#include <memory>
+
 #include "base/strings/string_util.h"
 #include "net/cert/internal/verify_name_match.h"
 #include "net/der/input.h"
@@ -298,11 +300,11 @@ GeneralNames::GeneralNames() {}
 GeneralNames::~GeneralNames() {}
 
 // static
-scoped_ptr<GeneralNames> GeneralNames::CreateFromDer(
+std::unique_ptr<GeneralNames> GeneralNames::CreateFromDer(
     const der::Input& general_names_tlv) {
   // RFC 5280 section 4.2.1.6:
   // GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
-  scoped_ptr<GeneralNames> general_names(new GeneralNames());
+  std::unique_ptr<GeneralNames> general_names(new GeneralNames());
   der::Parser parser(general_names_tlv);
   der::Parser sequence_parser;
   if (!parser.ReadSequence(&sequence_parser))
@@ -330,10 +332,10 @@ scoped_ptr<GeneralNames> GeneralNames::CreateFromDer(
 NameConstraints::~NameConstraints() {}
 
 // static
-scoped_ptr<NameConstraints> NameConstraints::CreateFromDer(
+std::unique_ptr<NameConstraints> NameConstraints::CreateFromDer(
     const der::Input& extension_value,
     bool is_critical) {
-  scoped_ptr<NameConstraints> name_constraints(new NameConstraints());
+  std::unique_ptr<NameConstraints> name_constraints(new NameConstraints());
   if (!name_constraints->Parse(extension_value, is_critical))
     return nullptr;
   return name_constraints;

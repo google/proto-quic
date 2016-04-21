@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -27,7 +28,6 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"

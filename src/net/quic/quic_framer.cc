@@ -436,7 +436,7 @@ QuicEncryptedPacket* QuicFramer::BuildPublicResetPacket(
 
   size_t len =
       kPublicFlagsSize + PACKET_8BYTE_CONNECTION_ID + reset_serialized.length();
-  scoped_ptr<char[]> buffer(new char[len]);
+  std::unique_ptr<char[]> buffer(new char[len]);
   QuicDataWriter writer(len, buffer.get());
 
   uint8_t flags = static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_RST |
@@ -462,7 +462,7 @@ QuicEncryptedPacket* QuicFramer::BuildVersionNegotiationPacket(
     const QuicVersionVector& versions) {
   DCHECK(!versions.empty());
   size_t len = GetVersionNegotiationPacketSize(versions.size());
-  scoped_ptr<char[]> buffer(new char[len]);
+  std::unique_ptr<char[]> buffer(new char[len]);
   QuicDataWriter writer(len, buffer.get());
 
   uint8_t flags = static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_VERSION |
@@ -524,7 +524,7 @@ bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
     rv = ProcessDataPacket(&reader, public_header, packet, buffer,
                            kMaxPacketSize);
   } else {
-    scoped_ptr<char[]> large_buffer(new char[packet.length()]);
+    std::unique_ptr<char[]> large_buffer(new char[packet.length()]);
     rv = ProcessDataPacket(&reader, public_header, packet, large_buffer.get(),
                            packet.length());
     QUIC_BUG_IF(rv) << "QUIC should never successfully process packets larger"
@@ -604,7 +604,7 @@ bool QuicFramer::ProcessPublicResetPacket(
     const QuicPacketPublicHeader& public_header) {
   QuicPublicResetPacket packet(public_header);
 
-  scoped_ptr<CryptoHandshakeMessage> reset(
+  std::unique_ptr<CryptoHandshakeMessage> reset(
       CryptoFramer::ParseMessage(reader->ReadRemainingPayload()));
   if (!reset.get()) {
     set_detailed_error("Unable to read reset message.");

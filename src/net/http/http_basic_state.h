@@ -8,11 +8,11 @@
 #ifndef NET_HTTP_HTTP_BASIC_STATE_H_
 #define NET_HTTP_HTTP_BASIC_STATE_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
@@ -45,7 +45,7 @@ class NET_EXPORT_PRIVATE HttpBasicState {
 
   ClientSocketHandle* connection() const { return connection_.get(); }
 
-  scoped_ptr<ClientSocketHandle> ReleaseConnection();
+  std::unique_ptr<ClientSocketHandle> ReleaseConnection();
 
   scoped_refptr<GrowableIOBuffer> read_buf() const;
 
@@ -56,9 +56,9 @@ class NET_EXPORT_PRIVATE HttpBasicState {
  private:
   scoped_refptr<GrowableIOBuffer> read_buf_;
 
-  scoped_ptr<HttpStreamParser> parser_;
+  std::unique_ptr<HttpStreamParser> parser_;
 
-  scoped_ptr<ClientSocketHandle> connection_;
+  std::unique_ptr<ClientSocketHandle> connection_;
 
   const bool using_proxy_;
 

@@ -10,6 +10,7 @@
 
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/pattern.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
@@ -160,9 +161,9 @@ std::string TraceConfig::ToString() const {
   return json;
 }
 
-scoped_ptr<ConvertableToTraceFormat> TraceConfig::AsConvertableToTraceFormat()
-    const {
-  return make_scoped_ptr(new ConvertableTraceConfigToTraceFormat(*this));
+std::unique_ptr<ConvertableToTraceFormat>
+TraceConfig::AsConvertableToTraceFormat() const {
+  return WrapUnique(new ConvertableTraceConfigToTraceFormat(*this));
 }
 
 std::string TraceConfig::ToCategoryFilterString() const {
@@ -345,7 +346,7 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
 }
 
 void TraceConfig::InitializeFromConfigString(const std::string& config_string) {
-  scoped_ptr<Value> value(JSONReader::Read(config_string));
+  std::unique_ptr<Value> value(JSONReader::Read(config_string));
   if (!value)
     return InitializeDefault();
 
@@ -476,7 +477,7 @@ void TraceConfig::AddCategoryToDict(base::DictionaryValue& dict,
   if (categories.empty())
     return;
 
-  scoped_ptr<base::ListValue> list(new base::ListValue());
+  std::unique_ptr<base::ListValue> list(new base::ListValue());
   for (StringList::const_iterator ci = categories.begin();
        ci != categories.end();
        ++ci) {
@@ -565,11 +566,11 @@ void TraceConfig::ToDict(base::DictionaryValue& dict) const {
   AddCategoryToDict(dict, kSyntheticDelaysParam, synthetic_delays_);
 
   if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
-    scoped_ptr<base::DictionaryValue> memory_dump_config(
+    std::unique_ptr<base::DictionaryValue> memory_dump_config(
         new base::DictionaryValue());
-    scoped_ptr<base::ListValue> triggers_list(new base::ListValue());
+    std::unique_ptr<base::ListValue> triggers_list(new base::ListValue());
     for (const MemoryDumpTriggerConfig& config : memory_dump_config_) {
-      scoped_ptr<base::DictionaryValue> trigger_dict(
+      std::unique_ptr<base::DictionaryValue> trigger_dict(
           new base::DictionaryValue());
       trigger_dict->SetInteger(kPeriodicIntervalParam,
                                static_cast<int>(config.periodic_interval_ms));

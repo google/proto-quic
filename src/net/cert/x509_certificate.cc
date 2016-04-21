@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -16,7 +17,6 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
@@ -715,7 +715,7 @@ SHA256HashValue X509Certificate::CalculateCAFingerprint256(
   SHA256HashValue sha256;
   memset(sha256.data, 0, sizeof(sha256.data));
 
-  scoped_ptr<crypto::SecureHash> hash(
+  std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
 
   for (size_t i = 0; i < intermediates.size(); ++i) {

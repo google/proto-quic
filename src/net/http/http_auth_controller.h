@@ -5,11 +5,11 @@
 #ifndef NET_HTTP_HTTP_AUTH_CONTROLLER_H_
 #define NET_HTTP_HTTP_AUTH_CONTROLLER_H_
 
+#include <memory>
 #include <set>
 #include <string>
 
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
@@ -133,7 +133,7 @@ class NET_EXPORT_PRIVATE HttpAuthController
   // |handler_| encapsulates the logic for the particular auth-scheme.
   // This includes the challenge's parameters. If NULL, then there is no
   // associated auth handler.
-  scoped_ptr<HttpAuthHandler> handler_;
+  std::unique_ptr<HttpAuthHandler> handler_;
 
   // |identity_| holds the credentials that should be used by
   // the handler_ to generate challenge responses. This identity can come from

@@ -7,9 +7,10 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -87,15 +88,18 @@ class NET_EXPORT SignatureAlgorithm {
 
   // Creates a SignatureAlgorithm by parsing a DER-encoded "AlgorithmIdentifier"
   // (RFC 5280). Returns nullptr on failure.
-  static scoped_ptr<SignatureAlgorithm> CreateFromDer(
+  static std::unique_ptr<SignatureAlgorithm> CreateFromDer(
       const der::Input& algorithm_identifier);
 
   // Creates a new SignatureAlgorithm with the given type and parameters.
-  static scoped_ptr<SignatureAlgorithm> CreateRsaPkcs1(DigestAlgorithm digest);
-  static scoped_ptr<SignatureAlgorithm> CreateEcdsa(DigestAlgorithm digest);
-  static scoped_ptr<SignatureAlgorithm> CreateRsaPss(DigestAlgorithm digest,
-                                                     DigestAlgorithm mgf1_hash,
-                                                     uint32_t salt_length);
+  static std::unique_ptr<SignatureAlgorithm> CreateRsaPkcs1(
+      DigestAlgorithm digest);
+  static std::unique_ptr<SignatureAlgorithm> CreateEcdsa(
+      DigestAlgorithm digest);
+  static std::unique_ptr<SignatureAlgorithm> CreateRsaPss(
+      DigestAlgorithm digest,
+      DigestAlgorithm mgf1_hash,
+      uint32_t salt_length);
 
   // The following methods retrieve the parameters for the signature algorithm.
   //
@@ -109,11 +113,11 @@ class NET_EXPORT SignatureAlgorithm {
  private:
   SignatureAlgorithm(SignatureAlgorithmId algorithm,
                      DigestAlgorithm digest,
-                     scoped_ptr<SignatureAlgorithmParameters> params);
+                     std::unique_ptr<SignatureAlgorithmParameters> params);
 
   const SignatureAlgorithmId algorithm_;
   const DigestAlgorithm digest_;
-  const scoped_ptr<SignatureAlgorithmParameters> params_;
+  const std::unique_ptr<SignatureAlgorithmParameters> params_;
 
   DISALLOW_COPY_AND_ASSIGN(SignatureAlgorithm);
 };

@@ -23,7 +23,7 @@ TracedValue* GetHeapDump(const ProcessMemoryDump& pmd, const char* name) {
 }  // namespace
 
 TEST(ProcessMemoryDumpTest, Clear) {
-  scoped_ptr<ProcessMemoryDump> pmd1(new ProcessMemoryDump(nullptr));
+  std::unique_ptr<ProcessMemoryDump> pmd1(new ProcessMemoryDump(nullptr));
   pmd1->CreateAllocatorDump("mad1");
   pmd1->CreateAllocatorDump("mad2");
   ASSERT_FALSE(pmd1->allocator_dumps().empty());
@@ -54,7 +54,7 @@ TEST(ProcessMemoryDumpTest, Clear) {
   ASSERT_EQ(nullptr, pmd1->GetSharedGlobalAllocatorDump(shared_mad_guid2));
 
   // Check that calling AsValueInto() doesn't cause a crash.
-  scoped_ptr<TracedValue> traced_value(new TracedValue);
+  std::unique_ptr<TracedValue> traced_value(new TracedValue);
   pmd1->AsValueInto(traced_value.get());
 
   // Check that the pmd can be reused and behaves as expected.
@@ -79,11 +79,11 @@ TEST(ProcessMemoryDumpTest, Clear) {
 }
 
 TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
-  scoped_ptr<TracedValue> traced_value(new TracedValue);
+  std::unique_ptr<TracedValue> traced_value(new TracedValue);
   TracedValue* heap_dumps_ptr[4];
-  scoped_ptr<TracedValue> heap_dump;
+  std::unique_ptr<TracedValue> heap_dump;
 
-  scoped_ptr<ProcessMemoryDump> pmd1(new ProcessMemoryDump(nullptr));
+  std::unique_ptr<ProcessMemoryDump> pmd1(new ProcessMemoryDump(nullptr));
   auto mad1_1 = pmd1->CreateAllocatorDump("pmd1/mad1");
   auto mad1_2 = pmd1->CreateAllocatorDump("pmd1/mad2");
   pmd1->AddOwnershipEdge(mad1_1->guid(), mad1_2->guid());
@@ -94,7 +94,7 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   heap_dumps_ptr[1] = heap_dump.get();
   pmd1->AddHeapDump("pmd1/heap_dump2", std::move(heap_dump));
 
-  scoped_ptr<ProcessMemoryDump> pmd2(new ProcessMemoryDump(nullptr));
+  std::unique_ptr<ProcessMemoryDump> pmd2(new ProcessMemoryDump(nullptr));
   auto mad2_1 = pmd2->CreateAllocatorDump("pmd2/mad1");
   auto mad2_2 = pmd2->CreateAllocatorDump("pmd2/mad2");
   pmd2->AddOwnershipEdge(mad2_1->guid(), mad2_2->guid());
@@ -154,7 +154,7 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
 }
 
 TEST(ProcessMemoryDumpTest, Suballocations) {
-  scoped_ptr<ProcessMemoryDump> pmd(new ProcessMemoryDump(nullptr));
+  std::unique_ptr<ProcessMemoryDump> pmd(new ProcessMemoryDump(nullptr));
   const std::string allocator_dump_name = "fakealloc/allocated_objects";
   pmd->CreateAllocatorDump(allocator_dump_name);
 
@@ -191,14 +191,14 @@ TEST(ProcessMemoryDumpTest, Suballocations) {
   ASSERT_TRUE(found_edge[1]);
 
   // Check that calling AsValueInto() doesn't cause a crash.
-  scoped_ptr<TracedValue> traced_value(new TracedValue);
+  std::unique_ptr<TracedValue> traced_value(new TracedValue);
   pmd->AsValueInto(traced_value.get());
 
   pmd.reset();
 }
 
 TEST(ProcessMemoryDumpTest, GlobalAllocatorDumpTest) {
-  scoped_ptr<ProcessMemoryDump> pmd(new ProcessMemoryDump(nullptr));
+  std::unique_ptr<ProcessMemoryDump> pmd(new ProcessMemoryDump(nullptr));
   MemoryAllocatorDumpGuid shared_mad_guid(1);
   auto shared_mad1 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad_guid, shared_mad1->guid());
@@ -227,7 +227,7 @@ TEST(ProcessMemoryDumpTest, CountResidentBytes) {
 
   // Allocate few page of dirty memory and check if it is resident.
   const size_t size1 = 5 * page_size;
-  scoped_ptr<char, base::AlignedFreeDeleter> memory1(
+  std::unique_ptr<char, base::AlignedFreeDeleter> memory1(
       static_cast<char*>(base::AlignedAlloc(size1, page_size)));
   memset(memory1.get(), 0, size1);
   size_t res1 = ProcessMemoryDump::CountResidentBytes(memory1.get(), size1);
@@ -235,7 +235,7 @@ TEST(ProcessMemoryDumpTest, CountResidentBytes) {
 
   // Allocate a large memory segment (> 8Mib).
   const size_t kVeryLargeMemorySize = 15 * 1024 * 1024;
-  scoped_ptr<char, base::AlignedFreeDeleter> memory2(
+  std::unique_ptr<char, base::AlignedFreeDeleter> memory2(
       static_cast<char*>(base::AlignedAlloc(kVeryLargeMemorySize, page_size)));
   memset(memory2.get(), 0, kVeryLargeMemorySize);
   size_t res2 = ProcessMemoryDump::CountResidentBytes(memory2.get(),

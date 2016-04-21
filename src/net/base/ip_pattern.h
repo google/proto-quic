@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 
@@ -38,7 +38,7 @@ class NET_EXPORT IPPattern {
  private:
   class ComponentPattern;
   using Strings = std::vector<std::string>;
-  using ComponentPatternList = std::vector<scoped_ptr<ComponentPattern>>;
+  using ComponentPatternList = std::vector<std::unique_ptr<ComponentPattern>>;
 
   // IPv6 addresses have 8 components, while IPv4 addresses have 4 components.
   // ComponentPattern is used to define patterns to match individual components.

@@ -35,7 +35,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   QuicConnectionLogger(
       QuicSpdySession* session,
       const char* const connection_description,
-      scoped_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       const BoundNetLog& net_log);
 
   ~QuicConnectionLogger() override;
@@ -185,7 +185,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   const char* const connection_description_;
   // Receives notifications regarding the performance of the underlying socket
   // for the QUIC connection. May be null.
-  const scoped_ptr<SocketPerformanceWatcher> socket_performance_watcher_;
+  const std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicConnectionLogger);
 };

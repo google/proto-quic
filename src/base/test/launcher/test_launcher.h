@@ -228,7 +228,7 @@ class TestLauncher {
   size_t parallel_jobs_;
 
   // Worker pool used to launch processes in parallel.
-  scoped_ptr<SequencedWorkerPoolOwner> worker_pool_owner_;
+  std::unique_ptr<SequencedWorkerPoolOwner> worker_pool_owner_;
 
   DISALLOW_COPY_AND_ASSIGN(TestLauncher);
 };

@@ -7,6 +7,7 @@
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
 #include "base/debug/stack_trace.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_util.h"
 #include "net/cookies/cookie_store.h"
 #include "net/dns/host_resolver.h"
@@ -75,11 +76,11 @@ const HttpNetworkSession::Params* URLRequestContext::GetNetworkSessionParams(
   return &network_session->params();
 }
 
-scoped_ptr<URLRequest> URLRequestContext::CreateRequest(
+std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
     const GURL& url,
     RequestPriority priority,
     URLRequest::Delegate* delegate) const {
-  return make_scoped_ptr(
+  return base::WrapUnique(
       new URLRequest(url, priority, delegate, this, network_delegate_));
 }
 

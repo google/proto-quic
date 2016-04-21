@@ -5,8 +5,9 @@
 #ifndef NET_HTTP_URL_SECURITY_MANAGER_H_
 #define NET_HTTP_URL_SECURITY_MANAGER_H_
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 class GURL;
@@ -51,9 +52,9 @@ class NET_EXPORT_PRIVATE URLSecurityManager {
   virtual bool CanDelegate(const GURL& auth_origin) const = 0;
 
   virtual void SetDefaultWhitelist(
-      scoped_ptr<HttpAuthFilter> whitelist_default) = 0;
+      std::unique_ptr<HttpAuthFilter> whitelist_default) = 0;
   virtual void SetDelegateWhitelist(
-      scoped_ptr<HttpAuthFilter> whitelist_delegate) = 0;
+      std::unique_ptr<HttpAuthFilter> whitelist_delegate) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(URLSecurityManager);
@@ -68,16 +69,16 @@ class URLSecurityManagerWhitelist : public URLSecurityManager {
   bool CanUseDefaultCredentials(const GURL& auth_origin) const override;
   bool CanDelegate(const GURL& auth_origin) const override;
   void SetDefaultWhitelist(
-      scoped_ptr<HttpAuthFilter> whitelist_default) override;
+      std::unique_ptr<HttpAuthFilter> whitelist_default) override;
   void SetDelegateWhitelist(
-      scoped_ptr<HttpAuthFilter> whitelist_delegate) override;
+      std::unique_ptr<HttpAuthFilter> whitelist_delegate) override;
 
  protected:
   bool HasDefaultWhitelist() const;
 
  private:
-  scoped_ptr<const HttpAuthFilter> whitelist_default_;
-  scoped_ptr<const HttpAuthFilter> whitelist_delegate_;
+  std::unique_ptr<const HttpAuthFilter> whitelist_default_;
+  std::unique_ptr<const HttpAuthFilter> whitelist_delegate_;
 
   DISALLOW_COPY_AND_ASSIGN(URLSecurityManagerWhitelist);
 };

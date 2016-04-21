@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/quic/test_tools/crypto_test_utils.h"
-
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "crypto/ec_private_key.h"
 #include "crypto/ec_signature_creator.h"
 #include "net/quic/crypto/channel_id.h"
 #include "net/quic/crypto/channel_id_chromium.h"
+#include "net/quic/test_tools/crypto_test_utils.h"
 
 using base::StringPiece;
 using std::string;
@@ -26,7 +26,7 @@ class TestChannelIDSource : public ChannelIDSource {
 
   QuicAsyncStatus GetChannelIDKey(
       const string& hostname,
-      scoped_ptr<ChannelIDKey>* channel_id_key,
+      std::unique_ptr<ChannelIDKey>* channel_id_key,
       ChannelIDSourceCallback* /*callback*/) override {
     channel_id_key->reset(new ChannelIDKeyChromium(HostnameToKey(hostname)));
     return QUIC_SUCCESS;
@@ -35,10 +35,10 @@ class TestChannelIDSource : public ChannelIDSource {
  private:
   typedef std::map<string, crypto::ECPrivateKey*> HostnameToKeyMap;
 
-  scoped_ptr<crypto::ECPrivateKey> HostnameToKey(const string& hostname) {
+  std::unique_ptr<crypto::ECPrivateKey> HostnameToKey(const string& hostname) {
     HostnameToKeyMap::const_iterator it = hostname_to_key_.find(hostname);
     if (it != hostname_to_key_.end()) {
-      return make_scoped_ptr(it->second->Copy());
+      return base::WrapUnique(it->second->Copy());
     }
 
     crypto::ECPrivateKey* keypair = crypto::ECPrivateKey::Create();
@@ -46,7 +46,7 @@ class TestChannelIDSource : public ChannelIDSource {
       return nullptr;
     }
     hostname_to_key_[hostname] = keypair;
-    return make_scoped_ptr(keypair->Copy());
+    return base::WrapUnique(keypair->Copy());
   }
 
   HostnameToKeyMap hostname_to_key_;

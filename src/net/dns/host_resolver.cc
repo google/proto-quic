@@ -107,20 +107,22 @@ HostCache* HostResolver::GetHostCache() {
   return NULL;
 }
 
-scoped_ptr<base::Value> HostResolver::GetDnsConfigAsValue() const {
+std::unique_ptr<base::Value> HostResolver::GetDnsConfigAsValue() const {
   return nullptr;
 }
 
 // static
-scoped_ptr<HostResolver> HostResolver::CreateSystemResolver(
+std::unique_ptr<HostResolver> HostResolver::CreateSystemResolver(
     const Options& options,
     NetLog* net_log) {
-  return scoped_ptr<HostResolver>(new HostResolverImpl(options, net_log));
+  return std::unique_ptr<HostResolver>(new HostResolverImpl(options, net_log));
 }
 
 // static
-scoped_ptr<HostResolver> HostResolver::CreateDefaultResolver(NetLog* net_log) {
-  return scoped_ptr<HostResolver>(new HostResolverImpl(Options(), net_log));
+std::unique_ptr<HostResolver> HostResolver::CreateDefaultResolver(
+    NetLog* net_log) {
+  return std::unique_ptr<HostResolver>(
+      new HostResolverImpl(Options(), net_log));
 }
 
 HostResolver::HostResolver() {

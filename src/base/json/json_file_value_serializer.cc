@@ -101,7 +101,7 @@ const char* JSONFileValueDeserializer::GetErrorMessageForCode(int error_code) {
   }
 }
 
-scoped_ptr<base::Value> JSONFileValueDeserializer::Deserialize(
+std::unique_ptr<base::Value> JSONFileValueDeserializer::Deserialize(
     int* error_code,
     std::string* error_str) {
   std::string json_string;

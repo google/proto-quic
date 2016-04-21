@@ -12,18 +12,16 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/quic_framer.h"
 #include "net/quic/quic_protocol.h"
-
-using base::hash_map;
 
 namespace net {
 namespace test {
@@ -269,7 +267,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   DebugDelegate* debug_delegate_;
   QuicFramer* framer_;
 
-  scoped_ptr<QuicRandomBoolSource> random_bool_source_;
+  std::unique_ptr<QuicRandomBoolSource> random_bool_source_;
   QuicBufferAllocator* const buffer_allocator_;
 
   // Controls whether version should be included while serializing the packet.

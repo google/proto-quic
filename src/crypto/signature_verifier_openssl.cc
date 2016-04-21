@@ -9,10 +9,10 @@
 #include <openssl/evp.h>
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
 

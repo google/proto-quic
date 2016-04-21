@@ -279,7 +279,7 @@ const char* CryptoUtils::HandshakeFailureReasonToString(
 void CryptoUtils::HashHandshakeMessage(const CryptoHandshakeMessage& message,
                                        string* output) {
   const QuicData& serialized = message.GetSerialized();
-  scoped_ptr<crypto::SecureHash> hash(
+  std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
   hash->Update(serialized.data(), serialized.length());
   uint8_t digest[32];

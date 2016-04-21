@@ -26,7 +26,7 @@ class MockCryptoClientStreamFactory : public QuicCryptoClientStreamFactory {
   QuicCryptoClientStream* CreateQuicCryptoClientStream(
       const QuicServerId& server_id,
       QuicChromiumClientSession* session,
-      scoped_ptr<ProofVerifyContext> proof_verify_context,
+      std::unique_ptr<ProofVerifyContext> proof_verify_context,
       QuicCryptoClientConfig* crypto_config) override;
 
   void set_handshake_mode(

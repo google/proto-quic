@@ -6,7 +6,6 @@
 
 #include <set>
 
-#include "base/containers/hash_tables.h"
 #include "base/rand_util.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -31,7 +30,6 @@
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::hash_map;
 using std::set;
 using std::string;
 using std::vector;
@@ -1107,24 +1105,15 @@ TEST_P(QuicSessionTestServer, DrainingStreamsDoNotCountAsOpened) {
 TEST_P(QuicSessionTestServer, TestMaxIncomingAndOutgoingStreamsAllowed) {
   // Tests that on server side, the value of max_open_incoming/outgoing streams
   // are setup correctly during negotiation.
-  // When FLAGS_quic_different_max_num_open_streams is off, both of them are a
-  // little larger than negotiated values. When flag is true, the value for
-  // outgoing stream is limited to negotiated value and for incoming stream it
-  // is set to be larger than that.
+  // The value for outgoing stream is limited to negotiated value and for
+  // incoming stream it is set to be larger than that.
   session_.OnConfigNegotiated();
-  if (FLAGS_quic_different_max_num_open_streams) {
-    // The max number of open outgoing streams is less than that of incoming
-    // streams, and it should be same as negotiated value.
-    EXPECT_LT(session_.max_open_outgoing_streams(),
-              session_.max_open_incoming_streams());
-    EXPECT_EQ(session_.max_open_outgoing_streams(),
-              kDefaultMaxStreamsPerConnection);
-  } else {
-    // The max number of outgoing/incoming streams are the same.
-    EXPECT_EQ(session_.max_open_outgoing_streams(),
-              session_.max_open_incoming_streams());
-  }
-
+  // The max number of open outgoing streams is less than that of incoming
+  // streams, and it should be same as negotiated value.
+  EXPECT_LT(session_.max_open_outgoing_streams(),
+            session_.max_open_incoming_streams());
+  EXPECT_EQ(session_.max_open_outgoing_streams(),
+            kDefaultMaxStreamsPerConnection);
   EXPECT_GT(session_.max_open_incoming_streams(),
             kDefaultMaxStreamsPerConnection);
 }
@@ -1185,19 +1174,11 @@ TEST_P(QuicSessionTestClient, RecordFinAfterReadSideClosed) {
 TEST_P(QuicSessionTestClient, TestMaxIncomingAndOutgoingStreamsAllowed) {
   // Tests that on client side, the value of max_open_incoming/outgoing streams
   // are setup correctly during negotiation.
-  // When FLAGS_quic_different_max_num_open_streams is off, both of them are
-  // same as negotiated value. When flag is true, the value for outgoing stream
-  // is limited to negotiated value and for incoming stream it is set to be
-  // larger than that.
+  // When flag is true, the value for outgoing stream is limited to negotiated
+  // value and for incoming stream it is set to be larger than that.
   session_.OnConfigNegotiated();
-  if (FLAGS_quic_different_max_num_open_streams) {
-    EXPECT_LT(session_.max_open_outgoing_streams(),
-              session_.max_open_incoming_streams());
-  } else {
-    EXPECT_EQ(session_.max_open_outgoing_streams(),
-              session_.max_open_incoming_streams());
-  }
-
+  EXPECT_LT(session_.max_open_outgoing_streams(),
+            session_.max_open_incoming_streams());
   EXPECT_EQ(session_.max_open_outgoing_streams(),
             kDefaultMaxStreamsPerConnection);
 }

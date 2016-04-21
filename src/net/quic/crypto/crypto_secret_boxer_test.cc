@@ -4,7 +4,8 @@
 
 #include "net/quic/crypto/crypto_secret_boxer.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "net/quic/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

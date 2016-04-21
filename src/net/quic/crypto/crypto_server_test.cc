@@ -43,7 +43,7 @@ class DummyProofVerifierCallback : public ProofVerifierCallback {
 
   void Run(bool ok,
            const std::string& error_details,
-           scoped_ptr<ProofVerifyDetails>* details) override {
+           std::unique_ptr<ProofVerifyDetails>* details) override {
     // Do nothing
   }
 };
@@ -151,10 +151,10 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     old_config_options.id = kOldConfigId;
     delete config_.AddDefaultConfig(rand_, &clock_, old_config_options);
     clock_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1000));
-    scoped_ptr<QuicServerConfigProtobuf> primary_config(
+    std::unique_ptr<QuicServerConfigProtobuf> primary_config(
         config_.GenerateConfig(rand_, &clock_, config_options_));
     primary_config->set_primary_time(clock_.WallNow().ToUNIXSeconds());
-    scoped_ptr<CryptoHandshakeMessage> msg(
+    std::unique_ptr<CryptoHandshakeMessage> msg(
         config_.AddConfig(primary_config.get(), clock_.WallNow()));
 
     StringPiece orbit;
@@ -380,7 +380,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     IPAddress server_ip;
     string sig;
     string cert_sct;
-    scoped_ptr<ProofSource> proof_source(
+    std::unique_ptr<ProofSource> proof_source(
         CryptoTestUtils::ProofSourceForTesting());
     if (!proof_source->GetProof(server_ip, "", "", client_version_, "", false,
                                 &chain, &sig, &cert_sct) ||
@@ -415,7 +415,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   // These strings contain hex escaped values from the server suitable for using
   // when constructing client hello messages.
   string nonce_hex_, pub_hex_, srct_hex_, scid_hex_;
-  scoped_ptr<CryptoHandshakeMessage> server_config_;
+  std::unique_ptr<CryptoHandshakeMessage> server_config_;
 };
 
 // Run all CryptoServerTest with both values of
@@ -849,7 +849,8 @@ TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {
   EXPECT_TRUE(out_.GetStringPiece(kCertificateTag, &cert));
   EXPECT_TRUE(out_.GetStringPiece(kPROF, &proof));
   EXPECT_TRUE(out_.GetStringPiece(kSCFG, &scfg_str));
-  scoped_ptr<CryptoHandshakeMessage> scfg(CryptoFramer::ParseMessage(scfg_str));
+  std::unique_ptr<CryptoHandshakeMessage> scfg(
+      CryptoFramer::ParseMessage(scfg_str));
   StringPiece scid;
   EXPECT_TRUE(scfg->GetStringPiece(kSCID, &scid));
   EXPECT_NE(scid, kOldConfigId);
@@ -863,18 +864,18 @@ TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {
                                               common_cert_sets, &certs));
 
   // Check that the proof in the REJ message is valid.
-  scoped_ptr<ProofVerifier> proof_verifier(
+  std::unique_ptr<ProofVerifier> proof_verifier(
       CryptoTestUtils::ProofVerifierForTesting());
-  scoped_ptr<ProofVerifyContext> verify_context(
+  std::unique_ptr<ProofVerifyContext> verify_context(
       CryptoTestUtils::ProofVerifyContextForTesting());
-  scoped_ptr<ProofVerifyDetails> details;
+  std::unique_ptr<ProofVerifyDetails> details;
   string error_details;
   DummyProofVerifierCallback callback;
   string chlo_hash;
   CryptoUtils::HashHandshakeMessage(msg, &chlo_hash);
   EXPECT_EQ(QUIC_SUCCESS,
             proof_verifier->VerifyProof(
-                "test.example.com", scfg_str.as_string(), client_version_,
+                "test.example.com", 443, scfg_str.as_string(), client_version_,
                 chlo_hash, certs, "", proof.as_string(), verify_context.get(),
                 &error_details, &details, &callback));
 }
@@ -981,9 +982,9 @@ TEST(CryptoServerConfigGenerationTest, Determinism) {
                            CryptoTestUtils::ProofSourceForTesting());
   QuicCryptoServerConfig b(QuicCryptoServerConfig::TESTING, &rand_b,
                            CryptoTestUtils::ProofSourceForTesting());
-  scoped_ptr<CryptoHandshakeMessage> scfg_a(
+  std::unique_ptr<CryptoHandshakeMessage> scfg_a(
       a.AddDefaultConfig(&rand_a, &clock, options));
-  scoped_ptr<CryptoHandshakeMessage> scfg_b(
+  std::unique_ptr<CryptoHandshakeMessage> scfg_b(
       b.AddDefaultConfig(&rand_b, &clock, options));
 
   ASSERT_EQ(scfg_a->DebugString(), scfg_b->DebugString());
@@ -1002,9 +1003,9 @@ TEST(CryptoServerConfigGenerationTest, SCIDVaries) {
   rand_b.ChangeValue();
   QuicCryptoServerConfig b(QuicCryptoServerConfig::TESTING, &rand_b,
                            CryptoTestUtils::ProofSourceForTesting());
-  scoped_ptr<CryptoHandshakeMessage> scfg_a(
+  std::unique_ptr<CryptoHandshakeMessage> scfg_a(
       a.AddDefaultConfig(&rand_a, &clock, options));
-  scoped_ptr<CryptoHandshakeMessage> scfg_b(
+  std::unique_ptr<CryptoHandshakeMessage> scfg_b(
       b.AddDefaultConfig(&rand_b, &clock, options));
 
   StringPiece scid_a, scid_b;
@@ -1021,7 +1022,7 @@ TEST(CryptoServerConfigGenerationTest, SCIDIsHashOfServerConfig) {
 
   QuicCryptoServerConfig a(QuicCryptoServerConfig::TESTING, &rand_a,
                            CryptoTestUtils::ProofSourceForTesting());
-  scoped_ptr<CryptoHandshakeMessage> scfg(
+  std::unique_ptr<CryptoHandshakeMessage> scfg(
       a.AddDefaultConfig(&rand_a, &clock, options));
 
   StringPiece scid;
@@ -1033,7 +1034,7 @@ TEST(CryptoServerConfigGenerationTest, SCIDIsHashOfServerConfig) {
   scfg->MarkDirty();
   const QuicData& serialized(scfg->GetSerialized());
 
-  scoped_ptr<crypto::SecureHash> hash(
+  std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
   hash->Update(serialized.data(), serialized.length());
   uint8_t digest[16];
@@ -1136,7 +1137,7 @@ class AsyncStrikeServerVerificationTest : public CryptoServerTest {
         reinterpret_cast<const uint8_t*>(kOrbit.c_str()),
         StrikeRegister::NO_STARTUP_PERIOD_NEEDED);
     config_.SetStrikeRegisterClient(strike_register_client_);
-    CryptoServerTest::SetUp();
+    ASSERT_NO_FATAL_FAILURE(CryptoServerTest::SetUp());
     strike_register_client_->StartDelayingVerification();
   }
 

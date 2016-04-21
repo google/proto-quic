@@ -178,21 +178,24 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // profiler does not see unabalanced malloc/free calls from these containers.
   {
     TraceEventMemoryOverhead overhead;
-    hash_map<AllocationContext, size_t> bytes_by_context;
+    hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
     {
       AutoLock lock(allocation_register_lock_);
       if (allocation_register_) {
         if (args.level_of_detail == MemoryDumpLevelOfDetail::DETAILED) {
-          for (const auto& alloc_size : *allocation_register_)
-            bytes_by_context[alloc_size.context] += alloc_size.size;
+          for (const auto& alloc_size : *allocation_register_) {
+            AllocationMetrics& metrics = metrics_by_context[alloc_size.context];
+            metrics.size += alloc_size.size;
+            metrics.count++;
+          }
         }
         allocation_register_->EstimateTraceMemoryOverhead(&overhead);
       }
     }  // lock(allocation_register_lock_)
 
-    if (!bytes_by_context.empty()) {
-      scoped_ptr<TracedValue> heap_dump = ExportHeapDump(
-          bytes_by_context, pmd->session_state()->stack_frame_deduplicator(),
+    if (!metrics_by_context.empty()) {
+      std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
+          metrics_by_context, pmd->session_state()->stack_frame_deduplicator(),
           pmd->session_state()->type_name_deduplicator());
       pmd->AddHeapDump("malloc", std::move(heap_dump));
     }

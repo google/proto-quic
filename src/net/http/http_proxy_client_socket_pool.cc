@@ -169,13 +169,12 @@ HttpProxyConnectJobFactory::HttpProxyConnectJobFactory(
     base::TimeDelta::FromSeconds(kHttpProxyConnectJobTimeoutInSeconds);
 }
 
-
-scoped_ptr<ConnectJob>
+std::unique_ptr<ConnectJob>
 HttpProxyClientSocketPool::HttpProxyConnectJobFactory::NewConnectJob(
     const std::string& group_name,
     const PoolBase::Request& request,
     ConnectJob::Delegate* delegate) const {
-  return scoped_ptr<ConnectJob>(new HttpProxyConnectJob(
+  return std::unique_ptr<ConnectJob>(new HttpProxyConnectJob(
       group_name, request.priority(), request.respect_limits(),
       request.params(), ConnectionTimeout(), transport_pool_, ssl_pool_,
       delegate, net_log_));
@@ -242,9 +241,10 @@ void HttpProxyClientSocketPool::CancelRequest(
   base_.CancelRequest(group_name, handle);
 }
 
-void HttpProxyClientSocketPool::ReleaseSocket(const std::string& group_name,
-                                              scoped_ptr<StreamSocket> socket,
-                                              int id) {
+void HttpProxyClientSocketPool::ReleaseSocket(
+    const std::string& group_name,
+    std::unique_ptr<StreamSocket> socket,
+    int id) {
   base_.ReleaseSocket(group_name, std::move(socket), id);
 }
 
@@ -270,11 +270,11 @@ LoadState HttpProxyClientSocketPool::GetLoadState(
   return base_.GetLoadState(group_name, handle);
 }
 
-scoped_ptr<base::DictionaryValue> HttpProxyClientSocketPool::GetInfoAsValue(
-    const std::string& name,
-    const std::string& type,
-    bool include_nested_pools) const {
-  scoped_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
+std::unique_ptr<base::DictionaryValue>
+HttpProxyClientSocketPool::GetInfoAsValue(const std::string& name,
+                                          const std::string& type,
+                                          bool include_nested_pools) const {
+  std::unique_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
   if (include_nested_pools) {
     base::ListValue* list = new base::ListValue();
     if (transport_pool_) {

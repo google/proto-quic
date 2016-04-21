@@ -11,6 +11,32 @@
 #include "url/gurl.h"
 #include "url/url_canon_ip.h"
 
+namespace {
+
+bool IPAddressPrefixCheck(const std::vector<uint8_t>& ip_address,
+                          const unsigned char* ip_prefix,
+                          size_t prefix_length_in_bits) {
+  // Compare all the bytes that fall entirely within the prefix.
+  int num_entire_bytes_in_prefix = prefix_length_in_bits / 8;
+  for (int i = 0; i < num_entire_bytes_in_prefix; ++i) {
+    if (ip_address[i] != ip_prefix[i])
+      return false;
+  }
+
+  // In case the prefix was not a multiple of 8, there will be 1 byte
+  // which is only partially masked.
+  int remaining_bits = prefix_length_in_bits % 8;
+  if (remaining_bits != 0) {
+    unsigned char mask = 0xFF << (8 - remaining_bits);
+    int i = num_entire_bytes_in_prefix;
+    if ((ip_address[i] & mask) != (ip_prefix[i] & mask))
+      return false;
+  }
+  return true;
+}
+
+}  // namespace
+
 namespace net {
 
 IPAddress::IPAddress() {}
@@ -65,8 +91,55 @@ bool IPAddress::IsValid() const {
   return IsIPv4() || IsIPv6();
 }
 
+// Don't compare IPv4 and IPv6 addresses (they have different range
+// reservations). Keep separate reservation arrays for each IP type, and
+// consolidate adjacent reserved ranges within a reservation array when
+// possible.
+// Sources for info:
+// www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
+// www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
+// They're formatted here with the prefix as the last element. For example:
+// 10.0.0.0/8 becomes 10,0,0,0,8 and fec0::/10 becomes 0xfe,0xc0,0,0,0...,10.
 bool IPAddress::IsReserved() const {
-  return IsIPAddressReserved(ip_address_);
+  static const unsigned char kReservedIPv4[][5] = {
+      {0, 0, 0, 0, 8},     {10, 0, 0, 0, 8},      {100, 64, 0, 0, 10},
+      {127, 0, 0, 0, 8},   {169, 254, 0, 0, 16},  {172, 16, 0, 0, 12},
+      {192, 0, 2, 0, 24},  {192, 88, 99, 0, 24},  {192, 168, 0, 0, 16},
+      {198, 18, 0, 0, 15}, {198, 51, 100, 0, 24}, {203, 0, 113, 0, 24},
+      {224, 0, 0, 0, 3}};
+  static const unsigned char kReservedIPv6[][17] = {
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8},
+      {0x40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+      {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+      {0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3},
+      {0xe0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4},
+      {0xf0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5},
+      {0xf8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6},
+      {0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7},
+      {0xfe, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9},
+      {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10},
+      {0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10},
+  };
+  size_t array_size = 0;
+  const unsigned char* array = nullptr;
+  switch (ip_address_.size()) {
+    case kIPv4AddressSize:
+      array_size = arraysize(kReservedIPv4);
+      array = kReservedIPv4[0];
+      break;
+    case kIPv6AddressSize:
+      array_size = arraysize(kReservedIPv6);
+      array = kReservedIPv6[0];
+      break;
+  }
+  if (!array)
+    return false;
+  size_t width = ip_address_.size() + 1;
+  for (size_t i = 0; i < array_size; ++i, array += width) {
+    if (IPAddressPrefixCheck(ip_address_, array, array[width - 1]))
+      return true;
+  }
+  return false;
 }
 
 bool IPAddress::IsZero() const {
@@ -159,8 +232,27 @@ IPAddress ConvertIPv4MappedIPv6ToIPv4(const IPAddress& address) {
 bool IPAddressMatchesPrefix(const IPAddress& ip_address,
                             const IPAddress& ip_prefix,
                             size_t prefix_length_in_bits) {
-  return IPNumberMatchesPrefix(ip_address.bytes(), ip_prefix.bytes(),
-                               prefix_length_in_bits);
+  // Both the input IP address and the prefix IP address should be either IPv4
+  // or IPv6.
+  DCHECK(ip_address.IsValid());
+  DCHECK(ip_prefix.IsValid());
+
+  DCHECK_LE(prefix_length_in_bits, ip_prefix.size() * 8);
+
+  // In case we have an IPv6 / IPv4 mismatch, convert the IPv4 addresses to
+  // IPv6 addresses in order to do the comparison.
+  if (ip_address.size() != ip_prefix.size()) {
+    if (ip_address.IsIPv4()) {
+      return IPAddressMatchesPrefix(ConvertIPv4ToIPv4MappedIPv6(ip_address),
+                                    ip_prefix, prefix_length_in_bits);
+    }
+    return IPAddressMatchesPrefix(ip_address,
+                                  ConvertIPv4ToIPv4MappedIPv6(ip_prefix),
+                                  96 + prefix_length_in_bits);
+  }
+
+  return IPAddressPrefixCheck(ip_address.bytes(), ip_prefix.bytes().data(),
+                              prefix_length_in_bits);
 }
 
 bool ParseCIDRBlock(const std::string& cidr_literal,
@@ -180,16 +272,15 @@ bool ParseCIDRBlock(const std::string& cidr_literal,
     return false;
 
   // Parse the prefix length.
-  int number_of_bits = -1;
-  if (!ParseNonNegativeDecimalInt(parts[1], &number_of_bits))
+  uint32_t number_of_bits;
+  if (!ParseUint32(parts[1], &number_of_bits))
     return false;
 
   // Make sure the prefix length is in a valid range.
-  if (number_of_bits < 0 ||
-      number_of_bits > static_cast<int>(ip_address->size() * 8))
+  if (number_of_bits > ip_address->size() * 8)
     return false;
 
-  *prefix_length_in_bits = static_cast<size_t>(number_of_bits);
+  *prefix_length_in_bits = number_of_bits;
   return true;
 }
 

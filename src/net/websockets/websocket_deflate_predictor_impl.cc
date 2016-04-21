@@ -9,7 +9,7 @@ namespace net {
 typedef WebSocketDeflatePredictor::Result Result;
 
 Result WebSocketDeflatePredictorImpl::Predict(
-    const std::vector<scoped_ptr<WebSocketFrame>>& frames,
+    const std::vector<std::unique_ptr<WebSocketFrame>>& frames,
     size_t frame_index) {
   return DEFLATE;
 }

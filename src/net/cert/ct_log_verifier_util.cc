@@ -4,7 +4,8 @@
 
 #include "net/cert/ct_log_verifier_util.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
 #include "base/strings/string_util.h"
 #include "crypto/secure_hash.h"
 #include "crypto/sha2.h"
@@ -16,7 +17,7 @@ namespace ct {
 namespace internal {
 
 std::string HashNodes(const std::string& lh, const std::string& rh) {
-  scoped_ptr<crypto::SecureHash> hash(
+  std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
 
   hash->Update("\01", 1);

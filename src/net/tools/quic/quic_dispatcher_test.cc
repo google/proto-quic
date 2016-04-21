@@ -95,10 +95,11 @@ class TestDispatcher : public QuicDispatcher {
   TestDispatcher(const QuicConfig& config,
                  const QuicCryptoServerConfig* crypto_config,
                  EpollServer* eps)
-      : QuicDispatcher(config,
-                       crypto_config,
-                       QuicSupportedVersions(),
-                       new QuicEpollConnectionHelper(eps)) {}
+      : QuicDispatcher(
+            config,
+            crypto_config,
+            QuicSupportedVersions(),
+            new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)) {}
 
   MOCK_METHOD2(CreateQuicSession,
                QuicServerSessionBase*(QuicConnectionId connection_id,
@@ -156,7 +157,7 @@ QuicServerSessionBase* CreateSession(
 class QuicDispatcherTest : public ::testing::Test {
  public:
   QuicDispatcherTest()
-      : helper_(&eps_),
+      : helper_(&eps_, QuicAllocator::BUFFER_POOL),
         crypto_config_(QuicCryptoServerConfig::TESTING,
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),

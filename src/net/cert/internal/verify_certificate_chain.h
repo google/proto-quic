@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/compiler_specific.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -37,6 +37,7 @@ struct NET_EXPORT TrustAnchor {
 // names to trusted public keys.
 struct NET_EXPORT TrustStore {
   TrustStore();
+  TrustStore(const TrustStore& other);
   ~TrustStore();
 
   std::vector<TrustAnchor> anchors;

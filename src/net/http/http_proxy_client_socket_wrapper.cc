@@ -108,7 +108,7 @@ LoadState HttpProxyClientSocketWrapper::GetConnectLoadState() const {
   return LOAD_STATE_IDLE;
 }
 
-scoped_ptr<HttpResponseInfo>
+std::unique_ptr<HttpResponseInfo>
 HttpProxyClientSocketWrapper::GetAdditionalErrorState() {
   return std::move(error_response_info_);
 }

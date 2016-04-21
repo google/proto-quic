@@ -94,7 +94,7 @@ class MockFakeTimeEpollServer : public FakeTimeEpollServer {
 class QuicTimeWaitListManagerTest : public ::testing::Test {
  protected:
   QuicTimeWaitListManagerTest()
-      : helper_(&epoll_server_),
+      : helper_(&epoll_server_, QuicAllocator::BUFFER_POOL),
         time_wait_list_manager_(&writer_, &visitor_, &helper_),
         connection_id_(45),
         client_address_(net::test::TestPeerIPAddress(), kTestPort),

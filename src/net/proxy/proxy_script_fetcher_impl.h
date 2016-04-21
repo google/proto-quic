@@ -7,12 +7,12 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/string16.h"
 #include "base/time/time.h"
@@ -92,7 +92,7 @@ class NET_EXPORT ProxyScriptFetcherImpl : public ProxyScriptFetcher,
   int next_id_;
 
   // The current (in progress) request, or NULL.
-  scoped_ptr<URLRequest> cur_request_;
+  std::unique_ptr<URLRequest> cur_request_;
 
   // State for current request (only valid when |cur_request_| is not NULL):
 

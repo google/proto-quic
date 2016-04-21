@@ -37,7 +37,7 @@ class OneShotVisitor : public CryptoFramerVisitorInterface {
   CryptoHandshakeMessage* release() { return out_.release(); }
 
  private:
-  scoped_ptr<CryptoHandshakeMessage> out_;
+  std::unique_ptr<CryptoHandshakeMessage> out_;
   bool error_;
 };
 
@@ -105,7 +105,7 @@ QuicData* CryptoFramer::ConstructHandshakeMessage(
     return nullptr;
   }
 
-  scoped_ptr<char[]> buffer(new char[len]);
+  std::unique_ptr<char[]> buffer(new char[len]);
   QuicDataWriter writer(len, buffer.get());
   if (!writer.WriteUInt32(message.tag())) {
     DCHECK(false) << "Failed to write message tag.";

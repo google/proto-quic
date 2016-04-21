@@ -38,15 +38,16 @@ void WriteToATrace(int fd, const char* buffer, size_t size) {
   }
 }
 
-void WriteEvent(char phase,
-                const char* category_group,
-                const char* name,
-                unsigned long long id,
-                const char** arg_names,
-                const unsigned char* arg_types,
-                const TraceEvent::TraceValue* arg_values,
-                const scoped_ptr<ConvertableToTraceFormat>* convertable_values,
-                unsigned int flags) {
+void WriteEvent(
+    char phase,
+    const char* category_group,
+    const char* name,
+    unsigned long long id,
+    const char** arg_names,
+    const unsigned char* arg_types,
+    const TraceEvent::TraceValue* arg_values,
+    const std::unique_ptr<ConvertableToTraceFormat>* convertable_values,
+    unsigned int flags) {
   std::string out = StringPrintf("%c|%d|%s", phase, getpid(), name);
   if (flags & TRACE_EVENT_FLAG_HAS_ID)
     StringAppendF(&out, "-%" PRIx64, static_cast<uint64_t>(id));

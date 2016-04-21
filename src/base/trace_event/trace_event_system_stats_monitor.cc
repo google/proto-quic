@@ -4,12 +4,13 @@
 
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 
+#include <memory>
+
 #include "base/debug/leak_annotations.h"
 #include "base/json/json_writer.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/thread_task_runner_handle.h"
@@ -104,7 +105,7 @@ void TraceEventSystemStatsMonitor::StartProfiling() {
 
 // If system tracing is enabled, dumps a profile to the tracing system.
 void TraceEventSystemStatsMonitor::DumpSystemStats() {
-  scoped_ptr<SystemStatsHolder> dump_holder(new SystemStatsHolder());
+  std::unique_ptr<SystemStatsHolder> dump_holder(new SystemStatsHolder());
   dump_holder->GetSystemProfilingStats();
 
   TRACE_EVENT_OBJECT_SNAPSHOT_WITH_ID(

@@ -20,6 +20,7 @@
 #include "base/strings/string_util.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/load_flags.h"
@@ -985,6 +986,8 @@ void URLRequestHttpJob::ProcessExpectCTHeader() {
 }
 
 void URLRequestHttpJob::OnStartCompleted(int result) {
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+               "URLRequestHttpJob::OnStartCompleted");
   RecordTimer();
 
   // If the request was destroyed, then there is no more work to do.
@@ -1093,6 +1096,8 @@ void URLRequestHttpJob::OnHeadersReceivedCallback(int result) {
 }
 
 void URLRequestHttpJob::OnReadCompleted(int result) {
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+               "URLRequestHttpJob::OnReadCompleted");
   read_in_progress_ = false;
 
   DCHECK_NE(ERR_IO_PENDING, result);

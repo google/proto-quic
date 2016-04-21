@@ -7,6 +7,7 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/single_thread_task_runner.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
@@ -76,10 +77,11 @@ NetworkDelegateErrorObserver::~NetworkDelegateErrorObserver() {
 }
 
 // static
-scoped_ptr<ProxyResolverErrorObserver> NetworkDelegateErrorObserver::Create(
+std::unique_ptr<ProxyResolverErrorObserver>
+NetworkDelegateErrorObserver::Create(
     NetworkDelegate* network_delegate,
     const scoped_refptr<base::SingleThreadTaskRunner>& origin_runner) {
-  return make_scoped_ptr(
+  return base::WrapUnique(
       new NetworkDelegateErrorObserver(network_delegate, origin_runner.get()));
 }
 

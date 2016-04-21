@@ -5,11 +5,11 @@
 #ifndef NET_HTTP_HTTP_AUTH_HANDLER_DIGEST_H_
 #define NET_HTTP_HTTP_AUTH_HANDLER_DIGEST_H_
 
+#include <memory>
 #include <string>
 
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/http/http_auth_handler.h"
 #include "net/http/http_auth_handler_factory.h"
@@ -72,10 +72,10 @@ class NET_EXPORT_PRIVATE HttpAuthHandlerDigest : public HttpAuthHandler {
                           CreateReason reason,
                           int digest_nonce_count,
                           const BoundNetLog& net_log,
-                          scoped_ptr<HttpAuthHandler>* handler) override;
+                          std::unique_ptr<HttpAuthHandler>* handler) override;
 
    private:
-    scoped_ptr<const NonceGenerator> nonce_generator_;
+    std::unique_ptr<const NonceGenerator> nonce_generator_;
   };
 
   HttpAuth::AuthorizationResult HandleAnotherChallenge(

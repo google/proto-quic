@@ -224,41 +224,42 @@ void TestResultsTracker::AddGlobalTag(const std::string& tag) {
 }
 
 bool TestResultsTracker::SaveSummaryAsJSON(const FilePath& path) const {
-  scoped_ptr<DictionaryValue> summary_root(new DictionaryValue);
+  std::unique_ptr<DictionaryValue> summary_root(new DictionaryValue);
 
-  scoped_ptr<ListValue> global_tags(new ListValue);
+  std::unique_ptr<ListValue> global_tags(new ListValue);
   for (const auto& global_tag : global_tags_) {
     global_tags->AppendString(global_tag);
   }
   summary_root->Set("global_tags", std::move(global_tags));
 
-  scoped_ptr<ListValue> all_tests(new ListValue);
+  std::unique_ptr<ListValue> all_tests(new ListValue);
   for (const auto& test : all_tests_) {
     all_tests->AppendString(test);
   }
   summary_root->Set("all_tests", std::move(all_tests));
 
-  scoped_ptr<ListValue> disabled_tests(new ListValue);
+  std::unique_ptr<ListValue> disabled_tests(new ListValue);
   for (const auto& disabled_test : disabled_tests_) {
     disabled_tests->AppendString(disabled_test);
   }
   summary_root->Set("disabled_tests", std::move(disabled_tests));
 
-  scoped_ptr<ListValue> per_iteration_data(new ListValue);
+  std::unique_ptr<ListValue> per_iteration_data(new ListValue);
 
   for (int i = 0; i <= iteration_; i++) {
-    scoped_ptr<DictionaryValue> current_iteration_data(new DictionaryValue);
+    std::unique_ptr<DictionaryValue> current_iteration_data(
+        new DictionaryValue);
 
     for (PerIterationData::ResultsMap::const_iterator j =
              per_iteration_data_[i].results.begin();
          j != per_iteration_data_[i].results.end();
          ++j) {
-      scoped_ptr<ListValue> test_results(new ListValue);
+      std::unique_ptr<ListValue> test_results(new ListValue);
 
       for (size_t k = 0; k < j->second.test_results.size(); k++) {
         const TestResult& test_result = j->second.test_results[k];
 
-        scoped_ptr<DictionaryValue> test_result_value(new DictionaryValue);
+        std::unique_ptr<DictionaryValue> test_result_value(new DictionaryValue);
 
         test_result_value->SetString("status", test_result.StatusAsString());
         test_result_value->SetInteger(

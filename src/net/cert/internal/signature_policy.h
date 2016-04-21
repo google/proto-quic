@@ -47,9 +47,6 @@ class NET_EXPORT SignaturePolicy {
 
 // SimpleSignaturePolicy modifies the base SignaturePolicy by allowing the
 // minimum RSA key length to be specified (rather than hard coded to 2048).
-//
-// TODO(eroman): This is currently just used by a test. If it ends up being
-// only useful for the unit-test then move it directly to that test file.
 class NET_EXPORT SimpleSignaturePolicy : public SignaturePolicy {
  public:
   explicit SimpleSignaturePolicy(size_t min_rsa_modulus_length_bits);

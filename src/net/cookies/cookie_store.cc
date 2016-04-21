@@ -4,6 +4,8 @@
 
 #include "net/cookies/cookie_store.h"
 
+#include "base/bind.h"
+#include "base/callback.h"
 #include "net/cookies/cookie_options.h"
 
 namespace net {

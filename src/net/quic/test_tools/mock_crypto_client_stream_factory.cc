@@ -23,7 +23,7 @@ QuicCryptoClientStream*
 MockCryptoClientStreamFactory::CreateQuicCryptoClientStream(
     const QuicServerId& server_id,
     QuicChromiumClientSession* session,
-    scoped_ptr<ProofVerifyContext> /*proof_verify_context*/,
+    std::unique_ptr<ProofVerifyContext> /*proof_verify_context*/,
     QuicCryptoClientConfig* crypto_config) {
   const ProofVerifyDetailsChromium* proof_verify_details = nullptr;
   if (!proof_verify_details_queue_.empty()) {

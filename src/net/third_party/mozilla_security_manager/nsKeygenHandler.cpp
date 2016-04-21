@@ -215,9 +215,9 @@ std::string GenKeyAndSignChallenge(int key_size_in_bits,
   }
 
   // Convert the signed public key and challenge into base64/ascii.
-  base::Base64Encode(
-      std::string(reinterpret_cast<char*>(signedItem.data), signedItem.len),
-      &result_blob);
+  base::Base64Encode(base::StringPiece(reinterpret_cast<char*>(signedItem.data),
+                                       signedItem.len),
+                     &result_blob);
 
  failure:
   if (!isSuccess) {

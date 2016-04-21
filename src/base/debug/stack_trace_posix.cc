@@ -17,11 +17,10 @@
 #include <unistd.h>
 
 #include <map>
+#include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
-
-#include "base/memory/free_deleter.h"
 
 #if defined(__GLIBCXX__)
 #include <cxxabi.h>
@@ -38,7 +37,7 @@
 #include "base/debug/proc_maps_linux.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
+#include "base/memory/free_deleter.h"
 #include "base/memory/singleton.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/posix/eintr_wrapper.h"
@@ -99,7 +98,7 @@ void DemangleSymbols(std::string* text) {
 
     // Try to demangle the mangled symbol candidate.
     int status = 0;
-    scoped_ptr<char, base::FreeDeleter> demangled_symbol(
+    std::unique_ptr<char, base::FreeDeleter> demangled_symbol(
         abi::__cxa_demangle(mangled_symbol.c_str(), NULL, 0, &status));
     if (status == 0) {  // Demangling is successful.
       // Remove the mangled symbol.
@@ -180,8 +179,8 @@ void ProcessBacktrace(void *const *trace,
   // Below part is async-signal unsafe (uses malloc), so execute it only
   // when we are not executing the signal handler.
   if (in_signal_handler == 0) {
-    scoped_ptr<char*, FreeDeleter>
-        trace_symbols(backtrace_symbols(trace, size));
+    std::unique_ptr<char*, FreeDeleter> trace_symbols(
+        backtrace_symbols(trace, size));
     if (trace_symbols.get()) {
       for (size_t i = 0; i < size; ++i) {
         std::string trace_symbol = trace_symbols.get()[i];

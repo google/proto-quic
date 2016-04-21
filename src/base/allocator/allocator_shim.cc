@@ -232,8 +232,14 @@ void ShimFree(void* address) {
 // Cpp symbols (new / delete) should always be routed through the shim layer.
 #include "base/allocator/allocator_shim_override_cpp_symbols.h"
 
+// Android does not support symbol interposition. The way malloc symbols are
+// intercepted on Android is by using link-time -wrap flags.
+#if !defined(OS_ANDROID)
 // Ditto for plain malloc() / calloc() / free() etc. symbols.
 #include "base/allocator/allocator_shim_override_libc_symbols.h"
+#else
+#include "base/allocator/allocator_shim_override_linker_wrapped_symbols.h"
+#endif
 
 // In the case of tcmalloc we also want to plumb into the glibc hooks
 // to avoid that allocations made in glibc itself (e.g., strdup()) get

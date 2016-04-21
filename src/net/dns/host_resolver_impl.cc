@@ -4,7 +4,10 @@
 
 #include "net/dns/host_resolver_impl.h"
 
+#include <memory>
 #include <utility>
+
+#include "base/memory/ptr_util.h"
 
 #if defined(OS_WIN)
 #include <Winsock2.h>
@@ -23,7 +26,6 @@
 #include "base/debug/debugger.h"
 #include "base/debug/stack_trace.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
@@ -35,6 +37,7 @@
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/address_family.h"
 #include "net/base/address_list.h"
@@ -205,11 +208,9 @@ bool IsGloballyReachable(const IPAddress& dest, const BoundNetLog& net_log) {
   tracked_objects::ScopedTracker tracking_profile_1(
       FROM_HERE_WITH_EXPLICIT_FUNCTION("455942 IsGloballyReachable"));
 
-  scoped_ptr<DatagramClientSocket> socket(
+  std::unique_ptr<DatagramClientSocket> socket(
       ClientSocketFactory::GetDefaultFactory()->CreateDatagramClientSocket(
-          DatagramSocket::DEFAULT_BIND,
-          RandIntCallback(),
-          net_log.net_log(),
+          DatagramSocket::DEFAULT_BIND, RandIntCallback(), net_log.net_log(),
           net_log.source()));
   int rv = socket->Connect(IPEndPoint(dest, 53));
   if (rv != OK)
@@ -321,12 +322,12 @@ bool IsAllIPv4Loopback(const AddressList& addresses) {
 }
 
 // Creates NetLog parameters when the resolve failed.
-scoped_ptr<base::Value> NetLogProcTaskFailedCallback(
+std::unique_ptr<base::Value> NetLogProcTaskFailedCallback(
     uint32_t attempt_number,
     int net_error,
     int os_error,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   if (attempt_number)
     dict->SetInteger("attempt_number", attempt_number);
 
@@ -355,11 +356,11 @@ scoped_ptr<base::Value> NetLogProcTaskFailedCallback(
 }
 
 // Creates NetLog parameters when the DnsTask failed.
-scoped_ptr<base::Value> NetLogDnsTaskFailedCallback(
+std::unique_ptr<base::Value> NetLogDnsTaskFailedCallback(
     int net_error,
     int dns_error,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("net_error", net_error);
   if (dns_error)
     dict->SetInteger("dns_error", dns_error);
@@ -368,10 +369,10 @@ scoped_ptr<base::Value> NetLogDnsTaskFailedCallback(
 
 // Creates NetLog parameters containing the information in a RequestInfo object,
 // along with the associated NetLog::Source.
-scoped_ptr<base::Value> NetLogRequestInfoCallback(
+std::unique_ptr<base::Value> NetLogRequestInfoCallback(
     const HostResolver::RequestInfo* info,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
   dict->SetString("host", info->host_port_pair().ToString());
   dict->SetInteger("address_family",
@@ -382,39 +383,39 @@ scoped_ptr<base::Value> NetLogRequestInfoCallback(
 }
 
 // Creates NetLog parameters for the creation of a HostResolverImpl::Job.
-scoped_ptr<base::Value> NetLogJobCreationCallback(
+std::unique_ptr<base::Value> NetLogJobCreationCallback(
     const NetLog::Source& source,
     const std::string* host,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   source.AddToEventParameters(dict.get());
   dict->SetString("host", *host);
   return std::move(dict);
 }
 
 // Creates NetLog parameters for HOST_RESOLVER_IMPL_JOB_ATTACH/DETACH events.
-scoped_ptr<base::Value> NetLogJobAttachCallback(
+std::unique_ptr<base::Value> NetLogJobAttachCallback(
     const NetLog::Source& source,
     RequestPriority priority,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   source.AddToEventParameters(dict.get());
   dict->SetString("priority", RequestPriorityToString(priority));
   return std::move(dict);
 }
 
 // Creates NetLog parameters for the DNS_CONFIG_CHANGED event.
-scoped_ptr<base::Value> NetLogDnsConfigCallback(
+std::unique_ptr<base::Value> NetLogDnsConfigCallback(
     const DnsConfig* config,
     NetLogCaptureMode /* capture_mode */) {
   return config->ToValue();
 }
 
-scoped_ptr<base::Value> NetLogIPv6AvailableCallback(
+std::unique_ptr<base::Value> NetLogIPv6AvailableCallback(
     bool ipv6_available,
     bool cached,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetBoolean("ipv6_available", ipv6_available);
   dict->SetBoolean("cached", cached);
   return std::move(dict);
@@ -768,6 +769,7 @@ class HostResolverImpl::ProcTask
                         const uint32_t attempt_number,
                         int error,
                         const int os_error) {
+    TRACE_EVENT0("net", "ProcTask::OnLookupComplete");
     DCHECK(task_runner_->BelongsToCurrentThread());
     // If results are empty, we should return an error.
     bool empty_list_on_ok = (error == OK && results.empty());
@@ -1106,7 +1108,7 @@ class HostResolverImpl::DnsTask : public base::SupportsWeakPtr<DnsTask> {
     transaction_aaaa_->Start();
   }
 
-  scoped_ptr<DnsTransaction> CreateTransaction(AddressFamily family) {
+  std::unique_ptr<DnsTransaction> CreateTransaction(AddressFamily family) {
     DCHECK_NE(ADDRESS_FAMILY_UNSPECIFIED, family);
     return client_->GetTransactionFactory()->CreateTransaction(
         key_.hostname,
@@ -1242,8 +1244,8 @@ class HostResolverImpl::DnsTask : public base::SupportsWeakPtr<DnsTask> {
   Delegate* delegate_;
   const BoundNetLog net_log_;
 
-  scoped_ptr<DnsTransaction> transaction_a_;
-  scoped_ptr<DnsTransaction> transaction_aaaa_;
+  std::unique_ptr<DnsTransaction> transaction_a_;
+  std::unique_ptr<DnsTransaction> transaction_aaaa_;
 
   unsigned num_completed_transactions_;
 
@@ -1310,7 +1312,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     // else CompleteRequests logged EndEvent.
 
     // Log any remaining Requests as cancelled.
-    for (const scoped_ptr<Request>& req : requests_) {
+    for (const std::unique_ptr<Request>& req : requests_) {
       if (req->was_canceled())
         continue;
       DCHECK_EQ(this, req->job());
@@ -1337,7 +1339,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     }
   }
 
-  void AddRequest(scoped_ptr<Request> req) {
+  void AddRequest(std::unique_ptr<Request> req) {
     DCHECK_EQ(key_.hostname, req->info().hostname());
 
     req->set_job(this);
@@ -1709,7 +1711,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     // new job with the same key in case one of the OnComplete callbacks decides
     // to spawn one. Consequently, the job deletes itself when CompleteRequests
     // is done.
-    scoped_ptr<Job> self_deleter(this);
+    std::unique_ptr<Job> self_deleter(this);
 
     resolver_->RemoveJob(this);
 
@@ -1753,7 +1755,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       resolver_->CacheResult(key_, entry, ttl);
 
     // Complete all of the requests that were attached to the job.
-    for (const scoped_ptr<Request>& req : requests_) {
+    for (const std::unique_ptr<Request>& req : requests_) {
       if (req->was_canceled())
         continue;
 
@@ -1824,10 +1826,10 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
   scoped_refptr<ProcTask> proc_task_;
 
   // Resolves the host using a DnsTransaction.
-  scoped_ptr<DnsTask> dns_task_;
+  std::unique_ptr<DnsTask> dns_task_;
 
   // All Requests waiting for the result of this Job. Some can be canceled.
-  std::vector<scoped_ptr<Request>> requests_;
+  std::vector<std::unique_ptr<Request>> requests_;
 
   // A handle used in |HostResolverImpl::dispatcher_|.
   PrioritizedDispatcher::Handle handle_;
@@ -1981,8 +1983,8 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
   }
 
   // Can't complete synchronously. Create and attach request.
-  scoped_ptr<Request> req(new Request(
-      source_net_log, info, priority, callback, addresses));
+  std::unique_ptr<Request> req(
+      new Request(source_net_log, info, priority, callback, addresses));
   if (out_req)
     *out_req = reinterpret_cast<RequestHandle>(req.get());
 
@@ -2058,7 +2060,7 @@ void HostResolverImpl::SetDnsClientEnabled(bool enabled) {
   if (enabled && !dns_client_) {
     SetDnsClient(DnsClient::CreateClient(net_log_));
   } else if (!enabled && dns_client_) {
-    SetDnsClient(scoped_ptr<DnsClient>());
+    SetDnsClient(std::unique_ptr<DnsClient>());
   }
 #endif
 }
@@ -2067,7 +2069,7 @@ HostCache* HostResolverImpl::GetHostCache() {
   return cache_.get();
 }
 
-scoped_ptr<base::Value> HostResolverImpl::GetDnsConfigAsValue() const {
+std::unique_ptr<base::Value> HostResolverImpl::GetDnsConfigAsValue() const {
   // Check if async DNS is disabled.
   if (!dns_client_.get())
     return nullptr;
@@ -2076,7 +2078,7 @@ scoped_ptr<base::Value> HostResolverImpl::GetDnsConfigAsValue() const {
   // for it.
   const DnsConfig* dns_config = dns_client_->GetConfig();
   if (dns_config == NULL)
-    return make_scoped_ptr(new base::DictionaryValue());
+    return base::WrapUnique(new base::DictionaryValue());
 
   return dns_config->ToValue();
 }
@@ -2272,11 +2274,11 @@ bool HostResolverImpl::IsIPv6Reachable(const BoundNetLog& net_log) {
 void HostResolverImpl::AbortAllInProgressJobs() {
   // In Abort, a Request callback could spawn new Jobs with matching keys, so
   // first collect and remove all running jobs from |jobs_|.
-  std::vector<scoped_ptr<Job>> jobs_to_abort;
+  std::vector<std::unique_ptr<Job>> jobs_to_abort;
   for (JobMap::iterator it = jobs_.begin(); it != jobs_.end(); ) {
     Job* job = it->second;
     if (job->is_running()) {
-      jobs_to_abort.push_back(make_scoped_ptr(job));
+      jobs_to_abort.push_back(base::WrapUnique(job));
       jobs_.erase(it++);
     } else {
       DCHECK(job->is_queued());
@@ -2449,7 +2451,7 @@ void HostResolverImpl::OnDnsTaskResolve(int net_error) {
                               std::abs(net_error));
 }
 
-void HostResolverImpl::SetDnsClient(scoped_ptr<DnsClient> dns_client) {
+void HostResolverImpl::SetDnsClient(std::unique_ptr<DnsClient> dns_client) {
   // DnsClient and config must be updated before aborting DnsTasks, since doing
   // so may start new jobs.
   dns_client_ = std::move(dns_client);

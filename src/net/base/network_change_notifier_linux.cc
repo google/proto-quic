@@ -36,9 +36,9 @@ class NetworkChangeNotifierLinux::Thread : public base::Thread {
  private:
   void OnIPAddressChanged();
   void OnLinkChanged();
-  scoped_ptr<DnsConfigService> dns_config_service_;
+  std::unique_ptr<DnsConfigService> dns_config_service_;
   // Used to detect online/offline state and IP address changes.
-  scoped_ptr<internal::AddressTrackerLinux> address_tracker_;
+  std::unique_ptr<internal::AddressTrackerLinux> address_tracker_;
   NetworkChangeNotifier::ConnectionType last_type_;
 
   DISALLOW_COPY_AND_ASSIGN(Thread);

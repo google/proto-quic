@@ -41,12 +41,20 @@ enum class BreakDownMode { kByBacktrace, kByTypeName };
 
 // A group of bytes for which the context shares a prefix.
 struct Bucket {
-  Bucket() : size(0), backtrace_cursor(0), is_broken_down_by_type_name(false) {}
+  Bucket()
+      : size(0),
+        count(0),
+        backtrace_cursor(0),
+        is_broken_down_by_type_name(false) {}
 
-  std::vector<std::pair<const AllocationContext*, size_t>> bytes_by_context;
+  std::vector<std::pair<const AllocationContext*, AllocationMetrics>>
+      metrics_by_context;
 
-  // The sum of the sizes of |bytes_by_context|.
+  // The sum of the sizes of |metrics_by_context|.
   size_t size;
+
+  // The sum of number of allocations of |metrics_by_context|.
+  size_t count;
 
   // The index of the stack frame that has not yet been broken down by. For all
   // elements in this bucket, the stack frames 0 up to (but not including) the
@@ -69,8 +77,8 @@ std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
   base::hash_map<const char*, Bucket> breakdown;
 
   if (breakBy == BreakDownMode::kByBacktrace) {
-    for (const auto& context_and_size : bucket.bytes_by_context) {
-      const Backtrace& backtrace = context_and_size.first->backtrace;
+    for (const auto& context_and_metrics : bucket.metrics_by_context) {
+      const Backtrace& backtrace = context_and_metrics.first->backtrace;
       const char* const* begin = std::begin(backtrace.frames);
       const char* const* end = std::end(backtrace.frames);
       const char* const* cursor = begin + bucket.backtrace_cursor;
@@ -85,24 +93,28 @@ std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
 
       if (cursor != end) {
         Bucket& subbucket = breakdown[*cursor];
-        subbucket.size += context_and_size.second;
-        subbucket.bytes_by_context.push_back(context_and_size);
+        subbucket.size += context_and_metrics.second.size;
+        subbucket.count += context_and_metrics.second.count;
+        subbucket.metrics_by_context.push_back(context_and_metrics);
         subbucket.backtrace_cursor = bucket.backtrace_cursor + 1;
         subbucket.is_broken_down_by_type_name =
             bucket.is_broken_down_by_type_name;
         DCHECK_GT(subbucket.size, 0u);
+        DCHECK_GT(subbucket.count, 0u);
       }
     }
   } else if (breakBy == BreakDownMode::kByTypeName) {
     if (!bucket.is_broken_down_by_type_name) {
-      for (const auto& context_and_size : bucket.bytes_by_context) {
-        const AllocationContext* context = context_and_size.first;
+      for (const auto& context_and_metrics : bucket.metrics_by_context) {
+        const AllocationContext* context = context_and_metrics.first;
         Bucket& subbucket = breakdown[context->type_name];
-        subbucket.size += context_and_size.second;
-        subbucket.bytes_by_context.push_back(context_and_size);
+        subbucket.size += context_and_metrics.second.size;
+        subbucket.count += context_and_metrics.second.count;
+        subbucket.metrics_by_context.push_back(context_and_metrics);
         subbucket.backtrace_cursor = bucket.backtrace_cursor;
         subbucket.is_broken_down_by_type_name = true;
         DCHECK_GT(subbucket.size, 0u);
+        DCHECK_GT(subbucket.count, 0u);
       }
     }
   }
@@ -129,20 +141,14 @@ std::vector<Bucket> BreakDownBy(const Bucket& bucket, BreakDownMode breakBy) {
   std::make_heap(buckets.begin(), buckets.end());
 
   // Keep including buckets until adding one would increase the number of
-  // bytes accounted for by less than 0.8 percent. This simple heuristic works
+  // bytes accounted for by less than 0.8% (1/125). This simple heuristic works
   // quite well. The large buckets end up in [it, end()), [begin(), it) is the
   // part that contains the max-heap of small buckets.
   size_t accounted_for = 0;
   std::vector<Bucket>::iterator it;
   for (it = buckets.end(); it != buckets.begin(); --it) {
-    // Compute the contribution to the number of bytes accounted for as a
-    // fraction of 125 (in increments of 0.8 percent). Anything less than 1/125
-    // is rounded down to 0 due to integer division. Buckets are iterated by
-    // descending size, so later buckets cannot have a larger contribution than
-    // this one.
     accounted_for += buckets.front().size;
-    size_t contribution = buckets.front().size * 125 / accounted_for;
-    if (contribution == 0)
+    if (buckets.front().size < (accounted_for / 125))
       break;
 
     // Put the largest bucket in [begin, it) at |it - 1| and max-heapify
@@ -185,9 +191,9 @@ bool HeapDumpWriter::AddEntryForBucket(const Bucket& bucket) {
   // The contexts in the bucket are all different, but the [begin, cursor) range
   // is equal for all contexts in the bucket, and the type names are the same if
   // |is_broken_down_by_type_name| is set.
-  DCHECK(!bucket.bytes_by_context.empty());
+  DCHECK(!bucket.metrics_by_context.empty());
 
-  const AllocationContext* context = bucket.bytes_by_context.front().first;
+  const AllocationContext* context = bucket.metrics_by_context.front().first;
 
   const char* const* backtrace_begin = std::begin(context->backtrace.frames);
   const char* const* backtrace_end = backtrace_begin + bucket.backtrace_cursor;
@@ -203,6 +209,7 @@ bool HeapDumpWriter::AddEntryForBucket(const Bucket& bucket) {
                       : -1;
 
   entry.size = bucket.size;
+  entry.count = bucket.count;
 
   auto position_and_inserted = entries_.insert(entry);
   return position_and_inserted.second;
@@ -228,16 +235,19 @@ void HeapDumpWriter::BreakDown(const Bucket& bucket) {
 }
 
 const std::set<Entry>& HeapDumpWriter::Summarize(
-    const hash_map<AllocationContext, size_t>& bytes_by_context) {
+    const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context) {
   // Start with one bucket that represents the entire heap. Iterate by
   // reference, because the allocation contexts are going to point to allocation
-  // contexts stored in |bytes_by_context|.
+  // contexts stored in |metrics_by_context|.
   Bucket root_bucket;
-  for (const auto& context_and_size : bytes_by_context) {
-    const AllocationContext* context = &context_and_size.first;
-    const size_t size = context_and_size.second;
-    root_bucket.bytes_by_context.push_back(std::make_pair(context, size));
-    root_bucket.size += size;
+  for (const auto& context_and_metrics : metrics_by_context) {
+    DCHECK_GT(context_and_metrics.second.size, 0u);
+    DCHECK_GT(context_and_metrics.second.count, 0u);
+    const AllocationContext* context = &context_and_metrics.first;
+    root_bucket.metrics_by_context.push_back(
+        std::make_pair(context, context_and_metrics.second));
+    root_bucket.size += context_and_metrics.second.size;
+    root_bucket.count += context_and_metrics.second.count;
   }
 
   AddEntryForBucket(root_bucket);
@@ -248,9 +258,9 @@ const std::set<Entry>& HeapDumpWriter::Summarize(
   return entries_;
 }
 
-scoped_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
+std::unique_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
   std::string buffer;
-  scoped_ptr<TracedValue> traced_value(new TracedValue);
+  std::unique_ptr<TracedValue> traced_value(new TracedValue);
 
   traced_value->BeginArray("entries");
 
@@ -260,6 +270,9 @@ scoped_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
     // Format size as hexadecimal string into |buffer|.
     SStringPrintf(&buffer, "%" PRIx64, static_cast<uint64_t>(entry.size));
     traced_value->SetString("size", buffer);
+
+    SStringPrintf(&buffer, "%" PRIx64, static_cast<uint64_t>(entry.count));
+    traced_value->SetString("count", buffer);
 
     if (entry.stack_frame_id == -1) {
       // An empty backtrace (which will have ID -1) is represented by the empty
@@ -289,13 +302,13 @@ scoped_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
 
 }  // namespace internal
 
-scoped_ptr<TracedValue> ExportHeapDump(
-    const hash_map<AllocationContext, size_t>& bytes_by_size,
+std::unique_ptr<TracedValue> ExportHeapDump(
+    const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context,
     StackFrameDeduplicator* stack_frame_deduplicator,
     TypeNameDeduplicator* type_name_deduplicator) {
   internal::HeapDumpWriter writer(stack_frame_deduplicator,
                                   type_name_deduplicator);
-  return Serialize(writer.Summarize(bytes_by_size));
+  return Serialize(writer.Summarize(metrics_by_context));
 }
 
 }  // namespace trace_event

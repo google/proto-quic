@@ -12,6 +12,7 @@
 #include <stddef.h>
 
 #include <deque>
+#include <memory>
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
@@ -182,7 +183,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
 
   // Alarm to clean up connection_ids that have out lived their duration in
   // time wait state.
-  scoped_ptr<QuicAlarm> connection_id_clean_up_alarm_;
+  std::unique_ptr<QuicAlarm> connection_id_clean_up_alarm_;
 
   // Clock to efficiently measure approximate time.
   const QuicClock* clock_;

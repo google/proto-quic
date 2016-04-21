@@ -347,6 +347,14 @@ class BASE_EXPORT FieldTrialList {
   // Destructor Release()'s references to all registered FieldTrial instances.
   ~FieldTrialList();
 
+  // TODO(asvitkine): Temporary function to diagnose http://crbug.com/359406.
+  // Remove when that bug is fixed. This enables using a global map that checks
+  // the state of field trials between possible FieldTrialList instances. If
+  // enabled, a CHECK will be hit if it's seen that a field trial is given a
+  // different state then what was specified to a renderer process launch
+  // command line.
+  static void EnableGlobalStateChecks();
+
   // Get a FieldTrial instance from the factory.
   //
   // |name| is used to register the instance with the FieldTrialList class,
@@ -514,7 +522,7 @@ class BASE_EXPORT FieldTrialList {
 
   // Entropy provider to be used for one-time randomized field trials. If NULL,
   // one-time randomization is not supported.
-  scoped_ptr<const FieldTrial::EntropyProvider> entropy_provider_;
+  std::unique_ptr<const FieldTrial::EntropyProvider> entropy_provider_;
 
   // List of observers to be notified when a group is selected for a FieldTrial.
   scoped_refptr<ObserverListThreadSafe<Observer> > observer_list_;

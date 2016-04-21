@@ -5,10 +5,11 @@
 #ifndef NET_BASE_NETWORK_CHANGE_NOTIFIER_LINUX_H_
 #define NET_BASE_NETWORK_CHANGE_NOTIFIER_LINUX_H_
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/containers/hash_tables.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 
@@ -42,7 +43,7 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierLinux
   // to the registered observers without posting back to the thread the object
   // was created on.
   // Also used for DnsConfigService which requires TYPE_IO message loop.
-  scoped_ptr<Thread> notifier_thread_;
+  std::unique_ptr<Thread> notifier_thread_;
 
   DISALLOW_COPY_AND_ASSIGN(NetworkChangeNotifierLinux);
 };

@@ -23,8 +23,8 @@ TEST(P256KeyExchange, SharedKey) {
     ASSERT_FALSE(bob_private.empty());
     ASSERT_NE(alice_private, bob_private);
 
-    scoped_ptr<P256KeyExchange> alice(P256KeyExchange::New(alice_private));
-    scoped_ptr<P256KeyExchange> bob(P256KeyExchange::New(bob_private));
+    std::unique_ptr<P256KeyExchange> alice(P256KeyExchange::New(alice_private));
+    std::unique_ptr<P256KeyExchange> bob(P256KeyExchange::New(bob_private));
 
     ASSERT_TRUE(alice.get() != nullptr);
     ASSERT_TRUE(bob.get() != nullptr);

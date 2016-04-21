@@ -7,9 +7,9 @@
 
 #include <cstddef>
 #include <deque>
+#include <memory>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -30,7 +30,7 @@ class NET_EXPORT_PRIVATE SpdyReadQueue {
   size_t GetTotalSize() const;
 
   // Enqueues the bytes in |buffer|.
-  void Enqueue(scoped_ptr<SpdyBuffer> buffer);
+  void Enqueue(std::unique_ptr<SpdyBuffer> buffer);
 
   // Dequeues up to |len| (which must be positive) bytes into
   // |out|. Returns the number of bytes dequeued.

@@ -20,7 +20,7 @@ class PowerMonitorSource;
 class BASE_EXPORT PowerMonitor {
  public:
   // Takes ownership of |source|.
-  explicit PowerMonitor(scoped_ptr<PowerMonitorSource> source);
+  explicit PowerMonitor(std::unique_ptr<PowerMonitorSource> source);
   ~PowerMonitor();
 
   // Get the process-wide PowerMonitor (if not present, returns NULL).
@@ -45,7 +45,7 @@ class BASE_EXPORT PowerMonitor {
   void NotifyResume();
 
   scoped_refptr<ObserverListThreadSafe<PowerObserver> > observers_;
-  scoped_ptr<PowerMonitorSource> source_;
+  std::unique_ptr<PowerMonitorSource> source_;
 
   DISALLOW_COPY_AND_ASSIGN(PowerMonitor);
 };

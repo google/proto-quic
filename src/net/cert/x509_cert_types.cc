@@ -23,8 +23,8 @@ namespace {
 // untouched otherwise. Returns the parsed integer.
 int ParseIntAndAdvance(const char** field, size_t field_len, bool* ok) {
   int result = 0;
-  *ok &=
-      ParseNonNegativeDecimalInt(base::StringPiece(*field, field_len), &result);
+  *ok &= ParseInt32(base::StringPiece(*field, field_len),
+                    ParseIntFormat::NON_NEGATIVE, &result);
   *field += field_len;
   return result;
 }

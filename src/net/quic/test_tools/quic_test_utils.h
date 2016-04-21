@@ -513,7 +513,7 @@ class MockQuicSpdySession : public QuicSpdySession {
       QuicAckListenerInterface* ack_notifier_delegate);
 
  private:
-  scoped_ptr<QuicCryptoStream> crypto_stream_;
+  std::unique_ptr<QuicCryptoStream> crypto_stream_;
 
   DISALLOW_COPY_AND_ASSIGN(MockQuicSpdySession);
 };
@@ -567,7 +567,7 @@ class TestQuicSpdyClientSession : public QuicClientSessionBase {
   QuicCryptoClientStream* GetCryptoStream() override;
 
  private:
-  scoped_ptr<QuicCryptoClientStream> crypto_stream_;
+  std::unique_ptr<QuicCryptoClientStream> crypto_stream_;
   QuicClientPushPromiseIndex push_promise_index_;
 
   DISALLOW_COPY_AND_ASSIGN(TestQuicSpdyClientSession);

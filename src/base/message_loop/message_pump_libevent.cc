@@ -7,11 +7,12 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include "base/auto_reset.h"
 #include "base/compiler_specific.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/third_party/libevent/event.h"
@@ -153,7 +154,7 @@ bool MessagePumpLibevent::WatchFileDescriptor(int fd,
     event_mask |= EV_WRITE;
   }
 
-  scoped_ptr<event> evt(controller->ReleaseEvent());
+  std::unique_ptr<event> evt(controller->ReleaseEvent());
   if (evt.get() == NULL) {
     // Ownership is transferred to the controller.
     evt.reset(new event);
@@ -219,7 +220,7 @@ void MessagePumpLibevent::Run(Delegate* delegate) {
 
   // event_base_loopexit() + EVLOOP_ONCE is leaky, see http://crbug.com/25641.
   // Instead, make our own timer and reuse it on each call to event_base_loop().
-  scoped_ptr<event> timer_event(new event);
+  std::unique_ptr<event> timer_event(new event);
 
   for (;;) {
 #if defined(OS_MACOSX)

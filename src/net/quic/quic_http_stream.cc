@@ -29,11 +29,11 @@ namespace net {
 
 namespace {
 
-scoped_ptr<base::Value> NetLogQuicPushStreamCallback(
+std::unique_ptr<base::Value> NetLogQuicPushStreamCallback(
     QuicStreamId stream_id,
     const GURL* url,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("stream_id", stream_id);
   dict->SetString("url", url->spec());
   return std::move(dict);

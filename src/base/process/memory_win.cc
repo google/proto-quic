@@ -9,7 +9,6 @@
 #include <stddef.h>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 
 // malloc_unchecked is required to implement UncheckedMalloc properly.
 // It's provided by allocator_shim_win.cc but since that's not always present,

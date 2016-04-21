@@ -104,7 +104,7 @@ class NET_EXPORT_PRIVATE WebSocketEndpointLockManager {
     // Must be NULL to copy this object into the map. Must be set to non-NULL
     // after the object is inserted into the map then point to the same list
     // until this object is deleted.
-    scoped_ptr<WaiterQueue> queue;
+    std::unique_ptr<WaiterQueue> queue;
 
     // This pointer is only used to identify the last instance of StreamSocket
     // that was passed to RememberSocket() for this endpoint. It should only be

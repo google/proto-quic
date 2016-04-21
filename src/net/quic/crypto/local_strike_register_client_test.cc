@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/quic/crypto/crypto_protocol.h"
@@ -66,7 +65,7 @@ class LocalStrikeRegisterClientTest : public ::testing::Test {
         StrikeRegister::NO_STARTUP_PERIOD_NEEDED));
   }
 
-  scoped_ptr<LocalStrikeRegisterClient> strike_register_;
+  std::unique_ptr<LocalStrikeRegisterClient> strike_register_;
 };
 
 TEST_F(LocalStrikeRegisterClientTest, CheckOrbit) {

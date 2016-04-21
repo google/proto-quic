@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/metrics/metrics_hashes.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/persistent_sample_map.h"
@@ -23,12 +24,6 @@ typedef HistogramBase::Sample Sample;
 // static
 HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
                                            int32_t flags) {
-  // Import histograms from known persistent storage. Histograms could have
-  // been added by other processes and they must be fetched and recognized
-  // locally in order to be found by FindHistograms() below. If the persistent
-  // memory segment is not shared between processes, this call does nothing.
-  PersistentHistogramAllocator::ImportGlobalHistograms();
-
   HistogramBase* histogram = StatisticsRecorder::FindHistogram(name);
   if (!histogram) {
     // Try to create the histogram using a "persistent" allocator. As of
@@ -37,9 +32,8 @@ HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
     // allocating from it fails, code below will allocate the histogram from
     // the process heap.
     PersistentMemoryAllocator::Reference histogram_ref = 0;
-    scoped_ptr<HistogramBase> tentative_histogram;
-    PersistentHistogramAllocator* allocator =
-        PersistentHistogramAllocator::GetGlobalAllocator();
+    std::unique_ptr<HistogramBase> tentative_histogram;
+    PersistentHistogramAllocator* allocator = GlobalHistogramAllocator::Get();
     if (allocator) {
       tentative_histogram = allocator->AllocateHistogram(
           SPARSE_HISTOGRAM, name, 0, 0, nullptr, flags, &histogram_ref);
@@ -79,12 +73,12 @@ HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
 }
 
 // static
-scoped_ptr<HistogramBase> SparseHistogram::PersistentCreate(
-    PersistentMemoryAllocator* allocator,
+std::unique_ptr<HistogramBase> SparseHistogram::PersistentCreate(
+    PersistentHistogramAllocator* allocator,
     const std::string& name,
     HistogramSamples::Metadata* meta,
     HistogramSamples::Metadata* logged_meta) {
-  return make_scoped_ptr(
+  return WrapUnique(
       new SparseHistogram(allocator, name, meta, logged_meta));
 }
 
@@ -123,16 +117,16 @@ void SparseHistogram::AddCount(Sample value, int count) {
   FindAndRunCallback(value);
 }
 
-scoped_ptr<HistogramSamples> SparseHistogram::SnapshotSamples() const {
-  scoped_ptr<SampleMap> snapshot(new SampleMap(name_hash()));
+std::unique_ptr<HistogramSamples> SparseHistogram::SnapshotSamples() const {
+  std::unique_ptr<SampleMap> snapshot(new SampleMap(name_hash()));
 
   base::AutoLock auto_lock(lock_);
   snapshot->Add(*samples_);
   return std::move(snapshot);
 }
 
-scoped_ptr<HistogramSamples> SparseHistogram::SnapshotDelta() {
-  scoped_ptr<SampleMap> snapshot(new SampleMap(name_hash()));
+std::unique_ptr<HistogramSamples> SparseHistogram::SnapshotDelta() {
+  std::unique_ptr<SampleMap> snapshot(new SampleMap(name_hash()));
   base::AutoLock auto_lock(lock_);
   snapshot->Add(*samples_);
 
@@ -171,7 +165,7 @@ SparseHistogram::SparseHistogram(const std::string& name)
       samples_(new SampleMap(HashMetricName(name))),
       logged_samples_(new SampleMap(samples_->id())) {}
 
-SparseHistogram::SparseHistogram(PersistentMemoryAllocator* allocator,
+SparseHistogram::SparseHistogram(PersistentHistogramAllocator* allocator,
                                  const std::string& name,
                                  HistogramSamples::Metadata* meta,
                                  HistogramSamples::Metadata* logged_meta)
@@ -219,7 +213,7 @@ void SparseHistogram::WriteAsciiImpl(bool graph_it,
                                      const std::string& newline,
                                      std::string* output) const {
   // Get a local copy of the data so we are consistent.
-  scoped_ptr<HistogramSamples> snapshot = SnapshotSamples();
+  std::unique_ptr<HistogramSamples> snapshot = SnapshotSamples();
   Count total_count = snapshot->TotalCount();
   double scaled_total_count = total_count / 100.0;
 
@@ -232,7 +226,7 @@ void SparseHistogram::WriteAsciiImpl(bool graph_it,
   // normalize the graphical bar-width relative to that sample count.
   Count largest_count = 0;
   Sample largest_sample = 0;
-  scoped_ptr<SampleCountIterator> it = snapshot->Iterator();
+  std::unique_ptr<SampleCountIterator> it = snapshot->Iterator();
   while (!it->Done()) {
     Sample min;
     Sample max;

@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -99,7 +100,7 @@ class NET_EXPORT NSSCertDatabase {
     DISTRUSTED_OBJ_SIGN   = 1 << 5,
   };
 
-  typedef base::Callback<void(scoped_ptr<CertificateList> certs)>
+  typedef base::Callback<void(std::unique_ptr<CertificateList> certs)>
       ListCertsCallback;
 
   typedef base::Callback<void(bool)> DeleteCertCallback;
@@ -305,7 +306,7 @@ class NET_EXPORT NSSCertDatabase {
   crypto::ScopedPK11Slot private_slot_;
 
   // A helper observer that forwards events from this database to CertDatabase.
-  scoped_ptr<Observer> cert_notification_forwarder_;
+  std::unique_ptr<Observer> cert_notification_forwarder_;
 
   // Task runner that should be used in tests if set.
   scoped_refptr<base::TaskRunner> slow_task_runner_for_test_;

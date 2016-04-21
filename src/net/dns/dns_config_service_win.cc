@@ -5,6 +5,7 @@
 #include "net/dns/dns_config_service_win.h"
 
 #include <algorithm>
+#include <memory>
 #include <string>
 
 #include "base/bind.h"
@@ -15,7 +16,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -113,10 +113,11 @@ class RegistryReader : public base::NonThreadSafe {
 };
 
 // Wrapper for GetAdaptersAddresses. Returns NULL if failed.
-scoped_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> ReadIpHelper(ULONG flags) {
+std::unique_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> ReadIpHelper(
+    ULONG flags) {
   base::ThreadRestrictions::AssertIOAllowed();
 
-  scoped_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> out;
+  std::unique_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> out;
   ULONG len = 15000;  // As recommended by MSDN for GetAdaptersAddresses.
   UINT rv = ERROR_BUFFER_OVERFLOW;
   // Try up to three times.
@@ -246,11 +247,9 @@ HostsParseWinResult AddLocalhostEntries(DnsHosts* hosts) {
   if (have_ipv4 && have_ipv6)
     return HOSTS_PARSE_WIN_OK;
 
-  scoped_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> addresses =
-      ReadIpHelper(GAA_FLAG_SKIP_ANYCAST |
-                   GAA_FLAG_SKIP_DNS_SERVER |
-                   GAA_FLAG_SKIP_MULTICAST |
-                   GAA_FLAG_SKIP_FRIENDLY_NAME);
+  std::unique_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> addresses =
+      ReadIpHelper(GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER |
+                   GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_FRIENDLY_NAME);
   if (!addresses.get())
     return HOSTS_PARSE_WIN_IPHELPER_FAILED;
 
@@ -771,8 +770,8 @@ void DnsConfigServiceWin::OnHostsChanged(bool succeeded) {
 }  // namespace internal
 
 // static
-scoped_ptr<DnsConfigService> DnsConfigService::CreateSystemService() {
-  return scoped_ptr<DnsConfigService>(new internal::DnsConfigServiceWin());
+std::unique_ptr<DnsConfigService> DnsConfigService::CreateSystemService() {
+  return std::unique_ptr<DnsConfigService>(new internal::DnsConfigServiceWin());
 }
 
 }  // namespace net

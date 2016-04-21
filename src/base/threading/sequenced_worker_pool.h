@@ -8,13 +8,13 @@
 #include <stddef.h>
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
 #include "base/base_export.h"
 #include "base/callback_forward.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 
@@ -374,7 +374,7 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
 
   // Avoid pulling in too many headers by putting (almost) everything
   // into |inner_|.
-  const scoped_ptr<Inner> inner_;
+  const std::unique_ptr<Inner> inner_;
 
   DISALLOW_COPY_AND_ASSIGN(SequencedWorkerPool);
 };

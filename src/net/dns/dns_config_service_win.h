@@ -10,13 +10,13 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string16.h"
 #include "net/base/net_export.h"
 #include "net/dns/dns_config_service.h"
@@ -70,7 +70,7 @@ struct NET_EXPORT_PRIVATE DnsSystemSettings {
 
   // Filled in by GetAdapterAddresses. Note that the alternative
   // GetNetworkParams does not include IPv6 addresses.
-  scoped_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> addresses;
+  std::unique_ptr<IP_ADAPTER_ADDRESSES, base::FreeDeleter> addresses;
 
   // SOFTWARE\Policies\Microsoft\Windows NT\DNSClient\SearchList
   RegString policy_search_list;
@@ -136,7 +136,7 @@ class NET_EXPORT_PRIVATE DnsConfigServiceWin : public DnsConfigService {
   void OnConfigChanged(bool succeeded);
   void OnHostsChanged(bool succeeded);
 
-  scoped_ptr<Watcher> watcher_;
+  std::unique_ptr<Watcher> watcher_;
   scoped_refptr<ConfigReader> config_reader_;
   scoped_refptr<HostsReader> hosts_reader_;
 

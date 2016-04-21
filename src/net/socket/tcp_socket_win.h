@@ -8,15 +8,17 @@
 #include <stdint.h>
 #include <winsock2.h>
 
+#include <memory>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/win/object_watcher.h"
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
+#include "net/base/socket_performance_watcher.h"
 #include "net/log/net_log.h"
 
 namespace net {
@@ -28,7 +30,10 @@ class IPEndPoint;
 class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
                                 public base::win::ObjectWatcher::Delegate  {
  public:
-  TCPSocketWin(NetLog* net_log, const NetLog::Source& source);
+  TCPSocketWin(
+      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
+      NetLog* net_log,
+      const NetLog::Source& source);
   ~TCPSocketWin() override;
 
   int Open(AddressFamily family);
@@ -43,7 +48,7 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   int Bind(const IPEndPoint& address);
 
   int Listen(int backlog);
-  int Accept(scoped_ptr<TCPSocketWin>* socket,
+  int Accept(std::unique_ptr<TCPSocketWin>* socket,
              IPEndPoint* address,
              const CompletionCallback& callback);
 
@@ -112,7 +117,7 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // base::ObjectWatcher::Delegate implementation.
   void OnObjectSignaled(HANDLE object) override;
 
-  int AcceptInternal(scoped_ptr<TCPSocketWin>* socket,
+  int AcceptInternal(std::unique_ptr<TCPSocketWin>* socket,
                      IPEndPoint* address);
 
   int DoConnect();
@@ -128,10 +133,13 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   SOCKET socket_;
 
+  // |socket_performance_watcher_| may be nullptr.
+  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher_;
+
   HANDLE accept_event_;
   base::win::ObjectWatcher accept_watcher_;
 
-  scoped_ptr<TCPSocketWin>* accept_socket_;
+  std::unique_ptr<TCPSocketWin>* accept_socket_;
   IPEndPoint* accept_address_;
   CompletionCallback accept_callback_;
 
@@ -151,7 +159,7 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // External callback; called when write is complete.
   CompletionCallback write_callback_;
 
-  scoped_ptr<IPEndPoint> peer_address_;
+  std::unique_ptr<IPEndPoint> peer_address_;
   // The OS error that a connect attempt last completed with.
   int connect_os_error_;
 

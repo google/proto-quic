@@ -38,8 +38,6 @@
 
 using base::StringPiece;
 using base::StringPrintf;
-using base::hash_map;
-using base::hash_set;
 using std::list;
 using std::make_pair;
 using std::max;
@@ -862,13 +860,11 @@ bool QuicConnection::OnConnectionCloseFrame(
   if (debug_visitor_ != nullptr) {
     debug_visitor_->OnConnectionCloseFrame(frame);
   }
-  const string error_details =
-      StringPrintf("CONNECTION_CLOSE_FRAME received for connection: %" PRIu64
-                   " with error: %s %s",
-                   connection_id(), QuicUtils::ErrorToString(frame.error_code),
-                   frame.error_details.c_str());
-  DVLOG(1) << ENDPOINT << error_details;
-  TearDownLocalConnectionState(frame.error_code, error_details,
+  DVLOG(1) << ENDPOINT
+           << "Received ConnectionClose for connection: " << connection_id()
+           << ", with error: " << QuicUtils::ErrorToString(frame.error_code)
+           << " (" << frame.error_details << ")";
+  TearDownLocalConnectionState(frame.error_code, frame.error_details,
                                ConnectionCloseSource::FROM_PEER);
   return connected_;
 }
@@ -1054,11 +1050,6 @@ void QuicConnection::MaybeCloseIfTooManyOutstandingPackets() {
   }
 }
 
-void QuicConnection::PopulateAckFrame(QuicAckFrame* ack) {
-  received_packet_manager_.UpdateReceivedPacketInfo(ack,
-                                                    clock_->ApproximateNow());
-}
-
 const QuicFrame QuicConnection::GetUpdatedAckFrame() {
   return received_packet_manager_.GetUpdatedAckFrame(clock_->ApproximateNow());
 }
@@ -1097,7 +1088,7 @@ void QuicConnection::SendVersionNegotiationPacket() {
   }
   DVLOG(1) << ENDPOINT << "Sending version negotiation packet: {"
            << QuicVersionVectorToString(framer_.supported_versions()) << "}";
-  scoped_ptr<QuicEncryptedPacket> version_packet(
+  std::unique_ptr<QuicEncryptedPacket> version_packet(
       packet_generator_.SerializeVersionNegotiationPacket(
           framer_.supported_versions()));
   WriteResult result = writer_->WritePacket(

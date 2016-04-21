@@ -7,12 +7,12 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/http/http_basic_state.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
@@ -32,7 +32,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
  public:
   // |connect_delegate| and |failure_message| must out-live this object.
   WebSocketBasicHandshakeStream(
-      scoped_ptr<ClientSocketHandle> connection,
+      std::unique_ptr<ClientSocketHandle> connection,
       WebSocketStream::ConnectDelegate* connect_delegate,
       bool using_proxy,
       std::vector<std::string> requested_sub_protocols,
@@ -77,7 +77,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
   // have been received. It creates an appropriate subclass of WebSocketStream
   // depending on what extensions were negotiated. This object is unusable after
   // Upgrade() has been called and should be disposed of as soon as possible.
-  scoped_ptr<WebSocketStream> Upgrade() override;
+  std::unique_ptr<WebSocketStream> Upgrade() override;
 
   // Set the value used for the next Sec-WebSocket-Key header
   // deterministically. The key is only used once, and then discarded.
@@ -118,7 +118,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
 
   // The key to be sent in the next Sec-WebSocket-Key header. Usually NULL (the
   // key is generated on the fly).
-  scoped_ptr<std::string> handshake_challenge_for_testing_;
+  std::unique_ptr<std::string> handshake_challenge_for_testing_;
 
   // The required value for the Sec-WebSocket-Accept header.
   std::string handshake_challenge_response_;
@@ -137,7 +137,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
 
   // The extension parameters. The class is defined in the implementation file
   // to avoid including extension-related header files here.
-  scoped_ptr<WebSocketExtensionParams> extension_params_;
+  std::unique_ptr<WebSocketExtensionParams> extension_params_;
 
   std::string* failure_message_;
 

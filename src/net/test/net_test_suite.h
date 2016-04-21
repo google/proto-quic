@@ -5,6 +5,8 @@
 #ifndef NET_TEST_NET_TEST_SUITE_H_
 #define NET_TEST_NET_TEST_SUITE_H_
 
+#include <memory>
+
 #include "base/memory/ref_counted.h"
 #include "base/test/test_suite.h"
 #include "build/build_config.h"
@@ -41,8 +43,8 @@ class NetTestSuite : public base::TestSuite {
   void InitializeTestThreadNoNetworkChangeNotifier();
 
  private:
-  scoped_ptr<net::NetworkChangeNotifier> network_change_notifier_;
-  scoped_ptr<base::MessageLoop> message_loop_;
+  std::unique_ptr<net::NetworkChangeNotifier> network_change_notifier_;
+  std::unique_ptr<base::MessageLoop> message_loop_;
   scoped_refptr<net::RuleBasedHostResolverProc> host_resolver_proc_;
   net::ScopedDefaultHostResolverProc scoped_host_resolver_proc_;
 };

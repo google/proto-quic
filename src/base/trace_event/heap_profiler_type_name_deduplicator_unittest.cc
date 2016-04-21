@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <string>
 
 #include "base/json/json_reader.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -30,7 +30,8 @@ const char kTaskFileName[] = "..\\..\\base\\memory\\memory_win.cc";
 const char kTaskPath[] = "base\\memory";
 #endif
 
-scoped_ptr<Value> DumpAndReadBack(const TypeNameDeduplicator& deduplicator) {
+std::unique_ptr<Value> DumpAndReadBack(
+    const TypeNameDeduplicator& deduplicator) {
   std::string json;
   deduplicator.AppendAsTraceFormat(&json);
   return JSONReader::Read(json);
@@ -41,10 +42,10 @@ scoped_ptr<Value> DumpAndReadBack(const TypeNameDeduplicator& deduplicator) {
 // the same as |expected_value|.
 void TestInsertTypeAndReadback(const char* type_name,
                                const char* expected_value) {
-  scoped_ptr<TypeNameDeduplicator> dedup(new TypeNameDeduplicator);
+  std::unique_ptr<TypeNameDeduplicator> dedup(new TypeNameDeduplicator);
   ASSERT_EQ(1, dedup->Insert(type_name));
 
-  scoped_ptr<Value> type_names = DumpAndReadBack(*dedup);
+  std::unique_ptr<Value> type_names = DumpAndReadBack(*dedup);
   ASSERT_NE(nullptr, type_names);
 
   const DictionaryValue* dictionary;
@@ -66,7 +67,7 @@ TEST(TypeNameDeduplicatorTest, Deduplication) {
   // 2: bool
   // 3: string
 
-  scoped_ptr<TypeNameDeduplicator> dedup(new TypeNameDeduplicator);
+  std::unique_ptr<TypeNameDeduplicator> dedup(new TypeNameDeduplicator);
   ASSERT_EQ(1, dedup->Insert(kInt));
   ASSERT_EQ(2, dedup->Insert(kBool));
   ASSERT_EQ(3, dedup->Insert(kString));

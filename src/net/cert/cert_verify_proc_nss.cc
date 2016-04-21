@@ -4,15 +4,16 @@
 
 #include "net/cert/cert_verify_proc_nss.h"
 
-#include <string>
-#include <vector>
-
 #include <cert.h>
 #include <nss.h>
 #include <prerror.h>
 #include <secerr.h>
 #include <sechash.h>
 #include <sslerr.h>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "base/logging.h"
 #include "base/macros.h"
@@ -45,15 +46,15 @@ namespace net {
 
 namespace {
 
-typedef scoped_ptr<
+typedef std::unique_ptr<
     CERTCertificatePolicies,
     crypto::NSSDestroyer<CERTCertificatePolicies,
-                         CERT_DestroyCertificatePoliciesExtension> >
+                         CERT_DestroyCertificatePoliciesExtension>>
     ScopedCERTCertificatePolicies;
 
-typedef scoped_ptr<
+typedef std::unique_ptr<
     CERTCertList,
-    crypto::NSSDestroyer<CERTCertList, CERT_DestroyCertList> >
+    crypto::NSSDestroyer<CERTCertList, CERT_DestroyCertList>>
     ScopedCERTCertList;
 
 // ScopedCERTValOutParam manages destruction of values in the CERTValOutParam

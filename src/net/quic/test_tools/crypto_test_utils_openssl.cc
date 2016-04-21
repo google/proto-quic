@@ -49,7 +49,7 @@ class TestChannelIDKey : public ChannelIDKey {
       return false;
     }
 
-    scoped_ptr<uint8_t[]> der_sig(new uint8_t[sig_len]);
+    std::unique_ptr<uint8_t[]> der_sig(new uint8_t[sig_len]);
     if (!EVP_DigestSignFinal(md_ctx.get(), der_sig.get(), &sig_len)) {
       return false;
     }
@@ -63,7 +63,7 @@ class TestChannelIDKey : public ChannelIDKey {
 
     // The signature consists of a pair of 32-byte numbers.
     static const size_t kSignatureLength = 32 * 2;
-    scoped_ptr<uint8_t[]> signature(new uint8_t[kSignatureLength]);
+    std::unique_ptr<uint8_t[]> signature(new uint8_t[kSignatureLength]);
     if (!BN_bn2bin_padded(&signature[0], 32, sig->r) ||
         !BN_bn2bin_padded(&signature[32], 32, sig->s)) {
       return false;
@@ -105,7 +105,7 @@ class TestChannelIDSource : public ChannelIDSource {
 
   QuicAsyncStatus GetChannelIDKey(
       const string& hostname,
-      scoped_ptr<ChannelIDKey>* channel_id_key,
+      std::unique_ptr<ChannelIDKey>* channel_id_key,
       ChannelIDSourceCallback* /*callback*/) override {
     channel_id_key->reset(new TestChannelIDKey(HostnameToKey(hostname)));
     return QUIC_SUCCESS;

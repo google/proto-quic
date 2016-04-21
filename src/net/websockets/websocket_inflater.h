@@ -8,12 +8,12 @@
 #include <stddef.h>
 
 #include <deque>
+#include <memory>
 #include <utility>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 
 extern "C" struct z_stream_s;
@@ -120,7 +120,7 @@ class NET_EXPORT_PRIVATE WebSocketInflater {
   int Inflate(const char* next_in, size_t avail_in, int flush);
   int InflateChokedInput();
 
-  scoped_ptr<z_stream_s> stream_;
+  std::unique_ptr<z_stream_s> stream_;
   InputQueue input_queue_;
   OutputBuffer output_buffer_;
 

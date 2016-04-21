@@ -7,8 +7,9 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/bidirectional_stream_request_info.h"
@@ -40,7 +41,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
              BidirectionalStreamImpl::Delegate* delegate,
-             scoped_ptr<base::Timer> timer) override;
+             std::unique_ptr<base::Timer> timer) override;
   int ReadData(IOBuffer* buf, int buf_len) override;
   void SendData(IOBuffer* data, int length, bool end_stream) override;
   void Cancel() override;
@@ -52,7 +53,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   void OnRequestHeadersSent() override;
   SpdyResponseHeadersStatus OnResponseHeadersUpdated(
       const SpdyHeaderBlock& response_headers) override;
-  void OnDataReceived(scoped_ptr<SpdyBuffer> buffer) override;
+  void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) override;
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
   void OnClose(int status) override;
@@ -67,7 +68,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   const base::WeakPtr<SpdySession> spdy_session_;
   const BidirectionalStreamRequestInfo* request_info_;
   BidirectionalStreamImpl::Delegate* delegate_;
-  scoped_ptr<base::Timer> timer_;
+  std::unique_ptr<base::Timer> timer_;
   SpdyStreamRequest stream_request_;
   base::WeakPtr<SpdyStream> stream_;
 

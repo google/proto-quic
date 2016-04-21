@@ -52,11 +52,12 @@ class FakeMemoryAllocatorDumpProvider : public MemoryDumpProvider {
   }
 };
 
-scoped_ptr<Value> CheckAttribute(const MemoryAllocatorDump* dump,
-                                 const std::string& name,
-                                 const char* expected_type,
-                                 const char* expected_units) {
-  scoped_ptr<Value> raw_attrs = dump->attributes_for_testing()->ToBaseValue();
+std::unique_ptr<Value> CheckAttribute(const MemoryAllocatorDump* dump,
+                                      const std::string& name,
+                                      const char* expected_type,
+                                      const char* expected_units) {
+  std::unique_ptr<Value> raw_attrs =
+      dump->attributes_for_testing()->ToBaseValue();
   DictionaryValue* args = nullptr;
   DictionaryValue* arg = nullptr;
   std::string arg_value;
@@ -68,7 +69,7 @@ scoped_ptr<Value> CheckAttribute(const MemoryAllocatorDump* dump,
   EXPECT_TRUE(arg->GetString("units", &arg_value));
   EXPECT_EQ(expected_units, arg_value);
   EXPECT_TRUE(arg->Get("value", &out_value));
-  return out_value ? out_value->CreateDeepCopy() : scoped_ptr<Value>();
+  return out_value ? out_value->CreateDeepCopy() : std::unique_ptr<Value>();
 }
 
 void CheckString(const MemoryAllocatorDump* dump,
@@ -104,7 +105,7 @@ void CheckScalarF(const MemoryAllocatorDump* dump,
 }  // namespace
 
 TEST(MemoryAllocatorDumpTest, GuidGeneration) {
-  scoped_ptr<MemoryAllocatorDump> mad(
+  std::unique_ptr<MemoryAllocatorDump> mad(
       new MemoryAllocatorDump("foo", nullptr, MemoryAllocatorDumpGuid(0x42u)));
   ASSERT_EQ("42", mad->guid().ToString());
 
@@ -167,7 +168,7 @@ TEST(MemoryAllocatorDumpTest, DumpIntoProcessMemoryDump) {
   ASSERT_FALSE(attrs->HasKey(MemoryAllocatorDump::kNameObjectCount));
 
   // Check that the AsValueInfo doesn't hit any DCHECK.
-  scoped_ptr<TracedValue> traced_value(new TracedValue);
+  std::unique_ptr<TracedValue> traced_value(new TracedValue);
   pmd.AsValueInto(traced_value.get());
 }
 

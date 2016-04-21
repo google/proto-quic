@@ -316,7 +316,8 @@ class NET_EXPORT HttpServerProperties {
 
   // Returns all alternative service mappings as human readable strings.
   // Empty alternative service hostnames will be printed as such.
-  virtual scoped_ptr<base::Value> GetAlternativeServiceInfoAsValue() const = 0;
+  virtual std::unique_ptr<base::Value> GetAlternativeServiceInfoAsValue()
+      const = 0;
 
   // Gets a reference to the SettingsMap stored for a host.
   // If no settings are stored, returns an empty SettingsMap.

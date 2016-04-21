@@ -49,7 +49,7 @@ class BASE_EXPORT TraceBufferChunk {
 
  private:
   size_t next_free_;
-  scoped_ptr<TraceEventMemoryOverhead> cached_overhead_estimate_;
+  std::unique_ptr<TraceEventMemoryOverhead> cached_overhead_estimate_;
   TraceEvent chunk_[kTraceBufferChunkSize];
   uint32_t seq_;
 };
@@ -59,9 +59,9 @@ class BASE_EXPORT TraceBuffer {
  public:
   virtual ~TraceBuffer() {}
 
-  virtual scoped_ptr<TraceBufferChunk> GetChunk(size_t* index) = 0;
+  virtual std::unique_ptr<TraceBufferChunk> GetChunk(size_t* index) = 0;
   virtual void ReturnChunk(size_t index,
-                           scoped_ptr<TraceBufferChunk> chunk) = 0;
+                           std::unique_ptr<TraceBufferChunk> chunk) = 0;
 
   virtual bool IsFull() const = 0;
   virtual size_t Size() const = 0;

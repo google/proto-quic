@@ -4,6 +4,9 @@
 
 #include "net/cert/cert_verifier.h"
 
+#include <memory>
+
+#include "base/memory/ptr_util.h"
 #include "build/build_config.h"
 #include "net/cert/cert_verify_proc.h"
 
@@ -19,12 +22,12 @@ bool CertVerifier::SupportsOCSPStapling() {
   return false;
 }
 
-scoped_ptr<CertVerifier> CertVerifier::CreateDefault() {
+std::unique_ptr<CertVerifier> CertVerifier::CreateDefault() {
 #if defined(OS_NACL)
   NOTIMPLEMENTED();
-  return scoped_ptr<CertVerifier>();
+  return std::unique_ptr<CertVerifier>();
 #else
-  return make_scoped_ptr(
+  return base::WrapUnique(
       new MultiThreadedCertVerifier(CertVerifyProc::CreateDefault()));
 #endif
 }

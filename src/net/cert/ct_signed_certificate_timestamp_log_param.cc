@@ -5,6 +5,7 @@
 #include "net/cert/ct_signed_certificate_timestamp_log_param.h"
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -90,9 +91,9 @@ void SetBinaryData(
 // Returns a dictionary where each key is a field of the SCT and its value
 // is this field's value in the SCT. This dictionary is meant to be used for
 // outputting a de-serialized SCT to the NetLog.
-scoped_ptr<base::DictionaryValue> SCTToDictionary(
+std::unique_ptr<base::DictionaryValue> SCTToDictionary(
     const ct::SignedCertificateTimestamp& sct) {
-  scoped_ptr<base::DictionaryValue> out(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> out(new base::DictionaryValue());
 
   out->SetString("origin", OriginToString(sct.origin));
   out->SetInteger("version", sct.version);
@@ -115,9 +116,9 @@ scoped_ptr<base::DictionaryValue> SCTToDictionary(
 
 // Given a list of SCTs, return a ListValue instance where each item in the
 // list is a dictionary created by SCTToDictionary.
-scoped_ptr<base::ListValue> SCTListToPrintableValues(
+std::unique_ptr<base::ListValue> SCTListToPrintableValues(
     const ct::SCTList& sct_list) {
-  scoped_ptr<base::ListValue> output_scts(new base::ListValue());
+  std::unique_ptr<base::ListValue> output_scts(new base::ListValue());
   for (const auto& sct : sct_list)
     output_scts->Append(SCTToDictionary(*(sct.get())));
 
@@ -126,10 +127,10 @@ scoped_ptr<base::ListValue> SCTListToPrintableValues(
 
 }  // namespace
 
-scoped_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
+std::unique_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
     const ct::CTVerifyResult* ct_result,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
   dict->Set("verified_scts",
             SCTListToPrintableValues(ct_result->verified_scts));
@@ -143,12 +144,12 @@ scoped_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
   return std::move(dict);
 }
 
-scoped_ptr<base::Value> NetLogRawSignedCertificateTimestampCallback(
+std::unique_ptr<base::Value> NetLogRawSignedCertificateTimestampCallback(
     const std::string* embedded_scts,
     const std::string* sct_list_from_ocsp,
     const std::string* sct_list_from_tls_extension,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
   SetBinaryData("embedded_scts", *embedded_scts, dict.get());
   SetBinaryData("scts_from_ocsp_response", *sct_list_from_ocsp, dict.get());

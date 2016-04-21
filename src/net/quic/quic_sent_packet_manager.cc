@@ -668,7 +668,7 @@ void QuicSentPacketManager::RetransmitRtoPackets() {
       // Retransmittable data is marked as lost during loss detection, and will
       // be logged later.
       unacked_packets_.RemoveFromInFlight(packet_number);
-      if (FLAGS_quic_log_loss_event && debug_delegate_ != nullptr) {
+      if (debug_delegate_ != nullptr) {
         debug_delegate_->OnPacketLoss(packet_number, RTO_RETRANSMISSION,
                                       clock_->Now());
       }
@@ -704,7 +704,7 @@ void QuicSentPacketManager::InvokeLossDetection(QuicTime time) {
                                 &packets_lost_);
   for (const pair<QuicPacketNumber, QuicByteCount>& pair : packets_lost_) {
     ++stats_->packets_lost;
-    if (FLAGS_quic_log_loss_event && debug_delegate_ != nullptr) {
+    if (debug_delegate_ != nullptr) {
       debug_delegate_->OnPacketLoss(pair.first, LOSS_RETRANSMISSION, time);
     }
 

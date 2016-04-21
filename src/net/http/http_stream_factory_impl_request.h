@@ -5,10 +5,10 @@
 #ifndef NET_HTTP_HTTP_STREAM_FACTORY_IMPL_REQUEST_H_
 #define NET_HTTP_HTTP_STREAM_FACTORY_IMPL_REQUEST_H_
 
+#include <memory>
 #include <set>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/http/http_stream_factory_impl.h"
 #include "net/log/net_log.h"
 #include "net/socket/connection_attempts.h"
@@ -67,8 +67,8 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   // HttpStreamRequest::BIDIRECTIONAL_STREAM.
   void OnNewSpdySessionReady(
       Job* job,
-      scoped_ptr<HttpStream> stream,
-      scoped_ptr<BidirectionalStreamImpl> bidirectional_stream_spdy_impl,
+      std::unique_ptr<HttpStream> stream,
+      std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_spdy_impl,
       const base::WeakPtr<SpdySession>& spdy_session,
       bool direct);
 
@@ -152,9 +152,9 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   const BoundNetLog net_log_;
 
   // At the point where Job is irrevocably tied to the Request, we set this.
-  scoped_ptr<Job> bound_job_;
+  std::unique_ptr<Job> bound_job_;
   std::set<HttpStreamFactoryImpl::Job*> jobs_;
-  scoped_ptr<const SpdySessionKey> spdy_session_key_;
+  std::unique_ptr<const SpdySessionKey> spdy_session_key_;
 
   bool completed_;
   bool was_npn_negotiated_;

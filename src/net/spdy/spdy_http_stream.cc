@@ -274,7 +274,7 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
     return ERR_IO_PENDING;
   }
 
-  scoped_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
+  std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
   CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers,
                                    stream_->GetProtocolVersion(), direct_,
                                    headers.get());
@@ -351,7 +351,7 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
   return RESPONSE_HEADERS_ARE_COMPLETE;
 }
 
-void SpdyHttpStream::OnDataReceived(scoped_ptr<SpdyBuffer> buffer) {
+void SpdyHttpStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   CHECK_EQ(response_headers_status_, RESPONSE_HEADERS_ARE_COMPLETE);
 
   // Note that data may be received for a SpdyStream prior to the user calling

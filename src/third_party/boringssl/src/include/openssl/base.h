@@ -62,6 +62,10 @@
 
 #include <openssl/opensslconf.h>
 
+#if defined(BORINGSSL_PREFIX)
+#include <boringssl_prefix_symbols.h>
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -142,7 +146,7 @@ extern "C" {
 
 #if defined(__GNUC__)
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check) \
-        __attribute__((format(printf, string_index, first_to_check)))
+        __attribute__((__format__(__printf__, string_index, first_to_check)))
 #else
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check)
 #endif

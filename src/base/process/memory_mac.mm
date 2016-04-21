@@ -252,16 +252,9 @@ bool CanGetContextForCFAllocator() {
 }
 
 CFAllocatorContext* ContextForCFAllocator(CFAllocatorRef allocator) {
-  if (base::mac::IsOSSnowLeopard()) {
-    ChromeCFAllocatorLeopards* our_allocator =
-        const_cast<ChromeCFAllocatorLeopards*>(
-            reinterpret_cast<const ChromeCFAllocatorLeopards*>(allocator));
-    return &our_allocator->_context;
-  } else if (base::mac::IsOSLion() ||
-             base::mac::IsOSMountainLion() ||
-             base::mac::IsOSMavericks() ||
-             base::mac::IsOSYosemite() ||
-             base::mac::IsOSElCapitan()) {
+  if (base::mac::IsOSLion() || base::mac::IsOSMountainLion() ||
+      base::mac::IsOSMavericks() || base::mac::IsOSYosemite() ||
+      base::mac::IsOSElCapitan()) {
     ChromeCFAllocatorLions* our_allocator =
         const_cast<ChromeCFAllocatorLions*>(
             reinterpret_cast<const ChromeCFAllocatorLions*>(allocator));

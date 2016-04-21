@@ -40,7 +40,7 @@ QuicChromiumClientSession* QuicStreamFactoryPeer::GetActiveSession(
   return factory->active_sessions_[server_id];
 }
 
-scoped_ptr<QuicHttpStream> QuicStreamFactoryPeer::CreateFromSession(
+std::unique_ptr<QuicHttpStream> QuicStreamFactoryPeer::CreateFromSession(
     QuicStreamFactory* factory,
     QuicChromiumClientSession* session) {
   return factory->CreateFromSession(session);

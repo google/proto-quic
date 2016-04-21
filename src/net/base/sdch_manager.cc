@@ -231,13 +231,13 @@ SdchProblemCode SdchManager::CanFetchDictionary(
   return SDCH_OK;
 }
 
-scoped_ptr<SdchManager::DictionarySet>
-SdchManager::GetDictionarySet(const GURL& target_url) {
+std::unique_ptr<SdchManager::DictionarySet> SdchManager::GetDictionarySet(
+    const GURL& target_url) {
   if (IsInSupportedDomain(target_url) != SDCH_OK)
     return NULL;
 
   int count = 0;
-  scoped_ptr<SdchManager::DictionarySet> result(new DictionarySet);
+  std::unique_ptr<SdchManager::DictionarySet> result(new DictionarySet);
   for (const auto& entry: dictionaries_) {
     if (entry.second->data.CanUse(target_url) != SDCH_OK)
       continue;
@@ -255,12 +255,11 @@ SdchManager::GetDictionarySet(const GURL& target_url) {
   return result;
 }
 
-scoped_ptr<SdchManager::DictionarySet>
-SdchManager::GetDictionarySetByHash(
+std::unique_ptr<SdchManager::DictionarySet> SdchManager::GetDictionarySetByHash(
     const GURL& target_url,
     const std::string& server_hash,
     SdchProblemCode* problem_code) {
-  scoped_ptr<SdchManager::DictionarySet> result;
+  std::unique_ptr<SdchManager::DictionarySet> result;
 
   *problem_code = SDCH_DICTIONARY_HASH_NOT_FOUND;
   const auto& it = dictionaries_.find(server_hash);
@@ -376,13 +375,22 @@ SdchProblemCode SdchManager::AddSdchDictionary(
         if (value != "1.0")
           return SDCH_DICTIONARY_UNSUPPORTED_VERSION;
       } else if (name == "max-age") {
-        int64_t seconds;
-        // TODO(eroman): crbug.com/596541 -- should not accept a leading +.
-        base::StringToInt64(value, &seconds);
-        expiration = base::Time::Now() + base::TimeDelta::FromSeconds(seconds);
+        // max-age must be a non-negative number. If it is very large saturate
+        // to 2^32 - 1. If it is invalid then treat it as expired.
+        // TODO(eroman): crbug.com/602691 be stricter on failure.
+        uint32_t seconds = std::numeric_limits<uint32_t>::max();
+        ParseIntError parse_int_error;
+        if (ParseUint32(value, &seconds, &parse_int_error) ||
+            parse_int_error == ParseIntError::FAILED_OVERFLOW) {
+          expiration =
+              base::Time::Now() + base::TimeDelta::FromSeconds(seconds);
+        } else {
+          expiration = base::Time();
+        }
       } else if (name == "port") {
+        // TODO(eroman): crbug.com/602691 be stricter on failure.
         int port;
-        if (ParseNonNegativeDecimalInt(value, &port))
+        if (ParseInt32(value, ParseIntFormat::NON_NEGATIVE, &port))
           ports.insert(port);
       }
     }
@@ -434,24 +442,25 @@ SdchProblemCode SdchManager::RemoveSdchDictionary(
 }
 
 // static
-scoped_ptr<SdchManager::DictionarySet>
+std::unique_ptr<SdchManager::DictionarySet>
 SdchManager::CreateEmptyDictionarySetForTesting() {
-  return scoped_ptr<DictionarySet>(new DictionarySet);
+  return std::unique_ptr<DictionarySet>(new DictionarySet);
 }
 
-scoped_ptr<base::Value> SdchManager::SdchInfoToValue() const {
-  scoped_ptr<base::DictionaryValue> value(new base::DictionaryValue());
+std::unique_ptr<base::Value> SdchManager::SdchInfoToValue() const {
+  std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
 
   value->SetBoolean("sdch_enabled", true);
 
-  scoped_ptr<base::ListValue> entry_list(new base::ListValue());
+  std::unique_ptr<base::ListValue> entry_list(new base::ListValue());
   for (const auto& entry: dictionaries_) {
-    scoped_ptr<base::DictionaryValue> entry_dict(new base::DictionaryValue());
+    std::unique_ptr<base::DictionaryValue> entry_dict(
+        new base::DictionaryValue());
     entry_dict->SetString("url", entry.second->data.url().spec());
     entry_dict->SetString("client_hash", entry.second->data.client_hash());
     entry_dict->SetString("domain", entry.second->data.domain());
     entry_dict->SetString("path", entry.second->data.path());
-    scoped_ptr<base::ListValue> port_list(new base::ListValue());
+    std::unique_ptr<base::ListValue> port_list(new base::ListValue());
     for (std::set<int>::const_iterator port_it =
              entry.second->data.ports().begin();
          port_it != entry.second->data.ports().end(); ++port_it) {
@@ -468,7 +477,8 @@ scoped_ptr<base::Value> SdchManager::SdchInfoToValue() const {
        it != blacklisted_domains_.end(); ++it) {
     if (it->second.count == 0)
       continue;
-    scoped_ptr<base::DictionaryValue> entry_dict(new base::DictionaryValue());
+    std::unique_ptr<base::DictionaryValue> entry_dict(
+        new base::DictionaryValue());
     entry_dict->SetString("domain", it->first);
     if (it->second.count != INT_MAX)
       entry_dict->SetInteger("tries", it->second.count);

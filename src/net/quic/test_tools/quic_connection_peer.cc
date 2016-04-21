@@ -28,12 +28,6 @@ void QuicConnectionPeer::SetSendAlgorithm(
 }
 
 // static
-void QuicConnectionPeer::PopulateAckFrame(QuicConnection* connection,
-                                          QuicAckFrame* ack) {
-  connection->PopulateAckFrame(ack);
-}
-
-// static
 const QuicFrame QuicConnectionPeer::GetUpdatedAckFrame(
     QuicConnection* connection) {
   return connection->GetUpdatedAckFrame();
