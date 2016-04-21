@@ -14,6 +14,7 @@ update.py [directory or file] will copy a new file from CHROME_ROOT to
           LIBQUIC_ROOT
 """
 
+import fileinput
 import os
 import shutil
 import subprocess
@@ -71,6 +72,14 @@ def directory_to_skip(name):
     return True
   return False
 
+def clean_build_file(file_to_remove, filename):
+  if "gyp" not in filename:
+    return
+  print "   removing " + file_to_remove + " from " + filename
+  for line in fileinput.input(filename, inplace=True):
+    if file_to_remove not in line:
+      print line.rstrip('\n')
+
 def copy_each_file(directory):
   for filename in os.listdir(libquic_root + "/" + directory):
     if os.path.isfile(libquic_root + "/" + directory + "/" + filename):
@@ -84,7 +93,16 @@ def copy_each_file(directory):
             print "copy ", libquic_file, " " , chrome_file
           shutil.copyfile(chrome_file, libquic_file)
         else:
-          print "remove ", libquic_file
+          print "removing ", libquic_file
+          gyp_dir = directory.split("/")[0];
+          try:
+            command = "grep -r " + filename + " " + libquic_root + "/" + gyp_dir + "/*"
+            files_to_clean = subprocess.check_output(command, shell=True)
+            for file_to_clean in files_to_clean.split("\n"):
+              if file_to_clean:
+                clean_build_file(filename, file_to_clean.split(":")[0]);
+          except subprocess.CalledProcessError, e:
+            print "  found no references to " + filename + " in " + gyp_dir + "/";
           os.remove(libquic_file)
 
 def copy_directories():
@@ -94,7 +112,7 @@ def copy_directories():
     shutil.copytree(chrome_root + "/" + directory, libquic_root + "/" + directory, symlinks=True)
 
 def copy_all():
-  copy_directories()
+#  copy_directories()
   for item in os.walk(libquic_root):
     directory_name = item[0][len(libquic_root)+1:]
     if full_copy(directory_name):
