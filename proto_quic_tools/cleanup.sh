@@ -1,5 +1,6 @@
 #!/bin/bash
 
+rm -rf third_party/llvm-build/
 git add third_party/*
 git add base/*
 git add net/*
