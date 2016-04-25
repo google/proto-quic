@@ -10,14 +10,9 @@
 #include "build/build_config.h"
 #include "net/cert/cert_database.h"
 #include "net/socket/client_socket_handle.h"
+#include "net/socket/ssl_client_socket_openssl.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/udp/udp_client_socket.h"
-
-#if defined(USE_OPENSSL)
-#include "net/socket/ssl_client_socket_openssl.h"
-#else
-#include "net/socket/ssl_client_socket_nss.h"
-#endif
 
 namespace net {
 
@@ -72,13 +67,8 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
       const HostPortPair& host_and_port,
       const SSLConfig& ssl_config,
       const SSLClientSocketContext& context) override {
-#if defined(USE_OPENSSL)
     return std::unique_ptr<SSLClientSocket>(new SSLClientSocketOpenSSL(
         std::move(transport_socket), host_and_port, ssl_config, context));
-#else
-    return std::unique_ptr<SSLClientSocket>(new SSLClientSocketNSS(
-        std::move(transport_socket), host_and_port, ssl_config, context));
-#endif
   }
 
   void ClearSSLSessionCache() override { SSLClientSocket::ClearSessionCache(); }

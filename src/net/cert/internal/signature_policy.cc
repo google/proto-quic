@@ -6,9 +6,7 @@
 
 #include "base/logging.h"
 
-#if defined(USE_OPENSSL)
 #include <openssl/obj.h>
-#endif
 
 namespace net {
 
@@ -18,14 +16,12 @@ bool SignaturePolicy::IsAcceptableSignatureAlgorithm(
 }
 
 bool SignaturePolicy::IsAcceptableCurveForEcdsa(int curve_nid) const {
-#if defined(USE_OPENSSL)
   switch (curve_nid) {
     case NID_X9_62_prime256v1:
     case NID_secp384r1:
     case NID_secp521r1:
       return true;
   }
-#endif
   return false;
 }
 

@@ -5,6 +5,7 @@
 #include "net/tools/quic/quic_simple_server_session.h"
 
 #include <algorithm>
+#include <memory>
 
 #include "base/macros.h"
 #include "base/strings/string_number_conversions.h"
@@ -105,9 +106,11 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
 class MockConnectionWithSendStreamData : public MockConnection {
  public:
   MockConnectionWithSendStreamData(MockConnectionHelper* helper,
+                                   MockAlarmFactory* alarm_factory,
                                    Perspective perspective,
                                    const QuicVersionVector& supported_versions)
-      : MockConnection(helper, perspective, supported_versions) {}
+      : MockConnection(helper, alarm_factory, perspective, supported_versions) {
+  }
 
   MOCK_METHOD5(SendStreamData,
                QuicConsumedData(QuicStreamId id,
@@ -167,7 +170,8 @@ class QuicSimpleServerSessionTest
         kInitialSessionFlowControlWindowForTest);
 
     connection_ = new StrictMock<MockConnectionWithSendStreamData>(
-        &helper_, Perspective::IS_SERVER, SupportedVersions(GetParam()));
+        &helper_, &alarm_factory_, Perspective::IS_SERVER,
+        SupportedVersions(GetParam()));
     session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,
                                                &crypto_config_,
                                                &compressed_certs_cache_));
@@ -185,12 +189,13 @@ class QuicSimpleServerSessionTest
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnectionWithSendStreamData>* connection_;
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;
-  scoped_ptr<QuicSimpleServerSession> session_;
-  scoped_ptr<CryptoHandshakeMessage> handshake_message_;
+  std::unique_ptr<QuicSimpleServerSession> session_;
+  std::unique_ptr<CryptoHandshakeMessage> handshake_message_;
   QuicConnectionVisitorInterface* visitor_;
   MockQuicHeadersStream* headers_stream_;
 };
@@ -402,7 +407,8 @@ class QuicSimpleServerSessionServerPushTest
     QuicConfigPeer::SetReceivedConnectionOptions(&config_, copt);
 
     connection_ = new StrictMock<MockConnectionWithSendStreamData>(
-        &helper_, Perspective::IS_SERVER, SupportedVersions(GetParam()));
+        &helper_, &alarm_factory_, Perspective::IS_SERVER,
+        SupportedVersions(GetParam()));
     session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,
                                                &crypto_config_,
                                                &compressed_certs_cache_));

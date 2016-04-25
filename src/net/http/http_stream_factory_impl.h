@@ -59,10 +59,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       HttpStreamRequest::Delegate* delegate,
       const BoundNetLog& net_log) override;
 
-  void PreconnectStreams(int num_streams,
-                         const HttpRequestInfo& info,
-                         const SSLConfig& server_ssl_config,
-                         const SSLConfig& proxy_ssl_config) override;
+  void PreconnectStreams(int num_streams, const HttpRequestInfo& info) override;
   const HostMappingRules* GetHostMappingRules() const override;
 
   size_t num_orphaned_jobs() const { return orphaned_job_set_.size(); }

@@ -13,10 +13,10 @@
 #include <stddef.h>
 
 #include <map>
+#include <unordered_set>
 
 #include "base/callback.h"
 #include "base/compiler_specific.h"
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
 #include "base/synchronization/condition_variable.h"
@@ -51,10 +51,11 @@ class NET_EXPORT_PRIVATE AddressTrackerLinux :
   // NOTE: Only ignore interfaces not used to connect to the internet. Adding
   // interfaces used to connect to the internet can cause critical network
   // changed signals to be lost allowing incorrect stale state to persist.
-  AddressTrackerLinux(const base::Closure& address_callback,
-                      const base::Closure& link_callback,
-                      const base::Closure& tunnel_callback,
-                      const base::hash_set<std::string>& ignored_interfaces);
+  AddressTrackerLinux(
+      const base::Closure& address_callback,
+      const base::Closure& link_callback,
+      const base::Closure& tunnel_callback,
+      const std::unordered_set<std::string>& ignored_interfaces);
   ~AddressTrackerLinux() override;
 
   // In tracking mode, it starts watching the system configuration for
@@ -67,7 +68,7 @@ class NET_EXPORT_PRIVATE AddressTrackerLinux :
   AddressMap GetAddressMap() const;
 
   // Returns set of interface indicies for online interfaces.
-  base::hash_set<int> GetOnlineLinks() const;
+  std::unordered_set<int> GetOnlineLinks() const;
 
   // Implementation of NetworkChangeNotifierLinux::GetCurrentConnectionType().
   // Safe to call from any thread, but will block until Init() has completed.
@@ -160,10 +161,10 @@ class NET_EXPORT_PRIVATE AddressTrackerLinux :
 
   // Set of interface indices for links that are currently online.
   mutable base::Lock online_links_lock_;
-  base::hash_set<int> online_links_;
+  std::unordered_set<int> online_links_;
 
   // Set of interface names that should be ignored.
-  const base::hash_set<std::string> ignored_interfaces_;
+  const std::unordered_set<std::string> ignored_interfaces_;
 
   base::Lock connection_type_lock_;
   bool connection_type_initialized_;

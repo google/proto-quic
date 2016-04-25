@@ -743,15 +743,6 @@
           'use_nss_certs%': 0,
         }],
 
-        # NSS verifier usage.
-        # On non-OpenSSL iOS configurations, certificates use the operating
-        # system library, but the verifier uses the bundled copy of NSS.
-        ['(OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris") or (OS=="ios" and use_openssl==0)', {
-          'use_nss_verifier%': 1,
-        }, {
-          'use_nss_verifier%': 0,
-        }],
-
         # libudev usage.  This currently only affects the content layer.
         ['OS=="linux" and embedded==0', {
           'use_udev%': 1,
@@ -1164,7 +1155,6 @@
     'use_openssl%': '<(use_openssl)',
     'use_openssl_certs%': '<(use_openssl_certs)',
     'use_nss_certs%': '<(use_nss_certs)',
-    'use_nss_verifier%': '<(use_nss_verifier)',
     'use_udev%': '<(use_udev)',
     'os_bsd%': '<(os_bsd)',
     'os_posix%': '<(os_posix)',
@@ -2139,9 +2129,6 @@
       ['use_nss_certs==1', {
         'grit_defines': ['-D', 'use_nss_certs'],
       }],
-      ['use_nss_verifier==1', {
-        'grit_defines': ['-D', 'use_nss_verifier'],
-      }],
       ['use_ozone==1', {
         'grit_defines': ['-D', 'use_ozone'],
       }],
@@ -3106,9 +3093,6 @@
       }],
       ['<(use_nss_certs)==1 and >(nacl_untrusted_build)==0', {
         'defines': ['USE_NSS_CERTS=1'],
-      }],
-      ['<(use_nss_verifier)==1 and >(nacl_untrusted_build)==0', {
-        'defines': ['USE_NSS_VERIFIER=1'],
       }],
       ['<(chromeos)==1 and >(nacl_untrusted_build)==0', {
         'defines': ['OS_CHROMEOS=1'],

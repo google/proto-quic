@@ -4,10 +4,9 @@
 
 #include "net/ssl/ssl_cipher_suite_names.h"
 
-#if defined(USE_OPENSSL)
-#include <openssl/ssl.h>
-#endif
 #include <stdlib.h>
+
+#include <openssl/ssl.h>
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
@@ -424,7 +423,6 @@ bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite) {
 }
 
 const char* ECCurveName(uint16_t cipher_suite, int key_exchange_info) {
-#if defined(USE_OPENSSL)
   int key_exchange, cipher, mac;
   if (!GetCipherProperties(cipher_suite, &key_exchange, &cipher, &mac))
     return nullptr;
@@ -436,9 +434,6 @@ const char* ECCurveName(uint16_t cipher_suite, int key_exchange_info) {
       return nullptr;
   }
   return SSL_get_curve_name(key_exchange_info);
-#else
-  return nullptr;
-#endif
 }
 
 }  // namespace net

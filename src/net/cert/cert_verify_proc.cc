@@ -26,7 +26,7 @@
 #include "net/cert/x509_certificate.h"
 #include "url/url_canon.h"
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include "net/cert/cert_verify_proc_nss.h"
 #elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
 #include "net/cert/cert_verify_proc_openssl.h"
@@ -205,7 +205,7 @@ struct HashToArrayComparator {
 
 // static
 CertVerifyProc* CertVerifyProc::CreateDefault() {
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   return new CertVerifyProcNSS();
 #elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
   return new CertVerifyProcOpenSSL();

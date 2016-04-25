@@ -130,7 +130,7 @@ bool SequencedWorkerPoolTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  if (delay == TimeDelta()) {
+  if (delay.is_zero()) {
     return pool_->PostWorkerTaskWithShutdownBehavior(
         from_here, task, shutdown_behavior_);
   }
@@ -192,7 +192,7 @@ bool SequencedWorkerPoolSequencedTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  if (delay == TimeDelta()) {
+  if (delay.is_zero()) {
     return pool_->PostSequencedWorkerTaskWithShutdownBehavior(
         token_, from_here, task, shutdown_behavior_);
   }
@@ -610,7 +610,7 @@ bool SequencedWorkerPool::Inner::PostTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  DCHECK(delay == TimeDelta() || shutdown_behavior == SKIP_ON_SHUTDOWN);
+  DCHECK(delay.is_zero() || shutdown_behavior == SKIP_ON_SHUTDOWN);
   SequencedTask sequenced(from_here);
   sequenced.sequence_token_id = sequence_token.id_;
   sequenced.shutdown_behavior = shutdown_behavior;
@@ -1314,7 +1314,7 @@ bool SequencedWorkerPool::PostDelayedWorkerTask(
     const Closure& task,
     TimeDelta delay) {
   WorkerShutdown shutdown_behavior =
-      delay == TimeDelta() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
+      delay.is_zero() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
   return inner_->PostTask(NULL, SequenceToken(), shutdown_behavior,
                           from_here, task, delay);
 }
@@ -1341,7 +1341,7 @@ bool SequencedWorkerPool::PostDelayedSequencedWorkerTask(
     const Closure& task,
     TimeDelta delay) {
   WorkerShutdown shutdown_behavior =
-      delay == TimeDelta() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
+      delay.is_zero() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
   return inner_->PostTask(NULL, sequence_token, shutdown_behavior,
                           from_here, task, delay);
 }

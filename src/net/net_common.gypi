@@ -11,6 +11,7 @@
     '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
     '../crypto/crypto.gyp:crypto',
     '../sdch/sdch.gyp:sdch',
+    '../third_party/boringssl/boringssl.gyp:boringssl',
     '../third_party/protobuf/protobuf.gyp:protobuf_lite',
     '../third_party/zlib/zlib.gyp:zlib',
     'net_derived_sources',
@@ -105,94 +106,7 @@
         'dns/dns_client.cc',
       ],
     }],
-    ['use_openssl==1', {
-        'sources!': [
-          'base/nss_memio.c',
-          'base/nss_memio.h',
-          'cert/ct_log_verifier_nss.cc',
-          'cert/ct_objects_extractor_nss.cc',
-          'cert/jwk_serializer_nss.cc',
-          'cert/scoped_nss_types.h',
-          'cert/x509_certificate_ios.cc',
-          'cert/x509_util_nss.cc',
-          'quic/crypto/aead_base_decrypter_nss.cc',
-          'quic/crypto/aead_base_encrypter_nss.cc',
-          'quic/crypto/aes_128_gcm_12_decrypter_nss.cc',
-          'quic/crypto/aes_128_gcm_12_encrypter_nss.cc',
-          'quic/crypto/chacha20_poly1305_decrypter_nss.cc',
-          'quic/crypto/chacha20_poly1305_encrypter_nss.cc',
-          'quic/crypto/chacha20_poly1305_rfc7539_decrypter_nss.cc',
-          'quic/crypto/chacha20_poly1305_rfc7539_encrypter_nss.cc',
-          'quic/crypto/channel_id_nss.cc',
-          'quic/crypto/p256_key_exchange_nss.cc',
-          'quic/crypto/proof_source_chromium_nss.cc',
-          'socket/nss_ssl_util.cc',
-          'socket/nss_ssl_util.h',
-          'socket/ssl_client_socket_nss.cc',
-          'socket/ssl_client_socket_nss.h',
-          'socket/ssl_server_socket_nss.cc',
-          'socket/ssl_server_socket_nss.h',
-          'ssl/token_binding_nss.cc',
-        ],
-        'dependencies': [
-          '../third_party/boringssl/boringssl.gyp:boringssl',
-        ],
-        'conditions': [
-          ['chromecast==1 and use_nss_certs==1', {
-            'sources': [
-              'ssl/ssl_platform_key_chromecast.cc',
-            ],
-            'sources!': [
-              'ssl/ssl_platform_key_nss.cc',
-            ],
-          }],
-        ],
-      },
-      {  # else !use_openssl: remove the unneeded files and depend on NSS.
-        'sources!': [
-          'cert/ct_log_verifier_openssl.cc',
-          'cert/ct_objects_extractor_openssl.cc',
-          'cert/jwk_serializer_openssl.cc',
-          'cert/x509_util_openssl.cc',
-          'cert/x509_util_openssl.h',
-          'quic/crypto/aead_base_decrypter_openssl.cc',
-          'quic/crypto/aead_base_encrypter_openssl.cc',
-          'quic/crypto/aes_128_gcm_12_decrypter_openssl.cc',
-          'quic/crypto/aes_128_gcm_12_encrypter_openssl.cc',
-          'quic/crypto/chacha20_poly1305_decrypter_openssl.cc',
-          'quic/crypto/chacha20_poly1305_encrypter_openssl.cc',
-          'quic/crypto/chacha20_poly1305_rfc7539_decrypter_openssl.cc',
-          'quic/crypto/chacha20_poly1305_rfc7539_encrypter_openssl.cc',
-          'quic/crypto/channel_id_openssl.cc',
-          'quic/crypto/p256_key_exchange_openssl.cc',
-          'quic/crypto/proof_source_chromium_openssl.cc',
-          'quic/crypto/scoped_evp_aead_ctx.cc',
-          'quic/crypto/scoped_evp_aead_ctx.h',
-          'socket/ssl_client_socket_openssl.cc',
-          'socket/ssl_client_socket_openssl.h',
-          'socket/ssl_server_socket_openssl.cc',
-          'socket/ssl_server_socket_openssl.h',
-          'ssl/client_key_store.cc',
-          'ssl/client_key_store.h',
-          'ssl/openssl_ssl_util.cc',
-          'ssl/openssl_ssl_util.h',
-          'ssl/ssl_client_session_cache_openssl.cc',
-          'ssl/ssl_client_session_cache_openssl.h',
-          'ssl/ssl_key_logger.cc',
-          'ssl/ssl_key_logger.h',
-          'ssl/ssl_platform_key.h',
-          'ssl/ssl_platform_key_nss.cc',
-          'ssl/ssl_platform_key_task_runner.cc',
-          'ssl/ssl_platform_key_task_runner.h',
-          'ssl/test_ssl_private_key.cc',
-          'ssl/test_ssl_private_key.h',
-          'ssl/threaded_ssl_private_key.cc',
-          'ssl/threaded_ssl_private_key.h',
-          'ssl/token_binding_openssl.cc',
-        ],
-      },
-    ],
-    [ 'use_nss_verifier == 1', {
+    [ 'use_nss_certs == 1', {
         'conditions': [
           # Pull in the bundled or system NSS as appropriate.
           [ 'desktop_linux == 1 or chromeos == 1', {
@@ -284,29 +198,12 @@
         ],
       },
     ],
-    [ 'use_nss_verifier != 1', {
-        'sources!': [
-          'cert/cert_verify_proc_nss.cc',
-          'cert/cert_verify_proc_nss.h',
-          'cert/test_root_certs_nss.cc',
-          'cert/x509_util_nss_certs.cc',
-          'cert_net/nss_ocsp.cc',
-          'cert_net/nss_ocsp.h',
-        ],
-      },
-    ],
     # client_cert_store_nss.c requires NSS_CmpCertChainWCANames from NSS's
     # libssl, but our bundled copy is not built in OpenSSL ports. Pull that
     # file in directly.
     [ 'use_nss_certs == 1 and use_openssl == 1', {
         'sources': [
 #          'third_party/nss/ssl/cmpcert.c',
-        ],
-    }],
-    [ 'OS == "ios" and use_nss_verifier == 0', {
-        'sources!': [
-          'cert/x509_util_ios.cc',
-          'cert/x509_util_ios.h',
         ],
     }],
     [ 'enable_websockets == 1', {

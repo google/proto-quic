@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_sent_packet_manager.h"
 
+#include <memory>
+
 #include "base/stl_util.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/test_tools/quic_config_peer.h"

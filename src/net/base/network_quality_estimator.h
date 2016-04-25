@@ -46,6 +46,26 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
     : public NetworkChangeNotifier::ConnectionTypeObserver,
       public ExternalEstimateProvider::UpdatedEstimateDelegate {
  public:
+  // EffectiveConnectionType is the connection type whose typical performance is
+  // most similar to the measured performance of the network in use. In many
+  // cases, the "effective" connection type and the actual type of connection in
+  // use are the same, but often a network connection performs significantly
+  // different, usually worse, from its expected capabilities.
+  // EffectiveConnectionType of a network is independent of if the current
+  // connection is metered or not. For example, an unmetered slow connection may
+  // have EFFECTIVE_CONNECTION_TYPE_SLOW_2G as its effective connection type.
+  enum EffectiveConnectionType {
+    // The connection types should be in increasing order of quality.
+    EFFECTIVE_CONNECTION_TYPE_UNKNOWN = 0,
+    EFFECTIVE_CONNECTION_TYPE_OFFLINE,
+    EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
+    EFFECTIVE_CONNECTION_TYPE_2G,
+    EFFECTIVE_CONNECTION_TYPE_3G,
+    EFFECTIVE_CONNECTION_TYPE_4G,
+    EFFECTIVE_CONNECTION_TYPE_BROADBAND,
+    EFFECTIVE_CONNECTION_TYPE_LAST,
+  };
+
   // On Android, a Java counterpart will be generated for this enum.
   // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.net
   // GENERATED_JAVA_CLASS_NAME_OVERRIDE: NetworkQualityObservationSource
@@ -132,6 +152,9 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
       bool allow_smaller_responses_for_tests);
 
   ~NetworkQualityEstimator() override;
+
+  // Returns the effective type of the current connection.
+  EffectiveConnectionType GetEffectiveConnectionType() const;
 
   // Returns true if RTT is available and sets |rtt| to estimated RTT at the
   // HTTP layer. Virtualized for testing. |rtt| should not be null. The RTT at
@@ -236,6 +259,10 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   // ExternalEstimateProvider::UpdatedEstimateObserver implementation.
   void OnUpdatedEstimateAvailable() override;
+
+  // Return a string equivalent to |type|.
+  const char* GetNameForEffectiveConnectionType(
+      EffectiveConnectionType type) const;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, StoreObservations);
@@ -511,6 +538,13 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   void ObtainOperatingParams(
       const std::map<std::string, std::string>& variation_params);
 
+  // Obtains the model parameters for different effective connection types from
+  // the field trial parameters. For each effective connection type, a model
+  // (currently composed of a RTT threshold and a downlink throughput threshold)
+  // is provided by the field trial.
+  void ObtainEffectiveConnectionTypeModelParams(
+      const std::map<std::string, std::string>& variation_params);
+
   // Adds the default median RTT and downstream throughput estimate for the
   // current connection type to the observation buffer.
   void AddDefaultEstimates();
@@ -574,6 +608,9 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // network quality. Set to true only for tests.
   const bool allow_small_responses_;
 
+  // The factor by which the weight of an observation reduces every second.
+  const double weight_multiplier_per_second_;
+
   // Time when last connection change was observed.
   base::TimeTicks last_connection_change_;
 
@@ -603,6 +640,12 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // ConnectionType.
   NetworkQuality
       default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
+
+  // Thresholds for different effective connection types obtained from field
+  // trial variation params. These thresholds encode how different connection
+  // types behave in general. In future, complex encodings (e.g., curve
+  // fitting) may be used.
+  NetworkQuality connection_thresholds_[EFFECTIVE_CONNECTION_TYPE_LAST];
 
   // Estimated network quality. Updated on mainframe requests.
   NetworkQuality estimated_median_network_quality_;

@@ -11,9 +11,13 @@
 #include <string>
 
 #include "base/strings/string_piece.h"
+#include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 #include "net/spdy/spdy_protocol.h"
+#include "net/test/gtest_util.h"
+
+#define EXPECT_SPDY_BUG EXPECT_DFATAL
 
 namespace net {
 

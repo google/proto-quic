@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_packet_generator.h"
 
+#include <cstdint>
+#include <memory>
 #include <string>
 
 #include "base/macros.h"

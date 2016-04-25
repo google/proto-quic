@@ -11,6 +11,8 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
+#include <memory>
+
 #include "net/base/ip_endpoint.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/quic/crypto/crypto_handshake.h"
@@ -20,6 +22,7 @@
 #include "net/quic/quic_data_reader.h"
 #include "net/quic/quic_protocol.h"
 #include "net/tools/quic/quic_dispatcher.h"
+#include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_clock.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
@@ -93,7 +96,7 @@ void QuicServer::Initialize() {
 
   QuicEpollClock clock(&epoll_server_);
 
-  scoped_ptr<CryptoHandshakeMessage> scfg(crypto_config_.AddDefaultConfig(
+  std::unique_ptr<CryptoHandshakeMessage> scfg(crypto_config_.AddDefaultConfig(
       QuicRandom::GetInstance(), &clock, crypto_config_options_));
 }
 
@@ -142,9 +145,13 @@ QuicDefaultPacketWriter* QuicServer::CreateWriter(int fd) {
 }
 
 QuicDispatcher* QuicServer::CreateQuicDispatcher() {
-  return new QuicDispatcher(config_, &crypto_config_, supported_versions_,
-                            new QuicEpollConnectionHelper(
-                                &epoll_server_, QuicAllocator::BUFFER_POOL));
+  QuicEpollAlarmFactory alarm_factory(&epoll_server_);
+  return new QuicDispatcher(
+      config_, &crypto_config_, supported_versions_,
+      std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
+          &epoll_server_, QuicAllocator::BUFFER_POOL)),
+      std::unique_ptr<QuicEpollAlarmFactory>(
+          new QuicEpollAlarmFactory(&epoll_server_)));
 }
 
 void QuicServer::WaitForEvents() {

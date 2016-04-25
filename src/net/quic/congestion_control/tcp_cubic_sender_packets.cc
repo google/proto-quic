@@ -89,17 +89,10 @@ void TcpCubicSenderPackets::OnPacketLost(QuicPacketNumber packet_number,
       ++stats_->slowstart_packets_lost;
       stats_->slowstart_bytes_lost += lost_bytes;
       if (slow_start_large_reduction_) {
-        if (FLAGS_quic_sslr_byte_conservation) {
-          if (stats_->slowstart_packets_lost == 1 ||
-              (stats_->slowstart_bytes_lost / kDefaultTCPMSS) >
-                  (stats_->slowstart_bytes_lost - lost_bytes) /
-                      kDefaultTCPMSS) {
-            // Reduce congestion window by 1 for every mss of bytes lost.
-            congestion_window_ =
-                max(congestion_window_ - 1, min_congestion_window_);
-          }
-        } else {
-          // Reduce congestion window by 1 for every loss.
+        if (stats_->slowstart_packets_lost == 1 ||
+            (stats_->slowstart_bytes_lost / kDefaultTCPMSS) >
+                (stats_->slowstart_bytes_lost - lost_bytes) / kDefaultTCPMSS) {
+          // Reduce congestion window by 1 for every mss of bytes lost.
           congestion_window_ =
               max(congestion_window_ - 1, min_congestion_window_);
         }

@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_flow_controller.h"
 
+#include <memory>
+
 #include "base/format_macros.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/quic_flags.h"
@@ -29,7 +31,7 @@ class QuicFlowControllerTest : public ::testing::Test {
       : stream_id_(1234),
         send_window_(kInitialSessionFlowControlWindowForTest),
         receive_window_(kInitialSessionFlowControlWindowForTest),
-        connection_(&helper_, Perspective::IS_CLIENT) {}
+        connection_(&helper_, &alarm_factory_, Perspective::IS_CLIENT) {}
 
   void Initialize() {
     flow_controller_.reset(
@@ -43,6 +45,7 @@ class QuicFlowControllerTest : public ::testing::Test {
   QuicByteCount receive_window_;
   std::unique_ptr<QuicFlowController> flow_controller_;
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   MockConnection connection_;
 };
 

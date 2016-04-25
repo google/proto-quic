@@ -127,7 +127,7 @@ AddressTrackerLinux::AddressTrackerLinux(
     const base::Closure& address_callback,
     const base::Closure& link_callback,
     const base::Closure& tunnel_callback,
-    const base::hash_set<std::string>& ignored_interfaces)
+    const std::unordered_set<std::string>& ignored_interfaces)
     : get_interface_name_(GetInterfaceName),
       address_callback_(address_callback),
       link_callback_(link_callback),
@@ -250,7 +250,7 @@ AddressTrackerLinux::AddressMap AddressTrackerLinux::GetAddressMap() const {
   return address_map_;
 }
 
-base::hash_set<int> AddressTrackerLinux::GetOnlineLinks() const {
+std::unordered_set<int> AddressTrackerLinux::GetOnlineLinks() const {
   AddressTrackerAutoLock lock(*this, online_links_lock_);
   return online_links_;
 }
@@ -442,13 +442,13 @@ bool AddressTrackerLinux::IsTunnelInterface(int interface_index) const {
 
 void AddressTrackerLinux::UpdateCurrentConnectionType() {
   AddressTrackerLinux::AddressMap address_map = GetAddressMap();
-  base::hash_set<int> online_links = GetOnlineLinks();
+  std::unordered_set<int> online_links = GetOnlineLinks();
 
   // Strip out tunnel interfaces from online_links
-  for (base::hash_set<int>::const_iterator it = online_links.begin();
+  for (std::unordered_set<int>::const_iterator it = online_links.begin();
        it != online_links.end();) {
     if (IsTunnelInterface(*it)) {
-      base::hash_set<int>::const_iterator tunnel_it = it;
+      std::unordered_set<int>::const_iterator tunnel_it = it;
       ++it;
       online_links.erase(*tunnel_it);
     } else {

@@ -133,6 +133,7 @@
 #        '../crypto/crypto.gyp:crypto_test_support',
         '../testing/gmock.gyp:gmock',
         '../testing/gtest.gyp:gtest',
+        '../crypto/crypto.gyp:crypto',
         '../third_party/zlib/zlib.gyp:zlib',
         '../url/url.gyp:url_lib',
 #        'balsa',
@@ -192,7 +193,7 @@
             '../third_party/boringssl/boringssl.gyp:boringssl',
           ],
         }],
-        [ 'use_nss_verifier == 1', {
+        [ 'use_nss_certs == 1', {
           'conditions': [
             [ 'desktop_linux == 1 or chromeos == 1', {
               'dependencies': [
@@ -226,23 +227,20 @@
             'http/http_auth_handler_negotiate_unittest.cc',
           ],
         }],
-        [ 'use_nss_verifier == 0', {
+        [ 'use_nss_certs == 0', {
           # Only include this test when using NSS for cert verification.
           'sources!': [
             'cert_net/nss_ocsp_unittest.cc',
           ],
         }],
-        [ 'use_nss_verifier == 0 and OS == "ios"', {
+        [ 'use_nss_certs == 0 and OS == "ios"', {
           # Only include these files on iOS when using NSS for cert 
           # verification.
           'sources!': [
-           'cert/x509_util_ios.cc',
-           'cert/x509_util_ios.h',
           ],
         }],
         [ 'use_openssl==1', {
             'sources!': [
-              'quic/test_tools/crypto_test_utils_nss.cc',
             ],
           }, {  # else !use_openssl: remove the unneeded files and pull in NSS.
             'sources!': [
@@ -712,7 +710,7 @@
             'test/spawned_test_server/spawned_test_server.h',
           ],
         }],
-        ['use_nss_verifier == 1', {
+        ['use_nss_certs == 1', {
           'conditions': [
             [ 'desktop_linux == 1 or chromeos == 1', {
               'dependencies': [
@@ -1394,6 +1392,8 @@
             'tools/quic/quic_client.h',
             'tools/quic/quic_default_packet_writer.cc',
             'tools/quic/quic_default_packet_writer.h',
+            'tools/quic/quic_epoll_alarm_factory.cc',
+            'tools/quic/quic_epoll_alarm_factory.h',
             'tools/quic/quic_epoll_clock.cc',
             'tools/quic/quic_epoll_clock.h',
             'tools/quic/quic_epoll_connection_helper.cc',

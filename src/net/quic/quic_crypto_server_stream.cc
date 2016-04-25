@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_crypto_server_stream.h"
 
+#include <memory>
+
 #include "base/base64.h"
 #include "crypto/secure_hash.h"
 #include "net/quic/crypto/crypto_protocol.h"
@@ -16,6 +18,7 @@
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_session.h"
 
+using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -236,7 +239,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
   DVLOG(1) << "Server: Sending server config update: "
            << server_config_update_message.DebugString();
   const QuicData& data = server_config_update_message.GetSerialized();
-  WriteOrBufferData(string(data.data(), data.length()), false, nullptr);
+  WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
 
   ++num_server_config_update_messages_sent_;
 }

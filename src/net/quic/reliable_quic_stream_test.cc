@@ -4,6 +4,8 @@
 
 #include "net/quic/reliable_quic_stream.h"
 
+#include <memory>
+
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_utils.h"
@@ -104,7 +106,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
 
   void Initialize(bool stream_should_process_data) {
     connection_ = new StrictMock<MockConnection>(
-        &helper_, Perspective::IS_SERVER, supported_versions_);
+        &helper_, &alarm_factory_, Perspective::IS_SERVER, supported_versions_);
     session_.reset(new StrictMock<MockQuicSpdySession>(connection_));
 
     // New streams rely on having the peer's flow control receive window
@@ -148,6 +150,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
 
  protected:
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   MockConnection* connection_;
   std::unique_ptr<MockQuicSpdySession> session_;
   TestStream* stream_;

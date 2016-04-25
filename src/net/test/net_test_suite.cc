@@ -10,7 +10,7 @@
 #include "net/spdy/spdy_session.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include "net/cert_net/nss_ocsp.h"
 #endif
 
@@ -33,7 +33,7 @@ void NetTestSuite::Initialize() {
 }
 
 void NetTestSuite::Shutdown() {
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   net::ShutdownNSSHttpIO();
 #endif
 

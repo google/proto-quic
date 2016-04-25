@@ -85,6 +85,8 @@ class QuicConnectionPeer {
 
   static QuicConnectionHelperInterface* GetHelper(QuicConnection* connection);
 
+  static QuicAlarmFactory* GetAlarmFactory(QuicConnection* connection);
+
   static QuicFramer* GetFramer(QuicConnection* connection);
 
   static QuicAlarm* GetAckAlarm(QuicConnection* connection);

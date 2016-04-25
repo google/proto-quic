@@ -7,6 +7,7 @@
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_headers_stream.h"
 
+using base::StringPiece;
 using std::string;
 
 namespace net {

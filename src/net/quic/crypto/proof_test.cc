@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "base/files/file_path.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"

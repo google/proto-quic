@@ -5,6 +5,7 @@
 #include "net/quic/crypto/chacha20_poly1305_rfc7539_encrypter.h"
 
 #include <stdint.h>
+#include <memory>
 
 #include "net/quic/crypto/chacha20_poly1305_rfc7539_decrypter.h"
 #include "net/quic/test_tools/quic_test_utils.h"

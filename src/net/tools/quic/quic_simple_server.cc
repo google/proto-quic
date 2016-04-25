@@ -36,8 +36,13 @@ class SimpleQuicDispatcher : public QuicDispatcher {
   SimpleQuicDispatcher(const QuicConfig& config,
                        const QuicCryptoServerConfig* crypto_config,
                        const QuicVersionVector& supported_versions,
-                       QuicConnectionHelperInterface* helper)
-      : QuicDispatcher(config, crypto_config, supported_versions, helper) {}
+                       QuicConnectionHelperInterface* helper,
+                       QuicAlarmFactory* alarm_factory)
+      : QuicDispatcher(config,
+                       crypto_config,
+                       supported_versions,
+                       std::unique_ptr<QuicConnectionHelperInterface>(helper),
+                       std::unique_ptr<QuicAlarmFactory>(alarm_factory)) {}
 
  protected:
   QuicServerSessionBase* CreateQuicSession(
@@ -63,10 +68,10 @@ QuicSimpleServer::QuicSimpleServer(ProofSource* proof_source,
                                    const QuicConfig& config,
                                    const QuicVersionVector& supported_versions)
     : helper_(
-          new QuicChromiumConnectionHelper(base::ThreadTaskRunnerHandle::Get()
-                                               .get(),
-                                           &clock_,
-                                           QuicRandom::GetInstance())),
+          new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
+      alarm_factory_(new QuicChromiumAlarmFactory(
+          base::ThreadTaskRunnerHandle::Get().get(),
+          &clock_)),
       config_(config),
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
@@ -99,7 +104,7 @@ void QuicSimpleServer::Initialize() {
         kInitialSessionFlowControlWindow);
   }
 
-  scoped_ptr<CryptoHandshakeMessage> scfg(crypto_config_.AddDefaultConfig(
+  std::unique_ptr<CryptoHandshakeMessage> scfg(crypto_config_.AddDefaultConfig(
       helper_->GetRandomGenerator(), helper_->GetClock(),
       QuicCryptoServerConfig::ConfigOptions()));
 }
@@ -107,7 +112,7 @@ void QuicSimpleServer::Initialize() {
 QuicSimpleServer::~QuicSimpleServer() {}
 
 int QuicSimpleServer::Listen(const IPEndPoint& address) {
-  scoped_ptr<UDPServerSocket> socket(
+  std::unique_ptr<UDPServerSocket> socket(
       new UDPServerSocket(&net_log_, NetLog::Source()));
 
   socket->AllowAddressReuse();
@@ -144,8 +149,8 @@ int QuicSimpleServer::Listen(const IPEndPoint& address) {
 
   socket_.swap(socket);
 
-  dispatcher_.reset(new SimpleQuicDispatcher(config_, &crypto_config_,
-                                             supported_versions_, helper_));
+  dispatcher_.reset(new SimpleQuicDispatcher(
+      config_, &crypto_config_, supported_versions_, helper_, alarm_factory_));
   QuicSimpleServerPacketWriter* writer =
       new QuicSimpleServerPacketWriter(socket_.get(), dispatcher_.get());
   dispatcher_->InitializeWithWriter(writer);

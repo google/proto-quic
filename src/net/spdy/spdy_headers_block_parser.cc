@@ -5,6 +5,7 @@
 #include "net/spdy/spdy_headers_block_parser.h"
 
 #include "base/sys_byteorder.h"
+#include "net/spdy/spdy_bug_tracker.h"
 
 namespace net {
 namespace {
@@ -45,7 +46,7 @@ bool SpdyHeadersBlockParser::HandleControlFrameHeadersData(
     error_ = NO_PARSER_ERROR;
   }
   if (error_ != NO_PARSER_ERROR) {
-    LOG(DFATAL) << "Unexpected error: " << error_;
+    SPDY_BUG << "Unexpected error: " << error_;
     return false;
   }
 
@@ -55,13 +56,13 @@ bool SpdyHeadersBlockParser::HandleControlFrameHeadersData(
     stream_id_ = stream_id;
   }
   if (stream_id != stream_id_) {
-    LOG(DFATAL) << "Unexpected stream id: " << stream_id << " (expected "
-                << stream_id_ << ")";
+    SPDY_BUG << "Unexpected stream id: " << stream_id << " (expected "
+             << stream_id_ << ")";
     error_ = UNEXPECTED_STREAM_ID;
     return false;
   }
   if (stream_id_ == kInvalidStreamId) {
-    LOG(DFATAL) << "Expected nonzero stream id, saw: " << stream_id_;
+    SPDY_BUG << "Expected nonzero stream id, saw: " << stream_id_;
     error_ = UNEXPECTED_STREAM_ID;
     return false;
   }

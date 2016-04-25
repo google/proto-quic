@@ -146,6 +146,12 @@ QuicConnectionHelperInterface* QuicConnectionPeer::GetHelper(
 }
 
 // static
+QuicAlarmFactory* QuicConnectionPeer::GetAlarmFactory(
+    QuicConnection* connection) {
+  return connection->alarm_factory_;
+}
+
+// static
 QuicFramer* QuicConnectionPeer::GetFramer(QuicConnection* connection) {
   return &connection->framer_;
 }

@@ -95,6 +95,8 @@ size_t QuicSpdyStream::WriteTrailers(
 
   // The header block must contain the final offset for this stream, as the
   // trailers may be processed out of order at the peer.
+  DVLOG(1) << "Inserting trailer: (" << kFinalOffsetHeaderKey << ", "
+           << stream_bytes_written() + queued_data_bytes() << ")";
   trailer_block.insert(std::make_pair(
       kFinalOffsetHeaderKey,
       base::IntToString(stream_bytes_written() + queued_data_bytes())));
@@ -153,6 +155,13 @@ void QuicSpdyStream::MarkHeadersConsumed(size_t bytes_consumed) {
 
 void QuicSpdyStream::MarkTrailersConsumed(size_t bytes_consumed) {
   decompressed_trailers_.erase(0, bytes_consumed);
+}
+
+void QuicSpdyStream::ConsumeHeaderList() {
+  header_list_.Clear();
+  if (FinishedReadingHeaders()) {
+    sequencer()->SetUnblocked();
+  }
 }
 
 void QuicSpdyStream::SetPriority(SpdyPriority priority) {

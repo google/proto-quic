@@ -19,6 +19,7 @@
 #include "net/quic/quic_packet_writer.h"
 #include "net/quic/quic_protocol.h"
 #include "net/tools/quic/quic_dispatcher.h"
+#include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
@@ -76,8 +77,13 @@ class QuicTestDispatcher : public QuicDispatcher {
   QuicTestDispatcher(const QuicConfig& config,
                      const QuicCryptoServerConfig* crypto_config,
                      const QuicVersionVector& versions,
-                     QuicConnectionHelperInterface* helper)
-      : QuicDispatcher(config, crypto_config, versions, helper),
+                     std::unique_ptr<QuicConnectionHelperInterface> helper,
+                     std::unique_ptr<QuicAlarmFactory> alarm_factory)
+      : QuicDispatcher(config,
+                       crypto_config,
+                       versions,
+                       std::move(helper),
+                       std::move(alarm_factory)),
         session_factory_(nullptr),
         stream_factory_(nullptr),
         crypto_stream_factory_(nullptr) {}
@@ -90,7 +96,7 @@ class QuicTestDispatcher : public QuicDispatcher {
       return QuicDispatcher::CreateQuicSession(id, client);
     }
     QuicConnection* connection = new QuicConnection(
-        id, client, helper(), CreatePerConnectionWriter(),
+        id, client, helper(), alarm_factory(), CreatePerConnectionWriter(),
         /* owns_writer= */ true, Perspective::IS_SERVER, supported_versions());
 
     QuicServerSessionBase* session = nullptr;
@@ -150,8 +156,10 @@ QuicTestServer::QuicTestServer(ProofSource* proof_source,
 QuicDispatcher* QuicTestServer::CreateQuicDispatcher() {
   return new QuicTestDispatcher(
       config(), &crypto_config(), supported_versions(),
-      new QuicEpollConnectionHelper(epoll_server(),
-                                    QuicAllocator::BUFFER_POOL));
+      std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
+          epoll_server(), QuicAllocator::BUFFER_POOL)),
+      std::unique_ptr<QuicEpollAlarmFactory>(
+          new QuicEpollAlarmFactory(epoll_server())));
 }
 
 void QuicTestServer::SetSessionFactory(SessionFactory* factory) {

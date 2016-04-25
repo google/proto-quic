@@ -81,15 +81,15 @@ class BASE_EXPORT PersistentSampleMap : public HistogramSamples {
       HistogramBase::Sample value);
 
  private:
-  enum : HistogramBase::Sample { kAllSamples = -1 };
-
   // Imports samples from persistent memory by iterating over all sample
   // records found therein, adding them to the sample_counts_ map. If a
   // count for the sample |until_value| is found, stop the import and return
   // a pointer to that counter. If that value is not found, null will be
   // returned after all currently available samples have been loaded. Pass
-  // kAllSamples to force the importing of all available samples.
-  HistogramBase::Count* ImportSamples(HistogramBase::Sample until_value);
+  // true for |import_everything| to force the importing of all available
+  // samples even if a match is found.
+  HistogramBase::Count* ImportSamples(HistogramBase::Sample until_value,
+                                      bool import_everything);
 
   // All created/loaded sample values and their associated counts. The storage
   // for the actual Count numbers is owned by the |records_| object and its

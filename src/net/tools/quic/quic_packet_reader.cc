@@ -112,7 +112,7 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
     }
 
     IPEndPoint client_address = IPEndPoint(packets_[i].raw_address);
-    IPAddressNumber server_ip;
+    IPAddress server_ip;
     QuicTime packet_timestamp = QuicTime::Zero();
     QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
         &mmsg_hdr_[i].msg_hdr, &server_ip, &packet_timestamp);

@@ -40,7 +40,8 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
   }
 
   void CreateConnection() {
-    connection_ = new PacketSavingConnection(&helper_, Perspective::IS_CLIENT);
+    connection_ = new PacketSavingConnection(&helper_, &alarm_factory_,
+                                             Perspective::IS_CLIENT);
     // Advance the time, because timers do not like uninitialized times.
     connection_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
 
@@ -50,8 +51,8 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
 
   void CompleteCryptoHandshake() {
     stream()->CryptoConnect();
-    CryptoTestUtils::HandshakeWithFakeServer(&helper_, connection_, stream(),
-                                             server_options_);
+    CryptoTestUtils::HandshakeWithFakeServer(
+        &helper_, &alarm_factory_, connection_, stream(), server_options_);
   }
 
   void ConstructHandshakeMessage() {
@@ -62,6 +63,7 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
   QuicCryptoClientStream* stream() { return session_->GetCryptoStream(); }
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   PacketSavingConnection* connection_;
   std::unique_ptr<TestQuicSpdyClientSession> session_;
   QuicServerId server_id_;
@@ -267,11 +269,12 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         server_id_(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED) {
     TestQuicSpdyClientSession* client_session = nullptr;
-    CreateClientSessionForTest(
-        server_id_,
-        /* supports_stateless_rejects= */ true,
-        QuicTime::Delta::FromSeconds(100000), QuicSupportedVersions(), &helper_,
-        &client_crypto_config_, &client_connection_, &client_session);
+    CreateClientSessionForTest(server_id_,
+                               /* supports_stateless_rejects= */ true,
+                               QuicTime::Delta::FromSeconds(100000),
+                               QuicSupportedVersions(), &helper_,
+                               &alarm_factory_, &client_crypto_config_,
+                               &client_connection_, &client_session);
     CHECK(client_session);
     client_session_.reset(client_session);
   }
@@ -290,10 +293,11 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
   // Initializes the server_stream_ for stateless rejects.
   void InitializeFakeStatelessRejectServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
-    CreateServerSessionForTest(
-        server_id_, QuicTime::Delta::FromSeconds(100000),
-        QuicSupportedVersions(), &helper_, &server_crypto_config_,
-        &server_compressed_certs_cache_, &server_connection_, &server_session);
+    CreateServerSessionForTest(server_id_, QuicTime::Delta::FromSeconds(100000),
+                               QuicSupportedVersions(), &helper_,
+                               &alarm_factory_, &server_crypto_config_,
+                               &server_compressed_certs_cache_,
+                               &server_connection_, &server_session);
     CHECK(server_session);
     server_session_.reset(server_session);
     CryptoTestUtils::FakeServerOptions options;
@@ -304,6 +308,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
   }
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
 
   // Client crypto stream state
   PacketSavingConnection* client_connection_;

@@ -11,7 +11,7 @@
 #include "build/build_config.h"
 #include "net/base/net_export.h"
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include <list>
 #elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
 #include <vector>
@@ -67,7 +67,7 @@ class NET_EXPORT TestRootCerts {
 
 #if defined(USE_NSS_CERTS)
   bool Contains(CERTCertificate* cert) const;
-#elif defined(OS_MACOSX) && !defined(USE_NSS_VERIFIER)
+#elif defined(OS_MACOSX) && !defined(USE_NSS_CERTS)
   CFArrayRef temporary_roots() const { return temporary_roots_; }
 
   // Modifies the root certificates of |trust_ref| to include the
@@ -102,7 +102,7 @@ class NET_EXPORT TestRootCerts {
   // Performs platform-dependent initialization.
   void Init();
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   // It is necessary to maintain a cache of the original certificate trust
   // settings, in order to restore them when Clear() is called.
   class TrustEntry;

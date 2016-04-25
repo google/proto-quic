@@ -4,6 +4,8 @@
 
 #include "net/quic/test_tools/simple_quic_framer.h"
 
+#include <memory>
+
 #include "base/macros.h"
 #include "base/stl_util.h"
 #include "net/quic/crypto/quic_decrypter.h"

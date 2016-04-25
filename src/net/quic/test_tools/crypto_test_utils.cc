@@ -4,6 +4,8 @@
 
 #include "net/quic/test_tools/crypto_test_utils.h"
 
+#include <memory>
+
 #include "base/strings/string_util.h"
 #include "net/quic/crypto/channel_id.h"
 #include "net/quic/crypto/common_cert_set.h"
@@ -128,11 +130,13 @@ CryptoTestUtils::FakeClientOptions::FakeClientOptions()
 // static
 int CryptoTestUtils::HandshakeWithFakeServer(
     MockConnectionHelper* helper,
+    MockAlarmFactory* alarm_factory,
     PacketSavingConnection* client_conn,
     QuicCryptoClientStream* client,
     const FakeServerOptions& options) {
-  PacketSavingConnection* server_conn = new PacketSavingConnection(
-      helper, Perspective::IS_SERVER, client_conn->supported_versions());
+  PacketSavingConnection* server_conn =
+      new PacketSavingConnection(helper, alarm_factory, Perspective::IS_SERVER,
+                                 client_conn->supported_versions());
 
   QuicConfig config = DefaultQuicConfig();
   QuicCryptoServerConfig crypto_config(QuicCryptoServerConfig::TESTING,
@@ -160,12 +164,13 @@ int CryptoTestUtils::HandshakeWithFakeServer(
 // static
 int CryptoTestUtils::HandshakeWithFakeClient(
     MockConnectionHelper* helper,
+    MockAlarmFactory* alarm_factory,
     PacketSavingConnection* server_conn,
     QuicCryptoServerStream* server,
     const QuicServerId& server_id,
     const FakeClientOptions& options) {
   PacketSavingConnection* client_conn =
-      new PacketSavingConnection(helper, Perspective::IS_CLIENT);
+      new PacketSavingConnection(helper, alarm_factory, Perspective::IS_CLIENT);
   // Advance the time, because timers do not like uninitialized times.
   client_conn->AdvanceTime(QuicTime::Delta::FromSeconds(1));
 

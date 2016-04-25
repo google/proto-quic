@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_header_list.h"
 
+using std::string;
+
 namespace net {
 
 QuicHeaderList::QuicHeaderList() : uncompressed_header_bytes_(0) {}
@@ -35,6 +37,15 @@ void QuicHeaderList::OnHeaderBlockEnd(size_t uncompressed_header_bytes) {
 void QuicHeaderList::Clear() {
   header_list_.clear();
   uncompressed_header_bytes_ = 0;
+}
+
+string QuicHeaderList::DebugString() const {
+  string s = "{ ";
+  for (const auto& p : *this) {
+    s.append(p.first + "=" + p.second + ", ");
+  }
+  s.append("}");
+  return s;
 }
 
 }  // namespace net

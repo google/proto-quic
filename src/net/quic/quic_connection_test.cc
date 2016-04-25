@@ -4,8 +4,10 @@
 
 #include "net/quic/quic_connection.h"
 
+#include <errno.h>
 #include <memory>
 #include <ostream>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/macros.h"
@@ -204,16 +206,6 @@ class StrictTaggingDecrypter : public TaggingDecrypter {
 
 class TestConnectionHelper : public QuicConnectionHelperInterface {
  public:
-  class TestAlarm : public QuicAlarm {
-   public:
-    explicit TestAlarm(QuicArenaScopedPtr<QuicAlarm::Delegate> delegate)
-        : QuicAlarm(std::move(delegate)) {}
-
-    void SetImpl() override {}
-    void CancelImpl() override {}
-    using QuicAlarm::Fire;
-  };
-
   TestConnectionHelper(MockClock* clock, MockRandom* random_generator)
       : clock_(clock), random_generator_(random_generator) {
     clock_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
@@ -223,16 +215,6 @@ class TestConnectionHelper : public QuicConnectionHelperInterface {
   const QuicClock* GetClock() const override { return clock_; }
 
   QuicRandom* GetRandomGenerator() override { return random_generator_; }
-
-  QuicAlarm* CreateAlarm(QuicAlarm::Delegate* delegate) override {
-    return new TestAlarm(QuicArenaScopedPtr<QuicAlarm::Delegate>(delegate));
-  }
-
-  QuicArenaScopedPtr<QuicAlarm> CreateAlarm(
-      QuicArenaScopedPtr<QuicAlarm::Delegate> delegate,
-      QuicConnectionArena* arena) override {
-    return arena->New<TestAlarm>(std::move(delegate));
-  }
 
   QuicBufferAllocator* GetBufferAllocator() override {
     return &buffer_allocator_;
@@ -244,6 +226,34 @@ class TestConnectionHelper : public QuicConnectionHelperInterface {
   SimpleBufferAllocator buffer_allocator_;
 
   DISALLOW_COPY_AND_ASSIGN(TestConnectionHelper);
+};
+
+class TestAlarmFactory : public QuicAlarmFactory {
+ public:
+  class TestAlarm : public QuicAlarm {
+   public:
+    explicit TestAlarm(QuicArenaScopedPtr<QuicAlarm::Delegate> delegate)
+        : QuicAlarm(std::move(delegate)) {}
+
+    void SetImpl() override {}
+    void CancelImpl() override {}
+    using QuicAlarm::Fire;
+  };
+
+  TestAlarmFactory() {}
+
+  QuicAlarm* CreateAlarm(QuicAlarm::Delegate* delegate) override {
+    return new TestAlarm(QuicArenaScopedPtr<QuicAlarm::Delegate>(delegate));
+  }
+
+  QuicArenaScopedPtr<QuicAlarm> CreateAlarm(
+      QuicArenaScopedPtr<QuicAlarm::Delegate> delegate,
+      QuicConnectionArena* arena) override {
+    return arena->New<TestAlarm>(std::move(delegate));
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(TestAlarmFactory);
 };
 
 class TestPacketWriter : public QuicPacketWriter {
@@ -425,12 +435,14 @@ class TestConnection : public QuicConnection {
   TestConnection(QuicConnectionId connection_id,
                  IPEndPoint address,
                  TestConnectionHelper* helper,
+                 TestAlarmFactory* alarm_factory,
                  TestPacketWriter* writer,
                  Perspective perspective,
                  QuicVersion version)
       : QuicConnection(connection_id,
                        address,
                        helper,
+                       alarm_factory,
                        writer,
                        /* owns_writer= */ false,
                        perspective,
@@ -542,38 +554,38 @@ class TestConnection : public QuicConnection {
         .WillRepeatedly(Return(QuicBandwidth::FromKBytesPerSecond(10000)));
   }
 
-  TestConnectionHelper::TestAlarm* GetAckAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetAckAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetAckAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetPingAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetPingAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetPingAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetResumeWritesAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetResumeWritesAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetResumeWritesAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetRetransmissionAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetRetransmissionAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetRetransmissionAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetSendAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetSendAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetSendAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetTimeoutAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetTimeoutAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetTimeoutAlarm(this));
   }
 
-  TestConnectionHelper::TestAlarm* GetMtuDiscoveryAlarm() {
-    return reinterpret_cast<TestConnectionHelper::TestAlarm*>(
+  TestAlarmFactory::TestAlarm* GetMtuDiscoveryAlarm() {
+    return reinterpret_cast<TestAlarmFactory::TestAlarm*>(
         QuicConnectionPeer::GetMtuDiscoveryAlarm(this));
   }
 
@@ -635,6 +647,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         send_algorithm_(new StrictMock<MockSendAlgorithm>),
         loss_algorithm_(new MockLossAlgorithm()),
         helper_(new TestConnectionHelper(&clock_, &random_generator_)),
+        alarm_factory_(new TestAlarmFactory()),
         peer_creator_(connection_id_,
                       &framer_,
                       &random_generator_,
@@ -644,6 +657,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         connection_(connection_id_,
                     kPeerAddress,
                     helper_.get(),
+                    alarm_factory_.get(),
                     writer_.get(),
                     Perspective::IS_CLIENT,
                     version()),
@@ -995,6 +1009,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   MockRandom random_generator_;
   SimpleBufferAllocator buffer_allocator_;
   std::unique_ptr<TestConnectionHelper> helper_;
+  std::unique_ptr<TestAlarmFactory> alarm_factory_;
   QuicPacketCreator peer_creator_;
   std::unique_ptr<TestPacketWriter> writer_;
   TestConnection connection_;
@@ -1066,7 +1081,8 @@ TEST_P(QuicConnectionTest, MaxPacketSize) {
 TEST_P(QuicConnectionTest, SmallerServerMaxPacketSize) {
   QuicConnectionId connection_id = 42;
   TestConnection connection(connection_id, kPeerAddress, helper_.get(),
-                            writer_.get(), Perspective::IS_SERVER, version());
+                            alarm_factory_.get(), writer_.get(),
+                            Perspective::IS_SERVER, version());
   EXPECT_EQ(Perspective::IS_SERVER, connection.perspective());
   EXPECT_EQ(1000u, connection.max_packet_length());
 }
@@ -1154,7 +1170,8 @@ TEST_P(QuicConnectionTest, LimitMaxPacketSizeByWriterForNewConnection) {
   const QuicByteCount lower_max_packet_size = 1240;
   writer_->set_max_packet_size(lower_max_packet_size);
   TestConnection connection(connection_id, kPeerAddress, helper_.get(),
-                            writer_.get(), Perspective::IS_CLIENT, version());
+                            alarm_factory_.get(), writer_.get(),
+                            Perspective::IS_CLIENT, version());
   EXPECT_EQ(Perspective::IS_CLIENT, connection.perspective());
   EXPECT_EQ(lower_max_packet_size, connection.max_packet_length());
 }
@@ -4509,9 +4526,11 @@ TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
 
 TEST_P(QuicConnectionTest, Pacing) {
   TestConnection server(connection_id_, kSelfAddress, helper_.get(),
-                        writer_.get(), Perspective::IS_SERVER, version());
+                        alarm_factory_.get(), writer_.get(),
+                        Perspective::IS_SERVER, version());
   TestConnection client(connection_id_, kPeerAddress, helper_.get(),
-                        writer_.get(), Perspective::IS_CLIENT, version());
+                        alarm_factory_.get(), writer_.get(),
+                        Perspective::IS_CLIENT, version());
   EXPECT_FALSE(client.sent_packet_manager().using_pacing());
   EXPECT_FALSE(server.sent_packet_manager().using_pacing());
 }

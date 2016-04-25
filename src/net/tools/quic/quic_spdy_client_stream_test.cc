@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
+#include <memory>
+
 #include "base/macros.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_utils.h"
@@ -61,8 +63,9 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
   class StreamVisitor;
 
   QuicSpdyClientStreamTest()
-      : connection_(
-            new StrictMock<MockConnection>(&helper_, Perspective::IS_CLIENT)),
+      : connection_(new StrictMock<MockConnection>(&helper_,
+                                                   &alarm_factory_,
+                                                   Perspective::IS_CLIENT)),
         session_(connection_, &push_promise_index_),
         body_("hello world") {
     session_.Initialize();
@@ -84,12 +87,13 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
   };
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   QuicClientPushPromiseIndex push_promise_index_;
 
   MockQuicClientSession session_;
-  scoped_ptr<QuicSpdyClientStream> stream_;
-  scoped_ptr<StreamVisitor> stream_visitor_;
+  std::unique_ptr<QuicSpdyClientStream> stream_;
+  std::unique_ptr<StreamVisitor> stream_visitor_;
   BalsaHeaders headers_;
   string headers_string_;
   string body_;

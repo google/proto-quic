@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/strike_register.h"
 
+#include <cstdint>
+#include <memory>
 #include <set>
 #include <string>
 

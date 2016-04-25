@@ -34,6 +34,7 @@
 #include "net/base/ip_endpoint.h"
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/quic_alarm.h"
+#include "net/quic/quic_alarm_factory.h"
 #include "net/quic/quic_blocked_writer_interface.h"
 #include "net/quic/quic_fec_group.h"
 #include "net/quic/quic_framer.h"
@@ -273,20 +274,6 @@ class NET_EXPORT_PRIVATE QuicConnectionHelperInterface {
   // Returns a QuicRandom to be used for all random number related functions.
   virtual QuicRandom* GetRandomGenerator() = 0;
 
-  // Creates a new platform-specific alarm which will be configured to notify
-  // |delegate| when the alarm fires. Returns an alarm allocated on the heap.
-  // Caller takes ownership of the new alarm, which will not yet be "set" to
-  // fire.
-  virtual QuicAlarm* CreateAlarm(QuicAlarm::Delegate* delegate) = 0;
-
-  // Creates a new platform-specific alarm which will be configured to notify
-  // |delegate| when the alarm fires. Caller takes ownership of the new alarm,
-  // which will not yet be "set" to fire. If |arena| is null, then the alarm
-  // will be created on the heap. Otherwise, it will be created in |arena|.
-  virtual QuicArenaScopedPtr<QuicAlarm> CreateAlarm(
-      QuicArenaScopedPtr<QuicAlarm::Delegate> delegate,
-      QuicConnectionArena* arena) = 0;
-
   // Returns a QuicBufferAllocator to be used for all stream frame buffers.
   virtual QuicBufferAllocator* GetBufferAllocator() = 0;
 };
@@ -314,6 +301,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   QuicConnection(QuicConnectionId connection_id,
                  IPEndPoint address,
                  QuicConnectionHelperInterface* helper,
+                 QuicAlarmFactory* alarm_factory,
                  QuicPacketWriter* writer,
                  bool owns_writer,
                  Perspective perspective,
@@ -665,6 +653,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool ack_frame_updated() const;
 
   QuicConnectionHelperInterface* helper() { return helper_; }
+  QuicAlarmFactory* alarm_factory() { return alarm_factory_; }
 
   base::StringPiece GetCurrentPacket();
 
@@ -839,6 +828,7 @@ class NET_EXPORT_PRIVATE QuicConnection
 
   QuicFramer framer_;
   QuicConnectionHelperInterface* helper_;  // Not owned.
+  QuicAlarmFactory* alarm_factory_;        // Not owned.
   PerPacketOptions* per_packet_options_;   // Not owned.
   QuicPacketWriter* writer_;  // Owned or not depending on |owns_writer_|.
   bool owns_writer_;

@@ -89,11 +89,11 @@ const char* ResponseCorruptionDetectionCauseToString(
   return cause_string;
 }
 
-scoped_ptr<base::Value> NetLogSdchResponseCorruptionDetectionCallback(
+std::unique_ptr<base::Value> NetLogSdchResponseCorruptionDetectionCallback(
     ResponseCorruptionDetectionCause cause,
     bool cached,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("cause", ResponseCorruptionDetectionCauseToString(cause));
   dict->SetBoolean("cached", cached);
   return std::move(dict);

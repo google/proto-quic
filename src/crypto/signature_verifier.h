@@ -12,14 +12,8 @@
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
 
-#if defined(USE_OPENSSL)
 typedef struct env_md_st EVP_MD;
 typedef struct evp_pkey_ctx_st EVP_PKEY_CTX;
-#else
-typedef struct HASHContextStr HASHContext;
-typedef struct SECKEYPublicKeyStr SECKEYPublicKey;
-typedef struct VFYContextStr VFYContext;
-#endif
 
 namespace crypto {
 
@@ -96,7 +90,6 @@ class CRYPTO_EXPORT SignatureVerifier {
   bool VerifyFinal();
 
  private:
-#if defined(USE_OPENSSL)
   bool CommonInit(int pkey_type,
                   const EVP_MD* digest,
                   const uint8_t* signature,
@@ -104,29 +97,13 @@ class CRYPTO_EXPORT SignatureVerifier {
                   const uint8_t* public_key_info,
                   int public_key_info_len,
                   EVP_PKEY_CTX** pkey_ctx);
-#else
-  static SECKEYPublicKey* DecodePublicKeyInfo(const uint8_t* public_key_info,
-                                              int public_key_info_len);
-#endif
 
   void Reset();
 
   std::vector<uint8_t> signature_;
 
-#if defined(USE_OPENSSL)
   struct VerifyContext;
   VerifyContext* verify_context_;
-#else
-  // Used for all signature types except RSA-PSS.
-  VFYContext* vfy_context_;
-
-  // Used for RSA-PSS signatures.
-  HashAlgorithm hash_alg_;
-  HashAlgorithm mask_hash_alg_;
-  unsigned int salt_len_;
-  SECKEYPublicKey* public_key_;
-  HASHContext* hash_context_;
-#endif
 };
 
 }  // namespace crypto

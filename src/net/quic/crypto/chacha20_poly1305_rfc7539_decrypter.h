@@ -38,15 +38,6 @@ class NET_EXPORT_PRIVATE ChaCha20Poly1305Rfc7539Decrypter
   const char* cipher_name() const override;
   uint32_t cipher_id() const override;
 
-#if !defined(USE_OPENSSL)
- protected:
-  // AeadBaseDecrypter methods:
-  void FillAeadParams(base::StringPiece nonce,
-                      base::StringPiece associated_data,
-                      size_t auth_tag_size,
-                      AeadParams* aead_params) const override;
-#endif
-
  private:
   DISALLOW_COPY_AND_ASSIGN(ChaCha20Poly1305Rfc7539Decrypter);
 };

@@ -32,6 +32,8 @@ class QuicDispatcherPeer {
 
   static QuicConnectionHelperInterface* GetHelper(QuicDispatcher* dispatcher);
 
+  static QuicAlarmFactory* GetAlarmFactory(QuicDispatcher* dispatcher);
+
   static QuicDispatcher::WriteBlockedList* GetWriteBlockedList(
       QuicDispatcher* dispatcher);
 

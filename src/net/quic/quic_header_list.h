@@ -20,6 +20,7 @@ namespace net {
 class NET_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
  public:
   typedef std::deque<std::pair<std::string, std::string>> ListType;
+  typedef ListType::const_iterator const_iterator;
 
   QuicHeaderList();
   QuicHeaderList(QuicHeaderList&& other);
@@ -35,13 +36,15 @@ class NET_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
 
   void Clear();
 
-  ListType::const_iterator begin() const { return header_list_.begin(); }
-  ListType::const_iterator end() const { return header_list_.end(); }
+  const_iterator begin() const { return header_list_.begin(); }
+  const_iterator end() const { return header_list_.end(); }
 
   bool empty() const { return header_list_.empty(); }
   size_t uncompressed_header_bytes() const {
     return uncompressed_header_bytes_;
   }
+
+  std::string DebugString() const;
 
  private:
   std::deque<std::pair<std::string, std::string>> header_list_;

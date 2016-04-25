@@ -68,6 +68,34 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(bool fin,
   session_->OnInitialHeadersComplete(id(), response_headers_);
 }
 
+void QuicSpdyClientStream::OnInitialHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  QuicSpdyStream::OnInitialHeadersComplete(fin, frame_len, header_list);
+
+  DCHECK(headers_decompressed());
+  header_bytes_read_ += frame_len;
+  if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length_,
+                                         &response_headers_)) {
+    DLOG(ERROR) << "Failed to parse header list: " << header_list.DebugString();
+    Reset(QUIC_BAD_APPLICATION_PAYLOAD);
+    return;
+  }
+
+  if (!ParseHeaderStatusCode(&response_headers_, &response_code_)) {
+    DLOG(ERROR) << "Received invalid response code: "
+                << response_headers_[":status"].as_string();
+    Reset(QUIC_BAD_APPLICATION_PAYLOAD);
+    return;
+  }
+
+  ConsumeHeaderList();
+  DVLOG(1) << "headers complete for stream " << id();
+
+  session_->OnInitialHeadersComplete(id(), response_headers_);
+}
+
 void QuicSpdyClientStream::OnTrailingHeadersComplete(bool fin,
                                                      size_t frame_len) {
   QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len);
@@ -88,6 +116,27 @@ void QuicSpdyClientStream::OnPromiseHeadersComplete(QuicStreamId promised_id,
     return;
   }
   MarkHeadersConsumed(decompressed_headers().length());
+
+  session_->HandlePromised(id(), promised_id, promise_headers);
+  if (visitor() != nullptr) {
+    visitor()->OnPromiseHeadersComplete(promised_id, frame_len);
+  }
+}
+
+void QuicSpdyClientStream::OnPromiseHeaderList(
+    QuicStreamId promised_id,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  header_bytes_read_ += frame_len;
+  int64_t content_length = -1;
+  SpdyHeaderBlock promise_headers;
+  if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length,
+                                         &promise_headers)) {
+    DLOG(ERROR) << "Failed to parse promise headers: "
+                << header_list.DebugString();
+    Reset(QUIC_BAD_APPLICATION_PAYLOAD);
+    return;
+  }
 
   session_->HandlePromised(id(), promised_id, promise_headers);
 }

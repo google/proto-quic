@@ -13,13 +13,8 @@
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
 
-#if defined(USE_OPENSSL)
 // Forward declaration for openssl/*.h
 typedef struct env_md_ctx_st EVP_MD_CTX;
-#elif defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
-// Forward declaration.
-struct SGNContextStr;
-#endif
 
 namespace crypto {
 
@@ -61,11 +56,7 @@ class CRYPTO_EXPORT SignatureCreator {
   // Private constructor. Use the Create() method instead.
   SignatureCreator();
 
-#if defined(USE_OPENSSL)
   EVP_MD_CTX* sign_context_;
-#elif defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
-  SGNContextStr* sign_context_;
-#endif
 
   DISALLOW_COPY_AND_ASSIGN(SignatureCreator);
 };

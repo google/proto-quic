@@ -14,6 +14,7 @@
 #include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/base/net_export.h"
+#include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_protocol.h"
 
 namespace net {
@@ -76,7 +77,7 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
     if (version_ == HTTP2) {
-      DLOG_IF(DFATAL, SpdyConstants::GetFrameMaximumSize(version_) < length_)
+      SPDY_BUG_IF(SpdyConstants::GetFrameMaximumSize(version_) < length_)
           << "Frame length " << length_
           << " is longer than the maximum allowed length.";
     }

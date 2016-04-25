@@ -70,14 +70,14 @@ void QuicPacketCreatorPeer::FillPacketHeader(QuicPacketCreator* creator,
 }
 
 // static
-size_t QuicPacketCreatorPeer::CreateStreamFrame(QuicPacketCreator* creator,
-                                                QuicStreamId id,
-                                                QuicIOVector iov,
-                                                size_t iov_offset,
-                                                QuicStreamOffset offset,
-                                                bool fin,
-                                                QuicFrame* frame) {
-  return creator->CreateStreamFrame(id, iov, iov_offset, offset, fin, frame);
+void QuicPacketCreatorPeer::CreateStreamFrame(QuicPacketCreator* creator,
+                                              QuicStreamId id,
+                                              QuicIOVector iov,
+                                              size_t iov_offset,
+                                              QuicStreamOffset offset,
+                                              bool fin,
+                                              QuicFrame* frame) {
+  creator->CreateStreamFrame(id, iov, iov_offset, offset, fin, frame);
 }
 
 // static

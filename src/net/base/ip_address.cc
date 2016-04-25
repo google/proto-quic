@@ -13,25 +13,90 @@
 
 namespace {
 
+// The prefix for IPv6 mapped IPv4 addresses.
+// https://tools.ietf.org/html/rfc4291#section-2.5.5.2
+const uint8_t kIPv4MappedPrefix[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF};
+
+// Note that this function assumes:
+// * |ip_address| is at least |prefix_length_in_bits| (bits) long;
+// * |ip_prefix| is at least |prefix_length_in_bits| (bits) long.
 bool IPAddressPrefixCheck(const std::vector<uint8_t>& ip_address,
-                          const unsigned char* ip_prefix,
+                          const uint8_t* ip_prefix,
                           size_t prefix_length_in_bits) {
   // Compare all the bytes that fall entirely within the prefix.
-  int num_entire_bytes_in_prefix = prefix_length_in_bits / 8;
-  for (int i = 0; i < num_entire_bytes_in_prefix; ++i) {
+  size_t num_entire_bytes_in_prefix = prefix_length_in_bits / 8;
+  for (size_t i = 0; i < num_entire_bytes_in_prefix; ++i) {
     if (ip_address[i] != ip_prefix[i])
       return false;
   }
 
   // In case the prefix was not a multiple of 8, there will be 1 byte
   // which is only partially masked.
-  int remaining_bits = prefix_length_in_bits % 8;
+  size_t remaining_bits = prefix_length_in_bits % 8;
   if (remaining_bits != 0) {
-    unsigned char mask = 0xFF << (8 - remaining_bits);
-    int i = num_entire_bytes_in_prefix;
+    uint8_t mask = 0xFF << (8 - remaining_bits);
+    size_t i = num_entire_bytes_in_prefix;
     if ((ip_address[i] & mask) != (ip_prefix[i] & mask))
       return false;
   }
+  return true;
+}
+
+// Returns true if |ip_address| matches any of the reserved IPv4 ranges. This
+// method operates on a blacklist of reserved IPv4 ranges. Some ranges are
+// consolidated.
+// Sources for info:
+// www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
+// www.iana.org/assignments/iana-ipv4-special-registry/
+// iana-ipv4-special-registry.xhtml
+bool IsReservedIPv4(const std::vector<uint8_t>& ip_address) {
+  // Different IP versions have different range reservations.
+  DCHECK_EQ(net::IPAddress::kIPv4AddressSize, ip_address.size());
+  struct {
+    const uint8_t address[4];
+    size_t prefix_length_in_bits;
+  } static const kReservedIPv4Ranges[] = {
+      {{0, 0, 0, 0}, 8},     {{10, 0, 0, 0}, 8},      {{100, 64, 0, 0}, 10},
+      {{127, 0, 0, 0}, 8},   {{169, 254, 0, 0}, 16},  {{172, 16, 0, 0}, 12},
+      {{192, 0, 2, 0}, 24},  {{192, 88, 99, 0}, 24},  {{192, 168, 0, 0}, 16},
+      {{198, 18, 0, 0}, 15}, {{198, 51, 100, 0}, 24}, {{203, 0, 113, 0}, 24},
+      {{224, 0, 0, 0}, 3}};
+
+  for (const auto& range : kReservedIPv4Ranges) {
+    if (IPAddressPrefixCheck(ip_address, range.address,
+                             range.prefix_length_in_bits)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Returns true if |ip_address| matches any of the reserved IPv6 ranges. This
+// method operates on a whitelist of non-reserved IPv6 ranges. All IPv6
+// addresses outside these ranges are reserved.
+// Sources for info:
+// www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
+bool IsReservedIPv6(const std::vector<uint8_t>& ip_address) {
+  // Different IP versions have different range reservations.
+  DCHECK_EQ(net::IPAddress::kIPv6AddressSize, ip_address.size());
+  struct {
+    const uint8_t address_prefix[2];
+    size_t prefix_length_in_bits;
+  } static const kPublicIPv6Ranges[] = {
+      // 2000::/3  -- Global Unicast
+      {{0x20, 0}, 3},
+      // ff00::/8  -- Multicast
+      {{0xff, 0}, 8},
+  };
+
+  for (const auto& range : kPublicIPv6Ranges) {
+    if (IPAddressPrefixCheck(ip_address, range.address_prefix,
+                             range.prefix_length_in_bits)) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -91,53 +156,11 @@ bool IPAddress::IsValid() const {
   return IsIPv4() || IsIPv6();
 }
 
-// Don't compare IPv4 and IPv6 addresses (they have different range
-// reservations). Keep separate reservation arrays for each IP type, and
-// consolidate adjacent reserved ranges within a reservation array when
-// possible.
-// Sources for info:
-// www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
-// www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
-// They're formatted here with the prefix as the last element. For example:
-// 10.0.0.0/8 becomes 10,0,0,0,8 and fec0::/10 becomes 0xfe,0xc0,0,0,0...,10.
 bool IPAddress::IsReserved() const {
-  static const unsigned char kReservedIPv4[][5] = {
-      {0, 0, 0, 0, 8},     {10, 0, 0, 0, 8},      {100, 64, 0, 0, 10},
-      {127, 0, 0, 0, 8},   {169, 254, 0, 0, 16},  {172, 16, 0, 0, 12},
-      {192, 0, 2, 0, 24},  {192, 88, 99, 0, 24},  {192, 168, 0, 0, 16},
-      {198, 18, 0, 0, 15}, {198, 51, 100, 0, 24}, {203, 0, 113, 0, 24},
-      {224, 0, 0, 0, 3}};
-  static const unsigned char kReservedIPv6[][17] = {
-      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8},
-      {0x40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-      {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-      {0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3},
-      {0xe0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4},
-      {0xf0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5},
-      {0xf8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6},
-      {0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7},
-      {0xfe, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9},
-      {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10},
-      {0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10},
-  };
-  size_t array_size = 0;
-  const unsigned char* array = nullptr;
-  switch (ip_address_.size()) {
-    case kIPv4AddressSize:
-      array_size = arraysize(kReservedIPv4);
-      array = kReservedIPv4[0];
-      break;
-    case kIPv6AddressSize:
-      array_size = arraysize(kReservedIPv6);
-      array = kReservedIPv6[0];
-      break;
-  }
-  if (!array)
-    return false;
-  size_t width = ip_address_.size() + 1;
-  for (size_t i = 0; i < array_size; ++i, array += width) {
-    if (IPAddressPrefixCheck(ip_address_, array, array[width - 1]))
-      return true;
+  if (IsIPv4()) {
+    return IsReservedIPv4(ip_address_);
+  } else if (IsIPv6()) {
+    return IsReservedIPv6(ip_address_);
   }
   return false;
 }
@@ -152,7 +175,7 @@ bool IPAddress::IsZero() const {
 }
 
 bool IPAddress::IsIPv4MappedIPv6() const {
-  return net::IsIPv4Mapped(ip_address_);
+  return IsIPv6() && IPAddressStartsWith(*this, kIPv4MappedPrefix);
 }
 
 std::string IPAddress::ToString() const {
@@ -222,11 +245,23 @@ std::string IPAddressToPackedString(const IPAddress& address) {
 }
 
 IPAddress ConvertIPv4ToIPv4MappedIPv6(const IPAddress& address) {
-  return IPAddress(ConvertIPv4NumberToIPv6Number(address.bytes()));
+  DCHECK(address.IsIPv4());
+  // IPv4-mapped addresses are formed by:
+  // <80 bits of zeros>  + <16 bits of ones> + <32-bit IPv4 address>.
+  std::vector<uint8_t> bytes;
+  bytes.reserve(16);
+  bytes.insert(bytes.end(), std::begin(kIPv4MappedPrefix),
+               std::end(kIPv4MappedPrefix));
+  bytes.insert(bytes.end(), address.bytes().begin(), address.bytes().end());
+  return IPAddress(bytes);
 }
 
 IPAddress ConvertIPv4MappedIPv6ToIPv4(const IPAddress& address) {
-  return IPAddress(ConvertIPv4MappedToIPv4(address.bytes()));
+  DCHECK(address.IsIPv4MappedIPv6());
+
+  return IPAddress(std::vector<uint8_t>(
+      address.bytes().begin() + arraysize(kIPv4MappedPrefix),
+      address.bytes().end()));
 }
 
 bool IPAddressMatchesPrefix(const IPAddress& ip_address,

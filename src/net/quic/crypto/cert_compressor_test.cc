@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/cert_compressor.h"
 
+#include <memory>
+
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"

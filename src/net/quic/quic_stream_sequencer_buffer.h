@@ -69,8 +69,6 @@
 #include "base/macros.h"
 #include "net/quic/quic_protocol.h"
 
-using base::StringPiece;
-
 namespace net {
 
 namespace test {

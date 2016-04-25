@@ -43,10 +43,12 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
  public:
   // writer - the entity that writes to the socket. (Owned by the dispatcher)
   // visitor - the entity that manages blocked writers. (The dispatcher)
-  // helper - used to run clean up alarms. (Owned by the dispatcher)
+  // helper - provides a clock (Owned by the dispatcher)
+  // alarm_factory - used to run clean up alarms. (Owned by the dispatcher)
   QuicTimeWaitListManager(QuicPacketWriter* writer,
                           QuicServerSessionVisitor* visitor,
-                          QuicConnectionHelperInterface* helper);
+                          QuicConnectionHelperInterface* helper,
+                          QuicAlarmFactory* alarm_factory);
   ~QuicTimeWaitListManager() override;
 
   // Adds the given connection_id to time wait state for time_wait_period_.

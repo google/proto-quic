@@ -210,7 +210,7 @@ void ProxyList::UpdateRetryInfoOnFallback(
     const std::vector<ProxyServer>& additional_proxies_to_bypass,
     int net_error,
     const BoundNetLog& net_log) const {
-  DCHECK(retry_delay != base::TimeDelta());
+  DCHECK(!retry_delay.is_zero());
 
   if (proxies_.empty()) {
     NOTREACHED();

@@ -46,6 +46,7 @@
 
 #include "base/format_macros.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -192,7 +193,7 @@ Time CanonicalCookie::CanonExpiration(const ParsedCookie& pc,
 }
 
 // static
-scoped_ptr<CanonicalCookie> CanonicalCookie::Create(
+std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     const GURL& url,
     const std::string& cookie_line,
     const base::Time& creation_time,
@@ -245,7 +246,7 @@ scoped_ptr<CanonicalCookie> CanonicalCookie::Create(
     return nullptr;
   }
 
-  return make_scoped_ptr(new CanonicalCookie(
+  return base::WrapUnique(new CanonicalCookie(
       url, parsed_cookie.Name(), parsed_cookie.Value(), cookie_domain,
       cookie_path, creation_time, cookie_expires, creation_time,
       parsed_cookie.IsSecure(), parsed_cookie.IsHttpOnly(),
@@ -253,7 +254,7 @@ scoped_ptr<CanonicalCookie> CanonicalCookie::Create(
 }
 
 // static
-scoped_ptr<CanonicalCookie> CanonicalCookie::Create(
+std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     const GURL& url,
     const std::string& name,
     const std::string& value,
@@ -304,7 +305,7 @@ scoped_ptr<CanonicalCookie> CanonicalCookie::Create(
   cookie_path = std::string(canon_path.data() + canon_path_component.begin,
                             canon_path_component.len);
 
-  return make_scoped_ptr(new CanonicalCookie(
+  return base::WrapUnique(new CanonicalCookie(
       url, parsed_name, parsed_value, cookie_domain, cookie_path, creation,
       expiration, creation, secure, http_only, same_site, priority));
 }

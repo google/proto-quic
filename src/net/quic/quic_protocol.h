@@ -1390,8 +1390,6 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
   // Non-empty if there is a listener for this packet.
   std::list<AckListenerWrapper> ack_listeners;
 };
-static_assert(sizeof(TransmissionInfo) <= 128,
-              "TODO(ianswett): Keep the TransmissionInfo size to a cacheline.");
 
 // Struct to store the pending retransmission information.
 struct PendingRetransmission {

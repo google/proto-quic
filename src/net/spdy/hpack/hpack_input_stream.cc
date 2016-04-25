@@ -8,6 +8,7 @@
 
 #include "base/logging.h"
 #include "net/spdy/hpack/hpack_huffman_decoder.h"
+#include "net/spdy/spdy_bug_tracker.h"
 
 namespace net {
 
@@ -200,8 +201,8 @@ std::pair<size_t, uint32_t> HpackInputStream::InitializePeekBits() {
         break;
     }
   } else {
-    LOG(DFATAL) << "InitializePeekBits called with non-zero bit_offset_: "
-                << bit_offset_;
+    SPDY_BUG << "InitializePeekBits called with non-zero bit_offset_: "
+             << bit_offset_;
   }
   return std::make_pair(peeked_count, bits);
 }

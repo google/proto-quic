@@ -44,7 +44,7 @@ CRLSet::Result CRLSet::CheckSerial(
   while (serial.size() > 1 && serial[0] == 0x00)
     serial.remove_prefix(1);
 
-  base::hash_map<std::string, size_t>::const_iterator crl_index =
+  std::unordered_map<std::string, size_t>::const_iterator crl_index =
       crls_index_by_issuer_.find(issuer_spki_hash.as_string());
   if (crl_index == crls_index_by_issuer_.end())
     return UNKNOWN;

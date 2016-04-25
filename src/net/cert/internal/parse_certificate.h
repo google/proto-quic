@@ -112,6 +112,9 @@ enum class CertificateVersion {
 // ParsedCertificate is expected to be filled by ParseCertificate(), so
 // subsequent field descriptions are in terms of what ParseCertificate() sets.
 struct NET_EXPORT ParsedCertificate {
+  ParsedCertificate();
+  ~ParsedCertificate();
+
   // Corresponds with "tbsCertificate" from RFC 5280:
   //         tbsCertificate       TBSCertificate,
   //

@@ -160,7 +160,7 @@ HttpStreamFactoryImpl::Job::Job(HttpStreamFactoryImpl* stream_factory,
                                 RequestPriority priority,
                                 const SSLConfig& server_ssl_config,
                                 const SSLConfig& proxy_ssl_config,
-                                HostPortPair server,
+                                HostPortPair destination,
                                 GURL origin_url,
                                 NetLog* net_log)
     : Job(stream_factory,
@@ -169,7 +169,7 @@ HttpStreamFactoryImpl::Job::Job(HttpStreamFactoryImpl* stream_factory,
           priority,
           server_ssl_config,
           proxy_ssl_config,
-          server,
+          destination,
           origin_url,
           AlternativeService(),
           net_log) {}
@@ -180,7 +180,7 @@ HttpStreamFactoryImpl::Job::Job(HttpStreamFactoryImpl* stream_factory,
                                 RequestPriority priority,
                                 const SSLConfig& server_ssl_config,
                                 const SSLConfig& proxy_ssl_config,
-                                HostPortPair server,
+                                HostPortPair destination,
                                 GURL origin_url,
                                 AlternativeService alternative_service,
                                 NetLog* net_log)
@@ -196,7 +196,7 @@ HttpStreamFactoryImpl::Job::Job(HttpStreamFactoryImpl* stream_factory,
       stream_factory_(stream_factory),
       next_state_(STATE_NONE),
       pac_request_(NULL),
-      server_(server),
+      destination_(destination),
       origin_url_(origin_url),
       alternative_service_(alternative_service),
       blocking_job_(NULL),
@@ -257,7 +257,7 @@ int HttpStreamFactoryImpl::Job::Preconnect(int num_streams) {
       session_->http_server_properties();
   if (http_server_properties &&
       http_server_properties->SupportsRequestPriority(
-          HostPortPair::FromURL(request_info_.url))) {
+          url::SchemeHostPort(request_info_.url))) {
     num_streams_ = 1;
   } else {
     num_streams_ = num_streams;
@@ -399,7 +399,7 @@ SpdySessionKey HttpStreamFactoryImpl::Job::GetSpdySessionKey() const {
     return SpdySessionKey(proxy_info_.proxy_server().host_port_pair(),
                           ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   }
-  return SpdySessionKey(server_, proxy_info_.proxy_server(),
+  return SpdySessionKey(destination_, proxy_info_.proxy_server(),
                         request_info_.privacy_mode);
 }
 
@@ -817,7 +817,8 @@ int HttpStreamFactoryImpl::Job::DoStart() {
   }
 
   // Don't connect to restricted ports.
-  if (!IsPortAllowedForScheme(server_.port(), request_info_.url.scheme())) {
+  if (!IsPortAllowedForScheme(destination_.port(),
+                              request_info_.url.scheme())) {
     if (waiting_job_) {
       waiting_job_->Resume(this, base::TimeDelta());
       waiting_job_ = NULL;
@@ -907,7 +908,8 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
 
 bool HttpStreamFactoryImpl::Job::ShouldForceQuic() const {
   return session_->params().enable_quic &&
-         ContainsKey(session_->params().origins_to_force_quic_on, server_) &&
+         ContainsKey(session_->params().origins_to_force_quic_on,
+                     destination_) &&
          proxy_info_.is_direct() && origin_url_.SchemeIs("https");
 }
 
@@ -1003,7 +1005,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
       // The certificate of a QUIC alternative server is expected to be valid
       // for the origin of the request (in addition to being valid for the
       // server itself).
-      destination = server_;
+      destination = destination_;
       ssl_config = &server_ssl_config_;
     }
     int rv =
@@ -1074,7 +1076,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
   base::WeakPtr<HttpServerProperties> http_server_properties =
       session_->http_server_properties();
   if (http_server_properties) {
-    http_server_properties->MaybeForceHTTP11(server_, &server_ssl_config_);
+    http_server_properties->MaybeForceHTTP11(destination_, &server_ssl_config_);
     if (proxy_info_.is_http() || proxy_info_.is_https()) {
       http_server_properties->MaybeForceHTTP11(
           proxy_info_.proxy_server().host_port_pair(), &proxy_ssl_config_);
@@ -1084,7 +1086,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
   if (IsPreconnecting()) {
     DCHECK(!stream_factory_->for_websockets_);
     return PreconnectSocketsForHttpRequest(
-        GetSocketGroup(), server_, request_info_.extra_headers,
+        GetSocketGroup(), destination_, request_info_.extra_headers,
         request_info_.load_flags, priority_, session_, proxy_info_, expect_spdy,
         server_ssl_config_, proxy_ssl_config_, request_info_.privacy_mode,
         net_log_, num_streams_);
@@ -1103,7 +1105,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
     websocket_server_ssl_config.alpn_protos.clear();
     websocket_server_ssl_config.npn_protos.clear();
     return InitSocketHandleForWebSocketRequest(
-        GetSocketGroup(), server_, request_info_.extra_headers,
+        GetSocketGroup(), destination_, request_info_.extra_headers,
         request_info_.load_flags, priority_, session_, proxy_info_, expect_spdy,
         websocket_server_ssl_config, proxy_ssl_config_,
         request_info_.privacy_mode, net_log_, connection_.get(),
@@ -1111,7 +1113,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
   }
 
   return InitSocketHandleForHttpRequest(
-      GetSocketGroup(), server_, request_info_.extra_headers,
+      GetSocketGroup(), destination_, request_info_.extra_headers,
       request_info_.load_flags, priority_, session_, proxy_info_, expect_spdy,
       server_ssl_config_, proxy_ssl_config_, request_info_.privacy_mode,
       net_log_, connection_.get(), resolution_callback, io_callback_);
@@ -1345,7 +1347,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
     SSLClientSocket* ssl_socket =
         static_cast<SSLClientSocket*>(connection_->socket());
     RecordChannelIDKeyMatch(ssl_socket, session_->params().channel_id_service,
-                            server_.HostForURL());
+                            destination_.HostForURL());
   }
 
   // We only set the socket motivation if we're the first to use
@@ -1414,9 +1416,9 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   SSLInfo ssl_info;
   bool was_npn_negotiated;
   NextProto protocol_negotiated;
-  if (spdy_session->GetProtocolVersion() >= HTTP2 &&
-      spdy_session->GetSSLInfo(&ssl_info, &was_npn_negotiated,
-                               &protocol_negotiated)) {
+  if (spdy_session->GetSSLInfo(&ssl_info, &was_npn_negotiated,
+                               &protocol_negotiated) &&
+      spdy_session->GetProtocolVersion() >= HTTP2) {
     UMA_HISTOGRAM_SPARSE_SLOWLY(
         "Net.Http2SSLCipherSuite",
         SSLConnectionStatusToCipherSuite(ssl_info.connection_status));
@@ -1424,11 +1426,16 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
 
   new_spdy_session_ = spdy_session;
   spdy_session_direct_ = direct;
-  const HostPortPair& host_port_pair = spdy_session_key.host_port_pair();
+  const HostPortPair host_port_pair = spdy_session_key.host_port_pair();
+  bool is_https = ssl_info.is_valid();
+  url::SchemeHostPort scheme_host_port(is_https ? "https" : "http",
+                                       host_port_pair.host(),
+                                       host_port_pair.port());
+
   base::WeakPtr<HttpServerProperties> http_server_properties =
       session_->http_server_properties();
   if (http_server_properties)
-    http_server_properties->SetSupportsSpdy(host_port_pair, true);
+    http_server_properties->SetSupportsSpdy(scheme_host_port, true);
 
   // Create a SpdyHttpStream or a BidirectionalStreamImpl attached to the
   // session; OnNewSpdySessionReadyCallback is not called until an event loop
@@ -1766,7 +1773,7 @@ int HttpStreamFactoryImpl::Job::ValidSpdySessionPool::
 int HttpStreamFactoryImpl::Job::ValidSpdySessionPool::
     CheckAlternativeServiceValidityForOrigin(
         base::WeakPtr<SpdySession> spdy_session) {
-  // For an alternative Job, server_.host() might be different than
+  // For an alternative Job, destination_.host() might be different than
   // origin_url_.host(), therefore it needs to be verified that the former
   // provides a certificate that is valid for the latter.
   if (!is_spdy_alternative_ || !spdy_session ||

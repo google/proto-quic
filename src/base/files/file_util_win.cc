@@ -559,6 +559,26 @@ bool NormalizeToNativeFilePath(const FilePath& path, FilePath* nt_path) {
   return success;
 }
 
+bool IsOnNetworkDrive(const base::FilePath& path) {
+  win::ScopedHandle handle(
+      ::CreateFileW(path.value().c_str(),
+                    GENERIC_READ,
+                    kFileShareAll,
+                    NULL,
+                    OPEN_EXISTING,
+                    FILE_FLAG_BACKUP_SEMANTICS,  // Needed to open directory.
+                    NULL));
+
+  if (!handle.IsValid())
+    return false;
+
+  // If able to get network information, then the file is on a network.
+  FILE_REMOTE_PROTOCOL_INFO remote_proto_info = {0};
+  return !!::GetFileInformationByHandleEx(handle.Get(), FileRemoteProtocolInfo,
+                                          &remote_proto_info,
+                                          sizeof(remote_proto_info));
+}
+
 // TODO(rkc): Work out if we want to handle NTFS junctions here or not, handle
 // them if we do decide to.
 bool IsLink(const FilePath& file_path) {

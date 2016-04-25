@@ -37,9 +37,8 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_connection_defer_ack_response;
 NET_EXPORT_PRIVATE extern bool FLAGS_spdy_on_stream_end;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_cached_compressed_certs;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_rto_timeout;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_sslr_byte_conservation;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_socket_timestamp;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_consolidate_onstreamframe_errors;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_reply_to_rej;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_ignore_invalid_error_code;
 
 #endif  // NET_QUIC_QUIC_FLAGS_H_

@@ -296,7 +296,6 @@ TEST_F(TcpCubicSenderPacketsTest, SlowStartPacketLossWithLargeReduction) {
 }
 
 TEST_F(TcpCubicSenderPacketsTest, SlowStartHalfPacketLossWithLargeReduction) {
-  FLAGS_quic_sslr_byte_conservation = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kSSLR);

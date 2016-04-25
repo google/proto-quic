@@ -281,7 +281,7 @@ std::unique_ptr<base::Value> NetLogSpdyGoAwayCallback(
     int active_streams,
     int unclaimed_streams,
     SpdyGoAwayStatus status,
-    StringPiece debug_data,
+    base::StringPiece debug_data,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("last_accepted_stream_id",
@@ -368,6 +368,8 @@ SpdyProtocolErrorDetails MapFramerErrorToProtocolError(
       return SPDY_ERROR_GOAWAY_FRAME_CORRUPT;
     case SpdyFramer::SPDY_RST_STREAM_FRAME_CORRUPT:
       return SPDY_ERROR_RST_STREAM_FRAME_CORRUPT;
+    case SpdyFramer::SPDY_INVALID_PADDING:
+      return SPDY_ERROR_INVALID_PADDING;
     case SpdyFramer::SPDY_INVALID_DATA_FRAME_FLAGS:
       return SPDY_ERROR_INVALID_DATA_FRAME_FLAGS;
     case SpdyFramer::SPDY_INVALID_CONTROL_FRAME_FLAGS:
@@ -376,6 +378,8 @@ SpdyProtocolErrorDetails MapFramerErrorToProtocolError(
       return SPDY_ERROR_UNEXPECTED_FRAME;
     case SpdyFramer::SPDY_INVALID_CONTROL_FRAME_SIZE:
       return SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE;
+    case SpdyFramer::SPDY_INVALID_STREAM_ID:
+      return SPDY_ERROR_INVALID_STREAM_ID;
     default:
       NOTREACHED();
       return static_cast<SpdyProtocolErrorDetails>(-1);
@@ -402,6 +406,8 @@ Error MapFramerErrorToNetError(SpdyFramer::SpdyError err) {
       return ERR_SPDY_PROTOCOL_ERROR;
     case SpdyFramer::SPDY_RST_STREAM_FRAME_CORRUPT:
       return ERR_SPDY_PROTOCOL_ERROR;
+    case SpdyFramer::SPDY_INVALID_PADDING:
+      return ERR_SPDY_PROTOCOL_ERROR;
     case SpdyFramer::SPDY_INVALID_DATA_FRAME_FLAGS:
       return ERR_SPDY_PROTOCOL_ERROR;
     case SpdyFramer::SPDY_INVALID_CONTROL_FRAME_FLAGS:
@@ -410,6 +416,8 @@ Error MapFramerErrorToNetError(SpdyFramer::SpdyError err) {
       return ERR_SPDY_PROTOCOL_ERROR;
     case SpdyFramer::SPDY_INVALID_CONTROL_FRAME_SIZE:
       return ERR_SPDY_FRAME_SIZE_ERROR;
+    case SpdyFramer::SPDY_INVALID_STREAM_ID:
+      return ERR_SPDY_PROTOCOL_ERROR;
     default:
       NOTREACHED();
       return ERR_SPDY_PROTOCOL_ERROR;
@@ -2045,6 +2053,11 @@ base::WeakPtr<SpdyStream> SpdySession::GetActivePushStream(const GURL& url) {
   return active_it->second.stream->GetWeakPtr();
 }
 
+url::SchemeHostPort SpdySession::GetServer() {
+  return url::SchemeHostPort(is_secure_ ? "https" : "http",
+                             host_port_pair().host(), host_port_pair().port());
+}
+
 bool SpdySession::GetSSLInfo(SSLInfo* ssl_info,
                              bool* was_npn_negotiated,
                              NextProto* protocol_negotiated) {
@@ -2191,7 +2204,7 @@ void SpdySession::OnSettings(bool clear_persisted) {
   CHECK(in_io_loop_);
 
   if (clear_persisted)
-    http_server_properties_->ClearSpdySettings(host_port_pair());
+    http_server_properties_->ClearSpdySettings(GetServer());
 
   if (net_log_.IsCapturing()) {
     net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_SETTINGS,
@@ -2215,10 +2228,7 @@ void SpdySession::OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) {
 
   HandleSetting(id, value);
   http_server_properties_->SetSpdySetting(
-      host_port_pair(),
-      id,
-      static_cast<SpdySettingsFlags>(flags),
-      value);
+      GetServer(), id, static_cast<SpdySettingsFlags>(flags), value);
   received_settings_ = true;
 
   // Log the setting.
@@ -2523,7 +2533,7 @@ void SpdySession::OnRstStream(SpdyStreamId stream_id,
 
 void SpdySession::OnGoAway(SpdyStreamId last_accepted_stream_id,
                            SpdyGoAwayStatus status,
-                           StringPiece debug_data) {
+                           base::StringPiece debug_data) {
   CHECK(in_io_loop_);
 
   // TODO(jgraettinger): UMA histogram on |status|.
@@ -2881,7 +2891,7 @@ void SpdySession::SendInitialData() {
     // previously told us to use when communicating with them (after
     // applying them).
     const SettingsMap& server_settings_map =
-        http_server_properties_->GetSpdySettings(host_port_pair());
+        http_server_properties_->GetSpdySettings(GetServer());
     if (server_settings_map.empty())
       return;
 
@@ -3088,7 +3098,7 @@ void SpdySession::RecordHistograms() {
   if (received_settings_) {
     // Enumerate the saved settings, and set histograms for it.
     const SettingsMap& settings_map =
-        http_server_properties_->GetSpdySettings(host_port_pair());
+        http_server_properties_->GetSpdySettings(GetServer());
 
     SettingsMap::const_iterator it;
     for (it = settings_map.begin(); it != settings_map.end(); ++it) {

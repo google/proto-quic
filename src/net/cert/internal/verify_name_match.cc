@@ -4,8 +4,13 @@
 
 #include "net/cert/internal/verify_name_match.h"
 
+#include <algorithm>
+#include <vector>
+
 #include "base/strings/string_util.h"
 #include "base/tuple.h"
+#include "crypto/auto_cbb.h"
+#include "crypto/scoped_openssl_types.h"
 #include "net/cert/internal/parse_name.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
@@ -248,7 +253,7 @@ bool VerifyNameMatchInternal(const der::Input& a,
   // RDNs, for each RDN in DN1 there is a matching RDN in DN2, and the matching
   // RDNs appear in the same order in both DNs.
 
-  // First just check if the inputs have the same number of RDNs:
+  // As an optimization, first just compare the number of RDNs:
   der::Parser a_rdn_sequence_counter(a);
   der::Parser b_rdn_sequence_counter(b);
   while (a_rdn_sequence_counter.HasMore() && b_rdn_sequence_counter.HasMore()) {
@@ -265,7 +270,7 @@ bool VerifyNameMatchInternal(const der::Input& a,
   if (match_type == EXACT_MATCH && a_rdn_sequence_counter.HasMore())
     return false;
 
-  // Same number of RDNs, now check if they match.
+  // Verify that RDNs in |a| and |b| match.
   der::Parser a_rdn_sequence(a);
   der::Parser b_rdn_sequence(b);
   while (a_rdn_sequence.HasMore() && b_rdn_sequence.HasMore()) {
@@ -282,6 +287,113 @@ bool VerifyNameMatchInternal(const der::Input& a,
 }
 
 }  // namespace
+
+bool NormalizeName(const der::Input& name_rdn_sequence,
+                   std::string* normalized_rdn_sequence) {
+  // RFC 5280 section 4.1.2.4
+  // RDNSequence ::= SEQUENCE OF RelativeDistinguishedName
+  der::Parser rdn_sequence_parser(name_rdn_sequence);
+
+  crypto::AutoCBB cbb;
+  if (!CBB_init(cbb.get(), 0))
+    return false;
+
+  while (rdn_sequence_parser.HasMore()) {
+    // RelativeDistinguishedName ::= SET SIZE (1..MAX) OF AttributeTypeAndValue
+    der::Parser rdn_parser;
+    if (!rdn_sequence_parser.ReadConstructed(der::kSet, &rdn_parser))
+      return false;
+    RelativeDistinguishedName type_and_values;
+    if (!ReadRdn(&rdn_parser, &type_and_values))
+      return false;
+
+    // The AttributeTypeAndValue objects in the SET OF need to be sorted on
+    // their DER encodings. Encode each individually and save the encoded values
+    // in |encoded_attribute_type_and_values| so that it can be sorted before
+    // being added to |rdn_cbb|. |scoped_encoded_attribute_type_and_values|
+    // owns the |OPENSSL_malloc|ed memory referred to by
+    // |encoded_attribute_type_and_values|.
+    CBB rdn_cbb;
+    if (!CBB_add_asn1(cbb.get(), &rdn_cbb, CBS_ASN1_SET))
+      return false;
+    std::vector<crypto::ScopedOpenSSLBytes>
+        scoped_encoded_attribute_type_and_values;
+    std::vector<der::Input> encoded_attribute_type_and_values;
+
+    for (const auto& type_and_value : type_and_values) {
+      // A top-level CBB for encoding each individual AttributeTypeAndValue.
+      crypto::AutoCBB type_and_value_encoder_cbb;
+      if (!CBB_init(type_and_value_encoder_cbb.get(), 0))
+        return false;
+
+      // AttributeTypeAndValue ::= SEQUENCE {
+      //   type     AttributeType,
+      //   value    AttributeValue }
+      CBB attribute_type_and_value_cbb, type_cbb, value_cbb;
+      if (!CBB_add_asn1(type_and_value_encoder_cbb.get(),
+                        &attribute_type_and_value_cbb, CBS_ASN1_SEQUENCE)) {
+        return false;
+      }
+
+      // AttributeType ::= OBJECT IDENTIFIER
+      if (!CBB_add_asn1(&attribute_type_and_value_cbb, &type_cbb,
+                        CBS_ASN1_OBJECT) ||
+          !CBB_add_bytes(&type_cbb, type_and_value.type.UnsafeData(),
+                         type_and_value.type.Length())) {
+        return false;
+      }
+
+      // AttributeValue ::= ANY -- DEFINED BY AttributeType
+      if (IsNormalizableDirectoryString(type_and_value.value_tag)) {
+        std::string normalized_value;
+        if (!NormalizeValue(type_and_value, &normalized_value))
+          return false;
+        if (!CBB_add_asn1(&attribute_type_and_value_cbb, &value_cbb,
+                          CBS_ASN1_UTF8STRING) ||
+            !CBB_add_bytes(&value_cbb, reinterpret_cast<const uint8_t*>(
+                                           normalized_value.data()),
+                           normalized_value.size()))
+          return false;
+      } else {
+        if (!CBB_add_asn1(&attribute_type_and_value_cbb, &value_cbb,
+                          type_and_value.value_tag) ||
+            !CBB_add_bytes(&value_cbb, type_and_value.value.UnsafeData(),
+                           type_and_value.value.Length()))
+          return false;
+      }
+
+      uint8_t* bytes;
+      size_t len;
+      if (!CBB_finish(type_and_value_encoder_cbb.get(), &bytes, &len))
+        return false;
+      scoped_encoded_attribute_type_and_values.push_back(
+          crypto::ScopedOpenSSLBytes(bytes));
+      encoded_attribute_type_and_values.push_back(der::Input(bytes, len));
+    }
+
+    std::sort(encoded_attribute_type_and_values.begin(),
+              encoded_attribute_type_and_values.end());
+    for (const auto& encoded_attribute_type_and_value :
+         encoded_attribute_type_and_values) {
+      if (!CBB_add_bytes(&rdn_cbb,
+                         encoded_attribute_type_and_value.UnsafeData(),
+                         encoded_attribute_type_and_value.Length())) {
+        return false;
+      }
+    }
+
+    if (!CBB_flush(cbb.get()))
+      return false;
+  }
+
+  uint8_t* der;
+  size_t der_len;
+  if (!CBB_finish(cbb.get(), &der, &der_len))
+    return false;
+  normalized_rdn_sequence->assign(der, der + der_len);
+  OPENSSL_free(der);
+  return true;
+}
 
 bool VerifyNameMatch(const der::Input& a_rdn_sequence,
                      const der::Input& b_rdn_sequence) {

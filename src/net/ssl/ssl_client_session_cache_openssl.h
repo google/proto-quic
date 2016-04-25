@@ -8,11 +8,11 @@
 #include <openssl/ssl.h>
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include "base/containers/mru_cache.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_checker.h"
 #include "base/time/time.h"
@@ -53,7 +53,7 @@ class NET_EXPORT SSLClientSessionCacheOpenSSL {
   // Removes all entries from the cache.
   void Flush();
 
-  void SetClockForTesting(scoped_ptr<base::Clock> clock);
+  void SetClockForTesting(std::unique_ptr<base::Clock> clock);
 
  private:
   struct CacheEntry {
@@ -66,7 +66,7 @@ class NET_EXPORT SSLClientSessionCacheOpenSSL {
   };
 
   using CacheEntryMap =
-      base::HashingMRUCache<std::string, scoped_ptr<CacheEntry>>;
+      base::HashingMRUCache<std::string, std::unique_ptr<CacheEntry>>;
 
   // Returns true if |entry| is expired as of |now|.
   bool IsExpired(CacheEntry* entry, const base::Time& now);
@@ -74,7 +74,7 @@ class NET_EXPORT SSLClientSessionCacheOpenSSL {
   // Removes all expired sessions from the cache.
   void FlushExpiredSessions();
 
-  scoped_ptr<base::Clock> clock_;
+  std::unique_ptr<base::Clock> clock_;
   Config config_;
   CacheEntryMap cache_;
   size_t lookups_since_flush_;

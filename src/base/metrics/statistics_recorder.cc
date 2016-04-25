@@ -315,13 +315,25 @@ HistogramBase* StatisticsRecorder::FindHistogram(base::StringPiece name) {
 // static
 StatisticsRecorder::HistogramIterator StatisticsRecorder::begin(
     bool include_persistent) {
+  DCHECK(histograms_);
   ImportGlobalPersistentHistograms();
-  return HistogramIterator(histograms_->begin(), include_persistent);
+
+  HistogramMap::iterator iter_begin;
+  {
+    base::AutoLock auto_lock(*lock_);
+    iter_begin = histograms_->begin();
+  }
+  return HistogramIterator(iter_begin, include_persistent);
 }
 
 // static
 StatisticsRecorder::HistogramIterator StatisticsRecorder::end() {
-  return HistogramIterator(histograms_->end(), true);
+  HistogramMap::iterator iter_end;
+  {
+    base::AutoLock auto_lock(*lock_);
+    iter_end = histograms_->end();
+  }
+  return HistogramIterator(iter_end, true);
 }
 
 // static

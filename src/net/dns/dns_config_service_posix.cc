@@ -161,8 +161,8 @@ ConfigParsePosixResult ReadDnsConfig(DnsConfig* config) {
 // DNS code (and its clients) are already robust against failing to get the DNS
 // config for whatever reason, so the properties can disappear and the world
 // won't end.
-// TODO(ttuttle): Depend on libcutils, then switch this (and other uses of
-//                __system_property_get) to property_get.
+// TODO(juliatuttle): Depend on libcutils, then switch this (and other uses of
+//                    __system_property_get) to property_get.
 ConfigParsePosixResult ReadDnsConfig(DnsConfig* dns_config) {
    std::string dns1_string, dns2_string;
   char property_value[PROP_VALUE_MAX];

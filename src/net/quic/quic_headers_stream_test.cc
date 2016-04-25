@@ -133,6 +133,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParams> {
  public:
   QuicHeadersStreamTest()
       : connection_(new StrictMock<MockConnection>(&helper_,
+                                                   &alarm_factory_,
                                                    perspective(),
                                                    GetVersion())),
         session_(connection_),
@@ -249,6 +250,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParams> {
   static const bool kHasPriority = true;
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   StrictMock<MockQuicSpdySession> session_;
   QuicHeadersStream* headers_stream_;

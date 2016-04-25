@@ -98,7 +98,7 @@ HttpNetworkSession::Params::Params()
       time_func(&base::TimeTicks::Now),
       parse_alternative_services(false),
       enable_alternative_service_with_different_host(false),
-      enable_npn(true),
+      enable_npn(false),
       enable_brotli(false),
       enable_priority_dependencies(true),
       enable_quic(false),
@@ -382,6 +382,20 @@ void HttpNetworkSession::GetNpnProtos(NextProtoVector* npn_protos) const {
     *npn_protos = next_protos_;
   } else {
     npn_protos->clear();
+  }
+}
+
+void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,
+                                      SSLConfig* server_config,
+                                      SSLConfig* proxy_config) const {
+  ssl_config_service_->GetSSLConfig(server_config);
+  GetAlpnProtos(&server_config->alpn_protos);
+  GetNpnProtos(&server_config->npn_protos);
+  *proxy_config = *server_config;
+  if (request.privacy_mode == PRIVACY_MODE_ENABLED) {
+    server_config->channel_id_enabled = false;
+  } else if (params_.enable_token_binding && params_.channel_id_service) {
+    server_config->token_binding_params.push_back(TB_PARAM_ECDSAP256);
   }
 }
 

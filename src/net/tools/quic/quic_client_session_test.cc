@@ -94,7 +94,8 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
 
   void Initialize() {
     session_.reset();
-    connection_ = new PacketSavingConnection(&helper_, Perspective::IS_CLIENT,
+    connection_ = new PacketSavingConnection(&helper_, &alarm_factory_,
+                                             Perspective::IS_CLIENT,
                                              SupportedVersions(GetParam()));
     session_.reset(new TestQuicClientSession(
         DefaultQuicConfig(), connection_,
@@ -114,14 +115,15 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
     QuicCryptoClientStream* stream =
         static_cast<QuicCryptoClientStream*>(session_->GetCryptoStream());
     CryptoTestUtils::FakeServerOptions options;
-    CryptoTestUtils::HandshakeWithFakeServer(&helper_, connection_, stream,
-                                             options);
+    CryptoTestUtils::HandshakeWithFakeServer(&helper_, &alarm_factory_,
+                                             connection_, stream, options);
   }
 
   QuicCryptoClientConfig crypto_config_;
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   PacketSavingConnection* connection_;
-  scoped_ptr<TestQuicClientSession> session_;
+  std::unique_ptr<TestQuicClientSession> session_;
   QuicClientPushPromiseIndex push_promise_index_;
   SpdyHeaderBlock push_promise_;
   string promise_url_;
@@ -263,9 +265,9 @@ TEST_P(QuicClientSessionTest, InvalidPacketReceived) {
 
   // Verify that a non-decryptable packet doesn't close the connection.
   QuicConnectionId connection_id = session_->connection()->connection_id();
-  scoped_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
       connection_id, false, false, false, kDefaultPathId, 100, "data"));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));
   // Change the last byte of the encrypted data.
   *(const_cast<char*>(received->data() + received->length() - 1)) += 1;
@@ -286,10 +288,10 @@ TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
 
   // Verify that a decryptable packet with bad frames does close the connection.
   QuicConnectionId connection_id = session_->connection()->connection_id();
-  scoped_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
       connection_id, false, false, false, kDefaultPathId, 100, "data",
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, nullptr));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));
   EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(1);
   session_->ProcessUdpPacket(client_address, server_address, *received);

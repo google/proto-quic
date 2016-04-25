@@ -26,7 +26,10 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
                        CryptoTestUtils::ProofSourceForTesting()),
         dispatcher_(config_,
                     &crypto_config_,
-                    new net::test::MockConnectionHelper) {
+                    std::unique_ptr<MockConnectionHelper>(
+                        new net::test::MockConnectionHelper),
+                    std::unique_ptr<MockAlarmFactory>(
+                        new net::test::MockAlarmFactory)) {
     dispatcher_.InitializeWithWriter(nullptr);
   }
 

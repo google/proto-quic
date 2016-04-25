@@ -9,10 +9,11 @@
 #include <stdint.h>
 #include <winsock2.h>
 
+#include <memory>
+
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/win/object_watcher.h"
 #include "base/win/scoped_handle.h"
@@ -273,8 +274,8 @@ class NET_EXPORT UDPSocketWin
 
   // These are mutable since they're just cached copies to make
   // GetPeerAddress/GetLocalAddress smarter.
-  mutable scoped_ptr<IPEndPoint> local_address_;
-  mutable scoped_ptr<IPEndPoint> remote_address_;
+  mutable std::unique_ptr<IPEndPoint> local_address_;
+  mutable std::unique_ptr<IPEndPoint> remote_address_;
 
   // The core of the socket that can live longer than the socket itself. We pass
   // resources to the Windows async IO functions and we have to make sure that
@@ -301,7 +302,7 @@ class NET_EXPORT UDPSocketWin
 
   // Cached copy of the current address we're sending to, if any.  Used for
   // logging.
-  scoped_ptr<IPEndPoint> send_to_address_;
+  std::unique_ptr<IPEndPoint> send_to_address_;
 
   // External callback; called when read is complete.
   CompletionCallback read_callback_;

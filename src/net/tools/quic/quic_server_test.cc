@@ -8,6 +8,7 @@
 #include "net/quic/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
+#include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -29,7 +30,11 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
         dispatcher_(
             config_,
             &crypto_config_,
-            new QuicEpollConnectionHelper(&eps_, QuicAllocator::BUFFER_POOL)) {
+            std::unique_ptr<QuicEpollConnectionHelper>(
+                new QuicEpollConnectionHelper(&eps_,
+                                              QuicAllocator::BUFFER_POOL)),
+            std::unique_ptr<QuicEpollAlarmFactory>(
+                new QuicEpollAlarmFactory(&eps_))) {
     dispatcher_.InitializeWithWriter(new QuicDefaultPacketWriter(1234));
   }
 

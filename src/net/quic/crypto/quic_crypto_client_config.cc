@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/quic_crypto_client_config.h"
 
+#include <memory>
+
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"

@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "base/macros.h"
 #include "net/quic/quic_header_list.h"
 #include "net/quic/quic_headers_stream.h"
@@ -30,7 +32,7 @@ class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
 
   // Called by |headers_stream_| when headers have been received for a stream.
   virtual void OnStreamHeaders(QuicStreamId stream_id,
-                               StringPiece headers_data);
+                               base::StringPiece headers_data);
   // Called by |headers_stream_| when headers with a priority have been
   // received for this stream.  This method will only be called for server
   // streams.
@@ -54,7 +56,7 @@ class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   // Called by |headers_stream_| when push promise headers have been
   // received for a stream.
   virtual void OnPromiseHeaders(QuicStreamId stream_id,
-                                StringPiece headers_data);
+                                base::StringPiece headers_data);
 
   // Called by |headers_stream_| when push promise headers have been
   // completely received.  |fin| will be true if the fin flag was set

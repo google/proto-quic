@@ -5,6 +5,8 @@
 #ifndef NET_TOOLS_QUIC_TEST_TOOLS_SERVER_THREAD_H_
 #define NET_TOOLS_QUIC_TEST_TOOLS_SERVER_THREAD_H_
 
+#include <memory>
+
 #include "base/macros.h"
 #include "base/threading/simple_thread.h"
 #include "net/base/ip_endpoint.h"
@@ -63,7 +65,7 @@ class ServerThread : public base::SimpleThread {
   base::WaitableEvent resume_;     // Notified when the server should resume.
   base::WaitableEvent quit_;       // Notified when the server should quit.
 
-  scoped_ptr<QuicServer> server_;
+  std::unique_ptr<QuicServer> server_;
   IPEndPoint address_;
   base::Lock port_lock_;
   int port_;

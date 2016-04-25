@@ -6,6 +6,8 @@
 
 #include <stdarg.h>
 
+#include <memory>
+
 #include "base/stl_util.h"
 #include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/crypto/cert_compressor.h"

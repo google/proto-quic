@@ -45,8 +45,9 @@ class MockQuicClientSession : public QuicClientSession {
 class QuicClientPushPromiseIndexTest : public ::testing::Test {
  public:
   QuicClientPushPromiseIndexTest()
-      : connection_(
-            new StrictMock<MockConnection>(&helper_, Perspective::IS_CLIENT)),
+      : connection_(new StrictMock<MockConnection>(&helper_,
+                                                   &alarm_factory_,
+                                                   Perspective::IS_CLIENT)),
         session_(connection_, &index_),
         promised_(&session_, kServerDataStreamId1, url_) {
     FLAGS_quic_supports_push_promise = true;
@@ -59,6 +60,7 @@ class QuicClientPushPromiseIndexTest : public ::testing::Test {
   }
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   MockQuicClientSession session_;
   QuicClientPushPromiseIndex index_;

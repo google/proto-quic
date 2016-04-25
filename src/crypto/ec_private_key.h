@@ -15,16 +15,8 @@
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
 
-#if defined(USE_OPENSSL)
 // Forward declaration for openssl/*.h
 typedef struct evp_pkey_st EVP_PKEY;
-#else
-// Forward declaration.
-typedef struct CERTSubjectPublicKeyInfoStr CERTSubjectPublicKeyInfo;
-typedef struct PK11SlotInfoStr PK11SlotInfo;
-typedef struct SECKEYPrivateKeyStr SECKEYPrivateKey;
-typedef struct SECKEYPublicKeyStr SECKEYPublicKey;
-#endif
 
 namespace crypto {
 
@@ -51,32 +43,10 @@ class CRYPTO_EXPORT ECPrivateKey {
       const std::vector<uint8_t>& encrypted_private_key_info,
       const std::vector<uint8_t>& subject_public_key_info);
 
-#if !defined(USE_OPENSSL)
-  // Imports the key pair into |slot| and returns in |public_key| and |key|.
-  // Shortcut for code that needs to keep a reference directly to NSS types
-  // without having to create a ECPrivateKey object and make a copy of them.
-  // TODO(mattm): move this function to some NSS util file.
-  static bool ImportFromEncryptedPrivateKeyInfo(
-      PK11SlotInfo* slot,
-      const std::string& password,
-      const uint8_t* encrypted_private_key_info,
-      size_t encrypted_private_key_info_len,
-      CERTSubjectPublicKeyInfo* decoded_spki,
-      bool permanent,
-      bool sensitive,
-      SECKEYPrivateKey** key,
-      SECKEYPublicKey** public_key);
-#endif
-
   // Returns a copy of the object.
   ECPrivateKey* Copy() const;
 
-#if defined(USE_OPENSSL)
   EVP_PKEY* key() { return key_; }
-#else
-  SECKEYPrivateKey* key() { return key_; }
-  SECKEYPublicKey* public_key() { return public_key_; }
-#endif
 
   // Exports the private key as an ASN.1-encoded PKCS #8 EncryptedPrivateKeyInfo
   // block and the public key as an X.509 SubjectPublicKeyInfo block.
@@ -101,12 +71,7 @@ class CRYPTO_EXPORT ECPrivateKey {
   // Constructor is private. Use one of the Create*() methods above instead.
   ECPrivateKey();
 
-#if defined(USE_OPENSSL)
   EVP_PKEY* key_;
-#else
-  SECKEYPrivateKey* key_;
-  SECKEYPublicKey* public_key_;
-#endif
 
   DISALLOW_COPY_AND_ASSIGN(ECPrivateKey);
 };

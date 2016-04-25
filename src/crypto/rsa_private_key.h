@@ -15,15 +15,8 @@
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
 
-#if defined(USE_OPENSSL)
 // Forward declaration for openssl/*.h
 typedef struct evp_pkey_st EVP_PKEY;
-#else
-// Forward declaration.
-typedef struct PK11SlotInfoStr PK11SlotInfo;
-typedef struct SECKEYPrivateKeyStr SECKEYPrivateKey;
-typedef struct SECKEYPublicKeyStr SECKEYPublicKey;
-#endif
 
 namespace crypto {
 
@@ -43,23 +36,12 @@ class CRYPTO_EXPORT RSAPrivateKey {
   static RSAPrivateKey* CreateFromPrivateKeyInfo(
       const std::vector<uint8_t>& input);
 
-#if defined(USE_OPENSSL)
   // Create a new instance from an existing EVP_PKEY, taking a
   // reference to it. |key| must be an RSA key. Returns NULL on
   // failure.
   static RSAPrivateKey* CreateFromKey(EVP_PKEY* key);
-#else
-  // Create a new instance by referencing an existing private key
-  // structure.  Does not import the key.
-  static RSAPrivateKey* CreateFromKey(SECKEYPrivateKey* key);
-#endif
 
-#if defined(USE_OPENSSL)
   EVP_PKEY* key() { return key_; }
-#else
-  SECKEYPrivateKey* key() { return key_; }
-  SECKEYPublicKey* public_key() { return public_key_; }
-#endif
 
   // Creates a copy of the object.
   RSAPrivateKey* Copy() const;
@@ -74,12 +56,7 @@ class CRYPTO_EXPORT RSAPrivateKey {
   // Constructor is private. Use one of the Create*() methods above instead.
   RSAPrivateKey();
 
-#if defined(USE_OPENSSL)
   EVP_PKEY* key_;
-#else
-  SECKEYPrivateKey* key_;
-  SECKEYPublicKey* public_key_;
-#endif
 
   DISALLOW_COPY_AND_ASSIGN(RSAPrivateKey);
 };

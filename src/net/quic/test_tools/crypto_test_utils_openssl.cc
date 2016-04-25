@@ -11,6 +11,8 @@
 #include <openssl/obj_mac.h>
 #include <openssl/sha.h>
 
+#include <memory>
+
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
 #include "crypto/secure_hash.h"

@@ -15,12 +15,12 @@ namespace net {
 
 namespace {
 
-scoped_ptr<base::Value> NetLogUDPDataTranferCallback(
+std::unique_ptr<base::Value> NetLogUDPDataTranferCallback(
     int byte_count,
     const char* bytes,
     const IPEndPoint* address,
     NetLogCaptureMode capture_mode) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("byte_count", byte_count);
   if (capture_mode.include_socket_bytes())
     dict->SetString("hex_encoded_bytes", base::HexEncode(bytes, byte_count));
@@ -29,10 +29,10 @@ scoped_ptr<base::Value> NetLogUDPDataTranferCallback(
   return std::move(dict);
 }
 
-scoped_ptr<base::Value> NetLogUDPConnectCallback(
+std::unique_ptr<base::Value> NetLogUDPConnectCallback(
     const IPEndPoint* address,
     NetLogCaptureMode /* capture_mode */) {
-  scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("address", address->ToString());
   return std::move(dict);
 }

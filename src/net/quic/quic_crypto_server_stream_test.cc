@@ -102,6 +102,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     server_session_.reset();
     client_session_.reset();
     STLDeleteElements(&helpers_);
+    STLDeleteElements(&alarm_factories_);
   }
 
   // Initializes the crypto server stream state for testing.  May be
@@ -109,9 +110,10 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   void InitializeServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
     helpers_.push_back(new MockConnectionHelper);
+    alarm_factories_.push_back(new MockAlarmFactory);
     CreateServerSessionForTest(
         server_id_, QuicTime::Delta::FromSeconds(100000), supported_versions_,
-        helpers_.back(), &server_crypto_config_,
+        helpers_.back(), alarm_factories_.back(), &server_crypto_config_,
         &server_compressed_certs_cache_, &server_connection_, &server_session);
     CHECK(server_session);
     server_session_.reset(server_session);
@@ -135,12 +137,13 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   void InitializeFakeClient(bool supports_stateless_rejects) {
     TestQuicSpdyClientSession* client_session = nullptr;
     helpers_.push_back(new MockConnectionHelper);
-    CreateClientSessionForTest(server_id_, supports_stateless_rejects,
-                               QuicTime::Delta::FromSeconds(100000),
-                               supported_versions_,
+    alarm_factories_.push_back(new MockAlarmFactory);
+    CreateClientSessionForTest(
+        server_id_, supports_stateless_rejects,
+        QuicTime::Delta::FromSeconds(100000), supported_versions_,
 
-                               helpers_.back(), &client_crypto_config_,
-                               &client_connection_, &client_session);
+        helpers_.back(), alarm_factories_.back(), &client_crypto_config_,
+        &client_connection_, &client_session);
     CHECK(client_session);
     client_session_.reset(client_session);
   }
@@ -161,8 +164,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     CHECK(server_connection_);
     CHECK(server_session_ != nullptr);
     return CryptoTestUtils::HandshakeWithFakeClient(
-        helpers_.back(), server_connection_, server_stream(), server_id_,
-        client_options_);
+        helpers_.back(), alarm_factories_.back(), server_connection_,
+        server_stream(), server_id_, client_options_);
   }
 
   // Performs a single round of handshake message-exchange between the
@@ -178,10 +181,12 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   }
 
  protected:
-  // Every connection gets its own MockConnectionHelper, tracked separately
-  // from the server and client state so their lifetimes persist through the
-  // whole test.
+  // Every connection gets its own MockConnectionHelper and MockAlarmFactory,
+  // tracked separately from
+  // the server and client state so their lifetimes persist through the whole
+  // test.
   std::vector<MockConnectionHelper*> helpers_;
+  std::vector<MockAlarmFactory*> alarm_factories_;
 
   // Server state
   PacketSavingConnection* server_connection_;

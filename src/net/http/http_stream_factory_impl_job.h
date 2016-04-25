@@ -47,7 +47,7 @@ class HttpStreamFactoryImpl::Job {
       RequestPriority priority,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
-      HostPortPair server,
+      HostPortPair destination,
       GURL origin_url,
       NetLog* net_log);
   // Constructor for alternative Job.
@@ -57,7 +57,7 @@ class HttpStreamFactoryImpl::Job {
       RequestPriority priority,
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
-      HostPortPair server,
+      HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
       NetLog* net_log);
@@ -336,8 +336,8 @@ class HttpStreamFactoryImpl::Job {
   SSLInfo ssl_info_;
 
   // The server we are trying to reach, could be that of the origin or of the
-  // alternative service.
-  HostPortPair server_;
+  // alternative service (after applying host mapping rules).
+  HostPortPair destination_;
 
   // The origin url we're trying to reach. This url may be different from the
   // original request when host mapping rules are set-up.

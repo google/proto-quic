@@ -16,11 +16,7 @@
 
 // Forward declare the crypto types to avoid having to include the full
 // headers.
-#if defined(USE_OPENSSL)
 typedef struct evp_pkey_st EVP_PKEY;
-#else
-typedef struct SECKEYPublicKeyStr SECKEYPublicKey;
-#endif
 
 namespace net {
 
@@ -98,11 +94,7 @@ class NET_EXPORT CTLogVerifier
   ct::DigitallySigned::HashAlgorithm hash_algorithm_;
   ct::DigitallySigned::SignatureAlgorithm signature_algorithm_;
 
-#if defined(USE_OPENSSL)
   EVP_PKEY* public_key_;
-#else
-  SECKEYPublicKey* public_key_;
-#endif
 };
 
 }  // namespace net

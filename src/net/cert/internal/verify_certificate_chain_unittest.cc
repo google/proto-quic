@@ -17,10 +17,6 @@
 #include "net/der/input.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-// TODO(eroman): Because VerifySignedData() is only implemented for BoringSSL
-// these tests also depend on BoringSSL.
-#if defined(USE_OPENSSL)
-
 namespace net {
 
 namespace {
@@ -43,18 +39,6 @@ std::string ReadTestFileToString(const std::string& file_name) {
   return file_data;
 }
 
-// Adds the certificate |cert_der| as a trust anchor to |trust_store|.
-void AddCertificateToTrustStore(const std::string& cert_der,
-                                TrustStore* trust_store) {
-  ParsedCertificate cert;
-  ASSERT_TRUE(ParseCertificate(der::Input(&cert_der), &cert));
-
-  ParsedTbsCertificate tbs;
-  ASSERT_TRUE(ParseTbsCertificate(cert.tbs_certificate_tlv, &tbs));
-  TrustAnchor anchor = {tbs.spki_tlv.AsString(), tbs.subject_tlv.AsString()};
-  trust_store->anchors.push_back(anchor);
-}
-
 // Reads a test case from |file_name|. Test cases are comprised of a
 // certificate chain, trust store, a timestamp to validate at, and the
 // expected result of verification.
@@ -64,7 +48,7 @@ void ReadTestFromFile(const std::string& file_name,
                       der::GeneralizedTime* time,
                       bool* verify_result) {
   chain->clear();
-  *trust_store = TrustStore();
+  trust_store->Clear();
 
   std::string file_data = ReadTestFileToString(file_name);
 
@@ -91,7 +75,7 @@ void ReadTestFromFile(const std::string& file_name,
     if (block_type == kCertificateHeader) {
       chain->push_back(block_data);
     } else if (block_type == kTrustedCertificateHeader) {
-      AddCertificateToTrustStore(block_data, trust_store);
+      ASSERT_TRUE(trust_store->AddTrustedCertificate(block_data));
     } else if (block_type == kTimeHeader) {
       ASSERT_FALSE(has_time) << "Duplicate " << kTimeHeader;
       has_time = true;
@@ -201,6 +185,10 @@ TEST(VerifyCertificateChainTest, ExpiredTargetNotBefore) {
   RunTest("expired-target-notBefore.pem");
 }
 
+TEST(VerifyCertificateChainTest, ExpiredRoot) {
+  RunTest("expired-root.pem");
+}
+
 TEST(VerifyCertificateChainTest, TargetNotEndEntity) {
   RunTest("target-not-end-entity.pem");
 }
@@ -225,6 +213,14 @@ TEST(VerifyCertificateChainTest, IssuerAndSubjectNotByteForByteEqualAnchor) {
   RunTest("issuer-and-subject-not-byte-for-byte-equal-anchor.pem");
 }
 
+TEST(VerifyCertificateChainTest, ViolatesPathlen1Root) {
+  RunTest("violates-pathlen-1-root.pem");
+}
+
+TEST(VerifyCertificateChainTest, NonSelfSignedRoot) {
+  RunTest("non-self-signed-root.pem");
+}
+
 // Tests that verifying a chain with no certificates fails.
 TEST(VerifyCertificateChainTest, EmptyChainIsInvalid) {
   TrustStore trust_store;
@@ -242,5 +238,3 @@ TEST(VerifyCertificateChainTest, EmptyChainIsInvalid) {
 }  // namespace
 
 }  // namespace net
-
-#endif

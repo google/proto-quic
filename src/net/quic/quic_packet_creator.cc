@@ -186,12 +186,12 @@ size_t QuicPacketCreator::StreamFramePacketOverhead(
          QuicFramer::GetMinStreamFrameSize(1u, offset, true);
 }
 
-size_t QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
-                                            QuicIOVector iov,
-                                            size_t iov_offset,
-                                            QuicStreamOffset offset,
-                                            bool fin,
-                                            QuicFrame* frame) {
+void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
+                                          QuicIOVector iov,
+                                          size_t iov_offset,
+                                          QuicStreamOffset offset,
+                                          bool fin,
+                                          QuicFrame* frame) {
   DCHECK_GT(max_packet_length_,
             StreamFramePacketOverhead(connection_id_length_, kIncludeVersion,
                                       kIncludePathId,
@@ -208,7 +208,7 @@ size_t QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
     QUIC_BUG_IF(!fin) << "Creating a stream frame with no data or fin.";
     // Create a new packet for the fin, if necessary.
     *frame = QuicFrame(new QuicStreamFrame(id, true, offset, StringPiece()));
-    return 0;
+    return;
   }
 
   const size_t data_size = iov.total_length - iov_offset;
@@ -222,7 +222,6 @@ size_t QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   CopyToBuffer(iov, iov_offset, bytes_consumed, buffer.get());
   *frame = QuicFrame(new QuicStreamFrame(id, set_fin, offset, bytes_consumed,
                                          std::move(buffer)));
-  return bytes_consumed;
 }
 
 // static

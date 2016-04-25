@@ -41,17 +41,20 @@ class DeleteSessionsAlarm : public QuicAlarm::Delegate {
 
 }  // namespace
 
-QuicDispatcher::QuicDispatcher(const QuicConfig& config,
-                               const QuicCryptoServerConfig* crypto_config,
-                               const QuicVersionVector& supported_versions,
-                               QuicConnectionHelperInterface* helper)
+QuicDispatcher::QuicDispatcher(
+    const QuicConfig& config,
+    const QuicCryptoServerConfig* crypto_config,
+    const QuicVersionVector& supported_versions,
+    std::unique_ptr<QuicConnectionHelperInterface> helper,
+    std::unique_ptr<QuicAlarmFactory> alarm_factory)
     : config_(config),
       crypto_config_(crypto_config),
       compressed_certs_cache_(
           QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
-      helper_(helper),
+      helper_(std::move(helper)),
+      alarm_factory_(std::move(alarm_factory)),
       delete_sessions_alarm_(
-          helper_->CreateAlarm(new DeleteSessionsAlarm(this))),
+          alarm_factory_->CreateAlarm(new DeleteSessionsAlarm(this))),
       supported_versions_(supported_versions),
       current_packet_(nullptr),
       framer_(supported_versions,
@@ -449,7 +452,8 @@ QuicServerSessionBase* QuicDispatcher::CreateQuicSession(
     const IPEndPoint& client_address) {
   // The QuicServerSessionBase takes ownership of |connection| below.
   QuicConnection* connection = new QuicConnection(
-      connection_id, client_address, helper_.get(), CreatePerConnectionWriter(),
+      connection_id, client_address, helper_.get(), alarm_factory_.get(),
+      CreatePerConnectionWriter(),
       /* owns_writer= */ true, Perspective::IS_SERVER, supported_versions_);
 
   QuicServerSessionBase* session = new QuicSimpleServerSession(
@@ -459,7 +463,8 @@ QuicServerSessionBase* QuicDispatcher::CreateQuicSession(
 }
 
 QuicTimeWaitListManager* QuicDispatcher::CreateQuicTimeWaitListManager() {
-  return new QuicTimeWaitListManager(writer_.get(), this, helper_.get());
+  return new QuicTimeWaitListManager(writer_.get(), this, helper_.get(),
+                                     alarm_factory_.get());
 }
 
 bool QuicDispatcher::HandlePacketForTimeWait(

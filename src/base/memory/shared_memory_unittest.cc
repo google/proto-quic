@@ -316,6 +316,8 @@ TEST(SharedMemoryTest, AnonymousPrivate) {
   }
 }
 
+// The Mach functionality is tested in shared_memory_mac_unittest.cc.
+#if !(defined(OS_MACOSX) && !defined(OS_IOS))
 TEST(SharedMemoryTest, ShareReadOnly) {
   StringPiece contents = "Hello World";
 
@@ -323,10 +325,6 @@ TEST(SharedMemoryTest, ShareReadOnly) {
   SharedMemoryCreateOptions options;
   options.size = contents.size();
   options.share_read_only = true;
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // The Mach functionality is tested in shared_memory_mac_unittest.cc.
-  options.type = SharedMemoryHandle::POSIX;
-#endif
   ASSERT_TRUE(writable_shmem.Create(options));
   ASSERT_TRUE(writable_shmem.Map(options.size));
   memcpy(writable_shmem.memory(), contents.data(), contents.size());
@@ -402,6 +400,7 @@ TEST(SharedMemoryTest, ShareReadOnly) {
 #error Unexpected platform; write a test that tries to make 'handle' writable.
 #endif  // defined(OS_POSIX) || defined(OS_WIN)
 }
+#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 TEST(SharedMemoryTest, ShareToSelf) {
   StringPiece contents = "Hello World";
@@ -475,7 +474,7 @@ TEST(SharedMemoryTest, MapTwice) {
   EXPECT_EQ(old_address, memory.memory());
 }
 
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))
 // This test is not applicable for iOS (crbug.com/399384).
 #if !defined(OS_IOS)
 // Create a shared memory object, mmap it, and mprotect it to PROT_EXEC.
@@ -486,10 +485,6 @@ TEST(SharedMemoryTest, AnonymousExecutable) {
   SharedMemoryCreateOptions options;
   options.size = kTestSize;
   options.executable = true;
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // The Mach functionality is tested in shared_memory_mac_unittest.cc.
-  options.type = SharedMemoryHandle::POSIX;
-#endif
 
   EXPECT_TRUE(shared_memory.Create(options));
   EXPECT_TRUE(shared_memory.Map(shared_memory.requested_size()));
@@ -523,10 +518,6 @@ TEST(SharedMemoryTest, FilePermissionsAnonymous) {
   SharedMemory shared_memory;
   SharedMemoryCreateOptions options;
   options.size = kTestSize;
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // The Mach functionality is tested in shared_memory_mac_unittest.cc.
-  options.type = SharedMemoryHandle::POSIX;
-#endif
   // Set a file mode creation mask that gives all permissions.
   ScopedUmaskSetter permissive_mask(S_IWGRP | S_IWOTH);
 
@@ -549,10 +540,6 @@ TEST(SharedMemoryTest, FilePermissionsNamed) {
   SharedMemory shared_memory;
   SharedMemoryCreateOptions options;
   options.size = kTestSize;
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // The Mach functionality is tested in shared_memory_mac_unittest.cc.
-  options.type = SharedMemoryHandle::POSIX;
-#endif
 
   // Set a file mode creation mask that gives all permissions.
   ScopedUmaskSetter permissive_mask(S_IWGRP | S_IWOTH);
@@ -569,7 +556,7 @@ TEST(SharedMemoryTest, FilePermissionsNamed) {
 }
 #endif  // !defined(OS_ANDROID)
 
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 // Map() will return addresses which are aligned to the platform page size, this
 // varies from platform to platform though.  Since we'd like to advertise a

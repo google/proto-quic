@@ -32,7 +32,7 @@
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/log/net_log.h"
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include <private/pprthred.h>  // PR_DetachThread
 #endif
 
@@ -241,7 +241,7 @@ void DoVerifyOnWorkerThread(const scoped_refptr<CertVerifyProc>& verify_proc,
   *error = verify_proc->Verify(cert.get(), hostname, ocsp_response, flags,
                                crl_set.get(), additional_trust_anchors, result);
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   // Detach the thread from NSPR.
   // Calling NSS functions attaches the thread to NSPR, which stores
   // the NSPR thread ID in thread-specific data.

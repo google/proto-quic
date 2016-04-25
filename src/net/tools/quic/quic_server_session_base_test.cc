@@ -4,6 +4,9 @@
 
 #include "net/tools/quic/quic_server_session_base.h"
 
+#include <cstdint>
+#include <memory>
+
 #include "base/macros.h"
 #include "net/quic/crypto/quic_crypto_server_config.h"
 #include "net/quic/crypto/quic_random.h"
@@ -131,8 +134,9 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
     config_.SetInitialSessionFlowControlWindowToSend(
         kInitialSessionFlowControlWindowForTest);
 
-    connection_ = new StrictMock<MockConnection>(
-        &helper_, Perspective::IS_SERVER, SupportedVersions(GetParam()));
+    connection_ = new StrictMock<MockConnection>(&helper_, &alarm_factory_,
+                                                 Perspective::IS_SERVER,
+                                                 SupportedVersions(GetParam()));
     session_.reset(new TestServerSession(config_, connection_, &owner_,
                                          &crypto_config_,
                                          &compressed_certs_cache_));
@@ -146,12 +150,13 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;
-  scoped_ptr<TestServerSession> session_;
-  scoped_ptr<CryptoHandshakeMessage> handshake_message_;
+  std::unique_ptr<TestServerSession> session_;
+  std::unique_ptr<CryptoHandshakeMessage> handshake_message_;
   QuicConnectionVisitorInterface* visitor_;
 };
 

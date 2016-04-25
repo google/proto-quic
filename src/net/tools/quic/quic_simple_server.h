@@ -8,12 +8,14 @@
 #ifndef NET_QUIC_TOOLS_QUIC_SIMPLE_SERVER_H_
 #define NET_QUIC_TOOLS_QUIC_SIMPLE_SERVER_H_
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/log/net_log.h"
 #include "net/quic/crypto/quic_crypto_server_config.h"
+#include "net/quic/quic_chromium_alarm_factory.h"
 #include "net/quic/quic_chromium_connection_helper.h"
 #include "net/quic/quic_clock.h"
 #include "net/quic/quic_config.h"
@@ -64,7 +66,7 @@ class QuicSimpleServer {
   void Initialize();
 
   // Accepts data from the framer and demuxes clients to sessions.
-  scoped_ptr<QuicDispatcher> dispatcher_;
+  std::unique_ptr<QuicDispatcher> dispatcher_;
 
   // Used by the helper_ to time alarms.
   QuicClock clock_;
@@ -72,8 +74,11 @@ class QuicSimpleServer {
   // Used to manage the message loop. Owned by dispatcher_.
   QuicChromiumConnectionHelper* helper_;
 
+  // Used to manage the message loop. Owned by dispatcher_.
+  QuicChromiumAlarmFactory* alarm_factory_;
+
   // Listening socket. Also used for outbound client communication.
-  scoped_ptr<UDPServerSocket> socket_;
+  std::unique_ptr<UDPServerSocket> socket_;
 
   // config_ contains non-crypto parameters that are negotiated in the crypto
   // handshake.

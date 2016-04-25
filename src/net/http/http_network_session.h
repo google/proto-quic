@@ -267,6 +267,12 @@ class NET_EXPORT HttpNetworkSession
   // Populates |*npn_protos| with protocols to be used with NPN.
   void GetNpnProtos(NextProtoVector* npn_protos) const;
 
+  // Populates |server_config| and |proxy_config| based on this session and
+  // |request|.
+  void GetSSLConfig(const HttpRequestInfo& request,
+                    SSLConfig* server_config,
+                    SSLConfig* proxy_config) const;
+
  private:
   friend class HttpNetworkSessionPeer;
 

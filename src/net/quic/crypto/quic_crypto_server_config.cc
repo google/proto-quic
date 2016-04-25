@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <memory>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"

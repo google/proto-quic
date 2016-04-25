@@ -34,12 +34,22 @@ class QuicSpdyClientStream : public QuicSpdyStream {
   // Override the base class to parse and store headers.
   void OnInitialHeadersComplete(bool fin, size_t frame_len) override;
 
+  // Override the base class to parse and store headers.
+  void OnInitialHeadersComplete(bool fin,
+                                size_t frame_len,
+                                const QuicHeaderList& header_list) override;
+
   // Override the base class to parse and store trailers.
   void OnTrailingHeadersComplete(bool fin, size_t frame_len) override;
 
   // Override the base class to handle creation of the push stream.
   void OnPromiseHeadersComplete(QuicStreamId promised_stream_id,
                                 size_t frame_len) override;
+
+  // Override the base class to handle creation of the push stream.
+  void OnPromiseHeaderList(QuicStreamId promised_id,
+                           size_t frame_len,
+                           const QuicHeaderList& header_list) override;
 
   // ReliableQuicStream implementation called by the session when there's
   // data for us.

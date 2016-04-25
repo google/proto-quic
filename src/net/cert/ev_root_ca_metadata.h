@@ -7,7 +7,7 @@
 
 #include "build/build_config.h"
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include <secoidt.h>
 #endif
 
@@ -31,7 +31,7 @@ namespace net {
 // extended-validation (EV) certificates.
 class NET_EXPORT_PRIVATE EVRootCAMetadata {
  public:
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   typedef SECOidTag PolicyOID;
 #elif defined(OS_WIN)
   typedef const char* PolicyOID;
@@ -39,7 +39,7 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
 
   static EVRootCAMetadata* GetInstance();
 
-#if defined(USE_NSS_VERIFIER) || defined(OS_WIN)
+#if defined(USE_NSS_CERTS) || defined(OS_WIN)
   // Returns true if policy_oid is an EV policy OID of some root CA.
   bool IsEVPolicyOID(PolicyOID policy_oid) const;
 
@@ -64,7 +64,7 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   EVRootCAMetadata();
   ~EVRootCAMetadata();
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   typedef std::map<SHA1HashValue, std::vector<PolicyOID>,
                    SHA1HashValueLessThan> PolicyOIDMap;
 

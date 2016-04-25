@@ -13,8 +13,9 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/crypto/quic_crypto_server_config.h"
 #include "net/quic/quic_chromium_connection_helper.h"
@@ -94,7 +95,7 @@ class QuicServer : public EpollCallbackInterface {
   void Initialize();
 
   // Accepts data from the framer and demuxes clients to sessions.
-  scoped_ptr<QuicDispatcher> dispatcher_;
+  std::unique_ptr<QuicDispatcher> dispatcher_;
   // Frames incoming packets and hands them to the dispatcher.
   EpollServer epoll_server_;
 
@@ -129,7 +130,7 @@ class QuicServer : public EpollCallbackInterface {
 
   // Point to a QuicPacketReader object on the heap. The reader allocates more
   // space than allowed on the stack.
-  scoped_ptr<QuicPacketReader> packet_reader_;
+  std::unique_ptr<QuicPacketReader> packet_reader_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicServer);
 };

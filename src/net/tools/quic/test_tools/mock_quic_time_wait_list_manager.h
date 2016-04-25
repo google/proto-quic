@@ -17,7 +17,8 @@ class MockTimeWaitListManager : public QuicTimeWaitListManager {
  public:
   MockTimeWaitListManager(QuicPacketWriter* writer,
                           QuicServerSessionVisitor* visitor,
-                          QuicConnectionHelperInterface* helper);
+                          QuicConnectionHelperInterface* helper,
+                          QuicAlarmFactory* alarm_factory);
   ~MockTimeWaitListManager() override;
 
   MOCK_METHOD4(AddConnectionIdToTimeWait,

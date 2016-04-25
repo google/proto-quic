@@ -4,8 +4,9 @@
 
 #include "net/quic/quic_spdy_stream.h"
 
-#include "base/strings/string_number_conversions.h"
+#include <memory>
 
+#include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_utils.h"
 #include "net/quic/quic_write_blocked_list.h"
@@ -97,7 +98,8 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
 
   void Initialize(bool stream_should_process_data) {
     connection_ = new testing::StrictMock<MockConnection>(
-        &helper_, Perspective::IS_SERVER, SupportedVersions(GetParam()));
+        &helper_, &alarm_factory_, Perspective::IS_SERVER,
+        SupportedVersions(GetParam()));
     session_.reset(new testing::StrictMock<MockQuicSpdySession>(connection_));
     stream_ = new TestStream(kClientDataStreamId1, session_.get(),
                              stream_should_process_data);
@@ -109,6 +111,7 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
 
  protected:
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   MockConnection* connection_;
   std::unique_ptr<MockQuicSpdySession> session_;
 

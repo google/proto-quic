@@ -9,10 +9,10 @@
 #include <stdint.h>
 
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "base/containers/hash_tables.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
@@ -94,7 +94,7 @@ class NET_EXPORT CRLSet : public base::RefCountedThreadSafe<CRLSet> {
   // where the information for that issuer can be found. We have both |crls_|
   // and |crls_index_by_issuer_| because, when applying a delta update, we need
   // to identify a CRL by index.
-  base::hash_map<std::string, size_t> crls_index_by_issuer_;
+  std::unordered_map<std::string, size_t> crls_index_by_issuer_;
   // blocked_spkis_ contains the SHA256 hashes of SPKIs which are to be blocked
   // no matter where in a certificate chain they might appear.
   std::vector<std::string> blocked_spkis_;

@@ -7,8 +7,9 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/quic_packet_writer.h"
 
 namespace net {
@@ -38,7 +39,7 @@ class QuicPacketWriterWrapper : public QuicPacketWriter {
   void set_writer(QuicPacketWriter* writer);
 
  private:
-  scoped_ptr<QuicPacketWriter> writer_;
+  std::unique_ptr<QuicPacketWriter> writer_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketWriterWrapper);
 };

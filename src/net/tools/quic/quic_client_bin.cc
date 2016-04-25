@@ -114,7 +114,7 @@ class FakeCertVerifier : public net::CertVerifier {
              net::CRLSet* crl_set,
              net::CertVerifyResult* verify_result,
              const net::CompletionCallback& callback,
-             scoped_ptr<net::CertVerifier::Request>* out_req,
+             std::unique_ptr<net::CertVerifier::Request>* out_req,
              const net::BoundNetLog& net_log) override {
     return net::OK;
   }
@@ -275,14 +275,14 @@ int main(int argc, char* argv[]) {
     versions.push_back(static_cast<net::QuicVersion>(FLAGS_quic_version));
   }
   // For secure QUIC we need to verify the cert chain.
-  scoped_ptr<CertVerifier> cert_verifier(CertVerifier::CreateDefault());
+  std::unique_ptr<CertVerifier> cert_verifier(CertVerifier::CreateDefault());
   if (line->HasSwitch("disable-certificate-verification")) {
     cert_verifier.reset(new FakeCertVerifier());
   }
-  scoped_ptr<TransportSecurityState> transport_security_state(
+  std::unique_ptr<TransportSecurityState> transport_security_state(
       new TransportSecurityState);
   transport_security_state.reset(new TransportSecurityState);
-  scoped_ptr<CTVerifier> ct_verifier(new MultiLogCTVerifier());
+  std::unique_ptr<CTVerifier> ct_verifier(new MultiLogCTVerifier());
   ProofVerifierChromium* proof_verifier = new ProofVerifierChromium(
       cert_verifier.get(), nullptr, transport_security_state.get(),
       ct_verifier.get());

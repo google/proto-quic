@@ -9,13 +9,13 @@
 
 #include <stdint.h>
 
+#include <cstdint>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/quic/crypto/quic_compressed_certs_cache.h"
 #include "net/quic/quic_crypto_server_stream.h"
 #include "net/quic/quic_protocol.h"
@@ -124,7 +124,7 @@ class QuicServerSessionBase : public QuicSpdySession {
   // Owned by QuicDispatcher.
   QuicCompressedCertsCache* compressed_certs_cache_;
 
-  scoped_ptr<QuicCryptoServerStreamBase> crypto_stream_;
+  std::unique_ptr<QuicCryptoServerStreamBase> crypto_stream_;
   QuicServerSessionVisitor* visitor_;
 
   // Whether bandwidth resumption is enabled for this connection.

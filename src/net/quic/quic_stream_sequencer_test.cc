@@ -4,6 +4,9 @@
 
 #include "net/quic/quic_stream_sequencer.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -69,7 +72,9 @@ class QuicStreamSequencerTest : public ::testing::Test {
 
  protected:
   QuicStreamSequencerTest()
-      : connection_(new MockConnection(&helper_, Perspective::IS_CLIENT)),
+      : connection_(new MockConnection(&helper_,
+                                       &alarm_factory_,
+                                       Perspective::IS_CLIENT)),
         session_(connection_),
         stream_(&session_, 1),
         sequencer_(new QuicStreamSequencer(&stream_, &clock_)) {}
@@ -146,6 +151,7 @@ class QuicStreamSequencerTest : public ::testing::Test {
   }
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   MockConnection* connection_;
   MockClock clock_;
   MockQuicSpdySession session_;
@@ -563,11 +569,8 @@ TEST_F(QuicStreamSequencerTest, DontAcceptOverlappingFrames) {
   sequencer_->OnStreamFrame(frame1);
 
   QuicStreamFrame frame2(kClientDataStreamId1, false, 2, StringPiece("hello"));
-  EXPECT_CALL(stream_, CloseConnectionWithDetails(
-                           FLAGS_quic_consolidate_onstreamframe_errors
-                               ? QUIC_OVERLAPPING_STREAM_DATA
-                               : QUIC_EMPTY_STREAM_FRAME_NO_FIN,
-                           _))
+  EXPECT_CALL(stream_,
+              CloseConnectionWithDetails(QUIC_OVERLAPPING_STREAM_DATA, _))
       .Times(1);
   sequencer_->OnStreamFrame(frame2);
 }

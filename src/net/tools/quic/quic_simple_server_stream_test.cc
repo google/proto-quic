@@ -150,6 +150,7 @@ class QuicSimpleServerStreamTest
   QuicSimpleServerStreamTest()
       : connection_(
             new StrictMock<MockConnection>(&helper_,
+                                           &alarm_factory_,
                                            Perspective::IS_SERVER,
                                            SupportedVersions(GetParam()))),
         session_owner_(new StrictMock<MockQuicServerSessionVisitor>()),
@@ -204,6 +205,7 @@ class QuicSimpleServerStreamTest
 
   SpdyHeaderBlock response_headers_;
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   StrictMock<MockQuicServerSessionVisitor>* session_owner_;
   std::unique_ptr<QuicCryptoServerConfig> crypto_config_;

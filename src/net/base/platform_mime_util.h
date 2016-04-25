@@ -6,8 +6,8 @@
 #define NET_BASE_PLATFORM_MIME_UTIL_H_
 
 #include <string>
+#include <unordered_set>
 
-#include "base/containers/hash_tables.h"
 #include "base/files/file_path.h"
 
 namespace net {
@@ -25,7 +25,7 @@ class PlatformMimeUtil {
   // by GetPreferredExtensionForMimeType.
   void GetPlatformExtensionsForMimeType(
       const std::string& mime_type,
-      base::hash_set<base::FilePath::StringType>* extensions) const;
+      std::unordered_set<base::FilePath::StringType>* extensions) const;
 
  protected:
   // Get the mime type (if any) that is associated with the file extension.

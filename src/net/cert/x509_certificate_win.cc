@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <openssl/sha.h>
+
 #include "base/logging.h"
 #include "base/memory/free_deleter.h"
 #include "base/numerics/safe_conversions.h"
@@ -17,13 +19,6 @@
 #include "crypto/scoped_capi_types.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
-
-// Implement CalculateChainFingerprint() with our native crypto library.
-#if defined(USE_OPENSSL)
-#include <openssl/sha.h>
-#else
-#include <blapi.h>
-#endif
 
 using base::Time;
 
@@ -340,7 +335,6 @@ SHA1HashValue X509Certificate::CalculateCAFingerprint(
   SHA1HashValue sha1;
   memset(sha1.data, 0, sizeof(sha1.data));
 
-#if defined(USE_OPENSSL)
   SHA_CTX ctx;
   if (!SHA1_Init(&ctx))
     return sha1;
@@ -350,19 +344,6 @@ SHA1HashValue X509Certificate::CalculateCAFingerprint(
       return sha1;
   }
   SHA1_Final(sha1.data, &ctx);
-#else  // !USE_OPENSSL
-  SHA1Context* sha1_ctx = SHA1_NewContext();
-  if (!sha1_ctx)
-    return sha1;
-  SHA1_Begin(sha1_ctx);
-  for (size_t i = 0; i < intermediates.size(); ++i) {
-    PCCERT_CONTEXT ca_cert = intermediates[i];
-    SHA1_Update(sha1_ctx, ca_cert->pbCertEncoded, ca_cert->cbCertEncoded);
-  }
-  unsigned int result_len;
-  SHA1_End(sha1_ctx, sha1.data, &result_len, SHA1_LENGTH);
-  SHA1_DestroyContext(sha1_ctx, PR_TRUE);
-#endif  // USE_OPENSSL
 
   return sha1;
 }

@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(eroman): Because VerifySignedData() is only implemented for BoringSSL
-// these tests also depend on BoringSSL.
-#if defined(USE_OPENSSL)
-
 #include "net/cert/internal/verify_certificate_chain.h"
 
 #include "net/cert/internal/parse_certificate.h"
@@ -47,18 +43,6 @@ namespace net {
 
 namespace {
 
-// Adds the certificate |cert_der| as a trust anchor to |trust_store|.
-void AddCertificateToTrustStore(const std::string& cert_der,
-                                TrustStore* trust_store) {
-  ParsedCertificate cert;
-  ASSERT_TRUE(ParseCertificate(der::Input(&cert_der), &cert));
-
-  ParsedTbsCertificate tbs;
-  ASSERT_TRUE(ParseTbsCertificate(cert.tbs_certificate_tlv, &tbs));
-  TrustAnchor anchor = {tbs.spki_tlv.AsString(), tbs.subject_tlv.AsString()};
-  trust_store->anchors.push_back(anchor);
-}
-
 class VerifyCertificateChainPkitsTestDelegate {
  public:
   static bool Verify(std::vector<std::string> cert_ders,
@@ -69,7 +53,7 @@ class VerifyCertificateChainPkitsTestDelegate {
     }
     // First entry in the PKITS chain is the trust anchor.
     TrustStore trust_store;
-    AddCertificateToTrustStore(cert_ders[0], &trust_store);
+    EXPECT_TRUE(trust_store.AddTrustedCertificate(cert_ders[0]));
 
     // PKITS lists chains from trust anchor to target, VerifyCertificateChain
     // takes them starting with the target and not including the trust anchor.
@@ -219,5 +203,3 @@ INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
 // PkitsTest11InhibitPolicyMapping, PkitsTest12InhibitAnyPolicy
 
 }  // namespace net
-
-#endif  // USE_OPENSSL

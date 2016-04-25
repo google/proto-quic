@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/crypto_utils.h"
 
+#include <memory>
+
 #include "crypto/hkdf.h"
 #include "crypto/secure_hash.h"
 #include "net/base/url_util.h"

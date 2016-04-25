@@ -6,9 +6,10 @@
 
 #include <errno.h>
 
+#include <memory>
+
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/stl_util.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/crypto/crypto_protocol.h"
@@ -68,7 +69,7 @@ class QuicTimeWaitListManager::QueuedPacket {
  private:
   const IPEndPoint server_address_;
   const IPEndPoint client_address_;
-  scoped_ptr<QuicEncryptedPacket> packet_;
+  std::unique_ptr<QuicEncryptedPacket> packet_;
 
   DISALLOW_COPY_AND_ASSIGN(QueuedPacket);
 };
@@ -76,11 +77,12 @@ class QuicTimeWaitListManager::QueuedPacket {
 QuicTimeWaitListManager::QuicTimeWaitListManager(
     QuicPacketWriter* writer,
     QuicServerSessionVisitor* visitor,
-    QuicConnectionHelperInterface* helper)
+    QuicConnectionHelperInterface* helper,
+    QuicAlarmFactory* alarm_factory)
     : time_wait_period_(
           QuicTime::Delta::FromSeconds(FLAGS_quic_time_wait_list_seconds)),
       connection_id_clean_up_alarm_(
-          helper->CreateAlarm(new ConnectionIdCleanUpAlarm(this))),
+          alarm_factory->CreateAlarm(new ConnectionIdCleanUpAlarm(this))),
       clock_(helper->GetClock()),
       writer_(writer),
       visitor_(visitor) {

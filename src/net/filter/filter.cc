@@ -359,7 +359,7 @@ Filter::FilterStatus Filter::CopyOut(char* dest_buffer, int* dest_len) {
 
 // static
 Filter* Filter::InitBrotliFilter(FilterType type_id, int buffer_size) {
-  scoped_ptr<Filter> brotli_filter(CreateBrotliFilter(type_id));
+  std::unique_ptr<Filter> brotli_filter(CreateBrotliFilter(type_id));
   if (!brotli_filter.get())
     return nullptr;
 
@@ -369,7 +369,7 @@ Filter* Filter::InitBrotliFilter(FilterType type_id, int buffer_size) {
 
 // static
 Filter* Filter::InitGZipFilter(FilterType type_id, int buffer_size) {
-  scoped_ptr<GZipFilter> gz_filter(new GZipFilter(type_id));
+  std::unique_ptr<GZipFilter> gz_filter(new GZipFilter(type_id));
   gz_filter->InitBuffer(buffer_size);
   return gz_filter->InitDecoding(type_id) ? gz_filter.release() : NULL;
 }
@@ -378,7 +378,8 @@ Filter* Filter::InitGZipFilter(FilterType type_id, int buffer_size) {
 Filter* Filter::InitSdchFilter(FilterType type_id,
                                const FilterContext& filter_context,
                                int buffer_size) {
-  scoped_ptr<SdchFilter> sdch_filter(new SdchFilter(type_id, filter_context));
+  std::unique_ptr<SdchFilter> sdch_filter(
+      new SdchFilter(type_id, filter_context));
   sdch_filter->InitBuffer(buffer_size);
   return sdch_filter->InitDecoding(type_id) ? sdch_filter.release() : NULL;
 }
@@ -388,7 +389,7 @@ Filter* Filter::PrependNewFilter(FilterType type_id,
                                  const FilterContext& filter_context,
                                  int buffer_size,
                                  Filter* filter_list) {
-  scoped_ptr<Filter> first_filter;  // Soon to be start of chain.
+  std::unique_ptr<Filter> first_filter;  // Soon to be start of chain.
   switch (type_id) {
     case FILTER_TYPE_BROTLI:
       first_filter.reset(InitBrotliFilter(type_id, buffer_size));

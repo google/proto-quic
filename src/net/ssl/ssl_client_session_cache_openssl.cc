@@ -52,7 +52,7 @@ void SSLClientSessionCacheOpenSSL::Insert(const std::string& cache_key,
   base::AutoLock lock(lock_);
 
   // Make a new entry.
-  scoped_ptr<CacheEntry> entry(new CacheEntry);
+  std::unique_ptr<CacheEntry> entry(new CacheEntry);
   entry->session.reset(SSL_SESSION_up_ref(session));
   entry->creation_time = clock_->Now();
 
@@ -67,7 +67,7 @@ void SSLClientSessionCacheOpenSSL::Flush() {
 }
 
 void SSLClientSessionCacheOpenSSL::SetClockForTesting(
-    scoped_ptr<base::Clock> clock) {
+    std::unique_ptr<base::Clock> clock) {
   clock_ = std::move(clock);
 }
 

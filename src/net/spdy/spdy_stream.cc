@@ -476,6 +476,10 @@ void SpdyStream::OnPushPromiseHeadersReceived(const SpdyHeaderBlock& headers) {
 void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK(session_->IsStreamActive(stream_id_));
 
+  // Track our bandwidth.
+  recv_bytes_ += buffer ? buffer->GetRemainingSize() : 0;
+  recv_last_byte_time_ = base::TimeTicks::Now();
+
   // If we're still buffering data for a push stream, we will do the
   // check for data received with incomplete headers in
   // PushedStreamReplayData().
@@ -537,10 +541,6 @@ void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   buffer->AddConsumeCallback(
       base::Bind(&SpdyStream::OnReadBufferConsumed, GetWeakPtr()));
 
-  // Track our bandwidth.
-  recv_bytes_ += length;
-  recv_last_byte_time_ = base::TimeTicks::Now();
-
   // May close |this|.
   delegate_->OnDataReceived(std::move(buffer));
 }
@@ -572,9 +572,9 @@ void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
   }
 
   if (pending_send_status_ == NO_MORE_DATA_TO_SEND) {
-    if(io_state_ == STATE_OPEN) {
+    if (io_state_ == STATE_OPEN) {
       io_state_ = STATE_HALF_CLOSED_LOCAL;
-    } else if(io_state_ == STATE_HALF_CLOSED_REMOTE) {
+    } else if (io_state_ == STATE_HALF_CLOSED_REMOTE) {
       io_state_ = STATE_CLOSED;
     } else {
       NOTREACHED() << io_state_;
@@ -770,8 +770,15 @@ void SpdyStream::AddRawSentBytes(size_t sent_bytes) {
 bool SpdyStream::GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
   if (stream_id_ == 0)
     return false;
-
-  return session_->GetLoadTimingInfo(stream_id_, load_timing_info);
+  bool result = session_->GetLoadTimingInfo(stream_id_, load_timing_info);
+  if (type_ == SPDY_PUSH_STREAM) {
+    load_timing_info->push_start = recv_first_byte_time_;
+    bool done_receiving = IsClosed() || (!pending_recv_data_.empty() &&
+                                         !pending_recv_data_.back());
+    if (done_receiving)
+      load_timing_info->push_end = recv_last_byte_time_;
+  }
+  return result;
 }
 
 GURL SpdyStream::GetUrlFromHeaders() const {

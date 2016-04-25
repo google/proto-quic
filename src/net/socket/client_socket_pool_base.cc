@@ -79,7 +79,7 @@ std::unique_ptr<StreamSocket> ConnectJob::PassSocket() {
 }
 
 int ConnectJob::Connect() {
-  if (timeout_duration_ != base::TimeDelta())
+  if (!timeout_duration_.is_zero())
     timer_.Start(FROM_HERE, timeout_duration_, this, &ConnectJob::OnTimeout);
 
   idle_ = false;

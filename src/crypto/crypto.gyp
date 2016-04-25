@@ -17,9 +17,16 @@
       'dependencies': [
         '../base/base.gyp:base',
 #        '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
+        '../third_party/boringssl/boringssl.gyp:boringssl',
       ],
       'defines': [
         'CRYPTO_IMPLEMENTATION',
+      ],
+      'sources!': [
+        'third_party/nss/chromium-nss.h',
+        'third_party/nss/chromium-prtypes.h',
+        'third_party/nss/chromium-sha256.h',
+        'third_party/nss/sha512.cc',
       ],
       'conditions': [
         [ 'os_posix == 1 and OS != "mac" and OS != "ios" and OS != "android"', {
@@ -75,16 +82,6 @@
             'mac_security_services_lock.h',
           ],
         }],
-        [ 'use_openssl == 0 and (OS == "mac" or OS == "ios" or OS == "win")', {
-          'dependencies': [
-            '../third_party/nss/nss.gyp:nspr',
-            '../third_party/nss/nss.gyp:nss',
-          ],
-          'export_dependent_settings': [
-            '../third_party/nss/nss.gyp:nspr',
-            '../third_party/nss/nss.gyp:nss',
-          ],
-        }],
         [ 'OS != "win"', {
           'sources!': [
             'capi_util.h',
@@ -96,57 +93,8 @@
             4267,  # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
           ],
         }],
-        [ 'use_openssl==1', {
-            'dependencies': [
-              '../third_party/boringssl/boringssl.gyp:boringssl',
-            ],
-            # TODO(joth): Use a glob to match exclude patterns once the
-            #             OpenSSL file set is complete.
-            'sources!': [
-              'curve25519-donna.c',
-              'curve25519_nss.cc',
-              'ec_private_key_nss.cc',
-              'ec_signature_creator_nss.cc',
-              'encryptor_nss.cc',
-              'hmac_nss.cc',
-              'rsa_private_key_nss.cc',
-              'secure_hash_default.cc',
-              'signature_creator_nss.cc',
-              'signature_verifier_nss.cc',
-              'symmetric_key_nss.cc',
-              'third_party/nss/chromium-blapi.h',
-              'third_party/nss/chromium-blapit.h',
-              'third_party/nss/chromium-nss.h',
-              'third_party/nss/chromium-prtypes.h',
-              'third_party/nss/chromium-sha256.h',
-              'third_party/nss/pk11akey.cc',
-              'third_party/nss/rsawrapr.c',
-              'third_party/nss/secsign.cc',
-              'third_party/nss/sha512.cc',
-            ],
-          }, {
-            'sources!': [
-              'aead_openssl.cc',
-              'aead_openssl.h',
-              'curve25519_openssl.cc',
-              'ec_private_key_openssl.cc',
-              'ec_signature_creator_openssl.cc',
-              'encryptor_openssl.cc',
-              'hmac_openssl.cc',
-              'openssl_bio_string.cc',
-              'openssl_bio_string.h',
-              'openssl_util.cc',
-              'openssl_util.h',
-              'rsa_private_key_openssl.cc',
-              'secure_hash_openssl.cc',
-              'signature_creator_openssl.cc',
-              'signature_verifier_openssl.cc',
-              'symmetric_key_openssl.cc',
-            ],
-        },],
-        [ 'use_openssl==1 and use_nss_certs==0', {
-            # Some files are built when NSS is used at all, either for the
-            # internal crypto library or the platform certificate library.
+        [ 'use_nss_certs==0', {
+            # Some files are built when NSS is used for the platform certificate library.
             'sources!': [
               'nss_key_util.cc',
               'nss_key_util.h',
@@ -166,9 +114,7 @@
       'targets': [
         {
           'target_name': 'crypto_nacl_win64',
-          # We do not want nacl_helper to depend on NSS because this would
-          # require including a 64-bit copy of NSS. Thus, use the native APIs
-          # for the helper.
+          # We use the native APIs for the helper.
           'type': '<(component)',
           'dependencies': [
             '../base/base.gyp:base_win64',

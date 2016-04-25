@@ -9,8 +9,8 @@
 // of network_interfaces_linux.cc to address_tracker_linux and tests.
 
 #include <string>
+#include <unordered_set>
 
-#include "base/containers/hash_tables.h"
 #include "net/base/address_tracker_linux.h"
 #include "net/base/network_interfaces.h"
 
@@ -24,7 +24,7 @@ typedef std::string (*GetInterfaceSSIDFunction)(const std::string& ifname);
 NET_EXPORT bool GetNetworkListImpl(
     NetworkInterfaceList* networks,
     int policy,
-    const base::hash_set<int>& online_links,
+    const std::unordered_set<int>& online_links,
     const internal::AddressTrackerLinux::AddressMap& address_map,
     GetInterfaceNameFunction get_interface_name);
 

@@ -11,7 +11,9 @@
 #include <ocsp.h>
 #include <pthread.h>
 #include <secerr.h>
+
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -21,7 +23,6 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
@@ -407,7 +408,7 @@ class OCSPRequestSession
       extra_request_headers_.SetHeader(
           HttpRequestHeaders::kContentType, upload_content_type_);
 
-      scoped_ptr<UploadElementReader> reader(new UploadBytesElementReader(
+      std::unique_ptr<UploadElementReader> reader(new UploadBytesElementReader(
           upload_content_.data(), upload_content_.size()));
       request_->set_upload(
           ElementsUploadDataStream::CreateWithReader(std::move(reader), 0));
@@ -422,7 +423,7 @@ class OCSPRequestSession
   GURL url_;                        // The URL we eventually wound up at
   std::string http_request_method_;
   base::TimeDelta timeout_;         // The timeout for OCSP
-  scoped_ptr<URLRequest> request_;  // The actual request this wraps
+  std::unique_ptr<URLRequest> request_;  // The actual request this wraps
   scoped_refptr<IOBuffer> buffer_;  // Read buffer
   HttpRequestHeaders extra_request_headers_;
 

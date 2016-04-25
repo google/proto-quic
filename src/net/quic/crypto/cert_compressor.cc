@@ -4,6 +4,7 @@
 
 #include "net/quic/crypto/cert_compressor.h"
 
+#include <cstdint>
 #include <memory>
 
 #include "base/logging.h"

@@ -5,11 +5,11 @@
 #ifndef NET_SSL_SSL_KEY_LOGGER_H_
 #define NET_SSL_SSL_KEY_LOGGER_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 
 namespace base {
 class FilePath;
@@ -40,7 +40,7 @@ class SSLKeyLogger {
 
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
   // Destroyed on |task_runner_|.
-  scoped_ptr<Core> core_;
+  std::unique_ptr<Core> core_;
 
   DISALLOW_COPY_AND_ASSIGN(SSLKeyLogger);
 };

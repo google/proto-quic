@@ -58,19 +58,6 @@ NET_EXPORT std::string IPAddressToPackedString(const IPAddressNumber& addr);
 NET_EXPORT bool ParseIPLiteralToNumber(const base::StringPiece& ip_literal,
                                        IPAddressNumber* ip_number);
 
-// Converts an IPv4 address to an IPv4-mapped IPv6 address.
-// For example 192.168.0.1 would be converted to ::ffff:192.168.0.1.
-NET_EXPORT_PRIVATE IPAddressNumber ConvertIPv4NumberToIPv6Number(
-    const IPAddressNumber& ipv4_number);
-
-// Returns true iff |address| is an IPv4-mapped IPv6 address.
-NET_EXPORT_PRIVATE bool IsIPv4Mapped(const IPAddressNumber& address);
-
-// Converts an IPv4-mapped IPv6 address to IPv4 address. Should only be called
-// on IPv4-mapped IPv6 addresses.
-NET_EXPORT_PRIVATE IPAddressNumber ConvertIPv4MappedToIPv4(
-    const IPAddressNumber& address);
-
 // Returns number of matching initial bits between the addresses |a1| and |a2|.
 unsigned CommonPrefixLength(const IPAddressNumber& a1,
                             const IPAddressNumber& a2);

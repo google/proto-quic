@@ -37,13 +37,13 @@ class QuicPacketCreatorPeer {
   static void SetPacketNumber(QuicPacketCreator* creator, QuicPacketNumber s);
   static void FillPacketHeader(QuicPacketCreator* creator,
                                QuicPacketHeader* header);
-  static size_t CreateStreamFrame(QuicPacketCreator* creator,
-                                  QuicStreamId id,
-                                  QuicIOVector iov,
-                                  size_t iov_offset,
-                                  QuicStreamOffset offset,
-                                  bool fin,
-                                  QuicFrame* frame);
+  static void CreateStreamFrame(QuicPacketCreator* creator,
+                                QuicStreamId id,
+                                QuicIOVector iov,
+                                size_t iov_offset,
+                                QuicStreamOffset offset,
+                                bool fin,
+                                QuicFrame* frame);
   static SerializedPacket SerializeAllFrames(QuicPacketCreator* creator,
                                              const QuicFrames& frames,
                                              char* buffer,

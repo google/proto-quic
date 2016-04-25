@@ -149,12 +149,13 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
     // redirect call.
     //
     // When this function is called, the request will still contain the
-    // original URL, the destination of the redirect is provided in 'new_url'.
-    // If the delegate does not cancel the request and |*defer_redirect| is
-    // false, then the redirect will be followed, and the request's URL will be
-    // changed to the new URL.  Otherwise if the delegate does not cancel the
-    // request and |*defer_redirect| is true, then the redirect will be
-    // followed once FollowDeferredRedirect is called on the URLRequest.
+    // original URL, the destination of the redirect is provided in
+    // |redirect_info.new_url|.  If the delegate does not cancel the request
+    // and |*defer_redirect| is false, then the redirect will be followed, and
+    // the request's URL will be changed to the new URL.  Otherwise if the
+    // delegate does not cancel the request and |*defer_redirect| is true, then
+    // the redirect will be followed once FollowDeferredRedirect is called
+    // on the URLRequest.
     //
     // The caller must set |*defer_redirect| to false, so that delegates do not
     // need to set it if they are happy with the default behavior of not

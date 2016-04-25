@@ -59,7 +59,8 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
   // new one.
   static HistogramBase* FactoryGet(const std::string& name, int32_t flags);
 
-  // Create a histogram using data in persistent storage.
+  // Create a histogram using data in persistent storage. The allocator must
+  // live longer than the created sparse histogram.
   static std::unique_ptr<HistogramBase> PersistentCreate(
       PersistentHistogramAllocator* allocator,
       const std::string& name,

@@ -107,17 +107,13 @@ bool FLAGS_quic_use_cached_compressed_certs = true;
 // consecutive RTOs are sent.
 bool FLAGS_quic_enable_rto_timeout = true;
 
-// Use a byte conservation approach instead of packet conservation in the
-// Slow Start Large Reduction experiment.
-bool FLAGS_quic_sslr_byte_conservation = true;
-
 // Try to use the socket timestamp to determine the time a packet was
 // received instead of Now().
 bool FLAGS_quic_use_socket_timestamp = true;
 
-// If true, handling of errors from invalid stream frames is done in
-// one place in QuicStreamSequencer::OnStreamFrame.
-bool FLAGS_quic_consolidate_onstreamframe_errors = true;
-
 // Resend 0RTT requests in response to an REJ that re-establishes encryption.
 bool FLAGS_quic_reply_to_rej = true;
+
+// If true, QuicFramer will ignore invalid error codes when processing GoAway,
+// ConnectionClose, and RstStream frames.
+bool FLAGS_quic_ignore_invalid_error_code = true;

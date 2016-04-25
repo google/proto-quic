@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
@@ -58,15 +58,15 @@ class NET_EXPORT ChannelIDService
     void RequestStarted(ChannelIDService* service,
                         base::TimeTicks request_start,
                         const CompletionCallback& callback,
-                        scoped_ptr<crypto::ECPrivateKey>* key,
+                        std::unique_ptr<crypto::ECPrivateKey>* key,
                         ChannelIDServiceJob* job);
 
-    void Post(int error, scoped_ptr<crypto::ECPrivateKey> key);
+    void Post(int error, std::unique_ptr<crypto::ECPrivateKey> key);
 
     ChannelIDService* service_;
     base::TimeTicks request_start_;
     CompletionCallback callback_;
-    scoped_ptr<crypto::ECPrivateKey>* key_;
+    std::unique_ptr<crypto::ECPrivateKey>* key_;
     ChannelIDServiceJob* job_;
   };
 
@@ -102,7 +102,7 @@ class NET_EXPORT ChannelIDService
   //
   // |*out_req| will be initialized with a handle to the async request.
   int GetOrCreateChannelID(const std::string& host,
-                           scoped_ptr<crypto::ECPrivateKey>* key,
+                           std::unique_ptr<crypto::ECPrivateKey>* key,
                            const CompletionCallback& callback,
                            Request* out_req);
 
@@ -122,7 +122,7 @@ class NET_EXPORT ChannelIDService
   //
   // |*out_req| will be initialized with a handle to the async request.
   int GetChannelID(const std::string& host,
-                   scoped_ptr<crypto::ECPrivateKey>* key,
+                   std::unique_ptr<crypto::ECPrivateKey>* key,
                    const CompletionCallback& callback,
                    Request* out_req);
 
@@ -143,21 +143,21 @@ class NET_EXPORT ChannelIDService
  private:
   void GotChannelID(int err,
                     const std::string& server_identifier,
-                    scoped_ptr<crypto::ECPrivateKey> key);
+                    std::unique_ptr<crypto::ECPrivateKey> key);
   void GeneratedChannelID(
       const std::string& server_identifier,
       int error,
-      scoped_ptr<ChannelIDStore::ChannelID> channel_id);
+      std::unique_ptr<ChannelIDStore::ChannelID> channel_id);
   void HandleResult(int error,
                     const std::string& server_identifier,
-                    scoped_ptr<crypto::ECPrivateKey> key);
+                    std::unique_ptr<crypto::ECPrivateKey> key);
 
   // Searches for an in-flight request for the same domain. If found,
   // attaches to the request and returns true. Returns false if no in-flight
   // request is found.
   bool JoinToInFlightRequest(const base::TimeTicks& request_start,
                              const std::string& domain,
-                             scoped_ptr<crypto::ECPrivateKey>* key,
+                             std::unique_ptr<crypto::ECPrivateKey>* key,
                              bool create_if_missing,
                              const CompletionCallback& callback,
                              Request* out_req);
@@ -168,12 +168,12 @@ class NET_EXPORT ChannelIDService
   // failure (including failure to find a channel ID of |domain|).
   int LookupChannelID(const base::TimeTicks& request_start,
                       const std::string& domain,
-                      scoped_ptr<crypto::ECPrivateKey>* key,
+                      std::unique_ptr<crypto::ECPrivateKey>* key,
                       bool create_if_missing,
                       const CompletionCallback& callback,
                       Request* out_req);
 
-  scoped_ptr<ChannelIDStore> channel_id_store_;
+  std::unique_ptr<ChannelIDStore> channel_id_store_;
   scoped_refptr<base::TaskRunner> task_runner_;
   const int id_;
 

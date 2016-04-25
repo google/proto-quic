@@ -4,6 +4,7 @@
 
 #include "net/quic/quic_crypto_client_stream.h"
 
+#include <memory>
 #include <vector>
 
 #include "base/metrics/histogram_macros.h"

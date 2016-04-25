@@ -59,7 +59,7 @@
 #include "net/ssl/ssl_key_logger.h"
 #endif
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
 #include "net/cert_net/nss_ocsp.h"
 #endif
 
@@ -396,7 +396,7 @@ class SSLClientSocketOpenSSL::PeerCertificateChain {
   // this will behave as if Reset(NULL) was called.
   void Reset(STACK_OF(X509)* chain);
 
-  // Note that when USE_OPENSSL is defined, OSCertHandle is X509*
+  // Note that when USE_OPENSSL_CERTS is defined, OSCertHandle is X509*
   scoped_refptr<X509Certificate> AsOSChain() const;
 
   size_t size() const {
@@ -877,7 +877,7 @@ int SSLClientSocketOpenSSL::Init() {
   DCHECK(!ssl_);
   DCHECK(!transport_bio_);
 
-#if defined(USE_NSS_VERIFIER)
+#if defined(USE_NSS_CERTS)
   if (ssl_config_.cert_io_enabled) {
     // TODO(davidben): Move this out of SSLClientSocket. See
     // https://crbug.com/539520.

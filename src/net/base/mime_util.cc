@@ -6,9 +6,9 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <unordered_set>
 
 #include "base/base64.h"
-#include "base/containers/hash_tables.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/rand_util.h"
@@ -463,7 +463,7 @@ void GetExtensionsFromHardCodedMappings(
     const MimeInfo* mappings,
     size_t mappings_len,
     const std::string& leading_mime_type,
-    base::hash_set<base::FilePath::StringType>* extensions) {
+    std::unordered_set<base::FilePath::StringType>* extensions) {
   for (size_t i = 0; i < mappings_len; ++i) {
     if (base::StartsWith(mappings[i].mime_type, leading_mime_type,
                          base::CompareCase::INSENSITIVE_ASCII)) {
@@ -484,7 +484,7 @@ void GetExtensionsHelper(
     const char* const* standard_types,
     size_t standard_types_len,
     const std::string& leading_mime_type,
-    base::hash_set<base::FilePath::StringType>* extensions) {
+    std::unordered_set<base::FilePath::StringType>* extensions) {
   for (size_t i = 0; i < standard_types_len; ++i) {
     g_mime_util.Get().GetPlatformExtensionsForMimeType(standard_types[i],
                                                        extensions);
@@ -503,12 +503,13 @@ void GetExtensionsHelper(
 
 // Note that the elements in the source set will be appended to the target
 // vector.
-template<class T>
-void HashSetToVector(base::hash_set<T>* source, std::vector<T>* target) {
+template <class T>
+void UnorderedSetToVector(std::unordered_set<T>* source,
+                          std::vector<T>* target) {
   size_t old_target_size = target->size();
   target->resize(old_target_size + source->size());
   size_t i = 0;
-  for (typename base::hash_set<T>::iterator iter = source->begin();
+  for (typename std::unordered_set<T>::iterator iter = source->begin();
        iter != source->end(); ++iter, ++i)
     (*target)[old_target_size + i] = *iter;
 }
@@ -535,7 +536,7 @@ void GetExtensionsForMimeType(
     return;
 
   const std::string mime_type = base::ToLowerASCII(unsafe_mime_type);
-  base::hash_set<base::FilePath::StringType> unique_extensions;
+  std::unordered_set<base::FilePath::StringType> unique_extensions;
 
   if (base::EndsWith(mime_type, "/*", base::CompareCase::INSENSITIVE_ASCII)) {
     std::string leading_mime_type = mime_type.substr(0, mime_type.length() - 1);
@@ -569,7 +570,7 @@ void GetExtensionsForMimeType(
                                        &unique_extensions);
   }
 
-  HashSetToVector(&unique_extensions, extensions);
+  UnorderedSetToVector(&unique_extensions, extensions);
 }
 
 NET_EXPORT std::string GenerateMimeMultipartBoundary() {

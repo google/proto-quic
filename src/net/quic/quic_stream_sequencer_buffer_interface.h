@@ -9,8 +9,6 @@
 
 #include "net/quic/quic_protocol.h"
 
-using base::StringPiece;
-
 namespace net {
 
 // The QuicStreamSequencer uses an implementation of this interface to store
@@ -30,7 +28,7 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBufferInterface {
   // bytes buffered in |bytes_buffered|. Returns an error otherwise.
   // |timestamp| is the time the data arrived.
   virtual QuicErrorCode OnStreamData(QuicStreamOffset offset,
-                                     StringPiece data,
+                                     base::StringPiece data,
                                      QuicTime timestamp,
                                      size_t* bytes_buffered) = 0;
 

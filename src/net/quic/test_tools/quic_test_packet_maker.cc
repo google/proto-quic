@@ -139,7 +139,7 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
     QuicPacketNumber largest_received,
     QuicPacketNumber least_unacked,
     QuicErrorCode quic_error,
-    std::string& quic_error_details) {
+    const std::string& quic_error_details) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.reset_flag = false;

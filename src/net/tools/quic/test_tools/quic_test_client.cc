@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/test_tools/quic_test_client.h"
 
+#include <memory>
+
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_errors.h"
@@ -52,7 +54,7 @@ class RecordingProofVerifier : public ProofVerifier {
                               const string& signature,
                               const ProofVerifyContext* context,
                               string* error_details,
-                              scoped_ptr<ProofVerifyDetails>* details,
+                              std::unique_ptr<ProofVerifyDetails>* details,
                               ProofVerifierCallback* callback) override {
     common_name_.clear();
     if (certs.empty()) {
@@ -184,9 +186,7 @@ QuicTestClient::QuicTestClient(IPEndPoint server_address,
                                      config,
                                      supported_versions,
                                      &epoll_server_)),
-      allow_bidirectional_data_(false),
-      num_requests_(0),
-      num_responses_(0) {
+      allow_bidirectional_data_(false) {
   Initialize();
 }
 
@@ -204,6 +204,8 @@ void QuicTestClient::Initialize() {
   connect_attempted_ = false;
   auto_reconnect_ = false;
   buffer_body_ = true;
+  num_requests_ = 0;
+  num_responses_ = 0;
   ClearPerRequestState();
   // As chrome will generally do this, we want it to be the default when it's
   // not overridden.
@@ -311,7 +313,7 @@ ssize_t QuicTestClient::SendMessage(const HTTPMessage& message) {
   // CHECK(message.body_chunks().empty())
   //      << "HTTPMessage::body_chunks not supported";
 
-  scoped_ptr<BalsaHeaders> munged_headers(MungeHeaders(message.headers()));
+  std::unique_ptr<BalsaHeaders> munged_headers(MungeHeaders(message.headers()));
   ssize_t ret = GetOrCreateStreamAndSendRequest(
       (munged_headers.get() ? munged_headers.get() : message.headers()),
       message.body(), message.has_complete_message(), nullptr);

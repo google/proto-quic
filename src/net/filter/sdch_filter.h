@@ -16,10 +16,10 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/net_export.h"
 #include "net/base/sdch_dictionary.h"
 #include "net/base/sdch_manager.h"
@@ -82,7 +82,8 @@ class NET_EXPORT_PRIVATE SdchFilter : public Filter {
   // The underlying decoder that processes data.
   // This data structure is initialized by InitDecoding and updated in
   // ReadFilteredData.
-  scoped_ptr<open_vcdiff::VCDiffStreamingDecoder> vcdiff_streaming_decoder_;
+  std::unique_ptr<open_vcdiff::VCDiffStreamingDecoder>
+      vcdiff_streaming_decoder_;
 
   // After the encoded response SDCH header is read, this variable contains
   // the server hash with trailing null byte.
@@ -131,7 +132,7 @@ class NET_EXPORT_PRIVATE SdchFilter : public Filter {
   // If the response was encoded with a dictionary different than those
   // advertised (e.g. a cached response using an old dictionary), this
   // variable preserves that dictionary from deletion during decoding.
-  scoped_ptr<SdchManager::DictionarySet> unexpected_dictionary_handle_;
+  std::unique_ptr<SdchManager::DictionarySet> unexpected_dictionary_handle_;
 
   DISALLOW_COPY_AND_ASSIGN(SdchFilter);
 };

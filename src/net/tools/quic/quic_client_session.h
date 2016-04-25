@@ -7,6 +7,7 @@
 #ifndef NET_TOOLS_QUIC_QUIC_CLIENT_SESSION_H_
 #define NET_TOOLS_QUIC_QUIC_CLIENT_SESSION_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
@@ -81,7 +82,7 @@ class QuicClientSession : public QuicClientSessionBase {
   QuicCryptoClientConfig* crypto_config() { return crypto_config_; }
 
  private:
-  scoped_ptr<QuicCryptoClientStreamBase> crypto_stream_;
+  std::unique_ptr<QuicCryptoClientStreamBase> crypto_stream_;
   QuicServerId server_id_;
   QuicCryptoClientConfig* crypto_config_;
 

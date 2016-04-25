@@ -42,6 +42,12 @@ QuicConnectionHelperInterface* QuicDispatcherPeer::GetHelper(
 }
 
 // static
+QuicAlarmFactory* QuicDispatcherPeer::GetAlarmFactory(
+    QuicDispatcher* dispatcher) {
+  return dispatcher->alarm_factory_.get();
+}
+
+// static
 QuicDispatcher::WriteBlockedList* QuicDispatcherPeer::GetWriteBlockedList(
     QuicDispatcher* dispatcher) {
   return &dispatcher->write_blocked_list_;

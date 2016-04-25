@@ -15,7 +15,7 @@ namespace net {
 
 class NetworkChangeNotifierLinux::Thread : public base::Thread {
  public:
-  explicit Thread(const base::hash_set<std::string>& ignored_interfaces);
+  explicit Thread(const std::unordered_set<std::string>& ignored_interfaces);
   ~Thread() override;
 
   // Plumbing for NetworkChangeNotifier::GetCurrentConnectionType.
@@ -45,7 +45,7 @@ class NetworkChangeNotifierLinux::Thread : public base::Thread {
 };
 
 NetworkChangeNotifierLinux::Thread::Thread(
-    const base::hash_set<std::string>& ignored_interfaces)
+    const std::unordered_set<std::string>& ignored_interfaces)
     : base::Thread("NetworkChangeNotifier"),
       address_tracker_(new internal::AddressTrackerLinux(
           base::Bind(&NetworkChangeNotifierLinux::Thread::OnIPAddressChanged,
@@ -95,7 +95,7 @@ void NetworkChangeNotifierLinux::Thread::OnLinkChanged() {
 }
 
 NetworkChangeNotifierLinux::NetworkChangeNotifierLinux(
-    const base::hash_set<std::string>& ignored_interfaces)
+    const std::unordered_set<std::string>& ignored_interfaces)
     : NetworkChangeNotifier(NetworkChangeCalculatorParamsLinux()),
       notifier_thread_(new Thread(ignored_interfaces)) {
   // We create this notifier thread because the notification implementation

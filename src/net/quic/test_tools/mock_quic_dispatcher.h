@@ -20,7 +20,8 @@ class MockQuicDispatcher : public QuicDispatcher {
  public:
   MockQuicDispatcher(const QuicConfig& config,
                      const QuicCryptoServerConfig* crypto_config,
-                     QuicConnectionHelperInterface* helper);
+                     std::unique_ptr<QuicConnectionHelperInterface> helper,
+                     std::unique_ptr<QuicAlarmFactory> alarm_factory);
 
   ~MockQuicDispatcher() override;
 

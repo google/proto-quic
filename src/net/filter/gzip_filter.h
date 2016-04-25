@@ -15,8 +15,9 @@
 #ifndef NET_FILTER_GZIP_FILTER_H_
 #define NET_FILTER_GZIP_FILTER_H_
 
+#include <memory>
+
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/filter/filter.h"
 
 typedef struct z_stream_s z_stream;
@@ -115,7 +116,7 @@ class GZipFilter : public Filter {
 
   // Used to parse the gzip header in gzip stream.
   // It is used when the decoding_mode_ is DECODE_MODE_GZIP.
-  scoped_ptr<GZipHeader> gzip_header_;
+  std::unique_ptr<GZipHeader> gzip_header_;
 
   // Tracks the progress of parsing gzip header.
   // This variable is maintained by gzip_header_.
@@ -131,7 +132,7 @@ class GZipFilter : public Filter {
   // The control block of zlib which actually does the decoding.
   // This data structure is initialized by InitDecoding and updated only by
   // DoInflate, with InsertZlibHeader being the exception as a workaround.
-  scoped_ptr<z_stream> zlib_stream_;
+  std::unique_ptr<z_stream> zlib_stream_;
 
   // For robustness, when we see the solo sdch filter, we chain in a gzip filter
   // in front of it, with this flag to indicate that the gzip decoding might not

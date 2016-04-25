@@ -291,9 +291,14 @@ PersistentHistogramAllocator::GetCreateHistogramResultHistogram() {
     if (!initialized) {
       initialized = true;
       if (g_allocator) {
+// Don't log in release-with-asserts builds, otherwise the test_installer step
+// fails because this code writes to a log file before the installer code had a
+// chance to set the log file's location.
+#if !defined(DCHECK_ALWAYS_ON)
         DLOG(WARNING) << "Creating the results-histogram inside persistent"
                       << " memory can cause future allocations to crash if"
                       << " that memory is ever released (for testing).";
+#endif
       }
 
       histogram_pointer = LinearHistogram::FactoryGet(

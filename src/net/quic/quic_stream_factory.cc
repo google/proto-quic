@@ -5,8 +5,9 @@
 #include "net/quic/quic_stream_factory.h"
 
 #include <algorithm>
-#include <set>
 #include <utility>
+
+#include <openssl/aead.h>
 
 #include "base/location.h"
 #include "base/macros.h"
@@ -22,6 +23,7 @@
 #include "base/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
+#include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/base/socket_performance_watcher.h"
@@ -38,6 +40,7 @@
 #include "net/quic/crypto/quic_random.h"
 #include "net/quic/crypto/quic_server_info.h"
 #include "net/quic/port_suggester.h"
+#include "net/quic/quic_chromium_alarm_factory.h"
 #include "net/quic/quic_chromium_client_session.h"
 #include "net/quic/quic_chromium_connection_helper.h"
 #include "net/quic/quic_chromium_packet_reader.h"
@@ -56,13 +59,6 @@
 
 #if defined(OS_WIN)
 #include "base/win/windows_version.h"
-#endif
-
-#if defined(USE_OPENSSL)
-#include <openssl/aead.h>
-#include "crypto/openssl_util.h"
-#else
-#include "base/cpu.h"
 #endif
 
 using std::min;
@@ -384,12 +380,12 @@ int QuicStreamFactory::Job::DoLoadServerInfo() {
     const int kMaxLoadServerInfoTimeoutMs = 50;
     // Wait for DiskCache a maximum of 50ms.
     int64_t load_server_info_timeout_ms =
-        min(static_cast<int>(
-                (factory_->load_server_info_timeout_srtt_multiplier_ *
-                 factory_->GetServerNetworkStatsSmoothedRttInMicroseconds(
-                     server_id_)) /
-                1000),
-            kMaxLoadServerInfoTimeoutMs);
+        std::min(static_cast<int>(
+                     (factory_->load_server_info_timeout_srtt_multiplier_ *
+                      factory_->GetServerNetworkStatsSmoothedRttInMicroseconds(
+                          server_id_)) /
+                     1000),
+                 kMaxLoadServerInfoTimeoutMs);
     if (load_server_info_timeout_ms > 0) {
       factory_->task_runner_->PostDelayedTask(
           FROM_HERE,
@@ -681,13 +677,8 @@ QuicStreamFactory::QuicStreamFactory(
   }
   if (enable_token_binding && channel_id_service && IsTokenBindingSupported())
     crypto_config_.tb_key_params.push_back(kP256);
-#if defined(USE_OPENSSL)
   crypto::EnsureOpenSSLInit();
   bool has_aes_hardware_support = !!EVP_has_aes_hardware();
-#else
-  base::CPU cpu;
-  bool has_aes_hardware_support = cpu.has_aesni() && cpu.has_avx();
-#endif
   UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.PreferAesGcm",
                         has_aes_hardware_support);
   if (has_aes_hardware_support || prefer_aes_)
@@ -766,9 +757,8 @@ void QuicStreamFactory::set_quic_server_info_factory(
   quic_server_info_factory_.reset(quic_server_info_factory);
 }
 
-bool QuicStreamFactory::CanUseExistingSession(QuicServerId server_id,
-                                              PrivacyMode privacy_mode,
-                                              StringPiece origin_host) {
+bool QuicStreamFactory::CanUseExistingSession(const QuicServerId& server_id,
+                                              base::StringPiece origin_host) {
   // TODO(zhongyi): delete active_sessions_.empty() checks once the
   // android crash issue(crbug.com/498823) is resolved.
   if (active_sessions_.empty())
@@ -777,7 +767,7 @@ bool QuicStreamFactory::CanUseExistingSession(QuicServerId server_id,
   if (it == active_sessions_.end())
     return false;
   QuicChromiumClientSession* session = it->second;
-  return session->CanPool(origin_host.as_string(), privacy_mode);
+  return session->CanPool(origin_host.as_string(), server_id.privacy_mode());
 }
 
 int QuicStreamFactory::Create(const HostPortPair& host_port_pair,
@@ -1557,17 +1547,21 @@ int QuicStreamFactory::CreateSession(
   }
 
   if (!helper_.get()) {
-    helper_.reset(new QuicChromiumConnectionHelper(
-        base::ThreadTaskRunnerHandle::Get().get(), clock_.get(),
-        random_generator_));
+    helper_.reset(
+        new QuicChromiumConnectionHelper(clock_.get(), random_generator_));
+  }
+
+  if (!alarm_factory_.get()) {
+    alarm_factory_.reset(new QuicChromiumAlarmFactory(
+        base::ThreadTaskRunnerHandle::Get().get(), clock_.get()));
   }
   QuicConnectionId connection_id = random_generator_->RandUint64();
   InitializeCachedStateInCryptoConfig(server_id, server_info, &connection_id);
 
   QuicChromiumPacketWriter* writer = new QuicChromiumPacketWriter(socket.get());
   QuicConnection* connection = new QuicConnection(
-      connection_id, addr, helper_.get(), writer, true /* owns_writer */,
-      Perspective::IS_CLIENT, supported_versions_);
+      connection_id, addr, helper_.get(), alarm_factory_.get(), writer,
+      true /* owns_writer */, Perspective::IS_CLIENT, supported_versions_);
   writer->SetConnection(connection);
   connection->SetMaxPacketLength(max_packet_length_);
 
@@ -1636,9 +1630,10 @@ void QuicStreamFactory::ActivateSession(const QuicServerId& server_id,
 
 int64_t QuicStreamFactory::GetServerNetworkStatsSmoothedRttInMicroseconds(
     const QuicServerId& server_id) const {
+  url::SchemeHostPort server("https", server_id.host_port_pair().host(),
+                             server_id.host_port_pair().port());
   const ServerNetworkStats* stats =
-      http_server_properties_->GetServerNetworkStats(
-          server_id.host_port_pair());
+      http_server_properties_->GetServerNetworkStats(server);
   if (stats == nullptr)
     return 0;
   return stats->srtt.InMicroseconds();
@@ -1701,12 +1696,13 @@ void QuicStreamFactory::MaybeInitialize() {
     return;
 
   has_initialized_data_ = true;
-  for (const std::pair<const HostPortPair, AlternativeServiceInfoVector>&
+  for (const std::pair<const url::SchemeHostPort, AlternativeServiceInfoVector>&
            key_value : http_server_properties_->alternative_service_map()) {
+    HostPortPair host_port_pair(key_value.first.host(), key_value.first.port());
     for (const AlternativeServiceInfo& alternative_service_info :
          key_value.second) {
       if (alternative_service_info.alternative_service.protocol == QUIC) {
-        quic_supported_servers_at_startup_.insert(key_value.first);
+        quic_supported_servers_at_startup_.insert(host_port_pair);
         break;
       }
     }
@@ -1722,7 +1718,7 @@ void QuicStreamFactory::MaybeInitialize() {
   // touches quic_server_info_map.
   const QuicServerInfoMap& quic_server_info_map =
       http_server_properties_->quic_server_info_map();
-  vector<QuicServerId> server_list(quic_server_info_map.size());
+  std::vector<QuicServerId> server_list(quic_server_info_map.size());
   for (const auto& key_value : quic_server_info_map)
     server_list.push_back(key_value.first);
   for (auto it = server_list.rbegin(); it != server_list.rend(); ++it) {
@@ -1750,8 +1746,9 @@ void QuicStreamFactory::ProcessGoingAwaySession(
     ServerNetworkStats network_stats;
     network_stats.srtt = base::TimeDelta::FromMicroseconds(stats.srtt_us);
     network_stats.bandwidth_estimate = stats.estimated_bandwidth;
-    http_server_properties_->SetServerNetworkStats(server_id.host_port_pair(),
-                                                   network_stats);
+    url::SchemeHostPort server("https", server_id.host_port_pair().host(),
+                               server_id.host_port_pair().port());
+    http_server_properties_->SetServerNetworkStats(server, network_stats);
     return;
   }
 

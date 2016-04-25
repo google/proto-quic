@@ -48,11 +48,12 @@ typedef uint32_t SpdyStreamId;
 // flow control).
 const SpdyStreamId kSessionFlowControlStreamId = 0;
 
-// The maxmium possible control frame size allowed by the spec.
-const int32_t kSpdyMaxControlFrameSize = (1 << 24) - 1;
+// The maxmium possible frame payload size allowed by the spec.
+const uint32_t kSpdyMaxFrameSizeLimit = (1 << 24) - 1;
 
-// The maximum control frame size we accept.
-const int32_t kControlFrameSizeLimit = 1 << 14;
+// The initial value for the maximum frame payload size as per the spec. This is
+// the maximum control frame size we accept.
+const uint32_t kSpdyInitialFrameSizeLimit = 1 << 14;
 
 // Maximum window size for a Spdy stream or session.
 const int32_t kSpdyMaximumWindowSize = 0x7FFFFFFF;  // Max signed 32bit int
@@ -282,9 +283,7 @@ enum SpdyFrameType {
 enum SpdyDataFlags {
   DATA_FLAG_NONE = 0x00,
   DATA_FLAG_FIN = 0x01,
-  DATA_FLAG_END_SEGMENT = 0x02,
   DATA_FLAG_PADDED = 0x08,
-  DATA_FLAG_COMPRESSED = 0x20,
 };
 
 // Flags on control packets
@@ -300,7 +299,6 @@ enum SpdyPingFlags {
 
 // Used by HEADERS, PUSH_PROMISE, and CONTINUATION.
 enum SpdyHeadersFlags {
-  HEADERS_FLAG_END_SEGMENT = 0x02,
   HEADERS_FLAG_END_HEADERS = 0x04,
   HEADERS_FLAG_PADDED = 0x08,
   HEADERS_FLAG_PRIORITY = 0x20,
@@ -440,6 +438,12 @@ class NET_EXPORT_PRIVATE SpdyConstants {
   // Returns the frame type for non-control (i.e. data) frames
   // in the given SPDY version.
   static int DataFrameType(SpdyMajorVersion version);
+
+  // (HTTP/2) All standard frame types except WINDOW_UPDATE are
+  // (stream-specific xor connection-level). Returns false iff we know
+  // the given frame type does not align with the given streamID.
+  static bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
+                                        SpdyFrameType frame_type_field);
 
   // Returns true if a given on-the-wire enumeration of a setting id is valid
   // for a given protocol version, false otherwise.
@@ -855,7 +859,7 @@ class NET_EXPORT_PRIVATE SpdyWindowUpdateIR : public SpdyFrameWithStreamIdIR {
   }
   int32_t delta() const { return delta_; }
   void set_delta(int32_t delta) {
-    DCHECK_LT(0, delta);
+    DCHECK_LE(0, delta);
     DCHECK_LE(delta, kSpdyMaximumWindowSize);
     delta_ = delta;
   }

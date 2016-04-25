@@ -7,12 +7,12 @@
 #ifndef NET_COOKIES_COOKIE_STORE_H_
 #define NET_COOKIES_COOKIE_STORE_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/callback_forward.h"
 #include "base/callback_list.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/cookies/canonical_cookie.h"
@@ -198,7 +198,7 @@ class NET_EXPORT CookieStore {
   // (url, name) pair are removed. If this method ever needs to support an
   // unbounded amount of such pairs, this contract needs to change and
   // implementors need to be improved to not behave this way.
-  virtual scoped_ptr<CookieChangedSubscription> AddCallbackForCookie(
+  virtual std::unique_ptr<CookieChangedSubscription> AddCallbackForCookie(
       const GURL& url,
       const std::string& name,
       const CookieChangedCallback& callback) = 0;

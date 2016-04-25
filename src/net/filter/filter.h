@@ -48,13 +48,13 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/base/sdch_manager.h"
@@ -308,7 +308,7 @@ class NET_EXPORT_PRIVATE Filter {
                                  int buffer_size);
 
   // An optional filter to process output from this filter.
-  scoped_ptr<Filter> next_filter_;
+  std::unique_ptr<Filter> next_filter_;
 
   // Remember what status or local filter last returned so we can better handle
   // chained filters.

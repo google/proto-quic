@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/crypto_framer.h"
 
+#include <memory>
+
 #include "base/strings/stringprintf.h"
 #include "net/quic/crypto/crypto_protocol.h"
 #include "net/quic/quic_data_reader.h"

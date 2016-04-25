@@ -4,7 +4,8 @@
 
 #include "net/quic/quic_framer.h"
 
-#include <stdint.h>
+#include <cstdint>
+#include <memory>
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
@@ -1494,8 +1495,13 @@ bool QuicFramer::ProcessRstStreamFrame(QuicDataReader* reader,
   }
 
   if (error_code >= QUIC_STREAM_LAST_ERROR) {
-    set_detailed_error("Invalid rst stream error code.");
-    return false;
+    if (FLAGS_quic_ignore_invalid_error_code) {
+      // Ignore invalid stream error code if any.
+      error_code = QUIC_STREAM_LAST_ERROR;
+    } else {
+      set_detailed_error("Invalid rst stream error code.");
+      return false;
+    }
   }
 
   frame->error_code = static_cast<QuicRstStreamErrorCode>(error_code);
@@ -1511,8 +1517,13 @@ bool QuicFramer::ProcessConnectionCloseFrame(QuicDataReader* reader,
   }
 
   if (error_code >= QUIC_LAST_ERROR) {
-    set_detailed_error("Invalid error code.");
-    return false;
+    if (FLAGS_quic_ignore_invalid_error_code) {
+      // Ignore invalid QUIC error code if any.
+      error_code = QUIC_LAST_ERROR;
+    } else {
+      set_detailed_error("Invalid error code.");
+      return false;
+    }
   }
 
   frame->error_code = static_cast<QuicErrorCode>(error_code);
@@ -1534,12 +1545,17 @@ bool QuicFramer::ProcessGoAwayFrame(QuicDataReader* reader,
     set_detailed_error("Unable to read go away error code.");
     return false;
   }
-  frame->error_code = static_cast<QuicErrorCode>(error_code);
 
   if (error_code >= QUIC_LAST_ERROR) {
-    set_detailed_error("Invalid error code.");
-    return false;
+    if (FLAGS_quic_ignore_invalid_error_code) {
+      // Ignore invalid QUIC error code if any.
+      error_code = QUIC_LAST_ERROR;
+    } else {
+      set_detailed_error("Invalid error code.");
+      return false;
+    }
   }
+  frame->error_code = static_cast<QuicErrorCode>(error_code);
 
   uint32_t stream_id;
   if (!reader->ReadUInt32(&stream_id)) {

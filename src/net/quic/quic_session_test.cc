@@ -197,6 +197,7 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
   explicit QuicSessionTestBase(Perspective perspective)
       : connection_(
             new StrictMock<MockConnection>(&helper_,
+                                           &alarm_factory_,
                                            perspective,
                                            SupportedVersions(GetParam()))),
         session_(connection_) {
@@ -257,6 +258,7 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
   QuicVersion version() const { return connection_->version(); }
 
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   StrictMock<MockConnection>* connection_;
   TestSession session_;
   set<QuicStreamId> closed_streams_;

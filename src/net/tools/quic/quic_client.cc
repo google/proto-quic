@@ -21,6 +21,7 @@
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_server_id.h"
+#include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_socket_utils.h"
 #include "net/tools/quic/spdy_balsa_utils.h"
@@ -32,6 +33,7 @@
 // TODO(rtenneti): Add support for MMSG_MORE.
 #define MMSG_MORE 0
 
+using base::StringPiece;
 using std::string;
 using std::vector;
 
@@ -68,6 +70,7 @@ QuicClient::QuicClient(IPEndPoint server_address,
           supported_versions,
           config,
           new QuicEpollConnectionHelper(epoll_server, QuicAllocator::SIMPLE),
+          new QuicEpollAlarmFactory(epoll_server),
           proof_verifier),
       server_address_(server_address),
       local_port_(0),
@@ -230,7 +233,7 @@ void QuicClient::StartConnect() {
   }
 
   CreateQuicClientSession(new QuicConnection(
-      GetNextConnectionId(), server_address_, helper(), writer,
+      GetNextConnectionId(), server_address_, helper(), alarm_factory(), writer,
       /* owns_writer= */ false, Perspective::IS_CLIENT, supported_versions()));
 
   // Reset |writer_| after |session()| so that the old writer outlives the old

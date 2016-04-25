@@ -8,14 +8,15 @@
 #ifndef NET_TOOLS_QUIC_QUIC_CLIENT_BASE_H_
 #define NET_TOOLS_QUIC_QUIC_CLIENT_BASE_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "net/base/ip_endpoint.h"
 #include "net/log/net_log.h"
 #include "net/quic/crypto/crypto_handshake.h"
 #include "net/quic/crypto/quic_crypto_client_config.h"
+#include "net/quic/quic_alarm_factory.h"
 #include "net/quic/quic_bandwidth.h"
 #include "net/quic/quic_client_push_promise_index.h"
 #include "net/quic/quic_config.h"
@@ -36,6 +37,7 @@ class QuicClientBase {
                  const QuicVersionVector& supported_versions,
                  const QuicConfig& config,
                  QuicConnectionHelperInterface* helper,
+                 QuicAlarmFactory* alarm_factory,
                  ProofVerifier* proof_verifier);
 
   ~QuicClientBase();
@@ -181,6 +183,8 @@ class QuicClientBase {
 
   QuicConnectionHelperInterface* helper() { return helper_.get(); }
 
+  QuicAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
+
   void set_num_sent_client_hellos(int num_sent_client_hellos) {
     num_sent_client_hellos_ = num_sent_client_hellos;
   }
@@ -199,14 +203,17 @@ class QuicClientBase {
   QuicCryptoClientConfig crypto_config_;
 
   // Helper to be used by created connections. Needs to outlive |session_|.
-  scoped_ptr<QuicConnectionHelperInterface> helper_;
+  std::unique_ptr<QuicConnectionHelperInterface> helper_;
+
+  // Helper to be used by created connections. Needs to outlive |session_|.
+  std::unique_ptr<QuicAlarmFactory> alarm_factory_;
 
   // Writer used to actually send packets to the wire. Needs to outlive
   // |session_|.
-  scoped_ptr<QuicPacketWriter> writer_;
+  std::unique_ptr<QuicPacketWriter> writer_;
 
   // Session which manages streams.
-  scoped_ptr<QuicClientSession> session_;
+  std::unique_ptr<QuicClientSession> session_;
 
   // This vector contains QUIC versions which we currently support.
   // This should be ordered such that the highest supported version is the first

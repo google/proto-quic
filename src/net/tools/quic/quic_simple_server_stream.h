@@ -31,6 +31,12 @@ class QuicSimpleServerStream : public QuicSpdyStream {
   // QuicSpdyStream
   void OnInitialHeadersComplete(bool fin, size_t frame_len) override;
   void OnTrailingHeadersComplete(bool fin, size_t frame_len) override;
+  void OnInitialHeadersComplete(bool fin,
+                                size_t frame_len,
+                                const QuicHeaderList& header_list) override;
+  void OnTrailingHeadersComplete(bool fin,
+                                 size_t frame_len,
+                                 const QuicHeaderList& header_list) override;
 
   // ReliableQuicStream implementation called by the sequencer when there is
   // data (or a FIN) to be read.

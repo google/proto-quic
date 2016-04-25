@@ -10,6 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -33,6 +35,8 @@
 #include "net/tools/quic/quic_server_session_base.h"
 #include "net/tools/quic/test_tools/mock_quic_server_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
+
+using base::StringPiece;
 
 namespace net {
 
@@ -138,7 +142,7 @@ void CompareCharArraysWithHexError(const std::string& description,
                                    const char* expected,
                                    const int expected_len);
 
-bool DecodeHexString(const base::StringPiece& hex, std::string* bytes);
+bool DecodeHexString(const StringPiece& hex, std::string* bytes);
 
 // Returns the length of a QuicPacket that is capable of holding either a
 // stream frame or a minimal ack frame.  Sets |*payload_length| to the number
@@ -318,12 +322,23 @@ class MockConnectionHelper : public QuicConnectionHelperInterface {
   ~MockConnectionHelper() override;
   const QuicClock* GetClock() const override;
   QuicRandom* GetRandomGenerator() override;
+  QuicBufferAllocator* GetBufferAllocator() override;
+  void AdvanceTime(QuicTime::Delta delta);
+
+ private:
+  MockClock clock_;
+  MockRandom random_generator_;
+  SimpleBufferAllocator buffer_allocator_;
+
+  DISALLOW_COPY_AND_ASSIGN(MockConnectionHelper);
+};
+
+class MockAlarmFactory : public QuicAlarmFactory {
+ public:
   QuicAlarm* CreateAlarm(QuicAlarm::Delegate* delegate) override;
   QuicArenaScopedPtr<QuicAlarm> CreateAlarm(
       QuicArenaScopedPtr<QuicAlarm::Delegate> delegate,
       QuicConnectionArena* arena) override;
-  QuicBufferAllocator* GetBufferAllocator() override;
-  void AdvanceTime(QuicTime::Delta delta);
 
   // No-op alarm implementation
   class TestAlarm : public QuicAlarm {
@@ -340,38 +355,37 @@ class MockConnectionHelper : public QuicConnectionHelperInterface {
   void FireAlarm(QuicAlarm* alarm) {
     reinterpret_cast<TestAlarm*>(alarm)->Fire();
   }
-
- private:
-  MockClock clock_;
-  MockRandom random_generator_;
-  SimpleBufferAllocator buffer_allocator_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockConnectionHelper);
 };
 
 class MockConnection : public QuicConnection {
  public:
   // Uses a ConnectionId of 42 and 127.0.0.1:123.
-  MockConnection(MockConnectionHelper* helper, Perspective perspective);
+  MockConnection(MockConnectionHelper* helper,
+                 MockAlarmFactory* alarm_factory,
+                 Perspective perspective);
 
   // Uses a ConnectionId of 42.
   MockConnection(IPEndPoint address,
                  MockConnectionHelper* helper,
+                 MockAlarmFactory* alarm_factory,
                  Perspective perspective);
 
   // Uses 127.0.0.1:123.
   MockConnection(QuicConnectionId connection_id,
                  MockConnectionHelper* helper,
+                 MockAlarmFactory* alarm_factory,
                  Perspective perspective);
 
   // Uses a ConnectionId of 42, and 127.0.0.1:123.
   MockConnection(MockConnectionHelper* helper,
+                 MockAlarmFactory* alarm_factory,
                  Perspective perspective,
                  const QuicVersionVector& supported_versions);
 
   MockConnection(QuicConnectionId connection_id,
                  IPEndPoint address,
                  MockConnectionHelper* helper,
+                 MockAlarmFactory* alarm_factory,
                  Perspective perspective,
                  const QuicVersionVector& supported_versions);
 
@@ -435,9 +449,12 @@ class MockConnection : public QuicConnection {
 
 class PacketSavingConnection : public MockConnection {
  public:
-  PacketSavingConnection(MockConnectionHelper* helper, Perspective perspective);
+  PacketSavingConnection(MockConnectionHelper* helper,
+                         MockAlarmFactory* alarm_factory,
+                         Perspective perspective);
 
   PacketSavingConnection(MockConnectionHelper* helper,
+                         MockAlarmFactory* alarm_factory,
                          Perspective perspective,
                          const QuicVersionVector& supported_versions);
 
@@ -481,18 +498,28 @@ class MockQuicSpdySession : public QuicSpdySession {
                     QuicStreamOffset bytes_written));
 
   MOCK_METHOD2(OnStreamHeaders,
-               void(QuicStreamId stream_id, base::StringPiece headers_data));
+               void(QuicStreamId stream_id, StringPiece headers_data));
   MOCK_METHOD2(OnStreamHeadersPriority,
                void(QuicStreamId stream_id, SpdyPriority priority));
   MOCK_METHOD3(OnStreamHeadersComplete,
                void(QuicStreamId stream_id, bool fin, size_t frame_len));
+  MOCK_METHOD4(OnStreamHeaderList,
+               void(QuicStreamId stream_id,
+                    bool fin,
+                    size_t frame_len,
+                    const QuicHeaderList& header_list));
+  MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
   MOCK_METHOD2(OnPromiseHeaders,
                void(QuicStreamId stream_id, StringPiece headers_data));
   MOCK_METHOD3(OnPromiseHeadersComplete,
                void(QuicStreamId stream_id,
                     QuicStreamId promised_stream_id,
                     size_t frame_len));
-  MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
+  MOCK_METHOD4(OnPromiseHeaderList,
+               void(QuicStreamId stream_id,
+                    QuicStreamId promised_stream_id,
+                    size_t frame_len,
+                    const QuicHeaderList& header_list));
   MOCK_METHOD5(WriteHeaders,
                size_t(QuicStreamId id,
                       const SpdyHeaderBlock& headers,
@@ -791,6 +818,7 @@ void CreateClientSessionForTest(QuicServerId server_id,
                                 QuicTime::Delta connection_start_time,
                                 QuicVersionVector supported_versions,
                                 MockConnectionHelper* helper,
+                                MockAlarmFactory* alarm_factory,
                                 QuicCryptoClientConfig* crypto_client_config,
                                 PacketSavingConnection** client_connection,
                                 TestQuicSpdyClientSession** client_session);
@@ -815,6 +843,7 @@ void CreateServerSessionForTest(
     QuicTime::Delta connection_start_time,
     QuicVersionVector supported_versions,
     MockConnectionHelper* helper,
+    MockAlarmFactory* alarm_factory,
     QuicCryptoServerConfig* crypto_server_config,
     QuicCompressedCertsCache* compressed_certs_cache,
     PacketSavingConnection** server_connection,

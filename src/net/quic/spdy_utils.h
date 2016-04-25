@@ -45,7 +45,13 @@ class NET_EXPORT_PRIVATE SpdyUtils {
                             SpdyHeaderBlock* trailers);
 
   // Copies a list of headers to a SpdyHeaderBlock. Performs similar validation
-  // to SpdyFramer::ParseHeaderBlockInBuffer.
+  // to SpdyFramer::ParseHeaderBlockInBuffer and ParseHeaders, above.
+  static bool CopyAndValidateHeaders(const QuicHeaderList& header_list,
+                                     int64_t* content_length,
+                                     SpdyHeaderBlock* headers);
+
+  // Copies a list of headers to a SpdyHeaderBlock. Performs similar validation
+  // to SpdyFramer::ParseHeaderBlockInBuffer and ParseTrailers, above.
   static bool CopyAndValidateTrailers(const QuicHeaderList& header_list,
                                       size_t* final_byte_offset,
                                       SpdyHeaderBlock* trailers);

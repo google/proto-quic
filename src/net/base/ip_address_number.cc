@@ -84,41 +84,6 @@ bool ParseIPLiteralToNumber(const base::StringPiece& ip_literal,
   return family == url::CanonHostInfo::IPV4;
 }
 
-namespace {
-
-const unsigned char kIPv4MappedPrefix[] =
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF };
-}
-
-IPAddressNumber ConvertIPv4NumberToIPv6Number(
-    const IPAddressNumber& ipv4_number) {
-  DCHECK(ipv4_number.size() == 4);
-
-  // IPv4-mapped addresses are formed by:
-  // <80 bits of zeros>  + <16 bits of ones> + <32-bit IPv4 address>.
-  IPAddressNumber ipv6_number;
-  ipv6_number.reserve(16);
-  ipv6_number.insert(ipv6_number.end(),
-                     kIPv4MappedPrefix,
-                     kIPv4MappedPrefix + arraysize(kIPv4MappedPrefix));
-  ipv6_number.insert(ipv6_number.end(), ipv4_number.begin(), ipv4_number.end());
-  return ipv6_number;
-}
-
-bool IsIPv4Mapped(const IPAddressNumber& address) {
-  if (address.size() != kIPv6AddressSize)
-    return false;
-  return std::equal(address.begin(),
-                    address.begin() + arraysize(kIPv4MappedPrefix),
-                    kIPv4MappedPrefix);
-}
-
-IPAddressNumber ConvertIPv4MappedToIPv4(const IPAddressNumber& address) {
-  DCHECK(IsIPv4Mapped(address));
-  return IPAddressNumber(address.begin() + arraysize(kIPv4MappedPrefix),
-                         address.end());
-}
-
 unsigned CommonPrefixLength(const IPAddressNumber& a1,
                             const IPAddressNumber& a2) {
   DCHECK_EQ(a1.size(), a2.size());

@@ -8,10 +8,7 @@
 #ifndef NET_QUIC_QUIC_CONNECTION_HELPER_H_
 #define NET_QUIC_QUIC_CONNECTION_HELPER_H_
 
-#include <set>
-
 #include "base/macros.h"
-#include "base/memory/weak_ptr.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_protocol.h"
@@ -31,26 +28,19 @@ class QuicRandom;
 class NET_EXPORT_PRIVATE QuicChromiumConnectionHelper
     : public QuicConnectionHelperInterface {
  public:
-  QuicChromiumConnectionHelper(base::TaskRunner* task_runner,
-                               const QuicClock* clock,
+  QuicChromiumConnectionHelper(const QuicClock* clock,
                                QuicRandom* random_generator);
   ~QuicChromiumConnectionHelper() override;
 
   // QuicConnectionHelperInterface
   const QuicClock* GetClock() const override;
   QuicRandom* GetRandomGenerator() override;
-  QuicAlarm* CreateAlarm(QuicAlarm::Delegate* delegate) override;
-  QuicArenaScopedPtr<QuicAlarm> CreateAlarm(
-      QuicArenaScopedPtr<QuicAlarm::Delegate> delegate,
-      QuicConnectionArena* arena) override;
   QuicBufferAllocator* GetBufferAllocator() override;
 
  private:
-  base::TaskRunner* task_runner_;
   const QuicClock* clock_;
   QuicRandom* random_generator_;
   SimpleBufferAllocator buffer_allocator_;
-  base::WeakPtrFactory<QuicChromiumConnectionHelper> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicChromiumConnectionHelper);
 };

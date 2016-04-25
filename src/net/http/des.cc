@@ -4,16 +4,10 @@
 
 #include "net/http/des.h"
 
-#include "base/logging.h"
-
-#if defined(USE_OPENSSL)
 #include <openssl/des.h>
+
+#include "base/logging.h"
 #include "crypto/openssl_util.h"
-#elif defined(OS_IOS)
-#include <CommonCrypto/CommonCryptor.h>
-#else
-#error "Unknown platform"
-#endif
 
 // The iOS version of DESEncrypt is our own code.
 // DESSetKeyParity and DESMakeKey are based on
@@ -80,8 +74,6 @@ void DESMakeKey(const uint8_t* raw, uint8_t* key) {
   key[7] = DESSetKeyParity((raw[6] << 1));
 }
 
-#if defined(USE_OPENSSL)
-
 void DESEncrypt(const uint8_t* key, const uint8_t* src, uint8_t* hash) {
   crypto::EnsureOpenSSLInit();
 
@@ -92,18 +84,5 @@ void DESEncrypt(const uint8_t* key, const uint8_t* src, uint8_t* hash) {
   DES_ecb_encrypt(reinterpret_cast<const DES_cblock*>(src),
                   reinterpret_cast<DES_cblock*>(hash), &ks, DES_ENCRYPT);
 }
-
-#elif defined(OS_IOS)
-
-void DESEncrypt(const uint8_t* key, const uint8_t* src, uint8_t* hash) {
-  CCCryptorStatus status;
-  size_t data_out_moved = 0;
-  status = CCCrypt(kCCEncrypt, kCCAlgorithmDES, kCCOptionECBMode,
-                   key, 8, NULL, src, 8, hash, 8, &data_out_moved);
-  DCHECK(status == kCCSuccess);
-  DCHECK(data_out_moved == 8);
-}
-
-#endif
 
 }  // namespace net

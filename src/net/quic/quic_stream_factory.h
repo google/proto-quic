@@ -36,6 +36,7 @@
 #include "net/quic/quic_crypto_stream.h"
 #include "net/quic/quic_http_stream.h"
 #include "net/quic/quic_protocol.h"
+#include "net/quic/quic_server_id.h"
 #include "net/ssl/ssl_config_service.h"
 
 namespace net {
@@ -48,11 +49,11 @@ class CTVerifier;
 class HostResolver;
 class HttpServerProperties;
 class QuicClock;
+class QuicChromiumAlarmFactory;
 class QuicChromiumClientSession;
 class QuicChromiumConnectionHelper;
 class QuicCryptoClientStreamFactory;
 class QuicRandom;
-class QuicServerId;
 class QuicServerInfo;
 class QuicServerInfoFactory;
 class QuicStreamFactory;
@@ -108,7 +109,6 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   QuicStreamFactory* factory_;
   HostPortPair host_port_pair_;
   std::string origin_host_;
-  std::string url_;
   PrivacyMode privacy_mode_;
   BoundNetLog net_log_;
   CompletionCallback callback_;
@@ -168,9 +168,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Returns true if there is an existing session to |server_id| which can be
   // used for request to |origin_host|.
-  bool CanUseExistingSession(QuicServerId server_id,
-                             PrivacyMode privacy_mode,
-                             StringPiece origin_host);
+  bool CanUseExistingSession(const QuicServerId& server_id,
+                             base::StringPiece origin_host);
 
   // Creates a new QuicHttpStream to |host_port_pair| which will be
   // owned by |request|.
@@ -305,6 +304,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   QuicChromiumConnectionHelper* helper() { return helper_.get(); }
 
+  QuicChromiumAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
+
   bool enable_port_selection() const { return enable_port_selection_; }
 
   bool has_quic_server_info_factory() {
@@ -429,6 +430,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // The helper used for all connections.
   std::unique_ptr<QuicChromiumConnectionHelper> helper_;
+
+  // The alarm factory used for all connections.
+  std::unique_ptr<QuicChromiumAlarmFactory> alarm_factory_;
 
   // Contains owning pointers to all sessions that currently exist.
   SessionIdMap all_sessions_;

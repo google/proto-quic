@@ -43,8 +43,29 @@ void QuicSimpleServerStream::OnInitialHeadersComplete(bool fin,
   MarkHeadersConsumed(decompressed_headers().length());
 }
 
+void QuicSimpleServerStream::OnInitialHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  QuicSpdyStream::OnInitialHeadersComplete(fin, frame_len, header_list);
+  if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length_,
+                                         &request_headers_)) {
+    DVLOG(1) << "Invalid headers";
+    SendErrorResponse();
+  }
+  ConsumeHeaderList();
+}
+
 void QuicSimpleServerStream::OnTrailingHeadersComplete(bool fin,
                                                        size_t frame_len) {
+  QUIC_BUG << "Server does not support receiving Trailers.";
+  SendErrorResponse();
+}
+
+void QuicSimpleServerStream::OnTrailingHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
   QUIC_BUG << "Server does not support receiving Trailers.";
   SendErrorResponse();
 }

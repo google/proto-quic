@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
 
+#include <memory>
+
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using base::StringPiece;

@@ -9,31 +9,25 @@
 
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "base/containers/hash_tables.h"
 #include "base/files/file_path.h"
+#include "base/strings/string_piece.h"
 #include "net/base/address_family.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_export.h"
 
 namespace net {
-  typedef std::pair<std::string, AddressFamily> DnsHostsKey;
-};
 
-namespace BASE_HASH_NAMESPACE {
+using DnsHostsKey = std::pair<std::string, AddressFamily>;
 
-template<>
-struct hash<net::DnsHostsKey> {
-  std::size_t operator()(const net::DnsHostsKey& key) const {
+struct DnsHostsKeyHash {
+  std::size_t operator()(const DnsHostsKey& key) const {
     return base::StringPieceHash()(key.first) + key.second;
   }
 };
-
-}  // namespace BASE_HASH_NAMESPACE
-
-namespace net {
 
 // There are OS-specific variations in how commas in the hosts file behave.
 enum ParseHostsCommaMode {
@@ -56,13 +50,7 @@ enum ParseHostsCommaMode {
 // 127.0.0.1 localhost
 // 10.0.0.1 localhost
 // The expected resolution of localhost is 127.0.0.1.
-#if !defined(OS_ANDROID)
-typedef base::hash_map<DnsHostsKey, IPAddress> DnsHosts;
-#else
-// Android's hash_map doesn't support ==, so fall back to map.  (Chromium on
-// Android doesn't use the built-in DNS resolver anyway, so it's irrelevant.)
-typedef std::map<DnsHostsKey, IPAddress> DnsHosts;
-#endif
+using DnsHosts = std::unordered_map<DnsHostsKey, IPAddress, DnsHostsKeyHash>;
 
 // Parses |contents| (as read from /etc/hosts or equivalent) and stores results
 // in |dns_hosts|. Invalid lines are ignored (as in most implementations).

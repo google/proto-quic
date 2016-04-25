@@ -4,6 +4,8 @@
 
 #include "net/quic/crypto/aes_128_gcm_12_decrypter.h"
 
+#include <memory>
+
 #include "net/quic/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 

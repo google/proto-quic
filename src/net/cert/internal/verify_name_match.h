@@ -5,6 +5,8 @@
 #ifndef NET_CERT_INTERNAL_VERIFY_NAME_MATCH_H_
 #define NET_CERT_INTERNAL_VERIFY_NAME_MATCH_H_
 
+#include <string>
+
 #include "base/compiler_specific.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
@@ -14,6 +16,14 @@ namespace net {
 namespace der {
 class Input;
 }  // namespace der
+
+// Normalizes DER-encoded X.501 Name |name_rdn_sequence| (which should not
+// include the Sequence tag).  If successful, returns true and stores the
+// normalized DER-encoded Name into |normalized_rdn_sequence| (not including an
+// outer Sequence tag). Returns false if there was an error parsing or
+// normalizing the input.
+NET_EXPORT bool NormalizeName(const der::Input& name_rdn_sequence,
+                              std::string* normalized_rdn_sequence);
 
 // Compares DER-encoded X.501 Name values according to RFC 5280 rules.
 // |a_rdn_sequence| and |b_rdn_sequence| should be the DER-encoded RDNSequence

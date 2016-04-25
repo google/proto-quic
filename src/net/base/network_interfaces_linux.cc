@@ -114,7 +114,7 @@ std::string GetInterfaceSSID(const std::string& ifname) {
 bool GetNetworkListImpl(
     NetworkInterfaceList* networks,
     int policy,
-    const base::hash_set<int>& online_links,
+    const std::unordered_set<int>& online_links,
     const internal::AddressTrackerLinux::AddressMap& address_map,
     GetInterfaceNameFunction get_interface_name) {
   std::map<int, std::string> ifnames;

@@ -150,6 +150,10 @@ WARN_UNUSED_RESULT bool BitStringIsAllZeros(const der::BitString& bits) {
 
 }  // namespace
 
+ParsedCertificate::ParsedCertificate() {}
+
+ParsedCertificate::~ParsedCertificate() {}
+
 ParsedTbsCertificate::ParsedTbsCertificate() {}
 
 ParsedTbsCertificate::~ParsedTbsCertificate() {}

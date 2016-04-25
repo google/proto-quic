@@ -5,8 +5,8 @@
 #ifndef NET_QUIC_QUIC_CRYPTO_CLIENT_STREAM_H_
 #define NET_QUIC_QUIC_CRYPTO_CLIENT_STREAM_H_
 
-#include <stdint.h>
-
+#include <cstdint>
+#include <memory>
 #include <string>
 
 #include "base/macros.h"

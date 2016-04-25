@@ -33,15 +33,6 @@ class NET_EXPORT_PRIVATE ChaCha20Poly1305Rfc7539Encrypter
   // variant of ChaCha20+Poly1305.
   static bool IsSupported();
 
-#if !defined(USE_OPENSSL)
- protected:
-  // AeadBaseEncrypter methods:
-  void FillAeadParams(base::StringPiece nonce,
-                      base::StringPiece associated_data,
-                      size_t auth_tag_size,
-                      AeadParams* aead_params) const override;
-#endif
-
  private:
   DISALLOW_COPY_AND_ASSIGN(ChaCha20Poly1305Rfc7539Encrypter);
 };

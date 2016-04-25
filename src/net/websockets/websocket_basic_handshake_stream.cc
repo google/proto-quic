@@ -9,13 +9,13 @@
 #include <iterator>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "base/base64.h"
 #include "base/bind.h"
 #include "base/compiler_specific.h"
-#include "base/containers/hash_tables.h"
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
@@ -187,8 +187,8 @@ bool ValidateSubProtocol(
     std::string* failure_message) {
   size_t iter = 0;
   std::string value;
-  base::hash_set<std::string> requested_set(requested_sub_protocols.begin(),
-                                            requested_sub_protocols.end());
+  std::unordered_set<std::string> requested_set(requested_sub_protocols.begin(),
+                                                requested_sub_protocols.end());
   int count = 0;
   bool has_multiple_protocols = false;
   bool has_invalid_protocol = false;

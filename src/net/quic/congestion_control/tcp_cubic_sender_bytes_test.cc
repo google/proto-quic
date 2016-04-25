@@ -5,6 +5,7 @@
 #include "net/quic/congestion_control/tcp_cubic_sender_bytes.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 
 #include "base/logging.h"
@@ -287,7 +288,6 @@ TEST_F(TcpCubicSenderBytesTest, SlowStartPacketLossWithLargeReduction) {
 }
 
 TEST_F(TcpCubicSenderBytesTest, SlowStartHalfPacketLossWithLargeReduction) {
-  FLAGS_quic_sslr_byte_conservation = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kSSLR);

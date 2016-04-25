@@ -6,10 +6,10 @@
 #include <sys/epoll.h>
 
 #include <list>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/waitable_event.h"
@@ -254,7 +254,8 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         server_started_(false),
         strike_register_no_startup_period_(false),
         chlo_multiplier_(0),
-        stream_factory_(nullptr) {
+        stream_factory_(nullptr),
+        support_server_push_(false) {
     client_supported_versions_ = GetParam().client_supported_versions;
     server_supported_versions_ = GetParam().server_supported_versions;
     negotiated_version_ = GetParam().negotiated_version;
@@ -343,8 +344,9 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     // TODO(nimia): Consider setting the congestion control algorithm for the
     // client as well according to the test parameter.
     copt.push_back(GetParam().congestion_control_tag);
-    copt.push_back(kSPSH);
-
+    if (support_server_push_) {
+      copt.push_back(kSPSH);
+    }
     if (GetParam().client_supports_stateless_rejects) {
       copt.push_back(kSREJ);
     }
@@ -360,7 +362,10 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         reinterpret_cast<QuicEpollConnectionHelper*>(
             QuicConnectionPeer::GetHelper(
                 client_->client()->session()->connection())),
+        QuicConnectionPeer::GetAlarmFactory(
+            client_->client()->session()->connection()),
         new ClientDelegate(client_->client()));
+
     initialized_ = true;
     return client_->client()->connected();
   }
@@ -397,6 +402,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         GetParam().server_uses_stateless_rejects_if_peer_supported;
 
     server_writer_->Initialize(QuicDispatcherPeer::GetHelper(dispatcher),
+                               QuicDispatcherPeer::GetAlarmFactory(dispatcher),
                                new ServerDelegate(dispatcher));
     if (stream_factory_ != nullptr) {
       static_cast<QuicTestServer*>(server_thread_->server())
@@ -507,8 +513,8 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   bool initialized_;
   IPEndPoint server_address_;
   string server_hostname_;
-  scoped_ptr<ServerThread> server_thread_;
-  scoped_ptr<QuicTestClient> client_;
+  std::unique_ptr<ServerThread> server_thread_;
+  std::unique_ptr<QuicTestClient> client_;
   PacketDroppingTestWriter* client_writer_;
   PacketDroppingTestWriter* server_writer_;
   bool server_started_;
@@ -520,6 +526,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   bool strike_register_no_startup_period_;
   size_t chlo_multiplier_;
   QuicTestServer::StreamFactory* stream_factory_;
+  bool support_server_push_;
 };
 
 // Run all end to end tests with all supported versions.
@@ -588,7 +595,7 @@ TEST_P(EndToEndTest, MultipleRequestResponse) {
 
 TEST_P(EndToEndTest, MultipleClients) {
   ASSERT_TRUE(Initialize());
-  scoped_ptr<QuicTestClient> client2(CreateQuicClient(nullptr));
+  std::unique_ptr<QuicTestClient> client2(CreateQuicClient(nullptr));
 
   HTTPMessage request(HttpConstants::HTTP_1_1, HttpConstants::POST, "/foo");
   request.AddHeader("content-length", "3");
@@ -1738,7 +1745,8 @@ TEST_P(EndToEndTest, ServerSendPublicResetWithDifferentConnectionId) {
   header.rejected_packet_number = 10101;
   QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
                     Perspective::IS_SERVER);
-  scoped_ptr<QuicEncryptedPacket> packet(framer.BuildPublicResetPacket(header));
+  std::unique_ptr<QuicEncryptedPacket> packet(
+      framer.BuildPublicResetPacket(header));
   testing::NiceMock<MockQuicConnectionDebugVisitor> visitor;
   client_->client()->session()->connection()->set_debug_visitor(&visitor);
   EXPECT_CALL(visitor, OnIncorrectConnectionId(incorrect_connection_id))
@@ -1773,7 +1781,8 @@ TEST_P(EndToEndTest, ClientSendPublicResetWithDifferentConnectionId) {
   header.rejected_packet_number = 10101;
   QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
                     Perspective::IS_CLIENT);
-  scoped_ptr<QuicEncryptedPacket> packet(framer.BuildPublicResetPacket(header));
+  std::unique_ptr<QuicEncryptedPacket> packet(
+      framer.BuildPublicResetPacket(header));
   client_writer_->WritePacket(
       packet->data(), packet->length(),
       client_->client()->GetLatestClientAddress().address(), server_address_,
@@ -1792,7 +1801,7 @@ TEST_P(EndToEndTest, ServerSendVersionNegotiationWithDifferentConnectionId) {
   // Send the version negotiation packet.
   QuicConnectionId incorrect_connection_id =
       client_->client()->session()->connection()->connection_id() + 1;
-  scoped_ptr<QuicEncryptedPacket> packet(
+  std::unique_ptr<QuicEncryptedPacket> packet(
       QuicFramer::BuildVersionNegotiationPacket(incorrect_connection_id,
                                                 server_supported_versions_));
   testing::NiceMock<MockQuicConnectionDebugVisitor> visitor;
@@ -1895,7 +1904,7 @@ TEST_P(EndToEndTest, BadEncryptedData) {
   EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
   EXPECT_EQ(200u, client_->response_headers()->parsed_response_code());
 
-  scoped_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
       client_->client()->session()->connection()->connection_id(), false, false,
       false, kDefaultPathId, 1, "At least 20 characters.",
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER));
@@ -2295,6 +2304,7 @@ class EndToEndTestServerPush : public EndToEndTest {
   EndToEndTestServerPush() : EndToEndTest() {
     FLAGS_quic_supports_push_promise = true;
     client_config_.SetMaxStreamsPerConnection(kNumMaxStreams, kNumMaxStreams);
+    support_server_push_ = true;
   }
 
   // Add a request with its response and |num_resources| push resources into
@@ -2542,6 +2552,37 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   EXPECT_EQ(12u, client_->num_responses());
 }
 
+TEST_P(EndToEndTestServerPush, DisabledWithoutConnectionOption) {
+  // Tests that server push won't be triggered when kSPSH is not set by client.
+  support_server_push_ = false;
+  ASSERT_TRUE(Initialize());
+
+  // Add a response with headers, body, and push resources.
+  const string kBody = "body content";
+  size_t const kNumResources = 4;
+  string push_urls[] = {
+      "https://example.com/font.woff", "https://example.com/script.js",
+      "https://fonts.example.com/font.woff",
+      "https://example.com/logo-hires.jpg",
+  };
+  AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
+                                      push_urls, kNumResources, 0);
+  client_->client()->set_response_listener(new TestResponseListener);
+  EXPECT_EQ(kBody, client_->SendSynchronousRequest(
+                       "https://example.com/push_example"));
+
+  for (const string& url : push_urls) {
+    // Sending subsequent requests will trigger sending real requests because
+    // client doesn't support server push.
+    const string expected_body = "This is server push response body for " + url;
+    const string response_body = client_->SendSynchronousRequest(url);
+    EXPECT_EQ(expected_body, response_body);
+  }
+  // Same number of requests are sent as that of responses received.
+  EXPECT_EQ(1 + kNumResources, client_->num_requests());
+  EXPECT_EQ(1 + kNumResources, client_->num_responses());
+}
+
 // TODO(fayang): this test seems to cause net_unittests timeouts :|
 TEST_P(EndToEndTest, DISABLED_TestHugePostWithPacketLoss) {
   // This test tests a huge post with introduced packet loss from client to
@@ -2601,6 +2642,8 @@ TEST_P(EndToEndTest, DISABLED_TestHugeResponseWithPacketLoss) {
   static EpollEvent event(EPOLLOUT, false);
   client_writer_->Initialize(
       QuicConnectionPeer::GetHelper(client_->client()->session()->connection()),
+      QuicConnectionPeer::GetAlarmFactory(
+          client_->client()->session()->connection()),
       new ClientDelegate(client_->client()));
   initialized_ = true;
   ASSERT_TRUE(client_->client()->connected());

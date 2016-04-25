@@ -62,7 +62,7 @@ class QuicTestPacketMaker {
       QuicPacketNumber largest_received,
       QuicPacketNumber least_unacked,
       QuicErrorCode quic_error,
-      std::string& quic_error_details);
+      const std::string& quic_error_details);
   std::unique_ptr<QuicReceivedPacket> MakeConnectionClosePacket(
       QuicPacketNumber num);
   std::unique_ptr<QuicReceivedPacket> MakeGoAwayPacket(

@@ -4,6 +4,7 @@
 
 #include "net/tools/quic/quic_dispatcher.h"
 
+#include <memory>
 #include <ostream>
 #include <string>
 
@@ -19,6 +20,7 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/epoll_server/epoll_server.h"
+#include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
@@ -99,7 +101,10 @@ class TestDispatcher : public QuicDispatcher {
             config,
             crypto_config,
             QuicSupportedVersions(),
-            new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)) {}
+            std::unique_ptr<QuicEpollConnectionHelper>(
+                new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)),
+            std::unique_ptr<QuicEpollAlarmFactory>(
+                new QuicEpollAlarmFactory(eps))) {}
 
   MOCK_METHOD2(CreateQuicSession,
                QuicServerSessionBase*(QuicConnectionId connection_id,
@@ -117,8 +122,12 @@ class MockServerConnection : public MockConnection {
  public:
   MockServerConnection(QuicConnectionId connection_id,
                        MockConnectionHelper* helper,
+                       MockAlarmFactory* alarm_factory,
                        QuicDispatcher* dispatcher)
-      : MockConnection(connection_id, helper, Perspective::IS_SERVER),
+      : MockConnection(connection_id,
+                       helper,
+                       alarm_factory,
+                       Perspective::IS_SERVER),
         dispatcher_(dispatcher) {}
 
   void UnregisterOnConnectionClosed() {
@@ -137,11 +146,12 @@ QuicServerSessionBase* CreateSession(
     QuicConnectionId connection_id,
     const IPEndPoint& client_address,
     MockConnectionHelper* helper,
+    MockAlarmFactory* alarm_factory,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache,
     TestQuicSpdyServerSession** session) {
-  MockServerConnection* connection =
-      new MockServerConnection(connection_id, helper, dispatcher);
+  MockServerConnection* connection = new MockServerConnection(
+      connection_id, helper, alarm_factory, dispatcher);
   *session = new TestQuicSpdyServerSession(config, connection, crypto_config,
                                            compressed_certs_cache);
   connection->set_visitor(*session);
@@ -158,6 +168,7 @@ class QuicDispatcherTest : public ::testing::Test {
  public:
   QuicDispatcherTest()
       : helper_(&eps_, QuicAllocator::BUFFER_POOL),
+        alarm_factory_(&eps_),
         crypto_config_(QuicCryptoServerConfig::TESTING,
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
@@ -230,10 +241,10 @@ class QuicDispatcherTest : public ::testing::Test {
                      QuicPacketNumberLength packet_number_length,
                      QuicPacketNumber packet_number) {
     QuicVersionVector versions(SupportedVersions(version));
-    scoped_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
+    std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
         connection_id, has_version_flag, false, false, 0, packet_number, data,
         connection_id_length, packet_number_length, &versions));
-    scoped_ptr<QuicReceivedPacket> received_packet(
+    std::unique_ptr<QuicReceivedPacket> received_packet(
         ConstructReceivedPacket(*packet, helper_.GetClock()->Now()));
 
     data_ = string(packet->data(), packet->length());
@@ -247,8 +258,9 @@ class QuicDispatcherTest : public ::testing::Test {
   }
 
   void CreateTimeWaitListManager() {
-    time_wait_list_manager_ = new MockTimeWaitListManager(
-        QuicDispatcherPeer::GetWriter(&dispatcher_), &dispatcher_, &helper_);
+    time_wait_list_manager_ =
+        new MockTimeWaitListManager(QuicDispatcherPeer::GetWriter(&dispatcher_),
+                                    &dispatcher_, &helper_, &alarm_factory_);
     // dispatcher_ takes the ownership of time_wait_list_manager_.
     QuicDispatcherPeer::SetTimeWaitListManager(&dispatcher_,
                                                time_wait_list_manager_);
@@ -257,6 +269,8 @@ class QuicDispatcherTest : public ::testing::Test {
   EpollServer eps_;
   QuicEpollConnectionHelper helper_;
   MockConnectionHelper mock_helper_;
+  QuicEpollAlarmFactory alarm_factory_;
+  MockAlarmFactory mock_alarm_factory_;
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
   IPEndPoint server_address_;
@@ -274,8 +288,8 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(1, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, 1, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session1_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
   ProcessPacket(client_address, 1, true, false, "foo");
   EXPECT_EQ(client_address, dispatcher_.current_client_address());
   EXPECT_EQ(server_address_, dispatcher_.current_server_address());
@@ -283,8 +297,8 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(2, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, 2, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session2_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session2_)));
   ProcessPacket(client_address, 2, true, false, "bar");
 
   EXPECT_CALL(*reinterpret_cast<MockConnection*>(session1_->connection()),
@@ -314,8 +328,8 @@ TEST_F(QuicDispatcherTest, StatefulVersionNegotiation) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(1, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, 1, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session1_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
   QuicVersion version = static_cast<QuicVersion>(QuicVersionMin() - 1);
   ProcessPacket(client_address, 1, true, version, "foo",
                 PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, 1);
@@ -327,8 +341,8 @@ TEST_F(QuicDispatcherTest, Shutdown) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(_, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, 1, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session1_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
 
   ProcessPacket(client_address, 1, true, false, "foo");
 
@@ -347,8 +361,8 @@ TEST_F(QuicDispatcherTest, TimeWaitListManager) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(connection_id, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, connection_id, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session1_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
   ProcessPacket(client_address, connection_id, true, false, "foo");
 
   // Close the connection by sending public reset packet.
@@ -358,9 +372,9 @@ TEST_F(QuicDispatcherTest, TimeWaitListManager) {
   packet.public_header.version_flag = false;
   packet.rejected_packet_number = 19191;
   packet.nonce_proof = 132232;
-  scoped_ptr<QuicEncryptedPacket> encrypted(
+  std::unique_ptr<QuicEncryptedPacket> encrypted(
       QuicFramer::BuildPublicResetPacket(packet));
-  scoped_ptr<QuicReceivedPacket> received(
+  std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*encrypted, helper_.GetClock()->Now()));
   EXPECT_CALL(*session1_, OnConnectionClosed(QUIC_PUBLIC_RESET, _,
                                              ConnectionCloseSource::FROM_PEER))
@@ -496,7 +510,7 @@ class QuicDispatcherStatelessRejectTest
       QuicConnectionId connection_id,
       const IPEndPoint& client_address) {
     CreateSession(&dispatcher_, config_, connection_id, client_address,
-                  &mock_helper_, &crypto_config_,
+                  &mock_helper_, &mock_alarm_factory_, &crypto_config_,
                   QuicDispatcherPeer::GetCache(&dispatcher_), &session1_);
 
     crypto_stream1_ = new MockQuicCryptoServerStream(
@@ -534,8 +548,8 @@ TEST_F(QuicDispatcherTest, OKSeqNoPacketProcessed) {
   EXPECT_CALL(dispatcher_, CreateQuicSession(1, client_address))
       .WillOnce(testing::Return(CreateSession(
           &dispatcher_, config_, 1, client_address, &mock_helper_,
-          &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
-          &session1_)));
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
   // A packet whose packet number is the largest that is allowed to start a
   // connection.
   ProcessPacket(client_address, connection_id, true, false, "data",
@@ -677,14 +691,16 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
 
     EXPECT_CALL(dispatcher_, CreateQuicSession(_, client_address))
         .WillOnce(testing::Return(CreateSession(
-            &dispatcher_, config_, 1, client_address, &helper_, &crypto_config_,
-            QuicDispatcherPeer::GetCache(&dispatcher_), &session1_)));
+            &dispatcher_, config_, 1, client_address, &helper_, &alarm_factory_,
+            &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
+            &session1_)));
     ProcessPacket(client_address, 1, true, false, "foo");
 
     EXPECT_CALL(dispatcher_, CreateQuicSession(_, client_address))
         .WillOnce(testing::Return(CreateSession(
-            &dispatcher_, config_, 2, client_address, &helper_, &crypto_config_,
-            QuicDispatcherPeer::GetCache(&dispatcher_), &session2_)));
+            &dispatcher_, config_, 2, client_address, &helper_, &alarm_factory_,
+            &crypto_config_, QuicDispatcherPeer::GetCache(&dispatcher_),
+            &session2_)));
     ProcessPacket(client_address, 2, true, false, "bar");
 
     blocked_list_ = QuicDispatcherPeer::GetWriteBlockedList(&dispatcher_);
@@ -705,6 +721,7 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
 
  protected:
   MockConnectionHelper helper_;
+  MockAlarmFactory alarm_factory_;
   BlockingWriter* writer_;
   QuicDispatcher::WriteBlockedList* blocked_list_;
 };
