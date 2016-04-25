@@ -9,3 +9,4 @@ git add url/*
 git add chrome/*
 git add sdch/*
 git add testing/*
+git add ../proto_quic_tools/*
