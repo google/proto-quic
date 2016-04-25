@@ -57,6 +57,9 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -71,6 +74,9 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -89,6 +95,9 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":yasm_utils",
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -118,6 +127,9 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -132,6 +144,9 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -173,6 +188,9 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 
@@ -308,6 +326,9 @@ if (current_toolchain == host_toolchain) {
       ":generate_version",
       ":yasm_utils",
       "//build/config/sanitizers:deps",
+
+      # Default manifest on Windows (a no-op elsewhere).
+      "//build/win:default_exe_manifest",
     ]
   }
 

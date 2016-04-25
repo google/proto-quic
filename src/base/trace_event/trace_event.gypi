@@ -7,6 +7,7 @@
       'trace_event/blame_context.cc',
       'trace_event/blame_context.h',
       'trace_event/common/trace_event_common.h',
+      'trace_event/heap_profiler.h',
       'trace_event/heap_profiler_allocation_context.cc',
       'trace_event/heap_profiler_allocation_context.h',
       'trace_event/heap_profiler_allocation_context_tracker.cc',

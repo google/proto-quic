@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/macros.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/trace_event_impl.h"
 
 namespace base {
@@ -31,6 +32,8 @@ class TraceBufferRingBuffer : public TraceBuffer {
   }
 
   std::unique_ptr<TraceBufferChunk> GetChunk(size_t* index) override {
+    HEAP_PROFILER_SCOPED_IGNORE;
+
     // Because the number of threads is much less than the number of chunks,
     // the queue should never be empty.
     DCHECK(!QueueIsEmpty());
@@ -158,6 +161,8 @@ class TraceBufferVector : public TraceBuffer {
   }
 
   std::unique_ptr<TraceBufferChunk> GetChunk(size_t* index) override {
+    HEAP_PROFILER_SCOPED_IGNORE;
+
     // This function may be called when adding normal events or indirectly from
     // AddMetadataEventsWhileLocked(). We can not DECHECK(!IsFull()) because we
     // have to add the metadata events and flush thread-local buffers even if

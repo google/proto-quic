@@ -14,6 +14,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/thread.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
@@ -402,6 +403,7 @@ void MemoryDumpManager::CreateProcessDump(const MemoryDumpRequestArgs& args,
 // (un)registrations of |dump_providers_|.
 void MemoryDumpManager::SetupNextMemoryDump(
     std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state) {
+  HEAP_PROFILER_SCOPED_IGNORE;
   // Initalizes the ThreadLocalEventBuffer to guarantee that the TRACE_EVENTs
   // in the PostTask below don't end up registering their own dump providers
   // (for discounting trace memory overhead) while holding the |lock_|.
@@ -474,6 +476,7 @@ void MemoryDumpManager::SetupNextMemoryDump(
 // (unless disabled).
 void MemoryDumpManager::InvokeOnMemoryDump(
     ProcessMemoryDumpAsyncState* owned_pmd_async_state) {
+  HEAP_PROFILER_SCOPED_IGNORE;
   // In theory |owned_pmd_async_state| should be a scoped_ptr. The only reason
   // why it isn't is because of the corner case logic of |did_post_task|
   // above, which needs to take back the ownership of the |pmd_async_state| when
@@ -535,6 +538,7 @@ void MemoryDumpManager::InvokeOnMemoryDump(
 // static
 void MemoryDumpManager::FinalizeDumpAndAddToTrace(
     std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state) {
+  HEAP_PROFILER_SCOPED_IGNORE;
   DCHECK(pmd_async_state->pending_dump_providers.empty());
   const uint64_t dump_guid = pmd_async_state->req_args.dump_guid;
   if (!pmd_async_state->callback_task_runner->BelongsToCurrentThread()) {

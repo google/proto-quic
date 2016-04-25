@@ -50,16 +50,20 @@ diff --git a/third_party/libevent/event.c b/third_party/libevent/event.c
 index da6cd42..36b1c51 100644
 --- a/third_party/libevent/event.c
 +++ b/third_party/libevent/event.c
-@@ -107,7 +107,7 @@ static const struct eventop *eventops[] = {
+@@ -107,11 +107,7 @@ static const struct eventop *eventops[] = {
  /* Global state */
  struct event_base *current_base = NULL;
  extern struct event_base *evsignal_base;
 -static int use_monotonic;
+-
+-/* Handle signals - This is a deprecated interface */
+-int (*event_sigcb)(void);		/* Signal callback when gotsig is set */
+-volatile sig_atomic_t event_gotsig;	/* Set in signal handler */
 +static int use_monotonic = 1;
  
- /* Handle signals - This is a deprecated interface */
- int (*event_sigcb)(void);		/* Signal callback when gotsig is set */
-@@ -124,17 +124,6 @@ static int	timeout_next(struct event_base *, struct timeval **);
+ /* Prototypes */
+ static void	event_queue_insert(struct event_base *, struct event *, int);
+@@ -124,17 +120,6 @@ static int	timeout_next(struct event_base *, struct timeval **);
  static void	timeout_process(struct event_base *);
  static void	timeout_correct(struct event_base *, struct timeval *);
  
@@ -77,7 +81,7 @@ index da6cd42..36b1c51 100644
  static int
  gettime(struct event_base *base, struct timeval *tp)
  {
-@@ -144,18 +133,18 @@ gettime(struct event_base *base, struct timeval *tp)
+@@ -144,18 +129,18 @@ gettime(struct event_base *base, struct timeval *tp)
  	}
  
  #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
@@ -101,21 +105,24 @@ index da6cd42..36b1c51 100644
  	return (evutil_gettimeofday(tp, NULL));
  }
  
-@@ -182,7 +171,6 @@ event_base_new(void)
- 	event_sigcb = NULL;
- 	event_gotsig = 0;
+@@ -179,10 +164,6 @@ event_base_new(void)
+ 	if ((base = calloc(1, sizeof(struct event_base))) == NULL)
+ 		event_err(1, "%s: calloc", __func__);
  
+-	event_sigcb = NULL;
+-	event_gotsig = 0;
+-
 -	detect_monotonic();
  	gettime(base, &base->event_tv);
  	
  	min_heap_ctor(&base->timeheap);
-@@ -398,12 +386,9 @@ event_process_active(struct event_base *base)
+@@ -398,12 +379,9 @@ event_process_active(struct event_base *base)
  			ncalls--;
  			ev->ev_ncalls = ncalls;
  			(*ev->ev_callback)((int)ev->ev_fd, ev->ev_res, ev->ev_arg);
 -			if (event_gotsig || base->event_break) {
 -			  	ev->ev_pncalls = NULL;
-+			if (event_gotsig || base->event_break)
++			if (base->event_break)
  				return;
 -			}
  		}
@@ -123,7 +130,26 @@ index da6cd42..36b1c51 100644
  	}
  }
  
-@@ -808,8 +793,6 @@ int
+@@ -506,18 +484,6 @@ event_base_loop(struct event_base *base, int flags)
+ 			break;
+ 		}
+ 
+-		/* You cannot use this interface for multi-threaded apps */
+-		while (event_gotsig) {
+-			event_gotsig = 0;
+-			if (event_sigcb) {
+-				res = (*event_sigcb)();
+-				if (res == -1) {
+-					errno = EINTR;
+-					return (-1);
+-				}
+-			}
+-		}
+-
+ 		timeout_correct(base, &tv);
+ 
+ 		tv_p = &tv;
+@@ -808,8 +774,6 @@ int
  event_del(struct event *ev)
  {
  	struct event_base *base;
@@ -132,7 +158,7 @@ index da6cd42..36b1c51 100644
  
  	event_debug(("event_del: %p, callback %p",
  		 ev, ev->ev_callback));
-@@ -819,8 +802,6 @@ event_del(struct event *ev)
+@@ -819,8 +783,6 @@ event_del(struct event *ev)
  		return (-1);
  
  	base = ev->ev_base;
@@ -141,7 +167,7 @@ index da6cd42..36b1c51 100644
  
  	assert(!(ev->ev_flags & ~EVLIST_ALL));
  
-@@ -838,7 +819,7 @@ event_del(struct event *ev)
+@@ -838,7 +800,7 @@ event_del(struct event *ev)
  
  	if (ev->ev_flags & EVLIST_INSERTED) {
  		event_queue_remove(base, ev, EVLIST_INSERTED);

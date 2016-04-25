@@ -193,7 +193,6 @@ int ssl3_write_bytes(SSL *ssl, int type, const void *buf_, int len) {
   const uint8_t *buf = buf_;
   unsigned tot, n, nw;
 
-  ssl->rwstate = SSL_NOTHING;
   assert(ssl->s3->wnum <= INT_MAX);
   tot = ssl->s3->wnum;
   ssl->s3->wnum = 0;
@@ -378,8 +377,6 @@ int ssl3_read_bytes(SSL *ssl, int type, uint8_t *buf, int len, int peek) {
   }
 
 start:
-  ssl->rwstate = SSL_NOTHING;
-
   /* ssl->s3->rrec.type    - is the type of record
    * ssl->s3->rrec.data    - data
    * ssl->s3->rrec.off     - offset into 'data' for next read
@@ -400,7 +397,6 @@ start:
    * 'peek' mode) */
   if (ssl->shutdown & SSL_RECEIVED_SHUTDOWN) {
     rr->length = 0;
-    ssl->rwstate = SSL_NOTHING;
     return 0;
   }
 
@@ -519,11 +515,10 @@ start:
     goto start;
   }
 
-  /* If an alert record, process one alert out of the record. Note that we allow
-   * a single record to contain multiple alerts. */
+  /* If an alert record, process the alert. */
   if (rr->type == SSL3_RT_ALERT) {
-    /* Alerts may not be fragmented. */
-    if (rr->length < 2) {
+    /* Alerts records may not contain fragmented or multiple alerts. */
+    if (rr->length != 2) {
       al = SSL_AD_DECODE_ERROR;
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ALERT);
       goto f_err;
@@ -556,19 +551,6 @@ start:
         return 0;
       }
 
-      /* This is a warning but we receive it if we requested renegotiation and
-       * the peer denied it. Terminate with a fatal alert because if
-       * application tried to renegotiatie it presumably had a good reason and
-       * expects it to succeed.
-       *
-       * In future we might have a renegotiation where we don't care if the
-       * peer refused it where we carry on. */
-      else if (alert_descr == SSL_AD_NO_RENEGOTIATION) {
-        al = SSL_AD_HANDSHAKE_FAILURE;
-        OPENSSL_PUT_ERROR(SSL, SSL_R_NO_RENEGOTIATION);
-        goto f_err;
-      }
-
       ssl->s3->warning_alert_count++;
       if (ssl->s3->warning_alert_count > kMaxWarningAlerts) {
         al = SSL_AD_UNEXPECTED_MESSAGE;
@@ -578,7 +560,6 @@ start:
     } else if (alert_level == SSL3_AL_FATAL) {
       char tmp[16];
 
-      ssl->rwstate = SSL_NOTHING;
       OPENSSL_PUT_ERROR(SSL, SSL_AD_REASON_OFFSET + alert_descr);
       BIO_snprintf(tmp, sizeof(tmp), "%d", alert_descr);
       ERR_add_error_data(2, "SSL alert number ", tmp);

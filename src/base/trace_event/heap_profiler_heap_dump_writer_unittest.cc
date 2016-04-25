@@ -22,13 +22,15 @@
 
 namespace {
 
+using base::trace_event::StackFrame;
+
 // Define all strings once, because the deduplicator requires pointer equality,
 // and string interning is unreliable.
-const char kBrowserMain[] = "BrowserMain";
-const char kRendererMain[] = "RendererMain";
-const char kCreateWidget[] = "CreateWidget";
-const char kInitialize[] = "Initialize";
-const char kGetBitmap[] = "GetBitmap";
+StackFrame kBrowserMain = StackFrame::FromTraceEventName("BrowserMain");
+StackFrame kRendererMain = StackFrame::FromTraceEventName("RendererMain");
+StackFrame kCreateWidget = StackFrame::FromTraceEventName("CreateWidget");
+StackFrame kInitialize = StackFrame::FromTraceEventName("Initialize");
+StackFrame kGetBitmap = StackFrame::FromTraceEventName("GetBitmap");
 
 const char kInt[] = "int";
 const char kBool[] = "bool";
@@ -178,9 +180,10 @@ TEST(HeapDumpWriterTest, SizeAndCountAreHexadecimal) {
 TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
   hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
 
-  AllocationContext ctx = AllocationContext::Empty();
+  AllocationContext ctx;
   ctx.backtrace.frames[0] = kBrowserMain;
   ctx.backtrace.frames[1] = kCreateWidget;
+  ctx.backtrace.frame_count = 2;
   ctx.type_name = kInt;
 
   // 10 bytes with context { type: int, bt: [BrowserMain, CreateWidget] }.
@@ -193,6 +196,7 @@ TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
 
   ctx.backtrace.frames[0] = kRendererMain;
   ctx.backtrace.frames[1] = kInitialize;
+  ctx.backtrace.frame_count = 2;
 
   // 30 bytes with context { type: bool, bt: [RendererMain, Initialize] }.
   metrics_by_context[ctx] = {30, 30};
@@ -267,19 +271,22 @@ TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
 TEST(HeapDumpWriterTest, InsignificantValuesNotDumped) {
   hash_map<AllocationContext, AllocationMetrics> metrics_by_context;
 
-  AllocationContext ctx = AllocationContext::Empty();
+  AllocationContext ctx;
   ctx.backtrace.frames[0] = kBrowserMain;
   ctx.backtrace.frames[1] = kCreateWidget;
+  ctx.backtrace.frame_count = 2;
 
   // 0.5 KiB and 1 chunk in BrowserMain -> CreateWidget itself.
   metrics_by_context[ctx] = {512, 1};
 
   // 1 MiB and 1 chunk in BrowserMain -> CreateWidget -> GetBitmap.
   ctx.backtrace.frames[2] = kGetBitmap;
+  ctx.backtrace.frame_count = 3;
   metrics_by_context[ctx] = {1024 * 1024, 1};
 
   // 0.5 KiB and 1 chunk in BrowserMain -> CreateWidget -> Initialize.
   ctx.backtrace.frames[2] = kInitialize;
+  ctx.backtrace.frame_count = 3;
   metrics_by_context[ctx] = {512, 1};
 
   auto sf_deduplicator = WrapUnique(new StackFrameDeduplicator);

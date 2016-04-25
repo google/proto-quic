@@ -371,12 +371,11 @@ int ssl3_accept(SSL *ssl) {
          * in PR#1939. The proposed fix doesn't completely resolve this issue
          * as buggy implementations of BIO_CTRL_PENDING still exist. So instead
          * we just flush unconditionally. */
-        ssl->rwstate = SSL_WRITING;
         if (BIO_flush(ssl->wbio) <= 0) {
+          ssl->rwstate = SSL_WRITING;
           ret = -1;
           goto end;
         }
-        ssl->rwstate = SSL_NOTHING;
 
         ssl->state = ssl->s3->tmp.next_state;
         break;
@@ -1036,7 +1035,6 @@ int ssl3_get_client_hello(SSL *ssl) {
         ssl->rwstate = SSL_X509_LOOKUP;
         goto err;
       }
-      ssl->rwstate = SSL_NOTHING;
     }
     c = ssl3_choose_cipher(ssl, ciphers, ssl_get_cipher_preferences(ssl));
 
@@ -1341,13 +1339,11 @@ int ssl3_send_server_key_exchange(SSL *ssl) {
 
     switch (sign_result) {
       case ssl_private_key_success:
-        ssl->rwstate = SSL_NOTHING;
         if (!CBB_did_write(&child, sig_len)) {
           goto err;
         }
         break;
       case ssl_private_key_failure:
-        ssl->rwstate = SSL_NOTHING;
         goto err;
       case ssl_private_key_retry:
         /* Discard the unfinished signature and save the state of |cbb| for the
@@ -1564,10 +1560,8 @@ int ssl3_get_client_key_exchange(SSL *ssl) {
 
     switch (decrypt_result) {
       case ssl_private_key_success:
-        ssl->rwstate = SSL_NOTHING;
         break;
       case ssl_private_key_failure:
-        ssl->rwstate = SSL_NOTHING;
         goto err;
       case ssl_private_key_retry:
         ssl->rwstate = SSL_PRIVATE_KEY_OPERATION;
@@ -1575,7 +1569,11 @@ int ssl3_get_client_key_exchange(SSL *ssl) {
         goto err;
     }
 
-    assert(decrypt_len == rsa_size);
+    if (decrypt_len != rsa_size) {
+      al = SSL_AD_DECRYPT_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECRYPTION_FAILED);
+      goto f_err;
+    }
 
     /* Prepare a random premaster, to be used on invalid padding. See RFC 5246,
      * section 7.4.7.1. */

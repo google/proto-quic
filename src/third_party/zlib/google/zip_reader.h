@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
 #include "base/callback.h"
@@ -14,7 +15,6 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 
@@ -245,7 +245,7 @@ class ZipReader {
   unzFile zip_file_;
   int num_entries_;
   bool reached_end_;
-  scoped_ptr<EntryInfo> current_entry_info_;
+  std::unique_ptr<EntryInfo> current_entry_info_;
 
   base::WeakPtrFactory<ZipReader> weak_ptr_factory_;
 

@@ -74,25 +74,19 @@ bool operator<(const Bucket& lhs, const Bucket& rhs) {
 // returned list will have |backtrace_cursor| advanced or
 // |is_broken_down_by_type_name| set depending on the property to group by.
 std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
-  base::hash_map<const char*, Bucket> breakdown;
+  base::hash_map<const void*, Bucket> breakdown;
 
   if (breakBy == BreakDownMode::kByBacktrace) {
     for (const auto& context_and_metrics : bucket.metrics_by_context) {
       const Backtrace& backtrace = context_and_metrics.first->backtrace;
-      const char* const* begin = std::begin(backtrace.frames);
-      const char* const* end = std::end(backtrace.frames);
-      const char* const* cursor = begin + bucket.backtrace_cursor;
-
-      // The backtrace in the context is padded with null pointers, but these
-      // should not be considered for breakdown. Adjust end to point past the
-      // last non-null frame.
-      while (begin != end && *(end - 1) == nullptr)
-        end--;
+      const StackFrame* begin = std::begin(backtrace.frames);
+      const StackFrame* end = begin + backtrace.frame_count;
+      const StackFrame* cursor = begin + bucket.backtrace_cursor;
 
       DCHECK_LE(cursor, end);
 
       if (cursor != end) {
-        Bucket& subbucket = breakdown[*cursor];
+        Bucket& subbucket = breakdown[cursor->value];
         subbucket.size += context_and_metrics.second.size;
         subbucket.count += context_and_metrics.second.count;
         subbucket.metrics_by_context.push_back(context_and_metrics);
@@ -195,13 +189,13 @@ bool HeapDumpWriter::AddEntryForBucket(const Bucket& bucket) {
 
   const AllocationContext* context = bucket.metrics_by_context.front().first;
 
-  const char* const* backtrace_begin = std::begin(context->backtrace.frames);
-  const char* const* backtrace_end = backtrace_begin + bucket.backtrace_cursor;
+  const StackFrame* backtrace_begin = std::begin(context->backtrace.frames);
+  const StackFrame* backtrace_end = backtrace_begin + bucket.backtrace_cursor;
   DCHECK_LE(bucket.backtrace_cursor, arraysize(context->backtrace.frames));
 
   Entry entry;
-  entry.stack_frame_id =
-      stack_frame_deduplicator_->Insert(backtrace_begin, backtrace_end);
+  entry.stack_frame_id = stack_frame_deduplicator_->Insert(
+      backtrace_begin, backtrace_end);
 
   // Deduplicate the type name, or use ID -1 if type name is not set.
   entry.type_id = bucket.is_broken_down_by_type_name

@@ -258,16 +258,6 @@ int RSA_private_decrypt(size_t flen, const uint8_t *from, uint8_t *to, RSA *rsa,
   return out_len;
 }
 
-int RSA_verify_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out,
-                   const uint8_t *in, size_t in_len, int padding) {
-  if (rsa->meth->verify_raw) {
-    return rsa->meth->verify_raw(rsa, out_len, out, max_out, in, in_len, padding);
-  }
-
-  return rsa_default_verify_raw(rsa, out_len, out, max_out, in, in_len,
-                                padding);
-}
-
 int RSA_public_decrypt(size_t flen, const uint8_t *from, uint8_t *to, RSA *rsa,
                        int padding) {
   size_t out_len;
@@ -473,21 +463,17 @@ finish:
 
 int RSA_verify(int hash_nid, const uint8_t *msg, size_t msg_len,
                const uint8_t *sig, size_t sig_len, RSA *rsa) {
+  if (rsa->n == NULL || rsa->e == NULL) {
+    OPENSSL_PUT_ERROR(RSA, RSA_R_VALUE_MISSING);
+    return 0;
+  }
+
   const size_t rsa_size = RSA_size(rsa);
   uint8_t *buf = NULL;
   int ret = 0;
   uint8_t *signed_msg = NULL;
   size_t signed_msg_len, len;
   int signed_msg_is_alloced = 0;
-
-  if (rsa->meth->verify) {
-    return rsa->meth->verify(hash_nid, msg, msg_len, sig, sig_len, rsa);
-  }
-
-  if (sig_len != rsa_size) {
-    OPENSSL_PUT_ERROR(RSA, RSA_R_WRONG_SIGNATURE_LENGTH);
-    return 0;
-  }
 
   if (hash_nid == NID_md5_sha1 && msg_len != SSL_SIG_LENGTH) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_INVALID_MESSAGE_LENGTH);
@@ -510,7 +496,7 @@ int RSA_verify(int hash_nid, const uint8_t *msg, size_t msg_len,
     goto out;
   }
 
-  if (len != signed_msg_len || CRYPTO_memcmp(buf, signed_msg, len) != 0) {
+  if (len != signed_msg_len || memcmp(buf, signed_msg, len) != 0) {
     OPENSSL_PUT_ERROR(RSA, RSA_R_BAD_SIGNATURE);
     goto out;
   }

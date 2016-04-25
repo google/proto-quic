@@ -303,7 +303,7 @@ bool ZipReader::ExtractCurrentEntry(WriterDelegate* delegate) const {
     return false;
 
   bool success = true;  // This becomes false when something bad happens.
-  scoped_ptr<char[]> buf(new char[internal::kZipBufSize]);
+  std::unique_ptr<char[]> buf(new char[internal::kZipBufSize]);
   while (true) {
     const int num_bytes_read = unzReadCurrentFile(zip_file_, buf.get(),
                                                   internal::kZipBufSize);
@@ -517,7 +517,7 @@ FileWriterDelegate::FileWriterDelegate(base::File* file)
 }
 
 FileWriterDelegate::~FileWriterDelegate() {
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
   const bool success =
 #endif
       file_->SetLength(file_length_);

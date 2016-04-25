@@ -23,6 +23,8 @@ static library using GYP.
    - Revert the patch from http://sourceforge.net/p/levent/bugs/223/ that
      introduces use-after-free memory corruption when an event callback frees
      the struct event memory.
+   - Remove deprecated global variables, event_sigcb and event_gotsig
+     (essentially unused) that trigger tsan errors. (crbug/605894)
 4) The directories WIN32-Code and WIN32-Prj are not included.
 5) The configs for android were copied from Linux's which were very close to
    android one with the exception of HAVE_FD_MASK and HAVE_STRLCPY.
