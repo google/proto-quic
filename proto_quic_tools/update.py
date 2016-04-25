@@ -112,7 +112,7 @@ def copy_directories():
     shutil.copytree(chrome_root + "/" + directory, libquic_root + "/" + directory, symlinks=True)
 
 def copy_all():
-#  copy_directories()
+  copy_directories()
   for item in os.walk(libquic_root):
     directory_name = item[0][len(libquic_root)+1:]
     if full_copy(directory_name):
