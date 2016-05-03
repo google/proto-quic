@@ -20,7 +20,6 @@
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_error_details.h"
-#include "net/base/socket_performance_watcher.h"
 #include "net/cert/ct_verify_result.h"
 #include "net/proxy/proxy_server.h"
 #include "net/quic/quic_chromium_client_stream.h"
@@ -30,6 +29,7 @@
 #include "net/quic/quic_crypto_client_stream.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_time.h"
+#include "net/socket/socket_performance_watcher.h"
 
 namespace net {
 

@@ -629,15 +629,11 @@ TEST_P(QuicDispatcherStatelessRejectTest, ParameterizedBasicTest) {
 
 // Verify the stopgap test: Packets with truncated connection IDs should be
 // dropped.
-class QuicDispatcherTestStrayPacketConnectionId
-    : public QuicDispatcherTest,
-      public ::testing::WithParamInterface<QuicConnectionIdLength> {};
+class QuicDispatcherTestStrayPacketConnectionId : public QuicDispatcherTest {};
 
 // Packets with truncated connection IDs should be dropped.
-TEST_P(QuicDispatcherTestStrayPacketConnectionId,
+TEST_F(QuicDispatcherTestStrayPacketConnectionId,
        StrayPacketTruncatedConnectionId) {
-  const QuicConnectionIdLength connection_id_length = GetParam();
-
   CreateTimeWaitListManager();
 
   IPEndPoint client_address(net::test::Loopback4(), 1);
@@ -650,14 +646,8 @@ TEST_P(QuicDispatcherTestStrayPacketConnectionId,
   EXPECT_CALL(*time_wait_list_manager_, AddConnectionIdToTimeWait(_, _, _, _))
       .Times(0);
   ProcessPacket(client_address, connection_id, true, false, "data",
-                connection_id_length, PACKET_6BYTE_PACKET_NUMBER);
+                PACKET_0BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER);
 }
-
-INSTANTIATE_TEST_CASE_P(ConnectionIdLength,
-                        QuicDispatcherTestStrayPacketConnectionId,
-                        ::testing::Values(PACKET_0BYTE_CONNECTION_ID,
-                                          PACKET_1BYTE_CONNECTION_ID,
-                                          PACKET_4BYTE_CONNECTION_ID));
 
 class BlockingWriter : public QuicPacketWriterWrapper {
  public:

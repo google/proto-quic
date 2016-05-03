@@ -8,6 +8,7 @@
 #define NET_QUIC_QUIC_RELIABLE_CLIENT_STREAM_H_
 
 #include <stddef.h>
+#include <vector>
 
 #include "base/callback_forward.h"
 #include "base/macros.h"
@@ -79,6 +80,12 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   int WriteStreamData(base::StringPiece data,
                       bool fin,
                       const CompletionCallback& callback);
+  // Same as WriteStreamData except it writes data from a vector of IOBuffers,
+  // with the length of each buffer at the corresponding index in |lengths|.
+  int WritevStreamData(const std::vector<IOBuffer*>& buffers,
+                       const std::vector<int>& lengths,
+                       bool fin,
+                       const CompletionCallback& callback);
   // Set new |delegate|. |delegate| must not be NULL.
   // If this stream has already received data, OnDataReceived() will be
   // called on the delegate.

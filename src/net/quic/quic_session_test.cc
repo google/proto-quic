@@ -1164,7 +1164,7 @@ TEST_P(QuicSessionTestClient, RecordFinAfterReadSideClosed) {
   session_.PostProcessAfterData();
   EXPECT_TRUE(connection_->connected());
   EXPECT_TRUE(QuicSessionPeer::IsStreamClosed(&session_, stream_id));
-  EXPECT_EQ(nullptr, QuicSessionPeer::dynamic_streams(&session_)[stream_id]);
+  EXPECT_FALSE(QuicSessionPeer::IsStreamCreated(&session_, stream_id));
 
   // The stream is not waiting for the arrival of the peer's final offset as it
   // was received with the FIN earlier.

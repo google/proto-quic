@@ -38,6 +38,7 @@ BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
       closed_stream_status_(ERR_FAILED),
       closed_stream_received_bytes_(0),
       closed_stream_sent_bytes_(0),
+      disable_auto_flush_(false),
       weak_factory_(this) {}
 
 BidirectionalStreamSpdyImpl::~BidirectionalStreamSpdyImpl() {
@@ -50,11 +51,13 @@ BidirectionalStreamSpdyImpl::~BidirectionalStreamSpdyImpl() {
 void BidirectionalStreamSpdyImpl::Start(
     const BidirectionalStreamRequestInfo* request_info,
     const BoundNetLog& net_log,
+    bool disable_auto_flush,
     BidirectionalStreamImpl::Delegate* delegate,
     std::unique_ptr<base::Timer> timer) {
   DCHECK(!stream_);
   DCHECK(timer);
 
+  disable_auto_flush_ = disable_auto_flush;
   delegate_ = delegate;
   timer_ = std::move(timer);
 
@@ -100,8 +103,35 @@ void BidirectionalStreamSpdyImpl::SendData(IOBuffer* data,
                                            bool end_stream) {
   DCHECK(!stream_closed_);
   DCHECK(stream_);
+  DCHECK(!disable_auto_flush_);
 
   stream_->SendData(data, length,
+                    end_stream ? NO_MORE_DATA_TO_SEND : MORE_DATA_TO_SEND);
+}
+
+void BidirectionalStreamSpdyImpl::SendvData(
+    const std::vector<IOBuffer*>& buffers,
+    const std::vector<int>& lengths,
+    bool end_stream) {
+  DCHECK(!stream_closed_);
+  DCHECK(stream_);
+  DCHECK(disable_auto_flush_);
+  DCHECK_EQ(buffers.size(), lengths.size());
+
+  int total_len = 0;
+  for (int len : lengths) {
+    total_len += len;
+  }
+
+  pending_combined_buffer_ = new net::IOBuffer(total_len);
+  int len = 0;
+  // TODO(xunjieli): Get rid of extra copy. Coalesce headers and data frames.
+  for (size_t i = 0; i < buffers.size(); ++i) {
+    memcpy(pending_combined_buffer_->data() + len, buffers[i]->data(),
+           lengths[i]);
+    len += lengths[i];
+  }
+  stream_->SendData(pending_combined_buffer_.get(), total_len,
                     end_stream ? NO_MORE_DATA_TO_SEND : MORE_DATA_TO_SEND);
 }
 
@@ -141,7 +171,6 @@ void BidirectionalStreamSpdyImpl::OnRequestHeadersSent() {
   DCHECK(stream_);
 
   negotiated_protocol_ = stream_->GetProtocol();
-  delegate_->OnHeadersSent();
 }
 
 SpdyResponseHeadersStatus BidirectionalStreamSpdyImpl::OnResponseHeadersUpdated(
@@ -176,6 +205,10 @@ void BidirectionalStreamSpdyImpl::OnDataSent() {
   DCHECK(stream_);
   DCHECK(!stream_closed_);
 
+  if (disable_auto_flush_) {
+    DCHECK(pending_combined_buffer_);
+    pending_combined_buffer_ = nullptr;
+  }
   delegate_->OnDataSent();
 }
 
@@ -228,6 +261,7 @@ void BidirectionalStreamSpdyImpl::OnStreamInitialized(int rv) {
     stream_ = stream_request_.ReleaseStream();
     stream_->SetDelegate(this);
     SendRequestHeaders();
+    delegate_->OnStreamReady();
     return;
   }
   delegate_->OnFailed(rv);

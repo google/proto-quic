@@ -39,10 +39,14 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // BidirectionalStreamImpl implementation:
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
+             bool disable_auto_flush,
              BidirectionalStreamImpl::Delegate* delegate,
              std::unique_ptr<base::Timer> timer) override;
   int ReadData(IOBuffer* buffer, int buffer_len) override;
   void SendData(IOBuffer* data, int length, bool end_stream) override;
+  void SendvData(const std::vector<IOBuffer*>& buffers,
+                 const std::vector<int>& lengths,
+                 bool end_stream) override;
   void Cancel() override;
   NextProto GetProtocol() const override;
   int64_t GetTotalReceivedBytes() const override;
@@ -104,6 +108,8 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   bool has_sent_headers_;
   // Indicates whether initial headers have been received.
   bool has_received_headers_;
+
+  bool disable_auto_flush_;
 
   base::WeakPtrFactory<BidirectionalStreamQuicImpl> weak_factory_;
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2014 The Chromium Authors. All rights reserved.
+# Copyright (c) 2016 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -145,8 +145,6 @@
       'src/crypto/dh/params.c',
       'src/crypto/digest/digest.c',
       'src/crypto/digest/digests.c',
-      'src/crypto/directory_posix.c',
-      'src/crypto/directory_win.c',
       'src/crypto/dsa/dsa.c',
       'src/crypto/dsa/dsa_asn1.c',
       'src/crypto/ec/ec.c',
@@ -189,6 +187,12 @@
       'src/crypto/modes/ctr.c',
       'src/crypto/modes/gcm.c',
       'src/crypto/modes/ofb.c',
+      'src/crypto/newhope/error_correction.c',
+      'src/crypto/newhope/newhope.c',
+      'src/crypto/newhope/ntt.c',
+      'src/crypto/newhope/poly.c',
+      'src/crypto/newhope/precomp.c',
+      'src/crypto/newhope/reduce.c',
       'src/crypto/obj/obj.c',
       'src/crypto/obj/obj_xref.c',
       'src/crypto/pem/pem_all.c',

@@ -1496,6 +1496,16 @@ OPENSSL_EXPORT uint32_t SSL_SESSION_get_key_exchange_info(
  * TODO(davidben): This should return a const X509 *. */
 OPENSSL_EXPORT X509 *SSL_SESSION_get0_peer(const SSL_SESSION *session);
 
+/* TODO(davidben): Remove this when wpa_supplicant in Android has synced with
+ * upstream. */
+#if !defined(BORINGSSL_SUPPRESS_ACCESSORS)
+/* SSL_SESSION_get_master_key writes up to |max_out| bytes of |session|'s master
+ * secret to |out| and returns the number of bytes written. If |max_out| is
+ * zero, it returns the size of the master secret. */
+OPENSSL_EXPORT size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
+                                                 uint8_t *out, size_t max_out);
+#endif
+
 /* SSL_SESSION_set_time sets |session|'s creation time to |time| and returns
  * |time|. This function may be useful in writing tests but otherwise should not
  * be used. */
@@ -2162,12 +2172,6 @@ OPENSSL_EXPORT STACK_OF(X509_NAME) *SSL_dup_CA_list(STACK_OF(X509_NAME) *list);
  * error. */
 OPENSSL_EXPORT int SSL_add_file_cert_subjects_to_stack(STACK_OF(X509_NAME) *out,
                                                        const char *file);
-
-/* SSL_add_dir_cert_subjects_to_stack lists files in directory |dir|. It calls
- * |SSL_add_file_cert_subjects_to_stack| on each file and returns one on success
- * or zero on error. */
-OPENSSL_EXPORT int SSL_add_dir_cert_subjects_to_stack(STACK_OF(X509_NAME) *out,
-                                                      const char *dir);
 
 
 /* Server name indication.
@@ -2929,6 +2933,9 @@ OPENSSL_EXPORT int SSL_get_shutdown(const SSL *ssl);
  * |TLSEXT_hash_none|. */
 OPENSSL_EXPORT uint8_t SSL_get_server_key_exchange_hash(const SSL *ssl);
 
+/* TODO(davidben): Remove this when wpa_supplicant in Android has synced with
+ * upstream. */
+#if !defined(BORINGSSL_SUPPRESS_ACCESSORS)
 /* SSL_get_client_random writes up to |max_out| bytes of the most recent
  * handshake's client_random to |out| and returns the number of bytes written.
  * If |max_out| is zero, it returns the size of the client_random. */
@@ -2940,6 +2947,7 @@ OPENSSL_EXPORT size_t SSL_get_client_random(const SSL *ssl, uint8_t *out,
  * If |max_out| is zero, it returns the size of the server_random. */
 OPENSSL_EXPORT size_t SSL_get_server_random(const SSL *ssl, uint8_t *out,
                                             size_t max_out);
+#endif
 
 /* SSL_get_pending_cipher returns the cipher suite for the current handshake or
  * NULL if one has not been negotiated yet or there is no pending handshake. */
@@ -3402,6 +3410,13 @@ OPENSSL_EXPORT int SSL_CTX_set_tmp_ecdh(SSL_CTX *ctx, const EC_KEY *ec_key);
 /* SSL_set_tmp_ecdh calls |SSL_set1_curves| with a one-element list containing
  * |ec_key|'s curve. */
 OPENSSL_EXPORT int SSL_set_tmp_ecdh(SSL *ssl, const EC_KEY *ec_key);
+
+/* SSL_add_dir_cert_subjects_to_stack lists files in directory |dir|. It calls
+ * |SSL_add_file_cert_subjects_to_stack| on each file and returns one on success
+ * or zero on error. This function is only available from the libdecrepit
+ * library. */
+OPENSSL_EXPORT int SSL_add_dir_cert_subjects_to_stack(STACK_OF(X509_NAME) *out,
+                                                      const char *dir);
 
 
 /* Private structures.
@@ -4251,8 +4266,6 @@ typedef struct ssl3_state_st {
  * These functions are declared, temporarily, for Android because
  * wpa_supplicant will take a little time to sync with upstream. Outside of
  * Android they'll have no definition. */
-
-#define SSL_F_SSL_SET_SESSION_TICKET_EXT doesnt_exist
 
 OPENSSL_EXPORT int SSL_set_session_ticket_ext(SSL *s, void *ext_data,
                                               int ext_len);

@@ -184,6 +184,10 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // written to the server.
   void SetPriority(SpdyPriority priority);
 
+  // Called when owning session is getting deleted to avoid subsequent
+  // use of the spdy_session_ member.
+  void ClearSession();
+
  protected:
   // Called by OnStreamHeadersComplete depending on which type (initial or
   // trailing) headers are expected next.

@@ -450,6 +450,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
       NullEncrypter().GetCiphertextSize(0) +
       GetPacketHeaderSize(
           creator_->connection_id_length(), kIncludeVersion, !kIncludePathId,
+          !kIncludeDiversificationNonce,
           QuicPacketCreatorPeer::NextPacketNumberLength(creator_)) +
       // Add an extra 3 bytes for the payload and 1 byte so BytesFree is larger
       // than the GetMinStreamFrameSize.
@@ -575,24 +576,11 @@ TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations2) {
 TEST_F(QuicPacketGeneratorTest, TestConnectionIdLength) {
   generator_.SetConnectionIdLength(0);
   EXPECT_EQ(PACKET_0BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(1);
-  EXPECT_EQ(PACKET_1BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(2);
-  EXPECT_EQ(PACKET_4BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(3);
-  EXPECT_EQ(PACKET_4BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(4);
-  EXPECT_EQ(PACKET_4BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(5);
-  EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(6);
-  EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(7);
-  EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(8);
-  EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
-  generator_.SetConnectionIdLength(9);
-  EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
+
+  for (size_t i = 1; i < 10; i++) {
+    generator_.SetConnectionIdLength(i);
+    EXPECT_EQ(PACKET_8BYTE_CONNECTION_ID, creator_->connection_id_length());
+  }
 }
 
 // Test whether SetMaxPacketLength() works in the situation when the queue is

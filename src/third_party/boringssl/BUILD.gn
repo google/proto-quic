@@ -4,7 +4,10 @@
 
 import("//build/config/android/config.gni")
 import("//build/config/sanitizers/sanitizers.gni")
+import("//build_overrides/build.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
+import("BUILD.generated.gni")
+import("BUILD.generated_tests.gni")
 
 # Config for us and everybody else depending on BoringSSL.
 config("external_config") {
@@ -39,14 +42,7 @@ config("fuzzer_config") {
   defines = [ "BORINGSSL_UNSAFE_FUZZER_MODE" ]
 }
 
-# The list of BoringSSL files is kept in boringssl.gypi.
-gypi_values =
-    exec_script("//build/gypi_to_gn.py",
-                [ rebase_path("//third_party/boringssl/boringssl.gypi") ],
-                "scope",
-                [ "//third_party/boringssl/boringssl.gypi" ])
-boringssl_sources =
-    gypi_values.boringssl_crypto_sources + gypi_values.boringssl_ssl_sources
+all_sources = crypto_sources + ssl_sources
 
 # Windows' assembly is built with Yasm. The other platforms use the platform
 # assembler.
@@ -54,9 +50,9 @@ if (is_win && !is_msan) {
   import("//third_party/yasm/yasm_assemble.gni")
   yasm_assemble("boringssl_asm") {
     if (current_cpu == "x64") {
-      sources = gypi_values.boringssl_win_x86_64_sources
+      sources = crypto_sources_win_x86_64
     } else if (current_cpu == "x86") {
-      sources = gypi_values.boringssl_win_x86_sources
+      sources = crypto_sources_win_x86
     }
   }
 } else {
@@ -84,24 +80,24 @@ if (is_win && !is_msan) {
       public_configs = [ ":no_asm_config" ]
     } else if (current_cpu == "x64") {
       if (is_mac) {
-        sources += gypi_values.boringssl_mac_x86_64_sources
+        sources += crypto_sources_mac_x86_64
       } else if (is_linux || is_android) {
-        sources += gypi_values.boringssl_linux_x86_64_sources
+        sources += crypto_sources_linux_x86_64
       } else {
         public_configs = [ ":no_asm_config" ]
       }
     } else if (current_cpu == "x86") {
       if (is_mac) {
-        sources += gypi_values.boringssl_mac_x86_sources
+        sources += crypto_sources_mac_x86
       } else if (is_linux || is_android) {
-        sources += gypi_values.boringssl_linux_x86_sources
+        sources += crypto_sources_linux_x86
       } else {
         public_configs = [ ":no_asm_config" ]
       }
     } else if (current_cpu == "arm" && (is_linux || is_android)) {
-      sources += gypi_values.boringssl_linux_arm_sources
+      sources += crypto_sources_linux_arm
     } else if (current_cpu == "arm64" && (is_linux || is_android)) {
-      sources += gypi_values.boringssl_linux_aarch64_sources
+      sources += crypto_sources_linux_aarch64
 
       # TODO(davidben): Remove explicit arch flag once https://crbug.com/576858
       # is fixed.
@@ -113,7 +109,7 @@ if (is_win && !is_msan) {
 }
 
 component("boringssl") {
-  sources = boringssl_sources
+  sources = all_sources
   deps = [
     ":boringssl_asm",
   ]
@@ -129,65 +125,78 @@ component("boringssl") {
   }
 }
 
-# The same as boringssl, but builds with BORINGSSL_UNSAFE_FUZZER_MODE.
-component("boringssl_fuzzer") {
-  visibility = [ ":*" ]  # Only targets in this file can depend on this.
-
-  sources = boringssl_sources
-  deps = [
-    ":boringssl_asm",
-  ]
-
-  public_configs = [
-    ":external_config",
-    ":fuzzer_config",
-  ]
-  configs += [ ":internal_config" ]
-
-  configs -= [ "//build/config/compiler:chromium_code" ]
-  configs += [ "//build/config/compiler:no_chromium_code" ]
-
-  if (is_nacl) {
-    deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+if (build_with_chromium) {
+  create_tests("boringssl_tests") {
+    configs_exclude = [ "//build/config/compiler:chromium_code" ]
+    configs = [
+      ":internal_config",
+      "//build/config/compiler:no_chromium_code",
+    ]
+    deps = [
+      ":boringssl",
+      "//build/win:default_exe_manifest",
+    ]
   }
-}
 
-fuzzer_test("boringssl_cert_fuzzer") {
-  sources = [
-    "src/fuzz/cert.cc",
-  ]
-  deps = [
-    ":boringssl_fuzzer",
-  ]
-  seed_corpus = "src/fuzz/cert_corpus"
-}
+  test("boringssl_unittests") {
+    deps = [
+      ":boringssl_tests",
+      "//base",
+      "//base/test:run_all_unittests",
+      "//base/test:test_support",
+      "//testing/gtest",
+    ]
+    sources = [
+      "boringssl_unittest.cc",
+    ]
+  }
 
-fuzzer_test("boringssl_client_fuzzer") {
-  sources = [
-    "src/fuzz/client.cc",
-  ]
-  deps = [
-    ":boringssl_fuzzer",
-  ]
-  seed_corpus = "src/fuzz/client_corpus"
-}
+  # The same as boringssl, but builds with BORINGSSL_UNSAFE_FUZZER_MODE.
+  component("boringssl_fuzzer") {
+    visibility = [ ":*" ]  # Only targets in this file can depend on this.
 
-fuzzer_test("boringssl_privkey_fuzzer") {
-  sources = [
-    "src/fuzz/privkey.cc",
-  ]
-  deps = [
-    ":boringssl_fuzzer",
-  ]
-  seed_corpus = "src/fuzz/privkey_corpus"
-}
+    sources = all_sources
+    deps = [
+      ":boringssl_asm",
+    ]
 
-fuzzer_test("boringssl_server_fuzzer") {
-  sources = [
-    "src/fuzz/server.cc",
-  ]
-  deps = [
-    ":boringssl_fuzzer",
-  ]
-  seed_corpus = "src/fuzz/server_corpus"
+    public_configs = [
+      ":external_config",
+      ":fuzzer_config",
+    ]
+    configs += [ ":internal_config" ]
+
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+
+    if (is_nacl) {
+      deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+    }
+  }
+
+  foreach(fuzzer, fuzzers) {
+    fuzzer_test("boringssl_${fuzzer}_fuzzer") {
+      sources = [
+        "src/fuzz/${fuzzer}.cc",
+      ]
+      deps = [
+        ":boringssl_fuzzer",
+      ]
+      seed_corpus = "src/fuzz/${fuzzer}_corpus"
+
+      if ("cert" == fuzzer) {
+        libfuzzer_options = [ "max_len=3072" ]
+      } else if ("client" == fuzzer) {
+        libfuzzer_options = [ "max_len=20000" ]
+      } else if ("pkcs8" == fuzzer) {
+        libfuzzer_options = [ "max_len=2048" ]
+      } else if ("privkey" == fuzzer) {
+        libfuzzer_options = [ "max_len=2048" ]
+      } else if ("server" == fuzzer) {
+        libfuzzer_options = [ "max_len=4096" ]
+      } else if ("spki" == fuzzer) {
+        libfuzzer_options = [ "max_len=1024" ]
+      }
+    }
+  }
 }

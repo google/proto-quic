@@ -266,7 +266,11 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // crypto_proof: output structure containing the crypto proof used in reply to
   //     a proof demand.
   // out: the resulting handshake message (either REJ or SHLO)
-  // error_details: used to store a string describing any error.
+  // out_diversification_nonce: If the resulting handshake message is SHLO and
+  //     the version is greater than QUIC_VERSION_32 then this contains a
+  //     32-byte value that should be included in the public header of
+  //     initially encrypted packets.
+  // error_details: used to store a std::string describing any error.
   QuicErrorCode ProcessClientHello(
       const ValidateClientHelloResultCallback::Result& validate_chlo_result,
       QuicConnectionId connection_id,
@@ -282,6 +286,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicCryptoNegotiatedParameters* params,
       QuicCryptoProof* crypto_proof,
       CryptoHandshakeMessage* out,
+      DiversificationNonce* out_diversification_nonce,
       std::string* error_details) const;
 
   // BuildServerConfigUpdateMessage sets |out| to be a SCUP message containing

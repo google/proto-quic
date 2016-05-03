@@ -26,7 +26,6 @@
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
-#include "net/base/network_quality_estimator.h"
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "net/base/sdch_manager.h"
 #include "net/base/sdch_net_log_params.h"
@@ -42,6 +41,7 @@
 #include "net/http/http_transaction.h"
 #include "net/http/http_transaction_factory.h"
 #include "net/http/http_util.h"
+#include "net/nqe/network_quality_estimator.h"
 #include "net/proxy/proxy_info.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cert_request_info.h"
@@ -141,8 +141,7 @@ void LogChannelIDAndCookieStores(const GURL& url,
       ephemerality = CID_EPHEMERAL_COOKIE_PERSISTENT;
     }
   } else if (cookie_store->IsEphemeral()) {
-    // TODO(crbug.com/599049): Add NOTREACHED once this case doesn't happen on
-    // iOS anymore.
+    NOTREACHED();
     ephemerality = CID_PERSISTENT_COOKIE_EPHEMERAL;
   } else if (cookie_store->GetChannelIDServiceID() == -1) {
     ephemerality = PERSISTENT_UNKNOWN;
@@ -711,9 +710,7 @@ void URLRequestHttpJob::AddExtraHeaders() {
 
     // Advertise "br" encoding only if transferred data is opaque to proxy.
     bool advertise_brotli = false;
-    const HttpNetworkSession::Params* network_session_params =
-        request()->context()->GetNetworkSessionParams();
-    if (network_session_params && network_session_params->enable_brotli)
+    if (request()->context()->enable_brotli())
       advertise_brotli = request()->url().SchemeIsCryptographic();
 
     // Supply Accept-Encoding headers first so that it is more likely that they
@@ -1620,7 +1617,9 @@ void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {
               "Net.HttpJob.TotalTimeCached.Secure.NotQuic", total_time);
         }
       }
-    } else  {
+      if (response_info_->unused_since_prefetch)
+        UMA_HISTOGRAM_COUNTS("Net.Prefetch.HitBytes", prefilter_bytes_read());
+    } else {
       UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeNotCached", total_time);
       if (is_https_google) {
         if (used_quic) {

@@ -406,6 +406,11 @@ bool QuicDispatcher::OnStopWaitingFrame(const QuicStopWaitingFrame& /*frame*/) {
   return false;
 }
 
+bool QuicDispatcher::OnPaddingFrame(const QuicPaddingFrame& /*frame*/) {
+  DCHECK(false);
+  return false;
+}
+
 bool QuicDispatcher::OnPingFrame(const QuicPingFrame& /*frame*/) {
   DCHECK(false);
   return false;

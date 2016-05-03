@@ -2372,8 +2372,16 @@ GenerateClear(io::Printer* printer) {
   // positions of two fields in the Message.
   // ZR_ zeroes a non-empty range of fields via memset.
   const char* macros =
+      "#if defined(__clang__)\n"
+      "#define ZR_HELPER_(f) \\\n"
+      "  _Pragma(\"clang diagnostic push\") \\\n"
+      "  _Pragma(\"clang diagnostic ignored \\\"-Winvalid-offsetof\\\"\") \\\n"
+      "  __builtin_offsetof($classname$, f) \\\n"
+      "  _Pragma(\"clang diagnostic pop\")\n"
+      "#else\n"
       "#define ZR_HELPER_(f) reinterpret_cast<char*>(\\\n"
-      "  &reinterpret_cast<$classname$*>(16)->f)\n\n"
+      "  &reinterpret_cast<$classname$*>(16)->f)\n"
+      "#endif\n\n"
       "#define ZR_(first, last) do {\\\n"
       "  ::memset(&first, 0,\\\n"
       "           ZR_HELPER_(last) - ZR_HELPER_(first) + sizeof(last));\\\n"

@@ -32,6 +32,8 @@ class SimpleQuicFramer {
  public:
   SimpleQuicFramer();
   explicit SimpleQuicFramer(const QuicVersionVector& supported_versions);
+  SimpleQuicFramer(const QuicVersionVector& supported_versions,
+                   Perspective perspective);
   ~SimpleQuicFramer();
 
   bool ProcessPacket(const QuicEncryptedPacket& packet);

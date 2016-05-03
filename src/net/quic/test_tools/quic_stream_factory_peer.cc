@@ -73,15 +73,6 @@ bool QuicStreamFactoryPeer::IsQuicDisabled(QuicStreamFactory* factory,
   return factory->IsQuicDisabled(port);
 }
 
-bool QuicStreamFactoryPeer::GetDelayTcpRace(QuicStreamFactory* factory) {
-  return factory->delay_tcp_race_;
-}
-
-void QuicStreamFactoryPeer::SetDelayTcpRace(QuicStreamFactory* factory,
-                                            bool delay_tcp_race) {
-  factory->delay_tcp_race_ = delay_tcp_race;
-}
-
 void QuicStreamFactoryPeer::SetYieldAfterPackets(QuicStreamFactory* factory,
                                                  int yield_after_packets) {
   factory->yield_after_packets_ = yield_after_packets;

@@ -235,6 +235,10 @@ class NET_EXPORT URLRequestContext
     has_known_mismatched_cookie_store_ = true;
   }
 
+  void set_enable_brotli(bool enable_brotli) { enable_brotli_ = enable_brotli; }
+
+  bool enable_brotli() const { return enable_brotli_; }
+
  private:
   // ---------------------------------------------------------------------------
   // Important: When adding any new members below, consider whether they need to
@@ -270,6 +274,9 @@ class NET_EXPORT URLRequestContext
 
   std::unique_ptr<std::set<const URLRequest*>> url_requests_;
   bool has_known_mismatched_cookie_store_;
+
+  // Enables Brotli Content-Encoding support.
+  bool enable_brotli_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);
 };

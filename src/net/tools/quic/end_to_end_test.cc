@@ -790,9 +790,15 @@ TEST_P(EndToEndTest, LargePostZeroRTTFailure) {
   client_->WaitForResponseForMs(-1);
   ASSERT_TRUE(client_->client()->connected());
   EXPECT_EQ(kFooResponseBody, client_->SendCustomSynchronousRequest(request));
-  EXPECT_EQ(expected_num_hellos_latest_session,
-            client_->client()->session()->GetNumSentClientHellos());
-  EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+
+  if (negotiated_version_ <= QUIC_VERSION_32) {
+    EXPECT_EQ(expected_num_hellos_latest_session,
+              client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+  } else {
+    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
+  }
 
   client_->Disconnect();
 
@@ -843,9 +849,15 @@ TEST_P(EndToEndTest, SynchronousRequestZeroRTTFailure) {
   client_->WaitForInitialResponse();
   ASSERT_TRUE(client_->client()->connected());
   EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
-  EXPECT_EQ(expected_num_hellos_latest_session,
-            client_->client()->session()->GetNumSentClientHellos());
-  EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+
+  if (negotiated_version_ <= QUIC_VERSION_32) {
+    EXPECT_EQ(expected_num_hellos_latest_session,
+              client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+  } else {
+    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
+  }
 
   client_->Disconnect();
 
@@ -902,9 +914,15 @@ TEST_P(EndToEndTest, LargePostSynchronousRequest) {
   client_->WaitForInitialResponse();
   ASSERT_TRUE(client_->client()->connected());
   EXPECT_EQ(kFooResponseBody, client_->SendCustomSynchronousRequest(request));
-  EXPECT_EQ(expected_num_hellos_latest_session,
-            client_->client()->session()->GetNumSentClientHellos());
-  EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+
+  if (negotiated_version_ <= QUIC_VERSION_32) {
+    EXPECT_EQ(expected_num_hellos_latest_session,
+              client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
+  } else {
+    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
+  }
 
   client_->Disconnect();
 
@@ -1275,30 +1293,6 @@ TEST_P(EndToEndTest, 0ByteConnectionId) {
   QuicPacketHeader* header = QuicConnectionPeer::GetLastHeader(
       client_->client()->session()->connection());
   EXPECT_EQ(PACKET_0BYTE_CONNECTION_ID,
-            header->public_header.connection_id_length);
-}
-
-TEST_P(EndToEndTest, 1ByteConnectionId) {
-  client_config_.SetBytesForConnectionIdToSend(1);
-  ASSERT_TRUE(Initialize());
-
-  EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
-  EXPECT_EQ(200u, client_->response_headers()->parsed_response_code());
-  QuicPacketHeader* header = QuicConnectionPeer::GetLastHeader(
-      client_->client()->session()->connection());
-  EXPECT_EQ(PACKET_1BYTE_CONNECTION_ID,
-            header->public_header.connection_id_length);
-}
-
-TEST_P(EndToEndTest, 4ByteConnectionId) {
-  client_config_.SetBytesForConnectionIdToSend(4);
-  ASSERT_TRUE(Initialize());
-
-  EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
-  EXPECT_EQ(200u, client_->response_headers()->parsed_response_code());
-  QuicPacketHeader* header = QuicConnectionPeer::GetLastHeader(
-      client_->client()->session()->connection());
-  EXPECT_EQ(PACKET_4BYTE_CONNECTION_ID,
             header->public_header.connection_id_length);
 }
 

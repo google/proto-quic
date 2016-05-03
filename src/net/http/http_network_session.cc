@@ -99,7 +99,6 @@ HttpNetworkSession::Params::Params()
       parse_alternative_services(false),
       enable_alternative_service_with_different_host(false),
       enable_npn(false),
-      enable_brotli(false),
       enable_priority_dependencies(true),
       enable_quic(false),
       disable_quic_on_timeout_with_open_streams(false),
@@ -115,7 +114,6 @@ HttpNetworkSession::Params::Params()
       quic_max_number_of_lossy_connections(0),
       quic_packet_loss_threshold(1.0f),
       quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
-      quic_delay_tcp_race(false),
       quic_max_server_configs_stored_in_properties(0u),
       quic_clock(NULL),
       quic_random(NULL),
@@ -134,7 +132,7 @@ HttpNetworkSession::Params::Params()
       quic_disable_bidirectional_streams(false),
       proxy_delegate(NULL),
       enable_token_binding(false) {
-  quic_supported_versions.push_back(QUIC_VERSION_30);
+  quic_supported_versions.push_back(QUIC_VERSION_31);
 }
 
 HttpNetworkSession::Params::Params(const Params& other) = default;
@@ -181,7 +179,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_threshold_public_resets_post_handshake,
           params.quic_threshold_timeouts_streams_open,
           params.quic_socket_receive_buffer_size,
-          params.quic_delay_tcp_race,
           params.quic_max_server_configs_stored_in_properties,
           params.quic_close_sessions_on_ip_change,
           params.disable_quic_on_timeout_with_open_streams,
@@ -336,7 +333,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->SetInteger("max_number_of_lossy_connections",
                    params_.quic_max_number_of_lossy_connections);
   dict->SetDouble("packet_loss_threshold", params_.quic_packet_loss_threshold);
-  dict->SetBoolean("delay_tcp_race", params_.quic_delay_tcp_race);
+  dict->SetBoolean("delay_tcp_race", true);
   dict->SetInteger("max_server_configs_stored_in_properties",
                    params_.quic_max_server_configs_stored_in_properties);
   dict->SetInteger("idle_connection_timeout_seconds",

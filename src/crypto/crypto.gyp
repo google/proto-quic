@@ -45,7 +45,6 @@
         }, {  # os_posix != 1 or OS == "mac" or OS == "ios" or OS == "android"
             'sources!': [
               'hmac_win.cc',
-              'symmetric_key_win.cc',
             ],
         }],
         [ 'OS != "mac" and OS != "ios"', {

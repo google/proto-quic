@@ -6,6 +6,7 @@
 #define BASE_THREAD_TASK_RUNNER_HANDLE_H_
 
 #include "base/base_export.h"
+#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 
 namespace base {
@@ -34,6 +35,8 @@ class BASE_EXPORT ThreadTaskRunnerHandle {
 
  private:
   scoped_refptr<SingleThreadTaskRunner> task_runner_;
+
+  DISALLOW_COPY_AND_ASSIGN(ThreadTaskRunnerHandle);
 };
 
 }  // namespace base

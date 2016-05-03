@@ -170,8 +170,10 @@ MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
     std::unique_ptr<MemoryAllocatorDump> mad) {
   auto insertion_result = allocator_dumps_.insert(
       std::make_pair(mad->absolute_name(), std::move(mad)));
-  DCHECK(insertion_result.second) << "Duplicate name: " << mad->absolute_name();
-  return insertion_result.first->second.get();
+  MemoryAllocatorDump* inserted_mad = insertion_result.first->second.get();
+  DCHECK(insertion_result.second) << "Duplicate name: "
+                                  << inserted_mad->absolute_name();
+  return inserted_mad;
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::GetAllocatorDump(

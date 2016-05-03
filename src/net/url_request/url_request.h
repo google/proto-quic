@@ -637,12 +637,6 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // due to HSTS. If so, |redirect_url| is rewritten to the new HTTPS URL.
   bool GetHSTSRedirect(GURL* redirect_url) const;
 
-  // NOTE(willchan): This is just temporary for debugging
-  // http://crbug.com/90971.
-  // Allows to setting debug info into the URLRequest.
-  void set_stack_trace(const base::debug::StackTrace& stack_trace);
-  const base::debug::StackTrace* stack_trace() const;
-
   void set_received_response_content_length(int64_t received_content_length) {
     received_response_content_length_ = received_content_length;
   }
@@ -871,8 +865,6 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   // The proxy server used for this request, if any.
   HostPortPair proxy_server_;
-
-  std::unique_ptr<const base::debug::StackTrace> stack_trace_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequest);
 };

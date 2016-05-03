@@ -374,34 +374,39 @@ void CryptoTestUtils::SetupCryptoServerConfigForTest(
 
 // static
 void CryptoTestUtils::CommunicateHandshakeMessages(
-    PacketSavingConnection* a_conn,
-    QuicCryptoStream* a,
-    PacketSavingConnection* b_conn,
-    QuicCryptoStream* b) {
-  CommunicateHandshakeMessagesAndRunCallbacks(a_conn, a, b_conn, b, nullptr);
+    PacketSavingConnection* client_conn,
+    QuicCryptoStream* client,
+    PacketSavingConnection* server_conn,
+    QuicCryptoStream* server) {
+  CommunicateHandshakeMessagesAndRunCallbacks(client_conn, client, server_conn,
+                                              server, nullptr);
 }
 
 // static
 void CryptoTestUtils::CommunicateHandshakeMessagesAndRunCallbacks(
-    PacketSavingConnection* a_conn,
-    QuicCryptoStream* a,
-    PacketSavingConnection* b_conn,
-    QuicCryptoStream* b,
+    PacketSavingConnection* client_conn,
+    QuicCryptoStream* client,
+    PacketSavingConnection* server_conn,
+    QuicCryptoStream* server,
     CallbackSource* callback_source) {
-  size_t a_i = 0, b_i = 0;
-  while (!a->handshake_confirmed()) {
-    ASSERT_GT(a_conn->encrypted_packets_.size(), a_i);
-    VLOG(1) << "Processing " << a_conn->encrypted_packets_.size() - a_i
-            << " packets a->b";
-    MovePackets(a_conn, &a_i, b, b_conn);
+  size_t client_i = 0, server_i = 0;
+  while (!client->handshake_confirmed()) {
+    ASSERT_GT(client_conn->encrypted_packets_.size(), client_i);
+    VLOG(1) << "Processing "
+            << client_conn->encrypted_packets_.size() - client_i
+            << " packets client->server";
+    MovePackets(client_conn, &client_i, server, server_conn,
+                Perspective::IS_SERVER);
     if (callback_source) {
       callback_source->RunPendingCallbacks();
     }
 
-    ASSERT_GT(b_conn->encrypted_packets_.size(), b_i);
-    VLOG(1) << "Processing " << b_conn->encrypted_packets_.size() - b_i
-            << " packets b->a";
-    MovePackets(b_conn, &b_i, a, a_conn);
+    ASSERT_GT(server_conn->encrypted_packets_.size(), server_i);
+    VLOG(1) << "Processing "
+            << server_conn->encrypted_packets_.size() - server_i
+            << " packets server->client";
+    MovePackets(server_conn, &server_i, client, client_conn,
+                Perspective::IS_CLIENT);
     if (callback_source) {
       callback_source->RunPendingCallbacks();
     }
@@ -410,24 +415,26 @@ void CryptoTestUtils::CommunicateHandshakeMessagesAndRunCallbacks(
 
 // static
 pair<size_t, size_t> CryptoTestUtils::AdvanceHandshake(
-    PacketSavingConnection* a_conn,
-    QuicCryptoStream* a,
-    size_t a_i,
-    PacketSavingConnection* b_conn,
-    QuicCryptoStream* b,
-    size_t b_i) {
-  VLOG(1) << "Processing " << a_conn->encrypted_packets_.size() - a_i
-          << " packets a->b";
-  MovePackets(a_conn, &a_i, b, b_conn);
+    PacketSavingConnection* client_conn,
+    QuicCryptoStream* client,
+    size_t client_i,
+    PacketSavingConnection* server_conn,
+    QuicCryptoStream* server,
+    size_t server_i) {
+  VLOG(1) << "Processing " << client_conn->encrypted_packets_.size() - client_i
+          << " packets client->server";
+  MovePackets(client_conn, &client_i, server, server_conn,
+              Perspective::IS_SERVER);
 
-  VLOG(1) << "Processing " << b_conn->encrypted_packets_.size() - b_i
-          << " packets b->a";
-  if (b_conn->encrypted_packets_.size() - b_i == 2) {
+  VLOG(1) << "Processing " << server_conn->encrypted_packets_.size() - server_i
+          << " packets server->client";
+  if (server_conn->encrypted_packets_.size() - server_i == 2) {
     VLOG(1) << "here";
   }
-  MovePackets(b_conn, &b_i, a, a_conn);
+  MovePackets(server_conn, &server_i, client, client_conn,
+              Perspective::IS_CLIENT);
 
-  return std::make_pair(a_i, b_i);
+  return std::make_pair(client_i, server_i);
 }
 
 // static
@@ -760,8 +767,9 @@ ChannelIDSource* CryptoTestUtils::ChannelIDSourceForTesting() {
 void CryptoTestUtils::MovePackets(PacketSavingConnection* source_conn,
                                   size_t* inout_packet_index,
                                   QuicCryptoStream* dest_stream,
-                                  PacketSavingConnection* dest_conn) {
-  SimpleQuicFramer framer(source_conn->supported_versions());
+                                  PacketSavingConnection* dest_conn,
+                                  Perspective dest_perspective) {
+  SimpleQuicFramer framer(source_conn->supported_versions(), dest_perspective);
   CryptoFramer crypto_framer;
   CryptoFramerVisitor crypto_visitor;
 

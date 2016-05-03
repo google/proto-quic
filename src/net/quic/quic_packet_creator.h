@@ -72,6 +72,11 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // Makes the framer not serialize the protocol version in sent packets.
   void StopSendingVersion();
 
+  // SetDiversificationNonce sets the nonce that will be sent in each public
+  // header of packets encrypted at the initial encryption level. Should only
+  // be called by servers.
+  void SetDiversificationNonce(const DiversificationNonce nonce);
+
   // Update the packet number length to use in future packets as soon as it
   // can be safely changed.
   // TODO(fayang): Directly set packet number length instead of compute it in
@@ -84,6 +89,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
       QuicConnectionIdLength connection_id_length,
       bool include_version,
       bool include_path_id,
+      bool include_diversification_nonce,
       QuicPacketNumberLength packet_number_length,
       QuicStreamOffset offset);
 
@@ -97,7 +103,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
                    size_t iov_offset,
                    QuicStreamOffset offset,
                    bool fin,
-                   bool needs_padding,
+                   bool needs_full_padding,
                    QuicFrame* frame);
 
   // Returns true if current open packet can accommodate more stream frames of
@@ -261,6 +267,10 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // Clears all fields of packet_ that should be cleared between serializations.
   void ClearPacket();
 
+  // Returns true if a diversification nonce should be included in the current
+  // packet's public header.
+  bool IncludeNonceInPublicHeader();
+
   // Does not own these delegates or the framer.
   DelegateInterface* delegate_;
   DebugDelegate* debug_delegate_;
@@ -278,6 +288,10 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // a packet boundary, when the creator's packet_number_length_ can be changed
   // to this new value.
   QuicPacketNumberLength next_packet_number_length_;
+  // If true, then |nonce_for_public_header_| will be included in the public
+  // header of all packets created at the initial encryption level.
+  bool have_diversification_nonce_;
+  DiversificationNonce diversification_nonce_;
   // Maximum length including headers and encryption (UDP payload length.)
   QuicByteCount max_packet_length_;
   size_t max_plaintext_size_;

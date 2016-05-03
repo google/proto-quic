@@ -96,22 +96,11 @@ PersistentSampleMap::PersistentSampleMap(
     uint64_t id,
     PersistentHistogramAllocator* allocator,
     Metadata* meta)
-    : PersistentSampleMap(id, allocator->UseSampleMapRecords(id, this), meta) {}
-
-PersistentSampleMap::PersistentSampleMap(
-    uint64_t id,
-    PersistentSparseHistogramDataManager* manager,
-    Metadata* meta)
-    : PersistentSampleMap(id, manager->UseSampleMapRecords(id, this), meta) {}
-
-PersistentSampleMap::PersistentSampleMap(
-    uint64_t id,
-    PersistentSampleMapRecords* records,
-    Metadata* meta)
-    : HistogramSamples(id, meta), records_(records) {}
+    : HistogramSamples(id, meta), allocator_(allocator) {}
 
 PersistentSampleMap::~PersistentSampleMap() {
-  records_->Release(this);
+  if (records_)
+    records_->Release(this);
 }
 
 void PersistentSampleMap::Accumulate(Sample value, Count count) {
@@ -219,7 +208,9 @@ Count* PersistentSampleMap::GetOrCreateSampleCountStorage(Sample value) {
   if (count_pointer)
     return count_pointer;
 
-  // Create a new record in persistent memory for the value.
+  // Create a new record in persistent memory for the value. |records_| will
+  // have been initialized by the GetSampleCountStorage() call above.
+  DCHECK(records_);
   PersistentMemoryAllocator::Reference ref = records_->CreateNew(value);
   if (!ref) {
     // If a new record could not be created then the underlying allocator is
@@ -245,13 +236,25 @@ Count* PersistentSampleMap::GetOrCreateSampleCountStorage(Sample value) {
   return count_pointer;
 }
 
+PersistentSampleMapRecords* PersistentSampleMap::GetRecords() {
+  // The |records_| pointer is lazily fetched from the |allocator_| only on
+  // first use. Sometimes duplicate histograms are created by race conditions
+  // and if both were to grab the records object, there would be a conflict.
+  // Use of a histogram, and thus a call to this method, won't occur until
+  // after the histogram has been de-dup'd.
+  if (!records_)
+    records_ = allocator_->UseSampleMapRecords(id(), this);
+  return records_;
+}
+
 Count* PersistentSampleMap::ImportSamples(Sample until_value,
                                           bool import_everything) {
   Count* found_count = nullptr;
   PersistentMemoryAllocator::Reference ref;
-  while ((ref = records_->GetNext()) != 0) {
+  PersistentSampleMapRecords* records = GetRecords();
+  while ((ref = records->GetNext()) != 0) {
     SampleRecord* record =
-        records_->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+        records->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
     if (!record)
       continue;
 

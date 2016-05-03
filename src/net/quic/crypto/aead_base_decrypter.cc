@@ -8,10 +8,12 @@
 #include <memory>
 
 #include "net/quic/crypto/aead_base_decrypter.h"
+#include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_utils.h"
 
 using base::StringPiece;
+using std::string;
 
 namespace net {
 
@@ -46,7 +48,11 @@ AeadBaseDecrypter::AeadBaseDecrypter(const EVP_AEAD* aead_alg,
     : aead_alg_(aead_alg),
       key_size_(key_size),
       auth_tag_size_(auth_tag_size),
-      nonce_prefix_size_(nonce_prefix_size) {
+      nonce_prefix_size_(nonce_prefix_size),
+      have_preliminary_key_(false) {
+  DCHECK_GT(256u, key_size);
+  DCHECK_GT(256u, auth_tag_size);
+  DCHECK_GT(256u, nonce_prefix_size);
   DCHECK_LE(key_size_, sizeof(key_));
   DCHECK_LE(nonce_prefix_size_, sizeof(nonce_prefix_));
 }
@@ -79,6 +85,35 @@ bool AeadBaseDecrypter::SetNoncePrefix(StringPiece nonce_prefix) {
   return true;
 }
 
+bool AeadBaseDecrypter::SetPreliminaryKey(StringPiece key) {
+  DCHECK(!have_preliminary_key_);
+  SetKey(key);
+  have_preliminary_key_ = true;
+
+  return true;
+}
+
+bool AeadBaseDecrypter::SetDiversificationNonce(DiversificationNonce nonce) {
+  if (!have_preliminary_key_) {
+    return true;
+  }
+
+  string key, nonce_prefix;
+  DiversifyPreliminaryKey(
+      StringPiece(reinterpret_cast<const char*>(key_), key_size_),
+      StringPiece(reinterpret_cast<const char*>(nonce_prefix_),
+                  nonce_prefix_size_),
+      nonce, key_size_, nonce_prefix_size_, &key, &nonce_prefix);
+
+  if (!SetKey(key) || !SetNoncePrefix(nonce_prefix)) {
+    DCHECK(false);
+    return false;
+  }
+
+  have_preliminary_key_ = false;
+  return true;
+}
+
 bool AeadBaseDecrypter::DecryptPacket(QuicPathId path_id,
                                       QuicPacketNumber packet_number,
                                       StringPiece associated_data,
@@ -87,6 +122,11 @@ bool AeadBaseDecrypter::DecryptPacket(QuicPathId path_id,
                                       size_t* output_length,
                                       size_t max_output_length) {
   if (ciphertext.length() < auth_tag_size_) {
+    return false;
+  }
+
+  if (have_preliminary_key_) {
+    QUIC_BUG << "Unable to decrypt while key diversification is pending";
     return false;
   }
 

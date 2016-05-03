@@ -134,10 +134,6 @@ class NET_EXPORT IPAddress {
 
 using IPAddressList = std::vector<IPAddress>;
 
-// TODO(Martijnc): These utility functions currently forward the calls to
-// the IPAddressNumber implementations. Move the implementations over when
-// the IPAddressNumber migration is complete. https://crbug.com/496258.
-
 // Returns the canonical string representation of an IP address along with its
 // port. For example: "192.168.0.1:99" or "[::1]:80".
 NET_EXPORT std::string IPAddressToStringWithPort(const IPAddress& address,

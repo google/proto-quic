@@ -55,6 +55,10 @@ const uint32_t kSpdyMaxFrameSizeLimit = (1 << 24) - 1;
 // the maximum control frame size we accept.
 const uint32_t kSpdyInitialFrameSizeLimit = 1 << 14;
 
+// The initial value for the maximum size of the header list, "unlimited" (max
+// unsigned 32-bit int) as per the spec.
+const uint32_t kSpdyInitialHeaderListSizeLimit = 0xFFFFFFFF;
+
 // Maximum window size for a Spdy stream or session.
 const int32_t kSpdyMaximumWindowSize = 0x7FFFFFFF;  // Max signed 32bit int
 

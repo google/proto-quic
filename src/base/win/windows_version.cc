@@ -14,6 +14,10 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/win/registry.h"
 
+#if !defined(__clang__) && _MSC_FULL_VER < 190023918
+#error VS 2015 Update 2 or higher is required
+#endif
+
 namespace {
 typedef BOOL (WINAPI *GetProductInfoPtr)(DWORD, DWORD, DWORD, DWORD, PDWORD);
 }  // namespace

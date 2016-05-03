@@ -110,34 +110,34 @@ class CryptoTestUtils {
       QuicCryptoServerConfig* crypto_config,
       const FakeServerOptions& options);
 
-  // CommunicateHandshakeMessages moves messages from |a| to |b| and back until
-  // |a|'s handshake has completed.
-  static void CommunicateHandshakeMessages(PacketSavingConnection* a_conn,
-                                           QuicCryptoStream* a,
-                                           PacketSavingConnection* b_conn,
-                                           QuicCryptoStream* b);
+  // CommunicateHandshakeMessages moves messages from |client| to |server| and
+  // back until |clients|'s handshake has completed.
+  static void CommunicateHandshakeMessages(PacketSavingConnection* client_conn,
+                                           QuicCryptoStream* client,
+                                           PacketSavingConnection* server_conn,
+                                           QuicCryptoStream* server);
 
-  // CommunicateHandshakeMessagesAndRunCallbacks moves messages from |a| to |b|
-  // and back until |a|'s handshake has completed. If |callback_source| is not
-  // nullptr, CommunicateHandshakeMessagesAndRunCallbacks also runs callbacks
-  // from
+  // CommunicateHandshakeMessagesAndRunCallbacks moves messages from |client|
+  // to |server| and back until |client|'s handshake has completed. If
+  // |callback_source| is not nullptr,
+  // CommunicateHandshakeMessagesAndRunCallbacks also runs callbacks from
   // |callback_source| between processing messages.
   static void CommunicateHandshakeMessagesAndRunCallbacks(
-      PacketSavingConnection* a_conn,
-      QuicCryptoStream* a,
-      PacketSavingConnection* b_conn,
-      QuicCryptoStream* b,
+      PacketSavingConnection* client_conn,
+      QuicCryptoStream* client,
+      PacketSavingConnection* server_conn,
+      QuicCryptoStream* server,
       CallbackSource* callback_source);
 
-  // AdvanceHandshake attempts to moves messages from |a| to |b| and |b| to |a|.
-  // Returns the number of messages moved.
+  // AdvanceHandshake attempts to moves messages from |client| to |server| and
+  // |server| to |client|. Returns the number of messages moved.
   static std::pair<size_t, size_t> AdvanceHandshake(
-      PacketSavingConnection* a_conn,
-      QuicCryptoStream* a,
-      size_t a_i,
-      PacketSavingConnection* b_conn,
-      QuicCryptoStream* b,
-      size_t b_i);
+      PacketSavingConnection* client_conn,
+      QuicCryptoStream* client,
+      size_t client_i,
+      PacketSavingConnection* server_conn,
+      QuicCryptoStream* server,
+      size_t server_i);
 
   // Returns the value for the tag |tag| in the tag value map of |message|.
   static std::string GetValueForTag(const CryptoHandshakeMessage& message,
@@ -200,7 +200,8 @@ class CryptoTestUtils {
   static void MovePackets(PacketSavingConnection* source_conn,
                           size_t* inout_packet_index,
                           QuicCryptoStream* dest_stream,
-                          PacketSavingConnection* dest_conn);
+                          PacketSavingConnection* dest_conn,
+                          Perspective dest_perspective);
 
  private:
   static void CompareClientAndServerKeys(QuicCryptoClientStream* client,

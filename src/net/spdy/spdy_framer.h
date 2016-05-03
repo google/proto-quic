@@ -803,11 +803,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // If true, then ProcessInput returns after processing a full frame,
   // rather than reading all available input.
   bool process_single_input_frame_ = false;
-
-  // Latched value of --FLAGS_spdy_on_stream_end.
-  // If true, OnStreamEnd will be called instead of the sentinel call of
-  // OnStreamFrameData(stream_id, nullptr, 0, true)
-  bool spdy_on_stream_end_;
 };
 
 }  // namespace net

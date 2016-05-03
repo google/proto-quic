@@ -10,7 +10,6 @@
 #include "base/bind_helpers.h"
 #include "base/callback.h"
 #include "base/compiler_specific.h"
-#include "base/debug/stack_trace.h"
 #include "base/lazy_instance.h"
 #include "base/memory/singleton.h"
 #include "base/message_loop/message_loop.h"
@@ -1189,14 +1188,6 @@ void URLRequest::OnCallToDelegateComplete() {
     return;
   calling_delegate_ = false;
   net_log_.EndEvent(NetLog::TYPE_URL_REQUEST_DELEGATE);
-}
-
-void URLRequest::set_stack_trace(const base::debug::StackTrace& stack_trace) {
-  stack_trace_.reset(new base::debug::StackTrace(stack_trace));
-}
-
-const base::debug::StackTrace* URLRequest::stack_trace() const {
-  return stack_trace_.get();
 }
 
 void URLRequest::GetConnectionAttempts(ConnectionAttempts* out) const {

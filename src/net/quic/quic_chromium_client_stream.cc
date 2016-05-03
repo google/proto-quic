@@ -139,6 +139,27 @@ int QuicChromiumClientStream::WriteStreamData(
   return ERR_IO_PENDING;
 }
 
+int QuicChromiumClientStream::WritevStreamData(
+    const std::vector<IOBuffer*>& buffers,
+    const std::vector<int>& lengths,
+    bool fin,
+    const CompletionCallback& callback) {
+  // Must not be called when data is buffered.
+  DCHECK(!HasBufferedData());
+  // Writes the data, or buffers it.
+  for (size_t i = 0; i < buffers.size(); ++i) {
+    bool is_fin = fin && (i == buffers.size() - 1);
+    base::StringPiece string_data(buffers[i]->data(), lengths[i]);
+    WriteOrBufferData(string_data, is_fin, nullptr);
+  }
+  if (!HasBufferedData()) {
+    return OK;
+  }
+
+  callback_ = callback;
+  return ERR_IO_PENDING;
+}
+
 void QuicChromiumClientStream::SetDelegate(
     QuicChromiumClientStream::Delegate* delegate) {
   DCHECK(!(delegate_ && delegate));

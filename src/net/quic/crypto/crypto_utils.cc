@@ -14,6 +14,7 @@
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/crypto/quic_encrypter.h"
 #include "net/quic/crypto/quic_random.h"
+#include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_time.h"
 #include "net/quic/quic_utils.h"
 #include "url/url_canon.h"
@@ -90,6 +91,7 @@ bool CryptoUtils::DeriveKeys(StringPiece premaster_secret,
                              StringPiece server_nonce,
                              const string& hkdf_input,
                              Perspective perspective,
+                             Diversification diversification,
                              CrypterPair* crypters,
                              string* subkey_secret) {
   crypters->encrypter.reset(QuicEncrypter::Create(aead));
@@ -108,21 +110,67 @@ bool CryptoUtils::DeriveKeys(StringPiece premaster_secret,
 
   crypto::HKDF hkdf(premaster_secret, nonce, hkdf_input, key_bytes,
                     nonce_prefix_bytes, subkey_secret_bytes);
-  if (perspective == Perspective::IS_SERVER) {
-    if (!crypters->encrypter->SetKey(hkdf.server_write_key()) ||
-        !crypters->encrypter->SetNoncePrefix(hkdf.server_write_iv()) ||
-        !crypters->decrypter->SetKey(hkdf.client_write_key()) ||
-        !crypters->decrypter->SetNoncePrefix(hkdf.client_write_iv())) {
-      return false;
+
+  // Key derivation depends on the key diversification method being employed.
+  // both the client and the server support never doing key diversification.
+  // The server also supports immediate diversification, and the client
+  // supports pending diversification.
+  switch (diversification.mode()) {
+    case Diversification::NEVER: {
+      if (perspective == Perspective::IS_SERVER) {
+        if (!crypters->encrypter->SetKey(hkdf.server_write_key()) ||
+            !crypters->encrypter->SetNoncePrefix(hkdf.server_write_iv()) ||
+            !crypters->decrypter->SetKey(hkdf.client_write_key()) ||
+            !crypters->decrypter->SetNoncePrefix(hkdf.client_write_iv())) {
+          return false;
+        }
+      } else {
+        if (!crypters->encrypter->SetKey(hkdf.client_write_key()) ||
+            !crypters->encrypter->SetNoncePrefix(hkdf.client_write_iv()) ||
+            !crypters->decrypter->SetKey(hkdf.server_write_key()) ||
+            !crypters->decrypter->SetNoncePrefix(hkdf.server_write_iv())) {
+          return false;
+        }
+      }
+      break;
     }
-  } else {
-    if (!crypters->encrypter->SetKey(hkdf.client_write_key()) ||
-        !crypters->encrypter->SetNoncePrefix(hkdf.client_write_iv()) ||
-        !crypters->decrypter->SetKey(hkdf.server_write_key()) ||
-        !crypters->decrypter->SetNoncePrefix(hkdf.server_write_iv())) {
-      return false;
+    case Diversification::PENDING: {
+      if (perspective == Perspective::IS_SERVER) {
+        QUIC_BUG << "Pending diversification is only for clients.";
+        return false;
+      }
+
+      if (!crypters->encrypter->SetKey(hkdf.client_write_key()) ||
+          !crypters->encrypter->SetNoncePrefix(hkdf.client_write_iv()) ||
+          !crypters->decrypter->SetPreliminaryKey(hkdf.server_write_key()) ||
+          !crypters->decrypter->SetNoncePrefix(hkdf.server_write_iv())) {
+        return false;
+      }
+      break;
     }
+    case Diversification::NOW: {
+      if (perspective == Perspective::IS_CLIENT) {
+        QUIC_BUG << "Immediate diversification is only for servers.";
+        return false;
+      }
+
+      string key, nonce_prefix;
+      QuicDecrypter::DiversifyPreliminaryKey(
+          hkdf.server_write_key(), hkdf.server_write_iv(),
+          *diversification.nonce(), key_bytes, nonce_prefix_bytes, &key,
+          &nonce_prefix);
+      if (!crypters->decrypter->SetKey(hkdf.client_write_key()) ||
+          !crypters->decrypter->SetNoncePrefix(hkdf.client_write_iv()) ||
+          !crypters->encrypter->SetKey(key) ||
+          !crypters->encrypter->SetNoncePrefix(nonce_prefix)) {
+        return false;
+      }
+      break;
+    }
+    default:
+      DCHECK(false);
   }
+
   if (subkey_secret != nullptr) {
     hkdf.subkey_secret().CopyToString(subkey_secret);
   }

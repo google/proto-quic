@@ -65,9 +65,11 @@ inline Dest bit_cast(const Source& source) {
                 "bit_cast requires source and destination to be the same size");
 
 #if (__GNUC__ > 5 || (__GNUC__ == 5 && __GNUC_MINOR__ >= 1) || \
-     defined(_LIBCPP_VERSION))
+     (defined(__clang__) && defined(_LIBCPP_VERSION)))
   // GCC 5.1 contains the first libstdc++ with is_trivially_copyable.
   // Assume libc++ Just Works: is_trivially_copyable added on May 13th 2011.
+  // However, with libc++ when GCC is the compiler the trait is buggy, see
+  // crbug.com/607158, so fall back to the less strict variant for non-clang.
   static_assert(std::is_trivially_copyable<Dest>::value,
                 "non-trivially-copyable bit_cast is undefined");
   static_assert(std::is_trivially_copyable<Source>::value,

@@ -29,6 +29,8 @@
 
 namespace net {
 
+const size_t SpdyHttpStream::kRequestBodyBufferSize = 1 << 14;  // 16KB
+
 SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
                                bool direct)
     : spdy_session_(spdy_session),
@@ -232,9 +234,7 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
 
   CHECK(!request_body_buf_.get());
   if (HasUploadData()) {
-    // Use kMaxSpdyFrameChunkSize as the buffer size, since the request
-    // body data is written with this size at a time.
-    request_body_buf_ = new IOBufferWithSize(kMaxSpdyFrameChunkSize);
+    request_body_buf_ = new IOBufferWithSize(kRequestBodyBufferSize);
     // The request body buffer is empty at first.
     request_body_buf_size_ = 0;
   }

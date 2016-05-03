@@ -11,6 +11,8 @@
 #include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/compiler_specific.h"
+#include "base/debug/debugging_flags.h"
+#include "base/debug/stack_trace.h"
 #include "base/memory/ptr_util.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/thread.h"
@@ -170,7 +172,29 @@ void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
           switches::kEnableHeapProfiling))
     return;
 
-  AllocationContextTracker::SetCaptureEnabled(true);
+  std::string profiling_mode = CommandLine::ForCurrentProcess()
+      ->GetSwitchValueASCII(switches::kEnableHeapProfiling);
+  if (profiling_mode == "") {
+    AllocationContextTracker::SetCaptureMode(
+        AllocationContextTracker::CaptureMode::PSEUDO_STACK);
+  }
+  else if (profiling_mode == switches::kEnableHeapProfilingModeNative) {
+#if HAVE_TRACE_STACK_FRAME_POINTERS && \
+    (BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG))
+    // We need frame pointers for native tracing to work, and they are
+    // enabled in profiling and debug builds.
+    AllocationContextTracker::SetCaptureMode(
+        AllocationContextTracker::CaptureMode::NATIVE_STACK);
+#else
+    CHECK(false) << "'" << profiling_mode << "' mode for "
+                 << switches::kEnableHeapProfiling << " flag is not supported "
+                 << "for this platform / build type.";
+#endif
+  } else {
+    CHECK(false) << "Invalid mode '" << profiling_mode << "' for "
+               << switches::kEnableHeapProfiling << " flag.";
+  }
+
   for (auto mdp : dump_providers_)
     mdp->dump_provider->OnHeapProfilingEnabled(true);
   heap_profiling_enabled_ = true;

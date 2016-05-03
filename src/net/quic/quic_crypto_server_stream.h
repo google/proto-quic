@@ -121,6 +121,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
       const CryptoHandshakeMessage& message,
       const ValidateClientHelloResultCallback::Result& result,
       CryptoHandshakeMessage* reply,
+      DiversificationNonce* out_diversification_nonce,
       std::string* error_details);
 
   // Hook that allows the server to set QuicConfig defaults just

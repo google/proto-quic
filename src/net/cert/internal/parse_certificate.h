@@ -44,7 +44,7 @@ struct ParsedTbsCertificate;
 //     Note: Non-conforming CAs may issue certificates with serial numbers
 //     that are negative or zero.  Certificate users SHOULD be prepared to
 //     gracefully handle such certificates.
-bool VerifySerialNumber(const der::Input& value) WARN_UNUSED_RESULT;
+NET_EXPORT bool VerifySerialNumber(const der::Input& value) WARN_UNUSED_RESULT;
 
 // Parses a DER-encoded "Certificate" as specified by RFC 5280. Returns true on
 // success and sets the results in |out|.

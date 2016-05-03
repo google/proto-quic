@@ -267,6 +267,10 @@ class BASE_EXPORT PersistentHistogramAllocator {
   void CreateTrackingHistograms(StringPiece name);
   void UpdateTrackingHistograms();
 
+  // Clears the internal |last_created_| reference so testing can validate
+  // operation without that optimization.
+  void ClearLastCreatedReferenceForTesting();
+
   // Histogram containing creation results. Visible for testing.
   static HistogramBase* GetCreateHistogramResultHistogram();
 

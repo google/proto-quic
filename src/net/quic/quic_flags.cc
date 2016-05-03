@@ -41,7 +41,7 @@ bool FLAGS_quic_always_log_bugs_for_tests = true;
 
 // If true, a QUIC connection option with tag DHDT can be used to disable
 // HPACK\'s dynamic table.
-bool FLAGS_quic_disable_hpack_dynamic_table = false;
+bool FLAGS_quic_disable_hpack_dynamic_table = true;
 
 // If true, multipath is enabled for the connection.
 bool FLAGS_quic_enable_multipath = false;
@@ -89,19 +89,8 @@ bool FLAGS_quic_use_new_tcp_sender = true;
 // without needing to create a QUIC session first.
 bool FLAGS_quic_stateless_version_negotiation = true;
 
-// QUIC Ack Decimation with tolerance for packet reordering.
-bool FLAGS_quic_ack_decimation2 = true;
-
 // If true, QUIC connections will defer responding to ACKs to their send alarms.
 bool FLAGS_quic_connection_defer_ack_response = true;
-
-// If true, SpdyFramer will call OnStreamEnd from SpdyFramerVisitorInterface
-// instead of empty-data sentinel calls when the stream is to be ended.
-bool FLAGS_spdy_on_stream_end = true;
-
-// If true, QuicCryptoServerConfig will use cached compressed certificates
-// if the uncompressed certs to be compressed hits the cache.
-bool FLAGS_quic_use_cached_compressed_certs = true;
 
 // Enable a connection option allowing connections to time out if more than 5
 // consecutive RTOs are sent.
@@ -117,3 +106,17 @@ bool FLAGS_quic_reply_to_rej = true;
 // If true, QuicFramer will ignore invalid error codes when processing GoAway,
 // ConnectionClose, and RstStream frames.
 bool FLAGS_quic_ignore_invalid_error_code = true;
+
+// If true, QUIC connections can do bandwidth resumption with an initial window
+// of < 10 packets.
+bool FLAGS_quic_no_lower_bw_resumption_limit = true;
+
+// Limit the ruction of slow start large reduction to 1/2 the current CWND once
+// the initial flight has been acked.
+bool FLAGS_quic_sslr_limit_reduction = true;
+
+// Simplify QUIC's loss detection by combining time and nack based portions.
+bool FLAGS_quic_simplify_loss_detection = true;
+
+// If true, do not check HasUnackedPackets on retransmission timeout.
+bool FLAGS_quic_always_has_unacked_packets_on_timeout = true;

@@ -18,6 +18,7 @@ Modifications:
 - Add second workaround for VS 2015 Update 2 code-gen bug - crbug.com/599427
 - Add patch from https://bugzilla.gnome.org/show_bug.cgi?id=758588 for
   https://crbug.com/595262#c16
+- Fix integer overflow https://crbug.com/602280
 
 To import a new snapshot:
 

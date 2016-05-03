@@ -14,18 +14,6 @@ namespace net {
 namespace test {
 namespace {
 
-class TestDelegate : public QuicAlarm::Delegate {
- public:
-  TestDelegate() : fired_(false) {}
-
-  void OnAlarm() override { fired_ = true; }
-
-  bool fired() const { return fired_; }
-
- private:
-  bool fired_;
-};
-
 class QuicEpollConnectionHelperTest : public ::testing::Test {
  protected:
   QuicEpollConnectionHelperTest()

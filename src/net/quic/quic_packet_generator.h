@@ -120,6 +120,11 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
   // Makes the framer not serialize the protocol version in sent packets.
   void StopSendingVersion();
 
+  // SetDiversificationNonce sets the nonce that will be sent in each public
+  // header of packets encrypted at the initial encryption level. Should only
+  // be called by servers.
+  void SetDiversificationNonce(const DiversificationNonce nonce);
+
   // Creates a version negotiation packet which supports |supported_versions|.
   // Caller owns the created  packet. Also, sets the entropy hash of the
   // serialized packet to a random bool and returns that value as a member of

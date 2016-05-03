@@ -234,6 +234,28 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterCHLO) {
   EXPECT_TRUE(server_stream()->handshake_confirmed());
 }
 
+TEST_P(QuicCryptoServerStreamTest, EncryptionLevelAfterCHLO) {
+  Initialize();
+  InitializeFakeClient(/* supports_stateless_rejects= */ false);
+
+  // Do a first handshake in order to prime the client config with the server's
+  // information.
+  AdvanceHandshakeWithFakeClient();
+  EXPECT_FALSE(server_stream()->encryption_established());
+  EXPECT_FALSE(server_stream()->handshake_confirmed());
+
+  // Now do another handshake, with the blocking SHLO connection option.
+  InitializeServer();
+  InitializeFakeClient(/* supports_stateless_rejects= */ false);
+  client_session_->config()->SetConnectionOptionsToSend({kIPFS});
+
+  AdvanceHandshakeWithFakeClient();
+  EXPECT_TRUE(server_stream()->encryption_established());
+  EXPECT_TRUE(server_stream()->handshake_confirmed());
+  EXPECT_EQ(ENCRYPTION_FORWARD_SECURE,
+            server_session_->connection()->encryption_level());
+}
+
 TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
   ValueRestore<bool> old_flag(&FLAGS_enable_quic_stateless_reject_support,
                               true);
@@ -384,11 +406,7 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
         server_stream());
   }
 
-  if (AsyncStrikeRegisterVerification()) {
-    EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
-  } else {
-    EXPECT_EQ(2, client_stream()->num_sent_client_hellos());
-  }
+  EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
 }
 
 TEST_P(QuicCryptoServerStreamTest, MessageAfterHandshake) {

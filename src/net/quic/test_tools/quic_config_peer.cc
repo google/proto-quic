@@ -42,6 +42,7 @@ void QuicConfigPeer::SetReceivedConnectionOptions(
 // static
 void QuicConfigPeer::SetReceivedBytesForConnectionId(QuicConfig* config,
                                                      uint32_t bytes) {
+  DCHECK(bytes == 0 || bytes == 8);
   config->bytes_for_connection_id_.SetReceivedValue(bytes);
 }
 

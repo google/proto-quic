@@ -82,6 +82,7 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
                         header.public_header.connection_id_length,
                         header.public_header.version_flag,
                         header.public_header.multipath_flag,
+                        header.public_header.nonce != nullptr,
                         header.public_header.packet_number_length);
 }
 
@@ -112,6 +113,8 @@ MockFramerVisitor::MockFramerVisitor() {
   ON_CALL(*this, OnAckFrame(_)).WillByDefault(testing::Return(true));
 
   ON_CALL(*this, OnStopWaitingFrame(_)).WillByDefault(testing::Return(true));
+
+  ON_CALL(*this, OnPaddingFrame(_)).WillByDefault(testing::Return(true));
 
   ON_CALL(*this, OnPingFrame(_)).WillByDefault(testing::Return(true));
 
@@ -152,6 +155,10 @@ bool NoOpFramerVisitor::OnAckFrame(const QuicAckFrame& frame) {
 }
 
 bool NoOpFramerVisitor::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
+  return true;
+}
+
+bool NoOpFramerVisitor::OnPaddingFrame(const QuicPaddingFrame& frame) {
   return true;
 }
 
@@ -317,6 +324,26 @@ void PacketSavingConnection::SendOrQueuePacket(SerializedPacket* packet) {
   sent_packet_manager_.OnPacketSent(packet, 0, QuicTime::Zero(),
                                     NOT_RETRANSMISSION,
                                     HAS_RETRANSMITTABLE_DATA);
+}
+
+MockQuicSession::MockQuicSession(QuicConnection* connection)
+    : QuicSession(connection, DefaultQuicConfig()) {
+  crypto_stream_.reset(new QuicCryptoStream(this));
+  Initialize();
+  ON_CALL(*this, WritevData(_, _, _, _, _))
+      .WillByDefault(testing::Return(QuicConsumedData(0, false)));
+}
+
+MockQuicSession::~MockQuicSession() {}
+
+// static
+QuicConsumedData MockQuicSession::ConsumeAllData(
+    QuicStreamId /*id*/,
+    const QuicIOVector& data,
+    QuicStreamOffset /*offset*/,
+    bool fin,
+    QuicAckListenerInterface* /*ack_notifier_delegate*/) {
+  return QuicConsumedData(data.total_length, fin);
 }
 
 MockQuicSpdySession::MockQuicSpdySession(QuicConnection* connection)
@@ -608,7 +635,7 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
   reinterpret_cast<unsigned char*>(
       packet->mutable_data())[GetStartOfEncryptedData(
       connection_id_length, version_flag, multipath_flag,
-      packet_number_length)] = 0xFF;
+      false /* no diversification nonce */, packet_number_length)] = 0xFF;
 
   char* buffer = new char[kMaxPacketSize];
   size_t encrypted_length = framer.EncryptPayload(
@@ -699,6 +726,7 @@ QuicPacket* ConstructHandshakePacket(QuicConnectionId connection_id,
 size_t GetPacketLengthForOneStream(QuicVersion version,
                                    bool include_version,
                                    bool include_path_id,
+                                   bool include_diversification_nonce,
                                    QuicConnectionIdLength connection_id_length,
                                    QuicPacketNumberLength packet_number_length,
                                    size_t* payload_length) {
@@ -707,12 +735,13 @@ size_t GetPacketLengthForOneStream(QuicVersion version,
       NullEncrypter().GetCiphertextSize(*payload_length) +
       QuicPacketCreator::StreamFramePacketOverhead(
           PACKET_8BYTE_CONNECTION_ID, include_version, include_path_id,
-          packet_number_length, 0u);
+          include_diversification_nonce, packet_number_length, 0u);
   const size_t ack_length =
       NullEncrypter().GetCiphertextSize(
           QuicFramer::GetMinAckFrameSize(PACKET_1BYTE_PACKET_NUMBER)) +
       GetPacketHeaderSize(connection_id_length, include_version,
-                          include_path_id, packet_number_length);
+                          include_path_id, include_diversification_nonce,
+                          packet_number_length);
   if (stream_length < ack_length) {
     *payload_length = 1 + ack_length - stream_length;
   }
@@ -720,7 +749,7 @@ size_t GetPacketLengthForOneStream(QuicVersion version,
   return NullEncrypter().GetCiphertextSize(*payload_length) +
          QuicPacketCreator::StreamFramePacketOverhead(
              connection_id_length, include_version, include_path_id,
-             packet_number_length, 0u);
+             include_diversification_nonce, packet_number_length, 0u);
 }
 
 TestEntropyCalculator::TestEntropyCalculator() {}

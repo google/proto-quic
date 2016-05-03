@@ -36,13 +36,13 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
    public:
     Delegate();
 
-    // Called when the request headers have been sent.
+    // Called when the stream is ready for reading and writing.
     // The delegate may call BidirectionalStreamImpl::ReadData to start reading,
     // call BidirectionalStreamImpl::SendData to send data,
     // or call BidirectionalStreamImpl::Cancel to cancel the stream.
     // The delegate should not call BidirectionalStreamImpl::Cancel
     // during this callback.
-    virtual void OnHeadersSent() = 0;
+    virtual void OnStreamReady() = 0;
 
     // Called when response headers are received.
     // This is called at most once for the lifetime of a stream.
@@ -91,6 +91,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
   // Starts the BidirectionalStreamImpl and sends request headers.
   virtual void Start(const BidirectionalStreamRequestInfo* request_info,
                      const BoundNetLog& net_log,
+                     bool disable_auto_flush,
                      BidirectionalStreamImpl::Delegate* delegate,
                      std::unique_ptr<base::Timer> timer) = 0;
 
@@ -107,6 +108,10 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
   // Delegate::OnDataSent is invoked. If |end_stream| is true, the DATA frame
   // will have an END_STREAM flag.
   virtual void SendData(IOBuffer* data, int length, bool end_stream) = 0;
+
+  virtual void SendvData(const std::vector<IOBuffer*>& buffers,
+                         const std::vector<int>& lengths,
+                         bool end_stream) = 0;
 
   // Cancels the stream. No Delegate method will be called. Any pending
   // operations may or may not succeed.

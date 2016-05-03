@@ -61,20 +61,6 @@ const int kHungIntervalSeconds = 10;
 // Minimum seconds that unclaimed pushed streams will be kept in memory.
 const int kMinPushedStreamLifetimeSeconds = 300;
 
-std::unique_ptr<base::ListValue> SpdyHeaderBlockToListValue(
-    const SpdyHeaderBlock& headers,
-    NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::ListValue> headers_list(new base::ListValue());
-  for (SpdyHeaderBlock::const_iterator it = headers.begin();
-       it != headers.end(); ++it) {
-    headers_list->AppendString(
-        it->first.as_string() + ": " +
-        ElideHeaderValueForNetLog(capture_mode, it->first.as_string(),
-                                  it->second.as_string()));
-  }
-  return headers_list;
-}
-
 std::unique_ptr<base::Value> NetLogSpdySynStreamSentCallback(
     const SpdyHeaderBlock* headers,
     bool fin,
@@ -83,7 +69,7 @@ std::unique_ptr<base::Value> NetLogSpdySynStreamSentCallback(
     SpdyStreamId stream_id,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetBoolean("fin", fin);
   dict->SetBoolean("unidirectional", unidirectional);
   dict->SetInteger("priority", static_cast<int>(spdy_priority));
@@ -101,7 +87,7 @@ std::unique_ptr<base::Value> NetLogSpdyHeadersSentCallback(
     bool exclusive,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetBoolean("fin", fin);
   dict->SetInteger("stream_id", stream_id);
   dict->SetBoolean("has_priority", has_priority);
@@ -122,7 +108,7 @@ std::unique_ptr<base::Value> NetLogSpdySynStreamReceivedCallback(
     SpdyStreamId associated_stream,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetBoolean("fin", fin);
   dict->SetBoolean("unidirectional", unidirectional);
   dict->SetInteger("priority", static_cast<int>(spdy_priority));
@@ -137,7 +123,7 @@ std::unique_ptr<base::Value> NetLogSpdySynReplyOrHeadersReceivedCallback(
     SpdyStreamId stream_id,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetBoolean("fin", fin);
   dict->SetInteger("stream_id", stream_id);
   return std::move(dict);
@@ -300,7 +286,7 @@ std::unique_ptr<base::Value> NetLogSpdyPushPromiseReceivedCallback(
     SpdyStreamId promised_stream_id,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetInteger("id", stream_id);
   dict->SetInteger("promised_stream_id", promised_stream_id);
   return std::move(dict);

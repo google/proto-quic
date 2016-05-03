@@ -5,7 +5,9 @@
 #include "net/quic/test_tools/quic_test_packet_maker.h"
 
 #include <list>
+#include <memory>
 
+#include "base/memory/ptr_util.h"
 #include "net/quic/quic_framer.h"
 #include "net/quic/quic_http_utils.h"
 #include "net/quic/quic_utils.h"
@@ -291,6 +293,33 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeDataPacket(
   return MakePacket(header_, QuicFrame(&frame));
 }
 
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeMultipleDataFramesPacket(
+    QuicPacketNumber packet_number,
+    QuicStreamId stream_id,
+    bool should_include_version,
+    bool fin,
+    QuicStreamOffset offset,
+    const std::vector<std::string>& data_writes) {
+  InitializeHeader(packet_number, should_include_version);
+  QuicFrames data_frames;
+  // QuicFrame takes a raw pointer. Use a std::vector here so we keep
+  // StreamFrames alive until MakeMultipleFramesPacket is done.
+  std::vector<std::unique_ptr<QuicStreamFrame>> stream_frames;
+  for (size_t i = 0; i < data_writes.size(); ++i) {
+    bool is_fin = fin && (i == data_writes.size() - 1);
+    stream_frames.push_back(base::WrapUnique(new QuicStreamFrame(
+        stream_id, is_fin, offset, base::StringPiece(data_writes[i]))));
+    offset += data_writes[i].length();
+  }
+  for (const auto& stream_frame : stream_frames) {
+    QuicFrame quic_frame(stream_frame.get());
+    DVLOG(1) << "Adding frame: " << quic_frame;
+    data_frames.push_back(quic_frame);
+  }
+  return MakeMultipleFramesPacket(header_, data_frames);
+}
+
 std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
     QuicPacketNumber packet_number,
     bool include_version,
@@ -317,6 +346,60 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
   QuicStreamFrame stream_frame(stream_id, fin, offset, data);
   frames.push_back(QuicFrame(&stream_frame));
 
+  return MakeMultipleFramesPacket(header_, frames);
+}
+
+std::unique_ptr<QuicReceivedPacket>
+QuicTestPacketMaker::MakeRequestHeadersAndMultipleDataFramesPacket(
+    QuicPacketNumber packet_number,
+    QuicStreamId stream_id,
+    bool should_include_version,
+    bool fin,
+    SpdyPriority priority,
+    const SpdyHeaderBlock& headers,
+    size_t* spdy_headers_frame_length,
+    const std::vector<std::string>& data_writes) {
+  InitializeHeader(packet_number, should_include_version);
+  SpdySerializedFrame spdy_frame;
+  if (spdy_request_framer_.protocol_version() == SPDY3) {
+    SpdySynStreamIR syn_stream(stream_id);
+    syn_stream.set_header_block(headers);
+    syn_stream.set_fin(fin);
+    syn_stream.set_priority(priority);
+    spdy_frame = spdy_request_framer_.SerializeSynStream(syn_stream);
+  } else {
+    SpdyHeadersIR headers_frame(stream_id);
+    headers_frame.set_header_block(headers);
+    headers_frame.set_fin(fin);
+    headers_frame.set_priority(priority);
+    headers_frame.set_has_priority(true);
+    spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
+  }
+  if (spdy_headers_frame_length) {
+    *spdy_headers_frame_length = spdy_frame.size();
+  }
+  QuicStreamFrame frame(
+      kHeadersStreamId, false, 0,
+      base::StringPiece(spdy_frame.data(), spdy_frame.size()));
+
+  QuicFrames frames;
+  frames.push_back(QuicFrame(&frame));
+
+  QuicStreamOffset offset = 0;
+  // QuicFrame takes a raw pointer. Use a std::vector here so we keep
+  // StreamFrames alive until MakeMultipleFramesPacket is done.
+  std::vector<std::unique_ptr<QuicStreamFrame>> stream_frames;
+  for (size_t i = 0; i < data_writes.size(); ++i) {
+    bool is_fin = fin && (i == data_writes.size() - 1);
+    stream_frames.push_back(base::WrapUnique(new QuicStreamFrame(
+        stream_id, is_fin, offset, base::StringPiece(data_writes[i]))));
+    offset += data_writes[i].length();
+  }
+  for (const auto& stream_frame : stream_frames) {
+    QuicFrame quic_frame(stream_frame.get());
+    DVLOG(1) << "Adding frame: " << quic_frame;
+    frames.push_back(quic_frame);
+  }
   return MakeMultipleFramesPacket(header_, frames);
 }
 

@@ -141,6 +141,15 @@ class TaggingDecrypter : public QuicDecrypter {
 
   bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
 
+  bool SetPreliminaryKey(StringPiece key) override {
+    QUIC_BUG << "should not be called";
+    return false;
+  }
+
+  bool SetDiversificationNonce(DiversificationNonce key) override {
+    return true;
+  }
+
   bool DecryptPacket(QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      StringPiece associated_data,
@@ -3430,7 +3439,8 @@ TEST_P(QuicConnectionTest, TestQueueLimitsOnSendStreamData) {
   size_t payload_length;
   size_t length = GetPacketLengthForOneStream(
       connection_.version(), kIncludeVersion, !kIncludePathId,
-      PACKET_8BYTE_CONNECTION_ID, PACKET_1BYTE_PACKET_NUMBER, &payload_length);
+      !kIncludeDiversificationNonce, PACKET_8BYTE_CONNECTION_ID,
+      PACKET_1BYTE_PACKET_NUMBER, &payload_length);
   connection_.SetMaxPacketLength(length);
 
   // Queue the first packet.
@@ -3451,10 +3461,11 @@ TEST_P(QuicConnectionTest, LoopThroughSendingPackets) {
   // offset 0, and 2 for non-zero offsets up through 16K. Increase
   // max_packet_length by 2 so that subsequent packets containing subsequent
   // stream frames with non-zero offets will fit within the packet length.
-  size_t length = 2 + GetPacketLengthForOneStream(
-                          connection_.version(), kIncludeVersion,
-                          !kIncludePathId, PACKET_8BYTE_CONNECTION_ID,
-                          PACKET_1BYTE_PACKET_NUMBER, &payload_length);
+  size_t length =
+      2 + GetPacketLengthForOneStream(
+              connection_.version(), kIncludeVersion, !kIncludePathId,
+              !kIncludeDiversificationNonce, PACKET_8BYTE_CONNECTION_ID,
+              PACKET_1BYTE_PACKET_NUMBER, &payload_length);
   connection_.SetMaxPacketLength(length);
 
   // Queue the first packet.
@@ -3480,30 +3491,8 @@ TEST_P(QuicConnectionTest, LoopThroughSendingPacketsWithTruncation) {
   // we see in this test, due to the non-truncated connection id.
   size_t non_truncated_packet_size = writer_->last_packet_size();
 
-  // Change to a 4 byte connection id.
-  QuicConfig config;
-  QuicConfigPeer::SetReceivedBytesForConnectionId(&config, 4);
-  connection_.SetFromConfig(config);
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
-  EXPECT_EQ(payload.size(),
-            connection_.SendStreamDataWithString(3, payload, 0, !kFin, nullptr)
-                .bytes_consumed);
-  // Verify that we have 8 fewer bytes than in the non-truncated case.  The
-  // first packet got 4 bytes of extra payload due to the truncation, and the
-  // headers here are also 4 byte smaller.
-  EXPECT_EQ(non_truncated_packet_size, writer_->last_packet_size() + 8);
-
-  // Change to a 1 byte connection id.
-  QuicConfigPeer::SetReceivedBytesForConnectionId(&config, 1);
-  connection_.SetFromConfig(config);
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
-  EXPECT_EQ(payload.size(),
-            connection_.SendStreamDataWithString(3, payload, 0, !kFin, nullptr)
-                .bytes_consumed);
-  // Just like above, we save 7 bytes on payload, and 7 on truncation.
-  EXPECT_EQ(non_truncated_packet_size, writer_->last_packet_size() + 7 * 2);
-
   // Change to a 0 byte connection id.
+  QuicConfig config;
   QuicConfigPeer::SetReceivedBytesForConnectionId(&config, 0);
   connection_.SetFromConfig(config);
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
@@ -3594,8 +3583,60 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimation) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
+TEST_P(QuicConnectionTest, SendDelayedAckDecimationEighthRtt) {
+  QuicConnectionPeer::SetAckMode(&connection_, QuicConnection::ACK_DECIMATION);
+  QuicConnectionPeer::SetAckDecimationDelay(&connection_, 0.125);
+
+  const size_t kMinRttMs = 40;
+  RttStats* rtt_stats = QuicSentPacketManagerPeer::GetRttStats(manager_);
+  rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kMinRttMs),
+                       QuicTime::Delta::Zero(), QuicTime::Zero());
+  // The ack time should be based on min_rtt/8, since it's less than the
+  // default delayed ack time.
+  QuicTime ack_time = clock_.ApproximateNow().Add(
+      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  const uint8_t tag = 0x07;
+  connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
+  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  // Process a packet from the non-crypto stream.
+  frame1_.stream_id = 3;
+
+  // Process all the initial packets in order so there aren't missing packets.
+  QuicPacketNumber kFirstDecimatedPacket = 101;
+  for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kEntropyFlag,
+                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+  }
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
+  // instead of ENCRYPTION_NONE.
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket, !kEntropyFlag,
+                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+
+  // Check if delayed ack timer is running for the expected interval.
+  EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
+
+  // The 10th received packet causes an ack to be sent.
+  for (int i = 0; i < 9; ++i) {
+    EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
+                             !kEntropyFlag, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
+  }
+  // Check that ack is sent and that delayed ack alarm is reset.
+  EXPECT_EQ(2u, writer_->frame_count());
+  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+}
+
 TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
-  FLAGS_quic_ack_decimation2 = true;
   QuicConnectionPeer::SetAckMode(
       &connection_, QuicConnection::ACK_DECIMATION_WITH_REORDERING);
 
@@ -3657,7 +3698,6 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
 }
 
 TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
-  FLAGS_quic_ack_decimation2 = true;
   QuicConnectionPeer::SetAckMode(
       &connection_, QuicConnection::ACK_DECIMATION_WITH_REORDERING);
 
@@ -3669,6 +3709,143 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   // default delayed ack time.
   QuicTime ack_time = clock_.ApproximateNow().Add(
       QuicTime::Delta::FromMilliseconds(kMinRttMs / 4));
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  const uint8_t tag = 0x07;
+  connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
+  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  // Process a packet from the non-crypto stream.
+  frame1_.stream_id = 3;
+
+  // Process all the initial packets in order so there aren't missing packets.
+  QuicPacketNumber kFirstDecimatedPacket = 101;
+  for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kEntropyFlag,
+                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+  }
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
+  // instead of ENCRYPTION_NONE.
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket, !kEntropyFlag,
+                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+
+  // Check if delayed ack timer is running for the expected interval.
+  EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
+
+  // Process packet 10 first and ensure the alarm is one eighth min_rtt.
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 19,
+                           !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
+
+  // The 10th received packet causes an ack to be sent.
+  for (int i = 0; i < 8; ++i) {
+    EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
+                             !kEntropyFlag, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
+  }
+  // Check that ack is sent and that delayed ack alarm is reset.
+  EXPECT_EQ(2u, writer_->frame_count());
+  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+
+  // The next packet received in order will cause an immediate ack,
+  // because it fills a hole.
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 10,
+                           !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
+  // Check that ack is sent and that delayed ack alarm is reset.
+  EXPECT_EQ(2u, writer_->frame_count());
+  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+}
+
+TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
+  QuicConnectionPeer::SetAckMode(
+      &connection_, QuicConnection::ACK_DECIMATION_WITH_REORDERING);
+  QuicConnectionPeer::SetAckDecimationDelay(&connection_, 0.125);
+
+  const size_t kMinRttMs = 40;
+  RttStats* rtt_stats = QuicSentPacketManagerPeer::GetRttStats(manager_);
+  rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kMinRttMs),
+                       QuicTime::Delta::Zero(), QuicTime::Zero());
+  // The ack time should be based on min_rtt/8, since it's less than the
+  // default delayed ack time.
+  QuicTime ack_time = clock_.ApproximateNow().Add(
+      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  const uint8_t tag = 0x07;
+  connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
+  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  // Process a packet from the non-crypto stream.
+  frame1_.stream_id = 3;
+
+  // Process all the initial packets in order so there aren't missing packets.
+  QuicPacketNumber kFirstDecimatedPacket = 101;
+  for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kEntropyFlag,
+                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+  }
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+  // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
+  // instead of ENCRYPTION_NONE.
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket, !kEntropyFlag,
+                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+
+  // Check if delayed ack timer is running for the expected interval.
+  EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
+
+  // Process packet 10 first and ensure the alarm is one eighth min_rtt.
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 9,
+                           !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+  EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
+
+  // The 10th received packet causes an ack to be sent.
+  for (int i = 0; i < 8; ++i) {
+    EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
+    EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
+    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
+                             !kEntropyFlag, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
+  }
+  // Check that ack is sent and that delayed ack alarm is reset.
+  EXPECT_EQ(2u, writer_->frame_count());
+  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+}
+
+TEST_P(QuicConnectionTest,
+       SendDelayedAckDecimationWithLargeReorderingEighthRtt) {
+  QuicConnectionPeer::SetAckMode(
+      &connection_, QuicConnection::ACK_DECIMATION_WITH_REORDERING);
+  QuicConnectionPeer::SetAckDecimationDelay(&connection_, 0.125);
+
+  const size_t kMinRttMs = 40;
+  RttStats* rtt_stats = QuicSentPacketManagerPeer::GetRttStats(manager_);
+  rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kMinRttMs),
+                       QuicTime::Delta::Zero(), QuicTime::Zero());
+  // The ack time should be based on min_rtt/8, since it's less than the
+  // default delayed ack time.
+  QuicTime ack_time = clock_.ApproximateNow().Add(
+      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;

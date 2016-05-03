@@ -10,7 +10,7 @@
 #include "crypto/ec_private_key.h"
 #include "net/base/connection_type_histograms.h"
 #include "net/base/net_errors.h"
-#include "net/socket/ssl_client_socket_openssl.h"
+#include "net/socket/ssl_client_socket_impl.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cipher_suite_names.h"
 #include "net/ssl/ssl_config_service.h"
@@ -77,7 +77,7 @@ void SSLClientSocket::SetSSLKeyLogFile(
     const base::FilePath& path,
     const scoped_refptr<base::SequencedTaskRunner>& task_runner) {
 #if !defined(OS_NACL)
-  SSLClientSocketOpenSSL::SetSSLKeyLogFile(path, task_runner);
+  SSLClientSocketImpl::SetSSLKeyLogFile(path, task_runner);
 #else
   NOTIMPLEMENTED();
 #endif

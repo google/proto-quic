@@ -76,11 +76,16 @@ const QuicTag kTLPR = TAG('T', 'L', 'P', 'R');   // Tail loss probe delay of
 const QuicTag kACKD = TAG('A', 'C', 'K', 'D');   // Ack decimation style acking.
 const QuicTag kAKD2 = TAG('A', 'K', 'D', '2');   // Ack decimation tolerating
                                                  // out of order packets.
+const QuicTag kAKD3 = TAG('A', 'K', 'D', '3');   // Ack decimation style acking
+                                                 // with 1/8 RTT acks.
+const QuicTag kAKD4 = TAG('A', 'K', 'D', '4');   // Ack decimation with 1/8 RTT
+                                                 // tolerating out of order.
 const QuicTag kSSLR = TAG('S', 'S', 'L', 'R');   // Slow Start Large Reduction.
 const QuicTag k5RTO = TAG('5', 'R', 'T', 'O');   // Close connection on 5 RTOs
 const QuicTag kCTIM = TAG('C', 'T', 'I', 'M');   // Client timestamp in seconds
                                                  // since UNIX epoch.
 const QuicTag kDHDT = TAG('D', 'H', 'D', 'T');   // Disable HPACK dynamic table.
+const QuicTag kIPFS = TAG('I', 'P', 'F', 'S');   // Immediate Forward Secrecy.
 
 // Optional support of truncated Connection IDs.  If sent by a peer, the value
 // is the minimum number of bytes allowed for the connection ID sent to the

@@ -55,10 +55,6 @@ class QuicStreamFactoryPeer {
 
   static bool IsQuicDisabled(QuicStreamFactory* factory, uint16_t port);
 
-  static bool GetDelayTcpRace(QuicStreamFactory* factory);
-
-  static void SetDelayTcpRace(QuicStreamFactory* factory, bool delay_tcp_race);
-
   static void SetYieldAfterPackets(QuicStreamFactory* factory,
                                    int yield_after_packets);
 

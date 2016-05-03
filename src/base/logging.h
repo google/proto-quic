@@ -513,6 +513,18 @@ class CheckOpResult {
 
 #endif
 
+// This formats a value for a failing CHECK_XX statement.  Ordinarily,
+// it uses the definition for operator<<, with a few special cases below.
+template <typename T>
+inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
+  (*os) << v;
+}
+
+// We need an explicit specialization for std::nullptr_t.
+template <>
+BASE_EXPORT void MakeCheckOpValueString(std::ostream* os,
+                                        const std::nullptr_t& p);
+
 // Build the error message string.  This is separate from the "Impl"
 // function template because it is not performance critical and so can
 // be out of line, while the "Impl" code should be inline.  Caller
@@ -520,7 +532,11 @@ class CheckOpResult {
 template<class t1, class t2>
 std::string* MakeCheckOpString(const t1& v1, const t2& v2, const char* names) {
   std::ostringstream ss;
-  ss << names << " (" << v1 << " vs. " << v2 << ")";
+  ss << names << " (";
+  MakeCheckOpValueString(&ss, v1);
+  ss << " vs. ";
+  MakeCheckOpValueString(&ss, v2);
+  ss << ")";
   std::string* msg = new std::string(ss.str());
   return msg;
 }
@@ -714,9 +730,10 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // for example:
 //   DCHECK_EQ(string("abc")[1], 'b');
 //
-// WARNING: These may not compile correctly if one of the arguments is a pointer
-// and the other is NULL. To work around this, simply static_cast NULL to the
-// type of the desired pointer.
+// WARNING: These don't compile correctly if one of the arguments is a pointer
+// and the other is NULL.  In new code, prefer nullptr instead.  To
+// work around this for C++98, simply static_cast NULL to the type of the
+// desired pointer.
 
 #define DCHECK_EQ(val1, val2) DCHECK_OP(EQ, ==, val1, val2)
 #define DCHECK_NE(val1, val2) DCHECK_OP(NE, !=, val1, val2)

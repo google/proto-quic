@@ -32,6 +32,7 @@ class UploadDataStream;
 class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
                                           public HttpStream {
  public:
+  static const size_t kRequestBodyBufferSize;
   // |spdy_session| must not be NULL.
   SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session, bool direct);
   ~SpdyHttpStream() override;

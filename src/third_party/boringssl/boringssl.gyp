@@ -8,6 +8,49 @@
   ],
   'targets': [
     {
+      'target_name': 'boringssl_nacl_win64',
+      'type': '<(component)',
+      'sources': [
+        '<@(boringssl_crypto_sources)',
+      ],
+      'defines': [
+        'BORINGSSL_IMPLEMENTATION',
+        'BORINGSSL_NO_STATIC_INITIALIZER',
+        'OPENSSL_NO_ASM',
+        'OPENSSL_SMALL',
+      ],
+      'configurations': {
+        'Common_Base': {
+          'msvs_target_platform': 'x64',
+        },
+      },
+      # TODO(davidben): Fix size_t truncations in BoringSSL.
+      # https://crbug.com/429039
+      'msvs_disabled_warnings': [ 4267, ],
+      'conditions': [
+        ['component == "shared_library"', {
+          'defines': [
+            'BORINGSSL_SHARED_LIBRARY',
+          ],
+        }],
+      ],
+      'include_dirs': [
+        'src/include',
+      ],
+      'direct_dependent_settings': {
+        'include_dirs': [
+          'src/include',
+        ],
+        'conditions': [
+          ['component == "shared_library"', {
+            'defines': [
+              'BORINGSSL_SHARED_LIBRARY',
+            ],
+          }],
+        ],
+      },
+    },
+    {
       'target_name': 'boringssl',
       'type': '<(component)',
       'sources': [

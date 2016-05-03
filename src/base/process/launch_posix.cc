@@ -738,7 +738,7 @@ NOINLINE pid_t CloneAndLongjmpInChild(unsigned long flags,
   // fork-like behavior.
   char stack_buf[PTHREAD_STACK_MIN] ALIGNAS(16);
 #if defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS64_FAMILY) || defined(ARCH_CPU_MIPS_FAMILY)
+    defined(ARCH_CPU_MIPS_FAMILY)
   // The stack grows downward.
   void* stack = stack_buf + sizeof(stack_buf);
 #else
@@ -772,7 +772,7 @@ pid_t ForkWithFlags(unsigned long flags, pid_t* ptid, pid_t* ctid) {
 #if defined(ARCH_CPU_X86_64)
     return syscall(__NR_clone, flags, nullptr, ptid, ctid, nullptr);
 #elif defined(ARCH_CPU_X86) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS_FAMILY) || defined(ARCH_CPU_MIPS64_FAMILY)
+    defined(ARCH_CPU_MIPS_FAMILY)
     // CONFIG_CLONE_BACKWARDS defined.
     return syscall(__NR_clone, flags, nullptr, ptid, nullptr, ctid);
 #else

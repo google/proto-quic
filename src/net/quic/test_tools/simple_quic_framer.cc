@@ -76,6 +76,11 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
     return true;
   }
 
+  bool OnPaddingFrame(const QuicPaddingFrame& frame) override {
+    padding_frames_.push_back(frame);
+    return true;
+  }
+
   bool OnPingFrame(const QuicPingFrame& frame) override {
     ping_frames_.push_back(frame);
     return true;
@@ -143,6 +148,7 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   std::unique_ptr<QuicPublicResetPacket> public_reset_packet_;
   vector<QuicAckFrame> ack_frames_;
   vector<QuicStopWaitingFrame> stop_waiting_frames_;
+  vector<QuicPaddingFrame> padding_frames_;
   vector<QuicPingFrame> ping_frames_;
   vector<QuicStreamFrame*> stream_frames_;
   vector<QuicRstStreamFrame> rst_stream_frames_;
@@ -163,6 +169,10 @@ SimpleQuicFramer::SimpleQuicFramer()
 
 SimpleQuicFramer::SimpleQuicFramer(const QuicVersionVector& supported_versions)
     : framer_(supported_versions, QuicTime::Zero(), Perspective::IS_SERVER) {}
+
+SimpleQuicFramer::SimpleQuicFramer(const QuicVersionVector& supported_versions,
+                                   Perspective perspective)
+    : framer_(supported_versions, QuicTime::Zero(), perspective) {}
 
 SimpleQuicFramer::~SimpleQuicFramer() {}
 

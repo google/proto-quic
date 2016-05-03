@@ -306,6 +306,10 @@ source_set("protobuf_full") {
     "src/google/protobuf/wrappers.pb.h",
   ]
 
+  deps = [
+    "//build/config/sanitizers:deps",
+  ]
+
   configs -= [ "//build/config/compiler:chromium_code" ]
   configs += [
     "//build/config/compiler:no_chromium_code",
@@ -329,7 +333,10 @@ source_set("protobuf_full") {
 
 # Only compile the compiler for the host architecture.
 if (current_toolchain == host_toolchain) {
-  executable("protoc") {
+  # protoc compiler is separated into protoc library and executable targets to
+  # support protoc plugins that need to link libprotoc, but not the main()
+  # itself. See src/google/protobuf/compiler/plugin.h
+  source_set("protoc_lib") {
     sources = [
       "src/google/protobuf/compiler/code_generator.cc",
       "src/google/protobuf/compiler/code_generator.h",
@@ -476,7 +483,6 @@ if (current_toolchain == host_toolchain) {
       "src/google/protobuf/compiler/javanano/javanano_primitive_field.h",
       "src/google/protobuf/compiler/js/js_generator.cc",
       "src/google/protobuf/compiler/js/js_generator.h",
-      "src/google/protobuf/compiler/main.cc",
       "src/google/protobuf/compiler/objectivec/objectivec_enum.cc",
       "src/google/protobuf/compiler/objectivec/objectivec_enum.h",
       "src/google/protobuf/compiler/objectivec/objectivec_enum_field.cc",
@@ -528,16 +534,31 @@ if (current_toolchain == host_toolchain) {
       configs -= [ "//build/config/win:lean_and_mean" ]
     }
 
+    public_configs = [ ":protobuf_config" ]
+
+    cflags = protobuf_lite_cflags
+
+    public_deps = [
+      ":protobuf_full",
+    ]
+  }
+
+  executable("protoc") {
+    sources = [
+      "src/google/protobuf/compiler/main.cc",
+    ]
+
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+
     cflags = protobuf_lite_cflags
 
     deps = [
-      ":protobuf_full",
-      "//build/config/sanitizers:deps",
+      ":protoc_lib",
 
       # Default manifest on Windows (a no-op elsewhere).
       "//build/win:default_exe_manifest",
     ]
-    deps += [ "//build/config/sanitizers:deps" ]
   }
 }
 

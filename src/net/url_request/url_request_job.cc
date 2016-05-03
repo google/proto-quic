@@ -24,9 +24,9 @@
 #include "net/base/load_states.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
-#include "net/base/network_quality_estimator.h"
 #include "net/filter/filter.h"
 #include "net/http/http_response_headers.h"
+#include "net/nqe/network_quality_estimator.h"
 #include "net/url_request/url_request_context.h"
 
 namespace net {

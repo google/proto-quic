@@ -121,6 +121,8 @@ MessageLoop::TaskObserver::~TaskObserver() {
 MessageLoop::DestructionObserver::~DestructionObserver() {
 }
 
+MessageLoop::NestingObserver::~NestingObserver() {}
+
 //------------------------------------------------------------------------------
 
 MessageLoop::MessageLoop(Type type)
@@ -263,6 +265,16 @@ void MessageLoop::RemoveDestructionObserver(
   destruction_observers_.RemoveObserver(destruction_observer);
 }
 
+void MessageLoop::AddNestingObserver(NestingObserver* observer) {
+  DCHECK_EQ(this, current());
+  nesting_observers_.AddObserver(observer);
+}
+
+void MessageLoop::RemoveNestingObserver(NestingObserver* observer) {
+  DCHECK_EQ(this, current());
+  nesting_observers_.RemoveObserver(observer);
+}
+
 void MessageLoop::PostTask(
     const tracked_objects::Location& from_here,
     const Closure& task) {
@@ -280,13 +292,6 @@ void MessageLoop::PostNonNestableTask(
     const tracked_objects::Location& from_here,
     const Closure& task) {
   task_runner_->PostNonNestableTask(from_here, task);
-}
-
-void MessageLoop::PostNonNestableDelayedTask(
-    const tracked_objects::Location& from_here,
-    const Closure& task,
-    TimeDelta delay) {
-  task_runner_->PostNonNestableDelayedTask(from_here, task, delay);
 }
 
 void MessageLoop::Run() {
@@ -574,6 +579,11 @@ void MessageLoop::HistogramEvent(int event) {
   if (message_histogram_)
     message_histogram_->Add(event);
 #endif
+}
+
+void MessageLoop::NotifyBeginNestedLoop() {
+  FOR_EACH_OBSERVER(NestingObserver, nesting_observers_,
+                    OnBeginNestedMessageLoop());
 }
 
 bool MessageLoop::DoWork() {

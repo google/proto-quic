@@ -26,6 +26,8 @@ class NET_EXPORT_PRIVATE AeadBaseDecrypter : public QuicDecrypter {
   // QuicDecrypter implementation
   bool SetKey(base::StringPiece key) override;
   bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
+  bool SetPreliminaryKey(base::StringPiece key) override;
+  bool SetDiversificationNonce(DiversificationNonce nonce) override;
   bool DecryptPacket(QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      base::StringPiece associated_data,
@@ -48,6 +50,7 @@ class NET_EXPORT_PRIVATE AeadBaseDecrypter : public QuicDecrypter {
   const size_t key_size_;
   const size_t auth_tag_size_;
   const size_t nonce_prefix_size_;
+  bool have_preliminary_key_;
 
   // The key.
   unsigned char key_[kMaxKeySize];

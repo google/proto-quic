@@ -103,9 +103,6 @@ class NET_EXPORT HttpNetworkSession
     // Enables NPN support.  Note that ALPN is always enabled.
     bool enable_npn;
 
-    // Enables Brotli Content-Encoding support.
-    bool enable_brotli;
-
     // Enable setting of HTTP/2 dependencies based on priority.
     bool enable_priority_dependencies;
 
@@ -143,9 +140,6 @@ class NET_EXPORT HttpNetworkSession
     float quic_packet_loss_threshold;
     // Size in bytes of the QUIC DUP socket receive buffer.
     int quic_socket_receive_buffer_size;
-    // Delay starting a TCP connection when QUIC believes it can speak
-    // 0-RTT to a server.
-    bool quic_delay_tcp_race;
     // Maximum number of server configs that are to be stored in
     // HttpServerProperties, instead of the disk cache.
     size_t quic_max_server_configs_stored_in_properties;

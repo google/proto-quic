@@ -25,7 +25,6 @@
 #include "crypto/nss_util_internal.h"
 #include "crypto/rsa_private_key.h"
 #include "crypto/scoped_nss_types.h"
-#include "crypto/third_party/nss/chromium-nss.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
 #include "net/cert/x509_util_nss.h"

@@ -119,8 +119,8 @@ class NET_EXPORT TrustStore {
 // VerifyCertificateChain() verifies a certificate path (chain) based on the
 // rules in RFC 5280.
 //
-// WARNING: This implementation is in progress, and is currently
-// incomplete. DO NOT USE IT unless its limitations are acceptable for your use.
+// WARNING: This implementation is in progress, and is currently incomplete.
+// Consult an OWNER before using it.
 //
 // ---------
 // Inputs
@@ -132,7 +132,8 @@ class NET_EXPORT TrustStore {
 //
 //      * cert_chain[0] is the target certificate to verify.
 //      * cert_chain[i+1] holds the certificate that issued cert_chain[i].
-//      * cert_chain[N-1] must have been issued by a trust anchor
+//      * cert_chain[N-1] must be the trust anchor, or have been directly
+//        issued by a trust anchor.
 //
 //   trust_store:
 //     Contains the set of trusted public keys (and their names).

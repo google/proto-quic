@@ -4,15 +4,19 @@
 
 #include "base/thread_task_runner_handle.h"
 
+#include <utility>
+
 #include "base/lazy_instance.h"
+#include "base/logging.h"
 #include "base/single_thread_task_runner.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_local.h"
 
 namespace base {
 
 namespace {
 
-base::LazyInstance<base::ThreadLocalPointer<ThreadTaskRunnerHandle> >::Leaky
+base::LazyInstance<base::ThreadLocalPointer<ThreadTaskRunnerHandle>>::Leaky
     lazy_tls_ptr = LAZY_INSTANCE_INITIALIZER;
 
 }  // namespace
@@ -26,21 +30,23 @@ scoped_refptr<SingleThreadTaskRunner> ThreadTaskRunnerHandle::Get() {
 
 // static
 bool ThreadTaskRunnerHandle::IsSet() {
-  return lazy_tls_ptr.Pointer()->Get() != NULL;
+  return !!lazy_tls_ptr.Pointer()->Get();
 }
 
 ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(
     scoped_refptr<SingleThreadTaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {
   DCHECK(task_runner_->BelongsToCurrentThread());
-  DCHECK(!lazy_tls_ptr.Pointer()->Get());
+  // No SequencedTaskRunnerHandle (which includes ThreadTaskRunnerHandles)
+  // should already be set for this thread.
+  DCHECK(!SequencedTaskRunnerHandle::IsSet());
   lazy_tls_ptr.Pointer()->Set(this);
 }
 
 ThreadTaskRunnerHandle::~ThreadTaskRunnerHandle() {
   DCHECK(task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(lazy_tls_ptr.Pointer()->Get(), this);
-  lazy_tls_ptr.Pointer()->Set(NULL);
+  lazy_tls_ptr.Pointer()->Set(nullptr);
 }
 
 }  // namespace base

@@ -40,10 +40,14 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   // BidirectionalStreamImpl implementation:
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
+             bool disable_auto_flush,
              BidirectionalStreamImpl::Delegate* delegate,
              std::unique_ptr<base::Timer> timer) override;
   int ReadData(IOBuffer* buf, int buf_len) override;
   void SendData(IOBuffer* data, int length, bool end_stream) override;
+  void SendvData(const std::vector<IOBuffer*>& buffers,
+                 const std::vector<int>& lengths,
+                 bool end_stream) override;
   void Cancel() override;
   NextProto GetProtocol() const override;
   int64_t GetTotalReceivedBytes() const override;
@@ -92,6 +96,11 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   // After |stream_| has been closed, this keeps track of the total number of
   // bytes sent over the network for |stream_| while it was open.
   int64_t closed_stream_sent_bytes_;
+  // Whether auto flush is disabled.
+  bool disable_auto_flush_;
+  // Only relevant when |disable_auto_flush_| is true;
+  // This is the combined buffer of buffers passed in through SendvData.
+  scoped_refptr<IOBuffer> pending_combined_buffer_;
 
   base::WeakPtrFactory<BidirectionalStreamSpdyImpl> weak_factory_;
 

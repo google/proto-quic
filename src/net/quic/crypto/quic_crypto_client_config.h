@@ -234,6 +234,7 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   // signature are placed in the CETV value of the CHLO.
   QuicErrorCode FillClientHello(const QuicServerId& server_id,
                                 QuicConnectionId connection_id,
+                                const QuicVersion actual_version,
                                 const QuicVersion preferred_version,
                                 const CachedState* cached,
                                 QuicWallTime now,

@@ -68,6 +68,9 @@ bool RunLoop::BeforeRun() {
   run_depth_ = previous_run_loop_? previous_run_loop_->run_depth_ + 1 : 1;
   loop_->run_loop_ = this;
 
+  if (run_depth_ > 1)
+    loop_->NotifyBeginNestedLoop();
+
   running_ = true;
   return true;
 }

@@ -22,8 +22,8 @@ class TraceConfig;
 // tracing method that produces its own trace log should implement this
 // interface. All tracing agents must only be controlled by TracingController.
 // Some existing examples include TracingControllerImpl for Chrome trace events,
-// DebugDaemonClient for CrOs system trace, EtwSystemEventConsumer for Windows
-// system trace and PowerTracingAgent for BattOr power trace.
+// DebugDaemonClient for CrOs system trace, EtwTracingAgent for Windows system
+// trace and PowerTracingAgent for BattOr power trace.
 class BASE_EXPORT TracingAgent {
  public:
   using StartAgentTracingCallback =

@@ -265,15 +265,15 @@ AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceFor(
       continue;
 
     // Check whether there is an existing QUIC session to use for this origin.
+    HostPortPair mapped_origin(origin.host(), origin.port());
+    ignore_result(ApplyHostMappingRules(original_url, &mapped_origin));
+    QuicServerId server_id(mapped_origin, request_info.privacy_mode);
+
     HostPortPair destination(alternative_service.host_port_pair());
     ignore_result(ApplyHostMappingRules(original_url, &destination));
-    QuicServerId server_id(destination, request_info.privacy_mode);
 
-    HostPortPair origin_copy(origin.host(), origin.port());
-    ignore_result(ApplyHostMappingRules(original_url, &origin_copy));
-
-    if (session_->quic_stream_factory()->CanUseExistingSession(
-            server_id, origin_copy.host())) {
+    if (session_->quic_stream_factory()->CanUseExistingSession(server_id,
+                                                               destination)) {
       return alternative_service;
     }
 

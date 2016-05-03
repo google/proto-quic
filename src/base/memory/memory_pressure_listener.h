@@ -51,22 +51,27 @@ class BASE_EXPORT MemoryPressureListener {
     // No problems, there is enough memory to use. This event is not sent via
     // callback, but the enum is used in other places to find out the current
     // state of the system.
-    MEMORY_PRESSURE_LEVEL_NONE = -1,
+    MEMORY_PRESSURE_LEVEL_NONE,
 
     // Modules are advised to free buffers that are cheap to re-allocate and not
     // immediately needed.
-    MEMORY_PRESSURE_LEVEL_MODERATE = 0,
+    MEMORY_PRESSURE_LEVEL_MODERATE,
 
     // At this level, modules are advised to free all possible memory.  The
     // alternative is to be killed by the system, which means all memory will
     // have to be re-created, plus the cost of a cold start.
-    MEMORY_PRESSURE_LEVEL_CRITICAL = 2,
+    MEMORY_PRESSURE_LEVEL_CRITICAL,
   };
 
-  typedef base::Callback<void(MemoryPressureLevel)> MemoryPressureCallback;
+  typedef Callback<void(MemoryPressureLevel)> MemoryPressureCallback;
+  typedef Callback<void(MemoryPressureLevel)> SyncMemoryPressureCallback;
 
   explicit MemoryPressureListener(
       const MemoryPressureCallback& memory_pressure_callback);
+  MemoryPressureListener(
+      const MemoryPressureCallback& memory_pressure_callback,
+      const SyncMemoryPressureCallback& sync_memory_pressure_callback);
+
   ~MemoryPressureListener();
 
   // Intended for use by the platform specific implementation.
@@ -80,12 +85,14 @@ class BASE_EXPORT MemoryPressureListener {
   static void SimulatePressureNotification(
       MemoryPressureLevel memory_pressure_level);
 
- private:
   void Notify(MemoryPressureLevel memory_pressure_level);
+  void SyncNotify(MemoryPressureLevel memory_pressure_level);
 
+ private:
   static void DoNotifyMemoryPressure(MemoryPressureLevel memory_pressure_level);
 
   MemoryPressureCallback callback_;
+  SyncMemoryPressureCallback sync_memory_pressure_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryPressureListener);
 };

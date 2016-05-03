@@ -207,6 +207,9 @@ class NET_EXPORT_PRIVATE QuicConnectionDebugVisitor
   // Called when a StopWaitingFrame has been parsed.
   virtual void OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {}
 
+  // Called when a QuicPaddingFrame has been parsed.
+  virtual void OnPaddingFrame(const QuicPaddingFrame& frame) {}
+
   // Called when a Ping has been parsed.
   virtual void OnPingFrame(const QuicPingFrame& frame) {}
 
@@ -431,6 +434,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool OnStreamFrame(const QuicStreamFrame& frame) override;
   bool OnAckFrame(const QuicAckFrame& frame) override;
   bool OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override;
+  bool OnPaddingFrame(const QuicPaddingFrame& frame) override;
   bool OnPingFrame(const QuicPingFrame& frame) override;
   bool OnRstStreamFrame(const QuicRstStreamFrame& frame) override;
   bool OnConnectionCloseFrame(const QuicConnectionCloseFrame& frame) override;
@@ -547,6 +551,11 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Changes the encrypter used for level |level| to |encrypter|. The function
   // takes ownership of |encrypter|.
   void SetEncrypter(EncryptionLevel level, QuicEncrypter* encrypter);
+
+  // SetNonceForPublicHeader sets the nonce that will be transmitted in the
+  // public header of each packet encrypted at the initial encryption level
+  // decrypted. This should only be called on the server side.
+  void SetDiversificationNonce(const DiversificationNonce nonce);
 
   // SetDefaultEncryptionLevel sets the encryption level that will be applied
   // to new packets.
@@ -927,6 +936,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   int stop_waiting_count_;
   // Indicates the current ack mode, defaults to acking every 2 packets.
   AckMode ack_mode_;
+  // The max delay in fraction of min_rtt to use when sending decimated acks.
+  float ack_decimation_delay_;
 
   // Indicates the retransmit alarm is going to be set by the
   // ScopedRetransmitAlarmDelayer

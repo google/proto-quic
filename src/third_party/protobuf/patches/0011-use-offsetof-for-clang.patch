@@ -1,0 +1,49 @@
+diff --git a/third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message.cc b/third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message.cc
+index 9baaa35..0917537 100644
+--- a/third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message.cc
++++ b/third_party/protobuf/src/google/protobuf/compiler/cpp/cpp_message.cc
+@@ -2372,8 +2372,16 @@ GenerateClear(io::Printer* printer) {
+   // positions of two fields in the Message.
+   // ZR_ zeroes a non-empty range of fields via memset.
+   const char* macros =
++      "#if defined(__clang__)\n"
++      "#define ZR_HELPER_(f) \\\n"
++      "  _Pragma(\"clang diagnostic push\") \\\n"
++      "  _Pragma(\"clang diagnostic ignored \\\"-Winvalid-offsetof\\\"\") \\\n"
++      "  __builtin_offsetof($classname$, f) \\\n"
++      "  _Pragma(\"clang diagnostic pop\")\n"
++      "#else\n"
+       "#define ZR_HELPER_(f) reinterpret_cast<char*>(\\\n"
+-      "  &reinterpret_cast<$classname$*>(16)->f)\n\n"
++      "  &reinterpret_cast<$classname$*>(16)->f)\n"
++      "#endif\n\n"
+       "#define ZR_(first, last) do {\\\n"
+       "  ::memset(&first, 0,\\\n"
+       "           ZR_HELPER_(last) - ZR_HELPER_(first) + sizeof(last));\\\n"
+diff --git a/third_party/protobuf/src/google/protobuf/generated_message_reflection.h b/third_party/protobuf/src/google/protobuf/generated_message_reflection.h
+index 9ef7871..b26bbbc 100644
+--- a/third_party/protobuf/src/google/protobuf/generated_message_reflection.h
++++ b/third_party/protobuf/src/google/protobuf/generated_message_reflection.h
+@@ -587,11 +587,22 @@ class LIBPROTOBUF_EXPORT GeneratedMessageReflection : public Reflection {
+ // just use zero, GCC complains about dereferencing a NULL pointer.  We
+ // choose 16 rather than some other number just in case the compiler would
+ // be confused by an unaligned pointer.
++#if defined(__clang__)
++// For Clang we use __builtin_offsetof() and suppress the warning,
++// to avoid Control Flow Integrity and UBSan vptr sanitizers from
++// crashing while trying to validate the invalid reinterpet_casts.
++#define GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TYPE, FIELD)    \
++  _Pragma("clang diagnostic push")                            \
++  _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")  \
++  __builtin_offsetof(TYPE, FIELD)                             \
++  _Pragma("clang diagnostic pop")
++#else
+ #define GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TYPE, FIELD)    \
+   static_cast<int>(                                           \
+       reinterpret_cast<const char*>(                          \
+           &reinterpret_cast<const TYPE*>(16)->FIELD) -        \
+       reinterpret_cast<const char*>(16))
++#endif
+ 
+ #define PROTO2_GENERATED_DEFAULT_ONEOF_FIELD_OFFSET(ONEOF, FIELD)     \
+   static_cast<int>(                                                   \

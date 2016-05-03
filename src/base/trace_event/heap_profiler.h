@@ -33,16 +33,20 @@ namespace trace_event_internal {
 class BASE_EXPORT HeapProfilerScopedIgnore {
  public:
   inline HeapProfilerScopedIgnore() {
+    using base::trace_event::AllocationContextTracker;
     if (UNLIKELY(
-            base::trace_event::AllocationContextTracker::capture_enabled())) {
-      base::trace_event::AllocationContextTracker::GetInstanceForCurrentThread()
+            AllocationContextTracker::capture_mode() !=
+            AllocationContextTracker::CaptureMode::DISABLED)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
           ->begin_ignore_scope();
     }
   }
   inline ~HeapProfilerScopedIgnore() {
+    using base::trace_event::AllocationContextTracker;
     if (UNLIKELY(
-            base::trace_event::AllocationContextTracker::capture_enabled())) {
-      base::trace_event::AllocationContextTracker::GetInstanceForCurrentThread()
+            AllocationContextTracker::capture_mode() !=
+            AllocationContextTracker::CaptureMode::DISABLED)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
           ->end_ignore_scope();
     }
   }

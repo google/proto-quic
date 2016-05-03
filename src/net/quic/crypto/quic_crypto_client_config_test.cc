@@ -242,8 +242,8 @@ TEST(QuicCryptoClientConfigTest, FillClientHello) {
   MockRandom rand;
   CryptoHandshakeMessage chlo;
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
-  config.FillClientHello(server_id, kConnectionId, QuicVersionMax(), &state,
-                         QuicWallTime::Zero(), &rand,
+  config.FillClientHello(server_id, kConnectionId, QuicVersionMax(),
+                         QuicVersionMax(), &state, QuicWallTime::Zero(), &rand,
                          nullptr,  // channel_id_key
                          &params, &chlo, &error_details);
 

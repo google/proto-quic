@@ -175,8 +175,7 @@ SpdyFramer::SpdyFramer(SpdyMajorVersion version)
       enable_compression_(true),
       syn_frame_processed_(false),
       probable_http_response_(false),
-      end_stream_when_done_(false),
-      spdy_on_stream_end_(FLAGS_spdy_on_stream_end) {
+      end_stream_when_done_(false) {
   DCHECK(protocol_version_ == SPDY3 || protocol_version_ == HTTP2);
   // TODO(bnc): The way kMaxControlFrameSize is currently interpreted, it
   // includes the frame header, whereas kSpdyInitialFrameSizeLimit does not.
@@ -894,12 +893,7 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
       } else {
         // Empty data frame.
         if (current_frame_flags_ & DATA_FLAG_FIN) {
-          if (spdy_on_stream_end_) {
-            visitor_->OnStreamEnd(current_frame_stream_id_);
-          } else {
-            visitor_->OnStreamFrameData(current_frame_stream_id_, nullptr, 0,
-                                        true);
-          }
+          visitor_->OnStreamEnd(current_frame_stream_id_);
         }
         CHANGE_STATE(SPDY_FRAME_COMPLETE);
       }
@@ -2172,11 +2166,7 @@ size_t SpdyFramer::ProcessFramePadding(const char* data, size_t len) {
         ((current_frame_flags_ & CONTROL_FLAG_FIN) != 0 ||
          end_stream_when_done_)) {
       end_stream_when_done_ = false;
-      if (spdy_on_stream_end_) {
-        visitor_->OnStreamEnd(current_frame_stream_id_);
-      } else {
-        visitor_->OnStreamFrameData(current_frame_stream_id_, nullptr, 0, true);
-      }
+      visitor_->OnStreamEnd(current_frame_stream_id_);
     }
     CHANGE_STATE(SPDY_FRAME_COMPLETE);
   }

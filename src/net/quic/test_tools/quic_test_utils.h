@@ -150,6 +150,7 @@ bool DecodeHexString(const StringPiece& hex, std::string* bytes);
 size_t GetPacketLengthForOneStream(QuicVersion version,
                                    bool include_version,
                                    bool include_path_id,
+                                   bool include_diversification_nonce,
                                    QuicConnectionIdLength connection_id_length,
                                    QuicPacketNumberLength packet_number_length,
                                    size_t* payload_length);
@@ -240,6 +241,7 @@ class MockFramerVisitor : public QuicFramerVisitorInterface {
   MOCK_METHOD1(OnStreamFrame, bool(const QuicStreamFrame& frame));
   MOCK_METHOD1(OnAckFrame, bool(const QuicAckFrame& frame));
   MOCK_METHOD1(OnStopWaitingFrame, bool(const QuicStopWaitingFrame& frame));
+  MOCK_METHOD1(OnPaddingFrame, bool(const QuicPaddingFrame& frame));
   MOCK_METHOD1(OnPingFrame, bool(const QuicPingFrame& frame));
   MOCK_METHOD1(OnRstStreamFrame, bool(const QuicRstStreamFrame& frame));
   MOCK_METHOD1(OnConnectionCloseFrame,
@@ -272,6 +274,7 @@ class NoOpFramerVisitor : public QuicFramerVisitorInterface {
   bool OnStreamFrame(const QuicStreamFrame& frame) override;
   bool OnAckFrame(const QuicAckFrame& frame) override;
   bool OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override;
+  bool OnPaddingFrame(const QuicPaddingFrame& frame) override;
   bool OnPingFrame(const QuicPingFrame& frame) override;
   bool OnRstStreamFrame(const QuicRstStreamFrame& frame) override;
   bool OnConnectionCloseFrame(const QuicConnectionCloseFrame& frame) override;
@@ -466,6 +469,65 @@ class PacketSavingConnection : public MockConnection {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(PacketSavingConnection);
+};
+
+class MockQuicSession : public QuicSession {
+ public:
+  explicit MockQuicSession(QuicConnection* connection);
+  ~MockQuicSession() override;
+
+  QuicCryptoStream* GetCryptoStream() override { return crypto_stream_.get(); }
+
+  MOCK_METHOD3(OnConnectionClosed,
+               void(QuicErrorCode error,
+                    const std::string& error_details,
+                    ConnectionCloseSource source));
+  MOCK_METHOD1(CreateIncomingDynamicStream,
+               ReliableQuicStream*(QuicStreamId id));
+  MOCK_METHOD1(CreateOutgoingDynamicStream,
+               ReliableQuicStream*(SpdyPriority priority));
+  MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
+  MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
+  MOCK_METHOD5(WritevData,
+               QuicConsumedData(QuicStreamId id,
+                                QuicIOVector data,
+                                QuicStreamOffset offset,
+                                bool fin,
+                                QuicAckListenerInterface*));
+
+  MOCK_METHOD3(SendRstStream,
+               void(QuicStreamId stream_id,
+                    QuicRstStreamErrorCode error,
+                    QuicStreamOffset bytes_written));
+
+  MOCK_METHOD2(OnStreamHeaders,
+               void(QuicStreamId stream_id, base::StringPiece headers_data));
+  MOCK_METHOD2(OnStreamHeadersPriority,
+               void(QuicStreamId stream_id, SpdyPriority priority));
+  MOCK_METHOD3(OnStreamHeadersComplete,
+               void(QuicStreamId stream_id, bool fin, size_t frame_len));
+  MOCK_METHOD4(OnStreamHeaderList,
+               void(QuicStreamId stream_id,
+                    bool fin,
+                    size_t frame_len,
+                    const QuicHeaderList& header_list));
+  MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
+
+  using QuicSession::ActivateStream;
+
+  // Returns a QuicConsumedData that indicates all of |data| (and |fin| if set)
+  // has been consumed.
+  static QuicConsumedData ConsumeAllData(
+      QuicStreamId id,
+      const QuicIOVector& data,
+      QuicStreamOffset offset,
+      bool fin,
+      QuicAckListenerInterface* ack_notifier_delegate);
+
+ private:
+  std::unique_ptr<QuicCryptoStream> crypto_stream_;
+
+  DISALLOW_COPY_AND_ASSIGN(MockQuicSession);
 };
 
 class MockQuicSpdySession : public QuicSpdySession {

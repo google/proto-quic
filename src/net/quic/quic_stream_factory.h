@@ -78,7 +78,9 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
 
   // |cert_verify_flags| is bitwise OR'd of CertVerifier::VerifyFlags and it is
   // passed to CertVerifier::Verify.
-  int Request(const HostPortPair& host_port_pair,
+  // |destination| will be resolved and resulting IPEndPoint used to open a
+  // QuicConnection.  This can be different than HostPortPair::FromURL(url).
+  int Request(const HostPortPair& destination,
               PrivacyMode privacy_mode,
               int cert_verify_flags,
               const GURL& url,
@@ -99,17 +101,13 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   // Sets |session_|.
   void SetSession(QuicChromiumClientSession* session);
 
-  const std::string& origin_host() const { return origin_host_; }
-
-  PrivacyMode privacy_mode() const { return privacy_mode_; }
+  const QuicServerId& server_id() const { return server_id_; }
 
   const BoundNetLog& net_log() const { return net_log_; }
 
  private:
   QuicStreamFactory* factory_;
-  HostPortPair host_port_pair_;
-  std::string origin_host_;
-  PrivacyMode privacy_mode_;
+  QuicServerId server_id_;
   BoundNetLog net_log_;
   CompletionCallback callback_;
   base::WeakPtr<QuicChromiumClientSession> session_;
@@ -125,6 +123,31 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       public SSLConfigService::Observer,
       public CertDatabase::Observer {
  public:
+  // This class encompasses |destination| and |server_id|.
+  // |destination| is a HostPortPair which is resolved
+  // and a QuicConnection is made to the resulting IP address.
+  // |server_id| identifies the origin of the request,
+  // the crypto handshake advertises |server_id.host()| to the server,
+  // and the certificate is also matched against |server_id.host()|.
+  class NET_EXPORT_PRIVATE QuicSessionKey {
+   public:
+    QuicSessionKey() = default;
+    QuicSessionKey(const HostPortPair& destination,
+                   const QuicServerId& server_id);
+    ~QuicSessionKey() = default;
+
+    // Needed to be an element of std::set.
+    bool operator<(const QuicSessionKey& other) const;
+    bool operator==(const QuicSessionKey& other) const;
+
+    const HostPortPair& destination() const { return destination_; }
+    const QuicServerId& server_id() const { return server_id_; }
+
+   private:
+    HostPortPair destination_;
+    QuicServerId server_id_;
+  };
+
   QuicStreamFactory(
       HostResolver* host_resolver,
       ClientSocketFactory* client_socket_factory,
@@ -155,7 +178,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       int threshold_timeouts_with_streams_open,
       int threshold_public_resets_post_handshake,
       int socket_receive_buffer_size,
-      bool delay_tcp_race,
       int max_server_configs_stored_in_properties,
       bool close_sessions_on_ip_change,
       bool disable_quic_on_timeout_with_open_streams,
@@ -166,18 +188,19 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool enable_token_binding);
   ~QuicStreamFactory() override;
 
-  // Returns true if there is an existing session to |server_id| which can be
-  // used for request to |origin_host|.
+  // Returns true if there is an existing session for |server_id| or if the
+  // request can be pooled to an existing session to the IP address of
+  // |destination|.
   bool CanUseExistingSession(const QuicServerId& server_id,
-                             base::StringPiece origin_host);
+                             const HostPortPair& destination);
 
   // Creates a new QuicHttpStream to |host_port_pair| which will be
   // owned by |request|.
   // If a matching session already exists, this method will return OK.  If no
   // matching session exists, this will return ERR_IO_PENDING and will invoke
   // OnRequestComplete asynchronously.
-  int Create(const HostPortPair& host_port_pair,
-             PrivacyMode privacy_mode,
+  int Create(const QuicServerId& server_id,
+             const HostPortPair& destination,
              int cert_verify_flags,
              const GURL& url,
              base::StringPiece method,
@@ -322,16 +345,14 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   int socket_receive_buffer_size() const { return socket_receive_buffer_size_; }
 
-  bool delay_tcp_race() const { return delay_tcp_race_; }
-
  private:
   class Job;
   friend class test::QuicStreamFactoryPeer;
   FRIEND_TEST_ALL_PREFIXES(HttpStreamFactoryTest, QuicLossyProxyMarkedAsBad);
 
   typedef std::map<QuicServerId, QuicChromiumClientSession*> SessionMap;
-  typedef std::map<QuicChromiumClientSession*, QuicServerId> SessionIdMap;
-  typedef std::set<QuicServerId> AliasSet;
+  typedef std::map<QuicChromiumClientSession*, QuicSessionKey> SessionIdMap;
+  typedef std::set<QuicSessionKey> AliasSet;
   typedef std::map<QuicChromiumClientSession*, AliasSet> SessionAliasMap;
   typedef std::set<QuicChromiumClientSession*> SessionSet;
   typedef std::map<IPEndPoint, SessionSet> IPAliasMap;
@@ -352,9 +373,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Creates a job which doesn't wait for server config to be loaded from the
   // disk cache. This job is started via a PostTask.
-  void CreateAuxilaryJob(const QuicServerId server_id,
+  void CreateAuxilaryJob(const QuicSessionKey& key,
                          int cert_verify_flags,
-                         bool server_and_origin_have_same_host,
                          bool is_post,
                          const BoundNetLog& net_log);
 
@@ -362,19 +382,18 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   std::unique_ptr<QuicHttpStream> CreateFromSession(
       QuicChromiumClientSession* session);
 
-  bool OnResolution(const QuicServerId& server_id,
-                    const AddressList& address_list);
+  bool OnResolution(const QuicSessionKey& key, const AddressList& address_list);
   void OnJobComplete(Job* job, int rv);
   bool HasActiveSession(const QuicServerId& server_id) const;
   bool HasActiveJob(const QuicServerId& server_id) const;
-  int CreateSession(const QuicServerId& server_id,
+  int CreateSession(const QuicSessionKey& key,
                     int cert_verify_flags,
                     std::unique_ptr<QuicServerInfo> quic_server_info,
                     const AddressList& address_list,
                     base::TimeTicks dns_resolution_end_time,
                     const BoundNetLog& net_log,
                     QuicChromiumClientSession** session);
-  void ActivateSession(const QuicServerId& key,
+  void ActivateSession(const QuicSessionKey& key,
                        QuicChromiumClientSession* session);
 
   // Returns |srtt| in micro seconds from ServerNetworkStats. Returns 0 if there
@@ -515,9 +534,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Size of the UDP receive buffer.
   int socket_receive_buffer_size_;
-
-  // Set if we do want to delay TCP connection when it is racing with QUIC.
-  bool delay_tcp_race_;
 
   // If more than |yield_after_packets_| packets have been read or more than
   // |yield_after_duration_| time has passed, then

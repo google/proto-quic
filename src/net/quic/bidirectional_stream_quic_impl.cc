@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "base/timer/timer.h"
 #include "net/http/bidirectional_stream_request_info.h"
+#include "net/quic/quic_connection.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -31,6 +32,7 @@ BidirectionalStreamQuicImpl::BidirectionalStreamQuicImpl(
       closed_stream_sent_bytes_(0),
       has_sent_headers_(false),
       has_received_headers_(false),
+      disable_auto_flush_(false),
       weak_factory_(this) {
   DCHECK(session_);
   session_->AddObserver(this);
@@ -45,10 +47,12 @@ BidirectionalStreamQuicImpl::~BidirectionalStreamQuicImpl() {
 void BidirectionalStreamQuicImpl::Start(
     const BidirectionalStreamRequestInfo* request_info,
     const BoundNetLog& net_log,
+    bool disable_auto_flush,
     BidirectionalStreamImpl::Delegate* delegate,
     std::unique_ptr<base::Timer> /* timer */) {
   DCHECK(!stream_);
 
+  disable_auto_flush_ = disable_auto_flush;
   if (!session_) {
     NotifyError(was_handshake_confirmed_ ? ERR_QUIC_PROTOCOL_ERROR
                                          : ERR_QUIC_HANDSHAKE_FAILED);
@@ -104,6 +108,32 @@ void BidirectionalStreamQuicImpl::SendData(IOBuffer* data,
       string_data, end_stream,
       base::Bind(&BidirectionalStreamQuicImpl::OnSendDataComplete,
                  weak_factory_.GetWeakPtr()));
+  DCHECK(rv == OK || rv == ERR_IO_PENDING);
+  if (rv == OK) {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(&BidirectionalStreamQuicImpl::OnSendDataComplete,
+                              weak_factory_.GetWeakPtr(), OK));
+  }
+}
+
+void BidirectionalStreamQuicImpl::SendvData(
+    const std::vector<IOBuffer*>& buffers,
+    const std::vector<int>& lengths,
+    bool end_stream) {
+  DCHECK(stream_);
+  DCHECK_EQ(buffers.size(), lengths.size());
+
+  QuicConnection::ScopedPacketBundler bundler(
+      session_->connection(), QuicConnection::SEND_ACK_IF_PENDING);
+  if (!has_sent_headers_) {
+    SendRequestHeaders();
+  }
+
+  int rv = stream_->WritevStreamData(
+      buffers, lengths, end_stream,
+      base::Bind(&BidirectionalStreamQuicImpl::OnSendDataComplete,
+                 weak_factory_.GetWeakPtr()));
+
   DCHECK(rv == OK || rv == ERR_IO_PENDING);
   if (rv == OK) {
     base::ThreadTaskRunnerHandle::Get()->PostTask(
@@ -208,7 +238,10 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
   DCHECK(rv == OK || !stream_);
   if (rv == OK) {
     stream_->SetDelegate(this);
-    SendRequestHeaders();
+    if (!disable_auto_flush_) {
+      SendRequestHeaders();
+    }
+    delegate_->OnStreamReady();
   } else {
     NotifyError(rv);
   }
@@ -240,7 +273,6 @@ void BidirectionalStreamQuicImpl::SendRequestHeaders() {
       headers, request_info_->end_stream_on_headers, nullptr);
   headers_bytes_sent_ += frame_len;
   has_sent_headers_ = true;
-  delegate_->OnHeadersSent();
 }
 
 void BidirectionalStreamQuicImpl::NotifyError(int error) {

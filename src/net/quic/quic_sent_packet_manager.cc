@@ -295,7 +295,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
 
     if (ack_frame.missing_packets.Contains(packet_number)) {
       // Don't continue to increase the nack count for packets not in flight.
-      if (!it->in_flight) {
+      if (FLAGS_quic_simplify_loss_detection || !it->in_flight) {
         continue;
       }
       // Consider it multiple nacks when there is a gap between the missing
@@ -440,7 +440,7 @@ PendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
   return PendingRetransmission(path_id_, packet_number, transmission_type,
                                transmission_info.retransmittable_frames,
                                transmission_info.has_crypto_handshake,
-                               transmission_info.needs_padding,
+                               transmission_info.num_padding_bytes,
                                transmission_info.encryption_level,
                                transmission_info.packet_number_length);
 }

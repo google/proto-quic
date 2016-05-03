@@ -164,7 +164,7 @@ bool IPEndPoint::FromSockAddr(const struct sockaddr* sock_addr,
 }
 
 std::string IPEndPoint::ToString() const {
-  return IPAddressToStringWithPort(address_.bytes(), port_);
+  return IPAddressToStringWithPort(address_, port_);
 }
 
 std::string IPEndPoint::ToStringWithoutPort() const {

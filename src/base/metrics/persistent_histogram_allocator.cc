@@ -270,6 +270,10 @@ void PersistentHistogramAllocator::UpdateTrackingHistograms() {
   memory_allocator_->UpdateTrackingHistograms();
 }
 
+void PersistentHistogramAllocator::ClearLastCreatedReferenceForTesting() {
+  subtle::NoBarrier_Store(&last_created_, 0);
+}
+
 // static
 HistogramBase*
 PersistentHistogramAllocator::GetCreateHistogramResultHistogram() {
@@ -660,7 +664,7 @@ void GlobalHistogramAllocator::Set(
   g_allocator = allocator.release();
   size_t existing = StatisticsRecorder::GetHistogramCount();
 
-  DLOG_IF(WARNING, existing)
+  DVLOG_IF(1, existing)
       << existing << " histograms were created before persistence was enabled.";
 }
 

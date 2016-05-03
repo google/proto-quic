@@ -87,6 +87,13 @@ class QuicTestPacketMaker {
       bool fin,
       QuicStreamOffset offset,
       base::StringPiece data);
+  std::unique_ptr<QuicReceivedPacket> MakeMultipleDataFramesPacket(
+      QuicPacketNumber packet_number,
+      QuicStreamId stream_id,
+      bool should_include_version,
+      bool fin,
+      QuicStreamOffset offset,
+      const std::vector<std::string>& data_writes);
   std::unique_ptr<QuicReceivedPacket> MakeAckAndDataPacket(
       QuicPacketNumber packet_number,
       bool include_version,
@@ -96,6 +103,17 @@ class QuicTestPacketMaker {
       bool fin,
       QuicStreamOffset offset,
       base::StringPiece data);
+
+  std::unique_ptr<QuicReceivedPacket>
+  MakeRequestHeadersAndMultipleDataFramesPacket(
+      QuicPacketNumber packet_number,
+      QuicStreamId stream_id,
+      bool should_include_version,
+      bool fin,
+      SpdyPriority priority,
+      const SpdyHeaderBlock& headers,
+      size_t* spdy_headers_frame_length,
+      const std::vector<std::string>& data_writes);
 
   // If |spdy_headers_frame_length| is non-null, it will be set to the size of
   // the SPDY headers frame created for this packet.

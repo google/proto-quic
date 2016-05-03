@@ -10,7 +10,7 @@
 #include "build/build_config.h"
 #include "net/cert/cert_database.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/socket/ssl_client_socket_openssl.h"
+#include "net/socket/ssl_client_socket_impl.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/udp/udp_client_socket.h"
 
@@ -67,7 +67,7 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
       const HostPortPair& host_and_port,
       const SSLConfig& ssl_config,
       const SSLClientSocketContext& context) override {
-    return std::unique_ptr<SSLClientSocket>(new SSLClientSocketOpenSSL(
+    return std::unique_ptr<SSLClientSocket>(new SSLClientSocketImpl(
         std::move(transport_socket), host_and_port, ssl_config, context));
   }
 

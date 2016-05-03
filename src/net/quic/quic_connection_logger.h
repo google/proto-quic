@@ -12,11 +12,11 @@
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/network_change_notifier.h"
-#include "net/base/socket_performance_watcher.h"
 #include "net/log/net_log.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_spdy_session.h"
+#include "net/socket/socket_performance_watcher.h"
 
 namespace net {
 namespace test {

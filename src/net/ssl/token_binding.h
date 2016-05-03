@@ -20,10 +20,6 @@ enum class TokenBindingType {
   REFERRED = 1,
 };
 
-// Returns whether Token Binding is supported on this platform. If this function
-// returns false, Token Binding must not be negotiated.
-bool IsTokenBindingSupported();
-
 // Takes an exported keying material value |ekm| from the TLS layer and a token
 // binding key |key| and signs the EKM, putting the signature in |*out|. Returns
 // true on success or false if there's an error in the signing operations.

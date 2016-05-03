@@ -1319,7 +1319,8 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
 
   // TODO(primiano): Add support for events with copied name crbug.com/581078
   if (!(flags & TRACE_EVENT_FLAG_COPY)) {
-    if (AllocationContextTracker::capture_enabled()) {
+    if (AllocationContextTracker::capture_mode() ==
+        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
       if (phase == TRACE_EVENT_PHASE_BEGIN ||
           phase == TRACE_EVENT_PHASE_COMPLETE) {
         AllocationContextTracker::GetInstanceForCurrentThread()
@@ -1452,9 +1453,10 @@ void TraceLog::UpdateTraceEventDuration(
           EventToConsoleMessage(TRACE_EVENT_PHASE_END, now, trace_event);
     }
 
-    if (base::trace_event::AllocationContextTracker::capture_enabled()) {
+    if (AllocationContextTracker::capture_mode() ==
+        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
       // The corresponding push is in |AddTraceEventWithThreadIdAndTimestamp|.
-      base::trace_event::AllocationContextTracker::GetInstanceForCurrentThread()
+      AllocationContextTracker::GetInstanceForCurrentThread()
           ->PopPseudoStackFrame(name);
     }
   }

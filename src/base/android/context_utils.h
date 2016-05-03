@@ -18,14 +18,6 @@ namespace android {
 // must NOT release it.
 BASE_EXPORT jobject GetApplicationContext();
 
-// Initialize the global application context object.
-// Either this or the Java equivalent ContextUtils.initApplicationContext must
-// be called once during startup. JNI bindings must have been initialized, as
-// the context is stored on both sides.
-BASE_EXPORT void InitApplicationContext(
-    JNIEnv* env,
-    const base::android::JavaRef<jobject>& context);
-
 bool RegisterContextUtils(JNIEnv* env);
 
 }  // namespace android

@@ -107,7 +107,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   void Initialize(bool stream_should_process_data) {
     connection_ = new StrictMock<MockConnection>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER, supported_versions_);
-    session_.reset(new StrictMock<MockQuicSpdySession>(connection_));
+    session_.reset(new StrictMock<MockQuicSession>(connection_));
 
     // New streams rely on having the peer's flow control receive window
     // negotiated in the config.
@@ -152,7 +152,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   MockConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   MockConnection* connection_;
-  std::unique_ptr<MockQuicSpdySession> session_;
+  std::unique_ptr<MockQuicSession> session_;
   TestStream* stream_;
   SpdyHeaderBlock headers_;
   QuicWriteBlockedList* write_blocked_list_;
@@ -165,9 +165,10 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
 TEST_F(ReliableQuicStreamTest, WriteAllData) {
   Initialize(kShouldProcessData);
 
-  size_t length = 1 + QuicPacketCreator::StreamFramePacketOverhead(
-                          PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
-                          !kIncludePathId, PACKET_6BYTE_PACKET_NUMBER, 0u);
+  size_t length =
+      1 + QuicPacketCreator::StreamFramePacketOverhead(
+              PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion, !kIncludePathId,
+              !kIncludeDiversificationNonce, PACKET_6BYTE_PACKET_NUMBER, 0u);
   connection_->SetMaxPacketLength(length);
 
   EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
@@ -237,9 +238,10 @@ TEST_F(ReliableQuicStreamTest, WriteOrBufferData) {
   Initialize(kShouldProcessData);
 
   EXPECT_FALSE(HasWriteBlockedStreams());
-  size_t length = 1 + QuicPacketCreator::StreamFramePacketOverhead(
-                          PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion,
-                          !kIncludePathId, PACKET_6BYTE_PACKET_NUMBER, 0u);
+  size_t length =
+      1 + QuicPacketCreator::StreamFramePacketOverhead(
+              PACKET_8BYTE_CONNECTION_ID, !kIncludeVersion, !kIncludePathId,
+              !kIncludeDiversificationNonce, PACKET_6BYTE_PACKET_NUMBER, 0u);
   connection_->SetMaxPacketLength(length);
 
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
@@ -646,7 +648,7 @@ TEST_F(ReliableQuicStreamTest, EarlyResponseFinHandling) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Receive data for the request.
   QuicStreamFrame frame1(stream_->id(), false, 0, StringPiece("Start"));

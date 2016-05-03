@@ -296,6 +296,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
                                bool should_succeed,
                                const char* error_substr) {
     IPAddress server_ip;
+    DiversificationNonce diversification_nonce;
     string error_details;
     QuicConnectionId server_designated_connection_id =
         rand_for_id_generation_.RandUint64();
@@ -304,7 +305,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         supported_versions_.front(), supported_versions_,
         use_stateless_rejects_, server_designated_connection_id, &clock_, rand_,
         &compressed_certs_cache_, &params_, &crypto_proof_, &out_,
-        &error_details);
+        &diversification_nonce, &error_details);
 
     if (should_succeed) {
       ASSERT_EQ(error, QUIC_NO_ERROR) << "Message failed with error "
@@ -817,10 +818,17 @@ TEST_P(CryptoServerTest, NoServerNonce) {
 
   ShouldSucceed(msg);
 
-  CheckRejectTag();
-  const HandshakeFailureReason kRejectReasons[] = {
-      SERVER_NONCE_REQUIRED_FAILURE};
-  CheckRejectReasons(kRejectReasons, arraysize(kRejectReasons));
+  if (client_version_ <= QUIC_VERSION_32) {
+    CheckRejectTag();
+    const HandshakeFailureReason kRejectReasons[] = {
+        SERVER_NONCE_REQUIRED_FAILURE};
+    CheckRejectReasons(kRejectReasons, arraysize(kRejectReasons));
+  } else {
+    // Even without a server nonce, this ClientHello should be accepted in
+    // version 33.
+    ASSERT_EQ(kSHLO, out_.tag());
+    CheckServerHello(out_);
+  }
 }
 
 TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {

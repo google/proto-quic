@@ -69,6 +69,10 @@ const QuicPacketCount kDefaultRetransmittablePacketsBeforeAck = 2;
 const QuicPacketCount kMinReceivedBeforeAckDecimation = 100;
 // Wait for up to 10 retransmittable packets before sending an ack.
 const QuicPacketCount kMaxRetransmittablePacketsBeforeAck = 10;
+// One quarter RTT delay when doing ack decimation.
+const float kAckDecimationDelay = 0.25;
+// One eighth RTT delay when doing ack decimation.
+const float kShortAckDecimationDelay = 0.125;
 
 bool Near(QuicPacketNumber a, QuicPacketNumber b) {
   QuicPacketNumber delta = (a > b) ? a - b : b - a;
@@ -246,6 +250,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       num_packets_received_since_last_ack_sent_(0),
       stop_waiting_count_(0),
       ack_mode_(TCP_ACKING),
+      ack_decimation_delay_(kAckDecimationDelay),
       delay_setting_retransmission_alarm_(false),
       pending_retransmission_alarm_(false),
       defer_send_in_response_to_packets_(false),
@@ -372,9 +377,16 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
   if (config.HasClientSentConnectionOption(kACKD, perspective_)) {
     ack_mode_ = ACK_DECIMATION;
   }
-  if (FLAGS_quic_ack_decimation2 &&
-      config.HasClientSentConnectionOption(kAKD2, perspective_)) {
+  if (config.HasClientSentConnectionOption(kAKD2, perspective_)) {
     ack_mode_ = ACK_DECIMATION_WITH_REORDERING;
+  }
+  if (config.HasClientSentConnectionOption(kAKD3, perspective_)) {
+    ack_mode_ = ACK_DECIMATION;
+    ack_decimation_delay_ = kShortAckDecimationDelay;
+  }
+  if (config.HasClientSentConnectionOption(kAKD4, perspective_)) {
+    ack_mode_ = ACK_DECIMATION_WITH_REORDERING;
+    ack_decimation_delay_ = kShortAckDecimationDelay;
   }
   if (FLAGS_quic_enable_rto_timeout &&
       config.HasClientSentConnectionOption(k5RTO, perspective_)) {
@@ -624,6 +636,7 @@ bool QuicConnection::OnUnauthenticatedHeader(const QuicPacketHeader& header) {
 void QuicConnection::OnDecryptedPacket(EncryptionLevel level) {
   last_decrypted_packet_level_ = level;
   last_packet_decrypted_ = true;
+
   // If this packet was foward-secure encrypted and the forward-secure encrypter
   // is not being used, start using it.
   if (encryption_level_ != ENCRYPTION_FORWARD_SECURE &&
@@ -761,6 +774,14 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
 
   last_stop_waiting_frame_ = frame;
   return connected_;
+}
+
+bool QuicConnection::OnPaddingFrame(const QuicPaddingFrame& frame) {
+  DCHECK(connected_);
+  if (debug_visitor_ != nullptr) {
+    debug_visitor_->OnPaddingFrame(frame);
+  }
+  return true;
 }
 
 bool QuicConnection::OnPingFrame(const QuicPingFrame& frame) {
@@ -997,7 +1018,8 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
         // Wait the minimum of a quarter min_rtt and the delayed ack time.
         QuicTime::Delta ack_delay = QuicTime::Delta::Min(
             sent_packet_manager_.DelayedAckTime(),
-            sent_packet_manager_.GetRttStats()->min_rtt().Multiply(0.25));
+            sent_packet_manager_.GetRttStats()->min_rtt().Multiply(
+                ack_decimation_delay_));
         ack_alarm_->Set(clock_->ApproximateNow().Add(ack_delay));
       }
     } else {
@@ -1789,8 +1811,12 @@ void QuicConnection::SendAck() {
 }
 
 void QuicConnection::OnRetransmissionTimeout() {
-  if (!sent_packet_manager_.HasUnackedPackets()) {
-    return;
+  if (FLAGS_quic_always_has_unacked_packets_on_timeout) {
+    DCHECK(sent_packet_manager_.HasUnackedPackets());
+  } else {
+    if (!sent_packet_manager_.HasUnackedPackets()) {
+      return;
+    }
   }
 
   if (close_connection_after_five_rtos_ &&
@@ -1840,6 +1866,11 @@ void QuicConnection::SetEncrypter(EncryptionLevel level,
             sent_packet_manager_.EstimateMaxPacketsInFlight(
                 max_packet_length());
   }
+}
+
+void QuicConnection::SetDiversificationNonce(const DiversificationNonce nonce) {
+  DCHECK_EQ(Perspective::IS_SERVER, perspective_);
+  packet_generator_.SetDiversificationNonce(nonce);
 }
 
 void QuicConnection::SetDefaultEncryptionLevel(EncryptionLevel level) {

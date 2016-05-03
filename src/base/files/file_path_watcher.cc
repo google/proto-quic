@@ -11,10 +11,6 @@
 #include "base/message_loop/message_loop.h"
 #include "build/build_config.h"
 
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-#include "base/mac/mac_util.h"
-#endif
-
 namespace base {
 
 FilePathWatcher::~FilePathWatcher() {
@@ -29,13 +25,11 @@ void FilePathWatcher::CancelWatch(
 
 // static
 bool FilePathWatcher::RecursiveWatchAvailable() {
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // FSEvents isn't available on iOS and is broken on OSX 10.6 and earlier.
-  // See http://crbug.com/54822#c31
-  return mac::IsOSLionOrLater();
-#elif defined(OS_WIN) || defined(OS_LINUX) || defined(OS_ANDROID)
+#if (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_WIN) || \
+    defined(OS_LINUX) || defined(OS_ANDROID)
   return true;
 #else
+  // FSEvents isn't available on iOS.
   return false;
 #endif
 }

@@ -79,10 +79,12 @@ class NET_EXPORT ChannelIDStore
       const std::string& server_identifier,
       const base::Closure& completion_callback) = 0;
 
-  // Deletes all of the channel ID keypairs that have a creation_date greater
-  // than or equal to |delete_begin| and less than |delete_end|.  If a
-  // base::Time value is_null, that side of the comparison is unbounded.
-  virtual void DeleteAllCreatedBetween(
+  // Deletes the channel ID keypairs that have a creation_date greater than
+  // or equal to |delete_begin| and less than |delete_end| and whose server
+  // identifier matches the |domain_predicate|. If base::Time value is_null,
+  // that side of the comparison is unbounded.
+  virtual void DeleteForDomainsCreatedBetween(
+      const base::Callback<bool(const std::string&)>& domain_predicate,
       base::Time delete_begin,
       base::Time delete_end,
       const base::Closure& completion_callback) = 0;

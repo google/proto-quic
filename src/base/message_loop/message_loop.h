@@ -133,6 +133,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Creates the default MessagePump based on |type|. Caller owns return
   // value.
   static std::unique_ptr<MessagePump> CreateMessagePumpForType(Type type);
+
   // A DestructionObserver is notified when the current MessageLoop is being
   // destroyed.  These observers are notified prior to MessageLoop::current()
   // being changed to return NULL.  This gives interested parties the chance to
@@ -156,6 +157,19 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Remove a DestructionObserver.  It is safe to call this method while a
   // DestructionObserver is receiving a notification callback.
   void RemoveDestructionObserver(DestructionObserver* destruction_observer);
+
+  // A NestingObserver is notified when a nested message loop begins. The
+  // observers are notified before the first task is processed.
+  class BASE_EXPORT NestingObserver {
+   public:
+    virtual void OnBeginNestedMessageLoop() = 0;
+
+   protected:
+    virtual ~NestingObserver();
+  };
+
+  void AddNestingObserver(NestingObserver* observer);
+  void RemoveNestingObserver(NestingObserver* observer);
 
   // NOTE: Deprecated; prefer task_runner() and the TaskRunner interfaces.
   // TODO(skyostil): Remove these functions (crbug.com/465354).
@@ -188,10 +202,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
   void PostNonNestableTask(const tracked_objects::Location& from_here,
                            const Closure& task);
-
-  void PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  const Closure& task,
-                                  TimeDelta delay);
 
   // A variant on PostTask that deletes the given object.  This is useful
   // if the object needs to live until the next run of the MessageLoop (for
@@ -473,6 +483,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // If message_histogram_ is NULL, this is a no-op.
   void HistogramEvent(int event);
 
+  // Notify observers that a nested message loop is starting.
+  void NotifyBeginNestedLoop();
+
   // MessagePump::Delegate methods:
   bool DoWork() override;
   bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
@@ -506,6 +519,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   TaskQueue deferred_non_nestable_work_queue_;
 
   ObserverList<DestructionObserver> destruction_observers_;
+
+  ObserverList<NestingObserver> nesting_observers_;
 
   // A recursion block that prevents accidentally running additional tasks when
   // insider a (accidentally induced?) nested message pump.

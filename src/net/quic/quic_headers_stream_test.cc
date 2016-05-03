@@ -96,23 +96,17 @@ class MockVisitor : public SpdyFramerVisitorInterface {
 // Run all tests with each version, perspective (client or server),
 // and relevant flag options (false or true)
 struct TestParams {
-  TestParams(QuicVersion version,
-             Perspective perspective,
-             bool spdy_on_stream_end)
-      : version(version),
-        perspective(perspective),
-        spdy_on_stream_end(spdy_on_stream_end) {}
+  TestParams(QuicVersion version, Perspective perspective)
+      : version(version), perspective(perspective) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     os << "{ version: " << QuicVersionToString(p.version);
-    os << ", perspective: " << p.perspective;
-    os << ", spdy_on_stream_end: " << p.spdy_on_stream_end << " }";
+    os << ", perspective: " << p.perspective << " }";
     return os;
   }
 
   QuicVersion version;
   Perspective perspective;
-  bool spdy_on_stream_end;
 };
 
 // Constructs various test permutations.
@@ -120,10 +114,8 @@ vector<TestParams> GetTestParams() {
   vector<TestParams> params;
   QuicVersionVector all_supported_versions = QuicSupportedVersions();
   for (const QuicVersion version : all_supported_versions) {
-    params.push_back(TestParams(version, Perspective::IS_CLIENT, true));
-    params.push_back(TestParams(version, Perspective::IS_SERVER, true));
-    params.push_back(TestParams(version, Perspective::IS_CLIENT, false));
-    params.push_back(TestParams(version, Perspective::IS_SERVER, false));
+    params.push_back(TestParams(version, Perspective::IS_CLIENT));
+    params.push_back(TestParams(version, Perspective::IS_SERVER));
   }
   FLAGS_quic_supports_push_promise = true;
   return params;
@@ -145,7 +137,6 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParams> {
     headers_[":version"] = "HTTP/1.1";
     headers_[":status"] = "200 Ok";
     headers_["content-length"] = "11";
-    FLAGS_spdy_on_stream_end = GetParam().spdy_on_stream_end;
     framer_ = std::unique_ptr<SpdyFramer>(new SpdyFramer(HTTP2));
     framer_->set_visitor(&visitor_);
     EXPECT_EQ(version(), session_.connection()->version());
@@ -208,11 +199,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParams> {
         .WillRepeatedly(WithArgs<1, 2>(
             Invoke(this, &QuicHeadersStreamTest::SaveHeaderData)));
     if (fin) {
-      if (FLAGS_spdy_on_stream_end) {
-        EXPECT_CALL(visitor_, OnStreamEnd(stream_id));
-      } else {
-        EXPECT_CALL(visitor_, OnStreamFrameData(stream_id, nullptr, 0, true));
-      }
+      EXPECT_CALL(visitor_, OnStreamEnd(stream_id));
     }
     framer_->ProcessInput(saved_data_.data(), saved_data_.length());
     EXPECT_FALSE(framer_->HasError())

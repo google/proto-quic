@@ -121,6 +121,8 @@ class QuicConnectionPeer {
                                 QuicPacketNumber number);
   static void SetAckMode(QuicConnection* connection,
                          QuicConnection::AckMode ack_mode);
+  static void SetAckDecimationDelay(QuicConnection* connection,
+                                    float ack_decimation_delay);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConnectionPeer);

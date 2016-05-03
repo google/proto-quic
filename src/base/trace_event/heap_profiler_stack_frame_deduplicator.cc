@@ -4,6 +4,7 @@
 
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 
+#include <inttypes.h>
 #include <stddef.h>
 
 #include <string>
@@ -88,6 +89,12 @@ void StackFrameDeduplicator::AppendAsTraceFormat(std::string* out) const {
         SStringPrintf(&stringify_buffer,
                       "[Thread: %s]",
                       static_cast<const char*>(frame.value));
+        frame_node_value->SetString("name", stringify_buffer);
+        break;
+      case StackFrame::Type::PROGRAM_COUNTER:
+        SStringPrintf(&stringify_buffer,
+                      "pc:%" PRIxPTR,
+                      reinterpret_cast<uintptr_t>(frame.value));
         frame_node_value->SetString("name", stringify_buffer);
         break;
     }

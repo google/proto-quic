@@ -87,3 +87,12 @@ Description of the patches:
 
   These patches uninline some functions, resulting in a significant reduction
   (somewhere between 500 KB and 1 MB) of binary size.
+- 0011-use-offsetof-for-clang.patch
+
+  This patch replaces a few invalid reinterpret_casts with __builtin_offsetof,
+  if compiled with Clang. This is a temporary patch, it should be deletd, when
+  the official github repo is updates with this changes already submitted to
+  the internal Google repo.
+
+  See also: https://crbug.com/607751 and
+  https://github.com/google/protobuf/issues/1450

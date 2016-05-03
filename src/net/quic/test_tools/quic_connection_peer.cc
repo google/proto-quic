@@ -268,5 +268,11 @@ void QuicConnectionPeer::SetAckMode(QuicConnection* connection,
   connection->ack_mode_ = ack_mode;
 }
 
+// static
+void QuicConnectionPeer::SetAckDecimationDelay(QuicConnection* connection,
+                                               float ack_decimation_delay) {
+  connection->ack_decimation_delay_ = ack_decimation_delay;
+}
+
 }  // namespace test
 }  // namespace net

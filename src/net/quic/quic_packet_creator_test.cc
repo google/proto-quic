@@ -62,19 +62,15 @@ struct TestParams {
 // Constructs various test permutations.
 vector<TestParams> GetTestParams() {
   vector<TestParams> params;
-  QuicConnectionIdLength max = PACKET_8BYTE_CONNECTION_ID;
+  constexpr QuicConnectionIdLength kMax = PACKET_8BYTE_CONNECTION_ID;
   QuicVersionVector all_supported_versions = QuicSupportedVersions();
   for (size_t i = 0; i < all_supported_versions.size(); ++i) {
-    params.push_back(TestParams(all_supported_versions[i], true, max));
-    params.push_back(TestParams(all_supported_versions[i], false, max));
+    params.push_back(TestParams(all_supported_versions[i], true, kMax));
+    params.push_back(TestParams(all_supported_versions[i], false, kMax));
   }
   params.push_back(
       TestParams(all_supported_versions[0], true, PACKET_0BYTE_CONNECTION_ID));
-  params.push_back(
-      TestParams(all_supported_versions[0], true, PACKET_1BYTE_CONNECTION_ID));
-  params.push_back(
-      TestParams(all_supported_versions[0], true, PACKET_4BYTE_CONNECTION_ID));
-  params.push_back(TestParams(all_supported_versions[0], true, max));
+  params.push_back(TestParams(all_supported_versions[0], true, kMax));
   return params;
 }
 
@@ -185,6 +181,7 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   size_t GetPacketHeaderOverhead() {
     return GetPacketHeaderSize(
         creator_.connection_id_length(), kIncludeVersion, !kIncludePathId,
+        !kIncludeDiversificationNonce,
         QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
   }
 
@@ -209,12 +206,12 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   PendingRetransmission CreateRetransmission(
       const QuicFrames& retransmittable_frames,
       bool has_crypto_handshake,
-      bool needs_padding,
+      int num_padding_bytes,
       EncryptionLevel encryption_level,
       QuicPacketNumberLength packet_number_length) {
     return PendingRetransmission(1u, 1u, NOT_RETRANSMISSION,
                                  retransmittable_frames, has_crypto_handshake,
-                                 needs_padding, encryption_level,
+                                 num_padding_bytes, encryption_level,
                                  packet_number_length);
   }
 
@@ -419,7 +416,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
   frames.push_back(QuicFrame(stream_frame));
   char buffer[kMaxPacketSize];
   PendingRetransmission retransmission(CreateRetransmission(
-      frames, true /* has_crypto_handshake */, true /* needs padding */,
+      frames, true /* has_crypto_handshake */, -1 /* needs full padding */,
       ENCRYPTION_NONE, PACKET_1BYTE_PACKET_NUMBER));
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
@@ -439,6 +436,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
     EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
     EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
     EXPECT_CALL(framer_visitor_, OnStreamFrame(_));
+    EXPECT_CALL(framer_visitor_, OnPaddingFrame(_));
     EXPECT_CALL(framer_visitor_, OnPacketComplete());
   }
   ProcessPacket(serialized_packet_);
@@ -453,7 +451,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeCryptoFrameWithForwardSecurity) {
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   char buffer[kMaxPacketSize];
   PendingRetransmission retransmission(CreateRetransmission(
-      frames, true /* has_crypto_handshake */, true /* needs padding */,
+      frames, true /* has_crypto_handshake */, -1 /* needs full padding */,
       ENCRYPTION_NONE,
       QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
@@ -471,7 +469,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFrameWithForwardSecurity) {
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   char buffer[kMaxPacketSize];
   PendingRetransmission retransmission(CreateRetransmission(
-      frames, false /* has_crypto_handshake */, false /* needs padding */,
+      frames, false /* has_crypto_handshake */, 0 /* no padding */,
       ENCRYPTION_NONE,
       QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
@@ -481,7 +479,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFrameWithForwardSecurity) {
   delete stream_frame;
 }
 
-TEST_P(QuicPacketCreatorTest, ReserializeFramesWithPadding) {
+TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPadding) {
   QuicFrame frame;
   QuicIOVector io_vector(MakeIOVector("fake handshake message data"));
   QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
@@ -490,13 +488,52 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithPadding) {
   frames.push_back(frame);
   char buffer[kMaxPacketSize];
   PendingRetransmission retransmission(CreateRetransmission(
-      frames, true /* has_crypto_handshake */, true /* needs padding */,
+      frames, true /* has_crypto_handshake */, -1 /* needs full padding */,
       ENCRYPTION_NONE,
       QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
   EXPECT_EQ(kDefaultMaxPacketSize, serialized_packet_.encrypted_length);
+  delete frame.stream_frame;
+}
+
+TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
+  QuicFrame frame;
+  QuicIOVector io_vector(MakeIOVector("fake message data"));
+  QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
+                                           io_vector, 0u, 0u, false, &frame);
+
+  const int kNumPaddingBytes1 = 4;
+  int packet_size = 0;
+  {
+    QuicFrames frames;
+    frames.push_back(frame);
+    char buffer[kMaxPacketSize];
+    PendingRetransmission retransmission(CreateRetransmission(
+        frames, false /* has_crypto_handshake */,
+        kNumPaddingBytes1 /* padding bytes */, ENCRYPTION_NONE,
+        QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
+    EXPECT_CALL(delegate_, OnSerializedPacket(_))
+        .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+    creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
+    packet_size = serialized_packet_.encrypted_length;
+  }
+
+  const int kNumPaddingBytes2 = 44;
+  QuicFrames frames;
+  frames.push_back(frame);
+  char buffer[kMaxPacketSize];
+  PendingRetransmission retransmission(CreateRetransmission(
+      frames, false /* has_crypto_handshake */,
+      kNumPaddingBytes2 /* padding bytes */, ENCRYPTION_NONE,
+      QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
+
+  EXPECT_EQ(packet_size + kNumPaddingBytes2 - kNumPaddingBytes1,
+            serialized_packet_.encrypted_length);
   delete frame.stream_frame;
 }
 
@@ -517,7 +554,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPacketAndPadding) {
     frames.push_back(frame);
     char buffer[kMaxPacketSize];
     PendingRetransmission retransmission(CreateRetransmission(
-        frames, true /* has_crypto_handshake */, true /* needs padding */,
+        frames, true /* has_crypto_handshake */, -1 /* needs full padding */,
         ENCRYPTION_NONE,
         QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
     EXPECT_CALL(delegate_, OnSerializedPacket(_))
@@ -819,8 +856,8 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataLargerThanOneStreamFrame) {
       client_framer_.version(),
       QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
       QuicPacketCreatorPeer::SendPathIdInPacket(&creator_),
-      creator_.connection_id_length(), PACKET_1BYTE_PACKET_NUMBER,
-      &payload_length));
+      !kIncludeDiversificationNonce, creator_.connection_id_length(),
+      PACKET_1BYTE_PACKET_NUMBER, &payload_length));
   QuicFrame frame;
   const string too_long_payload(payload_length * 2, 'a');
   QuicIOVector io_vector(MakeIOVector(too_long_payload));
@@ -848,7 +885,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
                     creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
                     QuicPacketCreatorPeer::SendPathIdInPacket(&creator_),
-                    PACKET_1BYTE_PACKET_NUMBER),
+                    !kIncludeDiversificationNonce, PACKET_1BYTE_PACKET_NUMBER),
             creator_.BytesFree());
 
   // Add a variety of frame types and then a padding frame.
@@ -889,7 +926,8 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
                 GetPacketHeaderSize(
                     creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
-                    /*include_path_id=*/false, PACKET_1BYTE_PACKET_NUMBER),
+                    /*include_path_id=*/false, !kIncludeDiversificationNonce,
+                    PACKET_1BYTE_PACKET_NUMBER),
             creator_.BytesFree());
 }
 

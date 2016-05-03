@@ -38,7 +38,9 @@ QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
 }
 
 QuicSpdyStream::~QuicSpdyStream() {
-  spdy_session_->UnregisterStreamPriority(id());
+  if (spdy_session_ != nullptr) {
+    spdy_session_->UnregisterStreamPriority(id());
+  }
 }
 
 void QuicSpdyStream::CloseWriteSide() {
@@ -380,4 +382,9 @@ bool QuicSpdyStream::FinishedReadingTrailers() const {
 SpdyPriority QuicSpdyStream::priority() const {
   return priority_;
 }
+
+void QuicSpdyStream::ClearSession() {
+  spdy_session_ = nullptr;
+}
+
 }  // namespace net

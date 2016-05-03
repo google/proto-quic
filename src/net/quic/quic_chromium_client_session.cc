@@ -55,7 +55,7 @@ const size_t kMaxReadersPerQuicSession = 5;
 // Size of the MRU cache of Token Binding signatures. Since the material being
 // signed is constant and there aren't many keys being used to sign, a fairly
 // small number was chosen, somewhat arbitrarily, and to match
-// SSLClientSocketOpenssl.
+// SSLClientSocketImpl.
 const size_t kTokenBindingSignatureMapSize = 10;
 
 // Histograms for tracking down the crashes from http://crbug.com/354669
@@ -131,26 +131,13 @@ std::unique_ptr<base::Value> NetLogQuicClientSessionCallback(
   return std::move(dict);
 }
 
-std::unique_ptr<base::ListValue> SpdyHeaderBlockToListValue(
-    const SpdyHeaderBlock& headers,
-    NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::ListValue> headers_list(new base::ListValue());
-  for (const auto& it : headers) {
-    headers_list->AppendString(
-        it.first.as_string() + ": " +
-        ElideHeaderValueForNetLog(capture_mode, it.first.as_string(),
-                                  it.second.as_string()));
-  }
-  return headers_list;
-}
-
 std::unique_ptr<base::Value> NetLogQuicPushPromiseReceivedCallback(
     const SpdyHeaderBlock* headers,
     SpdyStreamId stream_id,
     SpdyStreamId promised_stream_id,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->Set("headers", SpdyHeaderBlockToListValue(*headers, capture_mode));
+  dict->Set("headers", ElideSpdyHeaderBlockForNetLog(*headers, capture_mode));
   dict->SetInteger("id", stream_id);
   dict->SetInteger("promised_stream_id", promised_stream_id);
   return std::move(dict);
@@ -322,10 +309,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   SSLInfo ssl_info;
   // QUIC supports only secure urls.
   if (GetSSLInfo(&ssl_info) && ssl_info.cert.get()) {
-    if (port_selected) {
-      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.ConnectSelectPortForHTTPS",
-                                  round_trip_handshakes, 0, 3, 4);
-    } else {
+    if (!port_selected) {
       UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.ConnectRandomPortForHTTPS",
                                   round_trip_handshakes, 0, 3, 4);
       if (require_confirmation_) {
@@ -721,7 +705,7 @@ void QuicChromiumClientSession::OnClosedStream() {
     request->OnRequestCompleteSuccess(CreateOutgoingReliableStreamImpl());
   }
 
-  if (GetNumOpenOutgoingStreams() == 0) {
+  if (GetNumOpenOutgoingStreams() == 0 && stream_factory_) {
     stream_factory_->OnIdleSession(this);
   }
 }
@@ -925,7 +909,9 @@ void QuicChromiumClientSession::OnSuccessfulVersionNegotiation(
 }
 
 void QuicChromiumClientSession::OnPathDegrading() {
-  stream_factory_->MaybeMigrateSessionEarly(this);
+  if (stream_factory_) {
+    stream_factory_->MaybeMigrateSessionEarly(this);
+  }
 }
 
 void QuicChromiumClientSession::OnProofValid(

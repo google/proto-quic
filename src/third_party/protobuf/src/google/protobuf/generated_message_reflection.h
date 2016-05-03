@@ -587,11 +587,22 @@ class LIBPROTOBUF_EXPORT GeneratedMessageReflection : public Reflection {
 // just use zero, GCC complains about dereferencing a NULL pointer.  We
 // choose 16 rather than some other number just in case the compiler would
 // be confused by an unaligned pointer.
+#if defined(__clang__)
+// For Clang we use __builtin_offsetof() and suppress the warning,
+// to avoid Control Flow Integrity and UBSan vptr sanitizers from
+// crashing while trying to validate the invalid reinterpet_casts.
+#define GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TYPE, FIELD)    \
+  _Pragma("clang diagnostic push")                            \
+  _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")  \
+  __builtin_offsetof(TYPE, FIELD)                             \
+  _Pragma("clang diagnostic pop")
+#else
 #define GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TYPE, FIELD)    \
   static_cast<int>(                                           \
       reinterpret_cast<const char*>(                          \
           &reinterpret_cast<const TYPE*>(16)->FIELD) -        \
       reinterpret_cast<const char*>(16))
+#endif
 
 #define PROTO2_GENERATED_DEFAULT_ONEOF_FIELD_OFFSET(ONEOF, FIELD)     \
   static_cast<int>(                                                   \

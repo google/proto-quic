@@ -11,7 +11,7 @@
 #include "base/stl_util.h"
 #include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/crypto/cert_compressor.h"
-#include "net/quic/crypto/chacha20_poly1305_rfc7539_encrypter.h"
+#include "net/quic/crypto/chacha20_poly1305_encrypter.h"
 #include "net/quic/crypto/crypto_handshake_message.h"
 #include "net/quic/crypto/crypto_secret_boxer.h"
 #include "net/quic/crypto/crypto_server_config_protobuf.h"
@@ -246,11 +246,7 @@ TEST(QuicCryptoServerConfigTest, ServerConfig) {
   ASSERT_EQ(QUIC_NO_ERROR, message->GetTaglist(kAEAD, &aead_tags, &aead_len));
   vector<QuicTag> aead(aead_tags, aead_tags + aead_len);
   EXPECT_THAT(aead, ::testing::Contains(kAESG));
-  if (ChaCha20Poly1305Rfc7539Encrypter::IsSupported()) {
-    EXPECT_LE(2u, aead.size());
-  } else {
-    EXPECT_LE(1u, aead.size());
-  }
+  EXPECT_LE(1u, aead.size());
 }
 
 TEST(QuicCryptoServerConfigTest, ServerConfigDisableChaCha) {
@@ -304,11 +300,7 @@ TEST(QuicCryptoServerConfigTest, CompressCerts) {
   string compressed =
       peer.CompressChain(&compressed_certs_cache, chain, "", "", nullptr);
 
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 1u);
-  } else {
-    EXPECT_EQ(compressed_certs_cache.Size(), 0u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 }
 
 TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
@@ -328,17 +320,13 @@ TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
 
   string compressed = peer.CompressChain(&compressed_certs_cache, chain,
                                          common_certs, cached_certs, nullptr);
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 1u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 
   // Compress the same certs, should use cache if available.
   string compressed2 = peer.CompressChain(&compressed_certs_cache, chain,
                                           common_certs, cached_certs, nullptr);
   EXPECT_EQ(compressed, compressed2);
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 1u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 }
 
 TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
@@ -359,18 +347,14 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
 
   string compressed = peer.CompressChain(&compressed_certs_cache, chain,
                                          common_certs, cached_certs, nullptr);
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 1u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 1u);
 
   // Compress a similar certs which only differs in the chain.
   scoped_refptr<ProofSource::Chain> chain2(new ProofSource::Chain(certs));
 
   string compressed2 = peer.CompressChain(&compressed_certs_cache, chain2,
                                           common_certs, cached_certs, nullptr);
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 2u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 2u);
 
   // Compress a similar certs which only differs in common certs field.
   static const uint64_t set_hash = 42;
@@ -381,9 +365,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
   string compressed3 = peer.CompressChain(&compressed_certs_cache, chain,
                                           different_common_certs.as_string(),
                                           cached_certs, common_sets.get());
-  if (FLAGS_quic_use_cached_compressed_certs) {
-    EXPECT_EQ(compressed_certs_cache.Size(), 3u);
-  }
+  EXPECT_EQ(compressed_certs_cache.Size(), 3u);
 }
 
 class SourceAddressTokenTest : public ::testing::Test {

@@ -454,6 +454,11 @@ template std::string* MakeCheckOpString<unsigned int, unsigned long>(
 template std::string* MakeCheckOpString<std::string, std::string>(
     const std::string&, const std::string&, const char* name);
 
+template <>
+void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& p) {
+  (*os) << "nullptr";
+}
+
 #if !defined(NDEBUG)
 // Displays a message box to the user with the error message in it.
 // Used for fatal messages, where we close the app simultaneously.
