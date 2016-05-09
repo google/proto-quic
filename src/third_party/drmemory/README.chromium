@@ -1,0 +1,45 @@
+Name: Dr. Memory
+Short Name: drmemory
+URL: http://drmemory.org
+Version: 1.9.16923
+License: LGPL 2.1
+License File: NOT_SHIPPED
+Security Critical: no
+
+Description:
+This directory contains a self-extracting 7z file with Dr. Memory
+(which is a Memcheck analog with Windows support) to be used
+by Chromium Dr. Memory/Windows buildbots and Chromium developers.
+
+More info on using Dr. Memory for testing Chromium can be found here:
+http://dev.chromium.org/developers/how-tos/using-drmemory
+
+To update the Dr. Memory distribution, please do the following steps:
+0) Download the latest package from
+   http://build.chromium.org/p/client.drmemory/builds/
+   e.g.:
+   $ curl -s http://build.chromium.org/p/client.drmemory/builds/drmemory-windows-rXXX-sfx.exe -o drmemory-windows-sfx.exe
+
+1) Upload the package to Google Storage:
+   $ upload_to_google_storage.py --bucket chromium-drmemory drmemory-windows-sfx.exe
+   This will produce a file drmemory-windows-sfx.exe.sha1 in the current 
+   directory.
+
+2) Replace the existing drmemory-windows-sfx.exe.sha1 file with the new
+   file created by the upload step.
+
+3) Update the README.chromium file's Version field.
+
+4) Commit the sha1 and README.chromium changes locally and upload the CL.
+
+5) Run a trybot job to the bot named "win_drmemory", e.g.:
+   git cl try -b win_drmemory
+
+6) If the trybot is green, commit the new sha1 file and README.chromium.
+   If it's red, find out if it's due to broken DrMemory binaries that you just
+   checked in, or whether the MFYI bot was red at the same revision.
+
+===
+Dr. Memory is hosted at http://drmemory.org and
+https://github.com/DynamoRIO/drmemory under LGPL
+https://github.com/DynamoRIO/drmemory/blob/master/license.txt

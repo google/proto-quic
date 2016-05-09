@@ -86,6 +86,47 @@
             }],
           ],
         }],
+        ['OS == "win"', {
+          # Specify delayload for base.dll.
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'DelayLoadDLLs': [
+                'cfgmgr32.dll',
+                'powrprof.dll',
+                'setupapi.dll',
+              ],
+              'AdditionalDependencies': [
+                'cfgmgr32.lib',
+                'powrprof.lib',
+                'setupapi.lib',
+                'userenv.lib',
+                'winmm.lib',
+              ],
+            },
+          },
+          # Specify delayload for components that link with base.lib.
+          'all_dependent_settings': {
+            'msvs_settings': {
+              'VCLinkerTool': {
+                'DelayLoadDLLs': [
+                  'cfgmgr32.dll',
+                  'powrprof.dll',
+                  'setupapi.dll',
+                ],
+                'AdditionalDependencies': [
+                  'cfgmgr32.lib',
+                  'powrprof.lib',
+                  'setupapi.lib',
+                  'userenv.lib',
+                  'winmm.lib',
+                ],
+              },
+            },
+          },
+          'dependencies': [
+           'trace_event/etw_manifest/etw_manifest.gyp:etw_manifest',
+          ],
+        }],
         ['OS != "win" and (OS != "ios" or _toolset == "host")', {
             'dependencies': ['third_party/libevent/libevent.gyp:libevent'],
         },],
