@@ -101,7 +101,7 @@ class BASE_EXPORT AllocationRegister {
     Allocation allocation;
   };
 
-  // The number of buckets, 2^18, approximately 260 000, has been tuned for
+  // The number of buckets, 2^17, approximately 130 000, has been tuned for
   // Chrome's typical number of outstanding allocations. (This number varies
   // between processes. Most processes have a sustained load of ~30k unfreed
   // allocations, but some processes have peeks around 100k-400k allocations.)
@@ -110,7 +110,7 @@ class BASE_EXPORT AllocationRegister {
   // suggest that it is worthwile to use more memory for the table to avoid
   // chasing down the linked list, until the size is 2^18. The number of buckets
   // is a power of two so modular indexing can be done with bitwise and.
-  static const uint32_t kNumBuckets = 0x40000;
+  static const uint32_t kNumBuckets = 0x20000;
   static const uint32_t kNumBucketsMask = kNumBuckets - 1;
 
   // Reserve address space to store at most this number of entries. High

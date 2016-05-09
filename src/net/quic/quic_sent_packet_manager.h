@@ -127,6 +127,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager {
 
   void SetNumOpenStreams(size_t num_streams);
 
+  void SetMaxPacingRate(QuicBandwidth max_pacing_rate);
+
   void SetHandshakeConfirmed() { handshake_confirmed_ = true; }
 
   // Processes the incoming ack.
@@ -437,6 +439,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager {
   // Vectors packets acked and lost as a result of the last congestion event.
   SendAlgorithmInterface::CongestionVector packets_acked_;
   SendAlgorithmInterface::CongestionVector packets_lost_;
+  // Largest newly acknowledged packet.
+  QuicPacketNumber largest_newly_acked_;
 
   // Set to true after the crypto handshake has successfully completed. After
   // this is true we no longer use HANDSHAKE_MODE, and further frames sent on

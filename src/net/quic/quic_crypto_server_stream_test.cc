@@ -24,6 +24,7 @@
 #include "net/quic/quic_session.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/delayed_verify_strike_register_client.h"
+#include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -39,16 +40,6 @@ using testing::_;
 
 namespace net {
 namespace test {
-
-class QuicCryptoServerConfigPeer {
- public:
-  static string GetPrimaryOrbit(const QuicCryptoServerConfig& config) {
-    base::AutoLock lock(config.configs_lock_);
-    CHECK(config.primary_config_.get() != nullptr);
-    return string(reinterpret_cast<const char*>(config.primary_config_->orbit),
-                  kOrbitSize);
-  }
-};
 
 class QuicCryptoServerStreamPeer {
  public:
@@ -82,14 +73,13 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     InitializeServer();
 
     if (AsyncStrikeRegisterVerification()) {
-      string orbit =
-          QuicCryptoServerConfigPeer::GetPrimaryOrbit(server_crypto_config_);
+      QuicCryptoServerConfigPeer peer(&server_crypto_config_);
       strike_register_client_ = new DelayedVerifyStrikeRegisterClient(
           10000,  // strike_register_max_entries
           static_cast<uint32_t>(
               server_connection_->clock()->WallNow().ToUNIXSeconds()),
           60,  // strike_register_window_secs
-          reinterpret_cast<const uint8_t*>(orbit.data()),
+          peer.GetPrimaryConfig()->orbit,
           StrikeRegister::NO_STARTUP_PERIOD_NEEDED);
       strike_register_client_->StartDelayingVerification();
       server_crypto_config_.SetStrikeRegisterClient(strike_register_client_);

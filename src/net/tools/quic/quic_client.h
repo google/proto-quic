@@ -99,6 +99,7 @@ class QuicClient : public QuicClientBase,
   // From QuicClientBase
   bool Initialize() override;
   bool WaitForEvents() override;
+  QuicSpdyClientStream* CreateReliableClientStream() override;
 
   // "Connect" to the QUIC server, including performing synchronous crypto
   // handshake.
@@ -122,7 +123,7 @@ class QuicClient : public QuicClientBase,
                                      base::StringPiece body,
                                      bool fin);
 
-  // Sends a request simple GET for each URL in |args|, and then waits for
+  // Sends a request simple GET for each URL in |url_list|, and then waits for
   // each to complete.
   void SendRequestsAndWaitForResponse(const std::vector<std::string>& url_list);
 
@@ -182,6 +183,7 @@ class QuicClient : public QuicClientBase,
   const std::string& latest_response_body() const;
   const std::string& latest_response_trailers() const;
 
+ protected:
   // Implements ProcessPacketInterface. This will be called for each received
   // packet.
   void ProcessPacket(const IPEndPoint& self_address,

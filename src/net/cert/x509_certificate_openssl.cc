@@ -23,7 +23,7 @@
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
-#include "net/base/ip_address_number.h"
+#include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_util_openssl.h"
 
@@ -125,8 +125,8 @@ void ParseSubjectAltName(X509Certificate::OSCertHandle cert,
       if (!ip_addr)
         continue;
       int ip_addr_len = name->d.iPAddress->length;
-      if (ip_addr_len != static_cast<int>(kIPv4AddressSize) &&
-          ip_addr_len != static_cast<int>(kIPv6AddressSize)) {
+      if (ip_addr_len != static_cast<int>(IPAddress::kIPv4AddressSize) &&
+          ip_addr_len != static_cast<int>(IPAddress::kIPv6AddressSize)) {
         // http://www.ietf.org/rfc/rfc3280.txt requires subjectAltName iPAddress
         // to have 4 or 16 bytes, whereas in a name constraint it includes a
         // net mask hence 8 or 32 bytes. Logging to help diagnose any mixup.

@@ -204,7 +204,7 @@ void GetX509CertSCT(scoped_refptr<SignedCertificateTimestamp>* sct_ref) {
   CHECK(sct_ref != NULL);
   *sct_ref = new SignedCertificateTimestamp();
   SignedCertificateTimestamp *const sct(sct_ref->get());
-  sct->version = ct::SignedCertificateTimestamp::SCT_VERSION_1;
+  sct->version = ct::SignedCertificateTimestamp::V1;
   sct->log_id = HexToBytes(kTestKeyId);
   // Time the log issued a SCT for this certificate, which is
   // Fri Apr  5 10:04:16.089 2013
@@ -221,7 +221,7 @@ void GetPrecertSCT(scoped_refptr<SignedCertificateTimestamp>* sct_ref) {
   CHECK(sct_ref != NULL);
   *sct_ref = new SignedCertificateTimestamp();
   SignedCertificateTimestamp *const sct(sct_ref->get());
-  sct->version = ct::SignedCertificateTimestamp::SCT_VERSION_1;
+  sct->version = ct::SignedCertificateTimestamp::V1;
   sct->log_id = HexToBytes(kTestKeyId);
   // Time the log issued a SCT for this Precertificate, which is
   // Fri Apr  5 10:04:16.275 2013

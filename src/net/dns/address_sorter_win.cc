@@ -140,63 +140,10 @@ class AddressSorterWin : public AddressSorter {
   DISALLOW_COPY_AND_ASSIGN(AddressSorterWin);
 };
 
-// Merges |list_ipv4| and |list_ipv6| before passing it to |callback|, but
-// only if |success| is true.
-void MergeResults(const AddressSorter::CallbackType& callback,
-                  const AddressList& list_ipv4,
-                  bool success,
-                  const AddressList& list_ipv6) {
-  if (!success) {
-    callback.Run(false, AddressList());
-    return;
-  }
-  AddressList list;
-  list.insert(list.end(), list_ipv6.begin(), list_ipv6.end());
-  list.insert(list.end(), list_ipv4.begin(), list_ipv4.end());
-  callback.Run(true, list);
-}
-
-// Wrapper for AddressSorterWin which does not sort IPv4 or IPv4-mapped
-// addresses but always puts them at the end of the list. Needed because the
-// SIO_ADDRESS_LIST_SORT does not support IPv4 addresses on Windows XP.
-class AddressSorterWinXP : public AddressSorter {
- public:
-  AddressSorterWinXP() {}
-  ~AddressSorterWinXP() override {}
-
-  // AddressSorter:
-  void Sort(const AddressList& list,
-            const CallbackType& callback) const override {
-    AddressList list_ipv4;
-    AddressList list_ipv6;
-    for (size_t i = 0; i < list.size(); ++i) {
-      const IPEndPoint& ipe = list[i];
-      if (ipe.GetFamily() == ADDRESS_FAMILY_IPV4) {
-        list_ipv4.push_back(ipe);
-      } else {
-        list_ipv6.push_back(ipe);
-      }
-    }
-    if (!list_ipv6.empty()) {
-      sorter_.Sort(list_ipv6, base::Bind(&MergeResults, callback, list_ipv4));
-    } else {
-      NOTREACHED() << "Should not be called with IPv4-only addresses.";
-      callback.Run(true, list);
-    }
-  }
-
- private:
-  AddressSorterWin sorter_;
-
-  DISALLOW_COPY_AND_ASSIGN(AddressSorterWinXP);
-};
-
 }  // namespace
 
 // static
 std::unique_ptr<AddressSorter> AddressSorter::CreateAddressSorter() {
-  if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return std::unique_ptr<AddressSorter>(new AddressSorterWinXP());
   return std::unique_ptr<AddressSorter>(new AddressSorterWin());
 }
 

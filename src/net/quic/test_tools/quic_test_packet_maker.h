@@ -27,7 +27,8 @@ class QuicTestPacketMaker {
   QuicTestPacketMaker(QuicVersion version,
                       QuicConnectionId connection_id,
                       MockClock* clock,
-                      const std::string& host);
+                      const std::string& host,
+                      Perspective perspective);
   ~QuicTestPacketMaker();
 
   void set_hostname(const std::string& host);
@@ -202,6 +203,7 @@ class QuicTestPacketMaker {
   SpdyFramer spdy_response_framer_;
   MockRandom random_generator_;
   QuicPacketHeader header_;
+  Perspective perspective_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicTestPacketMaker);
 };

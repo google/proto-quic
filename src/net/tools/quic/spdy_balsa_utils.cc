@@ -206,8 +206,8 @@ void SpdyHeadersToRequestHeaders(const SpdyHeaderBlock& header_block,
 // static
 void SpdyHeadersToBalsaHeaders(const SpdyHeaderBlock& block,
                                BalsaHeaders* headers,
-                               SpdyHeaderValidatorType type) {
-  if (type == SpdyHeaderValidatorType::RESPONSE_HEADER) {
+                               bool isResponse) {
+  if (isResponse) {
     SpdyHeadersToResponseHeaders(block, headers);
     return;
   }
@@ -269,14 +269,13 @@ string SpdyBalsaUtils::SerializeResponseHeaders(
 // static
 void SpdyBalsaUtils::SpdyHeadersToResponseHeaders(const SpdyHeaderBlock& block,
                                                   BalsaHeaders* headers) {
-  SpdyHeadersToBalsaHeaders(block, headers,
-                            SpdyHeaderValidatorType::RESPONSE_HEADER);
+  SpdyHeadersToBalsaHeaders(block, headers, true);
 }
 
 // static
 void SpdyBalsaUtils::SpdyHeadersToRequestHeaders(const SpdyHeaderBlock& block,
                                                  BalsaHeaders* headers) {
-  SpdyHeadersToBalsaHeaders(block, headers, SpdyHeaderValidatorType::REQUEST);
+  SpdyHeadersToBalsaHeaders(block, headers, false);
 }
 
 }  // namespace net

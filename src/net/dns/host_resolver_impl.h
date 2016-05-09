@@ -140,6 +140,8 @@ class NET_EXPORT HostResolverImpl
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
                        const BoundNetLog& source_net_log) override;
+  void ChangeRequestPriority(RequestHandle req,
+                             RequestPriority priority) override;
   void CancelRequest(RequestHandle req) override;
   void SetDnsClientEnabled(bool enabled) override;
   HostCache* GetHostCache() override;

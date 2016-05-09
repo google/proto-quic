@@ -98,6 +98,7 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
   QuicStreamId promised_stream_id_;
   bool fin_;
   size_t frame_len_;
+  size_t uncompressed_frame_len_;
 
   // Helper variables that cache the corresponding feature flag.
   bool measure_headers_hol_blocking_time_;

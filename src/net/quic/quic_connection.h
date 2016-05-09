@@ -327,6 +327,9 @@ class NET_EXPORT_PRIVATE QuicConnection
       const CachedNetworkParameters& cached_network_params,
       bool max_bandwidth_resumption);
 
+  // Called by the Session when a max pacing rate for the connection is needed.
+  virtual void SetMaxPacingRate(QuicBandwidth max_pacing_rate);
+
   // Sets the number of active streams on the connection for congestion control.
   void SetNumOpenStreams(size_t num_streams);
 
@@ -653,7 +656,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Return the id of the cipher of the primary decrypter of the framer.
   uint32_t cipher_id() const { return framer_.decrypter()->cipher_id(); }
 
-  std::vector<QuicEncryptedPacket*>* termination_packets() {
+  std::vector<std::unique_ptr<QuicEncryptedPacket>>* termination_packets() {
     return termination_packets_.get();
   }
 
@@ -908,7 +911,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool save_crypto_packets_as_termination_packets_;
 
   // Contains the connection close packets if the connection has been closed.
-  std::unique_ptr<std::vector<QuicEncryptedPacket*>> termination_packets_;
+  std::unique_ptr<std::vector<std::unique_ptr<QuicEncryptedPacket>>>
+      termination_packets_;
 
   // Determines whether or not a connection close packet is sent to the peer
   // after idle timeout due to lack of network activity.

@@ -61,6 +61,7 @@ class DnsConfigWatcher {
 };
 
 #elif defined(OS_ANDROID)
+
 // On Android, assume DNS config may have changed on every network change.
 class DnsConfigWatcher {
  public:
@@ -77,8 +78,12 @@ class DnsConfigWatcher {
  private:
   base::Callback<void(bool succeeded)> callback_;
 };
-#elif !defined(OS_MACOSX)
+
+#elif defined(OS_MACOSX)
+
 // DnsConfigWatcher for OS_MACOSX is in dns_config_watcher_mac.{hh,cc}.
+
+#else  // !defined(OS_IOS) && !defined(OS_ANDROID) && !defined(OS_MACOSX)
 
 #ifndef _PATH_RESCONF  // Normally defined in <resolv.h>
 #define _PATH_RESCONF "/etc/resolv.conf"
@@ -106,6 +111,7 @@ class DnsConfigWatcher {
   base::FilePathWatcher watcher_;
   CallbackType callback_;
 };
+
 #endif
 
 #if !defined(OS_ANDROID)
@@ -210,7 +216,9 @@ class DnsConfigServicePosix::Watcher {
                                 DNS_CONFIG_WATCH_FAILED_TO_START_CONFIG,
                                 DNS_CONFIG_WATCH_MAX);
     }
-#if !defined(OS_IOS)
+// Hosts file should never change on Android or iOS (and watching it on Android
+// is problematic; see http://crbug.com/600442), so don't watch it there.
+#if !defined(OS_ANDROID) && !defined(OS_IOS)
     if (!hosts_watcher_.Watch(
             base::FilePath(service_->file_path_hosts_), false,
             base::Bind(&Watcher::OnHostsChanged, base::Unretained(this)))) {
@@ -220,7 +228,7 @@ class DnsConfigServicePosix::Watcher {
                                 DNS_CONFIG_WATCH_FAILED_TO_START_HOSTS,
                                 DNS_CONFIG_WATCH_MAX);
     }
-#endif
+#endif  // !defined(OS_ANDROID) && !defined(OS_IOS)
     return success;
   }
 
@@ -251,9 +259,9 @@ class DnsConfigServicePosix::Watcher {
 
   DnsConfigServicePosix* service_;
   DnsConfigWatcher config_watcher_;
-#if !defined(OS_IOS)
+#if !defined(OS_ANDROID) && !defined(OS_IOS)
   base::FilePathWatcher hosts_watcher_;
-#endif
+#endif  // !defined(OS_ANDROID) && !defined(OS_IOS)
 
   base::WeakPtrFactory<Watcher> weak_factory_;
 
@@ -554,24 +562,7 @@ ConfigParsePosixResult ConvertResStateToDnsConfig(const struct __res_state& res,
 bool DnsConfigServicePosix::SeenChangeSince(
     const base::Time& since_time) const {
   DCHECK(CalledOnValidThread());
-  if (seen_config_change_)
-    return true;
-  base::File hosts(base::FilePath(file_path_hosts_),
-                   base::File::FLAG_OPEN | base::File::FLAG_READ);
-  base::File::Info hosts_info;
-  // File last modified times are not nearly as accurate as Time::Now() and are
-  // rounded down.  This means a file modified at 1:23.456 might only
-  // be given a last modified time of 1:23.450.  If we compared the last
-  // modified time directly to |since_time| we might miss changes to the hosts
-  // file because of this rounding down.  To account for this the |since_time|
-  // is pushed back by 1s which should more than account for any rounding.
-  // In practice file modified times on Android are two orders of magnitude
-  // more accurate than this 1s.  In practice the hosts file on Android always
-  // contains "127.0.0.1 localhost" and is never modified after Android is
-  // installed.
-  return !hosts.GetInfo(&hosts_info) ||
-         hosts_info.last_modified >=
-             (since_time - base::TimeDelta::FromSeconds(1));
+  return seen_config_change_;
 }
 
 void DnsConfigServicePosix::OnNetworkChanged(

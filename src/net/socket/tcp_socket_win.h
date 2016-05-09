@@ -69,7 +69,6 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // - SetExclusiveAddrUse().
   int SetDefaultOptionsForServer();
   // The commonly used options for client sockets and accepted sockets:
-  // - Increase the socket buffer sizes for WinXP;
   // - SetNoDelay(true);
   // - SetKeepAlive(true, 45).
   void SetDefaultOptionsForClient();

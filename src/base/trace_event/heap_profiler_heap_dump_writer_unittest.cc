@@ -16,6 +16,7 @@
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
+#include "base/trace_event/memory_dump_session_state.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -217,22 +218,26 @@ TEST(HeapDumpWriterTest, BacktraceTypeNameTable) {
   // +--------+--------------------+-----------------+-------------+
   // | Sum    |         28      23 |     49      34  |   77     57 |
 
-  auto sf_deduplicator = WrapUnique(new StackFrameDeduplicator);
-  auto tn_deduplicator = WrapUnique(new TypeNameDeduplicator);
-  HeapDumpWriter writer(sf_deduplicator.get(), tn_deduplicator.get());
+  auto stack_frame_deduplicator = WrapUnique(new StackFrameDeduplicator);
+  auto type_name_deduplicator = WrapUnique(new TypeNameDeduplicator);
+  HeapDumpWriter writer(stack_frame_deduplicator.get(),
+                        type_name_deduplicator.get(),
+                        10u);
   const std::set<Entry>& dump = writer.Summarize(metrics_by_context);
 
   // Get the indices of the backtraces and types by adding them again to the
   // deduplicator. Because they were added before, the same number is returned.
   StackFrame bt0[] = {kRendererMain, kInitialize};
   StackFrame bt1[] = {kBrowserMain, kCreateWidget};
-  int bt_renderer_main = sf_deduplicator->Insert(bt0, bt0 + 1);
-  int bt_browser_main = sf_deduplicator->Insert(bt1, bt1 + 1);
-  int bt_renderer_main_initialize = sf_deduplicator->Insert(bt0, bt0 + 2);
-  int bt_browser_main_create_widget = sf_deduplicator->Insert(bt1, bt1 + 2);
-  int type_id_int = tn_deduplicator->Insert(kInt);
-  int type_id_bool = tn_deduplicator->Insert(kBool);
-  int type_id_string = tn_deduplicator->Insert(kString);
+  int bt_renderer_main = stack_frame_deduplicator->Insert(bt0, bt0 + 1);
+  int bt_browser_main = stack_frame_deduplicator->Insert(bt1, bt1 + 1);
+  int bt_renderer_main_initialize =
+      stack_frame_deduplicator->Insert(bt0, bt0 + 2);
+  int bt_browser_main_create_widget =
+      stack_frame_deduplicator->Insert(bt1, bt1 + 2);
+  int type_id_int = type_name_deduplicator->Insert(kInt);
+  int type_id_bool = type_name_deduplicator->Insert(kBool);
+  int type_id_string = type_name_deduplicator->Insert(kString);
 
   // Full heap should have size 77.
   AssertSizeAndCountEq(dump, -1, -1, {77, 57});
@@ -284,38 +289,40 @@ TEST(HeapDumpWriterTest, InsignificantValuesNotDumped) {
   ctx.backtrace.frame_count = 3;
   metrics_by_context[ctx] = {1024 * 1024, 1};
 
-  // 0.5 KiB and 1 chunk in BrowserMain -> CreateWidget -> Initialize.
+  // 400B and 1 chunk in BrowserMain -> CreateWidget -> Initialize.
   ctx.backtrace.frames[2] = kInitialize;
   ctx.backtrace.frame_count = 3;
-  metrics_by_context[ctx] = {512, 1};
+  metrics_by_context[ctx] = {400, 1};
 
-  auto sf_deduplicator = WrapUnique(new StackFrameDeduplicator);
-  auto tn_deduplicator = WrapUnique(new TypeNameDeduplicator);
-  HeapDumpWriter writer(sf_deduplicator.get(), tn_deduplicator.get());
+  auto stack_frame_deduplicator = WrapUnique(new StackFrameDeduplicator);
+  auto type_name_deduplicator = WrapUnique(new TypeNameDeduplicator);
+  HeapDumpWriter writer(stack_frame_deduplicator.get(),
+                        type_name_deduplicator.get(),
+                        512u);
   const std::set<Entry>& dump = writer.Summarize(metrics_by_context);
 
   // Get the indices of the backtraces and types by adding them again to the
   // deduplicator. Because they were added before, the same number is returned.
   StackFrame bt0[] = {kBrowserMain, kCreateWidget, kGetBitmap};
   StackFrame bt1[] = {kBrowserMain, kCreateWidget, kInitialize};
-  int bt_browser_main = sf_deduplicator->Insert(bt0, bt0 + 1);
-  int bt_create_widget = sf_deduplicator->Insert(bt0, bt0 + 2);
-  int bt_get_bitmap = sf_deduplicator->Insert(bt0, bt0 + 3);
-  int bt_initialize = sf_deduplicator->Insert(bt1, bt1 + 3);
+  int bt_browser_main = stack_frame_deduplicator->Insert(bt0, bt0 + 1);
+  int bt_create_widget = stack_frame_deduplicator->Insert(bt0, bt0 + 2);
+  int bt_get_bitmap = stack_frame_deduplicator->Insert(bt0, bt0 + 3);
+  int bt_initialize = stack_frame_deduplicator->Insert(bt1, bt1 + 3);
 
-  // Full heap should have size of 1 MiB + 1 KiB and 3 chunks.
+  // Full heap should have size of 1 MiB + .9 KiB and 3 chunks.
   AssertSizeAndCountEq(dump, -1, -1 /* No type specified */,
-                       {1024 * 1024 + 512 + 512, 3});
+                       {1024 * 1024 + 512 + 400, 3});
 
   // |GetBitmap| allocated 1 MiB and 1 chunk.
   AssertSizeAndCountEq(dump, bt_get_bitmap, -1, {1024 * 1024, 1});
 
   // Because |GetBitmap| was dumped, all of its parent nodes should have been
-  // dumped too. |CreateWidget| has 1 MiB in |GetBitmap|, 512 bytes in
+  // dumped too. |CreateWidget| has 1 MiB in |GetBitmap|, 400 bytes in
   // |Initialize|, and 512 bytes of its own and each in 1 chunk.
   AssertSizeAndCountEq(dump, bt_create_widget, -1,
-                       {1024 * 1024 + 512 + 512, 3});
-  AssertSizeAndCountEq(dump, bt_browser_main, -1, {1024 * 1024 + 512 + 512, 3});
+                       {1024 * 1024 + 400 + 512, 3});
+  AssertSizeAndCountEq(dump, bt_browser_main, -1, {1024 * 1024 + 400 + 512, 3});
 
   // Initialize was not significant, it should not have been dumped.
   AssertNotDumped(dump, bt_initialize, -1);

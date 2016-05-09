@@ -23,5 +23,10 @@ void MemoryDumpSessionState::SetTypeNameDeduplicator(
   type_name_deduplicator_ = std::move(type_name_deduplicator);
 }
 
+void MemoryDumpSessionState::SetMemoryDumpConfig(
+    const TraceConfig::MemoryDumpConfig& config) {
+  memory_dump_config_ = config;
+}
+
 }  // namespace trace_event
 }  // namespace base

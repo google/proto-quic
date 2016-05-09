@@ -213,7 +213,11 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   size_t MaxAvailableStreams() const;
 
-  ReliableQuicStream* GetStream(const QuicStreamId stream_id);
+  // Returns existing static or dynamic stream with id = |stream_id|. If no
+  // such stream exists, and |stream_id| is a peer-created dynamic stream id,
+  // then a new stream is created and returned. In all other cases, nullptr is
+  // returned.
+  ReliableQuicStream* GetOrCreateStream(const QuicStreamId stream_id);
 
   // Mark a stream as draining.
   virtual void StreamDraining(QuicStreamId id);
@@ -334,6 +338,14 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // Called in OnConfigNegotiated when we receive a new connection level flow
   // control window in a negotiated config. Closes the connection if invalid.
   void OnNewSessionFlowControlWindow(QuicStreamOffset new_window);
+
+  // Called in OnConfigNegotiated when auto-tuning is enabled for flow
+  // control receive windows.
+  void EnableAutoTuneReceiveWindow();
+
+  // Called in OnConfigNegotiated for finch trials to measure performance of
+  // starting with smaller flow control receive windows and auto-tuning.
+  void AdjustInitialFlowControlWindows(size_t stream_window);
 
   // Keep track of highest received byte offset of locally closed streams, while
   // waiting for a definitive final highest offset from the peer.

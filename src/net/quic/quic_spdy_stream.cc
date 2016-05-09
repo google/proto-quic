@@ -29,7 +29,8 @@ QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
       visitor_(nullptr),
       headers_decompressed_(false),
       priority_(kDefaultPriority),
-      trailers_decompressed_(false) {
+      trailers_decompressed_(false),
+      avoid_empty_nonfin_writes_(FLAGS_quic_avoid_empty_nonfin_writes) {
   DCHECK_NE(kCryptoStreamId, id);
   // Don't receive any callbacks from the sequencer until headers
   // are complete.
@@ -88,7 +89,7 @@ void QuicSpdyStream::WriteOrBufferBody(
 }
 
 size_t QuicSpdyStream::WriteTrailers(
-    SpdyHeaderBlock trailer_block,
+    const SpdyHeaderBlock& trailer_block,
     QuicAckListenerInterface* ack_notifier_delegate) {
   if (fin_sent()) {
     QUIC_BUG << "Trailers cannot be sent after a FIN.";
@@ -99,7 +100,8 @@ size_t QuicSpdyStream::WriteTrailers(
   // trailers may be processed out of order at the peer.
   DVLOG(1) << "Inserting trailer: (" << kFinalOffsetHeaderKey << ", "
            << stream_bytes_written() + queued_data_bytes() << ")";
-  trailer_block.insert(std::make_pair(
+  SpdyHeaderBlock trailer_block_with_offset(trailer_block);
+  trailer_block_with_offset.insert(std::make_pair(
       kFinalOffsetHeaderKey,
       base::IntToString(stream_bytes_written() + queued_data_bytes())));
 
@@ -107,7 +109,7 @@ size_t QuicSpdyStream::WriteTrailers(
   // trailers are the last thing to be sent on a stream.
   const bool kFin = true;
   size_t bytes_written = spdy_session_->WriteHeaders(
-      id(), trailer_block, kFin, priority_, ack_notifier_delegate);
+      id(), trailer_block_with_offset, kFin, priority_, ack_notifier_delegate);
   set_fin_sent(kFin);
 
   // Trailers are the last thing to be sent on a stream, but if there is still

@@ -88,6 +88,23 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
     const std::string& data,
     QuicConnectionIdLength connection_id_length,
     QuicPacketNumberLength packet_number_length,
+    QuicVersionVector* versions,
+    Perspective perspective);
+
+// Create an encrypted packet for testing.
+// If versions == nullptr, uses &QuicSupportedVersions().
+// Note that the packet is encrypted with NullEncrypter, so to decrypt the
+// constructed packet, the framer must be set to use NullDecrypter.
+QuicEncryptedPacket* ConstructEncryptedPacket(
+    QuicConnectionId connection_id,
+    bool version_flag,
+    bool multipath_flag,
+    bool reset_flag,
+    QuicPathId path_id,
+    QuicPacketNumber packet_number,
+    const std::string& data,
+    QuicConnectionIdLength connection_id_length,
+    QuicPacketNumberLength packet_number_length,
     QuicVersionVector* versions);
 
 // This form assumes |versions| == nullptr.
@@ -134,7 +151,8 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
     const std::string& data,
     QuicConnectionIdLength connection_id_length,
     QuicPacketNumberLength packet_number_length,
-    QuicVersionVector* versions);
+    QuicVersionVector* versions,
+    Perspective perspective);
 
 void CompareCharArraysWithHexError(const std::string& description,
                                    const char* actual,
@@ -172,6 +190,11 @@ QuicAckFrame MakeAckFrame(QuicPacketNumber largest_observed);
 // nack ranges of width 1 packet, starting from |least_unacked|.
 QuicAckFrame MakeAckFrameWithNackRanges(size_t num_nack_ranges,
                                         QuicPacketNumber least_unacked);
+
+// Testing convenience method to construct a QuicAckFrame with |num_ack_blocks|
+// ack blocks of width 1 packet, starting from |least_unacked| + 2.
+QuicAckFrame MakeAckFrameWithAckBlocks(size_t num_ack_blocks,
+                                       QuicPacketNumber least_unacked);
 
 // Returns a QuicPacket that is owned by the caller, and
 // is populated with the fields in |header| and |frames|, or is nullptr if the
@@ -426,6 +449,7 @@ class MockConnection : public QuicConnection {
   MOCK_METHOD1(OnSendConnectionState, void(const CachedNetworkParameters&));
   MOCK_METHOD2(ResumeConnectionState,
                void(const CachedNetworkParameters&, bool));
+  MOCK_METHOD1(SetMaxPacingRate, void(QuicBandwidth));
 
   MOCK_METHOD1(OnError, void(QuicFramer* framer));
   void QuicConnection_OnError(QuicFramer* framer) {
@@ -592,15 +616,6 @@ class MockQuicSpdySession : public QuicSpdySession {
 
   using QuicSession::ActivateStream;
 
-  // Returns a QuicConsumedData that indicates all of |data| (and |fin| if set)
-  // has been consumed.
-  static QuicConsumedData ConsumeAllData(
-      QuicStreamId id,
-      const QuicIOVector& data,
-      QuicStreamOffset offset,
-      bool fin,
-      QuicAckListenerInterface* ack_notifier_delegate);
-
  private:
   std::unique_ptr<QuicCryptoStream> crypto_stream_;
 
@@ -733,12 +748,18 @@ class MockLossAlgorithm : public LossDetectionInterface {
   ~MockLossAlgorithm() override;
 
   MOCK_CONST_METHOD0(GetLossDetectionType, LossDetectionType());
-  MOCK_METHOD4(DetectLosses,
+  MOCK_METHOD5(DetectLosses,
                void(const QuicUnackedPacketMap& unacked_packets,
                     QuicTime time,
                     const RttStats& rtt_stats,
+                    QuicPacketNumber largest_recently_acked,
                     SendAlgorithmInterface::CongestionVector* packets_lost));
   MOCK_CONST_METHOD0(GetLossTimeout, QuicTime());
+  MOCK_METHOD4(SpuriousRetransmitDetected,
+               void(const QuicUnackedPacketMap&,
+                    QuicTime,
+                    const RttStats&,
+                    QuicPacketNumber));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockLossAlgorithm);

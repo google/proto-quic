@@ -196,13 +196,12 @@ void BufferedSpdyFramer::OnDataFrameHeader(SpdyStreamId stream_id,
 
 void BufferedSpdyFramer::OnStreamFrameData(SpdyStreamId stream_id,
                                            const char* data,
-                                           size_t len,
-                                           bool fin) {
-  visitor_->OnStreamFrameData(stream_id, data, len, fin);
+                                           size_t len) {
+  visitor_->OnStreamFrameData(stream_id, data, len);
 }
 
 void BufferedSpdyFramer::OnStreamEnd(SpdyStreamId stream_id) {
-  visitor_->OnStreamFrameData(stream_id, nullptr, 0, true);
+  visitor_->OnStreamEnd(stream_id);
 }
 
 void BufferedSpdyFramer::OnStreamPadding(SpdyStreamId stream_id, size_t len) {

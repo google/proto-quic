@@ -339,11 +339,6 @@ void QuicDispatcher::OnConnectionAddedToTimeWaitList(
   DVLOG(1) << "Connection " << connection_id << " added to time wait list.";
 }
 
-void QuicDispatcher::OnConnectionRemovedFromTimeWaitList(
-    QuicConnectionId connection_id) {
-  DVLOG(1) << "Connection " << connection_id << " removed from time wait list.";
-}
-
 void QuicDispatcher::OnPacket() {}
 
 void QuicDispatcher::OnError(QuicFramer* framer) {

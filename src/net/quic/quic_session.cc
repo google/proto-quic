@@ -45,7 +45,9 @@ QuicSession::QuicSession(QuicConnection* connection, const QuicConfig& config)
                        perspective(),
                        kMinimumFlowControlSendWindow,
                        config_.GetInitialSessionFlowControlWindowToSend(),
-                       perspective() == Perspective::IS_SERVER),
+                       FLAGS_quic_enable_autotune_by_default
+                           ? perspective() == Perspective::IS_SERVER
+                           : false),
       currently_writing_stream_id_(0) {}
 
 void QuicSession::Initialize() {
@@ -75,7 +77,7 @@ QuicSession::~QuicSession() {
 void QuicSession::OnStreamFrame(const QuicStreamFrame& frame) {
   // TODO(rch) deal with the error case of stream id 0.
   QuicStreamId stream_id = frame.stream_id;
-  ReliableQuicStream* stream = GetStream(stream_id);
+  ReliableQuicStream* stream = GetOrCreateStream(stream_id);
   if (!stream) {
     // The stream no longer exists, but we may still be interested in the
     // final stream byte offset sent by the peer. A frame with a FIN can give
@@ -100,7 +102,7 @@ void QuicSession::OnRstStream(const QuicRstStreamFrame& frame) {
   ReliableQuicStream* stream = GetOrCreateDynamicStream(frame.stream_id);
   if (!stream) {
     HandleRstOnValidNonexistentStream(frame);
-    return;  // Errors are handled by GetStream.
+    return;  // Errors are handled by GetOrCreateStream.
   }
 
   stream->OnStreamReset(frame);
@@ -148,7 +150,7 @@ void QuicSession::OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) {
     flow_controller_.UpdateSendWindowOffset(frame.byte_offset);
     return;
   }
-  ReliableQuicStream* stream = GetStream(stream_id);
+  ReliableQuicStream* stream = GetOrCreateStream(stream_id);
   if (stream) {
     stream->OnWindowUpdateFrame(frame);
   }
@@ -200,7 +202,8 @@ void QuicSession::OnCanWrite() {
       return;
     }
     currently_writing_stream_id_ = write_blocked_streams_.PopFront();
-    ReliableQuicStream* stream = GetStream(currently_writing_stream_id_);
+    ReliableQuicStream* stream =
+        GetOrCreateStream(currently_writing_stream_id_);
     if (stream != nullptr && !stream->flow_controller()->IsBlocked()) {
       // If the stream can't write all bytes it'll re-add itself to the blocked
       // list.
@@ -375,6 +378,25 @@ void QuicSession::OnConfigNegotiated() {
   connection_->SetFromConfig(config_);
 
   uint32_t max_streams = config_.MaxStreamsPerConnection();
+  if (!FLAGS_quic_enable_autotune_by_default &&
+      perspective() == Perspective::IS_SERVER) {
+    if (config_.HasReceivedConnectionOptions()) {
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kAFCW)) {
+        // The following variations change the initial receive flow control
+        // window sizes.
+        if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW5)) {
+          AdjustInitialFlowControlWindows(32 * 1024);
+        }
+        if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW6)) {
+          AdjustInitialFlowControlWindows(64 * 1024);
+        }
+        if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW7)) {
+          AdjustInitialFlowControlWindows(128 * 1024);
+        }
+        EnableAutoTuneReceiveWindow();
+      }
+    }
+  }
 
   set_max_open_outgoing_streams(max_streams);
 
@@ -397,6 +419,47 @@ void QuicSession::OnConfigNegotiated() {
   if (config_.HasReceivedInitialSessionFlowControlWindowBytes()) {
     OnNewSessionFlowControlWindow(
         config_.ReceivedInitialSessionFlowControlWindowBytes());
+  }
+}
+
+// TODO(ckrasic): remove the following two methods when deprecating
+// FLAGS_quic_enable_autotune_by_default.
+void QuicSession::EnableAutoTuneReceiveWindow() {
+  DVLOG(1) << ENDPOINT << "Enable auto tune receive windows";
+  flow_controller_.set_auto_tune_receive_window(true);
+  // Inform all existing streams about the new window.
+  for (auto const& kv : static_stream_map_) {
+    kv.second->flow_controller()->set_auto_tune_receive_window(true);
+  }
+  for (auto const& kv : dynamic_stream_map_) {
+    kv.second->flow_controller()->set_auto_tune_receive_window(true);
+  }
+}
+
+void QuicSession::AdjustInitialFlowControlWindows(size_t stream_window) {
+  const float session_window_multiplier =
+      config_.GetInitialStreamFlowControlWindowToSend()
+          ? static_cast<float>(
+                config_.GetInitialSessionFlowControlWindowToSend()) /
+                config_.GetInitialStreamFlowControlWindowToSend()
+          : 1.0;
+  DVLOG(1) << ENDPOINT << "Set stream receive window to " << stream_window;
+  config_.SetInitialStreamFlowControlWindowToSend(stream_window);
+  // Reduce the session window as well, motivation is reducing resource waste
+  // and denial of service vulnerability, as with the stream window.  Session
+  // size is set according to the ratio between session and stream window size
+  // previous to auto-tuning. Note that the ratio may change dynamically, since
+  // auto-tuning acts independently for each flow controller.
+  size_t session_window = session_window_multiplier * stream_window;
+  DVLOG(1) << ENDPOINT << "Set session receive window to " << session_window;
+  config_.SetInitialSessionFlowControlWindowToSend(session_window);
+  flow_controller_.UpdateReceiveWindowSize(session_window);
+  // Inform all existing streams about the new window.
+  for (auto const& kv : static_stream_map_) {
+    kv.second->flow_controller()->UpdateReceiveWindowSize(stream_window);
+  }
+  for (auto const& kv : dynamic_stream_map_) {
+    kv.second->flow_controller()->UpdateReceiveWindowSize(stream_window);
   }
 }
 
@@ -520,7 +583,8 @@ QuicStreamId QuicSession::GetNextOutgoingStreamId() {
   return id;
 }
 
-ReliableQuicStream* QuicSession::GetStream(const QuicStreamId stream_id) {
+ReliableQuicStream* QuicSession::GetOrCreateStream(
+    const QuicStreamId stream_id) {
   StreamMap::iterator it = static_stream_map_.find(stream_id);
   if (it != static_stream_map_.end()) {
     return it->second;
@@ -692,8 +756,8 @@ size_t QuicSession::GetNumAvailableStreams() const {
 }
 
 void QuicSession::MarkConnectionLevelWriteBlocked(QuicStreamId id) {
-  QUIC_BUG_IF(GetStream(id) == nullptr) << "Marking unknown stream " << id
-                                        << " blocked.";
+  QUIC_BUG_IF(GetOrCreateStream(id) == nullptr) << "Marking unknown stream "
+                                                << id << " blocked.";
 
   write_blocked_streams_.AddStream(id);
 }

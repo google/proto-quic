@@ -92,10 +92,6 @@ bool FLAGS_quic_stateless_version_negotiation = true;
 // If true, QUIC connections will defer responding to ACKs to their send alarms.
 bool FLAGS_quic_connection_defer_ack_response = true;
 
-// Enable a connection option allowing connections to time out if more than 5
-// consecutive RTOs are sent.
-bool FLAGS_quic_enable_rto_timeout = true;
-
 // Try to use the socket timestamp to determine the time a packet was
 // received instead of Now().
 bool FLAGS_quic_use_socket_timestamp = true;
@@ -120,3 +116,24 @@ bool FLAGS_quic_simplify_loss_detection = true;
 
 // If true, do not check HasUnackedPackets on retransmission timeout.
 bool FLAGS_quic_always_has_unacked_packets_on_timeout = true;
+
+// If true, respect any configured max pacing rate.
+bool FLAGS_quic_max_pacing_rate = true;
+
+// If true, QuicWriter avoids calling HttpWriter::Write with 0 bytes when
+// last_data == false.
+bool FLAGS_quic_avoid_empty_nonfin_writes = true;
+
+// If true, flow controller may grow the receive window size if necessary.
+bool FLAGS_quic_auto_tune_receive_window = true;
+
+// Add the ability for QUIC's time based loss detection to increase it's
+// threshold after spurious losses.
+bool FLAGS_quic_adaptive_loss_recovery = true;
+
+// If true, enable auto tuning by default (server side).
+bool FLAGS_quic_enable_autotune_by_default = true;
+
+// Use largest acked in the most recent ack instead of largest acked ever in
+// loss recovery.
+bool FLAGS_quic_loss_recovery_use_largest_acked = true;

@@ -38,9 +38,8 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
    public:
     virtual ~DelegateInterface() {}
     // Called when a packet is serialized. Delegate does not take the ownership
-    // of |serialized_packet|, but may take ownership of |packet.packet|
-    // and |packet.retransmittable_frames|.  If it does so, they must be set
-    // to nullptr.
+    // of |serialized_packet|, but takes ownership of any frames it removes
+    // from |packet.retransmittable_frames|.
     virtual void OnSerializedPacket(SerializedPacket* serialized_packet) = 0;
 
     // Called when an unrecoverable error is encountered.
@@ -86,6 +85,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 
   // The overhead the framing will add for a packet with one frame.
   static size_t StreamFramePacketOverhead(
+      QuicVersion version,
       QuicConnectionIdLength connection_id_length,
       bool include_version,
       bool include_path_id,

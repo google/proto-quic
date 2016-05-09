@@ -30,7 +30,7 @@ class NET_EXPORT_PRIVATE AddressSorterPosix
   // Generic policy entry.
   struct PolicyEntry {
     // IPv4 addresses must be mapped to IPv6.
-    unsigned char prefix[kIPv6AddressSize];
+    unsigned char prefix[IPAddress::kIPv6AddressSize];
     unsigned prefix_length;
     unsigned value;
   };

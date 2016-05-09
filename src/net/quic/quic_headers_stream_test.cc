@@ -39,9 +39,8 @@ class MockVisitor : public SpdyFramerVisitorInterface {
   MOCK_METHOD1(OnError, void(SpdyFramer* framer));
   MOCK_METHOD3(OnDataFrameHeader,
                void(SpdyStreamId stream_id, size_t length, bool fin));
-  MOCK_METHOD4(
-      OnStreamFrameData,
-      void(SpdyStreamId stream_id, const char* data, size_t len, bool fin));
+  MOCK_METHOD3(OnStreamFrameData,
+               void(SpdyStreamId stream_id, const char* data, size_t len));
   MOCK_METHOD1(OnStreamEnd, void(SpdyStreamId stream_id));
   MOCK_METHOD2(OnStreamPadding, void(SpdyStreamId stream_id, size_t len));
   MOCK_METHOD1(OnHeaderFrameStart,
@@ -373,6 +372,9 @@ TEST_P(QuicHeadersStreamTest, ProcessPushPromise) {
 }
 
 TEST_P(QuicHeadersStreamTest, EmptyHeaderHOLBlockedTime) {
+  if (!FLAGS_quic_measure_headers_hol_blocking_time) {
+    return;
+  }
   EXPECT_CALL(session_, OnHeadersHeadOfLineBlocking(_)).Times(0);
   testing::InSequence seq;
   bool fin = true;
@@ -405,6 +407,9 @@ TEST_P(QuicHeadersStreamTest, EmptyHeaderHOLBlockedTime) {
 }
 
 TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
+  if (!FLAGS_quic_measure_headers_hol_blocking_time) {
+    return;
+  }
   QuicStreamId stream_id;
   bool fin = true;
   QuicStreamFrame stream_frames[10];

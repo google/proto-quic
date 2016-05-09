@@ -92,6 +92,8 @@ class ImmediateGoAwaySession : public QuicSimpleServerSession {
                          QuicServerSessionVisitor* visitor,
                          const QuicCryptoServerConfig* crypto_config,
                          QuicCompressedCertsCache* compressed_certs_cache);
+  // Override to send GoAway.
+  void OnStreamFrame(const QuicStreamFrame& frame) override;
 };
 
 }  // namespace test

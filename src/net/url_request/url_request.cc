@@ -852,12 +852,18 @@ void URLRequest::ContinueWithCertificate(X509Certificate* client_cert,
                                          SSLPrivateKey* client_private_key) {
   DCHECK(job_.get());
 
+  // Matches the call in NotifyCertificateRequested.
+  OnCallToDelegateComplete();
+
   status_ = URLRequestStatus::FromError(ERR_IO_PENDING);
   job_->ContinueWithCertificate(client_cert, client_private_key);
 }
 
 void URLRequest::ContinueDespiteLastError() {
   DCHECK(job_.get());
+
+  // Matches the call in NotifySSLCertificateError.
+  OnCallToDelegateComplete();
 
   status_ = URLRequestStatus::FromError(ERR_IO_PENDING);
   job_->ContinueDespiteLastError();
@@ -1088,12 +1094,14 @@ void URLRequest::NotifyAuthRequiredComplete(
 void URLRequest::NotifyCertificateRequested(
     SSLCertRequestInfo* cert_request_info) {
   status_ = URLRequestStatus();
+  OnCallToDelegate();
   delegate_->OnCertificateRequested(this, cert_request_info);
 }
 
 void URLRequest::NotifySSLCertificateError(const SSLInfo& ssl_info,
                                            bool fatal) {
   status_ = URLRequestStatus();
+  OnCallToDelegate();
   delegate_->OnSSLCertificateError(this, ssl_info, fatal);
 }
 

@@ -8,16 +8,21 @@
 #include <string>
 #include <vector>
 
+#include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
+#include "base/time/time.h"
 #include "net/base/net_export.h"
-#include "net/cert/signed_certificate_timestamp.h"
-#include "net/cert/signed_tree_head.h"
 
 namespace net {
 
 // Utility functions for encoding/decoding structures used by Certificate
 // Transparency to/from the TLS wire format encoding.
 namespace ct {
+
+struct DigitallySigned;
+struct LogEntry;
+struct SignedCertificateTimestamp;
+struct SignedTreeHead;
 
 // If |input.signature_data| is less than kMaxSignatureLength, encodes the
 // |input| to |output| and returns true. Otherwise, returns false.

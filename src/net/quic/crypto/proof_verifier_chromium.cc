@@ -212,9 +212,22 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     // Note that this is a completely synchronous operation: The CT Log Verifier
     // gets all the data it needs for SCT verification and does not do any
     // external communication.
-    cert_transparency_verifier_->Verify(cert_.get(), std::string(), cert_sct,
-                                        &verify_details_->ct_verify_result,
-                                        net_log_);
+    int result = cert_transparency_verifier_->Verify(
+        cert_.get(), std::string(), cert_sct,
+        &verify_details_->ct_verify_result, net_log_);
+    // TODO(rtenneti): Delete this debugging code.
+    if (result == OK) {
+      VLOG(1) << "CTVerifier::Verify success";
+    } else {
+      VLOG(1) << "CTVerifier::Verify failed: " << result;
+    }
+  } else {
+    // TODO(rtenneti): Delete this debugging code.
+    if (cert_transparency_verifier_) {
+      VLOG(1) << "cert_sct is empty";
+    } else {
+      VLOG(1) << "cert_transparency_verifier_ is null";
+    }
   }
 
   // We call VerifySignature first to avoid copying of server_config and

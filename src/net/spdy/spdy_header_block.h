@@ -82,6 +82,11 @@ class NET_EXPORT SpdyHeaderBlock {
   // Allows either lookup or mutation of the value associated with a key.
   StringPieceProxy operator[](const base::StringPiece key);
 
+  // Non-mutating lookup of header value. Returns empty StringPiece if key not
+  // present. To distinguish between absence of header and empty header value,
+  // use find().
+  base::StringPiece GetHeader(const base::StringPiece key) const;
+
   // This object provides automatic conversions that allow SpdyHeaderBlock to be
   // nearly a drop-in replacement for linked_hash_map<string, string>. It reads
   // data from or writes data to a SpdyHeaderBlock::Storage.

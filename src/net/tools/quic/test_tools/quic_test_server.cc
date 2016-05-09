@@ -188,8 +188,11 @@ ImmediateGoAwaySession::ImmediateGoAwaySession(
                               connection,
                               visitor,
                               crypto_config,
-                              compressed_certs_cache) {
+                              compressed_certs_cache) {}
+
+void ImmediateGoAwaySession::OnStreamFrame(const QuicStreamFrame& frame) {
   SendGoAway(QUIC_PEER_GOING_AWAY, "");
+  QuicSimpleServerSession::OnStreamFrame(frame);
 }
 
 }  // namespace test

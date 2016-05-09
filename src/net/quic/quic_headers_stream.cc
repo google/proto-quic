@@ -55,14 +55,7 @@ class QuicHeadersStream::SpdyFramerVisitor
 
   void OnStreamFrameData(SpdyStreamId stream_id,
                          const char* data,
-                         size_t len,
-                         bool fin) override {
-    if (fin && len == 0) {
-      // The framer invokes OnStreamFrameData with zero-length data and
-      // fin = true after processing a SYN_STREAM or SYN_REPLY frame
-      // that had the fin bit set.
-      return;
-    }
+                         size_t len) override {
     CloseConnection("SPDY DATA frame received.");
   }
 
@@ -170,7 +163,16 @@ class QuicHeadersStream::SpdyFramerVisitor
   void OnSendCompressedFrame(SpdyStreamId stream_id,
                              SpdyFrameType type,
                              size_t payload_len,
-                             size_t frame_len) override {}
+                             size_t frame_len) override {
+    if (payload_len == 0) {
+      QUIC_BUG << "Zero payload length.";
+      return;
+    }
+    int compression_pct = 100 - (100 * frame_len) / payload_len;
+    DVLOG(1) << "Net.QuicHpackCompressionPercentage: " << compression_pct;
+    UMA_HISTOGRAM_PERCENTAGE("Net.QuicHpackCompressionPercentage",
+                             compression_pct);
+  }
 
   void OnReceiveCompressedFrame(SpdyStreamId stream_id,
                                 SpdyFrameType type,
@@ -202,6 +204,7 @@ QuicHeadersStream::QuicHeadersStream(QuicSpdySession* session)
       promised_stream_id_(kInvalidStreamId),
       fin_(false),
       frame_len_(0),
+      uncompressed_frame_len_(0),
       measure_headers_hol_blocking_time_(
           FLAGS_quic_measure_headers_hol_blocking_time),
       supports_push_promise_(session->perspective() == Perspective::IS_CLIENT &&
@@ -348,12 +351,20 @@ void QuicHeadersStream::OnControlFrameHeaderData(SpdyStreamId stream_id,
       spdy_session_->OnPromiseHeadersComplete(stream_id_, promised_stream_id_,
                                               frame_len_);
     }
+    if (uncompressed_frame_len_ != 0) {
+      int compression_pct = 100 - (100 * frame_len_) / uncompressed_frame_len_;
+      DVLOG(1) << "Net.QuicHpackDecompressionPercentage: " << compression_pct;
+      UMA_HISTOGRAM_PERCENTAGE("Net.QuicHpackDecompressionPercentage",
+                               compression_pct);
+    }
     // Reset state for the next frame.
     promised_stream_id_ = kInvalidStreamId;
     stream_id_ = kInvalidStreamId;
     fin_ = false;
     frame_len_ = 0;
+    uncompressed_frame_len_ = 0;
   } else {
+    uncompressed_frame_len_ += len;
     if (promised_stream_id_ == kInvalidStreamId) {
       spdy_session_->OnStreamHeaders(stream_id_, StringPiece(header_data, len));
     } else {
@@ -391,6 +402,7 @@ void QuicHeadersStream::OnHeaderList(const QuicHeaderList& header_list) {
   stream_id_ = kInvalidStreamId;
   fin_ = false;
   frame_len_ = 0;
+  uncompressed_frame_len_ = 0;
 }
 
 void QuicHeadersStream::OnCompressedFrameSize(size_t frame_len) {

@@ -120,8 +120,8 @@ std::unique_ptr<base::Value> NetLogQuicAckFrameCallback(
   dict->SetBoolean("truncated", frame->is_truncated);
 
   base::ListValue* missing = new base::ListValue();
-  dict->Set("missing_packets", missing);
-  for (QuicPacketNumber packet : frame->missing_packets)
+  dict->Set("packets", missing);
+  for (QuicPacketNumber packet : frame->packets)
     missing->AppendString(base::Uint64ToString(packet));
 
   base::ListValue* received = new base::ListValue();
@@ -351,8 +351,12 @@ void QuicConnectionLogger::OnFrameAddedToPacket(const QuicFrame& frame) {
       net_log_.AddEvent(
           NetLog::TYPE_QUIC_SESSION_ACK_FRAME_SENT,
           base::Bind(&NetLogQuicAckFrameCallback, frame.ack_frame));
-      const PacketNumberQueue& missing_packets =
-          frame.ack_frame->missing_packets;
+      // Missing packets histogram only relevant for v33 and lower
+      // TODO(rch, rtenneti) sort out histograms for v34+
+      if (session_->connection()->version() > QUIC_VERSION_33) {
+        break;
+      }
+      const PacketNumberQueue& missing_packets = frame.ack_frame->packets;
       const uint8_t max_ranges = std::numeric_limits<uint8_t>::max();
       // Compute an upper bound on the number of NACK ranges. If the bound
       // is below the max, then it clearly isn't truncated.
@@ -543,10 +547,14 @@ void QuicConnectionLogger::OnAckFrame(const QuicAckFrame& frame) {
   if (frame.is_truncated)
     ++num_truncated_acks_received_;
 
-  if (frame.missing_packets.Empty())
+  if (frame.packets.Empty())
     return;
 
-  const PacketNumberQueue& missing_packets = frame.missing_packets;
+  // TODO(rch, rtenneti) sort out histograms for QUIC_VERSION_34 and above.
+  if (session_->connection()->version() > QUIC_VERSION_33) {
+    return;
+  }
+  const PacketNumberQueue& missing_packets = frame.packets;
   PacketNumberQueue::const_iterator it =
       missing_packets.lower_bound(largest_received_missing_packet_number_);
   if (it == missing_packets.end())

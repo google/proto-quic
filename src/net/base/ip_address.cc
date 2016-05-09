@@ -9,7 +9,6 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
-#include "net/base/ip_address_number.h"
 #include "net/base/parse_number.h"
 #include "url/gurl.h"
 #include "url/url_canon_ip.h"
@@ -135,7 +134,8 @@ namespace net {
 
 IPAddress::IPAddress() {}
 
-IPAddress::IPAddress(const IPAddressNumber& address) : ip_address_(address) {}
+IPAddress::IPAddress(const std::vector<uint8_t>& address)
+    : ip_address_(address) {}
 
 IPAddress::IPAddress(const IPAddress& other) = default;
 

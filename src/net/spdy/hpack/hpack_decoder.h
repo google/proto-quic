@@ -121,6 +121,7 @@ class NET_EXPORT_PRIVATE HpackDecoder {
   // false on error.
   bool DecodeNextOpcodeWrapper(HpackInputStream* input_stream);
   bool DecodeNextOpcode(HpackInputStream* input_stream);
+  bool DecodeAtMostTwoHeaderTableSizeUpdates(HpackInputStream* input_stream);
   bool DecodeNextHeaderTableSizeUpdate(HpackInputStream* input_stream);
   bool DecodeNextIndexedHeader(HpackInputStream* input_stream);
   bool DecodeNextLiteralHeader(HpackInputStream* input_stream,

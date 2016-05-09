@@ -6,6 +6,8 @@
 
 #include <cstdlib>  // std::abs
 
+#include "net/quic/quic_flags.h"
+
 using std::max;
 
 namespace net {
@@ -27,6 +29,7 @@ RttStats::RttStats()
     : latest_rtt_(QuicTime::Delta::Zero()),
       min_rtt_(QuicTime::Delta::Zero()),
       smoothed_rtt_(QuicTime::Delta::Zero()),
+      previous_srtt_(QuicTime::Delta::Zero()),
       mean_deviation_(QuicTime::Delta::Zero()),
       initial_rtt_us_(kInitialRttMs * kNumMicrosPerMilli),
       num_min_rtt_samples_remaining_(0),
@@ -69,6 +72,9 @@ void RttStats::UpdateRtt(QuicTime::Delta send_delta,
   // positive RTT sample. Otherwise, we use the send_delta as a reasonable
   // measure for smoothed_rtt.
   QuicTime::Delta rtt_sample(send_delta);
+  if (FLAGS_quic_adaptive_loss_recovery) {
+    previous_srtt_ = smoothed_rtt_;
+  }
   if (rtt_sample > ack_delay) {
     rtt_sample = rtt_sample.Subtract(ack_delay);
   }

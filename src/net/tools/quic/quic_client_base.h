@@ -54,7 +54,7 @@ class QuicClientBase {
 
   // Returns a newly created QuicSpdyClientStream, owned by the
   // QuicSimpleClient.
-  QuicSpdyClientStream* CreateReliableClientStream();
+  virtual QuicSpdyClientStream* CreateReliableClientStream();
 
   // Wait for events until the stream with the given ID is closed.
   void WaitForStreamToClose(QuicStreamId id);

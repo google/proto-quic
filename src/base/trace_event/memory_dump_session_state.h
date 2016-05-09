@@ -10,6 +10,7 @@
 #include "base/base_export.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
+#include "base/trace_event/trace_config.h"
 
 namespace base {
 namespace trace_event {
@@ -39,6 +40,12 @@ class BASE_EXPORT MemoryDumpSessionState
   void SetTypeNameDeduplicator(
       std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator);
 
+  const TraceConfig::MemoryDumpConfig& memory_dump_config() const {
+    return memory_dump_config_;
+  }
+
+  void SetMemoryDumpConfig(const TraceConfig::MemoryDumpConfig& config);
+
  private:
   friend class RefCountedThreadSafe<MemoryDumpSessionState>;
   ~MemoryDumpSessionState();
@@ -50,6 +57,10 @@ class BASE_EXPORT MemoryDumpSessionState
   // Deduplicates type names in heap dumps so they can be written once when the
   // trace is finalized.
   std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator_;
+
+  // The memory dump config, copied at the time when the tracing session was
+  // started.
+  TraceConfig::MemoryDumpConfig memory_dump_config_;
 };
 
 }  // namespace trace_event

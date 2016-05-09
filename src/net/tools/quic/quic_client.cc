@@ -236,7 +236,7 @@ void QuicClient::StartConnect() {
       GetNextConnectionId(), server_address_, helper(), alarm_factory(), writer,
       /* owns_writer= */ false, Perspective::IS_CLIENT, supported_versions()));
 
-  // Reset |writer_| after |session()| so that the old writer outlives the old
+  // Reset |writer()| after |session()| so that the old writer outlives the old
   // session.
   set_writer(writer);
   session()->Initialize();
@@ -303,7 +303,6 @@ void QuicClient::SendRequest(const BalsaHeaders& headers,
     QUIC_BUG << "stream creation failed!";
     return;
   }
-  stream->set_visitor(this);
   stream->SendRequest(SpdyBalsaUtils::RequestHeadersToSpdyHeaders(headers),
                       body, fin);
   if (FLAGS_enable_quic_stateless_reject_support) {
@@ -348,6 +347,14 @@ void QuicClient::SendRequestsAndWaitForResponse(
   }
   while (WaitForEvents()) {
   }
+}
+
+QuicSpdyClientStream* QuicClient::CreateReliableClientStream() {
+  QuicSpdyClientStream* stream = QuicClientBase::CreateReliableClientStream();
+  if (stream) {
+    stream->set_visitor(this);
+  }
+  return stream;
 }
 
 bool QuicClient::WaitForEvents() {

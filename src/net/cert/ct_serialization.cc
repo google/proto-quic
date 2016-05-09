@@ -11,6 +11,8 @@
 
 #include "base/logging.h"
 #include "base/numerics/safe_math.h"
+#include "net/cert/signed_certificate_timestamp.h"
+#include "net/cert/signed_tree_head.h"
 
 namespace net {
 
@@ -339,7 +341,7 @@ bool EncodeV1SCTSignedData(const base::Time& timestamp,
                            const std::string& serialized_log_entry,
                            const std::string& extensions,
                            std::string* output) {
-  WriteUint(kVersionLength, SignedCertificateTimestamp::SCT_VERSION_1,
+  WriteUint(kVersionLength, SignedCertificateTimestamp::V1,
             output);
   WriteUint(kSignatureTypeLength, SIGNATURE_TYPE_CERTIFICATE_TIMESTAMP,
             output);
@@ -383,12 +385,12 @@ bool DecodeSignedCertificateTimestamp(
   unsigned version;
   if (!ReadUint(kVersionLength, input, &version))
     return false;
-  if (version != SignedCertificateTimestamp::SCT_VERSION_1) {
+  if (version != SignedCertificateTimestamp::V1) {
     DVLOG(1) << "Unsupported/invalid version " << version;
     return false;
   }
 
-  result->version = SignedCertificateTimestamp::SCT_VERSION_1;
+  result->version = SignedCertificateTimestamp::V1;
   base::StringPiece log_id;
   base::StringPiece extensions;
   if (!ReadFixedBytes(kLogIdLength, input, &log_id) ||
