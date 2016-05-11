@@ -26,7 +26,7 @@
 #include "net/base/network_change_notifier.h"
 #include "net/cert/cert_database.h"
 #include "net/http/http_server_properties.h"
-// #include "net/http/http_stream_factory.h"
+#include "net/http/http_stream_factory.h"
 #include "net/log/net_log.h"
 #include "net/proxy/proxy_server.h"
 #include "net/quic/network_connection.h"
