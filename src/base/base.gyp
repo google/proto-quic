@@ -86,47 +86,6 @@
             }],
           ],
         }],
-        ['OS == "win"', {
-          # Specify delayload for base.dll.
-          'msvs_settings': {
-            'VCLinkerTool': {
-              'DelayLoadDLLs': [
-                'cfgmgr32.dll',
-                'powrprof.dll',
-                'setupapi.dll',
-              ],
-              'AdditionalDependencies': [
-                'cfgmgr32.lib',
-                'powrprof.lib',
-                'setupapi.lib',
-                'userenv.lib',
-                'winmm.lib',
-              ],
-            },
-          },
-          # Specify delayload for components that link with base.lib.
-          'all_dependent_settings': {
-            'msvs_settings': {
-              'VCLinkerTool': {
-                'DelayLoadDLLs': [
-                  'cfgmgr32.dll',
-                  'powrprof.dll',
-                  'setupapi.dll',
-                ],
-                'AdditionalDependencies': [
-                  'cfgmgr32.lib',
-                  'powrprof.lib',
-                  'setupapi.lib',
-                  'userenv.lib',
-                  'winmm.lib',
-                ],
-              },
-            },
-          },
-          'dependencies': [
-           'trace_event/etw_manifest/etw_manifest.gyp:etw_manifest',
-          ],
-        }],
         ['OS != "win" and (OS != "ios" or _toolset == "host")', {
             'dependencies': ['third_party/libevent/libevent.gyp:libevent'],
         },],
@@ -144,51 +103,6 @@
         'sync_socket.h',
         'third_party/xdg_user_dirs/xdg_user_dir_lookup.cc',
         'third_party/xdg_user_dirs/xdg_user_dir_lookup.h',
-      ],
-      'includes': [
-        '../build/android/increase_size_for_speed.gypi',
-      ],
-    },
-    {
-      'target_name': 'base_i18n',
-      'type': '<(component)',
-      'variables': {
-        'enable_wexit_time_destructors': 1,
-        'optimize': 'max',
-        'base_i18n_target': 1,
-      },
-      'dependencies': [
-        'base',
-        'third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
-        '../third_party/icu/icu.gyp:icui18n',
-        '../third_party/icu/icu.gyp:icuuc',
-      ],
-      'conditions': [
-        ['OS == "win"', {
-          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-          'msvs_disabled_warnings': [
-            4267,
-          ],
-        }],
-        ['icu_use_data_file_flag==1', {
-          'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE'],
-        }, { # else icu_use_data_file_flag !=1
-          'conditions': [
-            ['OS=="win"', {
-              'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_SHARED'],
-            }, {
-              'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC'],
-            }],
-          ],
-        }],
-        ['OS == "ios"', {
-          'toolsets': ['host', 'target'],
-        }],
-      ],
-      'export_dependent_settings': [
-        'base',
-        '../third_party/icu/icu.gyp:icuuc',
-        '../third_party/icu/icu.gyp:icui18n',
       ],
       'includes': [
         '../build/android/increase_size_for_speed.gypi',

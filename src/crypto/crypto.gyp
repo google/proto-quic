@@ -109,30 +109,30 @@
     },
   ],
   'conditions': [
-#    ['OS == "win" and target_arch=="ia32"', {
-#      'targets': [
-#        {
-#          'target_name': 'crypto_nacl_win64',
-#          # We use the native APIs for the helper.
-#          'type': '<(component)',
-#          'dependencies': [
-#            '../base/base.gyp:base_win64',
-#            '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations_win64',
-#          ],
-#          'sources': [
-#            '<@(nacl_win64_sources)',
-#          ],
-#          'defines': [
-#           'CRYPTO_IMPLEMENTATION',
-#           '<@(nacl_win64_defines)',
-#          ],
-#          'configurations': {
-#            'Common_Base': {
-#              'msvs_target_platform': 'x64',
-#            },
-#          },
-#        },
-#      ],
-#    }],
+    ['OS == "win" and target_arch=="ia32"', {
+      'targets': [
+        {
+          'target_name': 'crypto_nacl_win64',
+          # We use the native APIs for the helper.
+          'type': '<(component)',
+          'dependencies': [
+            '../base/base.gyp:base_win64',
+            '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations_win64',
+          ],
+          'sources': [
+            '<@(nacl_win64_sources)',
+          ],
+          'defines': [
+           'CRYPTO_IMPLEMENTATION',
+           '<@(nacl_win64_defines)',
+          ],
+          'configurations': {
+            'Common_Base': {
+              'msvs_target_platform': 'x64',
+            },
+          },
+        },
+      ],
+    }],
   ],
 }

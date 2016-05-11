@@ -106,7 +106,7 @@
       # GN version: //net
       'target_name': 'net',
       'dependencies': [
-        '../base/base.gyp:base_i18n',
+#        '../base/base.gyp:base_i18n',
         '../third_party/brotli/brotli.gyp:brotli',
         '../third_party/icu/icu.gyp:icui18n',
         '../third_party/icu/icu.gyp:icuuc',
@@ -116,7 +116,7 @@
       ],
       'sources': [
 #        'base/filename_util_icu.cc',
-        'base/net_string_util_icu.cc',
+#        'base/net_string_util_icu.cc',
         'filter/brotli_filter.cc',
       ],
       'includes': [ 'net_common.gypi' ],
