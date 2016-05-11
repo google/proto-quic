@@ -40,14 +40,38 @@ class BASE_EXPORT TraceConfig {
  public:
   typedef std::vector<std::string> StringList;
 
-  // Specifies the memory dump config for tracing. Used only when
-  // "memory-infra" category is enabled.
-  struct MemoryDumpTriggerConfig {
-    uint32_t periodic_interval_ms;
-    MemoryDumpLevelOfDetail level_of_detail;
-  };
+  // Specifies the memory dump config for tracing.
+  // Used only when "memory-infra" category is enabled.
+  struct MemoryDumpConfig {
+    MemoryDumpConfig();
+    MemoryDumpConfig(const MemoryDumpConfig& other);
+    ~MemoryDumpConfig();
 
-  typedef std::vector<MemoryDumpTriggerConfig> MemoryDumpConfig;
+    // Specifies the triggers in the memory dump config.
+    struct Trigger {
+      uint32_t periodic_interval_ms;
+      MemoryDumpLevelOfDetail level_of_detail;
+    };
+
+    // Specifies the configuration options for the heap profiler.
+    struct HeapProfiler {
+      // Default value for |breakdown_threshold_bytes|.
+      enum { kDefaultBreakdownThresholdBytes = 1024 };
+
+      HeapProfiler();
+
+      // Reset the options to default.
+      void Clear();
+
+      uint32_t breakdown_threshold_bytes;
+    };
+
+    // Reset the values in the config.
+    void Clear();
+
+    std::vector<Trigger> triggers;
+    HeapProfiler heap_profiler_options;
+  };
 
   TraceConfig();
 

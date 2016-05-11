@@ -25,6 +25,7 @@
 #include "net/quic/test_tools/delayed_verify_strike_register_client.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
+#include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -54,19 +55,6 @@ class DummyProofVerifierCallback : public ProofVerifierCallback {
 const char kOldConfigId[] = "old-config-id";
 
 }  // namespace
-
-class QuicCryptoServerConfigPeer {
- public:
-  explicit QuicCryptoServerConfigPeer(QuicCryptoServerConfig* server_config)
-      : server_config_(server_config) {}
-
-  base::Lock* GetStrikeRegisterClientLock() {
-    return &server_config_->strike_register_client_lock_;
-  }
-
- private:
-  QuicCryptoServerConfig* server_config_;
-};
 
 // Run tests with both parities of
 // FLAGS_use_early_return_when_verifying_chlo.

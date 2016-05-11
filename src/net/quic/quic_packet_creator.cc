@@ -183,13 +183,14 @@ bool QuicPacketCreator::HasRoomForStreamFrame(QuicStreamId id,
 
 // static
 size_t QuicPacketCreator::StreamFramePacketOverhead(
+    QuicVersion version,
     QuicConnectionIdLength connection_id_length,
     bool include_version,
     bool include_path_id,
     bool include_diversification_nonce,
     QuicPacketNumberLength packet_number_length,
     QuicStreamOffset offset) {
-  return GetPacketHeaderSize(connection_id_length, include_version,
+  return GetPacketHeaderSize(version, connection_id_length, include_version,
                              include_path_id, include_diversification_nonce,
                              packet_number_length) +
          // Assumes this is a stream with a single lone packet.
@@ -202,11 +203,11 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
                                           QuicStreamOffset offset,
                                           bool fin,
                                           QuicFrame* frame) {
-  DCHECK_GT(
-      max_packet_length_,
-      StreamFramePacketOverhead(connection_id_length_, kIncludeVersion,
-                                kIncludePathId, IncludeNonceInPublicHeader(),
-                                PACKET_6BYTE_PACKET_NUMBER, offset));
+  DCHECK_GT(max_packet_length_,
+            StreamFramePacketOverhead(framer_->version(), connection_id_length_,
+                                      kIncludeVersion, kIncludePathId,
+                                      IncludeNonceInPublicHeader(),
+                                      PACKET_6BYTE_PACKET_NUMBER, offset));
 
   MaybeUpdatePacketNumberLength();
 
@@ -399,8 +400,9 @@ size_t QuicPacketCreator::PacketSize() {
   // Update packet number length on packet boundary.
   packet_.packet_number_length = next_packet_number_length_;
   packet_size_ = GetPacketHeaderSize(
-      connection_id_length_, send_version_in_packet_, send_path_id_in_packet_,
-      IncludeNonceInPublicHeader(), packet_.packet_number_length);
+      framer_->version(), connection_id_length_, send_version_in_packet_,
+      send_path_id_in_packet_, IncludeNonceInPublicHeader(),
+      packet_.packet_number_length);
   return packet_size_;
 }
 
@@ -456,8 +458,8 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
   }
   const size_t encrypted_length = framer_->EncryptInPlace(
       packet_.encryption_level, packet_.path_id, packet_.packet_number,
-      GetStartOfEncryptedData(header), length, encrypted_buffer_len,
-      encrypted_buffer);
+      GetStartOfEncryptedData(framer_->version(), header), length,
+      encrypted_buffer_len, encrypted_buffer);
   if (encrypted_length == 0) {
     QUIC_BUG << "Failed to encrypt packet number " << packet_.packet_number;
     return;

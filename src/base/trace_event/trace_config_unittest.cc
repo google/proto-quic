@@ -36,6 +36,9 @@ const char kCustomTraceConfigString[] =
                             "\"disabled-by-default-cc\","
                             "\"disabled-by-default-memory-infra\"],"
     "\"memory_dump_config\":{"
+      "\"heap_profiler_options\":{"
+        "\"breakdown_threshold_bytes\":10240"
+      "},"
       "\"triggers\":["
         "{\"mode\":\"light\",\"periodic_interval_ms\":50},"
         "{\"mode\":\"detailed\",\"periodic_interval_ms\":1000}"
@@ -570,15 +573,17 @@ TEST(TraceConfigTest, TraceConfigFromMemoryConfigString) {
   TraceConfig tc(tc_str);
   EXPECT_EQ(tc_str, tc.ToString());
   EXPECT_TRUE(tc.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
-  EXPECT_EQ(2u, tc.memory_dump_config_.size());
+  ASSERT_EQ(2u, tc.memory_dump_config_.triggers.size());
 
-  EXPECT_EQ(200u, tc.memory_dump_config_[0].periodic_interval_ms);
+  EXPECT_EQ(200u, tc.memory_dump_config_.triggers[0].periodic_interval_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::LIGHT,
-            tc.memory_dump_config_[0].level_of_detail);
+            tc.memory_dump_config_.triggers[0].level_of_detail);
 
-  EXPECT_EQ(2000u, tc.memory_dump_config_[1].periodic_interval_ms);
+  EXPECT_EQ(2000u, tc.memory_dump_config_.triggers[1].periodic_interval_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
-            tc.memory_dump_config_[1].level_of_detail);
+            tc.memory_dump_config_.triggers[1].level_of_detail);
+  EXPECT_EQ(2048u, tc.memory_dump_config_.heap_profiler_options.
+            breakdown_threshold_bytes);
 }
 
 TEST(TraceConfigTest, EmptyMemoryDumpConfigTest) {
@@ -586,14 +591,22 @@ TEST(TraceConfigTest, EmptyMemoryDumpConfigTest) {
   TraceConfig tc(TraceConfigMemoryTestUtil::GetTraceConfig_EmptyTriggers());
   EXPECT_EQ(TraceConfigMemoryTestUtil::GetTraceConfig_EmptyTriggers(),
             tc.ToString());
-  EXPECT_EQ(0u, tc.memory_dump_config_.size());
+  EXPECT_EQ(0u, tc.memory_dump_config_.triggers.size());
+  EXPECT_EQ(TraceConfig::MemoryDumpConfig::HeapProfiler
+            ::kDefaultBreakdownThresholdBytes,
+            tc.memory_dump_config_.heap_profiler_options
+            .breakdown_threshold_bytes);
 }
 
 TEST(TraceConfigTest, LegacyStringToMemoryDumpConfig) {
   TraceConfig tc(MemoryDumpManager::kTraceCategory, "");
   EXPECT_TRUE(tc.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
   EXPECT_NE(std::string::npos, tc.ToString().find("memory_dump_config"));
-  EXPECT_EQ(2u, tc.memory_dump_config_.size());
+  EXPECT_EQ(2u, tc.memory_dump_config_.triggers.size());
+  EXPECT_EQ(TraceConfig::MemoryDumpConfig::HeapProfiler
+            ::kDefaultBreakdownThresholdBytes,
+            tc.memory_dump_config_.heap_profiler_options
+            .breakdown_threshold_bytes);
 }
 
 }  // namespace trace_event

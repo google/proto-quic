@@ -10,6 +10,11 @@ namespace net {
 namespace test {
 
 // static
+QuicCryptoClientConfig* QuicClientPeer::GetCryptoConfig(QuicClient* client) {
+  return client->crypto_config();
+}
+
+// static
 bool QuicClientPeer::CreateUDPSocketAndBind(QuicClient* client) {
   return client->CreateUDPSocketAndBind();
 }
@@ -23,6 +28,11 @@ void QuicClientPeer::CleanUpUDPSocket(QuicClient* client, int fd) {
 void QuicClientPeer::SetClientPort(QuicClient* client, int port) {
   client->fd_address_map_.back().second =
       IPEndPoint(client->GetLatestClientAddress().address(), port);
+}
+
+// static
+void QuicClientPeer::SetWriter(QuicClient* client, QuicPacketWriter* writer) {
+  client->set_writer(writer);
 }
 
 }  // namespace test

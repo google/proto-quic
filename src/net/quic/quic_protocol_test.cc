@@ -39,11 +39,32 @@ TEST(QuicProtocolTest, MakeQuicTag) {
 TEST(QuicProtocolTest, IsAawaitingPacket) {
   QuicAckFrame ack_frame;
   ack_frame.largest_observed = 10u;
-  EXPECT_TRUE(IsAwaitingPacket(ack_frame, 11u));
-  EXPECT_FALSE(IsAwaitingPacket(ack_frame, 1u));
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame, 11u, 0u));
+  EXPECT_FALSE(IsAwaitingPacket(ack_frame, 1u, 0u));
 
-  ack_frame.missing_packets.Add(10);
-  EXPECT_TRUE(IsAwaitingPacket(ack_frame, 10u));
+  ack_frame.packets.Add(10);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame, 10u, 0u));
+
+  QuicAckFrame ack_frame1;
+  ack_frame1.missing = false;
+  ack_frame1.largest_observed = 10u;
+  ack_frame1.packets.Add(1, 11);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame1, 11u, 0u));
+  EXPECT_FALSE(IsAwaitingPacket(ack_frame1, 1u, 0u));
+
+  ack_frame1.packets.Remove(10);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame1, 10u, 0u));
+
+  QuicAckFrame ack_frame2;
+  ack_frame2.missing = false;
+  ack_frame2.largest_observed = 100u;
+  ack_frame2.packets.Add(21, 100);
+  EXPECT_FALSE(IsAwaitingPacket(ack_frame2, 11u, 20u));
+  EXPECT_FALSE(IsAwaitingPacket(ack_frame2, 80u, 20u));
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 101u, 20u));
+
+  ack_frame2.packets.Remove(50);
+  EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 50u, 20u));
 }
 
 TEST(QuicProtocolTest, QuicDeprecatedErrorCodeCount) {
@@ -264,6 +285,19 @@ TEST(PacketNumberQueueTest, Iterators) {
 
   it_low = queue.lower_bound(101);
   EXPECT_TRUE(queue.end() == it_low);
+}
+
+TEST(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
+  PacketNumberQueue queue;
+  queue.Add(1, 10);
+  queue.Add(20, 30);
+  queue.Add(40, 50);
+  EXPECT_EQ(3u, queue.NumIntervals());
+  EXPECT_EQ(10u, queue.LastIntervalLength());
+  queue.Remove(9, 21);
+  EXPECT_EQ(3u, queue.NumIntervals());
+  EXPECT_FALSE(queue.Contains(9));
+  EXPECT_FALSE(queue.Contains(20));
 }
 
 }  // namespace

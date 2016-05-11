@@ -16,8 +16,8 @@ namespace net {
 namespace {
 
 string RangeDebugString(QuicStreamOffset start, QuicStreamOffset end) {
-  return string("[") + base::IntToString(start) + ", " +
-         base::IntToString(end) + ") ";
+  return string("[") + base::Uint64ToString(start) + ", " +
+         base::Uint64ToString(end) + ") ";
 }
 
 }  // namespace

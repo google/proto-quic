@@ -882,7 +882,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersSendsAFin) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers, without a FIN.
   EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
@@ -903,7 +903,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersFinalOffset) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
   EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
@@ -930,7 +930,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersClosesWriteSide) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
   EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
@@ -955,7 +955,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
   EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
@@ -982,7 +982,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersAfterFIN) {
   Initialize(kShouldProcessData);
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(Invoke(MockQuicSpdySession::ConsumeAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers, with a FIN.
   EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));

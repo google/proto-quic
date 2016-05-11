@@ -18,6 +18,7 @@
 namespace base {
 namespace trace_event {
 
+class MemoryDumpSessionState;
 class StackFrameDeduplicator;
 class TracedValue;
 class TypeNameDeduplicator;
@@ -28,8 +29,7 @@ class TypeNameDeduplicator;
 // number of entries is kept reasonable because long tails are not included.
 BASE_EXPORT std::unique_ptr<TracedValue> ExportHeapDump(
     const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context,
-    StackFrameDeduplicator* stack_frame_deduplicator,
-    TypeNameDeduplicator* type_name_deduplicator);
+    const MemoryDumpSessionState& session_state);
 
 namespace internal {
 
@@ -62,11 +62,13 @@ BASE_EXPORT std::unique_ptr<TracedValue> Serialize(const std::set<Entry>& dump);
 // used as a one-shot local instance on the stack.
 class BASE_EXPORT HeapDumpWriter {
  public:
-  // The |StackFrameDeduplicator| and |TypeNameDeduplicator| are not owned. The
-  // heap dump writer assumes exclusive access to them during the lifetime of
-  // the dump writer.
+  // The |stack_frame_deduplicator| and |type_name_deduplicator| are not owned.
+  // The heap dump writer assumes exclusive access to them during the lifetime
+  // of the dump writer. The heap dumps are broken down for allocations bigger
+  // than |breakdown_threshold_bytes|.
   HeapDumpWriter(StackFrameDeduplicator* stack_frame_deduplicator,
-                 TypeNameDeduplicator* type_name_deduplicator);
+                 TypeNameDeduplicator* type_name_deduplicator,
+                 uint32_t breakdown_threshold_bytes);
 
   ~HeapDumpWriter();
 
@@ -96,6 +98,10 @@ class BASE_EXPORT HeapDumpWriter {
   // Helper for converting type names to IDs. Not owned, must outlive this heap
   // dump writer instance.
   TypeNameDeduplicator* const type_name_deduplicator_;
+
+  // Minimum size of an allocation for which an allocation bucket will be
+  // broken down with children.
+  uint32_t breakdown_threshold_bytes_;
 
   DISALLOW_COPY_AND_ASSIGN(HeapDumpWriter);
 };

@@ -83,11 +83,6 @@ class QuicDispatcher : public QuicServerSessionVisitor,
   // time-wait list.
   void OnConnectionAddedToTimeWaitList(QuicConnectionId connection_id) override;
 
-  // Called whenever the time wait list manager removes an old connection from
-  // the time-wait list.
-  void OnConnectionRemovedFromTimeWaitList(
-      QuicConnectionId connection_id) override;
-
   typedef std::unordered_map<QuicConnectionId, QuicServerSessionBase*>
       SessionMap;
 

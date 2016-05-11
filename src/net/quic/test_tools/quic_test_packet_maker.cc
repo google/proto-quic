@@ -21,13 +21,15 @@ namespace test {
 QuicTestPacketMaker::QuicTestPacketMaker(QuicVersion version,
                                          QuicConnectionId connection_id,
                                          MockClock* clock,
-                                         const std::string& host)
+                                         const std::string& host,
+                                         Perspective perspective)
     : version_(version),
       connection_id_(connection_id),
       clock_(clock),
       host_(host),
       spdy_request_framer_(HTTP2),
-      spdy_response_framer_(HTTP2) {}
+      spdy_response_framer_(HTTP2),
+      perspective_(perspective) {}
 
 QuicTestPacketMaker::~QuicTestPacketMaker() {}
 
@@ -107,6 +109,10 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
+  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
+    ack.missing = false;
+    ack.packets.Add(1, largest_received + 1);
+  }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
   DVLOG(1) << "Adding frame: " << frames[0];
@@ -120,8 +126,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   frames.push_back(QuicFrame(&rst));
   DVLOG(1) << "Adding frame: " << frames[2];
 
-  QuicFramer framer(SupportedVersions(version_), clock_->Now(),
-                    Perspective::IS_CLIENT);
+  QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
@@ -157,6 +162,10 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
+  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
+    ack.missing = false;
+    ack.packets.Add(1, largest_received + 1);
+  }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
   DVLOG(1) << "Adding frame: " << frames[0];
@@ -173,8 +182,7 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
   frames.push_back(QuicFrame(&close));
   DVLOG(1) << "Adding frame: " << frames[2];
 
-  QuicFramer framer(SupportedVersions(version_), clock_->Now(),
-                    Perspective::IS_CLIENT);
+  QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
@@ -259,9 +267,12 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
+  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
+    ack.missing = false;
+    ack.packets.Add(1, largest_received + 1);
+  }
 
-  QuicFramer framer(SupportedVersions(version_), clock_->Now(),
-                    Perspective::IS_CLIENT);
+  QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
 
@@ -335,6 +346,10 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
+  }
+  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
+    ack.missing = false;
+    ack.packets.Add(1, largest_received + 1);
   }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
@@ -588,8 +603,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePacket(
 std::unique_ptr<QuicReceivedPacket>
 QuicTestPacketMaker::MakeMultipleFramesPacket(const QuicPacketHeader& header,
                                               const QuicFrames& frames) {
-  QuicFramer framer(SupportedVersions(version_), clock_->Now(),
-                    Perspective::IS_CLIENT);
+  QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];

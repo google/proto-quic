@@ -27,6 +27,7 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
   GeneralLossAlgorithmTest() {
     rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(100),
                          QuicTime::Delta::Zero(), clock_.Now());
+    EXPECT_LT(0, rtt_stats_.smoothed_rtt().ToMicroseconds());
   }
 
   ~GeneralLossAlgorithmTest() override {}
@@ -42,13 +43,15 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
                                    true);
   }
 
-  void VerifyLosses(QuicPacketNumber largest_observed,
+  void VerifyLosses(QuicPacketNumber largest_newly_acked,
                     QuicPacketNumber* losses_expected,
                     size_t num_losses) {
-    unacked_packets_.IncreaseLargestObserved(largest_observed);
+    if (largest_newly_acked > unacked_packets_.largest_observed()) {
+      unacked_packets_.IncreaseLargestObserved(largest_newly_acked);
+    }
     SendAlgorithmInterface::CongestionVector lost_packets;
     loss_algorithm_.DetectLosses(unacked_packets_, clock_.Now(), rtt_stats_,
-                                 &lost_packets);
+                                 largest_newly_acked, &lost_packets);
     EXPECT_EQ(num_losses, lost_packets.size());
     for (size_t i = 0; i < num_losses; ++i) {
       EXPECT_EQ(lost_packets[i].first, losses_expected[i]);
@@ -324,6 +327,79 @@ TEST_F(GeneralLossAlgorithmTest, MultipleLossesAtOnce) {
   QuicPacketNumber lost[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   VerifyLosses(10, lost, arraysize(lost));
   EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
+}
+
+TEST_F(GeneralLossAlgorithmTest, NoSpuriousLossesFromLargeReordering) {
+  FLAGS_quic_simplify_loss_detection = true;
+  FLAGS_quic_loss_recovery_use_largest_acked = true;
+  loss_algorithm_.SetLossDetectionType(kTime);
+  const size_t kNumSentPackets = 10;
+  // Transmit 10 packets at once and then go forward an RTT.
+  for (size_t i = 1; i <= kNumSentPackets; ++i) {
+    SendDataPacket(i);
+  }
+  clock_.AdvanceTime(rtt_stats_.smoothed_rtt());
+  // Expect the timer to not be set.
+  EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
+  // The packet should not be lost until 1.25 RTTs pass.
+
+  unacked_packets_.RemoveFromInFlight(10);
+  VerifyLosses(10, nullptr, 0);
+  // Expect the timer to be set to 0.25 RTT's in the future.
+  EXPECT_EQ(rtt_stats_.smoothed_rtt().Multiply(0.25),
+            loss_algorithm_.GetLossTimeout().Subtract(clock_.Now()));
+  clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(0.25));
+  // Now ack packets 1 to 9 and ensure the timer is no longer set and no packets
+  // are lost.
+  for (QuicPacketNumber i = 1; i <= 9; ++i) {
+    unacked_packets_.RemoveFromInFlight(i);
+    VerifyLosses(i, nullptr, 0);
+    EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
+  }
+}
+
+TEST_F(GeneralLossAlgorithmTest, IncreaseThresholdUponSpuriousLoss) {
+  FLAGS_quic_simplify_loss_detection = true;
+  FLAGS_quic_adaptive_loss_recovery = true;
+  loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
+  EXPECT_EQ(16, loss_algorithm_.reordering_fraction());
+  const size_t kNumSentPackets = 10;
+  // Transmit 2 packets at 1/10th an RTT interval.
+  for (size_t i = 1; i <= kNumSentPackets; ++i) {
+    SendDataPacket(i);
+    clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(0.1));
+  }
+  EXPECT_EQ(QuicTime::Zero().Add(rtt_stats_.smoothed_rtt()), clock_.Now());
+
+  // Expect the timer to not be set.
+  EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
+  // Packet 1 should not be lost until 1/16 RTTs pass.
+  unacked_packets_.RemoveFromInFlight(2);
+  VerifyLosses(2, nullptr, 0);
+  // Expect the timer to be set to 1/16 RTT's in the future.
+  EXPECT_EQ(rtt_stats_.smoothed_rtt().Multiply(1.0f / 16),
+            loss_algorithm_.GetLossTimeout().Subtract(clock_.Now()));
+  VerifyLosses(2, nullptr, 0);
+  clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(1.0f / 16));
+  QuicPacketNumber lost[] = {1};
+  VerifyLosses(2, lost, arraysize(lost));
+  EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
+  // Retransmit packet 1 as 11 and 2 as 12.
+  SendDataPacket(11);
+  SendDataPacket(12);
+
+  // Advance the time 1/4 RTT and indicate the loss was spurious.
+  // The new threshold should be 1/2 RTT.
+  clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(1.0f / 4));
+  loss_algorithm_.SpuriousRetransmitDetected(unacked_packets_, clock_.Now(),
+                                             rtt_stats_, 11);
+  EXPECT_EQ(2, loss_algorithm_.reordering_fraction());
+
+  // Detect another spurious retransmit and ensure the threshold doesn't
+  // increase again.
+  loss_algorithm_.SpuriousRetransmitDetected(unacked_packets_, clock_.Now(),
+                                             rtt_stats_, 12);
+  EXPECT_EQ(2, loss_algorithm_.reordering_fraction());
 }
 
 }  // namespace

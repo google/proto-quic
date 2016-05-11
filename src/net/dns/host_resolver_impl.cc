@@ -574,6 +574,7 @@ class HostResolverImpl::Request {
   }
 
   RequestPriority priority() const { return priority_; }
+  void set_priority(RequestPriority priority) { priority_ = priority; }
 
   base::TimeTicks request_time() const { return request_time_; }
 
@@ -583,8 +584,7 @@ class HostResolverImpl::Request {
   // The request info that started the request.
   const RequestInfo info_;
 
-  // TODO(akalin): Support reprioritization.
-  const RequestPriority priority_;
+  RequestPriority priority_;
 
   // The resolve job that this request is dependent on.
   Job* job_;
@@ -1367,6 +1367,16 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     UpdatePriority();
   }
 
+  void ChangeRequestPriority(Request* req, RequestPriority priority) {
+    DCHECK_EQ(key_.hostname, req->info().hostname());
+    DCHECK(!req->was_canceled());
+
+    priority_tracker_.Remove(req->priority());
+    req->set_priority(priority);
+    priority_tracker_.Add(req->priority());
+    UpdatePriority();
+  }
+
   // Marks |req| as cancelled. If it was the last active Request, also finishes
   // this Job, marking it as cancelled, and deletes it.
   void CancelRequest(Request* req) {
@@ -1474,18 +1484,18 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     DCHECK_EQ(1u, num_occupied_job_slots_);
   }
 
+  AddressList MakeAddressListForRequest(const AddressList& list) const {
+    if (requests_.empty())
+      return list;
+    return AddressList::CopyWithPort(list, requests_.front()->info().port());
+  }
+
   void UpdatePriority() {
     if (is_queued()) {
       if (priority() != static_cast<RequestPriority>(handle_.priority()))
         priority_change_time_ = base::TimeTicks::Now();
       handle_ = resolver_->dispatcher_->ChangePriority(handle_, priority());
     }
-  }
-
-  AddressList MakeAddressListForRequest(const AddressList& list) const {
-    if (requests_.empty())
-      return list;
-    return AddressList::CopyWithPort(list, requests_.front()->info().port());
   }
 
   // PriorityDispatch::Job:
@@ -2043,6 +2053,16 @@ int HostResolverImpl::ResolveFromCache(const RequestInfo& info,
   int rv = ResolveHelper(key, info, ip_address_ptr, addresses, source_net_log);
   LogFinishRequest(source_net_log, info, rv);
   return rv;
+}
+
+void HostResolverImpl::ChangeRequestPriority(RequestHandle req_handle,
+                                             RequestPriority priority) {
+  DCHECK(CalledOnValidThread());
+  Request* req = reinterpret_cast<Request*>(req_handle);
+  DCHECK(req);
+  Job* job = req->job();
+  DCHECK(job);
+  job->ChangeRequestPriority(req, priority);
 }
 
 void HostResolverImpl::CancelRequest(RequestHandle req_handle) {

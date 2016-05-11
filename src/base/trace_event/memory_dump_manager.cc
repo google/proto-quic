@@ -682,15 +682,16 @@ void MemoryDumpManager::OnTraceLogEnabled() {
   g_periodic_dumps_count = 0;
   const TraceConfig trace_config =
       TraceLog::GetInstance()->GetCurrentTraceConfig();
-  const TraceConfig::MemoryDumpConfig& config_list =
-      trace_config.memory_dump_config();
-  if (config_list.empty())
+  session_state_->SetMemoryDumpConfig(trace_config.memory_dump_config());
+  const std::vector<TraceConfig::MemoryDumpConfig::Trigger>& triggers_list =
+      trace_config.memory_dump_config().triggers;
+  if (triggers_list.empty())
     return;
 
   uint32_t min_timer_period_ms = std::numeric_limits<uint32_t>::max();
   uint32_t heavy_dump_period_ms = 0;
-  DCHECK_LE(config_list.size(), 2u);
-  for (const TraceConfig::MemoryDumpTriggerConfig& config : config_list) {
+  DCHECK_LE(triggers_list.size(), 2u);
+  for (const TraceConfig::MemoryDumpConfig::Trigger& config : triggers_list) {
     DCHECK(config.periodic_interval_ms);
     if (config.level_of_detail == MemoryDumpLevelOfDetail::DETAILED)
       heavy_dump_period_ms = config.periodic_interval_ms;

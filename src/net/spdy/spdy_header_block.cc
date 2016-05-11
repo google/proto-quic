@@ -210,6 +210,11 @@ SpdyHeaderBlock::StringPieceProxy SpdyHeaderBlock::operator[](
   return StringPieceProxy(&block_, storage_.get(), iter, out_key);
 }
 
+StringPiece SpdyHeaderBlock::GetHeader(const StringPiece key) const {
+  auto iter = block_.find(key);
+  return iter == block_.end() ? StringPiece() : iter->second;
+}
+
 void SpdyHeaderBlock::ReplaceOrAppendHeader(const StringPiece key,
                                             const StringPiece value) {
   // TODO(birenroy): Write new value in place of old value, if it fits.

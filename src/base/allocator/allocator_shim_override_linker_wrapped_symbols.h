@@ -10,7 +10,7 @@
 // This header overrides the __wrap_X symbols when using the link-time
 // -Wl,-wrap,malloc shim-layer approach (see README.md).
 // All references to malloc, free, etc. within the linker unit that gets the
-// -wrap linker flags (e.g., libchrome_public.so) will be rewritten to the
+// -wrap linker flags (e.g., libchrome.so) will be rewritten to the
 // linker as references to __wrap_malloc, __wrap_free, which are defined here.
 
 #include "base/allocator/allocator_shim_internals.h"

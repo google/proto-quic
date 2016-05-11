@@ -74,6 +74,9 @@ CommandLine GetMultiProcessTestChildBaseCommandLine();
 // component builds.
 void InitAndroidMultiProcessTestHelper(int (*main)(int, char**));
 
+// Returns true if the current process is a test child.
+bool AndroidIsChildProcess();
+
 // Wait for a test child to exit if the alternate test child implementation is
 // being used.
 bool AndroidWaitForChildExitWithTimeout(

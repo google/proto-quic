@@ -20,6 +20,7 @@
 #include "net/base/iovec.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
+#include "net/quic/quic_flags.h"
 #include "net/quic/quic_header_list.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_stream_sequencer.h"
@@ -130,8 +131,8 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
 
   // Writes the trailers contained in |trailer_block| to the dedicated
   // headers stream. Trailers will always have the FIN set.
-  size_t WriteTrailers(SpdyHeaderBlock trailer_block,
-                       QuicAckListenerInterface* ack_notifier_delegate);
+  virtual size_t WriteTrailers(const SpdyHeaderBlock& trailer_block,
+                               QuicAckListenerInterface* ack_notifier_delegate);
 
   // Marks |bytes_consumed| of the headers data as consumed.
   void MarkHeadersConsumed(size_t bytes_consumed);
@@ -188,6 +189,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // use of the spdy_session_ member.
   void ClearSession();
 
+  // Latched value of --quic_avoid_empty_nonfin_writes.
+  bool avoid_empty_nonfin_writes() const { return avoid_empty_nonfin_writes_; }
+
  protected:
   // Called by OnStreamHeadersComplete depending on which type (initial or
   // trailing) headers are expected next.
@@ -234,6 +238,8 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   std::string decompressed_trailers_;
   // The parsed trailers received from the peer.
   SpdyHeaderBlock received_trailers_;
+
+  bool avoid_empty_nonfin_writes_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSpdyStream);
 };

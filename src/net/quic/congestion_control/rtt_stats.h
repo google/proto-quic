@@ -48,6 +48,9 @@ class NET_EXPORT_PRIVATE RttStats {
   // May return Zero if no valid updates have occurred.
   QuicTime::Delta smoothed_rtt() const { return smoothed_rtt_; }
 
+  // Returns the EWMA smoothed RTT prior to the most recent RTT sample.
+  QuicTime::Delta previous_srtt() const { return previous_srtt_; }
+
   int64_t initial_rtt_us() const { return initial_rtt_us_; }
 
   // Sets an initial RTT to be used for SmoothedRtt before any RTT updates.
@@ -96,6 +99,7 @@ class NET_EXPORT_PRIVATE RttStats {
   QuicTime::Delta latest_rtt_;
   QuicTime::Delta min_rtt_;
   QuicTime::Delta smoothed_rtt_;
+  QuicTime::Delta previous_srtt_;
   // Mean RTT deviation during this session.
   // Approximation of standard deviation, the error is roughly 1.25 times
   // larger than the standard deviation, for a normally distributed signal.

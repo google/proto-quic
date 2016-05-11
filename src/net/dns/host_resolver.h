@@ -163,6 +163,12 @@ class NET_EXPORT HostResolver {
                                AddressList* addresses,
                                const BoundNetLog& net_log) = 0;
 
+  // Changes the priority of the specified request. |req| is the handle returned
+  // by Resolve(). ChangeRequestPriority must NOT be called after the request's
+  // completion callback has already run or the request was canceled.
+  virtual void ChangeRequestPriority(RequestHandle req,
+                                     RequestPriority priority);
+
   // Cancels the specified request. |req| is the handle returned by Resolve().
   // After a request is canceled, its completion callback will not be called.
   // CancelRequest must NOT be called after the request's completion callback

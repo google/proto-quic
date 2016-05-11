@@ -449,8 +449,8 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
   size_t length =
       NullEncrypter().GetCiphertextSize(0) +
       GetPacketHeaderSize(
-          creator_->connection_id_length(), kIncludeVersion, !kIncludePathId,
-          !kIncludeDiversificationNonce,
+          framer_.version(), creator_->connection_id_length(), kIncludeVersion,
+          !kIncludePathId, !kIncludeDiversificationNonce,
           QuicPacketCreatorPeer::NextPacketNumberLength(creator_)) +
       // Add an extra 3 bytes for the payload and 1 byte so BytesFree is larger
       // than the GetMinStreamFrameSize.

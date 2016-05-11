@@ -33,7 +33,6 @@ NET_EXPORT_PRIVATE extern bool
     FLAGS_quic_crypto_server_config_default_has_chacha20;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_new_tcp_sender;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_connection_defer_ack_response;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_rto_timeout;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_socket_timestamp;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_reply_to_rej;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_ignore_invalid_error_code;
@@ -41,5 +40,10 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_no_lower_bw_resumption_limit;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_sslr_limit_reduction;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_simplify_loss_detection;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_always_has_unacked_packets_on_timeout;
-
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_max_pacing_rate;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_avoid_empty_nonfin_writes;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_auto_tune_receive_window;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_adaptive_loss_recovery;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_autotune_by_default;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_loss_recovery_use_largest_acked;
 #endif  // NET_QUIC_QUIC_FLAGS_H_

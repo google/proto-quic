@@ -18,7 +18,10 @@
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
+#include "base/trace_event/memory_dump_session_state.h"
+#include "base/trace_event/trace_config.h"
 #include "base/trace_event/trace_event_argument.h"
+#include "base/trace_event/trace_log.h"
 
 // Most of what the |HeapDumpWriter| does is aggregating detailed information
 // about the heap and deciding what to dump. The Input to this process is a list
@@ -70,13 +73,15 @@ bool operator<(const Bucket& lhs, const Bucket& rhs) {
   return lhs.size < rhs.size;
 }
 
-// Groups the allocations in the bucket by |breakBy|. The buckets in the
+// Groups the allocations in the bucket by |break_by|. The buckets in the
 // returned list will have |backtrace_cursor| advanced or
 // |is_broken_down_by_type_name| set depending on the property to group by.
-std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
+std::vector<Bucket> GetSubbuckets(const Bucket& bucket,
+                                  BreakDownMode break_by) {
   base::hash_map<const void*, Bucket> breakdown;
 
-  if (breakBy == BreakDownMode::kByBacktrace) {
+
+  if (break_by == BreakDownMode::kByBacktrace) {
     for (const auto& context_and_metrics : bucket.metrics_by_context) {
       const Backtrace& backtrace = context_and_metrics.first->backtrace;
       const StackFrame* begin = std::begin(backtrace.frames);
@@ -97,7 +102,7 @@ std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
         DCHECK_GT(subbucket.count, 0u);
       }
     }
-  } else if (breakBy == BreakDownMode::kByTypeName) {
+  } else if (break_by == BreakDownMode::kByTypeName) {
     if (!bucket.is_broken_down_by_type_name) {
       for (const auto& context_and_metrics : bucket.metrics_by_context) {
         const AllocationContext* context = context_and_metrics.first;
@@ -121,10 +126,12 @@ std::vector<Bucket> GetSubbuckets(const Bucket& bucket, BreakDownMode breakBy) {
   return buckets;
 }
 
-// Breaks down the bucket by |breakBy|. Returns only buckets that contribute
-// significantly to the total size. The long tail is omitted.
-std::vector<Bucket> BreakDownBy(const Bucket& bucket, BreakDownMode breakBy) {
-  std::vector<Bucket> buckets = GetSubbuckets(bucket, breakBy);
+// Breaks down the bucket by |break_by|. Returns only buckets that contribute
+// more than |min_size_bytes| to the total size. The long tail is omitted.
+std::vector<Bucket> BreakDownBy(const Bucket& bucket,
+                                BreakDownMode break_by,
+                                size_t min_size_bytes) {
+  std::vector<Bucket> buckets = GetSubbuckets(bucket, break_by);
 
   // Ensure that |buckets| is a max-heap (the data structure, not memory heap),
   // so its front contains the largest bucket. Buckets should be iterated
@@ -135,14 +142,12 @@ std::vector<Bucket> BreakDownBy(const Bucket& bucket, BreakDownMode breakBy) {
   std::make_heap(buckets.begin(), buckets.end());
 
   // Keep including buckets until adding one would increase the number of
-  // bytes accounted for by less than 0.8% (1/125). This simple heuristic works
-  // quite well. The large buckets end up in [it, end()), [begin(), it) is the
-  // part that contains the max-heap of small buckets.
-  size_t accounted_for = 0;
+  // bytes accounted for by |min_size_bytes|. The large buckets end up in
+  // [it, end()), [begin(), it) is the part that contains the max-heap
+  // of small buckets.
   std::vector<Bucket>::iterator it;
   for (it = buckets.end(); it != buckets.begin(); --it) {
-    accounted_for += buckets.front().size;
-    if (buckets.front().size < (accounted_for / 125))
+    if (buckets.front().size < min_size_bytes)
       break;
 
     // Put the largest bucket in [begin, it) at |it - 1| and max-heapify
@@ -175,9 +180,12 @@ bool operator<(Entry lhs, Entry rhs) {
 }
 
 HeapDumpWriter::HeapDumpWriter(StackFrameDeduplicator* stack_frame_deduplicator,
-                               TypeNameDeduplicator* type_name_deduplicator)
+                               TypeNameDeduplicator* type_name_deduplicator,
+                               uint32_t breakdown_threshold_bytes)
     : stack_frame_deduplicator_(stack_frame_deduplicator),
-      type_name_deduplicator_(type_name_deduplicator) {}
+      type_name_deduplicator_(type_name_deduplicator),
+      breakdown_threshold_bytes_(breakdown_threshold_bytes) {
+}
 
 HeapDumpWriter::~HeapDumpWriter() {}
 
@@ -210,8 +218,12 @@ bool HeapDumpWriter::AddEntryForBucket(const Bucket& bucket) {
 }
 
 void HeapDumpWriter::BreakDown(const Bucket& bucket) {
-  auto by_backtrace = BreakDownBy(bucket, BreakDownMode::kByBacktrace);
-  auto by_type_name = BreakDownBy(bucket, BreakDownMode::kByTypeName);
+  auto by_backtrace = BreakDownBy(bucket,
+                                  BreakDownMode::kByBacktrace,
+                                  breakdown_threshold_bytes_);
+  auto by_type_name = BreakDownBy(bucket,
+                                  BreakDownMode::kByTypeName,
+                                  breakdown_threshold_bytes_);
 
   // Insert entries for the buckets. If a bucket was not present before, it has
   // not been broken down before, so recursively continue breaking down in that
@@ -298,10 +310,12 @@ std::unique_ptr<TracedValue> Serialize(const std::set<Entry>& entries) {
 
 std::unique_ptr<TracedValue> ExportHeapDump(
     const hash_map<AllocationContext, AllocationMetrics>& metrics_by_context,
-    StackFrameDeduplicator* stack_frame_deduplicator,
-    TypeNameDeduplicator* type_name_deduplicator) {
-  internal::HeapDumpWriter writer(stack_frame_deduplicator,
-                                  type_name_deduplicator);
+    const MemoryDumpSessionState& session_state) {
+  internal::HeapDumpWriter writer(
+      session_state.stack_frame_deduplicator(),
+      session_state.type_name_deduplicator(),
+      session_state.memory_dump_config().heap_profiler_options
+          .breakdown_threshold_bytes);
   return Serialize(writer.Summarize(metrics_by_context));
 }
 

@@ -2111,14 +2111,13 @@ void SpdySession::OnDataFrameHeader(SpdyStreamId stream_id,
 
 void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
                                     const char* data,
-                                    size_t len,
-                                    bool fin) {
+                                    size_t len) {
   CHECK(in_io_loop_);
   DCHECK_LT(len, 1u << 24);
   if (net_log().IsCapturing()) {
     net_log().AddEvent(
         NetLog::TYPE_HTTP2_SESSION_RECV_DATA,
-        base::Bind(&NetLogSpdyDataCallback, stream_id, len, fin));
+        base::Bind(&NetLogSpdyDataCallback, stream_id, len, false));
   }
 
   // Build the buffer as early as possible so that we go through the
@@ -2149,6 +2148,39 @@ void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
   CHECK_EQ(stream->stream_id(), stream_id);
 
   stream->AddRawReceivedBytes(len);
+
+  if (it->second.waiting_for_syn_reply) {
+    const std::string& error = "Data received before SYN_REPLY.";
+    stream->LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+    ResetStreamIterator(it, RST_STREAM_PROTOCOL_ERROR, error);
+    return;
+  }
+
+  stream->OnDataReceived(std::move(buffer));
+}
+
+void SpdySession::OnStreamEnd(SpdyStreamId stream_id) {
+  CHECK(in_io_loop_);
+  if (net_log().IsCapturing()) {
+    net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_DATA,
+                       base::Bind(&NetLogSpdyDataCallback, stream_id, 0, true));
+  }
+
+  // Build the buffer as early as possible so that we go through the
+  // session flow control checks and update
+  // |unacked_recv_window_bytes_| properly even when the stream is
+  // inactive (since the other side has still reduced its session send
+  // window).
+  std::unique_ptr<SpdyBuffer> buffer;
+
+  ActiveStreamMap::iterator it = active_streams_.find(stream_id);
+
+  // By the time data comes in, the stream may already be inactive.
+  if (it == active_streams_.end())
+    return;
+
+  SpdyStream* stream = it->second.stream;
+  CHECK_EQ(stream->stream_id(), stream_id);
 
   if (it->second.waiting_for_syn_reply) {
     const std::string& error = "Data received before SYN_REPLY.";

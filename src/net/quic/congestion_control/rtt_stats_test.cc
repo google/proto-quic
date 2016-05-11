@@ -8,6 +8,7 @@
 
 #include "base/logging.h"
 #include "base/test/mock_log.h"
+#include "net/quic/quic_flags.h"
 #include "net/quic/test_tools/rtt_stats_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -50,6 +51,24 @@ TEST_F(RttStatsTest, SmoothedRtt) {
                        QuicTime::Zero());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.latest_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.smoothed_rtt());
+}
+
+TEST_F(RttStatsTest, PreviousSmoothedRtt) {
+  FLAGS_quic_adaptive_loss_recovery = true;
+  // Verify that ack_delay is corrected for in Smoothed RTT.
+  rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(300),
+                       QuicTime::Delta::FromMilliseconds(100),
+                       QuicTime::Zero());
+  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.latest_rtt());
+  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.smoothed_rtt());
+  EXPECT_EQ(QuicTime::Delta::Zero(), rtt_stats_.previous_srtt());
+  // Ensure the previous SRTT is 200ms after a 100ms sample.
+  rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(100),
+                       QuicTime::Delta::Zero(), QuicTime::Zero());
+  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(100), rtt_stats_.latest_rtt());
+  EXPECT_EQ(QuicTime::Delta::FromMicroseconds(187500).ToMicroseconds(),
+            rtt_stats_.smoothed_rtt().ToMicroseconds());
+  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.previous_srtt());
 }
 
 TEST_F(RttStatsTest, MinRtt) {

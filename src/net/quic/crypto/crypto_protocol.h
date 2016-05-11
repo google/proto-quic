@@ -56,6 +56,20 @@ const QuicTag kSRBF = TAG('S', 'R', 'B', 'F');   // Socket receive buffer
 const QuicTag kQBIC = TAG('Q', 'B', 'I', 'C');   // TCP cubic
 
 // Connection options (COPT) values
+const QuicTag kAFCW = TAG('A', 'F', 'C', 'W');   // Auto-tune flow control
+                                                 // receive windows.
+const QuicTag kIFW5 = TAG('I', 'F', 'W', '5');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 32KB. (2^5 KB).
+const QuicTag kIFW6 = TAG('I', 'F', 'W', '6');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 64KB. (2^6 KB).
+const QuicTag kIFW7 = TAG('I', 'F', 'W', '7');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 128KB. (2^7 KB).
 const QuicTag kTBBR = TAG('T', 'B', 'B', 'R');   // Reduced Buffer Bloat TCP
 const QuicTag kRENO = TAG('R', 'E', 'N', 'O');   // Reno Congestion Control
 const QuicTag kBYTE = TAG('B', 'Y', 'T', 'E');   // TCP cubic or reno in bytes
@@ -68,6 +82,7 @@ const QuicTag kNTLP = TAG('N', 'T', 'L', 'P');   // No tail loss probe
 const QuicTag kNCON = TAG('N', 'C', 'O', 'N');   // N Connection Congestion Ctrl
 const QuicTag kNRTO = TAG('N', 'R', 'T', 'O');   // CWND reduction on loss
 const QuicTag kTIME = TAG('T', 'I', 'M', 'E');   // Time based loss detection
+const QuicTag kATIM = TAG('A', 'T', 'I', 'M');   // Adaptive time loss detection
 const QuicTag kMIN1 = TAG('M', 'I', 'N', '1');   // Min CWND of 1 packet
 const QuicTag kMIN4 = TAG('M', 'I', 'N', '4');   // Min CWND of 4 packets,
                                                  // with a min rate of 1 BDP.

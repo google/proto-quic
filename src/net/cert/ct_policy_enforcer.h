@@ -93,6 +93,8 @@ class NET_EXPORT CTPolicyEnforcer {
   // ||verified_scts| contains any/all SCTs associated with |cert| that
   // |have been verified (well-formed, issued by known logs, and
   // |applying to |cert|).
+  // Note: |ev_whitelist| is an optional whitelist of certificates considered
+  // to be conforming.
   virtual ct::EVPolicyCompliance DoesConformToCTEVPolicy(
       X509Certificate* cert,
       const ct::EVCertsWhitelist* ev_whitelist,

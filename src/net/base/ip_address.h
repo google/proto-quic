@@ -13,7 +13,6 @@
 
 #include "base/compiler_specific.h"
 #include "base/strings/string_piece.h"
-#include "net/base/ip_address_number.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -25,8 +24,9 @@ class NET_EXPORT IPAddress {
   // Creates a zero-sized, invalid address.
   IPAddress();
 
-  // Creates an IP address from a deprecated IPAddressNumber.
-  explicit IPAddress(const IPAddressNumber& address);
+  // Copies the input address to |ip_address_|. The input is expected to be in
+  // network byte order.
+  explicit IPAddress(const std::vector<uint8_t>& address);
 
   IPAddress(const IPAddress& other);
 

@@ -705,16 +705,23 @@ SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
       // We rely on the visitor to check validity of current_frame_stream_id_.
       bool valid_stream =
           visitor_->OnUnknownFrame(current_frame_stream_id_, frame_type_field);
-      if (valid_stream) {
-        DLOG(WARNING) << "Ignoring unknown frame type.";
-        CHANGE_STATE(SPDY_IGNORE_REMAINING_PAYLOAD);
-      } else {
+      if (expect_continuation_) {
+        // Report an unexpected frame error and close the connection
+        // if we expect a continuation and receive an unknown frame.
+        DLOG(ERROR) << "The framer was expecting to receive a CONTINUATION "
+                    << "frame, but instead received an unknown frame of type "
+                    << frame_type_field;
+        set_error(SPDY_UNEXPECTED_FRAME);
+      } else if (!valid_stream) {
         // Report an invalid frame error and close the stream if the
         // stream_id is not valid.
         DLOG(WARNING) << "Unknown control frame type " << frame_type_field
                       << " received on invalid stream "
                       << current_frame_stream_id_;
         set_error(SPDY_INVALID_CONTROL_FRAME);
+      } else {
+        DVLOG(1) << "Ignoring unknown frame type.";
+        CHANGE_STATE(SPDY_IGNORE_REMAINING_PAYLOAD);
       }
     }
     return DATA;
@@ -1577,7 +1584,7 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
           // expect_continuation_ != 0, so this doubles as a check
           // that current_frame_stream_id != 0.
           if (current_frame_stream_id_ != expect_continuation_) {
-            set_error(SPDY_INVALID_CONTROL_FRAME);
+            set_error(SPDY_UNEXPECTED_FRAME);
             return original_len - len;
           }
           if (current_frame_flags_ & HEADERS_FLAG_END_HEADERS) {
@@ -2181,8 +2188,8 @@ size_t SpdyFramer::ProcessDataFramePayload(const char* data, size_t len) {
     if (amount_to_forward && state_ != SPDY_IGNORE_REMAINING_PAYLOAD) {
       // Only inform the visitor if there is data.
       if (amount_to_forward) {
-        visitor_->OnStreamFrameData(
-            current_frame_stream_id_, data, amount_to_forward, false);
+        visitor_->OnStreamFrameData(current_frame_stream_id_, data,
+                                    amount_to_forward);
       }
     }
     data += amount_to_forward;

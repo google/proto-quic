@@ -47,11 +47,8 @@ class QuicServerSessionVisitor {
                                   const std::string& error_details) = 0;
   virtual void OnWriteBlocked(QuicBlockedWriterInterface* blocked_writer) = 0;
   // Called after the given connection is added to the time-wait list.
-  virtual void OnConnectionAddedToTimeWaitList(QuicConnectionId connection_id) {
-  }
-  // Called after the given connection is removed from the time-wait list.
-  virtual void OnConnectionRemovedFromTimeWaitList(
-      QuicConnectionId connection_id) {}
+  virtual void OnConnectionAddedToTimeWaitList(
+      QuicConnectionId connection_id) = 0;
 };
 
 class QuicServerSessionBase : public QuicSpdySession {

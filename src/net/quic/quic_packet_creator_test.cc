@@ -178,10 +178,10 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
 
   // Returns the number of bytes consumed by the header of packet, including
   // the version.
-  size_t GetPacketHeaderOverhead() {
+  size_t GetPacketHeaderOverhead(QuicVersion version) {
     return GetPacketHeaderSize(
-        creator_.connection_id_length(), kIncludeVersion, !kIncludePathId,
-        !kIncludeDiversificationNonce,
+        version, creator_.connection_id_length(), kIncludeVersion,
+        !kIncludePathId, !kIncludeDiversificationNonce,
         QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
   }
 
@@ -538,8 +538,8 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
 }
 
 TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPacketAndPadding) {
-  const size_t overhead = GetPacketHeaderOverhead() + GetEncryptionOverhead() +
-                          GetStreamFrameOverhead();
+  const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
+                          GetEncryptionOverhead() + GetStreamFrameOverhead();
   size_t capacity = kDefaultMaxPacketSize - overhead;
   for (int delta = -5; delta <= 0; ++delta) {
     string data(capacity + delta, 'A');
@@ -636,7 +636,8 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataFinOnly) {
 }
 
 TEST_P(QuicPacketCreatorTest, CreateAllFreeBytesForStreamFrames) {
-  const size_t overhead = GetPacketHeaderOverhead() + GetEncryptionOverhead();
+  const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
+                          GetEncryptionOverhead();
   for (size_t i = overhead; i < overhead + 100; ++i) {
     creator_.SetMaxPacketLength(i);
     const bool should_have_room = i > overhead + GetStreamFrameOverhead();
@@ -660,8 +661,8 @@ TEST_P(QuicPacketCreatorTest, CreateAllFreeBytesForStreamFrames) {
 
 TEST_P(QuicPacketCreatorTest, StreamFrameConsumption) {
   // Compute the total overhead for a single frame in packet.
-  const size_t overhead = GetPacketHeaderOverhead() + GetEncryptionOverhead() +
-                          GetStreamFrameOverhead();
+  const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
+                          GetEncryptionOverhead() + GetStreamFrameOverhead();
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
   for (int delta = -5; delta <= 5; ++delta) {
@@ -688,8 +689,8 @@ TEST_P(QuicPacketCreatorTest, StreamFrameConsumption) {
 
 TEST_P(QuicPacketCreatorTest, CryptoStreamFramePacketPadding) {
   // Compute the total overhead for a single frame in packet.
-  const size_t overhead = GetPacketHeaderOverhead() + GetEncryptionOverhead() +
-                          GetStreamFrameOverhead();
+  const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
+                          GetEncryptionOverhead() + GetStreamFrameOverhead();
   ASSERT_GT(kMaxPacketSize, overhead);
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
@@ -724,8 +725,8 @@ TEST_P(QuicPacketCreatorTest, CryptoStreamFramePacketPadding) {
 
 TEST_P(QuicPacketCreatorTest, NonCryptoStreamFramePacketNonPadding) {
   // Compute the total overhead for a single frame in packet.
-  const size_t overhead = GetPacketHeaderOverhead() + GetEncryptionOverhead() +
-                          GetStreamFrameOverhead();
+  const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
+                          GetEncryptionOverhead() + GetStreamFrameOverhead();
   ASSERT_GT(kDefaultMaxPacketSize, overhead);
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
@@ -882,7 +883,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
   EXPECT_FALSE(creator_.HasPendingFrames());
   EXPECT_EQ(max_plaintext_size -
                 GetPacketHeaderSize(
-                    creator_.connection_id_length(),
+                    client_framer_.version(), creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
                     QuicPacketCreatorPeer::SendPathIdInPacket(&creator_),
                     !kIncludeDiversificationNonce, PACKET_1BYTE_PACKET_NUMBER),
@@ -924,7 +925,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
   EXPECT_FALSE(creator_.HasPendingFrames());
   EXPECT_EQ(max_plaintext_size -
                 GetPacketHeaderSize(
-                    creator_.connection_id_length(),
+                    client_framer_.version(), creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
                     /*include_path_id=*/false, !kIncludeDiversificationNonce,
                     PACKET_1BYTE_PACKET_NUMBER),
@@ -964,7 +965,10 @@ TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithLargePacketSize) {
 
   // Ensure the packet is successfully created, and the packet size estimate
   // matches the serialized packet length.
-  EXPECT_CALL(entropy_calculator_, EntropyHash(_)).WillOnce(testing::Return(0));
+  if (GetParam().version <= QUIC_VERSION_33) {
+    EXPECT_CALL(entropy_calculator_, EntropyHash(_))
+        .WillOnce(testing::Return(0));
+  }
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   size_t est_packet_size = creator_.PacketSize();
@@ -1002,7 +1006,9 @@ TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithSmallPacketSize) {
 
   // Ensure the packet is successfully created, and the packet size estimate
   // may not match the serialized packet length.
-  EXPECT_CALL(entropy_calculator_, EntropyHash(_)).WillOnce(Return(0));
+  if (GetParam().version <= QUIC_VERSION_33) {
+    EXPECT_CALL(entropy_calculator_, EntropyHash(_)).WillOnce(Return(0));
+  }
   size_t est_packet_size = creator_.PacketSize();
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));

@@ -223,7 +223,7 @@ QuicEncryptedPacket* QuicConnectionPeer::GetConnectionClosePacket(
       connection->termination_packets_->empty()) {
     return nullptr;
   }
-  return (*connection->termination_packets_)[0];
+  return (*connection->termination_packets_)[0].get();
 }
 
 // static

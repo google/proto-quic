@@ -137,6 +137,11 @@ bool FeatureList::IsEnabled(const Feature& feature) {
 }
 
 // static
+FieldTrial* FeatureList::GetFieldTrial(const Feature& feature) {
+  return GetInstance()->GetAssociatedFieldTrial(feature);
+}
+
+// static
 std::vector<std::string> FeatureList::SplitFeatureListString(
     const std::string& input) {
   return SplitString(input, ",", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
@@ -215,6 +220,20 @@ bool FeatureList::IsFeatureEnabled(const Feature& feature) {
   }
   // Otherwise, return the default state.
   return feature.default_state == FEATURE_ENABLED_BY_DEFAULT;
+}
+
+FieldTrial* FeatureList::GetAssociatedFieldTrial(const Feature& feature) {
+  DCHECK(initialized_);
+  DCHECK(IsValidFeatureOrFieldTrialName(feature.name)) << feature.name;
+  DCHECK(CheckFeatureIdentity(feature)) << feature.name;
+
+  auto it = overrides_.find(feature.name);
+  if (it != overrides_.end()) {
+    const OverrideEntry& entry = it->second;
+    return entry.field_trial;
+  }
+
+  return nullptr;
 }
 
 void FeatureList::RegisterOverridesFromCommandLine(
