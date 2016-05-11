@@ -150,6 +150,51 @@
       ],
     },
     {
+      'target_name': 'base_i18n',
+      'type': '<(component)',
+      'variables': {
+        'enable_wexit_time_destructors': 1,
+        'optimize': 'max',
+        'base_i18n_target': 1,
+      },
+      'dependencies': [
+        'base',
+        'third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
+        '../third_party/icu/icu.gyp:icui18n',
+        '../third_party/icu/icu.gyp:icuuc',
+      ],
+      'conditions': [
+        ['OS == "win"', {
+          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+          'msvs_disabled_warnings': [
+            4267,
+          ],
+        }],
+        ['icu_use_data_file_flag==1', {
+          'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE'],
+        }, { # else icu_use_data_file_flag !=1
+          'conditions': [
+            ['OS=="win"', {
+              'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_SHARED'],
+            }, {
+              'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC'],
+            }],
+          ],
+        }],
+        ['OS == "ios"', {
+          'toolsets': ['host', 'target'],
+        }],
+      ],
+      'export_dependent_settings': [
+        'base',
+        '../third_party/icu/icu.gyp:icuuc',
+        '../third_party/icu/icu.gyp:icui18n',
+      ],
+      'includes': [
+        '../build/android/increase_size_for_speed.gypi',
+      ],
+    },
+    {
       # This is the subset of files from base that should not be used with a
       # dynamic library. Note that this library cannot depend on base because
       # base depends on base_static.

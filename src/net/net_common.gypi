@@ -229,6 +229,34 @@
         ],
          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
         'msvs_disabled_warnings': [4267, ],
+        'all_dependent_settings': {
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalDependencies': [
+                'crypt32.lib',
+                'dhcpcsvc.lib',
+                'iphlpapi.lib',
+                'rpcrt4.lib',
+                'secur32.lib',
+                'urlmon.lib',
+                'winhttp.lib',
+              ],
+            },
+          },
+        },
+        'msvs_settings': {
+          'VCLinkerTool': {
+            'AdditionalDependencies': [
+              'crypt32.lib',
+              'dhcpcsvc.lib',
+              'iphlpapi.lib',
+              'rpcrt4.lib',
+              'secur32.lib',
+              'urlmon.lib',
+              'winhttp.lib',
+            ],
+          },
+        },
       }, { # else: OS != "win"
         'sources!': [
           'base/winsock_init.cc',
