@@ -1,4 +1,6 @@
-Builders switching from make to ninja will clobber on this.
+Compile on cc_unittests fails due to symbols removed in r185063.
+Improper dependency for create_nmf.py broke in r240802, fixed in r240860.
+Switch to VS2015 Update 2 almost-done
 Need to clobber everything due to an IDL change in r154579 (blink)
 Need to clobber everything due to gen file moves in r175513 (Blink)
 Clobber to get rid of obselete test plugin after r248358
@@ -12,3 +14,4 @@ Clobber to fix missing NaCl gyp dependencies (crbug.com/427427).
 Another clobber for missing NaCl gyp deps (crbug.com/427427).
 Clobber to fix GN not picking up increased ID range (crbug.com/444902)
 Remove NaCl toolchains from the output dir (crbug.com/456902)
+Clobber to delete stale generated files (crbug.com/510086)
