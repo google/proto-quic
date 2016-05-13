@@ -120,6 +120,26 @@
         'filter/brotli_filter.cc',
       ],
       'includes': [ 'net_common.gypi' ],
+      'conditions': [
+        ['os_posix == 1', {
+          'sources': [
+             # Begin additions
+             'base/crypto_module_nss.cc',
+             'cert/cert_database_nss.cc',
+             'cert/cert_verify_proc_nss.cc',
+             'cert/cert_verify_proc_nss.h',
+             'cert/nss_cert_database.cc',
+             'cert/nss_cert_database.h',
+             'cert/test_root_certs_nss.cc',
+             'cert/x509_certificate_nss.cc',
+             'cert/x509_util_nss.h',
+             'cert/x509_util_nss.cc',
+             'cert_net/nss_ocsp.cc',
+             'cert_net/nss_ocsp.h',
+             # End additions
+          ],
+        }],
+      ],
     },
     {
       # GN version: //net:net_unittests
