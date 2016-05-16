@@ -45,9 +45,9 @@ class MockQuicCryptoStream : public QuicCryptoStream {
 class QuicCryptoStreamTest : public ::testing::Test {
  public:
   QuicCryptoStreamTest()
-      : connection_(new MockConnection(&helper_,
-                                       &alarm_factory_,
-                                       Perspective::IS_CLIENT)),
+      : connection_(new MockQuicConnection(&helper_,
+                                           &alarm_factory_,
+                                           Perspective::IS_CLIENT)),
         session_(connection_),
         stream_(&session_) {
     message_.set_tag(kSHLO);
@@ -62,9 +62,9 @@ class QuicCryptoStreamTest : public ::testing::Test {
   }
 
  protected:
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockConnection* connection_;
+  MockQuicConnection* connection_;
   MockQuicSpdySession session_;
   MockQuicCryptoStream stream_;
   CryptoHandshakeMessage message_;

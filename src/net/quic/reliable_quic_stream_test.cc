@@ -105,7 +105,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   }
 
   void Initialize(bool stream_should_process_data) {
-    connection_ = new StrictMock<MockConnection>(
+    connection_ = new StrictMock<MockQuicConnection>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER, supported_versions_);
     session_.reset(new StrictMock<MockQuicSession>(connection_));
 
@@ -149,9 +149,9 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   }
 
  protected:
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockConnection* connection_;
+  MockQuicConnection* connection_;
   std::unique_ptr<MockQuicSession> session_;
   TestStream* stream_;
   SpdyHeaderBlock headers_;

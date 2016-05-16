@@ -220,8 +220,12 @@ ct::CertPolicyCompliance CheckCertPolicyCompliance(
   // the doubt in the event a log is revoked in the midst of processing
   // a precertificate and issuing the certificate.
   base::Time issuance_date = base::Time::Max();
-  for (const auto& sct : verified_scts)
+  for (const auto& sct : verified_scts) {
+    base::Time unused;
+    if (ct::IsLogDisqualified(sct->log_id, &unused))
+      continue;
     issuance_date = std::min(sct->timestamp, issuance_date);
+  }
 
   bool has_valid_google_sct = false;
   bool has_valid_nongoogle_sct = false;
@@ -231,20 +235,36 @@ ct::CertPolicyCompliance CheckCertPolicyCompliance(
   bool has_embedded_nongoogle_sct = false;
   std::vector<base::StringPiece> embedded_log_ids;
   for (const auto& sct : verified_scts) {
+    base::Time disqualification_date;
+    bool is_disqualified =
+        ct::IsLogDisqualified(sct->log_id, &disqualification_date);
+    if (is_disqualified &&
+        sct->origin != ct::SignedCertificateTimestamp::SCT_EMBEDDED) {
+      // For OCSP and TLS delivered SCTs, only SCTs that are valid at the
+      // time of check are accepted.
+      continue;
+    }
+
     if (ct::IsLogOperatedByGoogle(sct->log_id)) {
-      has_valid_google_sct = true;
+      has_valid_google_sct |= !is_disqualified;
       if (sct->origin == ct::SignedCertificateTimestamp::SCT_EMBEDDED)
         has_embedded_google_sct = true;
     } else {
-      has_valid_nongoogle_sct = true;
+      has_valid_nongoogle_sct |= !is_disqualified;
       if (sct->origin == ct::SignedCertificateTimestamp::SCT_EMBEDDED)
         has_embedded_nongoogle_sct = true;
     }
     if (sct->origin != ct::SignedCertificateTimestamp::SCT_EMBEDDED) {
       has_valid_nonembedded_sct = true;
     } else {
-      has_valid_embedded_sct = true;
-      embedded_log_ids.push_back(sct->log_id);
+      has_valid_embedded_sct |= !is_disqualified;
+      // If the log is disqualified, it only counts towards quorum if
+      // the certificate was issued before the log was disqualified, and the
+      // SCT was obtained before the log was disqualified.
+      if (!is_disqualified || (issuance_date < disqualification_date &&
+                               sct->timestamp < disqualification_date)) {
+        embedded_log_ids.push_back(sct->log_id);
+      }
     }
   }
 

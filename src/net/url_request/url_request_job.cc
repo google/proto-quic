@@ -15,7 +15,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
 #include "net/base/auth.h"
 #include "net/base/host_port_pair.h"
@@ -199,8 +199,8 @@ void URLRequestJob::PopulateNetErrorDetails(NetErrorDetails* details) const {
   return;
 }
 
-Filter* URLRequestJob::SetupFilter() const {
-  return NULL;
+std::unique_ptr<Filter> URLRequestJob::SetupFilter() const {
+  return nullptr;
 }
 
 bool URLRequestJob::IsRedirectResponse(GURL* location,
@@ -446,7 +446,7 @@ void URLRequestJob::NotifyHeadersComplete() {
 
   has_handled_response_ = true;
   if (request_->status().is_success())
-    filter_.reset(SetupFilter());
+    filter_ = SetupFilter();
 
   if (!filter_.get()) {
     std::string content_length;

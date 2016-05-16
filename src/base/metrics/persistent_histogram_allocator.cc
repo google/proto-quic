@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "base/files/important_file_writer.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
@@ -45,7 +46,8 @@ enum : uint32_t {
 // GlobalHistogramAllocator objects) are explicitly forbidden from doing
 // anything essential at exit anyway due to the fact that they depend on data
 // managed elsewhere and which could be destructed first.
-GlobalHistogramAllocator* g_allocator;
+GlobalHistogramAllocator* g_allocator = nullptr;
+bool g_allocator_enabled = false;
 
 // Take an array of range boundaries and create a proper BucketRanges object
 // which is returned to the caller. A return of nullptr indicates that the
@@ -655,6 +657,18 @@ void GlobalHistogramAllocator::CreateWithSharedMemoryHandle(
 }
 
 // static
+void GlobalHistogramAllocator::Enable() {
+  DCHECK(g_allocator);
+  g_allocator_enabled = true;
+}
+
+// static
+void GlobalHistogramAllocator::Disable() {
+  DCHECK(g_allocator);
+  g_allocator_enabled = false;
+}
+
+// static
 void GlobalHistogramAllocator::Set(
     std::unique_ptr<GlobalHistogramAllocator> allocator) {
   // Releasing or changing an allocator is extremely dangerous because it
@@ -662,6 +676,7 @@ void GlobalHistogramAllocator::Set(
   // also released, future accesses to those histograms will seg-fault.
   CHECK(!g_allocator);
   g_allocator = allocator.release();
+  g_allocator_enabled = true;
   size_t existing = StatisticsRecorder::GetHistogramCount();
 
   DVLOG_IF(1, existing)
@@ -670,6 +685,11 @@ void GlobalHistogramAllocator::Set(
 
 // static
 GlobalHistogramAllocator* GlobalHistogramAllocator::Get() {
+  return g_allocator_enabled ? g_allocator : nullptr;
+}
+
+// static
+GlobalHistogramAllocator* GlobalHistogramAllocator::GetEvenIfDisabled() {
   return g_allocator;
 }
 
@@ -707,6 +727,37 @@ GlobalHistogramAllocator::ReleaseForTesting() {
   g_allocator = nullptr;
   return WrapUnique(histogram_allocator);
 };
+
+void GlobalHistogramAllocator::SetPersistentLocation(const FilePath& location) {
+  persistent_location_ = location;
+}
+
+bool GlobalHistogramAllocator::WriteToPersistentLocation() {
+  DCHECK(g_allocator_enabled);
+
+#if defined(OS_NACL)
+  // NACL doesn't support file operations, including ImportantFileWriter.
+  NOTREACHED();
+  return false;
+#else
+  // Stop if no destination is set.
+  if (persistent_location_.empty()) {
+    NOTREACHED() << "Could not write \"" << Name() << "\" persistent histograms"
+                 << " to file because no location was set.";
+    return false;
+  }
+
+  StringPiece contents(static_cast<const char*>(data()), used());
+  if (!ImportantFileWriter::WriteFileAtomically(persistent_location_,
+                                                contents)) {
+    LOG(ERROR) << "Could not write \"" << Name() << "\" persistent histograms"
+               << " to file: " << persistent_location_.value();
+    return false;
+  }
+
+  return true;
+#endif
+}
 
 GlobalHistogramAllocator::GlobalHistogramAllocator(
     std::unique_ptr<PersistentMemoryAllocator> memory)

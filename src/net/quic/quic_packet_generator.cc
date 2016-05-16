@@ -91,7 +91,7 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     }
 
     // A stream frame is created and added.
-    size_t bytes_consumed = frame.stream_frame->frame_length;
+    size_t bytes_consumed = frame.stream_frame->data_length;
     if (listener != nullptr) {
       packet_creator_.AddAckListener(listener, bytes_consumed);
     }

@@ -12,28 +12,48 @@ namespace base {
 
 namespace {
 
-// ObserverListThreadSafe is RefCountedThreadSafe, this traits is needed
-// to ensure the LazyInstance will hold a reference to it.
-struct LeakyLazyObserverListTraits :
-    base::internal::LeakyLazyInstanceTraits<
-        ObserverListThreadSafe<MemoryPressureListener> > {
-  static ObserverListThreadSafe<MemoryPressureListener>*
-      New(void* instance) {
-    ObserverListThreadSafe<MemoryPressureListener>* ret =
-        base::internal::LeakyLazyInstanceTraits<
-            ObserverListThreadSafe<MemoryPressureListener>>::New(instance);
-    // Leaky.
-    ret->AddRef();
-    return ret;
+class MemoryPressureObserver {
+ public:
+  MemoryPressureObserver()
+      : async_observers_(new ObserverListThreadSafe<MemoryPressureListener>),
+        sync_observers_(new ObserverList<MemoryPressureListener>) {
   }
+
+  void AddObserver(MemoryPressureListener* listener, bool sync) {
+    async_observers_->AddObserver(listener);
+    if (sync) {
+      AutoLock lock(sync_observers_lock_);
+      sync_observers_->AddObserver(listener);
+    }
+  }
+
+  void RemoveObserver(MemoryPressureListener* listener) {
+    async_observers_->RemoveObserver(listener);
+    AutoLock lock(sync_observers_lock_);
+    sync_observers_->RemoveObserver(listener);
+  }
+
+  void Notify(MemoryPressureListener::MemoryPressureLevel
+      memory_pressure_level) {
+    async_observers_->Notify(FROM_HERE,
+        &MemoryPressureListener::Notify, memory_pressure_level);
+    AutoLock lock(sync_observers_lock_);
+    FOR_EACH_OBSERVER(MemoryPressureListener, *sync_observers_,
+        MemoryPressureListener::SyncNotify(memory_pressure_level));
+  }
+
+ private:
+  scoped_refptr<ObserverListThreadSafe<MemoryPressureListener>>
+      async_observers_;
+  ObserverList<MemoryPressureListener>* sync_observers_;
+  Lock sync_observers_lock_;
+
+  DISALLOW_COPY_AND_ASSIGN(MemoryPressureObserver);
 };
 
-LazyInstance<
-    ObserverListThreadSafe<MemoryPressureListener>,
-    LeakyLazyObserverListTraits> g_observers = LAZY_INSTANCE_INITIALIZER;
+LazyInstance<MemoryPressureObserver>::Leaky g_observer =
+    LAZY_INSTANCE_INITIALIZER;
 
-// All memory pressure notifications within this process will be suppressed if
-// this variable is set to 1.
 subtle::Atomic32 g_notifications_suppressed = 0;
 
 }  // namespace
@@ -41,15 +61,31 @@ subtle::Atomic32 g_notifications_suppressed = 0;
 MemoryPressureListener::MemoryPressureListener(
     const MemoryPressureListener::MemoryPressureCallback& callback)
     : callback_(callback) {
-  g_observers.Get().AddObserver(this);
+  g_observer.Get().AddObserver(this, false);
+}
+
+MemoryPressureListener::MemoryPressureListener(
+    const MemoryPressureListener::MemoryPressureCallback& callback,
+    const MemoryPressureListener::SyncMemoryPressureCallback&
+        sync_memory_pressure_callback)
+    : callback_(callback),
+      sync_memory_pressure_callback_(sync_memory_pressure_callback) {
+  g_observer.Get().AddObserver(this, true);
 }
 
 MemoryPressureListener::~MemoryPressureListener() {
-  g_observers.Get().RemoveObserver(this);
+  g_observer.Get().RemoveObserver(this);
 }
 
 void MemoryPressureListener::Notify(MemoryPressureLevel memory_pressure_level) {
   callback_.Run(memory_pressure_level);
+}
+
+void MemoryPressureListener::SyncNotify(
+    MemoryPressureLevel memory_pressure_level) {
+  if (!sync_memory_pressure_callback_.is_null()) {
+    sync_memory_pressure_callback_.Run(memory_pressure_level);
+  }
 }
 
 // static
@@ -86,8 +122,8 @@ void MemoryPressureListener::SimulatePressureNotification(
 void MemoryPressureListener::DoNotifyMemoryPressure(
     MemoryPressureLevel memory_pressure_level) {
   DCHECK_NE(memory_pressure_level, MEMORY_PRESSURE_LEVEL_NONE);
-  g_observers.Get().Notify(FROM_HERE, &MemoryPressureListener::Notify,
-                           memory_pressure_level);
+
+  g_observer.Get().Notify(memory_pressure_level);
 }
 
 }  // namespace base

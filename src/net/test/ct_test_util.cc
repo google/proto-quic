@@ -15,6 +15,7 @@
 #include "base/strings/stringprintf.h"
 #include "net/cert/ct_serialization.h"
 #include "net/cert/ct_verify_result.h"
+#include "net/cert/merkle_tree_leaf.h"
 #include "net/cert/signed_tree_head.h"
 #include "net/cert/x509_certificate.h"
 
@@ -78,6 +79,8 @@ const char kDefaultDerTbsCert[] =
     "41310e300c0603550408130557616c65733110300e060355040713074572772057656e8201"
     "0030090603551d1304023000";
 
+const char kDefaultExtensions[] = "666f6f626172"; // "foobar"
+
 const char kTestDigitallySigned[] =
     "0403004730450220606e10ae5c2d5a1b0aed49dc4937f48de71a4e9784e9c208dfbfe9ef53"
     "6cf7f2022100beb29c72d7d06d61d06bdb38a069469aa86fe12e18bb7cc45689a2c0187ef5"
@@ -96,6 +99,8 @@ const char kEcP256PublicKey[] =
 
 const char kTestKeyId[] =
     "df1c2ec11500945247a96168325ddc5c7959e8f7c6d388fc002e0bbd3f74d764";
+
+const int64_t kTestTimestamp = INT64_C(1396877277237);
 
 const char kTestSCTSignatureData[] =
     "30450220606e10ae5c2d5a1b0aed49dc4937f48de71a4e9784e9c208dfbfe9ef536cf7f202"
@@ -155,7 +160,6 @@ const char kFakeOCSPResponseIssuerCert[] =
     "3ea1e11df2ccb357a5fed5220f9c6239e8946b9b7517707631d51ab996833d58a022cff5a6"
     "2169ac9258ec110efee78da9ab4a641e3b3c9ee5e8bd291460";
 
-
 const char kFakeOCSPExtensionValue[] = "74657374";  // "test"
 
 // For the sample STH
@@ -166,13 +170,19 @@ const char kSampleSTHTreeHeadSignature[] =
     "6c7a20022100e38464f3c0fd066257b982074f7ac87655e0c8f714768a050b4be9a7b441cb"
     "d3";
 size_t kSampleSTHTreeSize = 21u;
-int64_t kSampleSTHTimestamp = INT64_C(1396877277237);
 
 }  // namespace
 
 void GetX509CertLogEntry(LogEntry* entry) {
   entry->type = ct::LogEntry::LOG_ENTRY_TYPE_X509;
   entry->leaf_certificate = HexToBytes(kDefaultDerCert);
+}
+
+void GetX509CertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
+  tree_leaf->log_id = HexToBytes(kTestKeyId);
+  tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
+  GetX509CertLogEntry(&tree_leaf->log_entry);
+  tree_leaf->extensions = HexToBytes(kDefaultExtensions);
 }
 
 std::string GetDerEncodedX509Cert() { return HexToBytes(kDefaultDerCert); }
@@ -182,6 +192,13 @@ void GetPrecertLogEntry(LogEntry* entry) {
   std::string issuer_hash(HexToBytes(kDefaultIssuerKeyHash));
   memcpy(entry->issuer_key_hash.data, issuer_hash.data(), issuer_hash.size());
   entry->tbs_certificate = HexToBytes(kDefaultDerTbsCert);
+}
+
+void GetPrecertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
+  tree_leaf->log_id = HexToBytes(kTestKeyId);
+  tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
+  GetPrecertLogEntry(&tree_leaf->log_entry);
+  tree_leaf->extensions = HexToBytes(kDefaultExtensions);
 }
 
 std::string GetTestDigitallySigned() {
@@ -258,7 +275,7 @@ std::string GetDerEncodedFakeOCSPResponseIssuerCert() {
 bool GetSampleSignedTreeHead(SignedTreeHead* sth) {
   sth->version = SignedTreeHead::V1;
   sth->timestamp = base::Time::UnixEpoch() +
-                   base::TimeDelta::FromMilliseconds(kSampleSTHTimestamp);
+                   base::TimeDelta::FromMilliseconds(kTestTimestamp);
   sth->tree_size = kSampleSTHTreeSize;
   std::string sha256_root_hash = GetSampleSTHSHA256RootHash();
   memcpy(sth->sha256_root_hash, sha256_root_hash.c_str(), kSthRootHashLength);
@@ -313,7 +330,7 @@ bool GetSampleSTHTreeHeadDecodedSignature(DigitallySigned* signature) {
 }
 
 std::string GetSampleSTHAsJson() {
-  return CreateSignedTreeHeadJsonString(kSampleSTHTreeSize, kSampleSTHTimestamp,
+  return CreateSignedTreeHeadJsonString(kSampleSTHTreeSize, kTestTimestamp,
                                         GetSampleSTHSHA256RootHash(),
                                         GetSampleSTHTreeHeadSignature());
 }

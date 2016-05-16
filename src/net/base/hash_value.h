@@ -19,16 +19,28 @@
 namespace net {
 
 struct NET_EXPORT SHA1HashValue {
-  bool Equals(const SHA1HashValue& other) const;
-
   unsigned char data[20];
 };
 
-struct NET_EXPORT SHA256HashValue {
-  bool Equals(const SHA256HashValue& other) const;
+inline bool operator==(const SHA1HashValue& lhs, const SHA1HashValue& rhs) {
+  return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
+}
 
+inline bool operator!=(const SHA1HashValue& lhs, const SHA1HashValue& rhs) {
+  return !(lhs == rhs);
+}
+
+struct NET_EXPORT SHA256HashValue {
   unsigned char data[32];
 };
+
+inline bool operator==(const SHA256HashValue& lhs, const SHA256HashValue& rhs) {
+  return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
+}
+
+inline bool operator!=(const SHA256HashValue& lhs, const SHA256HashValue& rhs) {
+  return !(lhs == rhs);
+}
 
 enum HashValueTag {
   HASH_VALUE_SHA1,
@@ -41,14 +53,6 @@ class NET_EXPORT HashValue {
   explicit HashValue(const SHA256HashValue& hash);
   explicit HashValue(HashValueTag tag) : tag(tag) {}
   HashValue() : tag(HASH_VALUE_SHA1) {}
-
-  // Check for equality of hash values
-  // This function may have VARIABLE timing which leaks information
-  // about its inputs.  For example it may exit early once a
-  // nonequal character is discovered.  Thus, for security reasons
-  // this function MUST NOT be used with secret values (such as
-  // password hashes, MAC tags, etc.)
-  bool Equals(const HashValue& other) const;
 
   // Serializes/Deserializes hashes in the form of
   // <hash-name>"/"<base64-hash-value>
@@ -82,6 +86,14 @@ class NET_EXPORT HashValue {
   } fingerprint;
 };
 
+inline bool operator==(const HashValue& lhs, const HashValue& rhs) {
+  return lhs.tag == rhs.tag && memcmp(lhs.data(), rhs.data(), lhs.size()) == 0;
+}
+
+inline bool operator!=(const HashValue& lhs, const HashValue& rhs) {
+  return !(lhs == rhs);
+}
+
 typedef std::vector<HashValue> HashValueVector;
 
 
@@ -99,18 +111,6 @@ class SHA256HashValueLessThan {
                   const SHA256HashValue& rhs) const {
     return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) < 0;
   }
-};
-
-class HashValuesEqual {
-  public:
-  explicit HashValuesEqual(const HashValue& fingerprint) :
-      fingerprint_(fingerprint) {}
-
-  bool operator()(const HashValue& other) const {
-    return fingerprint_.Equals(other);
-  }
-
-  const HashValue& fingerprint_;
 };
 
 // IsSHA256HashInSortedArray returns true iff |hash| is in |array|, a sorted

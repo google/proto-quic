@@ -11,6 +11,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
@@ -125,12 +126,20 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
       return false;
     }
 
-    if (headers->find(name) != headers->end()) {
-      DLOG(ERROR) << "Duplicate header '" << name << "' found.";
-      return false;
+    auto iter = headers->find(name);
+    if (iter == headers->end()) {
+      (*headers)[name] = p.second;
+    } else if (name == "cookie") {
+      // Obeys section 8.1.2.5 in RFC 7540 for cookie reconstruction.
+      headers->ReplaceOrAppendHeader(
+          name, base::StringPrintf("%s; %s", iter->second.as_string().c_str(),
+                                   p.second.c_str()));
+    } else {
+      // This header had multiple values, so it must be reconstructed.
+      string value = base::StringPrintf(
+          "%s%c%s", iter->second.as_string().c_str(), '\0', p.second.c_str());
+      headers->ReplaceOrAppendHeader(name, value);
     }
-
-    (*headers)[name] = p.second;
   }
 
   if (ContainsKey(*headers, "content-length")) {

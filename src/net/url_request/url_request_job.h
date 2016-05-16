@@ -155,7 +155,7 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // This class takes ownership of the returned Filter.
   //
   // The default implementation returns NULL.
-  virtual Filter* SetupFilter() const;
+  virtual std::unique_ptr<Filter> SetupFilter() const;
 
   // Called to determine if this response is a redirect.  Only makes sense
   // for some types of requests.  This method returns true if the response

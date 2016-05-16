@@ -271,7 +271,7 @@ CryptoTestUtils::FakeClientOptions::FakeClientOptions()
 
 // static
 int CryptoTestUtils::HandshakeWithFakeServer(
-    MockConnectionHelper* helper,
+    MockQuicConnectionHelper* helper,
     MockAlarmFactory* alarm_factory,
     PacketSavingConnection* client_conn,
     QuicCryptoClientStream* client,
@@ -305,7 +305,7 @@ int CryptoTestUtils::HandshakeWithFakeServer(
 
 // static
 int CryptoTestUtils::HandshakeWithFakeClient(
-    MockConnectionHelper* helper,
+    MockQuicConnectionHelper* helper,
     MockAlarmFactory* alarm_factory,
     PacketSavingConnection* server_conn,
     QuicCryptoServerStream* server,
@@ -792,7 +792,7 @@ void CryptoTestUtils::MovePackets(PacketSavingConnection* source_conn,
 
     for (const QuicStreamFrame* stream_frame : framer.stream_frames()) {
       ASSERT_TRUE(crypto_framer.ProcessInput(
-          StringPiece(stream_frame->frame_buffer, stream_frame->frame_length)));
+          StringPiece(stream_frame->data_buffer, stream_frame->data_length)));
       ASSERT_FALSE(crypto_visitor.error());
     }
   }

@@ -54,8 +54,9 @@ TEST(CryptoUtilsTest, NormalizeHostname) {
   };
 
   for (size_t i = 0; i < arraysize(tests); ++i) {
-    EXPECT_EQ(std::string(tests[i].expected),
-              CryptoUtils::NormalizeHostname(tests[i].input));
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s", tests[i].input);
+    EXPECT_EQ(string(tests[i].expected), CryptoUtils::NormalizeHostname(buf));
   }
 }
 
@@ -92,17 +93,14 @@ TEST(CryptoUtilsTest, TestExportKeyingMaterial) {
 
   for (size_t i = 0; i < arraysize(test_vector); i++) {
     // Decode the test vector.
-    string subkey_secret;
-    string label;
-    string context;
-    ASSERT_TRUE(DecodeHexString(test_vector[i].subkey_secret, &subkey_secret));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].label, &label));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].context, &context));
+    string subkey_secret = QuicUtils::HexDecode(test_vector[i].subkey_secret);
+    string label = QuicUtils::HexDecode(test_vector[i].label);
+    string context = QuicUtils::HexDecode(test_vector[i].context);
     size_t result_len = test_vector[i].result_len;
     bool expect_ok = test_vector[i].expected != nullptr;
     string expected;
     if (expect_ok) {
-      ASSERT_TRUE(DecodeHexString(test_vector[i].expected, &expected));
+      expected = QuicUtils::HexDecode(test_vector[i].expected);
     }
 
     string result;

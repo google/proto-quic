@@ -546,8 +546,10 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   SpdyPriority GetHighestPriority() const { return 0; }
 
-  // Interpolates SpdyPriority values into SPDY4/HTTP2 priority weights,
-  // and vice versa.
+  // Interpolates SpdyPriority values into SPDY4/HTTP2 priority weights, and
+  // vice versa. Note that these methods accept/return weight values in their
+  // on-the-wire form, i.e. in range [0, 255], rather than their effective
+  // values in range [1, 256].
   static uint8_t MapPriorityToWeight(SpdyPriority priority);
   static SpdyPriority MapWeightToPriority(uint8_t weight);
 

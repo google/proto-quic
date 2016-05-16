@@ -34,7 +34,7 @@
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
@@ -1748,19 +1748,19 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     }
 
     net_log_.EndEventWithNetErrorCode(NetLog::TYPE_HOST_RESOLVER_IMPL_JOB,
-                                      entry.error);
+                                      entry.error());
 
     DCHECK(!requests_.empty());
 
-    if (entry.error == OK) {
+    if (entry.error() == OK) {
       // Record this histogram here, when we know the system has a valid DNS
       // configuration.
       UMA_HISTOGRAM_BOOLEAN("AsyncDNS.HaveDnsConfig",
                             resolver_->received_dns_config_);
     }
 
-    bool did_complete = (entry.error != ERR_NETWORK_CHANGED) &&
-                        (entry.error != ERR_HOST_RESOLVER_QUEUE_TOO_LARGE);
+    bool did_complete = (entry.error() != ERR_NETWORK_CHANGED) &&
+                        (entry.error() != ERR_HOST_RESOLVER_QUEUE_TOO_LARGE);
     if (did_complete)
       resolver_->CacheResult(key_, entry, ttl);
 
@@ -1771,13 +1771,13 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
 
       DCHECK_EQ(this, req->job());
       // Update the net log and notify registered observers.
-      LogFinishRequest(req->source_net_log(), req->info(), entry.error);
+      LogFinishRequest(req->source_net_log(), req->info(), entry.error());
       if (did_complete) {
         // Record effective total time from creation to completion.
         RecordTotalTime(had_dns_config_, req->info().is_speculative(),
                         base::TimeTicks::Now() - req->request_time());
       }
-      req->OnComplete(entry.error, entry.addrlist);
+      req->OnComplete(entry.error(), entry.addresses());
 
       // Check if the resolver was destroyed as a result of running the
       // callback. If it was, we could continue, but we choose to bail.
@@ -2141,11 +2141,11 @@ bool HostResolverImpl::ServeFromCache(const Key& key,
   if (!cache_entry)
     return false;
 
-  *net_error = cache_entry->error;
+  *net_error = cache_entry->error();
   if (*net_error == OK) {
     if (cache_entry->has_ttl())
-      RecordTTL(cache_entry->ttl);
-    *addresses = EnsurePortOnAddressList(cache_entry->addrlist, info.port());
+      RecordTTL(cache_entry->ttl());
+    *addresses = EnsurePortOnAddressList(cache_entry->addresses(), info.port());
   }
   return true;
 }

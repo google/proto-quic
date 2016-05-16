@@ -5,9 +5,13 @@
 
 #include "base/macros.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_piece.h"
 #include "net/test/gtest_util.h"
 
+using base::StringPiece;
 using std::string;
+using testing::UnorderedElementsAre;
+using testing::Pair;
 
 namespace net {
 namespace test {
@@ -107,6 +111,126 @@ TEST(SpdyUtilsTest, SerializeAndParseTrailersWithPseudoHeaders) {
   EXPECT_FALSE(SpdyUtils::ParseTrailers(serialized_trailers.data(),
                                         serialized_trailers.size(),
                                         &final_byte_offset, &output_trailers));
+}
+static std::unique_ptr<QuicHeaderList> FromList(
+    const QuicHeaderList::ListType& src) {
+  std::unique_ptr<QuicHeaderList> headers(new QuicHeaderList);
+  headers->OnHeaderBlockStart();
+  for (const auto& p : src) {
+    headers->OnHeader(p.first, p.second);
+  }
+  headers->OnHeaderBlockEnd(0);
+  return headers;
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeaders) {
+  auto headers =
+      FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"baz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(block,
+              UnorderedElementsAre(Pair("foo", "foovalue"),
+                                   Pair("bar", "barvalue"), Pair("baz", "")));
+  EXPECT_EQ(-1, content_length);
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
+  auto headers = FromList({{"foo", "foovalue"}, {"", "barvalue"}, {"baz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_FALSE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
+  auto headers =
+      FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"bAz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_FALSE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
+  auto headers = FromList({{"content-length", "9"},
+                           {"foo", "foovalue"},
+                           {"content-length", "9"},
+                           {"bar", "barvalue"},
+                           {"baz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(block, UnorderedElementsAre(
+                         Pair("foo", "foovalue"), Pair("bar", "barvalue"),
+                         Pair("content-length", StringPiece("9"
+                                                            "\0"
+                                                            "9",
+                                                            3)),
+                         Pair("baz", "")));
+  EXPECT_EQ(9, content_length);
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersInconsistentContentLengths) {
+  auto headers = FromList({{"content-length", "9"},
+                           {"foo", "foovalue"},
+                           {"content-length", "8"},
+                           {"bar", "barvalue"},
+                           {"baz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_FALSE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
+  auto headers = FromList({{"foo", "foovalue"},
+                           {"bar", "barvalue"},
+                           {"baz", ""},
+                           {"foo", "boo"},
+                           {"baz", "buzz"}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(
+      block, UnorderedElementsAre(Pair("foo", StringPiece("foovalue\0boo", 12)),
+                                  Pair("bar", "barvalue"),
+                                  Pair("baz", StringPiece("\0buzz", 5))));
+  EXPECT_EQ(-1, content_length);
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersCookie) {
+  auto headers = FromList({{"foo", "foovalue"},
+                           {"bar", "barvalue"},
+                           {"cookie", "value1"},
+                           {"baz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(block, UnorderedElementsAre(
+                         Pair("foo", "foovalue"), Pair("bar", "barvalue"),
+                         Pair("cookie", "value1"), Pair("baz", "")));
+  EXPECT_EQ(-1, content_length);
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleCookies) {
+  auto headers = FromList({{"foo", "foovalue"},
+                           {"bar", "barvalue"},
+                           {"cookie", "value1"},
+                           {"baz", ""},
+                           {"cookie", "value2"}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(block, UnorderedElementsAre(
+                         Pair("foo", "foovalue"), Pair("bar", "barvalue"),
+                         Pair("cookie", "value1; value2"), Pair("baz", "")));
+  EXPECT_EQ(-1, content_length);
 }
 
 TEST(SpdyUtilsTest, GetUrlFromHeaderBlock) {

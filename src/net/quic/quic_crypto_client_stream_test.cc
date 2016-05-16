@@ -62,7 +62,7 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
 
   QuicCryptoClientStream* stream() { return session_->GetCryptoStream(); }
 
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   PacketSavingConnection* connection_;
   std::unique_ptr<TestQuicSpdyClientSession> session_;
@@ -307,7 +307,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
     FLAGS_enable_quic_stateless_reject_support = true;
   }
 
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
 
   // Client crypto stream state

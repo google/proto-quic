@@ -33,8 +33,8 @@
 
 using net::test::CryptoTestUtils;
 using net::test::GenerateBody;
-using net::test::MockConnection;
-using net::test::MockConnectionHelper;
+using net::test::MockQuicConnection;
+using net::test::MockQuicConnectionHelper;
 using net::test::QuicConfigPeer;
 using net::test::QuicConnectionPeer;
 using net::test::QuicSpdyStreamPeer;
@@ -103,14 +103,17 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
   DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoServerStream);
 };
 
-class MockConnectionWithSendStreamData : public MockConnection {
+class MockQuicConnectionWithSendStreamData : public MockQuicConnection {
  public:
-  MockConnectionWithSendStreamData(MockConnectionHelper* helper,
-                                   MockAlarmFactory* alarm_factory,
-                                   Perspective perspective,
-                                   const QuicVersionVector& supported_versions)
-      : MockConnection(helper, alarm_factory, perspective, supported_versions) {
-  }
+  MockQuicConnectionWithSendStreamData(
+      MockQuicConnectionHelper* helper,
+      MockAlarmFactory* alarm_factory,
+      Perspective perspective,
+      const QuicVersionVector& supported_versions)
+      : MockQuicConnection(helper,
+                           alarm_factory,
+                           perspective,
+                           supported_versions) {}
 
   MOCK_METHOD5(SendStreamData,
                QuicConsumedData(QuicStreamId id,
@@ -169,7 +172,7 @@ class QuicSimpleServerSessionTest
     config_.SetInitialSessionFlowControlWindowToSend(
         kInitialSessionFlowControlWindowForTest);
 
-    connection_ = new StrictMock<MockConnectionWithSendStreamData>(
+    connection_ = new StrictMock<MockQuicConnectionWithSendStreamData>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
     session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,
@@ -188,9 +191,9 @@ class QuicSimpleServerSessionTest
   }
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  StrictMock<MockConnectionWithSendStreamData>* connection_;
+  StrictMock<MockQuicConnectionWithSendStreamData>* connection_;
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;
@@ -406,7 +409,7 @@ class QuicSimpleServerSessionServerPushTest
     copt.push_back(kSPSH);
     QuicConfigPeer::SetReceivedConnectionOptions(&config_, copt);
 
-    connection_ = new StrictMock<MockConnectionWithSendStreamData>(
+    connection_ = new StrictMock<MockQuicConnectionWithSendStreamData>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
     session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,

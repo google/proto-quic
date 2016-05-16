@@ -408,6 +408,16 @@ typedef uint8_t SpdyPriority;
 const SpdyPriority kV3HighestPriority = 0;
 const SpdyPriority kV3LowestPriority = 7;
 
+// HTTP/2 stream weights are integers in range [1, 256], as specified in RFC
+// 7540 section 5.3.2. Default stream weight is defined in section 5.3.5.
+const int kHttp2MinStreamWeight = 1;
+const int kHttp2MaxStreamWeight = 256;
+const int kHttp2DefaultStreamWeight = 16;
+
+// Reserved ID for root stream of HTTP/2 stream dependency tree, as specified
+// in RFC 7540 section 5.3.1.
+const unsigned int kHttp2RootStreamId = 0;
+
 typedef uint64_t SpdyPingId;
 
 typedef std::string SpdyProtocolId;

@@ -104,7 +104,7 @@ std::unique_ptr<base::Value> NetLogQuicStreamFrameCallback(
   dict->SetInteger("stream_id", frame->stream_id);
   dict->SetBoolean("fin", frame->fin);
   dict->SetString("offset", base::Uint64ToString(frame->offset));
-  dict->SetInteger("length", frame->frame_length);
+  dict->SetInteger("length", frame->data_length);
   return std::move(dict);
 }
 
@@ -428,6 +428,7 @@ void QuicConnectionLogger::OnFrameAddedToPacket(const QuicFrame& frame) {
 
 void QuicConnectionLogger::OnPacketSent(
     const SerializedPacket& serialized_packet,
+    QuicPathId /* original_path_id */,
     QuicPacketNumber original_packet_number,
     TransmissionType transmission_type,
     QuicTime sent_time) {

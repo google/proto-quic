@@ -182,15 +182,16 @@ NET_EXPORT bool ParseCIDRBlock(const std::string& cidr_literal,
 // Returns true on success, and fills |ip_address| with the numeric value.
 // In other words, |hostname| must be an IPv4 literal, or an IPv6 literal
 // surrounded by brackets as in [::1].
-NET_EXPORT bool ParseURLHostnameToAddress(const std::string& hostname,
+NET_EXPORT bool ParseURLHostnameToAddress(const base::StringPiece& hostname,
                                           IPAddress* ip_address)
     WARN_UNUSED_RESULT;
 
 // Returns number of matching initial bits between the addresses |a1| and |a2|.
-unsigned CommonPrefixLength(const IPAddress& a1, const IPAddress& a2);
+NET_EXPORT unsigned CommonPrefixLength(const IPAddress& a1,
+                                       const IPAddress& a2);
 
 // Computes the number of leading 1-bits in |mask|.
-unsigned MaskPrefixLength(const IPAddress& mask);
+NET_EXPORT unsigned MaskPrefixLength(const IPAddress& mask);
 
 // Checks whether |address| starts with |prefix|. This provides similar
 // functionality as IPAddressMatchesPrefix() but doesn't perform automatic IPv4

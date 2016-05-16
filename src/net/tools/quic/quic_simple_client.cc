@@ -6,7 +6,7 @@
 
 #include "base/logging.h"
 #include "base/run_loop.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_info.h"
@@ -239,6 +239,7 @@ void QuicSimpleClient::Disconnect() {
 
   reset_writer();
   packet_reader_.reset();
+  packet_reader_started_ = false;
 
   initialized_ = false;
 }

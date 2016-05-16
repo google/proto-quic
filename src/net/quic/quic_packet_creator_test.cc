@@ -170,8 +170,8 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
     EXPECT_EQ(STREAM_FRAME, frame.type);
     ASSERT_TRUE(frame.stream_frame);
     EXPECT_EQ(stream_id, frame.stream_frame->stream_id);
-    EXPECT_EQ(data, StringPiece(frame.stream_frame->frame_buffer,
-                                frame.stream_frame->frame_length));
+    EXPECT_EQ(data, StringPiece(frame.stream_frame->data_buffer,
+                                frame.stream_frame->data_length));
     EXPECT_EQ(offset, frame.stream_frame->offset);
     EXPECT_EQ(fin, frame.stream_frame->fin);
   }
@@ -606,7 +606,7 @@ TEST_P(QuicPacketCreatorTest, ConsumeData) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   CheckStreamFrame(frame, 1u, "test", 0u, false);
   EXPECT_TRUE(creator_.HasPendingFrames());
@@ -618,7 +618,7 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataFin) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 10u, true, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   CheckStreamFrame(frame, 1u, "test", 10u, true);
   EXPECT_TRUE(creator_.HasPendingFrames());
@@ -629,7 +629,7 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataFinOnly) {
   QuicIOVector io_vector(nullptr, 0, 0);
   ASSERT_TRUE(creator_.ConsumeData(1u, io_vector, 0u, 0u, true, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(0u, consumed);
   CheckStreamFrame(frame, 1u, string(), 0u, true);
   EXPECT_TRUE(creator_.HasPendingFrames());
@@ -652,7 +652,7 @@ TEST_P(QuicPacketCreatorTest, CreateAllFreeBytesForStreamFrames) {
       ASSERT_TRUE(creator_.ConsumeData(kClientDataStreamId1, io_vector, 0u,
                                        kOffset, false, false, &frame));
       ASSERT_TRUE(frame.stream_frame);
-      size_t bytes_consumed = frame.stream_frame->frame_length;
+      size_t bytes_consumed = frame.stream_frame->data_length;
       EXPECT_LT(0u, bytes_consumed);
       creator_.Flush();
     }
@@ -706,7 +706,7 @@ TEST_P(QuicPacketCreatorTest, CryptoStreamFramePacketPadding) {
     ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, kOffset,
                                      false, true, &frame));
     ASSERT_TRUE(frame.stream_frame);
-    size_t bytes_consumed = frame.stream_frame->frame_length;
+    size_t bytes_consumed = frame.stream_frame->data_length;
     EXPECT_LT(0u, bytes_consumed);
     creator_.Flush();
     ASSERT_TRUE(serialized_packet_.encrypted_buffer);
@@ -741,7 +741,7 @@ TEST_P(QuicPacketCreatorTest, NonCryptoStreamFramePacketNonPadding) {
     ASSERT_TRUE(creator_.ConsumeData(kClientDataStreamId1, io_vector, 0u,
                                      kOffset, false, false, &frame));
     ASSERT_TRUE(frame.stream_frame);
-    size_t bytes_consumed = frame.stream_frame->frame_length;
+    size_t bytes_consumed = frame.stream_frame->data_length;
     EXPECT_LT(0u, bytes_consumed);
     creator_.Flush();
     ASSERT_TRUE(serialized_packet_.encrypted_buffer);
@@ -866,7 +866,7 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataLargerThanOneStreamFrame) {
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   ASSERT_TRUE(creator_.ConsumeData(1u, io_vector, 0u, 0u, true, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(payload_length, consumed);
   const string payload(payload_length, 'a');
   CheckStreamFrame(frame, 1u, payload, 0u, false);
@@ -899,7 +899,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
 
@@ -959,7 +959,7 @@ TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithLargePacketSize) {
   ASSERT_TRUE(
       creator_.ConsumeData(2u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
 
@@ -1054,7 +1054,7 @@ TEST_P(QuicPacketCreatorTest, SetCurrentPath) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
   EXPECT_EQ(0u, creator_.packet_number());
@@ -1086,7 +1086,7 @@ TEST_P(QuicPacketCreatorTest, SetCurrentPath) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  consumed = frame.stream_frame->frame_length;
+  consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
 
@@ -1145,7 +1145,7 @@ TEST_P(QuicPacketCreatorTest, SerializePacketOnDifferentPath) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->frame_length;
+  size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
   EXPECT_EQ(0u, creator_.packet_number());
@@ -1172,7 +1172,7 @@ TEST_P(QuicPacketCreatorTest, SerializePacketOnDifferentPath) {
   ASSERT_TRUE(
       creator_.ConsumeData(1u, io_vector, 0u, 0u, false, false, &frame));
   ASSERT_TRUE(frame.stream_frame);
-  consumed = frame.stream_frame->frame_length;
+  consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
   EXPECT_TRUE(creator_.HasPendingFrames());
   creator_.Flush();

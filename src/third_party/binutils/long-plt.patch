@@ -1,4 +1,4 @@
-commit ee8713f5cfc38be0e92d78f2afbc77d701ef189d
+commit ce3e49806d505721e0875e704de0b6fcba7660ed
 Author: Peter Collingbourne <pcc@google.com>
 Date:   Thu Dec 17 16:50:35 2015 -0800
 
@@ -20,8 +20,33 @@ Date:   Thu Dec 17 16:50:35 2015 -0800
         (Output_data_plt_arm_long): New class.
         * options.h (General_options): Define --long-plt flag.
 
+diff --git a/gold/ChangeLog b/gold/ChangeLog
+index d929cb7..07589c9 100644
+--- a/gold/ChangeLog
++++ b/gold/ChangeLog
+@@ -1,3 +1,20 @@
++2015-12-17  Peter Collingbourne  <pcc@google.com>
++
++	PR gold/18780
++	* arm.cc (Target_arm::do_make_data_plt): Choose PLT generator based
++	on value of --long-plt flag.
++	(Output_data_plt_arm_standard::do_get_plt_entry_size): Moved to
++	Output_data_plt_arm_short.
++	(Output_data_plt_arm_standard::do_fill_plt_entry): Likewise.
++	(Output_data_plt_arm_standard::plt_entry): Likewise.
++	(Output_data_plt_arm_standard::do_fill_first_plt_entry): Fix
++	variable reference.
++	(Output_data_plt_arm_short): New class.
++	(Output_data_plt_arm_short::do_fill_plt_entry): Error out on too large
++	PLT offsets instead of asserting.
++	(Output_data_plt_arm_long): New class.
++	* options.h (General_options): Define --long-plt flag.
++
+ 2015-12-16  Roland McGrath  <mcgrathr@google.com>
+ 
+ 	PR ld/17473
 diff --git a/gold/arm.cc b/gold/arm.cc
-index 6c472bb..a10d785 100644
+index 33e8734..fc387bb 100644
 --- a/gold/arm.cc
 +++ b/gold/arm.cc
 @@ -62,7 +62,10 @@ template<bool big_endian>
@@ -36,21 +61,20 @@ index 6c472bb..a10d785 100644
  
  template<bool big_endian>
  class Stub_table;
-@@ -2532,7 +2535,12 @@ class Target_arm : public Sized_target<32, big_endian>
-   virtual Output_data_plt_arm<big_endian>*
-   do_make_data_plt(Layout* layout, Output_data_space* got_plt)
+@@ -2554,7 +2557,11 @@ class Target_arm : public Sized_target<32, big_endian>
+ 		   Output_data_space* got_irelative)
    {
--    return new Output_data_plt_arm_standard<big_endian>(layout, got_plt);
+     gold_assert(got_plt != NULL && got_irelative != NULL);
+-    return new Output_data_plt_arm_standard<big_endian>(
 +    if (parameters->options().long_plt())
 +      return new Output_data_plt_arm_long<big_endian>(
-+	layout, got_plt);
++	layout, got, got_plt, got_irelative);
 +    else
 +      return new Output_data_plt_arm_short<big_endian>(
-+	layout, got_plt);
+ 	layout, got, got_plt, got_irelative);
    }
  
-  private:
-@@ -7382,29 +7390,14 @@ class Output_data_plt_arm_standard : public Output_data_plt_arm<big_endian>
+@@ -7715,29 +7722,14 @@ class Output_data_plt_arm_standard : public Output_data_plt_arm<big_endian>
    do_first_plt_entry_offset() const
    { return sizeof(first_plt_entry); }
  
@@ -80,7 +104,7 @@ index 6c472bb..a10d785 100644
  };
  
  // ARM PLTs.
-@@ -7432,7 +7425,7 @@ Output_data_plt_arm_standard<big_endian>::do_fill_first_plt_entry(
+@@ -7765,7 +7757,7 @@ Output_data_plt_arm_standard<big_endian>::do_fill_first_plt_entry(
  {
    // Write first PLT entry.  All but the last word are constants.
    const size_t num_first_plt_words = (sizeof(first_plt_entry)
@@ -89,19 +113,22 @@ index 6c472bb..a10d785 100644
    for (size_t i = 0; i < num_first_plt_words - 1; i++)
      elfcpp::Swap<32, big_endian>::writeval(pov + i * 4, first_plt_entry[i]);
    // Last word in first PLT entry is &GOT[0] - .
-@@ -7441,9 +7434,37 @@ Output_data_plt_arm_standard<big_endian>::do_fill_first_plt_entry(
+@@ -7774,9 +7766,39 @@ Output_data_plt_arm_standard<big_endian>::do_fill_first_plt_entry(
  }
  
  // Subsequent entries in the PLT.
 +// This class generates short (12-byte) entries, for displacements up to 2^28.
-+
-+template<bool big_endian>
+ 
+ template<bool big_endian>
+-const uint32_t Output_data_plt_arm_standard<big_endian>::plt_entry[3] =
 +class Output_data_plt_arm_short : public Output_data_plt_arm_standard<big_endian>
 +{
 + public:
 +  Output_data_plt_arm_short(Layout* layout,
-+			    Output_data_space* got_plt)
-+    : Output_data_plt_arm_standard<big_endian>(layout, got_plt)
++			    Arm_output_data_got<big_endian>* got,
++			    Output_data_space* got_plt,
++			    Output_data_space* got_irelative)
++    : Output_data_plt_arm_standard<big_endian>(layout, got, got_plt, got_irelative)
 +  { }
 +
 + protected:
@@ -121,14 +148,13 @@ index 6c472bb..a10d785 100644
 +  // Template for subsequent PLT entries.
 +  static const uint32_t plt_entry[3];
 +};
- 
- template<bool big_endian>
--const uint32_t Output_data_plt_arm_standard<big_endian>::plt_entry[3] =
++
++template<bool big_endian>
 +const uint32_t Output_data_plt_arm_short<big_endian>::plt_entry[3] =
  {
    0xe28fc600,	// add   ip, pc, #0xNN00000
    0xe28cca00,	// add   ip, ip, #0xNN000
-@@ -7452,7 +7473,7 @@ const uint32_t Output_data_plt_arm_standard<big_endian>::plt_entry[3] =
+@@ -7785,7 +7807,7 @@ const uint32_t Output_data_plt_arm_standard<big_endian>::plt_entry[3] =
  
  template<bool big_endian>
  void
@@ -137,7 +163,7 @@ index 6c472bb..a10d785 100644
      unsigned char* pov,
      Arm_address got_address,
      Arm_address plt_address,
-@@ -7461,8 +7482,9 @@ Output_data_plt_arm_standard<big_endian>::do_fill_plt_entry(
+@@ -7794,8 +7816,9 @@ Output_data_plt_arm_standard<big_endian>::do_fill_plt_entry(
  {
    int32_t offset = ((got_address + got_offset)
  		    - (plt_address + plt_offset + 8));
@@ -148,7 +174,7 @@ index 6c472bb..a10d785 100644
    uint32_t plt_insn0 = plt_entry[0] | ((offset >> 20) & 0xff);
    elfcpp::Swap<32, big_endian>::writeval(pov, plt_insn0);
    uint32_t plt_insn1 = plt_entry[1] | ((offset >> 12) & 0xff);
-@@ -7471,6 +7493,66 @@ Output_data_plt_arm_standard<big_endian>::do_fill_plt_entry(
+@@ -7804,6 +7827,68 @@ Output_data_plt_arm_standard<big_endian>::do_fill_plt_entry(
    elfcpp::Swap<32, big_endian>::writeval(pov + 8, plt_insn2);
  }
  
@@ -159,8 +185,10 @@ index 6c472bb..a10d785 100644
 +{
 + public:
 +  Output_data_plt_arm_long(Layout* layout,
-+			   Output_data_space* got_plt)
-+    : Output_data_plt_arm_standard<big_endian>(layout, got_plt)
++			   Arm_output_data_got<big_endian>* got,
++			   Output_data_space* got_plt,
++			   Output_data_space* got_irelative)
++    : Output_data_plt_arm_standard<big_endian>(layout, got, got_plt, got_irelative)
 +  { }
 +
 + protected:
@@ -216,10 +244,10 @@ index 6c472bb..a10d785 100644
  // and adjusts them as needed.  This is all specified by the arm ELF
  // Processor Supplement.
 diff --git a/gold/options.h b/gold/options.h
-index cf3b705..5bd93b1e 100644
+index ffc44e6..8b5159f 100644
 --- a/gold/options.h
 +++ b/gold/options.h
-@@ -826,6 +826,10 @@ class General_options
+@@ -834,6 +834,10 @@ class General_options
  		    "veneer"),
  		 NULL);
  

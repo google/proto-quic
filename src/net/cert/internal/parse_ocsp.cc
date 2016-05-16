@@ -438,7 +438,7 @@ bool VerifyHash(HashValueTag type,
     return false;
   }
 
-  return target.Equals(value_hash);
+  return target == value_hash;
 }
 
 // Checks that the input |id_tlv| parses to a valid CertID and matches the

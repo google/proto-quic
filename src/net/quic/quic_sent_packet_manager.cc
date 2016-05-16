@@ -118,10 +118,6 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
             min(kMaxInitialRoundTripTimeUs,
                 config.GetInitialRoundTripTimeUsToSend())));
   }
-  // Initial RTT may have changed.
-  if (network_change_visitor_ != nullptr) {
-    network_change_visitor_->OnRttChange();
-  }
   // TODO(ianswett): BBR is currently a server only feature.
   if (FLAGS_quic_allow_bbr && config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kTBBR)) {
@@ -185,7 +181,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   send_algorithm_->SetFromConfig(config, perspective_);
 
   if (network_change_visitor_ != nullptr) {
-    network_change_visitor_->OnCongestionWindowChange();
+    network_change_visitor_->OnCongestionChange();
   }
 }
 
@@ -290,7 +286,7 @@ void QuicSentPacketManager::MaybeInvokeCongestionEvent(
   packets_acked_.clear();
   packets_lost_.clear();
   if (network_change_visitor_ != nullptr) {
-    network_change_visitor_->OnCongestionWindowChange();
+    network_change_visitor_->OnCongestionChange();
   }
 }
 
@@ -555,6 +551,7 @@ QuicPacketNumber QuicSentPacketManager::GetLeastUnacked() const {
 
 bool QuicSentPacketManager::OnPacketSent(
     SerializedPacket* serialized_packet,
+    QuicPathId /*original_path_id*/,
     QuicPacketNumber original_packet_number,
     QuicTime sent_time,
     TransmissionType transmission_type,
@@ -770,10 +767,6 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
   QuicTime::Delta send_delta =
       ack_receive_time.Subtract(transmission_info.sent_time);
   rtt_stats_.UpdateRtt(send_delta, ack_frame.ack_delay_time, ack_receive_time);
-
-  if (network_change_visitor_ != nullptr) {
-    network_change_visitor_->OnRttChange();
-  }
 
   return true;
 }

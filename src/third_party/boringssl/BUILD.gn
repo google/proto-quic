@@ -64,9 +64,11 @@ if (is_win && !is_msan) {
     asmflags = []
     include_dirs = [ "src/include" ]
 
-    if (current_cpu == "arm" && is_clang) {
-      # TODO(hans) Enable integrated-as (crbug.com/124610).
-      asmflags += [ "-fno-integrated-as" ]
+    if ((current_cpu == "arm" || current_cpu == "arm64") && is_clang) {
+      if (current_cpu == "arm") {
+        # TODO(hans) Enable integrated-as (crbug.com/124610).
+        asmflags += [ "-fno-integrated-as" ]
+      }
       if (is_android) {
         rebased_android_toolchain_root =
             rebase_path(android_toolchain_root, root_build_dir)

@@ -24,17 +24,19 @@ BlameContext::BlameContext(const char* category,
       id_(id),
       parent_scope_(parent_context ? parent_context->scope() : nullptr),
       parent_id_(parent_context ? parent_context->id() : 0),
-      category_group_enabled_(nullptr) {
+      category_group_enabled_(nullptr),
+      weak_factory_(this) {
   DCHECK(!parent_context || !std::strcmp(name_, parent_context->name()))
       << "Parent blame context must have the same name";
 }
 
 BlameContext::~BlameContext() {
+  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(WasInitialized());
   TRACE_EVENT_API_ADD_TRACE_EVENT(
       TRACE_EVENT_PHASE_DELETE_OBJECT, category_group_enabled_, type_, scope_,
       id_, 0, nullptr, nullptr, nullptr, nullptr, TRACE_EVENT_FLAG_HAS_ID);
-  trace_event::TraceLog::GetInstance()->RemoveEnabledStateObserver(this);
+  trace_event::TraceLog::GetInstance()->RemoveAsyncEnabledStateObserver(this);
 }
 
 void BlameContext::Enter() {
@@ -54,6 +56,7 @@ void BlameContext::Leave() {
 }
 
 void BlameContext::TakeSnapshot() {
+  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(WasInitialized());
   if (!*category_group_enabled_)
     return;
@@ -89,12 +92,14 @@ void BlameContext::AsValueInto(trace_event::TracedValue* state) {
 }
 
 void BlameContext::Initialize() {
+  DCHECK(thread_checker_.CalledOnValidThread());
   category_group_enabled_ =
       TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED(category_);
   TRACE_EVENT_API_ADD_TRACE_EVENT(
       TRACE_EVENT_PHASE_CREATE_OBJECT, category_group_enabled_, type_, scope_,
       id_, 0, nullptr, nullptr, nullptr, nullptr, TRACE_EVENT_FLAG_HAS_ID);
-  trace_event::TraceLog::GetInstance()->AddEnabledStateObserver(this);
+  trace_event::TraceLog::GetInstance()->AddAsyncEnabledStateObserver(
+      weak_factory_.GetWeakPtr());
   TakeSnapshot();
 }
 

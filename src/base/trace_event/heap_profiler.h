@@ -21,6 +21,10 @@
 #define INTERNAL_HEAP_PROFILER_UID(name_prefix) \
   INTERNAL_HEAP_PROFILER_UID2(name_prefix, __LINE__)
 
+// Scoped tracker for task execution context in the heap profiler.
+#define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
+  trace_event_internal::HeapProfilerScopedTaskExecutionTracker
+
 // A scoped ignore event used to tell heap profiler to ignore all the
 // allocations in the scope. It is useful to exclude allocations made for
 // tracing from the heap profiler dumps.
@@ -29,6 +33,34 @@
       scoped_ignore)
 
 namespace trace_event_internal {
+
+// HeapProfilerScopedTaskExecutionTracker records the current task's context in
+// the heap profiler.
+class HeapProfilerScopedTaskExecutionTracker {
+ public:
+  inline explicit HeapProfilerScopedTaskExecutionTracker(
+      const char* task_context)
+      : context_(task_context) {
+    using base::trace_event::AllocationContextTracker;
+    if (UNLIKELY(AllocationContextTracker::capture_mode() !=
+                 AllocationContextTracker::CaptureMode::DISABLED)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PushCurrentTaskContext(context_);
+    }
+  }
+
+  inline ~HeapProfilerScopedTaskExecutionTracker() {
+    using base::trace_event::AllocationContextTracker;
+    if (UNLIKELY(AllocationContextTracker::capture_mode() !=
+                 AllocationContextTracker::CaptureMode::DISABLED)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PopCurrentTaskContext(context_);
+    }
+  }
+
+ private:
+  const char* context_;
+};
 
 class BASE_EXPORT HeapProfilerScopedIgnore {
  public:

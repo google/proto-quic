@@ -20,28 +20,13 @@
 #include "net/base/address_list.h"
 #include "net/base/expiring_cache.h"
 #include "net/base/net_export.h"
+#include "net/dns/dns_util.h"
 
 namespace net {
 
 // Cache used by HostResolver to map hostnames to their resolved result.
 class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
  public:
-  // Stores the latest address list that was looked up for a hostname.
-  struct NET_EXPORT Entry {
-    Entry(int error, const AddressList& addrlist, base::TimeDelta ttl);
-    // Use when |ttl| is unknown.
-    Entry(int error, const AddressList& addrlist);
-    ~Entry();
-
-    bool has_ttl() const { return ttl >= base::TimeDelta(); }
-
-    // The resolve results for this entry.
-    int error;
-    AddressList addrlist;
-    // TTL obtained from the nameserver. Negative if unknown.
-    base::TimeDelta ttl;
-  };
-
   struct Key {
     Key(const std::string& hostname, AddressFamily address_family,
         HostResolverFlags host_resolver_flags)
@@ -64,17 +49,70 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
     HostResolverFlags host_resolver_flags;
   };
 
-  struct EvictionHandler {
-    void Handle(const Key& key,
-                const Entry& entry,
-                const base::TimeTicks& expiration,
-                const base::TimeTicks& now,
-                bool onGet) const;
+  struct NET_EXPORT EntryStaleness {
+    // Time since the entry's TTL has expired. Negative if not expired.
+    base::TimeDelta expired_by;
+
+    // Number of network changes since this result was cached.
+    int network_changes;
+
+    // Number of hits to the cache entry while stale (expired or past-network).
+    int stale_hits;
+
+    bool is_stale() const {
+      return network_changes > 0 || expired_by >= base::TimeDelta();
+    }
   };
 
-  typedef ExpiringCache<Key, Entry, base::TimeTicks,
-                        std::less<base::TimeTicks>,
-                        EvictionHandler> EntryMap;
+  // Stores the latest address list that was looked up for a hostname.
+  class NET_EXPORT Entry {
+   public:
+    Entry(int error, const AddressList& addresses, base::TimeDelta ttl);
+    // Use when |ttl| is unknown.
+    Entry(int error, const AddressList& addresses);
+    ~Entry();
+
+    int error() const { return error_; }
+    const AddressList& addresses() const { return addresses_; }
+    bool has_ttl() const { return ttl_ >= base::TimeDelta(); }
+    base::TimeDelta ttl() const { return ttl_; }
+
+    base::TimeTicks expires() const { return expires_; }
+
+   private:
+    friend class HostCache;
+
+    Entry(const Entry& entry,
+          base::TimeTicks now,
+          base::TimeDelta ttl,
+          int network_changes);
+
+    int network_changes() const { return network_changes_; }
+    int total_hits() const { return total_hits_; }
+    int stale_hits() const { return stale_hits_; }
+
+    bool IsStale(base::TimeTicks now, int network_changes) const;
+    void CountHit(bool hit_is_stale);
+    void GetStaleness(base::TimeTicks now,
+                      int network_changes,
+                      EntryStaleness* out) const;
+
+    // The resolve results for this entry.
+    int error_;
+    AddressList addresses_;
+    // TTL obtained from the nameserver. Negative if unknown.
+    base::TimeDelta ttl_;
+
+    base::TimeTicks expires_;
+    // Copied from the cache's network_changes_ when the entry is set; can0
+    // later be compared to it to see if the entry was received on the current
+    // network.
+    int network_changes_;
+    int total_hits_;
+    int stale_hits_;
+  };
+
+  using EntryMap = std::map<Key, Entry>;
 
   // Constructs a HostCache that stores up to |max_entries|.
   explicit HostCache(size_t max_entries);
@@ -85,6 +123,13 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
   // |now|. If there is no such entry, returns NULL.
   const Entry* Lookup(const Key& key, base::TimeTicks now);
 
+  // Returns a pointer to the entry for |key|, whether it is valid or stale at
+  // time |now|. Fills in |stale_out| with information about how stale it is.
+  // If there is no entry for |key| at all, returns NULL.
+  const Entry* LookupStale(const Key& key,
+                           base::TimeTicks now,
+                           EntryStaleness* stale_out);
+
   // Overwrites or creates an entry for |key|.
   // |entry| is the value to set, |now| is the current time
   // |ttl| is the "time to live".
@@ -92,6 +137,9 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
            const Entry& entry,
            base::TimeTicks now,
            base::TimeDelta ttl);
+
+  // Marks all entries as stale on account of a network change.
+  void OnNetworkChange();
 
   // Empties the cache
   void clear();
@@ -102,7 +150,7 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
   // Following are used by net_internals UI.
   size_t max_entries() const;
 
-  const EntryMap& entries() const;
+  const EntryMap& entries() const { return entries_; }
 
   // Creates a default cache.
   static std::unique_ptr<HostCache> CreateDefaultCache();
@@ -110,14 +158,34 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
  private:
   FRIEND_TEST_ALL_PREFIXES(HostCacheTest, NoCache);
 
+  enum SetOutcome : int;
+  enum LookupOutcome : int;
+  enum EraseReason : int;
+
+  Entry* LookupInternal(const Key& key);
+
+  void RecordSet(SetOutcome outcome,
+                 base::TimeTicks now,
+                 const Entry* old_entry,
+                 const Entry& new_entry);
+  void RecordUpdateStale(AddressListDeltaType delta,
+                         const EntryStaleness& stale);
+  void RecordLookup(LookupOutcome outcome,
+                    base::TimeTicks now,
+                    const Entry* entry);
+  void RecordErase(EraseReason reason, base::TimeTicks now, const Entry& entry);
+  void RecordEraseAll(EraseReason reason, base::TimeTicks now);
+
   // Returns true if this HostCache can contain no entries.
-  bool caching_is_disabled() const {
-    return entries_.max_entries() == 0;
-  }
+  bool caching_is_disabled() const { return max_entries_ == 0; }
+
+  void EvictOneEntry(base::TimeTicks now);
 
   // Map from hostname (presumably in lowercase canonicalized format) to
   // a resolved result entry.
   EntryMap entries_;
+  size_t max_entries_;
+  int network_changes_;
 
   DISALLOW_COPY_AND_ASSIGN(HostCache);
 };

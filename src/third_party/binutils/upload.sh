@@ -35,7 +35,7 @@ for DIR in $1/*; do
       export ARCH="Linux_ia32"
       ;;
 
-    */x86_64-unknown-linux-gnu)
+    */x86_64-pc-linux-gnu)
       export ARCH="Linux_x64"
       ;;
 

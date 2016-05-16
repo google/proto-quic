@@ -19,8 +19,8 @@
 
 using net::test::CryptoTestUtils;
 using net::test::DefaultQuicConfig;
-using net::test::MockConnection;
-using net::test::MockConnectionHelper;
+using net::test::MockQuicConnection;
+using net::test::MockQuicConnectionHelper;
 using net::test::SupportedVersions;
 using net::test::kClientDataStreamId1;
 using net::test::kServerDataStreamId1;
@@ -63,9 +63,9 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
   class StreamVisitor;
 
   QuicSpdyClientStreamTest()
-      : connection_(new StrictMock<MockConnection>(&helper_,
-                                                   &alarm_factory_,
-                                                   Perspective::IS_CLIENT)),
+      : connection_(new StrictMock<MockQuicConnection>(&helper_,
+                                                       &alarm_factory_,
+                                                       Perspective::IS_CLIENT)),
         session_(connection_, &push_promise_index_),
         body_("hello world") {
     session_.Initialize();
@@ -86,9 +86,9 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
     }
   };
 
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  StrictMock<MockConnection>* connection_;
+  StrictMock<MockQuicConnection>* connection_;
   QuicClientPushPromiseIndex push_promise_index_;
 
   MockQuicClientSession session_;

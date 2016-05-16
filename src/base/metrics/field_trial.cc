@@ -10,6 +10,7 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/rand_util.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
@@ -123,8 +124,14 @@ void CheckTrialGroup(const std::string& trial_name,
 base::LazyInstance<std::map<std::string, std::string>>::Leaky g_seen_states =
     LAZY_INSTANCE_INITIALIZER;
 
+// A debug token generated during FieldTrialList construction. Used to diagnose
+// crbug.com/359406.
+// TODO(asvitkine): Remove when crbug.com/359406 is resolved.
+int32_t g_debug_token = -1;
+
 // Tracks whether |g_seen_states| is used. Defaults to false, because unit tests
-// will create multiple FieldTrialList instances.
+// will create multiple FieldTrialList instances. Also controls whether
+// |g_debug_token| is included in the field trial state string.
 bool g_use_global_check_states = false;
 
 }  // namespace
@@ -262,6 +269,9 @@ FieldTrial::FieldTrial(const std::string& trial_name,
   DCHECK_GT(total_probability, 0);
   DCHECK(!trial_name_.empty());
   DCHECK(!default_group_name_.empty());
+
+  if (g_debug_token == -1)
+    g_debug_token = RandInt(1, INT32_MAX);
 }
 
 FieldTrial::~FieldTrial() {}
@@ -353,6 +363,11 @@ FieldTrialList::~FieldTrialList() {
 void FieldTrialList::EnableGlobalStateChecks() {
   CHECK(!g_use_global_check_states);
   g_use_global_check_states = true;
+}
+
+// static
+int32_t FieldTrialList::GetDebugToken() {
+  return g_debug_token;
 }
 
 // static
@@ -482,6 +497,12 @@ void FieldTrialList::StatesToString(std::string* output) {
     output->append(it->trial_name);
     output->append(1, kPersistentStringSeparator);
     output->append(it->group_name);
+    output->append(1, kPersistentStringSeparator);
+  }
+  if (g_use_global_check_states) {
+    output->append("DebugToken");
+    output->append(1, kPersistentStringSeparator);
+    output->append(IntToString(g_debug_token));
     output->append(1, kPersistentStringSeparator);
   }
 }

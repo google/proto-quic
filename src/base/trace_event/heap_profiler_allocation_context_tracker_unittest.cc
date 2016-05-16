@@ -260,14 +260,14 @@ TEST_F(AllocationContextTrackerTest, TrackTaskContext) {
   const char kContext2[] = "context2";
   {
     // The context from the scoped task event should be used as type name.
-    TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT event1(kContext1);
+    TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION event1(kContext1);
     AllocationContext ctx1 =
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->GetContextSnapshot();
     ASSERT_EQ(kContext1, ctx1.type_name);
 
     // In case of nested events, the last event's context should be used.
-    TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT event2(kContext2);
+    TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION event2(kContext2);
     AllocationContext ctx2 =
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->GetContextSnapshot();

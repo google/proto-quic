@@ -192,13 +192,7 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
         allocation_register_->EstimateTraceMemoryOverhead(&overhead);
       }
     }  // lock(allocation_register_lock_)
-
-    if (!metrics_by_context.empty()) {
-      std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
-          metrics_by_context, *pmd->session_state());
-      pmd->AddHeapDump("malloc", std::move(heap_dump));
-    }
-    overhead.DumpInto("tracing/heap_profiler_malloc", pmd);
+    pmd->DumpHeapUsage(metrics_by_context, overhead, "malloc");
   }
   tid_dumping_heap_ = kInvalidThreadId;
 

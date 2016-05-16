@@ -72,9 +72,9 @@ class QuicStreamSequencerTest : public ::testing::Test {
 
  protected:
   QuicStreamSequencerTest()
-      : connection_(new MockConnection(&helper_,
-                                       &alarm_factory_,
-                                       Perspective::IS_CLIENT)),
+      : connection_(new MockQuicConnection(&helper_,
+                                           &alarm_factory_,
+                                           Perspective::IS_CLIENT)),
         session_(connection_),
         stream_(&session_, 1),
         sequencer_(new QuicStreamSequencer(&stream_, &clock_)) {}
@@ -130,8 +130,8 @@ class QuicStreamSequencerTest : public ::testing::Test {
     QuicStreamFrame frame;
     frame.stream_id = 1;
     frame.offset = byte_offset;
-    frame.frame_buffer = data;
-    frame.frame_length = strlen(data);
+    frame.data_buffer = data;
+    frame.data_length = strlen(data);
     frame.fin = true;
     sequencer_->OnStreamFrame(frame);
   }
@@ -140,8 +140,8 @@ class QuicStreamSequencerTest : public ::testing::Test {
     QuicStreamFrame frame;
     frame.stream_id = 1;
     frame.offset = byte_offset;
-    frame.frame_buffer = data;
-    frame.frame_length = strlen(data);
+    frame.data_buffer = data;
+    frame.data_length = strlen(data);
     frame.fin = false;
     sequencer_->OnStreamFrame(frame);
   }
@@ -150,9 +150,9 @@ class QuicStreamSequencerTest : public ::testing::Test {
     return QuicStreamSequencerPeer::GetNumBufferedBytes(sequencer_.get());
   }
 
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockConnection* connection_;
+  MockQuicConnection* connection_;
   MockClock clock_;
   MockQuicSpdySession session_;
   testing::StrictMock<MockStream> stream_;

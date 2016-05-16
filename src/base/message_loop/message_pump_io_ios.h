@@ -12,7 +12,6 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/message_loop/message_pump_mac.h"
-#include "base/observer_list.h"
 #include "base/threading/thread_checker.h"
 
 namespace base {
@@ -21,21 +20,6 @@ namespace base {
 // sockets are ready for I/O on iOS.
 class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
  public:
-  class IOObserver {
-   public:
-    IOObserver() {}
-
-    // An IOObserver is an object that receives IO notifications from the
-    // MessagePump.
-    //
-    // NOTE: An IOObserver implementation should be extremely fast!
-    virtual void WillProcessIOEvent() = 0;
-    virtual void DidProcessIOEvent() = 0;
-
-   protected:
-    virtual ~IOObserver() {}
-  };
-
   // Used with WatchFileDescriptor to asynchronously monitor the I/O readiness
   // of a file descriptor.
   class Watcher {
@@ -119,9 +103,6 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
 
   void RemoveRunLoopSource(CFRunLoopSourceRef source);
 
-  void AddIOObserver(IOObserver* obs);
-  void RemoveIOObserver(IOObserver* obs);
-
  private:
   friend class MessagePumpIOSForIOTest;
 
@@ -132,7 +113,6 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
                               CFOptionFlags callback_types,
                               void* context);
 
-  ObserverList<IOObserver> io_observers_;
   ThreadChecker watch_file_descriptor_caller_checker_;
 
   base::WeakPtrFactory<MessagePumpIOSForIO> weak_factory_;

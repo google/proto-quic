@@ -916,12 +916,14 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
   }
 
   // A nonce should only be present in packets from the server to the client,
+  // which are neither version negotiation nor public reset packets
   // and only for versions after QUIC_VERSION_32. Earlier versions will
   // set this bit when indicating an 8-byte connection ID, which should
   // not be interpreted as indicating a nonce is present.
   if (quic_version_ > QUIC_VERSION_32 &&
       public_flags & PACKET_PUBLIC_FLAGS_NONCE &&
       !(public_flags & PACKET_PUBLIC_FLAGS_VERSION) &&
+      !(public_flags & PACKET_PUBLIC_FLAGS_RST) &&
       // The nonce flag from a client is ignored and is assumed to be an older
       // client indicating an eight-byte connection ID.
       perspective_ == Perspective::IS_CLIENT) {
@@ -1376,8 +1378,8 @@ bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
       return false;
     }
   }
-  frame->frame_buffer = data.data();
-  frame->frame_length = static_cast<uint16_t>(data.length());
+  frame->data_buffer = data.data();
+  frame->data_length = static_cast<uint16_t>(data.length());
 
   return true;
 }
@@ -1659,13 +1661,8 @@ bool QuicFramer::ProcessRstStreamFrame(QuicDataReader* reader,
   }
 
   if (error_code >= QUIC_STREAM_LAST_ERROR) {
-    if (FLAGS_quic_ignore_invalid_error_code) {
-      // Ignore invalid stream error code if any.
-      error_code = QUIC_STREAM_LAST_ERROR;
-    } else {
-      set_detailed_error("Invalid rst stream error code.");
-      return false;
-    }
+    // Ignore invalid stream error code if any.
+    error_code = QUIC_STREAM_LAST_ERROR;
   }
 
   frame->error_code = static_cast<QuicRstStreamErrorCode>(error_code);
@@ -1681,13 +1678,8 @@ bool QuicFramer::ProcessConnectionCloseFrame(QuicDataReader* reader,
   }
 
   if (error_code >= QUIC_LAST_ERROR) {
-    if (FLAGS_quic_ignore_invalid_error_code) {
-      // Ignore invalid QUIC error code if any.
-      error_code = QUIC_LAST_ERROR;
-    } else {
-      set_detailed_error("Invalid error code.");
-      return false;
-    }
+    // Ignore invalid QUIC error code if any.
+    error_code = QUIC_LAST_ERROR;
   }
 
   frame->error_code = static_cast<QuicErrorCode>(error_code);
@@ -1711,13 +1703,8 @@ bool QuicFramer::ProcessGoAwayFrame(QuicDataReader* reader,
   }
 
   if (error_code >= QUIC_LAST_ERROR) {
-    if (FLAGS_quic_ignore_invalid_error_code) {
-      // Ignore invalid QUIC error code if any.
-      error_code = QUIC_LAST_ERROR;
-    } else {
-      set_detailed_error("Invalid error code.");
-      return false;
-    }
+    // Ignore invalid QUIC error code if any.
+    error_code = QUIC_LAST_ERROR;
   }
   frame->error_code = static_cast<QuicErrorCode>(error_code);
 
@@ -2017,7 +2004,7 @@ size_t QuicFramer::ComputeFrameLength(
       return GetMinStreamFrameSize(frame.stream_frame->stream_id,
                                    frame.stream_frame->offset,
                                    last_frame_in_packet) +
-             frame.stream_frame->frame_length;
+             frame.stream_frame->data_length;
     case ACK_FRAME: {
       return GetAckFrameSize(*frame.ack_frame, packet_number_length);
     }
@@ -2137,14 +2124,14 @@ bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
     return false;
   }
   if (!no_stream_frame_length) {
-    if ((frame.frame_length > numeric_limits<uint16_t>::max()) ||
-        !writer->WriteUInt16(static_cast<uint16_t>(frame.frame_length))) {
+    if ((frame.data_length > numeric_limits<uint16_t>::max()) ||
+        !writer->WriteUInt16(static_cast<uint16_t>(frame.data_length))) {
       QUIC_BUG << "Writing stream frame length failed";
       return false;
     }
   }
 
-  if (!writer->WriteBytes(frame.frame_buffer, frame.frame_length)) {
+  if (!writer->WriteBytes(frame.data_buffer, frame.data_length)) {
     QUIC_BUG << "Writing frame data failed.";
     return false;
   }

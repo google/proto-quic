@@ -368,7 +368,7 @@ bool ParseCIDRBlock(const std::string& cidr_literal,
   return true;
 }
 
-bool ParseURLHostnameToAddress(const std::string& hostname,
+bool ParseURLHostnameToAddress(const base::StringPiece& hostname,
                                IPAddress* ip_address) {
   if (hostname.size() >= 2 && hostname.front() == '[' &&
       hostname.back() == ']') {

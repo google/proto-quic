@@ -11,6 +11,8 @@
 
 #include "base/logging.h"
 #include "base/numerics/safe_math.h"
+#include "crypto/sha2.h"
+#include "net/cert/merkle_tree_leaf.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/signed_tree_head.h"
 
@@ -21,28 +23,34 @@ namespace ct {
 namespace {
 
 // Note: length is always specified in bytes.
-// Signed Certificate Timestamp (SCT) Version length
+// CT protocol version length
 const size_t kVersionLength = 1;
 
-// Members of a V1 SCT
-const size_t kLogIdLength = 32;
+// Common V1 struct members
 const size_t kTimestampLength = 8;
+const size_t kLogEntryTypeLength = 2;
+const size_t kAsn1CertificateLengthBytes = 3;
+const size_t kTbsCertificateLengthBytes = 3;
 const size_t kExtensionsLengthBytes = 2;
+
+// Members of a V1 SCT
+const size_t kLogIdLength = crypto::kSHA256Length;
 const size_t kHashAlgorithmLength = 1;
 const size_t kSigAlgorithmLength = 1;
 const size_t kSignatureLengthBytes = 2;
 
 // Members of the digitally-signed struct of a V1 SCT
 const size_t kSignatureTypeLength = 1;
-const size_t kLogEntryTypeLength = 2;
-const size_t kAsn1CertificateLengthBytes = 3;
-const size_t kTbsCertificateLengthBytes = 3;
 
 const size_t kSCTListLengthBytes = 2;
 const size_t kSerializedSCTLengthBytes = 2;
 
 // Members of digitally-signed struct of a STH
 const size_t kTreeSizeLength = 8;
+
+// Members of a V1 MerkleTreeLeaf
+const size_t kMerkleLeafTypeLength = 1;
+const size_t kIssuerKeyHashLength = crypto::kSHA256Length;
 
 enum SignatureType {
   SIGNATURE_TYPE_CERTIFICATE_TIMESTAMP = 0,
@@ -256,7 +264,7 @@ bool EncodePrecertLogEntry(const LogEntry& input, std::string* output) {
   WriteEncodedBytes(
       base::StringPiece(
           reinterpret_cast<const char*>(input.issuer_key_hash.data),
-          kLogIdLength),
+          kIssuerKeyHashLength),
       output);
   return WriteVariableBytes(kTbsCertificateLengthBytes,
                             input.tbs_certificate, output);
@@ -335,6 +343,18 @@ static void WriteTimeSinceEpoch(const base::Time& timestamp,
                                 std::string* output) {
   base::TimeDelta time_since_epoch = timestamp - base::Time::UnixEpoch();
   WriteUint(kTimestampLength, time_since_epoch.InMilliseconds(), output);
+}
+
+bool EncodeTreeLeaf(const MerkleTreeLeaf& leaf, std::string* output) {
+  WriteUint(kVersionLength, 0, output);         // version: 1
+  WriteUint(kMerkleLeafTypeLength, 0, output);  // type: timestamped entry
+  WriteTimeSinceEpoch(leaf.timestamp, output);
+  if (!EncodeLogEntry(leaf.log_entry, output))
+    return false;
+  if (!WriteVariableBytes(kExtensionsLengthBytes, leaf.extensions, output))
+    return false;
+
+  return true;
 }
 
 bool EncodeV1SCTSignedData(const base::Time& timestamp,

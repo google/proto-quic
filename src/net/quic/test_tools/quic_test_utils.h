@@ -311,10 +311,10 @@ class NoOpFramerVisitor : public QuicFramerVisitorInterface {
   DISALLOW_COPY_AND_ASSIGN(NoOpFramerVisitor);
 };
 
-class MockConnectionVisitor : public QuicConnectionVisitorInterface {
+class MockQuicConnectionVisitor : public QuicConnectionVisitorInterface {
  public:
-  MockConnectionVisitor();
-  ~MockConnectionVisitor() override;
+  MockQuicConnectionVisitor();
+  ~MockQuicConnectionVisitor() override;
 
   MOCK_METHOD1(OnStreamFrame, void(const QuicStreamFrame& frame));
   MOCK_METHOD1(OnWindowUpdateFrame, void(const QuicWindowUpdateFrame& frame));
@@ -339,13 +339,13 @@ class MockConnectionVisitor : public QuicConnectionVisitorInterface {
   MOCK_METHOD0(PostProcessAfterData, void());
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockConnectionVisitor);
+  DISALLOW_COPY_AND_ASSIGN(MockQuicConnectionVisitor);
 };
 
-class MockConnectionHelper : public QuicConnectionHelperInterface {
+class MockQuicConnectionHelper : public QuicConnectionHelperInterface {
  public:
-  MockConnectionHelper();
-  ~MockConnectionHelper() override;
+  MockQuicConnectionHelper();
+  ~MockQuicConnectionHelper() override;
   const QuicClock* GetClock() const override;
   QuicRandom* GetRandomGenerator() override;
   QuicBufferAllocator* GetBufferAllocator() override;
@@ -356,7 +356,7 @@ class MockConnectionHelper : public QuicConnectionHelperInterface {
   MockRandom random_generator_;
   SimpleBufferAllocator buffer_allocator_;
 
-  DISALLOW_COPY_AND_ASSIGN(MockConnectionHelper);
+  DISALLOW_COPY_AND_ASSIGN(MockQuicConnectionHelper);
 };
 
 class MockAlarmFactory : public QuicAlarmFactory {
@@ -383,41 +383,41 @@ class MockAlarmFactory : public QuicAlarmFactory {
   }
 };
 
-class MockConnection : public QuicConnection {
+class MockQuicConnection : public QuicConnection {
  public:
   // Uses a ConnectionId of 42 and 127.0.0.1:123.
-  MockConnection(MockConnectionHelper* helper,
-                 MockAlarmFactory* alarm_factory,
-                 Perspective perspective);
+  MockQuicConnection(MockQuicConnectionHelper* helper,
+                     MockAlarmFactory* alarm_factory,
+                     Perspective perspective);
 
   // Uses a ConnectionId of 42.
-  MockConnection(IPEndPoint address,
-                 MockConnectionHelper* helper,
-                 MockAlarmFactory* alarm_factory,
-                 Perspective perspective);
+  MockQuicConnection(IPEndPoint address,
+                     MockQuicConnectionHelper* helper,
+                     MockAlarmFactory* alarm_factory,
+                     Perspective perspective);
 
   // Uses 127.0.0.1:123.
-  MockConnection(QuicConnectionId connection_id,
-                 MockConnectionHelper* helper,
-                 MockAlarmFactory* alarm_factory,
-                 Perspective perspective);
+  MockQuicConnection(QuicConnectionId connection_id,
+                     MockQuicConnectionHelper* helper,
+                     MockAlarmFactory* alarm_factory,
+                     Perspective perspective);
 
   // Uses a ConnectionId of 42, and 127.0.0.1:123.
-  MockConnection(MockConnectionHelper* helper,
-                 MockAlarmFactory* alarm_factory,
-                 Perspective perspective,
-                 const QuicVersionVector& supported_versions);
+  MockQuicConnection(MockQuicConnectionHelper* helper,
+                     MockAlarmFactory* alarm_factory,
+                     Perspective perspective,
+                     const QuicVersionVector& supported_versions);
 
-  MockConnection(QuicConnectionId connection_id,
-                 IPEndPoint address,
-                 MockConnectionHelper* helper,
-                 MockAlarmFactory* alarm_factory,
-                 Perspective perspective,
-                 const QuicVersionVector& supported_versions);
+  MockQuicConnection(QuicConnectionId connection_id,
+                     IPEndPoint address,
+                     MockQuicConnectionHelper* helper,
+                     MockAlarmFactory* alarm_factory,
+                     Perspective perspective,
+                     const QuicVersionVector& supported_versions);
 
-  ~MockConnection() override;
+  ~MockQuicConnection() override;
 
-  // If the constructor that uses a MockConnectionHelper has been used then
+  // If the constructor that uses a MockQuicConnectionHelper has been used then
   // this method
   // will advance the time of the MockClock.
   void AdvanceTime(QuicTime::Delta delta);
@@ -471,16 +471,16 @@ class MockConnection : public QuicConnection {
   }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockConnection);
+  DISALLOW_COPY_AND_ASSIGN(MockQuicConnection);
 };
 
-class PacketSavingConnection : public MockConnection {
+class PacketSavingConnection : public MockQuicConnection {
  public:
-  PacketSavingConnection(MockConnectionHelper* helper,
+  PacketSavingConnection(MockQuicConnectionHelper* helper,
                          MockAlarmFactory* alarm_factory,
                          Perspective perspective);
 
-  PacketSavingConnection(MockConnectionHelper* helper,
+  PacketSavingConnection(MockQuicConnectionHelper* helper,
                          MockAlarmFactory* alarm_factory,
                          Perspective perspective,
                          const QuicVersionVector& supported_versions);
@@ -813,8 +813,7 @@ class MockNetworkChangeVisitor
   MockNetworkChangeVisitor();
   ~MockNetworkChangeVisitor() override;
 
-  MOCK_METHOD0(OnCongestionWindowChange, void());
-  MOCK_METHOD0(OnRttChange, void());
+  MOCK_METHOD0(OnCongestionChange, void());
   MOCK_METHOD0(OnPathDegrading, void());
 
  private:
@@ -828,8 +827,9 @@ class MockQuicConnectionDebugVisitor : public QuicConnectionDebugVisitor {
 
   MOCK_METHOD1(OnFrameAddedToPacket, void(const QuicFrame&));
 
-  MOCK_METHOD4(OnPacketSent,
+  MOCK_METHOD5(OnPacketSent,
                void(const SerializedPacket&,
+                    QuicPathId,
                     QuicPacketNumber,
                     TransmissionType,
                     QuicTime));
@@ -889,7 +889,7 @@ class MockReceivedPacketManager : public QuicReceivedPacketManager {
 //   connection_start_time should be synchronized witht the server
 //   start time, otherwise nonce verification will fail.
 // supported_versions: Set of QUIC versions this client supports.
-// helper: Pointer to the MockConnectionHelper to use for the session.
+// helper: Pointer to the MockQuicConnectionHelper to use for the session.
 // crypto_client_config: Pointer to the crypto client config.
 // client_connection: Pointer reference for newly created
 //   connection.  This object will be owned by the
@@ -900,7 +900,7 @@ void CreateClientSessionForTest(QuicServerId server_id,
                                 bool supports_stateless_rejects,
                                 QuicTime::Delta connection_start_time,
                                 QuicVersionVector supported_versions,
-                                MockConnectionHelper* helper,
+                                MockQuicConnectionHelper* helper,
                                 MockAlarmFactory* alarm_factory,
                                 QuicCryptoClientConfig* crypto_client_config,
                                 PacketSavingConnection** client_connection,
@@ -914,7 +914,7 @@ void CreateClientSessionForTest(QuicServerId server_id,
 //   connection_start_time should be synchronized witht the client
 //   start time, otherwise nonce verification will fail.
 // supported_versions: Set of QUIC versions this server supports.
-// helper: Pointer to the MockConnectionHelper to use for the session.
+// helper: Pointer to the MockQuicConnectionHelper to use for the session.
 // crypto_server_config: Pointer to the crypto server config.
 // server_connection: Pointer reference for newly created
 //   connection.  This object will be owned by the
@@ -925,7 +925,7 @@ void CreateServerSessionForTest(
     QuicServerId server_id,
     QuicTime::Delta connection_start_time,
     QuicVersionVector supported_versions,
-    MockConnectionHelper* helper,
+    MockQuicConnectionHelper* helper,
     MockAlarmFactory* alarm_factory,
     QuicCryptoServerConfig* crypto_server_config,
     QuicCompressedCertsCache* compressed_certs_cache,

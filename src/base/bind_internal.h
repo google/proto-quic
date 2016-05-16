@@ -176,19 +176,14 @@ class RunnableAdapter<R(T::*)(Args...)> {
       : method_(method) {
   }
 
-  template <typename... RunArgs>
-  R Run(T* object, RunArgs&&... args) {
-    return (object->*method_)(std::forward<RunArgs>(args)...);
-  }
-
-  template <typename RefType, typename... RunArgs>
-  R Run(const scoped_refptr<RefType>& object, RunArgs&&... args) {
+  template <typename Receiver, typename... RunArgs>
+  R Run(Receiver&& receiver_ptr, RunArgs&&... args) {
     // Clang skips CV qualifier check on a method pointer invocation when the
-    // receiver is a subclass. Store the receiver into a unqualified pointer to
+    // receiver is a subclass. Store the receiver into a const reference to
     // T to ensure the CV check works.
     // https://llvm.org/bugs/show_bug.cgi?id=27037
-    T* receiver = object.get();
-    return (receiver->*method_)(std::forward<RunArgs>(args)...);
+    T& receiver = *receiver_ptr;
+    return (receiver.*method_)(std::forward<RunArgs>(args)...);
   }
 
  private:
@@ -206,19 +201,14 @@ class RunnableAdapter<R(T::*)(Args...) const> {
       : method_(method) {
   }
 
-  template <typename... RunArgs>
-  R Run(const T* object, RunArgs&&... args) {
-    return (object->*method_)(std::forward<RunArgs>(args)...);
-  }
-
-  template <typename RefType, typename... RunArgs>
-  R Run(const scoped_refptr<RefType>& object, RunArgs&&... args) {
+  template <typename Receiver, typename... RunArgs>
+  R Run(Receiver&& receiver_ptr, RunArgs&&... args) {
     // Clang skips CV qualifier check on a method pointer invocation when the
-    // receiver is a subclass. Store the receiver into a const pointer to
-    // T to ensure the CV check works.
+    // receiver is a subclass. Store the receiver into a unqualified reference
+    // to T to ensure the CV check works.
     // https://llvm.org/bugs/show_bug.cgi?id=27037
-    const T* receiver = object.get();
-    return (receiver->*method_)(std::forward<RunArgs>(args)...);
+    const T& receiver = *receiver_ptr;
+    return (receiver.*method_)(std::forward<RunArgs>(args)...);
   }
 
  private:

@@ -355,6 +355,12 @@ class BASE_EXPORT FieldTrialList {
   // command line.
   static void EnableGlobalStateChecks();
 
+  // TODO(asvitkine): Temporary function to diagnose http://crbug.com/359406.
+  // Remove when that bug is fixed. This returns a unique token generated during
+  // FieldTrialList construction. This is used to verify that this value stays
+  // consistent between renderer process invocations.
+  static int32_t GetDebugToken();
+
   // Get a FieldTrial instance from the factory.
   //
   // |name| is used to register the instance with the FieldTrialList class,

@@ -102,7 +102,6 @@ HttpNetworkSession::Params::Params()
       enable_priority_dependencies(true),
       enable_quic(false),
       disable_quic_on_timeout_with_open_streams(false),
-      enable_quic_for_proxies(false),
       enable_quic_port_selection(true),
       quic_always_require_handshake_confirmation(false),
       quic_disable_connection_pooling(false),
@@ -114,6 +113,7 @@ HttpNetworkSession::Params::Params()
       quic_max_number_of_lossy_connections(0),
       quic_packet_loss_threshold(1.0f),
       quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
+      quic_delay_tcp_race(false),
       quic_max_server_configs_stored_in_properties(0u),
       quic_clock(NULL),
       quic_random(NULL),
@@ -179,6 +179,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_threshold_public_resets_post_handshake,
           params.quic_threshold_timeouts_streams_open,
           params.quic_socket_receive_buffer_size,
+          params.quic_delay_tcp_race,
           params.quic_max_server_configs_stored_in_properties,
           params.quic_close_sessions_on_ip_change,
           params.disable_quic_on_timeout_with_open_streams,
@@ -306,7 +307,6 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", params_.enable_quic);
-  dict->SetBoolean("quic_enabled_for_proxies", params_.enable_quic_for_proxies);
   dict->SetBoolean("enable_quic_port_selection",
                    params_.enable_quic_port_selection);
   std::unique_ptr<base::ListValue> connection_options(new base::ListValue);
@@ -333,7 +333,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->SetInteger("max_number_of_lossy_connections",
                    params_.quic_max_number_of_lossy_connections);
   dict->SetDouble("packet_loss_threshold", params_.quic_packet_loss_threshold);
-  dict->SetBoolean("delay_tcp_race", true);
+  dict->SetBoolean("delay_tcp_race", params_.quic_delay_tcp_race);
   dict->SetInteger("max_server_configs_stored_in_properties",
                    params_.quic_max_server_configs_stored_in_properties);
   dict->SetInteger("idle_connection_timeout_seconds",

@@ -780,6 +780,9 @@ struct NET_EXPORT_PRIVATE QuicPaddingFrame {
   explicit QuicPaddingFrame(int num_padding_bytes)
       : num_padding_bytes(num_padding_bytes) {}
 
+  NET_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
+                                                     const QuicPaddingFrame& s);
+
   // -1: full padding to the end of a max-sized packet
   // otherwise: only pad up to num_padding_bytes bytes
   int num_padding_bytes;
@@ -846,7 +849,7 @@ struct NET_EXPORT_PRIVATE QuicStreamFrame {
   QuicStreamFrame(QuicStreamId stream_id,
                   bool fin,
                   QuicStreamOffset offset,
-                  QuicPacketLength frame_length,
+                  QuicPacketLength data_length,
                   UniqueStreamBuffer buffer);
   ~QuicStreamFrame();
 
@@ -855,8 +858,8 @@ struct NET_EXPORT_PRIVATE QuicStreamFrame {
 
   QuicStreamId stream_id;
   bool fin;
-  QuicPacketLength frame_length;
-  const char* frame_buffer;
+  QuicPacketLength data_length;
+  const char* data_buffer;
   QuicStreamOffset offset;  // Location of this data in the stream.
   // nullptr when the QuicStreamFrame is received, and non-null when sent.
   UniqueStreamBuffer buffer;
@@ -865,8 +868,8 @@ struct NET_EXPORT_PRIVATE QuicStreamFrame {
   QuicStreamFrame(QuicStreamId stream_id,
                   bool fin,
                   QuicStreamOffset offset,
-                  const char* frame_buffer,
-                  QuicPacketLength frame_length,
+                  const char* data_buffer,
+                  QuicPacketLength data_length,
                   UniqueStreamBuffer buffer);
 
   DISALLOW_COPY_AND_ASSIGN(QuicStreamFrame);
@@ -1403,6 +1406,7 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
   QuicPacketEntropyHash entropy_hash;
   bool has_ack;
   bool has_stop_waiting;
+  QuicPathId original_path_id;
   QuicPacketNumber original_packet_number;
   TransmissionType transmission_type;
 

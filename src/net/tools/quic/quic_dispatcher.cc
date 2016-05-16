@@ -137,28 +137,18 @@ bool QuicDispatcher::OnUnauthenticatedPublicHeader(
   QuicVersion version = supported_versions_.front();
   if (header.version_flag) {
     QuicVersion packet_version = header.versions.front();
-    if (framer_.IsSupportedVersion(packet_version)) {
-      version = packet_version;
-    } else {
-      if (FLAGS_quic_stateless_version_negotiation) {
-        if (ShouldCreateSessionForUnknownVersion(framer_.last_version_tag())) {
-          return true;
-        }
-        // Since the version is not supported, send a version negotiation
-        // packet and stop processing the current packet.
-        time_wait_list_manager()->SendVersionNegotiationPacket(
-            connection_id, supported_versions_, current_server_address_,
-            current_client_address_);
-        return false;
-      } else {
-        // Packets set to be processed but having an unsupported version will
-        // cause a connection to be created.  The connection will handle
-        // sending a version negotiation packet.
-        // TODO(ianswett): This will malfunction if the full header of the
-        // packet causes a parsing error when parsed using the server's
-        // preferred version.
+    if (!framer_.IsSupportedVersion(packet_version)) {
+      if (ShouldCreateSessionForUnknownVersion(framer_.last_version_tag())) {
+        return true;
       }
+      // Since the version is not supported, send a version negotiation
+      // packet and stop processing the current packet.
+      time_wait_list_manager()->SendVersionNegotiationPacket(
+          connection_id, supported_versions_, current_server_address_,
+          current_client_address_);
+      return false;
     }
+    version = packet_version;
   }
   // Set the framer's version and continue processing.
   framer_.set_version(version);
@@ -353,14 +343,11 @@ bool QuicDispatcher::ShouldCreateSessionForUnknownVersion(QuicTag version_tag) {
 
 bool QuicDispatcher::OnProtocolVersionMismatch(
     QuicVersion /*received_version*/) {
-  if (FLAGS_quic_stateless_version_negotiation) {
-    QUIC_BUG_IF(
-        !time_wait_list_manager_->IsConnectionIdInTimeWait(
-            current_connection_id_) &&
-        !ShouldCreateSessionForUnknownVersion(framer_.last_version_tag()))
-        << "Unexpected version mismatch: "
-        << QuicUtils::TagToString(framer_.last_version_tag());
-  }
+  QUIC_BUG_IF(!time_wait_list_manager_->IsConnectionIdInTimeWait(
+                  current_connection_id_) &&
+              !ShouldCreateSessionForUnknownVersion(framer_.last_version_tag()))
+      << "Unexpected version mismatch: "
+      << QuicUtils::TagToString(framer_.last_version_tag());
 
   // Keep processing after protocol mismatch - this will be dealt with by the
   // time wait list or connection that we will create.

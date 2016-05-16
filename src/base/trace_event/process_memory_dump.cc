@@ -10,6 +10,8 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/process/process_metrics.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/heap_profiler_heap_dump_writer.h"
 #include "base/trace_event/process_memory_totals.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "build/build_config.h"
@@ -221,6 +223,22 @@ void ProcessMemoryDump::AddHeapDump(const std::string& absolute_name,
                                     std::unique_ptr<TracedValue> heap_dump) {
   DCHECK_EQ(0ul, heap_dumps_.count(absolute_name));
   heap_dumps_[absolute_name] = std::move(heap_dump);
+}
+
+void ProcessMemoryDump::DumpHeapUsage(
+    const base::hash_map<base::trace_event::AllocationContext,
+        base::trace_event::AllocationMetrics>& metrics_by_context,
+    base::trace_event::TraceEventMemoryOverhead& overhead,
+    const char* allocator_name) {
+  if (!metrics_by_context.empty()) {
+    std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
+        metrics_by_context, *session_state());
+    AddHeapDump(allocator_name, std::move(heap_dump));
+  }
+
+  std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
+                                             allocator_name);
+  overhead.DumpInto(base_name.c_str(), this);
 }
 
 void ProcessMemoryDump::Clear() {

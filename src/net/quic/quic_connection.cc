@@ -703,7 +703,7 @@ bool QuicConnection::OnStreamFrame(const QuicStreamFrame& frame) {
   }
   visitor_->OnStreamFrame(frame);
   visitor_->PostProcessAfterData();
-  stats_.stream_bytes_received += frame.frame_length;
+  stats_.stream_bytes_received += frame.data_length;
   should_last_packet_instigate_acks_ = true;
   return connected_;
 }
@@ -1303,11 +1303,9 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
   stats_.bytes_received += packet.length();
   ++stats_.packets_received;
 
-  if (FLAGS_quic_use_socket_timestamp) {
-    time_of_last_received_packet_ = packet.receipt_time();
-    DVLOG(1) << ENDPOINT << "time of last received packet: "
-             << time_of_last_received_packet_.ToDebuggingValue();
-  }
+  time_of_last_received_packet_ = packet.receipt_time();
+  DVLOG(1) << ENDPOINT << "time of last received packet: "
+           << time_of_last_received_packet_.ToDebuggingValue();
 
   ScopedRetransmissionScheduler alarm_delayer(this);
   if (!framer_.ProcessPacket(packet)) {
@@ -1366,7 +1364,11 @@ void QuicConnection::OnCanWrite() {
     // We're not write blocked, but some stream didn't write out all of its
     // bytes. Register for 'immediate' resumption so we'll keep writing after
     // other connections and events have had a chance to use the thread.
-    resume_writes_alarm_->Set(clock_->ApproximateNow());
+    if (FLAGS_quic_only_one_sending_alarm) {
+      send_alarm_->Update(clock_->ApproximateNow(), QuicTime::Delta::Zero());
+    } else {
+      resume_writes_alarm_->Set(clock_->ApproximateNow());
+    }
   }
 }
 
@@ -1445,12 +1447,6 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
   }
 
   DCHECK_EQ(NEGOTIATED_VERSION, version_negotiation_state_);
-
-  if (!FLAGS_quic_use_socket_timestamp) {
-    time_of_last_received_packet_ = clock_->Now();
-    DVLOG(1) << ENDPOINT << "time of last received packet: "
-             << time_of_last_received_packet_.ToDebuggingValue();
-  }
 
   if (last_size_ > largest_received_packet_size_) {
     largest_received_packet_size_ = last_size_;
@@ -1644,7 +1640,8 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   }
   if (result.status != WRITE_STATUS_ERROR && debug_visitor_ != nullptr) {
     // Pass the write result to the visitor.
-    debug_visitor_->OnPacketSent(*packet, packet->original_packet_number,
+    debug_visitor_->OnPacketSent(*packet, packet->original_path_id,
+                                 packet->original_packet_number,
                                  packet->transmission_type, packet_send_time);
   }
   if (packet->transmission_type == NOT_RETRANSMISSION) {
@@ -1667,8 +1664,8 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
       sent_packet_manager_.EstimateMaxPacketsInFlight(max_packet_length()));
 
   bool reset_retransmission_alarm = sent_packet_manager_.OnPacketSent(
-      packet, packet->original_packet_number, packet_send_time,
-      packet->transmission_type, IsRetransmittable(*packet));
+      packet, packet->original_path_id, packet->original_packet_number,
+      packet_send_time, packet->transmission_type, IsRetransmittable(*packet));
 
   if (reset_retransmission_alarm || !retransmission_alarm_->IsSet()) {
     SetRetransmissionAlarm();
@@ -1760,11 +1757,9 @@ void QuicConnection::OnUnrecoverableError(QuicErrorCode error,
   TearDownLocalConnectionState(error, error_details, source);
 }
 
-void QuicConnection::OnCongestionWindowChange() {
+void QuicConnection::OnCongestionChange() {
   visitor_->OnCongestionWindowChange(clock_->ApproximateNow());
-}
 
-void QuicConnection::OnRttChange() {
   // Uses the connection's smoothed RTT. If zero, uses initial_rtt.
   QuicTime::Delta rtt = sent_packet_manager_.GetRttStats()->smoothed_rtt();
   if (rtt.IsZero()) {
@@ -1862,6 +1857,10 @@ void QuicConnection::OnRetransmissionTimeout() {
     return;
   }
 
+  // Cancel the send alarm to ensure TimeUntilSend is re-evaluated.
+  if (FLAGS_quic_only_one_sending_alarm) {
+    send_alarm_->Cancel();
+  }
   sent_packet_manager_.OnRetransmissionTimeout();
   WriteIfNotBlocked();
 
@@ -2181,6 +2180,19 @@ void QuicConnection::SetPingAlarm() {
 void QuicConnection::SetRetransmissionAlarm() {
   if (delay_setting_retransmission_alarm_) {
     pending_retransmission_alarm_ = true;
+    return;
+  }
+  // Once the handshake has been confirmed, the retransmission alarm should
+  // never fire before the send alarm.
+  if (FLAGS_quic_only_one_sending_alarm &&
+      sent_packet_manager_.handshake_confirmed() && send_alarm_->IsSet()) {
+    DCHECK(!sent_packet_manager_.GetRetransmissionTime().IsInitialized() ||
+           sent_packet_manager_.GetRetransmissionTime() >=
+               send_alarm_->deadline())
+        << " retransmission_time:"
+        << sent_packet_manager_.GetRetransmissionTime().ToDebuggingValue()
+        << " send_alarm:" << send_alarm_->deadline().ToDebuggingValue();
+    retransmission_alarm_->Cancel();
     return;
   }
   QuicTime retransmission_time = sent_packet_manager_.GetRetransmissionTime();

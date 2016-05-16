@@ -291,12 +291,10 @@ int QuicSocketUtils::CreateUDPSocket(const IPEndPoint& address,
     return -1;
   }
 
-  if (FLAGS_quic_use_socket_timestamp) {
-    rc = SetGetSoftwareReceiveTimestamp(fd);
-    if (rc < 0) {
-      LOG(WARNING) << "SO_TIMESTAMPING not supported; using fallback: "
-                   << strerror(errno);
-    }
+  rc = SetGetSoftwareReceiveTimestamp(fd);
+  if (rc < 0) {
+    LOG(WARNING) << "SO_TIMESTAMPING not supported; using fallback: "
+                 << strerror(errno);
   }
 
   return fd;

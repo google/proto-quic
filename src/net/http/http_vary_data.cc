@@ -41,22 +41,6 @@ bool HttpVaryData::Init(const HttpRequestInfo& request_info,
     processed_header = true;
   }
 
-  // Add an implicit 'Vary: cookie' header to any redirect to avoid redirect
-  // loops which may result from redirects that are incorrectly marked as
-  // cachable by the server.  Unfortunately, other browsers do not cache
-  // redirects that result from requests containing a cookie header.  We are
-  // treading on untested waters here, so we want to be extra careful to make
-  // sure we do not end up with a redirect loop served from cache.
-  //
-  // If there is an explicit 'Vary: cookie' header, then we will just end up
-  // digesting the cookie header twice.  Not a problem.
-  //
-  std::string location;
-  if (response_headers.IsRedirect(&location)) {
-    AddField(request_info, "cookie", &ctx);
-    processed_header = true;
-  }
-
   if (!processed_header)
     return false;
 

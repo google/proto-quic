@@ -121,15 +121,13 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
       continue;
     }
 
-    if (FLAGS_quic_use_socket_timestamp) {
-      if (packet_timestamp == QuicTime::Zero()) {
-        // This isn't particularly desirable, but not all platforms support
-        // socket timestamping.
-        if (fallback_timestamp == QuicTime::Zero()) {
-          fallback_timestamp = clock.Now();
-        }
-        packet_timestamp = fallback_timestamp;
+    if (packet_timestamp == QuicTime::Zero()) {
+      // This isn't particularly desirable, but not all platforms support socket
+      // timestamping.
+      if (fallback_timestamp == QuicTime::Zero()) {
+        fallback_timestamp = clock.Now();
       }
+      packet_timestamp = fallback_timestamp;
     }
 
     QuicReceivedPacket packet(reinterpret_cast<char*>(packets_[i].iov.iov_base),
@@ -175,7 +173,7 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
     QUIC_BUG << "Unable to get server address.";
     return false;
   }
-  if (FLAGS_quic_use_socket_timestamp && timestamp == QuicTime::Zero()) {
+  if (timestamp == QuicTime::Zero()) {
     // This isn't particularly desirable, but not all platforms support socket
     // timestamping.
     timestamp = clock.Now();

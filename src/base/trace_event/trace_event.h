@@ -18,7 +18,7 @@
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "base/trace_event/common/trace_event_common.h"
-#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 #include "base/trace_event/trace_log.h"
 #include "build/build_config.h"
@@ -211,10 +211,6 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
 #define TRACE_EVENT_API_THREAD_BUCKET(thread_bucket)                           \
     g_trace_state[thread_bucket]
 
-// Scoped tracker for task execution context in the heap profiler.
-#define TRACE_EVENT_API_SCOPED_TASK_EXECUTION_EVENT \
-  trace_event_internal::ScopedTaskExecutionEvent
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // Implementation detail: trace event macros create temporary variables
@@ -386,6 +382,15 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
   };                                                                       \
   INTERNAL_TRACE_EVENT_UID(ScopedContext)                                  \
   INTERNAL_TRACE_EVENT_UID(scoped_context)(context.raw_id());
+
+// Implementation detail: internal macro to trace a task execution with the
+// location where it was posted from.
+#define INTERNAL_TRACE_TASK_EXECUTION(run_function, task)                 \
+  TRACE_EVENT2("toplevel", run_function, "src_file",                      \
+               (task).posted_from.file_name(), "src_func",                \
+               (task).posted_from.function_name());                       \
+  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION INTERNAL_TRACE_EVENT_UID( \
+      task_event)((task).posted_from.file_name());
 
 namespace trace_event_internal {
 
@@ -1048,35 +1053,6 @@ class TraceEventSamplingStateScope {
 
  private:
   const char* previous_state_;
-};
-
-// ScopedTaskExecutionEvent records the current task's context in the heap
-// profiler.
-class ScopedTaskExecutionEvent {
- public:
-  explicit ScopedTaskExecutionEvent(const char* task_context)
-      : context_(task_context) {
-    using base::trace_event::AllocationContextTracker;
-    if (UNLIKELY(
-            AllocationContextTracker::capture_mode() !=
-            AllocationContextTracker::CaptureMode::DISABLED)) {
-      AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PushCurrentTaskContext(context_);
-    }
-  }
-
-  ~ScopedTaskExecutionEvent() {
-    using base::trace_event::AllocationContextTracker;
-    if (UNLIKELY(
-            AllocationContextTracker::capture_mode() !=
-            AllocationContextTracker::CaptureMode::DISABLED)) {
-      AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PopCurrentTaskContext(context_);
-    }
-  }
-
- private:
-  const char* context_;
 };
 
 }  // namespace trace_event_internal

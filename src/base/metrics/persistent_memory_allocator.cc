@@ -117,6 +117,10 @@ const PersistentMemoryAllocator::Reference
     PersistentMemoryAllocator::kReferenceQueue =
         offsetof(SharedMetadata, queue);
 
+const base::FilePath::CharType PersistentMemoryAllocator::kFileExtension[] =
+    FILE_PATH_LITERAL(".pma");
+
+
 PersistentMemoryAllocator::Iterator::Iterator(
     const PersistentMemoryAllocator* allocator)
     : allocator_(allocator), last_record_(kReferenceQueue), record_count_(0) {}
@@ -226,6 +230,7 @@ PersistentMemoryAllocator::Iterator::GetNextOfType(uint32_t type_match) {
   }
   return kReferenceNull;
 }
+
 
 // static
 bool PersistentMemoryAllocator::IsMemoryAcceptable(const void* base,

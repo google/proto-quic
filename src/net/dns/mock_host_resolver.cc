@@ -15,8 +15,8 @@
 #include "base/strings/pattern.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
-#include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -175,9 +175,9 @@ int MockHostResolverBase::ResolveFromIPLiteralOrCache(const RequestInfo& info,
                        info.host_resolver_flags());
     const HostCache::Entry* entry = cache_->Lookup(key, base::TimeTicks::Now());
     if (entry) {
-      rv = entry->error;
+      rv = entry->error();
       if (rv == OK)
-        *addresses = AddressList::CopyWithPort(entry->addrlist, info.port());
+        *addresses = AddressList::CopyWithPort(entry->addresses(), info.port());
     }
   }
   return rv;

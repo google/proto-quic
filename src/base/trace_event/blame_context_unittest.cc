@@ -73,6 +73,8 @@ class BlameContextTest : public testing::Test {
   void StartTracing();
   void StopTracing();
   std::unique_ptr<trace_analyzer::TraceAnalyzer> CreateTraceAnalyzer();
+ protected:
+  MessageLoop loop_;
 };
 
 void BlameContextTest::StartTracing() {

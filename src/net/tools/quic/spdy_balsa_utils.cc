@@ -9,6 +9,7 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "net/base/linked_hash_map.h"
 #include "net/quic/quic_flags.h"
@@ -118,7 +119,7 @@ void PopulateSpdyResponseHeaderBlock(SpdyMajorVersion version,
 
 bool IsSpecialSpdyHeader(SpdyHeaderBlock::const_iterator header,
                          BalsaHeaders* headers) {
-  return header->first.empty() || header->second.empty() ||
+  return header->first.empty() || /* header->second.empty() || */
          header->first[0] == ':';
 }
 
@@ -153,7 +154,18 @@ void SpdyHeadersToResponseHeaders(const SpdyHeaderBlock& header_block,
 
   for (BlockIt it = header_block.begin(); it != header_block.end(); ++it) {
     if (!IsSpecialSpdyHeader(it, request_headers)) {
-      request_headers->AppendHeader(it->first, it->second);
+      if (it->second.empty()) {
+        request_headers->AppendHeader(it->first, it->second);
+      } else {
+        DVLOG(2) << "Splitting value: [" << it->second << "]"
+                 << " for key: " << it->first;
+        for (string value :
+             base::SplitString(it->second, base::StringPiece("\0", 1),
+                               base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL)) {
+          DVLOG(2) << "AppendHeader(" << it->first << ", " << value << ")";
+          request_headers->AppendHeader(it->first, StringPiece(value));
+        }
+      }
     }
   }
 }
@@ -198,7 +210,18 @@ void SpdyHeadersToRequestHeaders(const SpdyHeaderBlock& header_block,
 
   for (BlockIt it = header_block.begin(); it != header_block.end(); ++it) {
     if (!IsSpecialSpdyHeader(it, request_headers)) {
-      request_headers->AppendHeader(it->first, it->second);
+      if (it->second.empty()) {
+        request_headers->AppendHeader(it->first, it->second);
+      } else {
+        DVLOG(2) << "Splitting value: [" << it->second << "]"
+                 << " for key: " << it->first;
+        for (string value :
+             base::SplitString(it->second, base::StringPiece("\0", 1),
+                               base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL)) {
+          DVLOG(2) << "AppendHeader(" << it->first << ", " << value << ")";
+          request_headers->AppendHeader(it->first, StringPiece(value));
+        }
+      }
     }
   }
 }

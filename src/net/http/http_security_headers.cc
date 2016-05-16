@@ -48,15 +48,11 @@ bool MaxAgeToLimitedInt(std::string::const_iterator begin,
 // |from_cert_chain|. Such an SPKI hash is called a "backup pin".
 bool IsBackupPinPresent(const HashValueVector& pins,
                         const HashValueVector& from_cert_chain) {
-  for (HashValueVector::const_iterator i = pins.begin(); i != pins.end();
-       ++i) {
-    HashValueVector::const_iterator j =
-        std::find_if(from_cert_chain.begin(), from_cert_chain.end(),
-                     HashValuesEqual(*i));
-    if (j == from_cert_chain.end())
+  for (const auto& pin : pins) {
+    auto p = std::find(from_cert_chain.begin(), from_cert_chain.end(), pin);
+    if (p == from_cert_chain.end())
       return true;
   }
-
   return false;
 }
 
@@ -64,10 +60,9 @@ bool IsBackupPinPresent(const HashValueVector& pins,
 // |a| or |b| is empty, returns false.
 bool HashesIntersect(const HashValueVector& a,
                      const HashValueVector& b) {
-  for (HashValueVector::const_iterator i = a.begin(); i != a.end(); ++i) {
-    HashValueVector::const_iterator j =
-        std::find_if(b.begin(), b.end(), HashValuesEqual(*i));
-    if (j != b.end())
+  for (const auto& pin : a) {
+    auto p = std::find(b.begin(), b.end(), pin);
+    if (p != b.end())
       return true;
   }
   return false;
@@ -128,7 +123,8 @@ bool ParseHPKPHeaderImpl(const std::string& value,
 
   HttpUtil::NameValuePairsIterator name_value_pairs(
       value.begin(), value.end(), ';',
-      HttpUtil::NameValuePairsIterator::VALUES_OPTIONAL);
+      HttpUtil::NameValuePairsIterator::Values::NOT_REQUIRED,
+      HttpUtil::NameValuePairsIterator::Quotes::NOT_STRICT);
 
   while (name_value_pairs.GetNext()) {
     if (base::LowerCaseEqualsASCII(

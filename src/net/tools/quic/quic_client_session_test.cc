@@ -21,12 +21,13 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPrintf;
+using google::protobuf::implicit_cast;
 using net::test::ConstructEncryptedPacket;
 using net::test::ConstructMisFramedEncryptedPacket;
 using net::test::CryptoTestUtils;
 using net::test::DefaultQuicConfig;
-using net::test::MockConnection;
-using net::test::MockConnectionHelper;
+using net::test::MockQuicConnection;
+using net::test::MockQuicConnectionHelper;
 using net::test::MockQuicSpdyClientStream;
 using net::test::PacketSavingConnection;
 using net::test::QuicConnectionPeer;
@@ -120,7 +121,7 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   QuicCryptoClientConfig crypto_config_;
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   PacketSavingConnection* connection_;
   std::unique_ptr<TestQuicClientSession> session_;
@@ -245,8 +246,8 @@ TEST_P(QuicClientSessionTest, InvalidPacketReceived) {
   IPEndPoint client_address(TestPeerIPAddress(), kTestPort);
 
   EXPECT_CALL(*connection_, ProcessUdpPacket(server_address, client_address, _))
-      .WillRepeatedly(Invoke(static_cast<MockConnection*>(connection_),
-                             &MockConnection::ReallyProcessUdpPacket));
+      .WillRepeatedly(Invoke(implicit_cast<MockQuicConnection*>(connection_),
+                             &MockQuicConnection::ReallyProcessUdpPacket));
   EXPECT_CALL(*connection_, OnCanWrite()).Times(AnyNumber());
   EXPECT_CALL(*connection_, OnError(_)).Times(1);
 
@@ -284,8 +285,8 @@ TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
   IPEndPoint client_address(TestPeerIPAddress(), kTestPort);
 
   EXPECT_CALL(*connection_, ProcessUdpPacket(server_address, client_address, _))
-      .WillRepeatedly(Invoke(static_cast<MockConnection*>(connection_),
-                             &MockConnection::ReallyProcessUdpPacket));
+      .WillRepeatedly(Invoke(implicit_cast<MockQuicConnection*>(connection_),
+                             &MockQuicConnection::ReallyProcessUdpPacket));
   EXPECT_CALL(*connection_, OnError(_)).Times(1);
 
   // Verify that a decryptable packet with bad frames does close the connection.

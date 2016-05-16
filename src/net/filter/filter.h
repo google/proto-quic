@@ -6,7 +6,7 @@
 //
 //   IStream* pre_filter_source;
 //   ...
-//   Filter* filter = Filter::Factory(filter_type, size);
+//   std::unique_ptr<Filter> filter = Filter::Factory(filter_type, size);
 //   int pre_filter_data_len = filter->stream_buffer_size();
 //   pre_filter_source->read(filter->stream_buffer(), pre_filter_data_len);
 //
@@ -182,13 +182,14 @@ class NET_EXPORT_PRIVATE Filter {
   // (decoding) order. For example, types[0] = FILTER_TYPE_SDCH,
   // types[1] = FILTER_TYPE_GZIP will cause data to first be gunzip filtered,
   // and the resulting output from that filter will be sdch decoded.
-  static Filter* Factory(const std::vector<FilterType>& filter_types,
-                         const FilterContext& filter_context);
+  static std::unique_ptr<Filter> Factory(
+      const std::vector<FilterType>& filter_types,
+      const FilterContext& filter_context);
 
   // A simpler version of Factory() which creates a single, unchained
   // Filter of type FILTER_TYPE_GZIP, or NULL if the filter could not be
   // initialized.
-  static Filter* GZipFactory();
+  static std::unique_ptr<Filter> GZipFactory();
 
   // External call to obtain data from this filter chain. If ther is no
   // next_filter_, then it obtains data from this specific filter.
@@ -285,27 +286,32 @@ class NET_EXPORT_PRIVATE Filter {
   // called multiple times during the filter creation process. In most simple
   // cases, this is only called once. Returns NULL and cleans up (deleting
   // filter_list) if a new filter can't be constructed.
-  static Filter* PrependNewFilter(FilterType type_id,
-                                  const FilterContext& filter_context,
-                                  int buffer_size,
-                                  Filter* filter_list);
+  static std::unique_ptr<Filter> PrependNewFilter(
+      FilterType type_id,
+      const FilterContext& filter_context,
+      int buffer_size,
+      std::unique_ptr<Filter> filter_list);
 
   // Helper methods for PrependNewFilter. If initialization is successful,
   // they return a fully initialized Filter. Otherwise, return NULL.
-  static Filter* InitBrotliFilter(FilterType type_id, int buffer_size);
-  static Filter* InitGZipFilter(FilterType type_id, int buffer_size);
-  static Filter* InitSdchFilter(FilterType type_id,
-                                const FilterContext& filter_context,
-                                int buffer_size);
+  static std::unique_ptr<Filter> InitBrotliFilter(FilterType type_id,
+                                                  int buffer_size);
+  static std::unique_ptr<Filter> InitGZipFilter(FilterType type_id,
+                                                int buffer_size);
+  static std::unique_ptr<Filter> InitSdchFilter(
+      FilterType type_id,
+      const FilterContext& filter_context,
+      int buffer_size);
 
   // Helper function to empty our output into the next filter's input.
   void PushDataIntoNextFilter();
 
   // Constructs a filter with an internal buffer of the given size.
   // Only meant to be called by unit tests that need to control the buffer size.
-  static Filter* FactoryForTests(const std::vector<FilterType>& filter_types,
-                                 const FilterContext& filter_context,
-                                 int buffer_size);
+  static std::unique_ptr<Filter> FactoryForTests(
+      const std::vector<FilterType>& filter_types,
+      const FilterContext& filter_context,
+      int buffer_size);
 
   // An optional filter to process output from this filter.
   std::unique_ptr<Filter> next_filter_;

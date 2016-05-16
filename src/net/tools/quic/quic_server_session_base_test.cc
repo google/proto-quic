@@ -30,8 +30,8 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using net::test::CryptoTestUtils;
-using net::test::MockConnection;
-using net::test::MockConnectionHelper;
+using net::test::MockQuicConnection;
+using net::test::MockQuicConnectionHelper;
 using net::test::QuicConfigPeer;
 using net::test::QuicConnectionPeer;
 using net::test::QuicSpdyStreamPeer;
@@ -134,9 +134,9 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
     config_.SetInitialSessionFlowControlWindowToSend(
         kInitialSessionFlowControlWindowForTest);
 
-    connection_ = new StrictMock<MockConnection>(&helper_, &alarm_factory_,
-                                                 Perspective::IS_SERVER,
-                                                 SupportedVersions(GetParam()));
+    connection_ = new StrictMock<MockQuicConnection>(
+        &helper_, &alarm_factory_, Perspective::IS_SERVER,
+        SupportedVersions(GetParam()));
     session_.reset(new TestServerSession(config_, connection_, &owner_,
                                          &crypto_config_,
                                          &compressed_certs_cache_));
@@ -149,9 +149,9 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  StrictMock<MockConnection>* connection_;
+  StrictMock<MockQuicConnection>* connection_;
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;

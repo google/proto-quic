@@ -8,7 +8,6 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/message_loop/message_pump.h"
-#include "base/observer_list.h"
 #include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 
@@ -22,21 +21,6 @@ namespace base {
 // TODO(dkegel): add support for background file IO somehow
 class BASE_EXPORT MessagePumpLibevent : public MessagePump {
  public:
-  class IOObserver {
-   public:
-    IOObserver() {}
-
-    // An IOObserver is an object that receives IO notifications from the
-    // MessagePump.
-    //
-    // NOTE: An IOObserver implementation should be extremely fast!
-    virtual void WillProcessIOEvent() = 0;
-    virtual void DidProcessIOEvent() = 0;
-
-   protected:
-    virtual ~IOObserver() {}
-  };
-
   // Used with WatchFileDescriptor to asynchronously monitor the I/O readiness
   // of a file descriptor.
   class Watcher {
@@ -119,9 +103,6 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
                            FileDescriptorWatcher *controller,
                            Watcher *delegate);
 
-  void AddIOObserver(IOObserver* obs);
-  void RemoveIOObserver(IOObserver* obs);
-
   // MessagePump methods:
   void Run(Delegate* delegate) override;
   void Quit() override;
@@ -168,7 +149,6 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
   // ... libevent wrapper for read end
   event* wakeup_event_;
 
-  ObserverList<IOObserver> io_observers_;
   ThreadChecker watch_file_descriptor_caller_checker_;
   DISALLOW_COPY_AND_ASSIGN(MessagePumpLibevent);
 };

@@ -94,7 +94,6 @@ if (is_win) {
 }
 
 template("yasm_assemble") {
-  # TODO(ajwong): Support use_system_yasm.
   assert(defined(invoker.sources), "Need sources defined for $target_name")
 
   # Only depend on YASM on x86 systems. Force compilation of .asm files for
@@ -166,14 +165,8 @@ template("yasm_assemble") {
     }
 
     # Output file.
-    #
-    # TODO(brettw) it might be nice if there was a source expansion for the
-    # path of the source file relative to the source root. Then we could
-    # exactly duplicate the naming and location of object files from the
-    # native build, which would be:
-    # "$root_out_dir/${target_name}.{{source_dir_part}}.$asm_obj_extension"
     outputs = [
-      "$target_out_dir/{{source_name_part}}.o",
+      "$target_out_dir/$source_set_name/{{source_name_part}}.o",
     ]
     args += [
       "-o",

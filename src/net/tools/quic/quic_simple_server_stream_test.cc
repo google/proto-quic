@@ -25,8 +25,8 @@
 #include "url/gurl.h"
 
 using base::StringPiece;
-using net::test::MockConnection;
-using net::test::MockConnectionHelper;
+using net::test::MockQuicConnection;
+using net::test::MockQuicConnectionHelper;
 using net::test::MockQuicSpdySession;
 using net::test::ReliableQuicStreamPeer;
 using net::test::SupportedVersions;
@@ -149,10 +149,10 @@ class QuicSimpleServerStreamTest
  public:
   QuicSimpleServerStreamTest()
       : connection_(
-            new StrictMock<MockConnection>(&helper_,
-                                           &alarm_factory_,
-                                           Perspective::IS_SERVER,
-                                           SupportedVersions(GetParam()))),
+            new StrictMock<MockQuicConnection>(&helper_,
+                                               &alarm_factory_,
+                                               Perspective::IS_SERVER,
+                                               SupportedVersions(GetParam()))),
         session_owner_(new StrictMock<MockQuicServerSessionVisitor>()),
         crypto_config_(new QuicCryptoServerConfig(
             QuicCryptoServerConfig::TESTING,
@@ -204,9 +204,9 @@ class QuicSimpleServerStreamTest
   }
 
   SpdyHeaderBlock response_headers_;
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  StrictMock<MockConnection>* connection_;
+  StrictMock<MockQuicConnection>* connection_;
   StrictMock<MockQuicServerSessionVisitor>* session_owner_;
   std::unique_ptr<QuicCryptoServerConfig> crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;

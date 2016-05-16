@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <climits>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -89,7 +90,7 @@ template <typename Integer>
 struct PositionOfSignBit {
   static const typename std::enable_if<std::numeric_limits<Integer>::is_integer,
                                        size_t>::type value =
-      8 * sizeof(Integer) - 1;
+      CHAR_BIT * sizeof(Integer) - 1;
 };
 
 // This is used for UnsignedAbs, where we need to support floating-point
@@ -390,7 +391,7 @@ template <typename T>
 class CheckedNumericState<T, NUMERIC_INTEGER> {
  private:
   T value_;
-  RangeConstraint validity_;
+  RangeConstraint validity_ : CHAR_BIT;  // Actually requires only two bits.
 
  public:
   template <typename Src, NumericRepresentation type>

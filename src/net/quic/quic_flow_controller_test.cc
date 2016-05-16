@@ -44,9 +44,9 @@ class QuicFlowControllerTest : public ::testing::Test {
   QuicByteCount send_window_;
   QuicByteCount receive_window_;
   std::unique_ptr<QuicFlowController> flow_controller_;
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockConnection connection_;
+  MockQuicConnection connection_;
 };
 
 TEST_F(QuicFlowControllerTest, SendingBytes) {

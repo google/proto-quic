@@ -196,10 +196,10 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
  protected:
   explicit QuicSessionTestBase(Perspective perspective)
       : connection_(
-            new StrictMock<MockConnection>(&helper_,
-                                           &alarm_factory_,
-                                           perspective,
-                                           SupportedVersions(GetParam()))),
+            new StrictMock<MockQuicConnection>(&helper_,
+                                               &alarm_factory_,
+                                               perspective,
+                                               SupportedVersions(GetParam()))),
         session_(connection_) {
     FLAGS_quic_always_log_bugs_for_tests = true;
     session_.config()->SetInitialStreamFlowControlWindowToSend(
@@ -257,9 +257,9 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
 
   QuicVersion version() const { return connection_->version(); }
 
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  StrictMock<MockConnection>* connection_;
+  StrictMock<MockQuicConnection>* connection_;
   TestSession session_;
   set<QuicStreamId> closed_streams_;
   SpdyHeaderBlock headers_;
@@ -675,7 +675,7 @@ TEST_P(QuicSessionTestServer, SendGoAway) {
   EXPECT_CALL(*writer, WritePacket(_, _, _, _, _))
       .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 0)));
   EXPECT_CALL(*connection_, SendGoAway(_, _, _))
-      .WillOnce(Invoke(connection_, &MockConnection::ReallySendGoAway));
+      .WillOnce(Invoke(connection_, &MockQuicConnection::ReallySendGoAway));
   session_.SendGoAway(QUIC_PEER_GOING_AWAY, "Going Away.");
   EXPECT_TRUE(session_.goaway_sent());
 

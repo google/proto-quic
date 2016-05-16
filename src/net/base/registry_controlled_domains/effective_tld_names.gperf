@@ -12,6 +12,7 @@ struct DomainRule {
 };
 %%
 0.bg, 0
+0emm.com, 6
 1.bg, 0
 1kapp.com, 4
 2.bg, 0
@@ -87,6 +88,7 @@ ac.ug, 0
 ac.uk, 0
 ac.vn, 0
 ac.za, 0
+ac.zm, 0
 aca.pro, 0
 academy, 0
 academy.museum, 0
@@ -203,6 +205,7 @@ alabama.museum, 0
 alaheadju.no, 0
 aland.fi, 0
 alaska.museum, 0
+alces.network, 6
 alessandria.it, 0
 alesund.no, 0
 alfaromeo, 0
@@ -632,6 +635,7 @@ biz.tr, 0
 biz.tt, 0
 biz.ua, 4
 biz.vn, 0
+biz.zm, 0
 bizen.okayama.jp, 0
 bj, 0
 bj.cn, 0
@@ -724,6 +728,7 @@ blogspot.tw, 4
 blogspot.ug, 4
 blogspot.vn, 4
 bloomberg, 0
+bloxcms.com, 4
 blue, 0
 bm, 0
 bmd.br, 0
@@ -856,6 +861,7 @@ california.museum, 0
 call, 0
 caltanissetta.it, 0
 calvinklein, 0
+cam, 0
 cam.it, 0
 cambridge.museum, 0
 camera, 0
@@ -1029,6 +1035,7 @@ chino.nagano.jp, 0
 chintai, 0
 chippubetsu.hokkaido.jp, 0
 chiropractic.museum, 0
+chirurgiens-dentistes-en-france.fr, 4
 chirurgiens-dentistes.fr, 0
 chiryu.aichi.jp, 0
 chita.aichi.jp, 0
@@ -1181,6 +1188,7 @@ co.uz, 0
 co.ve, 0
 co.vi, 0
 co.za, 0
+co.zm, 0
 coach, 0
 coal.museum, 0
 coastaldefence.museum, 0
@@ -1327,6 +1335,7 @@ com.vi, 0
 com.vn, 0
 com.vu, 0
 com.ws, 0
+com.zm, 0
 comcast, 0
 commbank, 0
 communication.museum, 0
@@ -1339,6 +1348,7 @@ compare, 0
 compute-1.amazonaws.com, 4
 compute.amazonaws.cn, 4
 compute.amazonaws.com, 4
+compute.estate, 6
 computer, 0
 computer.museum, 0
 computerhistory.museum, 0
@@ -1446,6 +1456,7 @@ daiwa.hiroshima.jp, 0
 dali.museum, 0
 dallas.museum, 0
 dance, 0
+daplie.me, 4
 database.museum, 0
 date, 0
 date.fukushima.jp, 0
@@ -1469,6 +1480,7 @@ dealer, 0
 deals, 0
 deatnu.no, 0
 decorativearts.museum, 0
+dedyn.io, 4
 defense.tn, 0
 degree, 0
 delaware.museum, 0
@@ -1525,6 +1537,7 @@ dnsalias.org, 4
 dnsdojo.com, 4
 dnsdojo.net, 4
 dnsdojo.org, 4
+dnshome.de, 4
 do, 0
 docs, 0
 dodge, 0
@@ -1744,6 +1757,7 @@ edu.vn, 0
 edu.vu, 0
 edu.ws, 0
 edu.za, 0
+edu.zm, 0
 education, 0
 education.museum, 0
 educational.museum, 0
@@ -1986,6 +2000,7 @@ foggia.it, 0
 folkebibl.no, 0
 folldal.no, 0
 foo, 0
+food, 0
 foodnetwork, 0
 football, 0
 for-better.biz, 4
@@ -2312,6 +2327,7 @@ gob.ve, 0
 gobo.wakayama.jp, 0
 godaddy, 0
 godo.gifu.jp, 0
+goip.de, 4
 gojome.akita.jp, 0
 gok.pk, 0
 gokase.miyazaki.jp, 0
@@ -2472,6 +2488,7 @@ gov.ve, 0
 gov.vn, 0
 gov.ws, 0
 gov.za, 0
+gov.zm, 0
 government.aero, 0
 govt.nz, 0
 gp, 0
@@ -2818,6 +2835,7 @@ hotel.hu, 0
 hotel.lk, 0
 hotel.tz, 0
 hoteles, 0
+hotels, 0
 hotmail, 0
 house, 0
 house.museum, 0
@@ -2845,6 +2863,7 @@ hyllestad.no, 0
 hyogo.jp, 0
 hyuga.miyazaki.jp, 0
 hyundai, 0
+hzc.io, 4
 i.bg, 0
 i.ng, 0
 i.ph, 0
@@ -2999,6 +3018,7 @@ info.tt, 0
 info.tz, 0
 info.ve, 0
 info.vn, 0
+info.zm, 0
 ing, 0
 ing.pa, 0
 ingatlan.hu, 0
@@ -4257,6 +4277,7 @@ mil.uy, 0
 mil.vc, 0
 mil.ve, 0
 mil.za, 0
+mil.zm, 0
 milan.it, 0
 milano.it, 0
 military.museum, 0
@@ -4504,6 +4525,7 @@ my.eu.org, 4
 my.id, 0
 mydrobo.com, 4
 myds.me, 4
+myfritz.net, 4
 mykolaiv.ua, 0
 myoko.niigata.jp, 0
 mypep.link, 4
@@ -4666,6 +4688,7 @@ nebraska.museum, 0
 nec, 0
 nedre-eiker.no, 0
 nemuro.hokkaido.jp, 0
+nerdpol.ovh, 4
 nerima.tokyo.jp, 0
 nes.akershus.no, 0
 nes.buskerud.no, 0
@@ -4799,6 +4822,7 @@ net.vn, 0
 net.vu, 0
 net.ws, 0
 net.za, 0
+net.zm, 0
 netbank, 0
 netflix, 0
 network, 0
@@ -4965,6 +4989,7 @@ nrw.museum, 0
 ns.ca, 0
 nsk.ru, 0
 nsn.us, 0
+nsupdate.info, 4
 nsw.au, 0
 nsw.edu.au, 0
 nt.au, 0
@@ -5112,6 +5137,7 @@ omotego.fukushima.jp, 0
 omsk.ru, 0
 omura.nagasaki.jp, 0
 omuta.fukuoka.jp, 0
+on-aptible.com, 4
 on-the-web.tv, 4
 on.ca, 0
 onagawa.miyagi.jp, 0
@@ -5301,6 +5327,7 @@ org.vn, 0
 org.vu, 0
 org.ws, 0
 org.za, 0
+org.zm, 0
 organic, 0
 orientexpress, 0
 origins, 0
@@ -5366,6 +5393,7 @@ ovh, 0
 ovre-eiker.no, 0
 owani.aomori.jp, 0
 owariasahi.aichi.jp, 0
+ownprovider.com, 4
 oxford.museum, 0
 oy.lc, 4
 oyabe.toyama.jp, 0
@@ -5790,6 +5818,7 @@ room, 0
 roros.no, 0
 rost.no, 0
 rotorcraft.aero, 0
+router.management, 4
 rovigo.it, 0
 rovno.ua, 0
 royken.no, 0
@@ -5980,6 +6009,7 @@ sch.ng, 0
 sch.qa, 0
 sch.sa, 0
 sch.uk, 2
+sch.zm, 0
 schaeffler, 0
 schlesisches.museum, 0
 schmidt, 0
@@ -6185,6 +6215,7 @@ shoes, 0
 shonai.fukuoka.jp, 0
 shonai.yamagata.jp, 0
 shoo.okayama.jp, 0
+shop, 0
 shop.ht, 0
 shop.hu, 0
 shop.pl, 0
@@ -6749,6 +6780,7 @@ tours, 0
 towada.aomori.jp, 0
 town, 0
 town.museum, 0
+townnews-staging.com, 4
 toya.hokkaido.jp, 0
 toyako.hokkaido.jp, 0
 toyama.jp, 0
@@ -7870,7 +7902,7 @@ zip, 0
 zippo, 0
 zj.cn, 0
 zlg.br, 0
-zm, 2
+zm, 0
 zone, 0
 zoological.museum, 0
 zoology.museum, 0

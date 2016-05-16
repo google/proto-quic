@@ -97,7 +97,7 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   void Initialize(bool stream_should_process_data) {
-    connection_ = new testing::StrictMock<MockConnection>(
+    connection_ = new testing::StrictMock<MockQuicConnection>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
     session_.reset(new testing::StrictMock<MockQuicSpdySession>(connection_));
@@ -110,9 +110,9 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
  protected:
-  MockConnectionHelper helper_;
+  MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
-  MockConnection* connection_;
+  MockQuicConnection* connection_;
   std::unique_ptr<MockQuicSpdySession> session_;
 
   // Owned by the |session_|.

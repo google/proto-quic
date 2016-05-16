@@ -14,6 +14,8 @@
 
 namespace net {
 
+class AddressList;
+
 // DNSDomainFromDot - convert a domain string to DNS format. From DJB's
 // public domain DNS library.
 //
@@ -39,6 +41,25 @@ base::TimeDelta GetTimeDeltaForConnectionTypeFromFieldTrialOrDefault(
     base::TimeDelta default_delta,
     NetworkChangeNotifier::ConnectionType connection_type);
 #endif  // !defined(OS_NACL)
+
+// How similar or different two AddressLists are (see values for details).
+// Used in histograms; do not modify existing values.
+enum AddressListDeltaType {
+  // Both lists contain the same addresses in the same order.
+  DELTA_IDENTICAL = 0,
+  // Both lists contain the same addresses in a different order.
+  DELTA_REORDERED = 1,
+  // The two lists have at least one address in common, but not all of them.
+  DELTA_OVERLAP = 2,
+  // The two lists have no addresses in common.
+  DELTA_DISJOINT = 3,
+  MAX_DELTA_TYPE
+};
+
+// Compares two AddressLists to see how similar or different their addresses
+// are. (See |AddressListDeltaType| for details of exactly what's checked.)
+AddressListDeltaType FindAddressListDeltaType(const AddressList& a,
+                                              const AddressList& b);
 
 }  // namespace net
 

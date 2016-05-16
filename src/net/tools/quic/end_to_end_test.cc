@@ -300,6 +300,14 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     server_config_.SetInitialSessionFlowControlWindowToSend(
         3 * kInitialSessionFlowControlWindowForTest);
 
+    // The default idle timeouts can be too strict when running on a busy
+    // machine.
+    const QuicTime::Delta timeout = QuicTime::Delta::FromSeconds(30);
+    client_config_.set_max_time_before_crypto_handshake(timeout);
+    client_config_.set_max_idle_time_before_crypto_handshake(timeout);
+    server_config_.set_max_time_before_crypto_handshake(timeout);
+    server_config_.set_max_idle_time_before_crypto_handshake(timeout);
+
     QuicInMemoryCachePeer::ResetForTests();
     AddToCache("/foo", 200, kFooResponseBody);
     AddToCache("/bar", 200, kBarResponseBody);
@@ -1474,14 +1482,14 @@ TEST_P(EndToEndTest, ConnectionMigrationClientPortChanged) {
 
   // Store the client address which was used to send the first request.
   IPEndPoint old_address = client_->client()->GetLatestClientAddress();
-
-  // Stop listening and close the old FD.
-  QuicClientPeer::CleanUpUDPSocket(client_->client(),
-                                   client_->client()->GetLatestFD());
+  int old_fd = client_->client()->GetLatestFD();
 
   // Create a new socket before closing the old one, which will result in a new
   // ephemeral port.
   QuicClientPeer::CreateUDPSocketAndBind(client_->client());
+
+  // Stop listening and close the old FD.
+  QuicClientPeer::CleanUpUDPSocket(client_->client(), old_fd);
 
   // The packet writer needs to be updated to use the new FD.
   client_->client()->CreateQuicPacketWriter();

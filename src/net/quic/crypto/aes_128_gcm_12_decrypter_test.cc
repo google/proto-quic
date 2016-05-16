@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "net/quic/quic_flags.h"
+#include "net/quic/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using base::StringPiece;
@@ -68,7 +69,7 @@ struct TestVector {
 
   // Expected output:
   const char* pt;  // An empty string "" means decryption succeeded and
-                   // the plaintext is zero-length. NULL means decryption
+                   // the plaintext is zero-length. nullptr means decryption
                    // failed.
 };
 
@@ -232,19 +233,14 @@ TEST(Aes128Gcm12DecrypterTest, Decrypt) {
       bool has_pt = test_vectors[j].pt;
 
       // Decode the test vector.
-      string key;
-      string iv;
-      string ct;
-      string aad;
-      string tag;
+      string key = QuicUtils::HexDecode(test_vectors[j].key);
+      string iv = QuicUtils::HexDecode(test_vectors[j].iv);
+      string ct = QuicUtils::HexDecode(test_vectors[j].ct);
+      string aad = QuicUtils::HexDecode(test_vectors[j].aad);
+      string tag = QuicUtils::HexDecode(test_vectors[j].tag);
       string pt;
-      ASSERT_TRUE(DecodeHexString(test_vectors[j].key, &key));
-      ASSERT_TRUE(DecodeHexString(test_vectors[j].iv, &iv));
-      ASSERT_TRUE(DecodeHexString(test_vectors[j].ct, &ct));
-      ASSERT_TRUE(DecodeHexString(test_vectors[j].aad, &aad));
-      ASSERT_TRUE(DecodeHexString(test_vectors[j].tag, &tag));
       if (has_pt) {
-        ASSERT_TRUE(DecodeHexString(test_vectors[j].pt, &pt));
+        pt = QuicUtils::HexDecode(test_vectors[j].pt);
       }
 
       // The test vector's lengths should look sane. Note that the lengths

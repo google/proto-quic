@@ -200,9 +200,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
                        const Closure& task,
                        TimeDelta delay);
 
-  void PostNonNestableTask(const tracked_objects::Location& from_here,
-                           const Closure& task);
-
   // A variant on PostTask that deletes the given object.  This is useful
   // if the object needs to live until the next run of the MessageLoop (for
   // example, deleting a RenderProcessHost from within an IPC callback is not
@@ -660,12 +657,10 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
 #if defined(OS_WIN)
   typedef MessagePumpForIO::IOHandler IOHandler;
   typedef MessagePumpForIO::IOContext IOContext;
-  typedef MessagePumpForIO::IOObserver IOObserver;
 #elif defined(OS_IOS)
   typedef MessagePumpIOSForIO::Watcher Watcher;
   typedef MessagePumpIOSForIO::FileDescriptorWatcher
       FileDescriptorWatcher;
-  typedef MessagePumpIOSForIO::IOObserver IOObserver;
 
   enum Mode {
     WATCH_READ = MessagePumpIOSForIO::WATCH_READ,
@@ -676,7 +671,6 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
   typedef MessagePumpLibevent::Watcher Watcher;
   typedef MessagePumpLibevent::FileDescriptorWatcher
       FileDescriptorWatcher;
-  typedef MessagePumpLibevent::IOObserver IOObserver;
 
   enum Mode {
     WATCH_READ = MessagePumpLibevent::WATCH_READ,
@@ -684,9 +678,6 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
     WATCH_READ_WRITE = MessagePumpLibevent::WATCH_READ_WRITE
   };
 #endif
-
-  void AddIOObserver(IOObserver* io_observer);
-  void RemoveIOObserver(IOObserver* io_observer);
 
 #if defined(OS_WIN)
   // Please see MessagePumpWin for definitions of these methods.

@@ -673,7 +673,7 @@ bool EVRootCAMetadata::IsEVPolicyOID(PolicyOID policy_oid) const {
 bool EVRootCAMetadata::HasEVPolicyOID(const SHA1HashValue& fingerprint,
                                       PolicyOID policy_oid) const {
   for (size_t i = 0; i < arraysize(ev_root_ca_metadata); i++) {
-    if (!fingerprint.Equals(ev_root_ca_metadata[i].fingerprint))
+    if (fingerprint != ev_root_ca_metadata[i].fingerprint)
       continue;
     for (size_t j = 0; j < arraysize(ev_root_ca_metadata[i].policy_oids); j++) {
       if (ev_root_ca_metadata[i].policy_oids[j][0] == '\0')
@@ -691,7 +691,7 @@ bool EVRootCAMetadata::HasEVPolicyOID(const SHA1HashValue& fingerprint,
 bool EVRootCAMetadata::AddEVCA(const SHA1HashValue& fingerprint,
                                const char* policy) {
   for (size_t i = 0; i < arraysize(ev_root_ca_metadata); i++) {
-    if (fingerprint.Equals(ev_root_ca_metadata[i].fingerprint))
+    if (fingerprint == ev_root_ca_metadata[i].fingerprint)
       return false;
   }
 

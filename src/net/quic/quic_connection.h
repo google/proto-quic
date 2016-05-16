@@ -168,6 +168,7 @@ class NET_EXPORT_PRIVATE QuicConnectionDebugVisitor
 
   // Called when a packet has been sent.
   virtual void OnPacketSent(const SerializedPacket& serialized_packet,
+                            QuicPathId original_path_id,
                             QuicPacketNumber original_packet_number,
                             TransmissionType transmission_type,
                             QuicTime sent_time) {}
@@ -460,8 +461,7 @@ class NET_EXPORT_PRIVATE QuicConnection
                             ConnectionCloseSource source) override;
 
   // QuicSentPacketManager::NetworkChangeVisitor
-  void OnCongestionWindowChange() override;
-  void OnRttChange() override;
+  void OnCongestionChange() override;
   void OnPathDegrading() override;
 
   // Called by the crypto stream when the handshake completes. In the server's
@@ -965,6 +965,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   QuicArenaScopedPtr<QuicAlarm> send_alarm_;
   // An alarm that is scheduled when the connection can still write and there
   // may be more data to send.
+  // TODO(ianswett): Remove resume_writes_alarm when deprecating
+  // FLAGS_quic_only_one_sending_alarm
   QuicArenaScopedPtr<QuicAlarm> resume_writes_alarm_;
   // An alarm that fires when the connection may have timed out.
   QuicArenaScopedPtr<QuicAlarm> timeout_alarm_;

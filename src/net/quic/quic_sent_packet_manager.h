@@ -95,12 +95,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager {
    public:
     virtual ~NetworkChangeVisitor() {}
 
-    // Called when congestion window may have changed.
-    virtual void OnCongestionWindowChange() = 0;
-
-    // Called when RTT may have changed, including when an RTT is read from
-    // the config.
-    virtual void OnRttChange() = 0;
+    // Called when congestion window or RTT may have changed.
+    virtual void OnCongestionChange() = 0;
 
     // Called with the path may be degrading. Note that the path may only be
     // temporarily degrading.
@@ -178,6 +174,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager {
   // the number of bytes sent and if they were retransmitted.  Returns true if
   // the sender should reset the retransmission timer.
   virtual bool OnPacketSent(SerializedPacket* serialized_packet,
+                            QuicPathId /*original_path_id*/,
                             QuicPacketNumber original_packet_number,
                             QuicTime sent_time,
                             TransmissionType transmission_type,
@@ -239,6 +236,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager {
   void OnConnectionMigration(PeerAddressChangeType type);
 
   bool using_pacing() const { return using_pacing_; }
+
+  bool handshake_confirmed() const { return handshake_confirmed_; }
 
   void set_debug_delegate(DebugDelegate* debug_delegate) {
     debug_delegate_ = debug_delegate;

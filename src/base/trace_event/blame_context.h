@@ -9,6 +9,7 @@
 
 #include "base/base_export.h"
 #include "base/macros.h"
+#include "base/threading/thread_checker.h"
 #include "base/trace_event/trace_log.h"
 
 namespace base {
@@ -33,7 +34,7 @@ namespace trace_event {
 // should be attributed to a blame context which is the parent of all <iframe>
 // blame contexts.
 class BASE_EXPORT BlameContext
-    : public trace_event::TraceLog::EnabledStateObserver {
+    : public trace_event::TraceLog::AsyncEnabledStateObserver {
  public:
   // Construct a blame context belonging to the blame context tree |name|, using
   // the tracing category |category|, identified by |id| from the |scope|
@@ -75,12 +76,17 @@ class BASE_EXPORT BlameContext
   void Initialize();
 
   // Indicate that the current thread is now doing work which should count
-  // against this blame context.
+  // against this blame context.  This function is allowed to be called in a
+  // thread different from where the blame context was created; However, any
+  // client doing that must be fully responsible for ensuring thready safety.
   void Enter();
 
   // Leave and stop doing work for a previously entered blame context. If
   // another blame context belongin to the same tree was entered prior to this
-  // one, it becomes the active blame context for this thread again.
+  // one, it becomes the active blame context for this thread again.  Similar
+  // to Enter(), this function can be called in a thread different from where
+  // the blame context was created, and the same requirement on thread safety
+  // must be satisfied.
   void Leave();
 
   // Record a snapshot of the blame context. This is normally only needed if a
@@ -119,6 +125,9 @@ class BASE_EXPORT BlameContext
   const int64_t parent_id_;
 
   const unsigned char* category_group_enabled_;
+
+  ThreadChecker thread_checker_;
+  WeakPtrFactory<BlameContext> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(BlameContext);
 };

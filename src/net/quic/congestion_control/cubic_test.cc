@@ -5,7 +5,6 @@
 #include "net/quic/congestion_control/cubic.h"
 
 #include "base/logging.h"
-#include "net/quic/quic_connection_stats.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -68,37 +67,6 @@ TEST_F(CubicTest, AboveOrigin) {
   expected_cwnd =
       11 + (elapsed_time_s * elapsed_time_s * elapsed_time_s * 410) / 1024;
   EXPECT_EQ(expected_cwnd, current_cwnd);
-}
-
-TEST_F(CubicTest, CwndIncreaseStatsDuringConvexRegion) {
-  const QuicTime::Delta rtt_min = hundred_ms_;
-  QuicPacketCount current_cwnd = 10;
-  QuicPacketCount expected_cwnd = current_cwnd + 1;
-  // Initialize controller state.
-  clock_.AdvanceTime(one_ms_);
-  expected_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
-  current_cwnd = expected_cwnd;
-  // Testing Reno mode increase.
-  for (int i = 0; i < 48; ++i) {
-    for (QuicPacketCount n = 1; n < current_cwnd / kNConnectionAlpha; ++n) {
-      // Call once per ACK, causing cwnd growth in Reno mode.
-      cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
-    }
-    // Advance current time so that cwnd update is allowed to happen by Cubic.
-    clock_.AdvanceTime(hundred_ms_);
-    current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
-    expected_cwnd++;
-  }
-
-  // Testing Cubic mode increase.
-  for (int i = 0; i < 52; ++i) {
-    for (QuicPacketCount n = 1; n < current_cwnd; ++n) {
-      // Call once per ACK.
-      cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
-    }
-    clock_.AdvanceTime(hundred_ms_);
-    current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
-  }
 }
 
 TEST_F(CubicTest, LossEvents) {

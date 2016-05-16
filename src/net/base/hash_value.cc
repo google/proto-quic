@@ -26,14 +26,6 @@ int CompareSHA1Hashes(const void* a, const void* b) {
 }  // namespace
 
 
-bool SHA1HashValue::Equals(const SHA1HashValue& other) const {
-  return memcmp(data, other.data, sizeof(data)) == 0;
-}
-
-bool SHA256HashValue::Equals(const SHA256HashValue& other) const {
-  return memcmp(data, other.data, sizeof(data)) == 0;
-}
-
 HashValue::HashValue(const SHA1HashValue& hash) : HashValue(HASH_VALUE_SHA1) {
   fingerprint.sha1 = hash;
 }
@@ -41,20 +33,6 @@ HashValue::HashValue(const SHA1HashValue& hash) : HashValue(HASH_VALUE_SHA1) {
 HashValue::HashValue(const SHA256HashValue& hash)
     : HashValue(HASH_VALUE_SHA256) {
   fingerprint.sha256 = hash;
-}
-
-bool HashValue::Equals(const HashValue& other) const {
-  if (tag != other.tag)
-    return false;
-  switch (tag) {
-    case HASH_VALUE_SHA1:
-      return fingerprint.sha1.Equals(other.fingerprint.sha1);
-    case HASH_VALUE_SHA256:
-      return fingerprint.sha256.Equals(other.fingerprint.sha256);
-    default:
-      NOTREACHED() << "Unknown HashValueTag " << tag;
-      return false;
-  }
 }
 
 bool HashValue::FromString(const base::StringPiece value) {

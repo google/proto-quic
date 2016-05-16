@@ -156,9 +156,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     char public_value[32];
     memset(public_value, 42, sizeof(public_value));
 
-    const string nonce_str = GenerateNonce();
-    nonce_hex_ = "#" + base::HexEncode(nonce_str.data(), nonce_str.size());
-    pub_hex_ = "#" + base::HexEncode(public_value, sizeof(public_value));
+    nonce_hex_ = "#" + QuicUtils::HexEncode(GenerateNonce());
+    pub_hex_ = "#" + QuicUtils::HexEncode(public_value, sizeof(public_value));
 
     // clang-format off
     CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
@@ -183,7 +182,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
 
     StringPiece srct;
     ASSERT_TRUE(out_.GetStringPiece(kSourceAddressTokenTag, &srct));
-    srct_hex_ = "#" + base::HexEncode(srct.data(), srct.size());
+    srct_hex_ = "#" + QuicUtils::HexEncode(srct);
 
     StringPiece scfg;
     ASSERT_TRUE(out_.GetStringPiece(kSCFG, &scfg));
@@ -191,7 +190,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
 
     StringPiece scid;
     ASSERT_TRUE(server_config_->GetStringPiece(kSCID, &scid));
-    scid_hex_ = "#" + base::HexEncode(scid.data(), scid.size());
+    scid_hex_ = "#" + QuicUtils::HexEncode(scid);
+
     crypto_proof_ = QuicCryptoProof();
     DCHECK(crypto_proof_.chain.get() == nullptr);
   }
@@ -322,7 +322,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
       size_t expected_count) {
     const uint32_t* reject_reasons;
     size_t num_reject_reasons;
-    static_assert(sizeof(QuicTag) == sizeof(uint32_t), "header_out_of_sync");
+    static_assert(sizeof(QuicTag) == sizeof(uint32_t), "header out of sync");
     QuicErrorCode error_code =
         out_.GetTaglist(kRREJ, &reject_reasons, &num_reject_reasons);
     ASSERT_EQ(QUIC_NO_ERROR, error_code);
@@ -383,8 +383,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     std::ostringstream xlct_stream;
     uint64_t xlct = QuicUtils::FNV1a_64_Hash(chain->certs.at(0).c_str(),
                                              chain->certs.at(0).length());
-
-    return "#" + base::HexEncode(reinterpret_cast<char*>(&xlct), sizeof(xlct));
+    return "#" +
+           QuicUtils::HexEncode(reinterpret_cast<char*>(&xlct), sizeof(xlct));
   }
 
  protected:

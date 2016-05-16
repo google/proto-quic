@@ -99,7 +99,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // called multiple times.
   void InitializeServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
-    helpers_.push_back(new MockConnectionHelper);
+    helpers_.push_back(new MockQuicConnectionHelper);
     alarm_factories_.push_back(new MockAlarmFactory);
     CreateServerSessionForTest(
         server_id_, QuicTime::Delta::FromSeconds(100000), supported_versions_,
@@ -126,7 +126,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // testing.  May be called multiple times.
   void InitializeFakeClient(bool supports_stateless_rejects) {
     TestQuicSpdyClientSession* client_session = nullptr;
-    helpers_.push_back(new MockConnectionHelper);
+    helpers_.push_back(new MockQuicConnectionHelper);
     alarm_factories_.push_back(new MockAlarmFactory);
     CreateClientSessionForTest(
         server_id_, supports_stateless_rejects,
@@ -171,11 +171,12 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   }
 
  protected:
-  // Every connection gets its own MockConnectionHelper and MockAlarmFactory,
+  // Every connection gets its own MockQuicConnectionHelper and
+  // MockAlarmFactory,
   // tracked separately from
   // the server and client state so their lifetimes persist through the whole
   // test.
-  std::vector<MockConnectionHelper*> helpers_;
+  std::vector<MockQuicConnectionHelper*> helpers_;
   std::vector<MockAlarmFactory*> alarm_factories_;
 
   // Server state

@@ -185,10 +185,9 @@ std::string HashHost(const std::string& canonicalized_host) {
 // |a| or |b| is empty, returns false.
 bool HashesIntersect(const HashValueVector& a,
                      const HashValueVector& b) {
-  for (HashValueVector::const_iterator i = a.begin(); i != a.end(); ++i) {
-    HashValueVector::const_iterator j =
-        std::find_if(b.begin(), b.end(), HashValuesEqual(*i));
-    if (j != b.end())
+  for (const auto& hash : a) {
+    auto p = std::find(b.begin(), b.end(), hash);
+    if (p != b.end())
       return true;
   }
   return false;

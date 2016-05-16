@@ -154,8 +154,9 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   ~NetworkQualityEstimator() override;
 
-  // Returns the effective type of the current connection.
-  EffectiveConnectionType GetEffectiveConnectionType() const;
+  // Returns the effective type of the current connection. Virtualized for
+  // testing.
+  virtual EffectiveConnectionType GetEffectiveConnectionType() const;
 
   // Returns true if RTT is available and sets |rtt| to estimated RTT at the
   // HTTP layer. Virtualized for testing. |rtt| should not be null. The RTT at

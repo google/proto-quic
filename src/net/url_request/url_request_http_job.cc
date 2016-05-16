@@ -18,7 +18,7 @@
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
@@ -1225,10 +1225,10 @@ void URLRequestHttpJob::PopulateNetErrorDetails(
   return transaction_->PopulateNetErrorDetails(details);
 }
 
-Filter* URLRequestHttpJob::SetupFilter() const {
+std::unique_ptr<Filter> URLRequestHttpJob::SetupFilter() const {
   DCHECK(transaction_.get());
   if (!response_info_)
-    return NULL;
+    return nullptr;
 
   std::vector<Filter::FilterType> encoding_types;
   std::string encoding_type;

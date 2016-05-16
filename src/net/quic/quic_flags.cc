@@ -85,23 +85,11 @@ bool FLAGS_quic_crypto_server_config_default_has_chacha20 = true;
 // If true, QUIC will use newly refactored TCP sender code.
 bool FLAGS_quic_use_new_tcp_sender = true;
 
-// If true, the QUIC dispatcher will directly send version negotiation packets
-// without needing to create a QUIC session first.
-bool FLAGS_quic_stateless_version_negotiation = true;
-
 // If true, QUIC connections will defer responding to ACKs to their send alarms.
 bool FLAGS_quic_connection_defer_ack_response = true;
 
-// Try to use the socket timestamp to determine the time a packet was
-// received instead of Now().
-bool FLAGS_quic_use_socket_timestamp = true;
-
 // Resend 0RTT requests in response to an REJ that re-establishes encryption.
 bool FLAGS_quic_reply_to_rej = true;
-
-// If true, QuicFramer will ignore invalid error codes when processing GoAway,
-// ConnectionClose, and RstStream frames.
-bool FLAGS_quic_ignore_invalid_error_code = true;
 
 // If true, QUIC connections can do bandwidth resumption with an initial window
 // of < 10 packets.
@@ -137,3 +125,7 @@ bool FLAGS_quic_enable_autotune_by_default = true;
 // Use largest acked in the most recent ack instead of largest acked ever in
 // loss recovery.
 bool FLAGS_quic_loss_recovery_use_largest_acked = true;
+
+// Only set one alarm for sending at once, either the send alarm or
+// retransmission alarm.
+bool FLAGS_quic_only_one_sending_alarm = true;

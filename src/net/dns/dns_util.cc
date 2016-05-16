@@ -13,6 +13,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "build/build_config.h"
+#include "net/base/address_list.h"
 
 #if defined(OS_POSIX)
 #include <netinet/in.h>
@@ -191,5 +192,36 @@ base::TimeDelta GetTimeDeltaForConnectionTypeFromFieldTrialOrDefault(
   return out;
 }
 #endif  // !defined(OS_NACL)
+
+AddressListDeltaType FindAddressListDeltaType(const AddressList& a,
+                                              const AddressList& b) {
+  bool pairwise_mismatch = false;
+  bool any_match = false;
+  bool any_missing = false;
+  bool same_size = a.size() == b.size();
+
+  for (size_t i = 0; i < a.size(); ++i) {
+    bool this_match = false;
+    for (size_t j = 0; j < b.size(); ++j) {
+      if (a[i] == b[j]) {
+        any_match = true;
+        this_match = true;
+      } else if (i == j) {
+        pairwise_mismatch = true;
+      }
+    }
+    if (!this_match)
+      any_missing = true;
+  }
+
+  if (same_size && !pairwise_mismatch)
+    return DELTA_IDENTICAL;
+  else if (same_size && !any_missing)
+    return DELTA_REORDERED;
+  else if (any_match)
+    return DELTA_OVERLAP;
+  else
+    return DELTA_DISJOINT;
+}
 
 }  // namespace net

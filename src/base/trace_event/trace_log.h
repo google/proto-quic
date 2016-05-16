@@ -119,6 +119,28 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   void RemoveEnabledStateObserver(EnabledStateObserver* listener);
   bool HasEnabledStateObserver(EnabledStateObserver* listener) const;
 
+  // Asynchronous enabled state listeners. When tracing is enabled or disabled,
+  // for each observer, a task for invoking its appropriate callback is posted
+  // to the thread from which AddAsyncEnabledStateObserver() was called. This
+  // allows the observer to be safely destroyed, provided that it happens on the
+  // same thread that invoked AddAsyncEnabledStateObserver().
+  class BASE_EXPORT AsyncEnabledStateObserver {
+   public:
+    virtual ~AsyncEnabledStateObserver() = default;
+
+    // Posted just after the tracing system becomes enabled, outside |lock_|.
+    // TraceLog::IsEnabled() is true at this point.
+    virtual void OnTraceLogEnabled() = 0;
+
+    // Posted just after the tracing system becomes disabled, outside |lock_|.
+    // TraceLog::IsEnabled() is false at this point.
+    virtual void OnTraceLogDisabled() = 0;
+  };
+  void AddAsyncEnabledStateObserver(
+      WeakPtr<AsyncEnabledStateObserver> listener);
+  void RemoveAsyncEnabledStateObserver(AsyncEnabledStateObserver* listener);
+  bool HasAsyncEnabledStateObserver(AsyncEnabledStateObserver* listener) const;
+
   TraceLogStatus GetStatus() const;
   bool BufferIsFull() const;
 
@@ -365,6 +387,7 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   class ThreadLocalEventBuffer;
   class OptionalAutoLock;
+  struct RegisteredAsyncObserver;
 
   TraceLog();
   ~TraceLog() override;
@@ -442,6 +465,8 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   subtle::AtomicWord /* EventCallback */ event_callback_;
   bool dispatching_to_observer_list_;
   std::vector<EnabledStateObserver*> enabled_state_observer_list_;
+  std::map<AsyncEnabledStateObserver*, RegisteredAsyncObserver>
+      async_observers_;
 
   std::string process_name_;
   base::hash_map<int, std::string> process_labels_;

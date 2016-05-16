@@ -25,9 +25,9 @@
 #include "base/strings/stringprintf.h"
 #include "base/sys_info.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
-#include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_id_name_manager.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
 #include "base/trace_event/heap_profiler.h"
@@ -333,6 +333,15 @@ void TraceLog::ThreadLocalEventBuffer::FlushWhileLocked() {
   // find the generation mismatch and delete this buffer soon.
 }
 
+struct TraceLog::RegisteredAsyncObserver {
+  RegisteredAsyncObserver(WeakPtr<AsyncEnabledStateObserver> observer)
+      : observer(observer), task_runner(ThreadTaskRunnerHandle::Get()) {}
+  ~RegisteredAsyncObserver() {}
+
+  WeakPtr<AsyncEnabledStateObserver> observer;
+  scoped_refptr<SequencedTaskRunner> task_runner;
+};
+
 TraceLogStatus::TraceLogStatus() : event_capacity(0), event_count(0) {}
 
 TraceLogStatus::~TraceLogStatus() {}
@@ -570,6 +579,7 @@ void TraceLog::GetKnownCategoryGroups(
 
 void TraceLog::SetEnabled(const TraceConfig& trace_config, Mode mode) {
   std::vector<EnabledStateObserver*> observer_list;
+  std::map<AsyncEnabledStateObserver*, RegisteredAsyncObserver> observer_map;
   {
     AutoLock lock(lock_);
 
@@ -634,10 +644,16 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config, Mode mode) {
 
     dispatching_to_observer_list_ = true;
     observer_list = enabled_state_observer_list_;
+    observer_map = async_observers_;
   }
   // Notify observers outside the lock in case they trigger trace events.
   for (size_t i = 0; i < observer_list.size(); ++i)
     observer_list[i]->OnTraceLogEnabled();
+  for (const auto& it : observer_map) {
+    it.second.task_runner->PostTask(
+        FROM_HERE, Bind(&AsyncEnabledStateObserver::OnTraceLogEnabled,
+                        it.second.observer));
+  }
 
   {
     AutoLock lock(lock_);
@@ -719,6 +735,8 @@ void TraceLog::SetDisabledWhileLocked() {
   dispatching_to_observer_list_ = true;
   std::vector<EnabledStateObserver*> observer_list =
       enabled_state_observer_list_;
+  std::map<AsyncEnabledStateObserver*, RegisteredAsyncObserver> observer_map =
+      async_observers_;
 
   {
     // Dispatch to observers outside the lock in case the observer triggers a
@@ -726,6 +744,11 @@ void TraceLog::SetDisabledWhileLocked() {
     AutoUnlock unlock(lock_);
     for (size_t i = 0; i < observer_list.size(); ++i)
       observer_list[i]->OnTraceLogDisabled();
+    for (const auto& it : observer_map) {
+      it.second.task_runner->PostTask(
+          FROM_HERE, Bind(&AsyncEnabledStateObserver::OnTraceLogDisabled,
+                          it.second.observer));
+    }
   }
   dispatching_to_observer_list_ = false;
 }
@@ -1708,6 +1731,25 @@ void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
 void ConvertableToTraceFormat::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
   overhead->Add("ConvertableToTraceFormat(Unknown)", sizeof(*this));
+}
+
+void TraceLog::AddAsyncEnabledStateObserver(
+    WeakPtr<AsyncEnabledStateObserver> listener) {
+  AutoLock lock(lock_);
+  async_observers_.insert(
+      std::make_pair(listener.get(), RegisteredAsyncObserver(listener)));
+}
+
+void TraceLog::RemoveAsyncEnabledStateObserver(
+    AsyncEnabledStateObserver* listener) {
+  AutoLock lock(lock_);
+  async_observers_.erase(listener);
+}
+
+bool TraceLog::HasAsyncEnabledStateObserver(
+    AsyncEnabledStateObserver* listener) const {
+  AutoLock lock(lock_);
+  return ContainsKey(async_observers_, listener);
 }
 
 }  // namespace trace_event

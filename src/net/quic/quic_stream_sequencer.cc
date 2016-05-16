@@ -42,7 +42,7 @@ QuicStreamSequencer::~QuicStreamSequencer() {}
 void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
   ++num_frames_received_;
   const QuicStreamOffset byte_offset = frame.offset;
-  const size_t data_len = frame.frame_length;
+  const size_t data_len = frame.data_length;
 
   if (frame.fin) {
     CloseStreamAtOffset(frame.offset + data_len);
@@ -53,7 +53,7 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
   size_t bytes_written;
   string error_details;
   QuicErrorCode result = buffered_frames_.OnStreamData(
-      byte_offset, StringPiece(frame.frame_buffer, frame.frame_length),
+      byte_offset, StringPiece(frame.data_buffer, frame.data_length),
       clock_->ApproximateNow(), &bytes_written, &error_details);
   if (result != QUIC_NO_ERROR) {
     DLOG(WARNING) << QuicUtils::ErrorToString(result);

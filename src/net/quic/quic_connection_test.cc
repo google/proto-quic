@@ -1057,7 +1057,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   QuicPacketCreator* creator_;
   QuicPacketGenerator* generator_;
   QuicSentPacketManager* manager_;
-  StrictMock<MockConnectionVisitor> visitor_;
+  StrictMock<MockQuicConnectionVisitor> visitor_;
 
   QuicStreamFrame frame1_;
   QuicStreamFrame frame2_;
@@ -1910,7 +1910,7 @@ TEST_P(QuicConnectionTest, FramePackingSendv) {
   EXPECT_EQ(1u, writer_->stream_frames().size());
   QuicStreamFrame* frame = writer_->stream_frames()[0];
   EXPECT_EQ(1u, frame->stream_id);
-  EXPECT_EQ("ABCD", StringPiece(frame->frame_buffer, frame->frame_length));
+  EXPECT_EQ("ABCD", StringPiece(frame->data_buffer, frame->data_length));
 }
 
 TEST_P(QuicConnectionTest, FramePackingSendvQueued) {

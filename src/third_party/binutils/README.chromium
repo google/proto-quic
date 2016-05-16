@@ -1,6 +1,6 @@
 Name: binutils
 URL: http://www.gnu.org/software/binutils/
-Version: 2.25
+Version: 2.26
 License: GPL v2
 License File: NOT_SHIPPED
 Security Critical: no
@@ -9,29 +9,24 @@ Description:
 This directory contains i386 and amd64 binaries of the binutils tools
 (including gold linker).
 
-They were built from binutils-2.25 using the "build-all.sh" script on a Ubuntu
-Precise.
+They were built from binutils-2.26 using the "build-all.sh" script on a
+Ubuntu Trusty.
 
 The script creates chroots for 32bit and 64bit Ubuntu Precise and then builds
 binutils inside the roots. It also builds tcmalloc and links binutils with it
 to improve the speed of LTO.
 
-Version 2.25 was released on Wed, 24 Dec 2014
+Version 2.26 was released on Mon, 25 Jan 2016
 
 Local patches:
- * unlock-thin.patch for http://crbug.com/453195 from upstream change
-   https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=2cfbf2fece582c29df348104b28677c38a8301f4
-   (Landed upstream Wed, 4 Feb 2015 - should be in 2.26)
-
- * plugin-dso-fix.patch for http://crbug.com/453195 from upstream change
-   https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=3c537f7fdb11f02f7082749f3f21dfdd2c2025e8
-   (Landed upstream Thu, 5 Feb 2015 - should be in 2.26)
-
  * long-plt.patch for http://crbug.com/554017 from upstream change
    https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=ce3e49806d505721e0875e704de0b6fcba7660ed
    (Landed upstream Thu, 17 Dec 2015 - should be in 2.27)
-   The local patch has been backported to 2.25. The patch in the upstream
-   repository currently applies cleanly to the 2.26 branch.
+ * icf-rel.patch for https://sourceware.org/bugzilla/show_bug.cgi?id=19047
+   from upstream change
+   https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=d114b830426300f80302ca03ff4322942f63c615
+   (Landed upstream on 2.26 branch Thu, 5 May 2016,
+   and on trunk Fri, 5 Feb 2016 - will be in 2.27)
 
  * (build-all.sh|build-one.sh|upload.sh) scripts for building the binutils
    binaries and uploading them to Google storage.
@@ -53,4 +48,3 @@ To upgrade binutils, use the following steps:
  * Commit the change
 
 See https://codereview.chromium.org/1368233002/ for an example upgrade.
-
