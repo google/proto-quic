@@ -76,7 +76,7 @@ ubuntu_codenames="(precise|trusty|utopic|vivid|wily|xenial)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
   if [[ ! $lsb_release =~ $ubuntu_codenames ]]; then
     echo "ERROR: Only Ubuntu 12.04 (precise), 14.04 (trusty), " \
-      "14.10 (utopic), 15.04 (vivid), 15.10 (wily) and 16.04 (xenial) "
+      "14.10 (utopic), 15.04 (vivid), 15.10 (wily) and 16.04 (xenial) " \
       "are currently supported" >&2
     exit 1
   fi
@@ -100,17 +100,17 @@ chromeos_dev_list="libbluetooth-dev libxkbcommon-dev realpath"
 dev_list="bison cdbs curl dpkg-dev elfutils devscripts fakeroot
           flex fonts-thai-tlwg g++ git-core git-svn gperf language-pack-da
           language-pack-fr language-pack-he language-pack-zh-hant
-          libapache2-mod-php5 libasound2-dev libbrlapi-dev libav-tools
+          libasound2-dev libbrlapi-dev libav-tools
           libbz2-dev libcairo2-dev libcap-dev libcups2-dev libcurl4-gnutls-dev
           libdrm-dev libelf-dev libffi-dev libgconf2-dev libglib2.0-dev
           libglu1-mesa-dev libgnome-keyring-dev libgtk2.0-dev libkrb5-dev
           libnspr4-dev libnss3-dev libpam0g-dev libpci-dev libpulse-dev
           libsctp-dev libspeechd-dev libsqlite3-dev libssl-dev libudev-dev
           libwww-perl libxslt1-dev libxss-dev libxt-dev libxtst-dev openbox
-          patch perl php5-cgi pkg-config python python-cherrypy3 python-crypto
+          patch perl pkg-config python python-cherrypy3 python-crypto
           python-dev python-numpy python-opencv python-openssl python-psutil
-          python-yaml rpm ruby subversion ttf-dejavu-core ttf-indic-fonts
-          ttf-kochi-gothic ttf-kochi-mincho wdiff zip $chromeos_dev_list"
+          python-yaml rpm ruby subversion ttf-dejavu-core wdiff zip
+          $chromeos_dev_list"
 
 # 64-bit systems need a minimum set of 32-bit compat packages for the pre-built
 # NaCl binaries.
@@ -156,10 +156,22 @@ arm_list="libc6-dev-armhf-cross
           g++-arm-linux-gnueabihf"
 
 # Work around for dependency issue Ubuntu/Trusty: http://crbug.com/435056
-if [ "x$lsb_release" = "xtrusty" ]; then
-  arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
-              gcc-4.8-multilib-arm-linux-gnueabihf"
-fi
+case $lsb_release in
+  trusty)
+    arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
+                gcc-4.8-multilib-arm-linux-gnueabihf"
+    ;;
+  wily)
+    arm_list+=" g++-5-multilib-arm-linux-gnueabihf
+                gcc-5-multilib-arm-linux-gnueabihf
+                gcc-arm-linux-gnueabihf"
+    ;;
+  xenial)
+    arm_list+=" g++-5-multilib-arm-linux-gnueabihf
+                gcc-5-multilib-arm-linux-gnueabihf
+                gcc-arm-linux-gnueabihf"
+    ;;
+esac
 
 # Packages to build NaCl, its toolchains, and its ports.
 naclports_list="ant autoconf bison cmake gawk intltool xutils-dev xsltproc"
@@ -235,6 +247,24 @@ if package_exists fonts-stix; then
   dev_list="${dev_list} fonts-stix"
 else
   dev_list="${dev_list} xfonts-mathml"
+fi
+if package_exists fonts-indic; then
+    dev_list="${dev_list} fonts-indic"
+else
+    dev_list="${dev_list} ttf-indic-fonts"
+fi
+if package_exists php7.0-cgi; then
+    dev_list="${dev_list} php7.0-cgi libapache2-mod-php7.0"
+else
+    dev_list="${dev_list} php5-cgi libapache2-mod-php5"
+fi
+# Ubuntu 16.04 has this package deleted.
+if package_exists ttf-kochi-gothic; then
+    dev_list="${dev_list} ttf-kochi-gothic"
+fi
+# Ubuntu 16.04 has this package deleted.
+if package_exists ttf-kochi-mincho; then
+    dev_list="${dev_list} ttf-kochi-mincho"
 fi
 
 # Some packages are only needed if the distribution actually supports
