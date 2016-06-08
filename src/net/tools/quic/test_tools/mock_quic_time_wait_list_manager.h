@@ -16,7 +16,7 @@ namespace test {
 class MockTimeWaitListManager : public QuicTimeWaitListManager {
  public:
   MockTimeWaitListManager(QuicPacketWriter* writer,
-                          QuicServerSessionVisitor* visitor,
+                          QuicServerSessionBase::Visitor* visitor,
                           QuicConnectionHelperInterface* helper,
                           QuicAlarmFactory* alarm_factory);
   ~MockTimeWaitListManager() override;

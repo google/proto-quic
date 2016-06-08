@@ -9,9 +9,7 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/callback_helpers.h"
-#include "base/compiler_specific.h"
 #include "base/logging.h"
-#include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
@@ -21,14 +19,11 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verifier.h"
-#include "net/cert/cert_verify_result.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/ct_verifier.h"
-#include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
 #include "net/quic/crypto/crypto_protocol.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -212,22 +207,9 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     // Note that this is a completely synchronous operation: The CT Log Verifier
     // gets all the data it needs for SCT verification and does not do any
     // external communication.
-    int result = cert_transparency_verifier_->Verify(
-        cert_.get(), std::string(), cert_sct,
-        &verify_details_->ct_verify_result, net_log_);
-    // TODO(rtenneti): Delete this debugging code.
-    if (result == OK) {
-      VLOG(1) << "CTVerifier::Verify success";
-    } else {
-      VLOG(1) << "CTVerifier::Verify failed: " << result;
-    }
-  } else {
-    // TODO(rtenneti): Delete this debugging code.
-    if (cert_transparency_verifier_) {
-      VLOG(1) << "cert_sct is empty";
-    } else {
-      VLOG(1) << "cert_transparency_verifier_ is null";
-    }
+    cert_transparency_verifier_->Verify(cert_.get(), std::string(), cert_sct,
+                                        &verify_details_->ct_verify_result,
+                                        net_log_);
   }
 
   // We call VerifySignature first to avoid copying of server_config and

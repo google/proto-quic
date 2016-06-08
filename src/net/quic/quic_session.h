@@ -98,6 +98,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // If provided, |ack_notifier_delegate| will be registered to be notified when
   // we have seen ACKs for all packets resulting from this call.
   virtual QuicConsumedData WritevData(
+      ReliableQuicStream* stream,
       QuicStreamId id,
       QuicIOVector iov,
       QuicStreamOffset offset,

@@ -287,6 +287,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     client_supported_versions_ = GetParam().client_supported_versions;
     server_supported_versions_ = GetParam().server_supported_versions;
     negotiated_version_ = GetParam().negotiated_version;
+    FLAGS_quic_reply_to_rej = false;  // b/28374708
 
     VLOG(1) << "Using Configuration: " << GetParam();
 
@@ -365,8 +366,8 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     server_config_.SetInitialSessionFlowControlWindowToSend(window);
   }
 
-  const QuicSentPacketManager* GetSentPacketManagerFromFirstServerSession()
-      const {
+  const QuicSentPacketManagerInterface*
+  GetSentPacketManagerFromFirstServerSession() const {
     QuicDispatcher* dispatcher =
         QuicServerPeer::GetDispatcher(server_thread_->server());
     QuicSession* session = dispatcher->session_map().begin()->second;
@@ -1200,6 +1201,9 @@ TEST_P(EndToEndTest, NegotiateMaxOpenStreams) {
 
 TEST_P(EndToEndTest, NegotiateCongestionControl) {
   ValueRestore<bool> old_flag(&FLAGS_quic_allow_bbr, true);
+  // Disable this flag because if connection uses multipath sent packet manager,
+  // static_cast here does not work.
+  FLAGS_quic_enable_multipath = false;
   ASSERT_TRUE(Initialize());
   client_->client()->WaitForCryptoHandshakeConfirmed();
 
@@ -1220,7 +1224,8 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
 
   EXPECT_EQ(expected_congestion_control_type,
             QuicSentPacketManagerPeer::GetSendAlgorithm(
-                *GetSentPacketManagerFromFirstServerSession())
+                *static_cast<const QuicSentPacketManager*>(
+                    GetSentPacketManagerFromFirstServerSession()))
                 ->GetCongestionControlType());
 }
 
@@ -1250,15 +1255,15 @@ TEST_P(EndToEndTest, ClientSuggestsRTT) {
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
-  const QuicSentPacketManager& client_sent_packet_manager =
+  const QuicSentPacketManagerInterface& client_sent_packet_manager =
       client_->client()->session()->connection()->sent_packet_manager();
-  const QuicSentPacketManager& server_sent_packet_manager =
-      *GetSentPacketManagerFromFirstServerSession();
+  const QuicSentPacketManagerInterface* server_sent_packet_manager =
+      GetSentPacketManagerFromFirstServerSession();
 
   EXPECT_EQ(kInitialRTT,
             client_sent_packet_manager.GetRttStats()->initial_rtt_us());
   EXPECT_EQ(kInitialRTT,
-            server_sent_packet_manager.GetRttStats()->initial_rtt_us());
+            server_sent_packet_manager->GetRttStats()->initial_rtt_us());
   server_thread_->Resume();
 }
 
@@ -1278,7 +1283,7 @@ TEST_P(EndToEndTest, MaxInitialRTT) {
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
   QuicSession* session = dispatcher->session_map().begin()->second;
-  const QuicSentPacketManager& client_sent_packet_manager =
+  const QuicSentPacketManagerInterface& client_sent_packet_manager =
       client_->client()->session()->connection()->sent_packet_manager();
 
   // Now that acks have been exchanged, the RTT estimate has decreased on the
@@ -1308,9 +1313,9 @@ TEST_P(EndToEndTest, MinInitialRTT) {
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
   QuicSession* session = dispatcher->session_map().begin()->second;
-  const QuicSentPacketManager& client_sent_packet_manager =
+  const QuicSentPacketManagerInterface& client_sent_packet_manager =
       client_->client()->session()->connection()->sent_packet_manager();
-  const QuicSentPacketManager& server_sent_packet_manager =
+  const QuicSentPacketManagerInterface& server_sent_packet_manager =
       session->connection()->sent_packet_manager();
 
   // Now that acks have been exchanged, the RTT estimate has decreased on the
@@ -1769,6 +1774,36 @@ TEST_P(EndToEndTest, AckNotifierWithPacketLossAndBlockedSocket) {
     client_->client()->WaitForEvents();
   }
   server_thread_->Resume();
+}
+
+// Send a public reset from the server.
+TEST_P(EndToEndTest, ServerSendPublicReset) {
+  ASSERT_TRUE(Initialize());
+
+  // Send the public reset.
+  QuicConnectionId connection_id =
+      client_->client()->session()->connection()->connection_id();
+  QuicPublicResetPacket header;
+  header.public_header.connection_id = connection_id;
+  header.public_header.reset_flag = true;
+  header.public_header.version_flag = false;
+  header.rejected_packet_number = 10101;
+  QuicFramer framer(server_supported_versions_, QuicTime::Zero(),
+                    Perspective::IS_SERVER);
+  std::unique_ptr<QuicEncryptedPacket> packet(
+      framer.BuildPublicResetPacket(header));
+  // We must pause the server's thread in order to call WritePacket without
+  // race conditions.
+  server_thread_->Pause();
+  server_writer_->WritePacket(
+      packet->data(), packet->length(), server_address_.address(),
+      client_->client()->GetLatestClientAddress(), nullptr);
+  server_thread_->Resume();
+
+  // The request should fail.
+  EXPECT_EQ("", client_->SendSynchronousRequest("/foo"));
+  EXPECT_EQ(0u, client_->response_headers()->parsed_response_code());
+  EXPECT_EQ(QUIC_PUBLIC_RESET, client_->connection_error());
 }
 
 // Send a public reset from the server for a different connection ID.
@@ -2656,7 +2691,7 @@ TEST_P(EndToEndTest, DISABLED_TestHugePostWithPacketLoss) {
     client_->SendData(string(body.data(), kSizeBytes), fin);
     client_->client()->WaitForEvents();
   }
-  VerifyCleanConnection(false);
+  VerifyCleanConnection(true);
 }
 
 // TODO(fayang): this test seems to cause net_unittests timeouts :|

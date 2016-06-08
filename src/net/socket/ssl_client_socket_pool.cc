@@ -379,17 +379,14 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                             cipher_suite);
     // UMA_HISTOGRAM_... macros cache the Histogram instance and thus only work
     // if the histogram name is constant, so don't generate it dynamically.
-    if (strcmp(str, "RSA") == 0) {
-      UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.RSA",
-                                  ssl_info.key_exchange_info);
-    } else if (strncmp(str, "DHE_", 4) == 0) {
+    if (strncmp(str, "DHE_", 4) == 0) {
       UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.DHE",
                                   ssl_info.key_exchange_info);
     } else if (strncmp(str, "ECDHE_", 6) == 0) {
       UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.ECDHE",
                                   ssl_info.key_exchange_info);
     } else {
-      NOTREACHED();
+      DCHECK_EQ(0, strcmp(str, "RSA"));
     }
 
     if (ssl_info.handshake_type == SSLInfo::HANDSHAKE_RESUME) {

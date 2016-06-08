@@ -16,7 +16,6 @@
 #include "base/macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "net/base/address_list.h"
-#include "net/base/connection_type_histograms.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -821,9 +820,6 @@ void TCPSocketWin::LogConnectBegin(const AddressList& addresses) {
 }
 
 void TCPSocketWin::LogConnectEnd(int net_error) {
-  if (net_error == OK)
-    UpdateConnectionTypeHistograms(CONNECTION_ANY);
-
   if (net_error != OK) {
     net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, net_error);
     return;

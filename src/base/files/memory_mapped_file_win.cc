@@ -15,25 +15,36 @@
 
 namespace base {
 
-MemoryMappedFile::MemoryMappedFile() : data_(NULL), length_(0), image_(false) {
-}
-
-bool MemoryMappedFile::InitializeAsImageSection(const FilePath& file_name) {
-  image_ = true;
-  return Initialize(file_name);
+MemoryMappedFile::MemoryMappedFile() : data_(NULL), length_(0) {
 }
 
 bool MemoryMappedFile::MapFileRegionToMemory(
-    const MemoryMappedFile::Region& region) {
+    const MemoryMappedFile::Region& region,
+    Access access) {
   ThreadRestrictions::AssertIOAllowed();
 
   if (!file_.IsValid())
     return false;
 
-  int flags = image_ ? SEC_IMAGE | PAGE_READONLY : PAGE_READONLY;
+  int flags = 0;
+  uint32_t size_low = 0;
+  uint32_t size_high = 0;
+  switch (access) {
+    case READ_ONLY:
+      flags |= PAGE_READONLY;
+      break;
+    case READ_WRITE:
+      flags |= PAGE_READWRITE;
+      break;
+    case READ_WRITE_EXTEND:
+      flags |= PAGE_READWRITE;
+      size_high = static_cast<uint32_t>(region.size >> 32);
+      size_low = static_cast<uint32_t>(region.size & 0xFFFFFFFF);
+      break;
+  }
 
-  file_mapping_.Set(::CreateFileMapping(file_.GetPlatformFile(), NULL,
-                                        flags, 0, 0, NULL));
+  file_mapping_.Set(::CreateFileMapping(file_.GetPlatformFile(), NULL, flags,
+                                        size_high, size_low, NULL));
   if (!file_mapping_.IsValid())
     return false;
 
@@ -42,6 +53,7 @@ bool MemoryMappedFile::MapFileRegionToMemory(
   int32_t data_offset = 0;
 
   if (region == MemoryMappedFile::Region::kWholeFile) {
+    DCHECK_NE(READ_WRITE_EXTEND, access);
     int64_t file_len = file_.GetLength();
     if (file_len <= 0 || file_len > std::numeric_limits<int32_t>::max())
       return false;
@@ -72,8 +84,9 @@ bool MemoryMappedFile::MapFileRegionToMemory(
   }
 
   data_ = static_cast<uint8_t*>(
-      ::MapViewOfFile(file_mapping_.Get(), FILE_MAP_READ, map_start.HighPart,
-                      map_start.LowPart, map_size));
+      ::MapViewOfFile(file_mapping_.Get(),
+                      (flags & PAGE_READONLY) ? FILE_MAP_READ : FILE_MAP_WRITE,
+                      map_start.HighPart, map_start.LowPart, map_size));
   if (data_ == NULL)
     return false;
   data_ += data_offset;

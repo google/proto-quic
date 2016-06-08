@@ -932,6 +932,34 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
             creator_.BytesFree());
 }
 
+TEST_P(QuicPacketCreatorTest, SerializeAndSendStreamFrame) {
+  if (!GetParam().version_serialization) {
+    creator_.StopSendingVersion();
+  }
+  EXPECT_FALSE(creator_.HasPendingFrames());
+
+  QuicIOVector iov(MakeIOVector("test"));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
+  ALIGNAS(64) char encrypted_buffer[kMaxPacketSize];
+  size_t num_bytes_consumed;
+  creator_.CreateAndSerializeStreamFrame(kHeadersStreamId, iov, 0, 0, true,
+                                         nullptr, encrypted_buffer,
+                                         kMaxPacketSize, &num_bytes_consumed);
+  EXPECT_EQ(static_cast<size_t>(4), num_bytes_consumed);
+
+  // Ensure the packet is successfully created.
+  ASSERT_TRUE(serialized_packet_.encrypted_buffer);
+  ASSERT_FALSE(serialized_packet_.retransmittable_frames.empty());
+  const QuicFrames& retransmittable = serialized_packet_.retransmittable_frames;
+  ASSERT_EQ(1u, retransmittable.size());
+  EXPECT_EQ(STREAM_FRAME, retransmittable[0].type);
+  ASSERT_TRUE(retransmittable[0].stream_frame);
+  DeleteSerializedPacket();
+
+  EXPECT_FALSE(creator_.HasPendingFrames());
+}
+
 TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithLargePacketSize) {
   if (!GetParam().version_serialization) {
     creator_.StopSendingVersion();
@@ -1188,6 +1216,26 @@ TEST_P(QuicPacketCreatorTest, AddUnencryptedStreamDataClosesConnection) {
                                StringPiece());
   EXPECT_DFATAL(creator_.AddSavedFrame(QuicFrame(&stream_frame)),
                 "Cannot send stream data without encryption.");
+}
+
+TEST_P(QuicPacketCreatorTest, ChloTooLarge) {
+  ValueRestore<bool> old_flag(&FLAGS_quic_disallow_multi_packet_chlo, true);
+  CryptoHandshakeMessage message;
+  message.set_tag(kCHLO);
+  message.set_minimum_size(kMaxPacketSize);
+  CryptoFramer framer;
+  std::unique_ptr<QuicData> message_data;
+  message_data.reset(framer.ConstructHandshakeMessage(message));
+
+  struct iovec iov;
+  QuicIOVector data_iovec(::net::MakeIOVector(
+      StringPiece(message_data->data(), message_data->length()), &iov));
+  QuicFrame frame;
+  EXPECT_CALL(delegate_,
+              OnUnrecoverableError(QUIC_CRYPTO_CHLO_TOO_LARGE, _, _));
+  EXPECT_DFATAL(
+      creator_.ConsumeData(1u, data_iovec, 0u, 0u, false, false, &frame),
+      "Client hello won't fit in a single packet.");
 }
 
 }  // namespace

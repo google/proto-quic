@@ -49,7 +49,7 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
       const RttStats& rtt_stats,
       QuicPacketNumber spurious_retransmission) override;
 
-  int reordering_fraction() const { return reordering_fraction_; }
+  int reordering_shift() const { return reordering_shift_; }
 
  private:
   LossDetectionType loss_type_;
@@ -57,10 +57,10 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
   // Largest sent packet when a spurious retransmit is detected.
   // Prevents increasing the reordering threshold multiple times per epoch.
   QuicPacketNumber largest_sent_on_spurious_retransmit_;
-  // Fraction of a std::max(SRTT, latest_rtt) to permit reordering before
-  // declaring
-  // loss.
-  int reordering_fraction_;
+  // Fraction of a max(SRTT, latest_rtt) to permit reordering before declaring
+  // loss.  Fraction calculated by shifting max(SRTT, latest_rtt) to the right
+  // by reordering_shift.
+  int reordering_shift_;
 
   DISALLOW_COPY_AND_ASSIGN(GeneralLossAlgorithm);
 };

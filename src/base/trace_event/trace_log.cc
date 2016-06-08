@@ -479,6 +479,12 @@ void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
   }
 #endif
 
+  // TODO(primiano): this is a temporary workaround for catapult:#2341,
+  // to guarantee that metadata events are always added even if the category
+  // filter is "-*". See crbug.com/618054 for more details and long-term fix.
+  if (mode_ == RECORDING_MODE && !strcmp(category_group, "__metadata"))
+    enabled_flag |= ENABLED_FOR_RECORDING;
+
   g_category_group_enabled[category_index] = enabled_flag;
 }
 

@@ -36,8 +36,6 @@ ImportNSSKeyFromPrivateKeyInfo(PK11SlotInfo* slot,
                                const std::vector<uint8_t>& input,
                                bool permanent);
 
-#if defined(USE_NSS_CERTS)
-
 // Decodes |input| as a DER-encoded X.509 SubjectPublicKeyInfo and searches for
 // the private key half in the key database. Returns the private key on success
 // or nullptr on error.
@@ -50,8 +48,6 @@ FindNSSKeyFromPublicKeyInfo(const std::vector<uint8_t>& input);
 CRYPTO_EXPORT ScopedSECKEYPrivateKey
 FindNSSKeyFromPublicKeyInfoInSlot(const std::vector<uint8_t>& input,
                                   PK11SlotInfo* slot);
-
-#endif  // defined(USE_NSS_CERTS)
 
 }  // namespace crypto
 

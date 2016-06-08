@@ -9,11 +9,34 @@
 #include <stdint.h>
 
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/rand_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 
 namespace {
+
+// Errors that can occur during Shared Memory construction.
+// These match tools/metrics/histograms/histograms.xml.
+// This enum is append-only.
+enum CreateError {
+  SUCCESS = 0,
+  SIZE_ZERO = 1,
+  SIZE_TOO_LARGE = 2,
+  INITIALIZE_ACL_FAILURE = 3,
+  INITIALIZE_SECURITY_DESC_FAILURE = 4,
+  SET_SECURITY_DESC_FAILURE = 5,
+  CREATE_FILE_MAPPING_FAILURE = 6,
+  REDUCE_PERMISSIONS_FAILURE = 7,
+  ALREADY_EXISTS = 8,
+  CREATE_ERROR_LAST = ALREADY_EXISTS
+};
+
+// Emits an UMA metric.
+void LogError(CreateError error) {
+  UMA_HISTOGRAM_ENUMERATION("SharedMemory.CreateError", error,
+                            CREATE_ERROR_LAST + 1);
+}
 
 typedef enum _SECTION_INFORMATION_CLASS {
   SectionBasicInformation,
@@ -84,8 +107,10 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
                                                LPCWSTR name) {
   HANDLE h = CreateFileMapping(INVALID_HANDLE_VALUE, sa, PAGE_READWRITE, 0,
                                static_cast<DWORD>(rounded_size), name);
-  if (!h)
+  if (!h) {
+    LogError(CREATE_FILE_MAPPING_FAILURE);
     return nullptr;
+  }
 
   HANDLE h2;
   BOOL success = ::DuplicateHandle(
@@ -93,7 +118,13 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
       FILE_MAP_READ | FILE_MAP_WRITE | SECTION_QUERY, FALSE, 0);
   BOOL rv = ::CloseHandle(h);
   DCHECK(rv);
-  return success ? h2 : nullptr;
+
+  if (!success) {
+    LogError(REDUCE_PERMISSIONS_FAILURE);
+    return nullptr;
+  }
+
+  return h2;
 }
 
 }  // namespace.
@@ -188,13 +219,17 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   static const size_t kSectionMask = 65536 - 1;
   DCHECK(!options.executable);
   DCHECK(!mapped_file_);
-  if (options.size == 0)
+  if (options.size == 0) {
+    LogError(SIZE_ZERO);
     return false;
+  }
 
   // Check maximum accounting for overflow.
   if (options.size >
-      static_cast<size_t>(std::numeric_limits<int>::max()) - kSectionMask)
+      static_cast<size_t>(std::numeric_limits<int>::max()) - kSectionMask) {
+    LogError(SIZE_TOO_LARGE);
     return false;
+  }
 
   size_t rounded_size = (options.size + kSectionMask) & ~kSectionMask;
   name_ = options.name_deprecated ?
@@ -206,12 +241,18 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   if (name_.empty()) {
     // Add an empty DACL to enforce anonymous read-only sections.
     sa.lpSecurityDescriptor = &sd;
-    if (!InitializeAcl(&dacl, sizeof(dacl), ACL_REVISION))
+    if (!InitializeAcl(&dacl, sizeof(dacl), ACL_REVISION)) {
+      LogError(INITIALIZE_ACL_FAILURE);
       return false;
-    if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION))
+    }
+    if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION)) {
+      LogError(INITIALIZE_SECURITY_DESC_FAILURE);
       return false;
-    if (!SetSecurityDescriptorDacl(&sd, TRUE, &dacl, FALSE))
+    }
+    if (!SetSecurityDescriptorDacl(&sd, TRUE, &dacl, FALSE)) {
+      LogError(SET_SECURITY_DESC_FAILURE);
       return false;
+    }
 
     // Windows ignores DACLs on certain unnamed objects (like shared sections).
     // So, we generate a random name when we need to enforce read-only.
@@ -223,8 +264,10 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   }
   mapped_file_ = CreateFileMappingWithReducedPermissions(
       &sa, rounded_size, name_.empty() ? nullptr : name_.c_str());
-  if (!mapped_file_)
+  if (!mapped_file_) {
+    // The error is logged within CreateFileMappingWithReducedPermissions().
     return false;
+  }
 
   requested_size_ = options.size;
 
@@ -236,10 +279,12 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
     external_section_ = true;
     if (!options.open_existing_deprecated) {
       Close();
+      LogError(ALREADY_EXISTS);
       return false;
     }
   }
 
+  LogError(SUCCESS);
   return true;
 }
 

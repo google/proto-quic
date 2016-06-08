@@ -24,7 +24,9 @@ void QuicConnectionPeer::SendAck(QuicConnection* connection) {
 void QuicConnectionPeer::SetSendAlgorithm(
     QuicConnection* connection,
     SendAlgorithmInterface* send_algorithm) {
-  connection->sent_packet_manager_.send_algorithm_.reset(send_algorithm);
+  // TODO(fayang): Remove this method when there is a MockSentPacketManager.
+  static_cast<QuicSentPacketManager*>(connection->sent_packet_manager_.get())
+      ->send_algorithm_.reset(send_algorithm);
 }
 
 // static
@@ -62,7 +64,9 @@ QuicPacketGenerator* QuicConnectionPeer::GetPacketGenerator(
 // static
 QuicSentPacketManager* QuicConnectionPeer::GetSentPacketManager(
     QuicConnection* connection) {
-  return &connection->sent_packet_manager_;
+  // TODO(fayang): Remove this method when there is a MockSentPacketManager.
+  return static_cast<QuicSentPacketManager*>(
+      connection->sent_packet_manager_.get());
 }
 
 // static

@@ -10,6 +10,7 @@
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
+#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;
@@ -33,6 +34,8 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(&eps_,
                                               QuicAllocator::BUFFER_POOL)),
+            std::unique_ptr<QuicServerSessionBase::Helper>(
+                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
             std::unique_ptr<QuicEpollAlarmFactory>(
                 new QuicEpollAlarmFactory(&eps_))) {
     dispatcher_.InitializeWithWriter(new QuicDefaultPacketWriter(1234));

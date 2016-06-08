@@ -85,28 +85,6 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
   FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest,
                            CertTrustAnchorProvider);
 
-  // Input parameters of a certificate verification request.
-  struct NET_EXPORT_PRIVATE RequestParams {
-    RequestParams(const SHA1HashValue& cert_fingerprint_arg,
-                  const SHA1HashValue& ca_fingerprint_arg,
-                  const std::string& hostname_arg,
-                  const std::string& ocsp_response_arg,
-                  int flags_arg,
-                  const CertificateList& additional_trust_anchors);
-    RequestParams(const RequestParams& other);
-    ~RequestParams();
-
-    bool operator<(const RequestParams& other) const;
-
-    std::string hostname;
-    int flags;
-    std::vector<SHA1HashValue> hash_values;
-    // The time when verification started.
-    // Note: This uses base::Time, rather than base::TimeTicks, to
-    // account for system clock changes.
-    base::Time start_time;
-  };
-
   // CachedResult contains the result of a certificate verification.
   struct NET_EXPORT_PRIVATE CachedResult {
     CachedResult();
@@ -144,19 +122,23 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
   };
 
   using JobSet = std::set<CertVerifierJob*, JobComparator>;
+  using CertVerifierCache = ExpiringCache<CertVerifier::RequestParams,
+                                          CachedResult,
+                                          CacheValidityPeriod,
+                                          CacheExpirationFunctor>;
 
-  typedef ExpiringCache<RequestParams, CachedResult, CacheValidityPeriod,
-                        CacheExpirationFunctor> CertVerifierCache;
-
-  // Saves |result| into the cache, keyed by |key|.
-  void SaveResultToCache(const RequestParams& key, const CachedResult& result);
+  // Saves |result| into the cache, keyed by |key|, which began validation at
+  // |start_time|.
+  void SaveResultToCache(const CertVerifier::RequestParams& key,
+                         const base::Time& start_time,
+                         const CachedResult& result);
 
   // CertDatabase::Observer methods:
   void OnCACertChanged(const X509Certificate* cert) override;
 
   // Returns an inflight job for |key|. If there is no such job then returns
   // null.
-  CertVerifierJob* FindJob(const RequestParams& key);
+  CertVerifierJob* FindJob(const CertVerifier::RequestParams& key);
 
   // Removes |job| from the inflight set, and passes ownership back to the
   // caller. |job| must already be |inflight_|.

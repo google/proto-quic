@@ -12,7 +12,6 @@
 
 namespace net {
 
-const char kAlternateProtocolHeader[] = "Alternate-Protocol";
 const char kAlternativeServiceHeader[] = "Alt-Svc";
 
 namespace {

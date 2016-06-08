@@ -28,6 +28,8 @@ const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type) {
 const char* MemoryDumpLevelOfDetailToString(
     const MemoryDumpLevelOfDetail& level_of_detail) {
   switch (level_of_detail) {
+    case MemoryDumpLevelOfDetail::BACKGROUND:
+      return "background";
     case MemoryDumpLevelOfDetail::LIGHT:
       return "light";
     case MemoryDumpLevelOfDetail::DETAILED:
@@ -39,6 +41,8 @@ const char* MemoryDumpLevelOfDetailToString(
 
 MemoryDumpLevelOfDetail StringToMemoryDumpLevelOfDetail(
     const std::string& str) {
+  if (str == "background")
+    return MemoryDumpLevelOfDetail::BACKGROUND;
   if (str == "light")
     return MemoryDumpLevelOfDetail::LIGHT;
   if (str == "detailed")

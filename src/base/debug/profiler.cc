@@ -154,8 +154,8 @@ bool FindResolutionFunctionInImports(
   FunctionSearchContext* context =
       reinterpret_cast<FunctionSearchContext*>(cookie);
 
-  DCHECK_NE(nullptr, context);
-  DCHECK_EQ(nullptr, context->function);
+  DCHECK(context);
+  DCHECK(!context->function);
 
   // Our import address table contains pointers to the functions we import
   // at this point. Let's retrieve the first such function and use it to

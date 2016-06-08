@@ -131,6 +131,16 @@ static int do_dtls1_write(SSL *ssl, int type, const uint8_t *buf,
  * more data is needed. */
 static int dtls1_get_record(SSL *ssl) {
 again:
+  switch (ssl->s3->recv_shutdown) {
+    case ssl_shutdown_none:
+      break;
+    case ssl_shutdown_fatal_alert:
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PROTOCOL_IS_SHUTDOWN);
+      return -1;
+    case ssl_shutdown_close_notify:
+      return 0;
+  }
+
   /* Read a new packet if there is no unconsumed one. */
   if (ssl_read_buffer_len(ssl) == 0) {
     int ret = ssl_read_buffer_extend_to(ssl, 0 /* unused */);
@@ -217,7 +227,9 @@ void dtls1_read_close_notify(SSL *ssl) {
    * alerts also aren't delivered reliably, so we may even time out because the
    * peer never received our close_notify. Report to the caller that the channel
    * has fully shut down. */
-  ssl->shutdown |= SSL_RECEIVED_SHUTDOWN;
+  if (ssl->s3->recv_shutdown == ssl_shutdown_none) {
+    ssl->s3->recv_shutdown = ssl_shutdown_close_notify;
+  }
 }
 
 /* Return up to 'len' payload bytes received in 'type' records.
@@ -273,26 +285,7 @@ start:
 
   /* we now have a packet which can be read and processed */
 
-  /* If the other end has shut down, throw anything we read away (even in
-   * 'peek' mode) */
-  if (ssl->shutdown & SSL_RECEIVED_SHUTDOWN) {
-    rr->length = 0;
-    return 0;
-  }
-
-
   if (type == rr->type) {
-    /* Make sure that we are not getting application data when we
-     * are doing a handshake for the first time. */
-    if (SSL_in_init(ssl) && (type == SSL3_RT_APPLICATION_DATA) &&
-        (ssl->s3->aead_read_ctx == NULL)) {
-      /* TODO(davidben): Is this check redundant with the handshake_func
-       * check? */
-      al = SSL_AD_UNEXPECTED_MESSAGE;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_APP_DATA_IN_HANDSHAKE);
-      goto f_err;
-    }
-
     /* Discard empty records. */
     if (rr->length == 0) {
       goto start;
@@ -354,8 +347,7 @@ start:
 
     if (alert_level == SSL3_AL_WARNING) {
       if (alert_descr == SSL_AD_CLOSE_NOTIFY) {
-        ssl->s3->clean_shutdown = 1;
-        ssl->shutdown |= SSL_RECEIVED_SHUTDOWN;
+        ssl->s3->recv_shutdown = ssl_shutdown_close_notify;
         return 0;
       }
     } else if (alert_level == SSL3_AL_FATAL) {
@@ -364,7 +356,7 @@ start:
       OPENSSL_PUT_ERROR(SSL, SSL_AD_REASON_OFFSET + alert_descr);
       BIO_snprintf(tmp, sizeof tmp, "%d", alert_descr);
       ERR_add_error_data(2, "SSL alert number ", tmp);
-      ssl->shutdown |= SSL_RECEIVED_SHUTDOWN;
+      ssl->s3->recv_shutdown = ssl_shutdown_fatal_alert;
       SSL_CTX_remove_session(ssl->ctx, ssl->session);
       return 0;
     } else {

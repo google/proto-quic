@@ -408,6 +408,7 @@
       'mac-x86_64/crypto/sha/sha1-x86_64.S',
       'mac-x86_64/crypto/sha/sha256-x86_64.S',
       'mac-x86_64/crypto/sha/sha512-x86_64.S',
+      'src/crypto/curve25519/asm/x25519-asm-x86_64.S',
     ],
     'boringssl_win_x86_sources': [
       'win-x86/crypto/aes/aes-586.asm',

@@ -7,7 +7,6 @@
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/crypto/quic_encrypter.h"
 #include "net/quic/quic_client_session_base.h"
-#include "net/quic/quic_server_id.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;

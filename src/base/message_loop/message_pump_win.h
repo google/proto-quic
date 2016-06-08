@@ -8,6 +8,7 @@
 #include <windows.h>
 
 #include <list>
+#include <memory>
 
 #include "base/base_export.h"
 #include "base/message_loop/message_pump.h"
@@ -21,7 +22,7 @@ namespace base {
 // controlling the lifetime of the message pump.
 class BASE_EXPORT MessagePumpWin : public MessagePump {
  public:
-  MessagePumpWin() : have_work_(0), state_(NULL) {}
+  MessagePumpWin() : work_state_(READY), state_(NULL) {}
 
   // MessagePump methods:
   void Run(Delegate* delegate) override;
@@ -43,16 +44,23 @@ class BASE_EXPORT MessagePumpWin : public MessagePump {
     Time last_schedule_work_error_time;
   };
 
+  // State used with |work_state_| variable.
+  enum WorkState {
+    READY = 0,      // Ready to accept new work.
+    HAVE_WORK = 1,  // New work has been signalled.
+    WORKING = 2     // Handling the work.
+  };
+
   virtual void DoRunLoop() = 0;
   int GetCurrentDelay() const;
 
   // The time at which delayed work should run.
   TimeTicks delayed_work_time_;
 
-  // A boolean value used to indicate if there is a kMsgDoWork message pending
+  // A value used to indicate if there is a kMsgDoWork message pending
   // in the Windows Message queue.  There is at most one such message, and it
   // can drive execution of tasks when a native message pump is running.
-  LONG have_work_;
+  LONG work_state_;
 
   // State for the current invocation of Run.
   RunState* state_;
@@ -108,9 +116,6 @@ class BASE_EXPORT MessagePumpWin : public MessagePump {
 //
 class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
  public:
-  // The application-defined code passed to the hook procedure.
-  static const int kMessageFilterCode = 0x5001;
-
   MessagePumpForUI();
   ~MessagePumpForUI() override;
 
@@ -138,6 +143,39 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
 
   // A hidden message-only window.
   HWND message_hwnd_;
+};
+
+//-----------------------------------------------------------------------------
+// MessagePumpForGpu is a simplified version of UI message pump that is
+// optimized for the GPU process. Unlike MessagePumpForUI it doesn't have a
+// hidden window and doesn't handle a situation where a native message pump
+// might take over message processing.
+//
+class BASE_EXPORT MessagePumpForGpu : public MessagePumpWin {
+ public:
+  MessagePumpForGpu();
+  ~MessagePumpForGpu() override;
+
+  // Factory methods.
+  static void InitFactory();
+  static std::unique_ptr<MessagePump> CreateMessagePumpForGpu();
+
+  // MessagePump methods:
+  void ScheduleWork() override;
+  void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
+
+ private:
+  // MessagePumpWin methods:
+  void DoRunLoop() override;
+
+  void WaitForWork();
+  bool ProcessNextMessage();
+
+  const HANDLE event_;
+
+  // Used to help diagnose hangs.
+  // TODO(stanisc): crbug.com/596190: Remove these once the bug is fixed.
+  TimeTicks last_set_event_timeticks_;
 };
 
 //-----------------------------------------------------------------------------

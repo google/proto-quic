@@ -8,16 +8,6 @@ namespace net {
 namespace test {
 
 // static
-QuicTime::Delta RttStatsPeer::GetHalfWindowRtt(const RttStats* rtt_stats) {
-  return rtt_stats->half_window_rtt_.rtt;
-}
-
-// static
-QuicTime::Delta RttStatsPeer::GetQuarterWindowRtt(const RttStats* rtt_stats) {
-  return rtt_stats->quarter_window_rtt_.rtt;
-}
-
-// static
 void RttStatsPeer::SetSmoothedRtt(RttStats* rtt_stats, QuicTime::Delta rtt_ms) {
   rtt_stats->smoothed_rtt_ = rtt_ms;
 }

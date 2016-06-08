@@ -82,10 +82,11 @@ class SerialWorkerTest : public testing::Test {
   SerialWorkerTest()
       : input_value_(0),
         output_value_(-1),
-        work_allowed_(false, false),
-        work_called_(false, false),
-        work_running_(false) {
-  }
+        work_allowed_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                      base::WaitableEvent::InitialState::NOT_SIGNALED),
+        work_called_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                     base::WaitableEvent::InitialState::NOT_SIGNALED),
+        work_running_(false) {}
 
   // Helpers for tests.
 

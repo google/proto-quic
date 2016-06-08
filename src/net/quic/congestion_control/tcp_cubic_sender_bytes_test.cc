@@ -27,6 +27,7 @@ namespace test {
 // an initial CWND of 10. They have carefully calculated values which should be
 // updated to be based on kInitialCongestionWindow.
 const uint32_t kInitialCongestionWindowPackets = 10;
+const uint32_t kMaxCongestionWindowPackets = 200;
 const uint32_t kDefaultWindowTCP =
     kInitialCongestionWindowPackets * kDefaultTCPMSS;
 const float kRenoBeta = 0.7f;  // Reno backoff factor.
@@ -38,7 +39,7 @@ class TcpCubicSenderBytesPeer : public TcpCubicSenderBytes {
                             &rtt_stats_,
                             reno,
                             kInitialCongestionWindowPackets,
-                            kMaxCongestionWindow,
+                            kMaxCongestionWindowPackets,
                             &stats_) {}
 
   const HybridSlowStart& hybrid_slow_start() const {
@@ -732,9 +733,9 @@ TEST_F(TcpCubicSenderBytesTest, BandwidthResumption) {
 
   // Resumed CWND is limited to be in a sensible range.
   cached_network_params.set_bandwidth_estimate_bytes_per_second(
-      (kMaxCongestionWindow + 1) * kDefaultTCPMSS);
+      (kMaxCongestionWindowPackets + 1) * kDefaultTCPMSS);
   sender_->ResumeConnectionState(cached_network_params, false);
-  EXPECT_EQ(kMaxCongestionWindow * kDefaultTCPMSS,
+  EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
             sender_->GetCongestionWindow());
 
   if (FLAGS_quic_no_lower_bw_resumption_limit) {
@@ -752,9 +753,9 @@ TEST_F(TcpCubicSenderBytesTest, BandwidthResumption) {
 
   // Resume to the max value.
   cached_network_params.set_max_bandwidth_estimate_bytes_per_second(
-      kMaxCongestionWindow * kDefaultTCPMSS);
+      kMaxCongestionWindowPackets * kDefaultTCPMSS);
   sender_->ResumeConnectionState(cached_network_params, true);
-  EXPECT_EQ(kMaxCongestionWindow * kDefaultTCPMSS,
+  EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
             sender_->GetCongestionWindow());
 }
 
@@ -777,6 +778,36 @@ TEST_F(TcpCubicSenderBytesTest, PaceBelowCWND) {
       sender_->TimeUntilSend(QuicTime::Zero(), 3 * kDefaultTCPMSS).IsZero());
   EXPECT_FALSE(
       sender_->TimeUntilSend(QuicTime::Zero(), 4 * kDefaultTCPMSS).IsZero());
+}
+
+TEST_F(TcpCubicSenderBytesTest, NoPRR) {
+  ValueRestore<bool> old_flag(&FLAGS_quic_allow_noprr, true);
+  QuicTime::Delta rtt = QuicTime::Delta::FromMilliseconds(100);
+  sender_->rtt_stats_.UpdateRtt(rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
+
+  sender_->SetNumEmulatedConnections(1);
+  // Verify that kCOPT: kNPRR allows all packets to be sent, even if only one
+  // ack has been received.
+  QuicTagVector options;
+  options.push_back(kNPRR);
+  QuicConfig config;
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  SendAvailableSendWindow();
+  LoseNPackets(9);
+  AckNPackets(1);
+
+  // We should now have fallen out of slow start with a reduced window.
+  EXPECT_EQ(kRenoBeta * kDefaultWindowTCP, sender_->GetCongestionWindow());
+  const QuicPacketCount window_in_packets =
+      kRenoBeta * kDefaultWindowTCP / kDefaultTCPMSS;
+  const QuicBandwidth expected_pacing_rate =
+      QuicBandwidth::FromBytesAndTimeDelta(kRenoBeta * kDefaultWindowTCP,
+                                           sender_->rtt_stats_.smoothed_rtt());
+  EXPECT_EQ(expected_pacing_rate, sender_->PacingRate());
+  EXPECT_EQ(window_in_packets,
+            static_cast<uint64_t>(SendAvailableSendWindow()));
+  EXPECT_EQ(expected_pacing_rate, sender_->PacingRate());
 }
 
 TEST_F(TcpCubicSenderBytesTest, ResetAfterConnectionMigration) {
@@ -805,9 +836,28 @@ TEST_F(TcpCubicSenderBytesTest, ResetAfterConnectionMigration) {
   // Resets cwnd and slow start threshold on connection migrations.
   sender_->OnConnectionMigration();
   EXPECT_EQ(kDefaultWindowTCP, sender_->GetCongestionWindow());
-  EXPECT_EQ(kMaxCongestionWindow * kDefaultTCPMSS,
+  EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
             sender_->GetSlowStartThreshold());
   EXPECT_FALSE(sender_->hybrid_slow_start().started());
+}
+
+TEST_F(TcpCubicSenderBytesTest, DefaultMaxCwnd) {
+  ValueRestore<bool> old_flag(&FLAGS_quic_ignore_srbf, true);
+  RttStats rtt_stats;
+  QuicConnectionStats stats;
+  std::unique_ptr<SendAlgorithmInterface> sender(SendAlgorithmInterface::Create(
+      &clock_, &rtt_stats, kCubicBytes, &stats, kInitialCongestionWindow));
+
+  SendAlgorithmInterface::CongestionVector acked_packets;
+  SendAlgorithmInterface::CongestionVector missing_packets;
+  for (uint64_t i = 1; i < kDefaultMaxCongestionWindowPackets; ++i) {
+    acked_packets.clear();
+    acked_packets.push_back(std::make_pair(i, 1350));
+    sender->OnCongestionEvent(true, sender->GetCongestionWindow(),
+                              acked_packets, missing_packets);
+  }
+  EXPECT_EQ(kDefaultMaxCongestionWindowPackets,
+            sender->GetCongestionWindow() / kDefaultTCPMSS);
 }
 
 }  // namespace test

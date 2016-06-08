@@ -15,7 +15,6 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/win/scoped_handle.h"
-#include "base/win/windows_version.h"
 #include "net/base/escape.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -27,12 +26,6 @@ namespace {
 
 // Converts Windows defined types to NetworkInterfaceType.
 NetworkChangeNotifier::ConnectionType GetNetworkInterfaceType(DWORD ifType) {
-  // Bail out for pre-Vista versions of Windows which are documented to give
-  // inaccurate results like returning Ethernet for WiFi.
-  // http://msdn.microsoft.com/en-us/library/windows/desktop/aa366058.aspx
-  if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return NetworkChangeNotifier::CONNECTION_UNKNOWN;
-
   NetworkChangeNotifier::ConnectionType type =
       NetworkChangeNotifier::CONNECTION_UNKNOWN;
   if (ifType == IF_TYPE_ETHERNET_CSMACD) {
@@ -136,7 +129,6 @@ WlanApi::WlanApi() : initialized(false) {
 
 bool GetNetworkListImpl(NetworkInterfaceList* networks,
                         int policy,
-                        bool is_xp,
                         const IP_ADAPTER_ADDRESSES* adapters) {
   for (const IP_ADAPTER_ADDRESSES* adapter = adapters; adapter != NULL;
        adapter = adapter->Next) {
@@ -165,29 +157,7 @@ bool GetNetworkListImpl(NetworkInterfaceList* networks,
         IPEndPoint endpoint;
         if (endpoint.FromSockAddr(address->Address.lpSockaddr,
                                   address->Address.iSockaddrLength)) {
-          // XP has no OnLinkPrefixLength field.
-          size_t prefix_length = is_xp ? 0 : address->OnLinkPrefixLength;
-          if (is_xp) {
-            // Prior to Windows Vista the FirstPrefix pointed to the list with
-            // single prefix for each IP address assigned to the adapter.
-            // Order of FirstPrefix does not match order of FirstUnicastAddress,
-            // so we need to find corresponding prefix.
-            for (IP_ADAPTER_PREFIX* prefix = adapter->FirstPrefix; prefix;
-                 prefix = prefix->Next) {
-              int prefix_family = prefix->Address.lpSockaddr->sa_family;
-              IPEndPoint network_endpoint;
-              if (prefix_family == family &&
-                  network_endpoint.FromSockAddr(
-                      prefix->Address.lpSockaddr,
-                      prefix->Address.iSockaddrLength) &&
-                  IPAddressMatchesPrefix(endpoint.address(),
-                                         network_endpoint.address(),
-                                         prefix->PrefixLength)) {
-                prefix_length =
-                    std::max<size_t>(prefix_length, prefix->PrefixLength);
-              }
-            }
-          }
+          size_t prefix_length = address->OnLinkPrefixLength;
 
           // If the duplicate address detection (DAD) state is not changed to
           // Preferred, skip this address.
@@ -227,9 +197,8 @@ bool GetNetworkListImpl(NetworkInterfaceList* networks,
 }  // namespace internal
 
 bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
-  bool is_xp = base::win::GetVersion() < base::win::VERSION_VISTA;
   ULONG len = 0;
-  ULONG flags = is_xp ? GAA_FLAG_INCLUDE_PREFIX : 0;
+  ULONG flags = 0;
   // GetAdaptersAddresses() may require IO operations.
   base::ThreadRestrictions::AssertIOAllowed();
   ULONG result = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, NULL, &len);
@@ -246,7 +215,7 @@ bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
     return false;
   }
 
-  return internal::GetNetworkListImpl(networks, policy, is_xp, adapters);
+  return internal::GetNetworkListImpl(networks, policy, adapters);
 }
 
 WifiPHYLayerProtocol GetWifiPHYLayerProtocol() {

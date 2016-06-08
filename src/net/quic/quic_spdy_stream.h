@@ -140,6 +140,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // Marks |bytes_consumed| of the trailers data as consumed.
   void MarkTrailersConsumed(size_t bytes_consumed);
 
+  // Marks the trailers as consumed.
+  void MarkTrailersDelivered();
+
   // Clears |header_list_|.
   void ConsumeHeaderList();
 
@@ -233,6 +236,8 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
 
   // True if the trailers have been completely decompressed.
   bool trailers_decompressed_;
+  // True if the trailers have been consumed.
+  bool trailers_delivered_;
   // Contains a copy of the decompressed trailers until they are consumed
   // via ProcessData or Readv.
   std::string decompressed_trailers_;

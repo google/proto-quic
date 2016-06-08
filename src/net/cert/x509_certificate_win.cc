@@ -464,15 +464,16 @@ bool X509Certificate::IsIssuedByEncoded(
 
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
-  return !!CryptVerifyCertificateSignatureEx(
-      NULL,
-      X509_ASN_ENCODING,
-      CRYPT_VERIFY_CERT_SIGN_SUBJECT_CERT,
+  bool valid_signature = !!CryptVerifyCertificateSignatureEx(
+      NULL, X509_ASN_ENCODING, CRYPT_VERIFY_CERT_SIGN_SUBJECT_CERT,
       reinterpret_cast<void*>(const_cast<PCERT_CONTEXT>(cert_handle)),
       CRYPT_VERIFY_CERT_SIGN_ISSUER_CERT,
-      reinterpret_cast<void*>(const_cast<PCERT_CONTEXT>(cert_handle)),
-      0,
-      NULL);
+      reinterpret_cast<void*>(const_cast<PCERT_CONTEXT>(cert_handle)), 0, NULL);
+  if (!valid_signature)
+    return false;
+  return !!CertCompareCertificateName(X509_ASN_ENCODING,
+                                      &cert_handle->pCertInfo->Subject,
+                                      &cert_handle->pCertInfo->Issuer);
 }
 
 }  // namespace net

@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_clock.h"
 #include "net/quic/quic_flags.h"
@@ -56,9 +57,13 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
       byte_offset, StringPiece(frame.data_buffer, frame.data_length),
       clock_->ApproximateNow(), &bytes_written, &error_details);
   if (result != QUIC_NO_ERROR) {
+    string details = "Stream" + base::Uint64ToString(stream_->id()) + ": " +
+                     QuicUtils::ErrorToString(result) + ": " + error_details +
+                     "\nPeer Address: " +
+                     stream_->PeerAddressOfLatestPacket().ToString();
     DLOG(WARNING) << QuicUtils::ErrorToString(result);
-    DLOG(WARNING) << error_details;
-    stream_->CloseConnectionWithDetails(result, error_details);
+    DLOG(WARNING) << details;
+    stream_->CloseConnectionWithDetails(result, details);
     return;
   }
 

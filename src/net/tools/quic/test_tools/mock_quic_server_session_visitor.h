@@ -6,13 +6,13 @@
 #define NET_TOOLS_QUIC_TEST_TOOLS_MOCK_QUIC_SERVER_SESSION_VISITOR_H_
 
 #include "base/macros.h"
-#include "net/tools/quic/quic_server_session_base.h"
+#include "net/quic/quic_server_session_base.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {
 namespace test {
 
-class MockQuicServerSessionVisitor : public QuicServerSessionVisitor {
+class MockQuicServerSessionVisitor : public QuicServerSessionBase::Visitor {
  public:
   MockQuicServerSessionVisitor();
   virtual ~MockQuicServerSessionVisitor() override;
@@ -27,6 +27,17 @@ class MockQuicServerSessionVisitor : public QuicServerSessionVisitor {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockQuicServerSessionVisitor);
+};
+
+class MockQuicServerSessionHelper : public QuicServerSessionBase::Helper {
+ public:
+  MockQuicServerSessionHelper();
+  ~MockQuicServerSessionHelper() override;
+  MOCK_CONST_METHOD1(GenerateConnectionIdForReject,
+                     QuicConnectionId(QuicConnectionId connection_id));
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(MockQuicServerSessionHelper);
 };
 
 }  // namespace test

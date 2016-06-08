@@ -5,11 +5,10 @@
 #ifndef NET_QUIC_QUIC_ADDRESS_MISMATCH_H_
 #define NET_QUIC_QUIC_ADDRESS_MISMATCH_H_
 
+#include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
 
 namespace net {
-
-class IPEndPoint;
 
 enum QuicAddressMismatch {
   // The addresses don't match.

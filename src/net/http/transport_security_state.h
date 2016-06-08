@@ -198,6 +198,23 @@ class NET_EXPORT TransportSecurityState
     GURL report_uri;
   };
 
+  // An ExpectStapleState describes a site that expects valid OCSP information
+  // to be stapled to its certificate on every connection.
+  class NET_EXPORT ExpectStapleState {
+   public:
+    ExpectStapleState();
+    ~ExpectStapleState();
+
+    // The domain which matched during a search for this Expect-Staple entry
+    std::string domain;
+
+    // The URI reports are sent to if a valid OCSP response is not stapled
+    GURL report_uri;
+
+    // True if subdomains are subject to this policy
+    bool include_subdomains;
+  };
+
   // An interface for asynchronously sending HPKP violation reports.
   class NET_EXPORT ReportSender {
    public:
@@ -447,6 +464,14 @@ class NET_EXPORT TransportSecurityState
   bool GetStaticExpectCTState(const std::string& host,
                               ExpectCTState* expect_ct_result) const;
 
+  // Returns true and updates |*expect_staple_result| iff there is a static
+  // (built-in) state for |host| with expect_staple=true, or if |host| is a
+  // subdomain of another domain with expect_staple=true and
+  // include_subdomains_for_expect_staple=true.
+  bool GetStaticExpectStapleState(
+      const std::string& host,
+      ExpectStapleState* expect_staple_result) const;
+
   // The sets of hosts that have enabled TransportSecurity. |domain| will always
   // be empty for a STSState or PKPState in these maps; the domain
   // comes from the map keys instead. In addition, |upgrade_mode| in the
@@ -464,6 +489,9 @@ class NET_EXPORT TransportSecurityState
 
   // True if static expect-CT state should be used.
   bool enable_static_expect_ct_;
+
+  // True if static expect-staple state should be used.
+  bool enable_static_expect_staple_;
 
   ExpectCTReporter* expect_ct_reporter_;
 

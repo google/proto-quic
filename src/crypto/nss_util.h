@@ -24,12 +24,10 @@ class Time;
 // initialization functions.
 namespace crypto {
 
-#if defined(USE_NSS_CERTS)
 // EarlySetupForNSSInit performs lightweight setup which must occur before the
 // process goes multithreaded. This does not initialise NSS. For test, see
 // EnsureNSSInit.
 CRYPTO_EXPORT void EarlySetupForNSSInit();
-#endif
 
 // Initialize NRPR if it isn't already initialized.  This function is
 // thread-safe, and NSPR will only ever be initialized once.
@@ -81,7 +79,6 @@ CRYPTO_EXPORT base::Time PRTimeToBaseTime(int64_t prtime);
 // We use a int64_t instead of PRTime here to avoid depending on NSPR headers.
 CRYPTO_EXPORT int64_t BaseTimeToPRTime(base::Time time);
 
-#if defined(USE_NSS_CERTS)
 // NSS has a bug which can cause a deadlock or stall in some cases when writing
 // to the certDB and keyDB. It also has a bug which causes concurrent key pair
 // generations to scribble over each other. To work around this, we synchronize
@@ -102,7 +99,6 @@ class CRYPTO_EXPORT AutoNSSWriteLock {
   base::Lock *lock_;
   DISALLOW_COPY_AND_ASSIGN(AutoNSSWriteLock);
 };
-#endif  // defined(USE_NSS_CERTS)
 
 }  // namespace crypto
 

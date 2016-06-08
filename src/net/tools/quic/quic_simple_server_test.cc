@@ -9,6 +9,7 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;
@@ -24,12 +25,15 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
-        dispatcher_(config_,
-                    &crypto_config_,
-                    std::unique_ptr<MockQuicConnectionHelper>(
-                        new net::test::MockQuicConnectionHelper),
-                    std::unique_ptr<MockAlarmFactory>(
-                        new net::test::MockAlarmFactory)) {
+        dispatcher_(
+            config_,
+            &crypto_config_,
+            std::unique_ptr<MockQuicConnectionHelper>(
+                new net::test::MockQuicConnectionHelper),
+            std::unique_ptr<QuicServerSessionBase::Helper>(
+                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+            std::unique_ptr<MockAlarmFactory>(
+                new net::test::MockAlarmFactory)) {
     dispatcher_.InitializeWithWriter(nullptr);
   }
 

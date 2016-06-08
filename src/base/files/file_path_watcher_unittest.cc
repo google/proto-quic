@@ -215,7 +215,8 @@ bool FilePathWatcherTest::SetupWatch(const FilePath& target,
                                      FilePathWatcher* watcher,
                                      TestDelegateBase* delegate,
                                      bool recursive_watch) {
-  base::WaitableEvent completion(false, false);
+  base::WaitableEvent completion(WaitableEvent::ResetPolicy::AUTOMATIC,
+                                 WaitableEvent::InitialState::NOT_SIGNALED);
   bool result;
   file_thread_.task_runner()->PostTask(
       FROM_HERE, base::Bind(SetupWatchCallback, target, watcher, delegate,

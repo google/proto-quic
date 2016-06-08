@@ -8,11 +8,14 @@
 #include <stddef.h>
 
 #include <bitset>
+#include <string>
 
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/network_change_notifier.h"
+#include "net/cert/cert_verify_result.h"
 #include "net/log/net_log.h"
+#include "net/quic/crypto/crypto_handshake_message.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_spdy_session.h"
@@ -23,8 +26,6 @@ namespace test {
 class QuicConnectionLoggerPeer;
 }  // namespace test
 
-class CryptoHandshakeMessage;
-class CertVerifyResult;
 
 // This class is a debug visitor of a QuicConnection which logs
 // events to |net_log|.

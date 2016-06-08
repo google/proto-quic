@@ -208,7 +208,6 @@ HistogramBase* SparseHistogram::DeserializeInfoImpl(PickleIterator* iter) {
     return NULL;
   }
 
-  DCHECK(flags & HistogramBase::kIPCSerializationSourceFlag);
   flags &= ~HistogramBase::kIPCSerializationSourceFlag;
 
   return SparseHistogram::FactoryGet(histogram_name, flags);

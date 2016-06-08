@@ -15,6 +15,8 @@
 namespace net {
 
 struct NET_EXPORT SignedCertificateTimestampAndStatus {
+  SignedCertificateTimestampAndStatus();
+
   SignedCertificateTimestampAndStatus(
       const scoped_refptr<ct::SignedCertificateTimestamp>& sct,
       ct::SCTVerifyStatus status);

@@ -179,8 +179,6 @@ class HttpProxyClientSocketWrapper : public ProxyClientSocket {
 
   const std::string user_agent_;
   const HostPortPair endpoint_;
-  HttpAuthCache* const http_auth_cache_;
-  HttpAuthHandlerFactory* const http_auth_handler_factory_;
   SpdySessionPool* const spdy_session_pool_;
 
   const bool tunnel_;

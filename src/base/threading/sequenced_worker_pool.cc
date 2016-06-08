@@ -31,6 +31,7 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
 #include "build/build_config.h"
@@ -810,6 +811,8 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
             TRACE_EVENT_FLAG_FLOW_IN,
             "src_file", task.posted_from.file_name(),
             "src_func", task.posted_from.function_name());
+        TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION task_event(
+            task.posted_from.file_name());
         int new_thread_id = WillRunWorkerTask(task);
         {
           AutoUnlock unlock(lock_);

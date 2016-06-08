@@ -43,6 +43,11 @@ WaitableEvent::WaitableEvent(bool manual_reset, bool initially_signaled)
     : kernel_(new WaitableEventKernel(manual_reset, initially_signaled)) {
 }
 
+WaitableEvent::WaitableEvent(ResetPolicy reset_policy,
+                             InitialState initial_state)
+    : WaitableEvent(reset_policy == ResetPolicy::MANUAL,
+                    initial_state == InitialState::SIGNALED) {}
+
 WaitableEvent::~WaitableEvent() {
 }
 

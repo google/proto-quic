@@ -13,11 +13,10 @@
 #include "net/quic/crypto/proof_verifier_chromium.h"
 #include "net/quic/quic_client_session_base.h"
 #include "net/quic/quic_crypto_client_stream.h"
+#include "net/quic/quic_server_id.h"
 #include "net/quic/quic_session.h"
 
 namespace net {
-
-class QuicServerId;
 
 class MockCryptoClientStream : public QuicCryptoClientStream {
  public:

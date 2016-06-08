@@ -4,25 +4,28 @@
 
 import("//build/config/sanitizers/sanitizers.gni")
 
-prebuilt_available =
-    is_msan && (msan_track_origins == 0 || msan_track_origins == 2)
-
 group("deps") {
   if (use_prebuilt_instrumented_libraries) {
-    assert(prebuilt_available,
+    assert(prebuilt_instrumented_libraries_available,
            "Prebuilt instrumented libraries are only available when " +
                "is_msan = true and msan_track_origins = {0, 2}")
     deps = [
       ":prebuilt",
     ]
+    data_deps = [
+      ":prebuilt",
+    ]
   }
 }
 
-if (prebuilt_available) {
+if (prebuilt_instrumented_libraries_available) {
   group("prebuilt") {
     visibility = [ ":deps" ]
-    all_dependent_configs = [ ":prebuilt_link_helper" ]
+
     deps = [
+      ":extract_prebuilt_instrumented_libraries",
+    ]
+    data_deps = [
       ":extract_prebuilt_instrumented_libraries",
     ]
   }
@@ -52,10 +55,12 @@ if (prebuilt_available) {
     outputs = [
       "$target_out_dir/$archive_prefix.txt",
     ]
+    data = [
+      "$root_out_dir/instrumented_libraries_prebuilt/",
+    ]
   }
 
-  config("prebuilt_link_helper") {
-    visibility = [ ":prebuilt" ]
+  config("prebuilt_ldflags") {
     ldflags = [
       # Add a relative RPATH entry to Chromium binaries. This puts instrumented
       # DSOs before system-installed versions in library search path.

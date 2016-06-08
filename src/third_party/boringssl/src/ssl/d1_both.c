@@ -249,12 +249,12 @@ static void dtls1_update_mtu(SSL *ssl) {
   /* TODO(davidben): What is this code doing and do we need it? */
   if (ssl->d1->mtu < dtls1_min_mtu() &&
       !(SSL_get_options(ssl) & SSL_OP_NO_QUERY_MTU)) {
-    long mtu = BIO_ctrl(SSL_get_wbio(ssl), BIO_CTRL_DGRAM_QUERY_MTU, 0, NULL);
+    long mtu = BIO_ctrl(ssl->wbio, BIO_CTRL_DGRAM_QUERY_MTU, 0, NULL);
     if (mtu >= 0 && mtu <= (1 << 30) && (unsigned)mtu >= dtls1_min_mtu()) {
       ssl->d1->mtu = (unsigned)mtu;
     } else {
       ssl->d1->mtu = kDefaultMTU;
-      BIO_ctrl(SSL_get_wbio(ssl), BIO_CTRL_DGRAM_SET_MTU, ssl->d1->mtu, NULL);
+      BIO_ctrl(ssl->wbio, BIO_CTRL_DGRAM_SET_MTU, ssl->d1->mtu, NULL);
     }
   }
 
@@ -274,7 +274,7 @@ static size_t dtls1_max_record_size(SSL *ssl) {
   }
   ret -= overhead;
 
-  size_t pending = BIO_wpending(SSL_get_wbio(ssl));
+  size_t pending = BIO_wpending(ssl->wbio);
   if (ret <= pending) {
     return 0;
   }
@@ -290,7 +290,7 @@ static int dtls1_write_change_cipher_spec(SSL *ssl,
   /* During the handshake, wbio is buffered to pack messages together. Flush the
    * buffer if the ChangeCipherSpec would not fit in a packet. */
   if (dtls1_max_record_size(ssl) == 0) {
-    int ret = BIO_flush(SSL_get_wbio(ssl));
+    int ret = BIO_flush(ssl->wbio);
     if (ret <= 0) {
       ssl->rwstate = SSL_WRITING;
       return ret;
@@ -339,13 +339,13 @@ int dtls1_do_handshake_write(SSL *ssl, enum dtls1_use_epoch_t use_epoch) {
     /* During the handshake, wbio is buffered to pack messages together. Flush
      * the buffer if there isn't enough room to make progress. */
     if (dtls1_max_record_size(ssl) < DTLS1_HM_HEADER_LENGTH + 1) {
-      int flush_ret = BIO_flush(SSL_get_wbio(ssl));
+      int flush_ret = BIO_flush(ssl->wbio);
       if (flush_ret <= 0) {
         ssl->rwstate = SSL_WRITING;
         ret = flush_ret;
         goto err;
       }
-      assert(BIO_wpending(SSL_get_wbio(ssl)) == 0);
+      assert(BIO_wpending(ssl->wbio) == 0);
     }
 
     size_t todo = dtls1_max_record_size(ssl);
@@ -483,17 +483,6 @@ static hm_fragment *dtls1_get_buffered_message(
   return frag;
 }
 
-/* dtls1_max_handshake_message_len returns the maximum number of bytes
- * permitted in a DTLS handshake message for |ssl|. The minimum is 16KB, but may
- * be greater if the maximum certificate list size requires it. */
-static size_t dtls1_max_handshake_message_len(const SSL *ssl) {
-  size_t max_len = DTLS1_HM_HEADER_LENGTH + SSL3_RT_MAX_ENCRYPTED_LENGTH;
-  if (max_len < ssl->max_cert_list) {
-    return ssl->max_cert_list;
-  }
-  return max_len;
-}
-
 /* dtls1_process_fragment reads a handshake fragment and processes it. It
  * returns one if a fragment was successfully processed and 0 or -1 on error. */
 static int dtls1_process_fragment(SSL *ssl) {
@@ -521,7 +510,7 @@ static int dtls1_process_fragment(SSL *ssl) {
   const size_t msg_len = msg_hdr.msg_len;
   if (frag_off > msg_len || frag_off + frag_len < frag_off ||
       frag_off + frag_len > msg_len ||
-      msg_len > dtls1_max_handshake_message_len(ssl) ||
+      msg_len > ssl_max_handshake_message_len(ssl) ||
       frag_len > ssl->s3->rrec.length) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_EXCESSIVE_MESSAGE_SIZE);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
@@ -567,9 +556,9 @@ static int dtls1_process_fragment(SSL *ssl) {
 }
 
 /* dtls1_get_message reads a handshake message of message type |msg_type| (any
- * if |msg_type| == -1), maximum acceptable body length |max|. Read an entire
- * handshake message. Handshake messages arrive in fragments. */
-long dtls1_get_message(SSL *ssl, int st1, int stn, int msg_type, long max,
+ * if |msg_type| == -1). Read an entire handshake message. Handshake messages
+ * arrive in fragments. */
+long dtls1_get_message(SSL *ssl, int msg_type,
                        enum ssl_hash_message_t hash_message, int *ok) {
   pitem *item = NULL;
   hm_fragment *frag = NULL;
@@ -589,8 +578,9 @@ long dtls1_get_message(SSL *ssl, int st1, int stn, int msg_type, long max,
       goto f_err;
     }
     *ok = 1;
+    assert(ssl->init_buf->length >= DTLS1_HM_HEADER_LENGTH);
     ssl->init_msg = (uint8_t *)ssl->init_buf->data + DTLS1_HM_HEADER_LENGTH;
-    ssl->init_num = (int)ssl->s3->tmp.message_size;
+    ssl->init_num = (int)ssl->init_buf->length - DTLS1_HM_HEADER_LENGTH;
     return ssl->init_num;
   }
 
@@ -610,17 +600,11 @@ long dtls1_get_message(SSL *ssl, int st1, int stn, int msg_type, long max,
   assert(ssl->d1->handshake_read_seq == frag->msg_header.seq);
   assert(frag->reassembly == NULL);
 
-  if (frag->msg_header.msg_len > (size_t)max) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_EXCESSIVE_MESSAGE_SIZE);
-    goto err;
-  }
-
   /* Reconstruct the assembled message. */
-  size_t len;
   CBB cbb;
   CBB_zero(&cbb);
-  if (!BUF_MEM_grow(ssl->init_buf, (size_t)frag->msg_header.msg_len +
-                                       DTLS1_HM_HEADER_LENGTH) ||
+  if (!BUF_MEM_reserve(ssl->init_buf, (size_t)frag->msg_header.msg_len +
+                                          DTLS1_HM_HEADER_LENGTH) ||
       !CBB_init_fixed(&cbb, (uint8_t *)ssl->init_buf->data,
                       ssl->init_buf->max) ||
       !CBB_add_u8(&cbb, frag->msg_header.type) ||
@@ -629,19 +613,19 @@ long dtls1_get_message(SSL *ssl, int st1, int stn, int msg_type, long max,
       !CBB_add_u24(&cbb, 0 /* frag_off */) ||
       !CBB_add_u24(&cbb, frag->msg_header.msg_len) ||
       !CBB_add_bytes(&cbb, frag->fragment, frag->msg_header.msg_len) ||
-      !CBB_finish(&cbb, NULL, &len)) {
+      !CBB_finish(&cbb, NULL, &ssl->init_buf->length)) {
     CBB_cleanup(&cbb);
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     goto err;
   }
-  assert(len == (size_t)frag->msg_header.msg_len + DTLS1_HM_HEADER_LENGTH);
+  assert(ssl->init_buf->length ==
+         (size_t)frag->msg_header.msg_len + DTLS1_HM_HEADER_LENGTH);
 
   ssl->d1->handshake_read_seq++;
 
   /* TODO(davidben): This function has a lot of implicit outputs. Simplify the
    * |ssl_get_message| API. */
   ssl->s3->tmp.message_type = frag->msg_header.type;
-  ssl->s3->tmp.message_size = frag->msg_header.msg_len;
   ssl->init_msg = (uint8_t *)ssl->init_buf->data + DTLS1_HM_HEADER_LENGTH;
   ssl->init_num = frag->msg_header.msg_len;
 
@@ -662,7 +646,6 @@ long dtls1_get_message(SSL *ssl, int st1, int stn, int msg_type, long max,
   pitem_free(item);
   dtls1_hm_fragment_free(frag);
 
-  ssl->state = stn;
   *ok = 1;
   return ssl->init_num;
 
@@ -689,7 +672,7 @@ int dtls1_read_failed(SSL *ssl, int code) {
 
   if (!SSL_in_init(ssl)) {
     /* done, no need to send a retransmit */
-    BIO_set_flags(SSL_get_rbio(ssl), BIO_FLAGS_READ);
+    BIO_set_flags(ssl->rbio, BIO_FLAGS_READ);
     return code;
   }
 
@@ -737,25 +720,39 @@ static int dtls1_retransmit_message(SSL *ssl, hm_fragment *frag) {
     ret = dtls1_do_handshake_write(ssl, use_epoch);
   }
 
-  /* TODO(davidben): Check return value? */
-  (void)BIO_flush(SSL_get_wbio(ssl));
   return ret;
 }
 
-
 int dtls1_retransmit_buffered_messages(SSL *ssl) {
-  pqueue sent = ssl->d1->sent_messages;
-  piterator iter = pqueue_iterator(sent);
-  pitem *item;
+  /* Ensure we are packing handshake messages. */
+  const int was_buffered = ssl_is_wbio_buffered(ssl);
+  assert(was_buffered == SSL_in_init(ssl));
+  if (!was_buffered && !ssl_init_wbio_buffer(ssl)) {
+    return -1;
+  }
+  assert(ssl_is_wbio_buffered(ssl));
 
+  int ret = -1;
+  piterator iter = pqueue_iterator(ssl->d1->sent_messages);
+  pitem *item;
   for (item = pqueue_next(&iter); item != NULL; item = pqueue_next(&iter)) {
     hm_fragment *frag = (hm_fragment *)item->data;
     if (dtls1_retransmit_message(ssl, frag) <= 0) {
-      return -1;
+      goto err;
     }
   }
 
-  return 1;
+  ret = BIO_flush(ssl->wbio);
+  if (ret <= 0) {
+    ssl->rwstate = SSL_WRITING;
+    goto err;
+  }
+
+err:
+  if (!was_buffered) {
+    ssl_free_wbio_buffer(ssl);
+  }
+  return ret;
 }
 
 /* dtls1_buffer_change_cipher_spec adds a ChangeCipherSpec to the current

@@ -96,8 +96,8 @@ HttpNetworkSession::Params::Params()
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
       spdy_stream_max_recv_window_size(kSpdyStreamMaxRecvWindowSize),
       time_func(&base::TimeTicks::Now),
-      parse_alternative_services(true),
-      enable_alternative_service_with_different_host(false),
+      enable_alternative_service_with_different_host(true),
+      enable_alternative_service_for_insecure_origins(false),
       enable_npn(false),
       enable_priority_dependencies(true),
       enable_quic(false),
@@ -113,7 +113,7 @@ HttpNetworkSession::Params::Params()
       quic_max_number_of_lossy_connections(0),
       quic_packet_loss_threshold(1.0f),
       quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
-      quic_delay_tcp_race(false),
+      quic_delay_tcp_race(true),
       quic_max_server_configs_stored_in_properties(0u),
       quic_clock(NULL),
       quic_random(NULL),
@@ -132,7 +132,7 @@ HttpNetworkSession::Params::Params()
       quic_disable_bidirectional_streams(false),
       proxy_delegate(NULL),
       enable_token_binding(false) {
-  quic_supported_versions.push_back(QUIC_VERSION_32);
+  quic_supported_versions.push_back(QUIC_VERSION_33);
 }
 
 HttpNetworkSession::Params::Params(const Params& other) = default;
@@ -148,6 +148,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
       proxy_service_(params.proxy_service),
       ssl_config_service_(params.ssl_config_service),
       quic_stream_factory_(
+          params.net_log,
           params.host_resolver,
           params.client_socket_factory
               ? params.client_socket_factory

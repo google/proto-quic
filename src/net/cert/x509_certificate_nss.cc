@@ -285,8 +285,12 @@ bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
   crypto::ScopedSECKEYPublicKey public_key(CERT_ExtractPublicKey(cert_handle));
   if (!public_key.get())
     return false;
-  return SECSuccess == CERT_VerifySignedDataWithPublicKey(
-      &cert_handle->signatureWrap, public_key.get(), NULL);
+  if (SECSuccess != CERT_VerifySignedDataWithPublicKey(
+                        &cert_handle->signatureWrap, public_key.get(), NULL)) {
+    return false;
+  }
+  return CERT_CompareName(&cert_handle->subject, &cert_handle->issuer) ==
+         SECEqual;
 }
 
 }  // namespace net

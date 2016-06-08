@@ -66,11 +66,13 @@ Thread::Thread(const std::string& name)
       running_(false),
       thread_(0),
       id_(kInvalidThreadId),
-      id_event_(true, false),
+      id_event_(WaitableEvent::ResetPolicy::MANUAL,
+                WaitableEvent::InitialState::NOT_SIGNALED),
       message_loop_(nullptr),
       message_loop_timer_slack_(TIMER_SLACK_NONE),
       name_(name),
-      start_event_(true, false) {
+      start_event_(WaitableEvent::ResetPolicy::MANUAL,
+                   WaitableEvent::InitialState::NOT_SIGNALED) {
 }
 
 Thread::~Thread() {

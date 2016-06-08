@@ -27,10 +27,6 @@
 #include <cert.h>
 #endif
 
-#if defined(OS_WIN)
-#include "base/win/windows_version.h"
-#endif
-
 using base::HexEncode;
 using base::Time;
 
@@ -752,6 +748,16 @@ TEST(X509CertificateTest, IsSelfSigned) {
       ImportCertFromFile(certs_dir, "aia-root.pem"));
   ASSERT_NE(static_cast<X509Certificate*>(NULL), self_signed.get());
   EXPECT_TRUE(X509Certificate::IsSelfSigned(self_signed->os_cert_handle()));
+
+  scoped_refptr<X509Certificate> bad_name(
+      ImportCertFromFile(certs_dir, "self-signed-invalid-name.pem"));
+  ASSERT_NE(static_cast<X509Certificate*>(NULL), bad_name.get());
+  EXPECT_FALSE(X509Certificate::IsSelfSigned(bad_name->os_cert_handle()));
+
+  scoped_refptr<X509Certificate> bad_sig(
+      ImportCertFromFile(certs_dir, "self-signed-invalid-sig.pem"));
+  ASSERT_NE(static_cast<X509Certificate*>(NULL), bad_sig.get());
+  EXPECT_FALSE(X509Certificate::IsSelfSigned(bad_sig->os_cert_handle()));
 }
 
 TEST(X509CertificateTest, IsIssuedByEncodedWithIntermediates) {
@@ -1210,14 +1216,6 @@ class X509CertificatePublicKeyInfoTest
 
 TEST_P(X509CertificatePublicKeyInfoTest, GetPublicKeyInfo) {
   PublicKeyInfoTestData data = GetParam();
-
-#if defined(OS_WIN)
-  if (base::win::GetVersion() < base::win::VERSION_VISTA &&
-      data.expected_type == X509Certificate::kPublicKeyTypeECDSA) {
-    // ECC is only supported on Vista+. Skip the test.
-    return;
-  }
-#endif
 
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), data.cert_file));

@@ -5,6 +5,7 @@
 #ifndef NET_DER_PARSER_H_
 #define NET_DER_PARSER_H_
 
+#include <openssl/bytestring.h>
 #include <stdint.h>
 
 #include "base/compiler_specific.h"
@@ -194,8 +195,8 @@ class NET_EXPORT Parser {
   bool Advance();
 
  private:
-  ByteReader input_;
-  Mark advance_mark_;
+  CBS cbs_;
+  size_t advance_len_;
 
   DISALLOW_COPY(Parser);
 };

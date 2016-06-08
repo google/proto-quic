@@ -293,6 +293,18 @@ class NET_EXPORT_PRIVATE QuicFramer {
       QuicConnectionId connection_id,
       const QuicVersionVector& versions);
 
+  // If header.public_header.version_flag is set, the version in the
+  // packet will be set -- but it will be set from quic_version_ not
+  // header.public_header.versions.
+  bool AppendPacketHeader(const QuicPacketHeader& header,
+                          QuicDataWriter* writer);
+  bool AppendTypeByte(const QuicFrame& frame,
+                      bool last_frame_in_packet,
+                      QuicDataWriter* writer);
+  bool AppendStreamFrame(const QuicStreamFrame& frame,
+                         bool last_frame_in_packet,
+                         QuicDataWriter* builder);
+
   // SetDecrypter sets the primary decrypter, replacing any that already exists,
   // and takes ownership. If an alternative decrypter is in place then the
   // function DCHECKs. This is intended for cases where one knows that future
@@ -514,17 +526,6 @@ class NET_EXPORT_PRIVATE QuicFramer {
   // The Append* methods attempt to write the provided header or frame using the
   // |writer|, and return true if successful.
 
-  // If header.public_header.version_flag is set, the version in the
-  // packet will be set -- but it will be set from quic_version_ not
-  // header.public_header.versions.
-  bool AppendPacketHeader(const QuicPacketHeader& header,
-                          QuicDataWriter* writer);
-  bool AppendTypeByte(const QuicFrame& frame,
-                      bool last_frame_in_packet,
-                      QuicDataWriter* writer);
-  bool AppendStreamFrame(const QuicStreamFrame& frame,
-                         bool last_frame_in_packet,
-                         QuicDataWriter* builder);
   bool AppendAckFrameAndTypeByte(const QuicPacketHeader& header,
                                  const QuicAckFrame& frame,
                                  QuicDataWriter* builder);

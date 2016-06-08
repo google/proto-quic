@@ -582,11 +582,6 @@ class LIBPROTOBUF_EXPORT GeneratedMessageReflection : public Reflection {
 // which the offsets of the direct fields of a class are non-constant.
 // Fields inherited from superclasses *can* have non-constant offsets,
 // but that's not what this macro will be used for.
-//
-// Note that we calculate relative to the pointer value 16 here since if we
-// just use zero, GCC complains about dereferencing a NULL pointer.  We
-// choose 16 rather than some other number just in case the compiler would
-// be confused by an unaligned pointer.
 #if defined(__clang__)
 // For Clang we use __builtin_offsetof() and suppress the warning,
 // to avoid Control Flow Integrity and UBSan vptr sanitizers from
@@ -597,6 +592,10 @@ class LIBPROTOBUF_EXPORT GeneratedMessageReflection : public Reflection {
   __builtin_offsetof(TYPE, FIELD)                             \
   _Pragma("clang diagnostic pop")
 #else
+// Note that we calculate relative to the pointer value 16 here since if we
+// just use zero, GCC complains about dereferencing a NULL pointer.  We
+// choose 16 rather than some other number just in case the compiler would
+// be confused by an unaligned pointer.
 #define GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TYPE, FIELD)    \
   static_cast<int>(                                           \
       reinterpret_cast<const char*>(                          \

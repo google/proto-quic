@@ -988,15 +988,10 @@ int SSLClientSocketImpl::Init() {
   // supported. As DHE is being deprecated, don't add a cipher only to remove it
   // immediately.
   std::string command(
-      "DEFAULT:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK");
+      "DEFAULT:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");
-
-  if (!(ssl_config_.rc4_enabled &&
-        ssl_config_.deprecated_cipher_suites_enabled)) {
-    command.append(":!RC4");
-  }
 
   if (!ssl_config_.deprecated_cipher_suites_enabled) {
     // Only offer DHE on the second handshake. https://crbug.com/538690

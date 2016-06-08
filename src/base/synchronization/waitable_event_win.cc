@@ -16,6 +16,11 @@
 
 namespace base {
 
+WaitableEvent::WaitableEvent(ResetPolicy reset_policy,
+                             InitialState initial_state)
+    : WaitableEvent(reset_policy == ResetPolicy::MANUAL,
+                    initial_state == InitialState::SIGNALED) {}
+
 WaitableEvent::WaitableEvent(bool manual_reset, bool signaled)
     : handle_(CreateEvent(NULL, manual_reset, signaled, NULL)) {
   // We're probably going to crash anyways if this is ever NULL, so we might as

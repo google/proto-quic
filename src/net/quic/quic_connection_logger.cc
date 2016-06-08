@@ -5,8 +5,9 @@
 #include "net/quic/quic_connection_logger.h"
 
 #include <algorithm>
-#include <string>
+#include <limits>
 #include <utility>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/callback.h"
@@ -16,9 +17,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/values.h"
 #include "net/base/ip_address.h"
-#include "net/cert/cert_verify_result.h"
 #include "net/cert/x509_certificate.h"
-#include "net/log/net_log.h"
 #include "net/quic/crypto/crypto_handshake_message.h"
 #include "net/quic/crypto/crypto_protocol.h"
 #include "net/quic/quic_address_mismatch.h"
@@ -93,7 +92,6 @@ std::unique_ptr<base::Value> NetLogQuicPacketHeaderCallback(
   dict->SetString("packet_number", base::Uint64ToString(header->packet_number));
   dict->SetInteger("entropy_flag", header->entropy_flag);
   dict->SetInteger("fec_flag", header->fec_flag);
-  dict->SetInteger("fec_group", static_cast<int>(header->fec_group));
   return std::move(dict);
 }
 
@@ -238,7 +236,7 @@ std::unique_ptr<base::Value> NetLogQuicCertificateVerifiedCallback(
   base::ListValue* subjects = new base::ListValue();
   for (std::vector<std::string>::const_iterator it = dns_names.begin();
        it != dns_names.end(); it++) {
-    subjects->Append(new base::StringValue(*it));
+    subjects->AppendString(*it);
   }
   dict->Set("subjects", subjects);
   return std::move(dict);

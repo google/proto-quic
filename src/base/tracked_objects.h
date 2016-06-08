@@ -514,7 +514,7 @@ class BASE_EXPORT ThreadData {
 
   // Initializes all statics if needed (this initialization call should be made
   // while we are single threaded).
-  static void Initialize();
+  static void EnsureTlsInitialization();
 
   // Sets internal status_.
   // If |status| is false, then status_ is set to DEACTIVATED.

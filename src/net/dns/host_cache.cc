@@ -289,7 +289,7 @@ void HostCache::RecordUpdateStale(AddressListDeltaType delta,
       break;
     case DELTA_DISJOINT:
       CACHE_HISTOGRAM_TIME("UpdateStale.ExpiredBy_Disjoint", stale.expired_by);
-      CACHE_HISTOGRAM_COUNT("UpdateStale.NetworkChanges_Dijsoint",
+      CACHE_HISTOGRAM_COUNT("UpdateStale.NetworkChanges_Disjoint",
                             stale.network_changes);
       break;
     case MAX_DELTA_TYPE:
@@ -326,11 +326,11 @@ void HostCache::RecordErase(EraseReason reason,
   entry.GetStaleness(now, network_changes_, &stale);
   CACHE_HISTOGRAM_ENUM("Erase", reason, MAX_ERASE_REASON);
   if (stale.is_stale()) {
-    CACHE_HISTOGRAM_TIME("EvictStale.ExpiredBy", stale.expired_by);
-    CACHE_HISTOGRAM_COUNT("EvictStale.NetworkChanges", stale.network_changes);
-    CACHE_HISTOGRAM_COUNT("EvictStale.StaleHits", entry.stale_hits());
+    CACHE_HISTOGRAM_TIME("EraseStale.ExpiredBy", stale.expired_by);
+    CACHE_HISTOGRAM_COUNT("EraseStale.NetworkChanges", stale.network_changes);
+    CACHE_HISTOGRAM_COUNT("EraseStale.StaleHits", entry.stale_hits());
   } else {
-    CACHE_HISTOGRAM_TIME("EvictValid.ValidFor", -stale.expired_by);
+    CACHE_HISTOGRAM_TIME("EraseValid.ValidFor", -stale.expired_by);
   }
 }
 

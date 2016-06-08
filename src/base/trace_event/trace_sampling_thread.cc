@@ -25,7 +25,9 @@ class TraceBucketData {
 };
 
 TraceSamplingThread::TraceSamplingThread()
-    : thread_running_(false), waitable_event_for_testing_(false, false) {}
+    : thread_running_(false),
+      waitable_event_for_testing_(WaitableEvent::ResetPolicy::AUTOMATIC,
+                                  WaitableEvent::InitialState::NOT_SIGNALED) {}
 
 TraceSamplingThread::~TraceSamplingThread() {}
 

@@ -120,6 +120,8 @@ struct BrotliStateStruct {
   int ringbuffer_mask;
   int dist_rb_idx;
   int dist_rb[4];
+  int error_code;
+  uint32_t sub_loop_counter;
   uint8_t* ringbuffer;
   uint8_t* ringbuffer_end;
   HuffmanCode* htree_command;
@@ -127,8 +129,6 @@ struct BrotliStateStruct {
   const uint8_t* context_lookup2;
   uint8_t* context_map_slice;
   uint8_t* dist_context_map_slice;
-
-  uint32_t sub_loop_counter;
 
   /* This ring buffer holds a few past copy distances that will be used by */
   /* some special distance codes. */
@@ -193,7 +193,7 @@ struct BrotliStateStruct {
 
   /* For InverseMoveToFrontTransform */
   uint32_t mtf_upper_bound;
-  uint8_t mtf[256];
+  uint8_t mtf[256 + 4];
 
   /* For custom dictionaries */
   const uint8_t* custom_dict;

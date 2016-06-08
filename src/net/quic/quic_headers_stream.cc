@@ -4,15 +4,17 @@
 
 #include "net/quic/quic_headers_stream.h"
 
+#include <utility>
+
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_header_list.h"
-#include "net/quic/quic_headers_stream.h"
 #include "net/quic/quic_spdy_session.h"
 #include "net/quic/quic_time.h"
+#include "net/spdy/spdy_protocol.h"
 
 using base::StringPiece;
 using net::HTTP2;
@@ -20,6 +22,44 @@ using net::SpdyFrameType;
 using std::string;
 
 namespace net {
+
+namespace {
+
+class HeaderTableDebugVisitor : public HpackHeaderTable::DebugVisitorInterface {
+ public:
+  HeaderTableDebugVisitor(
+      const QuicClock* clock,
+      std::unique_ptr<QuicHeadersStream::HpackDebugVisitor> visitor)
+      : clock_(clock), headers_stream_hpack_visitor_(std::move(visitor)) {}
+
+  int64_t OnNewEntry(const HpackEntry& entry) override {
+    DVLOG(1) << entry.GetDebugString();
+    return clock_->ApproximateNow().Subtract(QuicTime::Zero()).ToMicroseconds();
+  }
+
+  void OnUseEntry(const HpackEntry& entry) override {
+    const QuicTime::Delta elapsed(
+        clock_->ApproximateNow()
+            .Subtract(QuicTime::Delta::FromMicroseconds(entry.time_added()))
+            .Subtract(QuicTime::Zero()));
+    DVLOG(1) << entry.GetDebugString() << " " << elapsed.ToMilliseconds()
+             << " ms";
+    headers_stream_hpack_visitor_->OnUseEntry(elapsed);
+  }
+
+ private:
+  const QuicClock* clock_;
+  std::unique_ptr<QuicHeadersStream::HpackDebugVisitor>
+      headers_stream_hpack_visitor_;
+
+  DISALLOW_COPY_AND_ASSIGN(HeaderTableDebugVisitor);
+};
+
+}  // namespace
+
+QuicHeadersStream::HpackDebugVisitor::HpackDebugVisitor() {}
+
+QuicHeadersStream::HpackDebugVisitor::~HpackDebugVisitor() {}
 
 // A SpdyFramer visitor which passed SYN_STREAM and SYN_REPLY frames to
 // the QuicSpdyStream, and closes the connection if any unexpected frames
@@ -123,7 +163,7 @@ class QuicHeadersStream::SpdyFramerVisitor
 
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
-                 SpdyPriority priority,
+                 int weight,
                  SpdyStreamId parent_stream_id,
                  bool exclusive,
                  bool fin,
@@ -132,6 +172,8 @@ class QuicHeadersStream::SpdyFramerVisitor
       return;
     }
 
+    SpdyPriority priority =
+        has_priority ? Http2WeightToSpdy3Priority(weight) : 0;
     stream_->OnHeaders(stream_id, has_priority, priority, fin);
   }
 
@@ -153,6 +195,13 @@ class QuicHeadersStream::SpdyFramerVisitor
   }
 
   void OnContinuation(SpdyStreamId stream_id, bool end) override {}
+
+  void OnPriority(SpdyStreamId stream_id,
+                  SpdyStreamId parent_id,
+                  int weight,
+                  bool exclusive) override {
+    CloseConnection("SPDY PRIORITY frame received.");
+  }
 
   bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override {
     CloseConnection("Unknown frame type received.");
@@ -222,16 +271,15 @@ QuicHeadersStream::QuicHeadersStream(QuicSpdySession* session)
 QuicHeadersStream::~QuicHeadersStream() {}
 
 size_t QuicHeadersStream::WriteHeaders(QuicStreamId stream_id,
-                                       const SpdyHeaderBlock& headers,
+                                       SpdyHeaderBlock headers,
                                        bool fin,
                                        SpdyPriority priority,
                                        QuicAckListenerInterface* ack_listener) {
-  SpdyHeadersIR headers_frame(stream_id);
-  headers_frame.set_header_block(headers);
+  SpdyHeadersIR headers_frame(stream_id, std::move(headers));
   headers_frame.set_fin(fin);
   if (session()->perspective() == Perspective::IS_CLIENT) {
     headers_frame.set_has_priority(true);
-    headers_frame.set_priority(priority);
+    headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
   }
   SpdySerializedFrame frame(spdy_framer_.SerializeFrame(headers_frame));
   WriteOrBufferData(StringPiece(frame.data(), frame.size()), false,
@@ -242,15 +290,16 @@ size_t QuicHeadersStream::WriteHeaders(QuicStreamId stream_id,
 size_t QuicHeadersStream::WritePushPromise(
     QuicStreamId original_stream_id,
     QuicStreamId promised_stream_id,
-    const SpdyHeaderBlock& headers,
+    SpdyHeaderBlock headers,
     QuicAckListenerInterface* ack_listener) {
   if (session()->perspective() == Perspective::IS_CLIENT) {
     QUIC_BUG << "Client shouldn't send PUSH_PROMISE";
     return 0;
   }
 
-  SpdyPushPromiseIR push_promise(original_stream_id, promised_stream_id);
-  push_promise.set_header_block(headers);
+  SpdyPushPromiseIR push_promise(original_stream_id, promised_stream_id,
+                                 std::move(headers));
+
   // PUSH_PROMISE must not be the last frame sent out, at least followed by
   // response headers.
   push_promise.set_fin(false);
@@ -375,6 +424,8 @@ void QuicHeadersStream::OnControlFrameHeaderData(SpdyStreamId stream_id,
 }
 
 void QuicHeadersStream::OnHeaderList(const QuicHeaderList& header_list) {
+  DVLOG(1) << "Received header list for stream " << stream_id_ << ": "
+           << header_list.DebugString();
   if (measure_headers_hol_blocking_time_) {
     if (prev_max_timestamp_ > cur_max_timestamp_) {
       // prev_max_timestamp_ > cur_max_timestamp_ implies that
@@ -415,6 +466,20 @@ bool QuicHeadersStream::IsConnected() {
 
 void QuicHeadersStream::DisableHpackDynamicTable() {
   spdy_framer_.UpdateHeaderEncoderTableSize(0);
+}
+
+void QuicHeadersStream::SetHpackEncoderDebugVisitor(
+    std::unique_ptr<HpackDebugVisitor> visitor) {
+  spdy_framer_.SetEncoderHeaderTableDebugVisitor(
+      std::unique_ptr<HeaderTableDebugVisitor>(new HeaderTableDebugVisitor(
+          session()->connection()->helper()->GetClock(), std::move(visitor))));
+}
+
+void QuicHeadersStream::SetHpackDecoderDebugVisitor(
+    std::unique_ptr<HpackDebugVisitor> visitor) {
+  spdy_framer_.SetDecoderHeaderTableDebugVisitor(
+      std::unique_ptr<HeaderTableDebugVisitor>(new HeaderTableDebugVisitor(
+          session()->connection()->helper()->GetClock(), std::move(visitor))));
 }
 
 }  // namespace net

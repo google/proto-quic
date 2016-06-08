@@ -347,20 +347,6 @@ class BASE_EXPORT FieldTrialList {
   // Destructor Release()'s references to all registered FieldTrial instances.
   ~FieldTrialList();
 
-  // TODO(asvitkine): Temporary function to diagnose http://crbug.com/359406.
-  // Remove when that bug is fixed. This enables using a global map that checks
-  // the state of field trials between possible FieldTrialList instances. If
-  // enabled, a CHECK will be hit if it's seen that a field trial is given a
-  // different state then what was specified to a renderer process launch
-  // command line.
-  static void EnableGlobalStateChecks();
-
-  // TODO(asvitkine): Temporary function to diagnose http://crbug.com/359406.
-  // Remove when that bug is fixed. This returns a unique token generated during
-  // FieldTrialList construction. This is used to verify that this value stays
-  // consistent between renderer process invocations.
-  static int32_t GetDebugToken();
-
   // Get a FieldTrial instance from the factory.
   //
   // |name| is used to register the instance with the FieldTrialList class,
@@ -393,9 +379,12 @@ class BASE_EXPORT FieldTrialList {
   // used on one-time randomized field trials (instead of a hash of the trial
   // name, which is used otherwise or if |randomization_seed| has value 0). The
   // |randomization_seed| value (other than 0) should never be the same for two
-  // trials, else this would result in correlated group assignments.
-  // Note: Using a custom randomization seed is only supported by the
-  // PermutedEntropyProvider (which is used when UMA is not enabled).
+  // trials, else this would result in correlated group assignments.  Note:
+  // Using a custom randomization seed is only supported by the
+  // PermutedEntropyProvider (which is used when UMA is not enabled). If
+  // |override_entropy_provider| is not null, then it will be used for
+  // randomization instead of the provider given when the FieldTrialList was
+  // instanciated.
   static FieldTrial* FactoryGetFieldTrialWithRandomizationSeed(
       const std::string& trial_name,
       FieldTrial::Probability total_probability,
@@ -405,7 +394,8 @@ class BASE_EXPORT FieldTrialList {
       const int day_of_month,
       FieldTrial::RandomizationType randomization_type,
       uint32_t randomization_seed,
-      int* default_group_number);
+      int* default_group_number,
+      const FieldTrial::EntropyProvider* override_entropy_provider);
 
   // The Find() method can be used to test to see if a named trial was already
   // registered, or to retrieve a pointer to it from the global map.

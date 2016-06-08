@@ -18,27 +18,16 @@ namespace net {
 
 namespace der {
 
-class Mark;
-
 // An opaque class that represents a fixed buffer of data of a fixed length,
 // to be used as an input to other operations. An Input object does not own
 // the data it references, so callers are responsible for making sure that
 // the data outlives the Input object and any other associated objects.
 //
-// All data access for an Input should be done through the ByteReader and Mark
-// classes. This class and associated classes are designed with safety in mind
-// to make it difficult to read memory outside of an Input. ByteReader provides
-// a simple API for reading through the Input sequentially. For more
-// complicated uses, multiple instances of a ByteReader for a particular Input
-// can be created, and instances of Mark can be used to coordinate between the
-// ByteReaders.
-//
-// One such use case of multiple ByteReaders would be looking ahead in an
-// input: A ByteReader is copied and then is used to read some number of
-// bytes into the input, based on the content it is reading. A Mark can then be
-// set using the temporary ByteReader to indicate how far it read into the
-// Input. The original ByteReader can then be synchronized with how far the
-// temporary ByteReader read, by using either AdvanceToMark() or ReadToMark().
+// All data access for an Input should be done through the ByteReader class.
+// This class and associated classes are designed with safety in mind to make it
+// difficult to read memory outside of an Input. ByteReader provides a simple
+// API for reading through the Input sequentially. For more complicated uses,
+// multiple instances of a ByteReader for a particular Input can be created.
 class NET_EXPORT_PRIVATE Input {
  public:
   // Creates an empty Input, one from which no data can be read.
@@ -84,6 +73,7 @@ class NET_EXPORT_PRIVATE Input {
   // constructor, a std::string could be passed in to the base::StringPiece
   // constructor because of StringPiece's implicit constructor.
   Input(std::string) = delete;
+
   const uint8_t* data_;
   size_t len_;
 };
@@ -134,51 +124,11 @@ class NET_EXPORT_PRIVATE ByteReader {
   // Returns whether there is any more data to be read.
   bool HasMore();
 
-  // Creates a new Mark at the current position of this ByteReader. If another
-  // ByteReader is advanced to this mark, the next byte read by the other
-  // ByteReader will be the same as the next byte read by this ByteReader.
-  Mark NewMark();
-
-  // Advances this ByteReader to the position marked by |mark|. Note that
-  // a ByteReader can only advance forward - it is not possible to "rewind"
-  // to a previous mark. To do this, one would need to create a new ByteReader
-  // (from the same input) and AdvanceToMark() on the new ByteReader.
-  //
-  // If it is not possible to advance this ByteReader to the mark, this method
-  // returns false and does nothing.
-  bool AdvanceToMark(Mark mark) WARN_UNUSED_RESULT;
-
-  // Reads all data from the cursor of this ByteReader up to the mark, and
-  // initializes an Input to point to that data. If the Mark is not valid for
-  // this ByteReader, then this method returns false and does not modify |*out|.
-  bool ReadToMark(Mark mark, Input* out) WARN_UNUSED_RESULT;
-
  private:
   void Advance(size_t len);
 
   const uint8_t* data_;
   size_t len_;
-};
-
-// An immutable opaque pointer into the data represented by an Input. A Mark
-// object is used to save and restore the state (position) of a ByteReader to
-// allow for lookahead or backtracking. All interaction with a Mark object is
-// done through the ByteReader class.
-class NET_EXPORT_PRIVATE Mark {
- public:
-  // Creates a null Mark. This Mark will not be usable with any ByteReader.
-  // This only exists so that a class can have a Mark member which may or may
-  // not be a valid Mark at any given time.
-  static Mark NullMark();
-
-  // Checks whether a given Mark is an empty Mark.
-  bool IsEmpty();
-  friend class ByteReader;
-
- private:
-  explicit Mark(const uint8_t* ptr);
-  Mark();
-  const uint8_t* ptr_;
 };
 
 }  // namespace der

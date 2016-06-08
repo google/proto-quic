@@ -72,6 +72,12 @@ std::unordered_set<QuicStreamId>* QuicSessionPeer::GetDrainingStreams(
 }
 
 // static
+void QuicSessionPeer::ActivateStream(QuicSession* session,
+                                     ReliableQuicStream* stream) {
+  return session->ActivateStream(stream);
+}
+
+// static
 bool QuicSessionPeer::IsStreamClosed(QuicSession* session, QuicStreamId id) {
   DCHECK_NE(0u, id);
   return session->IsClosedStream(id);

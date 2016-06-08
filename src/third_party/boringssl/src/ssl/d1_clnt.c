@@ -161,30 +161,27 @@ int dtls1_connect(SSL *ssl) {
         if (ssl->init_buf == NULL) {
           buf = BUF_MEM_new();
           if (buf == NULL ||
-              !BUF_MEM_grow(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
+              !BUF_MEM_reserve(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
             ret = -1;
             goto end;
           }
           ssl->init_buf = buf;
           buf = NULL;
         }
+        ssl->init_num = 0;
 
-        if (!ssl_init_wbio_buffer(ssl, 0)) {
+        if (!ssl_init_wbio_buffer(ssl)) {
           ret = -1;
           goto end;
         }
 
-        /* don't push the buffering BIO quite yet */
-
         ssl->state = SSL3_ST_CW_CLNT_HELLO_A;
-        ssl->init_num = 0;
         ssl->d1->send_cookie = 0;
         ssl->hit = 0;
         break;
 
       case SSL3_ST_CW_CLNT_HELLO_A:
       case SSL3_ST_CW_CLNT_HELLO_B:
-        ssl->shutdown = 0;
         dtls1_start_timer(ssl);
         ret = ssl3_send_client_hello(ssl);
         if (ret <= 0) {
@@ -192,22 +189,14 @@ int dtls1_connect(SSL *ssl) {
         }
 
         if (ssl->d1->send_cookie) {
-          ssl->state = SSL3_ST_CW_FLUSH;
           ssl->s3->tmp.next_state = SSL3_ST_CR_SRVR_HELLO_A;
         } else {
-          ssl->state = DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A;
+          ssl->s3->tmp.next_state = DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A;
         }
-
-        ssl->init_num = 0;
-        /* turn on buffering for the next lot of output */
-        if (ssl->bbio != ssl->wbio) {
-          ssl->wbio = BIO_push(ssl->bbio, ssl->wbio);
-        }
-
+        ssl->state = SSL3_ST_CW_FLUSH;
         break;
 
       case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A:
-      case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_B:
         ret = dtls1_get_hello_verify(ssl);
         if (ret <= 0) {
           goto end;
@@ -219,11 +208,9 @@ int dtls1_connect(SSL *ssl) {
         } else {
           ssl->state = SSL3_ST_CR_SRVR_HELLO_A;
         }
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_SRVR_HELLO_A:
-      case SSL3_ST_CR_SRVR_HELLO_B:
         ret = ssl3_get_server_hello(ssl);
         if (ret <= 0) {
           goto end;
@@ -238,12 +225,10 @@ int dtls1_connect(SSL *ssl) {
         } else {
           ssl->state = SSL3_ST_CR_CERT_A;
         }
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_CERT_A:
-      case SSL3_ST_CR_CERT_B:
-        if (ssl_cipher_has_server_public_key(ssl->s3->tmp.new_cipher)) {
+        if (ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
           ret = ssl3_get_server_certificate(ssl);
           if (ret <= 0) {
             goto end;
@@ -257,7 +242,6 @@ int dtls1_connect(SSL *ssl) {
           skip = 1;
           ssl->state = SSL3_ST_CR_KEY_EXCH_A;
         }
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_VERIFY_SERVER_CERT:
@@ -267,31 +251,29 @@ int dtls1_connect(SSL *ssl) {
         }
 
         ssl->state = SSL3_ST_CR_KEY_EXCH_A;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_KEY_EXCH_A:
-      case SSL3_ST_CR_KEY_EXCH_B:
         ret = ssl3_get_server_key_exchange(ssl);
         if (ret <= 0) {
           goto end;
         }
-        ssl->state = SSL3_ST_CR_CERT_REQ_A;
-        ssl->init_num = 0;
+        if (ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
+          ssl->state = SSL3_ST_CR_CERT_REQ_A;
+        } else {
+          ssl->state = SSL3_ST_CR_SRVR_DONE_A;
+        }
         break;
 
       case SSL3_ST_CR_CERT_REQ_A:
-      case SSL3_ST_CR_CERT_REQ_B:
         ret = ssl3_get_certificate_request(ssl);
         if (ret <= 0) {
           goto end;
         }
         ssl->state = SSL3_ST_CR_SRVR_DONE_A;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_SRVR_DONE_A:
-      case SSL3_ST_CR_SRVR_DONE_B:
         ret = ssl3_get_server_done(ssl);
         if (ret <= 0) {
           goto end;
@@ -302,7 +284,6 @@ int dtls1_connect(SSL *ssl) {
         } else {
           ssl->s3->tmp.next_state = SSL3_ST_CW_KEY_EXCH_A;
         }
-        ssl->init_num = 0;
         ssl->state = ssl->s3->tmp.next_state;
         break;
 
@@ -316,7 +297,6 @@ int dtls1_connect(SSL *ssl) {
           goto end;
         }
         ssl->state = SSL3_ST_CW_KEY_EXCH_A;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CW_KEY_EXCH_A:
@@ -333,8 +313,6 @@ int dtls1_connect(SSL *ssl) {
         } else {
           ssl->state = SSL3_ST_CW_CHANGE_A;
         }
-
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CW_CERT_VRFY_A:
@@ -346,7 +324,6 @@ int dtls1_connect(SSL *ssl) {
           goto end;
         }
         ssl->state = SSL3_ST_CW_CHANGE_A;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CW_CHANGE_A:
@@ -361,7 +338,6 @@ int dtls1_connect(SSL *ssl) {
         }
 
         ssl->state = SSL3_ST_CW_FINISHED_A;
-        ssl->init_num = 0;
 
         if (!tls1_change_cipher_state(ssl, SSL3_CHANGE_CIPHER_CLIENT_WRITE)) {
           ret = -1;
@@ -392,27 +368,22 @@ int dtls1_connect(SSL *ssl) {
             ssl->s3->tmp.next_state = SSL3_ST_CR_CHANGE;
           }
         }
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_SESSION_TICKET_A:
-      case SSL3_ST_CR_SESSION_TICKET_B:
         ret = ssl3_get_new_session_ticket(ssl);
         if (ret <= 0) {
           goto end;
         }
         ssl->state = SSL3_ST_CR_CHANGE;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_CERT_STATUS_A:
-      case SSL3_ST_CR_CERT_STATUS_B:
         ret = ssl3_get_cert_status(ssl);
         if (ret <= 0) {
           goto end;
         }
         ssl->state = SSL3_ST_VERIFY_SERVER_CERT;
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CR_CHANGE:
@@ -429,9 +400,7 @@ int dtls1_connect(SSL *ssl) {
         break;
 
       case SSL3_ST_CR_FINISHED_A:
-      case SSL3_ST_CR_FINISHED_B:
-        ret =
-            ssl3_get_finished(ssl, SSL3_ST_CR_FINISHED_A, SSL3_ST_CR_FINISHED_B);
+        ret = ssl3_get_finished(ssl);
         if (ret <= 0) {
           goto end;
         }
@@ -443,7 +412,6 @@ int dtls1_connect(SSL *ssl) {
           ssl->state = SSL_ST_OK;
         }
 
-        ssl->init_num = 0;
         break;
 
       case SSL3_ST_CW_FLUSH:
@@ -462,6 +430,10 @@ int dtls1_connect(SSL *ssl) {
         /* Remove write buffering now. */
         ssl_free_wbio_buffer(ssl);
 
+	/* |init_buf| cannot be released because post-handshake retransmit
+         * relies on that buffer being available as scratch space.
+         *
+         * TODO(davidben): Fix this. */
         ssl->init_num = 0;
         ssl->s3->initial_handshake_complete = 1;
 
@@ -510,11 +482,7 @@ static int dtls1_get_hello_verify(SSL *ssl) {
   CBS hello_verify_request, cookie;
   uint16_t server_version;
 
-  n = ssl->method->ssl_get_message(
-      ssl, DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A,
-      DTLS1_ST_CR_HELLO_VERIFY_REQUEST_B, -1,
-      /* Use the same maximum size as ssl3_get_server_hello. */
-      20000, ssl_hash_message, &ok);
+  n = ssl->method->ssl_get_message(ssl, -1, ssl_hash_message, &ok);
 
   if (!ok) {
     return n;

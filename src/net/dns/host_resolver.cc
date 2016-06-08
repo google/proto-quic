@@ -9,6 +9,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/values.h"
+#include "net/base/net_errors.h"
 #include "net/dns/dns_client.h"
 #include "net/dns/dns_config_service.h"
 #include "net/dns/host_cache.h"
@@ -109,7 +110,7 @@ void HostResolver::ChangeRequestPriority(RequestHandle req,
 }
 
 HostCache* HostResolver::GetHostCache() {
-  return NULL;
+  return nullptr;
 }
 
 std::unique_ptr<base::Value> HostResolver::GetDnsConfigAsValue() const {

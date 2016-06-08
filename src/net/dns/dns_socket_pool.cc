@@ -11,7 +11,6 @@
 #include "net/base/address_list.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
-#include "net/base/rand_callback.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/stream_socket.h"
 #include "net/udp/datagram_client_socket.h"
@@ -39,12 +38,13 @@ const unsigned kAllocateMinSize = 1;
 
 } // namespace
 
-DnsSocketPool::DnsSocketPool(ClientSocketFactory* socket_factory)
+DnsSocketPool::DnsSocketPool(ClientSocketFactory* socket_factory,
+                             const RandIntCallback& rand_int_callback)
     : socket_factory_(socket_factory),
+      rand_int_callback_(rand_int_callback),
       net_log_(NULL),
       nameservers_(NULL),
-      initialized_(false) {
-}
+      initialized_(false) {}
 
 void DnsSocketPool::InitializeInternal(
     const std::vector<IPEndPoint>* nameservers,
@@ -75,26 +75,30 @@ std::unique_ptr<DatagramClientSocket> DnsSocketPool::CreateConnectedSocket(
 
   NetLog::Source no_source;
   socket = socket_factory_->CreateDatagramClientSocket(
-      kBindType, base::Bind(&base::RandInt), net_log_, no_source);
+      kBindType, rand_int_callback_, net_log_, no_source);
 
   if (socket.get()) {
     int rv = socket->Connect((*nameservers_)[server_index]);
     if (rv != OK) {
-      VLOG(1) << "Failed to connect socket: " << rv;
+      DVLOG(1) << "Failed to connect socket: " << rv;
       socket.reset();
     }
   } else {
-    LOG(WARNING) << "Failed to create socket.";
+    DVLOG(1) << "Failed to create socket.";
   }
 
   return socket;
 }
 
+int DnsSocketPool::GetRandomInt(int min, int max) {
+  return rand_int_callback_.Run(min, max);
+}
+
 class NullDnsSocketPool : public DnsSocketPool {
  public:
-  NullDnsSocketPool(ClientSocketFactory* factory)
-     : DnsSocketPool(factory) {
-  }
+  NullDnsSocketPool(ClientSocketFactory* factory,
+                    const RandIntCallback& rand_int_callback)
+      : DnsSocketPool(factory, rand_int_callback) {}
 
   void Initialize(const std::vector<IPEndPoint>* nameservers,
                   NetLog* net_log) override {
@@ -115,15 +119,17 @@ class NullDnsSocketPool : public DnsSocketPool {
 
 // static
 std::unique_ptr<DnsSocketPool> DnsSocketPool::CreateNull(
-    ClientSocketFactory* factory) {
-  return std::unique_ptr<DnsSocketPool>(new NullDnsSocketPool(factory));
+    ClientSocketFactory* factory,
+    const RandIntCallback& rand_int_callback) {
+  return std::unique_ptr<DnsSocketPool>(
+      new NullDnsSocketPool(factory, rand_int_callback));
 }
 
 class DefaultDnsSocketPool : public DnsSocketPool {
  public:
-  DefaultDnsSocketPool(ClientSocketFactory* factory)
-     : DnsSocketPool(factory) {
-  };
+  DefaultDnsSocketPool(ClientSocketFactory* factory,
+                       const RandIntCallback& rand_int_callback)
+      : DnsSocketPool(factory, rand_int_callback){};
 
   ~DefaultDnsSocketPool() override;
 
@@ -148,8 +154,10 @@ class DefaultDnsSocketPool : public DnsSocketPool {
 
 // static
 std::unique_ptr<DnsSocketPool> DnsSocketPool::CreateDefault(
-    ClientSocketFactory* factory) {
-  return std::unique_ptr<DnsSocketPool>(new DefaultDnsSocketPool(factory));
+    ClientSocketFactory* factory,
+    const RandIntCallback& rand_int_callback) {
+  return std::unique_ptr<DnsSocketPool>(
+      new DefaultDnsSocketPool(factory, rand_int_callback));
 }
 
 void DefaultDnsSocketPool::Initialize(
@@ -179,17 +187,17 @@ std::unique_ptr<DatagramClientSocket> DefaultDnsSocketPool::AllocateSocket(
 
   FillPool(server_index, kAllocateMinSize);
   if (pool.size() == 0) {
-    LOG(WARNING) << "No DNS sockets available in pool " << server_index << "!";
+    DVLOG(1) << "No DNS sockets available in pool " << server_index << "!";
     return std::unique_ptr<DatagramClientSocket>();
   }
 
   if (pool.size() < kAllocateMinSize) {
-    LOG(WARNING) << "Low DNS port entropy: wanted " << kAllocateMinSize
-                 << " sockets to choose from, but only have " << pool.size()
-                 << " in pool " << server_index << ".";
+    DVLOG(1) << "Low DNS port entropy: wanted " << kAllocateMinSize
+             << " sockets to choose from, but only have " << pool.size()
+             << " in pool " << server_index << ".";
   }
 
-  unsigned socket_index = base::RandInt(0, pool.size() - 1);
+  unsigned socket_index = GetRandomInt(0, pool.size() - 1);
   DatagramClientSocket* socket = pool[socket_index];
   pool[socket_index] = pool.back();
   pool.pop_back();

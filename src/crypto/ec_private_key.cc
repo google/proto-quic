@@ -85,8 +85,24 @@ ECPrivateKey* ECPrivateKey::Create() {
   if (!result->key_ || !EVP_PKEY_set1_EC_KEY(result->key_, ec_key.get()))
     return NULL;
 
-  CHECK_EQ(EVP_PKEY_EC, EVP_PKEY_type(result->key_->type));
+  CHECK_EQ(EVP_PKEY_EC, EVP_PKEY_id(result->key_));
   return result.release();
+}
+
+// static
+std::unique_ptr<ECPrivateKey> ECPrivateKey::CreateFromPrivateKeyInfo(
+    const std::vector<uint8_t>& input) {
+  OpenSSLErrStackTracer err_tracer(FROM_HERE);
+
+  CBS cbs;
+  CBS_init(&cbs, input.data(), input.size());
+  ScopedEVP_PKEY pkey(EVP_parse_private_key(&cbs));
+  if (!pkey || CBS_len(&cbs) != 0 || EVP_PKEY_id(pkey.get()) != EVP_PKEY_EC)
+    return nullptr;
+
+  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey);
+  result->key_ = pkey.release();
+  return result;
 }
 
 // static
@@ -131,15 +147,30 @@ ECPrivateKey* ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
   // Create a new EVP_PKEY for it.
   std::unique_ptr<ECPrivateKey> result(new ECPrivateKey);
   result->key_ = EVP_PKCS82PKEY(p8_decrypted.get());
-  if (!result->key_ || EVP_PKEY_type(result->key_->type) != EVP_PKEY_EC)
+  if (!result->key_ || EVP_PKEY_id(result->key_) != EVP_PKEY_EC)
     return NULL;
 
   return result.release();
 }
 
-bool ECPrivateKey::ExportEncryptedPrivateKey(const std::string& password,
-                                             int iterations,
-                                             std::vector<uint8_t>* output) {
+bool ECPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {
+  OpenSSLErrStackTracer err_tracer(FROM_HERE);
+  uint8_t* der;
+  size_t der_len;
+  AutoCBB cbb;
+  if (!CBB_init(cbb.get(), 0) || !EVP_marshal_private_key(cbb.get(), key_) ||
+      !CBB_finish(cbb.get(), &der, &der_len)) {
+    return false;
+  }
+  output->assign(der, der + der_len);
+  OPENSSL_free(der);
+  return true;
+}
+
+bool ECPrivateKey::ExportEncryptedPrivateKey(
+    const std::string& password,
+    int iterations,
+    std::vector<uint8_t>* output) const {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   // Convert into a PKCS#8 object.
   ScopedPKCS8_PRIV_KEY_INFO pkcs8(EVP_PKEY2PKCS8(key_));
@@ -168,7 +199,7 @@ bool ECPrivateKey::ExportEncryptedPrivateKey(const std::string& password,
                           output);
 }
 
-bool ECPrivateKey::ExportPublicKey(std::vector<uint8_t>* output) {
+bool ECPrivateKey::ExportPublicKey(std::vector<uint8_t>* output) const {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   uint8_t *der;
   size_t der_len;
@@ -183,7 +214,7 @@ bool ECPrivateKey::ExportPublicKey(std::vector<uint8_t>* output) {
   return true;
 }
 
-bool ECPrivateKey::ExportRawPublicKey(std::string* output) {
+bool ECPrivateKey::ExportRawPublicKey(std::string* output) const {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   // Export the x and y field elements as 32-byte, big-endian numbers. (This is
@@ -202,22 +233,6 @@ bool ECPrivateKey::ExportRawPublicKey(std::string* output) {
   }
 
   output->assign(reinterpret_cast<const char*>(buf), sizeof(buf));
-  return true;
-}
-
-bool ECPrivateKey::ExportValueForTesting(std::vector<uint8_t>* output) {
-  OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key_);
-  uint8_t *der;
-  size_t der_len;
-  AutoCBB cbb;
-  if (!CBB_init(cbb.get(), 0) ||
-      !EC_KEY_marshal_private_key(cbb.get(), ec_key, 0 /* enc_flags */) ||
-      !CBB_finish(cbb.get(), &der, &der_len)) {
-    return false;
-  }
-  output->assign(der, der + der_len);
-  OPENSSL_free(der);
   return true;
 }
 

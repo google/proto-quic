@@ -265,18 +265,6 @@ class NET_EXPORT HttpStreamFactory {
   HttpStreamFactory();
 
  private:
-  void ProcessAlternativeService(
-      const base::WeakPtr<HttpServerProperties>& http_server_properties,
-      base::StringPiece alternative_service_str,
-      const url::SchemeHostPort& http_server,
-      const HttpNetworkSession& session);
-
-  void ProcessAlternateProtocol(
-      const base::WeakPtr<HttpServerProperties>& http_server_properties,
-      const std::vector<std::string>& alternate_protocol_values,
-      const url::SchemeHostPort& http_server,
-      const HttpNetworkSession& session);
-
   static bool spdy_enabled_;
 
   url::SchemeHostPort RewriteHost(const url::SchemeHostPort& server);

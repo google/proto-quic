@@ -12,15 +12,24 @@
 namespace base {
 
 SimpleThread::SimpleThread(const std::string& name_prefix)
-    : name_prefix_(name_prefix), name_(name_prefix),
-      thread_(), event_(true, false), tid_(0), joined_(false) {
-}
+    : name_prefix_(name_prefix),
+      name_(name_prefix),
+      thread_(),
+      event_(WaitableEvent::ResetPolicy::MANUAL,
+             WaitableEvent::InitialState::NOT_SIGNALED),
+      tid_(0),
+      joined_(false) {}
 
 SimpleThread::SimpleThread(const std::string& name_prefix,
                            const Options& options)
-    : name_prefix_(name_prefix), name_(name_prefix), options_(options),
-      thread_(), event_(true, false), tid_(0), joined_(false) {
-}
+    : name_prefix_(name_prefix),
+      name_(name_prefix),
+      options_(options),
+      thread_(),
+      event_(WaitableEvent::ResetPolicy::MANUAL,
+             WaitableEvent::InitialState::NOT_SIGNALED),
+      tid_(0),
+      joined_(false) {}
 
 SimpleThread::~SimpleThread() {
   DCHECK(HasBeenStarted()) << "SimpleThread was never started.";
@@ -93,8 +102,8 @@ DelegateSimpleThreadPool::DelegateSimpleThreadPool(
     int num_threads)
     : name_prefix_(name_prefix),
       num_threads_(num_threads),
-      dry_(true, false) {
-}
+      dry_(WaitableEvent::ResetPolicy::MANUAL,
+           WaitableEvent::InitialState::NOT_SIGNALED) {}
 
 DelegateSimpleThreadPool::~DelegateSimpleThreadPool() {
   DCHECK(threads_.empty());

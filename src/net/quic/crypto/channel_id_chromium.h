@@ -6,6 +6,7 @@
 #define NET_QUIC_CRYPTO_CHANNEL_ID_CHROMIUM_H_
 
 #include <set>
+#include <string>
 
 #include "base/macros.h"
 #include "net/quic/crypto/channel_id.h"

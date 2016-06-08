@@ -36,10 +36,6 @@
 #include "base/mac/foundation_util.h"
 #endif
 
-#define ICU_UTIL_DATA_FILE   0
-#define ICU_UTIL_DATA_SHARED 1
-#define ICU_UTIL_DATA_STATIC 2
-
 namespace base {
 namespace i18n {
 
@@ -60,6 +56,8 @@ bool g_check_called_once = true;
 bool g_called_once = false;
 #endif  // !defined(NDEBUG)
 
+#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
+
 // To debug http://crbug.com/445616.
 int g_debug_icu_last_error;
 int g_debug_icu_load;
@@ -68,8 +66,6 @@ int g_debug_icu_pf_last_error;
 #if defined(OS_WIN)
 wchar_t g_debug_icu_pf_filename[_MAX_PATH];
 #endif  // OS_WIN
-
-#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 // Use an unversioned file name to simplify a icu version update down the road.
 // No need to change the filename in multiple places (gyp files, windows
 // build pkg configurations, etc). 'l' stands for Little Endian.
@@ -82,12 +78,6 @@ const char kAndroidAssetsIcuDataFileName[] = "assets/icudtl.dat";
 // File handle intentionally never closed. Not using File here because its
 // Windows implementation guards against two instances owning the same
 // PlatformFile (which we allow since we know it is never freed).
-const PlatformFile kInvalidPlatformFile =
-#if defined(OS_WIN)
-    INVALID_HANDLE_VALUE;
-#else
-    -1;
-#endif
 PlatformFile g_icudtl_pf = kInvalidPlatformFile;
 MemoryMappedFile* g_icudtl_mapped_file = nullptr;
 MemoryMappedFile::Region g_icudtl_region;

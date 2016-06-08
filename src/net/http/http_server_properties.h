@@ -214,7 +214,6 @@ typedef base::MRUCache<QuicServerId, std::string> QuicServerInfoMap;
 // Persist 5 QUIC Servers. This is mainly used by cronet.
 const int kMaxQuicServersToPersist = 5;
 
-extern const char kAlternateProtocolHeader[];
 extern const char kAlternativeServiceHeader[];
 
 // The interface for setting/retrieving the HTTP server properties.

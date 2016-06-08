@@ -5,6 +5,8 @@
 #ifndef BASE_MEMORY_REF_COUNTED_H_
 #define BASE_MEMORY_REF_COUNTED_H_
 
+#include <stddef.h>
+
 #include <cassert>
 #include <iosfwd>
 #include <type_traits>
@@ -422,6 +424,16 @@ bool operator==(const T* lhs, const scoped_refptr<U>& rhs) {
   return lhs == rhs.get();
 }
 
+template <typename T>
+bool operator==(const scoped_refptr<T>& lhs, std::nullptr_t null) {
+  return !static_cast<bool>(lhs);
+}
+
+template <typename T>
+bool operator==(std::nullptr_t null, const scoped_refptr<T>& rhs) {
+  return !static_cast<bool>(rhs);
+}
+
 template <typename T, typename U>
 bool operator!=(const scoped_refptr<T>& lhs, const U* rhs) {
   return !operator==(lhs, rhs);
@@ -430,6 +442,16 @@ bool operator!=(const scoped_refptr<T>& lhs, const U* rhs) {
 template <typename T, typename U>
 bool operator!=(const T* lhs, const scoped_refptr<U>& rhs) {
   return !operator==(lhs, rhs);
+}
+
+template <typename T>
+bool operator!=(const scoped_refptr<T>& lhs, std::nullptr_t null) {
+  return !operator==(lhs, null);
+}
+
+template <typename T>
+bool operator!=(std::nullptr_t null, const scoped_refptr<T>& rhs) {
+  return !operator==(null, rhs);
 }
 
 template <typename T>

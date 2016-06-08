@@ -48,11 +48,18 @@ OCSPFailure ParseOCSP(const std::string& file_name) {
   der::Input ca_input(&ca_data);
   der::Input cert_input(&cert_data);
 
-  ParsedCertificate issuer;
-  ParsedCertificate cert;
-  if (!ParseCertificate(ca_input, &issuer))
+  der::Input issuer_tbs_certificate_tlv;
+  der::Input issuer_signature_algorithm_tlv;
+  der::BitString issuer_signature_value;
+  der::Input cert_tbs_certificate_tlv;
+  der::Input cert_signature_algorithm_tlv;
+  der::BitString cert_signature_value;
+  if (!ParseCertificate(ca_input, &issuer_tbs_certificate_tlv,
+                        &issuer_signature_algorithm_tlv,
+                        &issuer_signature_value))
     return PARSE_CERT;
-  if (!ParseCertificate(cert_input, &cert))
+  if (!ParseCertificate(cert_input, &cert_tbs_certificate_tlv,
+                        &cert_signature_algorithm_tlv, &cert_signature_value))
     return PARSE_CERT;
   OCSPResponse parsed_ocsp;
   OCSPResponseData parsed_ocsp_data;
@@ -65,7 +72,8 @@ OCSPFailure ParseOCSP(const std::string& file_name) {
 
   OCSPCertStatus status;
 
-  if (!GetOCSPCertStatus(parsed_ocsp_data, issuer, cert, &status))
+  if (!GetOCSPCertStatus(parsed_ocsp_data, issuer_tbs_certificate_tlv,
+                         cert_tbs_certificate_tlv, &status))
     return PARSE_OCSP_SINGLE_RESPONSE;
 
   switch (status.status) {

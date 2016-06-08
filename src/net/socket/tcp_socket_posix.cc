@@ -19,7 +19,6 @@
 #include "base/threading/worker_pool.h"
 #include "base/time/default_tick_clock.h"
 #include "net/base/address_list.h"
-#include "net/base/connection_type_histograms.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -567,8 +566,6 @@ void TCPSocketPosix::LogConnectEnd(int net_error) const {
     net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, net_error);
     return;
   }
-
-  UpdateConnectionTypeHistograms(CONNECTION_ANY);
 
   SockaddrStorage storage;
   int rv = socket_->GetLocalAddress(&storage);

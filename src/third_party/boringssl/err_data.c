@@ -123,6 +123,8 @@ const uint32_t kOpenSSLReasonValues[] = {
     0x14328bdb,
     0x14330bea,
     0x14338bfc,
+    0x143400ac,
+    0x143480ea,
     0x18320083,
     0x18328ed0,
     0x183300ac,

@@ -4,14 +4,13 @@
 
 #include "net/quic/quic_stream_factory.h"
 
+#include <openssl/aead.h>
+
 #include <algorithm>
 #include <tuple>
 #include <utility>
 
-#include <openssl/aead.h>
-
 #include "base/location.h"
-#include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
@@ -19,6 +18,7 @@
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -40,7 +40,6 @@
 #include "net/quic/crypto/quic_server_info.h"
 #include "net/quic/port_suggester.h"
 #include "net/quic/quic_chromium_alarm_factory.h"
-#include "net/quic/quic_chromium_client_session.h"
 #include "net/quic/quic_chromium_connection_helper.h"
 #include "net/quic/quic_chromium_packet_reader.h"
 #include "net/quic/quic_chromium_packet_writer.h"
@@ -49,18 +48,11 @@
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_crypto_client_stream_factory.h"
 #include "net/quic/quic_flags.h"
-#include "net/quic/quic_http_stream.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_server_id.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_performance_watcher_factory.h"
 #include "net/ssl/token_binding.h"
 #include "net/udp/udp_client_socket.h"
-
-#if defined(OS_WIN)
-#include "base/win/windows_version.h"
-#endif
 
 using std::min;
 using NetworkHandle = net::NetworkChangeNotifier::NetworkHandle;
@@ -94,23 +86,72 @@ const int32_t kQuicStreamMaxRecvWindowSize = 6 * 1024 * 1024;    // 6 MB
 // Set the maximum number of undecryptable packets the connection will store.
 const int32_t kMaxUndecryptablePackets = 100;
 
+std::unique_ptr<base::Value> NetLogQuicConnectionMigrationTriggerCallback(
+    std::string trigger,
+    NetLogCaptureMode capture_mode) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("trigger", trigger);
+  return std::move(dict);
+}
+
+std::unique_ptr<base::Value> NetLogQuicConnectionMigrationFailureCallback(
+    QuicConnectionId connection_id,
+    std::string reason,
+    NetLogCaptureMode capture_mode) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("connection_id", base::Uint64ToString(connection_id));
+  dict->SetString("reason", reason);
+  return std::move(dict);
+}
+
+std::unique_ptr<base::Value> NetLogQuicConnectionMigrationSuccessCallback(
+    QuicConnectionId connection_id,
+    NetLogCaptureMode capture_mode) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("connection_id", base::Uint64ToString(connection_id));
+  return std::move(dict);
+}
+
+// Helper class that is used to log a connection migration event.
+class ScopedConnectionMigrationEventLog {
+ public:
+  ScopedConnectionMigrationEventLog(NetLog* net_log, std::string trigger)
+      : net_log_(BoundNetLog::Make(net_log,
+                                   NetLog::SOURCE_QUIC_CONNECTION_MIGRATION)) {
+    net_log_.BeginEvent(
+        NetLog::TYPE_QUIC_CONNECTION_MIGRATION_TRIGGERED,
+        base::Bind(&NetLogQuicConnectionMigrationTriggerCallback, trigger));
+  }
+
+  ~ScopedConnectionMigrationEventLog() {
+    net_log_.EndEvent(NetLog::TYPE_QUIC_CONNECTION_MIGRATION_TRIGGERED);
+  }
+
+  const BoundNetLog& net_log() { return net_log_; }
+
+ private:
+  const BoundNetLog net_log_;
+};
+
 void HistogramCreateSessionFailure(enum CreateSessionFailure error) {
   UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.CreationError", error,
                             CREATION_ERROR_MAX);
 }
 
+void HistogramAndLogMigrationFailure(const BoundNetLog& net_log,
+                                     enum QuicConnectionMigrationStatus status,
+                                     QuicConnectionId connection_id,
+                                     std::string reason) {
+  UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.ConnectionMigration", status,
+                            MIGRATION_STATUS_MAX);
+  net_log.AddEvent(NetLog::TYPE_QUIC_CONNECTION_MIGRATION_FAILURE,
+                   base::Bind(&NetLogQuicConnectionMigrationFailureCallback,
+                              connection_id, reason));
+}
+
 void HistogramMigrationStatus(enum QuicConnectionMigrationStatus status) {
   UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.ConnectionMigration", status,
                             MIGRATION_STATUS_MAX);
-}
-
-bool IsEcdsaSupported() {
-#if defined(OS_WIN)
-  if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return false;
-#endif
-
-  return true;
 }
 
 QuicConfig InitializeQuicConfig(const QuicTagVector& connection_options,
@@ -558,6 +599,7 @@ QuicStreamRequest::CreateBidirectionalStreamImpl() {
 }
 
 QuicStreamFactory::QuicStreamFactory(
+    NetLog* net_log,
     HostResolver* host_resolver,
     ClientSocketFactory* client_socket_factory,
     base::WeakPtr<HttpServerProperties> http_server_properties,
@@ -597,6 +639,7 @@ QuicStreamFactory::QuicStreamFactory(
     const QuicTagVector& connection_options,
     bool enable_token_binding)
     : require_confirmation_(true),
+      net_log_(net_log),
       host_resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
       http_server_properties_(http_server_properties),
@@ -676,8 +719,6 @@ QuicStreamFactory::QuicStreamFactory(
                         has_aes_hardware_support);
   if (has_aes_hardware_support || prefer_aes_)
     crypto_config_.PreferAesGcm();
-  if (!IsEcdsaSupported())
-    crypto_config_.DisableEcdsa();
   // When disk cache is used to store the server configs, HttpCache code calls
   // |set_quic_server_info_factory| if |quic_server_info_factory_| wasn't
   // created.
@@ -1303,14 +1344,20 @@ void QuicStreamFactory::OnNetworkConnected(NetworkHandle network) {
 void QuicStreamFactory::OnNetworkMadeDefault(NetworkHandle network) {}
 
 void QuicStreamFactory::OnNetworkDisconnected(NetworkHandle network) {
-  MaybeMigrateOrCloseSessions(network, /*force_close=*/true);
+  ScopedConnectionMigrationEventLog scoped_event_log(net_log_,
+                                                     "OnNetworkDisconnected");
+  MaybeMigrateOrCloseSessions(network, /*force_close=*/true,
+                              scoped_event_log.net_log());
   set_require_confirmation(true);
 }
 
 // This method is expected to only be called when migrating from Cellular to
 // WiFi on Android.
 void QuicStreamFactory::OnNetworkSoonToDisconnect(NetworkHandle network) {
-  MaybeMigrateOrCloseSessions(network, /*force_close=*/false);
+  ScopedConnectionMigrationEventLog scoped_event_log(
+      net_log_, "OnNetworkSoonToDisconnect");
+  MaybeMigrateOrCloseSessions(network, /*force_close=*/false,
+                              scoped_event_log.net_log());
 }
 
 NetworkHandle QuicStreamFactory::FindAlternateNetwork(
@@ -1326,8 +1373,10 @@ NetworkHandle QuicStreamFactory::FindAlternateNetwork(
   return NetworkChangeNotifier::kInvalidNetworkHandle;
 }
 
-void QuicStreamFactory::MaybeMigrateOrCloseSessions(NetworkHandle network,
-                                                    bool force_close) {
+void QuicStreamFactory::MaybeMigrateOrCloseSessions(
+    NetworkHandle network,
+    bool force_close,
+    const BoundNetLog& bound_net_log) {
   DCHECK_NE(NetworkChangeNotifier::kInvalidNetworkHandle, network);
   NetworkHandle new_network = FindAlternateNetwork(network);
 
@@ -1338,14 +1387,18 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(NetworkHandle network,
 
     if (session->GetDefaultSocket()->GetBoundNetwork() != network) {
       // If session is not bound to |network|, move on.
-      HistogramMigrationStatus(MIGRATION_STATUS_ALREADY_MIGRATED);
+      HistogramAndLogMigrationFailure(
+          bound_net_log, MIGRATION_STATUS_ALREADY_MIGRATED,
+          session->connection_id(), "Not bound to network");
       continue;
     }
     if (session->GetNumActiveStreams() == 0) {
       // Close idle sessions.
+      HistogramAndLogMigrationFailure(
+          bound_net_log, MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
+          session->connection_id(), "No active sessions");
       session->CloseSessionOnError(
           ERR_NETWORK_CHANGED, QUIC_CONNECTION_MIGRATION_NO_MIGRATABLE_STREAMS);
-      HistogramMigrationStatus(MIGRATION_STATUS_NO_MIGRATABLE_STREAMS);
       continue;
     }
     // If session has active streams, mark it as going away.
@@ -1353,6 +1406,11 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(NetworkHandle network,
 
     if (new_network == NetworkChangeNotifier::kInvalidNetworkHandle) {
       // No new network was found.
+      // TODO (jri): Add histogram for this failure case.
+      bound_net_log.AddEvent(
+          NetLog::TYPE_QUIC_CONNECTION_MIGRATION_FAILURE,
+          base::Bind(&NetLogQuicConnectionMigrationFailureCallback,
+                     session->connection_id(), "No new network"));
       if (force_close) {
         session->CloseSessionOnError(ERR_NETWORK_CHANGED,
                                      QUIC_CONNECTION_MIGRATION_NO_NEW_NETWORK);
@@ -1362,49 +1420,64 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(NetworkHandle network,
     if (session->config()->DisableConnectionMigration()) {
       // Do not migrate sessions where connection migration is disabled by
       // config.
+      HistogramAndLogMigrationFailure(bound_net_log, MIGRATION_STATUS_DISABLED,
+                                      session->connection_id(),
+                                      "Migration disabled");
       if (force_close) {
         // Close sessions where connection migration is disabled.
         session->CloseSessionOnError(ERR_NETWORK_CHANGED,
                                      QUIC_IP_ADDRESS_CHANGED);
-        HistogramMigrationStatus(MIGRATION_STATUS_DISABLED);
       }
       continue;
     }
     if (session->HasNonMigratableStreams()) {
       // Do not migrate sessions with non-migratable streams.
+      HistogramAndLogMigrationFailure(
+          bound_net_log, MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
+          session->connection_id(), "Non-migratable stream");
       if (force_close) {
         // Close sessions with non-migratable streams.
         session->CloseSessionOnError(
             ERR_NETWORK_CHANGED,
             QUIC_CONNECTION_MIGRATION_NON_MIGRATABLE_STREAM);
-        HistogramMigrationStatus(MIGRATION_STATUS_NON_MIGRATABLE_STREAM);
       }
       continue;
     }
 
-    MigrateSessionToNetwork(session, new_network);
+    MigrateSessionToNetwork(session, new_network, bound_net_log);
   }
 }
 
 void QuicStreamFactory::MaybeMigrateSessionEarly(
     QuicChromiumClientSession* session) {
+  ScopedConnectionMigrationEventLog scoped_event_log(net_log_,
+                                                     "EarlyMigration");
   if (!migrate_sessions_early_ || session->HasNonMigratableStreams() ||
       session->config()->DisableConnectionMigration()) {
+    HistogramAndLogMigrationFailure(
+        scoped_event_log.net_log(), MIGRATION_STATUS_DISABLED,
+        session->connection_id(), "Early migration disabled");
     return;
   }
   NetworkHandle new_network =
       FindAlternateNetwork(session->GetDefaultSocket()->GetBoundNetwork());
   if (new_network == NetworkChangeNotifier::kInvalidNetworkHandle) {
     // No alternate network found.
+    // TODO (jri): Add histogram for this failure case.
+    scoped_event_log.net_log().AddEvent(
+        NetLog::TYPE_QUIC_CONNECTION_MIGRATION_FAILURE,
+        base::Bind(&NetLogQuicConnectionMigrationFailureCallback,
+                   session->connection_id(), "No new network"));
     return;
   }
   OnSessionGoingAway(session);
-  MigrateSessionToNetwork(session, new_network);
+  MigrateSessionToNetwork(session, new_network, scoped_event_log.net_log());
 }
 
 void QuicStreamFactory::MigrateSessionToNetwork(
     QuicChromiumClientSession* session,
-    NetworkHandle new_network) {
+    NetworkHandle new_network,
+    const BoundNetLog& bound_net_log) {
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
   // using the PortSuggester since the connection is being migrated
   // and not being newly created.
@@ -1416,7 +1489,9 @@ void QuicStreamFactory::MigrateSessionToNetwork(
   if (ConfigureSocket(socket.get(), connection->peer_address(), new_network) !=
       OK) {
     session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
-    HistogramMigrationStatus(MIGRATION_STATUS_INTERNAL_ERROR);
+    HistogramAndLogMigrationFailure(
+        bound_net_log, MIGRATION_STATUS_INTERNAL_ERROR,
+        session->connection_id(), "Socket configuration failed");
     return;
   }
   std::unique_ptr<QuicChromiumPacketReader> new_reader(
@@ -1430,10 +1505,16 @@ void QuicStreamFactory::MigrateSessionToNetwork(
                                 std::move(new_writer))) {
     session->CloseSessionOnError(ERR_NETWORK_CHANGED,
                                  QUIC_CONNECTION_MIGRATION_TOO_MANY_CHANGES);
-    HistogramMigrationStatus(MIGRATION_STATUS_TOO_MANY_CHANGES);
+    HistogramAndLogMigrationFailure(
+        bound_net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
+        session->connection_id(), "Too many migrations");
     return;
   }
   HistogramMigrationStatus(MIGRATION_STATUS_SUCCESS);
+  bound_net_log.AddEvent(
+      NetLog::TYPE_QUIC_CONNECTION_MIGRATION_SUCCESS,
+      base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
+                 session->connection_id()));
 }
 
 void QuicStreamFactory::OnSSLConfigChanged() {
@@ -1477,6 +1558,13 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
     static_cast<UDPClientSocket*>(socket)->UseNonBlockingIO();
 #endif
   }
+
+#if defined(OS_WIN)
+  // TODO(rtenneti): Delete the check for TSVIPCli.dll loaded and the histogram.
+  bool tsvipcli_loaded = ::GetModuleHandle(L"TSVIPCli.dll") != NULL;
+  UMA_HISTOGRAM_BOOLEAN("Net.QuicStreamFactory.TSVIPCliIsLoaded",
+                        tsvipcli_loaded);
+#endif
 
   int rv;
   if (migrate_sessions_on_network_change_) {

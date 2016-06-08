@@ -52,6 +52,11 @@ struct NET_EXPORT SignedTreeHead {
 
 NET_EXPORT void PrintTo(const SignedTreeHead& sth, std::ostream* os);
 
+NET_EXPORT bool operator==(const SignedTreeHead& lhs,
+                           const SignedTreeHead& rhs);
+NET_EXPORT bool operator!=(const SignedTreeHead& lhs,
+                           const SignedTreeHead& rhs);
+
 }  // namespace ct
 
 }  // namespace net

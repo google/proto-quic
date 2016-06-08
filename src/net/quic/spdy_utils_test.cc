@@ -124,29 +124,45 @@ static std::unique_ptr<QuicHeaderList> FromList(
 }
 
 TEST(SpdyUtilsTest, CopyAndValidateHeaders) {
-  auto headers =
-      FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"baz", ""}});
+  auto headers = FromList({// All cookie crumbs are joined.
+                           {"cookie", " part 1"},
+                           {"cookie", "part 2 "},
+                           {"cookie", "part3"},
+
+                           // Already-delimited headers are passed through.
+                           {"passed-through", string("foo\0baz", 7)},
+
+                           // Other headers are joined on \0.
+                           {"joined", "value 1"},
+                           {"joined", "value 2"},
+
+                           // Empty headers remain empty.
+                           {"empty", ""},
+
+                           // Joined empty headers work as expected.
+                           {"empty-joined", ""},
+                           {"empty-joined", "foo"},
+                           {"empty-joined", ""},
+                           {"empty-joined", ""},
+
+                           // Non-continguous cookie crumb.
+                           {"cookie", " fin!"}});
+
   int64_t content_length = -1;
   SpdyHeaderBlock block;
   ASSERT_TRUE(
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
-  EXPECT_THAT(block,
-              UnorderedElementsAre(Pair("foo", "foovalue"),
-                                   Pair("bar", "barvalue"), Pair("baz", "")));
+  EXPECT_THAT(block, UnorderedElementsAre(
+                         Pair("cookie", " part 1; part 2 ; part3;  fin!"),
+                         Pair("passed-through", StringPiece("foo\0baz", 7)),
+                         Pair("joined", StringPiece("value 1\0value 2", 15)),
+                         Pair("empty", ""),
+                         Pair("empty-joined", StringPiece("\0foo\0\0", 6))));
   EXPECT_EQ(-1, content_length);
 }
 
 TEST(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
   auto headers = FromList({{"foo", "foovalue"}, {"", "barvalue"}, {"baz", ""}});
-  int64_t content_length = -1;
-  SpdyHeaderBlock block;
-  ASSERT_FALSE(
-      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
-}
-
-TEST(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
-  auto headers =
-      FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"bAz", ""}});
   int64_t content_length = -1;
   SpdyHeaderBlock block;
   ASSERT_FALSE(
@@ -199,6 +215,20 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleValues) {
       block, UnorderedElementsAre(Pair("foo", StringPiece("foovalue\0boo", 12)),
                                   Pair("bar", "barvalue"),
                                   Pair("baz", StringPiece("\0buzz", 5))));
+  EXPECT_EQ(-1, content_length);
+}
+
+TEST(SpdyUtilsTest, CopyAndValidateHeadersMoreThanTwoValues) {
+  auto headers = FromList({{"set-cookie", "value1"},
+                           {"set-cookie", "value2"},
+                           {"set-cookie", "value3"}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_TRUE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+  EXPECT_THAT(block,
+              UnorderedElementsAre(Pair(
+                  "set-cookie", StringPiece("value1\0value2\0value3", 20))));
   EXPECT_EQ(-1, content_length);
 }
 

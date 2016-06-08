@@ -375,6 +375,9 @@ struct PreloadResult {
   bool has_pins;
   bool expect_ct;
   uint32_t expect_ct_report_uri_id;
+  bool expect_staple;
+  bool expect_staple_include_subdomains;
+  uint32_t expect_staple_report_uri_id;
 };
 
 // DecodeHSTSPreloadRaw resolves |hostname| in the preloaded data. It returns
@@ -510,10 +513,22 @@ bool DecodeHSTSPreloadRaw(const std::string& search_hostname,
             return false;
         }
 
+        if (!reader.Next(&tmp.expect_staple))
+          return false;
+        tmp.expect_staple_include_subdomains = false;
+        if (tmp.expect_staple) {
+          if (!reader.Next(&tmp.expect_staple_include_subdomains))
+            return false;
+          if (!reader.Read(4, &tmp.expect_staple_report_uri_id))
+            return false;
+        }
+
         tmp.hostname_offset = hostname_offset;
 
         if (hostname_offset == 0 || hostname[hostname_offset - 1] == '.') {
-          *out_found = tmp.sts_include_subdomains || tmp.pkp_include_subdomains;
+          *out_found = tmp.sts_include_subdomains ||
+                       tmp.pkp_include_subdomains ||
+                       tmp.expect_staple_include_subdomains;
           *out = tmp;
 
           if (hostname_offset > 0) {
@@ -602,6 +617,7 @@ TransportSecurityState::TransportSecurityState()
       report_sender_(nullptr),
       enable_static_pins_(true),
       enable_static_expect_ct_(true),
+      enable_static_expect_staple_(false),
       expect_ct_reporter_(nullptr),
       sent_reports_cache_(kMaxHPKPReportCacheEntries) {
 // Static pinning is only enabled for official builds to make sure that
@@ -853,6 +869,29 @@ bool TransportSecurityState::GetStaticExpectCTState(
   expect_ct_state->domain = host.substr(result.hostname_offset);
   expect_ct_state->report_uri =
       GURL(kExpectCTReportURIs[result.expect_ct_report_uri_id]);
+  return true;
+}
+
+bool TransportSecurityState::GetStaticExpectStapleState(
+    const std::string& host,
+    ExpectStapleState* expect_staple_state) const {
+  DCHECK(CalledOnValidThread());
+
+  if (!IsBuildTimely())
+    return false;
+
+  PreloadResult result;
+  if (!DecodeHSTSPreload(host, &result))
+    return false;
+
+  if (!enable_static_expect_staple_ || !result.expect_staple)
+    return false;
+
+  expect_staple_state->domain = host.substr(result.hostname_offset);
+  expect_staple_state->include_subdomains =
+      result.expect_staple_include_subdomains;
+  expect_staple_state->report_uri =
+      GURL(kExpectStapleReportURIs[result.expect_staple_report_uri_id]);
   return true;
 }
 
@@ -1309,6 +1348,11 @@ TransportSecurityState::PKPState::~PKPState() {
 TransportSecurityState::ExpectCTState::ExpectCTState() {}
 
 TransportSecurityState::ExpectCTState::~ExpectCTState() {}
+
+TransportSecurityState::ExpectStapleState::ExpectStapleState()
+    : include_subdomains(false) {}
+
+TransportSecurityState::ExpectStapleState::~ExpectStapleState() {}
 
 bool TransportSecurityState::PKPState::CheckPublicKeyPins(
     const HashValueVector& hashes,

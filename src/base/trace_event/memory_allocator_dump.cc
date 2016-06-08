@@ -80,6 +80,13 @@ void MemoryAllocatorDump::AddScalarF(const char* name,
 void MemoryAllocatorDump::AddString(const char* name,
                                     const char* units,
                                     const std::string& value) {
+  // String attributes are disabled in background mode.
+  if (process_memory_dump_->dump_args().level_of_detail ==
+      MemoryDumpLevelOfDetail::BACKGROUND) {
+    NOTREACHED();
+    return;
+  }
+
   attributes_->BeginDictionary(name);
   attributes_->SetString("type", kTypeString);
   attributes_->SetString("units", units);

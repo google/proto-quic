@@ -318,7 +318,7 @@ std::unique_ptr<base::Value> NetLogBadProxyListCallback(
 
   for (ProxyRetryInfoMap::const_iterator iter = retry_info->begin();
        iter != retry_info->end(); ++iter) {
-    list->Append(new base::StringValue(iter->first));
+    list->AppendString(iter->first);
   }
   dict->Set("bad_proxy_list", list);
   return std::move(dict);
@@ -346,6 +346,26 @@ class UnsetProxyConfigService : public ProxyConfigService {
   }
 };
 #endif
+
+// Returns a sanitized copy of |url| which is safe to pass on to a PAC script.
+// The method for sanitizing is determined by |policy|. See the comments for
+// that enum for details.
+GURL SanitizeUrl(const GURL& url, ProxyService::SanitizeUrlPolicy policy) {
+  DCHECK(url.is_valid());
+
+  GURL::Replacements replacements;
+  replacements.ClearUsername();
+  replacements.ClearPassword();
+  replacements.ClearRef();
+
+  if (policy == ProxyService::SanitizeUrlPolicy::SAFE &&
+      url.SchemeIsCryptographic()) {
+    replacements.ClearPath();
+    replacements.ClearQuery();
+  }
+
+  return url.ReplaceComponents(replacements);
+}
 
 }  // namespace
 
@@ -937,7 +957,8 @@ ProxyService::ProxyService(
       net_log_(net_log),
       stall_proxy_auto_config_delay_(
           TimeDelta::FromMilliseconds(kDelayAfterNetworkChangesMs)),
-      quick_check_enabled_(true) {
+      quick_check_enabled_(true),
+      sanitize_url_policy_(SanitizeUrlPolicy::SAFE) {
   NetworkChangeNotifier::AddIPAddressObserver(this);
   NetworkChangeNotifier::AddDNSObserver(this);
   ResetConfigService(std::move(config_service));
@@ -1050,9 +1071,11 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
   if (current_state_ == STATE_NONE)
     ApplyProxyConfigIfAvailable();
 
-  // Strip away any reference fragments and the username/password, as they
-  // are not relevant to proxy resolution.
-  GURL url = SimplifyUrlForRequest(raw_url);
+  // Sanitize the URL before passing it on to the proxy resolver (i.e. PAC
+  // script). The goal is to remove sensitive data (like embedded user names
+  // and password), and local data (i.e. reference fragment) which does not need
+  // to be disclosed to the resolver.
+  GURL url = SanitizeUrl(raw_url, sanitize_url_policy_);
 
   // Check if the request can be completed right away. (This is the case when
   // using a direct connection for example).

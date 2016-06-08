@@ -16,6 +16,7 @@
 #include "base/process/process_handle.h"
 #include "base/strings/stringprintf.h"
 #include "base/third_party/valgrind/memcheck.h"
+#include "base/threading/worker_pool.h"
 #include "base/tracking_info.h"
 #include "build/build_config.h"
 
@@ -355,7 +356,9 @@ ThreadData* ThreadData::next() const { return next_; }
 
 // static
 void ThreadData::InitializeThreadContext(const std::string& suggested_name) {
-  Initialize();
+  if (base::WorkerPool::RunsTasksOnCurrentThread())
+    return;
+  EnsureTlsInitialization();
   ThreadData* current_thread_data =
       reinterpret_cast<ThreadData*>(tls_index_.Get());
   if (current_thread_data)
@@ -669,7 +672,7 @@ void ThreadData::OnProfilingPhaseCompletedOnThread(int profiling_phase) {
   }
 }
 
-void ThreadData::Initialize() {
+void ThreadData::EnsureTlsInitialization() {
   if (base::subtle::Acquire_Load(&status_) >= DEACTIVATED)
     return;  // Someone else did the initialization.
   // Due to racy lazy initialization in tests, we'll need to recheck status_
@@ -709,7 +712,7 @@ void ThreadData::InitializeAndSetTrackingStatus(Status status) {
   DCHECK_GE(status, DEACTIVATED);
   DCHECK_LE(status, PROFILING_ACTIVE);
 
-  Initialize();  // No-op if already initialized.
+  EnsureTlsInitialization();  // No-op if already initialized.
 
   if (status > DEACTIVATED)
     status = PROFILING_ACTIVE;

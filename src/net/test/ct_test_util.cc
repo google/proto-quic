@@ -279,6 +279,7 @@ bool GetSampleSignedTreeHead(SignedTreeHead* sth) {
   sth->tree_size = kSampleSTHTreeSize;
   std::string sha256_root_hash = GetSampleSTHSHA256RootHash();
   memcpy(sth->sha256_root_hash, sha256_root_hash.c_str(), kSthRootHashLength);
+  sth->log_id = GetTestPublicKeyId();
 
   return GetSampleSTHTreeHeadDecodedSignature(&(sth->signature));
 }
@@ -291,6 +292,7 @@ bool GetSampleEmptySignedTreeHead(SignedTreeHead* sth) {
   std::string empty_root_hash = HexToBytes(
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
   memcpy(sth->sha256_root_hash, empty_root_hash.c_str(), kSthRootHashLength);
+  sth->log_id = GetTestPublicKeyId();
 
   std::string tree_head_signature = HexToBytes(
       "040300463044022046c26401de9416403da54762dc1f1687c38eafd791b15e484ab4c5f7"
@@ -306,6 +308,7 @@ bool GetBadEmptySignedTreeHead(SignedTreeHead* sth) {
                    base::TimeDelta::FromMilliseconds(INT64_C(1450870952897));
   sth->tree_size = 0;
   memset(sth->sha256_root_hash, 'f', kSthRootHashLength);
+  sth->log_id = GetTestPublicKeyId();
 
   std::string tree_head_signature = HexToBytes(
       "04030046304402207cab04c62dee5d1cbc95fec30cd8417313f71587b75f133ad2e6f324"

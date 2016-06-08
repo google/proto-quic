@@ -214,6 +214,7 @@ HttpStreamParser::HttpStreamParser(ClientSocketHandle* connection,
       sent_bytes_(0),
       response_(nullptr),
       response_body_length_(-1),
+      response_is_keep_alive_(false),
       response_body_read_(0),
       user_read_buf_(nullptr),
       user_read_buf_len_(0),
@@ -869,6 +870,7 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
     }
   } else {
     CalculateResponseBodySize();
+
     // If the body is zero length, the caller may not call ReadResponseBody,
     // which is where any extra data is copied to read_buf_, so we move the
     // data here.
@@ -892,10 +894,16 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
         response_body_length_ = -1;
         // Now waiting for the second set of headers to be read.
       } else {
+        // Only set keep-alive based on final set of headers.
+        response_is_keep_alive_ = response_->headers->IsKeepAlive();
+
         io_state_ = STATE_DONE;
       }
       return OK;
     }
+
+    // Only set keep-alive based on final set of headers.
+    response_is_keep_alive_ = response_->headers->IsKeepAlive();
 
     // Note where the headers stop.
     read_buf_unused_offset_ = end_of_header_offset;
@@ -1087,8 +1095,20 @@ void HttpStreamParser::SetConnectionReused() {
 bool HttpStreamParser::CanReuseConnection() const {
   if (!CanFindEndOfResponse())
     return false;
-  if (!response_->headers || !response_->headers->IsKeepAlive())
+
+  if (!response_is_keep_alive_)
     return false;
+
+  // Check if extra data was received after reading the entire response body. If
+  // extra data was received, reusing the socket is not a great idea. This does
+  // have the down side of papering over certain server bugs, but seems to be
+  // the best option here.
+  //
+  // TODO(mmenke): Consider logging this - hard to decipher socket reuse
+  //     behavior makes NetLogs harder to read.
+  if (IsResponseBodyComplete() && IsMoreDataBuffered())
+    return false;
+
   return connection_->socket() && connection_->socket()->IsConnected();
 }
 

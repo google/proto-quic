@@ -8,13 +8,10 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
-#include "net/base/io_buffer.h"
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
-#include "net/quic/quic_chromium_client_session.h"
-#include "net/quic/quic_chromium_client_stream.h"
 #include "net/quic/quic_client_promised_info.h"
 #include "net/quic/quic_http_utils.h"
 #include "net/quic/quic_utils.h"
@@ -178,6 +175,12 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
 }
 
 int QuicHttpStream::DoStreamRequest() {
+  if (session_.get() == nullptr) {
+    // TODO(rtenneti) Bug: b/28676259 - a temporary fix until we find out why
+    // |session_| could be a nullptr.
+    return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
+                                    : ERR_QUIC_HANDSHAKE_FAILED;
+  }
   int rv = stream_request_.StartRequest(
       session_, &stream_,
       base::Bind(&QuicHttpStream::OnStreamReady, weak_factory_.GetWeakPtr()));

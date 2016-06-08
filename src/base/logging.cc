@@ -454,8 +454,7 @@ template std::string* MakeCheckOpString<unsigned int, unsigned long>(
 template std::string* MakeCheckOpString<std::string, std::string>(
     const std::string&, const std::string&, const char* name);
 
-template <>
-void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& p) {
+void MakeCheckOpValueString(std::ostream* os, std::nullptr_t p) {
   (*os) << "nullptr";
 }
 

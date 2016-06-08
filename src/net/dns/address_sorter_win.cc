@@ -14,7 +14,6 @@
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
 #include "base/threading/worker_pool.h"
-#include "base/win/windows_version.h"
 #include "net/base/address_list.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"

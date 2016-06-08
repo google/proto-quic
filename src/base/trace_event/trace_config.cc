@@ -85,6 +85,12 @@ void TraceConfig::MemoryDumpConfig::HeapProfiler::Clear() {
   breakdown_threshold_bytes = kDefaultBreakdownThresholdBytes;
 }
 
+void TraceConfig::ResetMemoryDumpConfig(
+    const TraceConfig::MemoryDumpConfig& memory_dump_config) {
+  memory_dump_config_.Clear();
+  memory_dump_config_ = memory_dump_config;
+}
+
 TraceConfig::MemoryDumpConfig::MemoryDumpConfig() {};
 
 TraceConfig::MemoryDumpConfig::MemoryDumpConfig(
@@ -361,7 +367,7 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
     // category enabled. So, use the default periodic dump config.
     const base::DictionaryValue* memory_dump_config = nullptr;
     if (dict.GetDictionary(kMemoryDumpConfigParam, &memory_dump_config))
-      SetMemoryDumpConfig(*memory_dump_config);
+      SetMemoryDumpConfigFromConfigDict(*memory_dump_config);
     else
       SetDefaultMemoryDumpConfig();
   }
@@ -509,7 +515,7 @@ void TraceConfig::AddCategoryToDict(base::DictionaryValue& dict,
   dict.Set(param, std::move(list));
 }
 
-void TraceConfig::SetMemoryDumpConfig(
+void TraceConfig::SetMemoryDumpConfigFromConfigDict(
     const base::DictionaryValue& memory_dump_config) {
   // Set triggers
   memory_dump_config_.triggers.clear();

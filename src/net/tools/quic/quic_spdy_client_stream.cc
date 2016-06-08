@@ -96,9 +96,11 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(
   session_->OnInitialHeadersComplete(id(), response_headers_);
 }
 
-void QuicSpdyClientStream::OnTrailingHeadersComplete(bool fin,
-                                                     size_t frame_len) {
-  QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len);
+void QuicSpdyClientStream::OnTrailingHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len, header_list);
   MarkTrailersConsumed(decompressed_trailers().length());
 }
 
@@ -139,6 +141,9 @@ void QuicSpdyClientStream::OnPromiseHeaderList(
   }
 
   session_->HandlePromised(id(), promised_id, promise_headers);
+  if (visitor() != nullptr) {
+    visitor()->OnPromiseHeadersComplete(promised_id, frame_len);
+  }
 }
 
 void QuicSpdyClientStream::OnDataAvailable() {

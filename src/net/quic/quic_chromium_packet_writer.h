@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_DEFAULT_PACKET_WRITER_H_
-#define NET_QUIC_QUIC_DEFAULT_PACKET_WRITER_H_
+#ifndef NET_QUIC_QUIC_CHROMIUM_PACKET_WRITER_H_
+#define NET_QUIC_QUIC_CHROMIUM_PACKET_WRITER_H_
 
 #include <stddef.h>
 
@@ -13,11 +13,10 @@
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_packet_writer.h"
 #include "net/quic/quic_protocol.h"
+#include "net/quic/quic_types.h"
 #include "net/udp/datagram_client_socket.h"
 
 namespace net {
-
-struct WriteResult;
 
 // Chrome specific packet writer which uses a datagram Socket for writing data.
 class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
@@ -57,4 +56,4 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_DEFAULT_PACKET_WRITER_H_
+#endif  // NET_QUIC_QUIC_CHROMIUM_PACKET_WRITER_H_

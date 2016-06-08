@@ -60,6 +60,36 @@ void QuicChromiumClientStream::OnStreamHeadersComplete(bool fin,
   }
 }
 
+void QuicChromiumClientStream::OnInitialHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  QuicSpdyStream::OnInitialHeadersComplete(fin, frame_len, header_list);
+
+  SpdyHeaderBlock header_block;
+  int64_t length = -1;
+  if (!SpdyUtils::CopyAndValidateHeaders(header_list, &length, &header_block)) {
+    DLOG(ERROR) << "Failed to parse header list: " << header_list.DebugString();
+    ConsumeHeaderList();
+    Reset(QUIC_BAD_APPLICATION_PAYLOAD);
+    return;
+  }
+
+  ConsumeHeaderList();
+  session_->OnInitialHeadersComplete(id(), header_block);
+
+  // The delegate will read the headers via a posted task.
+  NotifyDelegateOfHeadersCompleteLater(header_block, frame_len);
+}
+
+void QuicChromiumClientStream::OnTrailingHeadersComplete(
+    bool fin,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len, header_list);
+  NotifyDelegateOfHeadersCompleteLater(received_trailers(), frame_len);
+}
+
 void QuicChromiumClientStream::OnPromiseHeadersComplete(
     QuicStreamId promised_id,
     size_t frame_len) {
@@ -140,7 +170,7 @@ int QuicChromiumClientStream::WriteStreamData(
 }
 
 int QuicChromiumClientStream::WritevStreamData(
-    const std::vector<IOBuffer*>& buffers,
+    const std::vector<scoped_refptr<IOBuffer>>& buffers,
     const std::vector<int>& lengths,
     bool fin,
     const CompletionCallback& callback) {
@@ -222,6 +252,7 @@ void QuicChromiumClientStream::NotifyDelegateOfHeadersComplete(
   // Only mark trailers consumed when we are about to notify delegate.
   if (headers_delivered_) {
     MarkTrailersConsumed(decompressed_trailers().length());
+    MarkTrailersDelivered();
     net_log_.AddEvent(
         NetLog::TYPE_QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
         base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));

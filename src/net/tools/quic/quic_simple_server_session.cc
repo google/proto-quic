@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/quic_simple_server_session.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/stl_util.h"
 #include "net/quic/proto/cached_network_parameters.pb.h"
@@ -21,12 +23,14 @@ namespace net {
 QuicSimpleServerSession::QuicSimpleServerSession(
     const QuicConfig& config,
     QuicConnection* connection,
-    QuicServerSessionVisitor* visitor,
+    QuicServerSessionBase::Visitor* visitor,
+    QuicServerSessionBase::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)
     : QuicServerSessionBase(config,
                             connection,
                             visitor,
+                            helper,
                             crypto_config,
                             compressed_certs_cache),
       highest_promised_stream_id_(0) {}
@@ -75,7 +79,7 @@ void QuicSimpleServerSession::PromisePushResources(
     highest_promised_stream_id_ += 2;
     SendPushPromise(original_stream_id, highest_promised_stream_id_, headers);
     promised_streams_.push_back(PromisedStreamInfo(
-        headers, highest_promised_stream_id_, resource.priority));
+        std::move(headers), highest_promised_stream_id_, resource.priority));
   }
 
   // Procese promised push request as many as possible.
@@ -166,11 +170,11 @@ SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
 
 void QuicSimpleServerSession::SendPushPromise(QuicStreamId original_stream_id,
                                               QuicStreamId promised_stream_id,
-                                              const SpdyHeaderBlock& headers) {
+                                              SpdyHeaderBlock headers) {
   DVLOG(1) << "stream " << original_stream_id
            << " send PUSH_PROMISE for promised stream " << promised_stream_id;
   headers_stream()->WritePushPromise(original_stream_id, promised_stream_id,
-                                     headers, nullptr);
+                                     std::move(headers), nullptr);
 }
 
 void QuicSimpleServerSession::HandlePromisedPushRequests() {

@@ -26,8 +26,6 @@
 #include "net/quic/quic_chromium_connection_helper.h"
 #include "net/quic/quic_client_promised_info.h"
 #include "net/quic/quic_crypto_client_stream_factory.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_server_id.h"
 #include "net/quic/quic_stream_factory.h"
 #include "net/spdy/spdy_session.h"
 #include "net/ssl/channel_id_service.h"
@@ -142,6 +140,22 @@ std::unique_ptr<base::Value> NetLogQuicPushPromiseReceivedCallback(
   dict->SetInteger("promised_stream_id", promised_stream_id);
   return std::move(dict);
 }
+
+class HpackEncoderDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
+  void OnUseEntry(QuicTime::Delta elapsed) override {
+    UMA_HISTOGRAM_TIMES(
+        "Net.QuicHpackEncoder.IndexedEntryAge",
+        base::TimeDelta::FromMicroseconds(elapsed.ToMicroseconds()));
+  }
+};
+
+class HpackDecoderDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
+  void OnUseEntry(QuicTime::Delta elapsed) override {
+    UMA_HISTOGRAM_TIMES(
+        "Net.QuicHpackDecoder.IndexedEntryAge",
+        base::TimeDelta::FromMicroseconds(elapsed.ToMicroseconds()));
+  }
+};
 
 }  // namespace
 
@@ -368,6 +382,14 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
       static_cast<base::HistogramBase::Sample>(stats.max_sequence_reordering));
 }
 
+void QuicChromiumClientSession::Initialize() {
+  QuicClientSessionBase::Initialize();
+  headers_stream()->SetHpackEncoderDebugVisitor(
+      base::WrapUnique(new HpackEncoderDebugVisitor()));
+  headers_stream()->SetHpackDecoderDebugVisitor(
+      base::WrapUnique(new HpackDecoderDebugVisitor()));
+}
+
 void QuicChromiumClientSession::OnHeadersHeadOfLineBlocking(
     QuicTime::Delta delta) {
   UMA_HISTOGRAM_TIMES(
@@ -491,7 +513,7 @@ QuicChromiumClientSession::CreateOutgoingReliableStreamImpl() {
 
 QuicCryptoClientStream* QuicChromiumClientSession::GetCryptoStream() {
   return crypto_stream_.get();
-};
+}
 
 // TODO(rtenneti): Add unittests for GetSSLInfo which exercise the various ways
 // we learn about SSL info (sync vs async vs cached).
@@ -839,10 +861,10 @@ void QuicChromiumClientSession::OnConnectionClosed(
             connection()->sent_packet_manager().HasUnackedPackets());
         UMA_HISTOGRAM_COUNTS(
             "Net.QuicSession.TimedOutWithOpenStreams.ConsecutiveRTOCount",
-            connection()->sent_packet_manager().consecutive_rto_count());
+            connection()->sent_packet_manager().GetConsecutiveRtoCount());
         UMA_HISTOGRAM_COUNTS(
             "Net.QuicSession.TimedOutWithOpenStreams.ConsecutiveTLPCount",
-            connection()->sent_packet_manager().consecutive_tlp_count());
+            connection()->sent_packet_manager().GetConsecutiveTlpCount());
       }
       if (connection()->sent_packet_manager().HasUnackedPackets()) {
         UMA_HISTOGRAM_TIMES(
@@ -1015,8 +1037,7 @@ std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
   std::unique_ptr<base::ListValue> stream_list(new base::ListValue());
   for (StreamMap::const_iterator it = dynamic_streams().begin();
        it != dynamic_streams().end(); ++it) {
-    stream_list->Append(
-        new base::StringValue(base::UintToString(it->second->id())));
+    stream_list->AppendString(base::UintToString(it->second->id()));
   }
   dict->Set("active_streams", std::move(stream_list));
 
@@ -1034,7 +1055,7 @@ std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
   std::unique_ptr<base::ListValue> alias_list(new base::ListValue());
   for (std::set<HostPortPair>::const_iterator it = aliases.begin();
        it != aliases.end(); it++) {
-    alias_list->Append(new base::StringValue(it->ToString()));
+    alias_list->AppendString(it->ToString());
   }
   dict->Set("aliases", std::move(alias_list));
 

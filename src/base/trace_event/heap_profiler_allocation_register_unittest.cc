@@ -16,7 +16,10 @@ namespace trace_event {
 
 class AllocationRegisterTest : public testing::Test {
  public:
-  static const uint32_t kNumBuckets = AllocationRegister::kNumBuckets;
+  // Use a lower number of cells for unittests to avoid reserving a virtual
+  // region which is too big.
+  static const uint32_t kNumCellsForTesting =
+      AllocationRegister::kNumBuckets + 100;
 
   // Returns the number of cells that the |AllocationRegister| can store per
   // system page.
@@ -56,7 +59,7 @@ size_t SumAllSizes(const AllocationRegister& reg) {
 }
 
 TEST_F(AllocationRegisterTest, InsertRemove) {
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
 
   // Zero-sized allocations should be discarded.
@@ -90,7 +93,7 @@ TEST_F(AllocationRegisterTest, InsertRemove) {
 }
 
 TEST_F(AllocationRegisterTest, DoubleFreeIsAllowed) {
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
 
   reg.Insert(reinterpret_cast<void*>(1), 1, ctx);
@@ -103,9 +106,7 @@ TEST_F(AllocationRegisterTest, DoubleFreeIsAllowed) {
 }
 
 TEST_F(AllocationRegisterTest, DoubleInsertOverwrites) {
-  // TODO(ruuda): Although double insert happens in practice, it should not.
-  // Find out the cause and ban double insert if possible.
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
   StackFrame frame1 = StackFrame::FromTraceEventName("Foo");
   StackFrame frame2 = StackFrame::FromTraceEventName("Bar");
@@ -139,12 +140,12 @@ TEST_F(AllocationRegisterTest, DoubleInsertOverwrites) {
 // register still behaves correctly.
 TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
   size_t expected_sum = 0;
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
 
   // By inserting 100 more entries than the number of buckets, there will be at
-  // least 100 collisions.
-  for (uintptr_t i = 1; i <= kNumBuckets + 100; i++) {
+  // least 100 collisions (100 = kNumCellsForTesting - kNumBuckets).
+  for (uintptr_t i = 1; i <= kNumCellsForTesting; i++) {
     size_t size = i % 31;
     expected_sum += size;
     reg.Insert(reinterpret_cast<void*>(i), size, ctx);
@@ -156,7 +157,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
 
   EXPECT_EQ(expected_sum, SumAllSizes(reg));
 
-  for (uintptr_t i = 1; i <= kNumBuckets + 100; i++) {
+  for (uintptr_t i = 1; i <= kNumCellsForTesting; i++) {
     size_t size = i % 31;
     expected_sum -= size;
     reg.Remove(reinterpret_cast<void*>(i));
@@ -176,7 +177,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
 // free list is utilised properly.
 TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
   size_t expected_sum = 0;
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
 
   uintptr_t generator = 3;
@@ -217,7 +218,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
 TEST_F(AllocationRegisterTest, ChangeContextAfterInsertion) {
   using Allocation = AllocationRegister::Allocation;
   const char kStdString[] = "std::string";
-  AllocationRegister reg;
+  AllocationRegister reg(kNumCellsForTesting);
   AllocationContext ctx;
 
   reg.Insert(reinterpret_cast<void*>(17), 1, ctx);

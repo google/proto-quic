@@ -16,7 +16,6 @@
 
 namespace net {
 
-struct ParsedCertificate;
 struct ParsedTbsCertificate;
 
 // Returns true if the given serial number (CertificateSerialNumber in RFC 5280)
@@ -47,24 +46,44 @@ struct ParsedTbsCertificate;
 NET_EXPORT bool VerifySerialNumber(const der::Input& value) WARN_UNUSED_RESULT;
 
 // Parses a DER-encoded "Certificate" as specified by RFC 5280. Returns true on
-// success and sets the results in |out|.
+// success and sets the results in the |out_*| parameters.
 //
-// Note that on success |out| aliases data from the input |certificate_tlv|.
-// Hence the fields of the ParsedCertificate are only valid as long as
+// Note that on success the out parameters alias data from the input
+// |certificate_tlv|.  Hence the output values are only valid as long as
 // |certificate_tlv| remains valid.
 //
-// On failure |out| has an undefined state. Some of its fields may have been
-// updated during parsing, whereas others may not have been changed.
+// On failure the out parameters have an undefined state. Some of them may have
+// been updated during parsing, whereas others may not have been changed.
 //
-// Refer to the per-field documention of the ParsedCertificate structure for
-// details on what validity checks parsing performs.
-//
+// The out parameters represent each field of the Certificate SEQUENCE:
 //       Certificate  ::=  SEQUENCE  {
-//            tbsCertificate       TBSCertificate,
-//            signatureAlgorithm   AlgorithmIdentifier,
-//            signatureValue       BIT STRING  }
+//
+// The |out_tbs_certificate_tlv| parameter corresponds with "tbsCertificate"
+// from RFC 5280:
+//         tbsCertificate       TBSCertificate,
+//
+// This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
+// guarantees are made regarding the value of this SEQUENCE.
+// This can be further parsed using ParseTbsCertificate().
+//
+// The |out_signature_algorithm_tlv| parameter corresponds with
+// "signatureAlgorithm" from RFC 5280:
+//         signatureAlgorithm   AlgorithmIdentifier,
+//
+// This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
+// guarantees are made regarding the value of this SEQUENCE.
+// This can be further parsed using SignatureValue::CreateFromDer().
+//
+// The |out_signature_value| parameter corresponds with "signatureValue" from
+// RFC 5280:
+//         signatureValue       BIT STRING  }
+//
+// Parsing guarantees that this is a valid BIT STRING.
 NET_EXPORT bool ParseCertificate(const der::Input& certificate_tlv,
-                                 ParsedCertificate* out) WARN_UNUSED_RESULT;
+                                 der::Input* out_tbs_certificate_tlv,
+                                 der::Input* out_signature_algorithm_tlv,
+                                 der::BitString* out_signature_value)
+    WARN_UNUSED_RESULT;
 
 // Parses a DER-encoded "TBSCertificate" as specified by RFC 5280. Returns true
 // on success and sets the results in |out|.
@@ -104,40 +123,6 @@ enum class CertificateVersion {
   V1,
   V2,
   V3,
-};
-
-// ParsedCertificate contains pointers to the main fields of a DER-encoded RFC
-// 5280 "Certificate".
-//
-// ParsedCertificate is expected to be filled by ParseCertificate(), so
-// subsequent field descriptions are in terms of what ParseCertificate() sets.
-struct NET_EXPORT ParsedCertificate {
-  ParsedCertificate();
-  ~ParsedCertificate();
-
-  // Corresponds with "tbsCertificate" from RFC 5280:
-  //         tbsCertificate       TBSCertificate,
-  //
-  // This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
-  // guarantees are made regarding the value of this SEQUENCE.
-  //
-  // This can be further parsed using ParseTbsCertificate().
-  der::Input tbs_certificate_tlv;
-
-  // Corresponds with "signatureAlgorithm" from RFC 5280:
-  //         signatureAlgorithm   AlgorithmIdentifier,
-  //
-  // This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
-  // guarantees are made regarding the value of this SEQUENCE.
-  //
-  // This can be further parsed using SignatureValue::CreateFromDer().
-  der::Input signature_algorithm_tlv;
-
-  // Corresponds with "signatureValue" from RFC 5280:
-  //         signatureValue       BIT STRING  }
-  //
-  // Parsing guarantees that this is a valid BIT STRING.
-  der::BitString signature_value;
 };
 
 // ParsedTbsCertificate contains pointers to the main fields of a DER-encoded
@@ -338,6 +323,14 @@ NET_EXPORT der::Input ExtKeyUsageOid();
 NET_EXPORT bool ParseExtensions(
     const der::Input& extensions_tlv,
     std::map<der::Input, ParsedExtension>* extensions) WARN_UNUSED_RESULT;
+
+// Removes the extension with OID |oid| from |unconsumed_extensions| and fills
+// |extension| with the matching extension value. If there was no extension
+// matching |oid| then returns |false|.
+NET_EXPORT bool ConsumeExtension(
+    const der::Input& oid,
+    std::map<der::Input, ParsedExtension>* unconsumed_extensions,
+    ParsedExtension* extension) WARN_UNUSED_RESULT;
 
 struct ParsedBasicConstraints {
   bool is_ca = false;

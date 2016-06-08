@@ -6,7 +6,6 @@
 
 #include "base/logging.h"
 #include "net/base/ip_address.h"
-#include "net/base/ip_endpoint.h"
 
 namespace net {
 

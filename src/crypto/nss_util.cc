@@ -44,18 +44,12 @@
 #include "base/path_service.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/synchronization/lock.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/worker_pool.h"
 #include "build/build_config.h"
-
-// USE_NSS_CERTS means NSS is used for certificates and platform integration.
-// This requires additional support to manage the platform certificate and key
-// stores.
-#if defined(USE_NSS_CERTS)
-#include "base/synchronization/lock.h"
 #include "crypto/nss_crypto_module_delegate.h"
-#endif  // defined(USE_NSS_CERTS)
 
 namespace crypto {
 
@@ -85,7 +79,6 @@ std::string GetNSSErrorMessage() {
   return result;
 }
 
-#if defined(USE_NSS_CERTS)
 #if !defined(OS_CHROMEOS)
 base::FilePath GetDefaultConfigDirectory() {
   base::FilePath dir;
@@ -147,10 +140,6 @@ char* PKCS11PasswordFunc(PK11SlotInfo* slot, PRBool retry, void* arg) {
 // the NSS environment variable NSS_SDB_USE_CACHE to "yes" to override NSS's
 // detection when database_dir is on NFS.  See http://crbug.com/48585.
 //
-// TODO(wtc): port this function to other USE_NSS_CERTS platforms.  It is
-// defined only for OS_LINUX and OS_OPENBSD simply because the statfs structure
-// is OS-specific.
-//
 // Because this function sets an environment variable it must be run before we
 // go multi-threaded.
 void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
@@ -174,8 +163,6 @@ void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
       env->SetVar(kUseCacheEnvVar, "yes");
   }
 }
-
-#endif  // defined(USE_NSS_CERTS)
 
 // A singleton to initialize/deinitialize NSPR.
 // Separate from the NSS singleton because we initialize NSPR on the UI thread.
@@ -670,11 +657,9 @@ class NSSInitSingleton {
   }
 #endif
 
-#if defined(USE_NSS_CERTS)
   base::Lock* write_lock() {
     return &write_lock_;
   }
-#endif  // defined(USE_NSS_CERTS)
 
  private:
   friend struct base::DefaultLazyInstanceTraits<NSSInitSingleton>;
@@ -706,72 +691,52 @@ class NSSInitSingleton {
     }
 
     SECStatus status = SECFailure;
-    bool nodb_init = false;
+    base::FilePath database_dir = GetInitialConfigDirectory();
+    if (!database_dir.empty()) {
+      // This duplicates the work which should have been done in
+      // EarlySetupForNSSInit. However, this function is idempotent so
+      // there's no harm done.
+      UseLocalCacheOfNSSDatabaseIfNFS(database_dir);
 
-#if !defined(USE_NSS_CERTS)
-    // Use the system certificate store, so initialize NSS without database.
-    nodb_init = true;
+      // Initialize with a persistent database (likely, ~/.pki/nssdb).
+      // Use "sql:" which can be shared by multiple processes safely.
+      std::string nss_config_dir =
+          base::StringPrintf("sql:%s", database_dir.value().c_str());
+#if defined(OS_CHROMEOS)
+      status = NSS_Init(nss_config_dir.c_str());
+#else
+      status = NSS_InitReadWrite(nss_config_dir.c_str());
 #endif
-
-    if (nodb_init) {
+      if (status != SECSuccess) {
+        LOG(ERROR) << "Error initializing NSS with a persistent "
+                      "database (" << nss_config_dir
+                   << "): " << GetNSSErrorMessage();
+      }
+    }
+    if (status != SECSuccess) {
+      VLOG(1) << "Initializing NSS without a persistent database.";
       status = NSS_NoDB_Init(NULL);
       if (status != SECSuccess) {
         CrashOnNSSInitFailure();
         return;
       }
-#if defined(OS_IOS)
-      root_ = InitDefaultRootCerts();
-#endif  // defined(OS_IOS)
-    } else {
-#if defined(USE_NSS_CERTS)
-      base::FilePath database_dir = GetInitialConfigDirectory();
-      if (!database_dir.empty()) {
-        // This duplicates the work which should have been done in
-        // EarlySetupForNSSInit. However, this function is idempotent so
-        // there's no harm done.
-        UseLocalCacheOfNSSDatabaseIfNFS(database_dir);
-
-        // Initialize with a persistent database (likely, ~/.pki/nssdb).
-        // Use "sql:" which can be shared by multiple processes safely.
-        std::string nss_config_dir =
-            base::StringPrintf("sql:%s", database_dir.value().c_str());
-#if defined(OS_CHROMEOS)
-        status = NSS_Init(nss_config_dir.c_str());
-#else
-        status = NSS_InitReadWrite(nss_config_dir.c_str());
-#endif
-        if (status != SECSuccess) {
-          LOG(ERROR) << "Error initializing NSS with a persistent "
-                        "database (" << nss_config_dir
-                     << "): " << GetNSSErrorMessage();
-        }
-      }
-      if (status != SECSuccess) {
-        VLOG(1) << "Initializing NSS without a persistent database.";
-        status = NSS_NoDB_Init(NULL);
-        if (status != SECSuccess) {
-          CrashOnNSSInitFailure();
-          return;
-        }
-      }
-
-      PK11_SetPasswordFunc(PKCS11PasswordFunc);
-
-      // If we haven't initialized the password for the NSS databases,
-      // initialize an empty-string password so that we don't need to
-      // log in.
-      PK11SlotInfo* slot = PK11_GetInternalKeySlot();
-      if (slot) {
-        // PK11_InitPin may write to the keyDB, but no other thread can use NSS
-        // yet, so we don't need to lock.
-        if (PK11_NeedUserInit(slot))
-          PK11_InitPin(slot, NULL, NULL);
-        PK11_FreeSlot(slot);
-      }
-
-      root_ = InitDefaultRootCerts();
-#endif  // defined(USE_NSS_CERTS)
     }
+
+    PK11_SetPasswordFunc(PKCS11PasswordFunc);
+
+    // If we haven't initialized the password for the NSS databases,
+    // initialize an empty-string password so that we don't need to
+    // log in.
+    PK11SlotInfo* slot = PK11_GetInternalKeySlot();
+    if (slot) {
+      // PK11_InitPin may write to the keyDB, but no other thread can use NSS
+      // yet, so we don't need to lock.
+      if (PK11_NeedUserInit(slot))
+        PK11_InitPin(slot, NULL, NULL);
+      PK11_FreeSlot(slot);
+    }
+
+    root_ = InitDefaultRootCerts();
 
     // Disable MD5 certificate signatures. (They are disabled by default in
     // NSS 3.14.)
@@ -859,11 +824,9 @@ class NSSInitSingleton {
   ChromeOSUserMap chromeos_user_map_;
   ScopedPK11Slot test_system_slot_;
 #endif
-#if defined(USE_NSS_CERTS)
   // TODO(davidben): When https://bugzilla.mozilla.org/show_bug.cgi?id=564011
   // is fixed, we will no longer need the lock.
   base::Lock write_lock_;
-#endif  // defined(USE_NSS_CERTS)
 
   base::ThreadChecker thread_checker_;
 };
@@ -872,7 +835,6 @@ base::LazyInstance<NSSInitSingleton>::Leaky
     g_nss_singleton = LAZY_INSTANCE_INITIALIZER;
 }  // namespace
 
-#if defined(USE_NSS_CERTS)
 ScopedPK11Slot OpenSoftwareNSSDB(const base::FilePath& path,
                                  const std::string& description) {
   const std::string modspec =
@@ -895,7 +857,6 @@ void EarlySetupForNSSInit() {
   if (!database_dir.empty())
     UseLocalCacheOfNSSDatabaseIfNFS(database_dir);
 }
-#endif
 
 void EnsureNSPRInit() {
   g_nspr_singleton.Get();
@@ -913,7 +874,6 @@ bool CheckNSSVersion(const char* version) {
   return !!NSS_VersionCheck(version);
 }
 
-#if defined(USE_NSS_CERTS)
 base::Lock* GetNSSWriteLock() {
   return g_nss_singleton.Get().write_lock();
 }
@@ -939,7 +899,6 @@ AutoSECMODListReadLock::AutoSECMODListReadLock()
 AutoSECMODListReadLock::~AutoSECMODListReadLock() {
   SECMOD_ReleaseReadLock(lock_);
 }
-#endif  // defined(USE_NSS_CERTS)
 
 #if defined(OS_CHROMEOS)
 ScopedPK11Slot GetSystemNSSKeySlot(

@@ -26,7 +26,6 @@
 #include "base/time/time.h"
 #include "base/win/registry.h"
 #include "base/win/scoped_handle.h"
-#include "base/win/windows_version.h"
 #include "net/base/ip_address.h"
 #include "net/base/network_change_notifier.h"
 #include "net/dns/dns_hosts.h"
@@ -531,12 +530,7 @@ ConfigParseWinResult ConvertSettingsToDnsConfig(
   config->ndots = 1;
 
   if (!settings.append_to_multi_label_name.set) {
-    // The default setting is true for XP, false for Vista+.
-    if (base::win::GetVersion() >= base::win::VERSION_VISTA) {
-      config->append_to_multi_label_name = false;
-    } else {
-      config->append_to_multi_label_name = true;
-    }
+    config->append_to_multi_label_name = false;
   } else {
     config->append_to_multi_label_name =
         (settings.append_to_multi_label_name.value != 0);

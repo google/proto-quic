@@ -40,7 +40,8 @@ bool HpackDecoder::HandleControlFrameHeadersData(const char* headers_data,
     }
   }
   size_t new_size = headers_block_buffer_.size() + headers_data_length;
-  if (new_size > kMaxDecodeBufferSize) {
+  if (max_decode_buffer_size_bytes_ > 0 &&
+      new_size > max_decode_buffer_size_bytes_) {
     return false;
   }
   headers_block_buffer_.insert(headers_block_buffer_.end(), headers_data,

@@ -46,14 +46,14 @@ static void decode_rec(const uint8_t *r, NEWHOPE_POLY *c) {
   }
 }
 
-void NEWHOPE_keygen(uint8_t *servermsg, NEWHOPE_POLY *sk) {
-  newhope_poly_getnoise(sk);
-  newhope_poly_ntt(sk);
+void NEWHOPE_offer(uint8_t *offermsg, NEWHOPE_POLY *s) {
+  newhope_poly_getnoise(s);
+  newhope_poly_ntt(s);
 
-  /* The first part of the server's message is the seed, which compactly encodes
+  /* The first part of the offer message is the seed, which compactly encodes
    * a. */
   NEWHOPE_POLY a;
-  uint8_t *seed = &servermsg[POLY_BYTES];
+  uint8_t *seed = &offermsg[NEWHOPE_POLY_LENGTH];
   RAND_bytes(seed, SEED_LENGTH);
   newhope_poly_uniform(&a, seed);
 
@@ -61,100 +61,113 @@ void NEWHOPE_keygen(uint8_t *servermsg, NEWHOPE_POLY *sk) {
   newhope_poly_getnoise(&e);
   newhope_poly_ntt(&e);
 
-  /* The second part of the server's message is the polynomial pk = a*sk+e */
-  NEWHOPE_POLY r, pk;
-  newhope_poly_pointwise(&r, sk, &a);
-  newhope_poly_add(&pk, &e, &r);
-  newhope_poly_tobytes(servermsg, &pk);
+  /* The second part of the offer message is the polynomial pk = a*s+e */
+  NEWHOPE_POLY pk;
+  NEWHOPE_offer_computation(&pk, s,  &e, &a);
+  NEWHOPE_POLY_tobytes(offermsg, &pk);
 }
 
-int NEWHOPE_client_compute_key(
-    uint8_t key[SHA256_DIGEST_LENGTH],
-    uint8_t clientmsg[NEWHOPE_CLIENTMSG_LENGTH],
-    const uint8_t servermsg[NEWHOPE_SERVERMSG_LENGTH], size_t msg_len) {
-  if (msg_len != NEWHOPE_SERVERMSG_LENGTH) {
+int NEWHOPE_accept(uint8_t key[SHA256_DIGEST_LENGTH],
+                   uint8_t acceptmsg[NEWHOPE_ACCEPTMSG_LENGTH],
+                   const uint8_t offermsg[NEWHOPE_OFFERMSG_LENGTH],
+                   size_t msg_len) {
+  if (msg_len != NEWHOPE_OFFERMSG_LENGTH) {
     return 0;
   }
 
-  NEWHOPE_POLY sp;
+  /* Decode the |offermsg|, generating the same |a| as the peer, from the peer's
+   * seed. */
+  NEWHOPE_POLY pk, a;
+  const uint8_t *seed = &offermsg[NEWHOPE_POLY_LENGTH];
+  newhope_poly_uniform(&a, seed);
+  NEWHOPE_POLY_frombytes(&pk, offermsg);
+
+  /* Generate noise polynomials used to generate our key. */
+  NEWHOPE_POLY sp, ep, epp;
   newhope_poly_getnoise(&sp);
   newhope_poly_ntt(&sp);
+  newhope_poly_getnoise(&ep);
+  newhope_poly_ntt(&ep);
+  newhope_poly_getnoise(&epp);  /* intentionally not NTT */
 
-  /* The first part of the client's message is the polynomial bp=e'+a*s' */
-  {
-    NEWHOPE_POLY ep;
-    newhope_poly_getnoise(&ep);
-    newhope_poly_ntt(&ep);
+  /* Generate random bytes used for reconciliation. (The reference
+   * implementation calls ChaCha20 here.) */
+  uint8_t rand[32];
+  RAND_bytes(rand, sizeof(rand));
 
-    /* Generate the same |a| as the server, from the server's seed. */
-    NEWHOPE_POLY a;
-    const uint8_t *seed = &servermsg[POLY_BYTES];
-    newhope_poly_uniform(&a, seed);
+  /* Encode |bp| and |c| as the |acceptmsg|. */
+  NEWHOPE_POLY bp, c;
+  uint8_t k[NEWHOPE_KEY_LENGTH];
+  NEWHOPE_accept_computation(k, &bp, &c, &sp, &ep, &epp, rand, &pk, &a);
+  NEWHOPE_POLY_tobytes(acceptmsg, &bp);
+  encode_rec(&c, &acceptmsg[NEWHOPE_POLY_LENGTH]);
 
-    NEWHOPE_POLY bp;
-    newhope_poly_pointwise(&bp, &a, &sp);
-    newhope_poly_add(&bp, &bp, &ep);
-    newhope_poly_tobytes(clientmsg, &bp);
+  SHA256_CTX ctx;
+  if (!SHA256_Init(&ctx) ||
+      !SHA256_Update(&ctx, k, NEWHOPE_KEY_LENGTH) ||
+      !SHA256_Final(key, &ctx)) {
+    return 0;
   }
+
+  return 1;
+}
+
+int NEWHOPE_finish(uint8_t key[SHA256_DIGEST_LENGTH], const NEWHOPE_POLY *sk,
+                   const uint8_t acceptmsg[NEWHOPE_ACCEPTMSG_LENGTH],
+                   size_t msg_len) {
+  if (msg_len != NEWHOPE_ACCEPTMSG_LENGTH) {
+    return 0;
+  }
+
+  /* Decode the accept message into |bp| and |c|. */
+  NEWHOPE_POLY bp, c;
+  NEWHOPE_POLY_frombytes(&bp, acceptmsg);
+  decode_rec(&acceptmsg[NEWHOPE_POLY_LENGTH], &c);
+
+  uint8_t k[NEWHOPE_KEY_LENGTH];
+  NEWHOPE_finish_computation(k, sk, &bp, &c);
+  SHA256_CTX ctx;
+  if (!SHA256_Init(&ctx) ||
+      !SHA256_Update(&ctx, k, NEWHOPE_KEY_LENGTH) ||
+      !SHA256_Final(key, &ctx)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+void NEWHOPE_offer_computation(NEWHOPE_POLY *out_pk,
+                               const NEWHOPE_POLY *s, const NEWHOPE_POLY *e,
+                               const NEWHOPE_POLY *a) {
+  NEWHOPE_POLY r;
+  newhope_poly_pointwise(&r, s, a);
+  newhope_poly_add(out_pk, e, &r);
+}
+
+void NEWHOPE_accept_computation(
+    uint8_t k[NEWHOPE_KEY_LENGTH], NEWHOPE_POLY *bp,
+    NEWHOPE_POLY *reconciliation,
+    const NEWHOPE_POLY *sp, const NEWHOPE_POLY *ep, const NEWHOPE_POLY *epp,
+    const uint8_t rand[32],
+    const NEWHOPE_POLY *pk, const NEWHOPE_POLY *a) {
+  /* bp = a*s' + e' */
+  newhope_poly_pointwise(bp, a, sp);
+  newhope_poly_add(bp, bp, ep);
 
   /* v = pk * s' + e'' */
   NEWHOPE_POLY v;
-  {
-    NEWHOPE_POLY pk;
-    newhope_poly_frombytes(&pk, servermsg);
-
-    NEWHOPE_POLY epp;
-    newhope_poly_getnoise(&epp);
-
-    newhope_poly_pointwise(&v, &pk, &sp);
-    newhope_poly_invntt(&v);
-    newhope_poly_add(&v, &v, &epp);
-  }
-
-  /* The second part of the client's message is the reconciliation data derived
-   * from v. */
-  NEWHOPE_POLY c;
-  uint8_t *reconciliation = &clientmsg[POLY_BYTES];
-  newhope_helprec(&c, &v);
-  encode_rec(&c, reconciliation);
-
-  uint8_t k[KEY_LENGTH];
-  newhope_reconcile(k, &v, &c);
-  SHA256_CTX ctx;
-  if (!SHA256_Init(&ctx) ||
-      !SHA256_Update(&ctx, k, KEY_LENGTH) ||
-      !SHA256_Final(key, &ctx)) {
-    return 0;
-  }
-
-  return 1;
+  newhope_poly_pointwise(&v, pk, sp);
+  newhope_poly_invntt(&v);
+  newhope_poly_add(&v, &v, epp);
+  newhope_helprec(reconciliation, &v, rand);
+  newhope_reconcile(k, &v, reconciliation);
 }
 
-int NEWHOPE_server_compute_key(
-    uint8_t key[SHA256_DIGEST_LENGTH], const NEWHOPE_POLY *sk,
-    const uint8_t clientmsg[NEWHOPE_CLIENTMSG_LENGTH], size_t msg_len) {
-  if (msg_len != NEWHOPE_CLIENTMSG_LENGTH) {
-    return 0;
-  }
-  NEWHOPE_POLY bp;
-  newhope_poly_frombytes(&bp, clientmsg);
-
+void NEWHOPE_finish_computation(uint8_t k[NEWHOPE_KEY_LENGTH],
+                                const NEWHOPE_POLY *sk, const NEWHOPE_POLY *bp,
+                                const NEWHOPE_POLY *reconciliation) {
   NEWHOPE_POLY v;
-  newhope_poly_pointwise(&v, sk, &bp);
+  newhope_poly_pointwise(&v, sk, bp);
   newhope_poly_invntt(&v);
-
-  NEWHOPE_POLY c;
-  const uint8_t *reconciliation = &clientmsg[POLY_BYTES];
-  decode_rec(reconciliation, &c);
-
-  uint8_t k[KEY_LENGTH];
-  newhope_reconcile(k, &v, &c);
-  SHA256_CTX ctx;
-  if (!SHA256_Init(&ctx) ||
-      !SHA256_Update(&ctx, k, KEY_LENGTH) ||
-      !SHA256_Final(key, &ctx)) {
-    return 0;
-  }
-
-  return 1;
+  newhope_reconcile(k, &v, reconciliation);
 }

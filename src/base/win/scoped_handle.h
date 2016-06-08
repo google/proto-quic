@@ -12,7 +12,6 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/move.h"
 
 // TODO(rvargas): remove this with the rest of the verifier.
 #if defined(COMPILER_MSVC)
@@ -37,8 +36,6 @@ namespace win {
 //     this explicitly is necessary because of bug 528394 and VC++ 2015.
 template <class Traits, class Verifier>
 class GenericScopedHandle {
-  MOVE_ONLY_TYPE_FOR_CPP_03(GenericScopedHandle)
-
  public:
   typedef typename Traits::Handle Handle;
 
@@ -112,6 +109,8 @@ class GenericScopedHandle {
   FRIEND_TEST_ALL_PREFIXES(ScopedHandleTest, ActiveVerifierWrongOwner);
   FRIEND_TEST_ALL_PREFIXES(ScopedHandleTest, ActiveVerifierUntrackedHandle);
   Handle handle_;
+
+  DISALLOW_COPY_AND_ASSIGN(GenericScopedHandle);
 };
 
 #undef BASE_WIN_GET_CALLER

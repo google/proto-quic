@@ -40,6 +40,12 @@ bool QuicSentPacketManagerPeer::GetUseNewRto(
 }
 
 // static
+bool QuicSentPacketManagerPeer::GetUndoRetransmits(
+    QuicSentPacketManager* sent_packet_manager) {
+  return sent_packet_manager->undo_pending_retransmits_;
+}
+
+// static
 QuicByteCount QuicSentPacketManagerPeer::GetReceiveWindow(
     QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->receive_buffer_bytes_;
@@ -79,12 +85,6 @@ void QuicSentPacketManagerPeer::SetLossAlgorithm(
 }
 
 // static
-RttStats* QuicSentPacketManagerPeer::GetRttStats(
-    QuicSentPacketManager* sent_packet_manager) {
-  return &sent_packet_manager->rtt_stats_;
-}
-
-// static
 bool QuicSentPacketManagerPeer::HasPendingPackets(
     const QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->unacked_packets_.HasInFlightPackets();
@@ -104,9 +104,10 @@ QuicTime QuicSentPacketManagerPeer::GetSentTime(
 // static
 bool QuicSentPacketManagerPeer::IsRetransmission(
     QuicSentPacketManager* sent_packet_manager,
+    QuicPathId path_id,
     QuicPacketNumber packet_number) {
-  DCHECK(sent_packet_manager->HasRetransmittableFrames(packet_number));
-  if (!sent_packet_manager->HasRetransmittableFrames(packet_number)) {
+  DCHECK(sent_packet_manager->HasRetransmittableFrames(path_id, packet_number));
+  if (!sent_packet_manager->HasRetransmittableFrames(path_id, packet_number)) {
     return false;
   }
   for (auto transmission_info : sent_packet_manager->unacked_packets_) {
@@ -120,6 +121,7 @@ bool QuicSentPacketManagerPeer::IsRetransmission(
 // static
 void QuicSentPacketManagerPeer::MarkForRetransmission(
     QuicSentPacketManager* sent_packet_manager,
+    QuicPathId path_id,
     QuicPacketNumber packet_number,
     TransmissionType transmission_type) {
   sent_packet_manager->MarkForRetransmission(packet_number, transmission_type);
@@ -158,7 +160,7 @@ QuicByteCount QuicSentPacketManagerPeer::GetBytesInFlight(
 }
 
 // static
-QuicSentPacketManager::NetworkChangeVisitor*
+QuicSentPacketManagerInterface::NetworkChangeVisitor*
 QuicSentPacketManagerPeer::GetNetworkChangeVisitor(
     const QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->network_change_visitor_;
@@ -182,6 +184,12 @@ void QuicSentPacketManagerPeer::SetConsecutiveTlpCount(
 QuicSustainedBandwidthRecorder& QuicSentPacketManagerPeer::GetBandwidthRecorder(
     QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->sustained_bandwidth_recorder_;
+}
+
+// static
+bool QuicSentPacketManagerPeer::UsingPacing(
+    const QuicSentPacketManager* sent_packet_manager) {
+  return sent_packet_manager->using_pacing_;
 }
 
 }  // namespace test

@@ -49,9 +49,11 @@ class NET_EXPORT SpdyHeaderBlock {
 
   SpdyHeaderBlock();
   SpdyHeaderBlock(const SpdyHeaderBlock& other);
+  SpdyHeaderBlock(SpdyHeaderBlock&& other);
   ~SpdyHeaderBlock();
 
   SpdyHeaderBlock& operator=(const SpdyHeaderBlock& other);
+  SpdyHeaderBlock& operator=(SpdyHeaderBlock&& other);
   bool operator==(const SpdyHeaderBlock& other) const;
   bool operator!=(const SpdyHeaderBlock& other) const;
 

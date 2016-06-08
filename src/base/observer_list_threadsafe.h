@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <map>
+#include <tuple>
 
 #include "base/bind.h"
 #include "base/location.h"
@@ -177,8 +178,8 @@ class ObserverListThreadSafe
   void Notify(const tracked_objects::Location& from_here,
               Method m,
               const Params&... params) {
-    internal::UnboundMethod<ObserverType, Method, Tuple<Params...>> method(
-        m, MakeTuple(params...));
+    internal::UnboundMethod<ObserverType, Method, std::tuple<Params...>> method(
+        m, std::make_tuple(params...));
 
     AutoLock lock(list_lock_);
     for (const auto& entry : observer_lists_) {
@@ -186,8 +187,8 @@ class ObserverListThreadSafe
       context->task_runner->PostTask(
           from_here,
           Bind(&ObserverListThreadSafe<ObserverType>::template NotifyWrapper<
-                  Method, Tuple<Params...>>,
-              this, context, method));
+                   Method, std::tuple<Params...>>,
+               this, context, method));
     }
   }
 

@@ -15,6 +15,7 @@
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
@@ -25,23 +26,12 @@
 
 namespace net {
 
-namespace {
-
-using base::TimeDelta;
-
-// TODO(ricea): For now, we implement a global timeout for compatability with
-// TransportConnectJob. Since WebSocketTransportConnectJob controls the address
-// selection process more tightly, it could do something smarter here.
-const int kTransportConnectJobTimeoutInSeconds = 240;  // 4 minutes.
-
-}  // namespace
-
 WebSocketTransportConnectJob::WebSocketTransportConnectJob(
     const std::string& group_name,
     RequestPriority priority,
     ClientSocketPool::RespectLimits respect_limits,
     const scoped_refptr<TransportSocketParams>& params,
-    TimeDelta timeout_duration,
+    base::TimeDelta timeout_duration,
     const CompletionCallback& callback,
     ClientSocketFactory* client_socket_factory,
     HostResolver* host_resolver,
@@ -55,15 +45,16 @@ WebSocketTransportConnectJob::WebSocketTransportConnectJob(
                  respect_limits,
                  delegate,
                  BoundNetLog::Make(pool_net_log, NetLog::SOURCE_CONNECT_JOB)),
-      helper_(params, client_socket_factory, host_resolver, &connect_timing_),
-      race_result_(TransportConnectJobHelper::CONNECTION_LATENCY_UNKNOWN),
+      params_(params),
+      resolver_(host_resolver),
+      client_socket_factory_(client_socket_factory),
+      next_state_(STATE_NONE),
+      race_result_(TransportConnectJob::RACE_UNKNOWN),
       handle_(handle),
       callback_(callback),
       request_net_log_(request_net_log),
       had_ipv4_(false),
-      had_ipv6_(false) {
-  helper_.SetOnIOComplete(this);
-}
+      had_ipv6_(false) {}
 
 WebSocketTransportConnectJob::~WebSocketTransportConnectJob() {}
 
@@ -79,24 +70,84 @@ LoadState WebSocketTransportConnectJob::GetLoadState() const {
   return load_state;
 }
 
+void WebSocketTransportConnectJob::OnIOComplete(int result) {
+  result = DoLoop(result);
+  if (result != ERR_IO_PENDING)
+    NotifyDelegateOfCompletion(result);  // Deletes |this|
+}
+
+int WebSocketTransportConnectJob::DoLoop(int result) {
+  DCHECK_NE(next_state_, STATE_NONE);
+
+  int rv = result;
+  do {
+    State state = next_state_;
+    next_state_ = STATE_NONE;
+    switch (state) {
+      case STATE_RESOLVE_HOST:
+        DCHECK_EQ(OK, rv);
+        rv = DoResolveHost();
+        break;
+      case STATE_RESOLVE_HOST_COMPLETE:
+        rv = DoResolveHostComplete(rv);
+        break;
+      case STATE_TRANSPORT_CONNECT:
+        DCHECK_EQ(OK, rv);
+        rv = DoTransportConnect();
+        break;
+      case STATE_TRANSPORT_CONNECT_COMPLETE:
+        rv = DoTransportConnectComplete(rv);
+        break;
+      default:
+        NOTREACHED();
+        rv = ERR_FAILED;
+        break;
+    }
+  } while (rv != ERR_IO_PENDING && next_state_ != STATE_NONE);
+
+  return rv;
+}
+
 int WebSocketTransportConnectJob::DoResolveHost() {
-  return helper_.DoResolveHost(priority(), net_log());
+  next_state_ = STATE_RESOLVE_HOST_COMPLETE;
+  connect_timing_.dns_start = base::TimeTicks::Now();
+
+  return resolver_.Resolve(
+      params_->destination(), priority(), &addresses_,
+      base::Bind(&WebSocketTransportConnectJob::OnIOComplete,
+                 base::Unretained(this)),
+      net_log());
 }
 
 int WebSocketTransportConnectJob::DoResolveHostComplete(int result) {
-  return helper_.DoResolveHostComplete(result, net_log());
+  TRACE_EVENT0("net", "WebSocketTransportConnectJob::DoResolveHostComplete");
+  connect_timing_.dns_end = base::TimeTicks::Now();
+  // Overwrite connection start time, since for connections that do not go
+  // through proxies, |connect_start| should not include dns lookup time.
+  connect_timing_.connect_start = connect_timing_.dns_end;
+
+  if (result != OK)
+    return result;
+
+  // Invoke callback, and abort if it fails.
+  if (!params_->host_resolution_callback().is_null()) {
+    result = params_->host_resolution_callback().Run(addresses_, net_log());
+    if (result != OK)
+      return result;
+  }
+
+  next_state_ = STATE_TRANSPORT_CONNECT;
+  return result;
 }
 
 int WebSocketTransportConnectJob::DoTransportConnect() {
   AddressList ipv4_addresses;
   AddressList ipv6_addresses;
   int result = ERR_UNEXPECTED;
-  helper_.set_next_state(
-      TransportConnectJobHelper::STATE_TRANSPORT_CONNECT_COMPLETE);
+  next_state_ = STATE_TRANSPORT_CONNECT_COMPLETE;
 
-  for (AddressList::const_iterator it = helper_.addresses().begin();
-       it != helper_.addresses().end();
-       ++it) {
+  for (AddressList::const_iterator it = addresses_.begin();
+       it != addresses_.end(); ++it) {
     switch (it->GetFamily()) {
       case ADDRESS_FAMILY_IPV4:
         ipv4_addresses.push_back(*it);
@@ -126,10 +177,8 @@ int WebSocketTransportConnectJob::DoTransportConnect() {
     switch (result) {
       case OK:
         SetSocket(ipv6_job_->PassSocket());
-        race_result_ =
-            had_ipv4_
-                ? TransportConnectJobHelper::CONNECTION_LATENCY_IPV6_RACEABLE
-                : TransportConnectJobHelper::CONNECTION_LATENCY_IPV6_SOLO;
+        race_result_ = had_ipv4_ ? TransportConnectJob::RACE_IPV6_WINS
+                                 : TransportConnectJob::RACE_IPV6_SOLO;
         return result;
 
       case ERR_IO_PENDING:
@@ -137,9 +186,8 @@ int WebSocketTransportConnectJob::DoTransportConnect() {
           // This use of base::Unretained is safe because |fallback_timer_| is
           // owned by this object.
           fallback_timer_.Start(
-              FROM_HERE,
-              TimeDelta::FromMilliseconds(
-                  TransportConnectJobHelper::kIPv6FallbackTimerInMs),
+              FROM_HERE, base::TimeDelta::FromMilliseconds(
+                             TransportConnectJob::kIPv6FallbackTimerInMs),
               base::Bind(&WebSocketTransportConnectJob::StartIPv4JobAsync,
                          base::Unretained(this)));
         }
@@ -155,10 +203,8 @@ int WebSocketTransportConnectJob::DoTransportConnect() {
     result = ipv4_job_->Start();
     if (result == OK) {
       SetSocket(ipv4_job_->PassSocket());
-      race_result_ =
-          had_ipv6_
-              ? TransportConnectJobHelper::CONNECTION_LATENCY_IPV4_WINS_RACE
-              : TransportConnectJobHelper::CONNECTION_LATENCY_IPV4_NO_RACE;
+      race_result_ = had_ipv6_ ? TransportConnectJob::RACE_IPV4_WINS
+                               : TransportConnectJob::RACE_IPV4_SOLO;
     }
   }
 
@@ -167,7 +213,7 @@ int WebSocketTransportConnectJob::DoTransportConnect() {
 
 int WebSocketTransportConnectJob::DoTransportConnectComplete(int result) {
   if (result == OK)
-    helper_.HistogramDuration(race_result_);
+    TransportConnectJob::HistogramDuration(connect_timing_, race_result_);
   return result;
 }
 
@@ -177,17 +223,13 @@ void WebSocketTransportConnectJob::OnSubJobComplete(
   if (result == OK) {
     switch (job->type()) {
       case SUB_JOB_IPV4:
-        race_result_ =
-            had_ipv6_
-                ? TransportConnectJobHelper::CONNECTION_LATENCY_IPV4_WINS_RACE
-                : TransportConnectJobHelper::CONNECTION_LATENCY_IPV4_NO_RACE;
+        race_result_ = had_ipv6_ ? TransportConnectJob::RACE_IPV4_WINS
+                                 : TransportConnectJob::RACE_IPV4_SOLO;
         break;
 
       case SUB_JOB_IPV6:
-        race_result_ =
-            had_ipv4_
-                ? TransportConnectJobHelper::CONNECTION_LATENCY_IPV6_RACEABLE
-                : TransportConnectJobHelper::CONNECTION_LATENCY_IPV6_SOLO;
+        race_result_ = had_ipv4_ ? TransportConnectJob::RACE_IPV6_WINS
+                                 : TransportConnectJob::RACE_IPV6_SOLO;
         break;
     }
     SetSocket(job->PassSocket());
@@ -217,7 +259,7 @@ void WebSocketTransportConnectJob::OnSubJobComplete(
     if (ipv4_job_ || ipv6_job_)
       return;
   }
-  helper_.OnIOComplete(this, result);
+  OnIOComplete(result);
 }
 
 void WebSocketTransportConnectJob::StartIPv4JobAsync() {
@@ -228,7 +270,8 @@ void WebSocketTransportConnectJob::StartIPv4JobAsync() {
 }
 
 int WebSocketTransportConnectJob::ConnectInternal() {
-  return helper_.DoConnectInternal(this);
+  next_state_ = STATE_RESOLVE_HOST;
+  return DoLoop(OK);
 }
 
 WebSocketTransportClientSocketPool::WebSocketTransportClientSocketPool(
@@ -449,8 +492,11 @@ WebSocketTransportClientSocketPool::GetInfoAsValue(
   return dict;
 }
 
-TimeDelta WebSocketTransportClientSocketPool::ConnectionTimeout() const {
-  return TimeDelta::FromSeconds(kTransportConnectJobTimeoutInSeconds);
+base::TimeDelta WebSocketTransportClientSocketPool::ConnectionTimeout() const {
+  // TODO(ricea): For now, we implement a global timeout for compatibility with
+  // TransportConnectJob. Since WebSocketTransportConnectJob controls the
+  // address selection process more tightly, it could do something smarter here.
+  return base::TimeDelta::FromSeconds(TransportConnectJob::kTimeoutInSeconds);
 }
 
 bool WebSocketTransportClientSocketPool::IsStalled() const {

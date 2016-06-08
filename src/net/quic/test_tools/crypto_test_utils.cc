@@ -447,6 +447,25 @@ string CryptoTestUtils::GetValueForTag(const CryptoHandshakeMessage& message,
   return it->second;
 }
 
+uint64_t CryptoTestUtils::LeafCertHashForTesting() {
+  scoped_refptr<ProofSource::Chain> chain;
+  IPAddress server_ip;
+  string sig;
+  string cert_sct;
+  std::unique_ptr<ProofSource> proof_source(
+      CryptoTestUtils::ProofSourceForTesting());
+  if (!proof_source->GetProof(server_ip, "", "",
+                              QuicSupportedVersions().front(), "", false,
+                              &chain, &sig, &cert_sct) ||
+      chain->certs.empty()) {
+    DCHECK(false) << "Proof generation failed";
+    return 0;
+  }
+
+  return QuicUtils::FNV1a_64_Hash(chain->certs.at(0).c_str(),
+                                  chain->certs.at(0).length());
+}
+
 class MockCommonCertSets : public CommonCertSets {
  public:
   MockCommonCertSets(StringPiece cert, uint64_t hash, uint32_t index)

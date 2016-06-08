@@ -69,12 +69,12 @@ class MockQuicHeadersStream : public QuicHeadersStream {
   MOCK_METHOD4(WritePushPromise,
                size_t(QuicStreamId original_stream_id,
                       QuicStreamId promised_stream_id,
-                      const SpdyHeaderBlock& headers,
+                      SpdyHeaderBlock headers,
                       QuicAckListenerInterface* ack_listener));
 
   MOCK_METHOD5(WriteHeaders,
                size_t(QuicStreamId stream_id,
-                      const SpdyHeaderBlock& headers,
+                      SpdyHeaderBlock headers,
                       bool fin,
                       SpdyPriority priority,
                       QuicAckListenerInterface* ack_listener));
@@ -85,7 +85,7 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
   explicit MockQuicCryptoServerStream(
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache,
-      QuicSession* session)
+      QuicServerSessionBase* session)
       : QuicCryptoServerStream(crypto_config,
                                compressed_certs_cache,
                                FLAGS_enable_quic_stateless_reject_support,
@@ -175,9 +175,9 @@ class QuicSimpleServerSessionTest
     connection_ = new StrictMock<MockQuicConnectionWithSendStreamData>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
-    session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,
-                                               &crypto_config_,
-                                               &compressed_certs_cache_));
+    session_.reset(new QuicSimpleServerSession(
+        config_, connection_, &owner_, &session_helper_, &crypto_config_,
+        &compressed_certs_cache_));
     MockClock clock;
     handshake_message_.reset(crypto_config_.AddDefaultConfig(
         QuicRandom::GetInstance(), &clock,
@@ -191,6 +191,7 @@ class QuicSimpleServerSessionTest
   }
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
+  StrictMock<MockQuicServerSessionHelper> session_helper_;
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnectionWithSendStreamData>* connection_;
@@ -412,9 +413,9 @@ class QuicSimpleServerSessionServerPushTest
     connection_ = new StrictMock<MockQuicConnectionWithSendStreamData>(
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
-    session_.reset(new QuicSimpleServerSession(config_, connection_, &owner_,
-                                               &crypto_config_,
-                                               &compressed_certs_cache_));
+    session_.reset(new QuicSimpleServerSession(
+        config_, connection_, &owner_, &session_helper_, &crypto_config_,
+        &compressed_certs_cache_));
     session_->Initialize();
     // Needed to make new session flow control window and server push work.
     session_->OnConfigNegotiated();

@@ -1160,6 +1160,7 @@ void QuicCryptoServerConfig::EvaluateClientHello(
 
 bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
     QuicVersion version,
+    StringPiece chlo_hash,
     const SourceAddressTokens& previous_source_address_tokens,
     const IPAddress& server_ip,
     const IPAddress& client_ip,
@@ -1181,12 +1182,22 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
   string cert_sct;
-  if (!proof_source_->GetProof(server_ip, params.sni,
-                               primary_config_->serialized, version,
-                               params.client_nonce, params.x509_ecdsa_supported,
-                               &chain, &signature, &cert_sct)) {
-    DVLOG(1) << "Server: failed to get proof.";
-    return false;
+  if (FLAGS_quic_use_hash_in_scup) {
+    if (!proof_source_->GetProof(server_ip, params.sni,
+                                 primary_config_->serialized, version,
+                                 chlo_hash, params.x509_ecdsa_supported, &chain,
+                                 &signature, &cert_sct)) {
+      DVLOG(1) << "Server: failed to get proof.";
+      return false;
+    }
+  } else {
+    if (!proof_source_->GetProof(
+            server_ip, params.sni, primary_config_->serialized, version,
+            params.client_nonce, params.x509_ecdsa_supported, &chain,
+            &signature, &cert_sct)) {
+      DVLOG(1) << "Server: failed to get proof.";
+      return false;
+    }
   }
 
   const string compressed = CompressChain(

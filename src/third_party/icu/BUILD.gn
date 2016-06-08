@@ -42,6 +42,16 @@ config("icu_config") {
     "source/common",
     "source/i18n",
   ]
+
+  if (icu_use_data_file) {
+    defines += [ "ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE" ]
+  } else {
+    if (is_win) {
+      defines += [ "ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_SHARED" ]
+    } else {
+      defines += [ "ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC" ]
+    }
+  }
 }
 
 # Config used only by ICU code.

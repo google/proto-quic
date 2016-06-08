@@ -26,7 +26,7 @@ class X509Certificate;
 // crypto config.
 class NET_EXPORT_PRIVATE QuicServerInfo {
  public:
-  QuicServerInfo(const QuicServerId& server_id);
+  explicit QuicServerInfo(const QuicServerId& server_id);
   virtual ~QuicServerInfo();
 
   // Start will commence the lookup. This must be called before any other
@@ -140,6 +140,7 @@ class NET_EXPORT_PRIVATE QuicServerInfoFactory {
   // |server_id| or NULL on failure.
   virtual QuicServerInfo* GetForServer(const QuicServerId& server_id) = 0;
 
+ private:
   DISALLOW_COPY_AND_ASSIGN(QuicServerInfoFactory);
 };
 

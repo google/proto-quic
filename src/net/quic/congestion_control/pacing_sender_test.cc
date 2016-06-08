@@ -298,6 +298,32 @@ TEST_F(PacingSenderTest, FastSending) {
   CheckPacketIsDelayed(QuicTime::Delta::FromMicroseconds(1500));
 }
 
+TEST_F(PacingSenderTest, NoBurstEnteringRecovery) {
+  ValueRestore<bool> old_flag(&FLAGS_quic_allow_noprr, true);
+  // Configure pacing rate of 1 packet per 1 ms with no burst tokens.
+  InitPacingRate(0, QuicBandwidth::FromBytesAndTimeDelta(
+                        kMaxPacketSize, QuicTime::Delta::FromMilliseconds(1)));
+  // Sending a packet will set burst tokens.
+  CheckPacketIsSentImmediately();
+
+  // Losing a packet will set clear burst tokens.
+  SendAlgorithmInterface::CongestionVector lost_packets;
+  lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
+  SendAlgorithmInterface::CongestionVector empty;
+  EXPECT_CALL(*mock_sender_,
+              OnCongestionEvent(true, kMaxPacketSize, empty, lost_packets));
+  pacing_sender_->OnCongestionEvent(true, kMaxPacketSize, empty, lost_packets);
+  // One packet is sent immediately, because of 1ms pacing granularity.
+  CheckPacketIsSentImmediately();
+  // Ensure packets are immediately paced.
+  EXPECT_CALL(*mock_sender_, TimeUntilSend(clock_.Now(), kDefaultTCPMSS))
+      .WillOnce(Return(zero_time_));
+  // Verify the next packet is paced and delayed 2ms due to granularity.
+  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(2),
+            pacing_sender_->TimeUntilSend(clock_.Now(), kDefaultTCPMSS));
+  CheckPacketIsDelayed(QuicTime::Delta::FromMilliseconds(2));
+}
+
 TEST_F(PacingSenderTest, NoBurstInRecovery) {
   // Configure pacing rate of 1 packet per 1 ms with no burst tokens.
   InitPacingRate(0, QuicBandwidth::FromBytesAndTimeDelta(

@@ -16,6 +16,7 @@
 #include "base/macros.h"
 #include "base/synchronization/lock_impl.h"
 #include "base/threading/thread_local.h"
+#include "base/win/base_features.h"
 #include "base/win/current_module.h"
 
 extern "C" {
@@ -131,7 +132,7 @@ void ThreadSafeAssignOrCreateActiveVerifier(ActiveVerifier* existing_verifier,
 
 // static
 void ActiveVerifier::InstallVerifier() {
-#if defined(COMPONENT_BUILD)
+#if BUILDFLAG(SINGLE_MODULE_MODE_HANDLE_VERIFIER)
   // Component build has one Active Verifier per module.
   ThreadSafeAssignOrCreateActiveVerifier(nullptr, true);
 #else

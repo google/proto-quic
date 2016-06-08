@@ -9,7 +9,6 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/win/win_util.h"
-#include "base/win/windows_version.h"
 #include "net/cert/x509_certificate.h"
 
 namespace net {
@@ -173,11 +172,11 @@ HCERTCHAINENGINE TestRootCerts::GetChainEngine() const {
   if (IsEmpty())
     return NULL;  // Default chain engine will suffice.
 
-  // Windows versions before 7 don't accept the struct size for later versions.
+  // Windows versions before 8 don't accept the struct size for later versions.
   // We report the size of the old struct since we don't need the new members.
   static const DWORD kSizeofCertChainEngineConfig =
-      SIZEOF_STRUCT_WITH_SPECIFIED_LAST_MEMBER(
-          CERT_CHAIN_ENGINE_CONFIG, CycleDetectionModulus);
+      SIZEOF_STRUCT_WITH_SPECIFIED_LAST_MEMBER(CERT_CHAIN_ENGINE_CONFIG,
+                                               hExclusiveTrustedPeople);
 
   // Each HCERTCHAINENGINE caches both the configured system stores and
   // information about each chain that has been built. In order to ensure

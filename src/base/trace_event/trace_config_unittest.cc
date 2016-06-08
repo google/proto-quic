@@ -568,22 +568,33 @@ TEST(TraceConfigTest, SetTraceOptionValues) {
 }
 
 TEST(TraceConfigTest, TraceConfigFromMemoryConfigString) {
-  std::string tc_str =
+  std::string tc_str1 =
       TraceConfigMemoryTestUtil::GetTraceConfig_PeriodicTriggers(200, 2000);
-  TraceConfig tc(tc_str);
-  EXPECT_EQ(tc_str, tc.ToString());
-  EXPECT_TRUE(tc.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
-  ASSERT_EQ(2u, tc.memory_dump_config_.triggers.size());
+  TraceConfig tc1(tc_str1);
+  EXPECT_EQ(tc_str1, tc1.ToString());
+  EXPECT_TRUE(tc1.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
+  ASSERT_EQ(2u, tc1.memory_dump_config_.triggers.size());
 
-  EXPECT_EQ(200u, tc.memory_dump_config_.triggers[0].periodic_interval_ms);
+  EXPECT_EQ(200u, tc1.memory_dump_config_.triggers[0].periodic_interval_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::LIGHT,
-            tc.memory_dump_config_.triggers[0].level_of_detail);
+            tc1.memory_dump_config_.triggers[0].level_of_detail);
 
-  EXPECT_EQ(2000u, tc.memory_dump_config_.triggers[1].periodic_interval_ms);
+  EXPECT_EQ(2000u, tc1.memory_dump_config_.triggers[1].periodic_interval_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
-            tc.memory_dump_config_.triggers[1].level_of_detail);
-  EXPECT_EQ(2048u, tc.memory_dump_config_.heap_profiler_options.
-            breakdown_threshold_bytes);
+            tc1.memory_dump_config_.triggers[1].level_of_detail);
+  EXPECT_EQ(
+      2048u,
+      tc1.memory_dump_config_.heap_profiler_options.breakdown_threshold_bytes);
+
+  std::string tc_str2 =
+      TraceConfigMemoryTestUtil::GetTraceConfig_BackgroundTrigger();
+  TraceConfig tc2(tc_str2);
+  EXPECT_EQ(tc_str2, tc2.ToString());
+  EXPECT_TRUE(tc2.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
+  ASSERT_EQ(1u, tc2.memory_dump_config_.triggers.size());
+  EXPECT_EQ(1u, tc2.memory_dump_config_.triggers[0].periodic_interval_ms);
+  EXPECT_EQ(MemoryDumpLevelOfDetail::BACKGROUND,
+            tc2.memory_dump_config_.triggers[0].level_of_detail);
 }
 
 TEST(TraceConfigTest, EmptyMemoryDumpConfigTest) {

@@ -466,9 +466,9 @@ bool X509Certificate::IsSelfSigned(OSCertHandle os_cert) {
   crypto::ScopedEVP_PKEY scoped_key(X509_get_pubkey(cert.get()));
   if (!scoped_key)
     return false;
-
-  // NOTE: X509_verify() returns 1 in case of success, 0 or -1 on error.
-  return X509_verify(cert.get(), scoped_key.get()) == 1;
+  if (!X509_verify(cert.get(), scoped_key.get()))
+    return false;
+  return X509_check_issued(cert.get(), cert.get()) == X509_V_OK;
 }
 
 }  // namespace net

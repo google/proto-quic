@@ -24,7 +24,8 @@
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_framer.h"
 #include "net/quic/quic_protocol.h"
-#include "net/quic/quic_sent_packet_manager.h"
+#include "net/quic/quic_sent_packet_manager_interface.h"
+#include "net/quic/quic_server_session_base.h"
 #include "net/quic/quic_session.h"
 #include "net/quic/quic_simple_buffer_allocator.h"
 #include "net/quic/test_tools/mock_clock.h"
@@ -32,7 +33,6 @@
 #include "net/spdy/spdy_framer.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
-#include "net/tools/quic/quic_server_session_base.h"
 #include "net/tools/quic/test_tools/mock_quic_server_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -512,8 +512,9 @@ class MockQuicSession : public QuicSession {
                ReliableQuicStream*(SpdyPriority priority));
   MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
   MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
-  MOCK_METHOD5(WritevData,
-               QuicConsumedData(QuicStreamId id,
+  MOCK_METHOD6(WritevData,
+               QuicConsumedData(ReliableQuicStream* stream,
+                                QuicStreamId id,
                                 QuicIOVector data,
                                 QuicStreamOffset offset,
                                 bool fin,
@@ -530,11 +531,6 @@ class MockQuicSession : public QuicSession {
                void(QuicStreamId stream_id, SpdyPriority priority));
   MOCK_METHOD3(OnStreamHeadersComplete,
                void(QuicStreamId stream_id, bool fin, size_t frame_len));
-  MOCK_METHOD4(OnStreamHeaderList,
-               void(QuicStreamId stream_id,
-                    bool fin,
-                    size_t frame_len,
-                    const QuicHeaderList& header_list));
   MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
 
   using QuicSession::ActivateStream;
@@ -542,6 +538,7 @@ class MockQuicSession : public QuicSession {
   // Returns a QuicConsumedData that indicates all of |data| (and |fin| if set)
   // has been consumed.
   static QuicConsumedData ConsumeAllData(
+      ReliableQuicStream* stream,
       QuicStreamId id,
       const QuicIOVector& data,
       QuicStreamOffset offset,
@@ -571,8 +568,9 @@ class MockQuicSpdySession : public QuicSpdySession {
                QuicSpdyStream*(SpdyPriority priority));
   MOCK_METHOD1(ShouldCreateIncomingDynamicStream, bool(QuicStreamId id));
   MOCK_METHOD0(ShouldCreateOutgoingDynamicStream, bool());
-  MOCK_METHOD5(WritevData,
-               QuicConsumedData(QuicStreamId id,
+  MOCK_METHOD6(WritevData,
+               QuicConsumedData(ReliableQuicStream* stream,
+                                QuicStreamId id,
                                 QuicIOVector data,
                                 QuicStreamOffset offset,
                                 bool fin,
@@ -608,7 +606,7 @@ class MockQuicSpdySession : public QuicSpdySession {
                     const QuicHeaderList& header_list));
   MOCK_METHOD5(WriteHeaders,
                size_t(QuicStreamId id,
-                      const SpdyHeaderBlock& headers,
+                      SpdyHeaderBlock headers,
                       bool fin,
                       SpdyPriority priority,
                       QuicAckListenerInterface* ack_notifier_delegate));
@@ -641,6 +639,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
 
  private:
   MockQuicServerSessionVisitor visitor_;
+  MockQuicServerSessionHelper helper_;
 
   DISALLOW_COPY_AND_ASSIGN(TestQuicSpdyServerSession);
 };
@@ -808,7 +807,7 @@ class MockAckListener : public QuicAckListenerInterface {
 };
 
 class MockNetworkChangeVisitor
-    : public QuicSentPacketManager::NetworkChangeVisitor {
+    : public QuicSentPacketManagerInterface::NetworkChangeVisitor {
  public:
   MockNetworkChangeVisitor();
   ~MockNetworkChangeVisitor() override;

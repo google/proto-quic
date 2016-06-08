@@ -72,21 +72,12 @@ TEST_F(GeneralLossAlgorithmTest, NackRetransmit1Packet) {
   }
   // No loss on one ack.
   unacked_packets_.RemoveFromInFlight(2);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 1);
-  }
   VerifyLosses(2, nullptr, 0);
   // No loss on two acks.
   unacked_packets_.RemoveFromInFlight(3);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 2);
-  }
   VerifyLosses(3, nullptr, 0);
   // Loss on three acks.
   unacked_packets_.RemoveFromInFlight(4);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 3);
-  }
   QuicPacketNumber lost[] = {1};
   VerifyLosses(4, lost, arraysize(lost));
   EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
@@ -102,9 +93,6 @@ TEST_F(GeneralLossAlgorithmTest, NackRetransmit1PacketWith1StretchAck) {
   }
 
   // Nack the first packet 3 times in a single StretchAck.
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 3);
-  }
   unacked_packets_.RemoveFromInFlight(2);
   unacked_packets_.RemoveFromInFlight(3);
   unacked_packets_.RemoveFromInFlight(4);
@@ -122,11 +110,6 @@ TEST_F(GeneralLossAlgorithmTest, NackRetransmit1PacketSingleAck) {
   }
 
   // Nack the first packet 3 times in an AckFrame with three missing packets.
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 3);
-    unacked_packets_.NackPacket(2, 2);
-    unacked_packets_.NackPacket(3, 1);
-  }
   unacked_packets_.RemoveFromInFlight(4);
   QuicPacketNumber lost[] = {1};
   VerifyLosses(4, lost, arraysize(lost));
@@ -141,9 +124,6 @@ TEST_F(GeneralLossAlgorithmTest, EarlyRetransmit1Packet) {
   }
   // Early retransmit when the final packet gets acked and the first is nacked.
   unacked_packets_.RemoveFromInFlight(2);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 1);
-  }
   VerifyLosses(2, nullptr, 0);
   EXPECT_EQ(clock_.Now().Add(rtt_stats_.smoothed_rtt().Multiply(1.25)),
             loss_algorithm_.GetLossTimeout());
@@ -168,11 +148,6 @@ TEST_F(GeneralLossAlgorithmTest, EarlyRetransmitAllPackets) {
   // elapsed since the packets were sent.
   unacked_packets_.RemoveFromInFlight(kNumSentPackets);
   // This simulates a single ack following multiple missing packets with FACK.
-  if (!FLAGS_quic_simplify_loss_detection) {
-    for (size_t i = 1; i < kNumSentPackets; ++i) {
-      unacked_packets_.NackPacket(i, kNumSentPackets - i);
-    }
-  }
   QuicPacketNumber lost[] = {1, 2};
   VerifyLosses(kNumSentPackets, lost, arraysize(lost));
   // The time has already advanced 1/4 an RTT, so ensure the timeout is set
@@ -203,9 +178,6 @@ TEST_F(GeneralLossAlgorithmTest, DontEarlyRetransmitNeuteredPacket) {
   // Early retransmit when the final packet gets acked and the first is nacked.
   unacked_packets_.IncreaseLargestObserved(2);
   unacked_packets_.RemoveFromInFlight(2);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 1);
-  }
   VerifyLosses(2, nullptr, 0);
   EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
 }
@@ -224,9 +196,6 @@ TEST_F(GeneralLossAlgorithmTest, AlwaysLosePacketSent1RTTEarlier) {
   clock_.AdvanceTime(rtt_stats_.smoothed_rtt());
   unacked_packets_.IncreaseLargestObserved(2);
   unacked_packets_.RemoveFromInFlight(2);
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 1);
-  }
   QuicPacketNumber lost[] = {1};
   VerifyLosses(2, lost, arraysize(lost));
 }
@@ -241,9 +210,6 @@ TEST_F(GeneralLossAlgorithmTest, NoLossFor500Nacks) {
   }
   unacked_packets_.RemoveFromInFlight(2);
   for (size_t i = 1; i < 500; ++i) {
-    if (!FLAGS_quic_simplify_loss_detection) {
-      unacked_packets_.NackPacket(1, i);
-    }
     VerifyLosses(2, nullptr, 0);
   }
   EXPECT_EQ(rtt_stats_.smoothed_rtt().Multiply(1.25),
@@ -261,17 +227,11 @@ TEST_F(GeneralLossAlgorithmTest, NoLossUntilTimeout) {
   // Expect the timer to not be set.
   EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
   // The packet should not be lost until 1.25 RTTs pass.
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 1);
-  }
   unacked_packets_.RemoveFromInFlight(2);
   VerifyLosses(2, nullptr, 0);
   // Expect the timer to be set to 0.25 RTT's in the future.
   EXPECT_EQ(rtt_stats_.smoothed_rtt().Multiply(0.25),
             loss_algorithm_.GetLossTimeout().Subtract(clock_.Now()));
-  if (!FLAGS_quic_simplify_loss_detection) {
-    unacked_packets_.NackPacket(1, 5);
-  }
   VerifyLosses(2, nullptr, 0);
   clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(0.25));
   QuicPacketNumber lost[] = {1};
@@ -313,11 +273,6 @@ TEST_F(GeneralLossAlgorithmTest, MultipleLossesAtOnce) {
   // Expect the timer to not be set.
   EXPECT_EQ(QuicTime::Zero(), loss_algorithm_.GetLossTimeout());
   // The packet should not be lost until 1.25 RTTs pass.
-  if (!FLAGS_quic_simplify_loss_detection) {
-    for (size_t i = 1; i < kNumSentPackets; ++i) {
-      unacked_packets_.NackPacket(i, 1);
-    }
-  }
   unacked_packets_.RemoveFromInFlight(10);
   VerifyLosses(10, nullptr, 0);
   // Expect the timer to be set to 0.25 RTT's in the future.
@@ -330,7 +285,6 @@ TEST_F(GeneralLossAlgorithmTest, MultipleLossesAtOnce) {
 }
 
 TEST_F(GeneralLossAlgorithmTest, NoSpuriousLossesFromLargeReordering) {
-  FLAGS_quic_simplify_loss_detection = true;
   FLAGS_quic_loss_recovery_use_largest_acked = true;
   loss_algorithm_.SetLossDetectionType(kTime);
   const size_t kNumSentPackets = 10;
@@ -359,10 +313,9 @@ TEST_F(GeneralLossAlgorithmTest, NoSpuriousLossesFromLargeReordering) {
 }
 
 TEST_F(GeneralLossAlgorithmTest, IncreaseThresholdUponSpuriousLoss) {
-  FLAGS_quic_simplify_loss_detection = true;
   FLAGS_quic_adaptive_loss_recovery = true;
   loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
-  EXPECT_EQ(16, loss_algorithm_.reordering_fraction());
+  EXPECT_EQ(4, loss_algorithm_.reordering_shift());
   const size_t kNumSentPackets = 10;
   // Transmit 2 packets at 1/10th an RTT interval.
   for (size_t i = 1; i <= kNumSentPackets; ++i) {
@@ -393,13 +346,13 @@ TEST_F(GeneralLossAlgorithmTest, IncreaseThresholdUponSpuriousLoss) {
   clock_.AdvanceTime(rtt_stats_.smoothed_rtt().Multiply(1.0f / 4));
   loss_algorithm_.SpuriousRetransmitDetected(unacked_packets_, clock_.Now(),
                                              rtt_stats_, 11);
-  EXPECT_EQ(2, loss_algorithm_.reordering_fraction());
+  EXPECT_EQ(1, loss_algorithm_.reordering_shift());
 
   // Detect another spurious retransmit and ensure the threshold doesn't
   // increase again.
   loss_algorithm_.SpuriousRetransmitDetected(unacked_packets_, clock_.Now(),
                                              rtt_stats_, 12);
-  EXPECT_EQ(2, loss_algorithm_.reordering_fraction());
+  EXPECT_EQ(1, loss_algorithm_.reordering_shift());
 }
 
 }  // namespace

@@ -248,6 +248,12 @@ class BASE_EXPORT PersistentHistogramAllocator {
   // True, forgetting it otherwise.
   void FinalizeHistogram(Reference ref, bool registered);
 
+  // Merges the data in a persistent histogram with one held globally by the
+  // StatisticsRecorder, updating the "logged" samples within the passed
+  // object so that repeated merges are allowed. Don't call this on a "global"
+  // allocator because histograms created there will already be in the SR.
+  void MergeHistogramToStatisticsRecorder(HistogramBase* histogram);
+
   // Returns the object that manages the persistent-sample-map records for a
   // given |id|. Only one |user| of this data is allowed at a time. This does
   // an automatic Acquire() on the records. The user must call Release() on
@@ -394,26 +400,14 @@ class BASE_EXPORT GlobalHistogramAllocator
   // while operating single-threaded so there are no race-conditions.
   static void Set(std::unique_ptr<GlobalHistogramAllocator> allocator);
 
-  // Enables the global persistent allocator. Existing histograms will not be
-  // affected; only newly created ones will go into the allocator.
-  static void Enable();
-
-  // Disables the global persistent allocator. Existing histograms will not be
-  // affected; newly created histograms will be allocated from the heap.
-  static void Disable();
-
-  // Gets a pointer to an enabled global histogram allocator. If a global
-  // allocator exists but is disabled, this will return null.
+  // Gets a pointer to the global histogram allocator. Returns null if none
+  // exists.
   static GlobalHistogramAllocator* Get();
 
-  // Gets a pointer to a global histogram allocator if one exists, even if
-  // that allocator is disabled.
-  static GlobalHistogramAllocator* GetEvenIfDisabled();
-
   // This access to the persistent allocator is only for testing; it extracts
-  // the current allocator completely regardless whether it is enabled or not.
-  // This allows easy creation of histograms within persistent memory segments
-  // which can then be extracted and used in other ways.
+  // the current allocator completely. This allows easy creation of histograms
+  // within persistent memory segments which can then be extracted and used in
+  // other ways.
   static std::unique_ptr<GlobalHistogramAllocator> ReleaseForTesting();
 
   // Stores a pathname to which the contents of this allocator should be saved
@@ -429,7 +423,7 @@ class BASE_EXPORT GlobalHistogramAllocator
  private:
   friend class StatisticsRecorder;
 
-  // Creates a new global histogram allocator. It will be enabled by default.
+  // Creates a new global histogram allocator.
   explicit GlobalHistogramAllocator(
       std::unique_ptr<PersistentMemoryAllocator> memory);
 

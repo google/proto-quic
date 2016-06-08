@@ -128,7 +128,8 @@ void TraceLog::StopATrace() {
   // TraceLog::Flush() requires the current thread to have a message loop, but
   // this thread called from Java may not have one, so flush in another thread.
   Thread end_chrome_tracing_thread("end_chrome_tracing");
-  WaitableEvent complete_event(false, false);
+  WaitableEvent complete_event(WaitableEvent::ResetPolicy::AUTOMATIC,
+                               WaitableEvent::InitialState::NOT_SIGNALED);
   end_chrome_tracing_thread.Start();
   end_chrome_tracing_thread.task_runner()->PostTask(
       FROM_HERE, base::Bind(&EndChromeTracing, Unretained(this),

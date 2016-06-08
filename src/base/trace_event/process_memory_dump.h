@@ -16,6 +16,7 @@
 #include "base/memory/scoped_vector.h"
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
+#include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/memory_dump_session_state.h"
 #include "base/trace_event/process_memory_maps.h"
 #include "base/trace_event/process_memory_totals.h"
@@ -67,7 +68,8 @@ class BASE_EXPORT ProcessMemoryDump {
   static size_t CountResidentBytes(void* start_address, size_t mapped_size);
 #endif
 
-  ProcessMemoryDump(scoped_refptr<MemoryDumpSessionState> session_state);
+  ProcessMemoryDump(scoped_refptr<MemoryDumpSessionState> session_state,
+                    const MemoryDumpArgs& dump_args);
   ~ProcessMemoryDump();
 
   // Creates a new MemoryAllocatorDump with the given name and returns the
@@ -115,14 +117,6 @@ class BASE_EXPORT ProcessMemoryDump {
 
   // Returns the map of the MemoryAllocatorDumps added to this dump.
   const AllocatorDumpsMap& allocator_dumps() const { return allocator_dumps_; }
-
-  // Adds a heap dump for the allocator with |absolute_name|. The |TracedValue|
-  // must have the correct format. |trace_event::HeapDumper| will generate such
-  // a value from a |trace_event::AllocationRegister|.
-  // TODO(bashi): Remove this when WebMemoryDumpProvider is gone.
-  // http://crbug.com/605822
-  void AddHeapDump(const std::string& absolute_name,
-                   std::unique_ptr<TracedValue> heap_dump);
 
   // Dumps heap usage with |allocator_name|.
   void DumpHeapUsage(const base::hash_map<base::trace_event::AllocationContext,
@@ -183,9 +177,15 @@ class BASE_EXPORT ProcessMemoryDump {
 
   const HeapDumpsMap& heap_dumps() const { return heap_dumps_; }
 
+  const MemoryDumpArgs& dump_args() const { return dump_args_; }
+
  private:
+  FRIEND_TEST_ALL_PREFIXES(ProcessMemoryDumpTest, BackgroundModeTest);
+
   MemoryAllocatorDump* AddAllocatorDumpInternal(
       std::unique_ptr<MemoryAllocatorDump> mad);
+
+  MemoryAllocatorDump* GetBlackHoleMad();
 
   ProcessMemoryTotals process_totals_;
   bool has_process_totals_;
@@ -201,6 +201,18 @@ class BASE_EXPORT ProcessMemoryDump {
 
   // Keeps track of relationships between MemoryAllocatorDump(s).
   std::vector<MemoryAllocatorDumpEdge> allocator_dumps_edges_;
+
+  // Level of detail of the current dump.
+  const MemoryDumpArgs dump_args_;
+
+  // This allocator dump is returned when an invalid dump is created in
+  // background mode. The attributes of the dump are ignored and not added to
+  // the trace.
+  std::unique_ptr<MemoryAllocatorDump> black_hole_mad_;
+
+  // When set to true, the DCHECK(s) for invalid dump creations on the
+  // background mode are disabled for testing.
+  static bool is_black_hole_non_fatal_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(ProcessMemoryDump);
 };

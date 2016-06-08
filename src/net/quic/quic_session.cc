@@ -239,11 +239,25 @@ void QuicSession::ProcessUdpPacket(const IPEndPoint& self_address,
 }
 
 QuicConsumedData QuicSession::WritevData(
+    ReliableQuicStream* stream,
     QuicStreamId id,
     QuicIOVector iov,
     QuicStreamOffset offset,
     bool fin,
     QuicAckListenerInterface* ack_notifier_delegate) {
+  // This check is an attempt to deal with potential memory corruption
+  // in which |id| ends up set to 1 (the crypto stream id). If this happen
+  // it might end up resulting in unencrypted stream data being sent.
+  // While this is impossible to avoid given sufficient corruption, this
+  // seems like a reasonable mitigation.
+  if (id == kCryptoStreamId && stream != GetCryptoStream()) {
+    QUIC_BUG << "Stream id mismatch";
+    connection_->CloseConnection(
+        QUIC_INTERNAL_ERROR,
+        "Non-crypto stream attempted to write data as crypto stream.",
+        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    return QuicConsumedData(0, false);
+  }
   if (!IsEncryptionEstablished() && id != kCryptoStreamId) {
     // Do not let streams write without encryption. The calling stream will end
     // up write blocked until OnCanWrite is next called.
@@ -646,11 +660,8 @@ bool QuicSession::ShouldYield(QuicStreamId stream_id) {
 
 ReliableQuicStream* QuicSession::GetOrCreateDynamicStream(
     const QuicStreamId stream_id) {
-  if (ContainsKey(static_stream_map_, stream_id)) {
-    DLOG(FATAL)
-        << "Attempt to call GetOrCreateDynamicStream for a static stream";
-    return nullptr;
-  }
+  DCHECK(!ContainsKey(static_stream_map_, stream_id))
+      << "Attempt to call GetOrCreateDynamicStream for a static stream";
 
   StreamMap::iterator it = dynamic_stream_map_.find(stream_id);
   if (it != dynamic_stream_map_.end()) {

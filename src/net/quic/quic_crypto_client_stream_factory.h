@@ -9,6 +9,7 @@
 #include <string>
 
 #include "net/base/net_export.h"
+#include "net/quic/quic_server_id.h"
 
 namespace net {
 
@@ -16,7 +17,6 @@ class ProofVerifyContext;
 class QuicChromiumClientSession;
 class QuicCryptoClientConfig;
 class QuicCryptoClientStream;
-class QuicServerId;
 
 // An interface used to instantiate QuicCryptoClientStream objects. Used to
 // facilitate testing code with mock implementations.

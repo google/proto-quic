@@ -74,8 +74,9 @@ std::string SysInfo::OperatingSystemName() {
 std::string SysInfo::OperatingSystemVersion() {
   win::OSInfo* os_info = win::OSInfo::GetInstance();
   win::OSInfo::VersionNumber version_number = os_info->version_number();
-  std::string version(StringPrintf("%d.%d", version_number.major,
-                                   version_number.minor));
+  std::string version(StringPrintf("%d.%d.%d", version_number.major,
+                                   version_number.minor,
+                                   version_number.build));
   win::OSInfo::ServicePack service_pack = os_info->service_pack();
   if (service_pack.major != 0) {
     version += StringPrintf(" SP%d", service_pack.major);

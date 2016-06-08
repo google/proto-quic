@@ -307,9 +307,9 @@ QuicConsumedData ReliableQuicStream::WritevData(
     write_length = static_cast<size_t>(send_window);
   }
 
-  QuicConsumedData consumed_data =
-      session()->WritevData(id(), QuicIOVector(iov, iov_count, write_length),
-                            stream_bytes_written_, fin, ack_listener);
+  QuicConsumedData consumed_data = session()->WritevData(
+      this, id(), QuicIOVector(iov, iov_count, write_length),
+      stream_bytes_written_, fin, ack_listener);
   stream_bytes_written_ += consumed_data.bytes_consumed;
 
   AddBytesSent(consumed_data.bytes_consumed);
@@ -376,6 +376,10 @@ QuicVersion ReliableQuicStream::version() const {
 void ReliableQuicStream::StopReading() {
   DVLOG(1) << ENDPOINT << "Stop reading from stream " << id();
   sequencer_.StopReading();
+}
+
+const IPEndPoint& ReliableQuicStream::PeerAddressOfLatestPacket() const {
+  return session_->connection()->last_packet_source_address();
 }
 
 void ReliableQuicStream::OnClose() {

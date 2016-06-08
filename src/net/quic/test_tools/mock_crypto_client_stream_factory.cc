@@ -7,7 +7,6 @@
 #include "base/lazy_instance.h"
 #include "net/quic/quic_chromium_client_session.h"
 #include "net/quic/quic_crypto_client_stream.h"
-#include "net/quic/quic_server_id.h"
 
 using std::string;
 

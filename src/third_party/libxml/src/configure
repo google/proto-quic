@@ -663,8 +663,9 @@ WITH_REGEXPS
 TEST_SCHEMAS
 WITH_SCHEMAS
 WITH_ISO8859X
-ICU_LIBS
 WITH_ICU
+ICU_LIBS
+ICU_CFLAGS
 WITH_ICONV
 WITH_OUTPUT
 TEST_XPATH
@@ -835,6 +836,9 @@ build_os
 build_vendor
 build_cpu
 build
+MAINT
+MAINTAINER_MODE_FALSE
+MAINTAINER_MODE_TRUE
 target_alias
 host_alias
 build_alias
@@ -876,6 +880,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_maintainer_mode
 enable_silent_rules
 enable_dependency_tracking
 enable_shared
@@ -943,8 +948,12 @@ PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 LT_SYS_LIBRARY_PATH
+Z_CFLAGS
+Z_LIBS
 LZMA_CFLAGS
-LZMA_LIBS'
+LZMA_LIBS
+ICU_CFLAGS
+ICU_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1561,6 +1570,9 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-maintainer-mode
+                          disable make rules and dependencies not useful (and
+                          sometimes confusing) to the casual installer
   --enable-silent-rules   less verbose build output (undo: "make V=1")
   --disable-silent-rules  verbose build output (undo: "make V=0")
   --enable-dependency-tracking
@@ -1647,8 +1659,12 @@ Some influential environment variables:
               path overriding pkg-config's built-in search path
   LT_SYS_LIBRARY_PATH
               User-defined run-time library search path.
+  Z_CFLAGS    C compiler flags for Z, overriding pkg-config
+  Z_LIBS      linker flags for Z, overriding pkg-config
   LZMA_CFLAGS C compiler flags for LZMA, overriding pkg-config
   LZMA_LIBS   linker flags for LZMA, overriding pkg-config
+  ICU_CFLAGS  C compiler flags for ICU, overriding pkg-config
+  ICU_LIBS    linker flags for ICU, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2487,6 +2503,29 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 ac_config_headers="$ac_config_headers config.h"
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable maintainer-specific portions of Makefiles" >&5
+$as_echo_n "checking whether to enable maintainer-specific portions of Makefiles... " >&6; }
+    # Check whether --enable-maintainer-mode was given.
+if test "${enable_maintainer_mode+set}" = set; then :
+  enableval=$enable_maintainer_mode; USE_MAINTAINER_MODE=$enableval
+else
+  USE_MAINTAINER_MODE=yes
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $USE_MAINTAINER_MODE" >&5
+$as_echo "$USE_MAINTAINER_MODE" >&6; }
+   if test $USE_MAINTAINER_MODE = yes; then
+  MAINTAINER_MODE_TRUE=
+  MAINTAINER_MODE_FALSE='#'
+else
+  MAINTAINER_MODE_TRUE='#'
+  MAINTAINER_MODE_FALSE=
+fi
+
+  MAINT=$MAINTAINER_MODE_TRUE
+
+
+
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
   if test -f "$ac_dir/install-sh"; then
@@ -2590,7 +2629,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 LIBXML_MAJOR_VERSION=2
 LIBXML_MINOR_VERSION=9
-LIBXML_MICRO_VERSION=3
+LIBXML_MICRO_VERSION=4
 LIBXML_MICRO_VERSION_SUFFIX=
 LIBXML_VERSION=$LIBXML_MAJOR_VERSION.$LIBXML_MINOR_VERSION.$LIBXML_MICRO_VERSION$LIBXML_MICRO_VERSION_SUFFIX
 LIBXML_VERSION_INFO=`expr $LIBXML_MAJOR_VERSION + $LIBXML_MINOR_VERSION`:$LIBXML_MICRO_VERSION:$LIBXML_MINOR_VERSION
@@ -11634,9 +11673,6 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
-  # Add ABI-specific directories to the system library path.
-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
-
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -11645,7 +11681,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -12839,7 +12875,7 @@ if test "${with_readline+set}" = set; then :
   if test "$withval" != "no" -a "$withval" != "yes"; then
     RDL_DIR=$withval
     CPPFLAGS="${CPPFLAGS} -I$withval/include"
-    LIBS="${LIBS} -L$withval/lib"
+    LDFLAGS="${LDFLAGS} -L$withval/lib"
   fi
 
 fi
@@ -12935,7 +12971,7 @@ if test "${with_zlib+set}" = set; then :
   if test "$withval" != "no" -a "$withval" != "yes"; then
     Z_DIR=$withval
     CPPFLAGS="${CPPFLAGS} -I$withval/include"
-    LIBS="${LIBS} -L$withval/lib"
+    LDFLAGS="${LDFLAGS} -L$withval/lib"
   fi
 
 fi
@@ -12947,7 +12983,7 @@ if test "${with_lzma+set}" = set; then :
   if test "$withval" != "no" -a "$withval" != "yes"; then
     LZMA_DIR=$withval
     CPPFLAGS="${CPPFLAGS} -I$withval/include"
-    LIBS="${LIBS} -L$withval/lib"
+    LDFLAGS="${LDFLAGS} -L$withval/lib"
   fi
 
 fi
@@ -13144,16 +13180,89 @@ WITH_ZLIB=0
 if test "$with_zlib" = "no"; then
     echo "Disabling compression support"
 else
-    for ac_header in zlib.h
+    # Try pkg-config first so that static linking works.
+    # If this succeeeds, we ignore the WITH_ZLIB directory.
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Z" >&5
+$as_echo_n "checking for Z... " >&6; }
+
+if test -n "$Z_CFLAGS"; then
+    pkg_cv_Z_CFLAGS="$Z_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "zlib") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Z_CFLAGS=`$PKG_CONFIG --cflags "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Z_LIBS"; then
+    pkg_cv_Z_LIBS="$Z_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "zlib") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Z_LIBS=`$PKG_CONFIG --libs "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Z_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
+        else
+	        Z_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Z_PKG_ERRORS" >&5
+
+	have_libz=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_libz=no
+else
+	Z_CFLAGS=$pkg_cv_Z_CFLAGS
+	Z_LIBS=$pkg_cv_Z_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_libz=yes
+fi
+
+     if test "x$have_libz" = "xno"; then
+        for ac_header in zlib.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
 if test "x$ac_cv_header_zlib_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_ZLIB_H 1
 _ACEOF
- SAVE_LDFLAGS="${LDFLAGS}"
-	 LDFLAGS="-L${Z_DIR}/lib"
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for gzread in -lz" >&5
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gzread in -lz" >&5
 $as_echo_n "checking for gzread in -lz... " >&6; }
 if ${ac_cv_lib_z_gzread+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -13191,28 +13300,50 @@ fi
 $as_echo "$ac_cv_lib_z_gzread" >&6; }
 if test "x$ac_cv_lib_z_gzread" = xyes; then :
 
-
-$as_echo "#define HAVE_LIBZ 1" >>confdefs.h
-
-	    WITH_ZLIB=1
-	    if test "x${Z_DIR}" != "x"; then
-		Z_CFLAGS="-I${Z_DIR}/include"
-		Z_LIBS="-L${Z_DIR}/lib -lz"
-		case ${host} in
-		    *-*-solaris*)
-			Z_LIBS="-L${Z_DIR}/lib -R${Z_DIR}/lib -lz"
-			;;
-		esac
-	    else
-		Z_LIBS="-lz"
-	    fi
+                have_libz=yes
+                if test "x${Z_DIR}" != "x"; then
+                    Z_CFLAGS="-I${Z_DIR}/include"
+                    Z_LIBS="-L${Z_DIR}/lib -lz"
+                    case ${host} in
+                        *-*-solaris*)
+                            Z_LIBS="-L${Z_DIR}/lib -R${Z_DIR}/lib -lz"
+                            ;;
+                    esac
+                else
+                    Z_LIBS="-lz"
+                fi
+else
+  have_libz=no
 fi
 
-	 LDFLAGS="${SAVE_LDFLAGS}"
+
 fi
 
 done
 
+    else
+	# we still need to check for zlib.h header
+	for ac_header in zlib.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_zlib_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ZLIB_H 1
+_ACEOF
+
+fi
+
+done
+
+    fi
+
+    # Found the library via either method?
+    if test "x$have_libz" = "xyes"; then
+
+$as_echo "#define HAVE_LIBZ 1" >>confdefs.h
+
+        WITH_ZLIB=1
+    fi
 fi
 
 
@@ -13311,9 +13442,7 @@ if test "x$ac_cv_header_lzma_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LZMA_H 1
 _ACEOF
- SAVE_LDFLAGS="${LDFLAGS}"
-	     LDFLAGS="-L${LZMA_DIR}/lib"
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lzma_code in -llzma" >&5
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lzma_code in -llzma" >&5
 $as_echo_n "checking for lzma_code in -llzma... " >&6; }
 if ${ac_cv_lib_lzma_lzma_code+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -13362,7 +13491,7 @@ else
   have_liblzma=no
 fi
 
-	     LDFLAGS="${SAVE_LDFLAGS}"
+
 fi
 
 done
@@ -14321,7 +14450,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether va_list is an array type" >&5
 $as_echo_n "checking whether va_list is an array type... " >&6; }
 cat > conftest.$ac_ext <<EOF
-#line 14324 "configure"
+#line 14453 "configure"
 #include "confdefs.h"
 
 #include <stdarg.h>
@@ -14331,7 +14460,7 @@ int main(void) {
 va_list ap1, ap2; a(&ap1); ap2 = (va_list) ap1
 ; return 0; }
 EOF
-if { (eval echo configure:14334: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
+if { (eval echo configure:14463: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
   rm -rf conftest*
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -14521,7 +14650,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for type of socket length (socklen_t)" >&5
 $as_echo_n "checking for type of socket length (socklen_t)... " >&6; }
 cat > conftest.$ac_ext <<EOF
-#line 14524 "configure"
+#line 14653 "configure"
 #include "confdefs.h"
 
 #include <stddef.h>
@@ -14532,7 +14661,7 @@ int main(void) {
 (void)getsockopt (1, 1, 1, NULL, (socklen_t *)NULL)
 ; return 0; }
 EOF
-if { (eval echo configure:14535: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
+if { (eval echo configure:14664: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
   rm -rf conftest*
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: socklen_t *" >&5
@@ -14544,7 +14673,7 @@ else
   rm -rf conftest*
 
   cat > conftest.$ac_ext <<EOF
-#line 14547 "configure"
+#line 14676 "configure"
 #include "confdefs.h"
 
 #include <stddef.h>
@@ -14555,7 +14684,7 @@ int main(void) {
 (void)getsockopt (1, 1, 1, NULL, (size_t *)NULL)
 ; return 0; }
 EOF
-if { (eval echo configure:14558: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
+if { (eval echo configure:14687: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
   rm -rf conftest*
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: size_t *" >&5
@@ -14567,7 +14696,7 @@ else
   rm -rf conftest*
 
     cat > conftest.$ac_ext <<EOF
-#line 14570 "configure"
+#line 14699 "configure"
 #include "confdefs.h"
 
 #include <stddef.h>
@@ -14578,7 +14707,7 @@ int main(void) {
 (void)getsockopt (1, 1, 1, NULL, (int *)NULL)
 ; return 0; }
 EOF
-if { (eval echo configure:14581: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
+if { (eval echo configure:14710: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; _out=`eval $ac_compile 2>&1` && test "x$_out" = x; }; then
   rm -rf conftest*
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: int *" >&5
@@ -14981,7 +15110,7 @@ else
     fi
 
     # warnings we'd like to see
-    CFLAGS="${CFLAGS} -pedantic -W -Wformat -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wformat -Wchar-subscripts -Wuninitialized -Wparentheses -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls"
+    CFLAGS="${CFLAGS} -pedantic -W -Wformat -Wno-format-extra-args -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wchar-subscripts -Wuninitialized -Wparentheses -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls"
     # warnings we'd like to supress
     CFLAGS="${CFLAGS} -Wno-long-long"
     case "${host}" in
@@ -15372,7 +15501,7 @@ if [ "${LOGNAME}" = "veillard" -a "`pwd`" = "/u/veillard/XML" ] || \
 	fi
     fi
     if test "${GCC}" = "yes" ; then
-    CFLAGS="-g -O -pedantic -W -Wformat -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wformat -Wchar-subscripts -Wuninitialized -Wparentheses -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls -Wall"
+    CFLAGS="-g -O -pedantic -W -Wformat -Wno-format-extra-args -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wchar-subscripts -Wuninitialized -Wparentheses -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls -Wall"
     fi
     STATIC_BINARIES="-static"
 else
@@ -16102,8 +16231,6 @@ case "$host" in
 	*) M_LIBS="-lm"
 	;;
 esac
-XML_LIBS="-lxml2 $Z_LIBS $THREAD_LIBS $ICONV_LIBS $M_LIBS $LIBS"
-XML_LIBTOOLLIBS="libxml2.la"
 
 
 WITH_ICU=0
@@ -16111,17 +16238,175 @@ ICU_LIBS=""
 if test "$with_icu" != "yes" ; then
     echo Disabling ICU support
 else
-    ICU_CONFIG=icu-config
-    if ${ICU_CONFIG} --cflags >/dev/null 2>&1
-    then
-        ICU_LIBS=`${ICU_CONFIG} --ldflags`
-        WITH_ICU=1
-        echo Enabling ICU support
-    else
-        as_fn_error $? "libicu config program icu-config not found" "$LINENO" 5
-    fi
+    # Try pkg-config first so that static linking works.
+    # If this succeeeds, we ignore the WITH_ICU directory.
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ICU" >&5
+$as_echo_n "checking for ICU... " >&6; }
+
+if test -n "$ICU_CFLAGS"; then
+    pkg_cv_ICU_CFLAGS="$ICU_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"icu-i18n\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "icu-i18n") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_ICU_CFLAGS=`$PKG_CONFIG --cflags "icu-i18n" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$ICU_LIBS"; then
+    pkg_cv_ICU_LIBS="$ICU_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"icu-i18n\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "icu-i18n") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_ICU_LIBS=`$PKG_CONFIG --libs "icu-i18n" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
 fi
 
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        ICU_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "icu-i18n" 2>&1`
+        else
+	        ICU_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "icu-i18n" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$ICU_PKG_ERRORS" >&5
+
+	have_libicu=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_libicu=no
+else
+	ICU_CFLAGS=$pkg_cv_ICU_CFLAGS
+	ICU_LIBS=$pkg_cv_ICU_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_libicu=yes
+fi
+
+    # If pkg-config failed, fall back to AC_CHECK_LIB. This
+    # will not pick up the necessary LIBS flags for liblzma's
+    # private dependencies, though, so static linking may fail.
+    if test "x$have_libicu" = "xno"; then
+        ICU_CONFIG=icu-config
+        if ${ICU_CONFIG} --cflags >/dev/null 2>&1
+        then
+            ICU_LIBS=`${ICU_CONFIG} --ldflags`
+            have_libicu=yes
+            echo Enabling ICU support
+        else
+            if test "$with_icu" != "yes" -a "$with_iconv" != "" ; then
+                CPPFLAGS="${CPPFLAGS} -I$with_icu"
+                # Export this since our headers include icu.h
+                XML_INCLUDEDIR="${XML_INCLUDEDIR} -I$with_icu"
+            fi
+
+            ac_fn_c_check_header_mongrel "$LINENO" "unicode/ucnv.h" "ac_cv_header_unicode_ucnv_h" "$ac_includes_default"
+if test "x$ac_cv_header_unicode_ucnv_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for icu" >&5
+$as_echo_n "checking for icu... " >&6; }
+            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <unicode/ucnv.h>
+int
+main ()
+{
+
+        UConverter *utf = ucnv_open("UTF-8", NULL);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+                have_libicu=yes
+else
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for icu in -licucore" >&5
+$as_echo_n "checking for icu in -licucore... " >&6; }
+
+                _ldflags="${LDFLAGS}"
+                _libs="${LIBS}"
+                LDFLAGS="${LDFLAGS} ${ICU_LIBS}"
+                LIBS="${LIBS} -licucore"
+
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <unicode/ucnv.h>
+int
+main ()
+{
+
+        UConverter *utf = ucnv_open("UTF-8", NULL);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+                    have_libicu=yes
+                    ICU_LIBS="${ICU_LIBS} -licucore"
+                    LIBS="${_libs}"
+                    LDFLAGS="${_ldflags}"
+else
+
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                    LIBS="${_libs}"
+                LDFLAGS="${_ldflags}"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+
+
+        fi
+    fi
+
+    # Found the library via either method?
+    if test "x$have_libicu" = "xyes"; then
+        WITH_ICU=1
+    fi
+fi
+XML_LIBS="-lxml2 $Z_LIBS $LZMA_LIBS $THREAD_LIBS $ICONV_LIBS $ICU_LIBS $M_LIBS $LIBS"
+XML_LIBTOOLLIBS="libxml2.la"
 
 
 WITH_ISO8859X=1
@@ -16272,6 +16557,7 @@ fi
 
 
 
+
 RELDATE=`date +'%a %b %e %Y'`
 
 
@@ -16395,6 +16681,10 @@ LIBOBJS=$ac_libobjs
 LTLIBOBJS=$ac_ltlibobjs
 
 
+if test -z "${MAINTAINER_MODE_TRUE}" && test -z "${MAINTAINER_MODE_FALSE}"; then
+  as_fn_error $? "conditional \"MAINTAINER_MODE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking that generated files are newer than configure" >&5
 $as_echo_n "checking that generated files are newer than configure... " >&6; }
    if test -n "$am_sleep_pid"; then

@@ -314,14 +314,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
   bool HasGroup(const std::string& group_name) const;
 
-  // Called to enable/disable cleaning up idle sockets. When enabled,
-  // idle sockets that have been around for longer than a period defined
-  // by kCleanupInterval are cleaned up using a timer. Otherwise they are
-  // closed next time client makes a request. This may reduce network
-  // activity and power consumption.
-  static bool cleanup_timer_enabled();
-  static bool set_cleanup_timer_enabled(bool enabled);
-
   // Closes all idle sockets if |force| is true.  Else, only closes idle
   // sockets that timed out or can't be reused.  Made public for testing.
   void CleanupIdleSockets(bool force);
@@ -533,20 +525,11 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
   void IncrementIdleCount();
   void DecrementIdleCount();
 
-  // Start cleanup timer for idle sockets.
-  void StartIdleSocketTimer();
-
   // Scans the group map for groups which have an available socket slot and
   // at least one pending request. Returns true if any groups are stalled, and
   // if so (and if both |group| and |group_name| are not NULL), fills |group|
   // and |group_name| with data of the stalled group having highest priority.
   bool FindTopStalledGroup(Group** group, std::string* group_name) const;
-
-  // Called when timer_ fires.  This method scans the idle sockets removing
-  // sockets that timed out or can't be reused.
-  void OnCleanupTimerFired() {
-    CleanupIdleSockets(false);
-  }
 
   // Removes |job| from |group|, which must already own |job|.
   void RemoveConnectJob(ConnectJob* job, Group* group);
@@ -625,10 +608,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
   // possible that the request is cancelled.
   PendingCallbackMap pending_callback_map_;
 
-  // Timer used to periodically prune idle sockets that timed out or can't be
-  // reused.
-  base::RepeatingTimer timer_;
-
   // The total number of idle sockets in the system.
   int idle_socket_count_;
 
@@ -643,9 +622,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
   // The maximum number of sockets kept per group.
   const int max_sockets_per_group_;
-
-  // Whether to use timer to cleanup idle sockets.
-  bool use_cleanup_timer_;
 
   // The time to wait until closing idle sockets.
   const base::TimeDelta unused_idle_socket_timeout_;

@@ -223,7 +223,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   // The amount of sent data.
   int64_t sent_bytes_;
 
-  // The parsed response headers.  Owned by the caller of SendRequest.  This
+  // The parsed response headers.  Owned by the caller of SendRequest.   This
   // cannot be safely accessed after reading the final set of headers, as the
   // caller of SendRequest may have been destroyed - this happens in the case an
   // HttpResponseBodyDrainer is used.
@@ -233,6 +233,9 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   // (and chunked_decoder_ is null), then we must read until the server
   // closes the connection.
   int64_t response_body_length_;
+
+  // True if reading a keep-alive response. False if not, or if don't yet know.
+  bool response_is_keep_alive_;
 
   // Keep track of the number of response body bytes read so far.
   int64_t response_body_read_;

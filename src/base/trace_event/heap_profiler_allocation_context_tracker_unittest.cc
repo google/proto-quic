@@ -19,6 +19,7 @@ namespace trace_event {
 
 // Define all strings once, because the pseudo stack requires pointer equality,
 // and string interning is unreliable.
+const char kThreadName[] = "TestThread";
 const char kCupcake[] = "Cupcake";
 const char kDonut[] = "Donut";
 const char kEclair[] = "Eclair";
@@ -49,12 +50,14 @@ void AssertBacktraceEquals(const StackFrame(&expected_backtrace)[N]) {
   ASSERT_EQ(expected, expected_bottom);
 }
 
-void AssertBacktraceEmpty() {
+void AssertBacktraceContainsOnlyThreadName() {
+  StackFrame t = StackFrame::FromThreadName(kThreadName);
   AllocationContext ctx =
       AllocationContextTracker::GetInstanceForCurrentThread()
           ->GetContextSnapshot();
 
-  ASSERT_EQ(0u, ctx.backtrace.frame_count);
+  ASSERT_EQ(1u, ctx.backtrace.frame_count);
+  ASSERT_EQ(t, ctx.backtrace.frames[0]);
 }
 
 class AllocationContextTrackerTest : public testing::Test {
@@ -64,6 +67,7 @@ class AllocationContextTrackerTest : public testing::Test {
     TraceLog::GetInstance()->SetEnabled(config, TraceLog::RECORDING_MODE);
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::PSEUDO_STACK);
+    AllocationContextTracker::SetCurrentThreadName(kThreadName);
   }
 
   void TearDown() override {
@@ -75,21 +79,22 @@ class AllocationContextTrackerTest : public testing::Test {
 
 // Check that |TRACE_EVENT| macros push and pop to the pseudo stack correctly.
 TEST_F(AllocationContextTrackerTest, PseudoStackScopedTrace) {
+  StackFrame t = StackFrame::FromThreadName(kThreadName);
   StackFrame c = StackFrame::FromTraceEventName(kCupcake);
   StackFrame d = StackFrame::FromTraceEventName(kDonut);
   StackFrame e = StackFrame::FromTraceEventName(kEclair);
   StackFrame f = StackFrame::FromTraceEventName(kFroyo);
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   {
     TRACE_EVENT0("Testing", kCupcake);
-    StackFrame frame_c[] = {c};
+    StackFrame frame_c[] = {t, c};
     AssertBacktraceEquals(frame_c);
 
     {
       TRACE_EVENT0("Testing", kDonut);
-      StackFrame frame_cd[] = {c, d};
+      StackFrame frame_cd[] = {t, c, d};
       AssertBacktraceEquals(frame_cd);
     }
 
@@ -97,38 +102,39 @@ TEST_F(AllocationContextTrackerTest, PseudoStackScopedTrace) {
 
     {
       TRACE_EVENT0("Testing", kEclair);
-      StackFrame frame_ce[] = {c, e};
+      StackFrame frame_ce[] = {t, c, e};
       AssertBacktraceEquals(frame_ce);
     }
 
     AssertBacktraceEquals(frame_c);
   }
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   {
     TRACE_EVENT0("Testing", kFroyo);
-    StackFrame frame_f[] = {f};
+    StackFrame frame_f[] = {t, f};
     AssertBacktraceEquals(frame_f);
   }
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 }
 
 // Same as |PseudoStackScopedTrace|, but now test the |TRACE_EVENT_BEGIN| and
 // |TRACE_EVENT_END| macros.
 TEST_F(AllocationContextTrackerTest, PseudoStackBeginEndTrace) {
+  StackFrame t = StackFrame::FromThreadName(kThreadName);
   StackFrame c = StackFrame::FromTraceEventName(kCupcake);
   StackFrame d = StackFrame::FromTraceEventName(kDonut);
   StackFrame e = StackFrame::FromTraceEventName(kEclair);
   StackFrame f = StackFrame::FromTraceEventName(kFroyo);
 
-  StackFrame frame_c[] = {c};
-  StackFrame frame_cd[] = {c, d};
-  StackFrame frame_ce[] = {c, e};
-  StackFrame frame_f[] = {f};
+  StackFrame frame_c[] = {t, c};
+  StackFrame frame_cd[] = {t, c, d};
+  StackFrame frame_ce[] = {t, c, e};
+  StackFrame frame_f[] = {t, f};
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   TRACE_EVENT_BEGIN0("Testing", kCupcake);
   AssertBacktraceEquals(frame_c);
@@ -146,27 +152,28 @@ TEST_F(AllocationContextTrackerTest, PseudoStackBeginEndTrace) {
   AssertBacktraceEquals(frame_c);
   TRACE_EVENT_END0("Testing", kCupcake);
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   TRACE_EVENT_BEGIN0("Testing", kFroyo);
   AssertBacktraceEquals(frame_f);
   TRACE_EVENT_END0("Testing", kFroyo);
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 }
 
 TEST_F(AllocationContextTrackerTest, PseudoStackMixedTrace) {
+  StackFrame t = StackFrame::FromThreadName(kThreadName);
   StackFrame c = StackFrame::FromTraceEventName(kCupcake);
   StackFrame d = StackFrame::FromTraceEventName(kDonut);
   StackFrame e = StackFrame::FromTraceEventName(kEclair);
   StackFrame f = StackFrame::FromTraceEventName(kFroyo);
 
-  StackFrame frame_c[] = {c};
-  StackFrame frame_cd[] = {c, d};
-  StackFrame frame_e[] = {e};
-  StackFrame frame_ef[] = {e, f};
+  StackFrame frame_c[] = {t, c};
+  StackFrame frame_cd[] = {t, c, d};
+  StackFrame frame_e[] = {t, e};
+  StackFrame frame_ef[] = {t, e, f};
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   TRACE_EVENT_BEGIN0("Testing", kCupcake);
   AssertBacktraceEquals(frame_c);
@@ -178,7 +185,7 @@ TEST_F(AllocationContextTrackerTest, PseudoStackMixedTrace) {
 
   AssertBacktraceEquals(frame_c);
   TRACE_EVENT_END0("Testing", kCupcake);
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 
   {
     TRACE_EVENT0("Testing", kEclair);
@@ -190,15 +197,15 @@ TEST_F(AllocationContextTrackerTest, PseudoStackMixedTrace) {
     AssertBacktraceEquals(frame_e);
   }
 
-  AssertBacktraceEmpty();
+  AssertBacktraceContainsOnlyThreadName();
 }
 
 TEST_F(AllocationContextTrackerTest, BacktraceTakesTop) {
+  StackFrame t = StackFrame::FromThreadName(kThreadName);
   StackFrame c = StackFrame::FromTraceEventName(kCupcake);
   StackFrame f = StackFrame::FromTraceEventName(kFroyo);
 
-  // Push 12 events onto the pseudo stack.
-  TRACE_EVENT0("Testing", kCupcake);
+  // Push 11 events onto the pseudo stack.
   TRACE_EVENT0("Testing", kCupcake);
   TRACE_EVENT0("Testing", kCupcake);
   TRACE_EVENT0("Testing", kCupcake);
@@ -220,7 +227,8 @@ TEST_F(AllocationContextTrackerTest, BacktraceTakesTop) {
             ->GetContextSnapshot();
 
     // The pseudo stack relies on pointer equality, not deep string comparisons.
-    ASSERT_EQ(c, ctx.backtrace.frames[0]);
+    ASSERT_EQ(t, ctx.backtrace.frames[0]);
+    ASSERT_EQ(c, ctx.backtrace.frames[1]);
     ASSERT_EQ(f, ctx.backtrace.frames[11]);
   }
 
@@ -228,31 +236,10 @@ TEST_F(AllocationContextTrackerTest, BacktraceTakesTop) {
     AllocationContext ctx =
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->GetContextSnapshot();
-    ASSERT_EQ(c, ctx.backtrace.frames[0]);
+    ASSERT_EQ(t, ctx.backtrace.frames[0]);
+    ASSERT_EQ(c, ctx.backtrace.frames[1]);
     ASSERT_EQ(f, ctx.backtrace.frames[11]);
   }
-}
-
-TEST_F(AllocationContextTrackerTest, SetCurrentThreadName) {
-  TRACE_EVENT0("Testing", kCupcake);
-
-  // Test if the thread name is inserted into backtrace.
-  const char kThread1[] = "thread1";
-  AllocationContextTracker::SetCurrentThreadName(kThread1);
-  AllocationContext ctx1 =
-      AllocationContextTracker::GetInstanceForCurrentThread()
-          ->GetContextSnapshot();
-  ASSERT_EQ(StackFrame::FromThreadName(kThread1), ctx1.backtrace.frames[0]);
-  ASSERT_EQ(StackFrame::FromTraceEventName(kCupcake), ctx1.backtrace.frames[1]);
-
-  // Test if the thread name is reset.
-  const char kThread2[] = "thread2";
-  AllocationContextTracker::SetCurrentThreadName(kThread2);
-  AllocationContext ctx2 =
-      AllocationContextTracker::GetInstanceForCurrentThread()
-          ->GetContextSnapshot();
-  ASSERT_EQ(StackFrame::FromThreadName(kThread2), ctx2.backtrace.frames[0]);
-  ASSERT_EQ(StackFrame::FromTraceEventName(kCupcake), ctx2.backtrace.frames[1]);
 }
 
 TEST_F(AllocationContextTrackerTest, TrackTaskContext) {

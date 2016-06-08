@@ -8,6 +8,8 @@
 
 namespace net {
 
+SignedCertificateTimestampAndStatus::SignedCertificateTimestampAndStatus() {}
+
 SignedCertificateTimestampAndStatus::SignedCertificateTimestampAndStatus(
     const scoped_refptr<ct::SignedCertificateTimestamp>& sct,
     const ct::SCTVerifyStatus status)

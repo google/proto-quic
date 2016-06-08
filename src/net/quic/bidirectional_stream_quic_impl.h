@@ -8,12 +8,15 @@
 #include <stdint.h>
 
 #include <memory>
+#include <vector>
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "net/http/bidirectional_stream_impl.h"
+#include "net/log/net_log.h"
 #include "net/quic/quic_chromium_client_session.h"
 #include "net/quic/quic_chromium_client_stream.h"
+#include "net/spdy/spdy_header_block.h"
 
 namespace base {
 class Timer;
@@ -22,9 +25,7 @@ class Timer;
 namespace net {
 
 struct BidirectionalStreamRequestInfo;
-class BoundNetLog;
 class IOBuffer;
-class SpdyHeaderBlock;
 
 class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
     : public BidirectionalStreamImpl,
@@ -39,12 +40,15 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // BidirectionalStreamImpl implementation:
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
-             bool disable_auto_flush,
+             bool send_request_headers_automatically,
              BidirectionalStreamImpl::Delegate* delegate,
              std::unique_ptr<base::Timer> timer) override;
+  void SendRequestHeaders() override;
   int ReadData(IOBuffer* buffer, int buffer_len) override;
-  void SendData(IOBuffer* data, int length, bool end_stream) override;
-  void SendvData(const std::vector<IOBuffer*>& buffers,
+  void SendData(const scoped_refptr<IOBuffer>& data,
+                int length,
+                bool end_stream) override;
+  void SendvData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
                  const std::vector<int>& lengths,
                  bool end_stream) override;
   void Cancel() override;
@@ -69,8 +73,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   void OnSendDataComplete(int rv);
   void OnReadDataComplete(int rv);
 
-  // Helper method to send request headers.
-  void SendRequestHeaders();
   // Notifies the delegate of an error.
   void NotifyError(int error);
   // Resets the stream and ensures that |delegate_| won't be called back.
@@ -109,7 +111,11 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // Indicates whether initial headers have been received.
   bool has_received_headers_;
 
-  bool disable_auto_flush_;
+  // Whether to automatically send request headers when stream is negotiated.
+  // If false, headers will not be sent until SendRequestHeaders() is called or
+  // until next SendData/SendvData, during which QUIC will try to combine header
+  // frame with data frame in the same packet if possible.
+  bool send_request_headers_automatically_;
 
   base::WeakPtrFactory<BidirectionalStreamQuicImpl> weak_factory_;
 

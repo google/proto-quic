@@ -459,6 +459,31 @@ TEST_P(QuicCryptoServerStreamTest, OnlySendSCUPAfterHandshakeComplete) {
   EXPECT_EQ(0, server_stream()->NumServerConfigUpdateMessagesSent());
 }
 
+TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
+  FLAGS_quic_use_hash_in_scup = true;
+  Initialize();
+
+  InitializeFakeClient(/* supports_stateless_rejects= */ false);
+
+  // Do a first handshake in order to prime the client config with the server's
+  // information.
+  AdvanceHandshakeWithFakeClient();
+
+  // Now do another handshake, with the blocking SHLO connection option.
+  InitializeServer();
+  InitializeFakeClient(/* supports_stateless_rejects= */ false);
+  AdvanceHandshakeWithFakeClient();
+
+  // Send a SCUP message and ensure that the client was able to verify it.
+  EXPECT_CALL(*client_connection_, CloseConnection(_, _, _)).Times(0);
+  server_stream()->SendServerConfigUpdate(nullptr);
+  CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(), 1,
+                                    server_connection_, server_stream(), 1);
+
+  EXPECT_EQ(1, server_stream()->NumServerConfigUpdateMessagesSent());
+  EXPECT_EQ(1, client_stream()->num_scup_messages_received());
+}
+
 TEST_P(QuicCryptoServerStreamTest, DoesPeerSupportStatelessRejects) {
   Initialize();
 

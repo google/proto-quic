@@ -1,3 +1,17 @@
+// Copyright (c) 2016, Google Inc.
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+// OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+
 package runner
 
 import (
@@ -901,11 +915,17 @@ var testCipherSuites = []struct {
 	{"ECDHE-RSA-CHACHA20-POLY1305", TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256},
 	{"ECDHE-RSA-CHACHA20-POLY1305-OLD", TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD},
 	{"ECDHE-RSA-RC4-SHA", TLS_ECDHE_RSA_WITH_RC4_128_SHA},
+	{"CECPQ1-RSA-CHACHA20-POLY1305-SHA256", TLS_CECPQ1_RSA_WITH_CHACHA20_POLY1305_SHA256},
+	{"CECPQ1-ECDSA-CHACHA20-POLY1305-SHA256", TLS_CECPQ1_ECDSA_WITH_CHACHA20_POLY1305_SHA256},
+	{"CECPQ1-RSA-AES256-GCM-SHA384", TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384},
+	{"CECPQ1-ECDSA-AES256-GCM-SHA384", TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384},
 	{"PSK-AES128-CBC-SHA", TLS_PSK_WITH_AES_128_CBC_SHA},
 	{"PSK-AES256-CBC-SHA", TLS_PSK_WITH_AES_256_CBC_SHA},
 	{"ECDHE-PSK-AES128-CBC-SHA", TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA},
 	{"ECDHE-PSK-AES256-CBC-SHA", TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA},
 	{"ECDHE-PSK-CHACHA20-POLY1305", TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256},
+	{"ECDHE-PSK-AES128-GCM-SHA256", TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256},
+	{"ECDHE-PSK-AES256-GCM-SHA384", TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384},
 	{"PSK-RC4-SHA", TLS_PSK_WITH_RC4_128_SHA},
 	{"RC4-MD5", TLS_RSA_WITH_RC4_128_MD5},
 	{"RC4-SHA", TLS_RSA_WITH_RC4_128_SHA},
@@ -1391,7 +1411,7 @@ func addBasicTests() {
 		},
 		{
 			name:          "DisableEverything",
-			flags:         []string{"-no-tls12", "-no-tls11", "-no-tls1", "-no-ssl3"},
+			flags:         []string{"-no-tls13", "-no-tls12", "-no-tls11", "-no-tls1", "-no-ssl3"},
 			shouldFail:    true,
 			expectedError: ":WRONG_SSL_VERSION:",
 		},
@@ -2061,6 +2081,19 @@ func addBasicTests() {
 			shimShutsDown: true,
 		},
 		{
+			name: "Unclean-Shutdown-Alert",
+			config: Config{
+				Bugs: ProtocolBugs{
+					SendAlertOnShutdown: alertDecompressionFailure,
+					ExpectCloseNotify:   true,
+				},
+			},
+			shimShutsDown: true,
+			flags:         []string{"-check-close-notify"},
+			shouldFail:    true,
+			expectedError: ":SSLV3_ALERT_DECOMPRESSION_FAILURE:",
+		},
+		{
 			name: "LargePlaintext",
 			config: Config{
 				Bugs: ProtocolBugs{
@@ -2267,6 +2300,10 @@ func addCipherSuiteTests() {
 		if hasComponent(suite.name, "NULL") {
 			// NULL ciphers must be explicitly enabled.
 			flags = append(flags, "-cipher", "DEFAULT:NULL-SHA")
+		}
+		if hasComponent(suite.name, "CECPQ1") {
+			// CECPQ1 ciphers must be explicitly enabled.
+			flags = append(flags, "-cipher", "DEFAULT:kCECPQ1")
 		}
 
 		for _, ver := range tlsVersions {
@@ -2711,6 +2748,40 @@ func addClientAuthTests() {
 		},
 		// Setting SSL_VERIFY_PEER allows anonymous clients.
 		flags:         []string{"-verify-peer"},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_MESSAGE:",
+	})
+
+	// Client auth is only legal in certificate-based ciphers.
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "ClientAuth-PSK",
+		config: Config{
+			CipherSuites: []uint16{TLS_PSK_WITH_AES_128_CBC_SHA},
+			PreSharedKey: []byte("secret"),
+			ClientAuth:   RequireAnyClientCert,
+		},
+		flags: []string{
+			"-cert-file", path.Join(*resourceDir, rsaCertificateFile),
+			"-key-file", path.Join(*resourceDir, rsaKeyFile),
+			"-psk", "secret",
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_MESSAGE:",
+	})
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "ClientAuth-ECDHE_PSK",
+		config: Config{
+			CipherSuites: []uint16{TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA},
+			PreSharedKey: []byte("secret"),
+			ClientAuth:   RequireAnyClientCert,
+		},
+		flags: []string{
+			"-cert-file", path.Join(*resourceDir, rsaCertificateFile),
+			"-key-file", path.Join(*resourceDir, rsaKeyFile),
+			"-psk", "secret",
+		},
 		shouldFail:    true,
 		expectedError: ":UNEXPECTED_MESSAGE:",
 	})
@@ -3879,6 +3950,20 @@ func addExtensionTests() {
 		resumeSession: true,
 	})
 	testCases = append(testCases, testCase{
+		name: "SendSCTListOnResume",
+		config: Config{
+			Bugs: ProtocolBugs{
+				SendSCTListOnResume: []byte("bogus"),
+			},
+		},
+		flags: []string{
+			"-enable-signed-cert-timestamps",
+			"-expect-signed-cert-timestamps",
+			base64.StdEncoding.EncodeToString(testSCTList),
+		},
+		resumeSession: true,
+	})
+	testCases = append(testCases, testCase{
 		name:     "SignedCertificateTimestampList-Server",
 		testType: serverTest,
 		flags: []string{
@@ -4583,6 +4668,24 @@ var timeouts = []time.Duration{
 	60 * time.Second,
 }
 
+// shortTimeouts is an alternate set of timeouts which would occur if the
+// initial timeout duration was set to 250ms.
+var shortTimeouts = []time.Duration{
+	250 * time.Millisecond,
+	500 * time.Millisecond,
+	1 * time.Second,
+	2 * time.Second,
+	4 * time.Second,
+	8 * time.Second,
+	16 * time.Second,
+	32 * time.Second,
+	60 * time.Second,
+	60 * time.Second,
+	60 * time.Second,
+	60 * time.Second,
+	60 * time.Second,
+}
+
 func addDTLSRetransmitTests() {
 	// Test that this is indeed the timeout schedule. Stress all
 	// four patterns of handshake.
@@ -4658,6 +4761,31 @@ func addDTLSRetransmitTests() {
 			},
 		},
 		flags: []string{"-async"},
+	})
+
+	// Test the timeout schedule when a shorter initial timeout duration is set.
+	testCases = append(testCases, testCase{
+		protocol: dtls,
+		name:     "DTLS-Retransmit-Short-Client",
+		config: Config{
+			Bugs: ProtocolBugs{
+				TimeoutSchedule: shortTimeouts[:len(shortTimeouts)-1],
+			},
+		},
+		resumeSession: true,
+		flags:         []string{"-async", "-initial-timeout-duration-ms", "250"},
+	})
+	testCases = append(testCases, testCase{
+		protocol: dtls,
+		testType: serverTest,
+		name:     "DTLS-Retransmit-Short-Server",
+		config: Config{
+			Bugs: ProtocolBugs{
+				TimeoutSchedule: shortTimeouts[:len(shortTimeouts)-1],
+			},
+		},
+		resumeSession: true,
+		flags:         []string{"-async", "-initial-timeout-duration-ms", "250"},
 	})
 }
 

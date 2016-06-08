@@ -129,6 +129,10 @@ const struct CipherSuite kCipherSuites[] = {
     {0xc3, 0x85b},     // TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA256
     {0xc4, 0xa5b},     // TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256
     {0xc5, 0xc5b},     // TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA256
+    {0x16b7, 0x128f},  // TLS_CECPQ1_RSA_WITH_CHACHA20_POLY1305_SHA256 (exper)
+    {0x16b8, 0x138f},  // TLS_CECPQ1_ECDSA_WITH_CHACHA20_POLY1305_SHA256 (exper)
+    {0x16b9, 0x1277},  // TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384 (exper)
+    {0x16ba, 0x1377},  // TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384 (exper)
     {0xc001, 0xd02},   // TLS_ECDH_ECDSA_WITH_NULL_SHA
     {0xc002, 0xd12},   // TLS_ECDH_ECDSA_WITH_RC4_128_SHA
     {0xc003, 0xd3a},   // TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
@@ -206,7 +210,7 @@ const struct CipherSuite kCipherSuites[] = {
 
 const struct {
   char name[15];
-} kKeyExchangeNames[18] = {
+} kKeyExchangeNames[20] = {
   {"NULL"},  // 0
   {"RSA"},  // 1
   {"RSA_EXPORT"},  // 2
@@ -225,6 +229,8 @@ const struct {
   {"ECDH_RSA"},  // 15
   {"ECDHE_RSA"},  // 16
   {"ECDH_anon"},  // 17
+  {"CECPQ1_RSA"},  // 18
+  {"CECPQ1_ECDSA"},  // 19
 };
 
 const struct {
@@ -370,6 +376,8 @@ bool IsSecureTLSCipherSuite(uint16_t cipher_suite) {
   switch (key_exchange) {
     case 14:  // ECDHE_ECDSA
     case 16:  // ECDHE_RSA
+    case 18:  // CECPQ1_RSA
+    case 19:  // CECPQ1_ECDSA
       break;
     default:
       return false;
@@ -401,6 +409,8 @@ bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite) {
     case 10:  // DHE_RSA
     case 14:  // ECDHE_ECDSA
     case 16:  // ECDHE_RSA
+    case 18:  // CECPQ1_RSA
+    case 19:  // CECPQ1_ECDSA
       break;
     default:
       return false;

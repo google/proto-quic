@@ -45,15 +45,17 @@ void EnsureParsingCertificateSucceeds(const std::string& file_name) {
   ASSERT_TRUE(ReadTestDataFromPemFile(GetFilePath(file_name), mappings));
 
   // Parsing the certificate should succeed.
-  ParsedCertificate parsed;
-  ASSERT_TRUE(ParseCertificate(der::Input(&data), &parsed));
+  der::Input tbs_certificate_tlv;
+  der::Input signature_algorithm_tlv;
+  der::BitString signature_value;
+  ASSERT_TRUE(ParseCertificate(der::Input(&data), &tbs_certificate_tlv,
+                               &signature_algorithm_tlv, &signature_value));
 
-  // Ensure that the ParsedCertificate matches expectations.
-  EXPECT_EQ(0, parsed.signature_value.unused_bits());
-  EXPECT_EQ(der::Input(&expected_signature), parsed.signature_value.bytes());
-  EXPECT_EQ(der::Input(&expected_signature_algorithm),
-            parsed.signature_algorithm_tlv);
-  EXPECT_EQ(der::Input(&expected_tbs_certificate), parsed.tbs_certificate_tlv);
+  // Ensure that the parsed certificate matches expectations.
+  EXPECT_EQ(0, signature_value.unused_bits());
+  EXPECT_EQ(der::Input(&expected_signature), signature_value.bytes());
+  EXPECT_EQ(der::Input(&expected_signature_algorithm), signature_algorithm_tlv);
+  EXPECT_EQ(der::Input(&expected_tbs_certificate), tbs_certificate_tlv);
 }
 
 // Loads certificate data from the PEM file |file_name| and verifies that the
@@ -68,8 +70,11 @@ void EnsureParsingCertificateFails(const std::string& file_name) {
   ASSERT_TRUE(ReadTestDataFromPemFile(GetFilePath(file_name), mappings));
 
   // Parsing the Certificate should fail.
-  ParsedCertificate parsed;
-  ASSERT_FALSE(ParseCertificate(der::Input(&data), &parsed));
+  der::Input tbs_certificate_tlv;
+  der::Input signature_algorithm_tlv;
+  der::BitString signature_value;
+  ASSERT_FALSE(ParseCertificate(der::Input(&data), &tbs_certificate_tlv,
+                                &signature_algorithm_tlv, &signature_value));
 }
 
 // Tests parsing a Certificate.

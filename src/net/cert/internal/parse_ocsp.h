@@ -264,18 +264,19 @@ NET_EXPORT_PRIVATE bool ParseOCSPResponseData(const der::Input& raw_tlv,
 NET_EXPORT_PRIVATE bool ParseOCSPResponse(const der::Input& raw_tlv,
                                           OCSPResponse* out);
 
-// Checks the certificate status of |cert| based on the OCSPResponseData
-// |response_data| and issuer |issuer| and sets the results in |out|. In the
-// case that there are multiple responses for a given certificate, as a result
-// of caching or performance (RFC 6960, 4.2.2.3), the strictest response is
-// returned (REVOKED > UNKNOWN > GOOD).
+// Checks the certificate status of |cert_tbs_certificate_tlv| based on the
+// OCSPResponseData |response_data| and issuer |issuer_tbs_certificate_tlv| and
+// sets the results in |out|. In the case that there are multiple responses for
+// a given certificate, as a result of caching or performance (RFC 6960,
+// 4.2.2.3), the strictest response is returned (REVOKED > UNKNOWN > GOOD).
 //
 // On failure |out| has an undefined state. Some of its fields may have been
 // updated during parsing, whereas others may not have been changed.
-NET_EXPORT_PRIVATE bool GetOCSPCertStatus(const OCSPResponseData& response_data,
-                                          const ParsedCertificate& issuer,
-                                          const ParsedCertificate& cert,
-                                          OCSPCertStatus* out);
+NET_EXPORT_PRIVATE bool GetOCSPCertStatus(
+    const OCSPResponseData& response_data,
+    const der::Input& issuer_tbs_certificate_tlv,
+    const der::Input& cert_tbs_certificate_tlv,
+    OCSPCertStatus* out);
 
 }  // namespace net
 

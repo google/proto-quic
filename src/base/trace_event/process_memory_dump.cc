@@ -12,6 +12,7 @@
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/heap_profiler_heap_dump_writer.h"
+#include "base/trace_event/memory_infra_background_whitelist.h"
 #include "base/trace_event/process_memory_totals.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "build/build_config.h"
@@ -47,6 +48,9 @@ size_t GetSystemPageCount(size_t mapped_size, size_t page_size) {
 #endif
 
 }  // namespace
+
+// static
+bool ProcessMemoryDump::is_black_hole_non_fatal_for_testing_ = false;
 
 #if defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 // static
@@ -148,10 +152,12 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 
 ProcessMemoryDump::ProcessMemoryDump(
-    scoped_refptr<MemoryDumpSessionState> session_state)
+    scoped_refptr<MemoryDumpSessionState> session_state,
+    const MemoryDumpArgs& dump_args)
     : has_process_totals_(false),
       has_process_mmaps_(false),
-      session_state_(std::move(session_state)) {}
+      session_state_(std::move(session_state)),
+      dump_args_(dump_args) {}
 
 ProcessMemoryDump::~ProcessMemoryDump() {}
 
@@ -170,6 +176,13 @@ MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
 
 MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
     std::unique_ptr<MemoryAllocatorDump> mad) {
+  // In background mode return the black hole dump, if invalid dump name is
+  // given.
+  if (dump_args_.level_of_detail == MemoryDumpLevelOfDetail::BACKGROUND &&
+      !IsMemoryAllocatorDumpNameWhitelisted(mad->absolute_name())) {
+    return GetBlackHoleMad();
+  }
+
   auto insertion_result = allocator_dumps_.insert(
       std::make_pair(mad->absolute_name(), std::move(mad)));
   MemoryAllocatorDump* inserted_mad = insertion_result.first->second.get();
@@ -181,7 +194,11 @@ MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
 MemoryAllocatorDump* ProcessMemoryDump::GetAllocatorDump(
     const std::string& absolute_name) const {
   auto it = allocator_dumps_.find(absolute_name);
-  return it == allocator_dumps_.end() ? nullptr : it->second.get();
+  if (it != allocator_dumps_.end())
+    return it->second.get();
+  if (black_hole_mad_)
+    return black_hole_mad_.get();
+  return nullptr;
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::GetOrCreateAllocatorDump(
@@ -192,6 +209,10 @@ MemoryAllocatorDump* ProcessMemoryDump::GetOrCreateAllocatorDump(
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateSharedGlobalAllocatorDump(
     const MemoryAllocatorDumpGuid& guid) {
+  // Global dumps are disabled in background mode.
+  if (dump_args_.level_of_detail == MemoryDumpLevelOfDetail::BACKGROUND)
+    return GetBlackHoleMad();
+
   // A shared allocator dump can be shared within a process and the guid could
   // have been created already.
   MemoryAllocatorDump* mad = GetSharedGlobalAllocatorDump(guid);
@@ -206,6 +227,10 @@ MemoryAllocatorDump* ProcessMemoryDump::CreateSharedGlobalAllocatorDump(
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateWeakSharedGlobalAllocatorDump(
     const MemoryAllocatorDumpGuid& guid) {
+  // Global dumps are disabled in background mode.
+  if (dump_args_.level_of_detail == MemoryDumpLevelOfDetail::BACKGROUND)
+    return GetBlackHoleMad();
+
   MemoryAllocatorDump* mad = GetSharedGlobalAllocatorDump(guid);
   if (mad)
     return mad;
@@ -219,21 +244,16 @@ MemoryAllocatorDump* ProcessMemoryDump::GetSharedGlobalAllocatorDump(
   return GetAllocatorDump(GetSharedGlobalAllocatorDumpName(guid));
 }
 
-void ProcessMemoryDump::AddHeapDump(const std::string& absolute_name,
-                                    std::unique_ptr<TracedValue> heap_dump) {
-  DCHECK_EQ(0ul, heap_dumps_.count(absolute_name));
-  heap_dumps_[absolute_name] = std::move(heap_dump);
-}
-
 void ProcessMemoryDump::DumpHeapUsage(
     const base::hash_map<base::trace_event::AllocationContext,
         base::trace_event::AllocationMetrics>& metrics_by_context,
     base::trace_event::TraceEventMemoryOverhead& overhead,
     const char* allocator_name) {
   if (!metrics_by_context.empty()) {
+    DCHECK_EQ(0ul, heap_dumps_.count(allocator_name));
     std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
         metrics_by_context, *session_state());
-    AddHeapDump(allocator_name, std::move(heap_dump));
+    heap_dumps_[allocator_name] = std::move(heap_dump);
   }
 
   std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
@@ -333,9 +353,20 @@ void ProcessMemoryDump::AddOwnershipEdge(
 
 void ProcessMemoryDump::AddSuballocation(const MemoryAllocatorDumpGuid& source,
                                          const std::string& target_node_name) {
+  // Do not create new dumps for suballocations in background mode.
+  if (dump_args_.level_of_detail == MemoryDumpLevelOfDetail::BACKGROUND)
+    return;
+
   std::string child_mad_name = target_node_name + "/__" + source.ToString();
   MemoryAllocatorDump* target_child_mad = CreateAllocatorDump(child_mad_name);
   AddOwnershipEdge(source, target_child_mad->guid());
+}
+
+MemoryAllocatorDump* ProcessMemoryDump::GetBlackHoleMad() {
+  DCHECK(is_black_hole_non_fatal_for_testing_);
+  if (!black_hole_mad_)
+    black_hole_mad_.reset(new MemoryAllocatorDump("discarded", this));
+  return black_hole_mad_.get();
 }
 
 }  // namespace trace_event

@@ -8,8 +8,10 @@
 #include <stdint.h>
 
 #include <memory>
+#include <vector>
 
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/bidirectional_stream_request_info.h"
@@ -40,12 +42,15 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   // BidirectionalStreamImpl implementation:
   void Start(const BidirectionalStreamRequestInfo* request_info,
              const BoundNetLog& net_log,
-             bool disable_auto_flush,
+             bool send_request_headers_automatically,
              BidirectionalStreamImpl::Delegate* delegate,
              std::unique_ptr<base::Timer> timer) override;
+  void SendRequestHeaders() override;
   int ReadData(IOBuffer* buf, int buf_len) override;
-  void SendData(IOBuffer* data, int length, bool end_stream) override;
-  void SendvData(const std::vector<IOBuffer*>& buffers,
+  void SendData(const scoped_refptr<IOBuffer>& data,
+                int length,
+                bool end_stream) override;
+  void SendvData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
                  const std::vector<int>& lengths,
                  bool end_stream) override;
   void Cancel() override;
@@ -63,8 +68,11 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   void OnClose(int status) override;
 
  private:
-  void SendRequestHeaders();
+  int SendRequestHeadersHelper();
   void OnStreamInitialized(int rv);
+  // Notifies delegate of an error.
+  void NotifyError(int rv);
+  void ResetStream();
   void ScheduleBufferedRead();
   void DoBufferedRead();
   bool ShouldWaitForMoreBufferedData() const;
@@ -96,10 +104,8 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   // After |stream_| has been closed, this keeps track of the total number of
   // bytes sent over the network for |stream_| while it was open.
   int64_t closed_stream_sent_bytes_;
-  // Whether auto flush is disabled.
-  bool disable_auto_flush_;
-  // Only relevant when |disable_auto_flush_| is true;
   // This is the combined buffer of buffers passed in through SendvData.
+  // Keep a reference here so it is alive until OnDataSent is invoked.
   scoped_refptr<IOBuffer> pending_combined_buffer_;
 
   base::WeakPtrFactory<BidirectionalStreamSpdyImpl> weak_factory_;

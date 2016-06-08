@@ -21,10 +21,9 @@
 #include "net/quic/quic_framer.h"
 #include "net/quic/quic_packet_writer.h"
 #include "net/quic/quic_protocol.h"
+#include "net/quic/quic_server_session_base.h"
 
 namespace net {
-
-class QuicServerSessionVisitor;
 
 namespace test {
 class QuicTimeWaitListManagerPeer;
@@ -46,7 +45,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   // helper - provides a clock (Owned by the dispatcher)
   // alarm_factory - used to run clean up alarms. (Owned by the dispatcher)
   QuicTimeWaitListManager(QuicPacketWriter* writer,
-                          QuicServerSessionVisitor* visitor,
+                          QuicServerSessionBase::Visitor* visitor,
                           QuicConnectionHelperInterface* helper,
                           QuicAlarmFactory* alarm_factory);
   ~QuicTimeWaitListManager() override;
@@ -195,7 +194,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   QuicPacketWriter* writer_;
 
   // Interface that manages blocked writers.
-  QuicServerSessionVisitor* visitor_;
+  QuicServerSessionBase::Visitor* visitor_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicTimeWaitListManager);
 };

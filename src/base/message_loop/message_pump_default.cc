@@ -16,8 +16,8 @@ namespace base {
 
 MessagePumpDefault::MessagePumpDefault()
     : keep_running_(true),
-      event_(false, false) {
-}
+      event_(WaitableEvent::ResetPolicy::AUTOMATIC,
+             WaitableEvent::InitialState::NOT_SIGNALED) {}
 
 MessagePumpDefault::~MessagePumpDefault() {
 }

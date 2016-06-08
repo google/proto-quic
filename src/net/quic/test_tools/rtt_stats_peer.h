@@ -14,10 +14,6 @@ namespace test {
 
 class RttStatsPeer {
  public:
-  static QuicTime::Delta GetHalfWindowRtt(const RttStats* rtt_stats);
-
-  static QuicTime::Delta GetQuarterWindowRtt(const RttStats* rtt_stats);
-
   static void SetSmoothedRtt(RttStats* rtt_stats, QuicTime::Delta rtt_ms);
 
   static void SetMinRtt(RttStats* rtt_stats, QuicTime::Delta rtt_ms);

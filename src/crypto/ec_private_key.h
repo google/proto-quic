@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -34,10 +35,19 @@ class CRYPTO_EXPORT ECPrivateKey {
   // TODO(mattm): Add a curve parameter.
   static ECPrivateKey* Create();
 
+  // Create a new instance by importing an existing private key. The format is
+  // an ASN.1-encoded PrivateKeyInfo block from PKCS #8. This can return
+  // nullptr if initialization fails.
+  static std::unique_ptr<ECPrivateKey> CreateFromPrivateKeyInfo(
+      const std::vector<uint8_t>& input);
+
   // Creates a new instance by importing an existing key pair.
   // The key pair is given as an ASN.1-encoded PKCS #8 EncryptedPrivateKeyInfo
   // block and an X.509 SubjectPublicKeyInfo block.
   // Returns NULL if initialization fails.
+  //
+  // This function is deprecated. Use CreateFromPrivateKeyInfo for new code.
+  // See https://crbug.com/603319.
   static ECPrivateKey* CreateFromEncryptedPrivateKeyInfo(
       const std::string& password,
       const std::vector<uint8_t>& encrypted_private_key_info,
@@ -48,24 +58,26 @@ class CRYPTO_EXPORT ECPrivateKey {
 
   EVP_PKEY* key() { return key_; }
 
+  // Exports the private key to a PKCS #8 PrivateKeyInfo block.
+  bool ExportPrivateKey(std::vector<uint8_t>* output) const;
+
   // Exports the private key as an ASN.1-encoded PKCS #8 EncryptedPrivateKeyInfo
   // block and the public key as an X.509 SubjectPublicKeyInfo block.
   // The |password| and |iterations| are used as inputs to the key derivation
   // function for generating the encryption key.  PKCS #5 recommends a minimum
   // of 1000 iterations, on modern systems a larger value may be preferrable.
+  //
+  // This function is deprecated. Use ExportPrivateKey for new code. See
+  // https://crbug.com/603319.
   bool ExportEncryptedPrivateKey(const std::string& password,
                                  int iterations,
-                                 std::vector<uint8_t>* output);
+                                 std::vector<uint8_t>* output) const;
 
   // Exports the public key to an X.509 SubjectPublicKeyInfo block.
-  bool ExportPublicKey(std::vector<uint8_t>* output);
+  bool ExportPublicKey(std::vector<uint8_t>* output) const;
 
   // Exports the public key as an EC point in the uncompressed point format.
-  bool ExportRawPublicKey(std::string* output);
-
-  // Exports private key data for testing. The format of data stored into output
-  // doesn't matter other than that it is consistent for the same key.
-  bool ExportValueForTesting(std::vector<uint8_t>* output);
+  bool ExportRawPublicKey(std::string* output) const;
 
  private:
   // Constructor is private. Use one of the Create*() methods above instead.

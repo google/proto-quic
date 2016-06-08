@@ -413,6 +413,7 @@ crypto_sources_mac_x86_64 = [
   "mac-x86_64/crypto/sha/sha1-x86_64.S",
   "mac-x86_64/crypto/sha/sha256-x86_64.S",
   "mac-x86_64/crypto/sha/sha512-x86_64.S",
+  "src/crypto/curve25519/asm/x25519-asm-x86_64.S",
 ]
 
 crypto_sources_win_x86 = [
@@ -457,6 +458,7 @@ fuzzers = [
   "client",
   "pkcs8",
   "privkey",
+  "read_pem",
   "server",
   "spki",
 ]

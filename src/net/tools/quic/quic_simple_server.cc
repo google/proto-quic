@@ -19,6 +19,7 @@
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_simple_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_packet_writer.h"
+#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/udp/udp_server_socket.h"
 
 namespace net {
@@ -38,11 +39,14 @@ class SimpleQuicDispatcher : public QuicDispatcher {
                        const QuicVersionVector& supported_versions,
                        QuicConnectionHelperInterface* helper,
                        QuicAlarmFactory* alarm_factory)
-      : QuicDispatcher(config,
-                       crypto_config,
-                       supported_versions,
-                       std::unique_ptr<QuicConnectionHelperInterface>(helper),
-                       std::unique_ptr<QuicAlarmFactory>(alarm_factory)) {}
+      : QuicDispatcher(
+            config,
+            crypto_config,
+            supported_versions,
+            std::unique_ptr<QuicConnectionHelperInterface>(helper),
+            std::unique_ptr<QuicServerSessionBase::Helper>(
+                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+            std::unique_ptr<QuicAlarmFactory>(alarm_factory)) {}
 
  protected:
   QuicServerSessionBase* CreateQuicSession(

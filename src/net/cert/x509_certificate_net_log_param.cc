@@ -22,7 +22,7 @@ std::unique_ptr<base::Value> NetLogX509CertificateCallback(
   std::vector<std::string> encoded_chain;
   certificate->GetPEMEncodedChain(&encoded_chain);
   for (size_t i = 0; i < encoded_chain.size(); ++i)
-    certs->Append(new base::StringValue(encoded_chain[i]));
+    certs->AppendString(encoded_chain[i]);
   dict->Set("certificates", std::move(certs));
   return std::move(dict);
 }

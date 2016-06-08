@@ -4,8 +4,6 @@
 
 #include "net/quic/crypto/proof_verifier_chromium.h"
 
-#include <memory>
-
 #include "base/memory/ref_counted.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_data_directory.h"
@@ -15,12 +13,9 @@
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/ct_serialization.h"
-#include "net/cert/ct_verify_result.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/multi_log_ct_verifier.h"
-#include "net/cert/x509_certificate.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
 #include "net/quic/crypto/proof_verifier.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/ct_test_util.h"
@@ -73,7 +68,7 @@ class FailsTestCTPolicyEnforcer : public CTPolicyEnforcer {
 // conforms to the CT/EV policy.
 class MockCTPolicyEnforcer : public CTPolicyEnforcer {
  public:
-  MockCTPolicyEnforcer(bool is_ev) : is_ev_(is_ev) {}
+  explicit MockCTPolicyEnforcer(bool is_ev) : is_ev_(is_ev) {}
   ~MockCTPolicyEnforcer() override {}
 
   ct::EVPolicyCompliance DoesConformToCTEVPolicy(

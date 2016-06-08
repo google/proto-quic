@@ -4,6 +4,9 @@
 
 #include "net/quic/test_tools/quic_stream_factory_peer.h"
 
+#include <string>
+#include <vector>
+
 #include "net/quic/crypto/quic_crypto_client_config.h"
 #include "net/quic/quic_chromium_client_session.h"
 #include "net/quic/quic_clock.h"
@@ -25,17 +28,14 @@ QuicCryptoClientConfig* QuicStreamFactoryPeer::GetCryptoConfig(
   return &factory->crypto_config_;
 }
 
-bool QuicStreamFactoryPeer::HasActiveSession(
-    QuicStreamFactory* factory,
-    const HostPortPair& host_port_pair) {
-  QuicServerId server_id(host_port_pair, PRIVACY_MODE_DISABLED);
+bool QuicStreamFactoryPeer::HasActiveSession(QuicStreamFactory* factory,
+                                             const QuicServerId& server_id) {
   return factory->HasActiveSession(server_id);
 }
 
 QuicChromiumClientSession* QuicStreamFactoryPeer::GetActiveSession(
     QuicStreamFactory* factory,
-    const HostPortPair& host_port_pair) {
-  QuicServerId server_id(host_port_pair, PRIVACY_MODE_DISABLED);
+    const QuicServerId& server_id) {
   DCHECK(factory->HasActiveSession(server_id));
   return factory->active_sessions_[server_id];
 }
@@ -125,7 +125,7 @@ bool QuicStreamFactoryPeer::SupportsQuicAtStartUp(QuicStreamFactory* factory,
 
 bool QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(
     QuicStreamFactory* factory,
-    QuicServerId& quic_server_id) {
+    const QuicServerId& quic_server_id) {
   return factory->CryptoConfigCacheIsEmpty(quic_server_id);
 }
 

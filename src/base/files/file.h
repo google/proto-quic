@@ -13,7 +13,7 @@
 #include "base/files/file_path.h"
 #include "base/files/file_tracing.h"
 #include "base/files/scoped_file.h"
-#include "base/move.h"
+#include "base/macros.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 
@@ -29,10 +29,13 @@
 namespace base {
 
 #if defined(OS_WIN)
-typedef HANDLE PlatformFile;
-#elif defined(OS_POSIX)
-typedef int PlatformFile;
+using PlatformFile = HANDLE;
 
+const PlatformFile kInvalidPlatformFile = INVALID_HANDLE_VALUE;
+#elif defined(OS_POSIX)
+using PlatformFile = int;
+
+const PlatformFile kInvalidPlatformFile = -1;
 #if defined(OS_BSD) || defined(OS_MACOSX) || defined(OS_NACL)
 typedef struct stat stat_wrapper_t;
 #else
@@ -51,8 +54,6 @@ typedef struct stat64 stat_wrapper_t;
 // to the OS is not considered const, even if there is no apparent change to
 // member variables.
 class BASE_EXPORT File {
-  MOVE_ONLY_TYPE_FOR_CPP_03(File)
-
  public:
   // FLAG_(OPEN|CREATE).* are mutually exclusive. You should specify exactly one
   // of the five (possibly combining with other flags) when opening or creating
@@ -331,6 +332,8 @@ class BASE_EXPORT File {
   Error error_details_;
   bool created_;
   bool async_;
+
+  DISALLOW_COPY_AND_ASSIGN(File);
 };
 
 }  // namespace base

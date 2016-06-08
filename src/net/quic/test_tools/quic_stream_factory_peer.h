@@ -34,11 +34,11 @@ class QuicStreamFactoryPeer {
   static QuicCryptoClientConfig* GetCryptoConfig(QuicStreamFactory* factory);
 
   static bool HasActiveSession(QuicStreamFactory* factory,
-                               const HostPortPair& host_port_pair);
+                               const QuicServerId& server_id);
 
   static QuicChromiumClientSession* GetActiveSession(
       QuicStreamFactory* factory,
-      const HostPortPair& host_port_pair);
+      const QuicServerId& server_id);
 
   static std::unique_ptr<QuicHttpStream> CreateFromSession(
       QuicStreamFactory* factory,
@@ -80,7 +80,7 @@ class QuicStreamFactoryPeer {
                                     HostPortPair host_port_pair);
 
   static bool CryptoConfigCacheIsEmpty(QuicStreamFactory* factory,
-                                       QuicServerId& quic_server_id);
+                                       const QuicServerId& quic_server_id);
 
   // Creates a dummy QUIC server config and caches it.
   static void CacheDummyServerConfig(QuicStreamFactory* factory,

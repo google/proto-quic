@@ -14,6 +14,7 @@
 #include "base/logging.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/trace_event/trace_event.h"
+#include "build/build_config.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -441,7 +442,15 @@ void SocketPosix::ReadCompleted() {
 }
 
 int SocketPosix::DoWrite(IOBuffer* buf, int buf_len) {
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  // Disable SIGPIPE for this write. Although Chromium globally disables
+  // SIGPIPE, the net stack may be used in other consumers which do not do
+  // this. MSG_NOSIGNAL is a Linux-only API. On OS X, this is a setsockopt on
+  // socket creation.
+  int rv = HANDLE_EINTR(send(socket_fd_, buf->data(), buf_len, MSG_NOSIGNAL));
+#else
   int rv = HANDLE_EINTR(write(socket_fd_, buf->data(), buf_len));
+#endif
   return rv >= 0 ? rv : MapSystemError(errno);
 }
 

@@ -28,13 +28,24 @@ enum class MemoryDumpType {
 };
 
 // Tells the MemoryDumpProvider(s) how much detailed their dumps should be.
-// MemoryDumpProvider instances must guarantee that level of detail does not
-// affect the total size reported in the root node, but only the granularity of
-// the child MemoryAllocatorDump(s).
 enum class MemoryDumpLevelOfDetail {
-  LIGHT,           // Few entries, typically a fixed number, per dump.
-  DETAILED,        // Unrestricted amount of entries per dump.
-  LAST = DETAILED  // For IPC Macros.
+  // For background tracing mode. The dump time is quick, and typically just the
+  // totals are expected. Suballocations need not be specified. Dump name must
+  // contain only pre-defined strings and string arguments cannot be added.
+  BACKGROUND,
+
+  // For the levels below, MemoryDumpProvider instances must guarantee that the
+  // total size reported in the root node is consistent. Only the granularity of
+  // the child MemoryAllocatorDump(s) differs with the levels.
+
+  // Few entries, typically a fixed number, per dump.
+  LIGHT,
+
+  // Unrestricted amount of entries per dump.
+  DETAILED,
+
+  // For IPC Macros.
+  LAST = DETAILED
 };
 
 // Initial request arguments for a global memory dump. (see
@@ -46,6 +57,13 @@ struct BASE_EXPORT MemoryDumpRequestArgs {
   uint64_t dump_guid;
 
   MemoryDumpType dump_type;
+  MemoryDumpLevelOfDetail level_of_detail;
+};
+
+// Args for ProcessMemoryDump and passed to OnMemoryDump calls for memory dump
+// providers. Dump providers are expected to read the args for creating dumps.
+struct MemoryDumpArgs {
+  // Specifies how detailed the dumps should be.
   MemoryDumpLevelOfDetail level_of_detail;
 };
 

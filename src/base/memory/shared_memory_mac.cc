@@ -75,15 +75,10 @@ SharedMemoryCreateOptions::SharedMemoryCreateOptions()
       share_read_only(false) {}
 
 SharedMemory::SharedMemory()
-    : readonly_mapped_file_(-1),
-      mapped_size_(0),
-      memory_(NULL),
-      read_only_(false),
-      requested_size_(0) {}
+    : mapped_size_(0), memory_(NULL), read_only_(false), requested_size_(0) {}
 
 SharedMemory::SharedMemory(const SharedMemoryHandle& handle, bool read_only)
     : shm_(handle),
-      readonly_mapped_file_(-1),
       mapped_size_(0),
       memory_(NULL),
       read_only_(read_only),

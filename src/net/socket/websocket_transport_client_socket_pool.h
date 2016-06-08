@@ -69,12 +69,22 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
 
  private:
   friend class WebSocketTransportConnectSubJob;
-  friend class TransportConnectJobHelper;
   friend class WebSocketEndpointLockManager;
+
+  enum State {
+    STATE_RESOLVE_HOST,
+    STATE_RESOLVE_HOST_COMPLETE,
+    STATE_TRANSPORT_CONNECT,
+    STATE_TRANSPORT_CONNECT_COMPLETE,
+    STATE_NONE,
+  };
 
   // Although it is not strictly necessary, it makes the code simpler if each
   // subjob knows what type it is.
   enum SubJobType { SUB_JOB_IPV4, SUB_JOB_IPV6 };
+
+  void OnIOComplete(int result);
+  int DoLoop(int result);
 
   int DoResolveHost();
   int DoResolveHostComplete(int result);
@@ -92,8 +102,13 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
   // Otherwise, it returns a net error code.
   int ConnectInternal() override;
 
-  TransportConnectJobHelper helper_;
+  scoped_refptr<TransportSocketParams> params_;
+  SingleRequestHostResolver resolver_;
+  ClientSocketFactory* const client_socket_factory_;
 
+  State next_state_;
+
+  AddressList addresses_;
   // The addresses are divided into IPv4 and IPv6, which are performed partially
   // in parallel. If the list of IPv6 addresses is non-empty, then the IPv6 jobs
   // go first, followed after |kIPv6FallbackTimerInMs| by the IPv4
@@ -102,7 +117,7 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
   std::unique_ptr<WebSocketTransportConnectSubJob> ipv6_job_;
 
   base::OneShotTimer fallback_timer_;
-  TransportConnectJobHelper::ConnectionLatencyHistogram race_result_;
+  TransportConnectJob::RaceResult race_result_;
   ClientSocketHandle* const handle_;
   CompletionCallback callback_;
   BoundNetLog request_net_log_;

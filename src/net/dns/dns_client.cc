@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/bind.h"
+#include "base/memory/ptr_util.h"
 #include "base/rand_util.h"
 #include "net/dns/address_sorter.h"
 #include "net/dns/dns_config_service.h"
@@ -22,20 +23,25 @@ namespace {
 
 class DnsClientImpl : public DnsClient {
  public:
-  explicit DnsClientImpl(NetLog* net_log)
+  DnsClientImpl(NetLog* net_log,
+                ClientSocketFactory* socket_factory,
+                const RandIntCallback& rand_int_callback)
       : address_sorter_(AddressSorter::CreateAddressSorter()),
-        net_log_(net_log) {}
+        net_log_(net_log),
+        socket_factory_(socket_factory),
+        rand_int_callback_(rand_int_callback) {}
 
   void SetConfig(const DnsConfig& config) override {
     factory_.reset();
-    session_ = NULL;
+    session_ = nullptr;
     if (config.IsValid() && !config.unhandled_options) {
-      ClientSocketFactory* factory = ClientSocketFactory::GetDefaultFactory();
       std::unique_ptr<DnsSocketPool> socket_pool(
-          config.randomize_ports ? DnsSocketPool::CreateDefault(factory)
-                                 : DnsSocketPool::CreateNull(factory));
+          config.randomize_ports
+              ? DnsSocketPool::CreateDefault(socket_factory_,
+                                             rand_int_callback_)
+              : DnsSocketPool::CreateNull(socket_factory_, rand_int_callback_));
       session_ = new DnsSession(config, std::move(socket_pool),
-                                base::Bind(&base::RandInt), net_log_);
+                                rand_int_callback_, net_log_);
       factory_ = DnsTransactionFactory::CreateFactory(session_.get());
     }
   }
@@ -56,13 +62,29 @@ class DnsClientImpl : public DnsClient {
   std::unique_ptr<AddressSorter> address_sorter_;
 
   NetLog* net_log_;
+
+  ClientSocketFactory* socket_factory_;
+  const RandIntCallback rand_int_callback_;
+
+  DISALLOW_COPY_AND_ASSIGN(DnsClientImpl);
 };
 
 }  // namespace
 
 // static
 std::unique_ptr<DnsClient> DnsClient::CreateClient(NetLog* net_log) {
-  return std::unique_ptr<DnsClient>(new DnsClientImpl(net_log));
+  return base::WrapUnique(
+      new DnsClientImpl(net_log, ClientSocketFactory::GetDefaultFactory(),
+                        base::Bind(&base::RandInt)));
+}
+
+// static
+std::unique_ptr<DnsClient> DnsClient::CreateClientForTesting(
+    NetLog* net_log,
+    ClientSocketFactory* socket_factory,
+    const RandIntCallback& rand_int_callback) {
+  return base::WrapUnique(
+      new DnsClientImpl(net_log, socket_factory, rand_int_callback));
 }
 
 }  // namespace net

@@ -392,7 +392,7 @@ int UDPSocketWin::RecvFrom(IOBuffer* buf,
 int UDPSocketWin::Write(IOBuffer* buf,
                         int buf_len,
                         const CompletionCallback& callback) {
-  return SendToOrWrite(buf, buf_len, NULL, callback);
+  return SendToOrWrite(buf, buf_len, remote_address_.get(), callback);
 }
 
 int UDPSocketWin::SendTo(IOBuffer* buf,

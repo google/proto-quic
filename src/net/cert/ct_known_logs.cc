@@ -83,8 +83,7 @@ bool IsLogDisqualified(base::StringPiece log_id,
     return false;
   }
 
-  *disqualification_date =
-      base::Time::FromInternalValue(p->disqualification_date);
+  *disqualification_date = base::Time::UnixEpoch() + p->disqualification_date;
   return true;
 }
 

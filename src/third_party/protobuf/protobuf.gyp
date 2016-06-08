@@ -18,6 +18,7 @@
               4305,  # double to float truncation
               4355,  # 'this' used in base member initializer list
               4506,  # no definition for inline function (protobuf issue #240)
+              4715,  # not all control paths return a value (fixed in trunk)
             ],
             'defines!': [
               'WIN32_LEAN_AND_MEAN',  # Protobuf defines this itself.
@@ -299,6 +300,7 @@
             "src/google/protobuf/compiler/csharp/csharp_message.h",
             "src/google/protobuf/compiler/csharp/csharp_message_field.cc",
             "src/google/protobuf/compiler/csharp/csharp_message_field.h",
+            "src/google/protobuf/compiler/csharp/csharp_options.h",
             "src/google/protobuf/compiler/csharp/csharp_primitive_field.cc",
             "src/google/protobuf/compiler/csharp/csharp_primitive_field.h",
             "src/google/protobuf/compiler/csharp/csharp_reflection_class.cc",
@@ -327,6 +329,8 @@
             "src/google/protobuf/compiler/java/java_enum_lite.h",
             "src/google/protobuf/compiler/java/java_extension.cc",
             "src/google/protobuf/compiler/java/java_extension.h",
+            "src/google/protobuf/compiler/java/java_extension_lite.cc",
+            "src/google/protobuf/compiler/java/java_extension_lite.h",
             "src/google/protobuf/compiler/java/java_field.cc",
             "src/google/protobuf/compiler/java/java_field.h",
             "src/google/protobuf/compiler/java/java_file.cc",

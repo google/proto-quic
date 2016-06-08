@@ -325,11 +325,12 @@ static int
 xmlParse3986Port(xmlURIPtr uri, const char **str)
 {
     const char *cur = *str;
+    unsigned port = 0; /* unsigned for defined overflow behavior */
 
     if (ISA_DIGIT(cur)) {
-	unsigned port = 0; /* unsigned for defined overflow behavior */
 	while (ISA_DIGIT(cur)) {
 	    port = port * 10 + (*cur - '0');
+
 	    cur++;
 	}
 	if (uri != NULL)

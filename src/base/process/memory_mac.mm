@@ -252,8 +252,7 @@ bool CanGetContextForCFAllocator() {
 }
 
 CFAllocatorContext* ContextForCFAllocator(CFAllocatorRef allocator) {
-  if (base::mac::IsOSMountainLion() ||
-      base::mac::IsOSMavericks() || base::mac::IsOSYosemite() ||
+  if (base::mac::IsOSMavericks() || base::mac::IsOSYosemite() ||
       base::mac::IsOSElCapitan()) {
     ChromeCFAllocatorLions* our_allocator =
         const_cast<ChromeCFAllocatorLions*>(

@@ -38,26 +38,19 @@ namespace net {
 template <typename StreamIdType>
 class NET_EXPORT_PRIVATE WriteScheduler {
  public:
+  typedef StreamPrecedence<StreamIdType> StreamPrecedenceType;
+
   virtual ~WriteScheduler() {}
 
   // Registers new stream |stream_id| with the scheduler, assigning it the
-  // given weight, which should be in the range [1, 256]. If the scheduler
-  // supports stream dependencies, the stream is inserted into the dependency
-  // tree under the specified parent stream.
+  // given precedence. If the scheduler supports stream dependencies, the
+  // stream is inserted into the dependency tree under
+  // |precedence.parent_id()|.
   //
-  // Preconditions: |stream_id| should be unregistered, and |parent_id| should
-  // be registered or |kHttp2RootStreamId|.
+  // Preconditions: |stream_id| should be unregistered, and
+  // |precedence.parent_id()| should be registered or |kHttp2RootStreamId|.
   virtual void RegisterStream(StreamIdType stream_id,
-                              StreamIdType parent_id,
-                              int weight,
-                              bool exclusive) = 0;
-
-  // Registers a new stream with the scheduler, assigning it the given
-  // priority.
-  //
-  // Preconditions: |stream_id| should be unregistered.
-  virtual void RegisterStream(StreamIdType stream_id,
-                              SpdyPriority priority) = 0;
+                              const StreamPrecedenceType& precedence) = 0;
 
   // Unregisters the given stream from the scheduler, which will no longer keep
   // state for it.
@@ -68,44 +61,24 @@ class NET_EXPORT_PRIVATE WriteScheduler {
   // Returns true if the given stream is currently registered.
   virtual bool StreamRegistered(StreamIdType stream_id) const = 0;
 
-  // Returns the priority value for the specified stream. If the scheduler uses
-  // weights rather than priorities, the returned value is the stream's weight
-  // mapped to a SPDY priority.
+  // Returns the precedence of the specified stream. If the scheduler supports
+  // stream dependencies, calling |parent_id()| on the return value returns the
+  // stream's parent, and calling |exclusive()| returns true iff the specified
+  // stream is an only child of the parent stream.
   //
   // Preconditions: |stream_id| should be registered.
-  virtual SpdyPriority GetStreamPriority(StreamIdType stream_id) const = 0;
+  virtual StreamPrecedenceType GetStreamPrecedence(
+      StreamIdType stream_id) const = 0;
 
-  // Updates the priority of the given stream.
+  // Updates the precedence of the given stream. If the scheduler supports
+  // stream dependencies, |stream_id|'s parent will be updated to be
+  // |precedence.parent_id()| if it is not already.
   //
-  // Preconditions: |stream_id| should be registered.
-  virtual void UpdateStreamPriority(StreamIdType stream_id,
-                                    SpdyPriority priority) = 0;
-
-  // Returns the weight value for the specified stream. If the scheduler uses
-  // SPDY priorities rather than weights, the returned value is the stream's
-  // SPDY priority mapped to a weight.
-  //
-  // Preconditions: |stream_id| should be registered.
-  virtual int GetStreamWeight(StreamIdType stream_id) const = 0;
-
-  // Updates the weight of the given stream.
-  //
-  // Preconditions: |stream_id| should be registered.
-  virtual void UpdateStreamWeight(StreamIdType stream_id, int weight) = 0;
-
-  // Returns the parent stream of |stream_id|. If the scheduler
-  // doesn't support stream dependencies, returns |kHttp2RootStreamId|.
-  //
-  // Preconditions: |stream_id| should be registered.
-  virtual StreamIdType GetStreamParent(StreamIdType stream_id) const = 0;
-
-  // Updates which stream is the parent stream of |stream_id|. If the scheduler
-  // doesn't support stream dependencies of the stream, does nothing.
-  //
-  // Preconditions: |stream_id| should be registered.
-  virtual void UpdateStreamParent(StreamIdType stream_id,
-                                  StreamIdType parent_id,
-                                  bool exclusive) = 0;
+  // Preconditions: |stream_id| should be unregistered, and
+  // |precedence.parent_id()| should be registered or |kHttp2RootStreamId|.
+  virtual void UpdateStreamPrecedence(
+      StreamIdType stream_id,
+      const StreamPrecedenceType& precedence) = 0;
 
   // Returns child streams of the given stream, if any. If the scheduler
   // doesn't support stream dependencies, returns an empty vector.
@@ -162,23 +135,6 @@ class NET_EXPORT_PRIVATE WriteScheduler {
   // Returns the number of streams currently marked ready.
   virtual size_t NumReadyStreams() const = 0;
 };
-
-// Returns SPDY priority value clamped to the valid range of [0, 7].
-NET_EXPORT_PRIVATE SpdyPriority ClampSpdyPriority(SpdyPriority priority);
-
-// Returns HTTP/2 weight clamped to the valid range of [1, 256].
-NET_EXPORT_PRIVATE int ClampHttp2Weight(int weight);
-
-// Maps SPDY priority value in range [0, 7] to HTTP/2 weight value in range
-// [1, 256], where priority 0 (i.e. highest precedence) corresponds to maximum
-// weight 256 and priority 7 (lowest precedence) corresponds to minimum weight
-// 1.
-NET_EXPORT_PRIVATE int SpdyPriorityToHttp2Weight(SpdyPriority priority);
-
-// Maps HTTP/2 weight value in range [1, 256] to SPDY priority value in range
-// [0, 7], where minimum weight 1 corresponds to priority 7 (lowest precedence)
-// and maximum weight 256 corresponds to priority 0 (highest precedence).
-NET_EXPORT_PRIVATE SpdyPriority Http2WeightToSpdyPriority(int weight);
 
 }  // namespace net
 

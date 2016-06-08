@@ -21,7 +21,10 @@ class MockQuicSpdyClientStream : public net::QuicSpdyClientStream {
 
   MOCK_METHOD1(OnStreamFrame, void(const QuicStreamFrame& frame));
   MOCK_METHOD2(OnInitialHeadersComplete, void(bool fin, size_t frame_len));
-  MOCK_METHOD2(OnTrailingHeadersComplete, void(bool fin, size_t frame_len));
+  MOCK_METHOD3(OnTrailingHeadersComplete,
+               void(bool fin,
+                    size_t frame_len,
+                    const QuicHeaderList& header_list));
   MOCK_METHOD1(OnPromiseHeaders, void(base::StringPiece headers_data));
   MOCK_METHOD2(OnPromiseHeadersComplete,
                void(QuicStreamId promised_stream_id, size_t frame_len));

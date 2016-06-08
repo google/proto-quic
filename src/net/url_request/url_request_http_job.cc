@@ -602,6 +602,12 @@ void URLRequestHttpJob::StartTransactionInternal() {
 
   int rv;
 
+  // Notify NetworkQualityEstimator.
+  NetworkQualityEstimator* network_quality_estimator =
+      request()->context()->network_quality_estimator();
+  if (network_quality_estimator)
+    network_quality_estimator->NotifyStartTransaction(*request_);
+
   if (network_delegate()) {
     network_delegate()->NotifySendHeaders(
         request_, request_info_.extra_headers);
@@ -1646,7 +1652,7 @@ void URLRequestHttpJob::DoneWithRequest(CompletionCause reason) {
   done_ = true;
 
   // Notify NetworkQualityEstimator.
-  if (request() && (reason == FINISHED || reason == ABORTED)) {
+  if (request()) {
     NetworkQualityEstimator* network_quality_estimator =
         request()->context()->network_quality_estimator();
     if (network_quality_estimator)
@@ -1668,6 +1674,14 @@ HttpResponseHeaders* URLRequestHttpJob::GetResponseHeaders() const {
 
 void URLRequestHttpJob::NotifyURLRequestDestroyed() {
   awaiting_callback_ = false;
+
+  // Notify NetworkQualityEstimator.
+  if (request()) {
+    NetworkQualityEstimator* network_quality_estimator =
+        request()->context()->network_quality_estimator();
+    if (network_quality_estimator)
+      network_quality_estimator->NotifyURLRequestDestroyed(*request());
+  }
 }
 
 }  // namespace net

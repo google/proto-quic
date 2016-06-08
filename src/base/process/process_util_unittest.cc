@@ -681,14 +681,15 @@ TEST_F(ProcessUtilTest, MAYBE_FDRemapping) {
   // open some dummy fds to make sure they don't propagate over to the
   // child process.
   int dev_null = open("/dev/null", O_RDONLY);
+  DPCHECK(dev_null != -1);
   int sockets[2];
-  socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
+  int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
+  DPCHECK(ret == 0);
 
   int fds_after = CountOpenFDsInChild();
 
   ASSERT_EQ(fds_after, fds_before);
 
-  int ret;
   ret = IGNORE_EINTR(close(sockets[0]));
   DPCHECK(ret == 0);
   ret = IGNORE_EINTR(close(sockets[1]));

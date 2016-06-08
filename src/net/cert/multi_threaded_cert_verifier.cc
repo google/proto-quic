@@ -256,12 +256,13 @@ void DoVerifyOnWorkerThread(const scoped_refptr<CertVerifyProc>& verify_proc,
 // CertVerifierJob lives only on the verifier's origin message loop.
 class CertVerifierJob {
  public:
-  CertVerifierJob(const MultiThreadedCertVerifier::RequestParams& key,
+  CertVerifierJob(const CertVerifier::RequestParams& key,
                   NetLog* net_log,
                   X509Certificate* cert,
                   MultiThreadedCertVerifier* cert_verifier)
       : key_(key),
         start_time_(base::TimeTicks::Now()),
+        wall_start_time_(base::Time::Now()),
         net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_CERT_VERIFIER_JOB)),
         cert_verifier_(cert_verifier),
         is_first_job_(false),
@@ -275,7 +276,7 @@ class CertVerifierJob {
   // is only used for logging certain UMA stats.
   void set_is_first_job(bool is_first_job) { is_first_job_ = is_first_job; }
 
-  const MultiThreadedCertVerifier::RequestParams& key() const { return key_; }
+  const CertVerifier::RequestParams& key() const { return key_; }
 
   // Posts a task to the worker pool to do the verification. Once the
   // verification has completed on the worker thread, it will call
@@ -368,7 +369,7 @@ class CertVerifierJob {
         cert_verifier_->RemoveJob(this);
 
     LogMetrics(*verify_result);
-    cert_verifier_->SaveResultToCache(key_, *verify_result);
+    cert_verifier_->SaveResultToCache(key_, wall_start_time_, *verify_result);
     cert_verifier_ = nullptr;
 
     // TODO(eroman): If the cert_verifier_ is deleted from within one of the
@@ -381,8 +382,15 @@ class CertVerifierJob {
     }
   }
 
-  const MultiThreadedCertVerifier::RequestParams key_;
+  const CertVerifier::RequestParams key_;
+  // The tick count of when the job started. This is used to measure how long
+  // the job actually took to complete.
   const base::TimeTicks start_time_;
+
+  // The wall time of when the job started. This is to account for situations
+  // where the system clock may have changed after the Job had started, which
+  // could otherwise result in caching the wrong data.
+  const base::Time wall_start_time_;
 
   RequestList requests_;  // Non-owned.
 
@@ -438,8 +446,8 @@ int MultiThreadedCertVerifier::Verify(X509Certificate* cert,
       trust_anchor_provider_ ?
           trust_anchor_provider_->GetAdditionalTrustAnchors() : empty_cert_list;
 
-  const RequestParams key(cert->fingerprint(), cert->ca_fingerprint(), hostname,
-                          ocsp_response, flags, additional_trust_anchors);
+  const CertVerifier::RequestParams key(cert, hostname, flags, ocsp_response,
+                                        additional_trust_anchors);
   const CertVerifierCache::value_type* cached_entry =
       cache_.Get(key, CacheValidityPeriod(base::Time::Now()));
   if (cached_entry) {
@@ -483,53 +491,16 @@ bool MultiThreadedCertVerifier::SupportsOCSPStapling() {
   return verify_proc_->SupportsOCSPStapling();
 }
 
-MultiThreadedCertVerifier::RequestParams::RequestParams(
-    const SHA1HashValue& cert_fingerprint_arg,
-    const SHA1HashValue& ca_fingerprint_arg,
-    const std::string& hostname_arg,
-    const std::string& ocsp_response_arg,
-    int flags_arg,
-    const CertificateList& additional_trust_anchors)
-    : hostname(hostname_arg), flags(flags_arg), start_time(base::Time::Now()) {
-  hash_values.reserve(3 + additional_trust_anchors.size());
-  SHA1HashValue ocsp_hash;
-  base::SHA1HashBytes(
-      reinterpret_cast<const unsigned char*>(ocsp_response_arg.data()),
-      ocsp_response_arg.size(), ocsp_hash.data);
-  hash_values.push_back(ocsp_hash);
-  hash_values.push_back(cert_fingerprint_arg);
-  hash_values.push_back(ca_fingerprint_arg);
-  for (size_t i = 0; i < additional_trust_anchors.size(); ++i)
-    hash_values.push_back(additional_trust_anchors[i]->fingerprint());
-}
-
-MultiThreadedCertVerifier::RequestParams::RequestParams(
-    const RequestParams& other) = default;
-
-MultiThreadedCertVerifier::RequestParams::~RequestParams() {}
-
-bool MultiThreadedCertVerifier::RequestParams::operator<(
-    const RequestParams& other) const {
-  // |flags| is compared before |cert_fingerprint|, |ca_fingerprint|,
-  // |hostname|, and |ocsp_response|, under assumption that integer comparisons
-  // are faster than memory and string comparisons.
-  if (flags != other.flags)
-    return flags < other.flags;
-  if (hostname != other.hostname)
-    return hostname < other.hostname;
-  return std::lexicographical_compare(
-      hash_values.begin(), hash_values.end(), other.hash_values.begin(),
-      other.hash_values.end(), SHA1HashValueLessThan());
-}
-
 bool MultiThreadedCertVerifier::JobComparator::operator()(
     const CertVerifierJob* job1,
     const CertVerifierJob* job2) const {
   return job1->key() < job2->key();
 }
 
-void MultiThreadedCertVerifier::SaveResultToCache(const RequestParams& key,
-                                                  const CachedResult& result) {
+void MultiThreadedCertVerifier::SaveResultToCache(
+    const CertVerifier::RequestParams& key,
+    const base::Time& start_time,
+    const CachedResult& result) {
   DCHECK(CalledOnValidThread());
 
   // When caching, this uses the time that validation started as the
@@ -555,7 +526,6 @@ void MultiThreadedCertVerifier::SaveResultToCache(const RequestParams& key,
   // was corrected after validation, if the cache validity period was
   // computed at the end of validation, it would continue to serve an
   // invalid result for kTTLSecs.
-  const base::Time start_time = key.start_time;
   cache_.Put(
       key, result, CacheValidityPeriod(start_time),
       CacheValidityPeriod(start_time,
@@ -579,12 +549,13 @@ void MultiThreadedCertVerifier::OnCACertChanged(
 
 struct MultiThreadedCertVerifier::JobToRequestParamsComparator {
   bool operator()(const CertVerifierJob* job,
-                  const MultiThreadedCertVerifier::RequestParams& value) const {
+                  const CertVerifier::RequestParams& value) const {
     return job->key() < value;
   }
 };
 
-CertVerifierJob* MultiThreadedCertVerifier::FindJob(const RequestParams& key) {
+CertVerifierJob* MultiThreadedCertVerifier::FindJob(
+    const CertVerifier::RequestParams& key) {
   DCHECK(CalledOnValidThread());
 
   // The JobSet is kept in sorted order so items can be found using binary

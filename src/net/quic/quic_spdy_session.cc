@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_spdy_session.h"
 
+#include <utility>
+
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_headers_stream.h"
 
@@ -87,11 +89,11 @@ void QuicSpdySession::OnStreamHeaderList(QuicStreamId stream_id,
 
 size_t QuicSpdySession::WriteHeaders(
     QuicStreamId id,
-    const SpdyHeaderBlock& headers,
+    SpdyHeaderBlock headers,
     bool fin,
     SpdyPriority priority,
     QuicAckListenerInterface* ack_notifier_delegate) {
-  return headers_stream_->WriteHeaders(id, headers, fin, priority,
+  return headers_stream_->WriteHeaders(id, std::move(headers), fin, priority,
                                        ack_notifier_delegate);
 }
 

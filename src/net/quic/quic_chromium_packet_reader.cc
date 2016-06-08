@@ -10,7 +10,6 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/net_errors.h"
 #include "net/quic/quic_clock.h"
-#include "net/quic/quic_time.h"
 
 namespace net {
 

@@ -97,8 +97,7 @@ enum RangeConstraint {
 };
 
 // Helper function for coercing an int back to a RangeContraint.
-inline constexpr RangeConstraint GetRangeConstraint(
-    int integer_range_constraint) {
+constexpr RangeConstraint GetRangeConstraint(int integer_range_constraint) {
   // TODO(jschuh): Once we get full C++14 support we want this
   // assert(integer_range_constraint >= RANGE_VALID &&
   //        integer_range_constraint <= RANGE_INVALID)
@@ -252,7 +251,7 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
 };
 
 template <typename Dst, typename Src>
-inline constexpr RangeConstraint DstRangeRelationToSrcRange(Src value) {
+constexpr RangeConstraint DstRangeRelationToSrcRange(Src value) {
   static_assert(std::numeric_limits<Src>::is_specialized,
                 "Argument must be numeric.");
   static_assert(std::numeric_limits<Dst>::is_specialized,

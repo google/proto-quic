@@ -12,8 +12,11 @@
 
 #include <stddef.h>
 
+#include <list>
 #include <memory>
+#include <set>
 #include <string>
+#include <vector>
 
 #include "base/containers/mru_cache.h"
 #include "base/macros.h"
@@ -28,6 +31,7 @@
 #include "net/quic/quic_connection_logger.h"
 #include "net/quic/quic_crypto_client_stream.h"
 #include "net/quic/quic_protocol.h"
+#include "net/quic/quic_server_id.h"
 #include "net/quic/quic_time.h"
 #include "net/socket/socket_performance_watcher.h"
 
@@ -35,9 +39,7 @@ namespace net {
 
 class CertVerifyResult;
 class DatagramClientSocket;
-class QuicChromiumConnectionHelper;
 class QuicCryptoClientStreamFactory;
-class QuicServerId;
 class QuicServerInfo;
 class QuicStreamFactory;
 class SSLInfo;
@@ -135,6 +137,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log);
   ~QuicChromiumClientSession() override;
+
+  void Initialize() override;
 
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);

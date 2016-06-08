@@ -8175,7 +8175,7 @@ test_xmlDictCreateSub(void) {
 
     int mem_base;
     xmlDictPtr ret_val;
-    xmlDictPtr sub; /* an existing dictionnary */
+    xmlDictPtr sub; /* an existing dictionary */
     int n_sub;
 
     for (n_sub = 0;n_sub < gen_nb_xmlDictPtr;n_sub++) {
@@ -8207,7 +8207,7 @@ test_xmlDictExists(void) {
 
     int mem_base;
     const xmlChar * ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
     xmlChar * name; /* the name of the userdata */
     int n_name;
@@ -8263,7 +8263,7 @@ test_xmlDictLookup(void) {
 
     int mem_base;
     const xmlChar * ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
     xmlChar * name; /* the name of the userdata */
     int n_name;
@@ -8309,7 +8309,7 @@ test_xmlDictOwns(void) {
 
     int mem_base;
     int ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
     xmlChar * str; /* the string */
     int n_str;
@@ -8348,7 +8348,7 @@ test_xmlDictQLookup(void) {
 
     int mem_base;
     const xmlChar * ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
     xmlChar * prefix; /* the prefix */
     int n_prefix;
@@ -8394,7 +8394,7 @@ test_xmlDictReference(void) {
 
     int mem_base;
     int ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
 
     for (n_dict = 0;n_dict < gen_nb_xmlDictPtr;n_dict++) {
@@ -8437,7 +8437,7 @@ test_xmlDictSize(void) {
 
     int mem_base;
     int ret_val;
-    xmlDictPtr dict; /* the dictionnary */
+    xmlDictPtr dict; /* the dictionary */
     int n_dict;
 
     for (n_dict = 0;n_dict < gen_nb_xmlDictPtr;n_dict++) {

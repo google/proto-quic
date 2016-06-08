@@ -301,9 +301,6 @@
                 '-Wno-sign-compare',
                 '-Wno-unused-result',
               ],
-              'cflags!': [
-                '-fvisibility=hidden',
-              ],
               'link_settings': {
                 'ldflags': [
                   # Don't let linker rip this symbol out, otherwise the heap&cpu
@@ -315,6 +312,19 @@
                   '-Wl,-u_ZN15HeapLeakChecker12IgnoreObjectEPKv,-u_ZN15HeapLeakChecker14UnIgnoreObjectEPKv',
                 ],
               },
+              # Compiling tcmalloc with -fvisibility=default is only necessary when
+              # not using the allocator shim, which provides the correct visibility
+              # annotations for those symbols which need to be exported (see
+              # //base/allocator/allocator_shim_override_glibc_weak_symbols.h and
+              # //base/allocator/allocator_shim_internals.h for the definition of
+              # SHIM_ALWAYS_EXPORT).
+              'conditions': [
+                ['use_experimental_allocator_shim==0', {
+                  'cflags!': [
+                    '-fvisibility=hidden',
+                  ],
+                }],
+              ],
             }],
             ['profiling!=1', {
               'sources!': [

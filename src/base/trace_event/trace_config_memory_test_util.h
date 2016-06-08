@@ -71,6 +71,27 @@ class TraceConfigMemoryTestUtil {
           "\"record_mode\":\"record-until-full\""
         "}", MemoryDumpManager::kTraceCategory);
   }
+
+  static std::string GetTraceConfig_BackgroundTrigger() {
+    return StringPrintf(
+        "{"
+          "\"enable_argument_filter\":false,"
+          "\"enable_sampling\":false,"
+          "\"enable_systrace\":false,"
+          "\"included_categories\":["
+            "\"%s\""
+          "],"
+          "\"memory_dump_config\":{"
+             "\"triggers\":["
+              "{"
+                "\"mode\":\"background\","
+                "\"periodic_interval_ms\":1"
+              "}"
+            "]"
+          "},"
+          "\"record_mode\":\"record-until-full\""
+        "}", MemoryDumpManager::kTraceCategory);
+  }
 };
 
 }  // namespace trace_event

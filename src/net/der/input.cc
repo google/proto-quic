@@ -73,47 +73,10 @@ bool ByteReader::HasMore() {
   return len_ > 0;
 }
 
-Mark ByteReader::NewMark() {
-  return Mark(data_);
-}
-
-bool ByteReader::AdvanceToMark(Mark mark) {
-  if (mark.ptr_ < data_)
-    return false;
-  // mark.ptr_ >= data_, so no concern of integer underflow here.
-  size_t advance_len = mark.ptr_ - data_;
-  if (advance_len > len_)
-    return false;
-  Advance(advance_len);
-  return true;
-}
-
-bool ByteReader::ReadToMark(Mark mark, Input* out) {
-  if (mark.ptr_ < data_)
-    return false;
-  // mark.ptr_ >= data_, so no concern of integer underflow here.
-  size_t len = mark.ptr_ - data_;
-  return ReadBytes(len, out);
-}
-
 void ByteReader::Advance(size_t len) {
   CHECK_LE(len, len_);
   data_ += len;
   len_ -= len;
-}
-
-Mark Mark::NullMark() {
-  return Mark();
-}
-
-bool Mark::IsEmpty() {
-  return ptr_ == nullptr;
-}
-
-Mark::Mark(const uint8_t* ptr) : ptr_(ptr) {
-}
-
-Mark::Mark() : ptr_(nullptr) {
 }
 
 }  // namespace der

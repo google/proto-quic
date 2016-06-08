@@ -491,6 +491,24 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
   CheckPacketContains(contents, 1);
 }
 
+TEST_F(QuicPacketGeneratorTest, ConsumeDataFastPath) {
+  delegate_.SetCanWriteAnything();
+
+  // Create a 10000 byte IOVector.
+  QuicIOVector iov(CreateData(10000));
+  EXPECT_CALL(delegate_, OnSerializedPacket(_))
+      .WillRepeatedly(Invoke(this, &QuicPacketGeneratorTest::SavePacket));
+  QuicConsumedData consumed =
+      generator_.ConsumeDataFastPath(kHeadersStreamId, iov, 0, true, nullptr);
+  EXPECT_EQ(10000u, consumed.bytes_consumed);
+  EXPECT_TRUE(consumed.fin_consumed);
+  EXPECT_FALSE(generator_.HasQueuedFrames());
+
+  PacketContents contents;
+  contents.num_stream_frames = 1;
+  CheckPacketContains(contents, 0);
+}
+
 TEST_F(QuicPacketGeneratorTest, NotWritableThenBatchOperations) {
   delegate_.SetCanNotWrite();
 

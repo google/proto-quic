@@ -47,7 +47,7 @@ class AppendMultiProcessTest {
 
 // Invoke the main function of a test previously registered with
 // MULTIPROCESS_TEST_MAIN()
-int InvokeChildProcessTest(std::string test_name);
+int InvokeChildProcessTest(const std::string& test_name);
 
 // This macro creates a global MultiProcessTest::AppendMultiProcessTest object
 // whose constructor does the work of adding the global mapping.

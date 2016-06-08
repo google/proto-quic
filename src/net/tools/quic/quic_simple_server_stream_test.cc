@@ -42,8 +42,6 @@ using testing::Return;
 using testing::StrictMock;
 using testing::WithArgs;
 
-DECLARE_bool(quic_always_log_bugs_for_tests);
-
 namespace net {
 namespace test {
 
@@ -87,16 +85,18 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
   explicit MockQuicSimpleServerSession(
       QuicConnection* connection,
       MockQuicServerSessionVisitor* owner,
+      MockQuicServerSessionHelper* helper,
       QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache)
       : QuicSimpleServerSession(DefaultQuicConfig(),
                                 connection,
                                 owner,
+                                helper,
                                 crypto_config,
                                 compressed_certs_cache) {
     set_max_open_incoming_streams(kMaxStreamsForTest);
     set_max_open_outgoing_streams(kMaxStreamsForTest);
-    ON_CALL(*this, WritevData(_, _, _, _, _))
+    ON_CALL(*this, WritevData(_, _, _, _, _, _))
         .WillByDefault(testing::Return(QuicConsumedData(0, false)));
   }
 
@@ -107,8 +107,9 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                     const string& error_details,
                     ConnectionCloseSource source));
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicSpdyStream*(QuicStreamId id));
-  MOCK_METHOD5(WritevData,
-               QuicConsumedData(QuicStreamId id,
+  MOCK_METHOD6(WritevData,
+               QuicConsumedData(ReliableQuicStream* stream,
+                                QuicStreamId id,
                                 QuicIOVector data,
                                 QuicStreamOffset offset,
                                 bool fin,
@@ -121,7 +122,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                void(QuicStreamId stream_id, bool fin, size_t frame_len));
   MOCK_METHOD5(WriteHeaders,
                size_t(QuicStreamId id,
-                      const SpdyHeaderBlock& headers,
+                      SpdyHeaderBlock headers,
                       bool fin,
                       SpdyPriority priority,
                       QuicAckListenerInterface* ack_notifier_delegate));
@@ -132,7 +133,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
   MOCK_METHOD1(OnHeadersHeadOfLineBlocking, void(QuicTime::Delta delta));
   MOCK_METHOD4(PromisePushResources,
                void(const string&,
-                    const list<QuicInMemoryCache::ServerPushInfo>&,
+                    const std::list<QuicInMemoryCache::ServerPushInfo>&,
                     QuicStreamId,
                     const SpdyHeaderBlock&));
 
@@ -153,7 +154,6 @@ class QuicSimpleServerStreamTest
                                                &alarm_factory_,
                                                Perspective::IS_SERVER,
                                                SupportedVersions(GetParam()))),
-        session_owner_(new StrictMock<MockQuicServerSessionVisitor>()),
         crypto_config_(new QuicCryptoServerConfig(
             QuicCryptoServerConfig::TESTING,
             QuicRandom::GetInstance(),
@@ -161,7 +161,8 @@ class QuicSimpleServerStreamTest
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         session_(connection_,
-                 session_owner_,
+                 &session_owner_,
+                 &session_helper_,
                  crypto_config_.get(),
                  &compressed_certs_cache_),
         body_("hello world") {
@@ -207,7 +208,8 @@ class QuicSimpleServerStreamTest
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;
-  StrictMock<MockQuicServerSessionVisitor>* session_owner_;
+  StrictMock<MockQuicServerSessionVisitor> session_owner_;
+  StrictMock<MockQuicServerSessionHelper> session_helper_;
   std::unique_ptr<QuicCryptoServerConfig> crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;
   StrictMock<MockQuicSimpleServerSession> session_;
@@ -221,7 +223,7 @@ INSTANTIATE_TEST_CASE_P(Tests,
                         ::testing::ValuesIn(QuicSupportedVersions()));
 
 TEST_P(QuicSimpleServerStreamTest, TestFraming) {
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   stream_->OnStreamHeaders(headers_string_);
@@ -235,7 +237,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFraming) {
 }
 
 TEST_P(QuicSimpleServerStreamTest, TestFramingOnePacket) {
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
@@ -250,7 +252,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFramingOnePacket) {
 }
 
 TEST_P(QuicSimpleServerStreamTest, SendQuicRstStreamNoErrorInStopReading) {
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
@@ -273,7 +275,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFramingExtraData) {
 
   // We'll automatically write out an error (headers + body)
   EXPECT_CALL(session_, WriteHeaders(_, _, _, _, _));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(0);
 
@@ -310,7 +312,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithIllegalResponseStatus) {
 
   InSequence s;
   EXPECT_CALL(session_, WriteHeaders(stream_->id(), _, false, _, nullptr));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(
           strlen(QuicSimpleServerStream::kErrorResponseBody), true)));
@@ -341,7 +343,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithIllegalResponseStatus2) {
 
   InSequence s;
   EXPECT_CALL(session_, WriteHeaders(stream_->id(), _, false, _, nullptr));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(
           strlen(QuicSimpleServerStream::kErrorResponseBody), true)));
@@ -398,7 +400,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithValidHeaders) {
 
   InSequence s;
   EXPECT_CALL(session_, WriteHeaders(stream_->id(), _, false, _, nullptr));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(body.length(), true)));
 
@@ -420,7 +422,7 @@ TEST_P(QuicSimpleServerStreamTest, SendReponseWithPushResources) {
   string url = host + "/bar";
   QuicInMemoryCache::ServerPushInfo push_info(GURL(url), response_headers,
                                               kDefaultPriority, "Push body");
-  list<QuicInMemoryCache::ServerPushInfo> push_resources;
+  std::list<QuicInMemoryCache::ServerPushInfo> push_resources;
   push_resources.push_back(push_info);
   QuicInMemoryCache::GetInstance()->AddSimpleResponseWithServerPushResources(
       host, request_path, 200, body, push_resources);
@@ -437,7 +439,7 @@ TEST_P(QuicSimpleServerStreamTest, SendReponseWithPushResources) {
                                              ::net::test::kClientDataStreamId1,
                                              *request_headers));
   EXPECT_CALL(session_, WriteHeaders(stream_->id(), _, false, _, nullptr));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(body.length(), true)));
   QuicSimpleServerStreamPeer::SendResponse(stream_);
@@ -483,7 +485,7 @@ TEST_P(QuicSimpleServerStreamTest, PushResponseOnServerInitiatedStream) {
   EXPECT_CALL(session_,
               WriteHeaders(kServerInitiatedStreamId, _, false,
                            server_initiated_stream->priority(), nullptr));
-  EXPECT_CALL(session_, WritevData(kServerInitiatedStreamId, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, kServerInitiatedStreamId, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(kBody.size(), true)));
   server_initiated_stream->PushResponse(headers);
@@ -505,7 +507,7 @@ TEST_P(QuicSimpleServerStreamTest, TestSendErrorResponse) {
 
   InSequence s;
   EXPECT_CALL(session_, WriteHeaders(_, _, _, _, _));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(3, true)));
 
@@ -525,7 +527,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidMultipleContentLength) {
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
   EXPECT_CALL(session_, WriteHeaders(_, _, _, _, _));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   stream_->OnStreamHeaders(headers_string_);
@@ -546,7 +548,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
   EXPECT_CALL(session_, WriteHeaders(_, _, _, _, _));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   stream_->OnStreamHeaders(headers_string_);
@@ -580,7 +582,7 @@ TEST_P(QuicSimpleServerStreamTest, SendQuicRstStreamNoErrorWithEarlyResponse) {
 
   InSequence s;
   EXPECT_CALL(session_, WriteHeaders(stream_->id(), _, _, _, _));
-  EXPECT_CALL(session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(3, true)));
   if (GetParam() > QUIC_VERSION_28) {

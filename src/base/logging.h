@@ -11,10 +11,13 @@
 #include <cstring>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include "base/base_export.h"
 #include "base/debug/debugger.h"
 #include "base/macros.h"
+#include "base/template_util.h"
 #include "build/build_config.h"
 
 //
@@ -516,14 +519,26 @@ class CheckOpResult {
 // This formats a value for a failing CHECK_XX statement.  Ordinarily,
 // it uses the definition for operator<<, with a few special cases below.
 template <typename T>
-inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
+inline typename std::enable_if<
+    base::internal::SupportsOstreamOperator<const T&>::value,
+    void>::type
+MakeCheckOpValueString(std::ostream* os, const T& v) {
   (*os) << v;
 }
 
-// We need an explicit specialization for std::nullptr_t.
-template <>
-BASE_EXPORT void MakeCheckOpValueString(std::ostream* os,
-                                        const std::nullptr_t& p);
+// We need overloads for enums that don't support operator<<.
+// (i.e. scoped enums where no operator<< overload was declared).
+template <typename T>
+inline typename std::enable_if<
+    !base::internal::SupportsOstreamOperator<const T&>::value &&
+        std::is_enum<T>::value,
+    void>::type
+MakeCheckOpValueString(std::ostream* os, const T& v) {
+  (*os) << static_cast<typename base::underlying_type<T>::type>(v);
+}
+
+// We need an explicit overload for std::nullptr_t.
+BASE_EXPORT void MakeCheckOpValueString(std::ostream* os, std::nullptr_t p);
 
 // Build the error message string.  This is separate from the "Impl"
 // function template because it is not performance critical and so can

@@ -10,6 +10,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/stl_util.h"
+#include "net/quic/crypto/quic_random.h"
 #include "net/quic/quic_bug_tracker.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_utils.h"
@@ -46,12 +47,14 @@ QuicDispatcher::QuicDispatcher(
     const QuicCryptoServerConfig* crypto_config,
     const QuicVersionVector& supported_versions,
     std::unique_ptr<QuicConnectionHelperInterface> helper,
+    std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
     std::unique_ptr<QuicAlarmFactory> alarm_factory)
     : config_(config),
       crypto_config_(crypto_config),
       compressed_certs_cache_(
           QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
       helper_(std::move(helper)),
+      session_helper_(std::move(session_helper)),
       alarm_factory_(std::move(alarm_factory)),
       delete_sessions_alarm_(
           alarm_factory_->CreateAlarm(new DeleteSessionsAlarm(this))),
@@ -115,6 +118,10 @@ bool QuicDispatcher::OnUnauthenticatedPublicHeader(
   if (it != session_map_.end()) {
     it->second->ProcessUdpPacket(current_server_address_,
                                  current_client_address_, *current_packet_);
+    return false;
+  }
+
+  if (!OnUnauthenticatedUnknownPublicHeader(header)) {
     return false;
   }
 
@@ -444,7 +451,8 @@ QuicServerSessionBase* QuicDispatcher::CreateQuicSession(
       /* owns_writer= */ true, Perspective::IS_SERVER, supported_versions_);
 
   QuicServerSessionBase* session = new QuicSimpleServerSession(
-      config_, connection, this, crypto_config_, &compressed_certs_cache_);
+      config_, connection, this, session_helper_.get(), crypto_config_,
+      &compressed_certs_cache_);
   session->Initialize();
   return session;
 }
@@ -477,6 +485,11 @@ QuicPacketWriter* QuicDispatcher::CreatePerConnectionWriter() {
 
 void QuicDispatcher::SetLastError(QuicErrorCode error) {
   last_error_ = error;
+}
+
+bool QuicDispatcher::OnUnauthenticatedUnknownPublicHeader(
+    const QuicPacketPublicHeader& header) {
+  return true;
 }
 
 }  // namespace net

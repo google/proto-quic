@@ -23,6 +23,7 @@
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
+#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 #include "net/tools/quic/test_tools/mock_quic_time_wait_list_manager.h"
 #include "net/tools/quic/test_tools/quic_dispatcher_peer.h"
@@ -56,6 +57,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
                             QuicCompressedCertsCache* compressed_certs_cache)
       : QuicServerSessionBase(config,
                               connection,
+                              nullptr,
                               nullptr,
                               crypto_config,
                               compressed_certs_cache),
@@ -103,6 +105,8 @@ class TestDispatcher : public QuicDispatcher {
             QuicSupportedVersions(),
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)),
+            std::unique_ptr<QuicServerSessionBase::Helper>(
+                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
             std::unique_ptr<QuicEpollAlarmFactory>(
                 new QuicEpollAlarmFactory(eps))) {}
 
@@ -466,7 +470,7 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
  public:
   MockQuicCryptoServerStream(const QuicCryptoServerConfig& crypto_config,
                              QuicCompressedCertsCache* compressed_certs_cache,
-                             QuicSession* session)
+                             QuicServerSessionBase* session)
       : QuicCryptoServerStream(&crypto_config,
                                compressed_certs_cache,
                                FLAGS_enable_quic_stateless_reject_support,

@@ -7,6 +7,7 @@
 #include <string>
 
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "net/http/http_network_session.h"
@@ -184,9 +185,40 @@ AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceFor(
     const HttpRequestInfo& request_info,
     HttpStreamRequest::Delegate* delegate,
     HttpStreamRequest::StreamType stream_type) {
+  AlternativeService alternative_service =
+      GetAlternativeServiceForInternal(request_info, delegate, stream_type);
+  AlternativeServiceType type;
+  if (alternative_service.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL) {
+    type = NO_ALTERNATIVE_SERVICE;
+  } else if (alternative_service.protocol == QUIC) {
+    if (request_info.url.host() == alternative_service.host) {
+      type = QUIC_SAME_DESTINATION;
+    } else {
+      type = QUIC_DIFFERENT_DESTINATION;
+    }
+  } else {
+    if (request_info.url.host() == alternative_service.host) {
+      type = NOT_QUIC_SAME_DESTINATION;
+    } else {
+      type = NOT_QUIC_DIFFERENT_DESTINATION;
+    }
+  }
+  UMA_HISTOGRAM_ENUMERATION("Net.AlternativeServiceTypeForRequest", type,
+                            MAX_ALTERNATIVE_SERVICE_TYPE);
+  return alternative_service;
+}
+
+AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceForInternal(
+    const HttpRequestInfo& request_info,
+    HttpStreamRequest::Delegate* delegate,
+    HttpStreamRequest::StreamType stream_type) {
   GURL original_url = request_info.url;
 
   if (original_url.SchemeIs("ftp"))
+    return AlternativeService();
+
+  if (!session_->params().enable_alternative_service_for_insecure_origins &&
+      !original_url.SchemeIs("https"))
     return AlternativeService();
 
   url::SchemeHostPort origin(original_url);
@@ -235,6 +267,10 @@ AlternativeService HttpStreamFactoryImpl::GetAlternativeServiceFor(
     if (alternative_service.protocol >= NPN_SPDY_MINIMUM_VERSION &&
         alternative_service.protocol <= NPN_SPDY_MAXIMUM_VERSION) {
       if (!HttpStreamFactory::spdy_enabled())
+        continue;
+
+      // TODO(bnc): Re-enable when https://crbug.com/615413 is fixed.
+      if (origin.host() != alternative_service.host)
         continue;
 
       // Cache this entry if we don't have a non-broken Alt-Svc yet.

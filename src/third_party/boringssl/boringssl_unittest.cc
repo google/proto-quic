@@ -267,6 +267,23 @@ TEST(BoringSSL, LH) {
   TestSimple("lhash_test");
 }
 
+TEST(BoringSSL, NewHope) {
+  TestSimple("newhope_test");
+}
+
+TEST(BoringSSL, NewHopeVectors) {
+  base::FilePath data_file;
+  ASSERT_TRUE(BoringSSLPath(&data_file));
+  data_file = data_file.Append(FILE_PATH_LITERAL("crypto"));
+  data_file = data_file.Append(FILE_PATH_LITERAL("newhope"));
+  data_file = data_file.Append(FILE_PATH_LITERAL("newhope_test.txt"));
+
+  std::vector<base::CommandLine::StringType> args;
+  args.push_back(data_file.value());
+
+  TestProcess("newhope_vectors_test", args);
+}
+
 TEST(BoringSSL, PBKDF) {
   TestSimple("pbkdf_test");
 }

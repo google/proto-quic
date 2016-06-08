@@ -87,6 +87,7 @@ RSAPrivateKey* RSAPrivateKey::Copy() const {
 }
 
 bool RSAPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {
+  OpenSSLErrStackTracer err_tracer(FROM_HERE);
   uint8_t *der;
   size_t der_len;
   AutoCBB cbb;
@@ -101,6 +102,7 @@ bool RSAPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {
 }
 
 bool RSAPrivateKey::ExportPublicKey(std::vector<uint8_t>* output) const {
+  OpenSSLErrStackTracer err_tracer(FROM_HERE);
   uint8_t *der;
   size_t der_len;
   AutoCBB cbb;

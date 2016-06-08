@@ -19,8 +19,15 @@ class NET_EXPORT ExternalEstimateProvider {
  public:
   class NET_EXPORT UpdatedEstimateDelegate {
    public:
-    // Will be called when an updated estimate is available.
-    virtual void OnUpdatedEstimateAvailable() = 0;
+    // Will be called with updated RTT, downstream and upstream throughput (both
+    // in kilobits per second) when an updated estimate is available. If |rtt|
+    // is unavailable, it is set to base::TimeDelta(). If
+    // |downstream_throughput_kbps| or |upstream_throughput_kbps| are
+    // unavailble, they are set to -1, respectively.
+    virtual void OnUpdatedEstimateAvailable(
+        const base::TimeDelta& rtt,
+        int32_t downstream_throughput_kbps,
+        int32_t upstream_throughput_kbps) = 0;
 
    protected:
     UpdatedEstimateDelegate() {}

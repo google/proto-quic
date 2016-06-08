@@ -133,6 +133,16 @@ static const uint8_t kMaxWarningAlerts = 4;
 static int ssl3_get_record(SSL *ssl) {
   int ret;
 again:
+  switch (ssl->s3->recv_shutdown) {
+    case ssl_shutdown_none:
+      break;
+    case ssl_shutdown_fatal_alert:
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PROTOCOL_IS_SHUTDOWN);
+      return -1;
+    case ssl_shutdown_close_notify:
+      return 0;
+  }
+
   /* Ensure the buffer is large enough to decrypt in-place. */
   ret = ssl_read_buffer_extend_to(ssl, ssl_record_prefix_len(ssl));
   if (ret <= 0) {
@@ -393,26 +403,8 @@ start:
 
   /* we now have a packet which can be read and processed */
 
-  /* If the other end has shut down, throw anything we read away (even in
-   * 'peek' mode) */
-  if (ssl->shutdown & SSL_RECEIVED_SHUTDOWN) {
-    rr->length = 0;
-    return 0;
-  }
-
   if (type != 0 && type == rr->type) {
     ssl->s3->warning_alert_count = 0;
-
-    /* Make sure that we are not getting application data when we are doing a
-     * handshake for the first time. */
-    if (SSL_in_init(ssl) && type == SSL3_RT_APPLICATION_DATA &&
-        ssl->s3->aead_read_ctx == NULL) {
-      /* TODO(davidben): Is this check redundant with the handshake_func
-       * check? */
-      al = SSL_AD_UNEXPECTED_MESSAGE;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_APP_DATA_IN_HANDSHAKE);
-      goto f_err;
-    }
 
     /* Discard empty records. */
     if (rr->length == 0) {
@@ -546,8 +538,7 @@ start:
 
     if (alert_level == SSL3_AL_WARNING) {
       if (alert_descr == SSL_AD_CLOSE_NOTIFY) {
-        ssl->s3->clean_shutdown = 1;
-        ssl->shutdown |= SSL_RECEIVED_SHUTDOWN;
+        ssl->s3->recv_shutdown = ssl_shutdown_close_notify;
         return 0;
       }
 
@@ -563,7 +554,7 @@ start:
       OPENSSL_PUT_ERROR(SSL, SSL_AD_REASON_OFFSET + alert_descr);
       BIO_snprintf(tmp, sizeof(tmp), "%d", alert_descr);
       ERR_add_error_data(2, "SSL alert number ", tmp);
-      ssl->shutdown |= SSL_RECEIVED_SHUTDOWN;
+      ssl->s3->recv_shutdown = ssl_shutdown_fatal_alert;
       SSL_CTX_remove_session(ssl->ctx, ssl->session);
       return 0;
     } else {
@@ -575,7 +566,9 @@ start:
     goto start;
   }
 
-  if (ssl->shutdown & SSL_SENT_SHUTDOWN) {
+  if (type == 0) {
+    /* This may only occur from read_close_notify. */
+    assert(ssl->s3->send_shutdown == ssl_shutdown_close_notify);
     /* close_notify has been sent, so discard all records other than alerts. */
     rr->length = 0;
     goto start;
@@ -591,9 +584,19 @@ err:
 }
 
 int ssl3_send_alert(SSL *ssl, int level, int desc) {
-  /* If a fatal one, remove from cache */
-  if (level == 2 && ssl->session != NULL) {
-    SSL_CTX_remove_session(ssl->ctx, ssl->session);
+  /* It is illegal to send an alert when we've already sent a closing one. */
+  if (ssl->s3->send_shutdown != ssl_shutdown_none) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_PROTOCOL_IS_SHUTDOWN);
+    return -1;
+  }
+
+  if (level == SSL3_AL_FATAL) {
+    if (ssl->session != NULL) {
+      SSL_CTX_remove_session(ssl->ctx, ssl->session);
+    }
+    ssl->s3->send_shutdown = ssl_shutdown_fatal_alert;
+  } else if (level == SSL3_AL_WARNING && desc == SSL_AD_CLOSE_NOTIFY) {
+    ssl->s3->send_shutdown = ssl_shutdown_close_notify;
   }
 
   ssl->s3->alert_dispatch = 1;
@@ -605,8 +608,7 @@ int ssl3_send_alert(SSL *ssl, int level, int desc) {
     return ssl->method->ssl_dispatch_alert(ssl);
   }
 
-  /* else data is still being written out, we will get written some time in the
-   * future */
+  /* The alert will be dispatched later. */
   return -1;
 }
 

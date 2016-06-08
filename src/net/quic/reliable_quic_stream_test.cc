@@ -139,6 +139,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   }
 
   QuicConsumedData CloseStreamOnWriteError(
+      ReliableQuicStream* /*stream*/,
       QuicStreamId id,
       QuicIOVector /*iov*/,
       QuicStreamOffset /*offset*/,
@@ -172,7 +173,7 @@ TEST_F(ReliableQuicStreamTest, WriteAllData) {
               PACKET_6BYTE_PACKET_NUMBER, 0u);
   connection_->SetMaxPacketLength(length);
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kDataLen, true)));
   stream_->WriteOrBufferData(kData1, false, nullptr);
   EXPECT_FALSE(HasWriteBlockedStreams());
@@ -192,7 +193,7 @@ TEST_F(ReliableQuicStreamTest, BlockIfOnlySomeDataConsumed) {
 
   // Write some data and no fin.  If we consume some but not all of the data,
   // we should be write blocked a not all the data was consumed.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));
   stream_->WriteOrBufferData(StringPiece(kData1, 2), false, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
@@ -206,7 +207,7 @@ TEST_F(ReliableQuicStreamTest, BlockIfFinNotConsumedWithData) {
   // we should be write blocked because the fin was not consumed.
   // (This should never actually happen as the fin should be sent out with the
   // last data)
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, false)));
   stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
@@ -217,7 +218,7 @@ TEST_F(ReliableQuicStreamTest, BlockIfSoloFinNotConsumed) {
 
   // Write no data and a fin.  If we consume nothing we should be write blocked,
   // as the fin was not consumed.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(0, false)));
   stream_->WriteOrBufferData(StringPiece(), true, nullptr);
   ASSERT_EQ(1u, write_blocked_list_->NumBlockedStreams());
@@ -229,7 +230,7 @@ TEST_F(ReliableQuicStreamTest, CloseOnPartialWrite) {
   // Write some data and no fin. However, while writing the data
   // close the stream and verify that MarkConnectionLevelWriteBlocked does not
   // crash with an unknown stream.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Invoke(this, &ReliableQuicStreamTest::CloseStreamOnWriteError));
   stream_->WriteOrBufferData(StringPiece(kData1, 2), false, nullptr);
   ASSERT_EQ(0u, write_blocked_list_->NumBlockedStreams());
@@ -246,7 +247,7 @@ TEST_F(ReliableQuicStreamTest, WriteOrBufferData) {
               PACKET_6BYTE_PACKET_NUMBER, 0u);
   connection_->SetMaxPacketLength(length);
 
-  EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kDataLen - 1, false)));
   stream_->WriteOrBufferData(kData1, false, nullptr);
   EXPECT_TRUE(HasWriteBlockedStreams());
@@ -256,14 +257,14 @@ TEST_F(ReliableQuicStreamTest, WriteOrBufferData) {
 
   // Make sure we get the tail of the first write followed by the bytes_consumed
   InSequence s;
-  EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));
-  EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kDataLen - 2, false)));
   stream_->OnCanWrite();
 
   // And finally the end of the bytes_consumed.
-  EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, true)));
   stream_->OnCanWrite();
 }
@@ -291,7 +292,7 @@ TEST_F(ReliableQuicStreamTest, RstAlwaysSentIfNoFinSent) {
   EXPECT_FALSE(rst_sent());
 
   // Write some data, with no FIN.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));
   stream_->WriteOrBufferData(StringPiece(kData1, 1), false, nullptr);
   EXPECT_FALSE(fin_sent());
@@ -314,7 +315,7 @@ TEST_F(ReliableQuicStreamTest, RstNotSentIfFinSent) {
   EXPECT_FALSE(rst_sent());
 
   // Write some data, with FIN.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, true)));
   stream_->WriteOrBufferData(StringPiece(kData1, 1), true, nullptr);
   EXPECT_TRUE(fin_sent());
@@ -408,23 +409,26 @@ TEST_F(ReliableQuicStreamTest, WriteOrBufferDataWithQuicAckNotifier) {
 
   scoped_refptr<QuicAckListenerInterface> ack_listener;
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &ack_listener))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &ack_listener))),
           Return(QuicConsumedData(kFirstWriteSize, false))));
   stream_->WriteOrBufferData(kData, false, delegate.get());
   EXPECT_TRUE(HasWriteBlockedStreams());
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, ack_listener.get()))
+  EXPECT_CALL(*session_,
+              WritevData(stream_, kTestStreamId, _, _, _, ack_listener.get()))
       .WillOnce(Return(QuicConsumedData(kSecondWriteSize, false)));
   stream_->OnCanWrite();
 
   // No ack expected for an empty write.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, ack_listener.get()))
+  EXPECT_CALL(*session_,
+              WritevData(stream_, kTestStreamId, _, _, _, ack_listener.get()))
       .WillOnce(Return(QuicConsumedData(0, false)));
   stream_->OnCanWrite();
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, ack_listener.get()))
+  EXPECT_CALL(*session_,
+              WritevData(stream_, kTestStreamId, _, _, _, ack_listener.get()))
       .WillOnce(Return(QuicConsumedData(kLastWriteSize, false)));
   stream_->OnCanWrite();
 }
@@ -447,16 +451,16 @@ TEST_F(ReliableQuicStreamTest, WriteOrBufferDataAckNotificationBeforeFlush) {
 
   scoped_refptr<QuicAckListenerInterface> proxy_delegate;
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(kInitialWriteSize, false))));
   stream_->WriteOrBufferData(kData, false, ack_listener.get());
   EXPECT_TRUE(HasWriteBlockedStreams());
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(kDataSize - kInitialWriteSize, false))));
   stream_->OnCanWrite();
 }
@@ -469,9 +473,9 @@ TEST_F(ReliableQuicStreamTest, WriteAndBufferDataWithAckNotiferNoBuffer) {
 
   scoped_refptr<QuicAckListenerInterface> proxy_delegate;
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(kDataLen, true))));
   stream_->WriteOrBufferData(kData1, true, delegate.get());
   EXPECT_FALSE(HasWriteBlockedStreams());
@@ -485,14 +489,14 @@ TEST_F(ReliableQuicStreamTest, BufferOnWriteAndBufferDataWithAckNotifer) {
 
   scoped_refptr<QuicAckListenerInterface> proxy_delegate;
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(0, false)));
   stream_->WriteOrBufferData(kData1, true, delegate.get());
   EXPECT_TRUE(HasWriteBlockedStreams());
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(kDataLen, true))));
   stream_->OnCanWrite();
 }
@@ -506,16 +510,16 @@ TEST_F(ReliableQuicStreamTest, WriteAndBufferDataWithAckNotiferOnlyFinRemains) {
 
   scoped_refptr<QuicAckListenerInterface> proxy_delegate;
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(kDataLen, false))));
   stream_->WriteOrBufferData(kData1, true, delegate.get());
   EXPECT_TRUE(HasWriteBlockedStreams());
 
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(DoAll(
-          WithArgs<4>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
+          WithArgs<5>(Invoke(CreateFunctor(SaveAckListener, &proxy_delegate))),
           Return(QuicConsumedData(0, true))));
   stream_->OnCanWrite();
 }
@@ -607,7 +611,7 @@ TEST_F(ReliableQuicStreamTest, SetDrainingIncomingOutgoing) {
   EXPECT_EQ(1u, session_->GetNumOpenIncomingStreams());
 
   // Outgoing data with FIN.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, true)));
   stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
   EXPECT_TRUE(stream_->write_side_closed());
@@ -622,7 +626,7 @@ TEST_F(ReliableQuicStreamTest, SetDrainingOutgoingIncoming) {
   Initialize(kShouldNotProcessData);
 
   // Outgoing data with FIN.
-  EXPECT_CALL(*session_, WritevData(kTestStreamId, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(stream_, kTestStreamId, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(2, true)));
   stream_->WriteOrBufferData(StringPiece(kData1, 2), true, nullptr);
   EXPECT_TRUE(stream_->write_side_closed());
@@ -649,7 +653,7 @@ TEST_F(ReliableQuicStreamTest, EarlyResponseFinHandling) {
 
   Initialize(kShouldProcessData);
   EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
-  EXPECT_CALL(*session_, WritevData(_, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Receive data for the request.

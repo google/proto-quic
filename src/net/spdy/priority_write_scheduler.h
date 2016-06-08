@@ -37,26 +37,25 @@ class PriorityWriteSchedulerPeer;
 template <typename StreamIdType>
 class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
  public:
+  using typename WriteScheduler<StreamIdType>::StreamPrecedenceType;
+
   // Creates scheduler with no streams.
   PriorityWriteScheduler() = default;
 
   void RegisterStream(StreamIdType stream_id,
-                      StreamIdType parent_id,
-                      int weight,
-                      bool exclusive) override {
+                      const StreamPrecedenceType& precedence) override {
+    SPDY_BUG_IF(!precedence.is_spdy3_priority()) << "Expected SPDY priority";
+
     // parent_id not used here, but may as well validate it
+    StreamIdType parent_id = precedence.parent_id();
     SPDY_BUG_IF(parent_id != kHttp2RootStreamId && !StreamRegistered(parent_id))
         << "Stream " << parent_id << " not registered";
-    RegisterStream(stream_id, Http2WeightToSpdyPriority(weight));
-  }
 
-  void RegisterStream(StreamIdType stream_id, SpdyPriority priority) override {
     if (stream_id == kHttp2RootStreamId) {
       SPDY_BUG << "Stream " << kHttp2RootStreamId << " already registered";
       return;
     }
-    priority = ClampSpdyPriority(priority);
-    StreamInfo stream_info = {priority, false};
+    StreamInfo stream_info = {precedence.spdy3_priority(), stream_id, false};
     bool inserted =
         stream_infos_.insert(std::make_pair(stream_id, stream_info)).second;
     SPDY_BUG_IF(!inserted) << "Stream " << stream_id << " already registered";
@@ -71,7 +70,7 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
     StreamInfo& stream_info = it->second;
     if (stream_info.ready) {
       bool erased =
-          Erase(&priority_infos_[stream_info.priority].ready_list, stream_id);
+          Erase(&priority_infos_[stream_info.priority].ready_list, stream_info);
       DCHECK(erased);
     }
     stream_infos_.erase(it);
@@ -81,50 +80,44 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
     return stream_infos_.find(stream_id) != stream_infos_.end();
   }
 
-  SpdyPriority GetStreamPriority(StreamIdType stream_id) const override {
+  StreamPrecedenceType GetStreamPrecedence(
+      StreamIdType stream_id) const override {
     auto it = stream_infos_.find(stream_id);
     if (it == stream_infos_.end()) {
       SPDY_BUG << "Stream " << stream_id << " not registered";
-      return kV3LowestPriority;
+      return StreamPrecedenceType(kV3LowestPriority);
     }
-    return it->second.priority;
+    return StreamPrecedenceType(it->second.priority);
   }
 
-  void UpdateStreamPriority(StreamIdType stream_id,
-                            SpdyPriority priority) override {
+  void UpdateStreamPrecedence(StreamIdType stream_id,
+                              const StreamPrecedenceType& precedence) override {
+    SPDY_BUG_IF(!precedence.is_spdy3_priority()) << "Expected SPDY priority";
+
+    // parent_id not used here, but may as well validate it
+    StreamIdType parent_id = precedence.parent_id();
+    SPDY_BUG_IF(parent_id != kHttp2RootStreamId && !StreamRegistered(parent_id))
+        << "Stream " << parent_id << " not registered";
+
     auto it = stream_infos_.find(stream_id);
     if (it == stream_infos_.end()) {
       SPDY_BUG << "Stream " << stream_id << " not registered";
       return;
     }
     StreamInfo& stream_info = it->second;
-    if (stream_info.priority == priority) {
+    SpdyPriority new_priority = precedence.spdy3_priority();
+    if (stream_info.priority == new_priority) {
       return;
     }
     if (stream_info.ready) {
       bool erased =
-          Erase(&priority_infos_[stream_info.priority].ready_list, stream_id);
+          Erase(&priority_infos_[stream_info.priority].ready_list, stream_info);
       DCHECK(erased);
-      priority_infos_[priority].ready_list.push_back(stream_id);
+      priority_infos_[new_priority].ready_list.push_back(&stream_info);
+      ++num_ready_streams_;
     }
-    stream_info.priority = priority;
+    stream_info.priority = new_priority;
   }
-
-  int GetStreamWeight(StreamIdType stream_id) const override {
-    return SpdyPriorityToHttp2Weight(GetStreamPriority(stream_id));
-  }
-
-  void UpdateStreamWeight(StreamIdType stream_id, int weight) override {
-    UpdateStreamPriority(stream_id, Http2WeightToSpdyPriority(weight));
-  }
-
-  StreamIdType GetStreamParent(StreamIdType stream_id) const override {
-    return kHttp2RootStreamId;
-  }
-
-  void UpdateStreamParent(StreamIdType stream_id,
-                          StreamIdType parent_id,
-                          bool exclusive) override {}
 
   std::vector<StreamIdType> GetStreamChildren(
       StreamIdType stream_id) const override {
@@ -159,24 +152,20 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
   }
 
   StreamIdType PopNextReadyStream() override {
-    StreamIdType stream_id = 0;
     for (SpdyPriority p = kV3HighestPriority; p <= kV3LowestPriority; ++p) {
-      StreamIdList& ready_list = priority_infos_[p].ready_list;
+      ReadyList& ready_list = priority_infos_[p].ready_list;
       if (!ready_list.empty()) {
-        stream_id = ready_list.front();
+        StreamInfo* info = ready_list.front();
         ready_list.pop_front();
+        --num_ready_streams_;
 
-        auto it = stream_infos_.find(stream_id);
-        if (it == stream_infos_.end()) {
-          SPDY_BUG << "Missing StreamInfo for stream " << stream_id;
-        } else {
-          it->second.ready = false;
-        }
-        return stream_id;
+        DCHECK(stream_infos_.find(info->stream_id) != stream_infos_.end());
+        info->ready = false;
+        return info->stream_id;
       }
     }
     SPDY_BUG << "No ready streams available";
-    return stream_id;
+    return 0;
   }
 
   bool ShouldYield(StreamIdType stream_id) const override {
@@ -196,8 +185,8 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
 
     // If this priority level is empty, or this stream is the next up, there's
     // no need to yield.
-    auto ready_list = priority_infos_[it->second.priority].ready_list;
-    if (ready_list.empty() || ready_list.front() == stream_id) {
+    const auto& ready_list = priority_infos_[it->second.priority].ready_list;
+    if (ready_list.empty() || ready_list.front()->stream_id == stream_id) {
       return false;
     }
 
@@ -216,12 +205,13 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
     if (stream_info.ready) {
       return;
     }
-    StreamIdList& ready_list = priority_infos_[stream_info.priority].ready_list;
+    ReadyList& ready_list = priority_infos_[stream_info.priority].ready_list;
     if (add_to_front) {
-      ready_list.push_front(stream_id);
+      ready_list.push_front(&stream_info);
     } else {
-      ready_list.push_back(stream_id);
+      ready_list.push_back(&stream_info);
     }
+    ++num_ready_streams_;
     stream_info.ready = true;
   }
 
@@ -236,64 +226,56 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
       return;
     }
     bool erased =
-        Erase(&priority_infos_[stream_info.priority].ready_list, stream_id);
+        Erase(&priority_infos_[stream_info.priority].ready_list, stream_info);
     DCHECK(erased);
     stream_info.ready = false;
   }
 
   // Returns true iff the number of ready streams is non-zero.
-  bool HasReadyStreams() const override {
-    for (SpdyPriority i = kV3HighestPriority; i <= kV3LowestPriority; ++i) {
-      if (!priority_infos_[i].ready_list.empty()) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool HasReadyStreams() const override { return num_ready_streams_ > 0; }
 
   // Returns the number of ready streams.
-  size_t NumReadyStreams() const override {
-    size_t n = 0;
-    for (SpdyPriority i = kV3HighestPriority; i <= kV3LowestPriority; ++i) {
-      n += priority_infos_[i].ready_list.size();
-    }
-    return n;
-  }
+  size_t NumReadyStreams() const override { return num_ready_streams_; }
 
  private:
   friend class test::PriorityWriteSchedulerPeer<StreamIdType>;
-
-  // 0(1) size lookup, 0(1) insert at front or back.
-  typedef std::deque<StreamIdType> StreamIdList;
 
   // State kept for all registered streams. All ready streams have ready = true
   // and should be present in priority_infos_[priority].ready_list.
   struct StreamInfo {
     SpdyPriority priority;
+    StreamIdType stream_id;
     bool ready;
   };
+
+  // 0(1) size lookup, 0(1) insert at front or back.
+  typedef std::deque<StreamInfo*> ReadyList;
 
   // State kept for each priority level.
   struct PriorityInfo {
     // IDs of streams that are ready to write.
-    StreamIdList ready_list;
+    ReadyList ready_list;
     // Time of latest write event for stream of this priority, in microseconds.
     int64_t last_event_time_usec = 0;
   };
 
   typedef std::unordered_map<StreamIdType, StreamInfo> StreamInfoMap;
 
-  // Erases first occurrence (which should be the only one) of |stream_id| in
+  // Erases first occurrence (which should be the only one) of |info| in
   // |ready_list|, returning true if found (and erased), or false otherwise.
-  bool Erase(StreamIdList* ready_list, StreamIdType stream_id) {
-    auto it = std::find(ready_list->begin(), ready_list->end(), stream_id);
+  // Decrements |num_ready_streams_| if an entry is erased.
+  bool Erase(ReadyList* ready_list, const StreamInfo& info) {
+    auto it = std::find(ready_list->begin(), ready_list->end(), &info);
     if (it == ready_list->end()) {
       return false;
     }
     ready_list->erase(it);
+    --num_ready_streams_;
     return true;
   }
 
+  // Number of ready streams.
+  size_t num_ready_streams_ = 0;
   // Per-priority state, including ready lists.
   PriorityInfo priority_infos_[kV3LowestPriority + 1];
   // StreamInfos for all registered streams.

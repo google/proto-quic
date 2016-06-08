@@ -4,8 +4,9 @@
 
 #include "net/cert/internal/verify_certificate_chain.h"
 
-#include "net/cert/internal/parse_certificate.h"
+#include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/trust_store.h"
 #include "net/der/input.h"
 
 // Disable tests that require DSA signatures (DSA signatures are intentionally
@@ -53,13 +54,25 @@ class VerifyCertificateChainPkitsTestDelegate {
     }
     // First entry in the PKITS chain is the trust anchor.
     TrustStore trust_store;
-    EXPECT_TRUE(trust_store.AddTrustedCertificate(cert_ders[0]));
+    scoped_refptr<ParsedCertificate> anchor(
+        ParsedCertificate::CreateFromCertificateCopy(cert_ders[0]));
+    EXPECT_TRUE(anchor);
+    if (anchor)
+      trust_store.AddTrustedCertificate(std::move(anchor));
 
     // PKITS lists chains from trust anchor to target, VerifyCertificateChain
     // takes them starting with the target and not including the trust anchor.
-    std::vector<der::Input> input_chain;
-    for (size_t i = cert_ders.size() - 1; i > 0; --i)
-      input_chain.push_back(der::Input(&cert_ders[i]));
+    std::vector<scoped_refptr<net::ParsedCertificate>> input_chain;
+    for (size_t i = cert_ders.size() - 1; i > 0; --i) {
+      if (!net::ParsedCertificate::CreateAndAddToVector(
+              reinterpret_cast<const uint8_t*>(cert_ders[i].data()),
+              cert_ders[i].size(),
+              net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE,
+              &input_chain)) {
+        ADD_FAILURE() << "cert " << i << " failed to parse";
+        return false;
+      }
+    }
 
     SimpleSignaturePolicy signature_policy(1024);
 

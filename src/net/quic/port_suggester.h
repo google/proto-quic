@@ -10,11 +10,10 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/sha1.h"
+#include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
 
 namespace net {
-
-class HostPortPair;
 
 // We provide a pseudo-random number generator that is always seeded the same
 // way for a given destination host-port pair.  The generator is used to

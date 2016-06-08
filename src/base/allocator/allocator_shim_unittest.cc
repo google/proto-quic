@@ -76,15 +76,15 @@ class AllocatorShimTest : public testing::Test {
                            void* address,
                            size_t size) {
     if (instance_) {
-      // Address 0x42 is a special sentinel for the NewHandlerConcurrency test.
+      // Address 0x420 is a special sentinel for the NewHandlerConcurrency test.
       // The first time (but only the first one) it is hit it fails, causing the
       // invocation of the std::new_handler.
-      if (address == reinterpret_cast<void*>(0x42)) {
-        if (!instance_->did_fail_realloc_0x42_once->Get()) {
-          instance_->did_fail_realloc_0x42_once->Set(true);
+      if (address == reinterpret_cast<void*>(0x420)) {
+        if (!instance_->did_fail_realloc_0x420_once->Get()) {
+          instance_->did_fail_realloc_0x420_once->Set(true);
           return nullptr;
         } else {
-          return reinterpret_cast<void*>(0x42ul);
+          return reinterpret_cast<void*>(0x420ul);
         }
       }
 
@@ -120,7 +120,7 @@ class AllocatorShimTest : public testing::Test {
     memset(&aligned_allocs_intercepted_by_alignment, 0, array_size);
     memset(&reallocs_intercepted_by_size, 0, array_size);
     memset(&frees_intercepted_by_addr, 0, array_size);
-    did_fail_realloc_0x42_once.reset(new ThreadLocalBoolean());
+    did_fail_realloc_0x420_once.reset(new ThreadLocalBoolean());
     subtle::Release_Store(&num_new_handler_calls, 0);
     instance_ = this;
   }
@@ -135,7 +135,7 @@ class AllocatorShimTest : public testing::Test {
   size_t reallocs_intercepted_by_size[kMaxSizeTracked];
   size_t reallocs_intercepted_by_addr[kMaxSizeTracked];
   size_t frees_intercepted_by_addr[kMaxSizeTracked];
-  std::unique_ptr<ThreadLocalBoolean> did_fail_realloc_0x42_once;
+  std::unique_ptr<ThreadLocalBoolean> did_fail_realloc_0x420_once;
   subtle::Atomic32 num_new_handler_calls;
 
  private:
@@ -158,8 +158,8 @@ class ThreadDelegateForNewHandlerTest : public PlatformThread::Delegate {
 
   void ThreadMain() override {
     event_->Wait();
-    void* res = realloc(reinterpret_cast<void*>(0x42ul), 1);
-    EXPECT_EQ(0x42u, reinterpret_cast<uintptr_t>(res));
+    void* res = realloc(reinterpret_cast<void*>(0x420ul), 1);
+    EXPECT_EQ(reinterpret_cast<void*>(0x420ul), res);
   }
 
  private:
@@ -292,7 +292,8 @@ TEST_F(AllocatorShimTest, InterceptCppSymbols) {
 // This test exercises the case of concurrent OOM failure, which would end up
 // invoking std::new_handler concurrently. This is to cover the CallNewHandler()
 // paths of allocator_shim.cc and smoke-test its thread safey.
-// The test creates kNumThreads threads. Each of them does just a realloc(0x42).
+// The test creates kNumThreads threads. Each of them does just a
+// realloc(0x420).
 // The shim intercepts such realloc and makes it fail only once on each thread.
 // We expect to see excactly kNumThreads invocations of the new_handler.
 TEST_F(AllocatorShimTest, NewHandlerConcurrency) {
@@ -301,7 +302,8 @@ TEST_F(AllocatorShimTest, NewHandlerConcurrency) {
 
   // The WaitableEvent here is used to attempt to trigger all the threads at
   // the same time, after they have been initialized.
-  WaitableEvent event(/*manual_reset=*/true, /*initially_signaled=*/false);
+  WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
+                      WaitableEvent::InitialState::NOT_SIGNALED);
 
   ThreadDelegateForNewHandlerTest mock_thread_main(&event);
 

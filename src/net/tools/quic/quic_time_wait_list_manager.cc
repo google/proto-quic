@@ -19,8 +19,8 @@
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_framer.h"
 #include "net/quic/quic_protocol.h"
+#include "net/quic/quic_server_session_base.h"
 #include "net/quic/quic_utils.h"
-#include "net/tools/quic/quic_server_session_base.h"
 
 using base::StringPiece;
 
@@ -76,7 +76,7 @@ class QuicTimeWaitListManager::QueuedPacket {
 
 QuicTimeWaitListManager::QuicTimeWaitListManager(
     QuicPacketWriter* writer,
-    QuicServerSessionVisitor* visitor,
+    QuicServerSessionBase::Visitor* visitor,
     QuicConnectionHelperInterface* helper,
     QuicAlarmFactory* alarm_factory)
     : time_wait_period_(

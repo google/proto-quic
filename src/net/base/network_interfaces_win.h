@@ -84,7 +84,6 @@ struct WlanApiDeleter {
 NET_EXPORT bool GetNetworkListImpl(
     NetworkInterfaceList* networks,
     int policy,
-    bool is_xp,
     const IP_ADAPTER_ADDRESSES* ip_adapter_addresses);
 
 }  // namespace internal

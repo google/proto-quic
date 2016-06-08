@@ -15,12 +15,6 @@ namespace trace_event {
 
 class ProcessMemoryDump;
 
-// Args passed to OnMemoryDump(). This is to avoid rewriting all the subclasses
-// in the codebase when extending the MemoryDumpProvider API.
-struct MemoryDumpArgs {
-  MemoryDumpLevelOfDetail level_of_detail;
-};
-
 // The contract interface that memory dump providers must implement.
 class BASE_EXPORT MemoryDumpProvider {
  public:

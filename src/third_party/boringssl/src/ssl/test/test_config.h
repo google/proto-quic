@@ -38,6 +38,7 @@ struct TestConfig {
   bool write_different_record_sizes = false;
   bool cbc_record_splitting = false;
   bool partial_write = false;
+  bool no_tls13 = false;
   bool no_tls12 = false;
   bool no_tls11 = false;
   bool no_tls1 = false;
@@ -104,6 +105,7 @@ struct TestConfig {
   bool use_sparse_dh_prime = false;
   int expect_key_exchange_info = 0;
   bool use_old_client_cert_callback = false;
+  int initial_timeout_duration_ms = 0;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

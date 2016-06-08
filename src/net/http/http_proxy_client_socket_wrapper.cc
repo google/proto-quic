@@ -55,8 +55,6 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
       ssl_params_(ssl_params),
       user_agent_(user_agent),
       endpoint_(endpoint),
-      http_auth_cache_(http_auth_cache),
-      http_auth_handler_factory_(http_auth_handler_factory),
       spdy_session_pool_(spdy_session_pool),
       tunnel_(tunnel),
       proxy_delegate_(proxy_delegate),

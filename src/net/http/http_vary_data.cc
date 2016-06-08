@@ -68,9 +68,8 @@ bool HttpVaryData::MatchesRequest(
     const HttpResponseHeaders& cached_response_headers) const {
   HttpVaryData new_vary_data;
   if (!new_vary_data.Init(request_info, cached_response_headers)) {
-    // This shouldn't happen provided the same response headers passed here
-    // were also used when initializing |this|.
-    NOTREACHED();
+    // This case can happen if |this| was loaded from a cache that was populated
+    // by a build before crbug.com/469675 was fixed.
     return false;
   }
   return memcmp(&new_vary_data.request_digest_, &request_digest_,

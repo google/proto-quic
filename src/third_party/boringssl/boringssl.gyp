@@ -134,7 +134,7 @@
         }],
         ['target_arch == "ia32" and msan == 0', {
           'conditions': [
-            ['OS == "mac" or OS == "ios"', {
+            ['OS == "mac"', {
               'sources': [ '<@(boringssl_mac_x86_sources)' ],
             }],
             ['OS == "linux" or OS == "android"', {
@@ -160,7 +160,7 @@
         }],
         ['target_arch == "x64" and msan == 0', {
           'conditions': [
-            ['OS == "mac" or OS == "ios"', {
+            ['OS == "mac"', {
               'sources': [ '<@(boringssl_mac_x86_64_sources)' ],
             }],
             ['OS == "linux" or OS == "android"', {

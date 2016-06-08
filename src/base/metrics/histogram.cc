@@ -64,8 +64,7 @@ bool ReadHistogramArguments(PickleIterator* iter,
   }
 
   // We use the arguments to find or create the local version of the histogram
-  // in this process, so we need to clear the IPC flag.
-  DCHECK(*flags & HistogramBase::kIPCSerializationSourceFlag);
+  // in this process, so we need to clear any IPC flag.
   *flags &= ~HistogramBase::kIPCSerializationSourceFlag;
 
   return true;

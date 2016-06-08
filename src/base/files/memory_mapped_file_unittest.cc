@@ -65,7 +65,7 @@ TEST_F(MemoryMappedFileTest, MapWholeFileByPath) {
   MemoryMappedFile map;
   map.Initialize(temp_file_path());
   ASSERT_EQ(kFileSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
 }
@@ -76,7 +76,7 @@ TEST_F(MemoryMappedFileTest, MapWholeFileByFD) {
   MemoryMappedFile map;
   map.Initialize(File(temp_file_path(), File::FLAG_OPEN | File::FLAG_READ));
   ASSERT_EQ(kFileSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
 }
@@ -87,7 +87,7 @@ TEST_F(MemoryMappedFileTest, MapSmallFile) {
   MemoryMappedFile map;
   map.Initialize(temp_file_path());
   ASSERT_EQ(kFileSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
 }
@@ -100,7 +100,7 @@ TEST_F(MemoryMappedFileTest, MapWholeFileUsingRegion) {
   File file(temp_file_path(), File::FLAG_OPEN | File::FLAG_READ);
   map.Initialize(std::move(file), MemoryMappedFile::Region::kWholeFile);
   ASSERT_EQ(kFileSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
 }
@@ -115,7 +115,7 @@ TEST_F(MemoryMappedFileTest, MapPartialRegionAtBeginning) {
   MemoryMappedFile::Region region = {0, kPartialSize};
   map.Initialize(std::move(file), region);
   ASSERT_EQ(kPartialSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kPartialSize, 0));
 }
@@ -131,7 +131,7 @@ TEST_F(MemoryMappedFileTest, MapPartialRegionAtEnd) {
   MemoryMappedFile::Region region = {kOffset, kPartialSize};
   map.Initialize(std::move(file), region);
   ASSERT_EQ(kPartialSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kPartialSize, kOffset));
 }
@@ -148,7 +148,7 @@ TEST_F(MemoryMappedFileTest, MapSmallPartialRegionInTheMiddle) {
   MemoryMappedFile::Region region = {kOffset, kPartialSize};
   map.Initialize(std::move(file), region);
   ASSERT_EQ(kPartialSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kPartialSize, kOffset));
 }
@@ -165,9 +165,77 @@ TEST_F(MemoryMappedFileTest, MapLargePartialRegionInTheMiddle) {
   MemoryMappedFile::Region region = {kOffset, kPartialSize};
   map.Initialize(std::move(file), region);
   ASSERT_EQ(kPartialSize, map.length());
-  ASSERT_TRUE(map.data() != NULL);
+  ASSERT_TRUE(map.data() != nullptr);
   EXPECT_TRUE(map.IsValid());
   ASSERT_TRUE(CheckBufferContents(map.data(), kPartialSize, kOffset));
+}
+
+TEST_F(MemoryMappedFileTest, WriteableFile) {
+  const size_t kFileSize = 127;
+  CreateTemporaryTestFile(kFileSize);
+
+  {
+    MemoryMappedFile map;
+    map.Initialize(temp_file_path(), MemoryMappedFile::READ_WRITE);
+    ASSERT_EQ(kFileSize, map.length());
+    ASSERT_TRUE(map.data() != nullptr);
+    EXPECT_TRUE(map.IsValid());
+    ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
+
+    uint8_t* bytes = map.data();
+    bytes[0] = 'B';
+    bytes[1] = 'a';
+    bytes[2] = 'r';
+    bytes[kFileSize - 1] = '!';
+    EXPECT_FALSE(CheckBufferContents(map.data(), kFileSize, 0));
+    EXPECT_TRUE(CheckBufferContents(map.data() + 3, kFileSize - 4, 3));
+  }
+
+  int64_t file_size;
+  ASSERT_TRUE(GetFileSize(temp_file_path(), &file_size));
+  EXPECT_EQ(static_cast<int64_t>(kFileSize), file_size);
+
+  std::string contents;
+  ASSERT_TRUE(ReadFileToString(temp_file_path(), &contents));
+  EXPECT_EQ("Bar", contents.substr(0, 3));
+  EXPECT_EQ("!", contents.substr(kFileSize - 1, 1));
+}
+
+TEST_F(MemoryMappedFileTest, ExtendableFile) {
+  const size_t kFileSize = 127;
+  const size_t kFileExtend = 100;
+  CreateTemporaryTestFile(kFileSize);
+
+  {
+    File file(temp_file_path(),
+              File::FLAG_OPEN | File::FLAG_READ | File::FLAG_WRITE);
+    MemoryMappedFile::Region region = {0, kFileSize + kFileExtend};
+    MemoryMappedFile map;
+    map.Initialize(std::move(file), region,
+                   MemoryMappedFile::READ_WRITE_EXTEND);
+    EXPECT_EQ(kFileSize + kFileExtend, map.length());
+    ASSERT_TRUE(map.data() != nullptr);
+    EXPECT_TRUE(map.IsValid());
+    ASSERT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
+
+    uint8_t* bytes = map.data();
+    EXPECT_EQ(0, bytes[kFileSize + 0]);
+    EXPECT_EQ(0, bytes[kFileSize + 1]);
+    EXPECT_EQ(0, bytes[kFileSize + 2]);
+    bytes[kFileSize + 0] = 'B';
+    bytes[kFileSize + 1] = 'A';
+    bytes[kFileSize + 2] = 'Z';
+    EXPECT_TRUE(CheckBufferContents(map.data(), kFileSize, 0));
+  }
+
+  int64_t file_size;
+  ASSERT_TRUE(GetFileSize(temp_file_path(), &file_size));
+  EXPECT_LE(static_cast<int64_t>(kFileSize + 3), file_size);
+  EXPECT_GE(static_cast<int64_t>(kFileSize + kFileExtend), file_size);
+
+  std::string contents;
+  ASSERT_TRUE(ReadFileToString(temp_file_path(), &contents));
+  EXPECT_EQ("BAZ", contents.substr(kFileSize, 3));
 }
 
 }  // namespace

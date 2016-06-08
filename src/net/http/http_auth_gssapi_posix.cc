@@ -846,18 +846,6 @@ int HttpAuthGSSAPI::GetNextSecurityToken(const std::string& spn,
   }
   ScopedName scoped_name(principal_name, library_);
 
-  std::vector<char> channel_bindings_data;
-  std::unique_ptr<gss_channel_bindings_struct> gss_channel_bindings;
-  if (!channel_bindings.empty()) {
-    gss_channel_bindings.reset(new gss_channel_bindings_struct);
-    memset(gss_channel_bindings.get(), 0, sizeof(gss_channel_bindings_struct));
-    channel_bindings_data.assign(channel_bindings.begin(),
-                                 channel_bindings.end());
-    gss_channel_bindings->application_data.value = channel_bindings_data.data();
-    gss_channel_bindings->application_data.length =
-        channel_bindings_data.size();
-  }
-
   // Continue creating a security context.
   OM_uint32 req_flags = 0;
   if (can_delegate_)
@@ -865,9 +853,7 @@ int HttpAuthGSSAPI::GetNextSecurityToken(const std::string& spn,
   major_status = library_->init_sec_context(
       &minor_status, GSS_C_NO_CREDENTIAL, scoped_sec_context_.receive(),
       principal_name, gss_oid_, req_flags, GSS_C_INDEFINITE,
-      gss_channel_bindings ? gss_channel_bindings.get()
-                           : GSS_C_NO_CHANNEL_BINDINGS,
-      in_token,
+      GSS_C_NO_CHANNEL_BINDINGS, in_token,
       nullptr,  // actual_mech_type
       out_token,
       nullptr,  // ret flags

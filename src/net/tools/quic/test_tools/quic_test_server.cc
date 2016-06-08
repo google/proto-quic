@@ -22,6 +22,7 @@
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_simple_server_session.h"
+#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 
 namespace net {
@@ -32,7 +33,8 @@ class CustomStreamSession : public QuicSimpleServerSession {
   CustomStreamSession(
       const QuicConfig& config,
       QuicConnection* connection,
-      QuicServerSessionVisitor* visitor,
+      QuicServerSessionBase::Visitor* visitor,
+      QuicServerSessionBase::Helper* helper,
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache,
       QuicTestServer::StreamFactory* factory,
@@ -40,6 +42,7 @@ class CustomStreamSession : public QuicSimpleServerSession {
       : QuicSimpleServerSession(config,
                                 connection,
                                 visitor,
+                                helper,
                                 crypto_config,
                                 compressed_certs_cache),
         stream_factory_(factory),
@@ -74,15 +77,18 @@ class CustomStreamSession : public QuicSimpleServerSession {
 
 class QuicTestDispatcher : public QuicDispatcher {
  public:
-  QuicTestDispatcher(const QuicConfig& config,
-                     const QuicCryptoServerConfig* crypto_config,
-                     const QuicVersionVector& versions,
-                     std::unique_ptr<QuicConnectionHelperInterface> helper,
-                     std::unique_ptr<QuicAlarmFactory> alarm_factory)
+  QuicTestDispatcher(
+      const QuicConfig& config,
+      const QuicCryptoServerConfig* crypto_config,
+      const QuicVersionVector& versions,
+      std::unique_ptr<QuicConnectionHelperInterface> helper,
+      std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
+      std::unique_ptr<QuicAlarmFactory> alarm_factory)
       : QuicDispatcher(config,
                        crypto_config,
                        versions,
                        std::move(helper),
+                       std::move(session_helper),
                        std::move(alarm_factory)),
         session_factory_(nullptr),
         stream_factory_(nullptr),
@@ -102,12 +108,12 @@ class QuicTestDispatcher : public QuicDispatcher {
     QuicServerSessionBase* session = nullptr;
     if (stream_factory_ != nullptr || crypto_stream_factory_ != nullptr) {
       session = new CustomStreamSession(
-          config(), connection, this, crypto_config(), compressed_certs_cache(),
-          stream_factory_, crypto_stream_factory_);
+          config(), connection, this, session_helper(), crypto_config(),
+          compressed_certs_cache(), stream_factory_, crypto_stream_factory_);
     } else {
-      session = session_factory_->CreateSession(config(), connection, this,
-                                                crypto_config(),
-                                                compressed_certs_cache());
+      session = session_factory_->CreateSession(
+          config(), connection, this, session_helper(), crypto_config(),
+          compressed_certs_cache());
     }
     session->Initialize();
     return session;
@@ -158,6 +164,8 @@ QuicDispatcher* QuicTestServer::CreateQuicDispatcher() {
       config(), &crypto_config(), supported_versions(),
       std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
           epoll_server(), QuicAllocator::BUFFER_POOL)),
+      std::unique_ptr<QuicServerSessionBase::Helper>(
+          new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
       std::unique_ptr<QuicEpollAlarmFactory>(
           new QuicEpollAlarmFactory(epoll_server())));
 }
@@ -181,12 +189,14 @@ void QuicTestServer::SetCryptoStreamFactory(CryptoStreamFactory* factory) {
 ImmediateGoAwaySession::ImmediateGoAwaySession(
     const QuicConfig& config,
     QuicConnection* connection,
-    QuicServerSessionVisitor* visitor,
+    QuicServerSessionBase::Visitor* visitor,
+    QuicServerSessionBase::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)
     : QuicSimpleServerSession(config,
                               connection,
                               visitor,
+                              helper,
                               crypto_config,
                               compressed_certs_cache) {}
 

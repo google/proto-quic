@@ -150,10 +150,6 @@ WARN_UNUSED_RESULT bool BitStringIsAllZeros(const der::BitString& bits) {
 
 }  // namespace
 
-ParsedCertificate::ParsedCertificate() {}
-
-ParsedCertificate::~ParsedCertificate() {}
-
 ParsedTbsCertificate::ParsedTbsCertificate() {}
 
 ParsedTbsCertificate::~ParsedTbsCertificate() {}
@@ -171,7 +167,9 @@ bool VerifySerialNumber(const der::Input& value) {
 }
 
 bool ParseCertificate(const der::Input& certificate_tlv,
-                      ParsedCertificate* out) {
+                      der::Input* out_tbs_certificate_tlv,
+                      der::Input* out_signature_algorithm_tlv,
+                      der::BitString* out_signature_value) {
   der::Parser parser(certificate_tlv);
 
   //   Certificate  ::=  SEQUENCE  {
@@ -180,15 +178,15 @@ bool ParseCertificate(const der::Input& certificate_tlv,
     return false;
 
   //        tbsCertificate       TBSCertificate,
-  if (!ReadSequenceTLV(&certificate_parser, &out->tbs_certificate_tlv))
+  if (!ReadSequenceTLV(&certificate_parser, out_tbs_certificate_tlv))
     return false;
 
   //        signatureAlgorithm   AlgorithmIdentifier,
-  if (!ReadSequenceTLV(&certificate_parser, &out->signature_algorithm_tlv))
+  if (!ReadSequenceTLV(&certificate_parser, out_signature_algorithm_tlv))
     return false;
 
   //        signatureValue       BIT STRING  }
-  if (!certificate_parser.ReadBitString(&out->signature_value))
+  if (!certificate_parser.ReadBitString(out_signature_value))
     return false;
 
   // There isn't an extension point at the end of Certificate.
@@ -507,6 +505,19 @@ NET_EXPORT bool ParseExtensions(
   if (parser.HasMore())
     return false;
 
+  return true;
+}
+
+NET_EXPORT bool ConsumeExtension(
+    const der::Input& oid,
+    std::map<der::Input, ParsedExtension>* unconsumed_extensions,
+    ParsedExtension* extension) {
+  auto it = unconsumed_extensions->find(oid);
+  if (it == unconsumed_extensions->end())
+    return false;
+
+  *extension = it->second;
+  unconsumed_extensions->erase(it);
   return true;
 }
 

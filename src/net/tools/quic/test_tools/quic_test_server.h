@@ -34,7 +34,8 @@ class QuicTestServer : public QuicServer {
     virtual QuicServerSessionBase* CreateSession(
         const QuicConfig& config,
         QuicConnection* connection,
-        QuicServerSessionVisitor* visitor,
+        QuicServerSessionBase::Visitor* visitor,
+        QuicServerSessionBase::Helper* helper,
         const QuicCryptoServerConfig* crypto_config,
         QuicCompressedCertsCache* compressed_certs_cache) = 0;
   };
@@ -56,7 +57,7 @@ class QuicTestServer : public QuicServer {
     // Returns a new QuicCryptoServerStreamBase owned by the caller
     virtual QuicCryptoServerStreamBase* CreateCryptoStream(
         const QuicCryptoServerConfig* crypto_config,
-        QuicSpdySession* session) = 0;
+        QuicServerSessionBase* session) = 0;
   };
 
   explicit QuicTestServer(ProofSource* proof_source);
@@ -89,7 +90,8 @@ class ImmediateGoAwaySession : public QuicSimpleServerSession {
  public:
   ImmediateGoAwaySession(const QuicConfig& config,
                          QuicConnection* connection,
-                         QuicServerSessionVisitor* visitor,
+                         QuicServerSessionBase::Visitor* visitor,
+                         QuicServerSessionBase::Helper* helper,
                          const QuicCryptoServerConfig* crypto_config,
                          QuicCompressedCertsCache* compressed_certs_cache);
   // Override to send GoAway.

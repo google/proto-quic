@@ -74,6 +74,17 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   typedef std::set<Request*> RequestSet;
   typedef std::map<SpdySessionKey, RequestSet> SpdySessionRequestMap;
 
+  // Values must not be changed or reused.  Keep in sync with identically named
+  // enum in histograms.xml.
+  enum AlternativeServiceType {
+    NO_ALTERNATIVE_SERVICE = 0,
+    QUIC_SAME_DESTINATION = 1,
+    QUIC_DIFFERENT_DESTINATION = 2,
+    NOT_QUIC_SAME_DESTINATION = 3,
+    NOT_QUIC_DIFFERENT_DESTINATION = 4,
+    MAX_ALTERNATIVE_SERVICE_TYPE
+  };
+
   HttpStreamRequest* RequestStreamInternal(
       const HttpRequestInfo& info,
       RequestPriority priority,
@@ -85,6 +96,11 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const BoundNetLog& net_log);
 
   AlternativeService GetAlternativeServiceFor(
+      const HttpRequestInfo& request_info,
+      HttpStreamRequest::Delegate* delegate,
+      HttpStreamRequest::StreamType stream_type);
+
+  AlternativeService GetAlternativeServiceForInternal(
       const HttpRequestInfo& request_info,
       HttpStreamRequest::Delegate* delegate,
       HttpStreamRequest::StreamType stream_type);

@@ -152,6 +152,9 @@ class CryptoTestUtils {
   // Returns a real ProofVerifier (not a fake proof verifier) for testing.
   static ProofVerifier* RealProofVerifierForTesting();
 
+  // Returns a hash of the leaf test certificate.
+  static uint64_t LeafCertHashForTesting();
+
   // Returns a |ProofVerifyContext| that must be used with the verifier
   // returned by |ProofVerifierForTesting|.
   static ProofVerifyContext* ProofVerifyContextForTesting();

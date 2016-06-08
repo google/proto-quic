@@ -120,25 +120,21 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
       return false;
     }
 
-    if (std::any_of(name.begin(), name.end(), base::IsAsciiUpper<char>)) {
-      DLOG(ERROR) << "Malformed header: Header name " << name
-                  << " contains upper-case characters.";
-      return false;
-    }
-
     auto iter = headers->find(name);
     if (iter == headers->end()) {
       (*headers)[name] = p.second;
-    } else if (name == "cookie") {
-      // Obeys section 8.1.2.5 in RFC 7540 for cookie reconstruction.
-      headers->ReplaceOrAppendHeader(
-          name, base::StringPrintf("%s; %s", iter->second.as_string().c_str(),
-                                   p.second.c_str()));
     } else {
       // This header had multiple values, so it must be reconstructed.
-      string value = base::StringPrintf(
-          "%s%c%s", iter->second.as_string().c_str(), '\0', p.second.c_str());
-      headers->ReplaceOrAppendHeader(name, value);
+      StringPiece v = iter->second;
+      string s(v.data(), v.length());
+      if (name == "cookie") {
+        // Obeys section 8.1.2.5 in RFC 7540 for cookie reconstruction.
+        s.append("; ");
+      } else {
+        StringPiece("\0", 1).AppendToString(&s);
+      }
+      s.append(p.second);
+      headers->ReplaceOrAppendHeader(name, s);
     }
   }
 

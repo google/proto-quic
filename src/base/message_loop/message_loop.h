@@ -375,16 +375,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   void AddTaskObserver(TaskObserver* task_observer);
   void RemoveTaskObserver(TaskObserver* task_observer);
 
-#if defined(OS_WIN)
-  void set_os_modal_loop(bool os_modal_loop) {
-    os_modal_loop_ = os_modal_loop;
-  }
-
-  bool os_modal_loop() const {
-    return os_modal_loop_;
-  }
-#endif  // OS_WIN
-
   // Can only be called from the thread that owns the MessageLoop.
   bool is_running() const;
 
@@ -522,12 +512,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // A recursion block that prevents accidentally running additional tasks when
   // insider a (accidentally induced?) nested message pump.
   bool nestable_tasks_allowed_;
-
-#if defined(OS_WIN)
-  // Should be set to true before calling Windows APIs like TrackPopupMenu, etc.
-  // which enter a modal message loop.
-  bool os_modal_loop_;
-#endif
 
   // pump_factory_.Run() is called to create a message pump for this loop
   // if type_ is TYPE_CUSTOM and pump_ is null.

@@ -114,9 +114,6 @@ struct NET_EXPORT SSLConfig {
   // servers with bad configurations without full removal.
   bool deprecated_cipher_suites_enabled;
 
-  // Enables RC4 cipher suites.
-  bool rc4_enabled;
-
   bool channel_id_enabled;   // True if TLS channel ID extension is enabled.
 
   // List of Token Binding key parameters supported by the client. If empty,

@@ -5,7 +5,6 @@
 #include "net/quic/port_suggester.h"
 
 #include "base/logging.h"
-#include "net/base/host_port_pair.h"
 
 namespace net {
 

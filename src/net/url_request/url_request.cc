@@ -1014,8 +1014,9 @@ void URLRequest::SetPriority(RequestPriority priority) {
 
   priority_ = priority;
   if (job_.get()) {
-    net_log_.AddEvent(NetLog::TYPE_URL_REQUEST_SET_PRIORITY,
-                      NetLog::IntCallback("priority", priority_));
+    net_log_.AddEvent(
+        NetLog::TYPE_URL_REQUEST_SET_PRIORITY,
+        NetLog::StringCallback("priority", RequestPriorityToString(priority_)));
     job_->SetPriority(priority_);
   }
 }

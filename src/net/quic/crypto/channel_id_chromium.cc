@@ -4,10 +4,9 @@
 
 #include "net/quic/crypto/channel_id_chromium.h"
 
-#include <string>
 #include <utility>
+#include <vector>
 
-#include "base/macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "crypto/ec_private_key.h"

@@ -31,6 +31,11 @@ class NET_EXPORT UploadElementReader {
   // otherwise returns NULL.
   virtual const UploadFileElementReader* AsFileReader() const;
 
+  // This function must be called before calling any other method. It is not
+  // valid to call any method (other than the destructor) if Init() fails.
+  // This method can be called multiple times. Calling this method after an
+  // Init() success results in resetting the state (i.e. the stream is rewound).
+  //
   // Initializes the instance synchronously when possible, otherwise does
   // initialization aynschronously, returns ERR_IO_PENDING and runs callback.
   // Calling this method again after a Init() success results in resetting the

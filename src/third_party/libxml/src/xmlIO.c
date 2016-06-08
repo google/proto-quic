@@ -1604,7 +1604,7 @@ xmlCreateZMemBuff( int compression ) {
 	xmlFreeZMemBuff( buff );
 	buff = NULL;
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlCreateZMemBuff:  %s %d\n",
+		    "xmlCreateZMemBuff:  %s %d\n",
 		    "Error initializing compression context.  ZLIB error:",
 		    z_err );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1672,7 +1672,7 @@ xmlZMemBuffExtend( xmlZMemBuffPtr buff, size_t ext_amt ) {
     else {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlZMemBuffExtend:  %s %lu bytes.\n",
+		    "xmlZMemBuffExtend:  %s %lu bytes.\n",
 		    "Allocation failure extending output buffer to",
 		    new_size );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1718,7 +1718,7 @@ xmlZMemBuffAppend( xmlZMemBuffPtr buff, const char * src, int len ) {
 	if ( z_err != Z_OK ) {
 	    xmlChar msg[500];
 	    xmlStrPrintf(msg, 500,
-			(const xmlChar *) "xmlZMemBuffAppend:  %s %d %s - %d",
+			"xmlZMemBuffAppend:  %s %d %s - %d",
 			"Compression error while appending",
 			len, "bytes to buffer.  ZLIB error", z_err );
 	    xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1791,7 +1791,7 @@ xmlZMemBuffGetContent( xmlZMemBuffPtr buff, char ** data_ref ) {
     else {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlZMemBuffGetContent:  %s - %d\n",
+		    "xmlZMemBuffGetContent:  %s - %d\n",
 		    "Error flushing zlib buffers.  Error code", z_err );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
     }
@@ -1996,7 +1996,7 @@ xmlIOHTTPWrite( void * context, const char * buffer, int len ) {
 	if ( len < 0 ) {
 	    xmlChar msg[500];
 	    xmlStrPrintf(msg, 500,
-			(const xmlChar *) "xmlIOHTTPWrite:  %s\n%s '%s'.\n",
+			"xmlIOHTTPWrite:  %s\n%s '%s'.\n",
 			"Error appending to internal buffer.",
 			"Error sending document to URI",
 			ctxt->uri );
@@ -2068,7 +2068,7 @@ xmlIOHTTPCloseWrite( void * context, const char * http_mthd ) {
     if ( http_content == NULL ) {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		     (const xmlChar *) "xmlIOHTTPCloseWrite:  %s '%s' %s '%s'.\n",
+		     "xmlIOHTTPCloseWrite:  %s '%s' %s '%s'.\n",
 		     "Error retrieving content.\nUnable to",
 		     http_mthd, "data to URI", ctxt->uri );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -2140,7 +2140,7 @@ xmlIOHTTPCloseWrite( void * context, const char * http_mthd ) {
 	    else {
                 xmlChar msg[500];
                 xmlStrPrintf(msg, 500,
-    (const xmlChar *) "xmlIOHTTPCloseWrite: HTTP '%s' of %d %s\n'%s' %s %d\n",
+                      "xmlIOHTTPCloseWrite: HTTP '%s' of %d %s\n'%s' %s %d\n",
 			    http_mthd, content_lgth,
 			    "bytes to URI", ctxt->uri,
 			    "failed.  HTTP return code:", http_rtn );

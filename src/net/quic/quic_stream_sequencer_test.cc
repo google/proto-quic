@@ -52,6 +52,13 @@ class MockStream : public ReliableQuicStream {
   MOCK_METHOD1(Reset, void(QuicRstStreamErrorCode error));
   MOCK_METHOD0(OnCanWrite, void());
   virtual bool IsFlowControlEnabled() const { return true; }
+
+  const IPEndPoint& PeerAddressOfLatestPacket() const override {
+    return peer_address_;
+  }
+
+ protected:
+  IPEndPoint peer_address_ = IPEndPoint(net::test::Any4(), 65535);
 };
 
 namespace {

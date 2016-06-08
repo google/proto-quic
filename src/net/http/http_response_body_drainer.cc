@@ -113,7 +113,7 @@ void HttpResponseBodyDrainer::Finish(int result) {
   if (session_)
     session_->RemoveResponseDrainer(this);
 
-  if (result < 0) {
+  if (result < 0 || !stream_->CanReuseConnection()) {
     stream_->Close(true /* no keep-alive */);
   } else {
     DCHECK_EQ(OK, result);

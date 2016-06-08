@@ -7,17 +7,19 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "base/macros.h"
 #include "net/base/completion_callback.h"
+#include "net/base/hash_value.h"
 #include "net/base/net_export.h"
+#include "net/cert/x509_certificate.h"
 
 namespace net {
 
 class BoundNetLog;
 class CertVerifyResult;
 class CRLSet;
-class X509Certificate;
 
 // CertVerifier represents a service for verifying certificates.
 //
@@ -74,6 +76,32 @@ class NET_EXPORT CertVerifier {
     VERIFY_REV_CHECKING_REQUIRED_LOCAL_ANCHORS = 1 << 4,
   };
 
+  // The parameters for doing a Verify(). |certificate|, |hostname|, and
+  // |flags| are required. The rest are optional.
+  class NET_EXPORT RequestParams {
+   public:
+    RequestParams(X509Certificate* certificate,
+                  const std::string& hostname,
+                  int flags,
+                  const std::string& ocsp_response,
+                  const CertificateList& additional_trust_anchors);
+    RequestParams(const RequestParams& other);
+    ~RequestParams();
+
+    const std::string& hostname() const { return hostname_; }
+    int flags() const { return flags_; }
+    const std::vector<SHA1HashValue> request_data() const {
+      return request_data_;
+    }
+
+    bool operator<(const RequestParams& other) const;
+
+   private:
+    std::string hostname_;
+    int flags_;
+    std::vector<SHA1HashValue> request_data_;
+  };
+
   // When the verifier is destroyed, all certificate verification requests are
   // canceled, and their completion callbacks will not be called.
   virtual ~CertVerifier() {}
@@ -113,7 +141,7 @@ class NET_EXPORT CertVerifier {
   // nullptr. However it is not guaranteed that all implementations will reset
   // it in this case.
   //
-  // TODO(rsleevi): Move CRLSet* out of the CertVerifier signature.
+  // TODO(rsleevi): Update this to use RequestParams as part of the signature.
   virtual int Verify(X509Certificate* cert,
                      const std::string& hostname,
                      const std::string& ocsp_response,

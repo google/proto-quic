@@ -35,6 +35,9 @@ class NET_EXPORT CTVerifier {
     // net/) may store the observed |cert| and |sct|.
     virtual void OnSCTVerified(X509Certificate* cert,
                                const ct::SignedCertificateTimestamp* sct) = 0;
+
+   protected:
+    virtual ~Observer() {}
   };
 
   virtual ~CTVerifier() {}

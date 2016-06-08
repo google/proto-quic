@@ -42,7 +42,7 @@ class BASE_EXPORT TraceConfig {
 
   // Specifies the memory dump config for tracing.
   // Used only when "memory-infra" category is enabled.
-  struct MemoryDumpConfig {
+  struct BASE_EXPORT MemoryDumpConfig {
     MemoryDumpConfig();
     MemoryDumpConfig(const MemoryDumpConfig& other);
     ~MemoryDumpConfig();
@@ -196,6 +196,9 @@ class BASE_EXPORT TraceConfig {
 
   void Clear();
 
+  // Clears and resets the memory dump config.
+  void ResetMemoryDumpConfig(const MemoryDumpConfig& memory_dump_config);
+
   const MemoryDumpConfig& memory_dump_config() const {
     return memory_dump_config_;
   }
@@ -235,7 +238,8 @@ class BASE_EXPORT TraceConfig {
                          const char* param,
                          const StringList& categories) const;
 
-  void SetMemoryDumpConfig(const base::DictionaryValue& memory_dump_config);
+  void SetMemoryDumpConfigFromConfigDict(
+      const base::DictionaryValue& memory_dump_config);
   void SetDefaultMemoryDumpConfig();
 
   // Convert TraceConfig to the dict representation of the TraceConfig.

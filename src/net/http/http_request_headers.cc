@@ -197,9 +197,8 @@ std::unique_ptr<base::Value> HttpRequestHeaders::NetLogCallback(
        it != headers_.end(); ++it) {
     std::string log_value =
         ElideHeaderValueForNetLog(capture_mode, it->key, it->value);
-    headers->Append(new base::StringValue(
-        base::StringPrintf("%s: %s",
-                           it->key.c_str(), log_value.c_str())));
+    headers->AppendString(
+        base::StringPrintf("%s: %s", it->key.c_str(), log_value.c_str()));
   }
   dict->Set("headers", headers);
   return std::move(dict);

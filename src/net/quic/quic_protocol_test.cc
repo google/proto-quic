@@ -67,20 +67,6 @@ TEST(QuicProtocolTest, IsAawaitingPacket) {
   EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 50u, 20u));
 }
 
-TEST(QuicProtocolTest, QuicDeprecatedErrorCodeCount) {
-  // If you deprecated any QuicErrorCode, you will need to update the
-  // deprecated QuicErrorCode count. Otherwise this test will fail.
-  int num_deprecated_errors = 0;
-  std::string invalid_error_code = "INVALID_ERROR_CODE";
-  for (int i = 0; i < QUIC_LAST_ERROR; ++i) {
-    if (QuicUtils::ErrorToString(static_cast<QuicErrorCode>(i)) ==
-        invalid_error_code) {
-      ++num_deprecated_errors;
-    }
-  }
-  EXPECT_EQ(kDeprecatedQuicErrorCount, num_deprecated_errors);
-}
-
 TEST(QuicProtocolTest, QuicVersionToQuicTag) {
 // If you add a new version to the QuicVersion enum you will need to add a new
 // case to QuicVersionToQuicTag, otherwise this test will fail.

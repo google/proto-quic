@@ -5,28 +5,27 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/process/process_metrics.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(USE_TCMALLOC)
-extern "C" {
-void* tc_malloc(size_t size);
-void tc_free(void*);
-}
-
 namespace {
 
 using std::min;
 
 #ifdef NDEBUG
-void* TCMallocDoMallocForTest(size_t size) {
-  return tc_malloc(size);
+// We wrap malloc and free in noinline functions to ensure that we test the real
+// implementation of the allocator. Otherwise, the compiler may specifically
+// recognize the calls to malloc and free in our tests and optimize them away.
+NOINLINE void* TCMallocDoMallocForTest(size_t size) {
+  return malloc(size);
 }
 
-void TCMallocDoFreeForTest(void* ptr) {
-  tc_free(ptr);
+NOINLINE void TCMallocDoFreeForTest(void* ptr) {
+  free(ptr);
 }
 #endif
 

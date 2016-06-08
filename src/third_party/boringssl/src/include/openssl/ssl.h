@@ -487,6 +487,16 @@ OPENSSL_EXPORT int SSL_get_error(const SSL *ssl, int ret_code);
  * and zero on failure. */
 OPENSSL_EXPORT int SSL_set_mtu(SSL *ssl, unsigned mtu);
 
+/* DTLSv1_set_initial_timeout_duration sets the initial duration for a DTLS
+ * handshake timeout.
+ *
+ * This duration overrides the default of 1 second, which is the strong
+ * recommendation of RFC 6347 (see section 4.2.4.1). However, there may exist
+ * situations where a shorter timeout would be beneficial, such as for
+ * time-sensitive applications. */
+OPENSSL_EXPORT void DTLSv1_set_initial_timeout_duration(SSL *ssl,
+                                                        unsigned duration_ms);
+
 /* DTLSv1_get_timeout queries the next DTLS handshake timeout. If there is a
  * timeout in progress, it sets |*out| to the time remaining and returns one.
  * Otherwise, it returns zero.
@@ -527,6 +537,7 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define TLS1_VERSION 0x0301
 #define TLS1_1_VERSION 0x0302
 #define TLS1_2_VERSION 0x0303
+#define TLS1_3_VERSION 0x0304
 
 #define DTLS1_VERSION 0xfeff
 #define DTLS1_2_VERSION 0xfefd
@@ -1084,8 +1095,14 @@ OPENSSL_EXPORT int SSL_CIPHER_is_block_cipher(const SSL_CIPHER *cipher);
 /* SSL_CIPHER_is_ECDSA returns one if |cipher| uses ECDSA. */
 OPENSSL_EXPORT int SSL_CIPHER_is_ECDSA(const SSL_CIPHER *cipher);
 
+/* SSL_CIPHER_is_DHE returns one if |cipher| uses DHE. */
+OPENSSL_EXPORT int SSL_CIPHER_is_DHE(const SSL_CIPHER *cipher);
+
 /* SSL_CIPHER_is_ECDHE returns one if |cipher| uses ECDHE. */
 OPENSSL_EXPORT int SSL_CIPHER_is_ECDHE(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_CECPQ1 returns one if |cipher| uses CECPQ1. */
+OPENSSL_EXPORT int SSL_CIPHER_is_CECPQ1(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_get_min_version returns the minimum protocol version required
  * for |cipher|. */
@@ -1829,9 +1846,9 @@ OPENSSL_EXPORT int SSL_CTX_set1_curves(SSL_CTX *ctx, const int *curves,
 OPENSSL_EXPORT int SSL_set1_curves(SSL *ssl, const int *curves,
                                    size_t curves_len);
 
-/* SSL_get_curve_name returns a human-readable name for the elliptic curve
- * specified by the given TLS curve id, or NULL if the curve if unknown. */
-OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t curve_id);
+/* SSL_get_curve_name returns a human-readable name for the group specified by
+ * the given TLS group id, or NULL if the group is unknown. */
+OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t group_id);
 
 
 /* Multiplicative Diffie-Hellman.
@@ -3220,6 +3237,7 @@ DECLARE_STACK_OF(SSL_COMP)
 #define SSL_OP_NO_TLSv1 0x04000000L
 #define SSL_OP_NO_TLSv1_2 0x08000000L
 #define SSL_OP_NO_TLSv1_1 0x10000000L
+#define SSL_OP_NO_TLSv1_3 0x20000000L
 #define SSL_OP_NO_DTLSv1 SSL_OP_NO_TLSv1
 #define SSL_OP_NO_DTLSv1_2 SSL_OP_NO_TLSv1_2
 
@@ -3346,6 +3364,7 @@ OPENSSL_EXPORT const char *SSL_alert_desc_string(int value);
 #define SSL_TXT_kDHE "kDHE"
 #define SSL_TXT_kEDH "kEDH"
 #define SSL_TXT_kECDHE "kECDHE"
+#define SSL_TXT_kCECPQ1 "kCECPQ1"
 #define SSL_TXT_kEECDH "kEECDH"
 #define SSL_TXT_kPSK "kPSK"
 #define SSL_TXT_aRSA "aRSA"
@@ -3376,6 +3395,7 @@ OPENSSL_EXPORT const char *SSL_alert_desc_string(int value);
 #define SSL_TXT_TLSV1 "TLSv1"
 #define SSL_TXT_TLSV1_1 "TLSv1.1"
 #define SSL_TXT_TLSV1_2 "TLSv1.2"
+#define SSL_TXT_TLSV1_3 "TLSv1.3"
 #define SSL_TXT_ALL "ALL"
 #define SSL_TXT_CMPDEF "COMPLEMENTOFDEFAULT"
 
@@ -3785,9 +3805,9 @@ struct ssl_ctx_st {
   /* SRTP profiles we are willing to do from RFC 5764 */
   STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles;
 
-  /* EC extension values inherited by SSL structure */
-  size_t tlsext_ellipticcurvelist_length;
-  uint16_t *tlsext_ellipticcurvelist;
+  /* Supported group values inherited by SSL structure */
+  size_t supported_group_list_len;
+  uint16_t *supported_group_list;
 
   /* The client's Channel ID private key. */
   EVP_PKEY *tlsext_channel_id_private;
@@ -3853,7 +3873,9 @@ struct ssl_st {
   BIO *wbio; /* used by SSL_write */
 
   /* bbio, if non-NULL, is a buffer placed in front of |wbio| to pack handshake
-   * messages within one flight into a single |BIO_write|.
+   * messages within one flight into a single |BIO_write|. In this case, |wbio|
+   * and |bbio| are equal and the true caller-configured BIO is
+   * |bbio->next_bio|.
    *
    * TODO(davidben): This does not work right for DTLS. It assumes the MTU is
    * smaller than the buffer size so that the buffer's internal flushing never
@@ -3869,8 +3891,6 @@ struct ssl_st {
    * handshake_func is == 0 until then, we use this test instead of an "init"
    * member. */
 
-  int shutdown; /* we have shut things down, 0x01 sent, 0x02
-                 * for received */
   int state;    /* where we are */
 
   BUF_MEM *init_buf; /* buffer used during init */
@@ -3881,6 +3901,10 @@ struct ssl_st {
 
   struct ssl3_state_st *s3;  /* SSLv3 variables */
   struct dtls1_state_st *d1; /* DTLSv1 variables */
+
+  /* initial_timeout_duration_ms is the default DTLS timeout duration in
+   * milliseconds. It's used to initialize the timer any time it's restarted. */
+  unsigned initial_timeout_duration_ms;
 
   /* callback that allows applications to peek at protocol messages */
   void (*msg_callback)(int write_p, int version, int content_type,
@@ -3946,8 +3970,8 @@ struct ssl_st {
   char *tlsext_hostname;
   /* RFC4507 session ticket expected to be received or sent */
   int tlsext_ticket_expected;
-  size_t tlsext_ellipticcurvelist_length;
-  uint16_t *tlsext_ellipticcurvelist; /* our list */
+  size_t supported_group_list_len;
+  uint16_t *supported_group_list; /* our list */
 
   SSL_CTX *initial_ctx; /* initial ctx, used to store sessions */
 
@@ -4027,6 +4051,14 @@ typedef struct ssl3_buffer_st {
   uint16_t cap;
 } SSL3_BUFFER;
 
+/* An ssl_shutdown_t describes the shutdown state of one end of the connection,
+ * whether it is alive or has been shutdown via close_notify or fatal alert. */
+enum ssl_shutdown_t {
+  ssl_shutdown_none = 0,
+  ssl_shutdown_close_notify = 1,
+  ssl_shutdown_fatal_alert = 2,
+};
+
 typedef struct ssl3_state_st {
   uint8_t read_sequence[8];
   uint8_t write_sequence[8];
@@ -4069,12 +4101,13 @@ typedef struct ssl3_state_st {
    * the handshake hash for TLS 1.1 and below. */
   EVP_MD_CTX handshake_md5;
 
-  /* clean_shutdown is one if the connection was cleanly shutdown with a
-   * close_notify and zero otherwise. */
-  char clean_shutdown;
+  /* recv_shutdown is the shutdown state for the receive half of the
+   * connection. */
+  enum ssl_shutdown_t recv_shutdown;
 
-  /* we allow one fatal and one warning alert to be outstanding, send close
-   * alert via the warning alert */
+  /* recv_shutdown is the shutdown state for the send half of the connection. */
+  enum ssl_shutdown_t send_shutdown;
+
   int alert_dispatch;
   uint8_t send_alert[2];
 
@@ -4108,8 +4141,11 @@ typedef struct ssl3_state_st {
     uint8_t peer_finish_md[EVP_MAX_MD_SIZE];
     int peer_finish_md_len;
 
-    unsigned long message_size;
     int message_type;
+
+    /* message_complete is one if the current message is complete and zero
+     * otherwise. */
+    unsigned message_complete:1;
 
     /* used to hold the new cipher we are going to use */
     const SSL_CIPHER *new_cipher;
@@ -4181,11 +4217,11 @@ typedef struct ssl3_state_st {
     /* ocsp_stapling_requested is true if a client requested OCSP stapling. */
     unsigned ocsp_stapling_requested:1;
 
-    /* Server-only: peer_ellipticcurvelist contains the EC curve IDs advertised
-     * by the peer. This is only set on the server's end. The server does not
-     * advertise this extension to the client. */
-    uint16_t *peer_ellipticcurvelist;
-    size_t peer_ellipticcurvelist_length;
+    /* Server-only: peer_supported_group_list contains the supported group IDs
+     * advertised by the peer. This is only set on the server's end. The server
+     * does not advertise this extension to the client. */
+    uint16_t *peer_supported_group_list;
+    size_t peer_supported_group_list_len;
 
     /* extended_master_secret indicates whether the extended master secret
      * computation is used in this handshake. Note that this is different from

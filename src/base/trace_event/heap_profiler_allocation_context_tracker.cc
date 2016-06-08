@@ -8,8 +8,14 @@
 #include <iterator>
 
 #include "base/atomicops.h"
+#include "base/debug/leak_annotations.h"
+#include "base/threading/platform_thread.h"
 #include "base/threading/thread_local_storage.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
+
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+#include <sys/prctl.h>
+#endif
 
 namespace base {
 namespace trace_event {
@@ -31,6 +37,29 @@ ThreadLocalStorage::StaticSlot g_tls_alloc_ctx_tracker = TLS_INITIALIZER;
 // thread exits.
 void DestructAllocationContextTracker(void* alloc_ctx_tracker) {
   delete static_cast<AllocationContextTracker*>(alloc_ctx_tracker);
+}
+
+// Cannot call ThreadIdNameManager::GetName because it holds a lock and causes
+// deadlock when lock is already held by ThreadIdNameManager before the current
+// allocation. Gets the thread name from kernel if available or returns a string
+// with id. This function intenionally leaks the allocated strings since they
+// are used to tag allocations even after the thread dies.
+const char* GetAndLeakThreadName() {
+  char name[16];
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+  // If the thread name is not set, try to get it from prctl. Thread name might
+  // not be set in cases where the thread started before heap profiling was
+  // enabled.
+  int err = prctl(PR_GET_NAME, name);
+  if (!err) {
+    return strdup(name);
+  }
+#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+
+  // Use tid if we don't have a thread name.
+  snprintf(name, sizeof(name), "%lu",
+           static_cast<unsigned long>(PlatformThread::CurrentId()));
+  return strdup(name);
 }
 
 }  // namespace
@@ -142,7 +171,17 @@ AllocationContext AllocationContextTracker::GetContextSnapshot() {
   auto backtrace = std::begin(ctx.backtrace.frames);
   auto backtrace_end = std::end(ctx.backtrace.frames);
 
-  // Add the thread name as the first entry
+  if (!thread_name_) {
+    // Ignore the string allocation made by GetAndLeakThreadName to avoid
+    // reentrancy.
+    ignore_scope_depth_++;
+    thread_name_ = GetAndLeakThreadName();
+    ANNOTATE_LEAKING_OBJECT_PTR(thread_name_);
+    DCHECK(thread_name_);
+    ignore_scope_depth_--;
+  }
+
+  // Add the thread name as the first entry in pseudo stack.
   if (thread_name_) {
     *backtrace++ = StackFrame::FromThreadName(thread_name_);
   }

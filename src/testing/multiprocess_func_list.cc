@@ -40,7 +40,7 @@ AppendMultiProcessTest::AppendMultiProcessTest(
       ProcessFunctions(main_func_ptr, setup_func_ptr);
 }
 
-int InvokeChildProcessTest(std::string test_name) {
+int InvokeChildProcessTest(const std::string& test_name) {
   MultiProcessTestMap& func_lookup_table = GetMultiprocessFuncMap();
   MultiProcessTestMap::iterator it = func_lookup_table.find(test_name);
   if (it != func_lookup_table.end()) {

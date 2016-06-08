@@ -18,6 +18,7 @@
 #include "net/base/net_export.h"
 #include "net/base/prioritized_dispatcher.h"
 #include "net/base/request_priority.h"
+#include "net/dns/host_cache.h"
 
 namespace base {
 class Value;
@@ -27,7 +28,6 @@ namespace net {
 
 class AddressList;
 class BoundNetLog;
-class HostCache;
 class HostResolverProc;
 class NetLog;
 
@@ -155,14 +155,6 @@ class NET_EXPORT HostResolver {
                       RequestHandle* out_req,
                       const BoundNetLog& net_log) = 0;
 
-  // Resolves the given hostname (or IP address literal) out of cache or HOSTS
-  // file (if enabled) only. This is guaranteed to complete synchronously.
-  // This acts like |Resolve()| if the hostname is IP literal, or cached value
-  // or HOSTS entry exists. Otherwise, ERR_DNS_CACHE_MISS is returned.
-  virtual int ResolveFromCache(const RequestInfo& info,
-                               AddressList* addresses,
-                               const BoundNetLog& net_log) = 0;
-
   // Changes the priority of the specified request. |req| is the handle returned
   // by Resolve(). ChangeRequestPriority must NOT be called after the request's
   // completion callback has already run or the request was canceled.
@@ -174,6 +166,14 @@ class NET_EXPORT HostResolver {
   // CancelRequest must NOT be called after the request's completion callback
   // has already run or the request was canceled.
   virtual void CancelRequest(RequestHandle req) = 0;
+
+  // Resolves the given hostname (or IP address literal) out of cache or HOSTS
+  // file (if enabled) only. This is guaranteed to complete synchronously.
+  // This acts like |Resolve()| if the hostname is IP literal, or cached value
+  // or HOSTS entry exists. Otherwise, ERR_DNS_CACHE_MISS is returned.
+  virtual int ResolveFromCache(const RequestInfo& info,
+                               AddressList* addresses,
+                               const BoundNetLog& net_log) = 0;
 
   // Enable or disable the built-in asynchronous DnsClient.
   virtual void SetDnsClientEnabled(bool enabled);

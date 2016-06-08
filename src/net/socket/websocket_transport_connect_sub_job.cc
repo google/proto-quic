@@ -67,7 +67,7 @@ LoadState WebSocketTransportConnectSubJob::GetLoadState() const {
 
 ClientSocketFactory* WebSocketTransportConnectSubJob::client_socket_factory()
     const {
-  return parent_job_->helper_.client_socket_factory();
+  return parent_job_->client_socket_factory_;
 }
 
 const BoundNetLog& WebSocketTransportConnectSubJob::net_log() const {

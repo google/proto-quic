@@ -175,7 +175,7 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   struct iovec iov = {data, arraysize(data)};
   QuicIOVector iovector(&iov, 1, iov.iov_len);
   QuicConsumedData consumed =
-      session_->WritevData(stream->id(), iovector, 0, false, nullptr);
+      session_->WritevData(stream, stream->id(), iovector, 0, false, nullptr);
   EXPECT_FALSE(consumed.fin_consumed);
   EXPECT_EQ(0u, consumed.bytes_consumed);
 }

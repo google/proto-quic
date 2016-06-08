@@ -25,6 +25,7 @@
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_server.h"
+#include "url/gurl.h"
 
 class GURL;
 
@@ -52,6 +53,25 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                                 public ProxyConfigService::Observer,
                                 NON_EXPORTED_BASE(public base::NonThreadSafe) {
  public:
+  // Enumerates the policy to use when sanitizing URLs for proxy resolution
+  // (before passing them off to PAC scripts).
+  enum class SanitizeUrlPolicy {
+    // Do a basic level of sanitization for URLs:
+    //   - strip embedded identities (ex: "username:password@")
+    //   - strip the fragment (ex: "#blah")
+    //
+    // This is considered "unsafe" because it does not do any additional
+    // stripping for https:// URLs.
+    UNSAFE,
+
+    // SAFE does the same sanitization as UNSAFE, but additionally strips
+    // everything but the (scheme,host,port) from cryptographic URL schemes
+    // (https:// and wss://).
+    //
+    // In other words, it strips the path and query portion of https:// URLs.
+    SAFE,
+  };
+
   static const size_t kDefaultNumPacThreads = 4;
 
   // This interface defines the set of policies for when to poll the PAC
@@ -296,6 +316,10 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
     quick_check_enabled_ = value;
   }
 
+  void set_sanitize_url_policy(SanitizeUrlPolicy policy) {
+    sanitize_url_policy_ = policy;
+  }
+
  private:
   FRIEND_TEST_ALL_PREFIXES(ProxyServiceTest, UpdateConfigAfterFailedAutodetect);
   FRIEND_TEST_ALL_PREFIXES(ProxyServiceTest, UpdateConfigFromPACToDirect);
@@ -459,6 +483,9 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
 
   // Whether child ProxyScriptDeciders should use QuickCheck
   bool quick_check_enabled_;
+
+  // The method to use for sanitizing URLs seen by the proxy resolver.
+  SanitizeUrlPolicy sanitize_url_policy_;
 
   DISALLOW_COPY_AND_ASSIGN(ProxyService);
 };

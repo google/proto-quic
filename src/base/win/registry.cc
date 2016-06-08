@@ -39,7 +39,7 @@ const REGSAM kWow64AccessMask = KEY_WOW64_32KEY | KEY_WOW64_64KEY;
 // Watches for modifications to a key.
 class RegKey::Watcher : public ObjectWatcher::Delegate {
  public:
-  explicit Watcher(RegKey* owner) : owner_(owner) {}
+  Watcher() {}
   ~Watcher() override {}
 
   bool StartWatching(HKEY key, const ChangeCallback& callback);
@@ -53,7 +53,6 @@ class RegKey::Watcher : public ObjectWatcher::Delegate {
   }
 
  private:
-  RegKey* owner_;
   ScopedHandle watch_event_;
   ObjectWatcher object_watcher_;
   ChangeCallback callback_;
@@ -413,7 +412,7 @@ LONG RegKey::WriteValue(const wchar_t* name,
 
 bool RegKey::StartWatching(const ChangeCallback& callback) {
   if (!key_watcher_)
-    key_watcher_.reset(new Watcher(this));
+    key_watcher_.reset(new Watcher());
 
   if (!key_watcher_->StartWatching(key_, callback))
     return false;

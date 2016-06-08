@@ -50,7 +50,6 @@ class HostResolver;
 class HttpServerProperties;
 class QuicClock;
 class QuicChromiumAlarmFactory;
-class QuicChromiumClientSession;
 class QuicChromiumConnectionHelper;
 class QuicCryptoClientStreamFactory;
 class QuicRandom;
@@ -149,6 +148,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   };
 
   QuicStreamFactory(
+      NetLog* net_log,
       HostResolver* host_resolver,
       ClientSocketFactory* client_socket_factory,
       base::WeakPtr<HttpServerProperties> http_server_properties,
@@ -278,7 +278,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // sessions are closed if |force_close| is true, and continue using
   // |network| otherwise. Sessions not bound to |network| are left unchanged.
   void MaybeMigrateOrCloseSessions(NetworkChangeNotifier::NetworkHandle network,
-                                   bool force_close);
+                                   bool force_close,
+                                   const BoundNetLog& bound_net_log);
 
   // Method that initiates early migration of |session| if |session| is
   // active and if there is an alternate network than the one to which
@@ -286,9 +287,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   void MaybeMigrateSessionEarly(QuicChromiumClientSession* session);
 
   // Method that migrates |session| over to using |new_network|.
-  void MigrateSessionToNetwork(
-      QuicChromiumClientSession* session,
-      NetworkChangeNotifier::NetworkHandle new_network);
+  void MigrateSessionToNetwork(QuicChromiumClientSession* session,
+                               NetworkChangeNotifier::NetworkHandle new_network,
+                               const BoundNetLog& bound_net_log);
 
   // NetworkChangeNotifier::IPAddressObserver methods:
 
@@ -434,6 +435,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   void MaybeDisableQuic(uint16_t port);
 
   bool require_confirmation_;
+  NetLog* net_log_;
   HostResolver* host_resolver_;
   ClientSocketFactory* client_socket_factory_;
   base::WeakPtr<HttpServerProperties> http_server_properties_;

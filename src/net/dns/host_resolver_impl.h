@@ -32,10 +32,10 @@ class NetLog;
 
 // For each hostname that is requested, HostResolver creates a
 // HostResolverImpl::Job. When this job gets dispatched it creates a ProcTask
-// which runs the given HostResolverProc on a WorkerPool thread. If requests for
-// that same host are made during the job's lifetime, they are attached to the
-// existing job rather than creating a new one. This avoids doing parallel
-// resolves for the same host.
+// which runs the given HostResolverProc on a worker thread (a WorkerPool
+// thread, in production code.) If requests for that same host are made during
+// the job's lifetime, they are attached to the existing job rather than
+// creating a new one. This avoids doing parallel resolves for the same host.
 //
 // The way these classes fit together is illustrated by:
 //
@@ -68,7 +68,7 @@ class NET_EXPORT HostResolverImpl
   // Parameters for ProcTask which resolves hostnames using HostResolveProc.
   //
   // |resolver_proc| is used to perform the actual resolves; it must be
-  // thread-safe since it is run from multiple worker threads. If
+  // thread-safe since it may be run from multiple worker threads. If
   // |resolver_proc| is NULL then the default host resolver procedure is
   // used (which is SystemHostResolverProc except if overridden).
   //
@@ -103,7 +103,8 @@ class NET_EXPORT HostResolverImpl
     uint32_t retry_factor;
   };
 
-  // Creates a HostResolver as specified by |options|.
+  // Creates a HostResolver as specified by |options|. Blocking tasks are run on
+  // the WorkerPool.
   //
   // If Options.enable_caching is true, a cache is created using
   // HostCache::CreateDefaultCache(). Otherwise no cache is used.
@@ -137,19 +138,37 @@ class NET_EXPORT HostResolverImpl
               const CompletionCallback& callback,
               RequestHandle* out_req,
               const BoundNetLog& source_net_log) override;
-  int ResolveFromCache(const RequestInfo& info,
-                       AddressList* addresses,
-                       const BoundNetLog& source_net_log) override;
   void ChangeRequestPriority(RequestHandle req,
                              RequestPriority priority) override;
   void CancelRequest(RequestHandle req) override;
+  int ResolveFromCache(const RequestInfo& info,
+                       AddressList* addresses,
+                       const BoundNetLog& source_net_log) override;
   void SetDnsClientEnabled(bool enabled) override;
   HostCache* GetHostCache() override;
   std::unique_ptr<base::Value> GetDnsConfigAsValue() const override;
 
+  // Like |ResolveFromCache()|, but can return a stale result if the
+  // implementation supports it. Fills in |*stale_info| if a response is
+  // returned to indicate how stale (or not) it is.
+  int ResolveStaleFromCache(const RequestInfo& info,
+                            AddressList* addresses,
+                            HostCache::EntryStaleness* stale_info,
+                            const BoundNetLog& source_net_log);
+
   void set_proc_params_for_test(const ProcTaskParams& proc_params) {
     proc_params_ = proc_params;
   }
+
+ protected:
+  // Just like the public constructor, but allows the task runner used for
+  // blocking tasks to be specified. Intended for testing only.
+  HostResolverImpl(const Options& options,
+                   NetLog* net_log,
+                   scoped_refptr<base::TaskRunner> worker_task_runner);
+
+  // Callback from HaveOnlyLoopbackAddresses probe.
+  void SetHaveOnlyLoopbackAddresses(bool result);
 
  private:
   friend class HostResolverImplTest;
@@ -170,10 +189,19 @@ class NET_EXPORT HostResolverImpl
   // ERR_NAME_NOT_RESOLVED if either hostname is invalid or IP literal is
   // incompatible, ERR_DNS_CACHE_MISS if entry was not found in cache and
   // HOSTS and is not localhost.
+  //
+  // If |allow_stale| is true, then stale cache entries can be returned.
+  // |stale_info| must be non-null, and will be filled in with details of the
+  // entry's staleness (if an entry is returned).
+  //
+  // If |allow_stale| is false, then stale cache entries will not be returned,
+  // and |stale_info| must be null.
   int ResolveHelper(const Key& key,
                     const RequestInfo& info,
                     const IPAddress* ip_address,
                     AddressList* addresses,
+                    bool allow_stale,
+                    HostCache::EntryStaleness* stale_info,
                     const BoundNetLog& request_net_log);
 
   // Tries to resolve |key| as an IP, returns true and sets |net_error| if
@@ -187,10 +215,19 @@ class NET_EXPORT HostResolverImpl
   // If |key| is not found in cache returns false, otherwise returns
   // true, sets |net_error| to the cached error code and fills |addresses|
   // if it is a positive entry.
+  //
+  // If |allow_stale| is true, then stale cache entries can be returned.
+  // |stale_info| must be non-null, and will be filled in with details of the
+  // entry's staleness (if an entry is returned).
+  //
+  // If |allow_stale| is false, then stale cache entries will not be returned,
+  // and |stale_info| must be null.
   bool ServeFromCache(const Key& key,
                       const RequestInfo& info,
                       int* net_error,
-                      AddressList* addresses);
+                      AddressList* addresses,
+                      bool allow_stale,
+                      HostCache::EntryStaleness* stale_info);
 
   // If we have a DnsClient with a valid DnsConfig, and |key| is found in the
   // HOSTS file, returns true and fills |addresses|. Otherwise returns false.
@@ -204,9 +241,6 @@ class NET_EXPORT HostResolverImpl
                       const RequestInfo& info,
                       AddressList* addresses);
 
-  // Callback from HaveOnlyLoopbackAddresses probe.
-  void SetHaveOnlyLoopbackAddresses(bool result);
-
   // Returns the (hostname, address_family) key to use for |info|, choosing an
   // "effective" address family by inheriting the resolver's default address
   // family when the request leaves it unspecified.
@@ -218,6 +252,9 @@ class NET_EXPORT HostResolverImpl
   // Results are cached, i.e. when called repeatedly this method returns result
   // from the first probe for some time before probing again.
   virtual bool IsIPv6Reachable(const BoundNetLog& net_log);
+
+  // Asynchronously checks if only loopback IPs are available.
+  virtual void RunLoopbackProbeJob();
 
   // Records the result in cache if cache is present.
   void CacheResult(const Key& key,
@@ -310,6 +347,11 @@ class NET_EXPORT HostResolverImpl
 
   // Allow fallback to ProcTask if DnsTask fails.
   bool fallback_to_proctask_;
+
+  // Task runner used for DNS lookups using the platform resolver, and other
+  // blocking operations. Usually just the WorkerPool's task runner for slow
+  // tasks, but can be overridden for tests.
+  scoped_refptr<base::TaskRunner> worker_task_runner_;
 
   base::WeakPtrFactory<HostResolverImpl> weak_ptr_factory_;
 
