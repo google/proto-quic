@@ -34,8 +34,8 @@ void ConditionVariable::TimedWait(const TimeDelta& max_time) {
   user_lock_->CheckHeldAndUnmark();
 #endif
 
-  if (FALSE == SleepConditionVariableSRW(&cv_, srwlock_, timeout, 0)) {
-    DCHECK(GetLastError() != WAIT_TIMEOUT);
+  if (!SleepConditionVariableSRW(&cv_, srwlock_, timeout, 0)) {
+    DCHECK_EQ(static_cast<DWORD>(ERROR_TIMEOUT), GetLastError());
   }
 
 #if DCHECK_IS_ON()

@@ -96,6 +96,10 @@ enum {
   // This bit is set if the response has a key-exchange-info field at the end.
   RESPONSE_INFO_HAS_KEY_EXCHANGE_INFO = 1 << 22,
 
+  // This bit is set if ssl_info recorded that PKP was bypassed due to a local
+  // trust anchor.
+  RESPONSE_INFO_PKP_BYPASSED = 1 << 23,
+
   // TODO(darin): Add other bits to indicate alternate request methods.
   // For now, we don't support storing those.
 };
@@ -296,6 +300,8 @@ bool HttpResponseInfo::InitFromPickle(const base::Pickle& pickle,
 
   unused_since_prefetch = (flags & RESPONSE_INFO_UNUSED_SINCE_PREFETCH) != 0;
 
+  ssl_info.pkp_bypassed = (flags & RESPONSE_INFO_PKP_BYPASSED) != 0;
+
   return true;
 }
 
@@ -333,6 +339,8 @@ void HttpResponseInfo::Persist(base::Pickle* pickle,
     flags |= RESPONSE_INFO_UNUSED_SINCE_PREFETCH;
   if (!ssl_info.signed_certificate_timestamps.empty())
     flags |= RESPONSE_INFO_HAS_SIGNED_CERTIFICATE_TIMESTAMPS;
+  if (ssl_info.pkp_bypassed)
+    flags |= RESPONSE_INFO_PKP_BYPASSED;
 
   pickle->WriteInt(flags);
   pickle->WriteInt64(request_time.ToInternalValue());

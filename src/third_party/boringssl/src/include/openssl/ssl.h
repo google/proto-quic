@@ -2728,6 +2728,13 @@ OPENSSL_EXPORT void SSL_set_msg_callback_arg(SSL *ssl, void *arg);
 OPENSSL_EXPORT void SSL_CTX_set_keylog_callback(
     SSL_CTX *ctx, void (*cb)(const SSL *ssl, const char *line));
 
+/* SSL_CTX_set_current_time_cb configures a callback to retrieve the current
+ * time, which should be set in |*out_clock|. This can be used for testing
+ * purposes; for example, a callback can be configured that returns a time
+ * set explicitly by the test. */
+OPENSSL_EXPORT void SSL_CTX_set_current_time_cb(
+    SSL_CTX *ctx, void (*cb)(const SSL *ssl, struct timeval *out_clock));
+
 enum ssl_renegotiate_mode_t {
   ssl_renegotiate_never = 0,
   ssl_renegotiate_once,
@@ -3825,7 +3832,8 @@ struct ssl_ctx_st {
   void (*keylog_callback)(const SSL *ssl, const char *line);
 
   /* current_time_cb, if not NULL, is the function to use to get the current
-   * time. It sets |*out_clock| to the current time. */
+   * time. It sets |*out_clock| to the current time. See
+   * |SSL_CTX_set_current_time_cb|. */
   void (*current_time_cb)(const SSL *ssl, struct timeval *out_clock);
 
   /* quiet_shutdown is true if the connection should not send a close_notify on
@@ -4176,12 +4184,9 @@ typedef struct ssl3_state_st {
       uint16_t received;
     } custom_extensions;
 
-    /* SNI extension */
-
     /* should_ack_sni is used by a server and indicates that the SNI extension
      * should be echoed in the ServerHello. */
     unsigned should_ack_sni:1;
-
 
     /* Client-only: cert_req determines if a client certificate is to be sent.
      * This is 0 if no client Certificate message is to be sent, 1 if there is

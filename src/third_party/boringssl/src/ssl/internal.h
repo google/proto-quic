@@ -151,9 +151,9 @@
 
 #if defined(OPENSSL_WINDOWS)
 /* Windows defines struct timeval in winsock2.h. */
-#pragma warning(push, 3)
+OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <winsock2.h>
-#pragma warning(pop)
+OPENSSL_MSVC_PRAGMA(warning(pop))
 #else
 #include <sys/time.h>
 #endif
@@ -313,21 +313,19 @@ size_t SSL_AEAD_CTX_explicit_nonce_len(SSL_AEAD_CTX *ctx);
  * |SSL_AEAD_CTX_seal|. |ctx| may be NULL to denote the null cipher. */
 size_t SSL_AEAD_CTX_max_overhead(SSL_AEAD_CTX *ctx);
 
-/* SSL_AEAD_CTX_open authenticates and decrypts |in_len| bytes from |in| and
- * writes the result to |out|. It returns one on success and zero on
- * error. |ctx| may be NULL to denote the null cipher.
- *
- * If |in| and |out| alias then |out| must be <= |in| + |explicit_nonce_len|. */
-int SSL_AEAD_CTX_open(SSL_AEAD_CTX *ctx, uint8_t *out, size_t *out_len,
-                      size_t max_out, uint8_t type, uint16_t wire_version,
-                      const uint8_t seqnum[8], const uint8_t *in,
-                      size_t in_len);
+/* SSL_AEAD_CTX_open authenticates and decrypts |in_len| bytes from |in|
+ * in-place. On success, it sets |*out| to the plaintext in |in| and returns
+ * one. Otherwise, it returns zero. |ctx| may be NULL to denote the null cipher.
+ * The output will always be |explicit_nonce_len| bytes ahead of |in|. */
+int SSL_AEAD_CTX_open(SSL_AEAD_CTX *ctx, CBS *out, uint8_t type,
+                      uint16_t wire_version, const uint8_t seqnum[8],
+                      uint8_t *in, size_t in_len);
 
 /* SSL_AEAD_CTX_seal encrypts and authenticates |in_len| bytes from |in| and
  * writes the result to |out|. It returns one on success and zero on
  * error. |ctx| may be NULL to denote the null cipher.
  *
- * If |in| and |out| alias then |out| + |explicit_nonce_len| must be <= |in| */
+ * If |in| and |out| alias then |out| + |explicit_nonce_len| must be == |in|. */
 int SSL_AEAD_CTX_seal(SSL_AEAD_CTX *ctx, uint8_t *out, size_t *out_len,
                       size_t max_out, uint8_t type, uint16_t wire_version,
                       const uint8_t seqnum[8], const uint8_t *in,
@@ -365,52 +363,60 @@ enum ssl_open_record_t {
   ssl_open_record_success,
   ssl_open_record_discard,
   ssl_open_record_partial,
+  ssl_open_record_close_notify,
+  ssl_open_record_fatal_alert,
   ssl_open_record_error,
 };
 
-/* tls_open_record decrypts a record from |in|.
- *
- * On success, it returns |ssl_open_record_success|. It sets |*out_type| to the
- * record type, |*out_len| to the plaintext length, and writes the record body
- * to |out|. It sets |*out_consumed| to the number of bytes of |in| consumed.
- * Note that |*out_len| may be zero.
- *
- * If a record was successfully processed but should be discarded, it returns
- * |ssl_open_record_discard| and sets |*out_consumed| to the number of bytes
- * consumed.
+/* tls_open_record decrypts a record from |in| in-place.
  *
  * If the input did not contain a complete record, it returns
  * |ssl_open_record_partial|. It sets |*out_consumed| to the total number of
  * bytes necessary. It is guaranteed that a successful call to |tls_open_record|
  * will consume at least that many bytes.
  *
- * On failure, it returns |ssl_open_record_error| and sets |*out_alert| to an
- * alert to emit.
+ * Otherwise, it sets |*out_consumed| to the number of bytes of input
+ * consumed. Note that input may be consumed on all return codes if a record was
+ * decrypted.
  *
- * If |in| and |out| alias, |out| must be <= |in| + |ssl_record_prefix_len|. */
-enum ssl_open_record_t tls_open_record(
-    SSL *ssl, uint8_t *out_type, uint8_t *out, size_t *out_len,
-    size_t *out_consumed, uint8_t *out_alert, size_t max_out, const uint8_t *in,
-    size_t in_len);
+ * On success, it returns |ssl_open_record_success|. It sets |*out_type| to the
+ * record type and |*out| to the record body in |in|. Note that |*out| may be
+ * empty.
+ *
+ * If a record was successfully processed but should be discarded, it returns
+ * |ssl_open_record_discard|.
+ *
+ * If a record was successfully processed but is a close_notify or fatal alert,
+ * it returns |ssl_open_record_close_notify| or |ssl_open_record_fatal_alert|.
+ *
+ * On failure, it returns |ssl_open_record_error| and sets |*out_alert| to an
+ * alert to emit. */
+enum ssl_open_record_t tls_open_record(SSL *ssl, uint8_t *out_type, CBS *out,
+                                       size_t *out_consumed, uint8_t *out_alert,
+                                       uint8_t *in, size_t in_len);
 
 /* dtls_open_record implements |tls_open_record| for DTLS. It never returns
  * |ssl_open_record_partial| but otherwise behaves analogously. */
-enum ssl_open_record_t dtls_open_record(
-    SSL *ssl, uint8_t *out_type, uint8_t *out, size_t *out_len,
-    size_t *out_consumed, uint8_t *out_alert, size_t max_out, const uint8_t *in,
-    size_t in_len);
+enum ssl_open_record_t dtls_open_record(SSL *ssl, uint8_t *out_type, CBS *out,
+                                        size_t *out_consumed,
+                                        uint8_t *out_alert, uint8_t *in,
+                                        size_t in_len);
 
-/* ssl_seal_prefix_len returns the length of the prefix before the ciphertext
- * when sealing a record with |ssl|. Note that this value may differ from
- * |ssl_record_prefix_len| when TLS 1.0 CBC record-splitting is enabled. Sealing
- * a small record may also result in a smaller output than this value.
+/* ssl_seal_align_prefix_len returns the length of the prefix before the start
+ * of the bulk of the ciphertext when sealing a record with |ssl|. Callers may
+ * use this to align buffers.
+ *
+ * Note when TLS 1.0 CBC record-splitting is enabled, this includes the one byte
+ * record and is the offset into second record's ciphertext. Thus this value may
+ * differ from |ssl_record_prefix_len| and sealing a small record may result in
+ * a smaller output than this value.
  *
  * TODO(davidben): Expose this as part of public API once the high-level
  * buffer-free APIs are available. */
-size_t ssl_seal_prefix_len(const SSL *ssl);
+size_t ssl_seal_align_prefix_len(const SSL *ssl);
 
 /* ssl_max_seal_overhead returns the maximum overhead of sealing a record with
- * |ssl|. This includes |ssl_seal_prefix_len|.
+ * |ssl|.
  *
  * TODO(davidben): Expose this as part of public API once the high-level
  * buffer-free APIs are available. */
@@ -421,11 +427,12 @@ size_t ssl_max_seal_overhead(const SSL *ssl);
  * and zero on error. If enabled, |tls_seal_record| implements TLS 1.0 CBC 1/n-1
  * record splitting and may write two records concatenated.
  *
- * For a large record, the ciphertext will begin |ssl_seal_prefix_len| bytes
- * into out. Aligning |out| appropriately may improve performance. It writes at
- * most |in_len| + |ssl_max_seal_overhead| bytes to |out|.
+ * For a large record, the bulk of the ciphertext will begin
+ * |ssl_seal_align_prefix_len| bytes into out. Aligning |out| appropriately may
+ * improve performance. It writes at most |in_len| + |ssl_max_seal_overhead|
+ * bytes to |out|.
  *
- * If |in| and |out| alias, |out| + |ssl_seal_prefix_len| must be <= |in|. */
+ * |in| and |out| may not alias. */
 int tls_seal_record(SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
                     uint8_t type, const uint8_t *in, size_t in_len);
 
@@ -447,6 +454,13 @@ void ssl_set_read_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx);
 /* ssl_set_write_state sets |ssl|'s write cipher state to |aead_ctx|. It takes
  * ownership of |aead_ctx|. */
 void ssl_set_write_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx);
+
+/* ssl_process_alert processes |in| as an alert and updates |ssl|'s shutdown
+ * state. It returns one of |ssl_open_record_discard|, |ssl_open_record_error|,
+ * |ssl_open_record_close_notify|, or |ssl_open_record_fatal_alert| as
+ * appropriate. */
+enum ssl_open_record_t ssl_process_alert(SSL *ssl, uint8_t *out_alert,
+                                         const uint8_t *in, size_t in_len);
 
 
 /* Private key operations. */
@@ -626,6 +640,16 @@ int SSL_ECDH_CTX_finish(SSL_ECDH_CTX *ctx, uint8_t **out_secret,
 size_t ssl_max_handshake_message_len(const SSL *ssl);
 
 
+/* Callbacks. */
+
+/* ssl_do_info_callback calls |ssl|'s info callback, if set. */
+void ssl_do_info_callback(const SSL *ssl, int type, int value);
+
+/* ssl_do_msg_callback calls |ssl|'s message callback, if set. */
+void ssl_do_msg_callback(SSL *ssl, int is_write, int version, int content_type,
+                         const void *buf, size_t len);
+
+
 /* Transport buffers. */
 
 /* ssl_read_buffer returns a pointer to contents of the read buffer. */
@@ -685,99 +709,16 @@ void ssl_write_buffer_clear(SSL *ssl);
  *
  * Functions below here haven't been touched up and may be underdocumented. */
 
-#define c2l(c, l)                                                            \
-  (l = ((unsigned long)(*((c)++))), l |= (((unsigned long)(*((c)++))) << 8), \
-   l |= (((unsigned long)(*((c)++))) << 16),                                 \
-   l |= (((unsigned long)(*((c)++))) << 24))
-
-/* NOTE - c is not incremented as per c2l */
-#define c2ln(c, l1, l2, n)                       \
-  {                                              \
-    c += n;                                      \
-    l1 = l2 = 0;                                 \
-    switch (n) {                                 \
-      case 8:                                    \
-        l2 = ((unsigned long)(*(--(c)))) << 24;  \
-      case 7:                                    \
-        l2 |= ((unsigned long)(*(--(c)))) << 16; \
-      case 6:                                    \
-        l2 |= ((unsigned long)(*(--(c)))) << 8;  \
-      case 5:                                    \
-        l2 |= ((unsigned long)(*(--(c))));       \
-      case 4:                                    \
-        l1 = ((unsigned long)(*(--(c)))) << 24;  \
-      case 3:                                    \
-        l1 |= ((unsigned long)(*(--(c)))) << 16; \
-      case 2:                                    \
-        l1 |= ((unsigned long)(*(--(c)))) << 8;  \
-      case 1:                                    \
-        l1 |= ((unsigned long)(*(--(c))));       \
-    }                                            \
-  }
-
-#define l2c(l, c)                            \
-  (*((c)++) = (uint8_t)(((l)) & 0xff),       \
-   *((c)++) = (uint8_t)(((l) >> 8) & 0xff),  \
-   *((c)++) = (uint8_t)(((l) >> 16) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 24) & 0xff))
-
-#define n2l(c, l)                          \
-  (l = ((unsigned long)(*((c)++))) << 24,  \
-   l |= ((unsigned long)(*((c)++))) << 16, \
-   l |= ((unsigned long)(*((c)++))) << 8, l |= ((unsigned long)(*((c)++))))
-
 #define l2n(l, c)                            \
   (*((c)++) = (uint8_t)(((l) >> 24) & 0xff), \
    *((c)++) = (uint8_t)(((l) >> 16) & 0xff), \
    *((c)++) = (uint8_t)(((l) >> 8) & 0xff),  \
    *((c)++) = (uint8_t)(((l)) & 0xff))
 
-#define l2n8(l, c)                           \
-  (*((c)++) = (uint8_t)(((l) >> 56) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 48) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 40) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 32) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 24) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 16) & 0xff), \
-   *((c)++) = (uint8_t)(((l) >> 8) & 0xff),  \
-   *((c)++) = (uint8_t)(((l)) & 0xff))
-
-/* NOTE - c is not incremented as per l2c */
-#define l2cn(l1, l2, c, n)                               \
-  {                                                      \
-    c += n;                                              \
-    switch (n) {                                         \
-      case 8:                                            \
-        *(--(c)) = (uint8_t)(((l2) >> 24) & 0xff); \
-      case 7:                                            \
-        *(--(c)) = (uint8_t)(((l2) >> 16) & 0xff); \
-      case 6:                                            \
-        *(--(c)) = (uint8_t)(((l2) >> 8) & 0xff);  \
-      case 5:                                            \
-        *(--(c)) = (uint8_t)(((l2)) & 0xff);       \
-      case 4:                                            \
-        *(--(c)) = (uint8_t)(((l1) >> 24) & 0xff); \
-      case 3:                                            \
-        *(--(c)) = (uint8_t)(((l1) >> 16) & 0xff); \
-      case 2:                                            \
-        *(--(c)) = (uint8_t)(((l1) >> 8) & 0xff);  \
-      case 1:                                            \
-        *(--(c)) = (uint8_t)(((l1)) & 0xff);       \
-    }                                                    \
-  }
-
-#define n2s(c, s) \
-  ((s = (((unsigned int)(c[0])) << 8) | (((unsigned int)(c[1])))), c += 2)
-
 #define s2n(s, c)                              \
   ((c[0] = (uint8_t)(((s) >> 8) & 0xff), \
     c[1] = (uint8_t)(((s)) & 0xff)),     \
    c += 2)
-
-#define n2l3(c, l)                                                         \
-  ((l = (((unsigned long)(c[0])) << 16) | (((unsigned long)(c[1])) << 8) | \
-        (((unsigned long)(c[2])))),                                        \
-   c += 3)
 
 #define l2n3(l, c)                              \
   ((c[0] = (uint8_t)(((l) >> 16) & 0xff), \
@@ -870,8 +811,6 @@ struct ssl_protocol_method_st {
   char is_dtls;
   int (*ssl_new)(SSL *ssl);
   void (*ssl_free)(SSL *ssl);
-  int (*ssl_accept)(SSL *ssl);
-  int (*ssl_connect)(SSL *ssl);
   long (*ssl_get_message)(SSL *ssl, int msg_type,
                           enum ssl_hash_message_t hash_message, int *ok);
   int (*ssl_read_app_data)(SSL *ssl, uint8_t *buf, int len, int peek);
@@ -888,6 +827,14 @@ struct ssl_protocol_method_st {
   int (*set_handshake_header)(SSL *ssl, int type, unsigned long len);
   /* Write out handshake message */
   int (*do_write)(SSL *ssl);
+  /* send_change_cipher_spec sends a ChangeCipherSpec message. */
+  int (*send_change_cipher_spec)(SSL *ssl, int a, int b);
+  /* expect_flight is called when the handshake expects a flight of messages from
+   * the peer. */
+  void (*expect_flight)(SSL *ssl);
+  /* received_flight is called when the handshake has received a flight of
+   * messages from the peer. */
+  void (*received_flight)(SSL *ssl);
 };
 
 /* This is for the SSLv3/TLSv1.0 differences in crypto/hash stuff It is a bit
@@ -1059,9 +1006,6 @@ int ssl_verify_alarm_type(long type);
  * |len|. It returns one on success and zero on failure. */
 int ssl_fill_hello_random(uint8_t *out, size_t len, int is_server);
 
-int ssl3_send_server_certificate(SSL *ssl);
-int ssl3_send_new_session_ticket(SSL *ssl);
-int ssl3_send_certificate_status(SSL *ssl);
 int ssl3_get_finished(SSL *ssl);
 int ssl3_send_change_cipher_spec(SSL *ssl, int state_a, int state_b);
 void ssl3_cleanup_key_block(SSL *ssl);
@@ -1105,30 +1049,42 @@ int ssl3_connect(SSL *ssl);
 
 int ssl3_set_handshake_header(SSL *ssl, int htype, unsigned long len);
 int ssl3_handshake_write(SSL *ssl);
+void ssl3_expect_flight(SSL *ssl);
+void ssl3_received_flight(SSL *ssl);
 
 int dtls1_do_handshake_write(SSL *ssl, enum dtls1_use_epoch_t use_epoch);
+
+/* dtls1_get_record reads a new input record. On success, it places it in
+ * |ssl->s3->rrec| and returns one. Otherwise it returns <= 0 on error or if
+ * more data is needed. */
+int dtls1_get_record(SSL *ssl);
+
 int dtls1_read_app_data(SSL *ssl, uint8_t *buf, int len, int peek);
 int dtls1_read_change_cipher_spec(SSL *ssl);
 void dtls1_read_close_notify(SSL *ssl);
-int dtls1_read_bytes(SSL *ssl, int type, uint8_t *buf, int len, int peek);
 void dtls1_set_message_header(SSL *ssl, uint8_t mt, unsigned long len,
                               unsigned short seq_num, unsigned long frag_off,
                               unsigned long frag_len);
 
 int dtls1_write_app_data(SSL *ssl, const void *buf, int len);
-int dtls1_write_bytes(SSL *ssl, int type, const void *buf, int len,
-                      enum dtls1_use_epoch_t use_epoch);
+
+/* dtls1_write_record sends a record. It returns one on success and <= 0 on
+ * error. */
+int dtls1_write_record(SSL *ssl, int type, const uint8_t *buf, size_t len,
+                       enum dtls1_use_epoch_t use_epoch);
 
 int dtls1_send_change_cipher_spec(SSL *ssl, int a, int b);
 int dtls1_send_finished(SSL *ssl, int a, int b, const char *sender, int slen);
-int dtls1_read_failed(SSL *ssl, int code);
 int dtls1_buffer_message(SSL *ssl);
 int dtls1_retransmit_buffered_messages(SSL *ssl);
 void dtls1_clear_record_buffer(SSL *ssl);
-void dtls1_get_message_header(uint8_t *data, struct hm_header_st *msg_hdr);
+int dtls1_parse_fragment(CBS *cbs, struct hm_header_st *out_hdr,
+                         CBS *out_body);
 int dtls1_check_timeout_num(SSL *ssl);
 int dtls1_set_handshake_header(SSL *ssl, int type, unsigned long len);
 int dtls1_handshake_write(SSL *ssl);
+void dtls1_expect_flight(SSL *ssl);
+void dtls1_received_flight(SSL *ssl);
 
 int dtls1_supports_cipher(const SSL_CIPHER *cipher);
 void dtls1_start_timer(SSL *ssl);
@@ -1137,37 +1093,6 @@ int dtls1_is_timer_expired(SSL *ssl);
 void dtls1_double_timeout(SSL *ssl);
 unsigned int dtls1_min_mtu(void);
 void dtls1_hm_fragment_free(hm_fragment *frag);
-
-/* some client-only functions */
-int ssl3_send_client_hello(SSL *ssl);
-int ssl3_get_server_hello(SSL *ssl);
-int ssl3_get_certificate_request(SSL *ssl);
-int ssl3_get_new_session_ticket(SSL *ssl);
-int ssl3_get_cert_status(SSL *ssl);
-int ssl3_get_server_done(SSL *ssl);
-int ssl3_send_cert_verify(SSL *ssl);
-int ssl3_send_client_certificate(SSL *ssl);
-int ssl_do_client_cert_cb(SSL *ssl, X509 **px509, EVP_PKEY **ppkey);
-int ssl3_send_client_key_exchange(SSL *ssl);
-int ssl3_get_server_key_exchange(SSL *ssl);
-int ssl3_get_server_certificate(SSL *ssl);
-int ssl3_send_next_proto(SSL *ssl);
-int ssl3_send_channel_id(SSL *ssl);
-int ssl3_verify_server_cert(SSL *ssl);
-
-/* some server-only functions */
-int ssl3_get_initial_bytes(SSL *ssl);
-int ssl3_get_v2_client_hello(SSL *ssl);
-int ssl3_get_client_hello(SSL *ssl);
-int ssl3_send_server_hello(SSL *ssl);
-int ssl3_send_server_key_exchange(SSL *ssl);
-int ssl3_send_certificate_request(SSL *ssl);
-int ssl3_send_server_done(SSL *ssl);
-int ssl3_get_client_certificate(SSL *ssl);
-int ssl3_get_client_key_exchange(SSL *ssl);
-int ssl3_get_cert_verify(SSL *ssl);
-int ssl3_get_next_proto(SSL *ssl);
-int ssl3_get_channel_id(SSL *ssl);
 
 int dtls1_new(SSL *ssl);
 int dtls1_accept(SSL *ssl);

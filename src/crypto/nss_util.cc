@@ -15,6 +15,9 @@
 #include <memory>
 #include <utility>
 
+#include "base/location.h"
+#include "base/single_thread_task_runner.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "crypto/nss_util_internal.h"
 
 #if defined(OS_OPENBSD)
@@ -39,7 +42,6 @@
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/message_loop/message_loop.h"
 #include "base/native_library.h"
 #include "base/path_service.h"
 #include "base/stl_util.h"
@@ -344,8 +346,8 @@ class NSSInitSingleton {
     DCHECK(!initializing_tpm_token_);
     // If EnableTPMTokenForNSS hasn't been called, return false.
     if (!tpm_token_enabled_for_nss_) {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, false));
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE, base::Bind(callback, false));
       return;
     }
 
@@ -353,8 +355,8 @@ class NSSInitSingleton {
     // Note that only |tpm_slot_| is checked, since |chaps_module_| could be
     // NULL in tests while |tpm_slot_| has been set to the test DB.
     if (tpm_slot_) {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, true));
+      base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                    base::Bind(callback, true));
       return;
     }
 
@@ -376,8 +378,8 @@ class NSSInitSingleton {
             )) {
       initializing_tpm_token_ = true;
     } else {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, false));
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE, base::Bind(callback, false));
     }
   }
 
@@ -585,7 +587,7 @@ class NSSInitSingleton {
     if (username_hash.empty()) {
       DVLOG(2) << "empty username_hash";
       if (!callback.is_null()) {
-        base::MessageLoop::current()->PostTask(
+        base::ThreadTaskRunnerHandle::Get()->PostTask(
             FROM_HERE, base::Bind(callback, base::Passed(ScopedPK11Slot())));
       }
       return ScopedPK11Slot();

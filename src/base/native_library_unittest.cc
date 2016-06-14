@@ -13,17 +13,27 @@ const FilePath::CharType kDummyLibraryPath[] =
 
 TEST(NativeLibraryTest, LoadFailure) {
   NativeLibraryLoadError error;
-  NativeLibrary library =
-      LoadNativeLibrary(FilePath(kDummyLibraryPath), &error);
-  EXPECT_TRUE(library == nullptr);
+  EXPECT_FALSE(LoadNativeLibrary(FilePath(kDummyLibraryPath), &error));
   EXPECT_FALSE(error.ToString().empty());
 }
 
 // |error| is optional and can be null.
 TEST(NativeLibraryTest, LoadFailureWithNullError) {
-  NativeLibrary library =
-      LoadNativeLibrary(FilePath(kDummyLibraryPath), nullptr);
-  EXPECT_TRUE(library == nullptr);
+  EXPECT_FALSE(LoadNativeLibrary(FilePath(kDummyLibraryPath), nullptr));
+}
+
+TEST(NativeLibraryTest, GetNativeLibraryName) {
+  const char kExpectedName[] =
+#if defined(OS_IOS)
+      "mylib";
+#elif defined(OS_MACOSX)
+      "libmylib.dylib";
+#elif defined(OS_POSIX)
+      "libmylib.so";
+#elif defined(OS_WIN)
+      "mylib.dll";
+#endif
+  EXPECT_EQ(kExpectedName, GetNativeLibraryName("mylib"));
 }
 
 }  // namespace base

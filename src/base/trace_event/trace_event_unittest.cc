@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/command_line.h"
@@ -205,7 +206,7 @@ void TraceEventTestFixture::OnTraceDataCollected(
   while (root_list->GetSize()) {
     std::unique_ptr<Value> item;
     root_list->Remove(0, &item);
-    trace_parsed_.Append(item.release());
+    trace_parsed_.Append(std::move(item));
   }
 
   if (!has_more_events)

@@ -85,7 +85,8 @@ UDPSocketPosix::UDPSocketPosix(DatagramSocket::BindType bind_type,
       read_buf_len_(0),
       recv_from_address_(NULL),
       write_buf_len_(0),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_UDP_SOCKET)) {
+      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_UDP_SOCKET)),
+      bound_network_(NetworkChangeNotifier::kInvalidNetworkHandle) {
   net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
                       source.ToEventParametersCallback());
   if (bind_type == DatagramSocket::RANDOM_BIND)
@@ -175,8 +176,9 @@ int UDPSocketPosix::GetLocalAddress(IPEndPoint* address) const {
     if (!address->FromSockAddr(storage.addr, storage.addr_len))
       return ERR_ADDRESS_INVALID;
     local_address_.reset(address.release());
-    net_log_.AddEvent(NetLog::TYPE_UDP_LOCAL_ADDRESS,
-                      CreateNetLogUDPConnectCallback(local_address_.get()));
+    net_log_.AddEvent(
+        NetLog::TYPE_UDP_LOCAL_ADDRESS,
+        CreateNetLogUDPConnectCallback(local_address_.get(), bound_network_));
   }
 
   *address = *local_address_;
@@ -269,7 +271,7 @@ int UDPSocketPosix::SendToOrWrite(IOBuffer* buf,
 int UDPSocketPosix::Connect(const IPEndPoint& address) {
   DCHECK_NE(socket_, kInvalidSocket);
   net_log_.BeginEvent(NetLog::TYPE_UDP_CONNECT,
-                      CreateNetLogUDPConnectCallback(&address));
+                      CreateNetLogUDPConnectCallback(&address, bound_network_));
   int rv = InternalConnect(address);
   net_log_.EndEventWithNetErrorCode(NetLog::TYPE_UDP_CONNECT, rv);
   is_connected_ = (rv == OK);
@@ -347,16 +349,15 @@ int UDPSocketPosix::BindToNetwork(
   static SetNetworkForSocket setNetworkForSocket;
   // This is racy, but all racers should come out with the same answer so it
   // shouldn't matter.
-  if (setNetworkForSocket == nullptr) {
+  if (!setNetworkForSocket) {
     // Android's netd client library should always be loaded in our address
     // space as it shims libc functions like connect().
-    base::FilePath file(base::FilePath::FromUTF16Unsafe(
-        base::GetNativeLibraryName(base::ASCIIToUTF16("netd_client"))));
+    base::FilePath file(base::GetNativeLibraryName("netd_client"));
     base::NativeLibrary lib = base::LoadNativeLibrary(file, nullptr);
     setNetworkForSocket = reinterpret_cast<SetNetworkForSocket>(
         base::GetFunctionPointerFromNativeLibrary(lib, "setNetworkForSocket"));
   }
-  if (setNetworkForSocket == nullptr)
+  if (!setNetworkForSocket)
     return ERR_NOT_IMPLEMENTED;
   int rv = setNetworkForSocket(network, socket_);
   // If |network| has since disconnected, |rv| will be ENONET.  Surface this as
@@ -364,6 +365,8 @@ int UDPSocketPosix::BindToNetwork(
   // the less descriptive ERR_FAILED.
   if (rv == ENONET)
     return ERR_NETWORK_CHANGED;
+  if (rv == 0)
+    bound_network_ = network;
   return MapSystemError(rv);
 #else
   NOTIMPLEMENTED();

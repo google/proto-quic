@@ -876,20 +876,21 @@ TEST_P(QuicSessionTestServer, ConnectionFlowControlAccountingFinAndLocalReset) {
   TestStream* stream = session_.CreateOutgoingDynamicStream(kDefaultPriority);
 
   const QuicStreamOffset kByteOffset =
-      kInitialSessionFlowControlWindowForTest / 2;
-  QuicStreamFrame frame(stream->id(), true, kByteOffset, StringPiece());
+      kInitialSessionFlowControlWindowForTest / 2 - 1;
+  QuicStreamFrame frame(stream->id(), true, kByteOffset, ".");
   session_.OnStreamFrame(frame);
   session_.PostProcessAfterData();
   EXPECT_TRUE(connection_->connected());
 
   EXPECT_EQ(0u, stream->flow_controller()->bytes_consumed());
-  EXPECT_EQ(kByteOffset,
+  EXPECT_EQ(kByteOffset + frame.data_length,
             stream->flow_controller()->highest_received_byte_offset());
 
   // Reset stream locally.
   EXPECT_CALL(*connection_, SendRstStream(stream->id(), _, _));
   stream->Reset(QUIC_STREAM_CANCELLED);
-  EXPECT_EQ(kByteOffset, session_.flow_controller()->bytes_consumed());
+  EXPECT_EQ(kByteOffset + frame.data_length,
+            session_.flow_controller()->bytes_consumed());
 }
 
 TEST_P(QuicSessionTestServer, ConnectionFlowControlAccountingFinAfterRst) {

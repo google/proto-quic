@@ -39,17 +39,11 @@ namespace base {
 // -----------------------------------------------------------------------------
 // This is just an abstract base class for waking the two types of waiters
 // -----------------------------------------------------------------------------
-WaitableEvent::WaitableEvent(bool manual_reset, bool initially_signaled)
-    : kernel_(new WaitableEventKernel(manual_reset, initially_signaled)) {
-}
-
 WaitableEvent::WaitableEvent(ResetPolicy reset_policy,
                              InitialState initial_state)
-    : WaitableEvent(reset_policy == ResetPolicy::MANUAL,
-                    initial_state == InitialState::SIGNALED) {}
+    : kernel_(new WaitableEventKernel(reset_policy, initial_state)) {}
 
-WaitableEvent::~WaitableEvent() {
-}
+WaitableEvent::~WaitableEvent() = default;
 
 void WaitableEvent::Reset() {
   base::AutoLock locked(kernel_->lock_);
@@ -353,14 +347,13 @@ size_t WaitableEvent::EnqueueMany
 // -----------------------------------------------------------------------------
 // Private functions...
 
-WaitableEvent::WaitableEventKernel::WaitableEventKernel(bool manual_reset,
-                                                        bool initially_signaled)
-    : manual_reset_(manual_reset),
-      signaled_(initially_signaled) {
-}
+WaitableEvent::WaitableEventKernel::WaitableEventKernel(
+    ResetPolicy reset_policy,
+    InitialState initial_state)
+    : manual_reset_(reset_policy == ResetPolicy::MANUAL),
+      signaled_(initial_state == InitialState::SIGNALED) {}
 
-WaitableEvent::WaitableEventKernel::~WaitableEventKernel() {
-}
+WaitableEvent::WaitableEventKernel::~WaitableEventKernel() = default;
 
 // -----------------------------------------------------------------------------
 // Wake all waiting waiters. Called with lock held.

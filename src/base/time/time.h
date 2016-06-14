@@ -311,6 +311,12 @@ class TimeBase {
   // Returns true if this object represents the maximum time.
   bool is_max() const { return us_ == std::numeric_limits<int64_t>::max(); }
 
+  // Returns the maximum time, which should be greater than any reasonable time
+  // with which we might compare it.
+  static TimeClass Max() {
+    return TimeClass(std::numeric_limits<int64_t>::max());
+  }
+
   // For serializing only. Use FromInternalValue() to reconstitute. Please don't
   // use this and do arithmetic on it, as it is more error prone than using the
   // provided operators.
@@ -437,10 +443,6 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   // in which case time will actually go backwards. We don't guarantee that
   // times are increasing, or that two calls to Now() won't be the same.
   static Time Now();
-
-  // Returns the maximum time, which should be greater than any reasonable time
-  // with which we might compare it.
-  static Time Max();
 
   // Returns the current time. Same as Now() except that this function always
   // uses system time so that there are no discrepancies between the returned

@@ -18,8 +18,12 @@ message_compiler("chrome_events_win") {
 
   user_mode_logging = true
 
-  # TOOD(brucedawson) bug 569989: Enable ETW manifest and compile and link it
-  # into the proper places. Enabling as-is may add the resources to too many
-  # targets. See the bug for more information.
+  # The only code generated from chrome_events_win.man is a header file that
+  # is included by trace_event_etw_export_win.cc, so there is no need to
+  # compile any generated code. The other thing which compile_generated_code
+  # controls in this context is linking in the .res file generated from the
+  # manifest. However this is only needed for ETW provider registration which
+  # is done by UIforETW (https://github.com/google/UIforETW) and therefore the
+  # manifest resource can be skipped in Chrome.
   compile_generated_code = false
 }

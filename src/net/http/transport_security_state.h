@@ -216,7 +216,7 @@ class NET_EXPORT TransportSecurityState
   };
 
   // An interface for asynchronously sending HPKP violation reports.
-  class NET_EXPORT ReportSender {
+  class NET_EXPORT ReportSenderInterface {
    public:
     // Sends the given serialized |report| to |report_uri|.
     virtual void Send(const GURL& report_uri, const std::string& report) = 0;
@@ -226,7 +226,7 @@ class NET_EXPORT TransportSecurityState
         const base::Callback<void(const GURL&, int)>& error_callback) = 0;
 
    protected:
-    virtual ~ReportSender() {}
+    virtual ~ReportSenderInterface() {}
   };
 
   // An interface for building and asynchronously sending reports when a
@@ -255,7 +255,8 @@ class NET_EXPORT TransportSecurityState
   // These functions search for static and dynamic STS and PKP states, and
   // invoke the functions of the same name on them. These functions are the
   // primary public interface; direct access to STS and PKP states is best
-  // left to tests.
+  // left to tests. The caller needs to handle the optional pinning override
+  // when is_issued_by_known_root is false.
   bool ShouldSSLErrorsBeFatal(const std::string& host);
   bool ShouldUpgradeToSSL(const std::string& host);
   bool CheckPublicKeyPins(const HostPortPair& host_port_pair,
@@ -274,7 +275,7 @@ class NET_EXPORT TransportSecurityState
   // TransportSecurityState.
   void SetDelegate(Delegate* delegate);
 
-  void SetReportSender(ReportSender* report_sender);
+  void SetReportSender(ReportSenderInterface* report_sender);
 
   void SetExpectCTReporter(ExpectCTReporter* expect_ct_reporter);
 
@@ -412,6 +413,7 @@ class NET_EXPORT TransportSecurityState
   // Helper method for actually checking pins.
   bool CheckPublicKeyPinsImpl(
       const HostPortPair& host_port_pair,
+      bool is_issued_by_known_root,
       const HashValueVector& hashes,
       const X509Certificate* served_certificate_chain,
       const X509Certificate* validated_certificate_chain,
@@ -452,6 +454,7 @@ class NET_EXPORT TransportSecurityState
   // |validated_certificate_chain|.
   bool CheckPinsAndMaybeSendReport(
       const HostPortPair& host_port_pair,
+      bool is_issued_by_known_root,
       const TransportSecurityState::PKPState& pkp_state,
       const HashValueVector& hashes,
       const X509Certificate* served_certificate_chain,
@@ -482,7 +485,7 @@ class NET_EXPORT TransportSecurityState
 
   Delegate* delegate_;
 
-  ReportSender* report_sender_;
+  ReportSenderInterface* report_sender_;
 
   // True if static pins should be used.
   bool enable_static_pins_;

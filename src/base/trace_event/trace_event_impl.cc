@@ -261,7 +261,7 @@ void TraceEvent::AppendValueAsJSON(unsigned char type,
       // So as not to lose bits from a 64-bit pointer, output as a hex string.
       StringAppendF(
           out, "\"0x%" PRIx64 "\"",
-          static_cast<uint64_t>(reinterpret_cast<intptr_t>(value.as_pointer)));
+          static_cast<uint64_t>(reinterpret_cast<uintptr_t>(value.as_pointer)));
       break;
     case TRACE_VALUE_TYPE_STRING:
     case TRACE_VALUE_TYPE_COPY_STRING:

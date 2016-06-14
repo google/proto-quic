@@ -18,6 +18,7 @@
 #include "base/metrics/statistics_recorder.h"
 #include "base/run_loop.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
+#include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -303,9 +304,9 @@ void MessageLoop::RunUntilIdle() {
 void MessageLoop::QuitWhenIdle() {
   DCHECK_EQ(this, current());
   if (run_loop_) {
-    run_loop_->quit_when_idle_received_ = true;
+    run_loop_->QuitWhenIdle();
   } else {
-    NOTREACHED() << "Must be inside Run to call Quit";
+    NOTREACHED() << "Must be inside Run to call QuitWhenIdle";
   }
 }
 
@@ -395,7 +396,8 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
       unbound_task_runner_(
           new internal::MessageLoopTaskRunner(incoming_task_queue_)),
-      task_runner_(unbound_task_runner_) {
+      task_runner_(unbound_task_runner_),
+      thread_id_(kInvalidThreadId) {
   // If type is TYPE_CUSTOM non-null pump_factory must be given.
   DCHECK(type_ != TYPE_CUSTOM || !pump_factory_.is_null());
 }
@@ -414,6 +416,22 @@ void MessageLoop::BindToCurrentThread() {
   unbound_task_runner_->BindToCurrentThread();
   unbound_task_runner_ = nullptr;
   SetThreadTaskRunnerHandle();
+  {
+    // Save the current thread's ID for potential use by other threads
+    // later from GetThreadName().
+    thread_id_ = PlatformThread::CurrentId();
+    subtle::MemoryBarrier();
+  }
+}
+
+std::string MessageLoop::GetThreadName() const {
+  if (thread_id_ == kInvalidThreadId) {
+    // |thread_id_| may already have been initialized but this thread might not
+    // have received the update yet.
+    subtle::MemoryBarrier();
+    DCHECK_NE(kInvalidThreadId, thread_id_);
+  }
+  return ThreadIdNameManager::GetInstance()->GetName(thread_id_);
 }
 
 void MessageLoop::SetTaskRunner(
@@ -554,13 +572,12 @@ void MessageLoop::StartHistogrammer() {
 #if !defined(OS_NACL)  // NaCl build has no metrics code.
   if (enable_histogrammer_ && !message_histogram_
       && StatisticsRecorder::IsActive()) {
-    DCHECK(!thread_name_.empty());
+    std::string thread_name = GetThreadName();
+    DCHECK(!thread_name.empty());
     message_histogram_ = LinearHistogram::FactoryGetWithRangeDescription(
-        "MsgLoop:" + thread_name_,
-        kLeastNonZeroMessageId, kMaxMessageId,
+        "MsgLoop:" + thread_name, kLeastNonZeroMessageId, kMaxMessageId,
         kNumberOfDistinctMessagesDisplayed,
-        HistogramBase::kHexRangePrintingFlag,
-        event_descriptions_);
+        HistogramBase::kHexRangePrintingFlag, event_descriptions_);
   }
 #endif
 }

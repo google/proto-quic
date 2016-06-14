@@ -14,8 +14,8 @@
 #include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/process/process_iterator.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/win/object_watcher.h"
 
 namespace base {
@@ -46,7 +46,7 @@ class TimerExpiredTask : public win::ObjectWatcher::Delegate {
 
   void TimedOut();
 
-  // MessageLoop::Watcher -----------------------------------------------------
+  // win::ObjectWatcher::Delegate implementation.
   void OnObjectSignaled(HANDLE object) override;
 
  private:
@@ -193,7 +193,7 @@ void EnsureProcessTerminated(Process process) {
     return;
   }
 
-  MessageLoop::current()->PostDelayedTask(
+  ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, Bind(&TimerExpiredTask::TimedOut,
                       Owned(new TimerExpiredTask(std::move(process)))),
       TimeDelta::FromMilliseconds(kWaitInterval));

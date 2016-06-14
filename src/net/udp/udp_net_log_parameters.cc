@@ -31,9 +31,12 @@ std::unique_ptr<base::Value> NetLogUDPDataTranferCallback(
 
 std::unique_ptr<base::Value> NetLogUDPConnectCallback(
     const IPEndPoint* address,
+    NetworkChangeNotifier::NetworkHandle network,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("address", address->ToString());
+  if (network != NetworkChangeNotifier::kInvalidNetworkHandle)
+    dict->SetInteger("bound_to_network", network);
   return std::move(dict);
 }
 
@@ -48,9 +51,10 @@ NetLog::ParametersCallback CreateNetLogUDPDataTranferCallback(
 }
 
 NetLog::ParametersCallback CreateNetLogUDPConnectCallback(
-    const IPEndPoint* address) {
+    const IPEndPoint* address,
+    NetworkChangeNotifier::NetworkHandle network) {
   DCHECK(address);
-  return base::Bind(&NetLogUDPConnectCallback, address);
+  return base::Bind(&NetLogUDPConnectCallback, address, network);
 }
 
 }  // namespace net

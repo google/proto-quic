@@ -162,8 +162,6 @@ int ssl_read_buffer_extend_to(SSL *ssl, size_t len) {
     return -1;
   }
 
-  ERR_clear_system_error();
-
   int ret;
   if (SSL_IS_DTLS(ssl)) {
     /* |len| is ignored for a datagram transport. */
@@ -184,14 +182,13 @@ void ssl_read_buffer_consume(SSL *ssl, size_t len) {
   SSL3_BUFFER *buf = &ssl->s3->read_buffer;
 
   consume_buffer(buf, len);
-  if (!SSL_IS_DTLS(ssl)) {
-    /* The TLS stack never reads beyond the current record, so there will never
-     * be unconsumed data. If read-ahead is ever reimplemented,
-     * |ssl_read_buffer_discard| will require a |memcpy| to shift the excess
-     * back to the front of the buffer, to ensure there is enough space for the
-     * next record. */
-     assert(buf->len == 0);
-  }
+
+  /* The TLS stack never reads beyond the current record, so there will never be
+   * unconsumed data. If read-ahead is ever reimplemented,
+   * |ssl_read_buffer_discard| will require a |memcpy| to shift the excess back
+   * to the front of the buffer, to ensure there is enough space for the next
+   * record. */
+  assert(SSL_IS_DTLS(ssl) || len == 0 || buf->len == 0);
 }
 
 void ssl_read_buffer_discard(SSL *ssl) {
@@ -227,7 +224,7 @@ int ssl_write_buffer_init(SSL *ssl, uint8_t **out_ptr, size_t max_len) {
     return 0;
   }
 
-  size_t header_len = ssl_seal_prefix_len(ssl);
+  size_t header_len = ssl_seal_align_prefix_len(ssl);
 
   /* TODO(davidben): This matches the original behavior in keeping the malloc
    * size consistent. Does this matter? |cap| could just be |max_len|. */
@@ -301,7 +298,6 @@ int ssl_write_buffer_flush(SSL *ssl) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_BIO_NOT_SET);
     return -1;
   }
-  ERR_clear_system_error();
 
   if (SSL_IS_DTLS(ssl)) {
     return dtls_write_buffer_flush(ssl);

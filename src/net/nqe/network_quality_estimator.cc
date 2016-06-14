@@ -11,9 +11,11 @@
 #include <vector>
 
 #include "base/bind_helpers.h"
+#include "base/location.h"
 #include "base/logging.h"
 #include "base/metrics/histogram.h"
 #include "base/metrics/histogram_base.h"
+#include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/default_tick_clock.h"
@@ -134,9 +136,20 @@ bool GetValueForVariationParam(
     const std::map<std::string, std::string>& variation_params,
     const std::string& parameter_name,
     int32_t* variations_value) {
-  auto it = variation_params.find(parameter_name);
+  const auto it = variation_params.find(parameter_name);
   return it != variation_params.end() &&
          base::StringToInt(it->second, variations_value);
+}
+
+// Returns the algorithm that should be used for computing effective connection
+// type based on field trial params. Returns an empty string if a valid
+// algorithm paramter is not present in the field trial params.
+std::string GetEffectiveConnectionTypeAlgorithm(
+    const std::map<std::string, std::string>& variation_params) {
+  const auto it = variation_params.find("effective_connection_type_algorithm");
+  if (it == variation_params.end())
+    return std::string();
+  return it->second;
 }
 
 net::NetworkQualityObservationSource ProtocolSourceToObservationSource(
@@ -192,10 +205,20 @@ NetworkQualityEstimator::NetworkQualityEstimator(
     const std::map<std::string, std::string>& variation_params,
     bool use_local_host_requests_for_tests,
     bool use_smaller_responses_for_tests)
-    : use_localhost_requests_(use_local_host_requests_for_tests),
+    : algorithm_name_to_enum_({{"HttpRTTAndDownstreamThroughput",
+                                EffectiveConnectionTypeAlgorithm::
+                                    HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT}}),
+      use_localhost_requests_(use_local_host_requests_for_tests),
       use_small_responses_(use_smaller_responses_for_tests),
       weight_multiplier_per_second_(
           GetWeightMultiplierPerSecond(variation_params)),
+      effective_connection_type_algorithm_(
+          algorithm_name_to_enum_.find(GetEffectiveConnectionTypeAlgorithm(
+              variation_params)) == algorithm_name_to_enum_.end()
+              ? kDefaultEffectiveConnectionTypeAlgorithm
+              : algorithm_name_to_enum_
+                    .find(GetEffectiveConnectionTypeAlgorithm(variation_params))
+                    ->second),
       tick_clock_(new base::DefaultTickClock()),
       effective_connection_type_recomputation_interval_(
           base::TimeDelta::FromSeconds(15)),
@@ -216,6 +239,16 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   // oldest cache entry is rewritten to use a doubly-linked-list LRU queue.
   static_assert(kMaximumNetworkQualityCacheSize <= 10,
                 "Size of the network quality cache must <= 10");
+  // None of the algorithms can have an empty name.
+  DCHECK(algorithm_name_to_enum_.end() ==
+         algorithm_name_to_enum_.find(std::string()));
+
+  DCHECK_EQ(algorithm_name_to_enum_.size(),
+            static_cast<size_t>(EffectiveConnectionTypeAlgorithm::
+                                    EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST));
+  DCHECK_NE(EffectiveConnectionTypeAlgorithm::
+                EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST,
+            effective_connection_type_algorithm_);
 
   ObtainOperatingParams(variation_params);
   ObtainEffectiveConnectionTypeModelParams(variation_params);
@@ -440,7 +473,7 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
     // observations received over intervals of varying durations.
     for (const base::TimeDelta& measuring_delay :
          GetAccuracyRecordingIntervals()) {
-      base::MessageLoop::current()->task_runner()->PostDelayedTask(
+      base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
           FROM_HERE,
           base::Bind(&NetworkQualityEstimator::RecordAccuracyAfterMainFrame,
                      weak_ptr_factory_.GetWeakPtr(), measuring_delay),
@@ -473,14 +506,6 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
       observed_http_rtt, now, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST);
   rtt_observations_.AddObservation(http_rtt_observation);
   NotifyObserversOfRTT(http_rtt_observation);
-
-  // Compare the RTT observation with the estimated value and record it.
-  if (estimated_quality_at_last_main_frame_.http_rtt() !=
-      nqe::internal::InvalidRTT()) {
-    RecordHttpRTTUMA(
-        estimated_quality_at_last_main_frame_.http_rtt().InMilliseconds(),
-        observed_http_rtt.InMilliseconds());
-  }
 }
 
 void NetworkQualityEstimator::RecordAccuracyAfterMainFrame(
@@ -595,42 +620,6 @@ NetworkQualityEstimator::GetSocketPerformanceWatcherFactory() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   return watcher_factory_.get();
-}
-
-void NetworkQualityEstimator::RecordHttpRTTUMA(
-    int32_t estimated_value_msec,
-    int32_t actual_value_msec) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  // Record the difference between the actual and the estimated value.
-  if (estimated_value_msec >= actual_value_msec) {
-    base::HistogramBase* difference_rtt =
-        GetHistogram("DifferenceRTTEstimatedAndActual.",
-                     current_network_id_.type, 10 * 1000);  // 10 seconds
-    difference_rtt->Add(estimated_value_msec - actual_value_msec);
-  } else {
-    base::HistogramBase* difference_rtt =
-        GetHistogram("DifferenceRTTActualAndEstimated.",
-                     current_network_id_.type, 10 * 1000);  // 10 seconds
-    difference_rtt->Add(actual_value_msec - estimated_value_msec);
-  }
-
-  // Record all the RTT observations.
-  base::HistogramBase* rtt_observations =
-      GetHistogram("RTTObservations.", current_network_id_.type,
-                   10 * 1000);  // 10 seconds upper bound
-  rtt_observations->Add(actual_value_msec);
-
-  if (actual_value_msec == 0)
-    return;
-
-  int32_t ratio = (estimated_value_msec * 100) / actual_value_msec;
-
-  // Record the accuracy of estimation by recording the ratio of estimated
-  // value to the actual value.
-  base::HistogramBase* ratio_median_rtt = GetHistogram(
-      "RatioEstimatedToActualRTT.", current_network_id_.type, 1000);
-  ratio_median_rtt->Add(ratio);
 }
 
 bool NetworkQualityEstimator::RequestProvidesRTTObservation(
@@ -800,6 +789,21 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionType(
     const base::TimeTicks& start_time) const {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  if (effective_connection_type_algorithm_ ==
+      EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT) {
+    return GetRecentEffectiveConnectionTypeHttpRTTAndDownstreamThroughput(
+        start_time);
+  }
+  // Add additional algorithms here.
+  NOTREACHED();
+  return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+}
+
+NetworkQualityEstimator::EffectiveConnectionType NetworkQualityEstimator::
+    GetRecentEffectiveConnectionTypeHttpRTTAndDownstreamThroughput(
+        const base::TimeTicks& start_time) const {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
   // If the device is currently offline, then return
   // EFFECTIVE_CONNECTION_TYPE_OFFLINE.
   if (GetCurrentNetworkID().type == NetworkChangeNotifier::CONNECTION_NONE)
@@ -813,7 +817,7 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionType(
   if (!GetRecentMedianDownlinkThroughputKbps(start_time, &kbps))
     kbps = nqe::internal::kInvalidThroughput;
 
-  if (http_rtt == nqe::internal::InvalidRTT() &&
+  if (http_rtt == nqe::internal::InvalidRTT() ||
       kbps == nqe::internal::kInvalidThroughput) {
     // Quality of the current network is unknown.
     return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;

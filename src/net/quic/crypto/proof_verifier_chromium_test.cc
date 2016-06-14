@@ -33,14 +33,11 @@ class FailsTestCertVerifier : public CertVerifier {
   ~FailsTestCertVerifier() override {}
 
   // CertVerifier implementation
-  int Verify(X509Certificate* cert,
-             const std::string& hostname,
-             const std::string& ocsp_response,
-             int flags,
+  int Verify(const RequestParams& params,
              CRLSet* crl_set,
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
-             std::unique_ptr<CertVerifier::Request>* out_req,
+             std::unique_ptr<Request>* out_req,
              const BoundNetLog& net_log) override {
     ADD_FAILURE() << "CertVerifier::Verify() should not be called";
     return ERR_FAILED;
@@ -407,6 +404,91 @@ TEST_F(ProofVerifierChromiumTest, IgnoresPolicyEnforcerIfNotEV) {
   ProofVerifyDetailsChromium* verify_details =
       static_cast<ProofVerifyDetailsChromium*>(details_.get());
   EXPECT_EQ(0u, verify_details->cert_verify_result.cert_status);
+}
+
+HashValueVector MakeHashValueVector(uint8_t tag) {
+  HashValue hash(HASH_VALUE_SHA256);
+  memset(hash.data(), tag, hash.size());
+  HashValueVector hashes;
+  hashes.push_back(hash);
+  return hashes;
+}
+
+// Test that PKP is enforced for certificates that chain up to known roots.
+TEST_F(ProofVerifierChromiumTest, PKPEnforced) {
+  scoped_refptr<X509Certificate> test_cert = GetTestServerCertificate();
+  ASSERT_TRUE(test_cert);
+
+  CertVerifyResult dummy_result;
+  dummy_result.verified_cert = test_cert;
+  dummy_result.is_issued_by_known_root = true;
+  dummy_result.public_key_hashes = MakeHashValueVector(0x01);
+  dummy_result.cert_status = 0;
+
+  MockCertVerifier dummy_verifier;
+  dummy_verifier.AddResultForCert(test_cert.get(), dummy_result, OK);
+
+  HashValueVector pin_hashes = MakeHashValueVector(0x02);
+  TransportSecurityState transport_security_state;
+  transport_security_state.AddHPKP(
+      kTestHostname, base::Time::Now() + base::TimeDelta::FromSeconds(10000),
+      true, pin_hashes, GURL());
+
+  ProofVerifierChromium proof_verifier(&dummy_verifier, nullptr,
+                                       &transport_security_state, nullptr);
+
+  std::unique_ptr<DummyProofVerifierCallback> callback(
+      new DummyProofVerifierCallback);
+  QuicAsyncStatus status = proof_verifier.VerifyProof(
+      kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
+      GetTestSignature(), verify_context_.get(), &error_details_, &details_,
+      callback.get());
+  ASSERT_EQ(QUIC_FAILURE, status);
+
+  ASSERT_TRUE(details_.get());
+  ProofVerifyDetailsChromium* verify_details =
+      static_cast<ProofVerifyDetailsChromium*>(details_.get());
+  EXPECT_EQ(0u, verify_details->cert_verify_result.cert_status);
+  EXPECT_FALSE(verify_details->pkp_bypassed);
+  EXPECT_NE("", verify_details->pinning_failure_log);
+}
+
+// Test |pkp_bypassed| is set when PKP is bypassed due to a local
+// trust anchor
+TEST_F(ProofVerifierChromiumTest, PKPBypassFlagSet) {
+  scoped_refptr<X509Certificate> test_cert = GetTestServerCertificate();
+  ASSERT_TRUE(test_cert);
+
+  CertVerifyResult dummy_result;
+  dummy_result.verified_cert = test_cert;
+  dummy_result.is_issued_by_known_root = false;
+  dummy_result.public_key_hashes = MakeHashValueVector(0x01);
+  dummy_result.cert_status = 0;
+
+  MockCertVerifier dummy_verifier;
+  dummy_verifier.AddResultForCert(test_cert.get(), dummy_result, OK);
+
+  HashValueVector expected_hashes = MakeHashValueVector(0x02);
+  TransportSecurityState transport_security_state_fail;
+  transport_security_state_fail.AddHPKP(
+      kTestHostname, base::Time::Now() + base::TimeDelta::FromSeconds(10000),
+      true, expected_hashes, GURL());
+
+  ProofVerifierChromium proof_verifier(&dummy_verifier, nullptr,
+                                       &transport_security_state_fail, nullptr);
+
+  std::unique_ptr<DummyProofVerifierCallback> callback(
+      new DummyProofVerifierCallback);
+  QuicAsyncStatus status = proof_verifier.VerifyProof(
+      kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
+      GetTestSignature(), verify_context_.get(), &error_details_, &details_,
+      callback.get());
+  ASSERT_EQ(QUIC_SUCCESS, status);
+
+  ASSERT_TRUE(details_.get());
+  ProofVerifyDetailsChromium* verify_details =
+      static_cast<ProofVerifyDetailsChromium*>(details_.get());
+  EXPECT_TRUE(verify_details->pkp_bypassed);
 }
 
 }  // namespace test

@@ -94,6 +94,9 @@ class NET_EXPORT SSLInfo {
   // standard CA root. (As opposed to a user-installed root.)
   bool is_issued_by_known_root;
 
+  // True if pinning was bypassed on this connection.
+  bool pkp_bypassed;
+
   // True if a client certificate was sent to the server.  Note that sending
   // a Certificate message with no client certificate in it does not count.
   bool client_cert_sent;

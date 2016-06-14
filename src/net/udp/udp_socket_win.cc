@@ -19,6 +19,7 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_activity_monitor.h"
+#include "net/base/network_change_notifier.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/base/winsock_init.h"
 #include "net/base/winsock_util.h"
@@ -355,7 +356,9 @@ int UDPSocketWin::GetLocalAddress(IPEndPoint* address) const {
       return ERR_ADDRESS_INVALID;
     local_address_.reset(local_address.release());
     net_log_.AddEvent(NetLog::TYPE_UDP_LOCAL_ADDRESS,
-                      CreateNetLogUDPConnectCallback(local_address_.get()));
+                      CreateNetLogUDPConnectCallback(
+                          local_address_.get(),
+                          NetworkChangeNotifier::kInvalidNetworkHandle));
   }
 
   *address = *local_address_;
@@ -426,8 +429,10 @@ int UDPSocketWin::SendToOrWrite(IOBuffer* buf,
 
 int UDPSocketWin::Connect(const IPEndPoint& address) {
   DCHECK_NE(socket_, INVALID_SOCKET);
-  net_log_.BeginEvent(NetLog::TYPE_UDP_CONNECT,
-                      CreateNetLogUDPConnectCallback(&address));
+  net_log_.BeginEvent(
+      NetLog::TYPE_UDP_CONNECT,
+      CreateNetLogUDPConnectCallback(
+          &address, NetworkChangeNotifier::kInvalidNetworkHandle));
   int rv = InternalConnect(address);
   net_log_.EndEventWithNetErrorCode(NetLog::TYPE_UDP_CONNECT, rv);
   is_connected_ = (rv == OK);

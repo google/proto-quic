@@ -56,14 +56,6 @@ class BASE_EXPORT WaitableEvent {
   // the above enums.
   WaitableEvent(ResetPolicy reset_policy, InitialState initial_state);
 
-  // If manual_reset is true, then to set the event state to non-signaled, a
-  // consumer must call the Reset method.  If this parameter is false, then the
-  // system automatically resets the event state to non-signaled after a single
-  // waiting thread has been released.
-  // DEPRECATED: Use the enum-based constructor instead (full removal tracked in
-  // http://crbug.com/612843).
-  WaitableEvent(bool manual_reset, bool initially_signaled);
-
 #if defined(OS_WIN)
   // Create a WaitableEvent from an Event HANDLE which has already been
   // created. This objects takes ownership of the HANDLE and will close it when
@@ -165,7 +157,7 @@ class BASE_EXPORT WaitableEvent {
   struct WaitableEventKernel :
       public RefCountedThreadSafe<WaitableEventKernel> {
    public:
-    WaitableEventKernel(bool manual_reset, bool initially_signaled);
+    WaitableEventKernel(ResetPolicy reset_policy, InitialState initial_state);
 
     bool Dequeue(Waiter* waiter, void* tag);
 

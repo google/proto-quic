@@ -400,6 +400,20 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
   EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
 }
 
+TEST_P(QuicCryptoServerStreamTest, FailByPolicy) {
+  FLAGS_quic_enable_chlo_policy = true;
+  FLAGS_quic_require_fix = false;
+  Initialize();
+  InitializeFakeClient(/* supports_stateless_rejects= */ false);
+
+  EXPECT_CALL(*server_session_->helper(), CanAcceptClientHello(_, _, _))
+      .WillOnce(testing::Return(false));
+  EXPECT_CALL(*server_connection_,
+              CloseConnection(QUIC_HANDSHAKE_FAILED, _, _));
+
+  AdvanceHandshakeWithFakeClient();
+}
+
 TEST_P(QuicCryptoServerStreamTest, MessageAfterHandshake) {
   FLAGS_quic_require_fix = false;
   Initialize();

@@ -43,7 +43,7 @@ class PacingSenderTest : public ::testing::Test {
     mock_sender_ = new StrictMock<MockSendAlgorithm>();
     pacing_sender_.reset(new PacingSender(
         mock_sender_, QuicTime::Delta::FromMilliseconds(1), burst_size));
-    EXPECT_CALL(*mock_sender_, PacingRate()).WillRepeatedly(Return(bandwidth));
+    EXPECT_CALL(*mock_sender_, PacingRate(_)).WillRepeatedly(Return(bandwidth));
   }
 
   void CheckPacketIsSentImmediately(HasRetransmittableData retransmittable_data,
@@ -363,7 +363,7 @@ TEST_F(PacingSenderTest, VerifyInnerSenderCalled) {
 
   EXPECT_CALL(*mock_sender_, OnPacketSent(kTime, kBytes, 123u, kBytes,
                                           HAS_RETRANSMITTABLE_DATA));
-  EXPECT_CALL(*mock_sender_, PacingRate()).WillOnce(Return(kBandwidth));
+  EXPECT_CALL(*mock_sender_, PacingRate(_)).WillOnce(Return(kBandwidth));
   pacing_sender_->OnPacketSent(kTime, kBytes, 123u, kBytes,
                                HAS_RETRANSMITTABLE_DATA);
 
@@ -377,8 +377,8 @@ TEST_F(PacingSenderTest, VerifyInnerSenderCalled) {
       .WillOnce(Return(kTimeDelta));
   pacing_sender_->TimeUntilSend(kTime, kBytes);
 
-  EXPECT_CALL(*mock_sender_, PacingRate()).WillOnce(Return(kBandwidth));
-  EXPECT_EQ(kBandwidth, pacing_sender_->PacingRate());
+  EXPECT_CALL(*mock_sender_, PacingRate(_)).WillOnce(Return(kBandwidth));
+  EXPECT_EQ(kBandwidth, pacing_sender_->PacingRate(0));
 
   EXPECT_CALL(*mock_sender_, BandwidthEstimate()).WillOnce(Return(kBandwidth));
   EXPECT_EQ(kBandwidth, pacing_sender_->BandwidthEstimate());

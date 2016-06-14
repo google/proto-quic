@@ -399,6 +399,20 @@
       'msvs_disabled_warnings': [ 4267, ],
     },
     {
+      'target_name': 'boringssl_newhope_statistical_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'src/crypto/newhope/newhope_statistical_test.cc',
+        '<@(boringssl_test_support_sources)',
+      ],
+      # TODO(davidben): Fix size_t truncations in BoringSSL.
+      # https://crbug.com/429039
+      'msvs_disabled_warnings': [ 4267, ],
+    },
+    {
       'target_name': 'boringssl_newhope_test',
       'type': 'executable',
       'dependencies': [
@@ -641,6 +655,7 @@
       'boringssl_hkdf_test',
       'boringssl_hmac_test',
       'boringssl_lhash_test',
+      'boringssl_newhope_statistical_test',
       'boringssl_newhope_test',
       'boringssl_newhope_vectors_test',
       'boringssl_obj_test',

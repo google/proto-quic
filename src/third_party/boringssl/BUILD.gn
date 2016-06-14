@@ -30,6 +30,10 @@ config("internal_config") {
     # https://crbug.com/429039
     "//build/config/compiler:no_size_t_to_int_warning",
   ]
+  if (is_posix) {
+    cflags_c = [ "-std=c99" ]
+    defines += [ "_XOPEN_SOURCE=700" ]
+  }
 }
 
 config("no_asm_config") {

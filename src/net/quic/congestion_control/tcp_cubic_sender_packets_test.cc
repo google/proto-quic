@@ -953,10 +953,44 @@ TEST_F(TcpCubicSenderPacketsTest, NoPRR) {
   const QuicBandwidth expected_pacing_rate =
       QuicBandwidth::FromBytesAndTimeDelta(kRenoBeta * kDefaultWindowTCP,
                                            sender_->rtt_stats_.smoothed_rtt());
-  EXPECT_EQ(expected_pacing_rate, sender_->PacingRate());
+  EXPECT_EQ(expected_pacing_rate, sender_->PacingRate(0));
   EXPECT_EQ(window_in_packets,
             static_cast<uint64_t>(SendAvailableSendWindow()));
-  EXPECT_EQ(expected_pacing_rate, sender_->PacingRate());
+  EXPECT_EQ(expected_pacing_rate,
+            sender_->PacingRate(kRenoBeta * kDefaultWindowTCP));
+}
+
+TEST_F(TcpCubicSenderPacketsTest, PaceSlowerAboveCwnd) {
+  ValueRestore<bool> old_flag(&FLAGS_quic_rate_based_sending, true);
+  QuicTime::Delta rtt(QuicTime::Delta::FromMilliseconds(60));
+  sender_->rtt_stats_.UpdateRtt(rtt, QuicTime::Delta::Zero(), clock_.Now());
+
+  QuicConfig config;
+  QuicTagVector options;
+  options.push_back(kRATE);
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  EXPECT_EQ(10u, sender_->congestion_window());
+  sender_->SetNumEmulatedConnections(1);
+  // Lose a packet to exit slow start.
+  LoseNPackets(1);
+  const QuicPacketCount cwnd = 7;
+  EXPECT_EQ(cwnd * kDefaultTCPMSS, sender_->GetCongestionWindow());
+
+  EXPECT_TRUE(
+      sender_->TimeUntilSend(QuicTime::Zero(), kDefaultTCPMSS).IsZero());
+  EXPECT_EQ(sender_->PacingRate(kDefaultTCPMSS),
+            QuicBandwidth::FromBytesAndTimeDelta(7 * kDefaultTCPMSS, rtt)
+                .Scale(1.25));
+  for (QuicPacketCount i = cwnd + 1; i < 1.5 * cwnd; ++i) {
+    EXPECT_TRUE(
+        sender_->TimeUntilSend(QuicTime::Zero(), i * kDefaultTCPMSS).IsZero());
+    EXPECT_EQ(sender_->PacingRate(i * kDefaultTCPMSS),
+              QuicBandwidth::FromBytesAndTimeDelta(cwnd * kDefaultTCPMSS, rtt)
+                  .Scale(0.75));
+  }
+  EXPECT_FALSE(
+      sender_->TimeUntilSend(QuicTime::Zero(), 11 * kDefaultTCPMSS).IsZero());
 }
 
 TEST_F(TcpCubicSenderPacketsTest, ResetAfterConnectionMigration) {

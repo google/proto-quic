@@ -26,10 +26,7 @@ class MockCertVerifier : public CertVerifier {
   ~MockCertVerifier() override;
 
   // CertVerifier implementation
-  int Verify(X509Certificate* cert,
-             const std::string& hostname,
-             const std::string& ocsp_response,
-             int flags,
+  int Verify(const RequestParams& params,
              CRLSet* crl_set,
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
@@ -46,13 +43,13 @@ class MockCertVerifier : public CertVerifier {
   // copying |verify_result| into the verified result.
   // Note: Only the primary certificate of |cert| is checked. Any intermediate
   // certificates will be ignored.
-  void AddResultForCert(X509Certificate* cert,
+  void AddResultForCert(scoped_refptr<X509Certificate> cert,
                         const CertVerifyResult& verify_result,
                         int rv);
 
   // Same as AddResultForCert(), but further restricts it to only return for
   // hostnames that match |host_pattern|.
-  void AddResultForCertAndHost(X509Certificate* cert,
+  void AddResultForCertAndHost(scoped_refptr<X509Certificate> cert,
                                const std::string& host_pattern,
                                const CertVerifyResult& verify_result,
                                int rv);

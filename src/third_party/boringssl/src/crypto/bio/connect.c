@@ -66,10 +66,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #else
-#pragma warning(push, 3)
+OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#pragma warning(pop)
+OPENSSL_MSVC_PRAGMA(warning(pop))
 #endif
 
 #include <openssl/buf.h>
@@ -536,6 +536,12 @@ int BIO_set_conn_hostname(BIO *bio, const char *name) {
 
 int BIO_set_conn_port(BIO *bio, const char *port_str) {
   return BIO_ctrl(bio, BIO_C_SET_CONNECT, 1, (void*) port_str);
+}
+
+int BIO_set_conn_int_port(BIO *bio, const int *port) {
+  char buf[DECIMAL_SIZE(int) + 1];
+  BIO_snprintf(buf, sizeof(buf), "%d", *port);
+  return BIO_set_conn_port(bio, buf);
 }
 
 int BIO_set_nbio(BIO *bio, int on) {

@@ -310,6 +310,9 @@ class NET_EXPORT UDPSocketPosix : public base::NonThreadSafe {
 
   BoundNetLog net_log_;
 
+  // Network that this socket is bound to via BindToNetwork().
+  NetworkChangeNotifier::NetworkHandle bound_network_;
+
   DISALLOW_COPY_AND_ASSIGN(UDPSocketPosix);
 };
 

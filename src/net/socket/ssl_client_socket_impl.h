@@ -370,6 +370,9 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // pinning failure. It is a (somewhat) human-readable string.
   std::string pinning_failure_log_;
 
+  // True if PKP is bypassed due to a local trust anchor.
+  bool pkp_bypassed_;
+
   BoundNetLog net_log_;
   base::WeakPtrFactory<SSLClientSocketImpl> weak_factory_;
 };

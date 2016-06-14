@@ -416,7 +416,7 @@ void URLRequestHttpJob::NotifyBeforeNetworkStart(bool* defer) {
         backoff_manager_->ShouldRejectRequest(request()->url(),
                                               request()->request_time())) {
       *defer = true;
-      base::MessageLoop::current()->PostTask(
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE,
           base::Bind(&URLRequestHttpJob::OnStartCompleted,
                      weak_factory_.GetWeakPtr(), ERR_TEMPORARY_BACKOFF));

@@ -658,7 +658,8 @@ bool SpdySession::CanPool(TransportSecurityState* transport_security_state,
   // DISABLE_PIN_REPORTS is set here because this check can fail in
   // normal operation without being indicative of a misconfiguration or
   // attack. Port is left at 0 as it is never used.
-  if (!transport_security_state->CheckPublicKeyPins(
+  if (ssl_info.is_issued_by_known_root &&
+      !transport_security_state->CheckPublicKeyPins(
           HostPortPair(new_hostname, 0), ssl_info.is_issued_by_known_root,
           ssl_info.public_key_hashes, ssl_info.unverified_cert.get(),
           ssl_info.cert.get(), TransportSecurityState::DISABLE_PIN_REPORTS,

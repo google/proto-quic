@@ -980,7 +980,8 @@ TEST_F(ProcessUtilTest, GetAppOutputWithExitCode) {
 }
 
 TEST_F(ProcessUtilTest, GetParentProcessId) {
-  base::ProcessId ppid = base::GetParentProcessId(base::GetCurrentProcId());
+  base::ProcessId ppid =
+      base::GetParentProcessId(base::GetCurrentProcessHandle());
   EXPECT_EQ(ppid, getppid());
 }
 

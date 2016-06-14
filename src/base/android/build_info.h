@@ -74,6 +74,10 @@ class BASE_EXPORT BuildInfo {
     return android_build_fp_;
   }
 
+  const char* gms_version_code() const {
+    return gms_version_code_;
+  }
+
   const char* package_version_code() const {
     return package_version_code_;
   }
@@ -123,6 +127,7 @@ class BASE_EXPORT BuildInfo {
   const char* const brand_;
   const char* const android_build_id_;
   const char* const android_build_fp_;
+  const char* const gms_version_code_;
   const char* const package_version_code_;
   const char* const package_version_name_;
   const char* const package_label_;

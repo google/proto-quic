@@ -595,6 +595,52 @@ TEST_F(ReliableQuicStreamTest, FinalByteOffsetFromRst) {
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
 }
 
+TEST_F(ReliableQuicStreamTest, FinalByteOffsetFromZeroLengthStreamFrame) {
+  // When receiving Trailers, an empty stream frame is created with the FIN set,
+  // and is passed to OnStreamFrame. The Trailers may be sent in advance of
+  // queued body bytes being sent, and thus the final byte offset may exceed
+  // current flow control limits. Flow control should only be concerned with
+  // data that has actually been sent/received, so verify that flow control
+  // ignores such a stream frame.
+  Initialize(kShouldProcessData);
+
+  EXPECT_FALSE(stream_->HasFinalReceivedByteOffset());
+  const QuicStreamOffset kByteOffsetExceedingFlowControlWindow =
+      kInitialSessionFlowControlWindowForTest + 1;
+  const QuicStreamOffset current_stream_flow_control_offset =
+      QuicFlowControllerPeer::ReceiveWindowOffset(stream_->flow_controller());
+  const QuicStreamOffset current_connection_flow_control_offset =
+      QuicFlowControllerPeer::ReceiveWindowOffset(session_->flow_controller());
+  ASSERT_GT(kByteOffsetExceedingFlowControlWindow,
+            current_stream_flow_control_offset);
+  ASSERT_GT(kByteOffsetExceedingFlowControlWindow,
+            current_connection_flow_control_offset);
+  QuicStreamFrame zero_length_stream_frame_with_fin(
+      stream_->id(), /*fin=*/true, kByteOffsetExceedingFlowControlWindow,
+      StringPiece());
+  EXPECT_EQ(0, zero_length_stream_frame_with_fin.data_length);
+
+  if (FLAGS_quic_ignore_zero_length_frames) {
+    EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
+  } else {
+    EXPECT_CALL(*connection_,
+                CloseConnection(QUIC_FLOW_CONTROL_RECEIVED_TOO_MUCH_DATA, _, _))
+        .Times(1);
+  }
+  stream_->OnStreamFrame(zero_length_stream_frame_with_fin);
+  EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
+
+  if (FLAGS_quic_ignore_zero_length_frames) {
+    // The flow control receive offset values should not have changed.
+    EXPECT_EQ(current_stream_flow_control_offset,
+              QuicFlowControllerPeer::ReceiveWindowOffset(
+                  stream_->flow_controller()));
+    EXPECT_EQ(current_connection_flow_control_offset,
+              QuicFlowControllerPeer::ReceiveWindowOffset(
+                  session_->flow_controller()));
+  }
+}
+
 TEST_F(ReliableQuicStreamTest, SetDrainingIncomingOutgoing) {
   // Don't have incoming data consumed.
   Initialize(kShouldNotProcessData);

@@ -1075,7 +1075,7 @@ TEST_P(QuicSentPacketManagerTest, NewRetransmissionTimeout) {
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
-  EXPECT_CALL(*send_algorithm_, PacingRate())
+  EXPECT_CALL(*send_algorithm_, PacingRate(_))
       .WillRepeatedly(Return(QuicBandwidth::Zero()));
   EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
       .WillOnce(Return(10 * kDefaultTCPMSS));
@@ -1576,7 +1576,7 @@ TEST_P(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
   // Ensure undo works as intended.
   // Send 5 packets, mark the first 4 for retransmission, and then cancel
   // them when 1 is acked.
-  EXPECT_CALL(*send_algorithm_, PacingRate())
+  EXPECT_CALL(*send_algorithm_, PacingRate(_))
       .WillRepeatedly(Return(QuicBandwidth::Zero()));
   EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
       .WillOnce(Return(10 * kDefaultTCPMSS));
@@ -1639,7 +1639,7 @@ TEST_P(QuicSentPacketManagerTest,
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*send_algorithm_,
               SetMaxCongestionWindow(kMinSocketReceiveBuffer * 0.6));
-  EXPECT_CALL(*send_algorithm_, PacingRate())
+  EXPECT_CALL(*send_algorithm_, PacingRate(_))
       .WillRepeatedly(Return(QuicBandwidth::Zero()));
   EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
       .WillOnce(Return(10 * kDefaultTCPMSS));

@@ -130,29 +130,20 @@
 
 
 /* ssl3_do_write sends |ssl->init_buf| in records of type 'type'
- * (SSL3_RT_HANDSHAKE or SSL3_RT_CHANGE_CIPHER_SPEC). It returns -1 on error, 1
- * on success or zero if the transmission is still incomplete. */
+ * (SSL3_RT_HANDSHAKE or SSL3_RT_CHANGE_CIPHER_SPEC). It returns 1 on success
+ * and <= 0 on error. */
 int ssl3_do_write(SSL *ssl, int type) {
-  int n;
-
-  n = ssl3_write_bytes(ssl, type, &ssl->init_buf->data[ssl->init_off],
-                       ssl->init_num);
-  if (n < 0) {
-    return -1;
+  int ret = ssl3_write_bytes(ssl, type, ssl->init_buf->data, ssl->init_num);
+  if (ret <= 0) {
+    return ret;
   }
 
-  if (n == ssl->init_num) {
-    if (ssl->msg_callback) {
-      ssl->msg_callback(1, ssl->version, type, ssl->init_buf->data,
-                      (size_t)(ssl->init_off + ssl->init_num), ssl,
-                      ssl->msg_callback_arg);
-    }
-    return 1;
-  }
-
-  ssl->init_off += n;
-  ssl->init_num -= n;
-  return 0;
+  /* ssl3_write_bytes writes the data in its entirety. */
+  assert(ret == ssl->init_num);
+  ssl_do_msg_callback(ssl, 1 /* write */, ssl->version, type,
+                      ssl->init_buf->data, (size_t)ssl->init_num);
+  ssl->init_num = 0;
+  return 1;
 }
 
 int ssl3_send_finished(SSL *ssl, int a, int b) {
@@ -274,7 +265,6 @@ int ssl3_send_change_cipher_spec(SSL *ssl, int a, int b) {
   if (ssl->state == a) {
     *((uint8_t *)ssl->init_buf->data) = SSL3_MT_CCS;
     ssl->init_num = 1;
-    ssl->init_off = 0;
 
     ssl->state = b;
   }
@@ -382,10 +372,8 @@ again:
 
   /* We have now received a complete message. */
   ssl->s3->tmp.message_complete = 1;
-  if (ssl->msg_callback) {
-    ssl->msg_callback(0, ssl->version, SSL3_RT_HANDSHAKE, ssl->init_buf->data,
-                      ssl->init_buf->length, ssl, ssl->msg_callback_arg);
-  }
+  ssl_do_msg_callback(ssl, 0 /* read */, ssl->version, SSL3_RT_HANDSHAKE,
+                      ssl->init_buf->data, ssl->init_buf->length);
 
   static const uint8_t kHelloRequest[4] = {SSL3_MT_HELLO_REQUEST, 0, 0, 0};
   if (!ssl->server && ssl->init_buf->length == sizeof(kHelloRequest) &&
@@ -491,6 +479,9 @@ int ssl_verify_alarm_type(long type) {
     case X509_V_ERR_CRL_NOT_YET_VALID:
     case X509_V_ERR_CERT_UNTRUSTED:
     case X509_V_ERR_CERT_REJECTED:
+    case X509_V_ERR_HOSTNAME_MISMATCH:
+    case X509_V_ERR_EMAIL_MISMATCH:
+    case X509_V_ERR_IP_ADDRESS_MISMATCH:
       al = SSL_AD_BAD_CERTIFICATE;
       break;
 
@@ -508,7 +499,10 @@ int ssl_verify_alarm_type(long type) {
       al = SSL_AD_CERTIFICATE_REVOKED;
       break;
 
+    case X509_V_ERR_UNSPECIFIED:
     case X509_V_ERR_OUT_OF_MEM:
+    case X509_V_ERR_INVALID_CALL:
+    case X509_V_ERR_STORE_LOOKUP:
       al = SSL_AD_INTERNAL_ERROR;
       break;
 

@@ -8,10 +8,9 @@
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/single_thread_task_runner.h"
 
 namespace base {
-
-class SingleThreadTaskRunner;
 
 // ThreadTaskRunnerHandle stores a reference to a thread's TaskRunner
 // in thread-local storage.  Callers can then retrieve the TaskRunner

@@ -63,8 +63,6 @@ static const SSL_PROTOCOL_METHOD DTLS_protocol_method = {
     1 /* is_dtls */,
     dtls1_new,
     dtls1_free,
-    dtls1_accept,
-    dtls1_connect,
     dtls1_get_message,
     dtls1_read_app_data,
     dtls1_read_change_cipher_spec,
@@ -75,6 +73,9 @@ static const SSL_PROTOCOL_METHOD DTLS_protocol_method = {
     DTLS1_HM_HEADER_LENGTH,
     dtls1_set_handshake_header,
     dtls1_handshake_write,
+    dtls1_send_change_cipher_spec,
+    dtls1_expect_flight,
+    dtls1_received_flight,
 };
 
 const SSL_METHOD *DTLS_method(void) {

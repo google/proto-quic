@@ -4,42 +4,59 @@
 
 #include "net/cert/cert_verifier.h"
 
+#include <openssl/sha.h>
+
 #include <algorithm>
 #include <memory>
 
 #include "base/memory/ptr_util.h"
-#include "base/sha1.h"
+#include "base/strings/string_util.h"
 #include "build/build_config.h"
 #include "net/cert/cert_verify_proc.h"
 
 #if defined(OS_NACL)
 #include "base/logging.h"
 #else
+#include "net/cert/caching_cert_verifier.h"
 #include "net/cert/multi_threaded_cert_verifier.h"
 #endif
 
 namespace net {
 
 CertVerifier::RequestParams::RequestParams(
-    X509Certificate* certificate,
+    scoped_refptr<X509Certificate> certificate,
     const std::string& hostname,
     int flags,
     const std::string& ocsp_response,
-    const CertificateList& additional_trust_anchors)
-    : hostname_(hostname), flags_(flags) {
-  // Rather than store all of the original data, create a fingerprint based
-  // on the hash of the request data.
-  SHA1HashValue ocsp_hash;
-  base::SHA1HashBytes(
-      reinterpret_cast<const unsigned char*>(ocsp_response.data()),
-      ocsp_response.size(), ocsp_hash.data);
-
-  request_data_.reserve(additional_trust_anchors.size() + 3);
-  request_data_.push_back(ocsp_hash);
-  request_data_.push_back(certificate->fingerprint());
-  request_data_.push_back(certificate->ca_fingerprint());
-  for (const auto& trust_anchor : additional_trust_anchors)
-    request_data_.push_back(trust_anchor->fingerprint());
+    CertificateList additional_trust_anchors)
+    : certificate_(std::move(certificate)),
+      hostname_(hostname),
+      flags_(flags),
+      ocsp_response_(ocsp_response),
+      additional_trust_anchors_(std::move(additional_trust_anchors)) {
+  // For efficiency sake, rather than compare all of the fields for each
+  // comparison, compute a hash of their values. This is done directly in
+  // this class, rather than as an overloaded hash operator, for efficiency's
+  // sake.
+  SHA256_CTX ctx;
+  SHA256_Init(&ctx);
+  std::string cert_der;
+  X509Certificate::GetDEREncoded(certificate_->os_cert_handle(), &cert_der);
+  SHA256_Update(&ctx, cert_der.data(), cert_der.size());
+  for (const auto& cert_handle : certificate_->GetIntermediateCertificates()) {
+    X509Certificate::GetDEREncoded(cert_handle, &cert_der);
+    SHA256_Update(&ctx, cert_der.data(), cert_der.size());
+  }
+  SHA256_Update(&ctx, hostname_.data(), hostname.size());
+  SHA256_Update(&ctx, &flags, sizeof(flags));
+  SHA256_Update(&ctx, ocsp_response.data(), ocsp_response.size());
+  for (const auto& trust_anchor : additional_trust_anchors_) {
+    X509Certificate::GetDEREncoded(trust_anchor->os_cert_handle(), &cert_der);
+    SHA256_Update(&ctx, cert_der.data(), cert_der.size());
+  }
+  SHA256_Final(reinterpret_cast<uint8_t*>(
+                   base::WriteInto(&key_, SHA256_DIGEST_LENGTH + 1)),
+               &ctx);
 }
 
 CertVerifier::RequestParams::RequestParams(const RequestParams& other) =
@@ -48,13 +65,7 @@ CertVerifier::RequestParams::~RequestParams() {}
 
 bool CertVerifier::RequestParams::operator<(
     const CertVerifier::RequestParams& other) const {
-  if (flags_ != other.flags_)
-    return flags_ < other.flags_;
-  if (hostname_ != other.hostname_)
-    return hostname_ < other.hostname_;
-  return std::lexicographical_compare(
-      request_data_.begin(), request_data_.end(), other.request_data_.begin(),
-      other.request_data_.end(), SHA1HashValueLessThan());
+  return key_ < other.key_;
 }
 
 bool CertVerifier::SupportsOCSPStapling() {
@@ -66,8 +77,9 @@ std::unique_ptr<CertVerifier> CertVerifier::CreateDefault() {
   NOTIMPLEMENTED();
   return std::unique_ptr<CertVerifier>();
 #else
-  return base::WrapUnique(
-      new MultiThreadedCertVerifier(CertVerifyProc::CreateDefault()));
+  return base::MakeUnique<CachingCertVerifier>(
+      base::MakeUnique<MultiThreadedCertVerifier>(
+          CertVerifyProc::CreateDefault()));
 #endif
 }
 

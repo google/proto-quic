@@ -322,6 +322,8 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, StoreObservations);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestAddObservation);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, ObtainOperatingParams);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           ObtainAlgorithmToUseFromParams);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, HalfLifeParam);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, ComputedPercentiles);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestCaching);
@@ -345,6 +347,23 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // tiny.
   typedef std::map<NetworkID, nqe::internal::CachedNetworkQuality>
       CachedNetworkQualities;
+
+  // Algorithms supported by network quality estimator for computing effective
+  // connection type.
+  enum class EffectiveConnectionTypeAlgorithm {
+    HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT = 0,
+    EFFECTIVE_CONNECTION_TYPE_ALGORITHM_LAST
+  };
+
+  // Map from algorithm names to EffectiveConnectionTypeAlgorithm.
+  const std::map<std::string, EffectiveConnectionTypeAlgorithm>
+      algorithm_name_to_enum_;
+
+  // The default algorithm to be used if the algorithm value is not available
+  // through field trial parameters.
+  static const EffectiveConnectionTypeAlgorithm
+      kDefaultEffectiveConnectionTypeAlgorithm =
+          EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT;
 
   // Minimum valid value of the variation parameter that holds RTT (in
   // milliseconds) values.
@@ -427,10 +446,6 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   void NotifyObserversOfThroughput(const ThroughputObservation& observation);
 
-  // Records the UMA related to the RTT at the HTTP layer.
-  void RecordHttpRTTUMA(int32_t estimated_value_msec,
-                        int32_t actual_value_msec) const;
-
   // Returns true only if the |request| can be used for RTT estimation.
   bool RequestProvidesRTTObservation(const URLRequest& request) const;
 
@@ -446,6 +461,14 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // RecordAccuracyAfterMainFrame should be called |measuring_duration| after a
   // main frame request is observed.
   void RecordAccuracyAfterMainFrame(base::TimeDelta measuring_duration) const;
+
+  // Returns the effective type of the current connection based on only the
+  // samples observed after |start_time|. Uses HTTP RTT and downstream
+  // throughput to compute the effective connection type, and requires both of
+  // them to have a valid value.
+  EffectiveConnectionType
+  GetRecentEffectiveConnectionTypeHttpRTTAndDownstreamThroughput(
+      const base::TimeTicks& start_time) const;
 
   // Values of external estimate provider status. This enum must remain
   // synchronized with the enum of the same name in
@@ -476,6 +499,12 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   // The factor by which the weight of an observation reduces every second.
   const double weight_multiplier_per_second_;
+
+  // Algorithm to use for computing effective connection type. The value is
+  // obtained from field trial parameters. If the value from field trial
+  // parameters is unavailable, it is set to
+  // kDefaultEffectiveConnectionTypeAlgorithm.
+  const EffectiveConnectionTypeAlgorithm effective_connection_type_algorithm_;
 
   // Tick clock used by the network quality estimator.
   std::unique_ptr<base::TickClock> tick_clock_;

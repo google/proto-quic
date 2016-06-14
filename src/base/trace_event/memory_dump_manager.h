@@ -40,6 +40,7 @@ class MemoryDumpSessionState;
 class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
  public:
   static const char* const kTraceCategory;
+  static const char* const kLogPrefix;
 
   // This value is returned as the tracing id of the child processes by
   // GetTracingProcessId() when tracing is not enabled.

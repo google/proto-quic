@@ -49,13 +49,6 @@ class NET_EXPORT ProxyDelegate {
   virtual void OnFallback(const ProxyServer& bad_proxy,
                           int net_error) = 0;
 
-  // Called after a proxy connection. Allows the delegate to read/write
-  // |headers| before they get sent out. |headers| is valid only until
-  // OnCompleted or OnURLRequestDestroyed is called for this request.
-  virtual void OnBeforeSendHeaders(URLRequest* request,
-                                   const ProxyInfo& proxy_info,
-                                   HttpRequestHeaders* headers) = 0;
-
   // Called immediately before a proxy tunnel request is sent.
   // Provides the embedder an opportunity to add extra request headers.
   virtual void OnBeforeTunnelRequest(const HostPortPair& proxy_server,

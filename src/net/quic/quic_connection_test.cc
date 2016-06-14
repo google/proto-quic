@@ -565,7 +565,7 @@ class TestConnection : public QuicConnection {
     // Normally, the pacing would be disabled in the test, but calling
     // SetFromConfig enables it.  Set nearly-infinite bandwidth to make the
     // pacing algorithm work.
-    EXPECT_CALL(*send_algorithm, PacingRate())
+    EXPECT_CALL(*send_algorithm, PacingRate(_))
         .WillRepeatedly(Return(QuicBandwidth::FromKBytesPerSecond(10000)));
   }
 
@@ -702,7 +702,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         .WillRepeatedly(Return(QuicTime::Delta::Zero()));
     EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
         .WillRepeatedly(Return(kDefaultTCPMSS));
-    EXPECT_CALL(*send_algorithm_, PacingRate())
+    EXPECT_CALL(*send_algorithm_, PacingRate(_))
         .WillRepeatedly(Return(QuicBandwidth::Zero()));
     ON_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _))
         .WillByDefault(Return(true));
@@ -1346,13 +1346,9 @@ TEST_P(QuicConnectionTest, TruncatedAck) {
   }
 
   QuicAckFrame frame = InitAckFrame(num_packets);
-  PacketNumberSet lost_packets;
   // Create an ack with 256 nacks, none adjacent to one another.
   for (QuicPacketNumber i = 1; i <= 256; ++i) {
     NackPacket(i * 2, &frame);
-    if (i < 256) {  // Last packet is nacked, but not lost.
-      lost_packets.insert(i * 2);
-    }
   }
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(peer_entropy_calculator_, EntropyHash(511))
@@ -2184,8 +2180,6 @@ TEST_P(QuicConnectionTest, DoNotSendPendingRetransmissionForResetStream) {
   // Lose a packet which will trigger a pending retransmission.
   QuicAckFrame ack = InitAckFrame(last_packet);
   NackPacket(last_packet - 1, &ack);
-  PacketNumberSet lost_packets;
-  lost_packets.insert(last_packet - 1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _));
@@ -2247,6 +2241,7 @@ TEST_P(QuicConnectionTest, SendPendingRetransmissionForQuicRstStreamNoError) {
 }
 
 TEST_P(QuicConnectionTest, DiscardRetransmit) {
+  FLAGS_quic_always_write_queued_retransmissions = false;
   QuicPacketNumber last_packet;
   SendStreamDataToPeer(1, "foo", 0, !kFin, &last_packet);    // Packet 1
   SendStreamDataToPeer(1, "foos", 3, !kFin, &last_packet);   // Packet 2
@@ -2283,6 +2278,48 @@ TEST_P(QuicConnectionTest, DiscardRetransmit) {
   connection_.OnCanWrite();
 
   EXPECT_EQ(0u, connection_.NumQueuedPackets());
+}
+
+TEST_P(QuicConnectionTest, RetransmitAckedPacket) {
+  FLAGS_quic_always_write_queued_retransmissions = true;
+  QuicPacketNumber last_packet;
+  SendStreamDataToPeer(1, "foo", 0, !kFin, &last_packet);    // Packet 1
+  SendStreamDataToPeer(1, "foos", 3, !kFin, &last_packet);   // Packet 2
+  SendStreamDataToPeer(1, "fooos", 7, !kFin, &last_packet);  // Packet 3
+
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+
+  // Instigate a loss with an ack.
+  QuicAckFrame nack_two = InitAckFrame(3);
+  NackPacket(2, &nack_two);
+  // The first nack should trigger a fast retransmission, but we'll be
+  // write blocked, so the packet will be queued.
+  BlockOnNextWrite();
+
+  SendAlgorithmInterface::CongestionVector lost_packets;
+  lost_packets.push_back(std::make_pair(2, kMaxPacketSize));
+  EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
+      .WillOnce(SetArgPointee<4>(lost_packets));
+  EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _));
+  ProcessAckPacket(&nack_two);
+  EXPECT_EQ(1u, connection_.NumQueuedPackets());
+
+  // Now, ack the previous transmission.
+  EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _));
+  QuicAckFrame ack_all = InitAckFrame(3);
+  ProcessAckPacket(&ack_all);
+
+  // Unblock the socket and attempt to send the queued packets. We will always
+  // send the retransmission.
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 4, _, _)).Times(1);
+
+  writer_->SetWritable();
+  connection_.OnCanWrite();
+
+  EXPECT_EQ(0u, connection_.NumQueuedPackets());
+  // We do not store retransmittable frames of this retransmission.
+  EXPECT_FALSE(connection_.sent_packet_manager().HasRetransmittableFrames(
+      kDefaultPathId, 4));
 }
 
 TEST_P(QuicConnectionTest, RetransmitNackedLargestObserved) {

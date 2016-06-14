@@ -226,7 +226,7 @@ class MemoryDumpManagerTest : public testing::Test {
     RunLoop run_loop;
     MemoryDumpCallback callback =
         Bind(&MemoryDumpManagerTest::DumpCallbackAdapter, Unretained(this),
-             MessageLoop::current()->task_runner(), run_loop.QuitClosure());
+             ThreadTaskRunnerHandle::Get(), run_loop.QuitClosure());
     mdm_->RequestGlobalDump(dump_type, level_of_detail, callback);
     run_loop.Run();
   }
@@ -942,7 +942,7 @@ TEST_F(MemoryDumpManagerTest, DisableTracingWhileDumping) {
   RunLoop run_loop;
   MemoryDumpCallback callback =
       Bind(&MemoryDumpManagerTest::DumpCallbackAdapter, Unretained(this),
-           MessageLoop::current()->task_runner(), run_loop.QuitClosure());
+           ThreadTaskRunnerHandle::Get(), run_loop.QuitClosure());
   mdm_->RequestGlobalDump(MemoryDumpType::EXPLICITLY_TRIGGERED,
                           MemoryDumpLevelOfDetail::DETAILED, callback);
   DisableTracing();

@@ -77,7 +77,7 @@ def main():
 
   head = RevParse(BORINGSSL_SRC_PATH, 'HEAD')
   if head == commit:
-    print 'BoringSSL already up-to-date.'
+    print 'BoringSSL already up to date.'
     return 0
 
   print 'Rolling BoringSSL from %s to %s...' % (head, commit)

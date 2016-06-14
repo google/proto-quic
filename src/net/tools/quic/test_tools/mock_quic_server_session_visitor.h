@@ -35,6 +35,10 @@ class MockQuicServerSessionHelper : public QuicServerSessionBase::Helper {
   ~MockQuicServerSessionHelper() override;
   MOCK_CONST_METHOD1(GenerateConnectionIdForReject,
                      QuicConnectionId(QuicConnectionId connection_id));
+  MOCK_CONST_METHOD3(CanAcceptClientHello,
+                     bool(const CryptoHandshakeMessage& message,
+                          const IPEndPoint& self_address,
+                          std::string* error_details));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockQuicServerSessionHelper);

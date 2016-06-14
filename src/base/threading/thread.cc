@@ -231,7 +231,6 @@ void Thread::ThreadMain() {
   DCHECK(message_loop_);
   std::unique_ptr<MessageLoop> message_loop(message_loop_);
   message_loop_->BindToCurrentThread();
-  message_loop_->set_thread_name(name_);
   message_loop_->SetTimerSlack(message_loop_timer_slack_);
 
 #if defined(OS_WIN)

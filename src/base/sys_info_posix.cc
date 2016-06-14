@@ -73,6 +73,20 @@ base::LazyInstance<
     base::internal::LazySysInfoValue<int64_t, AmountOfVirtualMemory>>::Leaky
     g_lazy_virtual_memory = LAZY_INSTANCE_INITIALIZER;
 
+bool GetDiskSpaceInfo(const base::FilePath& path,
+                      int64_t* available_bytes,
+                      int64_t* total_bytes) {
+  struct statvfs stats;
+  if (HANDLE_EINTR(statvfs(path.value().c_str(), &stats)) != 0)
+    return false;
+
+  if (available_bytes)
+    *available_bytes = static_cast<int64_t>(stats.f_bavail) * stats.f_frsize;
+  if (total_bytes)
+    *total_bytes = static_cast<int64_t>(stats.f_blocks) * stats.f_frsize;
+  return true;
+}
+
 }  // namespace
 
 namespace base {
@@ -92,10 +106,20 @@ int64_t SysInfo::AmountOfVirtualMemory() {
 int64_t SysInfo::AmountOfFreeDiskSpace(const FilePath& path) {
   base::ThreadRestrictions::AssertIOAllowed();
 
-  struct statvfs stats;
-  if (HANDLE_EINTR(statvfs(path.value().c_str(), &stats)) != 0)
+  int64_t available;
+  if (!GetDiskSpaceInfo(path, &available, nullptr))
     return -1;
-  return static_cast<int64_t>(stats.f_bavail) * stats.f_frsize;
+  return available;
+}
+
+// static
+int64_t SysInfo::AmountOfTotalDiskSpace(const FilePath& path) {
+  base::ThreadRestrictions::AssertIOAllowed();
+
+  int64_t total;
+  if (!GetDiskSpaceInfo(path, nullptr, &total))
+    return -1;
+  return total;
 }
 
 #if !defined(OS_MACOSX) && !defined(OS_ANDROID)

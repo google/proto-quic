@@ -347,6 +347,18 @@ template("create_tests") {
     deps = invoker.deps
   }
 
+  executable("boringssl_newhope_statistical_test") {
+    sources = [
+      "src/crypto/newhope/newhope_statistical_test.cc",
+    ]
+    sources += _test_support_sources
+    if (defined(invoker.configs_exclude)) {
+      configs -= invoker.configs_exclude
+    }
+    configs += invoker.configs
+    deps = invoker.deps
+  }
+
   executable("boringssl_newhope_test") {
     sources = [
       "src/crypto/newhope/newhope_test.c",
@@ -554,6 +566,7 @@ template("create_tests") {
       ":boringssl_hkdf_test",
       ":boringssl_hmac_test",
       ":boringssl_lhash_test",
+      ":boringssl_newhope_statistical_test",
       ":boringssl_newhope_test",
       ":boringssl_newhope_vectors_test",
       ":boringssl_obj_test",

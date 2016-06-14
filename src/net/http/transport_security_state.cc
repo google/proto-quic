@@ -664,18 +664,20 @@ bool TransportSecurityState::CheckPublicKeyPins(
     const X509Certificate* validated_certificate_chain,
     const PublicKeyPinReportStatus report_status,
     std::string* pinning_failure_log) {
-  // Perform pin validation if, and only if, all these conditions obtain:
-  //
-  // * the server's certificate chain chains up to a known root (i.e. not a
-  //   user-installed trust anchor); and
-  // * the server actually has public key pins.
-  if (!is_issued_by_known_root || !HasPublicKeyPins(host_port_pair.host())) {
+  // Perform pin validation only if the server actually has public key pins.
+  if (!HasPublicKeyPins(host_port_pair.host())) {
     return true;
   }
 
   bool pins_are_valid = CheckPublicKeyPinsImpl(
-      host_port_pair, public_key_hashes, served_certificate_chain,
-      validated_certificate_chain, report_status, pinning_failure_log);
+      host_port_pair, is_issued_by_known_root, public_key_hashes,
+      served_certificate_chain, validated_certificate_chain, report_status,
+      pinning_failure_log);
+  // Don't track statistics when a local trust anchor would override the pinning
+  // anyway.
+  if (!is_issued_by_known_root)
+    return pins_are_valid;
+
   if (!pins_are_valid) {
     LOG(ERROR) << *pinning_failure_log;
     ReportUMAOnPinFailure(host_port_pair.host());
@@ -707,7 +709,7 @@ void TransportSecurityState::SetDelegate(
 }
 
 void TransportSecurityState::SetReportSender(
-    TransportSecurityState::ReportSender* report_sender) {
+    TransportSecurityState::ReportSenderInterface* report_sender) {
   DCHECK(CalledOnValidThread());
   report_sender_ = report_sender;
   if (report_sender_)
@@ -806,6 +808,7 @@ void TransportSecurityState::EnablePKPHost(const std::string& host,
 
 bool TransportSecurityState::CheckPinsAndMaybeSendReport(
     const HostPortPair& host_port_pair,
+    bool is_issued_by_known_root,
     const TransportSecurityState::PKPState& pkp_state,
     const HashValueVector& hashes,
     const X509Certificate* served_certificate_chain,
@@ -815,7 +818,7 @@ bool TransportSecurityState::CheckPinsAndMaybeSendReport(
   if (pkp_state.CheckPublicKeyPins(hashes, failure_log))
     return true;
 
-  if (!report_sender_ ||
+  if (!report_sender_ || !is_issued_by_known_root ||
       report_status != TransportSecurityState::ENABLE_PIN_REPORTS ||
       pkp_state.report_uri.is_empty()) {
     return false;
@@ -1057,14 +1060,10 @@ bool TransportSecurityState::ProcessHPKPReportOnlyHeader(
   pkp_state.report_uri = report_uri;
   pkp_state.domain = DNSDomainToString(CanonicalizeHost(host_port_pair.host()));
 
-  // Only perform pin validation if the cert chains up to a known root.
-  if (!ssl_info.is_issued_by_known_root)
-    return true;
-
   CheckPinsAndMaybeSendReport(
-      host_port_pair, pkp_state, ssl_info.public_key_hashes,
-      ssl_info.unverified_cert.get(), ssl_info.cert.get(), ENABLE_PIN_REPORTS,
-      &unused_failure_log);
+      host_port_pair, ssl_info.is_issued_by_known_root, pkp_state,
+      ssl_info.public_key_hashes, ssl_info.unverified_cert.get(),
+      ssl_info.cert.get(), ENABLE_PIN_REPORTS, &unused_failure_log);
   return true;
 }
 
@@ -1121,6 +1120,7 @@ bool TransportSecurityState::IsBuildTimely() {
 
 bool TransportSecurityState::CheckPublicKeyPinsImpl(
     const HostPortPair& host_port_pair,
+    bool is_issued_by_known_root,
     const HashValueVector& hashes,
     const X509Certificate* served_certificate_chain,
     const X509Certificate* validated_certificate_chain,
@@ -1137,8 +1137,9 @@ bool TransportSecurityState::CheckPublicKeyPinsImpl(
   }
 
   return CheckPinsAndMaybeSendReport(
-      host_port_pair, pkp_state, hashes, served_certificate_chain,
-      validated_certificate_chain, report_status, failure_log);
+      host_port_pair, is_issued_by_known_root, pkp_state, hashes,
+      served_certificate_chain, validated_certificate_chain, report_status,
+      failure_log);
 }
 
 bool TransportSecurityState::GetStaticDomainState(const std::string& host,

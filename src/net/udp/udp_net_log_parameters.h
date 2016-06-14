@@ -5,6 +5,7 @@
 #ifndef NET_UDP_UDP_NET_LOG_PARAMETERS_H_
 #define NET_UDP_UDP_NET_LOG_PARAMETERS_H_
 
+#include "net/base/network_change_notifier.h"
 #include "net/log/net_log.h"
 
 namespace net {
@@ -24,7 +25,8 @@ NetLog::ParametersCallback CreateNetLogUDPDataTranferCallback(
 // connect event.  |address| cannot be NULL, and must remain valid for
 // the lifetime of the callback.
 NetLog::ParametersCallback CreateNetLogUDPConnectCallback(
-    const IPEndPoint* address);
+    const IPEndPoint* address,
+    NetworkChangeNotifier::NetworkHandle network);
 
 }  // namespace net
 

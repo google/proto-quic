@@ -173,38 +173,37 @@
 #include "../crypto/dh/internal.h"
 
 
+static int ssl3_get_initial_bytes(SSL *ssl);
+static int ssl3_get_v2_client_hello(SSL *ssl);
+static int ssl3_get_client_hello(SSL *ssl);
+static int ssl3_send_server_hello(SSL *ssl);
+static int ssl3_send_server_certificate(SSL *ssl);
+static int ssl3_send_certificate_status(SSL *ssl);
+static int ssl3_send_server_key_exchange(SSL *ssl);
+static int ssl3_send_certificate_request(SSL *ssl);
+static int ssl3_send_server_hello_done(SSL *ssl);
+static int ssl3_get_client_certificate(SSL *ssl);
+static int ssl3_get_client_key_exchange(SSL *ssl);
+static int ssl3_get_cert_verify(SSL *ssl);
+static int ssl3_get_next_proto(SSL *ssl);
+static int ssl3_get_channel_id(SSL *ssl);
+static int ssl3_send_new_session_ticket(SSL *ssl);
+
 int ssl3_accept(SSL *ssl) {
   BUF_MEM *buf = NULL;
   uint32_t alg_a;
-  void (*cb)(const SSL *ssl, int type, int value) = NULL;
   int ret = -1;
-  int new_state, state, skip = 0;
+  int state, skip = 0;
 
   assert(ssl->handshake_func == ssl3_accept);
   assert(ssl->server);
-  assert(!SSL_IS_DTLS(ssl));
-
-  ERR_clear_system_error();
-
-  if (ssl->info_callback != NULL) {
-    cb = ssl->info_callback;
-  } else if (ssl->ctx->info_callback != NULL) {
-    cb = ssl->ctx->info_callback;
-  }
-
-  if (ssl->cert == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_SET);
-    return -1;
-  }
 
   for (;;) {
     state = ssl->state;
 
     switch (ssl->state) {
       case SSL_ST_ACCEPT:
-        if (cb != NULL) {
-          cb(ssl, SSL_CB_HANDSHAKE_START, 1);
-        }
+        ssl_do_info_callback(ssl, SSL_CB_HANDSHAKE_START, 1);
 
         if (ssl->init_buf == NULL) {
           buf = BUF_MEM_new();
@@ -230,7 +229,7 @@ int ssl3_accept(SSL *ssl) {
           goto end;
         }
 
-        if (!ssl->s3->have_version) {
+        if (!ssl->s3->have_version && !SSL_IS_DTLS(ssl)) {
           ssl->state = SSL3_ST_SR_INITIAL_BYTES;
         } else {
           ssl->state = SSL3_ST_SR_CLNT_HELLO_A;
@@ -238,6 +237,7 @@ int ssl3_accept(SSL *ssl) {
         break;
 
       case SSL3_ST_SR_INITIAL_BYTES:
+        assert(!SSL_IS_DTLS(ssl));
         ret = ssl3_get_initial_bytes(ssl);
         if (ret <= 0) {
           goto end;
@@ -247,6 +247,7 @@ int ssl3_accept(SSL *ssl) {
         break;
 
       case SSL3_ST_SR_V2_CLIENT_HELLO:
+        assert(!SSL_IS_DTLS(ssl));
         ret = ssl3_get_v2_client_hello(ssl);
         if (ret <= 0) {
           goto end;
@@ -261,6 +262,7 @@ int ssl3_accept(SSL *ssl) {
         if (ret <= 0) {
           goto end;
         }
+        ssl->method->received_flight(ssl);
         ssl->state = SSL3_ST_SW_SRVR_HELLO_A;
         break;
 
@@ -313,13 +315,7 @@ int ssl3_accept(SSL *ssl) {
       case SSL3_ST_SW_KEY_EXCH_C:
         alg_a = ssl->s3->tmp.new_cipher->algorithm_auth;
 
-        /* Send a ServerKeyExchange message if:
-         * - The key exchange is ephemeral or anonymous
-         *   Diffie-Hellman.
-         * - There is a PSK identity hint.
-         *
-         * TODO(davidben): This logic is currently duplicated in d1_srvr.c. Fix
-         * this. In the meantime, keep them in sync. */
+        /* PSK ciphers send ServerKeyExchange if there is an identity hint. */
         if (ssl_cipher_requires_server_key_exchange(ssl->s3->tmp.new_cipher) ||
             ((alg_a & SSL_aPSK) && ssl->psk_identity_hint)) {
           ret = ssl3_send_server_key_exchange(ssl);
@@ -348,27 +344,12 @@ int ssl3_accept(SSL *ssl) {
 
       case SSL3_ST_SW_SRVR_DONE_A:
       case SSL3_ST_SW_SRVR_DONE_B:
-        ret = ssl3_send_server_done(ssl);
+        ret = ssl3_send_server_hello_done(ssl);
         if (ret <= 0) {
           goto end;
         }
         ssl->s3->tmp.next_state = SSL3_ST_SR_CERT_A;
         ssl->state = SSL3_ST_SW_FLUSH;
-        break;
-
-      case SSL3_ST_SW_FLUSH:
-        /* This code originally checked to see if any data was pending using
-         * BIO_CTRL_INFO and then flushed. This caused problems as documented
-         * in PR#1939. The proposed fix doesn't completely resolve this issue
-         * as buggy implementations of BIO_CTRL_PENDING still exist. So instead
-         * we just flush unconditionally. */
-        if (BIO_flush(ssl->wbio) <= 0) {
-          ssl->rwstate = SSL_WRITING;
-          ret = -1;
-          goto end;
-        }
-
-        ssl->state = ssl->s3->tmp.next_state;
         break;
 
       case SSL3_ST_SR_CERT_A:
@@ -445,6 +426,7 @@ int ssl3_accept(SSL *ssl) {
           goto end;
         }
 
+        ssl->method->received_flight(ssl);
         if (ssl->hit) {
           ssl->state = SSL_ST_OK;
         } else if (ssl->tlsext_ticket_expected) {
@@ -452,6 +434,7 @@ int ssl3_accept(SSL *ssl) {
         } else {
           ssl->state = SSL3_ST_SW_CHANGE_A;
         }
+
         /* If this is a full handshake with ChannelID then record the hashshake
          * hashes in |ssl->session| in case we need them to verify a ChannelID
          * signature on a resumption of this session in the future. */
@@ -474,8 +457,8 @@ int ssl3_accept(SSL *ssl) {
 
       case SSL3_ST_SW_CHANGE_A:
       case SSL3_ST_SW_CHANGE_B:
-        ret = ssl3_send_change_cipher_spec(ssl, SSL3_ST_SW_CHANGE_A,
-                                           SSL3_ST_SW_CHANGE_B);
+        ret = ssl->method->send_change_cipher_spec(ssl, SSL3_ST_SW_CHANGE_A,
+                                                   SSL3_ST_SW_CHANGE_B);
         if (ret <= 0) {
           goto end;
         }
@@ -502,17 +485,35 @@ int ssl3_accept(SSL *ssl) {
         }
         break;
 
+      case SSL3_ST_SW_FLUSH:
+        if (BIO_flush(ssl->wbio) <= 0) {
+          ssl->rwstate = SSL_WRITING;
+          ret = -1;
+          goto end;
+        }
+
+        ssl->state = ssl->s3->tmp.next_state;
+        if (ssl->state != SSL_ST_OK) {
+          ssl->method->expect_flight(ssl);
+        }
+        break;
+
       case SSL_ST_OK:
         /* clean a few things up */
         ssl3_cleanup_key_block(ssl);
 
-        BUF_MEM_free(ssl->init_buf);
-        ssl->init_buf = NULL;
-        ssl->init_num = 0;
+        /* In DTLS, |init_buf| cannot be released because post-handshake
+         * retransmit relies on that buffer being available as scratch space.
+         *
+         * TODO(davidben): Fix this. */
+        if (!SSL_IS_DTLS(ssl)) {
+          BUF_MEM_free(ssl->init_buf);
+          ssl->init_buf = NULL;
+          ssl->init_num = 0;
+        }
 
         /* remove buffering on output */
         ssl_free_wbio_buffer(ssl);
-
 
         /* If we aren't retaining peer certificates then we can discard it
          * now. */
@@ -523,13 +524,17 @@ int ssl3_accept(SSL *ssl) {
           ssl->session->cert_chain = NULL;
         }
 
+        if (SSL_IS_DTLS(ssl)) {
+          ssl->d1->handshake_read_seq = 0;
+          ssl->d1->handshake_write_seq = 0;
+          ssl->d1->next_handshake_write_seq = 0;
+        }
+
         ssl->s3->initial_handshake_complete = 1;
 
         ssl_update_cache(ssl, SSL_SESS_CACHE_SERVER);
 
-        if (cb != NULL) {
-          cb(ssl, SSL_CB_HANDSHAKE_DONE, 1);
-        }
+        ssl_do_info_callback(ssl, SSL_CB_HANDSHAKE_DONE, 1);
 
         ret = 1;
         goto end;
@@ -540,11 +545,10 @@ int ssl3_accept(SSL *ssl) {
         goto end;
     }
 
-    if (!ssl->s3->tmp.reuse_message && !skip && cb != NULL &&
-        ssl->state != state) {
-      new_state = ssl->state;
+    if (!ssl->s3->tmp.reuse_message && !skip && ssl->state != state) {
+      int new_state = ssl->state;
       ssl->state = state;
-      cb(ssl, SSL_CB_ACCEPT_LOOP, 1);
+      ssl_do_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 1);
       ssl->state = new_state;
     }
     skip = 0;
@@ -552,13 +556,11 @@ int ssl3_accept(SSL *ssl) {
 
 end:
   BUF_MEM_free(buf);
-  if (cb != NULL) {
-    cb(ssl, SSL_CB_ACCEPT_EXIT, ret);
-  }
+  ssl_do_info_callback(ssl, SSL_CB_ACCEPT_EXIT, ret);
   return ret;
 }
 
-int ssl3_get_initial_bytes(SSL *ssl) {
+static int ssl3_get_initial_bytes(SSL *ssl) {
   /* Read the first 5 bytes, the size of the TLS record header. This is
    * sufficient to detect a V2ClientHello and ensures that we never read beyond
    * the first record. */
@@ -597,7 +599,7 @@ int ssl3_get_initial_bytes(SSL *ssl) {
   return 1;
 }
 
-int ssl3_get_v2_client_hello(SSL *ssl) {
+static int ssl3_get_v2_client_hello(SSL *ssl) {
   const uint8_t *p;
   int ret;
   CBS v2_client_hello, cipher_specs, session_id, challenge;
@@ -637,10 +639,9 @@ int ssl3_get_v2_client_hello(SSL *ssl) {
                                   CBS_len(&v2_client_hello))) {
     return -1;
   }
-  if (ssl->msg_callback) {
-    ssl->msg_callback(0, SSL2_VERSION, 0, CBS_data(&v2_client_hello),
-                    CBS_len(&v2_client_hello), ssl, ssl->msg_callback_arg);
-  }
+
+  ssl_do_msg_callback(ssl, 0 /* read */, SSL2_VERSION, 0,
+                      CBS_data(&v2_client_hello), CBS_len(&v2_client_hello));
 
   if (!CBS_get_u8(&v2_client_hello, &msg_type) ||
       !CBS_get_u16(&v2_client_hello, &version) ||
@@ -724,7 +725,7 @@ int ssl3_get_v2_client_hello(SSL *ssl) {
   return 1;
 }
 
-int ssl3_get_client_hello(SSL *ssl) {
+static int ssl3_get_client_hello(SSL *ssl) {
   int ok, al = SSL_AD_INTERNAL_ERROR, ret = -1;
   long n;
   const SSL_CIPHER *c;
@@ -1069,7 +1070,7 @@ err:
   return ret;
 }
 
-int ssl3_send_server_hello(SSL *ssl) {
+static int ssl3_send_server_hello(SSL *ssl) {
   if (ssl->state == SSL3_ST_SW_SRVR_HELLO_B) {
     return ssl_do_write(ssl);
   }
@@ -1120,7 +1121,19 @@ int ssl3_send_server_hello(SSL *ssl) {
   return ssl_do_write(ssl);
 }
 
-int ssl3_send_certificate_status(SSL *ssl) {
+static int ssl3_send_server_certificate(SSL *ssl) {
+  if (ssl->state == SSL3_ST_SW_CERT_A) {
+    if (!ssl3_output_cert_chain(ssl)) {
+      return 0;
+    }
+    ssl->state = SSL3_ST_SW_CERT_B;
+  }
+
+  /* SSL3_ST_SW_CERT_B */
+  return ssl_do_write(ssl);
+}
+
+static int ssl3_send_certificate_status(SSL *ssl) {
   if (ssl->state == SSL3_ST_SW_CERT_STATUS_A) {
     CBB out, ocsp_response;
     size_t length;
@@ -1146,19 +1159,7 @@ int ssl3_send_certificate_status(SSL *ssl) {
   return ssl_do_write(ssl);
 }
 
-int ssl3_send_server_done(SSL *ssl) {
-  if (ssl->state == SSL3_ST_SW_SRVR_DONE_A) {
-    if (!ssl_set_handshake_header(ssl, SSL3_MT_SERVER_DONE, 0)) {
-      return -1;
-    }
-    ssl->state = SSL3_ST_SW_SRVR_DONE_B;
-  }
-
-  /* SSL3_ST_SW_SRVR_DONE_B */
-  return ssl_do_write(ssl);
-}
-
-int ssl3_send_server_key_exchange(SSL *ssl) {
+static int ssl3_send_server_key_exchange(SSL *ssl) {
   if (ssl->state == SSL3_ST_SW_KEY_EXCH_C) {
     return ssl_do_write(ssl);
   }
@@ -1346,7 +1347,7 @@ err:
   return -1;
 }
 
-int ssl3_send_certificate_request(SSL *ssl) {
+static int ssl3_send_certificate_request(SSL *ssl) {
   uint8_t *p, *d;
   size_t i;
   int j, nl, off, n;
@@ -1414,7 +1415,158 @@ err:
   return -1;
 }
 
-int ssl3_get_client_key_exchange(SSL *ssl) {
+static int ssl3_send_server_hello_done(SSL *ssl) {
+  if (ssl->state == SSL3_ST_SW_SRVR_DONE_A) {
+    if (!ssl_set_handshake_header(ssl, SSL3_MT_SERVER_HELLO_DONE, 0)) {
+      return -1;
+    }
+    ssl->state = SSL3_ST_SW_SRVR_DONE_B;
+  }
+
+  /* SSL3_ST_SW_SRVR_DONE_B */
+  return ssl_do_write(ssl);
+}
+
+static int ssl3_get_client_certificate(SSL *ssl) {
+  int ok, al, ret = -1;
+  X509 *x = NULL;
+  unsigned long n;
+  STACK_OF(X509) *sk = NULL;
+  SHA256_CTX sha256;
+  CBS certificate_msg, certificate_list;
+  int is_first_certificate = 1;
+
+  assert(ssl->s3->tmp.cert_request);
+  n = ssl->method->ssl_get_message(ssl, -1, ssl_hash_message, &ok);
+
+  if (!ok) {
+    return n;
+  }
+
+  if (ssl->s3->tmp.message_type != SSL3_MT_CERTIFICATE) {
+    if (ssl->version == SSL3_VERSION &&
+        ssl->s3->tmp.message_type == SSL3_MT_CLIENT_KEY_EXCHANGE) {
+      /* In SSL 3.0, the Certificate message is omitted to signal no certificate. */
+      if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
+          (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
+        al = SSL_AD_HANDSHAKE_FAILURE;
+        goto f_err;
+      }
+
+      ssl->s3->tmp.reuse_message = 1;
+      return 1;
+    }
+
+    al = SSL_AD_UNEXPECTED_MESSAGE;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
+    goto f_err;
+  }
+
+  CBS_init(&certificate_msg, ssl->init_msg, n);
+
+  sk = sk_X509_new_null();
+  if (sk == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+    goto err;
+  }
+
+  if (!CBS_get_u24_length_prefixed(&certificate_msg, &certificate_list) ||
+      CBS_len(&certificate_msg) != 0) {
+    al = SSL_AD_DECODE_ERROR;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    goto f_err;
+  }
+
+  while (CBS_len(&certificate_list) > 0) {
+    CBS certificate;
+    const uint8_t *data;
+
+    if (!CBS_get_u24_length_prefixed(&certificate_list, &certificate)) {
+      al = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+      goto f_err;
+    }
+
+    if (is_first_certificate && ssl->ctx->retain_only_sha256_of_client_certs) {
+      /* If this is the first certificate, and we don't want to keep peer
+       * certificates in memory, then we hash it right away. */
+      SHA256_Init(&sha256);
+      SHA256_Update(&sha256, CBS_data(&certificate), CBS_len(&certificate));
+      SHA256_Final(ssl->session->peer_sha256, &sha256);
+      ssl->session->peer_sha256_valid = 1;
+    }
+    is_first_certificate = 0;
+
+    /* A u24 length cannot overflow a long. */
+    data = CBS_data(&certificate);
+    x = d2i_X509(NULL, &data, (long)CBS_len(&certificate));
+    if (x == NULL) {
+      al = SSL_AD_BAD_CERTIFICATE;
+      OPENSSL_PUT_ERROR(SSL, ERR_R_ASN1_LIB);
+      goto f_err;
+    }
+    if (data != CBS_data(&certificate) + CBS_len(&certificate)) {
+      al = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_LENGTH_MISMATCH);
+      goto f_err;
+    }
+    if (!sk_X509_push(sk, x)) {
+      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+      goto err;
+    }
+    x = NULL;
+  }
+
+  if (sk_X509_num(sk) <= 0) {
+    /* No client certificate so the handshake buffer may be discarded. */
+    ssl3_free_handshake_buffer(ssl);
+
+    /* TLS does not mind 0 certs returned */
+    if (ssl->version == SSL3_VERSION) {
+      al = SSL_AD_HANDSHAKE_FAILURE;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATES_RETURNED);
+      goto f_err;
+    } else if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
+               (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
+      /* Fail for TLS only if we required a certificate */
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
+      al = SSL_AD_HANDSHAKE_FAILURE;
+      goto f_err;
+    }
+  } else {
+    if (ssl_verify_cert_chain(ssl, sk) <= 0) {
+      al = ssl_verify_alarm_type(ssl->verify_result);
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
+      goto f_err;
+    }
+  }
+
+  X509_free(ssl->session->peer);
+  ssl->session->peer = sk_X509_shift(sk);
+  ssl->session->verify_result = ssl->verify_result;
+
+  sk_X509_pop_free(ssl->session->cert_chain, X509_free);
+  ssl->session->cert_chain = sk;
+  /* Inconsistency alert: cert_chain does *not* include the peer's own
+   * certificate, while we do include it in s3_clnt.c */
+
+  sk = NULL;
+
+  ret = 1;
+
+  if (0) {
+  f_err:
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
+  }
+
+err:
+  X509_free(x);
+  sk_X509_pop_free(sk, X509_free);
+  return ret;
+}
+
+static int ssl3_get_client_key_exchange(SSL *ssl) {
   int al;
   CBS client_key_exchange;
   uint32_t alg_k;
@@ -1683,7 +1835,7 @@ err:
   return -1;
 }
 
-int ssl3_get_cert_verify(SSL *ssl) {
+static int ssl3_get_cert_verify(SSL *ssl) {
   int al, ok, ret = 0;
   long n;
   CBS certificate_verify, signature;
@@ -1789,159 +1941,159 @@ err:
   return ret;
 }
 
-int ssl3_get_client_certificate(SSL *ssl) {
-  int ok, al, ret = -1;
-  X509 *x = NULL;
-  unsigned long n;
-  STACK_OF(X509) *sk = NULL;
-  SHA256_CTX sha256;
-  CBS certificate_msg, certificate_list;
-  int is_first_certificate = 1;
+/* ssl3_get_next_proto reads a Next Protocol Negotiation handshake message. It
+ * sets the next_proto member in s if found */
+static int ssl3_get_next_proto(SSL *ssl) {
+  int ok;
+  long n;
+  CBS next_protocol, selected_protocol, padding;
 
-  assert(ssl->s3->tmp.cert_request);
-  n = ssl->method->ssl_get_message(ssl, -1, ssl_hash_message, &ok);
+  /* Clients cannot send a NextProtocol message if we didn't see the extension
+   * in their ClientHello */
+  if (!ssl->s3->next_proto_neg_seen) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_GOT_NEXT_PROTO_WITHOUT_EXTENSION);
+    return -1;
+  }
+
+  n = ssl->method->ssl_get_message(ssl, SSL3_MT_NEXT_PROTO, ssl_hash_message,
+                                   &ok);
 
   if (!ok) {
     return n;
   }
 
-  if (ssl->s3->tmp.message_type != SSL3_MT_CERTIFICATE) {
-    if (ssl->version == SSL3_VERSION &&
-        ssl->s3->tmp.message_type == SSL3_MT_CLIENT_KEY_EXCHANGE) {
-      /* In SSL 3.0, the Certificate message is omitted to signal no certificate. */
-      if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
-          (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
-        al = SSL_AD_HANDSHAKE_FAILURE;
-        goto f_err;
-      }
+  CBS_init(&next_protocol, ssl->init_msg, n);
 
-      ssl->s3->tmp.reuse_message = 1;
-      return 1;
-    }
-
-    al = SSL_AD_UNEXPECTED_MESSAGE;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
-    goto f_err;
+  /* The payload looks like:
+   *   uint8 proto_len;
+   *   uint8 proto[proto_len];
+   *   uint8 padding_len;
+   *   uint8 padding[padding_len]; */
+  if (!CBS_get_u8_length_prefixed(&next_protocol, &selected_protocol) ||
+      !CBS_get_u8_length_prefixed(&next_protocol, &padding) ||
+      CBS_len(&next_protocol) != 0 ||
+      !CBS_stow(&selected_protocol, &ssl->s3->next_proto_negotiated,
+                &ssl->s3->next_proto_negotiated_len)) {
+    return 0;
   }
 
-  CBS_init(&certificate_msg, ssl->init_msg, n);
+  return 1;
+}
 
-  sk = sk_X509_new_null();
-  if (sk == NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+/* ssl3_get_channel_id reads and verifies a ClientID handshake message. */
+static int ssl3_get_channel_id(SSL *ssl) {
+  int ret = -1, ok;
+  long n;
+  uint8_t channel_id_hash[EVP_MAX_MD_SIZE];
+  size_t channel_id_hash_len;
+  const uint8_t *p;
+  uint16_t extension_type;
+  EC_GROUP *p256 = NULL;
+  EC_KEY *key = NULL;
+  EC_POINT *point = NULL;
+  ECDSA_SIG sig;
+  BIGNUM x, y;
+  CBS encrypted_extensions, extension;
+
+  n = ssl->method->ssl_get_message(ssl, SSL3_MT_CHANNEL_ID_ENCRYPTED_EXTENSIONS,
+                                   ssl_dont_hash_message, &ok);
+
+  if (!ok) {
+    return n;
+  }
+
+  /* Before incorporating the EncryptedExtensions message to the handshake
+   * hash, compute the hash that should have been signed. */
+  if (!tls1_channel_id_hash(ssl, channel_id_hash, &channel_id_hash_len)) {
+    return -1;
+  }
+  assert(channel_id_hash_len == SHA256_DIGEST_LENGTH);
+
+  if (!ssl3_hash_current_message(ssl)) {
+    return -1;
+  }
+
+  CBS_init(&encrypted_extensions, ssl->init_msg, n);
+
+  /* EncryptedExtensions could include multiple extensions, but the only
+   * extension that could be negotiated is ChannelID, so there can only be one
+   * entry.
+   *
+   * The payload looks like:
+   *   uint16 extension_type
+   *   uint16 extension_len;
+   *   uint8 x[32];
+   *   uint8 y[32];
+   *   uint8 r[32];
+   *   uint8 s[32]; */
+
+  if (!CBS_get_u16(&encrypted_extensions, &extension_type) ||
+      !CBS_get_u16_length_prefixed(&encrypted_extensions, &extension) ||
+      CBS_len(&encrypted_extensions) != 0 ||
+      extension_type != TLSEXT_TYPE_channel_id ||
+      CBS_len(&extension) != TLSEXT_CHANNEL_ID_SIZE) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_MESSAGE);
+    return -1;
+  }
+
+  p256 = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+  if (!p256) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_P256_SUPPORT);
+    return -1;
+  }
+
+  BN_init(&x);
+  BN_init(&y);
+  sig.r = BN_new();
+  sig.s = BN_new();
+  if (sig.r == NULL || sig.s == NULL) {
     goto err;
   }
 
-  if (!CBS_get_u24_length_prefixed(&certificate_msg, &certificate_list) ||
-      CBS_len(&certificate_msg) != 0) {
-    al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-    goto f_err;
+  p = CBS_data(&extension);
+  if (BN_bin2bn(p + 0, 32, &x) == NULL ||
+      BN_bin2bn(p + 32, 32, &y) == NULL ||
+      BN_bin2bn(p + 64, 32, sig.r) == NULL ||
+      BN_bin2bn(p + 96, 32, sig.s) == NULL) {
+    goto err;
   }
 
-  while (CBS_len(&certificate_list) > 0) {
-    CBS certificate;
-    const uint8_t *data;
-
-    if (!CBS_get_u24_length_prefixed(&certificate_list, &certificate)) {
-      al = SSL_AD_DECODE_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-      goto f_err;
-    }
-
-    if (is_first_certificate && ssl->ctx->retain_only_sha256_of_client_certs) {
-      /* If this is the first certificate, and we don't want to keep peer
-       * certificates in memory, then we hash it right away. */
-      SHA256_Init(&sha256);
-      SHA256_Update(&sha256, CBS_data(&certificate), CBS_len(&certificate));
-      SHA256_Final(ssl->session->peer_sha256, &sha256);
-      ssl->session->peer_sha256_valid = 1;
-    }
-    is_first_certificate = 0;
-
-    /* A u24 length cannot overflow a long. */
-    data = CBS_data(&certificate);
-    x = d2i_X509(NULL, &data, (long)CBS_len(&certificate));
-    if (x == NULL) {
-      al = SSL_AD_BAD_CERTIFICATE;
-      OPENSSL_PUT_ERROR(SSL, ERR_R_ASN1_LIB);
-      goto f_err;
-    }
-    if (data != CBS_data(&certificate) + CBS_len(&certificate)) {
-      al = SSL_AD_DECODE_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_LENGTH_MISMATCH);
-      goto f_err;
-    }
-    if (!sk_X509_push(sk, x)) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
-      goto err;
-    }
-    x = NULL;
+  point = EC_POINT_new(p256);
+  if (!point ||
+      !EC_POINT_set_affine_coordinates_GFp(p256, point, &x, &y, NULL)) {
+    goto err;
   }
 
-  if (sk_X509_num(sk) <= 0) {
-    /* No client certificate so the handshake buffer may be discarded. */
-    ssl3_free_handshake_buffer(ssl);
-
-    /* TLS does not mind 0 certs returned */
-    if (ssl->version == SSL3_VERSION) {
-      al = SSL_AD_HANDSHAKE_FAILURE;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATES_RETURNED);
-      goto f_err;
-    } else if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
-               (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
-      /* Fail for TLS only if we required a certificate */
-      OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
-      al = SSL_AD_HANDSHAKE_FAILURE;
-      goto f_err;
-    }
-  } else {
-    if (ssl_verify_cert_chain(ssl, sk) <= 0) {
-      al = ssl_verify_alarm_type(ssl->verify_result);
-      OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
-      goto f_err;
-    }
+  key = EC_KEY_new();
+  if (!key || !EC_KEY_set_group(key, p256) ||
+      !EC_KEY_set_public_key(key, point)) {
+    goto err;
   }
 
-  X509_free(ssl->session->peer);
-  ssl->session->peer = sk_X509_shift(sk);
-  ssl->session->verify_result = ssl->verify_result;
+  /* We stored the handshake hash in |tlsext_channel_id| the first time that we
+   * were called. */
+  if (!ECDSA_do_verify(channel_id_hash, channel_id_hash_len, &sig, key)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_SIGNATURE_INVALID);
+    ssl->s3->tlsext_channel_id_valid = 0;
+    goto err;
+  }
 
-  sk_X509_pop_free(ssl->session->cert_chain, X509_free);
-  ssl->session->cert_chain = sk;
-  /* Inconsistency alert: cert_chain does *not* include the peer's own
-   * certificate, while we do include it in s3_clnt.c */
-
-  sk = NULL;
-
+  memcpy(ssl->s3->tlsext_channel_id, p, 64);
   ret = 1;
 
-  if (0) {
-  f_err:
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
-  }
-
 err:
-  X509_free(x);
-  sk_X509_pop_free(sk, X509_free);
+  BN_free(&x);
+  BN_free(&y);
+  BN_free(sig.r);
+  BN_free(sig.s);
+  EC_KEY_free(key);
+  EC_POINT_free(point);
+  EC_GROUP_free(p256);
   return ret;
 }
 
-int ssl3_send_server_certificate(SSL *ssl) {
-  if (ssl->state == SSL3_ST_SW_CERT_A) {
-    if (!ssl3_output_cert_chain(ssl)) {
-      return 0;
-    }
-    ssl->state = SSL3_ST_SW_CERT_B;
-  }
-
-  /* SSL3_ST_SW_CERT_B */
-  return ssl_do_write(ssl);
-}
-
 /* send a new session ticket (not necessarily for a new session) */
-int ssl3_send_new_session_ticket(SSL *ssl) {
+static int ssl3_send_new_session_ticket(SSL *ssl) {
   int ret = -1;
   uint8_t *session = NULL;
   size_t session_len;
@@ -2069,156 +2221,5 @@ err:
   OPENSSL_free(session);
   EVP_CIPHER_CTX_cleanup(&ctx);
   HMAC_CTX_cleanup(&hctx);
-  return ret;
-}
-
-/* ssl3_get_next_proto reads a Next Protocol Negotiation handshake message. It
- * sets the next_proto member in s if found */
-int ssl3_get_next_proto(SSL *ssl) {
-  int ok;
-  long n;
-  CBS next_protocol, selected_protocol, padding;
-
-  /* Clients cannot send a NextProtocol message if we didn't see the extension
-   * in their ClientHello */
-  if (!ssl->s3->next_proto_neg_seen) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_GOT_NEXT_PROTO_WITHOUT_EXTENSION);
-    return -1;
-  }
-
-  n = ssl->method->ssl_get_message(ssl, SSL3_MT_NEXT_PROTO, ssl_hash_message,
-                                   &ok);
-
-  if (!ok) {
-    return n;
-  }
-
-  CBS_init(&next_protocol, ssl->init_msg, n);
-
-  /* The payload looks like:
-   *   uint8 proto_len;
-   *   uint8 proto[proto_len];
-   *   uint8 padding_len;
-   *   uint8 padding[padding_len]; */
-  if (!CBS_get_u8_length_prefixed(&next_protocol, &selected_protocol) ||
-      !CBS_get_u8_length_prefixed(&next_protocol, &padding) ||
-      CBS_len(&next_protocol) != 0 ||
-      !CBS_stow(&selected_protocol, &ssl->s3->next_proto_negotiated,
-                &ssl->s3->next_proto_negotiated_len)) {
-    return 0;
-  }
-
-  return 1;
-}
-
-/* ssl3_get_channel_id reads and verifies a ClientID handshake message. */
-int ssl3_get_channel_id(SSL *ssl) {
-  int ret = -1, ok;
-  long n;
-  uint8_t channel_id_hash[EVP_MAX_MD_SIZE];
-  size_t channel_id_hash_len;
-  const uint8_t *p;
-  uint16_t extension_type;
-  EC_GROUP *p256 = NULL;
-  EC_KEY *key = NULL;
-  EC_POINT *point = NULL;
-  ECDSA_SIG sig;
-  BIGNUM x, y;
-  CBS encrypted_extensions, extension;
-
-  n = ssl->method->ssl_get_message(ssl, SSL3_MT_CHANNEL_ID_ENCRYPTED_EXTENSIONS,
-                                   ssl_dont_hash_message, &ok);
-
-  if (!ok) {
-    return n;
-  }
-
-  /* Before incorporating the EncryptedExtensions message to the handshake
-   * hash, compute the hash that should have been signed. */
-  if (!tls1_channel_id_hash(ssl, channel_id_hash, &channel_id_hash_len)) {
-    return -1;
-  }
-  assert(channel_id_hash_len == SHA256_DIGEST_LENGTH);
-
-  if (!ssl3_hash_current_message(ssl)) {
-    return -1;
-  }
-
-  CBS_init(&encrypted_extensions, ssl->init_msg, n);
-
-  /* EncryptedExtensions could include multiple extensions, but the only
-   * extension that could be negotiated is ChannelID, so there can only be one
-   * entry.
-   *
-   * The payload looks like:
-   *   uint16 extension_type
-   *   uint16 extension_len;
-   *   uint8 x[32];
-   *   uint8 y[32];
-   *   uint8 r[32];
-   *   uint8 s[32]; */
-
-  if (!CBS_get_u16(&encrypted_extensions, &extension_type) ||
-      !CBS_get_u16_length_prefixed(&encrypted_extensions, &extension) ||
-      CBS_len(&encrypted_extensions) != 0 ||
-      extension_type != TLSEXT_TYPE_channel_id ||
-      CBS_len(&extension) != TLSEXT_CHANNEL_ID_SIZE) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_MESSAGE);
-    return -1;
-  }
-
-  p256 = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-  if (!p256) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_P256_SUPPORT);
-    return -1;
-  }
-
-  BN_init(&x);
-  BN_init(&y);
-  sig.r = BN_new();
-  sig.s = BN_new();
-  if (sig.r == NULL || sig.s == NULL) {
-    goto err;
-  }
-
-  p = CBS_data(&extension);
-  if (BN_bin2bn(p + 0, 32, &x) == NULL ||
-      BN_bin2bn(p + 32, 32, &y) == NULL ||
-      BN_bin2bn(p + 64, 32, sig.r) == NULL ||
-      BN_bin2bn(p + 96, 32, sig.s) == NULL) {
-    goto err;
-  }
-
-  point = EC_POINT_new(p256);
-  if (!point ||
-      !EC_POINT_set_affine_coordinates_GFp(p256, point, &x, &y, NULL)) {
-    goto err;
-  }
-
-  key = EC_KEY_new();
-  if (!key || !EC_KEY_set_group(key, p256) ||
-      !EC_KEY_set_public_key(key, point)) {
-    goto err;
-  }
-
-  /* We stored the handshake hash in |tlsext_channel_id| the first time that we
-   * were called. */
-  if (!ECDSA_do_verify(channel_id_hash, channel_id_hash_len, &sig, key)) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_SIGNATURE_INVALID);
-    ssl->s3->tlsext_channel_id_valid = 0;
-    goto err;
-  }
-
-  memcpy(ssl->s3->tlsext_channel_id, p, 64);
-  ret = 1;
-
-err:
-  BN_free(&x);
-  BN_free(&y);
-  BN_free(sig.r);
-  BN_free(sig.s);
-  EC_KEY_free(key);
-  EC_POINT_free(point);
-  EC_GROUP_free(p256);
   return ret;
 }

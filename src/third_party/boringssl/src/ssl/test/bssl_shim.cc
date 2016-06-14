@@ -28,14 +28,15 @@
 #include <unistd.h>
 #else
 #include <io.h>
-#pragma warning(push, 3)
+OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#pragma warning(pop)
+OPENSSL_MSVC_PRAGMA(warning(pop))
 
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
+#include <assert.h>
 #include <inttypes.h>
 #include <string.h>
 
@@ -81,19 +82,10 @@ static int Usage(const char *program) {
 }
 
 struct TestState {
-  TestState() {
-    // MSVC cannot initialize these inline.
-    memset(&clock, 0, sizeof(clock));
-    memset(&clock_delta, 0, sizeof(clock_delta));
-  }
-
   // async_bio is async BIO which pauses reads and writes.
   BIO *async_bio = nullptr;
-  // clock is the current time for the SSL connection.
-  timeval clock;
-  // clock_delta is how far the clock advanced in the most recent failed
-  // |BIO_read|.
-  timeval clock_delta;
+  // packeted_bio is the packeted BIO which simulates read timeouts.
+  BIO *packeted_bio = nullptr;
   ScopedEVP_PKEY channel_id;
   bool cert_ready = false;
   ScopedSSL_SESSION session;
@@ -553,7 +545,7 @@ static unsigned PskServerCallback(SSL *ssl, const char *identity,
 }
 
 static void CurrentTimeCallback(const SSL *ssl, timeval *out_clock) {
-  *out_clock = GetTestState(ssl)->clock;
+  *out_clock = PacketedBioGetClock(GetTestState(ssl)->packeted_bio);
 }
 
 static void ChannelIdCallback(SSL *ssl, EVP_PKEY **out_pkey) {
@@ -838,7 +830,7 @@ static ScopedSSL_CTX SetupCtx(const TestConfig *config) {
   SSL_CTX_enable_tls_channel_id(ssl_ctx.get());
   SSL_CTX_set_channel_id_cb(ssl_ctx.get(), ChannelIdCallback);
 
-  ssl_ctx->current_time_cb = CurrentTimeCallback;
+  SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
 
   SSL_CTX_set_info_callback(ssl_ctx.get(), InfoCallback);
   SSL_CTX_sess_set_new_cb(ssl_ctx.get(), NewSessionCallback);
@@ -890,24 +882,15 @@ static bool RetryAsync(SSL *ssl, int ret) {
 
   const TestConfig *config = GetTestConfig(ssl);
   TestState *test_state = GetTestState(ssl);
-  if (test_state->clock_delta.tv_usec != 0 ||
-      test_state->clock_delta.tv_sec != 0) {
-    // Process the timeout and retry.
-    test_state->clock.tv_usec += test_state->clock_delta.tv_usec;
-    test_state->clock.tv_sec += test_state->clock.tv_usec / 1000000;
-    test_state->clock.tv_usec %= 1000000;
-    test_state->clock.tv_sec += test_state->clock_delta.tv_sec;
-    memset(&test_state->clock_delta, 0, sizeof(test_state->clock_delta));
+  assert(config->async);
 
+  if (test_state->packeted_bio != nullptr &&
+      PacketedBioAdvanceClock(test_state->packeted_bio)) {
     // The DTLS retransmit logic silently ignores write failures. So the test
     // may progress, allow writes through synchronously.
-    if (config->async) {
-      AsyncBioEnforceWriteQuota(test_state->async_bio, false);
-    }
+    AsyncBioEnforceWriteQuota(test_state->async_bio, false);
     int timeout_ret = DTLSv1_handle_timeout(ssl);
-    if (config->async) {
-      AsyncBioEnforceWriteQuota(test_state->async_bio, true);
-    }
+    AsyncBioEnforceWriteQuota(test_state->async_bio, true);
 
     if (timeout_ret < 0) {
       fprintf(stderr, "Error retransmitting.\n");
@@ -1336,11 +1319,11 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
     return false;
   }
   if (config->is_dtls) {
-    ScopedBIO packeted =
-        PacketedBioCreate(&GetTestState(ssl.get())->clock_delta);
+    ScopedBIO packeted = PacketedBioCreate(!config->async);
     if (!packeted) {
       return false;
     }
+    GetTestState(ssl.get())->packeted_bio = packeted.get();
     BIO_push(packeted.get(), bio.release());
     bio = std::move(packeted);
   }

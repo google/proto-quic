@@ -637,6 +637,8 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
 
   QuicCryptoServerStream* GetCryptoStream() override;
 
+  MockQuicServerSessionHelper* helper() { return &helper_; }
+
  private:
   MockQuicServerSessionVisitor visitor_;
   MockQuicServerSessionHelper helper_;
@@ -724,7 +726,7 @@ class MockSendAlgorithm : public SendAlgorithmInterface {
   MOCK_CONST_METHOD2(TimeUntilSend,
                      QuicTime::Delta(QuicTime now,
                                      QuicByteCount bytes_in_flight));
-  MOCK_CONST_METHOD0(PacingRate, QuicBandwidth(void));
+  MOCK_CONST_METHOD1(PacingRate, QuicBandwidth(QuicByteCount));
   MOCK_CONST_METHOD0(BandwidthEstimate, QuicBandwidth(void));
   MOCK_CONST_METHOD0(HasReliableBandwidthEstimate, bool());
   MOCK_METHOD1(OnRttUpdated, void(QuicPacketNumber));

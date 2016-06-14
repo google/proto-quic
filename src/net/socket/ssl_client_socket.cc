@@ -159,13 +159,7 @@ void SSLClientSocket::RecordChannelIDSupport(
 bool SSLClientSocket::IsChannelIDEnabled(
     const SSLConfig& ssl_config,
     ChannelIDService* channel_id_service) {
-  if (!ssl_config.channel_id_enabled)
-    return false;
-  if (!channel_id_service) {
-    DVLOG(1) << "NULL channel_id_service_, not enabling channel ID.";
-    return false;
-  }
-  return true;
+  return ssl_config.channel_id_enabled && channel_id_service;
 }
 
 // static

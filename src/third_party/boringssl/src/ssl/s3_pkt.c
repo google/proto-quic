@@ -123,15 +123,10 @@
 
 static int do_ssl3_write(SSL *ssl, int type, const uint8_t *buf, unsigned len);
 
-/* kMaxWarningAlerts is the number of consecutive warning alerts that will be
- * processed. */
-static const uint8_t kMaxWarningAlerts = 4;
-
 /* ssl3_get_record reads a new input record. On success, it places it in
  * |ssl->s3->rrec| and returns one. Otherwise it returns <= 0 on error or if
  * more data is needed. */
 static int ssl3_get_record(SSL *ssl) {
-  int ret;
 again:
   switch (ssl->s3->recv_shutdown) {
     case ssl_shutdown_none:
@@ -143,43 +138,44 @@ again:
       return 0;
   }
 
-  /* Ensure the buffer is large enough to decrypt in-place. */
-  ret = ssl_read_buffer_extend_to(ssl, ssl_record_prefix_len(ssl));
-  if (ret <= 0) {
-    return ret;
-  }
-  assert(ssl_read_buffer_len(ssl) >= ssl_record_prefix_len(ssl));
-
-  uint8_t *out = ssl_read_buffer(ssl) + ssl_record_prefix_len(ssl);
-  size_t max_out = ssl_read_buffer_len(ssl) - ssl_record_prefix_len(ssl);
+  CBS body;
   uint8_t type, alert;
-  size_t len, consumed;
-  switch (tls_open_record(ssl, &type, out, &len, &consumed, &alert, max_out,
-                          ssl_read_buffer(ssl), ssl_read_buffer_len(ssl))) {
-    case ssl_open_record_success:
-      ssl_read_buffer_consume(ssl, consumed);
+  size_t consumed;
+  enum ssl_open_record_t open_ret =
+      tls_open_record(ssl, &type, &body, &consumed, &alert,
+                      ssl_read_buffer(ssl), ssl_read_buffer_len(ssl));
+  if (open_ret != ssl_open_record_partial) {
+    ssl_read_buffer_consume(ssl, consumed);
+  }
+  switch (open_ret) {
+    case ssl_open_record_partial: {
+      int read_ret = ssl_read_buffer_extend_to(ssl, consumed);
+      if (read_ret <= 0) {
+        return read_ret;
+      }
+      goto again;
+    }
 
-      if (len > 0xffff) {
+    case ssl_open_record_success:
+      if (CBS_len(&body) > 0xffff) {
         OPENSSL_PUT_ERROR(SSL, ERR_R_OVERFLOW);
         return -1;
       }
 
       SSL3_RECORD *rr = &ssl->s3->rrec;
       rr->type = type;
-      rr->length = (uint16_t)len;
-      rr->data = out;
+      rr->length = (uint16_t)CBS_len(&body);
+      rr->data = (uint8_t *)CBS_data(&body);
       return 1;
 
-    case ssl_open_record_partial:
-      ret = ssl_read_buffer_extend_to(ssl, consumed);
-      if (ret <= 0) {
-        return ret;
-      }
+    case ssl_open_record_discard:
       goto again;
 
-    case ssl_open_record_discard:
-      ssl_read_buffer_consume(ssl, consumed);
-      goto again;
+    case ssl_open_record_close_notify:
+      return 0;
+
+    case ssl_open_record_fatal_alert:
+      return -1;
 
     case ssl_open_record_error:
       ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -314,34 +310,46 @@ static int do_ssl3_write(SSL *ssl, int type, const uint8_t *buf, unsigned len) {
 
 int ssl3_read_app_data(SSL *ssl, uint8_t *buf, int len, int peek) {
   assert(!SSL_in_init(ssl));
+  assert(ssl->s3->initial_handshake_complete);
+
   return ssl3_read_bytes(ssl, SSL3_RT_APPLICATION_DATA, buf, len, peek);
 }
 
 int ssl3_read_change_cipher_spec(SSL *ssl) {
-  uint8_t byte;
-  int ret = ssl3_read_bytes(ssl, SSL3_RT_CHANGE_CIPHER_SPEC, &byte, 1 /* len */,
-                            0 /* no peek */);
-  if (ret <= 0) {
-    return ret;
-  }
-  assert(ret == 1);
+  SSL3_RECORD *rr = &ssl->s3->rrec;
 
-  if (ssl->s3->rrec.length != 0 || byte != SSL3_MT_CCS) {
+  if (rr->length == 0) {
+    int ret = ssl3_get_record(ssl);
+    if (ret <= 0) {
+      return ret;
+    }
+  }
+
+  if (rr->type != SSL3_RT_CHANGE_CIPHER_SPEC) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_RECORD);
+    return -1;
+  }
+
+  if (rr->length != 1 || rr->data[0] != SSL3_MT_CCS) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_CHANGE_CIPHER_SPEC);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
     return -1;
   }
 
-  if (ssl->msg_callback != NULL) {
-    ssl->msg_callback(0, ssl->version, SSL3_RT_CHANGE_CIPHER_SPEC, &byte, 1,
-                      ssl, ssl->msg_callback_arg);
-  }
+  ssl_do_msg_callback(ssl, 0 /* read */, ssl->version,
+                      SSL3_RT_CHANGE_CIPHER_SPEC, rr->data, rr->length);
 
+  rr->length = 0;
+  ssl_read_buffer_discard(ssl);
   return 1;
 }
 
 void ssl3_read_close_notify(SSL *ssl) {
-  ssl3_read_bytes(ssl, 0, NULL, 0, 0);
+  /* Read records until an error or close_notify. */
+  while (ssl3_get_record(ssl) > 0) {
+    ;
+  }
 }
 
 static int ssl3_can_renegotiate(SSL *ssl) {
@@ -364,9 +372,7 @@ static int ssl3_can_renegotiate(SSL *ssl) {
  * 'type' is one of the following:
  *
  *   -  SSL3_RT_HANDSHAKE (when ssl3_get_message calls us)
- *   -  SSL3_RT_CHANGE_CIPHER_SPEC (when ssl3_read_change_cipher_spec calls us)
  *   -  SSL3_RT_APPLICATION_DATA (when ssl3_read_app_data calls us)
- *   -  0 (during a shutdown, no data has to be returned)
  *
  * If we don't have stored data to work from, read a SSL/TLS record first
  * (possibly multiple records if we still don't have anything to return).
@@ -377,10 +383,8 @@ int ssl3_read_bytes(SSL *ssl, int type, uint8_t *buf, int len, int peek) {
   int al, i, ret;
   unsigned int n;
   SSL3_RECORD *rr;
-  void (*cb)(const SSL *ssl, int type, int value) = NULL;
 
-  if ((type && type != SSL3_RT_APPLICATION_DATA && type != SSL3_RT_HANDSHAKE &&
-       type != SSL3_RT_CHANGE_CIPHER_SPEC) ||
+  if ((type != SSL3_RT_APPLICATION_DATA && type != SSL3_RT_HANDSHAKE) ||
       (peek && type != SSL3_RT_APPLICATION_DATA)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     return -1;
@@ -403,9 +407,7 @@ start:
 
   /* we now have a packet which can be read and processed */
 
-  if (type != 0 && type == rr->type) {
-    ssl->s3->warning_alert_count = 0;
-
+  if (type == rr->type) {
     /* Discard empty records. */
     if (rr->length == 0) {
       goto start;
@@ -464,18 +466,8 @@ start:
     }
     ssl->s3->hello_request_len = 0;
 
-    if (ssl->msg_callback) {
-      ssl->msg_callback(0, ssl->version, SSL3_RT_HANDSHAKE, kHelloRequest,
-                      sizeof(kHelloRequest), ssl, ssl->msg_callback_arg);
-    }
-
-    if (!SSL_is_init_finished(ssl) || !ssl->s3->initial_handshake_complete) {
-      /* This cannot happen. If a handshake is in progress, |type| must be
-       * |SSL3_RT_HANDSHAKE|. */
-      assert(0);
-      OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-      goto err;
-    }
+    ssl_do_msg_callback(ssl, 0 /* read */, ssl->version, SSL3_RT_HANDSHAKE,
+                        kHelloRequest, sizeof(kHelloRequest));
 
     if (ssl->renegotiate_mode == ssl_renegotiate_ignore) {
       goto start;
@@ -507,79 +499,11 @@ start:
     goto start;
   }
 
-  /* If an alert record, process the alert. */
-  if (rr->type == SSL3_RT_ALERT) {
-    /* Alerts records may not contain fragmented or multiple alerts. */
-    if (rr->length != 2) {
-      al = SSL_AD_DECODE_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ALERT);
-      goto f_err;
-    }
-
-    if (ssl->msg_callback) {
-      ssl->msg_callback(0, ssl->version, SSL3_RT_ALERT, rr->data, 2, ssl,
-                        ssl->msg_callback_arg);
-    }
-    const uint8_t alert_level = rr->data[0];
-    const uint8_t alert_descr = rr->data[1];
-    rr->length -= 2;
-    rr->data += 2;
-
-    if (ssl->info_callback != NULL) {
-      cb = ssl->info_callback;
-    } else if (ssl->ctx->info_callback != NULL) {
-      cb = ssl->ctx->info_callback;
-    }
-
-    if (cb != NULL) {
-      uint16_t alert = (alert_level << 8) | alert_descr;
-      cb(ssl, SSL_CB_READ_ALERT, alert);
-    }
-
-    if (alert_level == SSL3_AL_WARNING) {
-      if (alert_descr == SSL_AD_CLOSE_NOTIFY) {
-        ssl->s3->recv_shutdown = ssl_shutdown_close_notify;
-        return 0;
-      }
-
-      ssl->s3->warning_alert_count++;
-      if (ssl->s3->warning_alert_count > kMaxWarningAlerts) {
-        al = SSL_AD_UNEXPECTED_MESSAGE;
-        OPENSSL_PUT_ERROR(SSL, SSL_R_TOO_MANY_WARNING_ALERTS);
-        goto f_err;
-      }
-    } else if (alert_level == SSL3_AL_FATAL) {
-      char tmp[16];
-
-      OPENSSL_PUT_ERROR(SSL, SSL_AD_REASON_OFFSET + alert_descr);
-      BIO_snprintf(tmp, sizeof(tmp), "%d", alert_descr);
-      ERR_add_error_data(2, "SSL alert number ", tmp);
-      ssl->s3->recv_shutdown = ssl_shutdown_fatal_alert;
-      SSL_CTX_remove_session(ssl->ctx, ssl->session);
-      return 0;
-    } else {
-      al = SSL_AD_ILLEGAL_PARAMETER;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_UNKNOWN_ALERT_TYPE);
-      goto f_err;
-    }
-
-    goto start;
-  }
-
-  if (type == 0) {
-    /* This may only occur from read_close_notify. */
-    assert(ssl->s3->send_shutdown == ssl_shutdown_close_notify);
-    /* close_notify has been sent, so discard all records other than alerts. */
-    rr->length = 0;
-    goto start;
-  }
-
   al = SSL_AD_UNEXPECTED_MESSAGE;
   OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_RECORD);
 
 f_err:
   ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
-err:
   return -1;
 }
 
@@ -625,22 +549,11 @@ int ssl3_dispatch_alert(SSL *ssl) {
     BIO_flush(ssl->wbio);
   }
 
-  if (ssl->msg_callback != NULL) {
-    ssl->msg_callback(1 /* write */, ssl->version, SSL3_RT_ALERT,
-                      ssl->s3->send_alert, 2, ssl, ssl->msg_callback_arg);
-  }
+  ssl_do_msg_callback(ssl, 1 /* write */, ssl->version, SSL3_RT_ALERT,
+                      ssl->s3->send_alert, 2);
 
-  void (*cb)(const SSL *ssl, int type, int value) = NULL;
-  if (ssl->info_callback != NULL) {
-    cb = ssl->info_callback;
-  } else if (ssl->ctx->info_callback != NULL) {
-    cb = ssl->ctx->info_callback;
-  }
-
-  if (cb != NULL) {
-    int alert = (ssl->s3->send_alert[0] << 8) | ssl->s3->send_alert[1];
-    cb(ssl, SSL_CB_WRITE_ALERT, alert);
-  }
+  int alert = (ssl->s3->send_alert[0] << 8) | ssl->s3->send_alert[1];
+  ssl_do_info_callback(ssl, SSL_CB_WRITE_ALERT, alert);
 
   return 1;
 }

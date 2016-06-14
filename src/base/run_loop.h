@@ -44,26 +44,32 @@ class BASE_EXPORT RunLoop {
 
   bool running() const { return running_; }
 
-  // Quit an earlier call to Run(). There can be other nested RunLoops servicing
-  // the same task queue (MessageLoop); Quitting one RunLoop has no bearing on
-  // the others. Quit can be called before, during or after Run. If called
-  // before Run, Run will return immediately when called. Calling Quit after the
-  // RunLoop has already finished running has no effect.
+  // Quit() quits an earlier call to Run() immediately. QuitWhenIdle() quits an
+  // earlier call to Run() when there aren't any tasks or messages in the queue.
   //
-  // WARNING: You must NEVER assume that a call to Quit will terminate the
-  // targetted message loop. If a nested message loop continues running, the
-  // target may NEVER terminate. It is very easy to livelock (run forever) in
-  // such a case.
+  // There can be other nested RunLoops servicing the same task queue
+  // (MessageLoop); Quitting one RunLoop has no bearing on the others. Quit()
+  // and QuitWhenIdle() can be called before, during or after Run(). If called
+  // before Run(), Run() will return immediately when called. Calling Quit() or
+  // QuitWhenIdle() after the RunLoop has already finished running has no
+  // effect.
+  //
+  // WARNING: You must NEVER assume that a call to Quit() or QuitWhenIdle() will
+  // terminate the targetted message loop. If a nested message loop continues
+  // running, the target may NEVER terminate. It is very easy to livelock (run
+  // forever) in such a case.
   void Quit();
+  void QuitWhenIdle();
 
-  // Convenience method to get a closure that safely calls Quit (has no effect
-  // if the RunLoop instance is gone).
+  // Convenience methods to get a closure that safely calls Quit() or
+  // QuitWhenIdle() (has no effect if the RunLoop instance is gone).
   //
   // Example:
   //   RunLoop run_loop;
   //   PostTask(run_loop.QuitClosure());
   //   run_loop.Run();
   base::Closure QuitClosure();
+  base::Closure QuitWhenIdleClosure();
 
  private:
   friend class MessageLoop;

@@ -30,6 +30,28 @@ int64_t AmountOfMemory(DWORDLONG MEMORYSTATUSEX::*memory_field) {
   return rv < 0 ? std::numeric_limits<int64_t>::max() : rv;
 }
 
+bool GetDiskSpaceInfo(const base::FilePath& path,
+                      int64_t* available_bytes,
+                      int64_t* total_bytes) {
+  ULARGE_INTEGER available;
+  ULARGE_INTEGER total;
+  ULARGE_INTEGER free;
+  if (!GetDiskFreeSpaceExW(path.value().c_str(), &available, &total, &free))
+    return false;
+
+  if (available_bytes) {
+    *available_bytes = static_cast<int64_t>(available.QuadPart);
+    if (*available_bytes < 0)
+      *available_bytes = std::numeric_limits<int64_t>::max();
+  }
+  if (total_bytes) {
+    *total_bytes = static_cast<int64_t>(total.QuadPart);
+    if (*total_bytes < 0)
+      *total_bytes = std::numeric_limits<int64_t>::max();
+  }
+  return true;
+}
+
 }  // namespace
 
 namespace base {
@@ -58,12 +80,20 @@ int64_t SysInfo::AmountOfVirtualMemory() {
 int64_t SysInfo::AmountOfFreeDiskSpace(const FilePath& path) {
   ThreadRestrictions::AssertIOAllowed();
 
-  ULARGE_INTEGER available, total, free;
-  if (!GetDiskFreeSpaceExW(path.value().c_str(), &available, &total, &free))
+  int64_t available;
+  if (!GetDiskSpaceInfo(path, &available, nullptr))
     return -1;
+  return available;
+}
 
-  int64_t rv = static_cast<int64_t>(available.QuadPart);
-  return rv < 0 ? std::numeric_limits<int64_t>::max() : rv;
+// static
+int64_t SysInfo::AmountOfTotalDiskSpace(const FilePath& path) {
+  ThreadRestrictions::AssertIOAllowed();
+
+  int64_t total;
+  if (!GetDiskSpaceInfo(path, nullptr, &total))
+    return -1;
+  return total;
 }
 
 std::string SysInfo::OperatingSystemName() {

@@ -554,7 +554,7 @@
           'sequenced_task_runner.h',
           'sequenced_task_runner_helpers.h',
           'sha1.h',
-          'sha1_portable.cc',
+          'sha1.cc',
           'sha1_win.cc',
           'single_thread_task_runner.h',
           'stl_util.h',

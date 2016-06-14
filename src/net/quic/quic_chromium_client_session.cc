@@ -225,6 +225,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       stream_factory_(stream_factory),
       transport_security_state_(transport_security_state),
       server_info_(std::move(server_info)),
+      pkp_bypassed_(false),
       num_total_streams_(0),
       task_runner_(task_runner),
       net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_QUIC_SESSION)),
@@ -554,6 +555,7 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
   ssl_info->public_key_hashes = cert_verify_result_->public_key_hashes;
   ssl_info->is_issued_by_known_root =
       cert_verify_result_->is_issued_by_known_root;
+  ssl_info->pkp_bypassed = pkp_bypassed_;
 
   ssl_info->connection_status = ssl_connection_status;
   ssl_info->client_cert_sent = false;
@@ -967,6 +969,7 @@ void QuicChromiumClientSession::OnProofVerifyDetailsAvailable(
       new ct::CTVerifyResult(verify_details_chromium->ct_verify_result));
   ct_verify_result_ = std::move(ct_verify_result_copy);
   logger_->OnCertificateVerified(*cert_verify_result_);
+  pkp_bypassed_ = verify_details_chromium->pkp_bypassed;
 }
 
 void QuicChromiumClientSession::StartReading() {

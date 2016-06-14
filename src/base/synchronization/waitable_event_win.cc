@@ -18,11 +18,10 @@ namespace base {
 
 WaitableEvent::WaitableEvent(ResetPolicy reset_policy,
                              InitialState initial_state)
-    : WaitableEvent(reset_policy == ResetPolicy::MANUAL,
-                    initial_state == InitialState::SIGNALED) {}
-
-WaitableEvent::WaitableEvent(bool manual_reset, bool signaled)
-    : handle_(CreateEvent(NULL, manual_reset, signaled, NULL)) {
+    : handle_(CreateEvent(nullptr,
+                          reset_policy == ResetPolicy::MANUAL,
+                          initial_state == InitialState::SIGNALED,
+                          nullptr)) {
   // We're probably going to crash anyways if this is ever NULL, so we might as
   // well make our stack reports more informative by crashing here.
   CHECK(handle_.IsValid());
@@ -33,8 +32,7 @@ WaitableEvent::WaitableEvent(win::ScopedHandle handle)
   CHECK(handle_.IsValid()) << "Tried to create WaitableEvent from NULL handle";
 }
 
-WaitableEvent::~WaitableEvent() {
-}
+WaitableEvent::~WaitableEvent() = default;
 
 void WaitableEvent::Reset() {
   ResetEvent(handle_.Get());

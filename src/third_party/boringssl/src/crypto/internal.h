@@ -123,9 +123,9 @@
 
 #if defined(OPENSSL_NO_THREADS)
 #elif defined(OPENSSL_WINDOWS)
-#pragma warning(push, 3)
+OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <windows.h>
-#pragma warning(pop)
+OPENSSL_MSVC_PRAGMA(warning(pop))
 #else
 #include <pthread.h>
 #endif
@@ -150,6 +150,19 @@ void OPENSSL_cpuid_setup(void);
 typedef __int128_t int128_t;
 typedef __uint128_t uint128_t;
 #endif
+
+
+/* buffers_alias returns one if |a| and |b| alias and zero otherwise. */
+static inline int buffers_alias(const uint8_t *a, size_t a_len,
+                                const uint8_t *b, size_t b_len) {
+  /* Cast |a| and |b| to integers. In C, pointer comparisons between unrelated
+   * objects are undefined whereas pointer to integer conversions are merely
+   * implementation-defined. We assume the implementation defined it in a sane
+   * way. */
+  uintptr_t a_u = (uintptr_t)a;
+  uintptr_t b_u = (uintptr_t)b;
+  return a_u + a_len > b_u && b_u + b_len > a_u;
+}
 
 
 /* Constant-time utility functions.

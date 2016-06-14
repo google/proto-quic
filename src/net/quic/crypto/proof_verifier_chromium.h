@@ -31,6 +31,10 @@ class TransportSecurityState;
 class NET_EXPORT_PRIVATE ProofVerifyDetailsChromium
     : public ProofVerifyDetails {
  public:
+  ProofVerifyDetailsChromium();
+  ProofVerifyDetailsChromium(const ProofVerifyDetailsChromium&);
+  ~ProofVerifyDetailsChromium() override;
+
   // ProofVerifyDetails implementation
   ProofVerifyDetails* Clone() const override;
 
@@ -41,6 +45,9 @@ class NET_EXPORT_PRIVATE ProofVerifyDetailsChromium
   // TransportSecurityState::PKPState::CheckPublicKeyPins in the event of a
   // pinning failure. It is a (somewhat) human-readable string.
   std::string pinning_failure_log;
+
+  // True if PKP was bypassed due to a local trust anchor.
+  bool pkp_bypassed;
 };
 
 // ProofVerifyContextChromium is the implementation-specific information that a

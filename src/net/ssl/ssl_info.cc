@@ -31,6 +31,7 @@ SSLInfo& SSLInfo::operator=(const SSLInfo& info) {
   key_exchange_info = info.key_exchange_info;
   connection_status = info.connection_status;
   is_issued_by_known_root = info.is_issued_by_known_root;
+  pkp_bypassed = info.pkp_bypassed;
   client_cert_sent = info.client_cert_sent;
   channel_id_sent = info.channel_id_sent;
   token_binding_negotiated = info.token_binding_negotiated;
@@ -54,6 +55,7 @@ void SSLInfo::Reset() {
   key_exchange_info = 0;
   connection_status = 0;
   is_issued_by_known_root = false;
+  pkp_bypassed = false;
   client_cert_sent = false;
   channel_id_sent = false;
   token_binding_negotiated = false;

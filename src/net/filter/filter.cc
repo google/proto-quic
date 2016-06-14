@@ -140,19 +140,26 @@ Filter::FilterStatus Filter::ReadData(char* dest_buffer, int* dest_len) {
 
   // This filter needs more data, but it's not clear that the rest of
   // the chain does; delegate the actual status return to the next filter.
-  if (last_status_ == FILTER_NEED_MORE_DATA && !stream_data_len())
-    return next_filter_->ReadData(dest_buffer, dest_len);
+  if (last_status_ == FILTER_NEED_MORE_DATA && !stream_data_len()) {
+    last_status_ = next_filter_->ReadData(dest_buffer, dest_len);
+    return last_status_;
+  }
 
   do {
     if (next_filter_->last_status() == FILTER_NEED_MORE_DATA) {
       PushDataIntoNextFilter();
-      if (FILTER_ERROR == last_status_)
+      if (FILTER_ERROR == last_status_) {
+        *dest_len = 0;
         return FILTER_ERROR;
+      }
     }
     *dest_len = dest_buffer_capacity;  // Reset the input/output parameter.
+
     next_filter_->ReadData(dest_buffer, dest_len);
-    if (FILTER_NEED_MORE_DATA == last_status_)
-        return next_filter_->last_status();
+    if (FILTER_NEED_MORE_DATA == last_status_) {
+      last_status_ = next_filter_->last_status();
+      return last_status_;
+    }
 
     // In the case where this filter has data internally, and is indicating such
     // with a last_status_ of FILTER_OK, but at the same time the next filter in
@@ -167,8 +174,12 @@ Filter::FilterStatus Filter::ReadData(char* dest_buffer, int* dest_len) {
            FILTER_NEED_MORE_DATA == next_filter_->last_status() &&
            0 == *dest_len);
 
-  if (next_filter_->last_status() == FILTER_ERROR)
+  if (next_filter_->last_status() == FILTER_ERROR) {
+    last_status_ = FILTER_ERROR;
+    *dest_len = 0;
     return FILTER_ERROR;
+  }
+  last_status_ = FILTER_OK;
   return FILTER_OK;
 }
 

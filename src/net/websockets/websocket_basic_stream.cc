@@ -97,7 +97,7 @@ int WebSocketBasicStream::ReadFrames(
     // large.
     scoped_refptr<GrowableIOBuffer> buffered_data;
     buffered_data.swap(http_read_buffer_);
-    DCHECK(http_read_buffer_.get() == NULL);
+    DCHECK(!http_read_buffer_);
     std::vector<std::unique_ptr<WebSocketFrameChunk>> frame_chunks;
     if (!parser_.Decode(buffered_data->StartOfBuffer(),
                         buffered_data->offset(),

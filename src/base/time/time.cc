@@ -136,11 +136,6 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
 // Time -----------------------------------------------------------------------
 
 // static
-Time Time::Max() {
-  return Time(std::numeric_limits<int64_t>::max());
-}
-
-// static
 Time Time::FromTimeT(time_t tt) {
   if (tt == 0)
     return Time();  // Preserve 0 so we can tell it doesn't exist.

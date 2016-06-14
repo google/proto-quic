@@ -514,13 +514,13 @@ void SSL_free(SSL *ssl) {
 void SSL_set_connect_state(SSL *ssl) {
   ssl->server = 0;
   ssl->state = SSL_ST_CONNECT;
-  ssl->handshake_func = ssl->method->ssl_connect;
+  ssl->handshake_func = ssl3_connect;
 }
 
 void SSL_set_accept_state(SSL *ssl) {
   ssl->server = 1;
   ssl->state = SSL_ST_ACCEPT;
-  ssl->handshake_func = ssl->method->ssl_accept;
+  ssl->handshake_func = ssl3_accept;
 }
 
 void SSL_set_bio(SSL *ssl, BIO *rbio, BIO *wbio) {
@@ -559,6 +559,7 @@ int SSL_do_handshake(SSL *ssl) {
   ssl->rwstate = SSL_NOTHING;
   /* Functions which use SSL_get_error must clear the error queue on entry. */
   ERR_clear_error();
+  ERR_clear_system_error();
 
   if (ssl->handshake_func == NULL) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_TYPE_NOT_SET);
@@ -578,8 +579,6 @@ int SSL_connect(SSL *ssl) {
     SSL_set_connect_state(ssl);
   }
 
-  assert(ssl->handshake_func == ssl->method->ssl_connect);
-
   return SSL_do_handshake(ssl);
 }
 
@@ -588,8 +587,6 @@ int SSL_accept(SSL *ssl) {
     /* Not properly initialized yet */
     SSL_set_accept_state(ssl);
   }
-
-  assert(ssl->handshake_func == ssl->method->ssl_accept);
 
   return SSL_do_handshake(ssl);
 }
@@ -665,6 +662,7 @@ int SSL_shutdown(SSL *ssl) {
   ssl->rwstate = SSL_NOTHING;
   /* Functions which use SSL_get_error must clear the error queue on entry. */
   ERR_clear_error();
+  ERR_clear_system_error();
 
   if (ssl->handshake_func == NULL) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNINITIALIZED);
@@ -1184,6 +1182,10 @@ int SSL_renegotiate_pending(SSL *ssl) {
   return SSL_in_init(ssl) && ssl->s3->initial_handshake_complete;
 }
 
+int SSL_total_renegotiations(const SSL *ssl) {
+  return ssl->s3->total_renegotiations;
+}
+
 size_t SSL_CTX_get_max_cert_list(const SSL_CTX *ctx) {
   return ctx->max_cert_list;
 }
@@ -1266,6 +1268,77 @@ int SSL_CTX_set_session_cache_mode(SSL_CTX *ctx, int mode) {
 
 int SSL_CTX_get_session_cache_mode(const SSL_CTX *ctx) {
   return ctx->session_cache_mode;
+}
+
+
+int SSL_CTX_get_tlsext_ticket_keys(SSL_CTX *ctx, void *out, size_t len) {
+  if (out == NULL) {
+    return 48;
+  }
+  if (len != 48) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_TICKET_KEYS_LENGTH);
+    return 0;
+  }
+  uint8_t *out_bytes = out;
+  memcpy(out_bytes, ctx->tlsext_tick_key_name, 16);
+  memcpy(out_bytes + 16, ctx->tlsext_tick_hmac_key, 16);
+  memcpy(out_bytes + 32, ctx->tlsext_tick_aes_key, 16);
+  return 1;
+}
+
+int SSL_CTX_set_tlsext_ticket_keys(SSL_CTX *ctx, const void *in, size_t len) {
+  if (in == NULL) {
+    return 48;
+  }
+  if (len != 48) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_TICKET_KEYS_LENGTH);
+    return 0;
+  }
+  const uint8_t *in_bytes = in;
+  memcpy(ctx->tlsext_tick_key_name, in_bytes, 16);
+  memcpy(ctx->tlsext_tick_hmac_key, in_bytes + 16, 16);
+  memcpy(ctx->tlsext_tick_aes_key, in_bytes + 32, 16);
+  return 1;
+}
+
+int SSL_CTX_set_tlsext_ticket_key_cb(
+    SSL_CTX *ctx, int (*callback)(SSL *ssl, uint8_t *key_name, uint8_t *iv,
+                                  EVP_CIPHER_CTX *ctx, HMAC_CTX *hmac_ctx,
+                                  int encrypt)) {
+  ctx->tlsext_ticket_key_cb = callback;
+  return 1;
+}
+
+int SSL_CTX_set1_curves(SSL_CTX *ctx, const int *curves, size_t curves_len) {
+  return tls1_set_curves(&ctx->supported_group_list,
+                         &ctx->supported_group_list_len, curves,
+                         curves_len);
+}
+
+int SSL_set1_curves(SSL *ssl, const int *curves, size_t curves_len) {
+  return tls1_set_curves(&ssl->supported_group_list,
+                         &ssl->supported_group_list_len, curves,
+                         curves_len);
+}
+
+int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh) {
+  DH_free(ctx->cert->dh_tmp);
+  ctx->cert->dh_tmp = DHparams_dup(dh);
+  if (ctx->cert->dh_tmp == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
+    return 0;
+  }
+  return 1;
+}
+
+int SSL_set_tmp_dh(SSL *ssl, const DH *dh) {
+  DH_free(ssl->cert->dh_tmp);
+  ssl->cert->dh_tmp = DHparams_dup(dh);
+  if (ssl->cert->dh_tmp == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
+    return 0;
+  }
+  return 1;
 }
 
 STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
@@ -1559,6 +1632,38 @@ int SSL_CTX_set_ocsp_response(SSL_CTX *ctx, const uint8_t *response,
   return 1;
 }
 
+int SSL_set_tlsext_host_name(SSL *ssl, const char *name) {
+  OPENSSL_free(ssl->tlsext_hostname);
+  ssl->tlsext_hostname = NULL;
+
+  if (name == NULL) {
+    return 1;
+  }
+
+  size_t len = strlen(name);
+  if (len == 0 || len > TLSEXT_MAXLEN_host_name) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_SSL3_EXT_INVALID_SERVERNAME);
+    return 0;
+  }
+  ssl->tlsext_hostname = BUF_strdup(name);
+  if (ssl->tlsext_hostname == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+    return 0;
+  }
+  return 1;
+}
+
+int SSL_CTX_set_tlsext_servername_callback(
+    SSL_CTX *ctx, int (*callback)(SSL *ssl, int *out_alert, void *arg)) {
+  ctx->tlsext_servername_callback = callback;
+  return 1;
+}
+
+int SSL_CTX_set_tlsext_servername_arg(SSL_CTX *ctx, void *arg) {
+  ctx->tlsext_servername_arg = arg;
+  return 1;
+}
+
 int SSL_select_next_proto(uint8_t **out, uint8_t *out_len,
                           const uint8_t *server, unsigned server_len,
                           const uint8_t *client, unsigned client_len) {
@@ -1664,6 +1769,58 @@ void SSL_get0_alpn_selected(const SSL *ssl, const uint8_t **out_data,
   }
 }
 
+
+int SSL_CTX_enable_tls_channel_id(SSL_CTX *ctx) {
+  ctx->tlsext_channel_id_enabled = 1;
+  return 1;
+}
+
+int SSL_enable_tls_channel_id(SSL *ssl) {
+  ssl->tlsext_channel_id_enabled = 1;
+  return 1;
+}
+
+static int is_p256_key(EVP_PKEY *private_key) {
+  const EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(private_key);
+  return ec_key != NULL &&
+         EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key)) ==
+             NID_X9_62_prime256v1;
+}
+
+int SSL_CTX_set1_tls_channel_id(SSL_CTX *ctx, EVP_PKEY *private_key) {
+  if (!is_p256_key(private_key)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_NOT_P256);
+    return 0;
+  }
+
+  EVP_PKEY_free(ctx->tlsext_channel_id_private);
+  ctx->tlsext_channel_id_private = EVP_PKEY_up_ref(private_key);
+  ctx->tlsext_channel_id_enabled = 1;
+
+  return 1;
+}
+
+int SSL_set1_tls_channel_id(SSL *ssl, EVP_PKEY *private_key) {
+  if (!is_p256_key(private_key)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_NOT_P256);
+    return 0;
+  }
+
+  EVP_PKEY_free(ssl->tlsext_channel_id_private);
+  ssl->tlsext_channel_id_private = EVP_PKEY_up_ref(private_key);
+  ssl->tlsext_channel_id_enabled = 1;
+
+  return 1;
+}
+
+size_t SSL_get_tls_channel_id(SSL *ssl, uint8_t *out, size_t max_out) {
+  if (!ssl->s3->tlsext_channel_id_valid) {
+    return 0;
+  }
+  memcpy(out, ssl->s3->tlsext_channel_id, (max_out < 64) ? max_out : 64);
+  return 64;
+}
+
 void SSL_CTX_set_cert_verify_callback(SSL_CTX *ctx,
                                       int (*cb)(X509_STORE_CTX *store_ctx,
                                                 void *arg),
@@ -1689,6 +1846,15 @@ void SSL_CTX_set_cert_cb(SSL_CTX *ctx, int (*cb)(SSL *ssl, void *arg),
 
 void SSL_set_cert_cb(SSL *ssl, int (*cb)(SSL *ssl, void *arg), void *arg) {
   ssl_cert_set_cert_cb(ssl->cert, cb, arg);
+}
+
+size_t SSL_get0_certificate_types(SSL *ssl, const uint8_t **out_types) {
+  if (ssl->server || !ssl->s3->tmp.cert_req) {
+    *out_types = NULL;
+    return 0;
+  }
+  *out_types = ssl->s3->tmp.certificate_types;
+  return ssl->s3->tmp.num_certificate_types;
 }
 
 void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
@@ -1855,6 +2021,10 @@ const SSL_CIPHER *SSL_get_current_cipher(const SSL *ssl) {
     return NULL;
   }
   return ssl->s3->aead_write_ctx->cipher;
+}
+
+int SSL_session_reused(const SSL *ssl) {
+  return ssl->hit;
 }
 
 const COMP_METHOD *SSL_get_current_compression(SSL *ssl) { return NULL; }
@@ -2184,6 +2354,12 @@ void SSL_set_msg_callback_arg(SSL *ssl, void *arg) {
 void SSL_CTX_set_keylog_callback(SSL_CTX *ctx,
                                  void (*cb)(const SSL *ssl, const char *line)) {
   ctx->keylog_callback = cb;
+}
+
+void SSL_CTX_set_current_time_cb(SSL_CTX *ctx,
+                                 void (*cb)(const SSL *ssl,
+                                            struct timeval *out_clock)) {
+  ctx->current_time_cb = cb;
 }
 
 static int cbb_add_hex(CBB *cbb, const uint8_t *in, size_t in_len) {
@@ -2535,8 +2711,6 @@ uint16_t ssl3_protocol_version(const SSL *ssl) {
   return ssl3_version_from_wire(ssl, ssl->version);
 }
 
-int SSL_cache_hit(SSL *ssl) { return SSL_session_reused(ssl); }
-
 int SSL_is_server(SSL *ssl) { return ssl->server; }
 
 void SSL_CTX_set_select_certificate_cb(
@@ -2709,6 +2883,27 @@ int SSL_clear(SSL *ssl) {
   return 1;
 }
 
+void ssl_do_info_callback(const SSL *ssl, int type, int value) {
+  void (*cb)(const SSL *ssl, int type, int value) = NULL;
+  if (ssl->info_callback != NULL) {
+    cb = ssl->info_callback;
+  } else if (ssl->ctx->info_callback != NULL) {
+    cb = ssl->ctx->info_callback;
+  }
+
+  if (cb != NULL) {
+    cb(ssl, type, value);
+  }
+}
+
+void ssl_do_msg_callback(SSL *ssl, int is_write, int version, int content_type,
+                         const void *buf, size_t len) {
+  if (ssl->msg_callback != NULL) {
+    ssl->msg_callback(is_write, version, content_type, buf, len, ssl,
+                      ssl->msg_callback_arg);
+  }
+}
+
 int SSL_CTX_sess_connect(const SSL_CTX *ctx) { return 0; }
 int SSL_CTX_sess_connect_good(const SSL_CTX *ctx) { return 0; }
 int SSL_CTX_sess_connect_renegotiate(const SSL_CTX *ctx) { return 0; }
@@ -2720,5 +2915,33 @@ int SSL_CTX_sess_cb_hits(const SSL_CTX *ctx) { return 0; }
 int SSL_CTX_sess_misses(const SSL_CTX *ctx) { return 0; }
 int SSL_CTX_sess_timeouts(const SSL_CTX *ctx) { return 0; }
 int SSL_CTX_sess_cache_full(const SSL_CTX *ctx) { return 0; }
+
+int SSL_num_renegotiations(const SSL *ssl) {
+  return SSL_total_renegotiations(ssl);
+}
+
+int SSL_CTX_need_tmp_RSA(const SSL_CTX *ctx) { return 0; }
+int SSL_need_tmp_RSA(const SSL *ssl) { return 0; }
+int SSL_CTX_set_tmp_rsa(SSL_CTX *ctx, const RSA *rsa) { return 1; }
+int SSL_set_tmp_rsa(SSL *ssl, const RSA *rsa) { return 1; }
 void ERR_load_SSL_strings(void) {}
 void SSL_load_error_strings(void) {}
+int SSL_cache_hit(SSL *ssl) { return SSL_session_reused(ssl); }
+
+int SSL_CTX_set_tmp_ecdh(SSL_CTX *ctx, const EC_KEY *ec_key) {
+  if (ec_key == NULL || EC_KEY_get0_group(ec_key) == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_PASSED_NULL_PARAMETER);
+    return 0;
+  }
+  int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
+  return SSL_CTX_set1_curves(ctx, &nid, 1);
+}
+
+int SSL_set_tmp_ecdh(SSL *ssl, const EC_KEY *ec_key) {
+  if (ec_key == NULL || EC_KEY_get0_group(ec_key) == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_PASSED_NULL_PARAMETER);
+    return 0;
+  }
+  int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
+  return SSL_set1_curves(ssl, &nid, 1);
+}

@@ -107,14 +107,11 @@ int32_t FLAGS_initial_mtu = 0;
 
 class FakeCertVerifier : public net::CertVerifier {
  public:
-  int Verify(net::X509Certificate* cert,
-             const std::string& hostname,
-             const std::string& ocsp_response,
-             int flags,
+  int Verify(const RequestParams& params,
              net::CRLSet* crl_set,
              net::CertVerifyResult* verify_result,
              const net::CompletionCallback& callback,
-             std::unique_ptr<net::CertVerifier::Request>* out_req,
+             std::unique_ptr<Request>* out_req,
              const net::BoundNetLog& net_log) override {
     return net::OK;
   }

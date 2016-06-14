@@ -98,6 +98,9 @@ const char* const MemoryDumpManager::kTraceCategory =
     TRACE_DISABLED_BY_DEFAULT("memory-infra");
 
 // static
+const char* const MemoryDumpManager::kLogPrefix = "Memory-infra dump";
+
+// static
 const int MemoryDumpManager::kMaxConsecutiveFailuresCount = 3;
 
 // static
@@ -337,6 +340,8 @@ void MemoryDumpManager::RequestGlobalDump(
     const MemoryDumpCallback& callback) {
   // Bail out immediately if tracing is not enabled at all.
   if (!UNLIKELY(subtle::NoBarrier_Load(&memory_tracing_enabled_))) {
+    VLOG(1) << kLogPrefix << " failed because " << kTraceCategory
+            << " tracing category is not enabled";
     if (!callback.is_null())
       callback.Run(0u /* guid */, false /* success */);
     return;
@@ -422,6 +427,14 @@ void MemoryDumpManager::SetupNextMemoryDump(
   // Anyway either tracing is stopped or this was the last hop, create a trace
   // event, add it to the trace and finalize process dump invoking the callback.
   if (!pmd_async_state->dump_thread_task_runner.get()) {
+    if (pmd_async_state->pending_dump_providers.empty()) {
+      VLOG(1) << kLogPrefix << " failed because dump thread was destroyed"
+              << " before finalizing the dump";
+    } else {
+      VLOG(1) << kLogPrefix << " failed because dump thread was destroyed"
+              << " before dumping "
+              << pmd_async_state->pending_dump_providers.back().get()->name;
+    }
     pmd_async_state->dump_successful = false;
     pmd_async_state->pending_dump_providers.clear();
   }
@@ -596,8 +609,11 @@ void MemoryDumpManager::FinalizeDumpAndAddToTrace(
 
   bool tracing_still_enabled;
   TRACE_EVENT_CATEGORY_GROUP_ENABLED(kTraceCategory, &tracing_still_enabled);
-  if (!tracing_still_enabled)
+  if (!tracing_still_enabled) {
     pmd_async_state->dump_successful = false;
+    VLOG(1) << kLogPrefix << " failed because tracing was disabled before"
+            << " the dump was completed";
+  }
 
   if (!pmd_async_state->callback.is_null()) {
     pmd_async_state->callback.Run(dump_guid, pmd_async_state->dump_successful);
@@ -740,7 +756,7 @@ MemoryDumpManager::ProcessMemoryDumpAsyncState::ProcessMemoryDumpAsyncState(
       session_state(std::move(session_state)),
       callback(callback),
       dump_successful(true),
-      callback_task_runner(MessageLoop::current()->task_runner()),
+      callback_task_runner(ThreadTaskRunnerHandle::Get()),
       dump_thread_task_runner(std::move(dump_thread_task_runner)) {
   pending_dump_providers.reserve(dump_providers.size());
   pending_dump_providers.assign(dump_providers.rbegin(), dump_providers.rend());

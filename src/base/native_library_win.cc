@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "base/files/file_util.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
@@ -62,8 +63,7 @@ NativeLibrary LoadNativeLibrary(const FilePath& library_path,
 NativeLibrary LoadNativeLibraryDynamically(const FilePath& library_path) {
   typedef HMODULE (WINAPI* LoadLibraryFunction)(const wchar_t* file_name);
 
-  LoadLibraryFunction load_library;
-  load_library = reinterpret_cast<LoadLibraryFunction>(
+  LoadLibraryFunction load_library = reinterpret_cast<LoadLibraryFunction>(
       GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW"));
 
   return LoadNativeLibraryHelper(library_path, load_library, NULL);
@@ -76,13 +76,14 @@ void UnloadNativeLibrary(NativeLibrary library) {
 
 // static
 void* GetFunctionPointerFromNativeLibrary(NativeLibrary library,
-                                          const char* name) {
-  return GetProcAddress(library, name);
+                                          StringPiece name) {
+  return GetProcAddress(library, name.data());
 }
 
 // static
-string16 GetNativeLibraryName(const string16& name) {
-  return name + ASCIIToUTF16(".dll");
+std::string GetNativeLibraryName(StringPiece name) {
+  DCHECK(IsStringASCII(name));
+  return name.as_string() + ".dll";
 }
 
 }  // namespace base

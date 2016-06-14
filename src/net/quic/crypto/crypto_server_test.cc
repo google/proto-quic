@@ -56,22 +56,15 @@ const char kOldConfigId[] = "old-config-id";
 
 }  // namespace
 
-// Run tests with both parities of
-// FLAGS_use_early_return_when_verifying_chlo.
 struct TestParams {
-  TestParams(bool use_early_return_when_verifying_chlo,
-             bool enable_stateless_rejects,
+  TestParams(bool enable_stateless_rejects,
              bool use_stateless_rejects,
              QuicVersionVector supported_versions)
-      : use_early_return_when_verifying_chlo(
-            use_early_return_when_verifying_chlo),
-        enable_stateless_rejects(enable_stateless_rejects),
+      : enable_stateless_rejects(enable_stateless_rejects),
         use_stateless_rejects(use_stateless_rejects),
         supported_versions(supported_versions) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
-    os << "{ use_early_return_when_verifying_chlo: "
-       << p.use_early_return_when_verifying_chlo << std::endl;
     os << "  enable_stateless_rejects: " << p.enable_stateless_rejects
        << std::endl;
     os << "  use_stateless_rejects: " << p.use_stateless_rejects << std::endl;
@@ -80,7 +73,6 @@ struct TestParams {
     return os;
   }
 
-  bool use_early_return_when_verifying_chlo;
   // This only enables the stateless reject feature via the feature-flag.
   // It does not force the crypto server to emit stateless rejects.
   bool enable_stateless_rejects;
@@ -96,17 +88,14 @@ struct TestParams {
 vector<TestParams> GetTestParams() {
   vector<TestParams> params;
   static const bool kTrueFalse[] = {true, false};
-  for (bool use_early_return : kTrueFalse) {
-    for (bool enable_stateless_rejects : kTrueFalse) {
-      for (bool use_stateless_rejects : kTrueFalse) {
-        // Start with all versions, remove highest on each iteration.
-        QuicVersionVector supported_versions = QuicSupportedVersions();
-        while (!supported_versions.empty()) {
-          params.push_back(
-              TestParams(use_early_return, enable_stateless_rejects,
-                         use_stateless_rejects, supported_versions));
-          supported_versions.erase(supported_versions.begin());
-        }
+  for (bool enable_stateless_rejects : kTrueFalse) {
+    for (bool use_stateless_rejects : kTrueFalse) {
+      // Start with all versions, remove highest on each iteration.
+      QuicVersionVector supported_versions = QuicSupportedVersions();
+      while (!supported_versions.empty()) {
+        params.push_back(TestParams(enable_stateless_rejects,
+                                    use_stateless_rejects, supported_versions));
+        supported_versions.erase(supported_versions.begin());
       }
     }
   }
@@ -130,8 +119,6 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     client_version_string_ =
         QuicUtils::TagToString(QuicVersionToQuicTag(client_version_));
 
-    FLAGS_use_early_return_when_verifying_chlo =
-        GetParam().use_early_return_when_verifying_chlo;
     FLAGS_enable_quic_stateless_reject_support =
         GetParam().enable_stateless_rejects;
     use_stateless_rejects_ = GetParam().use_stateless_rejects;
@@ -327,11 +314,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         out_.GetTaglist(kRREJ, &reject_reasons, &num_reject_reasons);
     ASSERT_EQ(QUIC_NO_ERROR, error_code);
 
-    if (FLAGS_use_early_return_when_verifying_chlo) {
-      EXPECT_EQ(1u, num_reject_reasons);
-    } else {
-      EXPECT_EQ(expected_count, num_reject_reasons);
-    }
+    EXPECT_EQ(expected_count, num_reject_reasons);
     for (size_t i = 0; i < num_reject_reasons; ++i) {
       EXPECT_EQ(expected_handshake_failures[i], reject_reasons[i]);
     }
@@ -396,8 +379,6 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   std::unique_ptr<CryptoHandshakeMessage> server_config_;
 };
 
-// Run all CryptoServerTest with both values of
-// FLAGS_use_early_return_when_verifying_chlo.
 INSTANTIATE_TEST_CASE_P(CryptoServerTests,
                         CryptoServerTest,
                         ::testing::ValuesIn(GetTestParams()));

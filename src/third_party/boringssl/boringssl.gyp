@@ -6,6 +6,14 @@
   'includes': [
     'boringssl.gypi',
   ],
+  'target_defaults': {
+    'conditions': [
+      ['os_posix == 1', {
+        'cflags_c': [ '-std=c99' ],
+        'defines': [ '_XOPEN_SOURCE=700' ],
+      }],
+    ],
+  },
   'targets': [
     {
       'target_name': 'boringssl_nacl_win64',

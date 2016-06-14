@@ -116,7 +116,7 @@ bool URLRequestJob::Read(IOBuffer* buf, int buf_size, int *bytes_read) {
   DCHECK_LT(buf_size, 1000000);  // Sanity check.
   DCHECK(buf);
   DCHECK(bytes_read);
-  DCHECK(filtered_read_buffer_.get() == NULL);
+  DCHECK(!filtered_read_buffer_);
   DCHECK_EQ(0, filtered_read_buffer_len_);
 
   Error error = OK;

@@ -152,7 +152,7 @@ class NET_EXPORT ClientSocketHandle {
 
   // Only valid if there is no |socket_|.
   bool is_ssl_error() const {
-    DCHECK(socket_.get() == NULL);
+    DCHECK(!socket_);
     return is_ssl_error_;
   }
   // On an ERR_PROXY_AUTH_REQUESTED error, the |headers| and |auth_challenge|
