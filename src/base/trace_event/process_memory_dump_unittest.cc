@@ -20,7 +20,9 @@ namespace trace_event {
 namespace {
 
 const MemoryDumpArgs kDetailedDumpArgs = {MemoryDumpLevelOfDetail::DETAILED};
-const char* const kTestDumpNameWhitelist[] = {"Whitelisted/TestName", nullptr};
+const char* const kTestDumpNameWhitelist[] = {
+    "Whitelisted/TestName", "Whitelisted/TestName_0x?",
+    "Whitelisted/0x?/TestName", nullptr};
 
 TracedValue* GetHeapDump(const ProcessMemoryDump& pmd, const char* name) {
   auto it = pmd.heap_dumps().find(name);
@@ -268,11 +270,9 @@ TEST(ProcessMemoryDumpTest, BackgroundModeTest) {
   // Valid dump names.
   EXPECT_NE(black_hole_mad, pmd->CreateAllocatorDump("Whitelisted/TestName"));
   EXPECT_NE(black_hole_mad,
-            pmd->CreateAllocatorDump("Whitelisted/TestName0xA1b2"));
+            pmd->CreateAllocatorDump("Whitelisted/TestName_0xA1b2"));
   EXPECT_NE(black_hole_mad,
-            pmd->CreateAllocatorDump("Whitelisted/TestName_123"));
-  EXPECT_NE(black_hole_mad,
-            pmd->CreateAllocatorDump("Whitelisted_12/0xaB/TestName"));
+            pmd->CreateAllocatorDump("Whitelisted/0xaB/TestName"));
 
   // GetAllocatorDump is consistent.
   EXPECT_EQ(black_hole_mad, pmd->GetAllocatorDump("NotWhitelisted/TestName"));

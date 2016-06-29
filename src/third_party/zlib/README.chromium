@@ -36,3 +36,11 @@ Other changes to accomodate:
 - read_buf was moved from local to ZLIB_INTERNAL for fill_window_sse.c to use
 - INSERT_STRING macro was made a function, insert_string() and an implementation using CRC instruction added
 - some crc funcionality moved into crc32.c
+
+Update to zlib-1.2.8, generate a third patch which includes the jtkukunas optimisations. We may merge some more from jtkukunas branch later.
+Currently we upgrade to madler's version 1.2.8,merged SIMD optimisation and
+some other changes above.
+The step as follows:
+1.download a clean madler zlib from github.
+2.apply google.patch, mixed.patch, simd.patch sequencely.
+3.update these patches.

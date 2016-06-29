@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_chromium_client_stream.h"
 
+#include <utility>
+
 #include "base/callback_helpers.h"
 #include "base/location.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -31,7 +33,7 @@ QuicChromiumClientStream::QuicChromiumClientStream(
 
 QuicChromiumClientStream::~QuicChromiumClientStream() {
   if (delegate_)
-    delegate_->OnClose(connection_error());
+    delegate_->OnClose();
 }
 
 void QuicChromiumClientStream::OnStreamHeadersComplete(bool fin,
@@ -120,7 +122,7 @@ void QuicChromiumClientStream::OnDataAvailable() {
 
 void QuicChromiumClientStream::OnClose() {
   if (delegate_) {
-    delegate_->OnClose(connection_error());
+    delegate_->OnClose();
     delegate_ = nullptr;
     delegate_tasks_.clear();
   }
@@ -136,14 +138,20 @@ void QuicChromiumClientStream::OnCanWrite() {
 }
 
 size_t QuicChromiumClientStream::WriteHeaders(
-    const SpdyHeaderBlock& header_block,
+    SpdyHeaderBlock header_block,
     bool fin,
     QuicAckListenerInterface* ack_notifier_delegate) {
+  if (!session()->IsCryptoHandshakeConfirmed()) {
+    auto entry = header_block.find(":method");
+    DCHECK(entry != header_block.end());
+    DCHECK_NE("POST", entry->second);
+  }
   net_log_.AddEvent(
       NetLog::TYPE_QUIC_CHROMIUM_CLIENT_STREAM_SEND_REQUEST_HEADERS,
       base::Bind(&QuicRequestNetLogCallback, id(), &header_block,
                  QuicSpdyStream::priority()));
-  return QuicSpdyStream::WriteHeaders(header_block, fin, ack_notifier_delegate);
+  return QuicSpdyStream::WriteHeaders(std::move(header_block), fin,
+                                      ack_notifier_delegate);
 }
 
 SpdyPriority QuicChromiumClientStream::priority() const {

@@ -94,10 +94,6 @@ static int asn1_string_canon(ASN1_STRING *out, ASN1_STRING *in);
 static int i2d_name_canon(STACK_OF(STACK_OF_X509_NAME_ENTRY) * intname,
                           unsigned char **in);
 
-static int x509_name_ex_print(BIO *out, ASN1_VALUE **pval,
-                              int indent,
-                              const char *fname, const ASN1_PCTX *pctx);
-
 ASN1_SEQUENCE(X509_NAME_ENTRY) = {
         ASN1_SIMPLE(X509_NAME_ENTRY, object, ASN1_OBJECT),
         ASN1_SIMPLE(X509_NAME_ENTRY, value, ASN1_PRINTABLE)
@@ -133,7 +129,7 @@ static const ASN1_EXTERN_FUNCS x509_name_ff = {
     0,                          /* Default clear behaviour is OK */
     x509_name_ex_d2i,
     x509_name_ex_i2d,
-    x509_name_ex_print
+    NULL,
 };
 
 IMPLEMENT_EXTERN_ASN1(X509_NAME, V_ASN1_SEQUENCE, x509_name_ff)
@@ -334,16 +330,6 @@ static int x509_name_encode(X509_NAME *a)
     return -1;
 }
 
-static int x509_name_ex_print(BIO *out, ASN1_VALUE **pval,
-                              int indent,
-                              const char *fname, const ASN1_PCTX *pctx)
-{
-    if (X509_NAME_print_ex(out, (X509_NAME *)*pval,
-                           indent, pctx->nm_flags) <= 0)
-        return 0;
-    return 2;
-}
-
 /*
  * This function generates the canonical encoding of the Name structure. In
  * it all strings are converted to UTF8, leading, trailing and multiple
@@ -464,10 +450,10 @@ static int asn1_string_canon(ASN1_STRING *out, ASN1_STRING *in)
         len--;
     }
 
-    to = from + len - 1;
+    to = from + len;
 
     /* Ignore trailing spaces */
-    while ((len > 0) && !(*to & 0x80) && isspace(*to)) {
+    while ((len > 0) && !(to[-1] & 0x80) && isspace(to[-1])) {
         to--;
         len--;
     }

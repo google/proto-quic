@@ -5,21 +5,23 @@
 #include "crypto/ec_signature_creator.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "crypto/ec_signature_creator_impl.h"
 
 namespace crypto {
 
 namespace {
 
-ECSignatureCreatorFactory* g_factory_ = NULL;
+ECSignatureCreatorFactory* g_factory_ = nullptr;
 
 }  // namespace
 
 // static
-ECSignatureCreator* ECSignatureCreator::Create(ECPrivateKey* key) {
+std::unique_ptr<ECSignatureCreator> ECSignatureCreator::Create(
+    ECPrivateKey* key) {
   if (g_factory_)
     return g_factory_->Create(key);
-  return new ECSignatureCreatorImpl(key);
+  return base::MakeUnique<ECSignatureCreatorImpl>(key);
 }
 
 // static

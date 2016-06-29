@@ -4,6 +4,8 @@
 
 #include "net/spdy/buffered_spdy_framer.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/strings/string_util.h"
 
@@ -211,7 +213,7 @@ void BufferedSpdyFramer::OnStreamPadding(SpdyStreamId stream_id, size_t len) {
 
 SpdyHeadersHandlerInterface* BufferedSpdyFramer::OnHeaderFrameStart(
     SpdyStreamId stream_id) {
-  coalescer_.reset(new HeaderCoalescer());
+  coalescer_.reset(new HeaderCoalescer(protocol_version()));
   return coalescer_.get();
 }
 
@@ -376,14 +378,12 @@ SpdySerializedFrame* BufferedSpdyFramer::CreateSynStream(
     SpdyStreamId associated_stream_id,
     SpdyPriority priority,
     SpdyControlFlags flags,
-    const SpdyHeaderBlock* headers) {
-  SpdySynStreamIR syn_stream(stream_id);
+    SpdyHeaderBlock headers) {
+  SpdySynStreamIR syn_stream(stream_id, std::move(headers));
   syn_stream.set_associated_to_stream_id(associated_stream_id);
   syn_stream.set_priority(priority);
   syn_stream.set_fin((flags & CONTROL_FLAG_FIN) != 0);
   syn_stream.set_unidirectional((flags & CONTROL_FLAG_UNIDIRECTIONAL) != 0);
-  // TODO(hkhalil): Avoid copy here.
-  syn_stream.set_header_block(*headers);
   return new SpdySerializedFrame(spdy_framer_.SerializeSynStream(syn_stream));
 }
 
@@ -392,11 +392,9 @@ SpdySerializedFrame* BufferedSpdyFramer::CreateSynStream(
 SpdySerializedFrame* BufferedSpdyFramer::CreateSynReply(
     SpdyStreamId stream_id,
     SpdyControlFlags flags,
-    const SpdyHeaderBlock* headers) {
-  SpdySynReplyIR syn_reply(stream_id);
+    SpdyHeaderBlock headers) {
+  SpdySynReplyIR syn_reply(stream_id, std::move(headers));
   syn_reply.set_fin(flags & CONTROL_FLAG_FIN);
-  // TODO(hkhalil): Avoid copy here.
-  syn_reply.set_header_block(*headers);
   return new SpdySerializedFrame(spdy_framer_.SerializeSynReply(syn_reply));
 }
 
@@ -448,14 +446,13 @@ SpdySerializedFrame* BufferedSpdyFramer::CreateHeaders(
     SpdyStreamId stream_id,
     SpdyControlFlags flags,
     int weight,
-    const SpdyHeaderBlock* headers) {
-  SpdyHeadersIR headers_ir(stream_id);
+    SpdyHeaderBlock headers) {
+  SpdyHeadersIR headers_ir(stream_id, std::move(headers));
   headers_ir.set_fin((flags & CONTROL_FLAG_FIN) != 0);
   if (flags & HEADERS_FLAG_PRIORITY) {
     headers_ir.set_has_priority(true);
     headers_ir.set_weight(weight);
   }
-  headers_ir.set_header_block(*headers);
   return new SpdySerializedFrame(spdy_framer_.SerializeHeaders(headers_ir));
 }
 
@@ -483,9 +480,9 @@ SpdySerializedFrame* BufferedSpdyFramer::CreateDataFrame(SpdyStreamId stream_id,
 SpdySerializedFrame* BufferedSpdyFramer::CreatePushPromise(
     SpdyStreamId stream_id,
     SpdyStreamId promised_stream_id,
-    const SpdyHeaderBlock* headers) {
-  SpdyPushPromiseIR push_promise_ir(stream_id, promised_stream_id);
-  push_promise_ir.set_header_block(*headers);
+    SpdyHeaderBlock headers) {
+  SpdyPushPromiseIR push_promise_ir(stream_id, promised_stream_id,
+                                    std::move(headers));
   return new SpdySerializedFrame(
       spdy_framer_.SerializePushPromise(push_promise_ir));
 }

@@ -295,7 +295,8 @@ int HttpStreamParser::SendRequest(const std::string& request_line,
     while (todo) {
       int consumed = request_->upload_data_stream->Read(
           request_headers_.get(), static_cast<int>(todo), CompletionCallback());
-      DCHECK_GT(consumed, 0);  // Read() won't fail if not chunked.
+      // Read() must succeed synchronously if not chunked and in memory.
+      DCHECK_GT(consumed, 0);
       request_headers_->DidConsume(consumed);
       todo -= consumed;
     }
@@ -550,7 +551,8 @@ int HttpStreamParser::DoSendBodyComplete(int result) {
 int HttpStreamParser::DoSendRequestReadBodyComplete(int result) {
   // |result| is the result of read from the request body from the last call to
   // DoSendBody().
-  DCHECK_GE(result, 0);  // There won't be errors.
+  if (result < 0)
+    return result;
 
   // Chunked data needs to be encoded.
   if (request_->upload_data_stream->is_chunked()) {

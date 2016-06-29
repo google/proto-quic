@@ -176,7 +176,6 @@ class QuicStreamFactory::Job {
       const QuicSessionKey& key,
       bool was_alternative_service_recently_broken,
       int cert_verify_flags,
-      bool is_post,
       QuicServerInfo* server_info,
       const BoundNetLog& net_log);
 
@@ -229,7 +228,6 @@ class QuicStreamFactory::Job {
   SingleRequestHostResolver host_resolver_;
   QuicSessionKey key_;
   int cert_verify_flags_;
-  bool is_post_;
   bool was_alternative_service_recently_broken_;
   std::unique_ptr<QuicServerInfo> server_info_;
   bool started_another_job_;
@@ -249,7 +247,6 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
                             const QuicSessionKey& key,
                             bool was_alternative_service_recently_broken,
                             int cert_verify_flags,
-                            bool is_post,
                             QuicServerInfo* server_info,
                             const BoundNetLog& net_log)
     : io_state_(STATE_RESOLVE_HOST),
@@ -257,7 +254,6 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
       host_resolver_(host_resolver),
       key_(key),
       cert_verify_flags_(cert_verify_flags),
-      is_post_(is_post),
       was_alternative_service_recently_broken_(
           was_alternative_service_recently_broken),
       server_info_(server_info),
@@ -276,7 +272,6 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
       host_resolver_(host_resolver),  // unused
       key_(key),
       cert_verify_flags_(0),                            // unused
-      is_post_(false),                                  // unused
       was_alternative_service_recently_broken_(false),  // unused
       started_another_job_(false),                      // unused
       net_log_(session->net_log()),                     // unused
@@ -436,7 +431,7 @@ int QuicStreamFactory::Job::DoLoadServerInfo() {
     // If we are waiting to load server config from the disk cache, then start
     // another job.
     started_another_job_ = true;
-    factory_->CreateAuxilaryJob(key_, cert_verify_flags_, is_post_, net_log_);
+    factory_->CreateAuxilaryJob(key_, cert_verify_flags_, net_log_);
   }
   return rv;
 }
@@ -482,7 +477,7 @@ int QuicStreamFactory::Job::DoConnect() {
   if (!session_->connection()->connected()) {
     return ERR_QUIC_PROTOCOL_ERROR;
   }
-  bool require_confirmation = factory_->require_confirmation() || is_post_ ||
+  bool require_confirmation = factory_->require_confirmation() ||
                               was_alternative_service_recently_broken_;
 
   rv = session_->CryptoConnect(
@@ -602,7 +597,7 @@ QuicStreamFactory::QuicStreamFactory(
     NetLog* net_log,
     HostResolver* host_resolver,
     ClientSocketFactory* client_socket_factory,
-    base::WeakPtr<HttpServerProperties> http_server_properties,
+    HttpServerProperties* http_server_properties,
     CertVerifier* cert_verifier,
     CTPolicyEnforcer* ct_policy_enforcer,
     ChannelIDService* channel_id_service,
@@ -890,8 +885,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   QuicSessionKey key(destination, server_id);
   std::unique_ptr<Job> job(
       new Job(this, host_resolver_, key, WasQuicRecentlyBroken(server_id),
-              cert_verify_flags, method == "POST" /* is_post */,
-              quic_server_info, net_log));
+              cert_verify_flags, quic_server_info, net_log));
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
@@ -934,11 +928,10 @@ bool QuicStreamFactory::QuicSessionKey::operator==(
 
 void QuicStreamFactory::CreateAuxilaryJob(const QuicSessionKey& key,
                                           int cert_verify_flags,
-                                          bool is_post,
                                           const BoundNetLog& net_log) {
   Job* aux_job =
       new Job(this, host_resolver_, key, WasQuicRecentlyBroken(key.server_id()),
-              cert_verify_flags, is_post, nullptr, net_log);
+              cert_verify_flags, nullptr, net_log);
   active_jobs_[key.server_id()].insert(aux_job);
   task_runner_->PostTask(FROM_HERE,
                          base::Bind(&QuicStreamFactory::Job::RunAuxilaryJob,
@@ -1558,13 +1551,6 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
     static_cast<UDPClientSocket*>(socket)->UseNonBlockingIO();
 #endif
   }
-
-#if defined(OS_WIN)
-  // TODO(rtenneti): Delete the check for TSVIPCli.dll loaded and the histogram.
-  bool tsvipcli_loaded = ::GetModuleHandle(L"TSVIPCli.dll") != NULL;
-  UMA_HISTOGRAM_BOOLEAN("Net.QuicStreamFactory.TSVIPCliIsLoaded",
-                        tsvipcli_loaded);
-#endif
 
   int rv;
   if (migrate_sessions_on_network_change_) {

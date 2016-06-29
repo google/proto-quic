@@ -31,23 +31,46 @@ bool BuildTokenBindingID(crypto::ECPrivateKey* key, CBB* out) {
          CBB_flush(out);
 }
 
+bool ECDSA_SIGToRaw(ECDSA_SIG* ec_sig, EC_KEY* ec, std::vector<uint8_t>* out) {
+  const EC_GROUP* group = EC_KEY_get0_group(ec);
+  const BIGNUM* order = EC_GROUP_get0_order(group);
+  size_t len = BN_num_bytes(order);
+  out->resize(2 * len);
+  if (!BN_bn2bin_padded(out->data(), len, ec_sig->r) ||
+      !BN_bn2bin_padded(out->data() + len, len, ec_sig->s)) {
+    return false;
+  }
+  return true;
+}
+
+ECDSA_SIG* RawToECDSA_SIG(EC_KEY* ec, base::StringPiece sig) {
+  crypto::ScopedECDSA_SIG raw_sig(ECDSA_SIG_new());
+  const EC_GROUP* group = EC_KEY_get0_group(ec);
+  const BIGNUM* order = EC_GROUP_get0_order(group);
+  size_t group_size = BN_num_bytes(order);
+  if (sig.size() != group_size * 2)
+    return nullptr;
+  const uint8_t* sigp = reinterpret_cast<const uint8_t*>(sig.data());
+  if (!BN_bin2bn(sigp, group_size, raw_sig->r) ||
+      !BN_bin2bn(sigp + group_size, group_size, raw_sig->s)) {
+    return nullptr;
+  }
+  return raw_sig.release();
+}
+
 }  // namespace
 
 bool SignTokenBindingEkm(base::StringPiece ekm,
                          crypto::ECPrivateKey* key,
                          std::vector<uint8_t>* out) {
-  size_t sig_len;
   const uint8_t* ekm_data = reinterpret_cast<const uint8_t*>(ekm.data());
-  crypto::ScopedEVP_PKEY_CTX pctx(EVP_PKEY_CTX_new(key->key(), nullptr));
-  if (!EVP_PKEY_sign_init(pctx.get()) ||
-      !EVP_PKEY_sign(pctx.get(), nullptr, &sig_len, ekm_data, ekm.size())) {
+  EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key->key());
+  if (!ec_key)
     return false;
-  }
-  out->resize(sig_len);
-  if (!EVP_PKEY_sign(pctx.get(), out->data(), &sig_len, ekm_data, ekm.size()))
+  crypto::ScopedECDSA_SIG sig(ECDSA_do_sign(ekm_data, ekm.size(), ec_key));
+  if (!sig)
     return false;
-  out->resize(sig_len);
-  return true;
+  return ECDSA_SIGToRaw(sig.get(), ec_key, out);
 }
 
 Error BuildTokenBindingMessageFromTokenBindings(
@@ -145,18 +168,11 @@ bool VerifyEKMSignature(base::StringPiece ec_point,
       reinterpret_cast<const uint8_t*>(ec_point.data());
   if (o2i_ECPublicKey(&keyp, &ec_point_data, ec_point.size()) != key.get())
     return false;
-  crypto::ScopedEVP_PKEY pkey(EVP_PKEY_new());
-  if (!EVP_PKEY_assign_EC_KEY(pkey.get(), key.release()))
+  crypto::ScopedECDSA_SIG sig(RawToECDSA_SIG(keyp, signature));
+  if (!sig)
     return false;
-  crypto::ScopedEVP_PKEY_CTX pctx(EVP_PKEY_CTX_new(pkey.get(), nullptr));
-  if (!EVP_PKEY_verify_init(pctx.get()) ||
-      !EVP_PKEY_verify(
-          pctx.get(), reinterpret_cast<const uint8_t*>(signature.data()),
-          signature.size(), reinterpret_cast<const uint8_t*>(ekm.data()),
-          ekm.size())) {
-    return false;
-  }
-  return true;
+  return !!ECDSA_do_verify(reinterpret_cast<const uint8_t*>(ekm.data()),
+                           ekm.size(), sig.get(), keyp);
 }
 
 }  // namespace net

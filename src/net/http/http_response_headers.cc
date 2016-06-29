@@ -354,6 +354,10 @@ void HttpResponseHeaders::AddHeader(const std::string& header) {
   Parse(new_raw_headers);
 }
 
+void HttpResponseHeaders::AddCookie(const std::string& cookie_string) {
+  AddHeader("Set-Cookie: " + cookie_string);
+}
+
 void HttpResponseHeaders::ReplaceStatusLine(const std::string& new_status) {
   CheckDoesNotHaveEmbededNulls(new_status);
   // Copy up to the null byte.  This just copies the status line.

@@ -247,6 +247,13 @@ int64_t URLRequest::GetTotalSentBytes() const {
   return job_->GetTotalSentBytes();
 }
 
+int64_t URLRequest::GetRawBodyBytes() const {
+  if (!job_.get())
+    return 0;
+
+  return job_->prefilter_bytes_read();
+}
+
 LoadStateWithParam URLRequest::GetLoadState() const {
   // The !blocked_by_.empty() check allows |this| to report it's blocked on a
   // delegate before it has been started.
@@ -386,11 +393,6 @@ bool URLRequest::GetRemoteEndpoint(IPEndPoint* endpoint) const {
     return false;
 
   return job_->GetRemoteEndpoint(endpoint);
-}
-
-bool URLRequest::GetResponseCookies(ResponseCookies* cookies) {
-  DCHECK(job_.get());
-  return job_->GetResponseCookies(cookies);
 }
 
 void URLRequest::GetMimeType(string* mime_type) const {
@@ -1019,22 +1021,6 @@ void URLRequest::SetPriority(RequestPriority priority) {
         NetLog::StringCallback("priority", RequestPriorityToString(priority_)));
     job_->SetPriority(priority_);
   }
-}
-
-bool URLRequest::GetHSTSRedirect(GURL* redirect_url) const {
-  const GURL& url = this->url();
-  bool scheme_is_http = url.SchemeIs("http");
-  if (!scheme_is_http && !url.SchemeIs("ws"))
-    return false;
-  TransportSecurityState* state = context()->transport_security_state();
-  if (state && state->ShouldUpgradeToSSL(url.host())) {
-    GURL::Replacements replacements;
-    const char* new_scheme = scheme_is_http ? "https" : "wss";
-    replacements.SetSchemeStr(new_scheme);
-    *redirect_url = url.ReplaceComponents(replacements);
-    return true;
-  }
-  return false;
 }
 
 void URLRequest::NotifyAuthRequired(AuthChallengeInfo* auth_info) {

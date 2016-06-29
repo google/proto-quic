@@ -24,9 +24,12 @@
 namespace net {
 
 // static
-void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(struct msghdr* hdr,
-                                                       IPAddress* address,
-                                                       QuicTime* timestamp) {
+void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
+    struct msghdr* hdr,
+    IPAddress* address,
+    QuicTime* timestamp,
+    QuicWallTime* walltimestamp,
+    bool latched_walltimestamps) {
   if (hdr->msg_controllen > 0) {
     for (cmsghdr* cmsg = CMSG_FIRSTHDR(hdr); cmsg != nullptr;
          cmsg = CMSG_NXTHDR(hdr, cmsg)) {
@@ -49,8 +52,12 @@ void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(struct msghdr* hdr,
         timespec* ts = &lts->systime;
         int64_t usec = (static_cast<int64_t>(ts->tv_sec) * 1000 * 1000) +
                        (static_cast<int64_t>(ts->tv_nsec) / 1000);
-        *timestamp =
-            QuicTime::Zero().Add(QuicTime::Delta::FromMicroseconds(usec));
+        if (latched_walltimestamps) {
+          *walltimestamp = QuicWallTime::FromUNIXMicroseconds(usec);
+        } else {
+          *timestamp =
+              QuicTime::Zero().Add(QuicTime::Delta::FromMicroseconds(usec));
+        }
       }
     }
   }
@@ -116,6 +123,8 @@ int QuicSocketUtils::ReadPacket(int fd,
                                 QuicPacketCount* dropped_packets,
                                 IPAddress* self_address,
                                 QuicTime* timestamp,
+                                QuicWallTime* walltimestamp,
+                                bool latched_walltimestamps,
                                 IPEndPoint* peer_address) {
   DCHECK(peer_address != nullptr);
   char cbuf[kSpaceForCmsg];
@@ -162,12 +171,18 @@ int QuicSocketUtils::ReadPacket(int fd,
     self_address = &stack_address;
   }
 
+  QuicWallTime stack_walltimestamp = QuicWallTime::FromUNIXMicroseconds(0);
+  if (walltimestamp == nullptr) {
+    walltimestamp = &stack_walltimestamp;
+  }
+
   QuicTime stack_timestamp = QuicTime::Zero();
   if (timestamp == nullptr) {
     timestamp = &stack_timestamp;
   }
 
-  GetAddressAndTimestampFromMsghdr(&hdr, self_address, timestamp);
+  GetAddressAndTimestampFromMsghdr(&hdr, self_address, timestamp, walltimestamp,
+                                   latched_walltimestamps);
 
   if (raw_address.ss_family == AF_INET) {
     CHECK(peer_address->FromSockAddr(

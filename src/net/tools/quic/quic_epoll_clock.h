@@ -33,6 +33,11 @@ class QuicEpollClock : public QuicClock {
   // Note: this uses significant resources, please use only if needed.
   QuicWallTime WallNow() const override;
 
+  // Override to do less work in this implementation.  The epoll clock is
+  // already based on system (unix epoch) time, no conversion required.
+  QuicTime ConvertWallTimeToQuicTime(
+      const QuicWallTime& walltime) const override;
+
  protected:
   EpollServer* epoll_server_;
 

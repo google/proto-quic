@@ -28,11 +28,13 @@ enum class MemoryDumpType {
 };
 
 // Tells the MemoryDumpProvider(s) how much detailed their dumps should be.
-enum class MemoryDumpLevelOfDetail {
+enum class MemoryDumpLevelOfDetail : uint32_t {
+  FIRST,
+
   // For background tracing mode. The dump time is quick, and typically just the
   // totals are expected. Suballocations need not be specified. Dump name must
   // contain only pre-defined strings and string arguments cannot be added.
-  BACKGROUND,
+  BACKGROUND = FIRST,
 
   // For the levels below, MemoryDumpProvider instances must guarantee that the
   // total size reported in the root node is consistent. Only the granularity of
@@ -44,7 +46,6 @@ enum class MemoryDumpLevelOfDetail {
   // Unrestricted amount of entries per dump.
   DETAILED,
 
-  // For IPC Macros.
   LAST = DETAILED
 };
 

@@ -14,7 +14,6 @@
 
 #include "base/containers/mru_cache.h"
 #include "base/macros.h"
-#include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
@@ -230,9 +229,6 @@ class NET_EXPORT HttpServerProperties {
   HttpServerProperties() {}
   virtual ~HttpServerProperties() {}
 
-  // Gets a weak pointer for this object.
-  virtual base::WeakPtr<HttpServerProperties> GetWeakPtr() = 0;
-
   // Deletes all data.
   virtual void Clear() = 0;
 
@@ -307,9 +303,6 @@ class NET_EXPORT HttpServerProperties {
   // |alternative_service.host| must not be empty.
   virtual void ConfirmAlternativeService(
       const AlternativeService& alternative_service) = 0;
-
-  // Clear all alternative services for |origin|.
-  virtual void ClearAlternativeServices(const url::SchemeHostPort& origin) = 0;
 
   // Returns all alternative service mappings.
   // Returned alternative services may have empty hostnames.

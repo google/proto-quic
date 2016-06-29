@@ -1004,6 +1004,17 @@ void ValidateInstantEventPresentOnEveryThread(const ListValue& trace_parsed,
   }
 }
 
+void CheckTraceDefaultCategoryFilters(const TraceLog& trace_log) {
+  // Default enables all category filters except the disabled-by-default-* ones.
+  EXPECT_TRUE(*trace_log.GetCategoryGroupEnabled("foo"));
+  EXPECT_TRUE(*trace_log.GetCategoryGroupEnabled("bar"));
+  EXPECT_TRUE(*trace_log.GetCategoryGroupEnabled("foo,bar"));
+  EXPECT_TRUE(*trace_log.GetCategoryGroupEnabled(
+        "foo,disabled-by-default-foo"));
+  EXPECT_FALSE(*trace_log.GetCategoryGroupEnabled(
+        "disabled-by-default-foo,disabled-by-default-bar"));
+}
+
 }  // namespace
 
 // Simple Test for emitting data and validating it was received.
@@ -1963,7 +1974,7 @@ TEST_F(TraceEventTestFixture, TraceCategoriesAfterNestedEnable) {
   EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("foo"));
   EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("baz"));
   EXPECT_STREQ(
-    "-*Debug,-*Test",
+    "",
     trace_log->GetCurrentTraceConfig().ToCategoryFilterString().c_str());
   trace_log->SetDisabled();
   trace_log->SetDisabled();
@@ -1997,6 +2008,48 @@ TEST_F(TraceEventTestFixture, TraceCategoriesAfterNestedEnable) {
     "disabled-by-default-cc,disabled-by-default-gpu",
     trace_log->GetCurrentTraceConfig().ToCategoryFilterString().c_str());
   trace_log->SetDisabled();
+  trace_log->SetDisabled();
+}
+
+TEST_F(TraceEventTestFixture, TraceWithDefaultCategoryFilters) {
+  TraceLog* trace_log = TraceLog::GetInstance();
+
+  trace_log->SetEnabled(TraceConfig(), TraceLog::RECORDING_MODE);
+  CheckTraceDefaultCategoryFilters(*trace_log);
+  trace_log->SetDisabled();
+
+  trace_log->SetEnabled(TraceConfig("", ""), TraceLog::RECORDING_MODE);
+  CheckTraceDefaultCategoryFilters(*trace_log);
+  trace_log->SetDisabled();
+
+  trace_log->SetEnabled(TraceConfig("*", ""), TraceLog::RECORDING_MODE);
+  CheckTraceDefaultCategoryFilters(*trace_log);
+  trace_log->SetDisabled();
+
+  trace_log->SetEnabled(TraceConfig(""), TraceLog::RECORDING_MODE);
+  CheckTraceDefaultCategoryFilters(*trace_log);
+  trace_log->SetDisabled();
+}
+
+TEST_F(TraceEventTestFixture, TraceWithDisabledByDefaultCategoryFilters) {
+  TraceLog* trace_log = TraceLog::GetInstance();
+
+  trace_log->SetEnabled(TraceConfig("foo,disabled-by-default-foo", ""),
+                        TraceLog::RECORDING_MODE);
+  EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("foo"));
+  EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("disabled-by-default-foo"));
+  EXPECT_FALSE(*trace_log->GetCategoryGroupEnabled("bar"));
+  EXPECT_FALSE(*trace_log->GetCategoryGroupEnabled("disabled-by-default-bar"));
+  trace_log->SetDisabled();
+
+  // Enabling only the disabled-by-default-* category means the default ones
+  // are also enabled.
+  trace_log->SetEnabled(TraceConfig("disabled-by-default-foo", ""),
+                        TraceLog::RECORDING_MODE);
+  EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("disabled-by-default-foo"));
+  EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("foo"));
+  EXPECT_TRUE(*trace_log->GetCategoryGroupEnabled("bar"));
+  EXPECT_FALSE(*trace_log->GetCategoryGroupEnabled("disabled-by-default-bar"));
   trace_log->SetDisabled();
 }
 

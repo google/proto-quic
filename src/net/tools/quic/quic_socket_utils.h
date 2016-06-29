@@ -49,9 +49,13 @@ class QuicSocketUtils {
   // Fills in |address| if |hdr| contains IP_PKTINFO or IPV6_PKTINFO. Fills in
   // |timestamp| if |hdr| contains |SO_TIMESTAMPING|. |address| and |timestamp|
   // must not be null.
+  // TODO(rjshade): Delete the |timestamp| argument when removing
+  // FLAGS_quic_socket_timestamps_walltime
   static void GetAddressAndTimestampFromMsghdr(struct msghdr* hdr,
                                                IPAddress* address,
-                                               QuicTime* timestamp);
+                                               QuicTime* timestamp,
+                                               QuicWallTime* walltimestamp,
+                                               bool latched_walltimestamps);
 
   // If the msghdr contains an SO_RXQ_OVFL entry, this will set dropped_packets
   // to the correct value and return true. Otherwise it will return false.
@@ -86,12 +90,16 @@ class QuicSocketUtils {
   // received packet, assuming a packet was read and the platform supports
   // packet receipt timestamping. If the platform does not support packet
   // receipt timestamping, timestamp will not be changed.
+  // TODO(rjshade): Delete the |timestamp| argument when removing
+  // FLAGS_quic_socket_timestamps_walltime
   static int ReadPacket(int fd,
                         char* buffer,
                         size_t buf_len,
                         QuicPacketCount* dropped_packets,
                         IPAddress* self_address,
                         QuicTime* timestamp,
+                        QuicWallTime* walltimestamp,
+                        bool latched_walltimestamps,
                         IPEndPoint* peer_address);
 
   // Writes buf_len to the socket. If writing is successful, sets the result's

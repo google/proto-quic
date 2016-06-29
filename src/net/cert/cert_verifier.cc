@@ -63,6 +63,11 @@ CertVerifier::RequestParams::RequestParams(const RequestParams& other) =
     default;
 CertVerifier::RequestParams::~RequestParams() {}
 
+bool CertVerifier::RequestParams::operator==(
+    const CertVerifier::RequestParams& other) const {
+  return key_ == other.key_;
+}
+
 bool CertVerifier::RequestParams::operator<(
     const CertVerifier::RequestParams& other) const {
   return key_ < other.key_;

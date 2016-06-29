@@ -46,9 +46,6 @@ typedef std::vector<NextProto> NextProtoVector;
 // Returns true if |next_proto| is a version of SPDY or HTTP/2.
 bool NextProtoIsSPDY(NextProto next_proto);
 
-// Remove HTTP/2 from |next_protos|.
-NET_EXPORT void DisableHTTP2(NextProtoVector* next_protos);
-
 }  // namespace net
 
 #endif  // NET_SOCKET_NEXT_PROTO_H_

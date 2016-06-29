@@ -4,6 +4,8 @@
 
 #include "net/quic/bidirectional_stream_quic_impl.h"
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/logging.h"
@@ -33,6 +35,7 @@ BidirectionalStreamQuicImpl::BidirectionalStreamQuicImpl(
       has_sent_headers_(false),
       has_received_headers_(false),
       send_request_headers_automatically_(true),
+      waiting_for_confirmation_(false),
       weak_factory_(this) {
   DCHECK(session_);
   session_->AddObserver(this);
@@ -95,7 +98,7 @@ void BidirectionalStreamQuicImpl::SendRequestHeaders() {
                                    http_request_info.extra_headers, HTTP2, true,
                                    &headers);
   size_t headers_bytes_sent = stream_->WriteHeaders(
-      headers, request_info_->end_stream_on_headers, nullptr);
+      std::move(headers), request_info_->end_stream_on_headers, nullptr);
   headers_bytes_sent_ += headers_bytes_sent;
   has_sent_headers_ = true;
 }
@@ -259,10 +262,10 @@ void BidirectionalStreamQuicImpl::OnDataAvailable() {
     delegate_->OnDataRead(rv);
 }
 
-void BidirectionalStreamQuicImpl::OnClose(QuicErrorCode error) {
+void BidirectionalStreamQuicImpl::OnClose() {
   DCHECK(stream_);
 
-  if (error == QUIC_NO_ERROR &&
+  if (stream_->connection_error() == QUIC_NO_ERROR &&
       stream_->stream_error() == QUIC_STREAM_NO_ERROR) {
     ResetStream();
     return;
@@ -281,6 +284,8 @@ bool BidirectionalStreamQuicImpl::HasSendHeadersComplete() {
 
 void BidirectionalStreamQuicImpl::OnCryptoHandshakeConfirmed() {
   was_handshake_confirmed_ = true;
+  if (waiting_for_confirmation_)
+    NotifyStreamReady();
 }
 
 void BidirectionalStreamQuicImpl::OnSessionClosed(
@@ -296,11 +301,11 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
   DCHECK(rv == OK || !stream_);
   if (rv == OK) {
     stream_->SetDelegate(this);
-    if (send_request_headers_automatically_) {
-      SendRequestHeaders();
+    if (!was_handshake_confirmed_ && request_info_->method == "POST") {
+      waiting_for_confirmation_ = true;
+      return;
     }
-    if (delegate_)
-      delegate_->OnStreamReady(has_sent_headers_);
+    NotifyStreamReady();
   } else {
     NotifyError(rv);
   }
@@ -330,6 +335,14 @@ void BidirectionalStreamQuicImpl::NotifyError(int error) {
     delegate->OnFailed(error);
     // |this| might be destroyed at this point.
   }
+}
+
+void BidirectionalStreamQuicImpl::NotifyStreamReady() {
+  if (send_request_headers_automatically_) {
+    SendRequestHeaders();
+  }
+  if (delegate_)
+    delegate_->OnStreamReady(has_sent_headers_);
 }
 
 void BidirectionalStreamQuicImpl::ResetStream() {

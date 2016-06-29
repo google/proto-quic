@@ -9,14 +9,13 @@
 #include <stddef.h>
 
 #include <iostream>
+#include <memory>
 
+#include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
-#include "base/process/launch.h"
-#include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
-#include "base/win/windows_version.h"
 
 namespace base {
 namespace debug {

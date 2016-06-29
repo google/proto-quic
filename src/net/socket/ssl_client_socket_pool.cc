@@ -160,8 +160,6 @@ void SSLConnectJob::GetAdditionalErrorState(ClientSocketHandle* handle) {
   handle->set_ssl_error_response_info(error_response_info_);
   if (!connect_timing_.ssl_start.is_null())
     handle->set_is_ssl_error(true);
-  if (ssl_socket_)
-    handle->set_ssl_failure_state(ssl_socket_->GetSSLFailureState());
 
   handle->set_connection_attempts(connection_attempts_);
 }

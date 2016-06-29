@@ -116,32 +116,7 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
     connection_group = "ftp/" + connection_group;
   }
   if (using_ssl) {
-    // All connections in a group should use the same SSLConfig settings.
-    // Encode version_max in the connection group's name, unless it's the
-    // default version_max. (We want the common case to use the shortest
-    // encoding). A version_max of TLS 1.1 is encoded as "ssl(max:3.2)/"
-    // rather than "tlsv1.1/" because the actual protocol version, which
-    // is selected by the server, may not be TLS 1.1. Do not encode
-    // version_min in the connection group's name because version_min
-    // should be the same for all connections, whereas version_max may
-    // change for version fallbacks.
     std::string prefix = "ssl/";
-    if (ssl_config_for_origin.version_max != kDefaultSSLVersionMax) {
-      switch (ssl_config_for_origin.version_max) {
-        case SSL_PROTOCOL_VERSION_TLS1_2:
-          prefix = "ssl(max:3.3)/";
-          break;
-        case SSL_PROTOCOL_VERSION_TLS1_1:
-          prefix = "ssl(max:3.2)/";
-          break;
-        case SSL_PROTOCOL_VERSION_TLS1:
-          prefix = "ssl(max:3.1)/";
-          break;
-        default:
-          CHECK(false);
-          break;
-      }
-    }
     // Place sockets with and without deprecated ciphers into separate
     // connection groups.
     if (ssl_config_for_origin.deprecated_cipher_suites_enabled)

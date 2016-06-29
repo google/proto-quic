@@ -339,7 +339,8 @@ TEST_F(MemoryDumpManagerTest, SharedSessionState) {
   RegisterDumpProvider(&mdp2);
 
   EnableTracingWithLegacyCategories(MemoryDumpManager::kTraceCategory);
-  const MemoryDumpSessionState* session_state = mdm_->session_state().get();
+  const MemoryDumpSessionState* session_state =
+      mdm_->session_state_for_testing().get();
   EXPECT_CALL(*delegate_, RequestGlobalMemoryDump(_, _)).Times(2);
   EXPECT_CALL(mdp1, OnMemoryDump(_, _))
       .Times(2)
@@ -1148,7 +1149,19 @@ TEST_F(MemoryDumpManagerTest, TestBackgroundTracingSetup) {
   EXPECT_CALL(*delegate_, RequestGlobalMemoryDump(_, _)).Times(AnyNumber());
 
   EnableTracingWithTraceConfig(
-      TraceConfigMemoryTestUtil::GetTraceConfig_BackgroundTrigger());
+      TraceConfigMemoryTestUtil::GetTraceConfig_BackgroundTrigger(
+          1 /* period_ms */));
+
+  // Only background mode dumps should be allowed with the trace config.
+  last_callback_success_ = false;
+  RequestGlobalDumpAndWait(MemoryDumpType::EXPLICITLY_TRIGGERED,
+                           MemoryDumpLevelOfDetail::LIGHT);
+  EXPECT_FALSE(last_callback_success_);
+  last_callback_success_ = false;
+  RequestGlobalDumpAndWait(MemoryDumpType::EXPLICITLY_TRIGGERED,
+                           MemoryDumpLevelOfDetail::DETAILED);
+  EXPECT_FALSE(last_callback_success_);
+
   ASSERT_TRUE(IsPeriodicDumpingEnabled());
   run_loop.Run();
   DisableTracing();

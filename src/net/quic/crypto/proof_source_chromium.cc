@@ -61,8 +61,8 @@ bool ProofSourceChromium::Initialize(const base::FilePath& cert_path,
 
   const uint8_t* p = reinterpret_cast<const uint8_t*>(key_data.data());
   std::vector<uint8_t> input(p, p + key_data.size());
-  private_key_.reset(crypto::RSAPrivateKey::CreateFromPrivateKeyInfo(input));
-  if (private_key_.get() == nullptr) {
+  private_key_ = crypto::RSAPrivateKey::CreateFromPrivateKeyInfo(input);
+  if (!private_key_) {
     DLOG(FATAL) << "Unable to create private key.";
     return false;
   }

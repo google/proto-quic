@@ -197,20 +197,44 @@ bool GetNetworkListImpl(NetworkInterfaceList* networks,
 }  // namespace internal
 
 bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
-  ULONG len = 0;
+  // Max number of times to retry GetAdaptersAddresses due to
+  // ERROR_BUFFER_OVERFLOW. If GetAdaptersAddresses returns this indefinitely
+  // due to an unforseen reason, we don't want to be stuck in an endless loop.
+  static constexpr int MAX_GETADAPTERSADDRESSES_TRIES = 10;
+  // Use an initial buffer size of 15KB, as recommended by MSDN. See:
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365915(v=vs.85).aspx
+  static constexpr int INITIAL_BUFFER_SIZE = 15000;
+
+  ULONG len = INITIAL_BUFFER_SIZE;
   ULONG flags = 0;
+  // Initial buffer allocated on stack.
+  char initial_buf[INITIAL_BUFFER_SIZE];
+  // Dynamic buffer in case initial buffer isn't large enough.
+  std::unique_ptr<char[]> buf;
+
   // GetAdaptersAddresses() may require IO operations.
   base::ThreadRestrictions::AssertIOAllowed();
-  ULONG result = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, NULL, &len);
-  if (result != ERROR_BUFFER_OVERFLOW) {
+
+  IP_ADAPTER_ADDRESSES* adapters =
+      reinterpret_cast<IP_ADAPTER_ADDRESSES*>(&initial_buf);
+  ULONG result =
+      GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, adapters, &len);
+
+  // If we get ERROR_BUFFER_OVERFLOW, call GetAdaptersAddresses in a loop,
+  // because the required size may increase between successive calls, resulting
+  // in ERROR_BUFFER_OVERFLOW multiple times.
+  for (int tries = 1; result == ERROR_BUFFER_OVERFLOW &&
+                      tries < MAX_GETADAPTERSADDRESSES_TRIES;
+       ++tries) {
+    buf.reset(new char[len]);
+    adapters = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buf.get());
+    result = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, adapters, &len);
+  }
+
+  if (result == ERROR_NO_DATA) {
     // There are 0 networks.
     return true;
-  }
-  std::unique_ptr<char[]> buf(new char[len]);
-  IP_ADAPTER_ADDRESSES* adapters =
-      reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buf.get());
-  result = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, adapters, &len);
-  if (result != NO_ERROR) {
+  } else if (result != NO_ERROR) {
     LOG(ERROR) << "GetAdaptersAddresses failed: " << result;
     return false;
   }

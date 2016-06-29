@@ -9,10 +9,10 @@
 #include <string>
 
 #include "base/strings/string_number_conversions.h"
-#include "net/base/test_data_directory.h"
 #include "net/cert/x509_certificate.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/ct_test_util.h"
+#include "net/test/test_data_directory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

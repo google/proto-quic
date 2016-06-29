@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/macros.h"
@@ -35,8 +36,8 @@ class CRYPTO_EXPORT SignatureCreator {
   // Create an instance. The caller must ensure that the provided PrivateKey
   // instance outlives the created SignatureCreator. Uses the HashAlgorithm
   // specified.
-  static SignatureCreator* Create(RSAPrivateKey* key, HashAlgorithm hash_alg);
-
+  static std::unique_ptr<SignatureCreator> Create(RSAPrivateKey* key,
+                                                  HashAlgorithm hash_alg);
 
   // Signs the precomputed |hash_alg| digest |data| using private |key| as
   // specified in PKCS #1 v1.5.

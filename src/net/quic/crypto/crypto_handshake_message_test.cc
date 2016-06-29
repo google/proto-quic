@@ -35,7 +35,7 @@ TEST(CryptoHandshakeMessageTest, DebugStringWithUintVector) {
 TEST(CryptoHandshakeMessageTest, DebugStringWithTagVector) {
   CryptoHandshakeMessage message;
   message.set_tag(kCHLO);
-  message.SetTaglist(kCOPT, kTBBR, kPAD, kBYTE, 0);
+  message.SetVector(kCOPT, QuicTagVector{kTBBR, kPAD, kBYTE});
   EXPECT_EQ("CHLO<\n  COPT: 'TBBR','PAD ','BYTE'\n>", message.DebugString());
 }
 

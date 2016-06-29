@@ -25,6 +25,7 @@ SSLConfig::SSLConfig()
       version_max(kDefaultSSLVersionMax),
       version_fallback_min(kDefaultSSLVersionFallbackMin),
       deprecated_cipher_suites_enabled(false),
+      dhe_enabled(false),
       channel_id_enabled(true),
       false_start_enabled(true),
       signed_cert_timestamps_enabled(true),

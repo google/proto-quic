@@ -19,7 +19,6 @@
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/debug/leak_annotations.h"
-#include "base/environment.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
@@ -29,7 +28,6 @@
 #include "base/nix/xdg_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_restrictions.h"
@@ -243,6 +241,7 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
     DCHECK(!client_);
     DCHECK(!task_runner_.get());
     task_runner_ = glib_task_runner;
+
     client_ = gconf_client_get_default();
     if (!client_) {
       // It's not clear whether/when this can return NULL.
@@ -813,6 +812,13 @@ bool SettingGetterImplGSettings::LoadAndCheckVersion(
       VLOG(1) << "Cannot load gio library. Will fall back to gconf.";
       return false;
     }
+
+    // g_type_init will be deprecated in 2.36. 2.35 is the development
+    // version for 2.36, hence do not call g_type_init starting 2.35.
+    // http://developer.gnome.org/gobject/unstable/gobject-Type-Information.html#g-type-init
+    if (libgio_loader_.glib_check_version(2, 35, 0)) {
+      libgio_loader_.g_type_init();
+    }
   }
 
   GSettings* client = NULL;
@@ -826,23 +832,15 @@ bool SettingGetterImplGSettings::LoadAndCheckVersion(
   }
   g_object_unref(client);
 
-  std::string path;
-  if (!env->GetVar("PATH", &path)) {
-    LOG(ERROR) << "No $PATH variable. Assuming no gnome-network-properties.";
-  } else {
-    // Yes, we're on the UI thread. Yes, we're accessing the file system.
-    // Sadly, we don't have much choice. We need the proxy settings and we
-    // need them now, and to figure out where to get them, we have to check
-    // for this binary. See http://crbug.com/69057 for additional details.
+  // Yes, we're on the UI thread. Yes, we're accessing the file system.
+  // Sadly, we don't have much choice. We need the proxy settings and we
+  // need them now, and to figure out where to get them, we have to check
+  // for this binary. See http://crbug.com/69057 for additional details.
+  {
     base::ThreadRestrictions::ScopedAllowIO allow_io;
-
-    for (const base::StringPiece& path_str : base::SplitStringPiece(
-             path, ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
-      base::FilePath file(path_str);
-      if (base::PathExists(file.Append("gnome-network-properties"))) {
-        VLOG(1) << "Found gnome-network-properties. Will fall back to gconf.";
-        return false;
-      }
+    if (base::ExecutableExistsInPath(env, "gnome-network-properties")) {
+      VLOG(1) << "Found gnome-network-properties. Will fall back to gconf.";
+      return false;
     }
   }
 

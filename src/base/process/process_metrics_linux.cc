@@ -534,6 +534,9 @@ const size_t kDiskWeightedIOTime = 13;
 SystemMemoryInfoKB::SystemMemoryInfoKB() {
   total = 0;
   free = 0;
+#if defined(OS_LINUX)
+  available = 0;
+#endif
   buffers = 0;
   cached = 0;
   active_anon = 0;
@@ -564,6 +567,9 @@ std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
 
   res->SetInteger("total", total);
   res->SetInteger("free", free);
+#if defined(OS_LINUX)
+  res->SetInteger("available", available);
+#endif
   res->SetInteger("buffers", buffers);
   res->SetInteger("cached", cached);
   res->SetInteger("active_anon", active_anon);
@@ -621,6 +627,10 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
       target = &meminfo->total;
     else if (tokens[0] == "MemFree:")
       target = &meminfo->free;
+#if defined(OS_LINUX)
+    else if (tokens[0] == "MemAvailable:")
+      target = &meminfo->available;
+#endif
     else if (tokens[0] == "Buffers:")
       target = &meminfo->buffers;
     else if (tokens[0] == "Cached:")

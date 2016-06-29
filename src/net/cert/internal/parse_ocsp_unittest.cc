@@ -6,9 +6,9 @@
 
 #include "base/files/file_path.h"
 #include "base/logging.h"
-#include "net/base/test_data_directory.h"
 #include "net/cert/internal/test_helpers.h"
 #include "net/cert/x509_certificate.h"
+#include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

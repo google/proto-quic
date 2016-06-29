@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/base/test_data_directory.h"
+#include "net/test/test_data_directory.h"
 
 #include "base/base_paths.h"
 #include "base/path_service.h"

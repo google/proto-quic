@@ -192,7 +192,7 @@ class ChannelIDServiceJob {
          i != requests.end(); i++) {
       std::unique_ptr<crypto::ECPrivateKey> key_copy;
       if (key)
-        key_copy.reset(key->Copy());
+        key_copy = key->Copy();
       (*i)->Post(error, std::move(key_copy));
     }
   }
@@ -439,7 +439,7 @@ void ChannelIDService::GeneratedChannelID(
 
   std::unique_ptr<crypto::ECPrivateKey> key;
   if (error == OK) {
-    key.reset(channel_id->key()->Copy());
+    key = channel_id->key()->Copy();
     channel_id_store_->SetChannelID(std::move(channel_id));
   }
   HandleResult(error, server_identifier, std::move(key));

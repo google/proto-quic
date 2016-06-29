@@ -6,7 +6,6 @@
 
 #include "base/time/time.h"
 #include "net/base/net_errors.h"
-#include "net/cert/cert_trust_anchor_provider.h"
 
 namespace net {
 
@@ -22,7 +21,6 @@ const unsigned kTTLSecs = 1800;  // 30 minutes.
 
 CachingCertVerifier::CachingCertVerifier(std::unique_ptr<CertVerifier> verifier)
     : verifier_(std::move(verifier)),
-      trust_anchor_provider_(nullptr),
       cache_(kMaxCacheEntries),
       requests_(0u),
       cache_hits_(0u) {
@@ -31,12 +29,6 @@ CachingCertVerifier::CachingCertVerifier(std::unique_ptr<CertVerifier> verifier)
 
 CachingCertVerifier::~CachingCertVerifier() {
   CertDatabase::GetInstance()->RemoveObserver(this);
-}
-
-void CachingCertVerifier::SetCertTrustAnchorProvider(
-    CertTrustAnchorProvider* trust_anchor_provider) {
-  DCHECK(!trust_anchor_provider_);
-  trust_anchor_provider_ = trust_anchor_provider;
 }
 
 int CachingCertVerifier::Verify(const CertVerifier::RequestParams& params,
@@ -49,19 +41,8 @@ int CachingCertVerifier::Verify(const CertVerifier::RequestParams& params,
 
   requests_++;
 
-  CertificateList additional_trust_anchors(params.additional_trust_anchors());
-  if (trust_anchor_provider_) {
-    const CertificateList& trust_anchors =
-        trust_anchor_provider_->GetAdditionalTrustAnchors();
-    additional_trust_anchors.insert(additional_trust_anchors.begin(),
-                                    trust_anchors.begin(), trust_anchors.end());
-  }
-
-  const CertVerifier::RequestParams new_params(
-      params.certificate(), params.hostname(), params.flags(),
-      params.ocsp_response(), additional_trust_anchors);
   const CertVerificationCache::value_type* cached_entry =
-      cache_.Get(new_params, CacheValidityPeriod(base::Time::Now()));
+      cache_.Get(params, CacheValidityPeriod(base::Time::Now()));
   if (cached_entry) {
     ++cache_hits_;
     *verify_result = cached_entry->result;
@@ -70,13 +51,13 @@ int CachingCertVerifier::Verify(const CertVerifier::RequestParams& params,
 
   base::Time start_time = base::Time::Now();
   CompletionCallback caching_callback = base::Bind(
-      &CachingCertVerifier::OnRequestFinished, base::Unretained(this),
-      new_params, start_time, callback, verify_result);
-  int result = verifier_->Verify(new_params, crl_set, verify_result,
+      &CachingCertVerifier::OnRequestFinished, base::Unretained(this), params,
+      start_time, callback, verify_result);
+  int result = verifier_->Verify(params, crl_set, verify_result,
                                  caching_callback, out_req, net_log);
   if (result != ERR_IO_PENDING) {
     // Synchronous completion; add directly to cache.
-    AddResultToCache(new_params, start_time, *verify_result, result);
+    AddResultToCache(params, start_time, *verify_result, result);
   }
 
   return result;
@@ -84,6 +65,25 @@ int CachingCertVerifier::Verify(const CertVerifier::RequestParams& params,
 
 bool CachingCertVerifier::SupportsOCSPStapling() {
   return verifier_->SupportsOCSPStapling();
+}
+
+bool CachingCertVerifier::AddEntry(const RequestParams& params,
+                                   int error,
+                                   const CertVerifyResult& verify_result,
+                                   base::Time verification_time) {
+  // If the cache is full, don't bother.
+  if (cache_.size() == cache_.max_entries())
+    return false;
+
+  // If there is an existing entry, don't bother updating it.
+  const CertVerificationCache::value_type* entry =
+      cache_.Get(params, CacheValidityPeriod(base::Time::Now()));
+  if (entry)
+    return false;
+
+  // Otherwise, go and add it.
+  AddResultToCache(params, verification_time, verify_result, error);
+  return true;
 }
 
 CachingCertVerifier::CachedResult::CachedResult() : error(ERR_FAILED) {}
@@ -179,6 +179,23 @@ void CachingCertVerifier::AddResultToCache(
       params, cached_result, CacheValidityPeriod(start_time),
       CacheValidityPeriod(start_time,
                           start_time + base::TimeDelta::FromSeconds(kTTLSecs)));
+}
+
+void CachingCertVerifier::VisitEntries(CacheVisitor* visitor) const {
+  DCHECK(visitor);
+
+  CacheValidityPeriod now(base::Time::Now());
+  CacheExpirationFunctor expiration_cmp;
+
+  for (CertVerificationCache::Iterator it(cache_); it.HasNext(); it.Advance()) {
+    if (!expiration_cmp(now, it.expiration()))
+      continue;
+    if (!visitor->VisitEntry(it.key(), it.value().error, it.value().result,
+                             it.expiration().verification_time,
+                             it.expiration().expiration_time)) {
+      break;
+    }
+  }
 }
 
 void CachingCertVerifier::OnCACertChanged(const X509Certificate* cert) {

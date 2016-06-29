@@ -22,7 +22,7 @@ namespace base {
 // controlling the lifetime of the message pump.
 class BASE_EXPORT MessagePumpWin : public MessagePump {
  public:
-  MessagePumpWin() : work_state_(READY), state_(NULL) {}
+  MessagePumpWin();
 
   // MessagePump methods:
   void Run(Delegate* delegate) override;
@@ -60,10 +60,10 @@ class BASE_EXPORT MessagePumpWin : public MessagePump {
   // A value used to indicate if there is a kMsgDoWork message pending
   // in the Windows Message queue.  There is at most one such message, and it
   // can drive execution of tasks when a native message pump is running.
-  LONG work_state_;
+  LONG work_state_ = READY;
 
   // State for the current invocation of Run.
-  RunState* state_;
+  RunState* state_ = nullptr;
 };
 
 //-----------------------------------------------------------------------------
@@ -163,6 +163,13 @@ class BASE_EXPORT MessagePumpForGpu : public MessagePumpWin {
   // MessagePump methods:
   void ScheduleWork() override;
   void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
+
+  // TODO (stanisc): crbug.com/596190: Remove this after the signaling issue
+  // has been investigated.
+  // This should be used for diagnostic only. If message pump wake-up mechanism
+  // is based on auto-reset event this call would reset the event to unset
+  // state.
+  bool WasSignaled() override;
 
  private:
   // MessagePumpWin methods:

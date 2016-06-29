@@ -51,6 +51,16 @@ class TrustStore;
 //   time:
 //     The UTC time to use for expiration checks.
 //
+//   trusted_chain_out:
+//     The vector to populate with the verified trusted certificate chain.
+//      * trusted_chain_out[0] is the target certificate verified.
+//      * trusted_chain_out[i+1] holds the certificate that issued
+//        trusted_chain_out[i].
+//      * trusted_chain_out[N-1] is the trust anchor.
+//     If a nullptr is passed, this parameter is ignored.
+//     If the target certificate can not be verified, this parameter is
+//     ignored.
+//
 // ---------
 // Outputs
 // ---------
@@ -60,7 +70,9 @@ NET_EXPORT bool VerifyCertificateChain(
     const std::vector<scoped_refptr<ParsedCertificate>>& cert_chain,
     const TrustStore& trust_store,
     const SignaturePolicy* signature_policy,
-    const der::GeneralizedTime& time) WARN_UNUSED_RESULT;
+    const der::GeneralizedTime& time,
+    std::vector<scoped_refptr<ParsedCertificate>>* trusted_chain_out)
+    WARN_UNUSED_RESULT;
 
 }  // namespace net
 

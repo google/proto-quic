@@ -499,10 +499,10 @@ bool GetOCSPCertStatus(const OCSPResponseData& response_data,
   out->status = OCSPCertStatus::Status::GOOD;
 
   ParsedTbsCertificate tbs_cert;
-  if (!ParseTbsCertificate(cert_tbs_certificate_tlv, &tbs_cert))
+  if (!ParseTbsCertificate(cert_tbs_certificate_tlv, {}, &tbs_cert))
     return false;
   ParsedTbsCertificate issuer_tbs_cert;
-  if (!ParseTbsCertificate(issuer_tbs_certificate_tlv, &issuer_tbs_cert))
+  if (!ParseTbsCertificate(issuer_tbs_certificate_tlv, {}, &issuer_tbs_cert))
     return false;
 
   bool found = false;

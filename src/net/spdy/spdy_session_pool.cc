@@ -34,7 +34,7 @@ enum SpdySessionGetTypes {
 SpdySessionPool::SpdySessionPool(
     HostResolver* resolver,
     SSLConfigService* ssl_config_service,
-    const base::WeakPtr<HttpServerProperties>& http_server_properties,
+    HttpServerProperties* http_server_properties,
     TransportSecurityState* transport_security_state,
     bool enable_ping_based_connection_checking,
     bool enable_priority_dependencies,

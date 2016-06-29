@@ -59,11 +59,6 @@ class URLRequestContext;
 class URLRequestJob;
 class X509Certificate;
 
-// This stores the values of the Set-Cookie headers received during the request.
-// Each item in the vector corresponds to a Set-Cookie: line received,
-// excluding the "Set-Cookie:" part.
-typedef std::vector<std::string> ResponseCookies;
-
 //-----------------------------------------------------------------------------
 // A class  representing the asynchronous load of a data stream from an URL.
 //
@@ -390,6 +385,12 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // are used for range requests or auth.
   int64_t GetTotalSentBytes() const;
 
+  // The size of the response body before removing any content encodings.
+  // Does not include redirects or sub-requests issued at lower levels (range
+  // requests or auth). Only includes bytes which have been read so far,
+  // including bytes from the cache.
+  int64_t GetRawBodyBytes() const;
+
   // Returns the current load state for the request. The returned value's
   // |param| field is an optional parameter describing details related to the
   // load state. Not all load states have a parameter.
@@ -492,12 +493,6 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // Returns true and fills in |endpoint| if the endpoint is available; returns
   // false and leaves |endpoint| unchanged if it is unavailable.
   bool GetRemoteEndpoint(IPEndPoint* endpoint) const;
-
-  // Returns the cookie values included in the response, if the request is one
-  // that can have cookies.  Returns true if the request is a cookie-bearing
-  // type, false otherwise.  This method may only be called once the
-  // delegate's OnResponseStarted method has been called.
-  bool GetResponseCookies(ResponseCookies* cookies);
 
   // Get the mime type.  This method may only be called once the delegate's
   // OnResponseStarted method has been called.
@@ -632,10 +627,6 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // jobs. Must not change the priority to anything other than
   // MAXIMUM_PRIORITY if the IGNORE_LIMITS load flag is set.
   void SetPriority(RequestPriority priority);
-
-  // Returns true iff this request would be internally redirected to HTTPS
-  // due to HSTS. If so, |redirect_url| is rewritten to the new HTTPS URL.
-  bool GetHSTSRedirect(GURL* redirect_url) const;
 
   void set_received_response_content_length(int64_t received_content_length) {
     received_response_content_length_ = received_content_length;

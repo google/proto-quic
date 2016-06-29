@@ -16,11 +16,11 @@
 #include "base/strings/string_util.h"
 #include "crypto/rsa_private_key.h"
 #include "net/base/net_errors.h"
-#include "net/base/test_data_directory.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/x509_util_nss.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/test_certificate_data.h"
+#include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(USE_NSS_CERTS)
@@ -46,42 +46,23 @@ namespace net {
 // $ date +%s -d '<date str>'
 
 // Google's cert.
-uint8_t google_fingerprint[] = {
-  0xab, 0xbe, 0x5e, 0xb4, 0x93, 0x88, 0x4e, 0xe4, 0x60, 0xc6, 0xef, 0xf8,
-  0xea, 0xd4, 0xb1, 0x55, 0x4b, 0xc9, 0x59, 0x3c
-};
-
-// webkit.org's cert.
-uint8_t webkit_fingerprint[] = {
-  0xa1, 0x4a, 0x94, 0x46, 0x22, 0x8e, 0x70, 0x66, 0x2b, 0x94, 0xf9, 0xf8,
-  0x57, 0x83, 0x2d, 0xa2, 0xff, 0xbc, 0x84, 0xc2
-};
-
-// thawte.com's cert (it's EV-licious!).
-uint8_t thawte_fingerprint[] = {
-  0x85, 0x04, 0x2d, 0xfd, 0x2b, 0x0e, 0xc6, 0xc8, 0xaf, 0x2d, 0x77, 0xd6,
-  0xa1, 0x3a, 0x64, 0x04, 0x27, 0x90, 0x97, 0x37
-};
-
-// A certificate for https://www.unosoft.hu/, whose AIA extension contains
-// an LDAP URL without a host name.
-uint8_t unosoft_hu_fingerprint[] = {
-  0x32, 0xff, 0xe3, 0xbe, 0x2c, 0x3b, 0xc7, 0xca, 0xbf, 0x2d, 0x64, 0xbd,
-  0x25, 0x66, 0xf2, 0xec, 0x8b, 0x0f, 0xbf, 0xd8
-};
+SHA256HashValue google_fingerprint = {
+    {0x21, 0xaf, 0x58, 0x74, 0xea, 0x6b, 0xad, 0xbd, 0xe4, 0xb3, 0xb1,
+     0xaa, 0x53, 0x32, 0x80, 0x8f, 0xbf, 0x8a, 0x24, 0x7d, 0x98, 0xec,
+     0x7f, 0x77, 0x49, 0x38, 0x42, 0x81, 0x26, 0x7f, 0xed, 0x38}};
 
 // The fingerprint of the Google certificate used in the parsing tests,
 // which is newer than the one included in the x509_certificate_data.h
-uint8_t google_parse_fingerprint[] = {
-  0x40, 0x50, 0x62, 0xe5, 0xbe, 0xfd, 0xe4, 0xaf, 0x97, 0xe9, 0x38, 0x2a,
-  0xf1, 0x6c, 0xc8, 0x7c, 0x8f, 0xb7, 0xc4, 0xe2
-};
+SHA256HashValue google_parse_fingerprint = {
+    {0xf6, 0x41, 0xc3, 0x6c, 0xfe, 0xf4, 0x9b, 0xc0, 0x71, 0x35, 0x9e,
+     0xcf, 0x88, 0xee, 0xd9, 0x31, 0x7b, 0x73, 0x8b, 0x59, 0x89, 0x41,
+     0x6a, 0xd4, 0x01, 0x72, 0x0c, 0x0a, 0x4e, 0x2e, 0x63, 0x52}};
 
 // The fingerprint for the Thawte SGC certificate
-uint8_t thawte_parse_fingerprint[] = {
-  0xec, 0x07, 0x10, 0x03, 0xd8, 0xf5, 0xa3, 0x7f, 0x42, 0xc4, 0x55, 0x7f,
-  0x65, 0x6a, 0xae, 0x86, 0x65, 0xfa, 0x4b, 0x02
-};
+SHA256HashValue thawte_parse_fingerprint = {
+    {0x10, 0x85, 0xa6, 0xf4, 0x54, 0xd0, 0xc9, 0x11, 0x98, 0xfd, 0xda,
+     0xb1, 0x1a, 0x31, 0xc7, 0x16, 0xd5, 0xdc, 0xd6, 0x8d, 0xf9, 0x1c,
+     0x03, 0x9c, 0xe1, 0x8d, 0xca, 0x9b, 0xeb, 0x3c, 0xde, 0x3d}};
 
 // Dec 18 00:00:00 2009 GMT
 const double kGoogleParseValidFrom = 1261094400;
@@ -89,8 +70,9 @@ const double kGoogleParseValidFrom = 1261094400;
 const double kGoogleParseValidTo = 1324252799;
 
 void CheckGoogleCert(const scoped_refptr<X509Certificate>& google_cert,
-                     uint8_t* expected_fingerprint,
-                     double valid_from, double valid_to) {
+                     const SHA256HashValue& expected_fingerprint,
+                     double valid_from,
+                     double valid_to) {
   ASSERT_NE(static_cast<X509Certificate*>(NULL), google_cert.get());
 
   const CertPrincipal& subject = google_cert->subject();
@@ -122,9 +104,8 @@ void CheckGoogleCert(const scoped_refptr<X509Certificate>& google_cert,
   const Time& valid_expiry = google_cert->valid_expiry();
   EXPECT_EQ(valid_to, valid_expiry.ToDoubleT());
 
-  const SHA1HashValue& fingerprint = google_cert->fingerprint();
-  for (size_t i = 0; i < 20; ++i)
-    EXPECT_EQ(expected_fingerprint[i], fingerprint.data[i]);
+  EXPECT_EQ(expected_fingerprint, X509Certificate::CalculateFingerprint256(
+                                      google_cert->os_cert_handle()));
 
   std::vector<std::string> dns_names;
   google_cert->GetDNSNames(&dns_names);
@@ -179,10 +160,6 @@ TEST(X509CertificateTest, WebkitCertParsing) {
   const Time& valid_expiry = webkit_cert->valid_expiry();
   EXPECT_EQ(1300491319, valid_expiry.ToDoubleT());  // Mar 18 23:35:19 2011 GMT
 
-  const SHA1HashValue& fingerprint = webkit_cert->fingerprint();
-  for (size_t i = 0; i < 20; ++i)
-    EXPECT_EQ(webkit_fingerprint[i], fingerprint.data[i]);
-
   std::vector<std::string> dns_names;
   webkit_cert->GetDNSNames(&dns_names);
   ASSERT_EQ(2U, dns_names.size());
@@ -234,10 +211,6 @@ TEST(X509CertificateTest, ThawteCertParsing) {
 
   const Time& valid_expiry = thawte_cert->valid_expiry();
   EXPECT_EQ(1263772799, valid_expiry.ToDoubleT());  // Jan 17 23:59:59 2010 GMT
-
-  const SHA1HashValue& fingerprint = thawte_cert->fingerprint();
-  for (size_t i = 0; i < 20; ++i)
-    EXPECT_EQ(thawte_fingerprint[i], fingerprint.data[i]);
 
   std::vector<std::string> dns_names;
   thawte_cert->GetDNSNames(&dns_names);
@@ -327,16 +300,13 @@ TEST(X509CertificateTest, SHA256FingerprintsCorrectly) {
   scoped_refptr<X509Certificate> google_cert(X509Certificate::CreateFromBytes(
       reinterpret_cast<const char*>(google_der), sizeof(google_der)));
 
-  static const uint8_t google_sha256_fingerprint[32] = {
-      0x21, 0xaf, 0x58, 0x74, 0xea, 0x6b, 0xad, 0xbd, 0xe4, 0xb3, 0xb1,
-      0xaa, 0x53, 0x32, 0x80, 0x8f, 0xbf, 0x8a, 0x24, 0x7d, 0x98, 0xec,
-      0x7f, 0x77, 0x49, 0x38, 0x42, 0x81, 0x26, 0x7f, 0xed, 0x38};
+  const SHA256HashValue google_sha256_fingerprint = {
+      {0x21, 0xaf, 0x58, 0x74, 0xea, 0x6b, 0xad, 0xbd, 0xe4, 0xb3, 0xb1,
+       0xaa, 0x53, 0x32, 0x80, 0x8f, 0xbf, 0x8a, 0x24, 0x7d, 0x98, 0xec,
+       0x7f, 0x77, 0x49, 0x38, 0x42, 0x81, 0x26, 0x7f, 0xed, 0x38}};
 
-  SHA256HashValue fingerprint =
-      X509Certificate::CalculateFingerprint256(google_cert->os_cert_handle());
-
-  for (size_t i = 0; i < 32; ++i)
-    EXPECT_EQ(google_sha256_fingerprint[i], fingerprint.data[i]);
+  EXPECT_EQ(google_sha256_fingerprint, X509Certificate::CalculateFingerprint256(
+                                           google_cert->os_cert_handle()));
 }
 
 TEST(X509CertificateTest, CAFingerprints) {
@@ -372,99 +342,53 @@ TEST(X509CertificateTest, CAFingerprints) {
       X509Certificate::CreateFromHandle(server_cert->os_cert_handle(),
                                         intermediates);
 
-  static const uint8_t cert_chain1_ca_fingerprint[20] = {
-    0xc2, 0xf0, 0x08, 0x7d, 0x01, 0xe6, 0x86, 0x05, 0x3a, 0x4d,
-    0x63, 0x3e, 0x7e, 0x70, 0xd4, 0xef, 0x65, 0xc2, 0xcc, 0x4f
-  };
-  static const uint8_t cert_chain2_ca_fingerprint[20] = {
-    0xd5, 0x59, 0xa5, 0x86, 0x66, 0x9b, 0x08, 0xf4, 0x6a, 0x30,
-    0xa1, 0x33, 0xf8, 0xa9, 0xed, 0x3d, 0x03, 0x8e, 0x2e, 0xa8
-  };
-  // The SHA-1 hash of nothing.
-  static const uint8_t cert_chain3_ca_fingerprint[20] = {
-    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55,
-    0xbf, 0xef, 0x95, 0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09
-  };
-  EXPECT_TRUE(memcmp(cert_chain1->ca_fingerprint().data,
-                     cert_chain1_ca_fingerprint, 20) == 0);
-  EXPECT_TRUE(memcmp(cert_chain2->ca_fingerprint().data,
-                     cert_chain2_ca_fingerprint, 20) == 0);
-  EXPECT_TRUE(memcmp(cert_chain3->ca_fingerprint().data,
-                     cert_chain3_ca_fingerprint, 20) == 0);
-
-  // Test the SHA-256 hash calculation functions explicitly since they are not
-  // used by X509Certificate internally.
-  static const uint8_t cert_chain1_ca_fingerprint_256[32] = {
-    0x51, 0x15, 0x30, 0x49, 0x97, 0x54, 0xf8, 0xb4, 0x17, 0x41,
-    0x6b, 0x58, 0x78, 0xb0, 0x89, 0xd2, 0xc3, 0xae, 0x66, 0xc1,
-    0x16, 0x80, 0xa0, 0x78, 0xe7, 0x53, 0x45, 0xa2, 0xfb, 0x80,
-    0xe1, 0x07
-  };
-  static const uint8_t cert_chain2_ca_fingerprint_256[32] = {
-    0x00, 0xbd, 0x2b, 0x0e, 0xdd, 0x83, 0x40, 0xb1, 0x74, 0x6c,
-    0xc3, 0x95, 0xc0, 0xe3, 0x55, 0xb2, 0x16, 0x58, 0x53, 0xfd,
-    0xb9, 0x3c, 0x52, 0xda, 0xdd, 0xa8, 0x22, 0x8b, 0x07, 0x00,
-    0x2d, 0xce
-  };
+  SHA256HashValue cert_chain1_ca_fingerprint_256 = {
+      {0x51, 0x15, 0x30, 0x49, 0x97, 0x54, 0xf8, 0xb4, 0x17, 0x41, 0x6b,
+       0x58, 0x78, 0xb0, 0x89, 0xd2, 0xc3, 0xae, 0x66, 0xc1, 0x16, 0x80,
+       0xa0, 0x78, 0xe7, 0x53, 0x45, 0xa2, 0xfb, 0x80, 0xe1, 0x07}};
+  SHA256HashValue cert_chain2_ca_fingerprint_256 = {
+      {0x00, 0xbd, 0x2b, 0x0e, 0xdd, 0x83, 0x40, 0xb1, 0x74, 0x6c, 0xc3,
+       0x95, 0xc0, 0xe3, 0x55, 0xb2, 0x16, 0x58, 0x53, 0xfd, 0xb9, 0x3c,
+       0x52, 0xda, 0xdd, 0xa8, 0x22, 0x8b, 0x07, 0x00, 0x2d, 0xce}};
   // The SHA-256 hash of nothing.
-  static const uint8_t cert_chain3_ca_fingerprint_256[32] = {
-    0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb,
-    0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4,
-    0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52,
-    0xb8, 0x55
-  };
-  SHA256HashValue ca_fingerprint_256_1 =
-      X509Certificate::CalculateCAFingerprint256(
-          cert_chain1->GetIntermediateCertificates());
-  SHA256HashValue ca_fingerprint_256_2 =
-      X509Certificate::CalculateCAFingerprint256(
-          cert_chain2->GetIntermediateCertificates());
-  SHA256HashValue ca_fingerprint_256_3 =
-      X509Certificate::CalculateCAFingerprint256(
-          cert_chain3->GetIntermediateCertificates());
-  EXPECT_TRUE(memcmp(ca_fingerprint_256_1.data,
-                     cert_chain1_ca_fingerprint_256, 32) == 0);
-  EXPECT_TRUE(memcmp(ca_fingerprint_256_2.data,
-                     cert_chain2_ca_fingerprint_256, 32) == 0);
-  EXPECT_TRUE(memcmp(ca_fingerprint_256_3.data,
-                     cert_chain3_ca_fingerprint_256, 32) == 0);
+  SHA256HashValue cert_chain3_ca_fingerprint_256 = {
+      {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4,
+       0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
+       0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55}};
+  EXPECT_EQ(cert_chain1_ca_fingerprint_256,
+            X509Certificate::CalculateCAFingerprint256(
+                cert_chain1->GetIntermediateCertificates()));
+  EXPECT_EQ(cert_chain2_ca_fingerprint_256,
+            X509Certificate::CalculateCAFingerprint256(
+                cert_chain2->GetIntermediateCertificates()));
+  EXPECT_EQ(cert_chain3_ca_fingerprint_256,
+            X509Certificate::CalculateCAFingerprint256(
+                cert_chain3->GetIntermediateCertificates()));
 
-  static const uint8_t cert_chain1_chain_fingerprint_256[32] = {
-    0xac, 0xff, 0xcc, 0x63, 0x0d, 0xd0, 0xa7, 0x19, 0x78, 0xb5,
-    0x8a, 0x47, 0x8b, 0x67, 0x97, 0xcb, 0x8d, 0xe1, 0x6a, 0x8a,
-    0x57, 0x70, 0xda, 0x9a, 0x53, 0x72, 0xe2, 0xa0, 0x08, 0xab,
-    0xcc, 0x8f
-  };
-  static const uint8_t cert_chain2_chain_fingerprint_256[32] = {
-    0x67, 0x3a, 0x11, 0x20, 0xd6, 0x94, 0x14, 0xe4, 0x16, 0x9f,
-    0x58, 0xe2, 0x8b, 0xf7, 0x27, 0xed, 0xbb, 0xe8, 0xa7, 0xff,
-    0x1c, 0x8c, 0x0f, 0x21, 0x38, 0x16, 0x7c, 0xad, 0x1f, 0x22,
-    0x6f, 0x9b
-  };
-  static const uint8_t cert_chain3_chain_fingerprint_256[32] = {
-    0x16, 0x7a, 0xbd, 0xb4, 0x57, 0x04, 0x65, 0x3c, 0x3b, 0xef,
-    0x6e, 0x6a, 0xa6, 0x02, 0x73, 0x30, 0x3e, 0x34, 0x1b, 0x43,
-    0xc2, 0x7c, 0x98, 0x52, 0x9f, 0x34, 0x7f, 0x55, 0x97, 0xe9,
-    0x1a, 0x10
-  };
-  SHA256HashValue chain_fingerprint_256_1 =
-      X509Certificate::CalculateChainFingerprint256(
-          cert_chain1->os_cert_handle(),
-          cert_chain1->GetIntermediateCertificates());
-  SHA256HashValue chain_fingerprint_256_2 =
-      X509Certificate::CalculateChainFingerprint256(
-          cert_chain2->os_cert_handle(),
-          cert_chain2->GetIntermediateCertificates());
-  SHA256HashValue chain_fingerprint_256_3 =
-      X509Certificate::CalculateChainFingerprint256(
-          cert_chain3->os_cert_handle(),
-          cert_chain3->GetIntermediateCertificates());
-  EXPECT_TRUE(memcmp(chain_fingerprint_256_1.data,
-                     cert_chain1_chain_fingerprint_256, 32) == 0);
-  EXPECT_TRUE(memcmp(chain_fingerprint_256_2.data,
-                     cert_chain2_chain_fingerprint_256, 32) == 0);
-  EXPECT_TRUE(memcmp(chain_fingerprint_256_3.data,
-                     cert_chain3_chain_fingerprint_256, 32) == 0);
+  SHA256HashValue cert_chain1_chain_fingerprint_256 = {
+      {0xac, 0xff, 0xcc, 0x63, 0x0d, 0xd0, 0xa7, 0x19, 0x78, 0xb5, 0x8a,
+       0x47, 0x8b, 0x67, 0x97, 0xcb, 0x8d, 0xe1, 0x6a, 0x8a, 0x57, 0x70,
+       0xda, 0x9a, 0x53, 0x72, 0xe2, 0xa0, 0x08, 0xab, 0xcc, 0x8f}};
+  SHA256HashValue cert_chain2_chain_fingerprint_256 = {
+      {0x67, 0x3a, 0x11, 0x20, 0xd6, 0x94, 0x14, 0xe4, 0x16, 0x9f, 0x58,
+       0xe2, 0x8b, 0xf7, 0x27, 0xed, 0xbb, 0xe8, 0xa7, 0xff, 0x1c, 0x8c,
+       0x0f, 0x21, 0x38, 0x16, 0x7c, 0xad, 0x1f, 0x22, 0x6f, 0x9b}};
+  SHA256HashValue cert_chain3_chain_fingerprint_256 = {
+      {0x16, 0x7a, 0xbd, 0xb4, 0x57, 0x04, 0x65, 0x3c, 0x3b, 0xef, 0x6e,
+       0x6a, 0xa6, 0x02, 0x73, 0x30, 0x3e, 0x34, 0x1b, 0x43, 0xc2, 0x7c,
+       0x98, 0x52, 0x9f, 0x34, 0x7f, 0x55, 0x97, 0xe9, 0x1a, 0x10}};
+  EXPECT_EQ(cert_chain1_chain_fingerprint_256,
+            X509Certificate::CalculateChainFingerprint256(
+                cert_chain1->os_cert_handle(),
+                cert_chain1->GetIntermediateCertificates()));
+  EXPECT_EQ(cert_chain2_chain_fingerprint_256,
+            X509Certificate::CalculateChainFingerprint256(
+                cert_chain2->os_cert_handle(),
+                cert_chain2->GetIntermediateCertificates()));
+  EXPECT_EQ(cert_chain3_chain_fingerprint_256,
+            X509Certificate::CalculateChainFingerprint256(
+                cert_chain3->os_cert_handle(),
+                cert_chain3->GetIntermediateCertificates()));
 }
 
 TEST(X509CertificateTest, ParseSubjectAltNames) {
@@ -845,68 +769,86 @@ TEST(X509CertificateTest, GetDefaultNickname) {
 const struct CertificateFormatTestData {
   const char* file_name;
   X509Certificate::Format format;
-  uint8_t* chain_fingerprints[3];
+  SHA256HashValue* chain_fingerprints[3];
 } kFormatTestData[] = {
-  // DER Parsing - single certificate, DER encoded
-  { "google.single.der", X509Certificate::FORMAT_SINGLE_CERTIFICATE,
-    { google_parse_fingerprint,
-      NULL, } },
-  // DER parsing - single certificate, PEM encoded
-  { "google.single.pem", X509Certificate::FORMAT_SINGLE_CERTIFICATE,
-    { google_parse_fingerprint,
-      NULL, } },
-  // PEM parsing - single certificate, PEM encoded with a PEB of
-  // "CERTIFICATE"
-  { "google.single.pem", X509Certificate::FORMAT_PEM_CERT_SEQUENCE,
-    { google_parse_fingerprint,
-      NULL, } },
-  // PEM parsing - sequence of certificates, PEM encoded with a PEB of
-  // "CERTIFICATE"
-  { "google.chain.pem", X509Certificate::FORMAT_PEM_CERT_SEQUENCE,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  // PKCS#7 parsing - "degenerate" SignedData collection of certificates, DER
-  // encoding
-  { "google.binary.p7b", X509Certificate::FORMAT_PKCS7,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  // PKCS#7 parsing - "degenerate" SignedData collection of certificates, PEM
-  // encoded with a PEM PEB of "CERTIFICATE"
-  { "google.pem_cert.p7b", X509Certificate::FORMAT_PKCS7,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  // PKCS#7 parsing - "degenerate" SignedData collection of certificates, PEM
-  // encoded with a PEM PEB of "PKCS7"
-  { "google.pem_pkcs7.p7b", X509Certificate::FORMAT_PKCS7,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  // All of the above, this time using auto-detection
-  { "google.single.der", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      NULL, } },
-  { "google.single.pem", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      NULL, } },
-  { "google.chain.pem", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  { "google.binary.p7b", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  { "google.pem_cert.p7b", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
-  { "google.pem_pkcs7.p7b", X509Certificate::FORMAT_AUTO,
-    { google_parse_fingerprint,
-      thawte_parse_fingerprint,
-      NULL, } },
+    // DER Parsing - single certificate, DER encoded
+    {"google.single.der",
+     X509Certificate::FORMAT_SINGLE_CERTIFICATE,
+     {
+         &google_parse_fingerprint, NULL,
+     }},
+    // DER parsing - single certificate, PEM encoded
+    {"google.single.pem",
+     X509Certificate::FORMAT_SINGLE_CERTIFICATE,
+     {
+         &google_parse_fingerprint, NULL,
+     }},
+    // PEM parsing - single certificate, PEM encoded with a PEB of
+    // "CERTIFICATE"
+    {"google.single.pem",
+     X509Certificate::FORMAT_PEM_CERT_SEQUENCE,
+     {
+         &google_parse_fingerprint, NULL,
+     }},
+    // PEM parsing - sequence of certificates, PEM encoded with a PEB of
+    // "CERTIFICATE"
+    {"google.chain.pem",
+     X509Certificate::FORMAT_PEM_CERT_SEQUENCE,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    // PKCS#7 parsing - "degenerate" SignedData collection of certificates, DER
+    // encoding
+    {"google.binary.p7b",
+     X509Certificate::FORMAT_PKCS7,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    // PKCS#7 parsing - "degenerate" SignedData collection of certificates, PEM
+    // encoded with a PEM PEB of "CERTIFICATE"
+    {"google.pem_cert.p7b",
+     X509Certificate::FORMAT_PKCS7,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    // PKCS#7 parsing - "degenerate" SignedData collection of certificates, PEM
+    // encoded with a PEM PEB of "PKCS7"
+    {"google.pem_pkcs7.p7b",
+     X509Certificate::FORMAT_PKCS7,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    // All of the above, this time using auto-detection
+    {"google.single.der",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, NULL,
+     }},
+    {"google.single.pem",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, NULL,
+     }},
+    {"google.chain.pem",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    {"google.binary.p7b",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    {"google.pem_cert.p7b",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
+    {"google.pem_pkcs7.p7b",
+     X509Certificate::FORMAT_AUTO,
+     {
+         &google_parse_fingerprint, &thawte_parse_fingerprint, NULL,
+     }},
 };
 
 class X509CertificateParseTest
@@ -943,12 +885,9 @@ TEST_P(X509CertificateParseTest, CanParseFormat) {
 
     // Compare the parsed certificate with the expected certificate, by
     // comparing fingerprints.
-    const X509Certificate* cert = certs[i].get();
-    const SHA1HashValue& actual_fingerprint = cert->fingerprint();
-    uint8_t* expected_fingerprint = test_data_.chain_fingerprints[i];
-
-    for (size_t j = 0; j < 20; ++j)
-      EXPECT_EQ(expected_fingerprint[j], actual_fingerprint.data[j]);
+    EXPECT_EQ(
+        *test_data_.chain_fingerprints[i],
+        X509Certificate::CalculateFingerprint256(certs[i]->os_cert_handle()));
   }
 }
 

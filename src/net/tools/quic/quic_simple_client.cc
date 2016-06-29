@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/quic_simple_client.h"
 
+#include <utility>
+
 #include "base/logging.h"
 #include "base/run_loop.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -256,7 +258,7 @@ void QuicSimpleClient::SendRequest(const HttpRequestInfo& headers,
   CreateSpdyHeadersFromHttpRequest(headers, headers.extra_headers, net::HTTP2,
                                    true, &header_block);
   stream->set_visitor(this);
-  stream->SendRequest(header_block, body, fin);
+  stream->SendRequest(std::move(header_block), body, fin);
   if (FLAGS_enable_quic_stateless_reject_support) {
     // Record this in case we need to resend.
     auto new_headers = new HttpRequestInfo;

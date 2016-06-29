@@ -7,6 +7,7 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/message_loop/message_loop.h"
+#include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
@@ -75,7 +76,7 @@ class SerialWorkerTest : public testing::Test {
   }
 
   void RunUntilBreak(const std::string& b) {
-    message_loop_->Run();
+    base::RunLoop().Run();
     ASSERT_EQ(breakpoint_, b);
   }
 

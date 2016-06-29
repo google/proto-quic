@@ -231,6 +231,18 @@ void ThroughputAnalyzer::OnConnectionTypeChanged() {
   last_connection_change_ = base::TimeTicks::Now();
 }
 
+void ThroughputAnalyzer::SetUseLocalHostRequestsForTesting(
+    bool use_localhost_requests) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  use_localhost_requests_for_tests_ = use_localhost_requests;
+}
+
+void ThroughputAnalyzer::SetUseSmallResponsesForTesting(
+    bool use_small_responses) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  use_small_responses_for_tests_ = use_small_responses;
+}
+
 int64_t ThroughputAnalyzer::GetBitsReceived() const {
   DCHECK(thread_checker_.CalledOnValidThread());
 

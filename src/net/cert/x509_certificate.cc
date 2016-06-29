@@ -21,7 +21,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
 #include "base/profiler/scoped_tracker.h"
-#include "base/sha1.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
@@ -83,7 +82,7 @@ class X509CertificateCache {
   void Remove(X509Certificate::OSCertHandle cert_handle);
 
  private:
-  // A single entry in the cache. Certificates will be keyed by their SHA1
+  // A single entry in the cache. Certificates will be keyed by their SHA-256
   // fingerprints, but will not be considered equivalent unless the entire
   // certificate data matches.
   struct Entry {
@@ -97,7 +96,7 @@ class X509CertificateCache {
     // the cached OS certificate handle will be freed.
     int ref_count;
   };
-  typedef std::map<SHA1HashValue, Entry, SHA1HashValueLessThan> CertMap;
+  typedef std::map<SHA256HashValue, Entry, SHA256HashValueLessThan> CertMap;
 
   // Obtain an instance of X509CertificateCache via a LazyInstance.
   X509CertificateCache() {}
@@ -120,8 +119,8 @@ base::LazyInstance<X509CertificateCache>::Leaky
 void X509CertificateCache::InsertOrUpdate(
     X509Certificate::OSCertHandle* cert_handle) {
   DCHECK(cert_handle);
-  SHA1HashValue fingerprint =
-      X509Certificate::CalculateFingerprint(*cert_handle);
+  SHA256HashValue fingerprint =
+      X509Certificate::CalculateFingerprint256(*cert_handle);
 
   X509Certificate::OSCertHandle old_handle = NULL;
   {
@@ -139,7 +138,7 @@ void X509CertificateCache::InsertOrUpdate(
       bool is_same_cert =
           X509Certificate::IsSameOSCert(*cert_handle, pos->second.cert_handle);
       if (!is_same_cert) {
-        // Two certificates don't match, due to a SHA1 hash collision. Given
+        // Two certificates don't match, due to a SHA-256 hash collision. Given
         // the low probability, the simplest solution is to not cache the
         // certificate, which should not affect performance too negatively.
         return;
@@ -168,8 +167,8 @@ void X509CertificateCache::InsertOrUpdate(
 }
 
 void X509CertificateCache::Remove(X509Certificate::OSCertHandle cert_handle) {
-  SHA1HashValue fingerprint =
-      X509Certificate::CalculateFingerprint(cert_handle);
+  SHA256HashValue fingerprint =
+      X509Certificate::CalculateFingerprint256(cert_handle);
   base::AutoLock lock(lock_);
 
   CertMap::iterator pos = cache_.find(fingerprint);
@@ -224,35 +223,6 @@ void SplitOnChar(const base::StringPiece& src,
 }
 
 }  // namespace
-
-bool X509Certificate::LessThan::operator()(
-    const scoped_refptr<X509Certificate>& lhs,
-    const scoped_refptr<X509Certificate>& rhs) const {
-  if (lhs.get() == rhs.get())
-    return false;
-
-  int rv = memcmp(lhs->fingerprint_.data, rhs->fingerprint_.data,
-                  sizeof(lhs->fingerprint_.data));
-  if (rv != 0)
-    return rv < 0;
-
-  rv = memcmp(lhs->ca_fingerprint_.data, rhs->ca_fingerprint_.data,
-              sizeof(lhs->ca_fingerprint_.data));
-  return rv < 0;
-}
-
-X509Certificate::X509Certificate(const std::string& subject,
-                                 const std::string& issuer,
-                                 base::Time start_date,
-                                 base::Time expiration_date)
-    : subject_(subject),
-      issuer_(issuer),
-      valid_start_(start_date),
-      valid_expiry_(expiration_date),
-      cert_handle_(NULL) {
-  memset(fingerprint_.data, 0, sizeof(fingerprint_.data));
-  memset(ca_fingerprint_.data, 0, sizeof(ca_fingerprint_.data));
-}
 
 // static
 scoped_refptr<X509Certificate> X509Certificate::CreateFromHandle(
@@ -707,26 +677,6 @@ bool X509Certificate::GetPEMEncodedChain(
   }
   pem_encoded->swap(encoded_chain);
   return true;
-}
-
-// static
-SHA256HashValue X509Certificate::CalculateCAFingerprint256(
-    const OSCertHandles& intermediates) {
-  SHA256HashValue sha256;
-  memset(sha256.data, 0, sizeof(sha256.data));
-
-  std::unique_ptr<crypto::SecureHash> hash(
-      crypto::SecureHash::Create(crypto::SecureHash::SHA256));
-
-  for (size_t i = 0; i < intermediates.size(); ++i) {
-    std::string der_encoded;
-    if (!GetDEREncoded(intermediates[i], &der_encoded))
-      return sha256;
-    hash->Update(der_encoded.data(), der_encoded.length());
-  }
-  hash->Finish(sha256.data, sizeof(sha256.data));
-
-  return sha256;
 }
 
 // static

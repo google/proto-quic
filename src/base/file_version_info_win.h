@@ -5,20 +5,23 @@
 #ifndef BASE_FILE_VERSION_INFO_WIN_H_
 #define BASE_FILE_VERSION_INFO_WIN_H_
 
+#include <windows.h>
+
+#include <stdint.h>
+
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "base/base_export.h"
 #include "base/file_version_info.h"
 #include "base/macros.h"
-#include "base/memory/free_deleter.h"
 
 struct tagVS_FIXEDFILEINFO;
 typedef tagVS_FIXEDFILEINFO VS_FIXEDFILEINFO;
 
 class BASE_EXPORT FileVersionInfoWin : public FileVersionInfo {
  public:
-  FileVersionInfoWin(void* data, WORD language, WORD code_page);
   ~FileVersionInfoWin() override;
 
   // Accessors to the different version properties.
@@ -48,14 +51,25 @@ class BASE_EXPORT FileVersionInfoWin : public FileVersionInfo {
   std::wstring GetStringValue(const wchar_t* name);
 
   // Get the fixed file info if it exists. Otherwise NULL
-  VS_FIXEDFILEINFO* fixed_file_info() { return fixed_file_info_; }
+  const VS_FIXEDFILEINFO* fixed_file_info() const { return fixed_file_info_; }
 
  private:
-  std::unique_ptr<char, base::FreeDeleter> data_;
-  WORD language_;
-  WORD code_page_;
-  // This is a pointer into the data_ if it exists. Otherwise NULL.
-  VS_FIXEDFILEINFO* fixed_file_info_;
+  friend FileVersionInfo;
+
+  // |data| is a VS_VERSION_INFO resource. |language| and |code_page| are
+  // extracted from the \VarFileInfo\Translation value of |data|.
+  FileVersionInfoWin(std::vector<uint8_t>&& data,
+                     WORD language,
+                     WORD code_page);
+  FileVersionInfoWin(void* data, WORD language, WORD code_page);
+
+  const std::vector<uint8_t> owned_data_;
+  const void* const data_;
+  const WORD language_;
+  const WORD code_page_;
+
+  // This is a pointer into |data_| if it exists. Otherwise nullptr.
+  const VS_FIXEDFILEINFO* const fixed_file_info_;
 
   DISALLOW_COPY_AND_ASSIGN(FileVersionInfoWin);
 };

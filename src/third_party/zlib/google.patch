@@ -1,21 +1,128 @@
-diff -ru zlib-1.2.5/gzlib.c zlib/gzlib.c
---- zlib-1.2.5/gzlib.c
-+++ zlib/gzlib.c
-@@ -5,7 +5,9 @@
+diff --git a/third_party/zlib/contrib/minizip/ioapi.h b/third_party/zlib/contrib/minizip/ioapi.h
+index 8dcbdb0..c1b7a54 100644
+--- a/third_party/zlib/contrib/minizip/ioapi.h
++++ b/third_party/zlib/contrib/minizip/ioapi.h
+@@ -43,7 +43,7 @@
  
- #include "gzguts.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
  
--#if defined(_LARGEFILE64_SOURCE) && _LFS64_LARGEFILE-0
-+#if defined(_WIN32)
-+#  define LSEEK (z_off64_t)_lseeki64
-+#elif defined(_LARGEFILE64_SOURCE) && _LFS64_LARGEFILE-0
- #  define LSEEK lseek64
+ #if defined(USE_FILE32API)
+ #define fopen64 fopen
+diff --git a/third_party/zlib/contrib/minizip/mztools.c b/third_party/zlib/contrib/minizip/mztools.c
+index 96891c2..8bf9cca 100644
+--- a/third_party/zlib/contrib/minizip/mztools.c
++++ b/third_party/zlib/contrib/minizip/mztools.c
+@@ -8,7 +8,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #include "unzip.h"
+ 
+ #define READ_8(adr)  ((unsigned char)*(adr))
+diff --git a/third_party/zlib/contrib/minizip/mztools.h b/third_party/zlib/contrib/minizip/mztools.h
+index a49a426..f295ffe 100644
+--- a/third_party/zlib/contrib/minizip/mztools.h
++++ b/third_party/zlib/contrib/minizip/mztools.h
+@@ -12,7 +12,7 @@ extern "C" {
+ #endif
+ 
+ #ifndef _ZLIB_H
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #endif
+ 
+ #include "unzip.h"
+diff --git a/third_party/zlib/contrib/minizip/unzip.c b/third_party/zlib/contrib/minizip/unzip.c
+index 9093504..2d5f0b1 100644
+--- a/third_party/zlib/contrib/minizip/unzip.c
++++ b/third_party/zlib/contrib/minizip/unzip.c
+@@ -72,7 +72,7 @@
+         #define NOUNCRYPT
+ #endif
+ 
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #include "unzip.h"
+ 
+ #ifdef STDC
+@@ -1705,11 +1705,6 @@ extern int ZEXPORT unzReadCurrentFile  (unzFile file, voidp buf, unsigned len)
+ 
+     pfile_in_zip_read_info->stream.avail_out = (uInt)len;
+ 
+-    if ((len>pfile_in_zip_read_info->rest_read_uncompressed) &&
+-        (!(pfile_in_zip_read_info->raw)))
+-        pfile_in_zip_read_info->stream.avail_out =
+-            (uInt)pfile_in_zip_read_info->rest_read_uncompressed;
+-
+     if ((len>pfile_in_zip_read_info->rest_read_compressed+
+            pfile_in_zip_read_info->stream.avail_in) &&
+          (pfile_in_zip_read_info->raw))
+diff --git a/third_party/zlib/contrib/minizip/unzip.h b/third_party/zlib/contrib/minizip/unzip.h
+index 2104e39..3c01435 100644
+--- a/third_party/zlib/contrib/minizip/unzip.h
++++ b/third_party/zlib/contrib/minizip/unzip.h
+@@ -48,7 +48,7 @@ extern "C" {
+ #endif
+ 
+ #ifndef _ZLIB_H
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #endif
+ 
+ #ifndef  _ZLIBIOAPI_H
+diff --git a/third_party/zlib/contrib/minizip/zip.c b/third_party/zlib/contrib/minizip/zip.c
+index ea54853..aaf6961 100644
+--- a/third_party/zlib/contrib/minizip/zip.c
++++ b/third_party/zlib/contrib/minizip/zip.c
+@@ -26,7 +26,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <time.h>
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #include "zip.h"
+ 
+ #ifdef STDC
+diff --git a/third_party/zlib/contrib/minizip/zip.h b/third_party/zlib/contrib/minizip/zip.h
+index 8aaebb6..8c06c0a 100644
+--- a/third_party/zlib/contrib/minizip/zip.h
++++ b/third_party/zlib/contrib/minizip/zip.h
+@@ -47,7 +47,7 @@ extern "C" {
+ //#define HAVE_BZIP2
+ 
+ #ifndef _ZLIB_H
+-#include "zlib.h"
++#include "third_party/zlib/zlib.h"
+ #endif
+ 
+ #ifndef _ZLIBIOAPI_H
+diff --git a/third_party/zlib/gzread.c b/third_party/zlib/gzread.c
+index bf4538e..4e11246 100644
+--- a/third_party/zlib/gzread.c
++++ b/third_party/zlib/gzread.c
+@@ -383,7 +383,11 @@ int ZEXPORT gzread(file, buf, len)
+ #  undef z_gzgetc
  #else
- #  define LSEEK lseek
-diff -ru zlib-1.2.5/mozzconf.h zlib/mozzconf.h
---- zlib-1.2.5/mozzconf.h	2011-12-15 18:10:49.000000000 +0800
-+++ zlib/mozzconf.h	2011-12-16 16:08:00.000000000 +0800
-@@ -0,0 +1,168 @@
+ #  undef gzgetc
++#  ifdef MOZZCONF_H
++#    define gzgetc MOZ_Z_gzgetc
++#  endif
+ #endif
++
+ int ZEXPORT gzgetc(file)
+     gzFile file;
+ {
+diff --git a/third_party/zlib/mozzconf.h b/third_party/zlib/mozzconf.h
+new file mode 100644
+index 0000000..80994c9
+--- /dev/null
++++ b/third_party/zlib/mozzconf.h
+@@ -0,0 +1,177 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****
 + * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -92,10 +199,12 @@ diff -ru zlib-1.2.5/mozzconf.h zlib/mozzconf.h
 +#define gzread MOZ_Z_gzread
 +#define gzwrite MOZ_Z_gzwrite
 +#define gzprintf MOZ_Z_gzprintf
++#define gzvprintf MOZ_Z_gzvprintf
 +#define gzputs MOZ_Z_gzputs
 +#define gzgets MOZ_Z_gzgets
 +#define gzputc MOZ_Z_gzputc
 +#define gzgetc MOZ_Z_gzgetc
++#define gzgetc_ MOZ_Z_gzgetc_
 +#define gzungetc MOZ_Z_gzungetc
 +#define gzflush MOZ_Z_gzflush
 +#define gzseek MOZ_Z_gzseek
@@ -177,6 +286,13 @@ diff -ru zlib-1.2.5/mozzconf.h zlib/mozzconf.h
 +#define gz_header_s MOZ_Z_gz_header_s
 +#define internal_state MOZ_Z_internal_state
 +
++/* New as of zlib 1.2.8 */
++#define deflateResetKeep MOZ_Z_deflateResetKeep
++#define deflatePending MOZ_Z_deflatePending
++#define inflateGetDictionary MOZ_Z_inflateGetDictionary
++#define inflateResetKeep MOZ_Z_inflateResetKeep
++#define gzopen_w MOZ_Z_gzopen_w
++
 +/* Mangle Byte types except on Mac. */
 +#if !defined(__MACTYPES__)
 +#define Byte MOZ_Z_Byte
@@ -184,9 +300,10 @@ diff -ru zlib-1.2.5/mozzconf.h zlib/mozzconf.h
 +#endif
 +
 +#endif
-diff -ru zlib-1.2.5/zconf.h zlib/zconf.h
---- zlib-1.2.5/zconf.h	2010-04-19 01:58:06.000000000 +0800
-+++ zlib/zconf.h	2011-12-14 08:06:37.000000000 +0800
+diff --git a/third_party/zlib/zconf.h b/third_party/zlib/zconf.h
+index 9987a77..1b1d88b 100644
+--- a/third_party/zlib/zconf.h
++++ b/third_party/zlib/zconf.h
 @@ -8,6 +8,9 @@
  #ifndef ZCONF_H
  #define ZCONF_H
@@ -197,8 +314,8 @@ diff -ru zlib-1.2.5/zconf.h zlib/zconf.h
  /*
   * If you *really* need a unique prefix for all types and library functions,
   * compile with -DZ_PREFIX. The "standard" zlib should be compiled without it.
-@@ -359,7 +359,7 @@ typedef uLong FAR uLongf;
-    typedef Byte       *voidp;
+@@ -408,7 +411,7 @@ typedef uLong FAR uLongf;
+    typedef unsigned long z_crc_t;
  #endif
  
 -#ifdef HAVE_UNISTD_H    /* may be set to #if 1 by ./configure */
@@ -206,35 +323,95 @@ diff -ru zlib-1.2.5/zconf.h zlib/zconf.h
  #  define Z_HAVE_UNISTD_H
  #endif
  
---- zlib-1.2.5/zlib.h	2010-04-20 12:12:48.000000000 +0800
-+++ zlib/zlib.h	2013-04-06 16:08:48.000000000 +0800
-@@ -1572,11 +1572,29 @@
+diff --git a/third_party/zlib/zlib.h b/third_party/zlib/zlib.h
+index 3e0c767..36c73af 100644
+--- a/third_party/zlib/zlib.h
++++ b/third_party/zlib/zlib.h
+@@ -1678,8 +1678,14 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
+ #  define z_gzgetc(g) \
+           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
+ #else
+-#  define gzgetc(g) \
++#  ifdef MOZZCONF_H
++#    undef gzgetc
++#    define gzgetc(g) \
++          ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : MOZ_Z_gzgetc(g))
++#  else
++#    define gzgetc(g) \
+           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
++#  endif
  #endif
  
- #if !defined(ZLIB_INTERNAL) && _FILE_OFFSET_BITS-0 == 64 && _LFS64_LARGEFILE-0
-+#  ifdef gzopen
-+#    undef gzopen
+ /* provide 64-bit offset functions if _LARGEFILE64_SOURCE defined, and/or
+@@ -1706,11 +1712,29 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
+ #    define z_adler32_combine z_adler32_combine64
+ #    define z_crc32_combine z_crc32_combine64
+ #  else
++#    ifdef gzopen
++#      undef gzopen
++#    endif
+ #    define gzopen gzopen64
++#    ifdef gzseek
++#      undef gzseek
++#    endif
+ #    define gzseek gzseek64
++#    ifdef gztell
++#      undef gztell
++#    endif
+ #    define gztell gztell64
++#    ifdef gzoffset
++#      undef gzoffset
++#    endif
+ #    define gzoffset gzoffset64
++#    ifdef adler32_combine
++#      undef adler32_combine
++#    endif
+ #    define adler32_combine adler32_combine64
++#    ifdef crc32_combine
++#      undef crc32_combine
++#    endif
+ #    define crc32_combine crc32_combine64
+ #  endif
+ #  ifndef Z_LARGE64
+diff --git a/third_party/zlib/zutil.h b/third_party/zlib/zutil.h
+index 24ab06b..fe9e53c 100644
+--- a/third_party/zlib/zutil.h
++++ b/third_party/zlib/zutil.h
+@@ -28,6 +28,21 @@
+ #  include <string.h>
+ #  include <stdlib.h>
+ #endif
++#ifdef NO_ERRNO_H
++#   ifdef _WIN32_WCE
++      /* The Microsoft C Run-Time Library for Windows CE doesn't have
++       * errno.  We define it as a global variable to simplify porting.
++       * Its value is always 0 and should not be used.  We rename it to
++       * avoid conflict with other libraries that use the same workaround.
++       */
++#     define errno z_errno
++#   endif
++    extern int errno;
++#else
++#  ifndef _WIN32_WCE
++#    include <errno.h>
 +#  endif
- #  define gzopen gzopen64
-+#  ifdef gzseek
-+#    undef gzseek
-+#  endif
- #  define gzseek gzseek64
-+#  ifdef gztell
-+#    undef gztell
-+#  endif
- #  define gztell gztell64
-+#  ifdef gzoffset
-+#    undef gzoffset
-+#  endif
- #  define gzoffset gzoffset64
-+#  ifdef adler32_combine
-+#    undef adler32_combine
-+#  endif
- #  define adler32_combine adler32_combine64
-+#  ifdef crc32_combine
-+#    undef crc32_combine
-+#  endif
- #  define crc32_combine crc32_combine64
- #  ifdef _LARGEFILE64_SOURCE
-      ZEXTERN gzFile ZEXPORT gzopen64 OF((const char *, const char *));
++#endif
+ 
+ #ifdef Z_SOLO
+    typedef long ptrdiff_t;  /* guess -- will be caught if guess is wrong */
+@@ -135,6 +150,12 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
+ #  define OS_CODE  0x0a
+ #endif
+ 
++#ifdef _MSC_VER
++#define zalign(x) __declspec(align(x))
++#else
++#define zalign(x) __attribute__((aligned((x))))
++#endif
++
+ #ifdef WIN32
+ #  ifndef __CYGWIN__  /* Cygwin is Unix, not Win32 */
+ #    define OS_CODE  0x0b
+-- 
+2.7.4
+

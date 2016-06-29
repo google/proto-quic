@@ -564,6 +564,12 @@ void MessageLoop::ScheduleWork() {
   pump_->ScheduleWork();
 }
 
+#if defined(OS_WIN)
+bool MessageLoop::MessagePumpWasSignaled() {
+  return pump_->WasSignaled();
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Method and data for histogramming events and actions taken by each instance
 // on each thread.

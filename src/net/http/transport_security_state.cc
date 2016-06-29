@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "base/base64.h"
 #include "base/build_time.h"
@@ -29,7 +30,6 @@
 #include "net/dns/dns_util.h"
 #include "net/http/http_security_headers.h"
 #include "net/ssl/ssl_info.h"
-#include "url/gurl.h"
 
 namespace net {
 
@@ -613,12 +613,9 @@ bool DecodeHSTSPreload(const std::string& hostname, PreloadResult* out) {
 }  // namespace
 
 TransportSecurityState::TransportSecurityState()
-    : delegate_(nullptr),
-      report_sender_(nullptr),
-      enable_static_pins_(true),
+    : enable_static_pins_(true),
       enable_static_expect_ct_(true),
       enable_static_expect_staple_(false),
-      expect_ct_reporter_(nullptr),
       sent_reports_cache_(kMaxHPKPReportCacheEntries) {
 // Static pinning is only enabled for official builds to make sure that
 // others don't end up with pins that cannot be easily updated.
@@ -656,7 +653,7 @@ bool TransportSecurityState::ShouldUpgradeToSSL(const std::string& host) {
   return false;
 }
 
-bool TransportSecurityState::CheckPublicKeyPins(
+TransportSecurityState::PKPStatus TransportSecurityState::CheckPublicKeyPins(
     const HostPortPair& host_port_pair,
     bool is_issued_by_known_root,
     const HashValueVector& public_key_hashes,
@@ -666,25 +663,26 @@ bool TransportSecurityState::CheckPublicKeyPins(
     std::string* pinning_failure_log) {
   // Perform pin validation only if the server actually has public key pins.
   if (!HasPublicKeyPins(host_port_pair.host())) {
-    return true;
+    return PKPStatus::OK;
   }
 
-  bool pins_are_valid = CheckPublicKeyPinsImpl(
+  PKPStatus pin_validity = CheckPublicKeyPinsImpl(
       host_port_pair, is_issued_by_known_root, public_key_hashes,
       served_certificate_chain, validated_certificate_chain, report_status,
       pinning_failure_log);
+
   // Don't track statistics when a local trust anchor would override the pinning
   // anyway.
   if (!is_issued_by_known_root)
-    return pins_are_valid;
+    return pin_validity;
 
-  if (!pins_are_valid) {
+  if (pin_validity == PKPStatus::VIOLATED) {
     LOG(ERROR) << *pinning_failure_log;
     ReportUMAOnPinFailure(host_port_pair.host());
   }
-
-  UMA_HISTOGRAM_BOOLEAN("Net.PublicKeyPinSuccess", pins_are_valid);
-  return pins_are_valid;
+  UMA_HISTOGRAM_BOOLEAN("Net.PublicKeyPinSuccess",
+                        pin_validity == PKPStatus::OK);
+  return pin_validity;
 }
 
 bool TransportSecurityState::HasPublicKeyPins(const std::string& host) {
@@ -698,6 +696,21 @@ bool TransportSecurityState::HasPublicKeyPins(const std::string& host) {
     if (static_pkp_state.HasPublicKeyPins())
       return true;
   }
+
+  return false;
+}
+
+bool TransportSecurityState::ShouldRequireCT(
+    const std::string& hostname,
+    const X509Certificate* validated_certificate_chain,
+    const HashValueVector& public_key_hashes) {
+  using CTRequirementLevel = RequireCTDelegate::CTRequirementLevel;
+
+  CTRequirementLevel ct_required = CTRequirementLevel::DEFAULT;
+  if (require_ct_delegate_)
+    ct_required = require_ct_delegate_->IsCTRequiredForHost(hostname);
+  if (ct_required != CTRequirementLevel::DEFAULT)
+    return ct_required == CTRequirementLevel::REQUIRED;
 
   return false;
 }
@@ -720,6 +733,11 @@ void TransportSecurityState::SetExpectCTReporter(
     ExpectCTReporter* expect_ct_reporter) {
   DCHECK(CalledOnValidThread());
   expect_ct_reporter_ = expect_ct_reporter;
+}
+
+void TransportSecurityState::SetRequireCTDelegate(RequireCTDelegate* delegate) {
+  DCHECK(CalledOnValidThread());
+  require_ct_delegate_ = delegate;
 }
 
 void TransportSecurityState::AddHSTSInternal(
@@ -806,7 +824,8 @@ void TransportSecurityState::EnablePKPHost(const std::string& host,
   DirtyNotify();
 }
 
-bool TransportSecurityState::CheckPinsAndMaybeSendReport(
+TransportSecurityState::PKPStatus
+TransportSecurityState::CheckPinsAndMaybeSendReport(
     const HostPortPair& host_port_pair,
     bool is_issued_by_known_root,
     const TransportSecurityState::PKPState& pkp_state,
@@ -816,26 +835,30 @@ bool TransportSecurityState::CheckPinsAndMaybeSendReport(
     const TransportSecurityState::PublicKeyPinReportStatus report_status,
     std::string* failure_log) {
   if (pkp_state.CheckPublicKeyPins(hashes, failure_log))
-    return true;
+    return PKPStatus::OK;
 
-  if (!report_sender_ || !is_issued_by_known_root ||
+  // Don't report violations for certificates that chain to local roots.
+  if (!is_issued_by_known_root)
+    return PKPStatus::BYPASSED;
+
+  if (!report_sender_ ||
       report_status != TransportSecurityState::ENABLE_PIN_REPORTS ||
       pkp_state.report_uri.is_empty()) {
-    return false;
+    return PKPStatus::VIOLATED;
   }
 
   DCHECK(pkp_state.report_uri.is_valid());
   // Report URIs should not be used if they are the same host as the pin
   // and are HTTPS, to avoid going into a report-sending loop.
   if (!IsReportUriValidForHost(pkp_state.report_uri, host_port_pair.host()))
-    return false;
+    return PKPStatus::VIOLATED;
 
   std::string serialized_report;
   std::string report_cache_key;
   if (!GetHPKPReport(host_port_pair, pkp_state, served_certificate_chain,
                      validated_certificate_chain, &serialized_report,
                      &report_cache_key)) {
-    return false;
+    return PKPStatus::VIOLATED;
   }
 
   // Limit the rate at which duplicate reports are sent to the same
@@ -844,14 +867,14 @@ bool TransportSecurityState::CheckPinsAndMaybeSendReport(
   // also prevents accidental loops (a.com triggers a report to b.com
   // which triggers a report to a.com). See section 2.1.4 of RFC 7469.
   if (sent_reports_cache_.Get(report_cache_key, base::TimeTicks::Now()))
-    return false;
+    return PKPStatus::VIOLATED;
   sent_reports_cache_.Put(
       report_cache_key, true, base::TimeTicks::Now(),
       base::TimeTicks::Now() +
           base::TimeDelta::FromMinutes(kTimeToRememberHPKPReportsMins));
 
   report_sender_->Send(pkp_state.report_uri, serialized_report);
-  return false;
+  return PKPStatus::VIOLATED;
 }
 
 bool TransportSecurityState::GetStaticExpectCTState(
@@ -1118,7 +1141,8 @@ bool TransportSecurityState::IsBuildTimely() {
   return (base::Time::Now() - build_time).InDays() < 70 /* 10 weeks */;
 }
 
-bool TransportSecurityState::CheckPublicKeyPinsImpl(
+TransportSecurityState::PKPStatus
+TransportSecurityState::CheckPublicKeyPinsImpl(
     const HostPortPair& host_port_pair,
     bool is_issued_by_known_root,
     const HashValueVector& hashes,
@@ -1129,13 +1153,13 @@ bool TransportSecurityState::CheckPublicKeyPinsImpl(
   PKPState pkp_state;
   STSState unused;
 
-  if (!GetDynamicPKPState(host_port_pair.host(), &pkp_state) &&
-      !GetStaticDomainState(host_port_pair.host(), &unused, &pkp_state)) {
-    // HasPublicKeyPins should have returned true in order for this method
-    // to have been called, so if we fall through to here, it's an error.
-    return false;
-  }
+  bool found_state =
+      GetDynamicPKPState(host_port_pair.host(), &pkp_state) ||
+      GetStaticDomainState(host_port_pair.host(), &unused, &pkp_state);
 
+  // HasPublicKeyPins should have returned true in order for this method to have
+  // been called.
+  DCHECK(found_state);
   return CheckPinsAndMaybeSendReport(
       host_port_pair, is_issued_by_known_root, pkp_state, hashes,
       served_certificate_chain, validated_certificate_chain, report_status,
@@ -1325,10 +1349,6 @@ bool TransportSecurityState::STSState::ShouldUpgradeToSSL() const {
   return upgrade_mode == MODE_FORCE_HTTPS;
 }
 
-bool TransportSecurityState::STSState::ShouldSSLErrorsBeFatal() const {
-  return true;
-}
-
 TransportSecurityState::STSStateIterator::STSStateIterator(
     const TransportSecurityState& state)
     : iterator_(state.enabled_sts_hosts_.begin()),
@@ -1392,10 +1412,6 @@ bool TransportSecurityState::PKPState::CheckPublicKeyPins(
 
 bool TransportSecurityState::PKPState::HasPublicKeyPins() const {
   return spki_hashes.size() > 0 || bad_spki_hashes.size() > 0;
-}
-
-bool TransportSecurityState::PKPState::ShouldSSLErrorsBeFatal() const {
-  return true;
 }
 
 TransportSecurityState::PKPStateIterator::PKPStateIterator(

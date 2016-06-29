@@ -8,10 +8,10 @@
 
 #include "base/files/file_util.h"
 #include "base/strings/string_number_conversions.h"
-#include "net/base/test_data_directory.h"
 #include "net/cert/pem_tokenizer.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
+#include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

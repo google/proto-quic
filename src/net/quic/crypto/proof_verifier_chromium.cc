@@ -150,7 +150,13 @@ ProofVerifierChromium::Job::Job(
       cert_verify_flags_(cert_verify_flags),
       next_state_(STATE_NONE),
       start_time_(base::TimeTicks::Now()),
-      net_log_(net_log) {}
+      net_log_(net_log) {
+  CHECK(proof_verifier_);
+  CHECK(verifier_);
+  CHECK(policy_enforcer_);
+  CHECK(transport_security_state_);
+  CHECK(cert_transparency_verifier_);
+}
 
 ProofVerifierChromium::Job::~Job() {
   base::TimeTicks end_time = base::TimeTicks::Now();
@@ -211,7 +217,7 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     return QUIC_FAILURE;
   }
 
-  if (cert_transparency_verifier_ && !cert_sct.empty()) {
+  if (!cert_sct.empty()) {
     // Note that this is a completely synchronous operation: The CT Log Verifier
     // gets all the data it needs for SCT verification and does not do any
     // external communication.
@@ -303,11 +309,14 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
   const CertVerifyResult& cert_verify_result =
       verify_details_->cert_verify_result;
   const CertStatus cert_status = cert_verify_result.cert_status;
-  verify_details_->ct_verify_result.ct_policies_applied =
-      (result == OK && policy_enforcer_ != nullptr);
+  verify_details_->ct_verify_result.ct_policies_applied = result == OK;
   verify_details_->ct_verify_result.ev_policy_compliance =
       ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY;
-  if (result == OK && policy_enforcer_) {
+
+  // If the connection was good, check HPKP and CT status simultaneously,
+  // but prefer to treat the HPKP error as more serious, if there was one.
+  if ((result == OK ||
+       (IsCertificateError(result) && IsCertStatusMinorError(cert_status)))) {
     if ((cert_verify_result.cert_status & CERT_STATUS_IS_EV)) {
       ct::EVPolicyCompliance ev_policy_compliance =
           policy_enforcer_->DoesConformToCTEVPolicy(
@@ -332,22 +341,41 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
         policy_enforcer_->DoesConformToCertPolicy(
             cert_verify_result.verified_cert.get(),
             verify_details_->ct_verify_result.verified_scts, net_log_);
-  }
 
-  if (transport_security_state_ &&
-      (result == OK ||
-       (IsCertificateError(result) && IsCertStatusMinorError(cert_status))) &&
-      !transport_security_state_->CheckPublicKeyPins(
-          HostPortPair(hostname_, port_),
-          cert_verify_result.is_issued_by_known_root,
-          cert_verify_result.public_key_hashes, cert_.get(),
-          cert_verify_result.verified_cert.get(),
-          TransportSecurityState::ENABLE_PIN_REPORTS,
-          &verify_details_->pinning_failure_log)) {
-    if (cert_verify_result.is_issued_by_known_root)
-      result = ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN;
-    else
-      verify_details_->pkp_bypassed = true;
+    int ct_result = OK;
+    if (verify_details_->ct_verify_result.cert_policy_compliance !=
+            ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS &&
+        transport_security_state_->ShouldRequireCT(
+            hostname_, cert_verify_result.verified_cert.get(),
+            cert_verify_result.public_key_hashes)) {
+      verify_details_->cert_verify_result.cert_status |=
+          CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED;
+      ct_result = ERR_CERTIFICATE_TRANSPARENCY_REQUIRED;
+    }
+
+    TransportSecurityState::PKPStatus pin_validity =
+        transport_security_state_->CheckPublicKeyPins(
+            HostPortPair(hostname_, port_),
+            cert_verify_result.is_issued_by_known_root,
+            cert_verify_result.public_key_hashes, cert_.get(),
+            cert_verify_result.verified_cert.get(),
+            TransportSecurityState::ENABLE_PIN_REPORTS,
+            &verify_details_->pinning_failure_log);
+    switch (pin_validity) {
+      case TransportSecurityState::PKPStatus::VIOLATED:
+        result = ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN;
+        verify_details_->cert_verify_result.cert_status |=
+            CERT_STATUS_PINNED_KEY_MISSING;
+        break;
+      case TransportSecurityState::PKPStatus::BYPASSED:
+        verify_details_->pkp_bypassed = true;
+      // Fall through.
+      case TransportSecurityState::PKPStatus::OK:
+        // Do nothing.
+        break;
+    }
+    if (result != ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN && ct_result != OK)
+      result = ct_result;
   }
 
   if (result != OK) {
@@ -440,7 +468,12 @@ ProofVerifierChromium::ProofVerifierChromium(
     : cert_verifier_(cert_verifier),
       ct_policy_enforcer_(ct_policy_enforcer),
       transport_security_state_(transport_security_state),
-      cert_transparency_verifier_(cert_transparency_verifier) {}
+      cert_transparency_verifier_(cert_transparency_verifier) {
+  DCHECK(cert_verifier_);
+  DCHECK(ct_policy_enforcer_);
+  DCHECK(transport_security_state_);
+  DCHECK(cert_transparency_verifier_);
+}
 
 ProofVerifierChromium::~ProofVerifierChromium() {
   STLDeleteElements(&active_jobs_);

@@ -8,6 +8,7 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
+#include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -74,7 +75,7 @@ void ResolverThread::Run() {
     return;
 
   // Run the mesage loop until OnResolutionComplete quits it.
-  base::MessageLoop::current()->Run();
+  base::RunLoop().Run();
 }
 
 int ResolverThread::Resolve(const std::string& host, AddressList* addresses) {

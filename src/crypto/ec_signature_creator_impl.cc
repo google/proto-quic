@@ -33,9 +33,10 @@ bool ECSignatureCreatorImpl::Sign(const uint8_t* data,
   ScopedEVP_MD_CTX ctx(EVP_MD_CTX_create());
   size_t sig_len = 0;
   if (!ctx.get() ||
-      !EVP_DigestSignInit(ctx.get(), NULL, EVP_sha256(), NULL, key_->key()) ||
+      !EVP_DigestSignInit(ctx.get(), nullptr, EVP_sha256(), nullptr,
+                          key_->key()) ||
       !EVP_DigestSignUpdate(ctx.get(), data, data_len) ||
-      !EVP_DigestSignFinal(ctx.get(), NULL, &sig_len)) {
+      !EVP_DigestSignFinal(ctx.get(), nullptr, &sig_len)) {
     return false;
   }
 
@@ -43,9 +44,9 @@ bool ECSignatureCreatorImpl::Sign(const uint8_t* data,
   if (!EVP_DigestSignFinal(ctx.get(), &signature->front(), &sig_len))
     return false;
 
-  // NOTE: A call to EVP_DigestSignFinal() with a NULL second parameter returns
-  // a maximum allocation size, while the call without a NULL returns the real
-  // one, which may be smaller.
+  // NOTE: A call to EVP_DigestSignFinal() with a nullptr second parameter
+  // returns a maximum allocation size, while the call without a nullptr
+  // returns the real one, which may be smaller.
   signature->resize(sig_len);
   return true;
 }

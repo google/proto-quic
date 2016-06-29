@@ -14,6 +14,7 @@
 
 #include "base/logging.h"
 #include "base/stl_util.h"
+#include "net/quic/crypto/null_decrypter.h"
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/crypto/quic_encrypter.h"
 #include "net/quic/quic_protocol.h"
@@ -1794,6 +1795,84 @@ TEST_P(QuicFramerTest, StreamFrame) {
   CheckStreamFrameBoundaries(
       framer_.version() <= QUIC_VERSION_33 ? packet : packet_34,
       kQuicMaxStreamIdSize, !kIncludeVersion);
+}
+
+TEST_P(QuicFramerTest, MissingDiversificationNonce) {
+  QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
+  framer_.SetDecrypter(ENCRYPTION_NONE, new NullDecrypter());
+  decrypter_ = new test::TestDecrypter();
+  framer_.SetAlternativeDecrypter(ENCRYPTION_INITIAL, decrypter_, false);
+
+  // clang-format off
+  unsigned char packet[] = {
+    // public flags (8 byte connection_id)
+    0x38,
+    // connection_id
+    0x10, 0x32, 0x54, 0x76,
+    0x98, 0xBA, 0xDC, 0xFE,
+    // packet number
+    0xBC, 0x9A, 0x78, 0x56,
+    0x34, 0x12,
+    // private flags
+    0x00,
+
+    // frame type (stream frame with fin)
+    0xFF,
+    // stream id
+    0x04, 0x03, 0x02, 0x01,
+    // offset
+    0x54, 0x76, 0x10, 0x32,
+    0xDC, 0xFE, 0x98, 0xBA,
+    // data length
+    0x0c, 0x00,
+    // data
+    'h',  'e',  'l',  'l',
+    'o',  ' ',  'w',  'o',
+    'r',  'l',  'd',  '!',
+  };
+  unsigned char packet_34[] = {
+      // public flags (8 byte connection_id)
+      0x38,
+      // connection_id
+      0x10, 0x32, 0x54, 0x76,
+      0x98, 0xBA, 0xDC, 0xFE,
+      // packet number
+      0xBC, 0x9A, 0x78, 0x56,
+      0x34, 0x12,
+
+      // frame type (stream frame with fin)
+      0xFF,
+      // stream id
+      0x04, 0x03, 0x02, 0x01,
+      // offset
+      0x54, 0x76, 0x10, 0x32,
+      0xDC, 0xFE, 0x98, 0xBA,
+      // data length
+      0x0c, 0x00,
+      // data
+      'h',  'e',  'l',  'l',
+      'o',  ' ',  'w',  'o',
+      'r',  'l',  'd',  '!',
+  };
+  // clang-format on
+
+  QuicEncryptedPacket encrypted(
+      AsChars(framer_.version() <= QUIC_VERSION_33 ? packet : packet_34),
+      framer_.version() <= QUIC_VERSION_33 ? arraysize(packet)
+                                           : arraysize(packet_34),
+      false);
+  if (framer_.version() > QUIC_VERSION_32) {
+    EXPECT_FALSE(framer_.ProcessPacket(encrypted));
+    EXPECT_EQ(QUIC_DECRYPTION_FAILURE, framer_.error());
+
+  } else {
+    EXPECT_TRUE(framer_.ProcessPacket(encrypted));
+
+    EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
+    ASSERT_TRUE(visitor_.header_.get());
+    EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
+                                !kIncludeDiversificationNonce));
+  }
 }
 
 TEST_P(QuicFramerTest, StreamFrame3ByteStreamId) {

@@ -6,48 +6,63 @@
 
 #include <windows.h>
 #include <stddef.h>
-#include <stdint.h>
 
-#include "base/file_version_info.h"
 #include "base/files/file_path.h"
 #include "base/logging.h"
-#include "base/macros.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/win/resource_util.h"
 
 using base::FilePath;
 
-FileVersionInfoWin::FileVersionInfoWin(void* data,
-                                       WORD language,
-                                       WORD code_page)
-    : language_(language), code_page_(code_page) {
-  base::ThreadRestrictions::AssertIOAllowed();
-  data_.reset((char*) data);
-  fixed_file_info_ = NULL;
-  UINT size;
-  ::VerQueryValue(data_.get(), L"\\", (LPVOID*)&fixed_file_info_, &size);
-}
+namespace {
 
-FileVersionInfoWin::~FileVersionInfoWin() {
-  DCHECK(data_.get());
-}
-
-typedef struct {
+struct LanguageAndCodePage {
   WORD language;
   WORD code_page;
-} LanguageAndCodePage;
+};
+
+// Returns the \\VarFileInfo\\Translation value extracted from the
+// VS_VERSION_INFO resource in |data|.
+LanguageAndCodePage* GetTranslate(const void* data) {
+  LanguageAndCodePage* translate = nullptr;
+  UINT length;
+  if (::VerQueryValue(data, L"\\VarFileInfo\\Translation",
+                      reinterpret_cast<void**>(&translate), &length)) {
+    return translate;
+  }
+  return nullptr;
+}
+
+VS_FIXEDFILEINFO* GetVsFixedFileInfo(const void* data) {
+  VS_FIXEDFILEINFO* fixed_file_info = nullptr;
+  UINT length;
+  if (::VerQueryValue(data, L"\\", reinterpret_cast<void**>(&fixed_file_info),
+                      &length)) {
+    return fixed_file_info;
+  }
+  return nullptr;
+}
+
+}  // namespace
+
+FileVersionInfoWin::~FileVersionInfoWin() = default;
 
 // static
 FileVersionInfo* FileVersionInfo::CreateFileVersionInfoForModule(
     HMODULE module) {
-  // Note that the use of MAX_PATH is basically in line with what we do for
-  // all registered paths (PathProviderWin).
-  wchar_t system_buffer[MAX_PATH];
-  system_buffer[0] = 0;
-  if (!GetModuleFileName(module, system_buffer, MAX_PATH))
-    return NULL;
+  void* data;
+  size_t version_info_length;
+  const bool has_version_resource = base::win::GetResourceFromModule(
+      module, VS_VERSION_INFO, RT_VERSION, &data, &version_info_length);
+  if (!has_version_resource)
+    return nullptr;
 
-  FilePath app_path(system_buffer);
-  return CreateFileVersionInfo(app_path);
+  const LanguageAndCodePage* translate = GetTranslate(data);
+  if (!translate)
+    return nullptr;
+
+  return new FileVersionInfoWin(data, translate->language,
+                                translate->code_page);
 }
 
 // static
@@ -59,30 +74,19 @@ FileVersionInfo* FileVersionInfo::CreateFileVersionInfo(
   const wchar_t* path = file_path.value().c_str();
   DWORD length = ::GetFileVersionInfoSize(path, &dummy);
   if (length == 0)
-    return NULL;
+    return nullptr;
 
-  void* data = calloc(length, 1);
-  if (!data)
-    return NULL;
+  std::vector<uint8_t> data(length, 0);
 
-  if (!::GetFileVersionInfo(path, dummy, length, data)) {
-    free(data);
-    return NULL;
-  }
+  if (!::GetFileVersionInfo(path, dummy, data.size(), data.data()))
+    return nullptr;
 
-  LanguageAndCodePage* translate = NULL;
-  uint32_t page_count;
-  BOOL query_result = VerQueryValue(data, L"\\VarFileInfo\\Translation",
-                                   (void**) &translate, &page_count);
+  const LanguageAndCodePage* translate = GetTranslate(data.data());
+  if (!translate)
+    return nullptr;
 
-  if (query_result && translate) {
-    return new FileVersionInfoWin(data, translate->language,
-                                  translate->code_page);
-
-  } else {
-    free(data);
-    return NULL;
-  }
+  return new FileVersionInfoWin(std::move(data), translate->language,
+                                translate->code_page);
 }
 
 base::string16 FileVersionInfoWin::company_name() {
@@ -175,7 +179,7 @@ bool FileVersionInfoWin::GetValue(const wchar_t* name,
                  L"\\StringFileInfo\\%04x%04x\\%ls", language, code_page, name);
     LPVOID value = NULL;
     uint32_t size;
-    BOOL r = ::VerQueryValue(data_.get(), sub_block, &value, &size);
+    BOOL r = ::VerQueryValue(data_, sub_block, &value, &size);
     if (r && value) {
       value_str->assign(static_cast<wchar_t*>(value));
       return true;
@@ -190,4 +194,25 @@ std::wstring FileVersionInfoWin::GetStringValue(const wchar_t* name) {
     return str;
   else
     return L"";
+}
+
+FileVersionInfoWin::FileVersionInfoWin(std::vector<uint8_t>&& data,
+                                       WORD language,
+                                       WORD code_page)
+    : owned_data_(std::move(data)),
+      data_(owned_data_.data()),
+      language_(language),
+      code_page_(code_page),
+      fixed_file_info_(GetVsFixedFileInfo(data_)) {
+  DCHECK(!owned_data_.empty());
+}
+
+FileVersionInfoWin::FileVersionInfoWin(void* data,
+                                       WORD language,
+                                       WORD code_page)
+    : data_(data),
+      language_(language),
+      code_page_(code_page),
+      fixed_file_info_(GetVsFixedFileInfo(data)) {
+  DCHECK(data_);
 }

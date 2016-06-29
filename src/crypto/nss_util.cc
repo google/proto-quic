@@ -126,13 +126,13 @@ char* PKCS11PasswordFunc(PK11SlotInfo* slot, PRBool retry, void* arg) {
                                                      retry != PR_FALSE,
                                                      &cancelled);
     if (cancelled)
-      return NULL;
+      return nullptr;
     char* result = PORT_Strdup(password.c_str());
     password.replace(0, password.size(), password.size(), 0);
     return result;
   }
-  DLOG(ERROR) << "PK11 password requested with NULL arg";
-  return NULL;
+  DLOG(ERROR) << "PK11 password requested with nullptr arg";
+  return nullptr;
 }
 
 // NSS creates a local cache of the sqlite database if it detects that the
@@ -218,8 +218,8 @@ class ChromeOSUserData {
   }
 
   ScopedPK11Slot GetPublicSlot() {
-    return ScopedPK11Slot(
-        public_slot_ ? PK11_ReferenceSlot(public_slot_.get()) : NULL);
+    return ScopedPK11Slot(public_slot_ ? PK11_ReferenceSlot(public_slot_.get())
+                                       : nullptr);
   }
 
   ScopedPK11Slot GetPrivateSlot(
@@ -353,7 +353,7 @@ class NSSInitSingleton {
 
     // If everything is already initialized, then return true.
     // Note that only |tpm_slot_| is checked, since |chaps_module_| could be
-    // NULL in tests while |tpm_slot_| has been set to the test DB.
+    // nullptr in tests while |tpm_slot_| has been set to the test DB.
     if (tpm_slot_) {
       base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
                                                     base::Bind(callback, true));
@@ -608,7 +608,7 @@ class NSSInitSingleton {
 
   void SetSystemKeySlotForTesting(ScopedPK11Slot slot) {
     // Ensure that a previous value of test_system_slot_ is not overwritten.
-    // Unsetting, i.e. setting a NULL, however is allowed.
+    // Unsetting, i.e. setting a nullptr, however is allowed.
     DCHECK(!slot || !test_system_slot_);
     test_system_slot_ = std::move(slot);
     if (test_system_slot_) {
@@ -644,7 +644,7 @@ class NSSInitSingleton {
     // TODO(mattm): chromeos::TPMTokenloader always calls
     // InitializeTPMTokenAndSystemSlot with slot 0.  If the system slot is
     // disabled, tpm_slot_ will be the first user's slot instead. Can that be
-    // detected and return NULL instead?
+    // detected and return nullptr instead?
 
     base::Closure wrapped_callback;
     if (!callback.is_null()) {
@@ -669,8 +669,8 @@ class NSSInitSingleton {
   NSSInitSingleton()
       : tpm_token_enabled_for_nss_(false),
         initializing_tpm_token_(false),
-        chaps_module_(NULL),
-        root_(NULL) {
+        chaps_module_(nullptr),
+        root_(nullptr) {
     // It's safe to construct on any thread, since LazyInstance will prevent any
     // other threads from accessing until the constructor is done.
     thread_checker_.DetachFromThread();
@@ -717,7 +717,7 @@ class NSSInitSingleton {
     }
     if (status != SECSuccess) {
       VLOG(1) << "Initializing NSS without a persistent database.";
-      status = NSS_NoDB_Init(NULL);
+      status = NSS_NoDB_Init(nullptr);
       if (status != SECSuccess) {
         CrashOnNSSInitFailure();
         return;
@@ -734,7 +734,7 @@ class NSSInitSingleton {
       // PK11_InitPin may write to the keyDB, but no other thread can use NSS
       // yet, so we don't need to lock.
       if (PK11_NeedUserInit(slot))
-        PK11_InitPin(slot, NULL, NULL);
+        PK11_InitPin(slot, nullptr, nullptr);
       PK11_FreeSlot(slot);
     }
 
@@ -758,12 +758,12 @@ class NSSInitSingleton {
     if (root_) {
       SECMOD_UnloadUserModule(root_);
       SECMOD_DestroyModule(root_);
-      root_ = NULL;
+      root_ = nullptr;
     }
     if (chaps_module_) {
       SECMOD_UnloadUserModule(chaps_module_);
       SECMOD_DestroyModule(chaps_module_);
-      chaps_module_ = NULL;
+      chaps_module_ = nullptr;
     }
 
     SECStatus status = NSS_Shutdown();
@@ -776,14 +776,14 @@ class NSSInitSingleton {
 
   // Load nss's built-in root certs.
   SECMODModule* InitDefaultRootCerts() {
-    SECMODModule* root = LoadModule("Root Certs", "libnssckbi.so", NULL);
+    SECMODModule* root = LoadModule("Root Certs", "libnssckbi.so", nullptr);
     if (root)
       return root;
 
     // Aw, snap.  Can't find/load root cert shared library.
     // This will make it hard to talk to anybody via https.
     // TODO(mattm): Re-add the NOTREACHED here when crbug.com/310972 is fixed.
-    return NULL;
+    return nullptr;
   }
 
   // Load the given module for this NSS session.
@@ -799,17 +799,17 @@ class NSSInitSingleton {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=642546 was filed
     // on NSS codebase to address this.
     SECMODModule* module = SECMOD_LoadUserModule(
-        const_cast<char*>(modparams.c_str()), NULL, PR_FALSE);
+        const_cast<char*>(modparams.c_str()), nullptr, PR_FALSE);
     if (!module) {
       LOG(ERROR) << "Error loading " << name << " module into NSS: "
                  << GetNSSErrorMessage();
-      return NULL;
+      return nullptr;
     }
     if (!module->loaded) {
       LOG(ERROR) << "After loading " << name << ", loaded==false: "
                  << GetNSSErrorMessage();
       SECMOD_DestroyModule(module);
-      return NULL;
+      return nullptr;
     }
     return module;
   }
@@ -846,7 +846,7 @@ ScopedPK11Slot OpenSoftwareNSSDB(const base::FilePath& path,
   PK11SlotInfo* db_slot = SECMOD_OpenUserDB(modspec.c_str());
   if (db_slot) {
     if (PK11_NeedUserInit(db_slot))
-      PK11_InitPin(db_slot, NULL, NULL);
+      PK11_InitPin(db_slot, nullptr, nullptr);
   } else {
     LOG(ERROR) << "Error opening persistent database (" << modspec
                << "): " << GetNSSErrorMessage();
@@ -881,7 +881,7 @@ base::Lock* GetNSSWriteLock() {
 }
 
 AutoNSSWriteLock::AutoNSSWriteLock() : lock_(GetNSSWriteLock()) {
-  // May be NULL if the lock is not needed in our version of NSS.
+  // May be nullptr if the lock is not needed in our version of NSS.
   if (lock_)
     lock_->Acquire();
 }

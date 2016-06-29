@@ -24,7 +24,7 @@ namespace crypto {
 
 // Opens an NSS software database in folder |path|, with the (potentially)
 // user-visible description |description|. Returns the slot for the opened
-// database, or NULL if the database could not be opened.
+// database, or nullptr if the database could not be opened.
 CRYPTO_EXPORT ScopedPK11Slot OpenSoftwareNSSDB(const base::FilePath& path,
                                                const std::string& description);
 
@@ -57,8 +57,8 @@ CRYPTO_EXPORT ScopedPK11Slot GetSystemNSSKeySlot(
 // through |GetSystemNSSKeySlot| and |IsTPMTokenReady| will return true.
 // |InitializeTPMTokenAndSystemSlot|, which triggers the TPM initialization,
 // does not have to be called if the test system slot is set.
-// This must must not be called consecutively with a |slot| != NULL. If |slot|
-// is NULL, the test system slot is unset.
+// This must must not be called consecutively with a |slot| != nullptr. If
+// |slot| is nullptr, the test system slot is unset.
 CRYPTO_EXPORT void SetSystemKeySlotForTesting(ScopedPK11Slot slot);
 
 // Prepare per-user NSS slot mapping. It is safe to call this function multiple

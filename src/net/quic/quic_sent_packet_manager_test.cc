@@ -88,10 +88,6 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
                  /*delegate=*/nullptr),
         send_algorithm_(new StrictMock<MockSendAlgorithm>),
         network_change_visitor_(new StrictMock<MockNetworkChangeVisitor>) {
-    // These tests only work with pacing enabled.
-    saved_FLAGS_quic_disable_pacing_ = FLAGS_quic_disable_pacing;
-    FLAGS_quic_disable_pacing = false;
-
     QuicSentPacketManagerPeer::SetSendAlgorithm(&manager_, send_algorithm_);
     // Disable tail loss probes for most tests.
     QuicSentPacketManagerPeer::SetMaxTailLossProbes(&manager_, 0);
@@ -110,7 +106,6 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
 
   ~QuicSentPacketManagerTest() override {
     STLDeleteElements(&packets_);
-    FLAGS_quic_disable_pacing = saved_FLAGS_quic_disable_pacing_;
   }
 
   QuicByteCount BytesInFlight() {
@@ -312,7 +307,6 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
   QuicConnectionStats stats_;
   MockSendAlgorithm* send_algorithm_;
   std::unique_ptr<MockNetworkChangeVisitor> network_change_visitor_;
-  bool saved_FLAGS_quic_disable_pacing_;
 };
 
 INSTANTIATE_TEST_CASE_P(QuicSentPacketManagerTest,
@@ -536,7 +530,6 @@ TEST_P(QuicSentPacketManagerTest, RetransmitTwiceThenAckFirst) {
 }
 
 TEST_P(QuicSentPacketManagerTest, AckOriginalTransmission) {
-  FLAGS_quic_adaptive_loss_recovery = true;
   MockLossAlgorithm* loss_algorithm = new MockLossAlgorithm();
   QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm);
 

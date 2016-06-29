@@ -13,8 +13,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <memory>
-
 #include "base/logging.h"
 #include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
@@ -43,13 +41,13 @@ bool ExportKeyWithBio(const void* key,
     return false;
 
   ScopedBIO bio(BIO_new(BIO_s_mem()));
-  if (!bio.get())
+  if (!bio)
     return false;
 
   if (!export_fn(bio.get(), key))
     return false;
 
-  char* data = NULL;
+  char* data = nullptr;
   long len = BIO_get_mem_data(bio.get(), &data);
   if (!data || len < 0)
     return false;
@@ -65,28 +63,21 @@ ECPrivateKey::~ECPrivateKey() {
     EVP_PKEY_free(key_);
 }
 
-ECPrivateKey* ECPrivateKey::Copy() const {
-  std::unique_ptr<ECPrivateKey> copy(new ECPrivateKey);
-  if (key_)
-    copy->key_ = EVP_PKEY_up_ref(key_);
-  return copy.release();
-}
-
 // static
-ECPrivateKey* ECPrivateKey::Create() {
+std::unique_ptr<ECPrivateKey> ECPrivateKey::Create() {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   ScopedEC_KEY ec_key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
-  if (!ec_key.get() || !EC_KEY_generate_key(ec_key.get()))
-    return NULL;
+  if (!ec_key || !EC_KEY_generate_key(ec_key.get()))
+    return nullptr;
 
   std::unique_ptr<ECPrivateKey> result(new ECPrivateKey());
   result->key_ = EVP_PKEY_new();
   if (!result->key_ || !EVP_PKEY_set1_EC_KEY(result->key_, ec_key.get()))
-    return NULL;
+    return nullptr;
 
   CHECK_EQ(EVP_PKEY_EC, EVP_PKEY_id(result->key_));
-  return result.release();
+  return result;
 }
 
 // static
@@ -100,13 +91,13 @@ std::unique_ptr<ECPrivateKey> ECPrivateKey::CreateFromPrivateKeyInfo(
   if (!pkey || CBS_len(&cbs) != 0 || EVP_PKEY_id(pkey.get()) != EVP_PKEY_EC)
     return nullptr;
 
-  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey);
+  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey());
   result->key_ = pkey.release();
   return result;
 }
 
 // static
-ECPrivateKey* ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
+std::unique_ptr<ECPrivateKey> ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
     const std::string& password,
     const std::vector<uint8_t>& encrypted_private_key_info,
     const std::vector<uint8_t>& subject_public_key_info) {
@@ -114,16 +105,16 @@ ECPrivateKey* ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
   // useful for the NSS implementation (which uses the public key's SHA1
   // as a lookup key when storing the private one in its store).
   if (encrypted_private_key_info.empty())
-    return NULL;
+    return nullptr;
 
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   const uint8_t* data = &encrypted_private_key_info[0];
   const uint8_t* ptr = data;
   ScopedX509_SIG p8_encrypted(
-      d2i_X509_SIG(NULL, &ptr, encrypted_private_key_info.size()));
+      d2i_X509_SIG(nullptr, &ptr, encrypted_private_key_info.size()));
   if (!p8_encrypted || ptr != data + encrypted_private_key_info.size())
-    return NULL;
+    return nullptr;
 
   ScopedPKCS8_PRIV_KEY_INFO p8_decrypted;
   if (password.empty()) {
@@ -142,15 +133,22 @@ ECPrivateKey* ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
   }
 
   if (!p8_decrypted)
-    return NULL;
+    return nullptr;
 
   // Create a new EVP_PKEY for it.
-  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey);
+  std::unique_ptr<ECPrivateKey> result(new ECPrivateKey());
   result->key_ = EVP_PKCS82PKEY(p8_decrypted.get());
   if (!result->key_ || EVP_PKEY_id(result->key_) != EVP_PKEY_EC)
-    return NULL;
+    return nullptr;
 
-  return result.release();
+  return result;
+}
+
+std::unique_ptr<ECPrivateKey> ECPrivateKey::Copy() const {
+  std::unique_ptr<ECPrivateKey> copy(new ECPrivateKey());
+  if (key_)
+    copy->key_ = EVP_PKEY_up_ref(key_);
+  return copy;
 }
 
 bool ECPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {
@@ -174,7 +172,7 @@ bool ECPrivateKey::ExportEncryptedPrivateKey(
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   // Convert into a PKCS#8 object.
   ScopedPKCS8_PRIV_KEY_INFO pkcs8(EVP_PKEY2PKCS8(key_));
-  if (!pkcs8.get())
+  if (!pkcs8)
     return false;
 
   // Encrypt the object.
@@ -190,7 +188,7 @@ bool ECPrivateKey::ExportEncryptedPrivateKey(
       0,
       iterations,
       pkcs8.get()));
-  if (!encrypted.get())
+  if (!encrypted)
     return false;
 
   // Write it into |*output|
@@ -236,6 +234,6 @@ bool ECPrivateKey::ExportRawPublicKey(std::string* output) const {
   return true;
 }
 
-ECPrivateKey::ECPrivateKey() : key_(NULL) {}
+ECPrivateKey::ECPrivateKey() : key_(nullptr) {}
 
 }  // namespace crypto

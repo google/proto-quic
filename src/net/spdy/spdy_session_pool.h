@@ -49,18 +49,17 @@ class NET_EXPORT SpdySessionPool
   // |default_protocol| may be kProtoUnknown (e.g., if SPDY is
   // disabled), in which case it's set to a default value. Otherwise,
   // it must be a SPDY protocol.
-  SpdySessionPool(
-      HostResolver* host_resolver,
-      SSLConfigService* ssl_config_service,
-      const base::WeakPtr<HttpServerProperties>& http_server_properties,
-      TransportSecurityState* transport_security_state,
-      bool enable_ping_based_connection_checking,
-      bool enable_priority_dependencies,
-      NextProto default_protocol,
-      size_t session_max_recv_window_size,
-      size_t stream_max_recv_window_size,
-      SpdySessionPool::TimeFunc time_func,
-      ProxyDelegate* proxy_delegate);
+  SpdySessionPool(HostResolver* host_resolver,
+                  SSLConfigService* ssl_config_service,
+                  HttpServerProperties* http_server_properties,
+                  TransportSecurityState* transport_security_state,
+                  bool enable_ping_based_connection_checking,
+                  bool enable_priority_dependencies,
+                  NextProto default_protocol,
+                  size_t session_max_recv_window_size,
+                  size_t stream_max_recv_window_size,
+                  SpdySessionPool::TimeFunc time_func,
+                  ProxyDelegate* proxy_delegate);
   ~SpdySessionPool() override;
 
   // In the functions below, a session is "available" if this pool has
@@ -133,7 +132,7 @@ class NET_EXPORT SpdySessionPool
   // Creates a Value summary of the state of the spdy session pool.
   std::unique_ptr<base::Value> SpdySessionPoolInfoToValue() const;
 
-  base::WeakPtr<HttpServerProperties> http_server_properties() {
+  HttpServerProperties* http_server_properties() {
     return http_server_properties_;
   }
 
@@ -197,7 +196,7 @@ class NET_EXPORT SpdySessionPool
       const std::string& description,
       bool idle_only);
 
-  const base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* http_server_properties_;
 
   TransportSecurityState* transport_security_state_;
 

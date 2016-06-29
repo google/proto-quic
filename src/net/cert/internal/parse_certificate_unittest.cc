@@ -156,7 +156,7 @@ void EnsureParsingTbsSucceeds(const std::string& file_name,
 
   // Parsing the TBSCertificate should succeed.
   ParsedTbsCertificate parsed;
-  ASSERT_TRUE(ParseTbsCertificate(der::Input(&data), &parsed));
+  ASSERT_TRUE(ParseTbsCertificate(der::Input(&data), {}, &parsed));
 
   // Ensure that the ParsedTbsCertificate matches expectations.
   EXPECT_EQ(expected_version, parsed.version);
@@ -199,7 +199,7 @@ void EnsureParsingTbsFails(const std::string& file_name) {
 
   // Parsing the TBSCertificate should fail.
   ParsedTbsCertificate parsed;
-  ASSERT_FALSE(ParseTbsCertificate(der::Input(&data), &parsed));
+  ASSERT_FALSE(ParseTbsCertificate(der::Input(&data), {}, &parsed));
 }
 
 // Tests parsing a TBSCertificate for v3 that contains no optional fields.

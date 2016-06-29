@@ -88,6 +88,7 @@ class TransportSecurityState;
 enum SpdyProtocolErrorDetails {
   // SpdyFramer::SpdyError mappings.
   SPDY_ERROR_NO_ERROR = 0,
+  SPDY_ERROR_INVALID_STREAM_ID = 38,
   SPDY_ERROR_INVALID_CONTROL_FRAME = 1,
   SPDY_ERROR_CONTROL_PAYLOAD_TOO_LARGE = 2,
   SPDY_ERROR_ZLIB_INIT_FAILURE = 3,
@@ -102,7 +103,7 @@ enum SpdyProtocolErrorDetails {
   SPDY_ERROR_UNEXPECTED_FRAME = 31,
   SPDY_ERROR_INTERNAL_FRAMER_ERROR = 41,
   SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE = 37,
-  SPDY_ERROR_INVALID_STREAM_ID = 38,
+  SPDY_ERROR_OVERSIZED_PAYLOAD = 40,
   // SpdyRstStreamStatus mappings.
   // RST_STREAM_INVALID not mapped.
   STATUS_CODE_PROTOCOL_ERROR = 11,
@@ -131,7 +132,7 @@ enum SpdyProtocolErrorDetails {
   PROTOCOL_ERROR_RECEIVE_WINDOW_VIOLATION = 28,
 
   // Next free value.
-  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 40,
+  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 41,
 };
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
     MapFramerErrorToProtocolError(SpdyFramer::SpdyError error);
@@ -142,7 +143,7 @@ SpdyGoAwayStatus NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
 
 // If these compile asserts fail then SpdyProtocolErrorDetails needs
 // to be updated with new values, as do the mapping functions above.
-static_assert(16 == SpdyFramer::LAST_ERROR,
+static_assert(17 == SpdyFramer::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
 static_assert(17 == RST_STREAM_NUM_STATUS_CODES,
               "SpdyProtocolErrorDetails / RstStreamStatus mismatch");
@@ -292,7 +293,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // |session| is the HttpNetworkSession.  |net_log| is the NetLog that we log
   // network events to.
   SpdySession(const SpdySessionKey& spdy_session_key,
-              const base::WeakPtr<HttpServerProperties>& http_server_properties,
+              HttpServerProperties* http_server_properties,
               TransportSecurityState* transport_security_state,
               bool verify_domain_authentication,
               bool enable_sending_initial_data,
@@ -372,11 +373,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                           std::unique_ptr<SpdyBufferProducer> producer);
 
   // Creates and returns a SYN frame for |stream_id|.
-  std::unique_ptr<SpdySerializedFrame> CreateSynStream(
-      SpdyStreamId stream_id,
-      RequestPriority priority,
-      SpdyControlFlags flags,
-      const SpdyHeaderBlock& headers);
+  std::unique_ptr<SpdySerializedFrame> CreateSynStream(SpdyStreamId stream_id,
+                                                       RequestPriority priority,
+                                                       SpdyControlFlags flags,
+                                                       SpdyHeaderBlock headers);
 
   // Creates and returns a SpdyBuffer holding a data frame with the
   // given data. May return NULL if stalled by flow control.
@@ -1026,7 +1026,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   // |pool_| owns us, therefore its lifetime must exceed ours.
   SpdySessionPool* pool_;
-  const base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* http_server_properties_;
 
   TransportSecurityState* transport_security_state_;
 

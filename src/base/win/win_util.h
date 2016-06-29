@@ -176,6 +176,9 @@ BASE_EXPORT bool GetLoadedModulesSnapshot(HANDLE process,
 BASE_EXPORT void EnableFlicks(HWND hwnd);
 BASE_EXPORT void DisableFlicks(HWND hwnd);
 
+// Returns true if the process is per monitor DPI aware.
+BASE_EXPORT bool IsProcessPerMonitorDpiAware();
+
 }  // namespace win
 }  // namespace base
 

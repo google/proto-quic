@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_BASE_TEST_DATA_DIRECTORY_H_
-#define NET_BASE_TEST_DATA_DIRECTORY_H_
+#ifndef NET_TEST_TEST_DATA_DIRECTORY_H_
+#define NET_TEST_TEST_DATA_DIRECTORY_H_
 
 #include "base/files/file_path.h"
 
@@ -26,4 +26,4 @@ base::FilePath GetWebSocketTestDataDirectory();
 
 }  // namespace net
 
-#endif  // NET_BASE_TEST_DATA_DIRECTORY_H_
+#endif  // NET_TEST_TEST_DATA_DIRECTORY_H_

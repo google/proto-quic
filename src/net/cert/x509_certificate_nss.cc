@@ -33,9 +33,6 @@ void X509Certificate::Initialize() {
   x509_util::ParseDate(&cert_handle_->validity.notBefore, &valid_start_);
   x509_util::ParseDate(&cert_handle_->validity.notAfter, &valid_expiry_);
 
-  fingerprint_ = CalculateFingerprint(cert_handle_);
-  ca_fingerprint_ = CalculateCAFingerprint(intermediate_ca_certs_);
-
   serial_number_ = x509_util::ParseSerialNumber(cert_handle_);
 }
 
@@ -208,22 +205,6 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 }
 
 // static
-SHA1HashValue X509Certificate::CalculateFingerprint(
-    OSCertHandle cert) {
-  SHA1HashValue sha1;
-  memset(sha1.data, 0, sizeof(sha1.data));
-
-  DCHECK(NULL != cert->derCert.data);
-  DCHECK_NE(0U, cert->derCert.len);
-
-  SECStatus rv = HASH_HashBuf(HASH_AlgSHA1, sha1.data,
-                              cert->derCert.data, cert->derCert.len);
-  DCHECK_EQ(SECSuccess, rv);
-
-  return sha1;
-}
-
-// static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
   SHA256HashValue sha256;
   memset(sha256.data, 0, sizeof(sha256.data));
@@ -239,24 +220,25 @@ SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
 }
 
 // static
-SHA1HashValue X509Certificate::CalculateCAFingerprint(
+SHA256HashValue X509Certificate::CalculateCAFingerprint256(
     const OSCertHandles& intermediates) {
-  SHA1HashValue sha1;
-  memset(sha1.data, 0, sizeof(sha1.data));
+  SHA256HashValue sha256;
+  memset(sha256.data, 0, sizeof(sha256.data));
 
-  HASHContext* sha1_ctx = HASH_Create(HASH_AlgSHA1);
-  if (!sha1_ctx)
-    return sha1;
-  HASH_Begin(sha1_ctx);
+  HASHContext* sha256_ctx = HASH_Create(HASH_AlgSHA256);
+  if (!sha256_ctx)
+    return sha256;
+  HASH_Begin(sha256_ctx);
   for (size_t i = 0; i < intermediates.size(); ++i) {
     CERTCertificate* ca_cert = intermediates[i];
-    HASH_Update(sha1_ctx, ca_cert->derCert.data, ca_cert->derCert.len);
+    HASH_Update(sha256_ctx, ca_cert->derCert.data, ca_cert->derCert.len);
   }
   unsigned int result_len;
-  HASH_End(sha1_ctx, sha1.data, &result_len, HASH_ResultLenContext(sha1_ctx));
-  HASH_Destroy(sha1_ctx);
+  HASH_End(sha256_ctx, sha256.data, &result_len,
+           HASH_ResultLenContext(sha256_ctx));
+  HASH_Destroy(sha256_ctx);
 
-  return sha1;
+  return sha256;
 }
 
 // static

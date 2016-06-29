@@ -77,7 +77,7 @@ void ReadTestFromFile(const std::string& file_name,
       chain->push_back(block_data);
     } else if (block_type == kTrustedCertificateHeader) {
       scoped_refptr<ParsedCertificate> cert(
-          ParsedCertificate::CreateFromCertificateCopy(block_data));
+          ParsedCertificate::CreateFromCertificateCopy(block_data, {}));
       ASSERT_TRUE(cert);
       trust_store->AddTrustedCertificate(std::move(cert));
     } else if (block_type == kTimeHeader) {
@@ -109,13 +109,23 @@ void RunTest(const char* file_name) {
   for (const auto& cert_der : chain) {
     ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(
         reinterpret_cast<const uint8_t*>(cert_der.data()), cert_der.size(),
-        net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE, &input_chain));
+        net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE, {},
+        &input_chain));
   }
 
   SimpleSignaturePolicy signature_policy(1024);
 
-  bool result =
-      VerifyCertificateChain(input_chain, trust_store, &signature_policy, time);
+  std::vector<scoped_refptr<ParsedCertificate>> trusted_chain;
+  bool result = VerifyCertificateChain(input_chain, trust_store,
+                                       &signature_policy, time, &trusted_chain);
+  if (result) {
+    ASSERT_EQ(trusted_chain.size(), input_chain.size() + 1);
+    ASSERT_TRUE(std::equal(input_chain.begin(), input_chain.end(),
+                           trusted_chain.begin()));
+    ASSERT_TRUE(trust_store.IsTrustedCertificate(trusted_chain.back().get()));
+  } else {
+    ASSERT_EQ(trusted_chain.size(), 0u);
+  }
 
   ASSERT_EQ(expected_result, result);
 }
@@ -235,8 +245,8 @@ TEST(VerifyCertificateChainTest, EmptyChainIsInvalid) {
   std::vector<scoped_refptr<ParsedCertificate>> chain;
   SimpleSignaturePolicy signature_policy(2048);
 
-  ASSERT_FALSE(
-      VerifyCertificateChain(chain, trust_store, &signature_policy, time));
+  ASSERT_FALSE(VerifyCertificateChain(chain, trust_store, &signature_policy,
+                                      time, nullptr));
 }
 
 // TODO(eroman): Add test that invalidate validity dates where the day or month

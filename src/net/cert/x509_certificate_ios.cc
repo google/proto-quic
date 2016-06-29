@@ -173,8 +173,6 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 
 void X509Certificate::Initialize() {
   crypto::EnsureOpenSSLInit();
-  fingerprint_ = CalculateFingerprint(cert_handle_);
-  ca_fingerprint_ = CalculateCAFingerprint(intermediate_ca_certs_);
   ScopedX509 x509_cert = OSCertHandleToOpenSSL(cert_handle_);
   if (!x509_cert)
     return;
@@ -201,21 +199,6 @@ void X509Certificate::Initialize() {
 }
 
 // static
-SHA1HashValue X509Certificate::CalculateFingerprint(OSCertHandle cert) {
-  SHA1HashValue sha1;
-  memset(sha1.data, 0, sizeof(sha1.data));
-
-  ScopedCFTypeRef<CFDataRef> cert_data(SecCertificateCopyData(cert));
-  if (!cert_data)
-    return sha1;
-  DCHECK(CFDataGetBytePtr(cert_data));
-  DCHECK_NE(0, CFDataGetLength(cert_data));
-  CC_SHA1(CFDataGetBytePtr(cert_data), CFDataGetLength(cert_data), sha1.data);
-
-  return sha1;
-}
-
-// static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
   SHA256HashValue sha256;
   memset(sha256.data, 0, sizeof(sha256.data));
@@ -232,23 +215,23 @@ SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
 }
 
 // static
-SHA1HashValue X509Certificate::CalculateCAFingerprint(
+SHA256HashValue X509Certificate::CalculateCAFingerprint256(
     const OSCertHandles& intermediates) {
-  SHA1HashValue sha1;
-  memset(sha1.data, 0, sizeof(sha1.data));
+  SHA256HashValue sha256;
+  memset(sha256.data, 0, sizeof(sha256.data));
 
-  CC_SHA1_CTX sha1_ctx;
-  CC_SHA1_Init(&sha1_ctx);
+  CC_SHA256_CTX sha256_ctx;
+  CC_SHA256_Init(&sha256_ctx);
   for (size_t i = 0; i < intermediates.size(); ++i) {
     ScopedCFTypeRef<CFDataRef> cert_data(
         SecCertificateCopyData(intermediates[i]));
     if (!cert_data)
-      return sha1;
-    CC_SHA1_Update(&sha1_ctx, CFDataGetBytePtr(cert_data),
-                   CFDataGetLength(cert_data));
+      return sha256;
+    CC_SHA256_Update(&sha256_ctx, CFDataGetBytePtr(cert_data),
+                     CFDataGetLength(cert_data));
   }
-  CC_SHA1_Final(sha1.data, &sha1_ctx);
-  return sha1;
+  CC_SHA256_Final(sha256.data, &sha256_ctx);
+  return sha256;
 }
 
 // static

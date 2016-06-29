@@ -31,6 +31,7 @@ namespace net {
 class CertVerifier;
 class ChannelIDService;
 class CookieStore;
+class CTPolicyEnforcer;
 class CTVerifier;
 class HostResolver;
 class HttpAuthHandlerFactory;
@@ -137,10 +138,10 @@ class NET_EXPORT URLRequestContext
   NetworkDelegate* network_delegate() const { return network_delegate_; }
 
   void set_http_server_properties(
-      const base::WeakPtr<HttpServerProperties>& http_server_properties) {
+      HttpServerProperties* http_server_properties) {
     http_server_properties_ = http_server_properties;
   }
-  base::WeakPtr<HttpServerProperties> http_server_properties() const {
+  HttpServerProperties* http_server_properties() const {
     return http_server_properties_;
   }
 
@@ -162,6 +163,11 @@ class NET_EXPORT URLRequestContext
   }
   void set_cert_transparency_verifier(CTVerifier* verifier) {
     cert_transparency_verifier_ = verifier;
+  }
+
+  CTPolicyEnforcer* ct_policy_enforcer() const { return ct_policy_enforcer_; }
+  void set_ct_policy_enforcer(CTPolicyEnforcer* enforcer) {
+    ct_policy_enforcer_ = enforcer;
   }
 
   const URLRequestJobFactory* job_factory() const { return job_factory_; }
@@ -255,11 +261,12 @@ class NET_EXPORT URLRequestContext
   ProxyService* proxy_service_;
   scoped_refptr<SSLConfigService> ssl_config_service_;
   NetworkDelegate* network_delegate_;
-  base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* http_server_properties_;
   HttpUserAgentSettings* http_user_agent_settings_;
   CookieStore* cookie_store_;
   TransportSecurityState* transport_security_state_;
   CTVerifier* cert_transparency_verifier_;
+  CTPolicyEnforcer* ct_policy_enforcer_;
   HttpTransactionFactory* http_transaction_factory_;
   const URLRequestJobFactory* job_factory_;
   URLRequestThrottlerManager* throttler_manager_;

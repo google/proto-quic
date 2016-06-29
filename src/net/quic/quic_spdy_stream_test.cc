@@ -5,6 +5,7 @@
 #include "net/quic/quic_spdy_stream.h"
 
 #include <memory>
+#include <utility>
 
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_connection.h"
@@ -894,7 +895,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersSendsAFin) {
   trailers["trailer key"] = "trailer value";
   EXPECT_CALL(*session_, WriteHeaders(_, _,
                                       /*fin=*/true, _, _));
-  stream_->WriteTrailers(trailers, nullptr);
+  stream_->WriteTrailers(std::move(trailers), nullptr);
   EXPECT_TRUE(stream_->fin_sent());
 }
 
@@ -922,7 +923,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersFinalOffset) {
   trailers_with_offset[kFinalOffsetHeaderKey] = base::IntToString(kBodySize);
   EXPECT_CALL(*session_, WriteHeaders(_, testing::Eq(trailers_with_offset),
                                       /*fin=*/true, _, _));
-  stream_->WriteTrailers(trailers, nullptr);
+  stream_->WriteTrailers(std::move(trailers), nullptr);
 }
 
 TEST_P(QuicSpdyStreamTest, WritingTrailersClosesWriteSide) {

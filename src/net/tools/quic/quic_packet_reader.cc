@@ -99,6 +99,7 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
   }
 
   QuicTime fallback_timestamp = QuicTime::Zero();
+  QuicWallTime fallback_walltimestamp = QuicWallTime::Zero();
   for (int i = 0; i < packets_read; ++i) {
     if (mmsg_hdr_[i].msg_len == 0) {
       continue;
@@ -114,22 +115,34 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
     IPEndPoint client_address = IPEndPoint(packets_[i].raw_address);
     IPAddress server_ip;
     QuicTime packet_timestamp = QuicTime::Zero();
+    QuicWallTime packet_walltimestamp = QuicWallTime::Zero();
+    bool latched_walltimestamps = FLAGS_quic_socket_walltimestamps;
     QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
-        &mmsg_hdr_[i].msg_hdr, &server_ip, &packet_timestamp);
+        &mmsg_hdr_[i].msg_hdr, &server_ip, &packet_timestamp,
+        &packet_walltimestamp, latched_walltimestamps);
     if (!IsInitializedAddress(server_ip)) {
       QUIC_BUG << "Unable to get server address.";
       continue;
     }
 
-    if (packet_timestamp == QuicTime::Zero()) {
-      // This isn't particularly desirable, but not all platforms support socket
-      // timestamping.
-      if (fallback_timestamp == QuicTime::Zero()) {
-        fallback_timestamp = clock.Now();
+    // This isn't particularly desirable, but not all platforms support socket
+    // timestamping.
+    if (latched_walltimestamps) {
+      if (packet_walltimestamp.IsZero()) {
+        if (fallback_walltimestamp.IsZero()) {
+          fallback_walltimestamp = clock.WallNow();
+        }
+        packet_walltimestamp = fallback_walltimestamp;
       }
-      packet_timestamp = fallback_timestamp;
+      packet_timestamp = clock.ConvertWallTimeToQuicTime(packet_walltimestamp);
+    } else {
+      if (packet_timestamp == QuicTime::Zero()) {
+        if (fallback_timestamp == QuicTime::Zero()) {
+          fallback_timestamp = clock.Now();
+        }
+        packet_timestamp = fallback_timestamp;
+      }
     }
-
     QuicReceivedPacket packet(reinterpret_cast<char*>(packets_[i].iov.iov_base),
                               mmsg_hdr_[i].msg_len, packet_timestamp, false);
     IPEndPoint server_address(server_ip, port);
@@ -156,14 +169,16 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
     const QuicClock& clock,
     ProcessPacketInterface* processor,
     QuicPacketCount* packets_dropped) {
+  bool latched_walltimestamps = FLAGS_quic_socket_walltimestamps;
   char buf[kMaxPacketSize];
 
   IPEndPoint client_address;
   IPAddress server_ip;
   QuicTime timestamp = QuicTime::Zero();
-  int bytes_read =
-      QuicSocketUtils::ReadPacket(fd, buf, arraysize(buf), packets_dropped,
-                                  &server_ip, &timestamp, &client_address);
+  QuicWallTime walltimestamp = QuicWallTime::Zero();
+  int bytes_read = QuicSocketUtils::ReadPacket(
+      fd, buf, arraysize(buf), packets_dropped, &server_ip, &timestamp,
+      &walltimestamp, latched_walltimestamps, &client_address);
 
   if (bytes_read < 0) {
     return false;  // ReadPacket failed.
@@ -173,10 +188,17 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
     QUIC_BUG << "Unable to get server address.";
     return false;
   }
-  if (timestamp == QuicTime::Zero()) {
-    // This isn't particularly desirable, but not all platforms support socket
-    // timestamping.
-    timestamp = clock.Now();
+  // This isn't particularly desirable, but not all platforms support socket
+  // timestamping.
+  if (latched_walltimestamps) {
+    if (walltimestamp.IsZero()) {
+      walltimestamp = clock.WallNow();
+    }
+    timestamp = clock.ConvertWallTimeToQuicTime(walltimestamp);
+  } else {
+    if (timestamp == QuicTime::Zero()) {
+      timestamp = clock.Now();
+    }
   }
 
   QuicReceivedPacket packet(buf, bytes_read, timestamp, false);

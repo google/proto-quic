@@ -61,7 +61,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   void OnHeadersAvailable(const SpdyHeaderBlock& headers,
                           size_t frame_len) override;
   void OnDataAvailable() override;
-  void OnClose(QuicErrorCode error) override;
+  void OnClose() override;
   void OnError(int error) override;
   bool HasSendHeadersComplete() override;
 
@@ -75,6 +75,8 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
 
   // Notifies the delegate of an error.
   void NotifyError(int error);
+  // Notifies the delegate that the stream is ready.
+  void NotifyStreamReady();
   // Resets the stream and ensures that |delegate_| won't be called back.
   void ResetStream();
 
@@ -116,6 +118,10 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
   // until next SendData/SendvData, during which QUIC will try to combine header
   // frame with data frame in the same packet if possible.
   bool send_request_headers_automatically_;
+
+  // True of this stream is waiting for the QUIC handshake to be confirmed
+  // before sending headers.
+  bool waiting_for_confirmation_;
 
   base::WeakPtrFactory<BidirectionalStreamQuicImpl> weak_factory_;
 

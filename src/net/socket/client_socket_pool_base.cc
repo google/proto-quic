@@ -11,6 +11,7 @@
 #include "base/format_macros.h"
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
@@ -975,11 +976,21 @@ void ClientSocketPoolBaseHelper::HandOutSocket(
   handle->set_pool_id(pool_generation_number_);
   handle->set_connect_timing(connect_timing);
 
-  if (handle->is_reused()) {
+  if (reuse_type == ClientSocketHandle::REUSED_IDLE) {
     net_log.AddEvent(
         NetLog::TYPE_SOCKET_POOL_REUSED_AN_EXISTING_SOCKET,
         NetLog::IntCallback("idle_ms",
                             static_cast<int>(idle_time.InMilliseconds())));
+
+    UMA_HISTOGRAM_COUNTS_1000("Net.Socket.IdleSocketReuseTime",
+                              idle_time.InSeconds());
+  }
+
+  if (reuse_type != ClientSocketHandle::UNUSED) {
+    // The socket being handed out is no longer considered idle, but was
+    // considered idle until just before this method was called.
+    UMA_HISTOGRAM_CUSTOM_COUNTS("Net.Socket.NumIdleSockets",
+                                idle_socket_count() + 1, 1, 256, 50);
   }
 
   net_log.AddEvent(

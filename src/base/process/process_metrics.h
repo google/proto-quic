@@ -272,6 +272,14 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int total;
   int free;
 
+#if defined(OS_LINUX)
+  // This provides an estimate of available memory as described here:
+  // https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773
+  // NOTE: this is ONLY valid in kernels 3.14 and up.  Its value will always
+  // be 0 in earlier kernel versions.
+  int available;
+#endif
+
 #if !defined(OS_MACOSX)
   int swap_total;
   int swap_free;

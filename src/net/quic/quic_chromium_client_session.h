@@ -187,6 +187,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
                           ConnectionCloseSource source) override;
   void OnSuccessfulVersionNegotiation(const QuicVersion& version) override;
   void OnPathDegrading() override;
+  bool HasOpenDynamicStreams() const override;
 
   // QuicChromiumPacketReader::Visitor methods:
   void OnReadError(int result, const DatagramClientSocket* socket) override;

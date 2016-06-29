@@ -20,7 +20,7 @@ ElementsUploadDataStream::ElementsUploadDataStream(
     : UploadDataStream(false, identifier),
       element_readers_(std::move(element_readers)),
       element_index_(0),
-      read_failed_(false),
+      read_error_(OK),
       weak_ptr_factory_(this) {}
 
 ElementsUploadDataStream::~ElementsUploadDataStream() {
@@ -61,7 +61,7 @@ ElementsUploadDataStream::GetElementReaders() const {
 
 void ElementsUploadDataStream::ResetInternal() {
   weak_ptr_factory_.InvalidateWeakPtrs();
-  read_failed_ = false;
+  read_error_ = OK;
   element_index_ = 0;
 }
 
@@ -103,7 +103,7 @@ void ElementsUploadDataStream::OnInitElementCompleted(size_t index,
 
 int ElementsUploadDataStream::ReadElements(
     const scoped_refptr<DrainableIOBuffer>& buf) {
-  while (!read_failed_ && element_index_ < element_readers_.size()) {
+  while (read_error_ == OK && element_index_ < element_readers_.size()) {
     UploadElementReader* reader = element_readers_[element_index_].get();
 
     if (reader->BytesRemaining() == 0) {
@@ -125,18 +125,10 @@ int ElementsUploadDataStream::ReadElements(
     ProcessReadResult(buf, result);
   }
 
-  if (read_failed_) {
-    // If an error occured during read operation, then pad with zero.
-    // Otherwise the server will hang waiting for the rest of the data.
-    int num_bytes_to_fill =
-        static_cast<int>(std::min(static_cast<uint64_t>(buf->BytesRemaining()),
-                                  size() - position() - buf->BytesConsumed()));
-    DCHECK_GE(num_bytes_to_fill, 0);
-    memset(buf->data(), 0, num_bytes_to_fill);
-    buf->DidConsume(num_bytes_to_fill);
-  }
+  if (buf->BytesConsumed() > 0)
+    return buf->BytesConsumed();
 
-  return buf->BytesConsumed();
+  return read_error_;
 }
 
 void ElementsUploadDataStream::OnReadElementCompleted(
@@ -153,12 +145,12 @@ void ElementsUploadDataStream::ProcessReadResult(
     const scoped_refptr<DrainableIOBuffer>& buf,
     int result) {
   DCHECK_NE(ERR_IO_PENDING, result);
-  DCHECK(!read_failed_);
+  DCHECK(!read_error_);
 
   if (result >= 0) {
     buf->DidConsume(result);
   } else {
-    read_failed_ = true;
+    read_error_ = result;
   }
 }
 

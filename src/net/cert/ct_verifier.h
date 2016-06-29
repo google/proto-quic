@@ -21,7 +21,6 @@ class CTLogVerifier;
 class X509Certificate;
 
 // Interface for verifying Signed Certificate Timestamps over a certificate.
-// The only known (non-test) implementation currently is MultiLogCTVerifier.
 class NET_EXPORT CTVerifier {
  public:
   class NET_EXPORT Observer {

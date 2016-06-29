@@ -15,7 +15,6 @@
 #include "net/base/net_errors.h"
 #include "net/socket/ssl_socket.h"
 #include "net/socket/stream_socket.h"
-#include "net/ssl/ssl_failure_state.h"
 
 namespace base {
 class FilePath;
@@ -41,13 +40,7 @@ class X509Certificate;
 // This struct groups together several fields which are used by various
 // classes related to SSLClientSocket.
 struct SSLClientSocketContext {
-  SSLClientSocketContext()
-      : cert_verifier(NULL),
-        channel_id_service(NULL),
-        transport_security_state(NULL),
-        cert_transparency_verifier(NULL),
-        ct_policy_enforcer(NULL) {}
-
+  SSLClientSocketContext() = default;
   SSLClientSocketContext(CertVerifier* cert_verifier_arg,
                          ChannelIDService* channel_id_service_arg,
                          TransportSecurityState* transport_security_state_arg,
@@ -61,11 +54,11 @@ struct SSLClientSocketContext {
         ct_policy_enforcer(ct_policy_enforcer_arg),
         ssl_session_cache_shard(ssl_session_cache_shard_arg) {}
 
-  CertVerifier* cert_verifier;
-  ChannelIDService* channel_id_service;
-  TransportSecurityState* transport_security_state;
-  CTVerifier* cert_transparency_verifier;
-  CTPolicyEnforcer* ct_policy_enforcer;
+  CertVerifier* cert_verifier = nullptr;
+  ChannelIDService* channel_id_service = nullptr;
+  TransportSecurityState* transport_security_state = nullptr;
+  CTVerifier* cert_transparency_verifier = nullptr;
+  CTPolicyEnforcer* ct_policy_enforcer = nullptr;
   // ssl_session_cache_shard is an opaque string that identifies a shard of the
   // SSL session cache. SSL sockets with the same ssl_session_cache_shard may
   // resume each other's SSL sessions but we'll never sessions between shards.
@@ -158,11 +151,6 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   // establishing the connection (or NULL if no channel ID was used).
   virtual crypto::ECPrivateKey* GetChannelIDKey() const = 0;
 
-  // Returns the state of the handshake when it failed, or |SSL_FAILURE_NONE| if
-  // the handshake succeeded. This is used to classify causes of the TLS version
-  // fallback.
-  virtual SSLFailureState GetSSLFailureState() const = 0;
-
  protected:
   void set_negotiation_extension(
       SSLNegotiationExtension negotiation_extension) {
@@ -192,17 +180,6 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   static bool IsChannelIDEnabled(
       const SSLConfig& ssl_config,
       ChannelIDService* channel_id_service);
-
-  // Determine if there is at least one enabled cipher suite that satisfies
-  // Section 9.2 of the HTTP/2 specification.  Note that the server might still
-  // pick an inadequate cipher suite.
-  static bool HasCipherAdequateForHTTP2(
-      const std::vector<uint16_t>& cipher_suites);
-
-  // Determine if the TLS version required by Section 9.2 of the HTTP/2
-  // specification is enabled.  Note that the server might still pick an
-  // inadequate TLS version.
-  static bool IsTLSVersionAdequateForHTTP2(const SSLConfig& ssl_config);
 
   // Serialize |next_protos| in the wire format for ALPN and NPN: protocols are
   // listed in order, each prefixed by a one-byte length.

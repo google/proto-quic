@@ -8,12 +8,14 @@
 #include "net/base/net_export.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
+#include "net/spdy/spdy_protocol.h"
 
 namespace net {
 
 class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
  public:
-  HeaderCoalescer() {}
+  explicit HeaderCoalescer(const SpdyMajorVersion& protocol_version)
+      : protocol_version_(protocol_version) {}
 
   void OnHeaderBlockStart() override {}
 
@@ -28,6 +30,8 @@ class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
   SpdyHeaderBlock headers_;
   size_t header_list_size_ = 0;
   bool error_seen_ = false;
+  bool regular_header_seen_ = false;
+  SpdyMajorVersion protocol_version_;
 };
 
 }  // namespace net

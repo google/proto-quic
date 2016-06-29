@@ -39,13 +39,13 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   // ResumeNetworkStart is called before establishing a connection.
   typedef base::Callback<void(bool* defer)> BeforeNetworkStartCallback;
 
-  // Provides an opportunity to add proxy-specific request headers. Called after
-  // it is determined that a proxy is being used and before the request headers
-  // are sent. |proxy_info| contains information about the proxy being used,
-  // and additional headers may be added to |request_headers|.
-  typedef base::Callback<void(
-      const ProxyInfo& proxy_info,
-      HttpRequestHeaders* request_headers)> BeforeProxyHeadersSentCallback;
+  // Provides an opportunity to add additional request headers. Called after
+  // a connection is established and before the request headers are sent.
+  // |proxy_info| contains information about any proxies being used, and
+  // additional headers may be added to |request_headers|.
+  typedef base::Callback<void(const ProxyInfo& proxy_info,
+                              HttpRequestHeaders* request_headers)>
+      BeforeHeadersSentCallback;
 
   // Stops any pending IO and destroys the transaction object.
   virtual ~HttpTransaction() {}
@@ -181,14 +181,14 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   virtual void SetWebSocketHandshakeStreamCreateHelper(
       WebSocketHandshakeStreamBase::CreateHelper* create_helper) = 0;
 
-  // Set the callback to receive notification just before network use.
+  // Sets the callback to receive notification just before network use.
   virtual void SetBeforeNetworkStartCallback(
       const BeforeNetworkStartCallback& callback) = 0;
 
-  // Set the callback to receive notification just before a proxy request
-  // is to be sent.
-  virtual void SetBeforeProxyHeadersSentCallback(
-      const BeforeProxyHeadersSentCallback& callback) = 0;
+  // Sets the callback to receive notification just before request headers
+  // are to be sent.
+  virtual void SetBeforeHeadersSentCallback(
+      const BeforeHeadersSentCallback& callback) = 0;
 
   // Resumes the transaction after being deferred.
   virtual int ResumeNetworkStart() = 0;

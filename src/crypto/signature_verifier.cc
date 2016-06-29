@@ -27,7 +27,7 @@ const EVP_MD* ToOpenSSLDigest(SignatureVerifier::HashAlgorithm hash_alg) {
     case SignatureVerifier::SHA256:
       return EVP_sha256();
   }
-  return NULL;
+  return nullptr;
 }
 
 }  // namespace
@@ -36,9 +36,7 @@ struct SignatureVerifier::VerifyContext {
   ScopedEVP_MD_CTX ctx;
 };
 
-SignatureVerifier::SignatureVerifier()
-    : verify_context_(NULL) {
-}
+SignatureVerifier::SignatureVerifier() : verify_context_(nullptr) {}
 
 SignatureVerifier::~SignatureVerifier() {
   Reset();
@@ -153,7 +151,7 @@ bool SignatureVerifier::CommonInit(int pkey_type,
 
 void SignatureVerifier::Reset() {
   delete verify_context_;
-  verify_context_ = NULL;
+  verify_context_ = nullptr;
   signature_.clear();
 }
 

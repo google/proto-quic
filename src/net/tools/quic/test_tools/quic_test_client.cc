@@ -5,6 +5,7 @@
 #include "net/tools/quic/test_tools/quic_test_client.h"
 
 #include <memory>
+#include <utility>
 
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
@@ -278,7 +279,7 @@ ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
       // HTTP/2 requests should include the :authority pseudo hader.
       spdy_headers[":authority"] = client_->server_id().host();
     }
-    ret = stream->SendRequest(spdy_headers, body, fin);
+    ret = stream->SendRequest(std::move(spdy_headers), body, fin);
     ++num_requests_;
   } else {
     stream->WriteOrBufferBody(body.as_string(), fin, delegate);

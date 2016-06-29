@@ -59,9 +59,7 @@ class QuicSpdyClientStream : public QuicSpdyStream {
 
   // Serializes the headers and body, sends it to the server, and
   // returns the number of bytes sent.
-  size_t SendRequest(const SpdyHeaderBlock& headers,
-                     base::StringPiece body,
-                     bool fin);
+  size_t SendRequest(SpdyHeaderBlock headers, base::StringPiece body, bool fin);
 
   // Returns the response data.
   const std::string& data() { return data_; }

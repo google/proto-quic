@@ -58,10 +58,6 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
   FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest, InflightJoin);
   FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest, MultipleInflightJoin);
   FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest, CancelRequest);
-  FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest,
-                           RequestParamsComparators);
-  FRIEND_TEST_ALL_PREFIXES(MultiThreadedCertVerifierTest,
-                           CertTrustAnchorProvider);
 
   struct JobComparator {
     bool operator()(const CertVerifierJob* job1,

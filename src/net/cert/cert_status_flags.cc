@@ -29,6 +29,8 @@ CertStatus MapNetErrorToCertStatus(int error) {
       return CERT_STATUS_NO_REVOCATION_MECHANISM;
     case ERR_CERT_UNABLE_TO_CHECK_REVOCATION:
       return CERT_STATUS_UNABLE_TO_CHECK_REVOCATION;
+    case ERR_CERTIFICATE_TRANSPARENCY_REQUIRED:
+      return CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED;
     case ERR_CERT_REVOKED:
       return CERT_STATUS_REVOKED;
     // We added the ERR_CERT_CONTAINS_ERRORS error code when we were using
@@ -73,6 +75,8 @@ int MapCertStatusToNetError(CertStatus cert_status) {
     return ERR_CERT_AUTHORITY_INVALID;
   if (cert_status & CERT_STATUS_COMMON_NAME_INVALID)
     return ERR_CERT_COMMON_NAME_INVALID;
+  if (cert_status & CERT_STATUS_CERTIFICATE_TRANSPARENCY_REQUIRED)
+    return ERR_CERTIFICATE_TRANSPARENCY_REQUIRED;
   // CERT_STATUS_NON_UNIQUE_NAME is intentionally not mapped to an error.
   // It is treated as just a warning and used to degrade the SSL UI.
   if (cert_status & CERT_STATUS_NAME_CONSTRAINT_VIOLATION)

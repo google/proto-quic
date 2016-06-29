@@ -284,6 +284,18 @@ bool operator<(const GeneralizedTime& lhs, const GeneralizedTime& rhs) {
                                           rhs.hours, rhs.minutes, rhs.seconds);
 }
 
+bool operator>(const GeneralizedTime& lhs, const GeneralizedTime& rhs) {
+  return rhs < lhs;
+}
+
+bool operator<=(const GeneralizedTime& lhs, const GeneralizedTime& rhs) {
+  return !(lhs > rhs);
+}
+
+bool operator>=(const GeneralizedTime& lhs, const GeneralizedTime& rhs) {
+  return !(lhs < rhs);
+}
+
 // A UTC Time in DER encoding should be YYMMDDHHMMSSZ, but some CAs encode
 // the time following BER rules, which allows for YYMMDDHHMMZ. If the length
 // is 11, assume it's YYMMDDHHMMZ, and in converting it to a GeneralizedTime,

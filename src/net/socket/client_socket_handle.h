@@ -24,7 +24,6 @@
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/stream_socket.h"
-#include "net/ssl/ssl_failure_state.h"
 
 namespace net {
 
@@ -140,9 +139,6 @@ class NET_EXPORT ClientSocketHandle {
   void set_ssl_error_response_info(const HttpResponseInfo& ssl_error_state) {
     ssl_error_response_info_ = ssl_error_state;
   }
-  void set_ssl_failure_state(SSLFailureState ssl_failure_state) {
-    ssl_failure_state_ = ssl_failure_state;
-  }
   void set_pending_http_proxy_connection(ClientSocketHandle* connection) {
     pending_http_proxy_connection_.reset(connection);
   }
@@ -161,7 +157,6 @@ class NET_EXPORT ClientSocketHandle {
   const HttpResponseInfo& ssl_error_response_info() const {
     return ssl_error_response_info_;
   }
-  SSLFailureState ssl_failure_state() const { return ssl_failure_state_; }
   ClientSocketHandle* release_pending_http_proxy_connection() {
     return pending_http_proxy_connection_.release();
   }
@@ -219,7 +214,6 @@ class NET_EXPORT ClientSocketHandle {
   int pool_id_;  // See ClientSocketPool::ReleaseSocket() for an explanation.
   bool is_ssl_error_;
   HttpResponseInfo ssl_error_response_info_;
-  SSLFailureState ssl_failure_state_;
   std::unique_ptr<ClientSocketHandle> pending_http_proxy_connection_;
   std::vector<ConnectionAttempt> connection_attempts_;
   base::TimeTicks init_time_;

@@ -70,6 +70,17 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // Notifies |this| of a change in connection type.
   void OnConnectionTypeChanged();
 
+  // |use_localhost_requests| should only be true when testing against local
+  // HTTP server and allows the requests to local host to be used for network
+  // quality estimation.
+  void SetUseLocalHostRequestsForTesting(bool use_localhost_requests);
+
+  // |use_smaller_responses_for_tests| should only be true when testing, and
+  // allows the responses smaller than |kMinTransferSizeInBits| or shorter than
+  // |kMinRequestDurationMicroseconds| to be used for network quality
+  // estimation.
+  void SetUseSmallResponsesForTesting(bool use_small_responses);
+
  protected:
   // Exposed for testing.
   bool disable_throughput_measurements() const {
@@ -155,12 +166,12 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
 
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.
-  const bool use_localhost_requests_for_tests_;
+  bool use_localhost_requests_for_tests_;
 
   // Determines if the responses smaller than |kMinTransferSizeInBits|
   // or shorter than |kMinTransferSizeInBits| can be used in estimating the
   // network quality. Set to true only for tests.
-  const bool use_small_responses_for_tests_;
+  bool use_small_responses_for_tests_;
 
   base::ThreadChecker thread_checker_;
 

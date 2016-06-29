@@ -276,8 +276,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     QuicConnectionId server_designated_connection_id =
         rand_for_id_generation_.RandUint64();
     QuicErrorCode error = config_.ProcessClientHello(
-        result, 1 /* ConnectionId */, server_ip, client_address_,
-        supported_versions_.front(), supported_versions_,
+        result, /*reject_only=*/false, /*connection_id=*/1, server_ip,
+        client_address_, supported_versions_.front(), supported_versions_,
         use_stateless_rejects_, server_designated_connection_id, &clock_, rand_,
         &compressed_certs_cache_, &params_, &crypto_proof_, &out_,
         &diversification_nonce, &error_details);

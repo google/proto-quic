@@ -116,13 +116,27 @@ std::unique_ptr<base::Value> NetLogQuicAckFrameCallback(
                   base::Uint64ToString(frame->largest_observed));
   dict->SetString("delta_time_largest_observed_us",
                   base::Int64ToString(frame->ack_delay_time.ToMicroseconds()));
-  dict->SetInteger("entropy_hash", frame->entropy_hash);
-  dict->SetBoolean("truncated", frame->is_truncated);
+  if (frame->missing) {
+    // Entropy and Truncated are not present in v34 and above.
+    dict->SetInteger("entropy_hash", frame->entropy_hash);
+    dict->SetBoolean("truncated", frame->is_truncated);
+  }
 
   base::ListValue* missing = new base::ListValue();
-  dict->Set("packets", missing);
-  for (QuicPacketNumber packet : frame->packets)
-    missing->AppendString(base::Uint64ToString(packet));
+  dict->Set("missing_packets", missing);
+  if (frame->missing) {
+    for (QuicPacketNumber packet : frame->packets)
+      missing->AppendString(base::Uint64ToString(packet));
+  } else if (!frame->packets.Empty()) {
+    // V34 and above express acked packets, but only print
+    // missing packets, because it's typically a shorter list.
+    for (QuicPacketNumber packet = frame->packets.Min();
+         packet < frame->largest_observed; ++packet) {
+      if (!frame->packets.Contains(packet)) {
+        missing->AppendString(base::Uint64ToString(packet));
+      }
+    }
+  }
 
   base::ListValue* received = new base::ListValue();
   dict->Set("received_packet_times", received);

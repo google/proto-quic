@@ -17,6 +17,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/sha1.h"
 #include "build/build_config.h"
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
@@ -31,16 +32,7 @@
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_nss.h"
 
-#if defined(OS_IOS)
-#include <CommonCrypto/CommonDigest.h>
-#include "net/cert/x509_util_ios.h"
-#endif  // defined(OS_IOS)
-
-#if defined(USE_NSS_CERTS)
 #include <dlfcn.h>
-#else
-#include <ocsp.h>
-#endif
 
 namespace net {
 
@@ -227,13 +219,8 @@ void GetCertChainInfo(CERTCertList* cert_list,
 
   if (root_cert)
     verified_chain.push_back(root_cert);
-#if defined(OS_IOS)
-  verify_result->verified_cert =
-      x509_util_ios::CreateCertFromNSSHandles(verified_cert, verified_chain);
-#else
   verify_result->verified_cert =
       X509Certificate::CreateFromHandle(verified_cert, verified_chain);
-#endif  // defined(OS_IOS)
 }
 
 // IsKnownRoot returns true if the given certificate is one that we believe
@@ -660,25 +647,17 @@ SECOidTag GetFirstCertPolicy(CERTCertificate* cert_handle) {
 
 HashValue CertPublicKeyHashSHA1(CERTCertificate* cert) {
   HashValue hash(HASH_VALUE_SHA1);
-#if defined(OS_IOS)
-  CC_SHA1(cert->derPublicKey.data, cert->derPublicKey.len, hash.data());
-#else
   SECStatus rv = HASH_HashBuf(HASH_AlgSHA1, hash.data(),
                               cert->derPublicKey.data, cert->derPublicKey.len);
   DCHECK_EQ(SECSuccess, rv);
-#endif
   return hash;
 }
 
 HashValue CertPublicKeyHashSHA256(CERTCertificate* cert) {
   HashValue hash(HASH_VALUE_SHA256);
-#if defined(OS_IOS)
-  CC_SHA256(cert->derPublicKey.data, cert->derPublicKey.len, hash.data());
-#else
   SECStatus rv = HASH_HashBuf(HASH_AlgSHA256, hash.data(),
                               cert->derPublicKey.data, cert->derPublicKey.len);
   DCHECK_EQ(rv, SECSuccess);
-#endif
   return hash;
 }
 
@@ -784,26 +763,16 @@ bool VerifyEV(CERTCertificate* cert_handle,
       return false;
   }
 
-#if defined(OS_IOS)
-  SHA1HashValue fingerprint = x509_util_ios::CalculateFingerprintNSS(root_ca);
-#else
-  SHA1HashValue fingerprint =
-      X509Certificate::CalculateFingerprint(root_ca);
-#endif
-  return metadata->HasEVPolicyOID(fingerprint, ev_policy_oid);
+  SHA1HashValue weak_fingerprint;
+  base::SHA1HashBytes(root_ca->derCert.data, root_ca->derCert.len,
+                      weak_fingerprint.data);
+  return metadata->HasEVPolicyOID(weak_fingerprint, ev_policy_oid);
 }
 
 CERTCertList* CertificateListToCERTCertList(const CertificateList& list) {
   CERTCertList* result = CERT_NewCertList();
   for (size_t i = 0; i < list.size(); ++i) {
-#if defined(OS_IOS)
-    // X509Certificate::os_cert_handle() on iOS is a SecCertificateRef; convert
-    // it to an NSS CERTCertificate.
-    CERTCertificate* cert = x509_util_ios::CreateNSSCertHandleFromOSHandle(
-        list[i]->os_cert_handle());
-#else
     CERTCertificate* cert = list[i]->os_cert_handle();
-#endif
     CERT_AddCertToListTail(result, CERT_DupCertificate(cert));
   }
   return result;
@@ -812,14 +781,9 @@ CERTCertList* CertificateListToCERTCertList(const CertificateList& list) {
 }  // namespace
 
 CertVerifyProcNSS::CertVerifyProcNSS()
-#if defined(USE_NSS_CERTS)
     : cache_ocsp_response_from_side_channel_(
           reinterpret_cast<CacheOCSPResponseFromSideChannelFunction>(
               dlsym(RTLD_DEFAULT, "CERT_CacheOCSPResponseFromSideChannel")))
-#else
-    : cache_ocsp_response_from_side_channel_(
-          &CERT_CacheOCSPResponseFromSideChannel)
-#endif
 {
 }
 
@@ -842,14 +806,7 @@ int CertVerifyProcNSS::VerifyInternalImpl(
     const CertificateList& additional_trust_anchors,
     CERTChainVerifyCallback* chain_verify_callback,
     CertVerifyResult* verify_result) {
-#if defined(OS_IOS)
-  // For iOS, the entire chain must be loaded into NSS's in-memory certificate
-  // store.
-  x509_util_ios::NSSCertChain scoped_chain(cert);
-  CERTCertificate* cert_handle = scoped_chain.cert_handle();
-#else
   CERTCertificate* cert_handle = cert->os_cert_handle();
-#endif  // defined(OS_IOS)
 
   if (!ocsp_response.empty() && cache_ocsp_response_from_side_channel_) {
     // Note: NSS uses a thread-safe global hash table, so this call will

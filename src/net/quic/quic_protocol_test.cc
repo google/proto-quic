@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "base/stl_util.h"
+#include "net/quic/quic_flags.h"
 #include "net/quic/quic_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -280,6 +281,17 @@ TEST(QuicProtocolTest, PathCloseFrameToString) {
   std::ostringstream stream;
   stream << frame;
   EXPECT_EQ("{ path_id: 1 }\n", stream.str());
+}
+
+TEST(QuicProtocolTest, FilterSupportedVersions) {
+  QuicVersionVector all_versions = {QUIC_VERSION_25, QUIC_VERSION_26,
+                                    QUIC_VERSION_27, QUIC_VERSION_29,
+                                    QUIC_VERSION_30};
+
+  FLAGS_quic_disable_pre_30 = true;
+  QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
+  ASSERT_EQ(1u, filtered_versions.size());
+  EXPECT_EQ(QUIC_VERSION_30, filtered_versions[0]);
 }
 
 // Tests that a queue contains the expected data after calls to Add().

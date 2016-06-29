@@ -36,7 +36,7 @@ class RunnableAdapter<R(__stdcall *)(Args...)> {
   }
 
   template <typename... RunArgs>
-  R Run(RunArgs&&... args) {
+  R Run(RunArgs&&... args) const {
     return function_(std::forward<RunArgs>(args)...);
   }
 
@@ -57,7 +57,7 @@ class RunnableAdapter<R(__fastcall *)(Args...)> {
   }
 
   template <typename... RunArgs>
-  R Run(RunArgs&&... args) {
+  R Run(RunArgs&&... args) const {
     return function_(std::forward<RunArgs>(args)...);
   }
 

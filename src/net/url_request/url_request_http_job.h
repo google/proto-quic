@@ -107,10 +107,9 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   void OnHeadersReceivedCallback(int result);
   void OnStartCompleted(int result);
   void OnReadCompleted(int result);
-  void NotifyBeforeSendHeadersCallback(int result);
-  void NotifyBeforeSendProxyHeadersCallback(
-      const ProxyInfo& proxy_info,
-      HttpRequestHeaders* request_headers);
+  void NotifyBeforeStartTransactionCallback(int result);
+  void NotifyBeforeSendHeadersCallback(const ProxyInfo& proxy_info,
+                                       HttpRequestHeaders* request_headers);
 
   void RestartTransactionWithAuth(const AuthCredentials& credentials);
 
@@ -124,7 +123,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   void GetResponseInfo(HttpResponseInfo* info) override;
   void GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const override;
   bool GetRemoteEndpoint(IPEndPoint* endpoint) const override;
-  bool GetResponseCookies(std::vector<std::string>* cookies) override;
   int GetResponseCode() const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) const override;
   std::unique_ptr<Filter> SetupFilter() const override;

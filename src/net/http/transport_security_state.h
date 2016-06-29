@@ -9,8 +9,6 @@
 
 #include <map>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "base/callback.h"
 #include "base/gtest_prod_util.h"
@@ -18,17 +16,15 @@
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
 #include "net/base/expiring_cache.h"
+#include "net/base/hash_value.h"
 #include "net/base/net_export.h"
-#include "net/cert/x509_cert_types.h"
-#include "net/cert/x509_certificate.h"
 #include "url/gurl.h"
-
-class GURL;
 
 namespace net {
 
 class HostPortPair;
 class SSLInfo;
+class X509Certificate;
 
 // Tracks which hosts have enabled strict transport security and/or public
 // key pins.
@@ -51,6 +47,38 @@ class NET_EXPORT TransportSecurityState
 
    protected:
     virtual ~Delegate() {}
+  };
+
+  class NET_EXPORT RequireCTDelegate {
+   public:
+    // Provides a capability for altering the default handling of Certificate
+    // Transparency information, allowing it to be always required for some
+    // hosts, for some hosts to be opted out of the default policy, or
+    // allowing the TransportSecurityState to apply the default security
+    // policies.
+    enum class CTRequirementLevel {
+      // The host is required to always supply Certificate Transparency
+      // information that complies with the CT policy.
+      REQUIRED,
+
+      // The host is explicitly not required to supply Certificate
+      // Transparency information that complies with the CT policy.
+      NOT_REQUIRED,
+
+      // The delegate makes no statements, positive or negative, about
+      // requiring the host to supply Certificate Transparency information,
+      // allowing the default behaviour to happen.
+      DEFAULT,
+    };
+
+    // Called by the TransportSecurityState, allows the Delegate to override
+    // the default handling of Certificate Transparency requirements, if
+    // desired.
+    virtual CTRequirementLevel IsCTRequiredForHost(
+        const std::string& hostname) = 0;
+
+   protected:
+    virtual ~RequireCTDelegate() = default;
   };
 
   // A STSState describes the strict transport security state (required
@@ -86,10 +114,6 @@ class NET_EXPORT TransportSecurityState
     // ShouldUpgradeToSSL returns true iff HTTP requests should be internally
     // redirected to HTTPS (also if WS should be upgraded to WSS).
     bool ShouldUpgradeToSSL() const;
-
-    // ShouldSSLErrorsBeFatal returns true iff HTTPS errors should cause
-    // hard-fail behavior (e.g. if HSTS is set for the domain).
-    bool ShouldSSLErrorsBeFatal() const;
   };
 
   class NET_EXPORT STSStateIterator {
@@ -105,6 +129,20 @@ class NET_EXPORT TransportSecurityState
    private:
     std::map<std::string, STSState>::const_iterator iterator_;
     std::map<std::string, STSState>::const_iterator end_;
+  };
+
+  // PKPStatus describes the result of a pinning check.
+  enum class PKPStatus {
+    // Pinning was enabled and the necessary pins were not present.
+    VIOLATED,
+
+    // Pinning was not enabled, or pinning was enabled and the certificate
+    // satisfied the pins.
+    OK,
+
+    // Pinning was enabled and the certificate did not satisfy the pins, but the
+    // violation was ignored due to local policy, such as a local trust anchor.
+    BYPASSED,
   };
 
   // A PKPState describes the public key pinning state.
@@ -163,10 +201,6 @@ class NET_EXPORT TransportSecurityState
     // |bad_static_spki_hashes|, or |dynamic_spki_hashes| contains any
     // items.
     bool HasPublicKeyPins() const;
-
-    // ShouldSSLErrorsBeFatal returns true iff HTTPS errors should cause
-    // hard-fail behavior (e.g. if HSTS is set for the domain).
-    bool ShouldSSLErrorsBeFatal() const;
   };
 
   class NET_EXPORT PKPStateIterator {
@@ -259,14 +293,26 @@ class NET_EXPORT TransportSecurityState
   // when is_issued_by_known_root is false.
   bool ShouldSSLErrorsBeFatal(const std::string& host);
   bool ShouldUpgradeToSSL(const std::string& host);
-  bool CheckPublicKeyPins(const HostPortPair& host_port_pair,
-                          bool is_issued_by_known_root,
-                          const HashValueVector& hashes,
-                          const X509Certificate* served_certificate_chain,
-                          const X509Certificate* validated_certificate_chain,
-                          const PublicKeyPinReportStatus report_status,
-                          std::string* failure_log);
+  PKPStatus CheckPublicKeyPins(
+      const HostPortPair& host_port_pair,
+      bool is_issued_by_known_root,
+      const HashValueVector& hashes,
+      const X509Certificate* served_certificate_chain,
+      const X509Certificate* validated_certificate_chain,
+      const PublicKeyPinReportStatus report_status,
+      std::string* failure_log);
   bool HasPublicKeyPins(const std::string& host);
+
+  // Returns true if connections to |host|, using the validated certificate
+  // |validated_certificate_chain|, are expected to be accompanied with
+  // valid Certificate Transparency information that complies with the
+  // connection's CTPolicyEnforcer.
+  //
+  // The behavior may be further be altered by setting a RequireCTDelegate
+  // via |SetRequireCTDelegate()|.
+  bool ShouldRequireCT(const std::string& host,
+                       const X509Certificate* validated_certificate_chain,
+                       const HashValueVector& hashes);
 
   // Assign a |Delegate| for persisting the transport security state. If
   // |NULL|, state will not be persisted. The caller retains
@@ -278,6 +324,16 @@ class NET_EXPORT TransportSecurityState
   void SetReportSender(ReportSenderInterface* report_sender);
 
   void SetExpectCTReporter(ExpectCTReporter* expect_ct_reporter);
+
+  // Assigns a delegate responsible for determining whether or not a
+  // connection to a given host should require Certificate Transparency
+  // information that complies with the CT policy provided by a
+  // CTPolicyEnforcer.
+  // If nullptr, no delegate will be consulted.
+  // The caller retains ownership of the |delegate|, and must persist for
+  // the lifetime of this object or until called with nullptr, whichever
+  // occurs first.
+  void SetRequireCTDelegate(RequireCTDelegate* delegate);
 
   // Clears all dynamic data (e.g. HSTS and HPKP data).
   //
@@ -411,7 +467,7 @@ class NET_EXPORT TransportSecurityState
   static bool IsBuildTimely();
 
   // Helper method for actually checking pins.
-  bool CheckPublicKeyPinsImpl(
+  PKPStatus CheckPublicKeyPinsImpl(
       const HostPortPair& host_port_pair,
       bool is_issued_by_known_root,
       const HashValueVector& hashes,
@@ -452,7 +508,7 @@ class NET_EXPORT TransportSecurityState
   // |report_status| says to), this method sends an HPKP violation
   // report containing |served_certificate_chain| and
   // |validated_certificate_chain|.
-  bool CheckPinsAndMaybeSendReport(
+  PKPStatus CheckPinsAndMaybeSendReport(
       const HostPortPair& host_port_pair,
       bool is_issued_by_known_root,
       const TransportSecurityState::PKPState& pkp_state,
@@ -483,9 +539,9 @@ class NET_EXPORT TransportSecurityState
   STSStateMap enabled_sts_hosts_;
   PKPStateMap enabled_pkp_hosts_;
 
-  Delegate* delegate_;
+  Delegate* delegate_ = nullptr;
 
-  ReportSenderInterface* report_sender_;
+  ReportSenderInterface* report_sender_ = nullptr;
 
   // True if static pins should be used.
   bool enable_static_pins_;
@@ -496,7 +552,9 @@ class NET_EXPORT TransportSecurityState
   // True if static expect-staple state should be used.
   bool enable_static_expect_staple_;
 
-  ExpectCTReporter* expect_ct_reporter_;
+  ExpectCTReporter* expect_ct_reporter_ = nullptr;
+
+  RequireCTDelegate* require_ct_delegate_ = nullptr;
 
   // Keeps track of reports that have been sent recently for
   // rate-limiting.

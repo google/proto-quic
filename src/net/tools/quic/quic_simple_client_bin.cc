@@ -69,6 +69,7 @@
 
 using base::StringPiece;
 using net::CertVerifier;
+using net::CTPolicyEnforcer;
 using net::CTVerifier;
 using net::MultiLogCTVerifier;
 using net::ProofVerifierChromium;
@@ -252,9 +253,10 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<TransportSecurityState> transport_security_state(
       new TransportSecurityState);
   std::unique_ptr<CTVerifier> ct_verifier(new MultiLogCTVerifier());
+  std::unique_ptr<CTPolicyEnforcer> ct_policy_enforcer(new CTPolicyEnforcer());
   ProofVerifierChromium* proof_verifier = new ProofVerifierChromium(
-      cert_verifier.get(), nullptr, transport_security_state.get(),
-      ct_verifier.get());
+      cert_verifier.get(), ct_policy_enforcer.get(),
+      transport_security_state.get(), ct_verifier.get());
   net::QuicSimpleClient client(net::IPEndPoint(ip_addr, port), server_id,
                                versions, proof_verifier);
   client.set_initial_max_packet_length(

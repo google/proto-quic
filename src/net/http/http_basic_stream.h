@@ -14,6 +14,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/http/http_basic_state.h"
 #include "net/http/http_stream.h"
 
@@ -27,7 +28,7 @@ class HttpRequestHeaders;
 class HttpStreamParser;
 class IOBuffer;
 
-class HttpBasicStream : public HttpStream {
+class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
  public:
   // Constructs a new HttpBasicStream. InitializeStream must be called to
   // initialize it correctly.

@@ -23,9 +23,8 @@ class HttpServerProperties;
 // it's ok for us to keep it on disk.
 class NET_EXPORT_PRIVATE PropertiesBasedQuicServerInfo : public QuicServerInfo {
  public:
-  PropertiesBasedQuicServerInfo(
-      const QuicServerId& server_id,
-      base::WeakPtr<HttpServerProperties> http_server_properties);
+  PropertiesBasedQuicServerInfo(const QuicServerId& server_id,
+                                HttpServerProperties* http_server_properties);
   ~PropertiesBasedQuicServerInfo() override;
 
   // QuicServerInfo implementation.
@@ -39,7 +38,7 @@ class NET_EXPORT_PRIVATE PropertiesBasedQuicServerInfo : public QuicServerInfo {
   void OnExternalCacheHit() override;
 
  private:
-  base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* http_server_properties_;
 
   DISALLOW_COPY_AND_ASSIGN(PropertiesBasedQuicServerInfo);
 };
@@ -48,13 +47,13 @@ class NET_EXPORT_PRIVATE PropertiesBasedQuicServerInfoFactory
     : public QuicServerInfoFactory {
  public:
   explicit PropertiesBasedQuicServerInfoFactory(
-      base::WeakPtr<HttpServerProperties> http_server_properties);
+      HttpServerProperties* http_server_properties);
   ~PropertiesBasedQuicServerInfoFactory() override;
 
   QuicServerInfo* GetForServer(const QuicServerId& server_id) override;
 
  private:
-  base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* http_server_properties_;
 
   DISALLOW_COPY_AND_ASSIGN(PropertiesBasedQuicServerInfoFactory);
 };

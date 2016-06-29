@@ -96,6 +96,9 @@ class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
   void OnClose(int status) override;
 
  private:
+  // Helper function used for resetting stream from inside the stream.
+  void ResetStreamInternal();
+
   // Must be called only when |request_info_| is non-NULL.
   bool HasUploadData() const;
 

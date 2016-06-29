@@ -166,15 +166,15 @@ bool PathProviderWin(int key, FilePath* result) {
       // Windows.
       // http://stackoverflow.com/questions/76080/how-do-you-reliably-get-the-quick-
       // http://www.microsoft.com/technet/scriptcenter/resources/qanda/sept05/hey0901.mspx
-      cur = cur.AppendASCII("Microsoft")
-                .AppendASCII("Internet Explorer")
-                .AppendASCII("Quick Launch");
+      cur = cur.Append(FILE_PATH_LITERAL("Microsoft"))
+                .Append(FILE_PATH_LITERAL("Internet Explorer"))
+                .Append(FILE_PATH_LITERAL("Quick Launch"));
       break;
     case base::DIR_TASKBAR_PINS:
       if (!PathService::Get(base::DIR_USER_QUICK_LAUNCH, &cur))
         return false;
-      cur = cur.AppendASCII("User Pinned");
-      cur = cur.AppendASCII("TaskBar");
+      cur = cur.Append(FILE_PATH_LITERAL("User Pinned"));
+      cur = cur.Append(FILE_PATH_LITERAL("TaskBar"));
       break;
     case base::DIR_WINDOWS_FONTS:
       if (FAILED(SHGetFolderPath(

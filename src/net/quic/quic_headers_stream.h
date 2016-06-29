@@ -75,6 +75,12 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
   void SetHpackEncoderDebugVisitor(std::unique_ptr<HpackDebugVisitor> visitor);
   void SetHpackDecoderDebugVisitor(std::unique_ptr<HpackDebugVisitor> visitor);
 
+  // Sets how much encoded data the hpack decoder of spdy_framer_ is willing to
+  // buffer.
+  void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes) {
+    spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
+  }
+
  private:
   class SpdyFramerVisitor;
 

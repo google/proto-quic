@@ -26,8 +26,6 @@ add_library(
   asn1_lib.c
   asn1_par.c
   asn_pack.c
-  bio_asn1.c
-  bio_ndef.c
   f_enum.c
   f_int.c
   f_string.c
@@ -36,7 +34,6 @@ add_library(
   tasn_enc.c
   tasn_fre.c
   tasn_new.c
-  tasn_prn.c
   tasn_typ.c
   tasn_utl.c
   x_bignum.c

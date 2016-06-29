@@ -55,7 +55,7 @@ class VerifyCertificateChainPkitsTestDelegate {
     // First entry in the PKITS chain is the trust anchor.
     TrustStore trust_store;
     scoped_refptr<ParsedCertificate> anchor(
-        ParsedCertificate::CreateFromCertificateCopy(cert_ders[0]));
+        ParsedCertificate::CreateFromCertificateCopy(cert_ders[0], {}));
     EXPECT_TRUE(anchor);
     if (anchor)
       trust_store.AddTrustedCertificate(std::move(anchor));
@@ -67,7 +67,7 @@ class VerifyCertificateChainPkitsTestDelegate {
       if (!net::ParsedCertificate::CreateAndAddToVector(
               reinterpret_cast<const uint8_t*>(cert_ders[i].data()),
               cert_ders[i].size(),
-              net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE,
+              net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE, {},
               &input_chain)) {
         ADD_FAILURE() << "cert " << i << " failed to parse";
         return false;
@@ -80,7 +80,7 @@ class VerifyCertificateChainPkitsTestDelegate {
     der::GeneralizedTime time = {2011, 4, 15, 0, 0, 0};
 
     return VerifyCertificateChain(input_chain, trust_store, &signature_policy,
-                                  time);
+                                  time, nullptr);
   }
 };
 

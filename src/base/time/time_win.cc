@@ -235,7 +235,7 @@ bool Time::IsHighResolutionTimerInUse() {
 }
 
 // static
-Time Time::FromExploded(bool is_local, const Exploded& exploded) {
+bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   // Create the system struct representing our exploded time. It will either be
   // in local time or UTC.
   SYSTEMTIME st;
@@ -253,17 +253,19 @@ Time Time::FromExploded(bool is_local, const Exploded& exploded) {
   // Ensure that it's in UTC.
   if (is_local) {
     SYSTEMTIME utc_st;
-    success = TzSpecificLocalTimeToSystemTime(NULL, &st, &utc_st) &&
+    success = TzSpecificLocalTimeToSystemTime(nullptr, &st, &utc_st) &&
               SystemTimeToFileTime(&utc_st, &ft);
   } else {
     success = !!SystemTimeToFileTime(&st, &ft);
   }
 
   if (!success) {
-    NOTREACHED() << "Unable to convert time";
-    return Time(0);
+    *time = Time(0);
+    return false;
   }
-  return Time(FileTimeToMicroseconds(ft));
+
+  *time = Time(FileTimeToMicroseconds(ft));
+  return true;
 }
 
 void Time::Explode(bool is_local, Exploded* exploded) const {
@@ -288,7 +290,7 @@ void Time::Explode(bool is_local, Exploded* exploded) const {
     // daylight saving time, it will take daylight saving time into account,
     // even if the time you are converting is in standard time.
     success = FileTimeToSystemTime(&utc_ft, &utc_st) &&
-              SystemTimeToTzSpecificLocalTime(NULL, &utc_st, &st);
+              SystemTimeToTzSpecificLocalTime(nullptr, &utc_st, &st);
   } else {
     success = !!FileTimeToSystemTime(&utc_ft, &st);
   }

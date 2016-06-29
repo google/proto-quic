@@ -69,14 +69,14 @@ class NET_EXPORT HttpNetworkSession
     ClientSocketFactory* client_socket_factory;
     HostResolver* host_resolver;
     CertVerifier* cert_verifier;
-    CTPolicyEnforcer* ct_policy_enforcer;
     ChannelIDService* channel_id_service;
     TransportSecurityState* transport_security_state;
     CTVerifier* cert_transparency_verifier;
+    CTPolicyEnforcer* ct_policy_enforcer;
     ProxyService* proxy_service;
     SSLConfigService* ssl_config_service;
     HttpAuthHandlerFactory* http_auth_handler_factory;
-    base::WeakPtr<HttpServerProperties> http_server_properties;
+    HttpServerProperties* http_server_properties;
     NetLog* net_log;
     HostMappingRules* host_mapping_rules;
     SocketPerformanceWatcherFactory* socket_performance_watcher_factory;
@@ -94,9 +94,12 @@ class NET_EXPORT HttpNetworkSession
     size_t spdy_stream_max_recv_window_size;
     // Source of time for SPDY connections.
     SpdySessionPool::TimeFunc time_func;
-    // Whether to enable Alt-Svc entries with hostname different than that of
-    // the origin.
-    bool enable_alternative_service_with_different_host;
+    // Whether to enable HTTP/2 Alt-Svc entries with hostname different than
+    // that of the origin.
+    bool enable_http2_alternative_service_with_different_host;
+    // Whether to enable QUIC Alt-Svc entries with hostname different than that
+    // of the origin.
+    bool enable_quic_alternative_service_with_different_host;
     // Only set for tests.
     // TODO(bnc) https://crbug.com/615497:
     // Adapt tests to https requests, remove this member.
@@ -227,7 +230,7 @@ class NET_EXPORT HttpNetworkSession
   HttpAuthHandlerFactory* http_auth_handler_factory() {
     return http_auth_handler_factory_;
   }
-  base::WeakPtr<HttpServerProperties> http_server_properties() {
+  HttpServerProperties* http_server_properties() {
     return http_server_properties_;
   }
   HttpStreamFactory* http_stream_factory() {
@@ -276,7 +279,7 @@ class NET_EXPORT HttpNetworkSession
   ClientSocketPoolManager* GetSocketPoolManager(SocketPoolType pool_type);
 
   NetLog* const net_log_;
-  const base::WeakPtr<HttpServerProperties> http_server_properties_;
+  HttpServerProperties* const http_server_properties_;
   CertVerifier* const cert_verifier_;
   HttpAuthHandlerFactory* const http_auth_handler_factory_;
 

@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/strings/string_util.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
@@ -218,7 +219,9 @@ bool ParseCertificate(const der::Input& certificate_tlv,
 //        extensions      [3]  EXPLICIT Extensions OPTIONAL
 //                             -- If present, version MUST be v3
 //        }
-bool ParseTbsCertificate(const der::Input& tbs_tlv, ParsedTbsCertificate* out) {
+bool ParseTbsCertificate(const der::Input& tbs_tlv,
+                         const ParseCertificateOptions& options,
+                         ParsedTbsCertificate* out) {
   der::Parser parser(tbs_tlv);
 
   //   Certificate  ::=  SEQUENCE  {
@@ -248,8 +251,10 @@ bool ParseTbsCertificate(const der::Input& tbs_tlv, ParsedTbsCertificate* out) {
   //        serialNumber         CertificateSerialNumber,
   if (!tbs_parser.ReadTag(der::kInteger, &out->serial_number))
     return false;
-  if (!VerifySerialNumber(out->serial_number))
+  if (!options.allow_invalid_serial_numbers &&
+      !VerifySerialNumber(out->serial_number)) {
     return false;
+  }
 
   //        signature            AlgorithmIdentifier,
   if (!ReadSequenceTLV(&tbs_parser, &out->signature_algorithm_tlv))
@@ -465,6 +470,36 @@ der::Input ExtKeyUsageOid() {
   return der::Input(oid);
 }
 
+der::Input AuthorityInfoAccessOid() {
+  // From RFC 5280:
+  //
+  //     id-pe-authorityInfoAccess OBJECT IDENTIFIER ::= { id-pe 1 }
+  //
+  // In dotted notation: 1.3.6.1.5.5.7.1.1
+  static const uint8_t oid[] = {0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x01, 0x01};
+  return der::Input(oid);
+}
+
+der::Input AdCaIssuersOid() {
+  // From RFC 5280:
+  //
+  //     id-ad-caIssuers OBJECT IDENTIFIER ::= { id-ad 2 }
+  //
+  // In dotted notation: 1.3.6.1.5.5.7.48.2
+  static const uint8_t oid[] = {0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02};
+  return der::Input(oid);
+}
+
+der::Input AdOcspOid() {
+  // From RFC 5280:
+  //
+  //     id-ad-ocsp OBJECT IDENTIFIER ::= { id-ad 1 }
+  //
+  // In dotted notation: 1.3.6.1.5.5.7.48.1
+  static const uint8_t oid[] = {0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01};
+  return der::Input(oid);
+}
+
 NET_EXPORT bool ParseExtensions(
     const der::Input& extensions_tlv,
     std::map<der::Input, ParsedExtension>* extensions) {
@@ -586,6 +621,59 @@ bool ParseKeyUsage(const der::Input& key_usage_tlv, der::BitString* key_usage) {
   //     one of the bits MUST be set to 1.
   if (BitStringIsAllZeros(*key_usage))
     return false;
+
+  return true;
+}
+
+bool ParseAuthorityInfoAccess(
+    const der::Input& authority_info_access_tlv,
+    std::vector<base::StringPiece>* out_ca_issuers_uris,
+    std::vector<base::StringPiece>* out_ocsp_uris) {
+  der::Parser parser(authority_info_access_tlv);
+
+  out_ca_issuers_uris->clear();
+  out_ocsp_uris->clear();
+
+  //    AuthorityInfoAccessSyntax  ::=
+  //            SEQUENCE SIZE (1..MAX) OF AccessDescription
+  der::Parser sequence_parser;
+  if (!parser.ReadSequence(&sequence_parser))
+    return false;
+  if (!sequence_parser.HasMore())
+    return false;
+
+  while (sequence_parser.HasMore()) {
+    //    AccessDescription  ::=  SEQUENCE {
+    der::Parser access_description_sequence_parser;
+    if (!sequence_parser.ReadSequence(&access_description_sequence_parser))
+      return false;
+
+    //            accessMethod          OBJECT IDENTIFIER,
+    der::Input access_method_oid;
+    if (!access_description_sequence_parser.ReadTag(der::kOid,
+                                                    &access_method_oid))
+      return false;
+
+    //            accessLocation        GeneralName  }
+    der::Tag access_location_tag;
+    der::Input access_location_value;
+    if (!access_description_sequence_parser.ReadTagAndValue(
+            &access_location_tag, &access_location_value))
+      return false;
+
+    // GeneralName ::= CHOICE {
+    if (access_location_tag == der::ContextSpecificPrimitive(6)) {
+      // uniformResourceIdentifier       [6]     IA5String,
+      base::StringPiece uri = access_location_value.AsStringPiece();
+      if (!base::IsStringASCII(uri))
+        return false;
+
+      if (access_method_oid == AdCaIssuersOid())
+        out_ca_issuers_uris->push_back(uri);
+      else if (access_method_oid == AdOcspOid())
+        out_ocsp_uris->push_back(uri);
+    }
+  }
 
   return true;
 }

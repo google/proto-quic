@@ -23,9 +23,7 @@ ClientSocketHandle::ClientSocketHandle()
       reuse_type_(ClientSocketHandle::UNUSED),
       callback_(base::Bind(&ClientSocketHandle::OnIOComplete,
                            base::Unretained(this))),
-      is_ssl_error_(false),
-      ssl_failure_state_(SSL_FAILURE_NONE) {
-}
+      is_ssl_error_(false) {}
 
 ClientSocketHandle::~ClientSocketHandle() {
   Reset();
@@ -76,7 +74,6 @@ void ClientSocketHandle::ResetInternal(bool cancel) {
 void ClientSocketHandle::ResetErrorState() {
   is_ssl_error_ = false;
   ssl_error_response_info_ = HttpResponseInfo();
-  ssl_failure_state_ = SSL_FAILURE_NONE;
   pending_http_proxy_connection_.reset();
 }
 

@@ -11,15 +11,4 @@ bool NextProtoIsSPDY(NextProto next_proto) {
          next_proto <= kProtoSPDYMaximumVersion;
 }
 
-void DisableHTTP2(NextProtoVector* next_protos) {
-  for (NextProtoVector::iterator it = next_protos->begin();
-       it != next_protos->end();) {
-    if (*it == kProtoHTTP2) {
-      it = next_protos->erase(it);
-      continue;
-    }
-    ++it;
-  }
-}
-
 }  // namespace net

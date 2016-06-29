@@ -98,6 +98,12 @@ struct GeneralizedTime {
 
 NET_EXPORT_PRIVATE bool operator<(const GeneralizedTime& lhs,
                                   const GeneralizedTime& rhs);
+NET_EXPORT_PRIVATE bool operator<=(const GeneralizedTime& lhs,
+                                   const GeneralizedTime& rhs);
+NET_EXPORT_PRIVATE bool operator>(const GeneralizedTime& lhs,
+                                  const GeneralizedTime& rhs);
+NET_EXPORT_PRIVATE bool operator>=(const GeneralizedTime& lhs,
+                                   const GeneralizedTime& rhs);
 
 // Reads a DER-encoded ASN.1 UTCTime value from |in| and puts the resulting
 // value in |out|, returning true if the UTCTime could be parsed successfully.

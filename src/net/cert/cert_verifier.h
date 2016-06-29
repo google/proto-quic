@@ -117,6 +117,7 @@ class NET_EXPORT CertVerifier {
       return additional_trust_anchors_;
     }
 
+    bool operator==(const RequestParams& other) const;
     bool operator<(const RequestParams& other) const;
 
    private:

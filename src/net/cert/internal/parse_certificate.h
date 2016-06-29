@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <map>
+#include <vector>
 
 #include "base/compiler_specific.h"
 #include "net/base/net_export.h"
@@ -44,6 +45,14 @@ struct ParsedTbsCertificate;
 //     that are negative or zero.  Certificate users SHOULD be prepared to
 //     gracefully handle such certificates.
 NET_EXPORT bool VerifySerialNumber(const der::Input& value) WARN_UNUSED_RESULT;
+
+struct NET_EXPORT ParseCertificateOptions {
+  // If set to true, then parsing will skip checks on the certificate's serial
+  // number. The only requirement will be that the serial number is an INTEGER,
+  // however it is not required to be a valid DER-encoding (i.e. minimal
+  // encoding), nor is it required to be constrained to any particular length.
+  bool allow_invalid_serial_numbers = false;
+};
 
 // Parses a DER-encoded "Certificate" as specified by RFC 5280. Returns true on
 // success and sets the results in the |out_*| parameters.
@@ -86,7 +95,8 @@ NET_EXPORT bool ParseCertificate(const der::Input& certificate_tlv,
     WARN_UNUSED_RESULT;
 
 // Parses a DER-encoded "TBSCertificate" as specified by RFC 5280. Returns true
-// on success and sets the results in |out|.
+// on success and sets the results in |out|. Certain invalid inputs may
+// be accepted based on the provided |options|.
 //
 // Note that on success |out| aliases data from the input |tbs_tlv|.
 // Hence the fields of the ParsedTbsCertificate are only valid as long as
@@ -114,6 +124,7 @@ NET_EXPORT bool ParseCertificate(const der::Input& certificate_tlv,
 //                                 -- If present, version MUST be v3
 //            }
 NET_EXPORT bool ParseTbsCertificate(const der::Input& tbs_tlv,
+                                    const ParseCertificateOptions& options,
                                     ParsedTbsCertificate* out)
     WARN_UNUSED_RESULT;
 
@@ -148,7 +159,13 @@ struct NET_EXPORT ParsedTbsCertificate {
   // instance if the serial number was 1000 then this would contain bytes
   // {0x03, 0xE8}.
   //
-  // In addition to being a valid DER-encoded INTEGER, parsing guarantees that
+  // The serial number may or may not be a valid DER-encoded INTEGER:
+  //
+  // If the option |allow_invalid_serial_numbers=true| was used during
+  // parsing, then nothing further can be assumed about these bytes.
+  //
+  // Otherwise if |allow_invalid_serial_numbers=false| then in addition
+  // to being a valid DER-encoded INTEGER, parsing guarantees that
   // the serial number is at most 20 bytes long. Parsing does NOT guarantee
   // that the integer is positive (might be zero or negative).
   der::Input serial_number;
@@ -312,6 +329,27 @@ NET_EXPORT der::Input PolicyConstraintsOid();
 // In dotted notation: 2.5.29.37
 NET_EXPORT der::Input ExtKeyUsageOid();
 
+// From RFC 5280:
+//
+//     id-pe-authorityInfoAccess OBJECT IDENTIFIER ::= { id-pe 1 }
+//
+// In dotted notation: 1.3.6.1.5.5.7.1.1
+NET_EXPORT der::Input AuthorityInfoAccessOid();
+
+// From RFC 5280:
+//
+//     id-ad-caIssuers OBJECT IDENTIFIER ::= { id-ad 2 }
+//
+// In dotted notation: 1.3.6.1.5.5.7.48.2
+NET_EXPORT der::Input AdCaIssuersOid();
+
+// From RFC 5280:
+//
+//     id-ad-ocsp OBJECT IDENTIFIER ::= { id-ad 1 }
+//
+// In dotted notation: 1.3.6.1.5.5.7.48.1
+NET_EXPORT der::Input AdOcspOid();
+
 // Parses the Extensions sequence as defined by RFC 5280. Extensions are added
 // to the map |extensions| keyed by the OID. Parsing guarantees that each OID
 // is unique. Note that certificate verification must consume each extension
@@ -390,6 +428,27 @@ enum KeyUsageBit {
 //     key_usage->AssertsBit(KEY_USAGE_BIT_DIGITAL_SIGNATURE);
 NET_EXPORT bool ParseKeyUsage(const der::Input& key_usage_tlv,
                               der::BitString* key_usage) WARN_UNUSED_RESULT;
+
+// Parses the Authority Information Access extension defined by RFC 5280.
+// Returns true on success, and |out_ca_issuers_uris| and |out_ocsp_uris| will
+// alias data in |authority_info_access_tlv|. On failure returns false, and
+// |out_ca_issuers_uris| and |out_ocsp_uris| may have been partially filled.
+//
+// |out_ca_issuers_uris| is filled with the accessLocations of type
+// uniformResourceIdentifier for the accessMethod id-ad-caIssuers.
+// |out_ocsp_uris| is filled with the accessLocations of type
+// uniformResourceIdentifier for the accessMethod id-ad-ocsp.
+//
+// The values in |out_ca_issuers_uris| and |out_ocsp_uris| are checked to be
+// IA5String (ASCII strings), but no other validation is performed on them.
+//
+// accessMethods other than id-ad-caIssuers and id-ad-ocsp are silently ignored.
+// accessLocation types other than uniformResourceIdentifier are silently
+// ignored.
+NET_EXPORT bool ParseAuthorityInfoAccess(
+    const der::Input& authority_info_access_tlv,
+    std::vector<base::StringPiece>* out_ca_issuers_uris,
+    std::vector<base::StringPiece>* out_ocsp_uris) WARN_UNUSED_RESULT;
 
 }  // namespace net
 

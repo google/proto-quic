@@ -51,8 +51,4 @@ bool PendingTask::operator<(const PendingTask& other) const {
   return (sequence_num - other.sequence_num) > 0;
 }
 
-void TaskQueue::Swap(TaskQueue* queue) {
-  c.swap(queue->c);  // Calls std::deque::swap.
-}
-
 }  // namespace base

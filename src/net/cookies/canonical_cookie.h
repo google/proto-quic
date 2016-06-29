@@ -72,6 +72,20 @@ class NET_EXPORT CanonicalCookie {
                                                  bool enforce_strict_secure,
                                                  CookiePriority priority);
 
+  // Creates a canonical cookie from unparsed attribute values.
+  // It does not do any validation.
+  static std::unique_ptr<CanonicalCookie> Create(const std::string& name,
+                                                 const std::string& value,
+                                                 const std::string& domain,
+                                                 const std::string& path,
+                                                 const base::Time& creation,
+                                                 const base::Time& expiration,
+                                                 const base::Time& last_access,
+                                                 bool secure,
+                                                 bool http_only,
+                                                 CookieSameSite same_site,
+                                                 CookiePriority priority);
+
   const GURL& Source() const { return source_; }
   const std::string& Name() const { return name_; }
   const std::string& Value() const { return value_; }

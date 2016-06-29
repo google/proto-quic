@@ -3213,6 +3213,7 @@ func addStateMachineCoverageTests(async, splitHandshake bool, protocol protocol)
 				NextProtos: []string{"foo"},
 			},
 			flags:                 []string{"-select-next-proto", "foo"},
+			resumeSession:         true,
 			expectedNextProto:     "foo",
 			expectedNextProtoType: npn,
 		})
@@ -3226,6 +3227,7 @@ func addStateMachineCoverageTests(async, splitHandshake bool, protocol protocol)
 				"-advertise-npn", "\x03foo\x03bar\x03baz",
 				"-expect-next-proto", "bar",
 			},
+			resumeSession:         true,
 			expectedNextProto:     "bar",
 			expectedNextProtoType: npn,
 		})
@@ -3340,6 +3342,42 @@ func addStateMachineCoverageTests(async, splitHandshake bool, protocol protocol)
 			},
 			resumeSession:   true,
 			expectChannelID: true,
+		})
+
+		// Channel ID and NPN at the same time, to ensure their relative
+		// ordering is correct.
+		tests = append(tests, testCase{
+			name: "ChannelID-NPN-Client",
+			config: Config{
+				RequestChannelID: true,
+				NextProtos:       []string{"foo"},
+			},
+			flags: []string{
+				"-send-channel-id", path.Join(*resourceDir, channelIDKeyFile),
+				"-select-next-proto", "foo",
+			},
+			resumeSession:         true,
+			expectChannelID:       true,
+			expectedNextProto:     "foo",
+			expectedNextProtoType: npn,
+		})
+		tests = append(tests, testCase{
+			testType: serverTest,
+			name:     "ChannelID-NPN-Server",
+			config: Config{
+				ChannelID:  channelIDKey,
+				NextProtos: []string{"bar"},
+			},
+			flags: []string{
+				"-expect-channel-id",
+				base64.StdEncoding.EncodeToString(channelIDBytes),
+				"-advertise-npn", "\x03foo\x03bar\x03baz",
+				"-expect-next-proto", "bar",
+			},
+			resumeSession:         true,
+			expectChannelID:       true,
+			expectedNextProto:     "bar",
+			expectedNextProtoType: npn,
 		})
 
 		// Bidirectional shutdown with the runner initiating.
@@ -5101,6 +5139,65 @@ func addCurveTests() {
 	})
 }
 
+func addCECPQ1Tests() {
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "CECPQ1-Client-BadX25519Part",
+		config: Config{
+			MinVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384},
+			Bugs: ProtocolBugs{
+				CECPQ1BadX25519Part: true,
+			},
+		},
+		flags:              []string{"-cipher", "kCECPQ1"},
+		shouldFail:         true,
+		expectedLocalError: "local error: bad record MAC",
+	})
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "CECPQ1-Client-BadNewhopePart",
+		config: Config{
+			MinVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384},
+			Bugs: ProtocolBugs{
+				CECPQ1BadNewhopePart: true,
+			},
+		},
+		flags:              []string{"-cipher", "kCECPQ1"},
+		shouldFail:         true,
+		expectedLocalError: "local error: bad record MAC",
+	})
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "CECPQ1-Server-BadX25519Part",
+		config: Config{
+			MinVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384},
+			Bugs: ProtocolBugs{
+				CECPQ1BadX25519Part: true,
+			},
+		},
+		flags:         []string{"-cipher", "kCECPQ1"},
+		shouldFail:    true,
+		expectedError: ":DECRYPTION_FAILED_OR_BAD_RECORD_MAC:",
+	})
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "CECPQ1-Server-BadNewhopePart",
+		config: Config{
+			MinVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384},
+			Bugs: ProtocolBugs{
+				CECPQ1BadNewhopePart: true,
+			},
+		},
+		flags:         []string{"-cipher", "kCECPQ1"},
+		shouldFail:    true,
+		expectedError: ":DECRYPTION_FAILED_OR_BAD_RECORD_MAC:",
+	})
+}
+
 func addKeyExchangeInfoTests() {
 	testCases = append(testCases, testCase{
 		name: "KeyExchangeInfo-RSA-Client",
@@ -5254,6 +5351,7 @@ func main() {
 	addCustomExtensionTests()
 	addRSAClientKeyExchangeTests()
 	addCurveTests()
+	addCECPQ1Tests()
 	addKeyExchangeInfoTests()
 	for _, async := range []bool{false, true} {
 		for _, splitHandshake := range []bool{false, true} {

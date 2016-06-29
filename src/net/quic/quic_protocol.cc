@@ -179,6 +179,17 @@ QuicVersionVector QuicSupportedVersions() {
   return supported_versions;
 }
 
+QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
+  QuicVersionVector filtered_versions(versions.size());
+  filtered_versions.clear();  // Guaranteed by spec not to change capacity.
+  for (QuicVersion version : versions) {
+    if (!FLAGS_quic_disable_pre_30 || version >= QUIC_VERSION_30) {
+      filtered_versions.push_back(version);
+    }
+  }
+  return filtered_versions;
+}
+
 QuicTag QuicVersionToQuicTag(const QuicVersion version) {
   switch (version) {
     case QUIC_VERSION_25:
@@ -273,7 +284,7 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
     os << ", version:";
     for (size_t i = 0; i < header.public_header.versions.size(); ++i) {
       os << " ";
-      os << header.public_header.versions[i];
+      os << QuicVersionToString(header.public_header.versions[i]);
     }
   }
   if (header.public_header.nonce != nullptr) {

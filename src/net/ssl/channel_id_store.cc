@@ -33,7 +33,7 @@ ChannelIDStore::ChannelID& ChannelIDStore::ChannelID::operator=(
   server_identifier_ = other.server_identifier_;
   creation_time_ = other.creation_time_;
   if (other.key_)
-    key_.reset(other.key_->Copy());
+    key_ = other.key_->Copy();
   return *this;
 }
 

@@ -170,6 +170,12 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // testing.
   virtual EffectiveConnectionType GetEffectiveConnectionType() const;
 
+  // Returns the effective type of the current connection based on only the
+  // samples observed after |start_time|. This should only be used for
+  // recording the metrics. Virtualized for testing.
+  virtual EffectiveConnectionType GetRecentEffectiveConnectionType(
+      const base::TimeTicks& start_time) const;
+
   // Adds |observer| to the list of effective connection type observers. Must be
   // called on the IO thread.
   void AddEffectiveConnectionTypeObserver(
@@ -179,24 +185,6 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // Must be called on the IO thread.
   void RemoveEffectiveConnectionTypeObserver(
       EffectiveConnectionTypeObserver* observer);
-
-  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
-  // the HTTP layer. Virtualized for testing. |rtt| should not be null. The RTT
-  // at the HTTP layer measures the time from when the request was sent (this
-  // happens after the connection is established) to the time when the response
-  // headers were received.
-  virtual bool GetHttpRTTEstimate(base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
-
-  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
-  // the transport layer. |rtt| should not be null. Virtualized for testing.
-  virtual bool GetTransportRTTEstimate(base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
-
-  // Returns true if downlink throughput is available and sets |kbps| to
-  // estimated downlink throughput (in kilobits per second).
-  // Virtualized for testing. |kbps| should not be null.
-  virtual bool GetDownlinkThroughputKbpsEstimate(int32_t* kbps) const;
 
   // Notifies NetworkQualityEstimator that the response header of |request| has
   // been received.
@@ -212,31 +200,6 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   // Notifies NetworkQualityEstimator that |request| will be destroyed.
   void NotifyURLRequestDestroyed(const URLRequest& request);
-
-  // Returns true if median RTT at the HTTP layer is available and sets |rtt|
-  // to the median of RTT observations since |start_time|.
-  // Virtualized for testing. |rtt| should not be null. The RTT at the HTTP
-  // layer measures the time from when the request was sent (this happens after
-  // the connection is established) to the time when the response headers were
-  // received.
-  virtual bool GetRecentHttpRTTMedian(const base::TimeTicks& start_time,
-                                      base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
-
-  // Returns true if the median RTT at the transport layer is available and sets
-  // |rtt| to the median of transport layer RTT observations since
-  // |start_time|. |rtt| should not be null. Virtualized for testing.
-  virtual bool GetRecentTransportRTTMedian(const base::TimeTicks& start_time,
-                                           base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
-
-  // Returns true if median downstream throughput is available and sets |kbps|
-  // to the median of downstream throughput (in kilobits per second)
-  // observations since |start_time|. Virtualized for testing. |kbps|
-  // should not be null. Virtualized for testing.
-  virtual bool GetRecentMedianDownlinkThroughputKbps(
-      const base::TimeTicks& start_time,
-      int32_t* kbps) const WARN_UNUSED_RESULT;
 
   // Adds |rtt_observer| to the list of round trip time observers. Must be
   // called on the IO thread.
@@ -255,6 +218,24 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   void RemoveThroughputObserver(ThroughputObserver* throughput_observer);
 
   SocketPerformanceWatcherFactory* GetSocketPerformanceWatcherFactory();
+
+  // Returns a string equivalent to |type|.
+  static const char* GetNameForEffectiveConnectionType(
+      EffectiveConnectionType type);
+
+  // Returns an EffectiveConnectionType equivalent to |connection_type_name|.
+  static EffectiveConnectionType GetEffectiveConnectionTypeForName(
+      const std::string& connection_type_name);
+
+  // |use_localhost_requests| should only be true when testing against local
+  // HTTP server and allows the requests to local host to be used for network
+  // quality estimation.
+  void SetUseLocalHostRequestsForTesting(bool use_localhost_requests);
+
+  // |use_smaller_responses_for_tests| should only be true when testing.
+  // Allows the responses smaller than |kMinTransferSizeInBits| to be used for
+  // network quality estimation.
+  void SetUseSmallResponsesForTesting(bool use_small_responses);
 
  protected:
   // NetworkID is used to uniquely identify a network.
@@ -306,9 +287,48 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
                                   int32_t downstream_throughput_kbps,
                                   int32_t upstream_throughput_kbps) override;
 
-  // Return a string equivalent to |type|.
-  const char* GetNameForEffectiveConnectionType(
-      EffectiveConnectionType type) const;
+  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
+  // the HTTP layer. Virtualized for testing. |rtt| should not be null. The RTT
+  // at the HTTP layer measures the time from when the request was sent (this
+  // happens after the connection is established) to the time when the response
+  // headers were received.
+  virtual bool GetHttpRTTEstimate(base::TimeDelta* rtt) const
+      WARN_UNUSED_RESULT;
+
+  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
+  // the transport layer. |rtt| should not be null. Virtualized for testing.
+  virtual bool GetTransportRTTEstimate(base::TimeDelta* rtt) const
+      WARN_UNUSED_RESULT;
+
+  // Returns true if downlink throughput is available and sets |kbps| to
+  // estimated downlink throughput (in kilobits per second).
+  // Virtualized for testing. |kbps| should not be null.
+  virtual bool GetDownlinkThroughputKbpsEstimate(int32_t* kbps) const;
+
+  // Returns true if median RTT at the HTTP layer is available and sets |rtt|
+  // to the median of RTT observations since |start_time|.
+  // Virtualized for testing. |rtt| should not be null. The RTT at the HTTP
+  // layer measures the time from when the request was sent (this happens after
+  // the connection is established) to the time when the response headers were
+  // received.
+  virtual bool GetRecentHttpRTTMedian(const base::TimeTicks& start_time,
+                                      base::TimeDelta* rtt) const
+      WARN_UNUSED_RESULT;
+
+  // Returns true if the median RTT at the transport layer is available and sets
+  // |rtt| to the median of transport layer RTT observations since
+  // |start_time|. |rtt| should not be null. Virtualized for testing.
+  virtual bool GetRecentTransportRTTMedian(const base::TimeTicks& start_time,
+                                           base::TimeDelta* rtt) const
+      WARN_UNUSED_RESULT;
+
+  // Returns true if median downstream throughput is available and sets |kbps|
+  // to the median of downstream throughput (in kilobits per second)
+  // observations since |start_time|. Virtualized for testing. |kbps|
+  // should not be null. Virtualized for testing.
+  virtual bool GetRecentMedianDownlinkThroughputKbps(
+      const base::TimeTicks& start_time,
+      int32_t* kbps) const WARN_UNUSED_RESULT;
 
   // Returns the list of intervals at which the accuracy of network quality
   // prediction should be recorded. Virtualized for testing.
@@ -412,11 +432,6 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // current connection type to the observation buffer.
   void AddDefaultEstimates();
 
-  // Returns the effective type of the current connection based on only the
-  // samples observed after |start_time|.
-  EffectiveConnectionType GetRecentEffectiveConnectionType(
-      const base::TimeTicks& start_time) const;
-
   // Returns an estimate of network quality at the specified |percentile|.
   // |disallowed_observation_sources| is the list of observation sources that
   // should be excluded when computing the percentile.
@@ -490,12 +505,12 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
 
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.
-  const bool use_localhost_requests_;
+  bool use_localhost_requests_;
 
   // Determines if the responses smaller than |kMinTransferSizeInBytes|
   // or shorter than |kMinTransferSizeInBytes| can be used in estimating the
   // network quality. Set to true only for tests.
-  const bool use_small_responses_;
+  bool use_small_responses_;
 
   // The factor by which the weight of an observation reduces every second.
   const double weight_multiplier_per_second_;
@@ -563,6 +578,7 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // Estimated network quality when the response headers for the last mainframe
   // request were received.
   nqe::internal::NetworkQuality estimated_quality_at_last_main_frame_;
+  EffectiveConnectionType effective_connection_type_at_last_main_frame_;
 
   // ExternalEstimateProvider that provides network quality using operating
   // system APIs. May be NULL.

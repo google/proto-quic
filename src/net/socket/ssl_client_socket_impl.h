@@ -30,7 +30,6 @@
 #include "net/ssl/openssl_ssl_util.h"
 #include "net/ssl/ssl_client_cert_type.h"
 #include "net/ssl/ssl_config_service.h"
-#include "net/ssl/ssl_failure_state.h"
 
 namespace base {
 class FilePath;
@@ -78,7 +77,6 @@ class SSLClientSocketImpl : public SSLClientSocket {
   Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
                                     std::vector<uint8_t>* out) override;
   crypto::ECPrivateKey* GetChannelIDKey() const override;
-  SSLFailureState GetSSLFailureState() const override;
 
   // SSLSocket implementation.
   int ExportKeyingMaterial(const base::StringPiece& label,
@@ -133,7 +131,6 @@ class SSLClientSocketImpl : public SSLClientSocket {
   int DoVerifyCertComplete(int result);
   void DoConnectCallback(int result);
   void UpdateServerCert();
-  void VerifyCT();
 
   void OnHandshakeIOComplete(int result);
   void OnSendComplete(int result);
@@ -156,6 +153,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   void BufferRecvComplete(int result);
   void TransportWriteComplete(int result);
   int TransportReadComplete(int result);
+  int VerifyCT();
 
   // Callback from the SSL layer that indicates the remote server is requesting
   // a certificate for this client.
@@ -356,7 +354,6 @@ class SSLClientSocketImpl : public SSLClientSocket {
   bool certificate_verified_;
   // The request handle for |channel_id_service_|.
   ChannelIDService::Request channel_id_request_;
-  SSLFailureState ssl_failure_state_;
 
   int signature_result_;
   std::vector<uint8_t> signature_;

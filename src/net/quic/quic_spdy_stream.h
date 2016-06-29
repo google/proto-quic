@@ -120,7 +120,7 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
 
   // Writes the headers contained in |header_block| to the dedicated
   // headers stream.
-  virtual size_t WriteHeaders(const SpdyHeaderBlock& header_block,
+  virtual size_t WriteHeaders(SpdyHeaderBlock header_block,
                               bool fin,
                               QuicAckListenerInterface* ack_notifier_delegate);
 
@@ -131,7 +131,7 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
 
   // Writes the trailers contained in |trailer_block| to the dedicated
   // headers stream. Trailers will always have the FIN set.
-  virtual size_t WriteTrailers(const SpdyHeaderBlock& trailer_block,
+  virtual size_t WriteTrailers(SpdyHeaderBlock trailer_block,
                                QuicAckListenerInterface* ack_notifier_delegate);
 
   // Marks |bytes_consumed| of the headers data as consumed.

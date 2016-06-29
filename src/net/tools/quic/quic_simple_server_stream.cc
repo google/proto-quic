@@ -5,6 +5,7 @@
 #include "net/tools/quic/quic_simple_server_stream.h"
 
 #include <list>
+#include <utility>
 
 #include "base/logging.h"
 #include "base/stl_util.h"
@@ -211,7 +212,7 @@ void QuicSimpleServerStream::SendNotFoundResponse() {
   SpdyHeaderBlock headers;
   headers[":status"] = "404";
   headers["content-length"] = base::IntToString(strlen(kNotFoundResponseBody));
-  SendHeadersAndBody(headers, kNotFoundResponseBody);
+  SendHeadersAndBody(std::move(headers), kNotFoundResponseBody);
 }
 
 void QuicSimpleServerStream::SendErrorResponse() {
@@ -219,19 +220,20 @@ void QuicSimpleServerStream::SendErrorResponse() {
   SpdyHeaderBlock headers;
   headers[":status"] = "500";
   headers["content-length"] = base::UintToString(strlen(kErrorResponseBody));
-  SendHeadersAndBody(headers, kErrorResponseBody);
+  SendHeadersAndBody(std::move(headers), kErrorResponseBody);
 }
 
 void QuicSimpleServerStream::SendHeadersAndBody(
-    const SpdyHeaderBlock& response_headers,
+    SpdyHeaderBlock response_headers,
     StringPiece body) {
-  SendHeadersAndBodyAndTrailers(response_headers, body, SpdyHeaderBlock());
+  SendHeadersAndBodyAndTrailers(std::move(response_headers), body,
+                                SpdyHeaderBlock());
 }
 
 void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
-    const SpdyHeaderBlock& response_headers,
+    SpdyHeaderBlock response_headers,
     StringPiece body,
-    const SpdyHeaderBlock& response_trailers) {
+    SpdyHeaderBlock response_trailers) {
   // This server only supports SPDY and HTTP, and neither handles bidirectional
   // streaming.
   if (!reading_stopped()) {
@@ -242,7 +244,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
   bool send_fin = (body.empty() && response_trailers.empty());
   DVLOG(1) << "Writing headers (fin = " << send_fin
            << ") : " << response_headers.DebugString();
-  WriteHeaders(response_headers, send_fin, nullptr);
+  WriteHeaders(std::move(response_headers), send_fin, nullptr);
   if (send_fin) {
     // Nothing else to send.
     return;
@@ -261,7 +263,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
   // Send the trailers. A FIN is always sent with trailers.
   DVLOG(1) << "Writing trailers (fin = true): "
            << response_trailers.DebugString();
-  WriteTrailers(response_trailers, nullptr);
+  WriteTrailers(std::move(response_trailers), nullptr);
 }
 
 const char* const QuicSimpleServerStream::kErrorResponseBody = "bad";

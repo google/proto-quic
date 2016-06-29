@@ -54,7 +54,6 @@ TEST_F(RttStatsTest, SmoothedRtt) {
 }
 
 TEST_F(RttStatsTest, PreviousSmoothedRtt) {
-  FLAGS_quic_adaptive_loss_recovery = true;
   // Verify that ack_delay is corrected for in Smoothed RTT.
   rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(300),
                        QuicTime::Delta::FromMilliseconds(100),

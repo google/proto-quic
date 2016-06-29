@@ -103,7 +103,8 @@ class QuicTestDispatcher : public QuicDispatcher {
     }
     QuicConnection* connection = new QuicConnection(
         id, client, helper(), alarm_factory(), CreatePerConnectionWriter(),
-        /* owns_writer= */ true, Perspective::IS_SERVER, supported_versions());
+        /* owns_writer= */ true, Perspective::IS_SERVER,
+        GetSupportedVersions());
 
     QuicServerSessionBase* session = nullptr;
     if (stream_factory_ != nullptr || crypto_stream_factory_ != nullptr) {

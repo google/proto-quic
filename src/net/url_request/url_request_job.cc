@@ -191,10 +191,6 @@ bool URLRequestJob::GetRemoteEndpoint(IPEndPoint* endpoint) const {
   return false;
 }
 
-bool URLRequestJob::GetResponseCookies(std::vector<std::string>* cookies) {
-  return false;
-}
-
 void URLRequestJob::PopulateNetErrorDetails(NetErrorDetails* details) const {
   return;
 }

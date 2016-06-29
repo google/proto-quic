@@ -23,7 +23,7 @@ typedef uint32_t CertStatus;
 #include "net/cert/cert_status_flags_list.h"
 #undef CERT_STATUS_FLAG
 
-static const CertStatus CERT_STATUS_ALL_ERRORS = 0xFFFF;
+static const CertStatus CERT_STATUS_ALL_ERRORS = 0xFF00FFFF;
 
 // Returns true if the specified cert status has an error set.
 static inline bool IsCertStatusError(CertStatus status) {

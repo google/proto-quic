@@ -215,10 +215,10 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                                        SpdyStreamId associated_stream_id,
                                        SpdyPriority priority,
                                        SpdyControlFlags flags,
-                                       const SpdyHeaderBlock* headers);
+                                       SpdyHeaderBlock headers);
   SpdySerializedFrame* CreateSynReply(SpdyStreamId stream_id,
                                       SpdyControlFlags flags,
-                                      const SpdyHeaderBlock* headers);
+                                      SpdyHeaderBlock headers);
   SpdySerializedFrame* CreateRstStream(SpdyStreamId stream_id,
                                        SpdyRstStreamStatus status) const;
   SpdySerializedFrame* CreateSettings(const SettingsMap& values) const;
@@ -229,7 +229,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   SpdySerializedFrame* CreateHeaders(SpdyStreamId stream_id,
                                      SpdyControlFlags flags,
                                      int weight,
-                                     const SpdyHeaderBlock* headers);
+                                     SpdyHeaderBlock headers);
   SpdySerializedFrame* CreateWindowUpdate(SpdyStreamId stream_id,
                                           uint32_t delta_window_size) const;
   SpdySerializedFrame* CreateDataFrame(SpdyStreamId stream_id,
@@ -238,7 +238,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                                        SpdyDataFlags flags);
   SpdySerializedFrame* CreatePushPromise(SpdyStreamId stream_id,
                                          SpdyStreamId promised_stream_id,
-                                         const SpdyHeaderBlock* headers);
+                                         SpdyHeaderBlock headers);
 
   // Serialize a frame of unknown type.
   SpdySerializedFrame SerializeFrame(const SpdyFrameIR& frame) {

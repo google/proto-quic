@@ -4,6 +4,8 @@
 
 #include "net/quic/quic_http_stream.h"
 
+#include <utility>
+
 #include "base/callback_helpers.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_split.h"
@@ -172,41 +174,6 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
     callback_ = callback;
 
   return rv;
-}
-
-int QuicHttpStream::DoStreamRequest() {
-  if (session_.get() == nullptr) {
-    // TODO(rtenneti) Bug: b/28676259 - a temporary fix until we find out why
-    // |session_| could be a nullptr.
-    return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
-                                    : ERR_QUIC_HANDSHAKE_FAILED;
-  }
-  int rv = stream_request_.StartRequest(
-      session_, &stream_,
-      base::Bind(&QuicHttpStream::OnStreamReady, weak_factory_.GetWeakPtr()));
-  if (rv == OK) {
-    stream_->SetDelegate(this);
-    if (request_info_->load_flags & LOAD_DISABLE_CONNECTION_MIGRATION) {
-      stream_->DisableConnectionMigration();
-    }
-    if (response_info_) {
-      next_state_ = STATE_SET_REQUEST_PRIORITY;
-    }
-  } else if (rv != ERR_IO_PENDING && !was_handshake_confirmed_) {
-    rv = ERR_QUIC_HANDSHAKE_FAILED;
-  }
-  return rv;
-}
-
-int QuicHttpStream::DoSetRequestPriority() {
-  // Set priority according to request and, and advance to
-  // STATE_SEND_HEADERS.
-  DCHECK(stream_);
-  DCHECK(response_info_);
-  SpdyPriority priority = ConvertRequestPriorityToQuicPriority(priority_);
-  stream_->SetPriority(priority);
-  next_state_ = STATE_SEND_HEADERS;
-  return OK;
 }
 
 void QuicHttpStream::OnStreamReady(int rv) {
@@ -531,17 +498,18 @@ void QuicHttpStream::OnDataAvailable() {
   DoCallback(rv);
 }
 
-void QuicHttpStream::OnClose(QuicErrorCode error) {
-  if (error != QUIC_NO_ERROR) {
+void QuicHttpStream::OnClose() {
+  if (stream_->connection_error() != QUIC_NO_ERROR ||
+      stream_->stream_error() != QUIC_STREAM_NO_ERROR) {
     response_status_ = was_handshake_confirmed_ ? ERR_QUIC_PROTOCOL_ERROR
                                                 : ERR_QUIC_HANDSHAKE_FAILED;
   } else if (!response_headers_received_) {
     response_status_ = ERR_ABORTED;
   }
 
+  quic_connection_error_ = stream_->connection_error();
   ResetStream();
   if (!callback_.is_null()) {
-    quic_connection_error_ = error;
     DoCallback(response_status_);
   }
 }
@@ -560,6 +528,13 @@ bool QuicHttpStream::HasSendHeadersComplete() {
 
 void QuicHttpStream::OnCryptoHandshakeConfirmed() {
   was_handshake_confirmed_ = true;
+  if (next_state_ == STATE_WAIT_FOR_CONFIRMATION_COMPLETE) {
+    int rv = DoLoop(OK);
+
+    if (rv != ERR_IO_PENDING && !callback_.is_null()) {
+      DoCallback(rv);
+    }
+  }
 }
 
 void QuicHttpStream::OnSessionClosed(int error, bool port_migration_detected) {
@@ -597,6 +572,13 @@ int QuicHttpStream::DoLoop(int rv) {
       case STATE_SET_REQUEST_PRIORITY:
         rv = DoSetRequestPriority();
         break;
+      case STATE_WAIT_FOR_CONFIRMATION:
+        CHECK_EQ(OK, rv);
+        rv = DoWaitForConfirmation();
+        break;
+      case STATE_WAIT_FOR_CONFIRMATION_COMPLETE:
+        rv = DoWaitForConfirmationComplete(rv);
+        break;
       case STATE_SEND_HEADERS:
         CHECK_EQ(OK, rv);
         rv = DoSendHeaders();
@@ -631,6 +613,61 @@ int QuicHttpStream::DoLoop(int rv) {
   return rv;
 }
 
+int QuicHttpStream::DoStreamRequest() {
+  // TODO(rtenneti) Bug: b/28676259 - a temporary fix until we find out why
+  // |session_| could be a nullptr. Delete |null_session| check and histogram if
+  // session is never a nullptr.
+  bool null_session = session_ == nullptr;
+  if (null_session) {
+    UMA_HISTOGRAM_BOOLEAN("Net.QuicHttpStream::DoStreamRequest.IsNullSession",
+                          null_session);
+    return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
+                                    : ERR_QUIC_HANDSHAKE_FAILED;
+  }
+  int rv = stream_request_.StartRequest(
+      session_, &stream_,
+      base::Bind(&QuicHttpStream::OnStreamReady, weak_factory_.GetWeakPtr()));
+  if (rv == OK) {
+    stream_->SetDelegate(this);
+    if (request_info_->load_flags & LOAD_DISABLE_CONNECTION_MIGRATION) {
+      stream_->DisableConnectionMigration();
+    }
+    if (response_info_) {
+      next_state_ = STATE_SET_REQUEST_PRIORITY;
+    }
+  } else if (rv != ERR_IO_PENDING && !was_handshake_confirmed_) {
+    rv = ERR_QUIC_HANDSHAKE_FAILED;
+  }
+  return rv;
+}
+
+int QuicHttpStream::DoSetRequestPriority() {
+  // Set priority according to request
+  DCHECK(stream_);
+  DCHECK(response_info_);
+  SpdyPriority priority = ConvertRequestPriorityToQuicPriority(priority_);
+  stream_->SetPriority(priority);
+  next_state_ = STATE_WAIT_FOR_CONFIRMATION;
+  return OK;
+}
+
+int QuicHttpStream::DoWaitForConfirmation() {
+  next_state_ = STATE_WAIT_FOR_CONFIRMATION_COMPLETE;
+  if (!session_->IsCryptoHandshakeConfirmed() &&
+      request_info_->method == "POST") {
+    return ERR_IO_PENDING;
+  }
+  return OK;
+}
+
+int QuicHttpStream::DoWaitForConfirmationComplete(int rv) {
+  if (rv < 0)
+    return rv;
+
+  next_state_ = STATE_SEND_HEADERS;
+  return OK;
+}
+
 int QuicHttpStream::DoSendHeaders() {
   if (!stream_)
     return ERR_UNEXPECTED;
@@ -643,11 +680,11 @@ int QuicHttpStream::DoSendHeaders() {
   bool has_upload_data = request_body_stream_ != nullptr;
 
   next_state_ = STATE_SEND_HEADERS_COMPLETE;
-  size_t frame_len =
-      stream_->WriteHeaders(request_headers_, !has_upload_data, nullptr);
+  size_t frame_len = stream_->WriteHeaders(std::move(request_headers_),
+                                           !has_upload_data, nullptr);
   headers_bytes_sent_ += frame_len;
 
-  request_headers_.clear();
+  request_headers_ = SpdyHeaderBlock();
   return static_cast<int>(frame_len);
 }
 
@@ -672,14 +709,18 @@ int QuicHttpStream::DoReadRequestBody() {
 }
 
 int QuicHttpStream::DoReadRequestBodyComplete(int rv) {
-  // |rv| is the result of read from the request body from the last call to
-  // DoSendBody().
-  if (rv < 0)
-    return rv;
-
   // If the stream is already closed, don't continue.
   if (!stream_)
     return response_status_;
+
+  // |rv| is the result of read from the request body from the last call to
+  // DoSendBody().
+  if (rv < 0) {
+    stream_->SetDelegate(nullptr);
+    stream_->Reset(QUIC_ERROR_PROCESSING_STREAM);
+    ResetStream();
+    return rv;
+  }
 
   request_body_buf_ = new DrainableIOBuffer(raw_request_body_buf_.get(), rv);
   if (rv == 0) {  // Reached the end.

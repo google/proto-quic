@@ -341,7 +341,7 @@ std::unique_ptr<base::Value> NetLogProcTaskFailedCallback(
     dict->SetString("os_error_string", gai_strerror(os_error));
 #elif defined(OS_WIN)
     // Map the error code to a human-readable string.
-    LPWSTR error_string = NULL;
+    LPWSTR error_string = nullptr;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
                   0,  // Use the internal message table.
                   os_error,
@@ -538,15 +538,15 @@ class HostResolverImpl::Request {
       : source_net_log_(source_net_log),
         info_(info),
         priority_(priority),
-        job_(NULL),
+        job_(nullptr),
         callback_(callback),
         addresses_(addresses),
         request_time_(base::TimeTicks::Now()) {}
 
   // Mark the request as canceled.
   void MarkAsCanceled() {
-    job_ = NULL;
-    addresses_ = NULL;
+    job_ = nullptr;
+    addresses_ = nullptr;
     callback_.Reset();
   }
 
@@ -1310,7 +1310,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       // Clean-up, record in the log, but don't run any callbacks.
       if (is_proc_running()) {
         proc_task_->Cancel();
-        proc_task_ = NULL;
+        proc_task_ = nullptr;
       }
       // Clean up now for nice NetLog.
       KillDnsTask();
@@ -1651,7 +1651,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
                         int net_error) {
     DNS_HISTOGRAM("AsyncDNS.ResolveFail", duration);
 
-    if (dns_task == NULL)
+    if (!dns_task)
       return;
 
     dns_task_error_ = net_error;
@@ -1741,7 +1741,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       if (is_proc_running()) {
         DCHECK(!is_queued());
         proc_task_->Cancel();
-        proc_task_ = NULL;
+        proc_task_ = nullptr;
       }
       KillDnsTask();
 
@@ -1813,13 +1813,9 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     return priority_tracker_.total_count();
   }
 
-  bool is_dns_running() const {
-    return dns_task_.get() != NULL;
-  }
+  bool is_dns_running() const { return !!dns_task_; }
 
-  bool is_proc_running() const {
-    return proc_task_.get() != NULL;
-  }
+  bool is_proc_running() const { return !!proc_task_; }
 
   base::WeakPtr<HostResolverImpl> resolver_;
 
@@ -2144,7 +2140,7 @@ std::unique_ptr<base::Value> HostResolverImpl::GetDnsConfigAsValue() const {
   // Check if async DNS is enabled, but we currently have no configuration
   // for it.
   const DnsConfig* dns_config = dns_client_->GetConfig();
-  if (dns_config == NULL)
+  if (!dns_config)
     return base::WrapUnique(new base::DictionaryValue());
 
   return dns_config->ToValue();
@@ -2519,9 +2515,8 @@ bool HostResolverImpl::HaveDnsConfig() const {
   // ScopedDefaultHostResolverProc.
   // The alternative is to use NetworkChangeNotifier to override DnsConfig,
   // but that would introduce construction order requirements for NCN and SDHRP.
-  return (dns_client_.get() != NULL) && (dns_client_->GetConfig() != NULL) &&
-         !(proc_params_.resolver_proc.get() == NULL &&
-           HostResolverProc::GetDefault() != NULL);
+  return dns_client_ && dns_client_->GetConfig() &&
+         (proc_params_.resolver_proc || !HostResolverProc::GetDefault());
 }
 
 void HostResolverImpl::OnDnsTaskResolve(int net_error) {

@@ -47,6 +47,7 @@ const char kSyntheticDelayCategoryFilterPrefix[] = "DELAY(";
 // String parameters that is used to parse memory dump config in trace config
 // string.
 const char kMemoryDumpConfigParam[] = "memory_dump_config";
+const char kAllowedDumpModesParam[] = "allowed_dump_modes";
 const char kTriggersParam[] = "triggers";
 const char kPeriodicIntervalParam[] = "periodic_interval_ms";
 const char kModeParam[] = "mode";
@@ -75,6 +76,15 @@ class ConvertableTraceConfigToTraceFormat
   const TraceConfig trace_config_;
 };
 
+std::set<MemoryDumpLevelOfDetail> GetDefaultAllowedMemoryDumpModes() {
+  std::set<MemoryDumpLevelOfDetail> all_modes;
+  for (uint32_t mode = static_cast<uint32_t>(MemoryDumpLevelOfDetail::FIRST);
+       mode <= static_cast<uint32_t>(MemoryDumpLevelOfDetail::LAST); mode++) {
+    all_modes.insert(static_cast<MemoryDumpLevelOfDetail>(mode));
+  }
+  return all_modes;
+}
+
 }  // namespace
 
 
@@ -99,6 +109,7 @@ TraceConfig::MemoryDumpConfig::MemoryDumpConfig(
 TraceConfig::MemoryDumpConfig::~MemoryDumpConfig() {};
 
 void TraceConfig::MemoryDumpConfig::Clear() {
+  allowed_dump_modes.clear();
   triggers.clear();
   heap_profiler_options.Clear();
 }
@@ -317,8 +328,6 @@ void TraceConfig::InitializeDefault() {
   enable_sampling_ = false;
   enable_systrace_ = false;
   enable_argument_filter_ = false;
-  excluded_categories_.push_back("*Debug");
-  excluded_categories_.push_back("*Test");
 }
 
 void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
@@ -517,9 +526,23 @@ void TraceConfig::AddCategoryToDict(base::DictionaryValue& dict,
 
 void TraceConfig::SetMemoryDumpConfigFromConfigDict(
     const base::DictionaryValue& memory_dump_config) {
+  // Set allowed dump modes.
+  memory_dump_config_.allowed_dump_modes.clear();
+  const base::ListValue* allowed_modes_list;
+  if (memory_dump_config.GetList(kAllowedDumpModesParam, &allowed_modes_list)) {
+    for (size_t i = 0; i < allowed_modes_list->GetSize(); ++i) {
+      std::string level_of_detail_str;
+      allowed_modes_list->GetString(i, &level_of_detail_str);
+      memory_dump_config_.allowed_dump_modes.insert(
+          StringToMemoryDumpLevelOfDetail(level_of_detail_str));
+    }
+  } else {
+    // If allowed modes param is not given then allow all modes by default.
+    memory_dump_config_.allowed_dump_modes = GetDefaultAllowedMemoryDumpModes();
+  }
+
   // Set triggers
   memory_dump_config_.triggers.clear();
-
   const base::ListValue* trigger_list = nullptr;
   if (memory_dump_config.GetList(kTriggersParam, &trigger_list) &&
       trigger_list->GetSize() > 0) {
@@ -565,6 +588,7 @@ void TraceConfig::SetDefaultMemoryDumpConfig() {
   memory_dump_config_.Clear();
   memory_dump_config_.triggers.push_back(kDefaultHeavyMemoryDumpTrigger);
   memory_dump_config_.triggers.push_back(kDefaultLightMemoryDumpTrigger);
+  memory_dump_config_.allowed_dump_modes = GetDefaultAllowedMemoryDumpModes();
 }
 
 void TraceConfig::ToDict(base::DictionaryValue& dict) const {
@@ -611,6 +635,15 @@ void TraceConfig::ToDict(base::DictionaryValue& dict) const {
   if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     std::unique_ptr<base::DictionaryValue> memory_dump_config(
         new base::DictionaryValue());
+    std::unique_ptr<base::ListValue> allowed_modes_list(new base::ListValue());
+    for (MemoryDumpLevelOfDetail dump_mode :
+         memory_dump_config_.allowed_dump_modes) {
+      allowed_modes_list->AppendString(
+          MemoryDumpLevelOfDetailToString(dump_mode));
+    }
+    memory_dump_config->Set(kAllowedDumpModesParam,
+                            std::move(allowed_modes_list));
+
     std::unique_ptr<base::ListValue> triggers_list(new base::ListValue());
     for (const MemoryDumpConfig::Trigger& config
         : memory_dump_config_.triggers) {

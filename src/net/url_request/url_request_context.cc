@@ -24,10 +24,12 @@ URLRequestContext::URLRequestContext()
       http_auth_handler_factory_(nullptr),
       proxy_service_(nullptr),
       network_delegate_(nullptr),
+      http_server_properties_(nullptr),
       http_user_agent_settings_(nullptr),
       cookie_store_(nullptr),
       transport_security_state_(nullptr),
       cert_transparency_verifier_(nullptr),
+      ct_policy_enforcer_(nullptr),
       http_transaction_factory_(nullptr),
       job_factory_(nullptr),
       throttler_manager_(nullptr),
@@ -56,6 +58,7 @@ void URLRequestContext::CopyFrom(const URLRequestContext* other) {
   set_cookie_store(other->cookie_store_);
   set_transport_security_state(other->transport_security_state_);
   set_cert_transparency_verifier(other->cert_transparency_verifier_);
+  set_ct_policy_enforcer(other->ct_policy_enforcer_);
   set_http_transaction_factory(other->http_transaction_factory_);
   set_job_factory(other->job_factory_);
   set_throttler_manager(other->throttler_manager_);

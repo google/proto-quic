@@ -64,11 +64,11 @@ class QuicSimpleServerStream : public QuicSpdyStream {
   // for the body.
   void SendNotFoundResponse();
 
-  void SendHeadersAndBody(const SpdyHeaderBlock& response_headers,
+  void SendHeadersAndBody(SpdyHeaderBlock response_headers,
                           base::StringPiece body);
-  void SendHeadersAndBodyAndTrailers(const SpdyHeaderBlock& response_headers,
+  void SendHeadersAndBodyAndTrailers(SpdyHeaderBlock response_headers,
                                      base::StringPiece body,
-                                     const SpdyHeaderBlock& response_trailers);
+                                     SpdyHeaderBlock response_trailers);
 
   SpdyHeaderBlock* request_headers() { return &request_headers_; }
 

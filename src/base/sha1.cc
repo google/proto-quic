@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "base/sys_byteorder.h"
 
 namespace base {
 
@@ -92,10 +93,6 @@ static inline uint32_t K(uint32_t t) {
   }
 }
 
-static inline void swapends(uint32_t* t) {
-  *t = (*t >> 24) | ((*t >> 8) & 0xff00) | ((*t & 0xff00) << 8) | (*t << 24);
-}
-
 const int SecureHashAlgorithm::kDigestSizeBytes = 20;
 
 void SecureHashAlgorithm::Init() {
@@ -118,7 +115,7 @@ void SecureHashAlgorithm::Final() {
   Process();
 
   for (int t = 0; t < 5; ++t)
-    swapends(&H[t]);
+    H[t] = ByteSwap(H[t]);
 }
 
 void SecureHashAlgorithm::Update(const void* data, size_t nbytes) {
@@ -165,7 +162,7 @@ void SecureHashAlgorithm::Process() {
   // W and M are in a union, so no need to memcpy.
   // memcpy(W, M, sizeof(M));
   for (t = 0; t < 16; ++t)
-    swapends(&W[t]);
+    W[t] = ByteSwap(W[t]);
 
   // b.
   for (t = 16; t < 80; ++t)

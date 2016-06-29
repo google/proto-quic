@@ -11,8 +11,9 @@ namespace net {
 const size_t kMaxHeaderListSize = 256 * 1024;
 
 void HeaderCoalescer::OnHeader(base::StringPiece key, base::StringPiece value) {
-  if (error_seen_)
+  if (error_seen_) {
     return;
+  }
 
   if (key.empty()) {
     DVLOG(1) << "Header name must not be empty.";
@@ -25,6 +26,15 @@ void HeaderCoalescer::OnHeader(base::StringPiece key, base::StringPiece value) {
   if (header_list_size_ > kMaxHeaderListSize) {
     error_seen_ = true;
     return;
+  }
+
+  if (key[0] == ':') {
+    if (protocol_version_ == HTTP2 && regular_header_seen_) {
+      error_seen_ = true;
+      return;
+    }
+  } else {
+    regular_header_seen_ = true;
   }
 
   auto iter = headers_.find(key);

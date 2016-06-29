@@ -338,10 +338,13 @@ void MemoryDumpManager::RequestGlobalDump(
     MemoryDumpType dump_type,
     MemoryDumpLevelOfDetail level_of_detail,
     const MemoryDumpCallback& callback) {
-  // Bail out immediately if tracing is not enabled at all.
-  if (!UNLIKELY(subtle::NoBarrier_Load(&memory_tracing_enabled_))) {
+  // Bail out immediately if tracing is not enabled at all or if the dump mode
+  // is not allowed.
+  if (!UNLIKELY(subtle::NoBarrier_Load(&memory_tracing_enabled_)) ||
+      !IsDumpModeAllowed(level_of_detail)) {
     VLOG(1) << kLogPrefix << " failed because " << kTraceCategory
-            << " tracing category is not enabled";
+            << " tracing category is not enabled or the requested dump mode is "
+               "not allowed by trace config.";
     if (!callback.is_null())
       callback.Run(0u /* guid */, false /* success */);
     return;
@@ -385,15 +388,33 @@ void MemoryDumpManager::CreateProcessDump(const MemoryDumpRequestArgs& args,
   TRACE_EVENT_NESTABLE_ASYNC_BEGIN0(kTraceCategory, "ProcessMemoryDump",
                                     TRACE_ID_MANGLE(args.dump_guid));
 
+  // If argument filter is enabled then only background mode dumps should be
+  // allowed. In case the trace config passed for background tracing session
+  // missed the allowed modes argument, it crashes here instead of creating
+  // unexpected dumps.
+  if (TraceLog::GetInstance()
+          ->GetCurrentTraceConfig()
+          .IsArgumentFilterEnabled()) {
+    CHECK_EQ(MemoryDumpLevelOfDetail::BACKGROUND, args.level_of_detail);
+  }
+
   std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state;
   {
     AutoLock lock(lock_);
+
     // |dump_thread_| can be nullptr is tracing was disabled before reaching
     // here. SetupNextMemoryDump() is robust enough to tolerate it and will
     // NACK the dump.
     pmd_async_state.reset(new ProcessMemoryDumpAsyncState(
         args, dump_providers_, session_state_, callback,
         dump_thread_ ? dump_thread_->task_runner() : nullptr));
+
+    // Safety check to prevent reaching here without calling RequestGlobalDump,
+    // with disallowed modes. If |session_state_| is null then tracing is
+    // disabled.
+    CHECK(!session_state_ ||
+          session_state_->memory_dump_config().allowed_dump_modes.count(
+              args.level_of_detail));
   }
 
   TRACE_EVENT_WITH_FLOW0(kTraceCategory, "MemoryDumpManager::CreateProcessDump",
@@ -714,6 +735,14 @@ void MemoryDumpManager::OnTraceLogDisabled() {
     dump_thread->Stop();
 }
 
+bool MemoryDumpManager::IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode) {
+  AutoLock lock(lock_);
+  if (!session_state_)
+    return false;
+  return session_state_->memory_dump_config().allowed_dump_modes.count(
+             dump_mode) != 0;
+}
+
 uint64_t MemoryDumpManager::GetTracingProcessId() const {
   return delegate_->GetTracingProcessId();
 }
@@ -796,14 +825,23 @@ void MemoryDumpManager::PeriodicGlobalDumpTimer::Start(
   uint32_t light_dump_period_ms = 0;
   uint32_t heavy_dump_period_ms = 0;
   DCHECK_LE(triggers_list.size(), 3u);
+  auto mdm = MemoryDumpManager::GetInstance();
   for (const TraceConfig::MemoryDumpConfig::Trigger& config : triggers_list) {
     DCHECK_NE(0u, config.periodic_interval_ms);
-    if (config.level_of_detail == MemoryDumpLevelOfDetail::LIGHT) {
-      DCHECK_EQ(0u, light_dump_period_ms);
-      light_dump_period_ms = config.periodic_interval_ms;
-    } else if (config.level_of_detail == MemoryDumpLevelOfDetail::DETAILED) {
-      DCHECK_EQ(0u, heavy_dump_period_ms);
-      heavy_dump_period_ms = config.periodic_interval_ms;
+    switch (config.level_of_detail) {
+      case MemoryDumpLevelOfDetail::BACKGROUND:
+        DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::BACKGROUND));
+        break;
+      case MemoryDumpLevelOfDetail::LIGHT:
+        DCHECK_EQ(0u, light_dump_period_ms);
+        DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::LIGHT));
+        light_dump_period_ms = config.periodic_interval_ms;
+        break;
+      case MemoryDumpLevelOfDetail::DETAILED:
+        DCHECK_EQ(0u, heavy_dump_period_ms);
+        DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::DETAILED));
+        heavy_dump_period_ms = config.periodic_interval_ms;
+        break;
     }
     min_timer_period_ms =
         std::min(min_timer_period_ms, config.periodic_interval_ms);

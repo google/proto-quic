@@ -15,6 +15,7 @@
 #include "net/base/auth.h"
 #include "net/base/completion_callback.h"
 #include "net/cookies/canonical_cookie.h"
+#include "net/proxy/proxy_retry_info.h"
 
 class GURL;
 
@@ -62,14 +63,15 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
   int NotifyBeforeURLRequest(URLRequest* request,
                              const CompletionCallback& callback,
                              GURL* new_url);
-  int NotifyBeforeSendHeaders(URLRequest* request,
-                              const CompletionCallback& callback,
-                              HttpRequestHeaders* headers);
-  void NotifyBeforeSendProxyHeaders(URLRequest* request,
-                                    const ProxyInfo& proxy_info,
-                                    HttpRequestHeaders* headers);
-  void NotifySendHeaders(URLRequest* request,
-                         const HttpRequestHeaders& headers);
+  int NotifyBeforeStartTransaction(URLRequest* request,
+                                   const CompletionCallback& callback,
+                                   HttpRequestHeaders* headers);
+  void NotifyBeforeSendHeaders(URLRequest* request,
+                               const ProxyInfo& proxy_info,
+                               const ProxyRetryInfoMap& proxy_retry_info,
+                               HttpRequestHeaders* headers);
+  void NotifyStartTransaction(URLRequest* request,
+                              const HttpRequestHeaders& headers);
   int NotifyHeadersReceived(
       URLRequest* request,
       const CompletionCallback& callback,
@@ -130,27 +132,31 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
                                  const CompletionCallback& callback,
                                  GURL* new_url) = 0;
 
-  // Called right before the HTTP headers are sent. Allows the delegate to
+  // Called right before the network transaction starts. Allows the delegate to
   // read/write |headers| before they get sent out. |callback| and |headers| are
   // valid only until OnCompleted or OnURLRequestDestroyed is called for this
   // request.
   // See OnBeforeURLRequest for return value description. Returns OK by default.
-  virtual int OnBeforeSendHeaders(URLRequest* request,
-                                  const CompletionCallback& callback,
-                                  HttpRequestHeaders* headers) = 0;
+  virtual int OnBeforeStartTransaction(URLRequest* request,
+                                       const CompletionCallback& callback,
+                                       HttpRequestHeaders* headers) = 0;
 
-  // Called after a proxy connection. Allows the delegate to read/write
-  // |headers| before they get sent out. |headers| is valid only until
-  // OnCompleted or OnURLRequestDestroyed is called for this request.
-  virtual void OnBeforeSendProxyHeaders(URLRequest* request,
-                                        const ProxyInfo& proxy_info,
-                                        HttpRequestHeaders* headers) = 0;
+  // Called after a connection is established , and just before headers are sent
+  // to the destination server (i.e., not called for HTTP CONNECT requests). For
+  // non-tunneled requests using HTTP proxies, |headers| will include any
+  // proxy-specific headers as well. Allows the delegate to read/write |headers|
+  // before they get sent out. |headers| is valid only until OnCompleted or
+  // OnURLRequestDestroyed is called for this request.
+  virtual void OnBeforeSendHeaders(URLRequest* request,
+                                   const ProxyInfo& proxy_info,
+                                   const ProxyRetryInfoMap& proxy_retry_info,
+                                   HttpRequestHeaders* headers) = 0;
 
   // Called right before the HTTP request(s) are being sent to the network.
   // |headers| is only valid until OnCompleted or OnURLRequestDestroyed is
   // called for this request.
-  virtual void OnSendHeaders(URLRequest* request,
-                             const HttpRequestHeaders& headers) = 0;
+  virtual void OnStartTransaction(URLRequest* request,
+                                  const HttpRequestHeaders& headers) = 0;
 
   // Called for HTTP requests when the headers have been received.
   // |original_response_headers| contains the headers as received over the

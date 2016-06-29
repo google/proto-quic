@@ -24,7 +24,6 @@
 #include "base/process/kill.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/sys_info.h"
-#include "base/win/object_watcher.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/scoped_process_information.h"
 #include "base/win/startup_information.h"
@@ -147,12 +146,6 @@ void RouteStdioToConsole(bool create_console_if_not_found) {
     // http://crbug.com/358267. Confirm that the underlying HANDLE is valid
     // before aborting.
 
-    // This causes NaCl tests to hang on XP for reasons unclear, perhaps due
-    // to not being able to inherit handles. Since it's only for debugging,
-    // and redirecting still works, punt for now.
-    if (base::win::GetVersion() < base::win::VERSION_VISTA)
-      return;
-
     intptr_t stdout_handle = _get_osfhandle(_fileno(stdout));
     intptr_t stderr_handle = _get_osfhandle(_fileno(stderr));
     if (stdout_handle >= 0 || stderr_handle >= 0)
@@ -217,11 +210,6 @@ Process LaunchProcess(const string16& cmdline,
     if (options.handles_to_inherit->empty()) {
       inherit_handles = false;
     } else {
-      if (base::win::GetVersion() < base::win::VERSION_VISTA) {
-        DLOG(ERROR) << "Specifying handles to inherit requires Vista or later.";
-        return Process();
-      }
-
       if (options.handles_to_inherit->size() >
               std::numeric_limits<DWORD>::max() / sizeof(HANDLE)) {
         DLOG(ERROR) << "Too many handles to inherit.";

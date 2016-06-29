@@ -938,6 +938,11 @@ void QuicChromiumClientSession::OnPathDegrading() {
   }
 }
 
+bool QuicChromiumClientSession::HasOpenDynamicStreams() const {
+  return QuicSession::HasOpenDynamicStreams() ||
+         GetNumDrainingOutgoingStreams() > 0;
+}
+
 void QuicChromiumClientSession::OnProofValid(
     const QuicCryptoClientConfig::CachedState& cached) {
   DCHECK(cached.proof_valid());
@@ -962,8 +967,8 @@ void QuicChromiumClientSession::OnProofVerifyDetailsAvailable(
     const ProofVerifyDetails& verify_details) {
   const ProofVerifyDetailsChromium* verify_details_chromium =
       reinterpret_cast<const ProofVerifyDetailsChromium*>(&verify_details);
-  cert_verify_result_.reset(new CertVerifyResult);
-  cert_verify_result_->CopyFrom(verify_details_chromium->cert_verify_result);
+  cert_verify_result_.reset(
+      new CertVerifyResult(verify_details_chromium->cert_verify_result));
   pinning_failure_log_ = verify_details_chromium->pinning_failure_log;
   std::unique_ptr<ct::CTVerifyResult> ct_verify_result_copy(
       new ct::CTVerifyResult(verify_details_chromium->ct_verify_result));

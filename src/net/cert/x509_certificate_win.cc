@@ -144,9 +144,6 @@ void X509Certificate::Initialize() {
   valid_start_ = Time::FromFileTime(cert_handle_->pCertInfo->NotBefore);
   valid_expiry_ = Time::FromFileTime(cert_handle_->pCertInfo->NotAfter);
 
-  fingerprint_ = CalculateFingerprint(cert_handle_);
-  ca_fingerprint_ = CalculateCAFingerprint(intermediate_ca_certs_);
-
   const CRYPT_INTEGER_BLOB* serial = &cert_handle_->pCertInfo->SerialNumber;
   std::unique_ptr<uint8_t[]> serial_bytes(new uint8_t[serial->cbData]);
   for (unsigned i = 0; i < serial->cbData; i++)
@@ -296,23 +293,6 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 }
 
 // static
-SHA1HashValue X509Certificate::CalculateFingerprint(
-    OSCertHandle cert) {
-  DCHECK(NULL != cert->pbCertEncoded);
-  DCHECK_NE(static_cast<DWORD>(0), cert->cbCertEncoded);
-
-  BOOL rv;
-  SHA1HashValue sha1;
-  DWORD sha1_size = sizeof(sha1.data);
-  rv = CryptHashCertificate(NULL, CALG_SHA1, 0, cert->pbCertEncoded,
-                            cert->cbCertEncoded, sha1.data, &sha1_size);
-  DCHECK(rv && sha1_size == sizeof(sha1.data));
-  if (!rv)
-    memset(sha1.data, 0, sizeof(sha1.data));
-  return sha1;
-}
-
-// static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
   DCHECK(NULL != cert->pbCertEncoded);
   DCHECK_NE(0u, cert->cbCertEncoded);
@@ -330,22 +310,22 @@ SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
   return sha256;
 }
 
-SHA1HashValue X509Certificate::CalculateCAFingerprint(
+SHA256HashValue X509Certificate::CalculateCAFingerprint256(
     const OSCertHandles& intermediates) {
-  SHA1HashValue sha1;
-  memset(sha1.data, 0, sizeof(sha1.data));
+  SHA256HashValue sha256;
+  memset(sha256.data, 0, sizeof(sha256.data));
 
-  SHA_CTX ctx;
-  if (!SHA1_Init(&ctx))
-    return sha1;
+  SHA256_CTX ctx;
+  if (!SHA256_Init(&ctx))
+    return sha256;
   for (size_t i = 0; i < intermediates.size(); ++i) {
     PCCERT_CONTEXT ca_cert = intermediates[i];
-    if (!SHA1_Update(&ctx, ca_cert->pbCertEncoded, ca_cert->cbCertEncoded))
-      return sha1;
+    if (!SHA256_Update(&ctx, ca_cert->pbCertEncoded, ca_cert->cbCertEncoded))
+      return sha256;
   }
-  SHA1_Final(sha1.data, &ctx);
+  SHA256_Final(sha256.data, &ctx);
 
-  return sha1;
+  return sha256;
 }
 
 // static

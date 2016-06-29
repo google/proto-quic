@@ -114,7 +114,7 @@ class QuicTestPacketMaker {
       bool should_include_version,
       bool fin,
       SpdyPriority priority,
-      const SpdyHeaderBlock& headers,
+      SpdyHeaderBlock headers,
       size_t* spdy_headers_frame_length,
       const std::vector<std::string>& data_writes);
 
@@ -126,7 +126,7 @@ class QuicTestPacketMaker {
       bool should_include_version,
       bool fin,
       SpdyPriority priority,
-      const SpdyHeaderBlock& headers,
+      SpdyHeaderBlock headers,
       size_t* spdy_headers_frame_length);
 
   std::unique_ptr<QuicReceivedPacket> MakeRequestHeadersPacket(
@@ -135,7 +135,7 @@ class QuicTestPacketMaker {
       bool should_include_version,
       bool fin,
       SpdyPriority priority,
-      const SpdyHeaderBlock& headers,
+      SpdyHeaderBlock headers,
       size_t* spdy_headers_frame_length,
       QuicStreamOffset* offset);
 
@@ -147,7 +147,7 @@ class QuicTestPacketMaker {
                                              bool should_include_version,
                                              bool fin,
                                              SpdyPriority priority,
-                                             const SpdyHeaderBlock& headers,
+                                             SpdyHeaderBlock headers,
                                              QuicStreamOffset* offset);
 
   // If |spdy_headers_frame_length| is non-null, it will be set to the size of
@@ -157,7 +157,7 @@ class QuicTestPacketMaker {
       QuicStreamId stream_id,
       bool should_include_version,
       bool fin,
-      const SpdyHeaderBlock& headers,
+      SpdyHeaderBlock headers,
       size_t* spdy_headers_frame_length,
       QuicStreamOffset* offset);
 
@@ -166,7 +166,7 @@ class QuicTestPacketMaker {
       QuicStreamId stream_id,
       bool should_include_version,
       bool fin,
-      const SpdyHeaderBlock& headers,
+      SpdyHeaderBlock headers,
       size_t* spdy_headers_frame_length);
 
   // Convenience method for calling MakeResponseHeadersPacket with nullptr for
@@ -176,7 +176,7 @@ class QuicTestPacketMaker {
                                               QuicStreamId stream_id,
                                               bool should_include_version,
                                               bool fin,
-                                              const SpdyHeaderBlock& headers,
+                                              SpdyHeaderBlock headers,
                                               QuicStreamOffset* offset);
 
   SpdyHeaderBlock GetRequestHeaders(const std::string& method,

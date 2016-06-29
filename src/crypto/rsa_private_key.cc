@@ -21,27 +21,27 @@
 namespace crypto {
 
 // static
-RSAPrivateKey* RSAPrivateKey::Create(uint16_t num_bits) {
+std::unique_ptr<RSAPrivateKey> RSAPrivateKey::Create(uint16_t num_bits) {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   ScopedRSA rsa_key(RSA_new());
   ScopedBIGNUM bn(BN_new());
   if (!rsa_key.get() || !bn.get() || !BN_set_word(bn.get(), 65537L))
-    return NULL;
+    return nullptr;
 
-  if (!RSA_generate_key_ex(rsa_key.get(), num_bits, bn.get(), NULL))
-    return NULL;
+  if (!RSA_generate_key_ex(rsa_key.get(), num_bits, bn.get(), nullptr))
+    return nullptr;
 
   std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
   result->key_ = EVP_PKEY_new();
   if (!result->key_ || !EVP_PKEY_set1_RSA(result->key_, rsa_key.get()))
-    return NULL;
+    return nullptr;
 
-  return result.release();
+  return result;
 }
 
 // static
-RSAPrivateKey* RSAPrivateKey::CreateFromPrivateKeyInfo(
+std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromPrivateKeyInfo(
     const std::vector<uint8_t>& input) {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
@@ -53,37 +53,35 @@ RSAPrivateKey* RSAPrivateKey::CreateFromPrivateKeyInfo(
 
   std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
   result->key_ = pkey.release();
-  return result.release();
+  return result;
 }
 
 // static
-RSAPrivateKey* RSAPrivateKey::CreateFromKey(EVP_PKEY* key) {
+std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromKey(EVP_PKEY* key) {
   DCHECK(key);
   if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA)
-    return NULL;
-  RSAPrivateKey* copy = new RSAPrivateKey();
+    return nullptr;
+  std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey);
   copy->key_ = EVP_PKEY_up_ref(key);
   return copy;
 }
 
-RSAPrivateKey::RSAPrivateKey()
-    : key_(NULL) {
-}
+RSAPrivateKey::RSAPrivateKey() : key_(nullptr) {}
 
 RSAPrivateKey::~RSAPrivateKey() {
   if (key_)
     EVP_PKEY_free(key_);
 }
 
-RSAPrivateKey* RSAPrivateKey::Copy() const {
-  std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey());
+std::unique_ptr<RSAPrivateKey> RSAPrivateKey::Copy() const {
+  std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey);
   ScopedRSA rsa(EVP_PKEY_get1_RSA(key_));
   if (!rsa)
-    return NULL;
+    return nullptr;
   copy->key_ = EVP_PKEY_new();
   if (!EVP_PKEY_set1_RSA(copy->key_, rsa.get()))
-    return NULL;
-  return copy.release();
+    return nullptr;
+  return copy;
 }
 
 bool RSAPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {

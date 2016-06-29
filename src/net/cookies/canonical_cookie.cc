@@ -310,6 +310,24 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
       expiration, creation, secure, http_only, same_site, priority));
 }
 
+// static
+std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
+    const std::string& name,
+    const std::string& value,
+    const std::string& domain,
+    const std::string& path,
+    const base::Time& creation,
+    const base::Time& expiration,
+    const base::Time& last_access,
+    bool secure,
+    bool http_only,
+    CookieSameSite same_site,
+    CookiePriority priority) {
+  return base::WrapUnique(new CanonicalCookie(
+      GURL(), name, value, domain, path, creation, expiration, last_access,
+      secure, http_only, same_site, priority));
+}
+
 bool CanonicalCookie::IsOnPath(const std::string& url_path) const {
 
   // A zero length would be unsafe for our trailing '/' checks, and

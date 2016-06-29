@@ -14,7 +14,7 @@ namespace net {
 
 PropertiesBasedQuicServerInfo::PropertiesBasedQuicServerInfo(
     const QuicServerId& server_id,
-    base::WeakPtr<HttpServerProperties> http_server_properties)
+    HttpServerProperties* http_server_properties)
     : QuicServerInfo(server_id),
       http_server_properties_(http_server_properties) {
   DCHECK(http_server_properties_);
@@ -55,7 +55,7 @@ void PropertiesBasedQuicServerInfo::Persist() {
 void PropertiesBasedQuicServerInfo::OnExternalCacheHit() {}
 
 PropertiesBasedQuicServerInfoFactory::PropertiesBasedQuicServerInfoFactory(
-    base::WeakPtr<HttpServerProperties> http_server_properties)
+    HttpServerProperties* http_server_properties)
     : http_server_properties_(http_server_properties) {}
 
 PropertiesBasedQuicServerInfoFactory::~PropertiesBasedQuicServerInfoFactory() {}

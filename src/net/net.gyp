@@ -222,7 +222,7 @@
             }, {  # desktop_linux == 0 and chromeos == 0
               'dependencies': [
 #                '../third_party/nss/nss.gyp:nspr',
-#                '../third_party/nss/nss.gyp:nss',
+#                '../third_party/nss/nss.gyp:ssl',
 #                'third_party/nss/ssl.gyp:libssl',
               ],
             }],
@@ -545,6 +545,8 @@
          'http/http_server_properties.h',
          'http/http_stream_factory.cc',
          'http/http_stream_factory_impl_job.cc',
+				 'http/http_stream_factory_impl_job_controller.h',
+				 'http/http_stream_factory_impl_job_controller.cc',
          'http/http_stream_factory_impl_request.cc',
          'http/http_auth_cache.cc',
          'http/http_response_body_drainer.cc',
@@ -630,8 +632,6 @@
 #        'base/mock_file_stream.h',
         'base/test_completion_callback.cc',
         'base/test_completion_callback.h',
-        'base/test_data_directory.cc',
-        'base/test_data_directory.h',
         'cert/mock_cert_verifier.cc',
         'cert/mock_cert_verifier.h',
 #        'cert/mock_client_cert_verifier.cc',
@@ -739,7 +739,7 @@
             }, {  # desktop_linux == 0 and chromeos == 0
               'dependencies': [
 #                '../third_party/nss/nss.gyp:nspr',
-#                '../third_party/nss/nss.gyp:nss',
+#                '../third_party/nss/nss.gyp:ssl',
 #                'third_party/nss/ssl.gyp:libssl',
               ],
             }],
@@ -934,6 +934,8 @@
         'net_quic_proto',
       ],
       'sources': [
+        'tools/quic/chlo_extractor.h',
+        'tools/quic/chlo_extractor.cc',
         'tools/quic/quic_client_base.cc',
         'tools/quic/quic_client_base.h',
         'tools/quic/quic_client_session.cc',
@@ -963,6 +965,8 @@
         'tools/quic/quic_simple_server_stream.h',
         'tools/quic/quic_time_wait_list_manager.cc',
         'tools/quic/quic_time_wait_list_manager.h',
+        'tools/quic/stateless_rejector.h',
+        'tools/quic/stateless_rejector.cc',
         'tools/quic/synchronous_host_resolver.cc',
         'tools/quic/synchronous_host_resolver.h',
       ],

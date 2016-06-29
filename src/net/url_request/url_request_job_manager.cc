@@ -30,13 +30,13 @@ struct SchemeToFactory {
 }  // namespace
 
 static const SchemeToFactory kBuiltinFactories[] = {
-  { "http", URLRequestHttpJob::Factory },
-  { "https", URLRequestHttpJob::Factory },
+    {"http", URLRequestHttpJob::Factory},
+    {"https", URLRequestHttpJob::Factory},
 
-#if !defined(OS_IOS)
-  { "ws", URLRequestHttpJob::Factory },
-  { "wss", URLRequestHttpJob::Factory },
-#endif  // !defined(OS_IOS)
+#if defined(ENABLE_WEBSOCKETS)
+    {"ws", URLRequestHttpJob::Factory},
+    {"wss", URLRequestHttpJob::Factory},
+#endif  // defined(ENABLE_WEBSOCKETS)
 };
 
 // static

@@ -209,6 +209,10 @@ vector<TestParams> GetTestParams() {
             }
 
             for (const QuicVersionVector& client_versions : version_buckets) {
+              if (client_versions.front() < QUIC_VERSION_30 &&
+                  FLAGS_quic_disable_pre_30) {
+                continue;
+              }
               CHECK(!client_versions.empty());
               // Add an entry for server and client supporting all versions.
               params.push_back(TestParams(
@@ -229,6 +233,10 @@ vector<TestParams> GetTestParams() {
               // in the client. Protocol negotiation should occur. Skip the i =
               // 0 case because it is essentially the same as the default case.
               for (size_t i = 1; i < client_versions.size(); ++i) {
+                if (client_versions[i] < QUIC_VERSION_30 &&
+                    FLAGS_quic_disable_pre_30) {
+                  continue;
+                }
                 QuicVersionVector server_supported_versions;
                 server_supported_versions.push_back(client_versions[i]);
                 params.push_back(TestParams(

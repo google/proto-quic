@@ -46,15 +46,10 @@ struct BASE_EXPORT PendingTask : public TrackingInfo {
   bool is_high_res;
 };
 
-// Wrapper around std::queue specialized for PendingTask which adds a Swap
-// helper method.
-class BASE_EXPORT TaskQueue : public std::queue<PendingTask> {
- public:
-  void Swap(TaskQueue* queue);
-};
+using TaskQueue = std::queue<PendingTask>;
 
 // PendingTasks are sorted by their |delayed_run_time| property.
-typedef std::priority_queue<base::PendingTask> DelayedTaskQueue;
+using DelayedTaskQueue = std::priority_queue<base::PendingTask>;
 
 }  // namespace base
 

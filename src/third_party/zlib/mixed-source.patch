@@ -1,5 +1,5 @@
 diff --git a/third_party/zlib/deflate.c b/third_party/zlib/deflate.c
-index 5c4022f..88b2ec0 100644
+index 6969577..7c95b30 100644
 --- a/third_party/zlib/deflate.c
 +++ b/third_party/zlib/deflate.c
 @@ -70,14 +70,15 @@ typedef enum {
@@ -34,7 +34,7 @@ index 5c4022f..88b2ec0 100644
  #endif
  
  #ifdef DEBUG
-@@ -281,6 +282,9 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+@@ -293,6 +294,9 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
      s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
      s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
      s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
@@ -44,7 +44,7 @@ index 5c4022f..88b2ec0 100644
  
      s->high_water = 0;      /* nothing written to s->window yet */
  
-@@ -367,6 +371,8 @@ int ZEXPORT deflateReset (strm)
+@@ -406,6 +410,8 @@ int ZEXPORT deflateResetKeep (strm)
      s = (deflate_state *)strm->state;
      s->pending = 0;
      s->pending_out = s->pending_buf;
@@ -53,7 +53,7 @@ index 5c4022f..88b2ec0 100644
  
      if (s->wrap < 0) {
          s->wrap = -s->wrap; /* was made negative by deflate(..., Z_FINISH); */
-@@ -817,9 +823,26 @@ int ZEXPORT deflate (strm, flush)
+@@ -900,9 +906,26 @@ int ZEXPORT deflate (strm, flush)
          (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
          block_state bstate;
  
@@ -83,7 +83,7 @@ index 5c4022f..88b2ec0 100644
  
          if (bstate == finish_started || bstate == finish_done) {
              s->status = FINISH_STATE;
-@@ -915,6 +938,7 @@ int ZEXPORT deflateEnd (strm)
+@@ -999,6 +1022,7 @@ int ZEXPORT deflateEnd (strm)
      TRY_FREE(strm, strm->state->head);
      TRY_FREE(strm, strm->state->prev);
      TRY_FREE(strm, strm->state->window);
@@ -91,7 +91,7 @@ index 5c4022f..88b2ec0 100644
  
      ZFREE(strm, strm->state);
      strm->state = Z_NULL;
-@@ -1046,6 +1070,57 @@ local void lm_init (s)
+@@ -1131,6 +1155,57 @@ local void lm_init (s)
  #endif
  }
  
@@ -149,7 +149,7 @@ index 5c4022f..88b2ec0 100644
  #ifndef FASTEST
  /* ===========================================================================
   * Set match_start to the longest match starting at the given string and
-@@ -1060,9 +1135,10 @@ local void lm_init (s)
+@@ -1145,9 +1220,10 @@ local void lm_init (s)
  /* For 80x86 and 680x0, an optimized version will be provided in match.asm or
   * match.S. The code will be functionally equivalent.
   */
@@ -161,7 +161,7 @@ index 5c4022f..88b2ec0 100644
  {
      unsigned chain_length = s->max_chain_length;/* max hash chain length */
      register Bytef *scan = s->window + s->strstart; /* current string */
-@@ -1110,6 +1186,9 @@ local uInt longest_match(s, cur_match)
+@@ -1195,6 +1271,9 @@ local uInt longest_match(s, cur_match)
      do {
          Assert(cur_match < s->strstart, "no future");
          match = s->window + cur_match;
@@ -171,7 +171,7 @@ index 5c4022f..88b2ec0 100644
  
          /* Skip to next match if the match length cannot increase
           * or if the match length is less than 2.  Note that the checks below
-@@ -1152,6 +1231,8 @@ local uInt longest_match(s, cur_match)
+@@ -1237,6 +1316,8 @@ local uInt longest_match(s, cur_match)
          len = (MAX_MATCH - 1) - (int)(strend-scan);
          scan = strend - (MAX_MATCH-1);
  
@@ -180,7 +180,7 @@ index 5c4022f..88b2ec0 100644
  #else /* UNALIGNED_OK */
  
          if (match[best_len]   != scan_end  ||
-@@ -1168,15 +1249,23 @@ local uInt longest_match(s, cur_match)
+@@ -1253,15 +1334,23 @@ local uInt longest_match(s, cur_match)
          scan += 2, match++;
          Assert(*scan == *match, "match[2]?");
  
@@ -213,7 +213,7 @@ index 5c4022f..88b2ec0 100644
  
          Assert(scan <= s->window+(unsigned)(s->window_size-1), "wild scan");
  
-@@ -1204,20 +1293,74 @@ local uInt longest_match(s, cur_match)
+@@ -1289,20 +1378,74 @@ local uInt longest_match(s, cur_match)
  }
  #endif /* ASMV */
  
@@ -289,11 +289,10 @@ index 5c4022f..88b2ec0 100644
      /* The code is optimized for HASH_BITS >= 8 and MAX_MATCH-2 multiple of 16.
       * It is easy to get rid of this optimization if necessary.
       */
-@@ -1360,6 +1503,21 @@ local void fill_window(s)
+@@ -1447,6 +1590,20 @@ local void fill_window(s)
                   */
              } while (--n);
  #endif
-+
 +            for (n = 0; n < Z_COOKIE_HASH_SIZE; n++) {
 +                if (s->cookie_locations[n] > wsize) {
 +                    s->cookie_locations[n] -= wsize;
@@ -310,8 +309,8 @@ index 5c4022f..88b2ec0 100644
 +
              more += wsize;
          }
-         if (s->strm->avail_in == 0) return;
-@@ -1378,6 +1536,9 @@ local void fill_window(s)
+         if (s->strm->avail_in == 0) break;
+@@ -1465,6 +1622,9 @@ local void fill_window(s)
          Assert(more >= 2, "more < 2");
  
          n = read_buf(s->strm, s->window + s->strstart + s->lookahead, more);
@@ -321,7 +320,7 @@ index 5c4022f..88b2ec0 100644
          s->lookahead += n;
  
          /* Initialize the hash value now that we have some input: */
-@@ -1459,9 +1620,10 @@ local void fill_window(s)
+@@ -1561,9 +1721,10 @@ local void fill_window(s)
   * NOTE: this function should be optimized to avoid extra copying from
   * window to pending_buf.
   */
@@ -333,7 +332,7 @@ index 5c4022f..88b2ec0 100644
  {
      /* Stored blocks are limited to 0xffff bytes, pending_buf is limited
       * to pending_buf_size, and each stored block has a 5 byte header:
-@@ -1517,13 +1679,19 @@ local block_state deflate_stored(s, flush)
+@@ -1625,13 +1786,19 @@ local block_state deflate_stored(s, flush)
   * new strings in the dictionary only for unmatched strings or for short
   * matches. It is used only for the fast compression options.
   */
@@ -354,7 +353,7 @@ index 5c4022f..88b2ec0 100644
      for (;;) {
          /* Make sure that we always have enough lookahead, except
           * at the end of the input file. We need MAX_MATCH bytes
-@@ -1554,7 +1722,7 @@ local block_state deflate_fast(s, flush)
+@@ -1662,7 +1829,7 @@ local block_state deflate_fast(s, flush)
               * of window index 0 (in particular we have to avoid a match
               * of the string with itself at the start of the input file).
               */
@@ -363,7 +362,7 @@ index 5c4022f..88b2ec0 100644
              /* longest_match() sets match_start */
          }
          if (s->match_length >= MIN_MATCH) {
-@@ -1613,12 +1781,25 @@ local block_state deflate_fast(s, flush)
+@@ -1727,12 +1894,25 @@ local block_state deflate_fast(s, flush)
   * evaluation for matches: a match is finally adopted only if there is
   * no better match at the next window position.
   */
@@ -390,7 +389,7 @@ index 5c4022f..88b2ec0 100644
  
      /* Process the input block. */
      for (;;) {
-@@ -1648,13 +1829,18 @@ local block_state deflate_slow(s, flush)
+@@ -1762,13 +1942,18 @@ local block_state deflate_slow(s, flush)
          s->prev_length = s->match_length, s->prev_match = s->match_start;
          s->match_length = MIN_MATCH-1;
  
@@ -412,7 +411,7 @@ index 5c4022f..88b2ec0 100644
              /* longest_match() sets match_start */
  
              if (s->match_length <= 5 && (s->strategy == Z_FILTERED
-@@ -1673,7 +1859,20 @@ local block_state deflate_slow(s, flush)
+@@ -1787,7 +1972,20 @@ local block_state deflate_slow(s, flush)
          /* If there was a match at the previous step and the current
           * match is not better, output the previous match:
           */
@@ -435,10 +434,10 @@ index 5c4022f..88b2ec0 100644
              /* Do not insert strings in hash table beyond this. */
  
 diff --git a/third_party/zlib/deflate.h b/third_party/zlib/deflate.h
-index cbf0d1e..2fe6fd6 100644
+index ce0299e..c795034 100644
 --- a/third_party/zlib/deflate.h
 +++ b/third_party/zlib/deflate.h
-@@ -91,6 +91,9 @@ typedef unsigned IPos;
+@@ -94,6 +94,9 @@ typedef unsigned IPos;
   * save space in the various tables. IPos is used only for parameter passing.
   */
  
@@ -448,7 +447,7 @@ index cbf0d1e..2fe6fd6 100644
  typedef struct internal_state {
      z_streamp strm;      /* pointer back to this zlib stream */
      int   status;        /* as the name implies */
-@@ -139,6 +142,8 @@ typedef struct internal_state {
+@@ -142,6 +145,8 @@ typedef struct internal_state {
      uInt  hash_mask;      /* hash_size-1 */
  
      uInt  hash_shift;
@@ -458,7 +457,7 @@ index cbf0d1e..2fe6fd6 100644
       * step. It must be such that after MIN_MATCH steps, the oldest
       * byte no longer takes part in the hash key, that is:
 diff --git a/third_party/zlib/zlib.h b/third_party/zlib/zlib.h
-index 4d54af9..da7e971 100644
+index 36c73af..5544c88 100644
 --- a/third_party/zlib/zlib.h
 +++ b/third_party/zlib/zlib.h
 @@ -101,6 +101,7 @@ typedef struct z_stream_s {
@@ -480,7 +479,7 @@ index 4d54af9..da7e971 100644
  #define zlib_version zlibVersion()
  /* for compatibility with versions < 1.0.2 */
  
-@@ -1587,6 +1592,13 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
+@@ -1744,6 +1749,13 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
       ZEXTERN z_off_t ZEXPORT gzoffset64 OF((gzFile));
       ZEXTERN uLong ZEXPORT adler32_combine64 OF((uLong, uLong, z_off_t));
       ZEXTERN uLong ZEXPORT crc32_combine64 OF((uLong, uLong, z_off_t));
@@ -494,3 +493,6 @@ index 4d54af9..da7e971 100644
  #  endif
  #else
     ZEXTERN gzFile ZEXPORT gzopen OF((const char *, const char *));
+-- 
+2.7.4
+

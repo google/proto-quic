@@ -9,7 +9,6 @@
 #include "base/debug/profiler.h"
 #include "base/strings/string_util.h"
 #include "base/trace_event/process_memory_dump.h"
-#include "base/win/windows_version.h"
 
 namespace base {
 namespace trace_event {
@@ -56,13 +55,7 @@ bool WinHeapDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   //     then chaos should be assumed. This flakyness is acceptable for tracing.
   //   - The MSDN page for HeapLock says: "If the HeapLock function is called on
   //     a heap created with the HEAP_NO_SERIALIZATION flag, the results are
-  //     undefined.". This is a problem on Windows XP where some system DLLs are
-  //     known for creating heaps with this particular flag. For this reason
-  //     this function should be disabled on XP.
-  //
-  // See https://crbug.com/487291 for more details about this.
-  if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return false;
+  //     undefined."
 
   // Disable this dump provider for the SyzyASan instrumented build
   // because they don't support the heap walking functions yet.

@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -21,7 +22,7 @@ class CRYPTO_EXPORT ECSignatureCreatorFactory {
  public:
   virtual ~ECSignatureCreatorFactory() {}
 
-  virtual ECSignatureCreator* Create(ECPrivateKey* key) = 0;
+  virtual std::unique_ptr<ECSignatureCreator> Create(ECPrivateKey* key) = 0;
 };
 
 // Signs data using a bare private key (as opposed to a full certificate).
@@ -35,7 +36,7 @@ class CRYPTO_EXPORT ECSignatureCreator {
   // instance outlives the created ECSignatureCreator.
   // TODO(rch):  This is currently hard coded to use SHA256. Ideally, we should
   // pass in the hash algorithm identifier.
-  static ECSignatureCreator* Create(ECPrivateKey* key);
+  static std::unique_ptr<ECSignatureCreator> Create(ECPrivateKey* key);
 
   // Set a factory to make the Create function return non-standard
   // ECSignatureCreator objects.  Because the ECDSA algorithm involves

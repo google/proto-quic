@@ -30,10 +30,10 @@ class CRYPTO_EXPORT ECPrivateKey {
  public:
   ~ECPrivateKey();
 
-  // Creates a new random instance. Can return NULL if initialization fails.
+  // Creates a new random instance. Can return nullptr if initialization fails.
   // The created key will use the NIST P-256 curve.
   // TODO(mattm): Add a curve parameter.
-  static ECPrivateKey* Create();
+  static std::unique_ptr<ECPrivateKey> Create();
 
   // Create a new instance by importing an existing private key. The format is
   // an ASN.1-encoded PrivateKeyInfo block from PKCS #8. This can return
@@ -44,17 +44,17 @@ class CRYPTO_EXPORT ECPrivateKey {
   // Creates a new instance by importing an existing key pair.
   // The key pair is given as an ASN.1-encoded PKCS #8 EncryptedPrivateKeyInfo
   // block and an X.509 SubjectPublicKeyInfo block.
-  // Returns NULL if initialization fails.
+  // Returns nullptr if initialization fails.
   //
   // This function is deprecated. Use CreateFromPrivateKeyInfo for new code.
   // See https://crbug.com/603319.
-  static ECPrivateKey* CreateFromEncryptedPrivateKeyInfo(
+  static std::unique_ptr<ECPrivateKey> CreateFromEncryptedPrivateKeyInfo(
       const std::string& password,
       const std::vector<uint8_t>& encrypted_private_key_info,
       const std::vector<uint8_t>& subject_public_key_info);
 
   // Returns a copy of the object.
-  ECPrivateKey* Copy() const;
+  std::unique_ptr<ECPrivateKey> Copy() const;
 
   EVP_PKEY* key() { return key_; }
 

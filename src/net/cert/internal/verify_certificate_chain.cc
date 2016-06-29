@@ -483,7 +483,8 @@ bool VerifyCertificateChain(
     const std::vector<scoped_refptr<ParsedCertificate>>& cert_chain,
     const TrustStore& trust_store,
     const SignaturePolicy* signature_policy,
-    const der::GeneralizedTime& time) {
+    const der::GeneralizedTime& time,
+    std::vector<scoped_refptr<ParsedCertificate>>* trusted_chain_out) {
   if (cert_chain.empty())
     return false;
 
@@ -494,8 +495,11 @@ bool VerifyCertificateChain(
     return false;
 
   // Verify the chain.
-  return VerifyCertificateChainAssumingTrustedRoot(full_chain, trust_store,
-                                                   signature_policy, time);
+  bool success = VerifyCertificateChainAssumingTrustedRoot(
+      full_chain, trust_store, signature_policy, time);
+  if (success && trusted_chain_out != nullptr)
+    *trusted_chain_out = std::move(full_chain);
+  return success;
 }
 
 }  // namespace net

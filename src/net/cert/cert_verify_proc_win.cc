@@ -612,10 +612,11 @@ bool CheckEV(PCCERT_CHAIN_CONTEXT chain_context,
 
   // Look up the EV policy OID of the root CA.
   PCCERT_CONTEXT root_cert = element[num_elements - 1]->pCertContext;
-  SHA1HashValue fingerprint =
-      X509Certificate::CalculateFingerprint(root_cert);
+  SHA1HashValue weak_fingerprint;
+  base::SHA1HashBytes(root_cert->pbCertEncoded, root_cert->cbCertEncoded,
+                      weak_fingerprint.data);
   EVRootCAMetadata* metadata = EVRootCAMetadata::GetInstance();
-  return metadata->HasEVPolicyOID(fingerprint, policy_oid);
+  return metadata->HasEVPolicyOID(weak_fingerprint, policy_oid);
 }
 
 // Custom revocation provider function that compares incoming certificates with

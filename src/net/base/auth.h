@@ -9,8 +9,8 @@
 
 #include "base/memory/ref_counted.h"
 #include "base/strings/string16.h"
-#include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
+#include "url/origin.h"
 
 namespace net {
 
@@ -28,7 +28,7 @@ class NET_EXPORT AuthChallengeInfo :
   bool is_proxy;
 
   // The service issuing the challenge.
-  HostPortPair challenger;
+  url::Origin challenger;
 
   // The authentication scheme used, such as "basic" or "digest". If the
   // |source| is FTP_SERVER, this is an empty string. The encoding is ASCII.

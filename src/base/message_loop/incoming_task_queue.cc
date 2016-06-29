@@ -104,7 +104,7 @@ int IncomingTaskQueue::ReloadWorkQueue(TaskQueue* work_queue) {
     // incoming queue becomes nonempty we need to schedule it again.
     message_loop_scheduled_ = false;
   } else {
-    incoming_queue_.Swap(work_queue);
+    incoming_queue_.swap(*work_queue);
   }
   // Reset the count of high resolution tasks since our queue is now empty.
   int high_res_tasks = high_res_task_count_;

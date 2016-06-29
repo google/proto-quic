@@ -14,10 +14,10 @@
 #include "base/strings/stringprintf.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
-#include "net/base/test_data_directory.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/cert_verify_result.h"
+#include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_verifier.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/multi_log_ct_verifier.h"
@@ -32,6 +32,7 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/test/cert_test_util.h"
+#include "net/test/test_data_directory.h"
 
 using base::StringPiece;
 using base::StringPrintf;
@@ -50,14 +51,16 @@ class TestProofVerifierChromium : public ProofVerifierChromium {
       std::unique_ptr<CertVerifier> cert_verifier,
       std::unique_ptr<TransportSecurityState> transport_security_state,
       std::unique_ptr<CTVerifier> cert_transparency_verifier,
+      std::unique_ptr<CTPolicyEnforcer> ct_policy_enforcer,
       const std::string& cert_file)
       : ProofVerifierChromium(cert_verifier.get(),
-                              nullptr,
+                              ct_policy_enforcer.get(),
                               transport_security_state.get(),
                               cert_transparency_verifier.get()),
         cert_verifier_(std::move(cert_verifier)),
         transport_security_state_(std::move(transport_security_state)),
-        cert_transparency_verifier_(std::move(cert_transparency_verifier)) {
+        cert_transparency_verifier_(std::move(cert_transparency_verifier)),
+        ct_policy_enforcer_(std::move(ct_policy_enforcer)) {
     // Load and install the root for the validated chain.
     scoped_refptr<X509Certificate> root_cert =
         ImportCertFromFile(GetTestCertsDirectory(), cert_file);
@@ -73,6 +76,7 @@ class TestProofVerifierChromium : public ProofVerifierChromium {
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<TransportSecurityState> transport_security_state_;
   std::unique_ptr<CTVerifier> cert_transparency_verifier_;
+  std::unique_ptr<CTPolicyEnforcer> ct_policy_enforcer_;
 };
 
 }  // namespace
@@ -104,11 +108,13 @@ ProofVerifier* ProofVerifierForTestingInternal(bool use_real_proof_verifier) {
   if (use_real_proof_verifier) {
     return new TestProofVerifierChromium(
         std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
-        base::WrapUnique(new MultiLogCTVerifier), "quic_root.crt");
+        base::WrapUnique(new MultiLogCTVerifier),
+        base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt");
   }
   return new TestProofVerifierChromium(
       std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
-      base::WrapUnique(new MultiLogCTVerifier), "quic_root.crt");
+      base::WrapUnique(new MultiLogCTVerifier),
+      base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt");
 }
 
 // static

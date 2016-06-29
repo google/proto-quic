@@ -56,9 +56,6 @@ class NET_EXPORT UploadDataStream {
   // upload data is smaller than size()), zeros are padded to ensure that
   // size() bytes can be read, which can happen for TYPE_FILE payloads.
   //
-  // Reads are currently not allowed to fail - they must either return
-  // a value >= 0 or ERR_IO_PENDING, and call OnReadCompleted with a
-  // value >= 0.
   // TODO(mmenke):  Investigate letting reads fail.
   int Read(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
 

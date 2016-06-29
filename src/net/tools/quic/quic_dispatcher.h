@@ -144,6 +144,15 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
       QuicConnectionId connection_id,
       const IPEndPoint& client_address);
 
+  // Called when a connection is rejected statelessly.
+  virtual void OnConnectionRejectedStatelessly();
+
+  // Called when a connection is closed statelessly.
+  virtual void OnConnectionClosedStatelessly(QuicErrorCode error);
+
+  // Returns true if cheap stateless rejection should be attempted.
+  virtual bool ShouldAttemptCheapStatelessRejection();
+
   // Values to be returned by ValidityChecks() to indicate what should be done
   // with a packet.  Fates with greater values are considered to be higher
   // priority, in that if one validity check indicates a lower-valued fate and
@@ -171,9 +180,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
     return time_wait_list_manager_.get();
   }
 
-  const QuicVersionVector& supported_versions() const {
-    return supported_versions_;
-  }
+  const QuicVersionVector& GetSupportedVersions();
 
   const IPEndPoint& current_server_address() { return current_server_address_; }
   const IPEndPoint& current_client_address() { return current_client_address_; }
@@ -213,8 +220,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   void SetLastError(QuicErrorCode error);
 
   // Called when the public header has been parsed and the session has been
-  // looked up, and the session was not found in the active std::list of
-  // sessions.
+  // looked up, and the session was not found in the active list of sessions.
   // Returns false if processing should stop after this call.
   virtual bool OnUnauthenticatedUnknownPublicHeader(
       const QuicPacketPublicHeader& header);
@@ -228,6 +234,13 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   void CleanUpSession(SessionMap::iterator it, bool session_closed_statelessly);
 
   bool HandlePacketForTimeWait(const QuicPacketPublicHeader& header);
+
+  // Attempts to reject the connection statelessly, if stateless rejects are
+  // possible and if the current packet contains a CHLO message.
+  // Returns a fate which describes what subsequent processing should be
+  // performed on the packets, like ValidityChecks.
+  QuicPacketFate MaybeRejectStatelessly(QuicConnectionId connection_id,
+                                        const QuicPacketHeader& header);
 
   const QuicConfig& config_;
 
@@ -266,7 +279,13 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // This should be ordered such that the highest supported version is the first
   // element, with subsequent elements in descending order (versions can be
   // skipped as necessary).
-  const QuicVersionVector supported_versions_;
+  QuicVersionVector supported_versions_;
+
+  // FLAGS_quic_disable_pre_30
+  bool disable_quic_pre_30_;
+  // The list of versions that may be supported by this dispatcher.
+  // |supported_versions| is derived from this list and |disable_quic_pre_30_|.
+  const QuicVersionVector allowed_supported_versions_;
 
   // Information about the packet currently being handled.
   IPEndPoint current_client_address_;

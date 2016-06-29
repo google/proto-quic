@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
     virtual void OnDataAvailable() = 0;
 
     // Called when the stream is closed by the peer.
-    virtual void OnClose(QuicErrorCode error) = 0;
+    virtual void OnClose() = 0;
 
     // Called when the stream is closed because of an error.
     virtual void OnError(int error) = 0;
@@ -76,7 +76,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   void OnDataAvailable() override;
   void OnClose() override;
   void OnCanWrite() override;
-  size_t WriteHeaders(const SpdyHeaderBlock& header_block,
+  size_t WriteHeaders(SpdyHeaderBlock header_block,
                       bool fin,
                       QuicAckListenerInterface* ack_notifier_delegate) override;
   SpdyPriority priority() const override;

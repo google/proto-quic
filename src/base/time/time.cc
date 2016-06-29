@@ -258,6 +258,14 @@ bool Time::FromStringInternal(const char* time_string,
   return true;
 }
 
+// static
+bool Time::ExplodedMostlyEquals(const Exploded& lhs, const Exploded& rhs) {
+  return lhs.year == rhs.year && lhs.month == rhs.month &&
+         lhs.day_of_month == rhs.day_of_month && lhs.hour == rhs.hour &&
+         lhs.minute == rhs.minute && lhs.second == rhs.second &&
+         lhs.millisecond == rhs.millisecond;
+}
+
 std::ostream& operator<<(std::ostream& os, Time time) {
   Time::Exploded exploded;
   time.UTCExplode(&exploded);

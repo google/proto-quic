@@ -25,10 +25,7 @@ class NET_EXPORT CertVerifyResult {
 
   void Reset();
 
-  // Copies from |other| to |this|.
-  void CopyFrom(const CertVerifyResult& other) {
-    *this = other;
-  }
+  bool operator==(const CertVerifyResult& other) const;
 
   // The certificate and chain that was constructed during verification.
   // Note that the though the verified certificate will match the originally

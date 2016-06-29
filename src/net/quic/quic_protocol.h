@@ -390,6 +390,11 @@ typedef std::vector<QuicVersion> QuicVersionVector;
 // Returns a vector of QUIC versions in kSupportedQuicVersions.
 NET_EXPORT_PRIVATE QuicVersionVector QuicSupportedVersions();
 
+// Returns a vector of QUIC versions from |versions| which exclude any versions
+// which are disabled by flags.
+NET_EXPORT_PRIVATE QuicVersionVector
+FilterSupportedVersions(QuicVersionVector versions);
+
 // QuicTag is written to and read from the wire, but we prefer to use
 // the more readable QuicVersion at other levels.
 // Helper function which translates from a QuicVersion to a QuicTag. Returns 0

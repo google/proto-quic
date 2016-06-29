@@ -131,7 +131,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     send_algorithm_.reset(SendAlgorithmInterface::Create(
         clock_, &rtt_stats_, kCubicBytes, stats_, initial_congestion_window_));
   }
-  if (!FLAGS_quic_disable_pacing) {
+  if (!FLAGS_quic_disable_pacing_for_perf_tests) {
     EnablePacing();
   }
 
@@ -154,8 +154,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
       ContainsQuicTag(config.ReceivedConnectionOptions(), kTIME)) {
     loss_algorithm_.reset(new GeneralLossAlgorithm(kTime));
   }
-  if (FLAGS_quic_adaptive_loss_recovery &&
-      config.HasReceivedConnectionOptions() &&
+  if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kATIM)) {
     loss_algorithm_.reset(new GeneralLossAlgorithm(kAdaptiveTime));
   }
@@ -419,9 +418,8 @@ void QuicSentPacketManager::RecordSpuriousRetransmissions(
     RecordOneSpuriousRetransmission(retransmit_info);
   }
   // Only inform the loss detection of spurious retransmits it caused.
-  if (FLAGS_quic_adaptive_loss_recovery &&
-      unacked_packets_.GetTransmissionInfo(info.retransmission)
-              .transmission_type == LOSS_RETRANSMISSION) {
+  if (unacked_packets_.GetTransmissionInfo(info.retransmission)
+          .transmission_type == LOSS_RETRANSMISSION) {
     loss_algorithm_->SpuriousRetransmitDetected(
         unacked_packets_, clock_->Now(), rtt_stats_, info.retransmission);
   }
@@ -769,6 +767,14 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
 
   QuicTime::Delta send_delta =
       ack_receive_time.Subtract(transmission_info.sent_time);
+  const int kMaxSendDeltaSeconds = 30;
+  if (FLAGS_quic_socket_walltimestamps &&
+      send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
+    // send_delta can be very high if local clock is changed mid-connection.
+    LOG(WARNING) << "Excessive send delta: " << send_delta.ToSeconds()
+                 << ", setting to: " << kMaxSendDeltaSeconds;
+    send_delta = QuicTime::Delta::FromSeconds(kMaxSendDeltaSeconds);
+  }
   rtt_stats_.UpdateRtt(send_delta, ack_frame.ack_delay_time, ack_receive_time);
 
   return true;
