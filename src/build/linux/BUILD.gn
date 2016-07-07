@@ -4,29 +4,12 @@
 
 import("//build/config/features.gni")
 import("//build/config/linux/pkg_config.gni")
-import("//tools/generate_library_loader/generate_library_loader.gni")
-
-gypi_values = exec_script("//build/gypi_to_gn.py",
-                          [ rebase_path("system.gyp") ],
-                          "scope",
-                          [ "system.gyp" ])
 
 # If brlapi isn't needed, don't require it to be installed.
 if (use_brlapi) {
-  config("brlapi_config") {
-    defines = [ "USE_BRLAPI" ]
-  }
-
-  # TODO(GYP) linux_link_brlapi support. Is this needed?
-  generate_library_loader("libbrlapi") {
-    name = "LibBrlapiLoader"
-    output_h = "libbrlapi.h"
-    output_cc = "libbrlapi_loader.cc"
-    header = "<brlapi.h>"
-    config = ":brlapi_config"
-
-    functions = gypi_values.libbrlapi_functions
-  }
+  deps = [
+    "//build/linux/libbrlapi",
+  ]
 }
 if (use_gio) {
   pkg_config("gio_config") {
@@ -53,56 +36,12 @@ if (use_gio) {
     #ignore_libs = true  # Loader generated below.
   }
 
-  # This generates a target named "gio".
-  generate_library_loader("gio") {
-    name = "LibGioLoader"
-    output_h = "libgio.h"
-    output_cc = "libgio_loader.cc"
-    header = "<gio/gio.h>"
-    config = "//build/linux:gio_config"
-
-    functions = gypi_values.libgio_functions
-  }
-}
-
-# This generates a target named "libpci".
-generate_library_loader("libpci") {
-  name = "LibPciLoader"
-  output_h = "libpci.h"
-  output_cc = "libpci_loader.cc"
-  header = "<pci/pci.h>"
-
-  functions = gypi_values.libpci_functions
+  deps = [
+    "//build/linux/libgio",
+  ]
 }
 
 # Looking for libspeechd? Use //third_party/speech-dispatcher
-
-# This generates a target named "udev0_loader".
-generate_library_loader("udev0_loader") {
-  name = "LibUdev0Loader"
-  output_h = "libudev0.h"
-  output_cc = "libudev0_loader.cc"
-  header = "\"third_party/libudev/libudev0.h\""
-
-  functions = gypi_values.libudev_functions
-}
-
-# This generates a target named "udev1_loader".
-generate_library_loader("udev1_loader") {
-  name = "LibUdev1Loader"
-  output_h = "libudev1.h"
-  output_cc = "libudev1_loader.cc"
-  header = "\"third_party/libudev/libudev1.h\""
-
-  functions = gypi_values.libudev_functions
-}
-
-group("udev") {
-  public_deps = [
-    ":udev0_loader",
-    ":udev1_loader",
-  ]
-}
 
 group("fontconfig") {
   if (is_chromecast) {

@@ -28,6 +28,8 @@
       'brlapi__readKey',
     ],
     'libgio_functions': [
+      'glib_check_version',
+      'g_type_init',
       'g_settings_new',
       'g_settings_get_child',
       'g_settings_get_string',

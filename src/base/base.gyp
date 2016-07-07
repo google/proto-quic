@@ -344,6 +344,8 @@
 #        'test/ios/wait_util.mm',
         'test/launcher/test_launcher.cc',
         'test/launcher/test_launcher.h',
+        'test/launcher/test_launcher_tracer.cc',
+        'test/launcher/test_launcher_tracer.h',
         'test/launcher/test_result.cc',
         'test/launcher/test_result.h',
         'test/launcher/test_results_tracker.cc',
