@@ -51,8 +51,10 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
 
   void CompleteCryptoHandshake() {
     stream()->CryptoConnect();
-    CryptoTestUtils::HandshakeWithFakeServer(
-        &helper_, &alarm_factory_, connection_, stream(), server_options_);
+    QuicConfig config;
+    CryptoTestUtils::HandshakeWithFakeServer(&config, &helper_, &alarm_factory_,
+                                             connection_, stream(),
+                                             server_options_);
   }
 
   void ConstructHandshakeMessage() {

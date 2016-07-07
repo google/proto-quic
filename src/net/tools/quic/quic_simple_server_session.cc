@@ -77,7 +77,8 @@ void QuicSimpleServerSession::PromisePushResources(
     SpdyHeaderBlock headers = SynthesizePushRequestHeaders(
         request_url, resource, original_request_headers);
     highest_promised_stream_id_ += 2;
-    SendPushPromise(original_stream_id, highest_promised_stream_id_, headers);
+    SendPushPromise(original_stream_id, highest_promised_stream_id_,
+                    headers.Clone());
     promised_streams_.push_back(PromisedStreamInfo(
         std::move(headers), highest_promised_stream_id_, resource.priority));
   }
@@ -151,7 +152,7 @@ SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
   GURL push_request_url = resource.request_url;
   string path = push_request_url.path();
 
-  SpdyHeaderBlock spdy_headers = original_request_headers;
+  SpdyHeaderBlock spdy_headers = original_request_headers.Clone();
   // :authority could be different from original request.
   spdy_headers.ReplaceOrAppendHeader(":authority", push_request_url.host());
   spdy_headers.ReplaceOrAppendHeader(":path", path);
@@ -179,7 +180,7 @@ void QuicSimpleServerSession::SendPushPromise(QuicStreamId original_stream_id,
 
 void QuicSimpleServerSession::HandlePromisedPushRequests() {
   while (!promised_streams_.empty() && ShouldCreateOutgoingDynamicStream()) {
-    const PromisedStreamInfo& promised_info = promised_streams_.front();
+    PromisedStreamInfo& promised_info = promised_streams_.front();
     DCHECK_EQ(next_outgoing_stream_id(), promised_info.stream_id);
 
     if (promised_info.is_cancelled) {
@@ -196,10 +197,10 @@ void QuicSimpleServerSession::HandlePromisedPushRequests() {
     DCHECK_EQ(promised_info.stream_id, promised_stream->id());
     DVLOG(1) << "created server push stream " << promised_stream->id();
 
-    const SpdyHeaderBlock request_headers(promised_info.request_headers);
+    SpdyHeaderBlock request_headers(std::move(promised_info.request_headers));
 
     promised_streams_.pop_front();
-    promised_stream->PushResponse(request_headers);
+    promised_stream->PushResponse(std::move(request_headers));
   }
 }
 

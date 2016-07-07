@@ -271,6 +271,7 @@ CryptoTestUtils::FakeClientOptions::FakeClientOptions()
 
 // static
 int CryptoTestUtils::HandshakeWithFakeServer(
+    QuicConfig* server_quic_config,
     MockQuicConnectionHelper* helper,
     MockAlarmFactory* alarm_factory,
     PacketSavingConnection* client_conn,
@@ -280,17 +281,17 @@ int CryptoTestUtils::HandshakeWithFakeServer(
       new PacketSavingConnection(helper, alarm_factory, Perspective::IS_SERVER,
                                  client_conn->supported_versions());
 
-  QuicConfig config = DefaultQuicConfig();
   QuicCryptoServerConfig crypto_config(QuicCryptoServerConfig::TESTING,
                                        QuicRandom::GetInstance(),
                                        ProofSourceForTesting());
   QuicCompressedCertsCache compressed_certs_cache(
       QuicCompressedCertsCache::kQuicCompressedCertsCacheSize);
   SetupCryptoServerConfigForTest(server_conn->clock(),
-                                 server_conn->random_generator(), &config,
-                                 &crypto_config, options);
+                                 server_conn->random_generator(),
+                                 server_quic_config, &crypto_config, options);
 
-  TestQuicSpdyServerSession server_session(server_conn, config, &crypto_config,
+  TestQuicSpdyServerSession server_session(server_conn, *server_quic_config,
+                                           &crypto_config,
                                            &compressed_certs_cache);
 
   // The client's handshake must have been started already.

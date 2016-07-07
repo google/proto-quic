@@ -291,7 +291,7 @@ void QuicClient::SendRequest(const BalsaHeaders& headers,
 
   if (rv == QUIC_PENDING) {
     // May need to retry request if asynchronous rendezvous fails.
-    auto new_headers = new BalsaHeaders;
+    auto* new_headers = new BalsaHeaders;
     new_headers->CopyFrom(headers);
     push_promise_data_to_resend_.reset(
         new ClientQuicDataToResend(new_headers, body, fin, this));
@@ -307,9 +307,9 @@ void QuicClient::SendRequest(const BalsaHeaders& headers,
                       body, fin);
   if (FLAGS_enable_quic_stateless_reject_support) {
     // Record this in case we need to resend.
-    auto new_headers = new BalsaHeaders;
+    auto* new_headers = new BalsaHeaders;
     new_headers->CopyFrom(headers);
-    auto data_to_resend =
+    auto* data_to_resend =
         new ClientQuicDataToResend(new_headers, body, fin, this);
     MaybeAddQuicDataToResend(data_to_resend);
   }

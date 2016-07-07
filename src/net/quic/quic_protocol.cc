@@ -183,8 +183,18 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
   QuicVersionVector filtered_versions(versions.size());
   filtered_versions.clear();  // Guaranteed by spec not to change capacity.
   for (QuicVersion version : versions) {
-    if (!FLAGS_quic_disable_pre_30 || version >= QUIC_VERSION_30) {
-      filtered_versions.push_back(version);
+    if (version < QUIC_VERSION_30) {
+      if (!FLAGS_quic_disable_pre_30) {
+        filtered_versions.push_back(version);
+      }
+    } else {
+      if (version == QUIC_VERSION_35) {
+        if (FLAGS_quic_enable_version_35) {
+          filtered_versions.push_back(version);
+        }
+      } else {
+        filtered_versions.push_back(version);
+      }
     }
   }
   return filtered_versions;
@@ -212,6 +222,8 @@ QuicTag QuicVersionToQuicTag(const QuicVersion version) {
       return MakeQuicTag('Q', '0', '3', '3');
     case QUIC_VERSION_34:
       return MakeQuicTag('Q', '0', '3', '4');
+    case QUIC_VERSION_35:
+      return MakeQuicTag('Q', '0', '3', '5');
     default:
       // This shold be an ERROR because we should never attempt to convert an
       // invalid QuicVersion to be written to the wire.
@@ -248,6 +260,7 @@ string QuicVersionToString(const QuicVersion version) {
     RETURN_STRING_LITERAL(QUIC_VERSION_32);
     RETURN_STRING_LITERAL(QUIC_VERSION_33);
     RETURN_STRING_LITERAL(QUIC_VERSION_34);
+    RETURN_STRING_LITERAL(QUIC_VERSION_35);
     default:
       return "QUIC_VERSION_UNSUPPORTED";
   }

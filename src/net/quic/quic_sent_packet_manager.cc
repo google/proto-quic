@@ -93,6 +93,7 @@ QuicSentPacketManager::QuicSentPacketManager(
       use_new_rto_(false),
       undo_pending_retransmits_(false),
       largest_newly_acked_(0),
+      largest_mtu_acked_(0),
       handshake_confirmed_(false) {}
 
 QuicSentPacketManager::~QuicSentPacketManager() {}
@@ -529,6 +530,12 @@ void QuicSentPacketManager::MarkPacketHandled(QuicPacketNumber packet_number,
     }
   }
 
+  if (FLAGS_quic_no_mtu_discovery_ack_listener &&
+      network_change_visitor_ != nullptr &&
+      info->bytes_sent > largest_mtu_acked_) {
+    largest_mtu_acked_ = info->bytes_sent;
+    network_change_visitor_->OnPathMtuIncreased(largest_mtu_acked_);
+  }
   unacked_packets_.RemoveFromInFlight(info);
   unacked_packets_.RemoveRetransmittability(info);
   if (FLAGS_quic_loss_recovery_use_largest_acked) {

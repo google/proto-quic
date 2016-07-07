@@ -634,7 +634,7 @@ EVENT_TYPE(SIGNED_CERTIFICATE_TIMESTAMPS_RECEIVED)
 //
 // Where each SCT is an object:
 // {
-//    "origin": <one of: "embedded_in_certificate", "tls_extension", "ocsp">,
+//    "origin": <one of: "Embedded in certificate", "tls_extension", "ocsp">,
 //    "version": <numeric version>,
 //    "log_id": <base64-encoded log id>,
 //    "timestamp": <numeric timestamp in milliseconds since the Unix epoch>,
@@ -1187,6 +1187,23 @@ EVENT_TYPE(HTTP_TRANSACTION_RESTART_AFTER_ERROR)
 //      "headers": <The list of header:value pairs>,
 //   }
 EVENT_TYPE(BIDIRECTIONAL_STREAM_ALIVE)
+
+// Marks the ReadData call of a net::BidirectionalStream.
+// The following parameters are attached:
+// {
+//     "rv": <The value in int that is returned to the caller>
+// }
+EVENT_TYPE(BIDIRECTIONAL_STREAM_READ_DATA)
+
+// Marks the SendData call of a net::BidirectionalStream.
+EVENT_TYPE(BIDIRECTIONAL_STREAM_SEND_DATA)
+
+// Marks the SendvData call of a net::BidirectionalStream.
+// The following parameters are attached:
+// {
+//     "num_buffers": <The number of buffers passed to SendvData>
+// }
+EVENT_TYPE(BIDIRECTIONAL_STREAM_SENDV_DATA)
 
 // Marks the beginning/end of buffers sent in a net::BidirectionalStream.
 // The following parameters are attached:

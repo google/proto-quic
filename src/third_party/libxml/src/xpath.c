@@ -10691,13 +10691,16 @@ xmlXPathCompPathExpr(xmlXPathParserContextPtr ctxt) {
 		    lc = 1;
 		    break;
 		} else if ((NXT(len) == '(')) {
-		    /* Note Type or Function */
+		    /* Node Type or Function */
 		    if (xmlXPathIsNodeType(name)) {
 #ifdef DEBUG_STEP
 		        xmlGenericError(xmlGenericErrorContext,
 				"PathExpr: Type search\n");
 #endif
 			lc = 1;
+                    } else if (ctxt->xptr &&
+                               xmlStrEqual(name, BAD_CAST "range-to")) {
+                        lc = 1;
 		    } else {
 #ifdef DEBUG_STEP
 		        xmlGenericError(xmlGenericErrorContext,

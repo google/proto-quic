@@ -71,6 +71,18 @@ config("tcmalloc_flags") {
       # typedefs.
       "-Wno-unused-private-field",
     ]
+  } else {
+    cflags = []
+  }
+
+  if (is_linux || is_android) {
+    # We enable all warnings by default, but upstream disables a few.
+    # Keep "-Wno-*" flags in sync with upstream by comparing against:
+    # http://code.google.com/p/google-perftools/source/browse/trunk/Makefile.am
+    cflags += [
+      "-Wno-sign-compare",
+      "-Wno-unused-result",
+    ]
   }
 }
 
@@ -226,14 +238,6 @@ if (use_allocator == "tcmalloc") {
         "$tcmalloc_dir/src/system-alloc.h",
         "$tcmalloc_dir/src/windows/port.cc",
         "$tcmalloc_dir/src/windows/port.h",
-      ]
-
-      # We enable all warnings by default, but upstream disables a few.
-      # Keep "-Wno-*" flags in sync with upstream by comparing against:
-      # http://code.google.com/p/google-perftools/source/browse/trunk/Makefile.am
-      cflags = [
-        "-Wno-sign-compare",
-        "-Wno-unused-result",
       ]
 
       # Compiling tcmalloc with -fvisibility=default is only necessary when

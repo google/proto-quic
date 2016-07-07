@@ -13,6 +13,7 @@
 #include "net/quic/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
+#include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
@@ -112,11 +113,17 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   void CompleteCryptoHandshake() {
+    CompleteCryptoHandshake(kDefaultMaxStreamsPerConnection);
+  }
+
+  void CompleteCryptoHandshake(uint32_t server_max_incoming_streams) {
     session_->CryptoConnect();
     QuicCryptoClientStream* stream =
         static_cast<QuicCryptoClientStream*>(session_->GetCryptoStream());
     CryptoTestUtils::FakeServerOptions options;
-    CryptoTestUtils::HandshakeWithFakeServer(&helper_, &alarm_factory_,
+    QuicConfig config = DefaultQuicConfig();
+    config.SetMaxIncomingDynamicStreamsToSend(server_max_incoming_streams);
+    CryptoTestUtils::HandshakeWithFakeServer(&config, &helper_, &alarm_factory_,
                                              connection_, stream, options);
   }
 
@@ -183,10 +190,15 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
 TEST_P(QuicClientSessionTest, MaxNumStreamsWithNoFinOrRst) {
   EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(AnyNumber());
 
-  session_->config()->SetMaxStreamsPerConnection(1, 1);
+  if (GetParam() <= QUIC_VERSION_34) {
+    session_->config()->SetMaxStreamsPerConnection(1, 1);
 
-  // Initialize crypto before the client session will create a stream.
-  CompleteCryptoHandshake();
+    // Initialize crypto before the client session will create a stream.
+    CompleteCryptoHandshake();
+  } else {
+    const uint32_t kServerMaxIncomingStreams = 1;
+    CompleteCryptoHandshake(kServerMaxIncomingStreams);
+  }
 
   QuicSpdyClientStream* stream =
       session_->CreateOutgoingDynamicStream(kDefaultPriority);
@@ -205,10 +217,15 @@ TEST_P(QuicClientSessionTest, MaxNumStreamsWithNoFinOrRst) {
 TEST_P(QuicClientSessionTest, MaxNumStreamsWithRst) {
   EXPECT_CALL(*connection_, SendRstStream(_, _, _)).Times(AnyNumber());
 
-  session_->config()->SetMaxStreamsPerConnection(1, 1);
+  if (GetParam() <= QUIC_VERSION_34) {
+    session_->config()->SetMaxStreamsPerConnection(1, 1);
 
-  // Initialize crypto before the client session will create a stream.
-  CompleteCryptoHandshake();
+    // Initialize crypto before the client session will create a stream.
+    CompleteCryptoHandshake();
+  } else {
+    const uint32_t kServerMaxIncomingStreams = 1;
+    CompleteCryptoHandshake(kServerMaxIncomingStreams);
+  }
 
   QuicSpdyClientStream* stream =
       session_->CreateOutgoingDynamicStream(kDefaultPriority);

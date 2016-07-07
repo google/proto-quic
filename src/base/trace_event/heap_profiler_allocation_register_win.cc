@@ -13,6 +13,7 @@
 
 namespace base {
 namespace trace_event {
+namespace internal {
 
 namespace {
 size_t GetGuardSize() {
@@ -20,8 +21,7 @@ size_t GetGuardSize() {
 }
 }
 
-// static
-void* AllocationRegister::AllocateVirtualMemory(size_t size) {
+void* AllocateGuardedVirtualMemory(size_t size) {
   size = bits::Align(size, GetPageSize());
 
   // Add space for a guard page at the end.
@@ -50,14 +50,13 @@ void* AllocationRegister::AllocateVirtualMemory(size_t size) {
   return addr;
 }
 
-// static
-void AllocationRegister::FreeVirtualMemory(void* address,
-                                           size_t allocated_size) {
+void FreeGuardedVirtualMemory(void* address, size_t allocated_size) {
   // For |VirtualFree|, the size passed with |MEM_RELEASE| mut be 0. Windows
   // automatically frees the entire region that was reserved by the
   // |VirtualAlloc| with flag |MEM_RESERVE|.
   VirtualFree(address, 0, MEM_RELEASE);
 }
 
+}  // namespace internal
 }  // namespace trace_event
 }  // namespace base

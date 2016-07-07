@@ -173,8 +173,14 @@ bool PathProviderWin(int key, FilePath* result) {
     case base::DIR_TASKBAR_PINS:
       if (!PathService::Get(base::DIR_USER_QUICK_LAUNCH, &cur))
         return false;
-      cur = cur.Append(FILE_PATH_LITERAL("User Pinned"));
-      cur = cur.Append(FILE_PATH_LITERAL("TaskBar"));
+      cur = cur.Append(FILE_PATH_LITERAL("User Pinned"))
+                .Append(FILE_PATH_LITERAL("TaskBar"));
+      break;
+    case base::DIR_IMPLICIT_APP_SHORTCUTS:
+      if (!PathService::Get(base::DIR_USER_QUICK_LAUNCH, &cur))
+        return false;
+      cur = cur.Append(FILE_PATH_LITERAL("User Pinned"))
+                .Append(FILE_PATH_LITERAL("ImplicitAppShortcuts"));
       break;
     case base::DIR_WINDOWS_FONTS:
       if (FAILED(SHGetFolderPath(

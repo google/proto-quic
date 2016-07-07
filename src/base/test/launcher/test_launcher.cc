@@ -22,6 +22,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/process/kill.h"
 #include "base/process/launch.h"
+#include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/pattern.h"
 #include "base/strings/string_number_conversions.h"
@@ -31,6 +32,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/test/gtest_util.h"
+#include "base/test/launcher/test_launcher_tracer.h"
 #include "base/test/launcher/test_results_tracker.h"
 #include "base/test/sequenced_worker_pool_owner.h"
 #include "base/test/test_switches.h"
@@ -89,6 +91,9 @@ const size_t kOutputSnippetLinesLimit = 5000;
 LazyInstance<std::map<ProcessHandle, CommandLine> > g_live_processes
     = LAZY_INSTANCE_INITIALIZER;
 LazyInstance<Lock> g_live_processes_lock = LAZY_INSTANCE_INITIALIZER;
+
+// Performance trace generator.
+LazyInstance<TestLauncherTracer> g_tracer = LAZY_INSTANCE_INITIALIZER;
 
 #if defined(OS_POSIX)
 // Self-pipe that makes it possible to do complex shutdown handling
@@ -253,6 +258,8 @@ int LaunchChildTestProcessWithOptions(
     TimeDelta timeout,
     const TestLauncher::GTestProcessLaunchedCallback& launched_callback,
     bool* was_timeout) {
+  TimeTicks start_time(TimeTicks::Now());
+
 #if defined(OS_POSIX)
   // Make sure an option we rely on is present - see LaunchChildGTestProcess.
   DCHECK(options.new_process_group);
@@ -343,6 +350,9 @@ int LaunchChildTestProcessWithOptions(
 
     g_live_processes.Get().erase(process.Handle());
   }
+
+  g_tracer.Get().RecordProcessExecution(start_time,
+                                        TimeTicks::Now() - start_time);
 
   return exit_code;
 }
@@ -535,7 +545,7 @@ bool TestLauncher::Run() {
   ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, Bind(&TestLauncher::RunTestIteration, Unretained(this)));
 
-  MessageLoop::current()->Run();
+  RunLoop().Run();
 
   if (requested_cycles != 1)
     results_tracker_.PrintSummaryOfAllIterations();
@@ -1032,6 +1042,13 @@ void TestLauncher::MaybeSaveSummaryAsJSON() {
                               switches::kTestLauncherSummaryOutput));
     if (!results_tracker_.SaveSummaryAsJSON(summary_path)) {
       LOG(ERROR) << "Failed to save test launcher output summary.";
+    }
+  }
+  if (command_line->HasSwitch(switches::kTestLauncherTrace)) {
+    FilePath trace_path(
+        command_line->GetSwitchValuePath(switches::kTestLauncherTrace));
+    if (!g_tracer.Get().Dump(trace_path)) {
+      LOG(ERROR) << "Failed to save test launcher trace.";
     }
   }
 }

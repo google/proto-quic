@@ -199,40 +199,40 @@ TEST_P(QuicSpdyStreamTest, ParseHeaderStatusCode) {
 
   // Valid status code.
   headers_.ReplaceOrAppendHeader(":status", "404");
-  EXPECT_TRUE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_TRUE(stream_->ParseHeaderStatusCode(headers_, &status_code));
   EXPECT_EQ(404, status_code);
 
   // Invalid status codes.
   headers_.ReplaceOrAppendHeader(":status", "010");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "600");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "200 ok");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "2000");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "+200");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "+20");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   // Leading or trailing spaces are also invalid.
   headers_.ReplaceOrAppendHeader(":status", " 200");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "200 ");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", " 200 ");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_.ReplaceOrAppendHeader(":status", "  ");
-  EXPECT_FALSE(stream_->ParseHeaderStatusCode(&headers_, &status_code));
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 }
 
 TEST_P(QuicSpdyStreamTest, MarkHeadersConsumed) {
@@ -887,14 +887,13 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersSendsAFin) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers, without a FIN.
-  EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, _, _, _));
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/false, nullptr);
 
   // Writing trailers implicitly sends a FIN.
   SpdyHeaderBlock trailers;
   trailers["trailer key"] = "trailer value";
-  EXPECT_CALL(*session_, WriteHeaders(_, _,
-                                      /*fin=*/true, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(std::move(trailers), nullptr);
   EXPECT_TRUE(stream_->fin_sent());
 }
@@ -908,7 +907,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersFinalOffset) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
-  EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, _, _, _));
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/false, nullptr);
 
   // Write non-zero body data to force a non-zero final offset.
@@ -919,11 +918,11 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersFinalOffset) {
   // number of body bytes written (including queued bytes).
   SpdyHeaderBlock trailers;
   trailers["trailer key"] = "trailer value";
-  SpdyHeaderBlock trailers_with_offset = trailers;
+  SpdyHeaderBlock trailers_with_offset(trailers.Clone());
   trailers_with_offset[kFinalOffsetHeaderKey] = base::IntToString(kBodySize);
-  EXPECT_CALL(*session_, WriteHeaders(_, testing::Eq(trailers_with_offset),
-                                      /*fin=*/true, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(std::move(trailers), nullptr);
+  EXPECT_EQ(trailers_with_offset, session_->GetWriteHeaders());
 }
 
 TEST_P(QuicSpdyStreamTest, WritingTrailersClosesWriteSide) {
@@ -935,7 +934,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersClosesWriteSide) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
-  EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, _, _, _));
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/false, nullptr);
 
   // Write non-zero body data.
@@ -945,8 +944,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersClosesWriteSide) {
 
   // Headers and body have been fully written, there is no queued data. Writing
   // trailers marks the end of this stream, and thus the write side is closed.
-  EXPECT_CALL(*session_, WriteHeaders(_, _,
-                                      /*fin=*/true, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(SpdyHeaderBlock(), nullptr);
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -960,7 +958,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers.
-  EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, _, _, _));
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/false, nullptr);
 
   // Write non-zero body data, but only consume partially, ensuring queueing.
@@ -972,8 +970,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
 
   // Writing trailers will send a FIN, but not close the write side of the
   // stream as there are queued bytes.
-  EXPECT_CALL(*session_, WriteHeaders(_, _,
-                                      /*fin=*/true, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(SpdyHeaderBlock(), nullptr);
   EXPECT_TRUE(stream_->fin_sent());
   EXPECT_FALSE(stream_->write_side_closed());
@@ -987,7 +984,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersAfterFIN) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
   // Write the initial headers, with a FIN.
-  EXPECT_CALL(*session_, WriteHeaders(_, _, _, _, _));
+  EXPECT_CALL(*session_, WriteHeadersMock(_, _, _, _, _));
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/true, nullptr);
   EXPECT_TRUE(stream_->fin_sent());
 

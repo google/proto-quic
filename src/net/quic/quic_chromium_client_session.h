@@ -27,6 +27,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/quic/quic_chromium_client_stream.h"
 #include "net/quic/quic_chromium_packet_reader.h"
+#include "net/quic/quic_chromium_packet_writer.h"
 #include "net/quic/quic_client_session_base.h"
 #include "net/quic/quic_connection_logger.h"
 #include "net/quic/quic_crypto_client_stream.h"
@@ -54,7 +55,8 @@ class QuicChromiumClientSessionPeer;
 
 class NET_EXPORT_PRIVATE QuicChromiumClientSession
     : public QuicClientSessionBase,
-      public QuicChromiumPacketReader::Visitor {
+      public QuicChromiumPacketReader::Visitor,
+      public QuicChromiumPacketWriter::WriteErrorObserver {
  public:
   // Reasons to disable QUIC, that is under certain pathological
   // connection errors.  Note: these values must be kept in sync with
@@ -156,6 +158,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // Cancels the pending stream creation request.
   void CancelRequest(StreamRequest* request);
 
+  // QuicChromiumPacketWriter::WriteErrorObserver override.
+  int OnWriteError(int error_code,
+                   scoped_refptr<StringIOBuffer> last_packet) override;
+
   // QuicSpdySession methods:
   void OnHeadersHeadOfLineBlocking(QuicTime::Delta delta) override;
 
@@ -244,15 +250,19 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   QuicDisabledReason disabled_reason() const { return disabled_reason_; }
 
-  // Migrates session onto new socket, i.e., starts reading from |socket|
-  // in addition to any previous sockets, and sets |writer| to be the new
-  // default writer. Returns true if socket was successfully added to the
-  // session and the session was successfully migrated to using the new socket.
-  // Returns false if number of migrations exceeds kMaxReadersPerQuicSession.
-  // Takes ownership of |socket|, |reader|, and |writer|.
+  // Migrates session onto new socket, i.e., starts reading from
+  // |socket| in addition to any previous sockets, and sets |writer|
+  // to be the new default writer. Returns true if socket was
+  // successfully added to the session and the session was
+  // successfully migrated to using the new socket. If not null,
+  // |packet| is sent on the new network, else a PING frame is
+  // sent. Returns true on successful migration, or false if number of
+  // migrations exceeds kMaxReadersPerQuicSession.  Takes ownership of
+  // |socket|, |reader|, and |writer|.
   bool MigrateToSocket(std::unique_ptr<DatagramClientSocket> socket,
                        std::unique_ptr<QuicChromiumPacketReader> reader,
-                       std::unique_ptr<QuicPacketWriter> writer);
+                       std::unique_ptr<QuicChromiumPacketWriter> writer,
+                       scoped_refptr<StringIOBuffer> packet);
 
   // Populates network error details for this session.
   void PopulateNetErrorDetails(NetErrorDetails* details);
@@ -354,6 +364,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // UMA histogram counters for streams pushed to this session.
   int streams_pushed_count_;
   int streams_pushed_and_claimed_count_;
+  // Return value from packet rewrite packet on new socket. Used
+  // during connection migration on socket write error.
+  int error_code_from_rewrite_;
+  bool use_error_code_from_rewrite_;
   base::WeakPtrFactory<QuicChromiumClientSession> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicChromiumClientSession);

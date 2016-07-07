@@ -13,68 +13,13 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
+#include "net/cert/ct_sct_to_string.h"
 #include "net/cert/ct_verify_result.h"
 #include "net/cert/signed_certificate_timestamp.h"
 
 namespace net {
 
 namespace {
-
-// Converts a numeric |origin| to text describing the SCT's origin
-const char* OriginToString(ct::SignedCertificateTimestamp::Origin origin) {
-  switch (origin) {
-    case ct::SignedCertificateTimestamp::SCT_EMBEDDED:
-      return "embedded_in_certificate";
-    case ct::SignedCertificateTimestamp::SCT_FROM_TLS_EXTENSION:
-      return "tls_extension";
-    case ct::SignedCertificateTimestamp::SCT_FROM_OCSP_RESPONSE:
-      return "ocsp";
-    case ct::SignedCertificateTimestamp::SCT_ORIGIN_MAX:
-      break;
-  }
-
-  return "unknown";
-}
-
-// Converts a numeric |hash_algorithm| to its textual representation
-const char* HashAlgorithmToString(
-    ct::DigitallySigned::HashAlgorithm hash_algorithm) {
-  switch (hash_algorithm) {
-    case ct::DigitallySigned::HASH_ALGO_NONE:
-      return "NONE";
-    case ct::DigitallySigned::HASH_ALGO_MD5:
-      return "MD5";
-    case ct::DigitallySigned::HASH_ALGO_SHA1:
-      return "SHA1";
-    case ct::DigitallySigned::HASH_ALGO_SHA224:
-      return "SHA224";
-    case ct::DigitallySigned::HASH_ALGO_SHA256:
-      return "SHA256";
-    case ct::DigitallySigned::HASH_ALGO_SHA384:
-      return "SHA384";
-    case ct::DigitallySigned::HASH_ALGO_SHA512:
-      return "SHA512";
-  }
-
-  return "unknown";
-}
-
-// Converts a numeric |signature_algorithm| to its textual representation
-const char* SignatureAlgorithmToString(
-    ct::DigitallySigned::SignatureAlgorithm signature_algorithm) {
-  switch (signature_algorithm) {
-    case ct::DigitallySigned::SIG_ALGO_ANONYMOUS:
-      return "ANONYMOUS";
-    case ct::DigitallySigned::SIG_ALGO_RSA:
-      return "RSA";
-    case ct::DigitallySigned::SIG_ALGO_DSA:
-      return "DSA";
-    case ct::DigitallySigned::SIG_ALGO_ECDSA:
-      return "ECDSA";
-  }
-
-  return "unknown";
-}
 
 // Base64 encode the given |value| string and put it in |dict| with the
 // description |key|.

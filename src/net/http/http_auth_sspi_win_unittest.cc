@@ -6,7 +6,12 @@
 #include "net/http/http_auth_challenge_tokenizer.h"
 #include "net/http/http_auth_sspi_win.h"
 #include "net/http/mock_sspi_library_win.h"
+#include "net/test/gtest_util.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+using net::test::IsError;
+using net::test::IsOk;
 
 namespace net {
 
@@ -46,7 +51,7 @@ TEST(HttpAuthSSPITest, DetermineMaxTokenLength_Normal) {
   mock_library.ExpectQuerySecurityPackageInfo(L"NTLM", SEC_E_OK, &package_info);
   ULONG max_token_length = kMaxTokenLength;
   int rv = DetermineMaxTokenLength(&mock_library, L"NTLM", &max_token_length);
-  EXPECT_EQ(OK, rv);
+  EXPECT_THAT(rv, IsOk());
   EXPECT_EQ(1337u, max_token_length);
 }
 
@@ -56,7 +61,7 @@ TEST(HttpAuthSSPITest, DetermineMaxTokenLength_InvalidPackage) {
                                               NULL);
   ULONG max_token_length = kMaxTokenLength;
   int rv = DetermineMaxTokenLength(&mock_library, L"Foo", &max_token_length);
-  EXPECT_EQ(ERR_UNSUPPORTED_AUTH_SCHEME, rv);
+  EXPECT_THAT(rv, IsError(ERR_UNSUPPORTED_AUTH_SCHEME));
   // |DetermineMaxTokenLength()| interface states that |max_token_length| should
   // not change on failure.
   EXPECT_EQ(100u, max_token_length);

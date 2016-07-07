@@ -7,6 +7,7 @@
 #include "net/quic/crypto/quic_decrypter.h"
 #include "net/quic/crypto/quic_encrypter.h"
 #include "net/quic/quic_client_session_base.h"
+#include "net/quic/test_tools/quic_config_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
@@ -124,6 +125,8 @@ void MockCryptoClientStream::SetConfigNegotiated() {
   config.SetMaxStreamsPerConnection(kDefaultMaxStreamsPerConnection / 2,
                                     kDefaultMaxStreamsPerConnection / 2);
   config.SetBytesForConnectionIdToSend(PACKET_8BYTE_CONNECTION_ID);
+  config.SetMaxIncomingDynamicStreamsToSend(kDefaultMaxStreamsPerConnection /
+                                            2);
 
   CryptoHandshakeMessage msg;
   config.ToHandshakeMessage(&msg);

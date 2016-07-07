@@ -421,6 +421,14 @@ class NET_EXPORT TransportSecurityState
                const HashValueVector& hashes,
                const GURL& report_uri);
 
+  // Enables or disables public key pinning bypass for local trust anchors.
+  // Disabling the bypass for local trust anchors is highly discouraged.
+  // This method is used by Cronet only and *** MUST NOT *** be used by any
+  // other consumer. For more information see "How does key pinning interact
+  // with local proxies and filters?" at
+  // https://www.chromium.org/Home/chromium-security/security-faq
+  void SetEnablePublicKeyPinningBypassForLocalTrustAnchors(bool value);
+
   // Parses |value| as a Public-Key-Pins-Report-Only header value and
   // sends a HPKP report for |host_port_pair| if |ssl_info| violates the
   // pin. Returns true if |value| parses and includes a valid
@@ -440,6 +448,11 @@ class NET_EXPORT TransportSecurityState
   void ProcessExpectCTHeader(const std::string& value,
                              const HostPortPair& host_port_pair,
                              const SSLInfo& ssl_info);
+
+  // For unit tests only; causes ShouldRequireCT() to return |*required|
+  // by default (that is, unless a RequireCTDelegate overrides). Set to
+  // nullptr to reset.
+  static void SetShouldRequireCTForTesting(bool* required);
 
  private:
   friend class TransportSecurityStateTest;
@@ -551,6 +564,9 @@ class NET_EXPORT TransportSecurityState
 
   // True if static expect-staple state should be used.
   bool enable_static_expect_staple_;
+
+  // True if public key pinning bypass is enabled for local trust anchors.
+  bool enable_pkp_bypass_for_local_trust_anchors_;
 
   ExpectCTReporter* expect_ct_reporter_ = nullptr;
 

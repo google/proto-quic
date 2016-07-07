@@ -6,9 +6,11 @@
 
 #include <string>
 
+#include "base/strings/string_number_conversions.h"
 #include "net/quic/quic_utils.h"
 #include "net/quic/spdy_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
+#include "net/quic/test_tools/quic_headers_stream_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/reliable_quic_stream_peer.h"
@@ -225,7 +227,8 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParams> {
     EXPECT_CALL(session_, WritevData(headers_stream_, kHeadersStreamId, _, _,
                                      false, nullptr))
         .WillOnce(WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIov)));
-    headers_stream_->WriteHeaders(stream_id, headers_, fin, priority, nullptr);
+    headers_stream_->WriteHeaders(stream_id, headers_.Clone(), fin, priority,
+                                  nullptr);
 
     // Parse the outgoing data and check that it matches was was written.
     if (type == SYN_STREAM) {
@@ -331,8 +334,8 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
       EXPECT_CALL(session_, WritevData(headers_stream_, kHeadersStreamId, _, _,
                                        false, nullptr))
           .WillOnce(WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIov)));
-      headers_stream_->WritePushPromise(stream_id, promised_stream_id, headers_,
-                                        nullptr);
+      headers_stream_->WritePushPromise(stream_id, promised_stream_id,
+                                        headers_.Clone(), nullptr);
 
       // Parse the outgoing data and check that it matches was was written.
       EXPECT_CALL(visitor_,
@@ -347,9 +350,10 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
       CheckHeaders();
       saved_data_.clear();
     } else {
-      EXPECT_DFATAL(headers_stream_->WritePushPromise(
-                        stream_id, promised_stream_id, headers_, nullptr),
-                    "Client shouldn't send PUSH_PROMISE");
+      EXPECT_DFATAL(
+          headers_stream_->WritePushPromise(stream_id, promised_stream_id,
+                                            headers_.Clone(), nullptr),
+          "Client shouldn't send PUSH_PROMISE");
     }
   }
 }
@@ -362,14 +366,14 @@ TEST_P(QuicHeadersStreamTest, ProcessRawData) {
         // Replace with "WriteHeadersAndSaveData"
         SpdySerializedFrame frame;
         if (perspective() == Perspective::IS_SERVER) {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           headers_frame.set_has_priority(true);
           headers_frame.set_weight(Spdy3PriorityToHttp2Weight(0));
           frame = framer_->SerializeFrame(headers_frame);
           EXPECT_CALL(session_, OnStreamHeadersPriority(stream_id, 0));
         } else {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           frame = framer_->SerializeFrame(headers_frame);
         }
@@ -392,7 +396,8 @@ TEST_P(QuicHeadersStreamTest, ProcessPushPromise) {
   for (QuicStreamId stream_id = kClientDataStreamId1;
        stream_id < kClientDataStreamId3; stream_id += 2) {
     QuicStreamId promised_stream_id = NextPromisedStreamId();
-    SpdyPushPromiseIR push_promise(stream_id, promised_stream_id, headers_);
+    SpdyPushPromiseIR push_promise(stream_id, promised_stream_id,
+                                   headers_.Clone());
     SpdySerializedFrame frame(framer_->SerializeFrame(push_promise));
     if (perspective() == Perspective::IS_SERVER) {
       EXPECT_CALL(*connection_,
@@ -428,14 +433,14 @@ TEST_P(QuicHeadersStreamTest, EmptyHeaderHOLBlockedTime) {
     // Replace with "WriteHeadersAndSaveData"
     SpdySerializedFrame frame;
     if (perspective() == Perspective::IS_SERVER) {
-      SpdyHeadersIR headers_frame(stream_id, headers_);
+      SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
       headers_frame.set_fin(fin);
       headers_frame.set_has_priority(true);
       headers_frame.set_weight(Spdy3PriorityToHttp2Weight(0));
       frame = framer_->SerializeFrame(headers_frame);
       EXPECT_CALL(session_, OnStreamHeadersPriority(stream_id, 0));
     } else {
-      SpdyHeadersIR headers_frame(stream_id, headers_);
+      SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
       headers_frame.set_fin(fin);
       frame = framer_->SerializeFrame(headers_frame);
     }
@@ -463,14 +468,14 @@ TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
     for (int stream_num = 0; stream_num < 10; ++stream_num) {
       stream_id = QuicClientDataStreamId(stream_num);
       if (perspective() == Perspective::IS_SERVER) {
-        SpdyHeadersIR headers_frame(stream_id, headers_);
+        SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
         headers_frame.set_fin(fin);
         headers_frame.set_has_priority(true);
         headers_frame.set_weight(Spdy3PriorityToHttp2Weight(0));
         frames[stream_num] = framer_->SerializeFrame(headers_frame);
         EXPECT_CALL(session_, OnStreamHeadersPriority(stream_id, 0)).Times(1);
       } else {
-        SpdyHeadersIR headers_frame(stream_id, headers_);
+        SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
         headers_frame.set_fin(fin);
         frames[stream_num] = framer_->SerializeFrame(headers_frame);
       }
@@ -510,14 +515,14 @@ TEST_P(QuicHeadersStreamTest, ProcessLargeRawData) {
         // Replace with "WriteHeadersAndSaveData"
         SpdySerializedFrame frame;
         if (perspective() == Perspective::IS_SERVER) {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           headers_frame.set_has_priority(true);
           headers_frame.set_weight(Spdy3PriorityToHttp2Weight(0));
           frame = framer_->SerializeFrame(headers_frame);
           EXPECT_CALL(session_, OnStreamHeadersPriority(stream_id, 0));
         } else {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           frame = framer_->SerializeFrame(headers_frame);
         }
@@ -570,6 +575,7 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdyRstStreamFrame) {
 }
 
 TEST_P(QuicHeadersStreamTest, ProcessSpdySettingsFrame) {
+  FLAGS_quic_respect_http2_settings_frame = false;
   SpdySettingsIR data;
   data.AddSetting(SETTINGS_HEADER_TABLE_SIZE, true, true, 0);
   SpdySerializedFrame frame(framer_->SerializeFrame(data));
@@ -577,6 +583,66 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdySettingsFrame) {
                                             "SPDY SETTINGS frame received.", _))
       .WillOnce(InvokeWithoutArgs(
           this, &QuicHeadersStreamTest::TearDownLocalConnectionState));
+  stream_frame_.data_buffer = frame.data();
+  stream_frame_.data_length = frame.size();
+  headers_stream_->OnStreamFrame(stream_frame_);
+}
+
+TEST_P(QuicHeadersStreamTest, RespectHttp2SettingsFrameSupportedFields) {
+  FLAGS_quic_respect_http2_settings_frame = true;
+  const uint32_t kTestHeaderTableSize = 1000;
+  SpdySettingsIR data;
+  // Respect supported settings frames SETTINGS_HEADER_TABLE_SIZE.
+  data.AddSetting(SETTINGS_HEADER_TABLE_SIZE, true, true, kTestHeaderTableSize);
+  SpdySerializedFrame frame(framer_->SerializeFrame(data));
+  stream_frame_.data_buffer = frame.data();
+  stream_frame_.data_length = frame.size();
+  headers_stream_->OnStreamFrame(stream_frame_);
+  EXPECT_EQ(kTestHeaderTableSize,
+            QuicHeadersStreamPeer::GetSpdyFramer(headers_stream_)
+                .header_encoder_table_size());
+}
+
+TEST_P(QuicHeadersStreamTest, RespectHttp2SettingsFrameUnsupportedFields) {
+  FLAGS_quic_respect_http2_settings_frame = true;
+  SpdySettingsIR data;
+  // Does not support SETTINGS_MAX_HEADER_LIST_SIZE,
+  // SETTINGS_MAX_CONCURRENT_STREAMS, SETTINGS_INITIAL_WINDOW_SIZE,
+  // SETTINGS_ENABLE_PUSH and SETTINGS_MAX_FRAME_SIZE.
+  data.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, true, true, 2000);
+  data.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, true, true, 100);
+  data.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, true, true, 100);
+  data.AddSetting(SETTINGS_ENABLE_PUSH, true, true, 1);
+  data.AddSetting(SETTINGS_MAX_FRAME_SIZE, true, true, 1250);
+  SpdySerializedFrame frame(framer_->SerializeFrame(data));
+  EXPECT_CALL(
+      *connection_,
+      CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
+                      "Unsupported field of HTTP/2 SETTINGS frame: " +
+                          base::IntToString(SETTINGS_MAX_HEADER_LIST_SIZE),
+                      _));
+  EXPECT_CALL(
+      *connection_,
+      CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
+                      "Unsupported field of HTTP/2 SETTINGS frame: " +
+                          base::IntToString(SETTINGS_MAX_CONCURRENT_STREAMS),
+                      _));
+  EXPECT_CALL(
+      *connection_,
+      CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
+                      "Unsupported field of HTTP/2 SETTINGS frame: " +
+                          base::IntToString(SETTINGS_INITIAL_WINDOW_SIZE),
+                      _));
+  EXPECT_CALL(*connection_,
+              CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
+                              "Unsupported field of HTTP/2 SETTINGS frame: " +
+                                  base::IntToString(SETTINGS_ENABLE_PUSH),
+                              _));
+  EXPECT_CALL(*connection_,
+              CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
+                              "Unsupported field of HTTP/2 SETTINGS frame: " +
+                                  base::IntToString(SETTINGS_MAX_FRAME_SIZE),
+                              _));
   stream_frame_.data_buffer = frame.data();
   stream_frame_.data_length = frame.size();
   headers_stream_->OnStreamFrame(stream_frame_);
@@ -654,14 +720,14 @@ TEST_P(QuicHeadersStreamTest, HpackDecoderDebugVisitor) {
         // Replace with "WriteHeadersAndSaveData"
         SpdySerializedFrame frame;
         if (perspective() == Perspective::IS_SERVER) {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           headers_frame.set_has_priority(true);
           headers_frame.set_weight(Spdy3PriorityToHttp2Weight(0));
           frame = framer_->SerializeFrame(headers_frame);
           EXPECT_CALL(session_, OnStreamHeadersPriority(stream_id, 0));
         } else {
-          SpdyHeadersIR headers_frame(stream_id, headers_);
+          SpdyHeadersIR headers_frame(stream_id, headers_.Clone());
           headers_frame.set_fin(fin);
           frame = framer_->SerializeFrame(headers_frame);
         }

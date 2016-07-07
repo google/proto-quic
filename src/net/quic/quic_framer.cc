@@ -2497,8 +2497,10 @@ bool QuicFramer::AppendStopWaitingFrame(const QuicPacketHeader& header,
   if (least_unacked_delta >> length_shift > 0) {
     QUIC_BUG << "packet_number_length "
              << header.public_header.packet_number_length
-             << " is too small for least_unacked_delta: "
-             << least_unacked_delta;
+             << " is too small for least_unacked_delta: " << least_unacked_delta
+             << " packet_number:" << header.packet_number
+             << " least_unacked:" << frame.least_unacked
+             << " version:" << quic_version_;
     return false;
   }
   if (!AppendPacketSequenceNumber(header.public_header.packet_number_length,

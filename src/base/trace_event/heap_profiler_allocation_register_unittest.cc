@@ -16,23 +16,21 @@ namespace trace_event {
 
 class AllocationRegisterTest : public testing::Test {
  public:
-  // Use a lower number of cells for unittests to avoid reserving a virtual
-  // region which is too big.
-  static const uint32_t kNumCellsForTesting =
-      AllocationRegister::kNumBuckets + 100;
+  // Use a lower number of backtrace cells for unittests to avoid reserving
+  // a virtual region which is too big.
+  static const size_t kAllocationBuckets =
+      AllocationRegister::kAllocationBuckets + 100;
+  static const size_t kAllocationCapacity = kAllocationBuckets;
+  static const size_t kBacktraceCapacity = 10;
 
   // Returns the number of cells that the |AllocationRegister| can store per
   // system page.
-  size_t GetNumCellsPerPage() {
-    return GetPageSize() / sizeof(AllocationRegister::Cell);
+  size_t GetAllocationCapacityPerPage() {
+    return GetPageSize() / sizeof(AllocationRegister::AllocationMap::Cell);
   }
 
-  uint32_t GetHighWaterMark(const AllocationRegister& reg) {
-    return reg.next_unused_cell_;
-  }
-
-  uint32_t GetNumCells(const AllocationRegister& reg) {
-    return reg.num_cells_;
+  size_t GetHighWaterMark(const AllocationRegister& reg) {
+    return reg.allocations_.next_unused_cell_;
   }
 };
 
@@ -59,7 +57,7 @@ size_t SumAllSizes(const AllocationRegister& reg) {
 }
 
 TEST_F(AllocationRegisterTest, InsertRemove) {
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
 
   // Zero-sized allocations should be discarded.
@@ -93,7 +91,7 @@ TEST_F(AllocationRegisterTest, InsertRemove) {
 }
 
 TEST_F(AllocationRegisterTest, DoubleFreeIsAllowed) {
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
 
   reg.Insert(reinterpret_cast<void*>(1), 1, ctx);
@@ -106,7 +104,7 @@ TEST_F(AllocationRegisterTest, DoubleFreeIsAllowed) {
 }
 
 TEST_F(AllocationRegisterTest, DoubleInsertOverwrites) {
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
   StackFrame frame1 = StackFrame::FromTraceEventName("Foo");
   StackFrame frame2 = StackFrame::FromTraceEventName("Bar");
@@ -140,12 +138,12 @@ TEST_F(AllocationRegisterTest, DoubleInsertOverwrites) {
 // register still behaves correctly.
 TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
   size_t expected_sum = 0;
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
 
   // By inserting 100 more entries than the number of buckets, there will be at
-  // least 100 collisions (100 = kNumCellsForTesting - kNumBuckets).
-  for (uintptr_t i = 1; i <= kNumCellsForTesting; i++) {
+  // least 100 collisions (100 = kAllocationCapacity - kAllocationBuckets).
+  for (uintptr_t i = 1; i <= kAllocationCapacity; i++) {
     size_t size = i % 31;
     expected_sum += size;
     reg.Insert(reinterpret_cast<void*>(i), size, ctx);
@@ -157,7 +155,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
 
   EXPECT_EQ(expected_sum, SumAllSizes(reg));
 
-  for (uintptr_t i = 1; i <= kNumCellsForTesting; i++) {
+  for (uintptr_t i = 1; i <= kAllocationCapacity; i++) {
     size_t size = i % 31;
     expected_sum -= size;
     reg.Remove(reinterpret_cast<void*>(i));
@@ -177,7 +175,7 @@ TEST_F(AllocationRegisterTest, InsertRemoveCollisions) {
 // free list is utilised properly.
 TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
   size_t expected_sum = 0;
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
 
   uintptr_t generator = 3;
@@ -217,74 +215,52 @@ TEST_F(AllocationRegisterTest, InsertRemoveRandomOrder) {
 
 TEST_F(AllocationRegisterTest, ChangeContextAfterInsertion) {
   using Allocation = AllocationRegister::Allocation;
-  const char kStdString[] = "std::string";
-  AllocationRegister reg(kNumCellsForTesting);
+  AllocationRegister reg(kAllocationCapacity, kBacktraceCapacity);
   AllocationContext ctx;
 
   reg.Insert(reinterpret_cast<void*>(17), 1, ctx);
   reg.Insert(reinterpret_cast<void*>(19), 2, ctx);
   reg.Insert(reinterpret_cast<void*>(23), 3, ctx);
 
+  Allocation a;
+
   // Looking up addresses that were not inserted should return null.
   // A null pointer lookup is a valid thing to do.
-  EXPECT_EQ(nullptr, reg.Get(nullptr));
-  EXPECT_EQ(nullptr, reg.Get(reinterpret_cast<void*>(13)));
+  EXPECT_FALSE(reg.Get(nullptr, &a));
+  EXPECT_FALSE(reg.Get(reinterpret_cast<void*>(13), &a));
 
-  Allocation* a17 = reg.Get(reinterpret_cast<void*>(17));
-  Allocation* a19 = reg.Get(reinterpret_cast<void*>(19));
-  Allocation* a23 = reg.Get(reinterpret_cast<void*>(23));
-
-  EXPECT_NE(nullptr, a17);
-  EXPECT_NE(nullptr, a19);
-  EXPECT_NE(nullptr, a23);
-
-  a17->size = 100;
-  a19->context.type_name = kStdString;
+  EXPECT_TRUE(reg.Get(reinterpret_cast<void*>(17), &a));
+  EXPECT_TRUE(reg.Get(reinterpret_cast<void*>(19), &a));
+  EXPECT_TRUE(reg.Get(reinterpret_cast<void*>(23), &a));
 
   reg.Remove(reinterpret_cast<void*>(23));
 
   // Lookup should not find any garbage after removal.
-  EXPECT_EQ(nullptr, reg.Get(reinterpret_cast<void*>(23)));
-
-  // Mutating allocations should have modified the allocations in the register.
-  for (const Allocation& allocation : reg) {
-     if (allocation.address == reinterpret_cast<void*>(17))
-       EXPECT_EQ(100u, allocation.size);
-     if (allocation.address == reinterpret_cast<void*>(19))
-       EXPECT_EQ(kStdString, allocation.context.type_name);
-  }
+  EXPECT_FALSE(reg.Get(reinterpret_cast<void*>(23), &a));
 
   reg.Remove(reinterpret_cast<void*>(17));
   reg.Remove(reinterpret_cast<void*>(19));
 
-  EXPECT_EQ(nullptr, reg.Get(reinterpret_cast<void*>(17)));
-  EXPECT_EQ(nullptr, reg.Get(reinterpret_cast<void*>(19)));
+  EXPECT_FALSE(reg.Get(reinterpret_cast<void*>(17), &a));
+  EXPECT_FALSE(reg.Get(reinterpret_cast<void*>(19), &a));
 }
 
 // Check that the process aborts due to hitting the guard page when inserting
 // too many elements.
 #if GTEST_HAS_DEATH_TEST
 TEST_F(AllocationRegisterTest, OverflowDeathTest) {
-  // Use a smaller register to prevent OOM errors on low-end devices.
-  AllocationRegister reg(static_cast<uint32_t>(GetNumCellsPerPage()));
+  const size_t allocation_capacity = GetAllocationCapacityPerPage();
+  AllocationRegister reg(allocation_capacity, kBacktraceCapacity);
   AllocationContext ctx;
-  uintptr_t i;
+  size_t i;
 
-  // Fill up all of the memory allocated for the register. |GetNumCells(reg)|
-  // minus 1 elements are inserted, because cell 0 is unused, so this should
-  // fill up the available cells exactly.
-  for (i = 1; i < GetNumCells(reg); i++) {
-    reg.Insert(reinterpret_cast<void*>(i), 1, ctx);
+  // Fill up all of the memory allocated for the register's allocation map.
+  for (i = 0; i < allocation_capacity; i++) {
+    reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx);
   }
 
-  // Adding just one extra element might still work because the allocated memory
-  // is rounded up to the page size. Adding a page full of elements should cause
-  // overflow.
-  const size_t cells_per_page = GetNumCellsPerPage();
-
-  ASSERT_DEATH(for (size_t j = 0; j < cells_per_page; j++) {
-    reg.Insert(reinterpret_cast<void*>(i + j), 1, ctx);
-  }, "");
+  // Adding just one extra element should cause overflow.
+  ASSERT_DEATH(reg.Insert(reinterpret_cast<void*>(i + 1), 1, ctx), "");
 }
 #endif
 

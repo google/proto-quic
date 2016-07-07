@@ -218,8 +218,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       stream_type_(HttpStreamRequest::BIDIRECTIONAL_STREAM),
       ptr_factory_(this) {
   DCHECK(session);
-  if (IsSpdyAlternative() &&
-      !session_->params().enable_alternative_service_for_insecure_origins) {
+  if (IsSpdyAlternative()) {
     DCHECK(origin_url_.SchemeIs("https"));
   }
   if (IsQuicAlternative()) {
@@ -845,8 +844,10 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
 
 bool HttpStreamFactoryImpl::Job::ShouldForceQuic() const {
   return session_->params().enable_quic &&
-         ContainsKey(session_->params().origins_to_force_quic_on,
-                     destination_) &&
+         (ContainsKey(session_->params().origins_to_force_quic_on,
+                      HostPortPair()) ||
+          ContainsKey(session_->params().origins_to_force_quic_on,
+                      destination_)) &&
          proxy_info_.is_direct() && origin_url_.SchemeIs("https");
 }
 

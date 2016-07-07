@@ -152,6 +152,18 @@ class QuicTestPacketMaker {
 
   // If |spdy_headers_frame_length| is non-null, it will be set to the size of
   // the SPDY headers frame created for this packet.
+  std::unique_ptr<QuicReceivedPacket> MakePushPromisePacket(
+      QuicPacketNumber packet_number,
+      QuicStreamId stream_id,
+      QuicStreamId promised_stream_id,
+      bool should_include_version,
+      bool fin,
+      SpdyHeaderBlock headers,
+      size_t* spdy_headers_frame_length,
+      QuicStreamOffset* offset);
+
+  // If |spdy_headers_frame_length| is non-null, it will be set to the size of
+  // the SPDY headers frame created for this packet.
   std::unique_ptr<QuicReceivedPacket> MakeResponseHeadersPacket(
       QuicPacketNumber packet_number,
       QuicStreamId stream_id,

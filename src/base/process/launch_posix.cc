@@ -152,12 +152,12 @@ int sys_rt_sigaction(int sig, const struct kernel_sigaction* act,
 // This function is intended to be used in between fork() and execve() and will
 // reset all signal handlers to the default.
 // The motivation for going through all of them is that sa_restorer can leak
-// from parents and help defeat ASLR on buggy kernels.  We reset it to NULL.
+// from parents and help defeat ASLR on buggy kernels.  We reset it to null.
 // See crbug.com/177956.
 void ResetChildSignalHandlersToDefaults(void) {
   for (int signum = 1; ; ++signum) {
     struct kernel_sigaction act = {0};
-    int sigaction_get_ret = sys_rt_sigaction(signum, NULL, &act);
+    int sigaction_get_ret = sys_rt_sigaction(signum, nullptr, &act);
     if (sigaction_get_ret && errno == EINVAL) {
 #if !defined(NDEBUG)
       // Linux supports 32 real-time signals from 33 to 64.
@@ -176,14 +176,14 @@ void ResetChildSignalHandlersToDefaults(void) {
     // The kernel won't allow to re-set SIGKILL or SIGSTOP.
     if (signum != SIGSTOP && signum != SIGKILL) {
       act.k_sa_handler = reinterpret_cast<void*>(SIG_DFL);
-      act.k_sa_restorer = NULL;
-      if (sys_rt_sigaction(signum, &act, NULL)) {
+      act.k_sa_restorer = nullptr;
+      if (sys_rt_sigaction(signum, &act, nullptr)) {
         RAW_LOG(FATAL, "sigaction (set) failed.");
       }
     }
 #if !defined(NDEBUG)
     // Now ask the kernel again and check that no restorer will leak.
-    if (sys_rt_sigaction(signum, NULL, &act) || act.k_sa_restorer) {
+    if (sys_rt_sigaction(signum, nullptr, &act) || act.k_sa_restorer) {
       RAW_LOG(FATAL, "Cound not fix sa_restorer.");
     }
 #endif  // !defined(NDEBUG)
@@ -305,10 +305,10 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   for (size_t i = 0; i < argv.size(); i++) {
     argv_cstr[i] = const_cast<char*>(argv[i].c_str());
   }
-  argv_cstr[argv.size()] = NULL;
+  argv_cstr[argv.size()] = nullptr;
 
   std::unique_ptr<char* []> new_environ;
-  char* const empty_environ = NULL;
+  char* const empty_environ = nullptr;
   char* const* old_environ = GetEnvironment();
   if (options.clear_environ)
     old_environ = &empty_environ;
@@ -430,7 +430,7 @@ Process LaunchProcess(const std::vector<std::string>& argv,
       // Set process' controlling terminal.
       if (HANDLE_EINTR(setsid()) != -1) {
         if (HANDLE_EINTR(
-                ioctl(options.ctrl_terminal_fd, TIOCSCTTY, NULL)) == -1) {
+                ioctl(options.ctrl_terminal_fd, TIOCSCTTY, nullptr)) == -1) {
           RAW_LOG(WARNING, "ioctl(TIOCSCTTY), ctrl terminal not set");
         }
       } else {
@@ -511,14 +511,6 @@ void RaiseProcessToHighPriority() {
   // setpriority() or sched_getscheduler, but these all require extra rights.
 }
 
-// Return value used by GetAppOutputInternal to encapsulate the various exit
-// scenarios from the function.
-enum GetAppOutputInternalResult {
-  EXECUTE_FAILURE,
-  EXECUTE_SUCCESS,
-  GOT_MAX_OUTPUT,
-};
-
 // Executes the application specified by |argv| and wait for it to exit. Stores
 // the output (stdout) in |output|. If |do_search_path| is set, it searches the
 // path for the application; in that case, |envp| must be null, and it will use
@@ -526,21 +518,14 @@ enum GetAppOutputInternalResult {
 // specify the path of the application, and |envp| will be used as the
 // environment. If |include_stderr| is true, includes stderr otherwise redirects
 // it to /dev/null.
-// If we successfully start the application and get all requested output, we
-// return GOT_MAX_OUTPUT, or if there is a problem starting or exiting
-// the application we return RUN_FAILURE. Otherwise we return EXECUTE_SUCCESS.
-// The GOT_MAX_OUTPUT return value exists so a caller that asks for limited
-// output can treat this as a success, despite having an exit code of SIG_PIPE
-// due to us closing the output pipe.
-// In the case of EXECUTE_SUCCESS, the application exit code will be returned
-// in |*exit_code|, which should be checked to determine if the application
-// ran successfully.
-static GetAppOutputInternalResult GetAppOutputInternal(
+// The return value of the function indicates success or failure. In the case of
+// success, the application exit code will be returned in |*exit_code|, which
+// should be checked to determine if the application ran successfully.
+static bool GetAppOutputInternal(
     const std::vector<std::string>& argv,
     char* const envp[],
     bool include_stderr,
     std::string* output,
-    size_t max_output,
     bool do_search_path,
     int* exit_code) {
   // Doing a blocking wait for another command to finish counts as IO.
@@ -562,13 +547,13 @@ static GetAppOutputInternalResult GetAppOutputInternal(
   DCHECK(!do_search_path ^ !envp);
 
   if (pipe(pipe_fd) < 0)
-    return EXECUTE_FAILURE;
+    return false;
 
   switch (pid = fork()) {
     case -1:  // error
       close(pipe_fd[0]);
       close(pipe_fd[1]);
-      return EXECUTE_FAILURE;
+      return false;
     case 0:  // child
       {
         // DANGER: no calls to malloc or locks are allowed from now on:
@@ -605,7 +590,7 @@ static GetAppOutputInternalResult GetAppOutputInternal(
 
         for (size_t i = 0; i < argv.size(); i++)
           argv_cstr[i] = const_cast<char*>(argv[i].c_str());
-        argv_cstr[argv.size()] = NULL;
+        argv_cstr[argv.size()] = nullptr;
         if (do_search_path)
           execvp(argv_cstr[0], argv_cstr.get());
         else
@@ -620,33 +605,21 @@ static GetAppOutputInternalResult GetAppOutputInternal(
         close(pipe_fd[1]);
 
         output->clear();
-        char buffer[256];
-        size_t output_buf_left = max_output;
-        ssize_t bytes_read = 1;  // A lie to properly handle |max_output == 0|
-                                 // case in the logic below.
 
-        while (output_buf_left > 0) {
-          bytes_read = HANDLE_EINTR(read(pipe_fd[0], buffer,
-                                    std::min(output_buf_left, sizeof(buffer))));
+        while (true) {
+          char buffer[256];
+          ssize_t bytes_read =
+              HANDLE_EINTR(read(pipe_fd[0], buffer, sizeof(buffer)));
           if (bytes_read <= 0)
             break;
           output->append(buffer, bytes_read);
-          output_buf_left -= static_cast<size_t>(bytes_read);
         }
         close(pipe_fd[0]);
 
         // Always wait for exit code (even if we know we'll declare
         // GOT_MAX_OUTPUT).
         Process process(pid);
-        bool success = process.WaitForExit(exit_code);
-
-        // If we stopped because we read as much as we wanted, we return
-        // GOT_MAX_OUTPUT (because the child may exit due to |SIGPIPE|).
-        if (!output_buf_left && bytes_read > 0)
-          return GOT_MAX_OUTPUT;
-        else if (success)
-          return EXECUTE_SUCCESS;
-        return EXECUTE_FAILURE;
+        return process.WaitForExit(exit_code);
       }
   }
 }
@@ -656,44 +629,27 @@ bool GetAppOutput(const CommandLine& cl, std::string* output) {
 }
 
 bool GetAppOutput(const std::vector<std::string>& argv, std::string* output) {
-  // Run |execve()| with the current environment and store "unlimited" data.
+  // Run |execve()| with the current environment.
   int exit_code;
-  GetAppOutputInternalResult result = GetAppOutputInternal(
-      argv, NULL, false, output, std::numeric_limits<std::size_t>::max(), true,
-      &exit_code);
-  return result == EXECUTE_SUCCESS && exit_code == EXIT_SUCCESS;
+  bool result =
+      GetAppOutputInternal(argv, nullptr, false, output, true, &exit_code);
+  return result && exit_code == EXIT_SUCCESS;
 }
 
 bool GetAppOutputAndError(const CommandLine& cl, std::string* output) {
-  // Run |execve()| with the current environment and store "unlimited" data.
+  // Run |execve()| with the current environment.
   int exit_code;
-  GetAppOutputInternalResult result = GetAppOutputInternal(
-      cl.argv(), NULL, true, output, std::numeric_limits<std::size_t>::max(),
-      true, &exit_code);
-  return result == EXECUTE_SUCCESS && exit_code == EXIT_SUCCESS;
-}
-
-// TODO(viettrungluu): Conceivably, we should have a timeout as well, so we
-// don't hang if what we're calling hangs.
-bool GetAppOutputRestricted(const CommandLine& cl,
-                            std::string* output, size_t max_output) {
-  // Run |execve()| with the empty environment.
-  char* const empty_environ = NULL;
-  int exit_code;
-  GetAppOutputInternalResult result = GetAppOutputInternal(
-      cl.argv(), &empty_environ, false, output, max_output, false, &exit_code);
-  return result == GOT_MAX_OUTPUT || (result == EXECUTE_SUCCESS &&
-                                      exit_code == EXIT_SUCCESS);
+  bool result =
+      GetAppOutputInternal(cl.argv(), nullptr, true, output, true, &exit_code);
+  return result && exit_code == EXIT_SUCCESS;
 }
 
 bool GetAppOutputWithExitCode(const CommandLine& cl,
                               std::string* output,
                               int* exit_code) {
-  // Run |execve()| with the current environment and store "unlimited" data.
-  GetAppOutputInternalResult result = GetAppOutputInternal(
-      cl.argv(), NULL, false, output, std::numeric_limits<std::size_t>::max(),
-      true, exit_code);
-  return result == EXECUTE_SUCCESS;
+  // Run |execve()| with the current environment.
+  return GetAppOutputInternal(cl.argv(), nullptr, false, output, true,
+                              exit_code);
 }
 
 #endif  // !defined(OS_NACL_NONSFI)

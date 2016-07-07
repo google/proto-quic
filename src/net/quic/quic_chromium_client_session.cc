@@ -24,6 +24,7 @@
 #include "net/quic/crypto/proof_verifier_chromium.h"
 #include "net/quic/crypto/quic_server_info.h"
 #include "net/quic/quic_chromium_connection_helper.h"
+#include "net/quic/quic_chromium_packet_writer.h"
 #include "net/quic/quic_client_promised_info.h"
 #include "net/quic/quic_crypto_client_stream_factory.h"
 #include "net/quic/quic_stream_factory.h"
@@ -240,6 +241,8 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       token_binding_signatures_(kTokenBindingSignatureMapSize),
       streams_pushed_count_(0),
       streams_pushed_and_claimed_count_(0),
+      error_code_from_rewrite_(OK),
+      use_error_code_from_rewrite_(false),
       weak_factory_(this) {
   sockets_.push_back(std::move(socket));
   packet_readers_.push_back(base::WrapUnique(new QuicChromiumPacketReader(
@@ -932,9 +935,20 @@ void QuicChromiumClientSession::OnSuccessfulVersionNegotiation(
   QuicSpdySession::OnSuccessfulVersionNegotiation(version);
 }
 
+int QuicChromiumClientSession::OnWriteError(
+    int error_code,
+    scoped_refptr<StringIOBuffer> packet) {
+  DCHECK(packet != nullptr);
+  use_error_code_from_rewrite_ = false;
+  if (stream_factory_) {
+    stream_factory_->MaybeMigrateSingleSession(this, WRITE_ERROR, packet);
+  }
+  return use_error_code_from_rewrite_ ? error_code_from_rewrite_ : error_code;
+}
+
 void QuicChromiumClientSession::OnPathDegrading() {
   if (stream_factory_) {
-    stream_factory_->MaybeMigrateSessionEarly(this);
+    stream_factory_->MaybeMigrateSingleSession(this, EARLY_MIGRATION, nullptr);
   }
 }
 
@@ -1140,7 +1154,6 @@ void QuicChromiumClientSession::NotifyFactoryOfSessionClosed() {
 
 void QuicChromiumClientSession::OnConnectTimeout() {
   DCHECK(callback_.is_null());
-  DCHECK(IsEncryptionEstablished());
 
   if (IsCryptoHandshakeConfirmed())
     return;
@@ -1155,17 +1168,25 @@ void QuicChromiumClientSession::OnConnectTimeout() {
 bool QuicChromiumClientSession::MigrateToSocket(
     std::unique_ptr<DatagramClientSocket> socket,
     std::unique_ptr<QuicChromiumPacketReader> reader,
-    std::unique_ptr<QuicPacketWriter> writer) {
+    std::unique_ptr<QuicChromiumPacketWriter> writer,
+    scoped_refptr<StringIOBuffer> packet) {
   DCHECK_EQ(sockets_.size(), packet_readers_.size());
   if (sockets_.size() >= kMaxReadersPerQuicSession) {
     return false;
   }
   // TODO(jri): Make SetQuicPacketWriter take a scoped_ptr.
-  connection()->SetQuicPacketWriter(writer.release(), /*owns_writer=*/true);
   packet_readers_.push_back(std::move(reader));
   sockets_.push_back(std::move(socket));
   StartReading();
-  connection()->SendPing();
+  QuicChromiumPacketWriter* raw_writer = writer.get();
+  connection()->SetQuicPacketWriter(writer.release(), /*owns_writer=*/true);
+  if (packet == nullptr) {
+    connection()->SendPing();
+    return true;
+  }
+  // Packet rewrite after migration on socket write error.
+  error_code_from_rewrite_ = raw_writer->WritePacketToSocket(packet.get());
+  use_error_code_from_rewrite_ = true;
   return true;
 }
 

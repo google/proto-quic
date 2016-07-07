@@ -383,6 +383,8 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
     } else if (strncmp(str, "ECDHE_", 6) == 0) {
       UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.ECDHE",
                                   ssl_info.key_exchange_info);
+    } else if (strncmp(str, "CECPQ1_", 7) == 0) {
+      // Nothing.
     } else {
       DCHECK_EQ(0, strcmp(str, "RSA"));
     }

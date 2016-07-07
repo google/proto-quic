@@ -288,7 +288,7 @@ void StatisticsRecorder::GetBucketRanges(
     return;
 
   for (const auto& entry : *ranges_) {
-    for (const auto& range_entry : *entry.second) {
+    for (auto* range_entry : *entry.second) {
       output->push_back(range_entry);
     }
   }
@@ -335,6 +335,14 @@ StatisticsRecorder::HistogramIterator StatisticsRecorder::end() {
     iter_end = histograms_->end();
   }
   return HistogramIterator(iter_end, true);
+}
+
+// static
+void StatisticsRecorder::InitLogOnShutdown() {
+  if (lock_ == nullptr)
+    return;
+  base::AutoLock auto_lock(*lock_);
+  g_statistics_recorder_.Get().InitLogOnShutdownWithoutLock();
 }
 
 // static
@@ -482,8 +490,14 @@ StatisticsRecorder::StatisticsRecorder() {
   callbacks_ = new CallbackMap;
   ranges_ = new RangesMap;
 
-  if (VLOG_IS_ON(1))
+  InitLogOnShutdownWithoutLock();
+}
+
+void StatisticsRecorder::InitLogOnShutdownWithoutLock() {
+  if (!vlog_initialized_ && VLOG_IS_ON(1)) {
+    vlog_initialized_ = true;
     AtExitManager::RegisterCallback(&DumpHistogramsToVlog, this);
+  }
 }
 
 // static

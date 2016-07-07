@@ -510,14 +510,12 @@ bool MessagePumpForUI::ProcessPumpReplacementMessage() {
 //-----------------------------------------------------------------------------
 // MessagePumpForGpu public:
 
-MessagePumpForGpu::MessagePumpForGpu()
-    : event_(CreateEvent(nullptr, FALSE, FALSE, nullptr)) {
+MessagePumpForGpu::MessagePumpForGpu() {
+  event_.Set(CreateEvent(nullptr, FALSE, FALSE, nullptr));
   InitUser32APIs();
 }
 
-MessagePumpForGpu::~MessagePumpForGpu() {
-  CloseHandle(event_);
-}
+MessagePumpForGpu::~MessagePumpForGpu() {}
 
 // static
 void MessagePumpForGpu::InitFactory() {
@@ -540,7 +538,7 @@ void MessagePumpForGpu::ScheduleWork() {
   last_set_event_timeticks_ = TimeTicks::Now();
 
   // Make sure the MessagePump does some work for us.
-  SetEvent(event_);
+  SetEvent(event_.Get());
 }
 
 void MessagePumpForGpu::ScheduleDelayedWork(
@@ -553,7 +551,7 @@ void MessagePumpForGpu::ScheduleDelayedWork(
 
 bool MessagePumpForGpu::WasSignaled() {
   // If |event_| was set this would reset it back to unset state.
-  return WaitForSingleObject(event_, 0) == WAIT_OBJECT_0;
+  return WaitForSingleObject(event_.Get(), 0) == WAIT_OBJECT_0;
 }
 
 //-----------------------------------------------------------------------------
@@ -621,8 +619,9 @@ void MessagePumpForGpu::WaitForWork() {
     debug::Alias(&wait_for_work_timeticks);
     debug::Alias(&delay);
 
+    HANDLE handle = event_.Get();
     DWORD result =
-        g_msg_wait_for_multiple_objects_ex(1, &event_, delay, QS_ALLINPUT, 0);
+        g_msg_wait_for_multiple_objects_ex(1, &handle, delay, QS_ALLINPUT, 0);
     DCHECK_NE(WAIT_FAILED, result) << GetLastError();
     if (result != WAIT_TIMEOUT) {
       // Either work or message available.

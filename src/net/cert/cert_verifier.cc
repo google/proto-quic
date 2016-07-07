@@ -43,7 +43,7 @@ CertVerifier::RequestParams::RequestParams(
   std::string cert_der;
   X509Certificate::GetDEREncoded(certificate_->os_cert_handle(), &cert_der);
   SHA256_Update(&ctx, cert_der.data(), cert_der.size());
-  for (const auto& cert_handle : certificate_->GetIntermediateCertificates()) {
+  for (auto* cert_handle : certificate_->GetIntermediateCertificates()) {
     X509Certificate::GetDEREncoded(cert_handle, &cert_der);
     SHA256_Update(&ctx, cert_der.data(), cert_der.size());
   }

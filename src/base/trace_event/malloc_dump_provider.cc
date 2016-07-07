@@ -229,7 +229,7 @@ void MallocDumpProvider::InsertAllocation(void* address, size_t size) {
   // This is the case of GetInstanceForCurrentThread() being called for the
   // first time, which causes a new() inside the tracker which re-enters the
   // heap profiler, in which case we just want to early out.
-  auto tracker = AllocationContextTracker::GetInstanceForCurrentThread();
+  auto* tracker = AllocationContextTracker::GetInstanceForCurrentThread();
   if (!tracker)
     return;
   AllocationContext context = tracker->GetContextSnapshot();

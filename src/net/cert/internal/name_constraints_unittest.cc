@@ -8,7 +8,11 @@
 
 #include "net/base/ip_address.h"
 #include "net/cert/internal/test_helpers.h"
+#include "net/test/gtest_util.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+using net::test::IsOk;
 
 namespace net {
 namespace {

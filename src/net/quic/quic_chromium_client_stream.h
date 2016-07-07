@@ -73,6 +73,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
                                  const QuicHeaderList& header_list) override;
   void OnPromiseHeadersComplete(QuicStreamId promised_stream_id,
                                 size_t frame_len) override;
+  void OnPromiseHeaderList(QuicStreamId promised_id,
+                           size_t frame_len,
+                           const QuicHeaderList& header_list) override;
   void OnDataAvailable() override;
   void OnClose() override;
   void OnCanWrite() override;
@@ -121,7 +124,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   using QuicSpdyStream::HasBufferedData;
 
  private:
-  void NotifyDelegateOfHeadersCompleteLater(const SpdyHeaderBlock& headers,
+  void NotifyDelegateOfHeadersCompleteLater(SpdyHeaderBlock headers,
                                             size_t frame_len);
   void NotifyDelegateOfHeadersComplete(SpdyHeaderBlock headers,
                                        size_t frame_len);

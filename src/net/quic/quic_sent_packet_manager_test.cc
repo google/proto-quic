@@ -102,6 +102,8 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
         .WillRepeatedly(Return(QuicBandwidth::Zero()));
     EXPECT_CALL(*send_algorithm_, InSlowStart()).Times(AnyNumber());
     EXPECT_CALL(*send_algorithm_, InRecovery()).Times(AnyNumber());
+    EXPECT_CALL(*network_change_visitor_, OnPathMtuIncreased(1000))
+        .Times(AnyNumber());
   }
 
   ~QuicSentPacketManagerTest() override {
@@ -1774,6 +1776,24 @@ TEST_P(QuicSentPacketManagerTest, ConnectionMigrationPortChange) {
   EXPECT_EQ(2 * default_init_rtt, rtt_stats->initial_rtt_us());
   EXPECT_EQ(1u, manager_.GetConsecutiveRtoCount());
   EXPECT_EQ(2u, manager_.GetConsecutiveTlpCount());
+}
+
+TEST_P(QuicSentPacketManagerTest, PathMtuIncreased) {
+  FLAGS_quic_no_mtu_discovery_ack_listener = true;
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, BytesInFlight(), 1, _, _))
+      .Times(1)
+      .WillOnce(Return(true));
+  SerializedPacket packet(kDefaultPathId, 1, PACKET_6BYTE_PACKET_NUMBER,
+                          nullptr, kDefaultLength + 100, 0u, false, false);
+  manager_.OnPacketSent(&packet, kInvalidPathId, 0, clock_.Now(),
+                        NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA);
+
+  // Ack the large packet and expect the path MTU to increase.
+  ExpectAck(1);
+  EXPECT_CALL(*network_change_visitor_,
+              OnPathMtuIncreased(kDefaultLength + 100));
+  QuicAckFrame ack_frame = InitAckFrame(1);
+  manager_.OnIncomingAck(ack_frame, clock_.Now());
 }
 
 }  // namespace

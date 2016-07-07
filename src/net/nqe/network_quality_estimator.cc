@@ -31,6 +31,7 @@
 #include "url/gurl.h"
 
 #if defined(OS_ANDROID)
+#include "net/android/cellular_signal_strength.h"
 #include "net/android/network_library.h"
 #endif  // OS_ANDROID
 
@@ -252,6 +253,8 @@ NetworkQualityEstimator::NetworkQualityEstimator(
           EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       external_estimate_provider_(std::move(external_estimates_provider)),
       effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
+      min_signal_strength_since_connection_change_(INT32_MAX),
+      max_signal_strength_since_connection_change_(INT32_MIN),
       weak_ptr_factory_(this) {
   static_assert(kDefaultHalfLifeSeconds > 0,
                 "Default half life duration must be > 0");
@@ -503,6 +506,7 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
                      weak_ptr_factory_.GetWeakPtr(), measuring_delay),
           measuring_delay);
     }
+    UpdateSignalStrength();
   }
 
   LoadTimingInfo load_timing_info;
@@ -740,6 +744,18 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   peak_network_quality_ = nqe::internal::NetworkQuality();
   downstream_throughput_kbps_observations_.Clear();
   rtt_observations_.Clear();
+
+#if defined(OS_ANDROID)
+  if (NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type)) {
+    UMA_HISTOGRAM_BOOLEAN(
+        "NQE.CellularSignalStrengthAvailable",
+        min_signal_strength_since_connection_change_ != INT32_MAX &&
+            max_signal_strength_since_connection_change_ != INT32_MIN);
+  }
+#endif  // OS_ANDROID
+  min_signal_strength_since_connection_change_ = INT32_MAX;
+  max_signal_strength_since_connection_change_ = INT32_MIN;
+
   current_network_id_ = GetCurrentNetworkID();
 
   // Query the external estimate provider on certain connection types. Once the
@@ -762,6 +778,21 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   estimated_quality_at_last_main_frame_ = nqe::internal::NetworkQuality();
   throughput_analyzer_->OnConnectionTypeChanged();
   MaybeRecomputeEffectiveConnectionType();
+  UpdateSignalStrength();
+}
+
+void NetworkQualityEstimator::UpdateSignalStrength() {
+#if defined(OS_ANDROID)
+  int32_t signal_strength_dbm;
+  if (!android::cellular_signal_strength::GetSignalStrengthDbm(
+          &signal_strength_dbm)) {
+    return;
+  }
+  min_signal_strength_since_connection_change_ = std::min(
+      min_signal_strength_since_connection_change_, signal_strength_dbm);
+  max_signal_strength_since_connection_change_ = std::max(
+      max_signal_strength_since_connection_change_, signal_strength_dbm);
+#endif  // OS_ANDROID
 }
 
 void NetworkQualityEstimator::RecordMetricsOnConnectionTypeChanged() const {

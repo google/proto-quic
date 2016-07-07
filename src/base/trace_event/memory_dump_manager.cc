@@ -825,7 +825,7 @@ void MemoryDumpManager::PeriodicGlobalDumpTimer::Start(
   uint32_t light_dump_period_ms = 0;
   uint32_t heavy_dump_period_ms = 0;
   DCHECK_LE(triggers_list.size(), 3u);
-  auto mdm = MemoryDumpManager::GetInstance();
+  auto* mdm = MemoryDumpManager::GetInstance();
   for (const TraceConfig::MemoryDumpConfig::Trigger& config : triggers_list) {
     DCHECK_NE(0u, config.periodic_interval_ms);
     switch (config.level_of_detail) {

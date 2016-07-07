@@ -32,6 +32,9 @@
 #include "net/udp/udp_net_log_parameters.h"
 
 #if defined(OS_ANDROID)
+#include <dlfcn.h>
+// This was added in Lollipop to dlfcn.h
+#define RTLD_NOLOAD 4
 #include "base/android/build_info.h"
 #include "base/native_library.h"
 #include "base/strings/utf_string_conversions.h"
@@ -351,11 +354,15 @@ int UDPSocketPosix::BindToNetwork(
   // shouldn't matter.
   if (!setNetworkForSocket) {
     // Android's netd client library should always be loaded in our address
-    // space as it shims libc functions like connect().
+    // space as it shims socket() which was used to create |socket_|.
     base::FilePath file(base::GetNativeLibraryName("netd_client"));
-    base::NativeLibrary lib = base::LoadNativeLibrary(file, nullptr);
-    setNetworkForSocket = reinterpret_cast<SetNetworkForSocket>(
-        base::GetFunctionPointerFromNativeLibrary(lib, "setNetworkForSocket"));
+    // Use RTLD_NOW to match Android's prior loading of the library:
+    // http://androidxref.com/6.0.0_r5/xref/bionic/libc/bionic/NetdClient.cpp#37
+    // Use RTLD_NOLOAD to assert that the library is already loaded and
+    // avoid doing any disk IO.
+    void* dl = dlopen(file.value().c_str(), RTLD_NOW | RTLD_NOLOAD);
+    setNetworkForSocket =
+        reinterpret_cast<SetNetworkForSocket>(dlsym(dl, "setNetworkForSocket"));
   }
   if (!setNetworkForSocket)
     return ERR_NOT_IMPLEMENTED;

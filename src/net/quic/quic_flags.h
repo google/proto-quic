@@ -26,8 +26,6 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_require_fix;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_supports_push_promise;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_supports_push_promise;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_cede_correctly;
-NET_EXPORT_PRIVATE extern bool
-    FLAGS_quic_crypto_server_config_default_has_chacha20;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_reply_to_rej;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_no_lower_bw_resumption_limit;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_sslr_limit_reduction;
@@ -36,11 +34,9 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_autotune_by_default;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_loss_recovery_use_largest_acked;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_only_one_sending_alarm;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_hash_in_scup;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_detect_memory_corrpution;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_old_public_reset_packets;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_ignore_srbf;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_allow_noprr;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_disallow_multi_packet_chlo;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_optimized_write_path;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_dispatcher_creates_id;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_chlo_policy;
@@ -52,5 +48,9 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_cheap_stateless_rejects;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_socket_walltimestamps;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_default_immediate_forward_secure;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_disable_pre_30;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_respect_http2_settings_frame;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_no_mtu_discovery_ack_listener;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_simple_packet_number_length;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_35;
 
 #endif  // NET_QUIC_QUIC_FLAGS_H_

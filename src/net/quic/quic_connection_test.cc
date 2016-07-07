@@ -1611,103 +1611,6 @@ TEST_P(QuicConnectionTest, AckAll) {
   ProcessAckPacket(&frame1);
 }
 
-TEST_P(QuicConnectionTest, SendingDifferentSequenceNumberLengthsBandwidth) {
-  QuicPacketNumber last_packet;
-  SendStreamDataToPeer(1, "foo", 0, !kFin, &last_packet);
-  EXPECT_EQ(1u, last_packet);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
-      .WillRepeatedly(Return(kMaxPacketSize * 256));
-
-  SendStreamDataToPeer(1, "bar", 3, !kFin, &last_packet);
-  EXPECT_EQ(2u, last_packet);
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  // The 1 packet lag is due to the packet number length being recalculated in
-  // QuicConnection after a packet is sent.
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
-      .WillRepeatedly(Return(kMaxPacketSize * 256 * 256));
-
-  SendStreamDataToPeer(1, "foo", 6, !kFin, &last_packet);
-  EXPECT_EQ(3u, last_packet);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
-      .WillRepeatedly(Return(kMaxPacketSize * 256 * 256 * 256));
-
-  SendStreamDataToPeer(1, "bar", 9, !kFin, &last_packet);
-  EXPECT_EQ(4u, last_packet);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
-      .WillRepeatedly(Return(kMaxPacketSize * 256 * 256 * 256 * 256));
-
-  SendStreamDataToPeer(1, "foo", 12, !kFin, &last_packet);
-  EXPECT_EQ(5u, last_packet);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-}
-
-// TODO(ianswett): Re-enable this test by finding a good way to test different
-// packet number lengths without sending packets with giant gaps.
-TEST_P(QuicConnectionTest,
-       DISABLED_SendingDifferentSequenceNumberLengthsUnackedDelta) {
-  QuicPacketNumber last_packet;
-  SendStreamDataToPeer(1, "foo", 0, !kFin, &last_packet);
-  EXPECT_EQ(1u, last_packet);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 100);
-
-  SendStreamDataToPeer(1, "bar", 3, !kFin, &last_packet);
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 100 * 256);
-
-  SendStreamDataToPeer(1, "foo", 6, !kFin, &last_packet);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 100 * 256 * 256);
-
-  SendStreamDataToPeer(1, "bar", 9, !kFin, &last_packet);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-
-  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 100 * 256 * 256 * 256);
-
-  SendStreamDataToPeer(1, "foo", 12, !kFin, &last_packet);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(creator_));
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            writer_->header().public_header.packet_number_length);
-}
-
 TEST_P(QuicConnectionTest, BasicSending) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   QuicPacketNumber last_packet;
@@ -5042,7 +4945,6 @@ TEST_P(QuicConnectionTest, MultipleCallsToCloseConnection) {
 }
 
 TEST_P(QuicConnectionTest, ServerReceivesChloOnNonCryptoStream) {
-  FLAGS_quic_detect_memory_corrpution = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   set_perspective(Perspective::IS_SERVER);
@@ -5062,7 +4964,6 @@ TEST_P(QuicConnectionTest, ServerReceivesChloOnNonCryptoStream) {
 }
 
 TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
-  FLAGS_quic_detect_memory_corrpution = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   CryptoHandshakeMessage message;

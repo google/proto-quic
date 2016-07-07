@@ -208,7 +208,7 @@ std::unique_ptr<SpdySerializedFrame> SpdyStream::ProduceSynStreamFrame() {
       (pending_send_status_ == NO_MORE_DATA_TO_SEND) ?
       CONTROL_FLAG_FIN : CONTROL_FLAG_NONE;
   std::unique_ptr<SpdySerializedFrame> frame(session_->CreateSynStream(
-      stream_id_, priority_, flags, *request_headers_));
+      stream_id_, priority_, flags, request_headers_->Clone()));
   send_time_ = base::TimeTicks::Now();
   return frame;
 }
@@ -470,7 +470,7 @@ void SpdyStream::OnPushPromiseHeadersReceived(const SpdyHeaderBlock& headers) {
   DCHECK(!delegate_);
 
   io_state_ = STATE_RESERVED_REMOTE;
-  request_headers_.reset(new SpdyHeaderBlock(headers));
+  request_headers_.reset(new SpdyHeaderBlock(headers.Clone()));
 }
 
 void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {

@@ -196,7 +196,11 @@ class FilePathWatcherTest : public testing::Test {
 
   bool WaitForEvents() WARN_UNUSED_RESULT {
     collector_->Reset();
-    loop_.Run();
+    // Make sure we timeout if we don't get notified.
+    loop_.PostDelayedTask(FROM_HERE,
+                          MessageLoop::QuitWhenIdleClosure(),
+                          TestTimeouts::action_timeout());
+    RunLoop().Run();
     return collector_->Success();
   }
 
@@ -890,9 +894,9 @@ TEST_F(FilePathWatcherTest, DirAttributesChanged) {
   // We should not get notified in this case as it hasn't affected our ability
   // to access the file.
   ASSERT_TRUE(ChangeFilePermissions(test_dir1, Read, false));
-  loop_.PostDelayedTask(FROM_HERE,
-                        MessageLoop::QuitWhenIdleClosure(),
-                        TestTimeouts::tiny_timeout());
+  loop_.task_runner()->PostDelayedTask(FROM_HERE,
+                                       MessageLoop::QuitWhenIdleClosure(),
+                                       TestTimeouts::tiny_timeout());
   ASSERT_FALSE(WaitForEvents());
   ASSERT_TRUE(ChangeFilePermissions(test_dir1, Read, true));
 

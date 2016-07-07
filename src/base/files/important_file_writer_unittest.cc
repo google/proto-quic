@@ -157,7 +157,7 @@ TEST_F(ImportantFileWriterTest, ScheduleWrite) {
   ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
       TimeDelta::FromMilliseconds(100));
-  MessageLoop::current()->Run();
+  RunLoop().Run();
   EXPECT_FALSE(writer.HasPendingWrite());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
@@ -173,7 +173,7 @@ TEST_F(ImportantFileWriterTest, DoScheduledWrite) {
   ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
       TimeDelta::FromMilliseconds(100));
-  MessageLoop::current()->Run();
+  RunLoop().Run();
   EXPECT_FALSE(writer.HasPendingWrite());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
@@ -190,7 +190,7 @@ TEST_F(ImportantFileWriterTest, BatchingWrites) {
   ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, MessageLoop::QuitWhenIdleClosure(),
       TimeDelta::FromMilliseconds(100));
-  MessageLoop::current()->Run();
+  RunLoop().Run();
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("baz", GetFileContent(writer.path()));
 }

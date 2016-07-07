@@ -127,7 +127,7 @@ void QuicSimpleServerStream::PushResponse(
     return;
   }
   // Change the stream state to emulate a client request.
-  request_headers_ = push_request_headers;
+  request_headers_ = std::move(push_request_headers);
   content_length_ = 0;
   DVLOG(1) << "Stream " << id() << ": Ready to receive server push response.";
 
@@ -169,11 +169,11 @@ void QuicSimpleServerStream::SendResponse() {
   string request_url = request_headers_[":authority"].as_string() +
                        request_headers_[":path"].as_string();
   int response_code;
-  SpdyHeaderBlock response_headers = response->headers();
-  if (!ParseHeaderStatusCode(&response_headers, &response_code)) {
-    DVLOG(1) << "Illegal (non-integer) response :status from cache: "
-             << response_headers[":status"].as_string() << " for request "
-             << request_url;
+  const SpdyHeaderBlock& response_headers = response->headers();
+  if (!ParseHeaderStatusCode(response_headers, &response_code)) {
+    LOG(WARNING) << "Illegal (non-integer) response :status from cache: "
+                 << response_headers.GetHeader(":status") << " for request "
+                 << request_url;
     SendErrorResponse();
     return;
   }
@@ -203,8 +203,8 @@ void QuicSimpleServerStream::SendResponse() {
   }
 
   DVLOG(1) << "Sending response for stream " << id();
-  SendHeadersAndBodyAndTrailers(response->headers(), response->body(),
-                                response->trailers());
+  SendHeadersAndBodyAndTrailers(response->headers().Clone(), response->body(),
+                                response->trailers().Clone());
 }
 
 void QuicSimpleServerStream::SendNotFoundResponse() {

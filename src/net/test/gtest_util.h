@@ -8,12 +8,33 @@
 #define NET_TEST_GTEST_UTIL_H_
 
 #include "base/test/mock_log.h"
+#include "net/base/net_errors.h"
 #include "net/test/scoped_disable_exit_on_dfatal.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
+
+// A GMock matcher that checks whether the argument is the expected net::Error.
+// On failure, the expected and actual net::Error names will be printed.
+// Usage: EXPECT_THAT(foo(), IsError(net::ERR_INVALID_ARGUMENT));
+MATCHER_P(IsError,
+          expected,
+          std::string(negation ? "not " : "") + net::ErrorToString(expected)) {
+  if (arg <= 0)
+    *result_listener << net::ErrorToString(arg);
+  return arg == expected;
+}
+
+// Shorthand for IsError(net::OK).
+// Usage: EXPECT_THAT(foo(), IsOk());
+MATCHER(IsOk,
+        std::string(negation ? "not " : "") + net::ErrorToString(net::OK)) {
+  if (arg <= 0)
+    *result_listener << net::ErrorToString(arg);
+  return arg == net::OK;
+}
 
 // Internal implementation for the EXPECT_DFATAL and ASSERT_DFATAL
 // macros.  Do not use this directly.

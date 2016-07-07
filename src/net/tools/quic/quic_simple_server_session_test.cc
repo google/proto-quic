@@ -66,15 +66,31 @@ class MockQuicHeadersStream : public QuicHeadersStream {
   explicit MockQuicHeadersStream(QuicSpdySession* session)
       : QuicHeadersStream(session) {}
 
-  MOCK_METHOD4(WritePushPromise,
+  // Methods taking non-copyable types like SpdyHeaderBlock by value cannot be
+  // mocked directly.
+  size_t WritePushPromise(QuicStreamId original_stream_id,
+                          QuicStreamId promised_stream_id,
+                          SpdyHeaderBlock headers,
+                          QuicAckListenerInterface* ack_listener) override {
+    return WritePushPromiseMock(original_stream_id, promised_stream_id, headers,
+                                ack_listener);
+  }
+  MOCK_METHOD4(WritePushPromiseMock,
                size_t(QuicStreamId original_stream_id,
                       QuicStreamId promised_stream_id,
-                      SpdyHeaderBlock headers,
+                      const SpdyHeaderBlock& headers,
                       QuicAckListenerInterface* ack_listener));
 
-  MOCK_METHOD5(WriteHeaders,
-               size_t(QuicStreamId stream_id,
+  size_t WriteHeaders(QuicStreamId stream_id,
                       SpdyHeaderBlock headers,
+                      bool fin,
+                      SpdyPriority priority,
+                      QuicAckListenerInterface* ack_listener) override {
+    return WriteHeadersMock(stream_id, headers, fin, priority, ack_listener);
+  }
+  MOCK_METHOD5(WriteHeadersMock,
+               size_t(QuicStreamId stream_id,
+                      const SpdyHeaderBlock& headers,
                       bool fin,
                       SpdyPriority priority,
                       QuicAckListenerInterface* ack_listener));
@@ -167,6 +183,9 @@ class QuicSimpleServerSessionTest
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize) {
     FLAGS_quic_always_log_bugs_for_tests = true;
     config_.SetMaxStreamsPerConnection(kMaxStreamsForTest, kMaxStreamsForTest);
+    config_.SetMaxIncomingDynamicStreamsToSend(kMaxStreamsForTest);
+    QuicConfigPeer::SetReceivedMaxIncomingDynamicStreams(&config_,
+                                                         kMaxStreamsForTest);
     config_.SetInitialStreamFlowControlWindowToSend(
         kInitialStreamFlowControlWindowForTest);
     config_.SetInitialSessionFlowControlWindowToSend(
@@ -188,6 +207,8 @@ class QuicSimpleServerSessionTest
     QuicSpdySessionPeer::SetHeadersStream(session_.get(), headers_stream_);
     // TODO(jri): Remove this line once tests pass.
     FLAGS_quic_cede_correctly = false;
+
+    session_->OnConfigNegotiated();
   }
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
@@ -457,18 +478,19 @@ class QuicSimpleServerSessionServerPushTest
       GURL resource_url = GURL(url);
       string body;
       GenerateBody(&body, body_size);
-      SpdyHeaderBlock response_headers;
       QuicInMemoryCache::GetInstance()->AddSimpleResponse(resource_host, path,
                                                           200, body);
       push_resources.push_back(QuicInMemoryCache::ServerPushInfo(
-          resource_url, response_headers, kDefaultPriority, body));
+          resource_url, SpdyHeaderBlock(), kDefaultPriority, body));
       // PUSH_PROMISED are sent for all the resources.
-      EXPECT_CALL(*headers_stream_, WritePushPromise(kClientDataStreamId1,
-                                                     stream_id, _, nullptr));
+      EXPECT_CALL(
+          *headers_stream_,
+          WritePushPromiseMock(kClientDataStreamId1, stream_id, _, nullptr));
       if (i <= kMaxStreamsForTest) {
         // |kMaxStreamsForTest| promised responses should be sent.
-        EXPECT_CALL(*headers_stream_, WriteHeaders(stream_id, _, false,
-                                                   kDefaultPriority, nullptr));
+        EXPECT_CALL(
+            *headers_stream_,
+            WriteHeadersMock(stream_id, _, false, kDefaultPriority, nullptr));
         // Since flow control window is smaller than response body, not the
         // whole body will be sent.
         EXPECT_CALL(*connection_,
@@ -506,8 +528,9 @@ TEST_P(QuicSimpleServerSessionServerPushTest,
 
   // After an open stream is marked draining, a new stream is expected to be
   // created and a response sent on the stream.
-  EXPECT_CALL(*headers_stream_, WriteHeaders(next_out_going_stream_id, _, false,
-                                             kDefaultPriority, nullptr));
+  EXPECT_CALL(*headers_stream_,
+              WriteHeadersMock(next_out_going_stream_id, _, false,
+                               kDefaultPriority, nullptr));
   EXPECT_CALL(*connection_,
               SendStreamData(next_out_going_stream_id, _, 0, false, nullptr))
       .WillOnce(Return(QuicConsumedData(kStreamFlowControlWindowSize, false)));
@@ -540,14 +563,14 @@ TEST_P(QuicSimpleServerSessionServerPushTest,
   // only one queued resource will be sent out.
   QuicStreamId stream_not_reset = (kMaxStreamsForTest + 1) * 2;
   InSequence s;
-  EXPECT_CALL(*headers_stream_, WriteHeaders(stream_not_reset, _, false,
-                                             kDefaultPriority, nullptr));
+  EXPECT_CALL(*headers_stream_, WriteHeadersMock(stream_not_reset, _, false,
+                                                 kDefaultPriority, nullptr));
   EXPECT_CALL(*connection_,
               SendStreamData(stream_not_reset, _, 0, false, nullptr))
       .WillOnce(Return(QuicConsumedData(kStreamFlowControlWindowSize, false)));
   EXPECT_CALL(*connection_, SendBlocked(stream_not_reset));
-  EXPECT_CALL(*headers_stream_, WriteHeaders(stream_got_reset, _, false,
-                                             kDefaultPriority, nullptr))
+  EXPECT_CALL(*headers_stream_, WriteHeadersMock(stream_got_reset, _, false,
+                                                 kDefaultPriority, nullptr))
       .Times(0);
 
   session_->StreamDraining(2);
@@ -567,8 +590,8 @@ TEST_P(QuicSimpleServerSessionServerPushTest,
   QuicStreamId stream_got_reset = 2;
   EXPECT_CALL(*connection_,
               SendRstStream(stream_got_reset, QUIC_RST_ACKNOWLEDGEMENT, _));
-  EXPECT_CALL(*headers_stream_, WriteHeaders(stream_to_open, _, false,
-                                             kDefaultPriority, nullptr));
+  EXPECT_CALL(*headers_stream_, WriteHeadersMock(stream_to_open, _, false,
+                                                 kDefaultPriority, nullptr));
   EXPECT_CALL(*connection_,
               SendStreamData(stream_to_open, _, 0, false, nullptr))
       .WillOnce(Return(QuicConsumedData(kStreamFlowControlWindowSize, false)));

@@ -473,11 +473,11 @@ TEST_F(MemoryDumpManagerTest, RespectTaskRunnerAffinity) {
   // invoked a number of times equal to its index.
   for (uint32_t i = kNumInitialThreads; i > 0; --i) {
     threads.push_back(WrapUnique(new Thread("test thread")));
-    auto thread = threads.back().get();
+    auto* thread = threads.back().get();
     thread->Start();
     scoped_refptr<SingleThreadTaskRunner> task_runner = thread->task_runner();
     mdps.push_back(WrapUnique(new MockMemoryDumpProvider()));
-    auto mdp = mdps.back().get();
+    auto* mdp = mdps.back().get();
     RegisterDumpProvider(mdp, task_runner, kDefaultOptions);
     EXPECT_CALL(*mdp, OnMemoryDump(_, _))
         .Times(i)

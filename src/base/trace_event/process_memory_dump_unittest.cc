@@ -68,10 +68,10 @@ TEST(ProcessMemoryDumpTest, Clear) {
   pmd1->AsValueInto(traced_value.get());
 
   // Check that the pmd can be reused and behaves as expected.
-  auto mad1 = pmd1->CreateAllocatorDump("mad1");
-  auto mad3 = pmd1->CreateAllocatorDump("mad3");
-  auto shared_mad1 = pmd1->CreateSharedGlobalAllocatorDump(shared_mad_guid1);
-  auto shared_mad2 =
+  auto* mad1 = pmd1->CreateAllocatorDump("mad1");
+  auto* mad3 = pmd1->CreateAllocatorDump("mad3");
+  auto* shared_mad1 = pmd1->CreateSharedGlobalAllocatorDump(shared_mad_guid1);
+  auto* shared_mad2 =
       pmd1->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid2);
   ASSERT_EQ(4u, pmd1->allocator_dumps().size());
   ASSERT_EQ(mad1, pmd1->GetAllocatorDump("mad1"));
@@ -102,24 +102,24 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
       WrapUnique(new TypeNameDeduplicator));
   std::unique_ptr<ProcessMemoryDump> pmd1(
       new ProcessMemoryDump(session_state.get(), kDetailedDumpArgs));
-  auto mad1_1 = pmd1->CreateAllocatorDump("pmd1/mad1");
-  auto mad1_2 = pmd1->CreateAllocatorDump("pmd1/mad2");
+  auto* mad1_1 = pmd1->CreateAllocatorDump("pmd1/mad1");
+  auto* mad1_2 = pmd1->CreateAllocatorDump("pmd1/mad2");
   pmd1->AddOwnershipEdge(mad1_1->guid(), mad1_2->guid());
   pmd1->DumpHeapUsage(metrics_by_context, overhead, "pmd1/heap_dump1");
   pmd1->DumpHeapUsage(metrics_by_context, overhead, "pmd1/heap_dump2");
 
   std::unique_ptr<ProcessMemoryDump> pmd2(
       new ProcessMemoryDump(session_state.get(), kDetailedDumpArgs));
-  auto mad2_1 = pmd2->CreateAllocatorDump("pmd2/mad1");
-  auto mad2_2 = pmd2->CreateAllocatorDump("pmd2/mad2");
+  auto* mad2_1 = pmd2->CreateAllocatorDump("pmd2/mad1");
+  auto* mad2_2 = pmd2->CreateAllocatorDump("pmd2/mad2");
   pmd2->AddOwnershipEdge(mad2_1->guid(), mad2_2->guid());
   pmd2->DumpHeapUsage(metrics_by_context, overhead, "pmd2/heap_dump1");
   pmd2->DumpHeapUsage(metrics_by_context, overhead, "pmd2/heap_dump2");
 
   MemoryAllocatorDumpGuid shared_mad_guid1(1);
   MemoryAllocatorDumpGuid shared_mad_guid2(2);
-  auto shared_mad1 = pmd2->CreateSharedGlobalAllocatorDump(shared_mad_guid1);
-  auto shared_mad2 =
+  auto* shared_mad1 = pmd2->CreateSharedGlobalAllocatorDump(shared_mad_guid1);
+  auto* shared_mad2 =
       pmd2->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid2);
 
   pmd1->TakeAllDumpsFrom(pmd2.get());
@@ -172,11 +172,11 @@ TEST(ProcessMemoryDumpTest, Suballocations) {
 
   // Create one allocation with an auto-assigned guid and mark it as a
   // suballocation of "fakealloc/allocated_objects".
-  auto pic1_dump = pmd->CreateAllocatorDump("picturemanager/picture1");
+  auto* pic1_dump = pmd->CreateAllocatorDump("picturemanager/picture1");
   pmd->AddSuballocation(pic1_dump->guid(), allocator_dump_name);
 
   // Same here, but this time create an allocation with an explicit guid.
-  auto pic2_dump = pmd->CreateAllocatorDump("picturemanager/picture2",
+  auto* pic2_dump = pmd->CreateAllocatorDump("picturemanager/picture2",
                                             MemoryAllocatorDumpGuid(0x42));
   pmd->AddSuballocation(pic2_dump->guid(), allocator_dump_name);
 
@@ -213,23 +213,23 @@ TEST(ProcessMemoryDumpTest, GlobalAllocatorDumpTest) {
   std::unique_ptr<ProcessMemoryDump> pmd(
       new ProcessMemoryDump(nullptr, kDetailedDumpArgs));
   MemoryAllocatorDumpGuid shared_mad_guid(1);
-  auto shared_mad1 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
+  auto* shared_mad1 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad_guid, shared_mad1->guid());
   ASSERT_EQ(MemoryAllocatorDump::Flags::WEAK, shared_mad1->flags());
 
-  auto shared_mad2 = pmd->GetSharedGlobalAllocatorDump(shared_mad_guid);
+  auto* shared_mad2 = pmd->GetSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad1, shared_mad2);
   ASSERT_EQ(MemoryAllocatorDump::Flags::WEAK, shared_mad1->flags());
 
-  auto shared_mad3 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
+  auto* shared_mad3 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad1, shared_mad3);
   ASSERT_EQ(MemoryAllocatorDump::Flags::WEAK, shared_mad1->flags());
 
-  auto shared_mad4 = pmd->CreateSharedGlobalAllocatorDump(shared_mad_guid);
+  auto* shared_mad4 = pmd->CreateSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad1, shared_mad4);
   ASSERT_EQ(MemoryAllocatorDump::Flags::DEFAULT, shared_mad1->flags());
 
-  auto shared_mad5 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
+  auto* shared_mad5 = pmd->CreateWeakSharedGlobalAllocatorDump(shared_mad_guid);
   ASSERT_EQ(shared_mad1, shared_mad5);
   ASSERT_EQ(MemoryAllocatorDump::Flags::DEFAULT, shared_mad1->flags());
 }

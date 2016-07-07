@@ -9,6 +9,7 @@
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
+#include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_packet_writer.h"
@@ -21,9 +22,25 @@ namespace net {
 // Chrome specific packet writer which uses a datagram Socket for writing data.
 class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
  public:
+  // Interface which receives notifications on socket write errors.
+  class NET_EXPORT_PRIVATE WriteErrorObserver {
+   public:
+    // Called on socket write error, with the error code of the failure
+    // and the packet that was not written as a result of the failure.
+    // An implementation must return error code from the rewrite
+    // attempt if there was one, else return |error_code|.
+    virtual int OnWriteError(int error_code,
+                             scoped_refptr<StringIOBuffer> last_packet) = 0;
+  };
+
   QuicChromiumPacketWriter();
   explicit QuicChromiumPacketWriter(Socket* socket);
   ~QuicChromiumPacketWriter() override;
+
+  void Initialize(WriteErrorObserver* observer, QuicConnection* connection);
+
+  // Writes |packet| to the socket and returns the error code from the write.
+  int WritePacketToSocket(StringIOBuffer* packet);
 
   // QuicPacketWriter
   WriteResult WritePacket(const char* buffer,
@@ -37,7 +54,6 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   QuicByteCount GetMaxPacketSize(const IPEndPoint& peer_address) const override;
 
   void OnWriteComplete(int rv);
-  void SetConnection(QuicConnection* connection) { connection_ = connection; }
 
  protected:
   void set_write_blocked(bool is_blocked) { write_blocked_ = is_blocked; }
@@ -45,6 +61,10 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
  private:
   Socket* socket_;
   QuicConnection* connection_;
+  WriteErrorObserver* observer_;
+  // When a write returns asynchronously, |packet_| stores the written
+  // packet until OnWriteComplete is called.
+  scoped_refptr<StringIOBuffer> packet_;
 
   // Whether a write is currently in flight.
   bool write_blocked_;

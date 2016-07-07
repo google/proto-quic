@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
+#include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -166,12 +167,9 @@ ZipReader::EntryInfo::EntryInfo(const std::string& file_name_in_zip,
   exploded_time.minute = raw_file_info.tmu_date.tm_min;
   exploded_time.second = raw_file_info.tmu_date.tm_sec;
   exploded_time.millisecond = 0;
-  if (exploded_time.HasValidValues()) {
-    last_modified_ = base::Time::FromLocalExploded(exploded_time);
-  } else {
-    // Use Unix time epoch if the time stamp data is invalid.
+
+  if (!base::Time::FromLocalExploded(exploded_time, &last_modified_))
     last_modified_ = base::Time::UnixEpoch();
-  }
 }
 
 ZipReader::ZipReader()
@@ -394,7 +392,7 @@ void ZipReader::ExtractCurrentEntryToFilePathAsync(
     return;
   }
 
-  base::MessageLoop::current()->PostTask(
+  base::MessageLoop::current()->task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&ZipReader::ExtractChunk, weak_ptr_factory_.GetWeakPtr(),
                  Passed(std::move(output_file)), success_callback,
@@ -501,7 +499,7 @@ void ZipReader::ExtractChunk(base::File output_file,
 
     progress_callback.Run(current_progress);
 
-    base::MessageLoop::current()->PostTask(
+    base::MessageLoop::current()->task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&ZipReader::ExtractChunk, weak_ptr_factory_.GetWeakPtr(),
                    Passed(std::move(output_file)), success_callback,

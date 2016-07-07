@@ -91,9 +91,7 @@ void LogChannelIDAndCookieStores(const GURL& url,
     // There is no ChannelIDStore for this request. This should never happen,
     // because we only log if Channel ID was sent.
     NO_CHANNEL_ID_STORE = 5,
-    // A case where the CookieStore is persistent and the ChannelIDStore is
-    // ephemeral, but it has been identified as not being a problem.
-    KNOWN_MISMATCH = 6,
+    // Value 6 was removed (KNOWN_MISMATCH).
     // Both stores are ephemeral, and the ChannelIDService used when
     // establishing the connection is the same one that the CookieStore was
     // created to be used with.
@@ -136,8 +134,6 @@ void LogChannelIDAndCookieStores(const GURL& url,
         NOTREACHED();
         ephemerality = EPHEMERAL_MISMATCH;
       }
-    } else if (context->has_known_mismatched_cookie_store()) {
-      ephemerality = KNOWN_MISMATCH;
     } else {
       NOTREACHED();
       ephemerality = CID_EPHEMERAL_COOKIE_PERSISTENT;

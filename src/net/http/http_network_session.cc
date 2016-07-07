@@ -98,8 +98,6 @@ HttpNetworkSession::Params::Params()
       time_func(&base::TimeTicks::Now),
       enable_http2_alternative_service_with_different_host(false),
       enable_quic_alternative_service_with_different_host(true),
-      enable_alternative_service_for_insecure_origins(false),
-      enable_npn(false),
       enable_priority_dependencies(true),
       enable_quic(false),
       disable_quic_on_timeout_with_open_streams(false),
@@ -151,6 +149,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
       quic_stream_factory_(
           params.net_log,
           params.host_resolver,
+          params.ssl_config_service,
           params.client_socket_factory
               ? params.client_socket_factory
               : ClientSocketFactory::GetDefaultFactory(),
@@ -377,11 +376,7 @@ void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
 }
 
 void HttpNetworkSession::GetNpnProtos(NextProtoVector* npn_protos) const {
-  if (HttpStreamFactory::spdy_enabled() && params_.enable_npn) {
-    *npn_protos = next_protos_;
-  } else {
-    npn_protos->clear();
-  }
+  npn_protos->clear();
 }
 
 void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,

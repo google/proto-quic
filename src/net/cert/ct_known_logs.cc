@@ -71,7 +71,7 @@ bool IsLogDisqualified(base::StringPiece log_id,
                        base::Time* disqualification_date) {
   CHECK_EQ(log_id.size(), arraysize(kDisqualifiedCTLogList[0].log_id) - 1);
 
-  auto p = std::lower_bound(
+  auto* p = std::lower_bound(
       std::begin(kDisqualifiedCTLogList), std::end(kDisqualifiedCTLogList),
       log_id.data(),
       [](const DisqualifiedCTLogInfo& disqualified_log, const char* log_id) {

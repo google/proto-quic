@@ -14,8 +14,8 @@
 #include "net/quic/quic_write_blocked_list.h"
 #include "net/quic/spdy_utils.h"
 
+using base::IntToString;
 using base::StringPiece;
-using net::SpdyPriority;
 using std::min;
 using std::string;
 
@@ -104,7 +104,7 @@ size_t QuicSpdyStream::WriteTrailers(
            << stream_bytes_written() + queued_data_bytes() << ")";
   trailer_block.insert(std::make_pair(
       kFinalOffsetHeaderKey,
-      base::IntToString(stream_bytes_written() + queued_data_bytes())));
+      IntToString(stream_bytes_written() + queued_data_bytes())));
 
   // Write the trailing headers with a FIN, and close stream for writing:
   // trailers are the last thing to be sent on a stream.
@@ -361,9 +361,13 @@ bool QuicSpdyStream::FinishedReadingHeaders() const {
          header_list_.empty();
 }
 
-bool QuicSpdyStream::ParseHeaderStatusCode(SpdyHeaderBlock* header,
+bool QuicSpdyStream::ParseHeaderStatusCode(const SpdyHeaderBlock& header,
                                            int* status_code) const {
-  StringPiece status = (*header)[":status"];
+  SpdyHeaderBlock::const_iterator it = header.find(":status");
+  if (it == header.end()) {
+    return false;
+  }
+  const StringPiece status(it->second);
   if (status.size() != 3) {
     return false;
   }

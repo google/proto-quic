@@ -261,9 +261,9 @@ void QuicSimpleClient::SendRequest(const HttpRequestInfo& headers,
   stream->SendRequest(std::move(header_block), body, fin);
   if (FLAGS_enable_quic_stateless_reject_support) {
     // Record this in case we need to resend.
-    auto new_headers = new HttpRequestInfo;
+    auto* new_headers = new HttpRequestInfo;
     *new_headers = headers;
-    auto data_to_resend =
+    auto* data_to_resend =
         new ClientQuicDataToResend(new_headers, body, fin, this);
     MaybeAddQuicDataToResend(data_to_resend);
   }

@@ -72,13 +72,13 @@ FileVersionInfo* FileVersionInfo::CreateFileVersionInfo(
 
   DWORD dummy;
   const wchar_t* path = file_path.value().c_str();
-  DWORD length = ::GetFileVersionInfoSize(path, &dummy);
+  const DWORD length = ::GetFileVersionInfoSize(path, &dummy);
   if (length == 0)
     return nullptr;
 
   std::vector<uint8_t> data(length, 0);
 
-  if (!::GetFileVersionInfo(path, dummy, data.size(), data.data()))
+  if (!::GetFileVersionInfo(path, dummy, length, data.data()))
     return nullptr;
 
   const LanguageAndCodePage* translate = GetTranslate(data.data());

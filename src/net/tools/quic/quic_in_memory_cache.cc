@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/quic_in_memory_cache.h"
 
+#include <utility>
+
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
 #include "base/stl_util.h"
@@ -80,18 +82,20 @@ class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
 
 }  // namespace
 
-QuicInMemoryCache::ServerPushInfo::ServerPushInfo(
-    GURL request_url,
-    const SpdyHeaderBlock& headers,
-    net::SpdyPriority priority,
-    string body)
+QuicInMemoryCache::ServerPushInfo::ServerPushInfo(GURL request_url,
+                                                  SpdyHeaderBlock headers,
+                                                  net::SpdyPriority priority,
+                                                  string body)
     : request_url(request_url),
-      headers(headers),
+      headers(std::move(headers)),
       priority(priority),
       body(body) {}
 
-QuicInMemoryCache::ServerPushInfo::ServerPushInfo(const ServerPushInfo& other) =
-    default;
+QuicInMemoryCache::ServerPushInfo::ServerPushInfo(const ServerPushInfo& other)
+    : request_url(other.request_url),
+      headers(other.headers.Clone()),
+      priority(other.priority),
+      body(other.body) {}
 
 QuicInMemoryCache::Response::Response() : response_type_(REGULAR_RESPONSE) {}
 
@@ -160,7 +164,7 @@ void QuicInMemoryCache::AddSimpleResponse(StringPiece host,
   response_headers[":status"] = IntToString(response_code);
   response_headers["content-length"] =
       IntToString(static_cast<int>(body.length()));
-  AddResponse(host, path, response_headers, body);
+  AddResponse(host, path, std::move(response_headers), body);
 }
 
 void QuicInMemoryCache::AddSimpleResponseWithServerPushResources(
@@ -179,19 +183,19 @@ void QuicInMemoryCache::AddDefaultResponse(Response* response) {
 
 void QuicInMemoryCache::AddResponse(StringPiece host,
                                     StringPiece path,
-                                    const SpdyHeaderBlock& response_headers,
+                                    SpdyHeaderBlock response_headers,
                                     StringPiece response_body) {
-  AddResponseImpl(host, path, REGULAR_RESPONSE, response_headers, response_body,
-                  SpdyHeaderBlock());
+  AddResponseImpl(host, path, REGULAR_RESPONSE, std::move(response_headers),
+                  response_body, SpdyHeaderBlock());
 }
 
 void QuicInMemoryCache::AddResponse(StringPiece host,
                                     StringPiece path,
-                                    const SpdyHeaderBlock& response_headers,
+                                    SpdyHeaderBlock response_headers,
                                     StringPiece response_body,
-                                    const SpdyHeaderBlock& response_trailers) {
-  AddResponseImpl(host, path, REGULAR_RESPONSE, response_headers, response_body,
-                  response_trailers);
+                                    SpdyHeaderBlock response_trailers) {
+  AddResponseImpl(host, path, REGULAR_RESPONSE, std::move(response_headers),
+                  response_body, std::move(response_trailers));
 }
 
 void QuicInMemoryCache::AddSpecialResponse(StringPiece host,
@@ -239,7 +243,7 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
     resource_file->Read();
 
     AddResponse(resource_file->host(), resource_file->path(),
-                resource_file->spdy_headers(), resource_file->body());
+                resource_file->spdy_headers().Clone(), resource_file->body());
 
     resource_files.push_back(std::move(resource_file));
   }
@@ -253,7 +257,7 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
         QUIC_BUG << "Push URL '" << push_url << "' not found.";
         return;
       }
-      push_resources.push_back(ServerPushInfo(url, response->headers(),
+      push_resources.push_back(ServerPushInfo(url, response->headers().Clone(),
                                               net::kV3LowestPriority,
                                               response->body().as_string()));
     }
@@ -278,13 +282,12 @@ QuicInMemoryCache::~QuicInMemoryCache() {
   STLDeleteValues(&responses_);
 }
 
-void QuicInMemoryCache::AddResponseImpl(
-    StringPiece host,
-    StringPiece path,
-    SpecialResponseType response_type,
-    const SpdyHeaderBlock& response_headers,
-    StringPiece response_body,
-    const SpdyHeaderBlock& response_trailers) {
+void QuicInMemoryCache::AddResponseImpl(StringPiece host,
+                                        StringPiece path,
+                                        SpecialResponseType response_type,
+                                        SpdyHeaderBlock response_headers,
+                                        StringPiece response_body,
+                                        SpdyHeaderBlock response_trailers) {
   DCHECK(!host.empty()) << "Host must be populated, e.g. \"www.google.com\"";
   string key = GetKey(host, path);
   if (ContainsKey(responses_, key)) {
@@ -293,9 +296,9 @@ void QuicInMemoryCache::AddResponseImpl(
   }
   Response* new_response = new Response();
   new_response->set_response_type(response_type);
-  new_response->set_headers(response_headers);
+  new_response->set_headers(std::move(response_headers));
   new_response->set_body(response_body);
-  new_response->set_trailers(response_trailers);
+  new_response->set_trailers(std::move(response_trailers));
   DVLOG(1) << "Add response with key " << key;
   responses_[key] = new_response;
 }
@@ -326,11 +329,10 @@ void QuicInMemoryCache::MaybeAddServerPushResources(
     string path = push_resource.request_url.path();
     if (responses_.find(GetKey(host, path)) == responses_.end()) {
       // Add a server push response to responses map, if it is not in the map.
-      SpdyHeaderBlock headers = push_resource.headers;
       StringPiece body = push_resource.body;
       DVLOG(1) << "Add response for push resource: host " << host << " path "
                << path;
-      AddResponse(host, path, headers, body);
+      AddResponse(host, path, push_resource.headers.Clone(), body);
     }
   }
 }

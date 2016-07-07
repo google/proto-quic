@@ -181,9 +181,8 @@ TEST_F(QuicConfigTest, MissingOptionalValuesInSHLO) {
 }
 
 TEST_F(QuicConfigTest, MissingValueInCHLO) {
+  // Server receives CHLO with missing kICSL.
   CryptoHandshakeMessage msg;
-  msg.SetValue(kICSL, 1);
-  // Missing kMSPC. KATO is optional.
   string error_details;
   const QuicErrorCode error =
       config_.ProcessPeerHello(msg, CLIENT, &error_details);
@@ -191,9 +190,8 @@ TEST_F(QuicConfigTest, MissingValueInCHLO) {
 }
 
 TEST_F(QuicConfigTest, MissingValueInSHLO) {
+  // Client receives SHLO with missing kICSL.
   CryptoHandshakeMessage msg;
-  msg.SetValue(kMSPC, 3);
-  // Missing ICSL. KATO is optional.
   string error_details;
   const QuicErrorCode error =
       config_.ProcessPeerHello(msg, SERVER, &error_details);

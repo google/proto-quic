@@ -4,116 +4,20 @@
 
 #include "base/trace_event/heap_profiler_allocation_register.h"
 
+#include <algorithm>
+
 #include "base/trace_event/trace_event_memory_overhead.h"
 
 namespace base {
 namespace trace_event {
 
-AllocationRegister::AllocationRegister()
-    : AllocationRegister(kNumBuckets * kNumCellsPerBucket) {}
-
-AllocationRegister::AllocationRegister(uint32_t num_cells)
-    // Reserve enough address space to store |num_cells_| entries if necessary,
-    // with a guard page after it to crash the program when attempting to store
-    // more entries.
-    : num_cells_(num_cells),
-      cells_(static_cast<Cell*>(AllocateVirtualMemory(num_cells_ *
-                                                      sizeof(Cell)))),
-      buckets_(static_cast<CellIndex*>(
-          AllocateVirtualMemory(kNumBuckets * sizeof(CellIndex)))),
-
-      // The free list is empty. The first unused cell is cell 1, because index
-      // 0 is used as list terminator.
-      free_list_(0),
-      next_unused_cell_(1) {}
-
-AllocationRegister::~AllocationRegister() {
-  FreeVirtualMemory(buckets_, kNumBuckets * sizeof(CellIndex));
-  FreeVirtualMemory(cells_, num_cells_ * sizeof(Cell));
-}
-
-void AllocationRegister::Insert(void* address,
-                                size_t size,
-                                AllocationContext context) {
-  DCHECK(address != nullptr);
-  if (size == 0)
-    return;
-
-  CellIndex* idx_ptr = Lookup(address);
-
-  // If the index is 0, the address is not yet present, so insert it.
-  if (*idx_ptr == 0) {
-    *idx_ptr = GetFreeCell();
-
-    // The address stored in a cell is const as long as it is exposed (via the
-    // iterators or |Get|), but because cells are re-used, a const cast is
-    // required to set it on insert and remove.
-    void* const& allocation_address = cells_[*idx_ptr].allocation.address;
-    const_cast<void*&>(allocation_address) = address;
-    cells_[*idx_ptr].next = 0;
-  }
-
-  cells_[*idx_ptr].allocation.size = size;
-  cells_[*idx_ptr].allocation.context = context;
-}
-
-void AllocationRegister::Remove(void* address) {
-  // Get a pointer to the index of the cell that stores |address|. The index can
-  // be an element of |buckets_| or the |next| member of a cell.
-  CellIndex* idx_ptr = Lookup(address);
-  CellIndex freed_idx = *idx_ptr;
-
-  // If the index is 0, the address was not there in the first place.
-  if (freed_idx == 0)
-    return;
-
-  // The cell at the index is now free, remove it from the linked list for
-  // |Hash(address)|.
-  Cell* freed_cell = &cells_[freed_idx];
-  *idx_ptr = freed_cell->next;
-
-  // Put the free cell at the front of the free list.
-  freed_cell->next = free_list_;
-  free_list_ = freed_idx;
-
-  // Reset the address, so that on iteration the free cell is ignored.
-  const_cast<void*&>(freed_cell->allocation.address) = nullptr;
-}
-
-AllocationRegister::Allocation* AllocationRegister::Get(void* address) {
-  CellIndex* idx_ptr = Lookup(address);
-
-  // If the index is 0, the address is not present in the table.
-  return *idx_ptr == 0 ? nullptr : &cells_[*idx_ptr].allocation;
-}
-
-AllocationRegister::ConstIterator AllocationRegister::begin() const {
-  // Initialize the iterator's index to 0. Cell 0 never stores an entry.
-  ConstIterator iterator(*this, 0);
-  // Incrementing will advance the iterator to the first used cell.
-  ++iterator;
-  return iterator;
-}
-
-AllocationRegister::ConstIterator AllocationRegister::end() const {
-  // Cell |next_unused_cell_ - 1| is the last cell that could contain an entry,
-  // so index |next_unused_cell_| is an iterator past the last element, in line
-  // with the STL iterator conventions.
-  return ConstIterator(*this, next_unused_cell_);
-}
-
 AllocationRegister::ConstIterator::ConstIterator(
-    const AllocationRegister& alloc_register,
-    CellIndex index)
-    : register_(alloc_register), index_(index) {}
+    const AllocationRegister& alloc_register, AllocationIndex index)
+    : register_(alloc_register),
+      index_(index) {}
 
 void AllocationRegister::ConstIterator::operator++() {
-  // Find the next cell with a non-null address until all cells that could
-  // possibly be used have been iterated. A null address indicates a free cell.
-  do {
-    index_++;
-  } while (index_ < register_.next_unused_cell_ &&
-           register_.cells_[index_].allocation.address == nullptr);
+  index_ = register_.allocations_.Next(index_ + 1);
 }
 
 bool AllocationRegister::ConstIterator::operator!=(
@@ -121,53 +25,38 @@ bool AllocationRegister::ConstIterator::operator!=(
   return index_ != other.index_;
 }
 
-const AllocationRegister::Allocation& AllocationRegister::ConstIterator::
-operator*() const {
-  return register_.cells_[index_].allocation;
+AllocationRegister::Allocation
+AllocationRegister::ConstIterator::operator*() const {
+  return register_.GetAllocation(index_);
 }
 
-AllocationRegister::CellIndex* AllocationRegister::Lookup(void* address) {
-  // The list head is in |buckets_| at the hash offset.
-  CellIndex* idx_ptr = &buckets_[Hash(address)];
+size_t AllocationRegister::BacktraceHasher::operator () (
+    const Backtrace& backtrace) const {
+  const size_t kSampleLength = 10;
 
-  // Chase down the list until the cell that holds |address| is found,
-  // or until the list ends.
-  while (*idx_ptr != 0 && cells_[*idx_ptr].allocation.address != address)
-    idx_ptr = &cells_[*idx_ptr].next;
+  uintptr_t total_value = 0;
 
-  return idx_ptr;
-}
-
-AllocationRegister::CellIndex AllocationRegister::GetFreeCell() {
-  // First try to re-use a cell from the freelist.
-  if (free_list_) {
-    CellIndex idx = free_list_;
-    free_list_ = cells_[idx].next;
-    return idx;
+  size_t head_end = std::min(backtrace.frame_count, kSampleLength);
+  for (size_t i = 0; i != head_end; ++i) {
+    total_value += reinterpret_cast<uintptr_t>(backtrace.frames[i].value);
   }
 
-  // Otherwise pick the next cell that has not been touched before.
-  CellIndex idx = next_unused_cell_;
-  next_unused_cell_++;
+  size_t tail_start = backtrace.frame_count -
+      std::min(backtrace.frame_count - head_end, kSampleLength);
+  for (size_t i = tail_start; i != backtrace.frame_count; ++i) {
+    total_value += reinterpret_cast<uintptr_t>(backtrace.frames[i].value);
+  }
 
-  // If the hash table has too little capacity (when too little address space
-  // was reserved for |cells_|), |next_unused_cell_| can be an index outside of
-  // the allocated storage. A guard page is allocated there to crash the
-  // program in that case. There are alternative solutions:
-  // - Deal with it, increase capacity by reallocating |cells_|.
-  // - Refuse to insert and let the caller deal with it.
-  // Because free cells are re-used before accessing fresh cells with a higher
-  // index, and because reserving address space without touching it is cheap,
-  // the simplest solution is to just allocate a humongous chunk of address
-  // space.
+  total_value += backtrace.frame_count;
 
-  DCHECK_LT(next_unused_cell_, num_cells_ + 1);
-
-  return idx;
+  // These magic constants give best results in terms of average collisions
+  // per backtrace. They were found by replaying real backtraces from Linux
+  // and Android against different hash functions.
+  return (total_value * 131101) >> 14;
 }
 
-// static
-uint32_t AllocationRegister::Hash(void* address) {
+size_t AllocationRegister::AddressHasher::operator () (
+    const void* address) const {
   // The multiplicative hashing scheme from [Knuth 1998]. The value of |a| has
   // been chosen carefully based on measurements with real-word data (addresses
   // recorded from a Chrome trace run). It is the first prime after 2^17. For
@@ -178,21 +67,113 @@ uint32_t AllocationRegister::Hash(void* address) {
   const uintptr_t a = 131101;
   const uintptr_t shift = 14;
   const uintptr_t h = (key * a) >> shift;
-  return static_cast<uint32_t>(h) & kNumBucketsMask;
+  return h;
+}
+
+AllocationRegister::AllocationRegister()
+    : AllocationRegister(kAllocationCapacity, kBacktraceCapacity) {}
+
+AllocationRegister::AllocationRegister(size_t allocation_capacity,
+                                       size_t backtrace_capacity)
+    : allocations_(allocation_capacity),
+      backtraces_(backtrace_capacity) {}
+
+AllocationRegister::~AllocationRegister() {
+}
+
+void AllocationRegister::Insert(const void* address,
+                                size_t size,
+                                const AllocationContext& context) {
+  DCHECK(address != nullptr);
+  if (size == 0) {
+    return;
+  }
+
+  AllocationInfo info = {
+      size,
+      context.type_name,
+      InsertBacktrace(context.backtrace)
+  };
+
+  // Try to insert the allocation.
+  auto index_and_flag = allocations_.Insert(address, info);
+  if (!index_and_flag.second) {
+    // |address| is already there - overwrite the allocation info.
+    auto& old_info = allocations_.Get(index_and_flag.first).second;
+    RemoveBacktrace(old_info.backtrace_index);
+    old_info = info;
+  }
+}
+
+void AllocationRegister::Remove(const void* address) {
+  auto index = allocations_.Find(address);
+  if (index == AllocationMap::kInvalidKVIndex) {
+    return;
+  }
+
+  const AllocationInfo& info = allocations_.Get(index).second;
+  RemoveBacktrace(info.backtrace_index);
+  allocations_.Remove(index);
+}
+
+bool AllocationRegister::Get(const void* address,
+                             Allocation* out_allocation) const {
+  auto index = allocations_.Find(address);
+  if (index == AllocationMap::kInvalidKVIndex) {
+    return false;
+  }
+
+  if (out_allocation) {
+    *out_allocation = GetAllocation(index);
+  }
+  return true;
+}
+
+AllocationRegister::ConstIterator AllocationRegister::begin() const {
+  return ConstIterator(*this, allocations_.Next(0));
+}
+
+AllocationRegister::ConstIterator AllocationRegister::end() const {
+  return ConstIterator(*this, AllocationMap::kInvalidKVIndex);
 }
 
 void AllocationRegister::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) const {
-  // Estimate memory overhead by counting all of the cells that have ever been
-  // touched. Don't report mmapped memory as allocated, because it has not been
-  // allocated by malloc.
   size_t allocated = sizeof(AllocationRegister);
   size_t resident = sizeof(AllocationRegister)
-                    // Include size of touched cells (size of |*cells_|).
-                    + sizeof(Cell) * next_unused_cell_
-                    // Size of |*buckets_|.
-                    + sizeof(CellIndex) * kNumBuckets;
+                    + allocations_.EstimateUsedMemory()
+                    + backtraces_.EstimateUsedMemory();
   overhead->Add("AllocationRegister", allocated, resident);
+}
+
+AllocationRegister::BacktraceMap::KVIndex AllocationRegister::InsertBacktrace(
+    const Backtrace& backtrace) {
+  auto index = backtraces_.Insert(backtrace, 0).first;
+  auto& backtrace_and_count = backtraces_.Get(index);
+  backtrace_and_count.second++;
+  return index;
+}
+
+void AllocationRegister::RemoveBacktrace(BacktraceMap::KVIndex index) {
+  auto& backtrace_and_count = backtraces_.Get(index);
+  if (--backtrace_and_count.second == 0) {
+    // Backtrace is not referenced anymore - remove it.
+    backtraces_.Remove(index);
+  }
+}
+
+AllocationRegister::Allocation AllocationRegister::GetAllocation(
+    AllocationMap::KVIndex index) const {
+  const auto& address_and_info = allocations_.Get(index);
+  const auto& backtrace_and_count = backtraces_.Get(
+      address_and_info.second.backtrace_index);
+  return {
+      address_and_info.first,
+      address_and_info.second.size,
+      AllocationContext(
+          backtrace_and_count.first,
+          address_and_info.second.type_name)
+  };
 }
 
 }  // namespace trace_event

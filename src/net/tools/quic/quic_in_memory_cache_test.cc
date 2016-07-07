@@ -90,8 +90,8 @@ TEST_F(QuicInMemoryCacheTest, AddResponse) {
   response_trailers["key-3"] = "value-3";
 
   QuicInMemoryCache* cache = QuicInMemoryCache::GetInstance();
-  cache->AddResponse(kRequestHost, "/", response_headers, kResponseBody,
-                     response_trailers);
+  cache->AddResponse(kRequestHost, "/", response_headers.Clone(), kResponseBody,
+                     response_trailers.Clone());
 
   const QuicInMemoryCache::Response* response =
       cache->GetResponse(kRequestHost, kRequestPath);
@@ -158,7 +158,7 @@ TEST_F(QuicInMemoryCacheTest, DefaultResponse) {
   response_headers["content-length"] = "0";
   QuicInMemoryCache::Response* default_response =
       new QuicInMemoryCache::Response;
-  default_response->set_headers(response_headers);
+  default_response->set_headers(std::move(response_headers));
   cache->AddDefaultResponse(default_response);
 
   // Now we should get the default response for the original request.
@@ -198,7 +198,7 @@ TEST_F(QuicInMemoryCacheTest, AddSimpleResponseWithServerPushResources) {
     response_headers[":status"] = "200";
     response_headers["content-length"] = base::UintToString(body.size());
     push_resources.push_back(
-        ServerPushInfo(resource_url, response_headers, i, body));
+        ServerPushInfo(resource_url, response_headers.Clone(), i, body));
   }
 
   QuicInMemoryCache* cache = QuicInMemoryCache::GetInstance();
@@ -233,7 +233,7 @@ TEST_F(QuicInMemoryCacheTest, GetServerPushResourcesAndPushResponses) {
     response_headers[":status"] = push_response_status[i];
     response_headers["content-length"] = base::UintToString(body.size());
     push_resources.push_back(
-        ServerPushInfo(resource_url, response_headers, i, body));
+        ServerPushInfo(resource_url, response_headers.Clone(), i, body));
   }
   QuicInMemoryCache* cache = QuicInMemoryCache::GetInstance();
   cache->AddSimpleResponseWithServerPushResources(

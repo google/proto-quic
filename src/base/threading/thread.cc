@@ -7,6 +7,7 @@
 #include "base/bind.h"
 #include "base/lazy_instance.h"
 #include "base/location.h"
+#include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/threading/thread_id_name_manager.h"
@@ -201,7 +202,7 @@ bool Thread::IsRunning() const {
 }
 
 void Thread::Run(MessageLoop* message_loop) {
-  message_loop->Run();
+  RunLoop().Run();
 }
 
 void Thread::SetThreadWasQuitProperly(bool flag) {

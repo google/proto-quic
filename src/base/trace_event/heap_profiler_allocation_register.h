@@ -8,77 +8,288 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <utility>
+
+#include "base/bits.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/process/process_metrics.h"
+#include "base/template_util.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 
 namespace base {
 namespace trace_event {
 
+class AllocationRegisterTest;
+
+namespace internal {
+
+// Allocates a region of virtual address space of |size| rounded up to the
+// system page size. The memory is zeroed by the system. A guard page is
+// added after the end.
+void* AllocateGuardedVirtualMemory(size_t size);
+
+// Frees a region of virtual address space allocated by a call to
+// |AllocateVirtualMemory|.
+void FreeGuardedVirtualMemory(void* address, size_t allocated_size);
+
+// Hash map that mmaps memory only once in the constructor. Its API is
+// similar to std::unordered_map, only index (KVIndex) is used to address
+template <size_t NumBuckets, class Key, class Value, class KeyHasher>
+class FixedHashMap {
+  // To keep things simple we don't call destructors.
+  static_assert(is_trivially_destructible<Key>::value &&
+                    is_trivially_destructible<Value>::value,
+                "Key and Value shouldn't have destructors");
+ public:
+  using KVPair = std::pair<const Key, Value>;
+
+  // For implementation simplicity API uses integer index instead
+  // of iterators. Most operations (except FindValidIndex) on KVIndex
+  // are O(1).
+  using KVIndex = size_t;
+  static const KVIndex kInvalidKVIndex = static_cast<KVIndex>(-1);
+
+  // Capacity controls how many items this hash map can hold, and largely
+  // affects memory footprint.
+  FixedHashMap(size_t capacity)
+    : num_cells_(capacity),
+      cells_(static_cast<Cell*>(
+          AllocateGuardedVirtualMemory(num_cells_ * sizeof(Cell)))),
+      buckets_(static_cast<Bucket*>(
+          AllocateGuardedVirtualMemory(NumBuckets * sizeof(Bucket)))),
+      free_list_(nullptr),
+      next_unused_cell_(0) {}
+
+  ~FixedHashMap() {
+    FreeGuardedVirtualMemory(cells_, num_cells_ * sizeof(Cell));
+    FreeGuardedVirtualMemory(buckets_, NumBuckets * sizeof(Bucket));
+  }
+
+  std::pair<KVIndex, bool> Insert(const Key& key, const Value& value) {
+    Cell** p_cell = Lookup(key);
+    Cell* cell = *p_cell;
+    if (cell) {
+      return {static_cast<KVIndex>(cell - cells_), false};  // not inserted
+    }
+
+    // Get a free cell and link it.
+    *p_cell = cell = GetFreeCell();
+    cell->p_prev = p_cell;
+    cell->next = nullptr;
+
+    // Initialize key/value pair. Since key is 'const Key' this is the
+    // only way to initialize it.
+    new (&cell->kv) KVPair(key, value);
+
+    return {static_cast<KVIndex>(cell - cells_), true};  // inserted
+  }
+
+  void Remove(KVIndex index) {
+    DCHECK_LT(index, next_unused_cell_);
+
+    Cell* cell = &cells_[index];
+
+    // Unlink the cell.
+    *cell->p_prev = cell->next;
+    if (cell->next) {
+      cell->next->p_prev = cell->p_prev;
+    }
+    cell->p_prev = nullptr;  // mark as free
+
+    // Add it to the free list.
+    cell->next = free_list_;
+    free_list_ = cell;
+  }
+
+  KVIndex Find(const Key& key) const {
+    Cell* cell = *Lookup(key);
+    return cell ? static_cast<KVIndex>(cell - cells_) : kInvalidKVIndex;
+  }
+
+  KVPair& Get(KVIndex index) {
+    return cells_[index].kv;
+  }
+
+  const KVPair& Get(KVIndex index) const {
+    return cells_[index].kv;
+  }
+
+  // Finds next index that has a KVPair associated with it. Search starts
+  // with the specified index. Returns kInvalidKVIndex if nothing was found.
+  // To find the first valid index, call this function with 0. Continue
+  // calling with the last_index + 1 until kInvalidKVIndex is returned.
+  KVIndex Next(KVIndex index) const {
+    for (;index < next_unused_cell_; ++index) {
+      if (cells_[index].p_prev) {
+        return index;
+      }
+    }
+    return kInvalidKVIndex;
+  }
+
+  // Estimates number of bytes used in allocated memory regions.
+  size_t EstimateUsedMemory() const {
+    size_t page_size = base::GetPageSize();
+    // |next_unused_cell_| is the first cell that wasn't touched, i.e.
+    // it's the number of touched cells.
+    return bits::Align(sizeof(Cell) * next_unused_cell_, page_size) +
+           bits::Align(sizeof(Bucket) * NumBuckets, page_size);
+  }
+
+ private:
+  friend base::trace_event::AllocationRegisterTest;
+
+  struct Cell {
+    KVPair kv;
+    Cell* next;
+
+    // Conceptually this is |prev| in a doubly linked list. However, buckets
+    // also participate in the bucket's cell list - they point to the list's
+    // head and also need to be linked / unlinked properly. To treat these two
+    // cases uniformly, instead of |prev| we're storing "pointer to a Cell*
+    // that points to this Cell" kind of thing. So |p_prev| points to a bucket
+    // for the first cell in a list, and points to |next| of the previous cell
+    // for any other cell. With that Lookup() is the only function that handles
+    // buckets / cells differently.
+    // If |p_prev| is nullptr, the cell is in the free list.
+    Cell** p_prev;
+  };
+
+  using Bucket = Cell*;
+
+  // Returns a pointer to the cell that contains or should contain the entry
+  // for |key|. The pointer may point at an element of |buckets_| or at the
+  // |next| member of an element of |cells_|.
+  Cell** Lookup(const Key& key) const {
+    // The list head is in |buckets_| at the hash offset.
+    Cell** p_cell = &buckets_[Hash(key)];
+
+    // Chase down the list until the cell that holds |key| is found,
+    // or until the list ends.
+    while (*p_cell && (*p_cell)->kv.first != key) {
+      p_cell = &(*p_cell)->next;
+    }
+
+    return p_cell;
+  }
+
+  // Returns a cell that is not being used to store an entry (either by
+  // recycling from the free list or by taking a fresh cell).
+  Cell* GetFreeCell() {
+    // First try to re-use a cell from the free list.
+    if (free_list_) {
+      Cell* cell = free_list_;
+      free_list_ = cell->next;
+      return cell;
+    }
+
+    // Otherwise pick the next cell that has not been touched before.
+    size_t idx = next_unused_cell_;
+    next_unused_cell_++;
+
+    // If the hash table has too little capacity (when too little address space
+    // was reserved for |cells_|), |next_unused_cell_| can be an index outside
+    // of the allocated storage. A guard page is allocated there to crash the
+    // program in that case. There are alternative solutions:
+    // - Deal with it, increase capacity by reallocating |cells_|.
+    // - Refuse to insert and let the caller deal with it.
+    // Because free cells are re-used before accessing fresh cells with a higher
+    // index, and because reserving address space without touching it is cheap,
+    // the simplest solution is to just allocate a humongous chunk of address
+    // space.
+
+    DCHECK_LT(next_unused_cell_, num_cells_ + 1);
+
+    return &cells_[idx];
+  }
+
+  // Returns a value in the range [0, NumBuckets - 1] (inclusive).
+  size_t Hash(const Key& key) const {
+    if (NumBuckets == (NumBuckets & ~(NumBuckets - 1))) {
+      // NumBuckets is a power of 2.
+      return KeyHasher()(key) & (NumBuckets - 1);
+    } else {
+      return KeyHasher()(key) % NumBuckets;
+    }
+  }
+
+  // Number of cells.
+  size_t const num_cells_;
+
+  // The array of cells. This array is backed by mmapped memory. Lower indices
+  // are accessed first, higher indices are accessed only when the |free_list_|
+  // is empty. This is to minimize the amount of resident memory used.
+  Cell* const cells_;
+
+  // The array of buckets (pointers into |cells_|). |buckets_[Hash(key)]| will
+  // contain the pointer to the linked list of cells for |Hash(key)|.
+  // This array is backed by mmapped memory.
+  mutable Bucket* buckets_;
+
+  // The head of the free list.
+  Cell* free_list_;
+
+  // The index of the first element of |cells_| that has not been used before.
+  // If the free list is empty and a new cell is needed, the cell at this index
+  // is used. This is the high water mark for the number of entries stored.
+  size_t next_unused_cell_;
+
+  DISALLOW_COPY_AND_ASSIGN(FixedHashMap);
+};
+
+}  // namespace internal
+
 class TraceEventMemoryOverhead;
 
 // The allocation register keeps track of all allocations that have not been
-// freed. It is a memory map-backed hash table that stores size and context
-// indexed by address. The hash table is tailored specifically for this use
-// case. The common case is that an entry is inserted and removed after a
-// while, lookup without modifying the table is not an intended use case. The
-// hash table is implemented as an array of linked lists. The size of this
-// array is fixed, but it does not limit the amount of entries that can be
-// stored.
-//
-// Replaying a recording of Chrome's allocations and frees against this hash
-// table takes about 15% of the time that it takes to replay them against
-// |std::map|.
+// freed. Internally it has two hashtables: one for Backtraces and one for
+// actual allocations. Sizes of both hashtables are fixed, and this class
+// allocates (mmaps) only in its constructor.
 class BASE_EXPORT AllocationRegister {
  public:
-  // The data stored in the hash table;
-  // contains the details about an allocation.
+  // Details about an allocation.
   struct Allocation {
-    void* const address;
+    const void* address;
     size_t size;
     AllocationContext context;
   };
 
-  // An iterator that iterates entries in the hash table efficiently, but in no
-  // particular order. It can do this by iterating the cells and ignoring the
-  // linked lists altogether. Instead of checking whether a cell is in the free
-  // list to see if it should be skipped, a null address is used to indicate
-  // that a cell is free.
+  // An iterator that iterates entries in no particular order.
   class BASE_EXPORT ConstIterator {
    public:
     void operator++();
     bool operator!=(const ConstIterator& other) const;
-    const Allocation& operator*() const;
+    Allocation operator*() const;
 
    private:
     friend class AllocationRegister;
-    using CellIndex = uint32_t;
+    using AllocationIndex = size_t;
 
-    ConstIterator(const AllocationRegister& alloc_register, CellIndex index);
+    ConstIterator(const AllocationRegister& alloc_register,
+                  AllocationIndex index);
 
     const AllocationRegister& register_;
-    CellIndex index_;
+    AllocationIndex index_;
   };
 
   AllocationRegister();
-  explicit AllocationRegister(uint32_t num_cells);
+  AllocationRegister(size_t allocation_capacity, size_t backtrace_capacity);
 
   ~AllocationRegister();
 
   // Inserts allocation details into the table. If the address was present
-  // already, its details are updated. |address| must not be null. (This is
-  // because null is used to mark free cells, to allow efficient iteration of
-  // the hash table.)
-  void Insert(void* address, size_t size, AllocationContext context);
+  // already, its details are updated. |address| must not be null.
+  void Insert(const void* address,
+              size_t size,
+              const AllocationContext& context);
 
   // Removes the address from the table if it is present. It is ok to call this
   // with a null pointer.
-  void Remove(void* address);
+  void Remove(const void* address);
 
-  // Returns a pointer to the allocation at the address, or null if there is no
-  // allocation at that address. This can be used to change the allocation
-  // context after insertion, for example to change the type name.
-  Allocation* Get(void* address);
+  // Finds allocation for the address and fills |out_allocation|.
+  bool Get(const void* address, Allocation* out_allocation) const;
 
   ConstIterator begin() const;
   ConstIterator end() const;
@@ -87,85 +298,54 @@ class BASE_EXPORT AllocationRegister {
   void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) const;
 
  private:
-  friend class AllocationRegisterTest;
-  using CellIndex = uint32_t;
+  friend AllocationRegisterTest;
 
-  // A cell can store allocation details (size and context) by address. Cells
-  // are part of a linked list via the |next| member. This list is either the
-  // list for a particular hash, or the free list. All cells are contiguous in
-  // memory in one big array. Therefore, on 64-bit systems, space can be saved
-  // by storing 32-bit indices instead of pointers as links. Index 0 is used as
-  // the list terminator.
-  struct Cell {
-    CellIndex next;
-    Allocation allocation;
+  // Expect max 1.5M allocations. Number of buckets is 2^18 for optimal
+  // hashing and should be changed together with AddressHasher.
+  static const size_t kAllocationBuckets = 1 << 18;
+  static const size_t kAllocationCapacity = 1500000;
+
+  // Expect max 2^15 unique backtraces. Can be changed to 2^16 without
+  // needing to tweak BacktraceHasher implementation.
+  static const size_t kBacktraceBuckets = 1 << 15;
+  static const size_t kBacktraceCapacity = kBacktraceBuckets;
+
+  struct BacktraceHasher {
+    size_t operator () (const Backtrace& backtrace) const;
   };
 
-  // The number of buckets, 2^17, approximately 130 000, has been tuned for
-  // Chrome's typical number of outstanding allocations. (This number varies
-  // between processes. Most processes have a sustained load of ~30k unfreed
-  // allocations, but some processes have peeks around 100k-400k allocations.)
-  // Because of the size of the table, it is likely that every |buckets_|
-  // access and every |cells_| access will incur a cache miss. Microbenchmarks
-  // suggest that it is worthwile to use more memory for the table to avoid
-  // chasing down the linked list, until the size is 2^18. The number of buckets
-  // is a power of two so modular indexing can be done with bitwise and.
-  static const uint32_t kNumBuckets = 0x20000;
-  static const uint32_t kNumBucketsMask = kNumBuckets - 1;
+  using BacktraceMap = internal::FixedHashMap<
+      kBacktraceBuckets,
+      Backtrace,
+      size_t, // Number of references to the backtrace (the key). Incremented
+              // when an allocation that references the backtrace is inserted,
+              // and decremented when the allocation is removed. When the
+              // number drops to zero, the backtrace is removed from the map.
+      BacktraceHasher>;
 
-  // Reserve address space to store at most this number of entries. High
-  // capacity does not imply high memory usage due to the access pattern. The
-  // only constraint on the number of cells is that on 32-bit systems address
-  // space is scarce (i.e. reserving 2GiB of address space for the entries is
-  // not an option). A value of ~3M entries is large enough to handle spikes in
-  // the number of allocations, and modest enough to require no more than a few
-  // dozens of MiB of address space.
-  static const uint32_t kNumCellsPerBucket = 10;
+  struct AllocationInfo {
+    size_t size;
+    const char* type_name;
+    BacktraceMap::KVIndex backtrace_index;
+  };
 
-  // Returns a value in the range [0, kNumBuckets - 1] (inclusive).
-  static uint32_t Hash(void* address);
+  struct AddressHasher {
+    size_t operator () (const void* address) const;
+  };
 
-  // Allocates a region of virtual address space of |size| rounded up to the
-  // system page size. The memory is zeroed by the system. A guard page is
-  // added after the end.
-  static void* AllocateVirtualMemory(size_t size);
+  using AllocationMap = internal::FixedHashMap<
+      kAllocationBuckets,
+      const void*,
+      AllocationInfo,
+      AddressHasher>;
 
-  // Frees a region of virtual address space allocated by a call to
-  // |AllocateVirtualMemory|.
-  static void FreeVirtualMemory(void* address, size_t allocated_size);
+  BacktraceMap::KVIndex InsertBacktrace(const Backtrace& backtrace);
+  void RemoveBacktrace(BacktraceMap::KVIndex index);
 
-  // Returns a pointer to the variable that contains or should contain the
-  // index of the cell that stores the entry for |address|. The pointer may
-  // point at an element of |buckets_| or at the |next| member of an element of
-  // |cells_|. If the value pointed at is 0, |address| is not in the table.
-  CellIndex* Lookup(void* address);
+  Allocation GetAllocation(AllocationMap::KVIndex) const;
 
-  // Takes a cell that is not being used to store an entry (either by recycling
-  // from the free list or by taking a fresh cell) and returns its index.
-  CellIndex GetFreeCell();
-
-  // The maximum number of cells which can be allocated.
-  uint32_t const num_cells_;
-
-  // The array of cells. This array is backed by mmapped memory. Lower indices
-  // are accessed first, higher indices are only accessed when required. In
-  // this way, even if a huge amount of address space has been mmapped, only
-  // the cells that are actually used will be backed by physical memory.
-  Cell* const cells_;
-
-  // The array of indices into |cells_|. |buckets_[Hash(address)]| will contain
-  // the index of the head of the linked list for |Hash(address)|. A value of 0
-  // indicates an empty list. This array is backed by mmapped memory.
-  CellIndex* const buckets_;
-
-  // The head of the free list. This is the index of the cell. A value of 0
-  // means that the free list is empty.
-  CellIndex free_list_;
-
-  // The index of the first element of |cells_| that has not been used before.
-  // If the free list is empty and a new cell is needed, the cell at this index
-  // is used. This is the high water mark for the number of entries stored.
-  CellIndex next_unused_cell_;
+  AllocationMap allocations_;
+  BacktraceMap backtraces_;
 
   DISALLOW_COPY_AND_ASSIGN(AllocationRegister);
 };

@@ -707,11 +707,7 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
     HttpStreamRequest::StreamType stream_type) {
   GURL original_url = request_info.url;
 
-  if (original_url.SchemeIs("ftp"))
-    return AlternativeService();
-
-  if (!session_->params().enable_alternative_service_for_insecure_origins &&
-      !original_url.SchemeIs("https"))
+  if (!original_url.SchemeIs("https"))
     return AlternativeService();
 
   url::SchemeHostPort origin(original_url);

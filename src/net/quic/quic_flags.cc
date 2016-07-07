@@ -46,7 +46,7 @@ bool FLAGS_quic_enable_multipath = false;
 bool FLAGS_quic_require_handshake_confirmation = false;
 
 // If true, Cubic's epoch is shifted when the sender is application-limited.
-bool FLAGS_shift_quic_cubic_epoch_when_app_limited = false;
+bool FLAGS_shift_quic_cubic_epoch_when_app_limited = true;
 
 // If true, QUIC will measure head of line (HOL) blocking due between
 // streams due to packet losses on the headers stream.  The
@@ -69,12 +69,6 @@ bool FLAGS_quic_supports_push_promise = true;
 // If true, make sure new incoming streams correctly cede to higher
 // priority (or batch) streams when doing QUIC writes.
 bool FLAGS_quic_cede_correctly = true;
-
-// If true, QUIC should correctly report if it supports ChaCha20. Otherwise,
-// QUIC will lie and claim that it does not support ChaCha20. The primary use
-// case for this is places where ChaCha20 is prohibitively expensive compared to
-// AES-GCM.
-bool FLAGS_quic_crypto_server_config_default_has_chacha20 = true;
 
 // Resend 0RTT requests in response to an REJ that re-establishes encryption.
 bool FLAGS_quic_reply_to_rej = true;
@@ -105,10 +99,6 @@ bool FLAGS_quic_only_one_sending_alarm = false;
 // an SCUP message.
 bool FLAGS_quic_use_hash_in_scup = true;
 
-// If true, consider receiving crypto frame on non crypto stream as memory
-// corruption.
-bool FLAGS_quic_detect_memory_corrpution = true;
-
 // If true, QUIC public reset packets will have the \"pre-v33\" public header
 // flags.
 bool FLAGS_quic_use_old_public_reset_packets = true;
@@ -120,9 +110,6 @@ bool FLAGS_quic_ignore_srbf = true;
 // Allow the NPRR connection option which reduces QUIC\'s pacing rate during
 // recovery instead of PRR.
 bool FLAGS_quic_allow_noprr = true;
-
-// If true, multi-packet CHLOs are explicitly disallowed.
-bool FLAGS_quic_disallow_multi_packet_chlo = true;
 
 // Use a write path optimized for StreamFrames.
 bool FLAGS_quic_use_optimized_write_path = true;
@@ -159,7 +146,21 @@ bool FLAGS_quic_socket_walltimestamps = false;
 // If true, default to immediate forward secure once established on the
 // server side, and the IPFS connection option disables this instead of
 // enabling it.
-bool FLAGS_quic_default_immediate_forward_secure = false;
+bool FLAGS_quic_default_immediate_forward_secure = true;
 
 // If true, disables support for QUIC version 29 and earlier.
 bool FLAGS_quic_disable_pre_30 = false;
+
+// If true, QUIC respect HTTP2 SETTINGS frame rather than always close the
+// connection.
+bool FLAGS_quic_respect_http2_settings_frame = true;
+
+// Do not use a QuicAckListener in order to confirm a larger Path MTU.
+bool FLAGS_quic_no_mtu_discovery_ack_listener = false;
+
+// Deprecate QuicPacketCreator::next_packet_number_length_ because it's no
+// longer necessary.
+bool FLAGS_quic_simple_packet_number_length = false;
+
+// If true, enables QUIC_VERSION_35.
+bool FLAGS_quic_enable_version_35 = false;

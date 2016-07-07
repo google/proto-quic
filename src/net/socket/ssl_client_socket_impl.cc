@@ -17,6 +17,7 @@
 
 #include "base/bind.h"
 #include "base/callback_helpers.h"
+#include "base/feature_list.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
@@ -83,6 +84,11 @@ const uint8_t kTbProtocolVersionMajor = 0;
 const uint8_t kTbProtocolVersionMinor = 6;
 const uint8_t kTbMinProtocolVersionMajor = 0;
 const uint8_t kTbMinProtocolVersionMinor = 6;
+
+#if !defined(OS_NACL)
+const base::Feature kPostQuantumExperiment{"SSLPostQuantumExperiment",
+                                           base::FEATURE_DISABLED_BY_DEFAULT};
+#endif
 
 bool EVP_MDToPrivateKeyHash(const EVP_MD* md, SSLPrivateKey::Hash* hash) {
   switch (EVP_MD_type(md)) {
@@ -966,8 +972,29 @@ int SSLClientSocketImpl::Init() {
   // DHE_RSA_WITH_AES_256_GCM_SHA384. Historically, AES_256_GCM was not
   // supported. As DHE is being deprecated, don't add a cipher only to remove it
   // immediately.
-  std::string command(
-      "DEFAULT:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
+  std::string command;
+#if !defined(OS_NACL)
+  if (base::FeatureList::IsEnabled(kPostQuantumExperiment)) {
+    // These are experimental, non-standard ciphersuites.  They are part of an
+    // experiment in post-quantum cryptography.  They're not intended to
+    // represent a de-facto standard, and will be removed from BoringSSL in
+    // ~2018.
+    if (EVP_has_aes_hardware()) {
+      command.append(
+          "CECPQ1-RSA-AES256-GCM-SHA384:"
+          "CECPQ1-ECDSA-AES256-GCM-SHA384:");
+    }
+    command.append(
+        "CECPQ1-RSA-CHACHA20-POLY1305-SHA256:"
+        "CECPQ1-ECDSA-CHACHA20-POLY1305-SHA256:");
+    if (!EVP_has_aes_hardware()) {
+      command.append(
+          "CECPQ1-RSA-AES256-GCM-SHA384:"
+          "CECPQ1-ECDSA-AES256-GCM-SHA384:");
+    }
+  }
+#endif
+  command.append("ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");

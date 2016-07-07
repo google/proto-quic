@@ -30,6 +30,10 @@
 #include "net/base/network_interfaces_posix.h"
 #include "url/gurl.h"
 
+#if defined(OS_ANDROID)
+#include "net/android/network_library.h"
+#endif
+
 namespace net {
 
 namespace {
@@ -212,6 +216,10 @@ bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
 }
 
 std::string GetWifiSSID() {
+// On Android, obtain the SSID using the Android-specific APIs.
+#if defined(OS_ANDROID)
+  return android::GetWifiSSID();
+#endif
   NetworkInterfaceList networks;
   if (GetNetworkList(&networks, INCLUDE_HOST_SCOPE_VIRTUAL_INTERFACES)) {
     return internal::GetWifiSSIDFromInterfaceListInternal(

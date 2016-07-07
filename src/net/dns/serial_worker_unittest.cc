@@ -58,7 +58,7 @@ class SerialWorkerTest : public testing::Test {
   }
 
   void OnWorkFinished() {
-    EXPECT_TRUE(message_loop_ == base::MessageLoop::current());
+    EXPECT_TRUE(message_loop_->task_runner()->BelongsToCurrentThread());
     EXPECT_EQ(output_value_, input_value_);
     BreakNow("OnWorkFinished");
   }

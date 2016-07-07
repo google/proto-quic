@@ -5,6 +5,7 @@
 #include "net/quic/quic_session.h"
 
 #include <set>
+#include <utility>
 
 #include "base/rand_util.h"
 #include "base/stl_util.h"
@@ -19,6 +20,7 @@
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
+#include "net/quic/test_tools/quic_headers_stream_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_stream_peer.h"
@@ -815,12 +817,12 @@ TEST_P(QuicSessionTestServer,
     headers["header"] = base::Uint64ToString(base::RandUint64()) +
                         base::Uint64ToString(base::RandUint64()) +
                         base::Uint64ToString(base::RandUint64());
-    headers_stream->WriteHeaders(stream_id, headers, true, 0, nullptr);
+    headers_stream->WriteHeaders(stream_id, headers.Clone(), true, 0, nullptr);
     stream_id += 2;
   }
   // Write once more to ensure that the headers stream has buffered data. The
   // random headers may have exactly filled the flow control window.
-  headers_stream->WriteHeaders(stream_id, headers, true, 0, nullptr);
+  headers_stream->WriteHeaders(stream_id, std::move(headers), true, 0, nullptr);
   EXPECT_TRUE(headers_stream->HasBufferedData());
 
   EXPECT_TRUE(headers_stream->flow_controller()->IsBlocked());
@@ -1179,6 +1181,18 @@ TEST_P(QuicSessionTestClient, TestMaxIncomingAndOutgoingStreamsAllowed) {
             session_.max_open_incoming_streams());
   EXPECT_EQ(session_.max_open_outgoing_streams(),
             kDefaultMaxStreamsPerConnection);
+}
+
+TEST_P(QuicSessionTestClient, EnableDHDTThroughConnectionOption) {
+  FLAGS_quic_disable_hpack_dynamic_table = true;
+
+  QuicTagVector copt;
+  copt.push_back(kDHDT);
+  QuicConfigPeer::SetConnectionOptionsToSend(session_.config(), copt);
+  session_.OnConfigNegotiated();
+  EXPECT_EQ(QuicHeadersStreamPeer::GetSpdyFramer(session_.headers_stream())
+                .header_encoder_table_size(),
+            0UL);
 }
 
 }  // namespace

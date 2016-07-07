@@ -178,7 +178,7 @@ class BASE_EXPORT MessagePumpForGpu : public MessagePumpWin {
   void WaitForWork();
   bool ProcessNextMessage();
 
-  const HANDLE event_;
+  win::ScopedHandle event_;
 
   // Used to help diagnose hangs.
   // TODO(stanisc): crbug.com/596190: Remove these once the bug is fixed.

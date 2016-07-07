@@ -812,6 +812,10 @@ void GlobalHistogramAllocator::SetPersistentLocation(const FilePath& location) {
   persistent_location_ = location;
 }
 
+const FilePath& GlobalHistogramAllocator::GetPersistentLocation() const {
+  return persistent_location_;
+}
+
 bool GlobalHistogramAllocator::WriteToPersistentLocation() {
 #if defined(OS_NACL)
   // NACL doesn't support file operations, including ImportantFileWriter.

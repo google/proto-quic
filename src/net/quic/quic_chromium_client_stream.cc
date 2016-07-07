@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/bind_helpers.h"
 #include "base/callback_helpers.h"
 #include "base/location.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -42,7 +43,8 @@ void QuicChromiumClientStream::OnStreamHeadersComplete(bool fin,
   if (decompressed_headers().empty() && !decompressed_trailers().empty()) {
     DCHECK(trailers_decompressed());
     // The delegate will read the trailers via a posted task.
-    NotifyDelegateOfHeadersCompleteLater(received_trailers(), frame_len);
+    NotifyDelegateOfHeadersCompleteLater(received_trailers().Clone(),
+                                         frame_len);
   } else {
     DCHECK(!headers_delivered_);
     SpdyHeaderBlock headers;
@@ -58,7 +60,7 @@ void QuicChromiumClientStream::OnStreamHeadersComplete(bool fin,
     session_->OnInitialHeadersComplete(id(), headers);
 
     // The delegate will read the headers via a posted task.
-    NotifyDelegateOfHeadersCompleteLater(headers, frame_len);
+    NotifyDelegateOfHeadersCompleteLater(std::move(headers), frame_len);
   }
 }
 
@@ -81,7 +83,7 @@ void QuicChromiumClientStream::OnInitialHeadersComplete(
   session_->OnInitialHeadersComplete(id(), header_block);
 
   // The delegate will read the headers via a posted task.
-  NotifyDelegateOfHeadersCompleteLater(header_block, frame_len);
+  NotifyDelegateOfHeadersCompleteLater(std::move(header_block), frame_len);
 }
 
 void QuicChromiumClientStream::OnTrailingHeadersComplete(
@@ -89,7 +91,7 @@ void QuicChromiumClientStream::OnTrailingHeadersComplete(
     size_t frame_len,
     const QuicHeaderList& header_list) {
   QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len, header_list);
-  NotifyDelegateOfHeadersCompleteLater(received_trailers(), frame_len);
+  NotifyDelegateOfHeadersCompleteLater(received_trailers().Clone(), frame_len);
 }
 
 void QuicChromiumClientStream::OnPromiseHeadersComplete(
@@ -107,6 +109,24 @@ void QuicChromiumClientStream::OnPromiseHeadersComplete(
   MarkHeadersConsumed(headers_len);
 
   session_->HandlePromised(id(), promised_id, headers);
+}
+
+void QuicChromiumClientStream::OnPromiseHeaderList(
+    QuicStreamId promised_id,
+    size_t frame_len,
+    const QuicHeaderList& header_list) {
+  SpdyHeaderBlock promise_headers;
+  int64_t content_length = -1;
+  if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length,
+                                         &promise_headers)) {
+    DLOG(ERROR) << "Failed to parse header list: " << header_list.DebugString();
+    ConsumeHeaderList();
+    Reset(QUIC_BAD_APPLICATION_PAYLOAD);
+    return;
+  }
+  ConsumeHeaderList();
+
+  session_->HandlePromised(id(), promised_id, promise_headers);
 }
 
 void QuicChromiumClientStream::OnDataAvailable() {
@@ -245,11 +265,11 @@ bool QuicChromiumClientStream::CanWrite(const CompletionCallback& callback) {
 }
 
 void QuicChromiumClientStream::NotifyDelegateOfHeadersCompleteLater(
-    const SpdyHeaderBlock& headers,
+    SpdyHeaderBlock headers,
     size_t frame_len) {
-  RunOrBuffer(
-      base::Bind(&QuicChromiumClientStream::NotifyDelegateOfHeadersComplete,
-                 weak_factory_.GetWeakPtr(), headers, frame_len));
+  RunOrBuffer(base::Bind(
+      &QuicChromiumClientStream::NotifyDelegateOfHeadersComplete,
+      weak_factory_.GetWeakPtr(), base::Passed(std::move(headers)), frame_len));
 }
 
 void QuicChromiumClientStream::NotifyDelegateOfHeadersComplete(

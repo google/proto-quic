@@ -8,6 +8,7 @@
 
 #include <vector>
 
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -25,7 +26,7 @@ namespace {
 
 class EnvironmentImpl : public Environment {
  public:
-  bool GetVar(const char* variable_name, std::string* result) override {
+  bool GetVar(StringPiece variable_name, std::string* result) override {
     if (GetVarImpl(variable_name, result))
       return true;
 
@@ -44,19 +45,19 @@ class EnvironmentImpl : public Environment {
     return GetVarImpl(alternate_case_var.c_str(), result);
   }
 
-  bool SetVar(const char* variable_name,
+  bool SetVar(StringPiece variable_name,
               const std::string& new_value) override {
     return SetVarImpl(variable_name, new_value);
   }
 
-  bool UnSetVar(const char* variable_name) override {
+  bool UnSetVar(StringPiece variable_name) override {
     return UnSetVarImpl(variable_name);
   }
 
  private:
-  bool GetVarImpl(const char* variable_name, std::string* result) {
+  bool GetVarImpl(StringPiece variable_name, std::string* result) {
 #if defined(OS_POSIX)
-    const char* env_value = getenv(variable_name);
+    const char* env_value = getenv(variable_name.data());
     if (!env_value)
       return false;
     // Note that the variable may be defined but empty.
@@ -64,8 +65,8 @@ class EnvironmentImpl : public Environment {
       *result = env_value;
     return true;
 #elif defined(OS_WIN)
-    DWORD value_length = ::GetEnvironmentVariable(
-        UTF8ToWide(variable_name).c_str(), NULL, 0);
+    DWORD value_length =
+        ::GetEnvironmentVariable(UTF8ToWide(variable_name).c_str(), nullptr, 0);
     if (value_length == 0)
       return false;
     if (result) {
@@ -80,10 +81,10 @@ class EnvironmentImpl : public Environment {
 #endif
   }
 
-  bool SetVarImpl(const char* variable_name, const std::string& new_value) {
+  bool SetVarImpl(StringPiece variable_name, const std::string& new_value) {
 #if defined(OS_POSIX)
     // On success, zero is returned.
-    return !setenv(variable_name, new_value.c_str(), 1);
+    return !setenv(variable_name.data(), new_value.c_str(), 1);
 #elif defined(OS_WIN)
     // On success, a nonzero value is returned.
     return !!SetEnvironmentVariable(UTF8ToWide(variable_name).c_str(),
@@ -91,13 +92,13 @@ class EnvironmentImpl : public Environment {
 #endif
   }
 
-  bool UnSetVarImpl(const char* variable_name) {
+  bool UnSetVarImpl(StringPiece variable_name) {
 #if defined(OS_POSIX)
     // On success, zero is returned.
-    return !unsetenv(variable_name);
+    return !unsetenv(variable_name.data());
 #elif defined(OS_WIN)
     // On success, a nonzero value is returned.
-    return !!SetEnvironmentVariable(UTF8ToWide(variable_name).c_str(), NULL);
+    return !!SetEnvironmentVariable(UTF8ToWide(variable_name).c_str(), nullptr);
 #endif
   }
 };
@@ -134,12 +135,12 @@ const char kHome[] = "HOME";
 Environment::~Environment() {}
 
 // static
-Environment* Environment::Create() {
-  return new EnvironmentImpl();
+std::unique_ptr<Environment> Environment::Create() {
+  return MakeUnique<EnvironmentImpl>();
 }
 
-bool Environment::HasVar(const char* variable_name) {
-  return GetVar(variable_name, NULL);
+bool Environment::HasVar(StringPiece variable_name) {
+  return GetVar(variable_name, nullptr);
 }
 
 #if defined(OS_WIN)

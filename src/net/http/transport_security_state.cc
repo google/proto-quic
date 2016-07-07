@@ -22,6 +22,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
+#include "build/build_config.h"
 #include "crypto/sha2.h"
 #include "net/base/host_port_pair.h"
 #include "net/cert/ct_policy_status.h"
@@ -31,15 +32,41 @@
 #include "net/http/http_security_headers.h"
 #include "net/ssl/ssl_info.h"
 
+#if !defined(OS_NACL)
+#include "base/metrics/field_trial.h"
+#endif
+
 namespace net {
 
 namespace {
 
+#include "net/http/transport_security_state_ct_policies.inc"
 #include "net/http/transport_security_state_static.h"
 
 const size_t kMaxHPKPReportCacheEntries = 50;
 const int kTimeToRememberHPKPReportsMins = 60;
 const size_t kReportCacheKeyLength = 16;
+
+// Override for ShouldRequireCT() for unit tests. Possible values:
+//  -1: Unless a delegate says otherwise, do not require CT.
+//   0: Use the default implementation (e.g. production)
+//   1: Unless a delegate says otherwise, require CT.
+int g_ct_required_for_testing = 0;
+
+// LessThan comparator for use with std::binary_search() in determining
+// whether a SHA-256 HashValue appears within a sorted array of
+// SHA256HashValues.
+struct SHA256ToHashValueComparator {
+  bool operator()(const SHA256HashValue& lhs, const HashValue& rhs) const {
+    DCHECK_EQ(HASH_VALUE_SHA256, rhs.tag);
+    return memcmp(lhs.data, rhs.data(), rhs.size()) < 0;
+  }
+
+  bool operator()(const HashValue& lhs, const SHA256HashValue& rhs) const {
+    DCHECK_EQ(HASH_VALUE_SHA256, lhs.tag);
+    return memcmp(lhs.data(), rhs.data, lhs.size()) < 0;
+  }
+};
 
 void RecordUMAForHPKPReportFailure(const GURL& report_uri, int net_error) {
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.PublicKeyPinReportSendingFailure",
@@ -616,6 +643,7 @@ TransportSecurityState::TransportSecurityState()
     : enable_static_pins_(true),
       enable_static_expect_ct_(true),
       enable_static_expect_staple_(false),
+      enable_pkp_bypass_for_local_trust_anchors_(true),
       sent_reports_cache_(kMaxHPKPReportCacheEntries) {
 // Static pinning is only enabled for official builds to make sure that
 // others don't end up with pins that cannot be easily updated.
@@ -712,7 +740,69 @@ bool TransportSecurityState::ShouldRequireCT(
   if (ct_required != CTRequirementLevel::DEFAULT)
     return ct_required == CTRequirementLevel::REQUIRED;
 
-  return false;
+  // Allow unittests to override the default result.
+  if (g_ct_required_for_testing)
+    return g_ct_required_for_testing == 1;
+
+  // Until CT is required for all secure hosts on the Internet, this should
+  // remain false. It is provided to simplify the various short-circuit
+  // returns below.
+  bool default_response = false;
+
+// FieldTrials are not supported in Native Client apps.
+#if !defined(OS_NACL)
+  // Emergency escape valve; not to be activated until there's an actual
+  // emergency (e.g. a weird path-building bug due to a CA's failed
+  // disclosure of cross-signed sub-CAs).
+  std::string group_name =
+      base::FieldTrialList::FindFullName("EnforceCTForProblematicRoots");
+  if (base::StartsWith(group_name, "disabled",
+                       base::CompareCase::INSENSITIVE_ASCII)) {
+    return default_response;
+  }
+#endif
+
+  const base::Time epoch = base::Time::UnixEpoch();
+  for (const auto& restricted_ca : kCTRequiredPolicies) {
+    if (epoch + restricted_ca.effective_date >
+        validated_certificate_chain->valid_start()) {
+      // The candidate cert is not subject to the CT policy, because it
+      // was issued before the effective CT date.
+      continue;
+    }
+
+    for (const auto& hash : public_key_hashes) {
+      if (hash.tag != HASH_VALUE_SHA256)
+        continue;
+
+      // Determine if |hash| is in the set of roots of |restricted_ca|.
+      if (!std::binary_search(restricted_ca.roots,
+                              restricted_ca.roots + restricted_ca.roots_length,
+                              hash, SHA256ToHashValueComparator())) {
+        continue;
+      }
+
+      // Found a match, indicating this certificate is potentially
+      // restricted. Determine if any of the hashes are on the exclusion
+      // list as exempt from the CT requirement.
+      for (const auto& sub_ca_hash : public_key_hashes) {
+        if (sub_ca_hash.tag != HASH_VALUE_SHA256)
+          continue;
+        if (std::binary_search(
+                restricted_ca.exceptions,
+                restricted_ca.exceptions + restricted_ca.exceptions_length,
+                sub_ca_hash, SHA256ToHashValueComparator())) {
+          // Found an excluded sub-CA; CT is not required.
+          return default_response;
+        }
+      }
+
+      // No exception found. This certificate must conform to the CT policy.
+      return true;
+    }
+  }
+
+  return default_response;
 }
 
 void TransportSecurityState::SetDelegate(
@@ -772,6 +862,11 @@ void TransportSecurityState::AddHPKPInternal(const std::string& host,
   pkp_state.report_uri = report_uri;
 
   EnablePKPHost(host, pkp_state);
+}
+
+void TransportSecurityState::
+    SetEnablePublicKeyPinningBypassForLocalTrustAnchors(bool value) {
+  enable_pkp_bypass_for_local_trust_anchors_ = value;
 }
 
 void TransportSecurityState::EnableSTSHost(const std::string& host,
@@ -838,7 +933,7 @@ TransportSecurityState::CheckPinsAndMaybeSendReport(
     return PKPStatus::OK;
 
   // Don't report violations for certificates that chain to local roots.
-  if (!is_issued_by_known_root)
+  if (!is_issued_by_known_root && enable_pkp_bypass_for_local_trust_anchors_)
     return PKPStatus::BYPASSED;
 
   if (!report_sender_ ||
@@ -1132,6 +1227,15 @@ void TransportSecurityState::ReportUMAOnPinFailure(const std::string& host) {
 
   UMA_HISTOGRAM_SPARSE_SLOWLY(
       "Net.PublicKeyPinFailureDomain", result.domain_id);
+}
+
+// static
+void TransportSecurityState::SetShouldRequireCTForTesting(bool* required) {
+  if (!required) {
+    g_ct_required_for_testing = 0;
+    return;
+  }
+  g_ct_required_for_testing = *required ? 1 : -1;
 }
 
 // static

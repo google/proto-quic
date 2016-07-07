@@ -34,8 +34,8 @@ void AssertBacktraceEquals(const StackFrame(&expected_backtrace)[N]) {
       AllocationContextTracker::GetInstanceForCurrentThread()
           ->GetContextSnapshot();
 
-  auto actual = std::begin(ctx.backtrace.frames);
-  auto actual_bottom = actual + ctx.backtrace.frame_count;
+  auto* actual = std::begin(ctx.backtrace.frames);
+  auto* actual_bottom = actual + ctx.backtrace.frame_count;
   auto expected = std::begin(expected_backtrace);
   auto expected_bottom = std::end(expected_backtrace);
 

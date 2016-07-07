@@ -202,6 +202,13 @@ class QuicTestClient : public test::SimpleClient,
 
   size_t num_responses() const { return num_responses_; }
 
+  // Explicitly set the SNI value for this client, overriding the default
+  // behavior which extracts the SNI value from the request URL.
+  void OverrideSni(const std::string& sni) {
+    override_sni_set_ = true;
+    override_sni_ = sni;
+  }
+
  protected:
   QuicTestClient();
 
@@ -273,6 +280,11 @@ class QuicTestClient : public test::SimpleClient,
   // Number of requests/responses this client has sent/received.
   size_t num_requests_;
   size_t num_responses_;
+
+  // If set, this value is used for the connection SNI, overriding the usual
+  // logic which extracts the SNI from the request URL.
+  bool override_sni_set_ = false;
+  std::string override_sni_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicTestClient);
 };

@@ -81,27 +81,31 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
                                            NetworkDelegate* network_delegate,
                                            const std::string& scheme);
 
-  // Referrer policies (see set_referrer_policy): During server redirects, the
-  // referrer header might be cleared, if the protocol changes from HTTPS to
-  // HTTP. This is the default behavior of URLRequest, corresponding to
-  // CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE. Alternatively, the
-  // referrer policy can be set to strip the referrer down to an origin upon
-  // cross-origin navigation (ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN), or
-  // never change the referrer header (NEVER_CLEAR_REFERRER). Embedders will
-  // want to use these options when implementing referrer policy support
-  // (https://w3c.github.io/webappsec/specs/referrer-policy/).
-  //
-  // REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN is a slight variant
-  // on CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE: If the request
-  // downgrades from HTTPS to HTTP, the referrer will be cleared. If the request
-  // transitions cross-origin (but does not downgrade), the referrer's
-  // granularity will be reduced (currently stripped down to an origin rather
-  // than a full URL). Same-origin requests will send the full referrer.
+  // A ReferrerPolicy for the request can be set with
+  // set_referrer_policy() and controls the contents of the Referer
+  // header when URLRequest follows server redirects.
   enum ReferrerPolicy {
+    // Clear the referrer header if the protocol changes from HTTPS to
+    // HTTP. This is the default behavior of URLRequest.
     CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+    // A slight variant on
+    // CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE: If the
+    // request downgrades from HTTPS to HTTP, the referrer will be
+    // cleared. If the request transitions cross-origin (but does not
+    // downgrade), the referrer's granularity will be reduced (currently
+    // stripped down to an origin rather than a full URL). Same-origin
+    // requests will send the full referrer.
     REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+    // Strip the referrer down to an origin upon cross-origin navigation.
     ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN,
+    // Never change the referrer.
     NEVER_CLEAR_REFERRER,
+    // Strip the referrer down to the origin regardless of the redirect
+    // location.
+    ORIGIN,
+    // Always clear the referrer regardless of the redirect location.
+    NO_REFERRER,
+    MAX_REFERRER_POLICY
   };
 
   // First-party URL redirect policy: During server redirects, the first-party

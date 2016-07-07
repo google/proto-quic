@@ -37,8 +37,8 @@ URLRequestContext::URLRequestContext()
       sdch_manager_(nullptr),
       network_quality_estimator_(nullptr),
       url_requests_(new std::set<const URLRequest*>),
-      has_known_mismatched_cookie_store_(false),
-      enable_brotli_(false) {}
+      enable_brotli_(false),
+      enable_referrer_policy_header_(false) {}
 
 URLRequestContext::~URLRequestContext() {
   AssertNoURLRequests();
@@ -67,6 +67,7 @@ void URLRequestContext::CopyFrom(const URLRequestContext* other) {
   set_http_user_agent_settings(other->http_user_agent_settings_);
   set_network_quality_estimator(other->network_quality_estimator_);
   set_enable_brotli(other->enable_brotli_);
+  set_enable_referrer_policy_header(other->enable_referrer_policy_header_);
 }
 
 const HttpNetworkSession::Params* URLRequestContext::GetNetworkSessionParams(

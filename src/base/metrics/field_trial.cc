@@ -44,8 +44,14 @@ Time CreateTimeFromParams(int year, int month, int day_of_month) {
   exploded.minute = 0;
   exploded.second = 0;
   exploded.millisecond = 0;
+  Time out_time;
+  if (!Time::FromLocalExploded(exploded, &out_time)) {
+    // TODO(maksims): implement failure handling.
+    // We might just return |out_time|, which is Time(0).
+    NOTIMPLEMENTED();
+  }
 
-  return Time::FromLocalExploded(exploded);
+  return out_time;
 }
 
 // Returns the boundary value for comparing against the FieldTrial's added

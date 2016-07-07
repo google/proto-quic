@@ -477,6 +477,11 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // main frame request is observed.
   void RecordAccuracyAfterMainFrame(base::TimeDelta measuring_duration) const;
 
+  // Obtains the current cellular signal strength value and updates
+  // |min_signal_strength_since_connection_change_| and
+  // |max_signal_strength_since_connection_change_|.
+  void UpdateSignalStrength();
+
   // Returns the effective type of the current connection based on only the
   // samples observed after |start_time|. Uses HTTP RTT and downstream
   // throughput to compute the effective connection type, and requires both of
@@ -605,6 +610,11 @@ class NET_EXPORT_PRIVATE NetworkQualityEstimator
   // the last computation was more than
   // |effective_connection_type_recomputation_interval_| ago).
   EffectiveConnectionType effective_connection_type_;
+
+  // Minimum and Maximum signal strength (in dbM) observed since last connection
+  // change. Updated on connection change and main frame requests.
+  int32_t min_signal_strength_since_connection_change_;
+  int32_t max_signal_strength_since_connection_change_;
 
   base::ThreadChecker thread_checker_;
 

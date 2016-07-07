@@ -21,6 +21,10 @@
 #include "net/quic/quic_spdy_session.h"
 #include "net/socket/socket_performance_watcher.h"
 
+namespace base {
+class HistogramBase;
+}
+
 namespace net {
 namespace test {
 class QuicConnectionLoggerPeer;

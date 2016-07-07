@@ -267,7 +267,9 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
 
   QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
   QuicFrames frames;
-  frames.push_back(QuicFrame(&ack));
+  QuicFrame ack_frame(&ack);
+  DVLOG(1) << "Adding frame: " << ack_frame;
+  frames.push_back(ack_frame);
 
   QuicStopWaitingFrame stop_waiting;
   stop_waiting.least_unacked = stop_least_unacked;
@@ -480,6 +482,40 @@ QuicTestPacketMaker::MakeRequestHeadersPacketWithOffsetTracking(
   return MakeRequestHeadersPacket(packet_number, stream_id,
                                   should_include_version, fin, priority,
                                   std::move(headers), nullptr, offset);
+}
+
+// If |offset| is provided, will use the value when creating the packet.
+// Will also update the value after packet creation.
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePushPromisePacket(
+    QuicPacketNumber packet_number,
+    QuicStreamId stream_id,
+    QuicStreamId promised_stream_id,
+    bool should_include_version,
+    bool fin,
+    SpdyHeaderBlock headers,
+    size_t* spdy_headers_frame_length,
+    QuicStreamOffset* offset) {
+  InitializeHeader(packet_number, should_include_version);
+  SpdySerializedFrame spdy_frame;
+  SpdyPushPromiseIR promise_frame(stream_id, promised_stream_id,
+                                  std::move(headers));
+  promise_frame.set_fin(fin);
+  spdy_frame = spdy_request_framer_.SerializeFrame(promise_frame);
+  if (spdy_headers_frame_length) {
+    *spdy_headers_frame_length = spdy_frame.size();
+  }
+  if (offset != nullptr) {
+    QuicStreamFrame frame(
+        kHeadersStreamId, false, *offset,
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
+    *offset += spdy_frame.size();
+    return MakePacket(header_, QuicFrame(&frame));
+  } else {
+    QuicStreamFrame frame(
+        kHeadersStreamId, false, 0,
+        base::StringPiece(spdy_frame.data(), spdy_frame.size()));
+    return MakePacket(header_, QuicFrame(&frame));
+  }
 }
 
 // If |offset| is provided, will use the value when creating the packet.

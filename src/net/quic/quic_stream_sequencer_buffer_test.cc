@@ -220,7 +220,7 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
   std::list<Gap> gaps = helper_->GetGaps();
   EXPECT_EQ(800u, gaps.front().end_offset);
   EXPECT_EQ(1824u, gaps.back().begin_offset);
-  auto frame_map = helper_->frame_arrival_time_map();
+  auto* frame_map = helper_->frame_arrival_time_map();
   EXPECT_EQ(1u, frame_map->size());
   EXPECT_EQ(800u, frame_map->begin()->first);
   EXPECT_EQ(t, (*frame_map)[800].timestamp);
@@ -243,7 +243,7 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithOverlap) {
             buffer_->OnStreamData(0, source, t2, &written, &error_details_));
   EXPECT_EQ(QUIC_OVERLAPPING_STREAM_DATA,
             buffer_->OnStreamData(1024, source, t2, &written, &error_details_));
-  auto frame_map = helper_->frame_arrival_time_map();
+  auto* frame_map = helper_->frame_arrival_time_map();
   EXPECT_EQ(1u, frame_map->size());
   EXPECT_EQ(t1, (*frame_map)[800].timestamp);
 }
@@ -274,7 +274,7 @@ TEST_F(QuicStreamSequencerBufferTest,
   EXPECT_EQ(QUIC_NO_ERROR,
             buffer_->OnStreamData(1824, one_byte, clock_.ApproximateNow(),
                                   &written, &error_details_));
-  auto frame_map = helper_->frame_arrival_time_map();
+  auto* frame_map = helper_->frame_arrival_time_map();
   EXPECT_EQ(3u, frame_map->size());
   EXPECT_TRUE(helper_->CheckBufferInvariants());
 }

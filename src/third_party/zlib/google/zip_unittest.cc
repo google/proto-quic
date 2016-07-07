@@ -142,7 +142,8 @@ class ZipTest : public PlatformTest {
     base::Time::Now().LocalExplode(&now_parts);
     now_parts.second = now_parts.second & ~1;
     now_parts.millisecond = 0;
-    base::Time now_time = base::Time::FromLocalExploded(now_parts);
+    base::Time now_time;
+    EXPECT_TRUE(base::Time::FromLocalExploded(now_parts, &now_time));
 
     EXPECT_EQ(1, base::WriteFile(src_file, "1", 1));
     EXPECT_TRUE(base::TouchFile(src_file, base::Time::Now(), test_mtime));

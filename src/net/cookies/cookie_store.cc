@@ -31,7 +31,7 @@ std::string CookieStore::BuildCookieLine(
 std::string CookieStore::BuildCookieLine(
     const std::vector<CanonicalCookie*>& cookies) {
   std::string cookie_line;
-  for (const auto& cookie : cookies) {
+  for (auto* cookie : cookies) {
     if (!cookie_line.empty())
       cookie_line += "; ";
     // In Mozilla, if you set a cookie like "AAA", it will have an empty token

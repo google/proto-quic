@@ -479,6 +479,15 @@ void URLRequest::SetReferrer(const std::string& referrer) {
 
 void URLRequest::set_referrer_policy(ReferrerPolicy referrer_policy) {
   DCHECK(!is_pending_);
+  // External callers shouldn't be setting NO_REFERRER or
+  // ORIGIN. |referrer_policy_| is only applied during server redirects,
+  // so external callers must set the referrer themselves using
+  // SetReferrer() for the initial request. Once the referrer has been
+  // set to an origin or to an empty string, there is no point in
+  // setting the policy to NO_REFERRER or ORIGIN as it would have the
+  // same effect as using NEVER_CLEAR_REFERRER across redirects.
+  DCHECK_NE(referrer_policy, NO_REFERRER);
+  DCHECK_NE(referrer_policy, ORIGIN);
   referrer_policy_ = referrer_policy;
 }
 
@@ -978,6 +987,7 @@ int URLRequest::Redirect(const RedirectInfo& redirect_info) {
   }
 
   referrer_ = redirect_info.new_referrer;
+  referrer_policy_ = redirect_info.new_referrer_policy;
   first_party_for_cookies_ = redirect_info.new_first_party_for_cookies;
   token_binding_referrer_ = redirect_info.referred_token_binding_host;
 

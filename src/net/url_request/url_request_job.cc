@@ -14,6 +14,7 @@
 #include "base/profiler/scoped_tracker.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
@@ -60,6 +61,56 @@ std::string ComputeMethodForRedirect(const std::string& method,
     return "GET";
   }
   return method;
+}
+
+// A redirect response can contain a Referrer-Policy header
+// (https://w3c.github.io/webappsec-referrer-policy/). This function
+// checks for a Referrer-Policy header, and parses it if
+// present. Returns the referrer policy that should be used for the
+// request.
+URLRequest::ReferrerPolicy ProcessReferrerPolicyHeaderOnRedirect(
+    URLRequest* request) {
+  URLRequest::ReferrerPolicy new_policy = request->referrer_policy();
+
+  std::string referrer_policy_header;
+  request->GetResponseHeaderByName("Referrer-Policy", &referrer_policy_header);
+  std::vector<std::string> policy_tokens =
+      base::SplitString(referrer_policy_header, ",", base::TRIM_WHITESPACE,
+                        base::SPLIT_WANT_NONEMPTY);
+
+  for (const auto& token : policy_tokens) {
+    if (base::CompareCaseInsensitiveASCII(token, "never") == 0 ||
+        base::CompareCaseInsensitiveASCII(token, "no-referrer") == 0) {
+      new_policy = URLRequest::NO_REFERRER;
+      continue;
+    }
+
+    if (base::CompareCaseInsensitiveASCII(token, "default") == 0 ||
+        base::CompareCaseInsensitiveASCII(token,
+                                          "no-referrer-when-downgrade") == 0) {
+      new_policy =
+          URLRequest::CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE;
+      continue;
+    }
+
+    if (base::CompareCaseInsensitiveASCII(token, "origin") == 0) {
+      new_policy = URLRequest::ORIGIN;
+      continue;
+    }
+
+    if (base::CompareCaseInsensitiveASCII(token, "origin-when-cross-origin") ==
+        0) {
+      new_policy = URLRequest::ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN;
+      continue;
+    }
+
+    if (base::CompareCaseInsensitiveASCII(token, "always") == 0 ||
+        base::CompareCaseInsensitiveASCII(token, "unsafe-url") == 0) {
+      new_policy = URLRequest::NEVER_CLEAR_REFERRER;
+      continue;
+    }
+  }
+  return new_policy;
 }
 
 }  // namespace
@@ -344,6 +395,13 @@ GURL URLRequestJob::ComputeReferrerForRedirect(
 
     case URLRequest::NEVER_CLEAR_REFERRER:
       return original_referrer;
+    case URLRequest::ORIGIN:
+      return original_referrer.GetOrigin();
+    case URLRequest::NO_REFERRER:
+      return GURL();
+    case URLRequest::MAX_REFERRER_POLICY:
+      NOTREACHED();
+      return GURL();
   }
 
   NOTREACHED();
@@ -398,6 +456,7 @@ void URLRequestJob::NotifyHeadersComplete() {
 
   GURL new_location;
   int http_status_code;
+
   if (IsRedirectResponse(&new_location, &http_status_code)) {
     // Redirect response bodies are not read. Notify the transaction
     // so it does not treat being stopped as an error.
@@ -944,11 +1003,18 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
         request_->first_party_for_cookies();
   }
 
+  if (request_->context()->enable_referrer_policy_header()) {
+    redirect_info.new_referrer_policy =
+        ProcessReferrerPolicyHeaderOnRedirect(request_);
+  } else {
+    redirect_info.new_referrer_policy = request_->referrer_policy();
+  }
+
   // Alter the referrer if redirecting cross-origin (especially HTTP->HTTPS).
   redirect_info.new_referrer =
-      ComputeReferrerForRedirect(request_->referrer_policy(),
-                                 request_->referrer(),
-                                 redirect_info.new_url).spec();
+      ComputeReferrerForRedirect(redirect_info.new_referrer_policy,
+                                 request_->referrer(), redirect_info.new_url)
+          .spec();
 
   std::string include_referer;
   request_->GetResponseHeaderByName("include-referer-token-binding-id",

@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/run_loop.h"
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -48,12 +49,12 @@ TEST_F(TraceSystemStatsMonitorTest, TraceEventSystemStatsMonitor) {
 
   // Simulate enabling tracing.
   system_stats_monitor->StartProfiling();
-  message_loop.RunUntilIdle();
+  RunLoop().RunUntilIdle();
   EXPECT_TRUE(system_stats_monitor->IsTimerRunningForTest());
 
   // Simulate disabling tracing.
   system_stats_monitor->StopProfiling();
-  message_loop.RunUntilIdle();
+  RunLoop().RunUntilIdle();
   EXPECT_FALSE(system_stats_monitor->IsTimerRunningForTest());
 
   // Deleting the observer removes it from the TraceLog observer list.

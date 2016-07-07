@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include <map>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
@@ -94,27 +95,30 @@ ProxyConfigServiceLinux::Delegate::~Delegate() {
 }
 
 bool ProxyConfigServiceLinux::Delegate::GetProxyFromEnvVarForScheme(
-    const char* variable, ProxyServer::Scheme scheme,
+    base::StringPiece variable,
+    ProxyServer::Scheme scheme,
     ProxyServer* result_server) {
   std::string env_value;
-  if (env_var_getter_->GetVar(variable, &env_value)) {
-    if (!env_value.empty()) {
-      env_value = FixupProxyHostScheme(scheme, env_value);
-      ProxyServer proxy_server =
-          ProxyServer::FromURI(env_value, ProxyServer::SCHEME_HTTP);
-      if (proxy_server.is_valid() && !proxy_server.is_direct()) {
-        *result_server = proxy_server;
-        return true;
-      } else {
-        LOG(ERROR) << "Failed to parse environment variable " << variable;
-      }
-    }
+  if (!env_var_getter_->GetVar(variable, &env_value))
+    return false;
+
+  if (env_value.empty())
+    return false;
+
+  env_value = FixupProxyHostScheme(scheme, env_value);
+  ProxyServer proxy_server =
+      ProxyServer::FromURI(env_value, ProxyServer::SCHEME_HTTP);
+  if (proxy_server.is_valid() && !proxy_server.is_direct()) {
+    *result_server = proxy_server;
+    return true;
   }
+  LOG(ERROR) << "Failed to parse environment variable " << variable;
   return false;
 }
 
 bool ProxyConfigServiceLinux::Delegate::GetProxyFromEnvVar(
-    const char* variable, ProxyServer* result_server) {
+    base::StringPiece variable,
+    ProxyServer* result_server) {
   return GetProxyFromEnvVarForScheme(variable, ProxyServer::SCHEME_HTTP,
                                      result_server);
 }
@@ -202,10 +206,10 @@ const int kDebounceTimeoutMilliseconds = 250;
 class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
  public:
   SettingGetterImplGConf()
-      : client_(NULL),
+      : client_(nullptr),
         system_proxy_id_(0),
         system_http_proxy_id_(0),
-        notify_delegate_(NULL),
+        notify_delegate_(nullptr),
         debounce_timer_(new base::OneShotTimer()) {}
 
   ~SettingGetterImplGConf() override {
@@ -246,10 +250,10 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
     if (!client_) {
       // It's not clear whether/when this can return NULL.
       LOG(ERROR) << "Unable to create a gconf client";
-      task_runner_ = NULL;
+      task_runner_ = nullptr;
       return false;
     }
-    GError* error = NULL;
+    GError* error = nullptr;
     bool added_system_proxy = false;
     // We need to add the directories for which we'll be asking
     // for notifications, and we might as well ask to preload them.
@@ -257,22 +261,22 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
     // here to only leave client_ non-NULL if both have been added.
     gconf_client_add_dir(client_, "/system/proxy",
                          GCONF_CLIENT_PRELOAD_ONELEVEL, &error);
-    if (error == NULL) {
+    if (!error) {
       added_system_proxy = true;
       gconf_client_add_dir(client_, "/system/http_proxy",
                            GCONF_CLIENT_PRELOAD_ONELEVEL, &error);
     }
-    if (error != NULL) {
-      LOG(ERROR) << "Error requesting gconf directory: " << error->message;
-      g_error_free(error);
-      if (added_system_proxy)
-        gconf_client_remove_dir(client_, "/system/proxy", NULL);
-      g_object_unref(client_);
-      client_ = NULL;
-      task_runner_ = NULL;
-      return false;
-    }
-    return true;
+    if (!error)
+      return true;
+
+    LOG(ERROR) << "Error requesting gconf directory: " << error->message;
+    g_error_free(error);
+    if (added_system_proxy)
+      gconf_client_remove_dir(client_, "/system/proxy", nullptr);
+    g_object_unref(client_);
+    client_ = nullptr;
+    task_runner_ = nullptr;
+    return false;
   }
 
   void ShutDown() override {
@@ -284,11 +288,11 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
       // own, which is destroyed when the session ends.)
       gconf_client_notify_remove(client_, system_http_proxy_id_);
       gconf_client_notify_remove(client_, system_proxy_id_);
-      gconf_client_remove_dir(client_, "/system/http_proxy", NULL);
-      gconf_client_remove_dir(client_, "/system/proxy", NULL);
+      gconf_client_remove_dir(client_, "/system/http_proxy", nullptr);
+      gconf_client_remove_dir(client_, "/system/proxy", nullptr);
       g_object_unref(client_);
-      client_ = NULL;
-      task_runner_ = NULL;
+      client_ = nullptr;
+      task_runner_ = nullptr;
     }
     debounce_timer_.reset();
   }
@@ -297,30 +301,29 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
       ProxyConfigServiceLinux::Delegate* delegate) override {
     DCHECK(client_);
     DCHECK(task_runner_->BelongsToCurrentThread());
-    GError* error = NULL;
+    GError* error = nullptr;
     notify_delegate_ = delegate;
     // We have to keep track of the IDs returned by gconf_client_notify_add() so
     // that we can remove them in ShutDown(). (Otherwise, notifications will be
     // delivered to this object after it is deleted, which is bad, m'kay?)
-    system_proxy_id_ = gconf_client_notify_add(
-        client_, "/system/proxy",
-        OnGConfChangeNotification, this,
-        NULL, &error);
-    if (error == NULL) {
+    system_proxy_id_ = gconf_client_notify_add(client_, "/system/proxy",
+                                               OnGConfChangeNotification, this,
+                                               nullptr, &error);
+    if (!error) {
       system_http_proxy_id_ = gconf_client_notify_add(
-          client_, "/system/http_proxy",
-          OnGConfChangeNotification, this,
-          NULL, &error);
+          client_, "/system/http_proxy", OnGConfChangeNotification, this,
+          nullptr, &error);
     }
-    if (error != NULL) {
-      LOG(ERROR) << "Error requesting gconf notifications: " << error->message;
-      g_error_free(error);
-      ShutDown();
-      return false;
+    if (!error) {
+      // Simulate a change to avoid possibly losing updates before this point.
+      OnChangeNotification();
+      return true;
     }
-    // Simulate a change to avoid possibly losing updates before this point.
-    OnChangeNotification();
-    return true;
+
+    LOG(ERROR) << "Error requesting gconf notifications: " << error->message;
+    g_error_free(error);
+    ShutDown();
+    return false;
   }
 
   const scoped_refptr<base::SingleThreadTaskRunner>& GetNotificationTaskRunner()
@@ -390,12 +393,12 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
   bool MatchHostsUsingSuffixMatching() override { return false; }
 
  private:
-  bool GetStringByPath(const char* key, std::string* result) {
+  bool GetStringByPath(base::StringPiece key, std::string* result) {
     DCHECK(client_);
     DCHECK(task_runner_->BelongsToCurrentThread());
-    GError* error = NULL;
-    gchar* value = gconf_client_get_string(client_, key, &error);
-    if (HandleGError(error, key))
+    GError* error = nullptr;
+    gchar* value = gconf_client_get_string(client_, key.data(), &error);
+    if (HandleGError(error, key.data()))
       return false;
     if (!value)
       return false;
@@ -403,15 +406,15 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
     g_free(value);
     return true;
   }
-  bool GetBoolByPath(const char* key, bool* result) {
+  bool GetBoolByPath(base::StringPiece key, bool* result) {
     DCHECK(client_);
     DCHECK(task_runner_->BelongsToCurrentThread());
-    GError* error = NULL;
+    GError* error = nullptr;
     // We want to distinguish unset values from values defaulting to
     // false. For that we need to use the type-generic
     // gconf_client_get() rather than gconf_client_get_bool().
-    GConfValue* gconf_value = gconf_client_get(client_, key, &error);
-    if (HandleGError(error, key))
+    GConfValue* gconf_value = gconf_client_get(client_, key.data(), &error);
+    if (HandleGError(error, key.data()))
       return false;
     if (!gconf_value) {
       // Unset.
@@ -426,25 +429,26 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
     gconf_value_free(gconf_value);
     return true;
   }
-  bool GetIntByPath(const char* key, int* result) {
+  bool GetIntByPath(base::StringPiece key, int* result) {
     DCHECK(client_);
     DCHECK(task_runner_->BelongsToCurrentThread());
-    GError* error = NULL;
-    int value = gconf_client_get_int(client_, key, &error);
-    if (HandleGError(error, key))
+    GError* error = nullptr;
+    int value = gconf_client_get_int(client_, key.data(), &error);
+    if (HandleGError(error, key.data()))
       return false;
     // We don't bother to distinguish an unset value because callers
     // don't care. 0 is returned if unset.
     *result = value;
     return true;
   }
-  bool GetStringListByPath(const char* key, std::vector<std::string>* result) {
+  bool GetStringListByPath(base::StringPiece key,
+                           std::vector<std::string>* result) {
     DCHECK(client_);
     DCHECK(task_runner_->BelongsToCurrentThread());
-    GError* error = NULL;
-    GSList* list = gconf_client_get_list(client_, key,
-                                         GCONF_VALUE_STRING, &error);
-    if (HandleGError(error, key))
+    GError* error = nullptr;
+    GSList* list =
+        gconf_client_get_list(client_, key.data(), GCONF_VALUE_STRING, &error);
+    if (HandleGError(error, key.data()))
       return false;
     if (!list)
       return false;
@@ -458,14 +462,14 @@ class SettingGetterImplGConf : public ProxyConfigServiceLinux::SettingGetter {
 
   // Logs and frees a glib error. Returns false if there was no error
   // (error is NULL).
-  bool HandleGError(GError* error, const char* key) {
-    if (error != NULL) {
-      LOG(ERROR) << "Error getting gconf value for " << key
-                 << ": " << error->message;
-      g_error_free(error);
-      return true;
-    }
-    return false;
+  bool HandleGError(GError* error, base::StringPiece key) {
+    if (!error)
+      return false;
+
+    LOG(ERROR) << "Error getting gconf value for " << key << ": "
+               << error->message;
+    g_error_free(error);
+    return true;
   }
 
   // This is the callback from the debounce timer.
@@ -522,12 +526,12 @@ class SettingGetterImplGSettings
     : public ProxyConfigServiceLinux::SettingGetter {
  public:
   SettingGetterImplGSettings()
-      : client_(NULL),
-        http_client_(NULL),
-        https_client_(NULL),
-        ftp_client_(NULL),
-        socks_client_(NULL),
-        notify_delegate_(NULL),
+      : client_(nullptr),
+        http_client_(nullptr),
+        https_client_(nullptr),
+        ftp_client_(nullptr),
+        socks_client_(nullptr),
+        notify_delegate_(nullptr),
         debounce_timer_(new base::OneShotTimer()) {}
 
   ~SettingGetterImplGSettings() override {
@@ -547,16 +551,16 @@ class SettingGetterImplGSettings
         ShutDown();
       } else {
         LOG(WARNING) << "~SettingGetterImplGSettings: leaking gsettings client";
-        client_ = NULL;
+        client_ = nullptr;
       }
     }
     DCHECK(!client_);
   }
 
-  bool SchemaExists(const char* schema_name) {
+  bool SchemaExists(base::StringPiece schema_name) {
     const gchar* const* schemas = libgio_loader_.g_settings_list_schemas();
     while (*schemas) {
-      if (strcmp(schema_name, static_cast<const char*>(*schemas)) == 0)
+      if (!strcmp(schema_name.data(), static_cast<const char*>(*schemas)))
         return true;
       schemas++;
     }
@@ -599,8 +603,8 @@ class SettingGetterImplGSettings
       g_object_unref(http_client_);
       g_object_unref(client_);
       // We only need to null client_ because it's the only one that we check.
-      client_ = NULL;
-      task_runner_ = NULL;
+      client_ = nullptr;
+      task_runner_ = nullptr;
     }
     debounce_timer_.reset();
   }
@@ -705,31 +709,33 @@ class SettingGetterImplGSettings
   bool MatchHostsUsingSuffixMatching() override { return false; }
 
  private:
-  bool GetStringByPath(GSettings* client, const char* key,
+  bool GetStringByPath(GSettings* client,
+                       base::StringPiece key,
                        std::string* result) {
     DCHECK(task_runner_->BelongsToCurrentThread());
-    gchar* value = libgio_loader_.g_settings_get_string(client, key);
+    gchar* value = libgio_loader_.g_settings_get_string(client, key.data());
     if (!value)
       return false;
     *result = value;
     g_free(value);
     return true;
   }
-  bool GetBoolByPath(GSettings* client, const char* key, bool* result) {
+  bool GetBoolByPath(GSettings* client, base::StringPiece key, bool* result) {
     DCHECK(task_runner_->BelongsToCurrentThread());
     *result = static_cast<bool>(
-        libgio_loader_.g_settings_get_boolean(client, key));
+        libgio_loader_.g_settings_get_boolean(client, key.data()));
     return true;
   }
-  bool GetIntByPath(GSettings* client, const char* key, int* result) {
+  bool GetIntByPath(GSettings* client, base::StringPiece key, int* result) {
     DCHECK(task_runner_->BelongsToCurrentThread());
-    *result = libgio_loader_.g_settings_get_int(client, key);
+    *result = libgio_loader_.g_settings_get_int(client, key.data());
     return true;
   }
-  bool GetStringListByPath(GSettings* client, const char* key,
+  bool GetStringListByPath(GSettings* client,
+                           base::StringPiece key,
                            std::vector<std::string>* result) {
     DCHECK(task_runner_->BelongsToCurrentThread());
-    gchar** list = libgio_loader_.g_settings_get_strv(client, key);
+    gchar** list = libgio_loader_.g_settings_get_strv(client, key.data());
     if (!list)
       return false;
     for (size_t i = 0; list[i]; ++i) {
@@ -821,9 +827,9 @@ bool SettingGetterImplGSettings::LoadAndCheckVersion(
     }
   }
 
-  GSettings* client = NULL;
+  GSettings* client = nullptr;
   if (SchemaExists(kProxyGConfSchema)) {
-    ANNOTATE_SCOPED_MEMORY_LEAK; // http://crbug.com/380782
+    ANNOTATE_SCOPED_MEMORY_LEAK;  // http://crbug.com/380782
     client = libgio_loader_.g_settings_new(kProxyGConfSchema);
   }
   if (!client) {
@@ -857,13 +863,13 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
  public:
   explicit SettingGetterImplKDE(base::Environment* env_var_getter)
       : inotify_fd_(-1),
-        notify_delegate_(NULL),
+        notify_delegate_(nullptr),
         debounce_timer_(new base::OneShotTimer()),
         indirect_manual_(false),
         auto_no_pac_(false),
         reversed_bypass_list_(false),
         env_var_getter_(env_var_getter),
-        file_task_runner_(NULL) {
+        file_task_runner_(nullptr) {
     // This has to be called on the UI thread (http://crbug.com/69057).
     base::ThreadRestrictions::ScopedAllowIO allow_io;
 
@@ -933,7 +939,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
     // anyway. (Not that it really matters; the process is exiting.)
     if (inotify_fd_ >= 0)
       ShutDown();
-    DCHECK(inotify_fd_ < 0);
+    DCHECK_LT(inotify_fd_, 0);
   }
 
   bool Init(const scoped_refptr<base::SingleThreadTaskRunner>& glib_task_runner,
@@ -941,7 +947,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
       override {
     // This has to be called on the UI thread (http://crbug.com/69057).
     base::ThreadRestrictions::ScopedAllowIO allow_io;
-    DCHECK(inotify_fd_ < 0);
+    DCHECK_LT(inotify_fd_, 0);
     inotify_fd_ = inotify_init();
     if (inotify_fd_ < 0) {
       PLOG(ERROR) << "inotify_init failed";
@@ -973,7 +979,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
 
   bool SetUpNotifications(
       ProxyConfigServiceLinux::Delegate* delegate) override {
-    DCHECK(inotify_fd_ >= 0);
+    DCHECK_GE(inotify_fd_, 0);
     DCHECK(file_task_runner_->BelongsToCurrentThread());
     // We can't just watch the kioslaverc file directly, since KDE will write
     // a new copy of it and then rename it whenever settings are changed and
@@ -1528,10 +1534,11 @@ bool ProxyConfigServiceLinux::Delegate::GetConfigFromSettings(
   return true;
 }
 
-ProxyConfigServiceLinux::Delegate::Delegate(base::Environment* env_var_getter)
-    : env_var_getter_(env_var_getter) {
+ProxyConfigServiceLinux::Delegate::Delegate(
+    std::unique_ptr<base::Environment> env_var_getter)
+    : env_var_getter_(std::move(env_var_getter)) {
   // Figure out which SettingGetterImpl to use, if any.
-  switch (base::nix::GetDesktopEnvironment(env_var_getter)) {
+  switch (base::nix::GetDesktopEnvironment(env_var_getter_.get())) {
     case base::nix::DESKTOP_ENVIRONMENT_GNOME:
     case base::nix::DESKTOP_ENVIRONMENT_UNITY:
 #if defined(USE_GIO)
@@ -1540,20 +1547,20 @@ ProxyConfigServiceLinux::Delegate::Delegate(base::Environment* env_var_getter)
           new SettingGetterImplGSettings());
       // We have to load symbols and check the GNOME version in use to decide
       // if we should use the gsettings getter. See LoadAndCheckVersion().
-      if (gs_getter->LoadAndCheckVersion(env_var_getter))
+      if (gs_getter->LoadAndCheckVersion(env_var_getter_.get()))
         setting_getter_.reset(gs_getter.release());
       }
 #endif
 #if defined(USE_GCONF)
       // Fall back on gconf if gsettings is unavailable or incorrect.
-      if (!setting_getter_.get())
+      if (!setting_getter_)
         setting_getter_.reset(new SettingGetterImplGConf());
 #endif
       break;
     case base::nix::DESKTOP_ENVIRONMENT_KDE3:
     case base::nix::DESKTOP_ENVIRONMENT_KDE4:
     case base::nix::DESKTOP_ENVIRONMENT_KDE5:
-      setting_getter_.reset(new SettingGetterImplKDE(env_var_getter));
+      setting_getter_.reset(new SettingGetterImplKDE(env_var_getter_.get()));
       break;
     case base::nix::DESKTOP_ENVIRONMENT_XFCE:
     case base::nix::DESKTOP_ENVIRONMENT_OTHER:
@@ -1562,9 +1569,10 @@ ProxyConfigServiceLinux::Delegate::Delegate(base::Environment* env_var_getter)
 }
 
 ProxyConfigServiceLinux::Delegate::Delegate(
-    base::Environment* env_var_getter, SettingGetter* setting_getter)
-    : env_var_getter_(env_var_getter), setting_getter_(setting_getter) {
-}
+    std::unique_ptr<base::Environment> env_var_getter,
+    SettingGetter* setting_getter)
+    : env_var_getter_(std::move(env_var_getter)),
+      setting_getter_(setting_getter) {}
 
 void ProxyConfigServiceLinux::Delegate::SetUpAndFetchInitialConfig(
     const scoped_refptr<base::SingleThreadTaskRunner>& glib_task_runner,
@@ -1595,7 +1603,7 @@ void ProxyConfigServiceLinux::Delegate::SetUpAndFetchInitialConfig(
   // mislead us.
 
   bool got_config = false;
-  if (setting_getter_.get() &&
+  if (setting_getter_ &&
       setting_getter_->Init(glib_task_runner, file_task_runner) &&
       GetConfigFromSettings(&cached_config_)) {
     cached_config_.set_id(1);  // Mark it as valid.
@@ -1727,8 +1735,9 @@ void ProxyConfigServiceLinux::Delegate::SetNewProxyConfig(
 }
 
 void ProxyConfigServiceLinux::Delegate::PostDestroyTask() {
-  if (!setting_getter_.get())
+  if (!setting_getter_)
     return;
+
   scoped_refptr<base::SingleThreadTaskRunner> shutdown_loop =
       setting_getter_->GetNotificationTaskRunner();
   if (!shutdown_loop.get() || shutdown_loop->BelongsToCurrentThread()) {
@@ -1758,14 +1767,13 @@ ProxyConfigServiceLinux::~ProxyConfigServiceLinux() {
 }
 
 ProxyConfigServiceLinux::ProxyConfigServiceLinux(
-    base::Environment* env_var_getter)
-    : delegate_(new Delegate(env_var_getter)) {
-}
+    std::unique_ptr<base::Environment> env_var_getter)
+    : delegate_(new Delegate(std::move(env_var_getter))) {}
 
 ProxyConfigServiceLinux::ProxyConfigServiceLinux(
-    base::Environment* env_var_getter, SettingGetter* setting_getter)
-    : delegate_(new Delegate(env_var_getter, setting_getter)) {
-}
+    std::unique_ptr<base::Environment> env_var_getter,
+    SettingGetter* setting_getter)
+    : delegate_(new Delegate(std::move(env_var_getter), setting_getter)) {}
 
 void ProxyConfigServiceLinux::AddObserver(Observer* observer) {
   delegate_->AddObserver(observer);

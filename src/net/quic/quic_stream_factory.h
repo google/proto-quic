@@ -67,6 +67,12 @@ class QuicStreamFactoryPeer;
 // When a connection is idle for 30 seconds it will be closed.
 const int kIdleConnectionTimeoutSeconds = 30;
 
+// Indicates cause when connection migration is triggered.
+enum MigrationCause {
+  EARLY_MIGRATION,  // Migration due to path degradation.
+  WRITE_ERROR       // Migration due to socket write error.
+};
+
 // Encapsulates a pending request for a QuicHttpStream.
 // If the request is still pending when it is destroyed, it will
 // cancel the request with the factory.
@@ -150,6 +156,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   QuicStreamFactory(
       NetLog* net_log,
       HostResolver* host_resolver,
+      SSLConfigService* ssl_config_service,
       ClientSocketFactory* client_socket_factory,
       HttpServerProperties* http_server_properties,
       CertVerifier* cert_verifier,
@@ -281,15 +288,21 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
                                    bool force_close,
                                    const BoundNetLog& bound_net_log);
 
-  // Method that initiates early migration of |session| if |session| is
+  // Method that initiates migration of |session| if |session| is
   // active and if there is an alternate network than the one to which
-  // |session| is currently bound.
-  void MaybeMigrateSessionEarly(QuicChromiumClientSession* session);
+  // |session| is currently bound. If not null, |packet| is sent on
+  // the new network, else a PING frame is sent.
+  void MaybeMigrateSingleSession(QuicChromiumClientSession* session,
+                                 MigrationCause migration_cause,
+                                 scoped_refptr<StringIOBuffer> packet);
 
-  // Method that migrates |session| over to using |new_network|.
+  // Method that migrates |session| over to using |new_network|. If
+  // not null, |packet| is sent on the new network, else a PING frame
+  // is sent. Returns ERR_QUIC_PROTOCOL_ERROR if migration fails.
   void MigrateSessionToNetwork(QuicChromiumClientSession* session,
                                NetworkChangeNotifier::NetworkHandle new_network,
-                               const BoundNetLog& bound_net_log);
+                               const BoundNetLog& bound_net_log,
+                               scoped_refptr<StringIOBuffer> packet);
 
   // NetworkChangeNotifier::IPAddressObserver methods:
 
@@ -583,6 +596,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   FactoryStatus status_;
 
   base::TaskRunner* task_runner_;
+
+  const scoped_refptr<SSLConfigService> ssl_config_service_;
 
   base::WeakPtrFactory<QuicStreamFactory> weak_factory_;
 

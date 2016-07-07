@@ -257,12 +257,6 @@ BASE_EXPORT bool GetAppOutput(const StringPiece16& cl, std::string* output);
 BASE_EXPORT bool GetAppOutput(const std::vector<std::string>& argv,
                               std::string* output);
 
-// A restricted version of |GetAppOutput()| which (a) clears the environment,
-// and (b) stores at most |max_output| bytes; also, it doesn't search the path
-// for the command.
-BASE_EXPORT bool GetAppOutputRestricted(const CommandLine& cl,
-                                        std::string* output, size_t max_output);
-
 // A version of |GetAppOutput()| which also returns the exit code of the
 // executed command. Returns true if the application runs and exits cleanly. If
 // this is the case the exit code of the application is available in

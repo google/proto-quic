@@ -233,7 +233,7 @@ class CertVerifierJob {
 
     // Parameter evaluation order is undefined in C++. Ensure the pointer value
     // is gotten before calling base::Passed().
-    auto result = owned_result.get();
+    auto* result = owned_result.get();
 
     return base::WorkerPool::PostTaskAndReply(
         FROM_HERE,

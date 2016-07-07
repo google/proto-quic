@@ -12,15 +12,33 @@
 #include "base/metrics/sparse_histogram.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
+#include "net/quic/quic_chromium_client_session.h"
 
 namespace net {
 
 QuicChromiumPacketWriter::QuicChromiumPacketWriter() : weak_factory_(this) {}
 
 QuicChromiumPacketWriter::QuicChromiumPacketWriter(Socket* socket)
-    : socket_(socket), write_blocked_(false), weak_factory_(this) {}
+    : socket_(socket),
+      connection_(nullptr),
+      observer_(nullptr),
+      packet_(nullptr),
+      write_blocked_(false),
+      weak_factory_(this) {}
 
 QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
+
+void QuicChromiumPacketWriter::Initialize(WriteErrorObserver* observer,
+                                          QuicConnection* connection) {
+  observer_ = observer;
+  connection_ = connection;
+}
+
+int QuicChromiumPacketWriter::WritePacketToSocket(StringIOBuffer* packet) {
+  return socket_->Write(packet, packet->size(),
+                        base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
+                                   weak_factory_.GetWeakPtr()));
+}
 
 WriteResult QuicChromiumPacketWriter::WritePacket(
     const char* buffer,
@@ -32,9 +50,17 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
       new StringIOBuffer(std::string(buffer, buf_len)));
   DCHECK(!IsWriteBlocked());
   base::TimeTicks now = base::TimeTicks::Now();
-  int rv = socket_->Write(buf.get(), buf_len,
-                          base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
-                                     weak_factory_.GetWeakPtr()));
+
+  int rv = WritePacketToSocket(buf.get());
+
+  if (rv < 0 && rv != ERR_IO_PENDING && observer_ != nullptr) {
+    // If write error, then call observer's OnWriteError, which may be
+    // able to migrate and rewrite packet on a new socket.
+    // OnWriteError returns the outcome of that attempt, which is returned
+    // to the caller.
+    rv = observer_->OnWriteError(rv, buf);
+  }
+
   WriteStatus status = WRITE_STATUS_OK;
   if (rv < 0) {
     if (rv != ERR_IO_PENDING) {
@@ -43,6 +69,7 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
     } else {
       status = WRITE_STATUS_BLOCKED;
       write_blocked_ = true;
+      packet_ = buf;
     }
   }
 
@@ -73,6 +100,16 @@ void QuicChromiumPacketWriter::SetWritable() {
 void QuicChromiumPacketWriter::OnWriteComplete(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
   write_blocked_ = false;
+  if (rv < 0) {
+    // If write error, then call into the observer's OnWriteError,
+    // which may be able to rewrite the packet on a new
+    // socket. OnWriteError returns the outcome of the attempt.
+    rv = observer_->OnWriteError(rv, packet_);
+    packet_ = nullptr;
+    if (rv == ERR_IO_PENDING)
+      return;
+  }
+
   if (rv < 0) {
     connection_->OnWriteError(rv);
   }

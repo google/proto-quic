@@ -402,7 +402,7 @@ void TraceLog::InitializeThreadLocalEventBufferIfSupported() {
   if (thread_blocks_message_loop_.Get() || !MessageLoop::current())
     return;
   HEAP_PROFILER_SCOPED_IGNORE;
-  auto thread_local_event_buffer = thread_local_event_buffer_.Get();
+  auto* thread_local_event_buffer = thread_local_event_buffer_.Get();
   if (thread_local_event_buffer &&
       !CheckGeneration(thread_local_event_buffer->generation())) {
     delete thread_local_event_buffer;
@@ -1227,7 +1227,7 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
   // |thread_local_event_buffer_| can be null if the current thread doesn't have
   // a message loop or the message loop is blocked.
   InitializeThreadLocalEventBufferIfSupported();
-  auto thread_local_event_buffer = thread_local_event_buffer_.Get();
+  auto* thread_local_event_buffer = thread_local_event_buffer_.Get();
 
   // Check and update the current thread name only if the event is for the
   // current thread to avoid locks in most cases.

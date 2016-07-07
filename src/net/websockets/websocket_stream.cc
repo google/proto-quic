@@ -86,6 +86,7 @@ class StreamRequestImpl : public WebSocketStreamRequest {
       const GURL& url,
       const URLRequestContext* context,
       const url::Origin& origin,
+      const std::string& additional_headers,
       std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
       std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper)
       : delegate_(new Delegate(this)),
@@ -100,6 +101,9 @@ class StreamRequestImpl : public WebSocketStreamRequest {
     headers.SetHeader(HttpRequestHeaders::kOrigin, origin.Serialize());
     headers.SetHeader(websockets::kSecWebSocketVersion,
                       websockets::kSupportedVersion);
+
+    headers.AddHeadersFromString(additional_headers);
+
     url_request_->SetExtraRequestHeaders(headers);
 
     // This passes the ownership of |create_helper_| to |url_request_|.
@@ -332,6 +336,7 @@ std::unique_ptr<WebSocketStreamRequest> WebSocketStream::CreateAndConnectStream(
     const GURL& socket_url,
     const std::vector<std::string>& requested_subprotocols,
     const url::Origin& origin,
+    const std::string& additional_headers,
     URLRequestContext* url_request_context,
     const BoundNetLog& net_log,
     std::unique_ptr<ConnectDelegate> connect_delegate) {
@@ -339,8 +344,8 @@ std::unique_ptr<WebSocketStreamRequest> WebSocketStream::CreateAndConnectStream(
       new WebSocketHandshakeStreamCreateHelper(connect_delegate.get(),
                                                requested_subprotocols));
   std::unique_ptr<StreamRequestImpl> request(new StreamRequestImpl(
-      socket_url, url_request_context, origin, std::move(connect_delegate),
-      std::move(create_helper)));
+      socket_url, url_request_context, origin, additional_headers,
+      std::move(connect_delegate), std::move(create_helper)));
   request->Start(std::unique_ptr<base::Timer>(new base::Timer(false, false)));
   return std::move(request);
 }
@@ -350,13 +355,14 @@ std::unique_ptr<WebSocketStreamRequest> CreateAndConnectStreamForTesting(
     const GURL& socket_url,
     std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
     const url::Origin& origin,
+    const std::string& additional_headers,
     URLRequestContext* url_request_context,
     const BoundNetLog& net_log,
     std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
     std::unique_ptr<base::Timer> timer) {
   std::unique_ptr<StreamRequestImpl> request(new StreamRequestImpl(
-      socket_url, url_request_context, origin, std::move(connect_delegate),
-      std::move(create_helper)));
+      socket_url, url_request_context, origin, additional_headers,
+      std::move(connect_delegate), std::move(create_helper)));
   request->Start(std::move(timer));
   return std::move(request);
 }

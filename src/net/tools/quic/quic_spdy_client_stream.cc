@@ -57,7 +57,7 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(bool fin,
     return;
   }
 
-  if (!ParseHeaderStatusCode(&response_headers_, &response_code_)) {
+  if (!ParseHeaderStatusCode(response_headers_, &response_code_)) {
     DLOG(ERROR) << "Received invalid response code: "
                 << response_headers_[":status"].as_string();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
@@ -85,7 +85,7 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(
     return;
   }
 
-  if (!ParseHeaderStatusCode(&response_headers_, &response_code_)) {
+  if (!ParseHeaderStatusCode(response_headers_, &response_code_)) {
     DLOG(ERROR) << "Received invalid response code: "
                 << response_headers_[":status"].as_string();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
