@@ -32,10 +32,13 @@
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using net::SpdyHeaderBlock;
+using net::SpdyPriority;
 using std::set;
 using std::string;
 using std::vector;
 using testing::CreateFunctor;
+using testing::AtLeast;
 using testing::InSequence;
 using testing::Invoke;
 using testing::Return;
@@ -721,7 +724,7 @@ TEST_P(QuicSessionTestServer, HandshakeUnblocksFlowControlBlockedStream) {
   EXPECT_FALSE(stream2->flow_controller()->IsBlocked());
   EXPECT_FALSE(session_.IsConnectionFlowControlBlocked());
   EXPECT_FALSE(session_.IsStreamFlowControlBlocked());
-  EXPECT_CALL(*connection_, SendBlocked(stream2->id()));
+  EXPECT_CALL(*connection_, SendBlocked(_)).Times(AtLeast(1));
   EXPECT_CALL(*connection_, SendBlocked(0));
   stream2->WriteOrBufferBody(body, false, nullptr);
   EXPECT_TRUE(stream2->flow_controller()->IsBlocked());
@@ -1118,6 +1121,16 @@ TEST_P(QuicSessionTestServer, TestMaxIncomingAndOutgoingStreamsAllowed) {
             kDefaultMaxStreamsPerConnection);
 }
 
+TEST_P(QuicSessionTestServer, EnableFHOLThroughConfigOption) {
+  QuicConfigPeer::SetReceivedForceHolBlocking(session_.config());
+  session_.OnConfigNegotiated();
+  if (version() <= QUIC_VERSION_35) {
+    EXPECT_FALSE(session_.force_hol_blocking());
+  } else {
+    EXPECT_TRUE(session_.force_hol_blocking());
+  }
+}
+
 class QuicSessionTestClient : public QuicSessionTestBase {
  protected:
   QuicSessionTestClient() : QuicSessionTestBase(Perspective::IS_CLIENT) {}
@@ -1193,6 +1206,16 @@ TEST_P(QuicSessionTestClient, EnableDHDTThroughConnectionOption) {
   EXPECT_EQ(QuicHeadersStreamPeer::GetSpdyFramer(session_.headers_stream())
                 .header_encoder_table_size(),
             0UL);
+}
+
+TEST_P(QuicSessionTestClient, EnableFHOLThroughConfigOption) {
+  session_.config()->SetForceHolBlocking();
+  session_.OnConfigNegotiated();
+  if (version() <= QUIC_VERSION_35) {
+    EXPECT_FALSE(session_.force_hol_blocking());
+  } else {
+    EXPECT_TRUE(session_.force_hol_blocking());
+  }
 }
 
 }  // namespace

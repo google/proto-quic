@@ -39,7 +39,7 @@ void QuicChromiumPacketReader::StartReading() {
     return;
 
   if (num_packets_read_ == 0)
-    yield_after_ = clock_->Now().Add(yield_after_duration_);
+    yield_after_ = clock_->Now() + yield_after_duration_;
 
   DCHECK(socket_);
   read_pending_ = true;

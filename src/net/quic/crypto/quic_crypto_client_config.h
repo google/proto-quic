@@ -210,11 +210,14 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   // to store the cached certs that were sent as hints to the server in
   // |out_params->cached_certs|. |preferred_version| is the version of the
   // QUIC protocol that this client chose to use initially. This allows the
-  // server to detect downgrade attacks.
+  // server to detect downgrade attacks.  If |demand_x509_proof| is true,
+  // then |out| will include an X509 proof demand, and the associated
+  // certificate related fields.
   void FillInchoateClientHello(const QuicServerId& server_id,
                                const QuicVersion preferred_version,
                                const CachedState* cached,
                                QuicRandom* rand,
+                               bool demand_x509_proof,
                                QuicCryptoNegotiatedParameters* out_params,
                                CryptoHandshakeMessage* out) const;
 

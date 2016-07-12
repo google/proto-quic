@@ -179,7 +179,6 @@ void GetX509CertLogEntry(LogEntry* entry) {
 }
 
 void GetX509CertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
-  tree_leaf->log_id = HexToBytes(kTestKeyId);
   tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
   GetX509CertLogEntry(&tree_leaf->log_entry);
   tree_leaf->extensions = HexToBytes(kDefaultExtensions);
@@ -195,7 +194,6 @@ void GetPrecertLogEntry(LogEntry* entry) {
 }
 
 void GetPrecertTreeLeaf(MerkleTreeLeaf* tree_leaf) {
-  tree_leaf->log_id = HexToBytes(kTestKeyId);
   tree_leaf->timestamp = base::Time::FromJsTime(kTestTimestamp);
   GetPrecertLogEntry(&tree_leaf->log_entry);
   tree_leaf->extensions = HexToBytes(kDefaultExtensions);

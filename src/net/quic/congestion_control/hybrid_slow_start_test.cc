@@ -59,17 +59,17 @@ TEST_F(HybridSlowStartTest, Delay) {
   // term RTT provided.
   for (int n = 0; n < kHybridStartMinSamples; ++n) {
     EXPECT_FALSE(slow_start_->ShouldExitSlowStart(
-        rtt_.Add(QuicTime::Delta::FromMilliseconds(n)), rtt_, 100));
+        rtt_ + QuicTime::Delta::FromMilliseconds(n), rtt_, 100));
   }
   slow_start_->StartReceiveRound(end_packet_number++);
   for (int n = 1; n < kHybridStartMinSamples; ++n) {
     EXPECT_FALSE(slow_start_->ShouldExitSlowStart(
-        rtt_.Add(QuicTime::Delta::FromMilliseconds(n + 10)), rtt_, 100));
+        rtt_ + QuicTime::Delta::FromMilliseconds(n + 10), rtt_, 100));
   }
   // Expect to trigger since all packets in this burst was above the long term
   // RTT provided.
   EXPECT_TRUE(slow_start_->ShouldExitSlowStart(
-      rtt_.Add(QuicTime::Delta::FromMilliseconds(10)), rtt_, 100));
+      rtt_ + QuicTime::Delta::FromMilliseconds(10), rtt_, 100));
 }
 
 }  // namespace test

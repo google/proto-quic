@@ -463,7 +463,7 @@ void QuicConnectionLogger::OnPacketSent(
     UMA_HISTOGRAM_CUSTOM_TIMES(
         "Net.QuicTimeBetweenTwoPacketSent",
         base::TimeDelta::FromMilliseconds(
-            sent_time.Subtract(last_packet_sent_time_).ToMilliseconds()),
+            (sent_time - last_packet_sent_time_).ToMilliseconds()),
         base::TimeDelta::FromMilliseconds(1), base::TimeDelta::FromMinutes(10),
         100);
   }

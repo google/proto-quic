@@ -71,15 +71,21 @@ func (c *Conn) dtlsDoReadRecord(want recordType) (recordType, *block, error) {
 	}
 	typ := recordType(b.data[0])
 	vers := wireToVersion(uint16(b.data[1])<<8|uint16(b.data[2]), c.isDTLS)
-	if c.haveVers {
-		if vers != c.vers {
-			c.sendAlert(alertProtocolVersion)
-			return 0, nil, c.in.setErrorLocked(fmt.Errorf("dtls: received record with version %x when expecting version %x", vers, c.vers))
-		}
-	} else {
-		if expect := c.config.Bugs.ExpectInitialRecordVersion; expect != 0 && vers != expect {
-			c.sendAlert(alertProtocolVersion)
-			return 0, nil, c.in.setErrorLocked(fmt.Errorf("dtls: received record with version %x when expecting version %x", vers, expect))
+	// Alerts sent near version negotiation do not have a well-defined
+	// record-layer version prior to TLS 1.3. (In TLS 1.3, the record-layer
+	// version is irrelevant.)
+	if typ != recordTypeAlert {
+		if c.haveVers {
+			if vers != c.vers {
+				c.sendAlert(alertProtocolVersion)
+				return 0, nil, c.in.setErrorLocked(fmt.Errorf("dtls: received record with version %x when expecting version %x", vers, c.vers))
+			}
+		} else {
+			// Pre-version-negotiation alerts may be sent with any version.
+			if expect := c.config.Bugs.ExpectInitialRecordVersion; expect != 0 && vers != expect {
+				c.sendAlert(alertProtocolVersion)
+				return 0, nil, c.in.setErrorLocked(fmt.Errorf("dtls: received record with version %x when expecting version %x", vers, expect))
+			}
 		}
 	}
 	epoch := b.data[3:5]
@@ -105,7 +111,9 @@ func (c *Conn) dtlsDoReadRecord(want recordType) (recordType, *block, error) {
 
 	// Process message.
 	b, c.rawInput = c.in.splitBlock(b, recordHeaderLen+n)
-	ok, off, err := c.in.decrypt(b)
+	// TODO(nharper): Once DTLS 1.3 is defined, handle the extra
+	// parameter from decrypt.
+	ok, off, _, err := c.in.decrypt(b)
 	if !ok {
 		c.in.setErrorLocked(c.sendAlert(err))
 	}
@@ -133,7 +141,30 @@ func (c *Conn) makeFragment(header, data []byte, fragOffset, fragLen int) []byte
 func (c *Conn) dtlsWriteRecord(typ recordType, data []byte) (n int, err error) {
 	if typ != recordTypeHandshake {
 		// Only handshake messages are fragmented.
-		return c.dtlsWriteRawRecord(typ, data)
+		n, err = c.dtlsWriteRawRecord(typ, data)
+		if err != nil {
+			return
+		}
+
+		if typ == recordTypeChangeCipherSpec {
+			err = c.out.changeCipherSpec(c.config)
+			if err != nil {
+				// Cannot call sendAlert directly,
+				// because we already hold c.out.Mutex.
+				c.tmp[0] = alertLevelError
+				c.tmp[1] = byte(err.(alert))
+				c.writeRecord(recordTypeAlert, c.tmp[0:2])
+				return n, c.out.setErrorLocked(&net.OpError{Op: "local error", Err: err})
+			}
+		}
+		return
+	}
+
+	if c.out.cipher == nil && c.config.Bugs.StrayChangeCipherSpec {
+		_, err = c.dtlsWriteRawRecord(recordTypeChangeCipherSpec, []byte{1})
+		if err != nil {
+			return
+		}
 	}
 
 	maxLen := c.config.Bugs.MaxHandshakeRecordLength
@@ -302,6 +333,8 @@ func (c *Conn) dtlsSealRecord(typ recordType, data []byte) (b *block, err error)
 		panic("Unknown cipher")
 	}
 	b.resize(recordHeaderLen + explicitIVLen + len(data))
+	// TODO(nharper): DTLS 1.3 will likely need to set this to
+	// recordTypeApplicationData if c.out.cipher != nil.
 	b.data[0] = byte(typ)
 	vers := c.vers
 	if vers == 0 {
@@ -327,7 +360,7 @@ func (c *Conn) dtlsSealRecord(typ recordType, data []byte) (b *block, err error)
 		}
 	}
 	copy(b.data[recordHeaderLen+explicitIVLen:], data)
-	c.out.encrypt(b, explicitIVLen)
+	c.out.encrypt(b, explicitIVLen, typ)
 	return
 }
 
@@ -344,18 +377,6 @@ func (c *Conn) dtlsWriteRawRecord(typ recordType, data []byte) (n int, err error
 	n = len(data)
 
 	c.out.freeBlock(b)
-
-	if typ == recordTypeChangeCipherSpec {
-		err = c.out.changeCipherSpec(c.config)
-		if err != nil {
-			// Cannot call sendAlert directly,
-			// because we already hold c.out.Mutex.
-			c.tmp[0] = alertLevelError
-			c.tmp[1] = byte(err.(alert))
-			c.writeRecord(recordTypeAlert, c.tmp[0:2])
-			return n, c.out.setErrorLocked(&net.OpError{Op: "local error", Err: err})
-		}
-	}
 	return
 }
 

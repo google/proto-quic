@@ -1057,7 +1057,7 @@ std::unique_ptr<base::Value> QuicChromiumClientSession::GetInfoAsValue(
   dict->SetString("version", QuicVersionToString(connection()->version()));
   dict->SetInteger("open_streams", GetNumOpenOutgoingStreams());
   std::unique_ptr<base::ListValue> stream_list(new base::ListValue());
-  for (StreamMap::const_iterator it = dynamic_streams().begin();
+  for (DynamicStreamMap::const_iterator it = dynamic_streams().begin();
        it != dynamic_streams().end(); ++it) {
     stream_list->AppendString(base::UintToString(it->second->id()));
   }

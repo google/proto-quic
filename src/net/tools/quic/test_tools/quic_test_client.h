@@ -202,6 +202,10 @@ class QuicTestClient : public test::SimpleClient,
 
   size_t num_responses() const { return num_responses_; }
 
+  void set_server_address(const IPEndPoint& server_address) {
+    client_->set_server_address(server_address);
+  }
+
   // Explicitly set the SNI value for this client, overriding the default
   // behavior which extracts the SNI value from the request URL.
   void OverrideSni(const std::string& sni) {

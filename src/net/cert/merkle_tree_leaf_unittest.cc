@@ -75,7 +75,6 @@ TEST_F(MerkleTreeLeafTest, CreatesForX509Cert) {
   MerkleTreeLeaf leaf;
   ASSERT_TRUE(GetMerkleTreeLeaf(test_cert_.get(), x509_sct_.get(), &leaf));
 
-  EXPECT_EQ(x509_sct_->log_id, leaf.log_id);
   EXPECT_EQ(LogEntry::LOG_ENTRY_TYPE_X509, leaf.log_entry.type);
   EXPECT_FALSE(leaf.log_entry.leaf_certificate.empty());
   EXPECT_TRUE(leaf.log_entry.tbs_certificate.empty());
@@ -89,7 +88,6 @@ TEST_F(MerkleTreeLeafTest, CreatesForPrecert) {
   ASSERT_TRUE(
       GetMerkleTreeLeaf(test_precert_.get(), precert_sct_.get(), &leaf));
 
-  EXPECT_EQ(precert_sct_->log_id, leaf.log_id);
   EXPECT_EQ(LogEntry::LOG_ENTRY_TYPE_PRECERT, leaf.log_entry.type);
   EXPECT_FALSE(leaf.log_entry.tbs_certificate.empty());
   EXPECT_TRUE(leaf.log_entry.leaf_certificate.empty());
@@ -114,7 +112,7 @@ TEST_F(MerkleTreeLeafTest, HashForX509Cert) {
   ct::GetX509CertTreeLeaf(&leaf);
 
   std::string hash;
-  ASSERT_TRUE(Hash(leaf, &hash));
+  ASSERT_TRUE(HashMerkleTreeLeaf(leaf, &hash));
   EXPECT_THAT(hash, HexEq("452da788b3b8d15872ff0bb0777354b2a7f1c1887b5633201e76"
                           "2ba5a4b143fc"));
 }
@@ -124,7 +122,7 @@ TEST_F(MerkleTreeLeafTest, HashForPrecert) {
   ct::GetPrecertTreeLeaf(&leaf);
 
   std::string hash;
-  ASSERT_TRUE(Hash(leaf, &hash));
+  ASSERT_TRUE(HashMerkleTreeLeaf(leaf, &hash));
   EXPECT_THAT(hash, HexEq("257ae85f08810445511e35e33f7aee99ee19407971e35e95822b"
                           "bf42a74be223"));
 }

@@ -464,7 +464,8 @@ bool MessageLoop::ProcessNextDelayedNonNestableTask() {
   if (deferred_non_nestable_work_queue_.empty())
     return false;
 
-  PendingTask pending_task = deferred_non_nestable_work_queue_.front();
+  PendingTask pending_task =
+      std::move(deferred_non_nestable_work_queue_.front());
   deferred_non_nestable_work_queue_.pop();
 
   RunTask(pending_task);
@@ -497,7 +498,7 @@ void MessageLoop::RunTask(const PendingTask& pending_task) {
   nestable_tasks_allowed_ = true;
 }
 
-bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task) {
+bool MessageLoop::DeferOrRunPendingTask(PendingTask pending_task) {
   if (pending_task.nestable || run_loop_->run_depth_ == 1) {
     RunTask(pending_task);
     // Show that we ran a task (Note: a new one might arrive as a
@@ -507,25 +508,25 @@ bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task) {
 
   // We couldn't run the task now because we're in a nested message loop
   // and the task isn't nestable.
-  deferred_non_nestable_work_queue_.push(pending_task);
+  deferred_non_nestable_work_queue_.push(std::move(pending_task));
   return false;
 }
 
-void MessageLoop::AddToDelayedWorkQueue(const PendingTask& pending_task) {
+void MessageLoop::AddToDelayedWorkQueue(PendingTask pending_task) {
   // Move to the delayed work queue.
-  delayed_work_queue_.push(pending_task);
+  delayed_work_queue_.push(std::move(pending_task));
 }
 
 bool MessageLoop::DeletePendingTasks() {
   bool did_work = !work_queue_.empty();
   while (!work_queue_.empty()) {
-    PendingTask pending_task = work_queue_.front();
+    PendingTask pending_task = std::move(work_queue_.front());
     work_queue_.pop();
     if (!pending_task.delayed_run_time.is_null()) {
       // We want to delete delayed tasks in the same order in which they would
       // normally be deleted in case of any funny dependencies between delayed
       // tasks.
-      AddToDelayedWorkQueue(pending_task);
+      AddToDelayedWorkQueue(std::move(pending_task));
     }
   }
   did_work |= !deferred_non_nestable_work_queue_.empty();
@@ -613,15 +614,17 @@ bool MessageLoop::DoWork() {
 
     // Execute oldest task.
     do {
-      PendingTask pending_task = work_queue_.front();
+      PendingTask pending_task = std::move(work_queue_.front());
       work_queue_.pop();
       if (!pending_task.delayed_run_time.is_null()) {
-        AddToDelayedWorkQueue(pending_task);
+        int sequence_num = pending_task.sequence_num;
+        TimeTicks delayed_run_time = pending_task.delayed_run_time;
+        AddToDelayedWorkQueue(std::move(pending_task));
         // If we changed the topmost task, then it is time to reschedule.
-        if (delayed_work_queue_.top().task.Equals(pending_task.task))
-          pump_->ScheduleDelayedWork(pending_task.delayed_run_time);
+        if (delayed_work_queue_.top().sequence_num == sequence_num)
+          pump_->ScheduleDelayedWork(delayed_run_time);
       } else {
-        if (DeferOrRunPendingTask(pending_task))
+        if (DeferOrRunPendingTask(std::move(pending_task)))
           return true;
       }
     } while (!work_queue_.empty());
@@ -653,13 +656,14 @@ bool MessageLoop::DoDelayedWork(TimeTicks* next_delayed_work_time) {
     }
   }
 
-  PendingTask pending_task = delayed_work_queue_.top();
+  PendingTask pending_task =
+      std::move(const_cast<PendingTask&>(delayed_work_queue_.top()));
   delayed_work_queue_.pop();
 
   if (!delayed_work_queue_.empty())
     *next_delayed_work_time = delayed_work_queue_.top().delayed_run_time;
 
-  return DeferOrRunPendingTask(pending_task);
+  return DeferOrRunPendingTask(std::move(pending_task));
 }
 
 bool MessageLoop::DoIdleWork() {

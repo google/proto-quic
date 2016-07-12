@@ -159,10 +159,6 @@ void URLRequest::Delegate::OnSSLCertificateError(URLRequest* request,
   request->Cancel();
 }
 
-void URLRequest::Delegate::OnBeforeNetworkStart(URLRequest* request,
-                                                bool* defer) {
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // URLRequest
 
@@ -570,8 +566,7 @@ URLRequest::URLRequest(const GURL& url,
                                           base::Unretained(this))),
       has_notified_completion_(false),
       received_response_content_length_(0),
-      creation_time_(base::TimeTicks::Now()),
-      notified_before_network_start_(false) {
+      creation_time_(base::TimeTicks::Now()) {
   // Sanity check out environment.
   DCHECK(base::MessageLoop::current())
       << "The current base::MessageLoop must exist";
@@ -786,19 +781,8 @@ void URLRequest::NotifyReceivedRedirect(const RedirectInfo& redirect_info,
   }
 }
 
-void URLRequest::NotifyBeforeNetworkStart(bool* defer) {
-  if (!notified_before_network_start_) {
-    OnCallToDelegate();
-    delegate_->OnBeforeNetworkStart(this, defer);
-    if (!*defer)
-      OnCallToDelegateComplete();
-    notified_before_network_start_ = true;
-  }
-}
-
 void URLRequest::ResumeNetworkStart() {
   DCHECK(job_.get());
-  DCHECK(notified_before_network_start_);
 
   OnCallToDelegateComplete();
   job_->ResumeNetworkStart();

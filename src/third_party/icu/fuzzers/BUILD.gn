@@ -11,13 +11,24 @@ import("//testing/libfuzzer/fuzzer_test.gni")
 group("fuzzers") {
 }
 
+source_set("fuzzer_support") {
+  public = [
+    "fuzzer_utils.h",
+  ]
+  deps = [
+    "//base",
+    "//base:i18n",
+    "//third_party/icu",
+  ]
+  public_configs = [ "//third_party/icu:icu_config" ]
+}
+
 fuzzer_test("icu_uregex_open_fuzzer") {
   sources = [
     "icu_uregex_open_fuzzer.cc",
   ]
   deps = [
-    "//base",
-    "//third_party/icu",
+    ":fuzzer_support",
   ]
   dict = "icu_regex.dict"
   libfuzzer_options = [ "max_len=128" ]
@@ -28,9 +39,10 @@ fuzzer_test("icu_unicode_string_codepage_create_fuzzer") {
     "icu_unicode_string_codepage_create_fuzzer.cc",
   ]
   deps = [
-    "//base",
-    "//third_party/icu",
+    ":fuzzer_support",
   ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
 }
 
 fuzzer_test("icu_number_format_fuzzer") {
@@ -38,10 +50,10 @@ fuzzer_test("icu_number_format_fuzzer") {
     "icu_number_format_fuzzer.cc",
   ]
   deps = [
-    "//base",
-    "//base:i18n",
-    "//third_party/icu",
+    ":fuzzer_support",
   ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
 }
 
 fuzzer_test("icu_break_iterator_fuzzer") {
@@ -49,10 +61,21 @@ fuzzer_test("icu_break_iterator_fuzzer") {
     "icu_break_iterator_fuzzer.cc",
   ]
   deps = [
-    "//base",
-    "//base:i18n",
-    "//third_party/icu",
+    ":fuzzer_support",
   ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
+}
+
+fuzzer_test("icu_break_iterator_utf32_fuzzer") {
+  sources = [
+    "icu_break_iterator_utf32_fuzzer.cc",
+  ]
+  deps = [
+    ":fuzzer_support",
+  ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
 }
 
 fuzzer_test("icu_ucasemap_fuzzer") {
@@ -60,9 +83,19 @@ fuzzer_test("icu_ucasemap_fuzzer") {
     "icu_ucasemap_fuzzer.cc",
   ]
   deps = [
-    "//base",
-    "//base:i18n",
-    "//third_party/icu",
+    ":fuzzer_support",
   ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
 }
 
+fuzzer_test("icu_converter_fuzzer") {
+  sources = [
+    "icu_converter_fuzzer.cc",
+  ]
+  deps = [
+    ":fuzzer_support",
+  ]
+  seed_corpus = "//third_party/icu/source/test/testdata"
+  libfuzzer_options = [ "max_len=10240" ]
+}

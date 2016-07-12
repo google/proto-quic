@@ -450,10 +450,10 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
   // Calls RunTask or queues the pending_task on the deferred task list if it
   // cannot be run right now.  Returns true if the task was run.
-  bool DeferOrRunPendingTask(const PendingTask& pending_task);
+  bool DeferOrRunPendingTask(PendingTask pending_task);
 
   // Adds the pending task to delayed_work_queue_.
-  void AddToDelayedWorkQueue(const PendingTask& pending_task);
+  void AddToDelayedWorkQueue(PendingTask pending_task);
 
   // Delete tasks that haven't run yet without running them.  Used in the
   // destructor to make sure all the task's destructors get called.  Returns

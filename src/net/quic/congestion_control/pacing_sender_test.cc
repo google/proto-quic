@@ -354,9 +354,6 @@ TEST_F(PacingSenderTest, VerifyInnerSenderCalled) {
   EXPECT_CALL(*mock_sender_, SetNumEmulatedConnections(2));
   pacing_sender_->SetNumEmulatedConnections(2);
 
-  EXPECT_CALL(*mock_sender_, SetMaxCongestionWindow(kBytes));
-  pacing_sender_->SetMaxCongestionWindow(kBytes);
-
   SendAlgorithmInterface::CongestionVector packets;
   EXPECT_CALL(*mock_sender_, OnCongestionEvent(true, kBytes, packets, packets));
   pacing_sender_->OnCongestionEvent(true, kBytes, packets, packets);

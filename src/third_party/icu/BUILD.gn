@@ -559,7 +559,7 @@ component("icuuc") {
   }
 }
 
-if (is_android) {
+if (is_android && enable_java_templates) {
   android_assets("icu_assets") {
     if (icu_use_data_file) {
       sources = [ "$root_out_dir/icudtl.dat" ]

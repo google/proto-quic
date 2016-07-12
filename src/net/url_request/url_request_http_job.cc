@@ -440,7 +440,6 @@ void URLRequestHttpJob::NotifyBeforeNetworkStart(bool* defer) {
       return;
     }
   }
-  URLRequestJob::NotifyBeforeNetworkStart(defer);
 }
 
 void URLRequestHttpJob::NotifyHeadersComplete() {
@@ -722,8 +721,12 @@ void URLRequestHttpJob::AddExtraHeaders() {
 
     // Advertise "br" encoding only if transferred data is opaque to proxy.
     bool advertise_brotli = false;
-    if (request()->context()->enable_brotli())
-      advertise_brotli = request()->url().SchemeIsCryptographic();
+    if (request()->context()->enable_brotli()) {
+      if (request()->url().SchemeIsCryptographic() ||
+          IsLocalhost(request()->url().HostNoBrackets())) {
+        advertise_brotli = true;
+      }
+    }
 
     // Supply Accept-Encoding headers first so that it is more likely that they
     // will be in the first transmitted packet. This can sometimes make it

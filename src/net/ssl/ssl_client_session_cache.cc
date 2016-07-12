@@ -15,7 +15,10 @@ SSLClientSessionCache::SSLClientSessionCache(const Config& config)
     : clock_(new base::DefaultClock),
       config_(config),
       cache_(config.max_entries),
-      lookups_since_flush_(0) {}
+      lookups_since_flush_(0) {
+  memory_pressure_listener_.reset(new base::MemoryPressureListener(base::Bind(
+      &SSLClientSessionCache::OnMemoryPressure, base::Unretained(this))));
+}
 
 SSLClientSessionCache::~SSLClientSessionCache() {
   Flush();
@@ -88,6 +91,20 @@ void SSLClientSessionCache::FlushExpiredSessions() {
     } else {
       ++iter;
     }
+  }
+}
+
+void SSLClientSessionCache::OnMemoryPressure(
+    base::MemoryPressureListener::MemoryPressureLevel memory_pressure_level) {
+  switch (memory_pressure_level) {
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE:
+      break;
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE:
+      FlushExpiredSessions();
+      break;
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL:
+      Flush();
+      break;
   }
 }
 

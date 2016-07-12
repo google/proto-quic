@@ -243,8 +243,7 @@ QuicTime::Delta TcpCubicSenderBase::RetransmissionDelay() const {
   if (rtt_stats_->smoothed_rtt().IsZero()) {
     return QuicTime::Delta::Zero();
   }
-  return rtt_stats_->smoothed_rtt().Add(
-      rtt_stats_->mean_deviation().Multiply(4));
+  return rtt_stats_->smoothed_rtt() + 4 * rtt_stats_->mean_deviation();
 }
 
 bool TcpCubicSenderBase::InSlowStart() const {

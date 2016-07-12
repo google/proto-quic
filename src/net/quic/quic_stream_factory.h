@@ -192,6 +192,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       int idle_connection_timeout_seconds,
       bool migrate_sessions_on_network_change,
       bool migrate_sessions_early,
+      bool force_hol_blocking,
       const QuicTagVector& connection_options,
       bool enable_token_binding);
   ~QuicStreamFactory() override;
@@ -571,6 +572,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Set if early migration should be attempted when the connection
   // experiences poor connectivity.
   const bool migrate_sessions_early_;
+
+  // If set, force HOL blocking.  For measurement purposes.
+  const bool force_hol_blocking_;
 
   // Each profile will (probably) have a unique port_seed_ value.  This value
   // is used to help seed a pseudo-random number generator (PortSuggester) so

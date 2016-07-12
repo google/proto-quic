@@ -669,7 +669,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_kECDHE,
      SSL_aPSK,
      SSL_AES128GCM,
-     SSL_SHA256,
+     SSL_AEAD,
      SSL_HANDSHAKE_MAC_SHA256,
     },
 
@@ -680,7 +680,7 @@ static const SSL_CIPHER kCiphers[] = {
      SSL_kECDHE,
      SSL_aPSK,
      SSL_AES256GCM,
-     SSL_SHA384,
+     SSL_AEAD,
      SSL_HANDSHAKE_MAC_SHA384,
     },
 
@@ -1725,6 +1725,15 @@ uint16_t SSL_CIPHER_get_min_version(const SSL_CIPHER *cipher) {
     return TLS1_2_VERSION;
   }
   return SSL3_VERSION;
+}
+
+uint16_t SSL_CIPHER_get_max_version(const SSL_CIPHER *cipher) {
+  if (cipher->algorithm_mac == SSL_AEAD &&
+      (cipher->algorithm_enc & SSL_CHACHA20POLY1305_OLD) == 0 &&
+      (cipher->algorithm_mkey & SSL_kECDHE) != 0) {
+    return TLS1_3_VERSION;
+  }
+  return TLS1_2_VERSION;
 }
 
 /* return the actual cipher being used */

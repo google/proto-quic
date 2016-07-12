@@ -158,7 +158,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChlo) {
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
   MockRandom rand;
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
-                                 &params, &msg);
+                                 /* demand_x509_proof= */ true, &params, &msg);
 
   QuicTag cver;
   EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kVER, &cver));
@@ -184,7 +184,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecure) {
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
   MockRandom rand;
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
-                                 &params, &msg);
+                                 /* demand_x509_proof= */ true, &params, &msg);
 
   QuicTag pdmd;
   EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kPDMD, &pdmd));
@@ -210,7 +210,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCID) {
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
   MockRandom rand;
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
-                                 &params, &msg);
+                                 /* demand_x509_proof= */ true, &params, &msg);
 
   StringPiece scid;
   EXPECT_TRUE(msg.GetStringPiece(kSCID, &scid));
@@ -226,7 +226,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureNoEcdsa) {
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
   MockRandom rand;
   config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
-                                 &params, &msg);
+                                 /* demand_x509_proof= */ true, &params, &msg);
 
   QuicTag pdmd;
   EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kPDMD, &pdmd));

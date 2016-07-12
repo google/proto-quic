@@ -76,7 +76,7 @@ class ProofVerifierChromium::Job {
       const std::string& signature,
       std::string* error_details,
       std::unique_ptr<ProofVerifyDetails>* verify_details,
-      ProofVerifierCallback* callback);
+      std::unique_ptr<ProofVerifierCallback> callback);
 
  private:
   enum State {
@@ -180,7 +180,7 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     const string& signature,
     std::string* error_details,
     std::unique_ptr<ProofVerifyDetails>* verify_details,
-    ProofVerifierCallback* callback) {
+    std::unique_ptr<ProofVerifierCallback> callback) {
   DCHECK(error_details);
   DCHECK(verify_details);
   DCHECK(callback);
@@ -246,7 +246,7 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
       *verify_details = std::move(verify_details_);
       return QUIC_SUCCESS;
     case ERR_IO_PENDING:
-      callback_.reset(callback);
+      callback_ = std::move(callback);
       return QUIC_PENDING;
     default:
       *error_details = error_details_;
@@ -491,7 +491,7 @@ QuicAsyncStatus ProofVerifierChromium::VerifyProof(
     const ProofVerifyContext* verify_context,
     std::string* error_details,
     std::unique_ptr<ProofVerifyDetails>* verify_details,
-    ProofVerifierCallback* callback) {
+    std::unique_ptr<ProofVerifierCallback> callback) {
   if (!verify_context) {
     *error_details = "Missing context";
     return QUIC_FAILURE;
@@ -504,7 +504,7 @@ QuicAsyncStatus ProofVerifierChromium::VerifyProof(
               chromium_context->cert_verify_flags, chromium_context->net_log));
   QuicAsyncStatus status = job->VerifyProof(
       hostname, port, server_config, quic_version, chlo_hash, certs, cert_sct,
-      signature, error_details, verify_details, callback);
+      signature, error_details, verify_details, std::move(callback));
   if (status == QUIC_PENDING) {
     active_jobs_.insert(job.release());
   }

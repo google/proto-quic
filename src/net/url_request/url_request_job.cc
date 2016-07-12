@@ -431,10 +431,6 @@ bool URLRequestJob::CanEnablePrivacyMode() const {
   return request_->CanEnablePrivacyMode();
 }
 
-void URLRequestJob::NotifyBeforeNetworkStart(bool* defer) {
-  request_->NotifyBeforeNetworkStart(defer);
-}
-
 void URLRequestJob::NotifyHeadersComplete() {
   if (has_handled_response_)
     return;

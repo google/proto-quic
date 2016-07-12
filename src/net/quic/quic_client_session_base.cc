@@ -174,7 +174,7 @@ QuicSpdyStream* QuicClientSessionBase::GetPromisedStream(
   if (IsClosedStream(id)) {
     return nullptr;
   }
-  StreamMap::iterator it = dynamic_streams().find(id);
+  DynamicStreamMap::iterator it = dynamic_streams().find(id);
   if (it != dynamic_streams().end()) {
     return static_cast<QuicSpdyStream*>(it->second);
   }

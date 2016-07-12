@@ -444,7 +444,7 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlBlocked) {
   GenerateBody(&body, kWindow + kOverflow);
 
   EXPECT_CALL(*connection_, SendBlocked(kClientDataStreamId1));
-  EXPECT_CALL(*session_, WritevData(stream_, kClientDataStreamId1, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kWindow, true)));
   stream_->WriteOrBufferData(body, false, nullptr);
 
@@ -690,7 +690,7 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlFinNotBlocked) {
   bool fin = true;
 
   EXPECT_CALL(*connection_, SendBlocked(kClientDataStreamId1)).Times(0);
-  EXPECT_CALL(*session_, WritevData(stream_, kClientDataStreamId1, _, _, _, _))
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(0, fin)));
 
   stream_->WriteOrBufferData(body, fin, nullptr);
@@ -966,14 +966,18 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kBodySize - 1, false)));
   stream_->WriteOrBufferData(string(kBodySize, 'x'), false, nullptr);
-  EXPECT_EQ(1u, stream_->queued_data_bytes());
+  if (!session_->force_hol_blocking()) {
+    EXPECT_EQ(1u, stream_->queued_data_bytes());
+  }
 
   // Writing trailers will send a FIN, but not close the write side of the
   // stream as there are queued bytes.
   EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(SpdyHeaderBlock(), nullptr);
   EXPECT_TRUE(stream_->fin_sent());
-  EXPECT_FALSE(stream_->write_side_closed());
+  if (!session_->force_hol_blocking()) {
+    EXPECT_FALSE(stream_->write_side_closed());
+  }
 }
 
 TEST_P(QuicSpdyStreamTest, WritingTrailersAfterFIN) {

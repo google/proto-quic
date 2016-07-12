@@ -41,7 +41,7 @@ class QuicChromeAlarm : public QuicAlarm {
       weak_factory_.InvalidateWeakPtrs();
     }
 
-    int64_t delay_us = deadline().Subtract(clock_->Now()).ToMicroseconds();
+    int64_t delay_us = (deadline() - (clock_->Now())).ToMicroseconds();
     if (delay_us < 0) {
       delay_us = 0;
     }

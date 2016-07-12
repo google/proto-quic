@@ -194,6 +194,9 @@ OPENSSL_EXPORT const SSL_METHOD *DTLS_method(void);
  * on error. */
 OPENSSL_EXPORT SSL_CTX *SSL_CTX_new(const SSL_METHOD *method);
 
+/* SSL_CTX_up_ref increments the reference count of |ctx|. It returns one. */
+OPENSSL_EXPORT int SSL_CTX_up_ref(SSL_CTX *ctx);
+
 /* SSL_CTX_free releases memory associated with |ctx|. */
 OPENSSL_EXPORT void SSL_CTX_free(SSL_CTX *ctx);
 
@@ -432,9 +435,9 @@ OPENSSL_EXPORT int SSL_get_error(const SSL *ssl, int ret_code);
  * See also |SSL_CTX_set_cert_cb| and |SSL_CTX_set_client_cert_cb|. */
 #define SSL_ERROR_WANT_X509_LOOKUP 4
 
-/* SSL_ERROR_WANT_SYSCALL indicates the operation failed externally to the
- * library. The caller should consult the system-specific error mechanism. This
- * is typically |errno| but may be something custom if using a custom |BIO|. It
+/* SSL_ERROR_SYSCALL indicates the operation failed externally to the library.
+ * The caller should consult the system-specific error mechanism. This is
+ * typically |errno| but may be something custom if using a custom |BIO|. It
  * may also be signaled if the transport returned EOF, in which case the
  * operation's return value will be zero. */
 #define SSL_ERROR_SYSCALL 5
@@ -1081,9 +1084,8 @@ OPENSSL_EXPORT int SSL_CIPHER_is_AES128CBC(const SSL_CIPHER *cipher);
 OPENSSL_EXPORT int SSL_CIPHER_is_AES256CBC(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_is_CHACHA20POLY1305 returns one if |cipher| uses
- * CHACHA20_POLY1305. Note this includes both the
- * draft-ietf-tls-chacha20-poly1305-04 and draft-agl-tls-chacha20poly1305-04
- * versions. */
+ * CHACHA20_POLY1305. Note this includes both the RFC 7905 and
+ * draft-agl-tls-chacha20poly1305-04 versions. */
 OPENSSL_EXPORT int SSL_CIPHER_is_CHACHA20POLY1305(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_is_NULL returns one if |cipher| does not encrypt. */
@@ -1110,6 +1112,10 @@ OPENSSL_EXPORT int SSL_CIPHER_is_CECPQ1(const SSL_CIPHER *cipher);
 /* SSL_CIPHER_get_min_version returns the minimum protocol version required
  * for |cipher|. */
 OPENSSL_EXPORT uint16_t SSL_CIPHER_get_min_version(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_get_max_version returns the maximum protocol version that
+ * supports |cipher|. */
+OPENSSL_EXPORT uint16_t SSL_CIPHER_get_max_version(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_get_name returns the OpenSSL name of |cipher|. */
 OPENSSL_EXPORT const char *SSL_CIPHER_get_name(const SSL_CIPHER *cipher);
@@ -1503,13 +1509,6 @@ OPENSSL_EXPORT long SSL_SESSION_get_time(const SSL_SESSION *session);
 /* SSL_SESSION_get_timeout returns the lifetime of |session| in seconds. */
 OPENSSL_EXPORT long SSL_SESSION_get_timeout(const SSL_SESSION *session);
 
-/* SSL_SESSION_get_key_exchange_info returns a value that describes the
- * strength of the asymmetric operation that provides confidentiality to
- * |session|. Its interpretation depends on the operation used. See the
- * documentation for this value in the |SSL_SESSION| structure. */
-OPENSSL_EXPORT uint32_t SSL_SESSION_get_key_exchange_info(
-    const SSL_SESSION *session);
-
 /* SSL_SESSION_get0_peer return's the peer leaf certificate stored in
  * |session|.
  *
@@ -1834,35 +1833,50 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_ticket_key_cb(
  * are supported. ECDHE is always enabled, but the curve preferences may be
  * configured with these functions.
  *
- * A client may use |SSL_SESSION_get_key_exchange_info| to determine the curve
- * selected. */
+ * Note that TLS 1.3 renames these from curves to groups. For consistency, we
+ * currently use the TLS 1.2 name in the API. */
 
 /* SSL_CTX_set1_curves sets the preferred curves for |ctx| to be |curves|. Each
  * element of |curves| should be a curve nid. It returns one on success and
- * zero on failure. */
+ * zero on failure.
+ *
+ * Note that this API uses nid values from nid.h and not the |SSL_CURVE_*|
+ * values defined below. */
 OPENSSL_EXPORT int SSL_CTX_set1_curves(SSL_CTX *ctx, const int *curves,
                                        size_t curves_len);
 
 /* SSL_set1_curves sets the preferred curves for |ssl| to be |curves|. Each
  * element of |curves| should be a curve nid. It returns one on success and
- * zero on failure. */
+ * zero on failure.
+ *
+ * Note that this API uses nid values from nid.h and not the |SSL_CURVE_*|
+ * values defined below. */
 OPENSSL_EXPORT int SSL_set1_curves(SSL *ssl, const int *curves,
                                    size_t curves_len);
 
-/* SSL_get_curve_name returns a human-readable name for the group specified by
- * the given TLS group id, or NULL if the group is unknown. */
-OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t group_id);
+/* SSL_CURVE_* define TLS curve IDs. */
+#define SSL_CURVE_SECP256R1 23
+#define SSL_CURVE_SECP384R1 24
+#define SSL_CURVE_SECP521R1 25
+#define SSL_CURVE_X25519 29
+
+/* SSL_get_curve_id returns the ID of the curve used by |ssl|'s most recently
+ * completed handshake or 0 if not applicable.
+ *
+ * TODO(davidben): This API currently does not work correctly if there is a
+ * renegotiation in progress. Fix this. */
+OPENSSL_EXPORT uint16_t SSL_get_curve_id(const SSL *ssl);
+
+/* SSL_get_curve_name returns a human-readable name for the curve specified by
+ * the given TLS curve id, or NULL if the curve is unknown. */
+OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t curve_id);
 
 
 /* Multiplicative Diffie-Hellman.
  *
  * Cipher suites using a DHE key exchange perform Diffie-Hellman over a
  * multiplicative group selected by the server. These ciphers are disabled for a
- * server unless a group is chosen with one of these functions.
- *
- * A client may use |SSL_SESSION_get_key_exchange_info| to determine the size of
- * the selected group's prime, but note that servers may select degenerate
- * groups. */
+ * server unless a group is chosen with one of these functions. */
 
 /* SSL_CTX_set_tmp_dh configures |ctx| to use the group from |dh| as the group
  * for DHE. Only the group is used, so |dh| needn't have a keypair. It returns
@@ -1894,6 +1908,15 @@ OPENSSL_EXPORT void SSL_CTX_set_tmp_dh_callback(
 OPENSSL_EXPORT void SSL_set_tmp_dh_callback(SSL *ssl,
                                             DH *(*dh)(SSL *ssl, int is_export,
                                                       int keylength));
+
+/* SSL_get_dhe_group_size returns the number of bits in the most recently
+ * completed handshake's selected group's prime, or zero if not
+ * applicable. Note, however, that validating this value does not ensure the
+ * server selected a secure group.
+ *
+ * TODO(davidben): This API currently does not work correctly if there is a
+ * renegotiation in progress. Fix this. */
+OPENSSL_EXPORT unsigned SSL_get_dhe_group_size(const SSL *ssl);
 
 
 /* Certificate verification.
@@ -2955,10 +2978,9 @@ OPENSSL_EXPORT SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX *ctx);
  * respectively. */
 OPENSSL_EXPORT int SSL_get_shutdown(const SSL *ssl);
 
-/* SSL_get_server_key_exchange_hash, on a client, returns the hash the server
- * used to sign the ServerKeyExchange in TLS 1.2. If not applicable, it returns
- * |TLSEXT_hash_none|. */
-OPENSSL_EXPORT uint8_t SSL_get_server_key_exchange_hash(const SSL *ssl);
+/* SSL_get_peer_signature_algorithm returns the signature algorithm used by the
+ * peer. If not applicable, it returns zero. */
+OPENSSL_EXPORT uint16_t SSL_get_peer_signature_algorithm(const SSL *ssl);
 
 /* TODO(davidben): Remove this when wpa_supplicant in Android has synced with
  * upstream. */
@@ -3189,6 +3211,14 @@ OPENSSL_EXPORT void SSL_load_error_strings(void);
  * convention. Use |SSL_CTX_set_srtp_profiles| instead. */
 OPENSSL_EXPORT int SSL_CTX_set_tlsext_use_srtp(SSL_CTX *ctx,
                                                const char *profiles);
+
+/* SSL_get_server_key_exchange_hash, on a client, returns the hash the server
+ * used to sign the ServerKeyExchange in TLS 1.2. If not applicable, it returns
+ * |TLSEXT_hash_none|.
+ *
+ * TODO(davidben): Remove once Chromium switches to
+ * |SSL_get_peer_signature_algorithm|. */
+OPENSSL_EXPORT uint8_t SSL_get_server_key_exchange_hash(const SSL *ssl);
 
 /* SSL_set_tlsext_use_srtp calls |SSL_set_srtp_profiles|. It returns zero on
  * success and one on failure.
@@ -3448,6 +3478,18 @@ OPENSSL_EXPORT int SSL_set_tmp_ecdh(SSL *ssl, const EC_KEY *ec_key);
 OPENSSL_EXPORT int SSL_add_dir_cert_subjects_to_stack(STACK_OF(X509_NAME) *out,
                                                       const char *dir);
 
+/* SSL_SESSION_get_key_exchange_info returns a value that describes the
+ * strength of the asymmetric operation that provides confidentiality to
+ * |session|. Its interpretation depends on the operation used. See the
+ * documentation for this value in the |SSL_SESSION| structure.
+ *
+ * Use |SSL_get_curve_id| or |SSL_get_dhe_group_size| instead.
+ *
+ * TODO(davidben): Remove this API once Chromium has switched to the new
+ * APIs. */
+OPENSSL_EXPORT uint32_t SSL_SESSION_get_key_exchange_info(
+    const SSL_SESSION *session);
+
 
 /* Private structures.
  *
@@ -3492,7 +3534,6 @@ struct ssl_session_st {
    * that controls the confidentiality of the connection. Its interpretation
    * depends on the primitive that was used; as specified by the cipher suite:
    *   DHE: the size, in bits, of the multiplicative group.
-   *   RSA: the size, in bits, of the modulus.
    *   ECDHE: the TLS id for the curve.
    *
    * A zero indicates that the value is unknown. */
@@ -3616,12 +3657,12 @@ struct ssl_ctx_st {
   /* lock is used to protect various operations on this object. */
   CRYPTO_MUTEX lock;
 
-  /* max_version is the maximum acceptable protocol version. If zero, the
-   * maximum supported version, currently (D)TLS 1.2, is used. */
+  /* max_version is the maximum acceptable protocol version. Note this version
+   * is normalized in DTLS. */
   uint16_t max_version;
 
-  /* min_version is the minimum acceptable protocl version. If zero, the
-   * minimum supported version, currently SSL 3.0 and DTLS 1.0, is used */
+  /* min_version is the minimum acceptable protocol version. Note this version
+   * is normalized in DTLS. */
   uint16_t min_version;
 
   struct ssl_cipher_preference_list_st *cipher_list;
@@ -3865,12 +3906,12 @@ struct ssl_st {
   /* version is the protocol version. */
   int version;
 
-  /* max_version is the maximum acceptable protocol version. If zero, the
-   * maximum supported version, currently (D)TLS 1.2, is used. */
+  /* max_version is the maximum acceptable protocol version. Note this version
+   * is normalized in DTLS. */
   uint16_t max_version;
 
-  /* min_version is the minimum acceptable protocl version. If zero, the
-   * minimum supported version, currently SSL 3.0 and DTLS 1.0, is used */
+  /* min_version is the minimum acceptable protocol version. Note this version
+   * is normalized in DTLS. */
   uint16_t min_version;
 
   /* method is the method table corresponding to the current protocol (DTLS or
@@ -4141,6 +4182,10 @@ typedef struct ssl3_state_st {
    * version. */
   const SSL3_ENC_METHOD *enc_method;
 
+  /* pending_message is the current outgoing handshake message. */
+  uint8_t *pending_message;
+  uint32_t pending_message_len;
+
   /* State pertaining to the pending handshake.
    *
    * TODO(davidben): State is current spread all over the place. Move
@@ -4191,12 +4236,6 @@ typedef struct ssl3_state_st {
      * should be echoed in the ServerHello. */
     unsigned should_ack_sni:1;
 
-    /* Client-only: cert_req determines if a client certificate is to be sent.
-     * This is 0 if no client Certificate message is to be sent, 1 if there is
-     * a client certificate, and 2 to send an empty client Certificate
-     * message. */
-    int cert_req;
-
     /* Client-only: ca_names contains the list of CAs received in a
      * CertificateRequest message. */
     STACK_OF(X509_NAME) *ca_names;
@@ -4213,9 +4252,9 @@ typedef struct ssl3_state_st {
     uint8_t new_key_len;
     uint8_t new_fixed_iv_len;
 
-    /* Server-only: cert_request is true if a client certificate was
-     * requested. */
-    int cert_request;
+    /* cert_request is true if a client certificate was requested and false
+     * otherwise. */
+    unsigned cert_request:1;
 
     /* certificate_status_expected is true if OCSP stapling was negotiated and
      * the server is expected to send a CertificateStatus message. (This is
@@ -4251,10 +4290,9 @@ typedef struct ssl3_state_st {
      * False Start. The client may write data at this point. */
     char in_false_start;
 
-    /* server_key_exchange_hash, on a client, is the hash the server used to
-     * sign the ServerKeyExchange in TLS 1.2. If not applicable, it is
-     * |TLSEXT_hash_none|. */
-    uint8_t server_key_exchange_hash;
+    /* peer_signature_algorithm is the signature algorithm used to authenticate
+     * the peer, or zero if not applicable. */
+    uint16_t peer_signature_algorithm;
 
     /* ecdh_ctx is the current ECDH instance. */
     SSL_ECDH_CTX ecdh_ctx;
@@ -4262,6 +4300,11 @@ typedef struct ssl3_state_st {
     /* peer_key is the peer's ECDH key. */
     uint8_t *peer_key;
     uint16_t peer_key_len;
+
+    /* server_params stores the ServerKeyExchange parameters to be signed while
+     * the signature is being computed. */
+    uint8_t *server_params;
+    uint32_t server_params_len;
   } tmp;
 
   /* Connection binding to prevent renegotiation attacks */
@@ -4614,6 +4657,8 @@ OPENSSL_EXPORT int SSL_set_ssl_method(SSL *s, const SSL_METHOD *method);
 #define SSL_R_X509_LIB 248
 #define SSL_R_X509_VERIFICATION_SETUP_PROBLEMS 249
 #define SSL_R_SHUTDOWN_WHILE_IN_INIT 250
+#define SSL_R_INVALID_OUTER_RECORD_TYPE 251
+#define SSL_R_UNSUPPORTED_PROTOCOL_FOR_CUSTOM_KEY 252
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

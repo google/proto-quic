@@ -448,10 +448,20 @@ static const SSL_ECDH_METHOD kDHEMethod = {
     CBB_add_u16_length_prefixed,
 };
 
+static const SSL_ECDH_METHOD kCECPQ1Method = {
+    NID_undef, 0, "",
+    ssl_cecpq1_cleanup,
+    ssl_cecpq1_offer,
+    ssl_cecpq1_accept,
+    ssl_cecpq1_finish,
+    CBS_get_u16_length_prefixed,
+    CBB_add_u16_length_prefixed,
+};
+
 static const SSL_ECDH_METHOD kMethods[] = {
     {
         NID_X9_62_prime256v1,
-        SSL_GROUP_SECP256R1,
+        SSL_CURVE_SECP256R1,
         "P-256",
         ssl_ec_point_cleanup,
         ssl_ec_point_offer,
@@ -462,7 +472,7 @@ static const SSL_ECDH_METHOD kMethods[] = {
     },
     {
         NID_secp384r1,
-        SSL_GROUP_SECP384R1,
+        SSL_CURVE_SECP384R1,
         "P-384",
         ssl_ec_point_cleanup,
         ssl_ec_point_offer,
@@ -473,7 +483,7 @@ static const SSL_ECDH_METHOD kMethods[] = {
     },
     {
         NID_secp521r1,
-        SSL_GROUP_SECP521R1,
+        SSL_CURVE_SECP521R1,
         "P-521",
         ssl_ec_point_cleanup,
         ssl_ec_point_offer,
@@ -484,7 +494,7 @@ static const SSL_ECDH_METHOD kMethods[] = {
     },
     {
         NID_X25519,
-        SSL_GROUP_X25519,
+        SSL_CURVE_X25519,
         "X25519",
         ssl_x25519_cleanup,
         ssl_x25519_offer,
@@ -492,17 +502,6 @@ static const SSL_ECDH_METHOD kMethods[] = {
         ssl_x25519_finish,
         CBS_get_u8_length_prefixed,
         CBB_add_u8_length_prefixed,
-    },
-    {
-        NID_cecpq1,
-        SSL_GROUP_CECPQ1,
-        "CECPQ1",
-        ssl_cecpq1_cleanup,
-        ssl_cecpq1_offer,
-        ssl_cecpq1_accept,
-        ssl_cecpq1_finish,
-        CBS_get_u16_length_prefixed,
-        CBB_add_u16_length_prefixed,
     },
 };
 
@@ -560,6 +559,12 @@ void SSL_ECDH_CTX_init_for_dhe(SSL_ECDH_CTX *ctx, DH *params) {
 
   ctx->method = &kDHEMethod;
   ctx->data = params;
+}
+
+void SSL_ECDH_CTX_init_for_cecpq1(SSL_ECDH_CTX *ctx) {
+  SSL_ECDH_CTX_cleanup(ctx);
+
+  ctx->method = &kCECPQ1Method;
 }
 
 int SSL_ECDH_CTX_get_key(SSL_ECDH_CTX *ctx, CBS *cbs, CBS *out) {

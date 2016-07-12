@@ -949,8 +949,8 @@ int CertVerifyProcWin::VerifyInternal(
   // By default, use the default HCERTCHAINENGINE (aka HCCE_CURRENT_USER). When
   // running tests, use a dynamic HCERTCHAINENGINE. All of the status and cache
   // of verified certificates and chains is tied to the HCERTCHAINENGINE. As
-  // each invocation may have changed the set of known roots, invalid the cache
-  // between runs.
+  // each invocation may have changed the set of known roots, invalidate the
+  // cache between runs.
   //
   // This is not the most efficient means of doing so; it's possible to mark the
   // Root store used by TestRootCerts as changed, via CertControlStore with the

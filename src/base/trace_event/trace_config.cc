@@ -14,6 +14,7 @@
 #include "base/strings/pattern.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/memory_dump_request_args.h"
@@ -411,7 +412,8 @@ void TraceConfig::InitializeFromStrings(
       if (category.empty())
         continue;
       // Synthetic delays are of the form 'DELAY(delay;option;option;...)'.
-      if (category.find(kSyntheticDelayCategoryFilterPrefix) == 0 &&
+      if (base::StartsWith(category, kSyntheticDelayCategoryFilterPrefix,
+                           base::CompareCase::SENSITIVE) &&
           category.at(category.size() - 1) == ')') {
         category = category.substr(
             strlen(kSyntheticDelayCategoryFilterPrefix),

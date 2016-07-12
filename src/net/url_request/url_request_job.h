@@ -266,9 +266,6 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Delegates to URLRequest::Delegate.
   bool CanEnablePrivacyMode() const;
 
-  // Notifies the job that the network is about to be used.
-  void NotifyBeforeNetworkStart(bool* defer);
-
   // Notifies the job that headers have been received.
   void NotifyHeadersComplete();
 

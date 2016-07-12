@@ -150,8 +150,7 @@ void PosixDynamicThreadPool::AddTask(PendingTask* pending_task) {
   DCHECK(!terminated_)
       << "This thread pool is already terminated.  Do not post new tasks.";
 
-  pending_tasks_.push(*pending_task);
-  pending_task->task.Reset();
+  pending_tasks_.push(std::move(*pending_task));
 
   // We have enough worker threads.
   if (static_cast<size_t>(num_idle_threads_) >= pending_tasks_.size()) {
@@ -186,7 +185,7 @@ PendingTask PosixDynamicThreadPool::WaitForTask() {
     }
   }
 
-  PendingTask pending_task = pending_tasks_.front();
+  PendingTask pending_task = std::move(pending_tasks_.front());
   pending_tasks_.pop();
   return pending_task;
 }

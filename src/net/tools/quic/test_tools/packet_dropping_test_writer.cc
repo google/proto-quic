@@ -118,14 +118,14 @@ WriteResult PacketDroppingTestWriter::WritePacket(
     }
 
     // Queue it to be sent.
-    QuicTime send_time = clock_->ApproximateNow().Add(fake_packet_delay_);
+    QuicTime send_time = clock_->ApproximateNow() + fake_packet_delay_;
     if (!fake_bandwidth_.IsZero()) {
       // Calculate a time the bandwidth limit would impose.
       QuicTime::Delta bandwidth_delay = QuicTime::Delta::FromMicroseconds(
           (buf_len * kNumMicrosPerSecond) / fake_bandwidth_.ToBytesPerSecond());
       send_time = delayed_packets_.empty()
-                      ? send_time.Add(bandwidth_delay)
-                      : delayed_packets_.back().send_time.Add(bandwidth_delay);
+                      ? send_time + bandwidth_delay
+                      : delayed_packets_.back().send_time + bandwidth_delay;
     }
     std::unique_ptr<PerPacketOptions> delayed_options;
     if (options != nullptr) {

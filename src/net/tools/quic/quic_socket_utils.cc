@@ -56,7 +56,7 @@ void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
           *walltimestamp = QuicWallTime::FromUNIXMicroseconds(usec);
         } else {
           *timestamp =
-              QuicTime::Zero().Add(QuicTime::Delta::FromMicroseconds(usec));
+              QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(usec);
         }
       }
     }

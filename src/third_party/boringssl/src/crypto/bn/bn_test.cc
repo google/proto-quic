@@ -72,7 +72,9 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
+#include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -83,6 +85,7 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 
+#include "../crypto/test/file_test.h"
 #include "../crypto/test/scoped_types.h"
 #include "../crypto/test/test_util.h"
 
@@ -93,44 +96,23 @@
 // TODO(davidben): Rather than generate random inputs and depend on bc to check
 // the results, most of these tests should use known answers.
 
-static const int num0 = 100; // number of tests
-static const int num1 = 50;  // additional tests for some functions
 static const int num2 = 5;   // number of tests for slow functions
 
-static bool test_add(FILE *fp);
-static bool test_sub(FILE *fp);
-static bool test_lshift1(FILE *fp);
-static bool test_lshift(FILE *fp, BN_CTX *ctx, ScopedBIGNUM a);
-static bool test_rshift1(FILE *fp);
-static bool test_rshift(FILE *fp, BN_CTX *ctx);
-static bool test_sqr(FILE *fp, BN_CTX *ctx);
-static bool test_mul(FILE *fp);
-static bool test_div(FILE *fp, BN_CTX *ctx);
 static int rand_neg();
 
-static bool test_div_word(FILE *fp);
-static bool test_mont(FILE *fp, BN_CTX *ctx);
-static bool test_mod(FILE *fp, BN_CTX *ctx);
-static bool test_mod_mul(FILE *fp, BN_CTX *ctx);
-static bool test_mod_exp(FILE *fp, BN_CTX *ctx);
-static bool test_mod_exp_mont_consttime(FILE *fp, BN_CTX *ctx);
-static bool test_exp(FILE *fp, BN_CTX *ctx);
 static bool test_mod_sqrt(FILE *fp, BN_CTX *ctx);
-static bool test_exp_mod_zero(void);
-static bool test_small_prime(FILE *fp, BN_CTX *ctx);
-static bool test_mod_exp_mont5(FILE *fp, BN_CTX *ctx);
-static bool test_sqrt(FILE *fp, BN_CTX *ctx);
-static bool test_bn2bin_padded(BN_CTX *ctx);
-static bool test_dec2bn(BN_CTX *ctx);
-static bool test_hex2bn(BN_CTX *ctx);
-static bool test_asc2bn(BN_CTX *ctx);
-static bool test_mpi();
-static bool test_rand();
-static bool test_asn1();
-
-static const uint8_t kSample[] =
-    "\xC6\x4F\x43\x04\x2A\xEA\xCA\x6E\x58\x36\x80\x5B\xE8\xC9"
-    "\x9B\x04\x5D\x48\x36\xC2\xFD\x16\xC9\x64\xF0";
+static bool TestBN2BinPadded(BN_CTX *ctx);
+static bool TestDec2BN(BN_CTX *ctx);
+static bool TestHex2BN(BN_CTX *ctx);
+static bool TestASC2BN(BN_CTX *ctx);
+static bool TestMPI();
+static bool TestRand();
+static bool TestASN1();
+static bool TestNegativeZero(BN_CTX *ctx);
+static bool TestBadModulus(BN_CTX *ctx);
+static bool TestExpModZero();
+static bool TestSmallPrime(BN_CTX *ctx);
+static bool RunTest(FileTest *t, void *arg);
 
 // A wrapper around puts that takes its arguments in the same order as our *_fp
 // functions.
@@ -156,28 +138,26 @@ int main(int argc, char *argv[]) {
   CRYPTO_library_init();
 
   ScopedFILE bc_file;
+  const char *name = argv[0];
   argc--;
   argv++;
-  while (argc >= 1) {
-    if (strcmp(*argv, "-bc") == 0) {
-      if (argc < 2) {
-        fprintf(stderr, "Missing parameter to -bc\n");
-        return 1;
-      }
-      bc_file.reset(fopen(argv[1], "w+"));
-      if (!bc_file) {
-        fprintf(stderr, "Failed to open %s: %s\n", argv[1], strerror(errno));
-      }
-      argc--;
-      argv++;
-    } else {
-      fprintf(stderr, "Unknown option: %s\n", argv[0]);
+  if (argc > 0 && strcmp(argv[0], "-bc") == 0) {
+    if (argc < 2) {
+      fprintf(stderr, "Missing parameter to -bc\n");
       return 1;
     }
-    argc--;
-    argv++;
+    bc_file.reset(fopen(argv[1], "w+"));
+    if (!bc_file) {
+      fprintf(stderr, "Failed to open %s: %s\n", argv[1], strerror(errno));
+    }
+    argc -= 2;
+    argv += 2;
   }
 
+  if (argc != 1) {
+    fprintf(stderr, "%s [-bc BC_FILE] TEST_FILE\n", name);
+    return 1;
+  }
 
   ScopedBN_CTX ctx(BN_CTX_new());
   if (!ctx) {
@@ -190,144 +170,27 @@ int main(int argc, char *argv[]) {
                          "| grep -v 0 */\n");
   puts_fp(bc_file.get(), "obase=16\nibase=16\n");
 
-  message(bc_file.get(), "BN_add");
-  if (!test_add(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_sub");
-  if (!test_sub(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_lshift1");
-  if (!test_lshift1(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_lshift (fixed)");
-  ScopedBIGNUM sample(BN_bin2bn(kSample, sizeof(kSample) - 1, NULL));
-  if (!sample) {
-    return 1;
-  }
-  if (!test_lshift(bc_file.get(), ctx.get(), std::move(sample))) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_lshift");
-  if (!test_lshift(bc_file.get(), ctx.get(), nullptr)) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_rshift1");
-  if (!test_rshift1(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_rshift");
-  if (!test_rshift(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_sqr");
-  if (!test_sqr(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mul");
-  if (!test_mul(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_div");
-  if (!test_div(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_div_word");
-  if (!test_div_word(bc_file.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mod");
-  if (!test_mod(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mod_mul");
-  if (!test_mod_mul(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mont");
-  if (!test_mont(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mod_exp");
-  if (!test_mod_exp(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_mod_exp_mont_consttime");
-  if (!test_mod_exp_mont_consttime(bc_file.get(), ctx.get()) ||
-      !test_mod_exp_mont5(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_exp");
-  if (!test_exp(bc_file.get(), ctx.get()) ||
-      !test_exp_mod_zero()) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
   message(bc_file.get(), "BN_mod_sqrt");
   if (!test_mod_sqrt(bc_file.get(), ctx.get())) {
     return 1;
   }
   flush_fp(bc_file.get());
 
-  message(bc_file.get(), "Small prime generation");
-  if (!test_small_prime(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  message(bc_file.get(), "BN_sqrt");
-  if (!test_sqrt(bc_file.get(), ctx.get())) {
-    return 1;
-  }
-  flush_fp(bc_file.get());
-
-  if (!test_bn2bin_padded(ctx.get()) ||
-      !test_dec2bn(ctx.get()) ||
-      !test_hex2bn(ctx.get()) ||
-      !test_asc2bn(ctx.get()) ||
-      !test_mpi() ||
-      !test_rand() ||
-      !test_asn1()) {
+  if (!TestBN2BinPadded(ctx.get()) ||
+      !TestDec2BN(ctx.get()) ||
+      !TestHex2BN(ctx.get()) ||
+      !TestASC2BN(ctx.get()) ||
+      !TestMPI() ||
+      !TestRand() ||
+      !TestASN1() ||
+      !TestNegativeZero(ctx.get()) ||
+      !TestBadModulus(ctx.get()) ||
+      !TestExpModZero() ||
+      !TestSmallPrime(ctx.get())) {
     return 1;
   }
 
-  printf("PASS\n");
-  return 0;
+  return FileTestMain(RunTest, ctx.get(), argv[0]);
 }
 
 static int HexToBIGNUM(ScopedBIGNUM *out, const char *in) {
@@ -337,1012 +200,502 @@ static int HexToBIGNUM(ScopedBIGNUM *out, const char *in) {
   return ret;
 }
 
-static bool test_add(FILE *fp) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  if (!a || !b || !c || !BN_rand(a.get(), 512, 0, 0)) {
+static ScopedBIGNUM GetBIGNUM(FileTest *t, const char *attribute) {
+  std::string hex;
+  if (!t->GetAttribute(&hex, attribute)) {
+    return nullptr;
+  }
+
+  ScopedBIGNUM ret;
+  if (HexToBIGNUM(&ret, hex.c_str()) != static_cast<int>(hex.size())) {
+    t->PrintLine("Could not decode '%s'.", hex.c_str());
+    return nullptr;
+  }
+  return ret;
+}
+
+static bool GetInt(FileTest *t, int *out, const char *attribute) {
+  ScopedBIGNUM ret = GetBIGNUM(t, attribute);
+  if (!ret) {
     return false;
   }
 
-  for (int i = 0; i < num0; i++) {
-    if (!BN_rand(b.get(), 450 + i, 0, 0)) {
-      return false;
-    }
-    a->neg = rand_neg();
-    b->neg = rand_neg();
-    if (!BN_add(c.get(), a.get(), b.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " + ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    a->neg = !a->neg;
-    b->neg = !b->neg;
-    if (!BN_add(c.get(), c.get(), b.get()) ||
-        !BN_add(c.get(), c.get(), a.get())) {
-      return false;
-    }
-    if (!BN_is_zero(c.get())) {
-      fprintf(stderr, "Add test failed!\n");
-      return false;
-    }
+  BN_ULONG word = BN_get_word(ret.get());
+  if (word > INT_MAX) {
+    return false;
   }
+
+  *out = static_cast<int>(word);
   return true;
 }
 
-static bool test_sub(FILE *fp) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  if (!a || !b || !c) {
+static bool ExpectBIGNUMsEqual(FileTest *t, const char *operation,
+                               const BIGNUM *expected, const BIGNUM *actual) {
+  if (BN_cmp(expected, actual) == 0) {
+    return true;
+  }
+
+  ScopedOpenSSLString expected_str(BN_bn2hex(expected));
+  ScopedOpenSSLString actual_str(BN_bn2hex(actual));
+  if (!expected_str || !actual_str) {
     return false;
   }
 
-  for (int i = 0; i < num0 + num1; i++) {
-    if (i < num1) {
-      if (!BN_rand(a.get(), 512, 0, 0) ||
-          !BN_copy(b.get(), a.get()) ||
-          !BN_set_bit(a.get(), i) ||
-          !BN_add_word(b.get(), i)) {
-        return false;
-      }
-    } else {
-      if (!BN_rand(b.get(), 400 + i - num1, 0, 0)) {
-        return false;
-      }
-      a->neg = rand_neg();
-      b->neg = rand_neg();
-    }
-    if (!BN_sub(c.get(), a.get(), b.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_add(c.get(), c.get(), b.get()) ||
-        !BN_sub(c.get(), c.get(), a.get())) {
-      return false;
-    }
-    if (!BN_is_zero(c.get())) {
-      fprintf(stderr, "Subtract test failed!\n");
-      return false;
-    }
-  }
-  return true;
+  t->PrintLine("Got %s =", operation);
+  t->PrintLine("\t%s", actual_str.get());
+  t->PrintLine("wanted:");
+  t->PrintLine("\t%s", expected_str.get());
+  return false;
 }
 
-static bool test_div(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e) {
+static bool TestSum(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM b = GetBIGNUM(t, "B");
+  ScopedBIGNUM sum = GetBIGNUM(t, "Sum");
+  if (!a || !b || !sum) {
     return false;
   }
 
-  if (!BN_one(a.get())) {
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_add(ret.get(), a.get(), b.get()) ||
+      !ExpectBIGNUMsEqual(t, "A + B", sum.get(), ret.get()) ||
+      !BN_sub(ret.get(), sum.get(), a.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - A", b.get(), ret.get()) ||
+      !BN_sub(ret.get(), sum.get(), b.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - B", a.get(), ret.get())) {
     return false;
   }
-  BN_zero(b.get());
-  if (BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-    fprintf(stderr, "Division by zero succeeded!\n");
-    return false;
-  }
-  ERR_clear_error();
 
-  for (int i = 0; i < num0 + num1; i++) {
-    if (i < num1) {
-      if (!BN_rand(a.get(), 400, 0, 0) ||
-          !BN_copy(b.get(), a.get()) ||
-          !BN_lshift(a.get(), a.get(), i) ||
-          !BN_add_word(a.get(), i)) {
-        return false;
-      }
-    } else if (!BN_rand(b.get(), 50 + 3 * (i - num1), 0, 0)) {
+  // Test that the functions work when |r| and |a| point to the same |BIGNUM|,
+  // or when |r| and |b| point to the same |BIGNUM|. TODO: Test the case where
+  // all of |r|, |a|, and |b| point to the same |BIGNUM|.
+  if (!BN_copy(ret.get(), a.get()) ||
+      !BN_add(ret.get(), ret.get(), b.get()) ||
+      !ExpectBIGNUMsEqual(t, "A + B (r is a)", sum.get(), ret.get()) ||
+      !BN_copy(ret.get(), b.get()) ||
+      !BN_add(ret.get(), a.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "A + B (r is b)", sum.get(), ret.get()) ||
+      !BN_copy(ret.get(), sum.get()) ||
+      !BN_sub(ret.get(), ret.get(), a.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - A (r is a)", b.get(), ret.get()) ||
+      !BN_copy(ret.get(), a.get()) ||
+      !BN_sub(ret.get(), sum.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - A (r is b)", b.get(), ret.get()) ||
+      !BN_copy(ret.get(), sum.get()) ||
+      !BN_sub(ret.get(), ret.get(), b.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - B (r is a)", a.get(), ret.get()) ||
+      !BN_copy(ret.get(), b.get()) ||
+      !BN_sub(ret.get(), sum.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "Sum - B (r is b)", a.get(), ret.get())) {
+    return false;
+  }
+
+  // Test |BN_uadd| and |BN_usub| with the prerequisites they are documented as
+  // having. Note that these functions are frequently used when the
+  // prerequisites don't hold. In those cases, they are supposed to work as if
+  // the prerequisite hold, but we don't test that yet. TODO: test that.
+  if (!BN_is_negative(a.get()) &&
+      !BN_is_negative(b.get()) && BN_cmp(a.get(), b.get()) >= 0) {
+    if (!BN_uadd(ret.get(), a.get(), b.get()) ||
+        !ExpectBIGNUMsEqual(t, "A +u B", sum.get(), ret.get()) ||
+        !BN_usub(ret.get(), sum.get(), a.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u A", b.get(), ret.get()) ||
+        !BN_usub(ret.get(), sum.get(), b.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u B", a.get(), ret.get())) {
       return false;
     }
-    a->neg = rand_neg();
-    b->neg = rand_neg();
-    if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " / ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, d.get());
-      puts_fp(fp, "\n");
 
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " % ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_mul(e.get(), d.get(), b.get(), ctx) ||
-        !BN_add(d.get(), e.get(), c.get()) ||
-        !BN_sub(d.get(), d.get(), a.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get())) {
-      fprintf(stderr, "Division test failed!\n");
+    // Test that the functions work when |r| and |a| point to the same |BIGNUM|,
+    // or when |r| and |b| point to the same |BIGNUM|. TODO: Test the case where
+    // all of |r|, |a|, and |b| point to the same |BIGNUM|.
+    if (!BN_copy(ret.get(), a.get()) ||
+        !BN_uadd(ret.get(), ret.get(), b.get()) ||
+        !ExpectBIGNUMsEqual(t, "A +u B (r is a)", sum.get(), ret.get()) ||
+        !BN_copy(ret.get(), b.get()) ||
+        !BN_uadd(ret.get(), a.get(), ret.get()) ||
+        !ExpectBIGNUMsEqual(t, "A +u B (r is b)", sum.get(), ret.get()) ||
+        !BN_copy(ret.get(), sum.get()) ||
+        !BN_usub(ret.get(), ret.get(), a.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u A (r is a)", b.get(), ret.get()) ||
+        !BN_copy(ret.get(), a.get()) ||
+        !BN_usub(ret.get(), sum.get(), ret.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u A (r is b)", b.get(), ret.get()) ||
+        !BN_copy(ret.get(), sum.get()) ||
+        !BN_usub(ret.get(), ret.get(), b.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u B (r is a)", a.get(), ret.get()) ||
+        !BN_copy(ret.get(), b.get()) ||
+        !BN_usub(ret.get(), sum.get(), ret.get()) ||
+        !ExpectBIGNUMsEqual(t, "Sum -u B (r is b)", a.get(), ret.get())) {
       return false;
     }
   }
 
-  // Test that BN_div never gives negative zero in the quotient.
-  if (!BN_set_word(a.get(), 1) ||
-      !BN_set_word(b.get(), 2)) {
-    return false;
-  }
-  BN_set_negative(a.get(), 1);
-  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-    return false;
-  }
-  if (!BN_is_zero(d.get()) || BN_is_negative(d.get())) {
-    fprintf(stderr, "Division test failed!\n");
-    return false;
-  }
-
-  // Test that BN_div never gives negative zero in the remainder.
-  if (!BN_set_word(b.get(), 1)) {
-    return false;
-  }
-  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-    return false;
-  }
-  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
-    fprintf(stderr, "Division test failed!\n");
-    return false;
+  // Test with |BN_add_word| and |BN_sub_word| if |b| is small enough.
+  BN_ULONG b_word = BN_get_word(b.get());
+  if (!BN_is_negative(b.get()) && b_word != (BN_ULONG)-1) {
+    if (!BN_copy(ret.get(), a.get()) ||
+        !BN_add_word(ret.get(), b_word) ||
+        !ExpectBIGNUMsEqual(t, "A + B (word)", sum.get(), ret.get()) ||
+        !BN_copy(ret.get(), sum.get()) ||
+        !BN_sub_word(ret.get(), b_word) ||
+        !ExpectBIGNUMsEqual(t, "Sum - B (word)", a.get(), ret.get())) {
+      return false;
+    }
   }
 
   return true;
 }
 
-static bool test_lshift1(FILE *fp) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  if (!a || !b || !c || !BN_rand(a.get(), 200, 0, 0)) {
-    return false;
-  }
-  a->neg = rand_neg();
-  for (int i = 0; i < num0; i++) {
-    if (!BN_lshift1(b.get(), a.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " * 2");
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_add(c.get(), a.get(), a.get()) ||
-        !BN_sub(a.get(), b.get(), c.get())) {
-      return false;
-    }
-    if (!BN_is_zero(a.get())) {
-      fprintf(stderr, "Left shift one test failed!\n");
-      return false;
-    }
-
-    if (!BN_copy(a.get(), b.get())) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool test_rshift(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e || !BN_one(c.get()) ||
-      !BN_rand(a.get(), 200, 0, 0)) {
-    return false;
-  }
-  a->neg = rand_neg();
-  for (int i = 0; i < num0; i++) {
-    if (!BN_rshift(b.get(), a.get(), i + 1) ||
-        !BN_add(c.get(), c.get(), c.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " / ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_div(d.get(), e.get(), a.get(), c.get(), ctx) ||
-        !BN_sub(d.get(), d.get(), b.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get())) {
-      fprintf(stderr, "Right shift test failed!\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool test_rshift1(FILE *fp) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  if (!a || !b || !c || !BN_rand(a.get(), 200, 0, 0)) {
-    return false;
-  }
-  a->neg = rand_neg();
-
-  for (int i = 0; i < num0; i++) {
-    if (!BN_rshift1(b.get(), a.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " / 2");
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_sub(c.get(), a.get(), b.get()) ||
-        !BN_sub(c.get(), c.get(), b.get())) {
-      return false;
-    }
-    if (!BN_is_zero(c.get()) && !BN_abs_is_word(c.get(), 1)) {
-      fprintf(stderr, "Right shift one test failed!\n");
-      return false;
-    }
-    if (!BN_copy(a.get(), b.get())) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool test_lshift(FILE *fp, BN_CTX *ctx, ScopedBIGNUM a) {
-  if (!a) {
-    a.reset(BN_new());
-    if (!a || !BN_rand(a.get(), 200, 0, 0)) {
-      return false;
-    }
-    a->neg = rand_neg();
-  }
-
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  if (!b || !c || !d || !BN_one(c.get())) {
+static bool TestLShift1(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM lshift1 = GetBIGNUM(t, "LShift1");
+  ScopedBIGNUM zero(BN_new());
+  if (!a || !lshift1 || !zero) {
     return false;
   }
 
-  for (int i = 0; i < num0; i++) {
-    if (!BN_lshift(b.get(), a.get(), i + 1) ||
-        !BN_add(c.get(), c.get(), c.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " * ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_mul(d.get(), a.get(), c.get(), ctx) ||
-        !BN_sub(d.get(), d.get(), b.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get())) {
-      fprintf(stderr, "Left shift test failed!\n");
-      fprintf(stderr, "a=");
-      BN_print_fp(stderr, a.get());
-      fprintf(stderr, "\nb=");
-      BN_print_fp(stderr, b.get());
-      fprintf(stderr, "\nc=");
-      BN_print_fp(stderr, c.get());
-      fprintf(stderr, "\nd=");
-      BN_print_fp(stderr, d.get());
-      fprintf(stderr, "\n");
-      return false;
-    }
-  }
-  return true;
-}
+  BN_zero(zero.get());
 
-static bool test_mul(FILE *fp) {
-  ScopedBN_CTX ctx(BN_CTX_new());
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!ctx || !a || !b || !c || !d || !e) {
+  ScopedBIGNUM ret(BN_new()), two(BN_new()), remainder(BN_new());
+  if (!ret || !two || !remainder ||
+      !BN_set_word(two.get(), 2) ||
+      !BN_add(ret.get(), a.get(), a.get()) ||
+      !ExpectBIGNUMsEqual(t, "A + A", lshift1.get(), ret.get()) ||
+      !BN_mul(ret.get(), a.get(), two.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A * 2", lshift1.get(), ret.get()) ||
+      !BN_div(ret.get(), remainder.get(), lshift1.get(), two.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "LShift1 / 2", a.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "LShift1 % 2", zero.get(), remainder.get()) ||
+      !BN_lshift1(ret.get(), a.get()) ||
+      !ExpectBIGNUMsEqual(t, "A << 1", lshift1.get(), ret.get()) ||
+      !BN_rshift1(ret.get(), lshift1.get()) ||
+      !ExpectBIGNUMsEqual(t, "LShift >> 1", a.get(), ret.get()) ||
+      !BN_rshift1(ret.get(), lshift1.get()) ||
+      !ExpectBIGNUMsEqual(t, "LShift >> 1", a.get(), ret.get())) {
     return false;
   }
 
-  for (int i = 0; i < num0 + num1; i++) {
-    if (i <= num1) {
-      if (!BN_rand(a.get(), 100, 0, 0) ||
-          !BN_rand(b.get(), 100, 0, 0)) {
-        return false;
-      }
-    } else if (!BN_rand(b.get(), i - num1, 0, 0)) {
-      return false;
-    }
-    a->neg = rand_neg();
-    b->neg = rand_neg();
-    if (!BN_mul(c.get(), a.get(), b.get(), ctx.get())) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " * ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_div(d.get(), e.get(), c.get(), a.get(), ctx.get()) ||
-        !BN_sub(d.get(), d.get(), b.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get()) || !BN_is_zero(e.get())) {
-      fprintf(stderr, "Multiplication test failed!\n");
-      return false;
-    }
-  }
-
-  // Test that BN_mul never gives negative zero.
-  if (!BN_set_word(a.get(), 1)) {
-    return false;
-  }
-  BN_set_negative(a.get(), 1);
-  BN_zero(b.get());
-  if (!BN_mul(c.get(), a.get(), b.get(), ctx.get())) {
-    return false;
-  }
-  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
-    fprintf(stderr, "Multiplication test failed!\n");
+  // Set the LSB to 1 and test rshift1 again.
+  if (!BN_set_bit(lshift1.get(), 0) ||
+      !BN_div(ret.get(), nullptr /* rem */, lshift1.get(), two.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "(LShift1 | 1) / 2", a.get(), ret.get()) ||
+      !BN_rshift1(ret.get(), lshift1.get()) ||
+      !ExpectBIGNUMsEqual(t, "(LShift | 1) >> 1", a.get(), ret.get())) {
     return false;
   }
 
   return true;
 }
 
-static bool test_sqr(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !c || !d || !e) {
+static bool TestLShift(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM lshift = GetBIGNUM(t, "LShift");
+  int n = 0;
+  if (!a || !lshift || !GetInt(t, &n, "N")) {
     return false;
   }
 
-  for (int i = 0; i < num0; i++) {
-    if (!BN_rand(a.get(), 40 + i * 10, 0, 0)) {
-      return false;
-    }
-    a->neg = rand_neg();
-    if (!BN_sqr(c.get(), a.get(), ctx)) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " * ");
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_div(d.get(), e.get(), c.get(), a.get(), ctx) ||
-        !BN_sub(d.get(), d.get(), a.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get()) || !BN_is_zero(e.get())) {
-      fprintf(stderr, "Square test failed!\n");
-      return false;
-    }
-  }
-
-  // Regression test for a BN_sqr overflow bug.
-  BIGNUM *a_raw = a.get();
-  if (!BN_hex2bn(
-          &a_raw,
-          "80000000000000008000000000000001FFFFFFFFFFFFFFFE0000000000000000") ||
-      !BN_sqr(c.get(), a.get(), ctx)) {
-    return false;
-  }
-  if (fp != NULL) {
-    BN_print_fp(fp, a.get());
-    puts_fp(fp, " * ");
-    BN_print_fp(fp, a.get());
-    puts_fp(fp, " - ");
-    BN_print_fp(fp, c.get());
-    puts_fp(fp, "\n");
-  }
-  if (!BN_mul(d.get(), a.get(), a.get(), ctx)) {
-    return false;
-  }
-  if (BN_cmp(c.get(), d.get())) {
-    fprintf(stderr,
-            "Square test failed: BN_sqr and BN_mul produce "
-            "different results!\n");
-    return false;
-  }
-
-  // Regression test for a BN_sqr overflow bug.
-  a_raw = a.get();
-  if (!BN_hex2bn(
-          &a_raw,
-          "80000000000000000000000080000001FFFFFFFE000000000000000000000000") ||
-      !BN_sqr(c.get(), a.get(), ctx)) {
-    return false;
-  }
-  if (fp != NULL) {
-    BN_print_fp(fp, a.get());
-    puts_fp(fp, " * ");
-    BN_print_fp(fp, a.get());
-    puts_fp(fp, " - ");
-    BN_print_fp(fp, c.get());
-    puts_fp(fp, "\n");
-  }
-  if (!BN_mul(d.get(), a.get(), a.get(), ctx)) {
-    return false;
-  }
-  if (BN_cmp(c.get(), d.get())) {
-    fprintf(stderr,
-            "Square test failed: BN_sqr and BN_mul produce "
-            "different results!\n");
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_lshift(ret.get(), a.get(), n) ||
+      !ExpectBIGNUMsEqual(t, "A << N", lshift.get(), ret.get()) ||
+      !BN_rshift(ret.get(), lshift.get(), n) ||
+      !ExpectBIGNUMsEqual(t, "A >> N", a.get(), ret.get())) {
     return false;
   }
 
   return true;
 }
 
+static bool TestRShift(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM rshift = GetBIGNUM(t, "RShift");
+  int n = 0;
+  if (!a || !rshift || !GetInt(t, &n, "N")) {
+    return false;
+  }
+
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_rshift(ret.get(), a.get(), n) ||
+      !ExpectBIGNUMsEqual(t, "A >> N", rshift.get(), ret.get())) {
+    return false;
+  }
+
+  return true;
+}
+
+static bool TestSquare(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM square = GetBIGNUM(t, "Square");
+  ScopedBIGNUM zero(BN_new());
+  if (!a || !square || !zero) {
+    return false;
+  }
+
+  BN_zero(zero.get());
+
+  ScopedBIGNUM ret(BN_new()), remainder(BN_new());
+  if (!ret ||
+      !BN_sqr(ret.get(), a.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A^2", square.get(), ret.get()) ||
+      !BN_mul(ret.get(), a.get(), a.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A * A", square.get(), ret.get()) ||
+      !BN_div(ret.get(), remainder.get(), square.get(), a.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "Square / A", a.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "Square % A", zero.get(), remainder.get())) {
+    return false;
+  }
+
+  BN_set_negative(a.get(), 0);
+  if (!BN_sqrt(ret.get(), square.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "sqrt(Square)", a.get(), ret.get())) {
+    return false;
+  }
+
+  // BN_sqrt should fail on non-squares and negative numbers.
+  if (!BN_is_zero(square.get())) {
+    ScopedBIGNUM tmp(BN_new());
+    if (!tmp || !BN_copy(tmp.get(), square.get())) {
+      return false;
+    }
+    BN_set_negative(tmp.get(), 1);
+
+    if (BN_sqrt(ret.get(), tmp.get(), ctx)) {
+      t->PrintLine("BN_sqrt succeeded on a negative number");
+      return false;
+    }
+    ERR_clear_error();
+
+    BN_set_negative(tmp.get(), 0);
+    if (!BN_add(tmp.get(), tmp.get(), BN_value_one())) {
+      return false;
+    }
+    if (BN_sqrt(ret.get(), tmp.get(), ctx)) {
+      t->PrintLine("BN_sqrt succeeded on a non-square");
+      return false;
+    }
+    ERR_clear_error();
+  }
+
+  return true;
+}
+
+static bool TestProduct(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM b = GetBIGNUM(t, "B");
+  ScopedBIGNUM product = GetBIGNUM(t, "Product");
+  ScopedBIGNUM zero(BN_new());
+  if (!a || !b || !product || !zero) {
+    return false;
+  }
+
+  BN_zero(zero.get());
+
+  ScopedBIGNUM ret(BN_new()), remainder(BN_new());
+  if (!ret || !remainder ||
+      !BN_mul(ret.get(), a.get(), b.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A * B", product.get(), ret.get()) ||
+      !BN_div(ret.get(), remainder.get(), product.get(), a.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "Product / A", b.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "Product % A", zero.get(), remainder.get()) ||
+      !BN_div(ret.get(), remainder.get(), product.get(), b.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "Product / B", a.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "Product % B", zero.get(), remainder.get())) {
+    return false;
+  }
+
+  return true;
+}
+
+static bool TestQuotient(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM b = GetBIGNUM(t, "B");
+  ScopedBIGNUM quotient = GetBIGNUM(t, "Quotient");
+  ScopedBIGNUM remainder = GetBIGNUM(t, "Remainder");
+  if (!a || !b || !quotient || !remainder) {
+    return false;
+  }
+
+  ScopedBIGNUM ret(BN_new()), ret2(BN_new());
+  if (!ret || !ret2 ||
+      !BN_div(ret.get(), ret2.get(), a.get(), b.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A / B", quotient.get(), ret.get()) ||
+      !ExpectBIGNUMsEqual(t, "A % B", remainder.get(), ret2.get()) ||
+      !BN_mul(ret.get(), quotient.get(), b.get(), ctx) ||
+      !BN_add(ret.get(), ret.get(), remainder.get()) ||
+      !ExpectBIGNUMsEqual(t, "Quotient * B + Remainder", a.get(), ret.get())) {
+    return false;
+  }
+
+  // Test with |BN_mod_word| and |BN_div_word| if the divisor is small enough.
+  BN_ULONG b_word = BN_get_word(b.get());
+  if (!BN_is_negative(b.get()) && b_word != (BN_ULONG)-1) {
+    BN_ULONG remainder_word = BN_get_word(remainder.get());
+    assert(remainder_word != (BN_ULONG)-1);
+    if (!BN_copy(ret.get(), a.get())) {
+      return false;
+    }
+    BN_ULONG ret_word = BN_div_word(ret.get(), b_word);
+    if (ret_word != remainder_word) {
+      t->PrintLine("Got A %% B (word) = " BN_HEX_FMT1 ", wanted " BN_HEX_FMT1
+                   "\n",
+                   ret_word, remainder_word);
+      return false;
+    }
+    if (!ExpectBIGNUMsEqual(t, "A / B (word)", quotient.get(), ret.get())) {
+      return false;
+    }
+
+    ret_word = BN_mod_word(a.get(), b_word);
+    if (ret_word != remainder_word) {
+      t->PrintLine("Got A %% B (word) = " BN_HEX_FMT1 ", wanted " BN_HEX_FMT1
+                   "\n",
+                   ret_word, remainder_word);
+      return false;
+    }
+  }
+
+  // Test BN_nnmod.
+  if (!BN_is_negative(b.get())) {
+    ScopedBIGNUM nnmod(BN_new());
+    if (!nnmod ||
+        !BN_copy(nnmod.get(), remainder.get()) ||
+        (BN_is_negative(nnmod.get()) &&
+         !BN_add(nnmod.get(), nnmod.get(), b.get())) ||
+        !BN_nnmod(ret.get(), a.get(), b.get(), ctx) ||
+        !ExpectBIGNUMsEqual(t, "A % B (non-negative)", nnmod.get(),
+                            ret.get())) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool TestModMul(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM b = GetBIGNUM(t, "B");
+  ScopedBIGNUM m = GetBIGNUM(t, "M");
+  ScopedBIGNUM mod_mul = GetBIGNUM(t, "ModMul");
+  if (!a || !b || !m || !mod_mul) {
+    return false;
+  }
+
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_mod_mul(ret.get(), a.get(), b.get(), m.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A * B (mod M)", mod_mul.get(), ret.get())) {
+    return false;
+  }
+
+  if (BN_is_odd(m.get())) {
+    // Reduce |a| and |b| and test the Montgomery version.
+    ScopedBN_MONT_CTX mont(BN_MONT_CTX_new());
+    ScopedBIGNUM a_tmp(BN_new()), b_tmp(BN_new());
+    if (!mont || !a_tmp || !b_tmp ||
+        !BN_MONT_CTX_set(mont.get(), m.get(), ctx) ||
+        !BN_nnmod(a_tmp.get(), a.get(), m.get(), ctx) ||
+        !BN_nnmod(b_tmp.get(), b.get(), m.get(), ctx) ||
+        !BN_to_montgomery(a_tmp.get(), a_tmp.get(), mont.get(), ctx) ||
+        !BN_to_montgomery(b_tmp.get(), b_tmp.get(), mont.get(), ctx) ||
+        !BN_mod_mul_montgomery(ret.get(), a_tmp.get(), b_tmp.get(), mont.get(),
+                               ctx) ||
+        !BN_from_montgomery(ret.get(), ret.get(), mont.get(), ctx) ||
+        !ExpectBIGNUMsEqual(t, "A * B (mod M) (Montgomery)",
+                            mod_mul.get(), ret.get())) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool TestModExp(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM e = GetBIGNUM(t, "E");
+  ScopedBIGNUM m = GetBIGNUM(t, "M");
+  ScopedBIGNUM mod_exp = GetBIGNUM(t, "ModExp");
+  if (!a || !e || !m || !mod_exp) {
+    return false;
+  }
+
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_mod_exp(ret.get(), a.get(), e.get(), m.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A ^ E (mod M)", mod_exp.get(), ret.get())) {
+    return false;
+  }
+
+  if (BN_is_odd(m.get())) {
+    if (!BN_mod_exp_mont(ret.get(), a.get(), e.get(), m.get(), ctx, NULL) ||
+        !ExpectBIGNUMsEqual(t, "A ^ E (mod M) (Montgomery)", mod_exp.get(),
+                            ret.get()) ||
+        !BN_mod_exp_mont_consttime(ret.get(), a.get(), e.get(), m.get(), ctx,
+                                   NULL) ||
+        !ExpectBIGNUMsEqual(t, "A ^ E (mod M) (constant-time)", mod_exp.get(),
+                            ret.get())) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool TestExp(FileTest *t, BN_CTX *ctx) {
+  ScopedBIGNUM a = GetBIGNUM(t, "A");
+  ScopedBIGNUM e = GetBIGNUM(t, "E");
+  ScopedBIGNUM exp = GetBIGNUM(t, "Exp");
+  if (!a || !e || !exp) {
+    return false;
+  }
+
+  ScopedBIGNUM ret(BN_new());
+  if (!ret ||
+      !BN_exp(ret.get(), a.get(), e.get(), ctx) ||
+      !ExpectBIGNUMsEqual(t, "A ^ E", exp.get(), ret.get())) {
+    return false;
+  }
+
+  return true;
+}
+
+struct Test {
+  const char *name;
+  bool (*func)(FileTest *t, BN_CTX *ctx);
+};
+
+static const Test kTests[] = {
+    {"Sum", TestSum},
+    {"LShift1", TestLShift1},
+    {"LShift", TestLShift},
+    {"RShift", TestRShift},
+    {"Square", TestSquare},
+    {"Product", TestProduct},
+    {"Quotient", TestQuotient},
+    {"ModMul", TestModMul},
+    {"ModExp", TestModExp},
+    {"Exp", TestExp},
+};
+
+static bool RunTest(FileTest *t, void *arg) {
+  BN_CTX *ctx = reinterpret_cast<BN_CTX *>(arg);
+  for (const Test &test : kTests) {
+    if (t->GetType() != test.name) {
+      continue;
+    }
+    return test.func(t, ctx);
+  }
+  t->PrintLine("Unknown test type: %s", t->GetType().c_str());
+  return false;
+}
 
 static int rand_neg() {
   static unsigned int neg = 0;
   static const int sign[8] = {0, 0, 0, 1, 1, 0, 1, 1};
 
   return sign[(neg++) % 8];
-}
-
-static void print_word(FILE *fp, BN_ULONG w) {
-  fprintf(fp, BN_HEX_FMT1, w);
-}
-
-static bool test_div_word(FILE *fp) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  if (!a || !b) {
-    return false;
-  }
-
-  for (int i = 0; i < num0; i++) {
-    do {
-      if (!BN_rand(a.get(), 512, -1, 0) ||
-          !BN_rand(b.get(), BN_BITS2, -1, 0)) {
-        return false;
-      }
-    } while (BN_is_zero(b.get()));
-
-    if (!BN_copy(b.get(), a.get())) {
-      return false;
-    }
-    BN_ULONG s = b->d[0];
-    BN_ULONG rmod = BN_mod_word(b.get(), s);
-    BN_ULONG r = BN_div_word(b.get(), s);
-    if (r == (BN_ULONG)-1) {
-      return false;
-    }
-
-    if (rmod != r) {
-      fprintf(stderr, "Mod (word) test failed!\n");
-      return false;
-    }
-
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " / ");
-      print_word(fp, s);
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, "\n");
-
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " % ");
-      print_word(fp, s);
-      puts_fp(fp, " - ");
-      print_word(fp, r);
-      puts_fp(fp, "\n");
-    }
-    if (!BN_mul_word(b.get(), s) ||
-        !BN_add_word(b.get(), r) ||
-        !BN_sub(b.get(), a.get(), b.get())) {
-      return false;
-    }
-    if (!BN_is_zero(b.get())) {
-      fprintf(stderr, "Division (word) test failed!\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool test_mont(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM A(BN_new());
-  ScopedBIGNUM B(BN_new());
-  ScopedBIGNUM n(BN_new());
-  ScopedBN_MONT_CTX mont(BN_MONT_CTX_new());
-  if (!a || !b || !c || !d || !A || !B || !n || !mont) {
-    return false;
-  }
-
-  BN_zero(n.get());
-  if (BN_MONT_CTX_set(mont.get(), n.get(), ctx)) {
-    fprintf(stderr, "BN_MONT_CTX_set succeeded for zero modulus!\n");
-    return false;
-  }
-  ERR_clear_error();
-
-  if (!BN_set_word(n.get(), 16)) {
-    return false;
-  }
-  if (BN_MONT_CTX_set(mont.get(), n.get(), ctx)) {
-    fprintf(stderr, "BN_MONT_CTX_set succeeded for even modulus!\n");
-    return false;
-  }
-  ERR_clear_error();
-
-  if (!BN_rand(a.get(), 100, 0, 0) ||
-      !BN_rand(b.get(), 100, 0, 0)) {
-    return false;
-  }
-
-  for (int i = 0; i < num2; i++) {
-    int bits = (200 * (i + 1)) / num2;
-
-    if (bits == 0) {
-      continue;
-    }
-    if (!BN_rand(n.get(), bits, 0, 1) ||
-        !BN_MONT_CTX_set(mont.get(), n.get(), ctx) ||
-        !BN_nnmod(a.get(), a.get(), n.get(), ctx) ||
-        !BN_nnmod(b.get(), b.get(), n.get(), ctx) ||
-        !BN_to_montgomery(A.get(), a.get(), mont.get(), ctx) ||
-        !BN_to_montgomery(B.get(), b.get(), mont.get(), ctx) ||
-        !BN_mod_mul_montgomery(c.get(), A.get(), B.get(), mont.get(), ctx) ||
-        !BN_from_montgomery(A.get(), c.get(), mont.get(), ctx)) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " * ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " % ");
-      BN_print_fp(fp, &mont->N);
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, A.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_mod_mul(d.get(), a.get(), b.get(), n.get(), ctx) ||
-        !BN_sub(d.get(), d.get(), A.get())) {
-      return false;
-    }
-    if (!BN_is_zero(d.get())) {
-      fprintf(stderr, "Montgomery multiplication test failed!\n");
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static bool test_mod(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e ||
-      !BN_rand(a.get(), 1024, 0, 0)) {
-    return false;
-  }
-
-  for (int i = 0; i < num0; i++) {
-    if (!BN_rand(b.get(), 450 + i * 10, 0, 0)) {
-      return false;
-    }
-    a->neg = rand_neg();
-    b->neg = rand_neg();
-    if (!BN_mod(c.get(), a.get(), b.get(), ctx)) {
-      return false;
-    }
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " % ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_div(d.get(), e.get(), a.get(), b.get(), ctx) ||
-        !BN_sub(e.get(), e.get(), c.get())) {
-      return false;
-    }
-    if (!BN_is_zero(e.get())) {
-      fprintf(stderr, "Modulo test failed!\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool test_mod_mul(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e) {
-    return false;
-  }
-
-  if (!BN_one(a.get()) || !BN_one(b.get())) {
-    return false;
-  }
-  BN_zero(c.get());
-  if (BN_mod_mul(e.get(), a.get(), b.get(), c.get(), ctx)) {
-    fprintf(stderr, "BN_mod_mul with zero modulus succeeded!\n");
-    return false;
-  }
-  ERR_clear_error();
-
-  for (int j = 0; j < 3; j++) {
-    if (!BN_rand(c.get(), 1024, 0, 0)) {
-      return false;
-    }
-    for (int i = 0; i < num0; i++) {
-      if (!BN_rand(a.get(), 475 + i * 10, 0, 0) ||
-          !BN_rand(b.get(), 425 + i * 11, 0, 0)) {
-        return false;
-      }
-      a->neg = rand_neg();
-      b->neg = rand_neg();
-      if (!BN_mod_mul(e.get(), a.get(), b.get(), c.get(), ctx)) {
-        ERR_print_errors_fp(stderr);
-        return false;
-      }
-      if (fp != NULL) {
-        BN_print_fp(fp, a.get());
-        puts_fp(fp, " * ");
-        BN_print_fp(fp, b.get());
-        puts_fp(fp, " % ");
-        BN_print_fp(fp, c.get());
-        if (a->neg != b->neg && !BN_is_zero(e.get())) {
-          // If  (a*b) % c  is negative,  c  must be added
-          // in order to obtain the normalized remainder
-          // (new with OpenSSL 0.9.7, previous versions of
-          // BN_mod_mul could generate negative results)
-          puts_fp(fp, " + ");
-          BN_print_fp(fp, c.get());
-        }
-        puts_fp(fp, " - ");
-        BN_print_fp(fp, e.get());
-        puts_fp(fp, "\n");
-      }
-      if (!BN_mul(d.get(), a.get(), b.get(), ctx) ||
-          !BN_sub(d.get(), d.get(), e.get()) ||
-          !BN_div(a.get(), b.get(), d.get(), c.get(), ctx)) {
-        return false;
-      }
-      if (!BN_is_zero(b.get())) {
-        fprintf(stderr, "Modulo multiply test failed!\n");
-        ERR_print_errors_fp(stderr);
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-static bool test_mod_exp(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e) {
-    return false;
-  }
-
-  if (!BN_one(a.get()) || !BN_one(b.get())) {
-    return false;
-  }
-  BN_zero(c.get());
-  if (BN_mod_exp(d.get(), a.get(), b.get(), c.get(), ctx)) {
-    fprintf(stderr, "BN_mod_exp with zero modulus succeeded!\n");
-    return 0;
-  }
-  ERR_clear_error();
-
-  if (!BN_rand(c.get(), 30, 0, 1)) {  // must be odd for montgomery
-    return false;
-  }
-  for (int i = 0; i < num2; i++) {
-    if (!BN_rand(a.get(), 20 + i * 5, 0, 0) ||
-        !BN_rand(b.get(), 2 + i, 0, 0) ||
-        !BN_mod_exp(d.get(), a.get(), b.get(), c.get(), ctx)) {
-      return false;
-    }
-
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " ^ ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " % ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, d.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_exp(e.get(), a.get(), b.get(), ctx) ||
-        !BN_sub(e.get(), e.get(), d.get()) ||
-        !BN_div(a.get(), b.get(), e.get(), c.get(), ctx)) {
-      return false;
-    }
-    if (!BN_is_zero(b.get())) {
-      fprintf(stderr, "Modulo exponentiation test failed!\n");
-      return false;
-    }
-  }
-
-   // Regression test for carry propagation bug in sqr8x_reduction.
-  if (!HexToBIGNUM(&a, "050505050505") ||
-      !HexToBIGNUM(&b, "02") ||
-      !HexToBIGNUM(
-          &c,
-          "4141414141414141414141274141414141414141414141414141414141414141"
-          "4141414141414141414141414141414141414141414141414141414141414141"
-          "4141414141414141414141800000000000000000000000000000000000000000"
-          "0000000000000000000000000000000000000000000000000000000000000000"
-          "0000000000000000000000000000000000000000000000000000000000000000"
-          "0000000000000000000000000000000000000000000000000000000001") ||
-      !BN_mod_exp(d.get(), a.get(), b.get(), c.get(), ctx) ||
-      !BN_mul(e.get(), a.get(), a.get(), ctx)) {
-    return false;
-  }
-  if (BN_cmp(d.get(), e.get()) != 0) {
-    fprintf(stderr, "BN_mod_exp and BN_mul produce different results!\n");
-    return false;
-  }
-
-  return true;
-}
-
-static bool test_mod_exp_mont_consttime(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !c || !d || !e) {
-    return false;
-  }
-
-  if (!BN_one(a.get()) || !BN_one(b.get())) {
-    return false;
-  }
-  BN_zero(c.get());
-  if (BN_mod_exp_mont_consttime(d.get(), a.get(), b.get(), c.get(), ctx,
-                                nullptr)) {
-    fprintf(stderr, "BN_mod_exp_mont_consttime with zero modulus succeeded!\n");
-    return 0;
-  }
-  ERR_clear_error();
-
-  if (!BN_set_word(c.get(), 16)) {
-    return false;
-  }
-  if (BN_mod_exp_mont_consttime(d.get(), a.get(), b.get(), c.get(), ctx,
-                                nullptr)) {
-    fprintf(stderr, "BN_mod_exp_mont_consttime with even modulus succeeded!\n");
-    return 0;
-  }
-  ERR_clear_error();
-
-  if (!BN_rand(c.get(), 30, 0, 1)) {  // must be odd for montgomery
-    return false;
-  }
-  for (int i = 0; i < num2; i++) {
-    if (!BN_rand(a.get(), 20 + i * 5, 0, 0) ||
-        !BN_rand(b.get(), 2 + i, 0, 0) ||
-        !BN_mod_exp_mont_consttime(d.get(), a.get(), b.get(), c.get(), ctx,
-                                   NULL)) {
-      return false;
-    }
-
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " ^ ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " % ");
-      BN_print_fp(fp, c.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, d.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_exp(e.get(), a.get(), b.get(), ctx) ||
-        !BN_sub(e.get(), e.get(), d.get()) ||
-        !BN_div(a.get(), b.get(), e.get(), c.get(), ctx)) {
-      return false;
-    }
-    if (!BN_is_zero(b.get())) {
-      fprintf(stderr, "Modulo exponentiation test failed!\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-// Test constant-time modular exponentiation with 1024-bit inputs,
-// which on x86_64 cause a different code branch to be taken.
-static bool test_mod_exp_mont5(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM p(BN_new());
-  ScopedBIGNUM m(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !p || !m || !d || !e ||
-      !BN_rand(m.get(), 1024, 0, 1) ||  // must be odd for montgomery
-      !BN_rand(a.get(), 1024, 0, 0)) {
-    return false;
-  }
-  // Zero exponent.
-  BN_zero(p.get());
-  if (!BN_mod_exp_mont_consttime(d.get(), a.get(), p.get(), m.get(), ctx,
-                                 NULL)) {
-    return false;
-  }
-  if (!BN_is_one(d.get())) {
-    fprintf(stderr, "Modular exponentiation test failed!\n");
-    return false;
-  }
-  if (!BN_rand(p.get(), 1024, 0, 0)) {
-    return false;
-  }
-  // Zero input.
-  BN_zero(a.get());
-  if (!BN_mod_exp_mont_consttime(d.get(), a.get(), p.get(), m.get(), ctx,
-                                 NULL)) {
-    return false;
-  }
-  if (!BN_is_zero(d.get())) {
-    fprintf(stderr, "Modular exponentiation test failed!\n");
-    return false;
-  }
-  // Craft an input whose Montgomery representation is 1, i.e., shorter than the
-  // modulus m, in order to test the const time precomputation
-  // scattering/gathering.
-  ScopedBN_MONT_CTX mont(BN_MONT_CTX_new());
-  if (!mont || !BN_one(a.get()) ||
-      !BN_MONT_CTX_set(mont.get(), m.get(), ctx) ||
-      !BN_from_montgomery(e.get(), a.get(), mont.get(), ctx) ||
-      !BN_mod_exp_mont_consttime(d.get(), e.get(), p.get(), m.get(), ctx,
-                                 NULL) ||
-      !BN_mod_exp(a.get(), e.get(), p.get(), m.get(), ctx)) {
-    return false;
-  }
-  if (BN_cmp(a.get(), d.get()) != 0) {
-    fprintf(stderr, "Modular exponentiation test failed!\n");
-    return false;
-  }
-  // Finally, some regular test vectors.
-  if (!BN_rand(e.get(), 1024, 0, 0) ||
-      !BN_mod_exp_mont_consttime(d.get(), e.get(), p.get(), m.get(), ctx,
-                                 NULL) ||
-      !BN_mod_exp(a.get(), e.get(), p.get(), m.get(), ctx)) {
-    return false;
-  }
-  if (BN_cmp(a.get(), d.get()) != 0) {
-    fprintf(stderr, "Modular exponentiation test failed!\n");
-    return false;
-  }
-
-  return true;
-}
-
-static bool test_exp(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM a(BN_new());
-  ScopedBIGNUM b(BN_new());
-  ScopedBIGNUM d(BN_new());
-  ScopedBIGNUM e(BN_new());
-  if (!a || !b || !d || !e) {
-    return false;
-  }
-
-  for (int i = 0; i < num2; i++) {
-    if (!BN_rand(a.get(), 20 + i * 5, 0, 0) ||
-        !BN_rand(b.get(), 2 + i, 0, 0) ||
-        !BN_exp(d.get(), a.get(), b.get(), ctx)) {
-      return false;
-    }
-
-    if (fp != NULL) {
-      BN_print_fp(fp, a.get());
-      puts_fp(fp, " ^ ");
-      BN_print_fp(fp, b.get());
-      puts_fp(fp, " - ");
-      BN_print_fp(fp, d.get());
-      puts_fp(fp, "\n");
-    }
-    if (!BN_one(e.get())) {
-      return false;
-    }
-    while (!BN_is_zero(b.get())) {
-      if (!BN_mul(e.get(), e.get(), a.get(), ctx) ||
-          !BN_sub(b.get(), b.get(), BN_value_one())) {
-        return false;
-      }
-    }
-    if (!BN_sub(e.get(), e.get(), d.get())) {
-      return false;
-    }
-    if (!BN_is_zero(e.get())) {
-      fprintf(stderr, "Exponentiation test failed!\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-// test_exp_mod_zero tests that 1**0 mod 1 == 0.
-static bool test_exp_mod_zero(void) {
-  ScopedBIGNUM zero(BN_new()), a(BN_new()), r(BN_new());
-  if (!zero || !a || !r || !BN_rand(a.get(), 1024, 0, 0)) {
-    return false;
-  }
-  BN_zero(zero.get());
-
-  if (!BN_mod_exp(r.get(), a.get(), zero.get(), BN_value_one(), nullptr) ||
-      !BN_is_zero(r.get()) ||
-      !BN_mod_exp_mont(r.get(), a.get(), zero.get(), BN_value_one(), nullptr,
-                       nullptr) ||
-      !BN_is_zero(r.get()) ||
-      !BN_mod_exp_mont_consttime(r.get(), a.get(), zero.get(), BN_value_one(),
-                                 nullptr, nullptr) ||
-      !BN_is_zero(r.get()) ||
-      !BN_mod_exp_mont_word(r.get(), 42, zero.get(), BN_value_one(), nullptr,
-                            nullptr) ||
-      !BN_is_zero(r.get())) {
-    return false;
-  }
-
-  return true;
 }
 
 static bool test_mod_sqrt(FILE *fp, BN_CTX *ctx) {
@@ -1405,69 +758,7 @@ static bool test_mod_sqrt(FILE *fp, BN_CTX *ctx) {
   return true;
 }
 
-static bool test_small_prime(FILE *fp, BN_CTX *ctx) {
-  static const unsigned kBits = 10;
-
-  ScopedBIGNUM r(BN_new());
-  if (!r || !BN_generate_prime_ex(r.get(), static_cast<int>(kBits), 0, NULL,
-                                  NULL, NULL)) {
-    return false;
-  }
-  if (BN_num_bits(r.get()) != kBits) {
-    fprintf(fp, "Expected %u bit prime, got %u bit number\n", kBits,
-            BN_num_bits(r.get()));
-    return false;
-  }
-
-  return true;
-}
-
-static bool test_sqrt(FILE *fp, BN_CTX *ctx) {
-  ScopedBIGNUM n(BN_new());
-  ScopedBIGNUM nn(BN_new());
-  ScopedBIGNUM sqrt(BN_new());
-  if (!n || !nn || !sqrt) {
-    return false;
-  }
-
-  // Test some random squares.
-  for (int i = 0; i < 100; i++) {
-    if (!BN_rand(n.get(), 1024 /* bit length */,
-                 -1 /* no modification of top bits */,
-                 0 /* don't modify bottom bit */) ||
-        !BN_mul(nn.get(), n.get(), n.get(), ctx) ||
-        !BN_sqrt(sqrt.get(), nn.get(), ctx)) {
-      ERR_print_errors_fp(stderr);
-      return false;
-    }
-    if (BN_cmp(n.get(), sqrt.get()) != 0) {
-      fprintf(stderr, "Bad result from BN_sqrt.\n");
-      return false;
-    }
-  }
-
-  // Test some non-squares.
-  for (int i = 0; i < 100; i++) {
-    if (!BN_rand(n.get(), 1024 /* bit length */,
-                 -1 /* no modification of top bits */,
-                 0 /* don't modify bottom bit */) ||
-        !BN_mul(nn.get(), n.get(), n.get(), ctx) ||
-        !BN_add(nn.get(), nn.get(), BN_value_one())) {
-      ERR_print_errors_fp(stderr);
-      return false;
-    }
-
-    if (BN_sqrt(sqrt.get(), nn.get(), ctx)) {
-      char *nn_str = BN_bn2dec(nn.get());
-      fprintf(stderr, "BIO_sqrt didn't fail on a non-square: %s\n", nn_str);
-      OPENSSL_free(nn_str);
-    }
-  }
-
-  return true;
-}
-
-static bool test_bn2bin_padded(BN_CTX *ctx) {
+static bool TestBN2BinPadded(BN_CTX *ctx) {
   uint8_t zeros[256], out[256], reference[128];
 
   memset(zeros, 0, sizeof(zeros));
@@ -1544,7 +835,7 @@ static int DecimalToBIGNUM(ScopedBIGNUM *out, const char *in) {
   return ret;
 }
 
-static bool test_dec2bn(BN_CTX *ctx) {
+static bool TestDec2BN(BN_CTX *ctx) {
   ScopedBIGNUM bn;
   int ret = DecimalToBIGNUM(&bn, "0");
   if (ret != 1 || !BN_is_zero(bn.get()) || BN_is_negative(bn.get())) {
@@ -1579,7 +870,7 @@ static bool test_dec2bn(BN_CTX *ctx) {
   return true;
 }
 
-static bool test_hex2bn(BN_CTX *ctx) {
+static bool TestHex2BN(BN_CTX *ctx) {
   ScopedBIGNUM bn;
   int ret = HexToBIGNUM(&bn, "0");
   if (ret != 1 || !BN_is_zero(bn.get()) || BN_is_negative(bn.get())) {
@@ -1622,7 +913,7 @@ static ScopedBIGNUM ASCIIToBIGNUM(const char *in) {
   return ScopedBIGNUM(raw);
 }
 
-static bool test_asc2bn(BN_CTX *ctx) {
+static bool TestASC2BN(BN_CTX *ctx) {
   ScopedBIGNUM bn = ASCIIToBIGNUM("0");
   if (!bn || !BN_is_zero(bn.get()) || BN_is_negative(bn.get())) {
     fprintf(stderr, "BN_asc2bn gave a bad result.\n");
@@ -1689,7 +980,7 @@ static const MPITest kMPITests[] = {
   { "-256", "\x00\x00\x00\x02\x81\x00", 6 },
 };
 
-static bool test_mpi() {
+static bool TestMPI() {
   uint8_t scratch[8];
 
   for (size_t i = 0; i < sizeof(kMPITests) / sizeof(kMPITests[0]); i++) {
@@ -1731,7 +1022,7 @@ static bool test_mpi() {
   return true;
 }
 
-static bool test_rand() {
+static bool TestRand() {
   ScopedBIGNUM bn(BN_new());
   if (!bn) {
     return false;
@@ -1815,7 +1106,7 @@ static const ASN1Test kASN1BuggyTests[] = {
     {"1", "\x02\x02\x00\x01", 4},
 };
 
-static bool test_asn1() {
+static bool TestASN1() {
   for (const ASN1Test &test : kASN1Tests) {
     ScopedBIGNUM bn = ASCIIToBIGNUM(test.value_ascii);
     if (!bn) {
@@ -1937,7 +1228,180 @@ static bool test_asn1() {
     CBB_cleanup(&cbb);
     return false;
   }
+  ERR_clear_error();
   CBB_cleanup(&cbb);
+
+  return true;
+}
+
+static bool TestNegativeZero(BN_CTX *ctx) {
+  ScopedBIGNUM a(BN_new());
+  ScopedBIGNUM b(BN_new());
+  ScopedBIGNUM c(BN_new());
+  ScopedBIGNUM d(BN_new());
+  if (!a || !b || !c || !d) {
+    return false;
+  }
+
+  // Test that BN_mul never gives negative zero.
+  if (!BN_set_word(a.get(), 1)) {
+    return false;
+  }
+  BN_set_negative(a.get(), 1);
+  BN_zero(b.get());
+  if (!BN_mul(c.get(), a.get(), b.get(), ctx)) {
+    return false;
+  }
+  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
+    fprintf(stderr, "Multiplication test failed!\n");
+    return false;
+  }
+
+  // Test that BN_div never gives negative zero in the quotient.
+  if (!BN_set_word(a.get(), 1) ||
+      !BN_set_word(b.get(), 2)) {
+    return false;
+  }
+  BN_set_negative(a.get(), 1);
+  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
+    return false;
+  }
+  if (!BN_is_zero(d.get()) || BN_is_negative(d.get())) {
+    fprintf(stderr, "Division test failed!\n");
+    return false;
+  }
+
+  // Test that BN_div never gives negative zero in the remainder.
+  if (!BN_set_word(b.get(), 1)) {
+    return false;
+  }
+  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
+    return false;
+  }
+  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
+    fprintf(stderr, "Division test failed!\n");
+    return false;
+  }
+
+  return true;
+}
+
+static bool TestBadModulus(BN_CTX *ctx) {
+  ScopedBIGNUM a(BN_new());
+  ScopedBIGNUM b(BN_new());
+  ScopedBIGNUM zero(BN_new());
+  ScopedBN_MONT_CTX mont(BN_MONT_CTX_new());
+  if (!a || !b || !zero || !mont) {
+    return false;
+  }
+
+  BN_zero(zero.get());
+
+  if (BN_div(a.get(), b.get(), BN_value_one(), zero.get(), ctx)) {
+    fprintf(stderr, "Division by zero succeeded!\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_mul(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx)) {
+    fprintf(stderr, "BN_mod_mul with zero modulus succeeded!\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_exp(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx)) {
+    fprintf(stderr, "BN_mod_exp with zero modulus succeeded!\n");
+    return 0;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_exp_mont(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx,
+                      NULL)) {
+    fprintf(stderr, "BN_mod_exp_mont with zero modulus succeeded!\n");
+    return 0;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_exp_mont_consttime(a.get(), BN_value_one(), BN_value_one(),
+                                zero.get(), ctx, nullptr)) {
+    fprintf(stderr, "BN_mod_exp_mont_consttime with zero modulus succeeded!\n");
+    return 0;
+  }
+  ERR_clear_error();
+
+  if (BN_MONT_CTX_set(mont.get(), zero.get(), ctx)) {
+    fprintf(stderr, "BN_MONT_CTX_set succeeded for zero modulus!\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  // Some operations also may not be used with an even modulus.
+
+  if (!BN_set_word(b.get(), 16)) {
+    return false;
+  }
+
+  if (BN_MONT_CTX_set(mont.get(), b.get(), ctx)) {
+    fprintf(stderr, "BN_MONT_CTX_set succeeded for even modulus!\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_exp_mont(a.get(), BN_value_one(), BN_value_one(), b.get(), ctx,
+                      NULL)) {
+    fprintf(stderr, "BN_mod_exp_mont with even modulus succeeded!\n");
+    return 0;
+  }
+  ERR_clear_error();
+
+  if (BN_mod_exp_mont_consttime(a.get(), BN_value_one(), BN_value_one(),
+                                b.get(), ctx, nullptr)) {
+    fprintf(stderr, "BN_mod_exp_mont_consttime with even modulus succeeded!\n");
+    return 0;
+  }
+  ERR_clear_error();
+
+  return true;
+}
+
+// TestExpModZero tests that 1**0 mod 1 == 0.
+static bool TestExpModZero() {
+  ScopedBIGNUM zero(BN_new()), a(BN_new()), r(BN_new());
+  if (!zero || !a || !r || !BN_rand(a.get(), 1024, 0, 0)) {
+    return false;
+  }
+  BN_zero(zero.get());
+
+  if (!BN_mod_exp(r.get(), a.get(), zero.get(), BN_value_one(), nullptr) ||
+      !BN_is_zero(r.get()) ||
+      !BN_mod_exp_mont(r.get(), a.get(), zero.get(), BN_value_one(), nullptr,
+                       nullptr) ||
+      !BN_is_zero(r.get()) ||
+      !BN_mod_exp_mont_consttime(r.get(), a.get(), zero.get(), BN_value_one(),
+                                 nullptr, nullptr) ||
+      !BN_is_zero(r.get()) ||
+      !BN_mod_exp_mont_word(r.get(), 42, zero.get(), BN_value_one(), nullptr,
+                            nullptr) ||
+      !BN_is_zero(r.get())) {
+    return false;
+  }
+
+  return true;
+}
+
+static bool TestSmallPrime(BN_CTX *ctx) {
+  static const unsigned kBits = 10;
+
+  ScopedBIGNUM r(BN_new());
+  if (!r || !BN_generate_prime_ex(r.get(), static_cast<int>(kBits), 0, NULL,
+                                  NULL, NULL)) {
+    return false;
+  }
+  if (BN_num_bits(r.get()) != kBits) {
+    fprintf(stderr, "Expected %u bit prime, got %u bit number\n", kBits,
+            BN_num_bits(r.get()));
+    return false;
+  }
 
   return true;
 }

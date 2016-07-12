@@ -4,16 +4,18 @@
 
 #include "base/files/file_path_watcher_fsevents.h"
 
+#include <dispatch/dispatch.h>
+
 #include <list>
 
 #include "base/bind.h"
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/mac/libdispatch_task_runner.h"
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
+#include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
@@ -22,19 +24,6 @@ namespace {
 
 // The latency parameter passed to FSEventsStreamCreate().
 const CFAbsoluteTime kEventLatencySeconds = 0.3;
-
-class FSEventsTaskRunner : public mac::LibDispatchTaskRunner {
- public:
-   FSEventsTaskRunner()
-       : mac::LibDispatchTaskRunner("org.chromium.FilePathWatcherFSEvents") {
-   }
-
- protected:
-  ~FSEventsTaskRunner() override {}
-};
-
-static LazyInstance<FSEventsTaskRunner>::Leaky g_task_runner =
-    LAZY_INSTANCE_INITIALIZER;
 
 // Resolve any symlinks in the path.
 FilePath ResolvePath(const FilePath& path) {
@@ -79,7 +68,12 @@ FilePath ResolvePath(const FilePath& path) {
 
 }  // namespace
 
-FilePathWatcherFSEvents::FilePathWatcherFSEvents() : fsevent_stream_(NULL) {
+FilePathWatcherFSEvents::FilePathWatcherFSEvents()
+    : queue_(dispatch_queue_create(
+          base::StringPrintf(
+              "org.chromium.base.FilePathWatcher.%p", this).c_str(),
+          DISPATCH_QUEUE_SERIAL)),
+      fsevent_stream_(nullptr) {
 }
 
 bool FilePathWatcherFSEvents::Watch(const FilePath& path,
@@ -98,9 +92,14 @@ bool FilePathWatcherFSEvents::Watch(const FilePath& path,
   callback_ = callback;
 
   FSEventStreamEventId start_event = FSEventsGetCurrentEventId();
-  g_task_runner.Get().PostTask(
-      FROM_HERE, Bind(&FilePathWatcherFSEvents::StartEventStream, this,
-                      start_event, path));
+  // The block runtime would implicitly capture the reference, not the object
+  // it's referencing. Copy the path into a local, so that the value is
+  // captured by the block's scope.
+  const FilePath path_copy(path);
+
+  dispatch_async(queue_, ^{
+      StartEventStream(start_event, path_copy);
+  });
   return true;
 }
 
@@ -108,10 +107,12 @@ void FilePathWatcherFSEvents::Cancel() {
   set_cancelled();
   callback_.Reset();
 
-  // Switch to the dispatch queue thread to tear down the event stream.
-  g_task_runner.Get().PostTask(
-      FROM_HERE,
-      Bind(&FilePathWatcherFSEvents::CancelOnMessageLoopThread, this));
+  // Switch to the dispatch queue to tear down the event stream. As the queue
+  // is owned by this object, and this method is called from the destructor,
+  // execute the block synchronously.
+  dispatch_sync(queue_, ^{
+      CancelOnMessageLoopThread();
+  });
 }
 
 // static
@@ -124,8 +125,6 @@ void FilePathWatcherFSEvents::FSEventsCallback(
     const FSEventStreamEventId event_ids[]) {
   FilePathWatcherFSEvents* watcher =
       reinterpret_cast<FilePathWatcherFSEvents*>(event_watcher);
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
-
   bool root_changed = watcher->ResolveTargetPath();
   std::vector<FilePath> paths;
   FSEventStreamEventId root_change_at = FSEventStreamGetLatestEventId(stream);
@@ -144,10 +143,9 @@ void FilePathWatcherFSEvents::FSEventsCallback(
   if (root_changed) {
     // Resetting the event stream from within the callback fails (FSEvents spews
     // bad file descriptor errors), so post a task to do the reset.
-    g_task_runner.Get().PostTask(
-        FROM_HERE,
-        Bind(&FilePathWatcherFSEvents::UpdateEventStream, watcher,
-             root_change_at));
+    dispatch_async(watcher->queue_, ^{
+        watcher->UpdateEventStream(root_change_at);
+    });
   }
 
   watcher->OnFilePathsChanged(paths);
@@ -165,7 +163,6 @@ FilePathWatcherFSEvents::~FilePathWatcherFSEvents() {
 
 void FilePathWatcherFSEvents::OnFilePathsChanged(
     const std::vector<FilePath>& paths) {
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
   DCHECK(!resolved_target_.empty());
   task_runner()->PostTask(
       FROM_HERE, Bind(&FilePathWatcherFSEvents::DispatchEvents, this, paths,
@@ -194,7 +191,6 @@ void FilePathWatcherFSEvents::CancelOnMessageLoopThread() {
   // For all other implementations, the "message loop thread" is the IO thread,
   // as returned by task_runner(). This implementation, however, needs to
   // cancel pending work on the Dispatch Queue thread.
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
 
   if (fsevent_stream_) {
     DestroyEventStream();
@@ -205,8 +201,6 @@ void FilePathWatcherFSEvents::CancelOnMessageLoopThread() {
 
 void FilePathWatcherFSEvents::UpdateEventStream(
     FSEventStreamEventId start_event) {
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
-
   // It can happen that the watcher gets canceled while tasks that call this
   // function are still in flight, so abort if this situation is detected.
   if (resolved_target_.empty())
@@ -237,8 +231,7 @@ void FilePathWatcherFSEvents::UpdateEventStream(
                                         start_event,
                                         kEventLatencySeconds,
                                         kFSEventStreamCreateFlagWatchRoot);
-  FSEventStreamSetDispatchQueue(fsevent_stream_,
-                                g_task_runner.Get().GetDispatchQueue());
+  FSEventStreamSetDispatchQueue(fsevent_stream_, queue_);
 
   if (!FSEventStreamStart(fsevent_stream_)) {
     task_runner()->PostTask(
@@ -247,7 +240,6 @@ void FilePathWatcherFSEvents::UpdateEventStream(
 }
 
 bool FilePathWatcherFSEvents::ResolveTargetPath() {
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
   FilePath resolved = ResolvePath(target_).StripTrailingSeparators();
   bool changed = resolved != resolved_target_;
   resolved_target_ = resolved;
@@ -274,7 +266,6 @@ void FilePathWatcherFSEvents::DestroyEventStream() {
 
 void FilePathWatcherFSEvents::StartEventStream(FSEventStreamEventId start_event,
                                                const FilePath& path) {
-  DCHECK(g_task_runner.Get().RunsTasksOnCurrentThread());
   DCHECK(resolved_target_.empty());
 
   target_ = path;

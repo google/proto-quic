@@ -3,7 +3,7 @@
 	["crypto/asn1/asn1_test"],
 	["crypto/base64/base64_test"],
 	["crypto/bio/bio_test"],
-	["crypto/bn/bn_test"],
+	["crypto/bn/bn_test", "crypto/bn/bn_tests.txt"],
 	["crypto/bytestring/bytestring_test"],
 	["crypto/chacha/chacha_test"],
 	["crypto/cipher/aead_test", "aes-128-gcm", "crypto/cipher/test/aes_128_gcm_tests.txt"],
@@ -65,6 +65,5 @@
 	["crypto/x509v3/tab_test"],
 	["crypto/x509v3/v3name_test"],
 	["decrepit/ripemd/ripemd_test"],
-	["ssl/pqueue/pqueue_test"],
 	["ssl/ssl_test"]
 ]

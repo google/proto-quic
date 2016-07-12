@@ -19,13 +19,15 @@ namespace base {
 // for use by classes that queue and execute tasks.
 struct BASE_EXPORT PendingTask : public TrackingInfo {
   PendingTask(const tracked_objects::Location& posted_from,
-              const Closure& task);
+              Closure task);
   PendingTask(const tracked_objects::Location& posted_from,
-              const Closure& task,
+              Closure task,
               TimeTicks delayed_run_time,
               bool nestable);
-  PendingTask(const PendingTask& other);
+  PendingTask(PendingTask&& other);
   ~PendingTask();
+
+  PendingTask& operator=(PendingTask&& other);
 
   // Used to support sorting.
   bool operator<(const PendingTask& other) const;

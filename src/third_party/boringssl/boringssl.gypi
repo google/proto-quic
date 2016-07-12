@@ -16,7 +16,6 @@
       'src/ssl/dtls_record.c',
       'src/ssl/handshake_client.c',
       'src/ssl/handshake_server.c',
-      'src/ssl/pqueue/pqueue.c',
       'src/ssl/s3_both.c',
       'src/ssl/s3_enc.c',
       'src/ssl/s3_lib.c',

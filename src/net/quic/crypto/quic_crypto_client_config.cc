@@ -413,6 +413,7 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
     const QuicVersion preferred_version,
     const CachedState* cached,
     QuicRandom* rand,
+    bool demand_x509_proof,
     QuicCryptoNegotiatedParameters* out_params,
     CryptoHandshakeMessage* out) const {
   out->set_tag(kCHLO);
@@ -429,10 +430,6 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
     out->SetStringPiece(kUAID, user_agent_id_);
   }
 
-  char proof_nonce[32];
-  rand->RandBytes(proof_nonce, arraysize(proof_nonce));
-  out->SetStringPiece(kNONP, StringPiece(proof_nonce, arraysize(proof_nonce)));
-
   // Even though this is an inchoate CHLO, send the SCID so that
   // the STK can be validated by the server.
   const CryptoHandshakeMessage* scfg = cached->GetServerConfig();
@@ -446,6 +443,14 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
   if (!cached->source_address_token().empty()) {
     out->SetStringPiece(kSourceAddressTokenTag, cached->source_address_token());
   }
+
+  if (!demand_x509_proof) {
+    return;
+  }
+
+  char proof_nonce[32];
+  rand->RandBytes(proof_nonce, arraysize(proof_nonce));
+  out->SetStringPiece(kNONP, StringPiece(proof_nonce, arraysize(proof_nonce)));
 
   if (disable_ecdsa_) {
     out->SetVector(kPDMD, QuicTagVector{kX59R});
@@ -493,7 +498,7 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
   DCHECK(error_details != nullptr);
 
   FillInchoateClientHello(server_id, preferred_version, cached, rand,
-                          out_params, out);
+                          /* demand_x509_proof= */ true, out_params, out);
 
   const CryptoHandshakeMessage* scfg = cached->GetServerConfig();
   if (!scfg) {

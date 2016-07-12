@@ -59,9 +59,14 @@ void QuicConfigPeer::SetReceivedMaxIncomingDynamicStreams(
 }
 
 // static
+
 void QuicConfigPeer::SetConnectionOptionsToSend(QuicConfig* config,
                                                 const QuicTagVector& options) {
   config->SetConnectionOptionsToSend(options);
+}
+
+void QuicConfigPeer::SetReceivedForceHolBlocking(QuicConfig* config) {
+  config->force_hol_blocking_.SetReceivedValue(1);
 }
 
 }  // namespace test

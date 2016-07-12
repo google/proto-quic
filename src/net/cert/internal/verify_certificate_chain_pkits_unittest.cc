@@ -52,35 +52,30 @@ class VerifyCertificateChainPkitsTestDelegate {
       ADD_FAILURE() << "cert_ders is empty";
       return false;
     }
-    // First entry in the PKITS chain is the trust anchor.
-    TrustStore trust_store;
-    scoped_refptr<ParsedCertificate> anchor(
-        ParsedCertificate::CreateFromCertificateCopy(cert_ders[0], {}));
-    EXPECT_TRUE(anchor);
-    if (anchor)
-      trust_store.AddTrustedCertificate(std::move(anchor));
 
     // PKITS lists chains from trust anchor to target, VerifyCertificateChain
     // takes them starting with the target and not including the trust anchor.
     std::vector<scoped_refptr<net::ParsedCertificate>> input_chain;
-    for (size_t i = cert_ders.size() - 1; i > 0; --i) {
+    for (auto i = cert_ders.rbegin(); i != cert_ders.rend(); ++i) {
       if (!net::ParsedCertificate::CreateAndAddToVector(
-              reinterpret_cast<const uint8_t*>(cert_ders[i].data()),
-              cert_ders[i].size(),
+              reinterpret_cast<const uint8_t*>(i->data()), i->size(),
               net::ParsedCertificate::DataSource::EXTERNAL_REFERENCE, {},
               &input_chain)) {
-        ADD_FAILURE() << "cert " << i << " failed to parse";
+        ADD_FAILURE() << "cert failed to parse";
         return false;
       }
     }
+
+    TrustStore trust_store;
+    trust_store.AddTrustedCertificate(input_chain.back());
 
     SimpleSignaturePolicy signature_policy(1024);
 
     // Run all tests at the time the PKITS was published.
     der::GeneralizedTime time = {2011, 4, 15, 0, 0, 0};
 
-    return VerifyCertificateChain(input_chain, trust_store, &signature_policy,
-                                  time, nullptr);
+    return VerifyCertificateChainAssumingTrustedRoot(input_chain, trust_store,
+                                                     &signature_policy, time);
   }
 };
 

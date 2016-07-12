@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       icu::NumberFormat::createInstance(locale, status));
   if (U_FAILURE(status)) return 0;
 
-  icu::UnicodeString str(reinterpret_cast<const char*>(data), size);
+  icu::UnicodeString str(UnicodeStringFromUtf8(data, size));
   icu::Formattable result;
   fmt->parse(str, result, status);
 

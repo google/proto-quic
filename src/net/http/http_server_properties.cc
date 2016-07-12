@@ -14,21 +14,6 @@ namespace net {
 
 const char kAlternativeServiceHeader[] = "Alt-Svc";
 
-namespace {
-
-// The order of these strings much match the order of the enum definition
-// for AlternateProtocol.
-const char* const kAlternateProtocolStrings[] = {
-    "npn-spdy/3.1",
-    "npn-h2",
-    "quic"};
-
-static_assert(arraysize(kAlternateProtocolStrings) ==
-                  NUM_VALID_ALTERNATE_PROTOCOLS,
-              "kAlternateProtocolStrings has incorrect size");
-
-}  // namespace
-
 void HistogramAlternateProtocolUsage(AlternateProtocolUsage usage) {
   UMA_HISTOGRAM_ENUMERATION("Net.AlternateProtocolUsage", usage,
                             ALTERNATE_PROTOCOL_USAGE_MAX);
@@ -47,12 +32,12 @@ bool IsAlternateProtocolValid(AlternateProtocol protocol) {
 
 const char* AlternateProtocolToString(AlternateProtocol protocol) {
   switch (protocol) {
-    case NPN_SPDY_3_1:
-    case NPN_HTTP_2:
     case QUIC:
-      DCHECK(IsAlternateProtocolValid(protocol));
-      return kAlternateProtocolStrings[
-          protocol - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION];
+      return "quic";
+    case NPN_HTTP_2:
+      return "h2";
+    case NPN_SPDY_3_1:
+      return "npn-spdy/3.1";
     case UNINITIALIZED_ALTERNATE_PROTOCOL:
       return "Uninitialized";
   }
@@ -61,12 +46,17 @@ const char* AlternateProtocolToString(AlternateProtocol protocol) {
 }
 
 AlternateProtocol AlternateProtocolFromString(const std::string& str) {
-  for (int i = ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION;
-       i <= ALTERNATE_PROTOCOL_MAXIMUM_VALID_VERSION; ++i) {
-    AlternateProtocol protocol = static_cast<AlternateProtocol>(i);
-    if (str == AlternateProtocolToString(protocol))
-      return protocol;
-  }
+  if (str == "quic")
+    return QUIC;
+  if (str == "h2")
+    return NPN_HTTP_2;
+  // "npn-h2" is accepted here so that persisted settings with the old string
+  // can be loaded from disk.  TODO(bnc):  Remove around 2016 December.
+  if (str == "npn-h2")
+    return NPN_HTTP_2;
+  if (str == "npn-spdy/3.1")
+    return NPN_SPDY_3_1;
+
   return UNINITIALIZED_ALTERNATE_PROTOCOL;
 }
 

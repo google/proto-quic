@@ -149,6 +149,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     // clang-format off
     CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "AEAD", "AESG",
         "KEXS", "C255",
         "PUBS", pub_hex_.c_str(),
@@ -399,6 +400,7 @@ TEST_P(CryptoServerTest, BadSNI) {
     // clang-format off
     CryptoHandshakeMessage msg = CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "SNI", kBadSNIs[i],
         "VER\0", client_version_string_.c_str(),
         "$padding", static_cast<int>(kClientHelloMinimumSize),
@@ -448,6 +450,7 @@ TEST_P(CryptoServerTest, RejectTooLarge) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "PUBS", pub_hex_.c_str(),
@@ -477,6 +480,7 @@ TEST_P(CryptoServerTest, RejectTooLargeButValidSTK) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "PUBS", pub_hex_.c_str(),
@@ -508,6 +512,7 @@ TEST_P(CryptoServerTest, TooSmall) {
   // clang-format off
   ShouldFailMentioning("too small", CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "VER\0", client_version_string_.c_str(),
         nullptr));
   // clang-format on
@@ -531,6 +536,7 @@ TEST_P(CryptoServerTest, BadSourceAddressToken) {
     // clang-format off
     CryptoHandshakeMessage msg = CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "STK", kBadSourceAddressTokens[i],
         "VER\0", client_version_string_.c_str(),
         "$padding", static_cast<int>(kClientHelloMinimumSize), nullptr);
@@ -556,6 +562,7 @@ TEST_P(CryptoServerTest, BadClientNonce) {
     // clang-format off
     CryptoHandshakeMessage msg = CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "NONC", kBadNonces[i],
         "VER\0", client_version_string_.c_str(),
         "$padding", static_cast<int>(kClientHelloMinimumSize),
@@ -570,6 +577,7 @@ TEST_P(CryptoServerTest, BadClientNonce) {
     // clang-format off
     CryptoHandshakeMessage msg1 = CryptoTestUtils::Message(
         "CHLO",
+        "PDMD", "X509",
         "AEAD", "AESG",
         "KEXS", "C255",
         "SCID", scid_hex_.c_str(),
@@ -597,6 +605,7 @@ TEST_P(CryptoServerTest, NoClientNonce) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "VER\0", client_version_string_.c_str(),
       "$padding", static_cast<int>(kClientHelloMinimumSize),
       nullptr);
@@ -610,6 +619,7 @@ TEST_P(CryptoServerTest, NoClientNonce) {
   // clang-format off
   CryptoHandshakeMessage msg1 = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -641,6 +651,7 @@ TEST_P(CryptoServerTest, DowngradeAttack) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "VER\0", bad_version.c_str(),
       "$padding", static_cast<int>(kClientHelloMinimumSize),
       nullptr);
@@ -656,6 +667,7 @@ TEST_P(CryptoServerTest, CorruptServerConfig) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", (string(1, 'X') + scid_hex_).c_str(),
@@ -678,6 +690,7 @@ TEST_P(CryptoServerTest, CorruptSourceAddressToken) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -701,6 +714,7 @@ TEST_P(CryptoServerTest, CorruptClientNonceAndSourceAddressToken) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -724,6 +738,7 @@ TEST_P(CryptoServerTest, CorruptMultipleTags) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -758,6 +773,7 @@ TEST_P(CryptoServerTest, NoServerNonce) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -836,14 +852,15 @@ TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {
       CryptoTestUtils::ProofVerifyContextForTesting());
   std::unique_ptr<ProofVerifyDetails> details;
   string error_details;
-  DummyProofVerifierCallback callback;
+  std::unique_ptr<ProofVerifierCallback> callback(
+      new DummyProofVerifierCallback());
   string chlo_hash;
   CryptoUtils::HashHandshakeMessage(msg, &chlo_hash);
   EXPECT_EQ(QUIC_SUCCESS,
             proof_verifier->VerifyProof(
                 "test.example.com", 443, scfg_str.as_string(), client_version_,
                 chlo_hash, certs, "", proof.as_string(), verify_context.get(),
-                &error_details, &details, &callback));
+                &error_details, &details, std::move(callback)));
 }
 
 TEST_P(CryptoServerTest, RejectInvalidXlct) {
@@ -854,6 +871,7 @@ TEST_P(CryptoServerTest, RejectInvalidXlct) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -883,6 +901,7 @@ TEST_P(CryptoServerTest, ValidXlct) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -909,6 +928,7 @@ TEST_P(CryptoServerTest, NonceInSHLO) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -1021,6 +1041,7 @@ TEST_P(CryptoServerTestNoConfig, DontCrash) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "VER\0", client_version_string_.c_str(),
       "$padding", static_cast<int>(kClientHelloMinimumSize),
       nullptr);
@@ -1046,6 +1067,7 @@ TEST_P(CryptoServerTestOldVersion, ServerIgnoresXlct) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -1070,6 +1092,7 @@ TEST_P(CryptoServerTestOldVersion, XlctNotRequired) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),
@@ -1115,6 +1138,7 @@ TEST_P(AsyncStrikeServerVerificationTest, AsyncReplayProtection) {
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",
+      "PDMD", "X509",
       "AEAD", "AESG",
       "KEXS", "C255",
       "SCID", scid_hex_.c_str(),

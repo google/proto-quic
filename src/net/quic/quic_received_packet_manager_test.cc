@@ -342,7 +342,7 @@ TEST_P(QuicReceivedPacketManagerTest, DontWaitForPacketsBefore) {
 TEST_P(QuicReceivedPacketManagerTest, GetUpdatedAckFrame) {
   QuicPacketHeader header;
   header.packet_number = 2u;
-  QuicTime two_ms = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(2));
+  QuicTime two_ms = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(2);
   EXPECT_FALSE(received_manager_.ack_frame_updated());
   received_manager_.RecordPacketReceived(0u, header, two_ms);
   EXPECT_TRUE(received_manager_.ack_frame_updated());
@@ -354,7 +354,7 @@ TEST_P(QuicReceivedPacketManagerTest, GetUpdatedAckFrame) {
   EXPECT_EQ(QuicTime::Delta::Zero(), ack.ack_frame->ack_delay_time);
   EXPECT_EQ(1u, ack.ack_frame->received_packet_times.size());
 
-  QuicTime four_ms = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(4));
+  QuicTime four_ms = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(4);
   ack = received_manager_.GetUpdatedAckFrame(four_ms);
   EXPECT_FALSE(received_manager_.ack_frame_updated());
   // When UpdateReceivedPacketInfo after not having received a new packet,
@@ -383,8 +383,8 @@ TEST_P(QuicReceivedPacketManagerTest, UpdateReceivedConnectionStats) {
   RecordPacketReceipt(1, 0);
   EXPECT_TRUE(received_manager_.ack_frame_updated());
   RecordPacketReceipt(6, 0);
-  RecordPacketReceipt(
-      2, 0, QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(1)));
+  RecordPacketReceipt(2, 0,
+                      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(1));
 
   EXPECT_EQ(4u, stats_.max_sequence_reordering);
   EXPECT_EQ(1000, stats_.max_time_reordering_us);

@@ -15,9 +15,13 @@ namespace ct {
 
 MerkleTreeLeaf::MerkleTreeLeaf() {}
 
-MerkleTreeLeaf::~MerkleTreeLeaf() {}
+MerkleTreeLeaf::MerkleTreeLeaf(const MerkleTreeLeaf& other) = default;
 
-bool Hash(const MerkleTreeLeaf& tree_leaf, std::string* out) {
+MerkleTreeLeaf::MerkleTreeLeaf(MerkleTreeLeaf&&) = default;
+
+MerkleTreeLeaf::~MerkleTreeLeaf() = default;
+
+bool HashMerkleTreeLeaf(const MerkleTreeLeaf& tree_leaf, std::string* out) {
   // Prepend 0 byte as per RFC 6962, section-2.1
   std::string leaf_in_tls_format("\x00", 1);
   if (!EncodeTreeLeaf(tree_leaf, &leaf_in_tls_format))
@@ -44,7 +48,6 @@ bool GetMerkleTreeLeaf(const X509Certificate* cert,
     }
   }
 
-  merkle_tree_leaf->log_id = sct->log_id;
   merkle_tree_leaf->timestamp = sct->timestamp;
   merkle_tree_leaf->extensions = sct->extensions;
   return true;

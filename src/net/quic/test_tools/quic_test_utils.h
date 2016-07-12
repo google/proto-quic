@@ -625,6 +625,9 @@ class MockQuicSpdySession : public QuicSpdySession {
                       SpdyPriority priority,
                       QuicAckListenerInterface* ack_notifier_delegate));
   MOCK_METHOD1(OnHeadersHeadOfLineBlocking, void(QuicTime::Delta delta));
+  MOCK_METHOD4(
+      OnStreamFrameData,
+      void(QuicStreamId stream_id, const char* data, size_t len, bool fin));
 
   using QuicSession::ActivateStream;
 

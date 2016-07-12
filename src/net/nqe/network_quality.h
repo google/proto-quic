@@ -46,13 +46,23 @@ class NET_EXPORT_PRIVATE NetworkQuality {
   // Returns the estimate of the round trip time at the HTTP layer.
   const base::TimeDelta& http_rtt() const { return http_rtt_; }
 
+  void set_http_rtt(const base::TimeDelta& http_rtt) { http_rtt_ = http_rtt; }
+
   // Returns the estimate of the round trip time at the transport layer.
   const base::TimeDelta& transport_rtt() const { return transport_rtt_; }
+
+  void set_transport_rtt(const base::TimeDelta& transport_rtt) {
+    transport_rtt_ = transport_rtt;
+  }
 
   // Returns the estimate of the downstream throughput in Kbps (Kilobits per
   // second).
   int32_t downstream_throughput_kbps() const {
     return downstream_throughput_kbps_;
+  }
+
+  void set_downstream_throughput_kbps(int32_t downstream_throughput_kbps) {
+    downstream_throughput_kbps_ = downstream_throughput_kbps;
   }
 
  private:

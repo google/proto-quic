@@ -334,7 +334,7 @@ void TraceLog::ThreadLocalEventBuffer::FlushWhileLocked() {
 }
 
 struct TraceLog::RegisteredAsyncObserver {
-  RegisteredAsyncObserver(WeakPtr<AsyncEnabledStateObserver> observer)
+  explicit RegisteredAsyncObserver(WeakPtr<AsyncEnabledStateObserver> observer)
       : observer(observer), task_runner(ThreadTaskRunnerHandle::Get()) {}
   ~RegisteredAsyncObserver() {}
 
@@ -897,7 +897,7 @@ void TraceLog::FlushInternal(const TraceLog::OutputCallback& cb,
     flush_task_runner_ = ThreadTaskRunnerHandle::IsSet()
                              ? ThreadTaskRunnerHandle::Get()
                              : nullptr;
-    DCHECK(!thread_message_loops_.size() || flush_task_runner_);
+    DCHECK(thread_message_loops_.empty() || flush_task_runner_);
     flush_output_callback_ = cb;
 
     if (thread_shared_chunk_) {
@@ -1354,11 +1354,12 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
           phase == TRACE_EVENT_PHASE_COMPLETE) {
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->PushPseudoStackFrame(name);
-      } else if (phase == TRACE_EVENT_PHASE_END)
+      } else if (phase == TRACE_EVENT_PHASE_END) {
         // The pop for |TRACE_EVENT_PHASE_COMPLETE| events
         // is in |TraceLog::UpdateTraceEventDuration|.
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->PopPseudoStackFrame(name);
+      }
     }
   }
 

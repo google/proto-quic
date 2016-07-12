@@ -218,6 +218,13 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
     framer_.set_debug_visitor(debug_visitor);
   }
 
+  // Passes the call on to the wrapped SpdyFramer.
+  void SetDecoderHeaderTableDebugVisitor(
+      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor)
+      override {
+        framer_.SetDecoderHeaderTableDebugVisitor(std::move(visitor));
+  }
+
   // Passes the call on to the base adapter class and wrapped SpdyFramer.
   void set_process_single_input_frame(bool v) override {
     SpdyFramerDecoderAdapter::set_process_single_input_frame(v);

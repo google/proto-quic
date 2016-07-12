@@ -35,3 +35,5 @@ static library using GYP.
    which is missing in the newlib-based PNaCl toolchain.
 7) Stub out signal.c for nacl_helper_nonsfi. socketpair() will be prohibited
    by sandbox in nacl_helper_nonsfi.
+8) Remove an unnecessary workaround for OS X 10.4 from kqueue.c. It was causing
+   problems on macOS Sierra.

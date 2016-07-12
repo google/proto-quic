@@ -54,6 +54,7 @@ using testing::StrictMock;
 using testing::_;
 using testing::InSequence;
 using testing::Return;
+using testing::AtLeast;
 
 namespace net {
 namespace test {
@@ -205,8 +206,6 @@ class QuicSimpleServerSessionTest
     visitor_ = QuicConnectionPeer::GetVisitor(connection_);
     headers_stream_ = new MockQuicHeadersStream(session_.get());
     QuicSpdySessionPeer::SetHeadersStream(session_.get(), headers_stream_);
-    // TODO(jri): Remove this line once tests pass.
-    FLAGS_quic_cede_correctly = false;
 
     session_->OnConfigNegotiated();
   }
@@ -493,11 +492,25 @@ class QuicSimpleServerSessionServerPushTest
             WriteHeadersMock(stream_id, _, false, kDefaultPriority, nullptr));
         // Since flow control window is smaller than response body, not the
         // whole body will be sent.
-        EXPECT_CALL(*connection_,
-                    SendStreamData(stream_id, _, 0, false, nullptr))
-            .WillOnce(
-                Return(QuicConsumedData(kStreamFlowControlWindowSize, false)));
-        EXPECT_CALL(*connection_, SendBlocked(stream_id));
+        if (!session_->force_hol_blocking()) {
+          EXPECT_CALL(*connection_,
+                      SendStreamData(stream_id, _, 0, false, nullptr))
+              .WillOnce(Return(
+                  QuicConsumedData(kStreamFlowControlWindowSize, false)));
+          EXPECT_CALL(*connection_, SendBlocked(stream_id));
+        } else {
+          // The forced HOL blocking encapsulates the stream data into
+          // HTTP/2 DATA frames within the headers stream.  HTTP/2
+          // DATA frames are limited to a max size of 16KB, so the
+          // 64KB body will be fragemented into four DATA frames.
+          EXPECT_CALL(*connection_, SendStreamData(_, _, _, false, nullptr))
+              .Times(body_size / 16384)
+              .WillOnce(Return(QuicConsumedData(9 + 16394, false)))
+              .WillOnce(Return(QuicConsumedData(9 + 16394, false)))
+              .WillOnce(Return(QuicConsumedData(9 + 16394, false)))
+              .WillOnce(Return(QuicConsumedData(9 + 16394, false)));
+          EXPECT_CALL(*connection_, SendBlocked(_));
+        }
       }
     }
     session_->PromisePushResources(request_url, push_resources,
@@ -513,6 +526,10 @@ TEST_P(QuicSimpleServerSessionServerPushTest, TestPromisePushResources) {
   // Tests that given more than kMaxOpenStreamForTest resources, all their
   // PUSH_PROMISE's will be sent out and only |kMaxOpenStreamForTest| streams
   // will be opened and send push response.
+
+  if (session_->force_hol_blocking()) {
+    return;
+  }
   size_t num_resources = kMaxStreamsForTest + 5;
   PromisePushResources(num_resources);
   EXPECT_EQ(kMaxStreamsForTest, session_->GetNumOpenOutgoingStreams());
@@ -520,6 +537,10 @@ TEST_P(QuicSimpleServerSessionServerPushTest, TestPromisePushResources) {
 
 TEST_P(QuicSimpleServerSessionServerPushTest,
        HandlePromisedPushRequestsAfterStreamDraining) {
+  if (session_->force_hol_blocking()) {
+    return;
+  }
+
   // Tests that after promised stream queued up, when an opened stream is marked
   // draining, a queued promised stream will become open and send push response.
   size_t num_resources = kMaxStreamsForTest + 1;
@@ -543,6 +564,9 @@ TEST_P(QuicSimpleServerSessionServerPushTest,
 
 TEST_P(QuicSimpleServerSessionServerPushTest,
        ResetPromisedStreamToCancelServerPush) {
+  if (session_->force_hol_blocking()) {
+    return;
+  }
   // Tests that after all resources are promised, a RST frame from client can
   // prevent a promised resource to be send out.
 
@@ -579,6 +603,9 @@ TEST_P(QuicSimpleServerSessionServerPushTest,
 
 TEST_P(QuicSimpleServerSessionServerPushTest,
        CloseStreamToHandleMorePromisedStream) {
+  if (session_->force_hol_blocking()) {
+    return;
+  }
   // Tests that closing a open outgoing stream can trigger a promised resource
   // in the queue to be send out.
   size_t num_resources = kMaxStreamsForTest + 1;

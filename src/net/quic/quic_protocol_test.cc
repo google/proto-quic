@@ -189,7 +189,7 @@ TEST(QuicProtocolTest, AckFrameToString) {
   frame.packets.Add(4);
   frame.packets.Add(5);
   frame.received_packet_times = {
-      {6, QuicTime::Zero().Add(QuicTime::Delta::FromMicroseconds(7))}};
+      {6, QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(7)}};
   std::ostringstream stream;
   stream << frame;
   EXPECT_EQ(

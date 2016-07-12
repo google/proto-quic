@@ -34,13 +34,15 @@ class NET_EXPORT HttpResponseInfo {
   // the cache, please make sure not to delete or reorder values.
   enum ConnectionInfo {
     CONNECTION_INFO_UNKNOWN = 0,
-    CONNECTION_INFO_HTTP1 = 1,
+    CONNECTION_INFO_HTTP1_1 = 1,
     CONNECTION_INFO_DEPRECATED_SPDY2 = 2,
     CONNECTION_INFO_SPDY3 = 3,
     CONNECTION_INFO_HTTP2 = 4,  // HTTP/2.
     CONNECTION_INFO_QUIC1_SPDY3 = 5,
     CONNECTION_INFO_HTTP2_14 = 6,  // HTTP/2 draft-14.
     CONNECTION_INFO_HTTP2_15 = 7,  // HTTP/2 draft-15.
+    CONNECTION_INFO_HTTP0_9 = 8,
+    CONNECTION_INFO_HTTP1_0 = 9,
     NUM_OF_CONNECTION_INFOS,
   };
 

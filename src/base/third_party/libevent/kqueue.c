@@ -140,28 +140,6 @@ kq_init(struct event_base *base)
 		TAILQ_INIT(&kqueueop->evsigevents[i]);
 	}
 
-	/* Check for Mac OS X kqueue bug. */
-	memset(&kqueueop->changes[0], 0, sizeof kqueueop->changes[0]);
-	kqueueop->changes[0].ident = -1;
-	kqueueop->changes[0].filter = EVFILT_READ;
-	kqueueop->changes[0].flags = EV_ADD;
-	/* 
-	 * If kqueue works, then kevent will succeed, and it will
-	 * stick an error in events[0].  If kqueue is broken, then
-	 * kevent will fail.
-	 */
-	if (kevent(kq,
-		kqueueop->changes, 1, kqueueop->events, NEVENT, NULL) != 1 ||
-	    kqueueop->events[0].ident != -1 ||
-	    kqueueop->events[0].flags != EV_ERROR) {
-		event_warn("%s: detected broken kqueue; not using.", __func__);
-		free(kqueueop->changes);
-		free(kqueueop->events);
-		free(kqueueop);
-		close(kq);
-		return (NULL);
-	}
-
 	return (kqueueop);
 }
 

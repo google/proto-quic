@@ -480,9 +480,9 @@ CanonicalCookie::CookiePrefix CanonicalCookie::GetCookiePrefix(
     const std::string& name) {
   const char kSecurePrefix[] = "__Secure-";
   const char kHostPrefix[] = "__Host-";
-  if (name.find(kSecurePrefix) == 0)
+  if (base::StartsWith(name, kSecurePrefix, base::CompareCase::SENSITIVE))
     return CanonicalCookie::COOKIE_PREFIX_SECURE;
-  if (name.find(kHostPrefix) == 0)
+  if (base::StartsWith(name, kHostPrefix, base::CompareCase::SENSITIVE))
     return CanonicalCookie::COOKIE_PREFIX_HOST;
   return CanonicalCookie::COOKIE_PREFIX_NONE;
 }

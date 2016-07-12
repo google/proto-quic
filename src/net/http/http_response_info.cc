@@ -419,8 +419,8 @@ std::string HttpResponseInfo::ConnectionInfoToString(
   switch (connection_info) {
     case CONNECTION_INFO_UNKNOWN:
       return "unknown";
-    case CONNECTION_INFO_HTTP1:
-      return "http/1";
+    case CONNECTION_INFO_HTTP1_1:
+      return "http/1.1";
     case CONNECTION_INFO_DEPRECATED_SPDY2:
       NOTREACHED();
       return "";
@@ -436,6 +436,10 @@ std::string HttpResponseInfo::ConnectionInfoToString(
       return "h2";
     case CONNECTION_INFO_QUIC1_SPDY3:
       return "quic/1+spdy/3";
+    case CONNECTION_INFO_HTTP0_9:
+      return "http/0.9";
+    case CONNECTION_INFO_HTTP1_0:
+      return "http/1.0";
     case NUM_OF_CONNECTION_INFOS:
       break;
   }

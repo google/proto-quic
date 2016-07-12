@@ -2475,7 +2475,7 @@ TEST_P(QuicConnectionTest, TLP) {
   EXPECT_EQ(1u, writer_->header().packet_number);
   // Simulate the retransmission alarm firing and sending a tlp,
   // so send algorithm's OnRetransmissionTimeout is not called.
-  clock_.AdvanceTime(retransmission_time.Subtract(clock_.Now()));
+  clock_.AdvanceTime(retransmission_time - clock_.Now());
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 2u, _, _));
   connection_.GetRetransmissionAlarm()->Fire();
   EXPECT_EQ(2u, writer_->header().packet_number);
@@ -2487,7 +2487,7 @@ TEST_P(QuicConnectionTest, RTO) {
   connection_.DisableTailLossProbe();
 
   QuicTime default_retransmission_time =
-      clock_.ApproximateNow().Add(DefaultRetransmissionTime());
+      clock_.ApproximateNow() + DefaultRetransmissionTime();
   SendStreamDataToPeer(3, "foo", 0, !kFin, nullptr);
   EXPECT_EQ(1u, stop_waiting()->least_unacked);
 
@@ -2507,7 +2507,7 @@ TEST_P(QuicConnectionTest, RTOWithSameEncryptionLevel) {
   connection_.DisableTailLossProbe();
 
   QuicTime default_retransmission_time =
-      clock_.ApproximateNow().Add(DefaultRetransmissionTime());
+      clock_.ApproximateNow() + DefaultRetransmissionTime();
   use_tagging_decrypter();
 
   // A TaggingEncrypter puts kTagSize copies of the given byte (0x01 here) at
@@ -2783,7 +2783,7 @@ TEST_P(QuicConnectionTest, DelayRTOWithAckReceipt) {
   connection_.SendStreamDataWithString(3, "bar", 0, !kFin, nullptr);
   QuicAlarm* retransmission_alarm = connection_.GetRetransmissionAlarm();
   EXPECT_TRUE(retransmission_alarm->IsSet());
-  EXPECT_EQ(clock_.Now().Add(DefaultRetransmissionTime()),
+  EXPECT_EQ(clock_.Now() + DefaultRetransmissionTime(),
             retransmission_alarm->deadline());
 
   // Advance the time right before the RTO, then receive an ack for the first
@@ -2796,7 +2796,7 @@ TEST_P(QuicConnectionTest, DelayRTOWithAckReceipt) {
   EXPECT_GT(retransmission_alarm->deadline(), clock_.Now());
 
   // Move forward past the original RTO and ensure the RTO is still pending.
-  clock_.AdvanceTime(DefaultRetransmissionTime().Multiply(2));
+  clock_.AdvanceTime(2 * DefaultRetransmissionTime());
 
   // Ensure the second packet gets retransmitted when it finally fires.
   EXPECT_TRUE(retransmission_alarm->IsSet());
@@ -2838,8 +2838,9 @@ TEST_P(QuicConnectionTest, InitialTimeout) {
   QuicConfig config;
   connection_.SetFromConfig(config);
   // Subtract a second from the idle timeout on the client side.
-  QuicTime default_timeout = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs - 1));
+  QuicTime default_timeout =
+      clock_.ApproximateNow() +
+      QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs - 1);
   EXPECT_EQ(default_timeout, connection_.GetTimeoutAlarm()->deadline());
 
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_NETWORK_IDLE_TIMEOUT, _,
@@ -2866,8 +2867,8 @@ TEST_P(QuicConnectionTest, HandshakeTimeout) {
   EXPECT_TRUE(connection_.connected());
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(AnyNumber());
 
-  QuicTime handshake_timeout = clock_.ApproximateNow().Add(timeout).Subtract(
-      QuicTime::Delta::FromSeconds(1));
+  QuicTime handshake_timeout =
+      clock_.ApproximateNow() + timeout - QuicTime::Delta::FromSeconds(1);
   EXPECT_EQ(handshake_timeout, connection_.GetTimeoutAlarm()->deadline());
   EXPECT_TRUE(connection_.connected());
 
@@ -2884,7 +2885,7 @@ TEST_P(QuicConnectionTest, HandshakeTimeout) {
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_TRUE(connection_.connected());
 
-  clock_.AdvanceTime(timeout.Subtract(QuicTime::Delta::FromSeconds(2)));
+  clock_.AdvanceTime(timeout - QuicTime::Delta::FromSeconds(2));
 
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_HANDSHAKE_TIMEOUT, _,
                                            ConnectionCloseSource::FROM_SELF));
@@ -2912,7 +2913,7 @@ TEST_P(QuicConnectionTest, PingAfterSend) {
   EXPECT_FALSE(connection_.GetRetransmissionAlarm()->IsSet());
   SendStreamDataToPeer(kHeadersStreamId, "GET /", 0, kFin, nullptr);
   EXPECT_TRUE(connection_.GetPingAlarm()->IsSet());
-  EXPECT_EQ(clock_.ApproximateNow().Add(QuicTime::Delta::FromSeconds(15)),
+  EXPECT_EQ(clock_.ApproximateNow() + QuicTime::Delta::FromSeconds(15),
             connection_.GetPingAlarm()->deadline());
 
   // Now recevie and ACK of the previous packet, which will move the
@@ -2925,9 +2926,8 @@ TEST_P(QuicConnectionTest, PingAfterSend) {
   EXPECT_TRUE(connection_.GetPingAlarm()->IsSet());
   // The ping timer is set slightly less than 15 seconds in the future, because
   // of the 1s ping timer alarm granularity.
-  EXPECT_EQ(clock_.ApproximateNow()
-                .Add(QuicTime::Delta::FromSeconds(15))
-                .Subtract(QuicTime::Delta::FromMilliseconds(5)),
+  EXPECT_EQ(clock_.ApproximateNow() + QuicTime::Delta::FromSeconds(15) -
+                QuicTime::Delta::FromMilliseconds(5),
             connection_.GetPingAlarm()->deadline());
 
   writer_->Reset();
@@ -3186,7 +3186,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
   const QuicTime::Delta initial_idle_timeout =
       QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs - 1);
   const QuicTime::Delta five_ms = QuicTime::Delta::FromMilliseconds(5);
-  QuicTime default_timeout = clock_.ApproximateNow().Add(initial_idle_timeout);
+  QuicTime default_timeout = clock_.ApproximateNow() + initial_idle_timeout;
 
   // When we send a packet, the timeout will change to 5ms +
   // kInitialIdleTimeoutSecs.
@@ -3202,12 +3202,12 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
 
   // The original alarm will fire.  We should not time out because we had a
   // network event at t=5ms.  The alarm will reregister.
-  clock_.AdvanceTime(initial_idle_timeout.Subtract(five_ms).Subtract(five_ms));
+  clock_.AdvanceTime(initial_idle_timeout - five_ms - five_ms);
   EXPECT_EQ(default_timeout, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_TRUE(connection_.connected());
-  EXPECT_EQ(default_timeout.Add(five_ms).Add(five_ms),
+  EXPECT_EQ(default_timeout + five_ms + five_ms,
             connection_.GetTimeoutAlarm()->deadline());
 
   // This time, we should time out.
@@ -3215,7 +3215,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
                                            ConnectionCloseSource::FROM_SELF));
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   clock_.AdvanceTime(five_ms);
-  EXPECT_EQ(default_timeout.Add(five_ms), clock_.ApproximateNow());
+  EXPECT_EQ(default_timeout + five_ms, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_FALSE(connection_.connected());
@@ -3250,7 +3250,7 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
   const QuicTime::Delta default_idle_timeout =
       QuicTime::Delta::FromSeconds(kDefaultIdleTimeoutSecs - 1);
   const QuicTime::Delta five_ms = QuicTime::Delta::FromMilliseconds(5);
-  QuicTime default_timeout = clock_.ApproximateNow().Add(default_idle_timeout);
+  QuicTime default_timeout = clock_.ApproximateNow() + default_idle_timeout;
 
   // When we send a packet, the timeout will change to 5ms +
   // kInitialIdleTimeoutSecs.
@@ -3266,19 +3266,19 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
 
   // The original alarm will fire.  We should not time out because we had a
   // network event at t=5ms.  The alarm will reregister.
-  clock_.AdvanceTime(default_idle_timeout.Subtract(five_ms).Subtract(five_ms));
+  clock_.AdvanceTime(default_idle_timeout - five_ms - five_ms);
   EXPECT_EQ(default_timeout, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_TRUE(connection_.connected());
-  EXPECT_EQ(default_timeout.Add(five_ms).Add(five_ms),
+  EXPECT_EQ(default_timeout + five_ms + five_ms,
             connection_.GetTimeoutAlarm()->deadline());
 
   // This time, we should time out.
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_NETWORK_IDLE_TIMEOUT, _,
                                            ConnectionCloseSource::FROM_SELF));
   clock_.AdvanceTime(five_ms);
-  EXPECT_EQ(default_timeout.Add(five_ms), clock_.ApproximateNow());
+  EXPECT_EQ(default_timeout + five_ms, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_FALSE(connection_.connected());
@@ -3295,7 +3295,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceive) {
   const QuicTime::Delta initial_idle_timeout =
       QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs - 1);
   const QuicTime::Delta five_ms = QuicTime::Delta::FromMilliseconds(5);
-  QuicTime default_timeout = clock_.ApproximateNow().Add(initial_idle_timeout);
+  QuicTime default_timeout = clock_.ApproximateNow() + initial_idle_timeout;
 
   connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 0, !kFin,
                                        nullptr);
@@ -3313,12 +3313,12 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceive) {
 
   // The original alarm will fire.  We should not time out because we had a
   // network event at t=5ms.  The alarm will reregister.
-  clock_.AdvanceTime(initial_idle_timeout.Subtract(five_ms));
+  clock_.AdvanceTime(initial_idle_timeout - five_ms);
   EXPECT_EQ(default_timeout, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.connected());
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
-  EXPECT_EQ(default_timeout.Add(five_ms),
+  EXPECT_EQ(default_timeout + five_ms,
             connection_.GetTimeoutAlarm()->deadline());
 
   // This time, we should time out.
@@ -3326,7 +3326,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceive) {
                                            ConnectionCloseSource::FROM_SELF));
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   clock_.AdvanceTime(five_ms);
-  EXPECT_EQ(default_timeout.Add(five_ms), clock_.ApproximateNow());
+  EXPECT_EQ(default_timeout + five_ms, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_FALSE(connection_.connected());
@@ -3344,9 +3344,9 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
       QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs - 1);
   connection_.SetNetworkTimeouts(
       QuicTime::Delta::Infinite(),
-      initial_idle_timeout.Add(QuicTime::Delta::FromSeconds(1)));
+      initial_idle_timeout + QuicTime::Delta::FromSeconds(1));
   const QuicTime::Delta five_ms = QuicTime::Delta::FromMilliseconds(5);
-  QuicTime default_timeout = clock_.ApproximateNow().Add(initial_idle_timeout);
+  QuicTime default_timeout = clock_.ApproximateNow() + initial_idle_timeout;
 
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 0, !kFin,
@@ -3367,12 +3367,12 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
 
   // The original alarm will fire.  We should not time out because we had a
   // network event at t=5ms.  The alarm will reregister.
-  clock_.AdvanceTime(initial_idle_timeout.Subtract(five_ms));
+  clock_.AdvanceTime(initial_idle_timeout - five_ms);
   EXPECT_EQ(default_timeout, clock_.ApproximateNow());
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.connected());
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
-  EXPECT_EQ(default_timeout.Add(five_ms),
+  EXPECT_EQ(default_timeout + five_ms,
             connection_.GetTimeoutAlarm()->deadline());
 
   // Now, send packets while advancing the time and verify that the connection
@@ -3528,7 +3528,7 @@ TEST_P(QuicConnectionTest, LoopThroughSendingPacketsWithTruncation) {
 }
 
 TEST_P(QuicConnectionTest, SendDelayedAck) {
-  QuicTime ack_time = clock_.ApproximateNow().Add(DefaultDelayedAckTime());
+  QuicTime ack_time = clock_.ApproximateNow() + DefaultDelayedAckTime();
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3564,8 +3564,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimation) {
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/4, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3617,8 +3617,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationEighthRtt) {
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/8, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3670,8 +3670,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/4, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3702,7 +3702,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
   ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 9,
                            !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
-  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
 
@@ -3731,8 +3731,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/4, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 4);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3763,7 +3763,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
   ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 19,
                            !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
-  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
 
@@ -3805,8 +3805,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/8, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3837,7 +3837,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
   ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 9,
                            !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
-  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
 
@@ -3868,8 +3868,8 @@ TEST_P(QuicConnectionTest,
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   // The ack time should be based on min_rtt/8, since it's less than the
   // default delayed ack time.
-  QuicTime ack_time = clock_.ApproximateNow().Add(
-      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8));
+  QuicTime ack_time = clock_.ApproximateNow() +
+                      QuicTime::Delta::FromMilliseconds(kMinRttMs / 8);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
@@ -3900,7 +3900,7 @@ TEST_P(QuicConnectionTest,
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
   ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 19,
                            !kEntropyFlag, !kHasStopWaiting, ENCRYPTION_INITIAL);
-  ack_time = clock_.ApproximateNow().Add(QuicTime::Delta::FromMilliseconds(5));
+  ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
 
@@ -3936,7 +3936,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckOnHandshakeConfirmed) {
   ProcessPacket(kDefaultPathId, 1);
   // Check that ack is sent and that delayed ack alarm is set.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
-  QuicTime ack_time = clock_.ApproximateNow().Add(DefaultDelayedAckTime());
+  QuicTime ack_time = clock_.ApproximateNow() + DefaultDelayedAckTime();
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
 
   // Completing the handshake as the server does nothing.
@@ -4661,7 +4661,7 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckAfterRTO) {
   scoped_refptr<MockAckListener> listener(new StrictMock<MockAckListener>);
 
   QuicTime default_retransmission_time =
-      clock_.ApproximateNow().Add(DefaultRetransmissionTime());
+      clock_.ApproximateNow() + DefaultRetransmissionTime();
   connection_.SendStreamDataWithString(3, "foo", 0, !kFin, listener.get());
   EXPECT_EQ(1u, stop_waiting()->least_unacked);
 
@@ -4817,7 +4817,7 @@ TEST_P(QuicConnectionTest, ReevaluateTimeUntilSendOnAck) {
       .WillRepeatedly(Return(QuicTime::Delta::FromMilliseconds(1)));
   connection_.OnCanWrite();
   EXPECT_TRUE(connection_.GetSendAlarm()->IsSet());
-  EXPECT_EQ(clock_.Now().Add(QuicTime::Delta::FromMilliseconds(1)),
+  EXPECT_EQ(clock_.Now() + QuicTime::Delta::FromMilliseconds(1),
             connection_.GetSendAlarm()->deadline());
 
   // Process an ack and the send alarm will be set to the  new 2ms delay.
@@ -4830,7 +4830,7 @@ TEST_P(QuicConnectionTest, ReevaluateTimeUntilSendOnAck) {
   EXPECT_EQ(1u, writer_->frame_count());
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_TRUE(connection_.GetSendAlarm()->IsSet());
-  EXPECT_EQ(clock_.Now().Add(QuicTime::Delta::FromMilliseconds(2)),
+  EXPECT_EQ(clock_.Now() + QuicTime::Delta::FromMilliseconds(2),
             connection_.GetSendAlarm()->deadline());
   writer_->Reset();
 }

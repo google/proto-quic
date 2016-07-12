@@ -94,6 +94,13 @@ const char kDefaultKbpsObservationSuffix[] = ".DefaultMedianKbps";
 const char kThresholdURLRTTMsecSuffix[] = ".ThresholdMedianHttpRTTMsec";
 
 // Suffix of the name of the variation parameter that contains the threshold
+// transport RTTs (in milliseconds) for different effective connection types.
+// Complete name of the variation parameter would be
+// |EffectiveConnectionType|.|kThresholdTransportRTTMsecSuffix|.
+const char kThresholdTransportRTTMsecSuffix[] =
+    ".ThresholdMedianTransportRTTMsec";
+
+// Suffix of the name of the variation parameter that contains the threshold
 // downlink throughput (in kbps) for different effective connection types.
 // Complete name of the variation parameter would be
 // |EffectiveConnectionType|.|kThresholdKbpsSuffix|.
@@ -228,7 +235,10 @@ NetworkQualityEstimator::NetworkQualityEstimator(
     bool use_smaller_responses_for_tests)
     : algorithm_name_to_enum_({{"HttpRTTAndDownstreamThroughput",
                                 EffectiveConnectionTypeAlgorithm::
-                                    HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT}}),
+                                    HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
+                               {"TransportRTTOrDownstreamThroughput",
+                                EffectiveConnectionTypeAlgorithm::
+                                    TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT}}),
       use_localhost_requests_(use_local_host_requests_for_tests),
       use_small_responses_(use_smaller_responses_for_tests),
       weight_multiplier_per_second_(
@@ -376,17 +386,34 @@ void NetworkQualityEstimator::ObtainEffectiveConnectionTypeModelParams(
             variation_params, connection_type_name + kThresholdURLRTTMsecSuffix,
             &variations_value) &&
         variations_value >= kMinimumRTTVariationParameterMsec) {
-      base::TimeDelta rtt(base::TimeDelta::FromMilliseconds(variations_value));
-      connection_thresholds_[i] = nqe::internal::NetworkQuality(
-          rtt, connection_thresholds_[i].transport_rtt(),
-          connection_thresholds_[i].downstream_throughput_kbps());
+      connection_thresholds_[i].set_http_rtt(
+          base::TimeDelta(base::TimeDelta::FromMilliseconds(variations_value)));
 
       // Verify that the RTT values are in decreasing order as the network
       // quality improves.
       DCHECK(i == 0 ||
              connection_thresholds_[i - 1].http_rtt() ==
                  nqe::internal::InvalidRTT() ||
-             rtt <= connection_thresholds_[i - 1].http_rtt());
+             connection_thresholds_[i].http_rtt() <=
+                 connection_thresholds_[i - 1].http_rtt());
+    }
+
+    variations_value = kMinimumRTTVariationParameterMsec - 1;
+    if (GetValueForVariationParam(
+            variation_params,
+            connection_type_name + kThresholdTransportRTTMsecSuffix,
+            &variations_value) &&
+        variations_value >= kMinimumRTTVariationParameterMsec) {
+      connection_thresholds_[i].set_transport_rtt(
+          base::TimeDelta(base::TimeDelta::FromMilliseconds(variations_value)));
+
+      // Verify that the transport RTT values are in decreasing order as the
+      // network quality improves.
+      DCHECK(i == 0 ||
+             connection_thresholds_[i - 1].transport_rtt() ==
+                 nqe::internal::InvalidRTT() ||
+             connection_thresholds_[i].transport_rtt() <=
+                 connection_thresholds_[i - 1].transport_rtt());
     }
 
     variations_value = kMinimumThroughputVariationParameterKbps - 1;
@@ -394,17 +421,15 @@ void NetworkQualityEstimator::ObtainEffectiveConnectionTypeModelParams(
                                   connection_type_name + kThresholdKbpsSuffix,
                                   &variations_value) &&
         variations_value >= kMinimumThroughputVariationParameterKbps) {
-      int32_t throughput_kbps = variations_value;
-      connection_thresholds_[i] = nqe::internal::NetworkQuality(
-          connection_thresholds_[i].http_rtt(),
-          connection_thresholds_[i].transport_rtt(), throughput_kbps);
+      connection_thresholds_[i].set_downstream_throughput_kbps(
+          variations_value);
 
       // Verify that the throughput values are in increasing order as the
       // network quality improves.
       DCHECK(i == 0 ||
              connection_thresholds_[i - 1].downstream_throughput_kbps() ==
                  kMinimumThroughputVariationParameterKbps ||
-             throughput_kbps >=
+             connection_thresholds_[i].downstream_throughput_kbps() >=
                  connection_thresholds_[i - 1].downstream_throughput_kbps());
     }
   }
@@ -920,17 +945,37 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionType(
 
   if (effective_connection_type_algorithm_ ==
       EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT) {
-    return GetRecentEffectiveConnectionTypeHttpRTTAndDownstreamThroughput(
-        start_time);
+    return GetRecentEffectiveConnectionTypeUsingMetrics(
+        start_time, NetworkQualityEstimator::MetricUsage::
+                        MUST_BE_USED /* http_rtt_metric */,
+        NetworkQualityEstimator::MetricUsage::
+            DO_NOT_USE /* transport_rtt_metric */,
+        NetworkQualityEstimator::MetricUsage::
+            MUST_BE_USED /* downstream_throughput_kbps_metric */);
+  }
+  if (effective_connection_type_algorithm_ ==
+      EffectiveConnectionTypeAlgorithm::
+          TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT) {
+    return GetRecentEffectiveConnectionTypeUsingMetrics(
+        start_time,
+        NetworkQualityEstimator::MetricUsage::DO_NOT_USE /* http_rtt_metric */,
+        NetworkQualityEstimator::MetricUsage::
+            USE_IF_AVAILABLE /* transport_rtt_metric */,
+        NetworkQualityEstimator::MetricUsage::
+            USE_IF_AVAILABLE /* downstream_throughput_kbps_metric */);
   }
   // Add additional algorithms here.
   NOTREACHED();
   return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
 }
 
-NetworkQualityEstimator::EffectiveConnectionType NetworkQualityEstimator::
-    GetRecentEffectiveConnectionTypeHttpRTTAndDownstreamThroughput(
-        const base::TimeTicks& start_time) const {
+NetworkQualityEstimator::EffectiveConnectionType
+NetworkQualityEstimator::GetRecentEffectiveConnectionTypeUsingMetrics(
+    const base::TimeTicks& start_time,
+    NetworkQualityEstimator::MetricUsage http_rtt_metric,
+    NetworkQualityEstimator::MetricUsage transport_rtt_metric,
+    NetworkQualityEstimator::MetricUsage downstream_throughput_kbps_metric)
+    const {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   // If the device is currently offline, then return
@@ -939,16 +984,46 @@ NetworkQualityEstimator::EffectiveConnectionType NetworkQualityEstimator::
     return EFFECTIVE_CONNECTION_TYPE_OFFLINE;
 
   base::TimeDelta http_rtt = nqe::internal::InvalidRTT();
-  if (!GetRecentHttpRTTMedian(start_time, &http_rtt))
+  if (http_rtt_metric != NetworkQualityEstimator::MetricUsage::DO_NOT_USE &&
+      !GetRecentHttpRTTMedian(start_time, &http_rtt)) {
     http_rtt = nqe::internal::InvalidRTT();
+  }
+
+  base::TimeDelta transport_rtt = nqe::internal::InvalidRTT();
+  if (transport_rtt_metric !=
+          NetworkQualityEstimator::MetricUsage::DO_NOT_USE &&
+      !GetRecentTransportRTTMedian(start_time, &transport_rtt)) {
+    transport_rtt = nqe::internal::InvalidRTT();
+  }
 
   int32_t kbps = nqe::internal::kInvalidThroughput;
-  if (!GetRecentMedianDownlinkThroughputKbps(start_time, &kbps))
+  if (downstream_throughput_kbps_metric !=
+          NetworkQualityEstimator::MetricUsage::DO_NOT_USE &&
+      !GetRecentMedianDownlinkThroughputKbps(start_time, &kbps)) {
     kbps = nqe::internal::kInvalidThroughput;
+  }
 
-  if (http_rtt == nqe::internal::InvalidRTT() ||
+  if (http_rtt == nqe::internal::InvalidRTT() &&
+      http_rtt_metric == NetworkQualityEstimator::MetricUsage::MUST_BE_USED) {
+    return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+  }
+
+  if (transport_rtt == nqe::internal::InvalidRTT() &&
+      transport_rtt_metric ==
+          NetworkQualityEstimator::MetricUsage::MUST_BE_USED) {
+    return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+  }
+
+  if (kbps == nqe::internal::kInvalidThroughput &&
+      downstream_throughput_kbps_metric ==
+          NetworkQualityEstimator::MetricUsage::MUST_BE_USED) {
+    return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+  }
+
+  if (http_rtt == nqe::internal::InvalidRTT() &&
+      transport_rtt == nqe::internal::InvalidRTT() &&
       kbps == nqe::internal::kInvalidThroughput) {
-    // Quality of the current network is unknown.
+    // None of the metrics are available.
     return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
   }
 
@@ -959,20 +1034,26 @@ NetworkQualityEstimator::EffectiveConnectionType NetworkQualityEstimator::
     EffectiveConnectionType type = static_cast<EffectiveConnectionType>(i);
     if (i == EFFECTIVE_CONNECTION_TYPE_UNKNOWN)
       continue;
-    bool estimated_http_rtt_is_higher_than_threshold =
+
+    const bool estimated_http_rtt_is_higher_than_threshold =
         http_rtt != nqe::internal::InvalidRTT() &&
         connection_thresholds_[i].http_rtt() != nqe::internal::InvalidRTT() &&
         http_rtt >= connection_thresholds_[i].http_rtt();
-    bool estimated_throughput_is_lower_than_threshold =
+
+    const bool estimated_transport_rtt_is_higher_than_threshold =
+        transport_rtt != nqe::internal::InvalidRTT() &&
+        connection_thresholds_[i].transport_rtt() !=
+            nqe::internal::InvalidRTT() &&
+        transport_rtt >= connection_thresholds_[i].transport_rtt();
+
+    const bool estimated_throughput_is_lower_than_threshold =
         kbps != nqe::internal::kInvalidThroughput &&
         connection_thresholds_[i].downstream_throughput_kbps() !=
             nqe::internal::kInvalidThroughput &&
         kbps <= connection_thresholds_[i].downstream_throughput_kbps();
 
-    // Return |type| as the effective connection type if the current network's
-    // RTT is worse than the threshold RTT for |type|, or if the current
-    // network's throughput is lower than the threshold throughput for |type|.
     if (estimated_http_rtt_is_higher_than_threshold ||
+        estimated_transport_rtt_is_higher_than_threshold ||
         estimated_throughput_is_lower_than_threshold) {
       return type;
     }

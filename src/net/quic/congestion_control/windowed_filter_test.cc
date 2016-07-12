@@ -19,9 +19,11 @@ class WindowedFilterTest : public ::testing::Test {
   // Set the window to 99ms, so 25ms is more than a quarter rtt.
   WindowedFilterTest()
       : windowed_min_rtt_(QuicTime::Delta::FromMilliseconds(99),
-                          QuicTime::Delta::Zero()),
+                          QuicTime::Delta::Zero(),
+                          QuicTime::Zero()),
         windowed_max_bw_(QuicTime::Delta::FromMilliseconds(99),
-                         QuicBandwidth::Zero()) {}
+                         QuicBandwidth::Zero(),
+                         QuicTime::Zero()) {}
 
   // Sets up windowed_min_rtt_ to have the following values:
   // Best = 20ms, recorded at 25ms
@@ -37,8 +39,8 @@ class WindowedFilterTest : public ::testing::Test {
               << " " << windowed_min_rtt_.GetBest().ToMilliseconds() << " "
               << windowed_min_rtt_.GetSecondBest().ToMilliseconds() << " "
               << windowed_min_rtt_.GetThirdBest().ToMilliseconds();
-      now = now.Add(QuicTime::Delta::FromMilliseconds(25));
-      rtt_sample = rtt_sample.Add(QuicTime::Delta::FromMilliseconds(10));
+      now = now + QuicTime::Delta::FromMilliseconds(25);
+      rtt_sample = rtt_sample + QuicTime::Delta::FromMilliseconds(10);
     }
     EXPECT_EQ(QuicTime::Delta::FromMilliseconds(20),
               windowed_min_rtt_.GetBest());
@@ -62,7 +64,7 @@ class WindowedFilterTest : public ::testing::Test {
               << " " << windowed_max_bw_.GetBest().ToBitsPerSecond() << " "
               << windowed_max_bw_.GetSecondBest().ToBitsPerSecond() << " "
               << windowed_max_bw_.GetThirdBest().ToBitsPerSecond();
-      now = now.Add(QuicTime::Delta::FromMilliseconds(25));
+      now = now + QuicTime::Delta::FromMilliseconds(25);
       bw_sample = bw_sample.Subtract(QuicBandwidth::FromBitsPerSecond(100));
     }
     EXPECT_EQ(QuicBandwidth::FromBitsPerSecond(900),
@@ -74,9 +76,30 @@ class WindowedFilterTest : public ::testing::Test {
   }
 
  protected:
-  WindowedFilter<QuicTime::Delta, MinFilter<QuicTime::Delta>> windowed_min_rtt_;
-  WindowedFilter<QuicBandwidth, MaxFilter<QuicBandwidth>> windowed_max_bw_;
+  WindowedFilter<QuicTime::Delta,
+                 MinFilter<QuicTime::Delta>,
+                 QuicTime,
+                 QuicTime::Delta>
+      windowed_min_rtt_;
+  WindowedFilter<QuicBandwidth,
+                 MaxFilter<QuicBandwidth>,
+                 QuicTime,
+                 QuicTime::Delta>
+      windowed_max_bw_;
 };
+
+namespace {
+// Test helper function: updates the filter with a lot of small values in order
+// to ensure that it is not susceptible to noise.
+void UpdateWithIrrelevantSamples(
+    WindowedFilter<uint64_t, MaxFilter<uint64_t>, uint64_t, uint64_t>* filter,
+    uint64_t max_value,
+    uint64_t time) {
+  for (uint64_t i = 0; i < 1000; i++) {
+    filter->Update(i % max_value, time);
+  }
+}
+}  // namespace
 
 TEST_F(WindowedFilterTest, UninitializedEstimates) {
   EXPECT_EQ(QuicTime::Delta::Zero(), windowed_min_rtt_.GetBest());
@@ -96,8 +119,8 @@ TEST_F(WindowedFilterTest, MonotonicallyIncreasingMin) {
   // Gradually increase the rtt samples and ensure the windowed min rtt starts
   // rising.
   for (int i = 0; i < 6; ++i) {
-    now = now.Add(QuicTime::Delta::FromMilliseconds(25));
-    rtt_sample = rtt_sample.Add(QuicTime::Delta::FromMilliseconds(10));
+    now = now + QuicTime::Delta::FromMilliseconds(25);
+    rtt_sample = rtt_sample + QuicTime::Delta::FromMilliseconds(10);
     windowed_min_rtt_.Update(rtt_sample, now);
     VLOG(1) << "i: " << i << " sample: " << rtt_sample.ToMilliseconds()
             << " mins: "
@@ -126,7 +149,7 @@ TEST_F(WindowedFilterTest, MonotonicallyDecreasingMax) {
   // Gradually decrease the bw samples and ensure the windowed max bw starts
   // decreasing.
   for (int i = 0; i < 6; ++i) {
-    now = now.Add(QuicTime::Delta::FromMilliseconds(25));
+    now = now + QuicTime::Delta::FromMilliseconds(25);
     bw_sample = bw_sample.Subtract(QuicBandwidth::FromBitsPerSecond(100));
     windowed_max_bw_.Update(bw_sample, now);
     VLOG(1) << "i: " << i << " sample: " << bw_sample.ToBitsPerSecond()
@@ -150,14 +173,15 @@ TEST_F(WindowedFilterTest, MonotonicallyDecreasingMax) {
 TEST_F(WindowedFilterTest, SampleChangesThirdBestMin) {
   InitializeMinFilter();
   // RTT sample lower than the third-choice min-rtt sets that, but nothing else.
-  QuicTime::Delta rtt_sample = windowed_min_rtt_.GetThirdBest().Subtract(
-      QuicTime::Delta::FromMilliseconds(5));
+  QuicTime::Delta rtt_sample =
+      windowed_min_rtt_.GetThirdBest() - QuicTime::Delta::FromMilliseconds(5);
   // This assert is necessary to avoid triggering -Wstrict-overflow
   // See crbug/616957
   ASSERT_GT(windowed_min_rtt_.GetThirdBest(),
             QuicTime::Delta::FromMilliseconds(5));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
+  windowed_min_rtt_.Update(rtt_sample, now);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(40),
@@ -171,7 +195,7 @@ TEST_F(WindowedFilterTest, SampleChangesThirdBestMax) {
   QuicBandwidth bw_sample =
       windowed_max_bw_.GetThirdBest().Add(QuicBandwidth::FromBitsPerSecond(50));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(QuicBandwidth::FromBitsPerSecond(700),
@@ -183,14 +207,14 @@ TEST_F(WindowedFilterTest, SampleChangesSecondBestMin) {
   InitializeMinFilter();
   // RTT sample lower than the second-choice min sets that and also
   // the third-choice min.
-  QuicTime::Delta rtt_sample = windowed_min_rtt_.GetSecondBest().Subtract(
-      QuicTime::Delta::FromMilliseconds(5));
+  QuicTime::Delta rtt_sample =
+      windowed_min_rtt_.GetSecondBest() - QuicTime::Delta::FromMilliseconds(5);
   // This assert is necessary to avoid triggering -Wstrict-overflow
   // See crbug/616957
   ASSERT_GT(windowed_min_rtt_.GetSecondBest(),
             QuicTime::Delta::FromMilliseconds(5));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetSecondBest());
@@ -204,7 +228,7 @@ TEST_F(WindowedFilterTest, SampleChangesSecondBestMax) {
   QuicBandwidth bw_sample = windowed_max_bw_.GetSecondBest().Add(
       QuicBandwidth::FromBitsPerSecond(50));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetSecondBest());
@@ -215,13 +239,13 @@ TEST_F(WindowedFilterTest, SampleChangesAllMins) {
   InitializeMinFilter();
   // RTT sample lower than the first-choice min-rtt sets that and also
   // the second and third-choice mins.
-  QuicTime::Delta rtt_sample = windowed_min_rtt_.GetBest().Subtract(
-      QuicTime::Delta::FromMilliseconds(5));
+  QuicTime::Delta rtt_sample =
+      windowed_min_rtt_.GetBest() - QuicTime::Delta::FromMilliseconds(5);
   // This assert is necessary to avoid triggering -Wstrict-overflow
   // See crbug/616957
   ASSERT_GT(windowed_min_rtt_.GetBest(), QuicTime::Delta::FromMilliseconds(5));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetSecondBest());
@@ -235,7 +259,7 @@ TEST_F(WindowedFilterTest, SampleChangesAllMaxs) {
   QuicBandwidth bw_sample =
       windowed_max_bw_.GetBest().Add(QuicBandwidth::FromBitsPerSecond(50));
   // Latest sample was recorded at 100ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(101));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetSecondBest());
@@ -247,9 +271,9 @@ TEST_F(WindowedFilterTest, ExpireBestMin) {
   QuicTime::Delta old_third_best = windowed_min_rtt_.GetThirdBest();
   QuicTime::Delta old_second_best = windowed_min_rtt_.GetSecondBest();
   QuicTime::Delta rtt_sample =
-      old_third_best.Add(QuicTime::Delta::FromMilliseconds(5));
+      old_third_best + QuicTime::Delta::FromMilliseconds(5);
   // Best min sample was recorded at 25ms, so expiry time is 124ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(125));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(125);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(old_third_best, windowed_min_rtt_.GetSecondBest());
@@ -263,7 +287,7 @@ TEST_F(WindowedFilterTest, ExpireBestMax) {
   QuicBandwidth bw_sample =
       old_third_best.Subtract(QuicBandwidth::FromBitsPerSecond(50));
   // Best max sample was recorded at 25ms, so expiry time is 124ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(125));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(125);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(old_third_best, windowed_max_bw_.GetSecondBest());
@@ -274,9 +298,9 @@ TEST_F(WindowedFilterTest, ExpireSecondBestMin) {
   InitializeMinFilter();
   QuicTime::Delta old_third_best = windowed_min_rtt_.GetThirdBest();
   QuicTime::Delta rtt_sample =
-      old_third_best.Add(QuicTime::Delta::FromMilliseconds(5));
+      old_third_best + QuicTime::Delta::FromMilliseconds(5);
   // Second best min sample was recorded at 75ms, so expiry time is 174ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(175));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(175);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetSecondBest());
@@ -289,7 +313,7 @@ TEST_F(WindowedFilterTest, ExpireSecondBestMax) {
   QuicBandwidth bw_sample =
       old_third_best.Subtract(QuicBandwidth::FromBitsPerSecond(50));
   // Second best max sample was recorded at 75ms, so expiry time is 174ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(175));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(175);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetSecondBest());
@@ -298,15 +322,15 @@ TEST_F(WindowedFilterTest, ExpireSecondBestMax) {
 
 TEST_F(WindowedFilterTest, ExpireAllMins) {
   InitializeMinFilter();
-  QuicTime::Delta rtt_sample = windowed_min_rtt_.GetThirdBest().Add(
-      QuicTime::Delta::FromMilliseconds(5));
+  QuicTime::Delta rtt_sample =
+      windowed_min_rtt_.GetThirdBest() + QuicTime::Delta::FromMilliseconds(5);
   // This assert is necessary to avoid triggering -Wstrict-overflow
   // See crbug/616957
   ASSERT_LT(windowed_min_rtt_.GetThirdBest(),
-            QuicTime::Delta::Infinite().Subtract(
-                QuicTime::Delta::FromMilliseconds(5)));
+            QuicTime::Delta::Infinite() - QuicTime::Delta::FromMilliseconds(5));
+
   // Third best min sample was recorded at 100ms, so expiry time is 199ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(200));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(200);
   windowed_min_rtt_.Update(rtt_sample, now);
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetThirdBest());
   EXPECT_EQ(rtt_sample, windowed_min_rtt_.GetSecondBest());
@@ -318,11 +342,49 @@ TEST_F(WindowedFilterTest, ExpireAllMaxs) {
   QuicBandwidth bw_sample = windowed_max_bw_.GetThirdBest().Subtract(
       QuicBandwidth::FromBitsPerSecond(50));
   // Third best max sample was recorded at 100ms, so expiry time is 199ms.
-  QuicTime now = QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(200));
+  QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(200);
   windowed_max_bw_.Update(bw_sample, now);
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetThirdBest());
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetSecondBest());
   EXPECT_EQ(bw_sample, windowed_max_bw_.GetBest());
+}
+
+// Test the windowed filter where the time used is an exact counter instead of a
+// timestamp.  This is useful if, for example, the time is measured in round
+// trips.
+TEST_F(WindowedFilterTest, ExpireCounterBasedMax) {
+  // Create a window which starts at t = 0 and expires after two cycles.
+  WindowedFilter<uint64_t, MaxFilter<uint64_t>, uint64_t, uint64_t> max_filter(
+      2, 0, 0);
+
+  // Insert 50000 at t = 1.
+  const uint64_t kBest = 50000;
+  max_filter.Update(50000, 1);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+  UpdateWithIrrelevantSamples(&max_filter, 20, 1);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+
+  // Insert 40000 at t = 2.  Nothing is expected to expire.
+  max_filter.Update(40000, 2);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+  UpdateWithIrrelevantSamples(&max_filter, 20, 2);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+
+  // Insert 30000 at t = 3.  Nothing is expected to expire yet.
+  max_filter.Update(30000, 3);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+  UpdateWithIrrelevantSamples(&max_filter, 20, 3);
+  EXPECT_EQ(kBest, max_filter.GetBest());
+  VLOG(0) << max_filter.GetSecondBest();
+  VLOG(0) << max_filter.GetThirdBest();
+
+  // Insert 20000 at t = 4.  50000 at t = 1 expires, so 40000 becomes the new
+  // maximum.
+  const uint64_t kNewBest = 40000;
+  max_filter.Update(20000, 4);
+  EXPECT_EQ(kNewBest, max_filter.GetBest());
+  UpdateWithIrrelevantSamples(&max_filter, 20, 4);
+  EXPECT_EQ(kNewBest, max_filter.GetBest());
 }
 
 }  // namespace

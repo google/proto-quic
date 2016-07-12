@@ -84,7 +84,7 @@ class NET_EXPORT_PRIVATE ProofVerifierChromium : public ProofVerifier {
       const ProofVerifyContext* verify_context,
       std::string* error_details,
       std::unique_ptr<ProofVerifyDetails>* verify_details,
-      ProofVerifierCallback* callback) override;
+      std::unique_ptr<ProofVerifierCallback> callback) override;
 
  private:
   class Job;

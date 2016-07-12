@@ -636,6 +636,9 @@ TEST(NetworkQualityEstimatorTest, ObtainAlgorithmToUseFromParams) {
       {true, "HttpRTTAndDownstreamThroughput",
        NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
            HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
+      {true, "TransportRTTOrDownstreamThroughput",
+       NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm::
+           TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT},
   };
 
   for (const auto& test : tests) {
@@ -647,6 +650,23 @@ TEST(NetworkQualityEstimatorTest, ObtainAlgorithmToUseFromParams) {
     EXPECT_EQ(test.expected_algorithm,
               estimator.effective_connection_type_algorithm_)
         << test.algorithm;
+
+    // Make sure no two values are same in the map.
+    typedef std::map<std::string,
+                     NetworkQualityEstimator::EffectiveConnectionTypeAlgorithm>
+        Algorithms;
+
+    for (Algorithms::const_iterator it_first =
+             estimator.algorithm_name_to_enum_.begin();
+         it_first != estimator.algorithm_name_to_enum_.end(); ++it_first) {
+      for (Algorithms::const_iterator it_second =
+               estimator.algorithm_name_to_enum_.begin();
+           it_second != estimator.algorithm_name_to_enum_.end(); ++it_second) {
+        if (it_first != it_second) {
+          DCHECK_NE(it_first->second, it_second->second);
+        }
+      }
+    }
   }
 }
 
@@ -754,8 +774,60 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyRTT) {
 }
 
 // Tests that |GetEffectiveConnectionType| returns correct connection type when
-// both RTT and throughput thresholds are specified in the variation params.
-TEST(NetworkQualityEstimatorTest, ObtainThresholdsRTTandThroughput) {
+// only transport RTT thresholds are specified in the variation params.
+TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyTransportRTT) {
+  std::map<std::string, std::string> variation_params;
+  variation_params["effective_connection_type_algorithm"] =
+      "TransportRTTOrDownstreamThroughput";
+
+  variation_params["Offline.ThresholdMedianTransportRTTMsec"] = "4000";
+  variation_params["Slow2G.ThresholdMedianTransportRTTMsec"] = "2000";
+  variation_params["2G.ThresholdMedianTransportRTTMsec"] = "1000";
+  variation_params["3G.ThresholdMedianTransportRTTMsec"] = "500";
+  variation_params["4G.ThresholdMedianTransportRTTMsec"] = "300";
+  variation_params["Broadband.ThresholdMedianTransportRTTMsec"] = "100";
+
+  TestNetworkQualityEstimator estimator(variation_params);
+
+  // Simulate the connection type as Wi-Fi so that GetEffectiveConnectionType
+  // does not return Offline if the device is offline.
+  estimator.SimulateNetworkChangeTo(NetworkChangeNotifier::CONNECTION_WIFI,
+                                    "test");
+
+  const struct {
+    int32_t transport_rtt_msec;
+    NetworkQualityEstimator::EffectiveConnectionType expected_conn_type;
+  } tests[] = {
+      {5000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_OFFLINE},
+      {4000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_OFFLINE},
+      {3000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
+      {2000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
+      {1500, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_2G},
+      {1000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_2G},
+      {700, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_3G},
+      {500, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_3G},
+      {400, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_4G},
+      {300, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_4G},
+      {200, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {100, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {20, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+  };
+
+  for (const auto& test : tests) {
+    estimator.set_transport_rtt(
+        base::TimeDelta::FromMilliseconds(test.transport_rtt_msec));
+    estimator.set_recent_transport_rtt(
+        base::TimeDelta::FromMilliseconds(test.transport_rtt_msec));
+    estimator.set_downlink_throughput_kbps(INT32_MAX);
+    estimator.set_recent_downlink_throughput_kbps(INT32_MAX);
+    EXPECT_EQ(test.expected_conn_type, estimator.GetEffectiveConnectionType());
+  }
+}
+
+// Tests that |GetEffectiveConnectionType| returns correct connection type when
+// both HTTP RTT and throughput thresholds are specified in the variation
+// params.
+TEST(NetworkQualityEstimatorTest, ObtainThresholdsHttpRTTandThroughput) {
   std::map<std::string, std::string> variation_params;
 
   variation_params["Offline.ThresholdMedianHttpRTTMsec"] = "4000";
@@ -807,6 +879,71 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsRTTandThroughput) {
     estimator.set_http_rtt(base::TimeDelta::FromMilliseconds(test.rtt_msec));
     estimator.set_recent_http_rtt(
         base::TimeDelta::FromMilliseconds(test.rtt_msec));
+    estimator.set_downlink_throughput_kbps(test.downlink_throughput_kbps);
+    estimator.set_recent_downlink_throughput_kbps(
+        test.downlink_throughput_kbps);
+    EXPECT_EQ(test.expected_conn_type, estimator.GetEffectiveConnectionType());
+  }
+}
+
+// Tests that |GetEffectiveConnectionType| returns correct connection type when
+// both transport RTT and throughput thresholds are specified in the variation
+// params.
+TEST(NetworkQualityEstimatorTest, ObtainThresholdsTransportRTTandThroughput) {
+  std::map<std::string, std::string> variation_params;
+  variation_params["effective_connection_type_algorithm"] =
+      "TransportRTTOrDownstreamThroughput";
+
+  variation_params["Offline.ThresholdMedianTransportRTTMsec"] = "4000";
+  variation_params["Slow2G.ThresholdMedianTransportRTTMsec"] = "2000";
+  variation_params["2G.ThresholdMedianTransportRTTMsec"] = "1000";
+  variation_params["3G.ThresholdMedianTransportRTTMsec"] = "500";
+  variation_params["4G.ThresholdMedianTransportRTTMsec"] = "300";
+  variation_params["Broadband.ThresholdMedianTransportRTTMsec"] = "100";
+
+  variation_params["Offline.ThresholdMedianKbps"] = "10";
+  variation_params["Slow2G.ThresholdMedianKbps"] = "100";
+  variation_params["2G.ThresholdMedianKbps"] = "300";
+  variation_params["3G.ThresholdMedianKbps"] = "500";
+  variation_params["4G.ThresholdMedianKbps"] = "1000";
+  variation_params["Broadband.ThresholdMedianKbps"] = "2000";
+
+  TestNetworkQualityEstimator estimator(variation_params);
+
+  // Simulate the connection type as Wi-Fi so that GetEffectiveConnectionType
+  // does not return Offline if the device is offline.
+  estimator.SimulateNetworkChangeTo(NetworkChangeNotifier::CONNECTION_WIFI,
+                                    "test");
+
+  const struct {
+    int32_t transport_rtt_msec;
+    int32_t downlink_throughput_kbps;
+    NetworkQualityEstimator::EffectiveConnectionType expected_conn_type;
+  } tests[] = {
+      // Set RTT to a very low value to observe the effect of throughput.
+      // Throughput is the bottleneck.
+      {1, 5, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_OFFLINE},
+      {1, 10, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_OFFLINE},
+      {1, 50, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
+      {1, 100, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
+      {1, 150, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_2G},
+      {1, 300, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_2G},
+      {1, 400, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_3G},
+      {1, 500, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_3G},
+      {1, 700, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_4G},
+      {1, 1000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_4G},
+      {1, 1500, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {1, 2500, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      // Set both RTT and throughput. RTT is the bottleneck.
+      {3000, 25000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
+      {700, 25000, NetworkQualityEstimator::EFFECTIVE_CONNECTION_TYPE_3G},
+  };
+
+  for (const auto& test : tests) {
+    estimator.set_transport_rtt(
+        base::TimeDelta::FromMilliseconds(test.transport_rtt_msec));
+    estimator.set_recent_transport_rtt(
+        base::TimeDelta::FromMilliseconds(test.transport_rtt_msec));
     estimator.set_downlink_throughput_kbps(test.downlink_throughput_kbps);
     estimator.set_recent_downlink_throughput_kbps(
         test.downlink_throughput_kbps);

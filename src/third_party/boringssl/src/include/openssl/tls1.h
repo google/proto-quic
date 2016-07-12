@@ -157,8 +157,7 @@ extern "C" {
 #endif
 
 
-#define TLS1_ALLOW_EXPERIMENTAL_CIPHERSUITES 0
-
+#define TLS1_AD_END_OF_EARLY_DATA 1
 #define TLS1_AD_DECRYPTION_FAILED 21
 #define TLS1_AD_RECORD_OVERFLOW 22
 #define TLS1_AD_UNKNOWN_CA 48    /* fatal */
@@ -171,6 +170,7 @@ extern "C" {
 #define TLS1_AD_INTERNAL_ERROR 80        /* fatal */
 #define TLS1_AD_USER_CANCELLED 90
 #define TLS1_AD_NO_RENEGOTIATION 100
+#define TLS1_AD_MISSING_EXTENSION 109
 /* codes 110-114 are from RFC3546 */
 #define TLS1_AD_UNSUPPORTED_EXTENSION 110
 #define TLS1_AD_CERTIFICATE_UNOBTAINABLE 111
@@ -179,40 +179,18 @@ extern "C" {
 #define TLS1_AD_BAD_CERTIFICATE_HASH_VALUE 114
 #define TLS1_AD_UNKNOWN_PSK_IDENTITY 115 /* fatal */
 
-/* ExtensionType values from RFC3546 / RFC4366 / RFC6066 */
+/* ExtensionType values from RFC6066 */
 #define TLSEXT_TYPE_server_name 0
-#define TLSEXT_TYPE_max_fragment_length 1
-#define TLSEXT_TYPE_client_certificate_url 2
-#define TLSEXT_TYPE_trusted_ca_keys 3
-#define TLSEXT_TYPE_truncated_hmac 4
 #define TLSEXT_TYPE_status_request 5
-/* ExtensionType values from RFC4681 */
-#define TLSEXT_TYPE_user_mapping 6
-
-/* ExtensionType values from RFC5878 */
-#define TLSEXT_TYPE_client_authz 7
-#define TLSEXT_TYPE_server_authz 8
-
-/* ExtensionType values from RFC6091 */
-#define TLSEXT_TYPE_cert_type 9
-
-/* ExtensionType values from draft-ietf-tls-tls13-latest */
-#define TLSEXT_TYPE_supported_groups 10
 
 /* ExtensionType values from RFC4492 */
 #define TLSEXT_TYPE_ec_point_formats 11
-
-/* ExtensionType value from RFC5054 */
-#define TLSEXT_TYPE_srp 12
 
 /* ExtensionType values from RFC5246 */
 #define TLSEXT_TYPE_signature_algorithms 13
 
 /* ExtensionType value from RFC5764 */
 #define TLSEXT_TYPE_srtp 14
-
-/* ExtensionType value from RFC5620 */
-#define TLSEXT_TYPE_heartbeat 15
 
 /* ExtensionType value from RFC7301 */
 #define TLSEXT_TYPE_application_layer_protocol_negotiation 16
@@ -225,6 +203,13 @@ extern "C" {
 
 /* ExtensionType value from RFC4507 */
 #define TLSEXT_TYPE_session_ticket 35
+
+/* ExtensionType values from draft-ietf-tls-tls13-13 */
+#define TLSEXT_TYPE_supported_groups 10
+#define TLSEXT_TYPE_key_share 40
+#define TLSEXT_TYPE_pre_shared_key 41
+#define TLSEXT_TYPE_early_data 42
+#define TLSEXT_TYPE_cookie 44
 
 /* ExtensionType value from RFC5746 */
 #define TLSEXT_TYPE_renegotiate 0xff01
@@ -244,7 +229,6 @@ extern "C" {
 /* ECPointFormat values from RFC 4492 */
 #define TLSEXT_ECPOINTFORMAT_uncompressed 0
 #define TLSEXT_ECPOINTFORMAT_ansiX962_compressed_prime 1
-#define TLSEXT_ECPOINTFORMAT_ansiX962_compressed_char2 2
 
 /* Signature and hash algorithms from RFC 5246 */
 
@@ -261,14 +245,19 @@ extern "C" {
 #define TLSEXT_hash_sha384 5
 #define TLSEXT_hash_sha512 6
 
-/* Flag set for unrecognised algorithms */
-#define TLSEXT_nid_unknown 0x1000000
+#define SSL_SIGN_RSA_PKCS1_SHA1         0x0201
+#define SSL_SIGN_RSA_PKCS1_SHA256       0x0401
+#define SSL_SIGN_RSA_PKCS1_SHA384       0x0501
+#define SSL_SIGN_RSA_PKCS1_SHA512       0x0601
+#define SSL_SIGN_ECDSA_SHA1             0x0203
+#define SSL_SIGN_ECDSA_SECP256R1_SHA256 0x0403
+#define SSL_SIGN_ECDSA_SECP384R1_SHA384 0x0503
+#define SSL_SIGN_ECDSA_SECP521R1_SHA512 0x0603
 
-/* ECC curves */
-
-#define TLSEXT_curve_P_256 23
-#define TLSEXT_curve_P_384 24
-
+/* Reserved SignatureScheme value to indicate RSA with MD5-SHA1. This will never
+ * be negotiated in TLS 1.2 and up, but is used to unify signing interfaces in
+ * older TLS versions. */
+#define SSL_SIGN_RSA_PKCS1_MD5_SHA1           0xff01
 
 #define TLSEXT_MAXLEN_host_name 255
 
@@ -432,6 +421,7 @@ extern "C" {
 #define TLS1_CK_ECDHE_RSA_CHACHA20_POLY1305_OLD 0x0300CC13
 #define TLS1_CK_ECDHE_ECDSA_CHACHA20_POLY1305_OLD 0x0300CC14
 
+/* ChaCha20-Poly1305 cipher suites from RFC 7905. */
 #define TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 0x0300CCA8
 #define TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 0x0300CCA9
 #define TLS1_CK_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256 0x0300CCAC

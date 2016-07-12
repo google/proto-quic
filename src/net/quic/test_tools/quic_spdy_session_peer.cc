@@ -22,5 +22,11 @@ void QuicSpdySessionPeer::SetHeadersStream(QuicSpdySession* session,
   session->static_streams()[headers_stream->id()] = headers_stream;
 }
 
+// static
+void QuicSpdySessionPeer::SetForceHolBlocking(QuicSpdySession* session,
+                                              bool value) {
+  session->force_hol_blocking_ = value;
+}
+
 }  // namespace test
 }  // namespace net

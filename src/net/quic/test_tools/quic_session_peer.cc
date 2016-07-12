@@ -61,7 +61,8 @@ QuicSessionPeer::GetLocallyClosedStreamsHighestOffset(QuicSession* session) {
 }
 
 // static
-QuicSession::StreamMap& QuicSessionPeer::static_streams(QuicSession* session) {
+QuicSession::StaticStreamMap& QuicSessionPeer::static_streams(
+    QuicSession* session) {
   return session->static_streams();
 }
 

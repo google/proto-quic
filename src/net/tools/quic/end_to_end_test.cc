@@ -29,6 +29,7 @@
 #include "net/quic/quic_session.h"
 #include "net/quic/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
@@ -99,7 +100,8 @@ struct TestParams {
              bool server_uses_stateless_rejects_if_peer_supported,
              QuicTag congestion_control_tag,
              bool auto_tune_flow_control_window,
-             bool disable_hpack_dynamic_table)
+             bool disable_hpack_dynamic_table,
+             bool force_hol_blocking)
       : client_supported_versions(client_supported_versions),
         server_supported_versions(server_supported_versions),
         negotiated_version(negotiated_version),
@@ -108,7 +110,8 @@ struct TestParams {
             server_uses_stateless_rejects_if_peer_supported),
         congestion_control_tag(congestion_control_tag),
         auto_tune_flow_control_window(auto_tune_flow_control_window),
-        disable_hpack_dynamic_table(disable_hpack_dynamic_table) {}
+        disable_hpack_dynamic_table(disable_hpack_dynamic_table),
+        force_hol_blocking(force_hol_blocking) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     os << "{ server_supported_versions: "
@@ -123,8 +126,8 @@ struct TestParams {
     os << " congestion_control_tag: "
        << QuicUtils::TagToString(p.congestion_control_tag);
     os << " auto_tune_flow_control_window: " << p.auto_tune_flow_control_window;
-    os << " disable_hpack_dynamic_table: " << p.disable_hpack_dynamic_table
-       << " }";
+    os << " disable_hpack_dynamic_table: " << p.disable_hpack_dynamic_table;
+    os << " force_hol_blocking: " << p.force_hol_blocking << " }";
     return os;
   }
 
@@ -136,6 +139,7 @@ struct TestParams {
   QuicTag congestion_control_tag;
   bool auto_tune_flow_control_window;
   bool disable_hpack_dynamic_table;
+  bool force_hol_blocking;
 };
 
 // Constructs various test permutations.
@@ -181,72 +185,80 @@ vector<TestParams> GetTestParams() {
     for (bool client_supports_stateless_rejects : {true, false}) {
       for (const QuicTag congestion_control_tag : {kRENO, kQBIC}) {
         for (bool auto_tune_flow_control_window : {true, false}) {
-          for (bool disable_hpack_dynamic_table : {true, false}) {
-            int enabled_options = 0;
-            if (congestion_control_tag != kQBIC) {
-              ++enabled_options;
-            }
-            if (auto_tune_flow_control_window) {
-              ++enabled_options;
-            }
-            if (disable_hpack_dynamic_table) {
-              ++enabled_options;
-            }
-            if (client_supports_stateless_rejects) {
-              ++enabled_options;
-            }
-            if (server_uses_stateless_rejects_if_peer_supported) {
-              ++enabled_options;
-            }
-            CHECK_GE(kMaxEnabledOptions, enabled_options);
-            if (enabled_options > max_enabled_options) {
-              max_enabled_options = enabled_options;
-            }
-
-            // Run tests with no options, a single option, or all the options
-            // enabled to avoid a combinatorial explosion.
-            if (enabled_options > 1 && enabled_options < kMaxEnabledOptions) {
-              continue;
-            }
-
-            for (const QuicVersionVector& client_versions : version_buckets) {
-              if (client_versions.front() < QUIC_VERSION_30 &&
-                  FLAGS_quic_disable_pre_30) {
-                continue;
+          for (bool disable_hpack_dynamic_table : {false}) {
+            for (bool force_hol_blocking : {true, false}) {
+              int enabled_options = 0;
+              if (force_hol_blocking) {
+                ++enabled_options;
               }
-              CHECK(!client_versions.empty());
-              // Add an entry for server and client supporting all versions.
-              params.push_back(TestParams(
-                  client_versions, all_supported_versions,
-                  client_versions.front(), client_supports_stateless_rejects,
-                  server_uses_stateless_rejects_if_peer_supported,
-                  congestion_control_tag, auto_tune_flow_control_window,
-                  disable_hpack_dynamic_table));
+              if (congestion_control_tag != kQBIC) {
+                ++enabled_options;
+              }
+              if (auto_tune_flow_control_window) {
+                ++enabled_options;
+              }
+              if (disable_hpack_dynamic_table) {
+                ++enabled_options;
+              }
+              if (client_supports_stateless_rejects) {
+                ++enabled_options;
+              }
+              if (server_uses_stateless_rejects_if_peer_supported) {
+                ++enabled_options;
+              }
+              CHECK_GE(kMaxEnabledOptions, enabled_options);
+              if (enabled_options > max_enabled_options) {
+                max_enabled_options = enabled_options;
+              }
 
-              // Run version negotiation tests tests with no options, or all
-              // the options enabled to avoid a combinatorial explosion.
-              if (enabled_options > 0 && enabled_options < kMaxEnabledOptions) {
+              // Run tests with no options, a single option, or all the options
+              // enabled to avoid a combinatorial explosion.
+              if (enabled_options > 1 && enabled_options < kMaxEnabledOptions) {
                 continue;
               }
 
-              // Test client supporting all versions and server supporting 1
-              // version. Simulate an old server and exercise version downgrade
-              // in the client. Protocol negotiation should occur. Skip the i =
-              // 0 case because it is essentially the same as the default case.
-              for (size_t i = 1; i < client_versions.size(); ++i) {
-                if (client_versions[i] < QUIC_VERSION_30 &&
+              for (const QuicVersionVector& client_versions : version_buckets) {
+                if (client_versions.front() < QUIC_VERSION_30 &&
                     FLAGS_quic_disable_pre_30) {
                   continue;
                 }
-                QuicVersionVector server_supported_versions;
-                server_supported_versions.push_back(client_versions[i]);
+                CHECK(!client_versions.empty());
+                // Add an entry for server and client supporting all versions.
                 params.push_back(TestParams(
-                    client_versions, server_supported_versions,
-                    server_supported_versions.front(),
-                    client_supports_stateless_rejects,
+                    client_versions, all_supported_versions,
+                    client_versions.front(), client_supports_stateless_rejects,
                     server_uses_stateless_rejects_if_peer_supported,
                     congestion_control_tag, auto_tune_flow_control_window,
-                    disable_hpack_dynamic_table));
+                    disable_hpack_dynamic_table, force_hol_blocking));
+
+                // Run version negotiation tests tests with no options, or all
+                // the options enabled to avoid a combinatorial explosion.
+                if (enabled_options > 0 &&
+                    enabled_options < kMaxEnabledOptions) {
+                  continue;
+                }
+
+                // Test client supporting all versions and server
+                // supporting 1 version. Simulate an old server and
+                // exercise version downgrade in the client. Protocol
+                // negotiation should occur. Skip the i = 0 case
+                // because it is essentially the same as the default
+                // case.
+                for (size_t i = 1; i < client_versions.size(); ++i) {
+                  if (client_versions[i] < QUIC_VERSION_30 &&
+                      FLAGS_quic_disable_pre_30) {
+                    continue;
+                  }
+                  QuicVersionVector server_supported_versions;
+                  server_supported_versions.push_back(client_versions[i]);
+                  params.push_back(TestParams(
+                      client_versions, server_supported_versions,
+                      server_supported_versions.front(),
+                      client_supports_stateless_rejects,
+                      server_uses_stateless_rejects_if_peer_supported,
+                      congestion_control_tag, auto_tune_flow_control_window,
+                      disable_hpack_dynamic_table, force_hol_blocking));
+                }
               }
             }
           }
@@ -402,6 +414,10 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     if (GetParam().disable_hpack_dynamic_table) {
       copt.push_back(kDHDT);
     }
+    if (GetParam().force_hol_blocking) {
+      client_config_.SetForceHolBlocking();
+      QuicConfigPeer::SetReceivedForceHolBlocking(&server_config_);
+    }
     client_config_.SetConnectionOptionsToSend(copt);
 
     // Start the server first, because CreateQuicClient() attempts
@@ -509,7 +525,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   void VerifyCleanConnection(bool had_packet_loss) {
     QuicConnectionStats client_stats =
         client_->client()->session()->connection()->GetStats();
-    if (FLAGS_quic_reply_to_rej && !had_packet_loss) {
+    if (!had_packet_loss) {
       EXPECT_EQ(0u, client_stats.packets_lost);
     }
     EXPECT_EQ(0u, client_stats.packets_discarded);
@@ -534,7 +550,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     ASSERT_EQ(1u, dispatcher->session_map().size());
     QuicSession* session = dispatcher->session_map().begin()->second;
     QuicConnectionStats server_stats = session->connection()->GetStats();
-    if (FLAGS_quic_reply_to_rej && !had_packet_loss) {
+    if (!had_packet_loss) {
       EXPECT_EQ(0u, server_stats.packets_lost);
     }
     EXPECT_EQ(0u, server_stats.packets_discarded);
@@ -579,6 +595,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   size_t chlo_multiplier_;
   QuicTestServer::StreamFactory* stream_factory_;
   bool support_server_push_;
+  bool force_hol_blocking_;
 };
 
 // Run all end to end tests with all supported versions.

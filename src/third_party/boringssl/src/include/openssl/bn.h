@@ -383,12 +383,12 @@ OPENSSL_EXPORT int BN_uadd(BIGNUM *r, const BIGNUM *a, const BIGNUM *b);
 /* BN_add_word adds |w| to |a|. It returns one on success and zero otherwise. */
 OPENSSL_EXPORT int BN_add_word(BIGNUM *a, BN_ULONG w);
 
-/* BN_sub sets |r| = |a| - |b|, where |r| must be a distinct pointer from |a|
- * and |b|. It returns one on success and zero on allocation failure. */
+/* BN_sub sets |r| = |a| - |b|, where |r| may be the same pointer as either |a|
+ * or |b|. It returns one on success and zero on allocation failure. */
 OPENSSL_EXPORT int BN_sub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b);
 
 /* BN_usub sets |r| = |a| - |b|, where |a| and |b| are non-negative integers,
- * |b| < |a| and |r| must be a distinct pointer from |a| and |b|. It returns
+ * |b| < |a| and |r| may be the same pointer as either |a| or |b|. It returns
  * one on success and zero on allocation failure. */
 OPENSSL_EXPORT int BN_usub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b);
 
@@ -502,7 +502,7 @@ OPENSSL_EXPORT int BN_mask_bits(BIGNUM *a, int n);
 
 /* Modulo arithmetic. */
 
-/* BN_mod_word returns |a| mod |w|. */
+/* BN_mod_word returns |a| mod |w| or (BN_ULONG)-1 on error. */
 OPENSSL_EXPORT BN_ULONG BN_mod_word(const BIGNUM *a, BN_ULONG w);
 
 /* BN_mod is a helper macro that calls |BN_div| and discards the quotient. */
@@ -565,7 +565,8 @@ OPENSSL_EXPORT int BN_mod_lshift1(BIGNUM *r, const BIGNUM *a, const BIGNUM *m,
 OPENSSL_EXPORT int BN_mod_lshift1_quick(BIGNUM *r, const BIGNUM *a,
                                         const BIGNUM *m);
 
-/* BN_mod_sqrt returns a |BIGNUM|, r, such that r^2 == a (mod p). */
+/* BN_mod_sqrt returns a |BIGNUM|, r, such that r^2 == a (mod p). |p| must be a
+ * prime. */
 OPENSSL_EXPORT BIGNUM *BN_mod_sqrt(BIGNUM *in, const BIGNUM *a, const BIGNUM *p,
                                    BN_CTX *ctx);
 

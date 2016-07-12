@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "base/logging.h"
+#include "base/strings/safe_sprintf.h"
 
 // malloc_unchecked is required to implement UncheckedMalloc properly.
 // It's provided by allocator_shim_win.cc but since that's not always present,
@@ -33,9 +34,16 @@ namespace {
 #pragma warning(disable: 4702)
 
 int OnNoMemory(size_t size) {
+  // Make no additional allocations here to avoid getting into a death spiral
+  // when trying to log the error message.
+  char buf[64];
+  strings::ssize_t result =
+      strings::SafeSPrintf(buf, "Out of memory, size = %d\n", size);
+  RAW_CHECK(result != -1);
+
   // Kill the process. This is important for security since most of code
   // does not check the result of memory allocation.
-  LOG(FATAL) << "Out of memory, size = " << size;
+  RAW_LOG(FATAL, buf);
 
   // Safety check, make sure process exits here.
   _exit(1);

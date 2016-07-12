@@ -9,7 +9,6 @@
 #include "base/logging.h"
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
-#include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/signature_policy.h"
 #include "net/cert/internal/trust_store.h"
@@ -170,7 +169,7 @@ WARN_UNUSED_RESULT bool BasicCertificateProcessing(
 }
 
 // This function corresponds to RFC 5280 section 6.1.4's "Preparation for
-// Certificate i+1" procedure. |cert| is expected to be an intermediary.
+// Certificate i+1" procedure. |cert| is expected to be an intermediate.
 WARN_UNUSED_RESULT bool PrepareForNextCertificate(
     const ParsedCertificate& cert,
     size_t* max_path_length_ptr,
@@ -212,7 +211,7 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   //    choose to reject all version 1 and version 2 intermediate
   //    certificates.)
   //
-  // This code implicitly rejects non version 3 intermediaries, since they
+  // This code implicitly rejects non version 3 intermediates, since they
   // can't contain a BasicConstraints extension.
   if (!cert.has_basic_constraints() || !cert.basic_constraints().is_ca)
     return false;
@@ -336,9 +335,6 @@ WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
 
 }  // namespace
 
-// TODO(eroman): Move this into existing anonymous namespace.
-namespace {
-
 // This implementation is structured to mimic the description of certificate
 // path verification given by RFC 5280 section 6.1.
 //
@@ -346,7 +342,7 @@ namespace {
 // the chain. This root certificate is assumed to be trusted, and neither its
 // signature nor issuer name are verified. (It needn't be self-signed).
 bool VerifyCertificateChainAssumingTrustedRoot(
-    const std::vector<scoped_refptr<ParsedCertificate>>& certs,
+    const ParsedCertificateList& certs,
     // The trust store is only used for assertions.
     const TrustStore& trust_store,
     const SignaturePolicy* signature_policy,
@@ -448,58 +444,6 @@ bool VerifyCertificateChainAssumingTrustedRoot(
   //    certification path.
 
   return true;
-}
-
-// TODO(eroman): This function is a temporary hack in the absence of full
-// path building. It may insert 1 certificate at the root of the
-// chain to ensure that the path's root certificate is a trust anchor.
-//
-// Beyond this no other verification is done on the chain. The caller is
-// responsible for verifying the subsequent chain's correctness.
-WARN_UNUSED_RESULT bool BuildSimplePathToTrustAnchor(
-    const TrustStore& trust_store,
-    std::vector<scoped_refptr<ParsedCertificate>>* certs) {
-  if (certs->empty())
-    return false;
-
-  // Check if the current root certificate is trusted. If it is then no
-  // extra work is needed.
-  if (trust_store.IsTrustedCertificate(certs->back().get()))
-    return true;
-
-  std::vector<scoped_refptr<ParsedCertificate>> trust_anchors;
-  trust_store.FindTrustAnchorsByNormalizedName(
-      certs->back()->normalized_issuer(), &trust_anchors);
-  if (trust_anchors.empty())
-    return false;
-  // TODO(mattm): this only tries the first match, even if there are multiple.
-  certs->push_back(std::move(trust_anchors[0]));
-  return true;
-}
-
-}  // namespace
-
-bool VerifyCertificateChain(
-    const std::vector<scoped_refptr<ParsedCertificate>>& cert_chain,
-    const TrustStore& trust_store,
-    const SignaturePolicy* signature_policy,
-    const der::GeneralizedTime& time,
-    std::vector<scoped_refptr<ParsedCertificate>>* trusted_chain_out) {
-  if (cert_chain.empty())
-    return false;
-
-  std::vector<scoped_refptr<ParsedCertificate>> full_chain = cert_chain;
-
-  // Modify the certificate chain so that its root is a trusted certificate.
-  if (!BuildSimplePathToTrustAnchor(trust_store, &full_chain))
-    return false;
-
-  // Verify the chain.
-  bool success = VerifyCertificateChainAssumingTrustedRoot(
-      full_chain, trust_store, signature_policy, time);
-  if (success && trusted_chain_out != nullptr)
-    *trusted_chain_out = std::move(full_chain);
-  return success;
 }
 
 }  // namespace net

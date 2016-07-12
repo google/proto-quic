@@ -71,7 +71,7 @@ std::unique_ptr<base::Value> NetLogStartCallback(
   dict->SetString("hostname", *hostname);
   dict->SetInteger("query_type", qtype);
   return std::move(dict);
-};
+}
 
 // ----------------------------------------------------------------------------
 
@@ -634,7 +634,7 @@ class DnsTransactionImpl : public DnsTransaction,
     if (!DNSDomainFromDot(hostname_, &labeled_hostname))
       return ERR_INVALID_ARGUMENT;
 
-    if (hostname_[hostname_.size() - 1] == '.') {
+    if (hostname_.back() == '.') {
       // It's a fully-qualified name, no suffix search.
       qnames_.push_back(labeled_hostname);
       return OK;

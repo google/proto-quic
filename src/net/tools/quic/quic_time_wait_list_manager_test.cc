@@ -353,11 +353,11 @@ TEST_F(QuicTimeWaitListManagerTest, CleanUpOldConnectionIds) {
 
   QuicTime::Delta offset = QuicTime::Delta::FromMicroseconds(39);
   // Now set the current time as time_wait_period + offset usecs.
-  epoll_server_.set_now_in_usec(time_wait_period.Add(offset).ToMicroseconds());
+  epoll_server_.set_now_in_usec((time_wait_period + offset).ToMicroseconds());
   // After all the old connection_ids are cleaned up, check the next alarm
   // interval.
   int64_t next_alarm_time = epoll_server_.ApproximateNowInUsec() +
-                            time_wait_period.Subtract(offset).ToMicroseconds();
+                            (time_wait_period - offset).ToMicroseconds();
   EXPECT_CALL(epoll_server_, RegisterAlarm(next_alarm_time, _));
 
   time_wait_list_manager_.CleanUpOldConnectionIds();
@@ -479,7 +479,7 @@ TEST_F(QuicTimeWaitListManagerTest, AddConnectionIdTwice) {
 
   QuicTime::Delta offset = QuicTime::Delta::FromMicroseconds(39);
   // Now set the current time as time_wait_period + offset usecs.
-  epoll_server_.set_now_in_usec(time_wait_period.Add(offset).ToMicroseconds());
+  epoll_server_.set_now_in_usec((time_wait_period + offset).ToMicroseconds());
   // After the connection_ids are cleaned up, check the next alarm interval.
   int64_t next_alarm_time =
       epoll_server_.ApproximateNowInUsec() + time_wait_period.ToMicroseconds();

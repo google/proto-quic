@@ -24,7 +24,7 @@ class QuicUnackedPacketMapTest : public ::testing::Test {
  protected:
   QuicUnackedPacketMapTest()
       : unacked_packets_(),
-        now_(QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(1000))) {}
+        now_(QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(1000)) {}
 
   ~QuicUnackedPacketMapTest() override { STLDeleteElements(&packets_); }
 

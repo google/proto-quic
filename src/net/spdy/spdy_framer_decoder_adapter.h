@@ -37,6 +37,10 @@ class SpdyFramerDecoderAdapter {
     return debug_visitor_;
   }
 
+  // Set debug callbacks to be called from the HPACK decoder.
+  virtual void SetDecoderHeaderTableDebugVisitor(
+      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) = 0;
+
   // Sets whether or not ProcessInput returns after finishing a frame, or
   // continues processing additional frames. Normally ProcessInput processes
   // all input, but this method enables the caller (and visitor) to work with

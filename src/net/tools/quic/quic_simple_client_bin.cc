@@ -326,9 +326,8 @@ int main(int argc, char* argv[]) {
     cout << "headers:" << header_block.DebugString();
     if (!FLAGS_body_hex.empty()) {
       // Print the user provided hex, rather than binary body.
-      cout << "body hex:   " << FLAGS_body_hex << endl;
-      cout << "body ascii: " << net::QuicUtils::BinaryToAscii(
-                                    net::QuicUtils::HexDecode(FLAGS_body_hex))
+      cout << "body:\n"
+           << net::QuicUtils::HexDump(net::QuicUtils::HexDecode(FLAGS_body_hex))
            << endl;
     } else {
       cout << "body: " << body << endl;
@@ -339,10 +338,7 @@ int main(int argc, char* argv[]) {
     string response_body = client.latest_response_body();
     if (!FLAGS_body_hex.empty()) {
       // Assume response is binary data.
-      cout << "body hex:   " << net::QuicUtils::HexEncode(response_body)
-           << endl;
-      cout << "body ascii: " << net::QuicUtils::BinaryToAscii(response_body)
-           << endl;
+      cout << "body:\n" << net::QuicUtils::HexDump(response_body) << endl;
     } else {
       cout << "body: " << response_body << endl;
     }

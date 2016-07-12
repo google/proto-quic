@@ -171,7 +171,11 @@ class QuicClient : public QuicClientBase,
 
   const IPEndPoint& server_address() const { return server_address_; }
 
-  // Takes ownership of the listener.
+  void set_server_address(const IPEndPoint& server_address) {
+    server_address_ = server_address;
+  }
+
+  // Takes ownership of the std::listener.
   void set_response_listener(ResponseListener* listener) {
     response_listener_.reset(listener);
   }
@@ -246,7 +250,7 @@ class QuicClient : public QuicClientBase,
                            bool fin);
 
   // Address of the server.
-  const IPEndPoint server_address_;
+  IPEndPoint server_address_;
 
   // If initialized, the address to bind to.
   IPAddress bind_to_address_;

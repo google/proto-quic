@@ -60,7 +60,6 @@
 #if defined(OS_MACOSX)
 #include <mach/vm_param.h>
 #include <malloc/malloc.h>
-#include "base/mac/mac_util.h"
 #endif
 #if defined(OS_ANDROID)
 #include "third_party/lss/linux_syscall_support.h"
@@ -572,10 +571,6 @@ int change_fdguard_np(int fd,
 // <http://crbug.com/338157>.  This function allows querying whether the file
 // descriptor is guarded before attempting to close it.
 bool CanGuardFd(int fd) {
-  // The syscall is first provided in 10.9/Mavericks.
-  if (!base::mac::IsOSMavericksOrLater())
-    return true;
-
   // Saves the original flags to reset later.
   int original_fdflags = 0;
 

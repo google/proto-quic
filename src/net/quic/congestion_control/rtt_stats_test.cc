@@ -78,29 +78,29 @@ TEST_F(RttStatsTest, MinRtt) {
             rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(10), QuicTime::Delta::Zero(),
-      QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(10)));
+      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(10));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
-      QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(20)));
+      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(20));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
-      QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(30)));
+      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(30));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
-      QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(40)));
+      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(40));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   // Verify that ack_delay does not go into recording of min_rtt_.
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(7),
       QuicTime::Delta::FromMilliseconds(2),
-      QuicTime::Zero().Add(QuicTime::Delta::FromMilliseconds(50)));
+      QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(50));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(7), rtt_stats_.min_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(7), rtt_stats_.WindowedMinRtt());
 }
@@ -132,21 +132,21 @@ TEST_F(RttStatsTest, ExpireSmoothedMetrics) {
   EXPECT_EQ(initial_rtt, rtt_stats_.WindowedMinRtt());
   EXPECT_EQ(initial_rtt, rtt_stats_.smoothed_rtt());
 
-  EXPECT_EQ(initial_rtt.Multiply(0.5), rtt_stats_.mean_deviation());
+  EXPECT_EQ(0.5 * initial_rtt, rtt_stats_.mean_deviation());
 
   // Update once with a 20ms RTT.
-  QuicTime::Delta doubled_rtt = initial_rtt.Multiply(2);
+  QuicTime::Delta doubled_rtt = 2 * initial_rtt;
   rtt_stats_.UpdateRtt(doubled_rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
-  EXPECT_EQ(initial_rtt.Multiply(1.125), rtt_stats_.smoothed_rtt());
+  EXPECT_EQ(1.125 * initial_rtt, rtt_stats_.smoothed_rtt());
 
   // Expire the smoothed metrics, increasing smoothed rtt and mean deviation.
   rtt_stats_.ExpireSmoothedMetrics();
   EXPECT_EQ(doubled_rtt, rtt_stats_.smoothed_rtt());
-  EXPECT_EQ(initial_rtt.Multiply(0.875), rtt_stats_.mean_deviation());
+  EXPECT_EQ(0.875 * initial_rtt, rtt_stats_.mean_deviation());
 
   // Now go back down to 5ms and expire the smoothed metrics, and ensure the
   // mean deviation increases to 15ms.
-  QuicTime::Delta half_rtt = initial_rtt.Multiply(0.5);
+  QuicTime::Delta half_rtt = 0.5 * initial_rtt;
   rtt_stats_.UpdateRtt(half_rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
   EXPECT_GT(doubled_rtt, rtt_stats_.smoothed_rtt());
   EXPECT_LT(initial_rtt, rtt_stats_.mean_deviation());

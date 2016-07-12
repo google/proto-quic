@@ -67,21 +67,19 @@ void RunVerification(ProofVerifier* verifier,
   string error_details;
   std::unique_ptr<ProofVerifyContext> verify_context(
       CryptoTestUtils::ProofVerifyContextForTesting());
-  TestProofVerifierCallback* callback =
-      new TestProofVerifierCallback(&comp_callback, &ok, &error_details);
+  std::unique_ptr<TestProofVerifierCallback> callback(
+      new TestProofVerifierCallback(&comp_callback, &ok, &error_details));
 
   QuicAsyncStatus status = verifier->VerifyProof(
       hostname, port, server_config, quic_version, chlo_hash, certs, "", proof,
-      verify_context.get(), &error_details, &details, callback);
+      verify_context.get(), &error_details, &details, std::move(callback));
 
   switch (status) {
     case QUIC_FAILURE:
-      delete callback;
       ASSERT_FALSE(expected_ok);
       ASSERT_NE("", error_details);
       return;
     case QUIC_SUCCESS:
-      delete callback;
       ASSERT_TRUE(expected_ok);
       ASSERT_EQ("", error_details);
       return;
@@ -104,6 +102,38 @@ string LoadTestCert(const string& file_name) {
   CHECK(X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der_bytes));
   return der_bytes;
 }
+
+class TestCallback : public ProofSource::Callback {
+ public:
+  explicit TestCallback(bool* called,
+                        bool* ok,
+                        scoped_refptr<ProofSource::Chain>* chain,
+                        string* signature,
+                        string* leaf_cert_sct)
+      : called_(called),
+        ok_(ok),
+        chain_(chain),
+        signature_(signature),
+        leaf_cert_sct_(leaf_cert_sct) {}
+
+  void Run(bool ok,
+           const scoped_refptr<ProofSource::Chain>& chain,
+           const string& signature,
+           const string& leaf_cert_sct) override {
+    *ok_ = ok;
+    *chain_ = chain;
+    *signature_ = signature;
+    *leaf_cert_sct_ = leaf_cert_sct;
+    *called_ = true;
+  }
+
+ private:
+  bool* called_;
+  bool* ok_;
+  scoped_refptr<ProofSource::Chain>* chain_;
+  string* signature_;
+  string* leaf_cert_sct_;
+};
 
 class ProofTest : public ::testing::TestWithParam<QuicVersion> {};
 
@@ -169,6 +199,43 @@ TEST_P(ProofTest, DISABLED_Verify) {
 
   RunVerification(verifier.get(), "foo.com", port, server_config, quic_version,
                   first_chlo_hash, wrong_certs, corrupt_signature, false);
+}
+
+TEST_P(ProofTest, VerifySourceAsync) {
+  std::unique_ptr<ProofSource> source(CryptoTestUtils::ProofSourceForTesting());
+
+  const string server_config = "server config bytes";
+  const string hostname = "test.example.com";
+  const string first_chlo_hash = "first chlo hash bytes";
+  const string second_chlo_hash = "first chlo hash bytes";
+  const QuicVersion quic_version = GetParam();
+  IPAddress server_ip;
+
+  // Call synchronous version
+  scoped_refptr<ProofSource::Chain> expected_chain;
+  string expected_signature;
+  string expected_leaf_cert_sct;
+  ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
+                               first_chlo_hash, false /* no ECDSA */,
+                               &expected_chain, &expected_signature,
+                               &expected_leaf_cert_sct));
+
+  // Call asynchronous version and compare results
+  bool called = false;
+  bool ok;
+  scoped_refptr<ProofSource::Chain> chain;
+  string signature;
+  string leaf_cert_sct;
+  std::unique_ptr<ProofSource::Callback> cb(
+      new TestCallback(&called, &ok, &chain, &signature, &leaf_cert_sct));
+  source->GetProof(server_ip, hostname, server_config, quic_version,
+                   first_chlo_hash, false /* no ECDSA */, std::move(cb));
+  // TODO(gredner): whan GetProof really invokes the callback asynchronously,
+  // figure out what to do here.
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(ok);
+  EXPECT_THAT(chain->certs, ::testing::ContainerEq(expected_chain->certs));
+  EXPECT_EQ(leaf_cert_sct, expected_leaf_cert_sct);
 }
 
 TEST_P(ProofTest, UseAfterFree) {
@@ -396,7 +463,7 @@ TEST_P(ProofTest, VerifyECDSAKnownAnswerTest) {
     // An ECDSA signature is DER-encoded. Corrupt the last byte so that the
     // signature can still be DER-decoded correctly.
     string corrupt_signature = signature;
-    corrupt_signature[corrupt_signature.size() - 1] += 1;
+    corrupt_signature.back()++;
     RunVerification(verifier.get(), hostname, port, server_config, quic_version,
                     chlo_hash, certs, corrupt_signature, false);
 

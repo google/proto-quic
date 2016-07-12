@@ -232,7 +232,6 @@ TEST_F(TcpCubicSenderBytesTest, SlowStartPacketLoss) {
 }
 
 TEST_F(TcpCubicSenderBytesTest, SlowStartPacketLossWithLargeReduction) {
-  FLAGS_quic_sslr_limit_reduction = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kSSLR);
@@ -327,7 +326,6 @@ TEST_F(TcpCubicSenderBytesTest, SlowStartHalfPacketLossWithLargeReduction) {
 }
 
 TEST_F(TcpCubicSenderBytesTest, SlowStartPacketLossWithMaxHalfReduction) {
-  FLAGS_quic_sslr_limit_reduction = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kSSLR);
@@ -876,7 +874,6 @@ TEST_F(TcpCubicSenderBytesTest, ResetAfterConnectionMigration) {
 }
 
 TEST_F(TcpCubicSenderBytesTest, DefaultMaxCwnd) {
-  ValueRestore<bool> old_flag(&FLAGS_quic_ignore_srbf, true);
   RttStats rtt_stats;
   QuicConnectionStats stats;
   std::unique_ptr<SendAlgorithmInterface> sender(SendAlgorithmInterface::Create(

@@ -91,7 +91,6 @@ HttpNetworkSession::Params::Params()
       enable_tcp_fast_open_for_ssl(false),
       enable_spdy_ping_based_connection_checking(true),
       spdy_default_protocol(kProtoUnknown),
-      enable_spdy31(false),
       enable_http2(true),
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
       spdy_stream_max_recv_window_size(kSpdyStreamMaxRecvWindowSize),
@@ -129,6 +128,7 @@ HttpNetworkSession::Params::Params()
       quic_migrate_sessions_on_network_change(false),
       quic_migrate_sessions_early(false),
       quic_disable_bidirectional_streams(false),
+      quic_force_hol_blocking(false),
       proxy_delegate(NULL),
       enable_token_binding(false) {
   quic_supported_versions.push_back(QUIC_VERSION_34);
@@ -187,6 +187,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_idle_connection_timeout_seconds,
           params.quic_migrate_sessions_on_network_change,
           params.quic_migrate_sessions_early,
+          params.quic_force_hol_blocking,
           params.quic_connection_options,
           params.enable_token_binding),
       spdy_session_pool_(params.host_resolver,
@@ -224,13 +225,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
   if (params_.enable_http2) {
     next_protos_.push_back(kProtoHTTP2);
     AlternateProtocol alternate = AlternateProtocolFromNextProto(kProtoHTTP2);
-    enabled_protocols_[alternate - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION] =
-        true;
-  }
-
-  if (params_.enable_spdy31) {
-    next_protos_.push_back(kProtoSPDY31);
-    AlternateProtocol alternate = AlternateProtocolFromNextProto(kProtoSPDY31);
     enabled_protocols_[alternate - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION] =
         true;
   }
@@ -345,6 +339,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
                    params_.disable_quic_on_timeout_with_open_streams);
   dict->SetString("disabled_reason",
                   quic_stream_factory_.QuicDisabledReasonString());
+  dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
   return std::move(dict);
 }
 

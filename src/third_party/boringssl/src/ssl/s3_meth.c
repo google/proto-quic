@@ -59,8 +59,18 @@
 #include "internal.h"
 
 
+static uint16_t ssl3_version_from_wire(uint16_t wire_version) {
+  return wire_version;
+}
+
+static uint16_t ssl3_version_to_wire(uint16_t version) { return version; }
+
 static const SSL_PROTOCOL_METHOD TLS_protocol_method = {
     0 /* is_dtls */,
+    SSL3_VERSION,
+    TLS1_3_VERSION,
+    ssl3_version_from_wire,
+    ssl3_version_to_wire,
     ssl3_new,
     ssl3_free,
     ssl3_get_message,
@@ -70,9 +80,9 @@ static const SSL_PROTOCOL_METHOD TLS_protocol_method = {
     ssl3_write_app_data,
     ssl3_dispatch_alert,
     ssl3_supports_cipher,
-    SSL3_HM_HEADER_LENGTH,
-    ssl3_set_handshake_header,
-    ssl3_handshake_write,
+    ssl3_init_message,
+    ssl3_finish_message,
+    ssl3_write_message,
     ssl3_send_change_cipher_spec,
     ssl3_expect_flight,
     ssl3_received_flight,

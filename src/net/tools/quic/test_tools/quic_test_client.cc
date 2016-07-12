@@ -45,18 +45,19 @@ namespace {
 class RecordingProofVerifier : public ProofVerifier {
  public:
   // ProofVerifier interface.
-  QuicAsyncStatus VerifyProof(const string& hostname,
-                              const uint16_t port,
-                              const string& server_config,
-                              QuicVersion quic_version,
-                              StringPiece chlo_hash,
-                              const vector<string>& certs,
-                              const string& cert_sct,
-                              const string& signature,
-                              const ProofVerifyContext* context,
-                              string* error_details,
-                              std::unique_ptr<ProofVerifyDetails>* details,
-                              ProofVerifierCallback* callback) override {
+  QuicAsyncStatus VerifyProof(
+      const string& hostname,
+      const uint16_t port,
+      const string& server_config,
+      QuicVersion quic_version,
+      StringPiece chlo_hash,
+      const vector<string>& certs,
+      const string& cert_sct,
+      const string& signature,
+      const ProofVerifyContext* context,
+      string* error_details,
+      std::unique_ptr<ProofVerifyDetails>* details,
+      std::unique_ptr<ProofVerifierCallback> callback) override {
     common_name_.clear();
     if (certs.empty()) {
       return QUIC_FAILURE;
@@ -495,7 +496,7 @@ void QuicTestClient::WaitForResponseForMs(int timeout_ms) {
       QuicConnectionPeer::GetHelper(client()->session()->connection())
           ->GetClock();
   QuicTime end_waiting_time =
-      clock->Now().Add(QuicTime::Delta::FromMicroseconds(timeout_us));
+      clock->Now() + QuicTime::Delta::FromMicroseconds(timeout_us);
   while (HaveActiveStream() &&
          (timeout_us < 0 || clock->Now() < end_waiting_time)) {
     client_->WaitForEvents();
@@ -515,7 +516,7 @@ void QuicTestClient::WaitForInitialResponseForMs(int timeout_ms) {
       QuicConnectionPeer::GetHelper(client()->session()->connection())
           ->GetClock();
   QuicTime end_waiting_time =
-      clock->Now().Add(QuicTime::Delta::FromMicroseconds(timeout_us));
+      clock->Now() + QuicTime::Delta::FromMicroseconds(timeout_us);
   while (stream_ != nullptr &&
          !client_->session()->IsClosedStream(stream_->id()) &&
          stream_->stream_bytes_read() == 0 &&

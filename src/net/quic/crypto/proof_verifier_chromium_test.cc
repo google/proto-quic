@@ -233,7 +233,7 @@ TEST_F(ProofVerifierChromiumTest, FailsIfCertFails) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
 }
 
@@ -252,7 +252,7 @@ TEST_F(ProofVerifierChromiumTest, ValidSCTList) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_,
       ct::GetSCTListForTesting(), "", verify_context_.get(), &error_details_,
-      &details_, callback.get());
+      &details_, std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
   CheckSCT(/*sct_expected_ok=*/true);
 }
@@ -272,7 +272,7 @@ TEST_F(ProofVerifierChromiumTest, InvalidSCTList) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_,
       ct::GetSCTListWithInvalidSCT(), "", verify_context_.get(),
-      &error_details_, &details_, callback.get());
+      &error_details_, &details_, std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
   CheckSCT(/*sct_expected_ok=*/false);
 }
@@ -290,7 +290,7 @@ TEST_F(ProofVerifierChromiumTest, FailsIfSignatureFails) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       kTestConfig, verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
 }
 
@@ -320,7 +320,7 @@ TEST_F(ProofVerifierChromiumTest, PreservesEVIfAllowed) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_SUCCESS, status);
 
   ASSERT_TRUE(details_.get());
@@ -356,7 +356,7 @@ TEST_F(ProofVerifierChromiumTest, StripsEVIfNotAllowed) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_SUCCESS, status);
 
   ASSERT_TRUE(details_.get());
@@ -391,7 +391,7 @@ TEST_F(ProofVerifierChromiumTest, IgnoresPolicyEnforcerIfNotEV) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_SUCCESS, status);
 
   ASSERT_TRUE(details_.get());
@@ -436,7 +436,7 @@ TEST_F(ProofVerifierChromiumTest, PKPEnforced) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
 
   ASSERT_TRUE(details_.get());
@@ -477,7 +477,7 @@ TEST_F(ProofVerifierChromiumTest, PKPBypassFlagSet) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_SUCCESS, status);
 
   ASSERT_TRUE(details_.get());
@@ -523,7 +523,7 @@ TEST_F(ProofVerifierChromiumTest, CTIsRequired) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
 
   ASSERT_TRUE(details_.get());
@@ -575,7 +575,7 @@ TEST_F(ProofVerifierChromiumTest, PKPAndCTBothTested) {
   QuicAsyncStatus status = proof_verifier.VerifyProof(
       kTestHostname, kTestPort, kTestConfig, QUIC_VERSION_25, "", certs_, "",
       GetTestSignature(), verify_context_.get(), &error_details_, &details_,
-      callback.get());
+      std::move(callback));
   ASSERT_EQ(QUIC_FAILURE, status);
 
   ASSERT_TRUE(details_.get());

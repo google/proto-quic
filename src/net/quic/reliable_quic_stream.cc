@@ -290,7 +290,7 @@ QuicConsumedData ReliableQuicStream::WritevData(
         min(send_window, connection_flow_controller_->SendWindowSize());
   }
 
-  if (FLAGS_quic_cede_correctly && session_->ShouldYield(id())) {
+  if (session_->ShouldYield(id())) {
     session_->MarkConnectionLevelWriteBlocked(id());
     return QuicConsumedData(0, false);
   }
@@ -309,9 +309,9 @@ QuicConsumedData ReliableQuicStream::WritevData(
     write_length = static_cast<size_t>(send_window);
   }
 
-  QuicConsumedData consumed_data = session()->WritevData(
-      this, id(), QuicIOVector(iov, iov_count, write_length),
-      stream_bytes_written_, fin, ack_listener);
+  QuicConsumedData consumed_data =
+      WritevDataInner(QuicIOVector(iov, iov_count, write_length),
+                      stream_bytes_written_, fin, ack_listener);
   stream_bytes_written_ += consumed_data.bytes_consumed;
 
   AddBytesSent(consumed_data.bytes_consumed);
@@ -339,6 +339,15 @@ QuicConsumedData ReliableQuicStream::WritevData(
     session_->MarkConnectionLevelWriteBlocked(id());
   }
   return consumed_data;
+}
+
+QuicConsumedData ReliableQuicStream::WritevDataInner(
+    QuicIOVector iov,
+    QuicStreamOffset offset,
+    bool fin,
+    QuicAckListenerInterface* ack_notifier_delegate) {
+  return session()->WritevData(this, id(), iov, offset, fin,
+                               ack_notifier_delegate);
 }
 
 void ReliableQuicStream::CloseReadSide() {

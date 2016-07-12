@@ -116,7 +116,7 @@ bool IPPattern::ParsePattern(const std::string& ip_pattern) {
       component_values_.push_back(value);
       continue;
     }
-    if (component[component.size() - 1] != ']') {
+    if (component.back() != ']') {
       DVLOG(1) << "Missing close bracket: " << ip_pattern;
       return false;
     }

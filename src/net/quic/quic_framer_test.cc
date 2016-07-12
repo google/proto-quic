@@ -351,7 +351,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
   QuicFramerTest()
       : encrypter_(new test::TestEncrypter()),
         decrypter_(new test::TestDecrypter()),
-        start_(QuicTime::Zero().Add(QuicTime::Delta::FromMicroseconds(0x10))),
+        start_(QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(0x10)),
         framer_(QuicSupportedVersions(), start_, Perspective::IS_SERVER) {
     version_ = GetParam();
     framer_.set_version(version_);

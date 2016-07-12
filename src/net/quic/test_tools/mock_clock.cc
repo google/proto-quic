@@ -11,7 +11,7 @@ MockClock::MockClock() : now_(QuicTime::Zero()) {}
 MockClock::~MockClock() {}
 
 void MockClock::AdvanceTime(QuicTime::Delta delta) {
-  now_ = now_.Add(delta);
+  now_ = now_ + delta;
 }
 
 QuicTime MockClock::Now() const {
@@ -23,14 +23,13 @@ QuicTime MockClock::ApproximateNow() const {
 }
 
 QuicWallTime MockClock::WallNow() const {
-  return QuicWallTime::FromUNIXSeconds(
-      now_.Subtract(QuicTime::Zero()).ToSeconds());
+  return QuicWallTime::FromUNIXSeconds((now_ - QuicTime::Zero()).ToSeconds());
 }
 
 base::TimeTicks MockClock::NowInTicks() const {
   base::TimeTicks ticks;
   return ticks + base::TimeDelta::FromMicroseconds(
-                     now_.Subtract(QuicTime::Zero()).ToMicroseconds());
+                     (now_ - QuicTime::Zero()).ToMicroseconds());
 }
 
 }  // namespace net

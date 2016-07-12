@@ -632,6 +632,7 @@ QuicStreamFactory::QuicStreamFactory(
     int idle_connection_timeout_seconds,
     bool migrate_sessions_on_network_change,
     bool migrate_sessions_early,
+    bool force_hol_blocking,
     const QuicTagVector& connection_options,
     bool enable_token_binding)
     : require_confirmation_(true),
@@ -685,6 +686,7 @@ QuicStreamFactory::QuicStreamFactory(
           NetworkChangeNotifier::AreNetworkHandlesSupported()),
       migrate_sessions_early_(migrate_sessions_early &&
                               migrate_sessions_on_network_change_),
+      force_hol_blocking_(force_hol_blocking),
       port_seed_(random_generator_->RandUint64()),
       check_persisted_supports_quic_(true),
       has_initialized_data_(false),
@@ -1681,6 +1683,9 @@ int QuicStreamFactory::CreateSession(
   if (srtt > 0)
     config.SetInitialRoundTripTimeUsToSend(static_cast<uint32_t>(srtt));
   config.SetBytesForConnectionIdToSend(0);
+
+  if (force_hol_blocking_)
+    config.SetForceHolBlocking();
 
   if (quic_server_info_factory_.get() && !server_info) {
     // Start the disk cache loading so that we can persist the newer QUIC server

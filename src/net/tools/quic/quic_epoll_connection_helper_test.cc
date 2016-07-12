@@ -30,7 +30,7 @@ TEST_F(QuicEpollConnectionHelperTest, GetClock) {
   QuicTime::Delta delta = QuicTime::Delta::FromMilliseconds(5);
   epoll_server_.AdvanceBy(delta.ToMicroseconds());
 
-  EXPECT_EQ(start.Add(delta), clock->Now());
+  EXPECT_EQ(start + delta, clock->Now());
 }
 
 TEST_F(QuicEpollConnectionHelperTest, GetRandomGenerator) {

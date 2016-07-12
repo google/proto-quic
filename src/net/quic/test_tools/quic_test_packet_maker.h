@@ -90,6 +90,13 @@ class QuicTestPacketMaker {
       bool fin,
       QuicStreamOffset offset,
       base::StringPiece data);
+  std::unique_ptr<QuicReceivedPacket> MakeForceHolDataPacket(
+      QuicPacketNumber packet_number,
+      QuicStreamId stream_id,
+      bool should_include_version,
+      bool fin,
+      QuicStreamOffset* offset,
+      base::StringPiece data);
   std::unique_ptr<QuicReceivedPacket> MakeMultipleDataFramesPacket(
       QuicPacketNumber packet_number,
       QuicStreamId stream_id,

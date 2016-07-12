@@ -604,6 +604,10 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
   bool x509_supported = false;
   bool x509_ecdsa_supported = false;
   ParseProofDemand(client_hello, &x509_supported, &x509_ecdsa_supported);
+  if (!x509_supported && FLAGS_quic_require_x509) {
+    *error_details = "Missing or invalid PDMD";
+    return QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER;
+  }
   DCHECK(proof_source_.get());
   string chlo_hash;
   CryptoUtils::HashHandshakeMessage(client_hello, &chlo_hash);
@@ -1163,21 +1167,27 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
     const QuicCryptoNegotiatedParameters& params,
     const CachedNetworkParameters* cached_network_params,
     CryptoHandshakeMessage* out) const {
-  base::AutoLock locked(configs_lock_);
+  string serialized;
+  string source_address_token;
+  const CommonCertSets* common_cert_sets;
+  {
+    base::AutoLock locked(configs_lock_);
+    serialized = primary_config_->serialized;
+    common_cert_sets = primary_config_->common_cert_sets;
+    source_address_token = NewSourceAddressToken(
+        *primary_config_, previous_source_address_tokens, client_ip, rand,
+        clock->WallNow(), cached_network_params);
+  }
+
   out->set_tag(kSCUP);
-  out->SetStringPiece(kSCFG, primary_config_->serialized);
-  out->SetStringPiece(
-      kSourceAddressTokenTag,
-      NewSourceAddressToken(*primary_config_.get(),
-                            previous_source_address_tokens, client_ip, rand,
-                            clock->WallNow(), cached_network_params));
+  out->SetStringPiece(kSCFG, serialized);
+  out->SetStringPiece(kSourceAddressTokenTag, source_address_token);
 
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
   string cert_sct;
   if (FLAGS_quic_use_hash_in_scup) {
-    if (!proof_source_->GetProof(server_ip, params.sni,
-                                 primary_config_->serialized, version,
+    if (!proof_source_->GetProof(server_ip, params.sni, serialized, version,
                                  chlo_hash, params.x509_ecdsa_supported, &chain,
                                  &signature, &cert_sct)) {
       DVLOG(1) << "Server: failed to get proof.";
@@ -1185,9 +1195,8 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
     }
   } else {
     if (!proof_source_->GetProof(
-            server_ip, params.sni, primary_config_->serialized, version,
-            params.client_nonce, params.x509_ecdsa_supported, &chain,
-            &signature, &cert_sct)) {
+            server_ip, params.sni, serialized, version, params.client_nonce,
+            params.x509_ecdsa_supported, &chain, &signature, &cert_sct)) {
       DVLOG(1) << "Server: failed to get proof.";
       return false;
     }
@@ -1195,7 +1204,7 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
 
   const string compressed = CompressChain(
       compressed_certs_cache, chain, params.client_common_set_hashes,
-      params.client_cached_cert_hashes, primary_config_->common_cert_sets);
+      params.client_cached_cert_hashes, common_cert_sets);
 
   out->SetStringPiece(kCertificateTag, compressed);
   out->SetStringPiece(kPROF, signature);
@@ -1249,7 +1258,8 @@ void QuicCryptoServerConfig::BuildRejection(
   bool x509_supported = false;
   ParseProofDemand(client_hello, &x509_supported,
                    &params->x509_ecdsa_supported);
-  if (!x509_supported) {
+  if (!x509_supported && FLAGS_quic_require_x509) {
+    QUIC_BUG << "x509 certificates not supported in proof demand";
     return;
   }
 

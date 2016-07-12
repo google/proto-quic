@@ -18,6 +18,7 @@
 #include "net/quic/crypto/quic_compressed_certs_cache.h"
 #include "net/quic/crypto/quic_random.h"
 #include "net/quic/quic_blocked_writer_interface.h"
+#include "net/quic/quic_buffered_packet_store.h"
 #include "net/quic/quic_connection.h"
 #include "net/quic/quic_protocol.h"
 #include "net/quic/quic_server_session_base.h"
@@ -37,7 +38,8 @@ class QuicDispatcherPeer;
 class QuicDispatcher : public QuicServerSessionBase::Visitor,
                        public ProcessPacketInterface,
                        public QuicBlockedWriterInterface,
-                       public QuicFramerVisitorInterface {
+                       public QuicFramerVisitorInterface,
+                       public QuicBufferedPacketStore::VisitorInterface {
  public:
   // Ideally we'd have a linked_hash_set: the  boolean is unused.
   typedef linked_hash_map<QuicBlockedWriterInterface*,
@@ -138,6 +140,11 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   bool OnBlockedFrame(const QuicBlockedFrame& frame) override;
   bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override;
   void OnPacketComplete() override;
+
+  // QuicBufferedPacketStore::VisitorInterface
+  void OnExpiredPackets(QuicConnectionId connection_id,
+                        QuicBufferedPacketStore::BufferedPacketList
+                            early_arrived_packets) override;
 
  protected:
   virtual QuicServerSessionBase* CreateQuicSession(
@@ -274,6 +281,10 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   // The writer to write to the socket with.
   std::unique_ptr<QuicPacketWriter> writer_;
+
+  // Undecryptable packets which are buffered until a connection can be
+  // created to handle them.
+  QuicBufferedPacketStore buffered_packets_;
 
   // This vector contains QUIC versions which we currently support.
   // This should be ordered such that the highest supported version is the first

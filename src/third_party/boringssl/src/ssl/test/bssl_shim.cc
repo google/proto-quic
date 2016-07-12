@@ -752,6 +752,11 @@ static ScopedSSL_CTX SetupCtx(const TestConfig *config) {
     return nullptr;
   }
 
+  if (!config->is_dtls) {
+    // Enable TLS 1.3 for tests.
+    SSL_CTX_set_max_version(ssl_ctx.get(), TLS1_3_VERSION);
+  }
+
   std::string cipher_list = "ALL";
   if (!config->cipher.empty()) {
     cipher_list = config->cipher;
@@ -1123,20 +1128,30 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     }
   }
 
-  if (config->expect_server_key_exchange_hash != 0 &&
-      config->expect_server_key_exchange_hash !=
-          SSL_get_server_key_exchange_hash(ssl)) {
-    fprintf(stderr, "ServerKeyExchange hash was %d, wanted %d.\n",
-            SSL_get_server_key_exchange_hash(ssl),
-            config->expect_server_key_exchange_hash);
+  if (config->expect_peer_signature_algorithm != 0 &&
+      config->expect_peer_signature_algorithm !=
+          SSL_get_peer_signature_algorithm(ssl)) {
+    fprintf(stderr, "Peer signature algorithm was %04x, wanted %04x.\n",
+            SSL_get_peer_signature_algorithm(ssl),
+            config->expect_peer_signature_algorithm);
     return false;
   }
 
-  if (config->expect_key_exchange_info != 0) {
-    uint32_t info = SSL_SESSION_get_key_exchange_info(SSL_get_session(ssl));
-    if (static_cast<uint32_t>(config->expect_key_exchange_info) != info) {
-      fprintf(stderr, "key_exchange_info was %" PRIu32 ", wanted %" PRIu32 "\n",
-              info, static_cast<uint32_t>(config->expect_key_exchange_info));
+  if (config->expect_curve_id != 0) {
+    uint16_t curve_id = SSL_get_curve_id(ssl);
+    if (static_cast<uint16_t>(config->expect_curve_id) != curve_id) {
+      fprintf(stderr, "curve_id was %04x, wanted %04x\n", curve_id,
+              static_cast<uint16_t>(config->expect_curve_id));
+      return false;
+    }
+  }
+
+  if (config->expect_dhe_group_size != 0) {
+    unsigned dhe_group_size = SSL_get_dhe_group_size(ssl);
+    if (static_cast<unsigned>(config->expect_dhe_group_size) !=
+        dhe_group_size) {
+      fprintf(stderr, "dhe_group_size was %u, wanted %d\n", dhe_group_size,
+              config->expect_dhe_group_size);
       return false;
     }
   }

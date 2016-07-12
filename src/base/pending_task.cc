@@ -9,9 +9,9 @@
 namespace base {
 
 PendingTask::PendingTask(const tracked_objects::Location& posted_from,
-                         const base::Closure& task)
+                         base::Closure task)
     : base::TrackingInfo(posted_from, TimeTicks()),
-      task(task),
+      task(std::move(task)),
       posted_from(posted_from),
       sequence_num(0),
       nestable(true),
@@ -19,21 +19,23 @@ PendingTask::PendingTask(const tracked_objects::Location& posted_from,
 }
 
 PendingTask::PendingTask(const tracked_objects::Location& posted_from,
-                         const base::Closure& task,
+                         base::Closure task,
                          TimeTicks delayed_run_time,
                          bool nestable)
     : base::TrackingInfo(posted_from, delayed_run_time),
-      task(task),
+      task(std::move(task)),
       posted_from(posted_from),
       sequence_num(0),
       nestable(nestable),
       is_high_res(false) {
 }
 
-PendingTask::PendingTask(const PendingTask& other) = default;
+PendingTask::PendingTask(PendingTask&& other) = default;
 
 PendingTask::~PendingTask() {
 }
+
+PendingTask& PendingTask::operator=(PendingTask&& other) = default;
 
 bool PendingTask::operator<(const PendingTask& other) const {
   // Since the top of a priority queue is defined as the "greatest" element, we

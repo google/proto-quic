@@ -1208,10 +1208,10 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   if (IsRenegotiationAllowed())
     SSL_set_renegotiate_mode(ssl_, ssl_renegotiate_freely);
 
-  uint8_t server_key_exchange_hash = SSL_get_server_key_exchange_hash(ssl_);
-  if (server_key_exchange_hash != TLSEXT_hash_none) {
-    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLServerKeyExchangeHash",
-                                server_key_exchange_hash);
+  uint16_t signature_algorithm = SSL_get_peer_signature_algorithm(ssl_);
+  if (signature_algorithm != 0) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLSignatureAlgorithm",
+                                signature_algorithm);
   }
 
   // Verify the certificate.

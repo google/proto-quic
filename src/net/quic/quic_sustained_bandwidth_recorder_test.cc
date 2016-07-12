@@ -33,14 +33,14 @@ TEST(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
 
   // Send a second reading, again this should not result in a valid estimate,
   // as not enough time has passed.
-  estimate_time = estimate_time.Add(srtt);
+  estimate_time = estimate_time + srtt;
   recorder.RecordEstimate(in_recovery, in_slow_start, bandwidth, estimate_time,
                           wall_time, srtt);
   EXPECT_FALSE(recorder.HasEstimate());
 
   // Now 3 * kSRTT has elapsed since first recording, expect a valid estimate.
-  estimate_time = estimate_time.Add(srtt);
-  estimate_time = estimate_time.Add(srtt);
+  estimate_time = estimate_time + srtt;
+  estimate_time = estimate_time + srtt;
   recorder.RecordEstimate(in_recovery, in_slow_start, bandwidth, estimate_time,
                           wall_time, srtt);
   EXPECT_TRUE(recorder.HasEstimate());
@@ -60,7 +60,7 @@ TEST(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
                           wall_time, srtt);
   EXPECT_EQ(recorder.BandwidthEstimate(), bandwidth);
 
-  estimate_time = estimate_time.Add(srtt.Multiply(3));
+  estimate_time = estimate_time + 3 * srtt;
   const int64_t kSeconds = 556677;
   QuicWallTime second_bandwidth_wall_time =
       QuicWallTime::FromUNIXSeconds(kSeconds);
@@ -80,7 +80,7 @@ TEST(QuicSustainedBandwidthRecorderTest, BandwidthEstimates) {
                           estimate_time, wall_time, srtt);
   EXPECT_EQ(recorder.BandwidthEstimate(), third_bandwidth);
 
-  estimate_time = estimate_time.Add(srtt.Multiply(3));
+  estimate_time = estimate_time + 3 * srtt;
   recorder.RecordEstimate(in_recovery, in_slow_start, third_bandwidth,
                           estimate_time, wall_time, srtt);
   EXPECT_EQ(recorder.BandwidthEstimate(), third_bandwidth);
@@ -111,14 +111,14 @@ TEST(QuicSustainedBandwidthRecorderTest, SlowStart) {
                           wall_time, srtt);
 
   // Now 3 * kSRTT has elapsed since first recording, expect a valid estimate.
-  estimate_time = estimate_time.Add(srtt.Multiply(3));
+  estimate_time = estimate_time + 3 * srtt;
   recorder.RecordEstimate(in_recovery, in_slow_start, bandwidth, estimate_time,
                           wall_time, srtt);
   EXPECT_TRUE(recorder.HasEstimate());
   EXPECT_TRUE(recorder.EstimateRecordedDuringSlowStart());
 
   // Now send another estimate, this time not in slow start.
-  estimate_time = estimate_time.Add(srtt.Multiply(3));
+  estimate_time = estimate_time + 3 * srtt;
   in_slow_start = false;
   recorder.RecordEstimate(in_recovery, in_slow_start, bandwidth, estimate_time,
                           wall_time, srtt);

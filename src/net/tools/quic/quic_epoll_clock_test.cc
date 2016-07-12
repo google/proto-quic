@@ -16,13 +16,13 @@ TEST(QuicEpollClockTest, ApproximateNowInUsec) {
 
   epoll_server.set_now_in_usec(1000000);
   EXPECT_EQ(1000000,
-            clock.ApproximateNow().Subtract(QuicTime::Zero()).ToMicroseconds());
+            (clock.ApproximateNow() - QuicTime::Zero()).ToMicroseconds());
   EXPECT_EQ(1u, clock.WallNow().ToUNIXSeconds());
   EXPECT_EQ(1000000u, clock.WallNow().ToUNIXMicroseconds());
 
   epoll_server.AdvanceBy(5);
   EXPECT_EQ(1000005,
-            clock.ApproximateNow().Subtract(QuicTime::Zero()).ToMicroseconds());
+            (clock.ApproximateNow() - QuicTime::Zero()).ToMicroseconds());
   EXPECT_EQ(1u, clock.WallNow().ToUNIXSeconds());
   EXPECT_EQ(1000005u, clock.WallNow().ToUNIXMicroseconds());
 
@@ -36,10 +36,10 @@ TEST(QuicEpollClockTest, NowInUsec) {
   QuicEpollClock clock(&epoll_server);
 
   epoll_server.set_now_in_usec(1000000);
-  EXPECT_EQ(1000000, clock.Now().Subtract(QuicTime::Zero()).ToMicroseconds());
+  EXPECT_EQ(1000000, (clock.Now() - QuicTime::Zero()).ToMicroseconds());
 
   epoll_server.AdvanceBy(5);
-  EXPECT_EQ(1000005, clock.Now().Subtract(QuicTime::Zero()).ToMicroseconds());
+  EXPECT_EQ(1000005, (clock.Now() - QuicTime::Zero()).ToMicroseconds());
 }
 
 }  // namespace test

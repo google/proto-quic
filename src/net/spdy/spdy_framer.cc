@@ -119,6 +119,7 @@ const size_t SpdyFramer::kHeaderDataChunkMaxSize = 1024;
 // limit on control frame size for legacy reasons and to
 // mitigate DOS attacks.
 const size_t SpdyFramer::kMaxControlFrameSize = (1 << 14) - 1;
+const size_t SpdyFramer::kMaxDataPayloadSendSize = 1 << 14;
 // The size of the control frame buffer. Must be >= the minimum size of the
 // largest control frame, which is SYN_STREAM. See GetSynStreamMinimumSize() for
 // calculation details.
@@ -421,11 +422,21 @@ size_t SpdyFramer::GetFrameMinimumSize() const {
 }
 
 size_t SpdyFramer::GetFrameMaximumSize() const {
-  return SpdyConstants::GetFrameMaximumSize(protocol_version_);
+  if (protocol_version_ == HTTP2) {
+    return send_frame_size_limit_ +
+           SpdyConstants::GetFrameHeaderSize(protocol_version_);
+  } else {
+    return SpdyConstants::GetMaxFrameSizeLimit(protocol_version_);
+  }
 }
 
 size_t SpdyFramer::GetDataFrameMaximumPayload() const {
-  return GetFrameMaximumSize() - GetDataFrameMinimumSize();
+  if (protocol_version_ == HTTP2) {
+    return std::min(kMaxDataPayloadSendSize,
+                    GetFrameMaximumSize() - GetDataFrameMinimumSize());
+  } else {
+    return GetFrameMaximumSize() - GetDataFrameMinimumSize();
+  }
 }
 
 size_t SpdyFramer::GetPrefixLength(SpdyFrameType type) const {
@@ -3222,7 +3233,11 @@ bool SpdyFramer::IncrementallyDeliverControlFrameHeaderData(
 
 void SpdyFramer::SetDecoderHeaderTableDebugVisitor(
     std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
-  GetHpackDecoder()->SetHeaderTableDebugVisitor(std::move(visitor));
+  if (decoder_adapter_ != nullptr) {
+    decoder_adapter_->SetDecoderHeaderTableDebugVisitor(std::move(visitor));
+  } else {
+    GetHpackDecoder()->SetHeaderTableDebugVisitor(std::move(visitor));
+  }
 }
 
 void SpdyFramer::SetEncoderHeaderTableDebugVisitor(

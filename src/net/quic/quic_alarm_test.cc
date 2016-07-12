@@ -80,8 +80,8 @@ class QuicAlarmTest : public ::testing::Test {
   QuicAlarmTest()
       : delegate_(new MockDelegate()),
         alarm_(delegate_),
-        deadline_(QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7))),
-        deadline2_(QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(14))),
+        deadline_(QuicTime::Zero() + QuicTime::Delta::FromSeconds(7)),
+        deadline2_(QuicTime::Zero() + QuicTime::Delta::FromSeconds(14)),
         new_deadline_(QuicTime::Zero()) {}
 
   void ResetAlarm() { alarm_.Set(new_deadline_); }
@@ -98,7 +98,7 @@ TEST_F(QuicAlarmTest, IsSet) {
 }
 
 TEST_F(QuicAlarmTest, Set) {
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
   EXPECT_TRUE(alarm_.IsSet());
   EXPECT_TRUE(alarm_.scheduled());
@@ -106,7 +106,7 @@ TEST_F(QuicAlarmTest, Set) {
 }
 
 TEST_F(QuicAlarmTest, Cancel) {
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
   alarm_.Cancel();
   EXPECT_FALSE(alarm_.IsSet());
@@ -115,9 +115,9 @@ TEST_F(QuicAlarmTest, Cancel) {
 }
 
 TEST_F(QuicAlarmTest, Update) {
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
-  QuicTime new_deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(8));
+  QuicTime new_deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(8);
   alarm_.Update(new_deadline, QuicTime::Delta::Zero());
   EXPECT_TRUE(alarm_.IsSet());
   EXPECT_TRUE(alarm_.scheduled());
@@ -125,7 +125,7 @@ TEST_F(QuicAlarmTest, Update) {
 }
 
 TEST_F(QuicAlarmTest, UpdateWithZero) {
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
   alarm_.Update(QuicTime::Zero(), QuicTime::Delta::Zero());
   EXPECT_FALSE(alarm_.IsSet());
@@ -134,7 +134,7 @@ TEST_F(QuicAlarmTest, UpdateWithZero) {
 }
 
 TEST_F(QuicAlarmTest, Fire) {
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm_.Set(deadline);
   alarm_.FireAlarm();
   EXPECT_FALSE(alarm_.IsSet());
@@ -157,7 +157,7 @@ TEST_F(QuicAlarmTest, FireDestroysAlarm) {
   DestructiveDelegate* delegate(new DestructiveDelegate);
   DestructiveAlarm* alarm = new DestructiveAlarm(delegate);
   delegate->set_alarm(alarm);
-  QuicTime deadline = QuicTime::Zero().Add(QuicTime::Delta::FromSeconds(7));
+  QuicTime deadline = QuicTime::Zero() + QuicTime::Delta::FromSeconds(7);
   alarm->Set(deadline);
   // This should not crash, even though it will destroy alarm.
   alarm->FireAlarm();

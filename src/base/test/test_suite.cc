@@ -12,6 +12,7 @@
 #include "base/bind.h"
 #include "base/command_line.h"
 #include "base/debug/debugger.h"
+#include "base/debug/profiler.h"
 #include "base/debug/stack_trace.h"
 #include "base/feature_list.h"
 #include "base/files/file_path.h"
@@ -91,6 +92,20 @@ class TestClientInitializer : public testing::EmptyTestEventListener {
 
   DISALLOW_COPY_AND_ASSIGN(TestClientInitializer);
 };
+
+std::string GetProfileName() {
+  static const char kDefaultProfileName[] = "test-profile-{pid}";
+  CR_DEFINE_STATIC_LOCAL(std::string, profile_name, ());
+  if (profile_name.empty()) {
+    const base::CommandLine& command_line =
+        *base::CommandLine::ForCurrentProcess();
+    if (command_line.HasSwitch(switches::kProfilingFile))
+      profile_name = command_line.GetSwitchValueASCII(switches::kProfilingFile);
+    else
+      profile_name = std::string(kDefaultProfileName);
+  }
+  return profile_name;
+}
 
 }  // namespace
 
@@ -362,9 +377,13 @@ void TestSuite::Initialize() {
   TestTimeouts::Initialize();
 
   trace_to_file_.BeginTracingFromCommandLineOptions();
+
+  base::debug::StartProfiling(GetProfileName());
 }
 
 void TestSuite::Shutdown() {
+  base::debug::StopProfiling();
+
   // Clear the FeatureList that was created by Initialize().
   if (created_feature_list_)
     FeatureList::ClearInstanceForTesting();

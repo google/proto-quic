@@ -677,7 +677,7 @@ bool FilePathWatcherImpl::HasValidWatchVector() const {
     if (watches_[i].subdir.empty())
       return false;
   }
-  return watches_[watches_.size() - 1].subdir.empty();
+  return watches_.back().subdir.empty();
 }
 
 }  // namespace

@@ -4,11 +4,6 @@
 
 #include "net/dns/host_resolver_impl.h"
 
-#include <memory>
-#include <utility>
-
-#include "base/memory/ptr_util.h"
-
 #if defined(OS_WIN)
 #include <Winsock2.h>
 #elif defined(OS_POSIX)
@@ -16,6 +11,7 @@
 #endif
 
 #include <cmath>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -195,7 +191,7 @@ bool ResemblesMulticastDNSName(const std::string& hostname) {
   const char kSuffix[] = ".local.";
   const size_t kSuffixLen = sizeof(kSuffix) - 1;
   const size_t kSuffixLenTrimmed = kSuffixLen - 1;
-  if (hostname[hostname.size() - 1] == '.') {
+  if (hostname.back() == '.') {
     return hostname.size() > kSuffixLen &&
         !hostname.compare(hostname.size() - kSuffixLen, kSuffixLen, kSuffix);
   }
@@ -367,7 +363,7 @@ std::unique_ptr<base::Value> NetLogDnsTaskFailedCallback(
   if (dns_error)
     dict->SetInteger("dns_error", dns_error);
   return std::move(dict);
-};
+}
 
 // Creates NetLog parameters containing the information in a RequestInfo object,
 // along with the associated NetLog::Source.
@@ -480,7 +476,8 @@ class PriorityTracker {
     --total_count_;
     --counts_[req_priority];
     size_t i;
-    for (i = highest_priority_; i > MINIMUM_PRIORITY && !counts_[i]; --i);
+    for (i = highest_priority_; i > MINIMUM_PRIORITY && !counts_[i]; --i) {
+    }
     highest_priority_ = static_cast<RequestPriority>(i);
 
     // In absence of requests, default to MINIMUM_PRIORITY.
@@ -859,7 +856,7 @@ class HostResolverImpl::ProcTask
 
       // Log DNS lookups based on |address_family|. This will help us determine
       // if IPv4 or IPv4/6 lookups are faster or slower.
-      switch(key_.address_family) {
+      switch (key_.address_family) {
         case ADDRESS_FAMILY_IPV4:
           DNS_HISTOGRAM("DNS.ResolveSuccess_FAMILY_IPV4", duration);
           break;
@@ -880,7 +877,7 @@ class HostResolverImpl::ProcTask
       }
       // Log DNS lookups based on |address_family|. This will help us determine
       // if IPv4 or IPv4/6 lookups are faster or slower.
-      switch(key_.address_family) {
+      switch (key_.address_family) {
         case ADDRESS_FAMILY_IPV4:
           DNS_HISTOGRAM("DNS.ResolveFail_FAMILY_IPV4", duration);
           break;
@@ -1686,7 +1683,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     }
     DNS_HISTOGRAM("AsyncDNS.ResolveSuccess", duration);
     // Log DNS lookups based on |address_family|.
-    switch(key_.address_family) {
+    switch (key_.address_family) {
       case ADDRESS_FAMILY_IPV4:
         DNS_HISTOGRAM("AsyncDNS.ResolveSuccess_FAMILY_IPV4", duration);
         break;
