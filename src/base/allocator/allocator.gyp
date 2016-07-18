@@ -55,6 +55,8 @@
           'sources': [
             'allocator_shim_win.cc',
             'allocator_shim_win.h',
+            'winheap_stubs_win.cc',
+            'winheap_stubs_win.h',
           ],
           'configurations': {
             'Debug_Base': {
@@ -386,6 +388,12 @@
         'buildflag_header_path': 'base/allocator/features.h',
         'buildflag_flags': [
           'USE_EXPERIMENTAL_ALLOCATOR_SHIM=<(use_experimental_allocator_shim)',
+        ],
+        'conditions': [
+            ['<(use_experimental_allocator_shim) or <(win_use_allocator_shim)',
+             {'buildflag_flags': [ 'ENABLE_WIN_ALLOCATOR_SHIM_TESTS=1' ],},
+             {'buildflag_flags': [ 'ENABLE_WIN_ALLOCATOR_SHIM_TESTS=0' ],}
+           ],
         ],
       },
     },  # 'allocator_features' target.

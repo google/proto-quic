@@ -90,7 +90,6 @@ HttpNetworkSession::Params::Params()
       testing_fixed_https_port(0),
       enable_tcp_fast_open_for_ssl(false),
       enable_spdy_ping_based_connection_checking(true),
-      spdy_default_protocol(kProtoUnknown),
       enable_http2(true),
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
       spdy_stream_max_recv_window_size(kSpdyStreamMaxRecvWindowSize),
@@ -127,6 +126,7 @@ HttpNetworkSession::Params::Params()
       quic_disable_preconnect_if_0rtt(false),
       quic_migrate_sessions_on_network_change(false),
       quic_migrate_sessions_early(false),
+      quic_allow_server_migration(false),
       quic_disable_bidirectional_streams(false),
       quic_force_hol_blocking(false),
       proxy_delegate(NULL),
@@ -187,6 +187,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_idle_connection_timeout_seconds,
           params.quic_migrate_sessions_on_network_change,
           params.quic_migrate_sessions_early,
+          params.quic_allow_server_migration,
           params.quic_force_hol_blocking,
           params.quic_connection_options,
           params.enable_token_binding),
@@ -196,7 +197,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
                          params.transport_security_state,
                          params.enable_spdy_ping_based_connection_checking,
                          params.enable_priority_dependencies,
-                         params.spdy_default_protocol,
                          params.spdy_session_max_recv_window_size,
                          params.spdy_stream_max_recv_window_size,
                          params.time_func,
@@ -240,6 +240,9 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 
   http_server_properties_->SetMaxServerConfigsStoredInProperties(
       params.quic_max_server_configs_stored_in_properties);
+
+  memory_pressure_listener_.reset(new base::MemoryPressureListener(base::Bind(
+      &HttpNetworkSession::OnMemoryPressure, base::Unretained(this))));
 }
 
 HttpNetworkSession::~HttpNetworkSession() {
@@ -366,7 +369,13 @@ void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
   if (HttpStreamFactory::spdy_enabled()) {
     *alpn_protos = next_protos_;
   } else {
+    // HttpStreamFactory::spdy_enabled() only affects SPDY/3.1,
+    // but not other ALPN protocols.
     alpn_protos->clear();
+    for (auto proto : next_protos_) {
+      if (proto != kProtoSPDY31)
+        alpn_protos->push_back(proto);
+    }
   }
 }
 
@@ -400,6 +409,18 @@ ClientSocketPoolManager* HttpNetworkSession::GetSocketPoolManager(
       break;
   }
   return NULL;
+}
+
+void HttpNetworkSession::OnMemoryPressure(
+    base::MemoryPressureListener::MemoryPressureLevel memory_pressure_level) {
+  switch (memory_pressure_level) {
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE:
+      break;
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE:
+    case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL:
+      CloseIdleConnections();
+      break;
+  }
 }
 
 }  // namespace net

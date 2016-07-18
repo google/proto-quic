@@ -13,6 +13,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "base/bind.h"
+#include "base/memory/memory_pressure_monitor.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/non_thread_safe.h"
@@ -87,7 +89,6 @@ class NET_EXPORT HttpNetworkSession
 
     // Use SPDY ping frames to test for connection health after idle.
     bool enable_spdy_ping_based_connection_checking;
-    NextProto spdy_default_protocol;
     bool enable_http2;
     size_t spdy_session_max_recv_window_size;
     size_t spdy_stream_max_recv_window_size;
@@ -176,6 +177,9 @@ class NET_EXPORT HttpNetworkSession
     // If true, active QUIC sessions experiencing poor connectivity may be
     // migrated onto a new network.
     bool quic_migrate_sessions_early;
+    // If true, allows migration of QUIC connections to a server-specified
+    // alternate server address.
+    bool quic_allow_server_migration;
     // If true, bidirectional streams over QUIC will be disabled.
     bool quic_disable_bidirectional_streams;
     // If true, enable force HOL blocking.  For measurement purposes.
@@ -272,6 +276,10 @@ class NET_EXPORT HttpNetworkSession
 
   ClientSocketPoolManager* GetSocketPoolManager(SocketPoolType pool_type);
 
+  // Flush sockets on low memory notifications callback.
+  void OnMemoryPressure(
+      base::MemoryPressureListener::MemoryPressureLevel memory_pressure_level);
+
   NetLog* const net_log_;
   HttpServerProperties* const http_server_properties_;
   CertVerifier* const cert_verifier_;
@@ -295,6 +303,8 @@ class NET_EXPORT HttpNetworkSession
   bool enabled_protocols_[NUM_VALID_ALTERNATE_PROTOCOLS];
 
   Params params_;
+
+  std::unique_ptr<base::MemoryPressureListener> memory_pressure_listener_;
 };
 
 }  // namespace net

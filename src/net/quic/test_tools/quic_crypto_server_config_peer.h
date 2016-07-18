@@ -81,7 +81,7 @@ class QuicCryptoServerConfigPeer {
 
   void SelectNewPrimaryConfig(int seconds);
 
-  const std::string CompressChain(
+  static std::string CompressChain(
       QuicCompressedCertsCache* compressed_certs_cache,
       const scoped_refptr<ProofSource::Chain>& chain,
       const std::string& client_common_set_hashes,

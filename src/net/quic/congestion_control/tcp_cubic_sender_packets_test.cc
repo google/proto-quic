@@ -928,7 +928,6 @@ TEST_F(TcpCubicSenderPacketsTest, PaceBelowCWND) {
 }
 
 TEST_F(TcpCubicSenderPacketsTest, NoPRR) {
-  ValueRestore<bool> old_flag(&FLAGS_quic_allow_noprr, true);
   QuicTime::Delta rtt = QuicTime::Delta::FromMilliseconds(100);
   sender_->rtt_stats_.UpdateRtt(rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
 
@@ -977,15 +976,15 @@ TEST_F(TcpCubicSenderPacketsTest, PaceSlowerAboveCwnd) {
 
   EXPECT_TRUE(
       sender_->TimeUntilSend(QuicTime::Zero(), kDefaultTCPMSS).IsZero());
-  EXPECT_EQ(sender_->PacingRate(kDefaultTCPMSS),
-            QuicBandwidth::FromBytesAndTimeDelta(7 * kDefaultTCPMSS, rtt)
-                .Scale(1.25));
+  EXPECT_EQ(
+      sender_->PacingRate(kDefaultTCPMSS),
+      QuicBandwidth::FromBytesAndTimeDelta(7 * kDefaultTCPMSS, rtt) * 1.25);
   for (QuicPacketCount i = cwnd + 1; i < 1.5 * cwnd; ++i) {
     EXPECT_TRUE(
         sender_->TimeUntilSend(QuicTime::Zero(), i * kDefaultTCPMSS).IsZero());
     EXPECT_EQ(sender_->PacingRate(i * kDefaultTCPMSS),
-              QuicBandwidth::FromBytesAndTimeDelta(cwnd * kDefaultTCPMSS, rtt)
-                  .Scale(0.75));
+              QuicBandwidth::FromBytesAndTimeDelta(cwnd * kDefaultTCPMSS, rtt) *
+                  0.75);
   }
   EXPECT_FALSE(
       sender_->TimeUntilSend(QuicTime::Zero(), 11 * kDefaultTCPMSS).IsZero());

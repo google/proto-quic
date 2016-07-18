@@ -68,7 +68,7 @@ class SimpleQuicDispatcher : public QuicDispatcher {
 
 }  // namespace
 
-QuicSimpleServer::QuicSimpleServer(ProofSource* proof_source,
+QuicSimpleServer::QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
                                    const QuicConfig& config,
                                    const QuicVersionVector& supported_versions)
     : helper_(
@@ -79,7 +79,7 @@ QuicSimpleServer::QuicSimpleServer(ProofSource* proof_source,
       config_(config),
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
-                     proof_source),
+                     std::move(proof_source)),
       supported_versions_(supported_versions),
       read_pending_(false),
       synchronous_read_count_(0),

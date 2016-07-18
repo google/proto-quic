@@ -65,7 +65,7 @@ class WindowedFilterTest : public ::testing::Test {
               << windowed_max_bw_.GetSecondBest().ToBitsPerSecond() << " "
               << windowed_max_bw_.GetThirdBest().ToBitsPerSecond();
       now = now + QuicTime::Delta::FromMilliseconds(25);
-      bw_sample = bw_sample.Subtract(QuicBandwidth::FromBitsPerSecond(100));
+      bw_sample = bw_sample - QuicBandwidth::FromBitsPerSecond(100);
     }
     EXPECT_EQ(QuicBandwidth::FromBitsPerSecond(900),
               windowed_max_bw_.GetBest());
@@ -150,7 +150,7 @@ TEST_F(WindowedFilterTest, MonotonicallyDecreasingMax) {
   // decreasing.
   for (int i = 0; i < 6; ++i) {
     now = now + QuicTime::Delta::FromMilliseconds(25);
-    bw_sample = bw_sample.Subtract(QuicBandwidth::FromBitsPerSecond(100));
+    bw_sample = bw_sample - QuicBandwidth::FromBitsPerSecond(100);
     windowed_max_bw_.Update(bw_sample, now);
     VLOG(1) << "i: " << i << " sample: " << bw_sample.ToBitsPerSecond()
             << " maxs: "
@@ -193,7 +193,7 @@ TEST_F(WindowedFilterTest, SampleChangesThirdBestMax) {
   InitializeMaxFilter();
   // BW sample higher than the third-choice max sets that, but nothing else.
   QuicBandwidth bw_sample =
-      windowed_max_bw_.GetThirdBest().Add(QuicBandwidth::FromBitsPerSecond(50));
+      windowed_max_bw_.GetThirdBest() + QuicBandwidth::FromBitsPerSecond(50);
   // Latest sample was recorded at 100ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
@@ -225,8 +225,8 @@ TEST_F(WindowedFilterTest, SampleChangesSecondBestMax) {
   InitializeMaxFilter();
   // BW sample higher than the second-choice max sets that and also
   // the third-choice max.
-  QuicBandwidth bw_sample = windowed_max_bw_.GetSecondBest().Add(
-      QuicBandwidth::FromBitsPerSecond(50));
+  QuicBandwidth bw_sample =
+      windowed_max_bw_.GetSecondBest() + QuicBandwidth::FromBitsPerSecond(50);
   // Latest sample was recorded at 100ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
@@ -257,7 +257,7 @@ TEST_F(WindowedFilterTest, SampleChangesAllMaxs) {
   // BW sample higher than the first-choice max sets that and also
   // the second and third-choice maxs.
   QuicBandwidth bw_sample =
-      windowed_max_bw_.GetBest().Add(QuicBandwidth::FromBitsPerSecond(50));
+      windowed_max_bw_.GetBest() + QuicBandwidth::FromBitsPerSecond(50);
   // Latest sample was recorded at 100ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(101);
   windowed_max_bw_.Update(bw_sample, now);
@@ -285,7 +285,7 @@ TEST_F(WindowedFilterTest, ExpireBestMax) {
   QuicBandwidth old_third_best = windowed_max_bw_.GetThirdBest();
   QuicBandwidth old_second_best = windowed_max_bw_.GetSecondBest();
   QuicBandwidth bw_sample =
-      old_third_best.Subtract(QuicBandwidth::FromBitsPerSecond(50));
+      old_third_best - QuicBandwidth::FromBitsPerSecond(50);
   // Best max sample was recorded at 25ms, so expiry time is 124ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(125);
   windowed_max_bw_.Update(bw_sample, now);
@@ -311,7 +311,7 @@ TEST_F(WindowedFilterTest, ExpireSecondBestMax) {
   InitializeMaxFilter();
   QuicBandwidth old_third_best = windowed_max_bw_.GetThirdBest();
   QuicBandwidth bw_sample =
-      old_third_best.Subtract(QuicBandwidth::FromBitsPerSecond(50));
+      old_third_best - QuicBandwidth::FromBitsPerSecond(50);
   // Second best max sample was recorded at 75ms, so expiry time is 174ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(175);
   windowed_max_bw_.Update(bw_sample, now);
@@ -339,8 +339,8 @@ TEST_F(WindowedFilterTest, ExpireAllMins) {
 
 TEST_F(WindowedFilterTest, ExpireAllMaxs) {
   InitializeMaxFilter();
-  QuicBandwidth bw_sample = windowed_max_bw_.GetThirdBest().Subtract(
-      QuicBandwidth::FromBitsPerSecond(50));
+  QuicBandwidth bw_sample =
+      windowed_max_bw_.GetThirdBest() - QuicBandwidth::FromBitsPerSecond(50);
   // Third best max sample was recorded at 100ms, so expiry time is 199ms.
   QuicTime now = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(200);
   windowed_max_bw_.Update(bw_sample, now);

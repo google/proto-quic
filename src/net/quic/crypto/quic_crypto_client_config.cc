@@ -54,8 +54,9 @@ void RecordDiskCacheServerConfigState(
 
 }  // namespace
 
-QuicCryptoClientConfig::QuicCryptoClientConfig(ProofVerifier* proof_verifier)
-    : proof_verifier_(proof_verifier), disable_ecdsa_(false) {
+QuicCryptoClientConfig::QuicCryptoClientConfig(
+    std::unique_ptr<ProofVerifier> proof_verifier)
+    : proof_verifier_(std::move(proof_verifier)), disable_ecdsa_(false) {
   DCHECK(proof_verifier_.get());
   SetDefaults();
 }

@@ -16,6 +16,7 @@
 #define HEADER_TEST_CONFIG
 
 #include <string>
+#include <vector>
 
 
 struct TestConfig {
@@ -25,6 +26,7 @@ struct TestConfig {
   bool resume = false;
   bool fallback_scsv = false;
   std::string digest_prefs;
+  std::vector<int> signing_prefs;
   std::string key_file;
   std::string cert_file;
   std::string expected_server_name;
@@ -44,6 +46,7 @@ struct TestConfig {
   bool no_tls1 = false;
   bool no_ssl3 = false;
   std::string expected_channel_id;
+  bool enable_channel_id = false;
   std::string send_channel_id;
   bool shim_writes_first = false;
   std::string host_name;
@@ -107,6 +110,7 @@ struct TestConfig {
   int expect_dhe_group_size = 0;
   bool use_old_client_cert_callback = false;
   int initial_timeout_duration_ms = 0;
+  bool use_null_client_ca_list = false;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

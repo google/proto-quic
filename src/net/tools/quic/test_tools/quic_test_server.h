@@ -60,8 +60,8 @@ class QuicTestServer : public QuicServer {
         QuicServerSessionBase* session) = 0;
   };
 
-  explicit QuicTestServer(ProofSource* proof_source);
-  QuicTestServer(ProofSource* proof_source,
+  explicit QuicTestServer(std::unique_ptr<ProofSource> proof_source);
+  QuicTestServer(std::unique_ptr<ProofSource> proof_source,
                  const QuicConfig& config,
                  const QuicVersionVector& supported_versions);
 

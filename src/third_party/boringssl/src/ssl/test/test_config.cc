@@ -61,6 +61,7 @@ const Flag<bool> kBoolFlags[] = {
   { "-no-tls11", &TestConfig::no_tls11 },
   { "-no-tls1", &TestConfig::no_tls1 },
   { "-no-ssl3", &TestConfig::no_ssl3 },
+  { "-enable-channel-id", &TestConfig::enable_channel_id },
   { "-shim-writes-first", &TestConfig::shim_writes_first },
   { "-expect-session-miss", &TestConfig::expect_session_miss },
   { "-decline-alpn", &TestConfig::decline_alpn },
@@ -102,6 +103,7 @@ const Flag<bool> kBoolFlags[] = {
   { "-use-sparse-dh-prime", &TestConfig::use_sparse_dh_prime },
   { "-use-old-client-cert-callback",
     &TestConfig::use_old_client_cert_callback },
+  { "-use-null-client-ca-list", &TestConfig::use_null_client_ca_list },
 };
 
 const Flag<std::string> kStringFlags[] = {
@@ -150,6 +152,10 @@ const Flag<int> kIntFlags[] = {
   { "-expect-curve-id", &TestConfig::expect_curve_id },
   { "-expect-dhe-group-size", &TestConfig::expect_dhe_group_size },
   { "-initial-timeout-duration-ms", &TestConfig::initial_timeout_duration_ms },
+};
+
+const Flag<std::vector<int>> kIntVectorFlags[] = {
+  { "-signing-prefs", &TestConfig::signing_prefs },
 };
 
 }  // namespace
@@ -204,6 +210,20 @@ bool ParseConfig(int argc, char **argv, TestConfig *out_config) {
         return false;
       }
       *int_field = atoi(argv[i]);
+      continue;
+    }
+
+    std::vector<int> *int_vector_field =
+        FindField(out_config, kIntVectorFlags, argv[i]);
+    if (int_vector_field) {
+      i++;
+      if (i >= argc) {
+        fprintf(stderr, "Missing parameter\n");
+        return false;
+      }
+
+      // Each instance of the flag adds to the list.
+      int_vector_field->push_back(atoi(argv[i]));
       continue;
     }
 

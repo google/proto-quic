@@ -14,10 +14,10 @@ QuicClientBase::QuicClientBase(const QuicServerId& server_id,
                                const QuicConfig& config,
                                QuicConnectionHelperInterface* helper,
                                QuicAlarmFactory* alarm_factory,
-                               ProofVerifier* proof_verifier)
+                               std::unique_ptr<ProofVerifier> proof_verifier)
     : server_id_(server_id),
       config_(config),
-      crypto_config_(proof_verifier),
+      crypto_config_(std::move(proof_verifier)),
       helper_(helper),
       alarm_factory_(alarm_factory),
       supported_versions_(supported_versions),

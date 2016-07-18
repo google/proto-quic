@@ -1013,7 +1013,7 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
           .spec();
 
   std::string include_referer;
-  request_->GetResponseHeaderByName("include-referer-token-binding-id",
+  request_->GetResponseHeaderByName("include-referred-token-binding-id",
                                     &include_referer);
   if (include_referer == "true" &&
       request_->ssl_info().token_binding_negotiated) {

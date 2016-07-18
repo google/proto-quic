@@ -168,21 +168,14 @@ const (
 	signatureEd448   signatureAlgorithm = 0x0704
 )
 
-// supportedSKXSignatureAlgorithms contains the signature and hash algorithms
-// that the code advertises as supported in a TLS 1.2 ClientHello.
-var supportedSKXSignatureAlgorithms = []signatureAlgorithm{
+// supportedSignatureAlgorithms contains the default supported signature
+// algorithms.
+var supportedSignatureAlgorithms = []signatureAlgorithm{
+	signatureRSAPSSWithSHA256,
 	signatureRSAPKCS1WithSHA256,
 	signatureECDSAWithP256AndSHA256,
 	signatureRSAPKCS1WithSHA1,
 	signatureECDSAWithSHA1,
-}
-
-// supportedPeerSignatureAlgorithms contains the signature and hash
-// algorithms that the code advertises as supported in a TLS 1.2
-// CertificateRequest.
-var supportedPeerSignatureAlgorithms = []signatureAlgorithm{
-	signatureRSAPKCS1WithSHA256,
-	signatureECDSAWithP256AndSHA256,
 }
 
 // SRTP protection profiles (See RFC 5764, section 4.1.2)
@@ -392,10 +385,13 @@ type Config struct {
 	// protection profiles to offer in DTLS-SRTP.
 	SRTPProtectionProfiles []uint16
 
-	// SignatureAlgorithms, if not nil, overrides the default set of
-	// supported signature and hash algorithms to advertise in
-	// CertificateRequest.
-	SignatureAlgorithms []signatureAlgorithm
+	// SignSignatureAlgorithms, if not nil, overrides the default set of
+	// supported signature algorithms to sign with.
+	SignSignatureAlgorithms []signatureAlgorithm
+
+	// VerifySignatureAlgorithms, if not nil, overrides the default set of
+	// supported signature algorithms that are accepted.
+	VerifySignatureAlgorithms []signatureAlgorithm
 
 	// Bugs specifies optional misbehaviour to be used for testing other
 	// implementations.
@@ -427,13 +423,9 @@ const (
 )
 
 type ProtocolBugs struct {
-	// InvalidSKXSignature specifies that the signature in a
-	// ServerKeyExchange message should be invalid.
-	InvalidSKXSignature bool
-
-	// InvalidCertVerifySignature specifies that the signature in a
-	// CertificateVerify message should be invalid.
-	InvalidCertVerifySignature bool
+	// InvalidSignature specifies that the signature in a ServerKeyExchange
+	// or CertificateVerify message should be invalid.
+	InvalidSignature bool
 
 	// SendCurve, if non-zero, causes the ServerKeyExchange message to use
 	// the specified curve ID rather than the negotiated one.
@@ -517,6 +509,20 @@ type ProtocolBugs struct {
 	// messages.
 	FragmentAcrossChangeCipherSpec bool
 
+	// SendUnencryptedFinished, if true, causes the Finished message to be
+	// send unencrypted before ChangeCipherSpec rather than after it.
+	SendUnencryptedFinished bool
+
+	// PartialEncryptedExtensionsWithServerHello, if true, causes the TLS
+	// 1.3 server to send part of EncryptedExtensions unencrypted
+	// in the same record as ServerHello.
+	PartialEncryptedExtensionsWithServerHello bool
+
+	// PartialClientFinishedWithClientHello, if true, causes the TLS 1.3
+	// client to send part of Finished unencrypted in the same record as
+	// ClientHello.
+	PartialClientFinishedWithClientHello bool
+
 	// SendV2ClientHello causes the client to send a V2ClientHello
 	// instead of a normal ClientHello.
 	SendV2ClientHello bool
@@ -564,6 +570,11 @@ type ProtocolBugs struct {
 	// SendClientVersion, if non-zero, causes the client to send a different
 	// TLS version in the ClientHello than the maximum supported version.
 	SendClientVersion uint16
+
+	// NegotiateVersion, if non-zero, causes the server to negotiate the
+	// specifed TLS version rather than the version supported by either
+	// peer.
+	NegotiateVersion uint16
 
 	// ExpectFalseStart causes the server to, on full handshakes,
 	// expect the peer to False Start; the server Finished message
@@ -709,6 +720,10 @@ type ProtocolBugs struct {
 	// Finished and will trigger a spurious retransmit.)
 	ReorderHandshakeFragments bool
 
+	// ReverseHandshakeFragments, if true, causes handshake fragments in
+	// DTLS to be reversed within a flight.
+	ReverseHandshakeFragments bool
+
 	// MixCompleteMessageWithFragments, if true, causes handshake
 	// messages in DTLS to redundantly both fragment the message
 	// and include a copy of the full one.
@@ -718,9 +733,9 @@ type ProtocolBugs struct {
 	// content type to be sent immediately following the handshake.
 	SendInvalidRecordType bool
 
-	// WrongCertificateMessageType, if true, causes Certificate message to
-	// be sent with the wrong message type.
-	WrongCertificateMessageType bool
+	// SendWrongMessageType, if non-zero, causes messages of the specified
+	// type to be sent with the wrong value.
+	SendWrongMessageType byte
 
 	// FragmentMessageTypeMismatch, if true, causes all non-initial
 	// handshake fragments in DTLS to have the wrong message type.
@@ -767,14 +782,18 @@ type ProtocolBugs struct {
 	// Diffie-Hellman group. The generator used is always two.
 	DHGroupPrime *big.Int
 
-	// PackHandshakeFragments, if true, causes handshake fragments to be
-	// packed into individual handshake records, up to the specified record
-	// size.
+	// PackHandshakeFragments, if true, causes handshake fragments in DTLS
+	// to be packed into individual handshake records, up to the specified
+	// record size.
 	PackHandshakeFragments int
 
-	// PackHandshakeRecords, if true, causes handshake records to be packed
-	// into individual packets, up to the specified packet size.
+	// PackHandshakeRecords, if true, causes handshake records in DTLS to be
+	// packed into individual packets, up to the specified packet size.
 	PackHandshakeRecords int
+
+	// PackHandshakeFlight, if true, causes each handshake flight in TLS to
+	// be packed into records, up to the largest size record available.
+	PackHandshakeFlight bool
 
 	// EnableAllCiphers, if true, causes all configured ciphers to be
 	// enabled.
@@ -835,6 +854,11 @@ type ProtocolBugs struct {
 	// data record. This only makes sense for a server.
 	SendHelloRequestBeforeEveryAppDataRecord bool
 
+	// SendHelloRequestBeforeEveryHandshakeMessage, if true, causes a
+	// HelloRequest handshake message to be sent before each handshake
+	// message. This only makes sense for a server.
+	SendHelloRequestBeforeEveryHandshakeMessage bool
+
 	// RequireDHPublicValueLen causes a fatal error if the length (in
 	// bytes) of the server's Diffie-Hellman public value is not equal to
 	// this.
@@ -880,6 +904,55 @@ type ProtocolBugs struct {
 	// OuterRecordType, if non-zero, is the outer record type to use instead
 	// of application data.
 	OuterRecordType recordType
+
+	// SendSignatureAlgorithm, if non-zero, causes all signatures to be sent
+	// with the given signature algorithm rather than the one negotiated.
+	SendSignatureAlgorithm signatureAlgorithm
+
+	// SkipECDSACurveCheck, if true, causes all ECDSA curve checks to be
+	// skipped.
+	SkipECDSACurveCheck bool
+
+	// IgnoreSignatureVersionChecks, if true, causes all signature
+	// algorithms to be enabled at all TLS versions.
+	IgnoreSignatureVersionChecks bool
+
+	// NegotiateRenegotiationInfoAtAllVersions, if true, causes
+	// Renegotiation Info to be negotiated at all versions.
+	NegotiateRenegotiationInfoAtAllVersions bool
+
+	// NegotiateChannelIDAtAllVersions, if true, causes Channel ID to be
+	// negotiated at all versions.
+	NegotiateChannelIDAtAllVersions bool
+
+	// NegotiateNPNAtAllVersions, if true, causes NPN to be negotiated at
+	// all versions.
+	NegotiateNPNAtAllVersions bool
+
+	// NegotiateEMSAtAllVersions, if true, causes EMS to be negotiated at
+	// all versions.
+	NegotiateEMSAtAllVersions bool
+
+	// AdvertiseTicketExtension, if true, causes the ticket extension to be
+	// advertised in server extensions
+	AdvertiseTicketExtension bool
+
+	// MissingKeyShare, if true, causes the TLS 1.3 implementation to skip
+	// sending a key_share extension and use the zero ECDHE secret
+	// instead.
+	MissingKeyShare bool
+
+	// DuplicateKeyShares, if true, causes the TLS 1.3 client to send two
+	// copies of each KeyShareEntry.
+	DuplicateKeyShares bool
+
+	// EmptyEncryptedExtensions, if true, causes the TLS 1.3 server to
+	// emit an empty EncryptedExtensions block.
+	EmptyEncryptedExtensions bool
+
+	// EncryptedExtensionsWithKeyShare, if true, causes the TLS 1.3 server to
+	// include the KeyShare extension in the EncryptedExtensions block.
+	EncryptedExtensionsWithKeyShare bool
 }
 
 func (c *Config) serverInit() {
@@ -1021,18 +1094,18 @@ func (c *Config) getCertificateForName(name string) *Certificate {
 	return &c.Certificates[0]
 }
 
-func (c *Config) signatureAlgorithmsForServer() []signatureAlgorithm {
-	if c != nil && c.SignatureAlgorithms != nil {
-		return c.SignatureAlgorithms
+func (c *Config) signSignatureAlgorithms() []signatureAlgorithm {
+	if c != nil && c.SignSignatureAlgorithms != nil {
+		return c.SignSignatureAlgorithms
 	}
-	return supportedPeerSignatureAlgorithms
+	return supportedSignatureAlgorithms
 }
 
-func (c *Config) signatureAlgorithmsForClient() []signatureAlgorithm {
-	if c != nil && c.SignatureAlgorithms != nil {
-		return c.SignatureAlgorithms
+func (c *Config) verifySignatureAlgorithms() []signatureAlgorithm {
+	if c != nil && c.VerifySignatureAlgorithms != nil {
+		return c.VerifySignatureAlgorithms
 	}
-	return supportedSKXSignatureAlgorithms
+	return supportedSignatureAlgorithms
 }
 
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate
@@ -1255,3 +1328,9 @@ func isSupportedSignatureAlgorithm(sigAlg signatureAlgorithm, sigAlgs []signatur
 	}
 	return false
 }
+
+var (
+	// See draft-ietf-tls-tls13-13, section 6.3.1.2.
+	downgradeTLS13 = []byte{0x44, 0x4f, 0x57, 0x4e, 0x47, 0x52, 0x44, 0x01}
+	downgradeTLS12 = []byte{0x44, 0x4f, 0x57, 0x4e, 0x47, 0x52, 0x44, 0x00}
+)

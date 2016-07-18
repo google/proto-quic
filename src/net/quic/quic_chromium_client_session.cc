@@ -737,6 +737,15 @@ void QuicChromiumClientSession::OnClosedStream() {
   }
 }
 
+void QuicChromiumClientSession::OnConfigNegotiated() {
+  QuicClientSessionBase::OnConfigNegotiated();
+  if (stream_factory_ && config()->HasReceivedAlternateServerAddress()) {
+    // Server has sent an alternate address to connect to.
+    stream_factory_->MigrateSessionToNewPeerAddress(
+        this, config()->ReceivedAlternateServerAddress(), net_log_);
+  }
+}
+
 void QuicChromiumClientSession::OnCryptoHandshakeEvent(
     CryptoHandshakeEvent event) {
   if (stream_factory_ && event == HANDSHAKE_CONFIRMED &&

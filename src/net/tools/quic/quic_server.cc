@@ -47,14 +47,14 @@ const char kSourceAddressTokenSecret[] = "secret";
 
 }  // namespace
 
-QuicServer::QuicServer(ProofSource* proof_source)
-    : QuicServer(proof_source,
+QuicServer::QuicServer(std::unique_ptr<ProofSource> proof_source)
+    : QuicServer(std::move(proof_source),
                  QuicConfig(),
                  QuicCryptoServerConfig::ConfigOptions(),
                  QuicSupportedVersions()) {}
 
 QuicServer::QuicServer(
-    ProofSource* proof_source,
+    std::unique_ptr<ProofSource> proof_source,
     const QuicConfig& config,
     const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
     const QuicVersionVector& supported_versions)
@@ -65,7 +65,7 @@ QuicServer::QuicServer(
       config_(config),
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
-                     proof_source),
+                     std::move(proof_source)),
       crypto_config_options_(crypto_config_options),
       supported_versions_(supported_versions),
       packet_reader_(new QuicPacketReader()) {

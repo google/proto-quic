@@ -4,39 +4,54 @@
 
 #include "base/files/file_tracing.h"
 
+#include "base/atomicops.h"
 #include "base/files/file.h"
+
+using base::subtle::AtomicWord;
 
 namespace base {
 
 namespace {
-FileTracing::Provider* g_provider = nullptr;
+AtomicWord g_provider;
+}
+
+FileTracing::Provider* GetProvider() {
+  AtomicWord provider = base::subtle::Acquire_Load(&g_provider);
+  return reinterpret_cast<FileTracing::Provider*>(provider);
 }
 
 // static
 bool FileTracing::IsCategoryEnabled() {
-  return g_provider && g_provider->FileTracingCategoryIsEnabled();
+  FileTracing::Provider* provider = GetProvider();
+  return provider && provider->FileTracingCategoryIsEnabled();
 }
 
 // static
 void FileTracing::SetProvider(FileTracing::Provider* provider) {
-  g_provider = provider;
+  base::subtle::Release_Store(&g_provider,
+                              reinterpret_cast<AtomicWord>(provider));
 }
 
 FileTracing::ScopedEnabler::ScopedEnabler() {
-  if (g_provider)
-    g_provider->FileTracingEnable(this);
+  FileTracing::Provider* provider = GetProvider();
+  if (provider)
+    provider->FileTracingEnable(this);
 }
 
 FileTracing::ScopedEnabler::~ScopedEnabler() {
-  if (g_provider)
-    g_provider->FileTracingDisable(this);
+  FileTracing::Provider* provider = GetProvider();
+  if (provider)
+    provider->FileTracingDisable(this);
 }
 
 FileTracing::ScopedTrace::ScopedTrace() : id_(nullptr) {}
 
 FileTracing::ScopedTrace::~ScopedTrace() {
-  if (id_ && g_provider)
-    g_provider->FileTracingEventEnd(name_, id_);
+  if (id_) {
+    FileTracing::Provider* provider = GetProvider();
+    if (provider)
+      provider->FileTracingEventEnd(name_, id_);
+  }
 }
 
 void FileTracing::ScopedTrace::Initialize(const char* name,
@@ -44,7 +59,7 @@ void FileTracing::ScopedTrace::Initialize(const char* name,
                                           int64_t size) {
   id_ = &file->trace_enabler_;
   name_ = name;
-  g_provider->FileTracingEventBegin(name_, id_, file->tracing_path_, size);
+  GetProvider()->FileTracingEventBegin(name_, id_, file->tracing_path_, size);
 }
 
 }  // namespace base

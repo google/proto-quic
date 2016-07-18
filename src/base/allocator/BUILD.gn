@@ -93,6 +93,8 @@ if (win_use_allocator_shim) {
     sources = [
       "allocator_shim_win.cc",
       "allocator_shim_win.h",
+      "winheap_stubs_win.cc",
+      "winheap_stubs_win.h",
     ]
     configs += [ ":allocator_shim_define" ]
   }
@@ -276,7 +278,10 @@ if (use_allocator == "tcmalloc") {
 
 buildflag_header("features") {
   header = "features.h"
-  flags = [ "USE_EXPERIMENTAL_ALLOCATOR_SHIM=$use_experimental_allocator_shim" ]
+  flags = [
+    "USE_EXPERIMENTAL_ALLOCATOR_SHIM=$use_experimental_allocator_shim",
+    "ENABLE_WIN_ALLOCATOR_SHIM_TESTS=($use_experimental_allocator_shim || $win_use_allocator_shim)",
+  ]
 }
 
 if (use_experimental_allocator_shim) {

@@ -94,9 +94,8 @@ void BidirectionalStreamQuicImpl::SendRequestHeaders() {
   http_request_info.method = request_info_->method;
   http_request_info.extra_headers = request_info_->extra_headers;
 
-  CreateSpdyHeadersFromHttpRequest(http_request_info,
-                                   http_request_info.extra_headers, HTTP2, true,
-                                   &headers);
+  CreateSpdyHeadersFromHttpRequest(
+      http_request_info, http_request_info.extra_headers, true, &headers);
   size_t headers_bytes_sent = stream_->WriteHeaders(
       std::move(headers), request_info_->end_stream_on_headers, nullptr);
   headers_bytes_sent_ += headers_bytes_sent;

@@ -57,6 +57,10 @@
 #include <openssl/ssl.h>
 
 #include <assert.h>
+#include <string.h>
+
+#include <openssl/buf.h>
+#include <openssl/err.h>
 
 #include "internal.h"
 
@@ -88,7 +92,46 @@ static uint16_t dtls1_version_to_wire(uint16_t version) {
   return ~(version - 0x0201);
 }
 
-static const SSL_PROTOCOL_METHOD DTLS_protocol_method = {
+static int dtls1_begin_handshake(SSL *ssl) {
+  return 1;
+}
+
+static void dtls1_finish_handshake(SSL *ssl) {
+  ssl->d1->handshake_read_seq = 0;
+  ssl->d1->handshake_write_seq = 0;
+  dtls_clear_incoming_messages(ssl);
+}
+
+static int dtls1_set_read_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx) {
+  /* Cipher changes are illegal when there are buffered incoming messages. */
+  if (dtls_has_incoming_messages(ssl)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_BUFFERED_MESSAGES_ON_CIPHER_CHANGE);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+    SSL_AEAD_CTX_free(aead_ctx);
+    return 0;
+  }
+
+  ssl->d1->r_epoch++;
+  memset(&ssl->d1->bitmap, 0, sizeof(ssl->d1->bitmap));
+  memset(ssl->s3->read_sequence, 0, sizeof(ssl->s3->read_sequence));
+
+  SSL_AEAD_CTX_free(ssl->s3->aead_read_ctx);
+  ssl->s3->aead_read_ctx = aead_ctx;
+  return 1;
+}
+
+static int dtls1_set_write_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx) {
+  ssl->d1->w_epoch++;
+  memcpy(ssl->d1->last_write_sequence, ssl->s3->write_sequence,
+         sizeof(ssl->s3->write_sequence));
+  memset(ssl->s3->write_sequence, 0, sizeof(ssl->s3->write_sequence));
+
+  SSL_AEAD_CTX_free(ssl->s3->aead_write_ctx);
+  ssl->s3->aead_write_ctx = aead_ctx;
+  return 1;
+}
+
+static const SSL_PROTOCOL_METHOD kDTLSProtocolMethod = {
     1 /* is_dtls */,
     TLS1_1_VERSION,
     TLS1_2_VERSION,
@@ -96,7 +139,10 @@ static const SSL_PROTOCOL_METHOD DTLS_protocol_method = {
     dtls1_version_to_wire,
     dtls1_new,
     dtls1_free,
+    dtls1_begin_handshake,
+    dtls1_finish_handshake,
     dtls1_get_message,
+    dtls1_hash_current_message,
     dtls1_read_app_data,
     dtls1_read_change_cipher_spec,
     dtls1_read_close_notify,
@@ -109,32 +155,34 @@ static const SSL_PROTOCOL_METHOD DTLS_protocol_method = {
     dtls1_send_change_cipher_spec,
     dtls1_expect_flight,
     dtls1_received_flight,
+    dtls1_set_read_state,
+    dtls1_set_write_state,
 };
 
 const SSL_METHOD *DTLS_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       0,
-      &DTLS_protocol_method,
+      &kDTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 /* Legacy version-locked methods. */
 
 const SSL_METHOD *DTLSv1_2_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       DTLS1_2_VERSION,
-      &DTLS_protocol_method,
+      &kDTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 const SSL_METHOD *DTLSv1_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       DTLS1_VERSION,
-      &DTLS_protocol_method,
+      &kDTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 /* Legacy side-specific methods. */

@@ -64,7 +64,7 @@ func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certi
 
 	var sigAlg signatureAlgorithm
 	if ka.version >= VersionTLS12 {
-		sigAlg, err = selectSignatureAlgorithm(ka.version, cert.PrivateKey, clientHello.signatureAlgorithms, config.signatureAlgorithmsForServer())
+		sigAlg, err = selectSignatureAlgorithm(ka.version, cert.PrivateKey, config, clientHello.signatureAlgorithms)
 		if err != nil {
 			return nil, err
 		}
@@ -397,14 +397,10 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	msg = append(msg, hello.random...)
 	msg = append(msg, params...)
 
-	if config.Bugs.InvalidSKXSignature {
-		msg[0] ^= 0x80
-	}
-
 	var sigAlg signatureAlgorithm
 	var err error
 	if ka.version >= VersionTLS12 {
-		sigAlg, err = selectSignatureAlgorithm(ka.version, cert.PrivateKey, clientHello.signatureAlgorithms, config.signatureAlgorithmsForServer())
+		sigAlg, err = selectSignatureAlgorithm(ka.version, cert.PrivateKey, config, clientHello.signatureAlgorithms)
 		if err != nil {
 			return nil, err
 		}
@@ -413,6 +409,9 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	sig, err := signMessage(ka.version, cert.PrivateKey, config, sigAlg, msg)
 	if err != nil {
 		return nil, err
+	}
+	if config.Bugs.SendSignatureAlgorithm != 0 {
+		sigAlg = config.Bugs.SendSignatureAlgorithm
 	}
 
 	skx := new(serverKeyExchangeMsg)
@@ -469,9 +468,6 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 		}
 		sigAlg = signatureAlgorithm(sig[0])<<8 | signatureAlgorithm(sig[1])
 		sig = sig[2:]
-		if !isSupportedSignatureAlgorithm(sigAlg, config.signatureAlgorithmsForClient()) {
-			return errors.New("tls: unsupported signature algorithm for ServerKeyExchange")
-		}
 		// Stash the signature algorithm to be extracted by the handshake.
 		ka.peerSignatureAlgorithm = sigAlg
 	}
@@ -485,7 +481,7 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 	}
 	sig = sig[2:]
 
-	return verifyMessage(ka.version, cert.PublicKey, sigAlg, msg, sig)
+	return verifyMessage(ka.version, cert.PublicKey, config, sigAlg, msg, sig)
 }
 
 // ecdheRSAKeyAgreement implements a TLS key agreement where the server

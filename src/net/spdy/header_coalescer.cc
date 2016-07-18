@@ -29,7 +29,7 @@ void HeaderCoalescer::OnHeader(base::StringPiece key, base::StringPiece value) {
   }
 
   if (key[0] == ':') {
-    if (protocol_version_ == HTTP2 && regular_header_seen_) {
+    if (regular_header_seen_) {
       error_seen_ = true;
       return;
     }

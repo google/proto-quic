@@ -319,4 +319,8 @@ bool QuicReceivedPacketManager::ack_frame_updated() const {
   return ack_frame_updated_;
 }
 
+QuicPacketNumber QuicReceivedPacketManager::GetLargestObserved() const {
+  return ack_frame_.largest_observed;
+}
+
 }  // namespace net

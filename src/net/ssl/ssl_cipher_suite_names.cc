@@ -344,6 +344,9 @@ void SSLVersionToString(const char** name, int ssl_version) {
     case SSL_CONNECTION_VERSION_TLS1_2:
       *name = "TLS 1.2";
       break;
+    case SSL_CONNECTION_VERSION_TLS1_3:
+      *name = "TLS 1.3";
+      break;
     case SSL_CONNECTION_VERSION_QUIC:
       *name = "QUIC";
       break;

@@ -33,7 +33,7 @@ class QuicSimpleServerPeer;
 
 class QuicSimpleServer {
  public:
-  QuicSimpleServer(ProofSource* proof_source,
+  QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
                    const QuicConfig& config,
                    const QuicVersionVector& supported_versions);
 

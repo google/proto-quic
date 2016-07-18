@@ -816,7 +816,7 @@ const QuicTime QuicSentPacketManager::GetRetransmissionTime() const {
       const QuicTime sent_time = unacked_packets_.GetLastPacketSentTime();
       const QuicTime tlp_time = sent_time + GetTailLossProbeDelay();
       // Ensure the TLP timer never gets set to a time in the past.
-      return QuicTime::Max(clock_->ApproximateNow(), tlp_time);
+      return std::max(clock_->ApproximateNow(), tlp_time);
     }
     case RTO_MODE: {
       // The RTO is based on the first outstanding packet.
@@ -825,7 +825,7 @@ const QuicTime QuicSentPacketManager::GetRetransmissionTime() const {
       // Wait for TLP packets to be acked before an RTO fires.
       QuicTime tlp_time =
           unacked_packets_.GetLastPacketSentTime() + GetTailLossProbeDelay();
-      return QuicTime::Max(tlp_time, rto_time);
+      return std::max(tlp_time, rto_time);
     }
   }
   DCHECK(false);
@@ -857,9 +857,8 @@ const QuicTime::Delta QuicSentPacketManager::GetTailLossProbeDelay() const {
             static_cast<int64_t>(0.5 * srtt.ToMilliseconds())));
   }
   if (!unacked_packets_.HasMultipleInFlightPackets()) {
-    return QuicTime::Delta::Max(2 * srtt,
-                                1.5 * srtt + QuicTime::Delta::FromMilliseconds(
-                                                 kMinRetransmissionTimeMs / 2));
+    return std::max(2 * srtt, 1.5 * srtt + QuicTime::Delta::FromMilliseconds(
+                                               kMinRetransmissionTimeMs / 2));
   }
   return QuicTime::Delta::FromMilliseconds(
       max(kMinTailLossProbeTimeoutMs,

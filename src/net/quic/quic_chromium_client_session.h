@@ -183,6 +183,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void OnRstStream(const QuicRstStreamFrame& frame) override;
 
   // QuicClientSessionBase methods:
+  void OnConfigNegotiated() override;
   void OnProofValid(const QuicCryptoClientConfig::CachedState& cached) override;
   void OnProofVerifyDetailsAvailable(
       const ProofVerifyDetails& verify_details) override;

@@ -175,15 +175,15 @@ void QuicCryptoServerConfigPeer::SelectNewPrimaryConfig(int seconds) {
       QuicWallTime::FromUNIXSeconds(seconds));
 }
 
-const string QuicCryptoServerConfigPeer::CompressChain(
+string QuicCryptoServerConfigPeer::CompressChain(
     QuicCompressedCertsCache* compressed_certs_cache,
     const scoped_refptr<ProofSource::Chain>& chain,
     const string& client_common_set_hashes,
     const string& client_cached_cert_hashes,
     const CommonCertSets* common_sets) {
-  return server_config_->CompressChain(compressed_certs_cache, chain,
-                                       client_common_set_hashes,
-                                       client_cached_cert_hashes, common_sets);
+  return QuicCryptoServerConfig::CompressChain(
+      compressed_certs_cache, chain, client_common_set_hashes,
+      client_cached_cert_hashes, common_sets);
 }
 
 uint32_t QuicCryptoServerConfigPeer::source_address_token_future_secs() {

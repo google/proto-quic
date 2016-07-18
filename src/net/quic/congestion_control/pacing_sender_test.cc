@@ -299,7 +299,6 @@ TEST_F(PacingSenderTest, FastSending) {
 }
 
 TEST_F(PacingSenderTest, NoBurstEnteringRecovery) {
-  ValueRestore<bool> old_flag(&FLAGS_quic_allow_noprr, true);
   // Configure pacing rate of 1 packet per 1 ms with no burst tokens.
   InitPacingRate(0, QuicBandwidth::FromBytesAndTimeDelta(
                         kMaxPacketSize, QuicTime::Delta::FromMilliseconds(1)));

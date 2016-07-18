@@ -147,7 +147,16 @@ static ScopedEVP_PKEY LoadPrivateKey(const std::string &file) {
 }
 
 static int AsyncPrivateKeyType(SSL *ssl) {
-  return EVP_PKEY_id(GetTestState(ssl)->private_key.get());
+  EVP_PKEY *key = GetTestState(ssl)->private_key.get();
+  switch (EVP_PKEY_id(key)) {
+    case EVP_PKEY_RSA:
+      return NID_rsaEncryption;
+    case EVP_PKEY_EC:
+      return EC_GROUP_get_curve_name(
+          EC_KEY_get0_group(EVP_PKEY_get0_EC_KEY(key)));
+    default:
+      return NID_undef;
+  }
 }
 
 static size_t AsyncPrivateKeyMaxSignatureLen(SSL *ssl) {
@@ -156,64 +165,78 @@ static size_t AsyncPrivateKeyMaxSignatureLen(SSL *ssl) {
 
 static ssl_private_key_result_t AsyncPrivateKeySign(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
-    const EVP_MD *md, const uint8_t *in, size_t in_len) {
+    uint16_t signature_algorithm, const uint8_t *in, size_t in_len) {
   TestState *test_state = GetTestState(ssl);
   if (!test_state->private_key_result.empty()) {
     fprintf(stderr, "AsyncPrivateKeySign called with operation pending.\n");
     abort();
   }
 
-  ScopedEVP_PKEY_CTX ctx(EVP_PKEY_CTX_new(test_state->private_key.get(),
-                                          nullptr));
-  if (!ctx) {
+  // Determine the hash.
+  const EVP_MD *md;
+  switch (signature_algorithm) {
+    case SSL_SIGN_RSA_PKCS1_SHA1:
+    case SSL_SIGN_ECDSA_SHA1:
+      md = EVP_sha1();
+      break;
+    case SSL_SIGN_RSA_PKCS1_SHA256:
+    case SSL_SIGN_ECDSA_SECP256R1_SHA256:
+    case SSL_SIGN_RSA_PSS_SHA256:
+      md = EVP_sha256();
+      break;
+    case SSL_SIGN_RSA_PKCS1_SHA384:
+    case SSL_SIGN_ECDSA_SECP384R1_SHA384:
+    case SSL_SIGN_RSA_PSS_SHA384:
+      md = EVP_sha384();
+      break;
+    case SSL_SIGN_RSA_PKCS1_SHA512:
+    case SSL_SIGN_ECDSA_SECP521R1_SHA512:
+    case SSL_SIGN_RSA_PSS_SHA512:
+      md = EVP_sha512();
+      break;
+    case SSL_SIGN_RSA_PKCS1_MD5_SHA1:
+      md = EVP_md5_sha1();
+      break;
+    default:
+      fprintf(stderr, "Unknown signature algorithm %04x.\n",
+              signature_algorithm);
+      return ssl_private_key_failure;
+  }
+
+  ScopedEVP_MD_CTX ctx;
+  EVP_PKEY_CTX *pctx;
+  if (!EVP_DigestSignInit(ctx.get(), &pctx, md, nullptr,
+                          test_state->private_key.get())) {
     return ssl_private_key_failure;
+  }
+
+  // Configure additional signature parameters.
+  switch (signature_algorithm) {
+    case SSL_SIGN_RSA_PSS_SHA256:
+    case SSL_SIGN_RSA_PSS_SHA384:
+    case SSL_SIGN_RSA_PSS_SHA512:
+      if (!EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) ||
+          !EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx,
+                                            -1 /* salt len = hash len */)) {
+        return ssl_private_key_failure;
+      }
   }
 
   // Write the signature into |test_state|.
   size_t len = 0;
-  if (!EVP_PKEY_sign_init(ctx.get()) ||
-      !EVP_PKEY_CTX_set_signature_md(ctx.get(), md) ||
-      !EVP_PKEY_sign(ctx.get(), nullptr, &len, in, in_len)) {
+  if (!EVP_DigestSignUpdate(ctx.get(), in, in_len) ||
+      !EVP_DigestSignFinal(ctx.get(), nullptr, &len)) {
     return ssl_private_key_failure;
   }
   test_state->private_key_result.resize(len);
-  if (!EVP_PKEY_sign(ctx.get(), test_state->private_key_result.data(), &len, in,
-                     in_len)) {
+  if (!EVP_DigestSignFinal(ctx.get(), test_state->private_key_result.data(),
+                           &len)) {
     return ssl_private_key_failure;
   }
   test_state->private_key_result.resize(len);
 
-  // The signature will be released asynchronously in
-  // |AsyncPrivateKeySignComplete|.
+  // The signature will be released asynchronously in |AsyncPrivateKeyComplete|.
   return ssl_private_key_retry;
-}
-
-static ssl_private_key_result_t AsyncPrivateKeySignComplete(
-    SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out) {
-  TestState *test_state = GetTestState(ssl);
-  if (test_state->private_key_result.empty()) {
-    fprintf(stderr,
-            "AsyncPrivateKeySignComplete called without operation pending.\n");
-    abort();
-  }
-
-  if (test_state->private_key_retries < 2) {
-    // Only return the signature on the second attempt, to test both incomplete
-    // |sign| and |sign_complete|.
-    return ssl_private_key_retry;
-  }
-
-  if (max_out < test_state->private_key_result.size()) {
-    fprintf(stderr, "Output buffer too small.\n");
-    return ssl_private_key_failure;
-  }
-  memcpy(out, test_state->private_key_result.data(),
-         test_state->private_key_result.size());
-  *out_len = test_state->private_key_result.size();
-
-  test_state->private_key_result.clear();
-  test_state->private_key_retries = 0;
-  return ssl_private_key_success;
 }
 
 static ssl_private_key_result_t AsyncPrivateKeyDecrypt(
@@ -240,18 +263,16 @@ static ssl_private_key_result_t AsyncPrivateKeyDecrypt(
 
   test_state->private_key_result.resize(*out_len);
 
-  // The decryption will be released asynchronously in
-  // |AsyncPrivateKeyDecryptComplete|.
+  // The decryption will be released asynchronously in |AsyncPrivateComplete|.
   return ssl_private_key_retry;
 }
 
-static ssl_private_key_result_t AsyncPrivateKeyDecryptComplete(
+static ssl_private_key_result_t AsyncPrivateKeyComplete(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out) {
   TestState *test_state = GetTestState(ssl);
   if (test_state->private_key_result.empty()) {
     fprintf(stderr,
-            "AsyncPrivateKeyDecryptComplete called without operation "
-            "pending.\n");
+            "AsyncPrivateKeyComplete called without operation pending.\n");
     abort();
   }
 
@@ -278,9 +299,9 @@ static const SSL_PRIVATE_KEY_METHOD g_async_private_key_method = {
     AsyncPrivateKeyType,
     AsyncPrivateKeyMaxSignatureLen,
     AsyncPrivateKeySign,
-    AsyncPrivateKeySignComplete,
+    nullptr /* sign_digest */,
     AsyncPrivateKeyDecrypt,
-    AsyncPrivateKeyDecryptComplete
+    AsyncPrivateKeyComplete,
 };
 
 template<typename T>
@@ -311,6 +332,14 @@ static bool GetCertificate(SSL *ssl, ScopedX509 *out_x509,
 
     if (!SSL_set_private_key_digest_prefs(ssl, digest_list.data(),
                                           digest_list.size())) {
+      return false;
+    }
+  }
+
+  if (!config->signing_prefs.empty()) {
+    std::vector<uint16_t> u16s(config->signing_prefs.begin(),
+                               config->signing_prefs.end());
+    if (!SSL_set_signing_algorithm_prefs(ssl, u16s.data(), u16s.size())) {
       return false;
     }
   }
@@ -873,6 +902,10 @@ static ScopedSSL_CTX SetupCtx(const TestConfig *config) {
     return nullptr;
   }
 
+  if (config->use_null_client_ca_list) {
+    SSL_CTX_set_client_CA_list(ssl_ctx.get(), nullptr);
+  }
+
   return ssl_ctx;
 }
 
@@ -1012,7 +1045,9 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
   if (expect_handshake_done && !config->is_server) {
     bool expect_new_session =
         !config->expect_no_session &&
-        (!SSL_session_reused(ssl) || config->expect_ticket_renewal);
+        (!SSL_session_reused(ssl) || config->expect_ticket_renewal) &&
+        /* TODO(svaldez): Implement Session Resumption. */
+        SSL_version(ssl) != TLS1_3_VERSION;
     if (expect_new_session != GetTestState(ssl)->got_new_session) {
       fprintf(stderr,
               "new session was%s cached, but we expected the opposite\n",
@@ -1088,8 +1123,8 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
   }
 
   if (config->expect_extended_master_secret) {
-    if (!ssl->session->extended_master_secret) {
-      fprintf(stderr, "No EMS for session when expected");
+    if (!SSL_get_extms_support(ssl)) {
+      fprintf(stderr, "No EMS for connection when expected");
       return false;
     }
   }
@@ -1231,7 +1266,8 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
   if (config->no_ssl3) {
     SSL_set_options(ssl.get(), SSL_OP_NO_SSLv3);
   }
-  if (!config->expected_channel_id.empty()) {
+  if (!config->expected_channel_id.empty() ||
+      config->enable_channel_id) {
     SSL_enable_tls_channel_id(ssl.get());
   }
   if (!config->send_channel_id.empty()) {

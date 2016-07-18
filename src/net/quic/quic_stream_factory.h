@@ -192,6 +192,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       int idle_connection_timeout_seconds,
       bool migrate_sessions_on_network_change,
       bool migrate_sessions_early,
+      bool allow_server_migration,
       bool force_hol_blocking,
       const QuicTagVector& connection_options,
       bool enable_token_binding);
@@ -297,13 +298,20 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
                                  MigrationCause migration_cause,
                                  scoped_refptr<StringIOBuffer> packet);
 
-  // Method that migrates |session| over to using |new_network|. If
-  // not null, |packet| is sent on the new network, else a PING frame
-  // is sent. Returns ERR_QUIC_PROTOCOL_ERROR if migration fails.
-  void MigrateSessionToNetwork(QuicChromiumClientSession* session,
-                               NetworkChangeNotifier::NetworkHandle new_network,
-                               const BoundNetLog& bound_net_log,
-                               scoped_refptr<StringIOBuffer> packet);
+  // Migrates |session| over to using |network|. If |network| is
+  // kInvalidNetworkHandle, default network is used. If |packet| is
+  // not null, it is sent on the new network, else a PING frame is
+  // sent.
+  void MigrateSessionToNewNetwork(QuicChromiumClientSession* session,
+                                  NetworkChangeNotifier::NetworkHandle network,
+                                  const BoundNetLog& bound_net_log,
+                                  scoped_refptr<StringIOBuffer> packet);
+
+  // Migrates |session| over to using |peer_address|. Causes a PING frame
+  // to be sent to the new peer address.
+  void MigrateSessionToNewPeerAddress(QuicChromiumClientSession* session,
+                                      IPEndPoint peer_address,
+                                      const BoundNetLog& bound_net_log);
 
   // NetworkChangeNotifier::IPAddressObserver methods:
 
@@ -447,6 +455,16 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   void MaybeDisableQuic(uint16_t port);
 
+  // Internal method that migrates |session| over to using
+  // |peer_address| and |network|. If |network| is kInvalidNetworkHandle,
+  // default network is used. If |packet| is not null, it is sent
+  // on the new network, else a PING frame is sent.
+  void MigrateSession(QuicChromiumClientSession* session,
+                      IPEndPoint peer_address,
+                      NetworkChangeNotifier::NetworkHandle network,
+                      const BoundNetLog& bound_net_log,
+                      scoped_refptr<StringIOBuffer> packet);
+
   bool require_confirmation_;
   NetLog* net_log_;
   HostResolver* host_resolver_;
@@ -572,6 +590,10 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Set if early migration should be attempted when the connection
   // experiences poor connectivity.
   const bool migrate_sessions_early_;
+
+  // If set, allows migration of connection to server-specified alternate
+  // server address.
+  const bool allow_server_migration_;
 
   // If set, force HOL blocking.  For measurement purposes.
   const bool force_hol_blocking_;

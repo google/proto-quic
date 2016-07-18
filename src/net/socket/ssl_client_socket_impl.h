@@ -217,18 +217,17 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // Callbacks for operations with the private key.
   int PrivateKeyTypeCallback();
   size_t PrivateKeyMaxSignatureLenCallback();
-  ssl_private_key_result_t PrivateKeySignCallback(uint8_t* out,
-                                                  size_t* out_len,
-                                                  size_t max_out,
-                                                  const EVP_MD* md,
-                                                  const uint8_t* in,
-                                                  size_t in_len);
-  ssl_private_key_result_t PrivateKeySignCompleteCallback(uint8_t* out,
-                                                          size_t* out_len,
-                                                          size_t max_out);
+  ssl_private_key_result_t PrivateKeySignDigestCallback(uint8_t* out,
+                                                        size_t* out_len,
+                                                        size_t max_out,
+                                                        const EVP_MD* md,
+                                                        const uint8_t* in,
+                                                        size_t in_len);
+  ssl_private_key_result_t PrivateKeyCompleteCallback(uint8_t* out,
+                                                      size_t* out_len,
+                                                      size_t max_out);
 
-  void OnPrivateKeySignComplete(Error error,
-                                const std::vector<uint8_t>& signature);
+  void OnPrivateKeyComplete(Error error, const std::vector<uint8_t>& signature);
 
   int TokenBindingAdd(const uint8_t** out,
                       size_t* out_len,

@@ -11,6 +11,7 @@
 #include <limits>
 
 #include "base/allocator/allocator_check.h"
+#include "base/allocator/features.h"
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
 #include "base/memory/aligned_memory.h"
@@ -86,8 +87,8 @@ TEST(MemoryTest, AllocatorShimWorking) {
 // Don't test these on ASan/TSan/MSan configurations: only test the real
 // allocator.
 // Windows only supports these tests with the allocator shim in place.
-#if !defined(OS_ANDROID) && !defined(OS_OPENBSD) &&   \
-    !(defined(OS_WIN) && !defined(ALLOCATOR_SHIM)) && \
+#if !defined(OS_ANDROID) && !defined(OS_OPENBSD) && \
+    BUILDFLAG(ENABLE_WIN_ALLOCATOR_SHIM_TESTS) &&   \
     !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
 
 namespace {

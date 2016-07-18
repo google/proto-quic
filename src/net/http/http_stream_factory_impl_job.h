@@ -265,51 +265,6 @@ class HttpStreamFactoryImpl::Job {
     STATUS_SUCCEEDED
   };
 
-  // Wrapper class for SpdySessionPool methods to enforce certificate
-  // requirements for SpdySessions.
-  class ValidSpdySessionPool {
-   public:
-    ValidSpdySessionPool(SpdySessionPool* spdy_session_pool,
-                         GURL& origin_url,
-                         bool is_spdy_alternative);
-
-    // Returns OK if a SpdySession was not found (in which case |spdy_session|
-    // is set to nullptr), or if one was found (in which case |spdy_session| is
-    // set to it) and it has an associated SSL certificate with is valid for
-    // |origin_url_|, or if this requirement does not apply because the Job is
-    // not a SPDY alternative job.  Returns the appropriate error code
-    // otherwise,
-    // in which case |spdy_session| should not be used.
-    int FindAvailableSession(const SpdySessionKey& key,
-                             const BoundNetLog& net_log,
-                             base::WeakPtr<SpdySession>* spdy_session);
-
-    // Creates a SpdySession and sets |spdy_session| to point to it.  Returns OK
-    // if the associated SSL certificate is valid for |origin_url_|, or if this
-    // requirement does not apply because the Job is not a SPDY alternative job.
-    // Returns the appropriate error code otherwise, in which case
-    // |spdy_session| should not be used.
-    int CreateAvailableSessionFromSocket(
-        const SpdySessionKey& key,
-        std::unique_ptr<ClientSocketHandle> connection,
-        const BoundNetLog& net_log,
-        int certificate_error_code,
-        bool is_secure,
-        base::WeakPtr<SpdySession>* spdy_session);
-
-   private:
-    // Returns OK if |spdy_session| has an associated SSL certificate with is
-    // valid for |origin_url_|, or if this requirement does not apply because
-    // the Job is not a SPDY alternative job, or if |spdy_session| is null.
-    // Returns appropriate error code otherwise.
-    int CheckAlternativeServiceValidityForOrigin(
-        base::WeakPtr<SpdySession> spdy_session);
-
-    SpdySessionPool* const spdy_session_pool_;
-    const GURL origin_url_;
-    const bool is_spdy_alternative_;
-  };
-
   // Resume the |this| job after the specified |wait_time_|.
   void ResumeAfterDelay();
 
@@ -506,8 +461,6 @@ class HttpStreamFactoryImpl::Job {
   // 0 if we're not preconnecting. Otherwise, the number of streams to
   // preconnect.
   int num_streams_;
-
-  std::unique_ptr<ValidSpdySessionPool> valid_spdy_session_pool_;
 
   // Initialized when we create a new SpdySession.
   base::WeakPtr<SpdySession> new_spdy_session_;

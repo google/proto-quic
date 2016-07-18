@@ -313,11 +313,10 @@ int tls1_change_cipher_state(SSL *ssl, int which) {
   }
 
   if (is_read) {
-    ssl_set_read_state(ssl, aead_ctx);
-  } else {
-    ssl_set_write_state(ssl, aead_ctx);
+    return ssl->method->set_read_state(ssl, aead_ctx);
   }
-  return 1;
+
+  return ssl->method->set_write_state(ssl, aead_ctx);
 }
 
 size_t SSL_get_key_block_len(const SSL *ssl) {
@@ -500,6 +499,11 @@ int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
                                int use_context) {
   if (!ssl->s3->have_version || ssl->version == SSL3_VERSION) {
     return 0;
+  }
+
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return tls13_export_keying_material(ssl, out, out_len, label, label_len,
+                                        context, context_len, use_context);
   }
 
   size_t seed_len = 2 * SSL3_RANDOM_SIZE;

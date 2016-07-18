@@ -6,6 +6,7 @@
 // This #if is needed as gyp can't have different compile
 // targets between Debug and Release.
 // TODO(wfh): Remove this once gyp is dead.
+// TODO(siggi): Remove this file once the generic shim sticks.
 #if defined(ALLOCATOR_SHIM)
 
 #include <limits.h>
@@ -14,7 +15,8 @@
 #include <windows.h>
 #include <stddef.h>
 
-#include "allocator_shim_win.h"
+#include "base/allocator/allocator_shim_win.h"
+#include "base/allocator/winheap_stubs_win.h"
 
 // This shim make it possible to perform additional checks on allocations
 // before passing them to the Heap functions.
@@ -26,66 +28,16 @@
 // See definitions of original functions in ucrt\corecrt_malloc.h in SDK
 // include directory.
 
-namespace base {
-namespace allocator {
-bool g_is_win_shim_layer_initialized = false;
-}  // namespace allocator
-}  // namespace base
-
 namespace {
 
-const size_t kWindowsPageSize = 4096;
-const size_t kMaxWindowsAllocation = INT_MAX - kWindowsPageSize;
 int new_mode = 0;
-
-inline HANDLE get_heap_handle() {
-  return reinterpret_cast<HANDLE>(_get_heap_handle());
-}
-
-void* win_heap_malloc(size_t size) {
-  if (size < kMaxWindowsAllocation)
-    return HeapAlloc(get_heap_handle(), 0, size);
-  return nullptr;
-}
-
-void win_heap_free(void* size) {
-  HeapFree(get_heap_handle(), 0, size);
-}
-
-void* win_heap_realloc(void* ptr, size_t size) {
-  if (!ptr)
-    return win_heap_malloc(size);
-  if (!size) {
-    win_heap_free(ptr);
-    return nullptr;
-  }
-  if (size < kMaxWindowsAllocation)
-    return HeapReAlloc(get_heap_handle(), 0, ptr, size);
-  return nullptr;
-}
-
-// Call the new handler, if one has been set.
-// Returns true on successfully calling the handler, false otherwise.
-inline bool call_new_handler(bool nothrow, size_t size) {
-  // Get the current new handler.
-  _PNH nh = _query_new_handler();
-#if defined(_HAS_EXCEPTIONS) && !_HAS_EXCEPTIONS
-  if (!nh)
-    return false;
-  // Since exceptions are disabled, we don't really know if new_handler
-  // failed.  Assume it will abort if it fails.
-  return nh(size) ? true : false;
-#else
-#error "Exceptions in allocator shim are not supported!"
-#endif  // defined(_HAS_EXCEPTIONS) && !_HAS_EXCEPTIONS
-}
 
 }  // namespace
 
 extern "C" {
 
-// Symbol to allow weak linkage to win_heap_malloc from memory_win.cc.
-void* (*malloc_unchecked)(size_t) = &win_heap_malloc;
+// Symbol to allow weak linkage to WinHeapMalloc from allocator_impl_win.cc.
+void* (*malloc_unchecked)(size_t) = &base::allocator::WinHeapMalloc;
 
 // This function behaves similarly to MSVC's _set_new_mode.
 // If flag is 0 (default), calls to malloc will behave normally.
@@ -100,6 +52,7 @@ int _set_new_mode(int flag) {
   base::allocator::g_is_win_shim_layer_initialized = true;
   int old_mode = new_mode;
   new_mode = flag;
+
   return old_mode;
 }
 
@@ -112,11 +65,11 @@ int _query_new_mode() {
 __declspec(restrict) void* malloc(size_t size) {
   void* ptr;
   for (;;) {
-    ptr = win_heap_malloc(size);
+    ptr = base::allocator::WinHeapMalloc(size);
     if (ptr)
       return ptr;
 
-    if (!new_mode || !call_new_handler(true, size))
+    if (!new_mode || base::allocator::WinCallNewHandler(size))
       break;
   }
   return ptr;
@@ -124,7 +77,7 @@ __declspec(restrict) void* malloc(size_t size) {
 
 // Replaces free in ucrt\heap\free.cpp
 void free(void* p) {
-  win_heap_free(p);
+  base::allocator::WinHeapFree(p);
   return;
 }
 
@@ -138,14 +91,14 @@ __declspec(restrict) void* realloc(void* ptr, size_t size) {
 
   void* new_ptr;
   for (;;) {
-    new_ptr = win_heap_realloc(ptr, size);
+    new_ptr = base::allocator::WinHeapRealloc(ptr, size);
 
     // Subtle warning:  NULL return does not alwas indicate out-of-memory.  If
     // the requested new size is zero, realloc should free the ptr and return
     // NULL.
     if (new_ptr || !size)
       return new_ptr;
-    if (!new_mode || !call_new_handler(true, size))
+    if (!new_mode || !base::allocator::WinCallNewHandler(size))
       break;
   }
   return new_ptr;

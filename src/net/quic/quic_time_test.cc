@@ -63,8 +63,8 @@ TEST(QuicTimeDeltaTest, Multiply) {
 
 TEST(QuicTimeDeltaTest, Max) {
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(2000),
-            QuicTime::Delta::Max(QuicTime::Delta::FromMicroseconds(1000),
-                                 QuicTime::Delta::FromMicroseconds(2000)));
+            std::max(QuicTime::Delta::FromMicroseconds(1000),
+                     QuicTime::Delta::FromMicroseconds(2000)));
 }
 
 TEST(QuicTimeDeltaTest, NotEqual) {
@@ -113,7 +113,7 @@ TEST_F(QuicTimeTest, Max) {
   QuicTime time_1 = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(1);
   QuicTime time_2 = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(2);
 
-  EXPECT_EQ(time_2, QuicTime::Max(time_1, time_2));
+  EXPECT_EQ(time_2, std::max(time_1, time_2));
 }
 
 TEST_F(QuicTimeTest, MockClock) {

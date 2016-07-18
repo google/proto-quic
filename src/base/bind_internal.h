@@ -295,7 +295,7 @@ struct InvokeHelper<true, ReturnType> {
 
   template <typename Functor, typename BoundWeakPtr, typename... RunArgs>
   static inline void MakeItSo(Functor&& functor,
-                              BoundWeakPtr weak_ptr,
+                              BoundWeakPtr&& weak_ptr,
                               RunArgs&&... args) {
     if (!weak_ptr)
       return;

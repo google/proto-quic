@@ -380,7 +380,7 @@ void SendAlgorithmSimulator::SendDataNow(Transfer* transfer) {
                                   ? QuicTime::Zero()
                                   : sent_packets_.back().ack_time +
                                         bandwidth_.TransferTime(kPacketSize);
-    ack_time = QuicTime::Max(ack_time, queue_ack_time);
+    ack_time = std::max(ack_time, queue_ack_time);
     sent_packets_.push_back(SentPacket(sender->last_sent, clock_->Now(),
                                        ack_time, packet_lost, transfer));
   } else {

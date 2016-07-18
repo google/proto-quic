@@ -90,6 +90,17 @@ void UnpackStreamDependencyValues(uint32_t packed,
   *parent_stream_id = packed & 0x7fffffff;
 }
 
+// Creates a SpdyFramerDecoderAdapter if flags indicate that one should be
+// used. This code is isolated to hopefully make merging into Chromium easier.
+std::unique_ptr<SpdyFramerDecoderAdapter> DecoderAdapterFactory(
+    SpdyFramer* outer) {
+  if (FLAGS_use_nested_spdy_framer_decoder) {
+    DVLOG(1) << "Creating NestedSpdyFramerDecoder.";
+    return CreateNestedSpdyFramerDecoder(outer);
+  }
+  return nullptr;
+}
+
 struct DictionaryIds {
   DictionaryIds()
       : v3_dictionary_id(
@@ -172,7 +183,8 @@ bool SpdyFramerVisitorInterface::OnRstStreamFrameData(
   return true;
 }
 
-SpdyFramer::SpdyFramer(SpdyMajorVersion version, bool choose_decoder)
+SpdyFramer::SpdyFramer(SpdyMajorVersion version,
+                       SpdyFramer::DecoderAdapterFactoryFn adapter_factory)
     : current_frame_buffer_(kControlFrameBufferSize),
       expect_continuation_(0),
       visitor_(NULL),
@@ -192,16 +204,13 @@ SpdyFramer::SpdyFramer(SpdyMajorVersion version, bool choose_decoder)
                 "Our send limit should be at most our receive limit");
   Reset();
 
-  if (choose_decoder && version == HTTP2) {
-    // Another case will be added, hence the nested if blocks...
-    if (FLAGS_use_nested_spdy_framer_decoder) {
-      DVLOG(1) << "Creating NestedSpdyFramerDecoder.";
-      decoder_adapter_.reset(CreateNestedSpdyFramerDecoder(this));
-    }
+  if (version == HTTP2 && adapter_factory != nullptr) {
+    decoder_adapter_ = adapter_factory(this);
   }
 }
 
-SpdyFramer::SpdyFramer(SpdyMajorVersion version) : SpdyFramer(version, true) {}
+SpdyFramer::SpdyFramer(SpdyMajorVersion version)
+    : SpdyFramer(version, &DecoderAdapterFactory) {}
 
 SpdyFramer::~SpdyFramer() {
   if (header_compressor_.get()) {

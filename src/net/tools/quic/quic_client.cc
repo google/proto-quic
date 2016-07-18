@@ -51,27 +51,27 @@ QuicClient::QuicClient(IPEndPoint server_address,
                        const QuicServerId& server_id,
                        const QuicVersionVector& supported_versions,
                        EpollServer* epoll_server,
-                       ProofVerifier* proof_verifier)
+                       std::unique_ptr<ProofVerifier> proof_verifier)
     : QuicClient(server_address,
                  server_id,
                  supported_versions,
                  QuicConfig(),
                  epoll_server,
-                 proof_verifier) {}
+                 std::move(proof_verifier)) {}
 
 QuicClient::QuicClient(IPEndPoint server_address,
                        const QuicServerId& server_id,
                        const QuicVersionVector& supported_versions,
                        const QuicConfig& config,
                        EpollServer* epoll_server,
-                       ProofVerifier* proof_verifier)
+                       std::unique_ptr<ProofVerifier> proof_verifier)
     : QuicClientBase(
           server_id,
           supported_versions,
           config,
           new QuicEpollConnectionHelper(epoll_server, QuicAllocator::SIMPLE),
           new QuicEpollAlarmFactory(epoll_server),
-          proof_verifier),
+          std::move(proof_verifier)),
       server_address_(server_address),
       local_port_(0),
       epoll_server_(epoll_server),

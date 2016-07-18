@@ -7,7 +7,10 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "base/strings/string_piece.h"
+#include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
@@ -78,8 +81,11 @@ class SpdyFramerDecoderAdapter {
 
 // Create an instance of NestedSpdyFramerDecoder, which implements
 // SpdyFramerDecoderAdapter, delegating to a SpdyFramer instance that will
-// actually perform the decoding (when requested via ProcessInput).
-SpdyFramerDecoderAdapter* CreateNestedSpdyFramerDecoder(SpdyFramer* outer);
+// actually perform the decoding (when requested via ProcessInput). This allows
+// us to test the SpdyFramerDecoderAdapter mechanism without changing the type
+// of decoder that is used.
+std::unique_ptr<SpdyFramerDecoderAdapter> CreateNestedSpdyFramerDecoder(
+    SpdyFramer* outer);
 
 // SpdyFramerVisitorInterface::OnError needs the original SpdyFramer* to
 // pass to the visitor (really a listener). This implementation takes care of

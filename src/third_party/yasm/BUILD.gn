@@ -104,7 +104,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   # Used by both yasm and genperf binaries.
-  source_set("yasm_utils") {
+  static_library("yasm_utils") {
     sources = [
       "source/patched-yasm/libyasm/phash.c",
       "source/patched-yasm/libyasm/xmalloc.c",

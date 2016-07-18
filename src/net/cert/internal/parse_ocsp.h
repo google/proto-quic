@@ -17,6 +17,11 @@
 #include "net/der/parser.h"
 #include "net/der/tag.h"
 
+namespace base {
+class Time;
+class TimeDelta;
+}
+
 namespace net {
 
 // OCSPCertID contains a representation of a DER-encoded RFC 6960 "CertID".
@@ -277,6 +282,15 @@ NET_EXPORT_PRIVATE bool GetOCSPCertStatus(
     const der::Input& issuer_tbs_certificate_tlv,
     const der::Input& cert_tbs_certificate_tlv,
     OCSPCertStatus* out);
+
+// Returns true if |response|, a valid OCSP response with a thisUpdate field and
+// potentially a nextUpdate field, is valid at |verify_time| and not older than
+// |max_age|. Expressed differently, returns true if |response.thisUpdate| <=
+// |verify_time| < response.nextUpdate, and |response.thisUpdate| >=
+// |verify_time| - |max_age|.
+NET_EXPORT_PRIVATE bool CheckOCSPDateValid(const OCSPSingleResponse& response,
+                                           const base::Time& verify_time,
+                                           const base::TimeDelta& max_age);
 
 }  // namespace net
 

@@ -38,7 +38,7 @@ class QuicClientBase {
                  const QuicConfig& config,
                  QuicConnectionHelperInterface* helper,
                  QuicAlarmFactory* alarm_factory,
-                 ProofVerifier* proof_verifier);
+                 std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~QuicClientBase();
 

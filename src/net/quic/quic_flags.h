@@ -22,7 +22,6 @@ NET_EXPORT_PRIVATE extern bool FLAGS_shift_quic_cubic_epoch_when_app_limited;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_measure_headers_hol_blocking_time;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_disable_pacing_for_perf_tests;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_never_write_unencrypted_data;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_require_fix;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_supports_push_promise;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_supports_push_promise;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_no_lower_bw_resumption_limit;
@@ -32,8 +31,6 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_loss_recovery_use_largest_acked;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_only_one_sending_alarm;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_hash_in_scup;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_old_public_reset_packets;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_allow_noprr;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_optimized_write_path;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_dispatcher_creates_id;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_chlo_policy;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_ignore_zero_length_frames;
@@ -50,5 +47,10 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_simple_packet_number_length;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_35;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_36;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_require_x509;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_deprecate_kfixd;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_refresh_proof;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_do_not_migrate_on_old_packet;
+NET_EXPORT_PRIVATE extern bool FLAGS_enable_async_get_proof;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_neuter_unencrypted_when_sending;
 
 #endif  // NET_QUIC_QUIC_FLAGS_H_

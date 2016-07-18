@@ -37,33 +37,35 @@ void QuicSimpleClient::ClientQuicDataToResend::Resend() {
   headers_ = nullptr;
 }
 
-QuicSimpleClient::QuicSimpleClient(IPEndPoint server_address,
-                                   const QuicServerId& server_id,
-                                   const QuicVersionVector& supported_versions,
-                                   ProofVerifier* proof_verifier)
+QuicSimpleClient::QuicSimpleClient(
+    IPEndPoint server_address,
+    const QuicServerId& server_id,
+    const QuicVersionVector& supported_versions,
+    std::unique_ptr<ProofVerifier> proof_verifier)
     : QuicClientBase(server_id,
                      supported_versions,
                      QuicConfig(),
                      CreateQuicConnectionHelper(),
                      CreateQuicAlarmFactory(),
-                     proof_verifier),
+                     std::move(proof_verifier)),
       server_address_(server_address),
       local_port_(0),
       initialized_(false),
       packet_reader_started_(false),
       weak_factory_(this) {}
 
-QuicSimpleClient::QuicSimpleClient(IPEndPoint server_address,
-                                   const QuicServerId& server_id,
-                                   const QuicVersionVector& supported_versions,
-                                   const QuicConfig& config,
-                                   ProofVerifier* proof_verifier)
+QuicSimpleClient::QuicSimpleClient(
+    IPEndPoint server_address,
+    const QuicServerId& server_id,
+    const QuicVersionVector& supported_versions,
+    const QuicConfig& config,
+    std::unique_ptr<ProofVerifier> proof_verifier)
     : QuicClientBase(server_id,
                      supported_versions,
                      config,
                      CreateQuicConnectionHelper(),
                      CreateQuicAlarmFactory(),
-                     proof_verifier),
+                     std::move(proof_verifier)),
       server_address_(server_address),
       local_port_(0),
       initialized_(false),
@@ -255,8 +257,8 @@ void QuicSimpleClient::SendRequest(const HttpRequestInfo& headers,
     return;
   }
   SpdyHeaderBlock header_block;
-  CreateSpdyHeadersFromHttpRequest(headers, headers.extra_headers, net::HTTP2,
-                                   true, &header_block);
+  CreateSpdyHeadersFromHttpRequest(headers, headers.extra_headers, true,
+                                   &header_block);
   stream->set_visitor(this);
   stream->SendRequest(std::move(header_block), body, fin);
   if (FLAGS_enable_quic_stateless_reject_support) {
@@ -348,8 +350,7 @@ void QuicSimpleClient::OnClose(QuicSpdyStream* stream) {
   QuicSpdyClientStream* client_stream =
       static_cast<QuicSpdyClientStream*>(stream);
   HttpResponseInfo response;
-  SpdyHeadersToHttpResponse(client_stream->response_headers(), net::HTTP2,
-                            &response);
+  SpdyHeadersToHttpResponse(client_stream->response_headers(), &response);
   if (response_listener_.get() != nullptr) {
     response_listener_->OnCompleteResponse(stream->id(), *response.headers,
                                            client_stream->data());

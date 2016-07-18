@@ -187,7 +187,7 @@ int64_t BidirectionalStreamSpdyImpl::GetTotalSentBytes() const {
 void BidirectionalStreamSpdyImpl::OnRequestHeadersSent() {
   DCHECK(stream_);
 
-  negotiated_protocol_ = stream_->GetProtocol();
+  negotiated_protocol_ = kProtoHTTP2;
   if (delegate_)
     delegate_->OnStreamReady(/*request_headers_sent=*/true);
 }
@@ -267,8 +267,7 @@ int BidirectionalStreamSpdyImpl::SendRequestHeadersHelper() {
   http_request_info.extra_headers = request_info_->extra_headers;
 
   CreateSpdyHeadersFromHttpRequest(
-      http_request_info, http_request_info.extra_headers,
-      stream_->GetProtocolVersion(), true, headers.get());
+      http_request_info, http_request_info.extra_headers, true, headers.get());
   return stream_->SendRequestHeaders(std::move(headers),
                                      request_info_->end_stream_on_headers
                                          ? NO_MORE_DATA_TO_SEND

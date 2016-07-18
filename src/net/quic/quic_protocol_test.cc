@@ -400,6 +400,19 @@ TEST(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {
   EXPECT_FALSE(queue.Contains(20));
 }
 
+TEST(PacketNumberQueueTest, Complement) {
+  PacketNumberQueue queue;
+  queue.Add(1, 10);
+  queue.Add(12, 20);
+  queue.Add(22, 30);
+  queue.Complement();
+  EXPECT_EQ(2u, queue.NumIntervals());
+  EXPECT_TRUE(queue.Contains(10));
+  EXPECT_TRUE(queue.Contains(11));
+  EXPECT_TRUE(queue.Contains(20));
+  EXPECT_TRUE(queue.Contains(21));
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

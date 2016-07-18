@@ -7,6 +7,7 @@
 #include "base/sha1.h"
 #include "crypto/sha2.h"
 #include "net/cert/internal/parse_ocsp.h"
+#include "net/der/encode_values.h"
 
 namespace net {
 
@@ -527,6 +528,30 @@ bool GetOCSPCertStatus(const OCSPResponseData& response_data,
     out->status = OCSPCertStatus::Status::UNKNOWN;
 
   return found;
+}
+
+bool CheckOCSPDateValid(const OCSPSingleResponse& response,
+                        const base::Time& verify_time,
+                        const base::TimeDelta& max_age) {
+  der::GeneralizedTime verify_time_der;
+  if (!der::EncodeTimeAsGeneralizedTime(verify_time, &verify_time_der))
+    return false;
+
+  if (response.this_update > verify_time_der)
+    return false;  // Response is not yet valid.
+
+  if (response.has_next_update && (response.next_update <= verify_time_der))
+    return false;  // Response is no longer valid.
+
+  der::GeneralizedTime earliest_this_update;
+  if (!der::EncodeTimeAsGeneralizedTime(verify_time - max_age,
+                                        &earliest_this_update)) {
+    return false;
+  }
+  if (response.this_update < earliest_this_update)
+    return false;  // Response is too old.
+
+  return true;
 }
 
 }  // namespace net

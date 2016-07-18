@@ -6,7 +6,7 @@ if (is_win) {
   import("//build/config/win/visual_studio_version.gni")
 }
 
-source_set("brotli") {
+static_library("brotli") {
   sources = [
     "dec/bit_reader.c",
     "dec/bit_reader.h",

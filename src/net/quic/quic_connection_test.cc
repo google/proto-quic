@@ -1113,6 +1113,34 @@ TEST_P(QuicConnectionTest, SelfAddressChangeAtServer) {
   EXPECT_FALSE(connection_.connected());
 }
 
+TEST_P(QuicConnectionTest, ClientAddressChangeAndPacketReordered) {
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  set_perspective(Perspective::IS_SERVER);
+  QuicPacketCreatorPeer::SetSendVersionInPacket(creator_, false);
+  // Clear peer address.
+  QuicConnectionPeer::SetPeerAddress(&connection_, IPEndPoint());
+
+  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 5);
+  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(AnyNumber());
+  const IPEndPoint kNewPeerAddress = IPEndPoint(Loopback6(),
+                                                /*port=*/23456);
+  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
+                                  kNewPeerAddress);
+
+  // Decrease packet number to simulate out-of-order packets.
+  QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 4);
+  if (FLAGS_quic_do_not_migrate_on_old_packet) {
+    // This is an old packet, do not migrate.
+    EXPECT_CALL(visitor_, OnConnectionMigration(PORT_CHANGE)).Times(0);
+  } else {
+    // A connection migration is observed.
+    EXPECT_CALL(visitor_, OnConnectionMigration(PORT_CHANGE));
+  }
+  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
+                                  kPeerAddress);
+}
+
 TEST_P(QuicConnectionTest, MaxPacketSize) {
   EXPECT_EQ(Perspective::IS_CLIENT, connection_.perspective());
   EXPECT_EQ(1350u, connection_.max_packet_length());

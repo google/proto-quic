@@ -81,7 +81,7 @@ const unsigned int kTbExtNum = 24;
 
 // Token Binding ProtocolVersions supported.
 const uint8_t kTbProtocolVersionMajor = 0;
-const uint8_t kTbProtocolVersionMinor = 6;
+const uint8_t kTbProtocolVersionMinor = 8;
 const uint8_t kTbMinProtocolVersionMajor = 0;
 const uint8_t kTbMinProtocolVersionMinor = 6;
 
@@ -346,25 +346,25 @@ class SSLClientSocketImpl::SSLContext {
     return socket->PrivateKeyMaxSignatureLenCallback();
   }
 
-  static ssl_private_key_result_t PrivateKeySignCallback(SSL* ssl,
-                                                         uint8_t* out,
-                                                         size_t* out_len,
-                                                         size_t max_out,
-                                                         const EVP_MD* md,
-                                                         const uint8_t* in,
-                                                         size_t in_len) {
-    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
-    return socket->PrivateKeySignCallback(out, out_len, max_out, md, in,
-                                          in_len);
-  }
-
-  static ssl_private_key_result_t PrivateKeySignCompleteCallback(
+  static ssl_private_key_result_t PrivateKeySignDigestCallback(
       SSL* ssl,
       uint8_t* out,
       size_t* out_len,
-      size_t max_out) {
+      size_t max_out,
+      const EVP_MD* md,
+      const uint8_t* in,
+      size_t in_len) {
     SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
-    return socket->PrivateKeySignCompleteCallback(out, out_len, max_out);
+    return socket->PrivateKeySignDigestCallback(out, out_len, max_out, md, in,
+                                                in_len);
+  }
+
+  static ssl_private_key_result_t PrivateKeyCompleteCallback(SSL* ssl,
+                                                             uint8_t* out,
+                                                             size_t* out_len,
+                                                             size_t max_out) {
+    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
+    return socket->PrivateKeyCompleteCallback(out, out_len, max_out);
   }
 
 #if !defined(OS_NACL)
@@ -391,12 +391,15 @@ class SSLClientSocketImpl::SSLContext {
   SSLClientSessionCache session_cache_;
 };
 
+// TODO(davidben): Switch from sign_digest to sign.
 const SSL_PRIVATE_KEY_METHOD
     SSLClientSocketImpl::SSLContext::kPrivateKeyMethod = {
         &SSLClientSocketImpl::SSLContext::PrivateKeyTypeCallback,
         &SSLClientSocketImpl::SSLContext::PrivateKeyMaxSignatureLenCallback,
-        &SSLClientSocketImpl::SSLContext::PrivateKeySignCallback,
-        &SSLClientSocketImpl::SSLContext::PrivateKeySignCompleteCallback,
+        nullptr /* sign */,
+        &SSLClientSocketImpl::SSLContext::PrivateKeySignDigestCallback,
+        nullptr /* decrypt */,
+        &SSLClientSocketImpl::SSLContext::PrivateKeyCompleteCallback,
 };
 
 // PeerCertificateChain is a helper object which extracts the certificate
@@ -2112,6 +2115,9 @@ std::string SSLClientSocketImpl::GetSessionCacheKey() const {
     case SSL_PROTOCOL_VERSION_TLS1_2:
       result.append("tls1.2");
       break;
+    case SSL_PROTOCOL_VERSION_TLS1_3:
+      result.append("tls1.3");
+      break;
     default:
       NOTREACHED();
   }
@@ -2157,7 +2163,7 @@ size_t SSLClientSocketImpl::PrivateKeyMaxSignatureLenCallback() {
   return ssl_config_.client_private_key->GetMaxSignatureLengthInBytes();
 }
 
-ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignCallback(
+ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignDigestCallback(
     uint8_t* out,
     size_t* out_len,
     size_t max_out,
@@ -2182,12 +2188,12 @@ ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignCallback(
   signature_result_ = ERR_IO_PENDING;
   ssl_config_.client_private_key->SignDigest(
       hash, base::StringPiece(reinterpret_cast<const char*>(in), in_len),
-      base::Bind(&SSLClientSocketImpl::OnPrivateKeySignComplete,
+      base::Bind(&SSLClientSocketImpl::OnPrivateKeyComplete,
                  weak_factory_.GetWeakPtr()));
   return ssl_private_key_retry;
 }
 
-ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignCompleteCallback(
+ssl_private_key_result_t SSLClientSocketImpl::PrivateKeyCompleteCallback(
     uint8_t* out,
     size_t* out_len,
     size_t max_out) {
@@ -2210,7 +2216,7 @@ ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignCompleteCallback(
   return ssl_private_key_success;
 }
 
-void SSLClientSocketImpl::OnPrivateKeySignComplete(
+void SSLClientSocketImpl::OnPrivateKeyComplete(
     Error error,
     const std::vector<uint8_t>& signature) {
   DCHECK_EQ(ERR_IO_PENDING, signature_result_);

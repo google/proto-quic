@@ -71,7 +71,7 @@ bool QuicSocketUtils::GetOverflowFromMsghdr(struct msghdr* hdr,
     for (cmsg = CMSG_FIRSTHDR(hdr); cmsg != nullptr;
          cmsg = CMSG_NXTHDR(hdr, cmsg)) {
       if (cmsg->cmsg_type == SO_RXQ_OVFL) {
-        *dropped_packets = *(reinterpret_cast<int*> CMSG_DATA(cmsg));
+        *dropped_packets = *(reinterpret_cast<uint32_t*> CMSG_DATA(cmsg));
         return true;
       }
     }

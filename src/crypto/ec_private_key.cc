@@ -146,8 +146,10 @@ std::unique_ptr<ECPrivateKey> ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
 
 std::unique_ptr<ECPrivateKey> ECPrivateKey::Copy() const {
   std::unique_ptr<ECPrivateKey> copy(new ECPrivateKey());
-  if (key_)
-    copy->key_ = EVP_PKEY_up_ref(key_);
+  if (key_) {
+    EVP_PKEY_up_ref(key_);
+    copy->key_ = key_;
+  }
   return copy;
 }
 

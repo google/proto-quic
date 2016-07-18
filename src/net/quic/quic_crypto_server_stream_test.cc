@@ -428,7 +428,8 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
 
 TEST_P(QuicCryptoServerStreamTest, FailByPolicy) {
   FLAGS_quic_enable_chlo_policy = true;
-  FLAGS_quic_require_fix = false;
+  FLAGS_quic_disable_pre_30 = true;
+  FLAGS_quic_deprecate_kfixd = true;
   Initialize();
   InitializeFakeClient(/* supports_stateless_rejects= */ false);
 
@@ -441,7 +442,8 @@ TEST_P(QuicCryptoServerStreamTest, FailByPolicy) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, MessageAfterHandshake) {
-  FLAGS_quic_require_fix = false;
+  FLAGS_quic_disable_pre_30 = true;
+  FLAGS_quic_deprecate_kfixd = true;
   Initialize();
   CompleteCryptoHandshake();
   EXPECT_CALL(
@@ -455,7 +457,8 @@ TEST_P(QuicCryptoServerStreamTest, MessageAfterHandshake) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, BadMessageType) {
-  FLAGS_quic_require_fix = false;
+  FLAGS_quic_disable_pre_30 = true;
+  FLAGS_quic_deprecate_kfixd = true;
   Initialize();
 
   message_.set_tag(kSHLO);

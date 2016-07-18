@@ -456,8 +456,8 @@ SSL *SSL_new(SSL_CTX *ctx) {
 
   ssl->tlsext_channel_id_enabled = ctx->tlsext_channel_id_enabled;
   if (ctx->tlsext_channel_id_private) {
-    ssl->tlsext_channel_id_private =
-        EVP_PKEY_up_ref(ctx->tlsext_channel_id_private);
+    EVP_PKEY_up_ref(ctx->tlsext_channel_id_private);
+    ssl->tlsext_channel_id_private = ctx->tlsext_channel_id_private;
   }
 
   ssl->signed_cert_timestamps_enabled =
@@ -1122,7 +1122,8 @@ int SSL_get_verify_depth(const SSL *ssl) {
 }
 
 int SSL_get_extms_support(const SSL *ssl) {
-  return ssl->s3->tmp.extended_master_secret == 1;
+  return ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
+         ssl->s3->tmp.extended_master_secret == 1;
 }
 
 int (*SSL_get_verify_callback(const SSL *ssl))(int, X509_STORE_CTX *) {
@@ -1834,7 +1835,8 @@ int SSL_CTX_set1_tls_channel_id(SSL_CTX *ctx, EVP_PKEY *private_key) {
   }
 
   EVP_PKEY_free(ctx->tlsext_channel_id_private);
-  ctx->tlsext_channel_id_private = EVP_PKEY_up_ref(private_key);
+  EVP_PKEY_up_ref(private_key);
+  ctx->tlsext_channel_id_private = private_key;
   ctx->tlsext_channel_id_enabled = 1;
 
   return 1;
@@ -1847,7 +1849,8 @@ int SSL_set1_tls_channel_id(SSL *ssl, EVP_PKEY *private_key) {
   }
 
   EVP_PKEY_free(ssl->tlsext_channel_id_private);
-  ssl->tlsext_channel_id_private = EVP_PKEY_up_ref(private_key);
+  EVP_PKEY_up_ref(private_key);
+  ssl->tlsext_channel_id_private = private_key;
   ssl->tlsext_channel_id_enabled = 1;
 
   return 1;
@@ -1903,10 +1906,11 @@ void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
   uint32_t mask_a = 0;
 
   if (ssl->cert->x509 != NULL && ssl_has_private_key(ssl)) {
-    if (ssl_private_key_type(ssl) == EVP_PKEY_RSA) {
+    int type = ssl_private_key_type(ssl);
+    if (type == NID_rsaEncryption) {
       mask_k |= SSL_kRSA;
       mask_a |= SSL_aRSA;
-    } else if (ssl_private_key_type(ssl) == EVP_PKEY_EC) {
+    } else if (ssl_is_ecdsa_key_type(type)) {
       /* An ECC certificate may be usable for ECDSA cipher suites depending on
        * the key usage extension and on the client's group preferences. */
       X509 *x = ssl->cert->x509;
@@ -2528,7 +2532,8 @@ int ssl3_can_false_start(const SSL *ssl) {
       SSL_version(ssl) == TLS1_2_VERSION &&
       (ssl->s3->alpn_selected || ssl->s3->next_proto_neg_seen) &&
       cipher != NULL &&
-      cipher->algorithm_mkey == SSL_kECDHE &&
+      (cipher->algorithm_mkey == SSL_kECDHE ||
+       cipher->algorithm_mkey == SSL_kCECPQ1) &&
       cipher->algorithm_mac == SSL_AEAD;
 }
 
@@ -2714,10 +2719,6 @@ uint64_t SSL_get_write_sequence(const SSL *ssl) {
 
 uint16_t SSL_get_peer_signature_algorithm(const SSL *ssl) {
   return ssl->s3->tmp.peer_signature_algorithm;
-}
-
-uint8_t SSL_get_server_key_exchange_hash(const SSL *ssl) {
-  return (uint8_t) (SSL_get_peer_signature_algorithm(ssl) >> 8);
 }
 
 size_t SSL_get_client_random(const SSL *ssl, uint8_t *out, size_t max_out) {

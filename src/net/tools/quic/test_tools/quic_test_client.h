@@ -30,6 +30,7 @@ namespace net {
 
 class ProofVerifier;
 
+class ProofVerifier;
 class QuicPacketWriterWrapper;
 
 namespace test {
@@ -50,6 +51,13 @@ class MockableQuicClient : public QuicClient {
                      const QuicConfig& config,
                      const QuicVersionVector& supported_versions,
                      EpollServer* epoll_server);
+
+  MockableQuicClient(IPEndPoint server_address,
+                     const QuicServerId& server_id,
+                     const QuicConfig& config,
+                     const QuicVersionVector& supported_versions,
+                     EpollServer* epoll_server,
+                     std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~MockableQuicClient() override;
   QuicPacketWriter* CreateQuicPacketWriter() override;
@@ -81,6 +89,11 @@ class QuicTestClient : public test::SimpleClient,
                  const std::string& server_hostname,
                  const QuicConfig& config,
                  const QuicVersionVector& supported_versions);
+  QuicTestClient(IPEndPoint server_address,
+                 const std::string& server_hostname,
+                 const QuicConfig& config,
+                 const QuicVersionVector& supported_versions,
+                 std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~QuicTestClient() override;
 

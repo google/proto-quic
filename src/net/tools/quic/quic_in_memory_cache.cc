@@ -69,7 +69,7 @@ class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
     body_ = StringPiece(file_contents_.data() + headers_end,
                         file_contents_.size() - headers_end);
 
-    CreateSpdyHeadersFromHttpResponse(*http_headers_, HTTP2, &spdy_headers_);
+    CreateSpdyHeadersFromHttpResponse(*http_headers_, &spdy_headers_);
   }
 
  private:

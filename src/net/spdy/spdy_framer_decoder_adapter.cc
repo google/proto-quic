@@ -197,7 +197,7 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
 
  public:
   explicit NestedSpdyFramerDecoder(SpdyFramer* outer)
-      : framer_(HTTP2, false), outer_(outer) {
+      : framer_(HTTP2, nullptr), outer_(outer) {
     DVLOG(1) << PRETTY_THIS;
   }
   ~NestedSpdyFramerDecoder() override { DVLOG(1) << PRETTY_THIS; }
@@ -254,8 +254,10 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
   std::unique_ptr<SpdyFramerVisitorAdapter> visitor_adapter_;
 };
 
-SpdyFramerDecoderAdapter* CreateNestedSpdyFramerDecoder(SpdyFramer* outer) {
-  return new NestedSpdyFramerDecoder(outer);
+std::unique_ptr<SpdyFramerDecoderAdapter> CreateNestedSpdyFramerDecoder(
+    SpdyFramer* outer) {
+  return std::unique_ptr<SpdyFramerDecoderAdapter>(
+      new NestedSpdyFramerDecoder(outer));
 }
 
 }  // namespace net

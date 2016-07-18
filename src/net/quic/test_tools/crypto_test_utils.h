@@ -142,14 +142,14 @@ class CryptoTestUtils {
   static std::string GetValueForTag(const CryptoHandshakeMessage& message,
                                     QuicTag tag);
 
-  // Returns a |ProofSource| that serves up test certificates.
-  static ProofSource* ProofSourceForTesting();
+  // Returns a new |ProofSource| that serves up test certificates.
+  static std::unique_ptr<ProofSource> ProofSourceForTesting();
 
   // Returns a |ProofVerifier| that uses the QUIC testing root CA.
-  static ProofVerifier* ProofVerifierForTesting();
+  static std::unique_ptr<ProofVerifier> ProofVerifierForTesting();
 
   // Returns a real ProofVerifier (not a fake proof verifier) for testing.
-  static ProofVerifier* RealProofVerifierForTesting();
+  static std::unique_ptr<ProofVerifier> RealProofVerifierForTesting();
 
   // Returns a hash of the leaf test certificate.
   static uint64_t LeafCertHashForTesting();

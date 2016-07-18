@@ -365,8 +365,7 @@ int SpdyProxyClientSocket::DoSendRequest() {
                  base::Unretained(&request_.extra_headers), &request_line));
 
   std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock());
-  CreateSpdyHeadersFromHttpRequest(request_, request_.extra_headers,
-                                   spdy_stream_->GetProtocolVersion(), true,
+  CreateSpdyHeadersFromHttpRequest(request_, request_.extra_headers, true,
                                    headers.get());
 
   return spdy_stream_->SendRequestHeaders(std::move(headers),
@@ -451,8 +450,7 @@ SpdyResponseHeadersStatus SpdyProxyClientSocket::OnResponseHeadersUpdated(
     return RESPONSE_HEADERS_ARE_COMPLETE;
 
   // Save the response
-  if (!SpdyHeadersToHttpResponse(
-          response_headers, spdy_stream_->GetProtocolVersion(), &response_))
+  if (!SpdyHeadersToHttpResponse(response_headers, &response_))
     return RESPONSE_HEADERS_ARE_INCOMPLETE;
 
   OnIOComplete(OK);

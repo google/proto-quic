@@ -631,10 +631,6 @@ int SpdyStream::OnDataSent(size_t frame_size) {
   }
 }
 
-SpdyMajorVersion SpdyStream::GetProtocolVersion() const {
-  return session_->GetProtocolVersion();
-}
-
 void SpdyStream::LogStreamError(int status, const std::string& description) {
   net_log_.AddEvent(NetLog::TYPE_HTTP2_STREAM_ERROR,
                     base::Bind(&NetLogSpdyStreamErrorCallback, stream_id_,
@@ -755,10 +751,6 @@ bool SpdyStream::IsReservedRemote() const {
   return io_state_ == STATE_RESERVED_REMOTE;
 }
 
-NextProto SpdyStream::GetProtocol() const {
-  return session_->protocol();
-}
-
 void SpdyStream::AddRawReceivedBytes(size_t received_bytes) {
   raw_received_bytes_ += received_bytes;
 }
@@ -785,7 +777,7 @@ GURL SpdyStream::GetUrlFromHeaders() const {
   if (!request_headers_)
     return GURL();
 
-  return GetUrlFromHeaderBlock(*request_headers_, GetProtocolVersion());
+  return GetUrlFromHeaderBlock(*request_headers_);
 }
 
 bool SpdyStream::HasUrlFromHeaders() const {

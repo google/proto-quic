@@ -6,6 +6,7 @@
 
 #include <openssl/bytestring.h>
 #include <openssl/ec.h>
+#include <openssl/ec_key.h>
 #include <openssl/evp.h>
 #include <openssl/mem.h>
 
@@ -18,16 +19,23 @@ namespace net {
 
 namespace {
 
+const size_t kUncompressedPointLen = 65;
+
 bool BuildTokenBindingID(crypto::ECPrivateKey* key, CBB* out) {
   EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key->key());
   DCHECK(ec_key);
 
+  uint8_t point_buf[kUncompressedPointLen];
+  if (EC_POINT_point2oct(
+          EC_KEY_get0_group(ec_key), EC_KEY_get0_public_key(ec_key),
+          POINT_CONVERSION_UNCOMPRESSED, point_buf, kUncompressedPointLen,
+          NULL) != kUncompressedPointLen) {
+    return false;
+  }
   CBB ec_point;
   return CBB_add_u8(out, TB_PARAM_ECDSAP256) &&
          CBB_add_u8_length_prefixed(out, &ec_point) &&
-         EC_POINT_point2cbb(&ec_point, EC_KEY_get0_group(ec_key),
-                            EC_KEY_get0_public_key(ec_key),
-                            POINT_CONVERSION_UNCOMPRESSED, nullptr) &&
+         CBB_add_bytes(&ec_point, point_buf + 1, kUncompressedPointLen - 1) &&
          CBB_flush(out);
 }
 
@@ -162,12 +170,20 @@ bool ParseTokenBindingMessage(base::StringPiece token_binding_message,
 bool VerifyEKMSignature(base::StringPiece ec_point,
                         base::StringPiece signature,
                         base::StringPiece ekm) {
+  if (ec_point.size() != kUncompressedPointLen - 1)
+    return false;
+  uint8_t x9_62_ec_point[kUncompressedPointLen];
+  x9_62_ec_point[0] = 4;
+  memcpy(x9_62_ec_point + 1, ec_point.data(), kUncompressedPointLen - 1);
   crypto::ScopedEC_Key key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EC_KEY* keyp = key.get();
-  const uint8_t* ec_point_data =
-      reinterpret_cast<const uint8_t*>(ec_point.data());
-  if (o2i_ECPublicKey(&keyp, &ec_point_data, ec_point.size()) != key.get())
+  crypto::ScopedEC_POINT pub_key(EC_POINT_new(EC_KEY_get0_group(keyp)));
+  if (!EC_POINT_oct2point(EC_KEY_get0_group(keyp), pub_key.get(),
+                          x9_62_ec_point, kUncompressedPointLen, nullptr) ||
+      !EC_KEY_set_public_key(keyp, pub_key.get())) {
     return false;
+  }
+
   crypto::ScopedECDSA_SIG sig(RawToECDSA_SIG(keyp, signature));
   if (!sig)
     return false;

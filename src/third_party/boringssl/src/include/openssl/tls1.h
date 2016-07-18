@@ -211,6 +211,14 @@ extern "C" {
 #define TLSEXT_TYPE_early_data 42
 #define TLSEXT_TYPE_cookie 44
 
+/* TLSEXT_TYPE_draft_version is the extension used to advertise the TLS 1.3
+ * draft implemented.
+ *
+ * See
+ * https://github.com/tlswg/tls13-spec/wiki/Implementations#version-negotiation
+ */
+#define TLSEXT_TYPE_draft_version 0xff02
+
 /* ExtensionType value from RFC5746 */
 #define TLSEXT_TYPE_renegotiate 0xff01
 
@@ -244,20 +252,6 @@ extern "C" {
 #define TLSEXT_hash_sha256 4
 #define TLSEXT_hash_sha384 5
 #define TLSEXT_hash_sha512 6
-
-#define SSL_SIGN_RSA_PKCS1_SHA1         0x0201
-#define SSL_SIGN_RSA_PKCS1_SHA256       0x0401
-#define SSL_SIGN_RSA_PKCS1_SHA384       0x0501
-#define SSL_SIGN_RSA_PKCS1_SHA512       0x0601
-#define SSL_SIGN_ECDSA_SHA1             0x0203
-#define SSL_SIGN_ECDSA_SECP256R1_SHA256 0x0403
-#define SSL_SIGN_ECDSA_SECP384R1_SHA384 0x0503
-#define SSL_SIGN_ECDSA_SECP521R1_SHA512 0x0603
-
-/* Reserved SignatureScheme value to indicate RSA with MD5-SHA1. This will never
- * be negotiated in TLS 1.2 and up, but is used to unify signing interfaces in
- * older TLS versions. */
-#define SSL_SIGN_RSA_PKCS1_MD5_SHA1           0xff01
 
 #define TLSEXT_MAXLEN_host_name 255
 

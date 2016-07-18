@@ -60,6 +60,7 @@ if (is_win && !is_msan) {
     }
   }
 } else {
+  # This has no sources on some platforms so must be a source_set.
   source_set("boringssl_asm") {
     visibility = [ ":*" ]  # Only targets in this file can depend on this.
 

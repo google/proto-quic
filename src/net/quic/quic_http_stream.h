@@ -207,6 +207,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   // invoked.
   QuicClientPushPromiseIndex::TryHandle* push_handle_;
 
+  // Set to true when DoLoop() is being executed, false otherwise.
+  bool in_loop_;
+
   base::WeakPtrFactory<QuicHttpStream> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicHttpStream);

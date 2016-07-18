@@ -239,7 +239,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
 }
 
 TEST_P(ProofTest, UseAfterFree) {
-  ProofSource* source = CryptoTestUtils::ProofSourceForTesting();
+  std::unique_ptr<ProofSource> source(CryptoTestUtils::ProofSourceForTesting());
 
   const string server_config = "server config bytes";
   const string hostname = "test.example.com";
@@ -254,7 +254,7 @@ TEST_P(ProofTest, UseAfterFree) {
 
   // Make sure we can safely access results after deleting where they came from.
   EXPECT_FALSE(chain->HasOneRef());
-  delete source;
+  source = nullptr;
   EXPECT_TRUE(chain->HasOneRef());
 
   EXPECT_FALSE(chain->certs.empty());

@@ -114,6 +114,7 @@
 
 #include <openssl/ssl.h>
 
+#include <assert.h>
 #include <string.h>
 
 #include <openssl/bn.h>
@@ -122,6 +123,7 @@
 #include <openssl/dh.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
+#include <openssl/sha.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -174,7 +176,8 @@ CERT *ssl_cert_dup(CERT *cert) {
   }
 
   if (cert->privatekey != NULL) {
-    ret->privatekey = EVP_PKEY_up_ref(cert->privatekey);
+    EVP_PKEY_up_ref(cert->privatekey);
+    ret->privatekey = cert->privatekey;
   }
 
   if (cert->chain) {
@@ -226,7 +229,7 @@ void ssl_cert_free(CERT *c) {
 
   ssl_cert_clear_certs(c);
   OPENSSL_free(c->peer_sigalgs);
-  OPENSSL_free(c->digest_nids);
+  OPENSSL_free(c->sigalgs);
   X509_STORE_free(c->verify_store);
 
   OPENSSL_free(c);
@@ -416,6 +419,63 @@ int SSL_CTX_add_client_CA(SSL_CTX *ctx, X509 *x509) {
   return add_client_CA(&ctx->client_CA, x509);
 }
 
+int ssl_has_certificate(const SSL *ssl) {
+  return ssl->cert->x509 != NULL && ssl_has_private_key(ssl);
+}
+
+STACK_OF(X509) *ssl_parse_cert_chain(SSL *ssl, uint8_t *out_alert,
+                                     uint8_t *out_leaf_sha256, CBS *cbs) {
+  STACK_OF(X509) *ret = sk_X509_new_null();
+  if (ret == NULL) {
+    *out_alert = SSL_AD_INTERNAL_ERROR;
+    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+    return NULL;
+  }
+
+  X509 *x = NULL;
+  CBS certificate_list;
+  if (!CBS_get_u24_length_prefixed(cbs, &certificate_list)) {
+    *out_alert = SSL_AD_DECODE_ERROR;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    goto err;
+  }
+
+  while (CBS_len(&certificate_list) > 0) {
+    CBS certificate;
+    if (!CBS_get_u24_length_prefixed(&certificate_list, &certificate)) {
+      *out_alert = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_LENGTH_MISMATCH);
+      goto err;
+    }
+
+    /* Retain the hash of the leaf certificate if requested. */
+    if (sk_X509_num(ret) == 0 && out_leaf_sha256 != NULL) {
+      SHA256(CBS_data(&certificate), CBS_len(&certificate), out_leaf_sha256);
+    }
+
+    /* A u24 length cannot overflow a long. */
+    const uint8_t *data = CBS_data(&certificate);
+    x = d2i_X509(NULL, &data, (long)CBS_len(&certificate));
+    if (x == NULL || data != CBS_data(&certificate) + CBS_len(&certificate)) {
+      *out_alert = SSL_AD_DECODE_ERROR;
+      goto err;
+    }
+    if (!sk_X509_push(ret, x)) {
+      *out_alert = SSL_AD_INTERNAL_ERROR;
+      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+      goto err;
+    }
+    x = NULL;
+  }
+
+  return ret;
+
+err:
+  X509_free(x);
+  sk_X509_pop_free(ret, X509_free);
+  return NULL;
+}
+
 int ssl_add_cert_to_cbb(CBB *cbb, X509 *x509) {
   int len = i2d_X509(x509, NULL);
   if (len < 0) {
@@ -440,12 +500,12 @@ static int ssl_add_cert_with_length(CBB *cbb, X509 *x509) {
 }
 
 int ssl_add_cert_chain(SSL *ssl, CBB *cbb) {
+  if (!ssl_has_certificate(ssl)) {
+    return CBB_add_u24(cbb, 0);
+  }
+
   CERT *cert = ssl->cert;
   X509 *x = cert->x509;
-  if (x == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_SET);
-    return 0;
-  }
 
   CBB child;
   if (!CBB_add_u24_length_prefixed(cbb, &child)) {
@@ -491,6 +551,89 @@ int ssl_add_cert_chain(SSL *ssl, CBB *cbb) {
       }
     }
     X509_STORE_CTX_cleanup(&xs_ctx);
+  }
+
+  return CBB_flush(cbb);
+}
+
+static int ca_dn_cmp(const X509_NAME **a, const X509_NAME **b) {
+  return X509_NAME_cmp(*a, *b);
+}
+
+STACK_OF(X509_NAME) *
+    ssl_parse_client_CA_list(SSL *ssl, uint8_t *out_alert, CBS *cbs) {
+  STACK_OF(X509_NAME) *ret = sk_X509_NAME_new(ca_dn_cmp);
+  X509_NAME *name = NULL;
+  if (ret == NULL) {
+    *out_alert = SSL_AD_INTERNAL_ERROR;
+    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+    return NULL;
+  }
+
+  CBS child;
+  if (!CBS_get_u16_length_prefixed(cbs, &child)) {
+    *out_alert = SSL_AD_DECODE_ERROR;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_LENGTH_MISMATCH);
+    goto err;
+  }
+
+  while (CBS_len(&child) > 0) {
+    CBS distinguished_name;
+    if (!CBS_get_u16_length_prefixed(&child, &distinguished_name)) {
+      *out_alert = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CA_DN_TOO_LONG);
+      goto err;
+    }
+
+    const uint8_t *ptr = CBS_data(&distinguished_name);
+    /* A u16 length cannot overflow a long. */
+    name = d2i_X509_NAME(NULL, &ptr, (long)CBS_len(&distinguished_name));
+    if (name == NULL ||
+        ptr != CBS_data(&distinguished_name) + CBS_len(&distinguished_name)) {
+      *out_alert = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+      goto err;
+    }
+
+    if (!sk_X509_NAME_push(ret, name)) {
+      *out_alert = SSL_AD_INTERNAL_ERROR;
+      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
+      goto err;
+    }
+    name = NULL;
+  }
+
+  return ret;
+
+err:
+  X509_NAME_free(name);
+  sk_X509_NAME_pop_free(ret, X509_NAME_free);
+  return NULL;
+}
+
+int ssl_add_client_CA_list(SSL *ssl, CBB *cbb) {
+  CBB child, name_cbb;
+  if (!CBB_add_u16_length_prefixed(cbb, &child)) {
+    return 0;
+  }
+
+  STACK_OF(X509_NAME) *sk = SSL_get_client_CA_list(ssl);
+  if (sk == NULL) {
+    return CBB_flush(cbb);
+  }
+
+  for (size_t i = 0; i < sk_X509_NAME_num(sk); i++) {
+    X509_NAME *name = sk_X509_NAME_value(sk, i);
+    int len = i2d_X509_NAME(name, NULL);
+    if (len < 0) {
+      return 0;
+    }
+    uint8_t *ptr;
+    if (!CBB_add_u16_length_prefixed(&child, &name_cbb) ||
+        !CBB_add_space(&name_cbb, &ptr, (size_t)len) ||
+        (len > 0 && i2d_X509_NAME(name, &ptr) < 0)) {
+      return 0;
+    }
   }
 
   return CBB_flush(cbb);
@@ -584,4 +727,44 @@ int SSL_CTX_get_extra_chain_certs(const SSL_CTX *ctx,
 int SSL_get0_chain_certs(const SSL *ssl, STACK_OF(X509) **out_chain) {
   *out_chain = ssl->cert->chain;
   return 1;
+}
+
+int ssl_check_leaf_certificate(SSL *ssl, X509 *leaf) {
+  int ret = 0;
+  EVP_PKEY *pkey = X509_get_pubkey(leaf);
+  if (pkey == NULL) {
+    goto err;
+  }
+
+  /* Check the certificate's type matches the cipher. */
+  const SSL_CIPHER *cipher = ssl->s3->tmp.new_cipher;
+  int expected_type = ssl_cipher_get_key_type(cipher);
+  assert(expected_type != EVP_PKEY_NONE);
+  if (pkey->type != expected_type) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CERTIFICATE_TYPE);
+    goto err;
+  }
+
+  if (cipher->algorithm_auth & SSL_aECDSA) {
+    /* TODO(davidben): This behavior is preserved from upstream. Should key
+     * usages be checked in other cases as well? */
+    /* This call populates the ex_flags field correctly */
+    X509_check_purpose(leaf, -1, 0);
+    if ((leaf->ex_flags & EXFLAG_KUSAGE) &&
+        !(leaf->ex_kusage & X509v3_KU_DIGITAL_SIGNATURE)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_ECC_CERT_NOT_FOR_SIGNING);
+      goto err;
+    }
+
+    if (!tls1_check_ec_cert(ssl, leaf)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ECC_CERT);
+      goto err;
+    }
+  }
+
+  ret = 1;
+
+err:
+  EVP_PKEY_free(pkey);
+  return ret;
 }

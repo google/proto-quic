@@ -62,7 +62,8 @@ std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromKey(EVP_PKEY* key) {
   if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA)
     return nullptr;
   std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey);
-  copy->key_ = EVP_PKEY_up_ref(key);
+  EVP_PKEY_up_ref(key);
+  copy->key_ = key;
   return copy;
 }
 

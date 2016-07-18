@@ -13,6 +13,7 @@
 
 #include "base/base_export.h"
 #include "base/gtest_prod_util.h"
+#include "base/strings/string_piece.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/values.h"
 
@@ -39,7 +40,7 @@ enum TraceRecordMode {
 
 class BASE_EXPORT TraceConfig {
  public:
-  typedef std::vector<std::string> StringList;
+  using StringList = std::vector<std::string>;
 
   // Specifies the memory dump config for tracing.
   // Used only when "memory-infra" category is enabled.
@@ -124,11 +125,10 @@ class BASE_EXPORT TraceConfig {
   // Example: TraceConfig("DELAY(gpu.PresentingFrame;16;alternating)", "");
   //          would make swap buffers take at least 16 ms every other time it
   //          is called; and use default options.
-  TraceConfig(const std::string& category_filter_string,
-              const std::string& trace_options_string);
+  TraceConfig(StringPiece category_filter_string,
+              StringPiece trace_options_string);
 
-  TraceConfig(const std::string& category_filter_string,
-              TraceRecordMode record_mode);
+  TraceConfig(StringPiece category_filter_string, TraceRecordMode record_mode);
 
   // Create TraceConfig object from the trace config string.
   //
@@ -158,7 +158,7 @@ class BASE_EXPORT TraceConfig {
   //
   // Note: memory_dump_config can be specified only if
   // disabled-by-default-memory-infra category is enabled.
-  explicit TraceConfig(const std::string& config_string);
+  explicit TraceConfig(StringPiece config_string);
 
   // Functionally identical to the above, but takes a parsed dictionary as input
   // instead of its JSON serialization.
@@ -233,25 +233,24 @@ class BASE_EXPORT TraceConfig {
   void InitializeFromConfigDict(const DictionaryValue& dict);
 
   // Initialize from a config string.
-  void InitializeFromConfigString(const std::string& config_string);
+  void InitializeFromConfigString(StringPiece config_string);
 
   // Initialize from category filter and trace options strings
-  void InitializeFromStrings(const std::string& category_filter_string,
-                             const std::string& trace_options_string);
+  void InitializeFromStrings(StringPiece category_filter_string,
+                             StringPiece trace_options_string);
 
-  void SetCategoriesFromIncludedList(const base::ListValue& included_list);
-  void SetCategoriesFromExcludedList(const base::ListValue& excluded_list);
-  void SetSyntheticDelaysFromList(const base::ListValue& list);
-  void AddCategoryToDict(base::DictionaryValue& dict,
+  void SetCategoriesFromIncludedList(const ListValue& included_list);
+  void SetCategoriesFromExcludedList(const ListValue& excluded_list);
+  void SetSyntheticDelaysFromList(const ListValue& list);
+  void AddCategoryToDict(DictionaryValue* dict,
                          const char* param,
                          const StringList& categories) const;
 
   void SetMemoryDumpConfigFromConfigDict(
-      const base::DictionaryValue& memory_dump_config);
+      const DictionaryValue& memory_dump_config);
   void SetDefaultMemoryDumpConfig();
 
-  // Convert TraceConfig to the dict representation of the TraceConfig.
-  void ToDict(base::DictionaryValue& dict) const;
+  std::unique_ptr<DictionaryValue> ToDict() const;
 
   std::string ToTraceOptionsString() const;
 
@@ -267,8 +266,7 @@ class BASE_EXPORT TraceConfig {
   // category is enabled from the tracing runtime's perspective.
   bool IsCategoryEnabled(const char* category_name) const;
 
-  static bool IsEmptyOrContainsLeadingOrTrailingWhitespace(
-      const std::string& str);
+  static bool IsEmptyOrContainsLeadingOrTrailingWhitespace(StringPiece str);
 
   bool HasIncludedPatterns() const;
 

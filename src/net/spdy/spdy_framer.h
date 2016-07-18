@@ -355,6 +355,11 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     LAST_ERROR,  // Must be the last entry in the enum.
   };
 
+  // Typedef for a function used to create SpdyFramerDecoderAdapter's.
+  // Defined in support of evaluating an alternate HTTP/2 decoder.
+  typedef std::unique_ptr<SpdyFramerDecoderAdapter> (*DecoderAdapterFactoryFn)(
+      SpdyFramer* outer);
+
   // Constant for invalid (or unknown) stream IDs.
   static const SpdyStreamId kInvalidStream;
 
@@ -377,8 +382,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   explicit SpdyFramer(SpdyMajorVersion version);
 
   // Used recursively from the above constructor in order to support
-  // instantiating a SpdyFramerDecoderAdapter selected via flags.
-  SpdyFramer(SpdyMajorVersion version, bool choose_decoder);
+  // instantiating a SpdyFramerDecoderAdapter selected via flags or some other
+  // means.
+  SpdyFramer(SpdyMajorVersion version, DecoderAdapterFactoryFn adapter_factory);
 
   virtual ~SpdyFramer();
 

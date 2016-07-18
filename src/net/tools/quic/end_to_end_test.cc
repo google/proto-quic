@@ -153,26 +153,30 @@ vector<TestParams> GetTestParams() {
   // to do 0-RTT across incompatible versions. Chromium only supports
   // a single version at a time anyway. :)
   QuicVersionVector all_supported_versions = QuicSupportedVersions();
-  QuicVersionVector version_buckets[4];
+  QuicVersionVector version_buckets[5];
 
   for (const QuicVersion version : all_supported_versions) {
     if (version <= QUIC_VERSION_25) {
+      // Versions: 25
       // SPDY/4
       version_buckets[0].push_back(version);
-    } else if (version <= QUIC_VERSION_32) {
-      // QUIC_VERSION_26 changes the kdf in a way that is incompatible with
-      // version negotiation across the version 26 boundary.
+    } else if (version <= QUIC_VERSION_30) {
+      // Versions: 26-30
+      // v26 adds a hash of the expected leaf cert in the XLCT tag.
       version_buckets[1].push_back(version);
-    } else if (version <= QUIC_VERSION_33) {
-      // QUIC_VERSION_33 changes the kdf in a way that is incompatible with
-      // version negotiation across the version 33 boundary, by using the
-      // diversification nonce.
+    } else if (version <= QUIC_VERSION_32) {
+      // Versions: 31-32
+      // v31 adds a hash of the CHLO into the proof signature.
       version_buckets[2].push_back(version);
-    } else {
-      // QUIC_VERSION_34 deprecates entropy and uses new ack and stop waiting
-      // wire formats, so it is incompatible with version negotiation across the
-      // version 34 boundary.
+    } else if (version <= QUIC_VERSION_33) {
+      // Versions: 33
+      // v33 adds a diversification nonce into the hkdf.
       version_buckets[3].push_back(version);
+    } else {
+      // Versions: 34+
+      // QUIC_VERSION_34 deprecates entropy and uses new ack and stop waiting
+      // wire formats.
+      version_buckets[4].push_back(version);
     }
   }
 
@@ -299,7 +303,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   EndToEndTest()
       : initialized_(false),
         server_address_(IPEndPoint(Loopback4(), 0)),
-        server_hostname_("example.com"),
+        server_hostname_("test.example.com"),
         server_started_(false),
         strike_register_no_startup_period_(false),
         chlo_multiplier_(0),
@@ -341,9 +345,9 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   }
 
   QuicTestClient* CreateQuicClient(QuicPacketWriterWrapper* writer) {
-    QuicTestClient* client =
-        new QuicTestClient(server_address_, server_hostname_, client_config_,
-                           client_supported_versions_);
+    QuicTestClient* client = new QuicTestClient(
+        server_address_, server_hostname_, client_config_,
+        client_supported_versions_, CryptoTestUtils::ProofVerifierForTesting());
     client->UseWriter(writer);
     client->Connect();
     return client;
@@ -491,7 +495,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   }
 
   void AddToCache(StringPiece path, int response_code, StringPiece body) {
-    QuicInMemoryCache::GetInstance()->AddSimpleResponse("www.google.com", path,
+    QuicInMemoryCache::GetInstance()->AddSimpleResponse(server_hostname_, path,
                                                         response_code, body);
   }
 
@@ -2466,7 +2470,7 @@ TEST_P(EndToEndTest, Trailers) {
   trailers["some-trailing-header"] = "trailing-header-value";
 
   QuicInMemoryCache::GetInstance()->AddResponse(
-      "www.google.com", "/trailer_url", std::move(headers), kBody,
+      server_hostname_, "/trailer_url", std::move(headers), kBody,
       trailers.Clone());
 
   EXPECT_EQ(kBody, client_->SendSynchronousRequest("/trailer_url"));

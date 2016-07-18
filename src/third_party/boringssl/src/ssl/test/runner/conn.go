@@ -55,7 +55,7 @@ type Conn struct {
 	peerSignatureAlgorithm signatureAlgorithm
 
 	clientRandom, serverRandom [32]byte
-	masterSecret               [48]byte
+	exporterSecret             []byte
 
 	clientProtocol         string
 	clientProtocolFallback bool
@@ -76,6 +76,10 @@ type Conn struct {
 	rawInput *block       // raw input, right off the wire
 	input    *block       // application record waiting to be read
 	hand     bytes.Buffer // handshake record waiting to be read
+
+	// pendingFlight, if PackHandshakeFlight is enabled, is the buffer of
+	// handshake data to be split into records at the end of the flight.
+	pendingFlight bytes.Buffer
 
 	// DTLS state
 	sendHandshakeSeq uint16
@@ -193,6 +197,13 @@ func (hc *halfConn) changeCipherSpec(config *Config) error {
 		hc.mac = nil
 	}
 	return nil
+}
+
+// updateKeys sets the current cipher state.
+func (hc *halfConn) updateKeys(cipher interface{}, version uint16) {
+	hc.version = version
+	hc.cipher = cipher
+	hc.incEpoch()
 }
 
 // incSeq increments the sequence number.
@@ -765,17 +776,18 @@ func (c *Conn) doReadRecord(want recordType) (recordType, *block, error) {
 
 	// Process message.
 	b, c.rawInput = c.in.splitBlock(b, recordHeaderLen+n)
-	ok, off, encTyp, err := c.in.decrypt(b)
+	ok, off, encTyp, alertValue := c.in.decrypt(b)
+	if !ok {
+		return 0, nil, c.in.setErrorLocked(c.sendAlert(alertValue))
+	}
+	b.off = off
+
 	if c.vers >= VersionTLS13 && c.in.cipher != nil {
 		if typ != recordTypeApplicationData {
 			return 0, nil, c.in.setErrorLocked(fmt.Errorf("tls: outer record type is not application data"))
 		}
 		typ = encTyp
 	}
-	if !ok {
-		c.in.setErrorLocked(c.sendAlert(err))
-	}
-	b.off = off
 	return typ, b, nil
 }
 
@@ -929,10 +941,37 @@ func (c *Conn) writeV2Record(data []byte) (n int, err error) {
 // to the connection and updates the record layer state.
 // c.out.Mutex <= L.
 func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
+	if wrongType := c.config.Bugs.SendWrongMessageType; wrongType != 0 {
+		if typ == recordTypeHandshake && data[0] == wrongType {
+			newData := make([]byte, len(data))
+			copy(newData, data)
+			newData[0] += 42
+			data = newData
+		}
+	}
+
 	if c.isDTLS {
 		return c.dtlsWriteRecord(typ, data)
 	}
 
+	if typ == recordTypeHandshake {
+		if c.config.Bugs.SendHelloRequestBeforeEveryHandshakeMessage {
+			newData := make([]byte, 0, 4+len(data))
+			newData = append(newData, typeHelloRequest, 0, 0, 0)
+			newData = append(newData, data...)
+			data = newData
+		}
+
+		if c.config.Bugs.PackHandshakeFlight {
+			c.pendingFlight.Write(data)
+			return len(data), nil
+		}
+	}
+
+	return c.doWriteRecord(typ, data)
+}
+
+func (c *Conn) doWriteRecord(typ recordType, data []byte) (n int, err error) {
 	recordHeaderLen := tlsRecordHeaderLen
 	b := c.out.newBlock()
 	first := true
@@ -1030,6 +1069,23 @@ func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
 	return
 }
 
+func (c *Conn) flushHandshake() error {
+	if c.isDTLS {
+		return c.dtlsFlushHandshake()
+	}
+
+	for c.pendingFlight.Len() > 0 {
+		var buf [maxPlaintext]byte
+		n, _ := c.pendingFlight.Read(buf[:])
+		if _, err := c.doWriteRecord(recordTypeHandshake, buf[:n]); err != nil {
+			return err
+		}
+	}
+
+	c.pendingFlight.Reset()
+	return nil
+}
+
 func (c *Conn) doReadHandshake() ([]byte, error) {
 	if c.isDTLS {
 		return c.dtlsDoReadHandshake()
@@ -1083,11 +1139,16 @@ func (c *Conn) readHandshake() (interface{}, error) {
 		}
 	case typeNewSessionTicket:
 		m = new(newSessionTicketMsg)
+	case typeEncryptedExtensions:
+		m = new(encryptedExtensionsMsg)
 	case typeCertificate:
-		m = new(certificateMsg)
+		m = &certificateMsg{
+			hasRequestContext: c.vers >= VersionTLS13,
+		}
 	case typeCertificateRequest:
 		m = &certificateRequestMsg{
 			hasSignatureAlgorithm: c.vers >= VersionTLS12,
+			hasRequestContext:     c.vers >= VersionTLS13,
 		}
 	case typeCertificateStatus:
 		m = new(certificateStatusMsg)
@@ -1216,6 +1277,7 @@ func (c *Conn) Write(b []byte) (int, error) {
 
 	if c.config.Bugs.SendHelloRequestBeforeEveryAppDataRecord {
 		c.writeRecord(recordTypeHandshake, []byte{typeHelloRequest, 0, 0, 0})
+		c.flushHandshake()
 	}
 
 	// SSL 3.0 and TLS 1.0 are susceptible to a chosen-plaintext
@@ -1268,6 +1330,7 @@ func (c *Conn) Renegotiate() error {
 			helloReq = c.config.Bugs.BadHelloRequest
 		}
 		c.writeRecord(recordTypeHandshake, helloReq)
+		c.flushHandshake()
 	}
 
 	c.handshakeComplete = false
@@ -1473,6 +1536,12 @@ func (c *Conn) ExportKeyingMaterial(length int, label, context []byte, useContex
 		return nil, errors.New("tls: handshake has not yet been performed")
 	}
 
+	if c.vers >= VersionTLS13 {
+		// TODO(davidben): What should we do with useContext? See
+		// https://github.com/tlswg/tls13-spec/issues/546
+		return hkdfExpandLabel(c.cipherSuite.hash(), c.exporterSecret, label, context, length), nil
+	}
+
 	seedLen := len(c.clientRandom) + len(c.serverRandom)
 	if useContext {
 		seedLen += 2 + len(context)
@@ -1485,7 +1554,7 @@ func (c *Conn) ExportKeyingMaterial(length int, label, context []byte, useContex
 		seed = append(seed, context...)
 	}
 	result := make([]byte, length)
-	prfForVersion(c.vers, c.cipherSuite)(result, c.masterSecret[:], label, seed)
+	prfForVersion(c.vers, c.cipherSuite)(result, c.exporterSecret, label, seed)
 	return result, nil
 }
 

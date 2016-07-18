@@ -43,6 +43,9 @@ class QuicConfigPeer {
 
   static void SetReceivedForceHolBlocking(QuicConfig* config);
 
+  static void SetReceivedAlternateServerAddress(QuicConfig* config,
+                                                IPEndPoint addr);
+
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConfigPeer);
 };

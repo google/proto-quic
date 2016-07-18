@@ -353,6 +353,10 @@ void ssl3_read_close_notify(SSL *ssl) {
 }
 
 static int ssl3_can_renegotiate(SSL *ssl) {
+  if (ssl->server || ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return 0;
+  }
+
   switch (ssl->renegotiate_mode) {
     case ssl_renegotiate_never:
       return 0;
@@ -439,6 +443,13 @@ start:
   /* Process unexpected records. */
 
   if (type == SSL3_RT_APPLICATION_DATA && rr->type == SSL3_RT_HANDSHAKE) {
+    if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+      /* TODO(svaldez): Handle TLS 1.3 post-handshake messages. For now,
+       * silently drop all handshake records. */
+      rr->length = 0;
+      goto start;
+    }
+
     /* If peer renegotiations are disabled, all out-of-order handshake records
      * are fatal. Renegotiations as a server are never supported. */
     if (ssl->server || !ssl3_can_renegotiate(ssl)) {

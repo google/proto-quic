@@ -35,8 +35,8 @@ class QuicPacketReader;
 
 class QuicServer : public EpollCallbackInterface {
  public:
-  explicit QuicServer(ProofSource* proof_source);
-  QuicServer(ProofSource* proof_source,
+  explicit QuicServer(std::unique_ptr<ProofSource> proof_source);
+  QuicServer(std::unique_ptr<ProofSource> proof_source,
              const QuicConfig& config,
              const QuicCryptoServerConfig::ConfigOptions& server_config_options,
              const QuicVersionVector& supported_versions);

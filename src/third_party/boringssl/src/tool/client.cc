@@ -86,6 +86,11 @@ static const struct argument kArguments[] = {
       "Private-key file to use (default is no client certificate)",
     },
     {
+      "-starttls", kOptionalArgument,
+      "A STARTTLS mini-protocol to run before the TLS handshake. Supported"
+      " values: 'smtp'",
+    },
+    {
      "", kOptionalArgument, "",
     },
 };
@@ -98,24 +103,6 @@ static ScopedEVP_PKEY LoadPrivateKey(const std::string &file) {
   ScopedEVP_PKEY pkey(PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr,
                                               nullptr));
   return pkey;
-}
-
-static bool VersionFromString(uint16_t *out_version,
-                              const std::string& version) {
-  if (version == "ssl3") {
-    *out_version = SSL3_VERSION;
-    return true;
-  } else if (version == "tls1" || version == "tls1.0") {
-    *out_version = TLS1_VERSION;
-    return true;
-  } else if (version == "tls1.1") {
-    *out_version = TLS1_1_VERSION;
-    return true;
-  } else if (version == "tls1.2") {
-    *out_version = TLS1_2_VERSION;
-    return true;
-  }
-  return false;
 }
 
 static int NextProtoSelectCallback(SSL* ssl, uint8_t** out, uint8_t* outlen,
@@ -255,6 +242,18 @@ bool Client(const std::vector<std::string> &args) {
   int sock = -1;
   if (!Connect(&sock, args_map["-connect"])) {
     return false;
+  }
+
+  if (args_map.count("-starttls") != 0) {
+    const std::string& starttls = args_map["-starttls"];
+    if (starttls == "smtp") {
+      if (!DoSMTPStartTLS(sock)) {
+        return false;
+      }
+    } else {
+      fprintf(stderr, "Unknown value for -starttls: %s\n", starttls.c_str());
+      return false;
+    }
   }
 
   ScopedBIO bio(BIO_new_socket(sock, BIO_CLOSE));

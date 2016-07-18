@@ -632,6 +632,7 @@ QuicStreamFactory::QuicStreamFactory(
     int idle_connection_timeout_seconds,
     bool migrate_sessions_on_network_change,
     bool migrate_sessions_early,
+    bool allow_server_migration,
     bool force_hol_blocking,
     const QuicTagVector& connection_options,
     bool enable_token_binding)
@@ -649,10 +650,11 @@ QuicStreamFactory::QuicStreamFactory(
       socket_performance_watcher_factory_(socket_performance_watcher_factory),
       config_(InitializeQuicConfig(connection_options,
                                    idle_connection_timeout_seconds)),
-      crypto_config_(new ProofVerifierChromium(cert_verifier,
-                                               ct_policy_enforcer,
-                                               transport_security_state,
-                                               cert_transparency_verifier)),
+      crypto_config_(base::WrapUnique(
+          new ProofVerifierChromium(cert_verifier,
+                                    ct_policy_enforcer,
+                                    transport_security_state,
+                                    cert_transparency_verifier))),
       supported_versions_(supported_versions),
       enable_port_selection_(enable_port_selection),
       always_require_handshake_confirmation_(
@@ -686,6 +688,7 @@ QuicStreamFactory::QuicStreamFactory(
           NetworkChangeNotifier::AreNetworkHandlesSupported()),
       migrate_sessions_early_(migrate_sessions_early &&
                               migrate_sessions_on_network_change_),
+      allow_server_migration_(allow_server_migration),
       force_hol_blocking_(force_hol_blocking),
       port_seed_(random_generator_->RandUint64()),
       check_persisted_supports_quic_(true),
@@ -1445,7 +1448,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
       continue;
     }
 
-    MigrateSessionToNetwork(session, new_network, bound_net_log, nullptr);
+    MigrateSessionToNewNetwork(session, new_network, bound_net_log, nullptr);
   }
 }
 
@@ -1477,15 +1480,37 @@ void QuicStreamFactory::MaybeMigrateSingleSession(
     return;
   }
   OnSessionGoingAway(session);
-  MigrateSessionToNetwork(session, new_network, scoped_event_log.net_log(),
-                          packet);
+  MigrateSessionToNewNetwork(session, new_network, scoped_event_log.net_log(),
+                             packet);
 }
 
-void QuicStreamFactory::MigrateSessionToNetwork(
+void QuicStreamFactory::MigrateSessionToNewPeerAddress(
     QuicChromiumClientSession* session,
-    NetworkHandle new_network,
+    IPEndPoint peer_address,
+    const BoundNetLog& bound_net_log) {
+  if (!allow_server_migration_)
+    return;
+  // Specifying kInvalidNetworkHandle for the |network| parameter
+  // causes the session to use the default network for the new socket.
+  MigrateSession(session, peer_address,
+                 NetworkChangeNotifier::kInvalidNetworkHandle, bound_net_log,
+                 nullptr);
+}
+
+void QuicStreamFactory::MigrateSessionToNewNetwork(
+    QuicChromiumClientSession* session,
+    NetworkHandle network,
     const BoundNetLog& bound_net_log,
     scoped_refptr<StringIOBuffer> packet) {
+  MigrateSession(session, session->connection()->peer_address(), network,
+                 bound_net_log, packet);
+}
+
+void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
+                                       IPEndPoint peer_address,
+                                       NetworkHandle network,
+                                       const BoundNetLog& bound_net_log,
+                                       scoped_refptr<StringIOBuffer> packet) {
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
   // using the PortSuggester since the connection is being migrated
   // and not being newly created.
@@ -1493,9 +1518,7 @@ void QuicStreamFactory::MigrateSessionToNetwork(
       client_socket_factory_->CreateDatagramClientSocket(
           DatagramSocket::DEFAULT_BIND, RandIntCallback(),
           session->net_log().net_log(), session->net_log().source()));
-  QuicConnection* connection = session->connection();
-  if (ConfigureSocket(socket.get(), connection->peer_address(), new_network) !=
-      OK) {
+  if (ConfigureSocket(socket.get(), peer_address, network) != OK) {
     session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
     HistogramAndLogMigrationFailure(
         bound_net_log, MIGRATION_STATUS_INTERNAL_ERROR,

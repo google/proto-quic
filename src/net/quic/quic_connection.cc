@@ -681,8 +681,12 @@ bool QuicConnection::OnPacketHeader(const QuicPacketHeader& header) {
   PeerAddressChangeType peer_migration_type =
       QuicUtils::DetermineAddressChangeType(peer_address_,
                                             last_packet_source_address_);
+  // Do not migrate connection if the changed address packet is a reordered
+  // packet.
   if (active_peer_migration_type_ == NO_CHANGE &&
-      peer_migration_type != NO_CHANGE) {
+      peer_migration_type != NO_CHANGE &&
+      (!FLAGS_quic_do_not_migrate_on_old_packet ||
+       header.packet_number > received_packet_manager_.GetLargestObserved())) {
     StartPeerMigration(header.path_id, peer_migration_type);
   }
 
@@ -1064,7 +1068,7 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
         ack_queued_ = true;
       } else if (!ack_alarm_->IsSet()) {
         // Wait the minimum of a quarter min_rtt and the delayed ack time.
-        QuicTime::Delta ack_delay = QuicTime::Delta::Min(
+        QuicTime::Delta ack_delay = std::min(
             DelayedAckTime(), sent_packet_manager_->GetRttStats()->min_rtt() *
                                   ack_decimation_delay_);
         ack_alarm_->Set(clock_->ApproximateNow() + ack_delay);
@@ -1212,8 +1216,7 @@ QuicConsumedData QuicConnection::SendStreamData(
   ScopedPacketBundler ack_bundler(this, SEND_ACK_IF_PENDING);
   // The optimized path may be used for data only packets which fit into a
   // standard buffer and don't need padding.
-  if (FLAGS_quic_use_optimized_write_path && id != kCryptoStreamId &&
-      !packet_generator_.HasQueuedFrames() &&
+  if (id != kCryptoStreamId && !packet_generator_.HasQueuedFrames() &&
       iov.total_length > kMaxPacketSize) {
     // Use the fast path to send full data packets.
     return packet_generator_.ConsumeDataFastPath(id, iov, offset, fin,

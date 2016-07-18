@@ -23,7 +23,6 @@
 #include "net/cert/cert_database.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_server.h"
-#include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -46,16 +45,12 @@ class NET_EXPORT SpdySessionPool
  public:
   typedef base::TimeTicks (*TimeFunc)(void);
 
-  // |default_protocol| may be kProtoUnknown (e.g., if SPDY is
-  // disabled), in which case it's set to a default value. Otherwise,
-  // it must be a SPDY protocol.
   SpdySessionPool(HostResolver* host_resolver,
                   SSLConfigService* ssl_config_service,
                   HttpServerProperties* http_server_properties,
                   TransportSecurityState* transport_security_state,
                   bool enable_ping_based_connection_checking,
                   bool enable_priority_dependencies,
-                  NextProto default_protocol,
                   size_t session_max_recv_window_size,
                   size_t stream_max_recv_window_size,
                   SpdySessionPool::TimeFunc time_func,
@@ -71,8 +66,7 @@ class NET_EXPORT SpdySessionPool
   // processing existing streams.
 
   // Create a new SPDY session from an existing socket.  There must
-  // not already be a session for the given key. This pool must have
-  // been constructed with a valid |default_protocol| value.
+  // not already be a session for the given key.
   //
   // |is_secure| can be false for testing or when SPDY is configured
   // to work with non-secure sockets. If |is_secure| is true,
@@ -228,7 +222,6 @@ class NET_EXPORT SpdySessionPool
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
   const bool enable_priority_dependencies_;
-  const NextProto default_protocol_;
   size_t session_max_recv_window_size_;
   size_t stream_max_recv_window_size_;
   TimeFunc time_func_;

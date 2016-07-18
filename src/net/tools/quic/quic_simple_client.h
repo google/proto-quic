@@ -85,12 +85,12 @@ class QuicSimpleClient : public QuicClientBase,
   QuicSimpleClient(IPEndPoint server_address,
                    const QuicServerId& server_id,
                    const QuicVersionVector& supported_versions,
-                   ProofVerifier* proof_verifier);
+                   std::unique_ptr<ProofVerifier> proof_verifier);
   QuicSimpleClient(IPEndPoint server_address,
                    const QuicServerId& server_id,
                    const QuicVersionVector& supported_versions,
                    const QuicConfig& config,
-                   ProofVerifier* proof_verifier);
+                   std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~QuicSimpleClient() override;
 

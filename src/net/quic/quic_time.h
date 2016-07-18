@@ -70,16 +70,6 @@ class NET_EXPORT_PRIVATE QuicTime {
     // Converts the time offset to a rounded number of microseconds.
     inline int64_t ToMicroseconds() const { return time_offset_; }
 
-    // Returns the larger delta of time1 and time2.
-    static inline Delta Max(Delta delta1, Delta delta2) {
-      return delta1 < delta2 ? delta2 : delta1;
-    }
-
-    // Returns the smaller delta of time1 and time2.
-    static inline Delta Min(Delta delta1, Delta delta2) {
-      return delta1 < delta2 ? delta1 : delta2;
-    }
-
     inline bool IsZero() const { return time_offset_ == 0; }
 
     inline bool IsInfinite() const {
@@ -124,11 +114,6 @@ class NET_EXPORT_PRIVATE QuicTime {
   // Creates a new QuicTime with an infinite time.
   static QUICTIME_CONSTEXPR QuicTime Infinite() {
     return QuicTime(Delta::kQuicInfiniteTimeUs);
-  }
-
-  // Returns the later time of time1 and time2.
-  static inline QuicTime Max(QuicTime time1, QuicTime time2) {
-    return time1 < time2 ? time2 : time1;
   }
 
   // Produce the internal value to be used when logging.  This value

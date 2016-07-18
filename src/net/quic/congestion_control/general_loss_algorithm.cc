@@ -64,10 +64,10 @@ void GeneralLossAlgorithm::DetectLosses(
   }
   loss_detection_timeout_ = QuicTime::Zero();
   QuicTime::Delta max_rtt =
-      QuicTime::Delta::Max(rtt_stats.previous_srtt(), rtt_stats.latest_rtt());
+      std::max(rtt_stats.previous_srtt(), rtt_stats.latest_rtt());
   QuicTime::Delta loss_delay =
-      QuicTime::Delta::Max(QuicTime::Delta::FromMilliseconds(kMinLossDelayMs),
-                           max_rtt + (max_rtt >> reordering_shift_));
+      std::max(QuicTime::Delta::FromMilliseconds(kMinLossDelayMs),
+               max_rtt + (max_rtt >> reordering_shift_));
   QuicPacketNumber packet_number = unacked_packets.GetLeastUnacked();
   for (QuicUnackedPacketMap::const_iterator it = unacked_packets.begin();
        it != unacked_packets.end() && packet_number <= largest_observed;
@@ -133,7 +133,7 @@ void GeneralLossAlgorithm::SpuriousRetransmitDetected(
       unacked_packets.GetTransmissionInfo(spurious_retransmission).sent_time;
   // Increase the reordering fraction until enough time would be allowed.
   QuicTime::Delta max_rtt =
-      QuicTime::Delta::Max(rtt_stats.previous_srtt(), rtt_stats.latest_rtt());
+      std::max(rtt_stats.previous_srtt(), rtt_stats.latest_rtt());
   QuicTime::Delta proposed_extra_time(QuicTime::Delta::Zero());
   do {
     proposed_extra_time = max_rtt >> reordering_shift_;

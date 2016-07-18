@@ -194,7 +194,8 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     DISALLOW_COPY_AND_ASSIGN(CachedState);
   };
 
-  explicit QuicCryptoClientConfig(ProofVerifier* proof_verifier);
+  explicit QuicCryptoClientConfig(
+      std::unique_ptr<ProofVerifier> proof_verifier);
   ~QuicCryptoClientConfig();
 
   // LookupOrCreate returns a CachedState for the given |server_id|. If no such

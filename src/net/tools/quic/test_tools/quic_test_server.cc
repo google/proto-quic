@@ -149,13 +149,13 @@ class QuicTestDispatcher : public QuicDispatcher {
   QuicTestServer::CryptoStreamFactory* crypto_stream_factory_;  // Not owned.
 };
 
-QuicTestServer::QuicTestServer(ProofSource* proof_source)
-    : QuicServer(proof_source) {}
+QuicTestServer::QuicTestServer(std::unique_ptr<ProofSource> proof_source)
+    : QuicServer(std::move(proof_source)) {}
 
-QuicTestServer::QuicTestServer(ProofSource* proof_source,
+QuicTestServer::QuicTestServer(std::unique_ptr<ProofSource> proof_source,
                                const QuicConfig& config,
                                const QuicVersionVector& supported_versions)
-    : QuicServer(proof_source,
+    : QuicServer(std::move(proof_source),
                  config,
                  QuicCryptoServerConfig::ConfigOptions(),
                  supported_versions) {}

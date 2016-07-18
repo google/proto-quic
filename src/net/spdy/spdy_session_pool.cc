@@ -38,7 +38,6 @@ SpdySessionPool::SpdySessionPool(
     TransportSecurityState* transport_security_state,
     bool enable_ping_based_connection_checking,
     bool enable_priority_dependencies,
-    NextProto default_protocol,
     size_t session_max_recv_window_size,
     size_t stream_max_recv_window_size,
     SpdySessionPool::TimeFunc time_func,
@@ -52,16 +51,10 @@ SpdySessionPool::SpdySessionPool(
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
       enable_priority_dependencies_(enable_priority_dependencies),
-      // TODO(akalin): Force callers to have a valid value of
-      // |default_protocol_|.
-      default_protocol_((default_protocol == kProtoUnknown) ? kProtoSPDY31
-                                                            : default_protocol),
       session_max_recv_window_size_(session_max_recv_window_size),
       stream_max_recv_window_size_(stream_max_recv_window_size),
       time_func_(time_func),
       proxy_delegate_(proxy_delegate) {
-  DCHECK(default_protocol_ >= kProtoSPDYMinimumVersion &&
-         default_protocol_ <= kProtoSPDYMaximumVersion);
   NetworkChangeNotifier::AddIPAddressObserver(this);
   if (ssl_config_service_.get())
     ssl_config_service_->AddObserver(this);
@@ -90,8 +83,6 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
     int certificate_error_code,
     bool is_secure) {
   TRACE_EVENT0("net", "SpdySessionPool::CreateAvailableSessionFromSocket");
-  DCHECK_GE(default_protocol_, kProtoSPDYMinimumVersion);
-  DCHECK_LE(default_protocol_, kProtoSPDYMaximumVersion);
 
   UMA_HISTOGRAM_ENUMERATION(
       "Net.SpdySessionGet", IMPORTED_FROM_SOCKET, SPDY_SESSION_GET_MAX);
@@ -100,9 +91,8 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
       key, http_server_properties_, transport_security_state_,
       verify_domain_authentication_, enable_sending_initial_data_,
       enable_ping_based_connection_checking_, enable_priority_dependencies_,
-      default_protocol_, session_max_recv_window_size_,
-      stream_max_recv_window_size_, time_func_, proxy_delegate_,
-      net_log.net_log()));
+      session_max_recv_window_size_, stream_max_recv_window_size_, time_func_,
+      proxy_delegate_, net_log.net_log()));
 
   new_session->InitializeWithSocket(std::move(connection), this, is_secure,
                                     certificate_error_code);

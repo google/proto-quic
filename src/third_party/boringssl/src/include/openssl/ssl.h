@@ -548,6 +548,8 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define DTLS1_VERSION 0xfeff
 #define DTLS1_2_VERSION 0xfefd
 
+#define TLS1_3_DRAFT_VERSION 13
+
 /* SSL_CTX_set_min_version sets the minimum protocol version for |ctx| to
  * |version|. */
 OPENSSL_EXPORT void SSL_CTX_set_min_version(SSL_CTX *ctx, uint16_t version);
@@ -869,13 +871,31 @@ OPENSSL_EXPORT int SSL_CTX_set_ocsp_response(SSL_CTX *ctx,
                                              const uint8_t *response,
                                              size_t response_len);
 
-/* SSL_set_private_key_digest_prefs copies |num_digests| NIDs from |digest_nids|
- * into |ssl|. These digests will be used, in decreasing order of preference,
- * when signing with |ssl|'s private key. It returns one on success and zero on
- * error. */
-OPENSSL_EXPORT int SSL_set_private_key_digest_prefs(SSL *ssl,
-                                                    const int *digest_nids,
-                                                    size_t num_digests);
+/* SSL_SIGN_* are signature algorithm values as defined in TLS 1.3. */
+#define SSL_SIGN_RSA_PKCS1_SHA1 0x0201
+#define SSL_SIGN_RSA_PKCS1_SHA256 0x0401
+#define SSL_SIGN_RSA_PKCS1_SHA384 0x0501
+#define SSL_SIGN_RSA_PKCS1_SHA512 0x0601
+#define SSL_SIGN_ECDSA_SHA1 0x0203
+#define SSL_SIGN_ECDSA_SECP256R1_SHA256 0x0403
+#define SSL_SIGN_ECDSA_SECP384R1_SHA384 0x0503
+#define SSL_SIGN_ECDSA_SECP521R1_SHA512 0x0603
+#define SSL_SIGN_RSA_PSS_SHA256 0x0700
+#define SSL_SIGN_RSA_PSS_SHA384 0x0701
+#define SSL_SIGN_RSA_PSS_SHA512 0x0702
+
+/* SSL_SIGN_RSA_PKCS1_MD5_SHA1 is an internal signature algorithm used to
+ * specify raw RSASSA-PKCS1-v1_5 with an MD5/SHA-1 concatenation, as used in TLS
+ * before TLS 1.2. */
+#define SSL_SIGN_RSA_PKCS1_MD5_SHA1 0xff01
+
+/* SSL_set_signing_algorithm_prefs configures |ssl| to use |prefs| as the
+ * preference list when signing with |ssl|'s private key. It returns one on
+ * success and zero on error. |prefs| should not include the internal-only value
+ * |SSL_SIGN_RSA_PKCS1_MD5_SHA1|. */
+OPENSSL_EXPORT int SSL_set_signing_algorithm_prefs(SSL *ssl,
+                                                   const uint16_t *prefs,
+                                                   size_t prefs_len);
 
 
 /* Certificate and private key convenience functions. */
@@ -962,43 +982,62 @@ enum ssl_private_key_result_t {
 /* SSL_PRIVATE_KEY_METHOD describes private key hooks. This is used to off-load
  * signing operations to a custom, potentially asynchronous, backend. */
 typedef struct ssl_private_key_method_st {
-  /* type returns either |EVP_PKEY_RSA| or |EVP_PKEY_EC| to denote the type of
-   * key used by |ssl|. */
+  /* type returns the type of the key used by |ssl|. For RSA keys, return
+   * |NID_rsaEncryption|. For ECDSA keys, return |NID_X9_62_prime256v1|,
+   * |NID_secp384r1|, or |NID_secp521r1|, depending on the curve.
+   *
+   * Returning |EVP_PKEY_EC| for ECDSA keys is deprecated and may result in
+   * connection failures in TLS 1.3. */
   int (*type)(SSL *ssl);
 
   /* max_signature_len returns the maximum length of a signature signed by the
    * key used by |ssl|. This must be a constant value for a given |ssl|. */
   size_t (*max_signature_len)(SSL *ssl);
 
-  /* sign signs |in_len| bytes of digest from |in|. |md| is the hash function
-   * used to calculate |in|. On success, it returns |ssl_private_key_success|
-   * and writes at most |max_out| bytes of signature data to |out|. On failure,
-   * it returns |ssl_private_key_failure|. If the operation has not completed,
-   * it returns |ssl_private_key_retry|. |sign| should arrange for the
-   * high-level operation on |ssl| to be retried when the operation is
-   * completed. This will result in a call to |sign_complete|.
+  /* sign signs the message |in| in using the specified signature algorithm. On
+   * success, it returns |ssl_private_key_success| and writes at most |max_out|
+   * bytes of signature data to |out| and sets |*out_len| to the number of bytes
+   * written. On failure, it returns |ssl_private_key_failure|. If the operation
+   * has not completed, it returns |ssl_private_key_retry|. |sign| should
+   * arrange for the high-level operation on |ssl| to be retried when the
+   * operation is completed. This will result in a call to |complete|.
+   *
+   * |signature_algorithm| is one of the |SSL_SIGN_*| values, as defined in TLS
+   * 1.3. Note that, in TLS 1.2, ECDSA algorithms do not require that curve
+   * sizes match hash sizes, so the curve portion of |SSL_SIGN_ECDSA_*| values
+   * must be ignored. BoringSSL will internally handle the curve matching logic
+   * where appropriate.
+   *
+   * It is an error to call |sign| while another private key operation is in
+   * progress on |ssl|. */
+  enum ssl_private_key_result_t (*sign)(SSL *ssl, uint8_t *out, size_t *out_len,
+                                        size_t max_out,
+                                        uint16_t signature_algorithm,
+                                        const uint8_t *in, size_t in_len);
+
+  /* sign_digest signs |in_len| bytes of digest from |in|. |md| is the hash
+   * function used to calculate |in|. On success, it returns
+   * |ssl_private_key_success| and writes at most |max_out| bytes of signature
+   * data to |out|. On failure, it returns |ssl_private_key_failure|. If the
+   * operation has not completed, it returns |ssl_private_key_retry|. |sign|
+   * should arrange for the high-level operation on |ssl| to be retried when the
+   * operation is completed. This will result in a call to |complete|.
    *
    * If the key is an RSA key, implementations must use PKCS#1 padding. |in| is
    * the digest itself, so the DigestInfo prefix, if any, must be prepended by
    * |sign|. If |md| is |EVP_md5_sha1|, there is no prefix.
    *
-   * It is an error to call |sign| while another private key operation is in
-   * progress on |ssl|. */
-  enum ssl_private_key_result_t (*sign)(SSL *ssl, uint8_t *out, size_t *out_len,
-                                        size_t max_out, const EVP_MD *md,
-                                        const uint8_t *in, size_t in_len);
-
-  /* sign_complete completes a pending |sign| operation. If the operation has
-   * completed, it returns |ssl_private_key_success| and writes the result to
-   * |out| as in |sign|. Otherwise, it returns |ssl_private_key_failure| on
-   * failure and |ssl_private_key_retry| if the operation is still in progress.
+   * It is an error to call |sign_digest| while another private key operation is
+   * in progress on |ssl|.
    *
-   * |sign_complete| may be called arbitrarily many times before completion, but
-   * it is an error to call |sign_complete| if there is no pending |sign|
-   * operation in progress on |ssl|. */
-  enum ssl_private_key_result_t (*sign_complete)(SSL *ssl, uint8_t *out,
-                                                 size_t *out_len,
-                                                 size_t max_out);
+   * This function is deprecated. Implement |sign| instead.
+   *
+   * TODO(davidben): Remove this function. */
+  enum ssl_private_key_result_t (*sign_digest)(SSL *ssl, uint8_t *out,
+                                               size_t *out_len, size_t max_out,
+                                               const EVP_MD *md,
+                                               const uint8_t *in,
+                                               size_t in_len);
 
   /* decrypt decrypts |in_len| bytes of encrypted data from |in|. On success it
    * returns |ssl_private_key_success|, writes at most |max_out| bytes of
@@ -1006,9 +1045,9 @@ typedef struct ssl_private_key_method_st {
    * written. On failure it returns |ssl_private_key_failure|. If the operation
    * has not completed, it returns |ssl_private_key_retry|. The caller should
    * arrange for the high-level operation on |ssl| to be retried when the
-   * operation is completed, which will result in a call to |decrypt_complete|.
-   * This function only works with RSA keys and should perform a raw RSA
-   * decryption operation with no padding.
+   * operation is completed, which will result in a call to |complete|. This
+   * function only works with RSA keys and should perform a raw RSA decryption
+   * operation with no padding.
    *
    * It is an error to call |decrypt| while another private key operation is in
    * progress on |ssl|. */
@@ -1016,18 +1055,16 @@ typedef struct ssl_private_key_method_st {
                                            size_t *out_len, size_t max_out,
                                            const uint8_t *in, size_t in_len);
 
-  /* decrypt_complete completes a pending |decrypt| operation. If the operation
-   * has completed, it returns |ssl_private_key_success| and writes the result
-   * to |out| as in |decrypt|. Otherwise, it returns |ssl_private_key_failure|
-   * on failure and |ssl_private_key_retry| if the operation is still in
-   * progress.
+  /* complete completes a pending operation. If the operation has completed, it
+   * returns |ssl_private_key_success| and writes the result to |out| as in
+   * |sign|. Otherwise, it returns |ssl_private_key_failure| on failure and
+   * |ssl_private_key_retry| if the operation is still in progress.
    *
-   * |decrypt_complete| may be called arbitrarily many times before completion,
-   * but it is an error to call |decrypt_complete| if there is no pending
-   * |decrypt| operation in progress on |ssl|. */
-  enum ssl_private_key_result_t (*decrypt_complete)(SSL *ssl, uint8_t *out,
-                                                    size_t *out_len,
-                                                    size_t max_out);
+   * |complete| may be called arbitrarily many times before completion, but it
+   * is an error to call |complete| if there is no pending operation in progress
+   * on |ssl|. */
+  enum ssl_private_key_result_t (*complete)(SSL *ssl, uint8_t *out,
+                                            size_t *out_len, size_t max_out);
 } SSL_PRIVATE_KEY_METHOD;
 
 /* SSL_set_private_key_method configures a custom private key on |ssl|.
@@ -2620,6 +2657,7 @@ OPENSSL_EXPORT const char *SSL_get_psk_identity(const SSL *ssl);
 #define SSL_AD_INTERNAL_ERROR TLS1_AD_INTERNAL_ERROR
 #define SSL_AD_USER_CANCELLED TLS1_AD_USER_CANCELLED
 #define SSL_AD_NO_RENEGOTIATION TLS1_AD_NO_RENEGOTIATION
+#define SSL_AD_MISSING_EXTENSION TLS1_AD_MISSING_EXTENSION
 #define SSL_AD_UNSUPPORTED_EXTENSION TLS1_AD_UNSUPPORTED_EXTENSION
 #define SSL_AD_CERTIFICATE_UNOBTAINABLE TLS1_AD_CERTIFICATE_UNOBTAINABLE
 #define SSL_AD_UNRECOGNIZED_NAME TLS1_AD_UNRECOGNIZED_NAME
@@ -2884,6 +2922,7 @@ OPENSSL_EXPORT void SSL_CTX_set_dos_protection_cb(
 #define SSL_ST_INIT (SSL_ST_CONNECT | SSL_ST_ACCEPT)
 #define SSL_ST_OK 0x03
 #define SSL_ST_RENEGOTIATE (0x04 | SSL_ST_INIT)
+#define SSL_ST_TLS13 (0x05 | SSL_ST_INIT)
 
 /* SSL_CB_* are possible values for the |type| parameter in the info
  * callback and the bitmasks that make them up. */
@@ -3212,14 +3251,6 @@ OPENSSL_EXPORT void SSL_load_error_strings(void);
 OPENSSL_EXPORT int SSL_CTX_set_tlsext_use_srtp(SSL_CTX *ctx,
                                                const char *profiles);
 
-/* SSL_get_server_key_exchange_hash, on a client, returns the hash the server
- * used to sign the ServerKeyExchange in TLS 1.2. If not applicable, it returns
- * |TLSEXT_hash_none|.
- *
- * TODO(davidben): Remove once Chromium switches to
- * |SSL_get_peer_signature_algorithm|. */
-OPENSSL_EXPORT uint8_t SSL_get_server_key_exchange_hash(const SSL *ssl);
-
 /* SSL_set_tlsext_use_srtp calls |SSL_set_srtp_profiles|. It returns zero on
  * success and one on failure.
  *
@@ -3250,16 +3281,16 @@ OPENSSL_EXPORT int *SSL_get_server_tmp_key(SSL *ssl, EVP_PKEY **out_key);
 
 #define SSL_get_cipher(ssl) SSL_CIPHER_get_name(SSL_get_current_cipher(ssl))
 #define SSL_get_cipher_bits(ssl, out_alg_bits) \
-	  SSL_CIPHER_get_bits(SSL_get_current_cipher(ssl), out_alg_bits)
+    SSL_CIPHER_get_bits(SSL_get_current_cipher(ssl), out_alg_bits)
 #define SSL_get_cipher_version(ssl) \
-	  SSL_CIPHER_get_version(SSL_get_current_cipher(ssl))
+    SSL_CIPHER_get_version(SSL_get_current_cipher(ssl))
 #define SSL_get_cipher_name(ssl) \
-	  SSL_CIPHER_get_name(SSL_get_current_cipher(ssl))
+    SSL_CIPHER_get_name(SSL_get_current_cipher(ssl))
 #define SSL_get_time(session) SSL_SESSION_get_time(session)
 #define SSL_set_time(session, time) SSL_SESSION_set_time((session), (time))
 #define SSL_get_timeout(session) SSL_SESSION_get_timeout(session)
 #define SSL_set_timeout(session, timeout) \
-		SSL_SESSION_set_timeout((session), (timeout))
+    SSL_SESSION_set_timeout((session), (timeout))
 
 typedef struct ssl_comp_st SSL_COMP;
 
@@ -3490,6 +3521,18 @@ OPENSSL_EXPORT int SSL_add_dir_cert_subjects_to_stack(STACK_OF(X509_NAME) *out,
 OPENSSL_EXPORT uint32_t SSL_SESSION_get_key_exchange_info(
     const SSL_SESSION *session);
 
+/* SSL_set_private_key_digest_prefs copies |num_digests| NIDs from |digest_nids|
+ * into |ssl|. These digests will be used, in decreasing order of preference,
+ * when signing with |ssl|'s private key. It returns one on success and zero on
+ * error.
+ *
+ * Use |SSL_set_signing_algorithm_prefs| instead.
+ *
+ * TODO(davidben): Remove this API when callers have been updated. */
+OPENSSL_EXPORT int SSL_set_private_key_digest_prefs(SSL *ssl,
+                                                    const int *digest_nids,
+                                                    size_t num_digests);
+
 
 /* Private structures.
  *
@@ -3499,6 +3542,7 @@ OPENSSL_EXPORT uint32_t SSL_SESSION_get_key_exchange_info(
 typedef struct ssl_protocol_method_st SSL_PROTOCOL_METHOD;
 typedef struct ssl3_enc_method SSL3_ENC_METHOD;
 typedef struct ssl_aead_ctx_st SSL_AEAD_CTX;
+typedef struct ssl_handshake_st SSL_HANDSHAKE;
 
 struct ssl_cipher_st {
   /* name is the OpenSSL name for the cipher. */
@@ -3539,6 +3583,8 @@ struct ssl_session_st {
    * A zero indicates that the value is unknown. */
   uint32_t key_exchange_info;
 
+  /* master_key, in TLS 1.2 and below, is the master secret associated with the
+   * session. In TLS 1.3 and up, it is the resumption secret. */
   int master_key_length;
   uint8_t master_key[SSL_MAX_MASTER_KEY_LENGTH];
 
@@ -3946,10 +3992,15 @@ struct ssl_st {
   int state;    /* where we are */
 
   BUF_MEM *init_buf; /* buffer used during init */
-  uint8_t *init_msg; /* pointer to handshake message body, set by
-                        ssl3_get_message() */
-  int init_num;      /* amount read/written */
-  int init_off;      /* amount read/written */
+
+  /* init_msg is a pointer to the current handshake message body. */
+  const uint8_t *init_msg;
+  /* init_num is the length of the current handshake message body. */
+  uint32_t init_num;
+
+  /* init_off, in DTLS, is the number of bytes of the current message that have
+   * been written. */
+  uint32_t init_off;
 
   struct ssl3_state_st *s3;  /* SSLv3 variables */
   struct dtls1_state_st *d1; /* DTLSv1 variables */
@@ -4120,11 +4171,15 @@ typedef struct ssl3_state_st {
 
   /* have_version is true if the connection's final version is known. Otherwise
    * the version has not been negotiated yet. */
-  char have_version;
+  unsigned have_version:1;
+
+  /* v2_hello_done is true if the peer's V2ClientHello, if any, has been handled
+   * and future messages should use the record layer. */
+  unsigned v2_hello_done:1;
 
   /* initial_handshake_complete is true if the initial handshake has
    * completed. */
-  char initial_handshake_complete;
+  unsigned initial_handshake_complete:1;
 
   /* read_buffer holds data from the transport to be processed. */
   SSL3_BUFFER read_buffer;
@@ -4186,16 +4241,26 @@ typedef struct ssl3_state_st {
   uint8_t *pending_message;
   uint32_t pending_message_len;
 
+  /* hs is the handshake state for the current handshake or NULL if there isn't
+   * one. */
+  SSL_HANDSHAKE *hs;
+
+  uint8_t write_traffic_secret[EVP_MAX_MD_SIZE];
+  uint8_t write_traffic_secret_len;
+  uint8_t read_traffic_secret[EVP_MAX_MD_SIZE];
+  uint8_t read_traffic_secret_len;
+  uint8_t exporter_secret[EVP_MAX_MD_SIZE];
+  uint8_t exporter_secret_len;
+
   /* State pertaining to the pending handshake.
    *
-   * TODO(davidben): State is current spread all over the place. Move
-   * pending handshake state here so it can be managed separately from
-   * established connection state in case of renegotiations. */
+   * TODO(davidben): Move everything not needed after the handshake completes to
+   * |hs| and remove this. */
   struct {
     uint8_t finish_md[EVP_MAX_MD_SIZE];
-    int finish_md_len;
+    uint8_t finish_md_len;
     uint8_t peer_finish_md[EVP_MAX_MD_SIZE];
-    int peer_finish_md_len;
+    uint8_t peer_finish_md_len;
 
     int message_type;
 
@@ -4377,7 +4442,12 @@ OPENSSL_EXPORT int SSL_set_ssl_method(SSL *s, const SSL_METHOD *method);
  *
  * Although using either the CTRL values or their wrapper macros in #ifdefs is
  * still supported, the CTRL values may not be passed to |SSL_ctrl| and
- * |SSL_CTX_ctrl|. Call the functions (previously wrapper macros) instead. */
+ * |SSL_CTX_ctrl|. Call the functions (previously wrapper macros) instead.
+ *
+ * See PORTING.md in the BoringSSL source tree for a table of corresponding
+ * functions.
+ * https://boringssl.googlesource.com/boringssl/+/master/PORTING.md#Replacements-for-values
+ */
 
 #define DTLS_CTRL_GET_TIMEOUT doesnt_exist
 #define DTLS_CTRL_HANDLE_TIMEOUT doesnt_exist
@@ -4659,6 +4729,12 @@ OPENSSL_EXPORT int SSL_set_ssl_method(SSL *s, const SSL_METHOD *method);
 #define SSL_R_SHUTDOWN_WHILE_IN_INIT 250
 #define SSL_R_INVALID_OUTER_RECORD_TYPE 251
 #define SSL_R_UNSUPPORTED_PROTOCOL_FOR_CUSTOM_KEY 252
+#define SSL_R_NO_COMMON_SIGNATURE_ALGORITHMS 253
+#define SSL_R_DOWNGRADE_DETECTED 254
+#define SSL_R_BUFFERED_MESSAGES_ON_CIPHER_CHANGE 255
+#define SSL_R_INVALID_COMPRESSION_LIST 256
+#define SSL_R_DUPLICATE_EXTENSION 257
+#define SSL_R_MISSING_KEY_SHARE 258
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

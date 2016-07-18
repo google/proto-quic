@@ -126,9 +126,8 @@ bool ProcessGTestOutput(const base::FilePath& output_file,
           result.status = TestResult::TEST_SUCCESS;
 
           if (!results->empty() &&
-              results->at(results->size() - 1).full_name == result.full_name &&
-              results->at(results->size() - 1).status ==
-                  TestResult::TEST_CRASH) {
+              results->back().full_name == result.full_name &&
+              results->back().status == TestResult::TEST_CRASH) {
             // Erase the fail-safe "crashed" result - now we know the test did
             // not crash.
             results->pop_back();
@@ -141,7 +140,7 @@ bool ProcessGTestOutput(const base::FilePath& output_file,
             return false;
 
           DCHECK(!results->empty());
-          results->at(results->size() - 1).status = TestResult::TEST_FAILURE;
+          results->back().status = TestResult::TEST_FAILURE;
 
           state = STATE_FAILURE;
         } else if (node_name == "testcase" && xml_reader.IsClosingElement()) {

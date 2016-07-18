@@ -654,14 +654,9 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
       return ERR_IO_PENDING;
 
     default:
-      DCHECK(result != ERR_ALTERNATIVE_CERT_NOT_VALID_FOR_ORIGIN ||
-             IsSpdyAlternative() || IsQuicAlternative());
       if (job_status_ != STATUS_BROKEN) {
         DCHECK_EQ(STATUS_RUNNING, job_status_);
         job_status_ = STATUS_FAILED;
-        // TODO(bnc): If (result == ERR_ALTERNATIVE_CERT_NOT_VALID_FOR_ORIGIN),
-        // then instead of marking alternative service broken, mark (origin,
-        // alternative service) couple as invalid.
         MaybeMarkAlternativeServiceBroken();
       }
       base::ThreadTaskRunnerHandle::Get()->PostTask(
@@ -738,8 +733,6 @@ int HttpStreamFactoryImpl::Job::StartInternal() {
 }
 
 int HttpStreamFactoryImpl::Job::DoStart() {
-  valid_spdy_session_pool_.reset(new ValidSpdySessionPool(
-      session_->spdy_session_pool(), origin_url_, IsSpdyAlternative()));
   const BoundNetLog* net_log = delegate_->GetNetLog(this);
 
   if (net_log) {
@@ -978,11 +971,9 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
   // Check first if we have a spdy session for this group.  If so, then go
   // straight to using that.
   if (CanUseExistingSpdySession()) {
-    base::WeakPtr<SpdySession> spdy_session;
-    int result = valid_spdy_session_pool_->FindAvailableSession(
-        spdy_session_key, net_log_, &spdy_session);
-    if (result != OK)
-      return result;
+    base::WeakPtr<SpdySession> spdy_session =
+        session_->spdy_session_pool()->FindAvailableSession(
+            spdy_session_key, origin_url_, net_log_);
     if (spdy_session) {
       // If we're preconnecting, but we already have a SpdySession, we don't
       // actually need to preconnect any sockets, so we're done.
@@ -1175,9 +1166,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   if (!ssl_started && result < 0 &&
       (IsSpdyAlternative() || IsQuicAlternative())) {
     job_status_ = STATUS_BROKEN;
-    // TODO(bnc): if (result == ERR_ALTERNATIVE_CERT_NOT_VALID_FOR_ORIGIN), then
-    // instead of marking alternative service broken, mark (origin, alternative
-    // service) couple as invalid.
     MaybeMarkAlternativeServiceBroken();
     return result;
   }
@@ -1321,22 +1309,17 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   }
 
   SpdySessionKey spdy_session_key = GetSpdySessionKey();
-  base::WeakPtr<SpdySession> spdy_session;
-  int result = valid_spdy_session_pool_->FindAvailableSession(
-      spdy_session_key, net_log_, &spdy_session);
-  if (result != OK) {
-    return result;
-  }
+  base::WeakPtr<SpdySession> spdy_session =
+      session_->spdy_session_pool()->FindAvailableSession(
+          spdy_session_key, origin_url_, net_log_);
   if (spdy_session) {
     return SetSpdyHttpStreamOrBidirectionalStreamImpl(spdy_session, direct);
   }
 
-  result = valid_spdy_session_pool_->CreateAvailableSessionFromSocket(
-      spdy_session_key, std::move(connection_), net_log_,
-      spdy_certificate_error_, using_ssl_, &spdy_session);
-  if (result != OK) {
-    return result;
-  }
+  spdy_session =
+      session_->spdy_session_pool()->CreateAvailableSessionFromSocket(
+          spdy_session_key, std::move(connection_), net_log_,
+          spdy_certificate_error_, using_ssl_);
 
   if (!spdy_session->HasAcceptableTransportSecurity()) {
     spdy_session->CloseSessionOnError(
@@ -1348,8 +1331,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   bool was_npn_negotiated;
   NextProto protocol_negotiated;
   if (spdy_session->GetSSLInfo(&ssl_info, &was_npn_negotiated,
-                               &protocol_negotiated) &&
-      spdy_session->GetProtocolVersion() >= HTTP2) {
+                               &protocol_negotiated)) {
     UMA_HISTOGRAM_SPARSE_SLOWLY(
         "Net.Http2SSLCipherSuite",
         SSLConnectionStatusToCipherSuite(ssl_info.connection_status));
@@ -1608,8 +1590,11 @@ int HttpStreamFactoryImpl::Job::HandleCertificateError(int error) {
 }
 
 void HttpStreamFactoryImpl::Job::SwitchToSpdyMode() {
-  if (HttpStreamFactory::spdy_enabled())
-    using_spdy_ = true;
+  if (protocol_negotiated_ == kProtoSPDY31 &&
+      !HttpStreamFactory::spdy_enabled())
+    return;
+
+  using_spdy_ = true;
 }
 
 void HttpStreamFactoryImpl::Job::ReportJobSucceededForRequest() {
@@ -1655,52 +1640,6 @@ void HttpStreamFactoryImpl::Job::MaybeMarkAlternativeServiceBroken() {
     session_->http_server_properties()->MarkAlternativeServiceBroken(
         other_job_alternative_service_);
   }
-}
-
-HttpStreamFactoryImpl::Job::ValidSpdySessionPool::ValidSpdySessionPool(
-    SpdySessionPool* spdy_session_pool,
-    GURL& origin_url,
-    bool is_spdy_alternative)
-    : spdy_session_pool_(spdy_session_pool),
-      origin_url_(origin_url),
-      is_spdy_alternative_(is_spdy_alternative) {
-}
-
-int HttpStreamFactoryImpl::Job::ValidSpdySessionPool::FindAvailableSession(
-    const SpdySessionKey& key,
-    const BoundNetLog& net_log,
-    base::WeakPtr<SpdySession>* spdy_session) {
-  *spdy_session =
-      spdy_session_pool_->FindAvailableSession(key, origin_url_, net_log);
-  return CheckAlternativeServiceValidityForOrigin(*spdy_session);
-}
-
-int HttpStreamFactoryImpl::Job::ValidSpdySessionPool::
-    CreateAvailableSessionFromSocket(
-        const SpdySessionKey& key,
-        std::unique_ptr<ClientSocketHandle> connection,
-        const BoundNetLog& net_log,
-        int certificate_error_code,
-        bool is_secure,
-        base::WeakPtr<SpdySession>* spdy_session) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "HttpStreamFactoryImpl::Job::CreateAvailableSessionFromSocket");
-  *spdy_session = spdy_session_pool_->CreateAvailableSessionFromSocket(
-      key, std::move(connection), net_log, certificate_error_code, is_secure);
-  return CheckAlternativeServiceValidityForOrigin(*spdy_session);
-}
-
-int HttpStreamFactoryImpl::Job::ValidSpdySessionPool::
-    CheckAlternativeServiceValidityForOrigin(
-        base::WeakPtr<SpdySession> spdy_session) {
-  // For an alternative Job, destination_.host() might be different than
-  // origin_url_.host(), therefore it needs to be verified that the former
-  // provides a certificate that is valid for the latter.
-  if (!is_spdy_alternative_ || !spdy_session ||
-      spdy_session->VerifyDomainAuthentication(origin_url_.host())) {
-    return OK;
-  }
-  return ERR_ALTERNATIVE_CERT_NOT_VALID_FOR_ORIGIN;
 }
 
 ClientSocketPoolManager::SocketGroupType

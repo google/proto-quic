@@ -59,6 +59,10 @@ const int kMss = 1430;
 // The 8 is the size of the SPDY frame header.
 const int kMaxSpdyFrameChunkSize = (2 * kMss) - 8;
 
+// Default value of SETTINGS_INITIAL_WINDOW_SIZE per protocol specification.
+// A session is always created with this initial window size.
+const int32_t kDefaultInitialWindowSize = 65535;
+
 // Maximum number of concurrent streams we will create, unless the server
 // sends a SETTINGS frame with a different value.
 const size_t kInitialMaxConcurrentStreams = 100;
@@ -147,14 +151,6 @@ static_assert(17 == SpdyFramer::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
 static_assert(17 == RST_STREAM_NUM_STATUS_CODES,
               "SpdyProtocolErrorDetails / RstStreamStatus mismatch");
-
-// Splits pushed |headers| into request and response parts. Request headers are
-// the headers specifying resource URL.
-void NET_EXPORT_PRIVATE
-    SplitPushedHeadersToRequestAndResponse(const SpdyHeaderBlock& headers,
-                                           SpdyMajorVersion protocol_version,
-                                           SpdyHeaderBlock* request_headers,
-                                           SpdyHeaderBlock* response_headers);
 
 // A helper class used to manage a request to create a stream.
 class NET_EXPORT_PRIVATE SpdyStreamRequest {
@@ -299,7 +295,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
               bool enable_sending_initial_data,
               bool enable_ping_based_connection_checking,
               bool enable_priority_dependencies,
-              NextProto default_protocol,
               size_t session_max_recv_window_size,
               size_t stream_max_recv_window_size,
               TimeFunc time_func,
@@ -348,10 +343,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                             SpdySessionPool* pool,
                             bool is_secure,
                             int certificate_error_code);
-
-  // Returns the protocol used by this session. Always between
-  // kProtoSPDYMinimumVersion and kProtoSPDYMaximumVersion.
-  NextProto protocol() const { return protocol_; }
 
   // Check to see if this SPDY session can support an additional domain.
   // If the session is un-authenticated, then this call always returns true.
@@ -531,8 +522,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
     return pooled_aliases_;
   }
 
-  SpdyMajorVersion GetProtocolVersion() const;
-
   size_t GetDataFrameMinimumSize() const {
     return buffered_spdy_framer_->GetDataFrameMinimumSize();
   }
@@ -551,12 +540,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   size_t GetDataFrameMaximumPayload() const {
     return buffered_spdy_framer_->GetDataFrameMaximumPayload();
-  }
-
-  // Default value of SETTINGS_INITIAL_WINDOW_SIZE per protocol specification.
-  // A session is always created with this initial window size.
-  static int32_t GetDefaultInitialWindowSize(NextProto protocol) {
-    return protocol < kProtoHTTP2 ? 65536 : 65535;
   }
 
   // https://http2.github.io/http2-spec/#TLSUsage mandates minimum security
@@ -893,15 +876,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
                      const SpdyHeaderBlock& headers) override;
-  void OnSynStream(SpdyStreamId stream_id,
-                   SpdyStreamId associated_stream_id,
-                   SpdyPriority priority,
-                   bool fin,
-                   bool unidirectional,
-                   const SpdyHeaderBlock& headers) override;
-  void OnSynReply(SpdyStreamId stream_id,
-                  bool fin,
-                  const SpdyHeaderBlock& headers) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -1152,9 +1126,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // status.
   bool check_ping_status_pending_;
 
-  // Whether to send the (HTTP/2) connection header prefix.
-  bool send_connection_header_prefix_;
-
   // Current send window size.  Zero unless session flow control is turned on.
   int32_t session_send_window_size_;
 
@@ -1196,10 +1167,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   bool verify_domain_authentication_;
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
-
-  // The SPDY protocol used. Always between kProtoSPDYMinimumVersion and
-  // kProtoSPDYMaximumVersion.
-  NextProto protocol_;
 
   // |connection_at_risk_of_loss_time_| is an optimization to avoid sending
   // wasteful preface pings (when we just got some data).

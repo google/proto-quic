@@ -135,6 +135,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
     STATE_SEND_BODY,
     STATE_SEND_BODY_COMPLETE,
     STATE_SEND_REQUEST_READ_BODY_COMPLETE,
+    STATE_SEND_REQUEST_COMPLETE,
     STATE_READ_HEADERS,
     STATE_READ_HEADERS_COMPLETE,
     STATE_READ_BODY,
@@ -167,6 +168,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   int DoSendBody();
   int DoSendBodyComplete(int result);
   int DoSendRequestReadBodyComplete(int result);
+  int DoSendRequestComplete(int result);
   int DoReadHeaders();
   int DoReadHeadersComplete(int result);
   int DoReadBody();
@@ -190,6 +192,9 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
 
   // Uploads statistics about status line compliance with RFC 7230.
   void ValidateStatusLine(const std::string& status_line);
+
+  // Check if buffers used to send the request are empty.
+  bool SendRequestBuffersEmpty();
 
   // Next state of the request, when the current one completes.
   State io_state_;

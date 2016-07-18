@@ -48,7 +48,7 @@ void PacingSender::OnCongestionEvent(bool rtt_updated,
                                      QuicByteCount bytes_in_flight,
                                      const CongestionVector& acked_packets,
                                      const CongestionVector& lost_packets) {
-  if (FLAGS_quic_allow_noprr && !lost_packets.empty()) {
+  if (!lost_packets.empty()) {
     // Clear any burst tokens when entering recovery.
     burst_tokens_ = 0;
   }
@@ -110,7 +110,7 @@ bool PacingSender::OnPacketSent(
     }
   } else {
     ideal_next_packet_send_time_ =
-        QuicTime::Max(ideal_next_packet_send_time_ + delay, sent_time + delay);
+        std::max(ideal_next_packet_send_time_ + delay, sent_time + delay);
   }
   return in_flight;
 }

@@ -29,6 +29,10 @@ QuicClientSessionBase::~QuicClientSessionBase() {
   }
 }
 
+void QuicClientSessionBase::OnConfigNegotiated() {
+  QuicSpdySession::OnConfigNegotiated();
+}
+
 void QuicClientSessionBase::OnCryptoHandshakeEvent(CryptoHandshakeEvent event) {
   QuicSession::OnCryptoHandshakeEvent(event);
 }

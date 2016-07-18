@@ -275,8 +275,7 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
   }
 
   std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
-  CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers,
-                                   stream_->GetProtocolVersion(), direct_,
+  CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers, direct_,
                                    headers.get());
   stream_->net_log().AddEvent(
       NetLog::TYPE_HTTP_TRANSACTION_HTTP2_SEND_REQUEST_HEADERS,
@@ -320,8 +319,7 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
     response_info_ = push_response_info_.get();
   }
 
-  if (!SpdyHeadersToHttpResponse(
-          response_headers, stream_->GetProtocolVersion(), response_info_)) {
+  if (!SpdyHeadersToHttpResponse(response_headers, response_info_)) {
     // We do not have complete headers yet.
     return RESPONSE_HEADERS_ARE_INCOMPLETE;
   }
@@ -339,7 +337,7 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
       SSLClientSocket::NextProtoToString(protocol_negotiated);
   response_info_->request_time = stream_->GetRequestTime();
   response_info_->connection_info =
-      HttpResponseInfo::ConnectionInfoFromNextProto(stream_->GetProtocol());
+      HttpResponseInfo::ConnectionInfoFromNextProto(kProtoHTTP2);
   response_info_->vary_data
       .Init(*request_info_, *response_info_->headers.get());
 

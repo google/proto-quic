@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/auto_reset.h"
 #include "base/callback_helpers.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_split.h"
@@ -18,7 +19,6 @@
 #include "net/quic/quic_http_utils.h"
 #include "net/quic/quic_utils.h"
 #include "net/quic/spdy_utils.h"
-#include "net/socket/next_proto.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -62,12 +62,14 @@ QuicHttpStream::QuicHttpStream(
       port_migration_detected_(false),
       found_promise_(false),
       push_handle_(nullptr),
+      in_loop_(false),
       weak_factory_(this) {
   DCHECK(session_);
   session_->AddObserver(this);
 }
 
 QuicHttpStream::~QuicHttpStream() {
+  CHECK(!in_loop_);
   Close(false);
   if (session_)
     session_->RemoveObserver(this);
@@ -85,8 +87,7 @@ bool QuicHttpStream::CheckVary(const SpdyHeaderBlock& client_request,
   ConvertHeaderBlockToHttpRequestHeaders(client_request,
                                          &client_request_info.extra_headers);
 
-  if (!SpdyHeadersToHttpResponse(promise_response, HTTP2,
-                                 &promise_response_info)) {
+  if (!SpdyHeadersToHttpResponse(promise_response, &promise_response_info)) {
     DLOG(WARNING) << "Invalid headers";
     return false;
   }
@@ -269,7 +270,7 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
   }
 
   // Store the serialized request headers.
-  CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers, HTTP2,
+  CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers,
                                    /*direct=*/true, &request_headers_);
 
   // Store the request body.
@@ -555,6 +556,7 @@ void QuicHttpStream::OnIOComplete(int rv) {
 void QuicHttpStream::DoCallback(int rv) {
   CHECK_NE(rv, ERR_IO_PENDING);
   CHECK(!callback_.is_null());
+  CHECK(!in_loop_);
 
   // The client callback can do anything, including destroying this class,
   // so any pending callback must be issued after everything else is done.
@@ -562,6 +564,8 @@ void QuicHttpStream::DoCallback(int rv) {
 }
 
 int QuicHttpStream::DoLoop(int rv) {
+  CHECK(!in_loop_);
+  base::AutoReset<bool> auto_reset_in_loop(&in_loop_, true);
   do {
     State state = next_state_;
     next_state_ = STATE_NONE;
@@ -771,7 +775,7 @@ int QuicHttpStream::DoSendBodyComplete(int rv) {
 }
 
 int QuicHttpStream::ProcessResponseHeaders(const SpdyHeaderBlock& headers) {
-  if (!SpdyHeadersToHttpResponse(headers, HTTP2, response_info_)) {
+  if (!SpdyHeadersToHttpResponse(headers, response_info_)) {
     DLOG(WARNING) << "Invalid headers";
     return ERR_QUIC_PROTOCOL_ERROR;
   }

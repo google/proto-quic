@@ -446,7 +446,7 @@ void QuicHeadersStream::OnDataAvailable() {
         break;
       }
       DCHECK(timestamp.IsInitialized());
-      cur_max_timestamp_ = QuicTime::Max(timestamp, cur_max_timestamp_);
+      cur_max_timestamp_ = std::max(timestamp, cur_max_timestamp_);
     } else {
       if (sequencer()->GetReadableRegions(&iov, 1) != 1) {
         // No more data to read.

@@ -35,15 +35,15 @@ TEST_F(QuicBandwidthTest, Add) {
   QuicBandwidth bandwidht_1 = QuicBandwidth::FromKBitsPerSecond(1);
   QuicBandwidth bandwidht_2 = QuicBandwidth::FromKBytesPerSecond(1);
 
-  EXPECT_EQ(9000, bandwidht_1.Add(bandwidht_2).ToBitsPerSecond());
-  EXPECT_EQ(9000, bandwidht_2.Add(bandwidht_1).ToBitsPerSecond());
+  EXPECT_EQ(9000, (bandwidht_1 + bandwidht_2).ToBitsPerSecond());
+  EXPECT_EQ(9000, (bandwidht_2 + bandwidht_1).ToBitsPerSecond());
 }
 
 TEST_F(QuicBandwidthTest, Subtract) {
   QuicBandwidth bandwidht_1 = QuicBandwidth::FromKBitsPerSecond(1);
   QuicBandwidth bandwidht_2 = QuicBandwidth::FromKBytesPerSecond(1);
 
-  EXPECT_EQ(7000, bandwidht_2.Subtract(bandwidht_1).ToBitsPerSecond());
+  EXPECT_EQ(7000, (bandwidht_2 - bandwidht_1).ToBitsPerSecond());
 }
 
 TEST_F(QuicBandwidthTest, TimeDelta) {
@@ -58,11 +58,11 @@ TEST_F(QuicBandwidthTest, TimeDelta) {
 
 TEST_F(QuicBandwidthTest, Scale) {
   EXPECT_EQ(QuicBandwidth::FromKBytesPerSecond(500),
-            QuicBandwidth::FromKBytesPerSecond(1000).Scale(0.5f));
+            QuicBandwidth::FromKBytesPerSecond(1000) * 0.5f);
   EXPECT_EQ(QuicBandwidth::FromKBytesPerSecond(750),
-            QuicBandwidth::FromKBytesPerSecond(1000).Scale(0.75f));
+            0.75f * QuicBandwidth::FromKBytesPerSecond(1000));
   EXPECT_EQ(QuicBandwidth::FromKBytesPerSecond(1250),
-            QuicBandwidth::FromKBytesPerSecond(1000).Scale(1.25f));
+            QuicBandwidth::FromKBytesPerSecond(1000) * 1.25f);
 }
 
 TEST_F(QuicBandwidthTest, BytesPerPeriod) {

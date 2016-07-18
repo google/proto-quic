@@ -417,10 +417,6 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // yet.
   bool IsReservedRemote() const;
 
-  // Returns the protocol used by this stream. Always between
-  // kProtoSPDYMinimumVersion and kProtoSPDYMaximumVersion.
-  NextProto GetProtocol() const;
-
   int response_status() const { return response_status_; }
 
   void AddRawReceivedBytes(size_t received_bytes);
@@ -444,8 +440,6 @@ class NET_EXPORT_PRIVATE SpdyStream {
   //
   // TODO(akalin): Remove this, as it's only used in tests.
   bool HasUrlFromHeaders() const;
-
-  SpdyMajorVersion GetProtocolVersion() const;
 
  private:
   class SynStreamBufferProducer;

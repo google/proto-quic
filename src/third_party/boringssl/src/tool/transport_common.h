@@ -31,6 +31,8 @@ bool Connect(int *out_sock, const std::string &hostname_and_port);
 // It returns true on success and false otherwise.
 bool Accept(int *out_sock, const std::string &port);
 
+bool VersionFromString(uint16_t *out_version, const std::string &version);
+
 void PrintConnectionInfo(const SSL *ssl);
 
 bool SocketSetNonBlocking(int sock, bool is_non_blocking);
@@ -39,5 +41,8 @@ int PrintErrorCallback(const char *str, size_t len, void *ctx);
 
 bool TransferData(SSL *ssl, int sock);
 
+// DoSMTPStartTLS performs the SMTP STARTTLS mini-protocol over |sock|. It
+// returns true on success and false otherwise.
+bool DoSMTPStartTLS(int sock);
 
 #endif  /* !OPENSSL_HEADER_TOOL_TRANSPORT_COMMON_H */

@@ -59,14 +59,20 @@ void QuicConfigPeer::SetReceivedMaxIncomingDynamicStreams(
 }
 
 // static
-
 void QuicConfigPeer::SetConnectionOptionsToSend(QuicConfig* config,
                                                 const QuicTagVector& options) {
   config->SetConnectionOptionsToSend(options);
 }
 
+// static
 void QuicConfigPeer::SetReceivedForceHolBlocking(QuicConfig* config) {
   config->force_hol_blocking_.SetReceivedValue(1);
+}
+
+// static
+void QuicConfigPeer::SetReceivedAlternateServerAddress(QuicConfig* config,
+                                                       IPEndPoint addr) {
+  config->alternate_server_address_.SetReceivedValue(addr);
 }
 
 }  // namespace test

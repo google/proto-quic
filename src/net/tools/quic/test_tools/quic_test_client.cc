@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_errors.h"
@@ -15,6 +16,8 @@
 #include "net/quic/crypto/proof_verifier.h"
 #include "net/quic/quic_flags.h"
 #include "net/quic/quic_server_id.h"
+#include "net/quic/quic_utils.h"
+#include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -41,9 +44,14 @@ namespace test {
 namespace {
 
 // RecordingProofVerifier accepts any certificate chain and records the common
-// name of the leaf.
+// name of the leaf and then delegates the actual verfication to an actual
+// verifier. If no optional verifier is provided, then VerifyProof will return
+// success.
 class RecordingProofVerifier : public ProofVerifier {
  public:
+  explicit RecordingProofVerifier(std::unique_ptr<ProofVerifier> verifier)
+      : verifier_(std::move(verifier)) {}
+
   // ProofVerifier interface.
   QuicAsyncStatus VerifyProof(
       const string& hostname,
@@ -80,7 +88,13 @@ class RecordingProofVerifier : public ProofVerifier {
     //    common_name_ = cert->subject().GetDisplayName();
     cert_sct_ = cert_sct;
 
-    return QUIC_SUCCESS;
+    if (!verifier_) {
+      return QUIC_SUCCESS;
+    }
+
+    return verifier_->VerifyProof(
+        hostname, port, server_config, quic_version, chlo_hash, certs, cert_sct,
+        signature, context, error_details, details, std::move(callback));
   }
 
   const string& common_name() const { return common_name_; }
@@ -88,6 +102,7 @@ class RecordingProofVerifier : public ProofVerifier {
   const string& cert_sct() const { return cert_sct_; }
 
  private:
+  std::unique_ptr<ProofVerifier> verifier_;
   string common_name_;
   string cert_sct_;
 };
@@ -106,7 +121,7 @@ BalsaHeaders* MungeHeaders(const BalsaHeaders* const_headers) {
   headers->CopyFrom(*const_headers);
   if (!uri.starts_with("https://") && !uri.starts_with("http://")) {
     // If we have a relative URL, set some defaults.
-    string full_uri = "https://www.google.com";
+    string full_uri = "https://test.example.com";
     full_uri.append(uri.as_string());
     headers->SetRequestUri(full_uri);
   }
@@ -130,12 +145,27 @@ MockableQuicClient::MockableQuicClient(
     const QuicConfig& config,
     const QuicVersionVector& supported_versions,
     EpollServer* epoll_server)
+    : MockableQuicClient(server_address,
+                         server_id,
+                         config,
+                         supported_versions,
+                         epoll_server,
+                         nullptr) {}
+
+MockableQuicClient::MockableQuicClient(
+    IPEndPoint server_address,
+    const QuicServerId& server_id,
+    const QuicConfig& config,
+    const QuicVersionVector& supported_versions,
+    EpollServer* epoll_server,
+    std::unique_ptr<ProofVerifier> proof_verifier)
     : QuicClient(server_address,
                  server_id,
                  supported_versions,
                  config,
                  epoll_server,
-                 new RecordingProofVerifier()),
+                 base::WrapUnique(
+                     new RecordingProofVerifier(std::move(proof_verifier)))),
       override_connection_id_(0),
       test_writer_(nullptr) {}
 
@@ -188,6 +218,23 @@ QuicTestClient::QuicTestClient(IPEndPoint server_address,
                                      config,
                                      supported_versions,
                                      &epoll_server_)),
+      allow_bidirectional_data_(false) {
+  Initialize();
+}
+
+QuicTestClient::QuicTestClient(IPEndPoint server_address,
+                               const string& server_hostname,
+                               const QuicConfig& config,
+                               const QuicVersionVector& supported_versions,
+                               std::unique_ptr<ProofVerifier> proof_verifier)
+    : client_(new MockableQuicClient(server_address,
+                                     QuicServerId(server_hostname,
+                                                  server_address.port(),
+                                                  PRIVACY_MODE_DISABLED),
+                                     config,
+                                     supported_versions,
+                                     &epoll_server_,
+                                     std::move(proof_verifier))),
       allow_bidirectional_data_(false) {
   Initialize();
 }

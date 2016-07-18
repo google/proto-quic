@@ -56,6 +56,10 @@
 
 #include <openssl/ssl.h>
 
+#include <string.h>
+
+#include <openssl/buf.h>
+
 #include "internal.h"
 
 
@@ -65,7 +69,53 @@ static uint16_t ssl3_version_from_wire(uint16_t wire_version) {
 
 static uint16_t ssl3_version_to_wire(uint16_t version) { return version; }
 
-static const SSL_PROTOCOL_METHOD TLS_protocol_method = {
+static int ssl3_begin_handshake(SSL *ssl) {
+  if (ssl->init_buf != NULL) {
+    return 1;
+  }
+
+  BUF_MEM *buf = BUF_MEM_new();
+  if (buf == NULL || !BUF_MEM_reserve(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
+    BUF_MEM_free(buf);
+    return 0;
+  }
+
+  ssl->init_buf = buf;
+  ssl->init_num = 0;
+  return 1;
+}
+
+static void ssl3_finish_handshake(SSL *ssl) {
+  BUF_MEM_free(ssl->init_buf);
+  ssl->init_buf = NULL;
+  ssl->init_num = 0;
+}
+
+static int ssl3_set_read_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx) {
+  if (ssl->s3->rrec.length != 0) {
+    /* There may not be unprocessed record data at a cipher change. */
+    OPENSSL_PUT_ERROR(SSL, SSL_R_BUFFERED_MESSAGES_ON_CIPHER_CHANGE);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+    SSL_AEAD_CTX_free(aead_ctx);
+    return 0;
+  }
+
+  memset(ssl->s3->read_sequence, 0, sizeof(ssl->s3->read_sequence));
+
+  SSL_AEAD_CTX_free(ssl->s3->aead_read_ctx);
+  ssl->s3->aead_read_ctx = aead_ctx;
+  return 1;
+}
+
+static int ssl3_set_write_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx) {
+  memset(ssl->s3->write_sequence, 0, sizeof(ssl->s3->write_sequence));
+
+  SSL_AEAD_CTX_free(ssl->s3->aead_write_ctx);
+  ssl->s3->aead_write_ctx = aead_ctx;
+  return 1;
+}
+
+static const SSL_PROTOCOL_METHOD kTLSProtocolMethod = {
     0 /* is_dtls */,
     SSL3_VERSION,
     TLS1_3_VERSION,
@@ -73,7 +123,10 @@ static const SSL_PROTOCOL_METHOD TLS_protocol_method = {
     ssl3_version_to_wire,
     ssl3_new,
     ssl3_free,
+    ssl3_begin_handshake,
+    ssl3_finish_handshake,
     ssl3_get_message,
+    ssl3_hash_current_message,
     ssl3_read_app_data,
     ssl3_read_change_cipher_spec,
     ssl3_read_close_notify,
@@ -86,14 +139,16 @@ static const SSL_PROTOCOL_METHOD TLS_protocol_method = {
     ssl3_send_change_cipher_spec,
     ssl3_expect_flight,
     ssl3_received_flight,
+    ssl3_set_read_state,
+    ssl3_set_write_state,
 };
 
 const SSL_METHOD *TLS_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       0,
-      &TLS_protocol_method,
+      &kTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 const SSL_METHOD *SSLv23_method(void) {
@@ -103,35 +158,35 @@ const SSL_METHOD *SSLv23_method(void) {
 /* Legacy version-locked methods. */
 
 const SSL_METHOD *TLSv1_2_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       TLS1_2_VERSION,
-      &TLS_protocol_method,
+      &kTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 const SSL_METHOD *TLSv1_1_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       TLS1_1_VERSION,
-      &TLS_protocol_method,
+      &kTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 const SSL_METHOD *TLSv1_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       TLS1_VERSION,
-      &TLS_protocol_method,
+      &kTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 const SSL_METHOD *SSLv3_method(void) {
-  static const SSL_METHOD method = {
+  static const SSL_METHOD kMethod = {
       SSL3_VERSION,
-      &TLS_protocol_method,
+      &kTLSProtocolMethod,
   };
-  return &method;
+  return &kMethod;
 }
 
 /* Legacy side-specific methods. */
