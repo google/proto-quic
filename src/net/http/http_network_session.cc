@@ -20,12 +20,12 @@
 #include "net/http/http_stream_factory_impl.h"
 #include "net/http/url_security_manager.h"
 #include "net/proxy/proxy_service.h"
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_clock.h"
-#include "net/quic/quic_crypto_client_stream_factory.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_stream_factory.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/chromium/quic_stream_factory.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_clock.h"
+#include "net/quic/core/quic_crypto_client_stream_factory.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
 #include "net/socket/next_proto.h"
@@ -96,7 +96,6 @@ HttpNetworkSession::Params::Params()
       time_func(&base::TimeTicks::Now),
       enable_http2_alternative_service_with_different_host(false),
       enable_quic_alternative_service_with_different_host(true),
-      enable_priority_dependencies(true),
       enable_quic(false),
       disable_quic_on_timeout_with_open_streams(false),
       enable_quic_port_selection(true),
@@ -196,7 +195,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
                          params.http_server_properties,
                          params.transport_security_state,
                          params.enable_spdy_ping_based_connection_checking,
-                         params.enable_priority_dependencies,
                          params.spdy_session_max_recv_window_size,
                          params.spdy_stream_max_recv_window_size,
                          params.time_func,
@@ -366,17 +364,7 @@ bool HttpNetworkSession::IsProtocolEnabled(AlternateProtocol protocol) const {
 }
 
 void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
-  if (HttpStreamFactory::spdy_enabled()) {
-    *alpn_protos = next_protos_;
-  } else {
-    // HttpStreamFactory::spdy_enabled() only affects SPDY/3.1,
-    // but not other ALPN protocols.
-    alpn_protos->clear();
-    for (auto proto : next_protos_) {
-      if (proto != kProtoSPDY31)
-        alpn_protos->push_back(proto);
-    }
-  }
+  *alpn_protos = next_protos_;
 }
 
 void HttpNetworkSession::GetNpnProtos(NextProtoVector* npn_protos) const {

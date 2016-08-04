@@ -21,11 +21,12 @@ class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
 
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override {}
 
-  const SpdyHeaderBlock& headers() const { return headers_; }
+  SpdyHeaderBlock release_headers();
   bool error_seen() const { return error_seen_; }
 
  private:
   SpdyHeaderBlock headers_;
+  bool headers_valid_ = true;
   size_t header_list_size_ = 0;
   bool error_seen_ = false;
   bool regular_header_seen_ = false;

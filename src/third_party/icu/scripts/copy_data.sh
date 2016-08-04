@@ -9,10 +9,15 @@
 TOPSRC="$(dirname "$0")/.."
 source "${TOPSRC}/scripts/data_common.sh"
 
-echo "Copying icudtl.dat and the corresponding assembly source for Linux"
-cp "data/out/tmp/icudt${VERSION}l.dat" "${TOPSRC}/common/icudtl.dat"
-cp "data/out/tmp/icudt${VERSION}l_dat.S" "${TOPSRC}/linux/icudtl_dat.S"
+DATA_PREFIX="data/out/tmp/icudt${VERSION}"
 
-"${TOPSRC}/scripts/make_mac_assembly.sh"
+echo "Generating the big endian data bundle"
+LD_LIBRARY_PATH=lib bin/icupkg -tb "${DATA_PREFIX}l.dat" "${DATA_PREFIX}b.dat"
+
+echo "Copying icudtl.dat and icudtlb.dat"
+for endian in l b
+do
+  cp "${DATA_PREFIX}${endian}.dat" "${TOPSRC}/common/icudt${endian}.dat"
+done
 
 echo "Done with copying pre-built ICU data files."

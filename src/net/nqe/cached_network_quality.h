@@ -19,25 +19,33 @@ namespace internal {
 // CachedNetworkQuality stores the quality of a previously seen network.
 class NET_EXPORT_PRIVATE CachedNetworkQuality {
  public:
-  explicit CachedNetworkQuality(const NetworkQuality& network_quality);
+  CachedNetworkQuality();
+
+  // |last_update_time| is the time when the |network_quality| was computed.
+  CachedNetworkQuality(base::TimeTicks last_update_time,
+                       const NetworkQuality& network_quality);
   CachedNetworkQuality(const CachedNetworkQuality& other);
   ~CachedNetworkQuality();
 
   // Returns the network quality associated with this cached entry.
   const NetworkQuality& network_quality() const { return network_quality_; }
 
+  CachedNetworkQuality& operator=(const CachedNetworkQuality& other);
+
   // Returns true if this cache entry was updated before
   // |cached_network_quality|.
   bool OlderThan(const CachedNetworkQuality& cached_network_quality) const;
 
-  // Time when this cache entry was last updated.
-  const base::TimeTicks last_update_time_;
+  base::TimeTicks last_update_time() { return last_update_time_; }
 
-  // Quality of this cached network.
-  const NetworkQuality network_quality_;
+  const NetworkQuality& network_quality() { return network_quality_; }
 
  private:
-  DISALLOW_ASSIGN(CachedNetworkQuality);
+  // Time when this cache entry was last updated.
+  base::TimeTicks last_update_time_;
+
+  // Quality of this cached network.
+  NetworkQuality network_quality_;
 };
 
 }  // namespace internal

@@ -81,9 +81,6 @@ NET_EXPORT bool GetIsRoaming();
 // Otherwise, returns empty string.
 NET_EXPORT_PRIVATE std::string GetWifiSSID();
 
-// Register JNI methods
-NET_EXPORT bool RegisterNetworkLibrary(JNIEnv* env);
-
 }  // namespace android
 }  // namespace net
 

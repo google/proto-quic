@@ -69,9 +69,12 @@ HttpChunkedDecoder::HttpChunkedDecoder()
 int HttpChunkedDecoder::FilterBuf(char* buf, int buf_len) {
   int result = 0;
 
-  while (buf_len) {
-    if (chunk_remaining_) {
-      int num = std::min(chunk_remaining_, buf_len);
+  while (buf_len > 0) {
+    if (chunk_remaining_ > 0) {
+      // Since |chunk_remaining_| is positive and |buf_len| an int, the minimum
+      // of the two must be an int.
+      int num = static_cast<int>(
+          std::min(chunk_remaining_, static_cast<int64_t>(buf_len)));
 
       buf_len -= num;
       chunk_remaining_ -= num;
@@ -79,8 +82,8 @@ int HttpChunkedDecoder::FilterBuf(char* buf, int buf_len) {
       result += num;
       buf += num;
 
-      // After each chunk's data there should be a CRLF
-      if (!chunk_remaining_)
+      // After each chunk's data there should be a CRLF.
+      if (chunk_remaining_ == 0)
         chunk_terminator_remaining_ = true;
       continue;
     } else if (reached_eof_) {
@@ -93,7 +96,7 @@ int HttpChunkedDecoder::FilterBuf(char* buf, int buf_len) {
       return bytes_consumed; // Error
 
     buf_len -= bytes_consumed;
-    if (buf_len)
+    if (buf_len > 0)
       memmove(buf, buf + bytes_consumed, buf_len);
   }
 
@@ -121,17 +124,17 @@ int HttpChunkedDecoder::ScanForChunkRemaining(const char* buf, int buf_len) {
     }
 
     if (reached_last_chunk_) {
-      if (buf_len)
+      if (buf_len > 0)
         DVLOG(1) << "ignoring http trailer";
       else
         reached_eof_ = true;
     } else if (chunk_terminator_remaining_) {
-      if (buf_len) {
+      if (buf_len > 0) {
         DLOG(ERROR) << "chunk data not terminated properly";
         return ERR_INVALID_CHUNKED_ENCODING;
       }
       chunk_terminator_remaining_ = false;
-    } else if (buf_len) {
+    } else if (buf_len > 0) {
       // Ignore any chunk-extensions.
       size_t index_of_semicolon = base::StringPiece(buf, buf_len).find(';');
       if (index_of_semicolon != base::StringPiece::npos)
@@ -189,14 +192,16 @@ int HttpChunkedDecoder::ScanForChunkRemaining(const char* buf, int buf_len) {
 // known sites.
 //
 //         Us: ^\X+[ ]*$
-bool HttpChunkedDecoder::ParseChunkSize(const char* start, int len, int* out) {
+bool HttpChunkedDecoder::ParseChunkSize(const char* start,
+                                        int len,
+                                        int64_t* out) {
   DCHECK_GE(len, 0);
 
   // Strip trailing spaces
-  while (len && start[len - 1] == ' ')
+  while (len > 0 && start[len - 1] == ' ')
     len--;
 
-  // Be more restrictive than HexStringToInt;
+  // Be more restrictive than HexStringToInt64;
   // don't allow inputs with leading "-", "+", "0x", "0X"
   base::StringPiece chunk_size(start, len);
   if (chunk_size.find_first_not_of("0123456789abcdefABCDEF")
@@ -204,8 +209,8 @@ bool HttpChunkedDecoder::ParseChunkSize(const char* start, int len, int* out) {
     return false;
   }
 
-  int parsed_number;
-  bool ok = base::HexStringToInt(chunk_size, &parsed_number);
+  int64_t parsed_number;
+  bool ok = base::HexStringToInt64(chunk_size, &parsed_number);
   if (ok && parsed_number >= 0) {
     *out = parsed_number;
     return true;

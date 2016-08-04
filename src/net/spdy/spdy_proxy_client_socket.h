@@ -39,10 +39,10 @@ class SpdyStream;
 class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
                                                  public SpdyStream::Delegate {
  public:
-  // Create a socket on top of the |spdy_stream| by sending a SYN_STREAM
-  // CONNECT frame for |endpoint|.  After the SYN_REPLY is received,
-  // any data read/written to the socket will be transferred in data
-  // frames. This object will set itself as |spdy_stream|'s delegate.
+  // Create a socket on top of the |spdy_stream| by sending a HEADERS CONNECT
+  // frame for |endpoint|.  After the response HEADERS frame is received, any
+  // data read/written to the socket will be transferred in data frames. This
+  // object will set itself as |spdy_stream|'s delegate.
   SpdyProxyClientSocket(const base::WeakPtr<SpdyStream>& spdy_stream,
                         const std::string& user_agent,
                         const HostPortPair& endpoint,

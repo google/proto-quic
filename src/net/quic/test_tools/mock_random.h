@@ -10,7 +10,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "net/quic/crypto/quic_random.h"
+#include "net/quic/core/crypto/quic_random.h"
 
 namespace net {
 namespace test {

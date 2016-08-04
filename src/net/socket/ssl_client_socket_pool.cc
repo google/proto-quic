@@ -336,7 +336,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
 
   // If we want SPDY over ALPN/NPN, make sure it succeeded.
   if (params_->expect_spdy() &&
-      !NextProtoIsSPDY(ssl_socket_->GetNegotiatedProtocol())) {
+      ssl_socket_->GetNegotiatedProtocol() != kProtoHTTP2) {
     return ERR_NPN_NEGOTIATION_FAILED;
   }
 

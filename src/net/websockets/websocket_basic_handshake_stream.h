@@ -26,6 +26,7 @@ class HttpResponseInfo;
 class HttpStreamParser;
 
 struct WebSocketExtensionParams;
+class WebSocketStreamRequest;
 
 class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
     : public WebSocketHandshakeStreamBase {
@@ -37,7 +38,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
       bool using_proxy,
       std::vector<std::string> requested_sub_protocols,
       std::vector<std::string> requested_extensions,
-      std::string* failure_message);
+      WebSocketStreamRequest* request);
 
   ~WebSocketBasicHandshakeStream() override;
 
@@ -99,9 +100,9 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
   // OK if they are, otherwise returns ERR_INVALID_RESPONSE.
   int ValidateUpgradeResponse(const HttpResponseHeaders* headers);
 
-  HttpStreamParser* parser() const { return state_.parser(); }
+  void OnFailure(const std::string& message);
 
-  void set_failure_message(const std::string& failure_message);
+  HttpStreamParser* parser() const { return state_.parser(); }
 
   // The request URL.
   GURL url_;
@@ -139,7 +140,7 @@ class NET_EXPORT_PRIVATE WebSocketBasicHandshakeStream
   // to avoid including extension-related header files here.
   std::unique_ptr<WebSocketExtensionParams> extension_params_;
 
-  std::string* failure_message_;
+  WebSocketStreamRequest* stream_request_;
 
   DISALLOW_COPY_AND_ASSIGN(WebSocketBasicHandshakeStream);
 };

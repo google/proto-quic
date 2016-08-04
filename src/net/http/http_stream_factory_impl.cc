@@ -17,7 +17,7 @@
 #include "net/http/http_stream_factory_impl_request.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log.h"
-#include "net/quic/quic_server_id.h"
+#include "net/quic/core/quic_server_id.h"
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "url/gurl.h"

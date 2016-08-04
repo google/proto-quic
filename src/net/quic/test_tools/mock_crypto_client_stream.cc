@@ -4,9 +4,9 @@
 
 #include "net/quic/test_tools/mock_crypto_client_stream.h"
 
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
-#include "net/quic/quic_client_session_base.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/quic_client_session_base.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

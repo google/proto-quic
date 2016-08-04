@@ -35,6 +35,56 @@ std::string TestNameWithoutDisabledPrefix(const std::string& test_name) {
   return test_name_no_disabled;
 }
 
+// Converts the given epoch time in milliseconds to a date string in the ISO
+// 8601 format, without the timezone information.
+// TODO(xyzzyz): Find a good place in Chromium to put it and refactor all uses
+// to point to it.
+std::string FormatTimeAsIso8601(base::Time time) {
+  base::Time::Exploded exploded;
+  time.UTCExplode(&exploded);
+  return StringPrintf("%04d-%02d-%02dT%02d:%02d:%02d",
+                      exploded.year,
+                      exploded.month,
+                      exploded.day_of_month,
+                      exploded.hour,
+                      exploded.minute,
+                      exploded.second);
+}
+
+struct TestSuiteResultsAggregator {
+  TestSuiteResultsAggregator()
+      : tests(0), failures(0), disabled(0), errors(0) {}
+
+  void Add(const TestResult& result) {
+    tests++;
+    elapsed_time += result.elapsed_time;
+
+    switch (result.status) {
+      case TestResult::TEST_SUCCESS:
+        break;
+      case TestResult::TEST_FAILURE:
+        failures++;
+        break;
+      case TestResult::TEST_FAILURE_ON_EXIT:
+      case TestResult::TEST_TIMEOUT:
+      case TestResult::TEST_CRASH:
+      case TestResult::TEST_UNKNOWN:
+        errors++;
+        break;
+      case TestResult::TEST_SKIPPED:
+        disabled++;
+        break;
+    }
+  }
+
+  int tests;
+  int failures;
+  int disabled;
+  int errors;
+
+  base::TimeDelta elapsed_time;
+};
+
 }  // namespace
 
 TestResultsTracker::TestResultsTracker() : iteration_(-1), out_(NULL) {
@@ -45,41 +95,64 @@ TestResultsTracker::~TestResultsTracker() {
 
   if (!out_)
     return;
-  fprintf(out_, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-  fprintf(out_, "<testsuites name=\"AllTests\" tests=\"\" failures=\"\""
-          " disabled=\"\" errors=\"\" time=\"\">\n");
 
   // Maps test case names to test results.
   typedef std::map<std::string, std::vector<TestResult> > TestCaseMap;
   TestCaseMap test_case_map;
 
-  for (PerIterationData::ResultsMap::iterator i =
-           per_iteration_data_[iteration_].results.begin();
-       i != per_iteration_data_[iteration_].results.end();
-       ++i) {
+  TestSuiteResultsAggregator all_tests_aggregator;
+  for (const PerIterationData::ResultsMap::value_type& i
+           : per_iteration_data_[iteration_].results) {
     // Use the last test result as the final one.
-    TestResult result = i->second.test_results.back();
+    TestResult result = i.second.test_results.back();
     test_case_map[result.GetTestCaseName()].push_back(result);
+    all_tests_aggregator.Add(result);
   }
-  for (TestCaseMap::iterator i = test_case_map.begin();
-       i != test_case_map.end();
-       ++i) {
-    fprintf(out_, "  <testsuite name=\"%s\" tests=\"%" PRIuS "\" failures=\"\""
-            " disabled=\"\" errors=\"\" time=\"\">\n",
-            i->first.c_str(), i->second.size());
-    for (size_t j = 0; j < i->second.size(); ++j) {
-      const TestResult& result = i->second[j];
+
+  fprintf(out_, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  fprintf(out_, "<testsuites name=\"AllTests\" tests=\"%d\" failures=\"%d\""
+          " disabled=\"%d\" errors=\"%d\" time=\"%.3f\" timestamp=\"%s\">\n",
+          all_tests_aggregator.tests,
+          all_tests_aggregator.failures,
+          all_tests_aggregator.disabled,
+          all_tests_aggregator.errors,
+          all_tests_aggregator.elapsed_time.InSecondsF(),
+          FormatTimeAsIso8601(base::Time::Now()).c_str());
+
+  for (const TestCaseMap::value_type& i : test_case_map) {
+    const std::string testsuite_name = i.first;
+    const std::vector<TestResult>& results = i.second;
+
+    TestSuiteResultsAggregator aggregator;
+    for (const TestResult& result : results) {
+      aggregator.Add(result);
+    }
+    fprintf(out_, "  <testsuite name=\"%s\" tests=\"%d\" "
+            "failures=\"%d\" disabled=\"%d\" errors=\"%d\" time=\"%.3f\" "
+            "timestamp=\"%s\">\n",
+            testsuite_name.c_str(),
+            aggregator.tests, aggregator.failures,
+            aggregator.disabled, aggregator.errors,
+            aggregator.elapsed_time.InSecondsF(),
+            FormatTimeAsIso8601(base::Time::Now()).c_str());
+
+    for (const TestResult& result : results) {
       fprintf(out_, "    <testcase name=\"%s\" status=\"run\" time=\"%.3f\""
               " classname=\"%s\">\n",
               result.GetTestName().c_str(),
               result.elapsed_time.InSecondsF(),
               result.GetTestCaseName().c_str());
-      if (result.status != TestResult::TEST_SUCCESS)
+      if (result.status != TestResult::TEST_SUCCESS) {
+        // The actual failure message is not propagated up to here, as it's too
+        // much work to escape it properly, and in case of failure, almost
+        // always one needs to look into full log anyway.
         fprintf(out_, "      <failure message=\"\" type=\"\"></failure>\n");
+      }
       fprintf(out_, "    </testcase>\n");
     }
     fprintf(out_, "  </testsuite>\n");
   }
+
   fprintf(out_, "</testsuites>\n");
   fclose(out_);
 }

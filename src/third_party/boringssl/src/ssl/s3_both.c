@@ -216,9 +216,9 @@ int ssl3_send_finished(SSL *ssl, int a, int b) {
   ssl->s3->tmp.finish_md_len = n;
 
   /* Log the master secret, if logging is enabled. */
-  if (!ssl_log_master_secret(ssl, ssl->s3->client_random, SSL3_RANDOM_SIZE,
-                             ssl->session->master_key,
-                             ssl->session->master_key_length)) {
+  if (!ssl_log_secret(ssl, "CLIENT_RANDOM",
+                      SSL_get_session(ssl)->master_key,
+                      SSL_get_session(ssl)->master_key_length)) {
     return 0;
   }
 
@@ -338,10 +338,28 @@ size_t ssl_max_handshake_message_len(const SSL *ssl) {
    * not accept peer certificate chains. */
   static const size_t kMaxMessageLen = 16384;
 
-  if ((!ssl->server || (ssl->verify_mode & SSL_VERIFY_PEER)) &&
-      kMaxMessageLen < ssl->max_cert_list) {
-    return ssl->max_cert_list;
+  if (SSL_in_init(ssl)) {
+    if ((!ssl->server || (ssl->verify_mode & SSL_VERIFY_PEER)) &&
+        kMaxMessageLen < ssl->max_cert_list) {
+      return ssl->max_cert_list;
+    }
+    return kMaxMessageLen;
   }
+
+  if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
+    /* In TLS 1.2 and below, the largest acceptable post-handshake message is
+     * a HelloRequest. */
+    return 0;
+  }
+
+  if (ssl->server) {
+    /* The largest acceptable post-handshake message for a server is a
+     * KeyUpdate. We will never initiate post-handshake auth. */
+    return 0;
+  }
+
+  /* Clients must accept NewSessionTicket and CertificateRequest, so allow the
+   * default size. */
   return kMaxMessageLen;
 }
 
@@ -350,10 +368,9 @@ static int extend_handshake_buffer(SSL *ssl, size_t length) {
     return -1;
   }
   while (ssl->init_buf->length < length) {
-    int ret =
-        ssl3_read_bytes(ssl, SSL3_RT_HANDSHAKE,
-                        (uint8_t *)ssl->init_buf->data + ssl->init_buf->length,
-                        length - ssl->init_buf->length, 0);
+    int ret = ssl3_read_handshake_bytes(
+        ssl, (uint8_t *)ssl->init_buf->data + ssl->init_buf->length,
+        length - ssl->init_buf->length);
     if (ret <= 0) {
       return ret;
     }
@@ -362,7 +379,7 @@ static int extend_handshake_buffer(SSL *ssl, size_t length) {
   return 1;
 }
 
-static int read_v2_client_hello(SSL *ssl) {
+static int read_v2_client_hello(SSL *ssl, int *out_is_v2_client_hello) {
   /* Read the first 5 bytes, the size of the TLS record header. This is
    * sufficient to detect a V2ClientHello and ensures that we never read beyond
    * the first record. */
@@ -390,6 +407,7 @@ static int read_v2_client_hello(SSL *ssl) {
   if ((p[0] & 0x80) == 0 || p[2] != SSL2_MT_CLIENT_HELLO ||
       p[3] != SSL3_VERSION_MAJOR) {
     /* Not a V2ClientHello. */
+    *out_is_v2_client_hello = 0;
     return 1;
   }
 
@@ -457,8 +475,15 @@ static int read_v2_client_hello(SSL *ssl) {
          rand_len);
 
   /* Write out an equivalent SSLv3 ClientHello. */
+  size_t max_v3_client_hello = SSL3_HM_HEADER_LENGTH + 2 /* version */ +
+                               SSL3_RANDOM_SIZE + 1 /* session ID length */ +
+                               2 /* cipher list length */ +
+                               CBS_len(&cipher_specs) / 3 * 2 +
+                               1 /* compression length */ + 1 /* compression */;
   CBB client_hello, hello_body, cipher_suites;
-  if (!CBB_init_fixed(&client_hello, (uint8_t *)ssl->init_buf->data,
+  CBB_zero(&client_hello);
+  if (!BUF_MEM_reserve(ssl->init_buf, max_v3_client_hello) ||
+      !CBB_init_fixed(&client_hello, (uint8_t *)ssl->init_buf->data,
                       ssl->init_buf->max) ||
       !CBB_add_u8(&client_hello, SSL3_MT_CLIENT_HELLO) ||
       !CBB_add_u24_length_prefixed(&client_hello, &hello_body) ||
@@ -500,25 +525,36 @@ static int read_v2_client_hello(SSL *ssl) {
     return -1;
   }
 
-  /* Mark the message for "re"-use. */
-  ssl->s3->tmp.reuse_message = 1;
-  ssl->s3->tmp.message_complete = 1;
-
   /* Consume and discard the V2ClientHello. */
   ssl_read_buffer_consume(ssl, 2 + msg_length);
   ssl_read_buffer_discard(ssl);
+
+  *out_is_v2_client_hello = 1;
   return 1;
 }
 
 int ssl3_get_message(SSL *ssl, int msg_type,
                      enum ssl_hash_message_t hash_message) {
 again:
+  /* Re-create the handshake buffer if needed. */
+  if (ssl->init_buf == NULL) {
+    ssl->init_buf = BUF_MEM_new();
+    if (ssl->init_buf == NULL) {
+      return -1;
+    }
+  }
+
   if (ssl->server && !ssl->s3->v2_hello_done) {
     /* Bypass the record layer for the first message to handle V2ClientHello. */
     assert(hash_message == ssl_hash_message);
-    int ret = read_v2_client_hello(ssl);
+    int is_v2_client_hello = 0;
+    int ret = read_v2_client_hello(ssl, &is_v2_client_hello);
     if (ret <= 0) {
       return ret;
+    }
+    if (is_v2_client_hello) {
+      /* V2ClientHello is hashed separately. */
+      hash_message = ssl_dont_hash_message;
     }
     ssl->s3->v2_hello_done = 1;
   }
@@ -528,17 +564,16 @@ again:
      * ssl_dont_hash_message would have to have been applied to the previous
      * call. */
     assert(hash_message == ssl_hash_message);
-    assert(ssl->s3->tmp.message_complete);
+    assert(ssl->init_msg != NULL);
 
     ssl->s3->tmp.reuse_message = 0;
     hash_message = ssl_dont_hash_message;
-  } else if (ssl->s3->tmp.message_complete) {
-    ssl->s3->tmp.message_complete = 0;
-    ssl->init_buf->length = 0;
+  } else {
+    ssl3_release_current_message(ssl, 0 /* don't free buffer */);
   }
 
   /* Read the message header, if we haven't yet. */
-  int ret = extend_handshake_buffer(ssl, 4);
+  int ret = extend_handshake_buffer(ssl, SSL3_HM_HEADER_LENGTH);
   if (ret <= 0) {
     return ret;
   }
@@ -554,37 +589,33 @@ again:
   }
 
   /* Read the message body, if we haven't yet. */
-  ret = extend_handshake_buffer(ssl, 4 + msg_len);
+  ret = extend_handshake_buffer(ssl, SSL3_HM_HEADER_LENGTH + msg_len);
   if (ret <= 0) {
     return ret;
   }
 
   /* We have now received a complete message. */
-  ssl->s3->tmp.message_complete = 1;
   ssl_do_msg_callback(ssl, 0 /* read */, ssl->version, SSL3_RT_HANDSHAKE,
                       ssl->init_buf->data, ssl->init_buf->length);
 
-  /* Ignore stray HelloRequest messages. Per RFC 5246, section 7.4.1.1, the
-   * server may send HelloRequest at any time. */
-  static const uint8_t kHelloRequest[4] = {SSL3_MT_HELLO_REQUEST, 0, 0, 0};
-  if (!ssl->server &&
-      (!ssl->s3->have_version ||
-       ssl3_protocol_version(ssl) < TLS1_3_VERSION) &&
-      ssl->init_buf->length == sizeof(kHelloRequest) &&
-      memcmp(kHelloRequest, ssl->init_buf->data, sizeof(kHelloRequest)) == 0) {
+  ssl->s3->tmp.message_type = ((const uint8_t *)ssl->init_buf->data)[0];
+  ssl->init_msg = (uint8_t*)ssl->init_buf->data + SSL3_HM_HEADER_LENGTH;
+  ssl->init_num = ssl->init_buf->length - SSL3_HM_HEADER_LENGTH;
+
+  /* Ignore stray HelloRequest messages in the handshake before TLS 1.3. Per RFC
+   * 5246, section 7.4.1.1, the server may send HelloRequest at any time. */
+  if (!ssl->server && SSL_in_init(ssl) &&
+      (!ssl->s3->have_version || ssl3_protocol_version(ssl) < TLS1_3_VERSION) &&
+      ssl->s3->tmp.message_type == SSL3_MT_HELLO_REQUEST &&
+      ssl->init_num == 0) {
     goto again;
   }
 
-  uint8_t actual_type = ((const uint8_t *)ssl->init_buf->data)[0];
-  if (msg_type >= 0 && actual_type != msg_type) {
+  if (msg_type >= 0 && ssl->s3->tmp.message_type != msg_type) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
     return -1;
   }
-  ssl->s3->tmp.message_type = actual_type;
-
-  ssl->init_msg = (uint8_t*)ssl->init_buf->data + 4;
-  ssl->init_num = ssl->init_buf->length - 4;
 
   /* Feed this message into MAC computation. */
   if (hash_message == ssl_hash_message && !ssl3_hash_current_message(ssl)) {
@@ -597,6 +628,23 @@ again:
 int ssl3_hash_current_message(SSL *ssl) {
   return ssl3_update_handshake_hash(ssl, (uint8_t *)ssl->init_buf->data,
                                     ssl->init_buf->length);
+}
+
+void ssl3_release_current_message(SSL *ssl, int free_buffer) {
+  if (ssl->init_msg != NULL) {
+    /* |init_buf| never contains data beyond the current message. */
+    assert(SSL3_HM_HEADER_LENGTH + ssl->init_num == ssl->init_buf->length);
+
+    /* Clear the current message. */
+    ssl->init_msg = NULL;
+    ssl->init_num = 0;
+    ssl->init_buf->length = 0;
+  }
+
+  if (free_buffer) {
+    BUF_MEM_free(ssl->init_buf);
+    ssl->init_buf = NULL;
+  }
 }
 
 int ssl_verify_alarm_type(long type) {

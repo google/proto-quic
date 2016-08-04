@@ -14,9 +14,6 @@ namespace android {
 // Wrapper class for using the java.lang.Runtime object from jni.
 class BASE_EXPORT JavaRuntime {
  public:
-  // Registers the jni class (once per process).
-  static bool Register(JNIEnv* env);
-
   // Fills the total memory used and memory allocated for objects by the java
   // heap in the current process. Returns true on success.
   static void GetMemoryUsage(long* total_memory, long* free_memory);

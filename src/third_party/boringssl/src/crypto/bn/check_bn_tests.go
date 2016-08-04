@@ -10,7 +10,7 @@
 // SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 // OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 package main
 
@@ -238,7 +238,7 @@ func main() {
 				r = r.Mod(r, test.Values["P"])
 				checkResult(test, "ModSqrt ^ 2 (mod P)", "A", r)
 
-				if (test.Values["P"].Cmp(bigTwo) > 0) {
+				if test.Values["P"].Cmp(bigTwo) > 0 {
 					pMinus1Over2 := new(big.Int).Sub(test.Values["P"], bigOne)
 					pMinus1Over2.Rsh(pMinus1Over2, 1)
 
@@ -246,6 +246,11 @@ func main() {
 						fmt.Fprintf(os.Stderr, "Line %d: ModSqrt should be minimal.\n", test.LineNumber)
 					}
 				}
+			}
+		case "ModInv":
+			if checkKeys(test, "A", "M", "ModInv") {
+				r := new(big.Int).ModInverse(test.Values["A"], test.Values["M"])
+				checkResult(test, "A ^ -1 (mod M)", "ModInv", r)
 			}
 		default:
 			fmt.Fprintf(os.Stderr, "Line %d: unknown test type %q.\n", test.LineNumber, test.Type)

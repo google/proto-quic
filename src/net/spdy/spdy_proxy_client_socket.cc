@@ -101,9 +101,9 @@ HttpStream* SpdyProxyClientSocket::CreateConnectResponseStream() {
       redirect_has_load_timing_info_ ? &redirect_load_timing_info_ : NULL);
 }
 
-// Sends a SYN_STREAM frame to the proxy with a CONNECT request
+// Sends a HEADERS frame to the proxy with a CONNECT request
 // for the specified endpoint.  Waits for the server to send back
-// a SYN_REPLY frame.  OK will be returned if the status is 200.
+// a HEADERS frame.  OK will be returned if the status is 200.
 // ERR_TUNNEL_CONNECTION_FAILED will be returned for any other status.
 // In any of these cases, Read() may be called to retrieve the HTTP
 // response body.  Any other return values should be considered fatal.
@@ -364,9 +364,9 @@ int SpdyProxyClientSocket::DoSendRequest() {
       base::Bind(&HttpRequestHeaders::NetLogCallback,
                  base::Unretained(&request_.extra_headers), &request_line));
 
-  std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock());
+  SpdyHeaderBlock headers;
   CreateSpdyHeadersFromHttpRequest(request_, request_.extra_headers, true,
-                                   headers.get());
+                                   &headers);
 
   return spdy_stream_->SendRequestHeaders(std::move(headers),
                                           MORE_DATA_TO_SEND);
@@ -376,14 +376,14 @@ int SpdyProxyClientSocket::DoSendRequestComplete(int result) {
   if (result < 0)
     return result;
 
-  // Wait for SYN_REPLY frame from the server
+  // Wait for HEADERS frame from the server
   next_state_ = STATE_READ_REPLY_COMPLETE;
   return ERR_IO_PENDING;
 }
 
 int SpdyProxyClientSocket::DoReadReplyComplete(int result) {
   // We enter this method directly from DoSendRequestComplete, since
-  // we are notified by a callback when the SYN_REPLY frame arrives
+  // we are notified by a callback when the HEADERS frame arrives.
 
   if (result < 0)
     return result;

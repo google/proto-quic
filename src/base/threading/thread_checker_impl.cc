@@ -4,31 +4,47 @@
 
 #include "base/threading/thread_checker_impl.h"
 
+#include "base/threading/thread_task_runner_handle.h"
+
 namespace base {
 
-ThreadCheckerImpl::ThreadCheckerImpl()
-    : valid_thread_id_() {
-  EnsureThreadIdAssigned();
+ThreadCheckerImpl::ThreadCheckerImpl() {
+  AutoLock auto_lock(lock_);
+  EnsureAssigned();
 }
 
-ThreadCheckerImpl::~ThreadCheckerImpl() {}
+ThreadCheckerImpl::~ThreadCheckerImpl() = default;
 
 bool ThreadCheckerImpl::CalledOnValidThread() const {
-  EnsureThreadIdAssigned();
   AutoLock auto_lock(lock_);
-  return valid_thread_id_ == PlatformThread::CurrentRef();
+  EnsureAssigned();
+
+  // If this ThreadCheckerImpl is bound to a valid SequenceToken, it must be
+  // equal to the current SequenceToken and there must be a registered
+  // ThreadTaskRunnerHandle. Otherwise, the fact that the current task runs on
+  // the thread to which this ThreadCheckerImpl is bound is fortuitous.
+  if (sequence_token_.IsValid() &&
+      (sequence_token_ != SequenceToken::GetForCurrentThread() ||
+       !ThreadTaskRunnerHandle::IsSet())) {
+    return false;
+  }
+
+  return thread_id_ == PlatformThread::CurrentRef();
 }
 
 void ThreadCheckerImpl::DetachFromThread() {
   AutoLock auto_lock(lock_);
-  valid_thread_id_ = PlatformThreadRef();
+  thread_id_ = PlatformThreadRef();
+  sequence_token_ = SequenceToken();
 }
 
-void ThreadCheckerImpl::EnsureThreadIdAssigned() const {
-  AutoLock auto_lock(lock_);
-  if (valid_thread_id_.is_null()) {
-    valid_thread_id_ = PlatformThread::CurrentRef();
-  }
+void ThreadCheckerImpl::EnsureAssigned() const {
+  lock_.AssertAcquired();
+  if (!thread_id_.is_null())
+    return;
+
+  thread_id_ = PlatformThread::CurrentRef();
+  sequence_token_ = SequenceToken::GetForCurrentThread();
 }
 
 }  // namespace base

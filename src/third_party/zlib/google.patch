@@ -122,7 +122,7 @@ new file mode 100644
 index 0000000..80994c9
 --- /dev/null
 +++ b/third_party/zlib/mozzconf.h
-@@ -0,0 +1,177 @@
+@@ -0,0 +1,178 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****
 + * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -287,6 +287,7 @@ index 0000000..80994c9
 +#define internal_state MOZ_Z_internal_state
 +
 +/* New as of zlib 1.2.8 */
++#define _tr_flush_bits MOZ_Z__tr_flush_bits
 +#define deflateResetKeep MOZ_Z_deflateResetKeep
 +#define deflatePending MOZ_Z_deflatePending
 +#define inflateGetDictionary MOZ_Z_inflateGetDictionary

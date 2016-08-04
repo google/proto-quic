@@ -106,6 +106,7 @@ enum {
 
 HttpResponseInfo::HttpResponseInfo()
     : was_cached(false),
+      cache_entry_status(CacheEntryStatus::ENTRY_UNDEFINED),
       server_data_unavailable(false),
       network_accessed(false),
       was_fetched_via_spdy(false),
@@ -118,6 +119,7 @@ HttpResponseInfo::HttpResponseInfo()
 
 HttpResponseInfo::HttpResponseInfo(const HttpResponseInfo& rhs)
     : was_cached(rhs.was_cached),
+      cache_entry_status(rhs.cache_entry_status),
       server_data_unavailable(rhs.server_data_unavailable),
       network_accessed(rhs.network_accessed),
       was_fetched_via_spdy(rhs.was_fetched_via_spdy),
@@ -144,6 +146,7 @@ HttpResponseInfo::~HttpResponseInfo() {
 
 HttpResponseInfo& HttpResponseInfo::operator=(const HttpResponseInfo& rhs) {
   was_cached = rhs.was_cached;
+  cache_entry_status = rhs.cache_entry_status;
   server_data_unavailable = rhs.server_data_unavailable;
   network_accessed = rhs.network_accessed;
   was_fetched_via_spdy = rhs.was_fetched_via_spdy;
@@ -397,8 +400,6 @@ void HttpResponseInfo::Persist(base::Pickle* pickle,
 HttpResponseInfo::ConnectionInfo HttpResponseInfo::ConnectionInfoFromNextProto(
     NextProto next_proto) {
   switch (next_proto) {
-    case kProtoSPDY31:
-      return CONNECTION_INFO_SPDY3;
     case kProtoHTTP2:
       return CONNECTION_INFO_HTTP2;
     case kProtoQUIC1SPDY3:
@@ -424,14 +425,14 @@ std::string HttpResponseInfo::ConnectionInfoToString(
     case CONNECTION_INFO_DEPRECATED_SPDY2:
       NOTREACHED();
       return "";
-    case CONNECTION_INFO_SPDY3:
+    case CONNECTION_INFO_DEPRECATED_SPDY3:
       return "spdy/3";
     // Since ConnectionInfo is persisted to disk, deprecated values have to be
     // handled. Note that h2-14 and h2-15 are essentially wire compatible with
     // h2.
     // Intentional fallthrough.
-    case CONNECTION_INFO_HTTP2_14:
-    case CONNECTION_INFO_HTTP2_15:
+    case CONNECTION_INFO_DEPRECATED_HTTP2_14:
+    case CONNECTION_INFO_DEPRECATED_HTTP2_15:
     case CONNECTION_INFO_HTTP2:
       return "h2";
     case CONNECTION_INFO_QUIC1_SPDY3:

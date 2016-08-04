@@ -21,6 +21,7 @@
 #include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
+#include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/profiler/scoped_tracker.h"
@@ -74,7 +75,7 @@ const int kNoPendingResult = 1;
 const char kDefaultSupportedNPNProtocol[] = "http/1.1";
 
 // Default size of the internal BoringSSL buffers.
-const int KDefaultOpenSSLBufferSize = 17 * 1024;
+const int kDefaultOpenSSLBufferSize = 17 * 1024;
 
 // TLS extension number use for Token Binding.
 const unsigned int kTbExtNum = 24;
@@ -517,7 +518,6 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       disconnected_(false),
       npn_status_(kNextProtoUnsupported),
       channel_id_sent_(false),
-      session_pending_(false),
       certificate_verified_(false),
       signature_result_(kNoPendingResult),
       transport_security_state_(context.transport_security_state),
@@ -708,7 +708,7 @@ void SSLClientSocketImpl::Disconnect() {
 
   channel_id_sent_ = false;
   tb_was_negotiated_ = false;
-  session_pending_ = false;
+  pending_session_ = nullptr;
   certificate_verified_ = false;
   channel_id_request_.Cancel();
 
@@ -798,14 +798,18 @@ bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   ssl_info->token_binding_negotiated = tb_was_negotiated_;
   ssl_info->token_binding_key_param = tb_negotiated_param_;
   ssl_info->pinning_failure_log = pinning_failure_log_;
+  ssl_info->ocsp_result = server_cert_verify_result_.ocsp_result;
 
   AddCTInfoToSSLInfo(ssl_info);
 
   const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl_);
   CHECK(cipher);
   ssl_info->security_bits = SSL_CIPHER_get_bits(cipher, NULL);
-  ssl_info->key_exchange_info =
-      SSL_SESSION_get_key_exchange_info(SSL_get_session(ssl_));
+  if (SSL_CIPHER_is_ECDHE(cipher)) {
+    ssl_info->key_exchange_info = SSL_get_curve_id(ssl_);
+  } else if (SSL_CIPHER_is_DHE(cipher)) {
+    ssl_info->key_exchange_info = SSL_get_dhe_group_size(ssl_);
+  }
 
   SSLConnectionStatusSetCipherSuite(
       static_cast<uint16_t>(SSL_CIPHER_get_id(cipher)),
@@ -917,10 +921,35 @@ int SSLClientSocketImpl::Init() {
   if (session)
     SSL_set_session(ssl_, session.get());
 
+  // Get read and write buffer sizes from field trials, if possible. If values
+  // not present, use default.  Also make sure values are in reasonable range.
+  int send_buffer_size = kDefaultOpenSSLBufferSize;
+#if !defined(OS_NACL)
+  int override_send_buffer_size;
+  if (base::StringToInt(base::FieldTrialList::FindFullName("SSLBufferSizeSend"),
+                        &override_send_buffer_size)) {
+    send_buffer_size = override_send_buffer_size;
+    send_buffer_size = std::max(send_buffer_size, 1000);
+    send_buffer_size =
+        std::min(send_buffer_size, 2 * kDefaultOpenSSLBufferSize);
+  }
+#endif  // !defined(OS_NACL)
   send_buffer_ = new GrowableIOBuffer();
-  send_buffer_->SetCapacity(KDefaultOpenSSLBufferSize);
+  send_buffer_->SetCapacity(send_buffer_size);
+
+  int recv_buffer_size = kDefaultOpenSSLBufferSize;
+#if !defined(OS_NACL)
+  int override_recv_buffer_size;
+  if (base::StringToInt(base::FieldTrialList::FindFullName("SSLBufferSizeRecv"),
+                        &override_recv_buffer_size)) {
+    recv_buffer_size = override_recv_buffer_size;
+    recv_buffer_size = std::max(recv_buffer_size, 1000);
+    recv_buffer_size =
+        std::min(recv_buffer_size, 2 * kDefaultOpenSSLBufferSize);
+  }
+#endif  // !defined(OS_NACL)
   recv_buffer_ = new GrowableIOBuffer();
-  recv_buffer_->SetCapacity(KDefaultOpenSSLBufferSize);
+  recv_buffer_->SetCapacity(recv_buffer_size);
 
   BIO* ssl_bio = NULL;
 
@@ -1192,16 +1221,16 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   RecordChannelIDSupport(channel_id_service_, channel_id_sent_,
                          ssl_config_.channel_id_enabled);
 
-  // Only record OCSP histograms if OCSP was requested.
-  if (ssl_config_.signed_cert_timestamps_enabled ||
-      cert_verifier_->SupportsOCSPStapling()) {
-    const uint8_t* ocsp_response;
-    size_t ocsp_response_len;
-    SSL_get0_ocsp_response(ssl_, &ocsp_response, &ocsp_response_len);
-
-    set_stapled_ocsp_response_received(ocsp_response_len != 0);
-    UMA_HISTOGRAM_BOOLEAN("Net.OCSPResponseStapled", ocsp_response_len != 0);
+  const uint8_t* ocsp_response_raw;
+  size_t ocsp_response_len;
+  SSL_get0_ocsp_response(ssl_, &ocsp_response_raw, &ocsp_response_len);
+  std::string ocsp_response;
+  if (ocsp_response_len > 0) {
+    ocsp_response_.assign(reinterpret_cast<const char*>(ocsp_response_raw),
+                          ocsp_response_len);
   }
+  set_stapled_ocsp_response_received(ocsp_response_len != 0);
+  UMA_HISTOGRAM_BOOLEAN("Net.OCSPResponseStapled", ocsp_response_len != 0);
 
   const uint8_t* sct_list;
   size_t sct_list_len;
@@ -1286,21 +1315,12 @@ int SSLClientSocketImpl::DoVerifyCert(int result) {
     return OK;
   }
 
-  std::string ocsp_response;
-  if (cert_verifier_->SupportsOCSPStapling()) {
-    const uint8_t* ocsp_response_raw;
-    size_t ocsp_response_len;
-    SSL_get0_ocsp_response(ssl_, &ocsp_response_raw, &ocsp_response_len);
-    ocsp_response.assign(reinterpret_cast<const char*>(ocsp_response_raw),
-                         ocsp_response_len);
-  }
-
   start_cert_verification_time_ = base::TimeTicks::Now();
 
   return cert_verifier_->Verify(
       CertVerifier::RequestParams(server_cert_, host_and_port_.host(),
                                   ssl_config_.GetCertVerifyFlags(),
-                                  ocsp_response, CertificateList()),
+                                  ocsp_response_, CertificateList()),
       // TODO(davidben): Route the CRLSet through SSLConfig so
       // SSLClientSocket doesn't depend on SSLConfigService.
       SSLConfigService::GetCRLSet().get(), &server_cert_verify_result_,
@@ -1355,6 +1375,11 @@ int SSLClientSocketImpl::DoVerifyCertComplete(int result) {
     DCHECK(!certificate_verified_);
     certificate_verified_ = true;
     MaybeCacheSession();
+    SSLInfo ssl_info;
+    bool ok = GetSSLInfo(&ssl_info);
+    DCHECK(ok);
+    transport_security_state_->CheckExpectStaple(host_and_port_, ssl_info,
+                                                 ocsp_response_);
   }
 
   completed_connect_ = true;
@@ -1770,15 +1795,6 @@ int SSLClientSocketImpl::TransportReadComplete(int result) {
 }
 
 int SSLClientSocketImpl::VerifyCT() {
-  const uint8_t* ocsp_response_raw;
-  size_t ocsp_response_len;
-  SSL_get0_ocsp_response(ssl_, &ocsp_response_raw, &ocsp_response_len);
-  std::string ocsp_response;
-  if (ocsp_response_len > 0) {
-    ocsp_response.assign(reinterpret_cast<const char*>(ocsp_response_raw),
-                         ocsp_response_len);
-  }
-
   const uint8_t* sct_list_raw;
   size_t sct_list_len;
   SSL_get0_signed_cert_timestamp_list(ssl_, &sct_list_raw, &sct_list_len);
@@ -1790,7 +1806,7 @@ int SSLClientSocketImpl::VerifyCT() {
   // gets all the data it needs for SCT verification and does not do any
   // external communication.
   cert_transparency_verifier_->Verify(
-      server_cert_verify_result_.verified_cert.get(), ocsp_response, sct_list,
+      server_cert_verify_result_.verified_cert.get(), ocsp_response_, sct_list,
       &ct_verify_result_, net_log_);
 
   ct_verify_result_.ct_policies_applied = true;
@@ -2071,25 +2087,18 @@ void SSLClientSocketImpl::MaybeCacheSession() {
   // Only cache the session once both a new session has been established and the
   // certificate has been verified. Due to False Start, these events may happen
   // in either order.
-  if (!session_pending_ || !certificate_verified_)
+  if (!pending_session_ || !certificate_verified_)
     return;
 
   SSLContext::GetInstance()->session_cache()->Insert(GetSessionCacheKey(),
-                                                     SSL_get_session(ssl_));
-  session_pending_ = false;
+                                                     pending_session_.get());
+  pending_session_ = nullptr;
 }
 
 int SSLClientSocketImpl::NewSessionCallback(SSL_SESSION* session) {
-  DCHECK_EQ(session, SSL_get_session(ssl_));
-
-  // Only sessions from the initial handshake get cached. Note this callback may
-  // be signaled on abbreviated handshakes if the ticket was renewed.
-  session_pending_ = true;
+  // OpenSSL passes a reference to |session|.
+  pending_session_.reset(session);
   MaybeCacheSession();
-
-  // OpenSSL passes a reference to |session|, but the session cache does not
-  // take this reference, so release it.
-  SSL_SESSION_free(session);
   return 1;
 }
 

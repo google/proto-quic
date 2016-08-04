@@ -7,18 +7,22 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <memory>
 #include <new>
 #include <vector>
 
 #include "base/atomicops.h"
+#include "base/process/process_metrics.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_local.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if !defined(OS_WIN)
+#include <unistd.h>
+#endif
 
 // Some new Android NDKs (64 bit) does not expose (p)valloc anymore. These
 // functions are implemented at the shim-layer level.
@@ -178,7 +182,7 @@ AllocatorDispatch g_mock_dispatch = {
 };
 
 TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
-  const size_t kPageSize = sysconf(_SC_PAGESIZE);
+  const size_t kPageSize = base::GetPageSize();
   InsertAllocatorDispatch(&g_mock_dispatch);
 
   void* alloc_ptr = malloc(19);
@@ -189,6 +193,7 @@ TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
   ASSERT_NE(nullptr, zero_alloc_ptr);
   ASSERT_GE(zero_allocs_intercepted_by_size[2 * 23], 1u);
 
+#if !defined(OS_WIN)
   void* memalign_ptr = memalign(128, 53);
   ASSERT_NE(nullptr, memalign_ptr);
   ASSERT_EQ(0u, reinterpret_cast<uintptr_t>(memalign_ptr) % 128);
@@ -215,15 +220,17 @@ TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
   ASSERT_GE(aligned_allocs_intercepted_by_alignment[kPageSize], 1u);
   // pvalloc rounds the size up to the next page.
   ASSERT_GE(aligned_allocs_intercepted_by_size[kPageSize], 1u);
+#endif  // OS_WIN
 
   char* realloc_ptr = static_cast<char*>(realloc(nullptr, 71));
   ASSERT_NE(nullptr, realloc_ptr);
   ASSERT_GE(reallocs_intercepted_by_size[71], 1u);
   ASSERT_GE(reallocs_intercepted_by_addr[Hash(nullptr)], 1u);
   strcpy(realloc_ptr, "foobar");
+  void* old_realloc_ptr = realloc_ptr;
   realloc_ptr = static_cast<char*>(realloc(realloc_ptr, 73));
   ASSERT_GE(reallocs_intercepted_by_size[73], 1u);
-  ASSERT_GE(reallocs_intercepted_by_addr[Hash(realloc_ptr)], 1u);
+  ASSERT_GE(reallocs_intercepted_by_addr[Hash(old_realloc_ptr)], 1u);
   ASSERT_EQ(0, strcmp(realloc_ptr, "foobar"));
 
   free(alloc_ptr);
@@ -232,6 +239,7 @@ TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
   free(zero_alloc_ptr);
   ASSERT_GE(frees_intercepted_by_addr[Hash(zero_alloc_ptr)], 1u);
 
+#if !defined(OS_WIN)
   free(memalign_ptr);
   ASSERT_GE(frees_intercepted_by_addr[Hash(memalign_ptr)], 1u);
 
@@ -243,6 +251,7 @@ TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
 
   free(pvalloc_ptr);
   ASSERT_GE(frees_intercepted_by_addr[Hash(pvalloc_ptr)], 1u);
+#endif  // OS_WIN
 
   free(realloc_ptr);
   ASSERT_GE(frees_intercepted_by_addr[Hash(realloc_ptr)], 1u);

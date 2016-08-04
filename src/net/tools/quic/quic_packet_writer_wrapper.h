@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/quic/quic_packet_writer.h"
+#include "net/quic/core/quic_packet_writer.h"
 
 namespace net {
 

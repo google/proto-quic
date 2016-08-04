@@ -9,7 +9,7 @@
 #include <string>
 
 #include "net/base/ip_endpoint.h"
-#include "net/quic/quic_session.h"
+#include "net/quic/core/quic_session.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_server.h"
 #include "net/tools/quic/quic_simple_server_session.h"

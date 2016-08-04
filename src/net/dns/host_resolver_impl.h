@@ -16,6 +16,7 @@
 #include "base/strings/string_piece.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
+#include "base/timer/timer.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/dns/host_cache.h"
@@ -136,11 +137,8 @@ class NET_EXPORT HostResolverImpl
               RequestPriority priority,
               AddressList* addresses,
               const CompletionCallback& callback,
-              RequestHandle* out_req,
+              std::unique_ptr<Request>* out_req,
               const BoundNetLog& source_net_log) override;
-  void ChangeRequestPriority(RequestHandle req,
-                             RequestPriority priority) override;
-  void CancelRequest(RequestHandle req) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
                        const BoundNetLog& source_net_log) override;
@@ -155,6 +153,10 @@ class NET_EXPORT HostResolverImpl
                             AddressList* addresses,
                             HostCache::EntryStaleness* stale_info,
                             const BoundNetLog& source_net_log);
+
+  void InitializePersistence(
+      const PersistCallback& persist_callback,
+      std::unique_ptr<const base::Value> old_data) override;
 
   void set_proc_params_for_test(const ProcTaskParams& proc_params) {
     proc_params_ = proc_params;
@@ -176,7 +178,7 @@ class NET_EXPORT HostResolverImpl
   class ProcTask;
   class LoopbackProbeJob;
   class DnsTask;
-  class Request;
+  class RequestImpl;
   typedef HostCache::Key Key;
   typedef std::map<Key, Job*> JobMap;
 
@@ -297,6 +299,19 @@ class NET_EXPORT HostResolverImpl
   // and resulted in |net_error|.
   void OnDnsTaskResolve(int net_error);
 
+  void OnCacheEntryEvicted(const HostCache::Key& key,
+                           const HostCache::Entry& entry);
+  void ClearCacheHitCallbacks(const HostCache::Key& key);
+  void MaybeAddCacheHitCallback(const HostCache::Key& key,
+                                const RequestInfo& info);
+  void RunCacheHitCallbacks(const HostCache::Key& key, const RequestInfo& info);
+
+  void ApplyPersistentData(std::unique_ptr<const base::Value>);
+  std::unique_ptr<const base::Value> GetPersistentData();
+
+  void SchedulePersist();
+  void DoPersist();
+
   // Allows the tests to catch slots leaking out of the dispatcher.  One
   // HostResolverImpl::Job could occupy multiple PrioritizedDispatcher job
   // slots.
@@ -352,6 +367,13 @@ class NET_EXPORT HostResolverImpl
   // blocking operations. Usually just the WorkerPool's task runner for slow
   // tasks, but can be overridden for tests.
   scoped_refptr<base::TaskRunner> worker_task_runner_;
+
+  std::map<const HostCache::Key, std::vector<RequestInfo::CacheHitCallback>>
+      cache_hit_callbacks_;
+
+  bool persist_initialized_;
+  PersistCallback persist_callback_;
+  base::OneShotTimer persist_timer_;
 
   base::WeakPtrFactory<HostResolverImpl> weak_ptr_factory_;
 

@@ -17,8 +17,8 @@
 #include "base/time/time.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
-#include "net/quic/quic_bandwidth.h"
-#include "net/quic/quic_server_id.h"
+#include "net/quic/core/quic_bandwidth.h"
+#include "net/quic/core/quic_server_id.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_framer.h"  // TODO(willchan): Reconsider this.
 #include "net/spdy/spdy_protocol.h"
@@ -265,7 +265,8 @@ class NET_EXPORT HttpServerProperties {
   // Set a single alternative service for |origin|.  Previous alternative
   // services for |origin| are discarded.
   // |alternative_service.host| may be empty.
-  // Return true if |alternative_service_map_| is changed.
+  // Return true if |alternative_service_map_| has changed significantly enough
+  // that it should be persisted to disk.
   virtual bool SetAlternativeService(
       const url::SchemeHostPort& origin,
       const AlternativeService& alternative_service,
@@ -274,7 +275,9 @@ class NET_EXPORT HttpServerProperties {
   // Set alternative services for |origin|.  Previous alternative services for
   // |origin| are discarded.
   // Hostnames in |alternative_service_info_vector| may be empty.
-  // Return true if |alternative_service_map_| is changed.
+  // |alternative_service_info_vector| may be empty.
+  // Return true if |alternative_service_map_| has changed significantly enough
+  // that it should be persisted to disk.
   virtual bool SetAlternativeServices(
       const url::SchemeHostPort& origin,
       const AlternativeServiceInfoVector& alternative_service_info_vector) = 0;

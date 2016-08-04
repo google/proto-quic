@@ -17,6 +17,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/task_traits.h"
 
 namespace tracked_objects {
 class Location;
@@ -47,8 +48,7 @@ class SequencedTaskRunner;
 //     destruction will be visible to T2.
 //
 // Example:
-//   SequencedWorkerPool::SequenceToken token =
-//       SequencedWorkerPool::GetSequenceToken();
+//   SequencedWorkerPool::SequenceToken token = pool.GetSequenceToken();
 //   pool.PostSequencedWorkerTask(token, SequencedWorkerPool::SKIP_ON_SHUTDOWN,
 //                                FROM_HERE, base::Bind(...));
 //   pool.PostSequencedWorkerTask(token, SequencedWorkerPool::SKIP_ON_SHUTDOWN,
@@ -164,29 +164,31 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // an unsequenced task, returns an invalid SequenceToken.
   static SequenceToken GetSequenceTokenForCurrentThread();
 
-  // Gets a SequencedTaskRunner for the current thread. If the current thread is
-  // running an unsequenced task, a new SequenceToken will be generated and set,
-  // so that the returned SequencedTaskRunner is guaranteed to run tasks after
-  // the current task has finished running.
-  static scoped_refptr<SequencedTaskRunner>
-  GetSequencedTaskRunnerForCurrentThread();
-
-  // Returns a unique token that can be used to sequence tasks posted to
-  // PostSequencedWorkerTask(). Valid tokens are always nonzero.
-  // TODO(bauerb): Rename this to better differentiate from
-  // GetSequenceTokenForCurrentThread().
-  static SequenceToken GetSequenceToken();
-
   // Returns the SequencedWorkerPool that owns this thread, or null if the
   // current thread is not a SequencedWorkerPool worker thread.
   static scoped_refptr<SequencedWorkerPool> GetWorkerPoolForCurrentThread();
+
+  // Returns a unique token that can be used to sequence tasks posted to
+  // PostSequencedWorkerTask(). Valid tokens are always nonzero.
+  static SequenceToken GetSequenceToken();
 
   // When constructing a SequencedWorkerPool, there must be a
   // ThreadTaskRunnerHandle on the current thread unless you plan to
   // deliberately leak it.
 
   // Pass the maximum number of threads (they will be lazily created as needed)
-  // and a prefix for the thread name to aid in debugging.
+  // and a prefix for the thread name to aid in debugging. |task_priority| will
+  // be used to hint base::TaskScheduler for an experiment in which all
+  // SequencedWorkerPool tasks will be redirected to it in processes where a
+  // base::TaskScheduler was instantiated.
+  SequencedWorkerPool(size_t max_threads,
+                      const std::string& thread_name_prefix,
+                      base::TaskPriority task_priority);
+
+  // Deprecated, use the above constructor with |task_priority| instead.
+  // TODO(gab): Cleanup last few use cases of this before running the
+  // aforementioned base::TaskScheduler experiment (or make sure this
+  // constructor results in callers being opted out of the experiment).
   SequencedWorkerPool(size_t max_threads,
                       const std::string& thread_name_prefix);
 
@@ -194,6 +196,7 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // |observer|.
   SequencedWorkerPool(size_t max_threads,
                       const std::string& thread_name_prefix,
+                      base::TaskPriority task_priority,
                       TestingObserver* observer);
 
   // Returns the sequence token associated with the given name. Calling this
@@ -319,10 +322,6 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // Returns true if the current thread is processing a task with the given
   // sequence_token.
   bool IsRunningSequenceOnCurrentThread(SequenceToken sequence_token) const;
-
-  // Returns true if any thread is currently processing a task with the given
-  // sequence token. Should only be called with a valid sequence token.
-  bool IsRunningSequence(SequenceToken sequence_token) const;
 
   // Blocks until all pending tasks are complete. This should only be called in
   // unit tests when you want to validate something that should have happened.

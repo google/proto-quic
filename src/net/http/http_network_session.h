@@ -23,7 +23,7 @@
 #include "net/dns/host_resolver.h"
 #include "net/http/http_auth_cache.h"
 #include "net/http/http_stream_factory.h"
-#include "net/quic/quic_stream_factory.h"
+#include "net/quic/chromium/quic_stream_factory.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_client_auth_cache.h"
@@ -100,9 +100,6 @@ class NET_EXPORT HttpNetworkSession
     // Whether to enable QUIC Alt-Svc entries with hostname different than that
     // of the origin.
     bool enable_quic_alternative_service_with_different_host;
-
-    // Enable setting of HTTP/2 dependencies based on priority.
-    bool enable_priority_dependencies;
 
     // Enables QUIC support.
     bool enable_quic;

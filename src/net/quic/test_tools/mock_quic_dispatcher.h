@@ -7,9 +7,9 @@
 
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/crypto/quic_crypto_server_config.h"
-#include "net/quic/quic_config.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/crypto/quic_crypto_server_config.h"
+#include "net/quic/core/quic_config.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "testing/gmock/include/gmock/gmock.h"
 

@@ -10,10 +10,10 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/stl_util.h"
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_bug_tracker.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/tools/quic/chlo_extractor.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_session.h"
@@ -202,7 +202,6 @@ QuicDispatcher::QuicDispatcher(
           alarm_factory_->CreateAlarm(new DeleteSessionsAlarm(this))),
       buffered_packets_(this, helper_->GetClock(), alarm_factory_.get()),
       supported_versions_(supported_versions),
-      disable_quic_pre_30_(FLAGS_quic_disable_pre_30),
       allowed_supported_versions_(supported_versions),
       current_packet_(nullptr),
       framer_(supported_versions,
@@ -475,8 +474,8 @@ void QuicDispatcher::OnConnectionClosed(QuicConnectionId connection_id,
       << ", with details: " << error_details;
 
   if (closed_session_list_.empty()) {
-    delete_sessions_alarm_->Cancel();
-    delete_sessions_alarm_->Set(helper()->GetClock()->ApproximateNow());
+    delete_sessions_alarm_->Update(helper()->GetClock()->ApproximateNow(),
+                                   QuicTime::Delta::Zero());
   }
   closed_session_list_.push_back(it->second);
   const bool should_close_statelessly =
@@ -741,10 +740,9 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::MaybeRejectStatelessly(
 
 const QuicVersionVector& QuicDispatcher::GetSupportedVersions() {
   // Filter (or un-filter) the list of supported versions based on the flag.
-  if (disable_quic_pre_30_ != FLAGS_quic_disable_pre_30) {
+  if (false) {
     DCHECK_EQ(supported_versions_.capacity(),
               allowed_supported_versions_.capacity());
-    disable_quic_pre_30_ = FLAGS_quic_disable_pre_30;
     supported_versions_ = FilterSupportedVersions(allowed_supported_versions_);
   }
   return supported_versions_;

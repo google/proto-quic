@@ -32,7 +32,7 @@ namespace base {
 //
 //  - If you only ever keep a couple of items and have very simple usage,
 //    consider whether a using a vector and brute-force searching it will be
-//    the most efficient. It's not a lot of generated code (less then a
+//    the most efficient. It's not a lot of generated code (less than a
 //    red-black tree if your key is "weird" and not eliminated as duplicate of
 //    something else) and will probably be faster and do fewer heap allocations
 //    than std::map if you have just a couple of items.

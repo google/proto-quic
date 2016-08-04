@@ -24,7 +24,6 @@
 #include "base/time/time.h"
 #include "base/values.h"
 #include "net/base/completion_callback.h"
-#include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
 #include "net/base/proxy_delegate.h"
 #include "net/base/url_util.h"
@@ -789,7 +788,6 @@ class ProxyService::PacRequest
   PacRequest(ProxyService* service,
              const GURL& url,
              const std::string& method,
-             int load_flags,
              ProxyDelegate* proxy_delegate,
              ProxyInfo* results,
              const CompletionCallback& user_callback,
@@ -799,7 +797,6 @@ class ProxyService::PacRequest
         results_(results),
         url_(url),
         method_(method),
-        load_flags_(load_flags),
         proxy_delegate_(proxy_delegate),
         resolve_job_(NULL),
         config_id_(ProxyConfig::kInvalidConfigID),
@@ -831,8 +828,8 @@ class ProxyService::PacRequest
   }
 
   void StartAndCompleteCheckingForSynchronous() {
-    int rv = service_->TryToCompleteSynchronously(url_, load_flags_,
-                                                  proxy_delegate_, results_);
+    int rv =
+        service_->TryToCompleteSynchronously(url_, proxy_delegate_, results_);
     if (rv == ERR_IO_PENDING)
       rv = Start();
     if (rv != ERR_IO_PENDING)
@@ -879,9 +876,9 @@ class ProxyService::PacRequest
     resolve_job_ = nullptr;
 
     // Note that DidFinishResolvingProxy might modify |results_|.
-    int rv = service_->DidFinishResolvingProxy(
-        url_, method_, load_flags_, proxy_delegate_, results_, result_code,
-        net_log_, creation_time_, script_executed);
+    int rv = service_->DidFinishResolvingProxy(url_, method_, proxy_delegate_,
+                                               results_, result_code, net_log_,
+                                               creation_time_, script_executed);
 
     // Make a note in the results which configuration was in use at the
     // time of the resolve.
@@ -934,7 +931,6 @@ class ProxyService::PacRequest
   ProxyInfo* results_;
   GURL url_;
   std::string method_;
-  int load_flags_;
   ProxyDelegate* proxy_delegate_;
   ProxyResolver::RequestHandle resolve_job_;
   ProxyConfig::ID config_id_;  // The config id when the resolve was started.
@@ -1039,20 +1035,18 @@ std::unique_ptr<ProxyService> ProxyService::CreateFixedFromPacResult(
 
 int ProxyService::ResolveProxy(const GURL& raw_url,
                                const std::string& method,
-                               int load_flags,
                                ProxyInfo* result,
                                const CompletionCallback& callback,
                                PacRequest** pac_request,
                                ProxyDelegate* proxy_delegate,
                                const BoundNetLog& net_log) {
   DCHECK(!callback.is_null());
-  return ResolveProxyHelper(raw_url, method, load_flags, result, callback,
-                            pac_request, proxy_delegate, net_log);
+  return ResolveProxyHelper(raw_url, method, result, callback, pac_request,
+                            proxy_delegate, net_log);
 }
 
 int ProxyService::ResolveProxyHelper(const GURL& raw_url,
                                      const std::string& method,
-                                     int load_flags,
                                      ProxyInfo* result,
                                      const CompletionCallback& callback,
                                      PacRequest** pac_request,
@@ -1079,10 +1073,10 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
 
   // Check if the request can be completed right away. (This is the case when
   // using a direct connection for example).
-  int rv = TryToCompleteSynchronously(url, load_flags, proxy_delegate, result);
+  int rv = TryToCompleteSynchronously(url, proxy_delegate, result);
   if (rv != ERR_IO_PENDING) {
     rv = DidFinishResolvingProxy(
-        url, method, load_flags, proxy_delegate, result, rv, net_log,
+        url, method, proxy_delegate, result, rv, net_log,
         callback.is_null() ? TimeTicks() : TimeTicks::Now(), false);
     return rv;
   }
@@ -1090,9 +1084,8 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
   if (callback.is_null())
     return ERR_IO_PENDING;
 
-  scoped_refptr<PacRequest> req(new PacRequest(this, url, method, load_flags,
-                                               proxy_delegate, result, callback,
-                                               net_log));
+  scoped_refptr<PacRequest> req(new PacRequest(
+      this, url, method, proxy_delegate, result, callback, net_log));
 
   if (current_state_ == STATE_READY) {
     // Start the resolve request.
@@ -1116,18 +1109,16 @@ int ProxyService::ResolveProxyHelper(const GURL& raw_url,
 
 bool ProxyService::TryResolveProxySynchronously(const GURL& raw_url,
                                                 const std::string& method,
-                                                int load_flags,
                                                 ProxyInfo* result,
                                                 ProxyDelegate* proxy_delegate,
                                                 const BoundNetLog& net_log) {
   CompletionCallback null_callback;
-  return ResolveProxyHelper(raw_url, method, load_flags, result, null_callback,
+  return ResolveProxyHelper(raw_url, method, result, null_callback,
                             nullptr /* pac_request*/, proxy_delegate,
                             net_log) == OK;
 }
 
 int ProxyService::TryToCompleteSynchronously(const GURL& url,
-                                             int load_flags,
                                              ProxyDelegate* proxy_delegate,
                                              ProxyInfo* result) {
   DCHECK_NE(STATE_NONE, current_state_);
@@ -1282,7 +1273,6 @@ void ProxyService::OnInitProxyResolverComplete(int result) {
 
 int ProxyService::ReconsiderProxyAfterError(const GURL& url,
                                             const std::string& method,
-                                            int load_flags,
                                             int net_error,
                                             ProxyInfo* result,
                                             const CompletionCallback& callback,
@@ -1302,7 +1292,7 @@ int ProxyService::ReconsiderProxyAfterError(const GURL& url,
     // If we have a new config or the config was never tried, we delete the
     // list of bad proxies and we try again.
     proxy_retry_info_.clear();
-    return ResolveProxy(url, method, load_flags, result, callback, pac_request,
+    return ResolveProxy(url, method, result, callback, pac_request,
                         proxy_delegate, net_log);
   }
 
@@ -1384,7 +1374,6 @@ void ProxyService::RemovePendingRequest(PacRequest* req) {
 
 int ProxyService::DidFinishResolvingProxy(const GURL& url,
                                           const std::string& method,
-                                          int load_flags,
                                           ProxyDelegate* proxy_delegate,
                                           ProxyInfo* result,
                                           int result_code,
@@ -1419,7 +1408,7 @@ int ProxyService::DidFinishResolvingProxy(const GURL& url,
     // Allow the proxy delegate to interpose on the resolution decision,
     // possibly modifying the ProxyInfo.
     if (proxy_delegate)
-      proxy_delegate->OnResolveProxy(url, method, load_flags, *this, result);
+      proxy_delegate->OnResolveProxy(url, method, *this, result);
 
     net_log.AddEvent(NetLog::TYPE_PROXY_SERVICE_RESOLVED_PROXY_LIST,
                      base::Bind(&NetLogFinishedResolvingProxyCallback, result));
@@ -1451,7 +1440,7 @@ int ProxyService::DidFinishResolvingProxy(const GURL& url,
       // Allow the proxy delegate to interpose on the resolution decision,
       // possibly modifying the ProxyInfo.
       if (proxy_delegate)
-        proxy_delegate->OnResolveProxy(url, method, load_flags, *this, result);
+        proxy_delegate->OnResolveProxy(url, method, *this, result);
     } else {
       result_code = ERR_MANDATORY_PROXY_CONFIGURATION_FAILED;
     }

@@ -11,8 +11,8 @@
 #include <sys/socket.h>
 
 #include "base/macros.h"
-#include "net/quic/quic_clock.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_clock.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_socket_utils.h"
 

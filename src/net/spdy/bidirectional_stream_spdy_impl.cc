@@ -260,14 +260,14 @@ void BidirectionalStreamSpdyImpl::OnClose(int status) {
 }
 
 int BidirectionalStreamSpdyImpl::SendRequestHeadersHelper() {
-  std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
+  SpdyHeaderBlock headers;
   HttpRequestInfo http_request_info;
   http_request_info.url = request_info_->url;
   http_request_info.method = request_info_->method;
   http_request_info.extra_headers = request_info_->extra_headers;
 
   CreateSpdyHeadersFromHttpRequest(
-      http_request_info, http_request_info.extra_headers, true, headers.get());
+      http_request_info, http_request_info.extra_headers, true, &headers);
   return stream_->SendRequestHeaders(std::move(headers),
                                      request_info_->end_stream_on_headers
                                          ? NO_MORE_DATA_TO_SEND

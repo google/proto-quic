@@ -593,6 +593,16 @@ OPENSSL_EXPORT int SSL_version(const SSL *ssl);
  * |SSL_CTX|. */
 #define SSL_OP_DISABLE_NPN 0x00800000L
 
+/* The following flags toggle individual protocol versions. This is deprecated.
+ * Use |SSL_CTX_set_min_version| and |SSL_CTX_set_max_version| instead. */
+#define SSL_OP_NO_SSLv3 0x02000000L
+#define SSL_OP_NO_TLSv1 0x04000000L
+#define SSL_OP_NO_TLSv1_2 0x08000000L
+#define SSL_OP_NO_TLSv1_1 0x10000000L
+#define SSL_OP_NO_TLSv1_3 0x20000000L
+#define SSL_OP_NO_DTLSv1 SSL_OP_NO_TLSv1
+#define SSL_OP_NO_DTLSv1_2 SSL_OP_NO_TLSv1_2
+
 /* SSL_CTX_set_options enables all options set in |options| (which should be one
  * or more of the |SSL_OP_*| values, ORed together) in |ctx|. It returns a
  * bitmask representing the resulting enabled options. */
@@ -671,7 +681,9 @@ OPENSSL_EXPORT uint32_t SSL_get_options(const SSL *ssl);
  * version; see RFC 7507 for details.
  *
  * DO NOT ENABLE THIS if your application attempts a normal handshake. Only use
- * this in explicit fallback retries, following the guidance in RFC 7507. */
+ * this in explicit fallback retries, following the guidance in RFC 7507.
+ *
+ * This flag is deprecated. Use |SSL_set_fallback_version| instead. */
 #define SSL_MODE_SEND_FALLBACK_SCSV 0x00000400L
 
 /* SSL_CTX_set_mode enables all modes set in |mode| (which should be one or more
@@ -1646,10 +1658,16 @@ OPENSSL_EXPORT int SSL_CTX_get_session_cache_mode(const SSL_CTX *ctx);
  * |session|. */
 OPENSSL_EXPORT int SSL_set_session(SSL *ssl, SSL_SESSION *session);
 
-/* SSL_get_session returns a non-owning pointer to |ssl|'s session. Prior to the
- * initial handshake beginning, this is the session to be offered, set by
- * |SSL_set_session|. After a handshake has finished, this is the currently
- * active session. Its behavior is undefined while a handshake is progress. */
+/* SSL_get_session returns a non-owning pointer to |ssl|'s session. For
+ * historical reasons, which session it returns depends on |ssl|'s state.
+ *
+ * Prior to the start of the initial handshake, it returns the session the
+ * caller set with |SSL_set_session|. After the initial handshake has finished
+ * and if no additional handshakes are in progress, it returns the currently
+ * active session. Its behavior is undefined while a handshake is in progress.
+ *
+ * Using this function to add new sessions to an external session cache is
+ * deprecated. Use |SSL_CTX_sess_set_new_cb| instead. */
 OPENSSL_EXPORT SSL_SESSION *SSL_get_session(const SSL *ssl);
 
 /* SSL_get0_session is an alias for |SSL_get_session|. */
@@ -2675,6 +2693,16 @@ OPENSSL_EXPORT const char *SSL_alert_type_string_long(int value);
  * alert description or "unknown" if unknown. */
 OPENSSL_EXPORT const char *SSL_alert_desc_string_long(int value);
 
+/* SSL_send_fatal_alert sends a fatal alert over |ssl| of the specified type,
+ * which should be one of the |SSL_AD_*| constants. It returns one on success
+ * and <= 0 on error. The caller should pass the return value into
+ * |SSL_get_error| to determine how to proceed. Once this function has been
+ * called, future calls to |SSL_write| will fail.
+ *
+ * If retrying a failed operation due to |SSL_ERROR_WANT_WRITE|, subsequent
+ * calls must use the same |alert| parameter. */
+OPENSSL_EXPORT int SSL_send_fatal_alert(SSL *ssl, uint8_t alert);
+
 
 /* ex_data functions.
  *
@@ -2923,6 +2951,7 @@ OPENSSL_EXPORT void SSL_CTX_set_dos_protection_cb(
 #define SSL_ST_OK 0x03
 #define SSL_ST_RENEGOTIATE (0x04 | SSL_ST_INIT)
 #define SSL_ST_TLS13 (0x05 | SSL_ST_INIT)
+#define SSL_ST_ERROR (0x06| SSL_ST_INIT)
 
 /* SSL_CB_* are possible values for the |type| parameter in the info
  * callback and the bitmasks that make them up. */
@@ -3048,6 +3077,22 @@ OPENSSL_EXPORT const SSL_CIPHER *SSL_get_pending_cipher(const SSL *ssl);
  * completes. See the |peer_sha256| field of |SSL_SESSION| for the hash. */
 OPENSSL_EXPORT void SSL_CTX_set_retain_only_sha256_of_client_certs(SSL_CTX *ctx,
                                                                    int enable);
+
+/* SSL_set_fallback_version, on a client, sets the effective maximum protocol
+ * version. This may be used when implementing a version fallback to work around
+ * buggy servers.
+ *
+ * For purposes of the TLS protocol itself, including assembling the ClientHello
+ * and which ServerHello versions are accepted, this value is used as the
+ * maximum version. However, if this value differs from the real maximum
+ * version, as set by |SSL_set_max_version|, TLS_FALLBACK_SCSV (see RFC 7507)
+ * will be sent. Further, the TLS 1.3 anti-downgrade logic will be conditioned
+ * on the true maximum version.
+ *
+ * For instance, a fallback from a TLS 1.3 ClientHello to a TLS 1.2 ClientHello
+ * should set this value to |TLS1_2_VERSION| and call |SSL_set_max_version| with
+ * |TLS1_3_VERSION|. */
+OPENSSL_EXPORT void SSL_set_fallback_version(SSL *ssl, uint16_t version);
 
 
 /* Deprecated functions. */
@@ -3301,16 +3346,6 @@ struct ssl_comp_st {
 };
 
 DECLARE_STACK_OF(SSL_COMP)
-
-/* The following flags toggle individual protocol versions. This is deprecated.
- * Use |SSL_CTX_set_min_version| and |SSL_CTX_set_max_version| instead. */
-#define SSL_OP_NO_SSLv3 0x02000000L
-#define SSL_OP_NO_TLSv1 0x04000000L
-#define SSL_OP_NO_TLSv1_2 0x08000000L
-#define SSL_OP_NO_TLSv1_1 0x10000000L
-#define SSL_OP_NO_TLSv1_3 0x20000000L
-#define SSL_OP_NO_DTLSv1 SSL_OP_NO_TLSv1
-#define SSL_OP_NO_DTLSv1_2 SSL_OP_NO_TLSv1_2
 
 /* The following flags do nothing and are included only to make it easier to
  * compile code with BoringSSL. */
@@ -3653,9 +3688,7 @@ struct ssl_session_st {
   /* peer_sha256_valid is non-zero if |peer_sha256| is valid. */
   unsigned peer_sha256_valid:1; /* Non-zero if peer_sha256 is valid */
 
-  /* not_resumable is used to indicate that session resumption is not allowed.
-   * Applications can also set this bit for a new session via
-   * not_resumable_session_cb to disable session caching and tickets. */
+  /* not_resumable is used to indicate that session resumption is disallowed. */
   unsigned not_resumable:1;
 };
 
@@ -3960,6 +3993,11 @@ struct ssl_st {
    * is normalized in DTLS. */
   uint16_t min_version;
 
+  /* fallback_version is the effective maximum acceptable protocol version for
+   * use with a version fallback, or zero if unset. Note this version is
+   * normalized in DTLS. */
+  uint16_t fallback_version;
+
   /* method is the method table corresponding to the current protocol (DTLS or
    * TLS). */
   const SSL_PROTOCOL_METHOD *method;
@@ -4036,7 +4074,8 @@ struct ssl_st {
   unsigned int sid_ctx_length;
   uint8_t sid_ctx[SSL_MAX_SID_CTX_LENGTH];
 
-  /* This can also be in the session once a session is established */
+  /* session is the configured session to be offered by the client. This session
+   * is immutable. */
   SSL_SESSION *session;
 
   int (*verify_callback)(int ok,
@@ -4105,9 +4144,6 @@ struct ssl_st {
 
   /* verify_mode is a bitmask of |SSL_VERIFY_*| values. */
   uint8_t verify_mode;
-
-  /* hit is true if this connection is resuming a previous session. */
-  unsigned hit:1;
 
   /* server is true iff the this SSL* is the server half. Note: before the SSL*
    * is initialized by either SSL_set_accept_state or SSL_set_connect_state,
@@ -4188,10 +4224,6 @@ typedef struct ssl3_state_st {
 
   SSL3_RECORD rrec; /* each decoded record goes in here */
 
-  /* hello_request_len is the number of bytes of HelloRequest received, possibly
-   * split over multiple records. */
-  uint8_t hello_request_len;
-
   /* partial write - check the numbers match */
   unsigned int wnum; /* number of bytes sent so far */
   int wpend_tot;     /* number bytes written */
@@ -4263,10 +4295,6 @@ typedef struct ssl3_state_st {
     uint8_t peer_finish_md_len;
 
     int message_type;
-
-    /* message_complete is one if the current message is complete and zero
-     * otherwise. */
-    unsigned message_complete:1;
 
     /* used to hold the new cipher we are going to use */
     const SSL_CIPHER *new_cipher;
@@ -4371,6 +4399,15 @@ typedef struct ssl3_state_st {
     uint8_t *server_params;
     uint32_t server_params_len;
   } tmp;
+
+  /* new_session is the new mutable session being established by the current
+   * handshake. It should not be cached. */
+  SSL_SESSION *new_session;
+
+  /* established_session is the session established by the connection. This
+   * session is only filled upon the completion of the handshake and is
+   * immutable. */
+  SSL_SESSION *established_session;
 
   /* Connection binding to prevent renegotiation attacks */
   uint8_t previous_client_finished[EVP_MAX_MD_SIZE];

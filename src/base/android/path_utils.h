@@ -48,8 +48,6 @@ BASE_EXPORT bool GetNativeLibraryDirectory(FilePath* result);
 // is placed in the FilePath pointed to by 'result'.
 BASE_EXPORT bool GetExternalStorageDirectory(FilePath* result);
 
-bool RegisterPathUtils(JNIEnv* env);
-
 }  // namespace android
 }  // namespace base
 

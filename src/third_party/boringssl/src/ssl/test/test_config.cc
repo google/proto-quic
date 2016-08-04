@@ -104,6 +104,7 @@ const Flag<bool> kBoolFlags[] = {
   { "-use-old-client-cert-callback",
     &TestConfig::use_old_client_cert_callback },
   { "-use-null-client-ca-list", &TestConfig::use_null_client_ca_list },
+  { "-send-alert", &TestConfig::send_alert },
 };
 
 const Flag<std::string> kStringFlags[] = {
@@ -144,6 +145,7 @@ const Flag<int> kIntFlags[] = {
   { "-port", &TestConfig::port },
   { "-min-version", &TestConfig::min_version },
   { "-max-version", &TestConfig::max_version },
+  { "-fallback-version", &TestConfig::fallback_version },
   { "-mtu", &TestConfig::mtu },
   { "-export-keying-material", &TestConfig::export_keying_material },
   { "-expect-total-renegotiations", &TestConfig::expect_total_renegotiations },

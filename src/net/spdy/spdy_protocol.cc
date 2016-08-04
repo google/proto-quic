@@ -706,15 +706,6 @@ size_t SpdyConstants::GetDataFrameMinimumSize(SpdyMajorVersion version) {
   return GetFrameHeaderSize(version);
 }
 
-size_t SpdyConstants::GetControlFrameHeaderSize(SpdyMajorVersion version) {
-  return GetFrameHeaderSize(version);
-}
-
-size_t SpdyConstants::GetPrefixLength(SpdyFrameType type,
-                                      SpdyMajorVersion version) {
-  return GetFrameHeaderSize(version);
-}
-
 size_t SpdyConstants::GetMaxFrameSizeLimit(SpdyMajorVersion version) {
   return kSpdyMaxFrameSizeLimit + GetFrameHeaderSize(version);
 }

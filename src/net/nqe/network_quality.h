@@ -13,9 +13,7 @@
 #include "net/base/net_export.h"
 
 namespace net {
-
 namespace nqe {
-
 namespace internal {
 
 // Returns the RTT value to be used when the valid RTT is unavailable. Readers
@@ -42,6 +40,12 @@ class NET_EXPORT_PRIVATE NetworkQuality {
   ~NetworkQuality();
 
   NetworkQuality& operator=(const NetworkQuality& other);
+
+  bool operator==(const NetworkQuality& other) const;
+
+  // Returns true if |this| is at least as fast as |other| for all parameters
+  // (HTTP RTT, transport RTT etc.)
+  bool IsFaster(const NetworkQuality& other) const;
 
   // Returns the estimate of the round trip time at the HTTP layer.
   const base::TimeDelta& http_rtt() const { return http_rtt_; }
@@ -77,9 +81,7 @@ class NET_EXPORT_PRIVATE NetworkQuality {
 };
 
 }  // namespace internal
-
 }  // namespace nqe
-
 }  // namespace net
 
 #endif  // NET_NQE_NETWORK_QUALITY_H_

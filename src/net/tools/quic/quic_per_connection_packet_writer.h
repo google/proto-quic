@@ -8,8 +8,8 @@
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/quic/quic_connection.h"
-#include "net/quic/quic_packet_writer.h"
+#include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_packet_writer.h"
 
 namespace net {
 

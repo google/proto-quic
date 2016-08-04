@@ -9,9 +9,8 @@
 TOPSRC="$(dirname "$0")/.."
 source "${TOPSRC}/scripts/data_common.sh"
 
-echo "Copying icudtl.dat and the corresponding assembly source for Android"
+echo "Copying icudtl.dat for Android"
 
 cp "data/out/tmp/icudt${VERSION}l.dat" "${TOPSRC}/android/icudtl.dat"
-cp "data/out/tmp/icudt${VERSION}l_dat.S" "${TOPSRC}/android/icudtl_dat.S"
 
-echo "Done with copying pre-built ICU data files for Android."
+echo "Done with copying pre-built ICU data file for Android."

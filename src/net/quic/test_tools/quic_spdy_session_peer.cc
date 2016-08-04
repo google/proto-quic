@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 
-#include "net/quic/quic_spdy_session.h"
+#include "net/quic/core/quic_spdy_session.h"
 
 namespace net {
 namespace test {

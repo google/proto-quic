@@ -14,7 +14,7 @@
 #include "base/strings/stringprintf.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
-#include "net/quic/quic_bug_tracker.h"
+#include "net/quic/core/quic_bug_tracker.h"
 #include "net/spdy/spdy_http_utils.h"
 
 using base::FilePath;

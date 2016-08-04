@@ -349,6 +349,31 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
     }                                                                         \
   } while (0)
 
+// The trace ID and bind ID will never be mangled by this macro.
+#define INTERNAL_TRACE_EVENT_ADD_BIND_IDS(category_group, name, id, bind_id,  \
+                                          ...)                                \
+    do {                                                                      \
+      INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
+      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
+        trace_event_internal::TraceID::DontMangle source_id(id);              \
+        trace_event_internal::TraceID::DontMangle target_id(bind_id);         \
+        if (target_id.scope() == trace_event_internal::kGlobalScope) {        \
+          trace_event_internal::AddTraceEvent(                                \
+              TRACE_EVENT_PHASE_BIND_IDS,                                     \
+              INTERNAL_TRACE_EVENT_UID(category_group_enabled),               \
+              name, source_id.scope(), source_id.raw_id(),                    \
+              TRACE_EVENT_FLAG_HAS_ID, target_id.raw_id(), ##__VA_ARGS__);    \
+        } else {                                                              \
+          trace_event_internal::AddTraceEvent(                                \
+              TRACE_EVENT_PHASE_BIND_IDS,                                     \
+              INTERNAL_TRACE_EVENT_UID(category_group_enabled),               \
+              name, source_id.scope(), source_id.raw_id(),                    \
+              TRACE_EVENT_FLAG_HAS_ID, target_id.raw_id(),                    \
+              "bind_scope", target_id.scope(), ##__VA_ARGS__);                \
+        }                                                                     \
+      }                                                                       \
+    } while (0)
+
 // Implementation detail: internal macro to create static category and add
 // metadata event if the category is enabled.
 #define INTERNAL_TRACE_EVENT_METADATA_ADD(category_group, name, ...)        \

@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
 #include "base/base_export.h"
@@ -103,22 +104,22 @@ class BASE_EXPORT ProcessMetrics {
   ~ProcessMetrics();
 
   // Creates a ProcessMetrics for the specified process.
-  // The caller owns the returned object.
 #if !defined(OS_MACOSX) || defined(OS_IOS)
-  static ProcessMetrics* CreateProcessMetrics(ProcessHandle process);
+  static std::unique_ptr<ProcessMetrics> CreateProcessMetrics(
+      ProcessHandle process);
 #else
 
   // The port provider needs to outlive the ProcessMetrics object returned by
   // this function. If NULL is passed as provider, the returned object
   // only returns valid metrics if |process| is the current process.
-  static ProcessMetrics* CreateProcessMetrics(ProcessHandle process,
-                                              PortProvider* port_provider);
+  static std::unique_ptr<ProcessMetrics> CreateProcessMetrics(
+      ProcessHandle process,
+      PortProvider* port_provider);
 #endif  // !defined(OS_MACOSX) || defined(OS_IOS)
 
   // Creates a ProcessMetrics for the current process. This a cross-platform
   // convenience wrapper for CreateProcessMetrics().
-  // The caller owns the returned object.
-  static ProcessMetrics* CreateCurrentProcessMetrics();
+  static std::unique_ptr<ProcessMetrics> CreateCurrentProcessMetrics();
 
   // Returns the current space allocated for the pagefile, in bytes (these pages
   // may or may not be in memory).  On Linux, this returns the total virtual
@@ -295,9 +296,9 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int dirty;
 
   // vmstats data.
-  int pswpin;
-  int pswpout;
-  int pgmajfault;
+  unsigned long pswpin;
+  unsigned long pswpout;
+  unsigned long pgmajfault;
 #endif  // defined(OS_ANDROID) || defined(OS_LINUX)
 
 #if defined(OS_CHROMEOS)

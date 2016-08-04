@@ -18,10 +18,10 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/quic/quic_crypto_server_stream.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_server_session_base.h"
-#include "net/quic/quic_spdy_session.h"
+#include "net/quic/core/quic_crypto_server_stream.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_spdy_session.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 

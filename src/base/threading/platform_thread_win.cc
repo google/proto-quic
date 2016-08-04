@@ -196,8 +196,16 @@ bool PlatformThread::CreateWithPriority(size_t stack_size, Delegate* delegate,
 
 // static
 bool PlatformThread::CreateNonJoinable(size_t stack_size, Delegate* delegate) {
-  return CreateThreadInternal(stack_size, delegate, nullptr,
-                              ThreadPriority::NORMAL);
+  return CreateNonJoinableWithPriority(stack_size, delegate,
+                                       ThreadPriority::NORMAL);
+}
+
+// static
+bool PlatformThread::CreateNonJoinableWithPriority(size_t stack_size,
+                                                   Delegate* delegate,
+                                                   ThreadPriority priority) {
+  return CreateThreadInternal(stack_size, delegate, nullptr /* non-joinable */,
+                              priority);
 }
 
 // static
@@ -225,6 +233,11 @@ void PlatformThread::Detach(PlatformThreadHandle thread_handle) {
 }
 
 // static
+bool PlatformThread::CanIncreaseCurrentThreadPriority() {
+  return true;
+}
+
+// static
 void PlatformThread::SetCurrentThreadPriority(ThreadPriority priority) {
   int desired_priority = THREAD_PRIORITY_ERROR_RETURN;
   switch (priority) {
@@ -246,7 +259,7 @@ void PlatformThread::SetCurrentThreadPriority(ThreadPriority priority) {
   }
   DCHECK_NE(desired_priority, THREAD_PRIORITY_ERROR_RETURN);
 
-#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
+#if DCHECK_IS_ON()
   const BOOL success =
 #endif
       ::SetThreadPriority(PlatformThread::CurrentHandle().platform_handle(),

@@ -52,6 +52,8 @@ TerminationStatus GetTerminationStatusImpl(ProcessHandle handle,
       case SIGFPE:
       case SIGILL:
       case SIGSEGV:
+      case SIGTRAP:
+      case SIGSYS:
         return TERMINATION_STATUS_PROCESS_CRASHED;
       case SIGKILL:
 #if defined(OS_CHROMEOS)

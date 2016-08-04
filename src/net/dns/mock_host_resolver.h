@@ -58,6 +58,9 @@ int ParseAddressList(const std::string& host_list,
 class MockHostResolverBase : public HostResolver,
                              public base::SupportsWeakPtr<MockHostResolverBase>,
                              public base::NonThreadSafe {
+ private:
+  class RequestImpl;
+
  public:
   ~MockHostResolverBase() override;
 
@@ -82,13 +85,15 @@ class MockHostResolverBase : public HostResolver,
               RequestPriority priority,
               AddressList* addresses,
               const CompletionCallback& callback,
-              RequestHandle* out_req,
+              std::unique_ptr<Request>* request,
               const BoundNetLog& net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
                        const BoundNetLog& net_log) override;
-  void CancelRequest(RequestHandle req) override;
   HostCache* GetHostCache() override;
+
+  // Detach cancelled request.
+  void DetachRequest(size_t id);
 
   // Resolves all pending requests. It is only valid to invoke this if
   // set_ondemand_mode was set before. The requests are resolved asynchronously,
@@ -119,15 +124,14 @@ class MockHostResolverBase : public HostResolver,
   explicit MockHostResolverBase(bool use_caching);
 
  private:
-  struct Request;
-  typedef std::map<size_t, Request*> RequestMap;
+  typedef std::map<size_t, RequestImpl*> RequestMap;
 
   // Resolve as IP or from |cache_| return cached error or
   // DNS_CACHE_MISS if failed.
   int ResolveFromIPLiteralOrCache(const RequestInfo& info,
                                   AddressList* addresses);
   // Resolve via |proc_|.
-  int ResolveProc(size_t id, const RequestInfo& info, AddressList* addresses);
+  int ResolveProc(const RequestInfo& info, AddressList* addresses);
   // Resolve request stored in |requests_|. Pass rv to callback.
   void ResolveNow(size_t id);
 
@@ -239,12 +243,11 @@ class HangingHostResolver : public HostResolver {
               RequestPriority priority,
               AddressList* addresses,
               const CompletionCallback& callback,
-              RequestHandle* out_req,
+              std::unique_ptr<Request>* out_req,
               const BoundNetLog& net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
                        const BoundNetLog& net_log) override;
-  void CancelRequest(RequestHandle req) override {}
 };
 
 // This class sets the default HostResolverProc for a particular scope.  The

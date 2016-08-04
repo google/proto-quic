@@ -4,12 +4,12 @@
 
 #include "net/tools/quic/chlo_extractor.h"
 
-#include "net/quic/crypto/crypto_framer.h"
-#include "net/quic/crypto/crypto_handshake_message.h"
-#include "net/quic/crypto/crypto_protocol.h"
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
-#include "net/quic/quic_framer.h"
+#include "net/quic/core/crypto/crypto_framer.h"
+#include "net/quic/core/crypto/crypto_handshake_message.h"
+#include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/quic_framer.h"
 
 using base::StringPiece;
 

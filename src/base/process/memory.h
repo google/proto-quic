@@ -48,6 +48,20 @@ const int kMaxOomScore = 1000;
 BASE_EXPORT bool AdjustOOMScore(ProcessId process, int score);
 #endif
 
+#if defined(OS_WIN)
+namespace win {
+
+// Custom Windows exception code chosen to indicate an out of memory error.
+// See https://msdn.microsoft.com/en-us/library/het71c37.aspx.
+// "To make sure that you do not define a code that conflicts with an existing
+// exception code" ... "The resulting error code should therefore have the
+// highest four bits set to hexadecimal E."
+// 0xe0000008 was chosen arbitrarily, as 0x00000008 is ERROR_NOT_ENOUGH_MEMORY.
+const DWORD kOomExceptionCode = 0xe0000008;
+
+}  // namespace win
+#endif
+
 // Special allocator functions for callers that want to check for OOM.
 // These will not abort if the allocation fails even if
 // EnableTerminationOnOutOfMemory has been called.

@@ -30,15 +30,12 @@ class WinsockInitSingleton {
       WSAGetLastError();
     }
   }
-
-  ~WinsockInitSingleton() {
-    // Don't call WSACleanup() since the worker pool threads can continue to
-    // call getaddrinfo() after Winsock has shutdown, which can lead to crashes.
-  }
 };
 
-static base::LazyInstance<WinsockInitSingleton> g_winsock_init_singleton =
-    LAZY_INSTANCE_INITIALIZER;
+// Worker pool threads that use the Windows Sockets API may still be running at
+// shutdown. Leak instance and skip cleanup.
+static base::LazyInstance<WinsockInitSingleton>::Leaky
+    g_winsock_init_singleton = LAZY_INSTANCE_INITIALIZER;
 
 }  // namespace
 

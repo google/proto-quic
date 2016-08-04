@@ -6,8 +6,8 @@
 #define NET_QUIC_TEST_TOOLS_RTT_STATS_PEER_H_
 
 #include "base/macros.h"
-#include "net/quic/congestion_control/rtt_stats.h"
-#include "net/quic/quic_time.h"
+#include "net/quic/core/congestion_control/rtt_stats.h"
+#include "net/quic/core/quic_time.h"
 
 namespace net {
 namespace test {

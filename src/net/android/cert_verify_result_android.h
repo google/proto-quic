@@ -44,9 +44,6 @@ void ExtractCertVerifyResult(jobject result,
                              bool* is_issued_by_known_root,
                              std::vector<std::string>* verified_chain);
 
-// Register JNI methods.
-bool RegisterCertVerifyResult(JNIEnv* env);
-
 }  // namespace android
 
 }  // namespace net

@@ -368,7 +368,8 @@ void TraceEvent::AppendAsJSON(
     StringAppendF(out, ",\"bp\":\"e\"");
 
   if ((flags_ & TRACE_EVENT_FLAG_FLOW_OUT) ||
-      (flags_ & TRACE_EVENT_FLAG_FLOW_IN)) {
+      (flags_ & TRACE_EVENT_FLAG_FLOW_IN) ||
+      phase_ == TRACE_EVENT_PHASE_BIND_IDS) {
     StringAppendF(out, ",\"bind_id\":\"0x%" PRIx64 "\"",
                   static_cast<uint64_t>(bind_id_));
   }

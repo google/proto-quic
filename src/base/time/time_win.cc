@@ -504,6 +504,26 @@ bool TimeTicks::IsHighResolution() {
 }
 
 // static
+bool TimeTicks::IsConsistentAcrossProcesses() {
+  // According to Windows documentation [1] QPC is consistent post-Windows
+  // Vista. So if we are using QPC then we are consistent which is the same as
+  // being high resolution.
+  //
+  // [1] https://msdn.microsoft.com/en-us/library/windows/desktop/dn553408(v=vs.85).aspx
+  //
+  // "In general, the performance counter results are consistent across all
+  // processors in multi-core and multi-processor systems, even when measured on
+  // different threads or processes. Here are some exceptions to this rule:
+  // - Pre-Windows Vista operating systems that run on certain processors might
+  // violate this consistency because of one of these reasons:
+  //     1. The hardware processors have a non-invariant TSC and the BIOS
+  //     doesn't indicate this condition correctly.
+  //     2. The TSC synchronization algorithm that was used wasn't suitable for
+  //     systems with large numbers of processors."
+  return IsHighResolution();
+}
+
+// static
 TimeTicks::Clock TimeTicks::GetClock() {
   return IsHighResolution() ?
       Clock::WIN_QPC : Clock::WIN_ROLLOVER_PROTECTED_TIME_GET_TIME;

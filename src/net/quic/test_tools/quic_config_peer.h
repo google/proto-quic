@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include "base/macros.h"
-#include "net/quic/quic_config.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_config.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 

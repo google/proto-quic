@@ -6,6 +6,7 @@
 
 #include "base/base_paths.h"
 #include "base/path_service.h"
+#include "base/threading/thread_restrictions.h"
 
 namespace net {
 
@@ -16,7 +17,11 @@ const base::FilePath::CharType kCertificateRelativePath[] =
 
 base::FilePath GetTestCertsDirectory() {
   base::FilePath src_root;
-  PathService::Get(base::DIR_SOURCE_ROOT, &src_root);
+  {
+    base::ThreadRestrictions::ScopedAllowIO allow_io_for_path_service;
+    PathService::Get(base::DIR_SOURCE_ROOT, &src_root);
+  }
+
   return src_root.Append(kCertificateRelativePath);
 }
 

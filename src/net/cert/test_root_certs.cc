@@ -9,6 +9,7 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
+#include "base/threading/thread_restrictions.h"
 #include "net/cert/x509_certificate.h"
 
 namespace net {
@@ -43,6 +44,7 @@ bool TestRootCerts::HasInstance() {
 }
 
 bool TestRootCerts::AddFromFile(const base::FilePath& file) {
+  base::ThreadRestrictions::ScopedAllowIO allow_io_for_loading_test_certs;
   CertificateList root_certs = LoadCertificates(file);
   if (root_certs.empty() || root_certs.size() > 1)
     return false;

@@ -4,8 +4,8 @@
 
 #include "net/tools/quic/quic_client_base.h"
 
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_server_id.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_server_id.h"
 
 namespace net {
 

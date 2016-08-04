@@ -5,8 +5,8 @@
 #ifndef NET_QUIC_QUIC_EPOLL_ALARM_FACTORY_H_
 #define NET_QUIC_QUIC_EPOLL_ALARM_FACTORY_H_
 
-#include "net/quic/quic_alarm.h"
-#include "net/quic/quic_alarm_factory.h"
+#include "net/quic/core/quic_alarm.h"
+#include "net/quic/core/quic_alarm_factory.h"
 
 namespace net {
 

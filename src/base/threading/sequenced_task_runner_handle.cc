@@ -28,16 +28,20 @@ scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
   if (handle) {
     // Various modes of setting SequencedTaskRunnerHandle don't combine.
     DCHECK(!base::ThreadTaskRunnerHandle::IsSet());
-    DCHECK(!SequencedWorkerPool::GetSequencedTaskRunnerForCurrentThread());
+    DCHECK(!SequencedWorkerPool::GetSequenceTokenForCurrentThread().IsValid());
     return handle->task_runner_;
   }
 
-  // Return the SequencedTaskRunner obtained from SequencedWorkerPool, if any.
-  scoped_refptr<base::SequencedTaskRunner> task_runner =
-      SequencedWorkerPool::GetSequencedTaskRunnerForCurrentThread();
-  if (task_runner) {
-    DCHECK(!base::ThreadTaskRunnerHandle::IsSet());
-    return task_runner;
+  // If we are on a worker thread for a SequencedBlockingPool that is running a
+  // sequenced task, return a SequencedTaskRunner for it.
+  scoped_refptr<base::SequencedWorkerPool> pool =
+      SequencedWorkerPool::GetWorkerPoolForCurrentThread();
+  if (pool) {
+    SequencedWorkerPool::SequenceToken sequence_token =
+        SequencedWorkerPool::GetSequenceTokenForCurrentThread();
+    DCHECK(sequence_token.IsValid());
+    DCHECK(pool->IsRunningSequenceOnCurrentThread(sequence_token));
+    return pool->GetSequencedTaskRunner(sequence_token);
   }
 
   // Return the SingleThreadTaskRunner for the current thread otherwise.
@@ -47,7 +51,7 @@ scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
 // static
 bool SequencedTaskRunnerHandle::IsSet() {
   return lazy_tls_ptr.Pointer()->Get() ||
-         SequencedWorkerPool::GetWorkerPoolForCurrentThread() ||
+         SequencedWorkerPool::GetSequenceTokenForCurrentThread().IsValid() ||
          base::ThreadTaskRunnerHandle::IsSet();
 }
 

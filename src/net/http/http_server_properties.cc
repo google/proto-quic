@@ -62,8 +62,6 @@ AlternateProtocol AlternateProtocolFromString(const std::string& str) {
 
 AlternateProtocol AlternateProtocolFromNextProto(NextProto next_proto) {
   switch (next_proto) {
-    case kProtoSPDY31:
-      return NPN_SPDY_3_1;
     case kProtoHTTP2:
       return NPN_HTTP_2;
     case kProtoQUIC1SPDY3:

@@ -12,8 +12,8 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/quic/quic_framer.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 

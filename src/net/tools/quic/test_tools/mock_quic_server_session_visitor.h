@@ -6,7 +6,7 @@
 #define NET_TOOLS_QUIC_TEST_TOOLS_MOCK_QUIC_SERVER_SESSION_VISITOR_H_
 
 #include "base/macros.h"
-#include "net/quic/quic_server_session_base.h"
+#include "net/quic/core/quic_server_session_base.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {

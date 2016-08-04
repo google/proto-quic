@@ -303,6 +303,19 @@ class NET_EXPORT TransportSecurityState
       std::string* failure_log);
   bool HasPublicKeyPins(const std::string& host);
 
+  // Sends an Expect-Staple report containing the raw |ocsp_response| for
+  // |host_port_pair| if the following conditions are true:
+  // 1. Sending Expect-Staple reports is enabled (via
+  //    |enable_static_expect_staple_|)
+  // 2. A report sender was provided via SetReportSender().
+  // 3. The build is timele (i.e. the preload list is fresh).
+  // 4. The given host is present on the Expect-Staple preload list.
+  // 5. |ssl_info| indicates the connection did not provide an OCSP response
+  //    indicating a revocation status of GOOD.
+  void CheckExpectStaple(const HostPortPair& host_port_pair,
+                         const SSLInfo& ssl_info,
+                         const std::string& ocsp_response);
+
   // Returns true if connections to |host|, using the validated certificate
   // |validated_certificate_chain|, are expected to be accompanied with
   // valid Certificate Transparency information that complies with the

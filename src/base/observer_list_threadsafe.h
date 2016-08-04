@@ -14,7 +14,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/observer_list.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
@@ -113,9 +112,9 @@ class ObserverListThreadSafe
   // Add an observer to the list.  An observer should not be added to
   // the same list more than once.
   void AddObserver(ObserverType* obs) {
-    // If there is not a current MessageLoop, it is impossible to notify on it,
+    // If there is no ThreadTaskRunnerHandle, it is impossible to notify on it,
     // so do not add the observer.
-    if (!MessageLoop::current())
+    if (!ThreadTaskRunnerHandle::IsSet())
       return;
 
     ObserverList<ObserverType>* list = nullptr;
@@ -256,8 +255,9 @@ class ObserverListThreadSafe
   }
 
   // Key by PlatformThreadId because in tests, clients can attempt to remove
-  // observers without a MessageLoop. If this were keyed by MessageLoop, that
-  // operation would be silently ignored, leaving garbage in the ObserverList.
+  // observers without a SingleThreadTaskRunner. If this were keyed by
+  // SingleThreadTaskRunner, that operation would be silently ignored, leaving
+  // garbage in the ObserverList.
   typedef std::map<PlatformThreadId, ObserverListContext*>
       ObserversListMap;
 

@@ -10,6 +10,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 #include "net/cert/cert_status_flags.h"
+#include "net/cert/ocsp_verify_result.h"
 #include "net/cert/x509_cert_types.h"
 
 namespace net {
@@ -66,6 +67,9 @@ class NET_EXPORT CertVerifyResult {
   // True if a fallback to the common name was used when matching the host
   // name, rather than using the subjectAltName.
   bool common_name_fallback_used;
+
+  // Verification of stapled OCSP response, if present.
+  OCSPVerifyResult ocsp_result;
 };
 
 }  // namespace net

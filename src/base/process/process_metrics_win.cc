@@ -13,6 +13,7 @@
 #include <algorithm>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/sys_info.h"
 
 namespace base {
@@ -29,12 +30,8 @@ typedef NTSTATUS(WINAPI* NTQUERYSYSTEMINFORMATION)(
 
 }  // namespace
 
-SystemMemoryInfoKB::SystemMemoryInfoKB() {
-  total = 0;
-  free = 0;
-  swap_total = 0;
-  swap_free = 0;
-}
+SystemMemoryInfoKB::SystemMemoryInfoKB()
+    : total(0), free(0), swap_total(0), swap_free(0) {}
 
 SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
     default;
@@ -42,8 +39,9 @@ SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
 ProcessMetrics::~ProcessMetrics() { }
 
 // static
-ProcessMetrics* ProcessMetrics::CreateProcessMetrics(ProcessHandle process) {
-  return new ProcessMetrics(process);
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
+    ProcessHandle process) {
+  return WrapUnique(new ProcessMetrics(process));
 }
 
 size_t ProcessMetrics::GetPagefileUsage() const {
@@ -263,35 +261,8 @@ bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process)
     : process_(process),
-      processor_count_(base::SysInfo::NumberOfProcessors()),
-      last_system_time_(0) {
-}
-
-// GetPerformanceInfo is not available on WIN2K.  So we'll
-// load it on-the-fly.
-const wchar_t kPsapiDllName[] = L"psapi.dll";
-typedef BOOL (WINAPI *GetPerformanceInfoFunction) (
-    PPERFORMANCE_INFORMATION pPerformanceInformation,
-    DWORD cb);
-
-// Beware of races if called concurrently from multiple threads.
-static BOOL InternalGetPerformanceInfo(
-    PPERFORMANCE_INFORMATION pPerformanceInformation, DWORD cb) {
-  static GetPerformanceInfoFunction GetPerformanceInfo_func = NULL;
-  if (!GetPerformanceInfo_func) {
-    HMODULE psapi_dll = ::GetModuleHandle(kPsapiDllName);
-    if (psapi_dll)
-      GetPerformanceInfo_func = reinterpret_cast<GetPerformanceInfoFunction>(
-          GetProcAddress(psapi_dll, "GetPerformanceInfo"));
-
-    if (!GetPerformanceInfo_func) {
-      // The function could not be loaded!
-      memset(pPerformanceInformation, 0, cb);
-      return FALSE;
-    }
-  }
-  return GetPerformanceInfo_func(pPerformanceInformation, cb);
-}
+      processor_count_(SysInfo::NumberOfProcessors()),
+      last_system_time_(0) {}
 
 size_t GetSystemCommitCharge() {
   // Get the System Page Size.
@@ -299,7 +270,7 @@ size_t GetSystemCommitCharge() {
   GetSystemInfo(&system_info);
 
   PERFORMANCE_INFORMATION info;
-  if (!InternalGetPerformanceInfo(&info, sizeof(info))) {
+  if (!GetPerformanceInfo(&info, sizeof(info))) {
     DLOG(ERROR) << "Failed to fetch internal performance info.";
     return 0;
   }

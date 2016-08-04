@@ -12,15 +12,15 @@
 #include "base/macros.h"
 #include "base/stl_util.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/crypto/crypto_protocol.h"
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
-#include "net/quic/quic_clock.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/quic_framer.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_server_session_base.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/quic_clock.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_utils.h"
 
 using base::StringPiece;
 
@@ -261,7 +261,6 @@ bool QuicTimeWaitListManager::WriteToWire(QueuedPacket* queued_packet) {
 }
 
 void QuicTimeWaitListManager::SetConnectionIdCleanUpAlarm() {
-  connection_id_clean_up_alarm_->Cancel();
   QuicTime::Delta next_alarm_interval = QuicTime::Delta::Zero();
   if (!connection_id_map_.empty()) {
     QuicTime oldest_connection_id =
@@ -277,8 +276,8 @@ void QuicTimeWaitListManager::SetConnectionIdCleanUpAlarm() {
     next_alarm_interval = time_wait_period_;
   }
 
-  connection_id_clean_up_alarm_->Set(clock_->ApproximateNow() +
-                                     next_alarm_interval);
+  connection_id_clean_up_alarm_->Update(
+      clock_->ApproximateNow() + next_alarm_interval, QuicTime::Delta::Zero());
 }
 
 bool QuicTimeWaitListManager::MaybeExpireOldestConnection(

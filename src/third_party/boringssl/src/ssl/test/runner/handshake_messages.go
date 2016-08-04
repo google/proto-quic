@@ -126,6 +126,7 @@ type clientHelloMsg struct {
 	ocspStapling            bool
 	supportedCurves         []CurveID
 	supportedPoints         []uint8
+	hasKeyShares            bool
 	keyShares               []keyShareEntry
 	pskIdentities           [][]uint8
 	hasEarlyData            bool
@@ -164,6 +165,7 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.ocspStapling == m1.ocspStapling &&
 		eqCurveIDs(m.supportedCurves, m1.supportedCurves) &&
 		bytes.Equal(m.supportedPoints, m1.supportedPoints) &&
+		m.hasKeyShares == m1.hasKeyShares &&
 		eqKeyShareEntryLists(m.keyShares, m1.keyShares) &&
 		eqByteSlices(m.pskIdentities, m1.pskIdentities) &&
 		m.hasEarlyData == m1.hasEarlyData &&
@@ -274,7 +276,7 @@ func (m *clientHelloMsg) marshal() []byte {
 			supportedPoints.addU8(pointFormat)
 		}
 	}
-	if len(m.keyShares) > 0 {
+	if m.hasKeyShares {
 		extensions.addU16(extensionKeyShare)
 		keyShareList := extensions.addU16LengthPrefixed()
 
@@ -376,6 +378,11 @@ func (m *clientHelloMsg) marshal() []byte {
 		extensions.addU16(extensionCustom)
 		customExt := extensions.addU16LengthPrefixed()
 		customExt.addBytes([]byte(m.customExtension))
+	}
+	if m.vers == VersionTLS13 {
+		extensions.addU16(extensionTLS13Draft)
+		extValue := extensions.addU16LengthPrefixed()
+		extValue.addU16(tls13DraftVersion)
 	}
 
 	if extensions.len() == 0 {
@@ -549,6 +556,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			d := data[2:length]
+			m.hasKeyShares = true
 			for len(d) > 0 {
 				// The next KeyShareEntry contains a NamedGroup (2 bytes) and a
 				// key_exchange (2-byte length prefix with at least 1 byte of content).
@@ -1142,6 +1150,47 @@ func (m *serverExtensions) unmarshal(data []byte, version uint16) bool {
 	return true
 }
 
+type helloRetryRequestMsg struct {
+	raw           []byte
+	vers          uint16
+	cipherSuite   uint16
+	selectedGroup CurveID
+}
+
+func (m *helloRetryRequestMsg) marshal() []byte {
+	if m.raw != nil {
+		return m.raw
+	}
+
+	retryRequestMsg := newByteBuilder()
+	retryRequestMsg.addU8(typeHelloRetryRequest)
+	retryRequest := retryRequestMsg.addU24LengthPrefixed()
+	retryRequest.addU16(m.vers)
+	retryRequest.addU16(m.cipherSuite)
+	retryRequest.addU16(uint16(m.selectedGroup))
+	// Extensions field. We have none to send.
+	retryRequest.addU16(0)
+
+	m.raw = retryRequestMsg.finish()
+	return m.raw
+}
+
+func (m *helloRetryRequestMsg) unmarshal(data []byte) bool {
+	m.raw = data
+	if len(data) < 12 {
+		return false
+	}
+	m.vers = uint16(data[4])<<8 | uint16(data[5])
+	m.cipherSuite = uint16(data[6])<<8 | uint16(data[7])
+	m.selectedGroup = CurveID(data[8])<<8 | CurveID(data[9])
+	extLen := int(data[10])<<8 | int(data[11])
+	data = data[12:]
+	if len(data) != extLen {
+		return false
+	}
+	return true
+}
+
 type certificateMsg struct {
 	raw               []byte
 	hasRequestContext bool
@@ -1666,50 +1715,75 @@ func (m *certificateVerifyMsg) unmarshal(data []byte) bool {
 }
 
 type newSessionTicketMsg struct {
-	raw    []byte
-	ticket []byte
+	raw            []byte
+	version        uint16
+	ticketLifetime uint32
+	ticketFlags    uint32
+	ticketAgeAdd   uint32
+	ticket         []byte
 }
 
-func (m *newSessionTicketMsg) marshal() (x []byte) {
+func (m *newSessionTicketMsg) marshal() []byte {
 	if m.raw != nil {
 		return m.raw
 	}
 
 	// See http://tools.ietf.org/html/rfc5077#section-3.3
-	ticketLen := len(m.ticket)
-	length := 2 + 4 + ticketLen
-	x = make([]byte, 4+length)
-	x[0] = typeNewSessionTicket
-	x[1] = uint8(length >> 16)
-	x[2] = uint8(length >> 8)
-	x[3] = uint8(length)
-	x[8] = uint8(ticketLen >> 8)
-	x[9] = uint8(ticketLen)
-	copy(x[10:], m.ticket)
+	ticketMsg := newByteBuilder()
+	ticketMsg.addU8(typeNewSessionTicket)
+	body := ticketMsg.addU24LengthPrefixed()
+	body.addU32(m.ticketLifetime)
+	if m.version >= VersionTLS13 {
+		body.addU32(m.ticketFlags)
+		body.addU32(m.ticketAgeAdd)
+		// Send no extensions.
+		//
+		// TODO(davidben): Add an option to send a custom extension to
+		// test we correctly ignore unknown ones.
+		body.addU16(0)
+	}
+	ticket := body.addU16LengthPrefixed()
+	ticket.addBytes(m.ticket)
 
-	m.raw = x
-
-	return
+	m.raw = ticketMsg.finish()
+	return m.raw
 }
 
 func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 	m.raw = data
 
-	if len(data) < 10 {
+	if len(data) < 8 {
+		return false
+	}
+	m.ticketLifetime = uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])
+	data = data[8:]
+
+	if m.version >= VersionTLS13 {
+		if len(data) < 10 {
+			return false
+		}
+		m.ticketFlags = uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+		m.ticketAgeAdd = uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])
+		extsLength := int(data[8])<<8 + int(data[9])
+		data = data[10:]
+		if len(data) < extsLength {
+			return false
+		}
+		data = data[extsLength:]
+	}
+
+	if len(data) < 2 {
+		return false
+	}
+	ticketLen := int(data[0])<<8 + int(data[1])
+	if len(data)-2 != ticketLen {
+		return false
+	}
+	if m.version >= VersionTLS13 && ticketLen == 0 {
 		return false
 	}
 
-	length := uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
-	if uint32(len(data))-4 != length {
-		return false
-	}
-
-	ticketLen := int(data[8])<<8 + int(data[9])
-	if len(data)-10 != ticketLen {
-		return false
-	}
-
-	m.ticket = data[10:]
+	m.ticket = data[2:]
 
 	return true
 }
@@ -1847,6 +1921,17 @@ func (*helloRequestMsg) marshal() []byte {
 }
 
 func (*helloRequestMsg) unmarshal(data []byte) bool {
+	return len(data) == 4
+}
+
+type keyUpdateMsg struct {
+}
+
+func (*keyUpdateMsg) marshal() []byte {
+	return []byte{typeKeyUpdate, 0, 0, 0}
+}
+
+func (*keyUpdateMsg) unmarshal(data []byte) bool {
 	return len(data) == 4
 }
 

@@ -6,6 +6,7 @@
 """Downloads, builds (with instrumentation) and installs shared libraries."""
 
 import argparse
+import ast
 import os
 import platform
 import re
@@ -23,7 +24,12 @@ def unescape_flags(s):
   line, wrapping each flag in double quotes. When flags are passed via
   CFLAGS/LDFLAGS instead, double quotes must be dropped.
   """
-  return ' '.join(shlex.split(s))
+  if not s:
+    return ''
+  try:
+    return ' '.join(ast.literal_eval(s))
+  except (SyntaxError, ValueError):
+    return ' '.join(shlex.split(s))
 
 
 def real_path(path_relative_to_gyp):
@@ -42,7 +48,7 @@ class InstrumentedPackageBuilder(object):
   def __init__(self, args, clobber):
     self._cc = args.cc
     self._cxx = args.cxx
-    self._extra_configure_flags = args.extra_configure_flags
+    self._extra_configure_flags = unescape_flags(args.extra_configure_flags)
     self._jobs = args.jobs
     self._libdir = args.libdir
     self._package = args.package
@@ -115,7 +121,7 @@ class InstrumentedPackageBuilder(object):
     """
     get_fresh_source = self._clobber or not os.path.exists(self._working_dir)
     if get_fresh_source:
-      self.shell_call('rm -rf %s' % self._working_dir)
+      shutil.rmtree(self._working_dir, ignore_errors=True)
       os.makedirs(self._working_dir)
       self.shell_call('apt-get source %s' % self._package,
                       cwd=self._working_dir)
@@ -148,7 +154,7 @@ class InstrumentedPackageBuilder(object):
     For license compliance purposes, every Chromium build that includes
     instrumented libraries must include their full source code.
     """
-    self.shell_call('rm -rf %s' % self._source_archives_dir)
+    shutil.rmtree(self._source_archives_dir, ignore_errors=True)
     os.makedirs(self._source_archives_dir)
     for filename in self._source_archives:
       shutil.copy(filename, self._source_archives_dir)
@@ -161,7 +167,8 @@ class InstrumentedPackageBuilder(object):
       self.patch_source()
       self.copy_source_archives()
 
-    self.shell_call('mkdir -p %s' % self.dest_libdir())
+    if not os.path.exists(self.dest_libdir()):
+      os.makedirs(self.dest_libdir())
 
     try:
       self.build_and_install()
@@ -366,7 +373,12 @@ class NSSBuilder(InstrumentedPackageBuilder):
 
     # Parallel build is not supported. Also, the build happens in
     # <source_dir>/nss.
-    self.make(make_args, jobs=1, cwd=temp_dir)
+    try:
+      self.make(make_args, jobs=1, cwd=temp_dir)
+    except Exception:
+      # Building fails after all the required DSOs have been built, so ignore
+      # the error.
+      pass
 
     self.fix_rpaths(temp_libdir)
 
@@ -378,6 +390,16 @@ class NSSBuilder(InstrumentedPackageBuilder):
           if self._verbose:
             print 'download_build_install.py: installing %s' % full_path
           shutil.copy(full_path, self.dest_libdir())
+
+
+class StubBuilder(InstrumentedPackageBuilder):
+  def download_build_install(self):
+    self._touch(os.path.join(self._destdir, '%s.txt' % self._package))
+    self._touch(os.path.join(self.dest_libdir(), '%s.so.0' % self._package))
+
+  def _touch(self, path):
+    with open(path, 'w'):
+      pass
 
 
 def main():
@@ -427,6 +449,8 @@ def main():
     builder = LibcapBuilder(args, clobber)
   elif args.build_method == 'custom_libpci3':
     builder = Libpci3Builder(args, clobber)
+  elif args.build_method == 'stub':
+    builder = StubBuilder(args, clobber)
   else:
     raise Exception('Unrecognized build method: %s' % args.build_method)
 

@@ -13,9 +13,9 @@
 #include <string>
 
 #include "base/logging.h"
-#include "net/quic/quic_bug_tracker.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_protocol.h"
 
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40

@@ -91,8 +91,23 @@ HostResolver::Options::Options()
 }
 
 HostResolver::RequestInfo::RequestInfo(const HostPortPair& host_port_pair)
-    : host_port_pair_(host_port_pair),
-      address_family_(ADDRESS_FAMILY_UNSPECIFIED),
+    : RequestInfo() {
+  host_port_pair_ = host_port_pair;
+}
+
+HostResolver::RequestInfo::RequestInfo(const RequestInfo& request_info)
+    : host_port_pair_(request_info.host_port_pair_),
+      address_family_(request_info.address_family_),
+      host_resolver_flags_(request_info.host_resolver_flags_),
+      allow_cached_response_(request_info.allow_cached_response_),
+      is_speculative_(request_info.is_speculative_),
+      is_my_ip_address_(request_info.is_my_ip_address_),
+      cache_hit_callback_(request_info.cache_hit_callback_) {}
+
+HostResolver::RequestInfo::~RequestInfo() {}
+
+HostResolver::RequestInfo::RequestInfo()
+    : address_family_(ADDRESS_FAMILY_UNSPECIFIED),
       host_resolver_flags_(0),
       allow_cached_response_(true),
       is_speculative_(false),
@@ -104,11 +119,6 @@ HostResolver::~HostResolver() {
 void HostResolver::SetDnsClientEnabled(bool enabled) {
 }
 
-void HostResolver::ChangeRequestPriority(RequestHandle req,
-                                         RequestPriority priority) {
-  NOTIMPLEMENTED();
-}
-
 HostCache* HostResolver::GetHostCache() {
   return nullptr;
 }
@@ -116,6 +126,10 @@ HostCache* HostResolver::GetHostCache() {
 std::unique_ptr<base::Value> HostResolver::GetDnsConfigAsValue() const {
   return nullptr;
 }
+
+void HostResolver::InitializePersistence(
+    const PersistCallback& persist_callback,
+    std::unique_ptr<const base::Value> old_data) {}
 
 // static
 std::unique_ptr<HostResolver> HostResolver::CreateSystemResolver(

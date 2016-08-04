@@ -56,6 +56,18 @@ class DnsClientImpl : public DnsClient {
 
   AddressSorter* GetAddressSorter() override { return address_sorter_.get(); }
 
+  std::unique_ptr<const base::Value> GetPersistentData() const override {
+    if (!session_)
+      return std::unique_ptr<const base::Value>();
+    return session_->GetPersistentData();
+  }
+
+  void ApplyPersistentData(const base::Value& data) override {
+    if (!session_)
+      return;
+    session_->ApplyPersistentData(data);
+  }
+
  private:
   scoped_refptr<DnsSession> session_;
   std::unique_ptr<DnsTransactionFactory> factory_;

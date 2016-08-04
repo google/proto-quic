@@ -157,7 +157,7 @@ class NET_EXPORT CookieStore {
                                             const DeleteCallback& callback) = 0;
 
   // Deletes all of the cookies that match the given predicate and that have a
-  // creation_date greater than or equal to |delete_begin| and less then
+  // creation_date greater than or equal to |delete_begin| and smaller than
   // |delete_end|. This includes all http_only and secure cookies. Avoid
   // deleting cookies that could leave websites with a partial set of visible
   // cookies.

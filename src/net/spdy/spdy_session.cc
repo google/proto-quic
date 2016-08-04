@@ -83,7 +83,7 @@ std::unique_ptr<base::Value> NetLogSpdyHeadersSentCallback(
   return std::move(dict);
 }
 
-std::unique_ptr<base::Value> NetLogSpdySynReplyOrHeadersReceivedCallback(
+std::unique_ptr<base::Value> NetLogSpdyHeadersReceivedCallback(
     const SpdyHeaderBlock* headers,
     bool fin,
     SpdyStreamId stream_id,
@@ -518,13 +518,11 @@ void SpdyStreamRequest::Reset() {
 }
 
 SpdySession::ActiveStreamInfo::ActiveStreamInfo()
-    : stream(NULL),
-      waiting_for_syn_reply(false) {}
+    : stream(NULL), waiting_for_reply_headers_frame(false) {}
 
 SpdySession::ActiveStreamInfo::ActiveStreamInfo(SpdyStream* stream)
     : stream(stream),
-      waiting_for_syn_reply(stream->type() != SPDY_PUSH_STREAM) {
-}
+      waiting_for_reply_headers_frame(stream->type() != SPDY_PUSH_STREAM) {}
 
 SpdySession::ActiveStreamInfo::~ActiveStreamInfo() {}
 
@@ -627,7 +625,6 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
                          bool verify_domain_authentication,
                          bool enable_sending_initial_data,
                          bool enable_ping_based_connection_checking,
-                         bool enable_priority_dependencies,
                          size_t session_max_recv_window_size,
                          size_t stream_max_recv_window_size,
                          TimeFunc time_func,
@@ -683,7 +680,6 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
       hung_interval_(base::TimeDelta::FromSeconds(kHungIntervalSeconds)),
       proxy_delegate_(proxy_delegate),
       time_func_(time_func),
-      priority_dependencies_enabled_(enable_priority_dependencies),
       weak_factory_(this) {
   net_log_.BeginEvent(
       NetLog::TYPE_HTTP2_SESSION,
@@ -992,13 +988,11 @@ void SpdySession::EnqueueStreamWrite(
     const base::WeakPtr<SpdyStream>& stream,
     SpdyFrameType frame_type,
     std::unique_ptr<SpdyBufferProducer> producer) {
-  DCHECK(frame_type == HEADERS ||
-         frame_type == DATA ||
-         frame_type == SYN_STREAM);
+  DCHECK(frame_type == HEADERS || frame_type == DATA);
   EnqueueWrite(stream->priority(), frame_type, std::move(producer), stream);
 }
 
-std::unique_ptr<SpdySerializedFrame> SpdySession::CreateSynStream(
+std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
     SpdyStreamId stream_id,
     RequestPriority priority,
     SpdyControlFlags flags,
@@ -1018,10 +1012,8 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateSynStream(
   SpdyStreamId dependent_stream_id = 0;
   bool exclusive = false;
 
-  if (priority_dependencies_enabled_) {
-    priority_dependency_state_.OnStreamSynSent(
-        stream_id, spdy_priority, &dependent_stream_id, &exclusive);
-  }
+  priority_dependency_state_.OnStreamSynSent(stream_id, spdy_priority,
+                                             &dependent_stream_id, &exclusive);
 
   if (net_log().IsCapturing()) {
     net_log().AddEvent(
@@ -1213,8 +1205,7 @@ void SpdySession::CloseActiveStreamIterator(ActiveStreamMap::iterator it,
 
   std::unique_ptr<SpdyStream> owned_stream(it->second.stream);
   active_streams_.erase(it);
-  if (priority_dependencies_enabled_)
-    priority_dependency_state_.OnStreamDestruction(owned_stream->stream_id());
+  priority_dependency_state_.OnStreamDestruction(owned_stream->stream_id());
 
   // TODO(akalin): When SpdyStream was ref-counted (and
   // |unclaimed_pushed_streams_| held scoped_refptr<SpdyStream>), this
@@ -1473,9 +1464,9 @@ int SpdySession::DoWrite() {
     if (stream.get())
       CHECK(!stream->IsClosed());
 
-    // Activate the stream only when sending the SYN_STREAM frame to
+    // Activate the stream only when sending the HEADERS frame to
     // guarantee monotonically-increasing stream IDs.
-    if (frame_type == SYN_STREAM) {
+    if (frame_type == HEADERS) {
       CHECK(stream.get());
       CHECK_EQ(stream->stream_id(), 0u);
       std::unique_ptr<SpdyStream> owned_stream =
@@ -2042,8 +2033,8 @@ void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
 
   stream->AddRawReceivedBytes(len);
 
-  if (it->second.waiting_for_syn_reply) {
-    const std::string& error = "Data received before SYN_REPLY.";
+  if (it->second.waiting_for_reply_headers_frame) {
+    const std::string& error = "DATA received before HEADERS.";
     stream->LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
     ResetStreamIterator(it, RST_STREAM_PROTOCOL_ERROR, error);
     return;
@@ -2075,8 +2066,8 @@ void SpdySession::OnStreamEnd(SpdyStreamId stream_id) {
   SpdyStream* stream = it->second.stream;
   CHECK_EQ(stream->stream_id(), stream_id);
 
-  if (it->second.waiting_for_syn_reply) {
-    const std::string& error = "Data received before SYN_REPLY.";
+  if (it->second.waiting_for_reply_headers_frame) {
+    const std::string& error = "DATA received before HEADERS.";
     stream->LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
     ResetStreamIterator(it, RST_STREAM_PROTOCOL_ERROR, error);
     return;
@@ -2141,7 +2132,7 @@ void SpdySession::OnSendCompressedFrame(
     SpdyFrameType type,
     size_t payload_len,
     size_t frame_len) {
-  if (type != SYN_STREAM && type != HEADERS)
+  if (type != HEADERS)
     return;
 
   DCHECK(buffered_spdy_framer_.get());
@@ -2241,13 +2232,13 @@ void SpdySession::OnHeaders(SpdyStreamId stream_id,
                             SpdyStreamId parent_stream_id,
                             bool exclusive,
                             bool fin,
-                            const SpdyHeaderBlock& headers) {
+                            SpdyHeaderBlock headers) {
   CHECK(in_io_loop_);
 
   if (net_log().IsCapturing()) {
     net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_HEADERS,
-                       base::Bind(&NetLogSpdySynReplyOrHeadersReceivedCallback,
-                                  &headers, fin, stream_id));
+                       base::Bind(&NetLogSpdyHeadersReceivedCallback, &headers,
+                                  fin, stream_id));
   }
 
   ActiveStreamMap::iterator it = active_streams_.find(stream_id);
@@ -2266,8 +2257,8 @@ void SpdySession::OnHeaders(SpdyStreamId stream_id,
   base::Time response_time = base::Time::Now();
   base::TimeTicks recv_first_byte_time = time_func_();
 
-  if (it->second.waiting_for_syn_reply) {
-    it->second.waiting_for_syn_reply = false;
+  if (it->second.waiting_for_reply_headers_frame) {
+    it->second.waiting_for_reply_headers_frame = false;
     ignore_result(OnInitialResponseHeadersReceived(
         headers, response_time, recv_first_byte_time, stream));
   } else if (it->second.stream->IsReservedRemote()) {
@@ -2495,7 +2486,7 @@ void SpdySession::OnWindowUpdate(SpdyStreamId stream_id,
 bool SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
                                       SpdyStreamId associated_stream_id,
                                       SpdyPriority priority,
-                                      const SpdyHeaderBlock& headers) {
+                                      SpdyHeaderBlock headers) {
   // Server-initiated streams should have even sequence numbers.
   if ((stream_id & 0x1) != 0) {
     LOG(WARNING) << "Received invalid push stream id " << stream_id;
@@ -2670,7 +2661,7 @@ bool SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
     return false;
   }
 
-  active_it->second.stream->OnPushPromiseHeadersReceived(headers);
+  active_it->second.stream->OnPushPromiseHeadersReceived(std::move(headers));
   DCHECK(active_it->second.stream->IsReservedRemote());
   num_pushed_streams_++;
   return true;
@@ -2678,7 +2669,7 @@ bool SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
 
 void SpdySession::OnPushPromise(SpdyStreamId stream_id,
                                 SpdyStreamId promised_stream_id,
-                                const SpdyHeaderBlock& headers) {
+                                SpdyHeaderBlock headers) {
   CHECK(in_io_loop_);
 
   if (net_log_.IsCapturing()) {
@@ -2689,7 +2680,8 @@ void SpdySession::OnPushPromise(SpdyStreamId stream_id,
 
   // Any priority will do.
   // TODO(baranovich): pass parent stream id priority?
-  if (!TryCreatePushStream(promised_stream_id, stream_id, 0, headers))
+  if (!TryCreatePushStream(promised_stream_id, stream_id, 0,
+                           std::move(headers)))
     return;
 }
 

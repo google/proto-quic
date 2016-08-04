@@ -202,9 +202,14 @@ done:
   return ret;
 }
 
-char ssl_early_callback_init(struct ssl_early_callback_ctx *ctx) {
-  CBS client_hello, session_id, cipher_suites, compression_methods, extensions;
+int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
+                            const uint8_t *in, size_t in_len) {
+  memset(ctx, 0, sizeof(*ctx));
+  ctx->ssl = ssl;
+  ctx->client_hello = in;
+  ctx->client_hello_len = in_len;
 
+  CBS client_hello, session_id, cipher_suites, compression_methods, extensions;
   CBS_init(&client_hello, ctx->client_hello, ctx->client_hello_len);
 
   if (/* Skip client version. */
@@ -300,12 +305,9 @@ static const uint16_t kDefaultGroups[] = {
 #endif
 };
 
-/* tls1_get_grouplist sets |*out_group_ids| and |*out_group_ids_len| to the
- * list of allowed group IDs. If |get_peer_groups| is non-zero, return the
- * peer's group list. Otherwise, return the preferred list. */
-static void tls1_get_grouplist(SSL *ssl, int get_peer_groups,
-                               const uint16_t **out_group_ids,
-                               size_t *out_group_ids_len) {
+void tls1_get_grouplist(SSL *ssl, int get_peer_groups,
+                        const uint16_t **out_group_ids,
+                        size_t *out_group_ids_len) {
   if (get_peer_groups) {
     /* Only clients send a supported group list, so this function is only
      * called on the server. */
@@ -711,10 +713,10 @@ static int ext_sni_parse_serverhello(SSL *ssl, uint8_t *out_alert,
 
   assert(ssl->tlsext_hostname != NULL);
 
-  if (!ssl->hit) {
-    assert(ssl->session->tlsext_hostname == NULL);
-    ssl->session->tlsext_hostname = BUF_strdup(ssl->tlsext_hostname);
-    if (!ssl->session->tlsext_hostname) {
+  if (ssl->session == NULL) {
+    assert(ssl->s3->new_session->tlsext_hostname == NULL);
+    ssl->s3->new_session->tlsext_hostname = BUF_strdup(ssl->tlsext_hostname);
+    if (!ssl->s3->new_session->tlsext_hostname) {
       *out_alert = SSL_AD_INTERNAL_ERROR;
       return 0;
     }
@@ -757,11 +759,11 @@ static int ext_sni_parse_clienthello(SSL *ssl, uint8_t *out_alert,
   /* TODO(davidben): SNI should be resolved before resumption. We have the
    * early callback as a replacement, but we should fix the current callback
    * and avoid the need for |SSL_CTX_set_session_id_context|. */
-  if (!ssl->hit) {
-    assert(ssl->session->tlsext_hostname == NULL);
+  if (ssl->session == NULL) {
+    assert(ssl->s3->new_session->tlsext_hostname == NULL);
 
     /* Copy the hostname as a string. */
-    if (!CBS_strdup(&host_name, &ssl->session->tlsext_hostname)) {
+    if (!CBS_strdup(&host_name, &ssl->s3->new_session->tlsext_hostname)) {
       *out_alert = SSL_AD_INTERNAL_ERROR;
       return 0;
     }
@@ -773,9 +775,9 @@ static int ext_sni_parse_clienthello(SSL *ssl, uint8_t *out_alert,
 }
 
 static int ext_sni_add_serverhello(SSL *ssl, CBB *out) {
-  if (ssl->hit ||
+  if (ssl->session != NULL ||
       !ssl->s3->tmp.should_ack_sni ||
-      ssl->session->tlsext_hostname == NULL) {
+      ssl->s3->new_session->tlsext_hostname == NULL) {
     return 1;
   }
 
@@ -1208,8 +1210,8 @@ static int ext_ocsp_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 0;
   }
 
-  if (!CBS_stow(&ocsp_response, &ssl->session->ocsp_response,
-                &ssl->session->ocsp_response_length)) {
+  if (!CBS_stow(&ocsp_response, &ssl->s3->new_session->ocsp_response,
+                &ssl->s3->new_session->ocsp_response_length)) {
     *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
@@ -1244,7 +1246,7 @@ static int ext_ocsp_add_serverhello(SSL *ssl, CBB *out) {
 
   if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
     /* The extension shouldn't be sent when resuming sessions. */
-    if (ssl->hit) {
+    if (ssl->session != NULL) {
       return 1;
     }
 
@@ -1434,9 +1436,11 @@ static int ext_sct_parse_serverhello(SSL *ssl, uint8_t *out_alert,
   }
 
   /* Session resumption uses the original session information. */
-  if (!ssl->hit &&
-      !CBS_stow(contents, &ssl->session->tlsext_signed_cert_timestamp_list,
-                &ssl->session->tlsext_signed_cert_timestamp_list_length)) {
+  if (ssl->session == NULL &&
+      !CBS_stow(
+          contents,
+          &ssl->s3->new_session->tlsext_signed_cert_timestamp_list,
+          &ssl->s3->new_session->tlsext_signed_cert_timestamp_list_length)) {
     *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
@@ -1451,7 +1455,7 @@ static int ext_sct_parse_clienthello(SSL *ssl, uint8_t *out_alert,
 
 static int ext_sct_add_serverhello(SSL *ssl, CBB *out) {
   /* The extension shouldn't be sent when resuming sessions. */
-  if (ssl->hit ||
+  if (ssl->session != NULL ||
       ssl->ctx->signed_cert_timestamp_list_length == 0) {
     return 1;
   }
@@ -1935,7 +1939,7 @@ static int ext_ec_point_add_serverhello(SSL *ssl, CBB *out) {
 static int ext_draft_version_add_clienthello(SSL *ssl, CBB *out) {
   uint16_t min_version, max_version;
   if (!ssl_get_version_range(ssl, &min_version, &max_version) ||
-      max_version >= TLS1_3_VERSION) {
+      max_version < TLS1_3_VERSION) {
     return 1;
   }
 
@@ -1973,7 +1977,24 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
 
   const uint16_t *groups;
   size_t groups_len;
-  tls1_get_grouplist(ssl, 0 /* local groups */, &groups, &groups_len);
+  if (ssl->s3->hs->retry_group) {
+    /* Append the new key share to the old list. */
+    if (!CBB_add_bytes(&kse_bytes, ssl->s3->hs->key_share_bytes,
+                       ssl->s3->hs->key_share_bytes_len)) {
+      return 0;
+    }
+    OPENSSL_free(ssl->s3->hs->key_share_bytes);
+    ssl->s3->hs->key_share_bytes = NULL;
+
+    groups = &ssl->s3->hs->retry_group;
+    groups_len = 1;
+  } else {
+    tls1_get_grouplist(ssl, 0 /* local groups */, &groups, &groups_len);
+    /* Only send the top two preferred key shares. */
+    if (groups_len > 2) {
+      groups_len = 2;
+    }
+  }
 
   ssl->s3->hs->groups = OPENSSL_malloc(groups_len * sizeof(SSL_ECDH_CTX));
   if (ssl->s3->hs->groups == NULL) {
@@ -1992,6 +2013,17 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
         !SSL_ECDH_CTX_init(&ssl->s3->hs->groups[i], groups[i]) ||
         !SSL_ECDH_CTX_offer(&ssl->s3->hs->groups[i], &key_exchange) ||
         !CBB_flush(&kse_bytes)) {
+      return 0;
+    }
+  }
+
+  if (!ssl->s3->hs->retry_group) {
+    /* Save the contents of the extension to repeat it in the second
+     * ClientHello. */
+    ssl->s3->hs->key_share_bytes_len = CBB_len(&kse_bytes);
+    ssl->s3->hs->key_share_bytes = BUF_memdup(CBB_data(&kse_bytes),
+                                              CBB_len(&kse_bytes));
+    if (ssl->s3->hs->key_share_bytes == NULL) {
       return 0;
     }
   }
@@ -2030,16 +2062,12 @@ int ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
     return 0;
   }
 
-  for (size_t i = 0; i < ssl->s3->hs->groups_len; i++) {
-    SSL_ECDH_CTX_cleanup(&ssl->s3->hs->groups[i]);
-  }
-  OPENSSL_free(ssl->s3->hs->groups);
-  ssl->s3->hs->groups = NULL;
-
+  ssl_handshake_clear_groups(ssl->s3->hs);
   return 1;
 }
 
-int ext_key_share_parse_clienthello(SSL *ssl, uint8_t **out_secret,
+int ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
+                                    uint8_t **out_secret,
                                     size_t *out_secret_len, uint8_t *out_alert,
                                     CBS *contents) {
   uint16_t group_id;
@@ -2049,7 +2077,7 @@ int ext_key_share_parse_clienthello(SSL *ssl, uint8_t **out_secret,
     return 0;
   }
 
-  int found = 0;
+  *out_found = 0;
   while (CBS_len(&key_shares) > 0) {
     uint16_t id;
     CBS peer_key;
@@ -2058,7 +2086,7 @@ int ext_key_share_parse_clienthello(SSL *ssl, uint8_t **out_secret,
       return 0;
     }
 
-    if (id != group_id || found) {
+    if (id != group_id || *out_found) {
       continue;
     }
 
@@ -2078,10 +2106,10 @@ int ext_key_share_parse_clienthello(SSL *ssl, uint8_t **out_secret,
     }
     SSL_ECDH_CTX_cleanup(&group);
 
-    found = 1;
+    *out_found = 1;
   }
 
-  return found;
+  return 1;
 }
 
 int ext_key_share_add_serverhello(SSL *ssl, CBB *out) {
@@ -2950,7 +2978,7 @@ int tls1_channel_id_hash(SSL *ssl, uint8_t *out, size_t *out_len) {
   static const char kClientIDMagic[] = "TLS Channel ID signature";
   EVP_DigestUpdate(&ctx, kClientIDMagic, sizeof(kClientIDMagic));
 
-  if (ssl->hit) {
+  if (ssl->session != NULL) {
     static const char kResumptionMagic[] = "Resumption";
     EVP_DigestUpdate(&ctx, kResumptionMagic, sizeof(kResumptionMagic));
     if (ssl->session->original_handshake_hash_len == 0) {
@@ -2980,25 +3008,26 @@ err:
 }
 
 /* tls1_record_handshake_hashes_for_channel_id records the current handshake
- * hashes in |ssl->session| so that Channel ID resumptions can sign that
+ * hashes in |ssl->s3->new_session| so that Channel ID resumptions can sign that
  * data. */
 int tls1_record_handshake_hashes_for_channel_id(SSL *ssl) {
   int digest_len;
   /* This function should never be called for a resumed session because the
    * handshake hashes that we wish to record are for the original, full
    * handshake. */
-  if (ssl->hit) {
+  if (ssl->session != NULL) {
     return -1;
   }
 
   digest_len =
-      tls1_handshake_digest(ssl, ssl->session->original_handshake_hash,
-                            sizeof(ssl->session->original_handshake_hash));
+      tls1_handshake_digest(
+          ssl, ssl->s3->new_session->original_handshake_hash,
+          sizeof(ssl->s3->new_session->original_handshake_hash));
   if (digest_len < 0) {
     return -1;
   }
 
-  ssl->session->original_handshake_hash_len = digest_len;
+  ssl->s3->new_session->original_handshake_hash_len = digest_len;
 
   return 1;
 }

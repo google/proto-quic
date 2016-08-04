@@ -34,6 +34,7 @@ namespace net {
 class BoundNetLog;
 class URLRequestContext;
 struct WebSocketFrame;
+class WebSocketHandshakeStreamBase;
 class WebSocketHandshakeStreamCreateHelper;
 
 // WebSocketStreamRequest is the caller's handle to the process of creation of a
@@ -44,6 +45,10 @@ class WebSocketHandshakeStreamCreateHelper;
 class NET_EXPORT_PRIVATE WebSocketStreamRequest {
  public:
   virtual ~WebSocketStreamRequest();
+
+  virtual void OnHandshakeStreamCreated(
+      WebSocketHandshakeStreamBase* handshake_stream) = 0;
+  virtual void OnFailure(const std::string& message) = 0;
 };
 
 // WebSocketStream is a transport-agnostic interface for reading and writing
@@ -106,13 +111,27 @@ class NET_EXPORT_PRIVATE WebSocketStream {
   // it is safe to delete.
   static std::unique_ptr<WebSocketStreamRequest> CreateAndConnectStream(
       const GURL& socket_url,
-      const std::vector<std::string>& requested_subprotocols,
+      std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
       const url::Origin& origin,
       const GURL& first_party_for_cookies,
       const std::string& additional_headers,
       URLRequestContext* url_request_context,
       const BoundNetLog& net_log,
       std::unique_ptr<ConnectDelegate> connect_delegate);
+
+  // Alternate version of CreateAndConnectStream() for testing use only. It
+  // takes |timer| as the handshake timeout timer.
+  static std::unique_ptr<WebSocketStreamRequest>
+  CreateAndConnectStreamForTesting(
+      const GURL& socket_url,
+      std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
+      const url::Origin& origin,
+      const GURL& first_party_for_cookies,
+      const std::string& additional_headers,
+      URLRequestContext* url_request_context,
+      const BoundNetLog& net_log,
+      std::unique_ptr<ConnectDelegate> connect_delegate,
+      std::unique_ptr<base::Timer> timer);
 
   // Derived classes must make sure Close() is called when the stream is not
   // closed on destruction.
@@ -215,22 +234,6 @@ void WebSocketDispatchOnFinishOpeningHandshake(
     const GURL& gurl,
     const scoped_refptr<HttpResponseHeaders>& headers,
     base::Time response_time);
-
-// Alternate version of WebSocketStream::CreateAndConnectStream() for testing
-// use only. The differences are the use of a |create_helper| argument in place
-// of |requested_subprotocols| and taking |timer| as the handshake timeout
-// timer. Implemented in websocket_stream.cc.
-NET_EXPORT_PRIVATE std::unique_ptr<WebSocketStreamRequest>
-CreateAndConnectStreamForTesting(
-    const GURL& socket_url,
-    std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
-    const url::Origin& origin,
-    const GURL& first_party_for_cookies,
-    const std::string& additional_headers,
-    URLRequestContext* url_request_context,
-    const BoundNetLog& net_log,
-    std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
-    std::unique_ptr<base::Timer> timer);
 
 }  // namespace net
 

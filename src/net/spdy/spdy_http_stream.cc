@@ -48,6 +48,8 @@ SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
       buffered_read_callback_pending_(false),
       more_read_data_pending_(false),
       direct_(direct),
+      was_npn_negotiated_(false),
+      protocol_negotiated_(kProtoUnknown),
       weak_factory_(this) {
   DCHECK(spdy_session_.get());
 }
@@ -78,6 +80,8 @@ int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
     if (stream_.get()) {
       DCHECK_EQ(stream_->type(), SPDY_PUSH_STREAM);
       stream_->SetDelegate(this);
+      stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
+                          &protocol_negotiated_);
       return OK;
     }
   }
@@ -91,6 +95,8 @@ int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
   if (rv == OK) {
     stream_ = stream_request_.ReleaseStream();
     stream_->SetDelegate(this);
+    stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
+                        &protocol_negotiated_);
   }
 
   return rv;
@@ -274,12 +280,12 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
     return ERR_IO_PENDING;
   }
 
-  std::unique_ptr<SpdyHeaderBlock> headers(new SpdyHeaderBlock);
+  SpdyHeaderBlock headers;
   CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers, direct_,
-                                   headers.get());
+                                   &headers);
   stream_->net_log().AddEvent(
       NetLog::TYPE_HTTP_TRANSACTION_HTTP2_SEND_REQUEST_HEADERS,
-      base::Bind(&SpdyHeaderBlockNetLogCallback, headers.get()));
+      base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
   result = stream_->SendRequestHeaders(
       std::move(headers),
       HasUploadData() ? MORE_DATA_TO_SEND : NO_MORE_DATA_TO_SEND);
@@ -304,8 +310,7 @@ void SpdyHttpStream::OnRequestHeadersSent() {
   if (HasUploadData()) {
     ReadAndSendRequestBodyData();
   } else {
-    if (!request_callback_.is_null())
-      DoRequestCallback(OK);
+    MaybePostRequestCallback(OK);
   }
 }
 
@@ -328,13 +333,9 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
   response_headers_status_ = RESPONSE_HEADERS_ARE_COMPLETE;
   // Don't store the SSLInfo in the response here, HttpNetworkTransaction
   // will take care of that part.
-  SSLInfo ssl_info;
-  NextProto protocol_negotiated = kProtoUnknown;
-  stream_->GetSSLInfo(&ssl_info,
-                      &response_info_->was_npn_negotiated,
-                      &protocol_negotiated);
+  response_info_->was_npn_negotiated = was_npn_negotiated_;
   response_info_->npn_negotiated_protocol =
-      SSLClientSocket::NextProtoToString(protocol_negotiated);
+      SSLClientSocket::NextProtoToString(protocol_negotiated_);
   response_info_->request_time = stream_->GetRequestTime();
   response_info_->connection_info =
       HttpResponseInfo::ConnectionInfoFromNextProto(kProtoHTTP2);
@@ -426,6 +427,8 @@ void SpdyHttpStream::OnStreamCreated(
   if (rv == OK) {
     stream_ = stream_request_.ReleaseStream();
     stream_->SetDelegate(this);
+    stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
+                        &protocol_negotiated_);
   }
   callback.Run(rv);
 }
@@ -434,13 +437,7 @@ void SpdyHttpStream::ReadAndSendRequestBodyData() {
   CHECK(HasUploadData());
   CHECK_EQ(request_body_buf_size_, 0);
   if (request_info_->upload_data_stream->IsEOF()) {
-    // This callback does not happen to be called, because it is called
-    // in OnRequestBodyReadCompleted() function when eof happens, and then it
-    // is cleared. But better to be paranoid and handle this just in case.
-    // Generally, this eof check just makes sure it is really the eof and then
-    // doloop exists.
-    if (!request_callback_.is_null())
-      DoRequestCallback(OK);
+    MaybePostRequestCallback(OK);
     return;
   }
 
@@ -463,13 +460,16 @@ void SpdyHttpStream::ResetStreamInternal() {
 void SpdyHttpStream::OnRequestBodyReadCompleted(int status) {
   if (status < 0) {
     DCHECK_NE(ERR_IO_PENDING, status);
+    // Post |request_callback_| with received error.  This should be posted
+    // before ResetStreamInternal, because the latter would call
+    // |request_callback_| via OnClose with an error code potentially different
+    // from |status|.
+    MaybePostRequestCallback(status);
+
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&SpdyHttpStream::ResetStreamInternal,
                               weak_factory_.GetWeakPtr()));
 
-    // Call the |request_callback| with received error.
-    if (!request_callback_.is_null())
-      DoRequestCallback(status);
     return;
   }
 
@@ -479,9 +479,6 @@ void SpdyHttpStream::OnRequestBodyReadCompleted(int status) {
   // Only the final frame may have a length of 0.
   if (eof) {
     CHECK_GE(request_body_buf_size_, 0);
-    // Call the cb only after all data is sent.
-    if (!request_callback_.is_null())
-      DoRequestCallback(OK);
   } else {
     CHECK_GT(request_body_buf_size_, 0);
   }
@@ -559,6 +556,20 @@ void SpdyHttpStream::DoRequestCallback(int rv) {
   base::ResetAndReturn(&request_callback_).Run(rv);
 }
 
+void SpdyHttpStream::MaybeDoRequestCallback(int rv) {
+  CHECK_NE(ERR_IO_PENDING, rv);
+  if (request_callback_)
+    base::ResetAndReturn(&request_callback_).Run(rv);
+}
+
+void SpdyHttpStream::MaybePostRequestCallback(int rv) {
+  CHECK_NE(ERR_IO_PENDING, rv);
+  if (request_callback_)
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(&SpdyHttpStream::MaybeDoRequestCallback,
+                              weak_factory_.GetWeakPtr(), rv));
+}
+
 void SpdyHttpStream::DoResponseCallback(int rv) {
   CHECK_NE(rv, ERR_IO_PENDING);
   CHECK(!response_callback_.is_null());
@@ -569,10 +580,7 @@ void SpdyHttpStream::DoResponseCallback(int rv) {
 }
 
 void SpdyHttpStream::GetSSLInfo(SSLInfo* ssl_info) {
-  DCHECK(stream_.get());
-  bool using_npn;
-  NextProto protocol_negotiated = kProtoUnknown;
-  stream_->GetSSLInfo(ssl_info, &using_npn, &protocol_negotiated);
+  *ssl_info = ssl_info_;
 }
 
 void SpdyHttpStream::GetSSLCertRequestInfo(

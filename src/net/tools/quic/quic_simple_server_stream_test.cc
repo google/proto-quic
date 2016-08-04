@@ -8,11 +8,11 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
-#include "net/quic/quic_connection.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_utils.h"
-#include "net/quic/spdy_utils.h"
+#include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_utils.h"
+#include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/reliable_quic_stream_peer.h"
@@ -286,11 +286,7 @@ TEST_P(QuicSimpleServerStreamTest, SendQuicRstStreamNoErrorInStopReading) {
   stream_->set_fin_sent(true);
   stream_->CloseWriteSide();
 
-  if (GetParam() > QUIC_VERSION_28) {
-    EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(1);
-  } else {
-    EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(0);
-  }
+  EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(1);
   stream_->StopReading();
 }
 
@@ -601,11 +597,7 @@ TEST_P(QuicSimpleServerStreamTest, SendQuicRstStreamNoErrorWithEarlyResponse) {
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
       .WillOnce(Return(QuicConsumedData(3, true)));
-  if (GetParam() > QUIC_VERSION_28) {
-    EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(1);
-  } else {
-    EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(0);
-  }
+  EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(1);
   EXPECT_FALSE(stream_->fin_received());
   QuicSimpleServerStreamPeer::SendErrorResponse(stream_);
   EXPECT_TRUE(stream_->reading_stopped());

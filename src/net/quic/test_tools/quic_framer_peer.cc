@@ -5,8 +5,8 @@
 #include "net/quic/test_tools/quic_framer_peer.h"
 
 #include "base/stl_util.h"
-#include "net/quic/quic_framer.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 namespace test {

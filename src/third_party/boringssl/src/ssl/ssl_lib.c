@@ -620,6 +620,64 @@ int SSL_accept(SSL *ssl) {
   return SSL_do_handshake(ssl);
 }
 
+static int ssl_do_renegotiate(SSL *ssl) {
+  /* We do not accept renegotiations as a server. */
+  if (ssl->server) {
+    goto no_renegotiation;
+  }
+
+  if (ssl->s3->tmp.message_type != SSL3_MT_HELLO_REQUEST ||
+      ssl->init_num != 0) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_HELLO_REQUEST);
+    return 0;
+  }
+
+  switch (ssl->renegotiate_mode) {
+    case ssl_renegotiate_ignore:
+      /* Ignore the HelloRequest. */
+      return 1;
+
+    case ssl_renegotiate_once:
+      if (ssl->s3->total_renegotiations != 0) {
+        goto no_renegotiation;
+      }
+      break;
+
+    case ssl_renegotiate_never:
+      goto no_renegotiation;
+
+    case ssl_renegotiate_freely:
+      break;
+  }
+
+  /* Renegotiation is only supported at quiescent points in the application
+   * protocol, namely in HTTPS, just before reading the HTTP response. Require
+   * the record-layer be idle and avoid complexities of sending a handshake
+   * record while an application_data record is being written. */
+  if (ssl_write_buffer_is_pending(ssl)) {
+    goto no_renegotiation;
+  }
+
+  /* Begin a new handshake. */
+  ssl->s3->total_renegotiations++;
+  ssl->state = SSL_ST_CONNECT;
+  return 1;
+
+no_renegotiation:
+  ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_NO_RENEGOTIATION);
+  OPENSSL_PUT_ERROR(SSL, SSL_R_NO_RENEGOTIATION);
+  return 0;
+}
+
+static int ssl_do_post_handshake(SSL *ssl) {
+  if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
+    return ssl_do_renegotiate(ssl);
+  }
+
+  return tls13_post_handshake(ssl);
+}
+
 static int ssl_read_impl(SSL *ssl, void *buf, int num, int peek) {
   ssl->rwstate = SSL_NOTHING;
   /* Functions which use SSL_get_error must clear the error queue on entry. */
@@ -631,21 +689,33 @@ static int ssl_read_impl(SSL *ssl, void *buf, int num, int peek) {
     return -1;
   }
 
-  /* This may require multiple iterations. False Start will cause
-   * |ssl->handshake_func| to signal success one step early, but the handshake
-   * must be completely finished before other modes are accepted. */
-  while (SSL_in_init(ssl)) {
-    int ret = SSL_do_handshake(ssl);
-    if (ret < 0) {
+  for (;;) {
+    /* Complete the current handshake, if any. False Start will cause
+     * |SSL_do_handshake| to return mid-handshake, so this may require multiple
+     * iterations. */
+    while (SSL_in_init(ssl)) {
+      int ret = SSL_do_handshake(ssl);
+      if (ret < 0) {
+        return ret;
+      }
+      if (ret == 0) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
+        return -1;
+      }
+    }
+
+    int got_handshake;
+    int ret = ssl->method->read_app_data(ssl, &got_handshake, buf, num, peek);
+    if (ret > 0 || !got_handshake) {
       return ret;
     }
-    if (ret == 0) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
+
+    /* Handle the post-handshake message and try again. */
+    if (!ssl_do_post_handshake(ssl)) {
       return -1;
     }
+    ssl->method->release_current_message(ssl, 1 /* free buffer */);
   }
-
-  return ssl->method->read_app_data(ssl, buf, num, peek);
 }
 
 int SSL_read(SSL *ssl, void *buf, int num) {
@@ -735,6 +805,20 @@ int SSL_shutdown(SSL *ssl) {
 
   /* Return 0 for unidirectional shutdown and 1 for bidirectional shutdown. */
   return ssl->s3->recv_shutdown == ssl_shutdown_close_notify;
+}
+
+int SSL_send_fatal_alert(SSL *ssl, uint8_t alert) {
+  if (ssl->s3->alert_dispatch) {
+    if (ssl->s3->send_alert[0] != SSL3_AL_FATAL ||
+        ssl->s3->send_alert[1] != alert) {
+      /* We are already attempting to write a different alert. */
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PROTOCOL_IS_SHUTDOWN);
+      return -1;
+    }
+    return ssl->method->dispatch_alert(ssl);
+  }
+
+  return ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
 }
 
 int SSL_get_error(const SSL *ssl, int ret_code) {
@@ -860,6 +944,10 @@ void SSL_set_max_version(SSL *ssl, uint16_t version) {
   ssl->max_version = ssl->method->version_from_wire(version);
 }
 
+void SSL_set_fallback_version(SSL *ssl, uint16_t version) {
+  ssl->fallback_version = ssl->method->version_from_wire(version);
+}
+
 uint32_t SSL_CTX_set_options(SSL_CTX *ctx, uint32_t options) {
   ctx->options |= options;
   return ctx->options;
@@ -909,17 +997,25 @@ uint32_t SSL_clear_mode(SSL *ssl, uint32_t mode) {
 uint32_t SSL_get_mode(const SSL *ssl) { return ssl->mode; }
 
 X509 *SSL_get_peer_certificate(const SSL *ssl) {
-  if (ssl == NULL || ssl->session == NULL || ssl->session->peer == NULL) {
+  if (ssl == NULL) {
     return NULL;
   }
-  return X509_up_ref(ssl->session->peer);
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL || session->peer == NULL) {
+    return NULL;
+  }
+  return X509_up_ref(session->peer);
 }
 
 STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
-  if (ssl == NULL || ssl->session == NULL) {
+  if (ssl == NULL) {
     return NULL;
   }
-  return ssl->session->cert_chain;
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL) {
+    return NULL;
+  }
+  return session->cert_chain;
 }
 
 int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
@@ -929,7 +1025,7 @@ int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
    * https://tools.ietf.org/html/rfc5929#section-3.1. */
   const uint8_t *finished = ssl->s3->previous_client_finished;
   size_t finished_len = ssl->s3->previous_client_finished_len;
-  if (ssl->hit) {
+  if (ssl->session != NULL) {
     /* tls-unique is broken for resumed sessions unless EMS is used. */
     if (!ssl->session->extended_master_secret) {
       goto err;
@@ -1122,6 +1218,9 @@ int SSL_get_verify_depth(const SSL *ssl) {
 }
 
 int SSL_get_extms_support(const SSL *ssl) {
+  if (!ssl->s3->have_version) {
+    return 0;
+  }
   return ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
          ssl->s3->tmp.extended_master_secret == 1;
 }
@@ -1354,13 +1453,14 @@ int SSL_set1_curves(SSL *ssl, const int *curves, size_t curves_len) {
 uint16_t SSL_get_curve_id(const SSL *ssl) {
   /* TODO(davidben): This checks the wrong session if there is a renegotiation in
    * progress. */
-  if (ssl->session == NULL ||
-      ssl->session->cipher == NULL ||
-      !SSL_CIPHER_is_ECDHE(ssl->session->cipher)) {
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL ||
+      session->cipher == NULL ||
+      !SSL_CIPHER_is_ECDHE(session->cipher)) {
     return 0;
   }
 
-  return (uint16_t)ssl->session->key_exchange_info;
+  return (uint16_t)session->key_exchange_info;
 }
 
 int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh) {
@@ -1586,18 +1686,19 @@ const char *SSL_get_servername(const SSL *ssl, const int type) {
     return ssl->tlsext_hostname;
   }
 
-  if (ssl->session == NULL) {
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL) {
     return NULL;
   }
-  return ssl->session->tlsext_hostname;
+  return session->tlsext_hostname;
 }
 
 int SSL_get_servername_type(const SSL *ssl) {
-  if (ssl->session != NULL && ssl->session->tlsext_hostname != NULL) {
-    return TLSEXT_NAMETYPE_host_name;
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL || session->tlsext_hostname == NULL) {
+    return -1;
   }
-
-  return -1;
+  return TLSEXT_NAMETYPE_host_name;
 }
 
 void SSL_CTX_enable_signed_cert_timestamps(SSL_CTX *ctx) {
@@ -1620,7 +1721,7 @@ int SSL_enable_ocsp_stapling(SSL *ssl) {
 
 void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
                                          size_t *out_len) {
-  SSL_SESSION *session = ssl->session;
+  SSL_SESSION *session = SSL_get_session(ssl);
 
   *out_len = 0;
   *out = NULL;
@@ -1634,7 +1735,7 @@ void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
 
 void SSL_get0_ocsp_response(const SSL *ssl, const uint8_t **out,
                             size_t *out_len) {
-  SSL_SESSION *session = ssl->session;
+  SSL_SESSION *session = SSL_get_session(ssl);
 
   *out_len = 0;
   *out = NULL;
@@ -1951,7 +2052,7 @@ void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
 void ssl_update_cache(SSL *ssl, int mode) {
   SSL_CTX *ctx = ssl->initial_ctx;
   /* Never cache sessions with empty session IDs. */
-  if (ssl->session->session_id_length == 0 ||
+  if (ssl->s3->established_session->session_id_length == 0 ||
       (ctx->session_cache_mode & mode) != mode) {
     return;
   }
@@ -1963,14 +2064,16 @@ void ssl_update_cache(SSL *ssl, int mode) {
   /* A client may see new sessions on abbreviated handshakes if the server
    * decides to renew the ticket. Once the handshake is completed, it should be
    * inserted into the cache. */
-  if (!ssl->hit || (!ssl->server && ssl->tlsext_ticket_expected)) {
+  if (ssl->s3->established_session != ssl->session ||
+      (!ssl->server && ssl->tlsext_ticket_expected)) {
     if (use_internal_cache) {
-      SSL_CTX_add_session(ctx, ssl->session);
+      SSL_CTX_add_session(ctx, ssl->s3->established_session);
     }
     if (ctx->new_session_cb != NULL &&
-        !ctx->new_session_cb(ssl, SSL_SESSION_up_ref(ssl->session))) {
+        !ctx->new_session_cb(ssl, SSL_SESSION_up_ref(
+            ssl->s3->established_session))) {
       /* |new_session_cb|'s return value signals whether it took ownership. */
-      SSL_SESSION_free(ssl->session);
+      SSL_SESSION_free(ssl->s3->established_session);
     }
   }
 
@@ -2068,7 +2171,7 @@ const SSL_CIPHER *SSL_get_current_cipher(const SSL *ssl) {
 }
 
 int SSL_session_reused(const SSL *ssl) {
-  return ssl->hit;
+  return ssl->session != NULL;
 }
 
 const COMP_METHOD *SSL_get_current_compression(SSL *ssl) { return NULL; }
@@ -2291,13 +2394,14 @@ void SSL_set_tmp_dh_callback(SSL *ssl, DH *(*callback)(SSL *ssl, int is_export,
 unsigned SSL_get_dhe_group_size(const SSL *ssl) {
   /* TODO(davidben): This checks the wrong session if there is a renegotiation in
    * progress. */
-  if (ssl->session == NULL ||
-      ssl->session->cipher == NULL ||
-      !SSL_CIPHER_is_DHE(ssl->session->cipher)) {
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL ||
+      session->cipher == NULL ||
+      !SSL_CIPHER_is_DHE(session->cipher)) {
     return 0;
   }
 
-  return ssl->session->key_exchange_info;
+  return session->key_exchange_info;
 }
 
 int SSL_CTX_use_psk_identity_hint(SSL_CTX *ctx, const char *identity_hint) {
@@ -2352,11 +2456,14 @@ const char *SSL_get_psk_identity_hint(const SSL *ssl) {
 }
 
 const char *SSL_get_psk_identity(const SSL *ssl) {
-  if (ssl == NULL || ssl->session == NULL) {
+  if (ssl == NULL) {
     return NULL;
   }
-
-  return ssl->session->psk_identity;
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL) {
+    return NULL;
+  }
+  return session->psk_identity;
 }
 
 void SSL_set_psk_client_callback(
@@ -2470,26 +2577,22 @@ int ssl_log_rsa_client_key_exchange(const SSL *ssl,
   return 1;
 }
 
-int ssl_log_master_secret(const SSL *ssl, const uint8_t *client_random,
-                          size_t client_random_len, const uint8_t *master,
-                          size_t master_len) {
+int ssl_log_secret(const SSL *ssl, const char *label, const uint8_t *secret,
+                   size_t secret_len) {
   if (ssl->ctx->keylog_callback == NULL) {
     return 1;
-  }
-
-  if (client_random_len != 32) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-    return 0;
   }
 
   CBB cbb;
   uint8_t *out;
   size_t out_len;
-  if (!CBB_init(&cbb, 14 + 64 + 1 + master_len * 2 + 1) ||
-      !CBB_add_bytes(&cbb, (const uint8_t *)"CLIENT_RANDOM ", 14) ||
-      !cbb_add_hex(&cbb, client_random, 32) ||
+  if (!CBB_init(&cbb, strlen(label) + 1 + SSL3_RANDOM_SIZE * 2 + 1 +
+                          secret_len * 2 + 1) ||
+      !CBB_add_bytes(&cbb, (const uint8_t *)label, strlen(label)) ||
       !CBB_add_bytes(&cbb, (const uint8_t *)" ", 1) ||
-      !cbb_add_hex(&cbb, master, master_len) ||
+      !cbb_add_hex(&cbb, ssl->s3->client_random, SSL3_RANDOM_SIZE) ||
+      !CBB_add_bytes(&cbb, (const uint8_t *)" ", 1) ||
+      !cbb_add_hex(&cbb, secret, secret_len) ||
       !CBB_add_u8(&cbb, 0 /* NUL */) ||
       !CBB_finish(&cbb, &out, &out_len)) {
     CBB_cleanup(&cbb);
@@ -2566,8 +2669,9 @@ const struct {
 
 static const size_t kVersionsLen = sizeof(kVersions) / sizeof(kVersions[0]);
 
-int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
-                          uint16_t *out_max_version) {
+int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
+                               uint16_t *out_fallback_version,
+                               uint16_t *out_max_version) {
   /* For historical reasons, |SSL_OP_NO_DTLSv1| aliases |SSL_OP_NO_TLSv1|, but
    * DTLS 1.0 should be mapped to TLS 1.1. */
   uint32_t options = ssl->options;
@@ -2627,14 +2731,30 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
     }
   }
 
-  if (!any_enabled) {
+  uint16_t fallback_version = max_version;
+  if (ssl->fallback_version != 0 && ssl->fallback_version < fallback_version) {
+    fallback_version = ssl->fallback_version;
+  }
+
+  if (!any_enabled || fallback_version < min_version) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_SSL_VERSION);
     return 0;
   }
 
   *out_min_version = min_version;
+  *out_fallback_version = fallback_version;
   *out_max_version = max_version;
   return 1;
+}
+
+int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
+                          uint16_t *out_effective_max_version) {
+  /* This function returns the effective maximum version and not the fallback
+   * version. */
+  uint16_t real_max_version_unused;
+  return ssl_get_full_version_range(ssl, out_min_version,
+                                    out_effective_max_version,
+                                    &real_max_version_unused);
 }
 
 uint16_t ssl3_protocol_version(const SSL *ssl) {
@@ -2765,8 +2885,6 @@ int SSL_clear(SSL *ssl) {
     ssl->session = NULL;
   }
 
-  ssl->hit = 0;
-
   /* SSL_clear may be called before or after the |ssl| is initialized in either
    * accept or connect state. In the latter case, SSL_clear should preserve the
    * half and reset |ssl->state| accordingly. */
@@ -2790,6 +2908,8 @@ int SSL_clear(SSL *ssl) {
 
   BUF_MEM_free(ssl->init_buf);
   ssl->init_buf = NULL;
+  ssl->init_msg = NULL;
+  ssl->init_num = 0;
 
   /* The ssl->d1->mtu is simultaneously configuration (preserved across
    * clear) and connection-specific state (gets reset).

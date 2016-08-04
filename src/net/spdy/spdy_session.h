@@ -67,7 +67,7 @@ const int32_t kDefaultInitialWindowSize = 65535;
 // sends a SETTINGS frame with a different value.
 const size_t kInitialMaxConcurrentStreams = 100;
 
-// Specifies the maxiumum concurrent streams server could send (via push).
+// Specifies the maximum concurrent streams server could send (via push).
 const int kMaxConcurrentPushedStreams = 1000;
 
 // If more than this many bytes have been read or more than that many
@@ -294,7 +294,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
               bool verify_domain_authentication,
               bool enable_sending_initial_data,
               bool enable_ping_based_connection_checking,
-              bool enable_priority_dependencies,
               size_t session_max_recv_window_size,
               size_t stream_max_recv_window_size,
               TimeFunc time_func,
@@ -363,11 +362,11 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                           SpdyFrameType frame_type,
                           std::unique_ptr<SpdyBufferProducer> producer);
 
-  // Creates and returns a SYN frame for |stream_id|.
-  std::unique_ptr<SpdySerializedFrame> CreateSynStream(SpdyStreamId stream_id,
-                                                       RequestPriority priority,
-                                                       SpdyControlFlags flags,
-                                                       SpdyHeaderBlock headers);
+  // Creates and returns a HEADERS frame for |stream_id|.
+  std::unique_ptr<SpdySerializedFrame> CreateHeaders(SpdyStreamId stream_id,
+                                                     RequestPriority priority,
+                                                     SpdyControlFlags flags,
+                                                     SpdyHeaderBlock headers);
 
   // Creates and returns a SpdyBuffer holding a data frame with the
   // given data. May return NULL if stalled by flow control.
@@ -526,8 +525,8 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
     return buffered_spdy_framer_->GetDataFrameMinimumSize();
   }
 
-  size_t GetControlFrameHeaderSize() const {
-    return buffered_spdy_framer_->GetControlFrameHeaderSize();
+  size_t GetFrameHeaderSize() const {
+    return buffered_spdy_framer_->GetFrameHeaderSize();
   }
 
   size_t GetFrameMinimumSize() const {
@@ -606,7 +605,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
     ~ActiveStreamInfo();
 
     SpdyStream* stream;
-    bool waiting_for_syn_reply;
+    bool waiting_for_reply_headers_frame;
   };
   typedef std::map<SpdyStreamId, ActiveStreamInfo> ActiveStreamMap;
 
@@ -674,7 +673,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   bool TryCreatePushStream(SpdyStreamId stream_id,
                            SpdyStreamId associated_stream_id,
                            SpdyPriority priority,
-                           const SpdyHeaderBlock& headers);
+                           SpdyHeaderBlock headers);
 
   // Close the stream pointed to by the given iterator. Note that that
   // stream may hold the last reference to the session.
@@ -875,14 +874,14 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
-                     const SpdyHeaderBlock& headers) override;
+                     SpdyHeaderBlock headers) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
                  SpdyStreamId parent_stream_id,
                  bool exclusive,
                  bool fin,
-                 const SpdyHeaderBlock& headers) override;
+                 SpdyHeaderBlock headers) override;
   void OnAltSvc(SpdyStreamId stream_id,
                 base::StringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
@@ -1197,7 +1196,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   TimeFunc time_func_;
 
-  const bool priority_dependencies_enabled_;
   Http2PriorityDependencies priority_dependency_state_;
 
   // Used for posting asynchronous IO tasks.  We use this even though

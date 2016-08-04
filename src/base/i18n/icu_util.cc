@@ -48,13 +48,13 @@ namespace i18n {
 
 namespace {
 #if !defined(OS_NACL)
-#if !defined(NDEBUG)
+#if DCHECK_IS_ON()
 // Assert that we are not called more than once.  Even though calling this
 // function isn't harmful (ICU can handle it), being called twice probably
 // indicates a programming error.
 bool g_check_called_once = true;
 bool g_called_once = false;
-#endif  // !defined(NDEBUG)
+#endif  // DCHECK_IS_ON()
 
 #if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 
@@ -201,7 +201,7 @@ bool InitializeICUWithFileDescriptorInternal(
 bool InitializeICUWithFileDescriptor(
     PlatformFile data_fd,
     const MemoryMappedFile::Region& data_region) {
-#if !defined(NDEBUG)
+#if DCHECK_IS_ON()
   DCHECK(!g_check_called_once || !g_called_once);
   g_called_once = true;
 #endif
@@ -222,7 +222,7 @@ const uint8_t* GetRawIcuMemory() {
 
 bool InitializeICUFromRawMemory(const uint8_t* raw_memory) {
 #if !defined(COMPONENT_BUILD)
-#if !defined(NDEBUG)
+#if DCHECK_IS_ON()
   DCHECK(!g_check_called_once || !g_called_once);
   g_called_once = true;
 #endif
@@ -238,7 +238,7 @@ bool InitializeICUFromRawMemory(const uint8_t* raw_memory) {
 #endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 
 bool InitializeICU() {
-#if !defined(NDEBUG)
+#if DCHECK_IS_ON()
   DCHECK(!g_check_called_once || !g_called_once);
   g_called_once = true;
 #endif
@@ -307,7 +307,7 @@ bool InitializeICU() {
 #endif  // !defined(OS_NACL)
 
 void AllowMultipleInitializeCallsForTesting() {
-#if !defined(NDEBUG) && !defined(OS_NACL)
+#if DCHECK_IS_ON() && !defined(OS_NACL)
   g_check_called_once = false;
 #endif
 }

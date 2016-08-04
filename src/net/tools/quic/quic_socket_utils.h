@@ -16,8 +16,8 @@
 #include "base/macros.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/quic_bandwidth.h"
-#include "net/quic/quic_types.h"
+#include "net/quic/core/quic_bandwidth.h"
+#include "net/quic/core/quic_types.h"
 
 namespace net {
 

@@ -17,7 +17,7 @@
 #include "base/memory/singleton.h"
 #include "base/strings/string_piece.h"
 #include "net/http/http_response_headers.h"
-#include "net/quic/spdy_utils.h"
+#include "net/quic/core/spdy_utils.h"
 #include "net/spdy/spdy_framer.h"
 #include "url/gurl.h"
 

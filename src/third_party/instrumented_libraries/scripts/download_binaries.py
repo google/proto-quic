@@ -10,6 +10,15 @@ import re
 import subprocess
 import sys
 
+
+SCRIPT_PATH = os.path.abspath(__file__)
+BASE_PATH = os.path.normpath(os.path.join(SCRIPT_PATH, *(4 * ['..'])))
+
+# This defaults to the consuming project's base directory, e.g. 'src' in
+# chromium.
+BASE_DIR = os.path.basename(BASE_PATH)
+
+
 def get_ubuntu_release():
   supported_releases = ['precise', 'trusty']
   release = subprocess.check_output(['lsb_release', '-cs']).strip()
@@ -45,7 +54,8 @@ def main(args):
 
   archive_name = get_archive_name(gyp_defines)
   sha1file = '%s.sha1' % archive_name
-  target_directory = 'src/third_party/instrumented_libraries/binaries/'
+  target_directory = os.path.join(
+      BASE_DIR, 'third_party', 'instrumented_libraries', 'binaries')
 
   subprocess.check_call([
       'download_from_google_storage',

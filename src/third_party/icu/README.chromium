@@ -50,18 +50,16 @@ Pre-built data files are generated and checked in with the following steps
   e. Run
        ${CHROME_ICU_TREE_TOP}/scripts/make_data.sh
 
-     This makes icudt${version}l.dat and icudt${version}l_dat.S
-
+     This makes icudt${version}l.dat.
 
   f. Run
        ${CHROME_ICU_TREE_TOP}/scripts/copy_data.sh
 
-     This copies the ICU data file for non-Android platform
-     and the corresponding assembly source files for Linux and Mac to
-     the following places.
+     This copies the ICU data files for non-Android platforms
+     (both Little and Big Endian) to the following locations:
 
      common/icudtl.dat
-     {linux,mac}/icudtl_dat.S
+     common/icudtb.dat
 
   g. Run
        ${CHROME_ICU_TREE_TOP}/android/patch_locale.sh
@@ -71,15 +69,14 @@ Pre-built data files are generated and checked in with the following steps
   h. Run
        ${CHROME_ICU_TREE_TOP}/scripts/make_data.sh
 
-     This makes icudt${version}l.dat and icudt${version}l_dat.S for Android.
+     This makes icudt${version}l.dat for Android.
 
   i. Run
        ${CHROME_ICU_TREE_TOP}/scripts/copy_data_android.sh
 
-     This copies icu data files for Android to the following locations:
+     This copies the icu data file for Android to the following location:
 
      android/icudtl.dat
-     android/icudtl_dat.S
 
   j. Run
        ${CHROME_ICU_TREE_TOP}/scripts/clean_up_data_source.sh
@@ -245,9 +242,9 @@ D. Local Modifications
      windowsZones.txt
      zoneinfo64.txt
 
-  As of May 14, 2016, the latest version is 2016d and the above files
+  As of July 26, 2016, the latest version is 2016f and the above files
   are available at
-  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016d/44/
+  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016f/44/
 
 5. Build-related changes
 

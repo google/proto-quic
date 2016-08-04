@@ -26,6 +26,10 @@ const (
 	VersionTLS13 = 0x0304
 )
 
+// The draft version of TLS 1.3 that is implemented here and sent in the draft
+// indicator extension.
+const tls13DraftVersion = 13
+
 const (
 	maxPlaintext        = 16384        // maximum plaintext payload length
 	maxCiphertext       = 16384 + 2048 // maximum ciphertext payload length
@@ -64,6 +68,7 @@ const (
 	typeClientKeyExchange   uint8 = 16
 	typeFinished            uint8 = 20
 	typeCertificateStatus   uint8 = 22
+	typeKeyUpdate           uint8 = 24  // draft-ietf-tls-tls13-13
 	typeNextProtocol        uint8 = 67  // Not IANA assigned
 	typeChannelID           uint8 = 203 // Not IANA assigned
 )
@@ -92,6 +97,7 @@ const (
 	extensionCustom                     uint16 = 1234  // not IANA assigned
 	extensionNextProtoNeg               uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo          uint16 = 0xff01
+	extensionTLS13Draft                 uint16 = 0xff02
 	extensionChannelID                  uint16 = 30032 // not IANA assigned
 )
 
@@ -184,6 +190,13 @@ const (
 	SRTP_AES128_CM_HMAC_SHA1_32        = 0x0002
 )
 
+// TicketFlags values (see draft-ietf-tls-tls13-14, section 4.4.1)
+const (
+	ticketAllowEarlyData     = 1
+	ticketAllowDHEResumption = 2
+	ticketAllowPSKResumption = 4
+)
+
 // ConnectionState records basic TLS details about the connection.
 type ConnectionState struct {
 	Version                    uint16                // TLS version used by the connection (e.g. VersionTLS12)
@@ -201,6 +214,7 @@ type ConnectionState struct {
 	TLSUnique                  []byte                // the tls-unique channel binding
 	SCTList                    []byte                // signed certificate timestamp list
 	PeerSignatureAlgorithm     signatureAlgorithm    // algorithm used by the peer in the handshake
+	CurveID                    CurveID               // the curve used in ECDHE
 }
 
 // ClientAuthType declares the policy the server will follow for
@@ -364,6 +378,12 @@ type Config struct {
 	// be used.
 	CurvePreferences []CurveID
 
+	// DefaultCurves contains the elliptic curves for which public values will
+	// be sent in the ClientHello's KeyShare extension. If this value is nil,
+	// all supported curves will have public values sent. This field is ignored
+	// on servers.
+	DefaultCurves []CurveID
+
 	// ChannelID contains the ECDSA key for the client to use as
 	// its TLS Channel ID.
 	ChannelID *ecdsa.PrivateKey
@@ -427,9 +447,15 @@ type ProtocolBugs struct {
 	// or CertificateVerify message should be invalid.
 	InvalidSignature bool
 
-	// SendCurve, if non-zero, causes the ServerKeyExchange message to use
-	// the specified curve ID rather than the negotiated one.
+	// SendCurve, if non-zero, causes the server to send the specified curve
+	// ID in ServerKeyExchange (TLS 1.2) or ServerHello (TLS 1.3) rather
+	// than the negotiated one.
 	SendCurve CurveID
+
+	// SendHelloRetryRequestCurve, if non-zero, causes the server to send
+	// the specified curve in HelloRetryRequest rather than the negotiated
+	// one.
+	SendHelloRetryRequestCurve CurveID
 
 	// InvalidECDHPoint, if true, causes the ECC points in
 	// ServerKeyExchange or ClientKeyExchange messages to be invalid.
@@ -859,6 +885,10 @@ type ProtocolBugs struct {
 	// message. This only makes sense for a server.
 	SendHelloRequestBeforeEveryHandshakeMessage bool
 
+	// SendKeyUpdateBeforeEveryAppDataRecord, if true, causes a KeyUpdate
+	// handshake message to be sent before each application data record.
+	SendKeyUpdateBeforeEveryAppDataRecord bool
+
 	// RequireDHPublicValueLen causes a fatal error if the length (in
 	// bytes) of the server's Diffie-Hellman public value is not equal to
 	// this.
@@ -942,6 +972,16 @@ type ProtocolBugs struct {
 	// instead.
 	MissingKeyShare bool
 
+	// SecondClientHelloMissingKeyShare, if true, causes the second TLS 1.3
+	// ClientHello to skip sending a key_share extension and use the zero
+	// ECDHE secret instead.
+	SecondClientHelloMissingKeyShare bool
+
+	// MisinterpretHelloRetryRequestCurve, if non-zero, causes the TLS 1.3
+	// client to pretend the server requested a HelloRetryRequest with the
+	// given curve rather than the actual one.
+	MisinterpretHelloRetryRequestCurve CurveID
+
 	// DuplicateKeyShares, if true, causes the TLS 1.3 client to send two
 	// copies of each KeyShareEntry.
 	DuplicateKeyShares bool
@@ -953,6 +993,30 @@ type ProtocolBugs struct {
 	// EncryptedExtensionsWithKeyShare, if true, causes the TLS 1.3 server to
 	// include the KeyShare extension in the EncryptedExtensions block.
 	EncryptedExtensionsWithKeyShare bool
+
+	// UnnecessaryHelloRetryRequest, if true, causes the TLS 1.3 server to
+	// send a HelloRetryRequest regardless of whether it needs to.
+	UnnecessaryHelloRetryRequest bool
+
+	// SecondHelloRetryRequest, if true, causes the TLS 1.3 server to send
+	// two HelloRetryRequests instead of one.
+	SecondHelloRetryRequest bool
+
+	// SendServerHelloVersion, if non-zero, causes the server to send the
+	// specified version in ServerHello rather than the true version.
+	SendServerHelloVersion uint16
+
+	// SkipHelloRetryRequest, if true, causes the TLS 1.3 server to not send
+	// HelloRetryRequest.
+	SkipHelloRetryRequest bool
+
+	// PackHelloRequestWithFinished, if true, causes the TLS server to send
+	// HelloRequest in the same record as Finished.
+	PackHelloRequestWithFinished bool
+
+	// SendExtraFinished, if true, causes an extra Finished message to be
+	// sent.
+	SendExtraFinished bool
 }
 
 func (c *Config) serverInit() {
@@ -1039,6 +1103,18 @@ func (c *Config) curvePreferences() []CurveID {
 		return defaultCurvePreferences
 	}
 	return c.CurvePreferences
+}
+
+func (c *Config) defaultCurves() map[CurveID]bool {
+	defaultCurves := make(map[CurveID]bool)
+	curves := c.DefaultCurves
+	if c == nil || c.DefaultCurves == nil {
+		curves = c.curvePreferences()
+	}
+	for _, curveID := range curves {
+		defaultCurves[curveID] = true
+	}
+	return defaultCurves
 }
 
 // mutualVersion returns the protocol version to use given the advertised

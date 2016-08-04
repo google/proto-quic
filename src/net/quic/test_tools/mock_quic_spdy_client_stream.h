@@ -6,7 +6,7 @@
 #define NET_QUIC_TEST_TOOLS_MOCK_QUIC_SPDY_CLIENT_STREAM_H_
 
 #include "base/macros.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "testing/gmock/include/gmock/gmock.h"
 // #include "testing/gtest/include/gtest/gtest.h"

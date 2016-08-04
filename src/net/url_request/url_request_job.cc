@@ -565,15 +565,13 @@ void URLRequestJob::ReadRawDataComplete(int result) {
     if (error == OK && !filter_bytes_read)
       DoneReading();
 
-    DVLOG(1) << __FUNCTION__ << "() "
-             << "\"" << request_->url().spec() << "\""
+    DVLOG(1) << __func__ << "() \"" << request_->url().spec() << "\""
              << " pre bytes read = " << bytes_read
              << " pre total = " << prefilter_bytes_read_
              << " post total = " << postfilter_bytes_read_;
     bytes_read = filter_bytes_read;
   } else {
-    DVLOG(1) << __FUNCTION__ << "() "
-             << "\"" << request_->url().spec() << "\""
+    DVLOG(1) << __func__ << "() \"" << request_->url().spec() << "\""
              << " pre bytes read = " << bytes_read
              << " pre total = " << prefilter_bytes_read_
              << " post total = " << postfilter_bytes_read_;
@@ -796,8 +794,7 @@ Error URLRequestJob::ReadFilteredData(int* bytes_read) {
           break;
         }
         case Filter::FILTER_ERROR: {
-          DVLOG(1) << __FUNCTION__ << "() "
-                   << "\"" << request_->url().spec() << "\""
+          DVLOG(1) << __func__ << "() \"" << request_->url().spec() << "\""
                    << " Filter Error";
           filter_needs_more_output_space_ = false;
           error = ERR_CONTENT_DECODING_FAILED;
@@ -942,8 +939,7 @@ void URLRequestJob::RecordBytesRead(int bytes_read) {
 
   if (!filter_.get())
     postfilter_bytes_read_ += bytes_read;
-  DVLOG(2) << __FUNCTION__ << "() "
-           << "\"" << request_->url().spec() << "\""
+  DVLOG(2) << __func__ << "() \"" << request_->url().spec() << "\""
            << " pre bytes read = " << bytes_read
            << " pre total = " << prefilter_bytes_read_
            << " post total = " << postfilter_bytes_read_;

@@ -12,7 +12,7 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/quic/crypto/local_strike_register_client.h"
+#include "net/quic/core/crypto/local_strike_register_client.h"
 
 namespace net {
 namespace test {

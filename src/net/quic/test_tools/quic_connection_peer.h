@@ -7,9 +7,9 @@
 
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/quic_connection.h"
-#include "net/quic/quic_connection_stats.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_connection_stats.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 
@@ -35,8 +35,15 @@ class QuicConnectionPeer {
  public:
   static void SendAck(QuicConnection* connection);
 
+  // Sets send algorithm of |path_id|.
   static void SetSendAlgorithm(QuicConnection* connection,
+                               QuicPathId path_id,
                                SendAlgorithmInterface* send_algorithm);
+
+  // Sets loss algorithm of |path_id|.
+  static void SetLossAlgorithm(QuicConnection* connection,
+                               QuicPathId path_id,
+                               LossDetectionInterface* loss_algorithm);
 
   static const QuicFrame GetUpdatedAckFrame(QuicConnection* connection);
 
@@ -49,8 +56,9 @@ class QuicConnectionPeer {
 
   static QuicPacketGenerator* GetPacketGenerator(QuicConnection* connection);
 
-  static QuicSentPacketManager* GetSentPacketManager(
-      QuicConnection* connection);
+  // Returns sent packet manager of |path_id|.
+  static QuicSentPacketManager* GetSentPacketManager(QuicConnection* connection,
+                                                     QuicPathId path_id);
 
   static QuicTime::Delta GetNetworkTimeout(QuicConnection* connection);
 
@@ -123,6 +131,9 @@ class QuicConnectionPeer {
                          QuicConnection::AckMode ack_mode);
   static void SetAckDecimationDelay(QuicConnection* connection,
                                     float ack_decimation_delay);
+  static bool HasRetransmittableFrames(QuicConnection* connection,
+                                       QuicPathId path_id,
+                                       QuicPacketNumber packet_number);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConnectionPeer);

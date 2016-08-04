@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 
 namespace net {

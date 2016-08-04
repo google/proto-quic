@@ -42,6 +42,18 @@ class NetLog;
 // goes out of scope).
 class NET_EXPORT HostResolver {
  public:
+  // HostResolver::Request class is used to cancel the request and change it's
+  // priority. It must be owned by consumer. Deletion cancels the request.
+  class Request {
+   public:
+    virtual ~Request() {}
+
+    // Changes the priority of the specified request. Can be called after
+    // Resolve() is called. Can't be called once the request is cancelled or
+    // completed.
+    virtual void ChangeRequestPriority(RequestPriority priority) = 0;
+  };
+
   // |max_concurrent_resolves| is how many resolve requests will be allowed to
   // run in parallel. Pass HostResolver::kDefaultParallelism to choose a
   // default value.
@@ -64,6 +76,8 @@ class NET_EXPORT HostResolver {
   class NET_EXPORT RequestInfo {
    public:
     explicit RequestInfo(const HostPortPair& host_port_pair);
+    RequestInfo(const RequestInfo& request_info);
+    ~RequestInfo();
 
     const HostPortPair& host_port_pair() const { return host_port_pair_; }
     void set_host_port_pair(const HostPortPair& host_port_pair) {
@@ -94,7 +108,17 @@ class NET_EXPORT HostResolver {
     bool is_my_ip_address() const { return is_my_ip_address_; }
     void set_is_my_ip_address(bool b) { is_my_ip_address_ = b; }
 
+    using CacheHitCallback = base::Callback<void(const RequestInfo&)>;
+    const CacheHitCallback& cache_hit_callback() const {
+      return cache_hit_callback_;
+    }
+    void set_cache_hit_callback(const CacheHitCallback& callback) {
+      cache_hit_callback_ = callback;
+    }
+
    private:
+    RequestInfo();
+
     // The hostname to resolve, and the port to use in resulting sockaddrs.
     HostPortPair host_port_pair_;
 
@@ -113,10 +137,11 @@ class NET_EXPORT HostResolver {
     // Indicates a request for myIpAddress (to differentiate from other requests
     // for localhost, currently used by Chrome OS).
     bool is_my_ip_address_;
-  };
 
-  // Opaque type used to cancel a request.
-  typedef void* RequestHandle;
+    // A callback that will be called when another request reads the cache data
+    // returned (and possibly written) by this request.
+    CacheHitCallback cache_hit_callback_;
+  };
 
   // Set Options.max_concurrent_resolves to this to select a default level
   // of concurrency.
@@ -143,29 +168,20 @@ class NET_EXPORT HostResolver {
   // callback.  Otherwise the result code is returned immediately from this
   // call.
   //
-  // If |out_req| is non-NULL, then |*out_req| will be filled with a handle to
-  // the async request. This handle is not valid after the request has
-  // completed.
+  // [out_req] must be owned by a caller. If the request is not completed
+  // synchronously, it will be filled with a handle to the request. It must be
+  // completed before the HostResolver itself is destroyed.
+  //
+  // Requests can be cancelled any time by deletion of the [out_req]. Deleting
+  // |out_req| will cancel the request, and cause |callback| not to be invoked.
   //
   // Profiling information for the request is saved to |net_log| if non-NULL.
   virtual int Resolve(const RequestInfo& info,
                       RequestPriority priority,
                       AddressList* addresses,
                       const CompletionCallback& callback,
-                      RequestHandle* out_req,
+                      std::unique_ptr<Request>* out_req,
                       const BoundNetLog& net_log) = 0;
-
-  // Changes the priority of the specified request. |req| is the handle returned
-  // by Resolve(). ChangeRequestPriority must NOT be called after the request's
-  // completion callback has already run or the request was canceled.
-  virtual void ChangeRequestPriority(RequestHandle req,
-                                     RequestPriority priority);
-
-  // Cancels the specified request. |req| is the handle returned by Resolve().
-  // After a request is canceled, its completion callback will not be called.
-  // CancelRequest must NOT be called after the request's completion callback
-  // has already run or the request was canceled.
-  virtual void CancelRequest(RequestHandle req) = 0;
 
   // Resolves the given hostname (or IP address literal) out of cache or HOSTS
   // file (if enabled) only. This is guaranteed to complete synchronously.
@@ -185,6 +201,16 @@ class NET_EXPORT HostResolver {
   // Returns the current DNS configuration |this| is using, as a Value, or
   // nullptr if it's configured to always use the system host resolver.
   virtual std::unique_ptr<base::Value> GetDnsConfigAsValue() const;
+
+  typedef base::Callback<void(std::unique_ptr<const base::Value>)>
+      PersistCallback;
+  // Configures the HostResolver to be able to persist data (e.g. observed
+  // performance) between sessions. |persist_callback| is a callback that will
+  // be called when the HostResolver wants to persist data; |old_data| is the
+  // data last persisted by the resolver on the previous session.
+  virtual void InitializePersistence(
+      const PersistCallback& persist_callback,
+      std::unique_ptr<const base::Value> old_data);
 
   // Creates a HostResolver implementation that queries the underlying system.
   // (Except if a unit-test has changed the global HostResolverProc using

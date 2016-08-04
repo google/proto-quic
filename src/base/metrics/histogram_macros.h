@@ -145,6 +145,9 @@
                                     base::HistogramBase::kNoFlags))
 
 // This is a helper macro used by other macros and shouldn't be used directly.
+// One additional bucket is created in the LinearHistogram for the illegal
+// values >= boundary_value so that mistakes in calling the UMA enumeration
+// macros can be detected.
 #define HISTOGRAM_ENUMERATION_WITH_FLAG(name, sample, boundary, flag) \
     STATIC_HISTOGRAM_POINTER_BLOCK(name, Add(sample), \
         base::LinearHistogram::FactoryGet(name, 1, boundary, boundary + 1, \
@@ -162,7 +165,9 @@
 // problems down the line if you add additional buckets to the histogram.  Note
 // also that, despite explicitly setting the minimum bucket value to |1| below,
 // it is fine for enumerated histograms to be 0-indexed -- this is because
-// enumerated histograms should never have underflow.
+// enumerated histograms should never have underflow. One additional bucket is
+// created in the LinearHistogram for the illegal values >= boundary_value so
+// that mistakes in calling this macro can be detected.
 #define LOCAL_HISTOGRAM_ENUMERATION(name, sample, boundary_value) \
     STATIC_HISTOGRAM_POINTER_BLOCK(name, Add(sample), \
         base::LinearHistogram::FactoryGet(name, 1, boundary_value, \

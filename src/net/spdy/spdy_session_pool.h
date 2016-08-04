@@ -50,7 +50,6 @@ class NET_EXPORT SpdySessionPool
                   HttpServerProperties* http_server_properties,
                   TransportSecurityState* transport_security_state,
                   bool enable_ping_based_connection_checking,
-                  bool enable_priority_dependencies,
                   size_t session_max_recv_window_size,
                   size_t stream_max_recv_window_size,
                   SpdySessionPool::TimeFunc time_func,
@@ -221,7 +220,6 @@ class NET_EXPORT SpdySessionPool
   bool verify_domain_authentication_;
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
-  const bool enable_priority_dependencies_;
   size_t session_max_recv_window_size_;
   size_t stream_max_recv_window_size_;
   TimeFunc time_func_;

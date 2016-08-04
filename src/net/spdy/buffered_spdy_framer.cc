@@ -114,12 +114,12 @@ bool BufferedSpdyFramer::OnControlFrameHeaderData(SpdyStreamId stream_id,
                             control_frame_fields_->weight,
                             control_frame_fields_->parent_stream_id,
                             control_frame_fields_->exclusive,
-                            control_frame_fields_->fin, headers);
+                            control_frame_fields_->fin, std::move(headers));
         break;
       case PUSH_PROMISE:
         visitor_->OnPushPromise(control_frame_fields_->stream_id,
                                 control_frame_fields_->promised_stream_id,
-                                headers);
+                                std::move(headers));
         break;
       default:
         DCHECK(false) << "Unexpect control frame type: "
@@ -193,17 +193,17 @@ void BufferedSpdyFramer::OnHeaderFrameEnd(SpdyStreamId stream_id,
       NOTREACHED();
       break;
     case HEADERS:
-      visitor_->OnHeaders(control_frame_fields_->stream_id,
-                          control_frame_fields_->has_priority,
-                          control_frame_fields_->weight,
-                          control_frame_fields_->parent_stream_id,
-                          control_frame_fields_->exclusive,
-                          control_frame_fields_->fin, coalescer_->headers());
+      visitor_->OnHeaders(
+          control_frame_fields_->stream_id, control_frame_fields_->has_priority,
+          control_frame_fields_->weight,
+          control_frame_fields_->parent_stream_id,
+          control_frame_fields_->exclusive, control_frame_fields_->fin,
+          coalescer_->release_headers());
       break;
     case PUSH_PROMISE:
       visitor_->OnPushPromise(control_frame_fields_->stream_id,
                               control_frame_fields_->promised_stream_id,
-                              coalescer_->headers());
+                              coalescer_->release_headers());
       break;
     default:
       DCHECK(false) << "Unexpect control frame type: "
@@ -318,33 +318,6 @@ bool BufferedSpdyFramer::MessageFullyRead() {
 
 bool BufferedSpdyFramer::HasError() {
   return spdy_framer_.HasError();
-}
-
-// TODO(jgraettinger): Eliminate uses of this method (prefer
-// SpdySynStreamIR).
-SpdySerializedFrame* BufferedSpdyFramer::CreateSynStream(
-    SpdyStreamId stream_id,
-    SpdyStreamId associated_stream_id,
-    SpdyPriority priority,
-    SpdyControlFlags flags,
-    SpdyHeaderBlock headers) {
-  SpdySynStreamIR syn_stream(stream_id, std::move(headers));
-  syn_stream.set_associated_to_stream_id(associated_stream_id);
-  syn_stream.set_priority(priority);
-  syn_stream.set_fin((flags & CONTROL_FLAG_FIN) != 0);
-  syn_stream.set_unidirectional((flags & CONTROL_FLAG_UNIDIRECTIONAL) != 0);
-  return new SpdySerializedFrame(spdy_framer_.SerializeSynStream(syn_stream));
-}
-
-// TODO(jgraettinger): Eliminate uses of this method (prefer
-// SpdySynReplyIR).
-SpdySerializedFrame* BufferedSpdyFramer::CreateSynReply(
-    SpdyStreamId stream_id,
-    SpdyControlFlags flags,
-    SpdyHeaderBlock headers) {
-  SpdySynReplyIR syn_reply(stream_id, std::move(headers));
-  syn_reply.set_fin(flags & CONTROL_FLAG_FIN);
-  return new SpdySerializedFrame(spdy_framer_.SerializeSynReply(syn_reply));
 }
 
 // TODO(jgraettinger): Eliminate uses of this method (prefer

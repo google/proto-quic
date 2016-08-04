@@ -713,6 +713,13 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
   // clock will be used instead.
   static bool IsHighResolution();
 
+  // Returns true if TimeTicks is consistent across processes, meaning that
+  // timestamps taken on different processes can be safely compared with one
+  // another. (Note that, even on platforms where this returns true, time values
+  // from different threads that are within one tick of each other must be
+  // considered to have an ambiguous ordering.)
+  static bool IsConsistentAcrossProcesses();
+
 #if defined(OS_WIN)
   // Translates an absolute QPC timestamp into a TimeTicks value. The returned
   // value has the same origin as Now(). Do NOT attempt to use this if

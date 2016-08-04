@@ -245,8 +245,7 @@ int HttpStreamParser::SendRequest(const std::string& request_line,
                  base::Unretained(&headers),
                  &request_line));
 
-  DVLOG(1) << __FUNCTION__ << "()"
-           << " request_line = \"" << request_line << "\""
+  DVLOG(1) << __func__ << "() request_line = \"" << request_line << "\""
            << " headers = \"" << headers.ToString() << "\"";
   response_ = response;
 
@@ -1039,9 +1038,8 @@ int HttpStreamParser::ParseResponseHeaders(int end_offset) {
     response_->connection_info = HttpResponseInfo::CONNECTION_INFO_HTTP1_1;
   }
   response_->vary_data.Init(*request_, *response_->headers);
-  DVLOG(1) << __FUNCTION__ << "()"
-           << " content_length = \"" << response_->headers->GetContentLength()
-           << "\n\""
+  DVLOG(1) << __func__ << "() content_length = \""
+           << response_->headers->GetContentLength() << "\n\""
            << " headers = \"" << GetResponseHeaderLines(*response_->headers)
            << "\"";
   return OK;

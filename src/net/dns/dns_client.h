@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "base/values.h"
 #include "net/base/net_export.h"
 #include "net/base/rand_callback.h"
 
@@ -37,6 +38,13 @@ class NET_EXPORT DnsClient {
 
   // Returns NULL if the current config is not valid.
   virtual AddressSorter* GetAddressSorter() = 0;
+
+  // Does nothing if the current config is not valid.
+  virtual void ApplyPersistentData(const base::Value& data) = 0;
+
+  // Returns std::unique_ptr<const Value>(NULL) if the current config is not
+  // valid.
+  virtual std::unique_ptr<const base::Value> GetPersistentData() const = 0;
 
   // Creates default client.
   static std::unique_ptr<DnsClient> CreateClient(NetLog* net_log);

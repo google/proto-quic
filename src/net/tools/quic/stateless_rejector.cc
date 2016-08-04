@@ -4,8 +4,8 @@
 
 #include "net/tools/quic/stateless_rejector.h"
 
-#include "net/quic/quic_crypto_server_stream.h"
-#include "net/quic/quic_flags.h"
+#include "net/quic/core/quic_crypto_server_stream.h"
+#include "net/quic/core/quic_flags.h"
 
 namespace net {
 
@@ -18,7 +18,9 @@ class StatelessRejector::ValidateCallback
   ~ValidateCallback() override {}
 
   void RunImpl(const CryptoHandshakeMessage& client_hello,
-               const Result& result) override {
+               const Result& result,
+               std::unique_ptr<ProofSource::Details> /* proof_source_details */)
+      override {
     rejector_->ProcessClientHello(client_hello, result);
   }
 

@@ -76,5 +76,12 @@ TEST(BaseWinUtilTest, TestGetLoadedModulesSnapshot) {
             std::find(snapshot.begin(), snapshot.end(), new_dll.get()));
 }
 
+TEST(BaseWinUtilTest, TestUint32ToInvalidHandle) {
+  // Ensure that INVALID_HANDLE_VALUE is preserved when going to a 32-bit value
+  // and back on 64-bit platforms.
+  uint32_t invalid_handle = base::win::HandleToUint32(INVALID_HANDLE_VALUE);
+  EXPECT_EQ(INVALID_HANDLE_VALUE, base::win::Uint32ToHandle(invalid_handle));
+}
+
 }  // namespace win
 }  // namespace base

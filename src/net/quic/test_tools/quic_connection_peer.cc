@@ -5,9 +5,10 @@
 #include "net/quic/test_tools/quic_connection_peer.h"
 
 #include "base/stl_util.h"
-#include "net/quic/congestion_control/send_algorithm_interface.h"
-#include "net/quic/quic_packet_writer.h"
-#include "net/quic/quic_received_packet_manager.h"
+#include "net/quic/core/congestion_control/send_algorithm_interface.h"
+#include "net/quic/core/quic_multipath_sent_packet_manager.h"
+#include "net/quic/core/quic_packet_writer.h"
+#include "net/quic/core/quic_received_packet_manager.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_generator_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
@@ -23,10 +24,19 @@ void QuicConnectionPeer::SendAck(QuicConnection* connection) {
 // static
 void QuicConnectionPeer::SetSendAlgorithm(
     QuicConnection* connection,
+    QuicPathId path_id,
     SendAlgorithmInterface* send_algorithm) {
-  // TODO(fayang): Remove this method when there is a MockSentPacketManager.
-  static_cast<QuicSentPacketManager*>(connection->sent_packet_manager_.get())
+  GetSentPacketManager(connection, path_id)
       ->send_algorithm_.reset(send_algorithm);
+}
+
+// static
+void QuicConnectionPeer::SetLossAlgorithm(
+    QuicConnection* connection,
+    QuicPathId path_id,
+    LossDetectionInterface* loss_algorithm) {
+  GetSentPacketManager(connection, path_id)
+      ->loss_algorithm_.reset(loss_algorithm);
 }
 
 // static
@@ -63,8 +73,14 @@ QuicPacketGenerator* QuicConnectionPeer::GetPacketGenerator(
 
 // static
 QuicSentPacketManager* QuicConnectionPeer::GetSentPacketManager(
-    QuicConnection* connection) {
-  // TODO(fayang): Remove this method when there is a MockSentPacketManager.
+    QuicConnection* connection,
+    QuicPathId path_id) {
+  if (FLAGS_quic_enable_multipath) {
+    return static_cast<QuicSentPacketManager*>(
+        static_cast<QuicMultipathSentPacketManager*>(
+            connection->sent_packet_manager_.get())
+            ->MaybeGetSentPacketManagerForPath(path_id));
+  }
   return static_cast<QuicSentPacketManager*>(
       connection->sent_packet_manager_.get());
 }
@@ -276,6 +292,15 @@ void QuicConnectionPeer::SetAckMode(QuicConnection* connection,
 void QuicConnectionPeer::SetAckDecimationDelay(QuicConnection* connection,
                                                float ack_decimation_delay) {
   connection->ack_decimation_delay_ = ack_decimation_delay;
+}
+
+// static
+bool QuicConnectionPeer::HasRetransmittableFrames(
+    QuicConnection* connection,
+    QuicPathId path_id,
+    QuicPacketNumber packet_number) {
+  return QuicSentPacketManagerPeer::HasRetransmittableFrames(
+      GetSentPacketManager(connection, path_id), packet_number);
 }
 
 }  // namespace test

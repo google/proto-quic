@@ -10,6 +10,50 @@
 #include <vector>
 
 #include "base/compiler_specific.h"
+#include "base/logging.h"
+#include "build/build_config.h"
+#include "testing/gtest/include/gtest/gtest.h"
+
+// EXPECT/ASSERT_DCHECK_DEATH is intended to replace EXPECT/ASSERT_DEBUG_DEATH
+// when the death is expected to be caused by a DCHECK. Contrary to
+// EXPECT/ASSERT_DEBUG_DEATH however, it doesn't execute the statement in non-
+// dcheck builds as DCHECKs are intended to catch things that should never
+// happen and as such executing the statement results in undefined behavior
+// (|statement| is compiled in unsupported configurations nonetheless).
+// Death tests misbehave on Android.
+#if DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
+
+#define EXPECT_DCHECK_DEATH(statement, regex) EXPECT_DEATH(statement, regex)
+#define ASSERT_DCHECK_DEATH(statement, regex) ASSERT_DEATH(statement, regex)
+
+#else
+// DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
+
+// Macro copied from gtest-death-test-internal.h as it's (1) internal for now
+// and (2) only defined if !GTEST_HAS_DEATH_TEST which is only a subset of the
+// conditions in which it's needed here.
+// TODO(gab): Expose macro in upstream gtest repo for consumers like us that
+// want more specific death tests and remove this hack.
+# define GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, terminator) \
+    GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
+    if (::testing::internal::AlwaysTrue()) { \
+      GTEST_LOG_(WARNING) \
+          << "Death tests are not supported on this platform.\n" \
+          << "Statement '" #statement "' cannot be verified."; \
+    } else if (::testing::internal::AlwaysFalse()) { \
+      ::testing::internal::RE::PartialMatch(".*", (regex)); \
+      GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
+      terminator; \
+    } else \
+      ::testing::Message()
+
+#define EXPECT_DCHECK_DEATH(statement, regex) \
+    GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, )
+#define ASSERT_DCHECK_DEATH(statement, regex) \
+    GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, return)
+
+#endif
+// DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
 
 namespace base {
 

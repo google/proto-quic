@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 
-#include "net/quic/quic_stream_sequencer.h"
+#include "net/quic/core/quic_stream_sequencer.h"
 
 using std::map;
 using std::string;

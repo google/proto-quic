@@ -40,7 +40,7 @@ full_copy_directories =[
                  'base/third_party/superfasthash',
                  'base/third_party/icu',
                  'base/trace_event',
-                 'net/quic/congestion_control/',
+                 'net/quic/core/',
                  'net/quic/test_tools/',
                  'net/third_party/mozilla_security_manager',
                  'third_party/apple_apsl',

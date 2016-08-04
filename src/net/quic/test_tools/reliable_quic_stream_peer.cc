@@ -6,7 +6,7 @@
 
 #include <list>
 
-#include "net/quic/reliable_quic_stream.h"
+#include "net/quic/core/reliable_quic_stream.h"
 
 using base::StringPiece;
 

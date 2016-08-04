@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_config_peer.h"
 
-#include "net/quic/quic_config.h"
+#include "net/quic/core/quic_config.h"
 
 namespace net {
 namespace test {

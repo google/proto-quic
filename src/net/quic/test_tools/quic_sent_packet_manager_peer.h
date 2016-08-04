@@ -8,8 +8,8 @@
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_sent_packet_manager.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_sent_packet_manager.h"
 
 namespace net {
 
@@ -92,6 +92,13 @@ class QuicSentPacketManagerPeer {
       QuicSentPacketManager* sent_packet_manager);
 
   static bool UsingPacing(const QuicSentPacketManager* sent_packet_manager);
+
+  static bool IsUnacked(QuicSentPacketManager* sent_packet_manager,
+                        QuicPacketNumber packet_number);
+
+  static bool HasRetransmittableFrames(
+      QuicSentPacketManager* sent_packet_manager,
+      QuicPacketNumber packet_number);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSentPacketManagerPeer);

@@ -13,8 +13,10 @@ declare_args() {
   enable_debugallocation = is_debug
 }
 
-# Allocator shim is only enabled for Release static builds.
-win_use_allocator_shim = is_win && !is_component_build && !is_debug
+# The Windows-only allocator shim is only enabled for Release static builds, and
+# is mutually exclusive with the generalized shim.
+win_use_allocator_shim = is_win && !is_component_build && !is_debug &&
+                         !use_experimental_allocator_shim && !is_asan
 
 # This "allocator" meta-target will forward to the default allocator according
 # to the build settings.
@@ -311,7 +313,14 @@ if (use_experimental_allocator_shim) {
       "allocator_shim_override_cpp_symbols.h",
       "allocator_shim_override_libc_symbols.h",
     ]
-    if (is_linux && use_allocator == "tcmalloc") {
+    if (is_win) {
+      sources += [
+        "allocator_shim_default_dispatch_to_winheap.cc",
+        "allocator_shim_override_ucrt_symbols_win.h",
+        "winheap_stubs_win.cc",
+        "winheap_stubs_win.h",
+      ]
+    } else if (is_linux && use_allocator == "tcmalloc") {
       sources += [
         "allocator_shim_default_dispatch_to_tcmalloc.cc",
         "allocator_shim_override_glibc_weak_symbols.h",

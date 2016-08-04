@@ -36,7 +36,7 @@
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_factory_impl_request.h"
 #include "net/log/net_log.h"
-#include "net/quic/quic_http_stream.h"
+#include "net/quic/chromium/quic_http_stream.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_manager.h"
@@ -129,15 +129,6 @@ std::unique_ptr<base::Value> NetLogHttpStreamJobCallback(
   return std::move(dict);
 }
 
-// Returns parameters associated with the delay of the HTTP stream job.
-std::unique_ptr<base::Value> NetLogHttpStreamJobDelayCallback(
-    base::TimeDelta delay,
-    NetLogCaptureMode /* capture_mode */) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->SetInteger("resume_after_ms", static_cast<int>(delay.InMilliseconds()));
-  return std::move(dict);
-}
-
 // Returns parameters associated with the Proto (with NPN negotiation) of a HTTP
 // stream.
 std::unique_ptr<base::Value> NetLogHttpStreamProtoCallback(
@@ -200,8 +191,6 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       alternative_service_(alternative_service),
       delegate_(delegate),
       job_type_(job_type),
-      blocking_job_(NULL),
-      waiting_job_(NULL),
       using_ssl_(false),
       using_spdy_(false),
       using_quic_(false),
@@ -286,60 +275,16 @@ LoadState HttpStreamFactoryImpl::Job::GetLoadState() const {
   }
 }
 
-void HttpStreamFactoryImpl::Job::WaitFor(Job* job) {
-  DCHECK_EQ(STATE_NONE, next_state_);
-  DCHECK_EQ(STATE_NONE, job->next_state_);
-  DCHECK(!blocking_job_);
-  DCHECK(!job->waiting_job_);
-
-  // Never share connection with other jobs for FTP requests.
-  DCHECK(!request_info_.url.SchemeIs("ftp"));
-
-  blocking_job_ = job;
-  job->waiting_job_ = this;
-}
-
-void HttpStreamFactoryImpl::Job::ResumeAfterDelay() {
-  DCHECK(!blocking_job_);
-  DCHECK_EQ(STATE_WAIT_FOR_JOB_COMPLETE, next_state_);
-
-  net_log_.AddEvent(NetLog::TYPE_HTTP_STREAM_JOB_DELAYED,
-                    base::Bind(&NetLogHttpStreamJobDelayCallback, wait_time_));
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, base::Bind(&HttpStreamFactoryImpl::Job::OnIOComplete,
-                            ptr_factory_.GetWeakPtr(), OK),
-      wait_time_);
-}
-
-void HttpStreamFactoryImpl::Job::Resume(Job* job,
-                                        const base::TimeDelta& delay) {
-  DCHECK_EQ(blocking_job_, job);
-  blocking_job_ = NULL;
-
-  // If |this| job is not past STATE_WAIT_FOR_JOB_COMPLETE state, then it will
-  // be delayed by the |wait_time_| when it resumes.
-  if (next_state_ == STATE_NONE || next_state_ <= STATE_WAIT_FOR_JOB_COMPLETE)
-    wait_time_ = delay;
-
-  // We know we're blocked if the next_state_ is STATE_WAIT_FOR_JOB_COMPLETE.
-  // Unblock |this|.
-  if (next_state_ == STATE_WAIT_FOR_JOB_COMPLETE)
-    ResumeAfterDelay();
+void HttpStreamFactoryImpl::Job::Resume() {
+  DCHECK_EQ(job_type_, MAIN);
+  DCHECK_EQ(next_state_, STATE_WAIT_COMPLETE);
+  OnIOComplete(OK);
 }
 
 void HttpStreamFactoryImpl::Job::Orphan() {
   net_log_.AddEvent(NetLog::TYPE_HTTP_STREAM_JOB_ORPHANED);
-  if (blocking_job_) {
-    // We've been orphaned, but there's a job we're blocked on. Don't bother
-    // racing, just cancel ourself.
-    DCHECK(blocking_job_->waiting_job_);
-    blocking_job_->waiting_job_ = NULL;
-    blocking_job_ = NULL;
-    if (delegate_->for_websockets() && connection_ && connection_->socket()) {
-      connection_->socket()->Disconnect();
-    }
-    delegate_->OnOrphanedJobComplete(this);
-  } else if (delegate_->for_websockets()) {
+
+  if (delegate_->for_websockets()) {
     // We cancel this job because a WebSocketHandshakeStream can't be created
     // without a WebSocketHandshakeStreamBase::CreateHelper which is stored in
     // the Request class and isn't retrievable by this job.
@@ -552,10 +497,6 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
   if (result == ERR_IO_PENDING)
     return result;
 
-  // If there was an error, we should have already resumed the |waiting_job_|,
-  // if there was one.
-  DCHECK(result == OK || waiting_job_ == NULL);
-
   if (job_type_ == PRECONNECT) {
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE,
@@ -684,12 +625,12 @@ int HttpStreamFactoryImpl::Job::DoLoop(int result) {
       case STATE_RESOLVE_PROXY_COMPLETE:
         rv = DoResolveProxyComplete(rv);
         break;
-      case STATE_WAIT_FOR_JOB:
+      case STATE_WAIT:
         DCHECK_EQ(OK, rv);
-        rv = DoWaitForJob();
+        rv = DoWait();
         break;
-      case STATE_WAIT_FOR_JOB_COMPLETE:
-        rv = DoWaitForJobComplete(rv);
+      case STATE_WAIT_COMPLETE:
+        rv = DoWaitComplete(rv);
         break;
       case STATE_INIT_CONNECTION:
         DCHECK_EQ(OK, rv);
@@ -748,10 +689,6 @@ int HttpStreamFactoryImpl::Job::DoStart() {
   // Don't connect to restricted ports.
   if (!IsPortAllowedForScheme(destination_.port(),
                               request_info_.url.scheme())) {
-    if (waiting_job_) {
-      waiting_job_->Resume(this, base::TimeDelta());
-      waiting_job_ = NULL;
-    }
     return ERR_UNSAFE_PORT;
   }
 
@@ -791,9 +728,8 @@ int HttpStreamFactoryImpl::Job::DoResolveProxy() {
   }
 
   return session_->proxy_service()->ResolveProxy(
-      url_for_proxy, request_info_.method, request_info_.load_flags,
-      &proxy_info_, io_callback_, &pac_request_,
-      session_->params().proxy_delegate, net_log_);
+      url_for_proxy, request_info_.method, &proxy_info_, io_callback_,
+      &pac_request_, session_->params().proxy_delegate, net_log_);
 }
 
 int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
@@ -824,14 +760,10 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
   }
 
   if (result != OK) {
-    if (waiting_job_) {
-      waiting_job_->Resume(this, base::TimeDelta());
-      waiting_job_ = NULL;
-    }
     return result;
   }
 
-  next_state_ = STATE_WAIT_FOR_JOB;
+  next_state_ = STATE_WAIT;
   return OK;
 }
 
@@ -844,37 +776,33 @@ bool HttpStreamFactoryImpl::Job::ShouldForceQuic() const {
          proxy_info_.is_direct() && origin_url_.SchemeIs("https");
 }
 
-int HttpStreamFactoryImpl::Job::DoWaitForJob() {
-  if (!blocking_job_ && wait_time_.is_zero()) {
-    // There is no |blocking_job_| and there is no |wait_time_|.
-    next_state_ = STATE_INIT_CONNECTION;
-    return OK;
-  }
+int HttpStreamFactoryImpl::Job::DoWait() {
+  next_state_ = STATE_WAIT_COMPLETE;
+  if (delegate_->ShouldWait(this))
+    return ERR_IO_PENDING;
 
-  next_state_ = STATE_WAIT_FOR_JOB_COMPLETE;
-  if (!wait_time_.is_zero()) {
-    // If there is a waiting_time, then resume the job after the wait_time_.
-    DCHECK(!blocking_job_);
-    ResumeAfterDelay();
-  }
-
-  return ERR_IO_PENDING;
+  return OK;
 }
 
-int HttpStreamFactoryImpl::Job::DoWaitForJobComplete(int result) {
-  DCHECK(!blocking_job_);
+int HttpStreamFactoryImpl::Job::DoWaitComplete(int result) {
   DCHECK_EQ(OK, result);
-  wait_time_ = base::TimeDelta();
   next_state_ = STATE_INIT_CONNECTION;
   return OK;
 }
 
 int HttpStreamFactoryImpl::Job::DoInitConnection() {
+  int result = DoInitConnectionImpl();
+  if (result != ERR_SPDY_SESSION_ALREADY_EXISTS)
+    delegate_->OnConnectionInitialized(this, result);
+
+  return result;
+}
+
+int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   // TODO(pkasting): Remove ScopedTracker below once crbug.com/462812 is fixed.
   tracked_objects::ScopedTracker tracking_profile(
       FROM_HERE_WITH_EXPLICIT_FUNCTION(
           "462812 HttpStreamFactoryImpl::Job::DoInitConnection"));
-  DCHECK(!blocking_job_);
   DCHECK(!connection_->is_initialized());
   DCHECK(proxy_info_.proxy_server().is_valid());
   next_state_ = STATE_INIT_CONNECTION_COMPLETE;
@@ -946,21 +874,11 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
     if (rv == OK) {
       using_existing_quic_session_ = true;
     } else {
-      // OK, there's no available QUIC session. Let |waiting_job_| resume
-      // if it's paused.
-      if (waiting_job_) {
-        if (rv == ERR_IO_PENDING) {
-          // Start the |waiting_job_| after the delay returned by
-          // GetTimeDelayForWaitingJob().
-          //
-          // If QUIC request fails during handshake, then
-          // DoInitConnectionComplete() will start the |waiting_job_|.
-          waiting_job_->Resume(this, quic_request_.GetTimeDelayForWaitingJob());
-        } else {
-          // QUIC request has failed, resume the |waiting_job_|.
-          waiting_job_->Resume(this, base::TimeDelta());
-        }
-        waiting_job_ = NULL;
+      // There's no available QUIC session. Inform the delegate how long to
+      // delay the main job.
+      if (rv == ERR_IO_PENDING) {
+        delegate_->MaybeSetWaitTimeForMainJob(
+            quic_request_.GetTimeDelayForWaitingJob());
       }
     }
     return rv;
@@ -989,13 +907,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
     // Ask |delegate_delegate_| to update the spdy session key for the request
     // that launched this job.
     delegate_->SetSpdySessionKey(this, spdy_session_key);
-  }
-
-  // OK, there's no available SPDY session. Let |waiting_job_| resume if it's
-  // paused.
-  if (waiting_job_) {
-    waiting_job_->Resume(this, base::TimeDelta());
-    waiting_job_ = NULL;
   }
 
   if (proxy_info_.is_http() || proxy_info_.is_https())
@@ -1050,10 +961,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
 }
 
 int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
-  if (using_quic_ && result < 0 && waiting_job_) {
-    waiting_job_->Resume(this, base::TimeDelta());
-    waiting_job_ = NULL;
-  }
   if (job_type_ == PRECONNECT) {
     if (using_quic_)
       return result;
@@ -1062,7 +969,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   }
 
   if (result == ERR_SPDY_SESSION_ALREADY_EXISTS) {
-    // We found a SPDY connection after resolving the host.  This is
+    // We found a SPDY connection after resolving the host. This is
     // probably an IP pooled connection.
     SpdySessionKey spdy_session_key = GetSpdySessionKey();
     existing_spdy_session_ =
@@ -1086,13 +993,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
       using_quic_ = false;
       return ReconsiderProxyAfterError(ERR_QUIC_PROTOCOL_ERROR);
     }
-  }
-
-  // TODO(willchan): Make this a bit more exact. Maybe there are recoverable
-  // errors, such as ignoring certificate errors for Alternate-Protocol.
-  if (result < 0 && waiting_job_) {
-    waiting_job_->Resume(this, base::TimeDelta());
-    waiting_job_ = NULL;
   }
 
   // |result| may be the result of any of the stacked pools. The following
@@ -1124,7 +1024,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
             NetLog::TYPE_HTTP_STREAM_REQUEST_PROTO,
             base::Bind(&NetLogHttpStreamProtoCallback,
                        status, &proto));
-        if (NextProtoIsSPDY(protocol_negotiated_))
+        if (protocol_negotiated_ == kProtoHTTP2)
           SwitchToSpdyMode();
       }
     }
@@ -1534,9 +1434,8 @@ int HttpStreamFactoryImpl::Job::ReconsiderProxyAfterError(int error) {
   }
 
   int rv = session_->proxy_service()->ReconsiderProxyAfterError(
-      request_info_.url, request_info_.method, request_info_.load_flags, error,
-      &proxy_info_, io_callback_, &pac_request_,
-      session_->params().proxy_delegate, net_log_);
+      request_info_.url, request_info_.method, error, &proxy_info_,
+      io_callback_, &pac_request_, session_->params().proxy_delegate, net_log_);
   if (rv == OK || rv == ERR_IO_PENDING) {
     // If the error was during connection setup, there is no socket to
     // disconnect.
@@ -1590,10 +1489,6 @@ int HttpStreamFactoryImpl::Job::HandleCertificateError(int error) {
 }
 
 void HttpStreamFactoryImpl::Job::SwitchToSpdyMode() {
-  if (protocol_negotiated_ == kProtoSPDY31 &&
-      !HttpStreamFactory::spdy_enabled())
-    return;
-
   using_spdy_ = true;
 }
 

@@ -5,7 +5,7 @@
 #ifndef NET_QUIC_TEST_TOOLS_QUIC_CRYPTO_SERVER_CONFIG_PEER_H_
 #define NET_QUIC_TEST_TOOLS_QUIC_CRYPTO_SERVER_CONFIG_PEER_H_
 
-#include "net/quic/crypto/quic_crypto_server_config.h"
+#include "net/quic/core/crypto/quic_crypto_server_config.h"
 
 namespace net {
 namespace test {

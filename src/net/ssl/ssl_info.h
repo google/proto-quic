@@ -11,6 +11,7 @@
 #include "net/base/net_export.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/ct_verify_result.h"
+#include "net/cert/ocsp_verify_result.h"
 #include "net/cert/sct_status_flags.h"
 #include "net/cert/x509_cert_types.h"
 #include "net/ssl/signed_certificate_timestamp_and_status.h"
@@ -144,6 +145,9 @@ class NET_EXPORT SSLInfo {
   // not, why not. Only meaningful it |ct_compliance_details_available|
   // is true.
   ct::CertPolicyCompliance ct_cert_policy_compliance;
+
+  // OCSP stapling details.
+  OCSPVerifyResult ocsp_result;
 };
 
 }  // namespace net

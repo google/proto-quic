@@ -19,6 +19,7 @@
 #include "base/rand_util.h"
 #include "base/stl_util.h"
 #include "base/time/time.h"
+#include "base/values.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/dns/dns_config_service.h"
@@ -287,6 +288,12 @@ std::unique_ptr<StreamSocket> DnsSession::CreateTCPSocket(
     unsigned server_index,
     const NetLog::Source& source) {
   return socket_pool_->CreateTCPSocket(server_index, source);
+}
+
+void DnsSession::ApplyPersistentData(const base::Value& data) {}
+
+std::unique_ptr<const base::Value> DnsSession::GetPersistentData() const {
+  return std::unique_ptr<const base::Value>();
 }
 
 // Release a socket.

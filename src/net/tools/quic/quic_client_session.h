@@ -11,9 +11,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "net/quic/quic_client_session_base.h"
-#include "net/quic/quic_crypto_client_stream.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_client_session_base.h"
+#include "net/quic/core/quic_crypto_client_stream.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
 namespace net {

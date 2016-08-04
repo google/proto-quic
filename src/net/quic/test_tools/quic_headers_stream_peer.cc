@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_headers_stream_peer.h"
 
-#include "net/quic/quic_headers_stream.h"
+#include "net/quic/core/quic_headers_stream.h"
 
 namespace net {
 namespace test {

@@ -7,8 +7,8 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "net/quic/quic_clock.h"
-#include "net/quic/quic_time.h"
+#include "net/quic/core/quic_clock.h"
+#include "net/quic/core/quic_time.h"
 
 namespace net {
 

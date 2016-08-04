@@ -23,24 +23,7 @@ class ParsedCookie;
 
 class NET_EXPORT CanonicalCookie {
  public:
-  // These constructors do no validation or canonicalization of their inputs;
-  // the resulting CanonicalCookies should not be relied on to be canonical
-  // unless the caller has done appropriate validation and canonicalization
-  // themselves.
   CanonicalCookie();
-  CanonicalCookie(const GURL& url,
-                  const std::string& name,
-                  const std::string& value,
-                  const std::string& domain,
-                  const std::string& path,
-                  const base::Time& creation,
-                  const base::Time& expiration,
-                  const base::Time& last_access,
-                  bool secure,
-                  bool httponly,
-                  CookieSameSite same_site,
-                  CookiePriority priority);
-
   CanonicalCookie(const CanonicalCookie& other);
 
   ~CanonicalCookie();
@@ -86,7 +69,6 @@ class NET_EXPORT CanonicalCookie {
                                                  CookieSameSite same_site,
                                                  CookiePriority priority);
 
-  const GURL& Source() const { return source_; }
   const std::string& Name() const { return name_; }
   const std::string& Value() const { return value_; }
   const std::string& Domain() const { return domain_; }
@@ -128,10 +110,7 @@ class NET_EXPORT CanonicalCookie {
   //
   // This is needed for the updates to RFC6265 as per
   // https://tools.ietf.org/html/draft-west-leave-secure-cookies-alone.
-  bool IsEquivalentForSecureCookieMatching(const CanonicalCookie& ecc) const {
-    return (name_ == ecc.Name() && (ecc.IsDomainMatch(Source().host()) ||
-                                    IsDomainMatch(ecc.Source().host())));
-  }
+  bool IsEquivalentForSecureCookieMatching(const CanonicalCookie& ecc) const;
 
   void SetLastAccessDate(const base::Time& date) {
     last_access_date_ = date;
@@ -185,6 +164,22 @@ class NET_EXPORT CanonicalCookie {
     COOKIE_PREFIX_LAST
   };
 
+  // This constructor does not validate or canonicalize their inputs;
+  // the resulting CanonicalCookies should not be relied on to be canonical
+  // unless the caller has done appropriate validation and canonicalization
+  // themselves.
+  CanonicalCookie(const std::string& name,
+                  const std::string& value,
+                  const std::string& domain,
+                  const std::string& path,
+                  const base::Time& creation,
+                  const base::Time& expiration,
+                  const base::Time& last_access,
+                  bool secure,
+                  bool httponly,
+                  CookieSameSite same_site,
+                  CookiePriority priority);
+
   // Returns the CookiePrefix (or COOKIE_PREFIX_NONE if none) that
   // applies to the given cookie |name|.
   static CookiePrefix GetCookiePrefix(const std::string& name);
@@ -198,15 +193,9 @@ class NET_EXPORT CanonicalCookie {
                                   const GURL& url,
                                   const ParsedCookie& parsed_cookie);
 
-  // The source member of a canonical cookie is the origin of the URL that tried
-  // to set this cookie.  This field is not persistent though; its only used in
-  // the in-tab cookies dialog to show the user the source URL. This is used for
-  // both allowed and blocked cookies.
-  // When a CanonicalCookie is constructed from the backing store (common case)
-  // this field will be null.  CanonicalCookie consumers should not rely on
-  // this field unless they guarantee that the creator of those
-  // CanonicalCookies properly initialized the field.
-  GURL source_;
+  // Returns the cookie's domain, with the leading dot removed, if present.
+  std::string DomainWithoutDot() const;
+
   std::string name_;
   std::string value_;
   std::string domain_;

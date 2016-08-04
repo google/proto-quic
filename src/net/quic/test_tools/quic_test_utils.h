@@ -19,16 +19,16 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/ip_address.h"
-#include "net/quic/congestion_control/loss_detection_interface.h"
-#include "net/quic/congestion_control/send_algorithm_interface.h"
-#include "net/quic/quic_client_push_promise_index.h"
-#include "net/quic/quic_connection.h"
-#include "net/quic/quic_framer.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_sent_packet_manager_interface.h"
-#include "net/quic/quic_server_session_base.h"
-#include "net/quic/quic_session.h"
-#include "net/quic/quic_simple_buffer_allocator.h"
+#include "net/quic/core/congestion_control/loss_detection_interface.h"
+#include "net/quic/core/congestion_control/send_algorithm_interface.h"
+#include "net/quic/core/quic_client_push_promise_index.h"
+#include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_sent_packet_manager_interface.h"
+#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_session.h"
+#include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/spdy/spdy_framer.h"
@@ -898,6 +898,70 @@ class MockReceivedPacketManager : public QuicReceivedPacketManager {
                void(const QuicStopWaitingFrame& stop_waiting));
   MOCK_CONST_METHOD0(HasNewMissingPackets, bool(void));
   MOCK_CONST_METHOD0(ack_frame_updated, bool(void));
+};
+
+class MockSentPacketManager : public QuicSentPacketManagerInterface {
+ public:
+  MockSentPacketManager();
+  ~MockSentPacketManager() override;
+
+  MOCK_METHOD1(SetFromConfig, void(const QuicConfig&));
+  MOCK_METHOD2(ResumeConnectionState,
+               void(const CachedNetworkParameters&, bool));
+  MOCK_METHOD1(SetNumOpenStreams, void(size_t));
+  MOCK_METHOD1(SetMaxPacingRate, void(QuicBandwidth));
+  MOCK_METHOD0(SetHandshakeConfirmed, void(void));
+  MOCK_METHOD2(OnIncomingAck, void(const QuicAckFrame&, QuicTime));
+  MOCK_METHOD1(RetransmitUnackedPackets, void(TransmissionType));
+  MOCK_METHOD0(MaybeRetransmitTailLossProbe, bool(void));
+  MOCK_METHOD0(NeuterUnencryptedPackets, void(void));
+  MOCK_CONST_METHOD0(HasPendingRetransmissions, bool(void));
+  MOCK_METHOD0(NextPendingRetransmission, PendingRetransmission(void));
+  MOCK_CONST_METHOD0(HasUnackedPackets, bool(void));
+  MOCK_CONST_METHOD1(GetLeastUnacked, QuicPacketNumber(QuicPathId));
+  MOCK_METHOD6(OnPacketSent,
+               bool(SerializedPacket*,
+                    QuicPathId,
+                    QuicPacketNumber,
+                    QuicTime,
+                    TransmissionType,
+                    HasRetransmittableData));
+  MOCK_METHOD0(OnRetransmissionTimeout, void(void));
+  MOCK_METHOD3(TimeUntilSend,
+               QuicTime::Delta(QuicTime, HasRetransmittableData, QuicPathId*));
+  MOCK_CONST_METHOD0(GetRetransmissionTime, const QuicTime(void));
+  MOCK_CONST_METHOD0(GetRttStats, const RttStats*(void));
+  MOCK_CONST_METHOD0(BandwidthEstimate, QuicBandwidth(void));
+  MOCK_CONST_METHOD0(SustainedBandwidthRecorder,
+                     const QuicSustainedBandwidthRecorder*(void));
+  MOCK_CONST_METHOD0(GetCongestionWindowInTcpMss, QuicPacketCount(void));
+  MOCK_CONST_METHOD1(EstimateMaxPacketsInFlight,
+                     QuicPacketCount(QuicByteCount));
+  MOCK_CONST_METHOD0(GetCongestionWindowInBytes, QuicByteCount(void));
+  MOCK_CONST_METHOD0(GetSlowStartThresholdInTcpMss, QuicPacketCount(void));
+  MOCK_METHOD1(CancelRetransmissionsForStream, void(QuicStreamId));
+  MOCK_METHOD2(OnConnectionMigration, void(QuicPathId, PeerAddressChangeType));
+  MOCK_CONST_METHOD0(IsHandshakeConfirmed, bool(void));
+  MOCK_METHOD1(SetDebugDelegate, void(DebugDelegate*));
+  MOCK_CONST_METHOD1(GetLargestObserved, QuicPacketNumber(QuicPathId));
+  MOCK_CONST_METHOD1(GetLargestSentPacket, QuicPacketNumber(QuicPathId));
+  MOCK_CONST_METHOD1(GetLeastPacketAwaitedByPeer, QuicPacketNumber(QuicPathId));
+  MOCK_METHOD1(SetNetworkChangeVisitor, void(NetworkChangeVisitor*));
+  MOCK_CONST_METHOD0(InSlowStart, bool(void));
+  MOCK_CONST_METHOD0(GetConsecutiveRtoCount, size_t(void));
+  MOCK_CONST_METHOD0(GetConsecutiveTlpCount, size_t(void));
+};
+
+class MockConnectionCloseDelegate
+    : public QuicConnectionCloseDelegateInterface {
+ public:
+  MockConnectionCloseDelegate();
+  ~MockConnectionCloseDelegate() override;
+
+  MOCK_METHOD3(OnUnrecoverableError,
+               void(QuicErrorCode,
+                    const std::string&,
+                    ConnectionCloseSource source));
 };
 
 // Creates a client session for testing.

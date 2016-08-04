@@ -10,7 +10,7 @@
 // SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 // OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 package runner
 
@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -30,6 +31,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -39,22 +41,24 @@ import (
 )
 
 var (
-	useValgrind     = flag.Bool("valgrind", false, "If true, run code under valgrind")
-	useGDB          = flag.Bool("gdb", false, "If true, run BoringSSL code under gdb")
-	useLLDB         = flag.Bool("lldb", false, "If true, run BoringSSL code under lldb")
-	flagDebug       = flag.Bool("debug", false, "Hexdump the contents of the connection")
-	mallocTest      = flag.Int64("malloc-test", -1, "If non-negative, run each test with each malloc in turn failing from the given number onwards.")
-	mallocTestDebug = flag.Bool("malloc-test-debug", false, "If true, ask bssl_shim to abort rather than fail a malloc. This can be used with a specific value for --malloc-test to identity the malloc failing that is causing problems.")
-	jsonOutput      = flag.String("json-output", "", "The file to output JSON results to.")
-	pipe            = flag.Bool("pipe", false, "If true, print status output suitable for piping into another program.")
-	testToRun       = flag.String("test", "", "The name of a test to run, or empty to run all tests")
-	numWorkers      = flag.Int("num-workers", runtime.NumCPU(), "The number of workers to run in parallel.")
-	shimPath        = flag.String("shim-path", "../../../build/ssl/test/bssl_shim", "The location of the shim binary.")
-	resourceDir     = flag.String("resource-dir", ".", "The directory in which to find certificate and key files.")
-	fuzzer          = flag.Bool("fuzzer", false, "If true, tests against a BoringSSL built in fuzzer mode.")
-	transcriptDir   = flag.String("transcript-dir", "", "The directory in which to write transcripts.")
-	idleTimeout     = flag.Duration("idle-timeout", 15*time.Second, "The number of seconds to wait for a read or write to bssl_shim.")
-	deterministic   = flag.Bool("deterministic", false, "If true, uses a deterministic PRNG in the runner.")
+	useValgrind        = flag.Bool("valgrind", false, "If true, run code under valgrind")
+	useGDB             = flag.Bool("gdb", false, "If true, run BoringSSL code under gdb")
+	useLLDB            = flag.Bool("lldb", false, "If true, run BoringSSL code under lldb")
+	flagDebug          = flag.Bool("debug", false, "Hexdump the contents of the connection")
+	mallocTest         = flag.Int64("malloc-test", -1, "If non-negative, run each test with each malloc in turn failing from the given number onwards.")
+	mallocTestDebug    = flag.Bool("malloc-test-debug", false, "If true, ask bssl_shim to abort rather than fail a malloc. This can be used with a specific value for --malloc-test to identity the malloc failing that is causing problems.")
+	jsonOutput         = flag.String("json-output", "", "The file to output JSON results to.")
+	pipe               = flag.Bool("pipe", false, "If true, print status output suitable for piping into another program.")
+	testToRun          = flag.String("test", "", "The pattern to filter tests to run, or empty to run all tests")
+	numWorkers         = flag.Int("num-workers", runtime.NumCPU(), "The number of workers to run in parallel.")
+	shimPath           = flag.String("shim-path", "../../../build/ssl/test/bssl_shim", "The location of the shim binary.")
+	resourceDir        = flag.String("resource-dir", ".", "The directory in which to find certificate and key files.")
+	fuzzer             = flag.Bool("fuzzer", false, "If true, tests against a BoringSSL built in fuzzer mode.")
+	transcriptDir      = flag.String("transcript-dir", "", "The directory in which to write transcripts.")
+	idleTimeout        = flag.Duration("idle-timeout", 15*time.Second, "The number of seconds to wait for a read or write to bssl_shim.")
+	deterministic      = flag.Bool("deterministic", false, "If true, uses a deterministic PRNG in the runner.")
+	allowUnimplemented = flag.Bool("allow-unimplemented", false, "If true, report pass even if some tests are unimplemented.")
+	looseErrors        = flag.Bool("loose-errors", false, "If true, allow shims to report an untranslated error code.")
 )
 
 type testCert int
@@ -254,6 +258,9 @@ type testCase struct {
 	// expectedPeerSignatureAlgorithm, if not zero, is the signature
 	// algorithm that the peer should have used in the handshake.
 	expectedPeerSignatureAlgorithm signatureAlgorithm
+	// expectedCurveID, if not zero, is the curve that the handshake should
+	// have used.
+	expectedCurveID CurveID
 	// messageLen is the length, in bytes, of the test message that will be
 	// sent.
 	messageLen int
@@ -295,6 +302,9 @@ type testCase struct {
 	// renegotiate indicates the number of times the connection should be
 	// renegotiated during the exchange.
 	renegotiate int
+	// sendHalfHelloRequest, if true, causes the server to send half a
+	// HelloRequest when the handshake completes.
+	sendHalfHelloRequest bool
 	// renegotiateCiphers is a list of ciphersuite ids that will be
 	// switched in just before renegotiation.
 	renegotiateCiphers []uint16
@@ -518,6 +528,10 @@ func doExchange(test *testCase, config *Config, conn net.Conn, isResume bool) er
 		return fmt.Errorf("expected peer to use signature algorithm %04x, but got %04x", expected, connState.PeerSignatureAlgorithm)
 	}
 
+	if expected := test.expectedCurveID; expected != 0 && expected != connState.CurveID {
+		return fmt.Errorf("expected peer to use curve %04x, but got %04x", expected, connState.CurveID)
+	}
+
 	if test.exportKeyingMaterial > 0 {
 		actual := make([]byte, test.exportKeyingMaterial)
 		if _, err := io.ReadFull(tlsConn, actual); err != nil {
@@ -560,6 +574,10 @@ func doExchange(test *testCase, config *Config, conn net.Conn, isResume bool) er
 
 	for i := 0; i < test.sendWarningAlerts; i++ {
 		tlsConn.SendAlert(alertLevelWarning, alertUnexpectedMessage)
+	}
+
+	if test.sendHalfHelloRequest {
+		tlsConn.SendHalfHelloRequest()
 	}
 
 	if test.renegotiate > 0 {
@@ -674,13 +692,10 @@ func lldbOf(path string, args ...string) *exec.Cmd {
 	return exec.Command("xterm", xtermArgs...)
 }
 
-type moreMallocsError struct{}
-
-func (moreMallocsError) Error() string {
-	return "child process did not exhaust all allocation calls"
-}
-
-var errMoreMallocs = moreMallocsError{}
+var (
+	errMoreMallocs   = errors.New("child process did not exhaust all allocation calls")
+	errUnimplemented = errors.New("child process does not implement needed flags")
+)
 
 // accept accepts a connection from listener, unless waitChan signals a process
 // exit first.
@@ -876,8 +891,11 @@ func runTest(test *testCase, shimPath string, mallocNumToFail int64) error {
 
 	childErr := <-waitChan
 	if exitError, ok := childErr.(*exec.ExitError); ok {
-		if exitError.Sys().(syscall.WaitStatus).ExitStatus() == 88 {
+		switch exitError.Sys().(syscall.WaitStatus).ExitStatus() {
+		case 88:
 			return errMoreMallocs
+		case 89:
+			return errUnimplemented
 		}
 	}
 
@@ -894,7 +912,9 @@ func runTest(test *testCase, shimPath string, mallocNumToFail int64) error {
 	}
 
 	failed := err != nil || childErr != nil
-	correctFailure := len(test.expectedError) == 0 || strings.Contains(stderr, test.expectedError)
+	correctFailure := len(test.expectedError) == 0 || strings.Contains(stderr, test.expectedError) ||
+		(*looseErrors && strings.Contains(stderr, "UNTRANSLATED_ERROR"))
+
 	localError := "none"
 	if err != nil {
 		localError = err.Error()
@@ -2047,7 +2067,7 @@ func addBasicTests() {
 				"-expect-total-renegotiations", "1",
 			},
 			shouldFail:    true,
-			expectedError: ":BAD_HELLO_REQUEST:",
+			expectedError: ":EXCESSIVE_MESSAGE_SIZE:",
 		},
 		{
 			name:        "BadHelloRequest-2",
@@ -2077,11 +2097,92 @@ func addBasicTests() {
 			},
 			resumeSession: true,
 		},
+		{
+			protocol: dtls,
+			name:     "DTLS-SendExtraFinished",
+			config: Config{
+				Bugs: ProtocolBugs{
+					SendExtraFinished: true,
+				},
+			},
+			shouldFail:    true,
+			expectedError: ":UNEXPECTED_RECORD:",
+		},
+		{
+			protocol: dtls,
+			name:     "DTLS-SendExtraFinished-Reordered",
+			config: Config{
+				Bugs: ProtocolBugs{
+					MaxHandshakeRecordLength:  2,
+					ReorderHandshakeFragments: true,
+					SendExtraFinished:         true,
+				},
+			},
+			shouldFail:    true,
+			expectedError: ":UNEXPECTED_RECORD:",
+		},
+		{
+			testType: serverTest,
+			name:     "V2ClientHello-EmptyRecordPrefix",
+			config: Config{
+				// Choose a cipher suite that does not involve
+				// elliptic curves, so no extensions are
+				// involved.
+				MaxVersion:   VersionTLS12,
+				CipherSuites: []uint16{TLS_RSA_WITH_RC4_128_SHA},
+				Bugs: ProtocolBugs{
+					SendV2ClientHello: true,
+				},
+			},
+			sendPrefix: string([]byte{
+				byte(recordTypeHandshake),
+				3, 1, // version
+				0, 0, // length
+			}),
+			// A no-op empty record may not be sent before V2ClientHello.
+			shouldFail:    true,
+			expectedError: ":WRONG_VERSION_NUMBER:",
+		},
+		{
+			testType: serverTest,
+			name:     "V2ClientHello-WarningAlertPrefix",
+			config: Config{
+				// Choose a cipher suite that does not involve
+				// elliptic curves, so no extensions are
+				// involved.
+				MaxVersion:   VersionTLS12,
+				CipherSuites: []uint16{TLS_RSA_WITH_RC4_128_SHA},
+				Bugs: ProtocolBugs{
+					SendV2ClientHello: true,
+				},
+			},
+			sendPrefix: string([]byte{
+				byte(recordTypeAlert),
+				3, 1, // version
+				0, 2, // length
+				alertLevelWarning, byte(alertDecompressionFailure),
+			}),
+			// A no-op warning alert may not be sent before V2ClientHello.
+			shouldFail:    true,
+			expectedError: ":WRONG_VERSION_NUMBER:",
+		},
+		{
+			testType: clientTest,
+			name:     "KeyUpdate",
+			config: Config{
+				MaxVersion: VersionTLS13,
+				Bugs: ProtocolBugs{
+					SendKeyUpdateBeforeEveryAppDataRecord: true,
+				},
+			},
+		},
 	}
 	testCases = append(testCases, basicTests...)
 }
 
 func addCipherSuiteTests() {
+	const bogusCipher = 0xfe00
+
 	for _, suite := range testCipherSuites {
 		const psk = "12345"
 		const pskIdentity = "luggage combo"
@@ -2257,6 +2358,29 @@ func addCipherSuiteTests() {
 	})
 
 	testCases = append(testCases, testCase{
+		name: "ServerHelloBogusCipher",
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				SendCipherSuite: bogusCipher,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNKNOWN_CIPHER_RETURNED:",
+	})
+	testCases = append(testCases, testCase{
+		name: "ServerHelloBogusCipher-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendCipherSuite: bogusCipher,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNKNOWN_CIPHER_RETURNED:",
+	})
+
+	testCases = append(testCases, testCase{
 		name: "WeakDH",
 		config: Config{
 			MaxVersion:   VersionTLS12,
@@ -2305,7 +2429,6 @@ func addCipherSuiteTests() {
 	})
 
 	// The server must be tolerant to bogus ciphers.
-	const bogusCipher = 0x1234
 	testCases = append(testCases, testCase{
 		testType: serverTest,
 		name:     "UnknownCipher",
@@ -3304,6 +3427,14 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 		})
 	}
 
+	tests = append(tests, testCase{
+		name:               "ShimSendAlert",
+		flags:              []string{"-send-alert"},
+		shimWritesFirst:    true,
+		shouldFail:         true,
+		expectedLocalError: "remote error: decompression failure",
+	})
+
 	if config.protocol == tls {
 		tests = append(tests, testCase{
 			name: "Renegotiate-Client",
@@ -3315,6 +3446,20 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 				"-renegotiate-freely",
 				"-expect-total-renegotiations", "1",
 			},
+		})
+
+		tests = append(tests, testCase{
+			name: "SendHalfHelloRequest",
+			config: Config{
+				MaxVersion: VersionTLS12,
+				Bugs: ProtocolBugs{
+					PackHelloRequestWithFinished: config.packHandshakeFlight,
+				},
+			},
+			sendHalfHelloRequest: true,
+			flags:                []string{"-renegotiate-ignore"},
+			shouldFail:           true,
+			expectedError:        ":UNEXPECTED_RECORD:",
 		})
 
 		// NPN on client and server; results in post-handshake message.
@@ -3833,6 +3978,51 @@ func addVersionNegotiationTests() {
 		shouldFail:         true,
 		expectedLocalError: "tls: downgrade from TLS 1.3 detected",
 	})
+
+	// Test that FALLBACK_SCSV is sent and that the downgrade signal works
+	// behave correctly when both real maximum and fallback versions are
+	// set.
+	testCases = append(testCases, testCase{
+		name: "Downgrade-TLS12-Client-Fallback",
+		config: Config{
+			Bugs: ProtocolBugs{
+				FailIfNotFallbackSCSV: true,
+			},
+		},
+		flags: []string{
+			"-max-version", strconv.Itoa(VersionTLS13),
+			"-fallback-version", strconv.Itoa(VersionTLS12),
+		},
+		shouldFail:    true,
+		expectedError: ":DOWNGRADE_DETECTED:",
+	})
+	testCases = append(testCases, testCase{
+		name: "Downgrade-TLS12-Client-FallbackEqualsMax",
+		flags: []string{
+			"-max-version", strconv.Itoa(VersionTLS12),
+			"-fallback-version", strconv.Itoa(VersionTLS12),
+		},
+	})
+
+	// On TLS 1.2 fallback, 1.3 ServerHellos are forbidden. (We would rather
+	// just have such connections fail than risk getting confused because we
+	// didn't sent the 1.3 ClientHello.)
+	testCases = append(testCases, testCase{
+		name: "Downgrade-TLS12-Fallback-CheckVersion",
+		config: Config{
+			Bugs: ProtocolBugs{
+				NegotiateVersion:      VersionTLS13,
+				FailIfNotFallbackSCSV: true,
+			},
+		},
+		flags: []string{
+			"-max-version", strconv.Itoa(VersionTLS13),
+			"-fallback-version", strconv.Itoa(VersionTLS12),
+		},
+		shouldFail:    true,
+		expectedError: ":UNSUPPORTED_PROTOCOL:",
+	})
+
 }
 
 func addMinimumVersionTests() {
@@ -4945,11 +5135,25 @@ func addRenegotiationTests() {
 		},
 	})
 
+	// Test renegotiation works if HelloRequest and server Finished come in
+	// the same record.
+	testCases = append(testCases, testCase{
+		name: "Renegotiate-Client-Packed",
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				PackHandshakeFlight:          true,
+				PackHelloRequestWithFinished: true,
+			},
+		},
+		renegotiate: 1,
+		flags: []string{
+			"-renegotiate-freely",
+			"-expect-total-renegotiations", "1",
+		},
+	})
+
 	// Renegotiation is forbidden in TLS 1.3.
-	//
-	// TODO(davidben): This test current asserts that we ignore
-	// HelloRequests, but we actually should hard reject them. Fix this
-	// test once we actually parse post-handshake messages.
 	testCases = append(testCases, testCase{
 		name: "Renegotiate-Client-TLS13",
 		config: Config{
@@ -4961,6 +5165,8 @@ func addRenegotiationTests() {
 		flags: []string{
 			"-renegotiate-freely",
 		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_MESSAGE:",
 	})
 
 	// Stray HelloRequests during the handshake are forbidden in TLS 1.3.
@@ -5475,8 +5681,8 @@ func addSignatureAlgorithmTests() {
 		expectedError: ":NO_COMMON_SIGNATURE_ALGORITHMS:",
 	})
 
-	// Test that hash preferences are enforced. BoringSSL defaults to
-	// rejecting MD5 signatures.
+	// Test that hash preferences are enforced. BoringSSL does not implement
+	// MD5 signatures.
 	testCases = append(testCases, testCase{
 		testType: serverTest,
 		name:     "ClientAuth-Enforced",
@@ -5485,11 +5691,6 @@ func addSignatureAlgorithmTests() {
 			Certificates: []Certificate{rsaCertificate},
 			SignSignatureAlgorithms: []signatureAlgorithm{
 				signatureRSAPKCS1WithMD5,
-				// Advertise SHA-1 so the handshake will
-				// proceed, but the shim's preferences will be
-				// ignored in CertificateVerify generation, so
-				// MD5 will be chosen.
-				signatureRSAPKCS1WithSHA1,
 			},
 			Bugs: ProtocolBugs{
 				IgnorePeerSignatureAlgorithmPreferences: true,
@@ -5510,6 +5711,41 @@ func addSignatureAlgorithmTests() {
 			},
 			Bugs: ProtocolBugs{
 				IgnorePeerSignatureAlgorithmPreferences: true,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_SIGNATURE_TYPE:",
+	})
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "ClientAuth-Enforced-TLS13",
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			Certificates: []Certificate{rsaCertificate},
+			SignSignatureAlgorithms: []signatureAlgorithm{
+				signatureRSAPKCS1WithMD5,
+			},
+			Bugs: ProtocolBugs{
+				IgnorePeerSignatureAlgorithmPreferences: true,
+				IgnoreSignatureVersionChecks:            true,
+			},
+		},
+		flags:         []string{"-require-any-client-certificate"},
+		shouldFail:    true,
+		expectedError: ":WRONG_SIGNATURE_TYPE:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "ServerAuth-Enforced-TLS13",
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			SignSignatureAlgorithms: []signatureAlgorithm{
+				signatureRSAPKCS1WithMD5,
+			},
+			Bugs: ProtocolBugs{
+				IgnorePeerSignatureAlgorithmPreferences: true,
+				IgnoreSignatureVersionChecks:            true,
 			},
 		},
 		shouldFail:    true,
@@ -6250,6 +6486,8 @@ var testCurves = []struct {
 	{"X25519", CurveX25519},
 }
 
+const bogusCurve = 0x1234
+
 func addCurveTests() {
 	for _, curve := range testCurves {
 		testCases = append(testCases, testCase{
@@ -6259,7 +6497,8 @@ func addCurveTests() {
 				CipherSuites:     []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				CurvePreferences: []CurveID{curve.id},
 			},
-			flags: []string{"-enable-all-curves"},
+			flags:           []string{"-enable-all-curves"},
+			expectedCurveID: curve.id,
 		})
 		testCases = append(testCases, testCase{
 			name: "CurveTest-Client-" + curve.name + "-TLS13",
@@ -6268,7 +6507,8 @@ func addCurveTests() {
 				CipherSuites:     []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				CurvePreferences: []CurveID{curve.id},
 			},
-			flags: []string{"-enable-all-curves"},
+			flags:           []string{"-enable-all-curves"},
+			expectedCurveID: curve.id,
 		})
 		testCases = append(testCases, testCase{
 			testType: serverTest,
@@ -6278,7 +6518,8 @@ func addCurveTests() {
 				CipherSuites:     []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				CurvePreferences: []CurveID{curve.id},
 			},
-			flags: []string{"-enable-all-curves"},
+			flags:           []string{"-enable-all-curves"},
+			expectedCurveID: curve.id,
 		})
 		testCases = append(testCases, testCase{
 			testType: serverTest,
@@ -6288,12 +6529,12 @@ func addCurveTests() {
 				CipherSuites:     []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				CurvePreferences: []CurveID{curve.id},
 			},
-			flags: []string{"-enable-all-curves"},
+			flags:           []string{"-enable-all-curves"},
+			expectedCurveID: curve.id,
 		})
 	}
 
 	// The server must be tolerant to bogus curves.
-	const bogusCurve = 0x1234
 	testCases = append(testCases, testCase{
 		testType: serverTest,
 		name:     "UnknownCurve",
@@ -7305,7 +7546,8 @@ func addTLS13HandshakeTests() {
 	})
 
 	testCases = append(testCases, testCase{
-		name: "MissingKeyShare-Server",
+		testType: serverTest,
+		name:     "MissingKeyShare-Server",
 		config: Config{
 			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
@@ -7378,6 +7620,158 @@ func addTLS13HandshakeTests() {
 		shouldFail:         true,
 		expectedLocalError: "remote error: unsupported extension",
 	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "SendHelloRetryRequest",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// Require a HelloRetryRequest for every curve.
+			DefaultCurves: []CurveID{},
+		},
+		expectedCurveID: CurveX25519,
+	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "SendHelloRetryRequest-2",
+		config: Config{
+			MaxVersion:    VersionTLS13,
+			DefaultCurves: []CurveID{CurveP384},
+		},
+		// Although the ClientHello did not predict our preferred curve,
+		// we always select it whether it is predicted or not.
+		expectedCurveID: CurveX25519,
+	})
+
+	testCases = append(testCases, testCase{
+		name: "UnknownCurve-HelloRetryRequest",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// P-384 requires HelloRetryRequest in BoringSSL.
+			CurvePreferences: []CurveID{CurveP384},
+			Bugs: ProtocolBugs{
+				SendHelloRetryRequestCurve: bogusCurve,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "DisabledCurve-HelloRetryRequest",
+		config: Config{
+			MaxVersion:       VersionTLS13,
+			CurvePreferences: []CurveID{CurveP256},
+			Bugs: ProtocolBugs{
+				IgnorePeerCurvePreferences: true,
+			},
+		},
+		flags:         []string{"-p384-only"},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "UnnecessaryHelloRetryRequest",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				UnnecessaryHelloRetryRequest: true,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "SecondHelloRetryRequest",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// P-384 requires HelloRetryRequest in BoringSSL.
+			CurvePreferences: []CurveID{CurveP384},
+			Bugs: ProtocolBugs{
+				SecondHelloRetryRequest: true,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_MESSAGE:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "SecondClientHelloMissingKeyShare",
+		config: Config{
+			MaxVersion:    VersionTLS13,
+			DefaultCurves: []CurveID{},
+			Bugs: ProtocolBugs{
+				SecondClientHelloMissingKeyShare: true,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":MISSING_KEY_SHARE:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "SecondClientHelloWrongCurve",
+		config: Config{
+			MaxVersion:    VersionTLS13,
+			DefaultCurves: []CurveID{},
+			Bugs: ProtocolBugs{
+				MisinterpretHelloRetryRequestCurve: CurveP521,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "HelloRetryRequestVersionMismatch",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// P-384 requires HelloRetryRequest in BoringSSL.
+			CurvePreferences: []CurveID{CurveP384},
+			Bugs: ProtocolBugs{
+				SendServerHelloVersion: 0x0305,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_VERSION_NUMBER:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "HelloRetryRequestCurveMismatch",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// P-384 requires HelloRetryRequest in BoringSSL.
+			CurvePreferences: []CurveID{CurveP384},
+			Bugs: ProtocolBugs{
+				// Send P-384 (correct) in the HelloRetryRequest.
+				SendHelloRetryRequestCurve: CurveP384,
+				// But send P-256 in the ServerHello.
+				SendCurve: CurveP256,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
+
+	// Test the server selecting a curve that requires a HelloRetryRequest
+	// without sending it.
+	testCases = append(testCases, testCase{
+		name: "SkipHelloRetryRequest",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// P-384 requires HelloRetryRequest in BoringSSL.
+			CurvePreferences: []CurveID{CurveP384},
+			Bugs: ProtocolBugs{
+				SkipHelloRetryRequest: true,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_CURVE:",
+	})
 }
 
 func worker(statusChan chan statusMsg, c chan *testCase, shimPath string, wg *sync.WaitGroup) {
@@ -7411,7 +7805,7 @@ type statusMsg struct {
 }
 
 func statusPrinter(doneChan chan *testOutput, statusChan chan statusMsg, total int) {
-	var started, done, failed, lineLen int
+	var started, done, failed, unimplemented, lineLen int
 
 	testOutput := newTestOutput()
 	for msg := range statusChan {
@@ -7430,9 +7824,18 @@ func statusPrinter(doneChan chan *testOutput, statusChan chan statusMsg, total i
 			done++
 
 			if msg.err != nil {
-				fmt.Printf("FAILED (%s)\n%s\n", msg.test.name, msg.err)
-				failed++
-				testOutput.addResult(msg.test.name, "FAIL")
+				if msg.err == errUnimplemented {
+					if *pipe {
+						// Print each test instead of a status line.
+						fmt.Printf("UNIMPLEMENTED (%s)\n", msg.test.name)
+					}
+					unimplemented++
+					testOutput.addResult(msg.test.name, "UNIMPLEMENTED")
+				} else {
+					fmt.Printf("FAILED (%s)\n%s\n", msg.test.name, msg.err)
+					failed++
+					testOutput.addResult(msg.test.name, "FAIL")
+				}
 			} else {
 				if *pipe {
 					// Print each test instead of a status line.
@@ -7444,7 +7847,7 @@ func statusPrinter(doneChan chan *testOutput, statusChan chan statusMsg, total i
 
 		if !*pipe {
 			// Print a new status line.
-			line := fmt.Sprintf("%d/%d/%d/%d", failed, done, started, total)
+			line := fmt.Sprintf("%d/%d/%d/%d/%d", failed, unimplemented, done, started, total)
 			lineLen = len(line)
 			os.Stdout.WriteString(line)
 		}
@@ -7503,13 +7906,24 @@ func main() {
 
 	var foundTest bool
 	for i := range testCases {
-		if len(*testToRun) == 0 || *testToRun == testCases[i].name {
+		matched := true
+		if len(*testToRun) != 0 {
+			var err error
+			matched, err = filepath.Match(*testToRun, testCases[i].name)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error matching pattern: %s\n", err)
+				os.Exit(1)
+			}
+		}
+
+		if matched {
 			foundTest = true
 			testChan <- &testCases[i]
 		}
 	}
+
 	if !foundTest {
-		fmt.Fprintf(os.Stderr, "No test named '%s'\n", *testToRun)
+		fmt.Fprintf(os.Stderr, "No tests matched %q\n", *testToRun)
 		os.Exit(1)
 	}
 
@@ -7526,7 +7940,11 @@ func main() {
 		}
 	}
 
-	if !testOutput.allPassed {
+	if !*allowUnimplemented && testOutput.NumFailuresByType["UNIMPLEMENTED"] > 0 {
+		os.Exit(1)
+	}
+
+	if !testOutput.noneFailed {
 		os.Exit(1)
 	}
 }

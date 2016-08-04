@@ -53,7 +53,7 @@ class NET_EXPORT_PRIVATE DnsSocketPool {
       NetLog* net_log) = 0;
 
   // Allocates a socket that is already connected to the nameserver referenced
-  // by |server_index|.  May return a scoped_ptr to NULL if no sockets are
+  // by |server_index|.  May return a std::unique_ptr to NULL if no sockets are
   // available to reuse and the factory fails to produce a socket (or produces
   // one on which Connect fails).
   virtual std::unique_ptr<DatagramClientSocket> AllocateSocket(

@@ -249,7 +249,7 @@ File::Error File::Unlock() {
   return FILE_OK;
 }
 
-File File::Duplicate() {
+File File::Duplicate() const {
   if (!IsValid())
     return File();
 
@@ -396,9 +396,10 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
   }
 }
 
-bool File::DoFlush() {
+bool File::Flush() {
   ThreadRestrictions::AssertIOAllowed();
   DCHECK(IsValid());
+  SCOPED_FILE_TRACE("Flush");
   return ::FlushFileBuffers(file_.Get()) != FALSE;
 }
 

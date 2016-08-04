@@ -22,10 +22,10 @@ namespace net {
 class SSLKeyLogger::Core {
  public:
   Core() { sequence_checker_.DetachFromSequence(); }
-  ~Core() { DCHECK(sequence_checker_.CalledOnValidSequencedThread()); }
+  ~Core() { DCHECK(sequence_checker_.CalledOnValidSequence()); }
 
   void OpenFile(const base::FilePath& path) {
-    DCHECK(sequence_checker_.CalledOnValidSequencedThread());
+    DCHECK(sequence_checker_.CalledOnValidSequence());
     DCHECK(!file_);
     file_.reset(base::OpenFile(path, "a"));
     if (!file_)
@@ -33,7 +33,7 @@ class SSLKeyLogger::Core {
   }
 
   void WriteLine(const std::string& line) {
-    DCHECK(sequence_checker_.CalledOnValidSequencedThread());
+    DCHECK(sequence_checker_.CalledOnValidSequence());
     if (!file_)
       return;
     fprintf(file_.get(), "%s\n", line.c_str());

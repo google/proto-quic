@@ -276,6 +276,7 @@ void MessageLoop::RemoveNestingObserver(NestingObserver* observer) {
   nesting_observers_.RemoveObserver(observer);
 }
 
+#if !(defined(OS_MACOSX) && !defined(OS_IOS))
 void MessageLoop::PostTask(
     const tracked_objects::Location& from_here,
     const Closure& task) {
@@ -288,6 +289,7 @@ void MessageLoop::PostDelayedTask(
     TimeDelta delay) {
   task_runner_->PostDelayedTask(from_here, task, delay);
 }
+#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 void MessageLoop::Run() {
   DCHECK(pump_);
@@ -688,6 +690,7 @@ bool MessageLoop::DoIdleWork() {
   return false;
 }
 
+#if !(defined(OS_MACOSX) && !defined(OS_IOS))
 void MessageLoop::DeleteSoonInternal(const tracked_objects::Location& from_here,
                                      void(*deleter)(const void*),
                                      const void* object) {
@@ -700,6 +703,7 @@ void MessageLoop::ReleaseSoonInternal(
     const void* object) {
   task_runner()->PostNonNestableTask(from_here, Bind(releaser, object));
 }
+#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 #if !defined(OS_NACL)
 //------------------------------------------------------------------------------

@@ -5,12 +5,11 @@
 #ifndef NET_QUIC_TEST_TOOLS_MOCK_CLOCK_H_
 #define NET_QUIC_TEST_TOOLS_MOCK_CLOCK_H_
 
-#include "net/quic/quic_clock.h"
-
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/time/time.h"
+#include "net/quic/core/quic_clock.h"
 
 namespace net {
 

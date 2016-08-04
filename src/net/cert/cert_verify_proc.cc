@@ -23,7 +23,10 @@
 #include "net/cert/cert_verify_proc_whitelist.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
+#include "net/cert/internal/parse_ocsp.h"
+#include "net/cert/ocsp_revocation_status.h"
 #include "net/cert/x509_certificate.h"
+#include "net/der/encode_values.h"
 #include "url/url_canon.h"
 
 #if defined(USE_NSS_CERTS)
@@ -182,6 +185,130 @@ bool IsPastSHA1DeprecationDate(const X509Certificate& cert) {
   return start >= kSHA1DeprecationDate;
 }
 
+// Checks if the given RFC 6960 OCSPCertID structure |cert_id| has the same
+// serial number as |certificate|.
+//
+// TODO(dadrian): Verify name and key hashes. https://crbug.com/620005
+bool CheckCertIDMatchesCertificate(const OCSPCertID& cert_id,
+                                   const X509Certificate& certificate) {
+  der::Input serial(&certificate.serial_number());
+  return cert_id.serial_number == serial;
+}
+
+// Populates |ocsp_result| with revocation information for |certificate|, based
+// on the unparsed OCSP response in |raw_response|.
+void CheckOCSP(const std::string& raw_response,
+               const X509Certificate& certificate,
+               OCSPVerifyResult* ocsp_result) {
+  // The maximum age for an OCSP response, implemented as time since the
+  // |this_update| field in OCSPSingleREsponse. Responses older than |max_age|
+  // will be considered invalid.
+  static base::TimeDelta max_age = base::TimeDelta::FromDays(7);
+  *ocsp_result = OCSPVerifyResult();
+
+  if (raw_response.empty()) {
+    ocsp_result->response_status = OCSPVerifyResult::MISSING;
+    return;
+  }
+
+  der::Input response_der(&raw_response);
+  OCSPResponse response;
+  if (!ParseOCSPResponse(response_der, &response)) {
+    ocsp_result->response_status = OCSPVerifyResult::PARSE_RESPONSE_ERROR;
+    return;
+  }
+
+  // RFC 6960 defines all responses |response_status| != SUCCESSFUL as error
+  // responses. No revocation information is provided on error responses, and
+  // the OCSPResponseData structure is not set.
+  if (response.status != OCSPResponse::ResponseStatus::SUCCESSFUL) {
+    ocsp_result->response_status = OCSPVerifyResult::ERROR_RESPONSE;
+    return;
+  }
+
+  // Actual revocation information is contained within the BasicOCSPResponse as
+  // a ResponseData structure. The BasicOCSPResponse was parsed above, and
+  // contains an unparsed ResponseData. From RFC 6960:
+  //
+  // BasicOCSPResponse       ::= SEQUENCE {
+  //    tbsResponseData      ResponseData,
+  //    signatureAlgorithm   AlgorithmIdentifier,
+  //    signature            BIT STRING,
+  //    certs            [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL }
+  //
+  // ResponseData ::= SEQUENCE {
+  //     version              [0] EXPLICIT Version DEFAULT v1,
+  //     responderID              ResponderID,
+  //     producedAt               GeneralizedTime,
+  //     responses                SEQUENCE OF SingleResponse,
+  //     responseExtensions   [1] EXPLICIT Extensions OPTIONAL }
+  OCSPResponseData response_data;
+  if (!ParseOCSPResponseData(response.data, &response_data)) {
+    ocsp_result->response_status = OCSPVerifyResult::PARSE_RESPONSE_DATA_ERROR;
+    return;
+  }
+
+  // If producedAt is outside of the certificate validity period, reject the
+  // response.
+  der::GeneralizedTime not_before, not_after;
+  if (!der::EncodeTimeAsGeneralizedTime(certificate.valid_start(),
+                                        &not_before) ||
+      !der::EncodeTimeAsGeneralizedTime(certificate.valid_expiry(),
+                                        &not_after)) {
+    ocsp_result->response_status = OCSPVerifyResult::BAD_PRODUCED_AT;
+    return;
+  }
+  if (response_data.produced_at < not_before ||
+      response_data.produced_at > not_after) {
+    ocsp_result->response_status = OCSPVerifyResult::BAD_PRODUCED_AT;
+    return;
+  }
+
+  // TODO(svaldez): Unify with GetOCSPCertStatus. https://crbug.com/629249
+  base::Time verify_time = base::Time::Now();
+  ocsp_result->response_status = OCSPVerifyResult::NO_MATCHING_RESPONSE;
+  for (const auto& single_response_der : response_data.responses) {
+    // In the common case, there should only be one SingleResponse in the
+    // ResponseData (matching the certificate requested and used on this
+    // connection). However, it is possible for the OCSP responder to provide
+    // multiple responses for multiple certificates. Look through all the
+    // provided SingleResponses, and check to see if any match the certificate.
+    // A SingleResponse matches a certificate if it has the same serial number.
+    OCSPSingleResponse single_response;
+    if (!ParseOCSPSingleResponse(single_response_der, &single_response))
+      continue;
+    OCSPCertID cert_id;
+    if (!ParseOCSPCertID(single_response.cert_id_tlv, &cert_id))
+      continue;
+    if (!CheckCertIDMatchesCertificate(cert_id, certificate))
+      continue;
+    // The SingleResponse matches the certificate, but may be out of date. Out
+    // of date responses are noted seperate from responses with mismatched
+    // serial numbers. If an OCSP responder provides both an up to date response
+    // and an expired response, the up to date response takes precedence
+    // (PROVIDED > INVALID_DATE).
+    if (!CheckOCSPDateValid(single_response, verify_time, max_age)) {
+      if (ocsp_result->response_status != OCSPVerifyResult::PROVIDED)
+        ocsp_result->response_status = OCSPVerifyResult::INVALID_DATE;
+      continue;
+    }
+
+    // In the case with multiple matching and up to date responses, keep only
+    // the strictest status (REVOKED > UNKNOWN > GOOD). The current
+    // |revocation_status| is only valid if |response_status| is already set to
+    // PROVIDED.
+    OCSPRevocationStatus current_status = OCSPRevocationStatus::GOOD;
+    if (ocsp_result->response_status == OCSPVerifyResult::PROVIDED) {
+      current_status = ocsp_result->revocation_status;
+    }
+    if (current_status == OCSPRevocationStatus::GOOD ||
+        single_response.cert_status.status == OCSPRevocationStatus::REVOKED) {
+      ocsp_result->revocation_status = single_response.cert_status.status;
+    }
+    ocsp_result->response_status = OCSPVerifyResult::PROVIDED;
+  }
+}
+
 // Comparison functor used for binary searching whether a given HashValue,
 // which MUST be a SHA-256 hash, is contained with an array of SHA-256
 // hashes.
@@ -257,6 +384,9 @@ int CertVerifyProc::Verify(X509Certificate* cert,
     UMA_HISTOGRAM_BOOLEAN("Net.CertCommonNameFallbackPrivateCA",
                           verify_result->common_name_fallback_used);
   }
+
+  CheckOCSP(ocsp_response, *verify_result->verified_cert,
+            &verify_result->ocsp_result);
 
   // This check is done after VerifyInternal so that VerifyInternal can fill
   // in the list of public key hashes.

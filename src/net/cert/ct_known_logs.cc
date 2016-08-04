@@ -37,7 +37,8 @@ CreateLogVerifiersForKnownLogs() {
   // Add all qualified logs.
   for (const auto& log : kCTLogList) {
     base::StringPiece key(log.log_key, log.log_key_length);
-    verifiers.push_back(CTLogVerifier::Create(key, log.log_name, log.log_url));
+    verifiers.push_back(CTLogVerifier::Create(key, log.log_name, log.log_url,
+                                              log.log_dns_domain));
     // Make sure no null logs enter verifiers. Parsing of all known logs should
     // succeed.
     CHECK(verifiers.back().get());
@@ -48,7 +49,8 @@ CreateLogVerifiersForKnownLogs() {
   for (const auto& disqualified_log : kDisqualifiedCTLogList) {
     const CTLogInfo& log = disqualified_log.log_info;
     base::StringPiece key(log.log_key, log.log_key_length);
-    verifiers.push_back(CTLogVerifier::Create(key, log.log_name, log.log_url));
+    verifiers.push_back(CTLogVerifier::Create(key, log.log_name, log.log_url,
+                                              log.log_dns_domain));
     // Make sure no null logs enter verifiers. Parsing of all known logs should
     // succeed.
     CHECK(verifiers.back().get());

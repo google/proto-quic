@@ -6,8 +6,8 @@
 
 #include <list>
 
-#include "net/quic/quic_flow_controller.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_flow_controller.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 namespace test {

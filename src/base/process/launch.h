@@ -63,17 +63,17 @@ struct BASE_EXPORT LaunchOptions {
   ~LaunchOptions();
 
   // If true, wait for the process to complete.
-  bool wait;
+  bool wait = false;
 
   // If not empty, change to this directory before executing the new process.
   base::FilePath current_directory;
 
 #if defined(OS_WIN)
-  bool start_hidden;
+  bool start_hidden = false;
 
   // If non-null, inherit exactly the list of handles in this vector (these
   // handles must be inheritable).
-  HandlesToInheritVector* handles_to_inherit;
+  HandlesToInheritVector* handles_to_inherit = nullptr;
 
   // If true, the new process inherits handles from the parent. In production
   // code this flag should be used only when running short-lived, trusted
@@ -81,7 +81,7 @@ struct BASE_EXPORT LaunchOptions {
   // leak to the child process, causing errors such as open socket hangs.
   // Note: If |handles_to_inherit| is non-null, this flag is ignored and only
   // those handles will be inherited.
-  bool inherit_handles;
+  bool inherit_handles = false;
 
   // If non-null, runs as if the user represented by the token had launched it.
   // Whether the application is visible on the interactive desktop depends on
@@ -90,29 +90,29 @@ struct BASE_EXPORT LaunchOptions {
   // To avoid hard to diagnose problems, when specified this loads the
   // environment variables associated with the user and if this operation fails
   // the entire call fails as well.
-  UserTokenHandle as_user;
+  UserTokenHandle as_user = nullptr;
 
   // If true, use an empty string for the desktop name.
-  bool empty_desktop_name;
+  bool empty_desktop_name = false;
 
   // If non-null, launches the application in that job object. The process will
   // be terminated immediately and LaunchProcess() will fail if assignment to
   // the job object fails.
-  HANDLE job_handle;
+  HANDLE job_handle = nullptr;
 
   // Handles for the redirection of stdin, stdout and stderr. The handles must
   // be inheritable. Caller should either set all three of them or none (i.e.
   // there is no way to redirect stderr without redirecting stdin). The
   // |inherit_handles| flag must be set to true when redirecting stdio stream.
-  HANDLE stdin_handle;
-  HANDLE stdout_handle;
-  HANDLE stderr_handle;
+  HANDLE stdin_handle = nullptr;
+  HANDLE stdout_handle = nullptr;
+  HANDLE stderr_handle = nullptr;
 
   // If set to true, ensures that the child process is launched with the
   // CREATE_BREAKAWAY_FROM_JOB flag which allows it to breakout of the parent
   // job if any.
-  bool force_breakaway_from_job_;
-#else
+  bool force_breakaway_from_job_ = false;
+#else  // !defined(OS_WIN)
   // Set/unset environment variables. These are applied on top of the parent
   // process environment.  Empty (the default) means to inherit the same
   // environment. See AlterEnvironment().
@@ -120,37 +120,37 @@ struct BASE_EXPORT LaunchOptions {
 
   // Clear the environment for the new process before processing changes from
   // |environ|.
-  bool clear_environ;
+  bool clear_environ = false;
 
   // If non-null, remap file descriptors according to the mapping of
   // src fd->dest fd to propagate FDs into the child process.
   // This pointer is owned by the caller and must live through the
   // call to LaunchProcess().
-  const FileHandleMappingVector* fds_to_remap;
+  const FileHandleMappingVector* fds_to_remap = nullptr;
 
   // Each element is an RLIMIT_* constant that should be raised to its
   // rlim_max.  This pointer is owned by the caller and must live through
   // the call to LaunchProcess().
-  const std::vector<int>* maximize_rlimits;
+  const std::vector<int>* maximize_rlimits = nullptr;
 
   // If true, start the process in a new process group, instead of
   // inheriting the parent's process group.  The pgid of the child process
   // will be the same as its pid.
-  bool new_process_group;
+  bool new_process_group = false;
 
 #if defined(OS_LINUX)
   // If non-zero, start the process using clone(), using flags as provided.
   // Unlike in clone, clone_flags may not contain a custom termination signal
   // that is sent to the parent when the child dies. The termination signal will
   // always be set to SIGCHLD.
-  int clone_flags;
+  int clone_flags = 0;
 
   // By default, child processes will have the PR_SET_NO_NEW_PRIVS bit set. If
   // true, then this bit will not be set in the new child process.
-  bool allow_new_privs;
+  bool allow_new_privs = false;
 
   // Sets parent process death signal to SIGKILL.
-  bool kill_on_parent_death;
+  bool kill_on_parent_death = false;
 #endif  // defined(OS_LINUX)
 
 #if defined(OS_POSIX)
@@ -160,13 +160,13 @@ struct BASE_EXPORT LaunchOptions {
   // WARNING: If LaunchProcess is called in the presence of multiple threads,
   // code running in this delegate essentially needs to be async-signal safe
   // (see man 7 signal for a list of allowed functions).
-  PreExecDelegate* pre_exec_delegate;
+  PreExecDelegate* pre_exec_delegate = nullptr;
 #endif  // defined(OS_POSIX)
 
 #if defined(OS_CHROMEOS)
   // If non-negative, the specified file descriptor will be set as the launched
   // process' controlling terminal.
-  int ctrl_terminal_fd;
+  int ctrl_terminal_fd = -1;
 #endif  // defined(OS_CHROMEOS)
 #endif  // !defined(OS_WIN)
 };

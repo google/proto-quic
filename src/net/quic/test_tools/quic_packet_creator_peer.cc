@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 
-#include "net/quic/quic_packet_creator.h"
+#include "net/quic/core/quic_packet_creator.h"
 
 namespace net {
 namespace test {

@@ -15,24 +15,13 @@
 #include "net/base/port_util.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_response_headers.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "url/gurl.h"
 
 namespace net {
 
-// WARNING: If you modify or add any static flags, you must keep them in sync
-// with |ResetStaticSettingsToInit|. This is critical for unit test isolation.
-
-// static
-bool HttpStreamFactory::spdy_enabled_ = true;
-
 HttpStreamFactory::~HttpStreamFactory() {}
-
-// static
-void HttpStreamFactory::ResetStaticSettingsToInit() {
-  spdy_enabled_ = true;
-}
 
 void HttpStreamFactory::ProcessAlternativeServices(
     HttpNetworkSession* session,

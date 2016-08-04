@@ -4,7 +4,7 @@
 
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 
-#include "net/quic/quic_types.h"
+#include "net/quic/core/quic_types.h"
 
 namespace net {
 

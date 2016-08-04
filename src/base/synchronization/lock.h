@@ -61,6 +61,14 @@ class BASE_EXPORT Lock {
   void AssertAcquired() const;
 #endif  // DCHECK_IS_ON()
 
+#if defined(OS_POSIX)
+  // Whether this platform has priority inheritance available. All locks will
+  // attempt to use the priority inheritance version if available.
+  static bool PriorityInheritanceAvailable() {
+    return internal::LockImpl::PriorityInheritanceAvailable();
+  }
+#endif
+
 #if defined(OS_POSIX) || defined(OS_WIN)
   // Both Windows and POSIX implementations of ConditionVariable need to be
   // able to see our lock and tweak our debugging counters, as they release and

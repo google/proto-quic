@@ -7,9 +7,7 @@
 #include <new.h>
 #include <psapi.h>
 #include <stddef.h>
-
-#include "base/logging.h"
-#include "base/strings/safe_sprintf.h"
+#include <windows.h>
 
 // malloc_unchecked is required to implement UncheckedMalloc properly.
 // It's provided by allocator_shim_win.cc but since that's not always present,
@@ -31,31 +29,26 @@ namespace base {
 namespace {
 
 #pragma warning(push)
-#pragma warning(disable: 4702)
+#pragma warning(disable: 4702)  // Unreachable code after the _exit.
 
-int OnNoMemory(size_t size) {
-  // Make no additional allocations here to avoid getting into a death spiral
-  // when trying to log the error message.
-  char buf[64];
-  strings::ssize_t result =
-      strings::SafeSPrintf(buf, "Out of memory, size = %d\n", size);
-  RAW_CHECK(result != -1);
-
+NOINLINE int OnNoMemory(size_t size) {
   // Kill the process. This is important for security since most of code
   // does not check the result of memory allocation.
-  RAW_LOG(FATAL, buf);
-
+  // https://msdn.microsoft.com/en-us/library/het71c37.aspx
+  ::RaiseException(win::kOomExceptionCode, EXCEPTION_NONCONTINUABLE, 0,
+                   nullptr);
   // Safety check, make sure process exits here.
-  _exit(1);
+  _exit(win::kOomExceptionCode);
   return 0;
 }
 
 #pragma warning(pop)
 
-// HeapSetInformation function pointer.
-typedef BOOL (WINAPI* HeapSetFn)(HANDLE, HEAP_INFORMATION_CLASS, PVOID, SIZE_T);
-
 }  // namespace
+
+void TerminateBecauseOutOfMemory(size_t size) {
+  OnNoMemory(size);
+}
 
 void EnableTerminationOnHeapCorruption() {
   // Ignore the result code. Supported on XP SP3 and Vista.

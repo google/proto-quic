@@ -18,8 +18,6 @@ namespace android {
 // via JNI from Java.
 BASE_EXPORT ScopedJavaLocalRef<jobject> GetClassLoader(JNIEnv* env);
 
-bool RegisterJNIUtils(JNIEnv* env);
-
 }  // namespace android
 }  // namespace base
 

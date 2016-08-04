@@ -15,13 +15,13 @@
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/linked_hash_map.h"
-#include "net/quic/crypto/quic_compressed_certs_cache.h"
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_blocked_writer_interface.h"
-#include "net/quic/quic_buffered_packet_store.h"
-#include "net/quic/quic_connection.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_server_session_base.h"
+#include "net/quic/core/crypto/quic_compressed_certs_cache.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_blocked_writer_interface.h"
+#include "net/quic/core/quic_buffered_packet_store.h"
+#include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_server_session_base.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 
@@ -292,10 +292,9 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // skipped as necessary).
   QuicVersionVector supported_versions_;
 
-  // FLAGS_quic_disable_pre_30
-  bool disable_quic_pre_30_;
-  // The list of versions that may be supported by this dispatcher.
-  // |supported_versions| is derived from this list and |disable_quic_pre_30_|.
+  // The std::list of versions that may be supported by this dispatcher.
+  // |supported_versions| is derived from this std::list and
+  // |disable_quic_pre_30_|.
   const QuicVersionVector allowed_supported_versions_;
 
   // Information about the packet currently being handled.

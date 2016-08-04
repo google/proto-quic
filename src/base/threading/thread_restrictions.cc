@@ -4,7 +4,7 @@
 
 #include "base/threading/thread_restrictions.h"
 
-#if ENABLE_THREAD_RESTRICTIONS
+#if DCHECK_IS_ON()
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
@@ -56,8 +56,12 @@ void ThreadRestrictions::AssertSingletonAllowed() {
   if (g_singleton_disallowed.Get().Get()) {
     LOG(FATAL) << "LazyInstance/Singleton is not allowed to be used on this "
                << "thread.  Most likely it's because this thread is not "
-               << "joinable, so AtExitManager may have deleted the object "
-               << "on shutdown, leading to a potential shutdown crash.";
+               << "joinable (or the current task is running with "
+               << "TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN semantics), so "
+               << "AtExitManager may have deleted the object on shutdown, "
+               << "leading to a potential shutdown crash. If you need to use "
+               << "the object from this context, it'll have to be updated to "
+               << "use Leaky traits.";
   }
 }
 
@@ -82,4 +86,4 @@ bool ThreadRestrictions::SetWaitAllowed(bool allowed) {
 
 }  // namespace base
 
-#endif  // ENABLE_THREAD_RESTRICTIONS
+#endif  // DCHECK_IS_ON()

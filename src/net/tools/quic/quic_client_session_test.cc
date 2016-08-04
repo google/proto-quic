@@ -8,9 +8,9 @@
 
 #include "base/strings/stringprintf.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/crypto/aes_128_gcm_12_encrypter.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/spdy_utils.h"
+#include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
 #include "net/quic/test_tools/quic_config_peer.h"

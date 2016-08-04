@@ -22,29 +22,17 @@ const int kProtoSPDYHistogramOffset = 100;
 enum NextProto {
   kProtoUnknown = 0,
   kProtoHTTP11 = 1,
-  kProtoMinimumVersion = kProtoHTTP11,
-
-  kProtoSPDY31 = 102,
-  kProtoSPDYMinimumVersion = kProtoSPDY31,
+  // kProtoSPDY31 = 102,
   // kProtoHTTP2_14 = 103,  // HTTP/2 draft-14
   // kProtoHTTP2_15 = 104,  // HTTP/2 draft-15
   // kProtoHTTP2_16 = 105,  // HTTP/2 draft-16
   // kProtoHTTP2_17 = 106,  // HTTP/2 draft-17
   kProtoHTTP2 = 107,  // HTTP/2, see https://tools.ietf.org/html/rfc7540.
-  kProtoSPDYMaximumVersion = kProtoHTTP2,
-
   kProtoQUIC1SPDY3 = 200,
-
-  kProtoMaximumVersion = kProtoQUIC1SPDY3,
 };
 
 // List of protocols to use for NPN, used for configuring HttpNetworkSessions.
 typedef std::vector<NextProto> NextProtoVector;
-
-// Convenience functions to create NextProtoVector.
-
-// Returns true if |next_proto| is a version of SPDY or HTTP/2.
-bool NextProtoIsSPDY(NextProto next_proto);
 
 }  // namespace net
 

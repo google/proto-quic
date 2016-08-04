@@ -13,6 +13,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/sys_byteorder.h"
 #include "net/http/transport_security_state.h"
+#include "net/spdy/spdy_flags.h"
 #include "net/ssl/ssl_info.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -175,14 +176,18 @@ void TestHeadersHandler::OnHeaderBlockStart() {
 
 void TestHeadersHandler::OnHeader(base::StringPiece name,
                                   base::StringPiece value) {
-  auto it = block_.find(name);
-  if (it == block_.end()) {
-    block_[name] = value;
+  if (FLAGS_chromium_http2_flag_use_new_spdy_header_block_header_joining) {
+    block_.AppendValueOrAddHeader(name, value);
   } else {
-    string new_value = it->second.as_string();
-    new_value.append((name == "cookie") ? "; " : string(1, '\0'));
-    value.AppendToString(&new_value);
-    block_.ReplaceOrAppendHeader(name, new_value);
+    auto it = block_.find(name);
+    if (it == block_.end()) {
+      block_[name] = value;
+    } else {
+      string new_value = it->second.as_string();
+      new_value.append((name == "cookie") ? "; " : string(1, '\0'));
+      value.AppendToString(&new_value);
+      block_.ReplaceOrAppendHeader(name, new_value);
+    }
   }
 }
 

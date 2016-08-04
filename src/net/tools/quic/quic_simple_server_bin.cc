@@ -14,8 +14,8 @@
 #include "base/strings/string_number_conversions.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
-#include "net/quic/crypto/proof_source_chromium.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/chromium/crypto/proof_source_chromium.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_simple_server.h"
 

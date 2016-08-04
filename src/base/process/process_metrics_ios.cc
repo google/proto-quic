@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 
 namespace base {
 
@@ -25,10 +26,7 @@ bool GetTaskInfo(task_basic_info_64* task_info_data) {
 
 }  // namespace
 
-SystemMemoryInfoKB::SystemMemoryInfoKB() {
-  total = 0;
-  free = 0;
-}
+SystemMemoryInfoKB::SystemMemoryInfoKB() : total(0), free(0) {}
 
 SystemMemoryInfoKB::SystemMemoryInfoKB(const SystemMemoryInfoKB& other) =
     default;
@@ -38,8 +36,9 @@ ProcessMetrics::ProcessMetrics(ProcessHandle process) {}
 ProcessMetrics::~ProcessMetrics() {}
 
 // static
-ProcessMetrics* ProcessMetrics::CreateProcessMetrics(ProcessHandle process) {
-  return new ProcessMetrics(process);
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
+    ProcessHandle process) {
+  return WrapUnique(new ProcessMetrics(process));
 }
 
 double ProcessMetrics::GetCPUUsage() {

@@ -110,8 +110,6 @@ class BASE_EXPORT BuildInfo {
 
   void ClearJavaExceptionInfo();
 
-  static bool RegisterBindings(JNIEnv* env);
-
  private:
   friend struct BuildInfoSingletonTraits;
 

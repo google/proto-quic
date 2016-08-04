@@ -27,7 +27,6 @@ size_t g_oom_size = 0U;
 
 namespace {
 
-#if !defined(OS_ANDROID)
 void OnNoMemorySize(size_t size) {
   g_oom_size = size;
 
@@ -39,7 +38,6 @@ void OnNoMemorySize(size_t size) {
 void OnNoMemory() {
   OnNoMemorySize(0);
 }
-#endif  // !defined(OS_ANDROID)
 
 }  // namespace
 
@@ -147,15 +145,10 @@ void EnableTerminationOnHeapCorruption() {
 }
 
 void EnableTerminationOnOutOfMemory() {
-#if defined(OS_ANDROID)
-  // Android doesn't support setting a new handler.
-  DLOG(WARNING) << "Not feasible.";
-#else
   // Set the new-out of memory handler.
   std::set_new_handler(&OnNoMemory);
   // If we're using glibc's allocator, the above functions will override
   // malloc and friends and make them die on out of memory.
-#endif
 
 #if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
   allocator::SetCallNewHandlerOnMallocFailure(true);

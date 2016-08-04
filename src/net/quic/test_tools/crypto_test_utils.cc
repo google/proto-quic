@@ -17,19 +17,19 @@
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
 #include "crypto/secure_hash.h"
-#include "net/quic/crypto/channel_id.h"
-#include "net/quic/crypto/common_cert_set.h"
-#include "net/quic/crypto/crypto_handshake.h"
-#include "net/quic/crypto/quic_crypto_server_config.h"
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_clock.h"
-#include "net/quic/quic_crypto_client_stream.h"
-#include "net/quic/quic_crypto_server_stream.h"
-#include "net/quic/quic_crypto_stream.h"
-#include "net/quic/quic_server_id.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/core/crypto/channel_id.h"
+#include "net/quic/core/crypto/common_cert_set.h"
+#include "net/quic/core/crypto/crypto_handshake.h"
+#include "net/quic/core/crypto/quic_crypto_server_config.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_clock.h"
+#include "net/quic/core/quic_crypto_client_stream.h"
+#include "net/quic/core/quic_crypto_server_stream.h"
+#include "net/quic/core/quic_crypto_stream.h"
+#include "net/quic/core/quic_server_id.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -268,6 +268,74 @@ CryptoTestUtils::FakeClientOptions::FakeClientOptions()
     : channel_id_enabled(false),
       channel_id_source_async(false),
       token_binding_enabled(false) {}
+
+namespace {
+// This class is used by GenerateFullCHLO() to extract SCID and STK from
+// REJ/SREJ and to construct a full CHLO with these fields and given inchoate
+// CHLO.
+class FullChloGenerator : public ValidateClientHelloResultCallback {
+ public:
+  FullChloGenerator(QuicCryptoServerConfig* crypto_config,
+                    IPAddress server_ip,
+                    IPEndPoint client_addr,
+                    const QuicClock* clock,
+                    QuicCryptoProof* proof,
+                    QuicCompressedCertsCache* compressed_certs_cache,
+                    CryptoHandshakeMessage* out)
+      : crypto_config_(crypto_config),
+        server_ip_(server_ip),
+        client_addr_(client_addr),
+        clock_(clock),
+        proof_(proof),
+        compressed_certs_cache_(compressed_certs_cache),
+        out_(out) {}
+
+  void RunImpl(const CryptoHandshakeMessage& client_hello,
+               const ValidateClientHelloResultCallback::Result& result,
+               std::unique_ptr<ProofSource::Details> /* details */) override {
+    QuicCryptoNegotiatedParameters params;
+    string error_details;
+    DiversificationNonce diversification_nonce;
+    CryptoHandshakeMessage rej;
+    crypto_config_->ProcessClientHello(
+        result, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
+        client_addr_, QuicSupportedVersions().front(), QuicSupportedVersions(),
+        /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
+        clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params,
+        proof_, &rej, &diversification_nonce, &error_details);
+    // Verify output is a REJ or SREJ.
+    EXPECT_THAT(rej.tag(),
+                testing::AnyOf(testing::Eq(kSREJ), testing::Eq(kREJ)));
+
+    VLOG(1) << "Extract valid STK and SCID from\n" << rej.DebugString();
+    StringPiece srct;
+    ASSERT_TRUE(rej.GetStringPiece(kSourceAddressTokenTag, &srct));
+
+    StringPiece scfg;
+    ASSERT_TRUE(rej.GetStringPiece(kSCFG, &scfg));
+    std::unique_ptr<CryptoHandshakeMessage> server_config(
+        CryptoFramer::ParseMessage(scfg));
+
+    StringPiece scid;
+    ASSERT_TRUE(server_config->GetStringPiece(kSCID, &scid));
+
+    *out_ = client_hello;
+    out_->SetStringPiece(kSCID, scid);
+    out_->SetStringPiece(kSourceAddressTokenTag, srct);
+    uint64_t xlct = CryptoTestUtils::LeafCertHashForTesting();
+    out_->SetValue(kXLCT, xlct);
+  }
+
+ protected:
+  QuicCryptoServerConfig* crypto_config_;
+  IPAddress server_ip_;
+  IPEndPoint client_addr_;
+  const QuicClock* clock_;
+  QuicCryptoProof* proof_;
+  QuicCompressedCertsCache* compressed_certs_cache_;
+  CryptoHandshakeMessage* out_;
+};
+}  // namespace
 
 // static
 int CryptoTestUtils::HandshakeWithFakeServer(
@@ -825,6 +893,24 @@ void CryptoTestUtils::MovePackets(PacketSavingConnection* source_conn,
   for (const CryptoHandshakeMessage& message : crypto_visitor.messages()) {
     dest_stream->OnHandshakeMessage(message);
   }
+}
+
+// static
+void CryptoTestUtils::GenerateFullCHLO(
+    const CryptoHandshakeMessage& inchoate_chlo,
+    QuicCryptoServerConfig* crypto_config,
+    IPAddress server_ip,
+    IPEndPoint client_addr,
+    QuicVersion version,
+    const QuicClock* clock,
+    QuicCryptoProof* proof,
+    QuicCompressedCertsCache* compressed_certs_cache,
+    CryptoHandshakeMessage* out) {
+  // Pass a inchoate CHLO.
+  crypto_config->ValidateClientHello(
+      inchoate_chlo, client_addr.address(), server_ip, version, clock, proof,
+      new FullChloGenerator(crypto_config, server_ip, client_addr, clock, proof,
+                            compressed_certs_cache, out));
 }
 
 }  // namespace test

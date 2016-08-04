@@ -543,7 +543,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   // Returns the (minimum) size of frames (sans variable-length portions).
   size_t GetDataFrameMinimumSize() const;
-  size_t GetControlFrameHeaderSize() const;
+  size_t GetFrameHeaderSize() const;
   size_t GetSynStreamMinimumSize() const;
   size_t GetSynReplyMinimumSize() const;
   size_t GetRstStreamMinimumSize() const;
@@ -566,9 +566,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   // Returns the maximum payload size of a DATA frame.
   size_t GetDataFrameMaximumPayload() const;
-
-  // Returns the prefix length for the given frame type.
-  size_t GetPrefixLength(SpdyFrameType type) const;
 
   // For debugging.
   static const char* StateToString(int state);

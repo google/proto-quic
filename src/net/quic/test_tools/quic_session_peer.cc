@@ -5,8 +5,8 @@
 #include "net/quic/test_tools/quic_session_peer.h"
 
 #include "base/stl_util.h"
-#include "net/quic/quic_session.h"
-#include "net/quic/reliable_quic_stream.h"
+#include "net/quic/core/quic_session.h"
+#include "net/quic/core/reliable_quic_stream.h"
 
 using std::map;
 

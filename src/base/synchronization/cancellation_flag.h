@@ -5,44 +5,15 @@
 #ifndef BASE_SYNCHRONIZATION_CANCELLATION_FLAG_H_
 #define BASE_SYNCHRONIZATION_CANCELLATION_FLAG_H_
 
-#include "base/atomicops.h"
-#include "base/base_export.h"
-#include "base/macros.h"
-#include "base/threading/platform_thread.h"
+#include "base/synchronization/atomic_flag.h"
 
 namespace base {
 
-// CancellationFlag allows one thread to cancel jobs executed on some worker
-// thread. Calling Set() from one thread and IsSet() from a number of threads
-// is thread-safe.
-//
-// This class IS NOT intended for synchronization between threads.
-class BASE_EXPORT CancellationFlag {
- public:
-  CancellationFlag() : flag_(false) {
-#if !defined(NDEBUG)
-    set_on_ = PlatformThread::CurrentId();
-#endif
-  }
-  ~CancellationFlag() {}
-
-  // Set the flag. May only be called on the thread which owns the object.
-  void Set();
-  bool IsSet() const;  // Returns true iff the flag was set.
-
-  // For subtle reasons that may be different on different architectures,
-  // a different thread testing IsSet() may erroneously read 'true' after
-  // this method has been called.
-  void UnsafeResetForTesting();
-
- private:
-  base::subtle::Atomic32 flag_;
-#if !defined(NDEBUG)
-  PlatformThreadId set_on_;
-#endif
-
-  DISALLOW_COPY_AND_ASSIGN(CancellationFlag);
-};
+// Use inheritance instead of "using" to allow forward declaration of "class
+// CancellationFlag".
+// TODO(fdoray): Replace CancellationFlag with AtomicFlag throughout the
+// codebase and delete this file. crbug.com/630251
+class CancellationFlag : public AtomicFlag {};
 
 }  // namespace base
 

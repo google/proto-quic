@@ -6,8 +6,8 @@
 #define NET_QUIC_TEST_TOOLS_QUIC_SPDY_SESSION_PEER_H_
 
 #include "base/macros.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_write_blocked_list.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_write_blocked_list.h"
 
 namespace net {
 

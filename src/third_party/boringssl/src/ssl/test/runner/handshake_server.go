@@ -84,6 +84,7 @@ func (c *Conn) serverHandshake() error {
 			// leg of the handshake is retransmited upon re-receiving a
 			// Finished.
 			if err := c.simulatePacketLoss(func() {
+				c.sendHandshakeSeq--
 				c.writeRecord(recordTypeHandshake, hs.finishedBytes)
 				c.flushHandshake()
 			}); err != nil {
@@ -266,6 +267,10 @@ func (hs *serverHandshakeState) doTLS13Handshake() error {
 		vers:   c.vers,
 	}
 
+	if config.Bugs.SendServerHelloVersion != 0 {
+		hs.hello.vers = config.Bugs.SendServerHelloVersion
+	}
+
 	hs.hello.random = make([]byte, 32)
 	if _, err := io.ReadFull(config.rand(), hs.hello.random); err != nil {
 		c.sendAlert(alertInternalError)
@@ -352,28 +357,99 @@ Curves:
 			}
 		}
 
-		if selectedKeyShare == nil {
-			// TODO(davidben,nharper): Implement HelloRetryRequest.
-			return errors.New("tls: HelloRetryRequest not implemented")
+		sendHelloRetryRequest := selectedKeyShare == nil
+		if config.Bugs.UnnecessaryHelloRetryRequest {
+			sendHelloRetryRequest = true
+		}
+		if config.Bugs.SkipHelloRetryRequest {
+			sendHelloRetryRequest = false
+		}
+		if sendHelloRetryRequest {
+			firstTime := true
+		ResendHelloRetryRequest:
+			// Send HelloRetryRequest.
+			helloRetryRequestMsg := helloRetryRequestMsg{
+				vers:          c.vers,
+				cipherSuite:   hs.hello.cipherSuite,
+				selectedGroup: selectedCurve,
+			}
+			if config.Bugs.SendHelloRetryRequestCurve != 0 {
+				helloRetryRequestMsg.selectedGroup = config.Bugs.SendHelloRetryRequestCurve
+			}
+			hs.writeServerHash(helloRetryRequestMsg.marshal())
+			c.writeRecord(recordTypeHandshake, helloRetryRequestMsg.marshal())
+
+			// Read new ClientHello.
+			newMsg, err := c.readHandshake()
+			if err != nil {
+				return err
+			}
+			newClientHello, ok := newMsg.(*clientHelloMsg)
+			if !ok {
+				c.sendAlert(alertUnexpectedMessage)
+				return unexpectedMessageError(newClientHello, newMsg)
+			}
+			hs.writeClientHash(newClientHello.marshal())
+
+			// Check that the new ClientHello matches the old ClientHello, except for
+			// the addition of the new KeyShareEntry at the end of the list, and
+			// removing the EarlyDataIndication extension (if present).
+			newKeyShares := newClientHello.keyShares
+			if len(newKeyShares) == 0 || newKeyShares[len(newKeyShares)-1].group != selectedCurve {
+				return errors.New("tls: KeyShare from HelloRetryRequest not present in new ClientHello")
+			}
+			oldClientHelloCopy := *hs.clientHello
+			oldClientHelloCopy.raw = nil
+			oldClientHelloCopy.hasEarlyData = false
+			oldClientHelloCopy.earlyDataContext = nil
+			newClientHelloCopy := *newClientHello
+			newClientHelloCopy.raw = nil
+			newClientHelloCopy.keyShares = newKeyShares[:len(newKeyShares)-1]
+			if !oldClientHelloCopy.equal(&newClientHelloCopy) {
+				return errors.New("tls: new ClientHello does not match")
+			}
+
+			if firstTime && config.Bugs.SecondHelloRetryRequest {
+				firstTime = false
+				goto ResendHelloRetryRequest
+			}
+
+			selectedKeyShare = &newKeyShares[len(newKeyShares)-1]
 		}
 
 		// Once a curve has been selected and a key share identified,
 		// the server needs to generate a public value and send it in
 		// the ServerHello.
-		curve, ok := curveForCurveID(selectedKeyShare.group)
+		curve, ok := curveForCurveID(selectedCurve)
 		if !ok {
 			panic("tls: server failed to look up curve ID")
 		}
+		c.curveID = selectedCurve
+
+		var peerKey []byte
+		if config.Bugs.SkipHelloRetryRequest {
+			// If skipping HelloRetryRequest, use a random key to
+			// avoid crashing.
+			curve2, _ := curveForCurveID(selectedCurve)
+			var err error
+			peerKey, err = curve2.offer(config.rand())
+			if err != nil {
+				return err
+			}
+		} else {
+			peerKey = selectedKeyShare.keyExchange
+		}
+
 		var publicKey []byte
 		var err error
-		publicKey, ecdheSecret, err = curve.accept(config.rand(), selectedKeyShare.keyExchange)
+		publicKey, ecdheSecret, err = curve.accept(config.rand(), peerKey)
 		if err != nil {
 			c.sendAlert(alertHandshakeFailure)
 			return err
 		}
 		hs.hello.hasKeyShare = true
 
-		curveID := selectedKeyShare.group
+		curveID := selectedCurve
 		if c.config.Bugs.SendCurve != 0 {
 			curveID = config.Bugs.SendCurve
 		}
@@ -415,8 +491,8 @@ Curves:
 
 	// Switch to handshake traffic keys.
 	handshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, handshakeTrafficLabel)
-	c.out.updateKeys(deriveTrafficAEAD(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, serverWrite), c.vers)
-	c.in.updateKeys(deriveTrafficAEAD(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, clientWrite), c.vers)
+	c.out.useTrafficSecret(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, serverWrite)
+	c.in.useTrafficSecret(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, clientWrite)
 
 	if hs.suite.flags&suitePSK != 0 {
 		return errors.New("tls: PSK ciphers not implemented for TLS 1.3")
@@ -507,6 +583,9 @@ Curves:
 	}
 	hs.writeServerHash(finished.marshal())
 	c.writeRecord(recordTypeHandshake, finished.marshal())
+	if c.config.Bugs.SendExtraFinished {
+		c.writeRecord(recordTypeHandshake, finished.marshal())
+	}
 	c.flushHandshake()
 
 	// The various secrets do not incorporate the client's final leg, so
@@ -516,7 +595,7 @@ Curves:
 
 	// Switch to application data keys on write. In particular, any alerts
 	// from the client certificate are sent over these keys.
-	c.out.updateKeys(deriveTrafficAEAD(c.vers, hs.suite, trafficSecret, applicationPhase, serverWrite), c.vers)
+	c.out.useTrafficSecret(c.vers, hs.suite, trafficSecret, applicationPhase, serverWrite)
 
 	// If we requested a client certificate, then the client must send a
 	// certificate message, even if it's empty.
@@ -589,12 +668,20 @@ Curves:
 	hs.writeClientHash(clientFinished.marshal())
 
 	// Switch to application data keys on read.
-	c.in.updateKeys(deriveTrafficAEAD(c.vers, hs.suite, trafficSecret, applicationPhase, clientWrite), c.vers)
+	c.in.useTrafficSecret(c.vers, hs.suite, trafficSecret, applicationPhase, clientWrite)
 
-	// TODO(davidben): Derive and save the resumption master secret for receiving tickets.
-	// TODO(davidben): Save the traffic secret for KeyUpdate.
 	c.cipherSuite = hs.suite
 	c.exporterSecret = hs.finishedHash.deriveSecret(masterSecret, exporterLabel)
+	c.resumptionSecret = hs.finishedHash.deriveSecret(masterSecret, resumptionLabel)
+
+	// TODO(davidben): Allow configuring the number of tickets sent for
+	// testing.
+	if !c.config.SessionTicketsDisabled {
+		ticketCount := 2
+		for i := 0; i < ticketCount; i++ {
+			c.SendNewSessionTicket()
+		}
+	}
 	return nil
 }
 
@@ -608,6 +695,10 @@ func (hs *serverHandshakeState) processClientHello() (isResume bool, err error) 
 		isDTLS:            c.isDTLS,
 		vers:              c.vers,
 		compressionMethod: compressionNone,
+	}
+
+	if config.Bugs.SendServerHelloVersion != 0 {
+		hs.hello.vers = config.Bugs.SendServerHelloVersion
 	}
 
 	hs.hello.random = make([]byte, 32)
@@ -971,6 +1062,9 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
+	if ecdhe, ok := keyAgreement.(*ecdheKeyAgreement); ok {
+		c.curveID = ecdhe.curveID
+	}
 	if skx != nil && !config.Bugs.SkipServerKeyExchange {
 		hs.writeServerHash(skx.marshal())
 		c.writeRecord(recordTypeHandshake, skx.marshal())
@@ -1309,7 +1403,14 @@ func (hs *serverHandshakeState) sendFinished(out []byte) error {
 
 	if !c.config.Bugs.SkipFinished && len(postCCSBytes) > 0 {
 		c.writeRecord(recordTypeHandshake, postCCSBytes)
-		c.flushHandshake()
+		if c.config.Bugs.SendExtraFinished {
+			c.writeRecord(recordTypeHandshake, finished.marshal())
+		}
+
+		if !c.config.Bugs.PackHelloRequestWithFinished {
+			// Defer flushing until renegotiation.
+			c.flushHandshake()
+		}
 	}
 
 	c.cipherSuite = hs.suite

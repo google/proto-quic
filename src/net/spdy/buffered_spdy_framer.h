@@ -39,7 +39,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
                          SpdyStreamId parent_stream_id,
                          bool exclusive,
                          bool fin,
-                         const SpdyHeaderBlock& headers) = 0;
+                         SpdyHeaderBlock headers) = 0;
 
   // Called when a data frame header is received.
   virtual void OnDataFrameHeader(SpdyStreamId stream_id,
@@ -97,7 +97,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Called when a PUSH_PROMISE frame has been parsed.
   virtual void OnPushPromise(SpdyStreamId stream_id,
                              SpdyStreamId promised_stream_id,
-                             const SpdyHeaderBlock& headers) = 0;
+                             SpdyHeaderBlock headers) = 0;
 
   // Called when an ALTSVC frame has been parsed.
   virtual void OnAltSvc(
@@ -191,14 +191,6 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   SpdyFramer::SpdyState state() const;
   bool MessageFullyRead();
   bool HasError();
-  SpdySerializedFrame* CreateSynStream(SpdyStreamId stream_id,
-                                       SpdyStreamId associated_stream_id,
-                                       SpdyPriority priority,
-                                       SpdyControlFlags flags,
-                                       SpdyHeaderBlock headers);
-  SpdySerializedFrame* CreateSynReply(SpdyStreamId stream_id,
-                                      SpdyControlFlags flags,
-                                      SpdyHeaderBlock headers);
   SpdySerializedFrame* CreateRstStream(SpdyStreamId stream_id,
                                        SpdyRstStreamStatus status) const;
   SpdySerializedFrame* CreateSettings(const SettingsMap& values) const;
@@ -231,8 +223,8 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
     return spdy_framer_.GetDataFrameMinimumSize();
   }
 
-  size_t GetControlFrameHeaderSize() const {
-    return spdy_framer_.GetControlFrameHeaderSize();
+  size_t GetFrameHeaderSize() const {
+    return spdy_framer_.GetFrameHeaderSize();
   }
 
   size_t GetSynStreamMinimumSize() const {

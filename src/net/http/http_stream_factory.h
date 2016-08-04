@@ -243,25 +243,10 @@ class NET_EXPORT HttpStreamFactory {
 
   virtual const HostMappingRules* GetHostMappingRules() const = 0;
 
-  // Static settings
-
-  // Reset all static settings to initialized values. Used to init test suite.
-  static void ResetStaticSettingsToInit();
-
-  // Turns spdy on or off.
-  // TODO(mmenke):  Figure out if this can be made a property of the
-  //                HttpNetworkSession.
-  static void set_spdy_enabled(bool value) {
-    spdy_enabled_ = value;
-  }
-  static bool spdy_enabled() { return spdy_enabled_; }
-
  protected:
   HttpStreamFactory();
 
  private:
-  static bool spdy_enabled_;
-
   url::SchemeHostPort RewriteHost(const url::SchemeHostPort& server);
 
   DISALLOW_COPY_AND_ASSIGN(HttpStreamFactory);

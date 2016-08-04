@@ -45,7 +45,9 @@ void QuicSimpleServerPacketWriter::OnWriteComplete(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
   write_blocked_ = false;
   WriteResult result(rv < 0 ? WRITE_STATUS_ERROR : WRITE_STATUS_OK, rv);
-  base::ResetAndReturn(&callback_).Run(result);
+  if (!callback_.is_null()) {
+    base::ResetAndReturn(&callback_).Run(result);
+  }
   blocked_writer_->OnCanWrite();
 }
 
@@ -71,7 +73,6 @@ WriteResult QuicSimpleServerPacketWriter::WritePacket(
   scoped_refptr<StringIOBuffer> buf(
       new StringIOBuffer(std::string(buffer, buf_len)));
   DCHECK(!IsWriteBlocked());
-  DCHECK(!callback_.is_null());
   int rv;
   if (buf_len <= static_cast<size_t>(std::numeric_limits<int>::max())) {
     rv = socket_->SendTo(

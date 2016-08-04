@@ -16,7 +16,7 @@
 #elif defined(COMPILER_MSVC)
 #define PRETTY_THIS base::StringPrintf("%s@%p ", __FUNCSIG__, this)
 #else
-#define PRETTY_THIS base::StringPrintf("%s@%p ", __FUNCTION__, this)
+#define PRETTY_THIS base::StringPrintf("%s@%p ", __func__, this)
 #endif
 
 namespace net {

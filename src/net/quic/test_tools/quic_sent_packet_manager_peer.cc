@@ -5,11 +5,11 @@
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 
 #include "base/stl_util.h"
-#include "net/quic/congestion_control/loss_detection_interface.h"
-#include "net/quic/congestion_control/send_algorithm_interface.h"
-#include "net/quic/quic_flags.h"
-#include "net/quic/quic_protocol.h"
-#include "net/quic/quic_sent_packet_manager.h"
+#include "net/quic/core/congestion_control/loss_detection_interface.h"
+#include "net/quic/core/congestion_control/send_algorithm_interface.h"
+#include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_sent_packet_manager.h"
 
 namespace net {
 namespace test {
@@ -106,8 +106,8 @@ bool QuicSentPacketManagerPeer::IsRetransmission(
     QuicSentPacketManager* sent_packet_manager,
     QuicPathId path_id,
     QuicPacketNumber packet_number) {
-  DCHECK(sent_packet_manager->HasRetransmittableFrames(path_id, packet_number));
-  if (!sent_packet_manager->HasRetransmittableFrames(path_id, packet_number)) {
+  DCHECK(HasRetransmittableFrames(sent_packet_manager, packet_number));
+  if (!HasRetransmittableFrames(sent_packet_manager, packet_number)) {
     return false;
   }
   for (auto transmission_info : sent_packet_manager->unacked_packets_) {
@@ -190,6 +190,21 @@ QuicSustainedBandwidthRecorder& QuicSentPacketManagerPeer::GetBandwidthRecorder(
 bool QuicSentPacketManagerPeer::UsingPacing(
     const QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->using_pacing_;
+}
+
+// static
+bool QuicSentPacketManagerPeer::IsUnacked(
+    QuicSentPacketManager* sent_packet_manager,
+    QuicPacketNumber packet_number) {
+  return sent_packet_manager->unacked_packets_.IsUnacked(packet_number);
+}
+
+// static
+bool QuicSentPacketManagerPeer::HasRetransmittableFrames(
+    QuicSentPacketManager* sent_packet_manager,
+    QuicPacketNumber packet_number) {
+  return sent_packet_manager->unacked_packets_.HasRetransmittableFrames(
+      packet_number);
 }
 
 }  // namespace test

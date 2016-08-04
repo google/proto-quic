@@ -9,16 +9,16 @@
 #include "base/sha1.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
-#include "net/quic/crypto/crypto_framer.h"
-#include "net/quic/crypto/crypto_handshake.h"
-#include "net/quic/crypto/crypto_utils.h"
-#include "net/quic/crypto/null_encrypter.h"
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
-#include "net/quic/quic_data_writer.h"
-#include "net/quic/quic_framer.h"
-#include "net/quic/quic_packet_creator.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/core/crypto/crypto_framer.h"
+#include "net/quic/core/crypto/crypto_handshake.h"
+#include "net/quic/core/crypto/crypto_utils.h"
+#include "net/quic/core/crypto/null_encrypter.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/quic_data_writer.h"
+#include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_packet_creator.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/spdy/spdy_frame_builder.h"
@@ -831,6 +831,14 @@ MockReceivedPacketManager::MockReceivedPacketManager(QuicConnectionStats* stats)
     : QuicReceivedPacketManager(stats) {}
 
 MockReceivedPacketManager::~MockReceivedPacketManager() {}
+
+MockSentPacketManager::MockSentPacketManager() {}
+
+MockSentPacketManager::~MockSentPacketManager() {}
+
+MockConnectionCloseDelegate::MockConnectionCloseDelegate() {}
+
+MockConnectionCloseDelegate::~MockConnectionCloseDelegate() {}
 
 void CreateClientSessionForTest(QuicServerId server_id,
                                 bool supports_stateless_rejects,

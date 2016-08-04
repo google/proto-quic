@@ -4,8 +4,8 @@
 
 #include "net/tools/quic/quic_simple_server.h"
 
-#include "net/quic/crypto/quic_random.h"
-#include "net/quic/quic_utils.h"
+#include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
 #include "net/quic/test_tools/quic_test_utils.h"

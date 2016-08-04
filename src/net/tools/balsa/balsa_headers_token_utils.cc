@@ -96,7 +96,7 @@ void BalsaHeadersTokenUtils::TokenizeHeaderValue(
   CHECK(tokens);
   tokens->clear();
 
-  // We may have more then 1 line with the same header key. Tokenize them all
+  // We may have more than 1 line with the same header key. Tokenize them all
   // and stick all the tokens into the same list.
   for (BalsaHeaders::const_header_lines_key_iterator header_line =
            headers.GetIteratorForKey(key);

@@ -370,7 +370,7 @@ File::Error File::Unlock() {
   return CallFcntlFlock(file_.get(), false);
 }
 
-File File::Duplicate() {
+File File::Duplicate() const {
   if (!IsValid())
     return File();
 
@@ -511,9 +511,10 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
 }
 #endif  // !defined(OS_NACL)
 
-bool File::DoFlush() {
+bool File::Flush() {
   ThreadRestrictions::AssertIOAllowed();
   DCHECK(IsValid());
+  SCOPED_FILE_TRACE("Flush");
 
 #if defined(OS_NACL)
   NOTIMPLEMENTED();  // NaCl doesn't implement fsync.

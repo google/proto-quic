@@ -14,12 +14,6 @@
 #include "net/cert_net/nss_ocsp.h"
 #endif
 
-class StaticReset : public ::testing::EmptyTestEventListener {
-  void OnTestStart(const ::testing::TestInfo& test_info) override {
-    net::HttpStreamFactory::ResetStaticSettingsToInit();
-  }
-};
-
 NetTestSuite::NetTestSuite(int argc, char** argv)
     : TestSuite(argc, argv) {
 }
@@ -28,7 +22,6 @@ NetTestSuite::~NetTestSuite() {}
 
 void NetTestSuite::Initialize() {
   TestSuite::Initialize();
-  ::testing::UnitTest::GetInstance()->listeners().Append(new StaticReset());
   InitializeTestThread();
 }
 

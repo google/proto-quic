@@ -234,6 +234,8 @@ void HostCache::EvictOneEntry(base::TimeTicks now) {
       oldest_it = it;
   }
 
+  if (!eviction_callback_.is_null())
+    eviction_callback_.Run(oldest_it->first, oldest_it->second);
   RecordErase(ERASE_EVICT, now, oldest_it->second);
   entries_.erase(oldest_it);
 }

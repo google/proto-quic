@@ -1391,8 +1391,7 @@ bool URLRequestHttpJob::ShouldFixMismatchedContentLength(int rv) const {
     if (request_ && request_->response_headers()) {
       int64_t expected_length =
           request_->response_headers()->GetContentLength();
-      VLOG(1) << __FUNCTION__ << "() "
-              << "\"" << request_->url().spec() << "\""
+      VLOG(1) << __func__ << "() \"" << request_->url().spec() << "\""
               << " content-length = " << expected_length
               << " pre total = " << prefilter_bytes_read()
               << " post total = " << postfilter_bytes_read();
@@ -1493,6 +1492,10 @@ void URLRequestHttpJob::RecordTimer() {
   request_creation_time_ = base::Time();
 
   UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpTimeToFirstByte", to_start);
+  if (request_info_.upload_data_stream &&
+      request_info_.upload_data_stream->size() > 1024 * 1024) {
+    UMA_HISTOGRAM_MEDIUM_TIMES("Net.HttpTimeToFirstByte.LargeUpload", to_start);
+  }
 }
 
 void URLRequestHttpJob::ResetTimer() {

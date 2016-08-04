@@ -10,14 +10,7 @@
 // There is a specific macro to do it: NON_EXPORTED_BASE(), defined in
 // compiler_specific.h
 #include "base/compiler_specific.h"
-
-// See comment at top of thread_checker.h
-#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON))
-#define ENABLE_NON_THREAD_SAFE 1
-#else
-#define ENABLE_NON_THREAD_SAFE 0
-#endif
-
+#include "base/logging.h"
 #include "base/threading/non_thread_safe_impl.h"
 
 namespace base {
@@ -58,13 +51,11 @@ class NonThreadSafeDoNothing {
 // to have a base::ThreadChecker as a member, rather than inherit from
 // NonThreadSafe. For more details about when to choose one over the other, see
 // the documentation for base::ThreadChecker.
-#if ENABLE_NON_THREAD_SAFE
+#if DCHECK_IS_ON()
 typedef NonThreadSafeImpl NonThreadSafe;
 #else
 typedef NonThreadSafeDoNothing NonThreadSafe;
-#endif  // ENABLE_NON_THREAD_SAFE
-
-#undef ENABLE_NON_THREAD_SAFE
+#endif  // DCHECK_IS_ON()
 
 }  // namespace base
 

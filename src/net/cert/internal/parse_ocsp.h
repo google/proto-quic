@@ -12,6 +12,7 @@
 #include "net/base/hash_value.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
+#include "net/cert/ocsp_revocation_status.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
@@ -75,11 +76,6 @@ struct OCSPCertID {
 // }
 // (from RFC 5280)
 struct OCSPCertStatus {
-  enum class Status {
-    GOOD,
-    REVOKED,
-    UNKNOWN,
-  };
 
   // Correspond to the values of CRLReason
   enum class RevocationReason {
@@ -98,7 +94,7 @@ struct OCSPCertStatus {
     LAST = AA_COMPROMISE,
   };
 
-  Status status;
+  OCSPRevocationStatus status;
   der::GeneralizedTime revocation_time;
   bool has_reason;
   RevocationReason revocation_reason;

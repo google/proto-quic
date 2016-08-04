@@ -53,9 +53,13 @@ type Conn struct {
 	// peerSignatureAlgorithm contains the signature algorithm that was used
 	// by the peer in the handshake, or zero if not applicable.
 	peerSignatureAlgorithm signatureAlgorithm
+	// curveID contains the curve that was used in the handshake, or zero if
+	// not applicable.
+	curveID CurveID
 
 	clientRandom, serverRandom [32]byte
 	exporterSecret             []byte
+	resumptionSecret           []byte
 
 	clientProtocol         string
 	clientProtocolFallback bool
@@ -155,6 +159,9 @@ type halfConn struct {
 	// used to save allocating a new buffer for each MAC.
 	inDigestBuf, outDigestBuf []byte
 
+	trafficSecret       []byte
+	keyUpdateGeneration int
+
 	config *Config
 }
 
@@ -199,11 +206,21 @@ func (hc *halfConn) changeCipherSpec(config *Config) error {
 	return nil
 }
 
-// updateKeys sets the current cipher state.
-func (hc *halfConn) updateKeys(cipher interface{}, version uint16) {
+// useTrafficSecret sets the current cipher state for TLS 1.3.
+func (hc *halfConn) useTrafficSecret(version uint16, suite *cipherSuite, secret, phase []byte, side trafficDirection) {
 	hc.version = version
-	hc.cipher = cipher
+	hc.cipher = deriveTrafficAEAD(version, suite, secret, phase, side)
+	hc.trafficSecret = secret
 	hc.incEpoch()
+}
+
+func (hc *halfConn) doKeyUpdate(c *Conn, isOutgoing bool) {
+	side := serverWrite
+	if c.isClient == isOutgoing {
+		side = clientWrite
+	}
+	hc.useTrafficSecret(hc.version, c.cipherSuite, updateTrafficSecret(c.cipherSuite.hash(), hc.trafficSecret), applicationPhase, side)
+	hc.keyUpdateGeneration++
 }
 
 // incSeq increments the sequence number.
@@ -873,14 +890,11 @@ Again:
 		b = nil
 
 	case recordTypeHandshake:
+		// Allow handshake data while reading application data to
+		// trigger post-handshake messages.
 		// TODO(rsc): Should at least pick off connection close.
-		if typ != want {
-			// A client might need to process a HelloRequest from
-			// the server, thus receiving a handshake message when
-			// application data is expected is ok.
-			if !c.isClient || want != recordTypeApplicationData {
-				return c.in.setErrorLocked(c.sendAlert(alertNoRenegotiation))
-			}
+		if typ != want && want != recordTypeApplicationData {
+			return c.in.setErrorLocked(c.sendAlert(alertNoRenegotiation))
 		}
 		c.hand.Write(data)
 	}
@@ -1137,8 +1151,12 @@ func (c *Conn) readHandshake() (interface{}, error) {
 		m = &serverHelloMsg{
 			isDTLS: c.isDTLS,
 		}
+	case typeHelloRetryRequest:
+		m = new(helloRetryRequestMsg)
 	case typeNewSessionTicket:
-		m = new(newSessionTicketMsg)
+		m = &newSessionTicketMsg{
+			version: c.vers,
+		}
 	case typeEncryptedExtensions:
 		m = new(encryptedExtensionsMsg)
 	case typeCertificate:
@@ -1170,6 +1188,8 @@ func (c *Conn) readHandshake() (interface{}, error) {
 		m = new(helloVerifyRequestMsg)
 	case typeChannelID:
 		m = new(channelIDMsg)
+	case typeKeyUpdate:
+		m = new(keyUpdateMsg)
 	default:
 		return nil, c.in.setErrorLocked(c.sendAlert(alertUnexpectedMessage))
 	}
@@ -1254,6 +1274,20 @@ func (c *Conn) simulatePacketLoss(resendFunc func()) error {
 	return nil
 }
 
+func (c *Conn) SendHalfHelloRequest() error {
+	if err := c.Handshake(); err != nil {
+		return err
+	}
+
+	c.out.Lock()
+	defer c.out.Unlock()
+
+	if _, err := c.writeRecord(recordTypeHandshake, []byte{typeHelloRequest, 0}); err != nil {
+		return err
+	}
+	return c.flushHandshake()
+}
+
 // Write writes data to the connection.
 func (c *Conn) Write(b []byte) (int, error) {
 	if err := c.Handshake(); err != nil {
@@ -1263,12 +1297,23 @@ func (c *Conn) Write(b []byte) (int, error) {
 	c.out.Lock()
 	defer c.out.Unlock()
 
+	// Flush any pending handshake data. PackHelloRequestWithFinished may
+	// have been set and the handshake not followed by Renegotiate.
+	c.flushHandshake()
+
 	if err := c.out.err; err != nil {
 		return 0, err
 	}
 
 	if !c.handshakeComplete {
 		return 0, alertInternalError
+	}
+
+	// Catch up with KeyUpdates from the peer.
+	for c.out.keyUpdateGeneration < c.in.keyUpdateGeneration {
+		if err := c.sendKeyUpdateLocked(); err != nil {
+			return 0, err
+		}
 	}
 
 	if c.config.Bugs.SendSpuriousAlert != 0 {
@@ -1278,6 +1323,10 @@ func (c *Conn) Write(b []byte) (int, error) {
 	if c.config.Bugs.SendHelloRequestBeforeEveryAppDataRecord {
 		c.writeRecord(recordTypeHandshake, []byte{typeHelloRequest, 0, 0, 0})
 		c.flushHandshake()
+	}
+
+	if c.config.Bugs.SendKeyUpdateBeforeEveryAppDataRecord {
+		c.sendKeyUpdateLocked()
 	}
 
 	// SSL 3.0 and TLS 1.0 are susceptible to a chosen-plaintext
@@ -1304,23 +1353,58 @@ func (c *Conn) Write(b []byte) (int, error) {
 	return n + m, c.out.setErrorLocked(err)
 }
 
-func (c *Conn) handleRenegotiation() error {
-	c.handshakeComplete = false
-	if !c.isClient {
-		panic("renegotiation should only happen for a client")
-	}
-
+func (c *Conn) handlePostHandshakeMessage() error {
 	msg, err := c.readHandshake()
 	if err != nil {
 		return err
 	}
-	_, ok := msg.(*helloRequestMsg)
-	if !ok {
-		c.sendAlert(alertUnexpectedMessage)
-		return alertUnexpectedMessage
+
+	if c.vers < VersionTLS13 {
+		if !c.isClient {
+			c.sendAlert(alertUnexpectedMessage)
+			return errors.New("tls: unexpected post-handshake message")
+		}
+
+		_, ok := msg.(*helloRequestMsg)
+		if !ok {
+			c.sendAlert(alertUnexpectedMessage)
+			return alertUnexpectedMessage
+		}
+
+		c.handshakeComplete = false
+		return c.Handshake()
 	}
 
-	return c.Handshake()
+	if c.isClient {
+		if newSessionTicket, ok := msg.(*newSessionTicketMsg); ok {
+			if c.config.ClientSessionCache == nil || newSessionTicket.ticketLifetime == 0 {
+				return nil
+			}
+
+			session := &ClientSessionState{
+				sessionTicket:      newSessionTicket.ticket,
+				vers:               c.vers,
+				cipherSuite:        c.cipherSuite.id,
+				masterSecret:       c.resumptionSecret,
+				serverCertificates: c.peerCertificates,
+				sctList:            c.sctList,
+				ocspResponse:       c.ocspResponse,
+			}
+
+			cacheKey := clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
+			c.config.ClientSessionCache.Put(cacheKey, session)
+			return nil
+		}
+	}
+
+	if _, ok := msg.(*keyUpdateMsg); ok {
+		c.in.doKeyUpdate(c, false)
+		return nil
+	}
+
+	// TODO(davidben): Add support for KeyUpdate.
+	c.sendAlert(alertUnexpectedMessage)
+	return alertUnexpectedMessage
 }
 
 func (c *Conn) Renegotiate() error {
@@ -1357,9 +1441,9 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 				return 0, err
 			}
 			if c.hand.Len() > 0 {
-				// We received handshake bytes, indicating the
-				// start of a renegotiation.
-				if err := c.handleRenegotiation(); err != nil {
+				// We received handshake bytes, indicating a
+				// post-handshake message.
+				if err := c.handlePostHandshakeMessage(); err != nil {
 					return 0, err
 				}
 				continue
@@ -1498,6 +1582,7 @@ func (c *Conn) ConnectionState() ConnectionState {
 		state.TLSUnique = c.firstFinished[:]
 		state.SCTList = c.sctList
 		state.PeerSignatureAlgorithm = c.peerSignatureAlgorithm
+		state.CurveID = c.curveID
 	}
 
 	return state
@@ -1571,4 +1656,58 @@ func (c *Conn) noRenegotiationInfo() bool {
 		return true
 	}
 	return false
+}
+
+func (c *Conn) SendNewSessionTicket() error {
+	if c.isClient || c.vers < VersionTLS13 {
+		return errors.New("tls: cannot send post-handshake NewSessionTicket")
+	}
+
+	var peerCertificatesRaw [][]byte
+	for _, cert := range c.peerCertificates {
+		peerCertificatesRaw = append(peerCertificatesRaw, cert.Raw)
+	}
+	state := sessionState{
+		vers:         c.vers,
+		cipherSuite:  c.cipherSuite.id,
+		masterSecret: c.resumptionSecret,
+		certificates: peerCertificatesRaw,
+	}
+
+	// TODO(davidben): Allow configuring these values.
+	m := &newSessionTicketMsg{
+		version:        c.vers,
+		ticketLifetime: uint32(24 * time.Hour / time.Second),
+		ticketFlags:    ticketAllowDHEResumption | ticketAllowPSKResumption,
+	}
+	if !c.config.Bugs.SendEmptySessionTicket {
+		var err error
+		m.ticket, err = c.encryptTicket(&state)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.out.Lock()
+	defer c.out.Unlock()
+	_, err := c.writeRecord(recordTypeHandshake, m.marshal())
+	return err
+}
+
+func (c *Conn) SendKeyUpdate() error {
+	c.out.Lock()
+	defer c.out.Unlock()
+	return c.sendKeyUpdateLocked()
+}
+
+func (c *Conn) sendKeyUpdateLocked() error {
+	m := new(keyUpdateMsg)
+	if _, err := c.writeRecord(recordTypeHandshake, m.marshal()); err != nil {
+		return err
+	}
+	if err := c.flushHandshake(); err != nil {
+		return err
+	}
+	c.out.doKeyUpdate(c, true)
+	return nil
 }

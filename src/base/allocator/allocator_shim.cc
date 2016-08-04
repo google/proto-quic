@@ -5,15 +5,21 @@
 #include "base/allocator/allocator_shim.h"
 
 #include <errno.h>
-#include <unistd.h>
 
 #include <new>
 
 #include "base/atomicops.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/process/process_metrics.h"
 #include "base/threading/platform_thread.h"
 #include "build/build_config.h"
+
+#if !defined(OS_WIN)
+#include <unistd.h>
+#else
+#include "base/allocator/winheap_stubs_win.h"
+#endif
 
 // No calls to malloc / new in this file. They would would cause re-entrancy of
 // the shim, which is hard to deal with. Keep this code as simple as possible
@@ -42,16 +48,19 @@ bool CalledOnValidThread() {
   return prev_tid == kInvalidTID || prev_tid == cur_tid;
 }
 
-inline size_t GetPageSize() {
+inline size_t GetCachedPageSize() {
   static size_t pagesize = 0;
   if (!pagesize)
-    pagesize = sysconf(_SC_PAGESIZE);
+    pagesize = base::GetPageSize();
   return pagesize;
 }
 
 // Calls the std::new handler thread-safely. Returns true if a new_handler was
 // set and called, false if no new_handler was set.
-bool CallNewHandler() {
+bool CallNewHandler(size_t size) {
+#if defined(OS_WIN)
+  return base::allocator::WinCallNewHandler(size);
+#else
   // TODO(primiano): C++11 has introduced ::get_new_handler() which is supposed
   // to be thread safe and would avoid the spinlock boilerplate here. However
   // it doesn't seem to be available yet in the Linux chroot headers yet.
@@ -69,6 +78,7 @@ bool CallNewHandler() {
   // Assume the new_handler will abort if it fails. Exception are disabled and
   // we don't support the case of a new_handler throwing std::bad_balloc.
   return true;
+#endif
 }
 
 inline const allocator::AllocatorDispatch* GetChainHead() {
@@ -148,7 +158,7 @@ void* ShimCppNew(size_t size) {
   void* ptr;
   do {
     ptr = chain_head->alloc_function(chain_head, size);
-  } while (!ptr && CallNewHandler());
+  } while (!ptr && CallNewHandler(size));
   return ptr;
 }
 
@@ -162,7 +172,8 @@ void* ShimMalloc(size_t size) {
   void* ptr;
   do {
     ptr = chain_head->alloc_function(chain_head, size);
-  } while (!ptr && g_call_new_handler_on_malloc_failure && CallNewHandler());
+  } while (!ptr && g_call_new_handler_on_malloc_failure &&
+           CallNewHandler(size));
   return ptr;
 }
 
@@ -171,7 +182,8 @@ void* ShimCalloc(size_t n, size_t size) {
   void* ptr;
   do {
     ptr = chain_head->alloc_zero_initialized_function(chain_head, n, size);
-  } while (!ptr && g_call_new_handler_on_malloc_failure && CallNewHandler());
+  } while (!ptr && g_call_new_handler_on_malloc_failure &&
+           CallNewHandler(size));
   return ptr;
 }
 
@@ -183,7 +195,7 @@ void* ShimRealloc(void* address, size_t size) {
   do {
     ptr = chain_head->realloc_function(chain_head, address, size);
   } while (!ptr && size && g_call_new_handler_on_malloc_failure &&
-           CallNewHandler());
+           CallNewHandler(size));
   return ptr;
 }
 
@@ -192,7 +204,8 @@ void* ShimMemalign(size_t alignment, size_t size) {
   void* ptr;
   do {
     ptr = chain_head->alloc_aligned_function(chain_head, alignment, size);
-  } while (!ptr && g_call_new_handler_on_malloc_failure && CallNewHandler());
+  } while (!ptr && g_call_new_handler_on_malloc_failure &&
+           CallNewHandler(size));
   return ptr;
 }
 
@@ -209,17 +222,17 @@ int ShimPosixMemalign(void** res, size_t alignment, size_t size) {
 }
 
 void* ShimValloc(size_t size) {
-  return ShimMemalign(GetPageSize(), size);
+  return ShimMemalign(GetCachedPageSize(), size);
 }
 
 void* ShimPvalloc(size_t size) {
   // pvalloc(0) should allocate one page, according to its man page.
   if (size == 0) {
-    size = GetPageSize();
+    size = GetCachedPageSize();
   } else {
-    size = (size + GetPageSize() - 1) & ~(GetPageSize() - 1);
+    size = (size + GetCachedPageSize() - 1) & ~(GetCachedPageSize() - 1);
   }
-  return ShimMemalign(GetPageSize(), size);
+  return ShimMemalign(GetCachedPageSize(), size);
 }
 
 void ShimFree(void* address) {
@@ -229,16 +242,22 @@ void ShimFree(void* address) {
 
 }  // extern "C"
 
-// Cpp symbols (new / delete) should always be routed through the shim layer.
+#if !defined(OS_WIN)
+// Cpp symbols (new / delete) should always be routed through the shim layer
+// except on Windows where the malloc intercept is deep enough that it also
+// catches the cpp calls.
 #include "base/allocator/allocator_shim_override_cpp_symbols.h"
+#endif
 
+#if defined(OS_ANDROID)
 // Android does not support symbol interposition. The way malloc symbols are
 // intercepted on Android is by using link-time -wrap flags.
-#if !defined(OS_ANDROID)
-// Ditto for plain malloc() / calloc() / free() etc. symbols.
-#include "base/allocator/allocator_shim_override_libc_symbols.h"
-#else
 #include "base/allocator/allocator_shim_override_linker_wrapped_symbols.h"
+#elif defined(OS_WIN)
+// On Windows we use plain link-time overriding of the CRT symbols.
+#include "base/allocator/allocator_shim_override_ucrt_symbols_win.h"
+#else
+#include "base/allocator/allocator_shim_override_libc_symbols.h"
 #endif
 
 // In the case of tcmalloc we also want to plumb into the glibc hooks

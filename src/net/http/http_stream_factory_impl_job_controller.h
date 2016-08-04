@@ -132,6 +132,14 @@ class HttpStreamFactoryImpl::JobController
       Job* job,
       const ConnectionAttempts& attempts) override;
 
+  // Invoked when |job| finishes initiating a connection.
+  // Resume the other job if there's an error raised.
+  void OnConnectionInitialized(Job* job, int rv) override;
+
+  // Return false if |job| can advance to the next state. Otherwise, |job|
+  // will wait for Job::Resume() to be called before advancing.
+  bool ShouldWait(Job* job) override;
+
   // Called when |job| determines the appropriate |spdy_session_key| for the
   // Request. Note that this does not mean that SPDY is necessarily supported
   // for this SpdySessionKey, since we may need to wait for NPN to complete
@@ -142,11 +150,14 @@ class HttpStreamFactoryImpl::JobController
   // Remove session from the SpdySessionRequestMap.
   void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) override;
   const BoundNetLog* GetNetLog(Job* job) const override;
+
+  void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) override;
+
   WebSocketHandshakeStreamBase::CreateHelper*
   websocket_handshake_stream_create_helper() override;
 
  private:
-  FRIEND_TEST_ALL_PREFIXES(HttpStreamFactoryImplRequestTest, DelayMainJob);
+  friend class JobControllerPeer;
 
   // Creates Job(s) for |request_|. Job(s) will be owned by |this|.
   void CreateJobs(const HttpRequestInfo& request_info,
@@ -182,6 +193,11 @@ class HttpStreamFactoryImpl::JobController
                            bool using_spdy);
 
   void MaybeNotifyFactoryOfCompletion();
+
+  // Called to resume the main job with delay.
+  void MaybeResumeMainJob(Job* job, const base::TimeDelta& delay);
+
+  void ResumeMainJob();
 
   // Returns true if QUIC is whitelisted for |host|.
   bool IsQuicWhitelistedForHost(const std::string& host);
@@ -223,9 +239,17 @@ class HttpStreamFactoryImpl::JobController
   // True if a Job has ever been bound to the |request_|.
   bool job_bound_;
 
+  // True if the main job has to wait for the alternative job: i.e., the main
+  // job must not create a connection until it is resumed.
+  bool main_job_is_blocked_;
+  // Waiting time for the main job before it is resumed.
+  base::TimeDelta main_job_wait_time_;
+
   // At the point where a Job is irrevocably tied to |request_|, we set this.
   // It will be nulled when the |request_| is finished.
   Job* bound_job_;
+
+  base::WeakPtrFactory<JobController> ptr_factory_;
 };
 
 }  // namespace net

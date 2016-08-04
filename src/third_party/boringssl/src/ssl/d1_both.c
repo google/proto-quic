@@ -262,17 +262,6 @@ static int dtls1_is_current_message_complete(const SSL *ssl) {
   return frag != NULL && frag->reassembly == NULL;
 }
 
-/* dtls1_pop_message removes the current handshake message, which must be
- * complete, and advances to the next one. */
-static void dtls1_pop_message(SSL *ssl) {
-  assert(dtls1_is_current_message_complete(ssl));
-
-  size_t index = ssl->d1->handshake_read_seq % SSL_MAX_HANDSHAKE_FLIGHT;
-  dtls1_hm_fragment_free(ssl->d1->incoming_messages[index]);
-  ssl->d1->incoming_messages[index] = NULL;
-  ssl->d1->handshake_read_seq++;
-}
-
 /* dtls1_get_incoming_message returns the incoming message corresponding to
  * |msg_hdr|. If none exists, it creates a new one and inserts it in the
  * queue. Otherwise, it checks |msg_hdr| is consistent with the existing one. It
@@ -368,6 +357,13 @@ start:
       return -1;
     }
 
+    /* The encrypted epoch in DTLS has only one handshake message. */
+    if (ssl->d1->r_epoch == 1 && msg_hdr.seq != ssl->d1->handshake_read_seq) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_RECORD);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+      return -1;
+    }
+
     if (msg_hdr.seq < ssl->d1->handshake_read_seq ||
         msg_hdr.seq >
             (unsigned)ssl->d1->handshake_read_seq + SSL_MAX_HANDSHAKE_FLIGHT) {
@@ -405,12 +401,12 @@ int dtls1_get_message(SSL *ssl, int msg_type,
      * ssl_dont_hash_message would have to have been applied to the previous
      * call. */
     assert(hash_message == ssl_hash_message);
-    assert(dtls1_is_current_message_complete(ssl));
+    assert(ssl->init_msg != NULL);
 
     ssl->s3->tmp.reuse_message = 0;
     hash_message = ssl_dont_hash_message;
-  } else if (dtls1_is_current_message_complete(ssl)) {
-    dtls1_pop_message(ssl);
+  } else {
+    dtls1_release_current_message(ssl, 0 /* don't free buffer */);
   }
 
   /* Process handshake records until the current message is ready. */
@@ -456,6 +452,21 @@ int dtls1_hash_current_message(SSL *ssl) {
                                     DTLS1_HM_HEADER_LENGTH + frag->msg_len);
 }
 
+void dtls1_release_current_message(SSL *ssl, int free_buffer) {
+  if (ssl->init_msg == NULL) {
+    return;
+  }
+
+  assert(dtls1_is_current_message_complete(ssl));
+  size_t index = ssl->d1->handshake_read_seq % SSL_MAX_HANDSHAKE_FLIGHT;
+  dtls1_hm_fragment_free(ssl->d1->incoming_messages[index]);
+  ssl->d1->incoming_messages[index] = NULL;
+  ssl->d1->handshake_read_seq++;
+
+  ssl->init_msg = NULL;
+  ssl->init_num = 0;
+}
+
 void dtls_clear_incoming_messages(SSL *ssl) {
   for (size_t i = 0; i < SSL_MAX_HANDSHAKE_FLIGHT; i++) {
     dtls1_hm_fragment_free(ssl->d1->incoming_messages[i]);
@@ -464,13 +475,14 @@ void dtls_clear_incoming_messages(SSL *ssl) {
 }
 
 int dtls_has_incoming_messages(const SSL *ssl) {
-  /* This function may not be called if there is a pending |dtls1_get_message|
-   * operation. */
-  assert(dtls1_is_current_message_complete(ssl));
-
   size_t current = ssl->d1->handshake_read_seq % SSL_MAX_HANDSHAKE_FLIGHT;
   for (size_t i = 0; i < SSL_MAX_HANDSHAKE_FLIGHT; i++) {
-    if (i != current && ssl->d1->incoming_messages[i] != NULL) {
+    /* Skip the current message. */
+    if (ssl->init_msg != NULL && i == current) {
+      assert(dtls1_is_current_message_complete(ssl));
+      continue;
+    }
+    if (ssl->d1->incoming_messages[i] != NULL) {
       return 1;
     }
   }

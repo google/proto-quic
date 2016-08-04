@@ -9,9 +9,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "net/quic/crypto/proof_verifier_chromium.h"
-#include "net/quic/quic_crypto_client_stream_factory.h"
-#include "net/quic/quic_server_id.h"
+#include "net/quic/chromium/crypto/proof_verifier_chromium.h"
+#include "net/quic/core/quic_crypto_client_stream_factory.h"
+#include "net/quic/core/quic_server_id.h"
 #include "net/quic/test_tools/mock_crypto_client_stream.h"
 
 namespace net {

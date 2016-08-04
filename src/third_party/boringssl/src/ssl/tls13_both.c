@@ -40,6 +40,19 @@ SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl)) {
   return hs;
 }
 
+void ssl_handshake_clear_groups(SSL_HANDSHAKE *hs) {
+  if (hs->groups == NULL) {
+    return;
+  }
+
+  for (size_t i = 0; i < hs->groups_len; i++) {
+    SSL_ECDH_CTX_cleanup(&hs->groups[i]);
+  }
+  OPENSSL_free(hs->groups);
+  hs->groups = NULL;
+  hs->groups_len = 0;
+}
+
 void ssl_handshake_free(SSL_HANDSHAKE *hs) {
   if (hs == NULL) {
     return;
@@ -47,12 +60,8 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs) {
 
   OPENSSL_cleanse(hs->secret, sizeof(hs->secret));
   OPENSSL_cleanse(hs->traffic_secret_0, sizeof(hs->traffic_secret_0));
-  if (hs->groups != NULL) {
-    for (size_t i = 0; i < hs->groups_len; i++) {
-      SSL_ECDH_CTX_cleanup(&hs->groups[i]);
-    }
-    OPENSSL_free(hs->groups);
-  }
+  ssl_handshake_clear_groups(hs);
+  OPENSSL_free(hs->key_share_bytes);
   OPENSSL_free(hs->public_key);
   OPENSSL_free(hs->cert_context);
   OPENSSL_free(hs);
@@ -68,6 +77,21 @@ int tls13_handshake(SSL *ssl) {
         OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
         return -1;
 
+      case ssl_hs_flush:
+      case ssl_hs_flush_and_read_message: {
+        int ret = BIO_flush(ssl->wbio);
+        if (ret <= 0) {
+          ssl->rwstate = SSL_WRITING;
+          return ret;
+        }
+        if (hs->wait != ssl_hs_flush_and_read_message) {
+          break;
+        }
+        ssl->method->expect_flight(ssl);
+        hs->wait = ssl_hs_read_message;
+        /* Fall-through. */
+      }
+
       case ssl_hs_read_message: {
         int ret = ssl->method->ssl_get_message(ssl, -1, ssl_dont_hash_message);
         if (ret <= 0) {
@@ -79,15 +103,6 @@ int tls13_handshake(SSL *ssl) {
       case ssl_hs_write_message: {
         int ret = ssl->method->write_message(ssl);
         if (ret <= 0) {
-          return ret;
-        }
-        break;
-      }
-
-      case ssl_hs_flush: {
-        int ret = BIO_flush(ssl->wbio);
-        if (ret <= 0) {
-          ssl->rwstate = SSL_WRITING;
           return ret;
         }
         break;
@@ -179,9 +194,9 @@ int tls13_process_certificate(SSL *ssl) {
   int ret = 0;
   uint8_t alert;
   STACK_OF(X509) *chain = ssl_parse_cert_chain(
-      ssl, &alert,
-      ssl->ctx->retain_only_sha256_of_client_certs ? ssl->session->peer_sha256
-                                                   : NULL,
+      ssl, &alert, ssl->ctx->retain_only_sha256_of_client_certs
+                       ? ssl->s3->new_session->peer_sha256
+                       : NULL,
       &cbs);
   if (chain == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -217,7 +232,7 @@ int tls13_process_certificate(SSL *ssl) {
 
   if (ssl->server && ssl->ctx->retain_only_sha256_of_client_certs) {
     /* The hash was filled in by |ssl_parse_cert_chain|. */
-    ssl->session->peer_sha256_valid = 1;
+    ssl->s3->new_session->peer_sha256_valid = 1;
   }
 
   X509 *leaf = sk_X509_value(chain, 0);
@@ -236,19 +251,19 @@ int tls13_process_certificate(SSL *ssl) {
   }
   ERR_clear_error();
 
-  ssl->session->verify_result = ssl->verify_result;
+  ssl->s3->new_session->verify_result = ssl->verify_result;
 
-  X509_free(ssl->session->peer);
+  X509_free(ssl->s3->new_session->peer);
   /* For historical reasons, the client and server differ on whether the chain
    * includes the leaf. */
   if (ssl->server) {
-    ssl->session->peer = sk_X509_shift(chain);
+    ssl->s3->new_session->peer = sk_X509_shift(chain);
   } else {
-    ssl->session->peer = X509_up_ref(leaf);
+    ssl->s3->new_session->peer = X509_up_ref(leaf);
   }
 
-  sk_X509_pop_free(ssl->session->cert_chain, X509_free);
-  ssl->session->cert_chain = chain;
+  sk_X509_pop_free(ssl->s3->new_session->cert_chain, X509_free);
+  ssl->s3->new_session->cert_chain = chain;
   chain = NULL;
 
   ret = 1;
@@ -260,7 +275,7 @@ err:
 
 int tls13_process_certificate_verify(SSL *ssl) {
   int ret = 0;
-  X509 *peer = ssl->session->peer;
+  X509 *peer = ssl->s3->new_session->peer;
   EVP_PKEY *pkey = NULL;
   uint8_t *msg = NULL;
   size_t msg_len;
@@ -316,6 +331,8 @@ int tls13_check_message_type(SSL *ssl, int type) {
   if (ssl->s3->tmp.message_type != type) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
+    ERR_add_error_dataf("got type %d, wanted type %d",
+                        ssl->s3->tmp.message_type, type);
     return 0;
   }
 
@@ -434,4 +451,33 @@ int tls13_prepare_finished(SSL *ssl) {
   }
 
   return 1;
+}
+
+static int tls13_receive_key_update(SSL *ssl) {
+  if (ssl->init_num != 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    return 0;
+  }
+
+  // TODO(svaldez): Send KeyUpdate.
+  return tls13_rotate_traffic_key(ssl, evp_aead_open);
+}
+
+int tls13_post_handshake(SSL *ssl) {
+  if (ssl->s3->tmp.message_type == SSL3_MT_KEY_UPDATE) {
+    return tls13_receive_key_update(ssl);
+  }
+
+  if (ssl->s3->tmp.message_type == SSL3_MT_NEW_SESSION_TICKET &&
+      !ssl->server) {
+    // TODO(svaldez): Handle NewSessionTicket.
+    return 1;
+  }
+
+  // TODO(svaldez): Handle post-handshake authentication.
+
+  ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+  OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
+  return 0;
 }

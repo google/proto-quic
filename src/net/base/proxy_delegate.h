@@ -38,7 +38,6 @@ class NET_EXPORT ProxyDelegate {
   // ProxyInfo |result|.
   virtual void OnResolveProxy(const GURL& url,
                               const std::string& method,
-                              int load_flags,
                               const ProxyService& proxy_service,
                               ProxyInfo* result) = 0;
 

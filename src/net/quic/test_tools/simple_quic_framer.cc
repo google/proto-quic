@@ -8,8 +8,8 @@
 
 #include "base/macros.h"
 #include "base/stl_util.h"
-#include "net/quic/crypto/quic_decrypter.h"
-#include "net/quic/crypto/quic_encrypter.h"
+#include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/crypto/quic_encrypter.h"
 
 using base::StringPiece;
 using std::string;

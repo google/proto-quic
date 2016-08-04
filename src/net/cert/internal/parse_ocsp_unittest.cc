@@ -80,11 +80,11 @@ OCSPFailure ParseOCSP(const std::string& file_name) {
     return PARSE_OCSP_SINGLE_RESPONSE;
 
   switch (status.status) {
-    case OCSPCertStatus::Status::GOOD:
+    case OCSPRevocationStatus::GOOD:
       return OCSP_SUCCESS;
-    case OCSPCertStatus::Status::REVOKED:
+    case OCSPRevocationStatus::REVOKED:
       return OCSP_SUCCESS_REVOKED;
-    case OCSPCertStatus::Status::UNKNOWN:
+    case OCSPRevocationStatus::UNKNOWN:
       return OCSP_SUCCESS_UNKNOWN;
   }
 

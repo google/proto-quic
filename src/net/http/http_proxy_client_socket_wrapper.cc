@@ -471,7 +471,7 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
   SSLClientSocket* ssl =
       static_cast<SSLClientSocket*>(transport_socket_handle_->socket());
   protocol_negotiated_ = ssl->GetNegotiatedProtocol();
-  using_spdy_ = NextProtoIsSPDY(protocol_negotiated_);
+  using_spdy_ = protocol_negotiated_ == kProtoHTTP2;
 
   // Reset the timer to just the length of time allowed for HttpProxy handshake
   // so that a fast SSL connection plus a slow HttpProxy failure doesn't take

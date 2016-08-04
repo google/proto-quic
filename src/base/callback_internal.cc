@@ -18,19 +18,10 @@ void BindStateBase::Release() {
     destructor_(this);
 }
 
-CallbackBase<CopyMode::MoveOnly>::CallbackBase(CallbackBase&& c)
-    : bind_state_(std::move(c.bind_state_)),
-      polymorphic_invoke_(c.polymorphic_invoke_) {
-  c.polymorphic_invoke_ = nullptr;
-}
+CallbackBase<CopyMode::MoveOnly>::CallbackBase(CallbackBase&& c) = default;
 
 CallbackBase<CopyMode::MoveOnly>&
-CallbackBase<CopyMode::MoveOnly>::operator=(CallbackBase&& c) {
-  bind_state_ = std::move(c.bind_state_);
-  polymorphic_invoke_ = c.polymorphic_invoke_;
-  c.polymorphic_invoke_ = nullptr;
-  return *this;
-}
+CallbackBase<CopyMode::MoveOnly>::operator=(CallbackBase&& c) = default;
 
 void CallbackBase<CopyMode::MoveOnly>::Reset() {
   polymorphic_invoke_ = nullptr;
@@ -41,7 +32,10 @@ void CallbackBase<CopyMode::MoveOnly>::Reset() {
 
 bool CallbackBase<CopyMode::MoveOnly>::EqualsInternal(
     const CallbackBase& other) const {
-  return bind_state_.get() == other.bind_state_.get() &&
+  // Ignore |polymorphic_invoke_| value in null case.
+  if (!bind_state_ || !other.bind_state_)
+    return bind_state_ == other.bind_state_;
+  return bind_state_ == other.bind_state_ &&
          polymorphic_invoke_ == other.polymorphic_invoke_;
 }
 
@@ -60,8 +54,7 @@ CallbackBase<CopyMode::Copyable>::CallbackBase(
   polymorphic_invoke_ = c.polymorphic_invoke_;
 }
 
-CallbackBase<CopyMode::Copyable>::CallbackBase(CallbackBase&& c)
-    : CallbackBase<CopyMode::MoveOnly>(std::move(c)) {}
+CallbackBase<CopyMode::Copyable>::CallbackBase(CallbackBase&& c) = default;
 
 CallbackBase<CopyMode::Copyable>&
 CallbackBase<CopyMode::Copyable>::operator=(const CallbackBase& c) {
@@ -71,10 +64,7 @@ CallbackBase<CopyMode::Copyable>::operator=(const CallbackBase& c) {
 }
 
 CallbackBase<CopyMode::Copyable>&
-CallbackBase<CopyMode::Copyable>::operator=(CallbackBase&& c) {
-  *static_cast<CallbackBase<CopyMode::MoveOnly>*>(this) = std::move(c);
-  return *this;
-}
+CallbackBase<CopyMode::Copyable>::operator=(CallbackBase&& c) = default;
 
 template class CallbackBase<CopyMode::MoveOnly>;
 template class CallbackBase<CopyMode::Copyable>;

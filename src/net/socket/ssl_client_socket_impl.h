@@ -28,6 +28,7 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/openssl_ssl_util.h"
+#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_client_cert_type.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -286,6 +287,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   std::unique_ptr<PeerCertificateChain> server_cert_chain_;
   scoped_refptr<X509Certificate> server_cert_;
   CertVerifyResult server_cert_verify_result_;
+  std::string ocsp_response_;
   bool completed_connect_;
 
   // Set when Read() or Write() successfully reads or writes data to or from the
@@ -345,10 +347,9 @@ class SSLClientSocketImpl : public SSLClientSocket {
   std::unique_ptr<crypto::ECPrivateKey> channel_id_key_;
   // True if a channel ID was sent.
   bool channel_id_sent_;
-  // True if the current session was newly-established, but the certificate had
-  // not yet been verified externally, so it cannot be inserted into the cache
-  // until later.
-  bool session_pending_;
+  // If non-null, the newly-established to be inserted into the session cache
+  // once certificate verification is done.
+  ScopedSSL_SESSION pending_session_;
   // True if the initial handshake's certificate has been verified.
   bool certificate_verified_;
   // The request handle for |channel_id_service_|.

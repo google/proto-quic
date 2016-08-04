@@ -32,11 +32,10 @@
 #       macro to work (see cc_include) and set
 #       component_build_force_source_set = true.
 #
-#   generator_plugin (optional)
-#       Name of plugin executable which generates custom cc stubs.
-#       Plugin itself should be dependency of the invoker.
+#   generator_plugin_label (optional)
+#       GN label for plugin executable which generates custom cc stubs.
 #
-#   generator_plugin_suffix (required if generator_plugin set)
+#   generator_plugin_suffix (required if generator_plugin_label set)
 #       Suffix (before extension) for generated .cc and .h files.
 #
 #   generator_plugin_options (optional)
@@ -166,8 +165,8 @@ template("proto_library") {
       ]
     }
 
-    if (defined(invoker.generator_plugin)) {
-      generator_plugin = invoker.generator_plugin
+    if (defined(invoker.generator_plugin_label)) {
+      generator_plugin_label = invoker.generator_plugin_label
       generator_plugin_suffix = invoker.generator_plugin_suffix
       if (defined(invoker.generator_plugin_options)) {
         generator_plugin_options = invoker.generator_plugin_options
@@ -178,9 +177,22 @@ template("proto_library") {
         "$out_dir/{{source_name_part}}$generator_plugin_suffix.cc",
         "$out_dir/{{source_name_part}}$generator_plugin_suffix.h",
       ]
+
+      # Straightforward way to get the name of executable doesn't work because
+      # root_out_dir and root_build_dir may differ in cross-compilation and
+      # also Windows executables have .exe at the end.
+
+      plugin_host_label = generator_plugin_label + "($host_toolchain)"
+      plugin_path = get_label_info(plugin_host_label, "root_out_dir") + "/" +
+                    get_label_info(plugin_host_label, "name")
+      if (host_os == "win") {
+        plugin_path += ".exe"
+      }
+
+      # Need "./" for script to find plugin binary (working dir is not on PATH).
       args += [
         "--plugin",
-        "protoc-gen-plugin=./$generator_plugin",
+        "protoc-gen-plugin=./" + rebase_path(plugin_path, root_build_dir),
         "--plugin_out",
         "$generator_plugin_options$rel_out_dir",  # Separated by colon.
       ]
@@ -189,6 +201,9 @@ template("proto_library") {
     deps = [
       protoc_label,
     ]
+    if (defined(plugin_host_label)) {
+      deps += [ plugin_host_label ]
+    }
 
     # The deps may have steps that have to run before running protobuf.
     if (defined(invoker.deps)) {

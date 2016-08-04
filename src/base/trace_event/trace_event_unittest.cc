@@ -517,6 +517,11 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
                                context_id);
     TRACE_EVENT_SCOPED_CONTEXT("all", "TRACE_EVENT_SCOPED_CONTEXT call",
                                context_id);
+
+    TRACE_BIND_IDS("all", "TRACE_BIND_IDS simple call", 0x1000, 0x2000);
+    TRACE_BIND_IDS("all", "TRACE_BIND_IDS scoped call",
+                   TRACE_ID_WITH_SCOPE("scope 1", 0x1000),
+                   TRACE_ID_WITH_SCOPE("scope 2", 0x2000));
   }  // Scope close causes TRACE_EVENT0 etc to send their END events.
 
   if (task_complete_event)
@@ -957,6 +962,45 @@ void ValidateAllTraceMacrosCreatedData(const ListValue& trace_parsed) {
     EXPECT_TRUE((item && item->GetString("id", &id)));
     EXPECT_EQ("0x20151021", id);
   }
+
+  EXPECT_FIND_("TRACE_BIND_IDS simple call");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("=", ph);
+
+    EXPECT_FALSE((item && item->HasKey("scope")));
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id", &id)));
+    EXPECT_EQ("0x1000", id);
+
+    EXPECT_FALSE((item && item->HasKey("args.bind_scope")));
+    std::string bind_id;
+    EXPECT_TRUE((item && item->GetString("bind_id", &id)));
+    EXPECT_EQ("0x2000", id);
+  }
+
+  EXPECT_FIND_("TRACE_BIND_IDS scoped call");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("=", ph);
+
+    std::string id_scope;
+    EXPECT_TRUE((item && item->GetString("scope", &id_scope)));
+    EXPECT_EQ("scope 1", id_scope);
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id", &id)));
+    EXPECT_EQ("0x1000", id);
+
+    std::string bind_scope;
+    EXPECT_TRUE((item && item->GetString("args.bind_scope", &bind_scope)));
+    EXPECT_EQ("scope 2", bind_scope);
+    std::string bind_id;
+    EXPECT_TRUE((item && item->GetString("bind_id", &id)));
+    EXPECT_EQ("0x2000", id);
+  }
+
 }
 
 void TraceManyInstantEvents(int thread_id, int num_events,

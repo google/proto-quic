@@ -50,7 +50,7 @@ class NET_EXPORT SingleRequestHostResolver {
   HostResolver* const resolver_;
 
   // The current request (if any).
-  HostResolver::RequestHandle cur_request_;
+  std::unique_ptr<HostResolver::Request> cur_request_;
   CompletionCallback cur_request_callback_;
 
   // Completion callback for when request to |resolver_| completes.

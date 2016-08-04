@@ -46,7 +46,7 @@ std::unique_ptr<Value> SystemMetrics::ToValue() const {
   return std::move(res);
 }
 
-ProcessMetrics* ProcessMetrics::CreateCurrentProcessMetrics() {
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateCurrentProcessMetrics() {
 #if !defined(OS_MACOSX) || defined(OS_IOS)
   return CreateProcessMetrics(base::GetCurrentProcessHandle());
 #else

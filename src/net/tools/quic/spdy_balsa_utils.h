@@ -8,7 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
-#include "net/quic/quic_protocol.h"
+#include "net/quic/core/quic_protocol.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_protocol.h"

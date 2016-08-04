@@ -37,21 +37,21 @@ class BASE_EXPORT FileTracing {
     virtual bool FileTracingCategoryIsEnabled() const = 0;
 
     // Enables file tracing for |id|. Must be called before recording events.
-    virtual void FileTracingEnable(void* id) = 0;
+    virtual void FileTracingEnable(const void* id) = 0;
 
     // Disables file tracing for |id|.
-    virtual void FileTracingDisable(void* id) = 0;
+    virtual void FileTracingDisable(const void* id) = 0;
 
     // Begins an event for |id| with |name|. |path| tells where in the directory
     // structure the event is happening (and may be blank). |size| is the number
     // of bytes involved in the event.
     virtual void FileTracingEventBegin(const char* name,
-                                       void* id,
+                                       const void* id,
                                        const FilePath& path,
                                        int64_t size) = 0;
 
     // Ends an event for |id| with |name|.
-    virtual void FileTracingEventEnd(const char* name, void* id) = 0;
+    virtual void FileTracingEventEnd(const char* name, const void* id) = 0;
   };
 
   // Sets a global file tracing provider to query categories and record events.
@@ -73,12 +73,12 @@ class BASE_EXPORT FileTracing {
     // event to trace (e.g. "Read", "Write") and must have an application
     // lifetime (e.g. static or literal). |file| is the file being traced; must
     // outlive this class. |size| is the size (in bytes) of this event.
-    void Initialize(const char* name, File* file, int64_t size);
+    void Initialize(const char* name, const File* file, int64_t size);
 
    private:
     // The ID of this trace. Based on the |file| passed to |Initialize()|. Must
     // outlive this class.
-    void* id_;
+    const void* id_;
 
     // The name of the event to trace (e.g. "Read", "Write"). Prefixed with
     // "File".

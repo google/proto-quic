@@ -197,9 +197,9 @@ class FilePathWatcherTest : public testing::Test {
   bool WaitForEvents() WARN_UNUSED_RESULT {
     collector_->Reset();
     // Make sure we timeout if we don't get notified.
-    loop_.PostDelayedTask(FROM_HERE,
-                          MessageLoop::QuitWhenIdleClosure(),
-                          TestTimeouts::action_timeout());
+    loop_.task_runner()->PostDelayedTask(FROM_HERE,
+                                         MessageLoop::QuitWhenIdleClosure(),
+                                         TestTimeouts::action_timeout());
     RunLoop().Run();
     return collector_->Success();
   }

@@ -14,11 +14,10 @@ namespace net {
 
 SingleRequestHostResolver::SingleRequestHostResolver(HostResolver* resolver)
     : resolver_(resolver),
-      cur_request_(NULL),
       callback_(
           base::Bind(&SingleRequestHostResolver::OnResolveCompletion,
                      base::Unretained(this))) {
-  DCHECK(resolver_ != NULL);
+  DCHECK(resolver_ != nullptr);
 }
 
 SingleRequestHostResolver::~SingleRequestHostResolver() {
@@ -34,7 +33,7 @@ int SingleRequestHostResolver::Resolve(const HostResolver::RequestInfo& info,
   DCHECK_EQ(false, callback.is_null());
   DCHECK(cur_request_callback_.is_null()) << "resolver already in use";
 
-  HostResolver::RequestHandle request = NULL;
+  std::unique_ptr<HostResolver::Request> request;
 
   // We need to be notified of completion before |callback| is called, so that
   // we can clear out |cur_request_*|.
@@ -47,7 +46,7 @@ int SingleRequestHostResolver::Resolve(const HostResolver::RequestInfo& info,
   if (rv == ERR_IO_PENDING) {
     DCHECK_EQ(false, callback.is_null());
     // Cleared in OnResolveCompletion().
-    cur_request_ = request;
+    cur_request_ = std::move(request);
     cur_request_callback_ = callback;
   }
 
@@ -55,11 +54,8 @@ int SingleRequestHostResolver::Resolve(const HostResolver::RequestInfo& info,
 }
 
 void SingleRequestHostResolver::Cancel() {
-  if (!cur_request_callback_.is_null()) {
-    resolver_->CancelRequest(cur_request_);
-    cur_request_ = NULL;
-    cur_request_callback_.Reset();
-  }
+  cur_request_.reset();
+  cur_request_callback_.Reset();
 }
 
 void SingleRequestHostResolver::OnResolveCompletion(int result) {
@@ -69,7 +65,7 @@ void SingleRequestHostResolver::OnResolveCompletion(int result) {
   CompletionCallback callback = cur_request_callback_;
 
   // Clear the outstanding request information.
-  cur_request_ = NULL;
+  cur_request_.reset();
   cur_request_callback_.Reset();
 
   // Call the user's original callback.
