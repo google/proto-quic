@@ -86,9 +86,7 @@ class NET_EXPORT_PRIVATE ProofSource {
   // key is RSA.
   //
   // The signature uses SHA-256 as the hash function when the key is ECDSA.
-  //
-  // If |ecdsa_ok| is true, the signature may use an ECDSA key. Otherwise, the
-  // signature must use an RSA key.
+  // The signature may use an ECDSA key.
   //
   // |out_chain| is reference counted to avoid the (assumed) expense of copying
   // out the certificates.
@@ -118,7 +116,6 @@ class NET_EXPORT_PRIVATE ProofSource {
                         const std::string& server_config,
                         QuicVersion quic_version,
                         base::StringPiece chlo_hash,
-                        bool ecdsa_ok,
                         scoped_refptr<Chain>* out_chain,
                         std::string* out_signature,
                         std::string* out_leaf_cert_sct) = 0;
@@ -132,7 +129,6 @@ class NET_EXPORT_PRIVATE ProofSource {
                         const std::string& server_config,
                         QuicVersion quic_version,
                         base::StringPiece chlo_hash,
-                        bool ecdsa_ok,
                         std::unique_ptr<Callback> callback) = 0;
 };
 

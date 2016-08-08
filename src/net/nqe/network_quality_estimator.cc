@@ -801,8 +801,12 @@ void NetworkQualityEstimator::RecordCorrelationMetric(
 
   LoadTimingInfo load_timing_info;
   request.GetLoadTimingInfo(&load_timing_info);
-  DCHECK(!load_timing_info.send_start.is_null() &&
-         !load_timing_info.receive_headers_end.is_null());
+  // If the load timing info is unavailable, it probably means that the request
+  // did not go over the network.
+  if (load_timing_info.send_start.is_null() ||
+      load_timing_info.receive_headers_end.is_null()) {
+    return;
+  }
 
   // Record UMA only for successful requests that have completed.
   if (!request.status().is_success() || request.status().is_io_pending())

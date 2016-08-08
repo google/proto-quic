@@ -116,9 +116,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
 
   // Returns the earliest time we can send the next packet. Sets |path_id| to be
   // the path on which the next packet will be sent.
-  virtual QuicTime::Delta TimeUntilSend(QuicTime now,
-                                        HasRetransmittableData retransmittable,
-                                        QuicPathId* path_id) = 0;
+  virtual QuicTime::Delta TimeUntilSend(QuicTime now, QuicPathId* path_id) = 0;
 
   // Returns the earliest retransmission time of all paths.
   // TODO(fayang): This method should not be const becasue the return value

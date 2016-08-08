@@ -28,9 +28,11 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
+        version_manager_(QuicSupportedVersions()),
         dispatcher_(
             config_,
             &crypto_config_,
+            &version_manager_,
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(&eps_,
                                               QuicAllocator::BUFFER_POOL)),
@@ -49,6 +51,7 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
  protected:
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
+  QuicVersionManager version_manager_;
   EpollServer eps_;
   MockQuicDispatcher dispatcher_;
 };

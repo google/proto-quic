@@ -27,16 +27,13 @@ namespace net {
 
 class NET_EXPORT_PRIVATE PacingSender : public SendAlgorithmInterface {
  public:
-  // Create a PacingSender to wrap the specified sender.  |alarm_granularity|
-  // indicates to the pacer to send that far into the future, since it should
-  // not expect a callback before that time delta.  |initial_packet_burst| is
-  // the number of packets sent without pacing after quiescence.
-  PacingSender(SendAlgorithmInterface* sender,
-               QuicTime::Delta alarm_granularity,
-               uint32_t initial_packet_burst);
+  PacingSender();
   ~PacingSender() override;
 
   void SetMaxPacingRate(QuicBandwidth max_pacing_rate);
+  // Sets the underlying sender. Takes ownership of |sender| if |owns_sender| is
+  // true.
+  void SetSender(SendAlgorithmInterface* sender, bool owns_sender);
 
   // SendAlgorithmInterface methods.
   void SetFromConfig(const QuicConfig& config,
@@ -69,12 +66,8 @@ class NET_EXPORT_PRIVATE PacingSender : public SendAlgorithmInterface {
   // End implementation of SendAlgorithmInterface.
 
  private:
-  std::unique_ptr<SendAlgorithmInterface> sender_;  // Underlying sender.
-  // The estimated system alarm granularity.
-  const QuicTime::Delta alarm_granularity_;
-  // Configured maximum size of the burst coming out of quiescence.  The burst
-  // is never larger than the current CWND in packets.
-  const uint32_t initial_packet_burst_;
+  // Underlying sender. Owned if |owns_sender_| is true.
+  SendAlgorithmInterface* sender_;
   // If not QuicBandidth::Zero, the maximum rate the PacingSender will use.
   QuicBandwidth max_pacing_rate_;
 
@@ -84,6 +77,7 @@ class NET_EXPORT_PRIVATE PacingSender : public SendAlgorithmInterface {
   QuicTime last_delayed_packet_sent_time_;
   QuicTime ideal_next_packet_send_time_;  // When can the next packet be sent.
   mutable bool was_last_send_delayed_;  // True when the last send was delayed.
+  bool owns_sender_;                    // True if PacingSender owns |sender_|.
 
   DISALLOW_COPY_AND_ASSIGN(PacingSender);
 };

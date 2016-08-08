@@ -56,7 +56,7 @@ void RecordDiskCacheServerConfigState(
 
 QuicCryptoClientConfig::QuicCryptoClientConfig(
     std::unique_ptr<ProofVerifier> proof_verifier)
-    : proof_verifier_(std::move(proof_verifier)), disable_ecdsa_(false) {
+    : proof_verifier_(std::move(proof_verifier)) {
   DCHECK(proof_verifier_.get());
   SetDefaults();
 }
@@ -382,8 +382,6 @@ void QuicCryptoClientConfig::SetDefaults() {
 
   // Authenticated encryption algorithms. Prefer RFC 7539 ChaCha20 by default.
   aead = {kCC20, kAESG};
-
-  disable_ecdsa_ = false;
 }
 
 QuicCryptoClientConfig::CachedState* QuicCryptoClientConfig::LookupOrCreate(
@@ -402,10 +400,11 @@ QuicCryptoClientConfig::CachedState* QuicCryptoClientConfig::LookupOrCreate(
   return cached;
 }
 
-void QuicCryptoClientConfig::ClearCachedStates() {
+void QuicCryptoClientConfig::ClearCachedStates(const ServerIdFilter& filter) {
   for (CachedStateMap::const_iterator it = cached_states_.begin();
        it != cached_states_.end(); ++it) {
-    it->second->Clear();
+    if (filter.Matches(it->first))
+      it->second->Clear();
   }
 }
 
@@ -453,11 +452,7 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
   rand->RandBytes(proof_nonce, arraysize(proof_nonce));
   out->SetStringPiece(kNONP, StringPiece(proof_nonce, arraysize(proof_nonce)));
 
-  if (disable_ecdsa_) {
-    out->SetVector(kPDMD, QuicTagVector{kX59R});
-  } else {
-    out->SetVector(kPDMD, QuicTagVector{kX509});
-  }
+  out->SetVector(kPDMD, QuicTagVector{kX509});
 
   if (common_cert_sets) {
     out->SetStringPiece(kCCS, common_cert_sets->GetCommonHashes());
@@ -944,10 +939,6 @@ void QuicCryptoClientConfig::PreferAesGcm() {
     aead.erase(pos);
     aead.insert(aead.begin(), kAESG);
   }
-}
-
-void QuicCryptoClientConfig::DisableEcdsa() {
-  disable_ecdsa_ = true;
 }
 
 bool QuicCryptoClientConfig::PopulateFromCanonicalConfig(

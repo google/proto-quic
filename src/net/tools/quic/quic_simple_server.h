@@ -65,6 +65,8 @@ class QuicSimpleServer {
   // Initialize the internal state of the server.
   void Initialize();
 
+  QuicVersionManager version_manager_;
+
   // Accepts data from the framer and demuxes clients to sessions.
   std::unique_ptr<QuicDispatcher> dispatcher_;
 
@@ -85,12 +87,6 @@ class QuicSimpleServer {
   QuicConfig config_;
   // crypto_config_ contains crypto parameters for the handshake.
   QuicCryptoServerConfig crypto_config_;
-
-  // This vector contains QUIC versions which we currently support.
-  // This should be ordered such that the highest supported version is the first
-  // element, with subsequent elements in descending order (versions can be
-  // skipped as necessary).
-  QuicVersionVector supported_versions_;
 
   // The address that the server listens on.
   IPEndPoint server_address_;

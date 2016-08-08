@@ -300,6 +300,20 @@ TEST(QuicProtocolTest, FilterSupportedVersions) {
   EXPECT_EQ(QUIC_VERSION_34, filtered_versions[4]);
 }
 
+TEST(QuicProtocolTest, QuicVersionManager) {
+  FLAGS_quic_enable_version_35 = false;
+  FLAGS_quic_enable_version_36 = false;
+  QuicVersionManager manager(QuicSupportedVersions());
+  EXPECT_EQ(FilterSupportedVersions(QuicSupportedVersions()),
+            manager.GetSupportedVersions());
+  FLAGS_quic_enable_version_35 = true;
+  FLAGS_quic_enable_version_36 = true;
+  EXPECT_EQ(FilterSupportedVersions(QuicSupportedVersions()),
+            manager.GetSupportedVersions());
+  EXPECT_EQ(QUIC_VERSION_36, manager.GetSupportedVersions()[0]);
+  EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[1]);
+}
+
 // Tests that a queue contains the expected data after calls to Add().
 TEST(PacketNumberQueueTest, AddRange) {
   PacketNumberQueue queue;

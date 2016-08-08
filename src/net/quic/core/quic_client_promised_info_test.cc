@@ -78,8 +78,6 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
         session_(connection_, &push_promise_index_),
         body_("hello world"),
         promise_id_(gfe_quic::test::kServerDataStreamId1) {
-    FLAGS_quic_supports_push_promise = true;
-
     session_.Initialize();
 
     headers_.SetResponseFirstline("HTTP/1.1", 200, "Ok");

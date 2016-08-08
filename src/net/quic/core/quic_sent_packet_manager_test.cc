@@ -708,9 +708,8 @@ TEST_P(QuicSentPacketManagerTest, TailLossProbeTimeout) {
   QuicPathId path_id = kInvalidPathId;
   // The first tail loss probe retransmits 1 packet.
   manager_.OnRetransmissionTimeout();
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   manager_.MaybeRetransmitTailLossProbe();
   EXPECT_TRUE(manager_.HasPendingRetransmissions());
@@ -719,18 +718,16 @@ TEST_P(QuicSentPacketManagerTest, TailLossProbeTimeout) {
 
   // The second tail loss probe retransmits 1 packet.
   manager_.OnRetransmissionTimeout();
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   manager_.MaybeRetransmitTailLossProbe();
   EXPECT_TRUE(manager_.HasPendingRetransmissions());
   RetransmitNextPacket(3);
   EXPECT_CALL(*send_algorithm_, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Infinite()));
-  EXPECT_EQ(
-      QuicTime::Delta::Infinite(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Infinite(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
 
   // Ack the third and ensure the first two are still pending.
@@ -773,35 +770,31 @@ TEST_P(QuicSentPacketManagerTest, TailLossProbeThenRTO) {
   // The first tail loss probe retransmits 1 packet.
   manager_.OnRetransmissionTimeout();
   QuicPathId path_id = kInvalidPathId;
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   manager_.MaybeRetransmitTailLossProbe();
   EXPECT_TRUE(manager_.HasPendingRetransmissions());
   RetransmitNextPacket(101);
   EXPECT_CALL(*send_algorithm_, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Infinite()));
-  EXPECT_EQ(
-      QuicTime::Delta::Infinite(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Infinite(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   clock_.AdvanceTime(manager_.GetRetransmissionTime() - clock_.Now());
 
   // The second tail loss probe retransmits 1 packet.
   manager_.OnRetransmissionTimeout();
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   EXPECT_TRUE(manager_.MaybeRetransmitTailLossProbe());
   EXPECT_TRUE(manager_.HasPendingRetransmissions());
   RetransmitNextPacket(102);
   EXPECT_CALL(*send_algorithm_, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Infinite()));
-  EXPECT_EQ(
-      QuicTime::Delta::Infinite(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Infinite(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
 
   // Ensure the RTO is set based on the correct packet.
   rto_packet_time = clock_.Now();
@@ -849,9 +842,8 @@ TEST_P(QuicSentPacketManagerTest, CryptoHandshakeTimeout) {
   // The first retransmits 2 packets.
   QuicPathId path_id = kInvalidPathId;
   manager_.OnRetransmissionTimeout();
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   RetransmitNextPacket(6);
   RetransmitNextPacket(7);
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
@@ -859,9 +851,8 @@ TEST_P(QuicSentPacketManagerTest, CryptoHandshakeTimeout) {
 
   // The second retransmits 2 packets.
   manager_.OnRetransmissionTimeout();
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   RetransmitNextPacket(8);
   RetransmitNextPacket(9);
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
@@ -1241,18 +1232,16 @@ TEST_P(QuicSentPacketManagerTest, GetTransmissionTimeTailLossProbe) {
   clock_.AdvanceTime(expected_tlp_delay);
   manager_.OnRetransmissionTimeout();
   QuicPathId path_id = kInvalidPathId;
-  EXPECT_EQ(
-      QuicTime::Delta::Zero(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Zero(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
   EXPECT_TRUE(manager_.MaybeRetransmitTailLossProbe());
   EXPECT_TRUE(manager_.HasPendingRetransmissions());
   RetransmitNextPacket(3);
   EXPECT_CALL(*send_algorithm_, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Infinite()));
-  EXPECT_EQ(
-      QuicTime::Delta::Infinite(),
-      manager_.TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+  EXPECT_EQ(QuicTime::Delta::Infinite(),
+            manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_FALSE(manager_.HasPendingRetransmissions());
 
   expected_time = clock_.Now() + expected_tlp_delay;

@@ -50,7 +50,6 @@ class QuicClientPushPromiseIndexTest : public ::testing::Test {
                                                        Perspective::IS_CLIENT)),
         session_(connection_, &index_),
         promised_(&session_, kServerDataStreamId1, url_) {
-    FLAGS_quic_supports_push_promise = true;
     request_[":path"] = "/bar";
     request_[":authority"] = "www.google.com";
     request_[":version"] = "HTTP/1.1";

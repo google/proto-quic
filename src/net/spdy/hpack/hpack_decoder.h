@@ -117,8 +117,7 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   uint32_t total_parsed_bytes_;
 
   // How much encoded data this decoder is willing to buffer.
-  // Defaults to 256 KB.
-  size_t max_decode_buffer_size_bytes_ = kMaxDecodeBufferSize;
+  size_t max_decode_buffer_size_bytes_ = 32 * 1024;  // 32 KB
 
   // Handlers for decoding HPACK opcodes and header representations
   // (or parts thereof). These methods return true on success and

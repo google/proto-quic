@@ -9,20 +9,32 @@
 using std::min;
 
 namespace net {
+namespace {
 
-PacingSender::PacingSender(SendAlgorithmInterface* sender,
-                           QuicTime::Delta alarm_granularity,
-                           uint32_t initial_packet_burst)
-    : sender_(sender),
-      alarm_granularity_(alarm_granularity),
-      initial_packet_burst_(initial_packet_burst),
+// The estimated system alarm granularity.
+static const QuicTime::Delta kAlarmGranularity =
+    QuicTime::Delta::FromMilliseconds(1);
+
+// Configured maximum size of the burst coming out of quiescence.  The burst
+// is never larger than the current CWND in packets.
+static const uint32_t kInitialUnpacedBurst = 10;
+
+}  // namespace
+
+PacingSender::PacingSender()
+    : sender_(nullptr),
       max_pacing_rate_(QuicBandwidth::Zero()),
-      burst_tokens_(initial_packet_burst),
+      burst_tokens_(kInitialUnpacedBurst),
       last_delayed_packet_sent_time_(QuicTime::Zero()),
       ideal_next_packet_send_time_(QuicTime::Zero()),
-      was_last_send_delayed_(false) {}
+      was_last_send_delayed_(false),
+      owns_sender_(false) {}
 
-PacingSender::~PacingSender() {}
+PacingSender::~PacingSender() {
+  if (owns_sender_) {
+    delete sender_;
+  }
+}
 
 void PacingSender::SetFromConfig(const QuicConfig& config,
                                  Perspective perspective) {
@@ -42,6 +54,14 @@ void PacingSender::SetNumEmulatedConnections(int num_connections) {
 
 void PacingSender::SetMaxPacingRate(QuicBandwidth max_pacing_rate) {
   max_pacing_rate_ = max_pacing_rate;
+}
+
+void PacingSender::SetSender(SendAlgorithmInterface* sender, bool owns_sender) {
+  if (owns_sender_) {
+    delete sender_;
+  }
+  sender_ = sender;
+  owns_sender_ = owns_sender;
 }
 
 void PacingSender::OnCongestionEvent(bool rtt_updated,
@@ -74,7 +94,7 @@ bool PacingSender::OnPacketSent(
     // limit it to the equivalent of a single bulk write, not exceeding the
     // current CWND in packets.
     burst_tokens_ = min(
-        initial_packet_burst_,
+        kInitialUnpacedBurst,
         static_cast<uint32_t>(sender_->GetCongestionWindow() / kDefaultTCPMSS));
   }
   if (burst_tokens_ > 0) {
@@ -140,7 +160,7 @@ QuicTime::Delta PacingSender::TimeUntilSend(
   }
 
   // If the next send time is within the alarm granularity, send immediately.
-  if (ideal_next_packet_send_time_ > now + alarm_granularity_) {
+  if (ideal_next_packet_send_time_ > now + kAlarmGranularity) {
     DVLOG(1) << "Delaying packet: "
              << (ideal_next_packet_send_time_ - now).ToMicroseconds();
     was_last_send_delayed_ = true;

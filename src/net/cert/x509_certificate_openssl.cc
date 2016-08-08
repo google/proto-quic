@@ -180,7 +180,8 @@ void sk_X509_NAME_free_all(STACK_OF(X509_NAME)* sk) {
 X509Certificate::OSCertHandle X509Certificate::DupOSCertHandle(
     OSCertHandle cert_handle) {
   DCHECK(cert_handle);
-  return X509_up_ref(cert_handle);
+  X509_up_ref(cert_handle);
+  return cert_handle;
 }
 
 // static

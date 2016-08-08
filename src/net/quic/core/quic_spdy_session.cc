@@ -149,8 +149,7 @@ void QuicSpdySession::OnPromiseHeaderList(QuicStreamId stream_id,
 
 void QuicSpdySession::OnConfigNegotiated() {
   QuicSession::OnConfigNegotiated();
-  if (FLAGS_quic_disable_hpack_dynamic_table &&
-      config()->HasClientSentConnectionOption(kDHDT, perspective())) {
+  if (config()->HasClientSentConnectionOption(kDHDT, perspective())) {
     headers_stream_->DisableHpackDynamicTable();
   }
   const QuicVersion version = connection()->version();

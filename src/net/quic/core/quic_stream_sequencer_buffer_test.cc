@@ -47,6 +47,8 @@ char GetCharFromIOVecs(size_t offset, iovec iov[], size_t count) {
   return '\0';
 }
 
+const size_t kMaxNumGapsAllowed = 2 * kMaxPacketGap;
+
 static const size_t kBlockSizeBytes =
     QuicStreamSequencerBuffer::kBlockSizeBytes;
 typedef QuicStreamSequencerBuffer::BufferBlock BufferBlock;
@@ -829,6 +831,26 @@ TEST_F(QuicStreamSequencerBufferTest, FlushBufferedFrames) {
   buffer_->Clear();
   EXPECT_EQ(max_capacity_bytes_ + 512, buffer_->BytesConsumed());
   EXPECT_TRUE(helper_->CheckBufferInvariants());
+}
+
+TEST_F(QuicStreamSequencerBufferTest, TooManyGaps) {
+  FLAGS_quic_limit_frame_gaps_in_buffer = true;
+  // Make sure max capacity is large enough that it is possible to have more
+  // than |kMaxNumGapsAllowed| number of gaps.
+  max_capacity_bytes_ = 3 * kBlockSizeBytes;
+  // Feed buffer with 1-byte discontiguous frames. e.g. [1,2), [3,4), [5,6)...
+  for (QuicStreamOffset begin = 1; begin <= max_capacity_bytes_; begin += 2) {
+    size_t written;
+    QuicErrorCode rs = buffer_->OnStreamData(
+        begin, "a", clock_.ApproximateNow(), &written, &error_details_);
+
+    QuicStreamOffset last_straw = 2 * kMaxNumGapsAllowed - 1;
+    if (begin == last_straw) {
+      EXPECT_EQ(QUIC_TOO_MANY_FRAME_GAPS, rs);
+      EXPECT_EQ("Too many gaps created for this stream.", error_details_);
+      break;
+    }
+  }
 }
 
 class QuicStreamSequencerBufferRandomIOTest

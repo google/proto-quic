@@ -25,9 +25,11 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
+        version_manager_(QuicSupportedVersions()),
         dispatcher_(
             config_,
             &crypto_config_,
+            &version_manager_,
             std::unique_ptr<MockQuicConnectionHelper>(
                 new net::test::MockQuicConnectionHelper),
             std::unique_ptr<QuicServerSessionBase::Helper>(
@@ -45,6 +47,7 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
  protected:
   QuicConfig config_;
   QuicCryptoServerConfig crypto_config_;
+  QuicVersionManager version_manager_;
   net::test::MockQuicDispatcher dispatcher_;
 };
 

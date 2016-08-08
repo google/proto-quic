@@ -16,6 +16,7 @@
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
+#include "net/quic/core/congestion_control/pacing_sender.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_protocol.h"
@@ -143,9 +144,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // TimeUntilSend again until we receive an OnIncomingAckFrame event.
   // Note 2: Send algorithms may or may not use |retransmit| in their
   // calculations.
-  QuicTime::Delta TimeUntilSend(QuicTime now,
-                                HasRetransmittableData retransmittable,
-                                QuicPathId* path_id) override;
+  QuicTime::Delta TimeUntilSend(QuicTime now, QuicPathId* path_id) override;
 
   // Returns the current delay for the retransmission timer, which may send
   // either a tail loss probe or do a full RTO.  Returns QuicTime::Zero() if
@@ -369,6 +368,10 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // If true, send the TLP at 0.5 RTT.
   bool enable_half_rtt_tail_loss_probe_;
   bool using_pacing_;
+  // TODO(jdorfman): Remove |using_pacing_| and rename |using_inline_pacing_| to
+  // |using_pacing| when deprecating
+  // gfe2_reloadable_flag_quic_use_inline_pacing.
+  bool using_inline_pacing_;
   // If true, use the new RTO with loss based CWND reduction instead of the send
   // algorithms's OnRetransmissionTimeout to reduce the congestion window.
   bool use_new_rto_;
@@ -383,6 +386,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   QuicPacketNumber largest_newly_acked_;
   // Largest packet in bytes ever acknowledged.
   QuicPacketLength largest_mtu_acked_;
+
+  PacingSender pacing_sender_;
 
   // Set to true after the crypto handshake has successfully completed. After
   // this is true we no longer use HANDSHAKE_MODE, and further frames sent on

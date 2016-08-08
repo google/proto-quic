@@ -538,7 +538,7 @@ void QuicCryptoServerConfig::ValidateClientHello(
   }
 
   if (result->error_code == QUIC_NO_ERROR) {
-    if (FLAGS_quic_refresh_proof && version > QUIC_VERSION_30) {
+    if (version > QUIC_VERSION_30) {
       // QUIC v31 and above require a new proof for each CHLO so clear the
       // existing proof, if any.
       crypto_proof->chain = nullptr;
@@ -615,10 +615,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
 
   out->Clear();
 
-  bool x509_supported = false;
-  bool x509_ecdsa_supported = false;
-  ParseProofDemand(client_hello, &x509_supported, &x509_ecdsa_supported);
-  if (!x509_supported && FLAGS_quic_require_x509) {
+  if (!ClientDemandsX509Proof(client_hello) && FLAGS_quic_require_x509) {
     *error_details = "Missing or invalid PDMD";
     return QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER;
   }
@@ -627,10 +624,10 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
   CryptoUtils::HashHandshakeMessage(client_hello, &chlo_hash);
   // No need to get a new proof if one was already generated.
   if (!crypto_proof->chain &&
-      !proof_source_->GetProof(
-          server_ip, info.sni.as_string(), primary_config->serialized, version,
-          chlo_hash, x509_ecdsa_supported, &crypto_proof->chain,
-          &crypto_proof->signature, &crypto_proof->cert_sct)) {
+      !proof_source_->GetProof(server_ip, info.sni.as_string(),
+                               primary_config->serialized, version, chlo_hash,
+                               &crypto_proof->chain, &crypto_proof->signature,
+                               &crypto_proof->cert_sct)) {
     return QUIC_HANDSHAKE_FAILED;
   }
 
@@ -1118,16 +1115,11 @@ void QuicCryptoServerConfig::EvaluateClientHello(
   }
 
   bool get_proof_failed = false;
-  bool x509_supported = false;
-  bool x509_ecdsa_supported = false;
-  ParseProofDemand(client_hello, &x509_supported, &x509_ecdsa_supported);
   string serialized_config = primary_config->serialized;
   string chlo_hash;
   CryptoUtils::HashHandshakeMessage(client_hello, &chlo_hash);
   bool need_proof = true;
-  if (FLAGS_quic_refresh_proof) {
-    need_proof = !crypto_proof->chain;
-  }
+  need_proof = !crypto_proof->chain;
   if (FLAGS_enable_async_get_proof) {
     if (need_proof) {
       // Make an async call to GetProof and setup the callback to trampoline
@@ -1139,7 +1131,7 @@ void QuicCryptoServerConfig::EvaluateClientHello(
               client_hello_state, done_cb));
       proof_source_->GetProof(server_ip, info->sni.as_string(),
                               serialized_config, version, chlo_hash,
-                              x509_ecdsa_supported, std::move(cb));
+                              std::move(cb));
       helper.DetachCallback();
       return;
     }
@@ -1147,10 +1139,10 @@ void QuicCryptoServerConfig::EvaluateClientHello(
 
   // No need to get a new proof if one was already generated.
   if (need_proof &&
-      !proof_source_->GetProof(
-          server_ip, info->sni.as_string(), serialized_config, version,
-          chlo_hash, x509_ecdsa_supported, &crypto_proof->chain,
-          &crypto_proof->signature, &crypto_proof->cert_sct)) {
+      !proof_source_->GetProof(server_ip, info->sni.as_string(),
+                               serialized_config, version, chlo_hash,
+                               &crypto_proof->chain, &crypto_proof->signature,
+                               &crypto_proof->cert_sct)) {
     get_proof_failed = true;
   }
 
@@ -1308,8 +1300,7 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   string signature;
   string cert_sct;
   if (!proof_source_->GetProof(server_ip, params.sni, serialized, version,
-                               chlo_hash, params.x509_ecdsa_supported, &chain,
-                               &signature, &cert_sct)) {
+                               chlo_hash, &chain, &signature, &cert_sct)) {
     DVLOG(1) << "Server: failed to get proof.";
     return false;
   }
@@ -1365,7 +1356,6 @@ void QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
           std::move(message), std::move(cb)));
 
   proof_source_->GetProof(server_ip, params.sni, serialized, version, chlo_hash,
-                          params.x509_ecdsa_supported,
                           std::move(proof_source_cb));
 }
 
@@ -1476,10 +1466,7 @@ void QuicCryptoServerConfig::BuildRejection(
   out->SetVector(kRREJ, info.reject_reasons);
 
   // The client may have requested a certificate chain.
-  bool x509_supported = false;
-  ParseProofDemand(client_hello, &x509_supported,
-                   &params->x509_ecdsa_supported);
-  if (!x509_supported && FLAGS_quic_require_x509) {
+  if (!ClientDemandsX509Proof(client_hello) && FLAGS_quic_require_x509) {
     QUIC_BUG << "x509 certificates not supported in proof demand";
     return;
   }
@@ -2024,30 +2011,23 @@ bool QuicCryptoServerConfig::ValidateExpectedLeafCertificate(
          hash_from_client;
 }
 
-void QuicCryptoServerConfig::ParseProofDemand(
-    const CryptoHandshakeMessage& client_hello,
-    bool* x509_supported,
-    bool* x509_ecdsa_supported) const {
+bool QuicCryptoServerConfig::ClientDemandsX509Proof(
+    const CryptoHandshakeMessage& client_hello) const {
   const QuicTag* their_proof_demands;
   size_t num_their_proof_demands;
 
   if (client_hello.GetTaglist(kPDMD, &their_proof_demands,
                               &num_their_proof_demands) != QUIC_NO_ERROR) {
-    return;
+    return false;
   }
 
-  *x509_supported = false;
   for (size_t i = 0; i < num_their_proof_demands; i++) {
     switch (their_proof_demands[i]) {
       case kX509:
-        *x509_supported = true;
-        *x509_ecdsa_supported = true;
-        break;
-      case kX59R:
-        *x509_supported = true;
-        break;
+        return true;
     }
   }
+  return false;
 }
 
 QuicCryptoServerConfig::Config::Config()

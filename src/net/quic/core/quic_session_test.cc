@@ -1186,8 +1186,6 @@ TEST_P(QuicSessionTestClient, TestMaxIncomingAndOutgoingStreamsAllowed) {
 }
 
 TEST_P(QuicSessionTestClient, EnableDHDTThroughConnectionOption) {
-  FLAGS_quic_disable_hpack_dynamic_table = true;
-
   QuicTagVector copt;
   copt.push_back(kDHDT);
   QuicConfigPeer::SetConnectionOptionsToSend(session_.config(), copt);

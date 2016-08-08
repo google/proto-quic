@@ -1072,6 +1072,10 @@ class NET_EXPORT_PRIVATE QuicConnection
   // If true, multipath is enabled for this connection.
   bool multipath_enabled_;
 
+  // Indicates whether a write error is encountered currently. This is used to
+  // avoid infinite write errors.
+  bool write_error_occured_;
+
   DISALLOW_COPY_AND_ASSIGN(QuicConnection);
 };
 

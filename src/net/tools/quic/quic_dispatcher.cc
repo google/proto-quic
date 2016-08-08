@@ -187,7 +187,7 @@ class ChloValidator : public ChloExtractor::Delegate {
 QuicDispatcher::QuicDispatcher(
     const QuicConfig& config,
     const QuicCryptoServerConfig* crypto_config,
-    const QuicVersionVector& supported_versions,
+    QuicVersionManager* version_manager,
     std::unique_ptr<QuicConnectionHelperInterface> helper,
     std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
     std::unique_ptr<QuicAlarmFactory> alarm_factory)
@@ -201,10 +201,9 @@ QuicDispatcher::QuicDispatcher(
       delete_sessions_alarm_(
           alarm_factory_->CreateAlarm(new DeleteSessionsAlarm(this))),
       buffered_packets_(this, helper_->GetClock(), alarm_factory_.get()),
-      supported_versions_(supported_versions),
-      allowed_supported_versions_(supported_versions),
       current_packet_(nullptr),
-      framer_(supported_versions,
+      version_manager_(version_manager),
+      framer_(GetSupportedVersions(),
               /*unused*/ QuicTime::Zero(),
               Perspective::IS_SERVER),
       last_error_(QUIC_NO_ERROR) {
@@ -609,22 +608,6 @@ void QuicDispatcher::OnExpiredPackets(
     QuicConnectionId connection_id,
     QuicBufferedPacketStore::BufferedPacketList early_arrived_packets) {}
 
-QuicServerSessionBase* QuicDispatcher::CreateQuicSession(
-    QuicConnectionId connection_id,
-    const IPEndPoint& client_address) {
-  // The QuicServerSessionBase takes ownership of |connection| below.
-  QuicConnection* connection = new QuicConnection(
-      connection_id, client_address, helper_.get(), alarm_factory_.get(),
-      CreatePerConnectionWriter(),
-      /* owns_writer= */ true, Perspective::IS_SERVER, GetSupportedVersions());
-
-  QuicServerSessionBase* session = new QuicSimpleServerSession(
-      config_, connection, this, session_helper_.get(), crypto_config_,
-      &compressed_certs_cache_);
-  session->Initialize();
-  return session;
-}
-
 void QuicDispatcher::OnConnectionRejectedStatelessly() {}
 
 void QuicDispatcher::OnConnectionClosedStatelessly(QuicErrorCode error) {}
@@ -680,13 +663,13 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::MaybeRejectStatelessly(
   }
 
   StatelessRejector rejector(header.public_header.versions.front(),
-                             supported_versions_, crypto_config_,
+                             GetSupportedVersions(), crypto_config_,
                              &compressed_certs_cache_, helper()->GetClock(),
                              helper()->GetRandomGenerator(),
                              current_client_address_, current_server_address_);
   ChloValidator validator(session_helper_.get(), current_server_address_,
                           &rejector);
-  if (!ChloExtractor::Extract(*current_packet_, supported_versions_,
+  if (!ChloExtractor::Extract(*current_packet_, GetSupportedVersions(),
                               &validator)) {
     DVLOG(1) << "Buffering undecryptable packet.";
     buffered_packets_.EnqueuePacket(connection_id, *current_packet_,
@@ -739,13 +722,7 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::MaybeRejectStatelessly(
 }
 
 const QuicVersionVector& QuicDispatcher::GetSupportedVersions() {
-  // Filter (or un-filter) the list of supported versions based on the flag.
-  if (false) {
-    DCHECK_EQ(supported_versions_.capacity(),
-              allowed_supported_versions_.capacity());
-    supported_versions_ = FilterSupportedVersions(allowed_supported_versions_);
-  }
-  return supported_versions_;
+  return version_manager_->GetSupportedVersions();
 }
 
 }  // namespace net

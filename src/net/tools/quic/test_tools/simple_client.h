@@ -55,11 +55,13 @@ class SimpleClient {
 
   // Returns once a complete response or a connection close has been received
   // from the server, or once the timeout expires. -1 for no timeout.
-  virtual void WaitForResponseForMs(int timeout_ms) = 0;
+  virtual void WaitForResponseForMs(int timeout_ms);
 
   // Waits for some data or response from the server, or once the timeout
   // expires. -1 for no timeout.
-  virtual void WaitForInitialResponseForMs(int timeout_ms) = 0;
+  virtual void WaitForInitialResponseForMs(int timeout_ms);
+
+  virtual void WaitUntil(int timeout_ms, std::function<bool()> trigger) = 0;
 
   // Clears any outstanding state from the last request.
   virtual void ClearPerRequestState() = 0;

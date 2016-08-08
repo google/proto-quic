@@ -41,9 +41,6 @@ static const int64_t kMinHandshakeTimeoutMs = 10;
 // per draft RFC draft-dukkipati-tcpm-tcp-loss-probe.
 static const size_t kDefaultMaxTailLossProbes = 2;
 
-// Number of unpaced packets to send after quiescence.
-static const size_t kInitialUnpacedBurst = 10;
-
 bool HasCryptoHandshake(const TransmissionInfo& transmission_info) {
   DCHECK(!transmission_info.has_crypto_handshake ||
          !transmission_info.retransmittable_frames.empty());
@@ -90,6 +87,7 @@ QuicSentPacketManager::QuicSentPacketManager(
       max_tail_loss_probes_(kDefaultMaxTailLossProbes),
       enable_half_rtt_tail_loss_probe_(false),
       using_pacing_(false),
+      using_inline_pacing_(false),
       use_new_rto_(false),
       undo_pending_retransmits_(false),
       largest_newly_acked_(0),
@@ -193,7 +191,9 @@ void QuicSentPacketManager::SetNumOpenStreams(size_t num_streams) {
 }
 
 void QuicSentPacketManager::SetMaxPacingRate(QuicBandwidth max_pacing_rate) {
-  if (using_pacing_) {
+  if (using_inline_pacing_) {
+    pacing_sender_.SetMaxPacingRate(max_pacing_rate);
+  } else if (using_pacing_) {
     static_cast<PacingSender*>(send_algorithm_.get())
         ->SetMaxPacingRate(max_pacing_rate);
   }
@@ -281,8 +281,13 @@ void QuicSentPacketManager::MaybeInvokeCongestionEvent(
   if (!rtt_updated && packets_acked_.empty() && packets_lost_.empty()) {
     return;
   }
-  send_algorithm_->OnCongestionEvent(rtt_updated, bytes_in_flight,
+  if (using_inline_pacing_) {
+    pacing_sender_.OnCongestionEvent(rtt_updated, bytes_in_flight,
                                      packets_acked_, packets_lost_);
+  } else {
+    send_algorithm_->OnCongestionEvent(rtt_updated, bytes_in_flight,
+                                       packets_acked_, packets_lost_);
+  }
   packets_acked_.clear();
   packets_lost_.clear();
   if (network_change_visitor_ != nullptr) {
@@ -558,10 +563,16 @@ bool QuicSentPacketManager::OnPacketSent(
     --pending_timer_transmission_count_;
   }
 
-  // TODO(ianswett): Remove sent_time, because it's unused.
-  const bool in_flight = send_algorithm_->OnPacketSent(
-      sent_time, unacked_packets_.bytes_in_flight(), packet_number,
-      serialized_packet->encrypted_length, has_retransmittable_data);
+  bool in_flight;
+  if (using_inline_pacing_) {
+    in_flight = pacing_sender_.OnPacketSent(
+        sent_time, unacked_packets_.bytes_in_flight(), packet_number,
+        serialized_packet->encrypted_length, has_retransmittable_data);
+  } else {
+    in_flight = send_algorithm_->OnPacketSent(
+        sent_time, unacked_packets_.bytes_in_flight(), packet_number,
+        serialized_packet->encrypted_length, has_retransmittable_data);
+  }
 
   unacked_packets_.AddSentPacket(serialized_packet, original_packet_number,
                                  transmission_type, sent_time, in_flight);
@@ -766,18 +777,21 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
   return true;
 }
 
-QuicTime::Delta QuicSentPacketManager::TimeUntilSend(
-    QuicTime now,
-    HasRetransmittableData retransmittable,
-    QuicPathId* path_id) {
+QuicTime::Delta QuicSentPacketManager::TimeUntilSend(QuicTime now,
+                                                     QuicPathId* path_id) {
   QuicTime::Delta delay = QuicTime::Delta::Infinite();
   // The TLP logic is entirely contained within QuicSentPacketManager, so the
   // send algorithm does not need to be consulted.
   if (pending_timer_transmission_count_ > 0) {
     delay = QuicTime::Delta::Zero();
   } else {
-    delay =
-        send_algorithm_->TimeUntilSend(now, unacked_packets_.bytes_in_flight());
+    if (using_inline_pacing_) {
+      delay =
+          pacing_sender_.TimeUntilSend(now, unacked_packets_.bytes_in_flight());
+    } else {
+      delay = send_algorithm_->TimeUntilSend(
+          now, unacked_packets_.bytes_in_flight());
+    }
   }
   if (!delay.IsInfinite()) {
     *path_id = path_id_;
@@ -924,18 +938,23 @@ void QuicSentPacketManager::CancelRetransmissionsForStream(
 }
 
 void QuicSentPacketManager::EnablePacing() {
-  // TODO(ianswett): Replace with a method which wraps the send algorithm in a
-  // pacer every time a new algorithm is set.
-  if (using_pacing_) {
-    return;
-  }
+  if (FLAGS_quic_use_inline_pacing) {
+    using_inline_pacing_ = true;
+    pacing_sender_.SetSender(send_algorithm_.get(), false);
+  } else {
+    // TODO(ianswett): Replace with a method which wraps the send algorithm in a
+    // pacer every time a new algorithm is set.
+    if (using_pacing_) {
+      return;
+    }
 
-  // Set up a pacing sender with a 1 millisecond alarm granularity, the same as
-  // the default granularity of the Linux kernel's FQ qdisc.
-  using_pacing_ = true;
-  send_algorithm_.reset(new PacingSender(send_algorithm_.release(),
-                                         QuicTime::Delta::FromMilliseconds(1),
-                                         kInitialUnpacedBurst));
+    // Set up a pacing sender with a 1 millisecond alarm granularity, the same
+    // as the default granularity of the Linux kernel's FQ qdisc.
+    using_pacing_ = true;
+    PacingSender* pacing_sender = new PacingSender;
+    pacing_sender->SetSender(send_algorithm_.release(), true);
+    send_algorithm_.reset(pacing_sender);
+  }
 }
 
 void QuicSentPacketManager::OnConnectionMigration(QuicPathId,
@@ -967,6 +986,7 @@ QuicPacketNumber QuicSentPacketManager::GetLargestSentPacket(QuicPathId) const {
   return unacked_packets_.largest_sent_packet();
 }
 
+// Remove this method when deprecating QUIC_VERSION_33.
 QuicPacketNumber QuicSentPacketManager::GetLeastPacketAwaitedByPeer(
     QuicPathId) const {
   return least_packet_awaited_by_peer_;

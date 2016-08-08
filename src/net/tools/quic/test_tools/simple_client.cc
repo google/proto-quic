@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/test_tools/simple_client.h"
 
+#include "net/tools/balsa/balsa_headers.h"
+
 namespace net {
 namespace test {
 
@@ -14,6 +16,18 @@ void SimpleClient::WaitForResponse() {
 // Waits for some data or response from the server.
 void SimpleClient::WaitForInitialResponse() {
   WaitForInitialResponseForMs(-1);
+}
+
+void SimpleClient::WaitForResponseForMs(int timeout_ms) {
+  WaitUntil(timeout_ms, [this]() { return response_complete(); });
+  if (response_complete()) {
+    VLOG(1) << "Client received response:" << response_headers()->DebugString()
+            << response_body();
+  }
+}
+
+void SimpleClient::WaitForInitialResponseForMs(int timeout_ms) {
+  WaitUntil(timeout_ms, [this]() { return response_size() != 0; });
 }
 
 int SimpleClient::ResetSocket() {

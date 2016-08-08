@@ -45,7 +45,10 @@ ScopedSSL_SESSION SSLClientSessionCache::Lookup(const std::string& cache_key) {
     cache_.Erase(iter);
     return nullptr;
   }
-  return ScopedSSL_SESSION(SSL_SESSION_up_ref(iter->second->session.get()));
+
+  SSL_SESSION* session = iter->second->session.get();
+  SSL_SESSION_up_ref(session);
+  return ScopedSSL_SESSION(session);
 }
 
 void SSLClientSessionCache::Insert(const std::string& cache_key,
@@ -54,7 +57,8 @@ void SSLClientSessionCache::Insert(const std::string& cache_key,
 
   // Make a new entry.
   std::unique_ptr<CacheEntry> entry(new CacheEntry);
-  entry->session.reset(SSL_SESSION_up_ref(session));
+  SSL_SESSION_up_ref(session);
+  entry->session.reset(session);
   entry->creation_time = clock_->Now();
 
   // Takes ownership.

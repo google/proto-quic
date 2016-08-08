@@ -69,6 +69,7 @@ void QuicSentPacketManagerPeer::SetSendAlgorithm(
     QuicSentPacketManager* sent_packet_manager,
     SendAlgorithmInterface* send_algorithm) {
   sent_packet_manager->send_algorithm_.reset(send_algorithm);
+  sent_packet_manager->using_inline_pacing_ = false;
 }
 
 // static

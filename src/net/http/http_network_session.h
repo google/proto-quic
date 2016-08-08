@@ -181,6 +181,8 @@ class NET_EXPORT HttpNetworkSession
     bool quic_disable_bidirectional_streams;
     // If true, enable force HOL blocking.  For measurement purposes.
     bool quic_force_hol_blocking;
+    // If true, race cert verification with host resolution.
+    bool quic_race_cert_verification;
 
     ProxyDelegate* proxy_delegate;
     // Enable support for Token Binding.

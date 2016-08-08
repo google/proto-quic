@@ -29,9 +29,8 @@ class PacingSenderTest : public ::testing::Test {
         infinite_time_(QuicTime::Delta::Infinite()),
         packet_number_(1),
         mock_sender_(new StrictMock<MockSendAlgorithm>()),
-        pacing_sender_(new PacingSender(mock_sender_,
-                                        QuicTime::Delta::FromMilliseconds(1),
-                                        0)) {
+        pacing_sender_(new PacingSender) {
+    pacing_sender_->SetSender(mock_sender_, true);
     // Pick arbitrary time.
     clock_.AdvanceTime(QuicTime::Delta::FromMilliseconds(9));
   }
@@ -39,11 +38,19 @@ class PacingSenderTest : public ::testing::Test {
   ~PacingSenderTest() override {}
 
   void InitPacingRate(QuicPacketCount burst_size, QuicBandwidth bandwidth) {
-    pacing_sender_.reset();
     mock_sender_ = new StrictMock<MockSendAlgorithm>();
-    pacing_sender_.reset(new PacingSender(
-        mock_sender_, QuicTime::Delta::FromMilliseconds(1), burst_size));
+    pacing_sender_.reset(new PacingSender);
+    pacing_sender_->SetSender(mock_sender_, true);
     EXPECT_CALL(*mock_sender_, PacingRate(_)).WillRepeatedly(Return(bandwidth));
+    if (burst_size == 0) {
+      EXPECT_CALL(*mock_sender_, OnCongestionEvent(_, _, _, _));
+      SendAlgorithmInterface::CongestionVector lost_packets;
+      lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
+      SendAlgorithmInterface::CongestionVector empty;
+      pacing_sender_->OnCongestionEvent(true, 1234, empty, lost_packets);
+    } else if (burst_size != kInitialBurstPackets) {
+      LOG(FATAL) << "Unsupported burst_size specificied.";
+    }
   }
 
   void CheckPacketIsSentImmediately(HasRetransmittableData retransmittable_data,
@@ -337,6 +344,9 @@ TEST_F(PacingSenderTest, NoBurstInRecovery) {
 }
 
 TEST_F(PacingSenderTest, VerifyInnerSenderCalled) {
+  // Configure pacing rate of 1 packet per 1 ms with no burst tokens.
+  InitPacingRate(0, QuicBandwidth::FromBytesAndTimeDelta(
+                        kMaxPacketSize, QuicTime::Delta::FromMilliseconds(1)));
   QuicBandwidth kBandwidth = QuicBandwidth::FromBitsPerSecond(1000);
   QuicTime kTime = QuicTime::Infinite();
   QuicTime::Delta kTimeDelta = QuicTime::Delta::Infinite();

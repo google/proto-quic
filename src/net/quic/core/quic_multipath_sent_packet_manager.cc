@@ -202,7 +202,6 @@ void QuicMultipathSentPacketManager::OnRetransmissionTimeout() {
 
 QuicTime::Delta QuicMultipathSentPacketManager::TimeUntilSend(
     QuicTime now,
-    HasRetransmittableData retransmittable,
     QuicPathId* path_id) {
   QuicTime::Delta delay = QuicTime::Delta::Infinite();
   *path_id = kInvalidPathId;
@@ -212,8 +211,8 @@ QuicTime::Delta QuicMultipathSentPacketManager::TimeUntilSend(
       continue;
     }
 
-    QuicTime::Delta path_delay = path_managers_info_[i].manager->TimeUntilSend(
-        now, retransmittable, path_id);
+    QuicTime::Delta path_delay =
+        path_managers_info_[i].manager->TimeUntilSend(now, path_id);
     if (!path_delay.IsInfinite() && path_delay < delay) {
       delay = path_delay;
       *path_id = i;

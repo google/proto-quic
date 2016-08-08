@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SSL_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_
-#define NET_SSL_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_
+#ifndef NET_CERT_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_
+#define NET_CERT_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_
 
 #include <vector>
 
@@ -35,4 +35,4 @@ typedef std::vector<SignedCertificateTimestampAndStatus>
 
 }  // namespace net
 
-#endif  // NET_SSL_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_
+#endif  // NET_CERT_SIGNED_CERTIFICATE_TIMESTAMP_AND_STATUS_H_

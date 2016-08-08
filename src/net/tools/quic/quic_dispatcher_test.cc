@@ -97,11 +97,12 @@ class TestDispatcher : public QuicDispatcher {
  public:
   TestDispatcher(const QuicConfig& config,
                  const QuicCryptoServerConfig* crypto_config,
+                 QuicVersionManager* version_manager,
                  EpollServer* eps)
       : QuicDispatcher(
             config,
             crypto_config,
-            QuicSupportedVersions(),
+            version_manager,
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)),
             std::unique_ptr<QuicServerSessionBase::Helper>(
@@ -172,10 +173,14 @@ class QuicDispatcherTest : public ::testing::Test {
   QuicDispatcherTest()
       : helper_(&eps_, QuicAllocator::BUFFER_POOL),
         alarm_factory_(&eps_),
+        version_manager_(QuicSupportedVersions()),
         crypto_config_(QuicCryptoServerConfig::TESTING,
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
-        dispatcher_(new TestDispatcher(config_, &crypto_config_, &eps_)),
+        dispatcher_(new TestDispatcher(config_,
+                                       &crypto_config_,
+                                       &version_manager_,
+                                       &eps_)),
         time_wait_list_manager_(nullptr),
         session1_(nullptr),
         session2_(nullptr) {
@@ -281,6 +286,7 @@ class QuicDispatcherTest : public ::testing::Test {
   QuicEpollAlarmFactory alarm_factory_;
   MockAlarmFactory mock_alarm_factory_;
   QuicConfig config_;
+  QuicVersionManager version_manager_;
   QuicCryptoServerConfig crypto_config_;
   IPEndPoint server_address_;
   std::unique_ptr<TestDispatcher> dispatcher_;

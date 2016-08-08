@@ -12,6 +12,7 @@
 #include "base/task_runner.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/privacy_mode.h"
+#include "net/log/net_log.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_time.h"
@@ -36,6 +37,9 @@ class QuicStreamFactoryPeer {
   static bool HasActiveSession(QuicStreamFactory* factory,
                                const QuicServerId& server_id);
 
+  static bool HasActiveCertVerifierJob(QuicStreamFactory* factory,
+                                       const QuicServerId& server_id);
+
   static QuicChromiumClientSession* GetActiveSession(
       QuicStreamFactory* factory,
       const QuicServerId& server_id);
@@ -58,6 +62,16 @@ class QuicStreamFactoryPeer {
   static bool GetDelayTcpRace(QuicStreamFactory* factory);
 
   static void SetDelayTcpRace(QuicStreamFactory* factory, bool delay_tcp_race);
+
+  static bool GetRaceCertVerification(QuicStreamFactory* factory);
+
+  static void SetRaceCertVerification(QuicStreamFactory* factory,
+                                      bool race_cert_verification);
+
+  static QuicAsyncStatus StartCertVerifyJob(QuicStreamFactory* factory,
+                                            const QuicServerId& server_id,
+                                            int cert_verify_flags,
+                                            const BoundNetLog& net_log);
 
   static void SetYieldAfterPackets(QuicStreamFactory* factory,
                                    int yield_after_packets);

@@ -84,7 +84,6 @@ bool ProofSourceChromium::GetProof(const IPAddress& server_ip,
                                    const string& server_config,
                                    QuicVersion quic_version,
                                    base::StringPiece chlo_hash,
-                                   bool ecdsa_ok,
                                    scoped_refptr<ProofSource::Chain>* out_chain,
                                    string* out_signature,
                                    string* out_leaf_cert_sct) {
@@ -156,16 +155,14 @@ void ProofSourceChromium::GetProof(const IPAddress& server_ip,
                                    const std::string& server_config,
                                    QuicVersion quic_version,
                                    base::StringPiece chlo_hash,
-                                   bool ecdsa_ok,
                                    std::unique_ptr<Callback> callback) {
   // As a transitional implementation, just call the synchronous version of
   // GetProof, then invoke the callback with the results and destroy it.
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
   string leaf_cert_sct;
-  const bool ok =
-      GetProof(server_ip, hostname, server_config, quic_version, chlo_hash,
-               ecdsa_ok, &chain, &signature, &leaf_cert_sct);
+  const bool ok = GetProof(server_ip, hostname, server_config, quic_version,
+                           chlo_hash, &chain, &signature, &leaf_cert_sct);
   callback->Run(ok, chain, signature, leaf_cert_sct, nullptr /* details */);
 }
 

@@ -355,6 +355,16 @@ void QuicSpdyStream::OnClose() {
   }
 }
 
+void QuicSpdyStream::OnCanWrite() {
+  ReliableQuicStream::OnCanWrite();
+
+  // Trailers (and hence a FIN) may have been sent ahead of queued body bytes.
+  if (FLAGS_quic_close_stream_after_writing_queued_data && !HasBufferedData() &&
+      fin_sent()) {
+    CloseWriteSide();
+  }
+}
+
 bool QuicSpdyStream::FinishedReadingHeaders() const {
   return headers_decompressed_ && decompressed_headers_.empty() &&
          header_list_.empty();

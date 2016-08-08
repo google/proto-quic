@@ -620,25 +620,17 @@ TEST_F(ReliableQuicStreamTest, FinalByteOffsetFromZeroLengthStreamFrame) {
       StringPiece());
   EXPECT_EQ(0, zero_length_stream_frame_with_fin.data_length);
 
-  if (FLAGS_quic_ignore_zero_length_frames) {
-    EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
-  } else {
-    EXPECT_CALL(*connection_,
-                CloseConnection(QUIC_FLOW_CONTROL_RECEIVED_TOO_MUCH_DATA, _, _))
-        .Times(1);
-  }
+  EXPECT_CALL(*connection_, CloseConnection(_, _, _)).Times(0);
   stream_->OnStreamFrame(zero_length_stream_frame_with_fin);
   EXPECT_TRUE(stream_->HasFinalReceivedByteOffset());
 
-  if (FLAGS_quic_ignore_zero_length_frames) {
-    // The flow control receive offset values should not have changed.
-    EXPECT_EQ(current_stream_flow_control_offset,
-              QuicFlowControllerPeer::ReceiveWindowOffset(
-                  stream_->flow_controller()));
-    EXPECT_EQ(current_connection_flow_control_offset,
-              QuicFlowControllerPeer::ReceiveWindowOffset(
-                  session_->flow_controller()));
-  }
+  // The flow control receive offset values should not have changed.
+  EXPECT_EQ(
+      current_stream_flow_control_offset,
+      QuicFlowControllerPeer::ReceiveWindowOffset(stream_->flow_controller()));
+  EXPECT_EQ(
+      current_connection_flow_control_offset,
+      QuicFlowControllerPeer::ReceiveWindowOffset(session_->flow_controller()));
 }
 
 TEST_F(ReliableQuicStreamTest, SetDrainingIncomingOutgoing) {

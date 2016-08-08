@@ -927,8 +927,7 @@ class MockSentPacketManager : public QuicSentPacketManagerInterface {
                     TransmissionType,
                     HasRetransmittableData));
   MOCK_METHOD0(OnRetransmissionTimeout, void(void));
-  MOCK_METHOD3(TimeUntilSend,
-               QuicTime::Delta(QuicTime, HasRetransmittableData, QuicPathId*));
+  MOCK_METHOD2(TimeUntilSend, QuicTime::Delta(QuicTime, QuicPathId*));
   MOCK_CONST_METHOD0(GetRetransmissionTime, const QuicTime(void));
   MOCK_CONST_METHOD0(GetRttStats, const RttStats*(void));
   MOCK_CONST_METHOD0(BandwidthEstimate, QuicBandwidth(void));

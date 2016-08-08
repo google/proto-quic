@@ -150,8 +150,6 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
   size_t frame_len_;
   size_t uncompressed_frame_len_;
 
-  // Helper variables that cache the corresponding feature flag.
-  bool measure_headers_hol_blocking_time_;
   bool supports_push_promise_;
 
   // Timestamps used to measure HOL blocking, these are recorded by

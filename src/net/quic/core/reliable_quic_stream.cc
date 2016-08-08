@@ -106,7 +106,7 @@ void ReliableQuicStream::OnStreamFrame(const QuicStreamFrame& frame) {
 
   // Flow control is interested in tracking highest received offset.
   // Only interested in received frames that carry data.
-  if ((!FLAGS_quic_ignore_zero_length_frames || frame_payload_size > 0) &&
+  if (frame_payload_size > 0 &&
       MaybeIncreaseHighestReceivedOffset(frame.offset + frame_payload_size)) {
     // As the highest received offset has changed, check to see if this is a
     // violation of flow control.

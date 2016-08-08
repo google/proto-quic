@@ -4,6 +4,7 @@
 
 #include "net/quic/core/quic_multipath_sent_packet_manager.h"
 
+#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/test_tools/quic_multipath_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
@@ -35,6 +36,7 @@ class QuicMultipathSentPacketManagerTest : public testing::Test {
         &multipath_manager_, manager_1_);
     QuicMultipathSentPacketManagerPeer::AddPathWithCloseState(
         &multipath_manager_, manager_2_);
+    FLAGS_quic_always_log_bugs_for_tests = true;
   }
 
   ~QuicMultipathSentPacketManagerTest() override {}
@@ -202,15 +204,12 @@ TEST_F(QuicMultipathSentPacketManagerTest, OnRetransmissionTimeout) {
 
 TEST_F(QuicMultipathSentPacketManagerTest, TimeUntilSend) {
   QuicPathId path_id = kInvalidPathId;
-  EXPECT_CALL(*manager_0_,
-              TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id))
+  EXPECT_CALL(*manager_0_, TimeUntilSend(clock_.Now(), &path_id))
       .WillOnce(Return(QuicTime::Delta::FromMilliseconds(200)));
-  EXPECT_CALL(*manager_1_,
-              TimeUntilSend(clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id))
+  EXPECT_CALL(*manager_1_, TimeUntilSend(clock_.Now(), &path_id))
       .WillOnce(Return(QuicTime::Delta::FromMilliseconds(100)));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(100),
-            multipath_manager_.TimeUntilSend(
-                clock_.Now(), HAS_RETRANSMITTABLE_DATA, &path_id));
+            multipath_manager_.TimeUntilSend(clock_.Now(), &path_id));
   EXPECT_EQ(kTestPathId1, path_id);
 }
 

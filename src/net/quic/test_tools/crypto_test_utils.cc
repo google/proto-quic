@@ -524,8 +524,8 @@ uint64_t CryptoTestUtils::LeafCertHashForTesting() {
   std::unique_ptr<ProofSource> proof_source(
       CryptoTestUtils::ProofSourceForTesting());
   if (!proof_source->GetProof(server_ip, "", "",
-                              QuicSupportedVersions().front(), "", false,
-                              &chain, &sig, &cert_sct) ||
+                              QuicSupportedVersions().front(), "", &chain, &sig,
+                              &cert_sct) ||
       chain->certs.empty()) {
     DCHECK(false) << "Proof generation failed";
     return 0;

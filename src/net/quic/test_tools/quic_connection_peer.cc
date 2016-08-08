@@ -28,6 +28,7 @@ void QuicConnectionPeer::SetSendAlgorithm(
     SendAlgorithmInterface* send_algorithm) {
   GetSentPacketManager(connection, path_id)
       ->send_algorithm_.reset(send_algorithm);
+  GetSentPacketManager(connection, path_id)->using_inline_pacing_ = false;
 }
 
 // static

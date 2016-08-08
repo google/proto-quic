@@ -30,25 +30,6 @@ class CryptoTestUtils;
 class QuicCryptoServerStreamPeer;
 }  // namespace test
 
-// Receives a notification when the server hello (SHLO) has been ACKed by the
-// peer. At this point we disable HANDSHAKE_MODE in the sent packet manager.
-class NET_EXPORT_PRIVATE ServerHelloNotifier : public QuicAckListenerInterface {
- public:
-  explicit ServerHelloNotifier(QuicCryptoServerStreamBase* stream)
-      : server_stream_(stream) {}
-
-  void OnPacketAcked(int acked_bytes, QuicTime::Delta ack_delay_time) override;
-
-  void OnPacketRetransmitted(int retransmitted_bytes) override;
-
- private:
-  ~ServerHelloNotifier() override {}
-
-  QuicCryptoServerStreamBase* server_stream_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServerHelloNotifier);
-};
-
 // TODO(alyssar) see what can be moved out of QuicCryptoServerStream with
 // various code and test refactoring.
 class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {

@@ -311,7 +311,8 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       largest_received_packet_size_(0),
       goaway_sent_(false),
       goaway_received_(false),
-      multipath_enabled_(false) {
+      multipath_enabled_(false),
+      write_error_occured_(false) {
   DVLOG(1) << ENDPOINT
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -663,7 +664,7 @@ void QuicConnection::OnDecryptedPacket(EncryptionLevel level) {
 
   // Once the server receives a forward secure packet, the handshake is
   // confirmed.
-  if (FLAGS_quic_no_shlo_listener && level == ENCRYPTION_FORWARD_SECURE &&
+  if (level == ENCRYPTION_FORWARD_SECURE &&
       perspective_ == Perspective::IS_SERVER) {
     sent_packet_manager_->SetHandshakeConfirmed();
   }
@@ -1557,8 +1558,6 @@ bool QuicConnection::CanWrite(HasRetransmittableData retransmittable) {
   }
 
   // Allow acks to be sent immediately.
-  // TODO(ianswett): Remove retransmittable from
-  // SendAlgorithmInterface::TimeUntilSend.
   if (retransmittable == NO_RETRANSMITTABLE_DATA) {
     return true;
   }
@@ -1571,8 +1570,7 @@ bool QuicConnection::CanWrite(HasRetransmittableData retransmittable) {
   // sent on path_id.
   QuicPathId path_id = kInvalidPathId;
   QuicTime now = clock_->Now();
-  QuicTime::Delta delay =
-      sent_packet_manager_->TimeUntilSend(now, retransmittable, &path_id);
+  QuicTime::Delta delay = sent_packet_manager_->TimeUntilSend(now, &path_id);
   if (delay.IsInfinite()) {
     DCHECK_EQ(kInvalidPathId, path_id);
     send_alarm_->Cancel();
@@ -1689,9 +1687,17 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
     // TODO(ianswett): Change the packet number length and other packet creator
     // options by a more explicit API than setting a struct value directly,
     // perhaps via the NetworkChangeVisitor.
-    packet_generator_.UpdateSequenceNumberLength(
-        sent_packet_manager_->GetLeastPacketAwaitedByPeer(packet->path_id),
-        sent_packet_manager_->EstimateMaxPacketsInFlight(max_packet_length()));
+    if (FLAGS_quic_least_unacked_packet_number_length) {
+      packet_generator_.UpdateSequenceNumberLength(
+          sent_packet_manager_->GetLeastUnacked(packet->path_id),
+          sent_packet_manager_->EstimateMaxPacketsInFlight(
+              max_packet_length()));
+    } else {
+      packet_generator_.UpdateSequenceNumberLength(
+          sent_packet_manager_->GetLeastPacketAwaitedByPeer(packet->path_id),
+          sent_packet_manager_->EstimateMaxPacketsInFlight(
+              max_packet_length()));
+    }
   }
 
   bool reset_retransmission_alarm = sent_packet_manager_->OnPacketSent(
@@ -1751,13 +1757,29 @@ bool QuicConnection::ShouldDiscardPacket(const SerializedPacket& packet) {
 }
 
 void QuicConnection::OnWriteError(int error_code) {
+  if (FLAGS_quic_close_connection_on_packet_too_large && write_error_occured_) {
+    // A write error already occurred. The connection is being closed.
+    return;
+  }
+  write_error_occured_ = true;
+
   const string error_details = "Write failed with error: " +
                                base::IntToString(error_code) + " (" +
                                ErrorToString(error_code) + ")";
   DVLOG(1) << ENDPOINT << error_details;
   // We can't send an error as the socket is presumably borked.
-  TearDownLocalConnectionState(QUIC_PACKET_WRITE_ERROR, error_details,
-                               ConnectionCloseSource::FROM_SELF);
+  switch (error_code) {
+    case ERR_MSG_TOO_BIG:
+      if (FLAGS_quic_close_connection_on_packet_too_large) {  // NOLINT
+        CloseConnection(QUIC_PACKET_WRITE_ERROR, error_details,
+                        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+        break;
+      }
+    default:
+      // We can't send an error as the socket is presumably borked.
+      TearDownLocalConnectionState(QUIC_PACKET_WRITE_ERROR, error_details,
+                                   ConnectionCloseSource::FROM_SELF);
+  }
 }
 
 void QuicConnection::OnSerializedPacket(SerializedPacket* serialized_packet) {
@@ -1843,7 +1865,8 @@ void QuicConnection::SendOrQueuePacket(SerializedPacket* packet) {
   // If a forward-secure encrypter is available but is not being used and the
   // next packet number is the first packet which requires
   // forward security, start using the forward-secure encrypter.
-  if (encryption_level_ != ENCRYPTION_FORWARD_SECURE &&
+  if (!FLAGS_quic_remove_obsolete_forward_secure &&
+      encryption_level_ != ENCRYPTION_FORWARD_SECURE &&
       has_forward_secure_encrypter_ &&
       packet->packet_number >= first_required_forward_secure_packet_ - 1) {
     SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
@@ -1913,7 +1936,8 @@ void QuicConnection::OnRetransmissionTimeout() {
 void QuicConnection::SetEncrypter(EncryptionLevel level,
                                   QuicEncrypter* encrypter) {
   packet_generator_.SetEncrypter(level, encrypter);
-  if (level == ENCRYPTION_FORWARD_SECURE) {
+  if (!FLAGS_quic_remove_obsolete_forward_secure &&
+      level == ENCRYPTION_FORWARD_SECURE) {
     has_forward_secure_encrypter_ = true;
     first_required_forward_secure_packet_ =
         packet_number_of_last_sent_packet_ +

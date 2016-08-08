@@ -637,11 +637,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       const CryptoHandshakeMessage& client_hello,
       const QuicCryptoProof& crypto_proof) const;
 
-  // ParseProofDemand reads the PDMD field from the client hello and sets the
-  // |x509_ecdsa_supported| and |x509_supported| output parameters.
-  void ParseProofDemand(const CryptoHandshakeMessage& client_hello,
-                        bool* x509_supported,
-                        bool* x509_ecdsa_supported) const;
+  // Returns true if the PDMD field from the client hello demands an X509
+  // certificate.
+  bool ClientDemandsX509Proof(const CryptoHandshakeMessage& client_hello) const;
 
   // Callback to receive the results of ProofSource::GetProof.  Note: this
   // callback has no cancellation support, since the lifetime of the ProofSource

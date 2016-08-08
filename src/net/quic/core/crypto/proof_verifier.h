@@ -86,6 +86,26 @@ class NET_EXPORT_PRIVATE ProofVerifier {
       std::string* error_details,
       std::unique_ptr<ProofVerifyDetails>* details,
       std::unique_ptr<ProofVerifierCallback> callback) = 0;
+
+  // VerifyCertChain checks that |certs| is a valid chain for |hostname|. On
+  // success, it returns QUIC_SUCCESS. On failure, it returns QUIC_FAILURE and
+  // sets |*error_details| to a description of the problem. In either case it
+  // may set |*details|, which the caller takes ownership of.
+  //
+  // |context| specifies an implementation specific struct (which may be nullptr
+  // for some implementations) that provides useful information for the
+  // verifier, e.g. logging handles.
+  //
+  // This function may also return QUIC_PENDING, in which case the ProofVerifier
+  // will call back, on the original thread, via |callback| when complete.
+  // In this case, the ProofVerifier will take ownership of |callback|.
+  virtual QuicAsyncStatus VerifyCertChain(
+      const std::string& hostname,
+      const std::vector<std::string>& certs,
+      const ProofVerifyContext* context,
+      std::string* error_details,
+      std::unique_ptr<ProofVerifyDetails>* details,
+      std::unique_ptr<ProofVerifierCallback> callback) = 0;
 };
 
 }  // namespace net

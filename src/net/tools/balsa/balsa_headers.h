@@ -828,6 +828,7 @@ class BalsaHeaders {
   // object is not completely parsed, e.g., when there was an error in the
   // middle of parsing.
   void DumpToString(std::string* str) const;
+  std::string DebugString() const;
 
   const base::StringPiece first_line() const {
     DCHECK_GE(whitespace_4_idx_, non_whitespace_1_idx_);

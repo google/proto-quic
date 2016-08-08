@@ -45,10 +45,6 @@ class NET_EXPORT_PRIVATE QuicCryptoStream
   // Sends |message| to the peer.
   // TODO(wtc): return a success/failure status.
   void SendHandshakeMessage(const CryptoHandshakeMessage& message);
-  // As above, but registers |delegate| for notification when |message| has been
-  // ACKed by the peer.
-  void SendHandshakeMessage(const CryptoHandshakeMessage& message,
-                            QuicAckListenerInterface* listener);
 
   // Performs key extraction to derive a new secret of |result_len| bytes
   // dependent on |label|, |context|, and the stream's negotiated subkey secret.

@@ -6,10 +6,16 @@
 
 #include <stdint.h>
 
+#include <limits>
+
+#include "base/format_macros.h"
 #include "base/logging.h"
+#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
+
+using base::StringPrintf;
 
 namespace net {
 
@@ -19,6 +25,11 @@ const int64_t kQuicInfiniteBandwidth = INT64_C(0x7fffffffffffffff);
 // static
 QuicBandwidth QuicBandwidth::Zero() {
   return QuicBandwidth(0);
+}
+
+// static
+QuicBandwidth QuicBandwidth::Infinite() {
+  return QuicBandwidth(std::numeric_limits<int64_t>::max());
 }
 
 // static
@@ -101,6 +112,32 @@ QuicTime::Delta QuicBandwidth::TransferTime(QuicByteCount bytes) const {
   }
   return QuicTime::Delta::FromMicroseconds(bytes * 8 * kNumMicrosPerSecond /
                                            bits_per_second_);
+}
+
+std::string QuicBandwidth::ToDebugValue() const {
+  if (bits_per_second_ < 80000) {
+    return StringPrintf("%" PRId64 " bits/s (%" PRId64 " bytes/s)",
+                        bits_per_second_, bits_per_second_ / 8);
+  }
+
+  double divisor;
+  char unit;
+  if (bits_per_second_ < 8 * 1000 * 1000) {
+    divisor = 1e3;
+    unit = 'k';
+  } else if (bits_per_second_ < INT64_C(8) * 1000 * 1000 * 1000) {
+    divisor = 1e6;
+    unit = 'M';
+  } else {
+    divisor = 1e9;
+    unit = 'G';
+  }
+
+  double bits_per_second_with_unit = bits_per_second_ / divisor;
+  double bytes_per_second_with_unit = bits_per_second_with_unit / 8;
+  return StringPrintf("%.2f %cbits/s (%.2f %cbytes/s)",
+                      bits_per_second_with_unit, unit,
+                      bytes_per_second_with_unit, unit);
 }
 
 }  // namespace net

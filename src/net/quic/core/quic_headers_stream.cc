@@ -320,10 +320,7 @@ QuicHeadersStream::QuicHeadersStream(QuicSpdySession* session)
       fin_(false),
       frame_len_(0),
       uncompressed_frame_len_(0),
-      measure_headers_hol_blocking_time_(
-          FLAGS_quic_measure_headers_hol_blocking_time),
-      supports_push_promise_(session->perspective() == Perspective::IS_CLIENT &&
-                             FLAGS_quic_supports_push_promise),
+      supports_push_promise_(session->perspective() == Perspective::IS_CLIENT),
       cur_max_timestamp_(QuicTime::Zero()),
       prev_max_timestamp_(QuicTime::Zero()),
       spdy_framer_(HTTP2),
@@ -440,19 +437,12 @@ void QuicHeadersStream::OnDataAvailable() {
   while (true) {
     iov.iov_base = buffer;
     iov.iov_len = arraysize(buffer);
-    if (measure_headers_hol_blocking_time_) {
-      if (!sequencer()->GetReadableRegion(&iov, &timestamp)) {
-        // No more data to read.
-        break;
-      }
-      DCHECK(timestamp.IsInitialized());
-      cur_max_timestamp_ = std::max(timestamp, cur_max_timestamp_);
-    } else {
-      if (sequencer()->GetReadableRegions(&iov, 1) != 1) {
-        // No more data to read.
-        break;
-      }
+    if (!sequencer()->GetReadableRegion(&iov, &timestamp)) {
+      // No more data to read.
+      break;
     }
+    DCHECK(timestamp.IsInitialized());
+    cur_max_timestamp_ = std::max(timestamp, cur_max_timestamp_);
     if (spdy_framer_.ProcessInput(static_cast<char*>(iov.iov_base),
                                   iov.iov_len) != iov.iov_len) {
       // Error processing data.
@@ -502,21 +492,19 @@ void QuicHeadersStream::OnControlFrameHeaderData(SpdyStreamId stream_id,
   if (len == 0) {
     DCHECK_NE(0u, stream_id_);
     DCHECK_NE(0u, frame_len_);
-    if (measure_headers_hol_blocking_time_) {
-      if (prev_max_timestamp_ > cur_max_timestamp_) {
-        // prev_max_timestamp_ > cur_max_timestamp_ implies that
-        // headers from lower numbered streams actually came off the
-        // wire after headers for the current stream, hence there was
-        // HOL blocking.
-        QuicTime::Delta delta = prev_max_timestamp_ - cur_max_timestamp_;
-        DVLOG(1) << "stream " << stream_id
-                 << ": Net.QuicSession.HeadersHOLBlockedTime "
-                 << delta.ToMilliseconds();
-        spdy_session_->OnHeadersHeadOfLineBlocking(delta);
-      }
-      prev_max_timestamp_ = std::max(prev_max_timestamp_, cur_max_timestamp_);
-      cur_max_timestamp_ = QuicTime::Zero();
+    if (prev_max_timestamp_ > cur_max_timestamp_) {
+      // prev_max_timestamp_ > cur_max_timestamp_ implies that
+      // headers from lower numbered streams actually came off the
+      // wire after headers for the current stream, hence there was
+      // HOL blocking.
+      QuicTime::Delta delta = prev_max_timestamp_ - cur_max_timestamp_;
+      DVLOG(1) << "stream " << stream_id
+               << ": Net.QuicSession.HeadersHOLBlockedTime "
+               << delta.ToMilliseconds();
+      spdy_session_->OnHeadersHeadOfLineBlocking(delta);
     }
+    prev_max_timestamp_ = std::max(prev_max_timestamp_, cur_max_timestamp_);
+    cur_max_timestamp_ = QuicTime::Zero();
     if (promised_stream_id_ == kInvalidStreamId) {
       spdy_session_->OnStreamHeadersComplete(stream_id_, fin_, frame_len_);
     } else {
@@ -549,21 +537,20 @@ void QuicHeadersStream::OnControlFrameHeaderData(SpdyStreamId stream_id,
 void QuicHeadersStream::OnHeaderList(const QuicHeaderList& header_list) {
   DVLOG(1) << "Received header list for stream " << stream_id_ << ": "
            << header_list.DebugString();
-  if (measure_headers_hol_blocking_time_) {
-    if (prev_max_timestamp_ > cur_max_timestamp_) {
-      // prev_max_timestamp_ > cur_max_timestamp_ implies that
-      // headers from lower numbered streams actually came off the
-      // wire after headers for the current stream, hence there was
-      // HOL blocking.
-      QuicTime::Delta delta = prev_max_timestamp_ - cur_max_timestamp_;
-      DVLOG(1) << "stream " << stream_id_
-               << ": Net.QuicSession.HeadersHOLBlockedTime "
-               << delta.ToMilliseconds();
-      spdy_session_->OnHeadersHeadOfLineBlocking(delta);
-    }
-    prev_max_timestamp_ = std::max(prev_max_timestamp_, cur_max_timestamp_);
-    cur_max_timestamp_ = QuicTime::Zero();
+  if (prev_max_timestamp_ > cur_max_timestamp_) {
+    // prev_max_timestamp_ > cur_max_timestamp_ implies that
+    // headers from lower numbered streams actually came off the
+    // wire after headers for the current stream, hence there was
+    // HOL blocking.
+    QuicTime::Delta delta = prev_max_timestamp_ - cur_max_timestamp_;
+    DVLOG(1) << "stream " << stream_id_
+             << ": Net.QuicSession.HeadersHOLBlockedTime "
+             << delta.ToMilliseconds();
+    spdy_session_->OnHeadersHeadOfLineBlocking(delta);
   }
+
+  prev_max_timestamp_ = std::max(prev_max_timestamp_, cur_max_timestamp_);
+  cur_max_timestamp_ = QuicTime::Zero();
   if (promised_stream_id_ == kInvalidStreamId) {
     spdy_session_->OnStreamHeaderList(stream_id_, fin_, frame_len_,
                                       header_list);

@@ -81,12 +81,11 @@ class QuicServer : public EpollCallbackInterface {
 
   const QuicConfig& config() const { return config_; }
   const QuicCryptoServerConfig& crypto_config() const { return crypto_config_; }
-  const QuicVersionVector& supported_versions() const {
-    return supported_versions_;
-  }
   EpollServer* epoll_server() { return &epoll_server_; }
 
   QuicDispatcher* dispatcher() { return dispatcher_.get(); }
+
+  QuicVersionManager* version_manager() { return &version_manager_; }
 
  private:
   friend class net::test::QuicServerPeer;
@@ -122,11 +121,8 @@ class QuicServer : public EpollCallbackInterface {
   // crypto_config_options_ contains crypto parameters for the handshake.
   QuicCryptoServerConfig::ConfigOptions crypto_config_options_;
 
-  // This vector contains QUIC versions which we currently support.
-  // This should be ordered such that the highest supported version is the first
-  // element, with subsequent elements in descending order (versions can be
-  // skipped as necessary).
-  QuicVersionVector supported_versions_;
+  // Used to generate current supported versions.
+  QuicVersionManager version_manager_;
 
   // Point to a QuicPacketReader object on the heap. The reader allocates more
   // space than allowed on the stack.

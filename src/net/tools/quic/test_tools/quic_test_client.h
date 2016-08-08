@@ -124,8 +124,7 @@ class QuicTestClient : public test::SimpleClient,
   void Disconnect() override;
   IPEndPoint local_address() const override;
   void ClearPerRequestState() override;
-  void WaitForResponseForMs(int timeout_ms) override;
-  void WaitForInitialResponseForMs(int timeout_ms) override;
+  void WaitUntil(int timeout_ms, std::function<bool()> trigger) override;
   ssize_t Send(const void* buffer, size_t size) override;
   bool response_complete() const override;
   bool response_headers_complete() const override;
@@ -170,6 +169,8 @@ class QuicTestClient : public test::SimpleClient,
   // ConnectionId instead of a random one.
   void UseConnectionId(QuicConnectionId connection_id);
 
+  // Update internal stream_ pointer and perform accompanying housekeeping.
+  void SetStream(QuicSpdyClientStream* stream);
   // Returns nullptr if the maximum number of streams have already been created.
   QuicSpdyClientStream* GetOrCreateStream();
 
@@ -274,6 +275,8 @@ class QuicTestClient : public test::SimpleClient,
 
   SpdyPriority priority_;
   std::string response_;
+  // bytes_read_ and bytes_written_ are updated only when stream_ is released;
+  // prefer bytes_read() and bytes_written() member functions.
   uint64_t bytes_read_;
   uint64_t bytes_written_;
   // The number of uncompressed HTTP header bytes received.

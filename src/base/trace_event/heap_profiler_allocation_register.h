@@ -45,8 +45,7 @@ class FixedHashMap {
   using KVPair = std::pair<const Key, Value>;
 
   // For implementation simplicity API uses integer index instead
-  // of iterators. Most operations (except FindValidIndex) on KVIndex
-  // are O(1).
+  // of iterators. Most operations (except Find) on KVIndex are O(1).
   using KVIndex = size_t;
   static const KVIndex kInvalidKVIndex = static_cast<KVIndex>(-1);
 
@@ -305,10 +304,14 @@ class BASE_EXPORT AllocationRegister {
   static const size_t kAllocationBuckets = 1 << 18;
   static const size_t kAllocationCapacity = 1500000;
 
-  // Expect max 2^15 unique backtraces. Can be changed to 2^16 without
-  // needing to tweak BacktraceHasher implementation.
-  static const size_t kBacktraceBuckets = 1 << 15;
-  static const size_t kBacktraceCapacity = kBacktraceBuckets;
+  // 2^16 works well with BacktraceHasher. When increasing this number make
+  // sure BacktraceHasher still produces low number of collisions.
+  static const size_t kBacktraceBuckets = 1 << 16;
+#if defined(OS_ANDROID)
+  static const size_t kBacktraceCapacity = 32000;  // 22K was observed
+#else
+  static const size_t kBacktraceCapacity = 55000;  // 45K was observed on Linux
+#endif
 
   struct BacktraceHasher {
     size_t operator () (const Backtrace& backtrace) const;

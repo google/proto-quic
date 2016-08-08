@@ -85,6 +85,13 @@ class NET_EXPORT_PRIVATE ProofVerifierChromium : public ProofVerifier {
       std::string* error_details,
       std::unique_ptr<ProofVerifyDetails>* verify_details,
       std::unique_ptr<ProofVerifierCallback> callback) override;
+  QuicAsyncStatus VerifyCertChain(
+      const std::string& hostname,
+      const std::vector<std::string>& certs,
+      const ProofVerifyContext* verify_context,
+      std::string* error_details,
+      std::unique_ptr<ProofVerifyDetails>* verify_details,
+      std::unique_ptr<ProofVerifierCallback> callback) override;
 
  private:
   class Job;

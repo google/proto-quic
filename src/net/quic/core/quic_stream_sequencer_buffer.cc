@@ -13,11 +13,19 @@ using std::min;
 using std::string;
 
 namespace net {
+namespace {
+
+// Upper limit of how many gaps allowed in buffer, which ensures a reasonable
+// number of iterations needed to find the right gap to fill when a frame
+// arrives.
+const size_t kMaxNumGapsAllowed = 2 * kMaxPacketGap;
+
+}  // namespace
 
 namespace {
 
 string RangeDebugString(QuicStreamOffset start, QuicStreamOffset end) {
-  return string("[") + base::Uint64ToString(start) + ", " +
+  return std::string("[") + base::Uint64ToString(start) + ", " +
          base::Uint64ToString(end) + ") ";
 }
 
@@ -129,6 +137,16 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
   if (offset + size > total_bytes_read_ + max_buffer_capacity_bytes_) {
     *error_details = "Received data beyond available range.";
     return QUIC_INTERNAL_ERROR;
+  }
+
+  if (FLAGS_quic_limit_frame_gaps_in_buffer &&
+      current_gap->begin_offset != starting_offset &&
+      current_gap->end_offset != starting_offset + data.length() &&
+      gaps_.size() >= kMaxNumGapsAllowed) {
+    // This frame is going to create one more gap which exceeds max number of
+    // gaps allowed. Stop processing.
+    *error_details = "Too many gaps created for this stream.";
+    return QUIC_TOO_MANY_FRAME_GAPS;
   }
 
   size_t total_written = 0;

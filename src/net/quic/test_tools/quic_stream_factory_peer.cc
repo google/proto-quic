@@ -7,11 +7,14 @@
 #include <string>
 #include <vector>
 
+#include "net/cert/x509_certificate.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/chromium/quic_http_stream.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/quic/core/crypto/quic_crypto_client_config.h"
 #include "net/quic/core/quic_clock.h"
+#include "net/test/cert_test_util.h"
+#include "net/test/test_data_directory.h"
 
 using std::string;
 using std::vector;
@@ -31,6 +34,12 @@ QuicCryptoClientConfig* QuicStreamFactoryPeer::GetCryptoConfig(
 bool QuicStreamFactoryPeer::HasActiveSession(QuicStreamFactory* factory,
                                              const QuicServerId& server_id) {
   return factory->HasActiveSession(server_id);
+}
+
+bool QuicStreamFactoryPeer::HasActiveCertVerifierJob(
+    QuicStreamFactory* factory,
+    const QuicServerId& server_id) {
+  return factory->HasActiveCertVerifierJob(server_id);
 }
 
 QuicChromiumClientSession* QuicStreamFactoryPeer::GetActiveSession(
@@ -80,6 +89,25 @@ bool QuicStreamFactoryPeer::GetDelayTcpRace(QuicStreamFactory* factory) {
 void QuicStreamFactoryPeer::SetDelayTcpRace(QuicStreamFactory* factory,
                                             bool delay_tcp_race) {
   factory->delay_tcp_race_ = delay_tcp_race;
+}
+
+bool QuicStreamFactoryPeer::GetRaceCertVerification(
+    QuicStreamFactory* factory) {
+  return factory->race_cert_verification_;
+}
+
+void QuicStreamFactoryPeer::SetRaceCertVerification(
+    QuicStreamFactory* factory,
+    bool race_cert_verification) {
+  factory->race_cert_verification_ = race_cert_verification;
+}
+
+QuicAsyncStatus QuicStreamFactoryPeer::StartCertVerifyJob(
+    QuicStreamFactory* factory,
+    const QuicServerId& server_id,
+    int cert_verify_flags,
+    const BoundNetLog& net_log) {
+  return factory->StartCertVerifyJob(server_id, cert_verify_flags, net_log);
 }
 
 void QuicStreamFactoryPeer::SetYieldAfterPackets(QuicStreamFactory* factory,
@@ -149,9 +177,15 @@ void QuicStreamFactoryPeer::CacheDummyServerConfig(
   string server_config(reinterpret_cast<const char*>(&scfg), sizeof(scfg));
   string source_address_token("test_source_address_token");
   string signature("test_signature");
-  string test_cert("test_cert");
+
   vector<string> certs;
-  certs.push_back(test_cert);
+  // Load a certificate that is valid for *.example.org
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
+  DCHECK(cert);
+  std::string der_bytes;
+  DCHECK(X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der_bytes));
+  certs.push_back(der_bytes);
 
   QuicCryptoClientConfig* crypto_config = &factory->crypto_config_;
   QuicCryptoClientConfig::CachedState* cached =
@@ -159,6 +193,7 @@ void QuicStreamFactoryPeer::CacheDummyServerConfig(
   QuicClock clock;
   cached->Initialize(server_config, source_address_token, certs, "", "",
                      signature, clock.WallNow());
+  DCHECK(!cached->certs().empty());
 }
 
 QuicClientPushPromiseIndex* QuicStreamFactoryPeer::GetPushPromiseIndex(

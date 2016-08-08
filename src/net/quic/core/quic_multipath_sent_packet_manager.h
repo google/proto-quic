@@ -98,9 +98,7 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
 
   // Returns the earliest time the next packet can be sent. Sets |path_id| to be
   // the path on which the next packet should be sent.
-  QuicTime::Delta TimeUntilSend(QuicTime now,
-                                HasRetransmittableData retransmittable,
-                                QuicPathId* path_id) override;
+  QuicTime::Delta TimeUntilSend(QuicTime now, QuicPathId* path_id) override;
 
   // Returns the earliest retransmission time of all paths.
   const QuicTime GetRetransmissionTime() const override;

@@ -301,6 +301,7 @@ const char* QuicUtils::ErrorToString(QuicErrorCode error) {
     RETURN_STRING_LITERAL(QUIC_CRYPTO_CHLO_TOO_LARGE);
     RETURN_STRING_LITERAL(QUIC_MULTIPATH_PATH_DOES_NOT_EXIST);
     RETURN_STRING_LITERAL(QUIC_MULTIPATH_PATH_NOT_ACTIVE);
+    RETURN_STRING_LITERAL(QUIC_TOO_MANY_FRAME_GAPS);
     RETURN_STRING_LITERAL(QUIC_LAST_ERROR);
     // Intentionally have no default case, so we'll break the build
     // if we add errors and don't put them here.

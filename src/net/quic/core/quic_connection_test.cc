@@ -279,6 +279,8 @@ class TestPacketWriter : public QuicPacketWriter {
         write_blocked_(false),
         write_should_fail_(false),
         block_on_next_write_(false),
+        next_packet_too_large_(false),
+        always_get_packet_too_large_(false),
         is_write_blocked_data_buffered_(false),
         final_bytes_of_last_packet_(0),
         final_bytes_of_previous_packet_(0),
@@ -310,6 +312,14 @@ class TestPacketWriter : public QuicPacketWriter {
     if (block_on_next_write_) {
       write_blocked_ = true;
       block_on_next_write_ = false;
+    }
+    if (next_packet_too_large_) {
+      next_packet_too_large_ = false;
+      return WriteResult(WRITE_STATUS_ERROR, ERR_MSG_TOO_BIG);
+    }
+    if (always_get_packet_too_large_) {
+      LOG(ERROR) << "RETURNING TOO BIG";
+      return WriteResult(WRITE_STATUS_ERROR, ERR_MSG_TOO_BIG);
     }
     if (IsWriteBlocked()) {
       return WriteResult(WRITE_STATUS_BLOCKED, -1);
@@ -345,6 +355,10 @@ class TestPacketWriter : public QuicPacketWriter {
   }
 
   void BlockOnNextWrite() { block_on_next_write_ = true; }
+
+  void SimulateNextPacketTooLarge() { next_packet_too_large_ = true; }
+
+  void AlwaysGetPacketTooLarge() { always_get_packet_too_large_ = true; }
 
   // Sets the amount of time that the writer should before the actual write.
   void SetWritePauseTimeDelta(QuicTime::Delta delta) {
@@ -428,6 +442,8 @@ class TestPacketWriter : public QuicPacketWriter {
   bool write_blocked_;
   bool write_should_fail_;
   bool block_on_next_write_;
+  bool next_packet_too_large_;
+  bool always_get_packet_too_large_;
   bool is_write_blocked_data_buffered_;
   uint32_t final_bytes_of_last_packet_;
   uint32_t final_bytes_of_previous_packet_;
@@ -1021,6 +1037,10 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     writer_->BlockOnNextWrite();
     EXPECT_CALL(visitor_, OnWriteBlocked()).Times(AtLeast(1));
   }
+
+  void SimulateNextPacketTooLarge() { writer_->SimulateNextPacketTooLarge(); }
+
+  void AlwaysGetPacketTooLarge() { writer_->AlwaysGetPacketTooLarge(); }
 
   void SetWritePauseTimeDelta(QuicTime::Delta delta) {
     writer_->SetWritePauseTimeDelta(delta);
@@ -2575,6 +2595,7 @@ TEST_P(QuicConnectionTest, RetransmitPacketsWithInitialEncryption) {
 }
 
 TEST_P(QuicConnectionTest, DelayForwardSecureEncryptionUntilClientIsReady) {
+  FLAGS_quic_remove_obsolete_forward_secure = false;
   // A TaggingEncrypter puts kTagSize copies of the given byte (0x02 here) at
   // the end of the packet. We can test this to check which encrypter was used.
   use_tagging_decrypter();
@@ -2598,6 +2619,7 @@ TEST_P(QuicConnectionTest, DelayForwardSecureEncryptionUntilClientIsReady) {
 }
 
 TEST_P(QuicConnectionTest, DelayForwardSecureEncryptionUntilManyPacketSent) {
+  FLAGS_quic_remove_obsolete_forward_secure = false;
   // Set a congestion window of 10 packets.
   QuicPacketCount congestion_window = 10;
   EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
@@ -4942,6 +4964,30 @@ TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_MAYBE_CORRUPTED_MEMORY, _,
                                            ConnectionCloseSource::FROM_SELF));
   ProcessFramePacket(QuicFrame(&frame1_));
+}
+
+TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {
+  FLAGS_quic_close_connection_on_packet_too_large = true;
+  SimulateNextPacketTooLarge();
+  // Although the data packet cannot be written, the send packet manager is
+  // informed. Also a connection close packet is sent.
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
+                                           ConnectionCloseSource::FROM_SELF))
+      .Times(1);
+  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
+}
+
+TEST_P(QuicConnectionTest, AlwaysGetPacketTooLarge) {
+  // Test even we always get packet too large, we do not infinitely try to send
+  // close packet.
+  FLAGS_quic_close_connection_on_packet_too_large = true;
+  AlwaysGetPacketTooLarge();
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
+                                           ConnectionCloseSource::FROM_SELF))
+      .Times(1);
+  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
 }
 
 }  // namespace

@@ -819,6 +819,26 @@ StringPiece QuicPacket::Plaintext(QuicVersion version) const {
                      length() - start_of_encrypted_data);
 }
 
+QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions) {
+  enable_quic_version_35_ = FLAGS_quic_enable_version_35;
+  enable_quic_version_36_ = FLAGS_quic_enable_version_36;
+  allowed_supported_versions_ = supported_versions;
+  filtered_supported_versions_ = FilterSupportedVersions(supported_versions);
+}
+
+const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
+  if (enable_quic_version_35_ != FLAGS_quic_enable_version_35 ||
+      enable_quic_version_36_ != FLAGS_quic_enable_version_36) {
+    enable_quic_version_35_ = FLAGS_quic_enable_version_35;
+    enable_quic_version_36_ = FLAGS_quic_enable_version_36;
+    filtered_supported_versions_ =
+        FilterSupportedVersions(allowed_supported_versions_);
+  }
+  return filtered_supported_versions_;
+}
+
+QuicVersionManager::~QuicVersionManager() {}
+
 AckListenerWrapper::AckListenerWrapper(QuicAckListenerInterface* listener,
                                        QuicPacketLength data_length)
     : ack_listener(listener), length(data_length) {

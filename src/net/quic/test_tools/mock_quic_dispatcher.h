@@ -10,17 +10,18 @@
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/tools/quic/quic_dispatcher.h"
+#include "net/tools/quic/quic_simple_dispatcher.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {
 namespace test {
 
-class MockQuicDispatcher : public QuicDispatcher {
+class MockQuicDispatcher : public QuicSimpleDispatcher {
  public:
   MockQuicDispatcher(
       const QuicConfig& config,
       const QuicCryptoServerConfig* crypto_config,
+      QuicVersionManager* version_manager,
       std::unique_ptr<QuicConnectionHelperInterface> helper,
       std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
       std::unique_ptr<QuicAlarmFactory> alarm_factory);

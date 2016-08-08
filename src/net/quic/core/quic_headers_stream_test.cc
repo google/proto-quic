@@ -208,7 +208,6 @@ struct TestParams {
         FLAGS_spdy_framer_use_new_methods2 = true;
         break;
     }
-    FLAGS_quic_supports_push_promise = true;
     FLAGS_quic_always_log_bugs_for_tests = true;
     VLOG(1) << "TestParams: version: " << QuicVersionToString(version)
             << ", perspective: " << perspective
@@ -533,9 +532,6 @@ TEST_P(QuicHeadersStreamTest, ProcessPushPromise) {
 }
 
 TEST_P(QuicHeadersStreamTest, EmptyHeaderHOLBlockedTime) {
-  if (!FLAGS_quic_measure_headers_hol_blocking_time) {
-    return;
-  }
   EXPECT_CALL(session_, OnHeadersHeadOfLineBlocking(_)).Times(0);
   testing::InSequence seq;
   bool fin = true;

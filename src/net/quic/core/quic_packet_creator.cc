@@ -422,6 +422,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   CopyToBuffer(iov, iov_offset, bytes_consumed, stream_buffer.get());
   std::unique_ptr<QuicStreamFrame> frame(new QuicStreamFrame(
       id, set_fin, stream_offset, bytes_consumed, std::move(stream_buffer)));
+  DVLOG(1) << "Adding frame: " << *frame;
 
   // TODO(ianswett): AppendTypeByte and AppendStreamFrame could be optimized
   // into one method that takes a QuicStreamFrame, if warranted.

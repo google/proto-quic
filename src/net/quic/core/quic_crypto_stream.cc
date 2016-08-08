@@ -63,20 +63,13 @@ void QuicCryptoStream::OnDataAvailable() {
 
 void QuicCryptoStream::SendHandshakeMessage(
     const CryptoHandshakeMessage& message) {
-  SendHandshakeMessage(message, nullptr);
-}
-
-void QuicCryptoStream::SendHandshakeMessage(
-    const CryptoHandshakeMessage& message,
-    QuicAckListenerInterface* listener) {
   DVLOG(1) << ENDPOINT << "Sending " << message.DebugString();
   if (FLAGS_quic_neuter_unencrypted_when_sending) {
     session()->connection()->NeuterUnencryptedPackets();
   }
   session()->OnCryptoHandshakeMessageSent(message);
   const QuicData& data = message.GetSerialized();
-  // TODO(wtc): check the return value.
-  WriteOrBufferData(StringPiece(data.data(), data.length()), false, listener);
+  WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
 }
 
 bool QuicCryptoStream::ExportKeyingMaterial(StringPiece label,

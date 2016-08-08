@@ -945,6 +945,8 @@
         'tools/quic/quic_process_packet_interface.h',
         'tools/quic/quic_simple_client.cc',
         'tools/quic/quic_simple_client.h',
+	'tools/quic/quic_simple_dispatcher.cc',
+	'tools/quic/quic_simple_dispatcher.h',
         'tools/quic/quic_simple_per_connection_packet_writer.cc',
         'tools/quic/quic_simple_per_connection_packet_writer.h',
         'tools/quic/quic_simple_server.cc',

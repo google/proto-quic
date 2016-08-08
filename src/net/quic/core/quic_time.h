@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include <ostream>
+
 #include "base/compiler_specific.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
@@ -75,6 +77,8 @@ class NET_EXPORT_PRIVATE QuicTime {
     inline bool IsInfinite() const {
       return time_offset_ == kQuicInfiniteTimeUs;
     }
+
+    std::string ToDebugValue() const;
 
    private:
     base::TimeDelta delta_;
@@ -263,6 +267,12 @@ inline QuicTime::Delta operator-(QuicTime lhs, QuicTime rhs) {
   return QuicTime::Delta(lhs.time_ - rhs.time_);
 }
 
+// Override stream output operator for gtest.
+inline std::ostream& operator<<(std::ostream& output,
+                                const QuicTime::Delta delta) {
+  output << delta.ToDebugValue();
+  return output;
+}
 }  // namespace net
 
 #endif  // NET_QUIC_QUIC_TIME_H_

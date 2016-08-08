@@ -38,7 +38,6 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 const std::string& server_config,
                 QuicVersion quic_version,
                 base::StringPiece chlo_hash,
-                bool ecdsa_ok,
                 scoped_refptr<ProofSource::Chain>* out_chain,
                 std::string* out_signature,
                 std::string* out_leaf_cert_sct) override;
@@ -48,7 +47,6 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 const std::string& server_config,
                 QuicVersion quic_version,
                 base::StringPiece chlo_hash,
-                bool ecdsa_ok,
                 std::unique_ptr<Callback> callback) override;
 
  private:

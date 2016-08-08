@@ -27,6 +27,23 @@ class TestProofVerifyDetails : public ProofVerifyDetails {
   }
 };
 
+class OneServerIdFilter : public QuicCryptoClientConfig::ServerIdFilter {
+ public:
+  OneServerIdFilter(const QuicServerId* server_id) : server_id_(*server_id) {}
+
+  bool Matches(const QuicServerId& server_id) const override {
+    return server_id == server_id_;
+  }
+
+ private:
+  const QuicServerId server_id_;
+};
+
+class AllServerIdsFilter : public QuicCryptoClientConfig::ServerIdFilter {
+ public:
+  bool Matches(const QuicServerId& server_id) const override { return true; }
+};
+
 }  // namespace
 
 TEST(QuicCryptoClientConfigTest, CachedState_IsEmpty) {
@@ -217,22 +234,6 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCID) {
   EXPECT_EQ("12345678", scid);
 }
 
-TEST(QuicCryptoClientConfigTest, InchoateChloSecureNoEcdsa) {
-  QuicCryptoClientConfig::CachedState state;
-  QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
-  config.DisableEcdsa();
-  QuicCryptoNegotiatedParameters params;
-  CryptoHandshakeMessage msg;
-  QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
-  MockRandom rand;
-  config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
-                                 /* demand_x509_proof= */ true, &params, &msg);
-
-  QuicTag pdmd;
-  EXPECT_EQ(QUIC_NO_ERROR, msg.GetUint32(kPDMD, &pdmd));
-  EXPECT_EQ(kX59R, pdmd);
-}
-
 TEST(QuicCryptoClientConfigTest, FillClientHello) {
   QuicCryptoClientConfig::CachedState state;
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
@@ -341,36 +342,88 @@ TEST(QuicCryptoClientConfigTest, CanonicalNotUsedIfNotValid) {
 
 TEST(QuicCryptoClientConfigTest, ClearCachedStates) {
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
-  QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
-  QuicCryptoClientConfig::CachedState* state = config.LookupOrCreate(server_id);
-  // TODO(rch): Populate other fields of |state|.
-  vector<string> certs(1);
-  certs[0] = "Hello Cert";
-  state->SetProof(certs, "cert_sct", "chlo_hash", "signature");
-  state->set_source_address_token("TOKEN");
-  state->SetProofValid();
-  EXPECT_EQ(1u, state->generation_counter());
+
+  // Create two states on different origins.
+  struct TestCase {
+    TestCase(const std::string& host, QuicCryptoClientConfig* config)
+        : server_id(host, 443, PRIVACY_MODE_DISABLED),
+          state(config->LookupOrCreate(server_id)) {
+      // TODO(rch): Populate other fields of |state|.
+      CryptoHandshakeMessage scfg;
+      scfg.set_tag(kSCFG);
+      uint64_t future = 1;
+      scfg.SetValue(kEXPY, future);
+      scfg.SetStringPiece(kSCID, "12345678");
+      string details;
+      state->SetServerConfig(scfg.GetSerialized().AsStringPiece(),
+                             QuicWallTime::FromUNIXSeconds(0), &details);
+
+      vector<string> certs(1);
+      certs[0] = "Hello Cert for " + host;
+      state->SetProof(certs, "cert_sct", "chlo_hash", "signature");
+      state->set_source_address_token("TOKEN");
+      state->SetProofValid();
+
+      // The generation counter starts at 2, because proof has been once
+      // invalidated in SetServerConfig().
+      EXPECT_EQ(2u, state->generation_counter());
+    }
+
+    QuicServerId server_id;
+    QuicCryptoClientConfig::CachedState* state;
+  } test_cases[] = {TestCase("www.google.com", &config),
+                    TestCase("www.example.com", &config)};
 
   // Verify LookupOrCreate returns the same data.
-  QuicCryptoClientConfig::CachedState* other = config.LookupOrCreate(server_id);
+  for (const TestCase& test_case : test_cases) {
+    QuicCryptoClientConfig::CachedState* other =
+        config.LookupOrCreate(test_case.server_id);
+    EXPECT_EQ(test_case.state, other);
+    EXPECT_EQ(2u, other->generation_counter());
+  }
 
-  EXPECT_EQ(state, other);
-  EXPECT_EQ(1u, other->generation_counter());
+  // Clear the cached state for www.google.com.
+  OneServerIdFilter google_com_filter(&test_cases[0].server_id);
+  config.ClearCachedStates(google_com_filter);
 
-  // Clear the cached states.
-  config.ClearCachedStates();
-
-  // Verify LookupOrCreate doesn't have any data.
+  // Verify LookupOrCreate doesn't have any data for google.com.
   QuicCryptoClientConfig::CachedState* cleared_cache =
-      config.LookupOrCreate(server_id);
+      config.LookupOrCreate(test_cases[0].server_id);
 
-  EXPECT_EQ(state, cleared_cache);
+  EXPECT_EQ(test_cases[0].state, cleared_cache);
   EXPECT_FALSE(cleared_cache->proof_valid());
   EXPECT_TRUE(cleared_cache->server_config().empty());
   EXPECT_TRUE(cleared_cache->certs().empty());
   EXPECT_TRUE(cleared_cache->cert_sct().empty());
   EXPECT_TRUE(cleared_cache->signature().empty());
-  EXPECT_EQ(2u, cleared_cache->generation_counter());
+  EXPECT_EQ(3u, cleared_cache->generation_counter());
+
+  // But it still does for www.example.com.
+  QuicCryptoClientConfig::CachedState* existing_cache =
+      config.LookupOrCreate(test_cases[1].server_id);
+
+  EXPECT_EQ(test_cases[1].state, existing_cache);
+  EXPECT_TRUE(existing_cache->proof_valid());
+  EXPECT_FALSE(existing_cache->server_config().empty());
+  EXPECT_FALSE(existing_cache->certs().empty());
+  EXPECT_FALSE(existing_cache->cert_sct().empty());
+  EXPECT_FALSE(existing_cache->signature().empty());
+  EXPECT_EQ(2u, existing_cache->generation_counter());
+
+  // Clear all cached states.
+  AllServerIdsFilter all_server_ids;
+  config.ClearCachedStates(all_server_ids);
+
+  // The data for www.example.com should now be cleared as well.
+  cleared_cache = config.LookupOrCreate(test_cases[1].server_id);
+
+  EXPECT_EQ(test_cases[1].state, cleared_cache);
+  EXPECT_FALSE(cleared_cache->proof_valid());
+  EXPECT_TRUE(cleared_cache->server_config().empty());
+  EXPECT_TRUE(cleared_cache->certs().empty());
+  EXPECT_TRUE(cleared_cache->cert_sct().empty());
+  EXPECT_TRUE(cleared_cache->signature().empty());
+  EXPECT_EQ(3u, cleared_cache->generation_counter());
 }
 
 TEST(QuicCryptoClientConfigTest, ProcessReject) {

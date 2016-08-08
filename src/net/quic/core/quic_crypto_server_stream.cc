@@ -41,15 +41,6 @@ bool HasFixedTag(const CryptoHandshakeMessage& message) {
 }
 }  // namespace
 
-void ServerHelloNotifier::OnPacketAcked(int acked_bytes,
-                                        QuicTime::Delta ack_delay_time) {
-  DCHECK(!FLAGS_quic_no_shlo_listener);
-  // The SHLO is sent in one packet.
-  server_stream_->OnServerHelloAcked();
-}
-
-void ServerHelloNotifier::OnPacketRetransmitted(int /*retransmitted_bytes*/) {}
-
 QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(
     QuicServerSessionBase* session)
     : QuicCryptoStream(session) {}
@@ -237,13 +228,7 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
     session()->connection()->SetDiversificationNonce(diversification_nonce);
   }
 
-  // We want to be notified when the SHLO is ACKed so that we can disable
-  // HANDSHAKE_MODE in the sent packet manager.
-  scoped_refptr<ServerHelloNotifier> server_hello_notifier(
-      new ServerHelloNotifier(this));
-  SendHandshakeMessage(reply, FLAGS_quic_no_shlo_listener
-                                  ? nullptr
-                                  : server_hello_notifier.get());
+  SendHandshakeMessage(reply);
 
   session()->connection()->SetEncrypter(
       ENCRYPTION_FORWARD_SECURE,

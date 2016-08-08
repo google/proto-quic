@@ -16,7 +16,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/tools/quic/quic_dispatcher.h"
+#include "net/tools/quic/quic_simple_dispatcher.h"
 #include "net/tools/quic/quic_simple_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_session_helper.h"
@@ -32,46 +32,13 @@ const char kSourceAddressTokenSecret[] = "secret";
 // the limit.
 const int kReadBufferSize = 2 * kMaxPacketSize;
 
-class SimpleQuicDispatcher : public QuicDispatcher {
- public:
-  SimpleQuicDispatcher(const QuicConfig& config,
-                       const QuicCryptoServerConfig* crypto_config,
-                       const QuicVersionVector& supported_versions,
-                       QuicConnectionHelperInterface* helper,
-                       QuicAlarmFactory* alarm_factory)
-      : QuicDispatcher(
-            config,
-            crypto_config,
-            supported_versions,
-            std::unique_ptr<QuicConnectionHelperInterface>(helper),
-            std::unique_ptr<QuicServerSessionBase::Helper>(
-                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
-            std::unique_ptr<QuicAlarmFactory>(alarm_factory)) {}
-
- protected:
-  QuicServerSessionBase* CreateQuicSession(
-      QuicConnectionId connection_id,
-      const IPEndPoint& client_address) override {
-    QuicServerSessionBase* session =
-        QuicDispatcher::CreateQuicSession(connection_id, client_address);
-    static_cast<QuicSimplePerConnectionPacketWriter*>(
-        session->connection()->writer())
-        ->set_connection(session->connection());
-    return session;
-  }
-
-  QuicPacketWriter* CreatePerConnectionWriter() override {
-    return new QuicSimplePerConnectionPacketWriter(
-        static_cast<QuicSimpleServerPacketWriter*>(writer()));
-  }
-};
-
 }  // namespace
 
 QuicSimpleServer::QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
                                    const QuicConfig& config,
                                    const QuicVersionVector& supported_versions)
-    : helper_(
+    : version_manager_(supported_versions),
+      helper_(
           new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
       alarm_factory_(new QuicChromiumAlarmFactory(
           base::ThreadTaskRunnerHandle::Get().get(),
@@ -80,7 +47,6 @@ QuicSimpleServer::QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
                      std::move(proof_source)),
-      supported_versions_(supported_versions),
       read_pending_(false),
       synchronous_read_count_(0),
       read_buffer_(new IOBufferWithSize(kReadBufferSize)),
@@ -153,8 +119,12 @@ int QuicSimpleServer::Listen(const IPEndPoint& address) {
 
   socket_.swap(socket);
 
-  dispatcher_.reset(new SimpleQuicDispatcher(
-      config_, &crypto_config_, supported_versions_, helper_, alarm_factory_));
+  dispatcher_.reset(new QuicSimpleDispatcher(
+      config_, &crypto_config_, &version_manager_,
+      std::unique_ptr<QuicConnectionHelperInterface>(helper_),
+      std::unique_ptr<QuicServerSessionBase::Helper>(
+          new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+      std::unique_ptr<QuicAlarmFactory>(alarm_factory_)));
   QuicSimpleServerPacketWriter* writer =
       new QuicSimpleServerPacketWriter(socket_.get(), dispatcher_.get());
   dispatcher_->InitializeWithWriter(writer);

@@ -2429,7 +2429,6 @@ class EndToEndTestServerPush : public EndToEndTest {
   const size_t kNumMaxStreams = 10;
 
   EndToEndTestServerPush() : EndToEndTest() {
-    FLAGS_quic_supports_push_promise = true;
     client_config_.SetMaxStreamsPerConnection(kNumMaxStreams, kNumMaxStreams);
     client_config_.SetMaxIncomingDynamicStreamsToSend(kNumMaxStreams);
     server_config_.SetMaxStreamsPerConnection(kNumMaxStreams, kNumMaxStreams);

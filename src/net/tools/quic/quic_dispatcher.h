@@ -49,7 +49,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   QuicDispatcher(const QuicConfig& config,
                  const QuicCryptoServerConfig* crypto_config,
-                 const QuicVersionVector& supported_versions,
+                 QuicVersionManager* version_manager,
                  std::unique_ptr<QuicConnectionHelperInterface> helper,
                  std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
                  std::unique_ptr<QuicAlarmFactory> alarm_factory);
@@ -149,7 +149,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
  protected:
   virtual QuicServerSessionBase* CreateQuicSession(
       QuicConnectionId connection_id,
-      const IPEndPoint& client_address);
+      const IPEndPoint& client_address) = 0;
 
   // Called when a connection is rejected statelessly.
   virtual void OnConnectionRejectedStatelessly();
@@ -189,6 +189,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   const QuicVersionVector& GetSupportedVersions();
 
+  QuicConnectionId current_connection_id() { return current_connection_id_; }
   const IPEndPoint& current_server_address() { return current_server_address_; }
   const IPEndPoint& current_client_address() { return current_client_address_; }
   const QuicReceivedPacket& current_packet() { return *current_packet_; }
@@ -286,22 +287,14 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // created to handle them.
   QuicBufferedPacketStore buffered_packets_;
 
-  // This vector contains QUIC versions which we currently support.
-  // This should be ordered such that the highest supported version is the first
-  // element, with subsequent elements in descending order (versions can be
-  // skipped as necessary).
-  QuicVersionVector supported_versions_;
-
-  // The std::list of versions that may be supported by this dispatcher.
-  // |supported_versions| is derived from this std::list and
-  // |disable_quic_pre_30_|.
-  const QuicVersionVector allowed_supported_versions_;
-
   // Information about the packet currently being handled.
   IPEndPoint current_client_address_;
   IPEndPoint current_server_address_;
   const QuicReceivedPacket* current_packet_;
   QuicConnectionId current_connection_id_;
+
+  // Used to get the supported versions based on flag. Does not own.
+  QuicVersionManager* version_manager_;
 
   QuicFramer framer_;
 

@@ -194,6 +194,13 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     DISALLOW_COPY_AND_ASSIGN(CachedState);
   };
 
+  // Used to filter server ids for partial config deletion.
+  class ServerIdFilter {
+   public:
+    // Returns true if |server_id| matches the filter.
+    virtual bool Matches(const QuicServerId& server_id) const = 0;
+  };
+
   explicit QuicCryptoClientConfig(
       std::unique_ptr<ProofVerifier> proof_verifier);
   ~QuicCryptoClientConfig();
@@ -202,8 +209,9 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   // CachedState currently exists, it will be created and cached.
   CachedState* LookupOrCreate(const QuicServerId& server_id);
 
-  // Delete all CachedState objects from cached_states_.
-  void ClearCachedStates();
+  // Delete CachedState objects whose server ids match |filter| from
+  // cached_states.
+  void ClearCachedStates(const ServerIdFilter& filter);
 
   // FillInchoateClientHello sets |out| to be a CHLO message that elicits a
   // source-address token or SCFG from a server. If |cached| is non-nullptr, the
@@ -321,11 +329,6 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   // called after SetDefaults().
   void PreferAesGcm();
 
-  // Disables the use of ECDSA for proof verification.
-  // Call this method on platforms that do not support ECDSA.
-  // TODO(rch): remove this method when we drop support for Windows XP.
-  void DisableEcdsa();
-
   // Saves the |user_agent_id| that will be passed in QUIC's CHLO message.
   void set_user_agent_id(const std::string& user_agent_id) {
     user_agent_id_ = user_agent_id;
@@ -373,9 +376,6 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
 
   std::unique_ptr<ProofVerifier> proof_verifier_;
   std::unique_ptr<ChannelIDSource> channel_id_source_;
-
-  // True if ECDSA should be disabled.
-  bool disable_ecdsa_;
 
   // The |user_agent_id_| passed in QUIC's CHLO message.
   std::string user_agent_id_;

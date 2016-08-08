@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include <ostream>
+
 #include "base/compiler_specific.h"
 #include "net/quic/core/quic_time.h"
 
@@ -21,6 +23,9 @@ class NET_EXPORT_PRIVATE QuicBandwidth {
  public:
   // Creates a new QuicBandwidth with an internal value of 0.
   static QuicBandwidth Zero();
+
+  // Creates a new QuicBandwidth with an internal value of INT64_MAX.
+  static QuicBandwidth Infinite();
 
   // Create a new QuicBandwidth holding the bits per second.
   static QuicBandwidth FromBitsPerSecond(int64_t bits_per_second);
@@ -53,6 +58,8 @@ class NET_EXPORT_PRIVATE QuicBandwidth {
   bool IsZero() const;
 
   QuicTime::Delta TransferTime(QuicByteCount bytes) const;
+
+  std::string ToDebugValue() const;
 
  private:
   explicit QuicBandwidth(int64_t bits_per_second);
@@ -95,6 +102,13 @@ inline QuicBandwidth operator*(QuicBandwidth lhs, float rhs) {
 }
 inline QuicBandwidth operator*(float lhs, QuicBandwidth rhs) {
   return rhs * lhs;
+}
+
+// Override stream output operator for gtest.
+inline std::ostream& operator<<(std::ostream& output,
+                                const QuicBandwidth bandwidth) {
+  output << bandwidth.ToDebugValue();
+  return output;
 }
 
 }  // namespace net

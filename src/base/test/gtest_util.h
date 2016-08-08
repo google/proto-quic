@@ -23,8 +23,12 @@
 // Death tests misbehave on Android.
 #if DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
 
-#define EXPECT_DCHECK_DEATH(statement, regex) EXPECT_DEATH(statement, regex)
-#define ASSERT_DCHECK_DEATH(statement, regex) ASSERT_DEATH(statement, regex)
+// EXPECT/ASSERT_DCHECK_DEATH tests verify that a DCHECK is hit ("Check failed"
+// is part of the error message), but intentionally do not expose the gtest
+// death test's full |regex| parameter to avoid users having to verify the exact
+// syntax of the error message produced by the DCHECK.
+#define EXPECT_DCHECK_DEATH(statement) EXPECT_DEATH(statement, "Check failed")
+#define ASSERT_DCHECK_DEATH(statement) ASSERT_DEATH(statement, "Check failed")
 
 #else
 // DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
@@ -47,10 +51,10 @@
     } else \
       ::testing::Message()
 
-#define EXPECT_DCHECK_DEATH(statement, regex) \
-    GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, )
-#define ASSERT_DCHECK_DEATH(statement, regex) \
-    GTEST_UNSUPPORTED_DEATH_TEST(statement, regex, return)
+#define EXPECT_DCHECK_DEATH(statement) \
+    GTEST_UNSUPPORTED_DEATH_TEST(statement, "Check failed", )
+#define ASSERT_DCHECK_DEATH(statement) \
+    GTEST_UNSUPPORTED_DEATH_TEST(statement, "Check failed", return)
 
 #endif
 // DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)

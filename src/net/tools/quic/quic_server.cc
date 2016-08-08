@@ -27,6 +27,7 @@
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_packet_reader.h"
+#include "net/tools/quic/quic_simple_dispatcher.h"
 #include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_socket_utils.h"
 
@@ -67,7 +68,7 @@ QuicServer::QuicServer(
                      QuicRandom::GetInstance(),
                      std::move(proof_source)),
       crypto_config_options_(crypto_config_options),
-      supported_versions_(supported_versions),
+      version_manager_(supported_versions),
       packet_reader_(new QuicPacketReader()) {
   Initialize();
 }
@@ -147,8 +148,8 @@ QuicDefaultPacketWriter* QuicServer::CreateWriter(int fd) {
 
 QuicDispatcher* QuicServer::CreateQuicDispatcher() {
   QuicEpollAlarmFactory alarm_factory(&epoll_server_);
-  return new QuicDispatcher(
-      config_, &crypto_config_, supported_versions_,
+  return new QuicSimpleDispatcher(
+      config_, &crypto_config_, &version_manager_,
       std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
           &epoll_server_, QuicAllocator::BUFFER_POOL)),
       std::unique_ptr<QuicServerSessionBase::Helper>(

@@ -75,6 +75,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // ReliableQuicStream implementation
   void OnClose() override;
 
+  // Override to maybe close the write side after writing.
+  void OnCanWrite() override;
+
   // Called by the session when decompressed headers data is received
   // for this stream.
   // May be called multiple times, with each call providing additional headers

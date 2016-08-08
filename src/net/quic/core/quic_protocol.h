@@ -212,6 +212,10 @@ const QuicPathId kInvalidPathId = 0xff;
 // duplicated.
 const size_t kDiversificationNonceSize = 32;
 
+// The largest gap in packets we'll accept without closing the connection.
+// This will likely have to be tuned.
+const QuicPacketNumber kMaxPacketGap = 5000;
+
 enum TransmissionType : int8_t {
   NOT_RETRANSMISSION,
   FIRST_TRANSMISSION_TYPE = NOT_RETRANSMISSION,
@@ -697,8 +701,12 @@ enum QuicErrorCode {
   // Network changed, but connection had one or more non-migratable streams.
   QUIC_CONNECTION_MIGRATION_NON_MIGRATABLE_STREAM = 84,
 
+  // Stream frames arrived too discontiguously so that stream sequencer buffer
+  // maintains too many gaps.
+  QUIC_TOO_MANY_FRAME_GAPS = 93,
+
   // No error. Used as bound while iterating.
-  QUIC_LAST_ERROR = 93,
+  QUIC_LAST_ERROR = 94,
 };
 
 typedef char DiversificationNonce[32];
@@ -1380,6 +1388,27 @@ class NET_EXPORT_PRIVATE QuicConnectionCloseDelegateInterface {
   virtual void OnUnrecoverableError(QuicErrorCode error,
                                     const std::string& error_details,
                                     ConnectionCloseSource source) = 0;
+};
+
+// Used to generate filtered supported versions based on flags.
+class NET_EXPORT_PRIVATE QuicVersionManager {
+ public:
+  explicit QuicVersionManager(QuicVersionVector supported_versions);
+  ~QuicVersionManager();
+
+  // Returns supported versions based on flags.
+  const QuicVersionVector& GetSupportedVersions();
+
+ private:
+  // FLAGS_quic_enable_version_35
+  bool enable_quic_version_35_;
+  // FLAGS_quic_enable_version_36
+  bool enable_quic_version_36_;
+  // The list of versions that may be supported.
+  QuicVersionVector allowed_supported_versions_;
+  // This vector contains QUIC versions which are currently supported based
+  // on flags.
+  QuicVersionVector filtered_supported_versions_;
 };
 
 struct NET_EXPORT_PRIVATE AckListenerWrapper {

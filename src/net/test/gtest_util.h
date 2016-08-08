@@ -38,25 +38,22 @@ MATCHER(IsOk,
 
 // Internal implementation for the EXPECT_DFATAL and ASSERT_DFATAL
 // macros.  Do not use this directly.
-#define GTEST_DFATAL_(statement, matcher, fail)                        \
-  GTEST_AMBIGUOUS_ELSE_BLOCKER_                                        \
-  if (true) {                                                          \
-    ::base::test::MockLog gtest_log;                                   \
-    ::net::test::ScopedDisableExitOnDFatal gtest_disable_exit;         \
-    using ::testing::_;                                                \
-    EXPECT_CALL(gtest_log, Log(_, _, _, _, _))                         \
-        .WillRepeatedly(::testing::Return(false));                     \
-    EXPECT_CALL(gtest_log, Log(logging::LOG_DFATAL, _, _, _, matcher)) \
-        .Times(::testing::AtLeast(1))                                  \
-        .WillOnce(::testing::Return(false));                           \
-    gtest_log.StartCapturingLogs();                                    \
-    { statement; }                                                     \
-    gtest_log.StopCapturingLogs();                                     \
-    if (!testing::Mock::VerifyAndClear(&gtest_log)) {                  \
-      goto GTEST_CONCAT_TOKEN_(gtest_label_dfatal_, __LINE__);         \
-    }                                                                  \
-  } else                                                               \
-  GTEST_CONCAT_TOKEN_(gtest_label_dfatal_, __LINE__) : fail("")
+#define GTEST_DFATAL_(statement, severity, matcher, fail)                    \
+  do {                                                                       \
+    ::base::test::MockLog gtest_log;                                         \
+    ::net::test::ScopedDisableExitOnDFatal gtest_disable_exit;               \
+    using ::testing::_;                                                      \
+    EXPECT_CALL(gtest_log, Log(_, _, _, _, _))                               \
+        .WillRepeatedly(::testing::Return(false));                           \
+    EXPECT_CALL(gtest_log, Log(::logging::LOG_##severity, _, _, _, matcher)) \
+        .Times(::testing::AtLeast(1))                                        \
+        .WillOnce(::testing::Return(false));                                 \
+    gtest_log.StartCapturingLogs();                                          \
+    { statement; }                                                           \
+    gtest_log.StopCapturingLogs();                                           \
+    if (!testing::Mock::VerifyAndClear(&gtest_log))                          \
+      fail("");                                                              \
+  } while (false)
 
 // The EXPECT_DFATAL and ASSERT_DFATAL macros are lightweight
 // alternatives to EXPECT_DEBUG_DEATH and ASSERT_DEBUG_DEATH. They
@@ -72,10 +69,10 @@ MATCHER(IsOk,
 // DFATAL log message, whereas the other variants assume a regex.
 
 #define EXPECT_DFATAL_WITH(statement, matcher) \
-  GTEST_DFATAL_(statement, matcher, GTEST_NONFATAL_FAILURE_)
+  GTEST_DFATAL_(statement, DFATAL, matcher, GTEST_NONFATAL_FAILURE_)
 
 #define ASSERT_DFATAL_WITH(statement, matcher) \
-  GTEST_DFATAL_(statement, matcher, GTEST_FATAL_FAILURE_)
+  GTEST_DFATAL_(statement, DFATAL, matcher, GTEST_FATAL_FAILURE_)
 
 #define EXPECT_DFATAL(statement, regex) \
   EXPECT_DFATAL_WITH(statement, ::testing::ContainsRegex(regex))
@@ -97,21 +94,45 @@ MATCHER(IsOk,
 #else  // NDEBUG
 
 #define EXPECT_DEBUG_DFATAL(statement, regex) \
-  GTEST_AMBIGUOUS_ELSE_BLOCKER_               \
-  if (true) {                                 \
+  do {                                        \
     (void)(regex);                            \
     statement;                                \
-  } else                                      \
-    GTEST_NONFATAL_FAILURE_("")
+  } while (false)
 #define ASSERT_DEBUG_DFATAL(statement, regex) \
-  GTEST_AMBIGUOUS_ELSE_BLOCKER_               \
-  if (true) {                                 \
+  do {                                        \
     (void)(regex);                            \
     statement;                                \
-  } else                                      \
-    GTEST_NONFATAL_FAILURE_("")
+  } while (false)
 
 #endif  // NDEBUG
+
+// The EXPECT_DCHECK and ASSERT_DCHECK macros are similar to EXPECT_DFATAL and
+// ASSERT_DFATAL. Use them in conjunction with DCHECK that produces no-op in opt
+// build and LOG_DCHECK (FATAL) if DCHECK_IS_ON().
+
+#if DCHECK_IS_ON()
+
+#define EXPECT_DCHECK(statement, regex)                             \
+  GTEST_DFATAL_(statement, DCHECK, ::testing::ContainsRegex(regex), \
+                GTEST_NONFATAL_FAILURE_)
+#define ASSERT_DCHECK(statement, regex)                             \
+  GTEST_DFATAL_(statement, DCHECK, ::testing::ContainsRegex(regex), \
+                GTEST_FATAL_FAILURE_)
+
+#else  // DCHECK_IS_ON()
+
+#define EXPECT_DCHECK(statement, regex) \
+  do {                                  \
+    (void)(regex);                      \
+    statement;                          \
+  } while (false)
+#define ASSERT_DCHECK(statement, regex) \
+  do {                                  \
+    (void)(regex);                      \
+    statement;                          \
+  } while (false)
+
+#endif  // DCHECK_IS_ON()
 
 }  // namespace test
 }  // namespace net
