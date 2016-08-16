@@ -86,14 +86,8 @@ bool SpdyProxyClientSocket::IsUsingSpdy() const {
   return true;
 }
 
-NextProto SpdyProxyClientSocket::GetProtocolNegotiated() const {
-  // Save the negotiated protocol
-  SSLInfo ssl_info;
-  bool was_npn_negotiated;
-  NextProto protocol_negotiated;
-  spdy_stream_->GetSSLInfo(&ssl_info, &was_npn_negotiated,
-                           &protocol_negotiated);
-  return protocol_negotiated;
+NextProto SpdyProxyClientSocket::GetProxyNegotiatedProtocol() const {
+  return spdy_stream_->GetNegotiatedProtocol();
 }
 
 HttpStream* SpdyProxyClientSocket::CreateConnectResponseStream() {
@@ -179,10 +173,7 @@ NextProto SpdyProxyClientSocket::GetNegotiatedProtocol() const {
 }
 
 bool SpdyProxyClientSocket::GetSSLInfo(SSLInfo* ssl_info) {
-  bool was_npn_negotiated;
-  NextProto protocol_negotiated;
-  return spdy_stream_->GetSSLInfo(ssl_info, &was_npn_negotiated,
-                                  &protocol_negotiated);
+  return spdy_stream_->GetSSLInfo(ssl_info);
 }
 
 void SpdyProxyClientSocket::GetConnectionAttempts(

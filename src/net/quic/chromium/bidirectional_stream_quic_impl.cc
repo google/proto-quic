@@ -42,7 +42,11 @@ BidirectionalStreamQuicImpl::BidirectionalStreamQuicImpl(
 }
 
 BidirectionalStreamQuicImpl::~BidirectionalStreamQuicImpl() {
-  Cancel();
+  if (stream_) {
+    delegate_ = nullptr;
+    stream_->Reset(QUIC_STREAM_CANCELLED);
+  }
+
   if (session_)
     session_->RemoveObserver(this);
 }
@@ -192,18 +196,6 @@ void BidirectionalStreamQuicImpl::SendvData(
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&BidirectionalStreamQuicImpl::OnSendDataComplete,
                               weak_factory_.GetWeakPtr(), OK));
-  }
-}
-
-void BidirectionalStreamQuicImpl::Cancel() {
-  if (delegate_) {
-    delegate_ = nullptr;
-    // Cancel any pending callbacks.
-    weak_factory_.InvalidateWeakPtrs();
-  }
-  if (stream_) {
-    stream_->Reset(QUIC_STREAM_CANCELLED);
-    ResetStream();
   }
 }
 

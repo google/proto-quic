@@ -99,7 +99,7 @@ class CycleTimer {
   struct timeval start_time_;
   int64_t cumulative_time_in_usec_;
 };
-#elif defined(HAVE_QUERYPERFORMANCECOUNTER)
+#elif defined(HAVE_WINDOWS_H)
 class CycleTimer {
  public:
   inline CycleTimer() {

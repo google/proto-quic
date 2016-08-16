@@ -66,6 +66,8 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   QuicTime::Delta RetransmissionDelay() const override;
   bool InSlowStart() const override;
   bool InRecovery() const override;
+  std::string GetDebugState() const override;
+  void OnApplicationLimited(QuicByteCount bytes_in_flight) override;
 
  protected:
   // Called when resuming a previous bandwidth.

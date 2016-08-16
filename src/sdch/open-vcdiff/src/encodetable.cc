@@ -17,7 +17,7 @@
 #include <string>
 #include "addrcache.h"
 #include "codetable.h"
-#include "encodetable.h"
+#include "google/encodetable.h"
 #include "instruction_map.h"
 #include "logging.h"
 #include "google/output_string.h"

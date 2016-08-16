@@ -567,6 +567,8 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
     QuicCompressedCertsCache* compressed_certs_cache,
     QuicCryptoNegotiatedParameters* params,
     QuicCryptoProof* crypto_proof,
+    QuicByteCount total_framing_overhead,
+    QuicByteCount chlo_packet_size,
     CryptoHandshakeMessage* out,
     DiversificationNonce* out_diversification_nonce,
     string* error_details) const {
@@ -617,7 +619,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
 
   if (!ClientDemandsX509Proof(client_hello) && FLAGS_quic_require_x509) {
     *error_details = "Missing or invalid PDMD";
-    return QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER;
+    return QUIC_UNSUPPORTED_PROOF_DEMAND;
   }
   DCHECK(proof_source_.get());
   string chlo_hash;
@@ -641,7 +643,8 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
     BuildRejection(version, *primary_config, client_hello, info,
                    validate_chlo_result.cached_network_params,
                    use_stateless_rejects, server_designated_connection_id, rand,
-                   compressed_certs_cache, params, *crypto_proof, out);
+                   compressed_certs_cache, params, *crypto_proof,
+                   total_framing_overhead, chlo_packet_size, out);
     return QUIC_NO_ERROR;
   }
 
@@ -1442,6 +1445,8 @@ void QuicCryptoServerConfig::BuildRejection(
     QuicCompressedCertsCache* compressed_certs_cache,
     QuicCryptoNegotiatedParameters* params,
     const QuicCryptoProof& crypto_proof,
+    QuicByteCount total_framing_overhead,
+    QuicByteCount chlo_packet_size,
     CryptoHandshakeMessage* out) const {
   if (FLAGS_enable_quic_stateless_reject_support && use_stateless_rejects) {
     DVLOG(1) << "QUIC Crypto server config returning stateless reject "
@@ -1486,6 +1491,7 @@ void QuicCryptoServerConfig::BuildRejection(
                     params->client_common_set_hashes,
                     params->client_cached_cert_hashes, config.common_cert_sets);
 
+  DCHECK_GT(chlo_packet_size, client_hello.size());
   // kREJOverheadBytes is a very rough estimate of how much of a REJ
   // message is taken up by things other than the certificates.
   // STK: 56 bytes
@@ -1497,16 +1503,22 @@ void QuicCryptoServerConfig::BuildRejection(
   // max_unverified_size is the number of bytes that the certificate chain,
   // signature, and (optionally) signed certificate timestamp can consume before
   // we will demand a valid source-address token.
-  const size_t max_unverified_size =
+  const size_t old_max_unverified_size =
       client_hello.size() * chlo_multiplier_ - kREJOverheadBytes;
+  const size_t new_max_unverified_size =
+      chlo_multiplier_ * (chlo_packet_size - total_framing_overhead) -
+      kREJOverheadBytes;
+  const size_t max_unverified_size = FLAGS_quic_use_chlo_packet_size
+                                         ? new_max_unverified_size
+                                         : old_max_unverified_size;
   static_assert(kClientHelloMinimumSize * kMultiplier >= kREJOverheadBytes,
                 "overhead calculation may underflow");
   bool should_return_sct =
       params->sct_supported_by_client && enable_serving_sct_;
   const size_t sct_size = should_return_sct ? crypto_proof.cert_sct.size() : 0;
-  if (info.valid_source_address_token ||
-      crypto_proof.signature.size() + compressed.size() + sct_size <
-          max_unverified_size) {
+  const size_t total_size =
+      crypto_proof.signature.size() + compressed.size() + sct_size;
+  if (info.valid_source_address_token || total_size < max_unverified_size) {
     out->SetStringPiece(kCertificateTag, compressed);
     out->SetStringPiece(kPROF, crypto_proof.signature);
     if (should_return_sct) {
@@ -1515,6 +1527,14 @@ void QuicCryptoServerConfig::BuildRejection(
       } else {
         out->SetStringPiece(kCertificateSCTTag, crypto_proof.cert_sct);
       }
+    }
+  } else {
+    if (FLAGS_quic_use_chlo_packet_size) {
+      DLOG(WARNING) << "Sending inchoate REJ for hostname: " << info.sni
+                    << " signature: " << crypto_proof.signature.size()
+                    << " cert: " << compressed.size() << " sct:" << sct_size
+                    << " total: " << total_size
+                    << " max: " << max_unverified_size;
     }
   }
 }
@@ -2038,7 +2058,7 @@ QuicCryptoServerConfig::Config::Config()
       source_address_token_boxer(nullptr) {}
 
 QuicCryptoServerConfig::Config::~Config() {
-  STLDeleteElements(&key_exchanges);
+  base::STLDeleteElements(&key_exchanges);
 }
 
 QuicCryptoProof::QuicCryptoProof() {}

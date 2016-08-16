@@ -44,9 +44,7 @@ class OwnedPoolMap : public std::map<Key, Value> {
     static_assert(std::is_pointer<Value>::value, "value must be a pointer");
   }
 
-  ~OwnedPoolMap() {
-    STLDeleteValues(this);
-  }
+  ~OwnedPoolMap() { base::STLDeleteValues(this); }
 };
 
 }  // namespace internal

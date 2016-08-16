@@ -36,7 +36,6 @@ class QuicMultipathSentPacketManagerTest : public testing::Test {
         &multipath_manager_, manager_1_);
     QuicMultipathSentPacketManagerPeer::AddPathWithCloseState(
         &multipath_manager_, manager_2_);
-    FLAGS_quic_always_log_bugs_for_tests = true;
   }
 
   ~QuicMultipathSentPacketManagerTest() override {}
@@ -156,7 +155,7 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetLeastUnacked) {
   EXPECT_EQ(2u, multipath_manager_.GetLeastUnacked(kDefaultPathId));
   EXPECT_EQ(3u, multipath_manager_.GetLeastUnacked(kTestPathId1));
   EXPECT_EQ(4u, multipath_manager_.GetLeastUnacked(kTestPathId2));
-  EXPECT_DFATAL(multipath_manager_.GetLeastUnacked(kTestPathId3), "");
+  EXPECT_QUIC_BUG(multipath_manager_.GetLeastUnacked(kTestPathId3), "");
 }
 
 TEST_F(QuicMultipathSentPacketManagerTest, OnPacketSent) {
@@ -181,16 +180,16 @@ TEST_F(QuicMultipathSentPacketManagerTest, OnPacketSent) {
   EXPECT_CALL(*manager_2_, OnPacketSent(_, _, _, _, _, _)).Times(0);
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_MULTIPATH_PATH_NOT_ACTIVE, _, _));
-  EXPECT_DFATAL(multipath_manager_.OnPacketSent(
-                    &packet2, kInvalidPathId, 0, clock_.Now(),
-                    NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA),
-                "");
+  EXPECT_QUIC_BUG(multipath_manager_.OnPacketSent(
+                      &packet2, kInvalidPathId, 0, clock_.Now(),
+                      NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA),
+                  "");
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_MULTIPATH_PATH_DOES_NOT_EXIST, _, _));
-  EXPECT_DFATAL(multipath_manager_.OnPacketSent(
-                    &packet3, kInvalidPathId, 0, clock_.Now(),
-                    NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA),
-                "");
+  EXPECT_QUIC_BUG(multipath_manager_.OnPacketSent(
+                      &packet3, kInvalidPathId, 0, clock_.Now(),
+                      NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA),
+                  "");
 }
 
 TEST_F(QuicMultipathSentPacketManagerTest, OnRetransmissionTimeout) {
@@ -268,11 +267,11 @@ TEST_F(QuicMultipathSentPacketManagerTest, OnConnectionMigration) {
   multipath_manager_.OnConnectionMigration(kDefaultPathId, PORT_CHANGE);
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_MULTIPATH_PATH_NOT_ACTIVE, _, _));
-  EXPECT_DFATAL(
+  EXPECT_QUIC_BUG(
       multipath_manager_.OnConnectionMigration(kTestPathId2, PORT_CHANGE), "");
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_MULTIPATH_PATH_DOES_NOT_EXIST, _, _));
-  EXPECT_DFATAL(
+  EXPECT_QUIC_BUG(
       multipath_manager_.OnConnectionMigration(kTestPathId3, PORT_CHANGE), "");
 }
 
@@ -298,7 +297,7 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetLargestObserved) {
   EXPECT_EQ(10u, multipath_manager_.GetLargestObserved(kDefaultPathId));
   EXPECT_EQ(11u, multipath_manager_.GetLargestObserved(kTestPathId1));
   EXPECT_EQ(12u, multipath_manager_.GetLargestObserved(kTestPathId2));
-  EXPECT_DFATAL(multipath_manager_.GetLargestObserved(kTestPathId3), "");
+  EXPECT_QUIC_BUG(multipath_manager_.GetLargestObserved(kTestPathId3), "");
 }
 
 TEST_F(QuicMultipathSentPacketManagerTest, GetLargestSentPacket) {
@@ -311,7 +310,7 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetLargestSentPacket) {
   EXPECT_EQ(10u, multipath_manager_.GetLargestSentPacket(kDefaultPathId));
   EXPECT_EQ(11u, multipath_manager_.GetLargestSentPacket(kTestPathId1));
   EXPECT_EQ(12u, multipath_manager_.GetLargestSentPacket(kTestPathId2));
-  EXPECT_DFATAL(multipath_manager_.GetLargestSentPacket(kTestPathId3), "");
+  EXPECT_QUIC_BUG(multipath_manager_.GetLargestSentPacket(kTestPathId3), "");
 }
 
 TEST_F(QuicMultipathSentPacketManagerTest, GetLeastPacketAwaitedByPeer) {
@@ -325,8 +324,8 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetLeastPacketAwaitedByPeer) {
             multipath_manager_.GetLeastPacketAwaitedByPeer(kDefaultPathId));
   EXPECT_EQ(11u, multipath_manager_.GetLeastPacketAwaitedByPeer(kTestPathId1));
   EXPECT_EQ(12u, multipath_manager_.GetLeastPacketAwaitedByPeer(kTestPathId2));
-  EXPECT_DFATAL(multipath_manager_.GetLeastPacketAwaitedByPeer(kTestPathId3),
-                "");
+  EXPECT_QUIC_BUG(multipath_manager_.GetLeastPacketAwaitedByPeer(kTestPathId3),
+                  "");
 }
 
 TEST_F(QuicMultipathSentPacketManagerTest, SetNetworkChangeVisitor) {
@@ -348,6 +347,13 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetConsecutiveRtoCount) {
 TEST_F(QuicMultipathSentPacketManagerTest, GetConsecutiveTlpCount) {
   EXPECT_CALL(*manager_0_, GetConsecutiveTlpCount()).WillOnce(Return(3));
   EXPECT_EQ(3u, multipath_manager_.GetConsecutiveTlpCount());
+}
+
+TEST_F(QuicMultipathSentPacketManagerTest, OnApplicationLimited) {
+  EXPECT_CALL(*manager_0_, OnApplicationLimited()).Times(1);
+  EXPECT_CALL(*manager_1_, OnApplicationLimited()).Times(1);
+  EXPECT_CALL(*manager_2_, OnApplicationLimited()).Times(0);
+  multipath_manager_.OnApplicationLimited();
 }
 
 }  // namespace

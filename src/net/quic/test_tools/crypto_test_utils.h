@@ -205,6 +205,12 @@ class CryptoTestUtils {
                           PacketSavingConnection* dest_conn,
                           Perspective dest_perspective);
 
+  // Return an inchoate CHLO with some basic tag value std:pairs.
+  static CryptoHandshakeMessage GenerateDefaultInchoateCHLO(
+      const QuicClock* clock,
+      QuicVersion version,
+      QuicCryptoServerConfig* crypto_config);
+
   // Takes a inchoate CHLO, returns a full CHLO in |out| which can pass
   // |crypto_config|'s validation.
   static void GenerateFullCHLO(const CryptoHandshakeMessage& inchoate_chlo,
@@ -220,6 +226,14 @@ class CryptoTestUtils {
  private:
   static void CompareClientAndServerKeys(QuicCryptoClientStream* client,
                                          QuicCryptoServerStream* server);
+
+  // Return a CHLO nonce in hexadecimal.
+  static std::string GenerateClientNonceHex(
+      const QuicClock* clock,
+      QuicCryptoServerConfig* crypto_config);
+
+  // Return a CHLO PUBS in hexadecimal.
+  static std::string GenerateClientPublicValuesHex();
 
   DISALLOW_COPY_AND_ASSIGN(CryptoTestUtils);
 };

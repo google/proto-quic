@@ -52,7 +52,7 @@ class NET_EXPORT_PRIVATE ProxyClientSocket : public StreamSocket {
   virtual bool IsUsingSpdy() const = 0;
 
   // Returns the protocol negotiated with the proxy.
-  virtual NextProto GetProtocolNegotiated() const = 0;
+  virtual NextProto GetProxyNegotiatedProtocol() const = 0;
 
  protected:
   // The HTTP CONNECT method for establishing a tunnel connection is documented

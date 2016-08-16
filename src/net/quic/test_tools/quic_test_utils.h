@@ -39,6 +39,12 @@
 
 using base::StringPiece;
 
+// EXPECT_QUIC_BUG is like EXPECT_DFATAL, except it ensures that no DFATAL
+// logging is skipped due to exponential backoff.
+//
+// For external QUIC, EXPECT_QUIC_BUG should be #defined to EXPECT_DFATAL.
+#define EXPECT_QUIC_BUG EXPECT_DFATAL
+
 namespace net {
 
 namespace test {
@@ -76,7 +82,7 @@ IPAddress Any4();
 void GenerateBody(std::string* body, int length);
 
 // Create an encrypted packet for testing.
-// If versions == nullptr, uses &QuicSupportedVersions().
+// If versions == nullptr, uses &AllSupportedVersions().
 // Note that the packet is encrypted with NullEncrypter, so to decrypt the
 // constructed packet, the framer must be set to use NullDecrypter.
 QuicEncryptedPacket* ConstructEncryptedPacket(
@@ -93,7 +99,7 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
     Perspective perspective);
 
 // Create an encrypted packet for testing.
-// If versions == nullptr, uses &QuicSupportedVersions().
+// If versions == nullptr, uses &AllSupportedVersions().
 // Note that the packet is encrypted with NullEncrypter, so to decrypt the
 // constructed packet, the framer must be set to use NullDecrypter.
 QuicEncryptedPacket* ConstructEncryptedPacket(
@@ -498,6 +504,7 @@ class PacketSavingConnection : public MockQuicConnection {
 
 class MockQuicSession : public QuicSession {
  public:
+  // Takes ownership of |connection|.
   explicit MockQuicSession(QuicConnection* connection);
   ~MockQuicSession() override;
 
@@ -554,6 +561,7 @@ class MockQuicSession : public QuicSession {
 
 class MockQuicSpdySession : public QuicSpdySession {
  public:
+  // Takes ownership of |connection|.
   explicit MockQuicSpdySession(QuicConnection* connection);
   ~MockQuicSpdySession() override;
 
@@ -640,6 +648,7 @@ class MockQuicSpdySession : public QuicSpdySession {
 
 class TestQuicSpdyServerSession : public QuicServerSessionBase {
  public:
+  // Takes ownership of |connection|.
   TestQuicSpdyServerSession(QuicConnection* connection,
                             const QuicConfig& config,
                             const QuicCryptoServerConfig* crypto_config,
@@ -750,12 +759,14 @@ class MockSendAlgorithm : public SendAlgorithmInterface {
   MOCK_METHOD1(OnRttUpdated, void(QuicPacketNumber));
   MOCK_CONST_METHOD0(RetransmissionDelay, QuicTime::Delta(void));
   MOCK_CONST_METHOD0(GetCongestionWindow, QuicByteCount());
+  MOCK_CONST_METHOD0(GetDebugState, std::string());
   MOCK_CONST_METHOD0(InSlowStart, bool());
   MOCK_CONST_METHOD0(InRecovery, bool());
   MOCK_CONST_METHOD0(GetSlowStartThreshold, QuicByteCount());
   MOCK_CONST_METHOD0(GetCongestionControlType, CongestionControlType());
   MOCK_METHOD2(ResumeConnectionState,
                void(const CachedNetworkParameters&, bool));
+  MOCK_METHOD1(OnApplicationLimited, void(QuicByteCount));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockSendAlgorithm);
@@ -938,6 +949,7 @@ class MockSentPacketManager : public QuicSentPacketManagerInterface {
                      QuicPacketCount(QuicByteCount));
   MOCK_CONST_METHOD0(GetCongestionWindowInBytes, QuicByteCount(void));
   MOCK_CONST_METHOD0(GetSlowStartThresholdInTcpMss, QuicPacketCount(void));
+  MOCK_CONST_METHOD0(GetDebugState, std::string());
   MOCK_METHOD1(CancelRetransmissionsForStream, void(QuicStreamId));
   MOCK_METHOD2(OnConnectionMigration, void(QuicPathId, PeerAddressChangeType));
   MOCK_CONST_METHOD0(IsHandshakeConfirmed, bool(void));
@@ -949,6 +961,7 @@ class MockSentPacketManager : public QuicSentPacketManagerInterface {
   MOCK_CONST_METHOD0(InSlowStart, bool(void));
   MOCK_CONST_METHOD0(GetConsecutiveRtoCount, size_t(void));
   MOCK_CONST_METHOD0(GetConsecutiveTlpCount, size_t(void));
+  MOCK_METHOD0(OnApplicationLimited, void(void));
 };
 
 class MockConnectionCloseDelegate

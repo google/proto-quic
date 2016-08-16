@@ -190,7 +190,6 @@ class QuicSimpleServerStreamTest
                  crypto_config_.get(),
                  &compressed_certs_cache_),
         body_("hello world") {
-    FLAGS_quic_always_log_bugs_for_tests = true;
     SpdyHeaderBlock request_headers;
     request_headers[":host"] = "";
     request_headers[":authority"] = "www.google.com";
@@ -244,7 +243,7 @@ class QuicSimpleServerStreamTest
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicSimpleServerStreamTest,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSimpleServerStreamTest, TestFraming) {
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
@@ -468,9 +467,9 @@ TEST_P(QuicSimpleServerStreamTest, SendReponseWithPushResources) {
 TEST_P(QuicSimpleServerStreamTest, PushResponseOnClientInitiatedStream) {
   // Calling PushResponse() on a client initialted stream is never supposed to
   // happen.
-  EXPECT_DFATAL(stream_->PushResponse(SpdyHeaderBlock()),
-                "Client initiated stream"
-                " shouldn't be used as promised stream.");
+  EXPECT_QUIC_BUG(stream_->PushResponse(SpdyHeaderBlock()),
+                  "Client initiated stream"
+                  " shouldn't be used as promised stream.");
 }
 
 TEST_P(QuicSimpleServerStreamTest, PushResponseOnServerInitiatedStream) {

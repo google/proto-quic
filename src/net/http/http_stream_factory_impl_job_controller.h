@@ -189,7 +189,7 @@ class HttpStreamFactoryImpl::JobController
 
   // Marks completion of the |request_|.
   void MarkRequestComplete(bool was_npn_negotiated,
-                           NextProto protocol_negotiated,
+                           NextProto negotiated_protocol,
                            bool using_spdy);
 
   void MaybeNotifyFactoryOfCompletion();

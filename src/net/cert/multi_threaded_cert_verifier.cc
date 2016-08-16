@@ -338,7 +338,7 @@ MultiThreadedCertVerifier::MultiThreadedCertVerifier(
     : requests_(0), inflight_joins_(0), verify_proc_(verify_proc) {}
 
 MultiThreadedCertVerifier::~MultiThreadedCertVerifier() {
-  STLDeleteElements(&inflight_);
+  base::STLDeleteElements(&inflight_);
 }
 
 int MultiThreadedCertVerifier::Verify(const RequestParams& params,

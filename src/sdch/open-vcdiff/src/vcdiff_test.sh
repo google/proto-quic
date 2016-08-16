@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copyright 2008 The open-vcdiff Authors. All Rights Reserved.
 #
@@ -16,12 +16,12 @@
 #
 # This script tests the correctness of the vcdiff command-line executable.
 # If you add a new test here, please add the same test to the Windows script
-# vsprojects/vcdiff_test.bat.
+# src/vcdiff_test.bat.
 #
-# The caller should set the environment variable $srcdir to the root directory
-# of the open-vcdiff package.  ($srcdir is automatically provided by Automake
-# when this script is run by "make check".)
+# The caller should pass path to PROJECT_SOURCE_DIR to this script. CTest
+# automatically pass it from ```make test```
 
+srcdir=$1
 # Find input files
 VCDIFF=./vcdiff
 # These options are only needed for the encoder;

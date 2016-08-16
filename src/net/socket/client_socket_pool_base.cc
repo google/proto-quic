@@ -240,7 +240,7 @@ bool ClientSocketPoolBaseHelper::IsStalled() const {
 void ClientSocketPoolBaseHelper::AddLowerLayeredPool(
     LowerLayeredPool* lower_pool) {
   DCHECK(pool_);
-  CHECK(!ContainsKey(lower_pools_, lower_pool));
+  CHECK(!base::ContainsKey(lower_pools_, lower_pool));
   lower_pools_.insert(lower_pool);
   lower_pool->AddHigherLayeredPool(pool_);
 }
@@ -248,14 +248,14 @@ void ClientSocketPoolBaseHelper::AddLowerLayeredPool(
 void ClientSocketPoolBaseHelper::AddHigherLayeredPool(
     HigherLayeredPool* higher_pool) {
   CHECK(higher_pool);
-  CHECK(!ContainsKey(higher_pools_, higher_pool));
+  CHECK(!base::ContainsKey(higher_pools_, higher_pool));
   higher_pools_.insert(higher_pool);
 }
 
 void ClientSocketPoolBaseHelper::RemoveHigherLayeredPool(
     HigherLayeredPool* higher_pool) {
   CHECK(higher_pool);
-  CHECK(ContainsKey(higher_pools_, higher_pool));
+  CHECK(base::ContainsKey(higher_pools_, higher_pool));
   higher_pools_.erase(higher_pool);
 }
 
@@ -322,11 +322,11 @@ void ClientSocketPoolBaseHelper::RequestSockets(
     rv = RequestSocketInternal(group_name, request);
     if (rv < 0 && rv != ERR_IO_PENDING) {
       // We're encountering a synchronous error.  Give up.
-      if (!ContainsKey(group_map_, group_name))
+      if (!base::ContainsKey(group_map_, group_name))
         deleted_group = true;
       break;
     }
-    if (!ContainsKey(group_map_, group_name)) {
+    if (!base::ContainsKey(group_map_, group_name)) {
       // Unexpected.  The group should only be getting deleted on synchronous
       // error.
       NOTREACHED();
@@ -522,7 +522,7 @@ void ClientSocketPoolBaseHelper::CancelRequest(
     return;
   }
 
-  CHECK(ContainsKey(group_map_, group_name));
+  CHECK(base::ContainsKey(group_map_, group_name));
 
   Group* group = GetOrCreateGroup(group_name);
 
@@ -544,7 +544,7 @@ void ClientSocketPoolBaseHelper::CancelRequest(
 }
 
 bool ClientSocketPoolBaseHelper::HasGroup(const std::string& group_name) const {
-  return ContainsKey(group_map_, group_name);
+  return base::ContainsKey(group_map_, group_name);
 }
 
 void ClientSocketPoolBaseHelper::CloseIdleSockets() {
@@ -563,7 +563,7 @@ int ClientSocketPoolBaseHelper::IdleSocketCountInGroup(
 LoadState ClientSocketPoolBaseHelper::GetLoadState(
     const std::string& group_name,
     const ClientSocketHandle* handle) const {
-  if (ContainsKey(pending_callback_map_, handle))
+  if (base::ContainsKey(pending_callback_map_, handle))
     return LOAD_STATE_CONNECTING;
 
   GroupMap::const_iterator group_it = group_map_.find(group_name);
@@ -928,7 +928,7 @@ void ClientSocketPoolBaseHelper::RemoveConnectJob(ConnectJob* job,
 
 void ClientSocketPoolBaseHelper::OnAvailableSocketSlot(
     const std::string& group_name, Group* group) {
-  DCHECK(ContainsKey(group_map_, group_name));
+  DCHECK(base::ContainsKey(group_map_, group_name));
   if (group->IsEmpty()) {
     RemoveGroup(group_name);
   } else if (group->has_pending_requests()) {
@@ -1110,7 +1110,7 @@ bool ClientSocketPoolBaseHelper::CloseOneIdleConnectionInHigherLayeredPool() {
 
 void ClientSocketPoolBaseHelper::InvokeUserCallbackLater(
     ClientSocketHandle* handle, const CompletionCallback& callback, int rv) {
-  CHECK(!ContainsKey(pending_callback_map_, handle));
+  CHECK(!base::ContainsKey(pending_callback_map_, handle));
   pending_callback_map_[handle] = CallbackResultPair(callback, rv);
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, base::Bind(&ClientSocketPoolBaseHelper::InvokeUserCallback,
@@ -1246,7 +1246,7 @@ void ClientSocketPoolBaseHelper::Group::RemoveAllJobs() {
   SanityCheck();
 
   // Delete active jobs.
-  STLDeleteElements(&jobs_);
+  base::STLDeleteElements(&jobs_);
   unassigned_job_count_ = 0;
 
   // Stop backup job timer.

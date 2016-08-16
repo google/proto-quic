@@ -181,7 +181,7 @@ err:
   return 0;
 }
 
-int tls13_process_certificate(SSL *ssl) {
+int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
   CBS cbs, context;
   CBS_init(&cbs, ssl->init_msg, ssl->init_num);
   if (!CBS_get_u8_length_prefixed(&cbs, &context) ||
@@ -191,12 +191,12 @@ int tls13_process_certificate(SSL *ssl) {
     return 0;
   }
 
+  const int retain_sha256 =
+      ssl->server && ssl->ctx->retain_only_sha256_of_client_certs;
   int ret = 0;
   uint8_t alert;
   STACK_OF(X509) *chain = ssl_parse_cert_chain(
-      ssl, &alert, ssl->ctx->retain_only_sha256_of_client_certs
-                       ? ssl->s3->new_session->peer_sha256
-                       : NULL,
+      ssl, &alert, retain_sha256 ? ssl->s3->new_session->peer_sha256 : NULL,
       &cbs);
   if (chain == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -210,16 +210,7 @@ int tls13_process_certificate(SSL *ssl) {
   }
 
   if (sk_X509_num(chain) == 0) {
-    /* Clients must receive a certificate from the server. */
-    if (!ssl->server) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-      goto err;
-    }
-
-    /* Servers may be configured to accept anonymous clients. */
-    if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
-        (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
+    if (!allow_anonymous) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
       goto err;
@@ -230,37 +221,16 @@ int tls13_process_certificate(SSL *ssl) {
     goto err;
   }
 
-  if (ssl->server && ssl->ctx->retain_only_sha256_of_client_certs) {
-    /* The hash was filled in by |ssl_parse_cert_chain|. */
-    ssl->s3->new_session->peer_sha256_valid = 1;
-  }
+  ssl->s3->new_session->peer_sha256_valid = retain_sha256;
 
-  X509 *leaf = sk_X509_value(chain, 0);
-  if (!ssl->server && !ssl_check_leaf_certificate(ssl, leaf)) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
+  if (!ssl_verify_cert_chain(ssl, chain)) {
     goto err;
   }
-
-  int verify_ret = ssl_verify_cert_chain(ssl, chain);
-  /* If |SSL_VERIFY_NONE|, the error is non-fatal, but we keep the result. */
-  if (ssl->verify_mode != SSL_VERIFY_NONE && verify_ret <= 0) {
-    int al = ssl_verify_alarm_type(ssl->verify_result);
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
-    OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
-    goto err;
-  }
-  ERR_clear_error();
 
   ssl->s3->new_session->verify_result = ssl->verify_result;
 
   X509_free(ssl->s3->new_session->peer);
-  /* For historical reasons, the client and server differ on whether the chain
-   * includes the leaf. */
-  if (ssl->server) {
-    ssl->s3->new_session->peer = sk_X509_shift(chain);
-  } else {
-    ssl->s3->new_session->peer = X509_up_ref(leaf);
-  }
+  ssl->s3->new_session->peer = X509_up_ref(sk_X509_value(chain, 0));
 
   sk_X509_pop_free(ssl->s3->new_session->cert_chain, X509_free);
   ssl->s3->new_session->cert_chain = chain;
@@ -471,8 +441,7 @@ int tls13_post_handshake(SSL *ssl) {
 
   if (ssl->s3->tmp.message_type == SSL3_MT_NEW_SESSION_TICKET &&
       !ssl->server) {
-    // TODO(svaldez): Handle NewSessionTicket.
-    return 1;
+    return tls13_process_new_session_ticket(ssl);
   }
 
   // TODO(svaldez): Handle post-handshake authentication.

@@ -225,7 +225,7 @@ int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
   ctx->session_id_len = CBS_len(&session_id);
 
   /* Skip past DTLS cookie */
-  if (SSL_IS_DTLS(ctx->ssl)) {
+  if (SSL_is_dtls(ctx->ssl)) {
     CBS cookie;
 
     if (!CBS_get_u8_length_prefixed(&client_hello, &cookie)) {
@@ -269,31 +269,39 @@ int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
   return 1;
 }
 
-int SSL_early_callback_ctx_extension_get(
-    const struct ssl_early_callback_ctx *ctx, uint16_t extension_type,
-    const uint8_t **out_data, size_t *out_len) {
+int ssl_early_callback_get_extension(const struct ssl_early_callback_ctx *ctx,
+                                     CBS *out, uint16_t extension_type) {
   CBS extensions;
-
   CBS_init(&extensions, ctx->extensions, ctx->extensions_len);
-
   while (CBS_len(&extensions) != 0) {
+    /* Decode the next extension. */
     uint16_t type;
     CBS extension;
-
-    /* Decode the next extension. */
     if (!CBS_get_u16(&extensions, &type) ||
         !CBS_get_u16_length_prefixed(&extensions, &extension)) {
       return 0;
     }
 
     if (type == extension_type) {
-      *out_data = CBS_data(&extension);
-      *out_len = CBS_len(&extension);
+      *out = extension;
       return 1;
     }
   }
 
   return 0;
+}
+
+int SSL_early_callback_ctx_extension_get(
+    const struct ssl_early_callback_ctx *ctx, uint16_t extension_type,
+    const uint8_t **out_data, size_t *out_len) {
+  CBS cbs;
+  if (!ssl_early_callback_get_extension(ctx, &cbs, extension_type)) {
+    return 0;
+  }
+
+  *out_data = CBS_data(&cbs);
+  *out_len = CBS_len(&cbs);
+  return 1;
 }
 
 static const uint16_t kDefaultGroups[] = {
@@ -1279,7 +1287,7 @@ static int ext_npn_add_clienthello(SSL *ssl, CBB *out) {
   if (ssl->s3->initial_handshake_complete ||
       ssl->ctx->next_proto_select_cb == NULL ||
       (ssl->options & SSL_OP_DISABLE_NPN) ||
-      SSL_IS_DTLS(ssl)) {
+      SSL_is_dtls(ssl)) {
     return 1;
   }
 
@@ -1305,7 +1313,7 @@ static int ext_npn_parse_serverhello(SSL *ssl, uint8_t *out_alert,
    * extension in the ClientHello and thus this function should never have been
    * called. */
   assert(!ssl->s3->initial_handshake_complete);
-  assert(!SSL_IS_DTLS(ssl));
+  assert(!SSL_is_dtls(ssl));
   assert(ssl->ctx->next_proto_select_cb != NULL);
   assert(!(ssl->options & SSL_OP_DISABLE_NPN));
 
@@ -1366,7 +1374,7 @@ static int ext_npn_parse_clienthello(SSL *ssl, uint8_t *out_alert,
        * |next_proto_neg_seen|. */
       ssl->s3->alpn_selected != NULL ||
       ssl->ctx->next_protos_advertised_cb == NULL ||
-      SSL_IS_DTLS(ssl)) {
+      SSL_is_dtls(ssl)) {
     return 1;
   }
 
@@ -1615,7 +1623,7 @@ static void ext_channel_id_init(SSL *ssl) {
 
 static int ext_channel_id_add_clienthello(SSL *ssl, CBB *out) {
   if (!ssl->tlsext_channel_id_enabled ||
-      SSL_IS_DTLS(ssl)) {
+      SSL_is_dtls(ssl)) {
     return 1;
   }
 
@@ -1637,7 +1645,7 @@ static int ext_channel_id_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 0;
   }
 
-  assert(!SSL_IS_DTLS(ssl));
+  assert(!SSL_is_dtls(ssl));
   assert(ssl->tlsext_channel_id_enabled);
 
   if (CBS_len(contents) != 0) {
@@ -1652,7 +1660,7 @@ static int ext_channel_id_parse_clienthello(SSL *ssl, uint8_t *out_alert,
                                             CBS *contents) {
   if (contents == NULL ||
       !ssl->tlsext_channel_id_enabled ||
-      SSL_IS_DTLS(ssl)) {
+      SSL_is_dtls(ssl)) {
     return 1;
   }
 
@@ -1840,7 +1848,7 @@ static int ext_srtp_add_serverhello(SSL *ssl, CBB *out) {
  * https://tools.ietf.org/html/rfc4492#section-5.1.2 */
 
 static int ssl_any_ec_cipher_suites_enabled(const SSL *ssl) {
-  if (ssl->version < TLS1_VERSION && !SSL_IS_DTLS(ssl)) {
+  if (ssl->version < TLS1_VERSION && !SSL_is_dtls(ssl)) {
     return 0;
   }
 
@@ -2031,13 +2039,14 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
   return CBB_flush(out);
 }
 
-int ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
-                                    size_t *out_secret_len, uint8_t *out_alert,
-                                    CBS *contents) {
+int ssl_ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
+                                        size_t *out_secret_len,
+                                        uint8_t *out_alert, CBS *contents) {
   CBS peer_key;
   uint16_t group;
   if (!CBS_get_u16(contents, &group) ||
-      !CBS_get_u16_length_prefixed(contents, &peer_key)) {
+      !CBS_get_u16_length_prefixed(contents, &peer_key) ||
+      CBS_len(contents) != 0) {
     *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
@@ -2066,14 +2075,15 @@ int ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
   return 1;
 }
 
-int ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
-                                    uint8_t **out_secret,
-                                    size_t *out_secret_len, uint8_t *out_alert,
-                                    CBS *contents) {
+int ssl_ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
+                                        uint8_t **out_secret,
+                                        size_t *out_secret_len,
+                                        uint8_t *out_alert, CBS *contents) {
   uint16_t group_id;
   CBS key_shares;
   if (!tls1_get_shared_group(ssl, &group_id) ||
-      !CBS_get_u16_length_prefixed(contents, &key_shares)) {
+      !CBS_get_u16_length_prefixed(contents, &key_shares) ||
+      CBS_len(contents) != 0) {
     return 0;
   }
 
@@ -2112,7 +2122,7 @@ int ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
   return 1;
 }
 
-int ext_key_share_add_serverhello(SSL *ssl, CBB *out) {
+int ssl_ext_key_share_add_serverhello(SSL *ssl, CBB *out) {
   if (ssl->s3->tmp.new_cipher->algorithm_mkey != SSL_kECDHE) {
     return 1;
   }
@@ -2424,7 +2434,7 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
     goto err;
   }
 
-  if (!SSL_IS_DTLS(ssl)) {
+  if (!SSL_is_dtls(ssl)) {
     header_len += 2 + CBB_len(&extensions);
     if (header_len > 0xff && header_len < 0x200) {
       /* Add padding to workaround bugs in F5 terminators. See RFC 7685.
@@ -2642,7 +2652,7 @@ static int ssl_scan_serverhello_tlsext(SSL *ssl, CBS *cbs, int *out_alert) {
       /* If the extension was never sent then it is illegal. */
       OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
       ERR_add_error_dataf("extension :%u", (unsigned)type);
-      *out_alert = SSL_AD_DECODE_ERROR;
+      *out_alert = SSL_AD_UNSUPPORTED_EXTENSION;
       return 0;
     }
 

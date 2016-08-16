@@ -864,7 +864,9 @@ static ScopedSSL_CTX SetupCtx(const TestConfig *config) {
   SSL_CTX_enable_tls_channel_id(ssl_ctx.get());
   SSL_CTX_set_channel_id_cb(ssl_ctx.get(), ChannelIdCallback);
 
-  SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
+  if (config->is_dtls) {
+    SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
+  }
 
   SSL_CTX_set_info_callback(ssl_ctx.get(), InfoCallback);
   SSL_CTX_sess_set_new_cb(ssl_ctx.get(), NewSessionCallback);
@@ -1028,6 +1030,14 @@ static int DoSendFatalAlert(SSL *ssl, uint8_t alert) {
   return ret;
 }
 
+static uint16_t GetProtocolVersion(const SSL *ssl) {
+  uint16_t version = SSL_version(ssl);
+  if (!SSL_is_dtls(ssl)) {
+    return version;
+  }
+  return 0x0201 + ~version;
+}
+
 // CheckHandshakeProperties checks, immediately after |ssl| completes its
 // initial handshake (or False Starts), whether all the properties are
 // consistent with the test configuration and invariants.
@@ -1057,8 +1067,8 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     bool expect_new_session =
         !config->expect_no_session &&
         (!SSL_session_reused(ssl) || config->expect_ticket_renewal) &&
-        /* TODO(svaldez): Implement Session Resumption. */
-        SSL_version(ssl) != TLS1_3_VERSION;
+        // Session tickets are sent post-handshake in TLS 1.3.
+        GetProtocolVersion(ssl) < TLS1_3_VERSION;
     if (expect_new_session != GetTestState(ssl)->got_new_session) {
       fprintf(stderr,
               "new session was%s cached, but we expected the opposite\n",
@@ -1202,19 +1212,18 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     }
   }
 
-  if (!config->is_server) {
-    /* Clients should expect a peer certificate chain iff this was not a PSK
-     * cipher suite. */
-    if (config->psk.empty()) {
-      if (SSL_get_peer_cert_chain(ssl) == nullptr) {
-        fprintf(stderr, "Missing peer certificate chain!\n");
-        return false;
-      }
-    } else if (SSL_get_peer_cert_chain(ssl) != nullptr) {
-      fprintf(stderr, "Unexpected peer certificate chain!\n");
+  if (!config->psk.empty()) {
+    if (SSL_get_peer_cert_chain(ssl) != nullptr) {
+      fprintf(stderr, "Received peer certificate on a PSK cipher.\n");
+      return false;
+    }
+  } else if (!config->is_server || config->require_any_client_certificate) {
+    if (SSL_get_peer_cert_chain(ssl) == nullptr) {
+      fprintf(stderr, "Received no peer certificate but expected one.\n");
       return false;
     }
   }
+
   return true;
 }
 
@@ -1412,8 +1421,8 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
     } else if (config->async) {
       // The internal session cache is disabled, so install the session
       // manually.
-      GetTestState(ssl.get())->pending_session.reset(
-          SSL_SESSION_up_ref(session));
+      SSL_SESSION_up_ref(session);
+      GetTestState(ssl.get())->pending_session.reset(session);
     }
   }
 
@@ -1569,9 +1578,22 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
 
   if (!config->is_server && !config->false_start &&
       !config->implicit_handshake &&
+      // Session tickets are sent post-handshake in TLS 1.3.
+      GetProtocolVersion(ssl.get()) < TLS1_3_VERSION &&
       GetTestState(ssl.get())->got_new_session) {
     fprintf(stderr, "new session was established after the handshake\n");
     return false;
+  }
+
+  if (GetProtocolVersion(ssl.get()) >= TLS1_3_VERSION && !config->is_server) {
+    bool expect_new_session =
+        !config->expect_no_session && !config->shim_shuts_down;
+    if (expect_new_session != GetTestState(ssl.get())->got_new_session) {
+      fprintf(stderr,
+              "new session was%s cached, but we expected the opposite\n",
+              GetTestState(ssl.get())->got_new_session ? "" : " not");
+      return false;
+    }
   }
 
   if (out_session) {

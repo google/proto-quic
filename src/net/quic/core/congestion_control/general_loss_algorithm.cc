@@ -27,15 +27,15 @@ static const int kDefaultAdaptiveLossDelayShift = 4;
 }  // namespace
 
 GeneralLossAlgorithm::GeneralLossAlgorithm()
-    : loss_type_(kNack),
-      loss_detection_timeout_(QuicTime::Zero()),
+    : loss_detection_timeout_(QuicTime::Zero()),
       largest_sent_on_spurious_retransmit_(0),
+      loss_type_(kNack),
       reordering_shift_(kDefaultLossDelayShift) {}
 
 GeneralLossAlgorithm::GeneralLossAlgorithm(LossDetectionType loss_type)
-    : loss_type_(loss_type),
-      loss_detection_timeout_(QuicTime::Zero()),
+    : loss_detection_timeout_(QuicTime::Zero()),
       largest_sent_on_spurious_retransmit_(0),
+      loss_type_(loss_type),
       reordering_shift_(loss_type == kAdaptiveTime
                             ? kDefaultAdaptiveLossDelayShift
                             : kDefaultLossDelayShift) {}
@@ -45,10 +45,12 @@ LossDetectionType GeneralLossAlgorithm::GetLossDetectionType() const {
 }
 
 void GeneralLossAlgorithm::SetLossDetectionType(LossDetectionType loss_type) {
+  loss_detection_timeout_ = QuicTime::Zero();
+  largest_sent_on_spurious_retransmit_ = 0;
   loss_type_ = loss_type;
-  if (loss_type_ == kAdaptiveTime) {
-    reordering_shift_ = kDefaultAdaptiveLossDelayShift;
-  }
+  reordering_shift_ = loss_type == kAdaptiveTime
+                          ? kDefaultAdaptiveLossDelayShift
+                          : kDefaultLossDelayShift;
 }
 
 // Uses nack counts to decide when packets are lost.

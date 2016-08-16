@@ -74,7 +74,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
   ReliableQuicStreamTest()
       : initial_flow_control_window_bytes_(kMaxPacketSize),
         zero_(QuicTime::Delta::Zero()),
-        supported_versions_(QuicSupportedVersions()) {
+        supported_versions_(AllSupportedVersions()) {
     headers_[":host"] = "www.google.com";
     headers_[":path"] = "/index.hml";
     headers_[":scheme"] = "https";
@@ -184,7 +184,8 @@ TEST_F(ReliableQuicStreamTest, NoBlockingIfNoDataOrFin) {
 
   // Write no data and no fin.  If we consume nothing we should not be write
   // blocked.
-  EXPECT_DFATAL(stream_->WriteOrBufferData(StringPiece(), false, nullptr), "");
+  EXPECT_QUIC_BUG(stream_->WriteOrBufferData(StringPiece(), false, nullptr),
+                  "");
   EXPECT_FALSE(HasWriteBlockedStreams());
 }
 

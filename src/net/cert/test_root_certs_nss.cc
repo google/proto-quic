@@ -108,7 +108,7 @@ void TestRootCerts::Clear() {
     // occur after Clear() has been called.
     DCHECK_EQ(SECSuccess, rv) << "Cannot restore certificate trust.";
   }
-  STLDeleteElements(&trust_cache_);
+  base::STLDeleteElements(&trust_cache_);
 }
 
 bool TestRootCerts::IsEmpty() const {

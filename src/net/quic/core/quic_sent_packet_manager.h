@@ -15,6 +15,7 @@
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
+#include "net/quic/core/congestion_control/general_loss_algorithm.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/pacing_sender.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
@@ -179,6 +180,9 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // start threshold and will return 0.
   QuicPacketCount GetSlowStartThresholdInTcpMss() const override;
 
+  // Returns debugging information about the state of the congestion controller.
+  std::string GetDebugState() const override;
+
   // No longer retransmit data for |stream_id|.
   void CancelRetransmissionsForStream(QuicStreamId stream_id) override;
 
@@ -202,6 +206,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   size_t GetConsecutiveRtoCount() const override;
 
   size_t GetConsecutiveTlpCount() const override;
+
+  void OnApplicationLimited() override;
 
  private:
   friend class test::QuicConnectionPeer;
@@ -311,8 +317,14 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // RTT measurement purposes.
   void RemoveObsoletePackets();
 
-  // Enables pacing if it has not already been enabled.
-  void EnablePacing();
+  // Sets the send algorithm to the given congestion control type and points the
+  // pacing sender at |send_algorithm_|. Can be called any number of times.
+  void SetSendAlgorithm(CongestionControlType congestion_control_type);
+
+  // Sets the send algorithm to |send_algorithm| and points the pacing sender at
+  // |send_algorithm_|. Takes ownership of |send_algorithm|. Can be called any
+  // number of times.
+  void SetSendAlgorithm(SendAlgorithmInterface* send_algorithm);
 
   // Newly serialized retransmittable packets are added to this map, which
   // contains owning pointers to any contained frames.  If a packet is
@@ -343,7 +355,9 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   const QuicPacketCount initial_congestion_window_;
   RttStats rtt_stats_;
   std::unique_ptr<SendAlgorithmInterface> send_algorithm_;
-  std::unique_ptr<LossDetectionInterface> loss_algorithm_;
+  // Not owned. Always points to |general_loss_algorithm_| outside of tests.
+  LossDetectionInterface* loss_algorithm_;
+  GeneralLossAlgorithm general_loss_algorithm_;
   bool n_connection_simulation_;
 
   // Receiver side buffer in bytes.
@@ -368,10 +382,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // If true, send the TLP at 0.5 RTT.
   bool enable_half_rtt_tail_loss_probe_;
   bool using_pacing_;
-  // TODO(jdorfman): Remove |using_pacing_| and rename |using_inline_pacing_| to
-  // |using_pacing| when deprecating
-  // gfe2_reloadable_flag_quic_use_inline_pacing.
-  bool using_inline_pacing_;
   // If true, use the new RTO with loss based CWND reduction instead of the send
   // algorithms's OnRetransmissionTimeout to reduce the congestion window.
   bool use_new_rto_;
@@ -387,6 +397,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Largest packet in bytes ever acknowledged.
   QuicPacketLength largest_mtu_acked_;
 
+  // Replaces certain calls to |send_algorithm_| when |using_pacing_| is true.
+  // Calls into |send_algorithm_| for the underlying congestion control.
   PacingSender pacing_sender_;
 
   // Set to true after the crypto handshake has successfully completed. After

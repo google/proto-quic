@@ -132,26 +132,22 @@ void HttpRequestHeaders::AddHeaderFromString(
   }
 
   const base::StringPiece header_key(header_line.data(), key_end_index);
+  if (!HttpUtil::IsValidHeaderName(header_key)) {
+    LOG(DFATAL) << "\"" << header_line << "\" has invalid header key.";
+    return;
+  }
 
   const std::string::size_type value_index = key_end_index + 1;
 
   if (value_index < header_line.size()) {
-    std::string header_value(header_line.data() + value_index,
-                             header_line.size() - value_index);
-    std::string::const_iterator header_value_begin =
-        header_value.begin();
-    std::string::const_iterator header_value_end =
-        header_value.end();
-    HttpUtil::TrimLWS(&header_value_begin, &header_value_end);
-
-    if (header_value_begin == header_value_end) {
-      // Value was all LWS.
-      SetHeader(header_key, "");
-    } else {
-      SetHeader(header_key,
-                base::StringPiece(&*header_value_begin,
-                                  header_value_end - header_value_begin));
+    base::StringPiece header_value(header_line.data() + value_index,
+                                   header_line.size() - value_index);
+    header_value = HttpUtil::TrimLWS(header_value);
+    if (!HttpUtil::IsValidHeaderValue(header_value)) {
+      LOG(DFATAL) << "\"" << header_line << "\" has invalid header value.";
+      return;
     }
+    SetHeader(header_key, header_value);
   } else if (value_index == header_line.size()) {
     SetHeader(header_key, "");
   } else {

@@ -15,6 +15,8 @@
 
 #include "base/logging.h"
 
+namespace base {
+
 // Clears internal memory of an STL object.
 // STL clear()/reserve(0) does not always free internal memory allocated
 // This function uses swap/destructor to ensure the internal memory is freed.
@@ -197,8 +199,6 @@ bool ContainsValue(const Collection& collection, const Value& value) {
   return std::find(collection.begin(), collection.end(), value) !=
       collection.end();
 }
-
-namespace base {
 
 // Returns true if the container is sorted.
 template <typename Container>

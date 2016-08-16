@@ -91,7 +91,7 @@ vector<TestParams> GetTestParams() {
   for (bool enable_stateless_rejects : kTrueFalse) {
     for (bool use_stateless_rejects : kTrueFalse) {
       // Start with all versions, remove highest on each iteration.
-      QuicVersionVector supported_versions = QuicSupportedVersions();
+      QuicVersionVector supported_versions = AllSupportedVersions();
       while (!supported_versions.empty()) {
         params.push_back(TestParams(enable_stateless_rejects,
                                     use_stateless_rejects, supported_versions));
@@ -111,7 +111,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
                 rand_,
                 CryptoTestUtils::ProofSourceForTesting()),
         compressed_certs_cache_(
-            QuicCompressedCertsCache::kQuicCompressedCertsCacheSize) {
+            QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
+        chlo_packet_size_(kDefaultMaxPacketSize) {
     supported_versions_ = GetParam().supported_versions;
     config_.set_enable_serving_sct(true);
 
@@ -282,7 +283,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         result, /*reject_only=*/false, /*connection_id=*/1, server_ip,
         client_address_, supported_versions_.front(), supported_versions_,
         use_stateless_rejects_, server_designated_connection_id, &clock_, rand_,
-        &compressed_certs_cache_, &params_, &crypto_proof_, &out_,
+        &compressed_certs_cache_, &params_, &crypto_proof_,
+        /*total_framing_overhead=*/50, chlo_packet_size_, &out_,
         &diversification_nonce, &error_details);
 
     if (should_succeed) {
@@ -375,6 +377,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   CryptoHandshakeMessage out_;
   uint8_t orbit_[kOrbitSize];
   bool use_stateless_rejects_;
+  size_t chlo_packet_size_;
 
   // These strings contain hex escaped values from the server suitable for using
   // when constructing client hello messages.
@@ -470,6 +473,38 @@ TEST_P(CryptoServerTest, RejectTooLarge) {
   EXPECT_FALSE(out_.GetStringPiece(kCertificateTag, &cert));
   EXPECT_FALSE(out_.GetStringPiece(kPROF, &proof));
   EXPECT_FALSE(out_.GetStringPiece(kCertificateSCTTag, &cert_sct));
+  const HandshakeFailureReason kRejectReasons[] = {
+      SERVER_CONFIG_INCHOATE_HELLO_FAILURE};
+  CheckRejectReasons(kRejectReasons, arraysize(kRejectReasons));
+}
+
+TEST_P(CryptoServerTest, RejectNotTooLarge) {
+  FLAGS_quic_use_chlo_packet_size = true;
+  // When the CHLO packet is large enough, ensure that a full REJ is sent.
+  chlo_packet_size_ *= 2;
+
+  // clang-format off
+  CryptoHandshakeMessage msg = CryptoTestUtils::Message(
+      "CHLO",
+      "PDMD", "X509",
+      "AEAD", "AESG",
+      "KEXS", "C255",
+      "PUBS", pub_hex_.c_str(),
+      "NONC", nonce_hex_.c_str(),
+      "PDMD", "X509",
+      "VER\0", client_version_string_.c_str(),
+      "$padding", static_cast<int>(kClientHelloMinimumSize),
+      nullptr);
+  // clang-format on
+
+  // The REJ will be larger than the CHLO so no PROF or CRT will be sent.
+  config_.set_chlo_multiplier(1);
+
+  ShouldSucceed(msg);
+  StringPiece cert, proof, cert_sct;
+  EXPECT_TRUE(out_.GetStringPiece(kCertificateTag, &cert));
+  EXPECT_TRUE(out_.GetStringPiece(kPROF, &proof));
+  EXPECT_TRUE(out_.GetStringPiece(kCertificateSCTTag, &cert_sct));
   const HandshakeFailureReason kRejectReasons[] = {
       SERVER_CONFIG_INCHOATE_HELLO_FAILURE};
   CheckRejectReasons(kRejectReasons, arraysize(kRejectReasons));

@@ -27,9 +27,7 @@ namespace net {
 void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
     struct msghdr* hdr,
     IPAddress* address,
-    QuicTime* timestamp,
-    QuicWallTime* walltimestamp,
-    bool latched_walltimestamps) {
+    QuicWallTime* walltimestamp) {
   if (hdr->msg_controllen > 0) {
     for (cmsghdr* cmsg = CMSG_FIRSTHDR(hdr); cmsg != nullptr;
          cmsg = CMSG_NXTHDR(hdr, cmsg)) {
@@ -52,12 +50,7 @@ void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
         timespec* ts = &lts->systime;
         int64_t usec = (static_cast<int64_t>(ts->tv_sec) * 1000 * 1000) +
                        (static_cast<int64_t>(ts->tv_nsec) / 1000);
-        if (latched_walltimestamps) {
-          *walltimestamp = QuicWallTime::FromUNIXMicroseconds(usec);
-        } else {
-          *timestamp =
-              QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(usec);
-        }
+        *walltimestamp = QuicWallTime::FromUNIXMicroseconds(usec);
       }
     }
   }
@@ -72,6 +65,23 @@ bool QuicSocketUtils::GetOverflowFromMsghdr(struct msghdr* hdr,
          cmsg = CMSG_NXTHDR(hdr, cmsg)) {
       if (cmsg->cmsg_type == SO_RXQ_OVFL) {
         *dropped_packets = *(reinterpret_cast<uint32_t*> CMSG_DATA(cmsg));
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// static
+bool QuicSocketUtils::GetTtlFromMsghdr(struct msghdr* hdr, int* ttl) {
+  if (hdr->msg_controllen > 0) {
+    struct cmsghdr* cmsg;
+    for (cmsg = CMSG_FIRSTHDR(hdr); cmsg != nullptr;
+         cmsg = CMSG_NXTHDR(hdr, cmsg)) {
+      if ((cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL) ||
+          (cmsg->cmsg_level == IPPROTO_IPV6 &&
+           cmsg->cmsg_type == IPV6_HOPLIMIT)) {
+        *ttl = *(reinterpret_cast<int*>(CMSG_DATA(cmsg)));
         return true;
       }
     }
@@ -122,9 +132,7 @@ int QuicSocketUtils::ReadPacket(int fd,
                                 size_t buf_len,
                                 QuicPacketCount* dropped_packets,
                                 IPAddress* self_address,
-                                QuicTime* timestamp,
                                 QuicWallTime* walltimestamp,
-                                bool latched_walltimestamps,
                                 IPEndPoint* peer_address) {
   DCHECK(peer_address != nullptr);
   char cbuf[kSpaceForCmsg];
@@ -176,13 +184,7 @@ int QuicSocketUtils::ReadPacket(int fd,
     walltimestamp = &stack_walltimestamp;
   }
 
-  QuicTime stack_timestamp = QuicTime::Zero();
-  if (timestamp == nullptr) {
-    timestamp = &stack_timestamp;
-  }
-
-  GetAddressAndTimestampFromMsghdr(&hdr, self_address, timestamp, walltimestamp,
-                                   latched_walltimestamps);
+  GetAddressAndTimestampFromMsghdr(&hdr, self_address, walltimestamp);
 
   if (raw_address.ss_family == AF_INET) {
     CHECK(peer_address->FromSockAddr(

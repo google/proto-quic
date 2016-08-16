@@ -24,7 +24,8 @@ class ReliableQuicStream;
 
 class QuicClientSession : public QuicClientSessionBase {
  public:
-  // Caller retains ownership of |promised_by_url|.
+  // Takes ownership of |connection|. Caller retains ownership of
+  // |promised_by_url|.
   QuicClientSession(const QuicConfig& config,
                     QuicConnection* connection,
                     const QuicServerId& server_id,

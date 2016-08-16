@@ -136,8 +136,8 @@ void QuicSimpleServerStream::PushResponse(
 }
 
 void QuicSimpleServerStream::SendResponse() {
-  if (!ContainsKey(request_headers_, ":authority") ||
-      !ContainsKey(request_headers_, ":path")) {
+  if (!base::ContainsKey(request_headers_, ":authority") ||
+      !base::ContainsKey(request_headers_, ":path")) {
     DVLOG(1) << "Request headers do not contain :authority or :path.";
     SendErrorResponse();
     return;

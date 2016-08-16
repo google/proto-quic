@@ -79,10 +79,6 @@ bool FLAGS_quic_rate_based_sending = true;
 // connection.
 bool FLAGS_quic_use_cheap_stateless_rejects = false;
 
-// If true, treat timestamps from SO_TIMESTAMPING as QuicWallTimes rather
-// than QuicTimes.
-bool FLAGS_quic_socket_walltimestamps = true;
-
 // If true, QUIC respect HTTP2 SETTINGS frame rather than always close the
 // connection.
 bool FLAGS_quic_respect_http2_settings_frame = true;
@@ -90,32 +86,27 @@ bool FLAGS_quic_respect_http2_settings_frame = true;
 // Do not use a QuicAckListener in order to confirm a larger Path MTU.
 bool FLAGS_quic_no_mtu_discovery_ack_listener = true;
 
-// Deprecate QuicPacketCreator::next_packet_number_length_ because it's no
-// longer necessary.
-bool FLAGS_quic_simple_packet_number_length = true;
-
 // If true, enables QUIC_VERSION_35.
 bool FLAGS_quic_enable_version_35 = true;
 
-// If true, enables QUIC_VERSION_36.
+// If true, re-enables QUIC_VERSION_36.
 bool FLAGS_quic_enable_version_36 = true;
+
+// If true, enables QUIC_VERSION_36.
+bool FLAGS_quic_enable_version_36_v2 = false;
 
 // If true, requires support for X509 certificates in QUIC CHLO PDMDs.
 bool FLAGS_quic_require_x509 = true;
 
 // If true, deprecate safeguards for b/26023400.
-bool FLAGS_quic_deprecate_kfixd = false;
-
-// If true, a connection does not migrate on an old packet even the peer address
-// changes.
-bool FLAGS_quic_do_not_migrate_on_old_packet = true;
+bool FLAGS_quic_deprecate_kfixd = true;
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
 bool FLAGS_enable_async_get_proof = false;
 
 // If true, neuter null encrypted packets before sending the next handshake
 // message.
-bool FLAGS_quic_neuter_unencrypted_when_sending = false;
+bool FLAGS_quic_neuter_unencrypted_when_sending = true;
 
 // If true, QuicAlarm::Update will call a faster UpdateImpl implementation
 // instead of canceling and reregistering the alarm.
@@ -127,8 +118,10 @@ bool FLAGS_quic_require_handshake_confirmation_pre33 = false;
 
 // If true, use the interval form of iteration over a PacketNumberQueue instead
 // of iterating over the individual numbers.
-bool FLAGS_quic_use_packet_number_queue_intervals = false;
+bool FLAGS_quic_use_packet_number_queue_intervals = true;
 
+// If true, fix a bug with which QuicStreamSequencerBuffer can\'t release block
+// memory in time.
 bool FLAGS_quic_sequencer_buffer_retire_block_in_time = true;
 
 // Remove obsolete code to force QUIC to go forward secure, now that the server
@@ -151,6 +144,24 @@ bool FLAGS_quic_close_stream_after_writing_queued_data = false;
 // gaps in QuicStreamSequenceBuffer exceeds allowed limit.
 bool FLAGS_quic_limit_frame_gaps_in_buffer = false;
 
-// If true, QuicSentPacketManager will use inline pacing functionality instead
-// of wrapping the SendAlgorithm with a PacingSender.
-bool FLAGS_quic_use_inline_pacing = false;
+// If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in public
+// flag.
+bool FLAGS_quic_remove_v33_hacks = true;
+
+// If true, use the CHLO packet size, not message size when determining how
+// large a REJ can be.
+bool FLAGS_quic_use_chlo_packet_size = false;
+
+// If true, defer creation of new connection till its CHLO arrives.
+bool FLAGS_quic_buffer_packet_till_chlo = false;
+
+// If true, the connection will check whether it is application-limited, and
+// notify the congestion controller about it.
+bool FLAGS_quic_enable_app_limited_check = true;
+
+// Deprecate QuicPacketCreator::next_packet_number_length_ because it's no
+// longer necessary.
+bool FLAGS_quic_simple_packet_number_length_2 = true;
+
+// If true, disables QUIC version less than 32.
+bool FLAGS_quic_disable_pre_32 = true;

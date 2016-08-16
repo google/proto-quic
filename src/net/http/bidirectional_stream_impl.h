@@ -135,10 +135,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
                          const std::vector<int>& lengths,
                          bool end_stream) = 0;
 
-  // Cancels the stream. No Delegate method will be called. Any pending
-  // operations may or may not succeed.
-  virtual void Cancel() = 0;
-
   // Returns the protocol used by this stream. If stream has not been
   // established, return kProtoUnknown.
   virtual NextProto GetProtocol() const = 0;

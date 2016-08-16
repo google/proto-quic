@@ -403,9 +403,14 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   url::SchemeHostPort GetServer();
 
   // Fills SSL info in |ssl_info| and returns true when SSL is in use.
-  bool GetSSLInfo(SSLInfo* ssl_info,
-                  bool* was_npn_negotiated,
-                  NextProto* protocol_negotiated);
+  bool GetSSLInfo(SSLInfo* ssl_info) const;
+
+  // Returns true if ALPN was negotiated for the underlying socket.
+  // TODO(bnc): Rename to WasAlpnNegotiated().
+  bool WasNpnNegotiated() const;
+
+  // Returns the protocol negotiated via ALPN for the underlying socket.
+  NextProto GetNegotiatedProtocol() const;
 
   // Signs the EKM value for Token Binding from the TLS layer using |*key| and
   // puts the result in |*out|. Returns OK or ERR_FAILED.

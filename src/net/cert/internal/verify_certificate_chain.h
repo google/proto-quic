@@ -20,14 +20,18 @@ struct GeneralizedTime;
 }
 
 class SignaturePolicy;
+class TrustAnchor;
 class TrustStore;
 
-// VerifyCertificateChainAssumingTrustedRoot() verifies a certificate path
-// (chain) based on the rules in RFC 5280. The caller is responsible for
-// building the path and ensuring the chain ends in a trusted root certificate.
+// VerifyCertificateChain() verifies a certificate path (chain) based on the
+// rules in RFC 5280. The caller is responsible for building the path and
+// finding the trust anchor.
 //
 // WARNING: This implementation is in progress, and is currently incomplete.
 // Consult an OWNER before using it.
+//
+// TODO(eroman): Take a CertPath instead of ParsedCertificateList +
+//               TrustAnchor.
 //
 // ---------
 // Inputs
@@ -39,11 +43,10 @@ class TrustStore;
 //
 //      * cert_chain[0] is the target certificate to verify.
 //      * cert_chain[i+1] holds the certificate that issued cert_chain[i].
-//      * cert_chain[N-1] must be the trust anchor.
+//      * cert_chain[N-1] must be issued by the trust anchor.
 //
-//   trust_store:
-//     Contains the set of trusted public keys (and their names). This is only
-//     used to DCHECK that the final cert is a trust anchor.
+//   trust_anchor:
+//     Contains the trust anchor (root) used to verify the chain.
 //
 //   signature_policy:
 //     The policy to use when verifying signatures (what hash algorithms are
@@ -57,12 +60,11 @@ class TrustStore;
 // ---------
 //
 //   Returns true if the target certificate can be verified.
-NET_EXPORT bool VerifyCertificateChainAssumingTrustedRoot(
-    const ParsedCertificateList& certs,
-    // The trust store is only used for assertions.
-    const TrustStore& trust_store,
-    const SignaturePolicy* signature_policy,
-    const der::GeneralizedTime& time) WARN_UNUSED_RESULT;
+NET_EXPORT bool VerifyCertificateChain(const ParsedCertificateList& certs,
+                                       const TrustAnchor* trust_anchor,
+                                       const SignaturePolicy* signature_policy,
+                                       const der::GeneralizedTime& time)
+    WARN_UNUSED_RESULT;
 
 }  // namespace net
 

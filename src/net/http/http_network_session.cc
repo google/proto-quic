@@ -246,18 +246,18 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 }
 
 HttpNetworkSession::~HttpNetworkSession() {
-  STLDeleteElements(&response_drainers_);
+  base::STLDeleteElements(&response_drainers_);
   spdy_session_pool_.CloseAllSessions();
 }
 
 void HttpNetworkSession::AddResponseDrainer(HttpResponseBodyDrainer* drainer) {
-  DCHECK(!ContainsKey(response_drainers_, drainer));
+  DCHECK(!base::ContainsKey(response_drainers_, drainer));
   response_drainers_.insert(drainer);
 }
 
 void HttpNetworkSession::RemoveResponseDrainer(
     HttpResponseBodyDrainer* drainer) {
-  DCHECK(ContainsKey(response_drainers_, drainer));
+  DCHECK(base::ContainsKey(response_drainers_, drainer));
   response_drainers_.erase(drainer);
 }
 

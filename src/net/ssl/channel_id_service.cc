@@ -285,7 +285,7 @@ ChannelIDService::ChannelIDService(
       weak_ptr_factory_(this) {}
 
 ChannelIDService::~ChannelIDService() {
-  STLDeleteValues(&inflight_);
+  base::STLDeleteValues(&inflight_);
 }
 
 // static

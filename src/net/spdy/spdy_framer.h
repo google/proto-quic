@@ -851,9 +851,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // If true, then ProcessInput returns after processing a full frame,
   // rather than reading all available input.
   bool process_single_input_frame_ = false;
-
-  bool enforce_max_frame_size_ =
-      FLAGS_chromium_http2_flag_enforce_max_frame_size;
 };
 
 }  // namespace net

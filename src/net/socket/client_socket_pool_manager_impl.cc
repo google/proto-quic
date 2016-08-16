@@ -212,11 +212,13 @@ SOCKSClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPoolForSOCKSProxy(
     const HostPortPair& socks_proxy) {
   SOCKSSocketPoolMap::const_iterator it = socks_socket_pools_.find(socks_proxy);
   if (it != socks_socket_pools_.end()) {
-    DCHECK(ContainsKey(transport_socket_pools_for_socks_proxies_, socks_proxy));
+    DCHECK(base::ContainsKey(transport_socket_pools_for_socks_proxies_,
+                             socks_proxy));
     return it->second;
   }
 
-  DCHECK(!ContainsKey(transport_socket_pools_for_socks_proxies_, socks_proxy));
+  DCHECK(!base::ContainsKey(transport_socket_pools_for_socks_proxies_,
+                            socks_proxy));
   int sockets_per_proxy_server = max_sockets_per_proxy_server(pool_type_);
   int sockets_per_group = std::min(sockets_per_proxy_server,
                                    max_sockets_per_group(pool_type_));
@@ -245,15 +247,19 @@ ClientSocketPoolManagerImpl::GetSocketPoolForHTTPProxy(
   HTTPProxySocketPoolMap::const_iterator it =
       http_proxy_socket_pools_.find(http_proxy);
   if (it != http_proxy_socket_pools_.end()) {
-    DCHECK(ContainsKey(transport_socket_pools_for_http_proxies_, http_proxy));
-    DCHECK(ContainsKey(transport_socket_pools_for_https_proxies_, http_proxy));
-    DCHECK(ContainsKey(ssl_socket_pools_for_https_proxies_, http_proxy));
+    DCHECK(base::ContainsKey(transport_socket_pools_for_http_proxies_,
+                             http_proxy));
+    DCHECK(base::ContainsKey(transport_socket_pools_for_https_proxies_,
+                             http_proxy));
+    DCHECK(base::ContainsKey(ssl_socket_pools_for_https_proxies_, http_proxy));
     return it->second;
   }
 
-  DCHECK(!ContainsKey(transport_socket_pools_for_http_proxies_, http_proxy));
-  DCHECK(!ContainsKey(transport_socket_pools_for_https_proxies_, http_proxy));
-  DCHECK(!ContainsKey(ssl_socket_pools_for_https_proxies_, http_proxy));
+  DCHECK(
+      !base::ContainsKey(transport_socket_pools_for_http_proxies_, http_proxy));
+  DCHECK(!base::ContainsKey(transport_socket_pools_for_https_proxies_,
+                            http_proxy));
+  DCHECK(!base::ContainsKey(ssl_socket_pools_for_https_proxies_, http_proxy));
 
   int sockets_per_proxy_server = max_sockets_per_proxy_server(pool_type_);
   int sockets_per_group = std::min(sockets_per_proxy_server,

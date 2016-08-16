@@ -199,7 +199,7 @@ struct TestParams {
 
 vector<TestParams> GetTestParams() {
   vector<TestParams> params;
-  QuicVersionVector all_supported_versions = QuicSupportedVersions();
+  QuicVersionVector all_supported_versions = AllSupportedVersions();
   for (size_t i = 0; i < all_supported_versions.size(); ++i) {
     params.push_back(TestParams(all_supported_versions[i]));
   }

@@ -9,7 +9,7 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
+#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/crypto/quic_random.h"
@@ -17,18 +17,24 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_buffered_packet_store_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/test/gtest_util.h"
 #include "net/tools/epoll_server/epoll_server.h"
+#include "net/tools/quic/chlo_extractor.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
+#include "net/tools/quic/stateless_rejector.h"
 #include "net/tools/quic/test_tools/mock_quic_time_wait_list_manager.h"
 #include "net/tools/quic/test_tools/quic_dispatcher_peer.h"
 #include "testing/gmock/include/gmock/gmock.h"
+#include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using base::IntToString;
 using base::StringPiece;
 using net::EpollServer;
 using net::test::ConstructEncryptedPacket;
@@ -36,13 +42,17 @@ using net::test::CryptoTestUtils;
 using net::test::MockQuicConnection;
 using net::test::MockQuicConnectionHelper;
 using net::test::ValueRestore;
+using std::ostream;
 using std::string;
 using std::vector;
+using testing::CreateFunctor;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Invoke;
 using testing::WithoutArgs;
 using testing::_;
+
+static const size_t kDefaultMaxConnectionsInStore = 100;
 
 namespace net {
 namespace test {
@@ -61,7 +71,8 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
                               crypto_config,
                               compressed_certs_cache),
         crypto_stream_(QuicServerSessionBase::GetCryptoStream()) {}
-  ~TestQuicSpdyServerSession() override{};
+
+  ~TestQuicSpdyServerSession() override { delete connection(); };
 
   MOCK_METHOD3(OnConnectionClosed,
                void(QuicErrorCode error,
@@ -114,6 +125,8 @@ class TestDispatcher : public QuicDispatcher {
                QuicServerSessionBase*(QuicConnectionId connection_id,
                                       const IPEndPoint& client_address));
 
+  MOCK_METHOD1(OnNewConnectionAdded, void(QuicConnectionId connection_id));
+
   using QuicDispatcher::current_server_address;
   using QuicDispatcher::current_client_address;
 };
@@ -144,36 +157,12 @@ class MockServerConnection : public MockQuicConnection {
   QuicDispatcher* dispatcher_;
 };
 
-QuicServerSessionBase* CreateSession(
-    QuicDispatcher* dispatcher,
-    const QuicConfig& config,
-    QuicConnectionId connection_id,
-    const IPEndPoint& client_address,
-    MockQuicConnectionHelper* helper,
-    MockAlarmFactory* alarm_factory,
-    const QuicCryptoServerConfig* crypto_config,
-    QuicCompressedCertsCache* compressed_certs_cache,
-    TestQuicSpdyServerSession** session) {
-  MockServerConnection* connection = new MockServerConnection(
-      connection_id, helper, alarm_factory, dispatcher);
-  *session = new TestQuicSpdyServerSession(config, connection, crypto_config,
-                                           compressed_certs_cache);
-  connection->set_visitor(*session);
-  ON_CALL(*connection, CloseConnection(_, _, _))
-      .WillByDefault(WithoutArgs(Invoke(
-          connection, &MockServerConnection::UnregisterOnConnectionClosed)));
-  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>((*session)->connection()),
-              ProcessUdpPacket(_, client_address, _));
-
-  return *session;
-}
-
 class QuicDispatcherTest : public ::testing::Test {
  public:
   QuicDispatcherTest()
       : helper_(&eps_, QuicAllocator::BUFFER_POOL),
         alarm_factory_(&eps_),
-        version_manager_(QuicSupportedVersions()),
+        version_manager_(AllSupportedVersions()),
         crypto_config_(QuicCryptoServerConfig::TESTING,
                        QuicRandom::GetInstance(),
                        CryptoTestUtils::ProofSourceForTesting()),
@@ -183,7 +172,10 @@ class QuicDispatcherTest : public ::testing::Test {
                                        &eps_)),
         time_wait_list_manager_(nullptr),
         session1_(nullptr),
-        session2_(nullptr) {
+        session2_(nullptr),
+        store_(nullptr) {}
+
+  void SetUp() override {
     dispatcher_->InitializeWithWriter(new QuicDefaultPacketWriter(1));
   }
 
@@ -235,8 +227,8 @@ class QuicDispatcherTest : public ::testing::Test {
                      QuicPathId path_id,
                      QuicPacketNumber packet_number) {
     ProcessPacket(client_address, connection_id, has_version_flag,
-                  QuicSupportedVersions().front(), data, connection_id_length,
-                  packet_number_length, packet_number);
+                  CurrentSupportedVersions().front(), data,
+                  connection_id_length, packet_number_length, packet_number);
   }
 
   // Processes a packet.
@@ -255,14 +247,47 @@ class QuicDispatcherTest : public ::testing::Test {
     std::unique_ptr<QuicReceivedPacket> received_packet(
         ConstructReceivedPacket(*packet, helper_.GetClock()->Now()));
 
-    data_ = string(packet->data(), packet->length());
+    if (ChloExtractor::Extract(*packet, versions, nullptr)) {
+      // Add CHLO packet to the beginning to be verified first, because it is
+      // also processed first by new session.
+      data_connection_map_[connection_id].push_front(
+          string(packet->data(), packet->length()));
+    } else {
+      // For non-CHLO, always append to last.
+      data_connection_map_[connection_id].push_back(
+          string(packet->data(), packet->length()));
+    }
     dispatcher_->ProcessPacket(server_address_, client_address,
                                *received_packet);
   }
 
-  void ValidatePacket(const QuicEncryptedPacket& packet) {
-    EXPECT_EQ(data_.length(), packet.AsStringPiece().length());
-    EXPECT_EQ(data_, packet.AsStringPiece());
+  void ValidatePacket(QuicConnectionId conn_id,
+                      const QuicEncryptedPacket& packet) {
+    EXPECT_EQ(data_connection_map_[conn_id].front().length(),
+              packet.AsStringPiece().length());
+    EXPECT_EQ(data_connection_map_[conn_id].front(), packet.AsStringPiece());
+    data_connection_map_[conn_id].pop_front();
+  }
+
+  QuicServerSessionBase* CreateSession(
+      QuicDispatcher* dispatcher,
+      const QuicConfig& config,
+      QuicConnectionId connection_id,
+      const IPEndPoint& client_address,
+      MockQuicConnectionHelper* helper,
+      MockAlarmFactory* alarm_factory,
+      const QuicCryptoServerConfig* crypto_config,
+      QuicCompressedCertsCache* compressed_certs_cache,
+      TestQuicSpdyServerSession** session) {
+    MockServerConnection* connection = new MockServerConnection(
+        connection_id, helper, alarm_factory, dispatcher);
+    *session = new TestQuicSpdyServerSession(config, connection, crypto_config,
+                                             compressed_certs_cache);
+    connection->set_visitor(*session);
+    ON_CALL(*connection, CloseConnection(_, _, _))
+        .WillByDefault(WithoutArgs(Invoke(
+            connection, &MockServerConnection::UnregisterOnConnectionClosed)));
+    return *session;
   }
 
   void CreateTimeWaitListManager() {
@@ -293,7 +318,8 @@ class QuicDispatcherTest : public ::testing::Test {
   MockTimeWaitListManager* time_wait_list_manager_;
   TestQuicSpdyServerSession* session1_;
   TestQuicSpdyServerSession* session2_;
-  string data_;
+  std::map<QuicConnectionId, std::list<string>> data_connection_map_;
+  QuicBufferedPacketStore* store_;
 };
 
 TEST_F(QuicDispatcherTest, ProcessPackets) {
@@ -305,6 +331,10 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
           dispatcher_.get(), config_, 1, client_address, &mock_helper_,
           &mock_alarm_factory_, &crypto_config_,
           QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   ProcessPacket(client_address, 1, true, false, SerializeCHLO());
   EXPECT_EQ(client_address, dispatcher_->current_client_address());
   EXPECT_EQ(server_address_, dispatcher_->current_server_address());
@@ -314,13 +344,17 @@ TEST_F(QuicDispatcherTest, ProcessPackets) {
           dispatcher_.get(), config_, 2, client_address, &mock_helper_,
           &mock_alarm_factory_, &crypto_config_,
           QuicDispatcherPeer::GetCache(dispatcher_.get()), &session2_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session2_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 2))));
   ProcessPacket(client_address, 2, true, false, SerializeCHLO());
 
   EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
               ProcessUdpPacket(_, _, _))
       .Times(1)
-      .WillOnce(testing::WithArgs<2>(
-          Invoke(this, &QuicDispatcherTest::ValidatePacket)));
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   ProcessPacket(client_address, 1, false, false, "data");
 }
 
@@ -342,6 +376,10 @@ TEST_F(QuicDispatcherTest, Shutdown) {
           dispatcher_.get(), config_, 1, client_address, &mock_helper_,
           &mock_alarm_factory_, &crypto_config_,
           QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
 
   ProcessPacket(client_address, 1, true, false, SerializeCHLO());
 
@@ -362,6 +400,11 @@ TEST_F(QuicDispatcherTest, TimeWaitListManager) {
           dispatcher_.get(), config_, connection_id, client_address,
           &mock_helper_, &mock_alarm_factory_, &crypto_config_,
           QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
+
   ProcessPacket(client_address, connection_id, true, false, SerializeCHLO());
 
   // Close the connection by sending public reset packet.
@@ -439,6 +482,10 @@ TEST_F(QuicDispatcherTest, OKSeqNoPacketProcessed) {
           dispatcher_.get(), config_, 1, client_address, &mock_helper_,
           &mock_alarm_factory_, &crypto_config_,
           QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+          &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   // A packet whose packet number is the largest that is allowed to start a
   // connection.
   ProcessPacket(client_address, connection_id, true, false, SerializeCHLO(),
@@ -535,7 +582,8 @@ class QuicDispatcherStatelessRejectTest
     : public QuicDispatcherTest,
       public ::testing::WithParamInterface<StatelessRejectTestParams> {
  public:
-  QuicDispatcherStatelessRejectTest() : crypto_stream1_(nullptr) {}
+  QuicDispatcherStatelessRejectTest()
+      : QuicDispatcherTest(), crypto_stream1_(nullptr) {}
 
   ~QuicDispatcherStatelessRejectTest() override {
     if (crypto_stream1_) {
@@ -546,6 +594,7 @@ class QuicDispatcherStatelessRejectTest
   // This test setup assumes that all testing will be done using
   // crypto_stream1_.
   void SetUp() override {
+    QuicDispatcherTest::SetUp();
     FLAGS_enable_quic_stateless_reject_support =
         GetParam().enable_stateless_rejects_via_flag;
   }
@@ -596,7 +645,11 @@ TEST_P(QuicDispatcherStatelessRejectTest, ParameterizedBasicTest) {
   EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
       .WillOnce(testing::Return(
           CreateSessionBasedOnTestParams(connection_id, client_address)));
-
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(
+          Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                               base::Unretained(this), connection_id))));
   // Process the first packet for the connection.
   ProcessPacket(client_address, connection_id, true, false, SerializeCHLO());
   if (ExpectStatelessReject()) {
@@ -622,13 +675,15 @@ TEST_P(QuicDispatcherStatelessRejectTest, ParameterizedBasicTest) {
                 ProcessUdpPacket(_, _, _))
         .Times(1)
         .WillOnce(testing::WithArgs<2>(
-            Invoke(this, &QuicDispatcherTest::ValidatePacket)));
+            Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                                 base::Unretained(this), connection_id))));
   }
   ProcessPacket(client_address, connection_id, true, false, "data");
 }
 
 TEST_P(QuicDispatcherStatelessRejectTest, CheapRejects) {
   FLAGS_quic_use_cheap_stateless_rejects = true;
+  FLAGS_quic_buffer_packet_till_chlo = true;
   CreateTimeWaitListManager();
 
   IPEndPoint client_address(net::test::Loopback4(), 1);
@@ -640,6 +695,10 @@ TEST_P(QuicDispatcherStatelessRejectTest, CheapRejects) {
     EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
         .WillOnce(testing::Return(
             CreateSessionBasedOnTestParams(connection_id, client_address)));
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                ProcessUdpPacket(_, _, _))
+        .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+            &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   }
 
   VLOG(1) << "ExpectStatelessReject: " << ExpectStatelessReject();
@@ -673,15 +732,35 @@ TEST_P(QuicDispatcherStatelessRejectTest, BufferNonChlo) {
   const IPEndPoint client_address(net::test::Loopback4(), 1);
   const QuicConnectionId connection_id = 1;
 
-  if (!GetParam().enable_stateless_rejects_via_flag) {
-    // If stateless rejects are not being used, then a connection will be
-    // created immediately.
+  if (!GetParam().enable_stateless_rejects_via_flag &&
+      !FLAGS_quic_buffer_packet_till_chlo) {
+    // If stateless rejects are not being used and early arrived packets are not
+    // buffered, then a connection will be created immediately.
     EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
         .WillOnce(testing::Return(
             CreateSessionBasedOnTestParams(connection_id, client_address)));
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                ProcessUdpPacket(_, client_address, _))
+        .WillOnce(testing::WithArg<2>(
+            Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                                 base::Unretained(this), connection_id))));
   }
-  ProcessPacket(client_address, connection_id, true, false,
-                "NOT DATA FOR A CHLO");
+  bool first_packet_dropped = GetParam().enable_stateless_rejects_via_flag &&
+                              !FLAGS_quic_buffer_packet_till_chlo;
+  if (first_packet_dropped) {
+    // Never do stateless reject while
+    // FLAGS_quic_buffer_packet_till_chlo is off.
+    EXPECT_QUIC_BUG(
+        ProcessPacket(client_address, connection_id, true, false,
+                      "NOT DATA FOR A CHLO"),
+        "Have to drop packet because buffering non-chlo packet is "
+        "not supported while trying to do stateless reject. "
+        "--gfe2_reloadable_flag_quic_buffer_packet_till_chlo false "
+        "--gfe2_reloadable_flag_quic_use_cheap_stateless_rejects true");
+  } else {
+    ProcessPacket(client_address, connection_id, true, false,
+                  "NOT DATA FOR A CHLO");
+  }
 
   // Process the first packet for the connection.
   // clang-format off
@@ -695,16 +774,33 @@ TEST_P(QuicDispatcherStatelessRejectTest, BufferNonChlo) {
       nullptr);
   // clang-format on
 
-  if (GetParam().enable_stateless_rejects_via_flag) {
+  if (GetParam().enable_stateless_rejects_via_flag ||
+      FLAGS_quic_buffer_packet_till_chlo) {
     // If stateless rejects are enabled then a connection will be created now
     // and the buffered packet will be processed
     EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
         .WillOnce(testing::Return(
             CreateSessionBasedOnTestParams(connection_id, client_address)));
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                ProcessUdpPacket(_, client_address, _))
+        .WillOnce(testing::WithArg<2>(
+            Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                                 base::Unretained(this), connection_id))));
   }
-  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
-              ProcessUdpPacket(_, client_address, _))
-      .RetiresOnSaturation();
+  if (!first_packet_dropped) {
+    // Expect both packets to be passed to ProcessUdpPacket(). And one of them
+    // is already expected in CreateSessionBasedOnTestParams().
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                ProcessUdpPacket(_, client_address, _))
+        .WillOnce(testing::WithArg<2>(
+            Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                                 base::Unretained(this), connection_id))))
+        .RetiresOnSaturation();
+  } else {
+    // Since first packet is dropped, remove it from map to skip
+    // ValidatePacket() on it.
+    data_connection_map_[connection_id].pop_front();
+  }
   ProcessPacket(client_address, connection_id, true, false,
                 client_hello.GetSerialized().AsStringPiece().as_string());
   EXPECT_FALSE(
@@ -758,6 +854,7 @@ class BlockingWriter : public QuicPacketWriterWrapper {
 class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
  public:
   void SetUp() override {
+    QuicDispatcherTest::SetUp();
     writer_ = new BlockingWriter;
     QuicDispatcherPeer::UseWriter(dispatcher_.get(), writer_);
 
@@ -768,6 +865,10 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
             dispatcher_.get(), config_, 1, client_address, &helper_,
             &alarm_factory_, &crypto_config_,
             QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+                ProcessUdpPacket(_, _, _))
+        .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+            &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
     ProcessPacket(client_address, 1, true, false, SerializeCHLO());
 
     EXPECT_CALL(*dispatcher_, CreateQuicSession(_, client_address))
@@ -775,6 +876,10 @@ class QuicDispatcherWriteBlockedListTest : public QuicDispatcherTest {
             dispatcher_.get(), config_, 2, client_address, &helper_,
             &alarm_factory_, &crypto_config_,
             QuicDispatcherPeer::GetCache(dispatcher_.get()), &session2_)));
+    EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session2_->connection()),
+                ProcessUdpPacket(_, _, _))
+        .WillOnce(testing::WithArgs<2>(Invoke(CreateFunctor(
+            &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 2))));
     ProcessPacket(client_address, 2, true, false, SerializeCHLO());
 
     blocked_list_ = QuicDispatcherPeer::GetWriteBlockedList(dispatcher_.get());
@@ -929,6 +1034,251 @@ TEST_F(QuicDispatcherWriteBlockedListTest, TestWriteLimits) {
   EXPECT_CALL(*connection2(), OnCanWrite());
   dispatcher_->OnCanWrite();
   EXPECT_FALSE(dispatcher_->HasPendingWrites());
+}
+
+// Tests that bufferring packets works in stateful reject, expensive stateless
+// reject and cheap stateless reject.
+struct BufferedPacketStoreTestParams {
+  BufferedPacketStoreTestParams(bool enable_stateless_rejects_via_flag,
+                                bool support_cheap_stateless_reject)
+      : enable_stateless_rejects_via_flag(enable_stateless_rejects_via_flag),
+        support_cheap_stateless_reject(support_cheap_stateless_reject) {}
+
+  friend ostream& operator<<(ostream& os,
+                             const BufferedPacketStoreTestParams& p) {
+    os << "{  enable_stateless_rejects_via_flag: "
+       << p.enable_stateless_rejects_via_flag << std::endl;
+    os << "  support_cheap_stateless_reject: "
+       << p.support_cheap_stateless_reject << " }";
+    return os;
+  }
+
+  // This only enables the stateless reject feature via the feature-flag.
+  // This should be a no-op if the peer does not support them.
+  bool enable_stateless_rejects_via_flag;
+  // Whether to do cheap stateless or not.
+  bool support_cheap_stateless_reject;
+};
+
+vector<BufferedPacketStoreTestParams> GetBufferedPacketStoreTestParams() {
+  vector<BufferedPacketStoreTestParams> params;
+  for (bool enable_stateless_rejects_via_flag : {true, false}) {
+    for (bool support_cheap_stateless_reject : {true, false}) {
+      params.push_back(BufferedPacketStoreTestParams(
+          enable_stateless_rejects_via_flag, support_cheap_stateless_reject));
+    }
+  }
+  return params;
+}
+
+// A dispatcher whose stateless rejector will always ACCEPTs CHLO.
+class BufferedPacketStoreTest
+    : public QuicDispatcherTest,
+      public ::testing::WithParamInterface<BufferedPacketStoreTestParams> {
+ public:
+  BufferedPacketStoreTest()
+      : QuicDispatcherTest(), client_addr_(Loopback4(), 1234) {
+    FLAGS_quic_buffer_packet_till_chlo = true;
+    FLAGS_quic_use_cheap_stateless_rejects =
+        GetParam().support_cheap_stateless_reject;
+    FLAGS_enable_quic_stateless_reject_support =
+        GetParam().enable_stateless_rejects_via_flag;
+  }
+
+  void SetUp() override {
+    QuicDispatcherTest::SetUp();
+    clock_ = QuicDispatcherPeer::GetHelper(dispatcher_.get())->GetClock();
+
+    QuicVersion version = AllSupportedVersions().front();
+    CryptoHandshakeMessage chlo = CryptoTestUtils::GenerateDefaultInchoateCHLO(
+        clock_, version, &crypto_config_);
+    chlo.SetVector(net::kCOPT, net::QuicTagVector{net::kSREJ});
+    // Pass an inchoate CHLO.
+    CryptoTestUtils::GenerateFullCHLO(
+        chlo, &crypto_config_, server_ip_, client_addr_, version, clock_,
+        &proof_, QuicDispatcherPeer::GetCache(dispatcher_.get()), &full_chlo_);
+  }
+
+  string SerializeFullCHLO() {
+    return full_chlo_.GetSerialized().AsStringPiece().as_string();
+  }
+
+ protected:
+  IPAddress server_ip_;
+  IPEndPoint client_addr_;
+  QuicCryptoProof proof_;
+  const QuicClock* clock_;
+  CryptoHandshakeMessage full_chlo_;
+};
+
+INSTANTIATE_TEST_CASE_P(
+    BufferedPacketStoreTests,
+    BufferedPacketStoreTest,
+    ::testing::ValuesIn(GetBufferedPacketStoreTestParams()));
+
+TEST_P(BufferedPacketStoreTest, ProcessNonChloPacketsUptoLimitAndProcessChlo) {
+  InSequence s;
+  IPEndPoint client_address(Loopback4(), 1);
+  server_address_ = IPEndPoint(Any4(), 5);
+  QuicConnectionId conn_id = 1;
+  // A bunch of non-CHLO should be buffered upon arrival, and the first one
+  // should trigger OnNewConnectionAdded().
+  EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id)).Times(1);
+  for (size_t i = 1; i <= kDefaultMaxUndecryptablePackets + 1; ++i) {
+    ProcessPacket(client_address, conn_id, true, false,
+                  "data packet " + IntToString(i + 1),
+                  PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
+                  kDefaultPathId,
+                  /*packet_number=*/i + 1);
+  }
+  EXPECT_EQ(0u, dispatcher_->session_map().size())
+      << "No session should be created before CHLO arrives.";
+
+  // Pop out the last packet as it is also be dropped by the store.
+  data_connection_map_[conn_id].pop_back();
+  // When CHLO arrives, a new session should be created, and all packets
+  // buffered should be delivered to the session.
+  EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
+      .WillOnce(testing::Return(CreateSession(
+          dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+
+  // Only |kDefaultMaxUndecryptablePackets| packets were buffered, and they
+  // should be delivered in arrival order.
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .Times(kDefaultMaxUndecryptablePackets + 1)  // + 1 for CHLO.
+      .WillRepeatedly(testing::WithArg<2>(
+          Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                               base::Unretained(this), conn_id))));
+  ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
+}
+
+TEST_P(BufferedPacketStoreTest,
+       ProcessNonChloPacketsForDifferentConnectionsUptoLimit) {
+  InSequence s;
+  server_address_ = IPEndPoint(Any4(), 5);
+  // A bunch of non-CHLO should be buffered upon arrival.
+  for (size_t i = 1; i <= kDefaultMaxConnectionsInStore + 1; ++i) {
+    IPEndPoint client_address(Loopback4(), i);
+    QuicConnectionId conn_id = i;
+    if (i <= kDefaultMaxConnectionsInStore) {
+      // As they are on different connection, they should trigger
+      // OnNewConnectionAdded(). The last packet should be dropped.
+      EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+    }
+    ProcessPacket(client_address, conn_id, true, false,
+                  "data packet on connection " + IntToString(i),
+                  PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
+                  kDefaultPathId,
+                  /*packet_number=*/2);
+  }
+
+  // Pop out the packet on last connection as it shouldn't be enqueued in store
+  // as well.
+  data_connection_map_[kDefaultMaxConnectionsInStore + 1].pop_front();
+
+  // Process CHLOs.
+  for (size_t i = 1; i <= kDefaultMaxConnectionsInStore + 1; ++i) {
+    IPEndPoint client_address(Loopback4(), i);
+    QuicConnectionId conn_id = i;
+    EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
+        .WillOnce(testing::Return(CreateSession(
+            dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
+            &mock_alarm_factory_, &crypto_config_,
+            QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+    if (conn_id == kDefaultMaxConnectionsInStore + 1) {
+      // The last CHLO should trigger OnNewConnectionAdded() since it's the
+      // first packet arrives on that connection.
+      EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+    }
+    // First |kDefaultMaxConnectionsInStore| connections should have buffered
+    // a packet in store. The rest should have been dropped.
+    if (i <= kDefaultMaxConnectionsInStore) {
+      EXPECT_CALL(
+          *reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+          ProcessUdpPacket(_, client_address, _))
+          .Times(2)
+          .WillRepeatedly(testing::WithArg<2>(
+              Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                                   base::Unretained(this), conn_id))));
+    }
+    ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
+  }
+}
+
+// Tests that store delivers empty packet list if CHLO arrives firstly.
+TEST_P(BufferedPacketStoreTest, DeliverEmptyPackets) {
+  QuicConnectionId conn_id = 1;
+  IPEndPoint client_address(Loopback4(), 1);
+  EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+  EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
+      .WillOnce(testing::Return(CreateSession(
+          dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
+}
+
+// Tests that by the time a retransmitted CHLO arrives, a connection for the
+// CHLO should already be created.
+TEST_P(BufferedPacketStoreTest, ReceiveRetransmittedCHLO) {
+  InSequence s;
+  IPEndPoint client_address(Loopback4(), 1);
+  server_address_ = IPEndPoint(Any4(), 5);
+  QuicConnectionId conn_id = 1;
+  ProcessPacket(client_address, conn_id, true, false,
+                "data packet " + IntToString(2), PACKET_8BYTE_CONNECTION_ID,
+                PACKET_6BYTE_PACKET_NUMBER, kDefaultPathId,
+                /*packet_number=*/2);
+
+  // When CHLO arrives, a new session should be created, and all packets
+  // buffered should be delivered to the session.
+  EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
+      .Times(1)  // Only triggered by 1st CHLO.
+      .WillOnce(testing::Return(CreateSession(
+          dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
+          &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .Times(3)  // Triggered by 1 data packet and 2 CHLOs.
+      .WillRepeatedly(testing::WithArg<2>(
+          Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                               base::Unretained(this), conn_id))));
+  ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
+
+  ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
+}
+
+// Tests that expiration of a connection add connection id to time wait list.
+TEST_P(BufferedPacketStoreTest, ReceiveCHLOAfterExpiration) {
+  InSequence s;
+  CreateTimeWaitListManager();
+  QuicBufferedPacketStore* store =
+      QuicDispatcherPeer::GetBufferedPackets(dispatcher_.get());
+  QuicBufferedPacketStorePeer::set_clock(store, mock_helper_.GetClock());
+
+  IPEndPoint client_address(Loopback4(), 1);
+  server_address_ = IPEndPoint(Any4(), 5);
+  QuicConnectionId conn_id = 1;
+  ProcessPacket(client_address, conn_id, true, false,
+                "data packet " + IntToString(2), PACKET_8BYTE_CONNECTION_ID,
+                PACKET_6BYTE_PACKET_NUMBER, kDefaultPathId,
+                /*packet_number=*/2);
+
+  mock_helper_.AdvanceTime(
+      QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs));
+  QuicAlarm* alarm = QuicBufferedPacketStorePeer::expiration_alarm(store);
+  // Cancel alarm as if it had been fired.
+  alarm->Cancel();
+  store->OnExpirationTimeout();
+  // New arrived CHLO will be dropped because this connection is in time wait
+  // list.
+  ASSERT_TRUE(time_wait_list_manager_->IsConnectionIdInTimeWait(conn_id));
+  EXPECT_CALL(*time_wait_list_manager_, ProcessPacket(_, _, conn_id, _, _));
+  ProcessPacket(client_address, conn_id, true, false, SerializeFullCHLO());
 }
 
 }  // namespace

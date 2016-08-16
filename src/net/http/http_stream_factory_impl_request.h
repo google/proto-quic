@@ -71,7 +71,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
   // Marks completion of the request. Must be called before OnStreamReady().
   void Complete(bool was_npn_negotiated,
-                NextProto protocol_negotiated,
+                NextProto negotiated_protocol,
                 bool using_spdy);
 
   void ResetSpdySessionKey();
@@ -120,7 +120,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   void SetPriority(RequestPriority priority) override;
   LoadState GetLoadState() const override;
   bool was_npn_negotiated() const override;
-  NextProto protocol_negotiated() const override;
+  NextProto negotiated_protocol() const override;
   bool using_spdy() const override;
   const ConnectionAttempts& connection_attempts() const override;
   HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
@@ -144,7 +144,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
   bool completed_;
   bool was_npn_negotiated_;
   // Protocol negotiated with the server.
-  NextProto protocol_negotiated_;
+  NextProto negotiated_protocol_;
   bool using_spdy_;
   ConnectionAttempts connection_attempts_;
 

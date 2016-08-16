@@ -316,8 +316,9 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // on their sort index, ascending, then by their name, and then tid.
   void SetProcessSortIndex(int sort_index);
 
-  // Sets the name of the process.
-  void SetProcessName(const std::string& process_name);
+  // Sets the name of the process. |process_name| should be a string literal
+  // since it is a whitelisted argument for background field trials.
+  void SetProcessName(const char* process_name);
 
   // Processes can have labels in addition to their names. Use labels, for
   // instance, to list out the web page titles that a process is handling.

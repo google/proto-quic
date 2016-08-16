@@ -5,28 +5,55 @@ open-vcdiff is an encoder and decoder for the VCDIFF format, as described in
 and Compression Data Format.
 
 You will need to first synchronize gflags and gtest by running
-`./fetch_prereq.bat` on Windows or `./fetch_prereq.sh` on other platforms.
+`git submodule update --init --recursive`. Or if you have system installed
+gflags and/or gtest libraries you can provide ```-Dvcdiff_use_system_gflags=ON```
+and ```-Dvcdiff_use_system_gtest=ON``` for ```cmake``` invokation in the build
+step.
 
 A library with a simple API is included, as well as a command-line executable
 that can apply the encoder and decoder to source, target, and delta files.
 For further details, please refer to
 [this link](https://github.com/google/open-vcdiff/wiki/How-to-use-openvcdiff).
 
-See [INSTALL](https://github.com/google/open-vcdiff/blob/master/INSTALL) for
-(generic) installation instructions for C++: basically
-```bash
-./configure && make && make install
-```
+open-vcdiff comes with a CMake build script (
+[CMakeLists.txt](CMakeLists.txt)) that can be used on a wide range of platforms ("C" stands for
+cross-platform.). If you don't have CMake installed already, you can
+download it for free from <http://www.cmake.org/>.
 
-This should compile the unit tests as well as `vcdiff`, a simple command-line
-utility to run the encoder and decoder.  Typical usage of vcdiff is as follows
-(the `<` and `>` are file redirect operations, not optional arguments):
+CMake works by generating native makefiles or build projects that can
+be used in the compiler environment of your choice.  The typical
+workflow starts with:
+```bash
+mkdir mybuild       # Create a directory to hold the build output.
+cd mybuild
+cmake ${OPEN_VCDIFF_DIR}  # Generate native build scripts.
+```
+If you want to disable build of build tests and/or executable and build
+libraries only replace last command with
+```bash
+cmake -Dvcdiff_build_test=OFF -Dvcdiff_build_exec=OFF ${OPEN_VCDIFF_DIR}
+```
+If you are on a \*nix system, you should now see a Makefile in the
+current directory.  Just type 'make' to build gtest.
+
+If you use Windows and have Visual Studio installed, a `gtest.sln` file
+and several `.vcproj` files will be created.  You can then build them
+using Visual Studio.
+
+On Mac OS X with Xcode installed, a `.xcodeproj` file will be generated.
+
+After compilation you should have the unit tests as well as `vcdiff`, a simple
+command-line utility to run the encoder and decoder.  Typical usage of vcdiff is
+as follows (the `<` and `>` are file redirect operations, not optional
+arguments):
 ```bash
 vcdiff encode -dictionary file.dict < target_file > delta_file
 vcdiff decode -dictionary file.dict < delta_file  > target_file
 ```
 
 To see the command-line syntax of vcdiff, use `vcdiff --help` or just `vcdiff`.
+
+To run tests just use `make test` inside build directory.
 
 To call the encoder from C++ code, assuming that dictionary, target, and delta
 are all `std::string` objects:

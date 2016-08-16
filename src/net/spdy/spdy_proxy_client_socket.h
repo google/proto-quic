@@ -59,7 +59,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
   const scoped_refptr<HttpAuthController>& GetAuthController() const override;
   int RestartWithAuth(const CompletionCallback& callback) override;
   bool IsUsingSpdy() const override;
-  NextProto GetProtocolNegotiated() const override;
+  NextProto GetProxyNegotiatedProtocol() const override;
 
   // StreamSocket implementation.
   int Connect(const CompletionCallback& callback) override;

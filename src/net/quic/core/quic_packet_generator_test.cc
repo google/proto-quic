@@ -104,7 +104,7 @@ struct PacketContents {
 class QuicPacketGeneratorTest : public ::testing::Test {
  public:
   QuicPacketGeneratorTest()
-      : framer_(QuicSupportedVersions(),
+      : framer_(AllSupportedVersions(),
                 QuicTime::Zero(),
                 Perspective::IS_CLIENT),
         generator_(42, &framer_, &random_, &buffer_allocator_, &delegate_),
@@ -401,9 +401,9 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_Handshake) {
 }
 
 TEST_F(QuicPacketGeneratorTest, ConsumeData_EmptyData) {
-  EXPECT_DFATAL(generator_.ConsumeData(kHeadersStreamId, MakeIOVector(""), 0,
-                                       false, nullptr),
-                "Attempt to consume empty data without FIN.");
+  EXPECT_QUIC_BUG(generator_.ConsumeData(kHeadersStreamId, MakeIOVector(""), 0,
+                                         false, nullptr),
+                  "Attempt to consume empty data without FIN.");
 }
 
 TEST_F(QuicPacketGeneratorTest,
@@ -842,9 +842,9 @@ TEST_F(QuicPacketGeneratorTest, DontCrashOnInvalidStopWaiting) {
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_FAILED_TO_SERIALIZE_PACKET, _,
                                    ConnectionCloseSource::FROM_SELF));
-  EXPECT_DFATAL(generator_.FinishBatchOperations(),
-                "packet_number_length 1 is too small "
-                "for least_unacked_delta: 1001");
+  EXPECT_QUIC_BUG(generator_.FinishBatchOperations(),
+                  "packet_number_length 1 is too small "
+                  "for least_unacked_delta: 1001");
 }
 
 TEST_F(QuicPacketGeneratorTest, SetCurrentPath) {
@@ -863,8 +863,8 @@ TEST_F(QuicPacketGeneratorTest, SetCurrentPath) {
 
   // Try to switch path when a packet is under construction.
   QuicPathId kTestPathId1 = 1;
-  EXPECT_DFATAL(generator_.SetCurrentPath(kTestPathId1, 1, 0),
-                "Unable to change paths when a packet is under construction");
+  EXPECT_QUIC_BUG(generator_.SetCurrentPath(kTestPathId1, 1, 0),
+                  "Unable to change paths when a packet is under construction");
   EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(creator_));
 
   // Try to switch path after current open packet gets serialized.

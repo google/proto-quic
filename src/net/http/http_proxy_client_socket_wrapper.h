@@ -86,7 +86,7 @@ class HttpProxyClientSocketWrapper : public ProxyClientSocket {
   int RestartWithAuth(const CompletionCallback& callback) override;
   const scoped_refptr<HttpAuthController>& GetAuthController() const override;
   bool IsUsingSpdy() const override;
-  NextProto GetProtocolNegotiated() const override;
+  NextProto GetProxyNegotiatedProtocol() const override;
 
   // StreamSocket implementation.
   int Connect(const CompletionCallback& callback) override;
@@ -185,7 +185,7 @@ class HttpProxyClientSocketWrapper : public ProxyClientSocket {
   ProxyDelegate* const proxy_delegate_;
 
   bool using_spdy_;
-  NextProto protocol_negotiated_;
+  NextProto negotiated_protocol_;
 
   std::unique_ptr<HttpResponseInfo> error_response_info_;
 

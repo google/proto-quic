@@ -468,7 +468,7 @@ class CryptoServerConfigsTest : public ::testing::Test {
 
     ASSERT_EQ(!has_invalid && !is_empty,
               config_.SetConfigs(protobufs, clock_.WallNow()));
-    STLDeleteElements(&protobufs);
+    base::STLDeleteElements(&protobufs);
   }
 
  protected:

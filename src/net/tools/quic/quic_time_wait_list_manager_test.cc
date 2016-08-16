@@ -176,7 +176,7 @@ class ValidatePublicResetPacketPredicate
       const std::tr1::tuple<const char*, int> packet_buffer,
       testing::MatchResultListener* /* listener */) const override {
     FramerVisitorCapturingPublicReset visitor;
-    QuicFramer framer(QuicSupportedVersions(), QuicTime::Zero(),
+    QuicFramer framer(AllSupportedVersions(), QuicTime::Zero(),
                       Perspective::IS_CLIENT);
     framer.set_visitor(&visitor);
     QuicEncryptedPacket encrypted(std::tr1::get<0>(packet_buffer),
@@ -226,15 +226,14 @@ TEST_F(QuicTimeWaitListManagerTest, CheckStatelessConnectionIdInTimeWait) {
 TEST_F(QuicTimeWaitListManagerTest, SendVersionNegotiationPacket) {
   std::unique_ptr<QuicEncryptedPacket> packet(
       QuicFramer::BuildVersionNegotiationPacket(connection_id_,
-                                                QuicSupportedVersions()));
+                                                AllSupportedVersions()));
   EXPECT_CALL(writer_,
               WritePacket(_, packet->length(), server_address_.address(),
                           client_address_, _))
       .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 1)));
 
   time_wait_list_manager_.SendVersionNegotiationPacket(
-      connection_id_, QuicSupportedVersions(), server_address_,
-      client_address_);
+      connection_id_, AllSupportedVersions(), server_address_, client_address_);
   EXPECT_EQ(0u, time_wait_list_manager_.num_connections());
 }
 

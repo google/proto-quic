@@ -49,7 +49,7 @@ ProxyConfigServiceWin::~ProxyConfigServiceWin() {
   // The registry functions below will end up going to disk.  Do this on another
   // thread to avoid slowing the IO thread.  http://crbug.com/61453
   base::ThreadRestrictions::ScopedAllowIO allow_io;
-  STLDeleteElements(&keys_to_watch_);
+  base::STLDeleteElements(&keys_to_watch_);
 }
 
 void ProxyConfigServiceWin::AddObserver(Observer* observer) {

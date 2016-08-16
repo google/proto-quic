@@ -891,6 +891,8 @@ struct ssl_handshake_st {
 
   uint8_t *cert_context;
   size_t cert_context_len;
+
+  uint8_t session_tickets_sent;
 } /* SSL_HANDSHAKE */;
 
 SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl));
@@ -917,7 +919,7 @@ int tls13_post_handshake(SSL *ssl);
  * it returns one. Otherwise, it sends an alert and returns zero. */
 int tls13_check_message_type(SSL *ssl, int type);
 
-int tls13_process_certificate(SSL *ssl);
+int tls13_process_certificate(SSL *ssl, int allow_anonymous);
 int tls13_process_certificate_verify(SSL *ssl);
 int tls13_process_finished(SSL *ssl);
 
@@ -925,15 +927,16 @@ int tls13_prepare_certificate(SSL *ssl);
 enum ssl_private_key_result_t tls13_prepare_certificate_verify(
     SSL *ssl, int is_first_run);
 int tls13_prepare_finished(SSL *ssl);
+int tls13_process_new_session_ticket(SSL *ssl);
 
-int ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
-                                    size_t *out_secret_len, uint8_t *out_alert,
-                                    CBS *contents);
-int ext_key_share_parse_clienthello(SSL *ssl,
-                                    int *out_found, uint8_t **out_secret,
-                                    size_t *out_secret_len, uint8_t *out_alert,
-                                    CBS *contents);
-int ext_key_share_add_serverhello(SSL *ssl, CBB *out);
+int ssl_ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
+                                        size_t *out_secret_len,
+                                        uint8_t *out_alert, CBS *contents);
+int ssl_ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
+                                        uint8_t **out_secret,
+                                        size_t *out_secret_len,
+                                        uint8_t *out_alert, CBS *contents);
+int ssl_ext_key_share_add_serverhello(SSL *ssl, CBB *out);
 
 int ssl_add_client_hello_body(SSL *ssl, CBB *body);
 
@@ -960,9 +963,6 @@ int ssl_log_secret(const SSL *ssl, const char *label, const uint8_t *secret,
  * Functions below here haven't been touched up and may be underdocumented. */
 
 #define TLSEXT_CHANNEL_ID_SIZE 128
-
-/* Check if an SSL structure is using DTLS */
-#define SSL_IS_DTLS(ssl) (ssl->method->is_dtls)
 
 /* From RFC4492, used in encoding the curve type in ECParameters */
 #define NAMED_CURVE_TYPE 3
@@ -1205,12 +1205,17 @@ typedef struct dtls1_state_st {
 extern const SSL3_ENC_METHOD TLSv1_enc_data;
 extern const SSL3_ENC_METHOD SSLv3_enc_data;
 
-int ssl_clear_bad_session(SSL *ssl);
+/* From draft-ietf-tls-tls13-14, used in determining ticket validity. */
+#define SSL_TICKET_ALLOW_EARLY_DATA 1
+#define SSL_TICKET_ALLOW_DHE_RESUMPTION 2
+#define SSL_TICKET_ALLOW_PSK_RESUMPTION 4
+
 CERT *ssl_cert_new(void);
 CERT *ssl_cert_dup(CERT *cert);
 void ssl_cert_clear_certs(CERT *c);
 void ssl_cert_free(CERT *c);
 int ssl_get_new_session(SSL *ssl, int is_server);
+int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session);
 
 enum ssl_session_result_t {
   ssl_session_success,
@@ -1368,6 +1373,9 @@ int tls1_generate_master_secret(SSL *ssl, uint8_t *out, const uint8_t *premaster
 int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
                             const uint8_t *in, size_t in_len);
 
+int ssl_early_callback_get_extension(const struct ssl_early_callback_ctx *ctx,
+                                     CBS *out, uint16_t extension_type);
+
 /* tls1_get_grouplist sets |*out_group_ids| and |*out_group_ids_len| to the
  * list of allowed group IDs. If |get_peer_groups| is non-zero, return the
  * peer's group list. Otherwise, return the preferred list. */
@@ -1470,6 +1478,8 @@ size_t tls12_get_psigalgs(SSL *ssl, const uint16_t **psigs);
 int tls12_check_peer_sigalg(SSL *ssl, int *out_alert,
                             uint16_t signature_algorithm);
 void ssl_set_client_disabled(SSL *ssl);
+
+void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock);
 
 
 #if defined(__cplusplus)

@@ -5,9 +5,7 @@
 #ifndef NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H
 #define NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H
 
-#include "base/base_paths.h"
-#include "base/files/file_util.h"
-#include "base/path_service.h"
+#include "net/cert/internal/test_helpers.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 // Parameterized test class for PKITS tests.
@@ -22,29 +20,13 @@ class PkitsTest : public ::testing::Test {
               const char* const (&crl_names)[num_crls]) {
     std::vector<std::string> cert_ders;
     for (const std::string& s : cert_names)
-      cert_ders.push_back(ReadTestFileToString("certs/" + s + ".crt"));
+      cert_ders.push_back(net::ReadTestFileToString(
+          "net/third_party/nist-pkits/certs/" + s + ".crt"));
     std::vector<std::string> crl_ders;
     for (const std::string& s : crl_names)
-      crl_ders.push_back(ReadTestFileToString("crls/" + s + ".crl"));
+      crl_ders.push_back(net::ReadTestFileToString(
+          "net/third_party/nist-pkits/crls/" + s + ".crl"));
     return PkitsTestDelegate::Verify(cert_ders, crl_ders);
-  }
-
- private:
-  std::string ReadTestFileToString(const std::string& file_name) {
-    // Compute the full path, relative to the src/ directory.
-    base::FilePath src_root;
-    PathService::Get(base::DIR_SOURCE_ROOT, &src_root);
-    base::FilePath filepath = src_root.AppendASCII(
-        std::string("net/third_party/nist-pkits/") + file_name);
-
-    // Read the full contents of the file.
-    std::string file_data;
-    if (!base::ReadFileToString(filepath, &file_data)) {
-      ADD_FAILURE() << "Couldn't read file: " << filepath.value();
-      return std::string();
-    }
-
-    return file_data;
   }
 };
 

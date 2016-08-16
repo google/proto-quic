@@ -444,8 +444,6 @@ void WarmUpBacktrace() {
   StackTrace stack_trace;
 }
 
-}  // namespace
-
 #if defined(USE_SYMBOLIZE)
 
 // class SandboxSymbolizeHelper.
@@ -461,7 +459,8 @@ class SandboxSymbolizeHelper {
  public:
   // Returns the singleton instance.
   static SandboxSymbolizeHelper* GetInstance() {
-    return Singleton<SandboxSymbolizeHelper>::get();
+    return Singleton<SandboxSymbolizeHelper,
+                     LeakySingletonTraits<SandboxSymbolizeHelper>>::get();
   }
 
  private:
@@ -676,6 +675,8 @@ class SandboxSymbolizeHelper {
   DISALLOW_COPY_AND_ASSIGN(SandboxSymbolizeHelper);
 };
 #endif  // USE_SYMBOLIZE
+
+}  // namespace
 
 bool EnableInProcessStackDumping() {
 #if defined(USE_SYMBOLIZE)

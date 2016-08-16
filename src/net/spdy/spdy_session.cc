@@ -757,9 +757,7 @@ bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
     return false;
 
   SSLInfo ssl_info;
-  bool was_npn_negotiated;
-  NextProto protocol_negotiated = kProtoUnknown;
-  if (!GetSSLInfo(&ssl_info, &was_npn_negotiated, &protocol_negotiated))
+  if (!GetSSLInfo(&ssl_info))
     return true;   // This is not a secure session, so all domains are okay.
 
   return CanPool(transport_security_state_, ssl_info,
@@ -954,7 +952,7 @@ bool SpdySession::HasAcceptableTransportSecurity() const {
   }
 
   SSLInfo ssl_info;
-  CHECK(connection_->socket()->GetSSLInfo(&ssl_info));
+  CHECK(GetSSLInfo(&ssl_info));
 
   // HTTP/2 requires TLS 1.2+
   if (SSLConnectionStatusToVersion(ssl_info.connection_status) <
@@ -1189,7 +1187,7 @@ void SpdySession::ResetStream(SpdyStreamId stream_id,
 }
 
 bool SpdySession::IsStreamActive(SpdyStreamId stream_id) const {
-  return ContainsKey(active_streams_, stream_id);
+  return base::ContainsKey(active_streams_, stream_id);
 }
 
 LoadState SpdySession::GetLoadState() const {
@@ -1754,7 +1752,7 @@ std::unique_ptr<base::Value> SpdySession::GetInfoAsValue() const {
 
   dict->SetBoolean("is_secure", is_secure_);
 
-  dict->SetString("protocol_negotiated",
+  dict->SetString("negotiated_protocol",
                   SSLClientSocket::NextProtoToString(
                       connection_->socket()->GetNegotiatedProtocol()));
 
@@ -1928,12 +1926,16 @@ url::SchemeHostPort SpdySession::GetServer() {
                              host_port_pair().host(), host_port_pair().port());
 }
 
-bool SpdySession::GetSSLInfo(SSLInfo* ssl_info,
-                             bool* was_npn_negotiated,
-                             NextProto* protocol_negotiated) {
-  *was_npn_negotiated = connection_->socket()->WasNpnNegotiated();
-  *protocol_negotiated = connection_->socket()->GetNegotiatedProtocol();
+bool SpdySession::GetSSLInfo(SSLInfo* ssl_info) const {
   return connection_->socket()->GetSSLInfo(ssl_info);
+}
+
+bool SpdySession::WasNpnNegotiated() const {
+  return connection_->socket()->WasNpnNegotiated();
+}
+
+NextProto SpdySession::GetNegotiatedProtocol() const {
+  return connection_->socket()->GetNegotiatedProtocol();
 }
 
 Error SpdySession::GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
@@ -2288,9 +2290,7 @@ void SpdySession::OnAltSvc(
     if (!gurl.SchemeIs("https"))
       return;
     SSLInfo ssl_info;
-    bool was_npn_negotiated;
-    NextProto protocol_negotiated = kProtoUnknown;
-    if (!GetSSLInfo(&ssl_info, &was_npn_negotiated, &protocol_negotiated))
+    if (!GetSSLInfo(&ssl_info))
       return;
     if (!CanPool(transport_security_state_, ssl_info, host_port_pair().host(),
                  gurl.host())) {
@@ -2594,7 +2594,7 @@ bool SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
       GURL associated_url(associated_it->second.stream->GetUrlFromHeaders());
       if (associated_url.SchemeIs("https")) {
         SSLInfo ssl_info;
-        CHECK(connection_->socket()->GetSSLInfo(&ssl_info));
+        CHECK(GetSSLInfo(&ssl_info));
         if (!gurl.SchemeIs("https") ||
             !CanPool(transport_security_state_, ssl_info, associated_url.host(),
                      gurl.host())) {

@@ -99,6 +99,8 @@ void QuicChromiumPacketWriter::SetWritable() {
 
 void QuicChromiumPacketWriter::OnWriteComplete(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
+  DCHECK(connection_) << "Uninitialized connection.";
+  DCHECK(observer_) << "Uninitialized observer.";
   write_blocked_ = false;
   if (rv < 0) {
     // If write error, then call into the observer's OnWriteError,

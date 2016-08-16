@@ -221,7 +221,7 @@ int ssl3_connect(SSL *ssl) {
           goto end;
         }
 
-        if (!SSL_IS_DTLS(ssl) || ssl->d1->send_cookie) {
+        if (!SSL_is_dtls(ssl) || ssl->d1->send_cookie) {
           ssl->s3->tmp.next_state = SSL3_ST_CR_SRVR_HELLO_A;
         } else {
           ssl->s3->tmp.next_state = DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A;
@@ -230,7 +230,7 @@ int ssl3_connect(SSL *ssl) {
         break;
 
       case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A:
-        assert(SSL_IS_DTLS(ssl));
+        assert(SSL_is_dtls(ssl));
         ret = dtls1_get_hello_verify(ssl);
         if (ret <= 0) {
           goto end;
@@ -508,7 +508,8 @@ int ssl3_connect(SSL *ssl) {
 
         SSL_SESSION_free(ssl->s3->established_session);
         if (ssl->session != NULL) {
-          ssl->s3->established_session = SSL_SESSION_up_ref(ssl->session);
+          SSL_SESSION_up_ref(ssl->session);
+          ssl->s3->established_session = ssl->session;
         } else {
           /* We make a copy of the session in order to maintain the immutability
            * of the new established_session due to False Start. The caller may
@@ -655,7 +656,7 @@ int ssl_add_client_hello_body(SSL *ssl, CBB *body) {
     return 0;
   }
 
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     if (!CBB_add_u8_length_prefixed(body, &child) ||
         !CBB_add_bytes(&child, ssl->d1->cookie, ssl->d1->cookie_len)) {
       return 0;
@@ -663,7 +664,7 @@ int ssl_add_client_hello_body(SSL *ssl, CBB *body) {
   }
 
   size_t header_len =
-      SSL_IS_DTLS(ssl) ? DTLS1_HM_HEADER_LENGTH : SSL3_HM_HEADER_LENGTH;
+      SSL_is_dtls(ssl) ? DTLS1_HM_HEADER_LENGTH : SSL3_HM_HEADER_LENGTH;
   if (!ssl_write_client_cipher_list(ssl, body, min_version, max_version,
                                     real_max_version) ||
       !CBB_add_u8(body, 1 /* one compression method */) ||
@@ -710,8 +711,10 @@ static int ssl3_send_client_hello(SSL *ssl) {
   if (ssl->session != NULL) {
     uint16_t session_version =
         ssl->method->version_from_wire(ssl->session->ssl_version);
+    struct timeval now;
+    ssl_get_current_time(ssl, &now);
     if (ssl->session->session_id_length == 0 || ssl->session->not_resumable ||
-        ssl->session->timeout < (long)(time(NULL) - ssl->session->time) ||
+        ssl->session->timeout < (long)now.tv_sec - ssl->session->time ||
         session_version < min_version || session_version > max_version) {
       SSL_set_session(ssl, NULL);
     }
@@ -719,7 +722,7 @@ static int ssl3_send_client_hello(SSL *ssl) {
 
   /* If resending the ClientHello in DTLS after a HelloVerifyRequest, don't
    * renegerate the client_random. The random must be reused. */
-  if ((!SSL_IS_DTLS(ssl) || !ssl->d1->send_cookie) &&
+  if ((!SSL_is_dtls(ssl) || !ssl->d1->send_cookie) &&
       !RAND_bytes(ssl->s3->client_random, sizeof(ssl->s3->client_random))) {
     goto err;
   }
@@ -1041,8 +1044,6 @@ static int ssl3_get_server_certificate(SSL *ssl) {
   X509_free(ssl->s3->new_session->peer);
   ssl->s3->new_session->peer = X509_up_ref(leaf);
 
-  ssl->s3->new_session->verify_result = ssl->verify_result;
-
   return 1;
 
 err:
@@ -1092,17 +1093,12 @@ f_err:
 }
 
 static int ssl3_verify_server_cert(SSL *ssl) {
-  int ret = ssl_verify_cert_chain(ssl, ssl->s3->new_session->cert_chain);
-  if (ssl->verify_mode != SSL_VERIFY_NONE && ret <= 0) {
-    int al = ssl_verify_alarm_type(ssl->verify_result);
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
-    OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
-  } else {
-    ret = 1;
-    ERR_clear_error(); /* but we keep ssl->verify_result */
+  if (!ssl_verify_cert_chain(ssl, ssl->s3->new_session->cert_chain)) {
+    return -1;
   }
 
-  return ret;
+  ssl->s3->new_session->verify_result = ssl->verify_result;
+  return 1;
 }
 
 static int ssl3_get_server_key_exchange(SSL *ssl) {
@@ -1916,9 +1912,9 @@ static int ssl3_get_new_session_ticket(SSL *ssl) {
   }
 
   CBS new_session_ticket, ticket;
-  uint32_t ticket_lifetime_hint;
+  uint32_t tlsext_tick_lifetime_hint;
   CBS_init(&new_session_ticket, ssl->init_msg, ssl->init_num);
-  if (!CBS_get_u32(&new_session_ticket, &ticket_lifetime_hint) ||
+  if (!CBS_get_u32(&new_session_ticket, &tlsext_tick_lifetime_hint) ||
       !CBS_get_u16_length_prefixed(&new_session_ticket, &ticket) ||
       CBS_len(&new_session_ticket) != 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
@@ -1954,7 +1950,7 @@ static int ssl3_get_new_session_ticket(SSL *ssl) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     goto err;
   }
-  session->tlsext_tick_lifetime_hint = ticket_lifetime_hint;
+  session->tlsext_tick_lifetime_hint = tlsext_tick_lifetime_hint;
 
   /* Generate a session ID for this session based on the session ticket. We use
    * the session ID mechanism for detecting ticket resumption. This also fits in

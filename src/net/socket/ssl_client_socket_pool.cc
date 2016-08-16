@@ -373,6 +373,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
 
     const char *str, *cipher_str, *mac_str;
     bool is_aead;
+    bool is_cecpq1 = false;
     SSLCipherSuiteToStrings(&str, &cipher_str, &mac_str, &is_aead,
                             cipher_suite);
     // UMA_HISTOGRAM_... macros cache the Histogram instance and thus only work
@@ -384,7 +385,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
       UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.ECDHE",
                                   ssl_info.key_exchange_info);
     } else if (strncmp(str, "CECPQ1_", 7) == 0) {
-      // Nothing.
+      is_cecpq1 = true;
     } else {
       DCHECK_EQ(0, strcmp(str, "RSA"));
     }
@@ -427,6 +428,26 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                                    base::TimeDelta::FromMilliseconds(1),
                                    base::TimeDelta::FromMinutes(1),
                                    100);
+
+        // These are hosts that we expect to always offer CECPQ1.  Connections
+        // to them, whether or not this browser is in the experiment group, form
+        // the basis of our comparisons.
+        bool cecpq1_supported =
+            (host == "play.google.com" || host == "checkout.google.com" ||
+             host == "wallet.google.com");
+        if (cecpq1_supported) {
+          UMA_HISTOGRAM_CUSTOM_TIMES(
+              "Net.SSL_Connection_Latency_PostQuantumSupported_Full_Handshake",
+              connect_duration, base::TimeDelta::FromMilliseconds(1),
+              base::TimeDelta::FromMinutes(1), 100);
+          if (SSLClientSocket::IsPostQuantumExperimentEnabled()) {
+            // But don't trust that these hosts offer CECPQ1: make sure.  If
+            // we're doing everything right on the server side, |is_cecpq1|
+            // should always be true if we get here, modulo MITM.
+            UMA_HISTOGRAM_BOOLEAN("Net.SSL_Connection_PostQuantum_Negotiated",
+                                  is_cecpq1);
+          }
+        }
       }
     }
   }

@@ -75,6 +75,7 @@ TEST_F(QuicConfigTest, ProcessClientHello) {
   client_config.SetInitialSessionFlowControlWindowToSend(
       2 * kInitialSessionFlowControlWindowForTest);
   client_config.SetSocketReceiveBufferToSend(kDefaultSocketReceiveBuffer);
+  client_config.SetForceHolBlocking();
   QuicTagVector copt;
   copt.push_back(kTBBR);
   client_config.SetConnectionOptionsToSend(copt);
@@ -100,6 +101,7 @@ TEST_F(QuicConfigTest, ProcessClientHello) {
             config_.IdleConnectionStateLifetime());
   EXPECT_EQ(kDefaultMaxStreamsPerConnection, config_.MaxStreamsPerConnection());
   EXPECT_EQ(10 * kNumMicrosPerMilli, config_.ReceivedInitialRoundTripTimeUs());
+  EXPECT_TRUE(config_.ForceHolBlocking(Perspective::IS_SERVER));
   EXPECT_TRUE(config_.HasReceivedConnectionOptions());
   EXPECT_EQ(2u, config_.ReceivedConnectionOptions().size());
   EXPECT_EQ(config_.ReceivedConnectionOptions()[0], kIW50);
@@ -217,8 +219,9 @@ TEST_F(QuicConfigTest, InvalidFlowControlWindow) {
   // peer: the receive window must be at least the default of 16 Kb.
   QuicConfig config;
   const uint64_t kInvalidWindow = kMinimumFlowControlSendWindow - 1;
-  EXPECT_DFATAL(config.SetInitialStreamFlowControlWindowToSend(kInvalidWindow),
-                "Initial stream flow control receive window");
+  EXPECT_QUIC_BUG(
+      config.SetInitialStreamFlowControlWindowToSend(kInvalidWindow),
+      "Initial stream flow control receive window");
 
   EXPECT_EQ(kMinimumFlowControlSendWindow,
             config.GetInitialStreamFlowControlWindowToSend());

@@ -7,8 +7,9 @@
 
 #include <vector>
 
+#include "net/base/net_export.h"
 #include "net/cert/ct_policy_enforcer.h"
-#include "net/cert/signed_certificate_timestamp.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 
 namespace net {
 
@@ -27,12 +28,8 @@ struct NET_EXPORT CTVerifyResult {
   CTVerifyResult(const CTVerifyResult& other);
   ~CTVerifyResult();
 
-  // SCTs from known logs where the signature verified correctly.
-  SCTList verified_scts;
-  // SCTs from known logs where the signature failed to verify.
-  SCTList invalid_scts;
-  // SCTs from unknown logs and as such are unverifiable.
-  SCTList unknown_logs_scts;
+  // All SCTs and their statuses
+  SignedCertificateTimestampAndStatusList scts;
 
   // True if any CT policies were applied on this connection.
   bool ct_policies_applied;
@@ -43,6 +40,12 @@ struct NET_EXPORT CTVerifyResult {
   // EV CT policy.
   EVPolicyCompliance ev_policy_compliance;
 };
+
+// Returns a list of SCTs from |sct_and_status_list| whose status matches
+// |match_status|.
+SCTList NET_EXPORT SCTsMatchingStatus(
+    const SignedCertificateTimestampAndStatusList& sct_and_status_list,
+    SCTVerifyStatus match_status);
 
 }  // namespace ct
 

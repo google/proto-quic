@@ -242,6 +242,11 @@ class BASE_EXPORT TimeDelta {
     return delta_ >= other.delta_;
   }
 
+#if defined(OS_WIN)
+  // This works around crbug.com/635974
+  constexpr TimeDelta(const TimeDelta& other) : delta_(other.delta_) {}
+#endif
+
  private:
   friend int64_t time_internal::SaturatedAdd(TimeDelta delta, int64_t value);
   friend int64_t time_internal::SaturatedSub(TimeDelta delta, int64_t value);

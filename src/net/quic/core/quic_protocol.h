@@ -387,12 +387,21 @@ static const QuicVersion kSupportedQuicVersions[] = {
 typedef std::vector<QuicVersion> QuicVersionVector;
 
 // Returns a vector of QUIC versions in kSupportedQuicVersions.
-NET_EXPORT_PRIVATE QuicVersionVector QuicSupportedVersions();
+NET_EXPORT_PRIVATE QuicVersionVector AllSupportedVersions();
+
+// Returns a vector of QUIC versions from kSupportedQuicVersions which exclude
+// any versions which are disabled by flags.
+NET_EXPORT_PRIVATE QuicVersionVector CurrentSupportedVersions();
 
 // Returns a vector of QUIC versions from |versions| which exclude any versions
 // which are disabled by flags.
 NET_EXPORT_PRIVATE QuicVersionVector
 FilterSupportedVersions(QuicVersionVector versions);
+
+// Returns QUIC version of |index| in result of |versions|. Returns
+// QUIC_VERSION_UNSUPPORTED if |index| is out of bounds.
+NET_EXPORT_PRIVATE QuicVersionVector
+VersionOfIndex(const QuicVersionVector& versions, int index);
 
 // QuicTag is written to and read from the wire, but we prefer to use
 // the more readable QuicVersion at other levels.
@@ -646,6 +655,8 @@ enum QuicErrorCode {
   // A crypto message was received that contained a parameter with too few
   // values.
   QUIC_CRYPTO_MESSAGE_INDEX_NOT_FOUND = 37,
+  // A demand for an unsupport proof type was received.
+  QUIC_UNSUPPORTED_PROOF_DEMAND = 94,
   // An internal error occured in crypto processing.
   QUIC_CRYPTO_INTERNAL_ERROR = 38,
   // A crypto handshake message specified an unsupported version.
@@ -706,7 +717,7 @@ enum QuicErrorCode {
   QUIC_TOO_MANY_FRAME_GAPS = 93,
 
   // No error. Used as bound while iterating.
-  QUIC_LAST_ERROR = 94,
+  QUIC_LAST_ERROR = 95,
 };
 
 typedef char DiversificationNonce[32];
@@ -1259,7 +1270,7 @@ typedef std::vector<QuicFrame> QuicFrames;
 class NET_EXPORT_PRIVATE QuicData {
  public:
   QuicData(const char* buffer, size_t length);
-  QuicData(char* buffer, size_t length, bool owns_buffer);
+  QuicData(const char* buffer, size_t length, bool owns_buffer);
   virtual ~QuicData();
 
   base::StringPiece AsStringPiece() const {
@@ -1311,7 +1322,7 @@ class NET_EXPORT_PRIVATE QuicPacket : public QuicData {
 class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
  public:
   QuicEncryptedPacket(const char* buffer, size_t length);
-  QuicEncryptedPacket(char* buffer, size_t length, bool owns_buffer);
+  QuicEncryptedPacket(const char* buffer, size_t length, bool owns_buffer);
 
   // Clones the packet into a new packet which owns the buffer.
   QuicEncryptedPacket* Clone() const;
@@ -1332,16 +1343,25 @@ class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
 class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
  public:
   QuicReceivedPacket(const char* buffer, size_t length, QuicTime receipt_time);
-  QuicReceivedPacket(char* buffer,
+  QuicReceivedPacket(const char* buffer,
                      size_t length,
                      QuicTime receipt_time,
                      bool owns_buffer);
+  QuicReceivedPacket(const char* buffer,
+                     size_t length,
+                     QuicTime receipt_time,
+                     bool owns_buffer,
+                     int ttl,
+                     bool ttl_valid);
 
   // Clones the packet into a new packet which owns the buffer.
   QuicReceivedPacket* Clone() const;
 
   // Returns the time at which the packet was received.
   QuicTime receipt_time() const { return receipt_time_; }
+
+  // This is the TTL of the packet, assuming ttl_vaild_ is true.
+  int ttl() const { return ttl_; }
 
   // By default, gtest prints the raw bytes of an object. The bool data
   // member (in the base class QuicData) causes this object to have padding
@@ -1353,6 +1373,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
 
  private:
   const QuicTime receipt_time_;
+  int ttl_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicReceivedPacket);
 };
@@ -1400,10 +1421,12 @@ class NET_EXPORT_PRIVATE QuicVersionManager {
   const QuicVersionVector& GetSupportedVersions();
 
  private:
+  // FLAGS_quic_disable_pre_32
+  bool disable_pre_32_;
   // FLAGS_quic_enable_version_35
-  bool enable_quic_version_35_;
-  // FLAGS_quic_enable_version_36
-  bool enable_quic_version_36_;
+  bool enable_version_35_;
+  // FLAGS_quic_enable_version_36_v2
+  bool enable_version_36_;
   // The list of versions that may be supported.
   QuicVersionVector allowed_supported_versions_;
   // This vector contains QUIC versions which are currently supported based

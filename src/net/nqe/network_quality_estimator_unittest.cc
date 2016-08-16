@@ -490,6 +490,73 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
                                      1);
 }
 
+// Tests that the network quality estimator writes and reads network quality
+// from the cache store correctly.
+TEST(NetworkQualityEstimatorTest, Caching) {
+  base::HistogramTester histogram_tester;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(variation_params);
+
+  estimator.SimulateNetworkChangeTo(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test");
+  histogram_tester.ExpectUniqueSample("NQE.CachedNetworkQualityAvailable",
+                                      false, 1);
+
+  base::TimeDelta rtt;
+  int32_t kbps;
+  EXPECT_FALSE(estimator.GetHttpRTTEstimate(&rtt));
+  EXPECT_FALSE(estimator.GetDownlinkThroughputKbpsEstimate(&kbps));
+
+  TestDelegate test_delegate;
+  TestURLRequestContext context(true);
+  context.set_network_quality_estimator(&estimator);
+  context.Init();
+
+  // Start two requests so that the network quality is added to cache store at
+  // the beginning of the second request from the network traffic observed from
+  // the first request.
+  for (size_t i = 0; i < 2; ++i) {
+    std::unique_ptr<URLRequest> request(context.CreateRequest(
+        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME);
+    request->Start();
+    base::RunLoop().Run();
+  }
+
+  base::RunLoop().RunUntilIdle();
+
+  // Both RTT and downstream throughput should be updated.
+  EXPECT_TRUE(estimator.GetHttpRTTEstimate(&rtt));
+  EXPECT_TRUE(estimator.GetDownlinkThroughputKbpsEstimate(&kbps));
+  EXPECT_NE(EFFECTIVE_CONNECTION_TYPE_UNKNOWN,
+            estimator.GetEffectiveConnectionType());
+  EXPECT_FALSE(estimator.GetTransportRTTEstimate(&rtt));
+
+  histogram_tester.ExpectBucketCount("NQE.CachedNetworkQualityAvailable", false,
+                                     1);
+
+  // Add the observers before changing the network type.
+  TestEffectiveConnectionTypeObserver observer;
+  estimator.AddEffectiveConnectionTypeObserver(&observer);
+  TestRTTObserver rtt_observer;
+  estimator.AddRTTObserver(&rtt_observer);
+  TestThroughputObserver throughput_observer;
+  estimator.AddThroughputObserver(&throughput_observer);
+
+  estimator.SimulateNetworkChangeTo(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test");
+  histogram_tester.ExpectBucketCount("NQE.CachedNetworkQualityAvailable", true,
+                                     1);
+  histogram_tester.ExpectTotalCount("NQE.CachedNetworkQualityAvailable", 2);
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that the cached network quality was read, and observers were
+  // notified.
+  EXPECT_EQ(1U, observer.effective_connection_types().size());
+  EXPECT_EQ(1U, rtt_observer.observations().size());
+  EXPECT_EQ(1U, throughput_observer.observations().size());
+}
+
 TEST(NetworkQualityEstimatorTest, StoreObservations) {
   std::map<std::string, std::string> variation_params;
   TestNetworkQualityEstimator estimator(variation_params);
@@ -1534,6 +1601,128 @@ TEST(NetworkQualityEstimatorTest, TestEffectiveConnectionTypeObserver) {
   EXPECT_EQ(2U, observer.effective_connection_types().size());
 }
 
+// Tests that the effective connection type is computed on every RTT
+// observation if the last computed effective connection type was unknown.
+TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
+  std::unique_ptr<base::SimpleTestTickClock> tick_clock(
+      new base::SimpleTestTickClock());
+  base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
+
+  TestEffectiveConnectionTypeObserver observer;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(variation_params);
+  estimator.SetTickClockForTesting(std::move(tick_clock));
+  estimator.AddEffectiveConnectionTypeObserver(&observer);
+  tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
+
+  size_t expected_effective_connection_type_notifications = 0;
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_UNKNOWN);
+  estimator.SimulateNetworkChangeTo(NetworkChangeNotifier::CONNECTION_WIFI,
+                                    "test");
+
+  NetworkQualityEstimator::RttObservation rtt_observation(
+      base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
+      NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST);
+
+  for (size_t i = 0; i < 10; ++i) {
+    estimator.NotifyObserversOfRTT(rtt_observation);
+    EXPECT_EQ(expected_effective_connection_type_notifications,
+              observer.effective_connection_types().size());
+  }
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_SLOW_2G);
+  // Even though there are 10 RTT samples already available, the addition of one
+  // more RTT sample should trigger recomputation of the effective connection
+  // type since the last computed effective connection type was unknown.
+  estimator.NotifyObserversOfRTT(NetworkQualityEstimator::RttObservation(
+      base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
+      NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+  ++expected_effective_connection_type_notifications;
+  EXPECT_EQ(expected_effective_connection_type_notifications,
+            observer.effective_connection_types().size());
+}
+
+// Tests that the effective connection type is computed regularly depending
+// on the number of RTT and bandwidth samples.
+TEST(NetworkQualityEstimatorTest,
+     AdaptiveRecomputationEffectiveConnectionType) {
+  base::HistogramTester histogram_tester;
+  std::unique_ptr<base::SimpleTestTickClock> tick_clock(
+      new base::SimpleTestTickClock());
+  base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
+
+  TestEffectiveConnectionTypeObserver observer;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(variation_params);
+  estimator.SetTickClockForTesting(std::move(tick_clock));
+  estimator.SimulateNetworkChangeTo(NetworkChangeNotifier::CONNECTION_WIFI,
+                                    "test");
+  estimator.AddEffectiveConnectionTypeObserver(&observer);
+
+  TestDelegate test_delegate;
+  TestURLRequestContext context(true);
+  context.set_network_quality_estimator(&estimator);
+  context.Init();
+
+  EXPECT_EQ(0U, observer.effective_connection_types().size());
+
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
+  tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
+
+  std::unique_ptr<URLRequest> request(context.CreateRequest(
+      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME);
+  request->Start();
+  base::RunLoop().Run();
+  EXPECT_EQ(1U, observer.effective_connection_types().size());
+  histogram_tester.ExpectUniqueSample(
+      "NQE.MainFrame.EffectiveConnectionType.WiFi",
+      EFFECTIVE_CONNECTION_TYPE_2G, 1);
+
+  size_t expected_effective_connection_type_notifications = 1;
+  EXPECT_EQ(expected_effective_connection_type_notifications,
+            observer.effective_connection_types().size());
+
+  EXPECT_EQ(expected_effective_connection_type_notifications,
+            estimator.rtt_observations_.Size());
+
+  // Increase the number of RTT observations. Every time the number of RTT
+  // observations is more than doubled, effective connection type must be
+  // recomputed and notified to observers.
+  for (size_t repetition = 0; repetition < 2; ++repetition) {
+    // Change the effective connection type so that the observers are
+    // notified when the effective connection type is recomputed.
+    if (repetition % 2 == 0) {
+      estimator.set_effective_connection_type(
+          EFFECTIVE_CONNECTION_TYPE_SLOW_2G);
+    } else {
+      estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
+    }
+    size_t rtt_observations_count = estimator.rtt_observations_.Size();
+    // Increase the number of RTT observations to more than twice the number
+    // of current observations. This should trigger recomputation of
+    // effective connection type.
+    for (size_t i = 0; i < rtt_observations_count + 1; ++i) {
+      estimator.rtt_observations_.AddObservation(
+          NetworkQualityEstimator::RttObservation(
+              base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
+              NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+
+      estimator.NotifyObserversOfRTT(NetworkQualityEstimator::RttObservation(
+          base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
+          NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+
+      if (i == rtt_observations_count) {
+        // Effective connection type must be recomputed since the number of RTT
+        // samples are now more than twice the number of RTT samples that were
+        // available when effective connection type was last computed.
+        ++expected_effective_connection_type_notifications;
+      }
+      EXPECT_EQ(expected_effective_connection_type_notifications,
+                observer.effective_connection_types().size());
+    }
+  }
+}
+
 TEST(NetworkQualityEstimatorTest, TestRttThroughputObservers) {
   TestRTTObserver rtt_observer;
   TestThroughputObserver throughput_observer;
@@ -1860,22 +2049,6 @@ TEST(NetworkQualityEstimatorTest, MAYBE_RecordAccuracy) {
               sign_suffix_with_zero_samples + "." + interval_value + ".60_140",
           0);
     }
-  }
-}
-
-// Tests that the effective connection type is converted correctly to a
-// descriptive string name, and vice-versa.
-TEST(NetworkQualityEstimatorTest, NameConnectionTypeConversion) {
-  for (size_t i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
-    const EffectiveConnectionType effective_connection_type =
-        static_cast<EffectiveConnectionType>(i);
-    std::string connection_type_name =
-        std::string(NetworkQualityEstimator::GetNameForEffectiveConnectionType(
-            effective_connection_type));
-    EXPECT_FALSE(connection_type_name.empty());
-    EXPECT_EQ(effective_connection_type,
-              NetworkQualityEstimator::GetEffectiveConnectionTypeForName(
-                  connection_type_name));
   }
 }
 

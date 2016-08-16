@@ -26,6 +26,38 @@ class X509Certificate;
 // crypto config.
 class NET_EXPORT_PRIVATE QuicServerInfo {
  public:
+  // Enum to track number of times data read/parse/write API calls of
+  // QuicServerInfo to and from disk cache is called.
+  enum QuicServerInfoAPICall {
+    QUIC_SERVER_INFO_START = 0,
+    QUIC_SERVER_INFO_WAIT_FOR_DATA_READY = 1,
+    QUIC_SERVER_INFO_PARSE = 2,
+    QUIC_SERVER_INFO_WAIT_FOR_DATA_READY_CANCEL = 3,
+    QUIC_SERVER_INFO_READY_TO_PERSIST = 4,
+    QUIC_SERVER_INFO_PERSIST = 5,
+    QUIC_SERVER_INFO_EXTERNAL_CACHE_HIT = 6,
+    QUIC_SERVER_INFO_RESET_WAIT_FOR_DATA_READY = 7,
+    QUIC_SERVER_INFO_NUM_OF_API_CALLS = 8,
+  };
+
+  // Enum to track failure reasons to read/load/write of QuicServerInfo to
+  // and from disk cache.
+  enum FailureReason {
+    WAIT_FOR_DATA_READY_INVALID_ARGUMENT_FAILURE = 0,
+    GET_BACKEND_FAILURE = 1,
+    OPEN_FAILURE = 2,
+    CREATE_OR_OPEN_FAILURE = 3,
+    PARSE_NO_DATA_FAILURE = 4,
+    PARSE_FAILURE = 5,
+    READ_FAILURE = 6,
+    READY_TO_PERSIST_FAILURE = 7,
+    PERSIST_NO_BACKEND_FAILURE = 8,
+    WRITE_FAILURE = 9,
+    NO_FAILURE = 10,
+    PARSE_DATA_DECODE_FAILURE = 11,
+    NUM_OF_FAILURES = 12,
+  };
+
   explicit QuicServerInfo(const QuicServerId& server_id);
   virtual ~QuicServerInfo();
 

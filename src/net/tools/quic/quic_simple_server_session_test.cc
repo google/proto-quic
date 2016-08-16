@@ -182,7 +182,6 @@ class QuicSimpleServerSessionTest
                        CryptoTestUtils::ProofSourceForTesting()),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize) {
-    FLAGS_quic_always_log_bugs_for_tests = true;
     config_.SetMaxStreamsPerConnection(kMaxStreamsForTest, kMaxStreamsForTest);
     config_.SetMaxIncomingDynamicStreamsToSend(kMaxStreamsForTest);
     QuicConfigPeer::SetReceivedMaxIncomingDynamicStreams(&config_,
@@ -226,7 +225,7 @@ class QuicSimpleServerSessionTest
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicSimpleServerSessionTest,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSimpleServerSessionTest, CloseStreamDueToReset) {
   // Open a stream, then reset it.
@@ -301,9 +300,9 @@ TEST_P(QuicSimpleServerSessionTest, CreateIncomingDynamicStreamDisconnected) {
   // Tests that incoming stream creation fails when connection is not connected.
   size_t initial_num_open_stream = session_->GetNumOpenIncomingStreams();
   QuicConnectionPeer::TearDownLocalConnectionState(connection_);
-  EXPECT_DFATAL(QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
-                    session_.get(), kClientDataStreamId1),
-                "ShouldCreateIncomingDynamicStream called when disconnected");
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
+                      session_.get(), kClientDataStreamId1),
+                  "ShouldCreateIncomingDynamicStream called when disconnected");
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenIncomingStreams());
 }
 
@@ -329,9 +328,9 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamDisconnected) {
   // Tests that outgoing stream creation fails when connection is not connected.
   size_t initial_num_open_stream = session_->GetNumOpenOutgoingStreams();
   QuicConnectionPeer::TearDownLocalConnectionState(connection_);
-  EXPECT_DFATAL(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                    session_.get(), kDefaultPriority),
-                "ShouldCreateOutgoingDynamicStream called when disconnected");
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
+                      session_.get(), kDefaultPriority),
+                  "ShouldCreateOutgoingDynamicStream called when disconnected");
 
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenOutgoingStreams());
 }
@@ -340,9 +339,9 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamUnencrypted) {
   // Tests that outgoing stream creation fails when encryption has not yet been
   // established.
   size_t initial_num_open_stream = session_->GetNumOpenOutgoingStreams();
-  EXPECT_DFATAL(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                    session_.get(), kDefaultPriority),
-                "Encryption not established so no outgoing stream created.");
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
+                      session_.get(), kDefaultPriority),
+                  "Encryption not established so no outgoing stream created.");
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenOutgoingStreams());
 }
 
@@ -520,7 +519,7 @@ class QuicSimpleServerSessionServerPushTest
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicSimpleServerSessionServerPushTest,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSimpleServerSessionServerPushTest, TestPromisePushResources) {
   // Tests that given more than kMaxOpenStreamForTest resources, all their

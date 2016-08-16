@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -197,10 +198,19 @@ void FeatureList::SetInstance(std::unique_ptr<FeatureList> instance) {
 }
 
 // static
-void FeatureList::ClearInstanceForTesting() {
-  delete g_instance;
+std::unique_ptr<FeatureList> FeatureList::ClearInstanceForTesting() {
+  FeatureList* old_instance = g_instance;
   g_instance = nullptr;
   g_initialized_from_accessor = false;
+  return base::WrapUnique(old_instance);
+}
+
+// static
+void FeatureList::RestoreInstanceForTesting(
+    std::unique_ptr<FeatureList> instance) {
+  DCHECK(!g_instance);
+  // Note: Intentional leak of global singleton.
+  g_instance = instance.release();
 }
 
 void FeatureList::FinalizeInitialization() {

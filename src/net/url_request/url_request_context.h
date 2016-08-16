@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 // This class represents contextual information (cookies, cache, etc.)
-// that's useful when processing resource requests.
-// The class is reference-counted so that it can be cleaned up after any
-// requests that are using it have been completed.
+// that's necessary when processing resource requests.
 
 #ifndef NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
 #define NET_URL_REQUEST_URL_REQUEST_CONTEXT_H_
@@ -47,9 +45,11 @@ class URLRequestJobFactory;
 class URLRequestThrottlerManager;
 
 // Subclass to provide application-specific context for URLRequest
-// instances. Note that URLRequestContext typically does not provide storage for
-// these member variables, since they may be shared. For the ones that aren't
-// shared, URLRequestContextStorage can be helpful in defining their storage.
+// instances. URLRequestContext does not own these member variables, since they
+// may be shared with other contexts. URLRequestContextStorage can be used for
+// automatic lifetime management. Most callers should use an existing
+// URLRequestContext rather than creating a new one, as guaranteeing that the
+// URLRequestContext is destroyed before its members can be difficult.
 class NET_EXPORT URLRequestContext
     : NON_EXPORTED_BASE(public base::NonThreadSafe) {
  public:

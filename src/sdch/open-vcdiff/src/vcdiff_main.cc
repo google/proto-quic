@@ -29,6 +29,8 @@
 #include "gflags/gflags.h"
 #include "google/vcdecoder.h"
 #include "google/vcencoder.h"
+#include "google/jsonwriter.h"
+#include "google/encodetable.h"
 #include "unique_ptr.h" // auto_ptr, unique_ptr
 
 #ifndef HAS_GLOBAL_STRING
@@ -36,6 +38,7 @@ using std::string;
 #endif  // !HAS_GLOBAL_STRING
 using google::GetCommandLineFlagInfoOrDie;
 using google::ShowUsageWithFlagsRestrict;
+using google::SetVersionString;
 
 static const size_t kDefaultMaxTargetSize = 1 << 26;      // 64 MB
 
@@ -386,6 +389,7 @@ bool VCDiffFileBasedCoder::Encode() {
     return false;
   }
   VCDiffFormatExtensionFlags format_flags = open_vcdiff::VCD_STANDARD_FORMAT;
+  UNIQUE_PTR<CodeTableWriterInterface> writer;
   if (FLAGS_interleaved) {
     format_flags |= open_vcdiff::VCD_FORMAT_INTERLEAVED;
   }
@@ -394,10 +398,15 @@ bool VCDiffFileBasedCoder::Encode() {
   }
   if (FLAGS_json) {
     format_flags |= open_vcdiff::VCD_FORMAT_JSON;
+    writer.reset(new JSONCodeTableWriter);
+  } else {
+    writer.reset(new VCDiffCodeTableWriter(FLAGS_interleaved));
   }
+
   open_vcdiff::VCDiffStreamingEncoder encoder(hashed_dictionary_.get(),
                                               format_flags,
-                                              FLAGS_target_matches);
+                                              FLAGS_target_matches,
+                                              writer.release());
   string output;
   size_t input_size = 0;
   size_t output_size = 0;
@@ -581,6 +590,7 @@ bool VCDiffFileBasedCoder::DecodeAndCompare() {
 int main(int argc, char** argv) {
   const char* const command_name = argv[0];
   google::SetUsageMessage(kUsageString);
+  google::SetVersionString(OPEN_VCDIFF_VERSION);
   google::ParseCommandLineFlags(&argc, &argv, true);
   if (argc != 2) {
     std::cerr << command_name << ": Must specify exactly one command option"

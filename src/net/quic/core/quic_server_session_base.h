@@ -74,7 +74,8 @@ class NET_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
                                       std::string* error_details) const = 0;
   };
 
-  // |crypto_config| must outlive the session.
+  // Does not take ownership of |connection|. |crypto_config| must outlive the
+  // session.
   QuicServerSessionBase(const QuicConfig& config,
                         QuicConnection* connection,
                         Visitor* visitor,

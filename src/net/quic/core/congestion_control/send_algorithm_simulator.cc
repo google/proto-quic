@@ -92,18 +92,23 @@ void SendAlgorithmSimulator::AddTransfer(Sender* sender,
 }
 
 void SendAlgorithmSimulator::TransferBytes() {
-  TransferBytes(std::numeric_limits<uint64_t>::max(),
-                QuicTime::Delta::Infinite());
+  TransferBytesUntil([](QuicTime, QuicByteCount) { return false; });
 }
 
 void SendAlgorithmSimulator::TransferBytes(QuicByteCount max_bytes,
                                            QuicTime::Delta max_time) {
-  const QuicTime end_time = max_time.IsInfinite()
-                                ? QuicTime::Zero() + QuicTime::Delta::Infinite()
-                                : clock_->Now() + max_time;
+  const QuicTime start_time = clock_->Now();
+  TransferBytesUntil([=](QuicTime now, QuicByteCount bytes_sent) {
+    return bytes_sent >= max_bytes || now - start_time > max_time;
+  });
+}
+
+template <class TerminationPredicate>
+bool SendAlgorithmSimulator::TransferBytesUntil(
+    TerminationPredicate termination_predicate) {
   QuicByteCount bytes_sent = 0;
-  while (!pending_transfers_.empty() && clock_->Now() < end_time &&
-         bytes_sent < max_bytes) {
+  while (!pending_transfers_.empty() &&
+         !termination_predicate(clock_->Now(), bytes_sent)) {
     // Determine the times of next send and of the next ack arrival.
     PacketEvent send_event = NextSendEvent();
     PacketEvent ack_event = NextAckEvent();
@@ -133,6 +138,8 @@ void SendAlgorithmSimulator::TransferBytes(QuicByteCount max_bytes,
       bytes_sent += kPacketSize;
     }
   }
+
+  return !pending_transfers_.empty();
 }
 
 SendAlgorithmSimulator::PacketEvent SendAlgorithmSimulator::NextSendEvent() {

@@ -100,4 +100,86 @@ der::Input SequenceValueFromString(const std::string* s) {
   return ::testing::AssertionSuccess();
 }
 
+void ReadVerifyCertChainTestFromFile(const std::string& file_name,
+                                     ParsedCertificateList* chain,
+                                     scoped_refptr<TrustAnchor>* trust_anchor,
+                                     der::GeneralizedTime* time,
+                                     bool* verify_result) {
+  chain->clear();
+  *trust_anchor = nullptr;
+
+  std::string file_data = ReadTestFileToString(
+      std::string("net/data/verify_certificate_chain_unittest/") + file_name);
+
+  std::vector<std::string> pem_headers;
+
+  // For details on the file format refer to:
+  // net/data/verify_certificate_chain_unittest/README.
+  const char kCertificateHeader[] = "CERTIFICATE";
+  const char kTrustAnchorUnconstrained[] = "TRUST_ANCHOR_UNCONSTRAINED";
+  const char kTimeHeader[] = "TIME";
+  const char kResultHeader[] = "VERIFY_RESULT";
+
+  pem_headers.push_back(kCertificateHeader);
+  pem_headers.push_back(kTrustAnchorUnconstrained);
+  pem_headers.push_back(kTimeHeader);
+  pem_headers.push_back(kResultHeader);
+
+  bool has_time = false;
+  bool has_result = false;
+
+  PEMTokenizer pem_tokenizer(file_data, pem_headers);
+  while (pem_tokenizer.GetNext()) {
+    const std::string& block_type = pem_tokenizer.block_type();
+    const std::string& block_data = pem_tokenizer.data();
+
+    if (block_type == kCertificateHeader) {
+      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(
+          reinterpret_cast<const uint8_t*>(block_data.data()),
+          block_data.size(), net::ParsedCertificate::DataSource::INTERNAL_COPY,
+          {}, chain));
+    } else if (block_type == kTrustAnchorUnconstrained) {
+      ASSERT_FALSE(*trust_anchor) << "Duplicate trust anchor";
+      scoped_refptr<ParsedCertificate> root =
+          net::ParsedCertificate::CreateFromCertificateData(
+              reinterpret_cast<const uint8_t*>(block_data.data()),
+              block_data.size(),
+              net::ParsedCertificate::DataSource::INTERNAL_COPY, {});
+      ASSERT_TRUE(root);
+      *trust_anchor =
+          TrustAnchor::CreateFromCertificateNoConstraints(std::move(root));
+    } else if (block_type == kTimeHeader) {
+      ASSERT_FALSE(has_time) << "Duplicate " << kTimeHeader;
+      has_time = true;
+      ASSERT_TRUE(der::ParseUTCTime(der::Input(&block_data), time));
+    } else if (block_type == kResultHeader) {
+      ASSERT_FALSE(has_result) << "Duplicate " << kResultHeader;
+      ASSERT_TRUE(block_data == "SUCCESS" || block_data == "FAIL")
+          << "Unrecognized result: " << block_data;
+      has_result = true;
+      *verify_result = block_data == "SUCCESS";
+    }
+  }
+
+  ASSERT_TRUE(has_time);
+  ASSERT_TRUE(has_result);
+  ASSERT_TRUE(*trust_anchor);
+}
+
+std::string ReadTestFileToString(const std::string& file_name) {
+  // Compute the full path, relative to the src/ directory.
+  base::FilePath src_root;
+  PathService::Get(base::DIR_SOURCE_ROOT, &src_root);
+  base::FilePath filepath = src_root.AppendASCII(file_name);
+
+  // Read the full contents of the file.
+  std::string file_data;
+  if (!base::ReadFileToString(filepath, &file_data)) {
+    ADD_FAILURE() << "Couldn't read file: " << filepath.value();
+    return std::string();
+  }
+
+  return file_data;
+}
+
 }  // namespace net

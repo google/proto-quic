@@ -231,7 +231,10 @@ OPENSSL_EXPORT void SSL_set_accept_state(SSL *ssl);
 
 /* SSL_is_server returns one if |ssl| is configured as a server and zero
  * otherwise. */
-OPENSSL_EXPORT int SSL_is_server(SSL *ssl);
+OPENSSL_EXPORT int SSL_is_server(const SSL *ssl);
+
+/* SSL_is_dtls returns one if |ssl| is a DTLS connection and zero otherwise. */
+OPENSSL_EXPORT int SSL_is_dtls(const SSL *ssl);
 
 /* SSL_set_bio configures |ssl| to read from |rbio| and write to |wbio|. |ssl|
  * takes ownership of the two |BIO|s. If |rbio| and |wbio| are the same, |ssl|
@@ -240,11 +243,32 @@ OPENSSL_EXPORT int SSL_is_server(SSL *ssl);
  * In DTLS, if |rbio| is blocking, it must handle
  * |BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT| control requests to set read timeouts.
  *
- * If |rbio| (respectively, |wbio|) is the same as the currently configured
- * |BIO| for reading (respectively, writing), that side is left untouched and is
- * not freed. Using this behavior and calling this function if |ssl| already has
- * |BIO|s configured is deprecated. */
+ * If |rbio| is the same as the currently configured |BIO| for reading, that
+ * side is left untouched and is not freed.
+ *
+ * If |wbio| is the same as the currently configured |BIO| for writing AND |ssl|
+ * is not currently configured to read from and write to the same |BIO|, that
+ * side is left untouched and is not freed. This asymmetry is present for
+ * historical reasons.
+ *
+ * Due to the very complex historical behavior of this function, calling this
+ * function if |ssl| already has |BIO|s configured is deprecated. Prefer
+ * |SSL_set0_rbio| and |SSL_set0_wbio| instead. */
 OPENSSL_EXPORT void SSL_set_bio(SSL *ssl, BIO *rbio, BIO *wbio);
+
+/* SSL_set0_rbio configures |ssl| to write to |rbio|. It takes ownership of
+ * |rbio|.
+ *
+ * Note that, although this function and |SSL_set0_wbio| may be called on the
+ * same |BIO|, each call takes a reference. Use |BIO_up_ref| to balance this. */
+OPENSSL_EXPORT void SSL_set0_rbio(SSL *ssl, BIO *rbio);
+
+/* SSL_set0_wbio configures |ssl| to write to |wbio|. It takes ownership of
+ * |wbio|.
+ *
+ * Note that, although this function and |SSL_set0_rbio| may be called on the
+ * same |BIO|, each call takes a reference. Use |BIO_up_ref| to balance this. */
+OPENSSL_EXPORT void SSL_set0_wbio(SSL *ssl, BIO *wbio);
 
 /* SSL_get_rbio returns the |BIO| that |ssl| reads from. */
 OPENSSL_EXPORT BIO *SSL_get_rbio(const SSL *ssl);
@@ -373,14 +397,7 @@ OPENSSL_EXPORT int SSL_write(SSL *ssl, const void *buf, int num);
  *
  * |SSL_shutdown| returns -1 on failure. The caller should pass the return value
  * into |SSL_get_error| to determine how to proceed. If the underlying |BIO| is
- * non-blocking, both stages may require retry.
- *
- * |SSL_shutdown| must be called to retain |ssl|'s session in the session
- * cache. Use |SSL_CTX_set_quiet_shutdown| to configure |SSL_shutdown| to
- * neither send nor wait for close_notify but still retain the session.
- *
- * TODO(davidben): Is there any point in the session cache interaction? Remove
- * it? */
+ * non-blocking, both stages may require retry. */
 OPENSSL_EXPORT int SSL_shutdown(SSL *ssl);
 
 /* SSL_CTX_set_quiet_shutdown sets quiet shutdown on |ctx| to |mode|. If
@@ -548,7 +565,7 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define DTLS1_VERSION 0xfeff
 #define DTLS1_2_VERSION 0xfefd
 
-#define TLS1_3_DRAFT_VERSION 13
+#define TLS1_3_DRAFT_VERSION 14
 
 /* SSL_CTX_set_min_version sets the minimum protocol version for |ctx| to
  * |version|. */
@@ -1516,9 +1533,9 @@ DECLARE_PEM_rw(SSL_SESSION, SSL_SESSION)
  * used outside the library. */
 OPENSSL_EXPORT SSL_SESSION *SSL_SESSION_new(void);
 
-/* SSL_SESSION_up_ref, if |session| is not NULL, increments the reference count
- * of |session|. It then returns |session|. */
-OPENSSL_EXPORT SSL_SESSION *SSL_SESSION_up_ref(SSL_SESSION *session);
+/* SSL_SESSION_up_ref increments the reference count of |session| and returns
+ * one. */
+OPENSSL_EXPORT int SSL_SESSION_up_ref(SSL_SESSION *session);
 
 /* SSL_SESSION_free decrements the reference count of |session|. If it reaches
  * zero, all data referenced by |session| and |session| itself are released. */
@@ -3145,6 +3162,8 @@ OPENSSL_EXPORT const SSL_METHOD *DTLSv1_2_method(void);
 
 /* These client- and server-specific methods call their corresponding generic
  * methods. */
+OPENSSL_EXPORT const SSL_METHOD *TLS_server_method(void);
+OPENSSL_EXPORT const SSL_METHOD *TLS_client_method(void);
 OPENSSL_EXPORT const SSL_METHOD *SSLv23_server_method(void);
 OPENSSL_EXPORT const SSL_METHOD *SSLv23_client_method(void);
 OPENSSL_EXPORT const SSL_METHOD *SSLv3_server_method(void);
@@ -3379,7 +3398,7 @@ DECLARE_STACK_OF(SSL_COMP)
 #define SSL_OP_TLS_ROLLBACK_BUG 0
 #define SSL_VERIFY_CLIENT_ONCE 0
 
-/* SSL_cache_hit calls |SSL_session_resumed|. */
+/* SSL_cache_hit calls |SSL_session_reused|. */
 OPENSSL_EXPORT int SSL_cache_hit(SSL *ssl);
 
 /* SSL_get_default_timeout returns |SSL_DEFAULT_SESSION_TIMEOUT|. */
@@ -3680,6 +3699,9 @@ struct ssl_session_st {
 
   uint32_t tlsext_tick_lifetime_hint; /* Session lifetime hint in seconds */
 
+  uint32_t ticket_flags;
+  uint32_t ticket_age_add;
+
   /* extended_master_secret is true if the master secret in this session was
    * generated using EMS and thus isn't vulnerable to the Triple Handshake
    * attack. */
@@ -3690,6 +3712,9 @@ struct ssl_session_st {
 
   /* not_resumable is used to indicate that session resumption is disallowed. */
   unsigned not_resumable:1;
+
+  /* ticket_age_add_valid is non-zero if |ticket_age_add| is valid. */
+  unsigned ticket_age_add_valid:1;
 };
 
 /* ssl_cipher_preference_list_st contains a list of SSL_CIPHERs with
@@ -4414,7 +4439,7 @@ typedef struct ssl3_state_st {
   uint8_t previous_client_finished_len;
   uint8_t previous_server_finished[EVP_MAX_MD_SIZE];
   uint8_t previous_server_finished_len;
-  int send_connection_binding; /* TODOEKR */
+  int send_connection_binding;
 
   /* Set if we saw the Next Protocol Negotiation extension from our peer. */
   int next_proto_neg_seen;

@@ -288,30 +288,43 @@ TEST(QuicProtocolTest, FilterSupportedVersions) {
       QUIC_VERSION_30, QUIC_VERSION_31, QUIC_VERSION_32, QUIC_VERSION_33,
       QUIC_VERSION_34, QUIC_VERSION_35, QUIC_VERSION_36};
 
+  FLAGS_quic_disable_pre_32 = true;
   FLAGS_quic_enable_version_35 = false;
-  FLAGS_quic_enable_version_36 = false;
+  FLAGS_quic_enable_version_36_v2 = false;
 
   QuicVersionVector filtered_versions = FilterSupportedVersions(all_versions);
-  ASSERT_EQ(5u, filtered_versions.size());
-  EXPECT_EQ(QUIC_VERSION_30, filtered_versions[0]);
-  EXPECT_EQ(QUIC_VERSION_31, filtered_versions[1]);
-  EXPECT_EQ(QUIC_VERSION_32, filtered_versions[2]);
-  EXPECT_EQ(QUIC_VERSION_33, filtered_versions[3]);
-  EXPECT_EQ(QUIC_VERSION_34, filtered_versions[4]);
+  ASSERT_EQ(3u, filtered_versions.size());
+  EXPECT_EQ(QUIC_VERSION_32, filtered_versions[0]);
+  EXPECT_EQ(QUIC_VERSION_33, filtered_versions[1]);
+  EXPECT_EQ(QUIC_VERSION_34, filtered_versions[2]);
 }
 
 TEST(QuicProtocolTest, QuicVersionManager) {
   FLAGS_quic_enable_version_35 = false;
-  FLAGS_quic_enable_version_36 = false;
-  QuicVersionManager manager(QuicSupportedVersions());
-  EXPECT_EQ(FilterSupportedVersions(QuicSupportedVersions()),
+  FLAGS_quic_enable_version_36_v2 = false;
+  QuicVersionManager manager(AllSupportedVersions());
+  EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
             manager.GetSupportedVersions());
   FLAGS_quic_enable_version_35 = true;
-  FLAGS_quic_enable_version_36 = true;
-  EXPECT_EQ(FilterSupportedVersions(QuicSupportedVersions()),
+  FLAGS_quic_enable_version_36_v2 = true;
+  EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
             manager.GetSupportedVersions());
   EXPECT_EQ(QUIC_VERSION_36, manager.GetSupportedVersions()[0]);
   EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[1]);
+}
+
+TEST(QuicProtocolTest, LookUpVersionByIndex) {
+  QuicVersionVector all_versions = {
+      QUIC_VERSION_30, QUIC_VERSION_31, QUIC_VERSION_32, QUIC_VERSION_33,
+      QUIC_VERSION_34, QUIC_VERSION_35, QUIC_VERSION_36};
+  int version_count = all_versions.size();
+  for (int i = -5; i <= version_count + 1; ++i) {
+    if (i >= 0 && i < version_count) {
+      EXPECT_EQ(all_versions[i], VersionOfIndex(all_versions, i)[0]);
+    } else {
+      EXPECT_EQ(QUIC_VERSION_UNSUPPORTED, VersionOfIndex(all_versions, i)[0]);
+    }
+  }
 }
 
 // Tests that a queue contains the expected data after calls to Add().

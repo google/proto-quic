@@ -23,6 +23,7 @@
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client.h"
 #include "net/tools/quic/test_tools/simple_client.h"
+#include "testing/gmock/include/gmock/gmock.h"
 
 using base::StringPiece;
 
@@ -38,7 +39,7 @@ namespace test {
 class HTTPMessage;
 class MockableQuicClient;
 
-// A quic client which allows mocking out writes.
+// A quic client which allows mocking out reads and writes.
 class MockableQuicClient : public QuicClient {
  public:
   MockableQuicClient(IPEndPoint server_address,
@@ -60,6 +61,16 @@ class MockableQuicClient : public QuicClient {
                      std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~MockableQuicClient() override;
+
+  // By default, this will call QuicClient::ProcessPacket
+  MOCK_METHOD3(ProcessPacket,
+               void(const IPEndPoint&,
+                    const IPEndPoint&,
+                    const QuicReceivedPacket&));
+
+  void ProcessPacketBase(const IPEndPoint& self_address,
+                         const IPEndPoint& peer_address,
+                         const QuicReceivedPacket& packet);
   QuicPacketWriter* CreateQuicPacketWriter() override;
   QuicConnectionId GenerateNewConnectionId() override;
   void UseWriter(QuicPacketWriterWrapper* writer);

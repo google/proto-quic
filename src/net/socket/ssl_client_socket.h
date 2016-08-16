@@ -10,6 +10,7 @@
 #include <string>
 
 #include "base/gtest_prod_util.h"
+#include "base/strings/string_piece.h"
 #include "net/base/completion_callback.h"
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
@@ -94,25 +95,12 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
     kExtensionNPN,
   };
 
-  // StreamSocket:
-  bool WasNpnNegotiated() const override;
-  NextProto GetNegotiatedProtocol() const override;
-
   // Gets the SSL CertificateRequest info of the socket after Connect failed
   // with ERR_SSL_CLIENT_AUTH_CERT_NEEDED.
   virtual void GetSSLCertRequestInfo(
       SSLCertRequestInfo* cert_request_info) = 0;
 
-  // Get the application level protocol that we negotiated with the server.
-  // *proto is set to the resulting protocol (n.b. that the string may have
-  // embedded NULs).
-  //   kNextProtoUnsupported: *proto is cleared.
-  //   kNextProtoNegotiated:  *proto is set to the negotiated protocol.
-  //   kNextProtoNoOverlap:   *proto is set to the first protocol in the
-  //                          supported list.
-  virtual NextProtoStatus GetNextProto(std::string* proto) const = 0;
-
-  static NextProto NextProtoFromString(const std::string& proto_string);
+  static NextProto NextProtoFromString(base::StringPiece proto_string);
 
   static const char* NextProtoToString(NextProto next_proto);
 
@@ -151,12 +139,12 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   // establishing the connection (or NULL if no channel ID was used).
   virtual crypto::ECPrivateKey* GetChannelIDKey() const = 0;
 
- protected:
-  void set_negotiation_extension(
-      SSLNegotiationExtension negotiation_extension) {
-    negotiation_extension_ = negotiation_extension;
-  }
+  // Returns true if the CECPQ1 (experimental post-quantum) experiment is
+  // enabled.  This should be removed after the experiment is ended, around
+  // 2017-18.
+  static bool IsPostQuantumExperimentEnabled();
 
+ protected:
   void set_signed_cert_timestamps_received(
       bool signed_cert_timestamps_received) {
     signed_cert_timestamps_received_ = signed_cert_timestamps_received;
@@ -165,21 +153,6 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   void set_stapled_ocsp_response_received(bool stapled_ocsp_response_received) {
     stapled_ocsp_response_received_ = stapled_ocsp_response_received;
   }
-
-  // Record which TLS extension was used to negotiate protocol and protocol
-  // chosen in a UMA histogram.
-  void RecordNegotiationExtension();
-
-  // Records histograms for channel id support during full handshakes - resumed
-  // handshakes are ignored.
-  static void RecordChannelIDSupport(ChannelIDService* channel_id_service,
-                                     bool negotiated_channel_id,
-                                     bool channel_id_enabled);
-
-  // Returns whether TLS channel ID is enabled.
-  static bool IsChannelIDEnabled(
-      const SSLConfig& ssl_config,
-      ChannelIDService* channel_id_service);
 
   // Serialize |next_protos| in the wire format for ALPN and NPN: protocols are
   // listed in order, each prefixed by a one-byte length.
@@ -202,8 +175,6 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   bool signed_cert_timestamps_received_;
   // True if a stapled OCSP response was received.
   bool stapled_ocsp_response_received_;
-  // Protocol negotiation extension used.
-  SSLNegotiationExtension negotiation_extension_;
 };
 
 }  // namespace net

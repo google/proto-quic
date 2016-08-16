@@ -16,7 +16,7 @@ QuicMultipathReceivedPacketManager::QuicMultipathReceivedPacketManager(
 }
 
 QuicMultipathReceivedPacketManager::~QuicMultipathReceivedPacketManager() {
-  STLDeleteValues(&path_managers_);
+  base::STLDeleteValues(&path_managers_);
 }
 
 void QuicMultipathReceivedPacketManager::OnPathCreated(

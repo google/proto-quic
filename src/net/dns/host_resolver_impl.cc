@@ -1895,7 +1895,7 @@ HostResolverImpl::~HostResolverImpl() {
   dispatcher_->SetLimitsToZero();
   // It's now safe for Jobs to call KillDsnTask on destruction, because
   // OnJobComplete will not start any new jobs.
-  STLDeleteValues(&jobs_);
+  base::STLDeleteValues(&jobs_);
 
   NetworkChangeNotifier::RemoveIPAddressObserver(this);
   NetworkChangeNotifier::RemoveConnectionTypeObserver(this);

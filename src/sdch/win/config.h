@@ -1,14 +1,53 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2016 The open-vcdiff Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// This file and directory exist so that we can use the provided config.h
-// without putting vsprojects into our include path (which would also give us an
-// incorrect/incompatible stdint.h).
+/* Defined to PROJECT_VERSION from CMakeLists.txt */
+#define OPEN_VCDIFF_VERSION "0.8.4"
 
-#ifndef SDCH_WIN_CONFIG_H_
-#define SDCH_WIN_CONFIG_H_
+/* Define to 1 if you have the <ext/rope> header file. */
+/* #undef HAVE_EXT_ROPE */
 
-#include "../open-vcdiff/vsprojects/config.h"
+/* Define to 1 if you have the `gettimeofday' function. */
+/* #undef HAVE_GETTIMEOFDAY */
 
-#endif  // SDCH_WIN_CONFIG_H_
+/* Define to 1 if you have the <malloc.h> header file. */
+#define HAVE_MALLOC_H
+
+/* Define to 1 if you have the `memalign' function. */
+/* #undef HAVE_MEMALIGN */
+
+/* Define to 1 if you have the `mprotect' function. */
+/* #undef HAVE_MPROTECT */
+
+/* Define to 1 if you have the `posix_memalign' function. */
+/* #undef HAVE_POSIX_MEMALIGN */
+
+/* Define to 1 if you have the <sys/mman.h> header file. */
+/* #undef HAVE_SYS_MMAN_H */
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+/* #undef HAVE_SYS_STAT_H */
+
+/* Define to 1 if you have the <sys/time.h> header file. */
+/* #undef HAVE_SYS_TIME_H */
+
+/* Define to 1 if you have the <unistd.h> header file. */
+/* #undef HAVE_UNISTD_H */
+
+/* Define to 1 if you have the <windows.h> header file. */
+#define HAVE_WINDOWS_H
+
+/* Use custom compare function instead of memcmp */
+/* #undef VCDIFF_USE_BLOCK_COMPARE_WORDS */
+

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013 The Chromium Authors. All rights reserved.
+/* Copyright (c) 2015 The Chromium Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -6,12 +6,10 @@
 /* This file contains common certificates. It's designed to be #included in
  * another file, in a namespace. */
 
-#include <stdint.h>
+#include "net/quic/core/crypto/common_cert_set_3a.inc"
+#include "net/quic/core/crypto/common_cert_set_3b.inc"
 
-#include "net/quic/core/crypto/common_cert_set_1a.inc"
-#include "net/quic/core/crypto/common_cert_set_1b.inc"
-
-static const size_t kNumCerts = 62;
+static const size_t kNumCerts = 52;
 static const unsigned char* const kCerts[] = {
   kDERCert0,
   kDERCert1,
@@ -65,81 +63,61 @@ static const unsigned char* const kCerts[] = {
   kDERCert49,
   kDERCert50,
   kDERCert51,
-  kDERCert52,
-  kDERCert53,
-  kDERCert54,
-  kDERCert55,
-  kDERCert56,
-  kDERCert57,
-  kDERCert58,
-  kDERCert59,
-  kDERCert60,
-  kDERCert61,
 };
 
 static const size_t kLens[] = {
   897,
   911,
-  985,
-  989,
   1012,
-  1022,
   1049,
-  1055,
-  1071,
-  1080,
-  1084,
-  1088,
+  1065,
+  1096,
   1097,
-  1098,
+  1101,
+  1105,
   1105,
   1107,
   1117,
-  1124,
   1127,
   1133,
   1136,
+  1138,
+  1139,
+  1145,
+  1149,
   1153,
-  1171,
-  1171,
+  1167,
   1172,
+  1174,
+  1174,
   1176,
-  1182,
   1188,
-  1191,
   1194,
-  1194,
-  1199,
+  1196,
+  1203,
   1205,
+  1206,
+  1208,
+  1209,
   1210,
-  1226,
+  1222,
+  1227,
   1236,
   1236,
   1238,
-  1250,
-  1254,
-  1256,
-  1257,
-  1269,
-  1270,
-  1280,
+  1283,
   1284,
-  1285,
   1287,
-  1290,
-  1291,
-  1291,
-  1294,
-  1297,
-  1385,
-  1512,
-  1520,
-  1548,
-  1570,
-  1581,
-  1628,
-  1712,
-  1770,
+  1298,
+  1315,
+  1327,
+  1340,
+  1357,
+  1418,
+  1447,
+  1509,
+  1513,
+  1632,
 };
 
-static const uint64_t kHash = UINT64_C(0xff715ce4e7e9267b);
+static const uint64_t kHash = UINT64_C(0x918215a28680ed7e);

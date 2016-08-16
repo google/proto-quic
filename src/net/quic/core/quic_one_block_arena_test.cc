@@ -7,6 +7,7 @@
 #include "net/quic/core/interval_set.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -33,8 +34,8 @@ TEST(QuicOneBlockArenaTest, Exhaust) {
     EXPECT_TRUE(ptr.is_from_arena());
   }
   QuicArenaScopedPtr<TestObject> ptr;
-  EXPECT_DFATAL(ptr = arena.New<TestObject>(),
-                "Ran out of space in QuicOneBlockArena");
+  EXPECT_QUIC_BUG(ptr = arena.New<TestObject>(),
+                  "Ran out of space in QuicOneBlockArena");
   EXPECT_FALSE(ptr.is_from_arena());
 }
 

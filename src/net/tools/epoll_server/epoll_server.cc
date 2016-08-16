@@ -442,7 +442,7 @@ void EpollServer::VerifyReadyList() const {
 
 void EpollServer::RegisterAlarm(int64_t timeout_time_in_us, AlarmCB* ac) {
   CHECK(ac);
-  if (ContainsKey(all_alarms_, ac)) {
+  if (base::ContainsKey(all_alarms_, ac)) {
     LOG(FATAL) << "Alarm already exists " << ac;
   }
   VLOG(4) << "RegisteringAlarm at : " << timeout_time_in_us;

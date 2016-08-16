@@ -78,8 +78,8 @@ QuicSimpleClient::~QuicSimpleClient() {
         QUIC_PEER_GOING_AWAY, "Shutting down",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
   }
-  STLDeleteElements(&data_to_resend_on_connect_);
-  STLDeleteElements(&data_sent_before_handshake_);
+  base::STLDeleteElements(&data_to_resend_on_connect_);
+  base::STLDeleteElements(&data_sent_before_handshake_);
 }
 
 bool QuicSimpleClient::Initialize() {
@@ -181,7 +181,7 @@ bool QuicSimpleClient::Connect() {
       for (QuicDataToResend* data : data_to_resend_on_connect_) {
         data->Resend();
       }
-      STLDeleteElements(&data_to_resend_on_connect_);
+      base::STLDeleteElements(&data_to_resend_on_connect_);
     }
     if (session() != nullptr &&
         session()->error() != QUIC_CRYPTO_HANDSHAKE_STATELESS_REJECT) {
@@ -238,8 +238,8 @@ void QuicSimpleClient::Disconnect() {
         QUIC_PEER_GOING_AWAY, "Client disconnecting",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
   }
-  STLDeleteElements(&data_to_resend_on_connect_);
-  STLDeleteElements(&data_sent_before_handshake_);
+  base::STLDeleteElements(&data_to_resend_on_connect_);
+  base::STLDeleteElements(&data_sent_before_handshake_);
 
   reset_writer();
   packet_reader_.reset();
@@ -277,7 +277,7 @@ void QuicSimpleClient::MaybeAddQuicDataToResend(
   if (session()->IsCryptoHandshakeConfirmed()) {
     // The handshake is confirmed.  No need to continue saving requests to
     // resend.
-    STLDeleteElements(&data_sent_before_handshake_);
+    base::STLDeleteElements(&data_sent_before_handshake_);
     delete data_to_resend;
     return;
   }

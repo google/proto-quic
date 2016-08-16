@@ -80,7 +80,8 @@ QuicCryptoServerStream::QuicCryptoServerStream(
       num_server_config_update_messages_sent_(0),
       use_stateless_rejects_if_peer_supported_(
           use_stateless_rejects_if_peer_supported),
-      peer_supports_stateless_rejects_(false) {
+      peer_supports_stateless_rejects_(false),
+      chlo_packet_size_(0) {
   DCHECK_EQ(Perspective::IS_SERVER, session->connection()->perspective());
 }
 
@@ -104,6 +105,7 @@ void QuicCryptoServerStream::OnHandshakeMessage(
     const CryptoHandshakeMessage& message) {
   QuicCryptoServerStreamBase::OnHandshakeMessage(message);
   ++num_handshake_messages_;
+  chlo_packet_size_ = session()->connection()->GetCurrentPacket().length();
 
   bool require_kfixd = !FLAGS_quic_deprecate_kfixd;
 
@@ -439,7 +441,8 @@ QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
       use_stateless_rejects_in_crypto_config, server_designated_connection_id,
       connection->clock(), connection->random_generator(),
       compressed_certs_cache_, &crypto_negotiated_params_, &crypto_proof_,
-      reply, out_diversification_nonce, error_details);
+      QuicCryptoStream::CryptoMessageFramingOverhead(version()),
+      chlo_packet_size_, reply, out_diversification_nonce, error_details);
 }
 
 void QuicCryptoServerStream::OverrideQuicConfigDefaults(QuicConfig* config) {}

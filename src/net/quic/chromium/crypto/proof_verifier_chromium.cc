@@ -397,12 +397,14 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
   if (enforce_policy_checking_ &&
       (result == OK ||
        (IsCertificateError(result) && IsCertStatusMinorError(cert_status)))) {
+    SCTList verified_scts = ct::SCTsMatchingStatus(
+        verify_details_->ct_verify_result.scts, ct::SCT_STATUS_OK);
     if ((cert_verify_result.cert_status & CERT_STATUS_IS_EV)) {
       ct::EVPolicyCompliance ev_policy_compliance =
           policy_enforcer_->DoesConformToCTEVPolicy(
               cert_verify_result.verified_cert.get(),
-              SSLConfigService::GetEVCertsWhitelist().get(),
-              verify_details_->ct_verify_result.verified_scts, net_log_);
+              SSLConfigService::GetEVCertsWhitelist().get(), verified_scts,
+              net_log_);
       verify_details_->ct_verify_result.ev_policy_compliance =
           ev_policy_compliance;
       if (ev_policy_compliance !=
@@ -419,8 +421,7 @@ int ProofVerifierChromium::Job::DoVerifyCertComplete(int result) {
 
     verify_details_->ct_verify_result.cert_policy_compliance =
         policy_enforcer_->DoesConformToCertPolicy(
-            cert_verify_result.verified_cert.get(),
-            verify_details_->ct_verify_result.verified_scts, net_log_);
+            cert_verify_result.verified_cert.get(), verified_scts, net_log_);
 
     int ct_result = OK;
     if (verify_details_->ct_verify_result.cert_policy_compliance !=
@@ -556,7 +557,7 @@ ProofVerifierChromium::ProofVerifierChromium(
 }
 
 ProofVerifierChromium::~ProofVerifierChromium() {
-  STLDeleteElements(&active_jobs_);
+  base::STLDeleteElements(&active_jobs_);
 }
 
 QuicAsyncStatus ProofVerifierChromium::VerifyProof(

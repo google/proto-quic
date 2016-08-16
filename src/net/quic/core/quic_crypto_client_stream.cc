@@ -342,6 +342,8 @@ void QuicCryptoClientStream::DoSendCHLO(
       CloseConnectionWithDetails(QUIC_INTERNAL_ERROR, "CHLO too large");
       return;
     }
+    // TODO(rch): Remove this when we remove:
+    // FLAGS_quic_use_chlo_packet_size
     out.set_minimum_size(
         static_cast<size_t>(max_packet_size - kFramingOverhead));
     next_state_ = STATE_RECV_REJ;

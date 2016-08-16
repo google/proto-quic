@@ -23,6 +23,7 @@ namespace open_vcdiff {
 
 class VCDiffEngine;
 class VCDiffStreamingEncoderImpl;
+class CodeTableWriterInterface;
 
 // A HashedDictionary must be constructed from the dictionary data
 // in order to use VCDiffStreamingEncoder.  If the same dictionary will
@@ -100,9 +101,17 @@ class VCDiffStreamingEncoder {
   // look_for_target_matches) because the cost of checking for matches
   // across the source-target boundary would not justify its benefits.
   //
+  // Second version of constructor uses provided CodeTableInterfaceWriter
+  // pointer instead of constructing one based on format_extenstions and will
+  // take ownership of it. It's useful when you want to gather some statistics
+  // for ADD/COPY/RUN instructions and archived compression ratio.
   VCDiffStreamingEncoder(const HashedDictionary* dictionary,
                          VCDiffFormatExtensionFlags format_extensions,
                          bool look_for_target_matches);
+  VCDiffStreamingEncoder(const HashedDictionary* dictionary,
+                         VCDiffFormatExtensionFlags format_extensions,
+                         bool look_for_target_matches,
+                         CodeTableWriterInterface* writer);
   ~VCDiffStreamingEncoder();
 
   // The client should use these routines as follows:

@@ -132,14 +132,12 @@ std::unique_ptr<base::Value> NetLogHttpStreamJobCallback(
 // Returns parameters associated with the Proto (with NPN negotiation) of a HTTP
 // stream.
 std::unique_ptr<base::Value> NetLogHttpStreamProtoCallback(
-    const SSLClientSocket::NextProtoStatus status,
-    const std::string* proto,
+    NextProto negotiated_protocol,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-  dict->SetString("next_proto_status",
-                  SSLClientSocket::NextProtoStatusToString(status));
-  dict->SetString("proto", *proto);
+  dict->SetString("proto",
+                  SSLClientSocket::NextProtoToString(negotiated_protocol));
   return std::move(dict);
 }
 
@@ -199,7 +197,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       spdy_certificate_error_(OK),
       establishing_tunnel_(false),
       was_npn_negotiated_(false),
-      protocol_negotiated_(kProtoUnknown),
+      negotiated_protocol_(kProtoUnknown),
       num_streams_(0),
       spdy_session_direct_(false),
       job_status_(STATUS_RUNNING),
@@ -306,8 +304,8 @@ bool HttpStreamFactoryImpl::Job::was_npn_negotiated() const {
   return was_npn_negotiated_;
 }
 
-NextProto HttpStreamFactoryImpl::Job::protocol_negotiated() const {
-  return protocol_negotiated_;
+NextProto HttpStreamFactoryImpl::Job::negotiated_protocol() const {
+  return negotiated_protocol_;
 }
 
 bool HttpStreamFactoryImpl::Job::using_spdy() const {
@@ -363,9 +361,6 @@ void HttpStreamFactoryImpl::Job::OnStreamReadyCallback() {
   DCHECK(stream_.get());
   DCHECK_NE(job_type_, PRECONNECT);
   DCHECK(!delegate_->for_websockets());
-
-  UMA_HISTOGRAM_TIMES("Net.HttpStreamFactoryJob.StreamReadyCallbackTime",
-                      base::TimeTicks::Now() - job_stream_ready_start_time_);
 
   MaybeCopyConnectionAttemptsFromSocketOrHandle();
 
@@ -587,7 +582,6 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
         }
       } else {
         DCHECK(stream_.get());
-        job_stream_ready_start_time_ = base::TimeTicks::Now();
         base::ThreadTaskRunnerHandle::Get()->PostTask(
             FROM_HERE,
             base::Bind(&Job::OnStreamReadyCallback, ptr_factory_.GetWeakPtr()));
@@ -707,28 +701,8 @@ int HttpStreamFactoryImpl::Job::DoResolveProxy() {
     return OK;
   }
 
-  // TODO(rch): remove this code since Alt-Svc seems to prohibit it.
-  GURL url_for_proxy = origin_url_;
-  // For SPDY via Alt-Svc, set |alternative_service_url_| to
-  // https://<alternative host>:<alternative port>/...
-  // so the proxy resolution works with the actual destination, and so
-  // that the correct socket pool is used.
-  if (IsSpdyAlternative()) {
-    // TODO(rch):  Figure out how to make QUIC iteract with PAC
-    // scripts.  By not re-writing the URL, we will query the PAC script
-    // for the proxy to use to reach the original URL via TCP.  But
-    // the alternate request will be going via UDP to a different port.
-    GURL::Replacements replacements;
-    // new_port needs to be in scope here because GURL::Replacements references
-    // the memory contained by it directly.
-    const std::string new_port = base::UintToString(alternative_service_.port);
-    replacements.SetSchemeStr("https");
-    replacements.SetPortStr(new_port);
-    url_for_proxy = url_for_proxy.ReplaceComponents(replacements);
-  }
-
   return session_->proxy_service()->ResolveProxy(
-      url_for_proxy, request_info_.method, &proxy_info_, io_callback_,
+      origin_url_, request_info_.method, &proxy_info_, io_callback_,
       &pac_request_, session_->params().proxy_delegate, net_log_);
 }
 
@@ -769,10 +743,10 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
 
 bool HttpStreamFactoryImpl::Job::ShouldForceQuic() const {
   return session_->params().enable_quic &&
-         (ContainsKey(session_->params().origins_to_force_quic_on,
-                      HostPortPair()) ||
-          ContainsKey(session_->params().origins_to_force_quic_on,
-                      destination_)) &&
+         (base::ContainsKey(session_->params().origins_to_force_quic_on,
+                            HostPortPair()) ||
+          base::ContainsKey(session_->params().origins_to_force_quic_on,
+                            destination_)) &&
          proxy_info_.is_direct() && origin_url_.SchemeIs("https");
 }
 
@@ -1009,22 +983,17 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   if (ssl_started && (result == OK || IsCertificateError(result))) {
     if (using_quic_ && result == OK) {
       was_npn_negotiated_ = true;
-      protocol_negotiated_ =
-          SSLClientSocket::NextProtoFromString("quic/1+spdy/3");
+      negotiated_protocol_ = kProtoQUIC1SPDY3;
     } else {
       SSLClientSocket* ssl_socket =
           static_cast<SSLClientSocket*>(connection_->socket());
       if (ssl_socket->WasNpnNegotiated()) {
         was_npn_negotiated_ = true;
-        std::string proto;
-        SSLClientSocket::NextProtoStatus status =
-            ssl_socket->GetNextProto(&proto);
-        protocol_negotiated_ = SSLClientSocket::NextProtoFromString(proto);
+        negotiated_protocol_ = ssl_socket->GetNegotiatedProtocol();
         net_log_.AddEvent(
             NetLog::TYPE_HTTP_STREAM_REQUEST_PROTO,
-            base::Bind(&NetLogHttpStreamProtoCallback,
-                       status, &proto));
-        if (protocol_negotiated_ == kProtoHTTP2)
+            base::Bind(&NetLogHttpStreamProtoCallback, negotiated_protocol_));
+        if (negotiated_protocol_ == kProtoHTTP2)
           SwitchToSpdyMode();
       }
     }
@@ -1034,7 +1003,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
       static_cast<ProxyClientSocket*>(connection_->socket());
     if (proxy_socket->IsUsingSpdy()) {
       was_npn_negotiated_ = true;
-      protocol_negotiated_ = proxy_socket->GetProtocolNegotiated();
+      negotiated_protocol_ = proxy_socket->GetProxyNegotiatedProtocol();
       SwitchToSpdyMode();
     }
   }
@@ -1228,10 +1197,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
   }
 
   SSLInfo ssl_info;
-  bool was_npn_negotiated;
-  NextProto protocol_negotiated;
-  if (spdy_session->GetSSLInfo(&ssl_info, &was_npn_negotiated,
-                               &protocol_negotiated)) {
+  if (spdy_session->GetSSLInfo(&ssl_info)) {
     UMA_HISTOGRAM_SPARSE_SLOWLY(
         "Net.Http2SSLCipherSuite",
         SSLConnectionStatusToCipherSuite(ssl_info.connection_status));

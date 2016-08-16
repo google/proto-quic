@@ -41,7 +41,8 @@ BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
       weak_factory_(this) {}
 
 BidirectionalStreamSpdyImpl::~BidirectionalStreamSpdyImpl() {
-  Cancel();
+  // Sends a RST to the remote if the stream is destroyed before it completes.
+  ResetStream();
 }
 
 void BidirectionalStreamSpdyImpl::Start(
@@ -149,15 +150,6 @@ void BidirectionalStreamSpdyImpl::SendvData(
   }
   stream_->SendData(pending_combined_buffer_.get(), total_len,
                     end_stream ? NO_MORE_DATA_TO_SEND : MORE_DATA_TO_SEND);
-}
-
-void BidirectionalStreamSpdyImpl::Cancel() {
-  if (delegate_) {
-    delegate_ = nullptr;
-    // Cancel any pending callback.
-    weak_factory_.InvalidateWeakPtrs();
-  }
-  ResetStream();
 }
 
 NextProto BidirectionalStreamSpdyImpl::GetProtocol() const {

@@ -12,23 +12,18 @@ namespace net {
 
 namespace {
 
-class VerifyCertificateChainAssumingTrustedRootDelegate {
+class VerifyCertificateChainDelegate {
  public:
   static void Verify(const ParsedCertificateList& chain,
-                     const ParsedCertificateList& roots,
+                     const scoped_refptr<TrustAnchor>& trust_anchor,
                      const der::GeneralizedTime& time,
                      bool expected_result) {
-    TrustStore trust_store;
-    ASSERT_EQ(1U, roots.size());
-    trust_store.AddTrustedCertificate(roots[0]);
-
-    ParsedCertificateList full_chain(chain);
-    full_chain.push_back(roots[0]);
+    ASSERT_TRUE(trust_anchor);
 
     SimpleSignaturePolicy signature_policy(1024);
 
-    bool result = VerifyCertificateChainAssumingTrustedRoot(
-        full_chain, trust_store, &signature_policy, time);
+    bool result = VerifyCertificateChain(chain, trust_anchor.get(),
+                                         &signature_policy, time);
 
     ASSERT_EQ(expected_result, result);
   }
@@ -36,9 +31,8 @@ class VerifyCertificateChainAssumingTrustedRootDelegate {
 
 }  // namespace
 
-INSTANTIATE_TYPED_TEST_CASE_P(
-    VerifyCertificateChainAssumingTrustedRoot,
-    VerifyCertificateChainSingleRootTest,
-    VerifyCertificateChainAssumingTrustedRootDelegate);
+INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
+                              VerifyCertificateChainSingleRootTest,
+                              VerifyCertificateChainDelegate);
 
 }  // namespace net

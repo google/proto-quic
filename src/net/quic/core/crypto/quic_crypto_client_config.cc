@@ -62,7 +62,7 @@ QuicCryptoClientConfig::QuicCryptoClientConfig(
 }
 
 QuicCryptoClientConfig::~QuicCryptoClientConfig() {
-  STLDeleteValues(&cached_states_);
+  base::STLDeleteValues(&cached_states_);
 }
 
 QuicCryptoClientConfig::CachedState::CachedState()
@@ -417,6 +417,8 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
     QuicCryptoNegotiatedParameters* out_params,
     CryptoHandshakeMessage* out) const {
   out->set_tag(kCHLO);
+  // TODO(rch): Remove this when we remove:
+  // FLAGS_quic_use_chlo_packet_size
   out->set_minimum_size(kClientHelloMinimumSize);
 
   // Server name indication. We only send SNI if it's a valid domain name, as
@@ -958,7 +960,7 @@ bool QuicCryptoClientConfig::PopulateFromCanonicalConfig(
 
   QuicServerId suffix_server_id(canonical_suffixes_[i], server_id.port(),
                                 server_id.privacy_mode());
-  if (!ContainsKey(canonical_server_map_, suffix_server_id)) {
+  if (!base::ContainsKey(canonical_server_map_, suffix_server_id)) {
     // This is the first host we've seen which matches the suffix, so make it
     // canonical.
     canonical_server_map_[suffix_server_id] = server_id;

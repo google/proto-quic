@@ -418,12 +418,12 @@ void QuicChromiumClientSession::AddObserver(Observer* observer) {
     return;
   }
 
-  DCHECK(!ContainsKey(observers_, observer));
+  DCHECK(!base::ContainsKey(observers_, observer));
   observers_.insert(observer);
 }
 
 void QuicChromiumClientSession::RemoveObserver(Observer* observer) {
-  DCHECK(ContainsKey(observers_, observer));
+  DCHECK(base::ContainsKey(observers_, observer));
   observers_.erase(observer);
 }
 

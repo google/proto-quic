@@ -327,6 +327,12 @@ QuicConnectionLogger::~QuicConnectionLogger() {
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.HeadersStream.EarlyFramesReceived",
                        session_->headers_stream()->num_early_frames_received());
 
+  const QuicConnectionStats& stats = session_->connection()->GetStats();
+  UMA_HISTOGRAM_TIMES("Net.QuicSession.MinRTT",
+                      base::TimeDelta::FromMicroseconds(stats.min_rtt_us));
+  UMA_HISTOGRAM_TIMES("Net.QuicSession.SmoothedRTT",
+                      base::TimeDelta::FromMicroseconds(stats.srtt_us));
+
   if (num_frames_received_ > 0) {
     int duplicate_stream_frame_per_thousand =
         num_duplicate_frames_received_ * 1000 / num_frames_received_;

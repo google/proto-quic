@@ -66,16 +66,17 @@ class VerifyCertificateChainPkitsTestDelegate {
       }
     }
 
-    TrustStore trust_store;
-    trust_store.AddTrustedCertificate(input_chain.back());
+    scoped_refptr<TrustAnchor> trust_anchor =
+        TrustAnchor::CreateFromCertificateNoConstraints(input_chain.back());
+    input_chain.pop_back();
 
     SimpleSignaturePolicy signature_policy(1024);
 
     // Run all tests at the time the PKITS was published.
     der::GeneralizedTime time = {2011, 4, 15, 0, 0, 0};
 
-    return VerifyCertificateChainAssumingTrustedRoot(input_chain, trust_store,
-                                                     &signature_policy, time);
+    return VerifyCertificateChain(input_chain, trust_anchor.get(),
+                                  &signature_policy, time);
   }
 };
 

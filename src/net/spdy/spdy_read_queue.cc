@@ -52,7 +52,7 @@ size_t SpdyReadQueue::Dequeue(char* out, size_t len) {
 }
 
 void SpdyReadQueue::Clear() {
-  STLDeleteElements(&queue_);
+  base::STLDeleteElements(&queue_);
 }
 
 }  // namespace net

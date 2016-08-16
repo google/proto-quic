@@ -69,7 +69,7 @@ TEST_F(QuicInMemoryCacheTest, AddSimpleResponseGetResponse) {
   const QuicInMemoryCache::Response* response =
       cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
   EXPECT_EQ(response_body.size(), response->body().length());
 }
@@ -106,9 +106,9 @@ TEST_F(QuicInMemoryCacheTest, ReadsCacheDir) {
       QuicInMemoryCache::GetInstance()->GetResponse("quic.test.url",
                                                     "/index.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
-  ASSERT_TRUE(ContainsKey(response->headers(), "connection"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), "connection"));
   EXPECT_EQ("close", response->headers().find("connection")->second);
   EXPECT_LT(0U, response->body().length());
 }
@@ -137,9 +137,9 @@ TEST_F(QuicInMemoryCacheTest, UsesOriginalUrl) {
       QuicInMemoryCache::GetInstance()->GetResponse("quic.test.url",
                                                     "/index.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
-  ASSERT_TRUE(ContainsKey(response->headers(), "connection"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), "connection"));
   EXPECT_EQ("close", response->headers().find("connection")->second);
   EXPECT_LT(0U, response->body().length());
 }
@@ -164,20 +164,20 @@ TEST_F(QuicInMemoryCacheTest, DefaultResponse) {
   // Now we should get the default response for the original request.
   response = cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 
   // Now add a set response for / and make sure it is returned
   cache->AddSimpleResponse("www.google.com", "/", 302, "");
   response = cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("302", response->headers().find(":status")->second);
 
   // We should get the default response for other requests.
   response = cache->GetResponse("www.google.com", "/asd");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 }
 
@@ -249,7 +249,7 @@ TEST_F(QuicInMemoryCacheTest, GetServerPushResourcesAndPushResponses) {
     const QuicInMemoryCache::Response* response =
         cache->GetResponse(host, path);
     ASSERT_TRUE(response);
-    ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+    ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
     EXPECT_EQ(push_response_status[i++],
               response->headers().find(":status")->second);
     EXPECT_EQ(push_resource.body, response->body());

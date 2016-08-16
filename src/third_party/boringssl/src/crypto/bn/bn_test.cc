@@ -1123,8 +1123,7 @@ static bool TestNegativeZero(BN_CTX *ctx) {
   ScopedBIGNUM a(BN_new());
   ScopedBIGNUM b(BN_new());
   ScopedBIGNUM c(BN_new());
-  ScopedBIGNUM d(BN_new());
-  if (!a || !b || !c || !d) {
+  if (!a || !b || !c) {
     return false;
   }
 
@@ -1138,33 +1137,65 @@ static bool TestNegativeZero(BN_CTX *ctx) {
     return false;
   }
   if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
-    fprintf(stderr, "Multiplication test failed!\n");
+    fprintf(stderr, "Multiplication test failed.\n");
     return false;
   }
 
-  // Test that BN_div never gives negative zero in the quotient.
-  if (!BN_set_word(a.get(), 1) ||
-      !BN_set_word(b.get(), 2)) {
-    return false;
+  for (int consttime = 0; consttime < 2; consttime++) {
+    ScopedBIGNUM numerator(BN_new()), denominator(BN_new());
+    if (!numerator || !denominator) {
+      return false;
+    }
+
+    if (consttime) {
+      BN_set_flags(numerator.get(), BN_FLG_CONSTTIME);
+      BN_set_flags(denominator.get(), BN_FLG_CONSTTIME);
+    }
+
+    // Test that BN_div never gives negative zero in the quotient.
+    if (!BN_set_word(numerator.get(), 1) ||
+        !BN_set_word(denominator.get(), 2)) {
+      return false;
+    }
+    BN_set_negative(numerator.get(), 1);
+    if (!BN_div(a.get(), b.get(), numerator.get(), denominator.get(), ctx)) {
+      return false;
+    }
+    if (!BN_is_zero(a.get()) || BN_is_negative(a.get())) {
+      fprintf(stderr, "Incorrect quotient (consttime = %d).\n", consttime);
+      return false;
+    }
+
+    // Test that BN_div never gives negative zero in the remainder.
+    if (!BN_set_word(denominator.get(), 1)) {
+      return false;
+    }
+    if (!BN_div(a.get(), b.get(), numerator.get(), denominator.get(), ctx)) {
+      return false;
+    }
+    if (!BN_is_zero(b.get()) || BN_is_negative(b.get())) {
+      fprintf(stderr, "Incorrect remainder (consttime = %d).\n", consttime);
+      return false;
+    }
   }
+
+  // Test that BN_set_negative will not produce a negative zero.
+  BN_zero(a.get());
   BN_set_negative(a.get(), 1);
-  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-    return false;
-  }
-  if (!BN_is_zero(d.get()) || BN_is_negative(d.get())) {
-    fprintf(stderr, "Division test failed!\n");
+  if (BN_is_negative(a.get())) {
+    fprintf(stderr, "BN_set_negative produced a negative zero.\n");
     return false;
   }
 
-  // Test that BN_div never gives negative zero in the remainder.
-  if (!BN_set_word(b.get(), 1)) {
-    return false;
-  }
-  if (!BN_div(d.get(), c.get(), a.get(), b.get(), ctx)) {
-    return false;
-  }
-  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
-    fprintf(stderr, "Division test failed!\n");
+  // Test that forcibly creating a negative zero does not break |BN_bn2hex| or
+  // |BN_bn2dec|.
+  a->neg = 1;
+  ScopedOpenSSLString dec(BN_bn2dec(a.get()));
+  ScopedOpenSSLString hex(BN_bn2hex(a.get()));
+  if (!dec || !hex ||
+      strcmp(dec.get(), "-0") != 0 ||
+      strcmp(hex.get(), "-0") != 0) {
+    fprintf(stderr, "BN_bn2dec or BN_bn2hex failed with negative zero.\n");
     return false;
   }
 
@@ -1183,39 +1214,43 @@ static bool TestBadModulus(BN_CTX *ctx) {
   BN_zero(zero.get());
 
   if (BN_div(a.get(), b.get(), BN_value_one(), zero.get(), ctx)) {
-    fprintf(stderr, "Division by zero succeeded!\n");
+    fprintf(stderr, "Division by zero unexpectedly succeeded.\n");
     return false;
   }
   ERR_clear_error();
 
   if (BN_mod_mul(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx)) {
-    fprintf(stderr, "BN_mod_mul with zero modulus succeeded!\n");
+    fprintf(stderr, "BN_mod_mul with zero modulus unexpectedly succeeded.\n");
     return false;
   }
   ERR_clear_error();
 
   if (BN_mod_exp(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx)) {
-    fprintf(stderr, "BN_mod_exp with zero modulus succeeded!\n");
+    fprintf(stderr, "BN_mod_exp with zero modulus unexpectedly succeeded.\n");
     return 0;
   }
   ERR_clear_error();
 
   if (BN_mod_exp_mont(a.get(), BN_value_one(), BN_value_one(), zero.get(), ctx,
                       NULL)) {
-    fprintf(stderr, "BN_mod_exp_mont with zero modulus succeeded!\n");
+    fprintf(stderr,
+            "BN_mod_exp_mont with zero modulus unexpectedly succeeded.\n");
     return 0;
   }
   ERR_clear_error();
 
   if (BN_mod_exp_mont_consttime(a.get(), BN_value_one(), BN_value_one(),
                                 zero.get(), ctx, nullptr)) {
-    fprintf(stderr, "BN_mod_exp_mont_consttime with zero modulus succeeded!\n");
+    fprintf(stderr,
+            "BN_mod_exp_mont_consttime with zero modulus unexpectedly "
+            "succeeded.\n");
     return 0;
   }
   ERR_clear_error();
 
   if (BN_MONT_CTX_set(mont.get(), zero.get(), ctx)) {
-    fprintf(stderr, "BN_MONT_CTX_set succeeded for zero modulus!\n");
+    fprintf(stderr,
+            "BN_MONT_CTX_set unexpectedly succeeded for zero modulus.\n");
     return false;
   }
   ERR_clear_error();
@@ -1227,21 +1262,25 @@ static bool TestBadModulus(BN_CTX *ctx) {
   }
 
   if (BN_MONT_CTX_set(mont.get(), b.get(), ctx)) {
-    fprintf(stderr, "BN_MONT_CTX_set succeeded for even modulus!\n");
+    fprintf(stderr,
+            "BN_MONT_CTX_set unexpectedly succeeded for even modulus.\n");
     return false;
   }
   ERR_clear_error();
 
   if (BN_mod_exp_mont(a.get(), BN_value_one(), BN_value_one(), b.get(), ctx,
                       NULL)) {
-    fprintf(stderr, "BN_mod_exp_mont with even modulus succeeded!\n");
+    fprintf(stderr,
+            "BN_mod_exp_mont with even modulus unexpectedly succeeded.\n");
     return 0;
   }
   ERR_clear_error();
 
   if (BN_mod_exp_mont_consttime(a.get(), BN_value_one(), BN_value_one(),
                                 b.get(), ctx, nullptr)) {
-    fprintf(stderr, "BN_mod_exp_mont_consttime with even modulus succeeded!\n");
+    fprintf(stderr,
+            "BN_mod_exp_mont_consttime with even modulus unexpectedly "
+            "succeeded.\n");
     return 0;
   }
   ERR_clear_error();

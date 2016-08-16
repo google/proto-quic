@@ -46,12 +46,14 @@ void LogSCTOriginToUMA(ct::SignedCertificateTimestamp::Origin origin) {
 // * When SCTs are available, how many are available per connection.
 void LogNumSCTsToUMA(const ct::CTVerifyResult& result) {
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.CertificateTransparency.SCTsPerConnection",
-                              result.invalid_scts.size() +
-                                  result.verified_scts.size() +
-                                  result.unknown_logs_scts.size(),
-                              1,
-                              10,
-                              11);
+                              result.scts.size(), 1, 10, 11);
+}
+
+void AddSCTAndLogStatus(scoped_refptr<ct::SignedCertificateTimestamp> sct,
+                        ct::SCTVerifyStatus status,
+                        SignedCertificateTimestampAndStatusList* sct_list) {
+  LogSCTStatusToUMA(status);
+  sct_list->push_back(SignedCertificateTimestampAndStatus(sct, status));
 }
 
 }  // namespace
@@ -82,9 +84,7 @@ int MultiLogCTVerifier::Verify(
   DCHECK(cert);
   DCHECK(result);
 
-  result->verified_scts.clear();
-  result->invalid_scts.clear();
-  result->unknown_logs_scts.clear();
+  result->scts.clear();
 
   bool has_verified_scts = false;
 
@@ -191,8 +191,7 @@ bool MultiLogCTVerifier::VerifySingleSCT(
   const auto& it = logs_.find(sct->log_id);
   if (it == logs_.end()) {
     DVLOG(1) << "SCT does not match any known log.";
-    result->unknown_logs_scts.push_back(sct);
-    LogSCTStatusToUMA(ct::SCT_STATUS_LOG_UNKNOWN);
+    AddSCTAndLogStatus(sct, ct::SCT_STATUS_LOG_UNKNOWN, &(result->scts));
     return false;
   }
 
@@ -200,21 +199,18 @@ bool MultiLogCTVerifier::VerifySingleSCT(
 
   if (!it->second->Verify(expected_entry, *sct.get())) {
     DVLOG(1) << "Unable to verify SCT signature.";
-    result->invalid_scts.push_back(sct);
-    LogSCTStatusToUMA(ct::SCT_STATUS_INVALID);
+    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID, &(result->scts));
     return false;
   }
 
   // SCT verified ok, just make sure the timestamp is legitimate.
   if (sct->timestamp > base::Time::Now()) {
     DVLOG(1) << "SCT is from the future!";
-    result->invalid_scts.push_back(sct);
-    LogSCTStatusToUMA(ct::SCT_STATUS_INVALID);
+    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID, &(result->scts));
     return false;
   }
 
-  LogSCTStatusToUMA(ct::SCT_STATUS_OK);
-  result->verified_scts.push_back(sct);
+  AddSCTAndLogStatus(sct, ct::SCT_STATUS_OK, &(result->scts));
   if (observer_)
     observer_->OnSCTVerified(cert, sct.get());
   return true;

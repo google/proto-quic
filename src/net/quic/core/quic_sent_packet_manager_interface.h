@@ -152,6 +152,10 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
   // TCP segments on the default path.
   virtual QuicPacketCount GetSlowStartThresholdInTcpMss() const = 0;
 
+  // Returns debugging information about the current state of the
+  // congestion controller.
+  virtual std::string GetDebugState() const = 0;
+
   // No longer retransmit data for |stream_id| on all paths.
   virtual void CancelRetransmissionsForStream(QuicStreamId stream_id) = 0;
 
@@ -181,6 +185,10 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
   // path.
   virtual size_t GetConsecutiveRtoCount() const = 0;
   virtual size_t GetConsecutiveTlpCount() const = 0;
+
+  // Signals to the congestion controller that the connection has no outstanding
+  // data to send.
+  virtual void OnApplicationLimited() = 0;
 };
 
 }  // namespace net

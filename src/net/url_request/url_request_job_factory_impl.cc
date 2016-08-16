@@ -36,7 +36,7 @@ bool URLRequestJobFactoryImpl::SetProtocolHandler(
     return true;
   }
 
-  if (ContainsKey(protocol_handler_map_, scheme))
+  if (base::ContainsKey(protocol_handler_map_, scheme))
     return false;
   protocol_handler_map_[scheme] = std::move(protocol_handler);
   return true;
@@ -76,8 +76,8 @@ URLRequestJob* URLRequestJobFactoryImpl::MaybeInterceptResponse(
 bool URLRequestJobFactoryImpl::IsHandledProtocol(
     const std::string& scheme) const {
   DCHECK(CalledOnValidThread());
-  return ContainsKey(protocol_handler_map_, scheme) ||
-      URLRequestJobManager::GetInstance()->SupportsScheme(scheme);
+  return base::ContainsKey(protocol_handler_map_, scheme) ||
+         URLRequestJobManager::GetInstance()->SupportsScheme(scheme);
 }
 
 bool URLRequestJobFactoryImpl::IsHandledURL(const GURL& url) const {

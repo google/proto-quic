@@ -20,6 +20,7 @@ import (
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"flag"
@@ -59,7 +60,27 @@ var (
 	deterministic      = flag.Bool("deterministic", false, "If true, uses a deterministic PRNG in the runner.")
 	allowUnimplemented = flag.Bool("allow-unimplemented", false, "If true, report pass even if some tests are unimplemented.")
 	looseErrors        = flag.Bool("loose-errors", false, "If true, allow shims to report an untranslated error code.")
+	shimConfigFile     = flag.String("shim-config", "", "A config file to use to configure the tests for this shim.")
+	includeDisabled    = flag.Bool("include-disabled", false, "If true, also runs disabled tests.")
 )
+
+// ShimConfigurations is used with the “json” package and represents a shim
+// config file.
+type ShimConfiguration struct {
+	// DisabledTests maps from a glob-based pattern to a freeform string.
+	// The glob pattern is used to exclude tests from being run and the
+	// freeform string is unparsed but expected to explain why the test is
+	// disabled.
+	DisabledTests map[string]string
+
+	// ErrorMap maps from expected error strings to the correct error
+	// string for the shim in question. For example, it might map
+	// “:NO_SHARED_CIPHER:” (a BoringSSL error string) to something
+	// like “SSL_ERROR_NO_CYPHER_OVERLAP”.
+	ErrorMap map[string]string
+}
+
+var shimConfig ShimConfiguration
 
 type testCert int
 
@@ -719,6 +740,18 @@ func acceptOrWait(listener net.Listener, waitChan chan error) (net.Conn, error) 
 	}
 }
 
+func translateExpectedError(errorStr string) string {
+	if translated, ok := shimConfig.ErrorMap[errorStr]; ok {
+		return translated
+	}
+
+	if *looseErrors {
+		return ""
+	}
+
+	return errorStr
+}
+
 func runTest(test *testCase, shimPath string, mallocNumToFail int64) error {
 	if !test.shouldFail && (len(test.expectedError) > 0 || len(test.expectedLocalError) > 0) {
 		panic("Error expected without shouldFail in " + test.name)
@@ -912,8 +945,8 @@ func runTest(test *testCase, shimPath string, mallocNumToFail int64) error {
 	}
 
 	failed := err != nil || childErr != nil
-	correctFailure := len(test.expectedError) == 0 || strings.Contains(stderr, test.expectedError) ||
-		(*looseErrors && strings.Contains(stderr, "UNTRANSLATED_ERROR"))
+	expectedError := translateExpectedError(test.expectedError)
+	correctFailure := len(expectedError) == 0 || strings.Contains(stderr, expectedError)
 
 	localError := "none"
 	if err != nil {
@@ -936,7 +969,7 @@ func runTest(test *testCase, shimPath string, mallocNumToFail int64) error {
 		case !failed && test.shouldFail:
 			msg = "unexpected success"
 		case failed && !correctFailure:
-			msg = "bad error (wanted '" + test.expectedError + "' / '" + test.expectedLocalError + "')"
+			msg = "bad error (wanted '" + expectedError + "' / '" + test.expectedLocalError + "')"
 		default:
 			panic("internal error")
 		}
@@ -1430,7 +1463,7 @@ func addBasicTests() {
 				},
 			},
 			shouldFail:    true,
-			expectedError: ":DECODE_ERROR:",
+			expectedError: ":PEER_DID_NOT_RETURN_A_CERTIFICATE:",
 		},
 		{
 			name:             "TLSFatalBadPackets",
@@ -1925,22 +1958,44 @@ func addBasicTests() {
 			expectedError:    ":TOO_MANY_EMPTY_FRAGMENTS:",
 		},
 		{
-			name:              "SendWarningAlerts-Pass",
+			name: "SendWarningAlerts-Pass",
+			config: Config{
+				MaxVersion: VersionTLS12,
+			},
 			sendWarningAlerts: 4,
 		},
 		{
-			protocol:          dtls,
-			name:              "SendWarningAlerts-DTLS-Pass",
+			protocol: dtls,
+			name:     "SendWarningAlerts-DTLS-Pass",
+			config: Config{
+				MaxVersion: VersionTLS12,
+			},
 			sendWarningAlerts: 4,
 		},
 		{
-			name:              "SendWarningAlerts",
+			name: "SendWarningAlerts-TLS13",
+			config: Config{
+				MaxVersion: VersionTLS13,
+			},
+			sendWarningAlerts:  4,
+			shouldFail:         true,
+			expectedError:      ":BAD_ALERT:",
+			expectedLocalError: "remote error: error decoding message",
+		},
+		{
+			name: "SendWarningAlerts",
+			config: Config{
+				MaxVersion: VersionTLS12,
+			},
 			sendWarningAlerts: 5,
 			shouldFail:        true,
 			expectedError:     ":TOO_MANY_WARNING_ALERTS:",
 		},
 		{
-			name:              "SendWarningAlerts-Async",
+			name: "SendWarningAlerts-Async",
+			config: Config{
+				MaxVersion: VersionTLS12,
+			},
 			sendWarningAlerts: 5,
 			flags:             []string{"-async"},
 			shouldFail:        true,
@@ -3391,39 +3446,65 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 		if config.protocol == dtls && !vers.hasDTLS {
 			continue
 		}
-		tests = append(tests, testCase{
-			testType: clientTest,
-			name:     "CertificateVerificationSucceed-" + vers.name,
-			config: Config{
-				MaxVersion: vers.version,
-			},
-			flags: []string{
-				"-verify-peer",
-			},
-		})
-		tests = append(tests, testCase{
-			testType: clientTest,
-			name:     "CertificateVerificationFail-" + vers.name,
-			config: Config{
-				MaxVersion: vers.version,
-			},
-			flags: []string{
-				"-verify-fail",
-				"-verify-peer",
-			},
-			shouldFail:    true,
-			expectedError: ":CERTIFICATE_VERIFY_FAILED:",
-		})
+		for _, testType := range []testType{clientTest, serverTest} {
+			suffix := "-Client"
+			if testType == serverTest {
+				suffix = "-Server"
+			}
+			suffix += "-" + vers.name
+
+			flag := "-verify-peer"
+			if testType == serverTest {
+				flag = "-require-any-client-certificate"
+			}
+
+			tests = append(tests, testCase{
+				testType: testType,
+				name:     "CertificateVerificationSucceed" + suffix,
+				config: Config{
+					MaxVersion:   vers.version,
+					Certificates: []Certificate{rsaCertificate},
+				},
+				flags: []string{
+					flag,
+					"-expect-verify-result",
+				},
+				// TODO(davidben): Enable this when resumption is
+				// implemented in TLS 1.3.
+				resumeSession: vers.version != VersionTLS13,
+			})
+			tests = append(tests, testCase{
+				testType: testType,
+				name:     "CertificateVerificationFail" + suffix,
+				config: Config{
+					MaxVersion:   vers.version,
+					Certificates: []Certificate{rsaCertificate},
+				},
+				flags: []string{
+					flag,
+					"-verify-fail",
+				},
+				shouldFail:    true,
+				expectedError: ":CERTIFICATE_VERIFY_FAILED:",
+			})
+		}
+
+		// By default, the client is in a soft fail mode where the peer
+		// certificate is verified but failures are non-fatal.
 		tests = append(tests, testCase{
 			testType: clientTest,
 			name:     "CertificateVerificationSoftFail-" + vers.name,
 			config: Config{
-				MaxVersion: vers.version,
+				MaxVersion:   vers.version,
+				Certificates: []Certificate{rsaCertificate},
 			},
 			flags: []string{
 				"-verify-fail",
 				"-expect-verify-result",
 			},
+			// TODO(davidben): Enable this when resumption is
+			// implemented in TLS 1.3.
+			resumeSession: vers.version != VersionTLS13,
 		})
 	}
 
@@ -3683,6 +3764,7 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 		tests = append(tests, testCase{
 			name: "Shutdown-Shim",
 			config: Config{
+				MaxVersion: VersionTLS12,
 				Bugs: ProtocolBugs{
 					ExpectCloseNotify: true,
 				},
@@ -4977,6 +5059,9 @@ func addRenegotiationTests() {
 			"-expect-total-renegotiations", "1",
 		},
 	})
+
+	// Test that the server may switch ciphers on renegotiation without
+	// problems.
 	testCases = append(testCases, testCase{
 		name:        "Renegotiate-Client-SwitchCiphers",
 		renegotiate: 1,
@@ -5003,6 +5088,27 @@ func addRenegotiationTests() {
 			"-expect-total-renegotiations", "1",
 		},
 	})
+
+	// Test that the server may not switch versions on renegotiation.
+	testCases = append(testCases, testCase{
+		name: "Renegotiate-Client-SwitchVersion",
+		config: Config{
+			MaxVersion: VersionTLS12,
+			// Pick a cipher which exists at both versions.
+			CipherSuites: []uint16{TLS_RSA_WITH_AES_128_CBC_SHA},
+			Bugs: ProtocolBugs{
+				NegotiateVersionOnRenego: VersionTLS11,
+			},
+		},
+		renegotiate: 1,
+		flags: []string{
+			"-renegotiate-freely",
+			"-expect-total-renegotiations", "1",
+		},
+		shouldFail:    true,
+		expectedError: ":WRONG_SSL_VERSION:",
+	})
+
 	testCases = append(testCases, testCase{
 		name:        "Renegotiate-SameClientVersion",
 		renegotiate: 1,
@@ -5660,8 +5766,11 @@ func addSignatureAlgorithmTests() {
 			"-cert-file", path.Join(*resourceDir, rsaCertificateFile),
 			"-key-file", path.Join(*resourceDir, rsaKeyFile),
 		},
-		shouldFail:    true,
-		expectedError: ":NO_COMMON_SIGNATURE_ALGORITHMS:",
+		shouldFail: true,
+		// An empty CertificateRequest signature algorithm list is a
+		// syntax error in TLS 1.3.
+		expectedError:      ":DECODE_ERROR:",
+		expectedLocalError: "remote error: error decoding message",
 	})
 
 	testCases = append(testCases, testCase{
@@ -6438,8 +6547,9 @@ func addCustomExtensionTests() {
 				CustomExtension: expectedContents,
 			},
 		},
-		shouldFail:    true,
-		expectedError: ":UNEXPECTED_EXTENSION:",
+		shouldFail:         true,
+		expectedError:      ":UNEXPECTED_EXTENSION:",
+		expectedLocalError: "remote error: unsupported extension",
 	})
 	testCases = append(testCases, testCase{
 		testType: clientTest,
@@ -6450,8 +6560,37 @@ func addCustomExtensionTests() {
 				CustomExtension: expectedContents,
 			},
 		},
-		shouldFail:    true,
-		expectedError: ":UNEXPECTED_EXTENSION:",
+		shouldFail:         true,
+		expectedError:      ":UNEXPECTED_EXTENSION:",
+		expectedLocalError: "remote error: unsupported extension",
+	})
+
+	// Test a known but unoffered extension from the server.
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "UnofferedExtension-Client",
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				SendALPN: "alpn",
+			},
+		},
+		shouldFail:         true,
+		expectedError:      ":UNEXPECTED_EXTENSION:",
+		expectedLocalError: "remote error: unsupported extension",
+	})
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "UnofferedExtension-Client-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendALPN: "alpn",
+			},
+		},
+		shouldFail:         true,
+		expectedError:      ":UNEXPECTED_EXTENSION:",
+		expectedLocalError: "remote error: unsupported extension",
 	})
 }
 
@@ -7897,6 +8036,19 @@ func main() {
 	testChan := make(chan *testCase, *numWorkers)
 	doneChan := make(chan *testOutput)
 
+	if len(*shimConfigFile) != 0 {
+		encoded, err := ioutil.ReadFile(*shimConfigFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Couldn't read config file %q: %s\n", *shimConfigFile, err)
+			os.Exit(1)
+		}
+
+		if err := json.Unmarshal(encoded, &shimConfig); err != nil {
+			fmt.Fprintf(os.Stderr, "Couldn't decode config file %q: %s\n", *shimConfigFile, err)
+			os.Exit(1)
+		}
+	}
+
 	go statusPrinter(doneChan, statusChan, len(testCases))
 
 	for i := 0; i < *numWorkers; i++ {
@@ -7916,6 +8068,21 @@ func main() {
 			}
 		}
 
+		if !*includeDisabled {
+			for pattern := range shimConfig.DisabledTests {
+				isDisabled, err := filepath.Match(pattern, testCases[i].name)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error matching pattern %q from config file: %s\n", pattern, err)
+					os.Exit(1)
+				}
+
+				if isDisabled {
+					matched = false
+					break
+				}
+			}
+		}
+
 		if matched {
 			foundTest = true
 			testChan <- &testCases[i]
@@ -7923,7 +8090,7 @@ func main() {
 	}
 
 	if !foundTest {
-		fmt.Fprintf(os.Stderr, "No tests matched %q\n", *testToRun)
+		fmt.Fprintf(os.Stderr, "No tests run\n")
 		os.Exit(1)
 	}
 

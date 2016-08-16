@@ -4,6 +4,7 @@
 
 #include "base/debug/task_annotator.h"
 
+#include "base/debug/activity_tracker.h"
 #include "base/debug/alias.h"
 #include "base/pending_task.h"
 #include "base/trace_event/trace_event.h"
@@ -28,6 +29,8 @@ void TaskAnnotator::DidQueueTask(const char* queue_function,
 
 void TaskAnnotator::RunTask(const char* queue_function,
                             const PendingTask& pending_task) {
+  ScopedTaskRunActivity task_activity(pending_task);
+
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
   tracked_objects::Duration queue_duration =

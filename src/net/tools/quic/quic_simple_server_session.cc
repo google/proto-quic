@@ -35,7 +35,9 @@ QuicSimpleServerSession::QuicSimpleServerSession(
                             compressed_certs_cache),
       highest_promised_stream_id_(0) {}
 
-QuicSimpleServerSession::~QuicSimpleServerSession() {}
+QuicSimpleServerSession::~QuicSimpleServerSession() {
+  delete connection();
+}
 
 QuicCryptoServerStreamBase*
 QuicSimpleServerSession::CreateQuicCryptoServerStream(

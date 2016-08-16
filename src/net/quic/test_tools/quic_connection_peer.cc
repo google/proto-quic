@@ -26,9 +26,7 @@ void QuicConnectionPeer::SetSendAlgorithm(
     QuicConnection* connection,
     QuicPathId path_id,
     SendAlgorithmInterface* send_algorithm) {
-  GetSentPacketManager(connection, path_id)
-      ->send_algorithm_.reset(send_algorithm);
-  GetSentPacketManager(connection, path_id)->using_inline_pacing_ = false;
+  GetSentPacketManager(connection, path_id)->SetSendAlgorithm(send_algorithm);
 }
 
 // static
@@ -36,8 +34,7 @@ void QuicConnectionPeer::SetLossAlgorithm(
     QuicConnection* connection,
     QuicPathId path_id,
     LossDetectionInterface* loss_algorithm) {
-  GetSentPacketManager(connection, path_id)
-      ->loss_algorithm_.reset(loss_algorithm);
+  GetSentPacketManager(connection, path_id)->loss_algorithm_ = loss_algorithm;
 }
 
 // static
@@ -158,6 +155,13 @@ bool QuicConnectionPeer::IsMultipathEnabled(QuicConnection* connection) {
 void QuicConnectionPeer::SwapCrypters(QuicConnection* connection,
                                       QuicFramer* framer) {
   QuicFramerPeer::SwapCrypters(framer, &connection->framer_);
+}
+
+// static
+void QuicConnectionPeer::SetCurrentPacket(QuicConnection* connection,
+                                          base::StringPiece current_packet) {
+  connection->current_packet_data_ = current_packet.data();
+  connection->last_size_ = current_packet.size();
 }
 
 // static

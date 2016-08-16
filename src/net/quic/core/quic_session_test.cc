@@ -119,6 +119,8 @@ class TestSession : public QuicSpdySession {
     Initialize();
   }
 
+  ~TestSession() override { delete connection(); }
+
   TestCryptoStream* GetCryptoStream() override { return &crypto_stream_; }
 
   TestStream* CreateOutgoingDynamicStream(SpdyPriority priority) override {
@@ -209,7 +211,6 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
                                                perspective,
                                                SupportedVersions(GetParam()))),
         session_(connection_) {
-    FLAGS_quic_always_log_bugs_for_tests = true;
     session_.config()->SetInitialStreamFlowControlWindowToSend(
         kInitialStreamFlowControlWindowForTest);
     session_.config()->SetInitialSessionFlowControlWindowToSend(
@@ -249,7 +250,7 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
 
   void CheckClosedStreams() {
     for (QuicStreamId i = kCryptoStreamId; i < 100; i++) {
-      if (!ContainsKey(closed_streams_, i)) {
+      if (!base::ContainsKey(closed_streams_, i)) {
         EXPECT_FALSE(session_.IsClosedStream(i)) << " stream id: " << i;
       } else {
         EXPECT_TRUE(session_.IsClosedStream(i)) << " stream id: " << i;
@@ -280,7 +281,7 @@ class QuicSessionTestServer : public QuicSessionTestBase {
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicSessionTestServer,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSessionTestServer, PeerAddress) {
   EXPECT_EQ(IPEndPoint(Loopback4(), kTestPort), session_.peer_address());
@@ -379,9 +380,8 @@ TEST_P(QuicSessionTestServer, DebugDFatalIfMarkingClosedStreamWriteBlocked) {
   // Close the stream.
   EXPECT_CALL(*connection_, SendRstStream(closed_stream_id, _, _));
   stream2->Reset(QUIC_BAD_APPLICATION_PAYLOAD);
-  EXPECT_DEBUG_DFATAL(
-      session_.MarkConnectionLevelWriteBlocked(closed_stream_id),
-      "Marking unknown stream 2 blocked.");
+  EXPECT_QUIC_BUG(session_.MarkConnectionLevelWriteBlocked(closed_stream_id),
+                  "Marking unknown stream 2 blocked.");
 }
 
 TEST_P(QuicSessionTestServer, OnCanWrite) {
@@ -490,6 +490,8 @@ TEST_P(QuicSessionTestServer, TestBatchedWrites) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
+  FLAGS_quic_enable_app_limited_check = true;
+
   // Encryption needs to be established before data can be sent.
   CryptoHandshakeMessage msg;
   session_.GetCryptoStream()->OnHandshakeMessage(msg);
@@ -511,6 +513,7 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
       .WillRepeatedly(Return(QuicTime::Delta::Zero()));
   EXPECT_CALL(*send_algorithm, GetCongestionWindow())
       .WillRepeatedly(Return(kMaxPacketSize * 10));
+  EXPECT_CALL(*send_algorithm, InRecovery()).WillRepeatedly(Return(false));
   EXPECT_CALL(*stream2, OnCanWrite())
       .WillOnce(testing::IgnoreResult(
           Invoke(CreateFunctor(&TestSession::SendStreamData,
@@ -531,11 +534,14 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
   EXPECT_CALL(*writer, WritePacket(_, _, _, _, _))
       .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 0)));
   EXPECT_CALL(*send_algorithm, OnPacketSent(_, _, _, _, _));
+  EXPECT_CALL(*send_algorithm, OnApplicationLimited(_));
   session_.OnCanWrite();
   EXPECT_FALSE(session_.WillingAndAbleToWrite());
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
+  FLAGS_quic_enable_app_limited_check = true;
+
   InSequence s;
 
   // Drive congestion control manually.
@@ -576,8 +582,39 @@ TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
   EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Zero()));
   EXPECT_CALL(*stream4, OnCanWrite());
+  EXPECT_CALL(*send_algorithm, OnApplicationLimited(_));
   session_.OnCanWrite();
   EXPECT_FALSE(session_.WillingAndAbleToWrite());
+}
+
+TEST_P(QuicSessionTestServer, OnCanWriteWriterBlocks) {
+  FLAGS_quic_enable_app_limited_check = true;
+
+  // Drive congestion control manually in order to ensure that
+  // application-limited signaling is handled correctly.
+  MockSendAlgorithm* send_algorithm = new StrictMock<MockSendAlgorithm>;
+  QuicConnectionPeer::SetSendAlgorithm(session_.connection(), kDefaultPathId,
+                                       send_algorithm);
+  EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
+      .WillRepeatedly(Return(QuicTime::Delta::Zero()));
+
+  // Drive packet writer manually.
+  MockPacketWriter* writer = static_cast<MockPacketWriter*>(
+      QuicConnectionPeer::GetWriter(session_.connection()));
+  EXPECT_CALL(*writer, IsWriteBlocked()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*writer, IsWriteBlockedDataBuffered())
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*writer, WritePacket(_, _, _, _, _)).Times(0);
+
+  TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
+
+  session_.MarkConnectionLevelWriteBlocked(stream2->id());
+
+  EXPECT_CALL(*stream2, OnCanWrite()).Times(0);
+  EXPECT_CALL(*send_algorithm, OnApplicationLimited(_)).Times(0);
+
+  session_.OnCanWrite();
+  EXPECT_TRUE(session_.WillingAndAbleToWrite());
 }
 
 TEST_P(QuicSessionTestServer, BufferedHandshake) {
@@ -642,6 +679,16 @@ TEST_P(QuicSessionTestServer, OnCanWriteWithClosedStream) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteLimitsNumWritesIfFlowControlBlocked) {
+  FLAGS_quic_enable_app_limited_check = true;
+
+  // Drive congestion control manually in order to ensure that
+  // application-limited signaling is handled correctly.
+  MockSendAlgorithm* send_algorithm = new StrictMock<MockSendAlgorithm>;
+  QuicConnectionPeer::SetSendAlgorithm(session_.connection(), kDefaultPathId,
+                                       send_algorithm);
+  EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
+      .WillRepeatedly(Return(QuicTime::Delta::Zero()));
+
   // Ensure connection level flow control blockage.
   QuicFlowControllerPeer::SetSendWindowOffset(session_.flow_controller(), 0);
   EXPECT_TRUE(session_.flow_controller()->IsBlocked());
@@ -666,6 +713,10 @@ TEST_P(QuicSessionTestServer, OnCanWriteLimitsNumWritesIfFlowControlBlocked) {
   TestHeadersStream* headers_stream = new TestHeadersStream(&session_);
   QuicSpdySessionPeer::SetHeadersStream(&session_, headers_stream);
   EXPECT_CALL(*headers_stream, OnCanWrite());
+
+  // After the crypto and header streams perform a write, the connection will be
+  // blocked by the flow control, hence it should become application-limited.
+  EXPECT_CALL(*send_algorithm, OnApplicationLimited(_));
 
   session_.OnCanWrite();
   EXPECT_FALSE(session_.WillingAndAbleToWrite());
@@ -1127,7 +1178,7 @@ class QuicSessionTestClient : public QuicSessionTestBase {
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicSessionTestClient,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSessionTestClient, AvailableStreamsClient) {
   ASSERT_TRUE(session_.GetOrCreateDynamicStream(6) != nullptr);

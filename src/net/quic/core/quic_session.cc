@@ -40,7 +40,7 @@ QuicSession::QuicSession(QuicConnection* connection, const QuicConfig& config)
       num_draining_incoming_streams_(0),
       num_locally_closed_incoming_streams_highest_offset_(0),
       error_(QUIC_NO_ERROR),
-      flow_controller_(connection_.get(),
+      flow_controller_(connection_,
                        0,
                        perspective(),
                        kMinimumFlowControlSendWindow,
@@ -57,8 +57,8 @@ void QuicSession::Initialize() {
 }
 
 QuicSession::~QuicSession() {
-  STLDeleteElements(&closed_streams_);
-  STLDeleteValues(&dynamic_stream_map_);
+  base::STLDeleteElements(&closed_streams_);
+  base::STLDeleteValues(&dynamic_stream_map_);
 
   DLOG_IF(WARNING, num_locally_closed_incoming_streams_highest_offset() >
                        max_open_incoming_streams_)
@@ -90,7 +90,7 @@ void QuicSession::OnStreamFrame(const QuicStreamFrame& frame) {
 }
 
 void QuicSession::OnRstStream(const QuicRstStreamFrame& frame) {
-  if (ContainsKey(static_stream_map_, frame.stream_id)) {
+  if (base::ContainsKey(static_stream_map_, frame.stream_id)) {
     connection()->CloseConnection(
         QUIC_INVALID_STREAM_ID, "Attempt to reset a static stream",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -185,7 +185,7 @@ void QuicSession::OnCanWrite() {
   }
 
   QuicConnection::ScopedPacketBundler ack_bundler(
-      connection_.get(), QuicConnection::SEND_ACK_IF_QUEUED);
+      connection_, QuicConnection::SEND_ACK_IF_QUEUED);
   for (size_t i = 0; i < num_writes; ++i) {
     if (!(write_blocked_streams_.HasWriteBlockedCryptoOrHeadersStream() ||
           write_blocked_streams_.HasWriteBlockedDataStreams())) {
@@ -270,7 +270,7 @@ QuicConsumedData QuicSession::WritevData(
 void QuicSession::SendRstStream(QuicStreamId id,
                                 QuicRstStreamErrorCode error,
                                 QuicStreamOffset bytes_written) {
-  if (ContainsKey(static_stream_map_, id)) {
+  if (base::ContainsKey(static_stream_map_, id)) {
     QUIC_BUG << "Cannot send RST for a static stream with ID " << id;
     return;
   }
@@ -535,8 +535,8 @@ QuicConfig* QuicSession::config() {
 void QuicSession::ActivateStream(ReliableQuicStream* stream) {
   DVLOG(1) << ENDPOINT << "num_streams: " << dynamic_stream_map_.size()
            << ". activating " << stream->id();
-  DCHECK(!ContainsKey(dynamic_stream_map_, stream->id()));
-  DCHECK(!ContainsKey(static_stream_map_, stream->id()));
+  DCHECK(!base::ContainsKey(dynamic_stream_map_, stream->id()));
+  DCHECK(!base::ContainsKey(static_stream_map_, stream->id()));
   dynamic_stream_map_[stream->id()] = stream;
   if (IsIncomingStream(stream->id())) {
     ++num_dynamic_incoming_streams_;
@@ -561,8 +561,8 @@ ReliableQuicStream* QuicSession::GetOrCreateStream(
 }
 
 void QuicSession::StreamDraining(QuicStreamId stream_id) {
-  DCHECK(ContainsKey(dynamic_stream_map_, stream_id));
-  if (!ContainsKey(draining_streams_, stream_id)) {
+  DCHECK(base::ContainsKey(dynamic_stream_map_, stream_id));
+  if (!base::ContainsKey(draining_streams_, stream_id)) {
     draining_streams_.insert(stream_id);
     if (IsIncomingStream(stream_id)) {
       ++num_draining_incoming_streams_;
@@ -614,7 +614,7 @@ bool QuicSession::ShouldYield(QuicStreamId stream_id) {
 
 ReliableQuicStream* QuicSession::GetOrCreateDynamicStream(
     const QuicStreamId stream_id) {
-  DCHECK(!ContainsKey(static_stream_map_, stream_id))
+  DCHECK(!base::ContainsKey(static_stream_map_, stream_id))
       << "Attempt to call GetOrCreateDynamicStream for a static stream";
 
   DynamicStreamMap::iterator it = dynamic_stream_map_.find(stream_id);
@@ -683,13 +683,13 @@ bool QuicSession::IsClosedStream(QuicStreamId id) {
   }
   // For peer created streams, we also need to consider available streams.
   return id <= largest_peer_created_stream_id_ &&
-         !ContainsKey(available_streams_, id);
+         !base::ContainsKey(available_streams_, id);
 }
 
 bool QuicSession::IsOpenStream(QuicStreamId id) {
   DCHECK_NE(0u, id);
-  if (ContainsKey(static_stream_map_, id) ||
-      ContainsKey(dynamic_stream_map_, id)) {
+  if (base::ContainsKey(static_stream_map_, id) ||
+      base::ContainsKey(dynamic_stream_map_, id)) {
     // Stream is active
     return true;
   }
@@ -728,7 +728,7 @@ bool QuicSession::HasDataToWrite() const {
 }
 
 void QuicSession::PostProcessAfterData() {
-  STLDeleteElements(&closed_streams_);
+  base::STLDeleteElements(&closed_streams_);
   closed_streams_.clear();
 }
 

@@ -112,7 +112,7 @@ void HttpServerPropertiesImpl::InitializeAlternativeServiceServers(
     url::SchemeHostPort canonical_server(kCanonicalScheme, canonical_suffix,
                                          kCanonicalPort);
     // If we already have a valid canonical server, we're done.
-    if (ContainsKey(canonical_host_to_origin_map_, canonical_server) &&
+    if (base::ContainsKey(canonical_host_to_origin_map_, canonical_server) &&
         (alternative_service_map_.Peek(
              canonical_host_to_origin_map_[canonical_server]) !=
          alternative_service_map_.end())) {
@@ -492,7 +492,8 @@ void HttpServerPropertiesImpl::MarkAlternativeServiceBroken(
 
 void HttpServerPropertiesImpl::MarkAlternativeServiceRecentlyBroken(
     const AlternativeService& alternative_service) {
-  if (!ContainsKey(recently_broken_alternative_services_, alternative_service))
+  if (!base::ContainsKey(recently_broken_alternative_services_,
+                         alternative_service))
     recently_broken_alternative_services_[alternative_service] = 1;
 }
 
@@ -500,15 +501,15 @@ bool HttpServerPropertiesImpl::IsAlternativeServiceBroken(
     const AlternativeService& alternative_service) const {
   // Empty host means use host of origin, callers are supposed to substitute.
   DCHECK(!alternative_service.host.empty());
-  return ContainsKey(broken_alternative_services_, alternative_service);
+  return base::ContainsKey(broken_alternative_services_, alternative_service);
 }
 
 bool HttpServerPropertiesImpl::WasAlternativeServiceRecentlyBroken(
     const AlternativeService& alternative_service) {
   if (alternative_service.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL)
     return false;
-  return ContainsKey(recently_broken_alternative_services_,
-                     alternative_service);
+  return base::ContainsKey(recently_broken_alternative_services_,
+                           alternative_service);
 }
 
 void HttpServerPropertiesImpl::ConfirmAlternativeService(

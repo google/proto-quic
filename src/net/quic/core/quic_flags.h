@@ -27,15 +27,13 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_only_one_sending_alarm;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_old_public_reset_packets;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_rate_based_sending;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_cheap_stateless_rejects;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_socket_walltimestamps;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_respect_http2_settings_frame;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_no_mtu_discovery_ack_listener;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_simple_packet_number_length;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_35;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_36;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_version_36_v2;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_require_x509;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_deprecate_kfixd;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_do_not_migrate_on_old_packet;
 NET_EXPORT_PRIVATE extern bool FLAGS_enable_async_get_proof;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_neuter_unencrypted_when_sending;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_change_alarms_efficiently;
@@ -48,6 +46,11 @@ NET_EXPORT_PRIVATE extern bool FLAGS_quic_least_unacked_packet_number_length;
 NET_EXPORT_PRIVATE extern bool
     FLAGS_quic_close_stream_after_writing_queued_data;
 NET_EXPORT_PRIVATE extern bool FLAGS_quic_limit_frame_gaps_in_buffer;
-NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_inline_pacing;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_remove_v33_hacks;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_use_chlo_packet_size;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_buffer_packet_till_chlo;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_enable_app_limited_check;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_simple_packet_number_length_2;
+NET_EXPORT_PRIVATE extern bool FLAGS_quic_disable_pre_32;
 
 #endif  // NET_QUIC_QUIC_FLAGS_H_

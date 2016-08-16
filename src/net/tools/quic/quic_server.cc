@@ -52,7 +52,7 @@ QuicServer::QuicServer(std::unique_ptr<ProofSource> proof_source)
     : QuicServer(std::move(proof_source),
                  QuicConfig(),
                  QuicCryptoServerConfig::ConfigOptions(),
-                 QuicSupportedVersions()) {}
+                 AllSupportedVersions()) {}
 
 QuicServer::QuicServer(
     std::unique_ptr<ProofSource> proof_source,

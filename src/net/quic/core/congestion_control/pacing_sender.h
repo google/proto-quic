@@ -25,48 +25,36 @@
 
 namespace net {
 
-class NET_EXPORT_PRIVATE PacingSender : public SendAlgorithmInterface {
+class NET_EXPORT_PRIVATE PacingSender {
  public:
   PacingSender();
-  ~PacingSender() override;
+  ~PacingSender();
 
-  void SetMaxPacingRate(QuicBandwidth max_pacing_rate);
-  // Sets the underlying sender. Takes ownership of |sender| if |owns_sender| is
-  // true.
-  void SetSender(SendAlgorithmInterface* sender, bool owns_sender);
+  // Sets the underlying sender. Does not take ownership of |sender|. |sender|
+  // must not be null. This must be called before any of the
+  // SendAlgorithmInterface wrapper methods are called.
+  void set_sender(SendAlgorithmInterface* sender);
 
-  // SendAlgorithmInterface methods.
-  void SetFromConfig(const QuicConfig& config,
-                     Perspective perspective) override;
-  void ResumeConnectionState(
-      const CachedNetworkParameters& cached_network_params,
-      bool max_bandwidth_resumption) override;
-  void SetNumEmulatedConnections(int num_connections) override;
-  void OnCongestionEvent(bool rtt_updated,
-                         QuicByteCount bytes_in_flight,
-                         const CongestionVector& acked_packets,
-                         const CongestionVector& lost_packets) override;
+  void set_max_pacing_rate(QuicBandwidth max_pacing_rate) {
+    max_pacing_rate_ = max_pacing_rate;
+  }
+
+  void OnCongestionEvent(
+      bool rtt_updated,
+      QuicByteCount bytes_in_flight,
+      const SendAlgorithmInterface::CongestionVector& acked_packets,
+      const SendAlgorithmInterface::CongestionVector& lost_packets);
   bool OnPacketSent(QuicTime sent_time,
                     QuicByteCount bytes_in_flight,
                     QuicPacketNumber packet_number,
                     QuicByteCount bytes,
-                    HasRetransmittableData is_retransmittable) override;
-  void OnRetransmissionTimeout(bool packets_retransmitted) override;
-  void OnConnectionMigration() override;
+                    HasRetransmittableData is_retransmittable);
   QuicTime::Delta TimeUntilSend(QuicTime now,
-                                QuicByteCount bytes_in_flight) const override;
-  QuicBandwidth PacingRate(QuicByteCount bytes_in_flight) const override;
-  QuicBandwidth BandwidthEstimate() const override;
-  QuicTime::Delta RetransmissionDelay() const override;
-  QuicByteCount GetCongestionWindow() const override;
-  bool InSlowStart() const override;
-  bool InRecovery() const override;
-  QuicByteCount GetSlowStartThreshold() const override;
-  CongestionControlType GetCongestionControlType() const override;
-  // End implementation of SendAlgorithmInterface.
+                                QuicByteCount bytes_in_flight) const;
+  QuicBandwidth PacingRate(QuicByteCount bytes_in_flight) const;
 
  private:
-  // Underlying sender. Owned if |owns_sender_| is true.
+  // Underlying sender. Not owned.
   SendAlgorithmInterface* sender_;
   // If not QuicBandidth::Zero, the maximum rate the PacingSender will use.
   QuicBandwidth max_pacing_rate_;
@@ -77,7 +65,6 @@ class NET_EXPORT_PRIVATE PacingSender : public SendAlgorithmInterface {
   QuicTime last_delayed_packet_sent_time_;
   QuicTime ideal_next_packet_send_time_;  // When can the next packet be sent.
   mutable bool was_last_send_delayed_;  // True when the last send was delayed.
-  bool owns_sender_;                    // True if PacingSender owns |sender_|.
 
   DISALLOW_COPY_AND_ASSIGN(PacingSender);
 };

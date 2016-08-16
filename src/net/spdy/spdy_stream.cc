@@ -713,11 +713,16 @@ void SpdyStream::SendData(IOBuffer* data,
   QueueNextDataFrame();
 }
 
-bool SpdyStream::GetSSLInfo(SSLInfo* ssl_info,
-                            bool* was_npn_negotiated,
-                            NextProto* protocol_negotiated) {
-  return session_->GetSSLInfo(
-      ssl_info, was_npn_negotiated, protocol_negotiated);
+bool SpdyStream::GetSSLInfo(SSLInfo* ssl_info) const {
+  return session_->GetSSLInfo(ssl_info);
+}
+
+bool SpdyStream::WasNpnNegotiated() const {
+  return session_->WasNpnNegotiated();
+}
+
+NextProto SpdyStream::GetNegotiatedProtocol() const {
+  return session_->GetNegotiatedProtocol();
 }
 
 void SpdyStream::PossiblyResumeIfSendStalled() {

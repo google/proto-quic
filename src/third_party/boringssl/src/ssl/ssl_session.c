@@ -167,10 +167,10 @@ SSL_SESSION *SSL_SESSION_new(void) {
   }
   memset(session, 0, sizeof(SSL_SESSION));
 
-  session->verify_result = 1; /* avoid 0 (= X509_V_OK) just in case */
+  session->verify_result = X509_V_ERR_INVALID_CALL;
   session->references = 1;
   session->timeout = SSL_DEFAULT_SESSION_TIMEOUT;
-  session->time = (unsigned long)time(NULL);
+  session->time = (long)time(NULL);
   CRYPTO_new_ex_data(&session->ex_data);
   return session;
 }
@@ -219,8 +219,8 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int include_ticket) {
   }
   if (include_ticket) {
     if (session->tlsext_tick != NULL) {
-      new_session->tlsext_tick = BUF_memdup(session->tlsext_tick,
-                                            session->tlsext_ticklen);
+      new_session->tlsext_tick =
+          BUF_memdup(session->tlsext_tick, session->tlsext_ticklen);
       if (new_session->tlsext_tick == NULL) {
         goto err;
       }
@@ -253,6 +253,8 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int include_ticket) {
   new_session->original_handshake_hash_len =
       session->original_handshake_hash_len;
   new_session->tlsext_tick_lifetime_hint = session->tlsext_tick_lifetime_hint;
+  new_session->ticket_flags = session->ticket_flags;
+  new_session->ticket_age_add = session->ticket_age_add;
   new_session->extended_master_secret = session->extended_master_secret;
   new_session->peer_sha256_valid = session->peer_sha256_valid;
   new_session->not_resumable = 1;
@@ -264,11 +266,9 @@ err:
   return 0;
 }
 
-SSL_SESSION *SSL_SESSION_up_ref(SSL_SESSION *session) {
-  if (session != NULL) {
-    CRYPTO_refcount_inc(&session->references);
-  }
-  return session;
+int SSL_SESSION_up_ref(SSL_SESSION *session) {
+  CRYPTO_refcount_inc(&session->references);
+  return 1;
 }
 
 void SSL_SESSION_free(SSL_SESSION *session) {
@@ -368,8 +368,7 @@ SSL_SESSION *SSL_magic_pending_session_ptr(void) {
   return (SSL_SESSION *)&g_pending_session_magic;
 }
 
-SSL_SESSION *SSL_get_session(const SSL *ssl)
-{
+SSL_SESSION *SSL_get_session(const SSL *ssl) {
   /* Once the handshake completes we return the established session. Otherwise
    * we return the intermediate session, either |session| (for resumption) or
    * |new_session| if doing a full handshake. */
@@ -383,8 +382,11 @@ SSL_SESSION *SSL_get_session(const SSL *ssl)
 }
 
 SSL_SESSION *SSL_get1_session(SSL *ssl) {
-  /* variant of SSL_get_session: caller really gets something */
-  return SSL_SESSION_up_ref(SSL_get_session(ssl));
+  SSL_SESSION *ret = SSL_get_session(ssl);
+  if (ret != NULL) {
+    SSL_SESSION_up_ref(ret);
+  }
+  return ret;
 }
 
 int SSL_SESSION_get_ex_new_index(long argl, void *argp,
@@ -417,6 +419,11 @@ int ssl_get_new_session(SSL *ssl, int is_server) {
   if (session == NULL) {
     return 0;
   }
+
+  /* Fill in the time from the |SSL_CTX|'s clock. */
+  struct timeval now;
+  ssl_get_current_time(ssl, &now);
+  session->time = now.tv_sec;
 
   /* If the context has a default timeout, use it over the default. */
   if (ssl->initial_ctx->session_timeout != 0) {
@@ -457,7 +464,7 @@ int ssl_get_new_session(SSL *ssl, int is_server) {
 
   /* The session is marked not resumable until it is completely filled in. */
   session->not_resumable = 1;
-  session->verify_result = X509_V_OK;
+  session->verify_result = X509_V_ERR_INVALID_CALL;
 
   SSL_SESSION_free(ssl->s3->new_session);
   ssl->s3->new_session = session;
@@ -467,6 +474,93 @@ int ssl_get_new_session(SSL *ssl, int is_server) {
 err:
   SSL_SESSION_free(session);
   return 0;
+}
+
+int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
+  int ret = 0;
+
+  /* Serialize the SSL_SESSION to be encoded into the ticket. */
+  uint8_t *session_buf = NULL;
+  size_t session_len;
+  if (!SSL_SESSION_to_bytes_for_ticket(session, &session_buf, &session_len)) {
+    return -1;
+  }
+
+  EVP_CIPHER_CTX ctx;
+  EVP_CIPHER_CTX_init(&ctx);
+  HMAC_CTX hctx;
+  HMAC_CTX_init(&hctx);
+
+  /* If the session is too long, emit a dummy value rather than abort the
+   * connection. */
+  static const size_t kMaxTicketOverhead =
+      16 + EVP_MAX_IV_LENGTH + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE;
+  if (session_len > 0xffff - kMaxTicketOverhead) {
+    static const char kTicketPlaceholder[] = "TICKET TOO LARGE";
+    if (CBB_add_bytes(out, (const uint8_t *)kTicketPlaceholder,
+                      strlen(kTicketPlaceholder))) {
+      ret = 1;
+    }
+    goto err;
+  }
+
+  /* Initialize HMAC and cipher contexts. If callback present it does all the
+   * work otherwise use generated values from parent ctx. */
+  SSL_CTX *tctx = ssl->initial_ctx;
+  uint8_t iv[EVP_MAX_IV_LENGTH];
+  uint8_t key_name[16];
+  if (tctx->tlsext_ticket_key_cb != NULL) {
+    if (tctx->tlsext_ticket_key_cb(ssl, key_name, iv, &ctx, &hctx,
+                                   1 /* encrypt */) < 0) {
+      goto err;
+    }
+  } else {
+    if (!RAND_bytes(iv, 16) ||
+        !EVP_EncryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL,
+                            tctx->tlsext_tick_aes_key, iv) ||
+        !HMAC_Init_ex(&hctx, tctx->tlsext_tick_hmac_key, 16, tlsext_tick_md(),
+                      NULL)) {
+      goto err;
+    }
+    memcpy(key_name, tctx->tlsext_tick_key_name, 16);
+  }
+
+  uint8_t *ptr;
+  if (!CBB_add_bytes(out, key_name, 16) ||
+      !CBB_add_bytes(out, iv, EVP_CIPHER_CTX_iv_length(&ctx)) ||
+      !CBB_reserve(out, &ptr, session_len + EVP_MAX_BLOCK_LENGTH)) {
+    goto err;
+  }
+
+  int len;
+  size_t total = 0;
+  if (!EVP_EncryptUpdate(&ctx, ptr + total, &len, session_buf, session_len)) {
+    goto err;
+  }
+  total += len;
+  if (!EVP_EncryptFinal_ex(&ctx, ptr + total, &len)) {
+    goto err;
+  }
+  total += len;
+  if (!CBB_did_write(out, total)) {
+    goto err;
+  }
+
+  unsigned hlen;
+  if (!HMAC_Update(&hctx, CBB_data(out), CBB_len(out)) ||
+      !CBB_reserve(out, &ptr, EVP_MAX_MD_SIZE) ||
+      !HMAC_Final(&hctx, ptr, &hlen) ||
+      !CBB_did_write(out, hlen)) {
+    goto err;
+  }
+
+  ret = 1;
+
+err:
+  OPENSSL_free(session_buf);
+  EVP_CIPHER_CTX_cleanup(&ctx);
+  HMAC_CTX_cleanup(&hctx);
+  return ret;
 }
 
 /* ssl_lookup_session looks up |session_id| in the session cache and sets
@@ -576,21 +670,9 @@ enum ssl_session_result_t ssl_get_prev_session(
     goto no_session;
   }
 
-  if ((ssl->verify_mode & SSL_VERIFY_PEER) && ssl->sid_ctx_length == 0) {
-    /* We can't be sure if this session is being used out of context, which is
-     * especially important for SSL_VERIFY_PEER. The application should have
-     * used SSL[_CTX]_set_session_id_context.
-     *
-     * For this error case, we generate an error instead of treating the event
-     * like a cache miss (otherwise it would be easy for applications to
-     * effectively disable the session cache by accident without anyone
-     * noticing). */
-    OPENSSL_PUT_ERROR(SSL, SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED);
-    SSL_SESSION_free(session);
-    return ssl_session_error;
-  }
-
-  if (session->timeout < (long)(time(NULL) - session->time)) {
+  struct timeval now;
+  ssl_get_current_time(ssl, &now);
+  if (session->timeout < (long)now.tv_sec - session->time) {
     if (from_cache) {
       /* The session was from the cache, so remove it. */
       SSL_CTX_remove_session(ssl->initial_ctx, session);
@@ -755,17 +837,6 @@ void SSL_CTX_flush_sessions(SSL_CTX *ctx, long time) {
   CRYPTO_MUTEX_lock_write(&ctx->lock);
   lh_SSL_SESSION_doall_arg(tp.cache, timeout_doall_arg, &tp);
   CRYPTO_MUTEX_unlock_write(&ctx->lock);
-}
-
-int ssl_clear_bad_session(SSL *ssl) {
-  if (ssl->session != NULL &&
-      ssl->s3->send_shutdown != ssl_shutdown_close_notify &&
-      !SSL_in_init(ssl)) {
-    SSL_CTX_remove_session(ssl->ctx, ssl->session);
-    return 1;
-  }
-
-  return 0;
 }
 
 /* locked by SSL_CTX in the calling function */

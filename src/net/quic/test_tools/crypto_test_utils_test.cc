@@ -41,10 +41,11 @@ class ShloVerifier : public ValidateClientHelloResultCallback {
     CryptoHandshakeMessage out;
     crypto_config_->ProcessClientHello(
         result, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
-        client_addr_, QuicSupportedVersions().front(), QuicSupportedVersions(),
+        client_addr_, AllSupportedVersions().front(), AllSupportedVersions(),
         /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
         clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params,
-        proof_, &out, &diversification_nonce, &error_details);
+        proof_, /*total_framing_overhead=*/50, kDefaultMaxPacketSize, &out,
+        &diversification_nonce, &error_details);
     // Verify output is a SHLO.
     EXPECT_EQ(out.tag(), kSHLO) << "Fail to pass validation. Get "
                                 << out.DebugString();
@@ -97,7 +98,7 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   string pub_hex =
       "#" + QuicUtils::HexEncode(public_value, sizeof(public_value));
 
-  QuicVersion version(QuicSupportedVersions().front());
+  QuicVersion version(AllSupportedVersions().front());
   // clang-format off
   CryptoHandshakeMessage inchoate_chlo = CryptoTestUtils::Message(
     "CHLO",

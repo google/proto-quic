@@ -19,7 +19,7 @@
 #include <string>
 #include "addrcache.h"
 #include "blockhash.h"
-#include "encodetable.h"
+#include "google/encodetable.h"
 #include "google/output_string.h"
 #include "rolling_hash.h"
 #include "testing.h"

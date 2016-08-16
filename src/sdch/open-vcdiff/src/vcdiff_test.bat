@@ -75,7 +75,7 @@ del %DELTA_FILE%
 del %OUTPUT_TARGET_FILE%
 
 rem open-vcdiff Issue 7
-rem (https://github.com/google/open-vcdiff/issues/detail?id=7)
+rem (https://github.com/google/open-vcdiff/issues/7)
 rem vcdiff using stdin/stdout.  Verify that output file matches target file
 %VCDIFF% %VCD_OPTIONS% ^
          encode -dictionary %DICTIONARY_FILE% ^
@@ -208,7 +208,7 @@ del %DELTA_FILE%
 del %OUTPUT_TARGET_FILE%
 
 rem open-vcdiff Issue 6
-rem (https://github.com/google/open-vcdiff/issues/detail?id=6)
+rem (https://github.com/google/open-vcdiff/issues/6)
 rem Using empty file as dictionary should work, but (because dictionary is empty)
 rem it will not produce a small delta file.
 %VCDIFF% %VCD_OPTIONS% ^
@@ -408,7 +408,7 @@ echo Test 32 ok
 echo Test 33 ok
 
 rem open-vcdiff Issue 8
-rem (https://github.com/google/open-vcdiff/issues/detail?id=8)
+rem (https://github.com/google/open-vcdiff/issues/8)
 rem A malicious encoding that tries to produce a 4GB target file made up of 64
 rem windows, each window having a size of 64MB.
 %VCDIFF% %VCD_OPTIONS% ^

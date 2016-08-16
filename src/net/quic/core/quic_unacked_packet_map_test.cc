@@ -26,7 +26,7 @@ class QuicUnackedPacketMapTest : public ::testing::Test {
       : unacked_packets_(),
         now_(QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(1000)) {}
 
-  ~QuicUnackedPacketMapTest() override { STLDeleteElements(&packets_); }
+  ~QuicUnackedPacketMapTest() override { base::STLDeleteElements(&packets_); }
 
   SerializedPacket CreateRetransmittablePacket(QuicPacketNumber packet_number) {
     return CreateRetransmittablePacketForStream(packet_number,

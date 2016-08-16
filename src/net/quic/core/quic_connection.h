@@ -851,6 +851,10 @@ class NET_EXPORT_PRIVATE QuicConnection
 
   const QuicTime::Delta DelayedAckTime();
 
+  // Check if the connection has no outstanding data to send and notify
+  // congestion controller if it is the case.
+  void CheckIfApplicationLimited();
+
   QuicFramer framer_;
   QuicConnectionHelperInterface* helper_;  // Not owned.
   QuicAlarmFactory* alarm_factory_;        // Not owned.

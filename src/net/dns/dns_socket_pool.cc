@@ -176,7 +176,7 @@ DefaultDnsSocketPool::~DefaultDnsSocketPool() {
   unsigned num_servers = pools_.size();
   for (unsigned server_index = 0; server_index < num_servers; ++server_index) {
     SocketVector& pool = pools_[server_index];
-    STLDeleteElements(&pool);
+    base::STLDeleteElements(&pool);
   }
 }
 

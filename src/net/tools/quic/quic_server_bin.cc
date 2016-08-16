@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
       CreateProofSource(line->GetSwitchValuePath("certificate_file"),
                         line->GetSwitchValuePath("key_file")),
       config, net::QuicCryptoServerConfig::ConfigOptions(),
-      net::QuicSupportedVersions());
+      net::AllSupportedVersions());
   server.SetStrikeRegisterNoStartupPeriod();
 
   int rc = server.CreateUDPSocketAndListen(net::IPEndPoint(ip, FLAGS_port));

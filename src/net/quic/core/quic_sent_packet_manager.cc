@@ -5,6 +5,7 @@
 #include "net/quic/core/quic_sent_packet_manager.h"
 
 #include <algorithm>
+#include <string>
 
 #include "base/logging.h"
 #include "base/stl_util.h"
@@ -69,13 +70,8 @@ QuicSentPacketManager::QuicSentPacketManager(
       debug_delegate_(nullptr),
       network_change_visitor_(nullptr),
       initial_congestion_window_(kInitialCongestionWindow),
-      send_algorithm_(
-          SendAlgorithmInterface::Create(clock,
-                                         &rtt_stats_,
-                                         congestion_control_type,
-                                         stats,
-                                         initial_congestion_window_)),
-      loss_algorithm_(new GeneralLossAlgorithm(loss_type)),
+      loss_algorithm_(&general_loss_algorithm_),
+      general_loss_algorithm_(loss_type),
       n_connection_simulation_(false),
       receive_buffer_bytes_(kDefaultSocketReceiveBuffer),
       least_packet_awaited_by_peer_(1),
@@ -87,12 +83,13 @@ QuicSentPacketManager::QuicSentPacketManager(
       max_tail_loss_probes_(kDefaultMaxTailLossProbes),
       enable_half_rtt_tail_loss_probe_(false),
       using_pacing_(false),
-      using_inline_pacing_(false),
       use_new_rto_(false),
       undo_pending_retransmits_(false),
       largest_newly_acked_(0),
       largest_mtu_acked_(0),
-      handshake_confirmed_(false) {}
+      handshake_confirmed_(false) {
+  SetSendAlgorithm(congestion_control_type);
+}
 
 QuicSentPacketManager::~QuicSentPacketManager() {}
 
@@ -113,26 +110,20 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   // TODO(ianswett): BBR is currently a server only feature.
   if (FLAGS_quic_allow_bbr && config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kTBBR)) {
-    send_algorithm_.reset(SendAlgorithmInterface::Create(
-        clock_, &rtt_stats_, kBBR, stats_, initial_congestion_window_));
+    SetSendAlgorithm(kBBR);
   }
   if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kRENO)) {
     if (ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-      send_algorithm_.reset(SendAlgorithmInterface::Create(
-          clock_, &rtt_stats_, kRenoBytes, stats_, initial_congestion_window_));
+      SetSendAlgorithm(kRenoBytes);
     } else {
-      send_algorithm_.reset(SendAlgorithmInterface::Create(
-          clock_, &rtt_stats_, kReno, stats_, initial_congestion_window_));
+      SetSendAlgorithm(kReno);
     }
   } else if (config.HasReceivedConnectionOptions() &&
              ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-    send_algorithm_.reset(SendAlgorithmInterface::Create(
-        clock_, &rtt_stats_, kCubicBytes, stats_, initial_congestion_window_));
+    SetSendAlgorithm(kCubicBytes);
   }
-  if (!FLAGS_quic_disable_pacing_for_perf_tests) {
-    EnablePacing();
-  }
+  using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests;
 
   if (config.HasClientSentConnectionOption(k1CON, perspective_)) {
     send_algorithm_->SetNumEmulatedConnections(1);
@@ -151,11 +142,11 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   }
   if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kTIME)) {
-    loss_algorithm_.reset(new GeneralLossAlgorithm(kTime));
+    general_loss_algorithm_.SetLossDetectionType(kTime);
   }
   if (config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kATIM)) {
-    loss_algorithm_.reset(new GeneralLossAlgorithm(kAdaptiveTime));
+    general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
   }
   if (FLAGS_quic_loss_recovery_use_largest_acked &&
       config.HasClientSentConnectionOption(kUNDO, perspective_)) {
@@ -191,12 +182,7 @@ void QuicSentPacketManager::SetNumOpenStreams(size_t num_streams) {
 }
 
 void QuicSentPacketManager::SetMaxPacingRate(QuicBandwidth max_pacing_rate) {
-  if (using_inline_pacing_) {
-    pacing_sender_.SetMaxPacingRate(max_pacing_rate);
-  } else if (using_pacing_) {
-    static_cast<PacingSender*>(send_algorithm_.get())
-        ->SetMaxPacingRate(max_pacing_rate);
-  }
+  pacing_sender_.set_max_pacing_rate(max_pacing_rate);
 }
 
 void QuicSentPacketManager::SetHandshakeConfirmed() {
@@ -281,7 +267,7 @@ void QuicSentPacketManager::MaybeInvokeCongestionEvent(
   if (!rtt_updated && packets_acked_.empty() && packets_lost_.empty()) {
     return;
   }
-  if (using_inline_pacing_) {
+  if (using_pacing_) {
     pacing_sender_.OnCongestionEvent(rtt_updated, bytes_in_flight,
                                      packets_acked_, packets_lost_);
   } else {
@@ -381,7 +367,7 @@ void QuicSentPacketManager::MarkForRetransmission(
   } else {
     // TODO(ianswett): Currently the RTO can fire while there are pending NACK
     // retransmissions for the same data, which is not ideal.
-    if (ContainsKey(pending_retransmissions_, packet_number)) {
+    if (base::ContainsKey(pending_retransmissions_, packet_number)) {
       return;
     }
 
@@ -564,7 +550,7 @@ bool QuicSentPacketManager::OnPacketSent(
   }
 
   bool in_flight;
-  if (using_inline_pacing_) {
+  if (using_pacing_) {
     in_flight = pacing_sender_.OnPacketSent(
         sent_time, unacked_packets_.bytes_in_flight(), packet_number,
         serialized_packet->encrypted_length, has_retransmittable_data);
@@ -761,8 +747,7 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
 
   QuicTime::Delta send_delta = ack_receive_time - transmission_info.sent_time;
   const int kMaxSendDeltaSeconds = 30;
-  if (FLAGS_quic_socket_walltimestamps &&
-      send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
+  if (send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
     // send_delta can be very high if local clock is changed mid-connection.
     LOG(WARNING) << "Excessive send delta: " << send_delta.ToSeconds()
                  << ", setting to: " << kMaxSendDeltaSeconds
@@ -784,14 +769,12 @@ QuicTime::Delta QuicSentPacketManager::TimeUntilSend(QuicTime now,
   // send algorithm does not need to be consulted.
   if (pending_timer_transmission_count_ > 0) {
     delay = QuicTime::Delta::Zero();
+  } else if (using_pacing_) {
+    delay =
+        pacing_sender_.TimeUntilSend(now, unacked_packets_.bytes_in_flight());
   } else {
-    if (using_inline_pacing_) {
-      delay =
-          pacing_sender_.TimeUntilSend(now, unacked_packets_.bytes_in_flight());
-    } else {
-      delay = send_algorithm_->TimeUntilSend(
-          now, unacked_packets_.bytes_in_flight());
-    }
+    delay =
+        send_algorithm_->TimeUntilSend(now, unacked_packets_.bytes_in_flight());
   }
   if (!delay.IsInfinite()) {
     *path_id = path_id_;
@@ -921,6 +904,10 @@ QuicPacketCount QuicSentPacketManager::GetSlowStartThresholdInTcpMss() const {
   return send_algorithm_->GetSlowStartThreshold() / kDefaultTCPMSS;
 }
 
+std::string QuicSentPacketManager::GetDebugState() const {
+  return send_algorithm_->GetDebugState();
+}
+
 void QuicSentPacketManager::CancelRetransmissionsForStream(
     QuicStreamId stream_id) {
   unacked_packets_.CancelRetransmissionsForStream(stream_id);
@@ -937,24 +924,17 @@ void QuicSentPacketManager::CancelRetransmissionsForStream(
   }
 }
 
-void QuicSentPacketManager::EnablePacing() {
-  if (FLAGS_quic_use_inline_pacing) {
-    using_inline_pacing_ = true;
-    pacing_sender_.SetSender(send_algorithm_.get(), false);
-  } else {
-    // TODO(ianswett): Replace with a method which wraps the send algorithm in a
-    // pacer every time a new algorithm is set.
-    if (using_pacing_) {
-      return;
-    }
+void QuicSentPacketManager::SetSendAlgorithm(
+    CongestionControlType congestion_control_type) {
+  SetSendAlgorithm(SendAlgorithmInterface::Create(
+      clock_, &rtt_stats_, congestion_control_type, stats_,
+      initial_congestion_window_));
+}
 
-    // Set up a pacing sender with a 1 millisecond alarm granularity, the same
-    // as the default granularity of the Linux kernel's FQ qdisc.
-    using_pacing_ = true;
-    PacingSender* pacing_sender = new PacingSender;
-    pacing_sender->SetSender(send_algorithm_.release(), true);
-    send_algorithm_.reset(pacing_sender);
-  }
+void QuicSentPacketManager::SetSendAlgorithm(
+    SendAlgorithmInterface* send_algorithm) {
+  send_algorithm_.reset(send_algorithm);
+  pacing_sender_.set_sender(send_algorithm);
 }
 
 void QuicSentPacketManager::OnConnectionMigration(QuicPathId,
@@ -1018,6 +998,10 @@ TransmissionInfo* QuicSentPacketManager::GetMutableTransmissionInfo(
 
 void QuicSentPacketManager::RemoveObsoletePackets() {
   unacked_packets_.RemoveObsoletePackets();
+}
+
+void QuicSentPacketManager::OnApplicationLimited() {
+  send_algorithm_->OnApplicationLimited(unacked_packets_.bytes_in_flight());
 }
 
 }  // namespace net

@@ -57,7 +57,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
     HANDSHAKE_CONFIRMED,
   };
 
-  // Takes ownership of |connection|.
+  // Does not take ownership of |connection|.
   QuicSession(QuicConnection* connection, const QuicConfig& config);
 
   ~QuicSession() override;
@@ -155,8 +155,8 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // not yet been created.
   bool IsClosedStream(QuicStreamId id);
 
-  QuicConnection* connection() { return connection_.get(); }
-  const QuicConnection* connection() const { return connection_.get(); }
+  QuicConnection* connection() { return connection_; }
+  const QuicConnection* connection() const { return connection_; }
   size_t num_active_requests() const { return dynamic_stream_map_.size(); }
   const IPEndPoint& peer_address() const { return connection_->peer_address(); }
   QuicConnectionId connection_id() const {
@@ -352,7 +352,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   std::map<QuicStreamId, QuicStreamOffset>
       locally_closed_streams_highest_offset_;
 
-  std::unique_ptr<QuicConnection> connection_;
+  QuicConnection* connection_;
 
   std::vector<ReliableQuicStream*> closed_streams_;
 

@@ -1645,7 +1645,7 @@ void TraceLog::SetProcessSortIndex(int sort_index) {
   process_sort_index_ = sort_index;
 }
 
-void TraceLog::SetProcessName(const std::string& process_name) {
+void TraceLog::SetProcessName(const char* process_name) {
   AutoLock lock(lock_);
   process_name_ = process_name;
 }

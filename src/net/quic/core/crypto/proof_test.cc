@@ -142,7 +142,7 @@ class ProofTest : public ::testing::TestWithParam<QuicVersion> {};
 
 INSTANTIATE_TEST_CASE_P(QuicVersion,
                         ProofTest,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 // TODO(rtenneti): Enable testing of ProofVerifier. See http://crbug.com/514468.
 TEST_P(ProofTest, DISABLED_Verify) {

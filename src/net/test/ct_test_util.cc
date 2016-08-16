@@ -399,15 +399,19 @@ std::string GetSCTListWithInvalidSCT() {
 
 bool CheckForSingleVerifiedSCTInResult(const ct::CTVerifyResult& result,
                                        const std::string& log_description) {
-  return (result.verified_scts.size() == 1U) && result.invalid_scts.empty() &&
-         result.unknown_logs_scts.empty() &&
-         result.verified_scts[0]->log_description == log_description;
+  return (result.scts.size() == 1 &&
+          result.scts[0].status == ct::SCT_STATUS_OK &&
+          result.scts[0].sct->log_description == log_description);
 }
 
 bool CheckForSCTOrigin(const ct::CTVerifyResult& result,
                        ct::SignedCertificateTimestamp::Origin origin) {
-  return (result.verified_scts.size() > 0) &&
-         (result.verified_scts[0]->origin == origin);
+  for (const auto& sct_and_status : result.scts)
+    if (sct_and_status.status == SCT_STATUS_OK &&
+        sct_and_status.sct->origin == origin)
+      return true;
+
+  return false;
 }
 
 }  // namespace ct

@@ -84,7 +84,8 @@ std::string MultipleHeaderValuesMessage(const std::string& header_name) {
 
 std::string GenerateHandshakeChallenge() {
   std::string raw_challenge(websockets::kRawChallengeLength, '\0');
-  crypto::RandBytes(string_as_array(&raw_challenge), raw_challenge.length());
+  crypto::RandBytes(base::string_as_array(&raw_challenge),
+                    raw_challenge.length());
   std::string encoded_challenge;
   base::Base64Encode(raw_challenge, &encoded_challenge);
   return encoded_challenge;

@@ -185,13 +185,6 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
                       const std::string& thread_name_prefix,
                       base::TaskPriority task_priority);
 
-  // Deprecated, use the above constructor with |task_priority| instead.
-  // TODO(gab): Cleanup last few use cases of this before running the
-  // aforementioned base::TaskScheduler experiment (or make sure this
-  // constructor results in callers being opted out of the experiment).
-  SequencedWorkerPool(size_t max_threads,
-                      const std::string& thread_name_prefix);
-
   // Like above, but with |observer| for testing.  Does not take ownership of
   // |observer|.
   SequencedWorkerPool(size_t max_threads,

@@ -141,7 +141,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override;
   void OnPacketComplete() override;
 
-  // QuicBufferedPacketStore::VisitorInterface
+  // QuicBufferedPacketStore::VisitorInterface implementation.
   void OnExpiredPackets(QuicConnectionId connection_id,
                         QuicBufferedPacketStore::BufferedPacketList
                             early_arrived_packets) override;
@@ -170,6 +170,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
     kFateProcess,
     // Put the connection ID into time-wait state and send a public reset.
     kFateTimeWait,
+    // Buffer the packet.
+    kFateBuffer,
     // Drop the packet (ignore and give no response).
     kFateDrop,
   };
@@ -182,6 +184,14 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Create and return the time wait list manager for this dispatcher, which
   // will be owned by the dispatcher as time_wait_list_manager_
   virtual QuicTimeWaitListManager* CreateQuicTimeWaitListManager();
+
+  // Called when |current_packet_| is a data packet that has arrived before
+  // the CHLO. Buffers the current packet until the CHLO arrives.
+  void BufferEarlyPacket(QuicConnectionId connection_id);
+
+  // Called when |current_packet_| is a CHLO packet. Creates a new connection
+  // and delivers any buffered packets for that connection id.
+  void ProcessChlo();
 
   QuicTimeWaitListManager* time_wait_list_manager() {
     return time_wait_list_manager_.get();
@@ -233,6 +243,18 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   virtual bool OnUnauthenticatedUnknownPublicHeader(
       const QuicPacketPublicHeader& header);
 
+  // Called when a new connection starts to be handled by this dispatcher.
+  // Either this connection is created or its packets is buffered while waiting
+  // for CHLO.
+  virtual void OnNewConnectionAdded(QuicConnectionId connection_id);
+
+  bool HasBufferedPackets(QuicConnectionId connection_id);
+
+  // Called when BufferEarlyPacket() fail to buffer the packet.
+  virtual void OnBufferPacketFailure(
+      QuicBufferedPacketStore::EnqueuePacketResult result,
+      QuicConnectionId connection_id);
+
  private:
   friend class net::test::QuicDispatcherPeer;
 
@@ -283,8 +305,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // The writer to write to the socket with.
   std::unique_ptr<QuicPacketWriter> writer_;
 
-  // Undecryptable packets which are buffered until a connection can be
-  // created to handle them.
+  // Packets which are buffered until a connection can be created to handle
+  // them.
   QuicBufferedPacketStore buffered_packets_;
 
   // Information about the packet currently being handled.

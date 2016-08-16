@@ -35,7 +35,8 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
     : public QuicSpdySession,
       public QuicCryptoClientStream::ProofHandler {
  public:
-  // Caller retains ownership of |promised_by_url|.
+  // Takes ownership of |connection|. Caller retains ownership of
+  // |promised_by_url|.
   QuicClientSessionBase(QuicConnection* connection,
                         QuicClientPushPromiseIndex* push_promise_index,
                         const QuicConfig& config);

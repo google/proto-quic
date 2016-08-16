@@ -20,6 +20,17 @@ CTVerifyResult::CTVerifyResult(const CTVerifyResult& other) = default;
 
 CTVerifyResult::~CTVerifyResult() {}
 
+SCTList SCTsMatchingStatus(
+    const SignedCertificateTimestampAndStatusList& sct_and_status_list,
+    SCTVerifyStatus match_status) {
+  SCTList result;
+  for (const auto& sct_and_status : sct_and_status_list)
+    if (sct_and_status.status == match_status)
+      result.push_back(sct_and_status.sct);
+
+  return result;
+}
+
 }  // namespace ct
 
 }  // namespace net

@@ -301,9 +301,11 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Returns the type passed to the constructor.
   Type type() const { return type_; }
 
-  // Returns the name of the thread this message loop is bound to.
-  // This function is only valid when this message loop is running and
-  // BindToCurrentThread has already been called.
+  // Returns the name of the thread this message loop is bound to. This function
+  // is only valid when this message loop is running, BindToCurrentThread has
+  // already been called and has an "happens-before" relationship with this call
+  // (this relationship is obtained implicitly by the MessageLoop's task posting
+  // system unless calling this very early).
   std::string GetThreadName() const;
 
   // Gets the TaskRunner associated with this message loop.
@@ -552,7 +554,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   scoped_refptr<SingleThreadTaskRunner> task_runner_;
   std::unique_ptr<ThreadTaskRunnerHandle> thread_task_runner_handle_;
 
-  // Id of the thread this message loop is bound to.
+  // Id of the thread this message loop is bound to. Initialized once when the
+  // MessageLoop is bound to its thread and constant forever after.
   PlatformThreadId thread_id_;
 
 #if !(defined(OS_MACOSX) && !defined(OS_IOS))

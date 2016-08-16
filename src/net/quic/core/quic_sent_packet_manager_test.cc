@@ -5,7 +5,7 @@
 #include "net/quic/core/quic_sent_packet_manager.h"
 
 #include <memory>
-
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -106,9 +106,7 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
         .Times(AnyNumber());
   }
 
-  ~QuicSentPacketManagerTest() override {
-    STLDeleteElements(&packets_);
-  }
+  ~QuicSentPacketManagerTest() override { base::STLDeleteElements(&packets_); }
 
   QuicByteCount BytesInFlight() {
     return QuicSentPacketManagerPeer::GetBytesInFlight(&manager_);
@@ -534,8 +532,8 @@ TEST_P(QuicSentPacketManagerTest, RetransmitTwiceThenAckFirst) {
 }
 
 TEST_P(QuicSentPacketManagerTest, AckOriginalTransmission) {
-  MockLossAlgorithm* loss_algorithm = new MockLossAlgorithm();
-  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm);
+  auto loss_algorithm = base::MakeUnique<MockLossAlgorithm>();
+  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm.get());
 
   SendDataPacket(1);
   RetransmitAndSendPacket(1, 2);
@@ -1346,8 +1344,8 @@ TEST_P(QuicSentPacketManagerTest, GetTransmissionDelay) {
 }
 
 TEST_P(QuicSentPacketManagerTest, GetLossDelay) {
-  MockLossAlgorithm* loss_algorithm = new MockLossAlgorithm();
-  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm);
+  auto loss_algorithm = base::MakeUnique<MockLossAlgorithm>();
+  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm.get());
 
   EXPECT_CALL(*loss_algorithm, GetLossTimeout())
       .WillRepeatedly(Return(QuicTime::Zero()));
@@ -1570,8 +1568,8 @@ TEST_P(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
   for (size_t i = 1; i <= kNumSentPackets; ++i) {
     SendDataPacket(i);
   }
-  MockLossAlgorithm* loss_algorithm = new MockLossAlgorithm();
-  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm);
+  auto loss_algorithm = base::MakeUnique<MockLossAlgorithm>();
+  QuicSentPacketManagerPeer::SetLossAlgorithm(&manager_, loss_algorithm.get());
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _));
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   SendAlgorithmInterface::CongestionVector lost_packets;

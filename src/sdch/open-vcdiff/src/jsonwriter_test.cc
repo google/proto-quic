@@ -15,9 +15,9 @@
 // Unit tests for the class JSONCodeTableWriter, found in jsonwriter.h.
 
 #include <config.h>
-#include "jsonwriter.h"
 #include "testing.h"
 #include "vcdiff_defs.h"
+#include "google/jsonwriter.h"
 #include "google/output_string.h"
 
 namespace open_vcdiff {

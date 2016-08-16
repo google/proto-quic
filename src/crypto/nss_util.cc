@@ -752,7 +752,7 @@ class NSSInitSingleton {
   // down.
   ~NSSInitSingleton() {
 #if defined(OS_CHROMEOS)
-    STLDeleteValues(&chromeos_user_map_);
+    base::STLDeleteValues(&chromeos_user_map_);
 #endif
     tpm_slot_.reset();
     if (root_) {

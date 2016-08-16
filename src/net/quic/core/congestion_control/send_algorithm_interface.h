@@ -117,6 +117,24 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
   virtual void ResumeConnectionState(
       const CachedNetworkParameters& cached_network_params,
       bool max_bandwidth_resumption) = 0;
+
+  // Retrieves debugging information about the current state of the
+  // send algorithm.
+  virtual std::string GetDebugState() const = 0;
+
+  // Called when the connection has no outstanding data to send. Specifically,
+  // this means that none of the data streams are write-blocked, there are no
+  // packets in the connection queue, and there are no pending retransmissins,
+  // i.e. the sender cannot send anything for reasons other than being blocked
+  // by congestion controller. This includes cases when the connection is
+  // blocked by the flow controller.
+  //
+  // The fact that this method is called does not necessarily imply that the
+  // connection would not be blocked by the congestion control if it actually
+  // tried to send data. If the congestion control algorithm needs to exclude
+  // such cases, it should use the internal state it uses for congestion control
+  // for that.
+  virtual void OnApplicationLimited(QuicByteCount bytes_in_flight) = 0;
 };
 
 }  // namespace net

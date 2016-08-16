@@ -17,7 +17,6 @@
 
 #include "base/bind.h"
 #include "base/callback_helpers.h"
-#include "base/feature_list.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
@@ -85,11 +84,6 @@ const uint8_t kTbProtocolVersionMajor = 0;
 const uint8_t kTbProtocolVersionMinor = 8;
 const uint8_t kTbMinProtocolVersionMajor = 0;
 const uint8_t kTbMinProtocolVersionMinor = 6;
-
-#if !defined(OS_NACL)
-const base::Feature kPostQuantumExperiment{"SSLPostQuantumExperiment",
-                                           base::FEATURE_DISABLED_BY_DEFAULT};
-#endif
 
 bool EVP_MDToPrivateKeyHash(const EVP_MD* md, SSLPrivateKey::Hash* hash) {
   switch (EVP_MD_type(md)) {
@@ -198,9 +192,8 @@ std::unique_ptr<base::Value> NetLogSSLInfoCallback(
   dict->SetInteger("cipher_suite", SSLConnectionStatusToCipherSuite(
                                        ssl_info.connection_status));
 
-  std::string next_proto;
-  socket->GetNextProto(&next_proto);
-  dict->SetString("next_proto", next_proto);
+  dict->SetString("next_proto", SSLClientSocket::NextProtoToString(
+                                    socket->GetNegotiatedProtocol()));
 
   return std::move(dict);
 }
@@ -517,6 +510,8 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       next_handshake_state_(STATE_NONE),
       disconnected_(false),
       npn_status_(kNextProtoUnsupported),
+      negotiated_protocol_(kProtoUnknown),
+      negotiation_extension_(kExtensionUnknown),
       channel_id_sent_(false),
       certificate_verified_(false),
       signature_result_(kNoPendingResult),
@@ -548,12 +543,6 @@ void SSLClientSocketImpl::GetSSLCertRequestInfo(
   cert_request_info->host_and_port = host_and_port_;
   cert_request_info->cert_authorities = cert_authorities_;
   cert_request_info->cert_key_types = cert_key_types_;
-}
-
-SSLClientSocket::NextProtoStatus SSLClientSocketImpl::GetNextProto(
-    std::string* proto) const {
-  *proto = npn_proto_;
-  return npn_status_;
 }
 
 ChannelIDService* SSLClientSocketImpl::GetChannelIDService() const {
@@ -704,7 +693,7 @@ void SSLClientSocketImpl::Disconnect() {
   start_cert_verification_time_ = base::TimeTicks();
 
   npn_status_ = kNextProtoUnsupported;
-  npn_proto_.clear();
+  negotiated_protocol_ = kProtoUnknown;
 
   channel_id_sent_ = false;
   tb_was_negotiated_ = false;
@@ -778,6 +767,14 @@ void SSLClientSocketImpl::SetOmniboxSpeculation() {
 
 bool SSLClientSocketImpl::WasEverUsed() const {
   return was_ever_used_;
+}
+
+bool SSLClientSocketImpl::WasNpnNegotiated() const {
+  return negotiated_protocol_ != kProtoUnknown;
+}
+
+NextProto SSLClientSocketImpl::GetNegotiatedProtocol() const {
+  return negotiated_protocol_;
 }
 
 bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
@@ -1005,8 +1002,7 @@ int SSLClientSocketImpl::Init() {
   // supported. As DHE is being deprecated, don't add a cipher only to remove it
   // immediately.
   std::string command;
-#if !defined(OS_NACL)
-  if (base::FeatureList::IsEnabled(kPostQuantumExperiment)) {
+  if (SSLClientSocket::IsPostQuantumExperimentEnabled()) {
     // These are experimental, non-standard ciphersuites.  They are part of an
     // experiment in post-quantum cryptography.  They're not intended to
     // represent a de-facto standard, and will be removed from BoringSSL in
@@ -1025,7 +1021,6 @@ int SSLClientSocketImpl::Init() {
           "CECPQ1-ECDSA-AES256-GCM-SHA384:");
     }
   }
-#endif
   command.append("ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
@@ -1054,7 +1049,7 @@ int SSLClientSocketImpl::Init() {
                            << rv;
 
   // TLS channel ids.
-  if (IsChannelIDEnabled(ssl_config_, channel_id_service_)) {
+  if (IsChannelIDEnabled()) {
     SSL_enable_tls_channel_id(ssl_);
   }
 
@@ -1211,15 +1206,16 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
     unsigned alpn_len = 0;
     SSL_get0_alpn_selected(ssl_, &alpn_proto, &alpn_len);
     if (alpn_len > 0) {
-      npn_proto_.assign(reinterpret_cast<const char*>(alpn_proto), alpn_len);
+      base::StringPiece proto(reinterpret_cast<const char*>(alpn_proto),
+                              alpn_len);
+      negotiated_protocol_ = NextProtoFromString(proto);
       npn_status_ = kNextProtoNegotiated;
-      set_negotiation_extension(kExtensionALPN);
+      negotiation_extension_ = kExtensionALPN;
     }
   }
 
   RecordNegotiationExtension();
-  RecordChannelIDSupport(channel_id_service_, channel_id_sent_,
-                         ssl_config_.channel_id_enabled);
+  RecordChannelIDSupport();
 
   const uint8_t* ocsp_response_raw;
   size_t ocsp_response_len;
@@ -1812,13 +1808,17 @@ int SSLClientSocketImpl::VerifyCT() {
   ct_verify_result_.ct_policies_applied = true;
   ct_verify_result_.ev_policy_compliance =
       ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY;
+
+  SCTList verified_scts =
+      ct::SCTsMatchingStatus(ct_verify_result_.scts, ct::SCT_STATUS_OK);
+
   if (server_cert_verify_result_.cert_status & CERT_STATUS_IS_EV) {
     scoped_refptr<ct::EVCertsWhitelist> ev_whitelist =
         SSLConfigService::GetEVCertsWhitelist();
     ct::EVPolicyCompliance ev_policy_compliance =
         policy_enforcer_->DoesConformToCTEVPolicy(
             server_cert_verify_result_.verified_cert.get(), ev_whitelist.get(),
-            ct_verify_result_.verified_scts, net_log_);
+            verified_scts, net_log_);
     ct_verify_result_.ev_policy_compliance = ev_policy_compliance;
     if (ev_policy_compliance !=
             ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY &&
@@ -1833,8 +1833,8 @@ int SSLClientSocketImpl::VerifyCT() {
   }
   ct_verify_result_.cert_policy_compliance =
       policy_enforcer_->DoesConformToCertPolicy(
-          server_cert_verify_result_.verified_cert.get(),
-          ct_verify_result_.verified_scts, net_log_);
+          server_cert_verify_result_.verified_cert.get(), verified_scts,
+          net_log_);
 
   if (ct_verify_result_.cert_policy_compliance !=
           ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS &&
@@ -2013,6 +2013,7 @@ int SSLClientSocketImpl::SelectNextProtoCallback(unsigned char** out,
       if (in[i] == proto.size() &&
           memcmp(&in[i + 1], proto.data(), in[i]) == 0) {
         // We found a match.
+        negotiated_protocol_ = next_proto;
         *out = const_cast<unsigned char*>(in) + i + 1;
         *outlen = in[i];
         npn_status_ = kNextProtoNegotiated;
@@ -2025,14 +2026,14 @@ int SSLClientSocketImpl::SelectNextProtoCallback(unsigned char** out,
 
   // If we didn't find a protocol, we select the last one from our list.
   if (npn_status_ == kNextProtoNoOverlap) {
+    negotiated_protocol_ = ssl_config_.npn_protos.back();
     // NextProtoToString returns a pointer to a static string.
-    const char* proto = NextProtoToString(ssl_config_.npn_protos.back());
+    const char* proto = NextProtoToString(negotiated_protocol_);
     *out = reinterpret_cast<unsigned char*>(const_cast<char*>(proto));
     *outlen = strlen(proto);
   }
 
-  npn_proto_.assign(reinterpret_cast<const char*>(*out), *outlen);
-  set_negotiation_extension(kExtensionNPN);
+  negotiation_extension_ = kExtensionNPN;
   return SSL_TLSEXT_ERR_OK;
 }
 
@@ -2149,9 +2150,8 @@ bool SSLClientSocketImpl::IsRenegotiationAllowed() const {
   if (npn_status_ == kNextProtoUnsupported)
     return ssl_config_.renego_allowed_default;
 
-  NextProto next_proto = NextProtoFromString(npn_proto_);
   for (NextProto allowed : ssl_config_.renego_allowed_for_protos) {
-    if (next_proto == allowed)
+    if (negotiated_protocol_ == allowed)
       return true;
   }
   return false;
@@ -2336,6 +2336,56 @@ void SSLClientSocketImpl::LogConnectEndEvent(int rv) {
 
   net_log_.EndEvent(NetLog::TYPE_SSL_CONNECT,
                     base::Bind(&NetLogSSLInfoCallback, base::Unretained(this)));
+}
+
+void SSLClientSocketImpl::RecordNegotiationExtension() const {
+  if (negotiation_extension_ == kExtensionUnknown)
+    return;
+  if (npn_status_ == kNextProtoUnsupported)
+    return;
+  base::HistogramBase::Sample sample =
+      static_cast<base::HistogramBase::Sample>(negotiated_protocol_);
+  // In addition to the protocol negotiated, we want to record which TLS
+  // extension was used, and in case of NPN, whether there was overlap between
+  // server and client list of supported protocols.
+  if (negotiation_extension_ == kExtensionNPN) {
+    if (npn_status_ == kNextProtoNoOverlap) {
+      sample += 1000;
+    } else {
+      sample += 500;
+    }
+  } else {
+    DCHECK_EQ(kExtensionALPN, negotiation_extension_);
+  }
+  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLProtocolNegotiation", sample);
+}
+
+void SSLClientSocketImpl::RecordChannelIDSupport() const {
+  // Since this enum is used for a histogram, do not change or re-use values.
+  enum {
+    DISABLED = 0,
+    CLIENT_ONLY = 1,
+    CLIENT_AND_SERVER = 2,
+    // CLIENT_NO_ECC is unused now.
+    // CLIENT_BAD_SYSTEM_TIME is unused now.
+    CLIENT_BAD_SYSTEM_TIME = 4,
+    CLIENT_NO_CHANNEL_ID_SERVICE = 5,
+    CHANNEL_ID_USAGE_MAX
+  } supported = DISABLED;
+  if (channel_id_sent_) {
+    supported = CLIENT_AND_SERVER;
+  } else if (ssl_config_.channel_id_enabled) {
+    if (!channel_id_service_)
+      supported = CLIENT_NO_CHANNEL_ID_SERVICE;
+    else
+      supported = CLIENT_ONLY;
+  }
+  UMA_HISTOGRAM_ENUMERATION("DomainBoundCerts.Support", supported,
+                            CHANNEL_ID_USAGE_MAX);
+}
+
+bool SSLClientSocketImpl::IsChannelIDEnabled() const {
+  return ssl_config_.channel_id_enabled && channel_id_service_;
 }
 
 }  // namespace net

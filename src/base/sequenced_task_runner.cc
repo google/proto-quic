@@ -28,4 +28,17 @@ bool SequencedTaskRunner::ReleaseSoonInternal(
   return PostNonNestableTask(from_here, Bind(releaser, object));
 }
 
+OnTaskRunnerDeleter::OnTaskRunnerDeleter(
+    scoped_refptr<SequencedTaskRunner> task_runner)
+    : task_runner_(std::move(task_runner)) {
+}
+
+OnTaskRunnerDeleter::~OnTaskRunnerDeleter() {
+}
+
+OnTaskRunnerDeleter::OnTaskRunnerDeleter(OnTaskRunnerDeleter&&) = default;
+
+OnTaskRunnerDeleter& OnTaskRunnerDeleter::operator=(
+    OnTaskRunnerDeleter&&) = default;
+
 }  // namespace base

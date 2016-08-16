@@ -58,6 +58,7 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
     bool is_cancelled;
   };
 
+  // Takes ownership of |connection|.
   QuicSimpleServerSession(const QuicConfig& config,
                           QuicConnection* connection,
                           QuicServerSessionBase::Visitor* visitor,

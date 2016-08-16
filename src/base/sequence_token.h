@@ -39,23 +39,69 @@ class BASE_EXPORT SequenceToken {
   static SequenceToken GetForCurrentThread();
 
  private:
-  SequenceToken(int token) : token_(token) {}
+  explicit SequenceToken(int token) : token_(token) {}
 
   static constexpr int kInvalidSequenceToken = -1;
   int token_ = kInvalidSequenceToken;
 };
 
-// Throughout its lifetime, determines the value returned by
-// SequenceToken::GetForCurrentThread().
+// A token that identifies a task.
+//
+// This is used by ThreadCheckerImpl to determine whether calls to
+// CalledOnValidThread() come from the same task and hence are deterministically
+// single-threaded (vs. calls coming from different sequenced or parallel tasks,
+// which may or may not run on the same thread).
+class BASE_EXPORT TaskToken {
+ public:
+  // Instantiates an invalid TaskToken.
+  TaskToken() = default;
+
+  // Explicitly allow copy.
+  TaskToken(const TaskToken& other) = default;
+  TaskToken& operator=(const TaskToken& other) = default;
+
+  // An invalid TaskToken is not equal to any other TaskToken, including
+  // other invalid TaskTokens.
+  bool operator==(const TaskToken& other) const;
+  bool operator!=(const TaskToken& other) const;
+
+  // Returns true if this is a valid TaskToken.
+  bool IsValid() const;
+
+  // In the scope of a ScopedSetSequenceTokenForCurrentThread, returns a valid
+  // TaskToken which isn't equal to any TaskToken returned in the scope of a
+  // different ScopedSetSequenceTokenForCurrentThread. Otherwise, returns an
+  // invalid TaskToken.
+  static TaskToken GetForCurrentThread();
+
+ private:
+  friend class ScopedSetSequenceTokenForCurrentThread;
+
+  explicit TaskToken(int token) : token_(token) {}
+
+  // Returns a valid TaskToken which isn't equal to any previously returned
+  // TaskToken. This is private as it only meant to be instantiated by
+  // ScopedSetSequenceTokenForCurrentThread.
+  static TaskToken Create();
+
+  static constexpr int kInvalidTaskToken = -1;
+  int token_ = kInvalidTaskToken;
+};
+
+// Instantiate this in the scope where a single task runs.
 class BASE_EXPORT ScopedSetSequenceTokenForCurrentThread {
  public:
-  ScopedSetSequenceTokenForCurrentThread(const SequenceToken& token);
+  // Throughout the lifetime of the constructed object,
+  // SequenceToken::GetForCurrentThread() will return |sequence_token| and
+  // TaskToken::GetForCurrentThread() will return a TaskToken which is not equal
+  // to any TaskToken returned in the scope of another
+  // ScopedSetSequenceTokenForCurrentThread.
+  ScopedSetSequenceTokenForCurrentThread(const SequenceToken& sequence_token);
   ~ScopedSetSequenceTokenForCurrentThread();
 
  private:
-  friend class SequenceToken;
-
-  const SequenceToken token_;
+  const SequenceToken sequence_token_;
+  const TaskToken task_token_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedSetSequenceTokenForCurrentThread);
 };

@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
   net::QuicSimpleServer server(
       CreateProofSource(line->GetSwitchValuePath("certificate_file"),
                         line->GetSwitchValuePath("key_file")),
-      config, net::QuicSupportedVersions());
+      config, net::AllSupportedVersions());
   server.SetStrikeRegisterNoStartupPeriod();
 
   int rc = server.Listen(net::IPEndPoint(ip, FLAGS_port));

@@ -68,21 +68,20 @@ SendAlgorithmInterface* QuicSentPacketManagerPeer::GetSendAlgorithm(
 void QuicSentPacketManagerPeer::SetSendAlgorithm(
     QuicSentPacketManager* sent_packet_manager,
     SendAlgorithmInterface* send_algorithm) {
-  sent_packet_manager->send_algorithm_.reset(send_algorithm);
-  sent_packet_manager->using_inline_pacing_ = false;
+  sent_packet_manager->SetSendAlgorithm(send_algorithm);
 }
 
 // static
 const LossDetectionInterface* QuicSentPacketManagerPeer::GetLossAlgorithm(
     QuicSentPacketManager* sent_packet_manager) {
-  return sent_packet_manager->loss_algorithm_.get();
+  return sent_packet_manager->loss_algorithm_;
 }
 
 // static
 void QuicSentPacketManagerPeer::SetLossAlgorithm(
     QuicSentPacketManager* sent_packet_manager,
     LossDetectionInterface* loss_detector) {
-  sent_packet_manager->loss_algorithm_.reset(loss_detector);
+  sent_packet_manager->loss_algorithm_ = loss_detector;
 }
 
 // static

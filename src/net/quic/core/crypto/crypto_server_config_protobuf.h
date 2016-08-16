@@ -59,7 +59,7 @@ class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
     return keys_.back();
   }
 
-  void clear_key() { STLDeleteElements(&keys_); }
+  void clear_key() { base::STLDeleteElements(&keys_); }
 
   bool has_primary_time() const { return primary_time_ > 0; }
 

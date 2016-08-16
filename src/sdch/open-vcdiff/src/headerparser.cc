@@ -14,17 +14,15 @@
 
 #include "headerparser.h"
 
-#include <limits.h>
+#include <limits>
 
-#include <config.h>
 #include "logging.h"
 #include "varint_bigendian.h"
-#include "vcdiff_defs.h"
 
 namespace {
 
 bool SumWouldOverflow2(size_t a, size_t b) {
-  return a > SIZE_MAX - b;
+  return a > std::numeric_limits<size_t>::max() - b;
 }
 
 bool SumWouldOverflow4(size_t a, size_t b, size_t c, size_t d) {

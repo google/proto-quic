@@ -73,7 +73,6 @@ class SSLClientSocketImpl : public SSLClientSocket {
 
   // SSLClientSocket implementation.
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override;
-  NextProtoStatus GetNextProto(std::string* proto) const override;
   ChannelIDService* GetChannelIDService() const override;
   Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
                                     std::vector<uint8_t>* out) override;
@@ -97,6 +96,8 @@ class SSLClientSocketImpl : public SSLClientSocket {
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
+  bool WasNpnNegotiated() const override;
+  NextProto GetNegotiatedProtocol() const override;
   bool GetSSLInfo(SSLInfo* ssl_info) override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
   void ClearConnectionAttempts() override {}
@@ -239,6 +240,17 @@ class SSLClientSocketImpl : public SSLClientSocket {
 
   void LogConnectEndEvent(int rv);
 
+  // Record which TLS extension was used to negotiate protocol and protocol
+  // chosen in a UMA histogram.
+  void RecordNegotiationExtension() const;
+
+  // Records histograms for channel id support during full handshakes - resumed
+  // handshakes are ignored.
+  void RecordChannelIDSupport() const;
+
+  // Returns whether TLS channel ID is enabled.
+  bool IsChannelIDEnabled() const;
+
   bool transport_send_busy_;
   bool transport_recv_busy_;
 
@@ -342,7 +354,9 @@ class SSLClientSocketImpl : public SSLClientSocket {
   bool disconnected_;
 
   NextProtoStatus npn_status_;
-  std::string npn_proto_;
+  NextProto negotiated_protocol_;
+  // Protocol negotiation extension used.
+  SSLNegotiationExtension negotiation_extension_;
   // Written by the |channel_id_service_|.
   std::unique_ptr<crypto::ECPrivateKey> channel_id_key_;
   // True if a channel ID was sent.

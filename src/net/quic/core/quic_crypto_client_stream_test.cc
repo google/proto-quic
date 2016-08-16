@@ -274,7 +274,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
     CreateClientSessionForTest(server_id_,
                                /* supports_stateless_rejects= */ true,
                                QuicTime::Delta::FromSeconds(100000),
-                               QuicSupportedVersions(), &helper_,
+                               AllSupportedVersions(), &helper_,
                                &alarm_factory_, &client_crypto_config_,
                                &client_connection_, &client_session);
     CHECK(client_session);
@@ -296,7 +296,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
   void InitializeFakeStatelessRejectServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
     CreateServerSessionForTest(server_id_, QuicTime::Delta::FromSeconds(100000),
-                               QuicSupportedVersions(), &helper_,
+                               AllSupportedVersions(), &helper_,
                                &alarm_factory_, &server_crypto_config_,
                                &server_compressed_certs_cache_,
                                &server_connection_, &server_session);

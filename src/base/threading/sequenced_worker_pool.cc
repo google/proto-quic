@@ -1220,12 +1220,6 @@ SequencedWorkerPool::SequencedWorkerPool(size_t max_threads,
                        NULL)) {}
 
 SequencedWorkerPool::SequencedWorkerPool(size_t max_threads,
-                                         const std::string& thread_name_prefix)
-    : SequencedWorkerPool(max_threads,
-                          thread_name_prefix,
-                          base::TaskPriority::USER_VISIBLE) {}
-
-SequencedWorkerPool::SequencedWorkerPool(size_t max_threads,
                                          const std::string& thread_name_prefix,
                                          base::TaskPriority task_priority,
                                          TestingObserver* observer)

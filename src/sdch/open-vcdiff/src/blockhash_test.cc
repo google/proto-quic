@@ -17,7 +17,7 @@
 #include <limits.h>  // INT_MIN
 #include <string.h>  // memcpy, memcmp, strlen
 #include <iostream>
-#include "encodetable.h"
+#include "google/encodetable.h"
 #include "rolling_hash.h"
 #include "testing.h"
 #include "unique_ptr.h" // auto_ptr, unique_ptr

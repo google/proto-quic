@@ -238,8 +238,8 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
     uint8_t *dhe_secret;
     size_t dhe_secret_len;
     uint8_t alert = SSL_AD_DECODE_ERROR;
-    if (!ext_key_share_parse_serverhello(ssl, &dhe_secret, &dhe_secret_len,
-                                         &alert, &key_share)) {
+    if (!ssl_ext_key_share_parse_serverhello(ssl, &dhe_secret, &dhe_secret_len,
+                                             &alert, &key_share)) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
       return ssl_hs_error;
     }
@@ -323,6 +323,7 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL *ssl,
       !CBS_stow(&context, &ssl->s3->hs->cert_context,
                 &ssl->s3->hs->cert_context_len) ||
       !CBS_get_u16_length_prefixed(&cbs, &supported_signature_algorithms) ||
+      CBS_len(&supported_signature_algorithms) == 0 ||
       !tls1_parse_peer_sigalgs(ssl, &supported_signature_algorithms)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
@@ -360,8 +361,17 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL *ssl,
 static enum ssl_hs_wait_t do_process_server_certificate(SSL *ssl,
                                                         SSL_HANDSHAKE *hs) {
   if (!tls13_check_message_type(ssl, SSL3_MT_CERTIFICATE) ||
-      !tls13_process_certificate(ssl) ||
+      !tls13_process_certificate(ssl, 0 /* certificate required */) ||
       !ssl->method->hash_current_message(ssl)) {
+    return ssl_hs_error;
+  }
+
+  /* Check the certificate matches the cipher suite.
+   *
+   * TODO(davidben): Remove this check when switching to the new TLS 1.3 cipher
+   * suite negotiation. */
+  if (!ssl_check_leaf_certificate(ssl, ssl->s3->new_session->peer)) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
     return ssl_hs_error;
   }
 
@@ -555,4 +565,39 @@ enum ssl_hs_wait_t tls13_client_handshake(SSL *ssl) {
   }
 
   return ssl_hs_ok;
+}
+
+int tls13_process_new_session_ticket(SSL *ssl) {
+  SSL_SESSION *session = SSL_SESSION_dup(ssl->s3->established_session,
+                                         0 /* don't include ticket */);
+  if (session == NULL) {
+    return 0;
+  }
+
+  CBS cbs, extensions, ticket;
+  CBS_init(&cbs, ssl->init_msg, ssl->init_num);
+  if (!CBS_get_u32(&cbs, &session->tlsext_tick_lifetime_hint) ||
+      !CBS_get_u32(&cbs, &session->ticket_flags) ||
+      !CBS_get_u32(&cbs, &session->ticket_age_add) ||
+      !CBS_get_u16_length_prefixed(&cbs, &extensions) ||
+      !CBS_get_u16_length_prefixed(&cbs, &ticket) ||
+      !CBS_stow(&ticket, &session->tlsext_tick, &session->tlsext_ticklen) ||
+      CBS_len(&cbs) != 0) {
+    SSL_SESSION_free(session);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    return 0;
+  }
+
+  session->ticket_age_add_valid = 1;
+  session->not_resumable = 0;
+
+  if (ssl->ctx->new_session_cb != NULL &&
+      ssl->ctx->new_session_cb(ssl, session)) {
+    /* |new_session_cb|'s return value signals that it took ownership. */
+    return 1;
+  }
+
+  SSL_SESSION_free(session);
+  return 1;
 }

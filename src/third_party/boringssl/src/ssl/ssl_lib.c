@@ -155,6 +155,13 @@
 #include "internal.h"
 #include "../crypto/internal.h"
 
+#if defined(OPENSSL_WINDOWS)
+#include <sys/timeb.h>
+#else
+#include <sys/socket.h>
+#include <sys/time.h>
+#endif
+
 
 /* |SSL_R_UNKNOWN_PROTOCOL| is no longer emitted, but continue to define it
  * to avoid downstream churn. */
@@ -433,7 +440,7 @@ SSL *SSL_new(SSL_CTX *ctx) {
     ssl->alpn_client_proto_list_len = ssl->ctx->alpn_client_proto_list_len;
   }
 
-  ssl->verify_result = X509_V_OK;
+  ssl->verify_result = X509_V_ERR_INVALID_CALL;
   ssl->method = ctx->method;
 
   if (!ssl->method->ssl_new(ssl)) {
@@ -494,7 +501,6 @@ void SSL_free(SSL *ssl) {
   ssl_cipher_preference_list_free(ssl->cipher_list);
   sk_SSL_CIPHER_free(ssl->cipher_list_by_id);
 
-  ssl_clear_bad_session(ssl);
   SSL_SESSION_free(ssl->session);
 
   ssl_cert_free(ssl->cert);
@@ -528,12 +534,12 @@ void SSL_set_accept_state(SSL *ssl) {
   ssl->handshake_func = ssl3_accept;
 }
 
-static void ssl_set_rbio(SSL *ssl, BIO *rbio) {
+void SSL_set0_rbio(SSL *ssl, BIO *rbio) {
   BIO_free_all(ssl->rbio);
   ssl->rbio = rbio;
 }
 
-static void ssl_set_wbio(SSL *ssl, BIO *wbio) {
+void SSL_set0_wbio(SSL *ssl, BIO *wbio) {
   /* If the output buffering BIO is still in place, remove it. */
   if (ssl->bbio != NULL) {
     ssl->wbio = BIO_pop(ssl->wbio);
@@ -552,25 +558,34 @@ void SSL_set_bio(SSL *ssl, BIO *rbio, BIO *wbio) {
   /* For historical reasons, this function has many different cases in ownership
    * handling. */
 
+  /* If nothing has changed, do nothing */
+  if (rbio == SSL_get_rbio(ssl) && wbio == SSL_get_wbio(ssl)) {
+    return;
+  }
+
   /* If the two arguments are equal, one fewer reference is granted than
    * taken. */
   if (rbio != NULL && rbio == wbio) {
     BIO_up_ref(rbio);
   }
 
-  /* If at most one of rbio or wbio is changed, only adopt one reference. */
+  /* If only the wbio is changed, adopt only one reference. */
   if (rbio == SSL_get_rbio(ssl)) {
-    ssl_set_wbio(ssl, wbio);
+    SSL_set0_wbio(ssl, wbio);
     return;
   }
-  if (wbio == SSL_get_wbio(ssl)) {
-    ssl_set_rbio(ssl, rbio);
+
+  /* There is an asymmetry here for historical reasons. If only the rbio is
+   * changed AND the rbio and wbio were originally different, then we only adopt
+   * one reference. */
+  if (wbio == SSL_get_wbio(ssl) && SSL_get_rbio(ssl) != SSL_get_wbio(ssl)) {
+    SSL_set0_rbio(ssl, rbio);
     return;
   }
 
   /* Otherwise, adopt both references. */
-  ssl_set_rbio(ssl, rbio);
-  ssl_set_wbio(ssl, wbio);
+  SSL_set0_rbio(ssl, rbio);
+  SSL_set0_wbio(ssl, wbio);
 }
 
 BIO *SSL_get_rbio(const SSL *ssl) { return ssl->rbio; }
@@ -1158,9 +1173,11 @@ int SSL_set_wfd(SSL *ssl, int fd) {
       return 0;
     }
     BIO_set_fd(bio, fd, BIO_NOCLOSE);
-    SSL_set_bio(ssl, rbio, bio);
+    SSL_set0_wbio(ssl, bio);
   } else {
-    SSL_set_bio(ssl, rbio, rbio);
+    /* Copy the rbio over to the wbio. */
+    BIO_up_ref(rbio);
+    SSL_set0_wbio(ssl, rbio);
   }
 
   return 1;
@@ -1176,9 +1193,11 @@ int SSL_set_rfd(SSL *ssl, int fd) {
       return 0;
     }
     BIO_set_fd(bio, fd, BIO_NOCLOSE);
-    SSL_set_bio(ssl, bio, wbio);
+    SSL_set0_rbio(ssl, bio);
   } else {
-    SSL_set_bio(ssl, wbio, wbio);
+    /* Copy the wbio over to the rbio. */
+    BIO_up_ref(wbio);
+    SSL_set0_rbio(ssl, wbio);
   }
   return 1;
 }
@@ -1362,7 +1381,7 @@ int SSL_set_max_send_fragment(SSL *ssl, size_t max_send_fragment) {
 }
 
 int SSL_set_mtu(SSL *ssl, unsigned mtu) {
-  if (!SSL_IS_DTLS(ssl) || mtu < dtls1_min_mtu()) {
+  if (!SSL_is_dtls(ssl) || mtu < dtls1_min_mtu()) {
     return 0;
   }
   ssl->d1->mtu = mtu;
@@ -2069,11 +2088,12 @@ void ssl_update_cache(SSL *ssl, int mode) {
     if (use_internal_cache) {
       SSL_CTX_add_session(ctx, ssl->s3->established_session);
     }
-    if (ctx->new_session_cb != NULL &&
-        !ctx->new_session_cb(ssl, SSL_SESSION_up_ref(
-            ssl->s3->established_session))) {
-      /* |new_session_cb|'s return value signals whether it took ownership. */
-      SSL_SESSION_free(ssl->s3->established_session);
+    if (ctx->new_session_cb != NULL) {
+      SSL_SESSION_up_ref(ssl->s3->established_session);
+      if (!ctx->new_session_cb(ssl, ssl->s3->established_session)) {
+        /* |new_session_cb|'s return value signals whether it took ownership. */
+        SSL_SESSION_free(ssl->s3->established_session);
+      }
     }
   }
 
@@ -2090,7 +2110,9 @@ void ssl_update_cache(SSL *ssl, int mode) {
     CRYPTO_MUTEX_unlock_write(&ctx->lock);
 
     if (flush_cache) {
-      SSL_CTX_flush_sessions(ctx, (unsigned long)time(NULL));
+      struct timeval now;
+      ssl_get_current_time(ssl, &now);
+      SSL_CTX_flush_sessions(ctx, (long)now.tv_sec);
     }
   }
 }
@@ -2631,7 +2653,7 @@ int ssl3_can_false_start(const SSL *ssl) {
   const SSL_CIPHER *const cipher = SSL_get_current_cipher(ssl);
 
   /* False Start only for TLS 1.2 with an ECDHE+AEAD cipher and ALPN or NPN. */
-  return !SSL_IS_DTLS(ssl) &&
+  return !SSL_is_dtls(ssl) &&
       SSL_version(ssl) == TLS1_2_VERSION &&
       (ssl->s3->alpn_selected || ssl->s3->next_proto_neg_seen) &&
       cipher != NULL &&
@@ -2675,7 +2697,7 @@ int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
   /* For historical reasons, |SSL_OP_NO_DTLSv1| aliases |SSL_OP_NO_TLSv1|, but
    * DTLS 1.0 should be mapped to TLS 1.1. */
   uint32_t options = ssl->options;
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     options &= ~SSL_OP_NO_TLSv1_1;
     if (options & SSL_OP_NO_DTLSv1) {
       options |= SSL_OP_NO_TLSv1_1;
@@ -2762,7 +2784,9 @@ uint16_t ssl3_protocol_version(const SSL *ssl) {
   return ssl->method->version_from_wire(ssl->version);
 }
 
-int SSL_is_server(SSL *ssl) { return ssl->server; }
+int SSL_is_server(const SSL *ssl) { return ssl->server; }
+
+int SSL_is_dtls(const SSL *ssl) { return ssl->method->is_dtls; }
 
 void SSL_CTX_set_select_certificate_cb(
     SSL_CTX *ctx, int (*cb)(const struct ssl_early_callback_ctx *)) {
@@ -2820,7 +2844,7 @@ static uint64_t be_to_u64(const uint8_t in[8]) {
 
 uint64_t SSL_get_read_sequence(const SSL *ssl) {
   /* TODO(davidben): Internally represent sequence numbers as uint64_t. */
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     /* max_seq_num already includes the epoch. */
     assert(ssl->d1->r_epoch == (ssl->d1->bitmap.max_seq_num >> 48));
     return ssl->d1->bitmap.max_seq_num;
@@ -2830,7 +2854,7 @@ uint64_t SSL_get_read_sequence(const SSL *ssl) {
 
 uint64_t SSL_get_write_sequence(const SSL *ssl) {
   uint64_t ret = be_to_u64(ssl->s3->write_sequence);
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     assert((ret >> 48) == 0);
     ret |= ((uint64_t)ssl->d1->w_epoch) << 48;
   }
@@ -2880,11 +2904,6 @@ int SSL_clear(SSL *ssl) {
     return 0;
   }
 
-  if (ssl_clear_bad_session(ssl)) {
-    SSL_SESSION_free(ssl->session);
-    ssl->session = NULL;
-  }
-
   /* SSL_clear may be called before or after the |ssl| is initialized in either
    * accept or connect state. In the latter case, SSL_clear should preserve the
    * half and reset |ssl->state| accordingly. */
@@ -2925,7 +2944,7 @@ int SSL_clear(SSL *ssl) {
     return 0;
   }
 
-  if (SSL_IS_DTLS(ssl) && (SSL_get_options(ssl) & SSL_OP_NO_QUERY_MTU)) {
+  if (SSL_is_dtls(ssl) && (SSL_get_options(ssl) & SSL_OP_NO_QUERY_MTU)) {
     ssl->d1->mtu = mtu;
   }
 
@@ -2995,4 +3014,20 @@ int SSL_set_tmp_ecdh(SSL *ssl, const EC_KEY *ec_key) {
   }
   int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
   return SSL_set1_curves(ssl, &nid, 1);
+}
+
+void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock) {
+  if (ssl->ctx->current_time_cb != NULL) {
+    ssl->ctx->current_time_cb(ssl, out_clock);
+    return;
+  }
+
+#if defined(OPENSSL_WINDOWS)
+  struct _timeb time;
+  _ftime(&time);
+  out_clock->tv_sec = time.time;
+  out_clock->tv_usec = time.millitm * 1000;
+#else
+  gettimeofday(out_clock, NULL);
+#endif
 }

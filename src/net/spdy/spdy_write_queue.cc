@@ -117,7 +117,7 @@ void SpdyWriteQueue::RemovePendingWritesForStream(
   }
   queue->erase(out_it, queue->end());
   removing_writes_ = false;
-  STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
+  base::STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
 }
 
 void SpdyWriteQueue::RemovePendingWritesForStreamsAfter(
@@ -143,7 +143,7 @@ void SpdyWriteQueue::RemovePendingWritesForStreamsAfter(
     queue->erase(out_it, queue->end());
   }
   removing_writes_ = false;
-  STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
+  base::STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
 }
 
 void SpdyWriteQueue::Clear() {
@@ -159,7 +159,7 @@ void SpdyWriteQueue::Clear() {
     queue_[i].clear();
   }
   removing_writes_ = false;
-  STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
+  base::STLDeleteElements(&erased_buffer_producers);  // Invokes callbacks.
 }
 
 }  // namespace net

@@ -201,14 +201,6 @@ class NET_EXPORT NetworkQualityEstimator
 
   SocketPerformanceWatcherFactory* GetSocketPerformanceWatcherFactory();
 
-  // Returns a string equivalent to |type|.
-  static const char* GetNameForEffectiveConnectionType(
-      EffectiveConnectionType type);
-
-  // Returns an EffectiveConnectionType equivalent to |connection_type_name|.
-  static EffectiveConnectionType GetEffectiveConnectionTypeForName(
-      const std::string& connection_type_name);
-
   // |use_localhost_requests| should only be true when testing against local
   // HTTP server and allows the requests to local host to be used for network
   // quality estimation.
@@ -295,6 +287,8 @@ class NET_EXPORT NetworkQualityEstimator
   virtual double RandDouble() const;
 
  private:
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           AdaptiveRecomputationEffectiveConnectionType);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, StoreObservations);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestAddObservation);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, ObtainOperatingParams);
@@ -305,6 +299,8 @@ class NET_EXPORT NetworkQualityEstimator
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestGetMetricsSince);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            TestExternalEstimateProviderMergeEstimates);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           UnknownEffectiveConnectionType);
 
   // Value of round trip time observations is in base::TimeDelta.
   typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
@@ -508,13 +504,6 @@ class NET_EXPORT NetworkQualityEstimator
   // Tick clock used by the network quality estimator.
   std::unique_ptr<base::TickClock> tick_clock_;
 
-  // Minimum duration between two consecutive computations of effective
-  // connection type. Set to non-zero value as a performance optimization.
-  const base::TimeDelta effective_connection_type_recomputation_interval_;
-
-  // Time when the effective connection type was last computed.
-  base::TimeTicks last_effective_connection_type_computation_;
-
   // Intervals after the main frame request arrives at which accuracy of network
   // quality prediction is recorded.
   std::vector<base::TimeDelta> accuracy_recording_intervals_;
@@ -590,6 +579,18 @@ class NET_EXPORT NetworkQualityEstimator
   // |downstream_throughput_kbps_observations_|, which are later used for
   // estimating the throughput.
   std::unique_ptr<nqe::internal::ThroughputAnalyzer> throughput_analyzer_;
+
+  // Minimum duration between two consecutive computations of effective
+  // connection type. Set to non-zero value as a performance optimization.
+  const base::TimeDelta effective_connection_type_recomputation_interval_;
+
+  // Time when the effective connection type was last computed.
+  base::TimeTicks last_effective_connection_type_computation_;
+
+  // Number of RTT and bandwidth samples available when effective connection
+  // type was last recomputed.
+  size_t rtt_observations_size_at_last_ect_computation_;
+  size_t throughput_observations_size_at_last_ect_computation_;
 
   // Current effective connection type. It is updated on connection change
   // events. It is also updated every time there is network traffic (provided

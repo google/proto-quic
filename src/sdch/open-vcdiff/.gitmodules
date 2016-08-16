@@ -1,0 +1,6 @@
+[submodule "gflags"]
+	path = third_party/gflags
+	url = https://github.com/gflags/gflags.git
+[submodule "googletest"]
+	path = third_party/googletest
+	url = https://github.com/google/googletest.git

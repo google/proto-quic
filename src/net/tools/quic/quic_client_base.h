@@ -165,6 +165,7 @@ class QuicClientBase {
   }
 
  protected:
+  // Takes ownership of |connection|.
   virtual QuicClientSession* CreateQuicClientSession(
       QuicConnection* connection);
 

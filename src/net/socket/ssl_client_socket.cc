@@ -4,9 +4,11 @@
 
 #include "net/socket/ssl_client_socket.h"
 
+#include "base/feature_list.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/strings/string_util.h"
+#include "build/build_config.h"
 #include "crypto/ec_private_key.h"
 #include "net/base/net_errors.h"
 #include "net/socket/ssl_client_socket_impl.h"
@@ -15,15 +17,19 @@
 
 namespace net {
 
+namespace {
+#if !defined(OS_NACL)
+const base::Feature kPostQuantumExperiment{"SSLPostQuantumExperiment",
+                                           base::FEATURE_DISABLED_BY_DEFAULT};
+#endif
+}  // namespace
+
 SSLClientSocket::SSLClientSocket()
     : signed_cert_timestamps_received_(false),
-      stapled_ocsp_response_received_(false),
-      negotiation_extension_(kExtensionUnknown) {
-}
+      stapled_ocsp_response_received_(false) {}
 
 // static
-NextProto SSLClientSocket::NextProtoFromString(
-    const std::string& proto_string) {
+NextProto SSLClientSocket::NextProtoFromString(base::StringPiece proto_string) {
   if (proto_string == "http1.1" || proto_string == "http/1.1") {
     return kProtoHTTP11;
   } else if (proto_string == "h2") {
@@ -75,18 +81,6 @@ void SSLClientSocket::SetSSLKeyLogFile(
 #endif
 }
 
-bool SSLClientSocket::WasNpnNegotiated() const {
-  std::string unused_proto;
-  return GetNextProto(&unused_proto) == kNextProtoNegotiated;
-}
-
-NextProto SSLClientSocket::GetNegotiatedProtocol() const {
-  std::string proto;
-  if (GetNextProto(&proto) != kNextProtoNegotiated)
-    return kProtoUnknown;
-  return NextProtoFromString(proto);
-}
-
 bool SSLClientSocket::IgnoreCertError(int error, int load_flags) {
   if (error == OK)
     return true;
@@ -94,65 +88,13 @@ bool SSLClientSocket::IgnoreCertError(int error, int load_flags) {
          IsCertificateError(error);
 }
 
-void SSLClientSocket::RecordNegotiationExtension() {
-  if (negotiation_extension_ == kExtensionUnknown)
-    return;
-  std::string proto;
-  SSLClientSocket::NextProtoStatus status = GetNextProto(&proto);
-  if (status == kNextProtoUnsupported)
-    return;
-  // Convert protocol into numerical value for histogram.
-  NextProto protocol_negotiated = SSLClientSocket::NextProtoFromString(proto);
-  base::HistogramBase::Sample sample =
-      static_cast<base::HistogramBase::Sample>(protocol_negotiated);
-  // In addition to the protocol negotiated, we want to record which TLS
-  // extension was used, and in case of NPN, whether there was overlap between
-  // server and client list of supported protocols.
-  if (negotiation_extension_ == kExtensionNPN) {
-    if (status == kNextProtoNoOverlap) {
-      sample += 1000;
-    } else {
-      sample += 500;
-    }
-  } else {
-    DCHECK_EQ(kExtensionALPN, negotiation_extension_);
-  }
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLProtocolNegotiation", sample);
-}
-
 // static
-void SSLClientSocket::RecordChannelIDSupport(
-    ChannelIDService* channel_id_service,
-    bool negotiated_channel_id,
-    bool channel_id_enabled) {
-  // Since this enum is used for a histogram, do not change or re-use values.
-  enum {
-    DISABLED = 0,
-    CLIENT_ONLY = 1,
-    CLIENT_AND_SERVER = 2,
-    // CLIENT_NO_ECC is unused now.
-    // CLIENT_BAD_SYSTEM_TIME is unused now.
-    CLIENT_BAD_SYSTEM_TIME = 4,
-    CLIENT_NO_CHANNEL_ID_SERVICE = 5,
-    CHANNEL_ID_USAGE_MAX
-  } supported = DISABLED;
-  if (negotiated_channel_id) {
-    supported = CLIENT_AND_SERVER;
-  } else if (channel_id_enabled) {
-    if (!channel_id_service)
-      supported = CLIENT_NO_CHANNEL_ID_SERVICE;
-    else
-      supported = CLIENT_ONLY;
-  }
-  UMA_HISTOGRAM_ENUMERATION("DomainBoundCerts.Support", supported,
-                            CHANNEL_ID_USAGE_MAX);
-}
-
-// static
-bool SSLClientSocket::IsChannelIDEnabled(
-    const SSLConfig& ssl_config,
-    ChannelIDService* channel_id_service) {
-  return ssl_config.channel_id_enabled && channel_id_service;
+bool SSLClientSocket::IsPostQuantumExperimentEnabled() {
+#if !defined(OS_NACL)
+  return base::FeatureList::IsEnabled(kPostQuantumExperiment);
+#else
+  return false;
+#endif
 }
 
 // static

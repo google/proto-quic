@@ -4,8 +4,8 @@
 //
 // Some helpers for quic.
 
-#ifndef NET_QUIC_QUIC_UTILS_H_
-#define NET_QUIC_QUIC_UTILS_H_
+#ifndef NET_QUIC_CORE_QUIC_UTILS_H_
+#define NET_QUIC_CORE_QUIC_UTILS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -157,4 +157,4 @@ inline QuicIOVector MakeIOVector(base::StringPiece str, struct iovec* iov) {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_UTILS_H_
+#endif  // NET_QUIC_CORE_QUIC_UTILS_H_

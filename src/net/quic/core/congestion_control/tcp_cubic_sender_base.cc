@@ -5,6 +5,7 @@
 #include "net/quic/core/congestion_control/tcp_cubic_sender_base.h"
 
 #include <algorithm>
+#include <string>
 
 #include "base/metrics/histogram_macros.h"
 #include "net/quic/core/congestion_control/prr_sender.h"
@@ -282,5 +283,11 @@ void TcpCubicSenderBase::OnConnectionMigration() {
   largest_sent_at_last_cutback_ = 0;
   last_cutback_exited_slowstart_ = false;
 }
+
+std::string TcpCubicSenderBase::GetDebugState() const {
+  return "";
+}
+
+void TcpCubicSenderBase::OnApplicationLimited(QuicByteCount bytes_in_flight) {}
 
 }  // namespace net

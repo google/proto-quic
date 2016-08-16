@@ -17,7 +17,7 @@
 #include <stdint.h>  // uint32_t
 #include <string.h>  // memcpy
 #include "blockhash.h"
-#include "codetablewriter_interface.h"
+#include "google/codetablewriter_interface.h"
 #include "logging.h"
 #include "rolling_hash.h"
 

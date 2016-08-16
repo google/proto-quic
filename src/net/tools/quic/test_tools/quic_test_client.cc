@@ -38,6 +38,8 @@ using net::test::QuicSpdySessionPeer;
 using net::test::ReliableQuicStreamPeer;
 using std::string;
 using std::vector;
+using testing::_;
+using testing::Invoke;
 
 namespace net {
 namespace test {
@@ -177,7 +179,16 @@ MockableQuicClient::MockableQuicClient(
                  base::WrapUnique(
                      new RecordingProofVerifier(std::move(proof_verifier)))),
       override_connection_id_(0),
-      test_writer_(nullptr) {}
+      test_writer_(nullptr) {
+  ON_CALL(*this, ProcessPacket(_, _, _))
+      .WillByDefault(Invoke(this, &MockableQuicClient::ProcessPacketBase));
+}
+
+void MockableQuicClient::ProcessPacketBase(const IPEndPoint& self_address,
+                                           const IPEndPoint& peer_address,
+                                           const QuicReceivedPacket& packet) {
+  QuicClient::ProcessPacket(self_address, peer_address, packet);
+}
 
 MockableQuicClient::~MockableQuicClient() {
   if (connected()) {

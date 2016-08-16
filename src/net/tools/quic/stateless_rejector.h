@@ -29,6 +29,7 @@ class StatelessRejector {
                     QuicCompressedCertsCache* compressed_certs_cache,
                     const QuicClock* clock,
                     QuicRandom* random,
+                    QuicByteCount chlo_packet_size,
                     const IPEndPoint& client_address,
                     const IPEndPoint& server_address);
 
@@ -70,6 +71,7 @@ class StatelessRejector {
   QuicVersionVector versions_;
   QuicConnectionId connection_id_;
   QuicConnectionId server_designated_connection_id_;
+  QuicByteCount chlo_packet_size_;
   IPEndPoint client_address_;
   IPEndPoint server_address_;
   const QuicClock* clock_;

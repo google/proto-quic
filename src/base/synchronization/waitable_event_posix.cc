@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "base/debug/activity_tracker.h"
 #include "base/logging.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
@@ -157,6 +158,9 @@ void WaitableEvent::Wait() {
 }
 
 bool WaitableEvent::TimedWait(const TimeDelta& max_time) {
+  // Record the event that this thread is blocking upon (for hang diagnosis).
+  base::debug::ScopedEventWaitActivity event_activity(this);
+
   base::ThreadRestrictions::AssertWaitAllowed();
   const TimeTicks end_time(TimeTicks::Now() + max_time);
   const bool finite_time = max_time.ToInternalValue() >= 0;
@@ -231,6 +235,9 @@ size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables,
                                size_t count) {
   base::ThreadRestrictions::AssertWaitAllowed();
   DCHECK(count) << "Cannot wait on no events";
+
+  // Record an event (the first) that this thread is blocking upon.
+  base::debug::ScopedEventWaitActivity event_activity(raw_waitables[0]);
 
   // We need to acquire the locks in a globally consistent order. Thus we sort
   // the array of waitables by address. We actually sort a pairs so that we can

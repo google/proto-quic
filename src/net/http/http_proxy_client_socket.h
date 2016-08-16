@@ -45,7 +45,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocket : public ProxyClientSocket {
                         HttpAuthController* http_auth_controller,
                         bool tunnel,
                         bool using_spdy,
-                        NextProto protocol_negotiated,
+                        NextProto negotiated_protocol,
                         ProxyDelegate* proxy_delegate,
                         bool is_https_proxy);
 
@@ -58,7 +58,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocket : public ProxyClientSocket {
   int RestartWithAuth(const CompletionCallback& callback) override;
   const scoped_refptr<HttpAuthController>& GetAuthController() const override;
   bool IsUsingSpdy() const override;
-  NextProto GetProtocolNegotiated() const override;
+  NextProto GetProxyNegotiatedProtocol() const override;
 
   // StreamSocket implementation.
   int Connect(const CompletionCallback& callback) override;
@@ -150,7 +150,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocket : public ProxyClientSocket {
   // If true, then the connection to the proxy is a SPDY connection.
   const bool using_spdy_;
   // Protocol negotiated with the server.
-  NextProto protocol_negotiated_;
+  NextProto negotiated_protocol_;
   // If true, then SSL is used to communicate with this proxy
   const bool is_https_proxy_;
 

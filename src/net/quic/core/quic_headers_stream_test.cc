@@ -40,7 +40,7 @@ using testing::_;
 // TODO(bnc): Merge these correctly.
 bool FLAGS_use_http2_frame_decoder_adapter;
 bool FLAGS_spdy_use_hpack_decoder2;
-bool FLAGS_spdy_framer_use_new_methods2;
+bool FLAGS_spdy_framer_use_new_methods3;
 
 namespace net {
 namespace test {
@@ -110,16 +110,16 @@ class MockVisitor : public SpdyFramerVisitorInterface {
                     SpdyStreamId promised_stream_id,
                     bool end));
   MOCK_METHOD2(OnContinuation, void(SpdyStreamId stream_id, bool end));
-  MOCK_METHOD4(OnPriority,
-               void(SpdyStreamId stream_id,
-                    SpdyStreamId parent_id,
-                    int weight,
-                    bool exclusive));
   MOCK_METHOD3(OnAltSvc,
                void(SpdyStreamId stream_id,
                     StringPiece origin,
                     const SpdyAltSvcWireFormat::AlternativeServiceVector&
                         altsvc_vector));
+  MOCK_METHOD4(OnPriority,
+               void(SpdyStreamId stream_id,
+                    SpdyStreamId parent_stream_id,
+                    int weight,
+                    bool exclusive));
   MOCK_METHOD2(OnUnknownFrame, bool(SpdyStreamId stream_id, int frame_type));
 };
 
@@ -171,16 +171,16 @@ ostream& operator<<(ostream& os, HpackDecoderChoice v) {
   return os;
 }
 
-typedef std::
+typedef testing::
     tuple<QuicVersion, Perspective, Http2DecoderChoice, HpackDecoderChoice>
         TestParamsTuple;
 
 struct TestParams {
   explicit TestParams(TestParamsTuple params)
-      : version(std::get<0>(params)),
-        perspective(std::get<1>(params)),
-        http2_decoder(std::get<2>(params)),
-        hpack_decoder(std::get<3>(params)) {
+      : version(testing::get<0>(params)),
+        perspective(testing::get<1>(params)),
+        http2_decoder(testing::get<2>(params)),
+        hpack_decoder(testing::get<3>(params)) {
     switch (http2_decoder) {
       case HTTP2_DECODER_SPDY:
         FLAGS_use_nested_spdy_framer_decoder = false;
@@ -195,7 +195,7 @@ struct TestParams {
         FLAGS_use_http2_frame_decoder_adapter = true;
         // Http2FrameDecoderAdapter needs the new header methods, else
         // --use_http2_frame_decoder_adapter=true will be ignored.
-        FLAGS_spdy_framer_use_new_methods2 = true;
+        FLAGS_spdy_framer_use_new_methods3 = true;
         break;
     }
     switch (hpack_decoder) {
@@ -205,10 +205,9 @@ struct TestParams {
       case HPACK_DECODER_NEW:
         FLAGS_spdy_use_hpack_decoder2 = true;
         // Needs new header methods to be used.
-        FLAGS_spdy_framer_use_new_methods2 = true;
+        FLAGS_spdy_framer_use_new_methods3 = true;
         break;
     }
-    FLAGS_quic_always_log_bugs_for_tests = true;
     VLOG(1) << "TestParams: version: " << QuicVersionToString(version)
             << ", perspective: " << perspective
             << ", http2_decoder: " << http2_decoder
@@ -408,7 +407,7 @@ INSTANTIATE_TEST_CASE_P(
     Tests,
     QuicHeadersStreamTest,
     ::testing::Combine(
-        ::testing::ValuesIn(QuicSupportedVersions()),
+        ::testing::ValuesIn(AllSupportedVersions()),
         ::testing::Values(Perspective::IS_CLIENT, Perspective::IS_SERVER),
         ::testing::Values(HTTP2_DECODER_SPDY,
                           HTTP2_DECODER_NESTED_SPDY,
@@ -460,7 +459,7 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
       CheckHeaders();
       saved_data_.clear();
     } else {
-      EXPECT_DFATAL(
+      EXPECT_QUIC_BUG(
           headers_stream_->WritePushPromise(stream_id, promised_stream_id,
                                             headers_.Clone(), nullptr),
           "Client shouldn't send PUSH_PROMISE");

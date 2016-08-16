@@ -144,6 +144,8 @@
           'cpu.h',
           'critical_closure.h',
           'critical_closure_internal_ios.mm',
+          'debug/activity_tracker.cc',
+          'debug/activity_tracker.h',
           'debug/alias.cc',
           'debug/alias.h',
 #          'debug/asan_invalid_access.cc',

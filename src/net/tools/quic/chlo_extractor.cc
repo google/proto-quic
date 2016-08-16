@@ -148,7 +148,9 @@ void ChloFramerVisitor::OnError(CryptoFramer* framer) {}
 
 void ChloFramerVisitor::OnHandshakeMessage(
     const CryptoHandshakeMessage& message) {
-  delegate_->OnChlo(framer_->version(), connection_id_, message);
+  if (delegate_ != nullptr) {
+    delegate_->OnChlo(framer_->version(), connection_id_, message);
+  }
   found_chlo_ = true;
 }
 

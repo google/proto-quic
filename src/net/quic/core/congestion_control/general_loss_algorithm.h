@@ -29,6 +29,9 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
   ~GeneralLossAlgorithm() override {}
 
   LossDetectionType GetLossDetectionType() const override;
+
+  // Switches the loss detection type to |loss_type| and resets the loss
+  // algorithm.
   void SetLossDetectionType(LossDetectionType loss_type);
 
   // Uses |largest_acked| and time to decide when packets are lost.
@@ -52,11 +55,11 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
   int reordering_shift() const { return reordering_shift_; }
 
  private:
-  LossDetectionType loss_type_;
   QuicTime loss_detection_timeout_;
   // Largest sent packet when a spurious retransmit is detected.
   // Prevents increasing the reordering threshold multiple times per epoch.
   QuicPacketNumber largest_sent_on_spurious_retransmit_;
+  LossDetectionType loss_type_;
   // Fraction of a max(SRTT, latest_rtt) to permit reordering before declaring
   // loss.  Fraction calculated by shifting max(SRTT, latest_rtt) to the right
   // by reordering_shift.

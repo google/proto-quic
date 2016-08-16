@@ -214,7 +214,7 @@ std::unique_ptr<MessagePump> MessageLoop::CreateMessagePumpForType(Type type) {
 // TODO(rvargas): Get rid of the OS guards.
 #if defined(USE_GLIB) && !defined(OS_NACL)
   typedef MessagePumpGlib MessagePumpForUI;
-#elif defined(OS_LINUX) && !defined(OS_NACL)
+#elif (defined(OS_LINUX) && !defined(OS_NACL)) || defined(OS_BSD)
   typedef MessagePumpLibevent MessagePumpForUI;
 #endif
 
@@ -418,21 +418,13 @@ void MessageLoop::BindToCurrentThread() {
   unbound_task_runner_->BindToCurrentThread();
   unbound_task_runner_ = nullptr;
   SetThreadTaskRunnerHandle();
-  {
-    // Save the current thread's ID for potential use by other threads
-    // later from GetThreadName().
-    thread_id_ = PlatformThread::CurrentId();
-    subtle::MemoryBarrier();
-  }
+  thread_id_ = PlatformThread::CurrentId();
 }
 
 std::string MessageLoop::GetThreadName() const {
-  if (thread_id_ == kInvalidThreadId) {
-    // |thread_id_| may already have been initialized but this thread might not
-    // have received the update yet.
-    subtle::MemoryBarrier();
-    DCHECK_NE(kInvalidThreadId, thread_id_);
-  }
+  DCHECK_NE(kInvalidThreadId, thread_id_)
+      << "GetThreadName() must only be called after BindToCurrentThread()'s "
+      << "side-effects have been synchronized with this thread.";
   return ThreadIdNameManager::GetInstance()->GetName(thread_id_);
 }
 

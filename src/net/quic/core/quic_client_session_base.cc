@@ -27,6 +27,7 @@ QuicClientSessionBase::~QuicClientSessionBase() {
     DVLOG(1) << "erase stream " << it.first << " url " << it.second->url();
     push_promise_index_->promised_by_url()->erase(it.second->url());
   }
+  delete connection();
 }
 
 void QuicClientSessionBase::OnConfigNegotiated() {

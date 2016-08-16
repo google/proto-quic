@@ -147,9 +147,9 @@ bool HttpProxyClientSocketWrapper::IsUsingSpdy() const {
   return false;
 }
 
-NextProto HttpProxyClientSocketWrapper::GetProtocolNegotiated() const {
+NextProto HttpProxyClientSocketWrapper::GetProxyNegotiatedProtocol() const {
   if (transport_socket_)
-    return transport_socket_->GetProtocolNegotiated();
+    return transport_socket_->GetProxyNegotiatedProtocol();
   return kProtoUnknown;
 }
 
@@ -470,8 +470,8 @@ int HttpProxyClientSocketWrapper::DoSSLConnectComplete(int result) {
 
   SSLClientSocket* ssl =
       static_cast<SSLClientSocket*>(transport_socket_handle_->socket());
-  protocol_negotiated_ = ssl->GetNegotiatedProtocol();
-  using_spdy_ = protocol_negotiated_ == kProtoHTTP2;
+  negotiated_protocol_ = ssl->GetNegotiatedProtocol();
+  using_spdy_ = negotiated_protocol_ == kProtoHTTP2;
 
   // Reset the timer to just the length of time allowed for HttpProxy handshake
   // so that a fast SSL connection plus a slow HttpProxy failure doesn't take
@@ -499,7 +499,7 @@ int HttpProxyClientSocketWrapper::DoHttpProxyConnect() {
   transport_socket_.reset(new HttpProxyClientSocket(
       transport_socket_handle_.release(), user_agent_, endpoint_,
       GetDestination().host_port_pair(), http_auth_controller_.get(), tunnel_,
-      using_spdy_, protocol_negotiated_, proxy_delegate_,
+      using_spdy_, negotiated_protocol_, proxy_delegate_,
       ssl_params_.get() != nullptr));
   return transport_socket_->Connect(base::Bind(
       &HttpProxyClientSocketWrapper::OnIOComplete, base::Unretained(this)));

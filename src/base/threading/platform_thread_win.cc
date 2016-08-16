@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 
+#include "base/debug/activity_tracker.h"
 #include "base/debug/alias.h"
 #include "base/debug/profiler.h"
 #include "base/logging.h"
@@ -210,6 +211,9 @@ bool PlatformThread::CreateNonJoinableWithPriority(size_t stack_size,
 
 // static
 void PlatformThread::Join(PlatformThreadHandle thread_handle) {
+  // Record the event that this thread is blocking upon (for hang diagnosis).
+  base::debug::ScopedThreadJoinActivity thread_activity(&thread_handle);
+
   DCHECK(thread_handle.platform_handle());
   // TODO(willchan): Enable this check once I can get it to work for Windows
   // shutdown.

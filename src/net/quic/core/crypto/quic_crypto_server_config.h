@@ -279,6 +279,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   //     contain the state of the connection.
   // crypto_proof: output structure containing the crypto proof used in reply to
   //     a proof demand.
+  // total_framing_overhead: the total per-packet overhead for a stream frame
+  // chlo_packet_size: the size, in bytes, of the CHLO packet
   // out: the resulting handshake message (either REJ or SHLO)
   // out_diversification_nonce: If the resulting handshake message is SHLO and
   //     the version is greater than QUIC_VERSION_32 then this contains a
@@ -300,6 +302,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicCompressedCertsCache* compressed_certs_cache,
       QuicCryptoNegotiatedParameters* params,
       QuicCryptoProof* crypto_proof,
+      QuicByteCount total_framing_overhead,
+      QuicByteCount chlo_packet_size,
       CryptoHandshakeMessage* out,
       DiversificationNonce* out_diversification_nonce,
       std::string* error_details) const;
@@ -550,6 +554,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
                       QuicCompressedCertsCache* compressed_certs_cache,
                       QuicCryptoNegotiatedParameters* params,
                       const QuicCryptoProof& crypto_proof,
+                      QuicByteCount total_framing_overhead,
+                      QuicByteCount chlo_packet_size,
                       CryptoHandshakeMessage* out) const;
 
   // CompressChain compresses the certificates in |chain->certs| and returns a

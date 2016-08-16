@@ -629,7 +629,7 @@ SpdyHeaderBlock QuicTestPacketMaker::GetResponseHeaders(
     const std::string& alt_svc) {
   SpdyHeaderBlock headers;
   headers[":status"] = status;
-  headers["Alt-Svc"] = alt_svc;
+  headers["alt-svc"] = alt_svc;
   headers["content-type"] = "text/plain";
   return headers;
 }

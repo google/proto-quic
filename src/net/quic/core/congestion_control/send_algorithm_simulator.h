@@ -168,9 +168,16 @@ class SendAlgorithmSimulator {
   void TransferBytes();
 
   // Transfers bytes through the connection until |max_bytes| are reached,
-  // |max_time| is reached, or all senders have finished sending.  If max_bytes
-  // is 0, it does not apply, and if |max_time| is Zero, no time limit applies.
+  // |max_time| is reached, or all senders have finished sending.  If |max_time|
+  // is Zero, no time limit applies.
   void TransferBytes(QuicByteCount max_bytes, QuicTime::Delta max_time);
+
+  // Transfers bytes through the connection until the supplied termination
+  // predicate returns true, or until all senders have finished sending.
+  // Returns true if the transfer was terminated due to the predicate, and false
+  // otherwise.
+  template <class TerminationPredicate>
+  bool TransferBytesUntil(TerminationPredicate termination_predicate);
 
  private:
   // A pending packet event, either a send or an ack.

@@ -83,7 +83,7 @@ void QuicPacketCreator::SetMaxPacketLength(QuicByteCount length) {
 }
 
 void QuicPacketCreator::MaybeUpdatePacketNumberLength() {
-  DCHECK(!FLAGS_quic_simple_packet_number_length);
+  DCHECK(!FLAGS_quic_simple_packet_number_length_2);
   if (!queued_frames_.empty()) {
     // Don't change creator state if there are frames queued.
     return;
@@ -115,7 +115,7 @@ void QuicPacketCreator::SetDiversificationNonce(
 void QuicPacketCreator::UpdatePacketNumberLength(
     QuicPacketNumber least_packet_awaited_by_peer,
     QuicPacketCount max_packets_in_flight) {
-  if (FLAGS_quic_simple_packet_number_length && !queued_frames_.empty()) {
+  if (FLAGS_quic_simple_packet_number_length_2 && !queued_frames_.empty()) {
     // Don't change creator state if there are frames queued.
     QUIC_BUG << "Called UpdatePacketNumberLength with " << queued_frames_.size()
              << " queued_frames.  First frame type:"
@@ -128,7 +128,7 @@ void QuicPacketCreator::UpdatePacketNumberLength(
   const QuicPacketNumber current_delta =
       packet_.packet_number + 1 - least_packet_awaited_by_peer;
   const uint64_t delta = max(current_delta, max_packets_in_flight);
-  if (FLAGS_quic_simple_packet_number_length) {
+  if (FLAGS_quic_simple_packet_number_length_2) {
     packet_.packet_number_length =
         QuicFramer::GetMinSequenceNumberLength(delta * 4);
   } else {
@@ -209,7 +209,7 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
                                       IncludeNonceInPublicHeader(),
                                       PACKET_6BYTE_PACKET_NUMBER, offset));
 
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     MaybeUpdatePacketNumberLength();
   }
   QUIC_BUG_IF(!HasRoomForStreamFrame(id, offset))
@@ -304,7 +304,7 @@ void QuicPacketCreator::ReserializeAllFrames(
 
   // Temporarily set the packet number length and change the encryption level.
   packet_.packet_number_length = retransmission.packet_number_length;
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     next_packet_number_length_ = retransmission.packet_number_length;
   }
   packet_.num_padding_bytes = retransmission.num_padding_bytes;
@@ -318,12 +318,13 @@ void QuicPacketCreator::ReserializeAllFrames(
   // Serialize the packet and restore packet number length state.
   for (const QuicFrame& frame : retransmission.retransmittable_frames) {
     bool success = AddFrame(frame, false);
-    LOG_IF(DFATAL, !success)
-        << " Failed to add frame of type:" << frame.type
-        << " num_frames:" << retransmission.retransmittable_frames.size()
-        << " retransmission.packet_number_length:"
-        << retransmission.packet_number_length
-        << " packet_.packet_number_length:" << packet_.packet_number_length;
+    QUIC_BUG_IF(!success) << " Failed to add frame of type:" << frame.type
+                          << " num_frames:"
+                          << retransmission.retransmittable_frames.size()
+                          << " retransmission.packet_number_length:"
+                          << retransmission.packet_number_length
+                          << " packet_.packet_number_length:"
+                          << packet_.packet_number_length;
   }
   SerializePacket(buffer, buffer_len);
   packet_.original_path_id = retransmission.path_id;
@@ -331,7 +332,7 @@ void QuicPacketCreator::ReserializeAllFrames(
   packet_.transmission_type = retransmission.transmission_type;
   OnSerializedPacket();
   // Restore old values.
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     // OnSerializedPacket updates the packet_number_length, so it's incorrect to
     // restore it here.
     packet_.packet_number_length = saved_length;
@@ -486,7 +487,7 @@ size_t QuicPacketCreator::PacketSize() {
     return packet_size_;
   }
   // Update packet number length on packet boundary.
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     packet_.packet_number_length = next_packet_number_length_;
   }
   packet_size_ = GetPacketHeaderSize(
@@ -621,7 +622,7 @@ bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
         ConnectionCloseSource::FROM_SELF);
     return false;
   }
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     MaybeUpdatePacketNumberLength();
   }
   size_t frame_len = framer_->GetSerializedFrameLength(

@@ -82,9 +82,10 @@ TEST_F(QuicFlowControllerTest, SendingBytes) {
   // Try to send more bytes, violating flow control.
   EXPECT_CALL(connection_,
               CloseConnection(QUIC_FLOW_CONTROL_SENT_TOO_MUCH_DATA, _, _));
-  EXPECT_DFATAL(flow_controller_->AddBytesSent(send_window_ * 10),
-                base::StringPrintf("Trying to send an extra %" PRIu64 " bytes",
-                                   send_window_ * 10));
+  EXPECT_QUIC_BUG(
+      flow_controller_->AddBytesSent(send_window_ * 10),
+      base::StringPrintf("Trying to send an extra %" PRIu64 " bytes",
+                         send_window_ * 10));
   EXPECT_TRUE(flow_controller_->IsBlocked());
   EXPECT_EQ(0u, flow_controller_->SendWindowSize());
 }

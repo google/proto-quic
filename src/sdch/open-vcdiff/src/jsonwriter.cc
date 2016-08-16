@@ -17,8 +17,8 @@
 #include <string.h>
 #include <sstream>
 #include <string>
-#include "jsonwriter.h"
 #include "logging.h"
+#include "google/jsonwriter.h"
 #include "google/output_string.h"
 
 namespace open_vcdiff {

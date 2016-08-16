@@ -694,6 +694,7 @@ void QuicConfig::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
   connection_migration_disabled_.ToHandshakeMessage(out);
   connection_options_.ToHandshakeMessage(out);
   alternate_server_address_.ToHandshakeMessage(out);
+  force_hol_blocking_.ToHandshakeMessage(out);
 }
 
 QuicErrorCode QuicConfig::ProcessPeerHello(
@@ -750,6 +751,10 @@ QuicErrorCode QuicConfig::ProcessPeerHello(
   if (error == QUIC_NO_ERROR) {
     error = alternate_server_address_.ProcessPeerHello(peer_hello, hello_type,
                                                        error_details);
+  }
+  if (error == QUIC_NO_ERROR) {
+    error = force_hol_blocking_.ProcessPeerHello(peer_hello, hello_type,
+                                                 error_details);
   }
   return error;
 }

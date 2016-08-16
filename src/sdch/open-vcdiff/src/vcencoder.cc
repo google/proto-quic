@@ -28,15 +28,33 @@
 
 #include <config.h>
 #include "checksum.h"
-#include "encodetable.h"
+#include "google/encodetable.h"
 #include "google/output_string.h"
 #include "google/vcencoder.h"
-#include "jsonwriter.h"
+#include "google/jsonwriter.h"
 #include "logging.h"
 #include "unique_ptr.h" // auto_ptr, unique_ptr
 #include "vcdiffengine.h"
 
 namespace open_vcdiff {
+
+namespace {
+
+// Helper function to create default CodeTableWriter
+CodeTableWriterInterface* create_writer(
+    VCDiffFormatExtensionFlags format_extensions) {
+  if (format_extensions & VCD_FORMAT_JSON) {
+    return new JSONCodeTableWriter();
+  } else {
+    // This implementation of the encoder uses the default
+    // code table.  A VCDiffCodeTableWriter could also be constructed
+    // using a custom code table.
+    return new VCDiffCodeTableWriter(
+        (format_extensions & VCD_FORMAT_INTERLEAVED) != 0);
+  }
+}
+
+}  // namespace
 
 HashedDictionary::HashedDictionary(const char* dictionary_contents,
                                    size_t dictionary_size)
@@ -52,7 +70,8 @@ class VCDiffStreamingEncoderImpl {
  public:
   VCDiffStreamingEncoderImpl(const HashedDictionary* dictionary,
                              VCDiffFormatExtensionFlags format_extensions,
-                             bool look_for_target_matches);
+                             bool look_for_target_matches,
+                             CodeTableWriterInterface* writer);
 
   // These functions are identical to their counterparts
   // in VCDiffStreamingEncoder.
@@ -89,21 +108,13 @@ class VCDiffStreamingEncoderImpl {
 inline VCDiffStreamingEncoderImpl::VCDiffStreamingEncoderImpl(
     const HashedDictionary* dictionary,
     VCDiffFormatExtensionFlags format_extensions,
-    bool look_for_target_matches)
+    bool look_for_target_matches,
+    CodeTableWriterInterface* writer)
     : engine_(dictionary->engine()),
+      coder_(writer),
       format_extensions_(format_extensions),
       look_for_target_matches_(look_for_target_matches),
-      encode_chunk_allowed_(false) {
-  if (format_extensions & VCD_FORMAT_JSON) {
-    coder_.reset(new JSONCodeTableWriter());
-  } else {
-    // This implementation of the encoder uses the default
-    // code table.  A VCDiffCodeTableWriter could also be constructed
-    // using a custom code table.
-    coder_.reset(new VCDiffCodeTableWriter(
-        (format_extensions & VCD_FORMAT_INTERLEAVED) != 0));
-  }
-}
+      encode_chunk_allowed_(false) { }
 
 inline bool VCDiffStreamingEncoderImpl::StartEncoding(
     OutputStringInterface* out) {
@@ -156,9 +167,21 @@ VCDiffStreamingEncoder::VCDiffStreamingEncoder(
     const HashedDictionary* dictionary,
     VCDiffFormatExtensionFlags format_extensions,
     bool look_for_target_matches)
+    : impl_(new VCDiffStreamingEncoderImpl(
+          dictionary,
+          format_extensions,
+          look_for_target_matches,
+          create_writer(format_extensions))) { }
+
+VCDiffStreamingEncoder::VCDiffStreamingEncoder(
+    const HashedDictionary* dictionary,
+    VCDiffFormatExtensionFlags format_extensions,
+    bool look_for_target_matches,
+    CodeTableWriterInterface* writer)
     : impl_(new VCDiffStreamingEncoderImpl(dictionary,
                                            format_extensions,
-                                           look_for_target_matches)) { }
+                                           look_for_target_matches,
+                                           writer)) { }
 
 VCDiffStreamingEncoder::~VCDiffStreamingEncoder() { delete impl_; }
 

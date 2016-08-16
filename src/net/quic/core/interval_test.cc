@@ -211,7 +211,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(100u, diff[0]->min());
   EXPECT_EQ(200u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
   EXPECT_TRUE(!empty.Difference(d, &diff) && diff.empty());
 
   EXPECT_TRUE(d.Difference(d, &diff) && diff.empty());
@@ -219,7 +219,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(100u, diff[0]->min());
   EXPECT_EQ(200u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   Interval<int64_t> lo;
   Interval<int64_t> hi;
@@ -232,7 +232,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(110u, diff[0]->min());
   EXPECT_EQ(200u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d3, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
@@ -245,7 +245,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(110u, diff[0]->max());
   EXPECT_EQ(180u, diff[1]->min());
   EXPECT_EQ(200u, diff[1]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d4, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
@@ -255,7 +255,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(100u, diff[0]->min());
   EXPECT_EQ(180u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_FALSE(d.Difference(d5, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
@@ -265,7 +265,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(100u, diff[0]->min());
   EXPECT_EQ(200u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d6, &lo, &hi));
   EXPECT_TRUE(lo.Empty());
@@ -275,7 +275,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(150u, diff[0]->min());
   EXPECT_EQ(200u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d7, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
@@ -285,7 +285,7 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_EQ(1u, diff.size());
   EXPECT_EQ(100u, diff[0]->min());
   EXPECT_EQ(150u, diff[0]->max());
-  STLDeleteElements(&diff);
+  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d8, &lo, &hi));
   EXPECT_TRUE(lo.Empty());

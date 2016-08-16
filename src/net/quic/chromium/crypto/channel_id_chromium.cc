@@ -200,7 +200,7 @@ ChannelIDSourceChromium::ChannelIDSourceChromium(
     : channel_id_service_(channel_id_service) {}
 
 ChannelIDSourceChromium::~ChannelIDSourceChromium() {
-  STLDeleteElements(&active_jobs_);
+  base::STLDeleteElements(&active_jobs_);
 }
 
 QuicAsyncStatus ChannelIDSourceChromium::GetChannelIDKey(

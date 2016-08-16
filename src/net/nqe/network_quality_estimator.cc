@@ -314,12 +314,12 @@ void RecordEffectiveConnectionTypeAccuracy(
     int32_t metric,
     base::TimeDelta measuring_duration,
     net::EffectiveConnectionType observed_effective_connection_type) {
-  const std::string histogram_name = base::StringPrintf(
-      "%s.EstimatedObservedDiff.%s.%d.%s", prefix,
-      metric >= 0 ? "Positive" : "Negative",
-      static_cast<int32_t>(measuring_duration.InSeconds()),
-      net::NetworkQualityEstimator::GetNameForEffectiveConnectionType(
-          observed_effective_connection_type));
+  const std::string histogram_name =
+      base::StringPrintf("%s.EstimatedObservedDiff.%s.%d.%s", prefix,
+                         metric >= 0 ? "Positive" : "Negative",
+                         static_cast<int32_t>(measuring_duration.InSeconds()),
+                         net::GetNameForEffectiveConnectionType(
+                             observed_effective_connection_type));
 
   base::HistogramBase* histogram = base::Histogram::FactoryGet(
       histogram_name, 0, net::EFFECTIVE_CONNECTION_TYPE_LAST,
@@ -363,8 +363,6 @@ NetworkQualityEstimator::NetworkQualityEstimator(
                     .find(GetEffectiveConnectionTypeAlgorithm(variation_params))
                     ->second),
       tick_clock_(new base::DefaultTickClock()),
-      effective_connection_type_recomputation_interval_(
-          base::TimeDelta::FromSeconds(15)),
       last_connection_change_(tick_clock_->NowTicks()),
       current_network_id_(nqe::internal::NetworkID(
           NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN,
@@ -374,6 +372,10 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       effective_connection_type_at_last_main_frame_(
           EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       external_estimate_provider_(std::move(external_estimates_provider)),
+      effective_connection_type_recomputation_interval_(
+          base::TimeDelta::FromSeconds(15)),
+      rtt_observations_size_at_last_ect_computation_(0),
+      throughput_observations_size_at_last_ect_computation_(0),
       effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       min_signal_strength_since_connection_change_(INT32_MAX),
       max_signal_strength_since_connection_change_(INT32_MIN),
@@ -962,10 +964,11 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   RecordMetricsOnConnectionTypeChanged();
 
   // Write the estimates of the previous network to the cache.
-  network_quality_store_.Add(current_network_id_,
-                             nqe::internal::CachedNetworkQuality(
-                                 last_effective_connection_type_computation_,
-                                 estimated_quality_at_last_main_frame_));
+  network_quality_store_.Add(
+      current_network_id_,
+      nqe::internal::CachedNetworkQuality(
+          last_effective_connection_type_computation_,
+          estimated_quality_at_last_main_frame_, effective_connection_type_));
 
   // Clear the local state.
   last_connection_change_ = tick_clock_->NowTicks();
@@ -983,6 +986,10 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
 #endif  // OS_ANDROID
   min_signal_strength_since_connection_change_ = INT32_MAX;
   max_signal_strength_since_connection_change_ = INT32_MIN;
+  estimated_quality_at_last_main_frame_ = nqe::internal::NetworkQuality();
+  effective_connection_type_ = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+  effective_connection_type_at_last_main_frame_ =
+      EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
 
   // Update the local state as part of preparation for the new connection.
   current_network_id_ = GetCurrentNetworkID();
@@ -1462,6 +1469,16 @@ bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
 
   const base::TimeTicks now = tick_clock_->NowTicks();
 
+  if (effective_connection_type_ == EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {
+    // Read the effective connection type from the cached estimate.
+    last_effective_connection_type_computation_ = now;
+    effective_connection_type_ =
+        cached_network_quality.effective_connection_type();
+
+    if (effective_connection_type_ != EFFECTIVE_CONNECTION_TYPE_UNKNOWN)
+      NotifyObserversOfEffectiveConnectionTypeChanged();
+  }
+
   if (cached_network_quality.network_quality().downstream_throughput_kbps() !=
       nqe::internal::kInvalidThroughput) {
     ThroughputObservation througphput_observation(
@@ -1517,53 +1534,6 @@ void NetworkQualityEstimator::OnUpdatedEstimateAvailable(
     external_estimate_provider_quality_.set_downstream_throughput_kbps(
         downstream_throughput_kbps);
   }
-}
-
-// static
-const char* NetworkQualityEstimator::GetNameForEffectiveConnectionType(
-    EffectiveConnectionType type) {
-  switch (type) {
-    case EFFECTIVE_CONNECTION_TYPE_UNKNOWN:
-      return "Unknown";
-    case EFFECTIVE_CONNECTION_TYPE_OFFLINE:
-      return "Offline";
-    case EFFECTIVE_CONNECTION_TYPE_SLOW_2G:
-      return "Slow2G";
-    case EFFECTIVE_CONNECTION_TYPE_2G:
-      return "2G";
-    case EFFECTIVE_CONNECTION_TYPE_3G:
-      return "3G";
-    case EFFECTIVE_CONNECTION_TYPE_4G:
-      return "4G";
-    case EFFECTIVE_CONNECTION_TYPE_BROADBAND:
-      return "Broadband";
-    default:
-      NOTREACHED();
-      break;
-  }
-  return "";
-}
-
-// static
-EffectiveConnectionType
-NetworkQualityEstimator::GetEffectiveConnectionTypeForName(
-    const std::string& connection_type_name) {
-  if (connection_type_name == "Unknown")
-    return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-  if (connection_type_name == "Offline")
-    return EFFECTIVE_CONNECTION_TYPE_OFFLINE;
-  if (connection_type_name == "Slow2G")
-    return EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
-  if (connection_type_name == "2G")
-    return EFFECTIVE_CONNECTION_TYPE_2G;
-  if (connection_type_name == "3G")
-    return EFFECTIVE_CONNECTION_TYPE_3G;
-  if (connection_type_name == "4G")
-    return EFFECTIVE_CONNECTION_TYPE_4G;
-  if (connection_type_name == "Broadband")
-    return EFFECTIVE_CONNECTION_TYPE_BROADBAND;
-  NOTREACHED();
-  return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
 }
 
 void NetworkQualityEstimator::SetTickClockForTesting(
@@ -1650,7 +1620,18 @@ void NetworkQualityEstimator::MaybeRecomputeEffectiveConnectionType() {
   // has not updated.
   if (now - last_effective_connection_type_computation_ <
           effective_connection_type_recomputation_interval_ &&
-      last_connection_change_ < last_effective_connection_type_computation_) {
+      last_connection_change_ < last_effective_connection_type_computation_ &&
+      // Recompute the effective connection type if the previously computed
+      // effective connection type was unknown.
+      effective_connection_type_ != EFFECTIVE_CONNECTION_TYPE_UNKNOWN &&
+      // Recompute the effective connection type if the number of samples
+      // available now are more than twice in count than the number of
+      // samples that were available when the effective connection type was
+      // last computed.
+      rtt_observations_size_at_last_ect_computation_ * 2 >=
+          rtt_observations_.Size() &&
+      throughput_observations_size_at_last_ect_computation_ * 2 >=
+          downstream_throughput_kbps_observations_.Size()) {
     return;
   }
 
@@ -1660,16 +1641,30 @@ void NetworkQualityEstimator::MaybeRecomputeEffectiveConnectionType() {
 
   if (past_type != effective_connection_type_)
     NotifyObserversOfEffectiveConnectionTypeChanged();
+
+  rtt_observations_size_at_last_ect_computation_ = rtt_observations_.Size();
+  throughput_observations_size_at_last_ect_computation_ =
+      downstream_throughput_kbps_observations_.Size();
 }
 
 void NetworkQualityEstimator::
     NotifyObserversOfEffectiveConnectionTypeChanged() {
   DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_NE(EFFECTIVE_CONNECTION_TYPE_LAST, effective_connection_type_);
 
   // TODO(tbansal): Add hysteresis in the notification.
   FOR_EACH_OBSERVER(
       EffectiveConnectionTypeObserver, effective_connection_type_observer_list_,
       OnEffectiveConnectionTypeChanged(effective_connection_type_));
+
+  // Add the estimates of the current network to the cache store.
+  if (effective_connection_type_ != EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {
+    network_quality_store_.Add(
+        current_network_id_,
+        nqe::internal::CachedNetworkQuality(
+            tick_clock_->NowTicks(), estimated_quality_at_last_main_frame_,
+            effective_connection_type_));
+  }
 }
 
 }  // namespace net

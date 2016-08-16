@@ -79,15 +79,15 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     const QuicReceivedPacket& packet,
     IPEndPoint server_address,
     IPEndPoint client_address) {
-  if (!ContainsKey(undecryptable_packets_, connection_id) &&
+  if (!base::ContainsKey(undecryptable_packets_, connection_id) &&
       undecryptable_packets_.size() >= kDefaultMaxConnectionsInStore) {
     // Drop the packet if store can't keep track of more connections.
     return TOO_MANY_CONNECTIONS;
-  } else if (!ContainsKey(undecryptable_packets_, connection_id)) {
+  } else if (!base::ContainsKey(undecryptable_packets_, connection_id)) {
     undecryptable_packets_.emplace(
         std::make_pair(connection_id, BufferedPacketList()));
   }
-  CHECK(ContainsKey(undecryptable_packets_, connection_id));
+  CHECK(base::ContainsKey(undecryptable_packets_, connection_id));
   BufferedPacketList& queue =
       undecryptable_packets_.find(connection_id)->second;
 
@@ -116,7 +116,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
 
 bool QuicBufferedPacketStore::HasBufferedPackets(
     QuicConnectionId connection_id) const {
-  return ContainsKey(undecryptable_packets_, connection_id);
+  return base::ContainsKey(undecryptable_packets_, connection_id);
 }
 
 list<BufferedPacket> QuicBufferedPacketStore::DeliverPackets(

@@ -7,6 +7,7 @@
 #include "base/logging.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
@@ -90,7 +91,7 @@ int QuicClientSession::GetNumReceivedServerConfigUpdates() const {
 
 bool QuicClientSession::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
   if (!connection()->connected()) {
-    LOG(DFATAL) << "ShouldCreateIncomingDynamicStream called when disconnected";
+    QUIC_BUG << "ShouldCreateIncomingDynamicStream called when disconnected";
     return false;
   }
   if (goaway_received() && respect_goaway_) {

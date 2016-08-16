@@ -91,6 +91,9 @@ class QuicConnectionPeer {
 
   static void SwapCrypters(QuicConnection* connection, QuicFramer* framer);
 
+  static void SetCurrentPacket(QuicConnection* connection,
+                               base::StringPiece current_packet);
+
   static QuicConnectionHelperInterface* GetHelper(QuicConnection* connection);
 
   static QuicAlarmFactory* GetAlarmFactory(QuicConnection* connection);

@@ -229,7 +229,7 @@ std::string ProxyBypassRules::ToString() const {
 }
 
 void ProxyBypassRules::Clear() {
-  STLDeleteElements(&rules_);
+  base::STLDeleteElements(&rules_);
 }
 
 void ProxyBypassRules::AssignFrom(const ProxyBypassRules& other) {

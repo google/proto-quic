@@ -543,12 +543,12 @@ void OCSPIOLoop::EnsureIOLoop() {
 }
 
 void OCSPIOLoop::AddRequest(OCSPRequestSession* request) {
-  DCHECK(!ContainsKey(requests_, request));
+  DCHECK(!base::ContainsKey(requests_, request));
   requests_.insert(request);
 }
 
 void OCSPIOLoop::RemoveRequest(OCSPRequestSession* request) {
-  DCHECK(ContainsKey(requests_, request));
+  DCHECK(base::ContainsKey(requests_, request));
   requests_.erase(request);
 }
 

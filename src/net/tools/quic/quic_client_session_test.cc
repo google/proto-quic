@@ -141,7 +141,7 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
 
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicClientSessionTest,
-                        ::testing::ValuesIn(QuicSupportedVersions()));
+                        ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicClientSessionTest, CryptoConnect) {
   CompleteCryptoHandshake();

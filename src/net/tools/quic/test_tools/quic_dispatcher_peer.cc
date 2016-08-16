@@ -62,6 +62,12 @@ QuicErrorCode QuicDispatcherPeer::GetAndClearLastError(
 }
 
 // static
+QuicBufferedPacketStore* QuicDispatcherPeer::GetBufferedPackets(
+    QuicDispatcher* dispatcher) {
+  return &(dispatcher->buffered_packets_);
+}
+
+// static
 const QuicDispatcher::SessionMap& QuicDispatcherPeer::session_map(
     QuicDispatcher* dispatcher) {
   return dispatcher->session_map();

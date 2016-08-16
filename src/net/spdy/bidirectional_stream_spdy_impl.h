@@ -53,7 +53,6 @@ class NET_EXPORT_PRIVATE BidirectionalStreamSpdyImpl
   void SendvData(const std::vector<scoped_refptr<IOBuffer>>& buffers,
                  const std::vector<int>& lengths,
                  bool end_stream) override;
-  void Cancel() override;
   NextProto GetProtocol() const override;
   int64_t GetTotalReceivedBytes() const override;
   int64_t GetTotalSentBytes() const override;

@@ -230,6 +230,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // becomes the default.
   bool peer_supports_stateless_rejects_;
 
+  // Size of the packet containing the most recently received CHLO.
+  QuicByteCount chlo_packet_size_;
+
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerStream);
 };
 

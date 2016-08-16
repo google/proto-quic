@@ -255,7 +255,7 @@ TEST(QuicCryptoClientConfigTest, FillClientHello) {
 }
 
 TEST(QuicCryptoClientConfigTest, ProcessServerDowngradeAttack) {
-  QuicVersionVector supported_versions = QuicSupportedVersions();
+  QuicVersionVector supported_versions = AllSupportedVersions();
   if (supported_versions.size() == 1) {
     // No downgrade attack is possible if the client only supports one version.
     return;
@@ -437,8 +437,8 @@ TEST(QuicCryptoClientConfigTest, ProcessReject) {
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
   EXPECT_EQ(QUIC_NO_ERROR,
             config.ProcessRejection(rej, QuicWallTime::FromUNIXSeconds(0),
-                                    QuicSupportedVersions().front(), "",
-                                    &cached, &out_params, &error));
+                                    AllSupportedVersions().front(), "", &cached,
+                                    &out_params, &error));
   EXPECT_FALSE(cached.has_server_designated_connection_id());
   EXPECT_FALSE(cached.has_server_nonce());
 }
@@ -459,8 +459,8 @@ TEST(QuicCryptoClientConfigTest, ProcessStatelessReject) {
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
   EXPECT_EQ(QUIC_NO_ERROR,
             config.ProcessRejection(rej, QuicWallTime::FromUNIXSeconds(0),
-                                    QuicSupportedVersions().front(), "",
-                                    &cached, &out_params, &error));
+                                    AllSupportedVersions().front(), "", &cached,
+                                    &out_params, &error));
   EXPECT_TRUE(cached.has_server_designated_connection_id());
   EXPECT_EQ(kConnectionId, cached.GetNextServerDesignatedConnectionId());
   EXPECT_EQ(server_nonce, cached.GetNextServerNonce());
@@ -479,8 +479,8 @@ TEST(QuicCryptoClientConfigTest, BadlyFormattedStatelessReject) {
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
   EXPECT_EQ(QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND,
             config.ProcessRejection(rej, QuicWallTime::FromUNIXSeconds(0),
-                                    QuicSupportedVersions().front(), "",
-                                    &cached, &out_params, &error));
+                                    AllSupportedVersions().front(), "", &cached,
+                                    &out_params, &error));
   EXPECT_FALSE(cached.has_server_designated_connection_id());
   EXPECT_EQ("Missing kRCID", error);
 }
@@ -491,7 +491,7 @@ TEST(QuicCryptoClientConfigTest, ServerNonceinSHLO) {
   msg.set_tag(kSHLO);
   // Choose the latest version.
   QuicVersionVector supported_versions;
-  QuicVersion version = QuicSupportedVersions().front();
+  QuicVersion version = AllSupportedVersions().front();
   supported_versions.push_back(version);
   QuicTagVector versions;
   versions.push_back(QuicVersionToQuicTag(version));

@@ -132,6 +132,10 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   // TCP segments on the default path.
   QuicPacketCount GetSlowStartThresholdInTcpMss() const override;
 
+  // Returns debugging information about the state of the congestion
+  // controller for all paths.
+  std::string GetDebugState() const override;
+
   // No longer retransmit data for |stream_id| on all paths and any pending
   // retransmissions in pending_retransmissions_.
   void CancelRetransmissionsForStream(QuicStreamId stream_id) override;
@@ -161,6 +165,8 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   // path.
   size_t GetConsecutiveRtoCount() const override;
   size_t GetConsecutiveTlpCount() const override;
+
+  void OnApplicationLimited() override;
 
  private:
   friend class test::QuicConnectionPeer;

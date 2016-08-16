@@ -147,8 +147,8 @@ bool QuicStreamFactoryPeer::HasInitializedData(QuicStreamFactory* factory) {
 
 bool QuicStreamFactoryPeer::SupportsQuicAtStartUp(QuicStreamFactory* factory,
                                                   HostPortPair host_port_pair) {
-  return ContainsKey(factory->quic_supported_servers_at_startup_,
-                     host_port_pair);
+  return base::ContainsKey(factory->quic_supported_servers_at_startup_,
+                           host_port_pair);
 }
 
 bool QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(

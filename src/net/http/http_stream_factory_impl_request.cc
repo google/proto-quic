@@ -30,7 +30,7 @@ HttpStreamFactoryImpl::Request::Request(
       net_log_(net_log),
       completed_(false),
       was_npn_negotiated_(false),
-      protocol_negotiated_(kProtoUnknown),
+      negotiated_protocol_(kProtoUnknown),
       using_spdy_(false),
       stream_type_(stream_type) {
   DCHECK(delegate_);
@@ -49,12 +49,12 @@ void HttpStreamFactoryImpl::Request::SetSpdySessionKey(
 }
 
 void HttpStreamFactoryImpl::Request::Complete(bool was_npn_negotiated,
-                                              NextProto protocol_negotiated,
+                                              NextProto negotiated_protocol,
                                               bool using_spdy) {
   DCHECK(!completed_);
   completed_ = true;
   was_npn_negotiated_ = was_npn_negotiated;
-  protocol_negotiated_ = protocol_negotiated;
+  negotiated_protocol_ = negotiated_protocol;
   using_spdy_ = using_spdy;
 }
 
@@ -139,10 +139,9 @@ bool HttpStreamFactoryImpl::Request::was_npn_negotiated() const {
   return was_npn_negotiated_;
 }
 
-NextProto HttpStreamFactoryImpl::Request::protocol_negotiated()
-    const {
+NextProto HttpStreamFactoryImpl::Request::negotiated_protocol() const {
   DCHECK(completed_);
-  return protocol_negotiated_;
+  return negotiated_protocol_;
 }
 
 bool HttpStreamFactoryImpl::Request::using_spdy() const {

@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
   // Build the client, and try to connect.
   net::QuicServerId server_id(url.host(), url.EffectiveIntPort(),
                               net::PRIVACY_MODE_DISABLED);
-  net::QuicVersionVector versions = net::QuicSupportedVersions();
+  net::QuicVersionVector versions = net::AllSupportedVersions();
   if (FLAGS_quic_version != -1) {
     versions.clear();
     versions.push_back(static_cast<net::QuicVersion>(FLAGS_quic_version));

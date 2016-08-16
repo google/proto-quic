@@ -208,7 +208,7 @@ void QuicInMemoryCache::AddSpecialResponse(StringPiece host,
 QuicInMemoryCache::QuicInMemoryCache() {}
 
 void QuicInMemoryCache::ResetForTests() {
-  STLDeleteValues(&responses_);
+  base::STLDeleteValues(&responses_);
   server_push_resources_.clear();
 }
 
@@ -279,7 +279,7 @@ list<ServerPushInfo> QuicInMemoryCache::GetServerPushResources(
 }
 
 QuicInMemoryCache::~QuicInMemoryCache() {
-  STLDeleteValues(&responses_);
+  base::STLDeleteValues(&responses_);
 }
 
 void QuicInMemoryCache::AddResponseImpl(StringPiece host,
@@ -290,7 +290,7 @@ void QuicInMemoryCache::AddResponseImpl(StringPiece host,
                                         SpdyHeaderBlock response_trailers) {
   DCHECK(!host.empty()) << "Host must be populated, e.g. \"www.google.com\"";
   string key = GetKey(host, path);
-  if (ContainsKey(responses_, key)) {
+  if (base::ContainsKey(responses_, key)) {
     QUIC_BUG << "Response for '" << key << "' already exists!";
     return;
   }

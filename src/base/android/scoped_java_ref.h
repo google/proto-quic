@@ -54,11 +54,11 @@ class BASE_EXPORT JavaRef<jobject> {
 
   jobject obj() const { return obj_; }
 
-  bool is_null() const { return obj_ == NULL; }
+  bool is_null() const { return obj_ == nullptr; }
 
  protected:
-  // Initializes a NULL reference. Don't add anything else here; it's inlined.
-  JavaRef() : obj_(NULL) {}
+  // Initializes a null reference. Don't add anything else here; it's inlined.
+  JavaRef() : obj_(nullptr) {}
 
   // Takes ownership of the |obj| reference passed; requires it to be a local
   // reference type.
@@ -144,7 +144,7 @@ class JavaParamRef : public JavaRef<T> {
 template<typename T>
 class ScopedJavaLocalRef : public JavaRef<T> {
  public:
-  ScopedJavaLocalRef() : env_(NULL) {}
+  ScopedJavaLocalRef() : env_(nullptr) {}
 
   // Non-explicit copy constructor, to allow ScopedJavaLocalRef to be returned
   // by value as this is the normal usage pattern.
@@ -153,9 +153,8 @@ class ScopedJavaLocalRef : public JavaRef<T> {
     this->SetNewLocalRef(env_, other.obj());
   }
 
-  template<typename U>
-  explicit ScopedJavaLocalRef(const U& other)
-      : env_(NULL) {
+  template <typename U>
+  explicit ScopedJavaLocalRef(const U& other) : env_(nullptr) {
     this->Reset(other);
   }
 
@@ -187,7 +186,7 @@ class ScopedJavaLocalRef : public JavaRef<T> {
 
   template<typename U>
   void Reset(const U& other) {
-    // If |env_| was not yet set (is still NULL) it will be attached to the
+    // If |env_| was not yet set (is still null) it will be attached to the
     // current thread in SetNewLocalRef().
     this->Reset(env_, other.obj());
   }
@@ -255,7 +254,7 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
 
   template<typename U>
   void Reset(const U& other) {
-    this->Reset(NULL, other.obj());
+    this->Reset(nullptr, other.obj());
   }
 
   template<typename U>
@@ -276,6 +275,22 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
   T Release() {
     return static_cast<T>(this->ReleaseInternal());
   }
+};
+
+// Temporary type for parameters to Java functions, to allow incremental
+// migration from bare jobject to JavaRef. Don't use outside JNI generator.
+template <typename T>
+class JavaRefOrBare {
+ public:
+  JavaRefOrBare(std::nullptr_t) : obj_(nullptr) {}
+  JavaRefOrBare(const JavaRef<T>& ref) : obj_(ref.obj()) {}
+  JavaRefOrBare(T obj) : obj_(obj) {}
+  T obj() const { return obj_; }
+
+ private:
+  T obj_;
+
+  DISALLOW_COPY_AND_ASSIGN(JavaRefOrBare);
 };
 
 }  // namespace android

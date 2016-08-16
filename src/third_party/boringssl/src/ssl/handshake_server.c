@@ -487,7 +487,8 @@ int ssl3_accept(SSL *ssl) {
 
         SSL_SESSION_free(ssl->s3->established_session);
         if (ssl->session != NULL) {
-          ssl->s3->established_session = SSL_SESSION_up_ref(ssl->session);
+          SSL_SESSION_up_ref(ssl->session);
+          ssl->s3->established_session = ssl->session;
         } else {
           ssl->s3->established_session = ssl->s3->new_session;
           ssl->s3->established_session->not_resumable = 0;
@@ -652,7 +653,7 @@ static int ssl3_get_client_hello(SSL *ssl) {
   /* Load the client random. */
   memcpy(ssl->s3->client_random, CBS_data(&client_random), SSL3_RANDOM_SIZE);
 
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     CBS cookie;
 
     if (!CBS_get_u8_length_prefixed(&client_hello, &cookie) ||
@@ -679,14 +680,12 @@ static int ssl3_get_client_hello(SSL *ssl) {
    * extensions are not normally parsed until later. This detects the EMS
    * extension for the resumption decision and it's checked against the result
    * of the normal parse later in this function. */
-  const uint8_t *ems_data;
-  size_t ems_len;
+  CBS ems;
   int have_extended_master_secret =
       ssl->version != SSL3_VERSION &&
-      SSL_early_callback_ctx_extension_get(&early_ctx,
-                                           TLSEXT_TYPE_extended_master_secret,
-                                           &ems_data, &ems_len) &&
-      ems_len == 0;
+      ssl_early_callback_get_extension(&early_ctx, &ems,
+                                       TLSEXT_TYPE_extended_master_secret) &&
+      CBS_len(&ems) == 0;
 
   int has_session = 0;
   if (session != NULL) {
@@ -887,11 +886,12 @@ static int ssl3_send_server_hello(SSL *ssl) {
     ssl->s3->tlsext_channel_id_valid = 0;
   }
 
-  const uint32_t current_time = time(NULL);
-  ssl->s3->server_random[0] = current_time >> 24;
-  ssl->s3->server_random[1] = current_time >> 16;
-  ssl->s3->server_random[2] = current_time >> 8;
-  ssl->s3->server_random[3] = current_time;
+  struct timeval now;
+  ssl_get_current_time(ssl, &now);
+  ssl->s3->server_random[0] = now.tv_sec >> 24;
+  ssl->s3->server_random[1] = now.tv_sec >> 16;
+  ssl->s3->server_random[2] = now.tv_sec >> 8;
+  ssl->s3->server_random[3] = now.tv_sec;
   if (!RAND_bytes(ssl->s3->server_random + 4, SSL3_RANDOM_SIZE - 4)) {
     return -1;
   }
@@ -1276,8 +1276,7 @@ static int ssl3_get_client_certificate(SSL *ssl) {
     if (ssl->version == SSL3_VERSION &&
         ssl->s3->tmp.message_type == SSL3_MT_CLIENT_KEY_EXCHANGE) {
       /* In SSL 3.0, the Certificate message is omitted to signal no certificate. */
-      if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
-          (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
+      if (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT) {
         OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
         ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
         return -1;
@@ -1315,13 +1314,15 @@ static int ssl3_get_client_certificate(SSL *ssl) {
     /* No client certificate so the handshake buffer may be discarded. */
     ssl3_free_handshake_buffer(ssl);
 
-    /* TLS does not mind 0 certs returned */
+    /* In SSL 3.0, sending no certificate is signaled by omitting the
+     * Certificate message. */
     if (ssl->version == SSL3_VERSION) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATES_RETURNED);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
       goto err;
-    } else if ((ssl->verify_mode & SSL_VERIFY_PEER) &&
-               (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) {
+    }
+
+    if (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT) {
       /* Fail for TLS only if we required a certificate */
       OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
@@ -1333,10 +1334,7 @@ static int ssl3_get_client_certificate(SSL *ssl) {
       ssl->s3->new_session->peer_sha256_valid = 1;
     }
 
-    if (ssl_verify_cert_chain(ssl, chain) <= 0) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL,
-                      ssl_verify_alarm_type(ssl->verify_result));
+    if (!ssl_verify_cert_chain(ssl, chain)) {
       goto err;
     }
   }
@@ -1869,107 +1867,22 @@ static int ssl3_send_new_session_ticket(SSL *ssl) {
     return ssl->method->write_message(ssl);
   }
 
-  /* Serialize the SSL_SESSION to be encoded into the ticket. */
-  uint8_t *session = NULL;
-  size_t session_len;
-  if (!SSL_SESSION_to_bytes_for_ticket(
-          ssl->session != NULL ? ssl->session : ssl->s3->new_session,
-          &session, &session_len)) {
-    return -1;
-  }
-
-  EVP_CIPHER_CTX ctx;
-  EVP_CIPHER_CTX_init(&ctx);
-  HMAC_CTX hctx;
-  HMAC_CTX_init(&hctx);
-
-  int ret = -1;
   CBB cbb, body, ticket;
-  if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_NEW_SESSION_TICKET) ||
+  if (!ssl->method->init_message(ssl, &cbb, &body,
+                                 SSL3_MT_NEW_SESSION_TICKET) ||
       /* Ticket lifetime hint (advisory only): We leave this unspecified for
        * resumed session (for simplicity), and guess that tickets for new
        * sessions will live as long as their sessions. */
-      !CBB_add_u32(&body, ssl->session != NULL ? 0 :
-                   ssl->s3->new_session->timeout) ||
-      !CBB_add_u16_length_prefixed(&body, &ticket)) {
-    goto err;
-  }
-
-  /* If the session is too long, emit a dummy value rather than abort the
-   * connection. */
-  const size_t max_ticket_overhead =
-      16 + EVP_MAX_IV_LENGTH + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE;
-  if (session_len > 0xffff - max_ticket_overhead) {
-    static const char kTicketPlaceholder[] = "TICKET TOO LARGE";
-
-    if (!CBB_add_bytes(&ticket, (const uint8_t *)kTicketPlaceholder,
-                       strlen(kTicketPlaceholder)) ||
-        !ssl->method->finish_message(ssl, &cbb)) {
-      goto err;
-    }
-
-    ssl->state = SSL3_ST_SW_SESSION_TICKET_B;
-    ret = 1;
-    goto err;
-  }
-
-  /* Initialize HMAC and cipher contexts. If callback present it does all the
-   * work otherwise use generated values from parent ctx. */
-  SSL_CTX *tctx = ssl->initial_ctx;
-  uint8_t iv[EVP_MAX_IV_LENGTH];
-  uint8_t key_name[16];
-  if (tctx->tlsext_ticket_key_cb != NULL) {
-    if (tctx->tlsext_ticket_key_cb(ssl, key_name, iv, &ctx, &hctx,
-                                   1 /* encrypt */) < 0) {
-      goto err;
-    }
-  } else {
-    if (!RAND_bytes(iv, 16) ||
-        !EVP_EncryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL,
-                            tctx->tlsext_tick_aes_key, iv) ||
-        !HMAC_Init_ex(&hctx, tctx->tlsext_tick_hmac_key, 16, tlsext_tick_md(),
-                      NULL)) {
-      goto err;
-    }
-    memcpy(key_name, tctx->tlsext_tick_key_name, 16);
-  }
-
-  uint8_t *ptr;
-  if (!CBB_add_bytes(&ticket, key_name, 16) ||
-      !CBB_add_bytes(&ticket, iv, EVP_CIPHER_CTX_iv_length(&ctx)) ||
-      !CBB_reserve(&ticket, &ptr, session_len + EVP_MAX_BLOCK_LENGTH)) {
-    goto err;
-  }
-
-  int len;
-  size_t total = 0;
-  if (!EVP_EncryptUpdate(&ctx, ptr + total, &len, session, session_len)) {
-    goto err;
-  }
-  total += len;
-  if (!EVP_EncryptFinal_ex(&ctx, ptr + total, &len)) {
-    goto err;
-  }
-  total += len;
-  if (!CBB_did_write(&ticket, total)) {
-    goto err;
-  }
-
-  unsigned hlen;
-  if (!HMAC_Update(&hctx, CBB_data(&ticket), CBB_len(&ticket)) ||
-      !CBB_reserve(&ticket, &ptr, EVP_MAX_MD_SIZE) ||
-      !HMAC_Final(&hctx, ptr, &hlen) ||
-      !CBB_did_write(&ticket, hlen) ||
+      !CBB_add_u32(&body,
+                   ssl->session != NULL ? 0 : ssl->s3->new_session->timeout) ||
+      !CBB_add_u16_length_prefixed(&body, &ticket) ||
+      !ssl_encrypt_ticket(ssl, &ticket, ssl->session != NULL
+                                            ? ssl->session
+                                            : ssl->s3->new_session) ||
       !ssl->method->finish_message(ssl, &cbb)) {
-    goto err;
+    return 0;
   }
 
   ssl->state = SSL3_ST_SW_SESSION_TICKET_B;
-  ret = ssl->method->write_message(ssl);
-
-err:
-  OPENSSL_free(session);
-  EVP_CIPHER_CTX_cleanup(&ctx);
-  HMAC_CTX_cleanup(&hctx);
-  return ret;
+  return ssl->method->write_message(ssl);
 }

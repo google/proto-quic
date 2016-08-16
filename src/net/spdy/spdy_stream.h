@@ -20,6 +20,7 @@
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
 #include "net/log/net_log.h"
+#include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_buffer.h"
 #include "net/spdy/spdy_framer.h"
@@ -383,9 +384,14 @@ class NET_EXPORT_PRIVATE SpdyStream {
   void SendData(IOBuffer* data, int length, SpdySendStatus send_status);
 
   // Fills SSL info in |ssl_info| and returns true when SSL is in use.
-  bool GetSSLInfo(SSLInfo* ssl_info,
-                  bool* was_npn_negotiated,
-                  NextProto* protocol_negotiated);
+  bool GetSSLInfo(SSLInfo* ssl_info) const;
+
+  // Returns true if ALPN was negotiated for the underlying socket.
+  // TODO(bnc): Rename to WasAlpnNegotiated().
+  bool WasNpnNegotiated() const;
+
+  // Returns the protocol negotiated via ALPN for the underlying socket.
+  NextProto GetNegotiatedProtocol() const;
 
   // If the stream is stalled on sending data, but the session is not
   // stalled on sending data and |send_window_size_| is positive, then

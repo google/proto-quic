@@ -78,7 +78,7 @@ QuicPathId QuicFramerPeer::GetLastPathId(QuicFramer* framer) {
 
 // static
 bool QuicFramerPeer::IsPathClosed(QuicFramer* framer, QuicPathId path_id) {
-  return ContainsKey(framer->closed_paths_, path_id);
+  return base::ContainsKey(framer->closed_paths_, path_id);
 }
 
 }  // namespace test

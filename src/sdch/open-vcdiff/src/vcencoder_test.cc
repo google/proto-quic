@@ -24,6 +24,7 @@
 #include "testing.h"
 #include "varint_bigendian.h"
 #include "google/vcdecoder.h"
+#include "google/jsonwriter.h"
 #include "vcdiff_defs.h"
 
 #ifdef HAVE_EXT_ROPE
@@ -136,6 +137,7 @@ class VCDiffEncoderTest : public VerifyEncodedBytesTest {
   VCDiffEncoder simple_encoder_;
   VCDiffDecoder simple_decoder_;
   VCDiffStreamingEncoder json_encoder_;
+  VCDiffStreamingEncoder external_encoder_;
   VCDiffEncoder nonascii_simple_encoder_;
 
   string result_target_;
@@ -171,6 +173,10 @@ VCDiffEncoderTest::VCDiffEncoderTest()
       json_encoder_(&hashed_dictionary_,
                     VCD_FORMAT_JSON,
                     /* look_for_target_matches = */ true),
+      external_encoder_(&hashed_dictionary_,
+                    0,
+                    /* look_for_target_matches = */ true,
+                    new JSONCodeTableWriter()),
       nonascii_simple_encoder_(kNonAscii, sizeof(kNonAscii)) {
   EXPECT_TRUE(hashed_dictionary_.Init());
 }
@@ -285,6 +291,13 @@ TEST_F(VCDiffEncoderTest, EncodeSimpleJSON) {
   EXPECT_TRUE(json_encoder_.StartEncoding(delta()));
   EXPECT_TRUE(json_encoder_.EncodeChunk(kTarget, strlen(kTarget), delta()));
   EXPECT_TRUE(json_encoder_.FinishEncoding(delta()));
+  EXPECT_EQ(kJSONDiff, delta_as_const());
+}
+
+TEST_F(VCDiffEncoderTest, EncodeSimpleExternalJSON) {
+  EXPECT_TRUE(external_encoder_.StartEncoding(delta()));
+  EXPECT_TRUE(external_encoder_.EncodeChunk(kTarget, strlen(kTarget), delta()));
+  EXPECT_TRUE(external_encoder_.FinishEncoding(delta()));
   EXPECT_EQ(kJSONDiff, delta_as_const());
 }
 

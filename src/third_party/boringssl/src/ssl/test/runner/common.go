@@ -28,7 +28,7 @@ const (
 
 // The draft version of TLS 1.3 that is implemented here and sent in the draft
 // indicator extension.
-const tls13DraftVersion = 13
+const tls13DraftVersion = 14
 
 const (
 	maxPlaintext        = 16384        // maximum plaintext payload length
@@ -242,6 +242,10 @@ type ClientSessionState struct {
 	extendedMasterSecret bool                // Whether an extended master secret was used to generate the session
 	sctList              []byte
 	ocspResponse         []byte
+	ticketCreationTime   time.Time
+	ticketExpiration     time.Time
+	ticketFlags          uint32
+	ticketAgeAdd         uint32
 }
 
 // ClientSessionCache is a cache of ClientSessionState objects that can be used
@@ -602,6 +606,10 @@ type ProtocolBugs struct {
 	// peer.
 	NegotiateVersion uint16
 
+	// NegotiateVersionOnRenego, if non-zero, causes the server to negotiate
+	// the specified TLS version on renegotiation rather than retaining it.
+	NegotiateVersionOnRenego uint16
+
 	// ExpectFalseStart causes the server to, on full handshakes,
 	// expect the peer to False Start; the server Finished message
 	// isn't sent until we receive an application data record
@@ -865,6 +873,11 @@ type ProtocolBugs struct {
 	// NegotiateALPNAndNPN, if true, causes the server to negotiate both
 	// ALPN and NPN in the same connetion.
 	NegotiateALPNAndNPN bool
+
+	// SendALPN, if non-empty, causes the server to send the specified
+	// string in the ALPN extension regardless of whether the client
+	// advertised it.
+	SendALPN string
 
 	// SendEmptySessionTicket, if true, causes the server to send an empty
 	// session ticket.

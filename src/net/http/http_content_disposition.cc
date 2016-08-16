@@ -6,6 +6,7 @@
 
 #include "base/base64.h"
 #include "base/logging.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
@@ -344,33 +345,30 @@ HttpContentDisposition::~HttpContentDisposition() {
 std::string::const_iterator HttpContentDisposition::ConsumeDispositionType(
     std::string::const_iterator begin, std::string::const_iterator end) {
   DCHECK(type_ == INLINE);
-  std::string::const_iterator delimiter = std::find(begin, end, ';');
-
-  std::string::const_iterator type_begin = begin;
-  std::string::const_iterator type_end = delimiter;
-  HttpUtil::TrimLWS(&type_begin, &type_end);
+  base::StringPiece header(begin, end);
+  size_t delimiter = header.find(';');
+  base::StringPiece type = header.substr(0, delimiter);
+  type = HttpUtil::TrimLWS(type);
 
   // If the disposition-type isn't a valid token the then the
   // Content-Disposition header is malformed, and we treat the first bytes as
   // a parameter rather than a disposition-type.
-  if (!HttpUtil::IsToken(type_begin, type_end))
+  if (type.empty() || !HttpUtil::IsToken(type))
     return begin;
 
   parse_result_flags_ |= HAS_DISPOSITION_TYPE;
 
-  DCHECK(std::find(type_begin, type_end, '=') == type_end);
+  DCHECK(type.find('=') == base::StringPiece::npos);
 
-  if (base::LowerCaseEqualsASCII(base::StringPiece(type_begin, type_end),
-                                 "inline")) {
+  if (base::LowerCaseEqualsASCII(type, "inline")) {
     type_ = INLINE;
-  } else if (base::LowerCaseEqualsASCII(base::StringPiece(type_begin, type_end),
-                                        "attachment")) {
+  } else if (base::LowerCaseEqualsASCII(type, "attachment")) {
     type_ = ATTACHMENT;
   } else {
     parse_result_flags_ |= HAS_UNKNOWN_DISPOSITION_TYPE;
     type_ = ATTACHMENT;
   }
-  return delimiter;
+  return begin + (type.data() + type.size() - header.data());
 }
 
 // http://tools.ietf.org/html/rfc6266

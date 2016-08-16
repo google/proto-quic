@@ -91,8 +91,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     // |helpers_| is destroyed.
     server_session_.reset();
     client_session_.reset();
-    STLDeleteElements(&helpers_);
-    STLDeleteElements(&alarm_factories_);
+    base::STLDeleteElements(&helpers_);
+    base::STLDeleteElements(&alarm_factories_);
   }
 
   // Initializes the crypto server stream state for testing.  May be
@@ -197,7 +197,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   DelayedVerifyStrikeRegisterClient* strike_register_client_;
 
   // Which QUIC versions the client and server support.
-  QuicVersionVector supported_versions_ = QuicSupportedVersions();
+  QuicVersionVector supported_versions_ = AllSupportedVersions();
 };
 
 INSTANTIATE_TEST_CASE_P(Tests, QuicCryptoServerStreamTest, testing::Bool());

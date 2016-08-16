@@ -66,7 +66,9 @@ class InotifyReader {
   typedef std::set<FilePathWatcherImpl*> WatcherSet;
 
   InotifyReader();
-  ~InotifyReader();
+  // There is no destructor because |g_inotify_reader| is a
+  // base::LazyInstace::Leaky object. Having a destructor causes build
+  // issues with GCC 6 (http://crbug.com/636346).
 
   // We keep track of which delegates want to be notified on which watches.
   hash_map<Watch, WatcherSet> watchers_;
@@ -79,9 +81,6 @@ class InotifyReader {
 
   // File descriptor returned by inotify_init.
   const int inotify_fd_;
-
-  // Use self-pipe trick to unblock select during shutdown.
-  int shutdown_pipe_[2];
 
   // Flag set to true when startup was successful.
   bool valid_;
@@ -194,13 +193,10 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
   DISALLOW_COPY_AND_ASSIGN(FilePathWatcherImpl);
 };
 
-void InotifyReaderCallback(InotifyReader* reader, int inotify_fd,
-                           int shutdown_fd) {
+void InotifyReaderCallback(InotifyReader* reader, int inotify_fd) {
   // Make sure the file descriptors are good for use with select().
   CHECK_LE(0, inotify_fd);
   CHECK_GT(FD_SETSIZE, inotify_fd);
-  CHECK_LE(0, shutdown_fd);
-  CHECK_GT(FD_SETSIZE, shutdown_fd);
 
   trace_event::TraceLog::GetInstance()->SetCurrentThreadBlocksMessageLoop();
 
@@ -208,19 +204,14 @@ void InotifyReaderCallback(InotifyReader* reader, int inotify_fd,
     fd_set rfds;
     FD_ZERO(&rfds);
     FD_SET(inotify_fd, &rfds);
-    FD_SET(shutdown_fd, &rfds);
 
     // Wait until some inotify events are available.
     int select_result =
-      HANDLE_EINTR(select(std::max(inotify_fd, shutdown_fd) + 1,
-                          &rfds, NULL, NULL, NULL));
+      HANDLE_EINTR(select(inotify_fd + 1, &rfds, NULL, NULL, NULL));
     if (select_result < 0) {
       DPLOG(WARNING) << "select failed";
       return;
     }
-
-    if (FD_ISSET(shutdown_fd, &rfds))
-      return;
 
     // Adjust buffer size to current event queue size.
     int buffer_size;
@@ -263,31 +254,12 @@ InotifyReader::InotifyReader()
   if (inotify_fd_ < 0)
     PLOG(ERROR) << "inotify_init() failed";
 
-  shutdown_pipe_[0] = -1;
-  shutdown_pipe_[1] = -1;
-  if (inotify_fd_ >= 0 && pipe(shutdown_pipe_) == 0 && thread_.Start()) {
+  if (inotify_fd_ >= 0 && thread_.Start()) {
     thread_.task_runner()->PostTask(
         FROM_HERE,
-        Bind(&InotifyReaderCallback, this, inotify_fd_, shutdown_pipe_[0]));
+        Bind(&InotifyReaderCallback, this, inotify_fd_));
     valid_ = true;
   }
-}
-
-InotifyReader::~InotifyReader() {
-  if (valid_) {
-    // Write to the self-pipe so that the select call in InotifyReaderTask
-    // returns.
-    ssize_t ret = HANDLE_EINTR(write(shutdown_pipe_[1], "", 1));
-    DPCHECK(ret > 0);
-    DCHECK_EQ(ret, 1);
-    thread_.Stop();
-  }
-  if (inotify_fd_ >= 0)
-    close(inotify_fd_);
-  if (shutdown_pipe_[0] >= 0)
-    close(shutdown_pipe_[0]);
-  if (shutdown_pipe_[1] >= 0)
-    close(shutdown_pipe_[1]);
 }
 
 InotifyReader::Watch InotifyReader::AddWatch(

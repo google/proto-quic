@@ -316,6 +316,23 @@ QuicPacketCount QuicMultipathSentPacketManager::GetSlowStartThresholdInTcpMss()
   return path_manager->GetSlowStartThresholdInTcpMss();
 }
 
+string QuicMultipathSentPacketManager::GetDebugState() const {
+  string debug_state_by_path;
+  for (size_t i = 0; i < path_managers_info_.size(); ++i) {
+    if (path_managers_info_[i].manager == nullptr ||
+        path_managers_info_[i].state != ACTIVE) {
+      continue;
+    }
+    const string& debug_state = path_managers_info_[i].manager->GetDebugState();
+    if (debug_state.empty()) {
+      continue;
+    }
+    debug_state_by_path =
+        debug_state_by_path + "[" + base::IntToString(i) + "]:" + debug_state;
+  }
+  return debug_state_by_path;
+}
+
 void QuicMultipathSentPacketManager::CancelRetransmissionsForStream(
     QuicStreamId stream_id) {
   for (PathSentPacketManagerInfo path_manager_info : path_managers_info_) {
@@ -498,6 +515,16 @@ void QuicMultipathSentPacketManager::OnUnrecoverablePathError(
                                ") must be active but is not.";
   delegate_->OnUnrecoverableError(QUIC_MULTIPATH_PATH_NOT_ACTIVE, error_details,
                                   ConnectionCloseSource::FROM_SELF);
+}
+
+void QuicMultipathSentPacketManager::OnApplicationLimited() {
+  for (PathSentPacketManagerInfo& path_manager_info : path_managers_info_) {
+    if (path_manager_info.manager == nullptr ||
+        path_manager_info.state != ACTIVE) {
+      continue;
+    }
+    path_manager_info.manager->OnApplicationLimited();
+  }
 }
 
 }  // namespace net

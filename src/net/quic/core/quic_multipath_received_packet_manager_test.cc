@@ -67,8 +67,8 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, OnPathCreatedAndClosed) {
   EXPECT_TRUE(
       QuicMultipathReceivedPacketManagerPeer::PathReceivedPacketManagerExists(
           &multipath_manager_, kPathId1));
-  EXPECT_DFATAL(multipath_manager_.OnPathCreated(kDefaultPathId, &stats_),
-                "Received packet manager of path already exists");
+  EXPECT_QUIC_BUG(multipath_manager_.OnPathCreated(kDefaultPathId, &stats_),
+                  "Received packet manager of path already exists");
   // Path 2 created.
   multipath_manager_.OnPathCreated(kPathId2, &stats_);
   EXPECT_TRUE(
@@ -88,17 +88,17 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, OnPathCreatedAndClosed) {
   EXPECT_FALSE(
       QuicMultipathReceivedPacketManagerPeer::PathReceivedPacketManagerExists(
           &multipath_manager_, kDefaultPathId));
-  EXPECT_DFATAL(multipath_manager_.OnPathClosed(kDefaultPathId),
-                "Received packet manager of path does not exist");
+  EXPECT_QUIC_BUG(multipath_manager_.OnPathClosed(kDefaultPathId),
+                  "Received packet manager of path does not exist");
 }
 
 TEST_F(QuicMultipathReceivedPacketManagerTest, RecordPacketReceived) {
   EXPECT_CALL(*manager_0_, RecordPacketReceived(_, _, _)).Times(1);
   multipath_manager_.RecordPacketReceived(kDefaultPathId, kBytes, header_,
                                           QuicTime::Zero());
-  EXPECT_DFATAL(multipath_manager_.RecordPacketReceived(
-                    kPathId2, kBytes, header_, QuicTime::Zero()),
-                "Received a packet on a non-existent path");
+  EXPECT_QUIC_BUG(multipath_manager_.RecordPacketReceived(
+                      kPathId2, kBytes, header_, QuicTime::Zero()),
+                  "Received a packet on a non-existent path");
 }
 
 TEST_F(QuicMultipathReceivedPacketManagerTest, IsMissing) {
@@ -109,8 +109,8 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, IsMissing) {
   EXPECT_TRUE(
       multipath_manager_.IsMissing(kDefaultPathId, header_.packet_number));
   EXPECT_FALSE(multipath_manager_.IsMissing(kPathId1, header_.packet_number));
-  EXPECT_DFATAL(multipath_manager_.IsMissing(kPathId2, header_.packet_number),
-                "Check whether a packet is missing on a non-existent path");
+  EXPECT_QUIC_BUG(multipath_manager_.IsMissing(kPathId2, header_.packet_number),
+                  "Check whether a packet is missing on a non-existent path");
 }
 
 TEST_F(QuicMultipathReceivedPacketManagerTest, IsAwaitingPacket) {
@@ -122,7 +122,7 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, IsAwaitingPacket) {
                                                   header_.packet_number));
   EXPECT_FALSE(
       multipath_manager_.IsAwaitingPacket(kPathId1, header_.packet_number));
-  EXPECT_DFATAL(
+  EXPECT_QUIC_BUG(
       multipath_manager_.IsAwaitingPacket(kPathId2, header_.packet_number),
       "Check whether a packet is awaited on a non-existent path");
 }
@@ -149,8 +149,9 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, HasNewMissingPackets) {
   EXPECT_CALL(*manager_1_, HasNewMissingPackets()).WillOnce(Return(false));
   EXPECT_TRUE(multipath_manager_.HasNewMissingPackets(kDefaultPathId));
   EXPECT_FALSE(multipath_manager_.HasNewMissingPackets(kPathId1));
-  EXPECT_DFATAL(multipath_manager_.HasNewMissingPackets(kPathId2),
-                "Check whether has new missing packets on a non-existent path");
+  EXPECT_QUIC_BUG(
+      multipath_manager_.HasNewMissingPackets(kPathId2),
+      "Check whether has new missing packets on a non-existent path");
 }
 
 }  // namespace

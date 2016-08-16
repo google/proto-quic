@@ -151,7 +151,7 @@ int ssl_record_sequence_update(uint8_t *seq, size_t seq_len) {
 }
 
 size_t ssl_record_prefix_len(const SSL *ssl) {
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     return DTLS1_RT_HEADER_LENGTH +
            SSL_AEAD_CTX_explicit_nonce_len(ssl->s3->aead_read_ctx);
   } else {
@@ -161,7 +161,7 @@ size_t ssl_record_prefix_len(const SSL *ssl) {
 }
 
 size_t ssl_seal_align_prefix_len(const SSL *ssl) {
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     return DTLS1_RT_HEADER_LENGTH +
            SSL_AEAD_CTX_explicit_nonce_len(ssl->s3->aead_write_ctx);
   } else {
@@ -177,7 +177,7 @@ size_t ssl_seal_align_prefix_len(const SSL *ssl) {
 
 size_t ssl_max_seal_overhead(const SSL *ssl) {
   size_t ret = SSL_AEAD_CTX_max_overhead(ssl->s3->aead_write_ctx);
-  if (SSL_IS_DTLS(ssl)) {
+  if (SSL_is_dtls(ssl)) {
     ret += DTLS1_RT_HEADER_LENGTH;
   } else {
     ret += SSL3_RT_HEADER_LENGTH;
@@ -187,7 +187,7 @@ size_t ssl_max_seal_overhead(const SSL *ssl) {
       ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
     ret += 1;
   }
-  if (!SSL_IS_DTLS(ssl) && ssl_needs_record_splitting(ssl)) {
+  if (!SSL_is_dtls(ssl) && ssl_needs_record_splitting(ssl)) {
     ret *= 2;
   }
   return ret;
@@ -429,6 +429,14 @@ enum ssl_open_record_t ssl_process_alert(SSL *ssl, uint8_t *out_alert,
       return ssl_open_record_close_notify;
     }
 
+    /* Warning alerts do not exist in TLS 1.3. */
+    if (ssl->s3->have_version &&
+        ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+      *out_alert = SSL_AD_DECODE_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ALERT);
+      return ssl_open_record_error;
+    }
+
     ssl->s3->warning_alert_count++;
     if (ssl->s3->warning_alert_count > kMaxWarningAlerts) {
       *out_alert = SSL_AD_UNEXPECTED_MESSAGE;
@@ -440,7 +448,6 @@ enum ssl_open_record_t ssl_process_alert(SSL *ssl, uint8_t *out_alert,
 
   if (alert_level == SSL3_AL_FATAL) {
     ssl->s3->recv_shutdown = ssl_shutdown_fatal_alert;
-    SSL_CTX_remove_session(ssl->ctx, ssl->session);
 
     char tmp[16];
     OPENSSL_PUT_ERROR(SSL, SSL_AD_REASON_OFFSET + alert_descr);

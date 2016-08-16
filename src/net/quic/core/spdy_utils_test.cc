@@ -198,6 +198,15 @@ TEST(SpdyUtilsTest, CopyAndValidateHeadersEmptyName) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
+TEST(SpdyUtilsTest, CopyAndValidateHeadersUpperCaseName) {
+  auto headers =
+      FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"bAz", ""}});
+  int64_t content_length = -1;
+  SpdyHeaderBlock block;
+  ASSERT_FALSE(
+      SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
+}
+
 TEST(SpdyUtilsTest, CopyAndValidateHeadersMultipleContentLengths) {
   auto headers = FromList({{"content-length", "9"},
                            {"foo", "foovalue"},

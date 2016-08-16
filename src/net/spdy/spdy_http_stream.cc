@@ -49,7 +49,7 @@ SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
       more_read_data_pending_(false),
       direct_(direct),
       was_npn_negotiated_(false),
-      protocol_negotiated_(kProtoUnknown),
+      negotiated_protocol_(kProtoUnknown),
       weak_factory_(this) {
   DCHECK(spdy_session_.get());
 }
@@ -79,9 +79,7 @@ int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
     // |stream_| may be NULL even if OK was returned.
     if (stream_.get()) {
       DCHECK_EQ(stream_->type(), SPDY_PUSH_STREAM);
-      stream_->SetDelegate(this);
-      stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
-                          &protocol_negotiated_);
+      InitializeStreamHelper();
       return OK;
     }
   }
@@ -94,9 +92,7 @@ int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
 
   if (rv == OK) {
     stream_ = stream_request_.ReleaseStream();
-    stream_->SetDelegate(this);
-    stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
-                        &protocol_negotiated_);
+    InitializeStreamHelper();
   }
 
   return rv;
@@ -335,7 +331,7 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
   // will take care of that part.
   response_info_->was_npn_negotiated = was_npn_negotiated_;
   response_info_->npn_negotiated_protocol =
-      SSLClientSocket::NextProtoToString(protocol_negotiated_);
+      SSLClientSocket::NextProtoToString(negotiated_protocol_);
   response_info_->request_time = stream_->GetRequestTime();
   response_info_->connection_info =
       HttpResponseInfo::ConnectionInfoFromNextProto(kProtoHTTP2);
@@ -426,9 +422,7 @@ void SpdyHttpStream::OnStreamCreated(
     int rv) {
   if (rv == OK) {
     stream_ = stream_request_.ReleaseStream();
-    stream_->SetDelegate(this);
-    stream_->GetSSLInfo(&ssl_info_, &was_npn_negotiated_,
-                        &protocol_negotiated_);
+    InitializeStreamHelper();
   }
   callback.Run(rv);
 }
@@ -450,6 +444,13 @@ void SpdyHttpStream::ReadAndSendRequestBodyData() {
 
   if (rv != ERR_IO_PENDING)
     OnRequestBodyReadCompleted(rv);
+}
+
+void SpdyHttpStream::InitializeStreamHelper() {
+  stream_->SetDelegate(this);
+  stream_->GetSSLInfo(&ssl_info_);
+  was_npn_negotiated_ = stream_->WasNpnNegotiated();
+  negotiated_protocol_ = stream_->GetNegotiatedProtocol();
 }
 
 void SpdyHttpStream::ResetStreamInternal() {

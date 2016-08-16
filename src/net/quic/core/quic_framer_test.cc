@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_framer.h"
 
-#include <stdint.h>
+#include <string.h>
 
 #include <algorithm>
 #include <map>
@@ -199,12 +199,12 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
         accept_public_header_(true) {}
 
   ~TestQuicVisitor() override {
-    STLDeleteElements(&stream_frames_);
-    STLDeleteElements(&ack_frames_);
-    STLDeleteElements(&stop_waiting_frames_);
-    STLDeleteElements(&padding_frames_);
-    STLDeleteElements(&ping_frames_);
-    STLDeleteElements(&stream_data_);
+    base::STLDeleteElements(&stream_frames_);
+    base::STLDeleteElements(&ack_frames_);
+    base::STLDeleteElements(&stop_waiting_frames_);
+    base::STLDeleteElements(&padding_frames_);
+    base::STLDeleteElements(&ping_frames_);
+    base::STLDeleteElements(&stream_data_);
   }
 
   void OnError(QuicFramer* f) override {
@@ -352,7 +352,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
       : encrypter_(new test::TestEncrypter()),
         decrypter_(new test::TestDecrypter()),
         start_(QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(0x10)),
-        framer_(QuicSupportedVersions(), start_, Perspective::IS_SERVER) {
+        framer_(AllSupportedVersions(), start_, Perspective::IS_SERVER) {
     version_ = GetParam();
     framer_.set_version(version_);
     framer_.SetDecrypter(ENCRYPTION_NONE, decrypter_);
@@ -642,7 +642,7 @@ TEST_P(QuicFramerTest, LargePacket) {
   memset(packet + header_size, 0, kMaxPacketSize - header_size);
 
   QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_DFATAL(framer_.ProcessPacket(encrypted), "Packet too large:1");
+  EXPECT_QUIC_BUG(framer_.ProcessPacket(encrypted), "Packet too large:1");
 
   ASSERT_TRUE(visitor_.header_.get());
   // Make sure we've parsed the packet header, so we can send an error.
@@ -4824,7 +4824,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   unsigned char packet[] = {
       // public flags (version, 8 byte connection_id)
       static_cast<unsigned char>(
-          framer_.version() > QUIC_VERSION_32 ? 0x3D : 0x3D),
+          (FLAGS_quic_remove_v33_hacks &&
+            framer_.version() > QUIC_VERSION_32) ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -4845,7 +4846,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   };
   unsigned char packet_34[] = {
       // public flags (version, 8 byte connection_id)
-      0x3D,
+      static_cast<unsigned char>(
+          FLAGS_quic_remove_v33_hacks ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -4977,7 +4979,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   unsigned char packet[] = {
     // public flags (8 byte connection_id)
     static_cast<unsigned char>(
-        framer_.version() > QUIC_VERSION_32 ? 0x7D : 0x7D),
+        (FLAGS_quic_remove_v33_hacks &&
+         framer_.version() > QUIC_VERSION_32) ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -5005,7 +5008,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   };
   unsigned char packet_34[] = {
     // public flags (8 byte connection_id)
-    0x7D,
+    static_cast<unsigned char>(
+        FLAGS_quic_remove_v33_hacks ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -7135,7 +7139,7 @@ extern "C" {
 
 // target function to be fuzzed by Dr. Fuzz
 void QuicFramerFuzzFunc(unsigned char* data, size_t size) {
-  QuicFramer framer(QuicSupportedVersions(), QuicTime::Zero(),
+  QuicFramer framer(AllSupportedVersions(), QuicTime::Zero(),
                     Perspective::IS_SERVER);
   const char* const packet_bytes = reinterpret_cast<const char*>(data);
 

@@ -9,6 +9,7 @@
 
 #include "base/stl_util.h"
 #include "net/quic/test_tools/mock_clock.h"
+#include "net/quic/test_tools/quic_buffered_packet_store_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -24,13 +25,6 @@ typedef QuicBufferedPacketStore::EnqueuePacketResult EnqueuePacketResult;
 static const size_t kDefaultMaxConnectionsInStore = 100;
 
 namespace test {
-class QuicBufferedPacketStorePeer {
- public:
-  static QuicAlarm* expiration_alarm(QuicBufferedPacketStore* store) {
-    return store->expiration_alarm_.get();
-  }
-};
-
 namespace {
 
 typedef QuicBufferedPacketStore::BufferedPacket BufferedPacket;

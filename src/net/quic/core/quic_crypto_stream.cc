@@ -33,6 +33,17 @@ QuicCryptoStream::QuicCryptoStream(QuicSession* session)
   DisableConnectionFlowControlForThisStream();
 }
 
+// static
+QuicByteCount QuicCryptoStream::CryptoMessageFramingOverhead(
+    QuicVersion version) {
+  return QuicPacketCreator::StreamFramePacketOverhead(
+      version, PACKET_8BYTE_CONNECTION_ID,
+      /*include_version=*/true,
+      /*include_path_id=*/true,
+      /*include_diversification_nonce=*/true, PACKET_1BYTE_PACKET_NUMBER,
+      /*offset=*/0);
+}
+
 void QuicCryptoStream::OnError(CryptoFramer* framer) {
   DLOG(WARNING) << "Error processing crypto data: "
                 << QuicUtils::ErrorToString(framer->error());

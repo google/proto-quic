@@ -41,6 +41,9 @@ class QuicDispatcherPeer {
   // visitor's OnError() method.  Then set that record to QUIC_NO_ERROR.
   static QuicErrorCode GetAndClearLastError(QuicDispatcher* dispatcher);
 
+  static QuicBufferedPacketStore* GetBufferedPackets(
+      QuicDispatcher* dispatcher);
+
   static const QuicDispatcher::SessionMap& session_map(
       QuicDispatcher* dispatcher);
 

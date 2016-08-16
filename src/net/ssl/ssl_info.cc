@@ -77,18 +77,9 @@ void SSLInfo::SetCertError(int error) {
 
 void SSLInfo::UpdateCertificateTransparencyInfo(
     const ct::CTVerifyResult& ct_verify_result) {
-  for (const auto& sct : ct_verify_result.verified_scts) {
-    signed_certificate_timestamps.push_back(
-        SignedCertificateTimestampAndStatus(sct, ct::SCT_STATUS_OK));
-  }
-  for (const auto& sct : ct_verify_result.invalid_scts) {
-    signed_certificate_timestamps.push_back(
-        SignedCertificateTimestampAndStatus(sct, ct::SCT_STATUS_INVALID));
-  }
-  for (const auto& sct : ct_verify_result.unknown_logs_scts) {
-    signed_certificate_timestamps.push_back(
-        SignedCertificateTimestampAndStatus(sct, ct::SCT_STATUS_LOG_UNKNOWN));
-  }
+  signed_certificate_timestamps.insert(signed_certificate_timestamps.end(),
+                                       ct_verify_result.scts.begin(),
+                                       ct_verify_result.scts.end());
 
   ct_compliance_details_available = ct_verify_result.ct_policies_applied;
   ct_cert_policy_compliance = ct_verify_result.cert_policy_compliance;

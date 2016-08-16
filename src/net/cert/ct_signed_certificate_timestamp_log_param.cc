@@ -37,10 +37,12 @@ void SetBinaryData(
 // is this field's value in the SCT. This dictionary is meant to be used for
 // outputting a de-serialized SCT to the NetLog.
 std::unique_ptr<base::DictionaryValue> SCTToDictionary(
-    const ct::SignedCertificateTimestamp& sct) {
+    const ct::SignedCertificateTimestamp& sct,
+    ct::SCTVerifyStatus status) {
   std::unique_ptr<base::DictionaryValue> out(new base::DictionaryValue());
 
   out->SetString("origin", OriginToString(sct.origin));
+  out->SetString("verification_status", StatusToString(status));
   out->SetInteger("version", sct.version);
 
   SetBinaryData("log_id", sct.log_id, out.get());
@@ -59,13 +61,14 @@ std::unique_ptr<base::DictionaryValue> SCTToDictionary(
   return out;
 }
 
-// Given a list of SCTs, return a ListValue instance where each item in the
-// list is a dictionary created by SCTToDictionary.
+// Given a list of SCTs and their statuses, return a ListValue instance where
+// each item in the list is a dictionary created by SCTToDictionary.
 std::unique_ptr<base::ListValue> SCTListToPrintableValues(
-    const ct::SCTList& sct_list) {
+    const SignedCertificateTimestampAndStatusList& sct_and_status_list) {
   std::unique_ptr<base::ListValue> output_scts(new base::ListValue());
-  for (const auto& sct : sct_list)
-    output_scts->Append(SCTToDictionary(*(sct.get())));
+  for (const auto& sct_and_status : sct_and_status_list)
+    output_scts->Append(
+        SCTToDictionary(*(sct_and_status.sct.get()), sct_and_status.status));
 
   return output_scts;
 }
@@ -77,14 +80,7 @@ std::unique_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-  dict->Set("verified_scts",
-            SCTListToPrintableValues(ct_result->verified_scts));
-
-  dict->Set("invalid_scts",
-            SCTListToPrintableValues(ct_result->invalid_scts));
-
-  dict->Set("unknown_logs_scts",
-            SCTListToPrintableValues(ct_result->unknown_logs_scts));
+  dict->Set("scts", SCTListToPrintableValues(ct_result->scts));
 
   return std::move(dict);
 }

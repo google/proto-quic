@@ -323,7 +323,7 @@ OPENSSL_EXPORT int BN_marshal_asn1(CBB *cbb, const BIGNUM *bn);
  * what you want before turning to these. */
 
 /* bn_correct_top decrements |bn->top| until |bn->d[top-1]| is non-zero or
- * until |top| is zero. */
+ * until |top| is zero. If |bn| is zero, |bn->neg| is set to zero. */
 OPENSSL_EXPORT void bn_correct_top(BIGNUM *bn);
 
 /* bn_wexpand ensures that |bn| has at least |words| works of space without
@@ -746,6 +746,18 @@ OPENSSL_EXPORT BIGNUM *BN_mod_inverse(BIGNUM *out, const BIGNUM *a,
 int BN_mod_inverse_blinded(BIGNUM *out, int *out_no_inverse, const BIGNUM *a,
                            const BN_MONT_CTX *mont, BN_CTX *ctx);
 
+/* BN_mod_inverse_odd sets |out| equal to |a|^-1, mod |n|. |a| must be
+ * non-negative and must be less than |n|. |n| must be odd. This function
+ * shouldn't be used for secret values; use |BN_mod_inverse_blinded| instead.
+ * Or, if |n| is guaranteed to be prime, use
+ * |BN_mod_exp_mont_consttime(out, a, m_minus_2, m, ctx, m_mont)|, taking
+ * advantage of Fermat's Little Theorem. It returns one on success or zero on
+ * failure. On failure, if the failure was caused by |a| having no inverse mod
+ * |n| then |*out_no_inverse| will be set to one; otherwise it will be set to
+ * zero. */
+int BN_mod_inverse_odd(BIGNUM *out, int *out_no_inverse, const BIGNUM *a,
+                       const BIGNUM *n, BN_CTX *ctx);
+
 /* BN_kronecker returns the Kronecker symbol of |a| and |b| (which is -1, 0 or
  * 1), or -2 on error. */
 OPENSSL_EXPORT int BN_kronecker(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
@@ -780,19 +792,23 @@ OPENSSL_EXPORT int BN_MONT_CTX_set(BN_MONT_CTX *mont, const BIGNUM *mod,
 int BN_MONT_CTX_set_locked(BN_MONT_CTX **pmont, CRYPTO_MUTEX *lock,
                            const BIGNUM *mod, BN_CTX *bn_ctx);
 
-/* BN_to_montgomery sets |ret| equal to |a| in the Montgomery domain. It
- * returns one on success and zero on error. */
+/* BN_to_montgomery sets |ret| equal to |a| in the Montgomery domain. |a| is
+ * assumed to be in the range [0, n), where |n| is the Montgomery modulus. It
+ * returns one on success or zero on error. */
 OPENSSL_EXPORT int BN_to_montgomery(BIGNUM *ret, const BIGNUM *a,
                                     const BN_MONT_CTX *mont, BN_CTX *ctx);
 
-/* BN_from_montgomery sets |ret| equal to |a| * R^-1, i.e. translates values
- * out of the Montgomery domain. It returns one on success or zero on error. */
+/* BN_from_montgomery sets |ret| equal to |a| * R^-1, i.e. translates values out
+ * of the Montgomery domain. |a| is assumed to be in the range [0, n), where |n|
+ * is the Montgomery modulus. It returns one on success or zero on error. */
 OPENSSL_EXPORT int BN_from_montgomery(BIGNUM *ret, const BIGNUM *a,
                                       const BN_MONT_CTX *mont, BN_CTX *ctx);
 
 /* BN_mod_mul_montgomery set |r| equal to |a| * |b|, in the Montgomery domain.
  * Both |a| and |b| must already be in the Montgomery domain (by
- * |BN_to_montgomery|). It returns one on success or zero on error. */
+ * |BN_to_montgomery|). In particular, |a| and |b| are assumed to be in the
+ * range [0, n), where |n| is the Montgomery modulus. It returns one on success
+ * or zero on error. */
 OPENSSL_EXPORT int BN_mod_mul_montgomery(BIGNUM *r, const BIGNUM *a,
                                          const BIGNUM *b,
                                          const BN_MONT_CTX *mont, BN_CTX *ctx);

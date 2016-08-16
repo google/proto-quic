@@ -91,7 +91,7 @@ QuicTimeWaitListManager::QuicTimeWaitListManager(
 
 QuicTimeWaitListManager::~QuicTimeWaitListManager() {
   connection_id_clean_up_alarm_->Cancel();
-  STLDeleteElements(&pending_packets_queue_);
+  base::STLDeleteElements(&pending_packets_queue_);
 }
 
 void QuicTimeWaitListManager::AddConnectionIdToTimeWait(
@@ -127,7 +127,7 @@ void QuicTimeWaitListManager::AddConnectionIdToTimeWait(
 
 bool QuicTimeWaitListManager::IsConnectionIdInTimeWait(
     QuicConnectionId connection_id) const {
-  return ContainsKey(connection_id_map_, connection_id);
+  return base::ContainsKey(connection_id_map_, connection_id);
 }
 
 QuicVersion QuicTimeWaitListManager::GetQuicVersionFromConnectionId(

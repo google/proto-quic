@@ -4,6 +4,8 @@
 
 #include "net/quic/core/congestion_control/pacing_sender.h"
 
+#include <string>
+
 #include "net/quic/core/quic_flags.h"
 
 using std::min;
@@ -27,47 +29,21 @@ PacingSender::PacingSender()
       burst_tokens_(kInitialUnpacedBurst),
       last_delayed_packet_sent_time_(QuicTime::Zero()),
       ideal_next_packet_send_time_(QuicTime::Zero()),
-      was_last_send_delayed_(false),
-      owns_sender_(false) {}
+      was_last_send_delayed_(false) {}
 
-PacingSender::~PacingSender() {
-  if (owns_sender_) {
-    delete sender_;
-  }
-}
+PacingSender::~PacingSender() {}
 
-void PacingSender::SetFromConfig(const QuicConfig& config,
-                                 Perspective perspective) {
-  sender_->SetFromConfig(config, perspective);
-}
-
-void PacingSender::ResumeConnectionState(
-    const CachedNetworkParameters& cached_network_params,
-    bool max_bandwidth_resumption) {
-  sender_->ResumeConnectionState(cached_network_params,
-                                 max_bandwidth_resumption);
-}
-
-void PacingSender::SetNumEmulatedConnections(int num_connections) {
-  sender_->SetNumEmulatedConnections(num_connections);
-}
-
-void PacingSender::SetMaxPacingRate(QuicBandwidth max_pacing_rate) {
-  max_pacing_rate_ = max_pacing_rate;
-}
-
-void PacingSender::SetSender(SendAlgorithmInterface* sender, bool owns_sender) {
-  if (owns_sender_) {
-    delete sender_;
-  }
+void PacingSender::set_sender(SendAlgorithmInterface* sender) {
+  DCHECK(sender != nullptr);
   sender_ = sender;
-  owns_sender_ = owns_sender;
 }
 
-void PacingSender::OnCongestionEvent(bool rtt_updated,
-                                     QuicByteCount bytes_in_flight,
-                                     const CongestionVector& acked_packets,
-                                     const CongestionVector& lost_packets) {
+void PacingSender::OnCongestionEvent(
+    bool rtt_updated,
+    QuicByteCount bytes_in_flight,
+    const SendAlgorithmInterface::CongestionVector& acked_packets,
+    const SendAlgorithmInterface::CongestionVector& lost_packets) {
+  DCHECK(sender_ != nullptr);
   if (!lost_packets.empty()) {
     // Clear any burst tokens when entering recovery.
     burst_tokens_ = 0;
@@ -82,6 +58,7 @@ bool PacingSender::OnPacketSent(
     QuicPacketNumber packet_number,
     QuicByteCount bytes,
     HasRetransmittableData has_retransmittable_data) {
+  DCHECK(sender_ != nullptr);
   const bool in_flight =
       sender_->OnPacketSent(sent_time, bytes_in_flight, packet_number, bytes,
                             has_retransmittable_data);
@@ -135,17 +112,10 @@ bool PacingSender::OnPacketSent(
   return in_flight;
 }
 
-void PacingSender::OnRetransmissionTimeout(bool packets_retransmitted) {
-  sender_->OnRetransmissionTimeout(packets_retransmitted);
-}
-
-void PacingSender::OnConnectionMigration() {
-  sender_->OnConnectionMigration();
-}
-
 QuicTime::Delta PacingSender::TimeUntilSend(
     QuicTime now,
     QuicByteCount bytes_in_flight) const {
+  DCHECK(sender_ != nullptr);
   QuicTime::Delta time_until_send =
       sender_->TimeUntilSend(now, bytes_in_flight);
   if (burst_tokens_ > 0 || bytes_in_flight == 0) {
@@ -172,40 +142,13 @@ QuicTime::Delta PacingSender::TimeUntilSend(
 }
 
 QuicBandwidth PacingSender::PacingRate(QuicByteCount bytes_in_flight) const {
+  DCHECK(sender_ != nullptr);
   if (!max_pacing_rate_.IsZero()) {
     return QuicBandwidth::FromBitsPerSecond(
         min(max_pacing_rate_.ToBitsPerSecond(),
             sender_->PacingRate(bytes_in_flight).ToBitsPerSecond()));
   }
   return sender_->PacingRate(bytes_in_flight);
-}
-
-QuicBandwidth PacingSender::BandwidthEstimate() const {
-  return sender_->BandwidthEstimate();
-}
-
-QuicTime::Delta PacingSender::RetransmissionDelay() const {
-  return sender_->RetransmissionDelay();
-}
-
-QuicByteCount PacingSender::GetCongestionWindow() const {
-  return sender_->GetCongestionWindow();
-}
-
-bool PacingSender::InSlowStart() const {
-  return sender_->InSlowStart();
-}
-
-bool PacingSender::InRecovery() const {
-  return sender_->InRecovery();
-}
-
-QuicByteCount PacingSender::GetSlowStartThreshold() const {
-  return sender_->GetSlowStartThreshold();
-}
-
-CongestionControlType PacingSender::GetCongestionControlType() const {
-  return sender_->GetCongestionControlType();
 }
 
 }  // namespace net

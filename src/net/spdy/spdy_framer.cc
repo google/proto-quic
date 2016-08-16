@@ -841,7 +841,7 @@ SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
     }
   }
 
-  if (enforce_max_frame_size_ && protocol_version_ == HTTP2 &&
+  if (protocol_version_ == HTTP2 &&
       payload_length_field > recv_frame_size_limit_) {
     set_error(SPDY_OVERSIZED_PAYLOAD);
   }
@@ -961,14 +961,6 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
 
   // if we're here, then we have the common header all received.
   if (!is_control_frame) {
-    if (protocol_version_ == HTTP2) {
-      // Catch bogus tests sending oversized DATA frames.
-      // TODO(dahollings): Remove this SPDY_BUG when deprecating
-      // --gfe2_reloadable_flag_enforce_max_frame_size.
-      SPDY_BUG_IF(GetFrameMaximumSize() < current_frame_length_)
-          << "DATA frame too large for HTTP/2.";
-    }
-
     uint8_t valid_data_flags = 0;
     if (protocol_version_ == SPDY3) {
       valid_data_flags = DATA_FLAG_FIN;
@@ -1201,7 +1193,7 @@ void SpdyFramer::ProcessControlFrameHeader(int control_frame_type_field) {
     return;
   }
 
-  if ((!enforce_max_frame_size_ || protocol_version_ == SPDY3) &&
+  if (protocol_version_ == SPDY3 &&
       current_frame_length_ >
           kSpdyInitialFrameSizeLimit +
               SpdyConstants::GetFrameHeaderSize(protocol_version_)) {

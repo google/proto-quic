@@ -1,19 +1,22 @@
-The linux directory contains a config.h generated from a run of configure on
-Ubuntu 10.04.1 LTS x86_64, with VCDIFF_USE_BLOCK_COMPARE_WORDS manually
-changed to match the $host_cpu test in configure.
+The linux directory contains a config.h generated from Ubuntu 14.04 LTS and
+cmake 2.8.12.2.
 
-The mac directory contains a config.h generated from a run of configure on a
-Mac, with VCDIFF_USE_BLOCK_COMPARE_WORDS manually changed to match the
-$host_cpu test in configure.
+The mac directory contains a config.h generated from OS X 10.11.6, XCode 7.3,
+and cmake 3.4.
 
-The ios directory contains a config.h generated from a run of configure
---host=arm-apple-darwin10 on a Mac with the following environment variables:
-  CC=/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/gcc-4.2 -x c -arch armv6
-  CFLAGS=-mno-thumb -miphoneos-version-min=4.2
-  CPPFLAGS=-isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk
-  CXX=/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/gcc-4.2 -x c++ -arch armv6
-  CXXFLAGS=-mno-thumb -miphoneos-version-min=4.2
+The ios directory contains a copy of the mac config.h. Since the mac config.h
+contains almost nothing, this is probably fine.
 
-The win directory contains a config.h that forwards to one provided with
-open-vcdiff. We have this to avoid putting open-vcdiff's minimal stdint.h hack
-into our include path.
+The win directory contains a config.h generated from Windows 7, VS 2013, and
+cmake 3.6 with 682f68732898c8ec621427fdd734b3b0ac223ec5 checked out. In a shell
+with the VC tools in the path, do:
+
+  cd \src
+  git clone https://github.com/google/open-vcdiff
+  cd open-vcdiff
+  git submodule update --init --recursive
+  mkdir buildfoo
+  cd buildfoo
+  "C:\Program Files\CMake\bin\cmake.exe" -GNinja ..
+
+Then copy the generated config.h out of the root of your open-vcdiff checkout.

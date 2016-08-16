@@ -24,6 +24,7 @@ class QuicSpdySessionPeer;
 // A QUIC session with a headers stream.
 class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
  public:
+  // Does not take ownership of |connection|.
   QuicSpdySession(QuicConnection* connection, const QuicConfig& config);
 
   ~QuicSpdySession() override;

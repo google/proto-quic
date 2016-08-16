@@ -338,7 +338,7 @@ QuicConnection::~QuicConnection() {
   if (owns_writer_) {
     delete writer_;
   }
-  STLDeleteElements(&undecryptable_packets_);
+  base::STLDeleteElements(&undecryptable_packets_);
   ClearQueuedPackets();
 }
 
@@ -443,7 +443,7 @@ bool QuicConnection::SelectMutualVersion(
   const QuicVersionVector& supported_versions = framer_.supported_versions();
   for (size_t i = 0; i < supported_versions.size(); ++i) {
     const QuicVersion& version = supported_versions[i];
-    if (ContainsValue(available_versions, version)) {
+    if (base::ContainsValue(available_versions, version)) {
       framer_.set_version(version);
       return true;
     }
@@ -562,7 +562,7 @@ void QuicConnection::OnVersionNegotiationPacket(
     return;
   }
 
-  if (ContainsValue(packet.versions, version())) {
+  if (base::ContainsValue(packet.versions, version())) {
     const string error_details =
         "Server already supports client's version and should have accepted the "
         "connection.";
@@ -690,8 +690,7 @@ bool QuicConnection::OnPacketHeader(const QuicPacketHeader& header) {
   // packet.
   if (active_peer_migration_type_ == NO_CHANGE &&
       peer_migration_type != NO_CHANGE &&
-      (!FLAGS_quic_do_not_migrate_on_old_packet ||
-       header.packet_number > received_packet_manager_.GetLargestObserved())) {
+      header.packet_number > received_packet_manager_.GetLargestObserved()) {
     StartPeerMigration(header.path_id, peer_migration_type);
   }
 
@@ -1168,7 +1167,6 @@ void QuicConnection::MaybeSendInResponseToPacket() {
 }
 
 void QuicConnection::SendVersionNegotiationPacket() {
-  // TODO(alyssar): implement zero server state negotiation.
   pending_version_negotiation_packet_ = true;
   if (writer_->IsWriteBlocked()) {
     visitor_->OnWriteBlocked();
@@ -1683,7 +1681,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   DVLOG(1) << ENDPOINT << "time we began writing last sent packet: "
            << packet_send_time.ToDebuggingValue();
 
-  if (!FLAGS_quic_simple_packet_number_length) {
+  if (!FLAGS_quic_simple_packet_number_length_2) {
     // TODO(ianswett): Change the packet number length and other packet creator
     // options by a more explicit API than setting a struct value directly,
     // perhaps via the NetworkChangeVisitor.
@@ -1708,12 +1706,20 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
     SetRetransmissionAlarm();
   }
 
-  if (FLAGS_quic_simple_packet_number_length) {
+  if (FLAGS_quic_simple_packet_number_length_2) {
     // The packet number length must be updated after OnPacketSent, because it
     // may change the packet number length in packet.
-    packet_generator_.UpdateSequenceNumberLength(
-        sent_packet_manager_->GetLeastPacketAwaitedByPeer(packet->path_id),
-        sent_packet_manager_->EstimateMaxPacketsInFlight(max_packet_length()));
+    if (FLAGS_quic_least_unacked_packet_number_length) {
+      packet_generator_.UpdateSequenceNumberLength(
+          sent_packet_manager_->GetLeastUnacked(packet->path_id),
+          sent_packet_manager_->EstimateMaxPacketsInFlight(
+              max_packet_length()));
+    } else {
+      packet_generator_.UpdateSequenceNumberLength(
+          sent_packet_manager_->GetLeastPacketAwaitedByPeer(packet->path_id),
+          sent_packet_manager_->EstimateMaxPacketsInFlight(
+              max_packet_length()));
+    }
   }
 
   stats_.bytes_sent += result.bytes_written;
@@ -2016,7 +2022,7 @@ void QuicConnection::MaybeProcessUndecryptablePackets() {
         debug_visitor_->OnUndecryptablePacket();
       }
     }
-    STLDeleteElements(&undecryptable_packets_);
+    base::STLDeleteElements(&undecryptable_packets_);
   }
 }
 
@@ -2307,6 +2313,28 @@ QuicConnection::ScopedPacketBundler::~ScopedPacketBundler() {
   if (!already_in_batch_mode_) {
     DVLOG(2) << "Leaving Batch Mode.";
     connection_->packet_generator_.FinishBatchOperations();
+
+    // Once all transmissions are done, check if there is any outstanding data
+    // to send and notify the congestion controller if not.
+    //
+    // Note that this means that the application limited check will happen as
+    // soon as the last bundler gets destroyed, which is typically after a
+    // single stream write is finished.  This means that if all the data from a
+    // single write goes through the connection, the application-limited signal
+    // will fire even if the caller does a write operation immediately after.
+    // There are two important approaches to remedy this situation:
+    // (1) Instantiate ScopedPacketBundler before performing multiple subsequent
+    //     writes, thus deferring this check until all writes are done.
+    // (2) Write data in chunks sufficiently large so that they cause the
+    //     connection to be limited by the congestion control.  Typically, this
+    //     would mean writing chunks larger than the product of the current
+    //     pacing rate and the pacer granularity.  So, for instance, if the
+    //     pacing rate of the connection is 1 Gbps, and the pacer granularity is
+    //     1 ms, the caller should send at least 125k bytes in order to not
+    //     be marked as application-limited.
+    if (FLAGS_quic_enable_app_limited_check) {
+      connection_->CheckIfApplicationLimited();
+    }
   }
   DCHECK_EQ(already_in_batch_mode_,
             connection_->packet_generator_.InBatchMode());
@@ -2521,6 +2549,14 @@ bool QuicConnection::MaybeConsiderAsMemoryCorruption(
 const QuicTime::Delta QuicConnection::DelayedAckTime() {
   return QuicTime::Delta::FromMilliseconds(
       min(kMaxDelayedAckTimeMs, kMinRetransmissionTimeMs / 2));
+}
+
+void QuicConnection::CheckIfApplicationLimited() {
+  if (queued_packets_.empty() &&
+      !sent_packet_manager_->HasPendingRetransmissions() &&
+      !visitor_->WillingAndAbleToWrite()) {
+    sent_packet_manager_->OnApplicationLimited();
+  }
 }
 
 }  // namespace net
