@@ -538,6 +538,19 @@ int UDPSocketWin::SetSendBufferSize(int32_t size) {
   return ERR_SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE;
 }
 
+int UDPSocketWin::SetDoNotFragment() {
+  DCHECK_NE(socket_, INVALID_SOCKET);
+  DCHECK(CalledOnValidThread());
+
+  if (addr_family_ == AF_INET6)
+    return OK;
+
+  DWORD val = 1;
+  int rv = setsockopt(socket_, IPPROTO_IP, IP_DONTFRAGMENT,
+                      reinterpret_cast<const char*>(&val), sizeof(val));
+  return rv == 0 ? OK : MapSystemError(WSAGetLastError());
+}
+
 int UDPSocketWin::AllowAddressReuse() {
   DCHECK_NE(socket_, INVALID_SOCKET);
   DCHECK(CalledOnValidThread());

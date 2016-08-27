@@ -296,6 +296,8 @@ class NET_EXPORT_PRIVATE QuicConnection
     SEND_ACK,
     // Bundle an ack with outgoing data.
     SEND_ACK_IF_PENDING,
+    // Do not send ack.
+    NO_ACK,
   };
 
   enum AckMode { TCP_ACKING, ACK_DECIMATION, ACK_DECIMATION_WITH_REORDERING };
@@ -683,6 +685,10 @@ class NET_EXPORT_PRIVATE QuicConnection
     return last_packet_source_address_;
   }
 
+  void set_largest_packet_size_supported(QuicByteCount size) {
+    largest_packet_size_supported_ = size;
+  }
+
  protected:
   // Calls cancel() on all the alarms owned by this connection.
   void CancelAllAlarms();
@@ -724,9 +730,11 @@ class NET_EXPORT_PRIVATE QuicConnection
     return active_peer_migration_type_;
   }
 
-  // Sends the connection close packet to the peer.
+  // Sends the connection close packet to the peer. |ack_mode| determines
+  // whether ack frame will be bundled with the connection close packet.
   virtual void SendConnectionClosePacket(QuicErrorCode error,
-                                         const std::string& details);
+                                         const std::string& details,
+                                         AckBundling ack_mode);
 
  private:
   friend class test::QuicConnectionPeer;
@@ -828,9 +836,10 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Set the size of the packet we are targeting while doing path MTU discovery.
   void SetMtuDiscoveryTarget(QuicByteCount target);
 
-  // Validates the potential maximum packet size, and reduces it if it exceeds
-  // the largest supported by the protocol or the packet writer.
-  QuicByteCount LimitMaxPacketSize(QuicByteCount suggested_max_packet_size);
+  // Returns |suggested_max_packet_size| clamped to any limits set by the
+  // underlying writer, connection, or protocol.
+  QuicByteCount GetLimitedMaxPacketSize(
+      QuicByteCount suggested_max_packet_size);
 
   // Called when |path_id| is considered as closed because either a PATH_CLOSE
   // frame is sent or received. Stops receiving packets on closed path. Drops
@@ -1064,8 +1073,18 @@ class NET_EXPORT_PRIVATE QuicConnection
   // sent.
   QuicPacketNumber next_mtu_probe_at_;
 
+  // The value of the MTU regularly used by the connection. This is different
+  // from the value returned by max_packet_size(), as max_packet_size() returns
+  // the value of the MTU as currently used by the serializer, so if
+  // serialization of an MTU probe is in progress, those two values will be
+  // different.
+  QuicByteCount long_term_mtu_;
+
   // The size of the largest packet received from peer.
   QuicByteCount largest_received_packet_size_;
+
+  // The maximum allowed packet size.
+  QuicByteCount largest_packet_size_supported_;
 
   // Whether a GoAway has been sent.
   bool goaway_sent_;

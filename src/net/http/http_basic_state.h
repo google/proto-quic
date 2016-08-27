@@ -27,7 +27,8 @@ struct HttpRequestInfo;
 
 class NET_EXPORT_PRIVATE HttpBasicState {
  public:
-  HttpBasicState(ClientSocketHandle* connection, bool using_proxy);
+  HttpBasicState(std::unique_ptr<ClientSocketHandle> connection,
+                 bool using_proxy);
   ~HttpBasicState();
 
   // Initialize() must be called before using any of the other methods.

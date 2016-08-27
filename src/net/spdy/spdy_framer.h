@@ -535,12 +535,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     recv_frame_size_limit_ = recv_frame_size_limit;
   }
 
-  void SetDecoderHeaderTableDebugVisitor(
-      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
-
-  void SetEncoderHeaderTableDebugVisitor(
-      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
-
   // Returns the (minimum) size of frames (sans variable-length portions).
   size_t GetDataFrameMinimumSize() const;
   size_t GetFrameHeaderSize() const;
@@ -596,6 +590,17 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   // Returns the maximum size of the header encoder compression table.
   size_t header_encoder_table_size() const;
+
+  void SetDecoderHeaderTableDebugVisitor(
+      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
+
+  void SetEncoderHeaderTableDebugVisitor(
+      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
+
+  // For testing support (i.e. for clients and backends),
+  // allow overriding the flag on a per framer basis.
+  void set_use_new_methods_for_test(bool v) { use_new_methods_ = v; }
+  bool use_new_methods_for_test() const { return use_new_methods_; }
 
  protected:
   friend class BufferedSpdyFramer;
@@ -851,6 +856,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // If true, then ProcessInput returns after processing a full frame,
   // rather than reading all available input.
   bool process_single_input_frame_ = false;
+
+  bool use_new_methods_ =
+      FLAGS_chromium_http2_flag_spdy_framer_use_new_methods3;
 };
 
 }  // namespace net

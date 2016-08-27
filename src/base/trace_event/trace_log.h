@@ -60,7 +60,9 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
     // Category group enabled by SetEventCallbackEnabled().
     ENABLED_FOR_EVENT_CALLBACK = 1 << 2,
     // Category group enabled to export events to ETW.
-    ENABLED_FOR_ETW_EXPORT = 1 << 3
+    ENABLED_FOR_ETW_EXPORT = 1 << 3,
+    // Category group being filtered before logged.
+    ENABLED_FOR_FILTERING = 1 << 4
   };
 
   static TraceLog* GetInstance();
@@ -286,6 +288,10 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
                                 const char* name,
                                 TraceEventHandle handle);
 
+  void EndFilteredEvent(const unsigned char* category_group_enabled,
+                        const char* name,
+                        TraceEventHandle handle);
+
   // For every matching event, the callback will be called.
   typedef base::Callback<void()> WatchEventCallback;
   void SetWatchEvent(const std::string& category_name,
@@ -305,6 +311,24 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Allows deleting our singleton instance.
   static void DeleteForTesting();
+
+  class BASE_EXPORT TraceEventFilter {
+   public:
+    static const char* const kEventWhitelistPredicate;
+    static const char* const kHeapProfilerPredicate;
+
+    TraceEventFilter() {}
+    virtual ~TraceEventFilter() {}
+    virtual bool FilterTraceEvent(const TraceEvent& trace_event) const = 0;
+    virtual void EndEvent(const char* category_group, const char* name) {}
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(TraceEventFilter);
+  };
+  typedef std::unique_ptr<TraceEventFilter> (
+      *TraceEventFilterConstructorForTesting)(void);
+  static void SetTraceEventFilterConstructorForTesting(
+      TraceEventFilterConstructorForTesting predicate);
 
   // Allow tests to inspect TraceEvents.
   TraceEvent* GetEventByHandle(TraceEventHandle handle);

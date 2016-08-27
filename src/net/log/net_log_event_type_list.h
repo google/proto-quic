@@ -3019,3 +3019,26 @@ EVENT_TYPE(SAFE_BROWSING_CHECKING_URL)
 //                       "resumed_redirect", "unchecked_redirect">
 //  }
 EVENT_TYPE(SAFE_BROWSING_DEFERRED)
+
+// Marks start of UploadDataStream that is logged on initialization.
+// The END phase contains the following parameters:
+// {
+//   "net_error": <Result of the initialization step>,
+//   "total_size": <Shows total content length>,
+//   "is_chunked": <Shows whether data is chunked or not>
+// }
+EVENT_TYPE(UPLOAD_DATA_STREAM_INIT)
+
+// The start/end of UploadDataStream::Read method.
+//
+// The BEGIN phase contains the following information:
+// {
+//   "current_position": <Shows current read position>,
+// }
+//
+// The END phase contains the following information:
+// {
+//   "result": <Result of reading. Result > 0 is bytes read. Result == 0 means
+//              the end of file. Result < 0 means an error.>
+// }
+EVENT_TYPE(UPLOAD_DATA_STREAM_READ)

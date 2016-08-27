@@ -79,7 +79,7 @@ class NET_EXPORT ChunkedUploadDataStream : public UploadDataStream {
 
  private:
   // UploadDataStream implementation.
-  int InitInternal() override;
+  int InitInternal(const BoundNetLog& net_log) override;
   int ReadInternal(IOBuffer* buf, int buf_len) override;
   void ResetInternal() override;
 

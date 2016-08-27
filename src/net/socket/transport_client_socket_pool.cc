@@ -117,7 +117,7 @@ TransportConnectJob::TransportConnectJob(
 
 TransportConnectJob::~TransportConnectJob() {
   // We don't worry about cancelling the host resolution and TCP connect, since
-  // ~SingleRequestHostResolver and ~StreamSocket will take care of it.
+  // ~HostResolver::Request and ~StreamSocket will take care of it.
 }
 
 LoadState TransportConnectJob::GetLoadState() const {
@@ -268,10 +268,10 @@ int TransportConnectJob::DoResolveHost() {
   next_state_ = STATE_RESOLVE_HOST_COMPLETE;
   connect_timing_.dns_start = base::TimeTicks::Now();
 
-  return resolver_.Resolve(
+  return resolver_->Resolve(
       params_->destination(), priority(), &addresses_,
       base::Bind(&TransportConnectJob::OnIOComplete, base::Unretained(this)),
-      net_log());
+      &request_, net_log());
 }
 
 int TransportConnectJob::DoResolveHostComplete(int result) {

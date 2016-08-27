@@ -68,6 +68,10 @@ int UDPServerSocket::SetSendBufferSize(int32_t size) {
   return socket_.SetSendBufferSize(size);
 }
 
+int UDPServerSocket::SetDoNotFragment() {
+  return socket_.SetDoNotFragment();
+}
+
 void UDPServerSocket::Close() {
   socket_.Close();
 }
@@ -120,10 +124,10 @@ void UDPServerSocket::DetachFromThread() {
   socket_.DetachFromThread();
 }
 
-#if defined(OS_WIN)
 void UDPServerSocket::UseNonBlockingIO() {
+#if defined(OS_WIN)
   socket_.UseNonBlockingIO();
-}
 #endif
+}
 
 }  // namespace net

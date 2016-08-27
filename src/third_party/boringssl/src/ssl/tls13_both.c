@@ -28,44 +28,10 @@
 #include "internal.h"
 
 
-SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl)) {
-  SSL_HANDSHAKE *hs = OPENSSL_malloc(sizeof(SSL_HANDSHAKE));
-  if (hs == NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
-    return NULL;
-  }
-  memset(hs, 0, sizeof(SSL_HANDSHAKE));
-  hs->do_handshake = do_handshake;
-  hs->wait = ssl_hs_ok;
-  return hs;
-}
-
-void ssl_handshake_clear_groups(SSL_HANDSHAKE *hs) {
-  if (hs->groups == NULL) {
-    return;
-  }
-
-  for (size_t i = 0; i < hs->groups_len; i++) {
-    SSL_ECDH_CTX_cleanup(&hs->groups[i]);
-  }
-  OPENSSL_free(hs->groups);
-  hs->groups = NULL;
-  hs->groups_len = 0;
-}
-
-void ssl_handshake_free(SSL_HANDSHAKE *hs) {
-  if (hs == NULL) {
-    return;
-  }
-
-  OPENSSL_cleanse(hs->secret, sizeof(hs->secret));
-  OPENSSL_cleanse(hs->traffic_secret_0, sizeof(hs->traffic_secret_0));
-  ssl_handshake_clear_groups(hs);
-  OPENSSL_free(hs->key_share_bytes);
-  OPENSSL_free(hs->public_key);
-  OPENSSL_free(hs->cert_context);
-  OPENSSL_free(hs);
-}
+/* kMaxKeyUpdates is the number of consecutive KeyUpdates that will be
+ * processed. Without this limit an attacker could force unbounded processing
+ * without being able to return application data. */
+static const uint8_t kMaxKeyUpdates = 32;
 
 int tls13_handshake(SSL *ssl) {
   SSL_HANDSHAKE *hs = ssl->s3->hs;
@@ -216,6 +182,10 @@ int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
       goto err;
     }
 
+    /* OpenSSL returns X509_V_OK when no certificates are requested. This is
+     * classed by them as a bug, but it's assumed by at least NGINX. */
+    ssl->s3->new_session->verify_result = X509_V_OK;
+
     /* No certificate, so nothing more to do. */
     ret = 1;
     goto err;
@@ -223,14 +193,15 @@ int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
 
   ssl->s3->new_session->peer_sha256_valid = retain_sha256;
 
-  if (!ssl_verify_cert_chain(ssl, chain)) {
+  if (!ssl_verify_cert_chain(ssl, &ssl->s3->new_session->verify_result,
+                             chain)) {
     goto err;
   }
 
-  ssl->s3->new_session->verify_result = ssl->verify_result;
-
   X509_free(ssl->s3->new_session->peer);
-  ssl->s3->new_session->peer = X509_up_ref(sk_X509_value(chain, 0));
+  X509 *leaf = sk_X509_value(chain, 0);
+  X509_up_ref(leaf);
+  ssl->s3->new_session->peer = leaf;
 
   sk_X509_pop_free(ssl->s3->new_session->cert_chain, X509_free);
   ssl->s3->new_session->cert_chain = chain;
@@ -283,6 +254,10 @@ int tls13_process_certificate_verify(SSL *ssl) {
   int sig_ok =
       ssl_public_key_verify(ssl, CBS_data(&signature), CBS_len(&signature),
                             signature_algorithm, pkey, msg, msg_len);
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  sig_ok = 1;
+  ERR_clear_error();
+#endif
   if (!sig_ok) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_SIGNATURE);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
@@ -316,8 +291,13 @@ int tls13_process_finished(SSL *ssl) {
     return 0;
   }
 
-  if (ssl->init_num != verify_data_len ||
-      CRYPTO_memcmp(verify_data, ssl->init_msg, verify_data_len) != 0) {
+  int finished_ok =
+      ssl->init_num == verify_data_len &&
+      CRYPTO_memcmp(verify_data, ssl->init_msg, verify_data_len) == 0;
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  finished_ok = 1;
+#endif
+  if (!finished_ok) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DIGEST_CHECK_FAILED);
     return 0;
@@ -327,11 +307,10 @@ int tls13_process_finished(SSL *ssl) {
 }
 
 int tls13_prepare_certificate(SSL *ssl) {
-  CBB cbb, body, context;
+  CBB cbb, body;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CERTIFICATE) ||
-      !CBB_add_u8_length_prefixed(&body, &context) ||
-      !CBB_add_bytes(&context, ssl->s3->hs->cert_context,
-                     ssl->s3->hs->cert_context_len) ||
+      /* The request context is always empty in the handshake. */
+      !CBB_add_u8(&body, 0) ||
       !ssl_add_cert_chain(ssl, &body) ||
       !ssl->method->finish_message(ssl, &cbb)) {
     CBB_cleanup(&cbb);
@@ -436,8 +415,17 @@ static int tls13_receive_key_update(SSL *ssl) {
 
 int tls13_post_handshake(SSL *ssl) {
   if (ssl->s3->tmp.message_type == SSL3_MT_KEY_UPDATE) {
+    ssl->s3->key_update_count++;
+    if (ssl->s3->key_update_count > kMaxKeyUpdates) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_TOO_MANY_KEY_UPDATES);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
+      return 0;
+    }
+
     return tls13_receive_key_update(ssl);
   }
+
+  ssl->s3->key_update_count = 0;
 
   if (ssl->s3->tmp.message_type == SSL3_MT_NEW_SESSION_TICKET &&
       !ssl->server) {

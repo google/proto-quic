@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
@@ -32,7 +33,8 @@ class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
  public:
   // Constructs a new HttpBasicStream. InitializeStream must be called to
   // initialize it correctly.
-  HttpBasicStream(ClientSocketHandle* connection, bool using_proxy);
+  HttpBasicStream(std::unique_ptr<ClientSocketHandle> connection,
+                  bool using_proxy);
   ~HttpBasicStream() override;
 
   // HttpStream methods:

@@ -432,10 +432,11 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
         // These are hosts that we expect to always offer CECPQ1.  Connections
         // to them, whether or not this browser is in the experiment group, form
         // the basis of our comparisons.
-        bool cecpq1_supported =
+        bool cecpq1_expected_to_be_offered =
+            ssl_info.is_issued_by_known_root &&
             (host == "play.google.com" || host == "checkout.google.com" ||
              host == "wallet.google.com");
-        if (cecpq1_supported) {
+        if (cecpq1_expected_to_be_offered) {
           UMA_HISTOGRAM_CUSTOM_TIMES(
               "Net.SSL_Connection_Latency_PostQuantumSupported_Full_Handshake",
               connect_duration, base::TimeDelta::FromMilliseconds(1),

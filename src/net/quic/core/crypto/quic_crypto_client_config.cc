@@ -914,6 +914,10 @@ void QuicCryptoClientConfig::SetChannelIDSource(ChannelIDSource* source) {
   channel_id_source_.reset(source);
 }
 
+void QuicCryptoClientConfig::UseTokenBinding() {
+  tb_key_params = {kP256};
+}
+
 void QuicCryptoClientConfig::InitializeFrom(
     const QuicServerId& server_id,
     const QuicServerId& canonical_server_id,

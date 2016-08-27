@@ -5,6 +5,7 @@
 #include "net/dns/host_resolver.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -135,17 +136,29 @@ void HostResolver::InitializePersistence(
 std::unique_ptr<HostResolver> HostResolver::CreateSystemResolver(
     const Options& options,
     NetLog* net_log) {
-  return std::unique_ptr<HostResolver>(new HostResolverImpl(options, net_log));
+  return std::unique_ptr<HostResolver>(
+      CreateSystemResolverImpl(options, net_log).release());
+}
+
+// static
+std::unique_ptr<HostResolverImpl> HostResolver::CreateSystemResolverImpl(
+    const Options& options,
+    NetLog* net_log) {
+  return base::WrapUnique(new HostResolverImpl(options, net_log));
 }
 
 // static
 std::unique_ptr<HostResolver> HostResolver::CreateDefaultResolver(
     NetLog* net_log) {
-  return std::unique_ptr<HostResolver>(
-      new HostResolverImpl(Options(), net_log));
+  return CreateSystemResolver(Options(), net_log);
 }
 
-HostResolver::HostResolver() {
+// static
+std::unique_ptr<HostResolverImpl> HostResolver::CreateDefaultResolverImpl(
+    NetLog* net_log) {
+  return CreateSystemResolverImpl(Options(), net_log);
 }
+
+HostResolver::HostResolver() {}
 
 }  // namespace net

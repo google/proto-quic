@@ -580,7 +580,7 @@ class TestConnection : public QuicConnection {
     // SetFromConfig enables it.  Set nearly-infinite bandwidth to make the
     // pacing algorithm work.
     EXPECT_CALL(*send_algorithm, PacingRate(_))
-        .WillRepeatedly(Return(QuicBandwidth::FromKBytesPerSecond(10000)));
+        .WillRepeatedly(Return(QuicBandwidth::Infinite()));
   }
 
   TestAlarmFactory::TestAlarm* GetAckAlarm() {
@@ -3143,6 +3143,58 @@ TEST_P(QuicConnectionTest, MtuDiscoveryWriterLimited) {
   EXPECT_EQ(1u, connection_.mtu_probe_count());
 }
 
+// Tests whether MTU discovery works when the writer returns an error despite
+// advertising higher packet length.
+TEST_P(QuicConnectionTest, MtuDiscoveryWriterFailed) {
+  FLAGS_graceful_emsgsize_on_mtu_probe = true;
+  EXPECT_TRUE(connection_.connected());
+
+  const QuicByteCount mtu_limit = kMtuDiscoveryTargetPacketSizeHigh - 1;
+  const QuicByteCount initial_mtu = connection_.max_packet_length();
+  EXPECT_LT(initial_mtu, mtu_limit);
+  writer_->set_max_packet_size(mtu_limit);
+  connection_.EnablePathMtuDiscovery(send_algorithm_);
+
+  // Send enough packets so that the next one triggers path MTU discovery.
+  for (QuicPacketCount i = 0; i < kPacketsBetweenMtuProbesBase - 1; i++) {
+    SendStreamDataToPeer(3, ".", i, /*fin=*/false, nullptr);
+    ASSERT_FALSE(connection_.GetMtuDiscoveryAlarm()->IsSet());
+  }
+
+  // Trigger the probe.
+  SendStreamDataToPeer(3, "!", kPacketsBetweenMtuProbesBase,
+                       /*fin=*/false, nullptr);
+  ASSERT_TRUE(connection_.GetMtuDiscoveryAlarm()->IsSet());
+  writer_->SimulateNextPacketTooLarge();
+  connection_.GetMtuDiscoveryAlarm()->Fire();
+  ASSERT_TRUE(connection_.connected());
+
+  // Send more data.
+  QuicPacketNumber probe_number = creator_->packet_number();
+  QuicPacketCount extra_packets = kPacketsBetweenMtuProbesBase * 3;
+  for (QuicPacketCount i = 0; i < extra_packets; i++) {
+    connection_.EnsureWritableAndSendStreamData5();
+    ASSERT_FALSE(connection_.GetMtuDiscoveryAlarm()->IsSet());
+  }
+
+  // Acknowledge all packets sent so far, except for the lost probe.
+  QuicAckFrame probe_ack = InitAckFrame(creator_->packet_number());
+  NackPacket(probe_number, &probe_ack);
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _));
+  ProcessAckPacket(&probe_ack);
+  EXPECT_EQ(initial_mtu, connection_.max_packet_length());
+
+  // Send more packets, and ensure that none of them sets the alarm.
+  for (QuicPacketCount i = 0; i < 4 * kPacketsBetweenMtuProbesBase; i++) {
+    connection_.EnsureWritableAndSendStreamData5();
+    ASSERT_FALSE(connection_.GetMtuDiscoveryAlarm()->IsSet());
+  }
+
+  EXPECT_EQ(initial_mtu, connection_.max_packet_length());
+  EXPECT_EQ(1u, connection_.mtu_probe_count());
+}
+
 TEST_P(QuicConnectionTest, NoMtuDiscoveryAfterConnectionClosed) {
   EXPECT_TRUE(connection_.connected());
 
@@ -5035,6 +5087,42 @@ TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedDueToWriteBlock) {
   BlockOnNextWrite();
 
   connection_.SendStreamData3();
+}
+
+TEST_P(QuicConnectionTest, ForceSendingAckOnPacketTooLarge) {
+  FLAGS_quic_do_not_send_ack_on_emsgsize = false;
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  // Send an ack by simulating delayed ack alarm firing.
+  ProcessPacket(kDefaultPathId, 1);
+  QuicAlarm* ack_alarm = QuicConnectionPeer::GetAckAlarm(&connection_);
+  EXPECT_TRUE(ack_alarm->IsSet());
+  connection_.GetAckAlarm()->Fire();
+  // Simulate data packet causes write error.
+  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _, _));
+  SimulateNextPacketTooLarge();
+  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
+  EXPECT_EQ(3u, writer_->frame_count());
+  EXPECT_FALSE(writer_->connection_close_frames().empty());
+  // Ack frame is bundled.
+  EXPECT_FALSE(writer_->ack_frames().empty());
+}
+
+TEST_P(QuicConnectionTest, DonotForceSendingAckOnPacketTooLarge) {
+  FLAGS_quic_do_not_send_ack_on_emsgsize = true;
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  // Send an ack by simulating delayed ack alarm firing.
+  ProcessPacket(kDefaultPathId, 1);
+  QuicAlarm* ack_alarm = QuicConnectionPeer::GetAckAlarm(&connection_);
+  EXPECT_TRUE(ack_alarm->IsSet());
+  connection_.GetAckAlarm()->Fire();
+  // Simulate data packet causes write error.
+  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _, _));
+  SimulateNextPacketTooLarge();
+  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
+  EXPECT_EQ(1u, writer_->frame_count());
+  EXPECT_FALSE(writer_->connection_close_frames().empty());
+  // Ack frame is not bundled in connection close packet.
+  EXPECT_TRUE(writer_->ack_frames().empty());
 }
 
 }  // namespace

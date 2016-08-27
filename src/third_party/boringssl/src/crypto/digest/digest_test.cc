@@ -16,15 +16,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <memory>
+
+#include <openssl/c++/digest.h>
 #include <openssl/crypto.h>
-#include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/md4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
-#include "../test/scoped_types.h"
+#include "../internal.h"
 
+
+namespace bssl {
 
 struct MD {
   // name is the name of the digest.
@@ -243,10 +247,10 @@ static int TestGetters() {
   return true;
 }
 
-int main(void) {
+static int Main() {
   CRYPTO_library_init();
 
-  for (size_t i = 0; i < sizeof(kTestVectors) / sizeof(kTestVectors[0]); i++) {
+  for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kTestVectors); i++) {
     if (!TestDigest(&kTestVectors[i])) {
       fprintf(stderr, "Test %d failed\n", (int)i);
       return 1;
@@ -259,4 +263,10 @@ int main(void) {
 
   printf("PASS\n");
   return 0;
+}
+
+}  // namespace bssl
+
+int main() {
+  return bssl::Main();
 }

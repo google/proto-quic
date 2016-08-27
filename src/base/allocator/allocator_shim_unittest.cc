@@ -182,7 +182,6 @@ AllocatorDispatch g_mock_dispatch = {
 };
 
 TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
-  const size_t kPageSize = base::GetPageSize();
   InsertAllocatorDispatch(&g_mock_dispatch);
 
   void* alloc_ptr = malloc(19);
@@ -210,6 +209,7 @@ TEST_F(AllocatorShimTest, InterceptLibcSymbols) {
 
   void* valloc_ptr = valloc(61);
   ASSERT_NE(nullptr, valloc_ptr);
+  const size_t kPageSize = base::GetPageSize();
   ASSERT_EQ(0u, reinterpret_cast<uintptr_t>(valloc_ptr) % kPageSize);
   ASSERT_GE(aligned_allocs_intercepted_by_alignment[kPageSize], 1u);
   ASSERT_GE(aligned_allocs_intercepted_by_size[61], 1u);

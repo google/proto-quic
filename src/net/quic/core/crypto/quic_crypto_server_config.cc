@@ -235,7 +235,7 @@ QuicCryptoServerConfig::QuicCryptoServerConfig(
       server_nonce_strike_register_window_secs_(120),
       enable_serving_sct_(false) {
   DCHECK(proof_source_.get());
-  default_source_address_token_boxer_.SetKeys(
+  source_address_token_boxer_.SetKeys(
       {DeriveSourceAddressTokenKey(source_address_token_secret)});
 
   // Generate a random key and orbit for server nonces.
@@ -482,9 +482,9 @@ bool QuicCryptoServerConfig::SetConfigs(
   return ok;
 }
 
-void QuicCryptoServerConfig::SetDefaultSourceAddressTokenKeys(
+void QuicCryptoServerConfig::SetSourceAddressTokenKeys(
     const vector<string>& keys) {
-  default_source_address_token_boxer_.SetKeys(keys);
+  source_address_token_boxer_.SetKeys(keys);
 }
 
 void QuicCryptoServerConfig::GetConfigIds(vector<string>* scids) const {
@@ -617,7 +617,7 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
 
   out->Clear();
 
-  if (!ClientDemandsX509Proof(client_hello) && FLAGS_quic_require_x509) {
+  if (!ClientDemandsX509Proof(client_hello)) {
     *error_details = "Missing or invalid PDMD";
     return QUIC_UNSUPPORTED_PROOF_DEMAND;
   }
@@ -1471,7 +1471,7 @@ void QuicCryptoServerConfig::BuildRejection(
   out->SetVector(kRREJ, info.reject_reasons);
 
   // The client may have requested a certificate chain.
-  if (!ClientDemandsX509Proof(client_hello) && FLAGS_quic_require_x509) {
+  if (!ClientDemandsX509Proof(client_hello)) {
     QUIC_BUG << "x509 certificates not supported in proof demand";
     return;
   }
@@ -1577,18 +1577,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
 
   scoped_refptr<Config> config(new Config);
   config->serialized = protobuf->config();
-
-  if (!protobuf->has_source_address_token_secret_override()) {
-    // Use the default boxer.
-    config->source_address_token_boxer = &default_source_address_token_boxer_;
-  } else {
-    // Create override boxer instance.
-    CryptoSecretBoxer* boxer = new CryptoSecretBoxer;
-    boxer->SetKeys({DeriveSourceAddressTokenKey(
-        protobuf->source_address_token_secret_override())});
-    config->source_address_token_boxer_storage.reset(boxer);
-    config->source_address_token_boxer = boxer;
-  }
+  config->source_address_token_boxer = &source_address_token_boxer_;
 
   if (protobuf->has_primary_time()) {
     config->primary_time =

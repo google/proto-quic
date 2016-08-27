@@ -5,6 +5,7 @@
 #ifndef NET_HTTP_HTTP_STREAM_FACTORY_IMPL_JOB_CONTROLLER_H_
 #define NET_HTTP_HTTP_STREAM_FACTORY_IMPL_JOB_CONTROLLER_H_
 
+#include "net/base/host_port_pair.h"
 #include "net/http/http_stream_factory_impl_job.h"
 #include "net/http/http_stream_factory_impl_request.h"
 
@@ -114,6 +115,14 @@ class HttpStreamFactoryImpl::JobController
                         const ProxyInfo& used_proxy_info,
                         HttpAuthController* auth_controller) override;
 
+  void OnResolveProxyComplete(
+      Job* job,
+      const HttpRequestInfo& request_info,
+      RequestPriority priority,
+      const SSLConfig& server_ssl_config,
+      const SSLConfig& proxy_ssl_config,
+      HttpStreamRequest::StreamType stream_type) override;
+
   // Invoked to notify the Request and Factory of the readiness of new
   // SPDY session.
   void OnNewSpdySessionReady(Job* job,
@@ -215,6 +224,16 @@ class HttpStreamFactoryImpl::JobController
   // Remove session from the SpdySessionRequestMap.
   void RemoveRequestFromSpdySessionRequestMap();
 
+  // Returns true if the |request_| can be fetched via an alternative
+  // proxy server, and sets |alternative_proxy_server| to the available
+  // alternative proxy server. |alternative_proxy_server| should not be null,
+  // and is owned by the caller.
+  bool ShouldCreateAlternativeProxyServerJob(
+      Job* job,
+      const ProxyInfo& proxy_info_,
+      const GURL& url,
+      ProxyServer* alternative_proxy_server) const;
+
   HttpStreamFactoryImpl* factory_;
   HttpNetworkSession* session_;
   JobFactory* job_factory_;
@@ -248,6 +267,9 @@ class HttpStreamFactoryImpl::JobController
   // At the point where a Job is irrevocably tied to |request_|, we set this.
   // It will be nulled when the |request_| is finished.
   Job* bound_job_;
+
+  // True if an alternative proxy server job can be started to fetch |request_|.
+  bool can_start_alternative_proxy_job_;
 
   base::WeakPtrFactory<JobController> ptr_factory_;
 };

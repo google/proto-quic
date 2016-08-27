@@ -1,9 +1,11 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-// Chromium note: this is based on the upstream PSL master
-//  https://github.com/publicsuffix/list/blob/master/public_suffix_list.dat
+// Please pull this list from, and only from https://publicsuffix.org/list/public_suffix_list.dat,
+// rather than any other VCS sites. Pulling from any other URL is not guaranteed to be supported.
+
+// Instructions on pulling and using this list can be found at https://publicsuffix.org/list/ .
 
 // ===BEGIN ICANN DOMAINS===
 
@@ -6529,7 +6531,7 @@ lib.ca.us
 lib.co.us
 lib.ct.us
 lib.dc.us
-lib.de.us
+// lib.de.us  Issue #243 - Moved to Private section at request of Ed Moore <Ed.Moore@lib.de.us>
 lib.fl.us
 lib.ga.us
 lib.gu.us
@@ -6945,7 +6947,7 @@ sch.zm
 *.zw
 
 
-// List of new gTLDs imported from https://newgtlds.icann.org/newgtlds.csv on 2016-05-09T22:17:27Z
+// List of new gTLDs imported from https://newgtlds.icann.org/newgtlds.csv on 2016-08-17T00:17:46Z
 
 // aaa : 2015-02-26 American Automobile Association, Inc.
 aaa
@@ -7021,9 +7023,6 @@ afl
 
 // africa : 2014-03-24 ZA Central Registry NPC trading as Registry.Africa
 africa
-
-// africamagic : 2015-03-05 Electronic Media Network (Pty) Ltd
-africamagic
 
 // agakhan : 2015-04-23 Fondation Aga Khan (Aga Khan Foundation)
 agakhan
@@ -7304,7 +7303,7 @@ blanco
 // blockbuster : 2015-07-30 Dish DBS Corporation
 blockbuster
 
-// blog : 2015-05-14 PRIMER NIVEL S.A.
+// blog : 2015-05-14
 blog
 
 // bloomberg : 2014-07-17 Bloomberg IP Holdings LLC
@@ -7730,6 +7729,9 @@ dad
 // dance : 2013-10-24 United TLD Holdco Ltd.
 dance
 
+// data : 2016-06-02 Dish DBS Corporation
+data
+
 // date : 2014-11-20 dot Date Limited
 date
 
@@ -7826,6 +7828,9 @@ dnp
 // docs : 2014-10-16 Charleston Road Registry Inc.
 docs
 
+// doctor : 2016-06-02 Brice Trail, LLC
+doctor
+
 // dodge : 2015-07-30 FCA US LLC.
 dodge
 
@@ -7846,9 +7851,6 @@ download
 
 // drive : 2015-03-05 Charleston Road Registry Inc.
 drive
-
-// dstv : 2015-03-12 MultiChoice (Proprietary) Limited
-dstv
 
 // dtv : 2015-06-04 Dish DBS Corporation
 dtv
@@ -7874,6 +7876,9 @@ durban
 // dvag : 2014-06-23 Deutsche Vermögensberatung Aktiengesellschaft DVAG
 dvag
 
+// dvr : 2016-05-26 Hughes Satellite Systems Corporation
+dvr
+
 // dwg : 2015-07-23 Autodesk, Inc.
 dwg
 
@@ -7882,6 +7887,9 @@ earth
 
 // eat : 2014-01-23 Charleston Road Registry Inc.
 eat
+
+// eco : 2016-07-08 Big Room Inc.
+eco
 
 // edeka : 2014-12-18 EDEKA Verband kaufmännischer Genossenschaften e.V.
 edeka
@@ -8066,9 +8074,6 @@ florist
 // flowers : 2014-10-09 Uniregistry, Corp.
 flowers
 
-// flsmidth : 2014-07-24 FLSmidth A/S
-flsmidth
-
 // fly : 2014-05-08 Charleston Road Registry Inc.
 fly
 
@@ -8159,7 +8164,7 @@ gallup
 // game : 2015-05-28 Uniregistry, Corp.
 game
 
-// games : 2015-05-28 Foggy Beach, LLC
+// games : 2015-05-28
 games
 
 // gap : 2015-07-31 The Gap, Inc.
@@ -8261,9 +8266,6 @@ gop
 // got : 2014-12-18 Amazon EU S.à r.l.
 got
 
-// gotv : 2015-03-12 MultiChoice (Proprietary) Limited
-gotv
-
 // grainger : 2015-05-07 Grainger Registry Services, LLC
 grainger
 
@@ -8278,6 +8280,9 @@ green
 
 // gripe : 2014-03-06 Corn Sunset, LLC
 gripe
+
+// grocery : 2016-06-16 Wal-Mart Stores, Inc.
+grocery
 
 // group : 2014-08-15 Romeo Town, LLC
 group
@@ -8642,9 +8647,6 @@ kred
 // kuokgroup : 2015-04-09 Kerry Trading Co. Limited
 kuokgroup
 
-// kyknet : 2015-03-05 Electronic Media Network (Pty) Ltd
-kyknet
-
 // kyoto : 2014-11-07 Academic Institution: Kyoto Jyoho Gakuen
 kyoto
 
@@ -8849,6 +8851,9 @@ management
 // mango : 2013-10-24 PUNTO FA S.L.
 mango
 
+// map : 2016-06-09 Charleston Road Registry Inc.
+map
+
 // market : 2014-03-06
 market
 
@@ -8909,6 +8914,9 @@ menu
 // meo : 2014-11-07 PT Comunicacoes S.A.
 meo
 
+// merckmsd : 2016-07-14 MSD Registry Holdings, Inc.
+merckmsd
+
 // metlife : 2015-05-07 MetLife Services and Solutions, LLC
 metlife
 
@@ -8939,8 +8947,8 @@ mls
 // mma : 2014-11-07 MMA IARD
 mma
 
-// mnet : 2015-03-05 Electronic Media Network (Pty) Ltd
-mnet
+// mobile : 2016-06-02 Dish DBS Corporation
+mobile
 
 // mobily : 2014-12-18 GreenTech Consultancy Company W.L.L.
 mobily
@@ -9008,17 +9016,11 @@ mtpc
 // mtr : 2015-03-12 MTR Corporation Limited
 mtr
 
-// multichoice : 2015-03-12 MultiChoice (Proprietary) Limited
-multichoice
-
 // mutual : 2015-04-02 Northwestern Mutual MU TLD Registry, LLC
 mutual
 
 // mutuelle : 2015-06-18 Fédération Nationale de la Mutualité Française
 mutuelle
-
-// mzansimagic : 2015-03-05 Electronic Media Network (Pty) Ltd
-mzansimagic
 
 // nab : 2015-08-20 National Australia Bank Limited
 nab
@@ -9028,9 +9030,6 @@ nadex
 
 // nagoya : 2013-10-24 GMO Registry, Inc.
 nagoya
-
-// naspers : 2015-02-12 Intelprop (Proprietary) Limited
-naspers
 
 // nationwide : 2015-07-23 Nationwide Mutual Insurance Company
 nationwide
@@ -9194,7 +9193,7 @@ orange
 // organic : 2014-03-27 Afilias Limited
 organic
 
-// orientexpress : 2015-02-05 Belmond Ltd.
+// orientexpress : 2015-02-05
 orientexpress
 
 // origins : 2015-10-01 The Estée Lauder Companies Inc.
@@ -9245,9 +9244,6 @@ passagens
 // pay : 2015-08-27 Amazon EU S.à r.l.
 pay
 
-// payu : 2015-02-12 MIH PayU B.V.
-payu
-
 // pccw : 2015-05-14 PCCW Enterprises Limited
 pccw
 
@@ -9260,8 +9256,14 @@ pfizer
 // pharmacy : 2014-06-19 National Association of Boards of Pharmacy
 pharmacy
 
+// phd : 2016-07-28 Charleston Road Registry Inc.
+phd
+
 // philips : 2014-11-07 Koninklijke Philips N.V.
 philips
+
+// phone : 2016-06-02 Dish DBS Corporation
+phone
 
 // photo : 2013-11-14 Uniregistry, Corp.
 photo
@@ -9397,6 +9399,9 @@ qvc
 
 // racing : 2014-12-04 Premier Registry Limited
 racing
+
+// radio : 2016-07-21 European Broadcasting Union (EBU)
+radio
 
 // raid : 2015-07-23 Johnson Shareholdings, Inc.
 raid
@@ -9620,6 +9625,9 @@ scor
 // scot : 2014-01-23 Dot Scot Registry Limited
 scot
 
+// search : 2016-06-09 Charleston Road Registry Inc.
+search
+
 // seat : 2014-05-22 SEAT, S.A. (Sociedad Unipersonal)
 seat
 
@@ -9832,9 +9840,6 @@ style
 
 // sucks : 2014-12-22 Vox Populi Registry Inc.
 sucks
-
-// supersport : 2015-03-05 SuperSport International Holdings Proprietary Limited
-supersport
 
 // supplies : 2013-12-19 Atomic Fields, LLC
 supplies
@@ -10656,10 +10661,10 @@ sa-east-1.compute.amazonaws.com
 us-gov-west-1.compute.amazonaws.com
 us-west-1.compute.amazonaws.com
 us-west-2.compute.amazonaws.com
-us-east-1.amazonaws.com
 compute-1.amazonaws.com
 z-1.compute-1.amazonaws.com
 z-2.compute-1.amazonaws.com
+us-east-1.amazonaws.com
 compute.amazonaws.com.cn
 cn-north-1.compute.amazonaws.com.cn
 
@@ -10697,14 +10702,22 @@ on-aptible.com
 
 // Association potager.org : https://potager.org/
 // Submitted by Lunar <jardiniers@potager.org>
-potager.org
-poivron.org
-sweetpepper.org
 pimienta.org
+poivron.org
+potager.org
+sweetpepper.org
+
+// ASUSTOR Inc. : http://www.asustor.com
+// Submitted by Vincent Tseng <vincenttseng@asustor.com>
+myasustor.com
 
 // AVM : https://avm.de
 // Submitted by Andreas Weise <a.weise@avm.de>
 myfritz.net
+
+// backplane : https://www.backplane.io
+// Submitted by Anthony Voutas <anthony@backplane.io>
+backplaneapp.io
 
 // BetaInABox
 // Submitted by Adrian <adrian@betainabox.com>
@@ -10713,6 +10726,10 @@ betainabox.com
 // Boxfuse : https://boxfuse.com
 // Submitted by Axel Fontaine <axel@boxfuse.com>
 boxfuse.io
+
+// BrowserSafetyMark
+// Submitted by Dave Tharp <browsersafetymark.io@quicinc.com>
+browsersafetymark.io
 
 // callidomus: https://www.callidomus.com/
 // Submitted by Marcus Popp <admin@callidomus.com>
@@ -10857,6 +10874,11 @@ dreamhosters.com
 // Drobo : http://www.drobo.com/
 // Submitted by Ricardo Padilha <rpadilha@drobo.com>
 mydrobo.com
+
+// Drud Holdings, LLC. : https://www.drud.com/
+// Submitted by Kevin Bridges <kevin@drud.com>
+drud.io
+drud.us
 
 // DuckDNS : http://www.duckdns.org/
 // Submitted by Richard Harper <richard@duckdns.org>
@@ -11269,9 +11291,15 @@ githubcloud.com
 gist.githubcloud.com
 *.githubcloudusercontent.com
 
+// GitLab, Inc.
+// Submitted by Alex Hanselka <alex@gitlab.com>
+gitlab.io
+
 // GlobeHosting, Inc.
 // Submitted by Zoltan Egresi <egresi@globehosting.com>
 ro.com
+ro.im
+shop.ro
 
 // GoIP DNS Services : http://www.goip.de
 // Submitted by Christian Poulter <milchstrasse@goip.de>
@@ -11386,6 +11414,14 @@ iki.fi
 // info.at : http://www.info.at/
 biz.at
 info.at
+
+// JS.ORG : http://dns.js.org
+// Submitted by Stefan Keim <admin@js.org>
+js.org
+
+// .KRD : http://nic.krd/data/krd/Registration%20Policy.pdf
+co.krd
+edu.krd
 
 // Magento Commerce
 // Submitted by Damien Tournoud <dtournoud@magento.cloud>
@@ -11579,6 +11615,12 @@ chirurgiens-dentistes-en-france.fr
 // Submitted by Daniel Dent (https://www.danieldent.com/)
 qa2.com
 
+// QNAP System Inc : https://www.qnap.com
+// Submitted by Nick Chang <nickchang@qnap.com>
+dev-myqnapcloud.com
+alpha-myqnapcloud.com
+myqnapcloud.com
+
 // Rackmaze LLC : https://www.rackmaze.com
 // Submitted by Kirill Pertsev <kika@rackmaze.com>
 rackmaze.com
@@ -11623,9 +11665,19 @@ bounty-full.com
 alpha.bounty-full.com
 beta.bounty-full.com
 
+// staticland : https://static.land
+// Submitted by Seth Vincent <sethvincent@gmail.com>
+static.land
+dev.static.land
+sites.static.land
+
 // SpaceKit : https://www.spacekit.io/
 // Submitted by Reza Akhavan <spacekit.io@gmail.com>
 spacekit.io
+
+// Stackspace : https://www.stackspace.io/
+// Submitted by Lina He <info@stackspace.io>
+stackspace.space
 
 // Synology, Inc. : https://www.synology.com/
 // Submitted by Rony Weng <ronyweng@synology.com>
@@ -11666,9 +11718,17 @@ hk.org
 ltd.hk
 inc.hk
 
+// .US
+// Submitted by Ed Moore <Ed.Moore@lib.de.us>
+lib.de.us
+
 // Viprinet Europe GmbH : http://www.viprinet.com
 // Submitted by Simon Kissel <hostmaster@viprinet.com>
 router.management
+
+// Wikimedia Labs : https://wikitech.wikimedia.org
+// Submitted by Yuvi Panda <yuvipanda@wikimedia.org>
+wmflabs.org
 
 // Yola : https://www.yola.com/
 // Submitted by Stefano Rivera <stefano@yola.com>

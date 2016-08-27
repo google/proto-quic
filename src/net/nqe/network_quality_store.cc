@@ -59,6 +59,10 @@ void NetworkQualityStore::Add(
       std::make_pair(network_id, cached_network_quality));
   DCHECK_LE(cached_network_qualities_.size(),
             static_cast<size_t>(kMaximumNetworkQualityCacheSize));
+
+  FOR_EACH_OBSERVER(
+      NetworkQualitiesCacheObserver, network_qualities_cache_observer_list_,
+      OnChangeInCachedNetworkQuality(network_id, cached_network_quality));
 }
 
 bool NetworkQualityStore::GetById(
@@ -74,6 +78,20 @@ bool NetworkQualityStore::GetById(
 
   *cached_network_quality = it->second;
   return true;
+}
+
+void NetworkQualityStore::AddNetworkQualitiesCacheObserver(
+    nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver*
+        observer) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  network_qualities_cache_observer_list_.AddObserver(observer);
+}
+
+void NetworkQualityStore::RemoveNetworkQualitiesCacheObserver(
+    nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver*
+        observer) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  network_qualities_cache_observer_list_.RemoveObserver(observer);
 }
 
 }  // namespace internal

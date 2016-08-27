@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include <type_traits>
+#include <utility>
 
 #include "base/base_export.h"
 #include "base/logging.h"
@@ -69,6 +70,8 @@ class BASE_EXPORT JavaRef<jobject> {
   // Don't add anything else here; it's inlined.
   JavaRef(JNIEnv* env, jobject obj) : obj_(obj) {}
 #endif
+
+  void swap(JavaRef& other) { std::swap(obj_, other.obj_); }
 
   // The following are implementation detail convenience methods, for
   // use by the sub-classes.
@@ -153,6 +156,10 @@ class ScopedJavaLocalRef : public JavaRef<T> {
     this->SetNewLocalRef(env_, other.obj());
   }
 
+  ScopedJavaLocalRef(ScopedJavaLocalRef<T>&& other) : env_(other.env_) {
+    this->swap(other);
+  }
+
   template <typename U>
   explicit ScopedJavaLocalRef(const U& other) : env_(nullptr) {
     this->Reset(other);
@@ -170,6 +177,11 @@ class ScopedJavaLocalRef : public JavaRef<T> {
   // copy constructor.
   void operator=(const ScopedJavaLocalRef<T>& other) {
     this->Reset(other);
+  }
+
+  void operator=(ScopedJavaLocalRef<T>&& other) {
+    env_ = other.env_;
+    this->swap(other);
   }
 
   void Reset() {
@@ -231,6 +243,8 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
     this->Reset(other);
   }
 
+  ScopedJavaGlobalRef(ScopedJavaGlobalRef<T>&& other) { this->swap(other); }
+
   ScopedJavaGlobalRef(JNIEnv* env, T obj) { this->Reset(env, obj); }
 
   template<typename U>
@@ -247,6 +261,8 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
   void operator=(const ScopedJavaGlobalRef<T>& other) {
     this->Reset(other);
   }
+
+  void operator=(ScopedJavaGlobalRef<T>&& other) { this->swap(other); }
 
   void Reset() {
     this->ResetGlobalRef();

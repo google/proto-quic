@@ -507,5 +507,13 @@ TEST(QuicCryptoClientConfigTest, ServerNonceinSHLO) {
   EXPECT_EQ("server hello missing server nonce", error_details);
 }
 
+TEST(QuicCryptoClientConfigTest, UseTokenBinding) {
+  QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
+  EXPECT_TRUE(config.tb_key_params.empty());
+  config.UseTokenBinding();
+  ASSERT_EQ(1u, config.tb_key_params.size());
+  EXPECT_EQ(kP256, config.tb_key_params[0]);
+}
+
 }  // namespace test
 }  // namespace net

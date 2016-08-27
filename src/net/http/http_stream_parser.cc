@@ -857,12 +857,9 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
       end_offset = read_buf_->offset();
       RecordHeaderParserEvent(HEADER_ALLOWED_TRUNCATED_HEADERS);
     } else {
-      // The server is apparently returning a very short HTTP/0.9 response.
-      // TODO(mmenke): Clean up remnants of HTTP/0.9 code once HTTP/0.9 removal
-      // successfully ships.
+      // The response is apparently using HTTP/0.9.  Treat the entire response
+      // as the body.
       end_offset = 0;
-      // Treat it as an error.
-      return ERR_INVALID_HTTP_RESPONSE;
     }
     int rv = ParseResponseHeaders(end_offset);
     if (rv < 0)
@@ -960,8 +957,6 @@ int HttpStreamParser::FindAndParseResponseHeaders() {
     // Enough data to decide that this is an HTTP/0.9 response.
     // 8 bytes = (4 bytes of junk) + "http".length()
     end_offset = 0;
-    // Treat a an error.
-    return ERR_INVALID_HTTP_RESPONSE;
   }
 
   if (end_offset == -1)

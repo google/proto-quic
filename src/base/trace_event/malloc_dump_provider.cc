@@ -9,6 +9,7 @@
 #include "base/allocator/allocator_extension.h"
 #include "base/allocator/allocator_shim.h"
 #include "base/allocator/features.h"
+#include "base/debug/profiler.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 #include "base/trace_event/heap_profiler_allocation_register.h"
@@ -22,12 +23,15 @@
 #else
 #include <malloc.h>
 #endif
+#if defined(OS_WIN)
+#include <windows.h>
+#endif
 
 namespace base {
 namespace trace_event {
 
-#if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
 namespace {
+#if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
 
 using allocator::AllocatorDispatch;
 
@@ -81,9 +85,89 @@ AllocatorDispatch g_allocator_hooks = {
     &HookFree,          /* free_function */
     nullptr,            /* next */
 };
-
-}  // namespace
 #endif  // BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+
+#if defined(OS_WIN)
+// A structure containing some information about a given heap.
+struct WinHeapInfo {
+  HANDLE heap_id;
+  size_t committed_size;
+  size_t uncommitted_size;
+  size_t allocated_size;
+  size_t block_count;
+};
+
+bool GetHeapInformation(WinHeapInfo* heap_info,
+                        const std::set<void*>& block_to_skip) {
+  CHECK(::HeapLock(heap_info->heap_id) == TRUE);
+  PROCESS_HEAP_ENTRY heap_entry;
+  heap_entry.lpData = nullptr;
+  // Walk over all the entries in this heap.
+  while (::HeapWalk(heap_info->heap_id, &heap_entry) != FALSE) {
+    if (block_to_skip.count(heap_entry.lpData) == 1)
+      continue;
+    if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0) {
+      heap_info->allocated_size += heap_entry.cbData;
+      heap_info->block_count++;
+    } else if ((heap_entry.wFlags & PROCESS_HEAP_REGION) != 0) {
+      heap_info->committed_size += heap_entry.Region.dwCommittedSize;
+      heap_info->uncommitted_size += heap_entry.Region.dwUnCommittedSize;
+    }
+  }
+  CHECK(::HeapUnlock(heap_info->heap_id) == TRUE);
+  return true;
+}
+
+void WinHeapMemoryDumpImpl(WinHeapInfo* all_heap_info) {
+// This method might be flaky for 2 reasons:
+//   - GetProcessHeaps is racy by design. It returns a snapshot of the
+//     available heaps, but there's no guarantee that that snapshot remains
+//     valid. If a heap disappears between GetProcessHeaps() and HeapWalk()
+//     then chaos should be assumed. This flakyness is acceptable for tracing.
+//   - The MSDN page for HeapLock says: "If the HeapLock function is called on
+//     a heap created with the HEAP_NO_SERIALIZATION flag, the results are
+//     undefined."
+//   - Note that multiple heaps occur on Windows primarily because system and
+//     3rd party DLLs will each create their own private heap. It's possible to
+//     retrieve the heap the CRT allocates from and report specifically on that
+//     heap. It's interesting to report all heaps, as e.g. loading or invoking
+//     on a Windows API may consume memory from a private heap.
+#if defined(SYZYASAN)
+  if (base::debug::IsBinaryInstrumented())
+    return;
+#endif
+
+  // Retrieves the number of heaps in the current process.
+  DWORD number_of_heaps = ::GetProcessHeaps(0, NULL);
+
+  // Try to retrieve a handle to all the heaps owned by this process. Returns
+  // false if the number of heaps has changed.
+  //
+  // This is inherently racy as is, but it's not something that we observe a lot
+  // in Chrome, the heaps tend to be created at startup only.
+  std::unique_ptr<HANDLE[]> all_heaps(new HANDLE[number_of_heaps]);
+  if (::GetProcessHeaps(number_of_heaps, all_heaps.get()) != number_of_heaps)
+    return;
+
+  // Skip the pointer to the heap array to avoid accounting the memory used by
+  // this dump provider.
+  std::set<void*> block_to_skip;
+  block_to_skip.insert(all_heaps.get());
+
+  // Retrieves some metrics about each heap.
+  for (size_t i = 0; i < number_of_heaps; ++i) {
+    WinHeapInfo heap_info = {0};
+    heap_info.heap_id = all_heaps[i];
+    GetHeapInformation(&heap_info, block_to_skip);
+
+    all_heap_info->allocated_size += heap_info.allocated_size;
+    all_heap_info->committed_size += heap_info.committed_size;
+    all_heap_info->uncommitted_size += heap_info.uncommitted_size;
+    all_heap_info->block_count += heap_info.block_count;
+  }
+}
+#endif  // defined(OS_WIN)
+}  // namespace
 
 // static
 const char MallocDumpProvider::kAllocatedObjects[] = "malloc/allocated_objects";
@@ -106,6 +190,7 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   size_t total_virtual_size = 0;
   size_t resident_size = 0;
   size_t allocated_objects_size = 0;
+  size_t allocated_objects_count = 0;
 #if defined(USE_TCMALLOC)
   bool res =
       allocator::GetNumericProperty("generic.heap_size", &total_virtual_size);
@@ -128,6 +213,18 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // fixed quantum, so the excess region will not be resident.
   // See crrev.com/1531463004 for detailed explanation.
   resident_size = stats.max_size_in_use;
+#elif defined(OS_WIN)
+  WinHeapInfo all_heap_info = {};
+  WinHeapMemoryDumpImpl(&all_heap_info);
+  total_virtual_size =
+      all_heap_info.committed_size + all_heap_info.uncommitted_size;
+  // Resident size is approximated with committed heap size. Note that it is
+  // possible to do this with better accuracy on windows by intersecting the
+  // working set with the virtual memory ranges occuipied by the heap. It's not
+  // clear that this is worth it, as it's fairly expensive to do.
+  resident_size = all_heap_info.committed_size;
+  allocated_objects_size = all_heap_info.allocated_size;
+  allocated_objects_count = all_heap_info.block_count;
 #else
   struct mallinfo info = mallinfo();
   DCHECK_GE(info.arena + info.hblkhd, info.uordblks);
@@ -137,6 +234,8 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // |arena| + |hblkhd|. For more details see link: http://goo.gl/fMR8lF.
   total_virtual_size = info.arena + info.hblkhd;
   resident_size = info.uordblks;
+
+  // Total allocated space is given by |uordblks|.
   allocated_objects_size = info.uordblks;
 #endif
 
@@ -146,11 +245,15 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   outer_dump->AddScalar(MemoryAllocatorDump::kNameSize,
                         MemoryAllocatorDump::kUnitsBytes, resident_size);
 
-  // Total allocated space is given by |uordblks|.
   MemoryAllocatorDump* inner_dump = pmd->CreateAllocatorDump(kAllocatedObjects);
   inner_dump->AddScalar(MemoryAllocatorDump::kNameSize,
                         MemoryAllocatorDump::kUnitsBytes,
                         allocated_objects_size);
+  if (allocated_objects_count != 0) {
+    inner_dump->AddScalar(MemoryAllocatorDump::kNameSize,
+                          MemoryAllocatorDump::kUnitsObjects,
+                          allocated_objects_count);
+  }
 
   if (resident_size - allocated_objects_size > 0) {
     // Explicitly specify why is extra memory resident. In tcmalloc it accounts

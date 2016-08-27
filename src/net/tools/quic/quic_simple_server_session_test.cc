@@ -71,16 +71,14 @@ class MockQuicHeadersStream : public QuicHeadersStream {
   // mocked directly.
   size_t WritePushPromise(QuicStreamId original_stream_id,
                           QuicStreamId promised_stream_id,
-                          SpdyHeaderBlock headers,
-                          QuicAckListenerInterface* ack_listener) override {
-    return WritePushPromiseMock(original_stream_id, promised_stream_id, headers,
-                                ack_listener);
+                          SpdyHeaderBlock headers) override {
+    return WritePushPromiseMock(original_stream_id, promised_stream_id,
+                                headers);
   }
-  MOCK_METHOD4(WritePushPromiseMock,
+  MOCK_METHOD3(WritePushPromiseMock,
                size_t(QuicStreamId original_stream_id,
                       QuicStreamId promised_stream_id,
-                      const SpdyHeaderBlock& headers,
-                      QuicAckListenerInterface* ack_listener));
+                      const SpdyHeaderBlock& headers));
 
   size_t WriteHeaders(QuicStreamId stream_id,
                       SpdyHeaderBlock headers,
@@ -481,9 +479,8 @@ class QuicSimpleServerSessionServerPushTest
       push_resources.push_back(QuicInMemoryCache::ServerPushInfo(
           resource_url, SpdyHeaderBlock(), kDefaultPriority, body));
       // PUSH_PROMISED are sent for all the resources.
-      EXPECT_CALL(
-          *headers_stream_,
-          WritePushPromiseMock(kClientDataStreamId1, stream_id, _, nullptr));
+      EXPECT_CALL(*headers_stream_,
+                  WritePushPromiseMock(kClientDataStreamId1, stream_id, _));
       if (i <= kMaxStreamsForTest) {
         // |kMaxStreamsForTest| promised responses should be sent.
         EXPECT_CALL(

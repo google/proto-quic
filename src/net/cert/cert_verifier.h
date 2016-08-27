@@ -75,6 +75,10 @@ class NET_EXPORT CertVerifier {
     // can only provide information for the leaf, and not for any
     // intermediates.
     VERIFY_REV_CHECKING_REQUIRED_LOCAL_ANCHORS = 1 << 4,
+
+    // If set, certificates with SHA-1 signatures will be allowed, but only if
+    // they are issued by non-public trust anchors.
+    VERIFY_ENABLE_SHA1_LOCAL_ANCHORS = 1 << 5,
   };
 
   // Parameters to verify |certificate| against the supplied

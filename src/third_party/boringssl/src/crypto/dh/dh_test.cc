@@ -62,14 +62,14 @@
 #include <vector>
 
 #include <openssl/bn.h>
-#include <openssl/bytestring.h>
+#include <openssl/c++/bytestring.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
 
-#include "internal.h"
 #include "../test/scoped_types.h"
 
+namespace bssl {
 
 static bool RunBasicTests();
 static bool RunRFC5114Tests();
@@ -77,7 +77,7 @@ static bool TestBadY();
 static bool TestASN1();
 static bool TestRFC3526();
 
-int main(int argc, char *argv[]) {
+static int Main() {
   CRYPTO_library_init();
 
   if (!RunBasicTests() ||
@@ -661,4 +661,10 @@ static bool TestRFC3526() {
   }
 
   return true;
+}
+
+}  // namespace bssl
+
+int main() {
+  return bssl::Main();
 }

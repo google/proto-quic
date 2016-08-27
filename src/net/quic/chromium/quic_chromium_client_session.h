@@ -332,8 +332,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // delete |this|.
   void NotifyFactoryOfSessionClosed();
 
-  void OnConnectTimeout();
-
   QuicServerId server_id_;
   bool require_confirmation_;
   std::unique_ptr<QuicCryptoClientStream> crypto_stream_;

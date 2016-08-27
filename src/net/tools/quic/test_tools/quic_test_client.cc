@@ -179,15 +179,16 @@ MockableQuicClient::MockableQuicClient(
                  base::WrapUnique(
                      new RecordingProofVerifier(std::move(proof_verifier)))),
       override_connection_id_(0),
-      test_writer_(nullptr) {
-  ON_CALL(*this, ProcessPacket(_, _, _))
-      .WillByDefault(Invoke(this, &MockableQuicClient::ProcessPacketBase));
-}
+      test_writer_(nullptr),
+      track_last_incoming_packet_(false) {}
 
-void MockableQuicClient::ProcessPacketBase(const IPEndPoint& self_address,
-                                           const IPEndPoint& peer_address,
-                                           const QuicReceivedPacket& packet) {
+void MockableQuicClient::ProcessPacket(const IPEndPoint& self_address,
+                                       const IPEndPoint& peer_address,
+                                       const QuicReceivedPacket& packet) {
   QuicClient::ProcessPacket(self_address, peer_address, packet);
+  if (track_last_incoming_packet_) {
+    last_incoming_packet_.reset(packet.Clone());
+  }
 }
 
 MockableQuicClient::~MockableQuicClient() {

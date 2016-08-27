@@ -18,6 +18,7 @@ MockCryptoClientStream::MockCryptoClientStream(
     const QuicServerId& server_id,
     QuicClientSessionBase* session,
     ProofVerifyContext* verify_context,
+    const QuicConfig& config,
     QuicCryptoClientConfig* crypto_config,
     HandshakeMode handshake_mode,
     const ProofVerifyDetailsChromium* proof_verify_details)
@@ -28,7 +29,8 @@ MockCryptoClientStream::MockCryptoClientStream(
                              session),
       handshake_mode_(handshake_mode),
       server_id_(server_id),
-      proof_verify_details_(proof_verify_details) {}
+      proof_verify_details_(proof_verify_details),
+      config_(config) {}
 
 MockCryptoClientStream::~MockCryptoClientStream() {}
 
@@ -118,7 +120,7 @@ void MockCryptoClientStream::SetConfigNegotiated() {
   cgst.push_back(kTBBR);
 #endif
   cgst.push_back(kQBIC);
-  QuicConfig config;
+  QuicConfig config(config_);
   config.SetIdleConnectionStateLifetime(
       QuicTime::Delta::FromSeconds(2 * kMaximumIdleTimeoutSecs),
       QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs));

@@ -166,8 +166,8 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
     der::Input* working_spki,
     der::Input* working_normalized_issuer_name,
     std::vector<const NameConstraints*>* name_constraints_list) {
-  // TODO(eroman): Steps a-b are omitted, as policy constraints are not yet
-  // implemented.
+  // TODO(crbug.com/634456): Steps a-b are omitted, as policy mappings are not
+  // yet implemented.
 
   // From RFC 5280 section 6.1.4 step c:
   //
@@ -187,8 +187,8 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   if (cert.has_name_constraints())
     name_constraints_list->push_back(&cert.name_constraints());
 
-  // TODO(eroman): Steps h-j are omitted as policy constraints are not yet
-  // implemented.
+  // TODO(eroman): Steps h-j are omitted as policy
+  // constraints/mappings/inhibitAnyPolicy are not yet implemented.
 
   // From RFC 5280 section 6.1.4 step k:
   //
@@ -294,8 +294,8 @@ WARN_UNUSED_RESULT bool VerifyTargetCertHasConsistentCaBits(
 // This function corresponds with RFC 5280 section 6.1.5's "Wrap-Up Procedure".
 // It does processing for the final certificate (the target cert).
 WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
-  // TODO(eroman): Steps a-b are omitted as policy constraints are not yet
-  // implemented.
+  // TODO(crbug.com/634452): Steps a-b are omitted as policy constraints are not
+  // yet implemented.
 
   // Note step c-e are omitted the verification function does
   // not output the working public key.
@@ -323,6 +323,62 @@ WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
   return true;
 }
 
+// Initializes the path validation algorithm given anchor constraints. This
+// follows the description in RFC 5937
+WARN_UNUSED_RESULT bool ProcessTrustAnchorConstraints(
+    const TrustAnchor& trust_anchor,
+    size_t* max_path_length_ptr,
+    std::vector<const NameConstraints*>* name_constraints_list) {
+  // In RFC 5937 the enforcement of anchor constraints is governed by the input
+  // enforceTrustAnchorConstraints to path validation. In our implementation
+  // this is always on, and enforcement is controlled solely by whether or not
+  // the trust anchor specified constraints.
+  if (!trust_anchor.enforces_constraints())
+    return true;
+
+  // Anchor constraints are encoded via the attached certificate.
+  const ParsedCertificate& cert = *trust_anchor.cert();
+
+  // The following enforcements follow from RFC 5937 (primarily section 3.2):
+
+  // Initialize name constraints initial-permitted/excluded-subtrees.
+  if (cert.has_name_constraints())
+    name_constraints_list->push_back(&cert.name_constraints());
+
+  // TODO(eroman): Initialize user-initial-policy-set based on anchor
+  // constraints.
+
+  // TODO(eroman): Initialize inhibit any policy based on anchor constraints.
+
+  // TODO(eroman): Initialize require explicit policy based on anchor
+  // constraints.
+
+  // TODO(eroman): Initialize inhibit policy mapping based on anchor
+  // constraints.
+
+  // From RFC 5937 section 3.2:
+  //
+  //    If a basic constraints extension is associated with the trust
+  //    anchor and contains a pathLenConstraint value, set the
+  //    max_path_length state variable equal to the pathLenConstraint
+  //    value from the basic constraints extension.
+  //
+  // NOTE: RFC 5937 does not say to enforce the CA=true part of basic
+  // constraints.
+  if (cert.has_basic_constraints() && cert.basic_constraints().has_path_len)
+    *max_path_length_ptr = cert.basic_constraints().path_len;
+
+  // From RFC 5937 section 2:
+  //
+  //    Extensions may be marked critical or not critical.  When trust anchor
+  //    constraints are enforced, clients MUST reject certification paths
+  //    containing a trust anchor with unrecognized critical extensions.
+  if (!VerifyNoUnconsumedCriticalExtensions(cert))
+    return false;
+
+  return true;
+}
+
 }  // namespace
 
 // This implementation is structured to mimic the description of certificate
@@ -334,8 +390,6 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
   // An empty chain is necessarily invalid.
   if (certs.empty())
     return false;
-
-  // TODO(crbug.com/635200): Support anchor constraints.
 
   // Will contain a NameConstraints for each previous cert in the chain which
   // had nameConstraints. This corresponds to the permitted_subtrees and
@@ -375,6 +429,12 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
   //    field within the basic constraints extension of a CA
   //    certificate.
   size_t max_path_length = certs.size();
+
+  // Apply any trust anchor constraints per RFC 5937.
+  if (!ProcessTrustAnchorConstraints(*trust_anchor, &max_path_length,
+                                     &name_constraints_list)) {
+    return false;
+  }
 
   // Iterate over all the certificates in the reverse direction: starting from
   // the certificate signed by trust anchor and progressing towards the target

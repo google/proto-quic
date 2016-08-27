@@ -85,9 +85,10 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 
-#include "../crypto/test/file_test.h"
-#include "../crypto/test/scoped_types.h"
-#include "../crypto/test/test_util.h"
+#include "../internal.h"
+#include "../test/file_test.h"
+#include "../test/scoped_types.h"
+#include "../test/test_util.h"
 
 
 static int HexToBIGNUM(ScopedBIGNUM *out, const char *in) {
@@ -668,8 +669,7 @@ static bool TestBN2BinPadded(BN_CTX *ctx) {
 
   // Test a random numbers at various byte lengths.
   for (size_t bytes = 128 - 7; bytes <= 128; bytes++) {
-    if (!BN_rand(n.get(), bytes * 8, 0 /* make sure top bit is 1 */,
-                 0 /* don't modify bottom bit */)) {
+    if (!BN_rand(n.get(), bytes * 8, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY)) {
       ERR_print_errors_fp(stderr);
       return false;
     }
@@ -868,7 +868,7 @@ static const MPITest kMPITests[] = {
 static bool TestMPI() {
   uint8_t scratch[8];
 
-  for (size_t i = 0; i < sizeof(kMPITests) / sizeof(kMPITests[0]); i++) {
+  for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kMPITests); i++) {
     const MPITest &test = kMPITests[i];
     ScopedBIGNUM bn(ASCIIToBIGNUM(test.base10));
     const size_t mpi_len = BN_bn2mpi(bn.get(), NULL);
@@ -915,34 +915,34 @@ static bool TestRand() {
 
   // Test BN_rand accounts for degenerate cases with |top| and |bottom|
   // parameters.
-  if (!BN_rand(bn.get(), 0, 0 /* top */, 0 /* bottom */) ||
+  if (!BN_rand(bn.get(), 0, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY) ||
       !BN_is_zero(bn.get())) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
   }
-  if (!BN_rand(bn.get(), 0, 1 /* top */, 1 /* bottom */) ||
+  if (!BN_rand(bn.get(), 0, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ODD) ||
       !BN_is_zero(bn.get())) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
   }
 
-  if (!BN_rand(bn.get(), 1, 0 /* top */, 0 /* bottom */) ||
+  if (!BN_rand(bn.get(), 1, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY) ||
       !BN_is_word(bn.get(), 1)) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
   }
-  if (!BN_rand(bn.get(), 1, 1 /* top */, 0 /* bottom */) ||
+  if (!BN_rand(bn.get(), 1, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ANY) ||
       !BN_is_word(bn.get(), 1)) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
   }
-  if (!BN_rand(bn.get(), 1, -1 /* top */, 1 /* bottom */) ||
+  if (!BN_rand(bn.get(), 1, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ODD) ||
       !BN_is_word(bn.get(), 1)) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
   }
 
-  if (!BN_rand(bn.get(), 2, 1 /* top */, 0 /* bottom */) ||
+  if (!BN_rand(bn.get(), 2, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ANY) ||
       !BN_is_word(bn.get(), 3)) {
     fprintf(stderr, "BN_rand gave a bad result.\n");
     return false;
@@ -1291,7 +1291,8 @@ static bool TestBadModulus(BN_CTX *ctx) {
 // TestExpModZero tests that 1**0 mod 1 == 0.
 static bool TestExpModZero() {
   ScopedBIGNUM zero(BN_new()), a(BN_new()), r(BN_new());
-  if (!zero || !a || !r || !BN_rand(a.get(), 1024, 0, 0)) {
+  if (!zero || !a || !r ||
+      !BN_rand(a.get(), 1024, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY)) {
     return false;
   }
   BN_zero(zero.get());
@@ -1401,6 +1402,41 @@ static bool TestCmpWord() {
   return true;
 }
 
+static bool TestBN2Dec() {
+  static const char *kBN2DecTests[] = {
+      "0",
+      "1",
+      "-1",
+      "100",
+      "-100",
+      "123456789012345678901234567890",
+      "-123456789012345678901234567890",
+      "123456789012345678901234567890123456789012345678901234567890",
+      "-123456789012345678901234567890123456789012345678901234567890",
+  };
+
+  for (const char *test : kBN2DecTests) {
+    ScopedBIGNUM bn;
+    int ret = DecimalToBIGNUM(&bn, test);
+    if (ret == 0) {
+      return false;
+    }
+
+    ScopedOpenSSLString dec(BN_bn2dec(bn.get()));
+    if (!dec) {
+      fprintf(stderr, "BN_bn2dec failed on %s.\n", test);
+      return false;
+    }
+
+    if (strcmp(dec.get(), test) != 0) {
+      fprintf(stderr, "BN_bn2dec gave %s, wanted %s.\n", dec.get(), test);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   CRYPTO_library_init();
 
@@ -1425,7 +1461,8 @@ int main(int argc, char *argv[]) {
       !TestBadModulus(ctx.get()) ||
       !TestExpModZero() ||
       !TestSmallPrime(ctx.get()) ||
-      !TestCmpWord()) {
+      !TestCmpWord() ||
+      !TestBN2Dec()) {
     return 1;
   }
 

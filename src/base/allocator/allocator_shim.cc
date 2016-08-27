@@ -34,7 +34,10 @@ subtle::AtomicWord g_chain_head = reinterpret_cast<subtle::AtomicWord>(
     &allocator::AllocatorDispatch::default_dispatch);
 
 bool g_call_new_handler_on_malloc_failure = false;
+
+#if !defined(OS_WIN)
 subtle::Atomic32 g_new_handler_lock = 0;
+#endif
 
 // In theory this should be just base::ThreadChecker. But we can't afford
 // the luxury of a LazyInstance<ThreadChecker> here as it would cause a new().

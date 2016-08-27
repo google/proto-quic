@@ -49,7 +49,7 @@ void RunTest_BasicSignal(MessageLoop::Type message_loop_type) {
 
   SetEvent(event);
 
-  MessageLoop::current()->Run();
+  RunLoop().Run();
 
   EXPECT_FALSE(watcher.IsWatching());
   CloseHandle(event);
@@ -113,7 +113,7 @@ void RunTest_SignalBeforeWatch(MessageLoop::Type message_loop_type) {
   bool ok = watcher.StartWatchingOnce(event, &delegate);
   EXPECT_TRUE(ok);
 
-  MessageLoop::current()->Run();
+  RunLoop().Run();
 
   EXPECT_FALSE(watcher.IsWatching());
   CloseHandle(event);
@@ -170,7 +170,7 @@ void RunTest_ExecuteMultipleTimes(MessageLoop::Type message_loop_type) {
 
   SetEvent(event);
 
-  MessageLoop::current()->Run();
+  RunLoop().Run();
 
   EXPECT_TRUE(watcher.IsWatching());
   EXPECT_TRUE(watcher.StopWatching());

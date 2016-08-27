@@ -295,7 +295,7 @@ WebSocketBasicHandshakeStream::WebSocketBasicHandshakeStream(
     std::vector<std::string> requested_sub_protocols,
     std::vector<std::string> requested_extensions,
     WebSocketStreamRequest* request)
-    : state_(connection.release(), using_proxy),
+    : state_(std::move(connection), using_proxy),
       connect_delegate_(connect_delegate),
       http_response_info_(nullptr),
       requested_sub_protocols_(requested_sub_protocols),

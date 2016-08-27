@@ -2892,24 +2892,19 @@ void SpdySession::RecordProtocolErrorHistogram(
 
 void SpdySession::RecordHistograms() {
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamsPerSession",
-                              streams_initiated_count_,
-                              0, 300, 50);
+                              streams_initiated_count_, 1, 300, 50);
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamsPushedPerSession",
-                              streams_pushed_count_,
-                              0, 300, 50);
+                              streams_pushed_count_, 1, 300, 50);
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamsPushedAndClaimedPerSession",
-                              streams_pushed_and_claimed_count_,
-                              0, 300, 50);
+                              streams_pushed_and_claimed_count_, 1, 300, 50);
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamsAbandonedPerSession",
-                              streams_abandoned_count_,
-                              0, 300, 50);
+                              streams_abandoned_count_, 1, 300, 50);
   UMA_HISTOGRAM_ENUMERATION("Net.SpdySettingsSent",
                             sent_settings_ ? 1 : 0, 2);
   UMA_HISTOGRAM_ENUMERATION("Net.SpdySettingsReceived",
                             received_settings_ ? 1 : 0, 2);
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamStallsPerSession",
-                              stalled_streams_,
-                              0, 300, 50);
+                              stalled_streams_, 1, 300, 50);
   UMA_HISTOGRAM_ENUMERATION("Net.SpdySessionsWithStalls",
                             stalled_streams_ > 0 ? 1 : 0, 2);
 

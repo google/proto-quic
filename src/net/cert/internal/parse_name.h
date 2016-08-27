@@ -91,6 +91,10 @@ NET_EXPORT bool ReadRdn(der::Parser* parser,
 // and sets the results in |out|.
 NET_EXPORT bool ParseName(const der::Input& name_tlv,
                           RDNSequence* out) WARN_UNUSED_RESULT;
+// Parses a DER-encoded "Name" value (without the sequence tag & length) as
+// specified by 5280. Returns true on success and sets the results in |out|.
+NET_EXPORT bool ParseNameValue(const der::Input& name_value,
+                               RDNSequence* out) WARN_UNUSED_RESULT;
 
 // Formats a RDNSequence |rdn_sequence| per RFC2253 as an ASCII string and
 // stores the result into |out|, and returns whether the conversion was

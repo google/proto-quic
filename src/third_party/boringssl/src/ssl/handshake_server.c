@@ -169,7 +169,6 @@
 
 #include "internal.h"
 #include "../crypto/internal.h"
-#include "../crypto/dh/internal.h"
 
 
 static int ssl3_get_client_hello(SSL *ssl);
@@ -226,6 +225,7 @@ int ssl3_accept(SSL *ssl) {
       case SSL3_ST_SR_CLNT_HELLO_A:
       case SSL3_ST_SR_CLNT_HELLO_B:
       case SSL3_ST_SR_CLNT_HELLO_C:
+      case SSL3_ST_SR_CLNT_HELLO_D:
         ret = ssl3_get_client_hello(ssl);
         if (ssl->state == SSL_ST_TLS13) {
           break;
@@ -530,279 +530,250 @@ end:
   return ret;
 }
 
+int ssl_client_cipher_list_contains_cipher(
+    const struct ssl_early_callback_ctx *client_hello, uint16_t id) {
+  CBS cipher_suites;
+  CBS_init(&cipher_suites, client_hello->cipher_suites,
+           client_hello->cipher_suites_len);
+
+  while (CBS_len(&cipher_suites) > 0) {
+    uint16_t got_id;
+    if (!CBS_get_u16(&cipher_suites, &got_id)) {
+      return 0;
+    }
+
+    if (got_id == id) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static int negotiate_version(
+    SSL *ssl, int *out_alert,
+    const struct ssl_early_callback_ctx *client_hello) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
+    *out_alert = SSL_AD_PROTOCOL_VERSION;
+    return 0;
+  }
+
+  uint16_t client_version =
+      ssl->method->version_from_wire(client_hello->version);
+  ssl->client_version = client_hello->version;
+
+  /* Select the version to use. */
+  uint16_t version = client_version;
+  if (version > max_version) {
+    version = max_version;
+  }
+
+  if (version < min_version) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_PROTOCOL);
+    *out_alert = SSL_AD_PROTOCOL_VERSION;
+    return 0;
+  }
+
+  /* Handle FALLBACK_SCSV. */
+  if (ssl_client_cipher_list_contains_cipher(client_hello,
+                                             SSL3_CK_FALLBACK_SCSV & 0xffff) &&
+      version < max_version) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INAPPROPRIATE_FALLBACK);
+    *out_alert = SSL3_AD_INAPPROPRIATE_FALLBACK;
+    return 0;
+  }
+
+  ssl->version = ssl->method->version_to_wire(version);
+  ssl->s3->enc_method = ssl3_get_enc_method(version);
+  assert(ssl->s3->enc_method != NULL);
+
+  /* At this point, the connection's version is known and |ssl->version| is
+   * fixed. Begin enforcing the record-layer version. */
+  ssl->s3->have_version = 1;
+
+  return 1;
+}
+
 static int ssl3_get_client_hello(SSL *ssl) {
   int al = SSL_AD_INTERNAL_ERROR, ret = -1;
-  const SSL_CIPHER *c;
-  STACK_OF(SSL_CIPHER) *ciphers = NULL;
-  struct ssl_early_callback_ctx early_ctx;
-  CBS client_hello;
-  uint16_t client_wire_version;
-  CBS client_random, session_id, cipher_suites, compression_methods;
   SSL_SESSION *session = NULL;
 
-  /* We do this so that we will respond with our native type. If we are TLSv1
-   * and we get SSLv3, we will respond with TLSv1, This down switching should
-   * be handled by a different method. If we are SSLv3, we will respond with
-   * SSLv3, even if prompted with TLSv1. */
-  switch (ssl->state) {
-    case SSL3_ST_SR_CLNT_HELLO_A: {
-      int msg_ret = ssl->method->ssl_get_message(ssl, SSL3_MT_CLIENT_HELLO,
-                                                 ssl_hash_message);
-      if (msg_ret <= 0) {
-        return msg_ret;
-      }
-
-      ssl->state = SSL3_ST_SR_CLNT_HELLO_B;
+  if (ssl->state == SSL3_ST_SR_CLNT_HELLO_A) {
+    /* The first time around, read the ClientHello. */
+    int msg_ret = ssl->method->ssl_get_message(ssl, SSL3_MT_CLIENT_HELLO,
+                                               ssl_hash_message);
+    if (msg_ret <= 0) {
+      return msg_ret;
     }
-      /* fallthrough */
-    case SSL3_ST_SR_CLNT_HELLO_B:
-    case SSL3_ST_SR_CLNT_HELLO_C:
-      if (!ssl_early_callback_init(ssl, &early_ctx, ssl->init_msg,
-                                   ssl->init_num)) {
-        al = SSL_AD_DECODE_ERROR;
-        OPENSSL_PUT_ERROR(SSL, SSL_R_CLIENTHELLO_PARSE_FAILED);
+
+    ssl->state = SSL3_ST_SR_CLNT_HELLO_B;
+  }
+
+  struct ssl_early_callback_ctx client_hello;
+  if (!ssl_early_callback_init(ssl, &client_hello, ssl->init_msg,
+                               ssl->init_num)) {
+    al = SSL_AD_DECODE_ERROR;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    goto f_err;
+  }
+
+  if (ssl->state == SSL3_ST_SR_CLNT_HELLO_B) {
+    /* Unlike other callbacks, the early callback is not run a second time if
+     * paused. */
+    ssl->state = SSL3_ST_SR_CLNT_HELLO_C;
+
+    /* Run the early callback. */
+    if (ssl->ctx->select_certificate_cb != NULL) {
+      switch (ssl->ctx->select_certificate_cb(&client_hello)) {
+        case 0:
+          ssl->rwstate = SSL_CERTIFICATE_SELECTION_PENDING;
+          goto err;
+
+        case -1:
+          /* Connection rejected. */
+          al = SSL_AD_ACCESS_DENIED;
+          OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
+          goto f_err;
+
+        default:
+          /* fallthrough */;
+      }
+    }
+  }
+
+  /* Negotiate the protocol version if we have not done so yet. */
+  if (!ssl->s3->have_version) {
+    if (!negotiate_version(ssl, &al, &client_hello)) {
+      goto f_err;
+    }
+
+    if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+      ssl->state = SSL_ST_TLS13;
+      return 1;
+    }
+  }
+
+  if (ssl->state == SSL3_ST_SR_CLNT_HELLO_C) {
+    /* Load the client random. */
+    if (client_hello.random_len != SSL3_RANDOM_SIZE) {
+      OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+      return -1;
+    }
+    memcpy(ssl->s3->client_random, client_hello.random,
+           client_hello.random_len);
+
+    /* Determine whether we are doing session resumption. */
+    int send_new_ticket = 0;
+    switch (
+        ssl_get_prev_session(ssl, &session, &send_new_ticket, &client_hello)) {
+      case ssl_session_success:
+        break;
+      case ssl_session_error:
+        goto err;
+      case ssl_session_retry:
+        ssl->rwstate = SSL_PENDING_SESSION;
+        goto err;
+    }
+    ssl->tlsext_ticket_expected = send_new_ticket;
+
+    /* The EMS state is needed when making the resumption decision, but
+     * extensions are not normally parsed until later. This detects the EMS
+     * extension for the resumption decision and it's checked against the result
+     * of the normal parse later in this function. */
+    CBS ems;
+    int have_extended_master_secret =
+        ssl->version != SSL3_VERSION &&
+        ssl_early_callback_get_extension(&client_hello, &ems,
+                                         TLSEXT_TYPE_extended_master_secret) &&
+        CBS_len(&ems) == 0;
+
+    int has_session = 0;
+    if (session != NULL) {
+      if (session->extended_master_secret &&
+          !have_extended_master_secret) {
+        /* A ClientHello without EMS that attempts to resume a session with EMS
+         * is fatal to the connection. */
+        al = SSL_AD_HANDSHAKE_FAILURE;
+        OPENSSL_PUT_ERROR(SSL, SSL_R_RESUMED_EMS_SESSION_WITHOUT_EMS_EXTENSION);
         goto f_err;
       }
 
-      if (ssl->state == SSL3_ST_SR_CLNT_HELLO_B &&
-          ssl->ctx->select_certificate_cb != NULL) {
-        ssl->state = SSL3_ST_SR_CLNT_HELLO_C;
-        switch (ssl->ctx->select_certificate_cb(&early_ctx)) {
-          case 0:
-            ssl->rwstate = SSL_CERTIFICATE_SELECTION_PENDING;
-            goto err;
+      has_session =
+          /* Only resume if the session's version matches the negotiated
+           * version: most clients do not accept a mismatch. */
+          ssl->version == session->ssl_version &&
+          /* If the client offers the EMS extension, but the previous session
+           * didn't use it, then negotiate a new session. */
+          have_extended_master_secret == session->extended_master_secret;
+    }
 
-          case -1:
-            /* Connection rejected. */
-            al = SSL_AD_ACCESS_DENIED;
-            OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
-            goto f_err;
-
-          default:
-            /* fallthrough */;
-        }
+    if (has_session) {
+      /* Use the old session. */
+      ssl->session = session;
+      session = NULL;
+      ssl->s3->session_reused = 1;
+    } else {
+      SSL_set_session(ssl, NULL);
+      if (!ssl_get_new_session(ssl, 1 /* server */)) {
+        goto err;
       }
-      ssl->state = SSL3_ST_SR_CLNT_HELLO_C;
-      break;
 
-    default:
-      OPENSSL_PUT_ERROR(SSL, SSL_R_UNKNOWN_STATE);
-      return -1;
-  }
-
-  CBS_init(&client_hello, ssl->init_msg, ssl->init_num);
-  if (!CBS_get_u16(&client_hello, &client_wire_version)) {
-    al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-    goto f_err;
-  }
-
-  uint16_t client_version = ssl->method->version_from_wire(client_wire_version);
-
-  /* use version from inside client hello, not from record header (may differ:
-   * see RFC 2246, Appendix E, second paragraph) */
-  ssl->client_version = client_wire_version;
-
-  uint16_t min_version, max_version;
-  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
-    al = SSL_AD_PROTOCOL_VERSION;
-    goto f_err;
-  }
-
-  /* Note: This codepath may run twice if |ssl_get_prev_session| completes
-   * asynchronously.
-   *
-   * TODO(davidben): Clean up the order of events around ClientHello
-   * processing. */
-  if (!ssl->s3->have_version) {
-    /* Select the version to use. */
-    uint16_t version = client_version;
-    if (version > max_version) {
-      version = max_version;
+      /* Clear the session ID if we want the session to be single-use. */
+      if (!(ssl->ctx->session_cache_mode & SSL_SESS_CACHE_SERVER)) {
+        ssl->s3->new_session->session_id_length = 0;
+      }
     }
-    if (version < min_version) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_PROTOCOL);
-      al = SSL_AD_PROTOCOL_VERSION;
-      goto f_err;
-    }
-    ssl->version = ssl->method->version_to_wire(version);
-    ssl->s3->enc_method = ssl3_get_enc_method(version);
-    assert(ssl->s3->enc_method != NULL);
-    /* At this point, the connection's version is known and |ssl->version| is
-     * fixed. Begin enforcing the record-layer version. */
-    ssl->s3->have_version = 1;
-  } else if (client_version < ssl3_protocol_version(ssl)) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_VERSION_NUMBER);
-    al = SSL_AD_PROTOCOL_VERSION;
-    goto f_err;
-  }
 
-  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    ssl->state = SSL_ST_TLS13;
-    return 1;
-  }
-
-  if (!CBS_get_bytes(&client_hello, &client_random, SSL3_RANDOM_SIZE) ||
-      !CBS_get_u8_length_prefixed(&client_hello, &session_id) ||
-      CBS_len(&session_id) > SSL_MAX_SSL_SESSION_ID_LENGTH) {
-    al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-    goto f_err;
-  }
-
-  /* Load the client random. */
-  memcpy(ssl->s3->client_random, CBS_data(&client_random), SSL3_RANDOM_SIZE);
-
-  if (SSL_is_dtls(ssl)) {
-    CBS cookie;
-
-    if (!CBS_get_u8_length_prefixed(&client_hello, &cookie) ||
-        CBS_len(&cookie) > DTLS1_COOKIE_LENGTH) {
-      al = SSL_AD_DECODE_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-      goto f_err;
-    }
-  }
-
-  int send_new_ticket = 0;
-  switch (ssl_get_prev_session(ssl, &session, &send_new_ticket, &early_ctx)) {
-    case ssl_session_success:
-      break;
-    case ssl_session_error:
-      goto err;
-    case ssl_session_retry:
-      ssl->rwstate = SSL_PENDING_SESSION;
-      goto err;
-  }
-  ssl->tlsext_ticket_expected = send_new_ticket;
-
-  /* The EMS state is needed when making the resumption decision, but
-   * extensions are not normally parsed until later. This detects the EMS
-   * extension for the resumption decision and it's checked against the result
-   * of the normal parse later in this function. */
-  CBS ems;
-  int have_extended_master_secret =
-      ssl->version != SSL3_VERSION &&
-      ssl_early_callback_get_extension(&early_ctx, &ems,
-                                       TLSEXT_TYPE_extended_master_secret) &&
-      CBS_len(&ems) == 0;
-
-  int has_session = 0;
-  if (session != NULL) {
-    if (session->extended_master_secret &&
-        !have_extended_master_secret) {
-      /* A ClientHello without EMS that attempts to resume a session with EMS
-       * is fatal to the connection. */
-      al = SSL_AD_HANDSHAKE_FAILURE;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_RESUMED_EMS_SESSION_WITHOUT_EMS_EXTENSION);
+    if (ssl->ctx->dos_protection_cb != NULL &&
+        ssl->ctx->dos_protection_cb(&client_hello) == 0) {
+      /* Connection rejected for DOS reasons. */
+      al = SSL_AD_ACCESS_DENIED;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
       goto f_err;
     }
 
-    has_session =
-        /* Only resume if the session's version matches the negotiated version:
-         * most clients do not accept a mismatch. */
-        ssl->version == session->ssl_version &&
-        /* If the client offers the EMS extension, but the previous session
-         * didn't use it, then negotiate a new session. */
-        have_extended_master_secret == session->extended_master_secret;
-  }
+    /* Only null compression is supported. */
+    if (memchr(client_hello.compression_methods, 0,
+               client_hello.compression_methods_len) == NULL) {
+      al = SSL_AD_ILLEGAL_PARAMETER;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_COMPRESSION_SPECIFIED);
+      goto f_err;
+    }
 
-  if (has_session) {
-    /* Use the old session. */
-    ssl->session = session;
-    session = NULL;
-    ssl->verify_result = ssl->session->verify_result;
-  } else {
-    SSL_set_session(ssl, NULL);
-    if (!ssl_get_new_session(ssl, 1 /* server */)) {
+    /* TLS extensions. */
+    if (!ssl_parse_clienthello_tlsext(ssl, &client_hello)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
       goto err;
     }
 
-    /* Clear the session ID if we want the session to be single-use. */
-    if (!(ssl->ctx->session_cache_mode & SSL_SESS_CACHE_SERVER)) {
-      ssl->s3->new_session->session_id_length = 0;
+    if (have_extended_master_secret != ssl->s3->tmp.extended_master_secret) {
+      al = SSL_AD_INTERNAL_ERROR;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_EMS_STATE_INCONSISTENT);
+      goto f_err;
     }
+
+    ssl->state = SSL3_ST_SR_CLNT_HELLO_D;
   }
 
-  if (ssl->ctx->dos_protection_cb != NULL &&
-      ssl->ctx->dos_protection_cb(&early_ctx) == 0) {
-    /* Connection rejected for DOS reasons. */
-    al = SSL_AD_ACCESS_DENIED;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
-    goto f_err;
-  }
+  /* Determine the remaining connection parameters. This is a separate state so
+   * |cert_cb| does not cause earlier logic to run multiple times. */
+  assert(ssl->state == SSL3_ST_SR_CLNT_HELLO_D);
 
-  if (!CBS_get_u16_length_prefixed(&client_hello, &cipher_suites) ||
-      CBS_len(&cipher_suites) == 0 ||
-      CBS_len(&cipher_suites) % 2 != 0 ||
-      !CBS_get_u8_length_prefixed(&client_hello, &compression_methods) ||
-      CBS_len(&compression_methods) == 0) {
-    al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-    goto f_err;
-  }
-
-  ciphers = ssl_bytes_to_cipher_list(ssl, &cipher_suites, max_version);
-  if (ciphers == NULL) {
-    goto err;
-  }
-
-  /* If it is a hit, check that the cipher is in the list. */
   if (ssl->session != NULL) {
-    size_t j;
-    int found_cipher = 0;
-    uint32_t id = ssl->session->cipher->id;
-
-    for (j = 0; j < sk_SSL_CIPHER_num(ciphers); j++) {
-      c = sk_SSL_CIPHER_value(ciphers, j);
-      if (c->id == id) {
-        found_cipher = 1;
-        break;
-      }
-    }
-
-    if (!found_cipher) {
-      /* we need to have the cipher in the cipher list if we are asked to reuse
-       * it */
+    /* Check that the cipher is in the list. */
+    if (!ssl_client_cipher_list_contains_cipher(
+            &client_hello, (uint16_t)ssl->session->cipher->id)) {
       al = SSL_AD_ILLEGAL_PARAMETER;
       OPENSSL_PUT_ERROR(SSL, SSL_R_REQUIRED_CIPHER_MISSING);
       goto f_err;
     }
-  }
 
-  /* Only null compression is supported. */
-  if (memchr(CBS_data(&compression_methods), 0,
-             CBS_len(&compression_methods)) == NULL) {
-    al = SSL_AD_ILLEGAL_PARAMETER;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_COMPRESSION_SPECIFIED);
-    goto f_err;
-  }
-
-  /* TLS extensions. */
-  if (ssl->version >= SSL3_VERSION &&
-      !ssl_parse_clienthello_tlsext(ssl, &client_hello)) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
-    goto err;
-  }
-
-  /* There should be nothing left over in the record. */
-  if (CBS_len(&client_hello) != 0) {
-    /* wrong packet length */
-    al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_PACKET_LENGTH);
-    goto f_err;
-  }
-
-  if (have_extended_master_secret != ssl->s3->tmp.extended_master_secret) {
-    al = SSL_AD_INTERNAL_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_EMS_STATE_INCONSISTENT);
-    goto f_err;
-  }
-
-  /* Given ciphers and SSL_get_ciphers, we must pick a cipher */
-  if (ssl->session == NULL) {
-    /* Let cert callback update server certificates if required */
-    if (ssl->cert->cert_cb) {
+    ssl->s3->tmp.new_cipher = ssl->session->cipher;
+    ssl->s3->tmp.cert_request = 0;
+  } else {
+    /* Call |cert_cb| to update server certificates if required. */
+    if (ssl->cert->cert_cb != NULL) {
       int rv = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
       if (rv == 0) {
         al = SSL_AD_INTERNAL_ERROR;
@@ -814,13 +785,15 @@ static int ssl3_get_client_hello(SSL *ssl) {
         goto err;
       }
     }
-    c = ssl3_choose_cipher(ssl, ciphers, ssl_get_cipher_preferences(ssl));
 
+    const SSL_CIPHER *c =
+        ssl3_choose_cipher(ssl, &client_hello, ssl_get_cipher_preferences(ssl));
     if (c == NULL) {
       al = SSL_AD_HANDSHAKE_FAILURE;
       OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
       goto f_err;
     }
+
     ssl->s3->new_session->cipher = c;
     ssl->s3->tmp.new_cipher = c;
 
@@ -835,10 +808,12 @@ static int ssl3_get_client_hello(SSL *ssl) {
     if (!ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
       ssl->s3->tmp.cert_request = 0;
     }
-  } else {
-    /* Session-id reuse */
-    ssl->s3->tmp.new_cipher = ssl->session->cipher;
-    ssl->s3->tmp.cert_request = 0;
+
+    if (!ssl->s3->tmp.cert_request) {
+      /* OpenSSL returns X509_V_OK when no certificates are requested. This is
+       * classed by them as a bug, but it's assumed by at least NGINX. */
+      ssl->s3->new_session->verify_result = X509_V_OK;
+    }
   }
 
   /* Now that the cipher is known, initialize the handshake hash. */
@@ -859,7 +834,6 @@ static int ssl3_get_client_hello(SSL *ssl) {
   }
 
 err:
-  sk_SSL_CIPHER_free(ciphers);
   SSL_SESSION_free(session);
   return ret;
 }
@@ -1220,13 +1194,12 @@ static int ssl3_send_certificate_request(SSL *ssl) {
 
   if (ssl3_protocol_version(ssl) >= TLS1_2_VERSION) {
     const uint16_t *sigalgs;
-    size_t sigalgs_len = tls12_get_psigalgs(ssl, &sigalgs);
+    size_t num_sigalgs = tls12_get_psigalgs(ssl, &sigalgs);
     if (!CBB_add_u16_length_prefixed(&body, &sigalgs_cbb)) {
       goto err;
     }
 
-    size_t i;
-    for (i = 0; i < sigalgs_len; i++) {
+    for (size_t i = 0; i < num_sigalgs; i++) {
       if (!CBB_add_u16(&sigalgs_cbb, sigalgs[i])) {
         goto err;
       }
@@ -1275,13 +1248,17 @@ static int ssl3_get_client_certificate(SSL *ssl) {
   if (ssl->s3->tmp.message_type != SSL3_MT_CERTIFICATE) {
     if (ssl->version == SSL3_VERSION &&
         ssl->s3->tmp.message_type == SSL3_MT_CLIENT_KEY_EXCHANGE) {
-      /* In SSL 3.0, the Certificate message is omitted to signal no certificate. */
+      /* In SSL 3.0, the Certificate message is omitted to signal no
+       * certificate. */
       if (ssl->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT) {
         OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
         ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
         return -1;
       }
 
+      /* OpenSSL returns X509_V_OK when no certificates are received. This is
+       * classed by them as a bug, but it's assumed by at least NGINX. */
+      ssl->s3->new_session->verify_result = X509_V_OK;
       ssl->s3->tmp.reuse_message = 1;
       return 1;
     }
@@ -1328,20 +1305,24 @@ static int ssl3_get_client_certificate(SSL *ssl) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
       goto err;
     }
+
+    /* OpenSSL returns X509_V_OK when no certificates are received. This is
+     * classed by them as a bug, but it's assumed by at least NGINX. */
+    ssl->s3->new_session->verify_result = X509_V_OK;
   } else {
     /* The hash would have been filled in. */
     if (ssl->ctx->retain_only_sha256_of_client_certs) {
       ssl->s3->new_session->peer_sha256_valid = 1;
     }
 
-    if (!ssl_verify_cert_chain(ssl, chain)) {
+    if (!ssl_verify_cert_chain(ssl, &ssl->s3->new_session->verify_result,
+                               chain)) {
       goto err;
     }
   }
 
   X509_free(ssl->s3->new_session->peer);
   ssl->s3->new_session->peer = sk_X509_shift(chain);
-  ssl->s3->new_session->verify_result = ssl->verify_result;
 
   sk_X509_pop_free(ssl->s3->new_session->cert_chain, X509_free);
   ssl->s3->new_session->cert_chain = chain;

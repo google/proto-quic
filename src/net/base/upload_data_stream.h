@@ -13,6 +13,7 @@
 #include "base/macros.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
+#include "net/log/net_log.h"
 
 namespace net {
 
@@ -43,7 +44,7 @@ class NET_EXPORT UploadDataStream {
   // Returns OK on success. Returns ERR_UPLOAD_FILE_CHANGED if the expected
   // file modification time is set (usually not set, but set for sliced
   // files) and the target file is changed.
-  int Init(const CompletionCallback& callback);
+  int Init(const CompletionCallback& callback, const BoundNetLog& net_log);
 
   // When possible, reads up to |buf_len| bytes synchronously from the upload
   // data stream to |buf| and returns the number of bytes read; otherwise,
@@ -107,7 +108,7 @@ class NET_EXPORT UploadDataStream {
   // See Init(). If it returns ERR_IO_PENDING, OnInitCompleted must be called
   // once it completes. If the upload is not chunked, SetSize must be called
   // before it completes.
-  virtual int InitInternal() = 0;
+  virtual int InitInternal(const BoundNetLog& net_log) = 0;
 
   // See Read(). For chunked uploads, must call SetIsFinalChunk if this is the
   // final chunk. For non-chunked uploads, the UploadDataStream determins which
@@ -134,6 +135,8 @@ class NET_EXPORT UploadDataStream {
   bool is_eof_;
 
   CompletionCallback callback_;
+
+  BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(UploadDataStream);
 };

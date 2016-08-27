@@ -1294,24 +1294,55 @@ void TransportSecurityState::ProcessExpectCTHeader(
     const SSLInfo& ssl_info) {
   DCHECK(CalledOnValidThread());
 
+  // Records the result of processing an Expect-CT header. This enum is
+  // histogrammed, so do not reorder or remove values.
+  enum ExpectCTHeaderResult {
+    // An Expect-CT header was received, but it had the wrong value.
+    EXPECT_CT_HEADER_BAD_VALUE = 0,
+    // The Expect-CT header was ignored because the build was old.
+    EXPECT_CT_HEADER_BUILD_NOT_TIMELY = 1,
+    // The Expect-CT header was ignored because the certificate did not chain to
+    // a public root.
+    EXPECT_CT_HEADER_PRIVATE_ROOT = 2,
+    // The Expect-CT header was ignored because CT compliance details were
+    // unavailable.
+    EXPECT_CT_HEADER_COMPLIANCE_DETAILS_UNAVAILABLE = 3,
+    // The request satisified the Expect-CT compliance policy, so no action was
+    // taken.
+    EXPECT_CT_HEADER_COMPLIED = 4,
+    // The Expect-CT header was ignored because there was no corresponding
+    // preload list entry.
+    EXPECT_CT_HEADER_NOT_PRELOADED = 5,
+    // The Expect-CT header was processed successfully and passed on to the
+    // delegate to send a report.
+    EXPECT_CT_HEADER_PROCESSED = 6,
+    EXPECT_CT_HEADER_LAST = EXPECT_CT_HEADER_PROCESSED
+  };
+
+  ExpectCTHeaderResult result = EXPECT_CT_HEADER_PROCESSED;
+
   if (!expect_ct_reporter_)
     return;
 
-  if (value != "preload")
-    return;
-
-  if (!IsBuildTimely())
-    return;
-
-  if (!ssl_info.is_issued_by_known_root ||
-      !ssl_info.ct_compliance_details_available ||
-      ssl_info.ct_cert_policy_compliance ==
-          ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS) {
-    return;
+  ExpectCTState state;
+  if (value != "preload") {
+    result = EXPECT_CT_HEADER_BAD_VALUE;
+  } else if (!IsBuildTimely()) {
+    result = EXPECT_CT_HEADER_BUILD_NOT_TIMELY;
+  } else if (!ssl_info.is_issued_by_known_root) {
+    result = EXPECT_CT_HEADER_PRIVATE_ROOT;
+  } else if (!ssl_info.ct_compliance_details_available) {
+    result = EXPECT_CT_HEADER_COMPLIANCE_DETAILS_UNAVAILABLE;
+  } else if (ssl_info.ct_cert_policy_compliance ==
+             ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS) {
+    result = EXPECT_CT_HEADER_COMPLIED;
+  } else if (!GetStaticExpectCTState(host_port_pair.host(), &state)) {
+    result = EXPECT_CT_HEADER_NOT_PRELOADED;
   }
 
-  ExpectCTState state;
-  if (!GetStaticExpectCTState(host_port_pair.host(), &state))
+  UMA_HISTOGRAM_ENUMERATION("Net.ExpectCTHeaderResult", result,
+                            EXPECT_CT_HEADER_LAST + 1);
+  if (result != EXPECT_CT_HEADER_PROCESSED)
     return;
 
   expect_ct_reporter_->OnExpectCTFailed(host_port_pair, state.report_uri,

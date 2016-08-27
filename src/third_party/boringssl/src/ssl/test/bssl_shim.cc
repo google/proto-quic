@@ -43,6 +43,7 @@ OPENSSL_MSVC_PRAGMA(warning(pop))
 #include <openssl/bio.h>
 #include <openssl/buf.h>
 #include <openssl/bytestring.h>
+#include <openssl/c++/digest.h>
 #include <openssl/cipher.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -55,12 +56,14 @@ OPENSSL_MSVC_PRAGMA(warning(pop))
 #include <string>
 #include <vector>
 
+#include "../../crypto/internal.h"
 #include "../../crypto/test/scoped_types.h"
 #include "async_bio.h"
 #include "packeted_bio.h"
 #include "scoped_types.h"
 #include "test_config.h"
 
+namespace bssl {
 
 #if !defined(OPENSSL_WINDOWS)
 static int closesocket(int sock) {
@@ -99,6 +102,9 @@ struct TestState {
   // operation has been retried.
   unsigned private_key_retries = 0;
   bool got_new_session = false;
+  ScopedSSL_SESSION new_session;
+  bool ticket_decrypt_done = false;
+  bool alpn_select_done = false;
 };
 
 static void TestStateExFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad,
@@ -513,6 +519,13 @@ static int NextProtoSelectCallback(SSL* ssl, uint8_t** out, uint8_t* outlen,
 
 static int AlpnSelectCallback(SSL* ssl, const uint8_t** out, uint8_t* outlen,
                               const uint8_t* in, unsigned inlen, void* arg) {
+  if (GetTestState(ssl)->alpn_select_done) {
+    fprintf(stderr, "AlpnSelectCallback called after completion.\n");
+    exit(1);
+  }
+
+  GetTestState(ssl)->alpn_select_done = true;
+
   const TestConfig *config = GetTestConfig(ssl);
   if (config->decline_alpn) {
     return SSL_TLSEXT_ERR_NOACK;
@@ -625,19 +638,31 @@ static void InfoCallback(const SSL *ssl, int type, int val) {
       abort();
     }
     GetTestState(ssl)->handshake_done = true;
+
+    // Callbacks may be called again on a new handshake.
+    GetTestState(ssl)->ticket_decrypt_done = false;
+    GetTestState(ssl)->alpn_select_done = false;
   }
 }
 
 static int NewSessionCallback(SSL *ssl, SSL_SESSION *session) {
   GetTestState(ssl)->got_new_session = true;
-  // BoringSSL passes a reference to |session|.
-  SSL_SESSION_free(session);
+  GetTestState(ssl)->new_session.reset(session);
   return 1;
 }
 
 static int TicketKeyCallback(SSL *ssl, uint8_t *key_name, uint8_t *iv,
                              EVP_CIPHER_CTX *ctx, HMAC_CTX *hmac_ctx,
                              int encrypt) {
+  if (!encrypt) {
+    if (GetTestState(ssl)->ticket_decrypt_done) {
+      fprintf(stderr, "TicketKeyCallback called after completion.\n");
+      return -1;
+    }
+
+    GetTestState(ssl)->ticket_decrypt_done = true;
+  }
+
   // This is just test code, so use the all-zeros key.
   static const uint8_t kZeros[16] = {0};
 
@@ -1372,7 +1397,7 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
       NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, NID_X25519,
     };
     if (!SSL_set1_curves(ssl.get(), kAllCurves,
-                         sizeof(kAllCurves) / sizeof(kAllCurves[0]))) {
+                         OPENSSL_ARRAY_SIZE(kAllCurves))) {
       return false;
     }
   }
@@ -1511,8 +1536,7 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
     memset(buf.get(), 0x42, kBufLen);
     static const size_t kRecordSizes[] = {
         0, 1, 255, 256, 257, 16383, 16384, 16385, 32767, 32768, 32769};
-    for (size_t i = 0; i < sizeof(kRecordSizes) / sizeof(kRecordSizes[0]);
-         i++) {
+    for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kRecordSizes); i++) {
       const size_t len = kRecordSizes[i];
       if (len > kBufLen) {
         fprintf(stderr, "Bad kRecordSizes value.\n");
@@ -1597,7 +1621,7 @@ static bool DoExchange(ScopedSSL_SESSION *out_session, SSL_CTX *ssl_ctx,
   }
 
   if (out_session) {
-    out_session->reset(SSL_get1_session(ssl.get()));
+    *out_session = std::move(GetTestState(ssl.get())->new_session);
   }
 
   ret = DoShutdown(ssl.get());
@@ -1634,7 +1658,7 @@ class StderrDelimiter {
   ~StderrDelimiter() { fprintf(stderr, "--- DONE ---\n"); }
 };
 
-int main(int argc, char **argv) {
+static int Main(int argc, char **argv) {
   // To distinguish ASan's output from ours, add a trailing message to stderr.
   // Anything following this line will be considered an error.
   StderrDelimiter delimiter;
@@ -1675,18 +1699,27 @@ int main(int argc, char **argv) {
   }
 
   ScopedSSL_SESSION session;
-  if (!DoExchange(&session, ssl_ctx.get(), &config, false /* is_resume */,
-                  NULL /* session */)) {
-    ERR_print_errors_fp(stderr);
-    return 1;
-  }
+  for (int i = 0; i < config.resume_count + 1; i++) {
+    bool is_resume = i > 0;
+    if (is_resume && !config.is_server && !session) {
+      fprintf(stderr, "No session to offer.\n");
+      return 1;
+    }
 
-  if (config.resume &&
-      !DoExchange(NULL, ssl_ctx.get(), &config, true /* is_resume */,
-                  session.get())) {
-    ERR_print_errors_fp(stderr);
-    return 1;
+    ScopedSSL_SESSION offer_session = std::move(session);
+    if (!DoExchange(&session, ssl_ctx.get(), &config, is_resume,
+                    offer_session.get())) {
+      fprintf(stderr, "Connection %d failed.\n", i + 1);
+      ERR_print_errors_fp(stderr);
+      return 1;
+    }
   }
 
   return 0;
+}
+
+}  // namespace bssl
+
+int main(int argc, char **argv) {
+  return bssl::Main(argc, argv);
 }

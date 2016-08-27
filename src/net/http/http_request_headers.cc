@@ -90,8 +90,7 @@ void HttpRequestHeaders::Clear() {
 void HttpRequestHeaders::SetHeader(const base::StringPiece& key,
                                    const base::StringPiece& value) {
   DCHECK(HttpUtil::IsValidHeaderName(key.as_string()));
-  // TODO(ricea): Revert this. See crbug.com/627398.
-  CHECK(HttpUtil::IsValidHeaderValue(value.as_string()));
+  DCHECK(HttpUtil::IsValidHeaderValue(value.as_string()));
   HeaderVector::iterator it = FindHeader(key);
   if (it != headers_.end())
     it->value.assign(value.data(), value.size());
@@ -102,8 +101,7 @@ void HttpRequestHeaders::SetHeader(const base::StringPiece& key,
 void HttpRequestHeaders::SetHeaderIfMissing(const base::StringPiece& key,
                                             const base::StringPiece& value) {
   DCHECK(HttpUtil::IsValidHeaderName(key.as_string()));
-  // TODO(ricea): Revert this. See crbug.com/627398.
-  CHECK(HttpUtil::IsValidHeaderValue(value.as_string()));
+  DCHECK(HttpUtil::IsValidHeaderValue(value.as_string()));
   HeaderVector::iterator it = FindHeader(key);
   if (it == headers_.end())
     headers_.push_back(HeaderKeyValuePair(key, value));

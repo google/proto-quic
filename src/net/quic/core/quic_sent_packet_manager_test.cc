@@ -1695,7 +1695,6 @@ TEST_P(QuicSentPacketManagerTest, ConnectionMigrationPortChange) {
 }
 
 TEST_P(QuicSentPacketManagerTest, PathMtuIncreased) {
-  FLAGS_quic_no_mtu_discovery_ack_listener = true;
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, BytesInFlight(), 1, _, _))
       .Times(1)
       .WillOnce(Return(true));

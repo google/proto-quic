@@ -648,6 +648,11 @@ void QuicDispatcher::ProcessChlo() {
   // Creates a new session and process all buffered packets for this connection.
   QuicServerSessionBase* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
+  if (FLAGS_quic_enforce_mtu_limit &&
+      current_packet().potentially_small_mtu()) {
+    session->connection()->set_largest_packet_size_supported(
+        kMinimumSupportedPacketSize);
+  }
   DVLOG(1) << "Created new session for " << current_connection_id_;
   session_map_.insert(std::make_pair(current_connection_id_, session));
   std::list<BufferedPacket> packets =
@@ -663,10 +668,7 @@ void QuicDispatcher::ProcessChlo() {
   // Deliver queued-up packets in the same order as they arrived.
   // Do this even when flag is off because there might be still some packets
   // buffered in the store before flag is turned off.
-  for (const BufferedPacket& packet : packets) {
-    session->ProcessUdpPacket(packet.server_address, packet.client_address,
-                              *(packet.packet));
-  }
+  DeliverPacketsToSession(packets, session);
 }
 
 bool QuicDispatcher::HandlePacketForTimeWait(
@@ -782,6 +784,15 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::MaybeRejectStatelessly(
 
 const QuicVersionVector& QuicDispatcher::GetSupportedVersions() {
   return version_manager_->GetSupportedVersions();
+}
+
+void QuicDispatcher::DeliverPacketsToSession(
+    const std::list<BufferedPacket>& packets,
+    QuicServerSessionBase* session) {
+  for (const BufferedPacket& packet : packets) {
+    session->ProcessUdpPacket(packet.server_address, packet.client_address,
+                              *(packet.packet));
+  }
 }
 
 }  // namespace net

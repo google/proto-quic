@@ -151,6 +151,7 @@
 #include <openssl/stack.h>
 
 #include "internal.h"
+#include "../crypto/internal.h"
 
 
 /* kCiphers is an array of all supported ciphers, sorted by id. */
@@ -686,7 +687,7 @@ static const SSL_CIPHER kCiphers[] = {
 
 };
 
-static const size_t kCiphersLen = sizeof(kCiphers) / sizeof(kCiphers[0]);
+static const size_t kCiphersLen = OPENSSL_ARRAY_SIZE(kCiphers);
 
 #define CIPHER_ADD 1
 #define CIPHER_KILL 2
@@ -786,8 +787,7 @@ static const CIPHER_ALIAS kCipherAliases[] = {
     {"FIPS", ~SSL_kCECPQ1, ~0u, ~(SSL_eNULL|SSL_RC4), ~0u, 0},
 };
 
-static const size_t kCipherAliasesLen =
-    sizeof(kCipherAliases) / sizeof(kCipherAliases[0]);
+static const size_t kCipherAliasesLen = OPENSSL_ARRAY_SIZE(kCipherAliases);
 
 static int ssl_cipher_id_cmp(const void *in_a, const void *in_b) {
   const SSL_CIPHER *a = in_a;
@@ -1136,13 +1136,22 @@ static void ssl_cipher_apply_rule(
       if (strength_bits != SSL_CIPHER_get_bits(cp, NULL)) {
         continue;
       }
-    } else if (!(alg_mkey & cp->algorithm_mkey) ||
-               !(alg_auth & cp->algorithm_auth) ||
-               !(alg_enc & cp->algorithm_enc) ||
-               !(alg_mac & cp->algorithm_mac) ||
-               (min_version != 0 &&
-                SSL_CIPHER_get_min_version(cp) != min_version)) {
-      continue;
+    } else {
+      if (!(alg_mkey & cp->algorithm_mkey) ||
+          !(alg_auth & cp->algorithm_auth) ||
+          !(alg_enc & cp->algorithm_enc) ||
+          !(alg_mac & cp->algorithm_mac) ||
+          (min_version != 0 && SSL_CIPHER_get_min_version(cp) != min_version)) {
+        continue;
+      }
+
+      /* The following ciphers are internal implementation details of TLS 1.3
+       * resumption but are not yet finalized. Disable them by default until
+       * then. */
+      if (cp->id == TLS1_CK_ECDHE_PSK_WITH_AES_128_GCM_SHA256 ||
+          cp->id == TLS1_CK_ECDHE_PSK_WITH_AES_256_GCM_SHA384) {
+        continue;
+      }
     }
 
     /* add the cipher if it has not been added yet. */
@@ -1649,6 +1658,30 @@ uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher) {
   /* All ciphers are SSLv3. */
   assert((id & 0xff000000) == 0x03000000);
   return id & 0xffff;
+}
+
+int ssl_cipher_get_ecdhe_psk_cipher(const SSL_CIPHER *cipher,
+                                    uint16_t *out_cipher) {
+  switch (cipher->id) {
+    case TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256:
+    case TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256:
+    case TLS1_CK_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256:
+      *out_cipher = TLS1_CK_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256 & 0xffff;
+      return 1;
+
+    case TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+    case TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:
+    case TLS1_CK_ECDHE_PSK_WITH_AES_128_GCM_SHA256:
+      *out_cipher = TLS1_CK_ECDHE_PSK_WITH_AES_128_GCM_SHA256 & 0xffff;
+      return 1;
+
+    case TLS1_CK_ECDHE_RSA_WITH_AES_256_GCM_SHA384:
+    case TLS1_CK_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:
+    case TLS1_CK_ECDHE_PSK_WITH_AES_256_GCM_SHA384:
+      *out_cipher = TLS1_CK_ECDHE_PSK_WITH_AES_256_GCM_SHA384 & 0xffff;
+      return 1;
+  }
+  return 0;
 }
 
 int SSL_CIPHER_is_AES(const SSL_CIPHER *cipher) {

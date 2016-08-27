@@ -116,6 +116,19 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
     return std::move(http_response);
   }
 
+  // Runs one URL request to completion.
+  void RunOneRequest() {
+    TestDelegate test_delegate;
+    TestURLRequestContext context(true);
+    context.set_network_quality_estimator(this);
+    context.Init();
+    std::unique_ptr<URLRequest> request(
+        context.CreateRequest(GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME);
+    request->Start();
+    base::RunLoop().Run();
+  }
+
   // Returns a GURL hosted at embedded test server.
   const GURL GetEchoURL() const {
     return embedded_test_server_.GetURL("/echo.html");
@@ -271,6 +284,7 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
 
   using NetworkQualityEstimator::SetTickClockForTesting;
   using NetworkQualityEstimator::OnConnectionTypeChanged;
+  using NetworkQualityEstimator::NetworkQualityStoreForTesting;
 
  private:
   // NetworkQualityEstimator implementation that returns the overridden
@@ -785,7 +799,6 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyRTT) {
   variation_params["2G.ThresholdMedianHttpRTTMsec"] = "1000";
   variation_params["3G.ThresholdMedianHttpRTTMsec"] = "500";
   variation_params["4G.ThresholdMedianHttpRTTMsec"] = "300";
-  variation_params["Broadband.ThresholdMedianHttpRTTMsec"] = "100";
 
   TestNetworkQualityEstimator estimator(variation_params);
 
@@ -808,9 +821,9 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyRTT) {
       {500, EFFECTIVE_CONNECTION_TYPE_3G},
       {400, EFFECTIVE_CONNECTION_TYPE_4G},
       {300, EFFECTIVE_CONNECTION_TYPE_4G},
-      {200, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {100, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {200, EFFECTIVE_CONNECTION_TYPE_4G},
+      {100, EFFECTIVE_CONNECTION_TYPE_4G},
+      {20, EFFECTIVE_CONNECTION_TYPE_4G},
   };
 
   for (const auto& test : tests) {
@@ -838,8 +851,8 @@ TEST(NetworkQualityEstimatorTest, DefaultTransportRTTBasedThresholds) {
       {false, 3000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 2000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
-      {false, 1000, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {false, 20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {false, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
+      {false, 20, EFFECTIVE_CONNECTION_TYPE_4G},
       // Override default thresholds using variation params.
       {true, 5000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
       {true, 4000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
@@ -847,7 +860,7 @@ TEST(NetworkQualityEstimatorTest, DefaultTransportRTTBasedThresholds) {
       {true, 2000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {true, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
       {true, 1000, EFFECTIVE_CONNECTION_TYPE_2G},
-      {true, 20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {true, 20, EFFECTIVE_CONNECTION_TYPE_4G},
   };
 
   for (const auto& test : tests) {
@@ -892,8 +905,8 @@ TEST(NetworkQualityEstimatorTest, DefaultHttpRTTBasedThresholds) {
       {false, 3000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 2000, EFFECTIVE_CONNECTION_TYPE_2G},
       {false, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
-      {false, 1000, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {false, 20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {false, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
+      {false, 20, EFFECTIVE_CONNECTION_TYPE_4G},
       // Override default thresholds using variation params.
       {true, 5000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
       {true, 4000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
@@ -901,7 +914,7 @@ TEST(NetworkQualityEstimatorTest, DefaultHttpRTTBasedThresholds) {
       {true, 2000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {true, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
       {true, 1000, EFFECTIVE_CONNECTION_TYPE_2G},
-      {true, 20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {true, 20, EFFECTIVE_CONNECTION_TYPE_4G},
   };
 
   for (const auto& test : tests) {
@@ -941,7 +954,6 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyTransportRTT) {
   variation_params["2G.ThresholdMedianTransportRTTMsec"] = "1000";
   variation_params["3G.ThresholdMedianTransportRTTMsec"] = "500";
   variation_params["4G.ThresholdMedianTransportRTTMsec"] = "300";
-  variation_params["Broadband.ThresholdMedianTransportRTTMsec"] = "100";
 
   TestNetworkQualityEstimator estimator(variation_params);
 
@@ -964,9 +976,9 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyTransportRTT) {
       {500, EFFECTIVE_CONNECTION_TYPE_3G},
       {400, EFFECTIVE_CONNECTION_TYPE_4G},
       {300, EFFECTIVE_CONNECTION_TYPE_4G},
-      {200, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {100, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {20, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {200, EFFECTIVE_CONNECTION_TYPE_4G},
+      {100, EFFECTIVE_CONNECTION_TYPE_4G},
+      {20, EFFECTIVE_CONNECTION_TYPE_4G},
   };
 
   for (const auto& test : tests) {
@@ -991,14 +1003,12 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsHttpRTTandThroughput) {
   variation_params["2G.ThresholdMedianHttpRTTMsec"] = "1000";
   variation_params["3G.ThresholdMedianHttpRTTMsec"] = "500";
   variation_params["4G.ThresholdMedianHttpRTTMsec"] = "300";
-  variation_params["Broadband.ThresholdMedianHttpRTTMsec"] = "100";
 
   variation_params["Offline.ThresholdMedianKbps"] = "10";
   variation_params["Slow2G.ThresholdMedianKbps"] = "100";
   variation_params["2G.ThresholdMedianKbps"] = "300";
   variation_params["3G.ThresholdMedianKbps"] = "500";
   variation_params["4G.ThresholdMedianKbps"] = "1000";
-  variation_params["Broadband.ThresholdMedianKbps"] = "2000";
 
   TestNetworkQualityEstimator estimator(variation_params);
 
@@ -1024,8 +1034,8 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsHttpRTTandThroughput) {
       {1, 500, EFFECTIVE_CONNECTION_TYPE_3G},
       {1, 700, EFFECTIVE_CONNECTION_TYPE_4G},
       {1, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
-      {1, 1500, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {1, 2500, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {1, 1500, EFFECTIVE_CONNECTION_TYPE_4G},
+      {1, 2500, EFFECTIVE_CONNECTION_TYPE_4G},
       // Set both RTT and throughput. RTT is the bottleneck.
       {3000, 25000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {700, 25000, EFFECTIVE_CONNECTION_TYPE_3G},
@@ -1055,14 +1065,12 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsTransportRTTandThroughput) {
   variation_params["2G.ThresholdMedianTransportRTTMsec"] = "1000";
   variation_params["3G.ThresholdMedianTransportRTTMsec"] = "500";
   variation_params["4G.ThresholdMedianTransportRTTMsec"] = "300";
-  variation_params["Broadband.ThresholdMedianTransportRTTMsec"] = "100";
 
   variation_params["Offline.ThresholdMedianKbps"] = "10";
   variation_params["Slow2G.ThresholdMedianKbps"] = "100";
   variation_params["2G.ThresholdMedianKbps"] = "300";
   variation_params["3G.ThresholdMedianKbps"] = "500";
   variation_params["4G.ThresholdMedianKbps"] = "1000";
-  variation_params["Broadband.ThresholdMedianKbps"] = "2000";
 
   TestNetworkQualityEstimator estimator(variation_params);
 
@@ -1088,8 +1096,8 @@ TEST(NetworkQualityEstimatorTest, ObtainThresholdsTransportRTTandThroughput) {
       {1, 500, EFFECTIVE_CONNECTION_TYPE_3G},
       {1, 700, EFFECTIVE_CONNECTION_TYPE_4G},
       {1, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
-      {1, 1500, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
-      {1, 2500, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+      {1, 1500, EFFECTIVE_CONNECTION_TYPE_4G},
+      {1, 2500, EFFECTIVE_CONNECTION_TYPE_4G},
       // Set both RTT and throughput. RTT is the bottleneck.
       {3000, 25000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {700, 25000, EFFECTIVE_CONNECTION_TYPE_3G},
@@ -1138,15 +1146,14 @@ TEST(NetworkQualityEstimatorTest, HalfLifeParam) {
 TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   std::map<std::string, std::string> variation_params;
 
-  const base::TimeDelta rtt_threshold_4g =
+  const base::TimeDelta rtt_threshold_3g =
       base::TimeDelta::FromMilliseconds(30);
-  const base::TimeDelta rtt_threshold_broadband =
-      base::TimeDelta::FromMilliseconds(1);
+  const base::TimeDelta rtt_threshold_4g = base::TimeDelta::FromMilliseconds(1);
 
+  variation_params["3G.ThresholdMedianHttpRTTMsec"] =
+      base::IntToString(rtt_threshold_3g.InMilliseconds());
   variation_params["4G.ThresholdMedianHttpRTTMsec"] =
       base::IntToString(rtt_threshold_4g.InMilliseconds());
-  variation_params["Broadband.ThresholdMedianHttpRTTMsec"] =
-      base::IntToString(rtt_threshold_broadband.InMilliseconds());
   variation_params["HalfLifeSeconds"] = "300000";
 
   TestNetworkQualityEstimator estimator(variation_params);
@@ -1161,8 +1168,8 @@ TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   const base::TimeDelta old_url_rtt = base::TimeDelta::FromMilliseconds(1);
   const base::TimeDelta old_tcp_rtt = base::TimeDelta::FromMilliseconds(10);
 
-  DCHECK_LT(old_url_rtt, rtt_threshold_4g);
-  DCHECK_LT(old_tcp_rtt, rtt_threshold_4g);
+  DCHECK_LT(old_url_rtt, rtt_threshold_3g);
+  DCHECK_LT(old_tcp_rtt, rtt_threshold_3g);
 
   // First sample has very old timestamp.
   for (size_t i = 0; i < 2; ++i) {
@@ -1185,10 +1192,10 @@ TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   DCHECK_NE(old_downlink_kbps, new_downlink_kbps);
   DCHECK_NE(old_url_rtt, new_url_rtt);
   DCHECK_NE(old_tcp_rtt, new_tcp_rtt);
+  DCHECK_GT(new_url_rtt, rtt_threshold_3g);
+  DCHECK_GT(new_tcp_rtt, rtt_threshold_3g);
   DCHECK_GT(new_url_rtt, rtt_threshold_4g);
   DCHECK_GT(new_tcp_rtt, rtt_threshold_4g);
-  DCHECK_GT(new_url_rtt, rtt_threshold_broadband);
-  DCHECK_GT(new_tcp_rtt, rtt_threshold_broadband);
 
   estimator.downstream_throughput_kbps_observations_.AddObservation(
       NetworkQualityEstimator::ThroughputObservation(
@@ -1211,12 +1218,11 @@ TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   } tests[] = {
       {now + base::TimeDelta::FromSeconds(10), false,
        base::TimeDelta::FromMilliseconds(0),
-       base::TimeDelta::FromMilliseconds(0), 0,
-       EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+       base::TimeDelta::FromMilliseconds(0), 0, EFFECTIVE_CONNECTION_TYPE_4G},
       {now, true, new_url_rtt, new_tcp_rtt, new_downlink_kbps,
-       EFFECTIVE_CONNECTION_TYPE_4G},
+       EFFECTIVE_CONNECTION_TYPE_3G},
       {old - base::TimeDelta::FromMicroseconds(500), true, old_url_rtt,
-       old_tcp_rtt, old_downlink_kbps, EFFECTIVE_CONNECTION_TYPE_BROADBAND},
+       old_tcp_rtt, old_downlink_kbps, EFFECTIVE_CONNECTION_TYPE_4G},
 
   };
   for (const auto& test : tests) {
@@ -2222,6 +2228,128 @@ TEST(NetworkQualityEstimatorTest, CorrelationHistogram) {
 
     // Get the bits at index 25-31 which contain the resource load size.
     EXPECT_LE(0, (buckets.at(0).min) % 128);
+  }
+}
+
+class TestNetworkQualitiesCacheObserver
+    : public nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver {
+ public:
+  TestNetworkQualitiesCacheObserver()
+      : network_id_(net::NetworkChangeNotifier::CONNECTION_UNKNOWN,
+                    std::string()),
+        notification_received_(0) {}
+  ~TestNetworkQualitiesCacheObserver() override {}
+
+  void OnChangeInCachedNetworkQuality(
+      const nqe::internal::NetworkID& network_id,
+      const nqe::internal::CachedNetworkQuality& cached_network_quality)
+      override {
+    network_id_ = network_id;
+    notification_received_++;
+  }
+
+  size_t get_notification_received_and_reset() {
+    size_t notification_received = notification_received_;
+    notification_received_ = 0;
+    return notification_received;
+  }
+
+  nqe::internal::NetworkID network_id() const { return network_id_; }
+
+ private:
+  nqe::internal::NetworkID network_id_;
+  size_t notification_received_;
+  DISALLOW_COPY_AND_ASSIGN(TestNetworkQualitiesCacheObserver);
+};
+
+TEST(NetworkQualityEstimatorTest, CacheObserver) {
+  TestNetworkQualitiesCacheObserver observer;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(variation_params);
+
+  // Add |observer| as a persistent caching observer.
+  estimator.NetworkQualityStoreForTesting()->AddNetworkQualitiesCacheObserver(
+      &observer);
+
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
+  estimator.SimulateNetworkChangeTo(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN, "test3g");
+  estimator.RunOneRequest();
+  EXPECT_EQ(1u, observer.get_notification_received_and_reset());
+  EXPECT_EQ("test3g", observer.network_id().id);
+
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
+  estimator.SimulateNetworkChangeTo(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test2g");
+  // One notification should be received for the previous network
+  // ("test3g") right before the connection change event. The second
+  // notification should be received for the second network ("test2g").
+  EXPECT_EQ(2u, observer.get_notification_received_and_reset());
+  estimator.RunOneRequest();
+  EXPECT_EQ("test2g", observer.network_id().id);
+
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_4G);
+  // Start multiple requests, but there should be only one notification
+  // received, since the effective connection type does not change.
+  estimator.RunOneRequest();
+  estimator.RunOneRequest();
+  estimator.RunOneRequest();
+  EXPECT_EQ(1u, observer.get_notification_received_and_reset());
+
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
+  estimator.RunOneRequest();
+  EXPECT_EQ(1u, observer.get_notification_received_and_reset());
+
+  // Remove |observer|, and it should not receive any notifications.
+  estimator.NetworkQualityStoreForTesting()
+      ->RemoveNetworkQualitiesCacheObserver(&observer);
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
+  estimator.SimulateNetworkChangeTo(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test2g");
+  EXPECT_EQ(0u, observer.get_notification_received_and_reset());
+  estimator.RunOneRequest();
+  EXPECT_EQ(0u, observer.get_notification_received_and_reset());
+}
+
+// Tests that the value of the effective connection type can be forced through
+// field trial parameters.
+TEST(NetworkQualityEstimatorTest,
+     ForceEffectiveConnectionTypeThroughFieldTrial) {
+  for (int i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
+    std::map<std::string, std::string> variation_params;
+    variation_params["force_effective_connection_type"] =
+        GetNameForEffectiveConnectionType(
+            static_cast<EffectiveConnectionType>(i));
+    TestNetworkQualityEstimator estimator(variation_params);
+    EXPECT_EQ(i, estimator.GetEffectiveConnectionType());
+
+    TestEffectiveConnectionTypeObserver observer;
+    estimator.AddEffectiveConnectionTypeObserver(&observer);
+
+    TestDelegate test_delegate;
+    TestURLRequestContext context(true);
+    context.set_network_quality_estimator(&estimator);
+    context.Init();
+
+    EXPECT_EQ(0U, observer.effective_connection_types().size());
+
+    std::unique_ptr<URLRequest> request(context.CreateRequest(
+        estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+    request->SetLoadFlags(request->load_flags() | LOAD_MAIN_FRAME);
+    request->Start();
+    base::RunLoop().Run();
+
+    size_t expected_count = static_cast<EffectiveConnectionType>(i) ==
+                                    EFFECTIVE_CONNECTION_TYPE_UNKNOWN
+                                ? 0
+                                : 1;
+    ASSERT_EQ(expected_count, observer.effective_connection_types().size());
+    if (expected_count == 1) {
+      EffectiveConnectionType last_notified_type =
+          observer.effective_connection_types().at(
+              observer.effective_connection_types().size() - 1);
+      EXPECT_EQ(i, last_notified_type);
+    }
   }
 }
 

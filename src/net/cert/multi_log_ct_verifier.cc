@@ -27,8 +27,12 @@ namespace {
 // Record SCT verification status. This metric would help detecting presence
 // of unknown CT logs as well as bad deployments (invalid SCTs).
 void LogSCTStatusToUMA(ct::SCTVerifyStatus status) {
-  UMA_HISTOGRAM_ENUMERATION(
-      "Net.CertificateTransparency.SCTStatus", status, ct::SCT_STATUS_MAX);
+  // Note SCT_STATUS_MAX + 1 is passed to the UMA_HISTOGRAM_ENUMERATION as that
+  // macro requires the values to be strictly less than the boundary value,
+  // and SCT_STATUS_MAX is the last valid value of the SCTVerifyStatus enum
+  // (since that enum is used for IPC as well).
+  UMA_HISTOGRAM_ENUMERATION("Net.CertificateTransparency.SCTStatus", status,
+                            ct::SCT_STATUS_MAX + 1);
 }
 
 // Record SCT origin enum. This metric measure the popularity
@@ -199,14 +203,14 @@ bool MultiLogCTVerifier::VerifySingleSCT(
 
   if (!it->second->Verify(expected_entry, *sct.get())) {
     DVLOG(1) << "Unable to verify SCT signature.";
-    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID, &(result->scts));
+    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID_SIGNATURE, &(result->scts));
     return false;
   }
 
   // SCT verified ok, just make sure the timestamp is legitimate.
   if (sct->timestamp > base::Time::Now()) {
     DVLOG(1) << "SCT is from the future!";
-    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID, &(result->scts));
+    AddSCTAndLogStatus(sct, ct::SCT_STATUS_INVALID_TIMESTAMP, &(result->scts));
     return false;
   }
 

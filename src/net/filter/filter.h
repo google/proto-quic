@@ -133,7 +133,7 @@ class NET_EXPORT_PRIVATE FilterContext {
 };
 
 //------------------------------------------------------------------------------
-class NET_EXPORT_PRIVATE Filter {
+class NET_EXPORT Filter {
  public:
   // Return values of function ReadFilteredData.
   enum FilterStatus {

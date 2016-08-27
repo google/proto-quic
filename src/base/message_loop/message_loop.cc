@@ -709,6 +709,18 @@ void MessageLoopForUI::Start() {
   // No Histogram support for UI message loop as it is managed by Java side
   static_cast<MessagePumpForUI*>(pump_.get())->Start(this);
 }
+
+void MessageLoopForUI::StartForTesting(
+    base::android::JavaMessageHandlerFactory* factory,
+    WaitableEvent* test_done_event) {
+  // No Histogram support for UI message loop as it is managed by Java side
+  static_cast<MessagePumpForUI*>(pump_.get())
+      ->StartForUnitTest(this, factory, test_done_event);
+}
+
+void MessageLoopForUI::Abort() {
+  static_cast<MessagePumpForUI*>(pump_.get())->Abort();
+}
 #endif
 
 #if defined(OS_IOS)

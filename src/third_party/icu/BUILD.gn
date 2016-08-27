@@ -8,6 +8,10 @@ if (is_android) {
   import("//build/config/android/rules.gni")
 }
 
+if (is_mac) {
+  import("//build/config/sanitizers/sanitizers.gni")
+}
+
 # Meta target that includes both icuuc and icui18n. Most targets want both.
 # You can depend on the individually if you need to.
 group("icu") {
@@ -953,6 +957,10 @@ component("icuuc") {
   deps = [
     ":icudata",
   ]
+
+  if (is_mac && using_sanitizer) {
+    deps += [ "//buildtools/third_party/libc++abi" ]
+  }
 
   configs -= [
     "//build/config/compiler:no_rtti",  # ICU uses RTTI.

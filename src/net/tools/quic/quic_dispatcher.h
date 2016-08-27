@@ -272,6 +272,11 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   QuicPacketFate MaybeRejectStatelessly(QuicConnectionId connection_id,
                                         const QuicPacketHeader& header);
 
+  // Deliver |packets| to |session| for further processing.
+  void DeliverPacketsToSession(
+      const std::list<QuicBufferedPacketStore::BufferedPacket>& packets,
+      QuicServerSessionBase* session);
+
   const QuicConfig& config_;
 
   const QuicCryptoServerConfig* crypto_config_;

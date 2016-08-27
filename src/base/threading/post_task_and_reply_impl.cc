@@ -6,6 +6,7 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
+#include "base/debug/leak_annotations.h"
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequence_checker.h"
@@ -82,6 +83,12 @@ bool PostTaskAndReplyImpl::PostTaskAndReply(
   DCHECK(!reply.is_null()) << from_here.ToString();
   PostTaskAndReplyRelay* relay =
       new PostTaskAndReplyRelay(from_here, task, reply);
+  // PostTaskAndReplyRelay self-destructs after executing |reply|. On the flip
+  // side though, it is intentionally leaked if the |task| doesn't complete
+  // before the origin sequence stops executing tasks. Annotate |relay| as leaky
+  // to avoid having to suppress every callsite which happens to flakily trigger
+  // this race.
+  ANNOTATE_LEAKING_OBJECT_PTR(relay);
   if (!PostTask(from_here, Bind(&PostTaskAndReplyRelay::RunTaskAndPostReply,
                                 Unretained(relay)))) {
     delete relay;

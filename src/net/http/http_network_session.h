@@ -162,8 +162,11 @@ class NET_EXPORT HttpNetworkSession
     QuicTagVector quic_connection_options;
     // If true, all QUIC sessions are closed when any local IP address changes.
     bool quic_close_sessions_on_ip_change;
-    // Specifes QUIC idle connection state lifetime.
+    // Specifies QUIC idle connection state lifetime.
     int quic_idle_connection_timeout_seconds;
+    // Specifies the maximum time duration that QUIC packet reader can perform
+    // consecutive packets reading.
+    int quic_packet_reader_yield_after_duration_milliseconds;
     // If true, disable preconnections if QUIC can do 0RTT.
     bool quic_disable_preconnect_if_0rtt;
     // List of hosts for which QUIC is explicitly whitelisted.

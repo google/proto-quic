@@ -55,6 +55,11 @@ const char kModeParam[] = "mode";
 const char kHeapProfilerOptions[] = "heap_profiler_options";
 const char kBreakdownThresholdBytes[] = "breakdown_threshold_bytes";
 
+// String parameters used to parse category event filters.
+const char kEventFiltersParam[] = "event_filters";
+const char kFilterPredicateParam[] = "filter_predicate";
+const char kFilterArgsParam[] = "filter_args";
+
 // Default configuration of memory dumps.
 const TraceConfig::MemoryDumpConfig::Trigger kDefaultHeavyMemoryDumpTrigger = {
     2000,  // periodic_interval_ms
@@ -68,6 +73,7 @@ class ConvertableTraceConfigToTraceFormat
  public:
   explicit ConvertableTraceConfigToTraceFormat(const TraceConfig& trace_config)
       : trace_config_(trace_config) {}
+
   ~ConvertableTraceConfigToTraceFormat() override {}
 
   void AppendAsTraceFormat(std::string* out) const override {
@@ -113,6 +119,69 @@ void TraceConfig::MemoryDumpConfig::Clear() {
   allowed_dump_modes.clear();
   triggers.clear();
   heap_profiler_options.Clear();
+}
+
+TraceConfig::EventFilterConfig::EventFilterConfig(
+    const std::string& predicate_name)
+    : predicate_name_(predicate_name) {}
+
+TraceConfig::EventFilterConfig::~EventFilterConfig() {}
+
+TraceConfig::EventFilterConfig::EventFilterConfig(const EventFilterConfig& tc) {
+  *this = tc;
+}
+
+TraceConfig::EventFilterConfig& TraceConfig::EventFilterConfig::operator=(
+    const TraceConfig::EventFilterConfig& rhs) {
+  if (this == &rhs)
+    return *this;
+
+  predicate_name_ = rhs.predicate_name_;
+  included_categories_ = rhs.included_categories_;
+  excluded_categories_ = rhs.excluded_categories_;
+  if (rhs.args_)
+    args_ = rhs.args_->CreateDeepCopy();
+
+  return *this;
+}
+
+void TraceConfig::EventFilterConfig::AddIncludedCategory(
+    const std::string& category) {
+  included_categories_.push_back(category);
+}
+
+void TraceConfig::EventFilterConfig::AddExcludedCategory(
+    const std::string& category) {
+  excluded_categories_.push_back(category);
+}
+
+void TraceConfig::EventFilterConfig::SetArgs(
+    std::unique_ptr<base::DictionaryValue> args) {
+  args_ = std::move(args);
+}
+
+bool TraceConfig::EventFilterConfig::IsCategoryGroupEnabled(
+    const char* category_group_name) const {
+  CStringTokenizer category_group_tokens(
+      category_group_name, category_group_name + strlen(category_group_name),
+      ",");
+  while (category_group_tokens.GetNext()) {
+    std::string category_group_token = category_group_tokens.token();
+
+    for (const auto& excluded_category : excluded_categories_) {
+      if (base::MatchPattern(category_group_token, excluded_category)) {
+        return false;
+      }
+    }
+
+    for (const auto& included_category : included_categories_) {
+      if (base::MatchPattern(category_group_token, included_category)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 TraceConfig::TraceConfig() {
@@ -166,7 +235,8 @@ TraceConfig::TraceConfig(const TraceConfig& tc)
       included_categories_(tc.included_categories_),
       disabled_categories_(tc.disabled_categories_),
       excluded_categories_(tc.excluded_categories_),
-      synthetic_delays_(tc.synthetic_delays_) {}
+      synthetic_delays_(tc.synthetic_delays_),
+      event_filters_(tc.event_filters_) {}
 
 TraceConfig::~TraceConfig() {
 }
@@ -184,6 +254,7 @@ TraceConfig& TraceConfig::operator=(const TraceConfig& rhs) {
   disabled_categories_ = rhs.disabled_categories_;
   excluded_categories_ = rhs.excluded_categories_;
   synthetic_delays_ = rhs.synthetic_delays_;
+  event_filters_ = rhs.event_filters_;
   return *this;
 }
 
@@ -314,6 +385,7 @@ void TraceConfig::Clear() {
   excluded_categories_.clear();
   synthetic_delays_.clear();
   memory_dump_config_.Clear();
+  event_filters_.clear();
 }
 
 void TraceConfig::InitializeDefault() {
@@ -361,6 +433,10 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
     else
       SetDefaultMemoryDumpConfig();
   }
+
+  const base::ListValue* category_event_filters = nullptr;
+  if (dict.GetList(kEventFiltersParam, &category_event_filters))
+    SetEventFilters(*category_event_filters);
 }
 
 void TraceConfig::InitializeFromConfigString(StringPiece config_string) {
@@ -553,6 +629,66 @@ void TraceConfig::SetDefaultMemoryDumpConfig() {
   memory_dump_config_.triggers.push_back(kDefaultHeavyMemoryDumpTrigger);
   memory_dump_config_.triggers.push_back(kDefaultLightMemoryDumpTrigger);
   memory_dump_config_.allowed_dump_modes = GetDefaultAllowedMemoryDumpModes();
+
+  if (AllocationContextTracker::capture_mode() ==
+      AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
+    for (const auto& filter : event_filters_) {
+      if (filter.predicate_name() ==
+          TraceLog::TraceEventFilter::kHeapProfilerPredicate)
+        return;
+    }
+    // Adds a filter predicate to filter all categories for the heap profiler.
+    // Note that the heap profiler predicate does not filter-out any events.
+    EventFilterConfig heap_profiler_config(
+        TraceLog::TraceEventFilter::kHeapProfilerPredicate);
+    heap_profiler_config.AddIncludedCategory("*");
+    heap_profiler_config.AddIncludedCategory(MemoryDumpManager::kTraceCategory);
+    event_filters_.push_back(heap_profiler_config);
+  }
+}
+
+void TraceConfig::SetEventFilters(
+    const base::ListValue& category_event_filters) {
+  event_filters_.clear();
+
+  for (size_t event_filter_index = 0;
+       event_filter_index < category_event_filters.GetSize();
+       ++event_filter_index) {
+    const base::DictionaryValue* event_filter = nullptr;
+    if (!category_event_filters.GetDictionary(event_filter_index,
+                                              &event_filter))
+      continue;
+
+    std::string predicate_name;
+    CHECK(event_filter->GetString(kFilterPredicateParam, &predicate_name))
+        << "Invalid predicate name in category event filter.";
+
+    EventFilterConfig new_config(predicate_name);
+    const base::ListValue* included_list = nullptr;
+    CHECK(event_filter->GetList(kIncludedCategoriesParam, &included_list))
+        << "Missing included_categories in category event filter.";
+
+    for (size_t i = 0; i < included_list->GetSize(); ++i) {
+      std::string category;
+      if (included_list->GetString(i, &category))
+        new_config.AddIncludedCategory(category);
+    }
+
+    const base::ListValue* excluded_list = nullptr;
+    if (event_filter->GetList(kExcludedCategoriesParam, &excluded_list)) {
+      for (size_t i = 0; i < excluded_list->GetSize(); ++i) {
+        std::string category;
+        if (excluded_list->GetString(i, &category))
+          new_config.AddExcludedCategory(category);
+      }
+    }
+
+    const base::DictionaryValue* args_dict = nullptr;
+    if (event_filter->GetDictionary(kFilterArgsParam, &args_dict))
+      new_config.SetArgs(args_dict->CreateDeepCopy());
+
+    event_filters_.push_back(new_config);
+  }
 }
 
 std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
@@ -585,6 +721,41 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
   AddCategoryToDict(dict.get(), kIncludedCategoriesParam, categories);
   AddCategoryToDict(dict.get(), kExcludedCategoriesParam, excluded_categories_);
   AddCategoryToDict(dict.get(), kSyntheticDelaysParam, synthetic_delays_);
+
+  if (!event_filters_.empty()) {
+    std::unique_ptr<base::ListValue> filter_list(new base::ListValue());
+    for (const EventFilterConfig& filter : event_filters_) {
+      std::unique_ptr<base::DictionaryValue> filter_dict(
+          new base::DictionaryValue());
+      filter_dict->SetString(kFilterPredicateParam, filter.predicate_name());
+
+      std::unique_ptr<base::ListValue> included_categories_list(
+          new base::ListValue());
+      for (const std::string& included_category : filter.included_categories())
+        included_categories_list->AppendString(included_category);
+
+      filter_dict->Set(kIncludedCategoriesParam,
+                       std::move(included_categories_list));
+
+      if (!filter.excluded_categories().empty()) {
+        std::unique_ptr<base::ListValue> excluded_categories_list(
+            new base::ListValue());
+        for (const std::string& excluded_category :
+             filter.excluded_categories())
+          excluded_categories_list->AppendString(excluded_category);
+
+        filter_dict->Set(kExcludedCategoriesParam,
+                         std::move(excluded_categories_list));
+      }
+
+      if (filter.filter_args())
+        filter_dict->Set(kFilterArgsParam,
+                         filter.filter_args()->CreateDeepCopy());
+
+      filter_list->Append(std::move(filter_dict));
+    }
+    dict->Set(kEventFiltersParam, std::move(filter_list));
+  }
 
   if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     auto allowed_modes = MakeUnique<ListValue>();

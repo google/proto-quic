@@ -135,6 +135,7 @@ int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
                                      RequestPriority priority,
                                      const BoundNetLog& stream_net_log,
                                      const CompletionCallback& callback) {
+  CHECK(callback_.is_null());
   DCHECK(!stream_);
   if (!session_)
     return was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
@@ -253,6 +254,7 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
                                 const CompletionCallback& callback) {
   CHECK(!request_body_stream_);
   CHECK(!response_info_);
+  CHECK(callback_.is_null());
   CHECK(!callback.is_null());
   CHECK(response);
 
@@ -316,6 +318,7 @@ UploadProgress QuicHttpStream::GetUploadProgress() const {
 }
 
 int QuicHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
+  CHECK(callback_.is_null());
   CHECK(!callback.is_null());
 
   if (stream_ == nullptr)
@@ -334,6 +337,11 @@ int QuicHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
 int QuicHttpStream::ReadResponseBody(IOBuffer* buf,
                                      int buf_len,
                                      const CompletionCallback& callback) {
+  CHECK(callback_.is_null());
+  CHECK(!callback.is_null());
+  CHECK(!user_buffer_.get());
+  CHECK_EQ(0, user_buffer_len_);
+
   if (!stream_) {
     // If the stream is already closed, there is no body to read.
     return response_status_;
@@ -342,10 +350,6 @@ int QuicHttpStream::ReadResponseBody(IOBuffer* buf,
   int rv = ReadAvailableData(buf, buf_len);
   if (rv != ERR_IO_PENDING)
     return rv;
-
-  CHECK(callback_.is_null());
-  CHECK(!user_buffer_.get());
-  CHECK_EQ(0, user_buffer_len_);
 
   callback_ = callback;
   user_buffer_ = buf;
@@ -358,10 +362,10 @@ void QuicHttpStream::Close(bool not_reusable) {
   if (stream_) {
     stream_->SetDelegate(nullptr);
     stream_->Reset(QUIC_STREAM_CANCELLED);
-    ResetStream();
     response_status_ = was_handshake_confirmed_ ? ERR_CONNECTION_CLOSED
                                                 : ERR_QUIC_HANDSHAKE_FAILED;
   }
+  ResetStream();
 }
 
 HttpStream* QuicHttpStream::RenewStreamForAuth() {

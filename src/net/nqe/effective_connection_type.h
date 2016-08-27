@@ -50,10 +50,6 @@ enum EffectiveConnectionType {
   // connection.
   EFFECTIVE_CONNECTION_TYPE_4G,
 
-  // Effective connection type reported when the network has the quality of a
-  // broadband connection.
-  EFFECTIVE_CONNECTION_TYPE_BROADBAND,
-
   // Last value of the effective connection type. This value is unused.
   EFFECTIVE_CONNECTION_TYPE_LAST,
 };

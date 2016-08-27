@@ -47,15 +47,27 @@ NET_EXPORT void SSLVersionToString(const char** name, int ssl_version);
 NET_EXPORT bool ParseSSLCipherString(const std::string& cipher_string,
                                      uint16_t* cipher_suite);
 
-// |cipher_suite| is the IANA id for the cipher suite. What a "secure"
-// cipher suite is arbitrarily determined here. The intent is to indicate what
-// cipher suites meet modern security standards when backwards compatibility can
-// be ignored.
+// Mask definitions for an integer that holds obsolete SSL setting details.
+enum ObsoleteSSLMask {
+  OBSOLETE_SSL_NONE = 0,  // Modern SSL
+  OBSOLETE_SSL_MASK_PROTOCOL = 1 << 0,
+  OBSOLETE_SSL_MASK_KEY_EXCHANGE = 1 << 1,
+  OBSOLETE_SSL_MASK_CIPHER = 1 << 2,
+};
+
+// Takes the given |connection_status| and returns a bitmask indicating which of
+// the protocol, key exchange, and cipher suite do not meet modern best-practice
+// security standards (when backwards compatibility can be ignored) - that is,
+// which ones are "obsolete".
 //
-// Currently, this function follows these criteria:
-// 1) Only uses ECDHE-based key exchanges authenticated by a certificate
-// 2) Only uses AEADs
-NET_EXPORT bool IsSecureTLSCipherSuite(uint16_t cipher_suite);
+// Currently, this function uses the following criteria to determine what is
+// obsolete:
+//
+// - Protocol: less than TLS 1.2
+// - Key exchange: Does not use ECDHE-based key exchanges authenticated by a
+//   certificate
+// - Cipher: not an AEAD cipher
+NET_EXPORT int ObsoleteSSLStatus(int connection_status);
 
 // Returns true if |cipher_suite| is suitable for use with HTTP/2. See
 // https://http2.github.io/http2-spec/#rfc.section.9.2.2.

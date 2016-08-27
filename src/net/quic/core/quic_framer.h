@@ -409,10 +409,7 @@ class NET_EXPORT_PRIVATE QuicFramer {
     QuicPacketNumber max_block_length;
     // Length of first ack block.
     QuicPacketNumber first_block_length;
-    // Ack blocks starting with gaps to next block and ack block lengths.
-    std::vector<AckBlock> ack_blocks;
-    // Number of ACK blocks. If |ack_blocks| is generated, must equal
-    // |ack_blocks.size()|.
+    // Number of ACK blocks needed for the ACK frame.
     size_t num_ack_blocks;
   };
 
@@ -528,8 +525,7 @@ class NET_EXPORT_PRIVATE QuicFramer {
 
   static AckFrameInfo GetAckFrameInfo(const QuicAckFrame& frame);
 
-  static NewAckFrameInfo GetNewAckFrameInfo(const QuicAckFrame& frame,
-                                            bool construct_blocks);
+  static NewAckFrameInfo GetNewAckFrameInfo(const QuicAckFrame& frame);
 
   // The Append* methods attempt to write the provided header or frame using the
   // |writer|, and return true if successful.

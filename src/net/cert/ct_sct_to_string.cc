@@ -64,12 +64,14 @@ const std::string StatusToString(SCTVerifyStatus status) {
       return "From unknown log";
     case SCT_STATUS_INVALID:
       return "Invalid";
+    case SCT_STATUS_INVALID_SIGNATURE:
+      return "Invalid signature";
     case SCT_STATUS_OK:
       return "Verified";
     case SCT_STATUS_NONE:
       return "None";
-    case SCT_STATUS_MAX:
-      NOTREACHED();
+    case SCT_STATUS_INVALID_TIMESTAMP:
+      return "Invalid timestamp";
   }
   return "Unknown";
 }

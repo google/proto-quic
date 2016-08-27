@@ -21,6 +21,7 @@ SSLConfig::CertAndStatus::~CertAndStatus() {}
 SSLConfig::SSLConfig()
     : rev_checking_enabled(false),
       rev_checking_required_local_anchors(false),
+      sha1_local_anchors_enabled(false),
       version_min(kDefaultSSLVersionMin),
       version_max(kDefaultSSLVersionMax),
       version_fallback_min(kDefaultSSLVersionFallbackMin),
@@ -70,6 +71,8 @@ int SSLConfig::GetCertVerifyFlags() const {
     flags |= CertVerifier::VERIFY_CERT_IO_ENABLED;
   if (rev_checking_required_local_anchors)
     flags |= CertVerifier::VERIFY_REV_CHECKING_REQUIRED_LOCAL_ANCHORS;
+  if (sha1_local_anchors_enabled)
+    flags |= CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS;
   return flags;
 }
 

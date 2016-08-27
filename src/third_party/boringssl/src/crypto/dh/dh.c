@@ -65,7 +65,6 @@
 #include <openssl/mem.h>
 #include <openssl/thread.h>
 
-#include "internal.h"
 #include "../internal.h"
 
 
@@ -257,7 +256,6 @@ err:
 int DH_generate_key(DH *dh) {
   int ok = 0;
   int generate_new_key = 0;
-  unsigned l;
   BN_CTX *ctx = NULL;
   BIGNUM *pub_key = NULL, *priv_key = NULL;
   BIGNUM local_priv;
@@ -303,9 +301,17 @@ int DH_generate_key(DH *dh) {
       }
     } else {
       /* secret exponent length */
-      DH_check_standard_parameters(dh);
-      l = dh->priv_length ? dh->priv_length : BN_num_bits(dh->p) - 1;
-      if (!BN_rand(priv_key, l, 0, 0)) {
+      unsigned priv_bits = dh->priv_length;
+      if (priv_bits == 0) {
+        const unsigned p_bits = BN_num_bits(dh->p);
+        if (p_bits == 0) {
+          goto err;
+        }
+
+        priv_bits = p_bits - 1;
+      }
+
+      if (!BN_rand(priv_key, priv_bits, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY)) {
         goto err;
       }
     }

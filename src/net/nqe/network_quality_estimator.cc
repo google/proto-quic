@@ -177,6 +177,18 @@ double GetDoubleValueForVariationParamWithDefaultValue(
   return variations_value;
 }
 
+// Returns the variation value for |parameter_name|. If the value is
+// unavailable, |default_value| is returned.
+std::string GetStringValueForVariationParamWithDefaultValue(
+    const std::map<std::string, std::string>& variation_params,
+    const std::string& parameter_name,
+    const std::string& default_value) {
+  const auto it = variation_params.find(parameter_name);
+  if (it == variation_params.end())
+    return default_value;
+  return it->second;
+}
+
 // Returns the algorithm that should be used for computing effective connection
 // type based on field trial params. Returns an empty string if a valid
 // algorithm paramter is not present in the field trial params.
@@ -384,6 +396,12 @@ NetworkQualityEstimator::NetworkQualityEstimator(
               variation_params,
               "correlation_logging_probability",
               0.0)),
+      forced_effective_connection_type_set_(
+          !GetStringValueForVariationParamWithDefaultValue(
+               variation_params,
+               "force_effective_connection_type",
+               "")
+               .empty()),
       weak_ptr_factory_(this) {
   static_assert(kDefaultHalfLifeSeconds > 0,
                 "Default half life duration must be > 0");
@@ -400,6 +418,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   DCHECK_LE(0.0, correlation_uma_logging_probability_);
   DCHECK_GE(1.0, correlation_uma_logging_probability_);
 
+  network_quality_store_.reset(new nqe::internal::NetworkQualityStore());
   ObtainOperatingParams(variation_params);
   ObtainEffectiveConnectionTypeModelParams(variation_params);
   NetworkChangeNotifier::AddConnectionTypeObserver(this);
@@ -431,6 +450,20 @@ NetworkQualityEstimator::NetworkQualityEstimator(
   accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(15));
   accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(30));
   accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(60));
+
+  if (forced_effective_connection_type_set_) {
+    std::string forced_value = GetStringValueForVariationParamWithDefaultValue(
+        variation_params, "force_effective_connection_type",
+        GetNameForEffectiveConnectionType(EFFECTIVE_CONNECTION_TYPE_UNKNOWN));
+    DCHECK(!forced_value.empty());
+    bool effective_connection_type_available =
+        GetEffectiveConnectionTypeForName(forced_value,
+                                          &forced_effective_connection_type_);
+    DCHECK(effective_connection_type_available);
+
+    // Silence unused variable warning in release builds.
+    (void)effective_connection_type_available;
+  }
 }
 
 void NetworkQualityEstimator::ObtainOperatingParams(
@@ -964,7 +997,7 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   RecordMetricsOnConnectionTypeChanged();
 
   // Write the estimates of the previous network to the cache.
-  network_quality_store_.Add(
+  network_quality_store_->Add(
       current_network_id_,
       nqe::internal::CachedNetworkQuality(
           last_effective_connection_type_computation_,
@@ -1221,6 +1254,9 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionTypeUsingMetrics(
     const {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  if (forced_effective_connection_type_set_)
+    return forced_effective_connection_type_;
+
   // If the device is currently offline, then return
   // EFFECTIVE_CONNECTION_TYPE_OFFLINE.
   if (current_network_id_.type == NetworkChangeNotifier::CONNECTION_NONE)
@@ -1304,6 +1340,12 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionTypeUsingMetrics(
   // Return the fastest connection type.
   return static_cast<EffectiveConnectionType>(EFFECTIVE_CONNECTION_TYPE_LAST -
                                               1);
+}
+
+nqe::internal::NetworkQualityStore*
+NetworkQualityEstimator::NetworkQualityStoreForTesting() const {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  return network_quality_store_.get();
 }
 
 void NetworkQualityEstimator::AddEffectiveConnectionTypeObserver(
@@ -1459,7 +1501,7 @@ bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
 
   nqe::internal::CachedNetworkQuality cached_network_quality;
 
-  const bool cached_estimate_available = network_quality_store_.GetById(
+  const bool cached_estimate_available = network_quality_store_->GetById(
       current_network_id_, &cached_network_quality);
   UMA_HISTOGRAM_BOOLEAN("NQE.CachedNetworkQualityAvailable",
                         cached_estimate_available);
@@ -1659,7 +1701,7 @@ void NetworkQualityEstimator::
 
   // Add the estimates of the current network to the cache store.
   if (effective_connection_type_ != EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {
-    network_quality_store_.Add(
+    network_quality_store_->Add(
         current_network_id_,
         nqe::internal::CachedNetworkQuality(
             tick_clock_->NowTicks(), estimated_quality_at_last_main_frame_,

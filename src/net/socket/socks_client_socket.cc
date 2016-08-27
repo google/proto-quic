@@ -101,7 +101,7 @@ int SOCKSClientSocket::Connect(const CompletionCallback& callback) {
 
 void SOCKSClientSocket::Disconnect() {
   completed_handshake_ = false;
-  host_resolver_.Cancel();
+  request_.reset();
   transport_->socket()->Disconnect();
 
   // Reset other states to make sure they aren't mistakenly used later.
@@ -289,12 +289,10 @@ int SOCKSClientSocket::DoResolveHost() {
   // SOCKS4 only supports IPv4 addresses, so only try getting the IPv4
   // addresses for the target host.
   host_request_info_.set_address_family(ADDRESS_FAMILY_IPV4);
-  return host_resolver_.Resolve(
-      host_request_info_,
-      priority_,
-      &addresses_,
+  return host_resolver_->Resolve(
+      host_request_info_, priority_, &addresses_,
       base::Bind(&SOCKSClientSocket::OnIOComplete, base::Unretained(this)),
-      net_log_);
+      &request_, net_log_);
 }
 
 int SOCKSClientSocket::DoResolveHostComplete(int result) {

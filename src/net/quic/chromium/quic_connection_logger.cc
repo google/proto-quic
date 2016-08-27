@@ -34,11 +34,6 @@ namespace net {
 
 namespace {
 
-// We have ranges-of-buckets in the cumulative histogram (covering 21 packet
-// sequences) of length 2, 3, 4, ... 22.
-// Hence the largest sample is bounded by the sum of those numbers.
-const int kBoundingSampleInCumulativeHistogram = ((2 + 22) * 21) / 2;
-
 std::unique_ptr<base::Value> NetLogQuicPacketCallback(
     const IPEndPoint* self_address,
     const IPEndPoint* peer_address,
@@ -124,8 +119,12 @@ std::unique_ptr<base::Value> NetLogQuicAckFrameCallback(
   base::ListValue* missing = new base::ListValue();
   dict->Set("missing_packets", missing);
   if (frame->missing) {
-    for (QuicPacketNumber packet : frame->packets)
-      missing->AppendString(base::Uint64ToString(packet));
+    for (const Interval<QuicPacketNumber>& interval : frame->packets) {
+      for (QuicPacketNumber packet = interval.min(); packet < interval.max();
+           ++packet) {
+        missing->AppendString(base::Uint64ToString(packet));
+      }
+    }
   } else if (!frame->packets.Empty()) {
     // V34 and above express acked packets, but only print
     // missing packets, because it's typically a shorter list.
@@ -324,8 +323,6 @@ QuicConnectionLogger::~QuicConnectionLogger() {
                        num_blocked_frames_received_);
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.BlockedFrames.Sent",
                        num_blocked_frames_sent_);
-  UMA_HISTOGRAM_COUNTS("Net.QuicSession.HeadersStream.EarlyFramesReceived",
-                       session_->headers_stream()->num_early_frames_received());
 
   const QuicConnectionStats& stats = session_->connection()->GetStats();
   UMA_HISTOGRAM_TIMES("Net.QuicSession.MinRTT",
@@ -347,7 +344,7 @@ QuicConnectionLogger::~QuicConnectionLogger() {
     }
   }
 
-  RecordLossHistograms();
+  RecordAggregatePacketLossRate();
 }
 
 void QuicConnectionLogger::OnFrameAddedToPacket(const QuicFrame& frame) {
@@ -534,32 +531,35 @@ void QuicConnectionLogger::OnAckFrame(const QuicAckFrame& frame) {
   const PacketNumberQueue& missing_packets = frame.packets;
   PacketNumberQueue::const_iterator it =
       missing_packets.lower_bound(largest_received_missing_packet_number_);
-  if (it == missing_packets.end())
+  if (it == missing_packets.end() ||
+      largest_received_missing_packet_number_ == missing_packets.Max()) {
     return;
+  }
 
-  if (*it == largest_received_missing_packet_number_) {
-    ++it;
-    if (it == missing_packets.end())
-      return;
-  }
   // Scan through the list and log consecutive ranges of missing packets.
-  size_t num_consecutive_missing_packets = 0;
-  QuicPacketNumber previous_missing_packet = *it - 1;
-  while (it != missing_packets.end()) {
-    if (previous_missing_packet == *it - 1) {
-      ++num_consecutive_missing_packets;
-    } else {
-      DCHECK_NE(0u, num_consecutive_missing_packets);
-      UpdatePacketGapSentHistogram(num_consecutive_missing_packets);
-      // Make sure this packet it included in the count.
-      num_consecutive_missing_packets = 1;
+  size_t num_consecutive_missing_packets = 1;
+  QuicPacketNumber previous_missing_packet =
+      largest_received_missing_packet_number_;
+  for (; it != missing_packets.end(); ++it) {
+    // Account for case where first interval starts below
+    // largest_received_missing_packet_number_.
+    QuicPacketNumber interval_min =
+        std::max(previous_missing_packet + 1, it->min());
+    DCHECK_LE(interval_min, it->max());
+
+    size_t interval_len = it->max() - interval_min;
+    if (interval_len == 0) {
+      continue;
     }
-    previous_missing_packet = *it;
-    ++it;
+    if (interval_min == previous_missing_packet + 1) {
+      num_consecutive_missing_packets += interval_len;
+    } else {
+      UpdatePacketGapSentHistogram(num_consecutive_missing_packets);
+      num_consecutive_missing_packets = interval_len;
+    }
+    previous_missing_packet = it->max() - 1;
   }
-  if (num_consecutive_missing_packets != 0) {
-    UpdatePacketGapSentHistogram(num_consecutive_missing_packets);
-  }
+  UpdatePacketGapSentHistogram(num_consecutive_missing_packets);
   largest_received_missing_packet_number_ = missing_packets.Max();
 }
 
@@ -685,15 +685,6 @@ void QuicConnectionLogger::OnCertificateVerified(
       base::Bind(&NetLogQuicCertificateVerifiedCallback, result.verified_cert));
 }
 
-base::HistogramBase* QuicConnectionLogger::GetPacketNumberHistogram(
-    const char* statistic_name) const {
-  string prefix("Net.QuicSession.PacketReceived_");
-  return base::LinearHistogram::FactoryGet(
-      prefix + statistic_name + connection_description_, 1,
-      received_packets_.size(), received_packets_.size() + 1,
-      base::HistogramBase::kUmaTargetedHistogramFlag);
-}
-
 base::HistogramBase* QuicConnectionLogger::Get6PacketHistogram(
     const char* which_6) const {
   // This histogram takes a binary encoding of the 6 consecutive packets
@@ -702,50 +693,6 @@ base::HistogramBase* QuicConnectionLogger::Get6PacketHistogram(
   return base::LinearHistogram::FactoryGet(
       prefix + which_6 + connection_description_, 1, 64, 65,
       base::HistogramBase::kUmaTargetedHistogramFlag);
-}
-
-base::HistogramBase* QuicConnectionLogger::Get21CumulativeHistogram(
-    const char* which_21) const {
-  // This histogram contains, for each sequence of 21 packets, the results from
-  // 21 distinct questions about that sequence.  Conceptually the histogtram is
-  // broken into 21 distinct ranges, and one sample is added into each of those
-  // ranges whenever we process a set of 21 packets.
-  // There is a little rendundancy, as each "range" must have the same number
-  // of samples, all told, but the histogram is a tad easier to read this way.
-  // The questions are:
-  // Was the first packet present (bucket 0==>no; bucket 1==>yes)
-  // Of the first two packets, how many were present? (bucket 2==> none;
-  //   bucket 3==> 1 of 2; bucket 4==> 2 of 2)
-  // Of the  first three packets, how many were present? (bucket 5==>none;
-  //   bucket 6==> 1 of 3; bucket 7==> 2 of 3; bucket 8==> 3 of 3).
-  // etc.
-  string prefix("Net.QuicSession.21CumulativePacketsReceived_");
-  return base::LinearHistogram::FactoryGet(
-      prefix + which_21 + connection_description_, 1,
-      kBoundingSampleInCumulativeHistogram,
-      kBoundingSampleInCumulativeHistogram + 1,
-      base::HistogramBase::kUmaTargetedHistogramFlag);
-}
-
-// static
-void QuicConnectionLogger::AddTo21CumulativeHistogram(
-    base::HistogramBase* histogram,
-    int bit_mask_of_packets,
-    int valid_bits_in_mask) {
-  DCHECK_LE(valid_bits_in_mask, 21);
-  DCHECK_LT(bit_mask_of_packets, 1 << 21);
-  const int blank_bits_in_mask = 21 - valid_bits_in_mask;
-  DCHECK_EQ(bit_mask_of_packets & ((1 << blank_bits_in_mask) - 1), 0);
-  bit_mask_of_packets >>= blank_bits_in_mask;
-  int bits_so_far = 0;
-  int range_start = 0;
-  for (int i = 1; i <= valid_bits_in_mask; ++i) {
-    bits_so_far += bit_mask_of_packets & 1;
-    bit_mask_of_packets >>= 1;
-    DCHECK_LT(range_start + bits_so_far, kBoundingSampleInCumulativeHistogram);
-    histogram->Add(range_start + bits_so_far);
-    range_start += i + 1;
-  }
 }
 
 float QuicConnectionLogger::ReceivedPacketLossRate() const {
@@ -783,77 +730,6 @@ void QuicConnectionLogger::RecordAggregatePacketLossRate() const {
       base::HistogramBase::kUmaTargetedHistogramFlag);
   histogram->Add(static_cast<base::HistogramBase::Sample>(
       ReceivedPacketLossRate() * 1000));
-}
-
-void QuicConnectionLogger::RecordLossHistograms() const {
-  if (largest_received_packet_number_ == 0)
-    return;  // Connection was never used.
-  RecordAggregatePacketLossRate();
-
-  base::HistogramBase* is_not_ack_histogram =
-      GetPacketNumberHistogram("IsNotAck_");
-  base::HistogramBase* is_an_ack_histogram =
-      GetPacketNumberHistogram("IsAnAck_");
-  base::HistogramBase* packet_arrived_histogram =
-      GetPacketNumberHistogram("Ack_");
-  base::HistogramBase* packet_missing_histogram =
-      GetPacketNumberHistogram("Nack_");
-  base::HistogramBase* ongoing_cumulative_packet_histogram =
-      Get21CumulativeHistogram("Some21s_");
-  base::HistogramBase* first_cumulative_packet_histogram =
-      Get21CumulativeHistogram("First21_");
-  base::HistogramBase* six_packet_histogram = Get6PacketHistogram("Some6s_");
-
-  DCHECK_EQ(received_packets_.size(), received_acks_.size());
-  const QuicPacketNumber last_index = std::min<QuicPacketNumber>(
-      received_packets_.size() - 1, largest_received_packet_number_);
-  const QuicPacketNumber index_of_first_21_contribution =
-      std::min<QuicPacketNumber>(21, last_index);
-  // Bit pattern of consecutively received packets that is maintained as we scan
-  // through the received_packets_ vector. Less significant bits correspond to
-  // less recent packets, and only the low order 21 bits are ever defined.
-  // Bit is 1 iff corresponding packet was received.
-  int packet_pattern_21 = 0;
-  // Zero is an invalid packet sequence number.
-  DCHECK(!received_packets_[0]);
-  for (size_t i = 1; i <= last_index; ++i) {
-    if (received_acks_[i])
-      is_an_ack_histogram->Add(i);
-    else
-      is_not_ack_histogram->Add(i);
-
-    packet_pattern_21 >>= 1;
-    if (received_packets_[i]) {
-      packet_arrived_histogram->Add(i);
-      packet_pattern_21 |= (1 << 20);  // Turn on the 21st bit.
-    } else {
-      packet_missing_histogram->Add(i);
-    }
-
-    if (i == index_of_first_21_contribution) {
-      AddTo21CumulativeHistogram(first_cumulative_packet_histogram,
-                                 packet_pattern_21, i);
-    }
-    // We'll just record for non-overlapping ranges, to reduce histogramming
-    // cost for now.  Each call does 21 separate histogram additions.
-    if (i > 21 || i % 21 == 0) {
-      AddTo21CumulativeHistogram(ongoing_cumulative_packet_histogram,
-                                 packet_pattern_21, 21);
-    }
-
-    if (i < 6)
-      continue;  // Not enough packets to do any pattern recording.
-    int recent_6_mask = packet_pattern_21 >> 15;
-    DCHECK_LT(recent_6_mask, 64);
-    if (i == 6) {
-      Get6PacketHistogram("First6_")->Add(recent_6_mask);
-      continue;
-    }
-    // Record some overlapping patterns, to get a better picture, since this is
-    // not very expensive.
-    if (i % 3 == 0)
-      six_packet_histogram->Add(recent_6_mask);
-  }
 }
 
 }  // namespace net

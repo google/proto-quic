@@ -19,16 +19,27 @@ std::string NativeLibraryLoadError::ToString() const {
 }
 
 // static
-NativeLibrary LoadNativeLibrary(const FilePath& library_path,
-                                NativeLibraryLoadError* error) {
+NativeLibrary LoadNativeLibraryWithOptions(const FilePath& library_path,
+                                           const NativeLibraryOptions& options,
+                                           NativeLibraryLoadError* error) {
   // dlopen() opens the file off disk.
   ThreadRestrictions::AssertIOAllowed();
 
-  // We deliberately do not use RTLD_DEEPBIND.  For the history why, please
-  // refer to the bug tracker.  Some useful bug reports to read include:
+  // We deliberately do not use RTLD_DEEPBIND by default.  For the history why,
+  // please refer to the bug tracker.  Some useful bug reports to read include:
   // http://crbug.com/17943, http://crbug.com/17557, http://crbug.com/36892,
   // and http://crbug.com/40794.
-  void* dl = dlopen(library_path.value().c_str(), RTLD_LAZY);
+  int flags = RTLD_LAZY;
+#if defined(OS_ANDROID)
+  // Android dlopen() requires further investigation, as it might vary across
+  // versions. Crash here to warn developers that they're trying to rely on
+  // uncertain behavior.
+  CHECK(!options.prefer_own_symbols);
+#else
+  if (options.prefer_own_symbols)
+    flags |= RTLD_DEEPBIND;
+#endif
+  void* dl = dlopen(library_path.value().c_str(), flags);
   if (!dl && error)
     error->message = dlerror();
 

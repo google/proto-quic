@@ -134,7 +134,6 @@ afjord.no, 0
 afl, 0
 africa, 0
 africa.com, 4
-africamagic, 0
 ag, 0
 ag.it, 0
 aga.niigata.jp, 0
@@ -216,6 +215,7 @@ alipay, 0
 allfinanz, 0
 allstate, 0
 ally, 0
+alpha-myqnapcloud.com, 4
 alpha.bounty-full.com, 4
 alsace, 0
 alstahaug.no, 0
@@ -482,6 +482,7 @@ ba, 0
 ba.it, 0
 babia-gora.pl, 0
 baby, 0
+backplaneapp.io, 4
 badaddja.no, 0
 badajoz.museum, 0
 baghdad.museum, 0
@@ -804,6 +805,7 @@ broker.aero, 0
 bronnoy.no, 0
 bronnoysund.no, 0
 brother, 0
+browsersafetymark.io, 4
 brumunddal.no, 0
 brunel.museum, 0
 brussel.museum, 0
@@ -1166,6 +1168,7 @@ co.it, 0
 co.je, 0
 co.jp, 0
 co.kr, 0
+co.krd, 4
 co.lc, 0
 co.ls, 0
 co.ma, 0
@@ -1472,6 +1475,7 @@ dallas.museum, 0
 damnserver.com, 4
 dance, 0
 daplie.me, 4
+data, 0
 database.museum, 0
 date, 0
 date.fukushima.jp, 0
@@ -1522,6 +1526,8 @@ design.aero, 0
 design.museum, 0
 detroit.museum, 0
 dev, 0
+dev-myqnapcloud.com, 4
+dev.static.land, 4
 dgca.aero, 0
 dhl, 0
 diamonds, 0
@@ -1561,6 +1567,7 @@ dnshome.de, 4
 dnsiskinky.com, 4
 do, 0
 docs, 0
+doctor, 0
 dodge, 0
 does-it.net, 4
 doesntexist.com, 4
@@ -1590,13 +1597,14 @@ drangedal.no, 0
 dreamhosters.com, 4
 drive, 0
 drobak.no, 0
+drud.io, 4
+drud.us, 4
 dscloud.biz, 4
 dscloud.me, 4
 dscloud.mobi, 4
 dsmynas.com, 4
 dsmynas.net, 4
 dsmynas.org, 4
-dstv, 0
 dtv, 0
 dubai, 0
 duck, 0
@@ -1608,6 +1616,7 @@ dupont, 0
 durban, 0
 durham.museum, 0
 dvag, 0
+dvr, 0
 dvrcam.info, 4
 dvrdns.org, 4
 dwg, 0
@@ -1658,6 +1667,7 @@ ebiz.tw, 0
 ec, 0
 echizen.fukui.jp, 0
 ecn.br, 0
+eco, 0
 eco.br, 0
 ed.ao, 0
 ed.ci, 0
@@ -1719,6 +1729,7 @@ edu.ki, 0
 edu.km, 0
 edu.kn, 0
 edu.kp, 0
+edu.krd, 4
 edu.ky, 0
 edu.kz, 0
 edu.la, 0
@@ -2020,7 +2031,6 @@ florida.museum, 0
 florist, 0
 floro.no, 0
 flowers, 0
-flsmidth, 0
 fly, 0
 flynnhub.com, 4
 fm, 0
@@ -2306,6 +2316,7 @@ github.io, 4
 githubcloud.com, 4
 githubcloudusercontent.com, 6
 githubusercontent.com, 4
+gitlab.io, 4
 gives, 0
 giving, 0
 gjemnes.no, 0
@@ -2400,7 +2411,6 @@ gotemba.shizuoka.jp, 0
 goto.nagasaki.jp, 0
 gotpantheon.com, 4
 gotsu.shimane.jp, 0
-gotv, 0
 gouv.bj, 0
 gouv.ci, 0
 gouv.fr, 0
@@ -2553,6 +2563,7 @@ greta.fr, 0
 grimstad.no, 0
 gripe, 0
 griw.gov.pl, 0
+grocery, 0
 groks-the.info, 4
 groks-this.info, 4
 grondar.za, 0
@@ -3336,6 +3347,7 @@ jpmorgan, 0
 jpn.com, 4
 jprs, 0
 js.cn, 0
+js.org, 4
 judaica.museum, 0
 judygarland.museum, 0
 juedisches.museum, 0
@@ -3820,7 +3832,6 @@ kwpsp.gov.pl, 0
 ky, 0
 ky.us, 0
 kyiv.ua, 0
-kyknet, 0
 kyonan.chiba.jp, 0
 kyotamba.kyoto.jp, 0
 kyotanabe.kyoto.jp, 0
@@ -3926,7 +3937,7 @@ lib.ca.us, 0
 lib.co.us, 0
 lib.ct.us, 0
 lib.dc.us, 0
-lib.de.us, 0
+lib.de.us, 4
 lib.ee, 0
 lib.fl.us, 0
 lib.ga.us, 0
@@ -4124,6 +4135,7 @@ mansions.museum, 0
 mantova.it, 0
 manx.museum, 0
 maori.nz, 0
+map, 0
 mar.it, 0
 marburg.museum, 0
 marche.it, 0
@@ -4233,6 +4245,7 @@ men, 0
 menu, 0
 meo, 0
 meraker.no, 0
+merckmsd, 0
 merseine.nu, 4
 mesaverde.museum, 0
 messina.it, 0
@@ -4434,7 +4447,6 @@ mmafan.biz, 4
 mn, 0
 mn.it, 0
 mn.us, 0
-mnet, 0
 mo, 0
 mo-i-rana.no, 0
 mo.cn, 0
@@ -4448,6 +4460,7 @@ mobi.na, 0
 mobi.ng, 0
 mobi.tt, 0
 mobi.tz, 0
+mobile, 0
 mobily, 0
 mochizuki.nagano.jp, 0
 mod.gi, 0
@@ -4538,7 +4551,6 @@ muika.niigata.jp, 0
 mukawa.hokkaido.jp, 0
 muko.kyoto.jp, 0
 mulhouse.museum, 0
-multichoice, 0
 munakata.fukuoka.jp, 0
 muncie.museum, 0
 muni.il, 0
@@ -4577,6 +4589,7 @@ my, 0
 my.eu.org, 4
 my.id, 0
 myactivedirectory.com, 4
+myasustor.com, 4
 mycd.eu, 4
 mydissent.net, 4
 mydrobo.com, 4
@@ -4592,6 +4605,7 @@ mypep.link, 4
 mypets.ws, 4
 myphotos.cc, 4
 mypsx.net, 4
+myqnapcloud.com, 4
 mysecuritycamera.com, 4
 mysecuritycamera.net, 4
 mysecuritycamera.org, 4
@@ -4599,7 +4613,6 @@ myshopblocks.com, 4
 mytis.ru, 0
 myvnc.com, 4
 mz, 2
-mzansimagic, 0
 n.bg, 0
 n.se, 0
 na, 0
@@ -4711,7 +4724,6 @@ narusawa.yamanashi.jp, 0
 naruto.tokushima.jp, 0
 narviika.no, 0
 narvik.no, 0
-naspers, 0
 nasu.tochigi.jp, 0
 nasushiobara.tochigi.jp, 0
 nat.tn, 0
@@ -5527,7 +5539,6 @@ passagens, 0
 passenger-association.aero, 0
 pavia.it, 0
 pay, 0
-payu, 0
 pb.ao, 0
 pc.it, 0
 pc.pl, 0
@@ -5562,11 +5573,13 @@ pharmacien.fr, 0
 pharmaciens.km, 0
 pharmacy, 0
 pharmacy.museum, 0
+phd, 0
 philadelphia.museum, 0
 philadelphiaarea.museum, 0
 philately.museum, 0
 philips, 0
 phoenix.museum, 0
+phone, 0
 photo, 0
 photography, 0
 photography.museum, 0
@@ -5770,6 +5783,7 @@ racing, 0
 rackmaze.com, 4
 rackmaze.net, 4
 rade.no, 0
+radio, 0
 radio.br, 0
 radom.pl, 0
 radoy.no, 0
@@ -5888,6 +5902,7 @@ rnu.tn, 0
 ro, 0
 ro.com, 4
 ro.eu.org, 4
+ro.im, 4
 ro.it, 0
 roan.no, 0
 rocher, 0
@@ -6140,6 +6155,7 @@ se.com, 4
 se.eu.org, 4
 se.net, 4
 seaport.museum, 0
+search, 0
 seat, 0
 sebastopol.ua, 0
 sec.ps, 0
@@ -6325,6 +6341,7 @@ shop, 0
 shop.ht, 0
 shop.hu, 0
 shop.pl, 0
+shop.ro, 4
 shopping, 0
 shouji, 0
 show, 0
@@ -6356,6 +6373,7 @@ singles, 0
 siracusa.it, 0
 sirdal.no, 0
 site, 0
+sites.static.land, 4
 sj, 0
 sk, 0
 sk.ca, 0
@@ -6480,6 +6498,7 @@ ss.it, 0
 ssl.origin.cdn77-secure.org, 4
 st, 0
 st.no, 0
+stackspace.space, 4
 stada, 0
 stadt.museum, 0
 stalbans.museum, 0
@@ -6498,6 +6517,7 @@ statebank, 0
 statefarm, 0
 stateofdelaware.museum, 0
 stathelle.no, 0
+static.land, 4
 station.museum, 0
 statoil, 0
 stavanger.no, 0
@@ -6563,7 +6583,6 @@ sumy.ua, 0
 sunagawa.hokkaido.jp, 0
 sund.no, 0
 sunndal.no, 0
-supersport, 0
 supplies, 0
 supply, 0
 support, 0
@@ -7416,6 +7435,7 @@ wiw.gov.pl, 0
 wlocl.pl, 0
 wloclawek.pl, 0
 wme, 0
+wmflabs.org, 4
 wodzislaw.pl, 0
 wolomin.pl, 0
 wolterskluwer, 0

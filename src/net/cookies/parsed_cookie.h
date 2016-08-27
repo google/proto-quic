@@ -84,7 +84,8 @@ class NET_EXPORT ParsedCookie {
   // returns as output arguments token_start and token_end to the start and end
   // positions of a cookie attribute token name parsed from the segment, and
   // updates the segment iterator to point to the next segment to be parsed.
-  // If no token is found, the function returns false.
+  // If no token is found, the function returns false and the segment iterator
+  // is set to end.
   static bool ParseToken(std::string::const_iterator* it,
                          const std::string::const_iterator& end,
                          std::string::const_iterator* token_start,

@@ -121,6 +121,12 @@ class PacketDroppingTestWriter : public QuicPacketWriterWrapper {
   // Useful for reproducing very flaky issues.
   void set_seed(uint64_t seed) { simple_random_.set_seed(seed); }
 
+  // Sets the maximum allowed packet size to be sent. Packets larger than
+  // |packet_size| will cause the write to check-fail.
+  void set_max_allowed_packet_size(QuicByteCount packet_size) {
+    max_allowed_packet_size_ = packet_size;
+  }
+
  private:
   // Writes out the next packet to the contained writer and returns the time
   // for the next delayed packet to be written.
@@ -162,6 +168,7 @@ class PacketDroppingTestWriter : public QuicPacketWriterWrapper {
   DelayedPacketList delayed_packets_;
   QuicByteCount cur_buffer_size_;
   uint64_t num_calls_to_write_;
+  QuicByteCount max_allowed_packet_size_;
 
   base::Lock config_mutex_;
   int32_t fake_packet_loss_percentage_;

@@ -350,11 +350,9 @@ size_t QuicHeadersStream::WriteHeaders(QuicStreamId stream_id,
   return frame.size();
 }
 
-size_t QuicHeadersStream::WritePushPromise(
-    QuicStreamId original_stream_id,
-    QuicStreamId promised_stream_id,
-    SpdyHeaderBlock headers,
-    QuicAckListenerInterface* ack_listener) {
+size_t QuicHeadersStream::WritePushPromise(QuicStreamId original_stream_id,
+                                           QuicStreamId promised_stream_id,
+                                           SpdyHeaderBlock headers) {
   if (session()->perspective() == Perspective::IS_CLIENT) {
     QUIC_BUG << "Client shouldn't send PUSH_PROMISE";
     return 0;
@@ -368,8 +366,7 @@ size_t QuicHeadersStream::WritePushPromise(
   push_promise.set_fin(false);
 
   SpdySerializedFrame frame(spdy_framer_.SerializeFrame(push_promise));
-  WriteOrBufferData(StringPiece(frame.data(), frame.size()), false,
-                    ack_listener);
+  WriteOrBufferData(StringPiece(frame.data(), frame.size()), false, nullptr);
   return frame.size();
 }
 

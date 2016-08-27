@@ -286,6 +286,9 @@ class NET_EXPORT NetworkQualityEstimator
   // Returns a random double in the range [0.0, 1.0). Virtualized for testing.
   virtual double RandDouble() const;
 
+  // Returns a pointer to |network_quality_store_|. Used only for testing.
+  nqe::internal::NetworkQualityStore* NetworkQualityStoreForTesting() const;
+
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            AdaptiveRecomputationEffectiveConnectionType);
@@ -611,7 +614,13 @@ class NET_EXPORT NetworkQualityEstimator
   const double correlation_uma_logging_probability_;
 
   // Stores the qualities of different networks.
-  nqe::internal::NetworkQualityStore network_quality_store_;
+  std::unique_ptr<nqe::internal::NetworkQualityStore> network_quality_store_;
+
+  // True if effective connection type value has been forced via variation
+  // parameters. If set to true, GetEffectiveConnectionType() will always return
+  // |forced_effective_connection_type_|.
+  const bool forced_effective_connection_type_set_;
+  EffectiveConnectionType forced_effective_connection_type_;
 
   base::ThreadChecker thread_checker_;
 

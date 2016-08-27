@@ -103,7 +103,8 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
   int ConnectInternal() override;
 
   scoped_refptr<TransportSocketParams> params_;
-  SingleRequestHostResolver resolver_;
+  HostResolver* resolver_;
+  std::unique_ptr<HostResolver::Request> request_;
   ClientSocketFactory* const client_socket_factory_;
 
   State next_state_;

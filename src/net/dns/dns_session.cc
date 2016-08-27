@@ -110,8 +110,8 @@ DnsSession::DnsSession(const DnsConfig& config,
       net_log_(net_log),
       server_index_(0) {
   socket_pool_->Initialize(&config_.nameservers, net_log);
-  UMA_HISTOGRAM_CUSTOM_COUNTS(
-      "AsyncDNS.ServerCount", config_.nameservers.size(), 0, 10, 11);
+  UMA_HISTOGRAM_CUSTOM_COUNTS("AsyncDNS.ServerCount",
+                              config_.nameservers.size(), 1, 10, 11);
   UpdateTimeouts(NetworkChangeNotifier::GetConnectionType());
   InitializeServerStats();
   NetworkChangeNotifier::AddConnectionTypeObserver(this);
@@ -188,8 +188,8 @@ unsigned DnsSession::NextGoodServerIndex(unsigned server_index) {
 }
 
 void DnsSession::RecordServerFailure(unsigned server_index) {
-  UMA_HISTOGRAM_CUSTOM_COUNTS(
-      "AsyncDNS.ServerFailureIndex", server_index, 0, 10, 11);
+  UMA_HISTOGRAM_CUSTOM_COUNTS("AsyncDNS.ServerFailureIndex", server_index, 1,
+                              10, 11);
   ++(server_stats_[server_index]->last_failure_count);
   server_stats_[server_index]->last_failure = base::Time::Now();
 }

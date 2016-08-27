@@ -88,39 +88,14 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   float ReceivedPacketLossRate() const;
 
  private:
-  // Do a factory get for a histogram for recording data, about individual
-  // packet numbers, that was gathered in the vectors
-  // received_packets_ and received_acks_. |statistic_name| identifies which
-  // element of data is recorded, and is used to form the histogram name.
-  base::HistogramBase* GetPacketNumberHistogram(
-      const char* statistic_name) const;
   // Do a factory get for a histogram to record a 6-packet loss-sequence as a
   // sample. The histogram will record the 64 distinct possible combinations.
   // |which_6| is used to adjust the name of the histogram to distinguish the
   // first 6 packets in a connection, vs. some later 6 packets.
   base::HistogramBase* Get6PacketHistogram(const char* which_6) const;
-  // Do a factory get for a histogram to record cumulative stats across a 21
-  // packet sequence.  |which_21| is used to adjust the name of the histogram
-  // to distinguish the first 21 packets' loss data, vs. some later 21 packet
-  // sequences' loss data.
-  base::HistogramBase* Get21CumulativeHistogram(const char* which_21) const;
-  // Add samples associated with a |bit_mask_of_packets| to the given histogram
-  // that was provided by Get21CumulativeHistogram().  The LSB of that mask
-  // corresponds to the oldest packet number in the series of packets,
-  // and the bit in the 2^20 position corresponds to the most recently received
-  // packet.  Of the maximum of 21 bits that are valid (correspond to packets),
-  // only the most significant |valid_bits_in_mask| are processed.
-  // A bit value of 0 indicates that a packet was never received, and a 1
-  // indicates the packet was received.
-  static void AddTo21CumulativeHistogram(base::HistogramBase* histogram,
-                                         int bit_mask_of_packets,
-                                         int valid_bits_in_mask);
   // For connections longer than 21 received packets, this call will calculate
   // the overall packet loss rate, and record it into a histogram.
   void RecordAggregatePacketLossRate() const;
-  // At destruction time, this records results of |pacaket_received_| into
-  // histograms for specific connection types.
-  void RecordLossHistograms() const;
 
   BoundNetLog net_log_;
   QuicSpdySession* session_;  // Unowned.

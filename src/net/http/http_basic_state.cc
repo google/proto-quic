@@ -17,9 +17,10 @@
 
 namespace net {
 
-HttpBasicState::HttpBasicState(ClientSocketHandle* connection, bool using_proxy)
+HttpBasicState::HttpBasicState(std::unique_ptr<ClientSocketHandle> connection,
+                               bool using_proxy)
     : read_buf_(new GrowableIOBuffer()),
-      connection_(connection),
+      connection_(std::move(connection)),
       using_proxy_(using_proxy),
       request_info_(NULL) {}
 

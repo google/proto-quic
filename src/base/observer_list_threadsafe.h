@@ -61,21 +61,15 @@ class ObserverListThreadSafe;
 
 namespace internal {
 
-// An UnboundMethod is a wrapper for a method where the actual object is
-// provided at Run dispatch time.
-template <class T, class Method, class Params>
-class UnboundMethod {
- public:
-  UnboundMethod(Method m, const Params& p) : m_(m), p_(p) {
-    static_assert((internal::ParamsUseScopedRefptrCorrectly<Params>::value),
-                  "bad unbound method params");
+template <typename ObserverType, typename Method>
+struct Dispatcher;
+
+template <typename ObserverType, typename ReceiverType, typename... Params>
+struct Dispatcher<ObserverType, void(ReceiverType::*)(Params...)> {
+  static void Run(void(ReceiverType::* m)(Params...),
+                  Params... params, ObserverType* obj) {
+    (obj->*m)(std::forward<Params>(params)...);
   }
-  void Run(T* obj) const {
-    DispatchToMethod(obj, m_, p_);
-  }
- private:
-  Method m_;
-  Params p_;
 };
 
 }  // namespace internal
@@ -173,20 +167,19 @@ class ObserverListThreadSafe
   // Note, these calls are effectively asynchronous.  You cannot assume
   // that at the completion of the Notify call that all Observers have
   // been Notified.  The notification may still be pending delivery.
-  template <class Method, class... Params>
+  template <typename Method, typename... Params>
   void Notify(const tracked_objects::Location& from_here,
-              Method m,
-              const Params&... params) {
-    internal::UnboundMethod<ObserverType, Method, std::tuple<Params...>> method(
-        m, std::make_tuple(params...));
+              Method m, Params&&... params) {
+    Callback<void(ObserverType*)> method =
+        Bind(&internal::Dispatcher<ObserverType, Method>::Run,
+             m, std::forward<Params>(params)...);
 
     AutoLock lock(list_lock_);
     for (const auto& entry : observer_lists_) {
       ObserverListContext* context = entry.second;
       context->task_runner->PostTask(
           from_here,
-          Bind(&ObserverListThreadSafe<ObserverType>::template NotifyWrapper<
-                   Method, std::tuple<Params...>>,
+          Bind(&ObserverListThreadSafe<ObserverType>::NotifyWrapper,
                this, context, method));
     }
   }
@@ -213,10 +206,8 @@ class ObserverListThreadSafe
   // Wrapper which is called to fire the notifications for each thread's
   // ObserverList.  This function MUST be called on the thread which owns
   // the unsafe ObserverList.
-  template <class Method, class Params>
-  void NotifyWrapper(
-      ObserverListContext* context,
-      const internal::UnboundMethod<ObserverType, Method, Params>& method) {
+  void NotifyWrapper(ObserverListContext* context,
+                     const Callback<void(ObserverType*)>& method) {
     // Check that this list still needs notifications.
     {
       AutoLock lock(list_lock_);

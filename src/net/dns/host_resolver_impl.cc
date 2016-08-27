@@ -1319,13 +1319,12 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       net_log_.EndEvent(NetLog::TYPE_HOST_RESOLVER_IMPL_JOB);
     }
     // else CompleteRequests logged EndEvent.
-
     if (!requests_.empty()) {
       // Log any remaining Requests as cancelled.
       for (RequestImpl* req : requests_) {
         DCHECK_EQ(this, req->job());
-        req->OnJobCancelled(this);
         LogCancelRequest(req->source_net_log(), req->info());
+        req->OnJobCancelled(this);
       }
       requests_.clear();
     }

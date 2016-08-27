@@ -15,7 +15,6 @@
 #include "net/base/net_errors.h"
 #include "net/cert/x509_util.h"
 #include "net/dns/host_resolver.h"
-#include "net/dns/single_request_host_resolver.h"
 #include "net/http/http_auth_filter.h"
 #include "net/http/http_auth_preferences.h"
 #include "net/log/net_log.h"
@@ -41,7 +40,7 @@ std::unique_ptr<base::Value> NetLogParameterChannelBindings(
 }  // namespace
 
 HttpAuthHandlerNegotiate::Factory::Factory()
-    : resolver_(NULL),
+    : resolver_(nullptr),
 #if defined(OS_WIN)
       max_token_length_(0),
 #endif
@@ -324,17 +323,12 @@ int HttpAuthHandlerNegotiate::DoResolveCanonicalName() {
     return OK;
 
   // TODO(cbentzel): Add reverse DNS lookup for numeric addresses.
-  DCHECK(!single_resolve_.get());
   HostResolver::RequestInfo info(HostPortPair(origin_.host(), 0));
   info.set_host_resolver_flags(HOST_RESOLVER_CANONNAME);
-  single_resolve_.reset(new SingleRequestHostResolver(resolver_));
-  return single_resolve_->Resolve(
-      info,
-      DEFAULT_PRIORITY,
-      &address_list_,
-      base::Bind(&HttpAuthHandlerNegotiate::OnIOComplete,
-                 base::Unretained(this)),
-      net_log_);
+  return resolver_->Resolve(info, DEFAULT_PRIORITY, &address_list_,
+                            base::Bind(&HttpAuthHandlerNegotiate::OnIOComplete,
+                                       base::Unretained(this)),
+                            &request_, net_log_);
 }
 
 int HttpAuthHandlerNegotiate::DoResolveCanonicalNameComplete(int rv) {

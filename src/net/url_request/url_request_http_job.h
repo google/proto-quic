@@ -25,7 +25,6 @@
 #include "net/filter/filter.h"
 #include "net/http/http_request_info.h"
 #include "net/socket/connection_attempts.h"
-#include "net/url_request/url_request_backoff_manager.h"
 #include "net/url_request/url_request_job.h"
 #include "net/url_request/url_request_throttler_entry_interface.h"
 
@@ -75,9 +74,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   typedef base::RefCountedData<bool> SharedBoolean;
 
   class HttpFilterContext;
-
-  // Shadows URLRequestJob's version of this method.
-  void NotifyBeforeNetworkStart(bool* defer);
 
   // Shadows URLRequestJob's version of this method so we can grab cookies.
   void NotifyHeadersComplete();
@@ -268,8 +264,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   bool awaiting_callback_;
 
   const HttpUserAgentSettings* http_user_agent_settings_;
-
-  URLRequestBackoffManager* backoff_manager_;
 
   // Keeps track of total received bytes over the network from transactions used
   // by this job that have already been destroyed.

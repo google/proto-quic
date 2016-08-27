@@ -82,6 +82,10 @@ struct NET_EXPORT SSLConfig {
   // certificate chain chains to a local (non-public) trust anchor.
   bool rev_checking_required_local_anchors;
 
+  // sha1_local_anchors_enabled is true if SHA-1 signed certificates issued by a
+  // local (non-public) trust anchor should be allowed.
+  bool sha1_local_anchors_enabled;
+
   // The minimum and maximum protocol versions that are enabled.
   // (Use the SSL_PROTOCOL_VERSION_xxx enumerators defined above.)
   // SSL 2.0 and SSL 3.0 are not supported. If version_max < version_min, it

@@ -23,29 +23,6 @@ using std::vector;
 
 namespace net {
 
-namespace {
-
-void AppendFixed(CryptoHandshakeMessage* message) {
-  if (FLAGS_quic_deprecate_kfixd) {
-    return;
-  }
-  vector<QuicTag> tags;
-  tags.push_back(kFIXD);
-
-  const QuicTag* received_tags;
-  size_t received_tags_length;
-  QuicErrorCode error =
-      message->GetTaglist(kCOPT, &received_tags, &received_tags_length);
-  if (error == QUIC_NO_ERROR) {
-    for (size_t i = 0; i < received_tags_length; ++i) {
-      tags.push_back(received_tags[i]);
-    }
-  }
-  message->SetVector(kCOPT, tags);
-}
-
-}  // namespace
-
 QuicCryptoClientStreamBase::QuicCryptoClientStreamBase(QuicSession* session)
     : QuicCryptoStream(session) {}
 
@@ -313,10 +290,6 @@ void QuicCryptoClientStream::DoSendCHLO(
   // inchoate or subsequent hello.
   session()->config()->ToHandshakeMessage(&out);
 
-  // This call and function should be removed when
-  // FLAGS_quic_deprecate_kfixd is removed.
-  AppendFixed(&out);
-
   // Send a local timestamp to the server.
   out.SetValue(kCTIM,
                session()->connection()->clock()->WallNow().ToUNIXSeconds());
@@ -439,6 +412,10 @@ void QuicCryptoClientStream::DoReceiveREJ(
     UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicClientHelloRejectReasons.Secure",
                                 packed_error);
   }
+
+  // Receipt of a REJ message means that the server received the CHLO
+  // so we can cancel and retransmissions.
+  session()->connection()->NeuterUnencryptedPackets();
 
   stateless_reject_received_ = in->tag() == kSREJ;
   string error_details;

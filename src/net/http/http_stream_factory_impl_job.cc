@@ -25,6 +25,7 @@
 #include "base/values.h"
 #include "build/build_config.h"
 #include "net/base/port_util.h"
+#include "net/base/proxy_delegate.h"
 #include "net/cert/cert_verifier.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_basic_stream.h"
@@ -161,6 +162,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
           destination,
           origin_url,
           AlternativeService(),
+          ProxyServer(),
           net_log) {}
 
 HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
@@ -173,6 +175,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
                                 HostPortPair destination,
                                 GURL origin_url,
                                 AlternativeService alternative_service,
+                                const ProxyServer& alternative_proxy_server,
                                 NetLog* net_log)
     : request_info_(request_info),
       priority_(priority),
@@ -188,6 +191,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       origin_url_(origin_url),
       alternative_service_(alternative_service),
       delegate_(delegate),
+      alternative_proxy_server_(alternative_proxy_server),
       job_type_(job_type),
       using_ssl_(false),
       using_spdy_(false),
@@ -205,6 +209,24 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       stream_type_(HttpStreamRequest::BIDIRECTIONAL_STREAM),
       ptr_factory_(this) {
   DCHECK(session);
+  // The job can't have alternative service and alternative proxy server set at
+  // the same time since alternative services are used for requests that are
+  // fetched directly, while the alternative proxy server is used for requests
+  // that should be fetched using proxy.
+  DCHECK(alternative_service_.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL ||
+         !alternative_proxy_server_.is_valid());
+  DCHECK(!alternative_proxy_server_.is_valid() ||
+         !(IsSpdyAlternative() || IsQuicAlternative()));
+  // If either the alternative service protocol is specified or if the
+  // alternative proxy server is valid, then the job type must be set to
+  // either ALTERNATIVE or PRECONNECT.
+  DCHECK((alternative_service_.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL &&
+          !alternative_proxy_server_.is_valid()) ||
+         (job_type_ == ALTERNATIVE || job_type_ == PRECONNECT));
+  // If the alternative proxy server is valid, then the job type must be
+  // set to ALTERNATIVE.
+  DCHECK(!alternative_proxy_server_.is_valid() || job_type_ == ALTERNATIVE);
+
   if (IsSpdyAlternative()) {
     DCHECK(origin_url_.SchemeIs("https"));
   }
@@ -701,6 +723,12 @@ int HttpStreamFactoryImpl::Job::DoResolveProxy() {
     return OK;
   }
 
+  // If an alternative proxy server was provided, use that.
+  if (alternative_proxy_server_.is_valid()) {
+    proxy_info_.UseProxyServer(alternative_proxy_server_);
+    return OK;
+  }
+
   return session_->proxy_service()->ResolveProxy(
       origin_url_, request_info_.method, &proxy_info_, io_callback_,
       &pac_request_, session_->params().proxy_delegate, net_log_);
@@ -738,6 +766,11 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
   }
 
   next_state_ = STATE_WAIT;
+
+  delegate_->OnResolveProxyComplete(this, request_info_, priority_,
+                                    server_ssl_config_, proxy_ssl_config_,
+                                    stream_type_);
+
   return OK;
 }
 
@@ -1157,7 +1190,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
           delegate_->websocket_handshake_stream_create_helper()
               ->CreateBasicStream(std::move(connection_), using_proxy));
     } else {
-      stream_.reset(new HttpBasicStream(connection_.release(), using_proxy));
+      stream_.reset(new HttpBasicStream(std::move(connection_), using_proxy));
     }
     return OK;
   }
@@ -1394,6 +1427,14 @@ int HttpStreamFactoryImpl::Job::ReconsiderProxyAfterError(int error) {
   if (request_info_.load_flags & LOAD_BYPASS_PROXY)
     return error;
 
+  // Alternative proxy server job should not use fallback proxies, and instead
+  // return. This would resume the main job (if possible) which may try the
+  // fallback proxies.
+  if (alternative_proxy_server_.is_valid()) {
+    DCHECK_EQ(STATE_NONE, next_state_);
+    return error;
+  }
+
   if (proxy_info_.is_https() && proxy_ssl_config_.send_client_cert) {
     session_->ssl_client_auth_cache()->Remove(
         proxy_info_.proxy_server().host_port_pair());
@@ -1474,14 +1515,29 @@ void HttpStreamFactoryImpl::Job::ReportJobSucceededForRequest() {
 
 void HttpStreamFactoryImpl::Job::MarkOtherJobComplete(const Job& job) {
   DCHECK_EQ(STATUS_RUNNING, other_job_status_);
+  DCHECK(!other_job_alternative_proxy_server_.is_valid());
+
   other_job_status_ = job.job_status_;
   other_job_alternative_service_ = job.alternative_service_;
+  other_job_alternative_proxy_server_ = job.alternative_proxy_server_;
+
+  // At most one job can have a valid |alternative_proxy_server_|.
+  DCHECK(!alternative_proxy_server_.is_valid() ||
+         !other_job_alternative_proxy_server_.is_valid());
+
   MaybeMarkAlternativeServiceBroken();
 }
 
 void HttpStreamFactoryImpl::Job::MaybeMarkAlternativeServiceBroken() {
+  // At least one job should not be an alternative job.
+  DCHECK(alternative_service_.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL ||
+         other_job_alternative_service_.protocol ==
+             UNINITIALIZED_ALTERNATE_PROTOCOL);
+
   if (job_status_ == STATUS_RUNNING || other_job_status_ == STATUS_RUNNING)
     return;
+
+  MaybeNotifyAlternativeProxyServerBroken();
 
   if (IsSpdyAlternative() || IsQuicAlternative()) {
     if (job_status_ == STATUS_BROKEN && other_job_status_ == STATUS_SUCCEEDED) {
@@ -1500,6 +1556,47 @@ void HttpStreamFactoryImpl::Job::MaybeMarkAlternativeServiceBroken() {
         BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_MAIN);
     session_->http_server_properties()->MarkAlternativeServiceBroken(
         other_job_alternative_service_);
+  }
+}
+
+void HttpStreamFactoryImpl::Job::MaybeNotifyAlternativeProxyServerBroken()
+    const {
+  if (!alternative_proxy_server_.is_valid() &&
+      !other_job_alternative_proxy_server_.is_valid()) {
+    // Neither of the two jobs used an alternative proxy server.
+    return;
+  }
+
+  // Neither this job, nor the other job should have used the alternative
+  // service.
+  DCHECK_EQ(UNINITIALIZED_ALTERNATE_PROTOCOL, alternative_service_.protocol);
+  DCHECK_EQ(UNINITIALIZED_ALTERNATE_PROTOCOL,
+            other_job_alternative_service_.protocol);
+
+  ProxyDelegate* proxy_delegate = session_->params().proxy_delegate;
+  if (!proxy_delegate)
+    return;
+
+  if (alternative_proxy_server_.is_valid()) {
+    // |this| connected to the alternative proxy server.
+    if ((job_status_ == STATUS_BROKEN || job_status_ == STATUS_FAILED) &&
+        other_job_status_ == STATUS_SUCCEEDED) {
+      // Notify ProxyDelegate.
+      proxy_delegate->OnAlternativeProxyBroken(alternative_proxy_server_);
+    }
+    return;
+  }
+
+  if (other_job_alternative_proxy_server_.is_valid()) {
+    // Other job connected to the alternative proxy server.
+    if (job_status_ == STATUS_SUCCEEDED &&
+        (other_job_status_ == STATUS_BROKEN ||
+         other_job_status_ == STATUS_FAILED)) {
+      // Notify ProxyDelegate.
+      proxy_delegate->OnAlternativeProxyBroken(
+          other_job_alternative_proxy_server_);
+    }
+    return;
   }
 }
 

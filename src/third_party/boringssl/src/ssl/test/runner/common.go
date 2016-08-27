@@ -635,9 +635,15 @@ type ProtocolBugs struct {
 	// return.
 	ALPNProtocol *string
 
-	// AllowSessionVersionMismatch causes the server to resume sessions
-	// regardless of the version associated with the session.
-	AllowSessionVersionMismatch bool
+	// AcceptAnySession causes the server to resume sessions regardless of
+	// the version associated with the session or cipher suite. It also
+	// causes the server to look in both TLS 1.2 and 1.3 extensions to
+	// process a ticket.
+	AcceptAnySession bool
+
+	// SendBothTickets, if true, causes the client to send tickets in both
+	// TLS 1.2 and 1.3 extensions.
+	SendBothTickets bool
 
 	// CorruptTicket causes a client to corrupt a session ticket before
 	// sending it in a resume handshake.
@@ -646,6 +652,14 @@ type ProtocolBugs struct {
 	// OversizedSessionId causes the session id that is sent with a ticket
 	// resumption attempt to be too large (33 bytes).
 	OversizedSessionId bool
+
+	// ExpectNoTLS12Session, if true, causes the server to fail the
+	// connection if either a session ID or TLS 1.2 ticket is offered.
+	ExpectNoTLS12Session bool
+
+	// ExpectNoTLS13PSK, if true, causes the server to fail the connection
+	// if a TLS 1.3 PSK is offered.
+	ExpectNoTLS13PSK bool
 
 	// RequireExtendedMasterSecret, if true, requires that the peer support
 	// the extended master secret option.
@@ -875,8 +889,8 @@ type ProtocolBugs struct {
 	NegotiateALPNAndNPN bool
 
 	// SendALPN, if non-empty, causes the server to send the specified
-	// string in the ALPN extension regardless of whether the client
-	// advertised it.
+	// string in the ALPN extension regardless of the content or presence of
+	// the client offer.
 	SendALPN string
 
 	// SendEmptySessionTicket, if true, causes the server to send an empty
@@ -1027,9 +1041,18 @@ type ProtocolBugs struct {
 	// HelloRequest in the same record as Finished.
 	PackHelloRequestWithFinished bool
 
+	// ExpectMissingKeyShare, if true, causes the TLS server to fail the
+	// connection if the selected curve appears in the client's initial
+	// ClientHello. That is, it requires that a HelloRetryRequest be sent.
+	ExpectMissingKeyShare bool
+
 	// SendExtraFinished, if true, causes an extra Finished message to be
 	// sent.
 	SendExtraFinished bool
+
+	// SendRequestContext, if not empty, is the request context to send in
+	// a TLS 1.3 CertificateRequest.
+	SendRequestContext []byte
 }
 
 func (c *Config) serverInit() {

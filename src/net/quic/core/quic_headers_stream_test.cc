@@ -444,7 +444,7 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
                                        false, nullptr))
           .WillOnce(WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIov)));
       headers_stream_->WritePushPromise(stream_id, promised_stream_id,
-                                        headers_.Clone(), nullptr);
+                                        headers_.Clone());
 
       // Parse the outgoing data and check that it matches was was written.
       EXPECT_CALL(visitor_,
@@ -459,10 +459,9 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
       CheckHeaders();
       saved_data_.clear();
     } else {
-      EXPECT_QUIC_BUG(
-          headers_stream_->WritePushPromise(stream_id, promised_stream_id,
-                                            headers_.Clone(), nullptr),
-          "Client shouldn't send PUSH_PROMISE");
+      EXPECT_QUIC_BUG(headers_stream_->WritePushPromise(
+                          stream_id, promised_stream_id, headers_.Clone()),
+                      "Client shouldn't send PUSH_PROMISE");
     }
   }
 }

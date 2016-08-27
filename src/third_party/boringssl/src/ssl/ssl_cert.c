@@ -127,7 +127,6 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
-#include "../crypto/dh/internal.h"
 #include "../crypto/internal.h"
 #include "internal.h"
 
@@ -159,20 +158,9 @@ CERT *ssl_cert_dup(CERT *cert) {
   }
   memset(ret, 0, sizeof(CERT));
 
-  ret->mask_k = cert->mask_k;
-  ret->mask_a = cert->mask_a;
-
-  if (cert->dh_tmp != NULL) {
-    ret->dh_tmp = DHparams_dup(cert->dh_tmp);
-    if (ret->dh_tmp == NULL) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
-      goto err;
-    }
-  }
-  ret->dh_tmp_cb = cert->dh_tmp_cb;
-
   if (cert->x509 != NULL) {
-    ret->x509 = X509_up_ref(cert->x509);
+    X509_up_ref(cert->x509);
+    ret->x509 = cert->x509;
   }
 
   if (cert->privatekey != NULL) {
@@ -189,6 +177,27 @@ CERT *ssl_cert_dup(CERT *cert) {
   }
 
   ret->key_method = cert->key_method;
+
+  ret->mask_k = cert->mask_k;
+  ret->mask_a = cert->mask_a;
+
+  if (cert->dh_tmp != NULL) {
+    ret->dh_tmp = DHparams_dup(cert->dh_tmp);
+    if (ret->dh_tmp == NULL) {
+      OPENSSL_PUT_ERROR(SSL, ERR_R_DH_LIB);
+      goto err;
+    }
+  }
+  ret->dh_tmp_cb = cert->dh_tmp_cb;
+
+  if (cert->sigalgs != NULL) {
+    ret->sigalgs =
+        BUF_memdup(cert->sigalgs, cert->num_sigalgs * sizeof(cert->sigalgs[0]));
+    if (ret->sigalgs == NULL) {
+      goto err;
+    }
+  }
+  ret->num_sigalgs = cert->num_sigalgs;
 
   ret->cert_cb = cert->cert_cb;
   ret->cert_cb_arg = cert->cert_cb_arg;
@@ -228,7 +237,6 @@ void ssl_cert_free(CERT *c) {
   DH_free(c->dh_tmp);
 
   ssl_cert_clear_certs(c);
-  OPENSSL_free(c->peer_sigalgs);
   OPENSSL_free(c->sigalgs);
   X509_STORE_free(c->verify_store);
 
@@ -285,7 +293,8 @@ void ssl_cert_set_cert_cb(CERT *c, int (*cb)(SSL *ssl, void *arg), void *arg) {
   c->cert_cb_arg = arg;
 }
 
-int ssl_verify_cert_chain(SSL *ssl, STACK_OF(X509) *cert_chain) {
+int ssl_verify_cert_chain(SSL *ssl, long *out_verify_result,
+                          STACK_OF(X509) *cert_chain) {
   if (cert_chain == NULL || sk_X509_num(cert_chain) == 0) {
     return 0;
   }
@@ -326,17 +335,15 @@ int ssl_verify_cert_chain(SSL *ssl, STACK_OF(X509) *cert_chain) {
     verify_ret = X509_verify_cert(&ctx);
   }
 
-  ssl->verify_result = ctx.error;
-
   /* If |SSL_VERIFY_NONE|, the error is non-fatal, but we keep the result. */
   if (verify_ret <= 0 && ssl->verify_mode != SSL_VERIFY_NONE) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL,
-                    ssl_verify_alarm_type(ssl->verify_result));
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, ssl_verify_alarm_type(ctx.error));
     OPENSSL_PUT_ERROR(SSL, SSL_R_CERTIFICATE_VERIFY_FAILED);
     goto err;
   }
 
   ERR_clear_error();
+  *out_verify_result = ctx.error;
   ret = 1;
 
 err:

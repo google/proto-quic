@@ -6,14 +6,19 @@
 
 #include "base/bind.h"
 #include "base/logging.h"
-#include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
 namespace win {
 
 //-----------------------------------------------------------------------------
 
-ObjectWatcher::ObjectWatcher() : weak_factory_(this) {}
+ObjectWatcher::ObjectWatcher()
+    : object_(NULL),
+      wait_object_(NULL),
+      origin_loop_(NULL),
+      run_once_(true),
+      weak_factory_(this) {
+}
 
 ObjectWatcher::~ObjectWatcher() {
   StopWatching();
@@ -33,7 +38,7 @@ bool ObjectWatcher::StopWatching() {
     return false;
 
   // Make sure ObjectWatcher is used in a single-threaded fashion.
-  DCHECK(task_runner_->BelongsToCurrentThread());
+  DCHECK_EQ(origin_loop_, MessageLoop::current());
 
   // Blocking call to cancel the wait. Any callbacks already in progress will
   // finish before we return from this call.
@@ -42,12 +47,16 @@ bool ObjectWatcher::StopWatching() {
     return false;
   }
 
-  Reset();
+  weak_factory_.InvalidateWeakPtrs();
+  object_ = NULL;
+  wait_object_ = NULL;
+
+  origin_loop_->RemoveDestructionObserver(this);
   return true;
 }
 
 bool ObjectWatcher::IsWatching() const {
-  return object_ != nullptr;
+  return object_ != NULL;
 }
 
 HANDLE ObjectWatcher::GetWatchedObject() const {
@@ -61,18 +70,22 @@ void CALLBACK ObjectWatcher::DoneWaiting(void* param, BOOLEAN timed_out) {
   // The destructor blocks on any callbacks that are in flight, so we know that
   // that is always a pointer to a valid ObjectWater.
   ObjectWatcher* that = static_cast<ObjectWatcher*>(param);
-  that->task_runner_->PostTask(FROM_HERE, that->callback_);
+  that->origin_loop_->task_runner()->PostTask(FROM_HERE, that->callback_);
   if (that->run_once_)
     that->callback_.Reset();
 }
 
 bool ObjectWatcher::StartWatchingInternal(HANDLE object, Delegate* delegate,
                                           bool execute_only_once) {
-  DCHECK(delegate);
-  DCHECK(!wait_object_) << "Already watching an object";
-  DCHECK(ThreadTaskRunnerHandle::IsSet());
+  CHECK(delegate);
+  if (wait_object_) {
+    NOTREACHED() << "Already watching an object";
+    return false;
+  }
 
-  task_runner_ = ThreadTaskRunnerHandle::Get();
+  origin_loop_ = MessageLoop::current();
+  if (!origin_loop_)
+    return false;
 
   run_once_ = execute_only_once;
 
@@ -84,17 +97,21 @@ bool ObjectWatcher::StartWatchingInternal(HANDLE object, Delegate* delegate,
 
   // DoneWaiting can be synchronously called from RegisterWaitForSingleObject,
   // so set up all state now.
-  callback_ =
-      Bind(&ObjectWatcher::Signal, weak_factory_.GetWeakPtr(), delegate);
+  callback_ = base::Bind(&ObjectWatcher::Signal, weak_factory_.GetWeakPtr(),
+                         delegate);
   object_ = object;
 
   if (!RegisterWaitForSingleObject(&wait_object_, object, DoneWaiting,
                                    this, INFINITE, wait_flags)) {
     DPLOG(FATAL) << "RegisterWaitForSingleObject failed";
-    Reset();
+    object_ = NULL;
+    wait_object_ = NULL;
     return false;
   }
 
+  // We need to know if the current message loop is going away so we can
+  // prevent the wait thread from trying to access a dead message loop.
+  origin_loop_->AddDestructionObserver(this);
   return true;
 }
 
@@ -108,13 +125,10 @@ void ObjectWatcher::Signal(Delegate* delegate) {
   delegate->OnObjectSignaled(object);
 }
 
-void ObjectWatcher::Reset() {
-  callback_.Reset();
-  object_ = nullptr;
-  wait_object_ = nullptr;
-  task_runner_ = nullptr;
-  run_once_ = true;
-  weak_factory_.InvalidateWeakPtrs();
+void ObjectWatcher::WillDestroyCurrentMessageLoop() {
+  // Need to shutdown the watch so that we don't try to access the MessageLoop
+  // after this point.
+  StopWatching();
 }
 
 }  // namespace win

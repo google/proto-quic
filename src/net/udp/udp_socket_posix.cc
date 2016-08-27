@@ -425,6 +425,37 @@ int UDPSocketPosix::SetSendBufferSize(int32_t size) {
   return rv == 0 ? OK : MapSystemError(errno);
 }
 
+int UDPSocketPosix::SetDoNotFragment() {
+  DCHECK_NE(socket_, kInvalidSocket);
+  DCHECK(CalledOnValidThread());
+
+#if !defined(IP_PMTUDISC_DO)
+  return ERR_NOT_IMPLEMENTED;
+#else
+  if (addr_family_ == AF_INET6) {
+    int val = IPV6_PMTUDISC_DO;
+    if (setsockopt(socket_, IPPROTO_IPV6, IPV6_MTU_DISCOVER, &val,
+                   sizeof(val)) != 0) {
+      return MapSystemError(errno);
+    }
+
+    int v6_only = false;
+    socklen_t v6_only_len = sizeof(v6_only);
+    if (getsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &v6_only,
+                   &v6_only_len) != 0) {
+      return MapSystemError(errno);
+    }
+
+    if (v6_only)
+      return OK;
+  }
+
+  int val = IP_PMTUDISC_DO;
+  int rv = setsockopt(socket_, IPPROTO_IP, IP_MTU_DISCOVER, &val, sizeof(val));
+  return rv == 0 ? OK : MapSystemError(errno);
+#endif
+}
+
 int UDPSocketPosix::AllowAddressReuse() {
   DCHECK_NE(socket_, kInvalidSocket);
   DCHECK(CalledOnValidThread());

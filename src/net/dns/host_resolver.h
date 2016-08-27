@@ -28,6 +28,7 @@ namespace net {
 
 class AddressList;
 class BoundNetLog;
+class HostResolverImpl;
 class HostResolverProc;
 class NetLog;
 
@@ -218,9 +219,18 @@ class NET_EXPORT HostResolver {
   static std::unique_ptr<HostResolver> CreateSystemResolver(
       const Options& options,
       NetLog* net_log);
+  // Same, but explicitly returns the HostResolverImpl. Only used by
+  // StaleHostResolver in cronet.
+  static std::unique_ptr<HostResolverImpl> CreateSystemResolverImpl(
+      const Options& options,
+      NetLog* net_log);
 
   // As above, but uses default parameters.
   static std::unique_ptr<HostResolver> CreateDefaultResolver(NetLog* net_log);
+  // Same, but explicitly returns the HostResolverImpl. Only used by
+  // StaleHostResolver in cronet.
+  static std::unique_ptr<HostResolverImpl> CreateDefaultResolverImpl(
+      NetLog* net_log);
 
  protected:
   HostResolver();

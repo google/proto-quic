@@ -104,6 +104,12 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
  private:
   friend class test::QuicBufferedPacketStorePeer;
 
+  // Set expiration alarm if it hasn't been set.
+  void MaybeSetExpirationAlarm();
+
+  // Return true if number of connections in the store reaches maximum.
+  bool IsFull();
+
   // A map to store packet queues with creation time for each connection.
   BufferedPacketMap undecryptable_packets_;
 

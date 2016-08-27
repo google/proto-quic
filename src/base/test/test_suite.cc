@@ -26,6 +26,7 @@
 #include "base/process/memory.h"
 #include "base/test/gtest_xml_unittest_result_printer.h"
 #include "base/test/gtest_xml_util.h"
+#include "base/test/icu_test_util.h"
 #include "base/test/launcher/unit_test_launcher.h"
 #include "base/test/multiprocess_test.h"
 #include "base/test/test_switches.h"
@@ -349,10 +350,8 @@ void TestSuite::Initialize() {
     logging::SetLogAssertHandler(UnitTestAssertHandler);
   }
 
-  if (!CommandLine::ForCurrentProcess()->HasSwitch(
-          switches::kTestDoNotInitializeIcu)) {
-    i18n::InitializeICU();
-  }
+  base::test::InitializeICUForTesting();
+
   // On the Mac OS X command line, the default locale is *_POSIX. In Chromium,
   // the locale is set via an OS X locale API and is never *_POSIX.
   // Some tests (such as those involving word break iterator) will behave

@@ -16,6 +16,7 @@
 #include "base/lazy_instance.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/singleton.h"
 #include "base/process/process_metrics.h"
@@ -102,6 +103,80 @@ const char* g_category_groups[MAX_CATEGORY_GROUPS] = {
 
 // The enabled flag is char instead of bool so that the API can be used from C.
 unsigned char g_category_group_enabled[MAX_CATEGORY_GROUPS] = {0};
+
+const char kEventNameWhitelist[] = "event_name_whitelist";
+
+class EventNameFilter : public TraceLog::TraceEventFilter {
+ public:
+  EventNameFilter(const base::DictionaryValue* filter_args) {
+    const base::ListValue* whitelist = nullptr;
+    if (filter_args->GetList(kEventNameWhitelist, &whitelist)) {
+      for (size_t i = 0; i < whitelist->GetSize(); ++i) {
+        std::string event_name;
+        if (!whitelist->GetString(i, &event_name))
+          continue;
+
+        whitelist_.insert(event_name);
+      }
+    }
+  }
+
+  bool FilterTraceEvent(const TraceEvent& trace_event) const override {
+    return ContainsKey(whitelist_, trace_event.name());
+  }
+
+ private:
+  std::unordered_set<std::string> whitelist_;
+};
+
+base::LazyInstance<
+    std::list<std::unique_ptr<TraceLog::TraceEventFilter>>>::Leaky
+    g_category_group_filter[MAX_CATEGORY_GROUPS] = {LAZY_INSTANCE_INITIALIZER};
+
+// This filter is used to record trace events as pseudo stack for the heap
+// profiler. It does not filter-out any events from the trace, ie. the behavior
+// of trace events being added to TraceLog remains same: the events are added
+// iff enabled for recording and not filtered-out by any other filter.
+class HeapProfilerFilter : public TraceLog::TraceEventFilter {
+ public:
+  HeapProfilerFilter() {}
+
+  bool FilterTraceEvent(const TraceEvent& trace_event) const override {
+    if (AllocationContextTracker::capture_mode() !=
+        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
+      return true;
+    }
+
+    // TODO(primiano): Add support for events with copied name crbug.com/581079.
+    if (trace_event.flags() & TRACE_EVENT_FLAG_COPY)
+      return true;
+
+    if (trace_event.phase() == TRACE_EVENT_PHASE_BEGIN ||
+        trace_event.phase() == TRACE_EVENT_PHASE_COMPLETE) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PushPseudoStackFrame(trace_event.name());
+    } else if (trace_event.phase() == TRACE_EVENT_PHASE_END) {
+      // The pop for |TRACE_EVENT_PHASE_COMPLETE| events is in |EndEvent|.
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PopPseudoStackFrame(trace_event.name());
+    }
+    // Do not filter-out any events and always return true. TraceLog adds the
+    // event only if it is enabled for recording.
+    return true;
+  }
+
+  void EndEvent(const char* name, const char* category_group) override {
+    if (AllocationContextTracker::capture_mode() ==
+        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PopPseudoStackFrame(name);
+    }
+  }
+};
+
+TraceLog::TraceEventFilterConstructorForTesting
+    g_trace_event_filter_constructor_for_testing = nullptr;
+
 // Indexes here have to match the g_category_groups array indexes above.
 const int kCategoryAlreadyShutdown = 1;
 const int kCategoryCategoriesExhausted = 2;
@@ -174,9 +249,26 @@ void MakeHandle(uint32_t chunk_seq,
   DCHECK(chunk_seq);
   DCHECK(chunk_index <= TraceBufferChunk::kMaxChunkIndex);
   DCHECK(event_index < TraceBufferChunk::kTraceBufferChunkSize);
+  DCHECK(chunk_index <= std::numeric_limits<uint16_t>::max());
   handle->chunk_seq = chunk_seq;
   handle->chunk_index = static_cast<uint16_t>(chunk_index);
   handle->event_index = static_cast<uint16_t>(event_index);
+}
+
+uintptr_t GetCategoryIndex(const unsigned char* category_group_enabled) {
+  // Calculate the index of the category group by finding
+  // category_group_enabled in g_category_group_enabled array.
+  uintptr_t category_begin =
+      reinterpret_cast<uintptr_t>(g_category_group_enabled);
+  uintptr_t category_ptr = reinterpret_cast<uintptr_t>(category_group_enabled);
+  DCHECK(category_ptr >= category_begin);
+  DCHECK(category_ptr < reinterpret_cast<uintptr_t>(g_category_group_enabled +
+                                                    MAX_CATEGORY_GROUPS))
+      << "out of bounds category pointer";
+  uintptr_t category_index =
+      (category_ptr - category_begin) / sizeof(g_category_group_enabled[0]);
+
+  return category_index;
 }
 
 }  // namespace
@@ -445,18 +537,13 @@ const unsigned char* TraceLog::GetCategoryGroupEnabled(
 
 const char* TraceLog::GetCategoryGroupName(
     const unsigned char* category_group_enabled) {
-  // Calculate the index of the category group by finding
-  // category_group_enabled in g_category_group_enabled array.
-  uintptr_t category_begin =
-      reinterpret_cast<uintptr_t>(g_category_group_enabled);
-  uintptr_t category_ptr = reinterpret_cast<uintptr_t>(category_group_enabled);
-  DCHECK(category_ptr >= category_begin);
-  DCHECK(category_ptr < reinterpret_cast<uintptr_t>(g_category_group_enabled +
-                                                    MAX_CATEGORY_GROUPS))
-      << "out of bounds category pointer";
-  uintptr_t category_index =
-      (category_ptr - category_begin) / sizeof(g_category_group_enabled[0]);
-  return g_category_groups[category_index];
+  return g_category_groups[GetCategoryIndex(category_group_enabled)];
+}
+
+std::list<std::unique_ptr<TraceLog::TraceEventFilter>>* GetCategoryGroupFilter(
+    const unsigned char* category_group_enabled) {
+  return g_category_group_filter[GetCategoryIndex(category_group_enabled)]
+      .Pointer();
 }
 
 void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
@@ -484,6 +571,34 @@ void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
   // filter is "-*". See crbug.com/618054 for more details and long-term fix.
   if (mode_ == RECORDING_MODE && !strcmp(category_group, "__metadata"))
     enabled_flag |= ENABLED_FOR_RECORDING;
+
+  // Having a filter is an exceptional case, so we avoid
+  // the LazyInstance creation in the common case.
+  if (!(g_category_group_filter[category_index] == nullptr))
+    g_category_group_filter[category_index].Get().clear();
+
+  for (const auto& event_filter : trace_config_.event_filters()) {
+    if (event_filter.IsCategoryGroupEnabled(category_group)) {
+      std::unique_ptr<TraceEventFilter> new_filter;
+
+      if (event_filter.predicate_name() ==
+          TraceEventFilter::kEventWhitelistPredicate) {
+        new_filter = MakeUnique<EventNameFilter>(event_filter.filter_args());
+      } else if (event_filter.predicate_name() ==
+                 TraceEventFilter::kHeapProfilerPredicate) {
+        new_filter = MakeUnique<HeapProfilerFilter>();
+      } else if (event_filter.predicate_name() == "testing_predicate") {
+        CHECK(g_trace_event_filter_constructor_for_testing);
+        new_filter = g_trace_event_filter_constructor_for_testing();
+      }
+
+      if (new_filter) {
+        g_category_group_filter[category_index].Get().push_back(
+            std::move(new_filter));
+        enabled_flag |= ENABLED_FOR_FILTERING;
+      }
+    }
+  }
 
   g_category_group_enabled[category_index] = enabled_flag;
 }
@@ -1271,7 +1386,32 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
 #endif  // OS_WIN
 
   std::string console_message;
-  if (*category_group_enabled & ENABLED_FOR_RECORDING) {
+  std::unique_ptr<TraceEvent> filtered_trace_event;
+  bool disabled_by_filters = false;
+  if (*category_group_enabled & ENABLED_FOR_FILTERING) {
+    std::unique_ptr<TraceEvent> new_trace_event(new TraceEvent);
+    new_trace_event->Initialize(thread_id, offset_event_timestamp, thread_now,
+                                phase, category_group_enabled, name, scope, id,
+                                bind_id, num_args, arg_names, arg_types,
+                                arg_values, convertable_values, flags);
+
+    auto filter_list = GetCategoryGroupFilter(category_group_enabled);
+    DCHECK(!filter_list->empty());
+
+    disabled_by_filters = true;
+    for (const auto& trace_event_filter : *filter_list) {
+      if (trace_event_filter->FilterTraceEvent(*new_trace_event))
+        disabled_by_filters = false;
+    }
+
+    if (!disabled_by_filters)
+      filtered_trace_event = std::move(new_trace_event);
+  }
+
+  // If enabled for recording, the event should be added only if one of the
+  // filters indicates or category is not enabled for filtering.
+  if ((*category_group_enabled & ENABLED_FOR_RECORDING) &&
+      !disabled_by_filters) {
     OptionalAutoLock lock(&lock_);
 
     TraceEvent* trace_event = NULL;
@@ -1283,21 +1423,14 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
     }
 
     if (trace_event) {
-      trace_event->Initialize(thread_id,
-                              offset_event_timestamp,
-                              thread_now,
-                              phase,
-                              category_group_enabled,
-                              name,
-                              scope,
-                              id,
-                              bind_id,
-                              num_args,
-                              arg_names,
-                              arg_types,
-                              arg_values,
-                              convertable_values,
-                              flags);
+      if (filtered_trace_event) {
+        trace_event->MoveFrom(std::move(filtered_trace_event));
+      } else {
+        trace_event->Initialize(thread_id, offset_event_timestamp, thread_now,
+                                phase, category_group_enabled, name, scope, id,
+                                bind_id, num_args, arg_names, arg_types,
+                                arg_values, convertable_values, flags);
+      }
 
 #if defined(OS_ANDROID)
       trace_event->SendToATrace();
@@ -1338,23 +1471,6 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
           phase == TRACE_EVENT_PHASE_COMPLETE ? TRACE_EVENT_PHASE_BEGIN : phase,
           category_group_enabled, name, scope, id, num_args, arg_names,
           arg_types, arg_values, flags);
-    }
-  }
-
-  // TODO(primiano): Add support for events with copied name crbug.com/581078
-  if (!(flags & TRACE_EVENT_FLAG_COPY)) {
-    if (AllocationContextTracker::capture_mode() ==
-        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
-      if (phase == TRACE_EVENT_PHASE_BEGIN ||
-          phase == TRACE_EVENT_PHASE_COMPLETE) {
-        AllocationContextTracker::GetInstanceForCurrentThread()
-            ->PushPseudoStackFrame(name);
-      } else if (phase == TRACE_EVENT_PHASE_END) {
-        // The pop for |TRACE_EVENT_PHASE_COMPLETE| events
-        // is in |TraceLog::UpdateTraceEventDuration|.
-        AllocationContextTracker::GetInstanceForCurrentThread()
-            ->PopPseudoStackFrame(name);
-      }
     }
   }
 
@@ -1435,6 +1551,18 @@ std::string TraceLog::EventToConsoleMessage(unsigned char phase,
   return log.str();
 }
 
+void TraceLog::EndFilteredEvent(const unsigned char* category_group_enabled,
+                                const char* name,
+                                TraceEventHandle handle) {
+  auto filter_list = GetCategoryGroupFilter(category_group_enabled);
+  DCHECK(!filter_list->empty());
+
+  for (const auto& trace_event_filter : *filter_list) {
+    trace_event_filter->EndEvent(name,
+                                 GetCategoryGroupName(category_group_enabled));
+  }
+}
+
 void TraceLog::UpdateTraceEventDuration(
     const unsigned char* category_group_enabled,
     const char* name,
@@ -1467,6 +1595,18 @@ void TraceLog::UpdateTraceEventDuration(
     TraceEvent* trace_event = GetEventByHandleInternal(handle, &lock);
     if (trace_event) {
       DCHECK(trace_event->phase() == TRACE_EVENT_PHASE_COMPLETE);
+      // TEMP(oysteine) to debug crbug.com/638744
+      if (trace_event->duration().ToInternalValue() != -1) {
+        DVLOG(1) << "TraceHandle: chunk_seq " << handle.chunk_seq
+                 << ", chunk_index " << handle.chunk_index << ", event_index "
+                 << handle.event_index;
+
+        std::string serialized_event;
+        trace_event->AppendAsJSON(&serialized_event, ArgumentFilterPredicate());
+        DVLOG(1) << "TraceEvent: " << serialized_event;
+        lock_.AssertAcquired();
+      }
+
       trace_event->UpdateDuration(now, thread_now);
 #if defined(OS_ANDROID)
       trace_event->SendToATrace();
@@ -1476,13 +1616,6 @@ void TraceLog::UpdateTraceEventDuration(
     if (trace_options() & kInternalEchoToConsole) {
       console_message =
           EventToConsoleMessage(TRACE_EVENT_PHASE_END, now, trace_event);
-    }
-
-    if (AllocationContextTracker::capture_mode() ==
-        AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
-      // The corresponding push is in |AddTraceEventWithThreadIdAndTimestamp|.
-      AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PopPseudoStackFrame(name);
     }
   }
 
@@ -1599,6 +1732,11 @@ void TraceLog::DeleteForTesting() {
   internal::DeleteTraceLogForTesting::Delete();
 }
 
+void TraceLog::SetTraceEventFilterConstructorForTesting(
+    TraceEventFilterConstructorForTesting predicate) {
+  g_trace_event_filter_constructor_for_testing = predicate;
+}
+
 TraceEvent* TraceLog::GetEventByHandle(TraceEventHandle handle) {
   return GetEventByHandleInternal(handle, NULL);
 }
@@ -1607,6 +1745,10 @@ TraceEvent* TraceLog::GetEventByHandleInternal(TraceEventHandle handle,
                                                OptionalAutoLock* lock) {
   if (!handle.chunk_seq)
     return NULL;
+
+  DCHECK(handle.chunk_seq);
+  DCHECK(handle.chunk_index <= TraceBufferChunk::kMaxChunkIndex);
+  DCHECK(handle.event_index < TraceBufferChunk::kTraceBufferChunkSize);
 
   if (thread_local_event_buffer_.Get()) {
     TraceEvent* trace_event =

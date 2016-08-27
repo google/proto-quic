@@ -405,7 +405,7 @@ void QuicClient::OnEvent(int fd, EpollEvent* event) {
     while (connected() && more_to_read) {
       more_to_read = packet_reader_->ReadAndDispatchPackets(
           GetLatestFD(), QuicClient::GetLatestClientAddress().port(),
-          *helper()->GetClock(), this,
+          false /* potentially_small_mtu */, *helper()->GetClock(), this,
           overflow_supported_ ? &packets_dropped_ : nullptr);
     }
   }

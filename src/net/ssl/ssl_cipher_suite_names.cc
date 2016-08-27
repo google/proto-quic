@@ -206,11 +206,14 @@ const struct CipherSuite kCipherSuites[] = {
     {0xcc14, 0x0e8f},  // TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305 (non-standard)
     {0xcca8, 0x108f},  // TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
     {0xcca9, 0x0e8f},  // TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    {0xccab, 0x148f},  // TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256
+    {0xd001, 0x146f},  // TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256
+    {0xd002, 0x1477},  // TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384
 };
 
 const struct {
   char name[15];
-} kKeyExchangeNames[20] = {
+} kKeyExchangeNames[21] = {
   {"NULL"},  // 0
   {"RSA"},  // 1
   {"RSA_EXPORT"},  // 2
@@ -231,6 +234,7 @@ const struct {
   {"ECDH_anon"},  // 17
   {"CECPQ1_RSA"},  // 18
   {"CECPQ1_ECDSA"},  // 19
+  {"ECDHE_PSK"},  // 20
 };
 
 const struct {
@@ -299,6 +303,52 @@ bool GetCipherProperties(uint16_t cipher_suite,
   *out_cipher = (cs->encoded >> 3) & 0x1f;
   *out_mac = cs->encoded & 0x7;
   return true;
+}
+
+int ObsoleteSSLStatusForProtocol(int ssl_version) {
+  int obsolete_ssl = net::OBSOLETE_SSL_NONE;
+  if (ssl_version < net::SSL_CONNECTION_VERSION_TLS1_2)
+    obsolete_ssl |= net::OBSOLETE_SSL_MASK_PROTOCOL;
+  return obsolete_ssl;
+}
+
+int ObsoleteSSLStatusForCipherSuite(uint16_t cipher_suite) {
+  int obsolete_ssl = net::OBSOLETE_SSL_NONE;
+
+  int key_exchange, cipher, mac;
+  if (!GetCipherProperties(cipher_suite, &key_exchange, &cipher, &mac)) {
+    // Cannot determine/unknown cipher suite. Err on the side of caution.
+    obsolete_ssl |= net::OBSOLETE_SSL_MASK_KEY_EXCHANGE;
+    obsolete_ssl |= net::OBSOLETE_SSL_MASK_CIPHER;
+    return obsolete_ssl;
+  }
+
+  // Only allow ECDHE key exchanges.
+  switch (key_exchange) {
+    case 14:  // ECDHE_ECDSA
+    case 16:  // ECDHE_RSA
+    case 18:  // CECPQ1_RSA
+    case 19:  // CECPQ1_ECDSA
+    case 20:  // ECDHE_PSK
+      break;
+    default:
+      obsolete_ssl |= net::OBSOLETE_SSL_MASK_KEY_EXCHANGE;
+  }
+
+  switch (cipher) {
+    case 13:  // AES_128_GCM
+    case 14:  // AES_256_GCM
+    case 17:  // CHACHA20_POLY1305
+      break;
+    default:
+      obsolete_ssl |= net::OBSOLETE_SSL_MASK_CIPHER;
+  }
+
+  // Only AEADs allowed.
+  if (mac != kAEADMACValue)
+    obsolete_ssl |= net::OBSOLETE_SSL_MASK_CIPHER;
+
+  return obsolete_ssl;
 }
 
 }  // namespace
@@ -370,36 +420,16 @@ bool ParseSSLCipherString(const std::string& cipher_string,
   return false;
 }
 
-bool IsSecureTLSCipherSuite(uint16_t cipher_suite) {
-  int key_exchange, cipher, mac;
-  if (!GetCipherProperties(cipher_suite, &key_exchange, &cipher, &mac))
-    return false;
+int ObsoleteSSLStatus(int connection_status) {
+  int obsolete_ssl = OBSOLETE_SSL_NONE;
 
-  // Only allow ECDHE key exchanges.
-  switch (key_exchange) {
-    case 14:  // ECDHE_ECDSA
-    case 16:  // ECDHE_RSA
-    case 18:  // CECPQ1_RSA
-    case 19:  // CECPQ1_ECDSA
-      break;
-    default:
-      return false;
-  }
+  int ssl_version = SSLConnectionStatusToVersion(connection_status);
+  obsolete_ssl |= ObsoleteSSLStatusForProtocol(ssl_version);
 
-  switch (cipher) {
-    case 13:  // AES_128_GCM
-    case 14:  // AES_256_GCM
-    case 17:  // CHACHA20_POLY1305
-      break;
-    default:
-      return false;
-  }
+  uint16_t cipher_suite = SSLConnectionStatusToCipherSuite(connection_status);
+  obsolete_ssl |= ObsoleteSSLStatusForCipherSuite(cipher_suite);
 
-  // Only AEADs allowed.
-  if (mac != kAEADMACValue)
-    return false;
-
-  return true;
+  return obsolete_ssl;
 }
 
 bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite) {
@@ -414,6 +444,7 @@ bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite) {
     case 16:  // ECDHE_RSA
     case 18:  // CECPQ1_RSA
     case 19:  // CECPQ1_ECDSA
+    case 20:  // ECDHE_PSK
       break;
     default:
       return false;
@@ -442,6 +473,7 @@ const char* ECCurveName(uint16_t cipher_suite, int key_exchange_info) {
   switch (key_exchange) {
     case 14:  // ECDHE_ECDSA
     case 16:  // ECDHE_RSA
+    case 20:  // ECDHE_PSK
       break;
     default:
       return nullptr;

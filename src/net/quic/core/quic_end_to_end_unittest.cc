@@ -238,8 +238,9 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
     request_.method = "POST";
     request_.url = GURL("https://test.example.com/");
     request_.upload_data_stream = upload_data_stream_.get();
-    ASSERT_THAT(request_.upload_data_stream->Init(CompletionCallback()),
-                IsOk());
+    ASSERT_THAT(
+        request_.upload_data_stream->Init(CompletionCallback(), BoundNetLog()),
+        IsOk());
   }
 
   // Checks that |consumer| completed and received |status_line| and |body|.

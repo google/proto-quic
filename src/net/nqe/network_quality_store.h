@@ -8,9 +8,11 @@
 #include <map>
 
 #include "base/macros.h"
+#include "base/observer_list.h"
 #include "base/threading/thread_checker.h"
 #include "net/base/net_export.h"
 #include "net/nqe/cached_network_quality.h"
+#include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_id.h"
 
 namespace net {
@@ -23,6 +25,25 @@ namespace internal {
 // memory. Entries are stored in LRU order, and older entries may be evicted.
 class NET_EXPORT_PRIVATE NetworkQualityStore {
  public:
+  // Observes changes in the cached network qualities.
+  class NET_EXPORT NetworkQualitiesCacheObserver {
+   public:
+    // Notifies the observer of a change in the cached network quality. The
+    // observer must register and unregister itself on the IO thread. All the
+    // observers would be notified on the IO thread. |network_id| is the ID of
+    // the network whose cached quality is being reported.
+    virtual void OnChangeInCachedNetworkQuality(
+        const nqe::internal::NetworkID& network_id,
+        const nqe::internal::CachedNetworkQuality& cached_network_quality) = 0;
+
+   protected:
+    NetworkQualitiesCacheObserver() {}
+    virtual ~NetworkQualitiesCacheObserver() {}
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(NetworkQualitiesCacheObserver);
+  };
+
   NetworkQualityStore();
   ~NetworkQualityStore();
 
@@ -36,6 +57,14 @@ class NET_EXPORT_PRIVATE NetworkQualityStore {
   // the estimate read.
   bool GetById(const nqe::internal::NetworkID& network_id,
                nqe::internal::CachedNetworkQuality* cached_network_quality);
+
+  // Adds and removes |observer| from the list of cache observers. The
+  // observers are notified on the same thread on which it was added. Addition
+  // and removal of the observer must happen on the same thread.
+  void AddNetworkQualitiesCacheObserver(
+      NetworkQualitiesCacheObserver* observer);
+  void RemoveNetworkQualitiesCacheObserver(
+      NetworkQualitiesCacheObserver* observer);
 
  private:
   // Maximum size of the store that holds network quality estimates.
@@ -52,6 +81,10 @@ class NET_EXPORT_PRIVATE NetworkQualityStore {
 
   // Data structure that stores the qualities of networks.
   CachedNetworkQualities cached_network_qualities_;
+
+  // Observer list for changes in the cached network quality.
+  base::ObserverList<NetworkQualitiesCacheObserver>
+      network_qualities_cache_observer_list_;
 
   base::ThreadChecker thread_checker_;
 

@@ -18,10 +18,11 @@
 #include <stdint.h>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 
 namespace net {
 
-class GZipHeader {
+class NET_EXPORT GZipHeader {
  public:
   enum Status {
     INCOMPLETE_HEADER,    // don't have all the bits yet...

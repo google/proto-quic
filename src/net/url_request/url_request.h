@@ -652,8 +652,8 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   // Allow the URLRequestJob class to control the is_pending() flag.
   void set_is_pending(bool value) { is_pending_ = value; }
 
-  // Allow the URLRequestJob class to set our status too
-  void set_status(const URLRequestStatus& value) { status_ = value; }
+  // Allow the URLRequestJob class to set our status too.
+  void set_status(URLRequestStatus status);
 
   // Allow the URLRequestJob to redirect this request.  Returns OK if
   // successful, otherwise an error code is returned.
@@ -716,7 +716,7 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   // Called by URLRequestJob to allow interception when the final response
   // occurs.
-  void NotifyResponseStarted();
+  void NotifyResponseStarted(const URLRequestStatus& status);
 
   // These functions delegate to |delegate_|.  See URLRequest::Delegate for the
   // meaning of these functions.

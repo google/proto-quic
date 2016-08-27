@@ -80,6 +80,38 @@ class BASE_EXPORT TraceConfig {
     HeapProfiler heap_profiler_options;
   };
 
+  class EventFilterConfig {
+   public:
+    EventFilterConfig(const std::string& predicate_name);
+    EventFilterConfig(const EventFilterConfig& tc);
+
+    ~EventFilterConfig();
+
+    EventFilterConfig& operator=(const EventFilterConfig& rhs);
+
+    void AddIncludedCategory(const std::string& category);
+    void AddExcludedCategory(const std::string& category);
+    void SetArgs(std::unique_ptr<base::DictionaryValue> args);
+
+    bool IsCategoryGroupEnabled(const char* category_group_name) const;
+
+    const std::string& predicate_name() const { return predicate_name_; }
+    base::DictionaryValue* filter_args() const { return args_.get(); }
+    const StringList& included_categories() const {
+      return included_categories_;
+    }
+    const StringList& excluded_categories() const {
+      return excluded_categories_;
+    }
+
+   private:
+    std::string predicate_name_;
+    StringList included_categories_;
+    StringList excluded_categories_;
+    std::unique_ptr<base::DictionaryValue> args_;
+  };
+  typedef std::vector<EventFilterConfig> EventFilters;
+
   TraceConfig();
 
   // Create TraceConfig object from category filter and trace options strings.
@@ -196,7 +228,7 @@ class BASE_EXPORT TraceConfig {
   // Returns true if at least one category in the list is enabled by this
   // trace config. This is used to determine if the category filters are
   // enabled in the TRACE_* macros.
-  bool IsCategoryGroupEnabled(const char* category_group) const;
+  bool IsCategoryGroupEnabled(const char* category_group_name) const;
 
   // Merges config with the current TraceConfig
   void Merge(const TraceConfig& config);
@@ -209,6 +241,8 @@ class BASE_EXPORT TraceConfig {
   const MemoryDumpConfig& memory_dump_config() const {
     return memory_dump_config_;
   }
+
+  const EventFilters& event_filters() const { return event_filters_; }
 
  private:
   FRIEND_TEST_ALL_PREFIXES(TraceConfigTest, TraceConfigFromValidLegacyFormat);
@@ -250,6 +284,7 @@ class BASE_EXPORT TraceConfig {
       const DictionaryValue& memory_dump_config);
   void SetDefaultMemoryDumpConfig();
 
+  void SetEventFilters(const base::ListValue& event_filters);
   std::unique_ptr<DictionaryValue> ToDict() const;
 
   std::string ToTraceOptionsString() const;
@@ -281,6 +316,7 @@ class BASE_EXPORT TraceConfig {
   StringList disabled_categories_;
   StringList excluded_categories_;
   StringList synthetic_delays_;
+  EventFilters event_filters_;
 };
 
 }  // namespace trace_event

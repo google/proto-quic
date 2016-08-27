@@ -229,14 +229,14 @@ const struct built_in_curve OPENSSL_built_in_curves[] = {
         /* 1.3.132.0.35 */
         {0x2b, 0x81, 0x04, 0x00, 0x23}, 5,
         &P521,
-        NULL,
+        &EC_GFp_mont_method,
       },
     {
         NID_secp384r1,
         /* 1.3.132.0.34 */
         {0x2b, 0x81, 0x04, 0x00, 0x22}, 5,
         &P384,
-        NULL,
+        &EC_GFp_mont_method,
     },
     {
         NID_X9_62_prime256v1,
@@ -246,12 +246,12 @@ const struct built_in_curve OPENSSL_built_in_curves[] = {
 #if defined(BORINGSSL_USE_INT128_CODE)
 #if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_X86_64) && \
     !defined(OPENSSL_SMALL)
-        EC_GFp_nistz256_method,
+        &EC_GFp_nistz256_method,
 #else
-        EC_GFp_nistp256_method,
+        &EC_GFp_nistp256_method,
 #endif
 #else
-        NULL,
+        &EC_GFp_mont_method,
 #endif
     },
     {
@@ -260,9 +260,9 @@ const struct built_in_curve OPENSSL_built_in_curves[] = {
         {0x2b, 0x81, 0x04, 0x00, 0x21}, 5,
         &P224,
 #if defined(BORINGSSL_USE_INT128_CODE) && !defined(OPENSSL_SMALL)
-        EC_GFp_nistp224_method,
+        &EC_GFp_nistp224_method,
 #else
-        NULL,
+        &EC_GFp_mont_method,
 #endif
     },
     {NID_undef, {0}, 0, NULL, NULL},
@@ -365,10 +365,7 @@ EC_GROUP *ec_group_new(const EC_METHOD *meth) {
 
 EC_GROUP *EC_GROUP_new_curve_GFp(const BIGNUM *p, const BIGNUM *a,
                                  const BIGNUM *b, BN_CTX *ctx) {
-  const EC_METHOD *meth = EC_GFp_mont_method();
-  EC_GROUP *ret;
-
-  ret = ec_group_new(meth);
+  EC_GROUP *ret = ec_group_new(&EC_GFp_mont_method);
   if (ret == NULL) {
     return NULL;
   }
@@ -409,7 +406,6 @@ static EC_GROUP *ec_group_new_from_data(unsigned built_in_index) {
   EC_GROUP *group = NULL;
   EC_POINT *P = NULL;
   BIGNUM *p = NULL, *a = NULL, *b = NULL, *x = NULL, *y = NULL;
-  const EC_METHOD *meth;
   int ok = 0;
 
   BN_CTX *ctx = BN_CTX_new();
@@ -429,18 +425,11 @@ static EC_GROUP *ec_group_new_from_data(unsigned built_in_index) {
     goto err;
   }
 
-  if (curve->method != 0) {
-    meth = curve->method();
-    if (((group = ec_group_new(meth)) == NULL) ||
-        (!(group->meth->group_set_curve(group, p, a, b, ctx)))) {
-      OPENSSL_PUT_ERROR(EC, ERR_R_EC_LIB);
-      goto err;
-    }
-  } else {
-    if ((group = EC_GROUP_new_curve_GFp(p, a, b, ctx)) == NULL) {
-      OPENSSL_PUT_ERROR(EC, ERR_R_EC_LIB);
-      goto err;
-    }
+  group = ec_group_new(curve->method);
+  if (group == NULL ||
+      !group->meth->group_set_curve(group, p, a, b, ctx)) {
+    OPENSSL_PUT_ERROR(EC, ERR_R_EC_LIB);
+    goto err;
   }
 
   if ((P = EC_POINT_new(group)) == NULL) {
@@ -525,74 +514,45 @@ void EC_GROUP_free(EC_GROUP *group) {
   OPENSSL_free(group);
 }
 
-int ec_group_copy(EC_GROUP *dest, const EC_GROUP *src) {
-  if (dest->meth->group_copy == 0) {
-    OPENSSL_PUT_ERROR(EC, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
-    return 0;
-  }
-  if (dest->meth != src->meth) {
-    OPENSSL_PUT_ERROR(EC, EC_R_INCOMPATIBLE_OBJECTS);
-    return 0;
-  }
-  if (dest == src) {
-    return 1;
-  }
-
-  dest->mont_data = src->mont_data;
-
-  if (src->generator != NULL) {
-    if (dest->generator == NULL) {
-      dest->generator = EC_POINT_new(dest);
-      if (dest->generator == NULL) {
-        return 0;
-      }
-    }
-    if (!EC_POINT_copy(dest->generator, src->generator)) {
-      return 0;
-    }
-  } else {
-    EC_POINT_clear_free(dest->generator);
-    dest->generator = NULL;
-  }
-
-  if (!BN_copy(&dest->order, &src->order)) {
-    return 0;
-  }
-
-  dest->curve_name = src->curve_name;
-
-  return dest->meth->group_copy(dest, src);
-}
-
 const BN_MONT_CTX *ec_group_get_mont_data(const EC_GROUP *group) {
   return group->mont_data;
 }
 
 EC_GROUP *EC_GROUP_dup(const EC_GROUP *a) {
-  EC_GROUP *t = NULL;
-  int ok = 0;
-
   if (a == NULL) {
     return NULL;
   }
 
-  t = ec_group_new(a->meth);
-  if (t == NULL) {
+  if (a->meth->group_copy == NULL) {
+    OPENSSL_PUT_ERROR(EC, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
     return NULL;
   }
-  if (!ec_group_copy(t, a)) {
+
+  EC_GROUP *ret = ec_group_new(a->meth);
+  if (ret == NULL) {
+    return NULL;
+  }
+
+  ret->mont_data = a->mont_data;
+  ret->curve_name = a->curve_name;
+
+  if (a->generator != NULL) {
+    ret->generator = EC_POINT_dup(a->generator, ret);
+    if (ret->generator == NULL) {
+      goto err;
+    }
+  }
+
+  if (!BN_copy(&ret->order, &a->order) ||
+      !ret->meth->group_copy(ret, a)) {
     goto err;
   }
 
-  ok = 1;
+  return ret;
 
 err:
-  if (!ok) {
-    EC_GROUP_free(t);
-    return NULL;
-  } else {
-    return t;
-  }
+  EC_GROUP_free(ret);
+  return NULL;
 }
 
 int EC_GROUP_cmp(const EC_GROUP *a, const EC_GROUP *b, BN_CTX *ignored) {
@@ -691,25 +651,18 @@ int EC_POINT_copy(EC_POINT *dest, const EC_POINT *src) {
 }
 
 EC_POINT *EC_POINT_dup(const EC_POINT *a, const EC_GROUP *group) {
-  EC_POINT *t;
-  int r;
-
   if (a == NULL) {
     return NULL;
   }
 
-  t = EC_POINT_new(group);
-  if (t == NULL) {
-    OPENSSL_PUT_ERROR(EC, ERR_R_MALLOC_FAILURE);
+  EC_POINT *ret = EC_POINT_new(group);
+  if (ret == NULL ||
+      !EC_POINT_copy(ret, a)) {
+    EC_POINT_free(ret);
     return NULL;
   }
-  r = EC_POINT_copy(t, a);
-  if (!r) {
-    EC_POINT_free(t);
-    return NULL;
-  } else {
-    return t;
-  }
+
+  return ret;
 }
 
 int EC_POINT_set_to_infinity(const EC_GROUP *group, EC_POINT *point) {

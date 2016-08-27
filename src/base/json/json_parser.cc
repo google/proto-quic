@@ -61,7 +61,7 @@ class DictionaryHiddenRootValue : public DictionaryValue {
   // Not overriding DictionaryValue::Remove because it just calls through to
   // the method below.
 
-  bool RemoveWithoutPathExpansion(const std::string& key,
+  bool RemoveWithoutPathExpansion(StringPiece key,
                                   std::unique_ptr<Value>* out) override {
     // If the caller won't take ownership of the removed value, just call up.
     if (!out)

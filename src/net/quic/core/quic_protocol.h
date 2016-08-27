@@ -55,6 +55,9 @@ typedef uint16_t QuicPacketLength;
 const QuicByteCount kDefaultMaxPacketSize = 1350;
 // Default initial maximum size in bytes of a QUIC packet for servers.
 const QuicByteCount kDefaultServerMaxPacketSize = 1000;
+// Minimum size of a QUIC packet, used if a server receives packets from a
+// client with unusual network headers. 1280 - sizeof(eth) - sizeof(ipv6).
+const QuicByteCount kMinimumSupportedPacketSize = 1214;
 // The maximum packet size of any QUIC packet, based on ethernet's max size,
 // minus the IP and UDP headers. IPv6 has a 40 byte header, UDP adds an
 // additional 8 bytes.  This is a total overhead of 48 bytes.  Ethernet's
@@ -243,7 +246,8 @@ enum class ConnectionCloseSource { FROM_PEER, FROM_SELF };
 // Should a connection be closed silently or not.
 enum class ConnectionCloseBehavior {
   SILENT_CLOSE,
-  SEND_CONNECTION_CLOSE_PACKET
+  SEND_CONNECTION_CLOSE_PACKET,
+  SEND_CONNECTION_CLOSE_PACKET_WITH_NO_ACK
 };
 
 NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
@@ -913,41 +917,9 @@ struct NET_EXPORT_PRIVATE QuicStopWaitingFrame {
 // larger new packet numbers are added, with the occasional random access.
 class NET_EXPORT_PRIVATE PacketNumberQueue {
  public:
-  using const_interval_iterator = IntervalSet<QuicPacketNumber>::const_iterator;
-  using const_reverse_interval_iterator =
+  using const_iterator = IntervalSet<QuicPacketNumber>::const_iterator;
+  using const_reverse_iterator =
       IntervalSet<QuicPacketNumber>::const_reverse_iterator;
-  // TODO(jdorfman): remove const_iterator and change the callers to iterate
-  // over the intervals.
-  class NET_EXPORT_PRIVATE const_iterator
-      : public std::iterator<std::input_iterator_tag,
-                             QuicPacketNumber,
-                             std::ptrdiff_t,
-                             const QuicPacketNumber*,
-                             const QuicPacketNumber&> {
-   public:
-    const_iterator(
-        IntervalSet<QuicPacketNumber>::const_iterator interval_set_iter,
-        QuicPacketNumber first,
-        QuicPacketNumber last);
-    const_iterator(const const_iterator& other);
-    const_iterator& operator=(const const_iterator& other);
-    // TODO(rtenneti): on windows RValue reference gives errors.
-    // const_iterator(const_iterator&& other);
-    ~const_iterator();
-
-    // TODO(rtenneti): on windows RValue reference gives errors.
-    // const_iterator& operator=(const_iterator&& other);
-    bool operator!=(const const_iterator& other) const;
-    bool operator==(const const_iterator& other) const;
-    value_type operator*() const;
-    const_iterator& operator++();
-    const_iterator operator++(int /* postincrement */);
-
-   private:
-    IntervalSet<QuicPacketNumber>::const_iterator interval_set_iter_;
-    QuicPacketNumber current_;
-    QuicPacketNumber last_;
-  };
 
   PacketNumberQueue();
   PacketNumberQueue(const PacketNumberQueue& other);
@@ -1006,20 +978,16 @@ class NET_EXPORT_PRIVATE PacketNumberQueue {
   // Returns the length of last interval.
   QuicPacketNumber LastIntervalLength() const;
 
-  // Returns iterators over the individual packet numbers.
+  // Returns iterators over the packet number intervals.
   const_iterator begin() const;
   const_iterator end() const;
+  const_reverse_iterator rbegin() const;
+  const_reverse_iterator rend() const;
   const_iterator lower_bound(QuicPacketNumber packet_number) const;
 
   NET_EXPORT_PRIVATE friend std::ostream& operator<<(
       std::ostream& os,
       const PacketNumberQueue& q);
-
-  // Returns iterators over the packet number intervals.
-  const_interval_iterator begin_intervals() const;
-  const_interval_iterator end_intervals() const;
-  const_reverse_interval_iterator rbegin_intervals() const;
-  const_reverse_interval_iterator rend_intervals() const;
 
  private:
   IntervalSet<QuicPacketNumber> packet_number_intervals_;
@@ -1351,6 +1319,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
                      size_t length,
                      QuicTime receipt_time,
                      bool owns_buffer,
+                     bool potentially_small_mtu,
                      int ttl,
                      bool ttl_valid);
 
@@ -1363,6 +1332,8 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
   // This is the TTL of the packet, assuming ttl_vaild_ is true.
   int ttl() const { return ttl_; }
 
+  bool potentially_small_mtu() const { return potentially_small_mtu_; }
+
   // By default, gtest prints the raw bytes of an object. The bool data
   // member (in the base class QuicData) causes this object to have padding
   // bytes, which causes the default gtest object printer to read
@@ -1374,6 +1345,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
  private:
   const QuicTime receipt_time_;
   int ttl_;
+  bool potentially_small_mtu_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicReceivedPacket);
 };

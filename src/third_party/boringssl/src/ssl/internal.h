@@ -148,6 +148,7 @@
 #include <openssl/ssl.h>
 #include <openssl/stack.h>
 
+
 #if defined(OPENSSL_WINDOWS)
 /* Windows defines struct timeval in winsock2.h. */
 OPENSSL_MSVC_PRAGMA(warning(push, 3))
@@ -240,6 +241,11 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
 
 /* ssl_cipher_get_value returns the cipher suite id of |cipher|. */
 uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher);
+
+/* ssl_cipher_get_resumption_cipher returns the cipher suite id of the cipher
+ * matching |cipher| with PSK enabled. */
+int ssl_cipher_get_ecdhe_psk_cipher(const SSL_CIPHER *cipher,
+                                    uint16_t *out_cipher);
 
 /* ssl_cipher_get_key_type returns the |EVP_PKEY_*| value corresponding to the
  * server key used in |cipher| or |EVP_PKEY_NONE| if there is none. */
@@ -848,6 +854,18 @@ int tls13_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
  * 0 for the Client Finished. */
 int tls13_finished_mac(SSL *ssl, uint8_t *out, size_t *out_len, int is_server);
 
+/* tls13_resumption_psk calculates the PSK to use for the resumption of
+ * |session| and stores the result in |out|. It returns one on success, and
+ * zero on failure. */
+int tls13_resumption_psk(SSL *ssl, uint8_t *out, size_t out_len,
+                         const SSL_SESSION *session);
+
+/* tls13_resumption_context derives the context to be used for the handshake
+ * transcript on the resumption of |session|. It returns one on success, and
+ * zero on failure. */
+int tls13_resumption_context(SSL *ssl, uint8_t *out, size_t out_len,
+                             const SSL_SESSION *session);
+
 
 /* Handshake functions. */
 
@@ -889,8 +907,12 @@ struct ssl_handshake_st {
   uint8_t *public_key;
   size_t public_key_len;
 
-  uint8_t *cert_context;
-  size_t cert_context_len;
+  /* peer_sigalgs are the signature algorithms that the peer supports. These are
+   * taken from the contents of the signature algorithms extension for a server
+   * or from the CertificateRequest for a client. */
+  uint16_t *peer_sigalgs;
+  /* num_peer_sigalgs is the number of entries in |peer_sigalgs|. */
+  size_t num_peer_sigalgs;
 
   uint8_t session_tickets_sent;
 } /* SSL_HANDSHAKE */;
@@ -938,6 +960,13 @@ int ssl_ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
                                         uint8_t *out_alert, CBS *contents);
 int ssl_ext_key_share_add_serverhello(SSL *ssl, CBB *out);
 
+int ssl_ext_pre_shared_key_parse_serverhello(SSL *ssl, uint8_t *out_alert,
+                                             CBS *contents);
+int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
+                                             SSL_SESSION **out_session,
+                                             uint8_t *out_alert, CBS *contents);
+int ssl_ext_pre_shared_key_add_serverhello(SSL *ssl, CBB *out);
+
 int ssl_add_client_hello_body(SSL *ssl, CBB *body);
 
 
@@ -956,6 +985,21 @@ int ssl_log_rsa_client_key_exchange(const SSL *ssl,
  * |ssl|. It returns one on success and zero on failure. */
 int ssl_log_secret(const SSL *ssl, const char *label, const uint8_t *secret,
                    size_t secret_len);
+
+
+/* ClientHello functions. */
+
+int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
+                            const uint8_t *in, size_t in_len);
+
+int ssl_early_callback_get_extension(const struct ssl_early_callback_ctx *ctx,
+                                     CBS *out, uint16_t extension_type);
+
+STACK_OF(SSL_CIPHER) *
+    ssl_parse_client_cipher_list(const struct ssl_early_callback_ctx *ctx);
+
+int ssl_client_cipher_list_contains_cipher(
+    const struct ssl_early_callback_ctx *client_hello, uint16_t id);
 
 
 /* Underdocumented functions.
@@ -993,17 +1037,10 @@ typedef struct cert_st {
   DH *dh_tmp;
   DH *(*dh_tmp_cb)(SSL *ssl, int is_export, int keysize);
 
-  /* peer_sigalgs are the algorithm/hash pairs that the peer supports. These
-   * are taken from the contents of signature algorithms extension for a server
-   * or from the CertificateRequest for a client. */
-  uint16_t *peer_sigalgs;
-  /* peer_sigalgslen is the number of entries in |peer_sigalgs|. */
-  size_t peer_sigalgslen;
-
-  /* sigalgs, if non-NULL, is the set of digests supported by |privatekey| in
-   * decreasing order of preference. */
+  /* sigalgs, if non-NULL, is the set of signature algorithms supported by
+   * |privatekey| in decreasing order of preference. */
   uint16_t *sigalgs;
-  size_t sigalgs_len;
+  size_t num_sigalgs;
 
   /* Certificate setup callback: if set is called whenever a
    * certificate may be required (client or server). the callback
@@ -1217,6 +1254,14 @@ void ssl_cert_free(CERT *c);
 int ssl_get_new_session(SSL *ssl, int is_server);
 int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session);
 
+/* ssl_session_is_context_valid returns one if |session|'s session ID context
+ * matches the one set on |ssl| and zero otherwise. */
+int ssl_session_is_context_valid(const SSL *ssl, const SSL_SESSION *session);
+
+/* ssl_session_is_time_valid returns one if |session| is still valid and zero if
+ * it has expired. */
+int ssl_session_is_time_valid(const SSL *ssl, const SSL_SESSION *session);
+
 enum ssl_session_result_t {
   ssl_session_success,
   ssl_session_error,
@@ -1233,14 +1278,19 @@ enum ssl_session_result_t ssl_get_prev_session(
     SSL *ssl, SSL_SESSION **out_session, int *out_send_ticket,
     const struct ssl_early_callback_ctx *ctx);
 
+/* The following flags determine which parts of the session are duplicated. */
+#define SSL_SESSION_DUP_AUTH_ONLY 0x0
+#define SSL_SESSION_INCLUDE_TICKET 0x1
+#define SSL_SESSION_INCLUDE_NONAUTH 0x2
+#define SSL_SESSION_DUP_ALL \
+  (SSL_SESSION_INCLUDE_TICKET | SSL_SESSION_INCLUDE_NONAUTH)
+
 /* SSL_SESSION_dup returns a newly-allocated |SSL_SESSION| with a copy of the
  * fields in |session| or NULL on error. The new session is non-resumable and
  * must be explicitly marked resumable once it has been filled in. */
 OPENSSL_EXPORT SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session,
-                                            int include_ticket);
+                                            int dup_flags);
 
-STACK_OF(SSL_CIPHER) *
-    ssl_bytes_to_cipher_list(SSL *ssl, const CBS *cbs, uint16_t max_version);
 void ssl_cipher_preference_list_free(
     struct ssl_cipher_preference_list_st *cipher_list);
 struct ssl_cipher_preference_list_st *ssl_get_cipher_preferences(SSL *ssl);
@@ -1252,7 +1302,8 @@ int ssl_cert_add1_chain_cert(CERT *cert, X509 *x509);
 void ssl_cert_set_cert_cb(CERT *cert,
                           int (*cb)(SSL *ssl, void *arg), void *arg);
 
-int ssl_verify_cert_chain(SSL *ssl, STACK_OF(X509) *cert_chain);
+int ssl_verify_cert_chain(SSL *ssl, long *out_verify_result,
+                          STACK_OF(X509) * cert_chain);
 void ssl_update_cache(SSL *ssl, int mode);
 
 /* ssl_get_compatible_server_ciphers determines the key exchange and
@@ -1293,8 +1344,8 @@ int ssl3_write_app_data(SSL *ssl, const void *buf, int len);
 int ssl3_write_bytes(SSL *ssl, int type, const void *buf, int len);
 int ssl3_output_cert_chain(SSL *ssl);
 const SSL_CIPHER *ssl3_choose_cipher(
-    SSL *ssl, STACK_OF(SSL_CIPHER) *clnt,
-    struct ssl_cipher_preference_list_st *srvr);
+    SSL *ssl, const struct ssl_early_callback_ctx *client_hello,
+    const struct ssl_cipher_preference_list_st *srvr);
 
 int ssl3_new(SSL *ssl);
 void ssl3_free(SSL *ssl);
@@ -1370,12 +1421,6 @@ int tls1_handshake_digest(SSL *ssl, uint8_t *out, size_t out_len);
 int tls1_generate_master_secret(SSL *ssl, uint8_t *out, const uint8_t *premaster,
                                 size_t premaster_len);
 
-int ssl_early_callback_init(SSL *ssl, struct ssl_early_callback_ctx *ctx,
-                            const uint8_t *in, size_t in_len);
-
-int ssl_early_callback_get_extension(const struct ssl_early_callback_ctx *ctx,
-                                     CBS *out, uint16_t extension_type);
-
 /* tls1_get_grouplist sets |*out_group_ids| and |*out_group_ids_len| to the
  * list of allowed group IDs. If |get_peer_groups| is non-zero, return the
  * peer's group list. Otherwise, return the preferred list. */
@@ -1412,7 +1457,8 @@ int tls1_check_ec_cert(SSL *ssl, X509 *x);
 int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len);
 
 int ssl_add_serverhello_tlsext(SSL *ssl, CBB *out);
-int ssl_parse_clienthello_tlsext(SSL *ssl, CBS *cbs);
+int ssl_parse_clienthello_tlsext(
+    SSL *ssl, const struct ssl_early_callback_ctx *client_hello);
 int ssl_parse_serverhello_tlsext(SSL *ssl, CBS *cbs);
 
 #define tlsext_tick_md EVP_sha256

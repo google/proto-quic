@@ -76,7 +76,13 @@
   UNLIKELY(*INTERNAL_TRACE_EVENT_UID(category_group_enabled) &           \
            (base::trace_event::TraceLog::ENABLED_FOR_RECORDING |         \
             base::trace_event::TraceLog::ENABLED_FOR_EVENT_CALLBACK |    \
-            base::trace_event::TraceLog::ENABLED_FOR_ETW_EXPORT))
+            base::trace_event::TraceLog::ENABLED_FOR_ETW_EXPORT |        \
+            base::trace_event::TraceLog::ENABLED_FOR_FILTERING))
+
+#define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_FILTERING_MODE( \
+    category_group_enabled)                                             \
+  UNLIKELY(category_group_enabled&                                      \
+               base::trace_event::TraceLog::ENABLED_FOR_FILTERING)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation specific tracing API definitions.
@@ -184,6 +190,14 @@
 //     base::trace_event::TraceEventHandle id)
 #define TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION \
     base::trace_event::TraceLog::GetInstance()->UpdateTraceEventDuration
+
+// Call EndEvent on the filter for a filtered event.
+// void TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION(
+//     const unsigned char* category_group_enabled,
+//     const char* name,
+//     base::trace_event::TraceEventHandle id)
+#define TRACE_EVENT_API_END_FILTERED_EVENT \
+  base::trace_event::TraceLog::GetInstance()->EndFilteredEvent
 
 // Adds a metadata event to the trace log. The |AppendValueAsTraceFormat| method
 // on the convertable value will be called at flush time.
@@ -999,9 +1013,15 @@ class TRACE_EVENT_API_CLASS_EXPORT ScopedTracer {
   ScopedTracer() : p_data_(NULL) {}
 
   ~ScopedTracer() {
-    if (p_data_ && *data_.category_group_enabled)
+    if (p_data_ && *data_.category_group_enabled) {
       TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION(
           data_.category_group_enabled, data_.name, data_.event_handle);
+      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_FILTERING_MODE(
+              *data_.category_group_enabled)) {
+        TRACE_EVENT_API_END_FILTERED_EVENT(data_.category_group_enabled,
+                                           data_.name, data_.event_handle);
+      }
+    }
   }
 
   void Initialize(const unsigned char* category_group_enabled,

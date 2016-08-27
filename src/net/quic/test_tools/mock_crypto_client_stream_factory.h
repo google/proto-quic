@@ -42,10 +42,14 @@ class MockCryptoClientStreamFactory : public QuicCryptoClientStreamFactory {
 
   MockCryptoClientStream* last_stream() const { return last_stream_; }
 
+  // Sets initial config for new sessions.
+  void SetConfig(const QuicConfig& config);
+
  private:
   MockCryptoClientStream::HandshakeMode handshake_mode_;
   MockCryptoClientStream* last_stream_;
   std::queue<const ProofVerifyDetailsChromium*> proof_verify_details_queue_;
+  std::unique_ptr<QuicConfig> config_;
 
   DISALLOW_COPY_AND_ASSIGN(MockCryptoClientStreamFactory);
 };

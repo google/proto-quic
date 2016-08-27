@@ -250,11 +250,13 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
     return;
   }
 
-  // Send the body, with a FIN if there's nothing else to send.
+  // Send the body, with a FIN if there's no trailers to send.
   send_fin = response_trailers.empty();
   DVLOG(1) << "Writing body (fin = " << send_fin
            << ") with size: " << body.size();
-  WriteOrBufferData(body, send_fin, nullptr);
+  if (!body.empty() || send_fin) {
+    WriteOrBufferData(body, send_fin, nullptr);
+  }
   if (send_fin) {
     // Nothing else to send.
     return;

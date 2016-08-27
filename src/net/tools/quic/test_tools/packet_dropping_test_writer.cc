@@ -50,6 +50,7 @@ PacketDroppingTestWriter::PacketDroppingTestWriter()
     : clock_(nullptr),
       cur_buffer_size_(0),
       num_calls_to_write_(0),
+      max_allowed_packet_size_(std::numeric_limits<QuicByteCount>::max()),
       config_mutex_(),
       fake_packet_loss_percentage_(0),
       fake_drop_first_n_packets_(0),
@@ -81,6 +82,7 @@ WriteResult PacketDroppingTestWriter::WritePacket(
     const IPAddress& self_address,
     const IPEndPoint& peer_address,
     PerPacketOptions* options) {
+  CHECK_LE(buf_len, max_allowed_packet_size_);
   ++num_calls_to_write_;
   ReleaseOldPackets();
 

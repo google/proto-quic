@@ -88,12 +88,12 @@ ProxyScriptDecider::ProxyScriptDecider(
       next_state_(STATE_NONE),
       net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_PROXY_SCRIPT_DECIDER)),
       fetch_pac_bytes_(false),
-      quick_check_enabled_(true) {
+      quick_check_enabled_(true),
+      host_resolver_(nullptr) {
   if (proxy_script_fetcher &&
       proxy_script_fetcher->GetRequestContext() &&
       proxy_script_fetcher->GetRequestContext()->host_resolver()) {
-      host_resolver_.reset(new SingleRequestHostResolver(
-          proxy_script_fetcher->GetRequestContext()->host_resolver()));
+    host_resolver_ = proxy_script_fetcher->GetRequestContext()->host_resolver();
   }
 }
 
@@ -251,7 +251,7 @@ int ProxyScriptDecider::DoWaitComplete(int result) {
 
 int ProxyScriptDecider::DoQuickCheck() {
   DCHECK(quick_check_enabled_);
-  if (host_resolver_.get() == NULL) {
+  if (host_resolver_ == nullptr) {
     // If we have no resolver, skip QuickCheck altogether.
     next_state_ = GetStartState();
     return OK;
@@ -272,8 +272,8 @@ int ProxyScriptDecider::DoQuickCheck() {
                            base::Bind(callback, ERR_NAME_NOT_RESOLVED));
 
   // We use HIGHEST here because proxy decision blocks doing any other requests.
-  return host_resolver_->Resolve(reqinfo, HIGHEST, &wpad_addresses_,
-                                 callback, net_log_);
+  return host_resolver_->Resolve(reqinfo, HIGHEST, &wpad_addresses_, callback,
+                                 &request_, net_log_);
 }
 
 int ProxyScriptDecider::DoQuickCheckComplete(int result) {
@@ -283,7 +283,7 @@ int ProxyScriptDecider::DoQuickCheckComplete(int result) {
     UMA_HISTOGRAM_TIMES("Net.WpadQuickCheckSuccess", delta);
   else
     UMA_HISTOGRAM_TIMES("Net.WpadQuickCheckFailure", delta);
-  host_resolver_->Cancel();
+  request_.reset();
   quick_check_timer_.Stop();
   if (result != OK)
     return TryToFallbackPacSource(result);

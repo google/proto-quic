@@ -18,6 +18,7 @@
 #include "base/json/json_writer.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/singleton.h"
 #include "base/process/process_handle.h"
@@ -3215,6 +3216,134 @@ TEST_F(TraceEventTestFixture, SyntheticDelayConfigurationToString) {
   const char filter[] = "DELAY(test.Delay;16;oneshot)";
   TraceConfig config(filter, "");
   EXPECT_EQ(filter, config.ToCategoryFilterString());
+}
+
+class TestEventFilter : public TraceLog::TraceEventFilter {
+ public:
+  bool FilterTraceEvent(const TraceEvent& trace_event) const override {
+    filter_trace_event_hit_count_++;
+    return true;
+  }
+
+  void EndEvent(const char* category_group, const char* name) override {
+    end_event_hit_count_++;
+  }
+
+  static size_t filter_trace_event_hit_count() {
+    return filter_trace_event_hit_count_;
+  }
+  static size_t end_event_hit_count() { return end_event_hit_count_; }
+
+ private:
+  static size_t filter_trace_event_hit_count_;
+  static size_t end_event_hit_count_;
+};
+
+size_t TestEventFilter::filter_trace_event_hit_count_ = 0;
+size_t TestEventFilter::end_event_hit_count_ = 0;
+
+std::unique_ptr<TraceLog::TraceEventFilter> ConstructTestEventFilter() {
+  return WrapUnique(new TestEventFilter);
+}
+
+TEST_F(TraceEventTestFixture, EventFiltering) {
+  const char config_json[] =
+      "{"
+      "  \"included_categories\": ["
+      "    \"filtered_cat\","
+      "    \"unfiltered_cat\"],"
+      "  \"event_filters\": ["
+      "     {"
+      "       \"filter_predicate\": \"testing_predicate\", "
+      "       \"included_categories\": [\"filtered_cat\"]"
+      "     }"
+      "    "
+      "  ]"
+      "}";
+
+  TraceLog::SetTraceEventFilterConstructorForTesting(ConstructTestEventFilter);
+  TraceConfig trace_config(config_json);
+  TraceLog::GetInstance()->SetEnabled(trace_config, TraceLog::RECORDING_MODE);
+  ASSERT_TRUE(TraceLog::GetInstance()->IsEnabled());
+
+  TRACE_EVENT0("filtered_cat", "a snake");
+  TRACE_EVENT0("filtered_cat", "a mushroom");
+  TRACE_EVENT0("unfiltered_cat", "a horse");
+
+  // This is scoped so we can test the end event being filtered.
+  { TRACE_EVENT0("filtered_cat", "another cat whoa"); }
+
+  EndTraceAndFlush();
+
+  EXPECT_EQ(3u, TestEventFilter::filter_trace_event_hit_count());
+  EXPECT_EQ(1u, TestEventFilter::end_event_hit_count());
+}
+
+TEST_F(TraceEventTestFixture, EventWhitelistFiltering) {
+  std::string config_json = StringPrintf(
+      "{"
+      "  \"included_categories\": ["
+      "    \"filtered_cat\","
+      "    \"unfiltered_cat\"],"
+      "  \"event_filters\": ["
+      "     {"
+      "       \"filter_predicate\": \"%s\", "
+      "       \"included_categories\": [\"*\"], "
+      "       \"excluded_categories\": [\"unfiltered_cat\"], "
+      "       \"filter_args\": {"
+      "           \"event_name_whitelist\": [\"a snake\", \"a dog\"]"
+      "         }"
+      "     }"
+      "    "
+      "  ]"
+      "}",
+      TraceLog::TraceEventFilter::kEventWhitelistPredicate);
+
+  TraceConfig trace_config(config_json);
+  TraceLog::GetInstance()->SetEnabled(trace_config, TraceLog::RECORDING_MODE);
+  EXPECT_TRUE(TraceLog::GetInstance()->IsEnabled());
+
+  TRACE_EVENT0("filtered_cat", "a snake");
+  TRACE_EVENT0("filtered_cat", "a mushroom");
+  TRACE_EVENT0("unfiltered_cat", "a cat");
+
+  EndTraceAndFlush();
+
+  EXPECT_TRUE(FindMatchingValue("name", "a snake"));
+  EXPECT_FALSE(FindMatchingValue("name", "a mushroom"));
+  EXPECT_TRUE(FindMatchingValue("name", "a cat"));
+}
+
+TEST_F(TraceEventTestFixture, HeapProfilerFiltering) {
+  std::string config_json = StringPrintf(
+      "{"
+      "  \"included_categories\": ["
+      "    \"filtered_cat\","
+      "    \"unfiltered_cat\"],"
+      "  \"excluded_categories\": [\"excluded_cat\"],"
+      "  \"event_filters\": ["
+      "     {"
+      "       \"filter_predicate\": \"%s\", "
+      "       \"included_categories\": [\"*\"]"
+      "     }"
+      "  ]"
+      "}",
+      TraceLog::TraceEventFilter::kHeapProfilerPredicate);
+
+  TraceConfig trace_config(config_json);
+  TraceLog::GetInstance()->SetEnabled(trace_config, TraceLog::RECORDING_MODE);
+  EXPECT_TRUE(TraceLog::GetInstance()->IsEnabled());
+
+  TRACE_EVENT0("filtered_cat", "a snake");
+  TRACE_EVENT0("excluded_cat", "a mushroom");
+  TRACE_EVENT0("unfiltered_cat", "a cat");
+
+  EndTraceAndFlush();
+
+  // The predicate should not change behavior of the trace events.
+  EXPECT_TRUE(FindMatchingValue("name", "a snake"));
+  EXPECT_FALSE(FindMatchingValue("name", "a mushroom"));
+  EXPECT_TRUE(FindMatchingValue("name", "a cat"));
 }
 
 TEST_F(TraceEventTestFixture, ClockSyncEventsAreAlwaysAddedToTrace) {

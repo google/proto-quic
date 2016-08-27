@@ -54,9 +54,7 @@ class QuicBufferedPacketStoreTest : public ::testing::Test {
         client_address_(Loopback6(), 65535),
         packet_content_("some encrypted content"),
         packet_time_(QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(42)),
-        data_packet_(packet_content_.data(),
-                     packet_content_.size(),
-                     packet_time_) {}
+        packet_(packet_content_.data(), packet_content_.size(), packet_time_) {}
 
  protected:
   QuicBufferedPacketStoreVisitor visitor_;
@@ -67,12 +65,12 @@ class QuicBufferedPacketStoreTest : public ::testing::Test {
   IPEndPoint client_address_;
   string packet_content_;
   QuicTime packet_time_;
-  QuicReceivedPacket data_packet_;
+  QuicReceivedPacket packet_;
 };
 
 TEST_F(QuicBufferedPacketStoreTest, SimpleEnqueueAndDeliverPacket) {
   QuicConnectionId connection_id = 1;
-  store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id, packet_, server_address_,
                        client_address_);
   EXPECT_TRUE(store_.HasBufferedPackets(connection_id));
   list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
@@ -90,9 +88,9 @@ TEST_F(QuicBufferedPacketStoreTest, SimpleEnqueueAndDeliverPacket) {
 TEST_F(QuicBufferedPacketStoreTest, DifferentPacketAddressOnOneConnection) {
   IPEndPoint addr_with_new_port(Loopback4(), 256);
   QuicConnectionId connection_id = 1;
-  store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id, packet_, server_address_,
                        client_address_);
-  store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id, packet_, server_address_,
                        addr_with_new_port);
   list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
   ASSERT_EQ(2u, queue.size());
@@ -106,9 +104,9 @@ TEST_F(QuicBufferedPacketStoreTest,
   size_t num_connections = 10;
   for (QuicConnectionId connection_id = 1; connection_id <= num_connections;
        ++connection_id) {
-    store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+    store_.EnqueuePacket(connection_id, packet_, server_address_,
                          client_address_);
-    store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+    store_.EnqueuePacket(connection_id, packet_, server_address_,
                          client_address_);
   }
 
@@ -129,7 +127,7 @@ TEST_F(QuicBufferedPacketStoreTest,
   for (size_t i = 1; i <= num_packets; ++i) {
     // Only first |kDefaultMaxUndecryptablePackets packets| will be buffered.
     EnqueuePacketResult result = store_.EnqueuePacket(
-        connection_id, data_packet_, server_address_, client_address_);
+        connection_id, packet_, server_address_, client_address_);
     if (i <= kDefaultMaxUndecryptablePackets) {
       EXPECT_EQ(EnqueuePacketResult::SUCCESS, result);
     } else {
@@ -150,7 +148,7 @@ TEST_F(QuicBufferedPacketStoreTest, FailToBufferPacketsForTooManyConnections) {
   for (size_t connection_id = 1; connection_id <= num_connections;
        ++connection_id) {
     EnqueuePacketResult result = store_.EnqueuePacket(
-        connection_id, data_packet_, server_address_, client_address_);
+        connection_id, packet_, server_address_, client_address_);
     if (connection_id <= kDefaultMaxConnectionsInStore) {
       EXPECT_EQ(EnqueuePacketResult::SUCCESS, result);
     } else {
@@ -172,7 +170,7 @@ TEST_F(QuicBufferedPacketStoreTest, FailToBufferPacketsForTooManyConnections) {
 
 TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery) {
   QuicConnectionId connection_id = 1;
-  store_.EnqueuePacket(connection_id, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id, packet_, server_address_,
                        client_address_);
   // Packet for another connection arrive 1ms later.
   clock_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
@@ -180,7 +178,7 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery) {
   // Use different client address to differetiate packets from different
   // connections.
   IPEndPoint another_client_address(Loopback4(), 255);
-  store_.EnqueuePacket(connection_id2, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id2, packet_, server_address_,
                        another_client_address);
   // Advance clock to the time when connection 1 expires.
   clock_.AdvanceTime(
@@ -206,9 +204,9 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery) {
   // Test the alarm is reset by enqueueing 2 packets for 3rd connection and wait
   // for them to expire.
   QuicConnectionId connection_id3 = 3;
-  store_.EnqueuePacket(connection_id3, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id3, packet_, server_address_,
                        client_address_);
-  store_.EnqueuePacket(connection_id3, data_packet_, server_address_,
+  store_.EnqueuePacket(connection_id3, packet_, server_address_,
                        client_address_);
   clock_.AdvanceTime(
       QuicBufferedPacketStorePeer::expiration_alarm(&store_)->deadline() -

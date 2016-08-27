@@ -63,7 +63,25 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
     return new HttpStreamFactoryImpl::Job(
         delegate, job_type, session, request_info, priority, server_ssl_config,
         proxy_ssl_config, destination, origin_url, alternative_service,
-        net_log);
+        ProxyServer(), net_log);
+  }
+
+  HttpStreamFactoryImpl::Job* CreateJob(
+      HttpStreamFactoryImpl::Job::Delegate* delegate,
+      HttpStreamFactoryImpl::JobType job_type,
+      HttpNetworkSession* session,
+      const HttpRequestInfo& request_info,
+      RequestPriority priority,
+      const SSLConfig& server_ssl_config,
+      const SSLConfig& proxy_ssl_config,
+      HostPortPair destination,
+      GURL origin_url,
+      const ProxyServer& alternative_proxy_server,
+      NetLog* net_log) override {
+    return new HttpStreamFactoryImpl::Job(
+        delegate, job_type, session, request_info, priority, server_ssl_config,
+        proxy_ssl_config, destination, origin_url, AlternativeService(),
+        alternative_proxy_server, net_log);
   }
 };
 }  // anonymous namespace

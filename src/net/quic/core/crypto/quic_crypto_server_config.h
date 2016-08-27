@@ -209,13 +209,11 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   bool SetConfigs(const std::vector<QuicServerConfigProtobuf*>& protobufs,
                   QuicWallTime now);
 
-  // SetDefaultSourceAddressTokenKeys sets the keys to be tried, in order,
-  // when decrypting a source address token. This modifies only the default
-  // boxer, which is to say, it is a no-op if a key was specified in the Config.
-  // Note that these keys are used *without* passing them through a KDF, in
-  // contradistinction to the |source_address_token_secret| argument to the
-  // constructor.
-  void SetDefaultSourceAddressTokenKeys(const std::vector<std::string>& keys);
+  // SetSourceAddressTokenKeys sets the keys to be tried, in order, when
+  // decrypting a source address token.  Note that these keys are used *without*
+  // passing them through a KDF, in contradistinction to the
+  // |source_address_token_secret| argument to the constructor.
+  void SetSourceAddressTokenKeys(const std::vector<std::string>& keys);
 
   // Get the server config ids for all known configs.
   void GetConfigIds(std::vector<std::string>* scids) const;
@@ -736,10 +734,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // observed client nonces in order to prevent replay attacks.
   mutable std::unique_ptr<StrikeRegisterClient> strike_register_client_;
 
-  // Default source_address_token_boxer_ used to protect the
-  // source-address tokens that are given to clients.  Individual
-  // configs may use boxers with alternate secrets.
-  CryptoSecretBoxer default_source_address_token_boxer_;
+  // Used to protect the source-address tokens that are given to clients.
+  CryptoSecretBoxer source_address_token_boxer_;
 
   // server_nonce_boxer_ is used to encrypt and validate suggested server
   // nonces.

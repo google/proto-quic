@@ -289,10 +289,14 @@ bool ReadRdn(der::Parser* parser, RelativeDistinguishedName* out) {
 
 bool ParseName(const der::Input& name_tlv, RDNSequence* out) {
   der::Parser name_parser(name_tlv);
-  der::Parser rdn_sequence_parser;
-  if (!name_parser.ReadSequence(&rdn_sequence_parser))
+  der::Input name_value;
+  if (!name_parser.ReadTag(der::kSequence, &name_value))
     return false;
+  return ParseNameValue(name_value, out);
+}
 
+bool ParseNameValue(const der::Input& name_value, RDNSequence* out) {
+  der::Parser rdn_sequence_parser(name_value);
   while (rdn_sequence_parser.HasMore()) {
     der::Parser rdn_parser;
     if (!rdn_sequence_parser.ReadConstructed(der::kSet, &rdn_parser))

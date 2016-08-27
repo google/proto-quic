@@ -44,8 +44,11 @@ class QuicPacketReader {
   // to track dropped packets and some packets are read.
   // If the socket has timestamping enabled, the per packet timestamps will be
   // passed to the processor. Otherwise, |clock| will be used.
+  // If |potentially_small_mtu| is set, the incoming packets have been
+  // identified as potentially having an unusually small MTU.
   virtual bool ReadAndDispatchPackets(int fd,
                                       int port,
+                                      bool potentially_small_mtu,
                                       const QuicClock& clock,
                                       ProcessPacketInterface* processor,
                                       QuicPacketCount* packets_dropped);
@@ -57,6 +60,7 @@ class QuicPacketReader {
   // Reads and dispatches many packets using recvmmsg.
   bool ReadAndDispatchManyPackets(int fd,
                                   int port,
+                                  bool potentially_small_mtu,
                                   const QuicClock& clock,
                                   ProcessPacketInterface* processor,
                                   QuicPacketCount* packets_dropped);
@@ -64,6 +68,7 @@ class QuicPacketReader {
   // Reads and dispatches a single packet using recvmsg.
   static bool ReadAndDispatchSinglePacket(int fd,
                                           int port,
+                                          bool potentially_small_mtu,
                                           const QuicClock& clock,
                                           ProcessPacketInterface* processor,
                                           QuicPacketCount* packets_dropped);

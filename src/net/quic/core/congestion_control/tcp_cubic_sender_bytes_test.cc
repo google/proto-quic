@@ -809,7 +809,6 @@ TEST_F(TcpCubicSenderBytesTest, NoPRR) {
 }
 
 TEST_F(TcpCubicSenderBytesTest, PaceSlowerAboveCwnd) {
-  ValueRestore<bool> old_flag(&FLAGS_quic_rate_based_sending, true);
   QuicTime::Delta rtt(QuicTime::Delta::FromMilliseconds(60));
   sender_->rtt_stats_.UpdateRtt(rtt, QuicTime::Delta::Zero(), clock_.Now());
 

@@ -14,7 +14,6 @@
 #include "base/timer/timer.h"
 #include "net/base/host_port_pair.h"
 #include "net/dns/host_resolver.h"
-#include "net/dns/single_request_host_resolver.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/connection_attempts.h"
@@ -164,7 +163,8 @@ class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
   void CopyConnectionAttemptsFromSockets();
 
   scoped_refptr<TransportSocketParams> params_;
-  SingleRequestHostResolver resolver_;
+  HostResolver* resolver_;
+  std::unique_ptr<HostResolver::Request> request_;
   ClientSocketFactory* const client_socket_factory_;
 
   State next_state_;

@@ -20,6 +20,7 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_stream_factory_impl.h"
 #include "net/log/net_log.h"
+#include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/socket/client_socket_handle.h"
@@ -35,6 +36,7 @@ class HttpAuthController;
 class HttpNetworkSession;
 class HttpStream;
 class SpdySessionPool;
+struct SSLConfig;
 class QuicHttpStream;
 
 // An HttpStreamRequestImpl exists for each stream which is in progress of being
@@ -96,6 +98,16 @@ class HttpStreamFactoryImpl::Job {
                                   const ProxyInfo& used_proxy_info,
                                   HttpAuthController* auth_controller) = 0;
 
+    // Invoked when |job| has completed proxy resolution. The delegate may
+    // create an alternative proxy server job to fetch the request.
+    virtual void OnResolveProxyComplete(
+        Job* job,
+        const HttpRequestInfo& request_info,
+        RequestPriority priority,
+        const SSLConfig& server_ssl_config,
+        const SSLConfig& proxy_ssl_config,
+        HttpStreamRequest::StreamType stream_type) = 0;
+
     // Invoked to notify the Request and Factory of the readiness of new
     // SPDY session.
     virtual void OnNewSpdySessionReady(
@@ -156,9 +168,14 @@ class HttpStreamFactoryImpl::Job {
       GURL origin_url,
       NetLog* net_log);
 
-  // Constructor for alternative Job.
-  // Job is owned by |delegate|, hence |delegate| is valid for the
-  // lifetime of the Job.
+  // Constructor for the alternative Job. The Job is owned by |delegate|, hence
+  // |delegate| is valid for the lifetime of the Job. If |alternative_service|
+  // is initialized, then the Job will use the alternative service. On the
+  // other hand, if |alternative_proxy_server| is a valid proxy server, then the
+  // job will use that instead of using ProxyService for proxy resolution.
+  // Further, if |alternative_proxy_server| is a valid but bad proxy, then
+  // fallback proxies are not used. It is illegal to call this with an
+  // initialized |alternative_service|, and a valid |alternative_proxy_server|.
   Job(Delegate* delegate,
       JobType job_type,
       HttpNetworkSession* session,
@@ -169,6 +186,7 @@ class HttpStreamFactoryImpl::Job {
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
+      const ProxyServer& alternative_proxy_server,
       NetLog* net_log);
   virtual ~Job();
 
@@ -364,6 +382,11 @@ class HttpStreamFactoryImpl::Job {
 
   void MaybeMarkAlternativeServiceBroken();
 
+  // May notify proxy delegate that the alternative proxy server is broken. The
+  // alternative proxy server is considered as broken if the alternative proxy
+  // server job failed, but the main job was successful.
+  void MaybeNotifyAlternativeProxyServerBroken() const;
+
   ClientSocketPoolManager::SocketGroupType GetSocketGroup() const;
 
   void MaybeCopyConnectionAttemptsFromSocketOrHandle();
@@ -397,11 +420,11 @@ class HttpStreamFactoryImpl::Job {
 
   // The server we are trying to reach, could be that of the origin or of the
   // alternative service (after applying host mapping rules).
-  HostPortPair destination_;
+  const HostPortPair destination_;
 
   // The origin url we're trying to reach. This url may be different from the
   // original request when host mapping rules are set-up.
-  GURL origin_url_;
+  const GURL origin_url_;
 
   // AlternativeService for this Job if this is an alternative Job.
   const AlternativeService alternative_service_;
@@ -412,7 +435,14 @@ class HttpStreamFactoryImpl::Job {
   // Unowned. |this| job is owned by |delegate_|.
   Delegate* delegate_;
 
-  JobType job_type_;
+  // Alternative proxy server that should be used by |this| to fetch the
+  // request.
+  const ProxyServer alternative_proxy_server_;
+
+  // Alternative proxy server for the other job.
+  ProxyServer other_job_alternative_proxy_server_;
+
+  const JobType job_type_;
 
   // True if handling a HTTPS request, or using SPDY with SSL
   bool using_ssl_;
@@ -479,7 +509,7 @@ class HttpStreamFactoryImpl::JobFactory {
  public:
   virtual ~JobFactory() {}
 
-  // Creates an alternative Job.
+  // Creates an alternative service Job.
   virtual HttpStreamFactoryImpl::Job* CreateJob(
       HttpStreamFactoryImpl::Job::Delegate* delegate,
       HttpStreamFactoryImpl::JobType job_type,
@@ -491,6 +521,20 @@ class HttpStreamFactoryImpl::JobFactory {
       HostPortPair destination,
       GURL origin_url,
       AlternativeService alternative_service,
+      NetLog* net_log) = 0;
+
+  // Creates an alternative proxy server Job.
+  virtual HttpStreamFactoryImpl::Job* CreateJob(
+      HttpStreamFactoryImpl::Job::Delegate* delegate,
+      HttpStreamFactoryImpl::JobType job_type,
+      HttpNetworkSession* session,
+      const HttpRequestInfo& request_info,
+      RequestPriority priority,
+      const SSLConfig& server_ssl_config,
+      const SSLConfig& proxy_ssl_config,
+      HostPortPair destination,
+      GURL origin_url,
+      const ProxyServer& alternative_proxy_server,
       NetLog* net_log) = 0;
 
   // Creates a non-alternative Job.

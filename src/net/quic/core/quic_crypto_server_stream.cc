@@ -23,24 +23,6 @@ using std::string;
 
 namespace net {
 
-namespace {
-bool HasFixedTag(const CryptoHandshakeMessage& message) {
-  const QuicTag* received_tags;
-  size_t received_tags_length;
-  QuicErrorCode error =
-      message.GetTaglist(kCOPT, &received_tags, &received_tags_length);
-  if (error == QUIC_NO_ERROR) {
-    DCHECK(received_tags);
-    for (size_t i = 0; i < received_tags_length; ++i) {
-      if (received_tags[i] == kFIXD) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-}  // namespace
-
 QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(
     QuicServerSessionBase* session)
     : QuicCryptoStream(session) {}
@@ -106,14 +88,6 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   QuicCryptoServerStreamBase::OnHandshakeMessage(message);
   ++num_handshake_messages_;
   chlo_packet_size_ = session()->connection()->GetCurrentPacket().length();
-
-  bool require_kfixd = !FLAGS_quic_deprecate_kfixd;
-
-  if (require_kfixd && !HasFixedTag(message)) {
-    CloseConnectionWithDetails(QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND,
-                               "Missing kFIXD");
-    return;
-  }
 
   // Do not process handshake messages after the handshake is confirmed.
   if (handshake_confirmed_) {

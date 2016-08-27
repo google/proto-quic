@@ -117,11 +117,13 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
   // net/data/verify_certificate_chain_unittest/README.
   const char kCertificateHeader[] = "CERTIFICATE";
   const char kTrustAnchorUnconstrained[] = "TRUST_ANCHOR_UNCONSTRAINED";
+  const char kTrustAnchorConstrained[] = "TRUST_ANCHOR_CONSTRAINED";
   const char kTimeHeader[] = "TIME";
   const char kResultHeader[] = "VERIFY_RESULT";
 
   pem_headers.push_back(kCertificateHeader);
   pem_headers.push_back(kTrustAnchorUnconstrained);
+  pem_headers.push_back(kTrustAnchorConstrained);
   pem_headers.push_back(kTimeHeader);
   pem_headers.push_back(kResultHeader);
 
@@ -138,7 +140,8 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
           reinterpret_cast<const uint8_t*>(block_data.data()),
           block_data.size(), net::ParsedCertificate::DataSource::INTERNAL_COPY,
           {}, chain));
-    } else if (block_type == kTrustAnchorUnconstrained) {
+    } else if (block_type == kTrustAnchorUnconstrained ||
+               block_type == kTrustAnchorConstrained) {
       ASSERT_FALSE(*trust_anchor) << "Duplicate trust anchor";
       scoped_refptr<ParsedCertificate> root =
           net::ParsedCertificate::CreateFromCertificateData(
@@ -147,7 +150,10 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
               net::ParsedCertificate::DataSource::INTERNAL_COPY, {});
       ASSERT_TRUE(root);
       *trust_anchor =
-          TrustAnchor::CreateFromCertificateNoConstraints(std::move(root));
+          block_type == kTrustAnchorUnconstrained
+              ? TrustAnchor::CreateFromCertificateNoConstraints(std::move(root))
+              : TrustAnchor::CreateFromCertificateWithConstraints(
+                    std::move(root));
     } else if (block_type == kTimeHeader) {
       ASSERT_FALSE(has_time) << "Duplicate " << kTimeHeader;
       has_time = true;

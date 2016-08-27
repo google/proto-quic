@@ -167,7 +167,6 @@
 #include <openssl/x509v3.h>
 
 #include "internal.h"
-#include "../crypto/dh/internal.h"
 
 
 static int ssl3_send_client_hello(SSL *ssl);
@@ -515,7 +514,7 @@ int ssl3_connect(SSL *ssl) {
            * of the new established_session due to False Start. The caller may
            * have taken a reference to the temporary session. */
           ssl->s3->established_session =
-              SSL_SESSION_dup(ssl->s3->new_session, 1 /* include ticket */);
+              SSL_SESSION_dup(ssl->s3->new_session, SSL_SESSION_DUP_ALL);
           if (ssl->s3->established_session == NULL) {
             /* Do not stay in SSL_ST_OK, to avoid confusing |SSL_in_init|
              * callers. */
@@ -606,6 +605,16 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
     if (!CBB_add_u16(&child, ssl_cipher_get_value(cipher))) {
       return 0;
     }
+    /* Add PSK ciphers for TLS 1.3 resumption. */
+    if (ssl->session != NULL &&
+        ssl->method->version_from_wire(ssl->session->ssl_version) >=
+            TLS1_3_VERSION) {
+      uint16_t resumption_cipher;
+      if (ssl_cipher_get_ecdhe_psk_cipher(cipher, &resumption_cipher) &&
+          !CBB_add_u16(&child, resumption_cipher)) {
+        return 0;
+      }
+    }
   }
 
   /* If all ciphers were disabled, return the error to the caller. */
@@ -621,8 +630,6 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
     if (!CBB_add_u16(&child, SSL3_CK_SCSV & 0xffff)) {
       return 0;
     }
-    /* The renegotiation extension is required to be at index zero. */
-    ssl->s3->tmp.extensions.sent |= (1u << 0);
   }
 
   if ((ssl->mode & SSL_MODE_SEND_FALLBACK_SCSV) ||
@@ -711,10 +718,10 @@ static int ssl3_send_client_hello(SSL *ssl) {
   if (ssl->session != NULL) {
     uint16_t session_version =
         ssl->method->version_from_wire(ssl->session->ssl_version);
-    struct timeval now;
-    ssl_get_current_time(ssl, &now);
-    if (ssl->session->session_id_length == 0 || ssl->session->not_resumable ||
-        ssl->session->timeout < (long)now.tv_sec - ssl->session->time ||
+    if ((session_version < TLS1_3_VERSION &&
+         ssl->session->session_id_length == 0) ||
+        ssl->session->not_resumable ||
+        !ssl_session_is_time_valid(ssl, ssl->session) ||
         session_version < min_version || session_version > max_version) {
       SSL_set_session(ssl, NULL);
     }
@@ -888,18 +895,11 @@ static int ssl3_get_server_hello(SSL *ssl) {
     goto f_err;
   }
 
-  assert(ssl->session == NULL || ssl->session->session_id_length > 0);
   if (!ssl->s3->initial_handshake_complete && ssl->session != NULL &&
+      ssl->session->session_id_length != 0 &&
       CBS_mem_equal(&session_id, ssl->session->session_id,
                     ssl->session->session_id_length)) {
-    if (ssl->sid_ctx_length != ssl->session->sid_ctx_length ||
-        memcmp(ssl->session->sid_ctx, ssl->sid_ctx, ssl->sid_ctx_length)) {
-      /* actually a client application bug */
-      al = SSL_AD_ILLEGAL_PARAMETER;
-      OPENSSL_PUT_ERROR(SSL,
-                        SSL_R_ATTEMPT_TO_REUSE_SESSION_IN_DIFFERENT_CONTEXT);
-      goto f_err;
-    }
+    ssl->s3->session_reused = 1;
   } else {
     /* The session wasn't resumed. Create a fresh SSL_SESSION to
      * fill out. */
@@ -947,6 +947,13 @@ static int ssl3_get_server_hello(SSL *ssl) {
     if (ssl->session->ssl_version != ssl->version) {
       al = SSL_AD_ILLEGAL_PARAMETER;
       OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_VERSION_NOT_RETURNED);
+      goto f_err;
+    }
+    if (!ssl_session_is_context_valid(ssl, ssl->session)) {
+      /* This is actually a client application bug. */
+      al = SSL_AD_ILLEGAL_PARAMETER;
+      OPENSSL_PUT_ERROR(SSL,
+                        SSL_R_ATTEMPT_TO_REUSE_SESSION_IN_DIFFERENT_CONTEXT);
       goto f_err;
     }
   } else {
@@ -1042,7 +1049,8 @@ static int ssl3_get_server_certificate(SSL *ssl) {
   ssl->s3->new_session->cert_chain = chain;
 
   X509_free(ssl->s3->new_session->peer);
-  ssl->s3->new_session->peer = X509_up_ref(leaf);
+  X509_up_ref(leaf);
+  ssl->s3->new_session->peer = leaf;
 
   return 1;
 
@@ -1093,11 +1101,11 @@ f_err:
 }
 
 static int ssl3_verify_server_cert(SSL *ssl) {
-  if (!ssl_verify_cert_chain(ssl, ssl->s3->new_session->cert_chain)) {
+  if (!ssl_verify_cert_chain(ssl, &ssl->s3->new_session->verify_result,
+                             ssl->s3->new_session->cert_chain)) {
     return -1;
   }
 
-  ssl->s3->new_session->verify_result = ssl->verify_result;
   return 1;
 }
 
@@ -1937,8 +1945,7 @@ static int ssl3_get_new_session_ticket(SSL *ssl) {
     /* The server is sending a new ticket for an existing session. Sessions are
      * immutable once established, so duplicate all but the ticket of the
      * existing session. */
-    session = SSL_SESSION_dup(ssl->session,
-                              0 /* Don't duplicate session ticket */);
+    session = SSL_SESSION_dup(ssl->session, SSL_SESSION_INCLUDE_NONAUTH);
     if (session == NULL) {
       /* This should never happen. */
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);

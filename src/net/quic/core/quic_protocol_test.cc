@@ -404,27 +404,36 @@ TEST(PacketNumberQueueTest, Iterators) {
   PacketNumberQueue queue;
   queue.Add(1, 100);
 
-  const std::vector<QuicPacketNumber> actual_numbers(queue.begin(),
-                                                     queue.end());
-  const std::vector<Interval<QuicPacketNumber>> actual_intervals(
-      queue.begin_intervals(), queue.end_intervals());
-
-  std::vector<QuicPacketNumber> expected_numbers;
-  for (int i = 1; i < 100; ++i) {
-    expected_numbers.push_back(i);
-  }
+  const std::vector<Interval<QuicPacketNumber>> actual_intervals(queue.begin(),
+                                                                 queue.end());
 
   std::vector<Interval<QuicPacketNumber>> expected_intervals;
   expected_intervals.push_back(Interval<QuicPacketNumber>(1, 100));
 
   EXPECT_EQ(expected_intervals, actual_intervals);
-  EXPECT_EQ(expected_numbers, actual_numbers);
+}
 
-  PacketNumberQueue::const_iterator it_low = queue.lower_bound(10);
-  EXPECT_EQ(10u, *it_low);
+TEST(PacketNumberQueueTest, LowerBoundEquals) {
+  PacketNumberQueue queue;
+  queue.Add(1, 100);
 
-  it_low = queue.lower_bound(101);
-  EXPECT_TRUE(queue.end() == it_low);
+  PacketNumberQueue::const_iterator it = queue.lower_bound(10);
+  ASSERT_NE(queue.end(), it);
+  EXPECT_TRUE(it->Contains(10u));
+
+  it = queue.lower_bound(101);
+  EXPECT_TRUE(queue.end() == it);
+}
+
+TEST(PacketNumberQueueTest, LowerBoundGreater) {
+  PacketNumberQueue queue;
+  queue.Add(15, 25);
+  queue.Add(50, 100);
+
+  PacketNumberQueue::const_iterator it = queue.lower_bound(10);
+  ASSERT_NE(queue.end(), it);
+  EXPECT_EQ(15u, it->min());
+  EXPECT_EQ(25u, it->max());
 }
 
 TEST(PacketNumberQueueTest, IntervalLengthAndRemoveInterval) {

@@ -93,8 +93,7 @@ void TcpCubicSenderBase::SetFromConfig(const QuicConfig& config,
       // Use unity pacing instead of PRR.
       no_prr_ = true;
     }
-    if (FLAGS_quic_rate_based_sending &&
-        config.HasReceivedConnectionOptions() &&
+    if (config.HasReceivedConnectionOptions() &&
         ContainsQuicTag(config.ReceivedConnectionOptions(), kRATE)) {
       // Rate based sending experiment
       rate_based_sending_ = true;

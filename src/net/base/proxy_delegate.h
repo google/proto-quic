@@ -68,6 +68,21 @@ class NET_EXPORT ProxyDelegate {
   // allowed to push cross-origin resources.
   virtual bool IsTrustedSpdyProxy(const net::ProxyServer& proxy_server) = 0;
 
+  // Called after the proxy is resolved but before the connection is
+  // established. |resolved_proxy_server| is the proxy server resolved by the
+  // proxy service for fetching |url|. Sets |alternative_proxy_server| to an
+  // alternative proxy server, if one is available to fetch |url|.
+  // |alternative_proxy_server| is owned by the caller, and is guaranteed to be
+  // non-null.
+  virtual void GetAlternativeProxy(
+      const GURL& url,
+      const ProxyServer& resolved_proxy_server,
+      ProxyServer* alternative_proxy_server) const = 0;
+
+  // Notifies the ProxyDelegate that |alternative_proxy_server| is broken.
+  virtual void OnAlternativeProxyBroken(
+      const ProxyServer& alternative_proxy_server) = 0;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(ProxyDelegate);
 };

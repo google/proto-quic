@@ -21,14 +21,25 @@ enum SCTVerifyStatus {
   // The SCT is from an unknown log, so we cannot verify its signature.
   SCT_STATUS_LOG_UNKNOWN = 1,
 
-  // The SCT is from a known log, but the signature is invalid.
+  // This value is deprecated and should not be used. It has been split
+  // into INVALID_SIGNATURE and INVALID_TIMESTAMP to represent the
+  // different reasons an SCT could be invalid. Though it is no longer
+  // in use, it is preserved here because it may be present in
+  // serialized messages.
   SCT_STATUS_INVALID = 2,
 
   // The SCT is from a known log, and the signature is valid.
   SCT_STATUS_OK = 3,
 
-  // Used to bound the enum values.
-  SCT_STATUS_MAX,
+  // The SCT is from a known log, but the signature is invalid.
+  SCT_STATUS_INVALID_SIGNATURE = 4,
+
+  // The SCT is from a known log, but the timestamp is in the future.
+  SCT_STATUS_INVALID_TIMESTAMP = 5,
+
+  // Used to bound the enum values. Since this enum is passed over IPC,
+  // the last value must be a valid one (rather than one past a valid one).
+  SCT_STATUS_MAX = SCT_STATUS_INVALID_TIMESTAMP,
 };
 
 }  // namespace ct

@@ -37,6 +37,16 @@
 #include "base/message_loop/message_pump_libevent.h"
 #endif
 
+#if defined(OS_ANDROID)
+namespace base {
+namespace android {
+
+class JavaMessageHandlerFactory;
+
+}  // namespace android
+}  // namespace base
+#endif  // defined(OS_ANDROID)
+
 namespace base {
 
 class HistogramBase;
@@ -617,6 +627,11 @@ class BASE_EXPORT MessageLoopForUI : public MessageLoop {
   // never be called. Instead use Start(), which will forward all the native UI
   // events to the Java message loop.
   void Start();
+  void StartForTesting(base::android::JavaMessageHandlerFactory* factory,
+                       WaitableEvent* test_done_event);
+  // In Android there are cases where we want to abort immediately without
+  // calling Quit(), in these cases we call Abort().
+  void Abort();
 #endif
 
 #if defined(USE_OZONE) || (defined(USE_X11) && !defined(USE_GLIB))

@@ -79,8 +79,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     const QuicReceivedPacket& packet,
     IPEndPoint server_address,
     IPEndPoint client_address) {
-  if (!base::ContainsKey(undecryptable_packets_, connection_id) &&
-      undecryptable_packets_.size() >= kDefaultMaxConnectionsInStore) {
+  if (!base::ContainsKey(undecryptable_packets_, connection_id) && IsFull()) {
     // Drop the packet if store can't keep track of more connections.
     return TOO_MANY_CONNECTIONS;
   } else if (!base::ContainsKey(undecryptable_packets_, connection_id)) {
@@ -108,9 +107,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
 
   queue.buffered_packets.push_back(std::move(new_entry));
 
-  if (!expiration_alarm_->IsSet()) {
-    expiration_alarm_->Set(clock_->ApproximateNow() + connection_life_span_);
-  }
+  MaybeSetExpirationAlarm();
   return SUCCESS;
 }
 
@@ -143,6 +140,16 @@ void QuicBufferedPacketStore::OnExpirationTimeout() {
   if (!undecryptable_packets_.empty()) {
     expiration_alarm_->Set(clock_->ApproximateNow() + connection_life_span_);
   }
+}
+
+void QuicBufferedPacketStore::MaybeSetExpirationAlarm() {
+  if (!expiration_alarm_->IsSet()) {
+    expiration_alarm_->Set(clock_->ApproximateNow() + connection_life_span_);
+  }
+}
+
+bool QuicBufferedPacketStore::IsFull() {
+  return undecryptable_packets_.size() >= kDefaultMaxConnectionsInStore;
 }
 
 }  // namespace net

@@ -72,9 +72,6 @@ bool FLAGS_quic_only_one_sending_alarm = false;
 // flags.
 bool FLAGS_quic_use_old_public_reset_packets = true;
 
-// Adds a RATE connection option to do rate based sending.
-bool FLAGS_quic_rate_based_sending = true;
-
 // If true, QUIC will use cheap stateless rejects without creating a full
 // connection.
 bool FLAGS_quic_use_cheap_stateless_rejects = false;
@@ -82,9 +79,6 @@ bool FLAGS_quic_use_cheap_stateless_rejects = false;
 // If true, QUIC respect HTTP2 SETTINGS frame rather than always close the
 // connection.
 bool FLAGS_quic_respect_http2_settings_frame = true;
-
-// Do not use a QuicAckListener in order to confirm a larger Path MTU.
-bool FLAGS_quic_no_mtu_discovery_ack_listener = true;
 
 // If true, enables QUIC_VERSION_35.
 bool FLAGS_quic_enable_version_35 = true;
@@ -95,12 +89,6 @@ bool FLAGS_quic_enable_version_36 = true;
 // If true, enables QUIC_VERSION_36.
 bool FLAGS_quic_enable_version_36_v2 = false;
 
-// If true, requires support for X509 certificates in QUIC CHLO PDMDs.
-bool FLAGS_quic_require_x509 = true;
-
-// If true, deprecate safeguards for b/26023400.
-bool FLAGS_quic_deprecate_kfixd = true;
-
 // If true, use async codepaths to invoke ProofSource::GetProof.
 bool FLAGS_enable_async_get_proof = false;
 
@@ -110,15 +98,11 @@ bool FLAGS_quic_neuter_unencrypted_when_sending = true;
 
 // If true, QuicAlarm::Update will call a faster UpdateImpl implementation
 // instead of canceling and reregistering the alarm.
-bool FLAGS_quic_change_alarms_efficiently = false;
+bool FLAGS_quic_change_alarms_efficiently = true;
 
 // If true, requires handshake confirmations for all QUIC handshakes with
 // versions less than 33.
 bool FLAGS_quic_require_handshake_confirmation_pre33 = false;
-
-// If true, use the interval form of iteration over a PacketNumberQueue instead
-// of iterating over the individual numbers.
-bool FLAGS_quic_use_packet_number_queue_intervals = true;
 
 // If true, fix a bug with which QuicStreamSequencerBuffer can\'t release block
 // memory in time.
@@ -126,23 +110,19 @@ bool FLAGS_quic_sequencer_buffer_retire_block_in_time = true;
 
 // Remove obsolete code to force QUIC to go forward secure, now that the server
 // immediately goes forward secure.
-bool FLAGS_quic_remove_obsolete_forward_secure = false;
+bool FLAGS_quic_remove_obsolete_forward_secure = true;
 
 // If true, close QUIC connection explicitly on write error due to packet being
 // too large.
 bool FLAGS_quic_close_connection_on_packet_too_large = true;
 
-// Use GetLeastUnacked when updating the packet number length, instead of
-// GetLeastPacketAwaitedByPeer.
-bool FLAGS_quic_least_unacked_packet_number_length = true;
-
 // If true, close the write side of a QUIC spdy stream when all queued bytes
 // have been written and a FIN has been sent.
-bool FLAGS_quic_close_stream_after_writing_queued_data = false;
+bool FLAGS_quic_close_stream_after_writing_queued_data = true;
 
 // If true, close connection with QUIC_TOO_MANY_FRAME_GAPS error when number of
 // gaps in QuicStreamSequenceBuffer exceeds allowed limit.
-bool FLAGS_quic_limit_frame_gaps_in_buffer = false;
+bool FLAGS_quic_limit_frame_gaps_in_buffer = true;
 
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in public
 // flag.
@@ -164,4 +144,19 @@ bool FLAGS_quic_enable_app_limited_check = true;
 bool FLAGS_quic_simple_packet_number_length_2 = true;
 
 // If true, disables QUIC version less than 32.
-bool FLAGS_quic_disable_pre_32 = true;
+bool FLAGS_quic_disable_pre_32 = false;
+
+// If true, QUIC will enforce the MTU limit for connections that may require a
+// small MTU.
+bool FLAGS_quic_enforce_mtu_limit = false;
+
+// Disable MTU probing if MTU probe causes ERR_MSG_TOO_BIG instead of aborting
+// the connection.
+bool FLAGS_graceful_emsgsize_on_mtu_probe = true;
+
+// If true, do not force sending ack when connection is closed because of
+// message too long (EMSGSIZE) write error.
+bool FLAGS_quic_do_not_send_ack_on_emsgsize = true;
+
+// If true, postpone multipath flag validation to ProcessValidatedPacket.
+bool FLAGS_quic_postpone_multipath_flag_validation = true;

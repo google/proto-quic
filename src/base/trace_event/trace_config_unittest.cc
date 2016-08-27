@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "base/json/json_reader.h"
+#include "base/json/json_writer.h"
 #include "base/macros.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/trace_config.h"
@@ -25,28 +26,36 @@ const char kDefaultTraceConfigString[] =
   "}";
 
 const char kCustomTraceConfigString[] =
-  "{"
+    "{"
     "\"enable_argument_filter\":true,"
     "\"enable_sampling\":true,"
     "\"enable_systrace\":true,"
+    "\"event_filters\":["
+    "{"
+    "\"excluded_categories\":[\"unfiltered_cat\"],"
+    "\"filter_args\":{\"event_name_whitelist\":[\"a snake\",\"a dog\"]},"
+    "\"filter_predicate\":\"event_whitelist_predicate\","
+    "\"included_categories\":[\"*\"]"
+    "}"
+    "],"
     "\"excluded_categories\":[\"excluded\",\"exc_pattern*\"],"
     "\"included_categories\":[\"included\","
-                            "\"inc_pattern*\","
-                            "\"disabled-by-default-cc\","
-                            "\"disabled-by-default-memory-infra\"],"
+    "\"inc_pattern*\","
+    "\"disabled-by-default-cc\","
+    "\"disabled-by-default-memory-infra\"],"
     "\"memory_dump_config\":{"
-      "\"allowed_dump_modes\":[\"background\",\"light\",\"detailed\"],"
-      "\"heap_profiler_options\":{"
-        "\"breakdown_threshold_bytes\":10240"
-      "},"
-      "\"triggers\":["
-        "{\"mode\":\"light\",\"periodic_interval_ms\":50},"
-        "{\"mode\":\"detailed\",\"periodic_interval_ms\":1000}"
-      "]"
+    "\"allowed_dump_modes\":[\"background\",\"light\",\"detailed\"],"
+    "\"heap_profiler_options\":{"
+    "\"breakdown_threshold_bytes\":10240"
+    "},"
+    "\"triggers\":["
+    "{\"mode\":\"light\",\"periodic_interval_ms\":50},"
+    "{\"mode\":\"detailed\",\"periodic_interval_ms\":1000}"
+    "]"
     "},"
     "\"record_mode\":\"record-continuously\","
     "\"synthetic_delays\":[\"test.Delay1;16\",\"test.Delay2;32\"]"
-  "}";
+    "}";
 
 void CheckDefaultTraceConfigBehavior(const TraceConfig& tc) {
   EXPECT_EQ(RECORD_UNTIL_FULL, tc.GetTraceRecordMode());
@@ -330,6 +339,7 @@ TEST(TraceConfigTest, DisabledByDefaultCategoryFilterString) {
   EXPECT_FALSE(tc.IsCategoryGroupEnabled("bar"));
   EXPECT_FALSE(tc.IsCategoryGroupEnabled("disabled-by-default-bar"));
 
+  EXPECT_TRUE(tc.event_filters().empty());
   // Enabling only the disabled-by-default-* category means the default ones
   // are also enabled.
   tc = TraceConfig("disabled-by-default-foo", "");
@@ -387,17 +397,25 @@ TEST(TraceConfigTest, TraceConfigFromDict) {
 TEST(TraceConfigTest, TraceConfigFromValidString) {
   // Using some non-empty config string.
   const char config_string[] =
-    "{"
+      "{"
       "\"enable_argument_filter\":true,"
       "\"enable_sampling\":true,"
       "\"enable_systrace\":true,"
+      "\"event_filters\":["
+      "{"
+      "\"excluded_categories\":[\"unfiltered_cat\"],"
+      "\"filter_args\":{\"event_name_whitelist\":[\"a snake\",\"a dog\"]},"
+      "\"filter_predicate\":\"event_whitelist_predicate\","
+      "\"included_categories\":[\"*\"]"
+      "}"
+      "],"
       "\"excluded_categories\":[\"excluded\",\"exc_pattern*\"],"
       "\"included_categories\":[\"included\","
-                               "\"inc_pattern*\","
-                               "\"disabled-by-default-cc\"],"
+      "\"inc_pattern*\","
+      "\"disabled-by-default-cc\"],"
       "\"record_mode\":\"record-continuously\","
       "\"synthetic_delays\":[\"test.Delay1;16\",\"test.Delay2;32\"]"
-    "}";
+      "}";
   TraceConfig tc(config_string);
 
   EXPECT_STREQ(config_string, tc.ToString().c_str());
@@ -433,6 +451,21 @@ TEST(TraceConfigTest, TraceConfigFromValidString) {
   EXPECT_EQ(2u, tc.GetSyntheticDelayValues().size());
   EXPECT_STREQ("test.Delay1;16", tc.GetSyntheticDelayValues()[0].c_str());
   EXPECT_STREQ("test.Delay2;32", tc.GetSyntheticDelayValues()[1].c_str());
+
+  EXPECT_EQ(tc.event_filters().size(), 1u);
+  const TraceConfig::EventFilterConfig& event_filter = tc.event_filters()[0];
+  EXPECT_STREQ("event_whitelist_predicate",
+               event_filter.predicate_name().c_str());
+  EXPECT_EQ(1u, event_filter.included_categories().size());
+  EXPECT_STREQ("*", event_filter.included_categories()[0].c_str());
+  EXPECT_EQ(1u, event_filter.excluded_categories().size());
+  EXPECT_STREQ("unfiltered_cat", event_filter.excluded_categories()[0].c_str());
+  EXPECT_TRUE(event_filter.filter_args());
+
+  std::string json_out;
+  base::JSONWriter::Write(*event_filter.filter_args(), &json_out);
+  EXPECT_STREQ(json_out.c_str(),
+               "{\"event_name_whitelist\":[\"a snake\",\"a dog\"]}");
 
   const char config_string_2[] = "{\"included_categories\":[\"*\"]}";
   TraceConfig tc2(config_string_2);

@@ -80,6 +80,7 @@ CTLogVerifier::CTLogVerifier(const base::StringPiece& description,
       signature_algorithm_(ct::DigitallySigned::SIG_ALGO_ANONYMOUS),
       public_key_(NULL) {
   DCHECK(url_.is_valid());
+  DCHECK(!dns_domain_.empty());
 }
 
 bool CTLogVerifier::Verify(const ct::LogEntry& entry,

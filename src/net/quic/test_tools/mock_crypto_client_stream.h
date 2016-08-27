@@ -41,6 +41,7 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
       const QuicServerId& server_id,
       QuicClientSessionBase* session,
       ProofVerifyContext* verify_context,
+      const QuicConfig& config,
       QuicCryptoClientConfig* crypto_config,
       HandshakeMode handshake_mode,
       const ProofVerifyDetailsChromium* proof_verify_details_);
@@ -63,6 +64,7 @@ class MockCryptoClientStream : public QuicCryptoClientStream {
 
   const QuicServerId server_id_;
   const ProofVerifyDetailsChromium* proof_verify_details_;
+  const QuicConfig config_;
 
   DISALLOW_COPY_AND_ASSIGN(MockCryptoClientStream);
 };

@@ -62,8 +62,7 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
   // Return the size, in bytes, of the resulting PUSH_PROMISE frame.
   virtual size_t WritePushPromise(QuicStreamId original_stream_id,
                                   QuicStreamId promised_stream_id,
-                                  SpdyHeaderBlock headers,
-                                  QuicAckListenerInterface* ack_listener);
+                                  SpdyHeaderBlock headers);
 
   // For forcing HOL blocking.  This encapsulates data from other
   // streams into HTTP/2 data frames on the headers stream.

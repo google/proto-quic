@@ -440,6 +440,9 @@ int CertVerifyProc::Verify(X509Certificate* cert,
   // disabled on this date, but enterprises need more time to transition.
   // As the risk is greatest for publicly trusted certificates, prevent
   // those certificates from being trusted from that date forward.
+  //
+  // TODO(mattm): apply the SHA-1 deprecation check to all certs unless
+  // CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS flag is present.
   if (verify_result->has_md5 ||
       (verify_result->has_sha1_leaf && verify_result->is_issued_by_known_root &&
        IsPastSHA1DeprecationDate(*cert))) {

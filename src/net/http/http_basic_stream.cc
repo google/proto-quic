@@ -4,7 +4,7 @@
 
 #include "net/http/http_basic_stream.h"
 
-#include <memory>
+#include <utility>
 
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_body_drainer.h"
@@ -13,9 +13,9 @@
 
 namespace net {
 
-HttpBasicStream::HttpBasicStream(ClientSocketHandle* connection,
+HttpBasicStream::HttpBasicStream(std::unique_ptr<ClientSocketHandle> connection,
                                  bool using_proxy)
-    : state_(connection, using_proxy) {}
+    : state_(std::move(connection), using_proxy) {}
 
 HttpBasicStream::~HttpBasicStream() {}
 
@@ -60,8 +60,7 @@ HttpStream* HttpBasicStream::RenewStreamForAuth() {
   // be extra-sure it doesn't touch the connection again, delete it here rather
   // than leaving it until the destructor is called.
   state_.DeleteParser();
-  return new HttpBasicStream(state_.ReleaseConnection().release(),
-                             state_.using_proxy());
+  return new HttpBasicStream(state_.ReleaseConnection(), state_.using_proxy());
 }
 
 bool HttpBasicStream::IsResponseBodyComplete() const {

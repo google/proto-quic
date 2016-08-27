@@ -141,6 +141,7 @@
 #include <openssl/ssl.h>
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <openssl/bytestring.h>
@@ -166,6 +167,11 @@
 /* |SSL_R_UNKNOWN_PROTOCOL| is no longer emitted, but continue to define it
  * to avoid downstream churn. */
 OPENSSL_DECLARE_ERROR_REASON(SSL, UNKNOWN_PROTOCOL)
+
+/* The following errors are no longer emitted, but are used in nginx without
+ * #ifdefs. */
+OPENSSL_DECLARE_ERROR_REASON(SSL, BLOCK_CIPHER_PAD_IS_WRONG)
+OPENSSL_DECLARE_ERROR_REASON(SSL, NO_CIPHERS_SPECIFIED)
 
 /* Some error codes are special. Ensure the make_errors.go script never
  * regresses this. */
@@ -440,7 +446,6 @@ SSL *SSL_new(SSL_CTX *ctx) {
     ssl->alpn_client_proto_list_len = ssl->ctx->alpn_client_proto_list_len;
   }
 
-  ssl->verify_result = X509_V_ERR_INVALID_CALL;
   ssl->method = ctx->method;
 
   if (!ssl->method->ssl_new(ssl)) {
@@ -722,6 +727,7 @@ static int ssl_read_impl(SSL *ssl, void *buf, int num, int peek) {
     int got_handshake;
     int ret = ssl->method->read_app_data(ssl, &got_handshake, buf, num, peek);
     if (ret > 0 || !got_handshake) {
+      ssl->s3->key_update_count = 0;
       return ret;
     }
 
@@ -1019,7 +1025,8 @@ X509 *SSL_get_peer_certificate(const SSL *ssl) {
   if (session == NULL || session->peer == NULL) {
     return NULL;
   }
-  return X509_up_ref(session->peer);
+  X509_up_ref(session->peer);
+  return session->peer;
 }
 
 STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
@@ -1630,21 +1637,11 @@ int SSL_set_cipher_list(SSL *ssl, const char *str) {
 }
 
 STACK_OF(SSL_CIPHER) *
-    ssl_bytes_to_cipher_list(SSL *ssl, const CBS *cbs, uint16_t max_version) {
-  CBS cipher_suites = *cbs;
-  const SSL_CIPHER *c;
-  STACK_OF(SSL_CIPHER) *sk;
+    ssl_parse_client_cipher_list(const struct ssl_early_callback_ctx *ctx) {
+  CBS cipher_suites;
+  CBS_init(&cipher_suites, ctx->cipher_suites, ctx->cipher_suites_len);
 
-  if (ssl->s3) {
-    ssl->s3->send_connection_binding = 0;
-  }
-
-  if (CBS_len(&cipher_suites) % 2 != 0) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST);
-    return NULL;
-  }
-
-  sk = sk_SSL_CIPHER_new_null();
+  STACK_OF(SSL_CIPHER) *sk = sk_SSL_CIPHER_new_null();
   if (sk == NULL) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     goto err;
@@ -1654,33 +1651,11 @@ STACK_OF(SSL_CIPHER) *
     uint16_t cipher_suite;
 
     if (!CBS_get_u16(&cipher_suites, &cipher_suite)) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+      OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST);
       goto err;
     }
 
-    /* Check for SCSV. */
-    if (ssl->s3 && cipher_suite == (SSL3_CK_SCSV & 0xffff)) {
-      /* SCSV is fatal if renegotiating. */
-      if (ssl->s3->initial_handshake_complete) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
-        goto err;
-      }
-      ssl->s3->send_connection_binding = 1;
-      continue;
-    }
-
-    /* Check for FALLBACK_SCSV. */
-    if (ssl->s3 && cipher_suite == (SSL3_CK_FALLBACK_SCSV & 0xffff)) {
-      if (ssl3_protocol_version(ssl) < max_version) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_INAPPROPRIATE_FALLBACK);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL3_AD_INAPPROPRIATE_FALLBACK);
-        goto err;
-      }
-      continue;
-    }
-
-    c = SSL_get_cipher_by_value(cipher_suite);
+    const SSL_CIPHER *c = SSL_get_cipher_by_value(cipher_suite);
     if (c != NULL && !sk_SSL_CIPHER_push(sk, c)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       goto err;
@@ -2193,7 +2168,7 @@ const SSL_CIPHER *SSL_get_current_cipher(const SSL *ssl) {
 }
 
 int SSL_session_reused(const SSL *ssl) {
-  return ssl->session != NULL;
+  return ssl->s3->session_reused;
 }
 
 const COMP_METHOD *SSL_get_current_compression(SSL *ssl) { return NULL; }
@@ -2340,10 +2315,18 @@ char *SSL_get_shared_ciphers(const SSL *ssl, char *buf, int len) {
 }
 
 void SSL_set_verify_result(SSL *ssl, long result) {
-  ssl->verify_result = result;
+  if (result != X509_V_OK) {
+    abort();
+  }
 }
 
-long SSL_get_verify_result(const SSL *ssl) { return ssl->verify_result; }
+long SSL_get_verify_result(const SSL *ssl) {
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL) {
+    return X509_V_ERR_INVALID_CALL;
+  }
+  return session->verify_result;
+}
 
 int SSL_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
                          CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func) {
@@ -2689,7 +2672,7 @@ const struct {
     {TLS1_3_VERSION, SSL_OP_NO_TLSv1_3},
 };
 
-static const size_t kVersionsLen = sizeof(kVersions) / sizeof(kVersions[0]);
+static const size_t kVersionsLen = OPENSSL_ARRAY_SIZE(kVersions);
 
 int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
                                uint16_t *out_fallback_version,

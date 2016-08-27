@@ -1692,7 +1692,7 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
 #endif
     }
 
-    if (current_frame_type_ != CONTINUATION) {
+    if (use_new_methods_ && current_frame_type_ != CONTINUATION) {
       header_handler_ = visitor_->OnHeaderFrameStart(current_frame_stream_id_);
       if (header_handler_ == nullptr) {
         SPDY_BUG << "visitor_->OnHeaderFrameStart returned nullptr";
@@ -1762,18 +1762,34 @@ size_t SpdyFramer::ProcessControlFrameHeaderBlock(const char* data,
         size_t compressed_len = 0;
         if (GetHpackDecoder()->HandleControlFrameHeadersComplete(
                 &compressed_len)) {
-          visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
-          if (state_ == SPDY_ERROR) {
-            return data_len;
+          if (use_new_methods_) {
+            visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
+            if (state_ == SPDY_ERROR) {
+              return data_len;
+            }
+          } else {
+            // TODO(jgraettinger): To be removed with migration to
+            // SpdyHeadersHandlerInterface. Serializes the HPACK block as a
+            // SPDY3 block, delivered via reentrant call to
+            // ProcessControlFrameHeaderBlock().
+            DeliverHpackBlockAsSpdy3Block(compressed_len);
+            return process_bytes;
           }
         } else {
           set_error(SPDY_DECOMPRESS_FAILURE);
           processed_successfully = false;
         }
       } else {
-        visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
-        if (state_ == SPDY_ERROR) {
-          return data_len;
+        if (use_new_methods_) {
+          visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
+          if (state_ == SPDY_ERROR) {
+            return data_len;
+          }
+        } else {
+          // The complete header block has been delivered. We send a zero-length
+          // OnControlFrameHeaderData() to indicated this.
+          visitor_->OnControlFrameHeaderData(current_frame_stream_id_, nullptr,
+                                             0);
         }
       }
     }
@@ -3177,11 +3193,17 @@ bool SpdyFramer::IncrementallyDecompressControlFrameHeaderData(
     if ((rv == Z_OK) || input_exhausted) {
       size_t decompressed_len = arraysize(buffer) - decomp->avail_out;
       if (decompressed_len > 0) {
-        processed_successfully = header_parser_->HandleControlFrameHeadersData(
-            stream_id, buffer, decompressed_len);
-        if (header_parser_->get_error() ==
-            SpdyHeadersBlockParser::NEED_MORE_DATA) {
-          processed_successfully = true;
+        if (use_new_methods_) {
+          processed_successfully =
+              header_parser_->HandleControlFrameHeadersData(stream_id, buffer,
+                                                            decompressed_len);
+          if (header_parser_->get_error() ==
+              SpdyHeadersBlockParser::NEED_MORE_DATA) {
+            processed_successfully = true;
+          }
+        } else {
+          processed_successfully = visitor_->OnControlFrameHeaderData(
+              stream_id, buffer, decompressed_len);
         }
       }
       if (!processed_successfully) {
@@ -3203,10 +3225,16 @@ bool SpdyFramer::IncrementallyDeliverControlFrameHeaderData(
   bool read_successfully = true;
   while (read_successfully && len > 0) {
     size_t bytes_to_deliver = std::min(len, kHeaderDataChunkMaxSize);
-    read_successfully = header_parser_->HandleControlFrameHeadersData(
-        stream_id, data, bytes_to_deliver);
-    if (header_parser_->get_error() == SpdyHeadersBlockParser::NEED_MORE_DATA) {
-      read_successfully = true;
+    if (use_new_methods_) {
+      read_successfully = header_parser_->HandleControlFrameHeadersData(
+          stream_id, data, bytes_to_deliver);
+      if (header_parser_->get_error() ==
+          SpdyHeadersBlockParser::NEED_MORE_DATA) {
+        read_successfully = true;
+      }
+    } else {
+      read_successfully =
+          visitor_->OnControlFrameHeaderData(stream_id, data, bytes_to_deliver);
     }
     data += bytes_to_deliver;
     len -= bytes_to_deliver;

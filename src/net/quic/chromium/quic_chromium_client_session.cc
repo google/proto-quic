@@ -39,10 +39,6 @@ namespace net {
 
 namespace {
 
-// The length of time to wait for a 0-RTT handshake to complete
-// before allowing the requests to possibly proceed over TCP.
-const int k0RttHandshakeTimeoutMs = 300;
-
 // IPv6 packets have an additional 20 bytes of overhead than IPv4 packets.
 const size_t kAdditionalOverheadForIPv6 = 20;
 
@@ -329,11 +325,11 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   if (GetSSLInfo(&ssl_info) && ssl_info.cert.get()) {
     if (!port_selected) {
       UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.ConnectRandomPortForHTTPS",
-                                  round_trip_handshakes, 0, 3, 4);
+                                  round_trip_handshakes, 1, 3, 4);
       if (require_confirmation_) {
         UMA_HISTOGRAM_CUSTOM_COUNTS(
             "Net.QuicSession.ConnectRandomPortRequiringConfirmationForHTTPS",
-            round_trip_handshakes, 0, 3, 4);
+            round_trip_handshakes, 1, 3, 4);
       }
     }
   }
@@ -352,7 +348,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
           static_cast<base::HistogramBase::Sample>(
               100 * wait_time.InMicroseconds() / stats.min_rtt_us);
       UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicServerInfo.WaitForDataReadyToRtt",
-                                  wait_to_rtt, 0, kMaxWaitToRtt, 50);
+                                  wait_to_rtt, 1, kMaxWaitToRtt, 50);
     }
   }
 
@@ -376,10 +372,10 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
         100 * stats.max_time_reordering_us / stats.min_rtt_us);
   }
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.MaxReorderingTime", reordering,
-                              0, kMaxReordering, 50);
+                              1, kMaxReordering, 50);
   if (stats.min_rtt_us > 100 * 1000) {
     UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.MaxReorderingTimeLongRtt",
-                                reordering, 0, kMaxReordering, 50);
+                                reordering, 1, kMaxReordering, 50);
   }
   UMA_HISTOGRAM_COUNTS(
       "Net.QuicSession.MaxReordering",
@@ -491,7 +487,10 @@ QuicChromiumClientSession::CreateOutgoingDynamicStream(SpdyPriority priority) {
   if (!ShouldCreateOutgoingDynamicStream()) {
     return nullptr;
   }
-  return CreateOutgoingReliableStreamImpl();
+  QuicChromiumClientStream* stream = CreateOutgoingReliableStreamImpl();
+  if (stream != nullptr)
+    stream->SetPriority(priority);
+  return stream;
 }
 
 QuicChromiumClientStream*
@@ -611,15 +610,8 @@ int QuicChromiumClientSession::CryptoConnect(
 
   // Unless we require handshake confirmation, activate the session if
   // we have established initial encryption.
-  if (!require_confirmation_ && IsEncryptionEstablished()) {
-    // To mitigate the effects of hanging 0-RTT connections, set up a timer to
-    // cancel any requests, if the handshake takes too long.
-    task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(&QuicChromiumClientSession::OnConnectTimeout,
-                              weak_factory_.GetWeakPtr()),
-        base::TimeDelta::FromMilliseconds(k0RttHandshakeTimeoutMs));
+  if (!require_confirmation_ && IsEncryptionEstablished())
     return OK;
-  }
 
   callback_ = callback;
   return ERR_IO_PENDING;
@@ -734,11 +726,31 @@ void QuicChromiumClientSession::OnClosedStream() {
 
 void QuicChromiumClientSession::OnConfigNegotiated() {
   QuicClientSessionBase::OnConfigNegotiated();
-  if (stream_factory_ && config()->HasReceivedAlternateServerAddress()) {
-    // Server has sent an alternate address to connect to.
-    stream_factory_->MigrateSessionToNewPeerAddress(
-        this, config()->ReceivedAlternateServerAddress(), net_log_);
+  if (!stream_factory_ || !config()->HasReceivedAlternateServerAddress())
+    return;
+
+  // Server has sent an alternate address to connect to.
+  IPEndPoint new_address = config()->ReceivedAlternateServerAddress();
+  IPEndPoint old_address;
+  GetDefaultSocket()->GetPeerAddress(&old_address);
+
+  // Migrate only if address families match, or if new address family is v6,
+  // since a v4 address should be reachable over a v6 network (using a
+  // v4-mapped v6 address).
+  if (old_address.GetFamily() != new_address.GetFamily() &&
+      old_address.GetFamily() == ADDRESS_FAMILY_IPV4) {
+    return;
   }
+
+  if (old_address.GetFamily() != new_address.GetFamily()) {
+    DCHECK_EQ(old_address.GetFamily(), ADDRESS_FAMILY_IPV6);
+    DCHECK_EQ(new_address.GetFamily(), ADDRESS_FAMILY_IPV4);
+    // Use a v4-mapped v6 address.
+    new_address = IPEndPoint(ConvertIPv4ToIPv4MappedIPv6(new_address.address()),
+                             new_address.port());
+  }
+
+  stream_factory_->MigrateSessionToNewPeerAddress(this, new_address, net_log_);
 }
 
 void QuicChromiumClientSession::OnCryptoHandshakeEvent(
@@ -876,6 +888,9 @@ void QuicChromiumClientSession::OnConnectionClosed(
         UMA_HISTOGRAM_COUNTS(
             "Net.QuicSession.TimedOutWithOpenStreams.ConsecutiveTLPCount",
             connection()->sent_packet_manager().GetConsecutiveTlpCount());
+        UMA_HISTOGRAM_SPARSE_SLOWLY(
+            "Net.QuicSession.TimedOutWithOpenStreams.LocalPort",
+            connection()->self_address().port());
       }
     } else {
       UMA_HISTOGRAM_COUNTS(
@@ -1144,19 +1159,6 @@ void QuicChromiumClientSession::NotifyFactoryOfSessionClosed() {
   // Will delete |this|.
   if (stream_factory_)
     stream_factory_->OnSessionClosed(this);
-}
-
-void QuicChromiumClientSession::OnConnectTimeout() {
-  DCHECK(callback_.is_null());
-
-  if (IsCryptoHandshakeConfirmed())
-    return;
-
-  // TODO(rch): re-enable this code once beta is cut.
-  //  if (stream_factory_)
-  //    stream_factory_->OnSessionConnectTimeout(this);
-  //  CloseAllStreams(ERR_QUIC_HANDSHAKE_FAILED);
-  //  DCHECK_EQ(0u, GetNumOpenOutgoingStreams());
 }
 
 bool QuicChromiumClientSession::MigrateToSocket(

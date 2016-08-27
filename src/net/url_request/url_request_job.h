@@ -354,10 +354,6 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   URLRequest* request_;
 
  private:
-  // Set the status of the associated URLRequest.
-  // TODO(mmenke): Make the URLRequest manage its own status.
-  void SetStatus(const URLRequestStatus& status);
-
   // When data filtering is enabled, this function is used to read data
   // for the filter. Returns a net error code to indicate if raw data was
   // successfully read,  an error happened, or the IO is pending.

@@ -9,8 +9,10 @@
 #include "base/strings/string_util.h"
 #include "base/values.h"
 #include "net/base/host_mapping_rules.h"
+#include "net/base/proxy_delegate.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/transport_security_state.h"
+#include "net/proxy/proxy_server.h"
 #include "net/spdy/spdy_session.h"
 
 namespace net {
@@ -38,6 +40,7 @@ HttpStreamFactoryImpl::JobController::JobController(
       job_bound_(false),
       main_job_is_blocked_(false),
       bound_job_(nullptr),
+      can_start_alternative_proxy_job_(false),
       ptr_factory_(this) {
   DCHECK(factory);
 }
@@ -355,6 +358,45 @@ void HttpStreamFactoryImpl::JobController::OnNeedsProxyAuth(
                              auth_controller);
 }
 
+void HttpStreamFactoryImpl::JobController::OnResolveProxyComplete(
+    Job* job,
+    const HttpRequestInfo& request_info,
+    RequestPriority priority,
+    const SSLConfig& server_ssl_config,
+    const SSLConfig& proxy_ssl_config,
+    HttpStreamRequest::StreamType stream_type) {
+  DCHECK(job);
+
+  ProxyServer alternative_proxy_server;
+  if (!ShouldCreateAlternativeProxyServerJob(job, job->proxy_info(),
+                                             request_info.url,
+                                             &alternative_proxy_server)) {
+    return;
+  }
+
+  DCHECK(main_job_);
+  DCHECK_EQ(MAIN, job->job_type());
+  DCHECK(!alternative_job_);
+  DCHECK(!main_job_is_blocked_);
+
+  HostPortPair destination(HostPortPair::FromURL(request_info.url));
+  GURL origin_url = ApplyHostMappingRules(request_info.url, &destination);
+
+  alternative_job_.reset(job_factory_->CreateJob(
+      this, ALTERNATIVE, session_, request_info, priority, server_ssl_config,
+      proxy_ssl_config, destination, origin_url, alternative_proxy_server,
+      job->net_log().net_log()));
+  AttachJob(alternative_job_.get());
+
+  can_start_alternative_proxy_job_ = false;
+  main_job_is_blocked_ = true;
+
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::Bind(&HttpStreamFactoryImpl::Job::Start,
+                            base::Unretained(alternative_job_.get()),
+                            request_->stream_type()));
+}
+
 void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
     Job* job,
     const base::WeakPtr<SpdySession>& spdy_session,
@@ -607,6 +649,8 @@ void HttpStreamFactoryImpl::JobController::CreateJobs(
 
     main_job_is_blocked_ = true;
     alternative_job_->Start(request_->stream_type());
+  } else {
+    can_start_alternative_proxy_job_ = true;
   }
   // Even if |alternative_job| has already finished, it will not have notified
   // the request yet, since we defer that to the next iteration of the
@@ -894,5 +938,74 @@ HttpStreamFactoryImpl::JobController::GetAlternativeServiceForInternal(
     delegate->OnQuicBroken();
 
   return first_alternative_service;
+}
+
+bool HttpStreamFactoryImpl::JobController::
+    ShouldCreateAlternativeProxyServerJob(
+        Job* job,
+        const ProxyInfo& proxy_info,
+        const GURL& url,
+        ProxyServer* alternative_proxy_server) const {
+  DCHECK(!alternative_proxy_server->is_valid());
+  if (!can_start_alternative_proxy_job_) {
+    // Either an alternative service job or an alternative proxy server job has
+    // already been started.
+    return false;
+  }
+
+  if (job->job_type() == ALTERNATIVE) {
+    // If |job| is using alternative service, then alternative proxy server
+    // should not be used.
+    return false;
+  }
+
+  if (job->job_type() == PRECONNECT) {
+    // Preconnects should be fetched using only the main job to keep the
+    // resource utilization down.
+    return false;
+  }
+
+  if (proxy_info.is_empty() || proxy_info.is_direct() || proxy_info.is_quic()) {
+    // Alternative proxy server job can be created only if |job| fetches the
+    // |request_| through a non-QUIC proxy.
+    return false;
+  }
+
+  if (!url.SchemeIs(url::kHttpScheme)) {
+    // Only HTTP URLs can be fetched through alternative proxy server, since the
+    // alternative proxy server may not support fetching of URLs with other
+    // schemes.
+    return false;
+  }
+
+  ProxyDelegate* proxy_delegate = session_->params().proxy_delegate;
+  if (!proxy_delegate)
+    return false;
+
+  proxy_delegate->GetAlternativeProxy(url, proxy_info.proxy_server(),
+                                      alternative_proxy_server);
+
+  if (!alternative_proxy_server->is_valid())
+    return false;
+
+  DCHECK(!(*alternative_proxy_server == proxy_info.proxy_server()));
+
+  if (!alternative_proxy_server->is_https() &&
+      !alternative_proxy_server->is_quic()) {
+    // Alternative proxy server should be a secure server.
+    return false;
+  }
+
+  if (alternative_proxy_server->is_quic()) {
+    // Check that QUIC is enabled globally, and it is not disabled on
+    // the specified port.
+    if (!session_->params().enable_quic ||
+        session_->quic_stream_factory()->IsQuicDisabled(
+            alternative_proxy_server->host_port_pair().port())) {
+      return false;
+    }
+  }
+
+  return true;
 }
 }

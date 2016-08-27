@@ -97,7 +97,7 @@
 //
 // PASSING BOUND INPUT PARAMETERS
 //
-//   Bound parameters are specified when you create thee callback as arguments
+//   Bound parameters are specified when you create the callback as arguments
 //   to Bind(). They will be passed to the function and the Run()ner of the
 //   callback doesn't see those values or even know that the function it's
 //   calling.
@@ -192,10 +192,10 @@
 //   // f becomes null during the following call.
 //   base::Closure cb = base::Bind(&TakesOwnership, base::Passed(&f));
 //
-//   Ownership of the parameter will be with the callback until the it is run,
-//   when ownership is passed to the callback function. This means the callback
-//   can only be run once. If the callback is never run, it will delete the
-//   object when it's destroyed.
+//   Ownership of the parameter will be with the callback until the callback is
+//   run, and then ownership is passed to the callback function. This means the
+//   callback can only be run once. If the callback is never run, it will delete
+//   the object when it's destroyed.
 //
 // PASSING PARAMETERS AS A scoped_refptr
 //
@@ -359,8 +359,7 @@ class Callback<R(Args...), copy_mode>
 
   Callback() : internal::CallbackBase<copy_mode>(nullptr) {}
 
-  Callback(internal::BindStateBase* bind_state,
-           PolymorphicInvoke invoke_func)
+  Callback(internal::BindStateBase* bind_state, PolymorphicInvoke invoke_func)
       : internal::CallbackBase<copy_mode>(bind_state) {
     using InvokeFuncStorage =
         typename internal::CallbackBase<copy_mode>::InvokeFuncStorage;

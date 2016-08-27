@@ -62,15 +62,10 @@ class MockableQuicClient : public QuicClient {
 
   ~MockableQuicClient() override;
 
-  // By default, this will call QuicClient::ProcessPacket
-  MOCK_METHOD3(ProcessPacket,
-               void(const IPEndPoint&,
-                    const IPEndPoint&,
-                    const QuicReceivedPacket&));
+  void ProcessPacket(const IPEndPoint& self_address,
+                     const IPEndPoint& peer_address,
+                     const QuicReceivedPacket& packet) override;
 
-  void ProcessPacketBase(const IPEndPoint& self_address,
-                         const IPEndPoint& peer_address,
-                         const QuicReceivedPacket& packet);
   QuicPacketWriter* CreateQuicPacketWriter() override;
   QuicConnectionId GenerateNewConnectionId() override;
   void UseWriter(QuicPacketWriterWrapper* writer);
@@ -79,11 +74,21 @@ class MockableQuicClient : public QuicClient {
       const CachedNetworkParameters& cached_network_params) {
     cached_network_paramaters_ = cached_network_params;
   }
+  const QuicReceivedPacket* last_incoming_packet() {
+    return last_incoming_packet_.get();
+  }
+  void set_track_last_incoming_packet(bool track) {
+    track_last_incoming_packet_ = track;
+  }
 
  private:
   QuicConnectionId override_connection_id_;  // ConnectionId to use, if nonzero
   QuicPacketWriterWrapper* test_writer_;
   CachedNetworkParameters cached_network_paramaters_;
+  // The last incoming packet, iff |track_last_incoming_packet_| is true.
+  std::unique_ptr<QuicReceivedPacket> last_incoming_packet_;
+  // If true, copy each packet from ProcessPacket into |last_incoming_packet_|
+  bool track_last_incoming_packet_;
 
   DISALLOW_COPY_AND_ASSIGN(MockableQuicClient);
 };
