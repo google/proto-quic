@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/logging.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
@@ -18,17 +19,26 @@
 
 namespace net {
 
+using namespace verify_certificate_chain_errors;
+
 namespace {
 
 // Returns true if the certificate does not contain any unconsumed _critical_
 // extensions.
 WARN_UNUSED_RESULT bool VerifyNoUnconsumedCriticalExtensions(
-    const ParsedCertificate& cert) {
+    const ParsedCertificate& cert,
+    CertErrors* errors) {
+  bool has_unconsumed_critical_extensions = false;
+
   for (const auto& entry : cert.unparsed_extensions()) {
-    if (entry.second.critical)
-      return false;
+    if (entry.second.critical) {
+      has_unconsumed_critical_extensions = true;
+      errors->AddWith2DerParams(kUnconsumedCriticalExtension, entry.second.oid,
+                                entry.second.value);
+    }
   }
-  return true;
+
+  return !has_unconsumed_critical_extensions;
 }
 
 // Returns true if |cert| was self-issued. The definition of self-issuance
@@ -54,9 +64,19 @@ WARN_UNUSED_RESULT bool IsSelfIssued(const ParsedCertificate& cert) {
 //    The validity period for a certificate is the period of time from
 //    notBefore through notAfter, inclusive.
 WARN_UNUSED_RESULT bool VerifyTimeValidity(const ParsedCertificate& cert,
-                                           const der::GeneralizedTime time) {
-  return !(time < cert.tbs().validity_not_before) &&
-         !(cert.tbs().validity_not_after < time);
+                                           const der::GeneralizedTime time,
+                                           CertErrors* errors) {
+  if (time < cert.tbs().validity_not_before) {
+    errors->Add(kValidityFailedNotBefore);
+    return false;
+  }
+
+  if (cert.tbs().validity_not_after < time) {
+    errors->Add(kValidityFailedNotAfter);
+    return false;
+  }
+
+  return true;
 }
 
 // Returns true if |signature_algorithm_tlv| is a valid algorithm encoding for
@@ -91,14 +111,27 @@ WARN_UNUSED_RESULT bool IsRsaWithSha1SignatureAlgorithm(
 // specifying RSA with SHA1 (different OIDs). This is special-cased for
 // compatibility sake.
 WARN_UNUSED_RESULT bool VerifySignatureAlgorithmsMatch(
-    const ParsedCertificate& cert) {
+    const ParsedCertificate& cert,
+    CertErrors* errors) {
   const der::Input& alg1_tlv = cert.signature_algorithm_tlv();
   const der::Input& alg2_tlv = cert.tbs().signature_algorithm_tlv;
 
   // Ensure that the two DER-encoded signature algorithms are byte-for-byte
-  // equal, but make a compatibility concession for RSA with SHA1.
-  return alg1_tlv == alg2_tlv || (IsRsaWithSha1SignatureAlgorithm(alg1_tlv) &&
-                                  IsRsaWithSha1SignatureAlgorithm(alg2_tlv));
+  // equal.
+  if (alg1_tlv == alg2_tlv)
+    return true;
+
+  // But make a compatibility concession for RSA with SHA1.
+  if (IsRsaWithSha1SignatureAlgorithm(alg1_tlv) &&
+      IsRsaWithSha1SignatureAlgorithm(alg2_tlv)) {
+    errors->AddWith2DerParams(kSignatureAlgorithmsDifferentEncoding, alg1_tlv,
+                              alg2_tlv);
+    return true;
+  }
+
+  errors->AddWith2DerParams(kSignatureAlgorithmMismatch, alg1_tlv, alg2_tlv);
+
+  return false;
 }
 
 // This function corresponds to RFC 5280 section 6.1.3's "Basic Certificate
@@ -110,34 +143,43 @@ WARN_UNUSED_RESULT bool BasicCertificateProcessing(
     const der::GeneralizedTime& time,
     const der::Input& working_spki,
     const der::Input& working_normalized_issuer_name,
-    const std::vector<const NameConstraints*>& name_constraints_list) {
+    const std::vector<const NameConstraints*>& name_constraints_list,
+    CertErrors* errors) {
   // Check that the signature algorithms in Certificate vs TBSCertificate
   // match. This isn't part of RFC 5280 section 6.1.3, but is mandated by
   // sections 4.1.1.2 and 4.1.2.3.
-  if (!VerifySignatureAlgorithmsMatch(cert))
+  if (!VerifySignatureAlgorithmsMatch(cert, errors))
     return false;
 
   // Verify the digital signature using the previous certificate's key (RFC
   // 5280 section 6.1.3 step a.1).
-  if (!cert.has_valid_supported_signature_algorithm() ||
-      !VerifySignedData(cert.signature_algorithm(), cert.tbs_certificate_tlv(),
+  if (!cert.has_valid_supported_signature_algorithm()) {
+    errors->AddWith1DerParam(kInvalidOrUnsupportedAlgorithm,
+                             cert.signature_algorithm_tlv());
+    return false;
+  }
+
+  if (!VerifySignedData(cert.signature_algorithm(), cert.tbs_certificate_tlv(),
                         cert.signature_value(), working_spki,
                         signature_policy)) {
+    errors->Add(kSignatureVerificationFailed);
     return false;
   }
 
   // Check the time range for the certificate's validity, ensuring it is valid
   // at |time|.
   // (RFC 5280 section 6.1.3 step a.2)
-  if (!VerifyTimeValidity(cert, time))
+  if (!VerifyTimeValidity(cert, time, errors))
     return false;
 
   // TODO(eroman): Check revocation (RFC 5280 section 6.1.3 step a.3)
 
   // Verify the certificate's issuer name matches the issuing certificate's
   // subject name. (RFC 5280 section 6.1.3 step a.4)
-  if (cert.normalized_issuer() != working_normalized_issuer_name)
+  if (cert.normalized_issuer() != working_normalized_issuer_name) {
+    errors->Add(kSubjectDoesNotMatchIssuer);
     return false;
+  }
 
   // Name constraints (RFC 5280 section 6.1.3 step b & c)
   // If certificate i is self-issued and it is not the final certificate in the
@@ -147,6 +189,7 @@ WARN_UNUSED_RESULT bool BasicCertificateProcessing(
     for (const NameConstraints* nc : name_constraints_list) {
       if (!nc->IsPermittedCert(cert.normalized_subject(),
                                cert.subject_alt_names())) {
+        errors->Add(kNotPermittedByNameConstraints);
         return false;
       }
     }
@@ -165,7 +208,8 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
     size_t* max_path_length_ptr,
     der::Input* working_spki,
     der::Input* working_normalized_issuer_name,
-    std::vector<const NameConstraints*>* name_constraints_list) {
+    std::vector<const NameConstraints*>* name_constraints_list,
+    CertErrors* errors) {
   // TODO(crbug.com/634456): Steps a-b are omitted, as policy mappings are not
   // yet implemented.
 
@@ -203,8 +247,15 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   //
   // This code implicitly rejects non version 3 intermediates, since they
   // can't contain a BasicConstraints extension.
-  if (!cert.has_basic_constraints() || !cert.basic_constraints().is_ca)
+  if (!cert.has_basic_constraints()) {
+    errors->Add(kMissingBasicConstraints);
     return false;
+  }
+
+  if (!cert.basic_constraints().is_ca) {
+    errors->Add(kBasicConstraintsIndicatesNotCa);
+    return false;
+  }
 
   // From RFC 5280 section 6.1.4 step l:
   //
@@ -212,8 +263,10 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   //    max_path_length is greater than zero and decrement
   //    max_path_length by 1.
   if (!IsSelfIssued(cert)) {
-    if (*max_path_length_ptr == 0)
+    if (*max_path_length_ptr == 0) {
+      errors->Add(kMaxPathLengthViolated);
       return false;
+    }
     --(*max_path_length_ptr);
   }
 
@@ -233,6 +286,7 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   //    keyCertSign bit is set.
   if (cert.has_key_usage() &&
       !cert.key_usage().AssertsBit(KEY_USAGE_BIT_KEY_CERT_SIGN)) {
+    errors->Add(kKeyCertSignBitNotSet);
     return false;
   }
 
@@ -242,7 +296,7 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
   //    the certificate.  Process any other recognized non-critical
   //    extension present in the certificate that is relevant to path
   //    processing.
-  if (!VerifyNoUnconsumedCriticalExtensions(cert))
+  if (!VerifyNoUnconsumedCriticalExtensions(cert, errors))
     return false;
 
   return true;
@@ -271,7 +325,8 @@ WARN_UNUSED_RESULT bool PrepareForNextCertificate(
 // for compatibility reasons. Investigate if we need to similarly relax this
 // constraint.
 WARN_UNUSED_RESULT bool VerifyTargetCertHasConsistentCaBits(
-    const ParsedCertificate& cert) {
+    const ParsedCertificate& cert,
+    CertErrors* errors) {
   // Check if the certificate contains any property specific to CAs.
   bool has_ca_property =
       (cert.has_basic_constraints() &&
@@ -283,9 +338,16 @@ WARN_UNUSED_RESULT bool VerifyTargetCertHasConsistentCaBits(
   // If it "looks" like a CA because it has a CA-only property, then check that
   // it sets ALL the properties expected of a CA.
   if (has_ca_property) {
-    return cert.has_basic_constraints() && cert.basic_constraints().is_ca &&
-           (!cert.has_key_usage() ||
-            cert.key_usage().AssertsBit(KEY_USAGE_BIT_KEY_CERT_SIGN));
+    bool success = cert.has_basic_constraints() &&
+                   cert.basic_constraints().is_ca &&
+                   (!cert.has_key_usage() ||
+                    cert.key_usage().AssertsBit(KEY_USAGE_BIT_KEY_CERT_SIGN));
+    if (!success) {
+      // TODO(eroman): Add DER for basic constraints and key usage.
+      errors->Add(kTargetCertInconsistentCaBits);
+    }
+
+    return success;
   }
 
   return true;
@@ -293,7 +355,8 @@ WARN_UNUSED_RESULT bool VerifyTargetCertHasConsistentCaBits(
 
 // This function corresponds with RFC 5280 section 6.1.5's "Wrap-Up Procedure".
 // It does processing for the final certificate (the target cert).
-WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
+WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert,
+                               CertErrors* errors) {
   // TODO(crbug.com/634452): Steps a-b are omitted as policy constraints are not
   // yet implemented.
 
@@ -309,7 +372,7 @@ WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
   //
   // Note that this is duplicated by PrepareForNextCertificate() so as to
   // directly match the procedures in RFC 5280's section 6.1.
-  if (!VerifyNoUnconsumedCriticalExtensions(cert))
+  if (!VerifyNoUnconsumedCriticalExtensions(cert, errors))
     return false;
 
   // TODO(eroman): Step g is omitted, as policy constraints are not yet
@@ -317,7 +380,7 @@ WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
 
   // The following check is NOT part of RFC 5280 6.1.5's "Wrap-Up Procedure",
   // however is implied by RFC 5280 section 4.2.1.9.
-  if (!VerifyTargetCertHasConsistentCaBits(cert))
+  if (!VerifyTargetCertHasConsistentCaBits(cert, errors))
     return false;
 
   return true;
@@ -328,7 +391,11 @@ WARN_UNUSED_RESULT bool WrapUp(const ParsedCertificate& cert) {
 WARN_UNUSED_RESULT bool ProcessTrustAnchorConstraints(
     const TrustAnchor& trust_anchor,
     size_t* max_path_length_ptr,
-    std::vector<const NameConstraints*>* name_constraints_list) {
+    std::vector<const NameConstraints*>* name_constraints_list,
+    CertErrors* errors) {
+  // Set the trust anchor as the current context for any subsequent errors.
+  ScopedCertErrorsTrustAnchorContext error_context(errors, &trust_anchor);
+
   // In RFC 5937 the enforcement of anchor constraints is governed by the input
   // enforceTrustAnchorConstraints to path validation. In our implementation
   // this is always on, and enforcement is controlled solely by whether or not
@@ -373,7 +440,7 @@ WARN_UNUSED_RESULT bool ProcessTrustAnchorConstraints(
   //    Extensions may be marked critical or not critical.  When trust anchor
   //    constraints are enforced, clients MUST reject certification paths
   //    containing a trust anchor with unrecognized critical extensions.
-  if (!VerifyNoUnconsumedCriticalExtensions(cert))
+  if (!VerifyNoUnconsumedCriticalExtensions(cert, errors))
     return false;
 
   return true;
@@ -386,10 +453,17 @@ WARN_UNUSED_RESULT bool ProcessTrustAnchorConstraints(
 bool VerifyCertificateChain(const ParsedCertificateList& certs,
                             const TrustAnchor* trust_anchor,
                             const SignaturePolicy* signature_policy,
-                            const der::GeneralizedTime& time) {
+                            const der::GeneralizedTime& time,
+                            CertErrors* errors) {
+  DCHECK(trust_anchor);
+  DCHECK(signature_policy);
+  DCHECK(errors);
+
   // An empty chain is necessarily invalid.
-  if (certs.empty())
+  if (certs.empty()) {
+    errors->Add(kChainIsEmpty);
     return false;
+  }
 
   // Will contain a NameConstraints for each previous cert in the chain which
   // had nameConstraints. This corresponds to the permitted_subtrees and
@@ -432,7 +506,7 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
 
   // Apply any trust anchor constraints per RFC 5937.
   if (!ProcessTrustAnchorConstraints(*trust_anchor, &max_path_length,
-                                     &name_constraints_list)) {
+                                     &name_constraints_list, errors)) {
     return false;
   }
 
@@ -454,6 +528,9 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
 
     const ParsedCertificate& cert = *certs[index_into_certs];
 
+    // Set the current certificate as the context for any subsequent errors.
+    ScopedCertErrorsCertContext error_context(errors, &cert, i);
+
     // Per RFC 5280 section 6.1:
     //  * Do basic processing for each certificate
     //  * If it is the last certificate in the path (target certificate)
@@ -461,17 +538,17 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
     //     - Otherwise run "Prepare for Next cert"
     if (!BasicCertificateProcessing(
             cert, is_target_cert, signature_policy, time, working_spki,
-            working_normalized_issuer_name, name_constraints_list)) {
+            working_normalized_issuer_name, name_constraints_list, errors)) {
       return false;
     }
     if (!is_target_cert) {
       if (!PrepareForNextCertificate(cert, &max_path_length, &working_spki,
                                      &working_normalized_issuer_name,
-                                     &name_constraints_list)) {
+                                     &name_constraints_list, errors)) {
         return false;
       }
     } else {
-      if (!WrapUp(cert))
+      if (!WrapUp(cert, errors))
         return false;
     }
   }
@@ -483,5 +560,38 @@ bool VerifyCertificateChain(const ParsedCertificateList& certs,
 
   return true;
 }
+
+namespace verify_certificate_chain_errors {
+
+DEFINE_CERT_ERROR_TYPE(
+    kSignatureAlgorithmMismatch,
+    "Certificate.signatureAlgorithm != TBSCertificate.signature");
+DEFINE_CERT_ERROR_TYPE(kInvalidOrUnsupportedAlgorithm,
+                       "Invalid or unsupported signature algorithm");
+DEFINE_CERT_ERROR_TYPE(kChainIsEmpty, "Chain is empty");
+DEFINE_CERT_ERROR_TYPE(kUnconsumedCriticalExtension,
+                       "Unconsumed critical extension");
+DEFINE_CERT_ERROR_TYPE(
+    kTargetCertInconsistentCaBits,
+    "Target certificate looks like a CA but does not set all CA properties");
+DEFINE_CERT_ERROR_TYPE(kKeyCertSignBitNotSet, "keyCertSign bit is not set");
+DEFINE_CERT_ERROR_TYPE(kMaxPathLengthViolated, "max_path_length reached");
+DEFINE_CERT_ERROR_TYPE(kBasicConstraintsIndicatesNotCa,
+                       "Basic Constraints indicates not a CA");
+DEFINE_CERT_ERROR_TYPE(kMissingBasicConstraints,
+                       "Does not have Basic Constraints");
+DEFINE_CERT_ERROR_TYPE(kNotPermittedByNameConstraints,
+                       "Not permitted by name constraints");
+DEFINE_CERT_ERROR_TYPE(kSubjectDoesNotMatchIssuer,
+                       "subject does not match issuer");
+DEFINE_CERT_ERROR_TYPE(kSignatureVerificationFailed,
+                       "Signature verification failed");
+DEFINE_CERT_ERROR_TYPE(kValidityFailedNotAfter, "Time is after notAfter");
+DEFINE_CERT_ERROR_TYPE(kValidityFailedNotBefore, "Time is before notBefore");
+DEFINE_CERT_ERROR_TYPE(kSignatureAlgorithmsDifferentEncoding,
+                       "Certificate.signatureAlgorithm is encoded differently "
+                       "than TBSCertificate.signature");
+
+}  // verify_certificate_chain_errors
 
 }  // namespace net

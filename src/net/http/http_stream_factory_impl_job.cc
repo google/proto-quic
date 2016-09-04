@@ -1190,7 +1190,9 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
           delegate_->websocket_handshake_stream_create_helper()
               ->CreateBasicStream(std::move(connection_), using_proxy));
     } else {
-      stream_.reset(new HttpBasicStream(std::move(connection_), using_proxy));
+      stream_.reset(new HttpBasicStream(
+          std::move(connection_), using_proxy,
+          session_->params().http_09_on_non_default_ports_enabled));
     }
     return OK;
   }

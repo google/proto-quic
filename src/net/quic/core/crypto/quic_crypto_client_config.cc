@@ -66,7 +66,9 @@ QuicCryptoClientConfig::~QuicCryptoClientConfig() {
 }
 
 QuicCryptoClientConfig::CachedState::CachedState()
-    : server_config_valid_(false), generation_counter_(0) {}
+    : server_config_valid_(false),
+      expiration_time_(QuicWallTime::Zero()),
+      generation_counter_(0) {}
 
 QuicCryptoClientConfig::CachedState::~CachedState() {}
 
@@ -89,15 +91,11 @@ bool QuicCryptoClientConfig::CachedState::IsComplete(QuicWallTime now) const {
     return false;
   }
 
-  uint64_t expiry_seconds;
-  if (scfg->GetUint64(kEXPY, &expiry_seconds) != QUIC_NO_ERROR) {
-    RecordInchoateClientHelloReason(SERVER_CONFIG_INVALID_EXPIRY);
-    return false;
-  }
-  if (now.ToUNIXSeconds() >= expiry_seconds) {
+  if (now.IsAfter(expiration_time_)) {
     UMA_HISTOGRAM_CUSTOM_TIMES(
         "Net.QuicClientHelloServerConfig.InvalidDuration",
-        base::TimeDelta::FromSeconds(now.ToUNIXSeconds() - expiry_seconds),
+        base::TimeDelta::FromSeconds(now.ToUNIXSeconds() -
+                                     expiration_time_.ToUNIXSeconds()),
         base::TimeDelta::FromMinutes(1), base::TimeDelta::FromDays(20), 50);
     RecordInchoateClientHelloReason(SERVER_CONFIG_EXPIRED);
     return false;
@@ -145,6 +143,7 @@ bool QuicCryptoClientConfig::CachedState::has_server_nonce() const {
 QuicCryptoClientConfig::CachedState::ServerConfigState
 QuicCryptoClientConfig::CachedState::SetServerConfig(StringPiece server_config,
                                                      QuicWallTime now,
+                                                     QuicWallTime expiry_time,
                                                      string* error_details) {
   const bool matches_existing = server_config == server_config_;
 
@@ -165,13 +164,18 @@ QuicCryptoClientConfig::CachedState::SetServerConfig(StringPiece server_config,
     return SERVER_CONFIG_INVALID;
   }
 
-  uint64_t expiry_seconds;
-  if (new_scfg->GetUint64(kEXPY, &expiry_seconds) != QUIC_NO_ERROR) {
-    *error_details = "SCFG missing EXPY";
-    return SERVER_CONFIG_INVALID_EXPIRY;
+  if (expiry_time.IsZero()) {
+    uint64_t expiry_seconds;
+    if (new_scfg->GetUint64(kEXPY, &expiry_seconds) != QUIC_NO_ERROR) {
+      *error_details = "SCFG missing EXPY";
+      return SERVER_CONFIG_INVALID_EXPIRY;
+    }
+    expiration_time_ = QuicWallTime::FromUNIXSeconds(expiry_seconds);
+  } else {
+    expiration_time_ = expiry_time;
   }
 
-  if (now.ToUNIXSeconds() >= expiry_seconds) {
+  if (now.IsAfter(expiration_time_)) {
     *error_details = "SCFG has expired";
     return SERVER_CONFIG_EXPIRED;
   }
@@ -259,7 +263,8 @@ bool QuicCryptoClientConfig::CachedState::Initialize(
     StringPiece cert_sct,
     StringPiece chlo_hash,
     StringPiece signature,
-    QuicWallTime now) {
+    QuicWallTime now,
+    QuicWallTime expiration_time) {
   DCHECK(server_config_.empty());
 
   if (server_config.empty()) {
@@ -268,7 +273,8 @@ bool QuicCryptoClientConfig::CachedState::Initialize(
   }
 
   string error_details;
-  ServerConfigState state = SetServerConfig(server_config, now, &error_details);
+  ServerConfigState state =
+      SetServerConfig(server_config, now, expiration_time, &error_details);
   RecordDiskCacheServerConfigState(state);
   if (state != SERVER_CONFIG_VALID) {
     DVLOG(1) << "SetServerConfig failed with " << error_details;
@@ -347,6 +353,7 @@ void QuicCryptoClientConfig::CachedState::InitializeFrom(
   server_config_sig_ = other.server_config_sig_;
   server_config_valid_ = other.server_config_valid_;
   server_designated_connection_ids_ = other.server_designated_connection_ids_;
+  expiration_time_ = other.expiration_time_;
   if (other.proof_verify_details_.get() != nullptr) {
     proof_verify_details_.reset(other.proof_verify_details_->Clone());
   }
@@ -730,8 +737,14 @@ QuicErrorCode QuicCryptoClientConfig::CacheNewServerConfig(
     return QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND;
   }
 
+  QuicWallTime expiration_time = QuicWallTime::Zero();
+  uint64_t expiry_seconds;
+  if (message.GetUint64(kSTTL, &expiry_seconds) == QUIC_NO_ERROR) {
+    expiration_time = now.Add(QuicTime::Delta::FromSeconds(expiry_seconds));
+  }
+
   CachedState::ServerConfigState state =
-      cached->SetServerConfig(scfg, now, error_details);
+      cached->SetServerConfig(scfg, now, expiration_time, error_details);
   if (state == CachedState::SERVER_CONFIG_EXPIRED) {
     return QUIC_CRYPTO_SERVER_CONFIG_EXPIRED;
   }

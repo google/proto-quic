@@ -21,6 +21,7 @@
 #include "net/tools/quic/stateless_rejector.h"
 
 using base::StringPiece;
+using std::list;
 using std::string;
 
 namespace net {
@@ -210,7 +211,8 @@ QuicDispatcher::QuicDispatcher(
       framer_(GetSupportedVersions(),
               /*unused*/ QuicTime::Zero(),
               Perspective::IS_SERVER),
-      last_error_(QUIC_NO_ERROR) {
+      last_error_(QUIC_NO_ERROR),
+      new_sessions_allowed_per_event_loop_(0u) {
   framer_.set_visitor(this);
 }
 
@@ -604,6 +606,29 @@ void QuicDispatcher::OnExpiredPackets(
       connection_id, framer_.version(), false, nullptr);
 }
 
+void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
+  // Reset the counter before starting creating connections.
+  new_sessions_allowed_per_event_loop_ = max_connections_to_create;
+  for (; new_sessions_allowed_per_event_loop_ > 0;
+       --new_sessions_allowed_per_event_loop_) {
+    QuicConnectionId connection_id;
+    list<BufferedPacket> packets =
+        buffered_packets_.DeliverPacketsForNextConnection(&connection_id);
+    if (packets.empty()) {
+      return;
+    }
+    QuicServerSessionBase* session =
+        CreateQuicSession(connection_id, packets.front().client_address);
+    DVLOG(1) << "Created new session for " << connection_id;
+    session_map_.insert(std::make_pair(connection_id, session));
+    DeliverPacketsToSession(packets, session);
+  }
+}
+
+bool QuicDispatcher::HasChlosBuffered() const {
+  return buffered_packets_.HasChlosBuffered();
+}
+
 void QuicDispatcher::OnNewConnectionAdded(QuicConnectionId connection_id) {
   VLOG(1) << "Received packet from new connection " << connection_id;
 }
@@ -636,7 +661,7 @@ void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
   bool is_new_connection = !buffered_packets_.HasBufferedPackets(connection_id);
   EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
       connection_id, *current_packet_, current_server_address_,
-      current_client_address_);
+      current_client_address_, /*is_chlo=*/false);
   if (rs != EnqueuePacketResult::SUCCESS) {
     OnBufferPacketFailure(rs, connection_id);
   } else if (is_new_connection) {
@@ -645,6 +670,33 @@ void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
 }
 
 void QuicDispatcher::ProcessChlo() {
+  QUIC_BUG_IF(!FLAGS_quic_buffer_packet_till_chlo &&
+              FLAGS_quic_limit_num_new_sessions_per_epoll_loop)
+      << "Try to limit connection creation per epoll event while not "
+         "supporting packet buffer. "
+         "--quic_limit_num_new_sessions_per_epoll_loop = true "
+         "--quic_buffer_packet_till_chlo = false";
+
+  if (FLAGS_quic_limit_num_new_sessions_per_epoll_loop &&
+      FLAGS_quic_buffer_packet_till_chlo &&
+      new_sessions_allowed_per_event_loop_ <= 0) {
+    // Can't create new session any more. Wait till next event loop.
+    if (!buffered_packets_.HasChloForConnection(current_connection_id_)) {
+      // Only buffer one CHLO per connection.
+      bool is_new_connection =
+          !buffered_packets_.HasBufferedPackets(current_connection_id_);
+      EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
+          current_connection_id_, *current_packet_, current_server_address_,
+          current_client_address_, /*is_chlo=*/true);
+      if (rs != EnqueuePacketResult::SUCCESS) {
+        OnBufferPacketFailure(rs, current_connection_id_);
+      } else if (is_new_connection) {
+        OnNewConnectionAdded(current_connection_id_);
+      }
+    }
+    return;
+  }
+
   // Creates a new session and process all buffered packets for this connection.
   QuicServerSessionBase* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
@@ -669,6 +721,10 @@ void QuicDispatcher::ProcessChlo() {
   // Do this even when flag is off because there might be still some packets
   // buffered in the store before flag is turned off.
   DeliverPacketsToSession(packets, session);
+  if (FLAGS_quic_limit_num_new_sessions_per_epoll_loop &&
+      FLAGS_quic_buffer_packet_till_chlo) {
+    --new_sessions_allowed_per_event_loop_;
+  }
 }
 
 bool QuicDispatcher::HandlePacketForTimeWait(

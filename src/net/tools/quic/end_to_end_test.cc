@@ -73,7 +73,6 @@ using net::test::QuicSentPacketManagerPeer;
 using net::test::QuicSessionPeer;
 using net::test::QuicSpdySessionPeer;
 using net::test::ReliableQuicStreamPeer;
-using net::test::ValueRestore;
 using net::test::kClientDataStreamId1;
 using net::test::kInitialSessionFlowControlWindowForTest;
 using net::test::kInitialStreamFlowControlWindowForTest;
@@ -260,7 +259,7 @@ vector<TestParams> GetTestParams() {
                     // Run version negotiation tests tests with no options, or
                     // all the options enabled to avoid a combinatorial
                     // explosion.
-                    if (enabled_options > 0 &&
+                    if (enabled_options > 1 &&
                         enabled_options < kMaxEnabledOptions) {
                       continue;
                     }
@@ -499,6 +498,9 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     FLAGS_quic_buffer_packet_till_chlo = GetParam().buffer_packet_till_chlo;
     FLAGS_quic_use_cheap_stateless_rejects =
         GetParam().use_cheap_stateless_reject;
+    if (!FLAGS_quic_buffer_packet_till_chlo) {
+      FLAGS_quic_limit_num_new_sessions_per_epoll_loop = false;
+    }
     auto test_server =
         new QuicTestServer(CryptoTestUtils::ProofSourceForTesting(),
                            server_config_, server_supported_versions_);
@@ -631,6 +633,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     stream_factory_ = factory;
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   bool initialized_;
   IPEndPoint server_address_;
   string server_hostname_;
@@ -1343,7 +1346,7 @@ TEST_P(EndToEndTest, SetIndependentMaxIncomingDynamicStreamsLimits) {
 }
 
 TEST_P(EndToEndTest, NegotiateCongestionControl) {
-  ValueRestore<bool> old_flag(&FLAGS_quic_allow_bbr, true);
+  FLAGS_quic_allow_bbr = true;
   // Disable this flag because if connection uses multipath sent packet manager,
   // static_cast here does not work.
   FLAGS_quic_enable_multipath = false;

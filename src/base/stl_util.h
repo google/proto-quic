@@ -47,19 +47,6 @@ void STLDeleteContainerPointers(ForwardIterator begin, ForwardIterator end) {
   }
 }
 
-// For a range within a container of pairs, calls delete (non-array version) on
-// the FIRST item in the pairs.
-// NOTE: Like STLDeleteContainerPointers, deleting behind the iterator.
-template <class ForwardIterator>
-void STLDeleteContainerPairFirstPointers(ForwardIterator begin,
-                                         ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete temp->first;
-  }
-}
-
 // For a range within a container of pairs, calls delete.
 // NOTE: Like STLDeleteContainerPointers, deleting behind the iterator.
 // Deleting the value does not always invalidate the iterator, but it may
@@ -150,18 +137,6 @@ class STLElementDeleter {
  public:
   STLElementDeleter<T>(T* container) : container_(container) {}
   ~STLElementDeleter<T>() { STLDeleteElements(container_); }
-
- private:
-  T* container_;
-};
-
-// Given a pointer to an STL container this class will delete all the value
-// pointers when it goes out of scope.
-template<class T>
-class STLValueDeleter {
- public:
-  STLValueDeleter<T>(T* container) : container_(container) {}
-  ~STLValueDeleter<T>() { STLDeleteValues(container_); }
 
  private:
   T* container_;

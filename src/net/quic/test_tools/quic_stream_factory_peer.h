@@ -57,6 +57,8 @@ class QuicStreamFactoryPeer {
   static int GetNumberOfLossyConnections(QuicStreamFactory* factory,
                                          uint16_t port);
 
+  static QuicTime::Delta GetPingTimeout(QuicStreamFactory* factory);
+
   static bool IsQuicDisabled(QuicStreamFactory* factory, uint16_t port);
 
   static bool GetDelayTcpRace(QuicStreamFactory* factory);

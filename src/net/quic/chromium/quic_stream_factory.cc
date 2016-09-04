@@ -67,7 +67,7 @@ enum CreateSessionFailure {
   CREATION_ERROR_CONNECTING_SOCKET,
   CREATION_ERROR_SETTING_RECEIVE_BUFFER,
   CREATION_ERROR_SETTING_SEND_BUFFER,
-  CREATION_ERROR_SETTING_NO_NOT_FRAGMENT,
+  CREATION_ERROR_SETTING_DO_NOT_FRAGMENT,
   CREATION_ERROR_MAX
 };
 
@@ -737,12 +737,14 @@ QuicStreamFactory::QuicStreamFactory(
     bool close_sessions_on_ip_change,
     bool disable_quic_on_timeout_with_open_streams,
     int idle_connection_timeout_seconds,
+    int reduced_ping_timeout_seconds,
     int packet_reader_yield_after_duration_milliseconds,
     bool migrate_sessions_on_network_change,
     bool migrate_sessions_early,
     bool allow_server_migration,
     bool force_hol_blocking,
     bool race_cert_verification,
+    bool quic_do_not_fragment,
     const QuicTagVector& connection_options,
     bool enable_token_binding)
     : require_confirmation_(true),
@@ -788,6 +790,9 @@ QuicStreamFactory::QuicStreamFactory(
           threshold_public_resets_post_handshake),
       socket_receive_buffer_size_(socket_receive_buffer_size),
       delay_tcp_race_(delay_tcp_race),
+      ping_timeout_(QuicTime::Delta::FromSeconds(kPingTimeoutSecs)),
+      reduced_ping_timeout_(
+          QuicTime::Delta::FromSeconds(reduced_ping_timeout_seconds)),
       yield_after_packets_(kQuicYieldAfterPacketsRead),
       yield_after_duration_(QuicTime::Delta::FromMilliseconds(
           packet_reader_yield_after_duration_milliseconds)),
@@ -800,6 +805,7 @@ QuicStreamFactory::QuicStreamFactory(
       allow_server_migration_(allow_server_migration),
       force_hol_blocking_(force_hol_blocking),
       race_cert_verification_(race_cert_verification),
+      quic_do_not_fragment_(quic_do_not_fragment),
       port_seed_(random_generator_->RandUint64()),
       check_persisted_supports_quic_(true),
       has_initialized_data_(false),
@@ -1370,6 +1376,13 @@ void QuicStreamFactory::OnSessionClosed(QuicChromiumClientSession* session) {
   all_sessions_.erase(session);
 }
 
+void QuicStreamFactory::OnTimeoutWithOpenStreams() {
+  // Reduce PING timeout when connection times out with open stream.
+  if (ping_timeout_ > reduced_ping_timeout_) {
+    ping_timeout_ = reduced_ping_timeout_;
+  }
+}
+
 void QuicStreamFactory::CancelRequest(QuicStreamRequest* request) {
   RequestMap::iterator request_it = active_requests_.find(request);
   DCHECK(request_it != active_requests_.end());
@@ -1531,7 +1544,9 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
       continue;
     }
 
-    MigrateSessionToNewNetwork(session, new_network, bound_net_log, nullptr);
+    MigrateSessionToNewNetwork(session, new_network,
+                               /*close_session_on_error=*/true, bound_net_log,
+                               nullptr);
   }
 }
 
@@ -1561,8 +1576,9 @@ void QuicStreamFactory::MaybeMigrateSingleSession(
     return;
   }
   OnSessionGoingAway(session);
-  MigrateSessionToNewNetwork(session, new_network, scoped_event_log.net_log(),
-                             packet);
+  MigrateSessionToNewNetwork(session, new_network,
+                             migration_cause != WRITE_ERROR,
+                             scoped_event_log.net_log(), packet);
 }
 
 void QuicStreamFactory::MigrateSessionToNewPeerAddress(
@@ -1579,22 +1595,24 @@ void QuicStreamFactory::MigrateSessionToNewPeerAddress(
   // Specifying kInvalidNetworkHandle for the |network| parameter
   // causes the session to use the default network for the new socket.
   MigrateSession(session, peer_address,
-                 NetworkChangeNotifier::kInvalidNetworkHandle, bound_net_log,
-                 nullptr);
+                 NetworkChangeNotifier::kInvalidNetworkHandle,
+                 /*close_session_on_error=*/true, bound_net_log, nullptr);
 }
 
 void QuicStreamFactory::MigrateSessionToNewNetwork(
     QuicChromiumClientSession* session,
     NetworkHandle network,
+    bool close_session_on_error,
     const BoundNetLog& bound_net_log,
     scoped_refptr<StringIOBuffer> packet) {
   MigrateSession(session, session->connection()->peer_address(), network,
-                 bound_net_log, packet);
+                 close_session_on_error, bound_net_log, packet);
 }
 
 void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
                                        IPEndPoint peer_address,
                                        NetworkHandle network,
+                                       bool close_session_on_error,
                                        const BoundNetLog& bound_net_log,
                                        scoped_refptr<StringIOBuffer> packet) {
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
@@ -1608,7 +1626,9 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
     HistogramAndLogMigrationFailure(
         bound_net_log, MIGRATION_STATUS_INTERNAL_ERROR,
         session->connection_id(), "Socket configuration failed");
-    session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
+    if (close_session_on_error) {
+      session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
+    }
     return;
   }
   std::unique_ptr<QuicChromiumPacketReader> new_reader(
@@ -1629,8 +1649,10 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
     HistogramAndLogMigrationFailure(
         bound_net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
         session->connection_id(), "Too many migrations");
-    session->CloseSessionOnError(ERR_NETWORK_CHANGED,
-                                 QUIC_CONNECTION_MIGRATION_TOO_MANY_CHANGES);
+    if (close_session_on_error) {
+      session->CloseSessionOnError(ERR_NETWORK_CHANGED,
+                                   QUIC_CONNECTION_MIGRATION_TOO_MANY_CHANGES);
+    }
     return;
   }
   HistogramMigrationStatus(MIGRATION_STATUS_SUCCESS);
@@ -1705,10 +1727,13 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
     return rv;
   }
 
-  rv = socket->SetDoNotFragment();
-  if (rv != OK) {
-    HistogramCreateSessionFailure(CREATION_ERROR_SETTING_NO_NOT_FRAGMENT);
-    return rv;
+  if (quic_do_not_fragment_) {
+    rv = socket->SetDoNotFragment();
+    // SetDoNotFragment is not implemented on all platforms, so ignore errors.
+    if (rv != OK && rv != ERR_NOT_IMPLEMENTED) {
+      HistogramCreateSessionFailure(CREATION_ERROR_SETTING_DO_NOT_FRAGMENT);
+      return rv;
+    }
   }
 
   // Set a buffer large enough to contain the initial CWND's worth of packet
@@ -1791,6 +1816,7 @@ int QuicStreamFactory::CreateSession(
   QuicConnection* connection = new QuicConnection(
       connection_id, addr, helper_.get(), alarm_factory_.get(), writer,
       true /* owns_writer */, Perspective::IS_CLIENT, supported_versions_);
+  connection->set_ping_timeout(ping_timeout_);
   connection->SetMaxPacketLength(max_packet_length_);
 
   QuicConfig config = config_;
@@ -1942,7 +1968,8 @@ void QuicStreamFactory::InitializeCachedStateInCryptoConfig(
                      server_info->state().source_address_token,
                      server_info->state().certs, server_info->state().cert_sct,
                      server_info->state().chlo_hash,
-                     server_info->state().server_config_sig, clock_->WallNow());
+                     server_info->state().server_config_sig, clock_->WallNow(),
+                     QuicWallTime::Zero());
 }
 
 void QuicStreamFactory::MaybeInitialize() {

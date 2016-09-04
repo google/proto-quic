@@ -223,6 +223,7 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
 
   static const QuicStreamOffset kOffset = 1u;
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   char buffer_[kMaxPacketSize];
   QuicFrames frames_;
   QuicFramer server_framer_;

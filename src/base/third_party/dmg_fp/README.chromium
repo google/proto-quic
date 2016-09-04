@@ -18,3 +18,4 @@ List of changes made to original code:
   - crash fix for running with reduced CPU float precision, see
     float_precision_crash.patch and crbug.com/123157
   - fixed warnings under msvc, see msvc_warnings.patch
+  - fixed parsing of long exponents, see exp_length.patch and crbug.com/542881

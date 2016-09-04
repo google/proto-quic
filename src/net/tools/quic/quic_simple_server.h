@@ -33,9 +33,11 @@ class QuicSimpleServerPeer;
 
 class QuicSimpleServer {
  public:
-  QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
-                   const QuicConfig& config,
-                   const QuicVersionVector& supported_versions);
+  QuicSimpleServer(
+      std::unique_ptr<ProofSource> proof_source,
+      const QuicConfig& config,
+      const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
+      const QuicVersionVector& supported_versions);
 
   virtual ~QuicSimpleServer();
 
@@ -58,6 +60,8 @@ class QuicSimpleServer {
   }
 
   QuicDispatcher* dispatcher() { return dispatcher_.get(); }
+
+  IPEndPoint server_address() const { return server_address_; }
 
  private:
   friend class test::QuicSimpleServerPeer;
@@ -85,6 +89,9 @@ class QuicSimpleServer {
   // config_ contains non-crypto parameters that are negotiated in the crypto
   // handshake.
   QuicConfig config_;
+  // crypto_config_ contains crypto parameters that are negotiated in the crypto
+  // handshake.
+  QuicCryptoServerConfig::ConfigOptions crypto_config_options_;
   // crypto_config_ contains crypto parameters for the handshake.
   QuicCryptoServerConfig crypto_config_;
 

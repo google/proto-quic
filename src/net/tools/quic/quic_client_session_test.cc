@@ -36,7 +36,6 @@ using net::test::QuicPacketCreatorPeer;
 using net::test::QuicSpdySessionPeer;
 using net::test::SupportedVersions;
 using net::test::TestPeerIPAddress;
-using net::test::ValueRestore;
 using net::test::kClientDataStreamId1;
 using net::test::kServerDataStreamId1;
 using net::test::kTestPort;

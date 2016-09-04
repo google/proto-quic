@@ -3265,6 +3265,10 @@ void SpdyFramer::UpdateHeaderEncoderTableSize(uint32_t value) {
   GetHpackEncoder()->ApplyHeaderTableSizeSetting(value);
 }
 
+void SpdyFramer::UpdateHeaderDecoderTableSize(uint32_t value) {
+  GetHpackDecoder()->ApplyHeaderTableSizeSetting(value);
+}
+
 size_t SpdyFramer::header_encoder_table_size() const {
   if (hpack_encoder_ == nullptr) {
     return kDefaultHeaderTableSizeSetting;

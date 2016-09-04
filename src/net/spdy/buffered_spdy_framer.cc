@@ -300,6 +300,10 @@ size_t BufferedSpdyFramer::ProcessInput(const char* data, size_t len) {
   return spdy_framer_.ProcessInput(data, len);
 }
 
+void BufferedSpdyFramer::UpdateHeaderDecoderTableSize(uint32_t value) {
+  spdy_framer_.UpdateHeaderDecoderTableSize(value);
+}
+
 void BufferedSpdyFramer::Reset() {
   spdy_framer_.Reset();
 }

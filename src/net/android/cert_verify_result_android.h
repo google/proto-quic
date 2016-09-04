@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "base/android/scoped_java_ref.h"
+
 namespace net {
 
 namespace android {
@@ -39,7 +41,7 @@ enum CertVerifyStatusAndroid {
 };
 
 // Extract parameters out of an AndroidCertVerifyResult object.
-void ExtractCertVerifyResult(jobject result,
+void ExtractCertVerifyResult(const base::android::JavaRef<jobject>& result,
                              CertVerifyStatusAndroid* status,
                              bool* is_issued_by_known_root,
                              std::vector<std::string>* verified_chain);

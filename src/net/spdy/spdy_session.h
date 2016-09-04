@@ -67,6 +67,9 @@ const int32_t kDefaultInitialWindowSize = 65535;
 // sends a SETTINGS frame with a different value.
 const size_t kInitialMaxConcurrentStreams = 100;
 
+// Specifies the maximum HPACK dynamic table size the server is allowed to set.
+const int kMaxHeaderTableSize = 64 * 1024;
+
 // Specifies the maximum concurrent streams server could send (via push).
 const int kMaxConcurrentPushedStreams = 1000;
 

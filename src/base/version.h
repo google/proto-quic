@@ -73,8 +73,4 @@ BASE_EXPORT std::ostream& operator<<(std::ostream& stream, const Version& v);
 
 }  // namespace base
 
-// TODO(xhwang) remove this when all users are updated to explicitly use the
-// namespace
-using base::Version;
-
 #endif  // BASE_VERSION_H_

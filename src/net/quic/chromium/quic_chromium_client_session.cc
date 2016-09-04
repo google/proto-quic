@@ -876,6 +876,10 @@ void QuicChromiumClientSession::OnConnectionClosed(
     UMA_HISTOGRAM_COUNTS(
         "Net.QuicSession.ConnectionClose.NumOpenStreams.TimedOut",
         GetNumOpenOutgoingStreams());
+    // Notify the factory the connection timed out with open streams.
+    if (GetNumOpenOutgoingStreams() > 0 && stream_factory_) {
+      stream_factory_->OnTimeoutWithOpenStreams();
+    }
     if (IsCryptoHandshakeConfirmed()) {
       if (GetNumOpenOutgoingStreams() > 0) {
         disabled_reason_ = QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS;

@@ -3,7 +3,7 @@
 
 #if __ARM_MAX_ARCH__>=7
 .text
-#if !defined(__clang__)
+#if !defined(__clang__) || defined(BORINGSSL_CLANG_SUPPORTS_DOT_ARCH)
 .arch	armv8-a+crypto
 #endif
 .align	5

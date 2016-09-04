@@ -234,6 +234,9 @@ class NET_EXPORT HttpServerProperties {
 
   // Returns true if |server| supports a network protocol which honors
   // request prioritization.
+  // Note that this also implies that the server supports request
+  // multiplexing, since priorities imply a relationship between
+  // multiple requests.
   virtual bool SupportsRequestPriority(const url::SchemeHostPort& server) = 0;
 
   // Returns the value set by SetSupportsSpdy(). If not set, returns false.

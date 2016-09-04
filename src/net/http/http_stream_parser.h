@@ -50,6 +50,14 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
                    const BoundNetLog& net_log);
   virtual ~HttpStreamParser();
 
+  // Sets whether or not HTTP/0.9 is only allowed on default ports. It's not
+  // allowed, by default.
+  void set_http_09_on_non_default_ports_enabled(
+      bool http_09_on_non_default_ports_enabled) {
+    http_09_on_non_default_ports_enabled_ =
+        http_09_on_non_default_ports_enabled;
+  }
+
   // These functions implement the interface described in HttpStream with
   // some additional functionality
   int SendRequest(const std::string& request_line,
@@ -208,6 +216,9 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   // Size of just the request headers.  May be less than the length of
   // |request_headers_| if the body was merged with the headers.
   int request_headers_length_;
+
+  // True if HTTP/0.9 should be permitted on non-default ports.
+  bool http_09_on_non_default_ports_enabled_;
 
   // Temporary buffer for reading.
   scoped_refptr<GrowableIOBuffer> read_buf_;

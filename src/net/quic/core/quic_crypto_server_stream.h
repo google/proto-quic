@@ -114,11 +114,6 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // before going through the parameter negotiation step.
   virtual void OverrideQuicConfigDefaults(QuicConfig* config);
 
-  // Given the current connection_id, generates a new ConnectionId to
-  // be returned with a stateless reject.
-  virtual QuicConnectionId GenerateConnectionIdForReject(
-      QuicConnectionId connection_id);
-
  private:
   friend class test::CryptoTestUtils;
   friend class test::QuicCryptoServerStreamPeer;
@@ -172,6 +167,10 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // SendServerConfigUpdate.
   void FinishSendServerConfigUpdate(bool ok,
                                     const CryptoHandshakeMessage& message);
+
+  // Returns a new ConnectionId to be used for statelessly rejected connections
+  // if |use_stateless_rejects| is true. Returns 0 otherwise.
+  QuicConnectionId GenerateConnectionIdForReject(bool use_stateless_rejects);
 
   // crypto_config_ contains crypto parameters for the handshake.
   const QuicCryptoServerConfig* crypto_config_;

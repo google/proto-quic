@@ -146,8 +146,12 @@ class NET_EXPORT HostCache : NON_EXPORTED_BASE(public base::NonThreadSafe) {
     eviction_callback_ = callback;
   }
 
-  // Empties the cache
+  // Empties the cache.
   void clear();
+
+  // Clears hosts matching |host_filter| from the cache.
+  void ClearForHosts(
+      const base::Callback<bool(const std::string&)>& host_filter);
 
   // Returns the number of entries in the cache.
   size_t size() const;

@@ -40,7 +40,7 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
   }
 
   void CreateConnection() {
-    connection_ = new PacketSavingConnection(&helper_, &alarm_factory_,
+    connection_ = new PacketSavingConnection(&client_helper_, &alarm_factory_,
                                              Perspective::IS_CLIENT);
     // Advance the time, because timers do not like uninitialized times.
     connection_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
@@ -52,9 +52,9 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
   void CompleteCryptoHandshake() {
     stream()->CryptoConnect();
     QuicConfig config;
-    CryptoTestUtils::HandshakeWithFakeServer(&config, &helper_, &alarm_factory_,
-                                             connection_, stream(),
-                                             server_options_);
+    CryptoTestUtils::HandshakeWithFakeServer(&config, &server_helper_,
+                                             &alarm_factory_, connection_,
+                                             stream(), server_options_);
   }
 
   void ConstructHandshakeMessage() {
@@ -64,7 +64,8 @@ class QuicCryptoClientStreamTest : public ::testing::Test {
 
   QuicCryptoClientStream* stream() { return session_->GetCryptoStream(); }
 
-  MockQuicConnectionHelper helper_;
+  MockQuicConnectionHelper server_helper_;
+  MockQuicConnectionHelper client_helper_;
   MockAlarmFactory alarm_factory_;
   PacketSavingConnection* connection_;
   std::unique_ptr<TestQuicSpdyClientSession> session_;
@@ -141,6 +142,22 @@ TEST_F(QuicCryptoClientStreamTest, ExpiredServerConfig) {
   stream()->CryptoConnect();
   // Check that a client hello was sent.
   ASSERT_EQ(1u, connection_->encrypted_packets_.size());
+  EXPECT_EQ(ENCRYPTION_NONE, connection_->encryption_level());
+}
+
+TEST_F(QuicCryptoClientStreamTest, ClockSkew) {
+  FLAGS_quic_send_scfg_ttl = true;
+  // Test that if the client's clock is skewed with respect to the server,
+  // the handshake succeeds. In the past, the client would get the server
+  // config, notice that it had already expired and then close the connection.
+
+  // Advance time 5 years to ensure that we pass the expiry time in the server
+  // config, but the TTL is used instead.
+  connection_->AdvanceTime(
+      QuicTime::Delta::FromSeconds(60 * 60 * 24 * 365 * 5));
+
+  // The handshakes completes!
+  CompleteCryptoHandshake();
 }
 
 TEST_F(QuicCryptoClientStreamTest, InvalidCachedServerConfig) {
@@ -197,6 +214,8 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
   server_config_update.set_tag(kSCUP);
   server_config_update.SetValue(kSourceAddressTokenTag, stk);
   server_config_update.SetValue(kSCFG, scfg);
+  const uint64_t expiry_seconds = 60 * 60 * 24 * 2;
+  server_config_update.SetValue(kSTTL, expiry_seconds);
 
   std::unique_ptr<QuicData> data(
       CryptoFramer::ConstructHandshakeMessage(server_config_update));
@@ -309,6 +328,8 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
     FLAGS_enable_quic_stateless_reject_support = true;
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
+
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
 
@@ -326,8 +347,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
 };
 
 TEST_F(QuicCryptoClientStreamStatelessTest, StatelessReject) {
-  ValueRestore<bool> old_flag(&FLAGS_enable_quic_stateless_reject_support,
-                              true);
+  FLAGS_enable_quic_stateless_reject_support = true;
 
   QuicCryptoClientConfig::CachedState* client_state =
       client_crypto_config_.LookupOrCreate(server_id_);

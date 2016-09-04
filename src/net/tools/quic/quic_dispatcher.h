@@ -146,6 +146,12 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
                         QuicBufferedPacketStore::BufferedPacketList
                             early_arrived_packets) override;
 
+  // Create connections for previously buffered CHLOs as many as allowed.
+  virtual void ProcessBufferedChlos(size_t max_connections_to_create);
+
+  // Return true if there is CHLO buffered.
+  virtual bool HasChlosBuffered() const;
+
  protected:
   virtual QuicServerSessionBase* CreateQuicSession(
       QuicConnectionId connection_id,
@@ -277,6 +283,11 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
       const std::list<QuicBufferedPacketStore::BufferedPacket>& packets,
       QuicServerSessionBase* session);
 
+  void set_new_sessions_allowed_per_event_loop(
+      int16_t new_sessions_allowed_per_event_loop) {
+    new_sessions_allowed_per_event_loop_ = new_sessions_allowed_per_event_loop;
+  }
+
   const QuicConfig& config_;
 
   const QuicCryptoServerConfig* crypto_config_;
@@ -328,6 +339,10 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // The last error set by SetLastError(), which is called by
   // framer_visitor_->OnError().
   QuicErrorCode last_error_;
+
+  // A backward counter of how many new sessions can be create within current
+  // event loop. When reaches 0, it means can't create sessions for now.
+  int16_t new_sessions_allowed_per_event_loop_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicDispatcher);
 };

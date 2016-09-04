@@ -588,6 +588,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Updates the maximum size of the header encoder compression table.
   void UpdateHeaderEncoderTableSize(uint32_t value);
 
+  // Updates the maximum size of the header decoder compression table.
+  void UpdateHeaderDecoderTableSize(uint32_t value);
+
   // Returns the maximum size of the header encoder compression table.
   size_t header_encoder_table_size() const;
 

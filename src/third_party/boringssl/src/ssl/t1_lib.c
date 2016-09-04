@@ -513,29 +513,24 @@ done:
  * customisable at some point, for now include everything we support. */
 
 static const uint16_t kDefaultSignatureAlgorithms[] = {
-    SSL_SIGN_RSA_PKCS1_SHA512,
-    SSL_SIGN_ECDSA_SECP521R1_SHA512,
-
-    SSL_SIGN_RSA_PKCS1_SHA384,
-    SSL_SIGN_ECDSA_SECP384R1_SHA384,
-
-    SSL_SIGN_RSA_PKCS1_SHA256,
-    SSL_SIGN_ECDSA_SECP256R1_SHA256,
-
-    SSL_SIGN_RSA_PKCS1_SHA1,
-    SSL_SIGN_ECDSA_SHA1,
-};
-
-static const uint16_t kDefaultTLS13SignatureAlgorithms[] = {
+    /* For now, do not ship RSA-PSS signature algorithms on Android's system
+     * BoringSSL. Once TLS 1.3 is finalized and the change in Chrome has stuck,
+     * restore them. */
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA512,
+#endif
     SSL_SIGN_RSA_PKCS1_SHA512,
     SSL_SIGN_ECDSA_SECP521R1_SHA512,
 
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA384,
+#endif
     SSL_SIGN_RSA_PKCS1_SHA384,
     SSL_SIGN_ECDSA_SECP384R1_SHA384,
 
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA256,
+#endif
     SSL_SIGN_RSA_PKCS1_SHA256,
     SSL_SIGN_ECDSA_SECP256R1_SHA256,
 
@@ -544,25 +539,6 @@ static const uint16_t kDefaultTLS13SignatureAlgorithms[] = {
 };
 
 size_t tls12_get_psigalgs(SSL *ssl, const uint16_t **psigs) {
-  uint16_t min_version, max_version;
-  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
-    assert(0);  /* This should never happen. */
-
-    /* Return an empty list. */
-    ERR_clear_error();
-    *psigs = NULL;
-    return 0;
-  }
-
-  /* TODO(davidben): Once TLS 1.3 has finalized, probably just advertise the
-   * same algorithm list regardless, as long as no fallback is needed. Note this
-   * may require care due to lingering NSS servers affected by
-   * https://bugzilla.mozilla.org/show_bug.cgi?id=1119983 */
-  if (max_version >= TLS1_3_VERSION) {
-    *psigs = kDefaultTLS13SignatureAlgorithms;
-    return OPENSSL_ARRAY_SIZE(kDefaultTLS13SignatureAlgorithms);
-  }
-
   *psigs = kDefaultSignatureAlgorithms;
   return OPENSSL_ARRAY_SIZE(kDefaultSignatureAlgorithms);
 }
@@ -958,10 +934,6 @@ static int ext_ri_add_serverhello(SSL *ssl, CBB *out) {
  *
  * https://tools.ietf.org/html/rfc7627 */
 
-static void ext_ems_init(SSL *ssl) {
-  ssl->s3->tmp.extended_master_secret = 0;
-}
-
 static int ext_ems_add_clienthello(SSL *ssl, CBB *out) {
   uint16_t min_version, max_version;
   if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
@@ -983,6 +955,17 @@ static int ext_ems_add_clienthello(SSL *ssl, CBB *out) {
 
 static int ext_ems_parse_serverhello(SSL *ssl, uint8_t *out_alert,
                                      CBS *contents) {
+  /* Whether EMS is negotiated may not change on renegotation. */
+  if (ssl->s3->initial_handshake_complete) {
+    if ((contents != NULL) != ssl->s3->tmp.extended_master_secret) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_RENEGOTIATION_EMS_MISMATCH);
+      *out_alert = SSL_AD_ILLEGAL_PARAMETER;
+      return 0;
+    }
+
+    return 1;
+  }
+
   if (contents == NULL) {
     return 1;
   }
@@ -2381,7 +2364,7 @@ static const struct tls_extension kExtensions[] = {
   },
   {
     TLSEXT_TYPE_extended_master_secret,
-    ext_ems_init,
+    NULL,
     ext_ems_add_clienthello,
     ext_ems_parse_serverhello,
     ext_ems_parse_clienthello,

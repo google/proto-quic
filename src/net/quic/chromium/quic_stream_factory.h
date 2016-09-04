@@ -190,12 +190,14 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool close_sessions_on_ip_change,
       bool disable_quic_on_timeout_with_open_streams,
       int idle_connection_timeout_seconds,
+      int reduced_ping_timeout_seconds,
       int packet_reader_yield_after_duration_milliseconds,
       bool migrate_sessions_on_network_change,
       bool migrate_sessions_early,
       bool allow_server_migration,
       bool force_hol_blocking,
       bool race_cert_verification,
+      bool quic_do_not_fragment,
       const QuicTagVector& connection_options,
       bool enable_token_binding);
   ~QuicStreamFactory() override;
@@ -254,6 +256,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Called by a session after it shuts down.
   void OnSessionClosed(QuicChromiumClientSession* session);
 
+  // Called by a session when it times out with open streams.
+  void OnTimeoutWithOpenStreams();
+
   // Cancels a pending request.
   void CancelRequest(QuicStreamRequest* request);
 
@@ -310,6 +315,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // sent.
   void MigrateSessionToNewNetwork(QuicChromiumClientSession* session,
                                   NetworkChangeNotifier::NetworkHandle network,
+                                  bool close_session_on_error,
                                   const BoundNetLog& bound_net_log,
                                   scoped_refptr<StringIOBuffer> packet);
 
@@ -480,6 +486,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   void MigrateSession(QuicChromiumClientSession* session,
                       IPEndPoint peer_address,
                       NetworkChangeNotifier::NetworkHandle network,
+                      bool close_session_on_error,
                       const BoundNetLog& bound_net_log,
                       scoped_refptr<StringIOBuffer> packet);
 
@@ -596,6 +603,10 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // Set if we do want to delay TCP connection when it is racing with QUIC.
   bool delay_tcp_race_;
 
+  // PING timeout for connections.
+  QuicTime::Delta ping_timeout_;
+  QuicTime::Delta reduced_ping_timeout_;
+
   // If more than |yield_after_packets_| packets have been read or more than
   // |yield_after_duration_| time has passed, then
   // QuicChromiumPacketReader::StartReading() yields by doing a PostTask().
@@ -622,6 +633,9 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Set if cert verification is to be raced with host resolution.
   bool race_cert_verification_;
+
+  // If set, configure QUIC sockets to not fragment packets.
+  bool quic_do_not_fragment_;
 
   // Each profile will (probably) have a unique port_seed_ value.  This value
   // is used to help seed a pseudo-random number generator (PortSuggester) so

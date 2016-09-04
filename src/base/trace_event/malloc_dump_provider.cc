@@ -250,12 +250,12 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
                         MemoryAllocatorDump::kUnitsBytes,
                         allocated_objects_size);
   if (allocated_objects_count != 0) {
-    inner_dump->AddScalar(MemoryAllocatorDump::kNameSize,
+    inner_dump->AddScalar(MemoryAllocatorDump::kNameObjectCount,
                           MemoryAllocatorDump::kUnitsObjects,
                           allocated_objects_count);
   }
 
-  if (resident_size - allocated_objects_size > 0) {
+  if (resident_size > allocated_objects_size) {
     // Explicitly specify why is extra memory resident. In tcmalloc it accounts
     // for free lists and caches. In mac and ios it accounts for the
     // fragmentation and metadata.

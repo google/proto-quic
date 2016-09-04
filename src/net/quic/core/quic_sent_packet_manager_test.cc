@@ -303,6 +303,7 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
     }
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicSentPacketManager manager_;
   vector<QuicEncryptedPacket*> packets_;
   MockClock clock_;

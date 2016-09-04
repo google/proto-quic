@@ -64,7 +64,7 @@ if (is_win && !is_msan) {
   source_set("boringssl_asm") {
     visibility = [ ":*" ]  # Only targets in this file can depend on this.
 
-    defines = []
+    defines = [ "BORINGSSL_CLANG_SUPPORTS_DOT_ARCH" ]
     sources = []
     asmflags = []
     include_dirs = [ "src/include" ]
@@ -105,10 +105,6 @@ if (is_win && !is_msan) {
       sources += crypto_sources_linux_arm
     } else if (current_cpu == "arm64" && (is_linux || is_android)) {
       sources += crypto_sources_linux_aarch64
-
-      # TODO(davidben): Remove explicit arch flag once https://crbug.com/576858
-      # is fixed.
-      asmflags += [ "-march=armv8-a+crypto" ]
     } else {
       public_configs = [ ":no_asm_config" ]
     }

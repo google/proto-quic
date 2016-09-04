@@ -483,6 +483,10 @@ class NET_EXPORT_PRIVATE QuicConnection
     debug_visitor_ = debug_visitor;
     sent_packet_manager_->SetDebugDelegate(debug_visitor);
   }
+  void set_ping_timeout(QuicTime::Delta ping_timeout) {
+    ping_timeout_ = ping_timeout;
+  }
+  const QuicTime::Delta ping_timeout() { return ping_timeout_; }
   // Used in Chromium, but not internally.
   void set_creator_debug_delegate(QuicPacketCreator::DebugDelegate* visitor) {
     packet_generator_.set_debug_delegate(visitor);
@@ -978,6 +982,9 @@ class NET_EXPORT_PRIVATE QuicConnection
   // If true, defer sending data in response to received packets to the
   // SendAlarm.
   bool defer_send_in_response_to_packets_;
+
+  // The timeout for PING.
+  QuicTime::Delta ping_timeout_;
 
   // Arena to store class implementations within the QuicConnection.
   QuicConnectionArena arena_;

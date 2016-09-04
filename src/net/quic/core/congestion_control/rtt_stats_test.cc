@@ -4,6 +4,7 @@
 
 #include "net/quic/core/congestion_control/rtt_stats.h"
 
+#include <cmath>
 #include <vector>
 
 #include "base/logging.h"
@@ -51,6 +52,20 @@ TEST_F(RttStatsTest, SmoothedRtt) {
                        QuicTime::Zero());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.latest_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.smoothed_rtt());
+}
+
+// Ensure that the potential rounding artifacts in EWMA calculation do not cause
+// the SRTT to drift too far from the exact value.
+TEST_F(RttStatsTest, SmoothedRttStability) {
+  for (size_t time = 3; time < 20000; time++) {
+    RttStats stats;
+    for (size_t i = 0; i < 100; i++) {
+      stats.UpdateRtt(QuicTime::Delta::FromMicroseconds(time),
+                      QuicTime::Delta::FromMilliseconds(0), QuicTime::Zero());
+      int64_t time_delta_us = stats.smoothed_rtt().ToMicroseconds() - time;
+      ASSERT_LE(std::abs(time_delta_us), 1);
+    }
+  }
 }
 
 TEST_F(RttStatsTest, PreviousSmoothedRtt) {

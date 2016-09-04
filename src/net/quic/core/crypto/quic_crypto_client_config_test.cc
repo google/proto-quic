@@ -210,6 +210,32 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecure) {
   EXPECT_FALSE(msg.GetStringPiece(kSCID, &scid));
 }
 
+TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCIDNoEXPY) {
+  // Test that a config with no EXPY is still valid when a non-zero
+  // expiry time is passed in.
+  QuicCryptoClientConfig::CachedState state;
+  CryptoHandshakeMessage scfg;
+  scfg.set_tag(kSCFG);
+  scfg.SetStringPiece(kSCID, "12345678");
+  string details;
+  QuicWallTime now = QuicWallTime::FromUNIXSeconds(1);
+  QuicWallTime expiry = QuicWallTime::FromUNIXSeconds(2);
+  state.SetServerConfig(scfg.GetSerialized().AsStringPiece(), now, expiry,
+                        &details);
+
+  QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
+  QuicCryptoNegotiatedParameters params;
+  CryptoHandshakeMessage msg;
+  QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
+  MockRandom rand;
+  config.FillInchoateClientHello(server_id, QuicVersionMax(), &state, &rand,
+                                 /* demand_x509_proof= */ true, &params, &msg);
+
+  StringPiece scid;
+  EXPECT_TRUE(msg.GetStringPiece(kSCID, &scid));
+  EXPECT_EQ("12345678", scid);
+}
+
 TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCID) {
   QuicCryptoClientConfig::CachedState state;
   CryptoHandshakeMessage scfg;
@@ -219,6 +245,7 @@ TEST(QuicCryptoClientConfigTest, InchoateChloSecureWithSCID) {
   scfg.SetStringPiece(kSCID, "12345678");
   string details;
   state.SetServerConfig(scfg.GetSerialized().AsStringPiece(),
+                        QuicWallTime::FromUNIXSeconds(1),
                         QuicWallTime::FromUNIXSeconds(0), &details);
 
   QuicCryptoClientConfig config(CryptoTestUtils::ProofVerifierForTesting());
@@ -356,7 +383,8 @@ TEST(QuicCryptoClientConfigTest, ClearCachedStates) {
       scfg.SetStringPiece(kSCID, "12345678");
       string details;
       state->SetServerConfig(scfg.GetSerialized().AsStringPiece(),
-                             QuicWallTime::FromUNIXSeconds(0), &details);
+                             QuicWallTime::FromUNIXSeconds(0),
+                             QuicWallTime::FromUNIXSeconds(future), &details);
 
       vector<string> certs(1);
       certs[0] = "Hello Cert for " + host;

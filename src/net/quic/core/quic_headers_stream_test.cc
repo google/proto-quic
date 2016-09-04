@@ -381,6 +381,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
   static const bool kFrameComplete = true;
   static const bool kHasPriority = true;
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   const TestParams test_params_;
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;

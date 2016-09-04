@@ -273,6 +273,34 @@
       'msvs_disabled_warnings': [ 4267, ],
     },
     {
+      'target_name': 'boringssl_ecdh_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'src/crypto/ecdh/ecdh_test.cc',
+        '<@(boringssl_test_support_sources)',
+      ],
+      # TODO(davidben): Fix size_t truncations in BoringSSL.
+      # https://crbug.com/429039
+      'msvs_disabled_warnings': [ 4267, ],
+    },
+    {
+      'target_name': 'boringssl_ecdsa_sign_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'src/crypto/ecdsa/ecdsa_sign_test.cc',
+        '<@(boringssl_test_support_sources)',
+      ],
+      # TODO(davidben): Fix size_t truncations in BoringSSL.
+      # https://crbug.com/429039
+      'msvs_disabled_warnings': [ 4267, ],
+    },
+    {
       'target_name': 'boringssl_ecdsa_test',
       'type': 'executable',
       'dependencies': [
@@ -280,6 +308,20 @@
       ],
       'sources': [
         'src/crypto/ecdsa/ecdsa_test.cc',
+        '<@(boringssl_test_support_sources)',
+      ],
+      # TODO(davidben): Fix size_t truncations in BoringSSL.
+      # https://crbug.com/429039
+      'msvs_disabled_warnings': [ 4267, ],
+    },
+    {
+      'target_name': 'boringssl_ecdsa_verify_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'src/crypto/ecdsa/ecdsa_verify_test.cc',
         '<@(boringssl_test_support_sources)',
       ],
       # TODO(davidben): Fix size_t truncations in BoringSSL.
@@ -638,7 +680,10 @@
       'boringssl_digest_test',
       'boringssl_dsa_test',
       'boringssl_ec_test',
+      'boringssl_ecdh_test',
+      'boringssl_ecdsa_sign_test',
       'boringssl_ecdsa_test',
+      'boringssl_ecdsa_verify_test',
       'boringssl_ed25519_test',
       'boringssl_err_test',
       'boringssl_evp_extra_test',

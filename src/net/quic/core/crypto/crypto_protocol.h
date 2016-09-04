@@ -121,6 +121,7 @@ const QuicTag kNCMR = TAG('N', 'C', 'M', 'R');   // Do not attempt connection
 const QuicTag kBWRE = TAG('B', 'W', 'R', 'E');  // Bandwidth resumption.
 const QuicTag kBWMX = TAG('B', 'W', 'M', 'X');  // Max bandwidth resumption.
 const QuicTag kBWRS = TAG('B', 'W', 'R', 'S');  // Server bandwidth resumption.
+const QuicTag kBWS2 = TAG('B', 'W', 'S', '2');  // Server bw resumption v2.
 
 // Enable path MTU discovery experiment.
 const QuicTag kMTUH = TAG('M', 'T', 'U', 'H');  // High-target MTU discovery.
@@ -163,6 +164,7 @@ const QuicTag kPROF = TAG('P', 'R', 'O', 'F');   // Proof (signature).
 const QuicTag kCCS  = TAG('C', 'C', 'S', 0);     // Common certificate set
 const QuicTag kCCRT = TAG('C', 'C', 'R', 'T');   // Cached certificate
 const QuicTag kEXPY = TAG('E', 'X', 'P', 'Y');   // Expiry
+const QuicTag kSTTL = TAG('S', 'T', 'T', 'L');   // Server Config TTL
 const QuicTag kSFCW = TAG('S', 'F', 'C', 'W');   // Initial stream flow control
                                                  // receive window.
 const QuicTag kCFCW = TAG('C', 'F', 'C', 'W');   // Initial session/connection

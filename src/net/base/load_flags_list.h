@@ -54,10 +54,14 @@ LOAD_FLAG(DO_NOT_SEND_AUTH_DATA, 1 << 10)
 // This should only be used for testing (set by HttpNetworkTransaction).
 LOAD_FLAG(IGNORE_ALL_CERT_ERRORS, 1 << 11)
 
+// DO NOT USE THIS FLAG
+// The network stack should not have frame level knowledge.  Any pre-connect
+// or pre-resolution requiring that knowledge should be done from the
+// stack embedder.
 // Indicate that this is a top level frame, so that we don't assume it is a
 // subresource and speculatively pre-connect or pre-resolve when a referring
 // page is loaded.
-LOAD_FLAG(MAIN_FRAME, 1 << 12)
+LOAD_FLAG(MAIN_FRAME_DEPRECATED, 1 << 12)
 
 // Indicates that this load was motivated by the rel=prefetch feature,
 // and is (in theory) not intended for the current frame.

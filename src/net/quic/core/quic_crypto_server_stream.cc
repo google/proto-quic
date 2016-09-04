@@ -405,9 +405,7 @@ QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
       peer_supports_stateless_rejects_;
   QuicConnection* connection = session()->connection();
   const QuicConnectionId server_designated_connection_id =
-      use_stateless_rejects_in_crypto_config
-          ? GenerateConnectionIdForReject(connection->connection_id())
-          : 0;
+      GenerateConnectionIdForReject(use_stateless_rejects_in_crypto_config);
   return crypto_config_->ProcessClientHello(
       result, /*reject_only=*/false, connection->connection_id(),
       connection->self_address().address(), connection->peer_address(),
@@ -440,12 +438,14 @@ void QuicCryptoServerStream::ValidateCallback::RunImpl(
 }
 
 QuicConnectionId QuicCryptoServerStream::GenerateConnectionIdForReject(
-    QuicConnectionId connection_id) {
-  // TODO(rch): Remove this method when
-  // reloadable_flag_quic_dispatcher_creates_id2 is removed.
+    bool use_stateless_rejects) {
+  if (!use_stateless_rejects) {
+    return 0;
+  }
   QuicServerSessionBase* session_base =
       static_cast<QuicServerSessionBase*>(session());
-  return session_base->GenerateConnectionIdForReject(connection_id);
+  return session_base->GenerateConnectionIdForReject(
+      session()->connection()->connection_id());
 }
 
 }  // namespace net

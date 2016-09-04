@@ -134,6 +134,7 @@ class TcpCubicSenderPacketsTest : public ::testing::Test {
     bytes_in_flight_ -= kDefaultTCPMSS;
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   const QuicTime::Delta one_ms_;
   MockClock clock_;
   std::unique_ptr<TcpCubicSenderPacketsPeer> sender_;
@@ -644,8 +645,7 @@ TEST_F(TcpCubicSenderPacketsTest, TcpCubicResetEpochOnQuiescence) {
 }
 
 TEST_F(TcpCubicSenderPacketsTest, TcpCubicShiftedEpochOnQuiescence) {
-  ValueRestore<bool> old_flag(&FLAGS_shift_quic_cubic_epoch_when_app_limited,
-                              true);
+  FLAGS_shift_quic_cubic_epoch_when_app_limited = true;
   const int kMaxCongestionWindow = 50;
   const QuicByteCount kMaxCongestionWindowBytes =
       kMaxCongestionWindow * kDefaultTCPMSS;

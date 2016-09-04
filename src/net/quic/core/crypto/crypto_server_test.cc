@@ -362,6 +362,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   }
 
  protected:
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicRandom* const rand_;
   MockRandom rand_for_id_generation_;
   MockClock clock_;

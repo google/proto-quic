@@ -731,6 +731,7 @@ void SpdySession::InitializeWithSocket(
   buffered_spdy_framer_.reset(new BufferedSpdyFramer());
   buffered_spdy_framer_->set_visitor(this);
   buffered_spdy_framer_->set_debug_visitor(this);
+  buffered_spdy_framer_->UpdateHeaderDecoderTableSize(kMaxHeaderTableSize);
 
   net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_INITIALIZED,
                     base::Bind(&NetLogSpdyInitializedCallback,
@@ -2708,8 +2709,8 @@ void SpdySession::SendInitialData() {
   // First, notify the server about the settings they should use when
   // communicating with us.
   SettingsMap settings_map;
-  // Create a new settings frame notifying the server of our
-  // max concurrent streams and initial window size.
+  settings_map[SETTINGS_HEADER_TABLE_SIZE] =
+      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxHeaderTableSize);
   settings_map[SETTINGS_MAX_CONCURRENT_STREAMS] =
       SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxConcurrentPushedStreams);
   if (stream_max_recv_window_size_ != kDefaultInitialWindowSize) {

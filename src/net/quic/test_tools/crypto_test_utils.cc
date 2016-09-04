@@ -624,6 +624,8 @@ void CryptoTestUtils::FillInDummyReject(CryptoHandshakeMessage* rej,
   // clang-format on
   rej->SetValue(kSCFG, scfg);
   rej->SetStringPiece(kServerNonceTag, "SERVER_NONCE");
+  int64_t ttl = 2 * 24 * 60 * 60;
+  rej->SetValue(kSTTL, ttl);
   vector<QuicTag> reject_reasons;
   reject_reasons.push_back(CLIENT_NONCE_INVALID_FAILURE);
   rej->SetVector(kRREJ, reject_reasons);

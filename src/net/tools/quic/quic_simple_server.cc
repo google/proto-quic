@@ -34,9 +34,11 @@ const int kReadBufferSize = 2 * kMaxPacketSize;
 
 }  // namespace
 
-QuicSimpleServer::QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
-                                   const QuicConfig& config,
-                                   const QuicVersionVector& supported_versions)
+QuicSimpleServer::QuicSimpleServer(
+    std::unique_ptr<ProofSource> proof_source,
+    const QuicConfig& config,
+    const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
+    const QuicVersionVector& supported_versions)
     : version_manager_(supported_versions),
       helper_(
           new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
@@ -44,6 +46,7 @@ QuicSimpleServer::QuicSimpleServer(std::unique_ptr<ProofSource> proof_source,
           base::ThreadTaskRunnerHandle::Get().get(),
           &clock_)),
       config_(config),
+      crypto_config_options_(crypto_config_options),
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
                      std::move(proof_source)),
@@ -76,7 +79,7 @@ void QuicSimpleServer::Initialize() {
 
   std::unique_ptr<CryptoHandshakeMessage> scfg(crypto_config_.AddDefaultConfig(
       helper_->GetRandomGenerator(), helper_->GetClock(),
-      QuicCryptoServerConfig::ConfigOptions()));
+      crypto_config_options_));
 }
 
 QuicSimpleServer::~QuicSimpleServer() {}

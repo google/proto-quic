@@ -244,8 +244,9 @@ struct FunctorTraits<IgnoreResultHelper<T>> : FunctorTraits<T> {
   template <typename IgnoreResultType, typename... RunArgs>
   static void Invoke(IgnoreResultType&& ignore_result_helper,
                      RunArgs&&... args) {
-    FunctorTraits<T>::Invoke(ignore_result_helper.functor_,
-                             std::forward<RunArgs>(args)...);
+    FunctorTraits<T>::Invoke(
+        std::forward<IgnoreResultType>(ignore_result_helper).functor_,
+        std::forward<RunArgs>(args)...);
   }
 };
 
@@ -380,7 +381,7 @@ struct BindState final : BindStateBase {
   template <typename ForwardFunctor, typename... ForwardBoundArgs>
   explicit BindState(ForwardFunctor&& functor, ForwardBoundArgs&&... bound_args)
       : BindStateBase(&Destroy),
-      functor_(std::forward<ForwardFunctor>(functor)),
+        functor_(std::forward<ForwardFunctor>(functor)),
         bound_args_(std::forward<ForwardBoundArgs>(bound_args)...) {
     DCHECK(!IsNull(functor_));
   }

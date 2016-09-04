@@ -27,9 +27,9 @@ namespace net {
 //   - the last auth handler used (contains realm and authentication scheme)
 //   - the list of paths which used this realm
 // Entries can be looked up by either (origin, realm, scheme) or (origin, path).
-class NET_EXPORT_PRIVATE HttpAuthCache {
+class NET_EXPORT HttpAuthCache {
  public:
-  class NET_EXPORT_PRIVATE Entry {
+  class NET_EXPORT Entry {
    public:
     Entry(const Entry& other);
     ~Entry();
@@ -59,6 +59,10 @@ class NET_EXPORT_PRIVATE HttpAuthCache {
     }
 
     void UpdateStaleChallenge(const std::string& auth_challenge);
+
+    void set_creation_time_for_testing(base::TimeTicks creation_time) {
+      creation_time_ = creation_time;
+    }
 
    private:
     friend class HttpAuthCache;
@@ -162,8 +166,8 @@ class NET_EXPORT_PRIVATE HttpAuthCache {
               HttpAuth::Scheme scheme,
               const AuthCredentials& credentials);
 
-  // Clears the cache.
-  void Clear();
+  // Clears cache entries created within |duration| of base::TimeTicks::Now().
+  void ClearEntriesAddedWithin(base::TimeDelta duration);
 
   // Updates a stale digest entry on server |origin| for realm |realm| and
   // scheme |scheme|. The cached auth challenge is replaced with

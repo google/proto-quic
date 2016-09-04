@@ -834,6 +834,7 @@ TEST_F(QuicStreamSequencerBufferTest, FlushBufferedFrames) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, TooManyGaps) {
+  QuicFlagSaver flags;
   FLAGS_quic_limit_frame_gaps_in_buffer = true;
   // Make sure max capacity is large enough that it is possible to have more
   // than |kMaxNumGapsAllowed| number of gaps.

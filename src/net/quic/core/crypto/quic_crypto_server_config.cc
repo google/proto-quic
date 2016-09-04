@@ -640,8 +640,8 @@ QuicErrorCode QuicCryptoServerConfig::ProcessClientHello(
   }
 
   if (!info.reject_reasons.empty() || !requested_config.get()) {
-    BuildRejection(version, *primary_config, client_hello, info,
-                   validate_chlo_result.cached_network_params,
+    BuildRejection(version, clock->WallNow(), *primary_config, client_hello,
+                   info, validate_chlo_result.cached_network_params,
                    use_stateless_rejects, server_designated_connection_id, rand,
                    compressed_certs_cache, params, *crypto_proof,
                    total_framing_overhead, chlo_packet_size, out);
@@ -1285,11 +1285,13 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
     CryptoHandshakeMessage* out) const {
   string serialized;
   string source_address_token;
+  QuicWallTime expiry_time = QuicWallTime::Zero();
   const CommonCertSets* common_cert_sets;
   {
     base::AutoLock locked(configs_lock_);
     serialized = primary_config_->serialized;
     common_cert_sets = primary_config_->common_cert_sets;
+    expiry_time = primary_config_->expiry_time;
     source_address_token = NewSourceAddressToken(
         *primary_config_, previous_source_address_tokens, client_ip, rand,
         clock->WallNow(), cached_network_params);
@@ -1298,6 +1300,10 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   out->set_tag(kSCUP);
   out->SetStringPiece(kSCFG, serialized);
   out->SetStringPiece(kSourceAddressTokenTag, source_address_token);
+  if (FLAGS_quic_send_scfg_ttl) {
+    out->SetValue(kSTTL,
+                  expiry_time.AbsoluteDifference(clock->WallNow()).ToSeconds());
+  }
 
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
@@ -1435,6 +1441,7 @@ void QuicCryptoServerConfig::FinishBuildServerConfigUpdateMessage(
 
 void QuicCryptoServerConfig::BuildRejection(
     QuicVersion version,
+    QuicWallTime now,
     const Config& config,
     const CryptoHandshakeMessage& client_hello,
     const ClientHelloInfo& info,
@@ -1462,6 +1469,10 @@ void QuicCryptoServerConfig::BuildRejection(
       kSourceAddressTokenTag,
       NewSourceAddressToken(config, info.source_address_tokens, info.client_ip,
                             rand, info.now, &cached_network_params));
+  if (FLAGS_quic_send_scfg_ttl) {
+    out->SetValue(kSTTL,
+                  config.expiry_time.AbsoluteDifference(now).ToSeconds());
+  }
   if (replay_protection_) {
     out->SetStringPiece(kServerNonceTag, NewServerNonce(rand, info.now));
   }
@@ -1724,6 +1735,15 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
     }
 
     config->key_exchanges.push_back(ka.release());
+  }
+
+  if (FLAGS_quic_send_scfg_ttl) {
+    uint64_t expiry_seconds;
+    if (msg->GetUint64(kEXPY, &expiry_seconds) != QUIC_NO_ERROR) {
+      LOG(WARNING) << "Server config message is missing EXPY";
+      return nullptr;
+    }
+    config->expiry_time = QuicWallTime::FromUNIXSeconds(expiry_seconds);
   }
 
   return config;
@@ -2043,6 +2063,7 @@ QuicCryptoServerConfig::Config::Config()
     : channel_id_enabled(false),
       is_primary(false),
       primary_time(QuicWallTime::Zero()),
+      expiry_time(QuicWallTime::Zero()),
       priority(0),
       source_address_token_boxer(nullptr) {}
 

@@ -171,6 +171,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   }
 
  protected:
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
+
   // Every connection gets its own MockQuicConnectionHelper and
   // MockAlarmFactory,
   // tracked separately from
@@ -247,8 +249,8 @@ TEST_P(QuicCryptoServerStreamTest, ForwardSecureAfterCHLO) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
-  ValueRestore<bool> old_flag(&FLAGS_enable_quic_stateless_reject_support,
-                              true);
+  FLAGS_enable_quic_stateless_reject_support = true;
+
   Initialize();
 
   EXPECT_CALL(*server_connection_,
@@ -281,8 +283,8 @@ TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
-  ValueRestore<bool> old_flag(&FLAGS_enable_quic_stateless_reject_support,
-                              true);
+  FLAGS_enable_quic_stateless_reject_support = true;
+
   Initialize();
 
   InitializeFakeClient(/* supports_stateless_rejects= */ true);
@@ -326,8 +328,8 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, NoStatelessRejectIfNoClientSupport) {
-  ValueRestore<bool> old_flag(&FLAGS_enable_quic_stateless_reject_support,
-                              true);
+  FLAGS_enable_quic_stateless_reject_support = true;
+
   Initialize();
 
   // The server is configured to use stateless rejects, but the client does not

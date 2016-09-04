@@ -148,6 +148,7 @@ template<typename T>
 class ScopedJavaLocalRef : public JavaRef<T> {
  public:
   ScopedJavaLocalRef() : env_(nullptr) {}
+  ScopedJavaLocalRef(std::nullptr_t) : env_(nullptr) {}
 
   // Non-explicit copy constructor, to allow ScopedJavaLocalRef to be returned
   // by value as this is the normal usage pattern.
@@ -238,6 +239,7 @@ template<typename T>
 class ScopedJavaGlobalRef : public JavaRef<T> {
  public:
   ScopedJavaGlobalRef() {}
+  ScopedJavaGlobalRef(std::nullptr_t) {}
 
   ScopedJavaGlobalRef(const ScopedJavaGlobalRef<T>& other) {
     this->Reset(other);

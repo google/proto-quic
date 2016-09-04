@@ -40,7 +40,6 @@ using net::test::QuicSessionPeer;
 using net::test::QuicSpdySessionPeer;
 using net::test::QuicSustainedBandwidthRecorderPeer;
 using net::test::SupportedVersions;
-using net::test::ValueRestore;
 using net::test::kClientDataStreamId1;
 using net::test::kClientDataStreamId2;
 using net::test::kClientDataStreamId3;

@@ -23,6 +23,7 @@
 #include "base/base_export.h"
 #include "base/location.h"
 #include "base/metrics/persistent_memory_allocator.h"
+#include "base/threading/platform_thread.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_local_storage.h"
 
@@ -40,6 +41,7 @@ class WaitableEvent;
 namespace debug {
 
 class ThreadActivityTracker;
+
 
 enum : int {
   // The maximum number of call-stack addresses stored per activity. This
@@ -342,6 +344,46 @@ class BASE_EXPORT ThreadActivityTracker {
 // the thread trackers is taken from a PersistentMemoryAllocator which allows
 // for the data to be analyzed by a parallel process or even post-mortem.
 class BASE_EXPORT GlobalActivityTracker {
+  template <typename T>
+  class ThreadSafeStack {
+   public:
+    ThreadSafeStack(size_t size)
+        : size_(size), values_(new T[size]), used_(0) {}
+    ~ThreadSafeStack() {}
+
+    size_t size() { return size_; }
+    size_t used() {
+      base::AutoLock autolock(lock_);
+      return used_;
+    }
+
+    bool push(T value) {
+      base::AutoLock autolock(lock_);
+      if (used_ == size_)
+        return false;
+      values_[used_++] = value;
+      return true;
+    }
+
+    bool pop(T* out_value) {
+      base::AutoLock autolock(lock_);
+      if (used_ == 0)
+        return false;
+      *out_value = values_[--used_];
+      return true;
+    }
+
+   private:
+    const size_t size_;
+
+    std::unique_ptr<T[]> values_;
+    size_t used_;
+    base::Lock lock_;
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(ThreadSafeStack);
+  };
+
  public:
   // Type identifiers used when storing in persistent memory so they can be
   // identified during extraction; the first 4 bytes of the SHA1 of the name
@@ -505,12 +547,12 @@ class BASE_EXPORT GlobalActivityTracker {
   // The activity tracker for the currently executing thread.
   base::ThreadLocalStorage::Slot this_thread_tracker_;
 
-  // These have to be lock-free because lock activity is tracked and causes
-  // re-entry problems.
+  // The number of thread trackers currently active.
   std::atomic<int> thread_tracker_count_;
-  std::atomic<int> available_memories_count_;
-  std::atomic<PersistentMemoryAllocator::Reference>
-      available_memories_[kMaxThreadCount];
+
+  // A cache of thread-tracker memories that have been previously freed and
+  // thus can be re-used instead of allocating new ones.
+  ThreadSafeStack<PersistentMemoryAllocator::Reference> available_memories_;
 
   // The active global activity tracker.
   static GlobalActivityTracker* g_tracker_;

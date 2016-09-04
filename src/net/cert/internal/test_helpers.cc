@@ -104,9 +104,11 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
                                      ParsedCertificateList* chain,
                                      scoped_refptr<TrustAnchor>* trust_anchor,
                                      der::GeneralizedTime* time,
-                                     bool* verify_result) {
+                                     bool* verify_result,
+                                     std::string* expected_errors) {
   chain->clear();
   *trust_anchor = nullptr;
+  expected_errors->clear();
 
   std::string file_data = ReadTestFileToString(
       std::string("net/data/verify_certificate_chain_unittest/") + file_name);
@@ -120,15 +122,18 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
   const char kTrustAnchorConstrained[] = "TRUST_ANCHOR_CONSTRAINED";
   const char kTimeHeader[] = "TIME";
   const char kResultHeader[] = "VERIFY_RESULT";
+  const char kErrorsHeader[] = "ERRORS";
 
   pem_headers.push_back(kCertificateHeader);
   pem_headers.push_back(kTrustAnchorUnconstrained);
   pem_headers.push_back(kTrustAnchorConstrained);
   pem_headers.push_back(kTimeHeader);
   pem_headers.push_back(kResultHeader);
+  pem_headers.push_back(kErrorsHeader);
 
   bool has_time = false;
   bool has_result = false;
+  bool has_errors = false;
 
   PEMTokenizer pem_tokenizer(file_data, pem_headers);
   while (pem_tokenizer.GetNext()) {
@@ -164,6 +169,10 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
           << "Unrecognized result: " << block_data;
       has_result = true;
       *verify_result = block_data == "SUCCESS";
+    } else if (block_type == kErrorsHeader) {
+      ASSERT_FALSE(has_errors) << "Duplicate " << kErrorsHeader;
+      has_errors = true;
+      *expected_errors = block_data;
     }
   }
 

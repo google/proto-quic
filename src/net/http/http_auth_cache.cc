@@ -252,8 +252,11 @@ bool HttpAuthCache::Remove(const GURL& origin,
   return false;
 }
 
-void HttpAuthCache::Clear() {
-  entries_.clear();
+void HttpAuthCache::ClearEntriesAddedWithin(base::TimeDelta duration) {
+  base::TimeTicks begin_time = base::TimeTicks::Now() - duration;
+  entries_.remove_if([begin_time](const Entry& entry) {
+    return entry.creation_time_ >= begin_time;
+  });
 }
 
 bool HttpAuthCache::UpdateStaleChallenge(const GURL& origin,

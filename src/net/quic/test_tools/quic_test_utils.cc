@@ -97,6 +97,18 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
                         header.public_header.packet_number_length);
 }
 
+QuicFlagSaver::QuicFlagSaver() {
+#define QUIC_FLAG(type, flag, value) CHECK_EQ(value, flag);
+#include "net/quic/core/quic_flags_list.h"
+#undef QUIC_FLAG
+}
+
+QuicFlagSaver::~QuicFlagSaver() {
+#define QUIC_FLAG(type, flag, value) flag = value;
+#include "net/quic/core/quic_flags_list.h"
+#undef QUIC_FLAG
+}
+
 uint64_t SimpleRandom::RandUint64() {
   unsigned char hash[base::kSHA1Length];
   base::SHA1HashBytes(reinterpret_cast<unsigned char*>(&seed_), sizeof(seed_),

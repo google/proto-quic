@@ -122,6 +122,7 @@ HttpNetworkSession::Params::Params()
       quic_threshold_timeouts_streams_open(0),
       quic_close_sessions_on_ip_change(false),
       quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
+      quic_reduced_ping_timeout_seconds(kPingTimeoutSecs),
       quic_packet_reader_yield_after_duration_milliseconds(
           kQuicYieldAfterDurationMilliseconds),
       quic_disable_preconnect_if_0rtt(false),
@@ -131,8 +132,10 @@ HttpNetworkSession::Params::Params()
       quic_disable_bidirectional_streams(false),
       quic_force_hol_blocking(false),
       quic_race_cert_verification(false),
+      quic_do_not_fragment(false),
       proxy_delegate(NULL),
-      enable_token_binding(false) {
+      enable_token_binding(false),
+      http_09_on_non_default_ports_enabled(false) {
   quic_supported_versions.push_back(QUIC_VERSION_35);
 }
 
@@ -187,12 +190,14 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_close_sessions_on_ip_change,
           params.disable_quic_on_timeout_with_open_streams,
           params.quic_idle_connection_timeout_seconds,
+          params.quic_reduced_ping_timeout_seconds,
           params.quic_packet_reader_yield_after_duration_milliseconds,
           params.quic_migrate_sessions_on_network_change,
           params.quic_migrate_sessions_early,
           params.quic_allow_server_migration,
           params.quic_force_hol_blocking,
           params.quic_race_cert_verification,
+          params.quic_do_not_fragment,
           params.quic_connection_options,
           params.enable_token_binding),
       spdy_session_pool_(params.host_resolver,
@@ -339,6 +344,8 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
                    params_.quic_max_server_configs_stored_in_properties);
   dict->SetInteger("idle_connection_timeout_seconds",
                    params_.quic_idle_connection_timeout_seconds);
+  dict->SetInteger("reduced_ping_timeout_seconds",
+                   params_.quic_reduced_ping_timeout_seconds);
   dict->SetInteger(
       "packet_reader_yield_after_duration_milliseconds",
       params_.quic_packet_reader_yield_after_duration_milliseconds);

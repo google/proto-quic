@@ -466,6 +466,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
     // will not be promoted at a specific time.
     QuicWallTime primary_time;
 
+    // expiry_time contains the timestamp when this config expires.
+    QuicWallTime expiry_time;
+
     // Secondary sort key for use when selecting primary configs and
     // there are multiple configs with the same primary time.
     // Smaller numbers mean higher priority.
@@ -542,6 +545,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
 
   // BuildRejection sets |out| to be a REJ message in reply to |client_hello|.
   void BuildRejection(QuicVersion version,
+                      QuicWallTime now,
                       const Config& config,
                       const CryptoHandshakeMessage& client_hello,
                       const ClientHelloInfo& info,

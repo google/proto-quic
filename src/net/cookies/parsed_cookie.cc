@@ -47,6 +47,7 @@
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
+#include "net/http/http_util.h"
 
 namespace {
 
@@ -94,26 +95,6 @@ inline bool SeekBackPast(std::string::const_iterator* it,
   for (; *it != end && CharIsA(**it, chars); --(*it)) {
   }
   return *it == end;
-}
-
-// Validate whether |value| is a valid token according to [RFC7230],
-// Section 3.2.6.
-bool IsValidToken(const std::string& value) {
-  if (value.empty())
-    return false;
-
-  // Check that |value| has no separators.
-  std::string separators = "()<>@,;:\\\"/[]?={} \t";
-  if (value.find_first_of(separators) != std::string::npos)
-    return false;
-
-  // Check that |value| has no CTLs.
-  for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
-    if ((*i >= 0 && *i <= 31) || *i >= 127)
-      return false;
-  }
-
-  return true;
 }
 
 // Validate value, which may be according to RFC 6265
@@ -196,7 +177,7 @@ CookiePriority ParsedCookie::Priority() const {
 }
 
 bool ParsedCookie::SetName(const std::string& name) {
-  if (!name.empty() && !IsValidToken(name))
+  if (!name.empty() && !HttpUtil::IsToken(name))
     return false;
   if (pairs_.empty())
     pairs_.push_back(std::make_pair("", ""));
@@ -488,7 +469,7 @@ bool ParsedCookie::SetBool(size_t* index, const std::string& key, bool value) {
 bool ParsedCookie::SetAttributePair(size_t* index,
                                     const std::string& key,
                                     const std::string& value) {
-  if (!(IsValidToken(key) && IsValidCookieAttributeValue(value)))
+  if (!(HttpUtil::IsToken(key) && IsValidCookieAttributeValue(value)))
     return false;
   if (!IsValid())
     return false;

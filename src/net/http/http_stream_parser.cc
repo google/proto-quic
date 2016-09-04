@@ -25,6 +25,7 @@
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/token_binding.h"
+#include "url/url_canon.h"
 
 namespace net {
 
@@ -207,6 +208,7 @@ HttpStreamParser::HttpStreamParser(ClientSocketHandle* connection,
       request_(request),
       request_headers_(nullptr),
       request_headers_length_(0),
+      http_09_on_non_default_ports_enabled_(false),
       read_buf_(read_buffer),
       read_buf_unused_offset_(0),
       response_header_start_offset_(-1),
@@ -997,7 +999,20 @@ int HttpStreamParser::ParseResponseHeaders(int end_offset) {
         std::string(read_buf_->StartOfBuffer(), raw_headers.find('\0')));
     headers = new HttpResponseHeaders(raw_headers);
   } else {
-    // Enough data was read -- there is no status line.
+    // Enough data was read -- there is no status line, so this is HTTP/0.9, or
+    // the server is broken / doesn't speak HTTP.
+
+    // If the port is not the default for the scheme, assume it's not a real
+    // HTTP/0.9 response, and fail the request.
+    // TODO(crbug.com/624462):  Further restrict the cases in which we allow
+    // HTTP/0.9.
+    std::string scheme(request_->url.scheme());
+    if (!http_09_on_non_default_ports_enabled_ &&
+        url::DefaultPortForScheme(scheme.c_str(), scheme.length()) !=
+            request_->url.EffectiveIntPort()) {
+      return ERR_INVALID_HTTP_RESPONSE;
+    }
+
     headers = new HttpResponseHeaders(std::string("HTTP/0.9 200 OK"));
 
     if (request_->url.SchemeIsCryptographic()) {

@@ -72,6 +72,10 @@ bool Origin::IsSameOriginWith(const Origin& other) const {
   return tuple_.Equals(other.tuple_);
 }
 
+bool Origin::DomainIs(base::StringPiece lower_ascii_domain) const {
+  return !unique_ && url::DomainIs(tuple_.host(), lower_ascii_domain);
+}
+
 bool Origin::operator<(const Origin& other) const {
   return tuple_ < other.tuple_;
 }

@@ -207,6 +207,7 @@ class QuicPacketGeneratorTest : public ::testing::Test {
     return ::net::MakeIOVector(s, &iov_);
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicFramer framer_;
   MockRandom random_;
   SimpleBufferAllocator buffer_allocator_;

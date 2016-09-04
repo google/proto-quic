@@ -13,7 +13,6 @@
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
-#include "base/message_loop/message_loop.h"
 #include "base/power_monitor/power_observer.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/load_states.h"
@@ -348,6 +347,7 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Completion callback for raw reads. See |ReadRawData| for details.
   // |bytes_read| is either >= 0 to indicate a successful read and count of
   // bytes read, or < 0 to indicate an error.
+  // On return, |this| may be deleted.
   void ReadRawDataComplete(int bytes_read);
 
   // The request that initiated this job. This value will never be nullptr.

@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 
+#include <cmath>
 #include <ostream>
 
 #include "base/compiler_specific.h"
@@ -247,7 +248,8 @@ inline QuicTime::Delta operator*(QuicTime::Delta lhs, int rhs) {
   return QuicTime::Delta(lhs.time_offset_ * rhs);
 }
 inline QuicTime::Delta operator*(QuicTime::Delta lhs, double rhs) {
-  return QuicTime::Delta(lhs.time_offset_ * rhs);
+  return QuicTime::Delta(
+      static_cast<int64_t>(std::llround(lhs.time_offset_ * rhs)));
 }
 inline QuicTime::Delta operator*(int lhs, QuicTime::Delta rhs) {
   return rhs * lhs;

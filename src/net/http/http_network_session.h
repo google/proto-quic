@@ -164,6 +164,9 @@ class NET_EXPORT HttpNetworkSession
     bool quic_close_sessions_on_ip_change;
     // Specifies QUIC idle connection state lifetime.
     int quic_idle_connection_timeout_seconds;
+    // Specifies the reduced ping timeout subsequent connections should use when
+    // a connection was timed out with open streams.
+    int quic_reduced_ping_timeout_seconds;
     // Specifies the maximum time duration that QUIC packet reader can perform
     // consecutive packets reading.
     int quic_packet_reader_yield_after_duration_milliseconds;
@@ -186,10 +189,16 @@ class NET_EXPORT HttpNetworkSession
     bool quic_force_hol_blocking;
     // If true, race cert verification with host resolution.
     bool quic_race_cert_verification;
+    // If true, configure QUIC sockets to not fragment packets.
+    bool quic_do_not_fragment;
 
     ProxyDelegate* proxy_delegate;
     // Enable support for Token Binding.
     bool enable_token_binding;
+
+    // Enable HTTP/0.9 for HTTP/HTTPS on ports other than the default one for
+    // each protocol.
+    bool http_09_on_non_default_ports_enabled;
   };
 
   enum SocketPoolType {

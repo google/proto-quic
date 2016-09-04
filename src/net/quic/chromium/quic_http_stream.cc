@@ -527,6 +527,10 @@ void QuicHttpStream::OnError(int error) {
   ResetStream();
   response_status_ =
       was_handshake_confirmed_ ? error : ERR_QUIC_HANDSHAKE_FAILED;
+  if (in_loop_) {
+    // If already in DoLoop(), |callback_| will be handled when DoLoop() exits.
+    return;
+  }
   if (!callback_.is_null())
     DoCallback(response_status_);
 }

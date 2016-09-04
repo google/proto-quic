@@ -30,7 +30,6 @@ using net::test::BuildUnsizedDataPacket;
 using net::test::NoOpFramerVisitor;
 using net::test::QuicVersionMax;
 using net::test::QuicVersionMin;
-using net::test::ValueRestore;
 using net::test::MockPacketWriter;
 
 using testing::Args;
@@ -153,6 +152,7 @@ class QuicTimeWaitListManagerTest : public ::testing::Test {
                                                packet_number, "data");
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   NiceMock<MockFakeTimeEpollServer> epoll_server_;
   QuicEpollConnectionHelper helper_;
   QuicEpollAlarmFactory alarm_factory_;

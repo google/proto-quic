@@ -198,6 +198,28 @@ void HostCache::clear() {
   entries_.clear();
 }
 
+void HostCache::ClearForHosts(
+    const base::Callback<bool(const std::string&)>& host_filter) {
+  DCHECK(CalledOnValidThread());
+
+  if (host_filter.is_null()) {
+    clear();
+    return;
+  }
+
+  base::TimeTicks now = base::TimeTicks::Now();
+  for (EntryMap::iterator it = entries_.begin(); it != entries_.end();) {
+    EntryMap::iterator next_it = std::next(it);
+
+    if (host_filter.Run(it->first.hostname)) {
+      RecordErase(ERASE_CLEAR, now, it->second);
+      entries_.erase(it);
+    }
+
+    it = next_it;
+  }
+}
+
 size_t HostCache::size() const {
   DCHECK(CalledOnValidThread());
   return entries_.size();

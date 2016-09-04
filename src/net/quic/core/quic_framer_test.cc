@@ -498,6 +498,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
     return BuildUnsizedDataPacket(&framer_, header, frames, packet_size);
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   test::TestEncrypter* encrypter_;
   test::TestDecrypter* decrypter_;
   QuicVersion version_;

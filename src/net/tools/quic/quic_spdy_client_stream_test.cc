@@ -26,7 +26,6 @@ using net::test::kClientDataStreamId1;
 using net::test::kServerDataStreamId1;
 using net::test::kInitialSessionFlowControlWindowForTest;
 using net::test::kInitialStreamFlowControlWindowForTest;
-using net::test::ValueRestore;
 
 using std::string;
 using testing::StrictMock;

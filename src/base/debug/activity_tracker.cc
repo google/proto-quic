@@ -500,91 +500,71 @@ void GlobalActivityTracker::CreateWithLocalMemory(size_t size,
 ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   DCHECK(!this_thread_tracker_.Get());
 
-  PersistentMemoryAllocator::Reference mem_reference = 0;
-  void* mem_base = nullptr;
+  PersistentMemoryAllocator::Reference mem_reference =
+      PersistentMemoryAllocator::kReferenceNull;
+  DCHECK(!mem_reference);  // invalid_value should be checkable with !
 
-  // Get the current count of available memories, acquiring the array values.
-  int count = available_memories_count_.load(std::memory_order_acquire);
-  while (count > 0) {
-    // There is a memory block that was previously released (and zeroed) so
-    // just re-use that rather than allocating a new one. Use "relaxed" because
-    // the value is guarded by the |count| "acquire". A zero reference replaces
-    // the existing value so that it can't be used by another thread that
-    // manages to interrupt this one before the count can be decremented.
-    // A zero reference is also required for the "push" operation to work
-    // once the count finally does get decremented.
-    mem_reference =
-        available_memories_[count - 1].exchange(0, std::memory_order_relaxed);
+  while (true) {
+    // Get the first available memory from the top of the FIFO.
+    if (!available_memories_.pop(&mem_reference))
+      break;
 
-    // If the reference is zero, it's already been taken but count hasn't yet
-    // been decremented. Give that other thread a chance to finish then reload
-    // the "count" value and try again.
-    if (!mem_reference) {
-      PlatformThread::YieldCurrentThread();
-      count = available_memories_count_.load(std::memory_order_acquire);
-      continue;
+    // Turn the reference back into one of the activity-tracker type. This can
+    // fail if something else has already taken the block and changed its type.
+    if (allocator_->ChangeType(mem_reference, kTypeIdActivityTracker,
+                               kTypeIdActivityTrackerFree)) {
+      break;
     }
-
-    // Decrement the count indicating that the value has been taken. If this
-    // fails then another thread has pushed something new and incremented the
-    // count.
-    // NOTE: |oldcount| will be loaded with the existing value.
-    int oldcount = count;
-    if (!available_memories_count_.compare_exchange_strong(
-            oldcount, count - 1, std::memory_order_acquire,
-            std::memory_order_acquire)) {
-      DCHECK_LT(count, oldcount);
-
-      // Restore the reference that was zeroed above and try again.
-      available_memories_[count - 1].store(mem_reference,
-                                           std::memory_order_relaxed);
-      count = oldcount;
-      continue;
-    }
-
-    // Turn the reference back into one of the activity-tracker type.
-    mem_base = allocator_->GetAsObject<char>(mem_reference,
-                                             kTypeIdActivityTrackerFree);
-    DCHECK(mem_base);
-    DCHECK_LE(stack_memory_size_, allocator_->GetAllocSize(mem_reference));
-    bool changed = allocator_->ChangeType(mem_reference, kTypeIdActivityTracker,
-                                          kTypeIdActivityTrackerFree);
-    DCHECK(changed);
-
-    // Success.
-    break;
   }
 
-  // Handle the case where no previously-used memories are available.
-  if (count == 0) {
+  // Handle the case where no known available memories were found.
+  if (!mem_reference) {
     // Allocate a block of memory from the persistent segment.
     mem_reference =
         allocator_->Allocate(stack_memory_size_, kTypeIdActivityTracker);
     if (mem_reference) {
-      // Success. Convert the reference to an actual memory address.
-      mem_base =
-          allocator_->GetAsObject<char>(mem_reference, kTypeIdActivityTracker);
-      // Make the allocation iterable so it can be found by other processes.
+      // Success. Make the allocation iterable so it can be found later.
       allocator_->MakeIterable(mem_reference);
     } else {
-      // Failure. This shouldn't happen.
-      NOTREACHED();
-      // But if it does, probably because the allocator wasn't given enough
-      // memory to satisfy all possible requests, handle it gracefully by
-      // allocating the required memory from the heap.
-      mem_base = new char[stack_memory_size_];
-      memset(mem_base, 0, stack_memory_size_);
-      // Report the thread-count at which the allocator was full so that the
-      // failure can be seen and underlying memory resized appropriately.
-      UMA_HISTOGRAM_COUNTS_1000(
-          "ActivityTracker.ThreadTrackers.MemLimitTrackerCount",
-          thread_tracker_count_.load(std::memory_order_relaxed));
+      // Failure. Look for any free blocks that weren't held in the cache
+      // of available memories and try to claim it. This can happen if the
+      // |available_memories_| stack isn't sufficiently large to hold all
+      // released memories or if multiple independent processes are sharing
+      // the memory segment.
+      PersistentMemoryAllocator::Iterator iter(allocator_.get());
+      while ((mem_reference = iter.GetNextOfType(kTypeIdActivityTrackerFree)) !=
+             0) {
+        if (allocator_->ChangeType(mem_reference, kTypeIdActivityTracker,
+                                   kTypeIdActivityTrackerFree)) {
+          break;
+        }
+        mem_reference = 0;
+      }
+      if (!mem_reference) {
+        // Dobule Failure. This shouldn't happen. But be graceful if it does,
+        // probably because the underlying allocator wasn't given enough memory
+        // to satisfy all possible requests.
+        NOTREACHED();
+        // Report the thread-count at which the allocator was full so that the
+        // failure can be seen and underlying memory resized appropriately.
+        UMA_HISTOGRAM_COUNTS_1000(
+            "ActivityTracker.ThreadTrackers.MemLimitTrackerCount",
+            thread_tracker_count_.load(std::memory_order_relaxed));
+        // Return null, just as if tracking wasn't enabled.
+        return nullptr;
+      }
     }
   }
 
+  // Convert the memory block found above into an actual memory address.
+  DCHECK(mem_reference);
+  void* mem_base =
+      allocator_->GetAsObject<char>(mem_reference, kTypeIdActivityTracker);
+  DCHECK(mem_base);
+  DCHECK_LE(stack_memory_size_, allocator_->GetAllocSize(mem_reference));
+
   // Create a tracker with the acquired memory and set it as the tracker
   // for this particular thread in thread-local-storage.
-  DCHECK(mem_base);
   ManagedActivityTracker* tracker =
       new ManagedActivityTracker(mem_reference, mem_base, stack_memory_size_);
   DCHECK(tracker->IsValid());
@@ -610,10 +590,7 @@ GlobalActivityTracker::GlobalActivityTracker(
       stack_memory_size_(ThreadActivityTracker::SizeForStackDepth(stack_depth)),
       this_thread_tracker_(&OnTLSDestroy),
       thread_tracker_count_(0),
-      available_memories_count_(0) {
-  // Clear the available-memories array.
-  memset(available_memories_, 0, sizeof(available_memories_));
-
+      available_memories_(kMaxThreadCount) {
   // Ensure the passed memory is valid and empty (iterator finds nothing).
   uint32_t type;
   DCHECK(!PersistentMemoryAllocator::Iterator(allocator_.get()).GetNext(&type));
@@ -633,6 +610,8 @@ void GlobalActivityTracker::ReturnTrackerMemory(
     ManagedActivityTracker* tracker) {
   PersistentMemoryAllocator::Reference mem_reference = tracker->mem_reference_;
   void* mem_base = tracker->mem_base_;
+  DCHECK(mem_reference);
+  DCHECK(mem_base);
 
   // Zero the memory so that it is ready for use if needed again later. It's
   // better to clear the memory now, when a thread is exiting, than to do it
@@ -643,60 +622,16 @@ void GlobalActivityTracker::ReturnTrackerMemory(
   DCHECK_LE(1, thread_tracker_count_.load(std::memory_order_relaxed));
   thread_tracker_count_.fetch_sub(1, std::memory_order_relaxed);
 
-  // Deal with the memory that was used by the tracker.
-  if (mem_reference) {
-    // The memory was within the persistent memory allocator. Change its type
-    // so that iteration won't find it.
-    allocator_->ChangeType(mem_reference, kTypeIdActivityTrackerFree,
-                           kTypeIdActivityTracker);
-    // There is no way to free memory from a persistent allocator so instead
-    // push it on the internal list of available memory blocks.
-    while (true) {
-      // Get the existing count of available memories and ensure we won't
-      // burst the array. Acquire the values in the array.
-      int count = available_memories_count_.load(std::memory_order_acquire);
-      if (count >= kMaxThreadCount) {
-        NOTREACHED();
-        // Storage is full. Just forget about this memory. It won't be re-used
-        // but there's no real loss.
-        break;
-      }
+  // The memory was within the persistent memory allocator. Change its type
+  // so it is effectively marked as "free".
+  allocator_->ChangeType(mem_reference, kTypeIdActivityTrackerFree,
+                         kTypeIdActivityTracker);
 
-      // Write the reference of the memory being returned to this slot in the
-      // array. Empty slots have a value of zero so do an atomic compare-and-
-      // exchange to ensure that a race condition doesn't exist with another
-      // thread doing the same.
-      PersistentMemoryAllocator::Reference mem_expected = 0;
-      if (!available_memories_[count].compare_exchange_strong(
-              mem_expected, mem_reference, std::memory_order_release,
-              std::memory_order_relaxed)) {
-        PlatformThread::YieldCurrentThread();
-        continue;  // Try again.
-      }
-
-      // Increment the count, releasing the value written to the array. This
-      // could fail if a simultaneous "pop" operation decremented the counter.
-      // If that happens, clear the array slot and start over. Do a "strong"
-      // exchange to avoid spurious retries that can occur with a "weak" one.
-      int expected = count;  // Updated by compare/exchange.
-      if (!available_memories_count_.compare_exchange_strong(
-              expected, count + 1, std::memory_order_release,
-              std::memory_order_relaxed)) {
-        available_memories_[count].store(0, std::memory_order_relaxed);
-        continue;
-      }
-
-      // Count was successfully incremented to reflect the newly added value.
-      break;
-    }
-  } else {
-    // The memory was allocated from the process heap. This shouldn't happen
-    // because the persistent memory segment should be big enough for all
-    // thread stacks but it's better to support falling back to allocation
-    // from the heap rather than crash. Everything will work as normal but
-    // the data won't be persisted.
-    delete[] reinterpret_cast<char*>(mem_base);
-  }
+  // Push this on the internal cache of available memory blocks so it can
+  // be found and reused quickly. If the push somehow exceeds the maximum
+  // size of the cache, it will fail but a fallback check in CreateTracker
+  // will find it by (slow) iteration.
+  available_memories_.push(mem_reference);
 }
 
 // static

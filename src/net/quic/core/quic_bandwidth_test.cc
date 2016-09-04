@@ -63,6 +63,12 @@ TEST_F(QuicBandwidthTest, Scale) {
             0.75f * QuicBandwidth::FromKBytesPerSecond(1000));
   EXPECT_EQ(QuicBandwidth::FromKBytesPerSecond(1250),
             QuicBandwidth::FromKBytesPerSecond(1000) * 1.25f);
+
+  // Ensure we are rounding correctly within a 1bps level of precision.
+  EXPECT_EQ(QuicBandwidth::FromBitsPerSecond(5),
+            QuicBandwidth::FromBitsPerSecond(9) * 0.5f);
+  EXPECT_EQ(QuicBandwidth::FromBitsPerSecond(2),
+            QuicBandwidth::FromBitsPerSecond(12) * 0.2f);
 }
 
 TEST_F(QuicBandwidthTest, BytesPerPeriod) {

@@ -15,6 +15,7 @@
 #include "base/logging.h"
 #include "base/metrics/histogram.h"
 #include "base/metrics/histogram_base.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
@@ -643,7 +644,7 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
 
   // Update |estimated_quality_at_last_main_frame_| if this is a main frame
   // request.
-  if (request.load_flags() & LOAD_MAIN_FRAME) {
+  if (request.load_flags() & LOAD_MAIN_FRAME_DEPRECATED) {
     last_main_frame_request_ = now;
     base::TimeDelta estimated_http_rtt;
     if (!GetHttpRTTEstimate(&estimated_http_rtt))

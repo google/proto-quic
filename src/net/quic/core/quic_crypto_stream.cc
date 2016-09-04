@@ -75,9 +75,7 @@ void QuicCryptoStream::OnDataAvailable() {
 void QuicCryptoStream::SendHandshakeMessage(
     const CryptoHandshakeMessage& message) {
   DVLOG(1) << ENDPOINT << "Sending " << message.DebugString();
-  if (FLAGS_quic_neuter_unencrypted_when_sending) {
-    session()->connection()->NeuterUnencryptedPackets();
-  }
+  session()->connection()->NeuterUnencryptedPackets();
   session()->OnCryptoHandshakeMessageSent(message);
   const QuicData& data = message.GetSerialized();
   WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);

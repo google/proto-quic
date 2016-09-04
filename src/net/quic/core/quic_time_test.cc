@@ -59,6 +59,12 @@ TEST(QuicTimeDeltaTest, Multiply) {
             QuicTime::Delta::FromMilliseconds(2) * d);
   EXPECT_EQ(QuicTime::Delta::FromMicroseconds(4000),
             d * QuicTime::Delta::FromMilliseconds(2));
+
+  // Ensure we are rounding correctly within a single-bit level of precision.
+  EXPECT_EQ(QuicTime::Delta::FromMicroseconds(5),
+            QuicTime::Delta::FromMicroseconds(9) * 0.5);
+  EXPECT_EQ(QuicTime::Delta::FromMicroseconds(2),
+            QuicTime::Delta::FromMicroseconds(12) * 0.2);
 }
 
 TEST(QuicTimeDeltaTest, Max) {

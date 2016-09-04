@@ -11,6 +11,7 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 #include "net/quic/test_tools/mock_clock.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::vector;
@@ -58,6 +59,7 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
     }
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicUnackedPacketMap unacked_packets_;
   GeneralLossAlgorithm loss_algorithm_;
   RttStats rtt_stats_;

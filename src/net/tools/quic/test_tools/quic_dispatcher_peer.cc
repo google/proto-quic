@@ -73,5 +73,13 @@ const QuicDispatcher::SessionMap& QuicDispatcherPeer::session_map(
   return dispatcher->session_map();
 }
 
+// static
+void QuicDispatcherPeer::set_new_sessions_allowed_per_event_loop(
+    QuicDispatcher* dispatcher,
+    size_t num_session_allowed) {
+  return dispatcher->set_new_sessions_allowed_per_event_loop(
+      num_session_allowed);
+}
+
 }  // namespace test
 }  // namespace net

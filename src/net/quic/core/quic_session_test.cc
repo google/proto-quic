@@ -266,6 +266,7 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
 
   QuicVersion version() const { return connection_->version(); }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;

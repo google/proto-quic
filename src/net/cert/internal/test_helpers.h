@@ -83,7 +83,8 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
                                      ParsedCertificateList* chain,
                                      scoped_refptr<TrustAnchor>* trust_anchor,
                                      der::GeneralizedTime* time,
-                                     bool* verify_result);
+                                     bool* verify_result,
+                                     std::string* expected_errors);
 
 // Reads a data file relative to the src root directory.
 std::string ReadTestFileToString(const std::string& file_name);

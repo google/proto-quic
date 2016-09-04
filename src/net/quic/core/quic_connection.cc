@@ -231,6 +231,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       delay_setting_retransmission_alarm_(false),
       pending_retransmission_alarm_(false),
       defer_send_in_response_to_packets_(false),
+      ping_timeout_(QuicTime::Delta::FromSeconds(kPingTimeoutSecs)),
       arena_(),
       ack_alarm_(alarm_factory_->CreateAlarm(arena_.New<AckAlarmDelegate>(this),
                                              &arena_)),
@@ -547,8 +548,13 @@ void QuicConnection::OnVersionNegotiationPacket(
   }
 
   if (!SelectMutualVersion(packet.versions)) {
-    CloseConnection(QUIC_INVALID_VERSION, "No common version found.",
-                    ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+    CloseConnection(
+        QUIC_INVALID_VERSION,
+        "No common version found. Supported versions: {" +
+            QuicVersionVectorToString(framer_.supported_versions()) +
+            "}, peer supported versions: {" +
+            QuicVersionVectorToString(packet.versions) + "}",
+        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return;
   }
 
@@ -1665,6 +1671,18 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   }
   if (packet->transmission_type == NOT_RETRANSMISSION) {
     time_of_last_sent_new_packet_ = packet_send_time;
+    if (!FLAGS_quic_better_last_send_for_timeout) {
+      if (IsRetransmittable(*packet) == HAS_RETRANSMITTABLE_DATA &&
+          last_send_for_timeout_ <= time_of_last_received_packet_) {
+        last_send_for_timeout_ = packet_send_time;
+      }
+    }
+  }
+  if (FLAGS_quic_better_last_send_for_timeout) {
+    // Only adjust the last sent time (for the purpose of tracking the idle
+    // timeout) if this is the first retransmittable packet sent after a
+    // packet is received. If it were updated on every sent packet, then
+    // sending into a black hole might never timeout.
     if (IsRetransmittable(*packet) == HAS_RETRANSMITTABLE_DATA &&
         last_send_for_timeout_ <= time_of_last_received_packet_) {
       last_send_for_timeout_ = packet_send_time;
@@ -2207,6 +2225,10 @@ void QuicConnection::CheckForTimeout() {
 void QuicConnection::SetTimeoutAlarm() {
   QuicTime time_of_last_packet =
       max(time_of_last_received_packet_, time_of_last_sent_new_packet_);
+  if (FLAGS_quic_better_last_send_for_timeout) {
+    time_of_last_packet =
+        max(time_of_last_received_packet_, last_send_for_timeout_);
+  }
 
   QuicTime deadline = time_of_last_packet + idle_network_timeout_;
   if (!handshake_timeout_.IsInfinite()) {
@@ -2227,8 +2249,7 @@ void QuicConnection::SetPingAlarm() {
     // Don't send a ping unless there are open streams.
     return;
   }
-  QuicTime::Delta ping_timeout = QuicTime::Delta::FromSeconds(kPingTimeoutSecs);
-  ping_alarm_->Update(clock_->ApproximateNow() + ping_timeout,
+  ping_alarm_->Update(clock_->ApproximateNow() + ping_timeout_,
                       QuicTime::Delta::FromSeconds(1));
 }
 

@@ -78,6 +78,7 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     // has expired.
     ServerConfigState SetServerConfig(base::StringPiece server_config,
                                       QuicWallTime now,
+                                      QuicWallTime expiry_time,
                                       std::string* error_details);
 
     // InvalidateServerConfig clears the cached server config (if any).
@@ -149,9 +150,9 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     void SetProofVerifyDetails(ProofVerifyDetails* details);
 
     // Copy the |server_config_|, |source_address_token_|, |certs_|,
-    // |cert_sct_|, |chlo_hash_| and |server_config_sig_| from the |other|.  The
-    // remaining fields, |generation_counter_|, |proof_verify_details_|, and
-    // |scfg_| remain unchanged.
+    // |expiration_time_|, |cert_sct_|, |chlo_hash_| and |server_config_sig_|
+    // from the |other|.  The remaining fields, |generation_counter_|,
+    // |proof_verify_details_|, and |scfg_| remain unchanged.
     void InitializeFrom(const CachedState& other);
 
     // Initializes this cached state based on the arguments provided.
@@ -162,7 +163,8 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
                     base::StringPiece cert_sct,
                     base::StringPiece chlo_hash,
                     base::StringPiece signature,
-                    QuicWallTime now);
+                    QuicWallTime now,
+                    QuicWallTime expiration_time);
 
    private:
     std::string server_config_;         // A serialized handshake message.
@@ -175,6 +177,8 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     bool server_config_valid_;          // True if |server_config_| is correctly
                                         // signed and |certs_| has been
                                         // validated.
+    QuicWallTime expiration_time_;      // Time when the config is no longer
+                                        // valid.
     // Generation counter associated with the |server_config_|, |certs_| and
     // |server_config_sig_| combination. It is incremented whenever we set
     // server_config_valid_ to false.
