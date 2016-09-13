@@ -121,7 +121,7 @@ class DefaultUnitTestPlatformDelegate : public UnitTestPlatformDelegate {
 
     CHECK(temp_dir_.IsValid() || temp_dir_.CreateUniqueTempDir());
     FilePath temp_file;
-    CHECK(CreateTemporaryFileInDir(temp_dir_.path(), &temp_file));
+    CHECK(CreateTemporaryFileInDir(temp_dir_.GetPath(), &temp_file));
     std::string long_flags(
         std::string("--") + kGTestFilterFlag + "=" +
         JoinString(test_names, ":"));

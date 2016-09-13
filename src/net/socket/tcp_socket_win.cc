@@ -24,6 +24,8 @@
 #include "net/base/sockaddr_storage.h"
 #include "net/base/winsock_init.h"
 #include "net/base/winsock_util.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
 #include "net/socket/socket_net_log_params.h"
 
@@ -255,15 +257,15 @@ TCPSocketWin::TCPSocketWin(
       waiting_write_(false),
       connect_os_error_(0),
       logging_multiple_connect_attempts_(false),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_SOCKET)) {
-  net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::SOCKET)) {
+  net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());
   EnsureWinsockInit();
 }
 
 TCPSocketWin::~TCPSocketWin() {
   Close();
-  net_log_.EndEvent(NetLog::TYPE_SOCKET_ALIVE);
+  net_log_.EndEvent(NetLogEventType::SOCKET_ALIVE);
 }
 
 int TCPSocketWin::Open(AddressFamily family) {
@@ -371,7 +373,7 @@ int TCPSocketWin::Accept(std::unique_ptr<TCPSocketWin>* socket,
   DCHECK(!callback.is_null());
   DCHECK(accept_callback_.is_null());
 
-  net_log_.BeginEvent(NetLog::TYPE_TCP_ACCEPT);
+  net_log_.BeginEvent(NetLogEventType::TCP_ACCEPT);
 
   int result = AcceptInternal(socket, address);
 
@@ -504,7 +506,7 @@ int TCPSocketWin::Write(IOBuffer* buf,
                    << " bytes, but " << rv << " bytes reported.";
         return ERR_WINSOCK_UNEXPECTED_WRITTEN_BYTES;
       }
-      net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, rv,
+      net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_SENT, rv,
                                     buf->data());
       NetworkActivityMonitor::GetInstance()->IncrementBytesSent(rv);
       return rv;
@@ -513,7 +515,7 @@ int TCPSocketWin::Write(IOBuffer* buf,
     int os_error = WSAGetLastError();
     if (os_error != WSA_IO_PENDING) {
       int net_error = MapSystemError(os_error);
-      net_log_.AddEvent(NetLog::TYPE_SOCKET_WRITE_ERROR,
+      net_log_.AddEvent(NetLogEventType::SOCKET_WRITE_ERROR,
                         CreateNetLogSocketErrorCallback(net_error, os_error));
       return net_error;
     }
@@ -606,7 +608,7 @@ void TCPSocketWin::Close() {
 
   if (socket_ != INVALID_SOCKET) {
     // Only log the close event if there's actually a socket to close.
-    net_log_.AddEvent(NetLog::EventType::TYPE_SOCKET_CLOSED);
+    net_log_.AddEvent(NetLogEventType::SOCKET_CLOSED);
 
     // Note: don't use CancelIo to cancel pending IO because it doesn't work
     // when there is a Winsock layered service provider.
@@ -688,7 +690,7 @@ int TCPSocketWin::AcceptInternal(std::unique_ptr<TCPSocketWin>* socket,
   if (new_socket < 0) {
     int net_error = MapSystemError(WSAGetLastError());
     if (net_error != ERR_IO_PENDING)
-      net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_ACCEPT, net_error);
+      net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_ACCEPT, net_error);
     return net_error;
   }
 
@@ -698,19 +700,20 @@ int TCPSocketWin::AcceptInternal(std::unique_ptr<TCPSocketWin>* socket,
     if (closesocket(new_socket) < 0)
       PLOG(ERROR) << "closesocket";
     int net_error = ERR_ADDRESS_INVALID;
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_ACCEPT, net_error);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_ACCEPT, net_error);
     return net_error;
   }
   std::unique_ptr<TCPSocketWin> tcp_socket(
       new TCPSocketWin(NULL, net_log_.net_log(), net_log_.source()));
   int adopt_result = tcp_socket->AdoptConnectedSocket(new_socket, ip_end_point);
   if (adopt_result != OK) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_ACCEPT, adopt_result);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_ACCEPT,
+                                      adopt_result);
     return adopt_result;
   }
   *socket = std::move(tcp_socket);
   *address = ip_end_point;
-  net_log_.EndEvent(NetLog::TYPE_TCP_ACCEPT,
+  net_log_.EndEvent(NetLogEventType::TCP_ACCEPT,
                     CreateNetLogIPEndPointCallback(&ip_end_point));
   return OK;
 }
@@ -744,7 +747,7 @@ int TCPSocketWin::DoConnect() {
   DCHECK_EQ(connect_os_error_, 0);
   DCHECK(!core_.get());
 
-  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+  net_log_.BeginEvent(NetLogEventType::TCP_CONNECT_ATTEMPT,
                       CreateNetLogIPEndPointCallback(peer_address_.get()));
 
   core_ = new Core(this);
@@ -804,10 +807,10 @@ void TCPSocketWin::DoConnectComplete(int result) {
   int os_error = connect_os_error_;
   connect_os_error_ = 0;
   if (result != OK) {
-    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+    net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT,
                       NetLog::IntCallback("os_error", os_error));
   } else {
-    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT);
+    net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT);
   }
 
   if (!logging_multiple_connect_attempts_)
@@ -815,13 +818,13 @@ void TCPSocketWin::DoConnectComplete(int result) {
 }
 
 void TCPSocketWin::LogConnectBegin(const AddressList& addresses) {
-  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT,
+  net_log_.BeginEvent(NetLogEventType::TCP_CONNECT,
                       addresses.CreateNetLogCallback());
 }
 
 void TCPSocketWin::LogConnectEnd(int net_error) {
   if (net_error != OK) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, net_error);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_CONNECT, net_error);
     return;
   }
 
@@ -833,12 +836,12 @@ void TCPSocketWin::LogConnectEnd(int net_error) {
     LOG(ERROR) << "getsockname() [rv: " << rv
                << "] error: " << WSAGetLastError();
     NOTREACHED();
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_CONNECT, rv);
     return;
   }
 
   net_log_.EndEvent(
-      NetLog::TYPE_TCP_CONNECT,
+      NetLogEventType::TCP_CONNECT,
       CreateNetLogSourceAddressCallback(
           reinterpret_cast<const struct sockaddr*>(&source_address),
           sizeof(source_address)));
@@ -856,13 +859,12 @@ int TCPSocketWin::DoRead(IOBuffer* buf, int buf_len,
     int os_error = WSAGetLastError();
     if (os_error != WSAEWOULDBLOCK) {
       int net_error = MapSystemError(os_error);
-      net_log_.AddEvent(
-          NetLog::TYPE_SOCKET_READ_ERROR,
-          CreateNetLogSocketErrorCallback(net_error, os_error));
+      net_log_.AddEvent(NetLogEventType::SOCKET_READ_ERROR,
+                        CreateNetLogSocketErrorCallback(net_error, os_error));
       return net_error;
     }
   } else {
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED, rv,
+    net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
                                   buf->data());
     NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
     return rv;
@@ -929,7 +931,7 @@ void TCPSocketWin::DidCompleteWrite() {
   if (!ok) {
     int os_error = WSAGetLastError();
     rv = MapSystemError(os_error);
-    net_log_.AddEvent(NetLog::TYPE_SOCKET_WRITE_ERROR,
+    net_log_.AddEvent(NetLogEventType::SOCKET_WRITE_ERROR,
                       CreateNetLogSocketErrorCallback(rv, os_error));
   } else {
     rv = static_cast<int>(num_bytes);
@@ -941,8 +943,8 @@ void TCPSocketWin::DidCompleteWrite() {
                  << " bytes reported.";
       rv = ERR_WINSOCK_UNEXPECTED_WRITTEN_BYTES;
     } else {
-      net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, num_bytes,
-                                    core_->write_iobuffer_->data());
+      net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_SENT,
+                                    num_bytes, core_->write_iobuffer_->data());
       NetworkActivityMonitor::GetInstance()->IncrementBytesSent(num_bytes);
     }
   }

@@ -305,7 +305,8 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
 bool CanonicalCookie::IsEquivalentForSecureCookieMatching(
     const CanonicalCookie& ecc) const {
   return (name_ == ecc.Name() && (ecc.IsDomainMatch(DomainWithoutDot()) ||
-                                  IsDomainMatch(ecc.DomainWithoutDot())));
+                                  IsDomainMatch(ecc.DomainWithoutDot())) &&
+          ecc.IsOnPath(Path()));
 }
 
 bool CanonicalCookie::IsOnPath(const std::string& url_path) const {

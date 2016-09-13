@@ -11,6 +11,7 @@
 #include "base/time/time.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"
@@ -50,7 +51,7 @@ SOCKSConnectJob::SOCKSConnectJob(
                  priority,
                  respect_limits,
                  delegate,
-                 BoundNetLog::Make(net_log, NetLog::SOURCE_CONNECT_JOB)),
+                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       socks_params_(socks_params),
       transport_pool_(transport_pool),
       resolver_(host_resolver),

@@ -88,7 +88,7 @@ class ImportantFileWriterTest : public testing::Test {
   ImportantFileWriterTest() { }
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-    file_ = temp_dir_.path().AppendASCII("test-file");
+    file_ = temp_dir_.GetPath().AppendASCII("test-file");
   }
 
  protected:

@@ -70,7 +70,10 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
         continue;
       }
 
-      outer_->task_tracker_->RunNextTaskInSequence(sequence.get());
+      const Task* task = sequence->PeekTask();
+      const TimeTicks start_time = TimeTicks::Now();
+      if (outer_->task_tracker_->RunTask(task, sequence->token()))
+        outer_->delegate_->DidRunTask(task, start_time - task->sequenced_time);
 
       const bool sequence_became_empty = sequence->PopTask();
 

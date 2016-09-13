@@ -15,6 +15,7 @@ class BitString;
 class Input;
 }  // namespace der
 
+class CertErrors;
 class SignatureAlgorithm;
 class SignaturePolicy;
 
@@ -30,14 +31,15 @@ class SignaturePolicy;
 //          * The parsed RSA key is an adequate size.
 //          * The parsed EC key is for an allowed curve.
 //          * The signature algorithm and its parameters are acceptable.
+//   |errors| - Non-null destination for errors/warnings information.
 //
 // Returns true if verification was successful.
 NET_EXPORT bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
                                  const der::Input& signed_data,
                                  const der::BitString& signature_value,
                                  const der::Input& public_key,
-                                 const SignaturePolicy* policy)
-    WARN_UNUSED_RESULT;
+                                 const SignaturePolicy* policy,
+                                 CertErrors* errors) WARN_UNUSED_RESULT;
 
 }  // namespace net
 

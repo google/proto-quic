@@ -38,6 +38,7 @@
 #include "net/dns/dns_session.h"
 #include "net/dns/dns_util.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/socket/stream_socket.h"
 #include "net/udp/datagram_client_socket.h"
 
@@ -580,7 +581,7 @@ class DnsTransactionImpl : public DnsTransaction,
 
   ~DnsTransactionImpl() override {
     if (!callback_.is_null()) {
-      net_log_.EndEventWithNetErrorCode(NetLog::TYPE_DNS_TRANSACTION,
+      net_log_.EndEventWithNetErrorCode(NetLogEventType::DNS_TRANSACTION,
                                         ERR_ABORTED);
     }  // otherwise logged in DoCallback or Start
   }
@@ -598,7 +599,7 @@ class DnsTransactionImpl : public DnsTransaction,
   void Start() override {
     DCHECK(!callback_.is_null());
     DCHECK(attempts_.empty());
-    net_log_.BeginEvent(NetLog::TYPE_DNS_TRANSACTION,
+    net_log_.BeginEvent(NetLogEventType::DNS_TRANSACTION,
                         base::Bind(&NetLogStartCallback, &hostname_, qtype_));
     AttemptResult result(PrepareSearch(), NULL);
     if (result.rv == OK) {
@@ -697,7 +698,8 @@ class DnsTransactionImpl : public DnsTransaction,
     DnsTransactionFactory::CallbackType callback = callback_;
     callback_.Reset();
 
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_DNS_TRANSACTION, result.rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::DNS_TRANSACTION,
+                                      result.rv);
     callback.Run(this, result.rv, response);
   }
 
@@ -736,7 +738,7 @@ class DnsTransactionImpl : public DnsTransaction,
       return AttemptResult(ERR_CONNECTION_REFUSED, NULL);
 
     net_log_.AddEvent(
-        NetLog::TYPE_DNS_TRANSACTION_ATTEMPT,
+        NetLogEventType::DNS_TRANSACTION_ATTEMPT,
         attempt->GetSocketNetLog().source().ToEventParametersCallback());
 
     int rv = attempt->Start(
@@ -779,7 +781,7 @@ class DnsTransactionImpl : public DnsTransaction,
     had_tcp_attempt_ = true;
 
     net_log_.AddEvent(
-        NetLog::TYPE_DNS_TRANSACTION_TCP_ATTEMPT,
+        NetLogEventType::DNS_TRANSACTION_TCP_ATTEMPT,
         attempt->GetSocketNetLog().source().ToEventParametersCallback());
 
     int rv = attempt->Start(base::Bind(&DnsTransactionImpl::OnAttemptComplete,
@@ -796,7 +798,7 @@ class DnsTransactionImpl : public DnsTransaction,
   // Begins query for the current name. Makes the first attempt.
   AttemptResult StartQuery() {
     std::string dotted_qname = DNSDomainToString(qnames_.front());
-    net_log_.BeginEvent(NetLog::TYPE_DNS_TRANSACTION_QUERY,
+    net_log_.BeginEvent(NetLogEventType::DNS_TRANSACTION_QUERY,
                         NetLog::StringCallback("qname", &dotted_qname));
 
     first_server_index_ = session_->NextFirstServerIndex();
@@ -856,10 +858,9 @@ class DnsTransactionImpl : public DnsTransaction,
 
   void LogResponse(const DnsAttempt* attempt) {
     if (attempt && attempt->GetResponse()) {
-      net_log_.AddEvent(
-          NetLog::TYPE_DNS_TRANSACTION_RESPONSE,
-          base::Bind(&DnsAttempt::NetLogResponseCallback,
-                     base::Unretained(attempt)));
+      net_log_.AddEvent(NetLogEventType::DNS_TRANSACTION_RESPONSE,
+                        base::Bind(&DnsAttempt::NetLogResponseCallback,
+                                   base::Unretained(attempt)));
     }
   }
 
@@ -879,15 +880,15 @@ class DnsTransactionImpl : public DnsTransaction,
       switch (result.rv) {
         case OK:
           session_->RecordServerSuccess(result.attempt->server_index());
-          net_log_.EndEventWithNetErrorCode(NetLog::TYPE_DNS_TRANSACTION_QUERY,
-                                            result.rv);
+          net_log_.EndEventWithNetErrorCode(
+              NetLogEventType::DNS_TRANSACTION_QUERY, result.rv);
           DCHECK(result.attempt);
           DCHECK(result.attempt->GetResponse());
           return result;
         case ERR_NAME_NOT_RESOLVED:
           session_->RecordServerSuccess(result.attempt->server_index());
-          net_log_.EndEventWithNetErrorCode(NetLog::TYPE_DNS_TRANSACTION_QUERY,
-                                            result.rv);
+          net_log_.EndEventWithNetErrorCode(
+              NetLogEventType::DNS_TRANSACTION_QUERY, result.rv);
           // Try next suffix.
           qnames_.pop_front();
           if (qnames_.empty()) {

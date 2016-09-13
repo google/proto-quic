@@ -225,7 +225,7 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
   // Make sure that the STK and SCFG are cached correctly.
   EXPECT_EQ("xstk", state->source_address_token());
 
-  string cached_scfg = state->server_config();
+  const string& cached_scfg = state->server_config();
   test::CompareCharArraysWithHexError(
       "scfg", cached_scfg.data(), cached_scfg.length(),
       QuicUtils::AsChars(scfg), arraysize(scfg));

@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_auth_challenge_tokenizer.h"
+#include "net/log/net_log_event_type.h"
 
 namespace net {
 
@@ -47,15 +48,15 @@ bool HttpAuthHandler::InitFromChallenge(HttpAuthChallengeTokenizer* challenge,
 
 namespace {
 
-NetLog::EventType EventTypeFromAuthTarget(HttpAuth::Target target) {
+NetLogEventType EventTypeFromAuthTarget(HttpAuth::Target target) {
   switch (target) {
     case HttpAuth::AUTH_PROXY:
-      return NetLog::TYPE_AUTH_PROXY;
+      return NetLogEventType::AUTH_PROXY;
     case HttpAuth::AUTH_SERVER:
-      return NetLog::TYPE_AUTH_SERVER;
+      return NetLogEventType::AUTH_SERVER;
     default:
       NOTREACHED();
-      return NetLog::TYPE_CANCELLED;
+      return NetLogEventType::CANCELLED;
   }
 }
 

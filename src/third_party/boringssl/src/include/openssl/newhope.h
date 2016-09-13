@@ -142,6 +142,17 @@ OPENSSL_EXPORT void NEWHOPE_offer_frommsg(
 
 #if defined(__cplusplus)
 } /* extern "C" */
+
+extern "C++" {
+
+namespace bssl {
+
+BORINGSSL_MAKE_DELETER(NEWHOPE_POLY, NEWHOPE_POLY_free)
+
+}  // namespace bssl
+
+}  /* extern C++ */
+
 #endif
 
 #endif /* OPENSSL_HEADER_NEWHOPE_H */

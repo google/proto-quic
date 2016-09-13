@@ -31,6 +31,7 @@
 #include "net/filter/brotli_filter.h"
 #include "net/filter/gzip_filter.h"
 #include "net/filter/sdch_filter.h"
+#include "net/log/net_log_event_type.h"
 #include "net/url_request/url_request_context.h"
 #include "url/gurl.h"
 
@@ -58,7 +59,7 @@ void LogSdchProblem(const FilterContext& filter_context,
                     SdchProblemCode problem) {
   SdchManager::SdchErrorRecovery(problem);
   filter_context.GetNetLog().AddEvent(
-      NetLog::TYPE_SDCH_DECODING_ERROR,
+      NetLogEventType::SDCH_DECODING_ERROR,
       base::Bind(&NetLogSdchResourceProblemCallback, problem));
 }
 

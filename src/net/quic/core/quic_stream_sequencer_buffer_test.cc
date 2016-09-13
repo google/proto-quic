@@ -60,7 +60,7 @@ class QuicStreamSequencerBufferPeer {
   explicit QuicStreamSequencerBufferPeer(QuicStreamSequencerBuffer* buffer)
       : buffer_(buffer) {}
 
-  // Read from this buffer_->into the given destination buffer_-> up to the
+  // Read from this buffer_ into the given destination buffer_ up to the
   // size of the destination. Returns the number of bytes read. Reading from
   // an empty buffer_->returns 0.
   size_t Read(char* dest_buffer, size_t size) {
@@ -76,6 +76,11 @@ class QuicStreamSequencerBufferPeer {
   }
 
   bool IsBlockArrayEmpty() {
+    if (FLAGS_quic_reduce_sequencer_buffer_memory_life_time &&  // NOLINT
+        buffer_->blocks_ == nullptr) {
+      return true;
+    }
+
     size_t count = buffer_->blocks_count_;
     for (size_t i = 0; i < count; i++) {
       if (buffer_->blocks_[i] != nullptr) {
@@ -150,6 +155,8 @@ class QuicStreamSequencerBufferPeer {
 
   void set_gaps(const std::list<Gap>& gaps) { buffer_->gaps_ = gaps; }
 
+  bool IsBufferAllocated() { return buffer_->blocks_ != nullptr; }
+
  private:
   QuicStreamSequencerBuffer* buffer_;
 };
@@ -208,6 +215,9 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamData0length) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
+  if (FLAGS_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
+    EXPECT_FALSE(helper_->IsBufferAllocated());
+  }
   string source(1024, 'a');
   size_t written;
   clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
@@ -227,6 +237,7 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
   EXPECT_EQ(800u, frame_map->begin()->first);
   EXPECT_EQ(t, (*frame_map)[800].timestamp);
   EXPECT_TRUE(helper_->CheckBufferInvariants());
+  EXPECT_TRUE(helper_->IsBufferAllocated());
 }
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithOverlap) {
@@ -539,6 +550,31 @@ TEST_F(QuicStreamSequencerBufferTest, GetReadableRegionsEmpty) {
   EXPECT_EQ(0, iov_count);
   EXPECT_EQ(nullptr, iovs[iov_count].iov_base);
   EXPECT_EQ(0u, iovs[iov_count].iov_len);
+}
+
+TEST_F(QuicStreamSequencerBufferTest, ReleaseWholeBuffer) {
+  // Tests that buffer is not deallocated unless ReleaseWholeBuffer() is called.
+  if (!FLAGS_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
+    // Won't release buffer when flag is off.
+    return;
+  }
+
+  string source(100, 'b');
+  clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
+  QuicTime t1 = clock_.ApproximateNow();
+  // Write something into [0, 100).
+  size_t written;
+  buffer_->OnStreamData(0, source, t1, &written, &error_details_);
+  EXPECT_TRUE(buffer_->HasBytesToRead());
+  char dest[120];
+  iovec iovecs[3]{iovec{dest, 40}, iovec{dest + 40, 40}, iovec{dest + 80, 40}};
+  size_t read = buffer_->Readv(iovecs, 3);
+  EXPECT_EQ(100u, read);
+  EXPECT_EQ(100u, buffer_->BytesConsumed());
+  EXPECT_TRUE(helper_->CheckBufferInvariants());
+  EXPECT_TRUE(helper_->IsBufferAllocated());
+  buffer_->ReleaseWholeBuffer();
+  EXPECT_FALSE(helper_->IsBufferAllocated());
 }
 
 TEST_F(QuicStreamSequencerBufferTest, GetReadableRegionsBlockedByGap) {

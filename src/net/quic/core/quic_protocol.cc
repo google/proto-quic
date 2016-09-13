@@ -188,7 +188,11 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
   filtered_versions.clear();  // Guaranteed by spec not to change capacity.
   for (QuicVersion version : versions) {
     if (version < QUIC_VERSION_32) {
-      if (!FLAGS_quic_disable_pre_32) {
+      if (!FLAGS_quic_disable_pre_32 && !FLAGS_quic_disable_pre_34) {
+        filtered_versions.push_back(version);
+      }
+    } else if (version < QUIC_VERSION_34) {
+      if (!FLAGS_quic_disable_pre_34) {
         filtered_versions.push_back(version);
       }
     } else if (version == QUIC_VERSION_35) {
@@ -780,6 +784,7 @@ StringPiece QuicPacket::Plaintext(QuicVersion version) const {
 
 QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
     : disable_pre_32_(FLAGS_quic_disable_pre_32),
+      disable_pre_34_(FLAGS_quic_disable_pre_34),
       enable_version_35_(FLAGS_quic_enable_version_35),
       enable_version_36_(FLAGS_quic_enable_version_36_v2),
       allowed_supported_versions_(supported_versions),
@@ -790,9 +795,11 @@ QuicVersionManager::~QuicVersionManager() {}
 
 const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
   if (disable_pre_32_ != FLAGS_quic_disable_pre_32 ||
+      disable_pre_34_ != FLAGS_quic_disable_pre_34 ||
       enable_version_35_ != FLAGS_quic_enable_version_35 ||
       enable_version_36_ != FLAGS_quic_enable_version_36_v2) {
     disable_pre_32_ = FLAGS_quic_disable_pre_32;
+    disable_pre_34_ = FLAGS_quic_disable_pre_34;
     enable_version_35_ = FLAGS_quic_enable_version_35;
     enable_version_36_ = FLAGS_quic_enable_version_36_v2;
     filtered_supported_versions_ =

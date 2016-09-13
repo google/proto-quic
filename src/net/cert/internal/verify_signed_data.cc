@@ -15,6 +15,7 @@
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_openssl_types.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/signature_policy.h"
 #include "net/der/input.h"
@@ -24,6 +25,15 @@
 namespace net {
 
 namespace {
+
+DEFINE_CERT_ERROR_TYPE(kUnacceptableSignatureAlgorithm,
+                       "Unacceptable signature algorithm");
+DEFINE_CERT_ERROR_TYPE(kUnacceptableRsaModulusLength,
+                       "Unacceptable modulus length for RSA key");
+DEFINE_CERT_ERROR_TYPE(kUnacceptableEcdsaCurve,
+                       "Unacceptable curve for ECDSA key");
+DEFINE_CERT_ERROR_TYPE(kSignatureVerificationFailed,
+                       "Signature verification failed");
 
 // Converts a DigestAlgorithm to an equivalent EVP_MD*.
 WARN_UNUSED_RESULT bool GetDigest(DigestAlgorithm digest, const EVP_MD** out) {
@@ -144,7 +154,9 @@ WARN_UNUSED_RESULT bool ImportPkeyFromSpki(const der::Input& spki,
 // Following RFC 3279 in this case.
 WARN_UNUSED_RESULT bool ParseRsaKeyFromSpki(const der::Input& public_key_spki,
                                             crypto::ScopedEVP_PKEY* pkey,
-                                            const SignaturePolicy* policy) {
+                                            const SignaturePolicy* policy,
+                                            CertErrors* errors) {
+  // TODO(crbug.com/634443): Add more specific errors.
   if (!ImportPkeyFromSpki(public_key_spki, EVP_PKEY_RSA, pkey))
     return false;
 
@@ -154,7 +166,12 @@ WARN_UNUSED_RESULT bool ParseRsaKeyFromSpki(const der::Input& public_key_spki,
     return false;
   unsigned int modulus_length_bits = BN_num_bits(rsa->n);
 
-  return policy->IsAcceptableModulusLengthForRsa(modulus_length_bits);
+  if (!policy->IsAcceptableModulusLengthForRsa(modulus_length_bits, errors)) {
+    errors->Add(kUnacceptableRsaModulusLength);
+    return false;
+  }
+
+  return true;
 }
 
 // Does signature verification using either RSA or ECDSA.
@@ -246,7 +263,9 @@ WARN_UNUSED_RESULT bool DoVerify(const SignatureAlgorithm& algorithm,
 //     }
 WARN_UNUSED_RESULT bool ParseEcKeyFromSpki(const der::Input& public_key_spki,
                                            crypto::ScopedEVP_PKEY* pkey,
-                                           const SignaturePolicy* policy) {
+                                           const SignaturePolicy* policy,
+                                           CertErrors* errors) {
+  // TODO(crbug.com/634443): Add more specific errors.
   if (!ImportPkeyFromSpki(public_key_spki, EVP_PKEY_EC, pkey))
     return false;
 
@@ -256,7 +275,12 @@ WARN_UNUSED_RESULT bool ParseEcKeyFromSpki(const der::Input& public_key_spki,
     return false;  // Unexpected.
   int curve_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec.get()));
 
-  return policy->IsAcceptableCurveForEcdsa(curve_nid);
+  if (!policy->IsAcceptableCurveForEcdsa(curve_nid, errors)) {
+    errors->Add(kUnacceptableEcdsaCurve);
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -265,9 +289,12 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
                       const der::Input& signed_data,
                       const der::BitString& signature_value,
                       const der::Input& public_key_spki,
-                      const SignaturePolicy* policy) {
-  if (!policy->IsAcceptableSignatureAlgorithm(signature_algorithm))
+                      const SignaturePolicy* policy,
+                      CertErrors* errors) {
+  if (!policy->IsAcceptableSignatureAlgorithm(signature_algorithm, errors)) {
+    errors->Add(kUnacceptableSignatureAlgorithm);
     return false;
+  }
 
   crypto::ScopedEVP_PKEY public_key;
 
@@ -275,17 +302,22 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
   switch (signature_algorithm.algorithm()) {
     case SignatureAlgorithmId::RsaPkcs1:
     case SignatureAlgorithmId::RsaPss:
-      if (!ParseRsaKeyFromSpki(public_key_spki, &public_key, policy))
+      if (!ParseRsaKeyFromSpki(public_key_spki, &public_key, policy, errors))
         return false;
       break;
     case SignatureAlgorithmId::Ecdsa:
-      if (!ParseEcKeyFromSpki(public_key_spki, &public_key, policy))
+      if (!ParseEcKeyFromSpki(public_key_spki, &public_key, policy, errors))
         return false;
       break;
   }
 
-  return DoVerify(signature_algorithm, signed_data, signature_value,
-                  public_key.get());
+  if (!DoVerify(signature_algorithm, signed_data, signature_value,
+                public_key.get())) {
+    errors->Add(kSignatureVerificationFailed);
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace net

@@ -41,6 +41,7 @@
 #include "net/http/http_transaction.h"
 #include "net/http/http_transaction_factory.h"
 #include "net/http/http_util.h"
+#include "net/log/net_log_event_type.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_retry_info.h"
@@ -447,7 +448,7 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
     if (rv != SDCH_OK) {
       SdchManager::SdchErrorRecovery(rv);
       request()->net_log().AddEvent(
-          NetLog::TYPE_SDCH_DECODING_ERROR,
+          NetLogEventType::SDCH_DECODING_ERROR,
           base::Bind(&NetLogSdchResourceProblemCallback, rv));
     } else {
       const std::string name = "Get-Dictionary";
@@ -472,7 +473,7 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
           if (rv != SDCH_OK) {
             SdchManager::SdchErrorRecovery(rv);
             request_->net_log().AddEvent(
-                NetLog::TYPE_SDCH_DICTIONARY_ERROR,
+                NetLogEventType::SDCH_DICTIONARY_ERROR,
                 base::Bind(&NetLogSdchDictionaryFetchProblemCallback, rv,
                            sdch_dictionary_url, false));
           }
@@ -568,7 +569,7 @@ void URLRequestHttpJob::MaybeStartTransactionInternal(int result) {
     StartTransactionInternal();
   } else {
     std::string source("delegate");
-    request_->net_log().AddEvent(NetLog::TYPE_CANCELLED,
+    request_->net_log().AddEvent(NetLogEventType::CANCELLED,
                                  NetLog::StringCallback("source", &source));
     NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, result));
   }
@@ -666,7 +667,7 @@ void URLRequestHttpJob::AddExtraHeaders() {
         advertise_sdch = false;
         SdchManager::SdchErrorRecovery(rv);
         request()->net_log().AddEvent(
-            NetLog::TYPE_SDCH_DECODING_ERROR,
+            NetLogEventType::SDCH_DECODING_ERROR,
             base::Bind(&NetLogSdchResourceProblemCallback, rv));
       }
     }
@@ -819,7 +820,7 @@ void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
 
   if (result != OK) {
     std::string source("delegate");
-    request_->net_log().AddEvent(NetLog::TYPE_CANCELLED,
+    request_->net_log().AddEvent(NetLogEventType::CANCELLED,
                                  NetLog::StringCallback("source", &source));
     NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, result));
     return;
@@ -993,9 +994,9 @@ void URLRequestHttpJob::OnStartCompleted(int result) {
           awaiting_callback_ = true;
         } else {
           std::string source("delegate");
-          request_->net_log().AddEvent(NetLog::TYPE_CANCELLED,
-                                       NetLog::StringCallback("source",
-                                                              &source));
+          request_->net_log().AddEvent(
+              NetLogEventType::CANCELLED,
+              NetLog::StringCallback("source", &source));
           OnCallToDelegateComplete();
           NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, error));
         }

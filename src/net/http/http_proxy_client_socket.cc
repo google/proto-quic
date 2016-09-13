@@ -21,6 +21,7 @@
 #include "net/http/http_stream_parser.h"
 #include "net/http/proxy_connect_redirect_http_stream.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "url/gurl.h"
 
@@ -335,24 +336,24 @@ int HttpProxyClientSocket::DoLoop(int last_io_result) {
       case STATE_SEND_REQUEST:
         DCHECK_EQ(OK, rv);
         net_log_.BeginEvent(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_SEND_REQUEST);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_SEND_REQUEST);
         rv = DoSendRequest();
         break;
       case STATE_SEND_REQUEST_COMPLETE:
         rv = DoSendRequestComplete(rv);
         net_log_.EndEventWithNetErrorCode(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_SEND_REQUEST, rv);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_SEND_REQUEST, rv);
         break;
       case STATE_READ_HEADERS:
         DCHECK_EQ(OK, rv);
         net_log_.BeginEvent(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_READ_HEADERS);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_READ_HEADERS);
         rv = DoReadHeaders();
         break;
       case STATE_READ_HEADERS_COMPLETE:
         rv = DoReadHeadersComplete(rv);
         net_log_.EndEventWithNetErrorCode(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_READ_HEADERS, rv);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_READ_HEADERS, rv);
         break;
       case STATE_DRAIN_BODY:
         DCHECK_EQ(OK, rv);
@@ -408,10 +409,9 @@ int HttpProxyClientSocket::DoSendRequest() {
                        &request_line_, &request_headers_);
 
     net_log_.AddEvent(
-        NetLog::TYPE_HTTP_TRANSACTION_SEND_TUNNEL_HEADERS,
+        NetLogEventType::HTTP_TRANSACTION_SEND_TUNNEL_HEADERS,
         base::Bind(&HttpRequestHeaders::NetLogCallback,
-                   base::Unretained(&request_headers_),
-                   &request_line_));
+                   base::Unretained(&request_headers_), &request_line_));
   }
 
   parser_buf_ = new GrowableIOBuffer();
@@ -443,7 +443,7 @@ int HttpProxyClientSocket::DoReadHeadersComplete(int result) {
     return ERR_TUNNEL_CONNECTION_FAILED;
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP_TRANSACTION_READ_TUNNEL_RESPONSE_HEADERS,
+      NetLogEventType::HTTP_TRANSACTION_READ_TUNNEL_RESPONSE_HEADERS,
       base::Bind(&HttpResponseHeaders::NetLogCallback, response_.headers));
 
   if (proxy_delegate_) {

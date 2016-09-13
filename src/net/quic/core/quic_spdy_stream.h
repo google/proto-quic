@@ -186,6 +186,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
     return received_trailers_;
   }
 
+  // Returns true if headers have been fully read and consumed.
+  bool FinishedReadingHeaders() const;
+
   virtual SpdyPriority priority() const;
 
   // Sets priority_ to priority.  This should only be called before bytes are
@@ -213,9 +216,6 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
                                          const QuicHeaderList& header_list);
   QuicSpdySession* spdy_session() const { return spdy_session_; }
   Visitor* visitor() { return visitor_; }
-
-  // Returns true if headers have been fully read and consumed.
-  bool FinishedReadingHeaders() const;
 
   // Redirects to the headers stream if force HOL blocking enabled,
   // otherwise just pass through.

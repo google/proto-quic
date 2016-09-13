@@ -105,6 +105,12 @@ inline QuicBandwidth operator*(QuicBandwidth lhs, float rhs) {
 inline QuicBandwidth operator*(float lhs, QuicBandwidth rhs) {
   return rhs * lhs;
 }
+inline QuicByteCount operator*(QuicBandwidth lhs, QuicTime::Delta rhs) {
+  return lhs.ToBytesPerPeriod(rhs);
+}
+inline QuicByteCount operator*(QuicTime::Delta lhs, QuicBandwidth rhs) {
+  return rhs * lhs;
+}
 
 // Override stream output operator for gtest.
 inline std::ostream& operator<<(std::ostream& output,

@@ -117,6 +117,22 @@ uint64_t SimpleRandom::RandUint64() {
   return seed_;
 }
 
+void SimpleRandom::RandBytes(void* data, size_t len) {
+  uint8_t* real_data = static_cast<uint8_t*>(data);
+  for (size_t offset = 0; offset < len; offset++) {
+    real_data[offset] = RandUint64() & 0xff;
+  }
+}
+
+void SimpleRandom::Reseed(const void* additional_entropy, size_t len) {
+  const uint8_t* real_entropy = static_cast<const uint8_t*>(additional_entropy);
+  for (size_t offset = 0; offset < len; offset++) {
+    // Note: this is not actually a well-established way to incorporate new
+    // entropy, but good enough for tests.
+    seed_ *= real_entropy[len];
+  }
+}
+
 MockFramerVisitor::MockFramerVisitor() {
   // By default, we want to accept packets.
   ON_CALL(*this, OnProtocolVersionMismatch(_))
@@ -418,7 +434,7 @@ TestQuicSpdyServerSession::CreateQuicCryptoServerStream(
     QuicCompressedCertsCache* compressed_certs_cache) {
   return new QuicCryptoServerStream(crypto_config, compressed_certs_cache,
                                     FLAGS_enable_quic_stateless_reject_support,
-                                    this);
+                                    this, &helper_);
 }
 
 QuicCryptoServerStream* TestQuicSpdyServerSession::GetCryptoStream() {

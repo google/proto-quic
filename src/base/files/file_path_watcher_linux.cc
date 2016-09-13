@@ -513,6 +513,8 @@ void FilePathWatcherImpl::UpdateWatches() {
 void FilePathWatcherImpl::UpdateRecursiveWatches(
     InotifyReader::Watch fired_watch,
     bool is_dir) {
+  DCHECK(HasValidWatchVector());
+
   if (!recursive_)
     return;
 
@@ -523,7 +525,8 @@ void FilePathWatcherImpl::UpdateRecursiveWatches(
 
   // Check to see if this is a forced update or if some component of |target_|
   // has changed. For these cases, redo the watches for |target_| and below.
-  if (!ContainsKey(recursive_paths_by_watch_, fired_watch)) {
+  if (!ContainsKey(recursive_paths_by_watch_, fired_watch) &&
+      fired_watch != watches_.back().watch) {
     UpdateRecursiveWatchesForPath(target_);
     return;
   }
@@ -532,7 +535,10 @@ void FilePathWatcherImpl::UpdateRecursiveWatches(
   if (!is_dir)
     return;
 
-  const FilePath& changed_dir = recursive_paths_by_watch_[fired_watch];
+  const FilePath& changed_dir =
+      ContainsKey(recursive_paths_by_watch_, fired_watch) ?
+      recursive_paths_by_watch_[fired_watch] :
+      target_;
 
   std::map<FilePath, InotifyReader::Watch>::iterator start_it =
       recursive_watches_by_path_.lower_bound(changed_dir);

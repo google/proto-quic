@@ -113,12 +113,16 @@ int MockHostResolverBase::Resolve(const RequestInfo& info,
   num_resolve_++;
   size_t id = next_request_id_++;
   int rv = ResolveFromIPLiteralOrCache(info, addresses);
-  if (rv != ERR_DNS_CACHE_MISS) {
+  if (rv != ERR_DNS_CACHE_MISS)
     return rv;
-  }
-  if (synchronous_mode_) {
+
+  // Just like the real resolver, refuse to do anything with invalid hostnames.
+  if (!IsValidDNSDomain(info.hostname()))
+    return ERR_NAME_NOT_RESOLVED;
+
+  if (synchronous_mode_)
     return ResolveProc(info, addresses);
-  }
+
   // Store the request for asynchronous resolution
   std::unique_ptr<RequestImpl> req(
       new RequestImpl(info, addresses, callback, this, id));

@@ -223,6 +223,7 @@ bool Thread::IsRunning() const {
 
 void Thread::Run(RunLoop* run_loop) {
   // Overridable protected method to be called from our |thread_| only.
+  DCHECK(id_event_.IsSignaled());
   DCHECK_EQ(id_, PlatformThread::CurrentId());
 
   run_loop->Run();
@@ -263,6 +264,11 @@ void Thread::SetMessageLoop(MessageLoop* message_loop) {
 void Thread::ThreadMain() {
   // First, make GetThreadId() available to avoid deadlocks. It could be called
   // any place in the following thread initialization code.
+  DCHECK(!id_event_.IsSignaled());
+  // Note: this read of |id_| while |id_event_| isn't signaled is exceptionally
+  // okay because ThreadMain has an happens-after relationship with the other
+  // write in StartWithOptions().
+  DCHECK_EQ(kInvalidThreadId, id_);
   id_ = PlatformThread::CurrentId();
   DCHECK_NE(kInvalidThreadId, id_);
   id_event_.Signal();

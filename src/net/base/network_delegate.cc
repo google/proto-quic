@@ -78,10 +78,12 @@ int NetworkDelegate::NotifyHeadersReceived(
                            allowed_unsafe_redirect_url);
 }
 
-void NetworkDelegate::NotifyResponseStarted(URLRequest* request) {
+void NetworkDelegate::NotifyResponseStarted(URLRequest* request,
+                                            int net_error) {
   DCHECK(CalledOnValidThread());
   DCHECK(request);
-  OnResponseStarted(request);
+
+  OnResponseStarted(request, net_error);
 }
 
 void NetworkDelegate::NotifyNetworkBytesReceived(URLRequest* request,
@@ -107,7 +109,9 @@ void NetworkDelegate::NotifyBeforeRedirect(URLRequest* request,
   OnBeforeRedirect(request, new_location);
 }
 
-void NetworkDelegate::NotifyCompleted(URLRequest* request, bool started) {
+void NetworkDelegate::NotifyCompleted(URLRequest* request,
+                                      bool started,
+                                      int net_error) {
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
                "NetworkDelegate::NotifyCompleted");
   DCHECK(CalledOnValidThread());
@@ -115,7 +119,8 @@ void NetworkDelegate::NotifyCompleted(URLRequest* request, bool started) {
   // TODO(cbentzel): Remove ScopedTracker below once crbug.com/475753 is fixed.
   tracked_objects::ScopedTracker tracking_profile(
       FROM_HERE_WITH_EXPLICIT_FUNCTION("475753 NetworkDelegate::OnCompleted"));
-  OnCompleted(request, started);
+
+  OnCompleted(request, started, net_error);
 }
 
 void NetworkDelegate::NotifyURLRequestDestroyed(URLRequest* request) {
@@ -186,6 +191,26 @@ bool NetworkDelegate::CancelURLRequestWithPolicyViolatingReferrerHeader(
   DCHECK(CalledOnValidThread());
   return OnCancelURLRequestWithPolicyViolatingReferrerHeader(
       request, target_url, referrer_url);
+}
+
+void NetworkDelegate::OnResponseStarted(URLRequest* request, int net_error) {
+  OnResponseStarted(request);
+}
+
+// Deprecated
+void NetworkDelegate::OnResponseStarted(URLRequest* request) {
+  NOTREACHED();
+}
+
+void NetworkDelegate::OnCompleted(URLRequest* request,
+                                  bool started,
+                                  int net_error) {
+  OnCompleted(request, started);
+}
+
+// Deprecated.
+void NetworkDelegate::OnCompleted(URLRequest* request, bool started) {
+  NOTREACHED();
 }
 
 }  // namespace net

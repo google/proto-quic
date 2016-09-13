@@ -56,7 +56,7 @@ SendAlgorithmSimulator::Transfer::Transfer(Sender* sender,
       bytes_lost(0),
       bytes_in_flight(0),
       start_time(start_time),
-      name(name) {}
+      name(std::move(name)) {}
 
 SendAlgorithmSimulator::SendAlgorithmSimulator(MockClock* clock,
                                                QuicBandwidth bandwidth,

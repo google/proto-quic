@@ -15,6 +15,7 @@
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "net/base/io_buffer.h"
+#include "net/base/load_timing_info.h"
 #include "net/http/http_stream.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/chromium/quic_chromium_client_stream.h"
@@ -177,6 +178,10 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   int64_t closed_stream_received_bytes_;
   // Number of bytes sent when the stream was closed.
   int64_t closed_stream_sent_bytes_;
+  // True if the stream is the first stream negotiated on the session. Set when
+  // the stream was closed. If |stream_| is failed to be created, this takes on
+  // the default value of false.
+  bool closed_is_first_stream_;
 
   // The caller's callback to be used for asynchronous operations.
   CompletionCallback callback_;
@@ -209,6 +214,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   // Set to true when DoLoop() is being executed, false otherwise.
   bool in_loop_;
+
+  // Session connect timing info.
+  LoadTimingInfo::ConnectTiming connect_timing_;
 
   base::WeakPtrFactory<QuicHttpStream> weak_factory_;
 

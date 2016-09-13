@@ -17,7 +17,7 @@ namespace net {
 class QuicPerConnectionPacketWriter : public QuicPacketWriter {
  public:
   // Does not take ownership of |shared_writer|.
-  QuicPerConnectionPacketWriter(QuicPacketWriter* shared_writer);
+  explicit QuicPerConnectionPacketWriter(QuicPacketWriter* shared_writer);
   ~QuicPerConnectionPacketWriter() override;
 
   QuicPacketWriter* shared_writer() const { return shared_writer_; }

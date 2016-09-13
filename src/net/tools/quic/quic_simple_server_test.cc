@@ -5,6 +5,7 @@
 #include "net/tools/quic/quic_simple_server.h"
 
 #include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
@@ -32,7 +33,7 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
             &version_manager_,
             std::unique_ptr<MockQuicConnectionHelper>(
                 new net::test::MockQuicConnectionHelper),
-            std::unique_ptr<QuicServerSessionBase::Helper>(
+            std::unique_ptr<QuicCryptoServerStream::Helper>(
                 new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
             std::unique_ptr<MockAlarmFactory>(
                 new net::test::MockAlarmFactory)) {

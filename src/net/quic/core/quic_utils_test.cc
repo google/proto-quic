@@ -103,7 +103,7 @@ TEST(QuicUtilsTest, DetermineAddressChangeType) {
             QuicUtils::DetermineAddressChangeType(old_address, new_address));
   ASSERT_TRUE(address.AssignFromIPLiteral(kIPv4String3));
   new_address = IPEndPoint(address, 1234);
-  EXPECT_EQ(UNSPECIFIED_CHANGE,
+  EXPECT_EQ(IPV4_TO_IPV4_CHANGE,
             QuicUtils::DetermineAddressChangeType(old_address, new_address));
 }
 

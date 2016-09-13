@@ -191,16 +191,15 @@ bool TaskTracker::WillPostTask(const Task* task) {
   return true;
 }
 
-void TaskTracker::RunNextTaskInSequence(const Sequence* sequence) {
-  DCHECK(sequence);
-  DCHECK(sequence->PeekTask());
-
-  const Task* task = sequence->PeekTask();
+bool TaskTracker::RunTask(const Task* task,
+                          const SequenceToken& sequence_token) {
+  DCHECK(task);
+  DCHECK(sequence_token.IsValid());
 
   const TaskShutdownBehavior shutdown_behavior =
       task->traits.shutdown_behavior();
   if (!BeforeRunTask(shutdown_behavior))
-    return;
+    return false;
 
   // All tasks run through here and the scheduler itself doesn't use singletons.
   // Therefore, it isn't necessary to reset the singleton allowed bit after
@@ -212,7 +211,7 @@ void TaskTracker::RunNextTaskInSequence(const Sequence* sequence) {
   {
     // Set up SequenceToken as expected for the scope of the task.
     ScopedSetSequenceTokenForCurrentThread
-        scoped_set_sequence_token_for_current_thread(sequence->token());
+        scoped_set_sequence_token_for_current_thread(sequence_token);
 
     // Set up TaskRunnerHandle as expected for the scope of the task.
     std::unique_ptr<SequencedTaskRunnerHandle> sequenced_task_runner_handle;
@@ -234,6 +233,8 @@ void TaskTracker::RunNextTaskInSequence(const Sequence* sequence) {
   }
 
   AfterRunTask(shutdown_behavior);
+
+  return true;
 }
 
 bool TaskTracker::HasShutdownStarted() const {

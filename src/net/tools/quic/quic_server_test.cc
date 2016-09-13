@@ -10,7 +10,7 @@
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
-#include "net/tools/quic/quic_simple_server_session_helper.h"
+#include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/test_tools/quic_server_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -30,7 +30,7 @@ class MockQuicSimpleDispatcher : public QuicSimpleDispatcher {
       const QuicCryptoServerConfig* crypto_config,
       QuicVersionManager* version_manager,
       std::unique_ptr<QuicConnectionHelperInterface> helper,
-      std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
+      std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
       std::unique_ptr<QuicAlarmFactory> alarm_factory)
       : QuicSimpleDispatcher(config,
                              crypto_config,
@@ -61,8 +61,8 @@ class TestQuicServer : public QuicServer {
         std::unique_ptr<QuicEpollConnectionHelper>(
             new QuicEpollConnectionHelper(epoll_server(),
                                           QuicAllocator::BUFFER_POOL)),
-        std::unique_ptr<QuicServerSessionBase::Helper>(
-            new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+        std::unique_ptr<QuicCryptoServerStream::Helper>(
+            new QuicSimpleCryptoServerStreamHelper(QuicRandom::GetInstance())),
         std::unique_ptr<QuicEpollAlarmFactory>(
             new QuicEpollAlarmFactory(epoll_server())));
     return mock_dispatcher_;
@@ -151,8 +151,9 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(&eps_,
                                               QuicAllocator::BUFFER_POOL)),
-            std::unique_ptr<QuicServerSessionBase::Helper>(
-                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+            std::unique_ptr<QuicCryptoServerStream::Helper>(
+                new QuicSimpleCryptoServerStreamHelper(
+                    QuicRandom::GetInstance())),
             std::unique_ptr<QuicEpollAlarmFactory>(
                 new QuicEpollAlarmFactory(&eps_))) {
     dispatcher_.InitializeWithWriter(new QuicDefaultPacketWriter(1234));

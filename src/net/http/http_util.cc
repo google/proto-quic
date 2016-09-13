@@ -446,17 +446,14 @@ bool HttpUtil::IsQuote(char c) {
   return c == '"' || c == '\'';
 }
 
-namespace {
-bool IsTokenChar(unsigned char c) {
-  return !(c >= 0x80 || c <= 0x1F || c == 0x7F || c == '(' || c == ')' ||
-           c == '<' || c == '>' || c == '@' || c == ',' || c == ';' ||
-           c == ':' || c == '\\' || c == '"' || c == '/' || c == '[' ||
-           c == ']' || c == '?' || c == '=' || c == '{' || c == '}' ||
-           c == ' ' || c == '\t');
+bool HttpUtil::IsTokenChar(char c) {
+  return !(c >= 0x7F || c <= 0x20 || c == '(' || c == ')' || c == '<' ||
+           c == '>' || c == '@' || c == ',' || c == ';' || c == ':' ||
+           c == '\\' || c == '"' || c == '/' || c == '[' || c == ']' ||
+           c == '?' || c == '=' || c == '{' || c == '}');
 }
-}  // anonymous namespace
 
-// See RFC 2616 Sec 2.2 for the definition of |token|.
+// See RFC 7230 Sec 3.2.6 for the definition of |token|.
 bool HttpUtil::IsToken(const base::StringPiece& string) {
   if (string.empty())
     return false;

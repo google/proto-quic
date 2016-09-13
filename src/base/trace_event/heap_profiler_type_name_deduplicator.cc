@@ -10,7 +10,9 @@
 #include <utility>
 
 #include "base/json/string_escape.h"
+#include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
+#include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 
 namespace base {
@@ -18,16 +20,24 @@ namespace trace_event {
 
 namespace {
 
-// Extract directory name if |type_name| was file name. Otherwise, return
-// |type_name|.
-StringPiece ExtractDirNameFromFileName(const char* type_name) {
+// If |type_name| is file name then extract directory name. Or if |type_name| is
+// category name, then disambiguate multple categories and remove
+// "disabled-by-default" prefix if present.
+StringPiece ExtractCategoryFromTypeName(const char* type_name) {
   StringPiece result(type_name);
   size_t last_seperator = result.find_last_of("\\/");
 
   // If |type_name| was a not a file path, the seperator will not be found, so
   // the whole type name is returned.
-  if (last_seperator == StringPiece::npos)
+  if (last_seperator == StringPiece::npos) {
+    // Use the first the category name if it has ",".
+    size_t first_comma_position = result.find(',');
+    if (first_comma_position != StringPiece::npos)
+      result = result.substr(0, first_comma_position);
+    if (result.starts_with(TRACE_DISABLED_BY_DEFAULT("")))
+      result.remove_prefix(sizeof(TRACE_DISABLED_BY_DEFAULT("")) - 1);
     return result;
+  }
 
   // Remove the file name from the path.
   result.remove_suffix(result.length() - last_seperator);
@@ -82,7 +92,7 @@ void TypeNameDeduplicator::AppendAsTraceFormat(std::string* out) const {
 
     // TODO(ssid): crbug.com/594803 the type name is misused for file name in
     // some cases.
-    StringPiece type_info = ExtractDirNameFromFileName(it->first);
+    StringPiece type_info = ExtractCategoryFromTypeName(it->first);
 
     // |EscapeJSONString| appends, it does not overwrite |buffer|.
     bool put_in_quotes = true;

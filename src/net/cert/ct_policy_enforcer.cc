@@ -28,6 +28,7 @@
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 
 namespace net {
 
@@ -416,7 +417,8 @@ ct::CertPolicyCompliance CTPolicyEnforcer::DoesConformToCertPolicy(
       base::Bind(&NetLogCertComplianceCheckResultCallback,
                  base::Unretained(cert), build_timely, compliance);
 
-  net_log.AddEvent(NetLog::TYPE_CERT_CT_COMPLIANCE_CHECKED, net_log_callback);
+  net_log.AddEvent(NetLogEventType::CERT_CT_COMPLIANCE_CHECKED,
+                   net_log_callback);
 
   return compliance;
 }
@@ -444,7 +446,7 @@ ct::EVPolicyCompliance CTPolicyEnforcer::DoesConformToCTEVPolicy(
       base::Bind(&NetLogEVComplianceCheckResultCallback, base::Unretained(cert),
                  base::Unretained(&details));
 
-  net_log.AddEvent(NetLog::TYPE_EV_CERT_CT_COMPLIANCE_CHECKED,
+  net_log.AddEvent(NetLogEventType::EV_CERT_CT_COMPLIANCE_CHECKED,
                    net_log_callback);
 
   if (!details.build_timely)

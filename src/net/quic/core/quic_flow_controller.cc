@@ -91,10 +91,10 @@ void QuicFlowController::AddBytesSent(QuicByteCount bytes_sent) {
 
 bool QuicFlowController::FlowControlViolation() {
   if (highest_received_byte_offset_ > receive_window_offset_) {
-    LOG(ERROR) << ENDPOINT << "Flow control violation on stream " << id_
-               << ", receive window offset: " << receive_window_offset_
-               << ", highest received byte offset: "
-               << highest_received_byte_offset_;
+    DVLOG(1) << ENDPOINT << "Flow control violation on stream " << id_
+             << ", receive window offset: " << receive_window_offset_
+             << ", highest received byte offset: "
+             << highest_received_byte_offset_;
     return true;
   }
   return false;

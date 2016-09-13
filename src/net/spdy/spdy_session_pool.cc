@@ -15,6 +15,7 @@
 #include "net/base/address_list.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
+#include "net/log/net_log_event_type.h"
 #include "net/spdy/spdy_session.h"
 
 namespace net {
@@ -100,7 +101,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
   MapKeyToAvailableSession(key, available_session);
 
   net_log.AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_POOL_IMPORTED_SESSION_FROM_SOCKET,
+      NetLogEventType::HTTP2_SESSION_POOL_IMPORTED_SESSION_FROM_SOCKET,
       available_session->net_log().source().ToEventParametersCallback());
 
   // Look up the IP address for this session so that we can match
@@ -155,7 +156,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
     UMA_HISTOGRAM_ENUMERATION(
         "Net.SpdySessionGet", FOUND_EXISTING, SPDY_SESSION_GET_MAX);
     net_log.AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION,
+        NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION,
         it->second->net_log().source().ToEventParametersCallback());
     return it->second;
   }
@@ -208,7 +209,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
                               FOUND_EXISTING_FROM_IP_POOL,
                               SPDY_SESSION_GET_MAX);
     net_log.AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION_FROM_IP_POOL,
+        NetLogEventType::HTTP2_SESSION_POOL_FOUND_EXISTING_SESSION_FROM_IP_POOL,
         available_session->net_log().source().ToEventParametersCallback());
     // Add this session to the map so that we can find it next time.
     MapKeyToAvailableSession(key, available_session);
@@ -237,7 +238,7 @@ void SpdySessionPool::RemoveUnavailableSession(
   DCHECK(!IsSessionAvailable(unavailable_session));
 
   unavailable_session->net_log().AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_POOL_REMOVE_SESSION,
+      NetLogEventType::HTTP2_SESSION_POOL_REMOVE_SESSION,
       unavailable_session->net_log().source().ToEventParametersCallback());
 
   SessionSet::iterator it = sessions_.find(unavailable_session.get());

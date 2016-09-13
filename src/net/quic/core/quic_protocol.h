@@ -375,6 +375,9 @@ enum QuicVersion {
                          // header, uses new ack and stop waiting wire format.
   QUIC_VERSION_35 = 35,  // Allows endpoints to independently set stream limit.
   QUIC_VERSION_36 = 36,  // Add support to force HOL blocking.
+
+  // IMPORTANT: if you are adding to this std::list, follow the instructions at
+  // http://sites/quic/adding-and-removing-versions
 };
 
 // This vector contains QUIC versions which we currently support.
@@ -1181,14 +1184,14 @@ enum PeerAddressChangeType {
   PORT_CHANGE,
   // IPv4 address changed, but within the /24 subnet (port may have changed.)
   IPV4_SUBNET_CHANGE,
+  // IPv4 address changed, excluding /24 subnet change (port may have changed.)
+  IPV4_TO_IPV4_CHANGE,
   // IP address change from an IPv4 to an IPv6 address (port may have changed.)
   IPV4_TO_IPV6_CHANGE,
   // IP address change from an IPv6 to an IPv4 address (port may have changed.)
   IPV6_TO_IPV4_CHANGE,
   // IP address change from an IPv6 to an IPv6 address (port may have changed.)
   IPV6_TO_IPV6_CHANGE,
-  // All other peer address changes.
-  UNSPECIFIED_CHANGE,
 };
 
 struct NET_EXPORT_PRIVATE QuicFrame {
@@ -1395,6 +1398,8 @@ class NET_EXPORT_PRIVATE QuicVersionManager {
  private:
   // FLAGS_quic_disable_pre_32
   bool disable_pre_32_;
+  // FLAGS_quic_disable_pre_34
+  bool disable_pre_34_;
   // FLAGS_quic_enable_version_35
   bool enable_version_35_;
   // FLAGS_quic_enable_version_36_v2

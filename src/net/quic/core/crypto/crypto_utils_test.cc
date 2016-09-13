@@ -18,9 +18,8 @@ TEST(CryptoUtilsTest, IsValidSNI) {
   EXPECT_FALSE(CryptoUtils::IsValidSNI("192.168.0.1"));
   // SNI without any dot.
   EXPECT_FALSE(CryptoUtils::IsValidSNI("somedomain"));
-  // Invalid RFC2396 hostname
-  // TODO(rtenneti): Support RFC2396 hostname.
-  // EXPECT_FALSE(CryptoUtils::IsValidSNI("some_domain.com"));
+  // Invalid by RFC2396 but unfortunately domains of this form exist.
+  EXPECT_TRUE(CryptoUtils::IsValidSNI("some_domain.com"));
   // An empty string must be invalid otherwise the QUIC client will try sending
   // it.
   EXPECT_FALSE(CryptoUtils::IsValidSNI(""));

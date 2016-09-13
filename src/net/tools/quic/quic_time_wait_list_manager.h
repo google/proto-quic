@@ -26,6 +26,7 @@
 namespace net {
 
 namespace test {
+class QuicDispatcherPeer;
 class QuicTimeWaitListManagerPeer;
 }  // namespace test
 
@@ -113,6 +114,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
       const QuicPublicResetPacket& packet);
 
  private:
+  friend class test::QuicDispatcherPeer;
   friend class test::QuicTimeWaitListManagerPeer;
 
   // Internal structure to store pending public reset packets.

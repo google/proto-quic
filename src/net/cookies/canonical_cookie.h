@@ -103,13 +103,18 @@ class NET_EXPORT CanonicalCookie {
             && path_ == ecc.Path());
   }
 
-  // Checks if two cookies have the same name and domain-match per RFC 6265.
-  // Note that this purposefully ignores paths, and that this function is
-  // guaranteed to return |true| for a superset of the inputs that
-  // IsEquivalent() above returns |true| for.
+  // Checks a looser set of equivalency rules than 'IsEquivalent()' in order
+  // to support the stricter 'Secure' behaviors specified in
+  // https://tools.ietf.org/html/draft-ietf-httpbis-cookie-alone#section-3
   //
-  // This is needed for the updates to RFC6265 as per
-  // https://tools.ietf.org/html/draft-west-leave-secure-cookies-alone.
+  // Returns 'true' if this cookie's name matches |ecc|, and this cookie is
+  // a domain-match for |ecc| (or vice versa), and |ecc|'s path is "on" this
+  // cookie's path (as per 'IsOnPath()').
+  //
+  // Note that while the domain-match cuts both ways (e.g. 'example.com'
+  // matches 'www.example.com' in either direction), the path-match is
+  // unidirectional (e.g. '/login/en' matches '/login' and '/', but
+  // '/login' and '/' do not match '/login/en').
   bool IsEquivalentForSecureCookieMatching(const CanonicalCookie& ecc) const;
 
   void SetLastAccessDate(const base::Time& date) {

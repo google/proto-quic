@@ -62,7 +62,7 @@ struct TestParams {
              QuicVersionVector supported_versions)
       : enable_stateless_rejects(enable_stateless_rejects),
         use_stateless_rejects(use_stateless_rejects),
-        supported_versions(supported_versions) {}
+        supported_versions(std::move(supported_versions)) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     os << "  enable_stateless_rejects: " << p.enable_stateless_rejects

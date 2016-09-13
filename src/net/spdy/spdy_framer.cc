@@ -952,6 +952,10 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
     }
   }
 
+  // If we're here, then we have the common header all received.
+  visitor_->OnCommonHeader(current_frame_stream_id_, remaining_data_length_,
+                           control_frame_type_field, current_frame_flags_);
+
   current_frame_type_ = ValidateFrameHeader(
       is_control_frame, control_frame_type_field, remaining_data_length_);
 
@@ -959,7 +963,6 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
     return original_len - len;
   }
 
-  // if we're here, then we have the common header all received.
   if (!is_control_frame) {
     uint8_t valid_data_flags = 0;
     if (protocol_version_ == SPDY3) {

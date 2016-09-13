@@ -12,22 +12,6 @@ namespace net {
 
 namespace {
 
-// Builds a string representation of all the errors/warnings, that matches the
-// format used in the test files. The format is described in
-// net/data/verify_certificate_chain_unittest/README.
-//
-// TODO(crbug.com/634443): Use a richer string format that includes the error
-// parameters and context.
-std::string MakeErrorsString(const CertErrors& errors) {
-  std::string str;
-  for (const auto& error : errors.errors()) {
-    if (!str.empty())
-      str += "\n";
-    str += error.type;
-  }
-  return str;
-}
-
 class VerifyCertificateChainDelegate {
  public:
   static void Verify(const ParsedCertificateList& chain,
@@ -43,7 +27,7 @@ class VerifyCertificateChainDelegate {
     bool result = VerifyCertificateChain(chain, trust_anchor.get(),
                                          &signature_policy, time, &errors);
     EXPECT_EQ(expected_result, result);
-    EXPECT_EQ(expected_errors, MakeErrorsString(errors));
+    EXPECT_EQ(expected_errors, errors.ToDebugString());
   }
 };
 

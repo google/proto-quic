@@ -109,8 +109,8 @@ class QuicPacketGeneratorTest : public ::testing::Test {
                 Perspective::IS_CLIENT),
         generator_(42, &framer_, &random_, &buffer_allocator_, &delegate_),
         creator_(QuicPacketGeneratorPeer::GetPacketCreator(&generator_)) {
-    // TODO(ianswett): Fix this test so it uses a non-null encrypter.
-    FLAGS_quic_never_write_unencrypted_data = false;
+    creator_->SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
+    creator_->set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   }
 
   ~QuicPacketGeneratorTest() override {

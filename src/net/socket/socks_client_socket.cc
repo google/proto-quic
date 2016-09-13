@@ -12,6 +12,7 @@
 #include "base/sys_byteorder.h"
 #include "net/base/io_buffer.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
 
 namespace net {
@@ -88,13 +89,13 @@ int SOCKSClientSocket::Connect(const CompletionCallback& callback) {
 
   next_state_ = STATE_RESOLVE_HOST;
 
-  net_log_.BeginEvent(NetLog::TYPE_SOCKS_CONNECT);
+  net_log_.BeginEvent(NetLogEventType::SOCKS_CONNECT);
 
   int rv = DoLoop(OK);
   if (rv == ERR_IO_PENDING) {
     user_callback_ = callback;
   } else {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_SOCKS_CONNECT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::SOCKS_CONNECT, rv);
   }
   return rv;
 }
@@ -232,7 +233,7 @@ void SOCKSClientSocket::OnIOComplete(int result) {
   DCHECK_NE(STATE_NONE, next_state_);
   int rv = DoLoop(result);
   if (rv != ERR_IO_PENDING) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_SOCKS_CONNECT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::SOCKS_CONNECT, rv);
     DoCallback(rv);
   }
 }

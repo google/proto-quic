@@ -85,13 +85,13 @@ std::string TimeToISO8601(const base::Time& t) {
 std::unique_ptr<base::ListValue> GetPEMEncodedChainAsList(
     const net::X509Certificate* cert_chain) {
   if (!cert_chain)
-    return base::WrapUnique(new base::ListValue());
+    return base::MakeUnique<base::ListValue>();
 
   std::unique_ptr<base::ListValue> result(new base::ListValue());
   std::vector<std::string> pem_encoded_chain;
   cert_chain->GetPEMEncodedChain(&pem_encoded_chain);
   for (const std::string& cert : pem_encoded_chain)
-    result->Append(base::WrapUnique(new base::StringValue(cert)));
+    result->Append(base::MakeUnique<base::StringValue>(cert));
 
   return result;
 }

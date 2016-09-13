@@ -77,8 +77,8 @@ struct NET_EXPORT LoadTimingInfo {
     base::TimeTicks dns_end;
 
     // The time spent establishing the connection. Connect time includes proxy
-    // connect times (Though not proxy_resolve times), DNS lookup times, time
-    // spent waiting in certain queues, TCP, and SSL time.
+    // connect times (though not proxy_resolve or DNS lookup times), time spent
+    // waiting in certain queues, TCP, and SSL time.
     // TODO(mmenke):  For proxies, this includes time spent blocking on higher
     //                level socket pools.  Fix this.
     // TODO(mmenke):  Retried connections to the same server should apparently

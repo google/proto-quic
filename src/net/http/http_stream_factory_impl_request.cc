@@ -9,6 +9,7 @@
 #include "base/stl_util.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_stream_factory_impl_job.h"
+#include "net/log/net_log_event_type.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_session.h"
 
@@ -35,11 +36,11 @@ HttpStreamFactoryImpl::Request::Request(
       stream_type_(stream_type) {
   DCHECK(delegate_);
 
-  net_log_.BeginEvent(NetLog::TYPE_HTTP_STREAM_REQUEST);
+  net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_REQUEST);
 }
 
 HttpStreamFactoryImpl::Request::~Request() {
-  net_log_.EndEvent(NetLog::TYPE_HTTP_STREAM_REQUEST);
+  net_log_.EndEvent(NetLogEventType::HTTP_STREAM_REQUEST);
   helper_->OnRequestComplete();
 }
 

@@ -22,7 +22,7 @@ DhcpProxyScriptFetcherFactory::DhcpProxyScriptFetcherFactory()
 std::unique_ptr<DhcpProxyScriptFetcher> DhcpProxyScriptFetcherFactory::Create(
     URLRequestContext* context) {
   if (!feature_enabled_) {
-    return base::WrapUnique(new DoNothingDhcpProxyScriptFetcher());
+    return base::MakeUnique<DoNothingDhcpProxyScriptFetcher>();
   } else {
     DCHECK(IsSupported());
     std::unique_ptr<DhcpProxyScriptFetcher> ret;

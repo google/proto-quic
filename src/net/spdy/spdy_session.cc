@@ -38,6 +38,8 @@
 #include "net/http/http_util.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_buffer_producer.h"
@@ -670,7 +672,7 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
       session_unacked_recv_window_bytes_(0),
       stream_initial_send_window_size_(kDefaultInitialWindowSize),
       stream_max_recv_window_size_(stream_max_recv_window_size),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_HTTP2_SESSION)),
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::HTTP2_SESSION)),
       verify_domain_authentication_(verify_domain_authentication),
       enable_sending_initial_data_(enable_sending_initial_data),
       enable_ping_based_connection_checking_(
@@ -682,7 +684,7 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
       time_func_(time_func),
       weak_factory_(this) {
   net_log_.BeginEvent(
-      NetLog::TYPE_HTTP2_SESSION,
+      NetLogEventType::HTTP2_SESSION,
       base::Bind(&NetLogSpdySessionCallback, &host_port_proxy_pair()));
   next_unclaimed_push_stream_sweep_time_ = time_func_() +
       base::TimeDelta::FromSeconds(kMinPushedStreamLifetimeSeconds);
@@ -701,7 +703,7 @@ SpdySession::~SpdySession() {
 
   RecordHistograms();
 
-  net_log_.EndEvent(NetLog::TYPE_HTTP2_SESSION);
+  net_log_.EndEvent(NetLogEventType::HTTP2_SESSION);
 }
 
 void SpdySession::InitializeWithSocket(
@@ -733,7 +735,7 @@ void SpdySession::InitializeWithSocket(
   buffered_spdy_framer_->set_debug_visitor(this);
   buffered_spdy_framer_->UpdateHeaderDecoderTableSize(kMaxHeaderTableSize);
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_INITIALIZED,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_INITIALIZED,
                     base::Bind(&NetLogSpdyInitializedCallback,
                                connection_->socket()->NetLog().source()));
 
@@ -827,7 +829,7 @@ int SpdySession::TryCreateStream(
   }
 
   stalled_streams_++;
-  net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_STALLED_MAX_STREAMS);
+  net_log().AddEvent(NetLogEventType::HTTP2_SESSION_STALLED_MAX_STREAMS);
   RequestPriority priority = request->priority();
   CHECK_GE(priority, MINIMUM_PRIORITY);
   CHECK_LE(priority, MAXIMUM_PRIORITY);
@@ -1016,7 +1018,7 @@ std::unique_ptr<SpdySerializedFrame> SpdySession::CreateHeaders(
 
   if (net_log().IsCapturing()) {
     net_log().AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_SEND_HEADERS,
+        NetLogEventType::HTTP2_SESSION_SEND_HEADERS,
         base::Bind(&NetLogSpdyHeadersSentCallback, &block,
                    (flags & CONTROL_FLAG_FIN) != 0, stream_id, has_priority,
                    weight, dependent_stream_id, exclusive));
@@ -1090,7 +1092,7 @@ std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
     // might end up being stalled by the session also.
     QueueSendStalledStream(*stream);
     net_log().AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_STREAM_STALLED_BY_STREAM_SEND_WINDOW,
+        NetLogEventType::HTTP2_SESSION_STREAM_STALLED_BY_STREAM_SEND_WINDOW,
         NetLog::IntCallback("stream_id", stream_id));
     return std::unique_ptr<SpdyBuffer>();
   }
@@ -1102,7 +1104,7 @@ std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
     stream->set_send_stalled_by_flow_control(true);
     QueueSendStalledStream(*stream);
     net_log().AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_STREAM_STALLED_BY_SESSION_SEND_WINDOW,
+        NetLogEventType::HTTP2_SESSION_STREAM_STALLED_BY_SESSION_SEND_WINDOW,
         NetLog::IntCallback("stream_id", stream_id));
     return std::unique_ptr<SpdyBuffer>();
   }
@@ -1117,7 +1119,7 @@ std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
     flags = static_cast<SpdyDataFlags>(flags & ~DATA_FLAG_FIN);
 
   if (net_log().IsCapturing()) {
-    net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_SEND_DATA,
+    net_log().AddEvent(NetLogEventType::HTTP2_SESSION_SEND_DATA,
                        base::Bind(&NetLogSpdyDataCallback, stream_id,
                                   effective_len, (flags & DATA_FLAG_FIN) != 0));
   }
@@ -1258,7 +1260,7 @@ void SpdySession::EnqueueResetStreamFrame(SpdyStreamId stream_id,
   DCHECK_NE(stream_id, 0u);
 
   net_log().AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_SEND_RST_STREAM,
+      NetLogEventType::HTTP2_SESSION_SEND_RST_STREAM,
       base::Bind(&NetLogSpdyRstCallback, stream_id, status, &description));
 
   DCHECK(buffered_spdy_framer_.get());
@@ -1671,7 +1673,7 @@ void SpdySession::DoDrainSession(Error err, const std::string& description) {
   error_on_close_ = err;
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_CLOSE,
+      NetLogEventType::HTTP2_SESSION_CLOSE,
       base::Bind(&NetLogSpdySessionCloseCallback, err, &description));
 
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SpdySession.ClosedOnError", -err);
@@ -1916,7 +1918,7 @@ base::WeakPtr<SpdyStream> SpdySession::GetActivePushStream(const GURL& url) {
     return base::WeakPtr<SpdyStream>();
   }
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_STREAM_ADOPTED_PUSH_STREAM,
+  net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_ADOPTED_PUSH_STREAM,
                     base::Bind(&NetLogSpdyAdoptedPushStreamCallback,
                                active_it->second.stream->stream_id(), &url));
   return active_it->second.stream->GetWeakPtr();
@@ -2003,7 +2005,7 @@ void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
   DCHECK_LT(len, 1u << 24);
   if (net_log().IsCapturing()) {
     net_log().AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_RECV_DATA,
+        NetLogEventType::HTTP2_SESSION_RECV_DATA,
         base::Bind(&NetLogSpdyDataCallback, stream_id, len, false));
   }
 
@@ -2049,7 +2051,7 @@ void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
 void SpdySession::OnStreamEnd(SpdyStreamId stream_id) {
   CHECK(in_io_loop_);
   if (net_log().IsCapturing()) {
-    net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_DATA,
+    net_log().AddEvent(NetLogEventType::HTTP2_SESSION_RECV_DATA,
                        base::Bind(&NetLogSpdyDataCallback, stream_id, 0, true));
   }
 
@@ -2102,7 +2104,7 @@ void SpdySession::OnSettings(bool clear_persisted) {
     http_server_properties_->ClearSpdySettings(GetServer());
 
   if (net_log_.IsCapturing()) {
-    net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_SETTINGS,
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_SETTINGS,
                       base::Bind(&NetLogSpdySettingsCallback, host_port_pair(),
                                  clear_persisted));
   }
@@ -2125,7 +2127,7 @@ void SpdySession::OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) {
   received_settings_ = true;
 
   // Log the setting.
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_SETTING,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_SETTING,
                     base::Bind(&NetLogSpdySettingCallback, id,
                                static_cast<SpdySettingsFlags>(flags), value));
 }
@@ -2239,7 +2241,7 @@ void SpdySession::OnHeaders(SpdyStreamId stream_id,
   CHECK(in_io_loop_);
 
   if (net_log().IsCapturing()) {
-    net_log().AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_HEADERS,
+    net_log().AddEvent(NetLogEventType::HTTP2_SESSION_RECV_HEADERS,
                        base::Bind(&NetLogSpdyHeadersReceivedCallback, &headers,
                                   fin, stream_id));
   }
@@ -2347,7 +2349,7 @@ void SpdySession::OnRstStream(SpdyStreamId stream_id,
 
   std::string description;
   net_log().AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_RST_STREAM,
+      NetLogEventType::HTTP2_SESSION_RST_STREAM,
       base::Bind(&NetLogSpdyRstCallback, stream_id, status, &description));
 
   ActiveStreamMap::iterator it = active_streams_.find(stream_id);
@@ -2390,7 +2392,7 @@ void SpdySession::OnGoAway(SpdyStreamId last_accepted_stream_id,
   // TODO(jgraettinger): UMA histogram on |status|.
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_GOAWAY,
+      NetLogEventType::HTTP2_SESSION_GOAWAY,
       base::Bind(&NetLogSpdyGoAwayCallback, last_accepted_stream_id,
                  active_streams_.size(), unclaimed_pushed_streams_.size(),
                  status, debug_data));
@@ -2412,7 +2414,7 @@ void SpdySession::OnPing(SpdyPingId unique_id, bool is_ack) {
   CHECK(in_io_loop_);
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_SESSION_PING,
+      NetLogEventType::HTTP2_SESSION_PING,
       base::Bind(&NetLogSpdyPingCallback, unique_id, is_ack, "received"));
 
   // Send response to a PING from server.
@@ -2441,7 +2443,7 @@ void SpdySession::OnWindowUpdate(SpdyStreamId stream_id,
                                  int delta_window_size) {
   CHECK(in_io_loop_);
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_RECEIVED_WINDOW_UPDATE_FRAME,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECEIVED_WINDOW_UPDATE_FRAME,
                     base::Bind(&NetLogSpdyWindowUpdateFrameCallback, stream_id,
                                delta_window_size));
 
@@ -2674,7 +2676,7 @@ void SpdySession::OnPushPromise(SpdyStreamId stream_id,
   CHECK(in_io_loop_);
 
   if (net_log_.IsCapturing()) {
-    net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_RECV_PUSH_PROMISE,
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_PUSH_PROMISE,
                       base::Bind(&NetLogSpdyPushPromiseReceivedCallback,
                                  &headers, stream_id, promised_stream_id));
   }
@@ -2734,7 +2736,7 @@ void SpdySession::SendInitialData() {
 }
 
 void SpdySession::SendSettings(const SettingsMap& settings) {
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_SEND_SETTINGS,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SEND_SETTINGS,
                     base::Bind(&NetLogSpdySendSettingsCallback, &settings));
   // Create the SETTINGS frame and send it.
   DCHECK(buffered_spdy_framer_.get());
@@ -2754,7 +2756,7 @@ void SpdySession::HandleSetting(uint32_t id, uint32_t value) {
     case SETTINGS_INITIAL_WINDOW_SIZE: {
       if (value > static_cast<uint32_t>(std::numeric_limits<int32_t>::max())) {
         net_log().AddEvent(
-            NetLog::TYPE_HTTP2_SESSION_INITIAL_WINDOW_SIZE_OUT_OF_RANGE,
+            NetLogEventType::HTTP2_SESSION_INITIAL_WINDOW_SIZE_OUT_OF_RANGE,
             NetLog::IntCallback("initial_window_size", value));
         return;
       }
@@ -2765,7 +2767,7 @@ void SpdySession::HandleSetting(uint32_t id, uint32_t value) {
       stream_initial_send_window_size_ = static_cast<int32_t>(value);
       UpdateStreamsSendWindowSize(delta_window_size);
       net_log().AddEvent(
-          NetLog::TYPE_HTTP2_SESSION_UPDATE_STREAMS_SEND_WINDOW_SIZE,
+          NetLogEventType::HTTP2_SESSION_UPDATE_STREAMS_SEND_WINDOW_SIZE,
           NetLog::IntCallback("delta_window_size", delta_window_size));
       break;
     }
@@ -2808,7 +2810,7 @@ void SpdySession::SendWindowUpdateFrame(SpdyStreamId stream_id,
     CHECK_EQ(stream_id, kSessionFlowControlStreamId);
   }
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_SENT_WINDOW_UPDATE_FRAME,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SENT_WINDOW_UPDATE_FRAME,
                     base::Bind(&NetLogSpdyWindowUpdateFrameCallback, stream_id,
                                delta_window_size));
 
@@ -2826,7 +2828,7 @@ void SpdySession::WritePingFrame(SpdyPingId unique_id, bool is_ack) {
 
   if (net_log().IsCapturing()) {
     net_log().AddEvent(
-        NetLog::TYPE_HTTP2_SESSION_PING,
+        NetLogEventType::HTTP2_SESSION_PING,
         base::Bind(&NetLogSpdyPingCallback, unique_id, is_ack, "sent"));
   }
   if (!is_ack) {
@@ -3017,7 +3019,7 @@ void SpdySession::IncreaseSendWindowSize(int delta_window_size) {
 
   session_send_window_size_ += delta_window_size;
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_UPDATE_SEND_WINDOW,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_UPDATE_SEND_WINDOW,
                     base::Bind(&NetLogSpdySessionWindowUpdateCallback,
                                delta_window_size, session_send_window_size_));
 
@@ -3037,7 +3039,7 @@ void SpdySession::DecreaseSendWindowSize(int32_t delta_window_size) {
 
   session_send_window_size_ -= delta_window_size;
 
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_UPDATE_SEND_WINDOW,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_UPDATE_SEND_WINDOW,
                     base::Bind(&NetLogSpdySessionWindowUpdateCallback,
                                -delta_window_size, session_send_window_size_));
 }
@@ -3063,7 +3065,7 @@ void SpdySession::IncreaseRecvWindowSize(int32_t delta_window_size) {
             std::numeric_limits<int32_t>::max() - session_recv_window_size_);
 
   session_recv_window_size_ += delta_window_size;
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_STREAM_UPDATE_RECV_WINDOW,
+  net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_UPDATE_RECV_WINDOW,
                     base::Bind(&NetLogSpdySessionWindowUpdateCallback,
                                delta_window_size, session_recv_window_size_));
 
@@ -3096,7 +3098,7 @@ void SpdySession::DecreaseRecvWindowSize(int32_t delta_window_size) {
   }
 
   session_recv_window_size_ -= delta_window_size;
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_SESSION_UPDATE_RECV_WINDOW,
+  net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_UPDATE_RECV_WINDOW,
                     base::Bind(&NetLogSpdySessionWindowUpdateCallback,
                                -delta_window_size, session_recv_window_size_));
 }

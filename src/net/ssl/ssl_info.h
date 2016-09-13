@@ -5,6 +5,8 @@
 #ifndef NET_SSL_SSL_INFO_H_
 #define NET_SSL_SSL_INFO_H_
 
+#include <stdint.h>
+
 #include <vector>
 
 #include "base/memory/ref_counted.h"
@@ -49,6 +51,10 @@ class NET_EXPORT SSLInfo {
 
   bool is_valid() const { return cert.get() != NULL; }
 
+  // Returns the ID of the (EC)DH group used by the key exchange or zero if
+  // unknown (older cache entries may not store the value) or not applicable.
+  uint16_t GetKeyExchangeGroup() const;
+
   // Adds the specified |error| to the cert status.
   void SetCertError(int error);
 
@@ -84,6 +90,9 @@ class NET_EXPORT SSLInfo {
   // The meaning depends on the cipher used, see BoringSSL's |SSL_SESSION|'s
   // key_exchange_info for more information.
   // A zero indicates that the value is unknown.
+  //
+  // This field is deprecated. Use GetKeyExchangeGroup instead. See
+  // https://crbug.com/639421.
   int key_exchange_info;
 
   // Information about the SSL connection itself. See

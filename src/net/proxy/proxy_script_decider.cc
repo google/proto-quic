@@ -16,6 +16,8 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/proxy/dhcp_proxy_script_fetcher.h"
 #include "net/proxy/dhcp_proxy_script_fetcher_factory.h"
 #include "net/proxy/proxy_script_fetcher.h"
@@ -86,7 +88,8 @@ ProxyScriptDecider::ProxyScriptDecider(
       current_pac_source_index_(0u),
       pac_mandatory_(false),
       next_state_(STATE_NONE),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_PROXY_SCRIPT_DECIDER)),
+      net_log_(
+          BoundNetLog::Make(net_log, NetLogSourceType::PROXY_SCRIPT_DECIDER)),
       fetch_pac_bytes_(false),
       quick_check_enabled_(true),
       host_resolver_(nullptr) {
@@ -109,7 +112,7 @@ int ProxyScriptDecider::Start(
   DCHECK(!callback.is_null());
   DCHECK(config.HasAutomaticSettings());
 
-  net_log_.BeginEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER);
+  net_log_.BeginEvent(NetLogEventType::PROXY_SCRIPT_DECIDER);
 
   fetch_pac_bytes_ = fetch_pac_bytes;
 
@@ -232,15 +235,15 @@ int ProxyScriptDecider::DoWait() {
   // Otherwise wait the specified amount of time.
   wait_timer_.Start(FROM_HERE, wait_delay_, this,
                     &ProxyScriptDecider::OnWaitTimerFired);
-  net_log_.BeginEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER_WAIT);
+  net_log_.BeginEvent(NetLogEventType::PROXY_SCRIPT_DECIDER_WAIT);
   return ERR_IO_PENDING;
 }
 
 int ProxyScriptDecider::DoWaitComplete(int result) {
   DCHECK_EQ(OK, result);
   if (wait_delay_.ToInternalValue() != 0) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_PROXY_SCRIPT_DECIDER_WAIT,
-                                      result);
+    net_log_.EndEventWithNetErrorCode(
+        NetLogEventType::PROXY_SCRIPT_DECIDER_WAIT, result);
   }
   if (quick_check_enabled_ && current_pac_source().type == PacSource::WPAD_DNS)
     next_state_ = STATE_QUICK_CHECK;
@@ -301,14 +304,14 @@ int ProxyScriptDecider::DoFetchPacScript() {
   GURL effective_pac_url;
   DetermineURL(pac_source, &effective_pac_url);
 
-  net_log_.BeginEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER_FETCH_PAC_SCRIPT,
-                      base::Bind(&PacSource::NetLogCallback,
-                                 base::Unretained(&pac_source),
-                                 &effective_pac_url));
+  net_log_.BeginEvent(
+      NetLogEventType::PROXY_SCRIPT_DECIDER_FETCH_PAC_SCRIPT,
+      base::Bind(&PacSource::NetLogCallback, base::Unretained(&pac_source),
+                 &effective_pac_url));
 
   if (pac_source.type == PacSource::WPAD_DHCP) {
     if (!dhcp_proxy_script_fetcher_) {
-      net_log_.AddEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER_HAS_NO_FETCHER);
+      net_log_.AddEvent(NetLogEventType::PROXY_SCRIPT_DECIDER_HAS_NO_FETCHER);
       return ERR_UNEXPECTED;
     }
 
@@ -318,7 +321,7 @@ int ProxyScriptDecider::DoFetchPacScript() {
   }
 
   if (!proxy_script_fetcher_) {
-    net_log_.AddEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER_HAS_NO_FETCHER);
+    net_log_.AddEvent(NetLogEventType::PROXY_SCRIPT_DECIDER_HAS_NO_FETCHER);
     return ERR_UNEXPECTED;
   }
 
@@ -331,7 +334,7 @@ int ProxyScriptDecider::DoFetchPacScriptComplete(int result) {
   DCHECK(fetch_pac_bytes_);
 
   net_log_.EndEventWithNetErrorCode(
-      NetLog::TYPE_PROXY_SCRIPT_DECIDER_FETCH_PAC_SCRIPT, result);
+      NetLogEventType::PROXY_SCRIPT_DECIDER_FETCH_PAC_SCRIPT, result);
   if (result != OK)
     return TryToFallbackPacSource(result);
 
@@ -412,7 +415,7 @@ int ProxyScriptDecider::TryToFallbackPacSource(int error) {
   ++current_pac_source_index_;
 
   net_log_.AddEvent(
-      NetLog::TYPE_PROXY_SCRIPT_DECIDER_FALLING_BACK_TO_NEXT_PAC_SOURCE);
+      NetLogEventType::PROXY_SCRIPT_DECIDER_FALLING_BACK_TO_NEXT_PAC_SOURCE);
   if (quick_check_enabled_ && current_pac_source().type == PacSource::WPAD_DNS)
     next_state_ = STATE_QUICK_CHECK;
   else
@@ -452,13 +455,13 @@ void ProxyScriptDecider::OnWaitTimerFired() {
 }
 
 void ProxyScriptDecider::DidComplete() {
-  net_log_.EndEvent(NetLog::TYPE_PROXY_SCRIPT_DECIDER);
+  net_log_.EndEvent(NetLogEventType::PROXY_SCRIPT_DECIDER);
 }
 
 void ProxyScriptDecider::Cancel() {
   DCHECK_NE(STATE_NONE, next_state_);
 
-  net_log_.AddEvent(NetLog::TYPE_CANCELLED);
+  net_log_.AddEvent(NetLogEventType::CANCELLED);
 
   switch (next_state_) {
     case STATE_WAIT_COMPLETE:

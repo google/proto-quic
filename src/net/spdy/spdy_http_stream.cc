@@ -22,6 +22,7 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_info.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_protocol.h"
@@ -280,7 +281,7 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
   CreateSpdyHeadersFromHttpRequest(*request_info_, request_headers, direct_,
                                    &headers);
   stream_->net_log().AddEvent(
-      NetLog::TYPE_HTTP_TRANSACTION_HTTP2_SEND_REQUEST_HEADERS,
+      NetLogEventType::HTTP_TRANSACTION_HTTP2_SEND_REQUEST_HEADERS,
       base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
   result = stream_->SendRequestHeaders(
       std::move(headers),

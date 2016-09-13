@@ -564,50 +564,7 @@ TEST_P(QuicSentPacketManagerTest, AckOriginalTransmission) {
   {
     QuicAckFrame ack_frame = InitAckFrame(4);
     NackPackets(2, 3, &ack_frame);
-    EXPECT_CALL(*loss_algorithm, DetectLosses(_, _, _, _, _));
-    EXPECT_CALL(*loss_algorithm, SpuriousRetransmitDetected(_, _, _, 5));
-    manager_.OnIncomingAck(ack_frame, clock_.Now());
   }
-}
-
-TEST_P(QuicSentPacketManagerTest, AckPreviousTransmissionThenTruncatedAck) {
-  FLAGS_quic_loss_recovery_use_largest_acked = false;
-  if (!GetParam().missing) {
-    return;
-  }
-  SendDataPacket(1);
-  RetransmitAndSendPacket(1, 2);
-  RetransmitAndSendPacket(2, 3);
-  RetransmitAndSendPacket(3, 4);
-  SendDataPacket(5);
-  SendDataPacket(6);
-  SendDataPacket(7);
-  SendDataPacket(8);
-  SendDataPacket(9);
-
-  // Ack previous transmission
-  {
-    QuicAckFrame ack_frame = InitAckFrame(2);
-    NackPackets(1, 2, &ack_frame);
-    ExpectAck(2);
-    manager_.OnIncomingAck(ack_frame, clock_.Now());
-    EXPECT_TRUE(QuicSentPacketManagerPeer::IsUnacked(&manager_, 4));
-  }
-
-  // Truncated ack with 4 NACKs
-  {
-    QuicAckFrame ack_frame = InitAckFrame(6);
-    NackPackets(3, 7, &ack_frame);
-    ack_frame.is_truncated = true;
-    ExpectAckAndLoss(true, 1, 3);
-    manager_.OnIncomingAck(ack_frame, clock_.Now());
-  }
-
-  // High water mark will be raised.
-  QuicPacketNumber unacked[] = {4, 5, 6, 7, 8, 9};
-  VerifyUnackedPackets(unacked, arraysize(unacked));
-  QuicPacketNumber retransmittable[] = {5, 6, 7, 8, 9};
-  VerifyRetransmittablePackets(retransmittable, arraysize(retransmittable));
 }
 
 TEST_P(QuicSentPacketManagerTest, GetLeastUnacked) {
@@ -1546,7 +1503,6 @@ TEST_P(QuicSentPacketManagerTest, NegotiateNewRTOFromOptionsAtClient) {
 }
 
 TEST_P(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
-  FLAGS_quic_loss_recovery_use_largest_acked = true;
   EXPECT_FALSE(QuicSentPacketManagerPeer::GetUndoRetransmits(&manager_));
   QuicConfig config;
   QuicTagVector options;
@@ -1598,7 +1554,6 @@ TEST_P(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
 }
 
 TEST_P(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtClient) {
-  FLAGS_quic_loss_recovery_use_largest_acked = true;
   EXPECT_FALSE(QuicSentPacketManagerPeer::GetUndoRetransmits(&manager_));
   QuicConfig client_config;
   QuicTagVector options;
@@ -1652,7 +1607,7 @@ TEST_P(QuicSentPacketManagerTest, ConnectionMigrationUnspecifiedChange) {
   EXPECT_EQ(2u, manager_.GetConsecutiveTlpCount());
 
   EXPECT_CALL(*send_algorithm_, OnConnectionMigration());
-  manager_.OnConnectionMigration(kDefaultPathId, UNSPECIFIED_CHANGE);
+  manager_.OnConnectionMigration(kDefaultPathId, IPV4_TO_IPV4_CHANGE);
 
   EXPECT_EQ(default_init_rtt, rtt_stats->initial_rtt_us());
   EXPECT_EQ(0u, manager_.GetConsecutiveRtoCount());

@@ -35,7 +35,7 @@ class QuicTestServer : public QuicServer {
         const QuicConfig& config,
         QuicConnection* connection,
         QuicServerSessionBase::Visitor* visitor,
-        QuicServerSessionBase::Helper* helper,
+        QuicCryptoServerStream::Helper* helper,
         const QuicCryptoServerConfig* crypto_config,
         QuicCompressedCertsCache* compressed_certs_cache) = 0;
   };
@@ -91,7 +91,7 @@ class ImmediateGoAwaySession : public QuicSimpleServerSession {
   ImmediateGoAwaySession(const QuicConfig& config,
                          QuicConnection* connection,
                          QuicServerSessionBase::Visitor* visitor,
-                         QuicServerSessionBase::Helper* helper,
+                         QuicCryptoServerStream::Helper* helper,
                          const QuicCryptoServerConfig* crypto_config,
                          QuicCompressedCertsCache* compressed_certs_cache);
   // Override to send GoAway.

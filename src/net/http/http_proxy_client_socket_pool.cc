@@ -15,6 +15,7 @@
 #include "net/base/proxy_delegate.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_proxy_client_socket_wrapper.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"
@@ -88,7 +89,7 @@ HttpProxyConnectJob::HttpProxyConnectJob(
                  priority,
                  respect_limits,
                  delegate,
-                 BoundNetLog::Make(net_log, NetLog::SOURCE_CONNECT_JOB)),
+                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       client_socket_(new HttpProxyClientSocketWrapper(
           group_name,
           priority,

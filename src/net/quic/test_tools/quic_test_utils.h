@@ -227,12 +227,16 @@ class QuicFlagSaver {
 // for pseudo-randomly dropping packets in tests.  It works by computing
 // the sha1 hash of the current seed, and using the first 64 bits as
 // the next random number, and the next seed.
-class SimpleRandom {
+class SimpleRandom : public QuicRandom {
  public:
   SimpleRandom() : seed_(0) {}
+  ~SimpleRandom() override {}
 
   // Returns a random number in the range [0, kuint64max].
-  uint64_t RandUint64();
+  uint64_t RandUint64() override;
+
+  void RandBytes(void* data, size_t len) override;
+  void Reseed(const void* additional_entropy, size_t len) override;
 
   void set_seed(uint64_t seed) { seed_ = seed; }
 
@@ -659,11 +663,11 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
 
   QuicCryptoServerStream* GetCryptoStream() override;
 
-  MockQuicServerSessionHelper* helper() { return &helper_; }
+  MockQuicCryptoServerStreamHelper* helper() { return &helper_; }
 
  private:
   MockQuicServerSessionVisitor visitor_;
-  MockQuicServerSessionHelper helper_;
+  MockQuicCryptoServerStreamHelper helper_;
 
   DISALLOW_COPY_AND_ASSIGN(TestQuicSpdyServerSession);
 };

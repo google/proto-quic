@@ -62,8 +62,10 @@ bool WaitableEvent::TimedWait(const TimeDelta& max_time) {
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedEventWaitActivity event_activity(this);
 
-  base::ThreadRestrictions::AssertWaitAllowed();
   DCHECK_GE(max_time, TimeDelta());
+  if (!max_time.is_zero())
+    base::ThreadRestrictions::AssertWaitAllowed();
+
   // Truncate the timeout to milliseconds. The API specifies that this method
   // can return in less than |max_time| (when returning false), as the argument
   // is the maximum time that a caller is willing to wait.

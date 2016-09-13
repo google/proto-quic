@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/logging.h"
@@ -172,9 +173,17 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   WaitableEvent workers_created_;
 #endif
 
-  // TaskScheduler.DetachDuration.[worker pool name] histogram. Is never
-  // deleted.
+  // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally
+  // leaked.
   HistogramBase* const detach_duration_histogram_;
+
+  // TaskScheduler.TaskLatency.[worker pool name].[task priority] histograms.
+  // Indexed by task priority. Histograms are allocated on demand to reduce
+  // memory usage (some task priorities might never run in this
+  // SchedulerThreadPoolImpl). Intentionally leaked.
+  subtle::AtomicWord
+      task_latency_histograms_[static_cast<int>(TaskPriority::HIGHEST) + 1] =
+          {};
 
   TaskTracker* const task_tracker_;
   DelayedTaskManager* const delayed_task_manager_;

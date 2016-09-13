@@ -47,10 +47,19 @@ void DefaultWinHeapFreeImpl(const AllocatorDispatch*, void* address) {
   base::allocator::WinHeapFree(address);
 }
 
+size_t DefaultWinHeapGetSizeEstimateImpl(const AllocatorDispatch*,
+                                         void* address) {
+  return base::allocator::WinHeapGetSizeEstimate(address);
+}
+
 }  // namespace
 
 const AllocatorDispatch AllocatorDispatch::default_dispatch = {
-    &DefaultWinHeapMallocImpl,   &DefaultWinHeapCallocImpl,
-    &DefaultWinHeapMemalignImpl, &DefaultWinHeapReallocImpl,
-    &DefaultWinHeapFreeImpl,     nullptr, /* next */
+    &DefaultWinHeapMallocImpl,
+    &DefaultWinHeapCallocImpl,
+    &DefaultWinHeapMemalignImpl,
+    &DefaultWinHeapReallocImpl,
+    &DefaultWinHeapFreeImpl,
+    &DefaultWinHeapGetSizeEstimateImpl,
+    nullptr, /* next */
 };

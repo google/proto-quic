@@ -9,6 +9,7 @@
 #include "base/values.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_event_type.h"
 
 namespace net {
 
@@ -57,7 +58,7 @@ int UploadDataStream::Init(const CompletionCallback& callback,
   DCHECK(callback_.is_null());
   DCHECK(!callback.is_null() || IsInMemory());
   net_log_ = net_log;
-  net_log_.BeginEvent(NetLog::TYPE_UPLOAD_DATA_STREAM_INIT);
+  net_log_.BeginEvent(NetLogEventType::UPLOAD_DATA_STREAM_INIT);
 
   int result = InitInternal(net_log_);
   if (result == ERR_IO_PENDING) {
@@ -77,7 +78,7 @@ int UploadDataStream::Read(IOBuffer* buf,
   DCHECK(initialized_successfully_);
   DCHECK_GT(buf_len, 0);
 
-  net_log_.BeginEvent(NetLog::TYPE_UPLOAD_DATA_STREAM_READ,
+  net_log_.BeginEvent(NetLogEventType::UPLOAD_DATA_STREAM_READ,
                       base::Bind(&NetLogReadInfoCallback, current_position_));
 
   int result = 0;
@@ -107,12 +108,12 @@ void UploadDataStream::Reset() {
     if (!initialized_successfully_) {
       // If initialization has not yet succeeded, this call is aborting
       // initialization.
-      net_log_.EndEventWithNetErrorCode(NetLog::TYPE_UPLOAD_DATA_STREAM_INIT,
-                                        ERR_ABORTED);
+      net_log_.EndEventWithNetErrorCode(
+          NetLogEventType::UPLOAD_DATA_STREAM_INIT, ERR_ABORTED);
     } else {
       // Otherwise, a read is being aborted.
-      net_log_.EndEventWithNetErrorCode(NetLog::TYPE_UPLOAD_DATA_STREAM_READ,
-                                        ERR_ABORTED);
+      net_log_.EndEventWithNetErrorCode(
+          NetLogEventType::UPLOAD_DATA_STREAM_READ, ERR_ABORTED);
     }
   }
 
@@ -159,7 +160,7 @@ void UploadDataStream::OnInitCompleted(int result) {
   }
 
   net_log_.EndEvent(
-      NetLog::TYPE_UPLOAD_DATA_STREAM_INIT,
+      NetLogEventType::UPLOAD_DATA_STREAM_INIT,
       base::Bind(&NetLogInitEndInfoCallback, result, total_size_, is_chunked_));
 
   if (!callback_.is_null())
@@ -180,7 +181,7 @@ void UploadDataStream::OnReadCompleted(int result) {
     }
   }
 
-  net_log_.EndEventWithNetErrorCode(NetLog::TYPE_UPLOAD_DATA_STREAM_READ,
+  net_log_.EndEventWithNetErrorCode(NetLogEventType::UPLOAD_DATA_STREAM_READ,
                                     result);
 
   if (!callback_.is_null())

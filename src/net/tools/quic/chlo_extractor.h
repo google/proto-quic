@@ -31,7 +31,7 @@ class ChloExtractor {
                       const QuicVersionVector& versions,
                       Delegate* delegate);
 
-  ChloExtractor(ChloExtractor&) = delete;
+  ChloExtractor(const ChloExtractor&) = delete;
   ChloExtractor operator=(const ChloExtractor&) = delete;
 };
 

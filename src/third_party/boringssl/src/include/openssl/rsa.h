@@ -636,6 +636,17 @@ struct rsa_st {
 
 #if defined(__cplusplus)
 }  /* extern C */
+
+extern "C++" {
+
+namespace bssl {
+
+BORINGSSL_MAKE_DELETER(RSA, RSA_free)
+
+}  // namespace bssl
+
+}  /* extern C++ */
+
 #endif
 
 #define RSA_R_BAD_ENCODING 100

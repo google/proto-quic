@@ -1653,7 +1653,7 @@ OPENSSL_EXPORT int SSL_SESSION_set1_id_context(SSL_SESSION *session,
 /* SSL_SESS_CACHE_SERVER enables session caching for a server. */
 #define SSL_SESS_CACHE_SERVER 0x0002
 
-/* SSL_SESS_CACHE_SERVER enables session caching for both client and server. */
+/* SSL_SESS_CACHE_BOTH enables session caching for both client and server. */
 #define SSL_SESS_CACHE_BOTH (SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER)
 
 /* SSL_SESS_CACHE_NO_AUTO_CLEAR disables automatically calling
@@ -4646,6 +4646,19 @@ OPENSSL_EXPORT int SSL_set_ssl_method(SSL *s, const SSL_METHOD *method);
 
 #if defined(__cplusplus)
 } /* extern C */
+
+extern "C++" {
+
+namespace bssl {
+
+BORINGSSL_MAKE_DELETER(SSL, SSL_free)
+BORINGSSL_MAKE_DELETER(SSL_CTX, SSL_CTX_free)
+BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
+
+}  // namespace bssl
+
+}  /* extern C++ */
+
 #endif
 
 #define SSL_R_APP_DATA_IN_HANDSHAKE 100

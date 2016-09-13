@@ -194,6 +194,17 @@ OPENSSL_EXPORT int i2d_ECDSA_SIG(const ECDSA_SIG *sig, uint8_t **outp);
 
 #if defined(__cplusplus)
 }  /* extern C */
+
+extern "C++" {
+
+namespace bssl {
+
+BORINGSSL_MAKE_DELETER(ECDSA_SIG, ECDSA_SIG_free)
+
+}  // namespace bssl
+
+}  /* extern C++ */
+
 #endif
 
 #define ECDSA_R_BAD_SIGNATURE 100

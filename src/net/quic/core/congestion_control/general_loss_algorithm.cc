@@ -60,10 +60,6 @@ void GeneralLossAlgorithm::DetectLosses(
     const RttStats& rtt_stats,
     QuicPacketNumber largest_newly_acked,
     SendAlgorithmInterface::CongestionVector* packets_lost) {
-  QuicPacketNumber largest_observed = unacked_packets.largest_observed();
-  if (FLAGS_quic_loss_recovery_use_largest_acked) {
-    largest_observed = largest_newly_acked;
-  }
   loss_detection_timeout_ = QuicTime::Zero();
   QuicTime::Delta max_rtt =
       std::max(rtt_stats.previous_srtt(), rtt_stats.latest_rtt());
@@ -72,7 +68,7 @@ void GeneralLossAlgorithm::DetectLosses(
                max_rtt + (max_rtt >> reordering_shift_));
   QuicPacketNumber packet_number = unacked_packets.GetLeastUnacked();
   for (QuicUnackedPacketMap::const_iterator it = unacked_packets.begin();
-       it != unacked_packets.end() && packet_number <= largest_observed;
+       it != unacked_packets.end() && packet_number <= largest_newly_acked;
        ++it, ++packet_number) {
     if (!it->in_flight) {
       continue;
@@ -80,7 +76,7 @@ void GeneralLossAlgorithm::DetectLosses(
 
     if (loss_type_ == kNack) {
       // FACK based loss detection.
-      if (largest_observed - packet_number >=
+      if (largest_newly_acked - packet_number >=
           kNumberOfNacksBeforeRetransmission) {
         packets_lost->push_back(std::make_pair(packet_number, it->bytes_sent));
         continue;
@@ -91,7 +87,7 @@ void GeneralLossAlgorithm::DetectLosses(
     // there are retransmittable packets in flight.
     // This also implements a timer-protected variant of FACK.
     if ((!it->retransmittable_frames.empty() &&
-         unacked_packets.largest_sent_packet() == largest_observed) ||
+         unacked_packets.largest_sent_packet() == largest_newly_acked) ||
         (loss_type_ == kTime || loss_type_ == kAdaptiveTime)) {
       QuicTime when_lost = it->sent_time + loss_delay;
       if (time < when_lost) {
@@ -104,7 +100,7 @@ void GeneralLossAlgorithm::DetectLosses(
 
     // NACK-based loss detection allows for a max reordering window of 1 RTT.
     if (it->sent_time + rtt_stats.smoothed_rtt() <
-        unacked_packets.GetTransmissionInfo(largest_observed).sent_time) {
+        unacked_packets.GetTransmissionInfo(largest_newly_acked).sent_time) {
       packets_lost->push_back(std::make_pair(packet_number, it->bytes_sent));
       continue;
     }

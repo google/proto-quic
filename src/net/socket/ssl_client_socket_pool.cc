@@ -18,6 +18,7 @@
 #include "net/base/net_errors.h"
 #include "net/http/http_proxy_client_socket.h"
 #include "net/http/http_proxy_client_socket_pool.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socks_client_socket_pool.h"
@@ -109,7 +110,7 @@ SSLConnectJob::SSLConnectJob(const std::string& group_name,
                  priority,
                  respect_limits,
                  delegate,
-                 BoundNetLog::Make(net_log, NetLog::SOURCE_CONNECT_JOB)),
+                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       transport_pool_(transport_pool),
       socks_pool_(socks_pool),

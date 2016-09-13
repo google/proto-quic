@@ -115,18 +115,16 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // to further process the SerializedPacket.
   void Flush();
 
-  // Optimized method to create a QuicStreamFrame, serialize it, and encrypt it
-  // into |encrypted_buffer|. Adds the QuicStreamFrame to the returned
-  // SerializedPacket.  Sets |num_bytes_consumed| to the number of bytes
-  // consumed to create the QuicStreamFrame.
+  // Optimized method to create a QuicStreamFrame and serialize it. Adds the
+  // QuicStreamFrame to the returned SerializedPacket.  Sets
+  // |num_bytes_consumed| to the number of bytes consumed to create the
+  // QuicStreamFrame.
   void CreateAndSerializeStreamFrame(QuicStreamId id,
                                      const QuicIOVector& iov,
                                      QuicStreamOffset iov_offset,
                                      QuicStreamOffset stream_offset,
                                      bool fin,
                                      QuicAckListenerInterface* listener,
-                                     char* encrypted_buffer,
-                                     size_t encrypted_buffer_len,
                                      size_t* num_bytes_consumed);
 
   // Returns true if there are frames pending to be serialized.

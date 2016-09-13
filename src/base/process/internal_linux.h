@@ -83,6 +83,9 @@ size_t ReadProcStatsAndGetFieldAsSizeT(pid_t pid,
 // Returns the time that the OS started. Clock ticks are relative to this.
 Time GetBootTime();
 
+// Returns the amount of time spent in user space since boot across all CPUs.
+TimeDelta GetUserCpuTimeSinceBoot();
+
 // Converts Linux clock ticks to a wall time delta.
 TimeDelta ClockTicksToTimeDelta(int clock_ticks);
 

@@ -17,7 +17,7 @@ struct WriteResult;
 
 
 // Default packet writer which wraps QuicSocketUtils WritePacket.
-class QuicDefaultPacketWriter : public QuicPacketWriter {
+class NET_EXPORT_PRIVATE QuicDefaultPacketWriter : public QuicPacketWriter {
  public:
   explicit QuicDefaultPacketWriter(int fd);
   ~QuicDefaultPacketWriter() override;

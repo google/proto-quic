@@ -31,6 +31,8 @@
 #include "net/cert/ct_verifier.h"
 #include "net/dns/host_resolver.h"
 #include "net/http/bidirectional_stream_impl.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/quic/chromium/bidirectional_stream_quic_impl.h"
 #include "net/quic/chromium/crypto/channel_id_chromium.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
@@ -120,15 +122,16 @@ std::unique_ptr<base::Value> NetLogQuicConnectionMigrationSuccessCallback(
 class ScopedConnectionMigrationEventLog {
  public:
   ScopedConnectionMigrationEventLog(NetLog* net_log, std::string trigger)
-      : net_log_(BoundNetLog::Make(net_log,
-                                   NetLog::SOURCE_QUIC_CONNECTION_MIGRATION)) {
+      : net_log_(
+            BoundNetLog::Make(net_log,
+                              NetLogSourceType::QUIC_CONNECTION_MIGRATION)) {
     net_log_.BeginEvent(
-        NetLog::TYPE_QUIC_CONNECTION_MIGRATION_TRIGGERED,
+        NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED,
         base::Bind(&NetLogQuicConnectionMigrationTriggerCallback, trigger));
   }
 
   ~ScopedConnectionMigrationEventLog() {
-    net_log_.EndEvent(NetLog::TYPE_QUIC_CONNECTION_MIGRATION_TRIGGERED);
+    net_log_.EndEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED);
   }
 
   const BoundNetLog& net_log() { return net_log_; }
@@ -148,7 +151,7 @@ void HistogramAndLogMigrationFailure(const BoundNetLog& net_log,
                                      std::string reason) {
   UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.ConnectionMigration", status,
                             MIGRATION_STATUS_MAX);
-  net_log.AddEvent(NetLog::TYPE_QUIC_CONNECTION_MIGRATION_FAILURE,
+  net_log.AddEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_FAILURE,
                    base::Bind(&NetLogQuicConnectionMigrationFailureCallback,
                               connection_id, reason));
 }
@@ -349,6 +352,7 @@ class QuicStreamFactory::Job {
   QuicChromiumClientSession* session_;
   CompletionCallback callback_;
   AddressList address_list_;
+  base::TimeTicks dns_resolution_start_time_;
   base::TimeTicks dns_resolution_end_time_;
   base::WeakPtrFactory<Job> weak_factory_;
   DISALLOW_COPY_AND_ASSIGN(Job);
@@ -475,6 +479,7 @@ void QuicStreamFactory::Job::CancelWaitForDataReadyCallback() {
 }
 
 int QuicStreamFactory::Job::DoResolveHost() {
+  dns_resolution_start_time_ = base::TimeTicks::Now();
   // Start loading the data now, and wait for it after we resolve the host.
   if (server_info_)
     server_info_->Start();
@@ -488,6 +493,7 @@ int QuicStreamFactory::Job::DoResolveHost() {
 }
 
 int QuicStreamFactory::Job::DoResolveHostComplete(int rv) {
+  dns_resolution_end_time_ = base::TimeTicks::Now();
   if (rv != OK)
     return rv;
 
@@ -566,9 +572,10 @@ int QuicStreamFactory::Job::DoLoadServerInfoComplete(int rv) {
 int QuicStreamFactory::Job::DoConnect() {
   io_state_ = STATE_CONNECT_COMPLETE;
 
-  int rv = factory_->CreateSession(
-      key_, cert_verify_flags_, std::move(server_info_), address_list_,
-      dns_resolution_end_time_, net_log_, &session_);
+  int rv =
+      factory_->CreateSession(key_, cert_verify_flags_, std::move(server_info_),
+                              address_list_, dns_resolution_start_time_,
+                              dns_resolution_end_time_, net_log_, &session_);
   if (rv != OK) {
     DCHECK(rv != ERR_IO_PENDING);
     DCHECK(!session_);
@@ -690,14 +697,14 @@ base::TimeDelta QuicStreamRequest::GetTimeDelayForWaitingJob() const {
 std::unique_ptr<QuicHttpStream> QuicStreamRequest::CreateStream() {
   if (!session_)
     return nullptr;
-  return base::WrapUnique(new QuicHttpStream(session_));
+  return base::MakeUnique<QuicHttpStream>(session_);
 }
 
 std::unique_ptr<BidirectionalStreamImpl>
 QuicStreamRequest::CreateBidirectionalStreamImpl() {
   if (!session_)
     return nullptr;
-  return base::WrapUnique(new BidirectionalStreamQuicImpl(session_));
+  return base::MakeUnique<BidirectionalStreamQuicImpl>(session_);
 }
 
 QuicStreamFactory::QuicStreamFactory(
@@ -1637,7 +1644,7 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
                                    session->net_log()));
   std::unique_ptr<QuicChromiumPacketWriter> new_writer(
       new QuicChromiumPacketWriter(socket.get()));
-  new_writer->Initialize(session, session->connection());
+  new_writer->set_delegate(session);
 
   if (!session->MigrateToSocket(std::move(socket), std::move(new_reader),
                                 std::move(new_writer), packet)) {
@@ -1657,7 +1664,7 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
   }
   HistogramMigrationStatus(MIGRATION_STATUS_SUCCESS);
   bound_net_log.AddEvent(
-      NetLog::TYPE_QUIC_CONNECTION_MIGRATION_SUCCESS,
+      NetLogEventType::QUIC_CONNECTION_MIGRATION_SUCCESS,
       base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
                  session->connection_id()));
 }
@@ -1763,6 +1770,7 @@ int QuicStreamFactory::CreateSession(
     int cert_verify_flags,
     std::unique_ptr<QuicServerInfo> server_info,
     const AddressList& address_list,
+    base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
     const BoundNetLog& net_log,
     QuicChromiumClientSession** session) {
@@ -1855,12 +1863,12 @@ int QuicStreamFactory::CreateSession(
       clock_.get(), transport_security_state_, std::move(server_info),
       server_id, yield_after_packets_, yield_after_duration_, cert_verify_flags,
       config, &crypto_config_, network_connection_.GetDescription(),
-      dns_resolution_end_time, &push_promise_index_,
+      dns_resolution_start_time, dns_resolution_end_time, &push_promise_index_,
       base::ThreadTaskRunnerHandle::Get().get(),
       std::move(socket_performance_watcher), net_log.net_log());
 
   all_sessions_[*session] = key;  // owning pointer
-  writer->Initialize(*session, connection);
+  writer->set_delegate(*session);
 
   (*session)->Initialize();
   bool closed_during_initialize = !base::ContainsKey(all_sessions_, *session) ||

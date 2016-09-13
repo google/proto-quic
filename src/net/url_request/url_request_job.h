@@ -95,10 +95,10 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   virtual void Kill();
 
   // Called to read post-filtered data from this Job, returning the number of
-  // bytes read, 0 when there is no more data, or -1 if there was an error.
-  // This is just the backend for URLRequest::Read, see that function for
+  // bytes read, 0 when there is no more data, or net error if there was an
+  // error. This is just the backend for URLRequest::Read, see that function for
   // more info.
-  bool Read(IOBuffer* buf, int buf_size, int* bytes_read);
+  int Read(IOBuffer* buf, int buf_size);
 
   // Stops further caching of this request, if any. For more info, see
   // URLRequest::StopCaching().

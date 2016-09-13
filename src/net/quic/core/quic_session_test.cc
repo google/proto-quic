@@ -12,6 +12,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "build/build_config.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_protocol.h"
@@ -117,6 +118,8 @@ class TestSession : public QuicSpdySession {
         crypto_stream_(this),
         writev_consumes_all_data_(false) {
     Initialize();
+    this->connection()->SetEncrypter(ENCRYPTION_FORWARD_SECURE,
+                                     new NullEncrypter());
   }
 
   ~TestSession() override { delete connection(); }
@@ -181,6 +184,9 @@ class TestSession : public QuicSpdySession {
 
   QuicConsumedData SendStreamData(ReliableQuicStream* stream) {
     struct iovec iov;
+    if (stream->id() != kCryptoStreamId) {
+      this->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
+    }
     return WritevData(stream, stream->id(), MakeIOVector("not empty", &iov), 0,
                       true, nullptr);
   }
@@ -243,9 +249,6 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
         "EFFlEYHsBQ98rXImL8ySDycdLEFvBPdtctPmWCfTxwmoSMLHU2SCVDhbqMWU5b0yr"
         "JBCScs_ejbKaqBDoB7ZGxTvqlrB__2ZmnHHjCr8RgMRtKNtIeuZAo ";
     connection_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
-    // TODO(ianswett): Fix QuicSessionTests so they don't attempt to write
-    // non-crypto stream data at ENCRYPTION_NONE.
-    FLAGS_quic_never_write_unencrypted_data = false;
   }
 
   void CheckClosedStreams() {

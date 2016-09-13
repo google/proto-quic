@@ -386,7 +386,6 @@
       'sources': [
         'source/config/<(OS)/Makefile',
         'source/config/<(OS)/config.h',
-        'source/config/<(OS)/libyasm-stdint.h',
       ],
     },
     {

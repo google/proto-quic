@@ -35,6 +35,11 @@ class ServiceThreadDelegate : public SchedulerWorker::Delegate {
     return nullptr;
   }
 
+  void DidRunTask(const Task* task, const TimeDelta& task_latency) override {
+    NOTREACHED()
+        << "GetWork() never returns a sequence so no task should ever run.";
+  }
+
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override {
     NOTREACHED() <<
         "GetWork() never returns a sequence so there's nothing to reenqueue.";

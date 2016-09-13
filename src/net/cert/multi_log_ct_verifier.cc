@@ -19,6 +19,7 @@
 #include "net/cert/sct_status_flags.h"
 #include "net/cert/x509_certificate.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 
 namespace net {
 
@@ -121,9 +122,8 @@ int MultiLogCTVerifier::Verify(
       base::Bind(&NetLogRawSignedCertificateTimestampCallback,
           &embedded_scts, &sct_list_from_ocsp, &sct_list_from_tls_extension);
 
-  net_log.AddEvent(
-      NetLog::TYPE_SIGNED_CERTIFICATE_TIMESTAMPS_RECEIVED,
-      net_log_callback);
+  net_log.AddEvent(NetLogEventType::SIGNED_CERTIFICATE_TIMESTAMPS_RECEIVED,
+                   net_log_callback);
 
   ct::LogEntry x509_entry;
   if (ct::GetX509LogEntry(cert->os_cert_handle(), &x509_entry)) {
@@ -139,9 +139,8 @@ int MultiLogCTVerifier::Verify(
   NetLog::ParametersCallback net_log_checked_callback =
       base::Bind(&NetLogSignedCertificateTimestampCallback, result);
 
-  net_log.AddEvent(
-      NetLog::TYPE_SIGNED_CERTIFICATE_TIMESTAMPS_CHECKED,
-      net_log_checked_callback);
+  net_log.AddEvent(NetLogEventType::SIGNED_CERTIFICATE_TIMESTAMPS_CHECKED,
+                   net_log_checked_callback);
 
   LogNumSCTsToUMA(*result);
 

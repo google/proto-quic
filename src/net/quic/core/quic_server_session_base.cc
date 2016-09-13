@@ -20,7 +20,7 @@ QuicServerSessionBase::QuicServerSessionBase(
     const QuicConfig& config,
     QuicConnection* connection,
     Visitor* visitor,
-    Helper* helper,
+    QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)
     : QuicSpdySession(connection, config),
@@ -196,18 +196,6 @@ void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {
 
   last_scup_time_ = now;
   last_scup_packet_number_ = connection()->packet_number_of_last_sent_packet();
-}
-
-QuicConnectionId QuicServerSessionBase::GenerateConnectionIdForReject(
-    QuicConnectionId connection_id) {
-  return helper_->GenerateConnectionIdForReject(connection_id);
-}
-
-bool QuicServerSessionBase::CanAcceptClientHello(
-    const CryptoHandshakeMessage& message,
-    string* error_details) {
-  return helper_->CanAcceptClientHello(message, connection()->self_address(),
-                                       error_details);
 }
 
 bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {

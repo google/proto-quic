@@ -148,8 +148,10 @@ class NET_EXPORT NetworkQualityEstimator
 
   ~NetworkQualityEstimator() override;
 
-  // Returns the effective type of the current connection. Virtualized for
-  // testing.
+  // Returns the last computed effective type of the current connection. The
+  // effective connection type is computed by the network quality estimator at
+  // regular intervals and at certain events (e.g., connection change).
+  // Virtualized for testing.
   virtual EffectiveConnectionType GetEffectiveConnectionType() const;
 
   // Returns the effective type of the current connection based on only the
@@ -232,20 +234,18 @@ class NET_EXPORT NetworkQualityEstimator
   // happens after the connection is established) to the time when the response
   // headers were received.
   // TODO(tbansal): Change it to return HTTP RTT as base::TimeDelta.
-  virtual bool GetHttpRTTEstimate(base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
+  virtual bool GetHttpRTT(base::TimeDelta* rtt) const WARN_UNUSED_RESULT;
 
   // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
   // the transport layer. |rtt| should not be null. Virtualized for testing.
   // TODO(tbansal): Change it to return transport RTT as base::TimeDelta.
-  virtual bool GetTransportRTTEstimate(base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
+  virtual bool GetTransportRTT(base::TimeDelta* rtt) const WARN_UNUSED_RESULT;
 
   // Returns true if downlink throughput is available and sets |kbps| to
   // estimated downlink throughput (in kilobits per second).
   // Virtualized for testing. |kbps| should not be null.
   // TODO(tbansal): Change it to return throughput as int32.
-  virtual bool GetDownlinkThroughputKbpsEstimate(int32_t* kbps) const;
+  virtual bool GetDownlinkThroughputKbps(int32_t* kbps) const;
 
   // Returns true if median RTT at the HTTP layer is available and sets |rtt|
   // to the median of RTT observations since |start_time|.
@@ -254,16 +254,15 @@ class NET_EXPORT NetworkQualityEstimator
   // the connection is established) to the time when the response headers were
   // received.
   // TODO(tbansal): Change it to return HTTP RTT as base::TimeDelta.
-  virtual bool GetRecentHttpRTTMedian(const base::TimeTicks& start_time,
-                                      base::TimeDelta* rtt) const
-      WARN_UNUSED_RESULT;
+  virtual bool GetRecentHttpRTT(const base::TimeTicks& start_time,
+                                base::TimeDelta* rtt) const WARN_UNUSED_RESULT;
 
   // Returns true if the median RTT at the transport layer is available and sets
   // |rtt| to the median of transport layer RTT observations since
   // |start_time|. |rtt| should not be null. Virtualized for testing.
   // TODO(tbansal): Change it to return transport RTT as base::TimeDelta.
-  virtual bool GetRecentTransportRTTMedian(const base::TimeTicks& start_time,
-                                           base::TimeDelta* rtt) const
+  virtual bool GetRecentTransportRTT(const base::TimeTicks& start_time,
+                                     base::TimeDelta* rtt) const
       WARN_UNUSED_RESULT;
 
   // Returns true if median downstream throughput is available and sets |kbps|
@@ -271,7 +270,7 @@ class NET_EXPORT NetworkQualityEstimator
   // observations since |start_time|. Virtualized for testing. |kbps|
   // should not be null. Virtualized for testing.
   // TODO(tbansal): Change it to return throughput as int32.
-  virtual bool GetRecentMedianDownlinkThroughputKbps(
+  virtual bool GetRecentDownlinkThroughputKbps(
       const base::TimeTicks& start_time,
       int32_t* kbps) const WARN_UNUSED_RESULT;
 
@@ -429,7 +428,7 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Recomputes effective connection type, if it was computed more than the
   // specified duration ago, or if there has been a connection change recently.
-  void MaybeRecomputeEffectiveConnectionType();
+  void MaybeComputeEffectiveConnectionType();
 
   // Notify observers of a change in effective connection type.
   void NotifyObserversOfEffectiveConnectionTypeChanged();
@@ -485,6 +484,10 @@ class NET_EXPORT NetworkQualityEstimator
   // Returns true if transport RTT should be used for computing the effective
   // connection type.
   bool UseTransportRTT() const;
+
+  // Forces computation of effective connection type, and notifies observers
+  // if there is a change in its value.
+  void ComputeEffectiveConnectionType();
 
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.

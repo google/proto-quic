@@ -31,11 +31,19 @@ inline base::Callback<MakeUnboundRunType<Functor, Args...>> Bind(
   using BindState = internal::MakeBindStateType<Functor, Args...>;
   using UnboundRunType = MakeUnboundRunType<Functor, Args...>;
   using Invoker = internal::Invoker<BindState, UnboundRunType>;
-
   using CallbackType = Callback<UnboundRunType>;
-  return CallbackType(new BindState(std::forward<Functor>(functor),
-                                    std::forward<Args>(args)...),
-                      &Invoker::Run);
+
+  // Store the invoke func into PolymorphicInvoke before casting it to
+  // InvokeFuncStorage, so that we can ensure its type matches to
+  // PolymorphicInvoke, to which CallbackType will cast back.
+  using PolymorphicInvoke = typename CallbackType::PolymorphicInvoke;
+  PolymorphicInvoke invoke_func = &Invoker::Run;
+
+  using InvokeFuncStorage = internal::BindStateBase::InvokeFuncStorage;
+  return CallbackType(new BindState(
+      reinterpret_cast<InvokeFuncStorage>(invoke_func),
+      std::forward<Functor>(functor),
+      std::forward<Args>(args)...));
 }
 
 }  // namespace base

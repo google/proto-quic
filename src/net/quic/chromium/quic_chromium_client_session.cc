@@ -4,6 +4,8 @@
 
 #include "net/quic/chromium/quic_chromium_client_session.h"
 
+#include <openssl/ssl.h>
+
 #include <utility>
 
 #include "base/callback_helpers.h"
@@ -21,6 +23,8 @@
 #include "net/base/network_activity_monitor.h"
 #include "net/http/http_log_util.h"
 #include "net/http/transport_security_state.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/chromium/quic_chromium_connection_helper.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
@@ -211,6 +215,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
     const QuicConfig& config,
     QuicCryptoClientConfig* crypto_config,
     const char* const connection_description,
+    base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
     QuicClientPushPromiseIndex* push_promise_index,
     base::TaskRunner* task_runner,
@@ -225,8 +230,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       pkp_bypassed_(false),
       num_total_streams_(0),
       task_runner_(task_runner),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_QUIC_SESSION)),
-      dns_resolution_end_time_(dns_resolution_end_time),
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::QUIC_SESSION)),
       logger_(new QuicConnectionLogger(this,
                                        connection_description,
                                        std::move(socket_performance_watcher),
@@ -241,17 +245,17 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       use_error_code_from_rewrite_(false),
       weak_factory_(this) {
   sockets_.push_back(std::move(socket));
-  packet_readers_.push_back(base::WrapUnique(new QuicChromiumPacketReader(
+  packet_readers_.push_back(base::MakeUnique<QuicChromiumPacketReader>(
       sockets_.back().get(), clock, this, yield_after_packets,
-      yield_after_duration, net_log_)));
+      yield_after_duration, net_log_));
   crypto_stream_.reset(
       crypto_client_stream_factory->CreateQuicCryptoClientStream(
-          server_id, this, base::WrapUnique(new ProofVerifyContextChromium(
-                               cert_verify_flags, net_log_)),
+          server_id, this, base::MakeUnique<ProofVerifyContextChromium>(
+                               cert_verify_flags, net_log_),
           crypto_config));
   connection->set_debug_visitor(logger_.get());
   connection->set_creator_debug_delegate(logger_.get());
-  net_log_.BeginEvent(NetLog::TYPE_QUIC_SESSION,
+  net_log_.BeginEvent(NetLogEventType::QUIC_SESSION,
                       base::Bind(NetLogQuicClientSessionCallback, &server_id,
                                  cert_verify_flags, require_confirmation_));
   IPEndPoint address;
@@ -260,6 +264,8 @@ QuicChromiumClientSession::QuicChromiumClientSession(
     connection->SetMaxPacketLength(connection->max_packet_length() -
                                    kAdditionalOverheadForIPv6);
   }
+  connect_timing_.dns_start = dns_resolution_start_time;
+  connect_timing_.dns_end = dns_resolution_end_time;
 }
 
 QuicChromiumClientSession::~QuicChromiumClientSession() {
@@ -279,7 +285,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
     CloseAllObservers(ERR_UNEXPECTED);
 
     connection()->set_debug_visitor(nullptr);
-    net_log_.EndEvent(NetLog::TYPE_QUIC_SESSION);
+    net_log_.EndEvent(NetLogEventType::QUIC_SESSION);
 
     while (!stream_requests_.empty()) {
       StreamRequest* request = stream_requests_.front();
@@ -385,9 +391,9 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
 void QuicChromiumClientSession::Initialize() {
   QuicClientSessionBase::Initialize();
   headers_stream()->SetHpackEncoderDebugVisitor(
-      base::WrapUnique(new HpackEncoderDebugVisitor()));
+      base::MakeUnique<HpackEncoderDebugVisitor>());
   headers_stream()->SetHpackDecoderDebugVisitor(
-      base::WrapUnique(new HpackDecoderDebugVisitor()));
+      base::MakeUnique<HpackDecoderDebugVisitor>());
 }
 
 void QuicChromiumClientSession::OnHeadersHeadOfLineBlocking(
@@ -544,10 +550,24 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
       return false;
   }
   int ssl_connection_status = 0;
-  ssl_connection_status |= cipher_suite;
-  ssl_connection_status |=
-      (SSL_CONNECTION_VERSION_QUIC & SSL_CONNECTION_VERSION_MASK)
-      << SSL_CONNECTION_VERSION_SHIFT;
+  SSLConnectionStatusSetCipherSuite(cipher_suite, &ssl_connection_status);
+  SSLConnectionStatusSetVersion(SSL_CONNECTION_VERSION_QUIC,
+                                &ssl_connection_status);
+
+  // Report the QUIC key exchange as the corresponding TLS curve.
+  uint16_t curve;
+  switch (crypto_stream_->crypto_negotiated_params().key_exchange) {
+    case kP256:
+      curve = SSL_CURVE_SECP256R1;
+      break;
+    case kC255:
+      curve = SSL_CURVE_X25519;
+      break;
+    default:
+      NOTREACHED();
+      return false;
+  }
+  ssl_info->key_exchange_info = curve;
 
   ssl_info->public_key_hashes = cert_verify_result_->public_key_hashes;
   ssl_info->is_issued_by_known_root =
@@ -600,13 +620,15 @@ int QuicChromiumClientSession::CryptoConnect(
     bool require_confirmation,
     const CompletionCallback& callback) {
   require_confirmation_ = require_confirmation;
-  handshake_start_ = base::TimeTicks::Now();
+  connect_timing_.connect_start = base::TimeTicks::Now();
   RecordHandshakeState(STATE_STARTED);
   DCHECK(flow_controller());
   crypto_stream_->CryptoConnect();
 
-  if (IsCryptoHandshakeConfirmed())
+  if (IsCryptoHandshakeConfirmed()) {
+    connect_timing_.connect_end = base::TimeTicks::Now();
     return OK;
+  }
 
   // Unless we require handshake confirmation, activate the session if
   // we have established initial encryption.
@@ -619,8 +641,10 @@ int QuicChromiumClientSession::CryptoConnect(
 
 int QuicChromiumClientSession::ResumeCryptoConnect(
     const CompletionCallback& callback) {
-  if (IsCryptoHandshakeConfirmed())
+  if (IsCryptoHandshakeConfirmed()) {
+    connect_timing_.connect_end = base::TimeTicks::Now();
     return OK;
+  }
 
   if (!connection()->connected())
     return ERR_QUIC_HANDSHAKE_FAILED;
@@ -771,8 +795,14 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
     base::ResetAndReturn(&callback_).Run(OK);
   }
   if (event == HANDSHAKE_CONFIRMED) {
-    UMA_HISTOGRAM_TIMES("Net.QuicSession.HandshakeConfirmedTime",
-                        base::TimeTicks::Now() - handshake_start_);
+    // Update |connect_end| only when handshake is confirmed. This should also
+    // take care of any failed 0-RTT request.
+    connect_timing_.connect_end = base::TimeTicks::Now();
+    DCHECK(connect_timing_.connect_start < connect_timing_.connect_end);
+    UMA_HISTOGRAM_TIMES(
+        "Net.QuicSession.HandshakeConfirmedTime",
+        connect_timing_.connect_end - connect_timing_.connect_start);
+
     if (server_info_) {
       // TODO(rtenneti): Should we delete this histogram?
       // Track how long it has taken to finish handshake once we start waiting
@@ -789,10 +819,10 @@ void QuicChromiumClientSession::OnCryptoHandshakeEvent(
     }
     // Track how long it has taken to finish handshake after we have finished
     // DNS host resolution.
-    if (!dns_resolution_end_time_.is_null()) {
+    if (!connect_timing_.dns_end.is_null()) {
       UMA_HISTOGRAM_TIMES(
           "Net.QuicSession.HostResolution.HandshakeConfirmedTime",
-          base::TimeTicks::Now() - dns_resolution_end_time_);
+          base::TimeTicks::Now() - connect_timing_.dns_end);
     }
 
     ObserverSet::iterator it = observers_.begin();
@@ -948,7 +978,7 @@ void QuicChromiumClientSession::OnSuccessfulVersionNegotiation(
   QuicSpdySession::OnSuccessfulVersionNegotiation(version);
 }
 
-int QuicChromiumClientSession::OnWriteError(
+int QuicChromiumClientSession::HandleWriteError(
     int error_code,
     scoped_refptr<StringIOBuffer> packet) {
   DCHECK(packet != nullptr);
@@ -957,6 +987,16 @@ int QuicChromiumClientSession::OnWriteError(
     stream_factory_->MaybeMigrateSingleSession(this, WRITE_ERROR, packet);
   }
   return use_error_code_from_rewrite_ ? error_code_from_rewrite_ : error_code;
+}
+
+void QuicChromiumClientSession::OnWriteError(int error_code) {
+  DCHECK_NE(ERR_IO_PENDING, error_code);
+  DCHECK_GT(0, error_code);
+  connection()->OnWriteError(error_code);
+}
+
+void QuicChromiumClientSession::OnWriteUnblocked() {
+  connection()->OnCanWrite();
 }
 
 void QuicChromiumClientSession::OnPathDegrading() {
@@ -1038,7 +1078,7 @@ void QuicChromiumClientSession::CloseSessionOnErrorInner(
   }
   CloseAllStreams(net_error);
   CloseAllObservers(net_error);
-  net_log_.AddEvent(NetLog::TYPE_QUIC_SESSION_CLOSE_ON_ERROR,
+  net_log_.AddEvent(NetLogEventType::QUIC_SESSION_CLOSE_ON_ERROR,
                     NetLog::IntCallback("net_error", net_error));
 
   if (connection()->connected())
@@ -1221,7 +1261,7 @@ void QuicChromiumClientSession::HandlePromised(QuicStreamId id,
                                                QuicStreamId promised_id,
                                                const SpdyHeaderBlock& headers) {
   QuicClientSessionBase::HandlePromised(id, promised_id, headers);
-  net_log_.AddEvent(NetLog::TYPE_QUIC_SESSION_PUSH_PROMISE_RECEIVED,
+  net_log_.AddEvent(NetLogEventType::QUIC_SESSION_PUSH_PROMISE_RECEIVED,
                     base::Bind(&NetLogQuicPushPromiseReceivedCallback, &headers,
                                id, promised_id));
 }
@@ -1231,6 +1271,13 @@ void QuicChromiumClientSession::DeletePromised(
   if (IsOpenStream(promised->id()))
     streams_pushed_and_claimed_count_++;
   QuicClientSessionBase::DeletePromised(promised);
+}
+
+const LoadTimingInfo::ConnectTiming&
+QuicChromiumClientSession::GetConnectTiming() {
+  connect_timing_.ssl_start = connect_timing_.connect_start;
+  connect_timing_.ssl_end = connect_timing_.connect_end;
+  return connect_timing_;
 }
 
 }  // namespace net

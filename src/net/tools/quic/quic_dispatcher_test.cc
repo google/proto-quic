@@ -25,7 +25,7 @@
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
-#include "net/tools/quic/quic_simple_server_session_helper.h"
+#include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 #include "net/tools/quic/stateless_rejector.h"
 #include "net/tools/quic/test_tools/mock_quic_time_wait_list_manager.h"
@@ -89,7 +89,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
       QuicCompressedCertsCache* compressed_certs_cache) override {
     return new QuicCryptoServerStream(
         crypto_config, compressed_certs_cache,
-        FLAGS_enable_quic_stateless_reject_support, this);
+        FLAGS_enable_quic_stateless_reject_support, this, stream_helper());
   }
 
   void SetCryptoStream(QuicCryptoServerStream* crypto_stream) {
@@ -98,6 +98,10 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
 
   QuicCryptoServerStreamBase* GetCryptoStream() override {
     return crypto_stream_;
+  }
+
+  QuicCryptoServerStream::Helper* stream_helper() {
+    return QuicServerSessionBase::stream_helper();
   }
 
  private:
@@ -118,8 +122,9 @@ class TestDispatcher : public QuicDispatcher {
             version_manager,
             std::unique_ptr<QuicEpollConnectionHelper>(
                 new QuicEpollConnectionHelper(eps, QuicAllocator::BUFFER_POOL)),
-            std::unique_ptr<QuicServerSessionBase::Helper>(
-                new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+            std::unique_ptr<QuicCryptoServerStream::Helper>(
+                new QuicSimpleCryptoServerStreamHelper(
+                    QuicRandom::GetInstance())),
             std::unique_ptr<QuicEpollAlarmFactory>(
                 new QuicEpollAlarmFactory(eps))) {}
 
@@ -528,11 +533,13 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
  public:
   MockQuicCryptoServerStream(const QuicCryptoServerConfig& crypto_config,
                              QuicCompressedCertsCache* compressed_certs_cache,
-                             QuicServerSessionBase* session)
+                             QuicServerSessionBase* session,
+                             QuicCryptoServerStream::Helper* helper)
       : QuicCryptoServerStream(&crypto_config,
                                compressed_certs_cache,
                                FLAGS_enable_quic_stateless_reject_support,
-                               session) {}
+                               session,
+                               helper) {}
   void set_handshake_confirmed_for_testing(bool handshake_confirmed) {
     handshake_confirmed_ = handshake_confirmed;
   }
@@ -613,7 +620,7 @@ class QuicDispatcherStatelessRejectTest
            GetParam().client_supports_statelesss_rejects;
   }
 
-  // Sets up dispatcher_, sesession1_, and crypto_stream1_ based on
+  // Sets up dispatcher_, session1_, and crypto_stream1_ based on
   // the test parameters.
   QuicServerSessionBase* CreateSessionBasedOnTestParams(
       QuicConnectionId connection_id,
@@ -624,7 +631,7 @@ class QuicDispatcherStatelessRejectTest
 
     crypto_stream1_ = new MockQuicCryptoServerStream(
         crypto_config_, QuicDispatcherPeer::GetCache(dispatcher_.get()),
-        session1_);
+        session1_, session1_->stream_helper());
     session1_->SetCryptoStream(crypto_stream1_);
     crypto_stream1_->set_handshake_confirmed_for_testing(
         GetParam().crypto_handshake_successful);

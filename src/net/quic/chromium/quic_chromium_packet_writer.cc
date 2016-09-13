@@ -20,19 +20,12 @@ QuicChromiumPacketWriter::QuicChromiumPacketWriter() : weak_factory_(this) {}
 
 QuicChromiumPacketWriter::QuicChromiumPacketWriter(Socket* socket)
     : socket_(socket),
-      connection_(nullptr),
-      observer_(nullptr),
+      delegate_(nullptr),
       packet_(nullptr),
       write_blocked_(false),
       weak_factory_(this) {}
 
 QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
-
-void QuicChromiumPacketWriter::Initialize(WriteErrorObserver* observer,
-                                          QuicConnection* connection) {
-  observer_ = observer;
-  connection_ = connection;
-}
 
 int QuicChromiumPacketWriter::WritePacketToSocket(StringIOBuffer* packet) {
   return socket_->Write(packet, packet->size(),
@@ -53,12 +46,11 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
 
   int rv = WritePacketToSocket(buf.get());
 
-  if (rv < 0 && rv != ERR_IO_PENDING && observer_ != nullptr) {
-    // If write error, then call observer's OnWriteError, which may be
-    // able to migrate and rewrite packet on a new socket.
-    // OnWriteError returns the outcome of that attempt, which is returned
-    // to the caller.
-    rv = observer_->OnWriteError(rv, buf);
+  if (rv < 0 && rv != ERR_IO_PENDING && delegate_ != nullptr) {
+    // If write error, then call delegate's HandleWriteError, which
+    // may be able to migrate and rewrite packet on a new socket.
+    // HandleWriteError returns the outcome of that rewrite attempt.
+    rv = delegate_->HandleWriteError(rv, buf);
   }
 
   WriteStatus status = WRITE_STATUS_OK;
@@ -99,23 +91,22 @@ void QuicChromiumPacketWriter::SetWritable() {
 
 void QuicChromiumPacketWriter::OnWriteComplete(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
-  DCHECK(connection_) << "Uninitialized connection.";
-  DCHECK(observer_) << "Uninitialized observer.";
+  DCHECK(delegate_) << "Uninitialized delegate.";
   write_blocked_ = false;
   if (rv < 0) {
-    // If write error, then call into the observer's OnWriteError,
-    // which may be able to rewrite the packet on a new
-    // socket. OnWriteError returns the outcome of the attempt.
-    rv = observer_->OnWriteError(rv, packet_);
+    // If write error, then call delegate's HandleWriteError, which
+    // may be able to migrate and rewrite packet on a new socket.
+    // HandleWriteError returns the outcome of that rewrite attempt.
+    rv = delegate_->HandleWriteError(rv, packet_);
     packet_ = nullptr;
     if (rv == ERR_IO_PENDING)
       return;
   }
 
-  if (rv < 0) {
-    connection_->OnWriteError(rv);
-  }
-  connection_->OnCanWrite();
+  if (rv < 0)
+    delegate_->OnWriteError(rv);
+  else
+    delegate_->OnWriteUnblocked();
 }
 
 QuicByteCount QuicChromiumPacketWriter::GetMaxPacketSize(

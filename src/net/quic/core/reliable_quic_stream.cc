@@ -46,7 +46,7 @@ size_t GetReceivedFlowControlWindow(QuicSession* session) {
 ReliableQuicStream::PendingData::PendingData(
     string data_in,
     QuicAckListenerInterface* ack_listener_in)
-    : data(data_in), offset(0), ack_listener(ack_listener_in) {}
+    : data(std::move(data_in)), offset(0), ack_listener(ack_listener_in) {}
 
 ReliableQuicStream::PendingData::~PendingData() {}
 
@@ -353,6 +353,8 @@ void ReliableQuicStream::CloseReadSide() {
   DVLOG(1) << ENDPOINT << "Done reading from stream " << id();
 
   read_side_closed_ = true;
+  sequencer_.ReleaseBuffer();
+
   if (write_side_closed_) {
     DVLOG(1) << ENDPOINT << "Closing stream: " << id();
     session_->CloseStream(id());

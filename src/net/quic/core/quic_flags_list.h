@@ -7,10 +7,6 @@
 
 // This file contains the list of QUIC protocol flags.
 
-// If true, it will return as soon as an error is detected while validating
-// CHLO.
-QUIC_FLAG(bool, FLAGS_use_early_return_when_verifying_chlo, true)
-
 // If true, QUIC BBR congestion control may be enabled via Finch and/or via QUIC
 // connection options.
 QUIC_FLAG(bool, FLAGS_quic_allow_bbr, false)
@@ -56,20 +52,9 @@ QUIC_FLAG(bool, FLAGS_quic_measure_headers_hol_blocking_time, true)
 // If true, disable pacing in QUIC.
 QUIC_FLAG(bool, FLAGS_quic_disable_pacing_for_perf_tests, false)
 
-// If true, Close the connection instead of writing unencrypted stream data.
-QUIC_FLAG(bool, FLAGS_quic_never_write_unencrypted_data, true)
-
 // If true, QUIC connections can do bandwidth resumption with an initial window
 // of < 10 packets.
 QUIC_FLAG(bool, FLAGS_quic_no_lower_bw_resumption_limit, true)
-
-// Use largest acked in the most recent ack instead of largest acked ever in
-// loss recovery.
-QUIC_FLAG(bool, FLAGS_quic_loss_recovery_use_largest_acked, true)
-
-// Only set one alarm for sending at once, either the send alarm or
-// retransmission alarm.  Disabled because it breaks QUIC time loss detection.
-QUIC_FLAG(bool, FLAGS_quic_only_one_sending_alarm, false)
 
 // If true, QUIC public reset packets will have the \"pre-v33\" public header
 // flags.
@@ -143,7 +128,7 @@ QUIC_FLAG(bool, FLAGS_quic_enable_app_limited_check, true)
 QUIC_FLAG(bool, FLAGS_quic_simple_packet_number_length_2, true)
 
 // If true, disables QUIC version less than 32.
-QUIC_FLAG(bool, FLAGS_quic_disable_pre_32, false)
+QUIC_FLAG(bool, FLAGS_quic_disable_pre_32, true)
 
 // If true, QUIC will enforce the MTU limit for connections that may require a
 // small MTU.
@@ -173,3 +158,14 @@ QUIC_FLAG(bool, FLAGS_quic_send_scfg_ttl, true)
 // rest to next event. This flag can be turned on only if
 // --quic_buffer_packet_till_chlo is true.
 QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, false)
+
+// If true, lazy allocate and early release memeory used in
+// QuicStreamSequencerBuffer to buffer incoming data.
+QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
+
+// If true, allow server address change if it is because of mapped ipv4 address.
+QUIC_FLAG(bool, FLAGS_quic_allow_server_address_change_for_mapped_ipv4, true)
+
+// If true, disables QUIC version less than 34.
+QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, false)
+

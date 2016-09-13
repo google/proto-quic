@@ -475,7 +475,7 @@ EVENT_TYPE(SSL_CLIENT_CERT_REQUESTED)
 //     "type": <type of the key>,
 //     "hash": <hash function used>,
 //   }
-EVENT_TYPE(SSL_PRIVATE_KEY_OPERATION)
+EVENT_TYPE(SSL_PRIVATE_KEY_OP)
 
 // The start/end of getting a domain-bound certificate and private key.
 //

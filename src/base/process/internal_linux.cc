@@ -170,6 +170,32 @@ Time GetBootTime() {
   return Time::FromTimeT(btime);
 }
 
+TimeDelta GetUserCpuTimeSinceBoot() {
+  FilePath path("/proc/stat");
+  std::string contents;
+  if (!ReadProcFile(path, &contents))
+    return TimeDelta();
+
+  ProcStatMap proc_stat;
+  ParseProcStat(contents, &proc_stat);
+  ProcStatMap::const_iterator cpu_it = proc_stat.find("cpu");
+  if (cpu_it == proc_stat.end())
+    return TimeDelta();
+
+  std::vector<std::string> cpu = SplitString(
+      cpu_it->second, kWhitespaceASCII, TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
+
+  if (cpu.size() < 2 || cpu[0] != "cpu")
+    return TimeDelta();
+
+  uint64_t user;
+  uint64_t nice;
+  if (!StringToUint64(cpu[0], &user) || !StringToUint64(cpu[1], &nice))
+    return TimeDelta();
+
+  return ClockTicksToTimeDelta(user + nice);
+}
+
 TimeDelta ClockTicksToTimeDelta(int clock_ticks) {
   // This queries the /proc-specific scaling factor which is
   // conceptually the system hertz.  To dump this value on another

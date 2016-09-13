@@ -1368,11 +1368,13 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       DLOG(FATAL) << "Unexpected congestion control tag";
   }
 
+  server_thread_->Pause();
   EXPECT_EQ(expected_congestion_control_type,
             QuicSentPacketManagerPeer::GetSendAlgorithm(
                 *static_cast<const QuicSentPacketManager*>(
                     GetSentPacketManagerFromFirstServerSession()))
                 ->GetCongestionControlType());
+  server_thread_->Resume();
 }
 
 TEST_P(EndToEndTest, LimitMaxOpenStreams) {
@@ -2165,7 +2167,8 @@ class ServerStreamWithErrorResponseBody : public QuicSimpleServerStream {
   ServerStreamWithErrorResponseBody(QuicStreamId id,
                                     QuicSpdySession* session,
                                     string response_body)
-      : QuicSimpleServerStream(id, session), response_body_(response_body) {}
+      : QuicSimpleServerStream(id, session),
+        response_body_(std::move(response_body)) {}
 
   ~ServerStreamWithErrorResponseBody() override {}
 
@@ -2187,7 +2190,7 @@ class ServerStreamWithErrorResponseBody : public QuicSimpleServerStream {
 class StreamWithErrorFactory : public QuicTestServer::StreamFactory {
  public:
   explicit StreamWithErrorFactory(string response_body)
-      : response_body_(response_body) {}
+      : response_body_(std::move(response_body)) {}
 
   ~StreamWithErrorFactory() override {}
 
@@ -2623,7 +2626,7 @@ TEST_P(EndToEndTestServerPush, ServerPushUnderLimit) {
   EXPECT_EQ(kBody, client_->SendSynchronousRequest(
                        "https://example.com/push_example"));
 
-  for (string url : push_urls) {
+  for (const string& url : push_urls) {
     // Sending subsequent requesets will not actually send anything on the wire,
     // as the responses are already in the client's cache.
     DVLOG(1) << "send request for pushed stream on url " << url;

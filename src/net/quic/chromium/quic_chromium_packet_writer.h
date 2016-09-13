@@ -22,22 +22,29 @@ namespace net {
 // Chrome specific packet writer which uses a datagram Socket for writing data.
 class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
  public:
-  // Interface which receives notifications on socket write errors.
-  class NET_EXPORT_PRIVATE WriteErrorObserver {
+  // Delegate interface which receives notifications on socket write events.
+  class NET_EXPORT_PRIVATE Delegate {
    public:
-    // Called on socket write error, with the error code of the failure
-    // and the packet that was not written as a result of the failure.
-    // An implementation must return error code from the rewrite
-    // attempt if there was one, else return |error_code|.
-    virtual int OnWriteError(int error_code,
-                             scoped_refptr<StringIOBuffer> last_packet) = 0;
+    // Called when a socket write attempt results in a failure, so
+    // that the delegate may recover from it by perhaps rewriting the
+    // packet to a different socket. An implementation must return the
+    // return value from the rewrite attempt if there is one, and
+    // |error_code| otherwise.
+    virtual int HandleWriteError(int error_code,
+                                 scoped_refptr<StringIOBuffer> last_packet) = 0;
+    // Called to propagate the final write error to the delegate.
+    virtual void OnWriteError(int error_code) = 0;
+    // Called when the writer is unblocked due to a write completion.
+    virtual void OnWriteUnblocked() = 0;
   };
 
   QuicChromiumPacketWriter();
+  // |socket| must outlive writer.
   explicit QuicChromiumPacketWriter(Socket* socket);
   ~QuicChromiumPacketWriter() override;
 
-  void Initialize(WriteErrorObserver* observer, QuicConnection* connection);
+  // |delegate| must outlive writer.
+  void set_delegate(Delegate* delegate) { delegate_ = delegate; }
 
   // Writes |packet| to the socket and returns the error code from the write.
   int WritePacketToSocket(StringIOBuffer* packet);
@@ -59,9 +66,8 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   void set_write_blocked(bool is_blocked) { write_blocked_ = is_blocked; }
 
  private:
-  Socket* socket_;
-  QuicConnection* connection_;
-  WriteErrorObserver* observer_;
+  Socket* socket_;      // Unowned.
+  Delegate* delegate_;  // Unowned.
   // When a write returns asynchronously, |packet_| stores the written
   // packet until OnWriteComplete is called.
   scoped_refptr<StringIOBuffer> packet_;

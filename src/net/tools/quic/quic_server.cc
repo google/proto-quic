@@ -27,8 +27,8 @@
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_packet_reader.h"
+#include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/quic_simple_dispatcher.h"
-#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_socket_utils.h"
 
 #ifndef SO_RXQ_OVFL
@@ -154,8 +154,8 @@ QuicDispatcher* QuicServer::CreateQuicDispatcher() {
       config_, &crypto_config_, &version_manager_,
       std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
           &epoll_server_, QuicAllocator::BUFFER_POOL)),
-      std::unique_ptr<QuicServerSessionBase::Helper>(
-          new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+      std::unique_ptr<QuicCryptoServerStream::Helper>(
+          new QuicSimpleCryptoServerStreamHelper(QuicRandom::GetInstance())),
       std::unique_ptr<QuicEpollAlarmFactory>(
           new QuicEpollAlarmFactory(&epoll_server_)));
 }

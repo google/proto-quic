@@ -13,7 +13,7 @@ QuicSimpleDispatcher::QuicSimpleDispatcher(
     const QuicCryptoServerConfig* crypto_config,
     QuicVersionManager* version_manager,
     std::unique_ptr<QuicConnectionHelperInterface> helper,
-    std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
+    std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
     std::unique_ptr<QuicAlarmFactory> alarm_factory)
     : QuicDispatcher(config,
                      crypto_config,

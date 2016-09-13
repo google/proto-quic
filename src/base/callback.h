@@ -22,22 +22,17 @@ namespace base {
 template <typename R, typename... Args, internal::CopyMode copy_mode>
 class Callback<R(Args...), copy_mode>
     : public internal::CallbackBase<copy_mode> {
- private:
+ public:
   using PolymorphicInvoke = R (*)(internal::BindStateBase*, Args&&...);
 
- public:
   // MSVC 2013 doesn't support Type Alias of function types.
   // Revisit this after we update it to newer version.
   typedef R RunType(Args...);
 
   Callback() : internal::CallbackBase<copy_mode>(nullptr) {}
 
-  Callback(internal::BindStateBase* bind_state, PolymorphicInvoke invoke_func)
+  explicit Callback(internal::BindStateBase* bind_state)
       : internal::CallbackBase<copy_mode>(bind_state) {
-    using InvokeFuncStorage =
-        typename internal::CallbackBase<copy_mode>::InvokeFuncStorage;
-    this->polymorphic_invoke_ =
-        reinterpret_cast<InvokeFuncStorage>(invoke_func);
   }
 
   bool Equals(const Callback& other) const {
@@ -57,7 +52,7 @@ class Callback<R(Args...), copy_mode>
   // cannot template its arguments based on how it's called.
   R Run(Args... args) const {
     PolymorphicInvoke f =
-        reinterpret_cast<PolymorphicInvoke>(this->polymorphic_invoke_);
+        reinterpret_cast<PolymorphicInvoke>(this->polymorphic_invoke());
     return f(this->bind_state_.get(), std::forward<Args>(args)...);
   }
 };

@@ -14,6 +14,7 @@
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
+#include "base/process/memory.h"
 #include "base/sys_info.h"
 
 namespace base {
@@ -140,6 +141,36 @@ void ProcessMetrics::GetCommittedKBytes(CommittedKBytes* usage) const {
   usage->priv = committed_private / 1024;
 }
 
+namespace {
+
+class WorkingSetInformationBuffer {
+ public:
+  WorkingSetInformationBuffer() {}
+  ~WorkingSetInformationBuffer() { Clear(); }
+
+  bool Reserve(size_t size) {
+    Clear();
+    // Use UncheckedMalloc here because this can be called from the code
+    // that handles low memory condition.
+    return UncheckedMalloc(size, reinterpret_cast<void**>(&buffer_));
+  }
+
+  PSAPI_WORKING_SET_INFORMATION* get() { return buffer_; }
+  const PSAPI_WORKING_SET_INFORMATION* operator ->() const { return buffer_; }
+
+ private:
+  void Clear() {
+    free(buffer_);
+    buffer_ = nullptr;
+  }
+
+  PSAPI_WORKING_SET_INFORMATION* buffer_ = nullptr;
+
+  DISALLOW_COPY_AND_ASSIGN(WorkingSetInformationBuffer);
+};
+
+}  // namespace
+
 bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   size_t ws_private = 0;
   size_t ws_shareable = 0;
@@ -149,40 +180,33 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   memset(ws_usage, 0, sizeof(*ws_usage));
 
   DWORD number_of_entries = 4096;  // Just a guess.
-  PSAPI_WORKING_SET_INFORMATION* buffer = NULL;
+  WorkingSetInformationBuffer buffer;
   int retries = 5;
   for (;;) {
     DWORD buffer_size = sizeof(PSAPI_WORKING_SET_INFORMATION) +
                         (number_of_entries * sizeof(PSAPI_WORKING_SET_BLOCK));
 
-    // if we can't expand the buffer, don't leak the previous
-    // contents or pass a NULL pointer to QueryWorkingSet
-    PSAPI_WORKING_SET_INFORMATION* new_buffer =
-        reinterpret_cast<PSAPI_WORKING_SET_INFORMATION*>(
-            realloc(buffer, buffer_size));
-    if (!new_buffer) {
-      free(buffer);
+    if (!buffer.Reserve(buffer_size))
       return false;
-    }
-    buffer = new_buffer;
 
     // Call the function once to get number of items
-    if (QueryWorkingSet(process_, buffer, buffer_size))
+    if (QueryWorkingSet(process_, buffer.get(), buffer_size))
       break;  // Success
 
-    if (GetLastError() != ERROR_BAD_LENGTH) {
-      free(buffer);
+    if (GetLastError() != ERROR_BAD_LENGTH)
       return false;
-    }
 
     number_of_entries = static_cast<DWORD>(buffer->NumberOfEntries);
 
     // Maybe some entries are being added right now. Increase the buffer to
-    // take that into account.
-    number_of_entries = static_cast<DWORD>(number_of_entries * 1.25);
+    // take that into account. Increasing by 10% should generally be enough,
+    // especially considering the potentially low memory condition during the
+    // call (when called from OomMemoryDetails) and the potentially high
+    // number of entries (300K was observed in crash dumps).
+    number_of_entries = static_cast<DWORD>(number_of_entries * 1.1);
 
     if (--retries == 0) {
-      free(buffer);  // If we're looping, eventually fail.
+      // If we're looping, eventually fail.
       return false;
     }
   }
@@ -205,7 +229,6 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   ws_usage->priv = ws_private * PAGESIZE_KB;
   ws_usage->shareable = ws_shareable * PAGESIZE_KB;
   ws_usage->shared = ws_shared * PAGESIZE_KB;
-  free(buffer);
   return true;
 }
 

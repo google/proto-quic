@@ -12,6 +12,7 @@
 #include "net/base/proxy_delegate.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/transport_security_state.h"
+#include "net/log/net_log_event_type.h"
 #include "net/proxy/proxy_server.h"
 #include "net/spdy/spdy_session.h"
 
@@ -492,7 +493,7 @@ void HttpStreamFactoryImpl::JobController::AddConnectionAttemptsToRequest(
 
 void HttpStreamFactoryImpl::JobController::ResumeMainJob() {
   main_job_->net_log().AddEvent(
-      NetLog::TYPE_HTTP_STREAM_JOB_DELAYED,
+      NetLogEventType::HTTP_STREAM_JOB_DELAYED,
       base::Bind(&NetLogHttpStreamJobDelayCallback, main_job_wait_time_));
 
   main_job_->Resume();
@@ -675,10 +676,10 @@ void HttpStreamFactoryImpl::JobController::BindJob(Job* job) {
   factory_->request_map_.erase(job);
 
   request_->net_log().AddEvent(
-      NetLog::TYPE_HTTP_STREAM_REQUEST_BOUND_TO_JOB,
+      NetLogEventType::HTTP_STREAM_REQUEST_BOUND_TO_JOB,
       job->net_log().source().ToEventParametersCallback());
   job->net_log().AddEvent(
-      NetLog::TYPE_HTTP_STREAM_JOB_BOUND_TO_REQUEST,
+      NetLogEventType::HTTP_STREAM_JOB_BOUND_TO_REQUEST,
       request_->net_log().source().ToEventParametersCallback());
 
   OrphanUnboundJob();

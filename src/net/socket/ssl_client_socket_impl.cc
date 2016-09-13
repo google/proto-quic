@@ -44,6 +44,7 @@
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/http/transport_security_state.h"
+#include "net/log/net_log_event_type.h"
 #include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_cipher_suite_names.h"
@@ -619,7 +620,7 @@ int SSLClientSocketImpl::Connect(const CompletionCallback& callback) {
   // https://crbug.com/499289.
   CHECK(!disconnected_);
 
-  net_log_.BeginEvent(NetLog::TYPE_SSL_CONNECT);
+  net_log_.BeginEvent(NetLogEventType::SSL_CONNECT);
 
   // Set up new ssl object.
   int rv = Init();
@@ -1168,7 +1169,7 @@ int SSLClientSocketImpl::DoHandshake() {
     LOG(ERROR) << "handshake failed; returned " << rv << ", SSL error code "
                << ssl_error << ", net_error " << net_error;
     net_log_.AddEvent(
-        NetLog::TYPE_SSL_HANDSHAKE_ERROR,
+        NetLogEventType::SSL_HANDSHAKE_ERROR,
         CreateNetLogOpenSSLErrorCallback(net_error, ssl_error, error_info));
   }
 
@@ -1251,7 +1252,7 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
 int SSLClientSocketImpl::DoChannelIDLookup() {
   NetLog::ParametersCallback callback = base::Bind(
       &NetLogChannelIDLookupCallback, base::Unretained(channel_id_service_));
-  net_log_.BeginEvent(NetLog::TYPE_SSL_GET_CHANNEL_ID, callback);
+  net_log_.BeginEvent(NetLogEventType::SSL_GET_CHANNEL_ID, callback);
   next_handshake_state_ = STATE_CHANNEL_ID_LOOKUP_COMPLETE;
   return channel_id_service_->GetOrCreateChannelID(
       host_and_port_.host(), &channel_id_key_,
@@ -1261,7 +1262,7 @@ int SSLClientSocketImpl::DoChannelIDLookup() {
 }
 
 int SSLClientSocketImpl::DoChannelIDLookupComplete(int result) {
-  net_log_.EndEvent(NetLog::TYPE_SSL_GET_CHANNEL_ID,
+  net_log_.EndEvent(NetLogEventType::SSL_GET_CHANNEL_ID,
                     base::Bind(&NetLogChannelIDLookupCompleteCallback,
                                channel_id_key_.get(), result));
   if (result < 0)
@@ -1396,7 +1397,7 @@ void SSLClientSocketImpl::UpdateServerCert() {
   server_cert_chain_->Reset(SSL_get_peer_cert_chain(ssl_));
   server_cert_ = server_cert_chain_->AsOSChain();
   if (server_cert_.get()) {
-    net_log_.AddEvent(NetLog::TYPE_SSL_CERTIFICATES_RECEIVED,
+    net_log_.AddEvent(NetLogEventType::SSL_CERTIFICATES_RECEIVED,
                       base::Bind(&NetLogX509CertificateCallback,
                                  base::Unretained(server_cert_.get())));
   }
@@ -1523,11 +1524,11 @@ int SSLClientSocketImpl::DoPayloadRead() {
     rv = pending_read_error_;
     pending_read_error_ = kNoPendingResult;
     if (rv == 0) {
-      net_log_.AddByteTransferEvent(NetLog::TYPE_SSL_SOCKET_BYTES_RECEIVED, rv,
-                                    user_read_buf_->data());
+      net_log_.AddByteTransferEvent(NetLogEventType::SSL_SOCKET_BYTES_RECEIVED,
+                                    rv, user_read_buf_->data());
     } else {
       net_log_.AddEvent(
-          NetLog::TYPE_SSL_READ_ERROR,
+          NetLogEventType::SSL_READ_ERROR,
           CreateNetLogOpenSSLErrorCallback(rv, pending_read_ssl_error_,
                                            pending_read_error_info_));
     }
@@ -1601,11 +1602,11 @@ int SSLClientSocketImpl::DoPayloadRead() {
   }
 
   if (rv >= 0) {
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SSL_SOCKET_BYTES_RECEIVED, rv,
-                                  user_read_buf_->data());
+    net_log_.AddByteTransferEvent(NetLogEventType::SSL_SOCKET_BYTES_RECEIVED,
+                                  rv, user_read_buf_->data());
   } else if (rv != ERR_IO_PENDING) {
     net_log_.AddEvent(
-        NetLog::TYPE_SSL_READ_ERROR,
+        NetLogEventType::SSL_READ_ERROR,
         CreateNetLogOpenSSLErrorCallback(rv, pending_read_ssl_error_,
                                          pending_read_error_info_));
     pending_read_ssl_error_ = SSL_ERROR_NONE;
@@ -1619,7 +1620,7 @@ int SSLClientSocketImpl::DoPayloadWrite() {
   int rv = SSL_write(ssl_, user_write_buf_->data(), user_write_buf_len_);
 
   if (rv >= 0) {
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SSL_SOCKET_BYTES_SENT, rv,
+    net_log_.AddByteTransferEvent(NetLogEventType::SSL_SOCKET_BYTES_SENT, rv,
                                   user_write_buf_->data());
     return rv;
   }
@@ -1633,7 +1634,7 @@ int SSLClientSocketImpl::DoPayloadWrite() {
 
   if (net_error != ERR_IO_PENDING) {
     net_log_.AddEvent(
-        NetLog::TYPE_SSL_WRITE_ERROR,
+        NetLogEventType::SSL_WRITE_ERROR,
         CreateNetLogOpenSSLErrorCallback(net_error, ssl_error, error_info));
   }
   return net_error;
@@ -1852,7 +1853,7 @@ int SSLClientSocketImpl::VerifyCT() {
 int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
   DCHECK(ssl == ssl_);
 
-  net_log_.AddEvent(NetLog::TYPE_SSL_CLIENT_CERT_REQUESTED);
+  net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_REQUESTED);
 
   // Clear any currently configured certificates.
   SSL_certs_clear(ssl_);
@@ -1948,14 +1949,14 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
     SSL_set_private_key_digest_prefs(ssl_, digests.data(), digests.size());
 
     int cert_count = 1 + sk_X509_num(chain.get());
-    net_log_.AddEvent(NetLog::TYPE_SSL_CLIENT_CERT_PROVIDED,
+    net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_PROVIDED,
                       NetLog::IntCallback("cert_count", cert_count));
     return 1;
   }
 #endif  // defined(OS_IOS)
 
   // Send no client certificate.
-  net_log_.AddEvent(NetLog::TYPE_SSL_CLIENT_CERT_PROVIDED,
+  net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_PROVIDED,
                     NetLog::IntCallback("cert_count", 0));
   return 1;
 }
@@ -2190,7 +2191,7 @@ ssl_private_key_result_t SSLClientSocketImpl::PrivateKeySignDigestCallback(
   }
 
   net_log_.BeginEvent(
-      NetLog::TYPE_SSL_PRIVATE_KEY_OPERATION,
+      NetLogEventType::SSL_PRIVATE_KEY_OP,
       base::Bind(&NetLogPrivateKeyOperationCallback,
                  ssl_config_.client_private_key->GetType(), hash));
 
@@ -2232,8 +2233,7 @@ void SSLClientSocketImpl::OnPrivateKeyComplete(
   DCHECK(signature_.empty());
   DCHECK(ssl_config_.client_private_key);
 
-  net_log_.EndEventWithNetErrorCode(NetLog::TYPE_SSL_PRIVATE_KEY_OPERATION,
-                                    error);
+  net_log_.EndEventWithNetErrorCode(NetLogEventType::SSL_PRIVATE_KEY_OP, error);
 
   signature_result_ = error;
   if (signature_result_ == OK)
@@ -2330,11 +2330,11 @@ int SSLClientSocketImpl::TokenBindingParse(const uint8_t* contents,
 
 void SSLClientSocketImpl::LogConnectEndEvent(int rv) {
   if (rv != OK) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_SSL_CONNECT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::SSL_CONNECT, rv);
     return;
   }
 
-  net_log_.EndEvent(NetLog::TYPE_SSL_CONNECT,
+  net_log_.EndEvent(NetLogEventType::SSL_CONNECT,
                     base::Bind(&NetLogSSLInfoCallback, base::Unretained(this)));
 }
 

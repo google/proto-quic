@@ -20,16 +20,18 @@
 #include "net/quic/core/quic_blocked_writer_interface.h"
 #include "net/quic/core/quic_buffered_packet_store.h"
 #include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_server_session_base.h"
+
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
+#include "net/tools/quic/stateless_rejector.h"
 
 namespace net {
 
 class QuicConfig;
 class QuicCryptoServerConfig;
-class QuicServerSessionBase;
 
 namespace test {
 class QuicDispatcherPeer;
@@ -51,7 +53,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
                  const QuicCryptoServerConfig* crypto_config,
                  QuicVersionManager* version_manager,
                  std::unique_ptr<QuicConnectionHelperInterface> helper,
-                 std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
+                 std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
                  std::unique_ptr<QuicAlarmFactory> alarm_factory);
 
   ~QuicDispatcher() override;
@@ -86,6 +88,9 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Called whenever the time wait list manager adds a new connection to the
   // time-wait list.
   void OnConnectionAddedToTimeWaitList(QuicConnectionId connection_id) override;
+
+  void OnPacketBeingDispatchedToSession(
+      QuicServerSessionBase* session) override {}
 
   typedef std::unordered_map<QuicConnectionId, QuicServerSessionBase*>
       SessionMap;
@@ -222,7 +227,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   QuicConnectionHelperInterface* helper() { return helper_.get(); }
 
-  QuicServerSessionBase::Helper* session_helper() {
+  QuicCryptoServerStream::Helper* session_helper() {
     return session_helper_.get();
   }
 
@@ -263,6 +268,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
  private:
   friend class net::test::QuicDispatcherPeer;
+  friend class StatelessRejectorProcessDoneCallback;
 
   // Removes the session from the session map and write blocked list, and adds
   // the ConnectionId to the time-wait list.  If |session_closed_statelessly| is
@@ -272,16 +278,28 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   bool HandlePacketForTimeWait(const QuicPacketPublicHeader& header);
 
   // Attempts to reject the connection statelessly, if stateless rejects are
-  // possible and if the current packet contains a CHLO message.
-  // Returns a fate which describes what subsequent processing should be
-  // performed on the packets, like ValidityChecks.
-  QuicPacketFate MaybeRejectStatelessly(QuicConnectionId connection_id,
-                                        const QuicPacketHeader& header);
+  // possible and if the current packet contains a CHLO message.  Determines a
+  // fate which describes what subsequent processing should be performed on the
+  // packets, like ValidityChecks, and invokes ProcessUnauthenticatedHeaderFate.
+  void MaybeRejectStatelessly(QuicConnectionId connection_id,
+                              const QuicPacketHeader& header);
 
   // Deliver |packets| to |session| for further processing.
   void DeliverPacketsToSession(
       const std::list<QuicBufferedPacketStore::BufferedPacket>& packets,
       QuicServerSessionBase* session);
+
+  // Perform the appropriate actions on the current packet based on |fate| -
+  // either process, buffer, or drop it.
+  void ProcessUnauthenticatedHeaderFate(QuicPacketFate fate,
+                                        QuicConnectionId connection_id,
+                                        QuicPacketNumber packet_number);
+
+  // Invoked when StatelessRejector::Process completes.
+  void OnStatelessRejectorProcessDone(
+      std::unique_ptr<StatelessRejector> rejector,
+      QuicPacketNumber packet_number,
+      QuicVersion first_version);
 
   void set_new_sessions_allowed_per_event_loop(
       int16_t new_sessions_allowed_per_event_loop) {
@@ -310,7 +328,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   std::unique_ptr<QuicConnectionHelperInterface> helper_;
 
   // The helper used for all sessions.
-  std::unique_ptr<QuicServerSessionBase::Helper> session_helper_;
+  std::unique_ptr<QuicCryptoServerStream::Helper> session_helper_;
 
   // Creates alarms.
   std::unique_ptr<QuicAlarmFactory> alarm_factory_;

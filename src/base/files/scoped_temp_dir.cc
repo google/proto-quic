@@ -76,6 +76,11 @@ FilePath ScopedTempDir::Take() {
   return ret;
 }
 
+const FilePath& ScopedTempDir::GetPath() const {
+  DCHECK(!path_.empty()) << "Did you call CreateUniqueTempDir* before?";
+  return path_;
+}
+
 bool ScopedTempDir::IsValid() const {
   return !path_.empty() && DirectoryExists(path_);
 }

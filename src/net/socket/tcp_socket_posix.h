@@ -97,9 +97,9 @@ class NET_EXPORT TCPSocketPosix {
   //
   // TCPClientSocket may attempt to connect to multiple addresses until it
   // succeeds in establishing a connection. The corresponding log will have
-  // multiple NetLog::TYPE_TCP_CONNECT_ATTEMPT entries nested within a
-  // NetLog::TYPE_TCP_CONNECT. These methods set the start/end of
-  // NetLog::TYPE_TCP_CONNECT.
+  // multiple NetLogEventType::TCP_CONNECT_ATTEMPT entries nested within a
+  // NetLogEventType::TCP_CONNECT. These methods set the start/end of
+  // NetLogEventType::TCP_CONNECT.
   //
   // TODO(yzshen): Change logging format and let TCPClientSocket log the
   // start/end of a series of connect attempts itself.

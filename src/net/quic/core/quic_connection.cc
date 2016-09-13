@@ -1404,10 +1404,31 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
       IsInitializedIPEndPoint(self_address_) &&
       IsInitializedIPEndPoint(last_packet_destination_address_) &&
       (!(self_address_ == last_packet_destination_address_))) {
-    CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
-                    "Self address migration is not supported at the server.",
-                    ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-    return false;
+    if (!FLAGS_quic_allow_server_address_change_for_mapped_ipv4) {
+      CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
+                      "Self address migration is not supported at the server.",
+                      ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+      return false;
+    }
+    // Allow change between pure IPv4 and equivalent mapped IPv4 address.
+    IPAddress self_ip = self_address_.address();
+    if (self_ip.IsIPv4MappedIPv6()) {
+      self_ip = ConvertIPv4MappedIPv6ToIPv4(self_ip);
+    }
+    IPAddress last_packet_destination_ip =
+        last_packet_destination_address_.address();
+    if (last_packet_destination_ip.IsIPv4MappedIPv6()) {
+      last_packet_destination_ip =
+          ConvertIPv4MappedIPv6ToIPv4(last_packet_destination_ip);
+    }
+    if (self_address_.port() != last_packet_destination_address_.port() ||
+        self_ip != last_packet_destination_ip) {
+      CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
+                      "Self address migration is not supported at the server.",
+                      ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+      return false;
+    }
+    self_address_ = last_packet_destination_address_;
   }
 
   if (!Near(header.packet_number, last_header_.packet_number)) {
@@ -1744,7 +1765,8 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
                 << " from host " << (self_address().address().empty()
                                          ? " empty address "
                                          : self_address().ToStringWithoutPort())
-                << " to address " << peer_address().ToString();
+                << " to address " << peer_address().ToString()
+                << " with error code " << result.error_code;
     return false;
   }
 

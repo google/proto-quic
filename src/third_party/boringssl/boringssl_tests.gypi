@@ -656,12 +656,10 @@
       'src/crypto/test/file_test.cc',
       'src/crypto/test/file_test.h',
       'src/crypto/test/malloc.cc',
-      'src/crypto/test/scoped_types.h',
       'src/crypto/test/test_util.cc',
       'src/crypto/test/test_util.h',
       'src/ssl/test/async_bio.h',
       'src/ssl/test/packeted_bio.h',
-      'src/ssl/test/scoped_types.h',
       'src/ssl/test/test_config.h',
     ],
     'boringssl_test_targets': [

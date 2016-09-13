@@ -151,14 +151,16 @@ class HeapProfilerFilter : public TraceLog::TraceEventFilter {
     if (trace_event.flags() & TRACE_EVENT_FLAG_COPY)
       return true;
 
+    const char* category_name =
+        TraceLog::GetCategoryGroupName(trace_event.category_group_enabled());
     if (trace_event.phase() == TRACE_EVENT_PHASE_BEGIN ||
         trace_event.phase() == TRACE_EVENT_PHASE_COMPLETE) {
       AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PushPseudoStackFrame(trace_event.name());
+          ->PushPseudoStackFrame({category_name, trace_event.name()});
     } else if (trace_event.phase() == TRACE_EVENT_PHASE_END) {
       // The pop for |TRACE_EVENT_PHASE_COMPLETE| events is in |EndEvent|.
       AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PopPseudoStackFrame(trace_event.name());
+          ->PopPseudoStackFrame({category_name, trace_event.name()});
     }
     // Do not filter-out any events and always return true. TraceLog adds the
     // event only if it is enabled for recording.
@@ -169,7 +171,7 @@ class HeapProfilerFilter : public TraceLog::TraceEventFilter {
     if (AllocationContextTracker::capture_mode() ==
         AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
       AllocationContextTracker::GetInstanceForCurrentThread()
-          ->PopPseudoStackFrame(name);
+          ->PopPseudoStackFrame({category_group, name});
     }
   }
 };

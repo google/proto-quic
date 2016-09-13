@@ -18,6 +18,9 @@
 #include "base/task_scheduler/task_traits.h"
 
 namespace base {
+
+class SequenceToken;
+
 namespace internal {
 
 // All tasks go through the scheduler's TaskTracker when they are posted and
@@ -41,9 +44,11 @@ class BASE_EXPORT TaskTracker {
   // this operation is allowed (|task| should be posted if-and-only-if it is).
   bool WillPostTask(const Task* task);
 
-  // Runs the next Task in |sequence| unless the current shutdown state prevents
-  // that. WillPostTask() must have allowed the Task to be posted.
-  void RunNextTaskInSequence(const Sequence* sequence);
+  // Runs |task| unless the current shutdown state prevents that.
+  // |sequence_token| is the token identifying the sequence from which |task|
+  // was extracted. Returns true if |task| ran. WillPostTask() must have allowed
+  // |task| to be posted before this is called.
+  bool RunTask(const Task* task, const SequenceToken& sequence_token);
 
   // Returns true once shutdown has started (Shutdown() has been called but
   // might not have returned). Note: sequential consistency with the thread

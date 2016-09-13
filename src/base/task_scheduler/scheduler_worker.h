@@ -53,6 +53,11 @@ class BASE_EXPORT SchedulerWorker {
     // run a Task.
     virtual scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) = 0;
 
+    // Called by the SchedulerWorker after it ran |task|. |task_latency| is the
+    // time elapsed between when the task was posted and when it started to run.
+    virtual void DidRunTask(const Task* task,
+                            const TimeDelta& task_latency) = 0;
+
     // Called when |sequence| isn't empty after the SchedulerWorker pops a Task
     // from it. |sequence| is the last Sequence returned by GetWork().
     virtual void ReEnqueueSequence(scoped_refptr<Sequence> sequence) = 0;

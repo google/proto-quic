@@ -107,15 +107,15 @@ std::unique_ptr<ProofVerifier> ProofVerifierForTestingInternal(
   cert_verifier->AddResultForCertAndHost(verify_result.verified_cert.get(),
                                          "test.example.com", verify_result, OK);
   if (use_real_proof_verifier) {
-    return base::WrapUnique(new TestProofVerifierChromium(
+    return base::MakeUnique<TestProofVerifierChromium>(
         std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
         base::WrapUnique(new MultiLogCTVerifier),
-        base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt"));
+        base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt");
   }
-  return base::WrapUnique(new TestProofVerifierChromium(
+  return base::MakeUnique<TestProofVerifierChromium>(
       std::move(cert_verifier), base::WrapUnique(new TransportSecurityState),
       base::WrapUnique(new MultiLogCTVerifier),
-      base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt"));
+      base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt");
 }
 
 // static

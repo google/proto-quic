@@ -93,7 +93,7 @@ extern CertErrorType kBasicConstraintsIndicatesNotCa;
 extern CertErrorType kMissingBasicConstraints;
 extern CertErrorType kNotPermittedByNameConstraints;
 extern CertErrorType kSubjectDoesNotMatchIssuer;
-extern CertErrorType kSignatureVerificationFailed;
+extern CertErrorType kVerifySignedDataFailed;
 extern CertErrorType kValidityFailedNotAfter;
 extern CertErrorType kValidityFailedNotBefore;
 extern CertErrorType kSignatureAlgorithmsDifferentEncoding;

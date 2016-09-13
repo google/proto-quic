@@ -21,6 +21,8 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"
@@ -106,7 +108,7 @@ TransportConnectJob::TransportConnectJob(
                  priority,
                  respect_limits,
                  delegate,
-                 BoundNetLog::Make(net_log, NetLog::SOURCE_CONNECT_JOB)),
+                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
@@ -572,7 +574,7 @@ void TransportClientSocketPool::NetLogTcpClientSocketPoolRequestedSocket(
   if (net_log.IsCapturing()) {
     // TODO(eroman): Split out the host and port parameters.
     net_log.AddEvent(
-        NetLog::TYPE_TCP_CLIENT_SOCKET_POOL_REQUESTED_SOCKET,
+        NetLogEventType::TCP_CLIENT_SOCKET_POOL_REQUESTED_SOCKET,
         CreateNetLogHostPortPairCallback(
             &casted_params->get()->destination().host_port_pair()));
   }
@@ -589,7 +591,7 @@ void TransportClientSocketPool::RequestSockets(
   if (net_log.IsCapturing()) {
     // TODO(eroman): Split out the host and port parameters.
     net_log.AddEvent(
-        NetLog::TYPE_TCP_CLIENT_SOCKET_POOL_REQUESTED_SOCKETS,
+        NetLogEventType::TCP_CLIENT_SOCKET_POOL_REQUESTED_SOCKETS,
         CreateNetLogHostPortPairCallback(
             &casted_params->get()->destination().host_port_pair()));
   }

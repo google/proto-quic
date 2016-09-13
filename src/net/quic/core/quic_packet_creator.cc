@@ -393,14 +393,13 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
     QuicStreamOffset stream_offset,
     bool fin,
     QuicAckListenerInterface* listener,
-    char* encrypted_buffer,
-    size_t encrypted_buffer_len,
     size_t* num_bytes_consumed) {
   DCHECK(queued_frames_.empty());
   // Write out the packet header
   QuicPacketHeader header;
   FillPacketHeader(&header);
-  QuicDataWriter writer(kMaxPacketSize, encrypted_buffer);
+  ALIGNAS(64) char encrypted_buffer[kMaxPacketSize];
+  QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer);
   if (!framer_->AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return;
@@ -441,7 +440,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   size_t encrypted_length = framer_->EncryptInPlace(
       packet_.encryption_level, packet_.path_id, packet_.packet_number,
       GetStartOfEncryptedData(framer_->version(), header), writer.length(),
-      encrypted_buffer_len, encrypted_buffer);
+      arraysize(encrypted_buffer), encrypted_buffer);
   if (encrypted_length == 0) {
     QUIC_BUG << "Failed to encrypt packet number " << header.packet_number;
     return;
@@ -612,7 +611,7 @@ bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
 bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
                                  bool save_retransmittable_frames) {
   DVLOG(1) << "Adding frame: " << frame;
-  if (FLAGS_quic_never_write_unencrypted_data && frame.type == STREAM_FRAME &&
+  if (frame.type == STREAM_FRAME &&
       frame.stream_frame->stream_id != kCryptoStreamId &&
       packet_.encryption_level == ENCRYPTION_NONE) {
     const string error_details = "Cannot send stream data without encryption.";

@@ -19,6 +19,8 @@
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/websocket_endpoint_lock_manager.h"
@@ -39,12 +41,13 @@ WebSocketTransportConnectJob::WebSocketTransportConnectJob(
     Delegate* delegate,
     NetLog* pool_net_log,
     const BoundNetLog& request_net_log)
-    : ConnectJob(group_name,
-                 timeout_duration,
-                 priority,
-                 respect_limits,
-                 delegate,
-                 BoundNetLog::Make(pool_net_log, NetLog::SOURCE_CONNECT_JOB)),
+    : ConnectJob(
+          group_name,
+          timeout_duration,
+          priority,
+          respect_limits,
+          delegate,
+          BoundNetLog::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
@@ -331,11 +334,11 @@ int WebSocketTransportClientSocketPool::RequestSocket(
   CHECK(!callback.is_null());
   CHECK(handle);
 
-  request_net_log.BeginEvent(NetLog::TYPE_SOCKET_POOL);
+  request_net_log.BeginEvent(NetLogEventType::SOCKET_POOL);
 
   if (ReachedMaxSocketsLimit() &&
       respect_limits == ClientSocketPool::RespectLimits::ENABLED) {
-    request_net_log.AddEvent(NetLog::TYPE_SOCKET_POOL_STALLED_MAX_SOCKETS);
+    request_net_log.AddEvent(NetLogEventType::SOCKET_POOL_STALLED_MAX_SOCKETS);
     // TODO(ricea): Use emplace_back when C++11 becomes allowed.
     StalledRequest request(
         casted_params, priority, handle, callback, request_net_log);
@@ -364,14 +367,14 @@ int WebSocketTransportClientSocketPool::RequestSocket(
   // |handle|, since this pool uses early-binding. So the binding is logged
   // here, without waiting for the result.
   request_net_log.AddEvent(
-      NetLog::TYPE_SOCKET_POOL_BOUND_TO_CONNECT_JOB,
+      NetLogEventType::SOCKET_POOL_BOUND_TO_CONNECT_JOB,
       connect_job->net_log().source().ToEventParametersCallback());
   if (rv == OK) {
     HandOutSocket(connect_job->PassSocket(),
                   connect_job->connect_timing(),
                   handle,
                   request_net_log);
-    request_net_log.EndEvent(NetLog::TYPE_SOCKET_POOL);
+    request_net_log.EndEvent(NetLogEventType::SOCKET_POOL);
   } else if (rv == ERR_IO_PENDING) {
     // TODO(ricea): Implement backup job timer?
     AddJob(handle, std::move(connect_job));
@@ -386,7 +389,7 @@ int WebSocketTransportClientSocketPool::RequestSocket(
   }
 
   if (rv != ERR_IO_PENDING) {
-    request_net_log.EndEventWithNetErrorCode(NetLog::TYPE_SOCKET_POOL, rv);
+    request_net_log.EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL, rv);
   }
 
   return rv;
@@ -527,7 +530,7 @@ void WebSocketTransportClientSocketPool::OnConnectJobComplete(
     DCHECK(socket.get());
     handed_out_socket = true;
     HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
-    request_net_log.EndEvent(NetLog::TYPE_SOCKET_POOL);
+    request_net_log.EndEvent(NetLogEventType::SOCKET_POOL);
   } else {
     // If we got a socket, it must contain error information so pass that
     // up so that the caller can retrieve it.
@@ -536,7 +539,8 @@ void WebSocketTransportClientSocketPool::OnConnectJobComplete(
       handed_out_socket = true;
       HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
     }
-    request_net_log.EndEventWithNetErrorCode(NetLog::TYPE_SOCKET_POOL, result);
+    request_net_log.EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
+                                             result);
   }
   bool delete_succeeded = DeleteJob(handle);
   DCHECK(delete_succeeded);
@@ -585,7 +589,7 @@ void WebSocketTransportClientSocketPool::HandOutSocket(
   handle->set_connect_timing(connect_timing);
 
   net_log.AddEvent(
-      NetLog::TYPE_SOCKET_POOL_BOUND_TO_SOCKET,
+      NetLogEventType::SOCKET_POOL_BOUND_TO_SOCKET,
       handle->socket()->NetLog().source().ToEventParametersCallback());
 
   ++handed_out_socket_count_;

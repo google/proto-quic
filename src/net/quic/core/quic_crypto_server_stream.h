@@ -34,7 +34,8 @@ class QuicCryptoServerStreamPeer;
 // various code and test refactoring.
 class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
  public:
-  explicit QuicCryptoServerStreamBase(QuicServerSessionBase* session);
+  explicit QuicCryptoServerStreamBase(QuicSession* session);
+
   ~QuicCryptoServerStreamBase() override {}
 
   // Cancel any outstanding callbacks, such as asynchronous validation of client
@@ -76,11 +77,32 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
 class NET_EXPORT_PRIVATE QuicCryptoServerStream
     : public QuicCryptoServerStreamBase {
  public:
+  class Helper {
+   public:
+    virtual ~Helper() {}
+
+    // Given the current connection_id, generates a new ConnectionId to
+    // be returned with a stateless reject.
+    virtual QuicConnectionId GenerateConnectionIdForReject(
+        QuicConnectionId connection_id) const = 0;
+
+    // Returns true if |message|, which was received on |self_address| is
+    // acceptable according to the visitor's policy. Otherwise, returns false
+    // and populates |error_details|.
+    virtual bool CanAcceptClientHello(const CryptoHandshakeMessage& message,
+                                      const IPEndPoint& self_address,
+                                      std::string* error_details) const = 0;
+  };
+
   // |crypto_config| must outlive the stream.
+  // |session| must outlive the stream.
+  // |helper| must outlive the stream.
   QuicCryptoServerStream(const QuicCryptoServerConfig* crypto_config,
                          QuicCompressedCertsCache* compressed_certs_cache,
                          bool use_stateless_rejects_if_peer_supported,
-                         QuicServerSessionBase* session);
+                         QuicSession* session,
+                         Helper* helper);
+
   ~QuicCryptoServerStream() override;
 
   // From QuicCryptoServerStreamBase
@@ -192,6 +214,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // FinishProcessingHandshakeMessage for processing.  nullptr if no
   // handshake message is being validated.
   ValidateCallback* validate_client_hello_cb_;
+
+  // Pointer to the helper for this crypto stream. Must outlive this stream.
+  Helper* helper_;
 
   // Number of handshake messages received by this stream.
   uint8_t num_handshake_messages_;

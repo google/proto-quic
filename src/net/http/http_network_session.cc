@@ -256,6 +256,9 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 HttpNetworkSession::~HttpNetworkSession() {
   base::STLDeleteElements(&response_drainers_);
   spdy_session_pool_.CloseAllSessions();
+
+  // TODO(ricea): Remove this by October 2016. See bug 641013.
+  CHECK_EQ(active_websockets_, 0);
 }
 
 void HttpNetworkSession::AddResponseDrainer(HttpResponseBodyDrainer* drainer) {

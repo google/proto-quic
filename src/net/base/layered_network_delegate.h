@@ -59,11 +59,12 @@ class NET_EXPORT LayeredNetworkDelegate : public NetworkDelegate {
       scoped_refptr<HttpResponseHeaders>* override_response_headers,
       GURL* allowed_unsafe_redirect_url) final;
   void OnBeforeRedirect(URLRequest* request, const GURL& new_location) final;
-  void OnResponseStarted(URLRequest* request) final;
+
+  void OnResponseStarted(URLRequest* request, int net_error) final;
   void OnNetworkBytesReceived(URLRequest* request,
                               int64_t bytes_received) final;
   void OnNetworkBytesSent(URLRequest* request, int64_t bytes_sent) final;
-  void OnCompleted(URLRequest* request, bool started) final;
+  void OnCompleted(URLRequest* request, bool started, int net_error) final;
   void OnURLRequestDestroyed(URLRequest* request) final;
   void OnPACScriptError(int line_number, const base::string16& error) final;
   AuthRequiredResponse OnAuthRequired(URLRequest* request,

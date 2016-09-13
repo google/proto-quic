@@ -234,6 +234,10 @@ class QuicInMemoryCache {
   // A map from request URL to associated server push responses (if any).
   std::multimap<std::string, ServerPushInfo> server_push_resources_;
 
+  // Protects against concurrent access from test threads setting responses, and
+  // server threads accessing those responses.
+  mutable base::Lock response_mutex_;
+
   DISALLOW_COPY_AND_ASSIGN(QuicInMemoryCache);
 };
 

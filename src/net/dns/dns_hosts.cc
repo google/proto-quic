@@ -9,6 +9,7 @@
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
+#include "net/dns/dns_util.h"
 
 using base::StringPiece;
 
@@ -155,6 +156,8 @@ void ParseHostsWithCommaMode(const std::string& contents,
       }
     } else {
       DnsHostsKey key(parser.token().as_string(), family);
+      if (!IsValidDNSDomain(key.first))
+        continue;
       key.first = base::ToLowerASCII(key.first);
       IPAddress* mapped_ip = &(*dns_hosts)[key];
       if (mapped_ip->empty())

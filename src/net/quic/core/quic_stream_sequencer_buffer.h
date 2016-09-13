@@ -152,6 +152,9 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // (To be called only after sequencer's StopReading has been called.)
   size_t FlushBufferedFrames();
 
+  // Free the memory of buffered data.
+  void ReleaseWholeBuffer();
+
   // Whether there are bytes can be read out.
   bool HasBytesToRead() const;
 
@@ -160,6 +163,10 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
 
   // Count how many bytes are in buffer at this moment.
   size_t BytesBuffered() const;
+
+  bool reduce_sequencer_buffer_memory_life_time() const {
+    return reduce_sequencer_buffer_memory_life_time_;
+  }
 
  private:
   friend class test::QuicStreamSequencerBufferPeer;
@@ -228,10 +235,14 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // Contains Gaps which represents currently missing data.
   std::list<Gap> gaps_;
 
+  // If true, allocate buffer memory upon the first frame arrival and release
+  // the memory when stream is read closed.
+  bool reduce_sequencer_buffer_memory_life_time_;
+
   // An ordered, variable-length list of blocks, with the length limited
   // such that the number of blocks never exceeds blocks_count_.
   // Each list entry can hold up to kBlockSizeBytes bytes.
-  std::vector<BufferBlock*> blocks_;
+  std::unique_ptr<BufferBlock* []> blocks_;
 
   // Number of bytes in buffer.
   size_t num_bytes_buffered_;

@@ -271,7 +271,7 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseVaryWaits) {
 
   // Now initiate rendezvous.
   PushPromiseDelegate delegate(/*match=*/true);
-  promised->HandleClientRequest(std::move(client_request_), &delegate);
+  promised->HandleClientRequest(client_request_, &delegate);
 
   // Promise is still there, waiting for response.
   EXPECT_NE(session_.GetPromisedById(promise_id_), nullptr);
@@ -303,7 +303,7 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseVaryNoWait) {
 
   // Now initiate rendezvous.
   PushPromiseDelegate delegate(/*match=*/true);
-  promised->HandleClientRequest(std::move(client_request_), &delegate);
+  promised->HandleClientRequest(client_request_, &delegate);
 
   // Promise is gone
   EXPECT_EQ(session_.GetPromisedById(promise_id_), nullptr);
@@ -321,7 +321,7 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseWaitCancels) {
 
   // Now initiate rendezvous.
   PushPromiseDelegate delegate(/*match=*/true);
-  promised->HandleClientRequest(std::move(client_request_), &delegate);
+  promised->HandleClientRequest(client_request_, &delegate);
 
   // Promise is still there, waiting for response.
   EXPECT_NE(session_.GetPromisedById(promise_id_), nullptr);
@@ -360,9 +360,8 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseDataClosed) {
 
   // Now initiate rendezvous.
   PushPromiseDelegate delegate(/*match=*/true);
-  EXPECT_EQ(
-      promised->HandleClientRequest(std::move(client_request_), &delegate),
-      QUIC_FAILURE);
+  EXPECT_EQ(promised->HandleClientRequest(client_request_, &delegate),
+            QUIC_FAILURE);
 
   // Got an indication of the stream failure, client should retry
   // request.

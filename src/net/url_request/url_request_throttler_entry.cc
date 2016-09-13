@@ -15,6 +15,8 @@
 #include "base/values.h"
 #include "net/base/load_flags.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_throttler_manager.h"
@@ -71,8 +73,9 @@ URLRequestThrottlerEntry::URLRequestThrottlerEntry(
       backoff_entry_(&backoff_policy_),
       manager_(manager),
       url_id_(url_id),
-      net_log_(BoundNetLog::Make(
-          manager->net_log(), NetLog::SOURCE_EXPONENTIAL_BACKOFF_THROTTLING)) {
+      net_log_(
+          BoundNetLog::Make(manager->net_log(),
+                            NetLogSourceType::EXPONENTIAL_BACKOFF_THROTTLING)) {
   DCHECK(manager_);
   Initialize();
 }
@@ -152,12 +155,10 @@ bool URLRequestThrottlerEntry::ShouldRejectRequest(
   bool reject_request = false;
   if (!is_backoff_disabled_ && !ExplicitUserRequest(request.load_flags()) &&
       GetBackoffEntry()->ShouldRejectRequest()) {
-    net_log_.AddEvent(
-        NetLog::TYPE_THROTTLING_REJECTED_REQUEST,
-        base::Bind(&NetLogRejectedRequestCallback,
-                   &url_id_,
-                   GetBackoffEntry()->failure_count(),
-                   GetBackoffEntry()->GetTimeUntilRelease()));
+    net_log_.AddEvent(NetLogEventType::THROTTLING_REJECTED_REQUEST,
+                      base::Bind(&NetLogRejectedRequestCallback, &url_id_,
+                                 GetBackoffEntry()->failure_count(),
+                                 GetBackoffEntry()->GetTimeUntilRelease()));
     reject_request = true;
   }
 

@@ -79,6 +79,9 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
   // automatically when the FIN is consumed (which may be immediately).
   void StopReading();
 
+  // Free the memory of underlying buffer.
+  void ReleaseBuffer();
+
   // Number of bytes in the buffer right now.
   size_t NumBytesBuffered() const;
 

@@ -56,12 +56,19 @@ struct AllocatorDispatch {
                           void* address,
                           size_t size);
   using FreeFn = void(const AllocatorDispatch* self, void* address);
+  // Returns the best available estimate for the actual amount of memory
+  // consumed by the allocation |address|. If possible, this should include
+  // heap overhead or at least a decent estimate of the full cost of the
+  // allocation. If no good estimate is possible, returns zero.
+  using GetSizeEstimateFn = size_t(const AllocatorDispatch* self,
+                                   void* address);
 
   AllocFn* const alloc_function;
   AllocZeroInitializedFn* const alloc_zero_initialized_function;
   AllocAlignedFn* const alloc_aligned_function;
   ReallocFn* const realloc_function;
   FreeFn* const free_function;
+  GetSizeEstimateFn* const get_size_estimate_function;
 
   const AllocatorDispatch* next;
 

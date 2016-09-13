@@ -404,9 +404,9 @@ void WebSocketDispatchOnFinishOpeningHandshake(
   DCHECK(connect_delegate);
   if (headers.get()) {
     connect_delegate->OnFinishOpeningHandshake(
-        base::WrapUnique(new WebSocketHandshakeResponseInfo(
+        base::MakeUnique<WebSocketHandshakeResponseInfo>(
             url, headers->response_code(), headers->GetStatusText(), headers,
-            response_time)));
+            response_time));
   }
 }
 

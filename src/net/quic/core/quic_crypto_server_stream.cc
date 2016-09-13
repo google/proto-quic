@@ -23,8 +23,7 @@ using std::string;
 
 namespace net {
 
-QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(
-    QuicServerSessionBase* session)
+QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(QuicSession* session)
     : QuicCryptoStream(session) {}
 
 // TODO(jokulik): Once stateless rejects support is inherent in the version
@@ -51,11 +50,13 @@ QuicCryptoServerStream::QuicCryptoServerStream(
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache,
     bool use_stateless_rejects_if_peer_supported,
-    QuicServerSessionBase* session)
+    QuicSession* session,
+    Helper* helper)
     : QuicCryptoServerStreamBase(session),
       crypto_config_(crypto_config),
       compressed_certs_cache_(compressed_certs_cache),
       validate_client_hello_cb_(nullptr),
+      helper_(helper),
       num_handshake_messages_(0),
       num_handshake_messages_with_server_nonces_(0),
       send_server_config_update_cb_(nullptr),
@@ -384,9 +385,8 @@ QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
     CryptoHandshakeMessage* reply,
     DiversificationNonce* out_diversification_nonce,
     string* error_details) {
-  QuicServerSessionBase* session_base =
-      static_cast<QuicServerSessionBase*>(session());
-  if (!session_base->CanAcceptClientHello(message, error_details)) {
+  if (!helper_->CanAcceptClientHello(
+          message, session()->connection()->self_address(), error_details)) {
     return QUIC_HANDSHAKE_FAILED;
   }
 
@@ -442,9 +442,7 @@ QuicConnectionId QuicCryptoServerStream::GenerateConnectionIdForReject(
   if (!use_stateless_rejects) {
     return 0;
   }
-  QuicServerSessionBase* session_base =
-      static_cast<QuicServerSessionBase*>(session());
-  return session_base->GenerateConnectionIdForReject(
+  return helper_->GenerateConnectionIdForReject(
       session()->connection()->connection_id());
 }
 

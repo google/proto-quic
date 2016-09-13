@@ -105,6 +105,13 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // Called if an error is detected in the SpdySerializedFrame protocol.
   virtual void OnError(SpdyFramer* framer) = 0;
 
+  // Called when the common header for a frame is received. Validating the
+  // common header occurs in later processing.
+  virtual void OnCommonHeader(SpdyStreamId stream_id,
+                              size_t length,
+                              uint8_t type,
+                              uint8_t flags) {}
+
   // Called when a data frame header is received. The frame's data
   // payload will be provided via subsequent calls to
   // OnStreamFrameData().
@@ -515,6 +522,10 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     enable_compression_ = value;
   }
 
+  void SetHpackIndexingPolicy(HpackEncoder::IndexingPolicy policy) {
+    GetHpackEncoder()->SetIndexingPolicy(std::move(policy));
+  }
+
   // Used only in log messages.
   void set_display_protocol(const std::string& protocol) {
     display_protocol_ = protocol;
@@ -861,7 +872,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   bool process_single_input_frame_ = false;
 
   bool use_new_methods_ =
-      FLAGS_chromium_http2_flag_spdy_framer_use_new_methods3;
+      FLAGS_chromium_http2_flag_spdy_framer_use_new_methods4;
 };
 
 }  // namespace net

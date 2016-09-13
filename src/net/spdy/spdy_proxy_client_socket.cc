@@ -23,6 +23,8 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/proxy_connect_redirect_http_stream.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "url/gurl.h"
 
@@ -45,15 +47,15 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
       was_ever_used_(false),
       redirect_has_load_timing_info_(false),
       net_log_(BoundNetLog::Make(spdy_stream->net_log().net_log(),
-                                 NetLog::SOURCE_PROXY_CLIENT_SOCKET)),
+                                 NetLogSourceType::PROXY_CLIENT_SOCKET)),
       weak_factory_(this),
       write_callback_weak_factory_(this) {
   request_.method = "CONNECT";
   request_.url = GURL("https://" + endpoint.ToString());
-  net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
+  net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source_net_log.source().ToEventParametersCallback());
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_PROXY_CLIENT_SESSION,
+      NetLogEventType::HTTP2_PROXY_CLIENT_SESSION,
       spdy_stream->net_log().source().ToEventParametersCallback());
 
   spdy_stream_->SetDelegate(this);
@@ -62,7 +64,7 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
 
 SpdyProxyClientSocket::~SpdyProxyClientSocket() {
   Disconnect();
-  net_log_.EndEvent(NetLog::TYPE_SOCKET_ALIVE);
+  net_log_.EndEvent(NetLogEventType::SOCKET_ALIVE);
 }
 
 const HttpResponseInfo* SpdyProxyClientSocket::GetConnectResponseInfo() const {
@@ -224,8 +226,8 @@ int SpdyProxyClientSocket::Write(IOBuffer* buf, int buf_len,
 
   DCHECK(spdy_stream_.get());
   spdy_stream_->SendData(buf, buf_len, MORE_DATA_TO_SEND);
-  net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT,
-                                buf_len, buf->data());
+  net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_SENT, buf_len,
+                                buf->data());
   write_callback_ = callback;
   write_buffer_len_ = buf_len;
   return ERR_IO_PENDING;
@@ -292,24 +294,25 @@ int SpdyProxyClientSocket::DoLoop(int last_io_result) {
         break;
       case STATE_SEND_REQUEST:
         DCHECK_EQ(OK, rv);
-        net_log_.BeginEvent(NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_SEND_REQUEST);
+        net_log_.BeginEvent(
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_SEND_REQUEST);
         rv = DoSendRequest();
         break;
       case STATE_SEND_REQUEST_COMPLETE:
         net_log_.EndEventWithNetErrorCode(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_SEND_REQUEST, rv);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_SEND_REQUEST, rv);
         rv = DoSendRequestComplete(rv);
         if (rv >= 0 || rv == ERR_IO_PENDING) {
           // Emit extra event so can use the same events as
           // HttpProxyClientSocket.
           net_log_.BeginEvent(
-              NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_READ_HEADERS);
+              NetLogEventType::HTTP_TRANSACTION_TUNNEL_READ_HEADERS);
         }
         break;
       case STATE_READ_REPLY_COMPLETE:
         rv = DoReadReplyComplete(rv);
         net_log_.EndEventWithNetErrorCode(
-            NetLog::TYPE_HTTP_TRANSACTION_TUNNEL_READ_HEADERS, rv);
+            NetLogEventType::HTTP_TRANSACTION_TUNNEL_READ_HEADERS, rv);
         break;
       default:
         NOTREACHED() << "bad state";
@@ -351,7 +354,7 @@ int SpdyProxyClientSocket::DoSendRequest() {
                      &request_line, &request_.extra_headers);
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP_TRANSACTION_SEND_TUNNEL_HEADERS,
+      NetLogEventType::HTTP_TRANSACTION_SEND_TUNNEL_HEADERS,
       base::Bind(&HttpRequestHeaders::NetLogCallback,
                  base::Unretained(&request_.extra_headers), &request_line));
 
@@ -384,7 +387,7 @@ int SpdyProxyClientSocket::DoReadReplyComplete(int result) {
     return ERR_TUNNEL_CONNECTION_FAILED;
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP_TRANSACTION_READ_TUNNEL_RESPONSE_HEADERS,
+      NetLogEventType::HTTP_TRANSACTION_READ_TUNNEL_RESPONSE_HEADERS,
       base::Bind(&HttpResponseHeaders::NetLogCallback, response_.headers));
 
   switch (response_.headers->response_code()) {
@@ -451,12 +454,13 @@ SpdyResponseHeadersStatus SpdyProxyClientSocket::OnResponseHeadersUpdated(
 // Called when data is received or on EOF (if |buffer| is NULL).
 void SpdyProxyClientSocket::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   if (buffer) {
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED,
+    net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED,
                                   buffer->GetRemainingSize(),
                                   buffer->GetRemainingData());
     read_buffer_queue_.Enqueue(std::move(buffer));
   } else {
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED, 0, NULL);
+    net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, 0,
+                                  NULL);
   }
 
   if (!read_callback_.is_null()) {

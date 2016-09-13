@@ -185,6 +185,10 @@ void QuicStreamSequencer::StopReading() {
   FlushBufferedFrames();
 }
 
+void QuicStreamSequencer::ReleaseBuffer() {
+  buffered_frames_.ReleaseWholeBuffer();
+}
+
 void QuicStreamSequencer::FlushBufferedFrames() {
   DCHECK(ignore_read_data_);
   size_t bytes_flushed = buffered_frames_.FlushBufferedFrames();

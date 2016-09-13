@@ -10,11 +10,46 @@
 #include "crypto/ec_private_key.h"
 #include "crypto/rsa_private_key.h"
 #include "net/base/hash_value.h"
+#include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
+#include "net/cert/internal/parse_name.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/x509_certificate.h"
+#include "net/der/input.h"
+#include "net/der/parse_values.h"
 
 namespace net {
+
+namespace {
+
+bool GetCommonName(const der::Input& tlv, std::string* common_name) {
+  RDNSequence rdn_sequence;
+  if (!ParseName(tlv, &rdn_sequence))
+    return false;
+
+  for (const auto& rdn : rdn_sequence) {
+    for (const auto& atv : rdn) {
+      if (atv.type == TypeCommonNameOid()) {
+        return atv.ValueAsStringUnsafe(common_name);
+      }
+    }
+  }
+  return true;
+}
+
+bool DecodeTime(const der::GeneralizedTime& generalized_time,
+                base::Time* time) {
+  base::Time::Exploded exploded = {0};
+  exploded.year = generalized_time.year;
+  exploded.month = generalized_time.month;
+  exploded.day_of_month = generalized_time.day;
+  exploded.hour = generalized_time.hours;
+  exploded.minute = generalized_time.minutes;
+  exploded.second = generalized_time.seconds;
+  return base::Time::FromUTCExploded(exploded, time);
+}
+
+}  // namespace
 
 namespace x509_util {
 
@@ -80,6 +115,58 @@ bool CreateKeyAndSelfSignedCert(const std::string& subject,
     key->reset(new_key.release());
 
   return success;
+}
+
+bool ParseCertificateSandboxed(const base::StringPiece& certificate,
+                               std::string* subject,
+                               std::string* issuer,
+                               base::Time* not_before,
+                               base::Time* not_after,
+                               std::vector<std::string>* dns_names,
+                               std::vector<std::string>* ip_addresses) {
+  der::Input cert_data(certificate);
+  der::Input tbs_cert, signature_alg;
+  der::BitString signature_value;
+  if (!ParseCertificate(cert_data, &tbs_cert, &signature_alg, &signature_value))
+    return false;
+
+  ParsedTbsCertificate parsed_tbs_cert;
+  if (!ParseTbsCertificate(tbs_cert, ParseCertificateOptions(),
+                           &parsed_tbs_cert))
+    return false;
+
+  if (!GetCommonName(parsed_tbs_cert.subject_tlv, subject))
+    return false;
+
+  if (!GetCommonName(parsed_tbs_cert.issuer_tlv, issuer))
+    return false;
+
+  if (!DecodeTime(parsed_tbs_cert.validity_not_before, not_before))
+    return false;
+
+  if (!DecodeTime(parsed_tbs_cert.validity_not_after, not_after))
+    return false;
+
+  if (!parsed_tbs_cert.has_extensions)
+    return true;
+
+  std::map<der::Input, ParsedExtension> extensions;
+  if (!ParseExtensions(parsed_tbs_cert.extensions_tlv, &extensions))
+    return false;
+
+  std::vector<std::string> san;
+  auto iter = extensions.find(SubjectAltNameOid());
+  if (iter != extensions.end()) {
+    std::unique_ptr<GeneralNames> subject_alt_names =
+        GeneralNames::CreateFromDer(iter->second.value);
+    if (subject_alt_names) {
+      *dns_names = subject_alt_names->dns_names;
+      for (const auto& ip : subject_alt_names->ip_addresses)
+        ip_addresses->push_back(ip.ToString());
+    }
+  }
+
+  return true;
 }
 
 }  // namespace x509_util

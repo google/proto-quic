@@ -18,6 +18,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
+#include "net/log/net_log_event_type.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_session.h"
@@ -50,7 +51,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
   return std::move(dict);
 }
 
-bool ContainsUppercaseAscii(const std::string& str) {
+bool ContainsUppercaseAscii(base::StringPiece str) {
   return std::any_of(str.begin(), str.end(), base::IsAsciiUpper<char>);
 }
 
@@ -279,7 +280,7 @@ void SpdyStream::IncreaseSendWindowSize(int32_t delta_window_size) {
   send_window_size_ += delta_window_size;
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_STREAM_UPDATE_SEND_WINDOW,
+      NetLogEventType::HTTP2_STREAM_UPDATE_SEND_WINDOW,
       base::Bind(&NetLogSpdyStreamWindowUpdateCallback, stream_id_,
                  delta_window_size, send_window_size_));
 
@@ -302,7 +303,7 @@ void SpdyStream::DecreaseSendWindowSize(int32_t delta_window_size) {
   send_window_size_ -= delta_window_size;
 
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_STREAM_UPDATE_SEND_WINDOW,
+      NetLogEventType::HTTP2_STREAM_UPDATE_SEND_WINDOW,
       base::Bind(&NetLogSpdyStreamWindowUpdateCallback, stream_id_,
                  -delta_window_size, send_window_size_));
 }
@@ -331,7 +332,7 @@ void SpdyStream::IncreaseRecvWindowSize(int32_t delta_window_size) {
 
   recv_window_size_ += delta_window_size;
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_STREAM_UPDATE_RECV_WINDOW,
+      NetLogEventType::HTTP2_STREAM_UPDATE_RECV_WINDOW,
       base::Bind(&NetLogSpdyStreamWindowUpdateCallback, stream_id_,
                  delta_window_size, recv_window_size_));
 
@@ -361,7 +362,7 @@ void SpdyStream::DecreaseRecvWindowSize(int32_t delta_window_size) {
 
   recv_window_size_ -= delta_window_size;
   net_log_.AddEvent(
-      NetLog::TYPE_HTTP2_STREAM_UPDATE_RECV_WINDOW,
+      NetLogEventType::HTTP2_STREAM_UPDATE_RECV_WINDOW,
       base::Bind(&NetLogSpdyStreamWindowUpdateCallback, stream_id_,
                  -delta_window_size, recv_window_size_));
 }
@@ -635,7 +636,7 @@ int SpdyStream::OnDataSent(size_t frame_size) {
 }
 
 void SpdyStream::LogStreamError(int status, const std::string& description) {
-  net_log_.AddEvent(NetLog::TYPE_HTTP2_STREAM_ERROR,
+  net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_ERROR,
                     base::Bind(&NetLogSpdyStreamErrorCallback, stream_id_,
                                status, &description));
 }
@@ -731,7 +732,7 @@ void SpdyStream::PossiblyResumeIfSendStalled() {
   }
   if (send_stalled_by_flow_control_ && !session_->IsSendStalled() &&
       send_window_size_ > 0) {
-    net_log_.AddEvent(NetLog::TYPE_HTTP2_STREAM_FLOW_CONTROL_UNSTALLED,
+    net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_FLOW_CONTROL_UNSTALLED,
                       NetLog::IntCallback("stream_id", stream_id_));
     send_stalled_by_flow_control_ = false;
     QueueNextDataFrame();
@@ -871,15 +872,14 @@ int SpdyStream::MergeWithResponseHeaders(
   for (SpdyHeaderBlock::const_iterator it = new_response_headers.begin();
       it != new_response_headers.end(); ++it) {
     // Disallow uppercase headers.
-    if (ContainsUppercaseAscii(it->first.as_string())) {
+    if (ContainsUppercaseAscii(it->first)) {
       session_->ResetStream(
           stream_id_, RST_STREAM_PROTOCOL_ERROR,
           "Upper case characters in header: " + it->first.as_string());
       return ERR_SPDY_PROTOCOL_ERROR;
     }
 
-    SpdyHeaderBlock::iterator it2 =
-        response_headers_.find(it->first.as_string());
+    SpdyHeaderBlock::iterator it2 = response_headers_.find(it->first);
     // Disallow duplicate headers.  This is just to be conservative.
     if (it2 != response_headers_.end()) {
       session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,

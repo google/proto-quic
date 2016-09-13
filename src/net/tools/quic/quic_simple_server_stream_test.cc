@@ -87,7 +87,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
   explicit MockQuicSimpleServerSession(
       QuicConnection* connection,
       MockQuicServerSessionVisitor* owner,
-      MockQuicServerSessionHelper* helper,
+      MockQuicCryptoServerStreamHelper* helper,
       QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache)
       : QuicSimpleServerSession(DefaultQuicConfig(),
@@ -232,7 +232,7 @@ class QuicSimpleServerStreamTest
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;
   StrictMock<MockQuicServerSessionVisitor> session_owner_;
-  StrictMock<MockQuicServerSessionHelper> session_helper_;
+  StrictMock<MockQuicCryptoServerStreamHelper> session_helper_;
   std::unique_ptr<QuicCryptoServerConfig> crypto_config_;
   QuicCompressedCertsCache compressed_certs_cache_;
   StrictMock<MockQuicSimpleServerSession> session_;

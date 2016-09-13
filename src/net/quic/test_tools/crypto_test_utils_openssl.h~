@@ -1,0 +1,51 @@
+#ifndef NET_QUIC_TEST_TOOLS_CRYPTO_TEST_UTILS_OPENSSL_H_
+#define NET_QUIC_TEST_TOOLS_CRYPTO_TEST_UTILS_OPENSSL_H_
+
+#include <memory>
+
+#include "net/quic/core/crypto/channel_id.h"
+#include "net/quic/test_tools/crypto_test_utils.h"
+
+#include "security/util/openssl_unique_ptr.h"
+#include "third_party/openssl/evp.h"
+
+namespace net {
+
+namespace test {
+
+class TestChannelIDKey : public ChannelIDKey {
+ public:
+  explicit TestChannelIDKey(EVP_PKEY* ecdsa_key) : ecdsa_key_(ecdsa_key) {}
+  ~TestChannelIDKey() override {}
+
+  // ChannelIDKey implementation.
+
+  bool Sign(base::StringPiece signed_data, std::string* out_signature) const override;
+
+  std::string SerializeKey() const override;
+
+  const EVP_PKEY* get_evp_pkey() const { return ecdsa_key_.get(); }
+
+ private:
+  security::openssl_unique_ptr<EVP_PKEY> ecdsa_key_;
+};
+
+class TestChannelIDSource : public ChannelIDSource {
+ public:
+  ~TestChannelIDSource() override {}
+
+  // ChannelIDSource implementation.
+
+  QuicAsyncStatus GetChannelIDKey(
+      const std::string& hostname,
+      std::unique_ptr<ChannelIDKey>* channel_id_key,
+      ChannelIDSourceCallback* /*callback*/) override;
+
+ private:
+  static EVP_PKEY* HostnameToKey(const std::string& hostname);
+};
+
+}  // namespace test
+}  // namespace net
+
+#endif  // NET_QUIC_TEST_TOOLS_CRYPTO_TEST_UTILS_OPENSSL_H_

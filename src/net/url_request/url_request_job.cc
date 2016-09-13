@@ -27,6 +27,7 @@
 #include "net/base/network_delegate.h"
 #include "net/filter/filter.h"
 #include "net/http/http_response_headers.h"
+#include "net/log/net_log_event_type.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/url_request/url_request_context.h"
 
@@ -160,43 +161,42 @@ void URLRequestJob::Kill() {
 // This function calls ReadRawData to get stream data. If a filter exists, it
 // passes the data to the attached filter. It then returns the output from
 // filter back to the caller.
-bool URLRequestJob::Read(IOBuffer* buf, int buf_size, int *bytes_read) {
+int URLRequestJob::Read(IOBuffer* buf, int buf_size) {
   DCHECK_LT(buf_size, 1000000);  // Sanity check.
   DCHECK(buf);
-  DCHECK(bytes_read);
   DCHECK(!filtered_read_buffer_);
   DCHECK_EQ(0, filtered_read_buffer_len_);
 
   Error error = OK;
-  *bytes_read = 0;
+  int bytes_read = 0;
 
   // Skip Filter if not present.
   if (!filter_) {
-    error = ReadRawDataHelper(buf, buf_size, bytes_read);
+    error = ReadRawDataHelper(buf, buf_size, &bytes_read);
   } else {
     // Save the caller's buffers while we do IO
     // in the filter's buffers.
     filtered_read_buffer_ = buf;
     filtered_read_buffer_len_ = buf_size;
 
-    error = ReadFilteredData(bytes_read);
+    error = ReadFilteredData(&bytes_read);
 
     // Synchronous EOF from the filter.
-    if (error == OK && *bytes_read == 0)
+    if (error == OK && bytes_read == 0)
       DoneReading();
   }
 
-  if (error == OK) {
-    // If URLRequestJob read zero bytes, the job is at EOF.
-    if (*bytes_read == 0)
-      NotifyDone(URLRequestStatus());
-  } else if (error == ERR_IO_PENDING) {
-    *bytes_read = ERR_IO_PENDING;
-  } else {
+  if (error == ERR_IO_PENDING)
+    return ERR_IO_PENDING;
+
+  if (error < 0) {
     NotifyDone(URLRequestStatus::FromError(error));
-    *bytes_read = error;
+    return error;
   }
-  return error == OK;
+
+  if (bytes_read == 0)
+    NotifyDone(URLRequestStatus());
+  return bytes_read;
 }
 
 void URLRequestJob::StopCaching() {
@@ -502,7 +502,7 @@ void URLRequestJob::NotifyHeadersComplete() {
       base::StringToInt64(content_length, &expected_content_size_);
   } else {
     request_->net_log().AddEvent(
-        NetLog::TYPE_URL_REQUEST_FILTERS_SET,
+        NetLogEventType::URL_REQUEST_FILTERS_SET,
         base::Bind(&FiltersSetCallback, base::Unretained(filter_.get())));
   }
 
@@ -612,7 +612,7 @@ void URLRequestJob::NotifyDone(const URLRequestStatus &status) {
   // successful.
   if (request_->status().is_success()) {
     if (status.status() == URLRequestStatus::FAILED)
-      request_->net_log().AddEventWithNetErrorCode(NetLog::TYPE_FAILED,
+      request_->net_log().AddEventWithNetErrorCode(NetLogEventType::FAILED,
                                                    status.error());
     request_->set_status(status);
   }
@@ -791,8 +791,8 @@ Error URLRequestJob::ReadFilteredData(int* bytes_read) {
       if (error == OK && filtered_data_len > 0 &&
           request()->net_log().IsCapturing()) {
         request()->net_log().AddByteTransferEvent(
-            NetLog::TYPE_URL_REQUEST_JOB_FILTERED_BYTES_READ, filtered_data_len,
-            filtered_read_buffer_->data());
+            NetLogEventType::URL_REQUEST_JOB_FILTERED_BYTES_READ,
+            filtered_data_len, filtered_read_buffer_->data());
       }
     } else {
       // we are done, or there is no data left.
@@ -877,7 +877,7 @@ void URLRequestJob::GatherRawReadStats(Error error, int bytes_read) {
   // instead.
   if (!filter_.get() && bytes_read > 0 && request()->net_log().IsCapturing()) {
     request()->net_log().AddByteTransferEvent(
-        NetLog::TYPE_URL_REQUEST_JOB_BYTES_READ, bytes_read,
+        NetLogEventType::URL_REQUEST_JOB_BYTES_READ, bytes_read,
         raw_read_buffer_->data());
   }
 

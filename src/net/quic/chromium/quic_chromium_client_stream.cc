@@ -12,6 +12,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_event_type.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/core/quic_http_utils.h"
 #include "net/quic/core/quic_spdy_session.h"
@@ -167,7 +168,7 @@ size_t QuicChromiumClientStream::WriteHeaders(
     DCHECK_NE("POST", entry->second);
   }
   net_log_.AddEvent(
-      NetLog::TYPE_QUIC_CHROMIUM_CLIENT_STREAM_SEND_REQUEST_HEADERS,
+      NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_SEND_REQUEST_HEADERS,
       base::Bind(&QuicRequestNetLogCallback, id(), &header_block,
                  QuicSpdyStream::priority()));
   return QuicSpdyStream::WriteHeaders(std::move(header_block), fin,
@@ -282,12 +283,12 @@ void QuicChromiumClientStream::NotifyDelegateOfHeadersComplete(
     MarkTrailersConsumed(decompressed_trailers().length());
     MarkTrailersDelivered();
     net_log_.AddEvent(
-        NetLog::TYPE_QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
+        NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_TRAILERS,
         base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
   } else {
     headers_delivered_ = true;
     net_log_.AddEvent(
-        NetLog::TYPE_QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_HEADERS,
+        NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_READ_RESPONSE_HEADERS,
         base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
   }
 
@@ -315,6 +316,10 @@ void QuicChromiumClientStream::RunOrBuffer(base::Closure closure) {
 
 void QuicChromiumClientStream::DisableConnectionMigration() {
   can_migrate_ = false;
+}
+
+bool QuicChromiumClientStream::IsFirstStream() {
+  return id() == kHeadersStreamId + 2;
 }
 
 }  // namespace net

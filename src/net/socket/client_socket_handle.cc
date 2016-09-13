@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/trace_event/trace_event.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_pool.h"
 
 namespace net {
@@ -41,7 +42,7 @@ void ClientSocketHandle::ResetInternal(bool cancel) {
     CHECK(pool_);
     if (is_initialized()) {
       if (socket_) {
-        socket_->NetLog().EndEvent(NetLog::TYPE_SOCKET_IN_USE);
+        socket_->NetLog().EndEvent(NetLogEventType::SOCKET_IN_USE);
         // Release the socket back to the ClientSocketPool so it can be
         // deleted or reused.
         pool_->ReleaseSocket(group_name_, std::move(socket_), pool_id_);
@@ -167,9 +168,8 @@ void ClientSocketHandle::HandleInitCompletion(int result) {
   // release() socket. It ends up working though, since those methods are being
   // used to layer sockets (and the destination sources are the same).
   DCHECK(socket_.get());
-  socket_->NetLog().BeginEvent(
-      NetLog::TYPE_SOCKET_IN_USE,
-      requesting_source_.ToEventParametersCallback());
+  socket_->NetLog().BeginEvent(NetLogEventType::SOCKET_IN_USE,
+                               requesting_source_.ToEventParametersCallback());
 }
 
 }  // namespace net

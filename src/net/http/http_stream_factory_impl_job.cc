@@ -37,6 +37,8 @@
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_factory_impl_request.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/quic/chromium/quic_http_stream.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
@@ -181,7 +183,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       priority_(priority),
       server_ssl_config_(server_ssl_config),
       proxy_ssl_config_(proxy_ssl_config),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_HTTP_STREAM_JOB)),
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
       io_callback_(base::Bind(&Job::OnIOComplete, base::Unretained(this))),
       connection_(new ClientSocketHandle),
       session_(session),
@@ -237,7 +239,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
 }
 
 HttpStreamFactoryImpl::Job::~Job() {
-  net_log_.EndEvent(NetLog::TYPE_HTTP_STREAM_JOB);
+  net_log_.EndEvent(NetLogEventType::HTTP_STREAM_JOB);
 
   // When we're in a partially constructed state, waiting for the user to
   // provide certificate handling information or authentication, we can't reuse
@@ -302,7 +304,7 @@ void HttpStreamFactoryImpl::Job::Resume() {
 }
 
 void HttpStreamFactoryImpl::Job::Orphan() {
-  net_log_.AddEvent(NetLog::TYPE_HTTP_STREAM_JOB_ORPHANED);
+  net_log_.AddEvent(NetLogEventType::HTTP_STREAM_JOB_ORPHANED);
 
   if (delegate_->for_websockets()) {
     // We cancel this job because a WebSocketHandshakeStream can't be created
@@ -694,11 +696,11 @@ int HttpStreamFactoryImpl::Job::DoStart() {
 
   if (net_log) {
     net_log_.BeginEvent(
-        NetLog::TYPE_HTTP_STREAM_JOB,
+        NetLogEventType::HTTP_STREAM_JOB,
         base::Bind(&NetLogHttpStreamJobCallback, net_log->source(),
                    &request_info_.url, &origin_url_, &alternative_service_,
                    priority_));
-    net_log->AddEvent(NetLog::TYPE_HTTP_STREAM_REQUEST_STARTED_JOB,
+    net_log->AddEvent(NetLogEventType::HTTP_STREAM_REQUEST_STARTED_JOB,
                       net_log_.source().ToEventParametersCallback());
   }
 
@@ -1024,7 +1026,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
         was_npn_negotiated_ = true;
         negotiated_protocol_ = ssl_socket->GetNegotiatedProtocol();
         net_log_.AddEvent(
-            NetLog::TYPE_HTTP_STREAM_REQUEST_PROTO,
+            NetLogEventType::HTTP_STREAM_REQUEST_PROTO,
             base::Bind(&NetLogHttpStreamProtoCallback, negotiated_protocol_));
         if (negotiated_protocol_ == kProtoHTTP2)
           SwitchToSpdyMode();
@@ -1034,6 +1036,9 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
         result == OK) {
     ProxyClientSocket* proxy_socket =
       static_cast<ProxyClientSocket*>(connection_->socket());
+    // http://crbug.com/642354
+    if (!proxy_socket->IsConnected())
+      return ERR_CONNECTION_CLOSED;
     if (proxy_socket->IsUsingSpdy()) {
       was_npn_negotiated_ = true;
       negotiated_protocol_ = proxy_socket->GetProxyNegotiatedProtocol();

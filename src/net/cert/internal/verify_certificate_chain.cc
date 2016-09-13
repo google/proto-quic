@@ -160,9 +160,9 @@ WARN_UNUSED_RESULT bool BasicCertificateProcessing(
   }
 
   if (!VerifySignedData(cert.signature_algorithm(), cert.tbs_certificate_tlv(),
-                        cert.signature_value(), working_spki,
-                        signature_policy)) {
-    errors->Add(kSignatureVerificationFailed);
+                        cert.signature_value(), working_spki, signature_policy,
+                        errors)) {
+    errors->Add(kVerifySignedDataFailed);
     return false;
   }
 
@@ -584,8 +584,7 @@ DEFINE_CERT_ERROR_TYPE(kNotPermittedByNameConstraints,
                        "Not permitted by name constraints");
 DEFINE_CERT_ERROR_TYPE(kSubjectDoesNotMatchIssuer,
                        "subject does not match issuer");
-DEFINE_CERT_ERROR_TYPE(kSignatureVerificationFailed,
-                       "Signature verification failed");
+DEFINE_CERT_ERROR_TYPE(kVerifySignedDataFailed, "VerifySignedData failed");
 DEFINE_CERT_ERROR_TYPE(kValidityFailedNotAfter, "Time is after notAfter");
 DEFINE_CERT_ERROR_TYPE(kValidityFailedNotBefore, "Time is before notBefore");
 DEFINE_CERT_ERROR_TYPE(kSignatureAlgorithmsDifferentEncoding,

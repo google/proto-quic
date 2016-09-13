@@ -6,6 +6,7 @@
 #define NET_TOOLS_QUIC_TEST_TOOLS_MOCK_QUIC_SERVER_SESSION_VISITOR_H_
 
 #include "base/macros.h"
+#include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -24,15 +25,17 @@ class MockQuicServerSessionVisitor : public QuicServerSessionBase::Visitor {
                void(QuicBlockedWriterInterface* blocked_writer));
   MOCK_METHOD1(OnConnectionAddedToTimeWaitList,
                void(QuicConnectionId connection_id));
+  MOCK_METHOD1(OnPacketBeingDispatchedToSession,
+               void(QuicServerSessionBase* session));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockQuicServerSessionVisitor);
 };
 
-class MockQuicServerSessionHelper : public QuicServerSessionBase::Helper {
+class MockQuicCryptoServerStreamHelper : public QuicCryptoServerStream::Helper {
  public:
-  MockQuicServerSessionHelper();
-  ~MockQuicServerSessionHelper() override;
+  MockQuicCryptoServerStreamHelper();
+  ~MockQuicCryptoServerStreamHelper() override;
   MOCK_CONST_METHOD1(GenerateConnectionIdForReject,
                      QuicConnectionId(QuicConnectionId connection_id));
   MOCK_CONST_METHOD3(CanAcceptClientHello,
@@ -41,7 +44,7 @@ class MockQuicServerSessionHelper : public QuicServerSessionBase::Helper {
                           std::string* error_details));
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockQuicServerSessionHelper);
+  DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoServerStreamHelper);
 };
 
 }  // namespace test

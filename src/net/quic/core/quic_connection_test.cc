@@ -476,6 +476,7 @@ class TestConnection : public QuicConnection {
                        perspective,
                        SupportedVersions(version)) {
     writer->set_perspective(perspective);
+    SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
   }
 
   void SendAck() { QuicConnectionPeer::SendAck(this); }
@@ -520,6 +521,9 @@ class TestConnection : public QuicConnection {
       QuicStreamOffset offset,
       bool fin,
       QuicAckListenerInterface* listener) {
+    if (id != kCryptoStreamId && this->encryption_level() == ENCRYPTION_NONE) {
+      this->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
+    }
     struct iovec iov;
     QuicIOVector data_iov(MakeIOVector(data, &iov));
     return QuicConnection::SendStreamData(id, data_iov, offset, fin, listener);
@@ -746,9 +750,6 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         .WillRepeatedly(Return(QuicTime::Zero()));
     EXPECT_CALL(*loss_algorithm_, DetectLosses(_, _, _, _, _))
         .Times(AnyNumber());
-    // TODO(ianswett): Fix QuicConnectionTests so they don't attempt to write
-    // non-crypto stream data at ENCRYPTION_NONE.
-    FLAGS_quic_never_write_unencrypted_data = false;
   }
 
   QuicVersion version() { return GetParam().version; }
@@ -806,6 +807,31 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
       connection_.GetSendAlarm()->Fire();
     }
     return serialized_packet.entropy_hash;
+  }
+
+  // Bypassing the packet creator is unrealistic, but allows us to process
+  // packets the QuicPacketCreator won't allow us to create.
+  void ForceProcessFramePacket(QuicFrame frame) {
+    QuicFrames frames;
+    frames.push_back(QuicFrame(frame));
+    QuicPacketCreatorPeer::SetSendVersionInPacket(
+        &peer_creator_, connection_.perspective() == Perspective::IS_SERVER);
+    QuicPacketHeader header;
+    QuicPacketCreatorPeer::FillPacketHeader(&peer_creator_, &header);
+    char encrypted_buffer[kMaxPacketSize];
+    size_t length = peer_framer_.BuildDataPacket(
+        header, frames, encrypted_buffer, kMaxPacketSize);
+    DCHECK_GT(length, 0u);
+
+    const size_t encrypted_length = peer_framer_.EncryptInPlace(
+        ENCRYPTION_NONE, kDefaultPathId, header.packet_number,
+        GetStartOfEncryptedData(peer_framer_.version(), header), length,
+        kMaxPacketSize, encrypted_buffer);
+    DCHECK_GT(encrypted_length, 0u);
+
+    connection_.ProcessUdpPacket(
+        kSelfAddress, kPeerAddress,
+        QuicReceivedPacket(encrypted_buffer, encrypted_length, clock_.Now()));
   }
 
   QuicPacketEntropyHash ProcessFramePacketAtLevel(QuicPathId path_id,
@@ -1138,6 +1164,33 @@ TEST_P(QuicConnectionTest, SelfAddressChangeAtServer) {
   ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), self_address,
                                   kPeerAddress);
   EXPECT_FALSE(connection_.connected());
+}
+
+TEST_P(QuicConnectionTest, AllowSelfAddressChangeToMappedIpv4AddressAtServer) {
+  FLAGS_quic_allow_server_address_change_for_mapped_ipv4 = true;
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+
+  set_perspective(Perspective::IS_SERVER);
+  QuicPacketCreatorPeer::SetSendVersionInPacket(creator_, false);
+
+  EXPECT_EQ(Perspective::IS_SERVER, connection_.perspective());
+  EXPECT_TRUE(connection_.connected());
+
+  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(3);
+  IPEndPoint self_address1(IPAddress(1, 1, 1, 1), 443);
+  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), self_address1,
+                                  kPeerAddress);
+  // Cause self_address change to mapped Ipv4 address.
+  IPEndPoint self_address2(ConvertIPv4ToIPv4MappedIPv6(self_address1.address()),
+                           443);
+  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), self_address2,
+                                  kPeerAddress);
+  EXPECT_TRUE(connection_.connected());
+  // self_address change back to Ipv4 address.
+  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), self_address1,
+                                  kPeerAddress);
+  EXPECT_TRUE(connection_.connected());
 }
 
 TEST_P(QuicConnectionTest, ClientAddressChangeAndPacketReordered) {
@@ -1476,7 +1529,6 @@ TEST_P(QuicConnectionTest, OutOfOrderAckReceiptCausesNoAck) {
 
 TEST_P(QuicConnectionTest, AckReceiptCausesAckSend) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-
   QuicPacketNumber original;
   QuicByteCount packet_size;
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _))
@@ -1889,6 +1941,7 @@ TEST_P(QuicConnectionTest, FramePackingSendvQueued) {
 }
 
 TEST_P(QuicConnectionTest, SendingZeroBytes) {
+  connection_.SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
   // Send a zero byte write with a fin using writev.
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   QuicIOVector empty_iov(nullptr, 0, 0);
@@ -1905,6 +1958,7 @@ TEST_P(QuicConnectionTest, SendingZeroBytes) {
 }
 
 TEST_P(QuicConnectionTest, LargeSendWithPendingAck) {
+  connection_.SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
   // Set the ack alarm by processing a ping frame.
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
@@ -2491,17 +2545,13 @@ TEST_P(QuicConnectionTest, RTO) {
   EXPECT_EQ(1u, stop_waiting()->least_unacked);
 }
 
-TEST_P(QuicConnectionTest, RTOWithSameEncryptionLevel) {
-  connection_.SetMaxTailLossProbes(kDefaultPathId, 0);
-
-  QuicTime default_retransmission_time =
-      clock_.ApproximateNow() + DefaultRetransmissionTime();
+TEST_P(QuicConnectionTest, RetransmitWithSameEncryptionLevel) {
   use_tagging_decrypter();
 
   // A TaggingEncrypter puts kTagSize copies of the given byte (0x01 here) at
   // the end of the packet. We can test this to check which encrypter was used.
   connection_.SetEncrypter(ENCRYPTION_NONE, new TaggingEncrypter(0x01));
-  SendStreamDataToPeer(3, "foo", 0, !kFin, nullptr);
+  SendStreamDataToPeer(kCryptoStreamId, "foo", 0, !kFin, nullptr);
   EXPECT_EQ(0x01010101u, writer_->final_bytes_of_last_packet());
 
   connection_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(0x02));
@@ -2509,17 +2559,14 @@ TEST_P(QuicConnectionTest, RTOWithSameEncryptionLevel) {
   SendStreamDataToPeer(3, "foo", 0, !kFin, nullptr);
   EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
 
-  EXPECT_EQ(default_retransmission_time,
-            connection_.GetRetransmissionAlarm()->deadline());
   {
     InSequence s;
     EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 3, _, _));
     EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 4, _, _));
   }
 
-  // Simulate the retransmission alarm firing.
-  clock_.AdvanceTime(DefaultRetransmissionTime());
-  connection_.GetRetransmissionAlarm()->Fire();
+  // Manually mark both packets for retransmission.
+  connection_.RetransmitUnackedPackets(ALL_UNACKED_RETRANSMISSION);
 
   // Packet should have been sent with ENCRYPTION_NONE.
   EXPECT_EQ(0x01010101u, writer_->final_bytes_of_previous_packet());
@@ -2561,7 +2608,7 @@ TEST_P(QuicConnectionTest,
   use_tagging_decrypter();
   connection_.SetEncrypter(ENCRYPTION_NONE, new TaggingEncrypter(0x01));
   QuicPacketNumber packet_number;
-  SendStreamDataToPeer(3, "foo", 0, !kFin, &packet_number);
+  SendStreamDataToPeer(kCryptoStreamId, "foo", 0, !kFin, &packet_number);
 
   // Simulate the retransmission alarm firing and the socket blocking.
   BlockOnNextWrite();
@@ -5019,11 +5066,12 @@ TEST_P(QuicConnectionTest, SendPingImmediately) {
 }
 
 TEST_P(QuicConnectionTest, SendingUnencryptedStreamDataFails) {
-  FLAGS_quic_never_write_unencrypted_data = true;
   EXPECT_CALL(visitor_,
               OnConnectionClosed(QUIC_ATTEMPT_TO_SEND_UNENCRYPTED_STREAM_DATA,
                                  _, ConnectionCloseSource::FROM_SELF));
-  EXPECT_QUIC_BUG(connection_.SendStreamDataWithString(3, "", 0, kFin, nullptr),
+  struct iovec iov;
+  QuicIOVector data_iov(MakeIOVector("", &iov));
+  EXPECT_QUIC_BUG(connection_.SendStreamData(3, data_iov, 0, kFin, nullptr),
                   "Cannot send stream data without encryption.");
   EXPECT_FALSE(connection_.connected());
 }
@@ -5131,7 +5179,7 @@ TEST_P(QuicConnectionTest, ServerReceivesChloOnNonCryptoStream) {
 
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_MAYBE_CORRUPTED_MEMORY, _,
                                            ConnectionCloseSource::FROM_SELF));
-  ProcessFramePacket(QuicFrame(&frame1_));
+  ForceProcessFramePacket(QuicFrame(&frame1_));
 }
 
 TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
@@ -5147,7 +5195,7 @@ TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
 
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_MAYBE_CORRUPTED_MEMORY, _,
                                            ConnectionCloseSource::FROM_SELF));
-  ProcessFramePacket(QuicFrame(&frame1_));
+  ForceProcessFramePacket(QuicFrame(&frame1_));
 }
 
 TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {

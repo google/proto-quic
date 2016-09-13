@@ -45,13 +45,20 @@ void RealFree(const AllocatorDispatch*, void* address) {
   __real_free(address);
 }
 
+size_t RealSizeEstimate(const AllocatorDispatch*, void*) {
+  // TODO(primiano): This should be redirected to malloc_usable_size or
+  //     the like.
+  return 0;
+}
+
 }  // namespace
 
 const AllocatorDispatch AllocatorDispatch::default_dispatch = {
-    &RealMalloc,   /* alloc_function */
-    &RealCalloc,   /* alloc_zero_initialized_function */
-    &RealMemalign, /* alloc_aligned_function */
-    &RealRealloc,  /* realloc_function */
-    &RealFree,     /* free_function */
-    nullptr,       /* next */
+    &RealMalloc,       /* alloc_function */
+    &RealCalloc,       /* alloc_zero_initialized_function */
+    &RealMemalign,     /* alloc_aligned_function */
+    &RealRealloc,      /* realloc_function */
+    &RealFree,         /* free_function */
+    &RealSizeEstimate, /* get_size_estimate_function */
+    nullptr,           /* next */
 };

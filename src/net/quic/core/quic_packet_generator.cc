@@ -137,11 +137,10 @@ QuicConsumedData QuicPacketGenerator::ConsumeDataFastPath(
          delegate_->ShouldGeneratePacket(HAS_RETRANSMITTABLE_DATA,
                                          NOT_HANDSHAKE)) {
     // Serialize and encrypt the packet.
-    ALIGNAS(64) char encrypted_buffer[kMaxPacketSize];
     size_t bytes_consumed = 0;
     packet_creator_.CreateAndSerializeStreamFrame(
         id, iov, total_bytes_consumed, offset + total_bytes_consumed, fin,
-        listener, encrypted_buffer, kMaxPacketSize, &bytes_consumed);
+        listener, &bytes_consumed);
     total_bytes_consumed += bytes_consumed;
   }
 

@@ -912,6 +912,10 @@ bool GetSystemDiskInfo(SystemDiskInfo* diskinfo) {
   return true;
 }
 
+TimeDelta GetUserCpuTimeSinceBoot() {
+  return internal::GetUserCpuTimeSinceBoot();
+}
+
 #if defined(OS_CHROMEOS)
 std::unique_ptr<Value> SwapInfo::ToValue() const {
   std::unique_ptr<DictionaryValue> res(new DictionaryValue());

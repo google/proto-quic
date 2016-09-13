@@ -9,8 +9,10 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "base/memory/ref_counted.h"
+#include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 
@@ -72,6 +74,17 @@ NET_EXPORT bool CreateSelfSignedCert(crypto::RSAPrivateKey* key,
                                      base::Time not_valid_before,
                                      base::Time not_valid_after,
                                      std::string* der_cert);
+
+// Provides a method to parse a DER-encoded X509 certificate without calling any
+// OS primitives. This is useful in sandboxed processes.
+NET_EXPORT bool ParseCertificateSandboxed(
+    const base::StringPiece& certificate,
+    std::string* subject,
+    std::string* issuer,
+    base::Time* not_before,
+    base::Time* not_after,
+    std::vector<std::string>* dns_names,
+    std::vector<std::string>* ip_addresses);
 
 // Comparator for use in STL algorithms that will sort client certificates by
 // order of preference.

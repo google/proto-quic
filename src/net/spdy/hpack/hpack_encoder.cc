@@ -233,7 +233,7 @@ void HpackEncoder::CookieToCrumbs(const Representation& cookie,
   StringPiece::size_type first = cookie_value.find_first_not_of(" \t");
   StringPiece::size_type last = cookie_value.find_last_not_of(" \t");
   if (first == StringPiece::npos) {
-    cookie_value.clear();
+    cookie_value = StringPiece();
   } else {
     cookie_value = cookie_value.substr(first, (last - first) + 1);
   }

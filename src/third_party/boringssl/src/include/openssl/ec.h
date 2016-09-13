@@ -356,6 +356,18 @@ OPENSSL_EXPORT size_t EC_get_builtin_curves(EC_builtin_curve *out_curves,
 
 #if defined(__cplusplus)
 }  /* extern C */
+
+extern "C++" {
+
+namespace bssl {
+
+BORINGSSL_MAKE_DELETER(EC_POINT, EC_POINT_free)
+BORINGSSL_MAKE_DELETER(EC_GROUP, EC_GROUP_free)
+
+}  // namespace bssl
+
+}  /* extern C++ */
+
 #endif
 
 #define EC_R_BUFFER_TOO_SMALL 100

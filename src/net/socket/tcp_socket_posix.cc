@@ -25,6 +25,8 @@
 #include "net/base/network_activity_monitor.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/sockaddr_storage.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 #include "net/socket/socket_net_log_params.h"
 #include "net/socket/socket_posix.h"
 
@@ -149,13 +151,13 @@ TCPSocketPosix::TCPSocketPosix(
       tcp_fastopen_connected_(false),
       tcp_fastopen_status_(TCP_FASTOPEN_STATUS_UNKNOWN),
       logging_multiple_connect_attempts_(false),
-      net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_SOCKET)) {
-  net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::SOCKET)) {
+  net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());
 }
 
 TCPSocketPosix::~TCPSocketPosix() {
-  net_log_.EndEvent(NetLog::TYPE_SOCKET_ALIVE);
+  net_log_.EndEvent(NetLogEventType::SOCKET_ALIVE);
   Close();
 }
 
@@ -209,7 +211,7 @@ int TCPSocketPosix::Accept(std::unique_ptr<TCPSocketPosix>* tcp_socket,
   DCHECK(socket_);
   DCHECK(!accept_socket_);
 
-  net_log_.BeginEvent(NetLog::TYPE_TCP_ACCEPT);
+  net_log_.BeginEvent(NetLogEventType::TCP_ACCEPT);
 
   int rv = socket_->Accept(
       &accept_socket_,
@@ -227,7 +229,7 @@ int TCPSocketPosix::Connect(const IPEndPoint& address,
   if (!logging_multiple_connect_attempts_)
     LogConnectBegin(AddressList(address));
 
-  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+  net_log_.BeginEvent(NetLogEventType::TCP_CONNECT_ATTEMPT,
                       CreateNetLogIPEndPointCallback(&address));
 
   SockaddrStorage storage;
@@ -503,10 +505,10 @@ int TCPSocketPosix::HandleAcceptCompleted(
     rv = BuildTcpSocketPosix(tcp_socket, address);
 
   if (rv == OK) {
-    net_log_.EndEvent(NetLog::TYPE_TCP_ACCEPT,
+    net_log_.EndEvent(NetLogEventType::TCP_ACCEPT,
                       CreateNetLogIPEndPointCallback(address));
   } else {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_ACCEPT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_ACCEPT, rv);
   }
 
   return rv;
@@ -539,10 +541,10 @@ void TCPSocketPosix::ConnectCompleted(const CompletionCallback& callback,
 int TCPSocketPosix::HandleConnectCompleted(int rv) {
   // Log the end of this attempt (and any OS error it threw).
   if (rv != OK) {
-    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT,
+    net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT,
                       NetLog::IntCallback("os_error", errno));
   } else {
-    net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT_ATTEMPT);
+    net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT);
     NotifySocketPerformanceWatcher();
   }
 
@@ -557,13 +559,13 @@ int TCPSocketPosix::HandleConnectCompleted(int rv) {
 }
 
 void TCPSocketPosix::LogConnectBegin(const AddressList& addresses) const {
-  net_log_.BeginEvent(NetLog::TYPE_TCP_CONNECT,
+  net_log_.BeginEvent(NetLogEventType::TCP_CONNECT,
                       addresses.CreateNetLogCallback());
 }
 
 void TCPSocketPosix::LogConnectEnd(int net_error) const {
   if (net_error != OK) {
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, net_error);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_CONNECT, net_error);
     return;
   }
 
@@ -572,13 +574,13 @@ void TCPSocketPosix::LogConnectEnd(int net_error) const {
   if (rv != OK) {
     PLOG(ERROR) << "GetLocalAddress() [rv: " << rv << "] error: ";
     NOTREACHED();
-    net_log_.EndEventWithNetErrorCode(NetLog::TYPE_TCP_CONNECT, rv);
+    net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_CONNECT, rv);
     return;
   }
 
-  net_log_.EndEvent(NetLog::TYPE_TCP_CONNECT,
-                    CreateNetLogSourceAddressCallback(storage.addr,
-                                                      storage.addr_len));
+  net_log_.EndEvent(
+      NetLogEventType::TCP_CONNECT,
+      CreateNetLogSourceAddressCallback(storage.addr, storage.addr_len));
 }
 
 void TCPSocketPosix::ReadCompleted(const scoped_refptr<IOBuffer>& buf,
@@ -607,7 +609,7 @@ int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
   }
 
   if (rv < 0) {
-    net_log_.AddEvent(NetLog::TYPE_SOCKET_READ_ERROR,
+    net_log_.AddEvent(NetLogEventType::SOCKET_READ_ERROR,
                       CreateNetLogSocketErrorCallback(rv, errno));
     return rv;
   }
@@ -616,7 +618,7 @@ int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
   if (rv > 0)
     NotifySocketPerformanceWatcher();
 
-  net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_RECEIVED, rv,
+  net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
                                 buf->data());
   NetworkActivityMonitor::GetInstance()->IncrementBytesReceived(rv);
 
@@ -643,7 +645,7 @@ int TCPSocketPosix::HandleWriteCompleted(IOBuffer* buf, int rv) {
       tcp_fastopen_status_ = TCP_FASTOPEN_ERROR;
       g_tcp_fastopen_has_failed = true;
     }
-    net_log_.AddEvent(NetLog::TYPE_SOCKET_WRITE_ERROR,
+    net_log_.AddEvent(NetLogEventType::SOCKET_WRITE_ERROR,
                       CreateNetLogSocketErrorCallback(rv, errno));
     return rv;
   }
@@ -652,7 +654,7 @@ int TCPSocketPosix::HandleWriteCompleted(IOBuffer* buf, int rv) {
   if (rv > 0)
     NotifySocketPerformanceWatcher();
 
-  net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, rv,
+  net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_SENT, rv,
                                 buf->data());
   NetworkActivityMonitor::GetInstance()->IncrementBytesSent(rv);
   return rv;

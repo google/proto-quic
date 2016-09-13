@@ -251,7 +251,7 @@ TEST_F(AllocationContextTrackerTest, BacktraceTakesTop) {
   }
 }
 
-TEST_F(AllocationContextTrackerTest, TrackTaskContext) {
+TEST_F(AllocationContextTrackerTest, TrackCategoryName) {
   const char kContext1[] = "context1";
   const char kContext2[] = "context2";
   {
@@ -268,6 +268,22 @@ TEST_F(AllocationContextTrackerTest, TrackTaskContext) {
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->GetContextSnapshot();
     ASSERT_EQ(kContext2, ctx2.type_name);
+  }
+
+  {
+    // Type should be category name of the last seen trace event.
+    TRACE_EVENT0("Testing", kCupcake);
+    AllocationContext ctx1 =
+        AllocationContextTracker::GetInstanceForCurrentThread()
+            ->GetContextSnapshot();
+    ASSERT_EQ("Testing", std::string(ctx1.type_name));
+
+    TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("Testing"), kCupcake);
+    AllocationContext ctx2 =
+        AllocationContextTracker::GetInstanceForCurrentThread()
+            ->GetContextSnapshot();
+    ASSERT_EQ(TRACE_DISABLED_BY_DEFAULT("Testing"),
+              std::string(ctx2.type_name));
   }
 
   // Type should be nullptr without task event.

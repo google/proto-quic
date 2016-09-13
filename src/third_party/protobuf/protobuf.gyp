@@ -141,7 +141,6 @@
             'src/google/protobuf/struct.pb.h',
             'src/google/protobuf/stubs/mathutil.h',
             'src/google/protobuf/stubs/mathlimits.cc',
-            'src/google/protobuf/stubs/mathlimits.h',
             'src/google/protobuf/stubs/substitute.cc',
             'src/google/protobuf/stubs/substitute.h',
             'src/google/protobuf/stubs/singleton$.h',

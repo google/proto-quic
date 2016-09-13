@@ -189,8 +189,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
     // TODO(gab): Despite all of the above this test has to be disabled for now
     // per crbug.com/629139#c6.
     // DCHECK(owning_sequence_checker_.CalledOnValidSequence() ||
-    //        id_ == PlatformThread::CurrentId() || message_loop_)
-    //     << id_ << " vs " << PlatformThread::CurrentId();
+    //        (id_event_.IsSignaled() && id_ == PlatformThread::CurrentId()) ||
+    //        message_loop_);
     return message_loop_;
   }
 
@@ -205,8 +205,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   scoped_refptr<SingleThreadTaskRunner> task_runner() const {
     // Refer to the DCHECK and comment inside |message_loop()|.
     DCHECK(owning_sequence_checker_.CalledOnValidSequence() ||
-           id_ == PlatformThread::CurrentId() || message_loop_)
-        << id_ << " vs " << PlatformThread::CurrentId();
+           (id_event_.IsSignaled() && id_ == PlatformThread::CurrentId()) ||
+           message_loop_);
     return message_loop_ ? message_loop_->task_runner() : nullptr;
   }
 
@@ -280,7 +280,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 
   // The thread's id once it has started.
   PlatformThreadId id_ = kInvalidThreadId;
-  mutable WaitableEvent id_event_;  // Protects |id_|.
+  // Protects |id_| which must only be read while it's signaled.
+  mutable WaitableEvent id_event_;
 
   // The thread's MessageLoop and RunLoop. Valid only while the thread is alive.
   // Set by the created thread.

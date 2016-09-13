@@ -9,6 +9,14 @@
 namespace base {
 namespace internal {
 
+BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
+                             void (*destructor)(BindStateBase*),
+                             bool (*is_cancelled)(const BindStateBase*))
+      : polymorphic_invoke_(polymorphic_invoke),
+        ref_count_(0),
+        destructor_(destructor),
+        is_cancelled_(is_cancelled) {}
+
 void BindStateBase::AddRef() {
   AtomicRefCountInc(&ref_count_);
 }
@@ -24,19 +32,19 @@ CallbackBase<CopyMode::MoveOnly>&
 CallbackBase<CopyMode::MoveOnly>::operator=(CallbackBase&& c) = default;
 
 void CallbackBase<CopyMode::MoveOnly>::Reset() {
-  polymorphic_invoke_ = nullptr;
   // NULL the bind_state_ last, since it may be holding the last ref to whatever
   // object owns us, and we may be deleted after that.
   bind_state_ = nullptr;
 }
 
+bool CallbackBase<CopyMode::MoveOnly>::IsCancelled() const {
+  DCHECK(bind_state_);
+  return bind_state_->IsCancelled();
+}
+
 bool CallbackBase<CopyMode::MoveOnly>::EqualsInternal(
     const CallbackBase& other) const {
-  // Ignore |polymorphic_invoke_| value in null case.
-  if (!bind_state_ || !other.bind_state_)
-    return bind_state_ == other.bind_state_;
-  return bind_state_ == other.bind_state_ &&
-         polymorphic_invoke_ == other.polymorphic_invoke_;
+  return bind_state_ == other.bind_state_;
 }
 
 CallbackBase<CopyMode::MoveOnly>::CallbackBase(
@@ -51,7 +59,6 @@ CallbackBase<CopyMode::Copyable>::CallbackBase(
     const CallbackBase& c)
     : CallbackBase<CopyMode::MoveOnly>(nullptr) {
   bind_state_ = c.bind_state_;
-  polymorphic_invoke_ = c.polymorphic_invoke_;
 }
 
 CallbackBase<CopyMode::Copyable>::CallbackBase(CallbackBase&& c) = default;
@@ -59,7 +66,6 @@ CallbackBase<CopyMode::Copyable>::CallbackBase(CallbackBase&& c) = default;
 CallbackBase<CopyMode::Copyable>&
 CallbackBase<CopyMode::Copyable>::operator=(const CallbackBase& c) {
   bind_state_ = c.bind_state_;
-  polymorphic_invoke_ = c.polymorphic_invoke_;
   return *this;
 }
 

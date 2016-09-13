@@ -21,6 +21,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_resolver.h"
 
@@ -294,18 +295,18 @@ class MultiThreadedProxyResolver::GetProxyForURLJob : public Job {
 
   void WaitingForThread() override {
     was_waiting_for_thread_ = true;
-    net_log_.BeginEvent(NetLog::TYPE_WAITING_FOR_PROXY_RESOLVER_THREAD);
+    net_log_.BeginEvent(NetLogEventType::WAITING_FOR_PROXY_RESOLVER_THREAD);
   }
 
   void FinishedWaitingForThread() override {
     DCHECK(executor());
 
     if (was_waiting_for_thread_) {
-      net_log_.EndEvent(NetLog::TYPE_WAITING_FOR_PROXY_RESOLVER_THREAD);
+      net_log_.EndEvent(NetLogEventType::WAITING_FOR_PROXY_RESOLVER_THREAD);
     }
 
     net_log_.AddEvent(
-        NetLog::TYPE_SUBMITTED_TO_RESOLVER_THREAD,
+        NetLogEventType::SUBMITTED_TO_RESOLVER_THREAD,
         NetLog::IntCallback("thread_number", executor()->thread_number()));
   }
 

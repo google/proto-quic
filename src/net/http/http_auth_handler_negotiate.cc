@@ -18,6 +18,7 @@
 #include "net/http/http_auth_filter.h"
 #include "net/http/http_auth_preferences.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 #include "net/ssl/ssl_info.h"
 
 namespace net {
@@ -240,7 +241,7 @@ bool HttpAuthHandlerNegotiate::Init(HttpAuthChallengeTokenizer* challenge,
                                                   &channel_bindings_);
   if (!channel_bindings_.empty())
     net_log_.AddEvent(
-        NetLog::TYPE_AUTH_CHANNEL_BINDINGS,
+        NetLogEventType::AUTH_CHANNEL_BINDINGS,
         base::Bind(&NetLogParameterChannelBindings, channel_bindings_));
   return true;
 }

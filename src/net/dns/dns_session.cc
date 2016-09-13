@@ -25,6 +25,7 @@
 #include "net/dns/dns_config_service.h"
 #include "net/dns/dns_socket_pool.h"
 #include "net/dns/dns_util.h"
+#include "net/log/net_log_event_type.h"
 #include "net/socket/stream_socket.h"
 #include "net/udp/datagram_client_socket.h"
 
@@ -133,8 +134,8 @@ void DnsSession::UpdateTimeouts(NetworkChangeNotifier::ConnectionType type) {
 void DnsSession::InitializeServerStats() {
   server_stats_.clear();
   for (size_t i = 0; i < config_.nameservers.size(); ++i) {
-    server_stats_.push_back(base::WrapUnique(
-        new ServerStats(initial_timeout_, rtt_buckets_.Pointer())));
+    server_stats_.push_back(base::MakeUnique<ServerStats>(
+        initial_timeout_, rtt_buckets_.Pointer()));
   }
 }
 
@@ -277,7 +278,7 @@ std::unique_ptr<DnsSession::SocketLease> DnsSession::AllocateSocket(
   if (!socket.get())
     return std::unique_ptr<SocketLease>();
 
-  socket->NetLog().BeginEvent(NetLog::TYPE_SOCKET_IN_USE,
+  socket->NetLog().BeginEvent(NetLogEventType::SOCKET_IN_USE,
                               source.ToEventParametersCallback());
 
   SocketLease* lease = new SocketLease(this, server_index, std::move(socket));
@@ -301,7 +302,7 @@ void DnsSession::FreeSocket(unsigned server_index,
                             std::unique_ptr<DatagramClientSocket> socket) {
   DCHECK(socket.get());
 
-  socket->NetLog().EndEvent(NetLog::TYPE_SOCKET_IN_USE);
+  socket->NetLog().EndEvent(NetLogEventType::SOCKET_IN_USE);
 
   socket_pool_->FreeSocket(server_index, std::move(socket));
 }

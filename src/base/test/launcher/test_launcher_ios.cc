@@ -94,7 +94,7 @@ class IOSUnitTestPlatformDelegate : public base::UnitTestPlatformDelegate {
     if (!temp_dir.CreateUniqueTempDirUnderPath(writable_path_))
       return false;
     base::FilePath test_list_path(
-        temp_dir.path().AppendASCII("test_list.json"));
+        temp_dir.GetPath().AppendASCII("test_list.json"));
 
     base::CommandLine cmd_line(dir_exe_.AppendASCII(test_name_ + ".app"));
     cmd_line.AppendSwitchPath(switches::kTestLauncherListTests, test_list_path);

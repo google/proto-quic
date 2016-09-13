@@ -18,7 +18,7 @@ QuicClientPromisedInfo::QuicClientPromisedInfo(QuicClientSessionBase* session,
                                                string url)
     : session_(session),
       id_(id),
-      url_(url),
+      url_(std::move(url)),
       client_request_delegate_(nullptr) {}
 
 QuicClientPromisedInfo::~QuicClientPromisedInfo() {}

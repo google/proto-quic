@@ -60,7 +60,7 @@ scoped_refptr<const CTLogVerifier> CTLogVerifier::Create(
     const base::StringPiece& description,
     const base::StringPiece& url,
     const base::StringPiece& dns_domain) {
-  GURL log_url(url.as_string());
+  GURL log_url(url);
   if (!log_url.is_valid())
     return nullptr;
   scoped_refptr<CTLogVerifier> result(

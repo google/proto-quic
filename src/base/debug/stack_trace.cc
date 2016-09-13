@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <algorithm>
-#include <limits>
 #include <sstream>
 
 #include "base/macros.h"
@@ -29,34 +28,21 @@ extern "C" void* __libc_stack_end;
 namespace base {
 namespace debug {
 
-StackTrace::StackTrace(const void* const* trace, size_t count) {
-  count = std::min(count, arraysize(trace_));
-  if (count)
-    memcpy(trace_, trace, count * sizeof(trace_[0]));
-  count_ = count;
-}
-
-StackTrace::~StackTrace() {
-}
-
-const void *const *StackTrace::Addresses(size_t* count) const {
-  *count = count_;
-  if (count_)
-    return trace_;
-  return NULL;
-}
-
-std::string StackTrace::ToString() const {
-  std::stringstream stream;
-#if !defined(__UCLIBC__)
-  OutputToStream(&stream);
-#endif
-  return stream.str();
-}
+namespace {
 
 #if HAVE_TRACE_STACK_FRAME_POINTERS
 
-static uintptr_t GetStackEnd() {
+#if defined(__arm__) && defined(__GNUC__) && !defined(__clang__)
+// GCC and LLVM generate slightly different frames on ARM, see
+// https://llvm.org/bugs/show_bug.cgi?id=18505 - LLVM generates
+// x86-compatible frame, while GCC needs adjustment.
+constexpr size_t kStackFrameAdjustment = sizeof(uintptr_t);
+#else
+constexpr size_t kStackFrameAdjustment = 0;
+#endif
+
+// Returns end of the stack, or 0 if we couldn't get it.
+uintptr_t GetStackEnd() {
 #if defined(OS_ANDROID)
   // Bionic reads proc/maps on every call to pthread_getattr_np() when called
   // from the main thread. So we need to cache end of stack in that case to get
@@ -87,7 +73,7 @@ static uintptr_t GetStackEnd() {
   if (is_main_thread) {
     main_stack_end = stack_end;
   }
-  return stack_end;
+  return stack_end;  // 0 in case of error
 
 #elif defined(OS_LINUX) && defined(__GLIBC__)
 
@@ -96,65 +82,164 @@ static uintptr_t GetStackEnd() {
     return reinterpret_cast<uintptr_t>(__libc_stack_end);
   }
 
-  // No easy way to get stack end for non-main threads, see crbug.com/617730.
-
-#else
-
-  // TODO(dskiba): support Windows, macOS
+  // No easy way to get end of the stack for non-main threads,
+  // see crbug.com/617730.
 
 #endif
 
-  // Couldn't get end of stack address.
-  return std::numeric_limits<uintptr_t>::max();
+  // Don't know how to get end of the stack.
+  return 0;
 }
+
+uintptr_t GetNextStackFrame(uintptr_t fp) {
+  return reinterpret_cast<const uintptr_t*>(fp)[0] - kStackFrameAdjustment;
+}
+
+uintptr_t GetStackFramePC(uintptr_t fp) {
+  return reinterpret_cast<const uintptr_t*>(fp)[1];
+}
+
+bool IsStackFrameValid(uintptr_t fp, uintptr_t prev_fp, uintptr_t stack_end) {
+  // With the stack growing downwards, older stack frame must be
+  // at a greater address that the current one.
+  if (fp <= prev_fp) return false;
+
+  // Assume huge stack frames are bogus.
+  if (fp - prev_fp > 100000) return false;
+
+  // Check alignment.
+  if (fp & (sizeof(uintptr_t) - 1)) return false;
+
+  if (stack_end) {
+    // Both fp[0] and fp[1] must be within the stack.
+    if (fp > stack_end - 2 * sizeof(uintptr_t)) return false;
+
+    // Additional check to filter out false positives.
+    if (GetStackFramePC(fp) < 32768) return false;
+  }
+
+  return true;
+};
+
+// ScanStackForNextFrame() scans the stack for a valid frame to allow unwinding
+// past system libraries. Only supported on Linux where system libraries are
+// usually in the middle of the trace:
+//
+//   TraceStackFramePointers
+//   <more frames from Chrome>
+//   base::WorkSourceDispatch   <-- unwinding stops (next frame is invalid),
+//   g_main_context_dispatch        ScanStackForNextFrame() is called
+//   <more frames from glib>
+//   g_main_context_iteration
+//   base::MessagePumpGlib::Run <-- ScanStackForNextFrame() finds valid frame,
+//   base::RunLoop::Run             unwinding resumes
+//   <more frames from Chrome>
+//   __libc_start_main
+//
+// For stack scanning to be efficient it's very important for the thread to
+// be started by Chrome. In that case we naturally terminate unwinding once
+// we reach the origin of the stack (i.e. GetStackEnd()). If the thread is
+// not started by Chrome (e.g. Android's main thread), then we end up always
+// scanning area at the origin of the stack, wasting time and not finding any
+// frames (since Android libraries don't have frame pointers).
+//
+// ScanStackForNextFrame() returns 0 if it couldn't find a valid frame
+// (or if stack scanning is not supported on the current platform).
+uintptr_t ScanStackForNextFrame(uintptr_t fp, uintptr_t stack_end) {
+#if defined(OS_LINUX)
+  // Enough to resume almost all prematurely terminated traces.
+  constexpr size_t kMaxStackScanArea = 8192;
+
+  if (!stack_end) {
+    // Too dangerous to scan without knowing where the stack ends.
+    return 0;
+  }
+
+  fp += sizeof(uintptr_t);  // current frame is known to be invalid
+  uintptr_t last_fp_to_scan = std::min(fp + kMaxStackScanArea, stack_end) -
+                                  sizeof(uintptr_t);
+  for (;fp <= last_fp_to_scan; fp += sizeof(uintptr_t)) {
+    uintptr_t next_fp = GetNextStackFrame(fp);
+    if (IsStackFrameValid(next_fp, fp, stack_end)) {
+      // Check two frames deep. Since stack frame is just a pointer to
+      // a higher address on the stack, it's relatively easy to find
+      // something that looks like one. However two linked frames are
+      // far less likely to be bogus.
+      uintptr_t next2_fp = GetNextStackFrame(next_fp);
+      if (IsStackFrameValid(next2_fp, next_fp, stack_end)) {
+        return fp;
+      }
+    }
+  }
+#endif  // defined(OS_LINUX)
+
+  return 0;
+}
+
+#endif  // HAVE_TRACE_STACK_FRAME_POINTERS
+
+}  // namespace
+
+StackTrace::StackTrace(const void* const* trace, size_t count) {
+  count = std::min(count, arraysize(trace_));
+  if (count)
+    memcpy(trace_, trace, count * sizeof(trace_[0]));
+  count_ = count;
+}
+
+StackTrace::~StackTrace() {
+}
+
+const void *const *StackTrace::Addresses(size_t* count) const {
+  *count = count_;
+  if (count_)
+    return trace_;
+  return NULL;
+}
+
+std::string StackTrace::ToString() const {
+  std::stringstream stream;
+#if !defined(__UCLIBC__)
+  OutputToStream(&stream);
+#endif
+  return stream.str();
+}
+
+#if HAVE_TRACE_STACK_FRAME_POINTERS
 
 size_t TraceStackFramePointers(const void** out_trace,
                                size_t max_depth,
                                size_t skip_initial) {
   // Usage of __builtin_frame_address() enables frame pointers in this
-  // function even if they are not enabled globally. So 'sp' will always
+  // function even if they are not enabled globally. So 'fp' will always
   // be valid.
-  uintptr_t sp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+  uintptr_t fp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0)) -
+                    kStackFrameAdjustment;
 
   uintptr_t stack_end = GetStackEnd();
 
   size_t depth = 0;
   while (depth < max_depth) {
-#if defined(__arm__) && defined(__GNUC__) && !defined(__clang__)
-    // GCC and LLVM generate slightly different frames on ARM, see
-    // https://llvm.org/bugs/show_bug.cgi?id=18505 - LLVM generates
-    // x86-compatible frame, while GCC needs adjustment.
-    sp -= sizeof(uintptr_t);
-#endif
-
-    // Both sp[0] and s[1] must be valid.
-    if (sp + 2 * sizeof(uintptr_t) > stack_end) {
-      break;
-    }
-
     if (skip_initial != 0) {
       skip_initial--;
     } else {
-      out_trace[depth++] = reinterpret_cast<const void**>(sp)[1];
+      out_trace[depth++] = reinterpret_cast<const void*>(GetStackFramePC(fp));
     }
 
-    // Find out next frame pointer
-    // (heuristics are from TCMalloc's stacktrace functions)
-    {
-      uintptr_t next_sp = reinterpret_cast<const uintptr_t*>(sp)[0];
-
-      // With the stack growing downwards, older stack frame must be
-      // at a greater address that the current one.
-      if (next_sp <= sp) break;
-
-      // Assume stack frames larger than 100,000 bytes are bogus.
-      if (next_sp - sp > 100000) break;
-
-      // Check alignment.
-      if (sp & (sizeof(void*) - 1)) break;
-
-      sp = next_sp;
+    uintptr_t next_fp = GetNextStackFrame(fp);
+    if (IsStackFrameValid(next_fp, fp, stack_end)) {
+      fp = next_fp;
+      continue;
     }
+
+    next_fp = ScanStackForNextFrame(fp, stack_end);
+    if (next_fp) {
+      fp = next_fp;
+      continue;
+    }
+
+    // Failed to find next frame.
+    break;
   }
 
   return depth;

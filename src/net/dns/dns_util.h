@@ -24,6 +24,9 @@ class AddressList;
 NET_EXPORT_PRIVATE bool DNSDomainFromDot(const base::StringPiece& dotted,
                                          std::string* out);
 
+// Checks that a hostname is valid. Simple wrapper around DNSDomainFromDot.
+NET_EXPORT_PRIVATE bool IsValidDNSDomain(const base::StringPiece& dotted);
+
 // DNSDomainToString converts a domain in DNS format to a dotted string.
 // Excludes the dot at the end.
 NET_EXPORT_PRIVATE std::string DNSDomainToString(

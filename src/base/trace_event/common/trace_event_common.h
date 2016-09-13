@@ -774,16 +774,19 @@
       TRACE_EVENT_FLAG_NONE, arg1_name, arg1_val, arg2_name, arg2_val)
 
 // Records a single NESTABLE_ASYNC_INSTANT event called "name" immediately,
-// with one associated argument. If the category is not enabled, then this
-// does nothing.
+// with none, one or two associated argument. If the category is not enabled,
+// then this does nothing.
+#define TRACE_EVENT_NESTABLE_ASYNC_INSTANT0(category_group, name, id)        \
+  INTERNAL_TRACE_EVENT_ADD_WITH_ID(TRACE_EVENT_PHASE_NESTABLE_ASYNC_INSTANT, \
+                                   category_group, name, id,                 \
+                                   TRACE_EVENT_FLAG_NONE)
+
 #define TRACE_EVENT_NESTABLE_ASYNC_INSTANT1(category_group, name, id,        \
                                             arg1_name, arg1_val)             \
   INTERNAL_TRACE_EVENT_ADD_WITH_ID(TRACE_EVENT_PHASE_NESTABLE_ASYNC_INSTANT, \
                                    category_group, name, id,                 \
                                    TRACE_EVENT_FLAG_NONE, arg1_name, arg1_val)
-// Records a single NESTABLE_ASYNC_INSTANT event called "name" immediately,
-// with 2 associated arguments. If the category is not enabled, then this
-// does nothing.
+
 #define TRACE_EVENT_NESTABLE_ASYNC_INSTANT2(                              \
     category_group, name, id, arg1_name, arg1_val, arg2_name, arg2_val)   \
   INTERNAL_TRACE_EVENT_ADD_WITH_ID(                                       \
@@ -827,15 +830,6 @@
   INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                 \
       TRACE_EVENT_PHASE_NESTABLE_ASYNC_END, category_group, name, id, \
       TRACE_EVENT_API_CURRENT_THREAD_ID, timestamp, TRACE_EVENT_FLAG_COPY)
-
-// Records a single NESTABLE_ASYNC_INSTANT event called "name" immediately,
-// with 2 associated arguments. If the category is not enabled, then this
-// does nothing.
-#define TRACE_EVENT_NESTABLE_ASYNC_INSTANT2(                              \
-    category_group, name, id, arg1_name, arg1_val, arg2_name, arg2_val)   \
-  INTERNAL_TRACE_EVENT_ADD_WITH_ID(                                       \
-      TRACE_EVENT_PHASE_NESTABLE_ASYNC_INSTANT, category_group, name, id, \
-      TRACE_EVENT_FLAG_NONE, arg1_name, arg1_val, arg2_name, arg2_val)
 
 // Records a single FLOW_BEGIN event called "name" immediately, with 0, 1 or 2
 // associated arguments. If the category is not enabled, then this

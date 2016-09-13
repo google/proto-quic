@@ -40,7 +40,7 @@ using testing::_;
 // TODO(bnc): Merge these correctly.
 bool FLAGS_use_http2_frame_decoder_adapter;
 bool FLAGS_spdy_use_hpack_decoder2;
-bool FLAGS_spdy_framer_use_new_methods3;
+bool FLAGS_spdy_framer_use_new_methods4;
 
 namespace net {
 namespace test {
@@ -195,7 +195,7 @@ struct TestParams {
         FLAGS_use_http2_frame_decoder_adapter = true;
         // Http2FrameDecoderAdapter needs the new header methods, else
         // --use_http2_frame_decoder_adapter=true will be ignored.
-        FLAGS_spdy_framer_use_new_methods3 = true;
+        FLAGS_spdy_framer_use_new_methods4 = true;
         break;
     }
     switch (hpack_decoder) {
@@ -205,7 +205,7 @@ struct TestParams {
       case HPACK_DECODER_NEW:
         FLAGS_spdy_use_hpack_decoder2 = true;
         // Needs new header methods to be used.
-        FLAGS_spdy_framer_use_new_methods3 = true;
+        FLAGS_spdy_framer_use_new_methods4 = true;
         break;
     }
     VLOG(1) << "TestParams: version: " << QuicVersionToString(version)

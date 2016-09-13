@@ -390,7 +390,7 @@ string QuicUtils::PeerAddressChangeTypeToString(PeerAddressChangeType type) {
     RETURN_STRING_LITERAL(IPV4_TO_IPV6_CHANGE);
     RETURN_STRING_LITERAL(IPV6_TO_IPV4_CHANGE);
     RETURN_STRING_LITERAL(IPV6_TO_IPV6_CHANGE);
-    RETURN_STRING_LITERAL(UNSPECIFIED_CHANGE);
+    RETURN_STRING_LITERAL(IPV4_TO_IPV4_CHANGE);
   }
   return "INVALID_PEER_ADDRESS_CHANGE_TYPE";
 }
@@ -513,7 +513,7 @@ PeerAddressChangeType QuicUtils::DetermineAddressChangeType(
     return IPV4_SUBNET_CHANGE;
   }
 
-  return UNSPECIFIED_CHANGE;
+  return IPV4_TO_IPV4_CHANGE;
 }
 
 string QuicUtils::HexEncode(const char* data, size_t length) {

@@ -8,6 +8,8 @@
 #include "base/strings/string_util.h"
 #include "net/base/url_util.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 
 namespace net {
 
@@ -78,7 +80,7 @@ scoped_refptr<URLRequestThrottlerEntryInterface>
     if (IsLocalhost(host)) {
       if (!logged_for_localhost_disabled_ && IsLocalhost(host)) {
         logged_for_localhost_disabled_ = true;
-        net_log_.AddEvent(NetLog::TYPE_THROTTLING_DISABLED_FOR_HOST,
+        net_log_.AddEvent(NetLogEventType::THROTTLING_DISABLED_FOR_HOST,
                           NetLog::StringCallback("host", &host));
       }
 
@@ -120,8 +122,8 @@ bool URLRequestThrottlerManager::enable_thread_checks() const {
 
 void URLRequestThrottlerManager::set_net_log(NetLog* net_log) {
   DCHECK(net_log);
-  net_log_ = BoundNetLog::Make(net_log,
-                               NetLog::SOURCE_EXPONENTIAL_BACKOFF_THROTTLING);
+  net_log_ = BoundNetLog::Make(
+      net_log, NetLogSourceType::EXPONENTIAL_BACKOFF_THROTTLING);
 }
 
 NetLog* URLRequestThrottlerManager::net_log() const {

@@ -27,6 +27,7 @@ namespace net {
 namespace {
 
 const char kSourceAddressTokenSecret[] = "secret";
+const size_t kNumSessionsToCreatePerSocketEvent = 16;
 
 // Allocate some extra space so we can send an error if the client goes over
 // the limit.
@@ -125,7 +126,7 @@ int QuicSimpleServer::Listen(const IPEndPoint& address) {
   dispatcher_.reset(new QuicSimpleDispatcher(
       config_, &crypto_config_, &version_manager_,
       std::unique_ptr<QuicConnectionHelperInterface>(helper_),
-      std::unique_ptr<QuicServerSessionBase::Helper>(
+      std::unique_ptr<QuicCryptoServerStream::Helper>(
           new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
       std::unique_ptr<QuicAlarmFactory>(alarm_factory_)));
   QuicSimpleServerPacketWriter* writer =
@@ -147,6 +148,11 @@ void QuicSimpleServer::Shutdown() {
 }
 
 void QuicSimpleServer::StartReading() {
+  if (synchronous_read_count_ == 0) {
+    // Only process buffered packets once per message loop.
+    dispatcher_->ProcessBufferedChlos(kNumSessionsToCreatePerSocketEvent);
+  }
+
   if (read_pending_) {
     return;
   }
@@ -158,6 +164,12 @@ void QuicSimpleServer::StartReading() {
 
   if (result == ERR_IO_PENDING) {
     synchronous_read_count_ = 0;
+    if (dispatcher_->HasChlosBuffered()) {
+      // No more packets to read, so yield before processing buffered packets.
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE, base::Bind(&QuicSimpleServer::StartReading,
+                                weak_factory_.GetWeakPtr()));
+    }
     return;
   }
 

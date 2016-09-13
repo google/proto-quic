@@ -80,9 +80,13 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
       GURL* allowed_unsafe_redirect_url);
   void NotifyBeforeRedirect(URLRequest* request,
                             const GURL& new_location);
+  void NotifyResponseStarted(URLRequest* request, int net_error);
+  // Deprecated.
   void NotifyResponseStarted(URLRequest* request);
   void NotifyNetworkBytesReceived(URLRequest* request, int64_t bytes_received);
   void NotifyNetworkBytesSent(URLRequest* request, int64_t bytes_sent);
+  void NotifyCompleted(URLRequest* request, bool started, int net_error);
+  // Deprecated.
   void NotifyCompleted(URLRequest* request, bool started);
   void NotifyURLRequestDestroyed(URLRequest* request);
   void NotifyPACScriptError(int line_number, const base::string16& error);
@@ -185,7 +189,9 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
                                 const GURL& new_location) = 0;
 
   // This corresponds to URLRequestDelegate::OnResponseStarted.
-  virtual void OnResponseStarted(URLRequest* request) = 0;
+  virtual void OnResponseStarted(URLRequest* request, int net_error);
+  // Deprecated.
+  virtual void OnResponseStarted(URLRequest* request);
 
   // Called when bytes are received from the network, such as after receiving
   // headers or reading raw response bytes. This includes localhost requests.
@@ -210,7 +216,9 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
   // Indicates that the URL request has been completed or failed.
   // |started| indicates whether the request has been started. If false,
   // some information like the socket address is not available.
-  virtual void OnCompleted(URLRequest* request, bool started) = 0;
+  virtual void OnCompleted(URLRequest* request, bool started, int net_error);
+  // Deprecated.
+  virtual void OnCompleted(URLRequest* request, bool started);
 
   // Called when an URLRequest is being destroyed. Note that the request is
   // being deleted, so it's not safe to call any methods that may result in

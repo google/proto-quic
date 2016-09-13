@@ -75,7 +75,7 @@ class TestServerSession : public QuicServerSessionBase {
   TestServerSession(const QuicConfig& config,
                     QuicConnection* connection,
                     QuicServerSessionBase::Visitor* visitor,
-                    QuicServerSessionBase::Helper* helper,
+                    QuicCryptoServerStream::Helper* helper,
                     const QuicCryptoServerConfig* crypto_config,
                     QuicCompressedCertsCache* compressed_certs_cache)
       : QuicServerSessionBase(config,
@@ -114,7 +114,7 @@ class TestServerSession : public QuicServerSessionBase {
       QuicCompressedCertsCache* compressed_certs_cache) override {
     return new QuicCryptoServerStream(
         crypto_config, compressed_certs_cache,
-        FLAGS_enable_quic_stateless_reject_support, this);
+        FLAGS_enable_quic_stateless_reject_support, this, stream_helper());
   }
 };
 
@@ -141,7 +141,7 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
         &helper_, &alarm_factory_, Perspective::IS_SERVER,
         SupportedVersions(GetParam()));
     session_.reset(new TestServerSession(config_, connection_, &owner_,
-                                         &session_helper_, &crypto_config_,
+                                         &stream_helper_, &crypto_config_,
                                          &compressed_certs_cache_));
     MockClock clock;
     handshake_message_.reset(crypto_config_.AddDefaultConfig(
@@ -152,7 +152,7 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   StrictMock<MockQuicServerSessionVisitor> owner_;
-  StrictMock<MockQuicServerSessionHelper> session_helper_;
+  StrictMock<MockQuicCryptoServerStreamHelper> stream_helper_;
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;
@@ -371,11 +371,13 @@ class MockQuicCryptoServerStream : public QuicCryptoServerStream {
   explicit MockQuicCryptoServerStream(
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache,
-      QuicServerSessionBase* session)
+      QuicServerSessionBase* session,
+      QuicCryptoServerStream::Helper* helper)
       : QuicCryptoServerStream(crypto_config,
                                compressed_certs_cache,
                                FLAGS_enable_quic_stateless_reject_support,
-                               session) {}
+                               session,
+                               helper) {}
   ~MockQuicCryptoServerStream() override {}
 
   MOCK_METHOD1(SendServerConfigUpdate,
@@ -411,8 +413,9 @@ TEST_P(QuicServerSessionBaseTest, BandwidthEstimates) {
   const string serving_region = "not a real region";
   session_->set_serving_region(serving_region);
 
-  MockQuicCryptoServerStream* crypto_stream = new MockQuicCryptoServerStream(
-      &crypto_config_, &compressed_certs_cache_, session_.get());
+  MockQuicCryptoServerStream* crypto_stream =
+      new MockQuicCryptoServerStream(&crypto_config_, &compressed_certs_cache_,
+                                     session_.get(), &stream_helper_);
   QuicServerSessionBasePeer::SetCryptoStream(session_.get(), crypto_stream);
 
   // Set some initial bandwidth values.

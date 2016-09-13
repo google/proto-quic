@@ -21,6 +21,7 @@
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
 
 using base::TimeDelta;
 
@@ -49,12 +50,12 @@ ConnectJob::ConnectJob(const std::string& group_name,
       idle_(true) {
   DCHECK(!group_name.empty());
   DCHECK(delegate);
-  net_log.BeginEvent(NetLog::TYPE_SOCKET_POOL_CONNECT_JOB,
+  net_log.BeginEvent(NetLogEventType::SOCKET_POOL_CONNECT_JOB,
                      NetLog::StringCallback("group_name", &group_name_));
 }
 
 ConnectJob::~ConnectJob() {
-  net_log().EndEvent(NetLog::TYPE_SOCKET_POOL_CONNECT_JOB);
+  net_log().EndEvent(NetLogEventType::SOCKET_POOL_CONNECT_JOB);
 }
 
 std::unique_ptr<StreamSocket> ConnectJob::PassSocket() {
@@ -81,7 +82,7 @@ int ConnectJob::Connect() {
 
 void ConnectJob::SetSocket(std::unique_ptr<StreamSocket> socket) {
   if (socket) {
-    net_log().AddEvent(NetLog::TYPE_CONNECT_JOB_SET_SOCKET,
+    net_log().AddEvent(NetLogEventType::CONNECT_JOB_SET_SOCKET,
                        socket->NetLog().source().ToEventParametersCallback());
   }
   socket_ = std::move(socket);
@@ -104,20 +105,20 @@ void ConnectJob::ResetTimer(base::TimeDelta remaining_time) {
 
 void ConnectJob::LogConnectStart() {
   connect_timing_.connect_start = base::TimeTicks::Now();
-  net_log().BeginEvent(NetLog::TYPE_SOCKET_POOL_CONNECT_JOB_CONNECT);
+  net_log().BeginEvent(NetLogEventType::SOCKET_POOL_CONNECT_JOB_CONNECT);
 }
 
 void ConnectJob::LogConnectCompletion(int net_error) {
   connect_timing_.connect_end = base::TimeTicks::Now();
   net_log().EndEventWithNetErrorCode(
-      NetLog::TYPE_SOCKET_POOL_CONNECT_JOB_CONNECT, net_error);
+      NetLogEventType::SOCKET_POOL_CONNECT_JOB_CONNECT, net_error);
 }
 
 void ConnectJob::OnTimeout() {
   // Make sure the socket is NULL before calling into |delegate|.
   SetSocket(std::unique_ptr<StreamSocket>());
 
-  net_log_.AddEvent(NetLog::TYPE_SOCKET_POOL_CONNECT_JOB_TIMED_OUT);
+  net_log_.AddEvent(NetLogEventType::SOCKET_POOL_CONNECT_JOB_TIMED_OUT);
 
   NotifyDelegateOfCompletion(ERR_TIMED_OUT);
 }
@@ -268,12 +269,13 @@ int ClientSocketPoolBaseHelper::RequestSocket(
   // Cleanup any timed-out idle sockets.
   CleanupIdleSockets(false);
 
-  request->net_log().BeginEvent(NetLog::TYPE_SOCKET_POOL);
+  request->net_log().BeginEvent(NetLogEventType::SOCKET_POOL);
   Group* group = GetOrCreateGroup(group_name);
 
   int rv = RequestSocketInternal(group_name, *request);
   if (rv != ERR_IO_PENDING) {
-    request->net_log().EndEventWithNetErrorCode(NetLog::TYPE_SOCKET_POOL, rv);
+    request->net_log().EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
+                                                rv);
     CHECK(!request->handle()->is_initialized());
     request.reset();
   } else {
@@ -307,8 +309,9 @@ void ClientSocketPoolBaseHelper::RequestSockets(
     num_sockets = max_sockets_per_group_;
   }
 
-  request.net_log().BeginEvent(NetLog::TYPE_SOCKET_POOL_CONNECTING_N_SOCKETS,
-                               NetLog::IntCallback("num_sockets", num_sockets));
+  request.net_log().BeginEvent(
+      NetLogEventType::SOCKET_POOL_CONNECTING_N_SOCKETS,
+      NetLog::IntCallback("num_sockets", num_sockets));
 
   Group* group = GetOrCreateGroup(group_name);
 
@@ -341,7 +344,7 @@ void ClientSocketPoolBaseHelper::RequestSockets(
   if (rv == ERR_IO_PENDING)
     rv = OK;
   request.net_log().EndEventWithNetErrorCode(
-      NetLog::TYPE_SOCKET_POOL_CONNECTING_N_SOCKETS, rv);
+      NetLogEventType::SOCKET_POOL_CONNECTING_N_SOCKETS, rv);
 }
 
 int ClientSocketPoolBaseHelper::RequestSocketInternal(
@@ -371,7 +374,7 @@ int ClientSocketPoolBaseHelper::RequestSocketInternal(
     // reuse that socket then if we needed one and wouldn't make it down to this
     // layer.
     request.net_log().AddEvent(
-        NetLog::TYPE_SOCKET_POOL_STALLED_MAX_SOCKETS_PER_GROUP);
+        NetLogEventType::SOCKET_POOL_STALLED_MAX_SOCKETS_PER_GROUP);
     return ERR_IO_PENDING;
   }
 
@@ -389,7 +392,8 @@ int ClientSocketPoolBaseHelper::RequestSocketInternal(
     } else {
       // We could check if we really have a stalled group here, but it requires
       // a scan of all groups, so just flip a flag here, and do the check later.
-      request.net_log().AddEvent(NetLog::TYPE_SOCKET_POOL_STALLED_MAX_SOCKETS);
+      request.net_log().AddEvent(
+          NetLogEventType::SOCKET_POOL_STALLED_MAX_SOCKETS);
       return ERR_IO_PENDING;
     }
   }
@@ -503,7 +507,7 @@ bool ClientSocketPoolBaseHelper::AssignIdleSocketToRequest(
 // static
 void ClientSocketPoolBaseHelper::LogBoundConnectJobToRequest(
     const NetLog::Source& connect_job_source, const Request& request) {
-  request.net_log().AddEvent(NetLog::TYPE_SOCKET_POOL_BOUND_TO_CONNECT_JOB,
+  request.net_log().AddEvent(NetLogEventType::SOCKET_POOL_BOUND_TO_CONNECT_JOB,
                              connect_job_source.ToEventParametersCallback());
 }
 
@@ -530,8 +534,8 @@ void ClientSocketPoolBaseHelper::CancelRequest(
   std::unique_ptr<const Request> request =
       group->FindAndRemovePendingRequest(handle);
   if (request) {
-    request->net_log().AddEvent(NetLog::TYPE_CANCELLED);
-    request->net_log().EndEvent(NetLog::TYPE_SOCKET_POOL);
+    request->net_log().AddEvent(NetLogEventType::CANCELLED);
+    request->net_log().EndEvent(NetLogEventType::SOCKET_POOL);
 
     // We let the job run, unless we're at the socket limit and there is
     // not another request waiting on the job.
@@ -871,7 +875,7 @@ void ClientSocketPoolBaseHelper::OnConnectJobComplete(
       HandOutSocket(std::move(socket), ClientSocketHandle::UNUSED,
                     connect_timing, request->handle(), base::TimeDelta(), group,
                     request->net_log());
-      request->net_log().EndEvent(NetLog::TYPE_SOCKET_POOL);
+      request->net_log().EndEvent(NetLogEventType::SOCKET_POOL);
       InvokeUserCallbackLater(request->handle(), request->callback(), result);
     } else {
       AddIdleSocket(std::move(socket), group);
@@ -893,8 +897,8 @@ void ClientSocketPoolBaseHelper::OnConnectJobComplete(
                       connect_timing, request->handle(), base::TimeDelta(),
                       group, request->net_log());
       }
-      request->net_log().EndEventWithNetErrorCode(
-          NetLog::TYPE_SOCKET_POOL, result);
+      request->net_log().EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
+                                                  result);
       InvokeUserCallbackLater(request->handle(), request->callback(), result);
     } else {
       RemoveConnectJob(job, group);
@@ -956,7 +960,8 @@ void ClientSocketPoolBaseHelper::ProcessPendingRequest(
     if (group->IsEmpty())
       RemoveGroup(group_name);
 
-    request->net_log().EndEventWithNetErrorCode(NetLog::TYPE_SOCKET_POOL, rv);
+    request->net_log().EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
+                                                rv);
     InvokeUserCallbackLater(request->handle(), request->callback(), rv);
   }
 }
@@ -978,7 +983,7 @@ void ClientSocketPoolBaseHelper::HandOutSocket(
 
   if (reuse_type == ClientSocketHandle::REUSED_IDLE) {
     net_log.AddEvent(
-        NetLog::TYPE_SOCKET_POOL_REUSED_AN_EXISTING_SOCKET,
+        NetLogEventType::SOCKET_POOL_REUSED_AN_EXISTING_SOCKET,
         NetLog::IntCallback("idle_ms",
                             static_cast<int>(idle_time.InMilliseconds())));
 
@@ -994,7 +999,7 @@ void ClientSocketPoolBaseHelper::HandOutSocket(
   }
 
   net_log.AddEvent(
-      NetLog::TYPE_SOCKET_POOL_BOUND_TO_SOCKET,
+      NetLogEventType::SOCKET_POOL_BOUND_TO_SOCKET,
       handle->socket()->NetLog().source().ToEventParametersCallback());
 
   handed_out_socket_count_++;
@@ -1229,7 +1234,7 @@ void ClientSocketPoolBaseHelper::Group::OnBackupJobTimerFired(
   std::unique_ptr<ConnectJob> backup_job =
       pool->connect_job_factory_->NewConnectJob(
           group_name, *pending_requests_.FirstMax().value(), pool);
-  backup_job->net_log().AddEvent(NetLog::TYPE_BACKUP_CONNECT_JOB_CREATED);
+  backup_job->net_log().AddEvent(NetLogEventType::BACKUP_CONNECT_JOB_CREATED);
   int rv = backup_job->Connect();
   pool->connecting_socket_count_++;
   ConnectJob* raw_backup_job = backup_job.get();

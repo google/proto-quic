@@ -282,6 +282,10 @@ class NET_EXPORT HttpNetworkSession
                     SSLConfig* server_config,
                     SSLConfig* proxy_config) const;
 
+  // TODO(ricea): Remove this by October 2016.
+  void IncrementActiveWebSockets() { ++active_websockets_; }
+  void DecrementActiveWebSockets() { --active_websockets_; }
+
  private:
   friend class HttpNetworkSessionPeer;
 
@@ -316,6 +320,9 @@ class NET_EXPORT HttpNetworkSession
   Params params_;
 
   std::unique_ptr<base::MemoryPressureListener> memory_pressure_listener_;
+
+  // TODO(ricea): Remove this by October 2016.
+  int active_websockets_ = 0;
 };
 
 }  // namespace net

@@ -83,6 +83,11 @@ bool DNSDomainFromDot(const base::StringPiece& dotted, std::string* out) {
   return true;
 }
 
+bool IsValidDNSDomain(const base::StringPiece& dotted) {
+  std::string dns_formatted;
+  return DNSDomainFromDot(dotted, &dns_formatted);
+}
+
 std::string DNSDomainToString(const base::StringPiece& domain) {
   std::string ret;
 

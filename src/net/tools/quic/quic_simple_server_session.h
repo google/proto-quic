@@ -62,7 +62,7 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
   QuicSimpleServerSession(const QuicConfig& config,
                           QuicConnection* connection,
                           QuicServerSessionBase::Visitor* visitor,
-                          QuicServerSessionBase::Helper* helper,
+                          QuicCryptoServerStream::Helper* helper,
                           const QuicCryptoServerConfig* crypto_config,
                           QuicCompressedCertsCache* compressed_certs_cache);
 

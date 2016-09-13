@@ -698,7 +698,7 @@ size_t SpdyConstants::GetFrameHeaderSize(SpdyMajorVersion version) {
     case HTTP2:
       return 9;
   }
-  SPDY_BUG << "Unhandled SPDY version.";
+  SPDY_BUG << "Unhandled SPDY version: " << version;
   return 0;
 }
 

@@ -176,11 +176,11 @@ class FilePathWatcherTest : public testing::Test {
   }
 
   FilePath test_file() {
-    return temp_dir_.path().AppendASCII("FilePathWatcherTest");
+    return temp_dir_.GetPath().AppendASCII("FilePathWatcherTest");
   }
 
   FilePath test_link() {
-    return temp_dir_.path().AppendASCII("FilePathWatcherTest.lnk");
+    return temp_dir_.GetPath().AppendASCII("FilePathWatcherTest.lnk");
   }
 
   // Write |content| to |file|. Returns true on success.
@@ -256,7 +256,7 @@ TEST_F(FilePathWatcherTest, ModifiedFile) {
 
 // Verify that moving the file into place is caught.
 TEST_F(FilePathWatcherTest, MovedFile) {
-  FilePath source_file(temp_dir_.path().AppendASCII("source"));
+  FilePath source_file(temp_dir_.GetPath().AppendASCII("source"));
   ASSERT_TRUE(WriteFile(source_file, "content"));
 
   FilePathWatcher watcher;
@@ -351,7 +351,7 @@ TEST_F(FilePathWatcherTest, MultipleWatchersSingleFile) {
 // the directory and file are created eventually.
 TEST_F(FilePathWatcherTest, NonExistentDirectory) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
   FilePath file(dir.AppendASCII("file"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
   ASSERT_TRUE(SetupWatch(file, &watcher, delegate.get(), false));
@@ -376,7 +376,7 @@ TEST_F(FilePathWatcherTest, NonExistentDirectory) {
 // Exercises watch reconfiguration for the case that directories on the path
 // are rapidly created.
 TEST_F(FilePathWatcherTest, DirectoryChain) {
-  FilePath path(temp_dir_.path());
+  FilePath path(temp_dir_.GetPath());
   std::vector<std::string> dir_names;
   for (int i = 0; i < 20; i++) {
     std::string dir(base::StringPrintf("d%d", i));
@@ -389,7 +389,7 @@ TEST_F(FilePathWatcherTest, DirectoryChain) {
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
   ASSERT_TRUE(SetupWatch(file, &watcher, delegate.get(), false));
 
-  FilePath sub_path(temp_dir_.path());
+  FilePath sub_path(temp_dir_.GetPath());
   for (std::vector<std::string>::const_iterator d(dir_names.begin());
        d != dir_names.end(); ++d) {
     sub_path = sub_path.AppendASCII(*d);
@@ -412,7 +412,7 @@ TEST_F(FilePathWatcherTest, DirectoryChain) {
 #endif
 TEST_F(FilePathWatcherTest, DisappearingDirectory) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
   FilePath file(dir.AppendASCII("file"));
   ASSERT_TRUE(base::CreateDirectory(dir));
   ASSERT_TRUE(WriteFile(file, "content"));
@@ -443,7 +443,7 @@ TEST_F(FilePathWatcherTest, DeleteAndRecreate) {
 
 TEST_F(FilePathWatcherTest, WatchDirectory) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
   FilePath file1(dir.AppendASCII("file1"));
   FilePath file2(dir.AppendASCII("file2"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
@@ -477,8 +477,8 @@ TEST_F(FilePathWatcherTest, WatchDirectory) {
 TEST_F(FilePathWatcherTest, MoveParent) {
   FilePathWatcher file_watcher;
   FilePathWatcher subdir_watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
-  FilePath dest(temp_dir_.path().AppendASCII("dest"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
+  FilePath dest(temp_dir_.GetPath().AppendASCII("dest"));
   FilePath subdir(dir.AppendASCII("subdir"));
   FilePath file(subdir.AppendASCII("file"));
   std::unique_ptr<TestDelegate> file_delegate(new TestDelegate(collector()));
@@ -503,7 +503,7 @@ TEST_F(FilePathWatcherTest, MoveParent) {
 
 TEST_F(FilePathWatcherTest, RecursiveWatch) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
   bool setup_result = SetupWatch(dir, &watcher, delegate.get(), true);
   if (!FilePathWatcher::RecursiveWatchAvailable()) {
@@ -581,14 +581,14 @@ TEST_F(FilePathWatcherTest, RecursiveWithSymLink) {
     return;
 
   FilePathWatcher watcher;
-  FilePath test_dir(temp_dir_.path().AppendASCII("test_dir"));
+  FilePath test_dir(temp_dir_.GetPath().AppendASCII("test_dir"));
   ASSERT_TRUE(base::CreateDirectory(test_dir));
   FilePath symlink(test_dir.AppendASCII("symlink"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
   ASSERT_TRUE(SetupWatch(symlink, &watcher, delegate.get(), true));
 
   // Link creation.
-  FilePath target1(temp_dir_.path().AppendASCII("target1"));
+  FilePath target1(temp_dir_.GetPath().AppendASCII("target1"));
   ASSERT_TRUE(base::CreateSymbolicLink(target1, symlink));
   ASSERT_TRUE(WaitForEvents());
 
@@ -602,7 +602,7 @@ TEST_F(FilePathWatcherTest, RecursiveWithSymLink) {
   ASSERT_TRUE(WaitForEvents());
 
   // Link change.
-  FilePath target2(temp_dir_.path().AppendASCII("target2"));
+  FilePath target2(temp_dir_.GetPath().AppendASCII("target2"));
   ASSERT_TRUE(base::CreateDirectory(target2));
   ASSERT_TRUE(base::DeleteFile(symlink, false));
   ASSERT_TRUE(base::CreateSymbolicLink(target2, symlink));
@@ -620,10 +620,10 @@ TEST_F(FilePathWatcherTest, RecursiveWithSymLink) {
 TEST_F(FilePathWatcherTest, MoveChild) {
   FilePathWatcher file_watcher;
   FilePathWatcher subdir_watcher;
-  FilePath source_dir(temp_dir_.path().AppendASCII("source"));
+  FilePath source_dir(temp_dir_.GetPath().AppendASCII("source"));
   FilePath source_subdir(source_dir.AppendASCII("subdir"));
   FilePath source_file(source_subdir.AppendASCII("file"));
-  FilePath dest_dir(temp_dir_.path().AppendASCII("dest"));
+  FilePath dest_dir(temp_dir_.GetPath().AppendASCII("dest"));
   FilePath dest_subdir(dest_dir.AppendASCII("subdir"));
   FilePath dest_file(dest_subdir.AppendASCII("file"));
 
@@ -748,8 +748,8 @@ TEST_F(FilePathWatcherTest, DeleteTargetLinkedFile) {
 // doesn't exist yet works if the symlink is created eventually.
 TEST_F(FilePathWatcherTest, LinkedDirectoryPart1) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
-  FilePath link_dir(temp_dir_.path().AppendASCII("dir.lnk"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
+  FilePath link_dir(temp_dir_.GetPath().AppendASCII("dir.lnk"));
   FilePath file(dir.AppendASCII("file"));
   FilePath linkfile(link_dir.AppendASCII("file"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
@@ -777,8 +777,8 @@ TEST_F(FilePathWatcherTest, LinkedDirectoryPart1) {
 // dangling symlink works if the directory is created eventually.
 TEST_F(FilePathWatcherTest, LinkedDirectoryPart2) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
-  FilePath link_dir(temp_dir_.path().AppendASCII("dir.lnk"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
+  FilePath link_dir(temp_dir_.GetPath().AppendASCII("dir.lnk"));
   FilePath file(dir.AppendASCII("file"));
   FilePath linkfile(link_dir.AppendASCII("file"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
@@ -807,8 +807,8 @@ TEST_F(FilePathWatcherTest, LinkedDirectoryPart2) {
 // to the file works.
 TEST_F(FilePathWatcherTest, LinkedDirectoryPart3) {
   FilePathWatcher watcher;
-  FilePath dir(temp_dir_.path().AppendASCII("dir"));
-  FilePath link_dir(temp_dir_.path().AppendASCII("dir.lnk"));
+  FilePath dir(temp_dir_.GetPath().AppendASCII("dir"));
+  FilePath link_dir(temp_dir_.GetPath().AppendASCII("dir.lnk"));
   FilePath file(dir.AppendASCII("file"));
   FilePath linkfile(link_dir.AppendASCII("file"));
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
@@ -879,7 +879,8 @@ bool ChangeFilePermissions(const FilePath& path, Permission perm, bool allow) {
 
 // Verify that changing attributes on a directory works.
 TEST_F(FilePathWatcherTest, DirAttributesChanged) {
-  FilePath test_dir1(temp_dir_.path().AppendASCII("DirAttributesChangedDir1"));
+  FilePath test_dir1(
+      temp_dir_.GetPath().AppendASCII("DirAttributesChangedDir1"));
   FilePath test_dir2(test_dir1.AppendASCII("DirAttributesChangedDir2"));
   FilePath test_file(test_dir2.AppendASCII("DirAttributesChangedFile"));
   // Setup a directory hierarchy.

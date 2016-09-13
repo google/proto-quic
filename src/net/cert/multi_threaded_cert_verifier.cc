@@ -31,6 +31,8 @@
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source_type.h"
 
 #if defined(USE_NSS_CERTS)
 #include <private/pprthred.h>  // PR_DetachThread
@@ -130,15 +132,15 @@ class CertVerifierRequest : public base::LinkNode<CertVerifierRequest>,
         callback_(callback),
         verify_result_(verify_result),
         net_log_(net_log) {
-    net_log_.BeginEvent(NetLog::TYPE_CERT_VERIFIER_REQUEST);
+    net_log_.BeginEvent(NetLogEventType::CERT_VERIFIER_REQUEST);
   }
 
   // Cancels the request.
   ~CertVerifierRequest() override {
     if (job_) {
       // Cancel the outstanding request.
-      net_log_.AddEvent(NetLog::TYPE_CANCELLED);
-      net_log_.EndEvent(NetLog::TYPE_CERT_VERIFIER_REQUEST);
+      net_log_.AddEvent(NetLogEventType::CANCELLED);
+      net_log_.EndEvent(NetLogEventType::CERT_VERIFIER_REQUEST);
 
       // Remove the request from the Job. No attempt is made to cancel the job
       // even though it may no longer have any requests attached to it. Because
@@ -153,7 +155,7 @@ class CertVerifierRequest : public base::LinkNode<CertVerifierRequest>,
     DCHECK(job_);
     job_ = nullptr;
 
-    net_log_.EndEvent(NetLog::TYPE_CERT_VERIFIER_REQUEST);
+    net_log_.EndEvent(NetLogEventType::CERT_VERIFIER_REQUEST);
     *verify_result_ = verify_result.result;
 
     base::ResetAndReturn(&callback_).Run(verify_result.error);
@@ -208,11 +210,12 @@ class CertVerifierJob {
                   MultiThreadedCertVerifier* cert_verifier)
       : key_(key),
         start_time_(base::TimeTicks::Now()),
-        net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_CERT_VERIFIER_JOB)),
+        net_log_(
+            BoundNetLog::Make(net_log, NetLogSourceType::CERT_VERIFIER_JOB)),
         cert_verifier_(cert_verifier),
         is_first_job_(false),
         weak_ptr_factory_(this) {
-    net_log_.BeginEvent(NetLog::TYPE_CERT_VERIFIER_JOB,
+    net_log_.BeginEvent(NetLogEventType::CERT_VERIFIER_JOB,
                         base::Bind(&NetLogX509CertificateCallback,
                                    base::Unretained(key.certificate().get())));
   }
@@ -251,8 +254,8 @@ class CertVerifierJob {
     if (cert_verifier_) {
       cert_verifier_ = nullptr;
 
-      net_log_.AddEvent(NetLog::TYPE_CANCELLED);
-      net_log_.EndEvent(NetLog::TYPE_CERT_VERIFIER_JOB);
+      net_log_.AddEvent(NetLogEventType::CANCELLED);
+      net_log_.EndEvent(NetLogEventType::CERT_VERIFIER_JOB);
 
       // Notify each request of the cancellation.
       for (base::LinkNode<CertVerifierRequest>* it = requests_.head();
@@ -271,7 +274,7 @@ class CertVerifierJob {
         new CertVerifierRequest(this, callback, verify_result, net_log));
 
     request->net_log().AddEvent(
-        NetLog::TYPE_CERT_VERIFIER_REQUEST_BOUND_TO_JOB,
+        NetLogEventType::CERT_VERIFIER_REQUEST_BOUND_TO_JOB,
         net_log_.source().ToEventParametersCallback());
 
     requests_.Append(request.get());
@@ -284,7 +287,7 @@ class CertVerifierJob {
   // Called on completion of the Job to log UMA metrics and NetLog events.
   void LogMetrics(const ResultHelper& verify_result) {
     net_log_.EndEvent(
-        NetLog::TYPE_CERT_VERIFIER_JOB,
+        NetLogEventType::CERT_VERIFIER_JOB,
         base::Bind(&CertVerifyResultCallback, verify_result.result));
     base::TimeDelta latency = base::TimeTicks::Now() - start_time_;
     UMA_HISTOGRAM_CUSTOM_TIMES("Net.CertVerifier_Job_Latency",

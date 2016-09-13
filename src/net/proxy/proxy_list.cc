@@ -9,6 +9,7 @@
 #include "base/strings/string_tokenizer.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "net/log/net_log_event_type.h"
 #include "net/proxy/proxy_server.h"
 
 using base::TimeDelta;
@@ -199,7 +200,7 @@ void ProxyList::AddProxyToRetryList(ProxyRetryInfoMap* proxy_retry_info,
     retry_info.net_error = net_error;
     (*proxy_retry_info)[proxy_key] = retry_info;
   }
-  net_log.AddEvent(NetLog::TYPE_PROXY_LIST_FALLBACK,
+  net_log.AddEvent(NetLogEventType::PROXY_LIST_FALLBACK,
                    NetLog::StringCallback("bad_proxy", &proxy_key));
 }
 

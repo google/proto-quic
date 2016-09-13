@@ -287,7 +287,6 @@ TEST_F(GeneralLossAlgorithmTest, MultipleLossesAtOnce) {
 }
 
 TEST_F(GeneralLossAlgorithmTest, NoSpuriousLossesFromLargeReordering) {
-  FLAGS_quic_loss_recovery_use_largest_acked = true;
   loss_algorithm_.SetLossDetectionType(kTime);
   const size_t kNumSentPackets = 10;
   // Transmit 10 packets at once and then go forward an RTT.

@@ -188,7 +188,7 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   }
 
   bool RunsTasksOnCurrentThread() const override {
-    return worker_pool_->IsRunningSequenceOnCurrentThread(token_);
+    return worker_pool_->RunsTasksOnCurrentThread();
   }
 
  private:

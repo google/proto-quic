@@ -20,9 +20,9 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
+#include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/quic_simple_dispatcher.h"
 #include "net/tools/quic/quic_simple_server_session.h"
-#include "net/tools/quic/quic_simple_server_session_helper.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 
 namespace net {
@@ -34,7 +34,7 @@ class CustomStreamSession : public QuicSimpleServerSession {
       const QuicConfig& config,
       QuicConnection* connection,
       QuicServerSessionBase::Visitor* visitor,
-      QuicServerSessionBase::Helper* helper,
+      QuicCryptoServerStream::Helper* helper,
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache,
       QuicTestServer::StreamFactory* factory,
@@ -82,7 +82,7 @@ class QuicTestDispatcher : public QuicSimpleDispatcher {
       const QuicCryptoServerConfig* crypto_config,
       QuicVersionManager* version_manager,
       std::unique_ptr<QuicConnectionHelperInterface> helper,
-      std::unique_ptr<QuicServerSessionBase::Helper> session_helper,
+      std::unique_ptr<QuicCryptoServerStream::Helper> session_helper,
       std::unique_ptr<QuicAlarmFactory> alarm_factory)
       : QuicSimpleDispatcher(config,
                              crypto_config,
@@ -165,8 +165,8 @@ QuicDispatcher* QuicTestServer::CreateQuicDispatcher() {
       config(), &crypto_config(), version_manager(),
       std::unique_ptr<QuicEpollConnectionHelper>(new QuicEpollConnectionHelper(
           epoll_server(), QuicAllocator::BUFFER_POOL)),
-      std::unique_ptr<QuicServerSessionBase::Helper>(
-          new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
+      std::unique_ptr<QuicCryptoServerStream::Helper>(
+          new QuicSimpleCryptoServerStreamHelper(QuicRandom::GetInstance())),
       std::unique_ptr<QuicEpollAlarmFactory>(
           new QuicEpollAlarmFactory(epoll_server())));
 }
@@ -191,7 +191,7 @@ ImmediateGoAwaySession::ImmediateGoAwaySession(
     const QuicConfig& config,
     QuicConnection* connection,
     QuicServerSessionBase::Visitor* visitor,
-    QuicServerSessionBase::Helper* helper,
+    QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)
     : QuicSimpleServerSession(config,

@@ -31,15 +31,20 @@ void TCFree(const AllocatorDispatch*, void* address) {
   tc_free(address);
 }
 
+size_t TCGetSizeEstimate(const AllocatorDispatch*, void* address) {
+  return tc_malloc_size(address);
+}
+
 }  // namespace
 
 const AllocatorDispatch AllocatorDispatch::default_dispatch = {
-    &TCMalloc,   /* alloc_function */
-    &TCCalloc,   /* alloc_zero_initialized_function */
-    &TCMemalign, /* alloc_aligned_function */
-    &TCRealloc,  /* realloc_function */
-    &TCFree,     /* free_function */
-    nullptr,     /* next */
+    &TCMalloc,          /* alloc_function */
+    &TCCalloc,          /* alloc_zero_initialized_function */
+    &TCMemalign,        /* alloc_aligned_function */
+    &TCRealloc,         /* realloc_function */
+    &TCFree,            /* free_function */
+    &TCGetSizeEstimate, /* get_size_estimate_function */
+    nullptr,            /* next */
 };
 
 // In the case of tcmalloc we have also to route the diagnostic symbols,
