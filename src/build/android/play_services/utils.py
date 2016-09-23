@@ -65,6 +65,11 @@ class ConfigParser(object):
       `//chrome/app/generated_resources.grd`
       Example: ["am", "ar", "bg", "ca", "cs"]
 
+   - resource_whitelist
+     List of strings. List of resource files to explicitely keep in the final
+     output. Use it to keep drawables for example, as we currently remove them
+     all.
+     Example: ["play-services-base/res/drawables/foobar.xml"]
   '''
   _VERSION_NUMBER_KEY = 'version_number'
 
@@ -94,6 +99,10 @@ class ConfigParser(object):
   @property
   def locale_whitelist(self):
     return self._data.get('locale_whitelist') or []
+
+  @property
+  def resource_whitelist(self):
+    return self._data.get('resource_whitelist') or []
 
   def UpdateVersionNumber(self, new_version_number):
     '''Updates the version number and saves it in the configuration file. '''

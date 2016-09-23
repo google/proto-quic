@@ -144,7 +144,7 @@ class HttpStreamFactoryImpl::Job {
     // Remove session from the SpdySessionRequestMap.
     virtual void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) = 0;
 
-    virtual const BoundNetLog* GetNetLog(Job* job) const = 0;
+    virtual const NetLogWithSource* GetNetLog(Job* job) const = 0;
 
     virtual WebSocketHandshakeStreamBase::CreateHelper*
     websocket_handshake_stream_create_helper() = 0;
@@ -212,10 +212,10 @@ class HttpStreamFactoryImpl::Job {
   void SetPriority(RequestPriority priority);
 
   RequestPriority priority() const { return priority_; }
-  bool was_npn_negotiated() const;
+  bool was_alpn_negotiated() const;
   NextProto negotiated_protocol() const;
   bool using_spdy() const;
-  const BoundNetLog& net_log() const { return net_log_; }
+  const NetLogWithSource& net_log() const { return net_log_; }
   HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
 
   std::unique_ptr<HttpStream> ReleaseStream() { return std::move(stream_); }
@@ -235,10 +235,19 @@ class HttpStreamFactoryImpl::Job {
   // will be orphaned.
   void ReportJobSucceededForRequest();
 
-  // Marks that the other |job| has completed.
-  virtual void MarkOtherJobComplete(const Job& job);
-
   JobType job_type() const { return job_type_; }
+
+  const AlternativeService alternative_service() const {
+    return alternative_service_;
+  }
+
+  const ProxyServer alternative_proxy_server() const {
+    return alternative_proxy_server_;
+  }
+
+  bool using_existing_quic_session() const {
+    return using_existing_quic_session_;
+  }
 
  private:
   friend class HttpStreamFactoryImplJobPeer;
@@ -279,13 +288,6 @@ class HttpStreamFactoryImpl::Job {
     STATE_DRAIN_BODY_FOR_AUTH_RESTART_COMPLETE,
     STATE_DONE,
     STATE_NONE
-  };
-
-  enum JobStatus {
-    STATUS_RUNNING,
-    STATUS_FAILED,
-    STATUS_BROKEN,
-    STATUS_SUCCEEDED
   };
 
   void OnStreamReadyCallback();
@@ -380,13 +382,6 @@ class HttpStreamFactoryImpl::Job {
   // Should we force QUIC for this stream request.
   bool ShouldForceQuic() const;
 
-  void MaybeMarkAlternativeServiceBroken();
-
-  // May notify proxy delegate that the alternative proxy server is broken. The
-  // alternative proxy server is considered as broken if the alternative proxy
-  // server job failed, but the main job was successful.
-  void MaybeNotifyAlternativeProxyServerBroken() const;
-
   ClientSocketPoolManager::SocketGroupType GetSocketGroup() const;
 
   void MaybeCopyConnectionAttemptsFromSocketOrHandle();
@@ -402,14 +397,14 @@ class HttpStreamFactoryImpl::Job {
                               const SpdySessionKey& spdy_session_key,
                               const GURL& origin_url,
                               const AddressList& addresses,
-                              const BoundNetLog& net_log);
+                              const NetLogWithSource& net_log);
 
   const HttpRequestInfo request_info_;
   RequestPriority priority_;
   ProxyInfo proxy_info_;
   SSLConfig server_ssl_config_;
   SSLConfig proxy_ssl_config_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 
   CompletionCallback io_callback_;
   std::unique_ptr<ClientSocketHandle> connection_;
@@ -429,18 +424,12 @@ class HttpStreamFactoryImpl::Job {
   // AlternativeService for this Job if this is an alternative Job.
   const AlternativeService alternative_service_;
 
-  // AlternativeService for the other Job if this is not an alternative Job.
-  AlternativeService other_job_alternative_service_;
-
-  // Unowned. |this| job is owned by |delegate_|.
-  Delegate* delegate_;
-
   // Alternative proxy server that should be used by |this| to fetch the
   // request.
   const ProxyServer alternative_proxy_server_;
 
-  // Alternative proxy server for the other job.
-  ProxyServer other_job_alternative_proxy_server_;
+  // Unowned. |this| job is owned by |delegate_|.
+  Delegate* delegate_;
 
   const JobType job_type_;
 
@@ -474,8 +463,8 @@ class HttpStreamFactoryImpl::Job {
   std::unique_ptr<WebSocketHandshakeStreamBase> websocket_stream_;
   std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl_;
 
-  // True if we negotiated NPN.
-  bool was_npn_negotiated_;
+  // True if we negotiated ALPN.
+  bool was_alpn_negotiated_;
 
   // Protocol negotiated with the server.
   NextProto negotiated_protocol_;
@@ -492,9 +481,6 @@ class HttpStreamFactoryImpl::Job {
 
   // Only used if |new_spdy_session_| is non-NULL.
   bool spdy_session_direct_;
-
-  JobStatus job_status_;
-  JobStatus other_job_status_;
 
   // Type of stream that is requested.
   HttpStreamRequest::StreamType stream_type_;

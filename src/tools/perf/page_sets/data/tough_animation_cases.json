@@ -1,0 +1,8 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "tough_animation_cases_000.wpr": [
+            "http://ie.microsoft.com/testdrive/performance/robohornetpro/"
+        ]
+    }
+}

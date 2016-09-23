@@ -1,0 +1,174 @@
+{
+ "version": "1.0",
+ "encoding": "UTF-8",
+ "feed": {
+  "xmlns": "http://www.w3.org/2005/Atom",
+  "xmlns$openSearch": "http://a9.com/-/spec/opensearch/1.1/",
+  "xmlns$gd": "http://schemas.google.com/g/2005",
+  "xmlns$issues": "http://schemas.google.com/projecthosting/issues/2009",
+  "id": {
+   "$t": "http://code.google.com/feeds/issues/p/chromium/issues/full"
+  },
+  "updated": {
+   "$t": "2014-10-31T23:44:18.640Z"
+  },
+  "title": {
+   "$t": "Issues - chromium"
+  },
+  "subtitle": {
+   "$t": "Issues - chromium"
+  },
+  "link": [
+   {
+    "rel": "alternate",
+    "type": "text/html",
+    "href": "http://code.google.com/p/chromium/issues/list"
+   },
+   {
+    "rel": "http://schemas.google.com/g/2005#feed",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full"
+   },
+   {
+    "rel": "http://schemas.google.com/g/2005#post",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full"
+   },
+   {
+    "rel": "self",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full?alt=json&max-results=1&id=424688"
+   }
+  ],
+  "generator": {
+   "$t": "ProjectHosting",
+   "version": "1.0",
+   "uri": "http://code.google.com/feeds/issues"
+  },
+  "openSearch$totalResults": {
+   "$t": 1
+  },
+  "openSearch$startIndex": {
+   "$t": 1
+  },
+  "openSearch$itemsPerPage": {
+   "$t": 1
+  },
+  "entry": [
+   {
+    "gd$etag": "W/\"A08NQX47eCl7ImA9XRdXFkw.\"",
+    "id": {
+     "$t": "http://code.google.com/feeds/issues/p/chromium/issues/full/424688"
+    },
+    "published": {
+     "$t": "2014-10-17T18:50:15.000Z"
+    },
+    "updated": {
+     "$t": "2014-10-29T21:58:10.000Z"
+    },
+    "title": {
+     "$t": "Should Not Start Bisect on Closed Bugs."
+    },
+    "content": {
+     "$t": "I have noticed that in some cases bisect jobs are running for closed bugs:\r\nhttps://code.google.com/p/chromium/issues/detail?id=422661\r\nhttps://code.google.com/p/chromium/issues/detail?id=422228\r\nhttps://code.google.com/p/chromium/issues/detail?id=421488\r\n\r\nIt is possible that the bugs can be marked as closed when the corresponding bisect jobs are in the queue. So to avoid bisects on such bugs, can we please add logic to bisect script to first check for bug state before running the bisect. This will save us from doing some unnecessary bisects.\r\n\r\n",
+     "type": "html"
+    },
+    "link": [
+     {
+      "rel": "replies",
+      "type": "application/atom+xml",
+      "href": "http://code.google.com/feeds/issues/p/chromium/issues/424688/comments/full"
+     },
+     {
+      "rel": "alternate",
+      "type": "text/html",
+      "href": "http://code.google.com/p/chromium/issues/detail?id=424688"
+     },
+     {
+      "rel": "self",
+      "type": "application/atom+xml",
+      "href": "https://code.google.com/feeds/issues/p/chromium/issues/full/424688"
+     }
+    ],
+    "author": [
+     {
+      "name": {
+       "$t": "anan...@chromium.org"
+      },
+      "uri": {
+       "$t": "/u/112777092906361529031/"
+      }
+     }
+    ],
+    "issues$cc": [
+     {
+      "issues$uri": {
+       "$t": "/u/116704265016059607269/"
+      },
+      "issues$username": {
+       "$t": "pras...@chromium.org"
+      }
+     },
+     {
+      "issues$uri": {
+       "$t": "/u/107012661329935444717/"
+      },
+      "issues$username": {
+       "$t": "qyears...@chromium.org"
+      }
+     },
+     {
+      "issues$uri": {
+       "$t": "/u/tonyg@chromium.org/"
+      },
+      "issues$username": {
+       "$t": "tonyg@chromium.org"
+      }
+     },
+     {
+      "issues$uri": {
+       "$t": "/u/114810703796781371055/"
+      },
+      "issues$username": {
+       "$t": "robert...@chromium.org"
+      }
+     }
+    ],
+    "issues$id": {
+     "$t": 424688
+    },
+    "issues$label": [
+     {
+      "$t": "Type-Feature"
+     },
+     {
+      "$t": "Pri-2"
+     },
+     {
+      "$t": "Cr-Tests-AutoBisect"
+     },
+     {
+      "$t": "OS-All"
+     }
+    ],
+    "issues$owner": {
+     "issues$uri": {
+      "$t": "/u/114810703796781371055/"
+     },
+     "issues$username": {
+      "$t": "robert...@chromium.org"
+     }
+    },
+    "issues$stars": {
+     "$t": 1
+    },
+    "issues$state": {
+     "$t": "open"
+    },
+    "issues$status": {
+     "$t": "Assigned"
+    }
+   }
+  ]
+ }
+}

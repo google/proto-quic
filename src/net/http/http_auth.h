@@ -17,7 +17,7 @@ template <class T> class scoped_refptr;
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class HttpAuthHandler;
 class HttpAuthHandlerFactory;
 class HttpResponseHeaders;
@@ -142,7 +142,7 @@ class NET_EXPORT_PRIVATE HttpAuth {
       Target target,
       const GURL& origin,
       const std::set<Scheme>& disabled_schemes,
-      const BoundNetLog& net_log,
+      const NetLogWithSource& net_log,
       std::unique_ptr<HttpAuthHandler>* handler);
 
   // Handle a 401/407 response from a server/proxy after a previous

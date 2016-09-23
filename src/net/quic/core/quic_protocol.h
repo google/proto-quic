@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <array>
 #include <limits>
 #include <list>
 #include <map>
@@ -727,7 +728,7 @@ enum QuicErrorCode {
   QUIC_LAST_ERROR = 95,
 };
 
-typedef char DiversificationNonce[32];
+typedef std::array<char, 32> DiversificationNonce;
 
 struct NET_EXPORT_PRIVATE QuicPacketPublicHeader {
   QuicPacketPublicHeader();

@@ -47,12 +47,17 @@ def DefaultConfigVariables():
     'use_custom_libcxx': '0',
     'use_instrumented_libraries': '0',
     'use_prebuilt_instrumented_libraries': '0',
-    'use_openssl': '0',
     'use_ozone': '0',
     'use_x11': '0',
     'v8_use_external_startup_data': '1',
     'msvs_version': '0',
   }
+
+
+def IsIsolateEmpty(isolate_path):
+  """Returns whether there are no files in the .isolate."""
+  with open(isolate_path) as f:
+    return "'files': []" in f.read()
 
 
 class Isolator(object):
@@ -147,6 +152,16 @@ class Isolator(object):
       else:
         os.remove(p)
 
+  @classmethod
+  def _DestructiveMerge(cls, src, dest):
+    if os.path.exists(dest) and os.path.isdir(dest):
+      for p in os.listdir(src):
+        cls._DestructiveMerge(os.path.join(src, p), os.path.join(dest, p))
+      os.rmdir(src)
+    else:
+      shutil.move(src, dest)
+
+
   def MoveOutputDeps(self):
     """Moves files from the output directory to the top level of
       |self._isolate_deps_dir|.
@@ -171,7 +186,7 @@ class Isolator(object):
         deps_out_dir, os.path.basename(constants.GetOutDirectory()))
     if os.path.isdir(deps_product_dir):
       for p in os.listdir(deps_product_dir):
-        shutil.move(os.path.join(deps_product_dir, p), self._isolate_deps_dir)
+        Isolator._DestructiveMerge(os.path.join(deps_product_dir, p),
+                                   os.path.join(self._isolate_deps_dir, p))
       os.rmdir(deps_product_dir)
       os.rmdir(deps_out_dir)
-

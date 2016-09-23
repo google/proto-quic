@@ -84,12 +84,13 @@ HttpProxyConnectJob::HttpProxyConnectJob(
     SSLClientSocketPool* ssl_pool,
     Delegate* delegate,
     NetLog* net_log)
-    : ConnectJob(group_name,
-                 base::TimeDelta() /* The socket takes care of timeouts */,
-                 priority,
-                 respect_limits,
-                 delegate,
-                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
+    : ConnectJob(
+          group_name,
+          base::TimeDelta() /* The socket takes care of timeouts */,
+          priority,
+          respect_limits,
+          delegate,
+          NetLogWithSource::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       client_socket_(new HttpProxyClientSocketWrapper(
           group_name,
           priority,
@@ -217,7 +218,7 @@ int HttpProxyClientSocketPool::RequestSocket(const std::string& group_name,
                                              RespectLimits respect_limits,
                                              ClientSocketHandle* handle,
                                              const CompletionCallback& callback,
-                                             const BoundNetLog& net_log) {
+                                             const NetLogWithSource& net_log) {
   const scoped_refptr<HttpProxySocketParams>* casted_socket_params =
       static_cast<const scoped_refptr<HttpProxySocketParams>*>(socket_params);
 
@@ -229,7 +230,7 @@ void HttpProxyClientSocketPool::RequestSockets(
     const std::string& group_name,
     const void* params,
     int num_sockets,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   const scoped_refptr<HttpProxySocketParams>* casted_params =
       static_cast<const scoped_refptr<HttpProxySocketParams>*>(params);
 

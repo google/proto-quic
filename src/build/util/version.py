@@ -27,7 +27,7 @@ def fetch_values_from_file(values_dict, file_name):
     values_dict[key] = val
 
 
-def fetch_values(file_list):
+def fetch_values(file_list, is_official_build=None):
   """
   Returns a dictionary of values to be used for substitution, populating
   the dictionary with KEYWORD=VALUE settings from the files in 'file_list'.
@@ -37,7 +37,7 @@ def fetch_values(file_list):
     OFFICIAL_BUILD
   """
   CHROME_BUILD_TYPE = os.environ.get('CHROME_BUILD_TYPE')
-  if CHROME_BUILD_TYPE == '_official':
+  if CHROME_BUILD_TYPE == '_official' or is_official_build:
     official_build = '1'
   else:
     official_build = '0'
@@ -113,6 +113,10 @@ def main():
                       help='Evaluate VAL after reading variables. Can be used '
                            'to synthesize variables. e.g. -e \'PATCH_HI=int('
                            'PATCH)/256.')
+  parser.add_argument('--official', action='store_true',
+                      help='Whether the current build should be an official '
+                           'build, used in addition to the environment '
+                           'variable.')
   parser.add_argument('args', nargs=argparse.REMAINDER,
                       help='For compatibility: INPUT and OUTPUT can be '
                            'passed as positional arguments.')
@@ -136,7 +140,7 @@ def main():
   if options.args:
     parser.error('Unexpected arguments: %r' % options.args)
 
-  values = fetch_values(options.file)
+  values = fetch_values(options.file, options.official)
   for key, val in evals.iteritems():
     values[key] = str(eval(val, globals(), values))
 

@@ -56,11 +56,6 @@ struct NET_EXPORT SSLConfig {
   // be NULL if user doesn't care about the cert status.
   bool IsAllowedBadCert(X509Certificate* cert, CertStatus* cert_status) const;
 
-  // Same as above except works with DER encoded certificates instead
-  // of X509Certificate.
-  bool IsAllowedBadCert(const base::StringPiece& der_cert,
-                        CertStatus* cert_status) const;
-
   // Returns the set of flags to use for certificate verification, which is a
   // bitwise OR of CertVerifier::VerifyFlags that represent this SSLConfig's
   // configuration.
@@ -141,10 +136,12 @@ struct NET_EXPORT SSLConfig {
 
   struct NET_EXPORT CertAndStatus {
     CertAndStatus();
+    CertAndStatus(scoped_refptr<X509Certificate> cert, CertStatus status);
+    CertAndStatus(const CertAndStatus&);
     ~CertAndStatus();
 
-    std::string der_cert;
-    CertStatus cert_status;
+    scoped_refptr<X509Certificate> cert;
+    CertStatus cert_status = 0;
   };
 
   // Add any known-bad SSL certificate (with its cert status) to
@@ -173,16 +170,6 @@ struct NET_EXPORT SSLConfig {
   // Layer Protocol Negotation), in decreasing order of preference.  Protocols
   // will be advertised in this order during TLS handshake.
   NextProtoVector alpn_protos;
-
-  // The list of application level protocols supported with NPN (Next Protocol
-  // Negotiation).  The last item on the list is selected if there is no overlap
-  // between |npn_protos| and the protocols supported by the server, otherwise
-  // server preference is observed and the order of |npn_protos| is irrelevant.
-  // Note that due to NSS limitations, ports which use NSS will use
-  // |alpn_protos| for both ALPN and NPN. However, if |npn_protos| is empty, NPN
-  // will still be disabled.
-  // TODO(bnc): Deprecate NPN, see https://crbug.com/526713.
-  NextProtoVector npn_protos;
 
   // True if renegotiation should be allowed for the default application-level
   // protocol when the peer negotiates neither ALPN nor NPN.

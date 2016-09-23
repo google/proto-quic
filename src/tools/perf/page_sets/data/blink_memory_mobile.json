@@ -1,0 +1,19 @@
+{
+    "archives": {
+        "blink_memory_mobile_000.wpr": [
+            "Wordpress",
+            "Blogger",
+            "Worldjournal",
+            "Gmail",
+            "Pinterest",
+            "https://facebook.com/barackobama",
+            "Wikipedia (1 tab) - delayed scroll start",
+            "Reddit",
+            "GooglePlus"
+        ],
+        "blink_memory_mobile_003.wpr": [
+            "TheVerge"
+        ]
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+}

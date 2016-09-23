@@ -32,9 +32,8 @@ class ShloVerifier : public ValidateClientHelloResultCallback {
         compressed_certs_cache_(compressed_certs_cache) {}
 
   // Verify that the output message is a SHLO.
-  void RunImpl(const CryptoHandshakeMessage& chlo,
-               const ValidateClientHelloResultCallback::Result& result,
-               std::unique_ptr<ProofSource::Details> /* details */) override {
+  void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+           std::unique_ptr<ProofSource::Details> /* details */) override {
     QuicCryptoNegotiatedParameters params;
     string error_details;
     DiversificationNonce diversification_nonce;
@@ -119,8 +118,9 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   // Verify that full_chlo can pass crypto_config's verification.
   crypto_config.ValidateClientHello(
       full_chlo, client_addr.address(), server_ip, version, &clock, &proof,
-      new ShloVerifier(&crypto_config, server_ip, client_addr, &clock, &proof,
-                       &compressed_certs_cache));
+      std::unique_ptr<ShloVerifier>(
+          new ShloVerifier(&crypto_config, server_ip, client_addr, &clock,
+                           &proof, &compressed_certs_cache)));
 }
 
 }  // namespace test

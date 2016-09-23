@@ -11,7 +11,6 @@ i.e., "adb forward" in reverse. Requires |host_forwarder| and |device_forwarder|
 to be built.
 """
 
-import logging
 import optparse
 import sys
 import time
@@ -19,7 +18,6 @@ import time
 import devil_chromium
 
 from devil.android import device_blacklist
-from devil.android import device_errors
 from devil.android import device_utils
 from devil.android import forwarder
 from devil.utils import run_tests_helper
@@ -63,18 +61,8 @@ def main(argv):
   blacklist = (device_blacklist.Blacklist(options.blacklist_file)
                if options.blacklist_file
                else None)
-  devices = device_utils.DeviceUtils.HealthyDevices(blacklist)
-
-  if options.device:
-    device = next((d for d in devices if d == options.device), None)
-    if not device:
-      raise device_errors.DeviceUnreachableError(options.device)
-  elif devices:
-    device = devices[0]
-    logging.info('No device specified. Defaulting to %s', devices[0])
-  else:
-    raise device_errors.NoDevicesError()
-
+  device = device_utils.DeviceUtils.HealthyDevices(
+      blacklist=blacklist, device_arg=options.device)[0]
   constants.SetBuildType(options.build_type)
   try:
     forwarder.Forwarder.Map(port_pairs, device)

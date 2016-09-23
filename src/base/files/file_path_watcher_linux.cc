@@ -88,8 +88,7 @@ class InotifyReader {
   DISALLOW_COPY_AND_ASSIGN(InotifyReader);
 };
 
-class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
-                            public MessageLoop::DestructionObserver {
+class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
  public:
   FilePathWatcherImpl();
 
@@ -107,7 +106,10 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
                          bool is_dir);
 
  protected:
-  ~FilePathWatcherImpl() override {}
+  ~FilePathWatcherImpl() override {
+    in_destructor_ = true;
+    CancelOnMessageLoopThreadOrInDestructor();
+  }
 
  private:
   // Start watching |path| for changes and notify |delegate| on each change.
@@ -118,14 +120,8 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
 
   // Cancel the watch. This unregisters the instance with InotifyReader.
   void Cancel() override;
-
-  // Cleans up and stops observing the message_loop() thread.
   void CancelOnMessageLoopThread() override;
-
-  // Deletion of the FilePathWatcher will call Cancel() to dispose of this
-  // object in the right thread. This also observes destruction of the required
-  // cleanup thread, in case it quits before Cancel() is called.
-  void WillDestroyCurrentMessageLoop() override;
+  void CancelOnMessageLoopThreadOrInDestructor();
 
   // Inotify watches are installed for all directory components of |target_|.
   // A WatchEntry instance holds:
@@ -189,6 +185,8 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
 
   hash_map<InotifyReader::Watch, FilePath> recursive_paths_by_watch_;
   std::map<FilePath, InotifyReader::Watch> recursive_watches_by_path_;
+
+  bool in_destructor_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(FilePathWatcherImpl);
 };
@@ -429,7 +427,6 @@ bool FilePathWatcherImpl::Watch(const FilePath& path,
   callback_ = callback;
   target_ = path;
   recursive_ = recursive;
-  MessageLoop::current()->AddDestructionObserver(this);
 
   std::vector<FilePath::StringType> comps;
   target_.GetComponents(&comps);
@@ -458,13 +455,19 @@ void FilePathWatcherImpl::Cancel() {
 }
 
 void FilePathWatcherImpl::CancelOnMessageLoopThread() {
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  CancelOnMessageLoopThreadOrInDestructor();
+}
+
+void FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor() {
+  DCHECK(in_destructor_ || task_runner()->BelongsToCurrentThread());
+
+  if (is_cancelled())
+    return;
+
   set_cancelled();
 
-  if (!callback_.is_null()) {
-    MessageLoop::current()->RemoveDestructionObserver(this);
+  if (!callback_.is_null())
     callback_.Reset();
-  }
 
   for (size_t i = 0; i < watches_.size(); ++i)
     g_inotify_reader.Get().RemoveWatch(watches_[i].watch, this);
@@ -473,10 +476,6 @@ void FilePathWatcherImpl::CancelOnMessageLoopThread() {
 
   if (recursive_)
     RemoveRecursiveWatches();
-}
-
-void FilePathWatcherImpl::WillDestroyCurrentMessageLoop() {
-  CancelOnMessageLoopThread();
 }
 
 void FilePathWatcherImpl::UpdateWatches() {

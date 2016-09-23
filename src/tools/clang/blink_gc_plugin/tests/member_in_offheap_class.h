@@ -28,7 +28,7 @@ private:
 };
 
 class PartObject {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 public:
     void trace(Visitor*);
 private:

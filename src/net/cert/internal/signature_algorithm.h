@@ -15,6 +15,8 @@
 
 namespace net {
 
+class CertErrors;
+
 namespace der {
 class Input;
 }  // namespace der
@@ -87,11 +89,14 @@ class NET_EXPORT SignatureAlgorithm {
   DigestAlgorithm digest() const { return digest_; }
 
   // Creates a SignatureAlgorithm by parsing a DER-encoded "AlgorithmIdentifier"
-  // (RFC 5280). Returns nullptr on failure.
-  static std::unique_ptr<SignatureAlgorithm> CreateFromDer(
-      const der::Input& algorithm_identifier);
+  // (RFC 5280). Returns nullptr on failure. If |errors| was non-null then
+  // error/warning information is output to it.
+  static std::unique_ptr<SignatureAlgorithm> Create(
+      const der::Input& algorithm_identifier,
+      CertErrors* errors);
 
   // Creates a new SignatureAlgorithm with the given type and parameters.
+  // Guaranteed to return non-null result.
   static std::unique_ptr<SignatureAlgorithm> CreateRsaPkcs1(
       DigestAlgorithm digest);
   static std::unique_ptr<SignatureAlgorithm> CreateEcdsa(

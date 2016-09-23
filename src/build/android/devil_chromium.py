@@ -99,7 +99,7 @@ _DEVIL_BUILD_PRODUCT_DEPS = {
 }
 
 
-def Initialize(output_directory=None, custom_deps=None):
+def Initialize(output_directory=None, custom_deps=None, adb_path=None):
   """Initializes devil with chromium's binaries and third-party libraries.
 
   This includes:
@@ -147,6 +147,16 @@ def Initialize(output_directory=None, custom_deps=None):
     }
   if custom_deps:
     devil_dynamic_config['dependencies'].update(custom_deps)
+  if adb_path:
+    devil_dynamic_config['dependencies'].update({
+      'adb': {
+        'file_info': {
+          devil_env.GetPlatform(): {
+            'local_paths': [adb_path]
+          }
+        }
+      }
+    })
 
   devil_env.config.Initialize(
       configs=[devil_dynamic_config], config_files=[_DEVIL_CONFIG])

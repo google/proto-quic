@@ -145,8 +145,7 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
     return QUIC_INTERNAL_ERROR;
   }
 
-  if (FLAGS_quic_limit_frame_gaps_in_buffer &&
-      current_gap->begin_offset != starting_offset &&
+  if (current_gap->begin_offset != starting_offset &&
       current_gap->end_offset != starting_offset + data.length() &&
       gaps_.size() >= kMaxNumGapsAllowed) {
     // This frame is going to create one more gap which exceeds max number of
@@ -471,13 +470,9 @@ void QuicStreamSequencerBuffer::RetireBlockIfEmpty(size_t block_index) {
     DCHECK(first_gap.begin_offset == total_bytes_read_);
     // Check where the next piece data is.
     // Not empty if next piece of data is still in this chunk.
-    bool gap_extends_to_infinity =
-        (first_gap.end_offset == std::numeric_limits<QuicStreamOffset>::max());
     bool gap_ends_in_this_block =
         (GetBlockIndex(first_gap.end_offset) == block_index);
-    if ((!FLAGS_quic_sequencer_buffer_retire_block_in_time &&
-         !gap_extends_to_infinity) ||
-        gap_ends_in_this_block) {
+    if (gap_ends_in_this_block) {
       return;
     }
   }

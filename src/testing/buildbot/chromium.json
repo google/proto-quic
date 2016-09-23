@@ -1,0 +1,59 @@
+{
+  "Linux": {
+    "additional_compile_targets": [
+      "all"
+    ],
+    "scripts": [
+      {
+        "name": "checkperms",
+        "script": "checkperms.py"
+      },
+      {
+        "args": [
+          "linux-release/sizes"
+        ],
+        "name": "sizes",
+        "script": "sizes.py"
+      }
+    ]
+  },
+  "Linux x64": {
+    "additional_compile_targets": [
+      "all"
+    ],
+    "scripts": [
+      {
+        "args": [
+          "linux-release-64/sizes"
+        ],
+        "name": "sizes",
+        "script": "sizes.py"
+      }
+    ]
+  },
+  "Mac": {
+    "additional_compile_targets": [
+      "all"
+    ],
+    "scripts": [
+      {
+        "args": [
+          "mac-release/sizes"
+        ],
+        "name": "sizes",
+        "script": "sizes.py"
+      }
+    ]
+  },
+  "Win": {
+    "additional_compile_targets": [
+      "all"
+    ],
+    "scripts": [
+      {
+        "name": "checkbins",
+        "script": "checkbins.py"
+      }
+    ]
+  }
+}

@@ -6,6 +6,7 @@
 
 #include "base/sha1.h"
 #include "crypto/sha2.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parse_ocsp.h"
 #include "net/der/encode_values.h"
 
@@ -323,7 +324,9 @@ bool ParseBasicOCSPResponse(const der::Input& raw_tlv, OCSPResponse* out) {
   der::Input sigalg_tlv;
   if (!parser.ReadRawTLV(&sigalg_tlv))
     return false;
-  out->signature_algorithm = SignatureAlgorithm::CreateFromDer(sigalg_tlv);
+  // TODO(crbug.com/634443): Propagate the errors.
+  net::CertErrors errors;
+  out->signature_algorithm = SignatureAlgorithm::Create(sigalg_tlv, &errors);
   if (!out->signature_algorithm)
     return false;
   if (!parser.ReadBitString(&(out->signature)))
@@ -500,10 +503,13 @@ bool GetOCSPCertStatus(const OCSPResponseData& response_data,
   out->status = OCSPRevocationStatus::GOOD;
 
   ParsedTbsCertificate tbs_cert;
-  if (!ParseTbsCertificate(cert_tbs_certificate_tlv, {}, &tbs_cert))
+  // TODO(crbug.com/634443): Propagate the errors.
+  CertErrors errors;
+  if (!ParseTbsCertificate(cert_tbs_certificate_tlv, {}, &tbs_cert, &errors))
     return false;
   ParsedTbsCertificate issuer_tbs_cert;
-  if (!ParseTbsCertificate(issuer_tbs_certificate_tlv, {}, &issuer_tbs_cert))
+  if (!ParseTbsCertificate(issuer_tbs_certificate_tlv, {}, &issuer_tbs_cert,
+                           &errors))
     return false;
 
   bool found = false;

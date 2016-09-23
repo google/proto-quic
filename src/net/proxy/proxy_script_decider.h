@@ -182,7 +182,7 @@ class NET_EXPORT_PRIVATE ProxyScriptDecider {
   PacSourceList pac_sources_;
   State next_state_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   bool fetch_pac_bytes_;
 

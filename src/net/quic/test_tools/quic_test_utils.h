@@ -864,6 +864,8 @@ class MockQuicConnectionDebugVisitor : public QuicConnectionDebugVisitor {
                     TransmissionType,
                     QuicTime));
 
+  MOCK_METHOD0(OnPingSent, void());
+
   MOCK_METHOD3(OnPacketReceived,
                void(const IPEndPoint&,
                     const IPEndPoint&,
@@ -1030,6 +1032,22 @@ void CreateServerSessionForTest(
 // Helper to generate client side stream ids, generalizes
 // kClientDataStreamId1 etc. above.
 QuicStreamId QuicClientDataStreamId(int i);
+
+// Verifies that the relative error of |actual| with respect to |expected| is
+// no more than |margin|.
+
+template <typename T>
+void ExpectApproxEq(T expected, T actual, float relative_margin) {
+  // If |relative_margin| > 1 and T is an unsigned type, the comparison will
+  // underflow.
+  ASSERT_LE(relative_margin, 1);
+  ASSERT_GE(relative_margin, 0);
+
+  T absolute_margin = expected * relative_margin;
+
+  EXPECT_GE(expected + absolute_margin, actual);
+  EXPECT_LE(expected - absolute_margin, actual);
+}
 
 }  // namespace test
 }  // namespace net

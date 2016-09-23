@@ -1,0 +1,105 @@
+{
+    "archives": {
+        "system_health_desktop_000.wpr": [
+            "load:search:amazon",
+            "load:search:flipkart",
+            "load:search:ebay",
+            "load:search:yandex",
+            "load:search:taobao",
+            "load:search:yahoo",
+            "load:search:baidu"
+        ],
+        "system_health_desktop_001.wpr": [
+            "load:social:instagram",
+            "load:social:pinterest",
+            "load:social:vk",
+            "load:social:tumblr"
+        ],
+        "system_health_desktop_002.wpr": [
+            "load:news:bbc",
+            "load:news:wikipedia"
+        ],
+        "system_health_desktop_003.wpr": [
+            "load:media:soundcloud",
+            "load:media:dailymotion",
+            "load:media:9gag",
+            "load:media:flickr",
+            "load:media:google_images",
+            "load:media:youtube"
+        ],
+        "system_health_desktop_004.wpr": [
+            "load:tools:drive",
+            "load:tools:docs",
+            "load:tools:gmail",
+            "load:tools:maps",
+            "load:tools:stackoverflow",
+            "load:tools:dropbox",
+            "load:tools:weather"
+        ],
+        "system_health_desktop_005.wpr": [
+            "load:games:spychase",
+            "load:games:alphabetty",
+            "load:games:bubbles",
+            "load:games:miniclip",
+            "load:games:lazors"
+        ],
+        "system_health_desktop_006.wpr": [
+            "load:news:cnn"
+        ],
+        "system_health_desktop_007.wpr": [
+            "load:social:facebook"
+        ],
+        "system_health_desktop_008.wpr": [
+            "load:news:hackernews"
+        ],
+        "system_health_desktop_009.wpr": [
+            "load:news:nytimes"
+        ],
+        "system_health_desktop_010.wpr": [
+            "load:news:qq"
+        ],
+        "system_health_desktop_011.wpr": [
+            "load:news:reddit"
+        ],
+        "system_health_desktop_013.wpr": [
+            "browse:news:cnn"
+        ],
+        "system_health_desktop_014.wpr": [
+            "browse:news:hackernews"
+        ],
+        "system_health_desktop_015.wpr": [
+            "browse:news:nytimes"
+        ],
+        "system_health_desktop_016.wpr": [
+            "browse:news:reddit"
+        ],
+        "system_health_desktop_018.wpr": [
+            "load:social:twitter"
+        ],
+        "system_health_desktop_019.wpr": [
+            "browse:social:twitter"
+        ],
+        "system_health_desktop_020.wpr": [
+            "load:news:flipboard"
+        ],
+        "system_health_desktop_021.wpr": [
+            "browse:news:flipboard"
+        ],
+        "system_health_desktop_022.wpr": [
+            "load:search:google",
+            "search:portal:google"
+        ],
+        "system_health_desktop_025.wpr": [
+            "browse:media:imgur",
+            "load:media:imgur"
+        ],
+        "system_health_desktop_026.wpr": [
+            "browse:media:youtube"
+        ],
+        "system_health_desktop_028.wpr": [
+             "long_running:tools:gmail-foreground",
+             "long_running:tools:gmail-background"
+        ]
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+}

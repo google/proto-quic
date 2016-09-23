@@ -1,0 +1,2 @@
+# https://crbug.com/571266
+URLRequestThrottlerSimulation.HelpsInAttack

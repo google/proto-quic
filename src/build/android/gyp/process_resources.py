@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import sys
+import xml.etree.ElementTree
 
 import generate_v14_compatible_resources
 
@@ -123,84 +124,62 @@ def _ParseArgs(args):
   if (options.R_dir is None) == (options.srcjar_out is None):
     raise Exception('Exactly one of --R-dir or --srcjar-out must be specified.')
 
-  options.resource_dirs = build_utils.ParseGypList(options.resource_dirs)
+  options.resource_dirs = build_utils.ParseGnList(options.resource_dirs)
   options.dependencies_res_zips = (
-      build_utils.ParseGypList(options.dependencies_res_zips))
+      build_utils.ParseGnList(options.dependencies_res_zips))
 
   # Don't use [] as default value since some script explicitly pass "".
   if options.extra_res_packages:
     options.extra_res_packages = (
-        build_utils.ParseGypList(options.extra_res_packages))
+        build_utils.ParseGnList(options.extra_res_packages))
   else:
     options.extra_res_packages = []
 
   if options.extra_r_text_files:
     options.extra_r_text_files = (
-        build_utils.ParseGypList(options.extra_r_text_files))
+        build_utils.ParseGnList(options.extra_r_text_files))
   else:
     options.extra_r_text_files = []
 
   return options
 
 
-def CreateExtraRJavaFiles(
-      r_dir, extra_packages, extra_r_text_files, shared_resources, include_all):
-  if include_all:
-    java_files = build_utils.FindInDirectory(r_dir, "R.java")
-    if len(java_files) != 1:
-      return
-    r_java_file = java_files[0]
-    r_java_contents = codecs.open(r_java_file, encoding='utf-8').read()
+def CreateRJavaFiles(srcjar_dir, main_r_txt_file, packages, r_txt_files,
+                     shared_resources):
+  assert len(packages) == len(r_txt_files), 'Need one R.txt file per package'
 
-    for package in extra_packages:
-      package_r_java_dir = os.path.join(r_dir, *package.split('.'))
-      build_utils.MakeDirectory(package_r_java_dir)
-      package_r_java_path = os.path.join(package_r_java_dir, 'R.java')
-      new_r_java = re.sub(r'package [.\w]*;', u'package %s;' % package,
-                          r_java_contents)
-      codecs.open(package_r_java_path, 'w', encoding='utf-8').write(new_r_java)
-  else:
-    if len(extra_packages) != len(extra_r_text_files):
-      raise Exception('Need one R.txt file per extra package')
+  # Map of (resource_type, name) -> Entry.
+  # Contains the correct values for resources.
+  all_resources = {}
+  for entry in _ParseTextSymbolsFile(main_r_txt_file):
+    all_resources[(entry.resource_type, entry.name)] = entry
 
-    r_txt_file = os.path.join(r_dir, 'R.txt')
-    if not os.path.exists(r_txt_file):
-      return
-
-    # Map of (resource_type, name) -> Entry.
-    # Contains the correct values for resources.
-    all_resources = {}
+  # Map of package_name->resource_type->entry
+  resources_by_package = (
+      collections.defaultdict(lambda: collections.defaultdict(list)))
+  # Build the R.java files using each package's R.txt file, but replacing
+  # each entry's placeholder value with correct values from all_resources.
+  for package, r_txt_file in zip(packages, r_txt_files):
+    if package in resources_by_package:
+      raise Exception(('Package name "%s" appeared twice. All '
+                       'android_resources() targets must use unique package '
+                       'names, or no package name at all.') % package)
+    resources_by_type = resources_by_package[package]
+    # The sub-R.txt files have the wrong values at this point. Read them to
+    # figure out which entries belong to them, but use the values from the
+    # main R.txt file.
     for entry in _ParseTextSymbolsFile(r_txt_file):
-      all_resources[(entry.resource_type, entry.name)] = entry
+      entry = all_resources[(entry.resource_type, entry.name)]
+      resources_by_type[entry.resource_type].append(entry)
 
-    # Map of package_name->resource_type->entry
-    resources_by_package = (
-        collections.defaultdict(lambda: collections.defaultdict(list)))
-    # Build the R.java files using each package's R.txt file, but replacing
-    # each entry's placeholder value with correct values from all_resources.
-    for package, r_text_file in zip(extra_packages, extra_r_text_files):
-      if not os.path.exists(r_text_file):
-        continue
-      if package in resources_by_package:
-        raise Exception(('Package name "%s" appeared twice. All '
-                         'android_resources() targets must use unique package '
-                         'names, or no package name at all.') % package)
-      resources_by_type = resources_by_package[package]
-      # The sub-R.txt files have the wrong values at this point. Read them to
-      # figure out which entries belong to them, but use the values from the
-      # main R.txt file.
-      for entry in _ParseTextSymbolsFile(r_text_file):
-        entry = all_resources[(entry.resource_type, entry.name)]
-        resources_by_type[entry.resource_type].append(entry)
-
-    for package, resources_by_type in resources_by_package.iteritems():
-      package_r_java_dir = os.path.join(r_dir, *package.split('.'))
-      build_utils.MakeDirectory(package_r_java_dir)
-      package_r_java_path = os.path.join(package_r_java_dir, 'R.java')
-      java_file_contents = _CreateExtraRJavaFile(
-          package, resources_by_type, shared_resources)
-      with open(package_r_java_path, 'w') as f:
-        f.write(java_file_contents)
+  for package, resources_by_type in resources_by_package.iteritems():
+    package_r_java_dir = os.path.join(srcjar_dir, *package.split('.'))
+    build_utils.MakeDirectory(package_r_java_dir)
+    package_r_java_path = os.path.join(package_r_java_dir, 'R.java')
+    java_file_contents = _CreateRJavaFile(
+        package, resources_by_type, shared_resources)
+    with open(package_r_java_path, 'w') as f:
+      f.write(java_file_contents)
 
 
 def _ParseTextSymbolsFile(path):
@@ -216,14 +195,26 @@ def _ParseTextSymbolsFile(path):
   return ret
 
 
-def _CreateExtraRJavaFile(package, resources_by_type, shared_resources):
+def _CreateRJavaFile(package, resources_by_type, shared_resources):
   """Generates the contents of a R.java file."""
+  # Keep these assignments all on one line to make diffing against regular
+  # aapt-generated files easier.
+  create_id = ('{{ e.resource_type }}.{{ e.name }} = '
+               '({{ e.resource_type }}.{{ e.name }} & 0x00ffffff) |'
+               ' (packageId << 24);')
+  create_id_arr = ('{{ e.resource_type }}.{{ e.name }}[i] = '
+                   '({{ e.resource_type }}.{{ e.name }}[i] & 0x00ffffff) |'
+                   ' (packageId << 24);')
+  # Here we diverge from what aapt does. Because we have so many
+  # resources, the onResourcesLoaded method was exceeding the 64KB limit that
+  # Java imposes. For this reason we split onResourcesLoaded into different
+  # methods for each resource type.
   template = Template("""/* AUTO-GENERATED FILE.  DO NOT MODIFY. */
 
 package {{ package }};
 
 public final class R {
-    {% for resource_type in resources %}
+    {% for resource_type in resource_types %}
     public static final class {{ resource_type }} {
         {% for e in resources[resource_type] %}
         {% if shared_resources %}
@@ -236,27 +227,33 @@ public final class R {
     {% endfor %}
     {% if shared_resources %}
     public static void onResourcesLoaded(int packageId) {
-        {% for resource_type in resources %}
+        {% for resource_type in resource_types %}
+        onResourcesLoaded{{ resource_type|title }}(packageId);
         {% for e in resources[resource_type] %}
         {% if e.java_type == 'int[]' %}
         for(int i = 0; i < {{ e.resource_type }}.{{ e.name }}.length; ++i) {
-            {{ e.resource_type }}.{{ e.name }}[i] =
-                    ({{ e.resource_type }}.{{ e.name }}[i] & 0x00ffffff)
-                    | (packageId << 24);
+            """ + create_id_arr + """
         }
-        {% else %}
-        {{ e.resource_type }}.{{ e.name }} =
-                ({{ e.resource_type }}.{{ e.name }} & 0x00ffffff)
-                | (packageId << 24);
         {% endif %}
         {% endfor %}
         {% endfor %}
     }
+    {% for res_type in resource_types %}
+    private static void onResourcesLoaded{{ res_type|title }}(int packageId) {
+        {% for e in resources[res_type] %}
+        {% if res_type != 'styleable' and e.java_type != 'int[]' %}
+        """ + create_id + """
+        {% endif %}
+        {% endfor %}
+    }
+    {% endfor %}
     {% endif %}
 }
 """, trim_blocks=True, lstrip_blocks=True)
 
-  return template.render(package=package, resources=resources_by_type,
+  return template.render(package=package,
+                         resources=resources_by_type,
+                         resource_types=sorted(resources_by_type),
                          shared_resources=shared_resources)
 
 
@@ -341,6 +338,11 @@ def CombineZips(zip_files, output_path):
   build_utils.MergeZips(output_path, zip_files, path_transform=path_transform)
 
 
+def _ExtractPackageFromManifest(manifest_path):
+  doc = xml.etree.ElementTree.parse(manifest_path)
+  return doc.getroot().get('package')
+
+
 def _OnStaleMd5(options):
   aapt = options.aapt_path
   with build_utils.TempDir() as temp_dir:
@@ -351,6 +353,8 @@ def _OnStaleMd5(options):
 
     gen_dir = os.path.join(temp_dir, 'gen')
     build_utils.MakeDirectory(gen_dir)
+    r_txt_path = os.path.join(gen_dir, 'R.txt')
+    srcjar_dir = os.path.join(temp_dir, 'java')
 
     input_resource_dirs = options.resource_dirs
 
@@ -379,36 +383,75 @@ def _OnStaleMd5(options):
                        '-m',
                        '-M', options.android_manifest,
                        '--auto-add-overlay',
+                       '--no-version-vectors',
                        '-I', options.android_sdk_jar,
                        '--output-text-symbols', gen_dir,
-                       '-J', gen_dir,
+                       '-J', gen_dir,  # Required for R.txt generation.
                        '--ignore-assets', build_utils.AAPT_IGNORE_PATTERN]
+
+    # aapt supports only the "--include-all-resources" mode, where each R.java
+    # file ends up with all symbols, rather than only those that it had at the
+    # time it was originally generated. This subtle difference makes no
+    # difference when compiling, but can lead to increased unused symbols in the
+    # resulting R.class files.
+    # TODO(agrieve): See if proguard makes this difference actually translate
+    # into a size difference. If not, we can delete all of our custom R.java
+    # template code above (and make include_all_resources the default).
+    if options.include_all_resources:
+      srcjar_dir = gen_dir
+      if options.extra_res_packages:
+        colon_separated = ':'.join(options.extra_res_packages)
+        package_command += ['--extra-packages', colon_separated]
+      if options.non_constant_id:
+        package_command.append('--non-constant-id')
+      if options.custom_package:
+        package_command += ['--custom-package', options.custom_package]
+      if options.shared_resources:
+        package_command.append('--shared-lib')
+      if options.app_as_shared_lib:
+        package_command.append('--app-as-shared-lib')
 
     for d in input_resource_dirs:
       package_command += ['-S', d]
 
+    # Adding all dependencies as sources is necessary for @type/foo references
+    # to symbols within dependencies to resolve. However, it has the side-effect
+    # that all Java symbols from dependencies are copied into the new R.java.
+    # E.g.: It enables an arguably incorrect usage of
+    # "mypackage.R.id.lib_symbol" where "libpackage.R.id.lib_symbol" would be
+    # more correct. This is just how Android works.
     for d in dep_subdirs:
       package_command += ['-S', d]
 
-    if options.non_constant_id:
-      package_command.append('--non-constant-id')
-    if options.custom_package:
-      package_command += ['--custom-package', options.custom_package]
     if options.proguard_file:
       package_command += ['-G', options.proguard_file]
-    if options.shared_resources:
-      package_command.append('--shared-lib')
-    if options.app_as_shared_lib:
-      package_command.append('--app-as-shared-lib')
     build_utils.CheckOutput(package_command, print_stderr=False)
 
-    if options.extra_res_packages:
-      CreateExtraRJavaFiles(
-          gen_dir,
-          options.extra_res_packages,
-          options.extra_r_text_files,
-          options.shared_resources or options.app_as_shared_lib,
-          options.include_all_resources)
+    # When an empty res/ directory is passed, aapt does not write an R.txt.
+    if not os.path.exists(r_txt_path):
+      build_utils.Touch(r_txt_path)
+
+    if not options.include_all_resources:
+      packages = list(options.extra_res_packages)
+      r_txt_files = list(options.extra_r_text_files)
+
+      cur_package = options.custom_package
+      if not options.custom_package:
+        cur_package = _ExtractPackageFromManifest(options.android_manifest)
+
+      # Don't create a .java file for the current resource target when:
+      # - no package name was provided (either by manifest or build rules),
+      # - there was already a dependent android_resources() with the same
+      #   package (occurs mostly when an apk target and resources target share
+      #   an AndroidManifest.xml)
+      if cur_package != 'dummy.package' and cur_package not in packages:
+        packages.append(cur_package)
+        r_txt_files.append(r_txt_path)
+
+      if packages:
+        shared_resources = options.shared_resources or options.app_as_shared_lib
+        CreateRJavaFiles(srcjar_dir, r_txt_path, packages, r_txt_files,
+                         shared_resources)
 
     # This is the list of directories with resources to put in the final .zip
     # file. The order of these is important so that crunched/v14 resources
@@ -434,16 +477,12 @@ def _OnStaleMd5(options):
 
     if options.R_dir:
       build_utils.DeleteDirectory(options.R_dir)
-      shutil.copytree(gen_dir, options.R_dir)
+      shutil.copytree(srcjar_dir, options.R_dir)
     else:
-      build_utils.ZipDir(options.srcjar_out, gen_dir)
+      build_utils.ZipDir(options.srcjar_out, srcjar_dir)
 
     if options.r_text_out:
-      r_text_path = os.path.join(gen_dir, 'R.txt')
-      if os.path.exists(r_text_path):
-        shutil.copyfile(r_text_path, options.r_text_out)
-      else:
-        open(options.r_text_out, 'w').close()
+      shutil.copyfile(r_txt_path, options.r_text_out)
 
 
 def main(args):
@@ -462,8 +501,6 @@ def main(args):
   # List python deps in input_strings rather than input_paths since the contents
   # of them does not change what gets written to the depsfile.
   input_strings = options.extra_res_packages + [
-    options.aapt_path,
-    options.android_sdk_jar,
     options.app_as_shared_lib,
     options.custom_package,
     options.include_all_resources,
@@ -472,13 +509,23 @@ def main(args):
     options.v14_skip,
   ]
 
-  input_paths = [ options.android_manifest ]
+  input_paths = [
+    options.aapt_path,
+    options.android_manifest,
+    options.android_sdk_jar,
+  ]
   input_paths.extend(options.dependencies_res_zips)
-  input_paths.extend(p for p in options.extra_r_text_files if os.path.exists(p))
+  input_paths.extend(options.extra_r_text_files)
 
-  for d in options.resource_dirs:
-    for root, _, filenames in os.walk(d):
-      input_paths.extend(os.path.join(root, f) for f in filenames)
+  resource_names = []
+  for resource_dir in options.resource_dirs:
+    for resource_file in build_utils.FindInDirectory(resource_dir, '*'):
+      input_paths.append(resource_file)
+      resource_names.append(os.path.relpath(resource_file, resource_dir))
+
+  # Resource filenames matter to the output, so add them to strings as well.
+  # This matters if a file is renamed but not changed (http://crbug.com/597126).
+  input_strings.extend(sorted(resource_names))
 
   build_utils.CallAndWriteDepfileIfStale(
       lambda: _OnStaleMd5(options),

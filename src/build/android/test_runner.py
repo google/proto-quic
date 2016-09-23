@@ -18,8 +18,6 @@ import unittest
 
 import devil_chromium
 from devil import base_error
-from devil import devil_env
-from devil.android import apk_helper
 from devil.android import device_blacklist
 from devil.android import device_errors
 from devil.android import device_utils
@@ -29,23 +27,17 @@ from devil.utils import reraiser_thread
 from devil.utils import run_tests_helper
 
 from pylib import constants
-from pylib.constants import host_paths
 from pylib.base import base_test_result
 from pylib.base import environment_factory
 from pylib.base import test_dispatcher
 from pylib.base import test_instance_factory
 from pylib.base import test_run_factory
+from pylib.constants import host_paths
 from pylib.linker import setup as linker_setup
-from pylib.host_driven import setup as host_driven_setup
-from pylib.instrumentation import setup as instrumentation_setup
-from pylib.instrumentation import test_options as instrumentation_test_options
 from pylib.junit import setup as junit_setup
 from pylib.junit import test_dispatcher as junit_dispatcher
 from pylib.monkey import setup as monkey_setup
 from pylib.monkey import test_options as monkey_test_options
-from pylib.perf import setup as perf_setup
-from pylib.perf import test_options as perf_test_options
-from pylib.perf import test_runner as perf_test_runner
 from pylib.results import json_results
 from pylib.results import report_results
 
@@ -72,10 +64,11 @@ def AddCommonOptions(parser):
       help=('If set, run test suites under out/Release. '
             'Default is env var BUILDTYPE or Debug.'))
 
+  # TODO(jbudorick): Remove --build-directory once no bots use it.
   group.add_argument('--build-directory', dest='build_directory',
-                     help=('Path to the directory in which build files are'
-                           ' located (should not include build type)'))
+                     help='DEPRECATED')
   group.add_argument('--output-directory', dest='output_directory',
+                     type=os.path.realpath,
                      help=('Path to the directory in which build files are'
                            ' located (must include build type). This will take'
                            ' precedence over --debug, --release and'
@@ -102,21 +95,21 @@ def AddCommonOptions(parser):
   group.add_argument('-e', '--environment', default='local',
                      choices=constants.VALID_ENVIRONMENTS,
                      help='Test environment to run in (default: %(default)s).')
-  group.add_argument('--adb-path',
+  group.add_argument('--adb-path', type=os.path.realpath,
                      help=('Specify the absolute path of the adb binary that '
                            'should be used.'))
   group.add_argument('--json-results-file', '--test-launcher-summary-output',
-                     dest='json_results_file',
+                     dest='json_results_file', type=os.path.realpath,
                      help='If set, will dump results in JSON form '
                           'to specified file.')
 
   logcat_output_group = group.add_mutually_exclusive_group()
   logcat_output_group.add_argument(
-      '--logcat-output-dir',
+      '--logcat-output-dir', type=os.path.realpath,
       help='If set, will dump logcats recorded during test run to directory. '
            'File names will be the device ids with timestamps.')
   logcat_output_group.add_argument(
-      '--logcat-output-file',
+      '--logcat-output-file', type=os.path.realpath,
       help='If set, will merge logcats recorded during test run and dump them '
            'to the specified file.')
 
@@ -144,17 +137,9 @@ def ProcessCommonOptions(args):
   if args.output_directory:
     constants.SetOutputDirectory(args.output_directory)
 
-  devil_custom_deps = None
-  if args.adb_path:
-    devil_custom_deps = {
-      'adb': {
-        devil_env.GetPlatform(): [args.adb_path]
-      }
-    }
-
   devil_chromium.Initialize(
       output_directory=constants.GetOutDirectory(),
-      custom_deps=devil_custom_deps)
+      adb_path=args.adb_path)
 
   # Some things such as Forwarder require ADB to be in the environment path.
   adb_dir = os.path.dirname(constants.GetAdbPath())
@@ -230,7 +215,8 @@ def AddDeviceOptions(parser):
   group.add_argument('-d', '--device', dest='test_device',
                      help=('Target device for the test suite '
                            'to run on.'))
-  group.add_argument('--blacklist-file', help='Device blacklist file.')
+  group.add_argument('--blacklist-file', type=os.path.realpath,
+                     help='Device blacklist file.')
   group.add_argument('--enable-device-cache', action='store_true',
                      help='Cache device state to disk between runs')
   group.add_argument('--enable-concurrent-adb', action='store_true',
@@ -240,6 +226,10 @@ def AddDeviceOptions(parser):
                      help='Do not wipe app data between tests. Use this to '
                      'speed up local development and never on bots '
                      '(increases flakiness)')
+  group.add_argument('--target-devices-file', type=os.path.realpath,
+                     help='Path to file with json list of device serials to '
+                          'run tests on. When not specified, all available '
+                          'devices are used.')
 
 
 def AddGTestOptions(parser):
@@ -249,7 +239,11 @@ def AddGTestOptions(parser):
   group.add_argument('-s', '--suite', dest='suite_name',
                      nargs='+', metavar='SUITE_NAME', required=True,
                      help='Executable name of the test suite to run.')
+  group.add_argument('--executable-dist-dir', type=os.path.realpath,
+                     help="Path to executable's dist directory for native"
+                          " (non-apk) tests.")
   group.add_argument('--test-apk-incremental-install-script',
+                     type=os.path.realpath,
                      help='Path to install script for the test apk.')
   group.add_argument('--gtest_also_run_disabled_tests',
                      '--gtest-also-run-disabled-tests',
@@ -265,6 +259,7 @@ def AddGTestOptions(parser):
   group.add_argument('--isolate_file_path',
                      '--isolate-file-path',
                      dest='isolate_file_path',
+                     type=os.path.realpath,
                      help='.isolate file path to override the default '
                           'path')
   group.add_argument('--app-data-file', action='append', dest='app_data_files',
@@ -296,6 +291,7 @@ def AddGTestOptions(parser):
                             dest='test_filter',
                             help='googletest-style filter string.')
   filter_group.add_argument('--gtest-filter-file', dest='test_filter_file',
+                            type=os.path.realpath,
                             help='Path to file that contains googletest-style '
                                   'filter strings. (Lines will be joined with '
                                   '":" to create a single filter string.)')
@@ -317,7 +313,8 @@ def AddJavaTestOptions(argument_group):
   """Adds the Java test options to |option_parser|."""
 
   argument_group.add_argument(
-      '-f', '--test-filter', dest='test_filter',
+      '-f', '--test-filter', '--gtest_filter', '--gtest-filter',
+      dest='test_filter',
       help=('Test filter (if not fully qualified, will run all matches).'))
   argument_group.add_argument(
       '--repeat', dest='repeat', type=int, default=0,
@@ -337,20 +334,13 @@ def AddJavaTestOptions(argument_group):
       help=('Comma-separated list of annotations. Exclude tests with these '
             'annotations.'))
   argument_group.add_argument(
-      '--screenshot', dest='screenshot_failures', action='store_true',
+      '--screenshot-directory', dest='screenshot_dir', type=os.path.realpath,
       help='Capture screenshots of test failures')
   argument_group.add_argument(
       '--save-perf-json', action='store_true',
       help='Saves the JSON file for each UI Perf test.')
   argument_group.add_argument(
       '--official-build', action='store_true', help='Run official build tests.')
-  argument_group.add_argument(
-      '--test_data', '--test-data', action='append', default=[],
-      help=('Each instance defines a directory of test data that should be '
-            'copied to the target(s) before running the tests. The argument '
-            'should be of the form <target>:<source>, <target> is relative to '
-            'the device data directory, and <source> is relative to the '
-            'chromium build directory.'))
   argument_group.add_argument(
       '--disable-dalvik-asserts', dest='set_asserts', action='store_false',
       default=True, help='Removes the dalvik.vm.enableassertions property')
@@ -390,13 +380,15 @@ def AddInstrumentationTestOptions(parser):
   java_or_python_group.add_argument(
       '-p', '--python-only', action='store_false',
       dest='run_java_tests', default=True,
-      help='Run only the host-driven tests.')
+      help='DEPRECATED')
 
   group.add_argument('--host-driven-root',
-                     help='Root of the host-driven tests.')
+                     help='DEPRECATED')
   group.add_argument('-w', '--wait_debugger', dest='wait_for_debugger',
                      action='store_true',
                      help='Wait for debugger.')
+  # TODO(jbudorick): Remove support for name-style APK specification once
+  # bots are no longer doing it.
   group.add_argument('--apk-under-test',
                      help='Path or name of the apk under test.')
   group.add_argument('--apk-under-test-incremental-install-script',
@@ -406,23 +398,27 @@ def AddInstrumentationTestOptions(parser):
                           '(name is without the .apk extension; '
                           'e.g. "ContentShellTest").')
   group.add_argument('--test-apk-incremental-install-script',
+                     type=os.path.realpath,
                      help='Path to install script for the --test-apk.')
   group.add_argument('--additional-apk', action='append',
                      dest='additional_apks', default=[],
+                     type=os.path.realpath,
                      help='Additional apk that must be installed on '
                           'the device when the tests are run')
-  group.add_argument('--coverage-dir',
+  group.add_argument('--coverage-dir', type=os.path.realpath,
                      help=('Directory in which to place all generated '
                            'EMMA coverage files.'))
-  group.add_argument('--device-flags', dest='device_flags', default='',
+  group.add_argument('--device-flags', dest='device_flags',
+                     type=os.path.realpath,
                      help='The relative filepath to a file containing '
                           'command-line flags to set on the device')
-  group.add_argument('--device-flags-file', default='',
+  group.add_argument('--device-flags-file', type=os.path.realpath,
                      help='The relative filepath to a file containing '
                           'command-line flags to set on the device')
   group.add_argument('--isolate_file_path',
                      '--isolate-file-path',
                      dest='isolate_file_path',
+                     type=os.path.realpath,
                      help='.isolate file path to override the default '
                           'path')
   group.add_argument('--delete-stale-data', dest='delete_stale_data',
@@ -434,95 +430,18 @@ def AddInstrumentationTestOptions(parser):
                      help='StrictMode command-line flag set on the device, '
                           'death/testing to kill the process, off to stop '
                           'checking, flash to flash only. Default testing.')
+  group.add_argument('--regenerate-goldens', dest='regenerate_goldens',
+                     action='store_true',
+                     help='Causes the render tests to not fail when a check'
+                          'fails or the golden image is missing but to render'
+                          'the view and carry on.')
+  group.add_argument('--store-tombstones', dest='store_tombstones',
+                     action='store_true',
+                     help='Add tombstones in results if crash.')
 
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
   AddRemoteDeviceOptions(parser)
-
-
-def ProcessInstrumentationOptions(args):
-  """Processes options/arguments and populate |options| with defaults.
-
-  Args:
-    args: argparse.Namespace object.
-
-  Returns:
-    An InstrumentationOptions named tuple which contains all options relevant to
-    instrumentation tests.
-  """
-
-  ProcessJavaTestOptions(args)
-
-  if not args.host_driven_root:
-    args.run_python_tests = False
-
-  if os.path.exists(args.test_apk):
-    args.test_apk_path = args.test_apk
-    args.test_apk, _ = os.path.splitext(os.path.basename(args.test_apk))
-  else:
-    args.test_apk_path = os.path.join(
-        constants.GetOutDirectory(),
-        constants.SDK_BUILD_APKS_DIR,
-        '%s.apk' % args.test_apk)
-
-  jar_basename = args.test_apk
-  if jar_basename.endswith('_incremental'):
-    jar_basename = jar_basename[:-len('_incremental')]
-
-  args.test_apk_jar_path = os.path.join(
-      constants.GetOutDirectory(),
-      constants.SDK_BUILD_TEST_JAVALIB_DIR,
-      '%s.jar' % jar_basename)
-  args.test_support_apk_path = '%sSupport%s' % (
-      os.path.splitext(args.test_apk_path))
-
-  args.test_runner = apk_helper.GetInstrumentationName(args.test_apk_path)
-
-  # TODO(jbudorick): Get rid of InstrumentationOptions.
-  return instrumentation_test_options.InstrumentationOptions(
-      args.tool,
-      args.annotations,
-      args.exclude_annotations,
-      args.test_filter,
-      args.test_data,
-      args.save_perf_json,
-      args.screenshot_failures,
-      args.wait_for_debugger,
-      args.coverage_dir,
-      args.test_apk,
-      args.test_apk_path,
-      args.test_apk_jar_path,
-      args.test_runner,
-      args.test_support_apk_path,
-      args.device_flags,
-      args.isolate_file_path,
-      args.set_asserts,
-      args.delete_stale_data,
-      args.timeout_scale,
-      args.apk_under_test,
-      args.additional_apks,
-      args.strict_mode,
-      args.skip_clear_data,
-      args.test_apk_incremental_install_script,
-      args.apk_under_test_incremental_install_script)
-
-
-def AddUIAutomatorTestOptions(parser):
-  """Adds UI Automator test options to |parser|."""
-
-  group = parser.add_argument_group('UIAutomator Test Options')
-  AddJavaTestOptions(group)
-  group.add_argument(
-      '--package', required=True, choices=constants.PACKAGE_INFO.keys(),
-      metavar='PACKAGE', help='Package under test.')
-  group.add_argument(
-      '--test-jar', dest='test_jar', required=True,
-      help=('The name of the dexed jar containing the tests (without the '
-            '.dex.jar extension). Alternatively, this can be a full path '
-            'to the jar.'))
-
-  AddCommonOptions(parser)
-  AddDeviceOptions(parser)
 
 
 def AddJUnitTestOptions(parser):
@@ -544,6 +463,9 @@ def AddJUnitTestOptions(parser):
   group.add_argument(
       '--sdk-version', dest='sdk_version', type=int,
       help='The Android SDK version.')
+  group.add_argument(
+      '--coverage-dir', dest='coverage_dir', type=os.path.realpath,
+      help='Directory to store coverage info.')
   AddCommonOptions(parser)
 
 
@@ -646,7 +568,7 @@ def AddPerfTestOptions(parser):
       help='The name of a previously executed perf step to print.')
 
   group.add_argument(
-      '--output-json-list',
+      '--output-json-list', type=os.path.realpath,
       help='Write a simple list of names from --steps into the given file.')
   group.add_argument(
       '--collect-chartjson-data',
@@ -654,14 +576,20 @@ def AddPerfTestOptions(parser):
       help='Cache the chartjson output from each step for later use.')
   group.add_argument(
       '--output-chartjson-data',
-      default='',
+      type=os.path.realpath,
       help='Write out chartjson into the given file.')
+  # TODO(rnephew): Remove this when everything moves to new option in platform
+  # mode.
   group.add_argument(
-      '--get-output-dir-archive', metavar='FILENAME',
-      help='Write the chached output directory archived by a step into the'
+      '--get-output-dir-archive', metavar='FILENAME', type=os.path.realpath,
+      help='Write the cached output directory archived by a step into the'
       ' given ZIP file.')
   group.add_argument(
-      '--flaky-steps',
+      '--output-dir-archive-path', metavar='FILENAME', type=os.path.realpath,
+      help='Write the cached output directory archived by a step into the'
+      ' given ZIP file.')
+  group.add_argument(
+      '--flaky-steps', type=os.path.realpath,
       help=('A JSON file containing steps that are flaky '
             'and will have its exit code ignored.'))
   group.add_argument(
@@ -679,37 +607,25 @@ def AddPerfTestOptions(parser):
       '--max-battery-temp', type=int,
       help='Only start tests when the battery is at or below the given '
            'temperature (0.1 C)')
-  group.add_argument('single_step_command', nargs='*', action=SingleStepAction,
-                     help='If --single-step is specified, the command to run.')
-  group.add_argument('--min-battery-level', type=int,
-                     help='Only starts tests when the battery is charged above '
-                          'given level.')
+  group.add_argument(
+      'single_step_command', nargs='*', action=SingleStepAction,
+      help='If --single-step is specified, the command to run.')
+  group.add_argument(
+      '--min-battery-level', type=int,
+      help='Only starts tests when the battery is charged above '
+      'given level.')
   group.add_argument('--known-devices-file', help='Path to known device list.')
+  group.add_argument(
+      '--repeat', dest='repeat', type=int, default=0,
+      help='Number of times to repeat the specified set of tests.')
+  group.add_argument(
+      '--break-on-failure', '--break_on_failure', dest='break_on_failure',
+      action='store_true', help='Whether to break on failure.')
+  group.add_argument(
+      '--write-buildbot-json', action='store_true',
+      help='Whether to output buildbot json.')
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
-
-
-def ProcessPerfTestOptions(args):
-  """Processes all perf test options.
-
-  Args:
-    args: argparse.Namespace object.
-
-  Returns:
-    A PerfOptions named tuple which contains all options relevant to
-    perf tests.
-  """
-  # TODO(jbudorick): Move single_step handling down into the perf tests.
-  if args.single_step:
-    args.single_step = ' '.join(args.single_step_command)
-  # TODO(jbudorick): Get rid of PerfOptions.
-  return perf_test_options.PerfOptions(
-      args.steps, args.flaky_steps, args.output_json_list,
-      args.print_step, args.no_timeout, args.test_filter,
-      args.dry_run, args.single_step, args.collect_chartjson_data,
-      args.output_chartjson_data, args.get_output_dir_archive,
-      args.max_battery_temp, args.min_battery_level,
-      args.known_devices_file)
 
 
 def AddPythonTestOptions(parser):
@@ -736,96 +652,6 @@ def _RunLinkerTests(args, devices):
 
   if args.json_results_file:
     json_results.GenerateJsonResultsFile([results], args.json_results_file)
-
-  return exit_code
-
-
-def _RunInstrumentationTests(args, devices):
-  """Subcommand of RunTestsCommands which runs instrumentation tests."""
-  logging.info('_RunInstrumentationTests(%s, %s)', str(args), str(devices))
-
-  instrumentation_options = ProcessInstrumentationOptions(args)
-
-  if len(devices) > 1 and args.wait_for_debugger:
-    logging.warning('Debugger can not be sharded, using first available device')
-    devices = devices[:1]
-
-  results = base_test_result.TestRunResults()
-  exit_code = 0
-
-  if args.run_java_tests:
-    java_runner_factory, java_tests = instrumentation_setup.Setup(
-        instrumentation_options, devices)
-  else:
-    java_runner_factory = None
-    java_tests = None
-
-  if args.run_python_tests:
-    py_runner_factory, py_tests = host_driven_setup.InstrumentationSetup(
-        args.host_driven_root, args.official_build,
-        instrumentation_options)
-  else:
-    py_runner_factory = None
-    py_tests = None
-
-  results = []
-  repetitions = (xrange(args.repeat + 1) if args.repeat >= 0
-                 else itertools.count())
-
-  code_counts = {constants.INFRA_EXIT_CODE: 0,
-                 constants.ERROR_EXIT_CODE: 0,
-                 constants.WARNING_EXIT_CODE: 0,
-                 0: 0}
-
-  def _escalate_code(old, new):
-    for x in (constants.INFRA_EXIT_CODE,
-              constants.ERROR_EXIT_CODE,
-              constants.WARNING_EXIT_CODE):
-      if x in (old, new):
-        return x
-    return 0
-
-  for _ in repetitions:
-    iteration_results = base_test_result.TestRunResults()
-    if java_tests:
-      test_results, test_exit_code = test_dispatcher.RunTests(
-          java_tests, java_runner_factory, devices, shard=True,
-          test_timeout=None, num_retries=args.num_retries)
-      iteration_results.AddTestRunResults(test_results)
-
-      code_counts[test_exit_code] += 1
-      exit_code = _escalate_code(exit_code, test_exit_code)
-
-    if py_tests:
-      test_results, test_exit_code = test_dispatcher.RunTests(
-          py_tests, py_runner_factory, devices, shard=True, test_timeout=None,
-          num_retries=args.num_retries)
-      iteration_results.AddTestRunResults(test_results)
-
-      code_counts[test_exit_code] += 1
-      exit_code = _escalate_code(exit_code, test_exit_code)
-
-    results.append(iteration_results)
-    report_results.LogFull(
-        results=iteration_results,
-        test_type='Instrumentation',
-        test_package=os.path.basename(args.test_apk),
-        annotation=args.annotations,
-        flakiness_server=args.flakiness_dashboard_server)
-
-
-    if args.break_on_failure and exit_code in (constants.ERROR_EXIT_CODE,
-                                               constants.INFRA_EXIT_CODE):
-      break
-
-  logging.critical('Instr tests: %s success, %s infra, %s errors, %s warnings',
-                   str(code_counts[0]),
-                   str(code_counts[constants.INFRA_EXIT_CODE]),
-                   str(code_counts[constants.ERROR_EXIT_CODE]),
-                   str(code_counts[constants.WARNING_EXIT_CODE]))
-
-  if args.json_results_file:
-    json_results.GenerateJsonResultsFile(results, args.json_results_file)
 
   return exit_code
 
@@ -867,50 +693,6 @@ def _RunMonkeyTests(args, devices):
   return exit_code
 
 
-def _RunPerfTests(args, active_devices):
-  """Subcommand of RunTestsCommands which runs perf tests."""
-  perf_options = ProcessPerfTestOptions(args)
-
-  # Just save a simple json with a list of test names.
-  if perf_options.output_json_list:
-    return perf_test_runner.OutputJsonList(
-        perf_options.steps, perf_options.output_json_list)
-
-  # Just print the results from a single previously executed step.
-  if perf_options.print_step:
-    return perf_test_runner.PrintTestOutput(
-        perf_options.print_step, perf_options.output_chartjson_data,
-        perf_options.get_output_dir_archive)
-
-  runner_factory, tests, devices = perf_setup.Setup(
-      perf_options, active_devices)
-
-  # shard=False means that each device will get the full list of tests
-  # and then each one will decide their own affinity.
-  # shard=True means each device will pop the next test available from a queue,
-  # which increases throughput but have no affinity.
-  results, _ = test_dispatcher.RunTests(
-      tests, runner_factory, devices, shard=False, test_timeout=None,
-      num_retries=args.num_retries)
-
-  report_results.LogFull(
-      results=results,
-      test_type='Perf',
-      test_package='Perf')
-
-  if args.json_results_file:
-    json_results.GenerateJsonResultsFile([results], args.json_results_file)
-
-  if perf_options.single_step:
-    return perf_test_runner.PrintTestOutput('single_step')
-
-  perf_test_runner.PrintSummary(tests)
-
-  # Always return 0 on the sharding stage. Individual tests exit_code
-  # will be returned on the print_step stage.
-  return 0
-
-
 def _RunPythonTests(args):
   """Subcommand of RunTestsCommand which runs python unit tests."""
   suite_vars = constants.PYTHON_UNIT_TEST_SUITES[args.suite_name]
@@ -928,7 +710,7 @@ def _RunPythonTests(args):
     sys.path = sys.path[1:]
 
 
-def _GetAttachedDevices(blacklist_file, test_device, enable_cache):
+def _GetAttachedDevices(blacklist_file, test_device, enable_cache, num_retries):
   """Get all attached devices.
 
   Args:
@@ -944,7 +726,8 @@ def _GetAttachedDevices(blacklist_file, test_device, enable_cache):
                else None)
 
   attached_devices = device_utils.DeviceUtils.HealthyDevices(
-      blacklist, enable_device_files_cache=enable_cache)
+      blacklist, enable_device_files_cache=enable_cache,
+      default_retries=num_retries)
   if test_device:
     test_device = [d for d in attached_devices if d == test_device]
     if not test_device:
@@ -957,6 +740,9 @@ def _GetAttachedDevices(blacklist_file, test_device, enable_cache):
     if not attached_devices:
       raise device_errors.NoDevicesError()
     return sorted(attached_devices)
+
+
+_DEFAULT_PLATFORM_MODE_TESTS = ['gtest', 'instrumentation', 'perf']
 
 
 def RunTestsCommand(args): # pylint: disable=too-many-return-statements
@@ -976,30 +762,28 @@ def RunTestsCommand(args): # pylint: disable=too-many-return-statements
 
   ProcessCommonOptions(args)
   logging.info('command: %s', ' '.join(sys.argv))
-
-  if args.enable_platform_mode:
+  if args.enable_platform_mode or command in _DEFAULT_PLATFORM_MODE_TESTS:
     return RunTestsInPlatformMode(args)
 
   forwarder.Forwarder.RemoveHostLog()
   if not ports.ResetTestServerPortAllocation():
     raise Exception('Failed to reset test server port.')
 
+  # pylint: disable=protected-access
+  if os.path.exists(ports._TEST_SERVER_PORT_LOCKFILE):
+    os.unlink(ports._TEST_SERVER_PORT_LOCKFILE)
+  # pylint: enable=protected-access
+
   def get_devices():
     return _GetAttachedDevices(args.blacklist_file, args.test_device,
-                               args.enable_device_cache)
+                               args.enable_device_cache, args.num_retries)
 
-  if command == 'gtest':
-    return RunTestsInPlatformMode(args)
-  elif command == 'linker':
+  if command == 'linker':
     return _RunLinkerTests(args, get_devices())
-  elif command == 'instrumentation':
-    return _RunInstrumentationTests(args, get_devices())
   elif command == 'junit':
     return _RunJUnitTests(args)
   elif command == 'monkey':
     return _RunMonkeyTests(args, get_devices())
-  elif command == 'perf':
-    return _RunPerfTests(args, get_devices())
   elif command == 'python':
     return _RunPythonTests(args)
   else:
@@ -1010,6 +794,7 @@ _SUPPORTED_IN_PLATFORM_MODE = [
   # TODO(jbudorick): Add support for more test types.
   'gtest',
   'instrumentation',
+  'perf',
   'uirobot',
 ]
 
@@ -1027,28 +812,48 @@ def RunTestsInPlatformMode(args):
     with test_instance_factory.CreateTestInstance(args, infra_error) as test:
       with test_run_factory.CreateTestRun(
           args, env, test, infra_error) as test_run:
-        results = []
+
+        # TODO(jbudorick): Rewrite results handling.
+
+        # all_raw_results is a list of lists of base_test_result.TestRunResults
+        # objects. Each instance of TestRunResults contains all test results
+        # produced by a single try, while each list of TestRunResults contains
+        # all tries in a single iteration.
+        all_raw_results = []
+        # all_iteration_results is a list of base_test_result.TestRunResults
+        # objects. Each instance of TestRunResults contains the last test result
+        # for each test run in that iteration.
+        all_iteration_results = []
+
         repetitions = (xrange(args.repeat + 1) if args.repeat >= 0
                        else itertools.count())
         result_counts = collections.defaultdict(
             lambda: collections.defaultdict(int))
         iteration_count = 0
         for _ in repetitions:
-          iteration_results = test_run.RunTests()
-          if iteration_results is not None:
-            iteration_count += 1
-            results.append(iteration_results)
-            for r in iteration_results.GetAll():
-              result_counts[r.GetName()][r.GetType()] += 1
-            report_results.LogFull(
-                results=iteration_results,
-                test_type=test.TestType(),
-                test_package=test_run.TestPackage(),
-                annotation=getattr(args, 'annotations', None),
-                flakiness_server=getattr(args, 'flakiness_dashboard_server',
-                                         None))
-            if args.break_on_failure and not iteration_results.DidRunPass():
-              break
+          raw_results = test_run.RunTests()
+          if not raw_results:
+            continue
+
+          all_raw_results.append(raw_results)
+
+          iteration_results = base_test_result.TestRunResults()
+          for r in reversed(raw_results):
+            iteration_results.AddTestRunResults(r)
+          all_iteration_results.append(iteration_results)
+
+          iteration_count += 1
+          for r in iteration_results.GetAll():
+            result_counts[r.GetName()][r.GetType()] += 1
+          report_results.LogFull(
+              results=iteration_results,
+              test_type=test.TestType(),
+              test_package=test_run.TestPackage(),
+              annotation=getattr(args, 'annotations', None),
+              flakiness_server=getattr(args, 'flakiness_dashboard_server',
+                                       None))
+          if args.break_on_failure and not iteration_results.DidRunPass():
+            break
 
         if iteration_count > 1:
           # display summary results
@@ -1077,9 +882,12 @@ def RunTestsInPlatformMode(args):
 
         if args.json_results_file:
           json_results.GenerateJsonResultsFile(
-              results, args.json_results_file)
+              all_raw_results, args.json_results_file)
 
-  return (0 if all(r.DidRunPass() for r in results)
+  if args.command == 'perf' and (args.steps or args.single_step):
+    return 0
+
+  return (0 if all(r.DidRunPass() for r in all_iteration_results)
           else constants.ERROR_EXIT_CODE)
 
 

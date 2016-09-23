@@ -9,3 +9,4 @@
 
 target_os = "android"
 is_component_build = true
+enable_blimp_client = true

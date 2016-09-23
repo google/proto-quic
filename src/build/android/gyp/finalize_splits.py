@@ -41,7 +41,7 @@ def main():
       finalize_apk.FinalizeApk(options)
 
   if options.languages:
-    for lang in build_utils.ParseGypList(options.languages):
+    for lang in build_utils.ParseGnList(options.languages):
       options.unsigned_apk_path = ("%s_%s" %
           (options.resource_packaged_apk_path, lang))
       options.final_apk_path = ("%s-lang-%s.apk" %

@@ -10,15 +10,27 @@ import glob
 import json
 import os
 import os.path
-import subprocess
 import shutil
+import subprocess
 import sys
+
+
+def _RunGit(args):
+  if sys.platform == 'win32':
+    args = ['git.bat'] + args
+  else:
+    args = ['git'] + args
+  subprocess.check_call(args)
 
 
 def _GenerateCompileCommands(files, include_paths):
   """Returns a JSON string containing a compilation database for the input."""
-  include_path_flags = ' '.join('-I %s' % include_path
-                               for include_path in include_paths)
+  # Note: in theory, backslashes in the compile DB should work but the tools
+  # that write compile DBs and the tools that read them don't agree on the
+  # escaping convention: https://llvm.org/bugs/show_bug.cgi?id=19687
+  files = [f.replace('\\', '/') for f in files]
+  include_path_flags = ' '.join('-I %s' % include_path.replace('\\', '/')
+                                for include_path in include_paths)
   return json.dumps([{'directory': '.',
                       'command': 'clang++ -std=c++11 -fsyntax-only %s -c %s' % (
                           include_path_flags, f),
@@ -27,7 +39,7 @@ def _GenerateCompileCommands(files, include_paths):
 
 def _NumberOfTestsToString(tests):
   """Returns an English describing the number of tests."""
-  return "%d test%s" % (tests, 's' if tests != 1 else '')
+  return '%d test%s' % (tests, 's' if tests != 1 else '')
 
 
 def main(argv):
@@ -65,9 +77,9 @@ def main(argv):
       shutil.copyfile(source, actual)
     # Stage the test files in the git index. If they aren't staged, then
     # run_tools.py will skip them when applying replacements.
-    args = ['git', 'add']
+    args = ['add']
     args.extend(actual_files)
-    subprocess.check_call(args)
+    _RunGit(args)
     # Generate a temporary compilation database to run the tool over.
     with open(compile_database, 'w') as f:
       f.write(_GenerateCompileCommands(actual_files, include_paths))
@@ -83,9 +95,9 @@ def main(argv):
       print 'run_tool failed:\n%s' % stdout
       sys.exit(1)
 
-    args = ['git', 'cl', 'format']
+    args = ['cl', 'format']
     args.extend(actual_files)
-    subprocess.check_call(args)
+    _RunGit(args)
 
     passed = 0
     failed = 0
@@ -121,9 +133,9 @@ def main(argv):
   finally:
     # No matter what, unstage the git changes we made earlier to avoid polluting
     # the index.
-    args = ['git', 'reset', '--quiet', 'HEAD']
+    args = ['reset', '--quiet', 'HEAD']
     args.extend(actual_files)
-    subprocess.call(args)
+    _RunGit(args)
 
 
 if __name__ == '__main__':

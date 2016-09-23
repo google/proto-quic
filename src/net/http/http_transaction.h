@@ -19,7 +19,7 @@
 namespace net {
 
 class AuthCredentials;
-class BoundNetLog;
+class NetLogWithSource;
 class HttpRequestHeaders;
 struct HttpRequestInfo;
 class HttpResponseInfo;
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   // Profiling information for the request is saved to |net_log| if non-NULL.
   virtual int Start(const HttpRequestInfo* request_info,
                     const CompletionCallback& callback,
-                    const BoundNetLog& net_log) = 0;
+                    const NetLogWithSource& net_log) = 0;
 
   // Restarts the HTTP transaction, ignoring the last error.  This call can
   // only be made after a call to Start (or RestartIgnoringLastError) failed.
@@ -147,10 +147,6 @@ class NET_EXPORT_PRIVATE HttpTransaction {
 
   // Returns the load state for this transaction.
   virtual LoadState GetLoadState() const = 0;
-
-  // Returns the upload progress in bytes.  If there is no upload data,
-  // zero will be returned.  This does not include the request headers.
-  virtual UploadProgress GetUploadProgress() const = 0;
 
   // SetQuicServerInfo sets a object which reads and writes public information
   // about a QUIC server.

@@ -24,7 +24,7 @@ HttpBasicStream::~HttpBasicStream() {}
 
 int HttpBasicStream::InitializeStream(const HttpRequestInfo* request_info,
                                       RequestPriority priority,
-                                      const BoundNetLog& net_log,
+                                      const NetLogWithSource& net_log,
                                       const CompletionCallback& callback) {
   state_.Initialize(request_info, priority, net_log, callback);
   return OK;
@@ -36,10 +36,6 @@ int HttpBasicStream::SendRequest(const HttpRequestHeaders& headers,
   DCHECK(parser());
   return parser()->SendRequest(
       state_.GenerateRequestLine(), headers, response, callback);
-}
-
-UploadProgress HttpBasicStream::GetUploadProgress() const {
-  return parser()->GetUploadProgress();
 }
 
 int HttpBasicStream::ReadResponseHeaders(const CompletionCallback& callback) {
@@ -115,9 +111,10 @@ bool HttpBasicStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   return state_.connection()->socket()->GetPeerAddress(endpoint) == OK;
 }
 
-Error HttpBasicStream::GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                                   std::vector<uint8_t>* out) {
-  return parser()->GetSignedEKMForTokenBinding(key, out);
+Error HttpBasicStream::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                                TokenBindingType tb_type,
+                                                std::vector<uint8_t>* out) {
+  return parser()->GetTokenBindingSignature(key, tb_type, out);
 }
 
 void HttpBasicStream::Drain(HttpNetworkSession* session) {

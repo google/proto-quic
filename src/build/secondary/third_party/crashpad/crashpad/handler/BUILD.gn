@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("handler_lib") {
+static_library("handler_lib") {
   sources = [
     "crash_report_upload_thread.cc",
     "crash_report_upload_thread.h",
@@ -44,5 +44,20 @@ executable("crashpad_handler") {
     ":handler_lib",
     "../compat",
     "//base",
+    "//build/win:default_exe_manifest",
   ]
+
+  if (is_mac && is_component_build) {
+    # The handler is in Chromium.app/Contents/Versions/X/Chromium Framework.framework/Helpers/
+    # so set rpath up to the base.
+    ldflags = [
+      "-rpath",
+      "@loader_path/../../../../../..",
+    ]
+  }
+
+  if (is_win) {
+    configs -= [ "//build/config/win:console" ]
+    configs += [ "//build/config/win:windowed" ]
+  }
 }

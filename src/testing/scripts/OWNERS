@@ -1,0 +1,12 @@
+# This is reserved for people that are comfortably with buildbot recipes
+# and understand the implications of changing these files.
+
+dpranke@chromium.org
+iannucci@chromium.org
+phajdan.jr@chromium.org
+
+# Wrappers for Telemetry based tests.
+per-file run_gpu*=kbr@chromium.org
+per-file run_gpu*=nednguyen@google.com
+per-file run_telemetry*=kbr@chromium.org
+per-file run_telemetry*=nednguyen@google.com

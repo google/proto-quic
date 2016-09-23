@@ -132,7 +132,7 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
   // SetDiversificationNonce sets the nonce that will be sent in each public
   // header of packets encrypted at the initial encryption level. Should only
   // be called by servers.
-  void SetDiversificationNonce(const DiversificationNonce nonce);
+  void SetDiversificationNonce(const DiversificationNonce& nonce);
 
   // Creates a version negotiation packet which supports |supported_versions|.
   // Caller owns the created  packet. Also, sets the entropy hash of the
@@ -181,8 +181,6 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
     packet_creator_.set_debug_delegate(debug_delegate);
   }
 
-  const QuicAckFrame& pending_ack_frame() const { return pending_ack_frame_; }
-
  private:
   friend class test::QuicPacketGeneratorPeer;
 
@@ -214,7 +212,6 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
   // a reference to it until we flush (and serialize it). Retransmittable frames
   // are referenced elsewhere so that they can later be (optionally)
   // retransmitted.
-  QuicAckFrame pending_ack_frame_;
   QuicStopWaitingFrame pending_stop_waiting_frame_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketGenerator);

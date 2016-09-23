@@ -2,8 +2,8 @@ include_rules = [
   "+crypto",
   "+gin",
   "+jni",
-  "+mojo/common",
-  "+mojo/public",
+#  "+mojo/common",
+#  "+mojo/public",
   "+third_party/apple_apsl",
   "+third_party/nss",
   "+third_party/protobuf/src/google/protobuf",
@@ -54,7 +54,7 @@ specific_include_rules = {
   ],
 
   "run_all_unittests\.cc": [
-    "+mojo/edk",
+#    "+mojo/edk",
   ],
 
   "brotli_filter\.cc": [

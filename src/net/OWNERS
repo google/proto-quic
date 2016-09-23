@@ -1,0 +1,25 @@
+agl@chromium.org
+asanka@chromium.org
+bnc@chromium.org
+cbentzel@chromium.org
+davidben@chromium.org
+eroman@chromium.org
+gavinp@chromium.org
+jar@chromium.org
+mattm@chromium.org
+mef@chromium.org
+mmenke@chromium.org
+pauljensen@chromium.org
+rch@chromium.org
+rdsmith@chromium.org
+rsleevi@chromium.org
+rtenneti@chromium.org
+juliatuttle@chromium.org
+xunjieli@chromium.org
+
+per-file *.isolate=maruel@chromium.org
+per-file *.isolate=tandrii@chromium.org
+per-file *.isolate=vadimsh@chromium.org
+
+per-file BUILD.gn=bengr@chromium.org
+per-file net.gyp*=bengr@chromium.org

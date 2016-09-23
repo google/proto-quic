@@ -13,7 +13,6 @@ import os
 import sys
 
 import devil_chromium
-from devil import devil_env
 from devil.android import apk_helper
 from devil.android import device_blacklist
 from devil.android import device_errors
@@ -54,9 +53,10 @@ def main():
                       help='If set, run test suites under out/Release. '
                            'Default is env var BUILDTYPE or Debug.')
   parser.add_argument('-d', '--device', dest='devices', action='append',
+                      default=[],
                       help='Target device for apk to install on. Enter multiple'
                            ' times for multiple devices.')
-  parser.add_argument('--adb-path',
+  parser.add_argument('--adb-path', type=os.path.abspath,
                       help='Absolute path to the adb binary to use.')
   parser.add_argument('--blacklist-file', help='Device blacklist JSON file.')
   parser.add_argument('-v', '--verbose', action='count',
@@ -73,17 +73,9 @@ def main():
   run_tests_helper.SetLogLevel(args.verbose)
   constants.SetBuildType(args.build_type)
 
-  devil_custom_deps = None
-  if args.adb_path:
-    devil_custom_deps = {
-      'adb': {
-        devil_env.GetPlatform(): [args.adb_path],
-      },
-    }
-
   devil_chromium.Initialize(
       output_directory=constants.GetOutDirectory(),
-      custom_deps=devil_custom_deps)
+      adb_path=args.adb_path)
 
   apk = args.apk_path or args.apk_name
   if not apk.endswith('.apk'):
@@ -109,14 +101,8 @@ def main():
   blacklist = (device_blacklist.Blacklist(args.blacklist_file)
                if args.blacklist_file
                else None)
-  devices = device_utils.DeviceUtils.HealthyDevices(blacklist)
-
-  if args.devices:
-    devices = [d for d in devices if d in args.devices]
-    if not devices:
-      raise device_errors.DeviceUnreachableError(args.devices)
-  elif not devices:
-    raise device_errors.NoDevicesError()
+  devices = device_utils.DeviceUtils.HealthyDevices(blacklist=blacklist,
+                                                    device_arg=args.devices)
 
   def blacklisting_install(device):
     try:

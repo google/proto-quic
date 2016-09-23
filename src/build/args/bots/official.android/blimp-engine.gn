@@ -1,0 +1,16 @@
+import("//build/args/blimp_engine.gn")
+
+# Use release build to improve engine performance, especially WebP encoding.
+is_debug = false
+
+# Designate this as an official build to pick up breakpad symbols.
+is_official_build = true
+
+# is_official_build will by default build with loads of symbols that we don't
+# use, thus bloating the engine binary size. Build with symbol_level = 1 to keep
+# binary size reasonable while preserving enough to generate backtraces with
+# source line numbers.
+symbol_level = 1
+
+# Turn on DCHECK to find bugs.
+dcheck_always_on = true

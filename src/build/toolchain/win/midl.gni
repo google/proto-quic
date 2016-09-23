@@ -44,8 +44,8 @@ template("midl") {
     # This functionality is handled by the win-tool because the GYP build has
     # MIDL support built-in.
     # TODO(brettw) move this to a separate MIDL wrapper script for better
-    # clarity once GYP support is not needed.
-    script = "$root_build_dir/gyp-win-tool"
+    # clarity.
+    script = "//build/toolchain/win/tool_wrapper.py"
 
     sources = invoker.sources
 

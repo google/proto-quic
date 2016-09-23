@@ -1,0 +1,3 @@
+per-file *chrome_proxy*=bengr@chromium.org
+per-file *chrome_proxy*=bolian@chromium.org
+per-file *chrome_proxy*=marq@chromium.org

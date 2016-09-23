@@ -61,7 +61,7 @@ class Delegate : public URLRequest::Delegate {
                           const RedirectInfo& redirect_info,
                           bool* defer_redirect) override;
 
-  void OnResponseStarted(URLRequest* request) override;
+  void OnResponseStarted(URLRequest* request, int net_error) override;
 
   void OnAuthRequired(URLRequest* request,
                       AuthChallengeInfo* auth_info) override;
@@ -153,9 +153,8 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
     connect_delegate_->OnSuccess(handshake_stream->Upgrade());
   }
 
-  std::string FailureMessageFromNetError() {
-    int error = url_request_->status().error();
-    if (error == ERR_TUNNEL_CONNECTION_FAILED) {
+  std::string FailureMessageFromNetError(int net_error) {
+    if (net_error == ERR_TUNNEL_CONNECTION_FAILED) {
       // This error is common and confusing, so special-case it.
       // TODO(ricea): Include the HostPortPair of the selected proxy server in
       // the error message. This is not currently possible because it isn't set
@@ -163,26 +162,26 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
       return "Establishing a tunnel via proxy server failed.";
     } else {
       return std::string("Error in connection establishment: ") +
-             ErrorToString(url_request_->status().error());
+             ErrorToString(net_error);
     }
   }
 
-  void ReportFailure() {
+  void ReportFailure(int net_error) {
     DCHECK(timer_);
     timer_->Stop();
     if (failure_message_.empty()) {
-      switch (url_request_->status().status()) {
-        case URLRequestStatus::SUCCESS:
-        case URLRequestStatus::IO_PENDING:
+      switch (net_error) {
+        case OK:
+        case ERR_IO_PENDING:
           break;
-        case URLRequestStatus::CANCELED:
-          if (url_request_->status().error() == ERR_TIMED_OUT)
-            failure_message_ = "WebSocket opening handshake timed out";
-          else
-            failure_message_ = "WebSocket opening handshake was canceled";
+        case ERR_ABORTED:
+          failure_message_ = "WebSocket opening handshake was canceled";
           break;
-        case URLRequestStatus::FAILED:
-          failure_message_ = FailureMessageFromNetError();
+        case ERR_TIMED_OUT:
+          failure_message_ = "WebSocket opening handshake timed out";
+          break;
+        default:
+          failure_message_ = FailureMessageFromNetError(net_error);
           break;
       }
     }
@@ -282,14 +281,14 @@ void Delegate::OnReceivedRedirect(URLRequest* request,
   }
 }
 
-void Delegate::OnResponseStarted(URLRequest* request) {
+void Delegate::OnResponseStarted(URLRequest* request, int net_error) {
+  DCHECK_NE(ERR_IO_PENDING, net_error);
   // All error codes, including OK and ABORTED, as with
   // Net.ErrorCodesForMainFrame3
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.WebSocket.ErrorCodes",
-                              -request->status().error());
-  if (!request->status().is_success()) {
+  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.WebSocket.ErrorCodes", -net_error);
+  if (net_error != OK) {
     DVLOG(3) << "OnResponseStarted (request failed)";
-    owner_->ReportFailure();
+    owner_->ReportFailure(net_error);
     return;
   }
   const int response_code = request->GetResponseCode();
@@ -315,7 +314,7 @@ void Delegate::OnResponseStarted(URLRequest* request) {
 
     default:
       result_ = FAILED;
-      owner_->ReportFailure();
+      owner_->ReportFailure(net_error);
   }
 }
 
@@ -365,7 +364,7 @@ std::unique_ptr<WebSocketStreamRequest> WebSocketStream::CreateAndConnectStream(
     const GURL& first_party_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<ConnectDelegate> connect_delegate) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(
       new WebSocketStreamRequestImpl(
@@ -384,7 +383,7 @@ WebSocketStream::CreateAndConnectStreamForTesting(
     const GURL& first_party_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
     std::unique_ptr<base::Timer> timer) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(

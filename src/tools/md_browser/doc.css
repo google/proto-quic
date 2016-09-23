@@ -1,0 +1,298 @@
+/**
+ * Copyright 2015 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/* This file is cloned from
+ * https://gerrit.googlesource.com/gitiles/+/master/gitiles-servlet/src/main/resources/com/google/gitiles/static/doc.css
+ */
+
+html.doc-page, .doc {
+  font-family: arial,sans-serif;
+}
+.doc-page body {
+  margin: 0;
+}
+
+.banner {
+  min-height: 44px;
+  margin: 0;
+  padding: 14px 15px 13px;
+  border-bottom: 1px solid #eee;
+}
+.banner h1, .banner h2 {
+  float: left;
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1.375;
+  margin: 0;
+}
+.banner img {
+  margin: -1px 10px -4px 0px;
+  vertical-align: middle;
+}
+.banner a, .banner a:hover {
+  text-decoration: none;
+}
+.banner, .banner a:link, .banner a:visited {
+  color: #777;
+}
+.banner h2:before {
+  border-right: 1px solid #eee;
+  content: "";
+  float: left;
+  height: 44px;
+  margin: 0 12px 0 14px;
+}
+
+.nav, .footer-line {
+  color: #333;
+  padding: 0 15px;
+  background: #eee;
+}
+.nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
+.nav li {
+  float: left;
+  font-size: 14px;
+  line-height: 1.43;
+  margin: 0 20px 0 0;
+  padding: 6px 0;
+}
+.nav li a, .footer-line a {
+  color: #7a7af9;
+}
+.nav li a:hover {
+  color: #0000f9;
+}
+.banner:after, .nav ul:after, .cols:after {
+  clear: both;
+  content: "";
+  display: block;
+}
+
+.nav-aux, .doc {
+  max-width: 978px;
+}
+.nav-aux, .doc-page .doc {
+  margin: auto;
+}
+
+.footer-break {
+  clear: both;
+  margin: 120px 0 0 0;
+}
+.footer-line {
+  font-size: 13px;
+  line-height: 30px;
+  height: 30px;
+}
+.footer-line ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.footer-line li {
+  display: inline;
+}
+.footer-line li+li:before {
+  content: "·";
+  padding: 0 5px;
+}
+.footer-line .nav-aux {
+  position: relative;
+}
+.gitiles-att {
+  color: #A0ADCC;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.gitiles-att a {
+  font-style: italic;
+}
+
+/* Markdown rendered in /+doc/ or tree view page . */
+
+.doc {
+  color: #444;
+  font-size: 13px;
+  line-height: normal;
+}
+
+.doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
+  font-family: "open sans",arial,sans-serif;
+  font-weight: bold;
+  color: #444;
+  height: auto;
+  white-space: normal;
+  overflow: visible;
+  margin: 0.67em 0 0.67em 0;
+}
+.doc h1 {
+  font-size: 20px;
+  margin: 0.67em 0 0.67em 0;
+}
+.doc h2 {
+  font-size: 16px;
+  margin: 0.67em 0 0.67em 0;
+}
+.doc h3 {
+  font-size: 14px;
+  margin: 0.67em 0 0.67em 0;
+}
+.doc h4 {
+  font-size: 13px;
+  margin: 1em 0 1em 0;
+}
+.doc h5 {
+  font-size: 13px;
+  margin: 1.3em 0 1.3em 0;
+}
+.doc h6 {
+  font-size: 13px;
+  margin: 1.6em 0 1.6em 0;
+}
+
+.doc a { text-decoration: none; }
+.doc a:link { color: #245dc1; }
+.doc a:visited { color: #7759ae; }
+.doc a:hover { text-decoration: underline; }
+
+.doc ul, .doc ol {
+  margin: 10px 10px 10px 30px;
+  padding: 0;
+}
+
+.doc img {
+  border: 0;
+  max-width: 100%;
+}
+.doc iframe {
+  min-width: 100px;
+  min-height: 30px;
+}
+iframe.noborder {
+  border: 0;
+}
+
+.doc em {
+  font-weight: normal;
+  font-style: italic;
+}
+.doc strong {
+  font-weight: bold;
+  color: inherit;
+}
+
+.doc pre {
+  border: 1px solid silver;
+  background: #fafafa;
+  margin: 0 2em 0 2em;
+  padding: 2px;
+}
+.doc code, .doc .code {
+  color: #060;
+  font: 13px/1.54 "courier new",courier,monospace;
+}
+
+.doc dl dt {
+  margin-top: 1em;
+}
+
+.doc table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+.doc th {
+  text-align: center;
+}
+.doc th, .doc td {
+  border: 1px solid #eee;
+  padding: 4px 12px;
+  vertical-align: top;
+}
+.doc th {
+  background-color: #f5f5f5;
+}
+
+.toc {
+  margin-top: 30px;
+}
+.toc-aux {
+  padding: 2px;
+  background: #f9f9f9;
+  border: 1px solid #f2f2f2;
+  border-radius: 4px;
+}
+.toc h2 {
+  margin: 0 0 5px 0;
+}
+.toc ul {
+  margin: 0 0 0 30px;
+}
+.toc ul li {
+  margin-left: 0px;
+  list-style: disc;
+}
+.toc ul ul li {
+  list-style: circle;
+}
+
+.note, .promo, .aside {
+  border: 1px solid;
+  border-radius: 4px;
+  margin: 10px 0;
+  padding: 10px;
+}
+.note {
+  background: #fffbe4;
+  border-color: #f8f6e6;
+}
+.promo {
+  background: #f6f9ff;
+  border-color: #eff2f9;
+}
+.aside {
+  background: #f9f9f9;
+  border-color: #f2f2f2;
+}
+.note :first-child,
+.promo :first-child,
+.aside :first-child {
+  margin-top: 0;
+}
+.note p:last-child,
+.promo p:last-child,
+.aside p:last-child {
+  margin-bottom: 0;
+}
+
+.cols {
+  margin: 0 -1.533%;
+  width: 103.067%;
+}
+.col-1, .col-2, .col-3, .col-4, .col-5, .col-6,
+.col-7, .col-8, .col-9, .col-10, .col-11, .col-12 {
+  float: left;
+  margin: 0 1.488% 20px;
+}
+.col-1 { width: 5.357%; }
+.col-2 { width: 13.690%; }
+.col-3 { width: 22.024%; }
+.col-4 { width: 30.357%; }
+.col-5 { width: 38.690%; }
+.col-6 { width: 47.024%; }
+.col-7 { width: 55.357%; }
+.col-8 { width: 63.690%; }
+.col-9 { width: 72.024%; }
+.col-10 { width: 80.357%; }
+.col-11 { width: 88.690%; }
+.col-12 { width: 97.024%; }
+.cols hr {
+  width: 80%;
+}

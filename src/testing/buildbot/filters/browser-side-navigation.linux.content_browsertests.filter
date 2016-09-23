@@ -1,0 +1,6 @@
+-BackgroundSyncBrowserTest*
+-IFrameZoomBrowserTest.RedirectToPageWithSubframeZoomsCorrectly
+-IFrameZoomBrowserTest.SubframesDontZoomIndependently
+-NavigationControllerBrowserTest.EnsureSamePageNavigationUpdatesFrameNavigationEntry
+-RequestDataResourceDispatcherHostBrowserTest.*
+-ServiceWorker*

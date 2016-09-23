@@ -151,7 +151,7 @@ TCPSocketPosix::TCPSocketPosix(
       tcp_fastopen_connected_(false),
       tcp_fastopen_status_(TCP_FASTOPEN_STATUS_UNKNOWN),
       logging_multiple_connect_attempts_(false),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::SOCKET)) {
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::SOCKET)) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());
 }

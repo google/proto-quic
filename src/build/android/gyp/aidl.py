@@ -32,11 +32,11 @@ def main(argv):
       output = os.path.join(temp_dir, classname + '.java')
       aidl_cmd = [options.aidl_path]
       aidl_cmd += [
-        '-p' + s for s in build_utils.ParseGypList(options.imports)
+        '-p' + s for s in build_utils.ParseGnList(options.imports)
       ]
       if options.includes is not None:
         aidl_cmd += [
-          '-I' + s for s in build_utils.ParseGypList(options.includes)
+          '-I' + s for s in build_utils.ParseGnList(options.includes)
         ]
       aidl_cmd += [
         f,
@@ -53,9 +53,7 @@ def main(argv):
         srcjar.writestr(arcname, data)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, options.srcjar)
 
 
 if __name__ == '__main__':

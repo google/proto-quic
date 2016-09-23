@@ -443,13 +443,12 @@ SpdyStreamRequest::~SpdyStreamRequest() {
   CancelRequest();
 }
 
-int SpdyStreamRequest::StartRequest(
-    SpdyStreamType type,
-    const base::WeakPtr<SpdySession>& session,
-    const GURL& url,
-    RequestPriority priority,
-    const BoundNetLog& net_log,
-    const CompletionCallback& callback) {
+int SpdyStreamRequest::StartRequest(SpdyStreamType type,
+                                    const base::WeakPtr<SpdySession>& session,
+                                    const GURL& url,
+                                    RequestPriority priority,
+                                    const NetLogWithSource& net_log,
+                                    const CompletionCallback& callback) {
   DCHECK(session);
   DCHECK(!session_);
   DCHECK(!stream_);
@@ -515,7 +514,7 @@ void SpdyStreamRequest::Reset() {
   stream_.reset();
   url_ = GURL();
   priority_ = MINIMUM_PRIORITY;
-  net_log_ = BoundNetLog();
+  net_log_ = NetLogWithSource();
   callback_.Reset();
 }
 
@@ -624,7 +623,6 @@ bool SpdySession::CanPool(TransportSecurityState* transport_security_state,
 SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
                          HttpServerProperties* http_server_properties,
                          TransportSecurityState* transport_security_state,
-                         bool verify_domain_authentication,
                          bool enable_sending_initial_data,
                          bool enable_ping_based_connection_checking,
                          size_t session_max_recv_window_size,
@@ -672,8 +670,8 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
       session_unacked_recv_window_bytes_(0),
       stream_initial_send_window_size_(kDefaultInitialWindowSize),
       stream_max_recv_window_size_(stream_max_recv_window_size),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::HTTP2_SESSION)),
-      verify_domain_authentication_(verify_domain_authentication),
+      net_log_(
+          NetLogWithSource::Make(net_log, NetLogSourceType::HTTP2_SESSION)),
       enable_sending_initial_data_(enable_sending_initial_data),
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
@@ -753,9 +751,6 @@ void SpdySession::InitializeWithSocket(
 }
 
 bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
-  if (!verify_domain_authentication_)
-    return true;
-
   if (availability_state_ == STATE_DRAINING)
     return false;
 
@@ -767,10 +762,9 @@ bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
                  host_port_pair().host(), domain);
 }
 
-int SpdySession::GetPushStream(
-    const GURL& url,
-    base::WeakPtr<SpdyStream>* stream,
-    const BoundNetLog& stream_net_log) {
+int SpdySession::GetPushStream(const GURL& url,
+                               base::WeakPtr<SpdyStream>* stream,
+                               const NetLogWithSource& stream_net_log) {
   CHECK(!in_io_loop_);
 
   stream->reset();
@@ -1272,11 +1266,6 @@ void SpdySession::EnqueueResetStreamFrame(SpdyStreamId stream_id,
 }
 
 void SpdySession::PumpReadLoop(ReadState expected_read_state, int result) {
-  TRACE_EVENT0("net", "SpdySession::PumpReadLoop");
-  // TODO(bnc): Remove ScopedTracker below once crbug.com/462774 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION("462774 SpdySession::PumpReadLoop"));
-
   CHECK(!in_io_loop_);
   if (availability_state_ == STATE_DRAINING) {
     return;
@@ -1941,15 +1930,16 @@ NextProto SpdySession::GetNegotiatedProtocol() const {
   return connection_->socket()->GetNegotiatedProtocol();
 }
 
-Error SpdySession::GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                               std::vector<uint8_t>* out) {
+Error SpdySession::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                            TokenBindingType tb_type,
+                                            std::vector<uint8_t>* out) {
   if (!is_secure_) {
     NOTREACHED();
     return ERR_FAILED;
   }
   SSLClientSocket* ssl_socket =
       static_cast<SSLClientSocket*>(connection_->socket());
-  return ssl_socket->GetSignedEKMForTokenBinding(key, out);
+  return ssl_socket->GetTokenBindingSignature(key, tb_type, out);
 }
 
 void SpdySession::OnError(SpdyFramer::SpdyError error_code) {

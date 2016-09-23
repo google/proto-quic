@@ -57,6 +57,10 @@ const size_t kMaxReadersPerQuicSession = 5;
 // SSLClientSocketImpl.
 const size_t kTokenBindingSignatureMapSize = 10;
 
+// Time to wait (in seconds) when no networks are available and
+// migrating sessions need to wait for a new network to connect.
+const size_t kWaitTimeForNewNetworkSecs = 10;
+
 // Histograms for tracking down the crashes from http://crbug.com/354669
 // Note: these values must be kept in sync with the corresponding values in:
 // tools/metrics/histograms/histograms.xml
@@ -230,19 +234,17 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       pkp_bypassed_(false),
       num_total_streams_(0),
       task_runner_(task_runner),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::QUIC_SESSION)),
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::QUIC_SESSION)),
       logger_(new QuicConnectionLogger(this,
                                        connection_description,
                                        std::move(socket_performance_watcher),
                                        net_log_)),
       going_away_(false),
       port_migration_detected_(false),
-      disabled_reason_(QUIC_DISABLED_NOT),
       token_binding_signatures_(kTokenBindingSignatureMapSize),
       streams_pushed_count_(0),
       streams_pushed_and_claimed_count_(0),
-      error_code_from_rewrite_(OK),
-      use_error_code_from_rewrite_(false),
+      migration_pending_(false),
       weak_factory_(this) {
   sockets_.push_back(std::move(socket));
   packet_readers_.push_back(base::MakeUnique<QuicChromiumPacketReader>(
@@ -368,6 +370,13 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
 
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.MtuProbesSent",
                        connection()->mtu_probe_count());
+
+  if (stats.packets_sent >= 100) {
+    // Used to monitor for regressions that effect large uploads.
+    UMA_HISTOGRAM_COUNTS_1000(
+        "Net.QuicSession.PacketRetransmitsPerMille",
+        1000 * stats.packets_retransmitted / stats.packets_sent);
+  }
 
   if (stats.max_sequence_reordering == 0)
     return;
@@ -555,19 +564,17 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
                                 &ssl_connection_status);
 
   // Report the QUIC key exchange as the corresponding TLS curve.
-  uint16_t curve;
   switch (crypto_stream_->crypto_negotiated_params().key_exchange) {
     case kP256:
-      curve = SSL_CURVE_SECP256R1;
+      ssl_info->key_exchange_group = SSL_CURVE_SECP256R1;
       break;
     case kC255:
-      curve = SSL_CURVE_X25519;
+      ssl_info->key_exchange_group = SSL_CURVE_X25519;
       break;
     default:
       NOTREACHED();
       return false;
   }
-  ssl_info->key_exchange_info = curve;
 
   ssl_info->public_key_hashes = cert_verify_result_->public_key_hashes;
   ssl_info->is_issued_by_known_root =
@@ -584,7 +591,7 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
   ssl_info->UpdateCertificateTransparencyInfo(*ct_verify_result_);
 
   if (crypto_stream_->crypto_negotiated_params().token_binding_key_param ==
-      kP256) {
+      kTB10) {
     ssl_info->token_binding_negotiated = true;
     ssl_info->token_binding_key_param = TB_PARAM_ECDSAP256;
   }
@@ -594,6 +601,7 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
 
 Error QuicChromiumClientSession::GetTokenBindingSignature(
     crypto::ECPrivateKey* key,
+    TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
   // The same key will be used across multiple requests to sign the same value,
   // so the signature is cached.
@@ -601,7 +609,7 @@ Error QuicChromiumClientSession::GetTokenBindingSignature(
   if (!key->ExportRawPublicKey(&raw_public_key))
     return ERR_FAILED;
   TokenBindingSignatureMap::iterator it =
-      token_binding_signatures_.Get(raw_public_key);
+      token_binding_signatures_.Get(std::make_pair(tb_type, raw_public_key));
   if (it != token_binding_signatures_.end()) {
     *out = it->second;
     return OK;
@@ -610,9 +618,9 @@ Error QuicChromiumClientSession::GetTokenBindingSignature(
   std::string key_material;
   if (!crypto_stream_->ExportTokenBindingKeyingMaterial(&key_material))
     return ERR_FAILED;
-  if (!SignTokenBindingEkm(key_material, key, out))
+  if (!CreateTokenBindingSignature(key_material, tb_type, key, out))
     return ERR_FAILED;
-  token_binding_signatures_.Put(raw_public_key, *out);
+  token_binding_signatures_.Put(std::make_pair(tb_type, raw_public_key), *out);
   return OK;
 }
 
@@ -780,8 +788,7 @@ void QuicChromiumClientSession::OnConfigNegotiated() {
 void QuicChromiumClientSession::OnCryptoHandshakeEvent(
     CryptoHandshakeEvent event) {
   if (stream_factory_ && event == HANDSHAKE_CONFIRMED &&
-      (stream_factory_->OnHandshakeConfirmed(
-          this, logger_->ReceivedPacketLossRate()))) {
+      stream_factory_->OnHandshakeConfirmed(this)) {
     return;
   }
 
@@ -912,7 +919,6 @@ void QuicChromiumClientSession::OnConnectionClosed(
     }
     if (IsCryptoHandshakeConfirmed()) {
       if (GetNumOpenOutgoingStreams() > 0) {
-        disabled_reason_ = QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS;
         UMA_HISTOGRAM_BOOLEAN(
             "Net.QuicSession.TimedOutWithOpenStreams.HasUnackedPackets",
             connection()->sent_packet_manager().HasUnackedPackets());
@@ -950,8 +956,6 @@ void QuicChromiumClientSession::OnConnectionClosed(
           "Net.QuicSession.ConnectionClose.HandshakeFailureUnknown.QuicError",
           error);
     }
-  } else if (error == QUIC_PUBLIC_RESET) {
-    disabled_reason_ = QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE;
   }
 
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicSession.QuicVersion",
@@ -981,12 +985,130 @@ void QuicChromiumClientSession::OnSuccessfulVersionNegotiation(
 int QuicChromiumClientSession::HandleWriteError(
     int error_code,
     scoped_refptr<StringIOBuffer> packet) {
-  DCHECK(packet != nullptr);
-  use_error_code_from_rewrite_ = false;
-  if (stream_factory_) {
-    stream_factory_->MaybeMigrateSingleSession(this, WRITE_ERROR, packet);
+  if (stream_factory_ == nullptr ||
+      !stream_factory_->migrate_sessions_on_network_change()) {
+    return error_code;
   }
-  return use_error_code_from_rewrite_ ? error_code_from_rewrite_ : error_code;
+  DCHECK(packet != nullptr);
+  DCHECK_NE(ERR_IO_PENDING, error_code);
+  DCHECK_GT(0, error_code);
+  DCHECK(!migration_pending_);
+  DCHECK(packet_ == nullptr);
+
+  // Post a task to migrate the session onto a new network.
+  task_runner_->PostTask(
+      FROM_HERE,
+      base::Bind(&QuicChromiumClientSession::MigrateSessionOnWriteError,
+                 weak_factory_.GetWeakPtr()));
+
+  // Store packet in the session since the actual migration and packet rewrite
+  // can happen via this posted task or via an async network notification.
+  packet_ = packet;
+  migration_pending_ = true;
+
+  // Cause the packet writer to return ERR_IO_PENDING and block so
+  // that the actual migration happens from the message loop instead
+  // of under the call stack of QuicConnection::WritePacket.
+  return ERR_IO_PENDING;
+}
+
+void QuicChromiumClientSession::MigrateSessionOnWriteError() {
+  // If migration_pending_ is false, an earlier task completed migration.
+  if (!migration_pending_)
+    return;
+
+  MigrationResult result = MigrationResult::FAILURE;
+  if (stream_factory_ != nullptr)
+    result = stream_factory_->MaybeMigrateSingleSession(this, WRITE_ERROR);
+
+  if (result == MigrationResult::SUCCESS)
+    return;
+
+  if (result == MigrationResult::NO_NEW_NETWORK) {
+    OnNoNewNetwork();
+    return;
+  }
+
+  // Close the connection if migration failed. Do not cause a
+  // connection close packet to be sent since socket may be borked.
+  connection()->CloseConnection(QUIC_PACKET_WRITE_ERROR,
+                                "Write and subsequent migration failed",
+                                ConnectionCloseBehavior::SILENT_CLOSE);
+}
+
+void QuicChromiumClientSession::OnNoNewNetwork() {
+  migration_pending_ = true;
+
+  // Block the packet writer to avoid any writes while migration is in progress.
+  static_cast<QuicChromiumPacketWriter*>(connection()->writer())
+      ->set_write_blocked(true);
+
+  // Post a task to maybe close the session if the alarm fires.
+  task_runner_->PostDelayedTask(
+      FROM_HERE, base::Bind(&QuicChromiumClientSession::OnMigrationTimeout,
+                            weak_factory_.GetWeakPtr(), sockets_.size()),
+      base::TimeDelta::FromSeconds(kWaitTimeForNewNetworkSecs));
+}
+
+void QuicChromiumClientSession::WriteToNewSocket() {
+  // Prevent any pending migration from executing.
+  migration_pending_ = false;
+  static_cast<QuicChromiumPacketWriter*>(connection()->writer())
+      ->set_write_blocked(false);
+  if (packet_ == nullptr) {
+    // Unblock the connection before sending a PING packet, since it
+    // may have been blocked before the migration started.
+    connection()->OnCanWrite();
+    connection()->SendPing();
+    return;
+  }
+
+  // Set packet_ to null first before calling WritePacketToSocket since
+  // that method may set packet_ if there is a write error.
+  scoped_refptr<StringIOBuffer> packet = packet_;
+  packet_ = nullptr;
+
+  // The connection is waiting for the original write to complete
+  // asynchronously. The new writer will notify the connection if the
+  // write below completes asynchronously, but a synchronous competion
+  // must be propagated back to the connection here.
+  WriteResult result =
+      static_cast<QuicChromiumPacketWriter*>(connection()->writer())
+          ->WritePacketToSocket(packet);
+  if (result.error_code == ERR_IO_PENDING)
+    return;
+
+  // All write errors should be mapped into ERR_IO_PENDING by
+  // HandleWriteError.
+  DCHECK_LT(0, result.error_code);
+  connection()->OnCanWrite();
+}
+
+void QuicChromiumClientSession::OnMigrationTimeout(size_t num_sockets) {
+  // If number of sockets has changed, this migration task is stale.
+  if (num_sockets != sockets_.size())
+    return;
+  UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.ConnectionMigration",
+                            MIGRATION_STATUS_NO_ALTERNATE_NETWORK,
+                            MIGRATION_STATUS_MAX);
+  CloseSessionOnError(ERR_NETWORK_CHANGED,
+                      QUIC_CONNECTION_MIGRATION_NO_NEW_NETWORK);
+}
+
+void QuicChromiumClientSession::OnNetworkConnected(
+    NetworkChangeNotifier::NetworkHandle network,
+    const NetLogWithSource& net_log) {
+  // If migration_pending_ is false, there was no migration pending or
+  // an earlier task completed migration.
+  if (!migration_pending_)
+    return;
+
+  // TODO(jri): Ensure that OnSessionGoingAway is called consistently,
+  // and that it's always called at the same time in the whole
+  // migration process. Allows tests to be more uniform.
+  stream_factory_->OnSessionGoingAway(this);
+  stream_factory_->MigrateSessionToNewNetwork(
+      this, network, /*close_session_on_error=*/true, net_log_);
 }
 
 void QuicChromiumClientSession::OnWriteError(int error_code) {
@@ -1001,7 +1123,7 @@ void QuicChromiumClientSession::OnWriteUnblocked() {
 
 void QuicChromiumClientSession::OnPathDegrading() {
   if (stream_factory_) {
-    stream_factory_->MaybeMigrateSingleSession(this, EARLY_MIGRATION, nullptr);
+    stream_factory_->MaybeMigrateSingleSession(this, EARLY_MIGRATION);
   }
 }
 
@@ -1208,25 +1330,28 @@ void QuicChromiumClientSession::NotifyFactoryOfSessionClosed() {
 bool QuicChromiumClientSession::MigrateToSocket(
     std::unique_ptr<DatagramClientSocket> socket,
     std::unique_ptr<QuicChromiumPacketReader> reader,
-    std::unique_ptr<QuicChromiumPacketWriter> writer,
-    scoped_refptr<StringIOBuffer> packet) {
+    std::unique_ptr<QuicChromiumPacketWriter> writer) {
   DCHECK_EQ(sockets_.size(), packet_readers_.size());
-  if (sockets_.size() >= kMaxReadersPerQuicSession) {
+  if (sockets_.size() >= kMaxReadersPerQuicSession)
     return false;
-  }
+
   // TODO(jri): Make SetQuicPacketWriter take a scoped_ptr.
   packet_readers_.push_back(std::move(reader));
   sockets_.push_back(std::move(socket));
   StartReading();
-  QuicChromiumPacketWriter* raw_writer = writer.get();
+  // Block the writer to prevent is being used until WriteToNewSocket
+  // completes.
+  writer->set_write_blocked(true);
   connection()->SetQuicPacketWriter(writer.release(), /*owns_writer=*/true);
-  if (packet == nullptr) {
-    connection()->SendPing();
-    return true;
-  }
-  // Packet rewrite after migration on socket write error.
-  error_code_from_rewrite_ = raw_writer->WritePacketToSocket(packet.get());
-  use_error_code_from_rewrite_ = true;
+
+  // Post task to write the pending packet or a PING packet to the new
+  // socket. This avoids reentrancy issues if there is a write error
+  // on the write to the new socket.
+  task_runner_->PostTask(
+      FROM_HERE, base::Bind(&QuicChromiumClientSession::WriteToNewSocket,
+                            weak_factory_.GetWeakPtr()));
+  // Migration completed.
+  migration_pending_ = false;
   return true;
 }
 

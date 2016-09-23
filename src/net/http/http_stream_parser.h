@@ -19,8 +19,8 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
-#include "net/base/upload_progress.h"
 #include "net/log/net_log.h"
+#include "net/ssl/token_binding.h"
 
 namespace net {
 
@@ -47,7 +47,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   HttpStreamParser(ClientSocketHandle* connection,
                    const HttpRequestInfo* request,
                    GrowableIOBuffer* read_buffer,
-                   const BoundNetLog& net_log);
+                   const NetLogWithSource& net_log);
   virtual ~HttpStreamParser();
 
   // Sets whether or not HTTP/0.9 is only allowed on default ports. It's not
@@ -71,10 +71,6 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
                        const CompletionCallback& callback);
 
   void Close(bool not_reusable);
-
-  // Returns the progress of uploading. When data is chunked, size is set to
-  // zero, but position will not be.
-  UploadProgress GetUploadProgress() const;
 
   bool IsResponseBodyComplete() const;
 
@@ -105,8 +101,9 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
 
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info);
 
-  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                    std::vector<uint8_t>* out);
+  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                 TokenBindingType tb_type,
+                                 std::vector<uint8_t>* out);
 
   // Encodes the given |payload| in the chunked format to |output|.
   // Returns the number of bytes written to |output|. |output_size| should
@@ -276,7 +273,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   // The underlying socket.
   ClientSocketHandle* const connection_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   // Callback to be used when doing IO.
   CompletionCallback io_callback_;

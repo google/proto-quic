@@ -50,6 +50,8 @@ def main(args):
   parser.add_argument('--depfile',
                       help='Path to the depfile. This must be specified as '
                            "the action's first output.")
+  parser.add_argument('--test-runner-path',
+                      help='Path to test_runner.py (optional).')
   # We need to intercept any test runner path arguments and make all
   # of the paths relative to the output script directory.
   group = parser.add_argument_group('Test runner path arguments.')
@@ -58,6 +60,7 @@ def main(args):
   group.add_argument('--additional-apk-list')
   group.add_argument('--apk-under-test')
   group.add_argument('--apk-under-test-incremental-install-script')
+  group.add_argument('--executable-dist-dir')
   group.add_argument('--isolate-file-path')
   group.add_argument('--output-directory')
   group.add_argument('--test-apk')
@@ -70,14 +73,14 @@ def main(args):
     """Returns the path relative to the output script directory."""
     return os.path.relpath(path, os.path.dirname(args.script_output_path))
 
-  test_runner_path = os.path.join(
+  test_runner_path = args.test_runner_path or os.path.join(
       os.path.dirname(__file__), os.path.pardir, 'test_runner.py')
   test_runner_path = RelativizePathToScript(test_runner_path)
 
   test_runner_path_args = []
   if args.additional_apk_list:
     args.additional_apks.extend(
-        build_utils.ParseGypList(args.additional_apk_list))
+        build_utils.ParseGnList(args.additional_apk_list))
   if args.additional_apks:
     test_runner_path_args.extend(
         ('--additional-apk', RelativizePathToScript(a))
@@ -90,6 +93,10 @@ def main(args):
         ('--apk-under-test-incremental-install-script',
          RelativizePathToScript(
              args.apk_under_test_incremental_install_script)))
+  if args.executable_dist_dir:
+    test_runner_path_args.append(
+        ('--executable-dist-dir',
+         RelativizePathToScript(args.executable_dist_dir)))
   if args.isolate_file_path:
     test_runner_path_args.append(
         ('--isolate-file-path', RelativizePathToScript(args.isolate_file_path)))
@@ -116,9 +123,7 @@ def main(args):
   os.chmod(args.script_output_path, 0750)
 
   if args.depfile:
-    build_utils.WriteDepfile(
-        args.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(args.depfile, args.script_output_path)
 
 if __name__ == '__main__':
   sys.exit(main(sys.argv[1:]))

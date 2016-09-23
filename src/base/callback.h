@@ -19,15 +19,76 @@
 
 namespace base {
 
-template <typename R, typename... Args, internal::CopyMode copy_mode>
-class Callback<R(Args...), copy_mode>
-    : public internal::CallbackBase<copy_mode> {
- public:
-  using PolymorphicInvoke = R (*)(internal::BindStateBase*, Args&&...);
+namespace internal {
 
-  // MSVC 2013 doesn't support Type Alias of function types.
-  // Revisit this after we update it to newer version.
-  typedef R RunType(Args...);
+// RunMixin provides different variants of `Run()` function to `Callback<>`
+// based on the type of callback.
+template <typename CallbackType>
+class RunMixin;
+
+// Specialization for OnceCallback.
+template <typename R, typename... Args>
+class RunMixin<Callback<R(Args...), CopyMode::MoveOnly, RepeatMode::Once>> {
+ private:
+  using CallbackType =
+      Callback<R(Args...), CopyMode::MoveOnly, RepeatMode::Once>;
+
+ public:
+  using PolymorphicInvoke = R(*)(internal::BindStateBase*, Args&&...);
+
+  R Run(Args... args) && {
+    // Move the callback instance into a local variable before the invocation,
+    // that ensures the internal state is cleared after the invocation.
+    // It's not safe to touch |this| after the invocation, since running the
+    // bound function may destroy |this|.
+    CallbackType cb = static_cast<CallbackType&&>(*this);
+    PolymorphicInvoke f =
+        reinterpret_cast<PolymorphicInvoke>(cb.polymorphic_invoke());
+    return f(cb.bind_state_.get(), std::forward<Args>(args)...);
+  }
+};
+
+// Specialization for RepeatingCallback.
+template <typename R, typename... Args, CopyMode copy_mode>
+class RunMixin<Callback<R(Args...), copy_mode, RepeatMode::Repeating>> {
+ private:
+  using CallbackType = Callback<R(Args...), copy_mode, RepeatMode::Repeating>;
+
+ public:
+  using PolymorphicInvoke = R(*)(internal::BindStateBase*, Args&&...);
+
+  R Run(Args... args) const {
+    const CallbackType& cb = static_cast<const CallbackType&>(*this);
+    PolymorphicInvoke f =
+        reinterpret_cast<PolymorphicInvoke>(cb.polymorphic_invoke());
+    return f(cb.bind_state_.get(), std::forward<Args>(args)...);
+  }
+};
+
+template <typename From, typename To>
+struct IsCallbackConvertible : std::false_type {};
+
+template <typename Signature>
+struct IsCallbackConvertible<
+  Callback<Signature, CopyMode::Copyable, RepeatMode::Repeating>,
+  Callback<Signature, CopyMode::MoveOnly, RepeatMode::Once>> : std::true_type {
+};
+
+}  // namespace internal
+
+template <typename R,
+          typename... Args,
+          internal::CopyMode copy_mode,
+          internal::RepeatMode repeat_mode>
+class Callback<R(Args...), copy_mode, repeat_mode>
+    : public internal::CallbackBase<copy_mode>,
+      public internal::RunMixin<Callback<R(Args...), copy_mode, repeat_mode>> {
+ public:
+  static_assert(repeat_mode != internal::RepeatMode::Once ||
+                copy_mode == internal::CopyMode::MoveOnly,
+                "OnceCallback must be MoveOnly.");
+
+  using RunType = R(Args...);
 
   Callback() : internal::CallbackBase<copy_mode>(nullptr) {}
 
@@ -35,26 +96,27 @@ class Callback<R(Args...), copy_mode>
       : internal::CallbackBase<copy_mode>(bind_state) {
   }
 
+  template <typename OtherCallback,
+            typename = typename std::enable_if<
+                internal::IsCallbackConvertible<OtherCallback, Callback>::value
+            >::type>
+  Callback(OtherCallback other)
+      : internal::CallbackBase<copy_mode>(std::move(other)) {}
+
+  template <typename OtherCallback,
+            typename = typename std::enable_if<
+                internal::IsCallbackConvertible<OtherCallback, Callback>::value
+            >::type>
+  Callback& operator=(OtherCallback other) {
+    static_cast<internal::CallbackBase<copy_mode>&>(*this) = std::move(other);
+    return *this;
+  }
+
   bool Equals(const Callback& other) const {
     return this->EqualsInternal(other);
   }
 
-  // Run() makes an extra copy compared to directly calling the bound function
-  // if an argument is passed-by-value and is copyable-but-not-movable:
-  // i.e. below copies CopyableNonMovableType twice.
-  //   void F(CopyableNonMovableType) {}
-  //   Bind(&F).Run(CopyableNonMovableType());
-  //
-  // We can not fully apply Perfect Forwarding idiom to the callchain from
-  // Callback::Run() to the target function. Perfect Forwarding requires
-  // knowing how the caller will pass the arguments. However, the signature of
-  // InvokerType::Run() needs to be fixed in the callback constructor, so Run()
-  // cannot template its arguments based on how it's called.
-  R Run(Args... args) const {
-    PolymorphicInvoke f =
-        reinterpret_cast<PolymorphicInvoke>(this->polymorphic_invoke());
-    return f(this->bind_state_.get(), std::forward<Args>(args)...);
-  }
+  friend class internal::RunMixin<Callback>;
 };
 
 }  // namespace base

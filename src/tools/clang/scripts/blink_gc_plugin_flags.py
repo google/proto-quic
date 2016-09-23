@@ -5,6 +5,9 @@
 
 # This script returns the flags that should be passed to clang.
 
+# TODO(sof): the script can be removed when/once gyp support is retired;
+# unused with gn.
+
 import os
 import sys
 
@@ -16,25 +19,16 @@ CLANG_LIB_PATH = os.path.normpath(os.path.join(
 FLAGS = '-Xclang -add-plugin -Xclang blink-gc-plugin'
 PREFIX= ' -Xclang -plugin-arg-blink-gc-plugin -Xclang '
 
-warn_raw_pointers = None
 for arg in sys.argv[1:]:
-  if arg == 'enable-oilpan=1':
-    FLAGS += PREFIX + 'enable-oilpan'
-    if warn_raw_pointers is None:
-      warn_raw_pointers = True
-  elif arg == 'dump-graph=1':
+  if arg == 'dump-graph=1':
     FLAGS += PREFIX + 'dump-graph'
-  elif arg == 'warn-raw-ptr=1':
-    warn_raw_pointers = True
-  elif arg == 'warn-raw-ptr=0':
-    warn_raw_pointers = False
   elif arg == 'warn-unneeded-finalizer=1':
     FLAGS += PREFIX + 'warn-unneeded-finalizer'
   elif arg.startswith('custom_clang_lib_path='):
     CLANG_LIB_PATH = arg[len('custom_clang_lib_path='):]
-
-if warn_raw_pointers is True:
-  FLAGS += PREFIX + 'warn-raw-ptr'
+  elif arg == 'target_os=ios':
+    sys.stderr.write('error: blink is unsupported on iOS\n')
+    sys.exit(1)
 
 if not sys.platform in ['win32', 'cygwin']:
   LIBSUFFIX = 'dylib' if sys.platform == 'darwin' else 'so'

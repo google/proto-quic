@@ -56,7 +56,7 @@ class NET_EXPORT_PRIVATE QuicDecrypter {
   //
   // Calling this function is a no-op if |SetPreliminaryKey| hasn't been
   // called.
-  virtual bool SetDiversificationNonce(DiversificationNonce nonce) = 0;
+  virtual bool SetDiversificationNonce(const DiversificationNonce& nonce) = 0;
 
   // Populates |output| with the decrypted |ciphertext| and populates
   // |output_length| with the length.  Returns 0 if there is an error.
@@ -86,7 +86,7 @@ class NET_EXPORT_PRIVATE QuicDecrypter {
 
   static void DiversifyPreliminaryKey(base::StringPiece preliminary_key,
                                       base::StringPiece nonce_prefix,
-                                      DiversificationNonce nonce,
+                                      const DiversificationNonce& nonce,
                                       size_t key_size,
                                       size_t nonce_prefix_size,
                                       std::string* out_key,

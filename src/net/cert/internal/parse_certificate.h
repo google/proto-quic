@@ -17,6 +17,7 @@
 
 namespace net {
 
+class CertErrors;
 struct ParsedTbsCertificate;
 
 // Returns true if the given serial number (CertificateSerialNumber in RFC 5280)
@@ -55,14 +56,17 @@ struct NET_EXPORT ParseCertificateOptions {
 };
 
 // Parses a DER-encoded "Certificate" as specified by RFC 5280. Returns true on
-// success and sets the results in the |out_*| parameters.
+// success and sets the results in the |out_*| parameters. On both the failure
+// and success case, if |out_errors| was non-null it may contain extra error
+// information.
 //
 // Note that on success the out parameters alias data from the input
 // |certificate_tlv|.  Hence the output values are only valid as long as
 // |certificate_tlv| remains valid.
 //
-// On failure the out parameters have an undefined state. Some of them may have
-// been updated during parsing, whereas others may not have been changed.
+// On failure the out parameters have an undefined state, except for
+// out_errors. Some of them may have been updated during parsing, whereas
+// others may not have been changed.
 //
 // The out parameters represent each field of the Certificate SEQUENCE:
 //       Certificate  ::=  SEQUENCE  {
@@ -91,12 +95,15 @@ struct NET_EXPORT ParseCertificateOptions {
 NET_EXPORT bool ParseCertificate(const der::Input& certificate_tlv,
                                  der::Input* out_tbs_certificate_tlv,
                                  der::Input* out_signature_algorithm_tlv,
-                                 der::BitString* out_signature_value)
-    WARN_UNUSED_RESULT;
+                                 der::BitString* out_signature_value,
+                                 CertErrors* out_errors) WARN_UNUSED_RESULT;
 
 // Parses a DER-encoded "TBSCertificate" as specified by RFC 5280. Returns true
 // on success and sets the results in |out|. Certain invalid inputs may
 // be accepted based on the provided |options|.
+//
+// If |errors| was non-null then any warnings/errors that occur during parsing
+// are added to it.
 //
 // Note that on success |out| aliases data from the input |tbs_tlv|.
 // Hence the fields of the ParsedTbsCertificate are only valid as long as
@@ -125,8 +132,8 @@ NET_EXPORT bool ParseCertificate(const der::Input& certificate_tlv,
 //            }
 NET_EXPORT bool ParseTbsCertificate(const der::Input& tbs_tlv,
                                     const ParseCertificateOptions& options,
-                                    ParsedTbsCertificate* out)
-    WARN_UNUSED_RESULT;
+                                    ParsedTbsCertificate* out,
+                                    CertErrors* errors) WARN_UNUSED_RESULT;
 
 // Represents a "Version" from RFC 5280:
 //         Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }

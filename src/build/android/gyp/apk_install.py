@@ -10,7 +10,6 @@
 
 import optparse
 import os
-import re
 import sys
 
 from util import build_device
@@ -26,35 +25,26 @@ from devil.android import apk_helper
 from pylib import constants
 
 
-def GetNewMetadata(device, apk_package):
-  """Gets the metadata on the device for the apk_package apk."""
-  output = device.RunShellCommand('ls -l /data/app/')
-  # Matches lines like:
-  # -rw-r--r-- system   system    7376582 2013-04-19 16:34 \
-  # org.chromium.chrome.apk
-  # -rw-r--r-- system   system    7376582 2013-04-19 16:34 \
-  # org.chromium.chrome-1.apk
-  apk_matcher = lambda s: re.match('.*%s(-[0-9]*)?(.apk)?$' % apk_package, s)
-  matches = filter(apk_matcher, output)
-  return matches[0] if matches else None
-
 def HasInstallMetadataChanged(device, apk_package, metadata_path):
   """Checks if the metadata on the device for apk_package has changed."""
   if not os.path.exists(metadata_path):
     return True
 
-  with open(metadata_path, 'r') as expected_file:
-    return expected_file.read() != device.GetInstallMetadata(apk_package)
+  try:
+    expected_metadata = build_utils.ReadJson(metadata_path)
+  except ValueError:  # File is not json encoded.
+    return True
+
+  return expected_metadata != device.GetInstallMetadata(apk_package)
 
 
 def RecordInstallMetadata(device, apk_package, metadata_path):
   """Records the metadata from the device for apk_package."""
-  metadata = GetNewMetadata(device, apk_package)
+  metadata = device.GetInstallMetadata(apk_package, refresh=True)
   if not metadata:
     raise Exception('APK install failed unexpectedly.')
 
-  with open(metadata_path, 'w') as outfile:
-    outfile.write(metadata)
+  build_utils.WriteJson(metadata, metadata_path)
 
 
 def main():

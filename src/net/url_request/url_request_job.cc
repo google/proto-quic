@@ -220,10 +220,6 @@ LoadState URLRequestJob::GetLoadState() const {
   return LOAD_STATE_IDLE;
 }
 
-UploadProgress URLRequestJob::GetUploadProgress() const {
-  return UploadProgress();
-}
-
 bool URLRequestJob::GetCharset(std::string* charset) {
   return false;
 }
@@ -320,12 +316,6 @@ void URLRequestJob::FollowDeferredRedirect() {
   RedirectInfo redirect_info = deferred_redirect_info_;
   deferred_redirect_info_ = RedirectInfo();
   FollowRedirect(redirect_info);
-}
-
-void URLRequestJob::ResumeNetworkStart() {
-  // This should only be called for HTTP Jobs, and implemented in the derived
-  // class.
-  NOTREACHED();
 }
 
 bool URLRequestJob::GetMimeType(std::string* mime_type) const {
@@ -978,6 +968,7 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
   std::string include_referer;
   request_->GetResponseHeaderByName("include-referred-token-binding-id",
                                     &include_referer);
+  include_referer = base::ToLowerASCII(include_referer);
   if (include_referer == "true" &&
       request_->ssl_info().token_binding_negotiated) {
     redirect_info.referred_token_binding_host = url.host();

@@ -65,7 +65,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocket : public ProxyClientSocket {
   void Disconnect() override;
   bool IsConnected() const override;
   bool IsConnectedAndIdle() const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -166,7 +166,7 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocket : public ProxyClientSocket {
   // This delegate must outlive this proxy client socket.
   ProxyDelegate* proxy_delegate_;
 
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpProxyClientSocket);
 };

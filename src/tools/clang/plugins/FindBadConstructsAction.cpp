@@ -21,7 +21,7 @@ class PluginConsumer : public ASTConsumer {
       : visitor_(*instance, options) {}
 
   void HandleTranslationUnit(clang::ASTContext& context) override {
-    visitor_.TraverseDecl(context.getTranslationUnitDecl());
+    visitor_.Traverse(context);
   }
 
  private:
@@ -36,9 +36,7 @@ FindBadConstructsAction::FindBadConstructsAction() {
 std::unique_ptr<ASTConsumer> FindBadConstructsAction::CreateASTConsumer(
     CompilerInstance& instance,
     llvm::StringRef ref) {
-  if (options_.with_ast_visitor)
-    return llvm::make_unique<PluginConsumer>(&instance, options_);
-  return llvm::make_unique<FindBadConstructsConsumer>(instance, options_);
+  return llvm::make_unique<PluginConsumer>(&instance, options_);
 }
 
 bool FindBadConstructsAction::ParseArgs(const CompilerInstance& instance,
@@ -49,20 +47,18 @@ bool FindBadConstructsAction::ParseArgs(const CompilerInstance& instance,
     if (args[i] == "check-base-classes") {
       // TODO(rsleevi): Remove this once http://crbug.com/123295 is fixed.
       options_.check_base_classes = true;
-    } else if (args[i] == "enforce-in-pdf") {
-      options_.enforce_in_pdf = true;
     } else if (args[i] == "enforce-in-thirdparty-webkit") {
       options_.enforce_in_thirdparty_webkit = true;
     } else if (args[i] == "check-enum-last-value") {
       // TODO(tsepez): Enable this by default once http://crbug.com/356815
       // and http://crbug.com/356816 are fixed.
       options_.check_enum_last_value = true;
-    } else if (args[i] == "with-ast-visitor") {
-      options_.with_ast_visitor = true;
-    } else if (args[i] == "check-templates") {
-      options_.check_templates = true;
-    } else if (args[i] == "follow-macro-expansion") {
-      options_.follow_macro_expansion = true;
+    } else if (args[i] == "no-realpath") {
+      options_.no_realpath = true;
+    } else if (args[i] == "check-ipc") {
+      options_.check_ipc = true;
+    } else if (args[i] == "check-auto-raw-pointer") {
+      options_.check_auto_raw_pointer = true;
     } else {
       parsed = false;
       llvm::errs() << "Unknown clang plugin argument: " << args[i] << "\n";

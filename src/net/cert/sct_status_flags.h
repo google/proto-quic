@@ -5,6 +5,10 @@
 #ifndef NET_CERT_SCT_STATUS_FLAGS_H_
 #define NET_CERT_SCT_STATUS_FLAGS_H_
 
+#include <stdint.h>
+
+#include "net/base/net_export.h"
+
 namespace net {
 
 namespace ct {
@@ -12,7 +16,7 @@ namespace ct {
 // The possible verification statuses for a SignedCertificateTimestamp.
 // Note: The numeric values are used within histograms and should not change
 // or be re-assigned.
-enum SCTVerifyStatus {
+enum SCTVerifyStatus : uint32_t {
   // Not a real status, this just prevents a default int value from being
   // mis-interpreseted as a valid status.
   // Also used to count SCTs that cannot be decoded in the histogram.
@@ -21,12 +25,8 @@ enum SCTVerifyStatus {
   // The SCT is from an unknown log, so we cannot verify its signature.
   SCT_STATUS_LOG_UNKNOWN = 1,
 
-  // This value is deprecated and should not be used. It has been split
-  // into INVALID_SIGNATURE and INVALID_TIMESTAMP to represent the
-  // different reasons an SCT could be invalid. Though it is no longer
-  // in use, it is preserved here because it may be present in
-  // serialized messages.
-  SCT_STATUS_INVALID = 2,
+  // Obsolete. Kept here to avoid reuse.
+  // SCT_STATUS_INVALID = 2,
 
   // The SCT is from a known log, and the signature is valid.
   SCT_STATUS_OK = 3,
@@ -41,6 +41,10 @@ enum SCTVerifyStatus {
   // the last value must be a valid one (rather than one past a valid one).
   SCT_STATUS_MAX = SCT_STATUS_INVALID_TIMESTAMP,
 };
+
+// Returns true if |status| denotes a valid value in SCTVerifyStatus, which
+// is all current values in the enum except SCT_STATUS_NONE.
+NET_EXPORT bool IsValidSCTStatus(uint32_t status);
 
 }  // namespace ct
 

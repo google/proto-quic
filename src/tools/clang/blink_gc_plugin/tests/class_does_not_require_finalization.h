@@ -33,8 +33,10 @@ public:
     virtual ~HasEmptyDtor() { }
 };
 
-class DoesNotNeedFinalizer3
-    : public GarbageCollectedFinalized<DoesNotNeedFinalizer3>,
+// If there are any virtual destructors involved, give up.
+
+class DoesNeedFinalizer2
+    : public GarbageCollectedFinalized<DoesNeedFinalizer2>,
       public HasEmptyDtor {
 public:
     void trace(Visitor*);

@@ -35,7 +35,8 @@ os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', '') + (':%s:%s:%s:%s:%s'
        os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party', 'pyftpdlib',
                     'src'),
        os.path.join(host_paths.DIR_SOURCE_ROOT, 'net', 'tools', 'testserver'),
-       os.path.join(host_paths.DIR_SOURCE_ROOT, 'sync', 'tools', 'testserver')))
+       os.path.join(host_paths.DIR_SOURCE_ROOT, 'components', 'sync', 'tools',
+                    'testserver')))
 
 
 SERVER_TYPES = {
@@ -219,7 +220,8 @@ class TestServerThread(threading.Thread):
     self._GenerateCommandLineArguments()
     command = host_paths.DIR_SOURCE_ROOT
     if self.arguments['server-type'] == 'sync':
-      command = [os.path.join(command, 'sync', 'tools', 'testserver',
+      command = [os.path.join(command, 'components', 'sync', 'tools',
+                              'testserver',
                               'sync_testserver.py')] + self.command_line
     else:
       command = [os.path.join(command, 'net', 'tools', 'testserver',

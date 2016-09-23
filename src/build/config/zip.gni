@@ -21,7 +21,6 @@ template("zip") {
     depfile = "$target_gen_dir/$target_name.d"
     inputs = invoker.inputs
     outputs = [
-      depfile,
       invoker.output,
     ]
 

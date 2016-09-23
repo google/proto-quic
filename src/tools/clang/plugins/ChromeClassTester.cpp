@@ -16,6 +16,9 @@
 #ifdef LLVM_ON_UNIX
 #include <sys/param.h>
 #endif
+#if defined(LLVM_ON_WIN32)
+#include <windows.h>
+#endif
 
 using namespace clang;
 using chrome_checker::Options;
@@ -40,18 +43,6 @@ ChromeClassTester::ChromeClassTester(CompilerInstance& instance,
 }
 
 ChromeClassTester::~ChromeClassTester() {}
-
-void ChromeClassTester::HandleTagDeclDefinition(TagDecl* tag) {
-  pending_class_decls_.push_back(tag);
-}
-
-bool ChromeClassTester::HandleTopLevelDecl(DeclGroupRef group_ref) {
-  for (size_t i = 0; i < pending_class_decls_.size(); ++i)
-    CheckTag(pending_class_decls_[i]);
-  pending_class_decls_.clear();
-
-  return true;  // true means continue parsing.
-}
 
 void ChromeClassTester::CheckTag(TagDecl* tag) {
   // We handle class types here where we have semantic information. We can only
@@ -132,22 +123,41 @@ bool ChromeClassTester::InBannedDirectory(SourceLocation loc) {
 #if defined(LLVM_ON_UNIX)
   // Resolve the symlinktastic relative path and make it absolute.
   char resolvedPath[MAXPATHLEN];
-  if (realpath(filename.c_str(), resolvedPath)) {
+  if (options_.no_realpath) {
+    // Same reason as windows below, but we don't need to do
+    // the '\\' manipulation on linux.
+    filename.insert(filename.begin(), '/');
+  } else if (realpath(filename.c_str(), resolvedPath)) {
     filename = resolvedPath;
   }
 #endif
 
 #if defined(LLVM_ON_WIN32)
-  std::replace(filename.begin(), filename.end(), '\\', '/');
+  // Make path absolute.
+  if (options_.no_realpath) {
+    // This turns e.g. "gen/dir/file.cc" to "/gen/dir/file.cc" which lets the
+    // "/gen/" banned_dir work.
+    filename.insert(filename.begin(), '/');
+  } else {
+    // The Windows dance: Convert to UTF-16, call GetFullPathNameW, convert back
+    DWORD size_needed =
+        MultiByteToWideChar(CP_UTF8, 0, filename.data(), -1, nullptr, 0);
+    std::wstring utf16(size_needed, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, filename.data(), -1,
+                        &utf16[0], size_needed);
 
-  // On Posix, realpath() has made the path absolute.  On Windows, this isn't
-  // necessarily true, so prepend a '/' to the path to make sure the
-  // banned_directories_ loop below works correctly.
-  // This turns e.g. "gen/dir/file.cc" to "/gen/dir/file.cc" which lets the
-  // "/gen/" banned_dir work.
-  // This seems simpler than converting to utf16, calling GetFullPathNameW(),
-  // and converting back to utf8.
-  filename.insert(filename.begin(), '/');
+    size_needed = GetFullPathNameW(utf16.data(), 0, nullptr, nullptr);
+    std::wstring full_utf16(size_needed, L'\0');
+    GetFullPathNameW(utf16.data(), full_utf16.size(), &full_utf16[0], nullptr);
+
+    size_needed = WideCharToMultiByte(CP_UTF8, 0, full_utf16.data(), -1,
+                                      nullptr, 0, nullptr, nullptr);
+    filename.resize(size_needed);
+    WideCharToMultiByte(CP_UTF8, 0, full_utf16.data(), -1, &filename[0],
+                        size_needed, nullptr, nullptr);
+  }
+
+  std::replace(filename.begin(), filename.end(), '\\', '/');
 #endif
 
   for (const std::string& allowed_dir : allowed_directories_) {
@@ -187,33 +197,38 @@ std::string ChromeClassTester::GetNamespace(const Decl* record) {
   return GetNamespaceImpl(record->getDeclContext(), "");
 }
 
+bool ChromeClassTester::HasIgnoredBases(const CXXRecordDecl* record) {
+  for (const auto& base : record->bases()) {
+    CXXRecordDecl* base_record = base.getType()->getAsCXXRecordDecl();
+    if (!base_record)
+      continue;
+
+    const std::string& base_name = base_record->getQualifiedNameAsString();
+    if (ignored_base_classes_.count(base_name) > 0)
+      return true;
+    if (HasIgnoredBases(base_record))
+      return true;
+  }
+  return false;
+}
+
 bool ChromeClassTester::InImplementationFile(SourceLocation record_location) {
   std::string filename;
 
-  if (options_.follow_macro_expansion) {
-    // If |record_location| is a macro, check the whole chain of expansions.
-    const SourceManager& source_manager = instance_.getSourceManager();
-    while (true) {
-      if (GetFilename(record_location, &filename)) {
-        if (ends_with(filename, ".cc") || ends_with(filename, ".cpp") ||
-            ends_with(filename, ".mm")) {
-          return true;
-        }
+  // If |record_location| is a macro, check the whole chain of expansions.
+  const SourceManager& source_manager = instance_.getSourceManager();
+  while (true) {
+    if (GetFilename(record_location, &filename)) {
+      if (ends_with(filename, ".cc") || ends_with(filename, ".cpp") ||
+          ends_with(filename, ".mm")) {
+        return true;
       }
-      if (!record_location.isMacroID()) {
-        break;
-      }
-      record_location =
-          source_manager.getImmediateExpansionRange(record_location).first;
     }
-  } else {
-    if (!GetFilename(record_location, &filename))
-      return false;
-
-    if (ends_with(filename, ".cc") || ends_with(filename, ".cpp") ||
-        ends_with(filename, ".mm")) {
-      return true;
+    if (!record_location.isMacroID()) {
+      break;
     }
+    record_location =
+        source_manager.getImmediateExpansionRange(record_location).first;
   }
 
   return false;
@@ -227,24 +242,14 @@ void ChromeClassTester::BuildBannedLists() {
     allowed_directories_.emplace("/third_party/WebKit/");
   }
 
-  if (!options_.enforce_in_pdf) {
-    banned_directories_.emplace("/pdf/");
-  }
-
   banned_directories_.emplace("/third_party/");
   banned_directories_.emplace("/native_client/");
   banned_directories_.emplace("/breakpad/");
   banned_directories_.emplace("/courgette/");
   banned_directories_.emplace("/ppapi/");
-  banned_directories_.emplace("/usr/include/");
-  banned_directories_.emplace("/usr/lib/");
-  banned_directories_.emplace("/usr/local/include/");
-  banned_directories_.emplace("/usr/local/lib/");
   banned_directories_.emplace("/testing/");
   banned_directories_.emplace("/v8/");
-  banned_directories_.emplace("/dart/");
   banned_directories_.emplace("/sdch/");
-  banned_directories_.emplace("/icu4c/");
   banned_directories_.emplace("/frameworks/");
 
   // Don't check autogenerated headers.
@@ -291,6 +296,10 @@ void ChromeClassTester::BuildBannedLists() {
 
   // Enum type with _LAST members where _LAST doesn't mean last enum value.
   ignored_record_names_.emplace("ViewID");
+
+  // Ignore IPC::NoParams bases, since these structs are generated via
+  // macros and it makes it difficult to add explicit ctors.
+  ignored_base_classes_.emplace("IPC::NoParams");
 }
 
 std::string ChromeClassTester::GetNamespaceImpl(const DeclContext* context,

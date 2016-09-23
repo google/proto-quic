@@ -262,13 +262,14 @@ class TestChannelIDSource : public ChannelIDSource {
 
 }  // anonymous namespace
 
-CryptoTestUtils::FakeServerOptions::FakeServerOptions()
-    : token_binding_enabled(false) {}
+CryptoTestUtils::FakeServerOptions::FakeServerOptions() {}
+
+CryptoTestUtils::FakeServerOptions::~FakeServerOptions() {}
 
 CryptoTestUtils::FakeClientOptions::FakeClientOptions()
-    : channel_id_enabled(false),
-      channel_id_source_async(false),
-      token_binding_enabled(false) {}
+    : channel_id_enabled(false), channel_id_source_async(false) {}
+
+CryptoTestUtils::FakeClientOptions::~FakeClientOptions() {}
 
 namespace {
 // This class is used by GenerateFullCHLO() to extract SCID and STK from
@@ -291,9 +292,8 @@ class FullChloGenerator : public ValidateClientHelloResultCallback {
         compressed_certs_cache_(compressed_certs_cache),
         out_(out) {}
 
-  void RunImpl(const CryptoHandshakeMessage& client_hello,
-               const ValidateClientHelloResultCallback::Result& result,
-               std::unique_ptr<ProofSource::Details> /* details */) override {
+  void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+           std::unique_ptr<ProofSource::Details> /* details */) override {
     QuicCryptoNegotiatedParameters params;
     string error_details;
     DiversificationNonce diversification_nonce;
@@ -321,7 +321,7 @@ class FullChloGenerator : public ValidateClientHelloResultCallback {
     StringPiece scid;
     ASSERT_TRUE(server_config->GetStringPiece(kSCID, &scid));
 
-    *out_ = client_hello;
+    *out_ = result->client_hello;
     out_->SetStringPiece(kSCID, scid);
     out_->SetStringPiece(kSourceAddressTokenTag, srct);
     uint64_t xlct = CryptoTestUtils::LeafCertHashForTesting();
@@ -397,8 +397,8 @@ int CryptoTestUtils::HandshakeWithFakeClient(
     }
     crypto_config.SetChannelIDSource(source);
   }
-  if (options.token_binding_enabled) {
-    crypto_config.tb_key_params.push_back(kP256);
+  if (!options.token_binding_params.empty()) {
+    crypto_config.tb_key_params = options.token_binding_params;
   }
   TestQuicSpdyClientSession client_session(client_conn, DefaultQuicConfig(),
                                            server_id, &crypto_config);
@@ -438,7 +438,7 @@ void CryptoTestUtils::SetupCryptoServerConfigForTest(
     const FakeServerOptions& fake_options) {
   QuicCryptoServerConfig::ConfigOptions options;
   options.channel_id_enabled = true;
-  options.token_binding_enabled = fake_options.token_binding_enabled;
+  options.token_binding_params = fake_options.token_binding_params;
   std::unique_ptr<CryptoHandshakeMessage> scfg(
       crypto_config->AddDefaultConfig(rand, clock, options));
 }
@@ -966,8 +966,9 @@ void CryptoTestUtils::GenerateFullCHLO(
   // Pass a inchoate CHLO.
   crypto_config->ValidateClientHello(
       inchoate_chlo, client_addr.address(), server_ip, version, clock, proof,
-      new FullChloGenerator(crypto_config, server_ip, client_addr, clock, proof,
-                            compressed_certs_cache, out));
+      std::unique_ptr<FullChloGenerator>(
+          new FullChloGenerator(crypto_config, server_ip, client_addr, clock,
+                                proof, compressed_certs_cache, out)));
 }
 
 }  // namespace test

@@ -93,7 +93,8 @@ bool AeadBaseDecrypter::SetPreliminaryKey(StringPiece key) {
   return true;
 }
 
-bool AeadBaseDecrypter::SetDiversificationNonce(DiversificationNonce nonce) {
+bool AeadBaseDecrypter::SetDiversificationNonce(
+    const DiversificationNonce& nonce) {
   if (!have_preliminary_key_) {
     return true;
   }

@@ -31,7 +31,7 @@ SSLInfo& SSLInfo::operator=(const SSLInfo& info) {
   unverified_cert = info.unverified_cert;
   cert_status = info.cert_status;
   security_bits = info.security_bits;
-  key_exchange_info = info.key_exchange_info;
+  key_exchange_group = info.key_exchange_group;
   connection_status = info.connection_status;
   is_issued_by_known_root = info.is_issued_by_known_root;
   pkp_bypassed = info.pkp_bypassed;
@@ -55,7 +55,7 @@ void SSLInfo::Reset() {
   unverified_cert = NULL;
   cert_status = 0;
   security_bits = -1;
-  key_exchange_info = 0;
+  key_exchange_group = 0;
   connection_status = 0;
   is_issued_by_known_root = false;
   pkp_bypassed = false;
@@ -72,24 +72,6 @@ void SSLInfo::Reset() {
   ct_cert_policy_compliance =
       ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
   ocsp_result = OCSPVerifyResult();
-}
-
-uint16_t SSLInfo::GetKeyExchangeGroup() const {
-  // key_exchange_info is sometimes the (EC)DH group ID and sometimes a
-  // completely different value.
-  //
-  // TODO(davidben): Once the DHE removal has stuck, remove key_exchange_info
-  // from this struct, doing all necessary conversions when parsing out of
-  // legacy cache entries. At that point, this accessor may be replaced with the
-  // struct field. See https://crbug.com/639421.
-  //
-  // TODO(davidben): When TLS 1.3 draft 15's new negotiation is implemented,
-  // also report key_exchange_info for the new AEAD/PRF ciphers.
-  uint16_t cipher_value = SSLConnectionStatusToCipherSuite(connection_status);
-  const SSL_CIPHER* cipher = SSL_get_cipher_by_value(cipher_value);
-  if (cipher && SSL_CIPHER_is_ECDHE(cipher))
-    return static_cast<uint16_t>(key_exchange_info);
-  return 0;
 }
 
 void SSLInfo::SetCertError(int error) {

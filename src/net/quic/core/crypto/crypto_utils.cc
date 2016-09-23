@@ -54,6 +54,11 @@ void CryptoUtils::GenerateNonce(QuicWallTime now,
 
 // static
 bool CryptoUtils::IsValidSNI(StringPiece sni) {
+  // TODO(rtenneti): Support RFC2396 hostname.
+  // NOTE: Microsoft does NOT enforce this spec, so if we throw away hostnames
+  // based on the above spec, we may be losing some hostnames that windows
+  // would consider valid. By far the most common hostname character NOT
+  // accepted by the above spec is '_'.
   url::CanonHostInfo host_info;
   string canonicalized_host(CanonicalizeHost(sni.as_string(), &host_info));
   return !host_info.IsIPAddress() &&

@@ -83,6 +83,8 @@ bool HpackDecoder::HandleControlFrameHeadersComplete(size_t* compressed_len) {
   // Data in headers_block_buffer_ should have been parsed by
   // HandleControlFrameHeadersData and removed.
   if (headers_block_buffer_.size() > 0) {
+    DVLOG(1) << "headers_block_buffer_.size() should be zero, but is "
+             << headers_block_buffer_.size();
     return false;
   }
 

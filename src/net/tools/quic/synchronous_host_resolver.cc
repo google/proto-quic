@@ -68,7 +68,7 @@ void ResolverThread::Run() {
                           DEFAULT_PRIORITY, addresses_,
                           base::Bind(&ResolverThread::OnResolutionComplete,
                                      weak_factory_.GetWeakPtr()),
-                          &request, BoundNetLog());
+                          &request, NetLogWithSource());
 
   if (rv_ != ERR_IO_PENDING)
     return;

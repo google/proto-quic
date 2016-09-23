@@ -108,7 +108,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     CHECK(server_session);
     server_session_.reset(server_session);
     CryptoTestUtils::FakeServerOptions options;
-    options.token_binding_enabled = true;
+    options.token_binding_params = QuicTagVector{kTB10};
     CryptoTestUtils::SetupCryptoServerConfigForTest(
         server_connection_->clock(), server_connection_->random_generator(),
         server_session_->config(), &server_crypto_config_, options);
@@ -513,10 +513,10 @@ TEST_P(QuicCryptoServerStreamTest, DoesPeerSupportStatelessRejects) {
 TEST_P(QuicCryptoServerStreamTest, TokenBindingNegotiated) {
   Initialize();
 
-  client_options_.token_binding_enabled = true;
+  client_options_.token_binding_params = QuicTagVector{kTB10, kP256};
   CompleteCryptoHandshake();
   EXPECT_EQ(
-      kP256,
+      kTB10,
       server_stream()->crypto_negotiated_params().token_binding_key_param);
   EXPECT_TRUE(server_stream()->encryption_established());
   EXPECT_TRUE(server_stream()->handshake_confirmed());

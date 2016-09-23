@@ -1,0 +1,32 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "typical_25_002.wpr": [
+            "http://www.nick.com/games", 
+            "http://www.rei.com/", 
+            "http://www.fifa.com/", 
+            "http://www.gamestop.com/ps3", 
+            "http://www.barnesandnoble.com/u/books-bestselling-books/379003057/", 
+            "http://www.economist.com/news/science-and-technology/21573529-small-models-cosmic-phenomena-are-shedding-light-real-thing-how-build", 
+            "http://www.theonion.com", 
+            "http://arstechnica.com/", 
+            "http://allrecipes.com/Recipe/Pull-Apart-Hot-Cross-Buns/Detail.aspx", 
+            "http://www.html5rocks.com/en/", 
+            "http://www.mlb.com/", 
+            "http://gawker.com/5939683/based-on-a-true-story-is-a-rotten-lie-i-hope-you-never-believe", 
+            "http://www.imdb.com/title/tt0910970/", 
+            "http://www.flickr.com/search/?q=monkeys&f=hp", 
+            "http://money.cnn.com/", 
+            "http://www.nationalgeographic.com/", 
+            "http://premierleague.com", 
+            "http://www.osubeavers.com/", 
+            "http://walgreens.com", 
+            "http://colorado.edu", 
+            "http://www.ticketmaster.com/JAY-Z-and-Justin-Timberlake-tickets/artist/1837448?brand=none&tm_link=tm_homeA_rc_name2", 
+            "http://www.theverge.com/2013/3/5/4061684/inside-ted-the-smartest-bubble-in-the-world", 
+            "http://www.airbnb.com/", 
+            "http://www.ign.com/", 
+            "http://www.fda.gov"
+        ]
+    }
+}

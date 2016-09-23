@@ -17,9 +17,11 @@ void RecursiveEdgeVisitor::AtValue(Value*) {}
 void RecursiveEdgeVisitor::AtRawPtr(RawPtr*) {}
 void RecursiveEdgeVisitor::AtRefPtr(RefPtr*) {}
 void RecursiveEdgeVisitor::AtOwnPtr(OwnPtr*) {}
+void RecursiveEdgeVisitor::AtUniquePtr(UniquePtr*) {}
 void RecursiveEdgeVisitor::AtMember(Member*) {}
 void RecursiveEdgeVisitor::AtWeakMember(WeakMember*) {}
 void RecursiveEdgeVisitor::AtPersistent(Persistent*) {}
+void RecursiveEdgeVisitor::AtCrossThreadPersistent(CrossThreadPersistent*) {}
 void RecursiveEdgeVisitor::AtCollection(Collection*) {}
 
 void RecursiveEdgeVisitor::VisitValue(Value* e) {
@@ -46,6 +48,13 @@ void RecursiveEdgeVisitor::VisitOwnPtr(OwnPtr* e) {
   Leave();
 }
 
+void RecursiveEdgeVisitor::VisitUniquePtr(UniquePtr* e) {
+  AtUniquePtr(e);
+  Enter(e);
+  e->ptr()->Accept(this);
+  Leave();
+}
+
 void RecursiveEdgeVisitor::VisitMember(Member* e) {
   AtMember(e);
   Enter(e);
@@ -62,6 +71,14 @@ void RecursiveEdgeVisitor::VisitWeakMember(WeakMember* e) {
 
 void RecursiveEdgeVisitor::VisitPersistent(Persistent* e) {
   AtPersistent(e);
+  Enter(e);
+  e->ptr()->Accept(this);
+  Leave();
+}
+
+void RecursiveEdgeVisitor::VisitCrossThreadPersistent(
+    CrossThreadPersistent* e) {
+  AtCrossThreadPersistent(e);
   Enter(e);
   e->ptr()->Accept(this);
   Leave();

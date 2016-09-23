@@ -416,10 +416,8 @@ TEST_F(QuicStreamSequencerBufferTest, Readv100Bytes) {
   EXPECT_EQ(100u, buffer_->BytesConsumed());
   EXPECT_EQ(source, string(dest, read));
   EXPECT_EQ(1u, helper_->frame_arrival_time_map()->size());
-  if (FLAGS_quic_sequencer_buffer_retire_block_in_time) {
-    // The first block should be released as its data has been read out.
-    EXPECT_EQ(nullptr, helper_->GetBlock(0));
-  }
+  // The first block should be released as its data has been read out.
+  EXPECT_EQ(nullptr, helper_->GetBlock(0));
   EXPECT_TRUE(helper_->CheckBufferInvariants());
 }
 
@@ -870,8 +868,6 @@ TEST_F(QuicStreamSequencerBufferTest, FlushBufferedFrames) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, TooManyGaps) {
-  QuicFlagSaver flags;
-  FLAGS_quic_limit_frame_gaps_in_buffer = true;
   // Make sure max capacity is large enough that it is possible to have more
   // than |kMaxNumGapsAllowed| number of gaps.
   max_capacity_bytes_ = 3 * kBlockSizeBytes;

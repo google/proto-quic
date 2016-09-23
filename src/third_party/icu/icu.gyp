@@ -568,7 +568,7 @@
             ],
           },
           'includes': [
-            '../../build/shim_headers.gypi',
+            'shim_headers.gypi',
           ],
           'toolsets': ['target'],
         },
@@ -671,7 +671,7 @@
             ],
           },
           'includes': [
-            '../../build/shim_headers.gypi',
+            'shim_headers.gypi',
           ],
           'toolsets': ['target'],
         },

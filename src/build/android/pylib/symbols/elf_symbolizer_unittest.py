@@ -6,12 +6,10 @@
 import functools
 import logging
 import os
-import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(__file__))
-import elf_symbolizer
-import mock_addr2line
+from pylib.symbols import elf_symbolizer
+from pylib.symbols import mock_addr2line
 
 
 _MOCK_A2L_PATH = os.path.join(os.path.dirname(mock_addr2line.__file__),

@@ -10,12 +10,12 @@
 namespace blink {
 
 class PartBase {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
     // Missing virtual trace.
 };
 
 class PartDerived : public PartBase {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 public:
     virtual void trace(Visitor*);
 };

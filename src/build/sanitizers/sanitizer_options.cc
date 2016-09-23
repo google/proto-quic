@@ -39,9 +39,7 @@ void _sanitizer_options_link_helper() { }
 //     for each malloc/free by 5 frames. These stack traces tend to accumulate
 //     very fast in applications using JIT (v8 in Chrome's case), see
 //     https://code.google.com/p/address-sanitizer/issues/detail?id=177
-//   symbolize=false - disable the in-process symbolization, which isn't 100%
-//     compatible with the existing sandboxes and doesn't make much sense for
-//     stripped official binaries.
+//   symbolize=1 - enable in-process symbolization.
 //   legacy_pthread_cond=1 - run in the libpthread 2.2.5 compatibility mode to
 //     work around libGL.so using the obsolete API, see
 //     http://crbug.com/341805. This may break if pthread_cond_t objects are
@@ -53,9 +51,8 @@ void _sanitizer_options_link_helper() { }
 //     output routines) arguments.
 //   use_sigaltstack=1 - handle signals on an alternate signal stack. Useful
 //     for stack overflow detection.
-//   strip_path_prefix=Release/../../ - prefixes up to and including this
+//   strip_path_prefix=/../../ - prefixes up to and including this
 //     substring will be stripped from source file paths in symbolized reports
-//     (if symbolize=true, which is set when running with LeakSanitizer).
 //   fast_unwind_on_fatal=1 - use the fast (frame-pointer-based) stack unwinder
 //     to print error reports. V8 doesn't generate debug info for the JIT code,
 //     so the slow unwinder may not work properly.
@@ -68,20 +65,20 @@ void _sanitizer_options_link_helper() { }
 // Chromium builds.
 const char kAsanDefaultOptions[] =
     "legacy_pthread_cond=1 malloc_context_size=5 "
-    "symbolize=false check_printf=1 use_sigaltstack=1 detect_leaks=0 "
-    "strip_path_prefix=Release/../../ fast_unwind_on_fatal=1";
+    "symbolize=1 check_printf=1 use_sigaltstack=1 detect_leaks=0 "
+    "strip_path_prefix=/../../ fast_unwind_on_fatal=1";
 #else
 // Default AddressSanitizer options for buildbots and non-official builds.
 const char *kAsanDefaultOptions =
-    "symbolize=false check_printf=1 use_sigaltstack=1 "
-    "detect_leaks=0 strip_path_prefix=Release/../../ fast_unwind_on_fatal=1 "
+    "symbolize=1 check_printf=1 use_sigaltstack=1 "
+    "detect_leaks=0 strip_path_prefix=/../../ fast_unwind_on_fatal=1 "
     "detect_stack_use_after_return=1 ";
 #endif  // GOOGLE_CHROME_BUILD
 
 #elif defined(OS_MACOSX)
 const char *kAsanDefaultOptions =
     "check_printf=1 use_sigaltstack=1 "
-    "strip_path_prefix=Release/../../ fast_unwind_on_fatal=1 "
+    "strip_path_prefix=/../../ fast_unwind_on_fatal=1 "
     "detect_stack_use_after_return=1 detect_odr_violation=0 ";
 static const char kNaClDefaultOptions[] = "handle_segv=0";
 static const char kNaClFlag[] = "--type=nacl-loader";
@@ -123,12 +120,12 @@ SANITIZER_HOOK_ATTRIBUTE const char *__asan_default_suppressions() {
 //   print_suppressions=1 - print the list of matched suppressions.
 //   history_size=7 - make the history buffer proportional to 2^7 (the maximum
 //     value) to keep more stack traces.
-//   strip_path_prefix=Release/../../ - prefixes up to and including this
+//   strip_path_prefix=/../../ - prefixes up to and including this
 //     substring will be stripped from source file paths in symbolized reports.
 const char kTsanDefaultOptions[] =
     "detect_deadlocks=1 second_deadlock_stack=1 report_signal_unsafe=0 "
     "report_thread_leaks=0 print_suppressions=1 history_size=7 "
-    "strict_memcmp=0 strip_path_prefix=Release/../../ ";
+    "strict_memcmp=0 strip_path_prefix=/../../ ";
 
 SANITIZER_HOOK_ATTRIBUTE const char *__tsan_default_options() {
   return kTsanDefaultOptions;
@@ -146,10 +143,10 @@ SANITIZER_HOOK_ATTRIBUTE const char *__tsan_default_suppressions() {
 // Default options for MemorySanitizer:
 //   intercept_memcmp=0 - do not detect uninitialized memory in memcmp() calls.
 //     Pending cleanup, see http://crbug.com/523428
-//   strip_path_prefix=Release/../../ - prefixes up to and including this
+//   strip_path_prefix=/../../ - prefixes up to and including this
 //     substring will be stripped from source file paths in symbolized reports.
 const char kMsanDefaultOptions[] =
-    "intercept_memcmp=0 strip_path_prefix=Release/../../ ";
+    "intercept_memcmp=0 strip_path_prefix=/../../ ";
 
 SANITIZER_HOOK_ATTRIBUTE const char *__msan_default_options() {
   return kMsanDefaultOptions;
@@ -160,10 +157,10 @@ SANITIZER_HOOK_ATTRIBUTE const char *__msan_default_options() {
 #if defined(LEAK_SANITIZER)
 // Default options for LeakSanitizer:
 //   print_suppressions=1 - print the list of matched suppressions.
-//   strip_path_prefix=Release/../../ - prefixes up to and including this
+//   strip_path_prefix=/../../ - prefixes up to and including this
 //     substring will be stripped from source file paths in symbolized reports.
 const char kLsanDefaultOptions[] =
-    "print_suppressions=1 strip_path_prefix=Release/../../ ";
+    "print_suppressions=1 strip_path_prefix=/../../ ";
 
 SANITIZER_HOOK_ATTRIBUTE const char *__lsan_default_options() {
   return kLsanDefaultOptions;
@@ -180,7 +177,8 @@ SANITIZER_HOOK_ATTRIBUTE const char *__lsan_default_suppressions() {
 #if defined(UNDEFINED_SANITIZER)
 // Default options for UndefinedBehaviorSanitizer:
 //   print_stacktrace=1 - print the stacktrace when UBSan reports an error.
-const char kUbsanDefaultOptions[] = "print_stacktrace=1";
+const char kUbsanDefaultOptions[] =
+    "print_stacktrace=1 strip_path_prefix=/../../ ";
 
 SANITIZER_HOOK_ATTRIBUTE const char* __ubsan_default_options() {
   return kUbsanDefaultOptions;

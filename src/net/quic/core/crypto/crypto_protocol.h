@@ -173,6 +173,9 @@ const QuicTag kUAID = TAG('U', 'A', 'I', 'D');   // Client's User Agent ID.
 const QuicTag kXLCT = TAG('X', 'L', 'C', 'T');   // Expected leaf certificate.
 const QuicTag kTBKP = TAG('T', 'B', 'K', 'P');   // Token Binding key params.
 
+// Token Binding tags
+const QuicTag kTB10 = TAG('T', 'B', '1', '0');   // TB draft 10 with P256.
+
 // Rejection tags
 const QuicTag kRREJ = TAG('R', 'R', 'E', 'J');   // Reasons for server sending
 // Stateless Reject tags

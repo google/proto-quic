@@ -315,13 +315,6 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   // |source|.
   void SetChannelIDSource(ChannelIDSource* source);
 
-  // UseTokenBinding enables token binding negotiation in the client.  The
-  // client will still need to check that token binding is negotiated with the
-  // server, and add token binding headers to requests if so.  The negotiated
-  // token binding parameters can be found on the QuicCryptoNegotiatedParameters
-  // object in token_binding_key_param.
-  void UseTokenBinding();
-
   // Initialize the CachedState from |canonical_crypto_config| for the
   // |canonical_server_id| as the initial CachedState for |server_id|. We will
   // copy config data only if |canonical_crypto_config| has valid proof.

@@ -461,9 +461,10 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
                    "b", 1415);
 
     TRACE_COUNTER_WITH_TIMESTAMP1("all", "TRACE_COUNTER_WITH_TIMESTAMP1 call",
-                                  42, 31415);
+                                  TimeTicks::FromInternalValue(42), 31415);
     TRACE_COUNTER_WITH_TIMESTAMP2("all", "TRACE_COUNTER_WITH_TIMESTAMP2 call",
-                                  42, "a", 30000, "b", 1415);
+                                  TimeTicks::FromInternalValue(42),
+                                  "a", 30000, "b", 1415);
 
     TRACE_COUNTER_ID1("all", "TRACE_COUNTER_ID1 call", 0x319009, 31415);
     TRACE_COUNTER_ID2("all", "TRACE_COUNTER_ID2 call", 0x319009,
@@ -471,14 +472,14 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
 
     TRACE_EVENT_COPY_BEGIN_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_COPY_BEGIN_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId, kThreadId, 12345);
+        kAsyncId, kThreadId, TimeTicks::FromInternalValue(12345));
     TRACE_EVENT_COPY_END_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_COPY_END_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId, kThreadId, 23456);
+        kAsyncId, kThreadId, TimeTicks::FromInternalValue(23456));
 
     TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId2, kThreadId, 34567);
+        kAsyncId2, kThreadId, TimeTicks::FromInternalValue(34567));
     TRACE_EVENT_ASYNC_STEP_PAST0("all", "TRACE_EVENT_ASYNC_STEP_PAST0 call",
                                  kAsyncId2, "step_end1");
     TRACE_EVENT_ASYNC_STEP_PAST1("all", "TRACE_EVENT_ASYNC_STEP_PAST1 call",
@@ -486,7 +487,7 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
 
     TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId2, kThreadId, 45678);
+        kAsyncId2, kThreadId, TimeTicks::FromInternalValue(45678));
 
     TRACE_EVENT_OBJECT_CREATED_WITH_ID("all", "tracked object 1", 0x42);
     TRACE_EVENT_OBJECT_SNAPSHOT_WITH_ID(
@@ -523,6 +524,13 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
     TRACE_BIND_IDS("all", "TRACE_BIND_IDS scoped call",
                    TRACE_ID_WITH_SCOPE("scope 1", 0x1000),
                    TRACE_ID_WITH_SCOPE("scope 2", 0x2000));
+
+    TRACE_EVENT_ASYNC_BEGIN0("all", "async default process scope", 0x1000);
+    TRACE_EVENT_ASYNC_BEGIN0("all", "async local id", TRACE_ID_LOCAL(0x2000));
+    TRACE_EVENT_ASYNC_BEGIN0("all", "async global id", TRACE_ID_GLOBAL(0x3000));
+    TRACE_EVENT_ASYNC_BEGIN0("all", "async global id with scope string",
+                             TRACE_ID_WITH_SCOPE("scope string",
+                                                 TRACE_ID_GLOBAL(0x4000)));
   }  // Scope close causes TRACE_EVENT0 etc to send their END events.
 
   if (task_complete_event)
@@ -1002,6 +1010,52 @@ void ValidateAllTraceMacrosCreatedData(const ListValue& trace_parsed) {
     EXPECT_EQ("0x2000", id);
   }
 
+  EXPECT_FIND_("async default process scope");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("S", ph);
+
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id", &id)));
+    EXPECT_EQ("0x1000", id);
+  }
+
+  EXPECT_FIND_("async local id");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("S", ph);
+
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id2.local", &id)));
+    EXPECT_EQ("0x2000", id);
+  }
+
+  EXPECT_FIND_("async global id");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("S", ph);
+
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id2.global", &id)));
+    EXPECT_EQ("0x3000", id);
+  }
+
+  EXPECT_FIND_("async global id with scope string");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("S", ph);
+
+    std::string id;
+    EXPECT_TRUE((item && item->GetString("id2.global", &id)));
+    EXPECT_EQ("0x4000", id);
+    std::string scope;
+    EXPECT_TRUE((item && item->GetString("scope", &scope)));
+    EXPECT_EQ("scope string", scope);
+  }
 }
 
 void TraceManyInstantEvents(int thread_id, int num_events,
@@ -2760,9 +2814,9 @@ TEST_F(TraceEventTestFixture, TraceBufferVectorReportFull) {
       TraceBuffer::CreateTraceBufferVectorOfSize(100));
   do {
     TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0(
-        "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
+        "all", "with_timestamp", 0, 0, TimeTicks::Now());
     TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0(
-        "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
+        "all", "with_timestamp", 0, 0, TimeTicks::Now());
   } while (!trace_log->BufferIsFull());
 
   EndTraceAndFlush();
@@ -3154,9 +3208,9 @@ TEST_F(TraceEventTestFixture, TimeOffset) {
     TRACE_EVENT0("all", "duration2");
   }
   TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0(
-      "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
+      "all", "with_timestamp", 0, 0, TimeTicks::Now());
   TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0(
-      "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
+      "all", "with_timestamp", 0, 0, TimeTicks::Now());
 
   EndTraceAndFlush();
   DropTracedMetadataRecords();

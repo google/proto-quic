@@ -1,0 +1,65 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/rules.gni")
+
+# GYP: //testing/android/native_test.gyp:native_test_support
+source_set("native_test_support") {
+  testonly = true
+  sources = [
+    "native_test_launcher.cc",
+    "native_test_launcher.h",
+    "native_test_util.cc",
+    "native_test_util.h",
+  ]
+  deps = [
+    ":native_test_jni_headers",
+    "//base",
+    "//base/test:test_support",
+    "//base/third_party/dynamic_annotations",
+    "//testing/gtest",
+  ]
+}
+
+# GYP: //testing/android/native_test.gyp:native_test_native_code
+source_set("native_test_native_code") {
+  testonly = true
+  sources = [
+    "native_test_jni_onload.cc",
+  ]
+  libs = [ "log" ]
+  deps = [
+    ":native_test_support",
+    "//base",
+  ]
+}
+
+# GYP: //testing/android/native_test.gyp:native_test_java
+android_library("native_test_java") {
+  testonly = true
+  deps = [
+    "//base:base_java",
+    "//base:base_java_test_support",
+    "//testing/android/appurify_support:appurify_support_java",
+    "//testing/android/reporter:reporter_java",
+  ]
+  srcjar_deps = [ "//base:base_native_libraries_gen" ]
+  java_files = [
+    "java/src/org/chromium/native_test/NativeBrowserTestActivity.java",
+    "java/src/org/chromium/native_test/NativeTest.java",
+    "java/src/org/chromium/native_test/NativeTestInstrumentationTestRunner.java",
+    "java/src/org/chromium/native_test/NativeUnitTest.java",
+    "java/src/org/chromium/native_test/NativeUnitTestActivity.java",
+    "java/src/org/chromium/native_test/NativeUnitTestNativeActivity.java",
+  ]
+  jar_excluded_patterns = [ "*/NativeLibraries.class" ]
+}
+
+# GYP: //testing/android/native_test.gyp:native_test_jni_headers
+generate_jni("native_test_jni_headers") {
+  sources = [
+    "java/src/org/chromium/native_test/NativeTest.java",
+  ]
+  jni_package = "testing"
+}

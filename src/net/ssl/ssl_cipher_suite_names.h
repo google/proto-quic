@@ -73,12 +73,6 @@ NET_EXPORT int ObsoleteSSLStatus(int connection_status);
 // https://http2.github.io/http2-spec/#rfc.section.9.2.2.
 NET_EXPORT bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite);
 
-// Returns the static curve name of |key_exchange_info| if the |cipher_suite|
-// is an elliptic curve, and a name is known. Returns nullptr otherwise.
-// Only defined for OpenSSL, returns nullptr otherwise.
-NET_EXPORT const char* ECCurveName(uint16_t cipher_suite,
-                                   int key_exchange_info);
-
 }  // namespace net
 
 #endif  // NET_SSL_SSL_CIPHER_SUITE_NAMES_H_

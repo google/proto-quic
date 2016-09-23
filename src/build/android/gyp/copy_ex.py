@@ -35,7 +35,7 @@ def CopyFile(f, dest, deps):
 
 def DoCopy(options, deps):
   """Copy files or directories given in options.files and update deps."""
-  files = list(itertools.chain.from_iterable(build_utils.ParseGypList(f)
+  files = list(itertools.chain.from_iterable(build_utils.ParseGnList(f)
                                              for f in options.files))
 
   for f in files:
@@ -48,11 +48,11 @@ def DoCopy(options, deps):
 def DoRenaming(options, deps):
   """Copy and rename files given in options.renaming_sources and update deps."""
   src_files = list(itertools.chain.from_iterable(
-                   build_utils.ParseGypList(f)
+                   build_utils.ParseGnList(f)
                    for f in options.renaming_sources))
 
   dest_files = list(itertools.chain.from_iterable(
-                    build_utils.ParseGypList(f)
+                    build_utils.ParseGnList(f)
                     for f in options.renaming_destinations))
 
   if (len(src_files) != len(dest_files)):
@@ -104,9 +104,8 @@ def main(args):
     DoRenaming(options, deps)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        deps + build_utils.GetPythonDependencies())
+    assert options.stamp
+    build_utils.WriteDepfile(options.depfile, options.stamp, deps)
 
   if options.stamp:
     build_utils.Touch(options.stamp)

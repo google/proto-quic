@@ -1,0 +1,16 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "polymer_001.wpr": [
+            "http://www.polymer-project.org/components/paper-fab/demo.html", 
+            "http://www.polymer-project.org/components/paper-shadow/demo.html", 
+            "http://www.polymer-project.org/components/paper-button/demo.html", 
+            "http://www.polymer-project.org/components/paper-icon-button/demo.html", 
+            "http://www.polymer-project.org/components/core-scroll-header-panel/demo.html", 
+            "http://www.polymer-project.org/components/paper-tabs/demo.html", 
+            "http://www.polymer-project.org/components/paper-calculator/demo.html", 
+            "http://www.polymer-project.org/components/paper-toggle-button/demo.html", 
+            "http://www.polymer-project.org/components/paper-checkbox/demo.html"
+        ]
+    }
+}

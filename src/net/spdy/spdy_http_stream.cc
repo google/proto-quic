@@ -49,7 +49,7 @@ SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
       buffered_read_callback_pending_(false),
       more_read_data_pending_(false),
       direct_(direct),
-      was_npn_negotiated_(false),
+      was_alpn_negotiated_(false),
       negotiated_protocol_(kProtoUnknown),
       weak_factory_(this) {
   DCHECK(spdy_session_.get());
@@ -64,7 +64,7 @@ SpdyHttpStream::~SpdyHttpStream() {
 
 int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
                                      RequestPriority priority,
-                                     const BoundNetLog& stream_net_log,
+                                     const NetLogWithSource& stream_net_log,
                                      const CompletionCallback& callback) {
   DCHECK(!stream_);
   if (!spdy_session_)
@@ -97,14 +97,6 @@ int SpdyHttpStream::InitializeStream(const HttpRequestInfo* request_info,
   }
 
   return rv;
-}
-
-UploadProgress SpdyHttpStream::GetUploadProgress() const {
-  if (!request_info_ || !HasUploadData())
-    return UploadProgress();
-
-  return UploadProgress(request_info_->upload_data_stream->position(),
-                        request_info_->upload_data_stream->size());
 }
 
 int SpdyHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
@@ -330,8 +322,8 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
   response_headers_status_ = RESPONSE_HEADERS_ARE_COMPLETE;
   // Don't store the SSLInfo in the response here, HttpNetworkTransaction
   // will take care of that part.
-  response_info_->was_npn_negotiated = was_npn_negotiated_;
-  response_info_->npn_negotiated_protocol =
+  response_info_->was_alpn_negotiated = was_alpn_negotiated_;
+  response_info_->alpn_negotiated_protocol =
       SSLClientSocket::NextProtoToString(negotiated_protocol_);
   response_info_->request_time = stream_->GetRequestTime();
   response_info_->connection_info =
@@ -450,7 +442,7 @@ void SpdyHttpStream::ReadAndSendRequestBodyData() {
 void SpdyHttpStream::InitializeStreamHelper() {
   stream_->SetDelegate(this);
   stream_->GetSSLInfo(&ssl_info_);
-  was_npn_negotiated_ = stream_->WasNpnNegotiated();
+  was_alpn_negotiated_ = stream_->WasNpnNegotiated();
   negotiated_protocol_ = stream_->GetNegotiatedProtocol();
 }
 
@@ -599,9 +591,10 @@ bool SpdyHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   return spdy_session_->GetPeerAddress(endpoint) == OK;
 }
 
-Error SpdyHttpStream::GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                                  std::vector<uint8_t>* out) {
-  return spdy_session_->GetSignedEKMForTokenBinding(key, out);
+Error SpdyHttpStream::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                               TokenBindingType tb_type,
+                                               std::vector<uint8_t>* out) {
+  return spdy_session_->GetTokenBindingSignature(key, tb_type, out);
 }
 
 void SpdyHttpStream::Drain(HttpNetworkSession* session) {

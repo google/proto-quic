@@ -1,0 +1,5 @@
+include_rules = [
+  "+chrome/common",
+  "+content/public/common",
+  "+mojo/edk/embedder"
+]

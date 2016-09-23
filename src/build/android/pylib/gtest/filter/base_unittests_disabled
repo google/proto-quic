@@ -13,13 +13,10 @@ StringPrintfTest.StringPrintfMisc
 StringPrintfTest.StringAppendfString
 StringPrintfTest.StringAppendfInt
 StringPrintfTest.StringPrintfBounds
-ProcessUtilTest.GetAppOutputRestrictedSIGPIPE
 # TODO(jrg): Fails on bots.  Works locally.  Figure out why.  2/6/12
 FieldTrialTest.*
 # Flaky?
 ScopedJavaRefTest.RefCounts
-# Death tests are not supported with apks.
-*DeathTest*
 FileTest.MemoryCorruption
 MessagePumpLibeventTest.QuitOutsideOfRun
 ScopedFD.ScopedFDCrashesOnCloseFailure

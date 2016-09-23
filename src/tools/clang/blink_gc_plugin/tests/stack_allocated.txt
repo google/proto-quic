@@ -5,14 +5,23 @@ class PartObject {
 ./stack_allocated.h:17:5: note: [blink-gc] Untraced field 'm_obj' declared here:
     Member<HeapObject> m_obj; // Needs tracing.
     ^
-./stack_allocated.h:26:28: warning: [blink-gc] Stack-allocated class 'AnotherStackObject' derives class 'PartObject' which is not stack allocated.
-class AnotherStackObject : public PartObject { // Invalid base.
-                           ^
-./stack_allocated.h:32:1: warning: [blink-gc] Class 'HeapObject' contains invalid fields.
+./stack_allocated.h:26:1: warning: [blink-gc] Class 'HeapObject' contains invalid fields.
 class HeapObject : public GarbageCollected<HeapObject> {
 ^
-./stack_allocated.h:36:5: note: [blink-gc] Stack-allocated field 'm_part' declared here:
+./stack_allocated.h:30:5: note: [blink-gc] Stack-allocated field 'm_part' declared here:
     StackObject m_part; // Cannot embed a stack allocated object.
+    ^
+./stack_allocated.h:34:27: warning: [blink-gc] Stack-allocated class 'DerivedHeapObject' derives class 'HeapObject' which is garbage collected.
+class DerivedHeapObject : public HeapObject, public StackObject {
+                          ^
+./stack_allocated.h:38:28: warning: [blink-gc] Stack-allocated class 'DerivedHeapObject2' derives class 'HeapObject' which is garbage collected.
+class DerivedHeapObject2 : public HeapObject {
+                           ^
+./stack_allocated.h:39:3: warning: [blink-gc] Garbage collected class 'DerivedHeapObject2' is not permitted to override its new operator.
+  STACK_ALLOCATED();
+  ^
+./heap/stubs.h:149:5: note: expanded from macro 'STACK_ALLOCATED'
+    __attribute__((annotate("blink_stack_allocated")))      \
     ^
 stack_allocated.cpp:12:1: warning: [blink-gc] Class 'AnonStackObject' contains invalid fields.
 class AnonStackObject : public StackObject {
@@ -20,4 +29,4 @@ class AnonStackObject : public StackObject {
 stack_allocated.cpp:14:5: note: [blink-gc] Raw pointer field 'm_obj' to a GC managed class declared here:
     HeapObject* m_obj;
     ^
-4 warnings generated.
+6 warnings generated.

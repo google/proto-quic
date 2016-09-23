@@ -54,6 +54,13 @@ group("fontconfig") {
   }
 }
 
+if (!is_chromecast) {
+  pkg_config("freetype2_config") {
+    visibility = [ ":freetype2" ]
+    packages = [ "freetype2" ]
+  }
+}
+
 group("freetype2") {
   if (is_chromecast) {
     # Chromecast platform doesn't provide freetype, so use Chromium's.
@@ -62,6 +69,6 @@ group("freetype2") {
       "//third_party/freetype-android:freetype",
     ]
   } else {
-    public_configs = [ "//build/config/linux:freetype2" ]
+    public_configs = [ ":freetype2_config" ]
   }
 }

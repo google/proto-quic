@@ -9,9 +9,8 @@
 #include "BlinkGCPluginOptions.h"
 #include "RecordInfo.h"
 
-CheckFieldsVisitor::CheckFieldsVisitor(const BlinkGCPluginOptions& options)
-    : options_(options),
-      current_(0),
+CheckFieldsVisitor::CheckFieldsVisitor()
+    : current_(0),
       stack_allocated_host_(false) {
 }
 
@@ -85,62 +84,28 @@ void CheckFieldsVisitor::AtValue(Value* edge) {
   if (!Parent() || !edge->value()->IsGCAllocated())
     return;
 
-  // In transition mode, disallow  OwnPtr<T>, RawPtr<T> to GC allocated T's,
-  // also disallow T* in stack-allocated types.
-  if (options_.enable_oilpan) {
-    if (Parent()->IsOwnPtr() ||
-        Parent()->IsRawPtrClass() ||
-        (stack_allocated_host_ && Parent()->IsRawPtr())) {
-      invalid_fields_.push_back(std::make_pair(
-          current_, InvalidSmartPtr(Parent())));
-      return;
-    }
-    if (options_.warn_raw_ptr && Parent()->IsRawPtr()) {
-      if (static_cast<RawPtr*>(Parent())->HasReferenceType()) {
-        invalid_fields_.push_back(std::make_pair(
-            current_, kReferencePtrToGCManagedWarning));
-      } else {
-        invalid_fields_.push_back(std::make_pair(
-            current_, kRawPtrToGCManagedWarning));
-      }
-    }
-    return;
-  }
-
-  if (Parent()->IsRawPtr() || Parent()->IsOwnPtr()) {
+  // Disallow  OwnPtr<T>, RefPtr<T> and T* to stack-allocated types.
+  if (Parent()->IsOwnPtr() ||
+      Parent()->IsUniquePtr() ||
+      Parent()->IsRefPtr() ||
+      (stack_allocated_host_ && Parent()->IsRawPtr())) {
     invalid_fields_.push_back(std::make_pair(
         current_, InvalidSmartPtr(Parent())));
     return;
   }
-
-  if (Parent()->IsRefPtr() && !edge->value()->IsGCRefCounted()) {
-    invalid_fields_.push_back(std::make_pair(
-        current_, InvalidSmartPtr(Parent())));
-    return;
+  if (Parent()->IsRawPtr()) {
+    RawPtr* rawPtr = static_cast<RawPtr*>(Parent());
+    Error error = rawPtr->HasReferenceType() ?
+        kReferencePtrToGCManaged : kRawPtrToGCManaged;
+    invalid_fields_.push_back(std::make_pair(current_, error));
   }
 }
 
 void CheckFieldsVisitor::AtCollection(Collection* edge) {
   if (edge->on_heap() && Parent() && Parent()->IsOwnPtr())
     invalid_fields_.push_back(std::make_pair(current_, kOwnPtrToGCManaged));
-}
-
-bool CheckFieldsVisitor::IsWarning(Error error) {
-  if (error == kRawPtrToGCManagedWarning)
-    return true;
-  if (error == kReferencePtrToGCManagedWarning)
-    return true;
-  return false;
-}
-
-bool CheckFieldsVisitor::IsRawPtrError(Error error) {
-  return (error == kRawPtrToGCManaged ||
-          error == kRawPtrToGCManagedWarning);
-}
-
-bool CheckFieldsVisitor::IsReferencePtrError(Error error) {
-  return (error == kReferencePtrToGCManaged ||
-          error == kReferencePtrToGCManagedWarning);
+  if (edge->on_heap() && Parent() && Parent()->IsUniquePtr())
+    invalid_fields_.push_back(std::make_pair(current_, kUniquePtrToGCManaged));
 }
 
 CheckFieldsVisitor::Error CheckFieldsVisitor::InvalidSmartPtr(Edge* ptr) {
@@ -154,5 +119,7 @@ CheckFieldsVisitor::Error CheckFieldsVisitor::InvalidSmartPtr(Edge* ptr) {
     return kRefPtrToGCManaged;
   if (ptr->IsOwnPtr())
     return kOwnPtrToGCManaged;
+  if (ptr->IsUniquePtr())
+    return kUniquePtrToGCManaged;
   assert(false && "Unknown smart pointer kind");
 }

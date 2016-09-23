@@ -14,7 +14,7 @@ run_tool.py <tool> <path/to/compiledb> --all
 If you only want to run the tool across just chrome/browser and content/browser:
 run_tool.py <tool> <path/to/compiledb> chrome/browser content/browser
 
-Please see https://code.google.com/p/chromium/wiki/ClangToolRefactoring for more
+Please see https://chromium.googlesource.com/chromium/src/+/master/docs/clang_tool_refactoring.md for more
 information, which documents the entire automated refactoring flow in Chromium.
 
 Why use this tool:
@@ -40,31 +40,20 @@ across Chromium, regardless of whether some instances failed or not.
 import argparse
 import collections
 import functools
-import json
 import multiprocessing
+import os
 import os.path
 import subprocess
 import sys
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+tool_dir = os.path.abspath(os.path.join(script_dir, '../pylib'))
+sys.path.insert(0, tool_dir)
+
+from clang import compile_db
+
 Edit = collections.namedtuple('Edit',
                               ('edit_type', 'offset', 'length', 'replacement'))
-
-
-def _GenerateCompileDatabase(path):
-  """Generates a compile database.
-
-  Note: requires ninja.
-
-  Args:
-    path: The build directory to generate a compile database for.
-  """
-  # TODO(dcheng): Incorporate Windows-specific compile DB munging from
-  # https://codereview.chromium.org/718873004
-  print 'Generating compile database in %s...' % path
-  args = ['ninja', '-C', path, '-t', 'compdb', 'cc', 'cxx', 'objc', 'objcxx']
-  output = subprocess.check_output(args)
-  with file(os.path.join(path, 'compile_commands.json'), 'w') as f:
-    f.write(output)
 
 
 def _GetFilesFromGit(paths=None):
@@ -92,12 +81,8 @@ def _GetFilesFromCompileDB(build_directory):
   Args:
     build_directory: Directory that contains the compile database.
   """
-  compiledb_path = os.path.join(build_directory, 'compile_commands.json')
-  with open(compiledb_path, 'rb') as compiledb_file:
-    json_commands = json.load(compiledb_file)
-
   return [os.path.join(entry['directory'], entry['file'])
-          for entry in json_commands]
+          for entry in compile_db.Read(build_directory)]
 
 
 def _ExtractEditsFromStdout(build_directory, stdout):
@@ -316,8 +301,15 @@ def main():
       help='optional paths to filter what files the tool is run on')
   args = parser.parse_args()
 
+  os.environ['PATH'] = '%s%s%s' % (
+      os.path.abspath(os.path.join(
+          os.path.dirname(__file__),
+          '../../../third_party/llvm-build/Release+Asserts/bin')),
+      os.pathsep,
+      os.environ['PATH'])
+
   if args.generate_compdb:
-    _GenerateCompileDatabase(args.compile_database)
+    compile_db.GenerateWithNinja(args.compile_database)
 
   if args.all:
     filenames = set(_GetFilesFromCompileDB(args.compile_database))

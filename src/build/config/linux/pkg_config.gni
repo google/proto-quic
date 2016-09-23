@@ -65,8 +65,8 @@ if (sysroot != "") {
   pkg_config_args = []
 }
 
-# Only use the custom libdir when building with the default toolchain.
-if (current_toolchain == default_toolchain) {
+# Only use the custom libdir when building with the target sysroot.
+if (target_sysroot != "" && sysroot == target_sysroot) {
   pkg_config_args += [
     "--system_libdir",
     system_libdir,

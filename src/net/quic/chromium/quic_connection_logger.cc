@@ -288,11 +288,12 @@ QuicConnectionLogger::QuicConnectionLogger(
     QuicSpdySession* session,
     const char* const connection_description,
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : net_log_(net_log),
       session_(session),
       last_received_packet_number_(0),
       last_received_packet_size_(0),
+      no_packet_received_after_ping_(false),
       previous_received_packet_size_(0),
       largest_received_packet_number_(0),
       largest_received_missing_packet_number_(0),
@@ -433,6 +434,10 @@ void QuicConnectionLogger::OnPacketSent(
   }
 }
 
+void QuicConnectionLogger::OnPingSent() {
+  no_packet_received_after_ping_ = true;
+}
+
 void QuicConnectionLogger::OnPacketReceived(const IPEndPoint& self_address,
                                             const IPEndPoint& peer_address,
                                             const QuicEncryptedPacket& packet) {
@@ -504,6 +509,12 @@ void QuicConnectionLogger::OnPacketHeader(const QuicPacketHeader& header) {
         "Net.QuicSession.OutOfOrderGapReceived",
         static_cast<base::HistogramBase::Sample>(last_received_packet_number_ -
                                                  header.packet_number));
+  } else if (no_packet_received_after_ping_) {
+    UMA_HISTOGRAM_COUNTS(
+        "Net.QuicSession.PacketGapReceivedNearPing",
+        static_cast<base::HistogramBase::Sample>(header.packet_number -
+                                                 last_received_packet_number_));
+    no_packet_received_after_ping_ = false;
   }
   last_received_packet_number_ = header.packet_number;
 }

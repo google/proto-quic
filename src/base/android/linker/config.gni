@@ -1,0 +1,12 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/config.gni")
+import("//build/config/compiler/compiler.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+# Chromium linker crashes on component builds on Android 4.4. See b/11379966
+# Chromium linker causes instrumentation to return incorrect results.
+chromium_linker_supported =
+    !is_component_build && !enable_profiling && !use_order_profiling && !is_asan

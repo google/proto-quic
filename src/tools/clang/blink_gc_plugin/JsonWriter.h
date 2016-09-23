@@ -18,7 +18,7 @@ class JsonWriter {
     *os_ << "[";
     state_.push(false);
   }
-  void OpenList(const std::string key) {
+  void OpenList(const std::string& key) {
     Write(key);
     *os_ << ":";
     OpenList();
@@ -40,15 +40,15 @@ class JsonWriter {
     Separator();
     *os_ << val;
   }
-  void Write(const std::string val) {
+  void Write(const std::string& val) {
     Separator();
     *os_ << "\"" << val << "\"";
   }
-  void Write(const std::string key, const size_t val) {
+  void Write(const std::string& key, const size_t val) {
     Separator();
     *os_ << "\"" << key << "\":" << val;
   }
-  void Write(const std::string key, const std::string val) {
+  void Write(const std::string& key, const std::string& val) {
     Separator();
     *os_ << "\"" << key << "\":\"" << val << "\"";
   }

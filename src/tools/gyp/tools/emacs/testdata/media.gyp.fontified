@@ -18,7 +18,7 @@
       'dependencies': [
         'yuv_convert',
         '../base/base.gyp:base',
-#        '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
+        '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
         '../build/temp_gyp/googleurl.gyp:googleurl',
         '../crypto/crypto.gyp:crypto',
         '../third_party/openmax/openmax.gyp:il',

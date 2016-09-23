@@ -6,7 +6,7 @@ config("client_config") {
   include_dirs = [ ".." ]
 }
 
-source_set("client") {
+static_library("client") {
   sources = [
     "crash_report_database.cc",
     "crash_report_database.h",
@@ -48,5 +48,6 @@ source_set("client") {
 
   if (is_win) {
     libs = [ "rpcrt4.lib" ]
+    cflags = [ "/wd4201" ]  # nonstandard extension used : nameless struct/union.
   }
 }

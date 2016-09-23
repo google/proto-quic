@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   MCParser
   Option
   X86AsmParser
+  X86CodeGen
   )
 
 add_llvm_executable(rewrite_to_chrome_style

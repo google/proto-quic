@@ -64,7 +64,7 @@ void ChunkedUploadDataStream::AppendData(
   OnReadCompleted(result);
 }
 
-int ChunkedUploadDataStream::InitInternal(const BoundNetLog& net_log) {
+int ChunkedUploadDataStream::InitInternal(const NetLogWithSource& net_log) {
   // ResetInternal should already have been called.
   DCHECK(!read_buffer_.get());
   DCHECK_EQ(0u, read_index_);

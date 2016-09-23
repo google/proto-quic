@@ -1,0 +1,32 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "top_25_repaint_000.wpr": [
+            "http://techcrunch.com", 
+            "https://www.google.com/#hl=en&q=barack+obama", 
+            "http://answers.yahoo.com", 
+            "https://www.google.com/calendar/", 
+            "https://www.google.com/search?q=cats&tbm=isch", 
+            "Docs  (1 open document tab)", 
+            "https://plus.google.com/110031535020051778989/posts", 
+            "http://www.youtube.com", 
+            "Blogger", 
+            "Wordpress", 
+            "http://booking.com", 
+            "Weather.com", 
+            "Facebook", 
+            "LinkedIn", 
+            "Wikipedia (1 tab)", 
+            "Twitter", 
+            "Pinterest", 
+            "ESPN", 
+            "https://mail.google.com/mail/", 
+            "http://games.yahoo.com", 
+            "http://news.yahoo.com", 
+            "http://www.cnn.com", 
+            "http://www.amazon.com", 
+            "http://www.ebay.com", 
+            "http://sports.yahoo.com/"
+        ]
+    }
+}

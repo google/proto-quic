@@ -312,7 +312,7 @@ WebSocketBasicHandshakeStream::~WebSocketBasicHandshakeStream() {}
 int WebSocketBasicHandshakeStream::InitializeStream(
     const HttpRequestInfo* request_info,
     RequestPriority priority,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     const CompletionCallback& callback) {
   url_ = request_info->url;
   state_.Initialize(request_info, priority, net_log, callback);
@@ -447,8 +447,9 @@ void WebSocketBasicHandshakeStream::PopulateNetErrorDetails(
   return;
 }
 
-Error WebSocketBasicHandshakeStream::GetSignedEKMForTokenBinding(
+Error WebSocketBasicHandshakeStream::GetTokenBindingSignature(
     crypto::ECPrivateKey* key,
+    TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
   NOTREACHED();
   return ERR_NOT_IMPLEMENTED;
@@ -463,10 +464,6 @@ void WebSocketBasicHandshakeStream::Drain(HttpNetworkSession* session) {
 void WebSocketBasicHandshakeStream::SetPriority(RequestPriority priority) {
   // TODO(ricea): See TODO comment in HttpBasicStream::SetPriority(). If it is
   // gone, then copy whatever has happened there over here.
-}
-
-UploadProgress WebSocketBasicHandshakeStream::GetUploadProgress() const {
-  return UploadProgress();
 }
 
 HttpStream* WebSocketBasicHandshakeStream::RenewStreamForAuth() {

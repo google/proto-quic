@@ -1,7 +1,9 @@
 # Copyright 2016 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 import("//tools/generate_library_loader/generate_library_loader.gni")
+
 libudev_functions = [
   "udev_device_get_action",
   "udev_device_get_devnode",
@@ -34,22 +36,27 @@ libudev_functions = [
   "udev_set_log_priority",
   "udev_unref",
 ]
+
 # This generates a target named "udev0_loader".
 generate_library_loader("udev0_loader") {
   name = "LibUdev0Loader"
   output_h = "libudev0.h"
   output_cc = "libudev0_loader.cc"
   header = "\"third_party/libudev/libudev0.h\""
+
   functions = libudev_functions
 }
+
 # This generates a target named "udev1_loader".
 generate_library_loader("udev1_loader") {
   name = "LibUdev1Loader"
   output_h = "libudev1.h"
   output_cc = "libudev1_loader.cc"
   header = "\"third_party/libudev/libudev1.h\""
+
   functions = libudev_functions
 }
+
 group("libudev") {
   public_deps = [
     ":udev0_loader",

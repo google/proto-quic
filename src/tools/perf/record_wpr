@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# Copyright 2012 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import os
+import sys
+
+
+from chrome_telemetry_build import chromium_config
+sys.path.append(chromium_config.GetTelemetryDir())
+
+from telemetry import record_wpr
+
+# This is required to resolve importing davclient in tools/perf/third_party/
+# when record_wpr try to dynamically discover benchmark classes.
+import third_party  # pylint: disable=unused-import
+
+
+_WARNING_PATTERN = '\033[93m%s\033[0m'  # Use yellow color for warning.
+
+
+def _WarnPythonVersion():
+  print (_WARNING_PATTERN %
+         ("Your system python's version is less than 2.7.9. "
+          'For best recording results, please run record_wpr with Python '
+          'version 2.7.9 or after (See '
+          'https://github.com/chromium/web-page-replay/issues/73 '
+          'for more information).\n'
+          'For instructions on how to upgrade Python on Ubuntu 14.04, see:\n'
+          'http://mbless.de/blog/2016/01/09/upgrade-to-python-2711-on-ubuntu-1404-lts.html'))
+
+
+if __name__ == '__main__':
+  if sys.version_info < (2, 7, 9):
+    _WarnPythonVersion()
+  sys.exit(record_wpr.Main(environment=chromium_config.ChromiumConfig()))

@@ -1,0 +1,45 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "top_25_002.wpr": [
+            "https://www.google.com/search?q=cats&tbm=isch"
+        ], 
+        "top_25_000.wpr": [
+            "https://www.google.com/#hl=en&q=barack+obama", 
+            "https://www.google.com/calendar/", 
+            "https://drive.google.com", 
+            "https://docs.google.com/document/d/1X-IKNjtEnx-WW5JIKRLsyhz5sbsat3mfTpAPUSX3_s4/view", 
+            "http://www.youtube.com", 
+            "http://googlewebmastercentral.blogspot.com/", 
+            "http://en.blog.wordpress.com/2012/09/04/freshly-pressed-editors-picks-for-august-2012/", 
+            "http://www.facebook.com/barackobama", 
+            "http://www.linkedin.com/in/linustorvalds", 
+            "http://en.wikipedia.org/wiki/Wikipedia", 
+            "https://twitter.com/katyperry", 
+            "http://pinterest.com", 
+            "http://espn.go.com", 
+            "http://news.yahoo.com", 
+            "http://www.cnn.com", 
+            "http://www.weather.com/weather/right-now/Mountain+View+CA+94043", 
+            "http://www.amazon.com", 
+            "http://www.ebay.com", 
+            "http://games.yahoo.com", 
+            "http://booking.com", 
+            "http://answers.yahoo.com", 
+            "http://sports.yahoo.com/", 
+            "http://techcrunch.com"
+        ], 
+        "top_25_003.wpr": [
+            "Facebook"
+        ], 
+        "top_25_001.wpr": [
+            "https://plus.google.com/110031535020051778989/posts"
+        ], 
+        "top_25_004.wpr": [
+            "Wikipedia (1 tab)"
+        ], 
+        "top_25_005.wpr": [
+            "https://mail.google.com/mail/"
+        ]
+    }
+}

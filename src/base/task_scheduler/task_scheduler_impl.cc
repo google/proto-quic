@@ -41,7 +41,7 @@ void TaskSchedulerImpl::PostTaskWithTraits(
     const Closure& task) {
   // Post |task| as part of a one-off single-task Sequence.
   GetWorkerPoolForTraits(traits)->PostTaskWithSequence(
-      WrapUnique(new Task(from_here, task, traits, TimeDelta())),
+      MakeUnique<Task>(from_here, task, traits, TimeDelta()),
       make_scoped_refptr(new Sequence), nullptr);
 }
 

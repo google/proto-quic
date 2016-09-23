@@ -1,0 +1,70 @@
+This directory contains test data for verifying certificate chains.
+
+It contains the following types of files:
+
+===============================
+generate-*.py
+===============================
+
+Generates the file for an individual test case. If the python file was
+named generate-XXX.py, then the corresponding output will be named
+XXX.pem.
+
+===============================
+generate-all.sh
+===============================
+
+Runs all of the generate-*.py scripts and does some cleanup.
+
+===============================
+*.pem
+===============================
+
+Each .pem file describes the inputs for certificate chain verification, and the
+expected result. These are the PEM blocks that each file contains and their
+interpretation:
+
+CERTIFICATE:
+
+These PEM blocks describe the ordered chain of certificates starting from the
+target certificate and progressing towards the trust anchor (but not including
+the trust anchor).
+
+ - There must be one or more such PEM blocks
+ - Its contents are a DER-encoded X.509 certificate
+ - The first block is the target certificate
+ - The (i+1)th CERTIFICATE is (allegedly) the one which issued the ith
+   CERTIFICATE.
+
+TRUST_ANCHOR_{XXX}:
+
+This PEM block describes the trust anchor to use when verifying the chain.
+There are two possible names for this PEM block, which affect how it is
+interpreted: TRUST_ANCHOR_CONSTRAINED or TRUST_ANCHOR_UNCONSTRAINED.
+
+ - There must be exactly one TRUST_ANCHOR_{XXX} block.
+ - Its contents are a DER-encoded X.509 certificate
+ - The subject and SPKI from the certificate define the trust anchor
+ - If the block was named TRUST_ANCHOR_CONSTRAINED, then any constraints on the
+   certificate are also considered normative when verifying paths. Otherwise
+   any standard extensions provided by the root certificate are not used during
+   path validation.
+
+TIMESTAMP:
+
+This PEM block describes the time to use when verifying the chain.
+
+ - There must be exactly one such PEM block
+ - Its contents are a DER-encoded UTCTime.
+
+VERIFY_RESULT:
+
+This PEM block describes the expected result from verifying the path.
+
+ - There must be exactly one such PEM block
+ - Its contents are a string with value of either "SUCCESS" or "FAIL"
+
+ERRORS:
+
+This PEM block is a pretty-printed textual dump of all the errors, as given by
+CertErrors::ToDebugString().

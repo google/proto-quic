@@ -44,12 +44,11 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   // HttpStream implementation.
   int InitializeStream(const HttpRequestInfo* request_info,
                        RequestPriority priority,
-                       const BoundNetLog& net_log,
+                       const NetLogWithSource& net_log,
                        const CompletionCallback& callback) override;
   int SendRequest(const HttpRequestHeaders& request_headers,
                   HttpResponseInfo* response,
                   const CompletionCallback& callback) override;
-  UploadProgress GetUploadProgress() const override;
   int ReadResponseHeaders(const CompletionCallback& callback) override;
   int ReadResponseBody(IOBuffer* buf,
                        int buf_len,
@@ -66,8 +65,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   void GetSSLInfo(SSLInfo* ssl_info) override;
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override;
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override;
-  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                    std::vector<uint8_t>* out) override;
+  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                 TokenBindingType tb_type,
+                                 std::vector<uint8_t>* out) override;
   void Drain(HttpNetworkSession* session) override;
   void PopulateNetErrorDetails(NetErrorDetails* details) override;
   void SetPriority(RequestPriority priority) override;
@@ -95,7 +95,10 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   enum State {
     STATE_NONE,
+    STATE_HANDLE_PROMISE,
+    STATE_HANDLE_PROMISE_COMPLETE,
     STATE_REQUEST_STREAM,
+    STATE_REQUEST_STREAM_COMPLETE,
     STATE_SET_REQUEST_PRIORITY,
     STATE_WAIT_FOR_CONFIRMATION,
     STATE_WAIT_FOR_CONFIRMATION_COMPLETE,
@@ -108,12 +111,14 @@ class NET_EXPORT_PRIVATE QuicHttpStream
     STATE_OPEN,
   };
 
-  void OnStreamReady(int rv);
   void OnIOComplete(int rv);
   void DoCallback(int rv);
 
   int DoLoop(int rv);
-  int DoStreamRequest();
+  int DoHandlePromise();
+  int DoHandlePromiseComplete(int rv);
+  int DoRequestStream();
+  int DoRequestStreamComplete(int rv);
   int DoSetRequestPriority();
   int DoWaitForConfirmation();
   int DoWaitForConfirmationComplete(int rv);
@@ -128,10 +133,8 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   int ReadAvailableData(IOBuffer* buf, int buf_len);
   void EnterStateSendHeaders();
-  int HandlePromise();
 
   void ResetStream();
-  bool CancelPromiseIfHasBody();
 
   State next_state_;
 
@@ -195,7 +198,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   // Wraps raw_request_body_buf_ to read the remaining data progressively.
   scoped_refptr<DrainableIOBuffer> request_body_buf_;
 
-  BoundNetLog stream_net_log_;
+  NetLogWithSource stream_net_log_;
 
   QuicErrorCode quic_connection_error_;
 

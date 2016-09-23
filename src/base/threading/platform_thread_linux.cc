@@ -8,8 +8,10 @@
 #include <sched.h>
 #include <stddef.h>
 
+#include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/threading/platform_thread_internal_posix.h"
 #include "base/threading/thread_id_name_manager.h"
 #include "base/tracked_objects.h"
@@ -18,11 +20,47 @@
 #if !defined(OS_NACL)
 #include <pthread.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif
 
 namespace base {
+namespace {
+#if !defined(OS_NACL)
+const FilePath::CharType kCpusetDirectory[] =
+    FILE_PATH_LITERAL("/sys/fs/cgroup/cpuset/chrome");
+
+FilePath ThreadPriorityToCpusetDirectory(ThreadPriority priority) {
+  FilePath cpuset_filepath(kCpusetDirectory);
+  switch (priority) {
+    case ThreadPriority::NORMAL:
+      return cpuset_filepath;
+    case ThreadPriority::BACKGROUND:
+      return cpuset_filepath.Append(FILE_PATH_LITERAL("non-urgent"));
+    case ThreadPriority::DISPLAY:
+    case ThreadPriority::REALTIME_AUDIO:
+      return cpuset_filepath.Append(FILE_PATH_LITERAL("urgent"));
+  }
+  NOTREACHED();
+  return FilePath();
+}
+
+void SetThreadCpuset(PlatformThreadId thread_id,
+                     const FilePath& cpuset_directory) {
+  // Silently ignore request if cpuset directory doesn't exist.
+  if (!DirectoryExists(cpuset_directory))
+    return;
+  FilePath tasks_filepath = cpuset_directory.Append(FILE_PATH_LITERAL("tasks"));
+  std::string tid = IntToString(thread_id);
+  int bytes_written = WriteFile(tasks_filepath, tid.c_str(), tid.size());
+  if (bytes_written != static_cast<int>(tid.size())) {
+    DVLOG(1) << "Failed to add " << tid << " to " << tasks_filepath.value();
+  }
+}
+#endif
+}  // namespace
 
 namespace internal {
 
@@ -41,6 +79,8 @@ const ThreadPriorityToNiceValuePair kThreadPriorityToNiceValueMap[4] = {
 
 bool SetCurrentThreadPriorityForPlatform(ThreadPriority priority) {
 #if !defined(OS_NACL)
+  FilePath cpuset_directory = ThreadPriorityToCpusetDirectory(priority);
+  SetThreadCpuset(PlatformThread::CurrentId(), cpuset_directory);
   return priority == ThreadPriority::REALTIME_AUDIO &&
          pthread_setschedparam(pthread_self(), SCHED_RR, &kRealTimePrio) == 0;
 #else
@@ -89,6 +129,26 @@ void PlatformThread::SetName(const std::string& name) {
     DPLOG(ERROR) << "prctl(PR_SET_NAME)";
 #endif  //  !defined(OS_NACL)
 }
+
+#if !defined(OS_NACL)
+// static
+void PlatformThread::SetThreadPriority(PlatformThreadId thread_id,
+                                       ThreadPriority priority) {
+  // Changing current main threads' priority is not permitted in favor of
+  // security, this interface is restricted to change only non-main thread
+  // priority.
+  CHECK_NE(thread_id, getpid());
+
+  FilePath cpuset_directory = ThreadPriorityToCpusetDirectory(priority);
+  SetThreadCpuset(thread_id, cpuset_directory);
+
+  const int nice_setting = internal::ThreadPriorityToNiceValue(priority);
+  if (setpriority(PRIO_PROCESS, thread_id, nice_setting)) {
+    DVPLOG(1) << "Failed to set nice value of thread (" << thread_id << ") to "
+              << nice_setting;
+  }
+}
+#endif  //  !defined(OS_NACL)
 
 void InitThreading() {}
 

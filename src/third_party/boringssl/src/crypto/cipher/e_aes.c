@@ -353,14 +353,14 @@ static int aes_cbc_cipher(EVP_CIPHER_CTX *ctx, uint8_t *out, const uint8_t *in,
 static int aes_ecb_cipher(EVP_CIPHER_CTX *ctx, uint8_t *out, const uint8_t *in,
                           size_t len) {
   size_t bl = ctx->cipher->block_size;
-  size_t i;
   EVP_AES_KEY *dat = (EVP_AES_KEY *)ctx->cipher_data;
 
   if (len < bl) {
     return 1;
   }
 
-  for (i = 0, len -= bl; i <= len; i += bl) {
+  len -= bl;
+  for (size_t i = 0; i <= len; i += bl) {
     (*dat->block)(in + i, out + i, &dat->ks);
   }
 
@@ -1150,7 +1150,6 @@ static const EVP_AEAD aead_aes_128_gcm = {
     aead_aes_gcm_cleanup,
     aead_aes_gcm_seal,
     aead_aes_gcm_open,
-    NULL,                     /* get_rc4_state */
     NULL,                     /* get_iv */
 };
 
@@ -1164,7 +1163,6 @@ static const EVP_AEAD aead_aes_256_gcm = {
     aead_aes_gcm_cleanup,
     aead_aes_gcm_seal,
     aead_aes_gcm_open,
-    NULL,                     /* get_rc4_state */
     NULL,                     /* get_iv */
 };
 
@@ -1412,7 +1410,6 @@ static const EVP_AEAD aead_aes_128_key_wrap = {
     aead_aes_key_wrap_cleanup,
     aead_aes_key_wrap_seal,
     aead_aes_key_wrap_open,
-    NULL, /* get_rc4_state */
     NULL, /* get_iv */
 };
 
@@ -1426,7 +1423,6 @@ static const EVP_AEAD aead_aes_256_key_wrap = {
     aead_aes_key_wrap_cleanup,
     aead_aes_key_wrap_seal,
     aead_aes_key_wrap_open,
-    NULL, /* get_rc4_state */
     NULL, /* get_iv */
 };
 
@@ -1677,7 +1673,6 @@ static const EVP_AEAD aead_aes_128_ctr_hmac_sha256 = {
     aead_aes_ctr_hmac_sha256_cleanup,
     aead_aes_ctr_hmac_sha256_seal,
     aead_aes_ctr_hmac_sha256_open,
-    NULL /* get_rc4_state */,
     NULL /* get_iv */,
 };
 
@@ -1692,7 +1687,6 @@ static const EVP_AEAD aead_aes_256_ctr_hmac_sha256 = {
     aead_aes_ctr_hmac_sha256_cleanup,
     aead_aes_ctr_hmac_sha256_seal,
     aead_aes_ctr_hmac_sha256_open,
-    NULL /* get_rc4_state */,
     NULL /* get_iv */,
 };
 

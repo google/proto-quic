@@ -24,17 +24,20 @@ class GNException(Exception):
 
 
 def ToGNString(value, allow_dicts = True):
-  """Prints the given value to stdout.
+  """Returns a stringified GN equivalent of the Python value.
 
   allow_dicts indicates if this function will allow converting dictionaries
   to GN scopes. This is only possible at the top level, you can't nest a
   GN scope in a list, so this should be set to False for recursive calls."""
-  if isinstance(value, str):
+  if isinstance(value, basestring):
     if value.find('\n') >= 0:
       raise GNException("Trying to print a string with a newline in it.")
     return '"' + \
         value.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + \
         '"'
+
+  if isinstance(value, unicode):
+    return ToGNString(value.encode('utf-8'))
 
   if isinstance(value, bool):
     if value:
@@ -48,8 +51,8 @@ def ToGNString(value, allow_dicts = True):
     if not allow_dicts:
       raise GNException("Attempting to recursively print a dictionary.")
     result = ""
-    for key in value:
-      if not isinstance(key, str):
+    for key in sorted(value):
+      if not isinstance(key, basestring):
         raise GNException("Dictionary key is not a string.")
       result += "%s = %s\n" % (key, ToGNString(value[key], False))
     return result
@@ -98,6 +101,27 @@ def FromGNString(input):
   re-parsed to get the same result."""
   parser = GNValueParser(input)
   return parser.Parse()
+
+
+def FromGNArgs(input):
+  """Converts a string with a bunch of gn arg assignments into a Python dict.
+
+  Given a whitespace-separated list of
+
+    <ident> = (integer | string | boolean | <list of the former>)
+
+  gn assignments, this returns a Python dict, i.e.:
+
+    FromGNArgs("foo=true\nbar=1\n") -> { 'foo': True, 'bar': 1 }.
+
+  Only simple types and lists supported; variables, structs, calls
+  and other, more complicated things are not.
+
+  This routine is meant to handle only the simple sorts of values that
+  arise in parsing --args.
+  """
+  parser = GNValueParser(input)
+  return parser.ParseArgs()
 
 
 def UnescapeGNString(value):
@@ -171,6 +195,27 @@ class GNValueParser(object):
                         self.input[self.cur:])
     return result
 
+  def ParseArgs(self):
+    """Converts a whitespace-separated list of ident=literals to a dict.
+
+    See additional usage notes on FromGNArgs, above.
+    """
+    d = {}
+
+    self.ConsumeWhitespace()
+    while not self.IsDone():
+      ident = self._ParseIdent()
+      self.ConsumeWhitespace()
+      if self.input[self.cur] != '=':
+        raise GNException("Unexpected token: " + self.input[self.cur:])
+      self.cur += 1
+      self.ConsumeWhitespace()
+      val = self._ParseAllowTrailing()
+      self.ConsumeWhitespace()
+      d[ident] = val
+
+    return d
+
   def _ParseAllowTrailing(self):
     """Internal version of Parse that doesn't check for trailing stuff."""
     self.ConsumeWhitespace()
@@ -190,6 +235,24 @@ class GNValueParser(object):
       return False
     else:
       raise GNException("Unexpected token: " + self.input[self.cur:])
+
+  def _ParseIdent(self):
+    id = ''
+
+    next_char = self.input[self.cur]
+    if not next_char.isalpha() and not next_char=='_':
+      raise GNException("Expected an identifier: " + self.input[self.cur:])
+
+    id += next_char
+    self.cur += 1
+
+    next_char = self.input[self.cur]
+    while next_char.isalpha() or next_char.isdigit() or next_char=='_':
+      id += next_char
+      self.cur += 1
+      next_char = self.input[self.cur]
+
+    return id
 
   def ParseNumber(self):
     self.ConsumeWhitespace()
@@ -280,7 +343,7 @@ class GNValueParser(object):
     returns true. Otherwise, returns false and the current position is
     unchanged."""
     end = self.cur + len(constant)
-    if end >= len(self.input):
+    if end > len(self.input):
       return False  # Not enough room.
     if self.input[self.cur:end] == constant:
       self.cur = end

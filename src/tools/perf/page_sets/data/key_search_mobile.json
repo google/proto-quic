@@ -1,0 +1,22 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "key_search_mobile_000.wpr": [
+            "http://www.google.com/", 
+            "https://www.google.com/search?q=science", 
+            "http://www.google.com/search?q=orange", 
+            "https://www.google.com/search?q=1600+Amphitheatre+Pkwy%2C+Mountain+View%2C+CA", 
+            "http://www.google.com/search?q=tom+hanks", 
+            "https://www.google.com/search?q=weather+94110", 
+            "http://www.google.com/search?q=goog", 
+            "https://www.google.com/search?q=population+of+california", 
+            "http://www.google.com/search?q=sfo+jfk+flights", 
+            "https://www.google.com/search?q=movies+94110", 
+            "http://www.google.com/search?q=tip+on+100+bill", 
+            "https://www.google.com/search?q=time+in+san+francisco", 
+            "http://www.google.com/search?q=define+define", 
+            "https://www.google.com/search?q=burritos+94110", 
+            "http://www.google.com/search?q=x^3"
+        ]
+    }
+}

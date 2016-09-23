@@ -34,9 +34,7 @@ def main():
   build_utils.DoZip(inputs, output, base_dir)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, output)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,8 @@
 
 #include "net/spdy/hpack/hpack_output_stream.h"
 
+#include <utility>
+
 #include "base/logging.h"
 
 namespace net {
@@ -70,6 +72,24 @@ void HpackOutputStream::TakeString(string* output) {
   buffer_.swap(*output);
   buffer_.clear();
   bit_offset_ = 0;
+}
+
+void HpackOutputStream::BoundedTakeString(size_t max_size, string* output) {
+  if (buffer_.size() > max_size) {
+    // Save off overflow bytes to temporary string (causes a copy).
+    string overflow(buffer_.data() + max_size, buffer_.size() - max_size);
+
+    // Resize buffer down to the given limit.
+    buffer_.resize(max_size);
+
+    // Give buffer to output string.
+    *output = std::move(buffer_);
+
+    // Reset to contain overflow.
+    buffer_ = std::move(overflow);
+  } else {
+    TakeString(output);
+  }
 }
 
 }  // namespace net

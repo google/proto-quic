@@ -1,0 +1,18 @@
+This directory contains modules related to tools for bisecting regressions.
+
+There are several different tools for bisecting regressions; the main use
+of these tools is to find revisions where a performance regression occurred.
+These tools are generally run by trybots but can also be run locally.
+
+Documentation:
+  http://www.chromium.org/developers/bisecting-bugs
+  http://www.chromium.org/developers/tree-sheriffs/perf-sheriffs/bisecting-performance-regressions
+
+Overview of bisect-related files in src/tools:
+  run-bisect-perf-regression.py -- used to kick off a bisect job
+  prepare-bisect-perf-regression.py -- run before the above to prepare the repo
+  run-bisect-manual-test.py -- used to manually bisect
+  bisect-manual-test.py -- helper module used by run-bisect-manual-test.py
+  auto_bisect/bisect.cfg -- config parameters for a bisect job
+  run-perf-test.cfg -- config parameters running a perf test once
+

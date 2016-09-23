@@ -130,8 +130,8 @@ def _ParseArgs(args):
 
   build_utils.CheckOptions(options, parser, required=required_options)
 
-  options.resource_zips = build_utils.ParseGypList(options.resource_zips)
-  options.language_splits = build_utils.ParseGypList(options.language_splits)
+  options.resource_zips = build_utils.ParseGnList(options.resource_zips)
+  options.language_splits = build_utils.ParseGnList(options.language_splits)
   return options
 
 
@@ -227,6 +227,7 @@ def _ConstructMostAaptArgs(options):
       '--no-crunch',
       '-f',
       '--auto-add-overlay',
+      '--no-version-vectors',
       '-I', options.android_sdk_jar,
       '-F', options.apk_path,
       '--ignore-assets', build_utils.AAPT_IGNORE_PATTERN,

@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<AutoVisualizer
+    xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="gfx::Point">
+    <AlternativeType Name="gfx::PointF"/>
+    <DisplayString>({x_}, {y_})</DisplayString>
+    <Expand>
+      <Item Name="X">x_</Item>
+      <Item Name="Y">y_</Item>
+    </Expand>
+  </Type>
+  <Type Name="gfx::Size">
+    <AlternativeType Name="gfx::SizeF"/>
+    <DisplayString>({width_}, {height_})</DisplayString>
+    <Expand>
+      <Item Name="Width">width_</Item>
+      <Item Name="Height">height_</Item>
+    </Expand>
+  </Type>
+  <Type Name="gfx::Rect">
+    <AlternativeType Name="gfx::RectF"/>
+    <DisplayString>({origin_.x_}, {origin_.y_}) x ({size_.width_}, {size_.height_})</DisplayString>
+    <Expand>
+      <Item Name="Left">origin_.x_</Item>
+      <Item Name="Top">origin_.y_</Item>
+      <Item Name="Width">size_.width_</Item>
+      <Item Name="Height">size_.height_</Item>
+    </Expand>
+  </Type>
+  <Type Name="aura::Window::Value">
+    <DisplayString>{name,s}: {value}</DisplayString>
+    <Expand/>
+  </Type>
+  <Type Name="aura::Window">
+    <DisplayString>{name_,s}</DisplayString>
+    <Expand>
+      <Item Name="Name">name_</Item>
+      <Item Name="Id">id_</Item>
+      <Item Name="Parent">parent_</Item>
+      <Item Name="Children">children_</Item>
+      <Item Name="Bounds">bounds_</Item>
+      <Item Name="Type">type_</Item>
+      <Item Name="Visible">visible_</Item>
+      <Item Name="Transparent">transparent_</Item>
+      <!--<Synthetic Name="Property Map">
+        <DisplayString>Size = {prop_map_._Mysize}</DisplayString>
+        <Expand>
+          <TreeItems>
+            <Size>prop_map_._Mysize</Size>
+            <HeadPointer>prop_map_._Myhead-&gt;_Parent</HeadPointer>
+            <LeftPointer>_Left</LeftPointer>
+            <RightPointer>_Right</RightPointer>
+            <ValueNode Condition="_Isnil == 0">_Myval.second</ValueNode>
+          </TreeItems>
+        </Expand>
+      </Synthetic>-->
+      <Item Name="Layer">layer_</Item>
+    </Expand>
+  </Type>
+  <Type Name="scoped_ptr&lt;*,*&gt;">
+    <DisplayString Condition="impl_.data_.ptr == 0">null</DisplayString>
+    <DisplayString>{impl_.data_.ptr}</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_.data_.ptr</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="scoped_refptr&lt;*&gt;">
+    <DisplayString Condition="ptr_ == 0">null</DisplayString>
+    <DisplayString>[{((base::subtle::RefCountedBase*)ptr_)-&gt;ref_count_}] {(void*)ptr_} {*ptr_}</DisplayString>
+    <Expand>
+      <Item Name="Ptr">ptr_</Item>
+      <Item Name="RefCount">((base::subtle::RefCountedBase*)ptr_)-&gt;ref_count_</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::RefCounted&lt;*&gt;">
+    <DisplayString>RefCount: {ref_count_}</DisplayString>
+    <Expand>
+      <Item Name="RefCount">ref_count_</Item>
+    </Expand>
+  </Type>
+  <Type Name="IPC::Message::Header">
+    <DisplayString>{{Routing: {routing}, Type: {type}}}</DisplayString>
+    <Expand>
+      <Item Name="RoutingId">routing</Item>
+      <Item Name="Type">type</Item>
+      <Synthetic Name="Priority"
+                 Condition="(flags &amp; IPC::Message::PRIORITY_MASK) ==
+                                IPC::Message::PRIORITY_LOW">
+        <DisplayString>Low</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Priority"
+                 Condition="(flags &amp; IPC::Message::PRIORITY_MASK) ==
+                                IPC::Message::PRIORITY_NORMAL">
+        <DisplayString>Normal</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Priority"
+                 Condition="(flags &amp; IPC::Message::PRIORITY_MASK) ==
+                                IPC::Message::PRIORITY_HIGH">
+        <DisplayString>High</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Sync"
+                 Condition="(flags &amp; IPC::Message::SYNC_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Sync"
+                 Condition="(flags &amp; IPC::Message::SYNC_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Reply"
+                 Condition="(flags &amp; IPC::Message::REPLY_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Reply"
+                 Condition="(flags &amp; IPC::Message::REPLY_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+      <Synthetic Name="ReplyError"
+                 Condition="(flags &amp; IPC::Message::REPLY_ERROR_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="ReplyError"
+                 Condition="(flags &amp; IPC::Message::REPLY_ERROR_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Unblock"
+                 Condition="(flags &amp; IPC::Message::UNBLOCK_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Unblock"
+                 Condition="(flags &amp; IPC::Message::UNBLOCK_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+      <Synthetic Name="PumpingMessages"
+                 Condition="(flags &amp; IPC::Message::PUMPING_MSGS_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="PumpingMessages"
+                 Condition="(flags &amp; IPC::Message::PUMPING_MSGS_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+      <Synthetic Name="HasSentTime"
+                 Condition="(flags &amp; IPC::Message::HAS_SENT_TIME_BIT) != 0">
+        <DisplayString>true</DisplayString>
+      </Synthetic>
+      <Synthetic Name="HasSentTime"
+                 Condition="(flags &amp; IPC::Message::HAS_SENT_TIME_BIT) == 0">
+        <DisplayString>false</DisplayString>
+      </Synthetic>
+    </Expand>
+  </Type>
+  <Type Name="IPC::Message">
+    <DisplayString>{{size = {header_size_+capacity_after_header_}}}</DisplayString>
+    <Expand>
+      <ExpandedItem>*((IPC::Message::Header*)header_),nd</ExpandedItem>
+      <Item Name="Payload">(void*)((char*)header_ + header_size_)</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::TimeDelta">
+    <DisplayString>{delta_}</DisplayString>
+    <Expand>
+      <Synthetic Name="Days">
+        <DisplayString>{(int)(delta_ / {,,base.dll}base::Time::kMicrosecondsPerDay)}</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Hours">
+        <DisplayString>{(int)(delta_ / {,,base.dll}base::Time::kMicrosecondsPerHour)}</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Minutes">
+        <DisplayString>{(int)(delta_ / {,,base.dll}base::Time::kMicrosecondsPerMinute)}</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Seconds">
+        <DisplayString>{(int)(delta_ / {,,base.dll}base::Time::kMicrosecondsPerSecond)}</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Milliseconds">
+        <DisplayString>{(int)(delta_ / {,,base.dll}base::Time::kMicrosecondsPerMillisecond)}</DisplayString>
+      </Synthetic>
+      <Item Name="Microseconds">delta_</Item>
+    </Expand>
+  </Type>
+  <Type Name="GURL">
+    <DisplayString>{spec_}</DisplayString>
+    <Expand>
+      <Item Name="Spec">spec_</Item>
+      <Item Name="IsValid">is_valid_</Item>
+      <Synthetic Name="Scheme">
+        <DisplayString
+            Condition="parsed_.scheme.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.scheme.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Username">
+        <DisplayString
+            Condition="parsed_.username.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.username.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Password">
+        <DisplayString
+            Condition="parsed_.password.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.password.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Host">
+        <DisplayString
+            Condition="parsed_.host.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.host.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Port">
+        <DisplayString
+            Condition="parsed_.port.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.port.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Path">
+        <DisplayString
+            Condition="parsed_.path.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.path.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Query">
+        <DisplayString
+            Condition="parsed_.query.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.query.begin][</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Ref">
+        <DisplayString Condition="parsed_.ref.len==-1">undefined</DisplayString>
+        <DisplayString>spec_._Myres[parsed_.ref.begin][</DisplayString>
+      </Synthetic>
+    </Expand>
+  </Type>
+  <Type Name="base::Value">
+    <DisplayString>{type_}</DisplayString>
+    <Expand>
+      <Item Name="Type">type_</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::FundamentalValue">
+    <DisplayString>Fundamental</DisplayString>
+    <Expand>
+      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
+      <Item Name="Int">integer_value_</Item>
+      <Item Name="Bool">boolean_value_</Item>
+      <Item Name="Double">double_value_</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::StringValue">
+    <DisplayString>String ({value_})</DisplayString>
+    <Expand>
+      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
+      <Item Name="Value">value_</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::BinaryValue">
+    <DisplayString>Binary ({size_} byte(s))</DisplayString>
+    <Expand>
+      <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
+      <Item Name="Data">buffer_</Item>
+    </Expand>
+  </Type>
+  <Type Name="base::DictionaryValue">
+    <DisplayString>Dictionary ({dictionary_._Mysize} entries)</DisplayString>
+    <Expand>
+      <ExpandedItem>dictionary_</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="base::ListValue">
+    <DisplayString>List ({list_._Mysize} entries)</DisplayString>
+    <Expand>
+      <ExpandedItem>list_</ExpandedItem>
+    </Expand>
+  </Type>
+</AutoVisualizer>

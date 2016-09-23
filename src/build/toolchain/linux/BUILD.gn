@@ -6,9 +6,19 @@ import("//build/config/sysroot.gni")
 import("//build/toolchain/gcc_toolchain.gni")
 
 clang_toolchain("clang_arm") {
-  toolchain_cpu = "arm"
-  toolchain_os = "linux"
   toolprefix = "arm-linux-gnueabihf-"
+  toolchain_args = {
+    current_cpu = "arm"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_arm64") {
+  toolprefix = "aarch64-linux-gnu-"
+  toolchain_args = {
+    current_cpu = "arm64"
+    current_os = "linux"
+  }
 }
 
 gcc_toolchain("arm") {
@@ -22,14 +32,34 @@ gcc_toolchain("arm") {
   readelf = "${toolprefix}readelf"
   nm = "${toolprefix}nm"
 
-  toolchain_cpu = "arm"
-  toolchain_os = "linux"
-  is_clang = false
+  toolchain_args = {
+    current_cpu = "arm"
+    current_os = "linux"
+    is_clang = false
+  }
 }
 
 clang_toolchain("clang_x86") {
-  toolchain_cpu = "x86"
-  toolchain_os = "linux"
+  toolchain_args = {
+    current_cpu = "x86"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_x86_v8_arm") {
+  toolchain_args = {
+    current_cpu = "x86"
+    v8_current_cpu = "arm"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_x86_v8_mipsel") {
+  toolchain_args = {
+    current_cpu = "x86"
+    v8_current_cpu = "mipsel"
+    current_os = "linux"
+  }
 }
 
 gcc_toolchain("x86") {
@@ -41,14 +71,34 @@ gcc_toolchain("x86") {
   ar = "ar"
   ld = cxx
 
-  toolchain_cpu = "x86"
-  toolchain_os = "linux"
-  is_clang = false
+  toolchain_args = {
+    current_cpu = "x86"
+    current_os = "linux"
+    is_clang = false
+  }
 }
 
 clang_toolchain("clang_x64") {
-  toolchain_cpu = "x64"
-  toolchain_os = "linux"
+  toolchain_args = {
+    current_cpu = "x64"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_x64_v8_arm64") {
+  toolchain_args = {
+    current_cpu = "x64"
+    v8_current_cpu = "arm64"
+    current_os = "linux"
+  }
+}
+
+clang_toolchain("clang_x64_v8_mips64el") {
+  toolchain_args = {
+    current_cpu = "x64"
+    v8_current_cpu = "mips64el"
+    current_os = "linux"
+  }
 }
 
 gcc_toolchain("x64") {
@@ -60,14 +110,18 @@ gcc_toolchain("x64") {
   ar = "ar"
   ld = cxx
 
-  toolchain_cpu = "x64"
-  toolchain_os = "linux"
-  is_clang = false
+  toolchain_args = {
+    current_cpu = "x64"
+    current_os = "linux"
+    is_clang = false
+  }
 }
 
 clang_toolchain("clang_mipsel") {
-  toolchain_cpu = "mipsel"
-  toolchain_os = "linux"
+  toolchain_args = {
+    current_cpu = "mipsel"
+    current_os = "linux"
+  }
 }
 
 gcc_toolchain("mipsel") {
@@ -78,9 +132,11 @@ gcc_toolchain("mipsel") {
   readelf = "mipsel-linux-gnu-readelf"
   nm = "mipsel-linux-gnu-nm"
 
-  toolchain_cpu = "mipsel"
-  toolchain_os = "linux"
-  is_clang = false
-  cc_wrapper = ""
-  use_goma = false
+  toolchain_args = {
+    cc_wrapper = ""
+    current_cpu = "mipsel"
+    current_os = "linux"
+    is_clang = false
+    use_goma = false
+  }
 }

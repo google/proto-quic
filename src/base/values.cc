@@ -320,7 +320,7 @@ std::unique_ptr<BinaryValue> BinaryValue::CreateWithCopiedBuffer(
     size_t size) {
   std::unique_ptr<char[]> buffer_copy(new char[size]);
   memcpy(buffer_copy.get(), buffer, size);
-  return base::MakeUnique<BinaryValue>(std::move(buffer_copy), size);
+  return MakeUnique<BinaryValue>(std::move(buffer_copy), size);
 }
 
 bool BinaryValue::GetAsBinary(const BinaryValue** out_value) const {
@@ -1042,29 +1042,31 @@ void ListValue::Append(std::unique_ptr<Value> in_value) {
   list_.push_back(std::move(in_value));
 }
 
+#if !defined(OS_LINUX) || defined(OS_CHROMEOS)
 void ListValue::Append(Value* in_value) {
   DCHECK(in_value);
   Append(WrapUnique(in_value));
 }
+#endif
 
 void ListValue::AppendBoolean(bool in_value) {
-  Append(new FundamentalValue(in_value));
+  Append(MakeUnique<FundamentalValue>(in_value));
 }
 
 void ListValue::AppendInteger(int in_value) {
-  Append(new FundamentalValue(in_value));
+  Append(MakeUnique<FundamentalValue>(in_value));
 }
 
 void ListValue::AppendDouble(double in_value) {
-  Append(new FundamentalValue(in_value));
+  Append(MakeUnique<FundamentalValue>(in_value));
 }
 
 void ListValue::AppendString(StringPiece in_value) {
-  Append(new StringValue(in_value.as_string()));
+  Append(MakeUnique<StringValue>(in_value.as_string()));
 }
 
 void ListValue::AppendString(const string16& in_value) {
-  Append(new StringValue(in_value));
+  Append(MakeUnique<StringValue>(in_value));
 }
 
 void ListValue::AppendStrings(const std::vector<std::string>& in_values) {
@@ -1081,24 +1083,23 @@ void ListValue::AppendStrings(const std::vector<string16>& in_values) {
   }
 }
 
-bool ListValue::AppendIfNotPresent(Value* in_value) {
+bool ListValue::AppendIfNotPresent(std::unique_ptr<Value> in_value) {
   DCHECK(in_value);
   for (const auto& entry : list_) {
-    if (entry->Equals(in_value)) {
-      delete in_value;
+    if (entry->Equals(in_value.get())) {
       return false;
     }
   }
-  list_.emplace_back(in_value);
+  list_.push_back(std::move(in_value));
   return true;
 }
 
-bool ListValue::Insert(size_t index, Value* in_value) {
+bool ListValue::Insert(size_t index, std::unique_ptr<Value> in_value) {
   DCHECK(in_value);
   if (index > list_.size())
     return false;
 
-  list_.insert(list_.begin() + index, WrapUnique(in_value));
+  list_.insert(list_.begin() + index, std::move(in_value));
   return true;
 }
 

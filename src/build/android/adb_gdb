@@ -25,6 +25,7 @@ TMPDIR=
 GDBSERVER_PIDFILE=
 TARGET_GDBSERVER=
 COMMAND_PREFIX=
+COMMAND_SUFFIX=
 
 clean_exit () {
   if [ "$TMPDIR" ]; then
@@ -35,7 +36,7 @@ clean_exit () {
     fi
     if [ "$TARGET_GDBSERVER" ]; then
       log "Removing target gdbserver binary: $TARGET_GDBSERVER."
-      "$ADB" shell "$COMMAND_PREFIX" rm "$TARGET_GDBSERVER" >/dev/null 2>&1
+      "$ADB" shell "$COMMAND_PREFIX" rm "$TARGET_GDBSERVER" "$COMMAND_SUFFIX" >/dev/null 2>&1
     fi
     log "Cleaning up: $TMPDIR"
     rm -rf "$TMPDIR"
@@ -102,6 +103,7 @@ PULL_LIBS_DIR=
 SANDBOXED=
 SANDBOXED_INDEX=
 START=
+START_URL=
 ATTACH_DELAY=1
 SU_PREFIX=
 SYMBOL_DIR=
@@ -177,6 +179,9 @@ for opt; do
     --script=*)
       GDBINIT=$optarg
       ;;
+    --start=*)
+      START_URL=$optarg
+      ;& # fallthrough
     --start)
       START=true
       ;;
@@ -311,7 +316,7 @@ Valid options:
   --program-name=<name> Specify program name (cosmetic only).
   --pid=<pid>           Specify application process pid.
   --force               Kill any previous debugging session, if any.
-  --start               Start package's activity on device.
+  --start[=<url>]       Start package's activity on device.
   --attach-delay=<num>  Seconds to wait for gdbserver to attach to the
                         remote process before starting gdb. Default 1.
                         <num> may be a float if your sleep(1) supports it.
@@ -344,7 +349,7 @@ if [ -z "$PACKAGE_NAME" ]; then
   panic "Please specify a package name on the command line. See --help."
 fi
 
-if [[ -z "$CHROMIUM_OUTPUT_DIR" ]]; then
+if [[ -z "$SYMBOL_DIR" && -z "$CHROMIUM_OUTPUT_DIR" ]]; then
   if [[ -e "build.ninja" ]]; then
     CHROMIUM_OUTPUT_DIR=$PWD
   else
@@ -354,6 +359,36 @@ if [[ -z "$CHROMIUM_OUTPUT_DIR" ]]; then
        Setting working directory to an output directory.
        See --help."
    fi
+fi
+
+# Detect the build type and symbol directory. This is done by finding
+# the most recent sub-directory containing debug shared libraries under
+# $CHROMIUM_OUTPUT_DIR.
+#
+# Out: nothing, but this sets SYMBOL_DIR
+#
+detect_symbol_dir () {
+  # GYP places unstripped libraries under out/lib
+  # GN places them under out/lib.unstripped
+  local PARENT_DIR="$CHROMIUM_OUTPUT_DIR"
+  if [[ ! -e "$PARENT_DIR" ]]; then
+    PARENT_DIR="$CHROMIUM_SRC/$PARENT_DIR"
+  fi
+  SYMBOL_DIR="$PARENT_DIR/lib.unstripped"
+  if [[ -z "$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null)" ]]; then
+    SYMBOL_DIR="$PARENT_DIR/lib"
+    if [[ -z "$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null)" ]]; then
+      panic "Could not find any symbols under \
+$PARENT_DIR/lib{.unstripped}. Please build the program first!"
+    fi
+  fi
+  log "Auto-config: --symbol-dir=$SYMBOL_DIR"
+}
+
+if [ -z "$SYMBOL_DIR" ]; then
+  detect_symbol_dir
+elif [[ -z "$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null)" ]]; then
+  panic "Could not find any symbols under $SYMBOL_DIR"
 fi
 
 if [ -z "$NDK_DIR" ]; then
@@ -436,15 +471,18 @@ adb_shell () {
   return $RET
 }
 
-# Find the target architecture from the target device.
+# Find the target architecture from a local shared library.
 # This returns an NDK-compatible architecture name.
 # out: NDK Architecture name, or empty string.
 get_gyp_target_arch () {
-  local ARCH=$(adb_shell getprop ro.product.cpu.abi)
+  local RANDOM_LIB=$(ls "$SYMBOL_DIR"/lib*.so | head -n1)
+  local SO_DESC=$(file $RANDOM_LIB)
   case $ARCH in
-    mips|x86|x86_64) echo "$ARCH";;
-    arm64*) echo "arm64";;
-    arm*) echo "arm";;
+    *32-bit*ARM,*) echo "arm";;
+    *64-bit*ARM,*) echo "arm64";;
+    *32-bit*Intel,*) echo "x86";;
+    *x86-64,*) echo "x86_64";;
+    *32-bit*MIPS,*) echo "mips";;
     *) echo "";
   esac
 }
@@ -602,6 +640,16 @@ Please verify your NDK installation!"
 }
 
 # $1: NDK install path
+get_ndk_host_gdb_client() {
+  local NDK_DIR="$1"
+  local HOST_OS HOST_ARCH
+
+  HOST_OS=$(get_ndk_host_system)
+  HOST_ARCH=$(get_ndk_host_arch)
+  echo "$NDK_DIR/prebuilt/$HOST_OS-$HOST_ARCH/bin/gdb"
+}
+
+# $1: NDK install path
 # $2: target architecture.
 get_ndk_gdbserver () {
   local NDK_DIR="$1"
@@ -640,7 +688,7 @@ ANDROID_TOOLCHAIN=${ANDROID_TOOLCHAIN%/}
 
 # Find host GDB client binary
 if [ -z "$GDB" ]; then
-  GDB=$(which $ANDROID_TOOLCHAIN/*-$GDBEXEPOSTFIX 2>/dev/null | head -1)
+  GDB=$(get_ndk_host_gdb_client "$ANDROID_NDK_ROOT")
   if [ -z "$GDB" ]; then
     panic "Can't find Android gdb client in your path, check your \
 --toolchain or --gdb path."
@@ -686,7 +734,7 @@ fi
 
 if [ "$START" ]; then
   log "Starting $PROGRAM_NAME on device."
-  adb_shell am start -n $PACKAGE_NAME/$ACTIVITY 2>/dev/null
+  adb_shell am start -n $PACKAGE_NAME/$ACTIVITY ${START_URL:+-d "$START_URL"}
   adb_shell ps | grep -q $PACKAGE_NAME
   fail_panic "Could not start $PROGRAM_NAME on device. Are you sure the \
 package is installed?"
@@ -698,34 +746,6 @@ fi
 get_file_timestamp () {
   stat -c %Y "$1" 2>/dev/null
 }
-
-# Detect the build type and symbol directory. This is done by finding
-# the most recent sub-directory containing debug shared libraries under
-# $CHROMIUM_OUTPUT_DIR.
-#
-# Out: nothing, but this sets SYMBOL_DIR
-#
-detect_symbol_dir () {
-  # GYP places unstripped libraries under out/lib
-  # GN places them under out/lib.unstripped
-  local PARENT_DIR="$CHROMIUM_OUTPUT_DIR"
-  if [[ ! -e "$PARENT_DIR" ]]; then
-    PARENT_DIR="$CHROMIUM_SRC/$PARENT_DIR"
-  fi
-  SYMBOL_DIR="$PARENT_DIR/lib.unstripped"
-  if [[ -z "$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null)" ]]; then
-    SYMBOL_DIR="$PARENT_DIR/lib"
-    if [[ -z "$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null)" ]]; then
-      panic "Could not find any symbols under \
-$PARENT_DIR/lib{.unstripped}. Please build the program first!"
-    fi
-  fi
-  log "Auto-config: --symbol-dir=$SYMBOL_DIR"
-}
-
-if [ -z "$SYMBOL_DIR" ]; then
-  detect_symbol_dir
-fi
 
 # Allow several concurrent debugging sessions
 TARGET_GDBSERVER=/data/data/$PACKAGE_NAME/gdbserver-adb-gdb-$TMP_ID
@@ -911,7 +931,7 @@ SOLIB_DIRS=$(find $PULL_LIBS_DIR -mindepth 1 -maxdepth 4 -type d | \
 # Push gdbserver to the device
 log "Pushing gdbserver $GDBSERVER to $TARGET_GDBSERVER"
 adb push $GDBSERVER $TMP_TARGET_GDBSERVER &>/dev/null
-adb shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER
+adb shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER $COMMAND_SUFFIX
 adb shell rm $TMP_TARGET_GDBSERVER
 fail_panic "Could not copy gdbserver to the device!"
 

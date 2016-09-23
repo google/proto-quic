@@ -7,7 +7,6 @@
       '../../build/util/lib/common/',
       '../../third_party/android_tools/sdk/build-tools/',
       '../../third_party/android_tools/sdk/platform-tools/',
-      '../../third_party/appurify-python/',
       '../../third_party/catapult/',
       '../../third_party/requests/',
       '../../tools/swarming_client/',

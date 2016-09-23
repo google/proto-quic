@@ -77,8 +77,13 @@ class NET_EXPORT_PRIVATE Cubic {
   // applied to this value if the new value is below our latest value.
   QuicPacketCount last_max_congestion_window_;
 
-  // Number of acked packets since the cycle started (epoch).
+  // Number of acked packets accumulated to increase the CWND via Reno
+  // 'tcp friendly' mode.
   QuicPacketCount acked_packets_count_;
+
+  // Number of acked packets since the cycle started (epoch).
+  // Used to limit CWND increases to 1/2 the number of acked packets.
+  QuicPacketCount epoch_packets_count_;
 
   // TCP Reno equivalent congestion window in packets.
   QuicPacketCount estimated_tcp_congestion_window_;

@@ -379,10 +379,16 @@ class NinjaWriter(object):
     # should be used for linking.
     self.uses_cpp = False
 
+    self.target_rpath = generator_flags.get('target_rpath', r'\$$ORIGIN/lib/')
+
     self.is_mac_bundle = gyp.xcode_emulation.IsMacBundle(self.flavor, spec)
     self.xcode_settings = self.msvs_settings = None
     if self.flavor == 'mac':
       self.xcode_settings = gyp.xcode_emulation.XcodeSettings(spec)
+      mac_toolchain_dir = generator_flags.get('mac_toolchain_dir', None)
+      if mac_toolchain_dir:
+        self.xcode_settings.mac_toolchain_dir = mac_toolchain_dir
+
     if self.flavor == 'win':
       self.msvs_settings = gyp.msvs_emulation.MsvsSettings(spec,
                                                            generator_flags)
@@ -559,6 +565,9 @@ class NinjaWriter(object):
     if 'sources' in spec and self.flavor == 'win':
       outputs += self.WriteWinIdlFiles(spec, prebuild)
 
+    if self.xcode_settings and self.xcode_settings.IsIosFramework():
+      self.WriteiOSFrameworkHeaders(spec, outputs, prebuild)
+
     stamp = self.WriteCollapsedDependencies('actions_rules_copies', outputs)
 
     if self.is_mac_bundle:
@@ -656,6 +665,7 @@ class NinjaWriter(object):
         for var in special_locals:
           if '${%s}' % var in argument:
             needed_variables.add(var)
+      needed_variables = sorted(needed_variables)
 
       def cygwin_munge(path):
         # pylint: disable=cell-var-from-loop
@@ -729,6 +739,7 @@ class NinjaWriter(object):
           # WriteNewNinjaRule uses unique_name for creating an rsp file on win.
           extra_bindings.append(('unique_name',
               hashlib.md5(outputs[0]).hexdigest()))
+
         self.ninja.build(outputs, rule_name, self.GypPathToNinja(source),
                          implicit=inputs,
                          order_only=prebuild,
@@ -740,7 +751,11 @@ class NinjaWriter(object):
 
   def WriteCopies(self, copies, prebuild, mac_bundle_depends):
     outputs = []
-    env = self.GetToolchainEnv()
+    if self.xcode_settings:
+      extra_env = self.xcode_settings.GetPerTargetSettings()
+      env = self.GetToolchainEnv(additional_settings=extra_env)
+    else:
+      env = self.GetToolchainEnv()
     for copy in copies:
       for path in copy['files']:
         # Normalize the path so trailing slashes don't confuse us.
@@ -762,18 +777,38 @@ class NinjaWriter(object):
 
     return outputs
 
+  def WriteiOSFrameworkHeaders(self, spec, outputs, prebuild):
+    """Prebuild steps to generate hmap files and copy headers to destination."""
+    framework = self.ComputeMacBundleOutput()
+    all_sources = spec['sources']
+    copy_headers = spec['mac_framework_headers']
+    output = self.GypPathToUniqueOutput('headers.hmap')
+    self.xcode_settings.header_map_path = output
+    all_headers = map(self.GypPathToNinja,
+                      filter(lambda x:x.endswith(('.h')), all_sources))
+    variables = [('framework', framework),
+                 ('copy_headers', map(self.GypPathToNinja, copy_headers))]
+    outputs.extend(self.ninja.build(
+        output, 'compile_ios_framework_headers', all_headers,
+        variables=variables, order_only=prebuild))
+
   def WriteMacBundleResources(self, resources, bundle_depends):
     """Writes ninja edges for 'mac_bundle_resources'."""
     xcassets = []
+
+    extra_env = self.xcode_settings.GetPerTargetSettings()
+    env = self.GetSortedXcodeEnv(additional_settings=extra_env)
+    env = self.ComputeExportEnvString(env)
+    isBinary = self.xcode_settings.IsBinaryOutputFormat(self.config_name)
+
     for output, res in gyp.xcode_emulation.GetMacBundleResources(
         generator_default_variables['PRODUCT_DIR'],
         self.xcode_settings, map(self.GypPathToNinja, resources)):
       output = self.ExpandSpecial(output)
       if os.path.splitext(output)[-1] != '.xcassets':
-        isBinary = self.xcode_settings.IsBinaryOutputFormat(self.config_name)
         self.ninja.build(output, 'mac_tool', res,
                          variables=[('mactool_cmd', 'copy-bundle-resource'), \
-                                    ('binary', isBinary)])
+                                    ('env', env), ('binary', isBinary)])
         bundle_depends.append(output)
       else:
         xcassets.append(res)
@@ -1186,7 +1221,9 @@ class NinjaWriter(object):
         rpath = 'lib/'
         if self.toolset != 'target':
           rpath += self.toolset
-        ldflags.append(r'-Wl,-rpath=\$$ORIGIN/%s' % rpath)
+          ldflags.append(r'-Wl,-rpath=\$$ORIGIN/%s' % rpath)
+        else:
+          ldflags.append('-Wl,-rpath=%s' % self.target_rpath)
         ldflags.append('-Wl,-rpath-link=%s' % rpath)
     self.WriteVariableList(ninja_file, 'ldflags',
                            map(self.ExpandSpecial, ldflags))
@@ -1260,10 +1297,11 @@ class NinjaWriter(object):
 
 
     if len(solibs):
-      extra_bindings.append(('solibs', gyp.common.EncodePOSIXShellList(solibs)))
+      extra_bindings.append(('solibs',
+          gyp.common.EncodePOSIXShellList(sorted(solibs))))
 
     ninja_file.build(output, command + command_suffix, link_deps,
-                     implicit=list(implicit_deps),
+                     implicit=sorted(implicit_deps),
                      order_only=list(order_deps),
                      variables=extra_bindings)
     return linked_binary
@@ -1330,9 +1368,13 @@ class NinjaWriter(object):
     self.AppendPostbuildVariable(variables, spec, output, self.target.binary,
                                  is_command_start=not package_framework)
     if package_framework and not is_empty:
-      variables.append(('version', self.xcode_settings.GetFrameworkVersion()))
-      self.ninja.build(output, 'package_framework', mac_bundle_depends,
-                       variables=variables)
+      if spec['type'] == 'shared_library' and self.xcode_settings.isIOS:
+        self.ninja.build(output, 'package_ios_framework', mac_bundle_depends,
+                         variables=variables)
+      else:
+        variables.append(('version', self.xcode_settings.GetFrameworkVersion()))
+        self.ninja.build(output, 'package_framework', mac_bundle_depends,
+                         variables=variables)
     else:
       self.ninja.build(output, 'stamp', mac_bundle_depends,
                        variables=variables)
@@ -1819,7 +1861,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
   master_ninja = ninja_syntax.Writer(master_ninja_file, width=120)
 
   # Put build-time support tools in out/{config_name}.
-  gyp.common.CopyTool(flavor, toplevel_build)
+  gyp.common.CopyTool(flavor, toplevel_build, generator_flags)
 
   # Grab make settings for CC/CXX.
   # The rules are
@@ -1900,6 +1942,10 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
       key_prefix = re.sub(r'\.HOST$', '.host', key_prefix)
       wrappers[key_prefix] = os.path.join(build_to_root, value)
 
+  mac_toolchain_dir = generator_flags.get('mac_toolchain_dir', None)
+  if mac_toolchain_dir:
+    wrappers['LINK'] = "export DEVELOPER_DIR='%s' &&" % mac_toolchain_dir
+
   if flavor == 'win':
     configs = [target_dicts[qualified_target]['configurations'][config_name]
                for qualified_target in target_list]
@@ -1910,7 +1956,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
               configs, generator_flags)
     cl_paths = gyp.msvs_emulation.GenerateEnvironmentFiles(
         toplevel_build, generator_flags, shared_system_includes, OpenOutput)
-    for arch, path in cl_paths.iteritems():
+    for arch, path in sorted(cl_paths.iteritems()):
       if clang_cl:
         # If we have selected clang-cl, use that instead.
         path = clang_cl
@@ -2234,6 +2280,12 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
       description='COMPILE XCASSETS $in',
       command='$env ./gyp-mac-tool compile-xcassets $keys $in')
     master_ninja.rule(
+      'compile_ios_framework_headers',
+      description='COMPILE HEADER MAPS AND COPY FRAMEWORK HEADERS $in',
+      command='$env ./gyp-mac-tool compile-ios-framework-header-map $out '
+              '$framework $in && $env ./gyp-mac-tool '
+              'copy-ios-framework-headers $framework $copy_headers')
+    master_ninja.rule(
       'mac_tool',
       description='MACTOOL $mactool_cmd $in',
       command='$env ./gyp-mac-tool $mactool_cmd $in $out $binary')
@@ -2241,6 +2293,11 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
       'package_framework',
       description='PACKAGE FRAMEWORK $out, POSTBUILDS',
       command='./gyp-mac-tool package-framework $out $version$postbuilds '
+              '&& touch $out')
+    master_ninja.rule(
+      'package_ios_framework',
+      description='PACKAGE IOS FRAMEWORK $out, POSTBUILDS',
+      command='./gyp-mac-tool package-ios-framework $out $postbuilds '
               '&& touch $out')
   if flavor == 'win':
     master_ninja.rule(
@@ -2346,7 +2403,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
     # able to run actions and build libraries by their short name.
     master_ninja.newline()
     master_ninja.comment('Short names for targets.')
-    for short_name in target_short_names:
+    for short_name in sorted(target_short_names):
       master_ninja.build(short_name, 'phony', [x.FinalOutput() for x in
                                                target_short_names[short_name]])
 
@@ -2362,7 +2419,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params,
 
   if all_outputs:
     master_ninja.newline()
-    master_ninja.build('all', 'phony', list(all_outputs))
+    master_ninja.build('all', 'phony', sorted(all_outputs))
     master_ninja.default(generator_flags.get('default_target', 'all'))
 
   master_ninja_file.close()

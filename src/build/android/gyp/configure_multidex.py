@@ -37,7 +37,7 @@ def ParseArgs():
   args = parser.parse_args()
 
   if args.enabled_configurations:
-    args.enabled_configurations = build_utils.ParseGypList(
+    args.enabled_configurations = build_utils.ParseGnList(
         args.enabled_configurations)
 
   return args

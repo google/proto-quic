@@ -36,7 +36,7 @@ def RunShellCommand(device, cmd):
 
 
 def CreateSymlinkScript(options):
-  libraries = build_utils.ParseGypList(options.libraries)
+  libraries = build_utils.ParseGnList(options.libraries)
 
   link_cmd = (
       'rm $APK_LIBRARIES_DIR/%(lib_basename)s > /dev/null 2>&1 \n'

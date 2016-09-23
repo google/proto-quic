@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Runs given benchmark on two executables and determines if the results are
+significantly different.
+
+Run one of the benchmarks available in 'run_benchmark' on two different browser
+executables and compare the results using a statistical hypothesis test to
+determine whether or not differences in benchmark results are statistically
+significant (i.e. whether or not there is an actual difference in performance).
+"""
+
+from __future__ import print_function
+import os
+import sys
+import time
+
+import argparse
+import subprocess
+
+from core import path_util
+sys.path.insert(1, os.path.join(path_util.GetChromiumSrcDir(), 'third_party',
+                                'catapult', 'experimental'))
+from statistical_analysis import compare_benchmark_results
+
+
+def CreateOutputDir(output_dir_name):
+  """Check if specified output directory exists and create if necessary."""
+  if not os.path.isdir(output_dir_name):
+    os.makedirs(output_dir_name)
+
+
+def RunBenchmark(benchmark_name, executable_path, output_dir, num_runs,
+                 reset_results):
+  """Runs a benchmark (using the run_benchmark command)."""
+  run_benchmark_path = os.path.join(os.path.dirname(__file__), 'run_benchmark')
+
+  command = ['{}'.format(run_benchmark_path),
+             'run',
+             '{}'.format(benchmark_name),
+             '--browser-executable={}'.format(os.path.join(executable_path)),
+             '--pageset-repeat={}'.format(num_runs),
+             '--output-dir={}'.format(output_dir),
+             '--output-format=chartjson',
+             '--output-format=html']
+  if reset_results:
+    command = command + ['--reset-results']
+
+  subprocess.check_call(command, shell=False)
+
+
+def RenameBenchmarkResultsJson(output_dir_name, new_json_file_name):
+  """Renames the JSON produced by the run_benchmark script.
+
+  Renaming the JSON makes sure that it is not overwritten by the following
+  benchmark result JSON.
+  """
+  current_name = os.path.join(output_dir_name, 'results-chart.json')
+  new_name = os.path.join(output_dir_name, new_json_file_name)
+  os.rename(current_name, new_name)
+
+
+def CreateJsonPathArgs(output_dir_name, json_file_names):
+  """Returns a list of the JSON path command line arguments for the
+  compare_benchmark_results script.
+
+  These two command line arguments are implicit and are not specified by the
+  command line arguments of this script since the JSON files are created and
+  processed by this script and are at no point handled by the user.
+  """
+  return [os.path.join(output_dir_name, json_file_name) for json_file_name in
+          json_file_names]
+
+
+def main():
+  parser = argparse.ArgumentParser(description=
+      'Runs the given benchmark on two different given executables and then '
+      'compares the results to determine if they are significantly different '
+      'from each other. Also takes any argument taken by '
+      'compare_benchmark_results.py in '
+      'catapult/experimental/statistical_analysis.')
+
+  def CheckNumRuns(val):
+    ret_val = int(val)
+    if ret_val < 3:
+      raise argparse.ArgumentTypeError('--num-runs has to be an int >= 3. '
+                                       'Entered value: {}.'.format(val))
+
+    return ret_val
+
+  parser.add_argument(dest='benchmark_name', help='Name of the benchmark as '
+                      'required by run_benchmark script. Run ./run_benchmark '
+                      'list for a list of available benchmarks.')
+
+  parser.add_argument(dest='executable_path', nargs=2,
+                      help='Browser executable location.')
+
+  parser.add_argument('--num-runs', dest='num_runs', default=30,
+                      type=CheckNumRuns, metavar='NUM', help='Number of times '
+                      'the benchmark is run for each executable. Has to be >= '
+                      '2.')
+
+  parser.add_argument('--output-dir', dest='output_dir', help='Output '
+                      'directory where the resulting Chart JSONs (one for '
+                      'each benchmark, raw data) and the output results.html '
+                      'file (summarizing and visualizing results) will be '
+                      'saved.')
+
+  # forward_args will be passed to the compare_benchmark_results script.
+  known_args, forward_args = parser.parse_known_args()
+
+  if known_args.output_dir is None:
+    output_dir_name = 'statistical_analysis_' + known_args.benchmark_name
+  else:
+    output_dir_name = known_args.output_dir
+
+  CreateOutputDir(output_dir_name)
+  new_json_file_names = ('results-1-chart.json', 'results-2-chart.json')
+  reset_results_for_benchmark = (True, False)
+
+  print('Run Benchmarks:\n')
+  start_time = time.time()
+  for executable_path, json_file_name, reset_results in zip(
+      known_args.executable_path, new_json_file_names,
+      reset_results_for_benchmark):
+    RunBenchmark(known_args.benchmark_name, executable_path, output_dir_name,
+                 known_args.num_runs, reset_results=reset_results)
+    RenameBenchmarkResultsJson(output_dir_name, json_file_name)
+  print('Running benchmarks took {} seconds.'.format(time.time() - start_time))
+
+  forward_args = (CreateJsonPathArgs(output_dir_name, new_json_file_names) +
+                  forward_args)
+  compare_benchmark_results.main(forward_args)
+
+
+if __name__ == '__main__':
+  sys.exit(main())

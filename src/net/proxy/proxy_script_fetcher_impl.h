@@ -44,7 +44,7 @@ class NET_EXPORT ProxyScriptFetcherImpl : public ProxyScriptFetcher,
   base::TimeDelta SetTimeoutConstraint(base::TimeDelta timeout);
   size_t SetSizeConstraint(size_t size_bytes);
 
-  void OnResponseCompleted(URLRequest* request);
+  void OnResponseCompleted(URLRequest* request, int net_error);
 
   // ProxyScriptFetcher methods:
   int Fetch(const GURL& url,
@@ -59,7 +59,7 @@ class NET_EXPORT ProxyScriptFetcherImpl : public ProxyScriptFetcher,
   void OnSSLCertificateError(URLRequest* request,
                              const SSLInfo& ssl_info,
                              bool is_hsts_ok) override;
-  void OnResponseStarted(URLRequest* request) override;
+  void OnResponseStarted(URLRequest* request, int net_error) override;
   void OnReadCompleted(URLRequest* request, int num_bytes) override;
 
  private:

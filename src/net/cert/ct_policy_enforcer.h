@@ -85,7 +85,7 @@ class NET_EXPORT CTPolicyEnforcer {
   virtual ct::CertPolicyCompliance DoesConformToCertPolicy(
       X509Certificate* cert,
       const SCTList& verified_scts,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 
   // Returns the CT/EV policy compliance status for a given certificate
   // and collection of SCTs.
@@ -99,7 +99,7 @@ class NET_EXPORT CTPolicyEnforcer {
       X509Certificate* cert,
       const ct::EVCertsWhitelist* ev_whitelist,
       const SCTList& verified_scts,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 };
 
 }  // namespace net

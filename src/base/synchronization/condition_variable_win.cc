@@ -35,6 +35,11 @@ void ConditionVariable::TimedWait(const TimeDelta& max_time) {
 #endif
 
   if (!SleepConditionVariableSRW(&cv_, srwlock_, timeout, 0)) {
+    // On failure, we only expect the CV to timeout. Any other error value means
+    // that we've unexpectedly woken up.
+    // Note that WAIT_TIMEOUT != ERROR_TIMEOUT. WAIT_TIMEOUT is used with the
+    // WaitFor* family of functions as a direct return value. ERROR_TIMEOUT is
+    // used with GetLastError().
     DCHECK_EQ(static_cast<DWORD>(ERROR_TIMEOUT), GetLastError());
   }
 

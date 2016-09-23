@@ -833,6 +833,13 @@ SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
 
 SpdyGoAwayIR::~SpdyGoAwayIR() {}
 
+SpdyContinuationIR::SpdyContinuationIR(SpdyStreamId stream_id)
+    : SpdyFrameWithStreamIdIR(stream_id), end_headers_(false) {
+  encoding_ = base::MakeUnique<std::string>();
+}
+
+SpdyContinuationIR::~SpdyContinuationIR() {}
+
 void SpdyGoAwayIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitGoAway(*this);
 }

@@ -75,31 +75,6 @@ NET_EXPORT bool VerifyCertificateChain(const ParsedCertificateList& certs,
                                        const der::GeneralizedTime& time,
                                        CertErrors* errors) WARN_UNUSED_RESULT;
 
-// -----------------------------------------------
-// Errors/Warnings set by VerifyCertificateChain
-// -----------------------------------------------
-
-namespace verify_certificate_chain_errors {
-
-// TODO(eroman): Document each of these and their parameters.
-extern CertErrorType kSignatureAlgorithmMismatch;
-extern CertErrorType kInvalidOrUnsupportedAlgorithm;
-extern CertErrorType kChainIsEmpty;
-extern CertErrorType kUnconsumedCriticalExtension;
-extern CertErrorType kTargetCertInconsistentCaBits;
-extern CertErrorType kKeyCertSignBitNotSet;
-extern CertErrorType kMaxPathLengthViolated;
-extern CertErrorType kBasicConstraintsIndicatesNotCa;
-extern CertErrorType kMissingBasicConstraints;
-extern CertErrorType kNotPermittedByNameConstraints;
-extern CertErrorType kSubjectDoesNotMatchIssuer;
-extern CertErrorType kVerifySignedDataFailed;
-extern CertErrorType kValidityFailedNotAfter;
-extern CertErrorType kValidityFailedNotBefore;
-extern CertErrorType kSignatureAlgorithmsDifferentEncoding;
-
-}  // namespace verify_certificate_chain_errors
-
 }  // namespace net
 
 #endif  // NET_CERT_INTERNAL_VERIFY_CERTIFICATE_CHAIN_H_

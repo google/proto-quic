@@ -57,9 +57,9 @@ def main(argv):
       build_utils.ZipDir(options.srcjar, temp_dir)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        args + [options.protoc] + build_utils.GetPythonDependencies())
+    assert options.srcjar
+    deps = args + [options.protoc]
+    build_utils.WriteDepfile(options.depfile, options.srcjar, deps)
 
   if options.stamp:
     build_utils.Touch(options.stamp)

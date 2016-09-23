@@ -52,7 +52,7 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
       ClientSocketHandle* handle,
       Delegate* delegate,
       NetLog* pool_net_log,
-      const BoundNetLog& request_net_log);
+      const NetLogWithSource& request_net_log);
   ~WebSocketTransportConnectJob() override;
 
   // Unlike normal socket pools, the WebSocketTransportClientPool uses
@@ -62,7 +62,7 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
   // Stash the callback from RequestSocket() here for convenience.
   const CompletionCallback& callback() const { return callback_; }
 
-  const BoundNetLog& request_net_log() const { return request_net_log_; }
+  const NetLogWithSource& request_net_log() const { return request_net_log_; }
 
   // ConnectJob methods.
   LoadState GetLoadState() const override;
@@ -121,7 +121,7 @@ class NET_EXPORT_PRIVATE WebSocketTransportConnectJob : public ConnectJob {
   TransportConnectJob::RaceResult race_result_;
   ClientSocketHandle* const handle_;
   CompletionCallback callback_;
-  BoundNetLog request_net_log_;
+  NetLogWithSource request_net_log_;
 
   bool had_ipv4_;
   bool had_ipv6_;
@@ -154,11 +154,11 @@ class NET_EXPORT_PRIVATE WebSocketTransportClientSocketPool
                     RespectLimits respect_limits,
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
-                    const BoundNetLog& net_log) override;
+                    const NetLogWithSource& net_log) override;
   void RequestSockets(const std::string& group_name,
                       const void* params,
                       int num_sockets,
-                      const BoundNetLog& net_log) override;
+                      const NetLogWithSource& net_log) override;
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
   void ReleaseSocket(const std::string& group_name,
@@ -200,16 +200,18 @@ class NET_EXPORT_PRIVATE WebSocketTransportClientSocketPool
                    RequestPriority priority,
                    ClientSocketHandle* handle,
                    const CompletionCallback& callback,
-                   const BoundNetLog& net_log);
+                   const NetLogWithSource& net_log);
     StalledRequest(const StalledRequest& other);
     ~StalledRequest();
     const scoped_refptr<TransportSocketParams> params;
     const RequestPriority priority;
     ClientSocketHandle* const handle;
     const CompletionCallback callback;
-    const BoundNetLog net_log;
+    const NetLogWithSource net_log;
   };
+
   friend class ConnectJobDelegate;
+
   typedef std::map<const ClientSocketHandle*, WebSocketTransportConnectJob*>
       PendingConnectsMap;
   // This is a list so that we can remove requests from the middle, and also
@@ -219,6 +221,10 @@ class NET_EXPORT_PRIVATE WebSocketTransportClientSocketPool
   typedef std::map<const ClientSocketHandle*, StalledRequestQueue::iterator>
       StalledRequestMap;
 
+  // Tries to hand out the socket connected by |job|. |result| must be (async)
+  // result of WebSocketTransportConnectJob::Connect(). Returns true iff it has
+  // handed out a socket.
+  bool TryHandOutSocket(int result, WebSocketTransportConnectJob* job);
   void OnConnectJobComplete(int result, WebSocketTransportConnectJob* job);
   void InvokeUserCallbackLater(ClientSocketHandle* handle,
                                const CompletionCallback& callback,
@@ -230,7 +236,7 @@ class NET_EXPORT_PRIVATE WebSocketTransportClientSocketPool
   void HandOutSocket(std::unique_ptr<StreamSocket> socket,
                      const LoadTimingInfo::ConnectTiming& connect_timing,
                      ClientSocketHandle* handle,
-                     const BoundNetLog& net_log);
+                     const NetLogWithSource& net_log);
   void AddJob(ClientSocketHandle* handle,
               std::unique_ptr<WebSocketTransportConnectJob> connect_job);
   bool DeleteJob(ClientSocketHandle* handle);

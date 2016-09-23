@@ -27,7 +27,6 @@ import time
 import _strptime  # pylint: disable=unused-import
 
 import devil_chromium
-from devil import devil_env
 from devil.android import battery_utils
 from devil.android import device_blacklist
 from devil.android import device_errors
@@ -35,6 +34,7 @@ from devil.android import device_temp_file
 from devil.android import device_utils
 from devil.android.sdk import keyevent
 from devil.android.sdk import version_codes
+from devil.constants import exit_codes
 from devil.utils import run_tests_helper
 from devil.utils import timeout_retry
 from pylib import constants
@@ -89,17 +89,10 @@ def ProvisionDevices(args):
 
 
 def ProvisionDevice(device, blacklist, options):
-  if options.reboot_timeout:
-    reboot_timeout = options.reboot_timeout
-  elif device.build_version_sdk >= version_codes.LOLLIPOP:
-    reboot_timeout = _DEFAULT_TIMEOUTS.LOLLIPOP
-  else:
-    reboot_timeout = _DEFAULT_TIMEOUTS.PRE_LOLLIPOP
-
   def should_run_phase(phase_name):
     return not options.phases or phase_name in options.phases
 
-  def run_phase(phase_func, reboot=True):
+  def run_phase(phase_func, reboot_timeout, reboot=True):
     try:
       device.WaitUntilFullyBooted(timeout=reboot_timeout, retries=0)
     except device_errors.CommandTimeoutError:
@@ -111,18 +104,25 @@ def ProvisionDevice(device, blacklist, options):
       device.adb.WaitForDevice()
 
   try:
+    if options.reboot_timeout:
+      reboot_timeout = options.reboot_timeout
+    elif device.build_version_sdk >= version_codes.LOLLIPOP:
+      reboot_timeout = _DEFAULT_TIMEOUTS.LOLLIPOP
+    else:
+      reboot_timeout = _DEFAULT_TIMEOUTS.PRE_LOLLIPOP
+
     if should_run_phase(_PHASES.WIPE):
       if (options.chrome_specific_wipe or device.IsUserBuild() or
           device.build_version_sdk >= version_codes.MARSHMALLOW):
-        run_phase(WipeChromeData)
+        run_phase(WipeChromeData, reboot_timeout)
       else:
-        run_phase(WipeDevice)
+        run_phase(WipeDevice, reboot_timeout)
 
     if should_run_phase(_PHASES.PROPERTIES):
-      run_phase(SetProperties)
+      run_phase(SetProperties, reboot_timeout)
 
     if should_run_phase(_PHASES.FINISH):
-      run_phase(FinishProvisioning, reboot=False)
+      run_phase(FinishProvisioning, reboot_timeout, reboot=False)
 
     if options.chrome_specific_wipe:
       package = "com.google.android.gms"
@@ -288,6 +288,10 @@ def SetProperties(device, options):
   if options.disable_network:
     device_settings.ConfigureContentSettings(
         device, device_settings.NETWORK_DISABLED_SETTINGS)
+    if device.build_version_sdk >= version_codes.MARSHMALLOW:
+      # Ensure that NFC is also switched off.
+      device.RunShellCommand(['svc', 'nfc', 'disable'],
+                             as_root=True, check_return=True)
 
   if options.disable_system_chrome:
     # The system chrome version on the device interferes with some tests.
@@ -295,15 +299,26 @@ def SetProperties(device, options):
                            check_return=True)
 
   if options.remove_system_webview:
-    if device.HasRoot():
-      # This is required, e.g., to replace the system webview on a device.
-      device.adb.Remount()
-      device.RunShellCommand(['stop'], check_return=True)
-      device.RunShellCommand(['rm', '-rf'] + _SYSTEM_WEBVIEW_PATHS,
-                             check_return=True)
-      device.RunShellCommand(['start'], check_return=True)
+    if any(device.PathExists(p) for p in _SYSTEM_WEBVIEW_PATHS):
+      logging.info('System WebView exists and needs to be removed')
+      if device.HasRoot():
+        # Disabled Marshmallow's Verity security feature
+        if device.build_version_sdk >= version_codes.MARSHMALLOW:
+          device.adb.DisableVerity()
+          device.Reboot()
+          device.WaitUntilFullyBooted()
+          device.EnableRoot()
+
+        # This is required, e.g., to replace the system webview on a device.
+        device.adb.Remount()
+        device.RunShellCommand(['stop'], check_return=True)
+        device.RunShellCommand(['rm', '-rf'] + _SYSTEM_WEBVIEW_PATHS,
+                               check_return=True)
+        device.RunShellCommand(['start'], check_return=True)
+      else:
+        logging.warning('Cannot remove system webview from a non-rooted device')
     else:
-      logging.warning('Cannot remove system webview from a non-rooted device')
+      logging.info('System WebView already removed')
 
   # Some device types can momentarily disappear after setting properties.
   device.adb.WaitForDevice()
@@ -358,17 +373,22 @@ def FinishProvisioning(device, options):
   def _set_and_verify_date():
     if device.build_version_sdk >= version_codes.MARSHMALLOW:
       date_format = '%m%d%H%M%Y.%S'
-      set_date_command = ['date']
+      set_date_command = ['date', '-u']
+      get_date_command = ['date', '-u']
     else:
       date_format = '%Y%m%d.%H%M%S'
       set_date_command = ['date', '-s']
+      get_date_command = ['date']
+
+    # TODO(jbudorick): This is wrong on pre-M devices -- get/set are
+    # dealing in local time, but we're setting based on GMT.
     strgmtime = time.strftime(date_format, time.gmtime())
     set_date_command.append(strgmtime)
     device.RunShellCommand(set_date_command, as_root=True, check_return=True)
 
+    get_date_command.append('+"%Y%m%d.%H%M%S"')
     device_time = device.RunShellCommand(
-        ['date', '+"%Y%m%d.%H%M%S"'], as_root=True,
-        single_line=True).replace('"', '')
+        get_date_command, as_root=True, single_line=True).replace('"', '')
     device_time = datetime.datetime.strptime(device_time, "%Y%m%d.%H%M%S")
     correct_time = datetime.datetime.strptime(strgmtime, date_format)
     tdelta = (correct_time - device_time).seconds
@@ -410,10 +430,9 @@ def _UninstallIfMatch(device, pattern, app_to_keep):
 
 
 def _WipeUnderDirIfMatch(device, path, pattern):
-  ls_result = device.Ls(path)
-  for (content, _) in ls_result:
-    if pattern.match(content):
-      _WipeFileOrDir(device, path + content)
+  for filename in device.ListDirectory(path):
+    if pattern.match(filename):
+      _WipeFileOrDir(device, posixpath.join(path, filename))
 
 
 def _WipeFileOrDir(device, path):
@@ -528,17 +547,12 @@ def main():
 
   run_tests_helper.SetLogLevel(args.verbose)
 
-  devil_custom_deps = None
-  if args.adb_path:
-    devil_custom_deps = {
-      'adb': {
-        devil_env.GetPlatform(): [args.adb_path],
-      },
-    }
+  devil_chromium.Initialize(adb_path=args.adb_path)
 
-  devil_chromium.Initialize(custom_deps=devil_custom_deps)
-
-  return ProvisionDevices(args)
+  try:
+    return ProvisionDevices(args)
+  except (device_errors.DeviceUnreachableError, device_errors.NoDevicesError):
+    return exit_codes.INFRA
 
 
 if __name__ == '__main__':

@@ -125,6 +125,14 @@ class Changes(object):
         return False
     return True
 
+  def IterAllPaths(self):
+    """Generator for paths."""
+    return self.new_metadata.IterPaths();
+
+  def IterAllSubpaths(self, path):
+    """Generator for subpaths."""
+    return self.new_metadata.IterSubpaths(path);
+
   def IterAddedPaths(self):
     """Generator for paths that were added."""
     for path in self.new_metadata.IterPaths():

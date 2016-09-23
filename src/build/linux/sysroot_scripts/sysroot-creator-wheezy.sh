@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2014 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,9 +8,12 @@ SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 DISTRO=debian
 DIST=wheezy
 APT_REPO=http://http.us.debian.org/debian
-REPO_BASEDIR="${APT_REPO}/dists/${DIST}"
 KEYRING_FILE=${SCRIPT_DIR}/debian-archive-wheezy-stable.gpg
 
+HAS_ARCH_AMD64=1
+HAS_ARCH_I386=1
+HAS_ARCH_ARM=1
+HAS_ARCH_MIPS=1
 
 # Sysroot packages: these are the packages needed to build chrome.
 # NOTE: When DEBIAN_PACKAGES is modified, the packagelist files must be updated
@@ -26,6 +29,8 @@ DEBIAN_PACKAGES="\
   libattr1
   libavahi-client3
   libavahi-common3
+  libbluetooth3
+  libbluetooth-dev
   libbrlapi0.5
   libbrlapi-dev
   libc6
@@ -129,6 +134,7 @@ DEBIAN_PACKAGES="\
   libx11-6
   libx11-dev
   libx11-xcb1
+  libx11-xcb-dev
   libxau6
   libxau-dev
   libxcb1

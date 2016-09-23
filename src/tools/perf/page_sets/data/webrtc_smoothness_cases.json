@@ -1,0 +1,9 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "webrtc_smoothness_cases_001.wpr": [
+            "720p_call_45s", 
+            "canvas_capture_peer_connection"
+        ]
+    }
+}
