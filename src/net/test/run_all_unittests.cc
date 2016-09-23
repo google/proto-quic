@@ -7,28 +7,23 @@
 #include "build/build_config.h"
 #include "crypto/nss_util.h"
 #include "net/socket/client_socket_pool_base.h"
-//#include "net/socket/ssl_server_socket.h"
+#include "net/socket/ssl_server_socket.h"
 #include "net/spdy/spdy_session.h"
 #include "net/test/net_test_suite.h"
+#include "url/url_features.h"
 
 #if defined(OS_ANDROID)
 #include "base/android/jni_android.h"
 #include "base/android/jni_registrar.h"
-#include "base/test/test_file_util.h"
-#include "base/test/test_ui_thread_android.h"
 #include "net/android/dummy_spnego_authenticator.h"
 #include "net/android/net_jni_registrar.h"
-#endif
-
-#if defined(USE_ICU_ALTERNATIVES_ON_ANDROID)
-#include "url/android/url_jni_registrar.h"  // nogncheck
 #endif
 
 #if !defined(OS_ANDROID) && !defined(OS_IOS)
 //#include "mojo/edk/embedder/embedder.h"  // nogncheck
 #endif
 
-//using net::internal::ClientSocketPoolBaseHelper;
+using net::internal::ClientSocketPoolBaseHelper;
 using net::SpdySession;
 
 int main(int argc, char** argv) {
@@ -40,11 +35,6 @@ int main(int argc, char** argv) {
     {"DummySpnegoAuthenticator",
      net::android::DummySpnegoAuthenticator::RegisterJni},
     {"NetAndroid", net::android::RegisterJni},
-    {"TestFileUtil", base::RegisterContentUriTestUtils},
-    {"TestUiThreadAndroid", base::RegisterTestUiThreadAndroid},
-#if defined(USE_ICU_ALTERNATIVES_ON_ANDROID)
-    {"UrlAndroid", url::android::RegisterJni},
-#endif
   };
 
   // Register JNI bindings for android. Doing it early as the test suite setup
@@ -56,19 +46,14 @@ int main(int argc, char** argv) {
 #endif
 
   NetTestSuite test_suite(argc, argv);
-//  ClientSocketPoolBaseHelper::set_connect_backup_jobs_enabled(false);
-
-#if defined(OS_WIN) && !defined(USE_OPENSSL)
-  // We want to be sure to init NSPR on the main thread.
-  crypto::EnsureNSPRInit();
-#endif
+  ClientSocketPoolBaseHelper::set_connect_backup_jobs_enabled(false);
 
   // Enable support for SSL server sockets, which must be done while
   // single-threaded.
-//  net::EnableSSLServerSockets();
+  net::EnableSSLServerSockets();
 
 #if !defined(OS_ANDROID) && !defined(OS_IOS)
-//  mojo::edk::Init();
+  //  mojo::edk::Init();
 #endif
 
   return base::LaunchUnitTests(

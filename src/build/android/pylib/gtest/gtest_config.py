@@ -7,7 +7,6 @@
 # Add new suites here before upgrading them to the stable list below.
 EXPERIMENTAL_TEST_SUITES = [
     'components_browsertests',
-    'content_gl_tests',
     'heap_profiler_unittests',
     'devtools_bridge_tests',
 ]
@@ -38,11 +37,10 @@ STABLE_TEST_SUITES = [
     'sandbox_linux_unittests',
     'skia_unittests',
     'sql_unittests',
-    'sync_unit_tests',
     'ui_android_unittests',
     'ui_base_unittests',
     'ui_touch_selection_unittests',
-    'unit_tests',
+    'unit_tests_apk',
     'webkit_unit_tests',
 ]
 
@@ -50,5 +48,9 @@ STABLE_TEST_SUITES = [
 # http://crbug.com/344868
 ASAN_EXCLUDED_TEST_SUITES = [
     'breakpad_unittests',
-    'sandbox_linux_unittests'
+    'sandbox_linux_unittests',
+
+    # The internal ASAN recipe cannot run step "unit_tests_apk", this is the
+    # only internal recipe affected. See http://crbug.com/607850
+    'unit_tests_apk',
 ]

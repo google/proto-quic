@@ -118,11 +118,28 @@ class HashMap {};
 
 }
 
+// Empty namespace declaration to exercise internal
+// handling of namespace equality.
+namespace std {
+  /* empty */
+}
+
+namespace std {
+
+template<typename T> class unique_ptr {
+public:
+    ~unique_ptr() { }
+    operator T*() const { return 0; }
+    T* operator->() { return 0; }
+};
+
+}
+
 namespace blink {
 
 using namespace WTF;
 
-#define DISALLOW_ALLOCATION()                   \
+#define DISALLOW_NEW()                   \
     private:                                    \
     void* operator new(size_t) = delete;        \
     void* operator new(size_t, void*) = delete;
@@ -172,6 +189,27 @@ public:
 };
 
 template<typename T> class Persistent {
+public:
+    operator T*() const { return 0; }
+    T* operator->() { return 0; }
+    bool operator!() const { return false; }
+};
+
+template<typename T> class WeakPersistent {
+public:
+    operator T*() const { return 0; }
+    T* operator->() { return 0; }
+    bool operator!() const { return false; }
+};
+
+template<typename T> class CrossThreadPersistent {
+public:
+    operator T*() const { return 0; }
+    T* operator->() { return 0; }
+    bool operator!() const { return false; }
+};
+
+template<typename T> class CrossThreadWeakPersistent {
 public:
     operator T*() const { return 0; }
     T* operator->() { return 0; }
@@ -241,15 +279,6 @@ public:
 template<typename T>
 struct TraceIfNeeded {
     static void trace(Visitor*, T*);
-};
-
-// blink::ScriptWrappable receives special treatment
-// so as to allow it to be used together with GarbageCollected<T>,
-// even when its user-declared destructor is provided.
-// As it is with Oilpan disabled.
-class ScriptWrappable {
-public:
-    ~ScriptWrappable() { /* user-declared, thus, non-trivial */ }
 };
 
 }

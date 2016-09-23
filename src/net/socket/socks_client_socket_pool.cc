@@ -46,12 +46,13 @@ SOCKSConnectJob::SOCKSConnectJob(
     HostResolver* host_resolver,
     Delegate* delegate,
     NetLog* net_log)
-    : ConnectJob(group_name,
-                 timeout_duration,
-                 priority,
-                 respect_limits,
-                 delegate,
-                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
+    : ConnectJob(
+          group_name,
+          timeout_duration,
+          priority,
+          respect_limits,
+          delegate,
+          NetLogWithSource::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       socks_params_(socks_params),
       transport_pool_(transport_pool),
       resolver_(host_resolver),
@@ -214,7 +215,7 @@ int SOCKSClientSocketPool::RequestSocket(const std::string& group_name,
                                          RespectLimits respect_limits,
                                          ClientSocketHandle* handle,
                                          const CompletionCallback& callback,
-                                         const BoundNetLog& net_log) {
+                                         const NetLogWithSource& net_log) {
   const scoped_refptr<SOCKSSocketParams>* casted_socket_params =
       static_cast<const scoped_refptr<SOCKSSocketParams>*>(socket_params);
 
@@ -222,11 +223,10 @@ int SOCKSClientSocketPool::RequestSocket(const std::string& group_name,
                              respect_limits, handle, callback, net_log);
 }
 
-void SOCKSClientSocketPool::RequestSockets(
-    const std::string& group_name,
-    const void* params,
-    int num_sockets,
-    const BoundNetLog& net_log) {
+void SOCKSClientSocketPool::RequestSockets(const std::string& group_name,
+                                           const void* params,
+                                           int num_sockets,
+                                           const NetLogWithSource& net_log) {
   const scoped_refptr<SOCKSSocketParams>* casted_params =
       static_cast<const scoped_refptr<SOCKSSocketParams>*>(params);
 

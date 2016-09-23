@@ -5,11 +5,13 @@
 namespace blink {
 
 // Global variables
-int frame_count = 0;
+int g_frame_count = 0;
 // Make sure that underscore-insertion doesn't get too confused by acronyms.
-static int variable_mentioning_http_and_https = 1;
+static int g_variable_mentioning_http_and_https = 1;
+// g_ prefix, but doesn't follow Google style.
+int g_with_blink_naming;
 // Already Google style, should not change.
-int already_google_style_;
+int g_already_google_style_;
 
 // Function parameters
 int Function(int interesting_number) {
@@ -18,15 +20,17 @@ int Function(int interesting_number) {
   // Static locals.
   static int a_static_local_variable = 2;
   // Make sure references to variables are also rewritten.
-  return frame_count +
-         variable_mentioning_http_and_https * interesting_number /
+  return g_frame_count +
+         g_variable_mentioning_http_and_https * interesting_number /
              a_local_variable % a_static_local_variable;
 }
 
 }  // namespace blink
 
+using blink::g_frame_count;
+
 int F() {
   // Make sure variables qualified with a namespace name are still rewritten
   // correctly.
-  return blink::frame_count;
+  return g_frame_count + blink::g_frame_count;
 }

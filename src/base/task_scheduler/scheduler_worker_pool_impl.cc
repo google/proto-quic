@@ -15,6 +15,7 @@
 #include "base/lazy_instance.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram.h"
+#include "base/sequence_token.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
@@ -61,7 +62,7 @@ class SchedulerParallelTaskRunner : public TaskRunner {
                        TimeDelta delay) override {
     // Post the task as part of a one-off single-task Sequence.
     return worker_pool_->PostTaskWithSequence(
-        WrapUnique(new Task(from_here, closure, traits_, delay)),
+        MakeUnique<Task>(from_here, closure, traits_, delay),
         make_scoped_refptr(new Sequence), nullptr);
   }
 
@@ -110,7 +111,9 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
   }
 
   bool RunsTasksOnCurrentThread() const override {
-    return tls_current_worker_pool.Get().Get() == worker_pool_;
+    // TODO(fdoray): Rename TaskRunner::RunsTaskOnCurrentThread() to something
+    // that reflects this behavior more accurately. crbug.com/646905
+    return sequence_->token() == SequenceToken::GetForCurrentThread();
   }
 
  private:
@@ -643,9 +646,9 @@ bool SchedulerWorkerPoolImpl::Initialize(
 
   for (size_t i = 0; i < max_threads; ++i) {
     std::unique_ptr<SchedulerWorker> worker = SchedulerWorker::Create(
-        priority_hint, WrapUnique(new SchedulerWorkerDelegateImpl(
+        priority_hint, MakeUnique<SchedulerWorkerDelegateImpl>(
                            this, re_enqueue_sequence_callback,
-                           &shared_priority_queue_, static_cast<int>(i))),
+                           &shared_priority_queue_, static_cast<int>(i)),
         task_tracker_, i == 0 ? SchedulerWorker::InitialState::ALIVE
                               : SchedulerWorker::InitialState::DETACHED);
     if (!worker)

@@ -4,7 +4,8 @@
 
 #include "net/websockets/websocket_extension_parser.h"
 
-#include "base/strings/string_util.h"
+#include "base/logging.h"
+#include "net/http/http_util.h"
 
 namespace net {
 
@@ -19,7 +20,7 @@ bool WebSocketExtensionParser::Parse(const char* data, size_t size) {
 
   bool failed = false;
 
-  while (true) {
+  do {
     WebSocketExtension extension;
     if (!ConsumeExtension(&extension)) {
       failed = true;
@@ -28,11 +29,7 @@ bool WebSocketExtensionParser::Parse(const char* data, size_t size) {
     extensions_.push_back(extension);
 
     ConsumeSpaces();
-
-    if (!ConsumeIfMatch(',')) {
-      break;
-    }
-  }
+  } while (ConsumeIfMatch(','));
 
   if (!failed && current_ == end_)
     return true;
@@ -43,9 +40,8 @@ bool WebSocketExtensionParser::Parse(const char* data, size_t size) {
 
 bool WebSocketExtensionParser::Consume(char c) {
   ConsumeSpaces();
-  if (current_ == end_ || c != current_[0]) {
+  if (current_ == end_ || c != *current_)
     return false;
-  }
   ++current_;
   return true;
 }
@@ -94,12 +90,10 @@ bool WebSocketExtensionParser::ConsumeExtensionParameter(
 bool WebSocketExtensionParser::ConsumeToken(base::StringPiece* token) {
   ConsumeSpaces();
   const char* head = current_;
-  while (current_ < end_ &&
-         !IsControl(current_[0]) && !IsSeparator(current_[0]))
+  while (current_ < end_ && HttpUtil::IsTokenChar(*current_))
     ++current_;
-  if (current_ == head) {
+  if (current_ == head)
     return false;
-  }
   *token = base::StringPiece(head, current_ - head);
   return true;
 }
@@ -109,22 +103,20 @@ bool WebSocketExtensionParser::ConsumeQuotedToken(std::string* token) {
     return false;
 
   *token = "";
-  while (current_ < end_ && !IsControl(current_[0])) {
-    if (UnconsumedBytes() >= 2 && current_[0] == '\\') {
-      char next = current_[1];
-      if (IsControl(next) || IsSeparator(next)) break;
-      *token += next;
-      current_ += 2;
-    } else if (IsSeparator(current_[0])) {
-      break;
-    } else {
-      *token += current_[0];
+  while (current_ < end_ && *current_ != '"') {
+    if (*current_ == '\\') {
       ++current_;
+      if (current_ == end_)
+        return false;
     }
+    if (!HttpUtil::IsTokenChar(*current_))
+      return false;
+    *token += *current_;
+    ++current_;
   }
-  // We can't use Consume here because we don't want to consume spaces.
-  if (current_ >= end_ || current_[0] != '"')
+  if (current_ == end_)
     return false;
+  DCHECK_EQ(*current_, '"');
 
   ++current_;
 
@@ -132,7 +124,7 @@ bool WebSocketExtensionParser::ConsumeQuotedToken(std::string* token) {
 }
 
 void WebSocketExtensionParser::ConsumeSpaces() {
-  while (current_ < end_ && (current_[0] == ' ' || current_[0] == '\t'))
+  while (current_ < end_ && (*current_ == ' ' || *current_ == '\t'))
     ++current_;
   return;
 }
@@ -152,17 +144,6 @@ bool WebSocketExtensionParser::ConsumeIfMatch(char c) {
   }
 
   return true;
-}
-
-// static
-bool WebSocketExtensionParser::IsControl(char c) {
-  return (0 <= c && c <= 31) || c == 127;
-}
-
-// static
-bool WebSocketExtensionParser::IsSeparator(char c) {
-  const char separators[] = "()<>@,;:\\\"/[]?={} \t";
-  return strchr(separators, c) != NULL;
 }
 
 }  // namespace net

@@ -358,10 +358,33 @@ void TraceEvent::AppendAsJSON(
 
   // If id_ is set, print it out as a hex string so we don't loose any
   // bits (it might be a 64-bit pointer).
-  if (flags_ & TRACE_EVENT_FLAG_HAS_ID) {
+  unsigned int id_flags_ = flags_ & (TRACE_EVENT_FLAG_HAS_ID |
+                                     TRACE_EVENT_FLAG_HAS_LOCAL_ID |
+                                     TRACE_EVENT_FLAG_HAS_GLOBAL_ID);
+  if (id_flags_) {
     if (scope_ != trace_event_internal::kGlobalScope)
       StringAppendF(out, ",\"scope\":\"%s\"", scope_);
-    StringAppendF(out, ",\"id\":\"0x%" PRIx64 "\"", static_cast<uint64_t>(id_));
+
+    switch (id_flags_) {
+      case TRACE_EVENT_FLAG_HAS_ID:
+        StringAppendF(out, ",\"id\":\"0x%" PRIx64 "\"",
+                      static_cast<uint64_t>(id_));
+        break;
+
+      case TRACE_EVENT_FLAG_HAS_LOCAL_ID:
+        StringAppendF(out, ",\"id2\":{\"local\":\"0x%" PRIx64 "\"}",
+                      static_cast<uint64_t>(id_));
+        break;
+
+      case TRACE_EVENT_FLAG_HAS_GLOBAL_ID:
+        StringAppendF(out, ",\"id2\":{\"global\":\"0x%" PRIx64 "\"}",
+                      static_cast<uint64_t>(id_));
+        break;
+
+      default:
+        NOTREACHED() << "More than one of the ID flags are set";
+        break;
+    }
   }
 
   if (flags_ & TRACE_EVENT_FLAG_BIND_TO_ENCLOSING)

@@ -183,7 +183,8 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       priority_(priority),
       server_ssl_config_(server_ssl_config),
       proxy_ssl_config_(proxy_ssl_config),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
+      net_log_(
+          NetLogWithSource::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
       io_callback_(base::Bind(&Job::OnIOComplete, base::Unretained(this))),
       connection_(new ClientSocketHandle),
       session_(session),
@@ -192,8 +193,8 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       destination_(destination),
       origin_url_(origin_url),
       alternative_service_(alternative_service),
-      delegate_(delegate),
       alternative_proxy_server_(alternative_proxy_server),
+      delegate_(delegate),
       job_type_(job_type),
       using_ssl_(false),
       using_spdy_(false),
@@ -202,12 +203,10 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       using_existing_quic_session_(false),
       spdy_certificate_error_(OK),
       establishing_tunnel_(false),
-      was_npn_negotiated_(false),
+      was_alpn_negotiated_(false),
       negotiated_protocol_(kProtoUnknown),
       num_streams_(0),
       spdy_session_direct_(false),
-      job_status_(STATUS_RUNNING),
-      other_job_status_(STATUS_RUNNING),
       stream_type_(HttpStreamRequest::BIDIRECTIONAL_STREAM),
       ptr_factory_(this) {
   DCHECK(session);
@@ -324,8 +323,8 @@ void HttpStreamFactoryImpl::Job::SetPriority(RequestPriority priority) {
   // preconnect state.
 }
 
-bool HttpStreamFactoryImpl::Job::was_npn_negotiated() const {
-  return was_npn_negotiated_;
+bool HttpStreamFactoryImpl::Job::was_alpn_negotiated() const {
+  return was_alpn_negotiated_;
 }
 
 NextProto HttpStreamFactoryImpl::Job::negotiated_protocol() const {
@@ -492,7 +491,7 @@ int HttpStreamFactoryImpl::Job::OnHostResolution(
     const SpdySessionKey& spdy_session_key,
     const GURL& origin_url,
     const AddressList& addresses,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   // It is OK to dereference spdy_session_pool, because the
   // ClientSocketPoolManager will be destroyed in the same callback that
   // destroys the SpdySessionPool.
@@ -581,8 +580,6 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
     }
 
     case OK:
-      job_status_ = STATUS_SUCCEEDED;
-      MaybeMarkAlternativeServiceBroken();
       next_state_ = STATE_DONE;
       if (new_spdy_session_.get()) {
         base::ThreadTaskRunnerHandle::Get()->PostTask(
@@ -613,11 +610,6 @@ int HttpStreamFactoryImpl::Job::RunLoop(int result) {
       return ERR_IO_PENDING;
 
     default:
-      if (job_status_ != STATUS_BROKEN) {
-        DCHECK_EQ(STATUS_RUNNING, job_status_);
-        job_status_ = STATUS_FAILED;
-        MaybeMarkAlternativeServiceBroken();
-      }
       base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::Bind(&Job::OnStreamFailedCallback,
                                 ptr_factory_.GetWeakPtr(), result));
@@ -692,7 +684,7 @@ int HttpStreamFactoryImpl::Job::StartInternal() {
 }
 
 int HttpStreamFactoryImpl::Job::DoStart() {
-  const BoundNetLog* net_log = delegate_->GetNetLog(this);
+  const NetLogWithSource* net_log = delegate_->GetNetLog(this);
 
   if (net_log) {
     net_log_.BeginEvent(
@@ -865,8 +857,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
       replacements.ClearRef();
       url = url.ReplaceComponents(replacements);
 
-      // If QUIC is disabled on the destination port, return error.
-      if (session_->quic_stream_factory()->IsQuicDisabled(destination.port()))
+      if (session_->quic_stream_factory()->IsQuicDisabled())
         return ERR_QUIC_PROTOCOL_ERROR;
     } else {
       DCHECK(using_ssl_);
@@ -953,7 +944,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
     // TODO(ricea): Re-enable NPN when WebSockets over SPDY is supported.
     SSLConfig websocket_server_ssl_config = server_ssl_config_;
     websocket_server_ssl_config.alpn_protos.clear();
-    websocket_server_ssl_config.npn_protos.clear();
     return InitSocketHandleForWebSocketRequest(
         GetSocketGroup(), destination_, request_info_.extra_headers,
         request_info_.load_flags, priority_, session_, proxy_info_, expect_spdy,
@@ -995,10 +985,10 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   }
 
   if (proxy_info_.is_quic() && using_quic_) {
-    // Mark QUIC proxy as bad if QUIC got disabled on the destination port.
+    // Mark QUIC proxy as bad if QUIC got disabled.
     // Underlying QUIC layer would have closed the connection.
     HostPortPair destination = proxy_info_.proxy_server().host_port_pair();
-    if (session_->quic_stream_factory()->IsQuicDisabled(destination.port())) {
+    if (session_->quic_stream_factory()->IsQuicDisabled()) {
       using_quic_ = false;
       return ReconsiderProxyAfterError(ERR_QUIC_PROTOCOL_ERROR);
     }
@@ -1017,13 +1007,13 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
 
   if (ssl_started && (result == OK || IsCertificateError(result))) {
     if (using_quic_ && result == OK) {
-      was_npn_negotiated_ = true;
+      was_alpn_negotiated_ = true;
       negotiated_protocol_ = kProtoQUIC1SPDY3;
     } else {
       SSLClientSocket* ssl_socket =
           static_cast<SSLClientSocket*>(connection_->socket());
       if (ssl_socket->WasNpnNegotiated()) {
-        was_npn_negotiated_ = true;
+        was_alpn_negotiated_ = true;
         negotiated_protocol_ = ssl_socket->GetNegotiatedProtocol();
         net_log_.AddEvent(
             NetLogEventType::HTTP_STREAM_REQUEST_PROTO,
@@ -1040,7 +1030,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     if (!proxy_socket->IsConnected())
       return ERR_CONNECTION_CLOSED;
     if (proxy_socket->IsUsingSpdy()) {
-      was_npn_negotiated_ = true;
+      was_alpn_negotiated_ = true;
       negotiated_protocol_ = proxy_socket->GetProxyNegotiatedProtocol();
       SwitchToSpdyMode();
     }
@@ -1064,25 +1054,17 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     return ReconsiderProxyAfterError(result);
   }
 
-  if (IsSpdyAlternative() && !using_spdy_) {
-    job_status_ = STATUS_BROKEN;
-    MaybeMarkAlternativeServiceBroken();
-    return ERR_NPN_NEGOTIATION_FAILED;
-  }
+  if (IsSpdyAlternative() && !using_spdy_)
+    return ERR_ALPN_NEGOTIATION_FAILED;
 
   if (!ssl_started && result < 0 &&
-      (IsSpdyAlternative() || IsQuicAlternative())) {
-    job_status_ = STATUS_BROKEN;
-    MaybeMarkAlternativeServiceBroken();
+      (IsSpdyAlternative() || IsQuicAlternative()))
     return result;
-  }
 
   if (using_quic_) {
-    if (result < 0) {
-      job_status_ = STATUS_BROKEN;
-      MaybeMarkAlternativeServiceBroken();
+    if (result < 0)
       return result;
-    }
+
     if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
       bidirectional_stream_impl_ =
           quic_request_.CreateBidirectionalStreamImpl();
@@ -1477,22 +1459,18 @@ int HttpStreamFactoryImpl::Job::HandleCertificateError(int error) {
       static_cast<SSLClientSocket*>(connection_->socket());
   ssl_socket->GetSSLInfo(&ssl_info_);
 
+  if (!ssl_info_.cert) {
+    // If the server's certificate could not be parsed, there is no way
+    // to gracefully recover this, so just pass the error up.
+    return error;
+  }
+
   // Add the bad certificate to the set of allowed certificates in the
   // SSL config object. This data structure will be consulted after calling
   // RestartIgnoringLastError(). And the user will be asked interactively
   // before RestartIgnoringLastError() is ever called.
-  SSLConfig::CertAndStatus bad_cert;
-
-  // |ssl_info_.cert| may be NULL if we failed to create
-  // X509Certificate for whatever reason, but normally it shouldn't
-  // happen, unless this code is used inside sandbox.
-  if (ssl_info_.cert.get() == NULL ||
-      !X509Certificate::GetDEREncoded(ssl_info_.cert->os_cert_handle(),
-                                      &bad_cert.der_cert)) {
-    return error;
-  }
-  bad_cert.cert_status = ssl_info_.cert_status;
-  server_ssl_config_.allowed_bad_certs.push_back(bad_cert);
+  server_ssl_config_.allowed_bad_certs.emplace_back(ssl_info_.cert,
+                                                    ssl_info_.cert_status);
 
   int load_flags = request_info_.load_flags;
   if (session_->params().ignore_certificate_errors)
@@ -1517,93 +1495,6 @@ void HttpStreamFactoryImpl::Job::ReportJobSucceededForRequest() {
   } else {
     // This Job was the normal Job, and hence the alternative Job lost the race.
     HistogramAlternateProtocolUsage(ALTERNATE_PROTOCOL_USAGE_LOST_RACE);
-  }
-}
-
-void HttpStreamFactoryImpl::Job::MarkOtherJobComplete(const Job& job) {
-  DCHECK_EQ(STATUS_RUNNING, other_job_status_);
-  DCHECK(!other_job_alternative_proxy_server_.is_valid());
-
-  other_job_status_ = job.job_status_;
-  other_job_alternative_service_ = job.alternative_service_;
-  other_job_alternative_proxy_server_ = job.alternative_proxy_server_;
-
-  // At most one job can have a valid |alternative_proxy_server_|.
-  DCHECK(!alternative_proxy_server_.is_valid() ||
-         !other_job_alternative_proxy_server_.is_valid());
-
-  MaybeMarkAlternativeServiceBroken();
-}
-
-void HttpStreamFactoryImpl::Job::MaybeMarkAlternativeServiceBroken() {
-  // At least one job should not be an alternative job.
-  DCHECK(alternative_service_.protocol == UNINITIALIZED_ALTERNATE_PROTOCOL ||
-         other_job_alternative_service_.protocol ==
-             UNINITIALIZED_ALTERNATE_PROTOCOL);
-
-  if (job_status_ == STATUS_RUNNING || other_job_status_ == STATUS_RUNNING)
-    return;
-
-  MaybeNotifyAlternativeProxyServerBroken();
-
-  if (IsSpdyAlternative() || IsQuicAlternative()) {
-    if (job_status_ == STATUS_BROKEN && other_job_status_ == STATUS_SUCCEEDED) {
-      HistogramBrokenAlternateProtocolLocation(
-          BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_ALT);
-      session_->http_server_properties()->MarkAlternativeServiceBroken(
-          alternative_service_);
-    }
-    return;
-  }
-
-  session_->quic_stream_factory()->OnTcpJobCompleted(job_status_ ==
-                                                     STATUS_SUCCEEDED);
-  if (job_status_ == STATUS_SUCCEEDED && other_job_status_ == STATUS_BROKEN) {
-    HistogramBrokenAlternateProtocolLocation(
-        BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB_MAIN);
-    session_->http_server_properties()->MarkAlternativeServiceBroken(
-        other_job_alternative_service_);
-  }
-}
-
-void HttpStreamFactoryImpl::Job::MaybeNotifyAlternativeProxyServerBroken()
-    const {
-  if (!alternative_proxy_server_.is_valid() &&
-      !other_job_alternative_proxy_server_.is_valid()) {
-    // Neither of the two jobs used an alternative proxy server.
-    return;
-  }
-
-  // Neither this job, nor the other job should have used the alternative
-  // service.
-  DCHECK_EQ(UNINITIALIZED_ALTERNATE_PROTOCOL, alternative_service_.protocol);
-  DCHECK_EQ(UNINITIALIZED_ALTERNATE_PROTOCOL,
-            other_job_alternative_service_.protocol);
-
-  ProxyDelegate* proxy_delegate = session_->params().proxy_delegate;
-  if (!proxy_delegate)
-    return;
-
-  if (alternative_proxy_server_.is_valid()) {
-    // |this| connected to the alternative proxy server.
-    if ((job_status_ == STATUS_BROKEN || job_status_ == STATUS_FAILED) &&
-        other_job_status_ == STATUS_SUCCEEDED) {
-      // Notify ProxyDelegate.
-      proxy_delegate->OnAlternativeProxyBroken(alternative_proxy_server_);
-    }
-    return;
-  }
-
-  if (other_job_alternative_proxy_server_.is_valid()) {
-    // Other job connected to the alternative proxy server.
-    if (job_status_ == STATUS_SUCCEEDED &&
-        (other_job_status_ == STATUS_BROKEN ||
-         other_job_status_ == STATUS_FAILED)) {
-      // Notify ProxyDelegate.
-      proxy_delegate->OnAlternativeProxyBroken(
-          other_job_alternative_proxy_server_);
-    }
-    return;
   }
 }
 

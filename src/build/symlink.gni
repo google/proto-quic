@@ -35,8 +35,11 @@ template("symlink") {
 #
 # Args:
 #   binary_label: Target that builds the file to symlink to. e.g.:
-#       ":foo($host_toolchain)".
-#   output: Where to create the symlink (default="$root_out_dir/$target_name")
+#       ":$target_name($host_toolchain)".
+#   binary_output_name: The output_name set by the binary_label target
+#       (if applicable).
+#   output_name: Where to create the symlink
+#       (default="$root_out_dir/$binary_output_name").
 #
 # Example:
 #   if (current_toolchain == host_toolchain) {
@@ -59,10 +62,17 @@ template("binary_symlink") {
     ]
 
     _out_dir = get_label_info(invoker.binary_label, "root_out_dir")
-    source = "$_out_dir/" + get_label_info(invoker.binary_label, "name")
-
-    if (!defined(output)) {
-      output = "$root_out_dir/${invoker.target_name}"
+    if (defined(invoker.binary_output_name)) {
+      _name = invoker.binary_output_name
+    } else {
+      _name = get_label_info(invoker.binary_label, "name")
     }
+    source = "$_out_dir/$_name"
+
+    _output_name = _name
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    }
+    output = "$root_out_dir/$_output_name"
   }
 }

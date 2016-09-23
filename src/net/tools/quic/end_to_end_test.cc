@@ -287,12 +287,12 @@ vector<TestParams> GetTestParams() {
                     }  // End of version for loop.
                   }    // End of 2nd version for loop.
                 }      // End of small_client_mtu loop.
-              }      // End of buffer_packet_till_chlo loop.
-            }        // End of use_cheap_stateless_reject for loop.
-          }          // End of force_hol_blocking loop.
-        }            // End of disable_hpack_dynamic_table for loop.
-      }              // End of congestion_control_tag for loop.
-    }                // End of client_supports_stateless_rejects for loop.
+              }        // End of buffer_packet_till_chlo loop.
+            }          // End of use_cheap_stateless_reject for loop.
+          }            // End of force_hol_blocking loop.
+        }              // End of disable_hpack_dynamic_table for loop.
+      }                // End of congestion_control_tag for loop.
+    }                  // End of client_supports_stateless_rejects for loop.
     CHECK_EQ(kMaxEnabledOptions, max_enabled_options);
   }  // End of server_uses_stateless_rejects_if_peer_supported for loop.
   return params;
@@ -1359,7 +1359,9 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kReno;
       break;
     case kTBBR:
-      expected_congestion_control_type = kBBR;
+      // TODO(vasilvv): switch this back to kBBR when new BBR implementation is
+      // in.
+      expected_congestion_control_type = kCubic;
       break;
     case kQBIC:
       expected_congestion_control_type = kCubic;
@@ -2766,7 +2768,10 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   EXPECT_EQ(12u, client_->num_responses());
 }
 
+// TODO(ckrasic) - remove this when deprecating
+// FLAGS_quic_enable_server_push_by_default.
 TEST_P(EndToEndTestServerPush, DisabledWithoutConnectionOption) {
+  FLAGS_quic_enable_server_push_by_default = false;
   // Tests that server push won't be triggered when kSPSH is not set by client.
   support_server_push_ = false;
   ASSERT_TRUE(Initialize());

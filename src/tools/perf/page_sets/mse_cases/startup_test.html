@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <title>MSE Startup Test</title>
+    <script src="startup_test.js"> </script>
+  </head>
+  <body>
+    <div>
+      <video controls style="width: 640px; height: 360px;" id="v"></video>
+    </div>
+    <div style="float: left; width: 320px; height: 250px">
+      <h4>Test Parameters:</h4>
+      <form method="GET">
+        <table>
+          <tr>
+            <td>testType:</td>
+            <td>
+              <select id="testType" name="testType">
+                <option value="A">audio-only</option>
+                <option value="V">video-only</option>
+                <option value="AV" selected >audio/video</option>
+              </select>
+            </td>
+          </tr>
+          <tr><td>doNotWaitForBodyOnLoad:</td><td ><input id="doNotWaitForBodyOnLoad" name="doNotWaitForBodyOnLoad" type="checkbox" value="true"></td></tr>
+          <tr><td>useAppendStream:</td><td ><input id="useAppendStream" name="useAppendStream" type="checkbox" value="true"></td></tr>
+          <tr><td>appendSize:</td><td><input type="text" size="7" id="appendSize" name="appendSize"></td></tr>
+          <tr><td>graphDuration (ms):</td><td><input type="text" size="7" id="graphDuration" name="graphDuration"></td></tr>
+        </table>
+        <input type="submit" value="Run Again">
+      </form>
+    </div>
+    <div style="float:left; width: 320px; height: 250px">
+      <h4>Results:</h4>
+      <div id="stats">
+      </div>
+    </div>
+    <div style="clear:both">
+      <canvas id="c" width="640" height="200"></canvas>
+    </div>
+    <script>
+      setupTest();
+    </script>
+  </body>
+</html>

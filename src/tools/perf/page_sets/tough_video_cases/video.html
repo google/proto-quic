@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <body>
+  </body>
+  <script>
+    function getQueryStrings() {
+      // Gets query parameters from the URL; e.g., given a URL like:
+      //
+      //    http://<url>/my.html?test=123&bob=456
+      //
+      // returns params["test"] = 123, params["bob"]=456, etc.
+      var params = {};
+      // RegEx to split out values by &.
+      var r = /([^&=]+)=?([^&]*)/g;
+      // Lambda function for decoding extracted match values. Replaces '+' with
+      // space so decodeURIComponent functions properly.
+      function d(s) { return decodeURIComponent(s.replace(/\+/g, ' ')); }
+      var match;
+      while (match = r.exec(window.location.search.substring(1)))
+       params[d(match[1])] = d(match[2]);
+      return params;
+    }
+    // Each network config = [DOWNLOAD_BANDWIDTH_Kbit/s, LATENCY_MS]
+    // Numbers are chosen to be similar to webpagereplay/net_configs.py
+    var netConfig = {};
+    netConfig['cable'] = [5120, 28];
+    netConfig['dsl'] = [1536, 50];
+    netConfig['wifi'] = [1024, 60];
+    netConfig['none'] = null;
+    // Constrained network server URL.
+    var CNS_BASE_URL = 'http://cns.chrome:9000/ServeConstrained?';
+
+    function getNetsimURL(net) {
+      if (!netConfig[net])
+        return CNS_BASE_URL;
+      return CNS_BASE_URL + 'bandwidth=' + netConfig[net][0] +
+          '&latency=' + netConfig[net][1]
+    }
+
+    function getMediaSRC() {
+      var mediaSRC = qsParams['src']
+      if (qsParams['net'])
+        return getNetsimURL(qsParams['net']) + '&new_port=True' + '&f=' +
+               mediaSRC;
+      return mediaSRC;
+    }
+
+    function canvas2dAnimation() {
+      canvasContext.drawImage(testElement, 0, 0, canvasElement.width, canvasElement.height);
+      window.requestAnimationFrame(canvas2dAnimation);
+    }
+
+    qsParams = getQueryStrings();
+    var type = qsParams['type'] || 'video';
+    var testElement = document.createElement(type);
+    var canvasElement;
+    var canvasContext;
+    testElement.preload = 'none';
+    testElement.controls = true;
+    if (qsParams['id'])
+      testElement.id = qsParams['id'];
+    testElement.src = getMediaSRC();
+    if (qsParams['canvas'] && type == 'video') {
+      canvasElement = document.createElement('canvas');
+      canvasElement.width = 800;
+      canvasElement.height = 450;
+      document.body.appendChild(canvasElement);
+      canvasContext = canvasElement.getContext('2d');
+      window.requestAnimationFrame(canvas2dAnimation);
+    }
+    document.body.appendChild(testElement);
+  </script>
+</html>

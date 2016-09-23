@@ -101,9 +101,8 @@ def main():
     f.write(new_manifest_data)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        [options.src_manifest] + build_utils.GetPythonDependencies())
+    deps = [options.src_manifest]
+    build_utils.WriteDepfile(options.depfile, options.out_manifest, deps)
 
 
 if __name__ == '__main__':

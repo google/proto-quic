@@ -8,6 +8,7 @@
 #include "net/quic/core/congestion_control/simulation/queue.h"
 #include "net/quic/core/congestion_control/simulation/simulator.h"
 #include "net/quic/core/congestion_control/simulation/switch.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -208,9 +209,7 @@ TEST(SimulatorTest, DirectLinkSaturation) {
   const QuicTime end_time = simulator.GetClock()->Now();
   const QuicBandwidth observed_bandwidth = QuicBandwidth::FromBytesAndTimeDelta(
       saturator_a.bytes_transmitted(), end_time - start_time);
-  EXPECT_NEAR(static_cast<double>(link.bandwidth().ToBitsPerSecond()) /
-                  observed_bandwidth.ToBitsPerSecond(),
-              1, 0.01);
+  test::ExpectApproxEq(link.bandwidth(), observed_bandwidth, 0.01);
 }
 
 // Accepts packets and stores them internally.

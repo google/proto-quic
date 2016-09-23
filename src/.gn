@@ -1,0 +1,266 @@
+# This file is used by the GN meta build system to find the root of the source
+# tree and to set startup options. For documentation on the values set in this
+# file, run "gn help dotfile" at the command line.
+
+# The location of the build configuration file.
+buildconfig = "//build/config/BUILDCONFIG.gn"
+
+# The secondary source root is a parallel directory tree where
+# GN build files are placed when they can not be placed directly
+# in the source tree, e.g. for third party source trees.
+secondary_source = "//build/secondary/"
+
+# These are the targets to check headers for by default. The files in targets
+# matching these patterns (see "gn help label_pattern" for format) will have
+# their includes checked for proper dependencies when you run either
+# "gn check" or "gn gen --check".
+check_targets = [
+  #"//apps/*",  # Medium-hard.
+  "//ash/*",
+  "//base/*",
+  "//blimp/*",
+  "//blink/*",
+  "//breakpad/*",
+  "//build/*",
+  "//cc/*",
+
+  #"//chrome/*",  # Epic number of errors.
+  "//chrome/app/*",
+  "//chrome/browser/extensions/*",
+
+  #"//chrome/browser/ui/*",  # Still fails on Windows official.
+  "//chrome/common/*",
+  "//chrome/installer/*",
+  "//chrome/third_party/mozilla_security_manager/*",
+  "//chrome/tools/*",
+  "//chrome/utility/*",
+  "//chromecast/*",
+  "//chromeos/*",
+  "//chrome_elf/*",
+  "//cloud_print/*",
+  "//components/*",
+  "//content/*",
+  "//courgette/*",
+  "//crypto/*",
+  "//data/*",
+  "//dbus/*",
+  "//device/*",
+
+  #"//extensions/*",  # Lots of errors.
+  "//extensions:extensions_unittests",
+  "//extensions/browser:browser_tests",
+  "//extensions/browser:unit_tests",
+  "//extensions/common:unit_tests",
+  "//extensions/renderer:unit_tests",
+  "//extensions/shell:browser_tests",
+  "//extensions/shell:unit_tests",
+  "//extensions/utility:unit_tests",
+  "//gin/*",
+  "//google_apis/*",
+  "//google_update/*",
+  "//gpu/*",
+
+  "//ios/*",
+  "//ios_internal/*",
+  "//ipc/*",
+
+  #"//jingle/*",
+  "//mash/*",
+
+  #"//media/*",  # Lots of errors.
+  #"//media/base/*",
+  #"//media/capture/*",
+  #"//media/cast/*",
+  #"//media/test/*",
+  "//media:media",
+  "//media:shared_memory_support",
+  "//media:media_unittests",
+  "//media:audio_unittests",
+  "//media:media_perftests",
+  "//media/audio/*",
+  "//media/blink/*",
+  "//media/cdm/*",
+  "//media/ffmpeg/*",
+  "//media/gpu/*",
+  "//media/midi/*",
+  "//media/mojo/*",
+
+  "mojo/*",
+
+  #"//native_client/*",
+  "//net/*",
+
+  #"//pdf/*",  # Medium-hard.
+  #"//ppapi/*",  # Lots of errors.
+  "//ppapi/examples/*",
+  "//printing/*",
+
+  #"//remoting/*",  # Medium-hard.
+  "//rlz/*",
+
+  #"//sandbox/*",  # Medium-hard.
+  "//sdch/*",
+  "//services/*",
+  "//skia/*",
+  "//sql/*",
+  "//storage/*",
+  "//testing/*",
+
+  #"//third_party/*",  # May not ever want this.
+  "//third_party/hunspell/*",
+  "//third_party/kasko/*",
+  "//third_party/libaddressinput/*",
+  "//third_party/libphonenumber/*",
+  "//third_party/WebKit/Source/*",
+  "//tools/*",
+
+  #"//ui/*",  # Work left on Chromeos w/ use_ozone. Some parts of UI that work:
+  "//ui/accessibility/*",
+  "//ui/android/*",
+  "//ui/app_list/*",
+  "//ui/arc/*",
+  "//ui/aura/*",
+  "//ui/aura_extra/*",
+  "//ui/base/*",
+  "//ui/chromeos/*",
+  "//ui/compositor/*",
+  "//ui/content_accelerators/*",
+  "//ui/display/*",
+  "//ui/events/*",
+  "//ui/file_manager/*",
+  "//ui/gfx/*",
+  "//ui/gl/*",
+  "//ui/keyboard/*",
+  "//ui/latency_info/*",
+  "//ui/login/*",
+  "//ui/message_center/*",
+  "//ui/mojo/*",
+  "//ui/native_theme/*",
+  "//ui/ozone/*",
+  "//ui/platform_window/*",
+  "//ui/resources/*",
+  "//ui/shell_dialogs/*",
+  "//ui/snapshot/*",
+  "//ui/strings/*",
+  "//ui/surface/*",
+  "//ui/touch_selection/*",
+  "//ui/views/*",
+  "//ui/views_content_client/*",
+  "//ui/web_dialogs/*",
+  "//ui/webui/*",
+  "//ui/wm/*",
+  "//url/*",
+  "//v8/*",
+  "//win8/*",
+]
+
+# These are the list of GN files that run exec_script. This whitelist exists
+# to force additional review for new uses of exec_script, which is strongly
+# discouraged.
+#
+# GYPI_TO_GN
+#
+# Most of these entries are for gypi_to_gn calls. We should not be adding new
+# calls to this script in the build (see //build/gypi_to_gn.py for detailed
+# advice). The only time you should be editing this list for gypi_to_gn
+# purposes is when moving an existing call to a different place.
+#
+# PLEASE READ
+#
+# You should almost never need to add new exec_script calls. exec_script is
+# slow, especially on Windows, and can cause confusing effects. Although
+# individually each call isn't slow or necessarily very confusing, at the scale
+# of our repo things get out of hand quickly. By strongly pushing back on all
+# additions, we keep the build fast and clean. If you think you need to add a
+# new call, please consider:
+#
+# - Do not use a script to check for the existance of a file or directory to
+#   enable a different mode. Instead, use GN build args to enable or disable
+#   functionality and set options. An example is checking for a file in the
+#   src-internal repo to see if the corresponding src-internal feature should
+#   be enabled. There are several things that can go wrong with this:
+#
+#    - It's mysterious what causes some things to happen. Although in many cases
+#      such behavior can be conveniently automatic, GN optimizes for explicit
+#      and obvious behavior so people can more easily diagnose problems.
+#
+#    - The user can't enable a mode for one build and not another. With GN build
+#      args, the user can choose the exact configuration of multiple builds
+#      using one checkout. But implicitly basing flags on the state of the
+#      checkout, this functionality is broken.
+#
+#    - It's easy to get stale files. If for example the user edits the gclient
+#      to stop checking out src-internal (or any other optional thing), it's
+#      easy to end up with stale files still mysteriously triggering build
+#      conditions that are no longer appropriate (yes, this happens in real
+#      life).
+#
+# - Do not use a script to iterate files in a directory (glob):
+#
+#    - This has the same "stale file" problem as the above discussion. Various
+#      operations can leave untracked files in the source tree which can cause
+#      surprising effects.
+#
+#    - It becomes impossible to use "git grep" to find where a certain file is
+#      referenced. This operation is very common and people really do get
+#      confused when things aren't listed.
+#
+#    - It's easy to screw up. One common case is a build-time script that packs
+#      up a directory. The author notices that the script isn't re-run when the
+#      directory is updated, so adds a glob so all the files are listed as
+#      inputs. This seems to work great... until a file is deleted. When a
+#      file is deleted, all the inputs the glob lists will still be up to date
+#      and no command-lines will have been changed. The action will not be
+#      re-run and the build will be broken. It is possible to get this correct
+#      using glob, and it's possible to mess it up without glob, but globs make
+#      this situation much easier to create. if the build always lists the
+#      files and passes them to a script, it will always be correct.
+exec_script_whitelist = [
+  "//android_webview/BUILD.gn",
+  "//build/config/BUILD.gn",
+  "//build/config/android/config.gni",
+  "//build/config/android/internal_rules.gni",
+  "//build/config/android/rules.gni",
+  "//build/config/compiler/BUILD.gn",
+  "//build/config/gcc/gcc_version.gni",
+  "//build/config/ios/ios_sdk.gni",
+  "//build/config/linux/BUILD.gn",
+  "//build/config/linux/pkg_config.gni",
+  "//build/config/linux/atk/BUILD.gn",
+  "//build/config/mac/mac_sdk.gni",
+  "//build/config/posix/BUILD.gn",
+  "//build/config/sysroot.gni",
+  "//build/config/win/BUILD.gn",
+  "//build/config/win/visual_studio_version.gni",
+  "//build/toolchain/concurrent_links.gni",
+  "//build/toolchain/mac/BUILD.gn",
+  "//build/toolchain/nacl/BUILD.gn",
+  "//build/toolchain/win/BUILD.gn",
+  "//build/util/branding.gni",
+  "//build/util/version.gni",
+  "//chromeos/BUILD.gn",
+
+  # TODO(dgn): Layer violation but breaks the build otherwise, see
+  # https://crbug.com/474506
+  "//clank/java/BUILD.gn",
+  "//clank/native/BUILD.gn",
+
+  "//jingle/BUILD.gn",
+  "//net/BUILD.gn",
+  "//remoting/host/BUILD.gn",
+  "//remoting/remoting_version.gni",
+  "//remoting/host/installer/win/generate_clsids.gni",
+  "//third_party/angle/BUILD.gn",
+  "//third_party/angle/src/tests/BUILD.gn",
+  "//third_party/angle/src/vulkan_support/BUILD.gn",
+  "//third_party/catapult/tracing/BUILD.gn",
+  "//third_party/google_input_tools/inputview.gni",
+  "//third_party/skia/gn/shared_sources.gni",
+
+  # CLD2 should be removed soon, delete this when we do.
+  "//third_party/cld_2/BUILD.gn",
+
+  # Not gypi-to-gn.
+  "//google_apis/BUILD.gn",
+  "//printing/BUILD.gn",
+]

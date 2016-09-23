@@ -4,6 +4,29 @@
 
 """Converts a given gypi file to a python scope and writes the result to stdout.
 
+USING THIS SCRIPT IN CHROMIUM
+
+Forking Python to run this script in the middle of GN is slow, especially on
+Windows, and it makes both the GYP and GN files harder to follow. You can't
+use "git grep" to find files in the GN build any more, and tracking everything
+in GYP down requires a level of indirection. Any calls will have to be removed
+and cleaned up once the GYP-to-GN transition is complete.
+
+As a result, we only use this script when the list of files is large and
+frequently-changing. In these cases, having one canonical list outweights the
+downsides.
+
+As of this writing, the GN build is basically complete. It's likely that all
+large and frequently changing targets where this is appropriate use this
+mechanism already. And since we hope to turn down the GYP build soon, the time
+horizon is also relatively short. As a result, it is likely that no additional
+uses of this script should every be added to the build. During this later part
+of the transition period, we should be focusing more and more on the absolute
+readability of the GN build.
+
+
+HOW TO USE
+
 It is assumed that the file contains a toplevel dictionary, and this script
 will return that dictionary as a GN "scope" (see example below). This script
 does not know anything about GYP and it will not expand variables or execute

@@ -13,7 +13,7 @@ class HeapObject;
 class PartObject;
 
 class PartBObject {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 public:
     void trace(Visitor*);
 private:
@@ -22,7 +22,7 @@ private:
 };
 
 class PartObject {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 public:
     void trace(Visitor*);
 private:

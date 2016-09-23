@@ -284,5 +284,8 @@ def Parse(proguard_output):
       if m:
         state.UpdateCurrentAnnotationFieldValue(
           m.group(2), _GetDepth(m.group(1)))
+      else:
+        state.InitMethod(None)
+
 
   return results

@@ -23,12 +23,16 @@ import md5_check  # pylint: disable=relative-import
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 from pylib.constants import host_paths
 
+sys.path.append(os.path.join(os.path.dirname(__file__),
+                             os.pardir, os.pardir, os.pardir))
+import gn_helpers
+
 COLORAMA_ROOT = os.path.join(host_paths.DIR_SOURCE_ROOT,
                              'third_party', 'colorama', 'src')
 # aapt should ignore OWNERS files in addition the default ignore pattern.
 AAPT_IGNORE_PATTERN = ('!OWNERS:!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:' +
                        '!CVS:!thumbs.db:!picasa.ini:!*~:!*.d.stamp')
-_HERMETIC_TIMESTAMP = (2001, 1, 1, 0, 0, 0)
+HERMETIC_TIMESTAMP = (2001, 1, 1, 0, 0, 0)
 _HERMETIC_FILE_ATTR = (0644 << 16L)
 
 
@@ -78,31 +82,23 @@ def FindInDirectories(directories, filename_filter):
 
 
 def ParseGnList(gn_string):
-  # TODO(brettw) bug 573132: This doesn't handle GN escaping properly, so any
-  # weird characters like $ or \ in the strings will be corrupted.
-  #
-  # The code should import build/gn_helpers.py and then do:
-  #   parser = gn_helpers.GNValueParser(gn_string)
-  #   return return parser.ParseList()
-  # As of this writing, though, there is a CastShell build script that sends
-  # JSON through this function, and using correct GN parsing corrupts that.
-  #
-  # We need to be consistent about passing either JSON or GN lists through
-  # this function.
-  return ast.literal_eval(gn_string)
+  """Converts a command-line parameter into a list.
 
+  If the input starts with a '[' it is assumed to be a GN-formatted list and
+  it will be parsed accordingly. When empty an empty list will be returned.
+  Otherwise, the parameter will be treated as a single raw string (not
+  GN-formatted in that it's not assumed to have literal quotes that must be
+  removed) and a list will be returned containing that string.
 
-def ParseGypList(gyp_string):
-  # The ninja generator doesn't support $ in strings, so use ## to
-  # represent $.
-  # TODO(cjhopman): Remove when
-  # https://code.google.com/p/gyp/issues/detail?id=327
-  # is addressed.
-  gyp_string = gyp_string.replace('##', '$')
-
-  if gyp_string.startswith('['):
-    return ParseGnList(gyp_string)
-  return shlex.split(gyp_string)
+  The common use for this behavior is in the Android build where things can
+  take lists of @FileArg references that are expanded via ExpandFileArgs.
+  """
+  if gn_string.startswith('['):
+    parser = gn_helpers.GNValueParser(gn_string)
+    return parser.ParseList()
+  if len(gn_string):
+    return [ gn_string ]
+  return []
 
 
 def CheckOptions(options, parser, required=None):
@@ -152,7 +148,7 @@ class CalledProcessError(Exception):
 # This can be used in most cases like subprocess.check_output(). The output,
 # particularly when the command fails, better highlights the command's failure.
 # If the command fails, raises a build_utils.CalledProcessError.
-def CheckOutput(args, cwd=None,
+def CheckOutput(args, cwd=None, env=None,
                 print_stdout=False, print_stderr=True,
                 stdout_filter=None,
                 stderr_filter=None,
@@ -161,7 +157,7 @@ def CheckOutput(args, cwd=None,
     cwd = os.getcwd()
 
   child = subprocess.Popen(args,
-      stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
+      stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd, env=env)
   stdout, stderr = child.communicate()
 
   if stdout_filter is not None:
@@ -225,6 +221,9 @@ def ExtractAll(zip_path, path=None, no_clobber=True, pattern=None,
   elif not os.path.exists(path):
     MakeDirectory(path)
 
+  if not zipfile.is_zipfile(zip_path):
+    raise Exception('Invalid zip file: %s' % zip_path)
+
   with zipfile.ZipFile(zip_path) as z:
     for name in z.namelist():
       if name.endswith('/'):
@@ -264,8 +263,14 @@ def AddToZipHermetic(zip_file, zip_path, src_path=None, data=None,
   assert (src_path is None) != (data is None), (
       '|src_path| and |data| are mutually exclusive.')
   CheckZipPath(zip_path)
-  zipinfo = zipfile.ZipInfo(filename=zip_path, date_time=_HERMETIC_TIMESTAMP)
+  zipinfo = zipfile.ZipInfo(filename=zip_path, date_time=HERMETIC_TIMESTAMP)
   zipinfo.external_attr = _HERMETIC_FILE_ATTR
+
+  if src_path and os.path.islink(src_path):
+    zipinfo.filename = zip_path
+    zipinfo.external_attr |= stat.S_IFLNK << 16L # mark as a symlink
+    zip_file.writestr(zipinfo, os.readlink(src_path))
+    return
 
   if src_path:
     with file(src_path) as f:
@@ -331,9 +336,6 @@ def MergeZips(output, inputs, exclude_patterns=None, path_transform=None):
           # Ignore directories.
           if info.filename[-1] == '/':
             continue
-          # Don't validate CRCs. ijar sets them all to 0.
-          if hasattr(info, 'CRC'):
-            del info.CRC
           dst_name = path_transform(info.filename, in_file)
           already_added = dst_name in added_names
           if not already_added and not MatchesGlob(dst_name, exclude_patterns):
@@ -418,14 +420,20 @@ def AddDepfileOption(parser):
   else:
     func = parser.add_argument
   func('--depfile',
-       help='Path to depfile. Must be specified as the action\'s first output.')
+       help='Path to depfile (refer to `gn help depfile`)')
 
 
-def WriteDepfile(path, dependencies):
-  with open(path, 'w') as depfile:
-    depfile.write(path)
+def WriteDepfile(depfile_path, first_gn_output, inputs=None, add_pydeps=True):
+  assert depfile_path != first_gn_output  # http://crbug.com/646165
+  inputs = inputs or []
+  if add_pydeps:
+    inputs = GetPythonDependencies() + inputs
+  MakeDirectory(os.path.dirname(depfile_path))
+  # Ninja does not support multiple outputs in depfiles.
+  with open(depfile_path, 'w') as depfile:
+    depfile.write(first_gn_output.replace(' ', '\\ '))
     depfile.write(': ')
-    depfile.write(' '.join(dependencies))
+    depfile.write(' '.join(i.replace(' ', '\\ ') for i in inputs))
     depfile.write('\n')
 
 
@@ -463,9 +471,23 @@ def ExpandFileArgs(args):
     for k in lookup_path[1:]:
       expansion = expansion[k]
 
-    new_args[i] = arg[:match.start()] + str(expansion)
+    # This should match ParseGNList. The output is either a GN-formatted list
+    # or a literal (with no quotes).
+    if isinstance(expansion, list):
+      new_args[i] = arg[:match.start()] + gn_helpers.ToGNString(expansion)
+    else:
+      new_args[i] = arg[:match.start()] + str(expansion)
 
   return new_args
+
+
+def ReadSourcesList(sources_list_file_name):
+  """Reads a GN-written file containing list of file names and returns a list.
+
+  Note that this function should not be used to parse response files.
+  """
+  with open(sources_list_file_name) as f:
+    return [file_name.strip() for file_name in f]
 
 
 def CallAndWriteDepfileIfStale(function, options, record_path=None,
@@ -493,9 +515,7 @@ def CallAndWriteDepfileIfStale(function, options, record_path=None,
   python_deps = None
   if hasattr(options, 'depfile') and options.depfile:
     python_deps = GetPythonDependencies()
-    # List python deps in input_strings rather than input_paths since the
-    # contents of them does not change what gets written to the depfile.
-    input_strings += python_deps
+    input_paths += python_deps
     output_paths += [options.depfile]
 
   stamp_file = hasattr(options, 'stamp') and options.stamp
@@ -509,7 +529,8 @@ def CallAndWriteDepfileIfStale(function, options, record_path=None,
       all_depfile_deps = list(python_deps)
       if depfile_deps:
         all_depfile_deps.extend(depfile_deps)
-      WriteDepfile(options.depfile, all_depfile_deps)
+      WriteDepfile(options.depfile, output_paths[0], all_depfile_deps,
+                   add_pydeps=False)
     if stamp_file:
       Touch(stamp_file)
 

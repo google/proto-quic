@@ -94,8 +94,6 @@ std::string AlternativeServiceInfo::ToString() const {
 void HttpServerProperties::ForceHTTP11(SSLConfig* ssl_config) {
   ssl_config->alpn_protos.clear();
   ssl_config->alpn_protos.push_back(kProtoHTTP11);
-  ssl_config->npn_protos.clear();
-  ssl_config->npn_protos.push_back(kProtoHTTP11);
 }
 
 }  // namespace net

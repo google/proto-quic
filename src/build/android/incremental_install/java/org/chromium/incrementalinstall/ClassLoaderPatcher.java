@@ -181,7 +181,7 @@ final class ClassLoaderPatcher {
             }
         }
         if (numNotChanged > 0) {
-            Log.i(TAG, numNotChanged + " libs already up-to-date.");
+            Log.i(TAG, numNotChanged + " libs already up to date.");
         }
     }
 
@@ -231,7 +231,8 @@ final class ClassLoaderPatcher {
         for (int i = 0; i < files.length; ++i) {
             File file = files[i];
             Object dexFile;
-            if ("N".equals(Build.VERSION.CODENAME)) {
+            if (Build.VERSION.CODENAME.equals("N")
+                    || Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
                 // loadDexFile requires that ret contain all previously added elements.
                 dexFile = Reflect.invokeMethod(clazz, "loadDexFile", file, optimizedDirectory,
                                                mClassLoader, ret);

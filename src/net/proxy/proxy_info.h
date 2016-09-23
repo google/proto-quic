@@ -141,7 +141,7 @@ class NET_EXPORT ProxyInfo {
   // is not because of a network error, then |OK| should be passed in (eg. for
   // reasons such as local policy). Returns true if there is another proxy is
   // available to try in proxy list_.
-  bool Fallback(int net_error, const BoundNetLog& net_log);
+  bool Fallback(int net_error, const NetLogWithSource& net_log);
 
   // De-prioritizes the proxies that we have cached as not working, by moving
   // them to the end of the proxy list.

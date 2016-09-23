@@ -1,0 +1,5 @@
+phajdan.jr@chromium.org
+
+# For Android-specific changes:
+per-file *android*=file://base/test/android/OWNERS
+per-file BUILD.gn=file://base/test/android/OWNERS

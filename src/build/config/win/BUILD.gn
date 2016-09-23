@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/win/visual_studio_version.gni")
+import("//build/toolchain/toolchain.gni")
 
 assert(is_win)
 
@@ -14,6 +16,9 @@ declare_args() {
   # warnings, so normally this is done on a build machine and only the new
   # warnings are examined.
   use_vs_code_analysis = false
+
+  # Turn this on to have the linker output extra timing information.
+  win_linker_timing = false
 }
 
 # This is included by reference in the //build/config/compiler config that
@@ -33,7 +38,6 @@ config("compiler") {
 
   cflags = [
     "/Gy",  # Enable function-level linking.
-    "/GS",  # Enable buffer security checking.
     "/FS",  # Preserve previous PDB behavior.
     "/bigobj",  # Some of our files are bigger than the regular limits.
   ]
@@ -43,6 +47,15 @@ config("compiler") {
   # modes.
   cflags_c = [ "/TC" ]
   cflags_cc = [ "/TP" ]
+
+  # Flags not supported in version 2013.
+  if (visual_studio_version != "2013" && visual_studio_version != "2013e") {
+    cflags += [
+      # Tell the compiler to crash on failures. This is undocumented
+      # and unsupported but very handy.
+      "/d2FastFail",
+    ]
+  }
 
   if (visual_studio_version == "2015") {
     cflags += [
@@ -60,12 +73,6 @@ config("compiler") {
   # experimental. See crbug.com/82385.
   # Keep this in sync with the similar block in build/common.gypi
   if (is_clang) {
-    cflags += [
-      # Many files use intrinsics without including this header.
-      # TODO(hans): Fix those files, or move this to sub-GYPs.
-      "/FIIntrin.h",
-    ]
-
     if (visual_studio_version == "2013") {
       cflags += [ "-fmsc-version=1800" ]
     } else if (visual_studio_version == "2015") {
@@ -86,13 +93,33 @@ config("compiler") {
         "-fansi-escape-codes",
       ]
     }
+
+    # Clang runtime libraries, such as the sanitizer runtimes, live here.
+    lib_dirs = [ "$clang_base_path/lib/clang/$clang_version/lib/windows" ]
   }
 
-  if (is_syzyasan) {
-    # SyzyAsan needs /PROFILE turned on to produce appropriate pdbs.
-    assert(!is_win_fastlink, "/PROFILE and /DEBUG:FASTLINK are incompatible")
+  # Ensures that the PDB file contains FIXUP information (growing the PDB file
+  # by about 5%) but does not otherwise alter the output binary. This
+  # information is used by the Syzygy optimization tool when decomposing the
+  # release image. It is enabled for syzyasan builds and opportunistically for
+  # other builds where it is not prohibited (not supported when incrementally
+  # linking, using /debug:fastlink, or building with clang).
+  if (is_syzyasan ||
+      (!is_debug && !is_component_build && !is_win_fastlink && !is_clang)) {
     ldflags = [ "/PROFILE" ]
   }
+
+  # arflags apply only to static_libraries. The normal linker configs are only
+  # set for executable and shared library targets so arflags must be set
+  # elsewhere. Since this is relatively contained, we just apply them in this
+  # more general config and they will only have an effect on static libraries.
+  arflags = [
+    # "No public symbols found; archive member will be inaccessible." This
+    # means that one or more object files in the library can never be
+    # pulled in to targets that link to this library. It's just a warning that
+    # the source file is a no-op.
+    "/ignore:4221",
+  ]
 }
 
 config("vs_code_analysis") {
@@ -156,7 +183,6 @@ config("runtime_library") {
     "_ATL_NO_OPENGL",
     "_WINDOWS",
     "CERT_CHAIN_PARA_HAS_EXTRA_FIELDS",
-    "NTDDI_VERSION=0x0A000000",
     "PSAPI_VERSION=1",
     "WIN32",
     "_SECURE_ATL",
@@ -200,6 +226,7 @@ config("runtime_library") {
 # targets need to manually override it for their compiles.
 config("winver") {
   defines = [
+    "NTDDI_VERSION=0x0A000000",
     "_WIN32_WINNT=0x0A00",
     "WINVER=0x0A00",
   ]
@@ -218,15 +245,13 @@ config("sdk_link") {
     ldflags = [
       "/MACHINE:X86",
       "/SAFESEH",  # Not compatible with x64 so use only for x86.
+      "/largeaddressaware",
     ]
     lib_dirs = [
       "$windows_sdk_path\Lib\winv6.3\um\x86",
       "$visual_studio_path\VC\lib",
       "$visual_studio_path\VC\atlmfc\lib",
     ]
-    if (!is_syzyasan) {
-      ldflags += [ "/largeaddressaware" ]
-    }
   }
 }
 
@@ -239,12 +264,11 @@ config("common_linker_setup") {
     "/ignore:4199",
     "/ignore:4221",
     "/NXCOMPAT",
+  ]
 
-    # Suggested by Microsoft Devrel to avoid
-    #   LINK : fatal error LNK1248: image size (80000000)
-    #   exceeds maximum allowable size (80000000)
-    # which started happening more regularly after VS2013 Update 4.
-    "/maxilksize:2147483647",
+  ldflags += [
+    # Tell the linker to crash on failures.
+    "/fastfail",
   ]
 
   # ASLR makes debugging with windbg difficult because Chrome.exe and
@@ -259,13 +283,12 @@ config("common_linker_setup") {
     ldflags += [ "/DYNAMICBASE" ]
   }
 
-  # Delay loaded DLLs.
-  ldflags += [
-    "/DELAYLOAD:dbghelp.dll",
-    "/DELAYLOAD:dwmapi.dll",
-    "/DELAYLOAD:shell32.dll",
-    "/DELAYLOAD:uxtheme.dll",
-  ]
+  if (win_linker_timing) {
+    ldflags += [
+      "/time",
+      "/verbose:incr",
+    ]
+  }
 }
 
 # Subsystem --------------------------------------------------------------------
@@ -291,7 +314,10 @@ config("windowed") {
 
 incremental_linking_on_switch = [ "/INCREMENTAL" ]
 incremental_linking_off_switch = [ "/INCREMENTAL:NO" ]
-if (is_debug) {
+
+# Disable incremental linking for syzyasan, enable for debug builds and all
+# component builds - any builds where performance is not job one.
+if ((is_debug || is_component_build) && !is_syzyasan) {
   default_incremental_linking_switch = incremental_linking_on_switch
 } else {
   default_incremental_linking_switch = incremental_linking_off_switch

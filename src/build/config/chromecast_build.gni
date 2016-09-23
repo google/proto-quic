@@ -11,7 +11,7 @@ declare_args() {
   is_chromecast = false
 
   # Set this true for an audio-only Chromecast build.
-  disable_display = false
+  is_cast_audio_only = false
 }
 
 # Note(slan): This arg depends on the value of is_chromecast, and thus must be
@@ -31,6 +31,6 @@ declare_args() {
 assert(is_linux || is_android || !is_chromecast,
        "Chromecast builds are not supported on $target_os")
 
-# Assert that disable_display and is_cast_desktop_build are both false on a
+# Assert that is_cast_audio_only and is_cast_desktop_build are both false on a
 # non-Chromecast build.
-assert(is_chromecast || !(disable_display || is_cast_desktop_build))
+assert(is_chromecast || (!is_cast_audio_only && !is_cast_desktop_build))

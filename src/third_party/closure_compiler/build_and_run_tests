@@ -1,0 +1,48 @@
+#!/bin/bash
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Downloads and compiles necessary dependencies (closure compiler, junit) and
+# builds and runs Java-specific JUnit tests.
+
+readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+readonly TEMP_DIR=$(mktemp -d)
+
+cleanup() {
+  rm -rf "${TEMP_DIR}"
+  rm -rf ${SCRIPT_DIR}/runner/*/com/google/javascript/jscomp/*.class
+}
+
+die_earlier() {
+  cleanup
+  exit 1
+}
+
+trap die_earlier SIGINT SIGHUP SIGTERM
+
+cd "${TEMP_DIR}"
+echo "Cloning Closure Compiler repo"
+git clone https://github.com/google/closure-compiler.git || die_earlier
+
+cd closure-compiler
+echo "Building Closure Compiler"
+ant all-classes-jar || die_earlier
+
+readonly classpath=".:./runner/test:./runner/src:\
+${TEMP_DIR}/closure-compiler/build/compiler.jar:\
+${TEMP_DIR}/closure-compiler/build/classes:\
+${TEMP_DIR}/closure-compiler/lib/junit.jar"
+
+cd "${SCRIPT_DIR}"
+
+echo "Compiling tests"
+javac -classpath "${classpath}" \
+    runner/test/com/google/javascript/jscomp/ChromePassTest.java || die_earlier
+
+echo "Running tests"
+java -classpath "${classpath}" org.junit.runner.JUnitCore \
+    com.google.javascript.jscomp.ChromePassTest || die_earlier
+
+echo "Cleaning up"
+cleanup

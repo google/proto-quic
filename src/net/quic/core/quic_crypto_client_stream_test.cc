@@ -244,18 +244,18 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateBeforeHandshake) {
 }
 
 TEST_F(QuicCryptoClientStreamTest, TokenBindingNegotiation) {
-  server_options_.token_binding_enabled = true;
-  crypto_config_.tb_key_params.push_back(kP256);
+  server_options_.token_binding_params = QuicTagVector{kTB10, kP256};
+  crypto_config_.tb_key_params = QuicTagVector{kTB10};
 
   CompleteCryptoHandshake();
   EXPECT_TRUE(stream()->encryption_established());
   EXPECT_TRUE(stream()->handshake_confirmed());
-  EXPECT_EQ(kP256,
+  EXPECT_EQ(kTB10,
             stream()->crypto_negotiated_params().token_binding_key_param);
 }
 
 TEST_F(QuicCryptoClientStreamTest, NoTokenBindingWithoutServerSupport) {
-  crypto_config_.tb_key_params.push_back(kP256);
+  crypto_config_.tb_key_params = QuicTagVector{kTB10, kP256};
 
   CompleteCryptoHandshake();
   EXPECT_TRUE(stream()->encryption_established());
@@ -264,7 +264,7 @@ TEST_F(QuicCryptoClientStreamTest, NoTokenBindingWithoutServerSupport) {
 }
 
 TEST_F(QuicCryptoClientStreamTest, NoTokenBindingWithoutClientSupport) {
-  server_options_.token_binding_enabled = true;
+  server_options_.token_binding_params = QuicTagVector{kTB10, kP256};
 
   CompleteCryptoHandshake();
   EXPECT_TRUE(stream()->encryption_established());

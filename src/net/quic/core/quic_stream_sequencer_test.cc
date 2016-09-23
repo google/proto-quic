@@ -283,14 +283,12 @@ TEST_F(QuicStreamSequencerTest, NextxFrameNotConsumed) {
   OnFrame(0, "abc");
   EXPECT_EQ(3u, NumBufferedBytes());
   EXPECT_EQ(0u, sequencer_->NumBytesConsumed());
-  EXPECT_EQ(0, sequencer_->num_early_frames_received());
 }
 
 TEST_F(QuicStreamSequencerTest, FutureFrameNotProcessed) {
   OnFrame(3, "abc");
   EXPECT_EQ(3u, NumBufferedBytes());
   EXPECT_EQ(0u, sequencer_->NumBytesConsumed());
-  EXPECT_EQ(1, sequencer_->num_early_frames_received());
 }
 
 TEST_F(QuicStreamSequencerTest, OutOfOrderFrameProcessed) {

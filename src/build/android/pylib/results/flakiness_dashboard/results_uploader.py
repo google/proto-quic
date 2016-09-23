@@ -86,22 +86,17 @@ class ResultsUploader(object):
   """Handles uploading buildbot tests results to the flakiness dashboard."""
   def __init__(self, tests_type):
     self._build_number = os.environ.get('BUILDBOT_BUILDNUMBER')
+    self._master_name = os.environ.get('BUILDBOT_MASTERNAME')
     self._builder_name = os.environ.get('BUILDBOT_BUILDERNAME')
     self._tests_type = tests_type
+    self._build_name = None
 
     if not self._build_number or not self._builder_name:
       raise Exception('You should not be uploading tests results to the server'
                       'from your local machine.')
 
     upstream = (tests_type != 'Chromium_Android_Instrumentation')
-    if upstream:
-      # TODO(frankf): Use factory properties (see buildbot/bb_device_steps.py)
-      # This requires passing the actual master name (e.g. 'ChromiumFYI' not
-      # 'chromium.fyi').
-      from slave import slave_utils # pylint: disable=F0401
-      self._build_name = slave_utils.SlaveBuildName(host_paths.DIR_SOURCE_ROOT)
-      self._master_name = slave_utils.GetActiveMaster()
-    else:
+    if not upstream:
       self._build_name = 'chromium-android'
       buildbot_branch = os.environ.get('BUILDBOT_BRANCH')
       if not buildbot_branch:

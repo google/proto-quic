@@ -18,3 +18,22 @@ source_set("tool_support") {
     "tool_support.h",
   ]
 }
+
+executable("crashpad_database_util") {
+  sources = [
+    "crashpad_database_util.cc",
+  ]
+
+  include_dirs = [ ".." ]
+
+  deps = [
+    ":tool_support",
+    "//base",
+
+    # Default manifest on Windows (a no-op elsewhere).
+    "//build/win:default_exe_manifest",
+    "//third_party/crashpad/crashpad/client",
+    "//third_party/crashpad/crashpad/compat",
+    "//third_party/crashpad/crashpad/util",
+  ]
+}

@@ -104,13 +104,14 @@ size_t ProxyScriptFetcherImpl::SetSizeConstraint(size_t size_bytes) {
   return prev;
 }
 
-void ProxyScriptFetcherImpl::OnResponseCompleted(URLRequest* request) {
+void ProxyScriptFetcherImpl::OnResponseCompleted(URLRequest* request,
+                                                 int net_error) {
   DCHECK_EQ(request, cur_request_.get());
 
   // Use |result_code_| as the request's error if we have already set it to
   // something specific.
-  if (result_code_ == OK && !request->status().is_success())
-    result_code_ = request->status().error();
+  if (result_code_ == OK && net_error != OK)
+    result_code_ = net_error;
 
   FetchCompleted();
 }
@@ -206,11 +207,13 @@ void ProxyScriptFetcherImpl::OnSSLCertificateError(URLRequest* request,
   request->Cancel();
 }
 
-void ProxyScriptFetcherImpl::OnResponseStarted(URLRequest* request) {
+void ProxyScriptFetcherImpl::OnResponseStarted(URLRequest* request,
+                                               int net_error) {
   DCHECK_EQ(request, cur_request_.get());
+  DCHECK_NE(ERR_IO_PENDING, net_error);
 
-  if (!request->status().is_success()) {
-    OnResponseCompleted(request);
+  if (net_error != OK) {
+    OnResponseCompleted(request, net_error);
     return;
   }
 
@@ -242,6 +245,8 @@ void ProxyScriptFetcherImpl::OnResponseStarted(URLRequest* request) {
 
 void ProxyScriptFetcherImpl::OnReadCompleted(URLRequest* request,
                                              int num_bytes) {
+  DCHECK_NE(ERR_IO_PENDING, num_bytes);
+
   DCHECK_EQ(request, cur_request_.get());
   if (ConsumeBytesRead(request, num_bytes)) {
     // Keep reading.
@@ -252,13 +257,15 @@ void ProxyScriptFetcherImpl::OnReadCompleted(URLRequest* request,
 void ProxyScriptFetcherImpl::ReadBody(URLRequest* request) {
   // Read as many bytes as are available synchronously.
   while (true) {
-    int num_bytes;
-    if (!request->Read(buf_.get(), kBufSize, &num_bytes)) {
-      // Check whether the read failed synchronously.
-      if (!request->status().is_io_pending())
-        OnResponseCompleted(request);
+    int num_bytes = request->Read(buf_.get(), kBufSize);
+    if (num_bytes == ERR_IO_PENDING)
+      return;
+
+    if (num_bytes < 0) {
+      OnResponseCompleted(request, num_bytes);
       return;
     }
+
     if (!ConsumeBytesRead(request, num_bytes))
       return;
   }
@@ -268,7 +275,7 @@ bool ProxyScriptFetcherImpl::ConsumeBytesRead(URLRequest* request,
                                               int num_bytes) {
   if (num_bytes <= 0) {
     // Error while reading, or EOF.
-    OnResponseCompleted(request);
+    OnResponseCompleted(request, num_bytes);
     return false;
   }
 

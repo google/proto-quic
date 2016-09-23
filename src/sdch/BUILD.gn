@@ -1,0 +1,92 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("sdch_config") {
+  include_dirs = [ "open-vcdiff/src" ]
+}
+
+# gn orders flags on a target before flags from configs. The default config
+# adds -Wall, and these flags have to be after -Wall -- so they need to come
+# from a config and can't be on the target directly.
+config("sdch_warnings") {
+  cflags = []
+  if (is_linux) {
+    # TODO(mostynb): remove this if open-vcdiff is ever updated for c++11:
+    cflags += [ "-Wno-deprecated-declarations" ]
+  }
+}
+
+static_library("sdch") {
+  sources = [
+    "logging_forward.h",
+    "open-vcdiff/src/addrcache.cc",
+    "open-vcdiff/src/blockhash.cc",
+    "open-vcdiff/src/blockhash.h",
+    "open-vcdiff/src/checksum.h",
+    "open-vcdiff/src/codetable.cc",
+    "open-vcdiff/src/codetable.h",
+    "open-vcdiff/src/compile_assert.h",
+    "open-vcdiff/src/decodetable.cc",
+    "open-vcdiff/src/decodetable.h",
+    "open-vcdiff/src/encodetable.cc",
+    "open-vcdiff/src/google/encodetable.h",
+    "open-vcdiff/src/google/jsonwriter.h",
+    "open-vcdiff/src/google/output_string.h",
+    "open-vcdiff/src/google/vcdecoder.h",
+    "open-vcdiff/src/google/vcencoder.h",
+    "open-vcdiff/src/headerparser.cc",
+    "open-vcdiff/src/headerparser.h",
+    "open-vcdiff/src/instruction_map.cc",
+    "open-vcdiff/src/instruction_map.h",
+    "open-vcdiff/src/jsonwriter.cc",
+    "open-vcdiff/src/rolling_hash.h",
+    "open-vcdiff/src/testing.h",
+    "open-vcdiff/src/varint_bigendian.cc",
+    "open-vcdiff/src/varint_bigendian.h",
+    "open-vcdiff/src/vcdecoder.cc",
+    "open-vcdiff/src/vcdiff_defs.h",
+    "open-vcdiff/src/vcdiffengine.cc",
+    "open-vcdiff/src/vcdiffengine.h",
+    "open-vcdiff/src/vcencoder.cc",
+  ]
+
+  configs += [ ":sdch_warnings" ]
+  public_configs = [ ":sdch_config" ]
+
+  deps = [
+    "//base",
+    "//third_party/zlib",
+  ]
+
+  if (is_linux || is_android) {
+    include_dirs = [ "linux" ]
+  } else if (is_ios) {
+    include_dirs = [ "ios" ]
+  } else if (is_mac) {
+    include_dirs = [ "mac" ]
+    defines = [ "OPEN_VCDIFF_USE_AUTO_PTR" ]
+  } else if (is_win) {
+    include_dirs = [ "win" ]
+  }
+
+  # open-vcdiff's logging.h introduces static initializers. This was
+  # reported upstream years ago (
+  # https://github.com/google/open-vcdiff/issues/33 ). Since
+  # upstream won't fix this, work around it on the chromium side:
+  # Inject a header that forwards to base/logging.h instead (which doesn't
+  # introduce static initializers, and which prevents open-vcdiff's
+  # logging.h from being used).
+  if (is_win) {
+    cflags = [
+      "/FI",
+      "sdch/logging_forward.h",
+    ]
+  } else {
+    logging_file = rebase_path("logging_forward.h", root_build_dir)
+    cflags = [
+      "-include",
+      logging_file,
+    ]
+  }
+}

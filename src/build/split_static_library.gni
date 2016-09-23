@@ -1,0 +1,62 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+template("split_static_library") {
+  assert(defined(invoker.split_count),
+         "Must define split_count for split_static_library")
+
+  # In many conditions the number of inputs will be 1 (because the count will
+  # be conditional on platform or configuration) so optimize that.
+  if (invoker.split_count == 1) {
+    static_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    group_name = target_name
+
+    generated_static_libraries = []
+    current_library_index = 0
+    foreach(current_sources, split_list(invoker.sources, invoker.split_count)) {
+      current_name = "${target_name}_$current_library_index"
+      assert(
+          current_sources != [],
+          "Your values for splitting a static library generate one that has no sources.")
+      generated_static_libraries += [ ":$current_name" ]
+
+      static_library(current_name) {
+        # Generated static library shard gets everything but sources (which
+        # we're redefining) and visibility (which is set to be the group
+        # below).
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "sources",
+                                 "visibility",
+                               ])
+        sources = current_sources
+        visibility = [ ":$group_name" ]
+
+        # Uniquify the output name if one is specified.
+        if (defined(invoker.output_name)) {
+          output_name = "${invoker.output_name}_$current_library_index"
+        }
+      }
+
+      current_library_index = current_library_index + 1
+    }
+
+    group(group_name) {
+      public_deps = generated_static_libraries
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+    }
+  }
+}
+
+set_defaults("split_static_library") {
+  configs = default_compiler_configs
+}

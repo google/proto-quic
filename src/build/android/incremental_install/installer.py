@@ -20,11 +20,10 @@ sys.path.append(
 import devil_chromium
 from devil.android import apk_helper
 from devil.android import device_utils
-from devil.android import device_errors
 from devil.android.sdk import version_codes
 from devil.utils import reraiser_thread
+from devil.utils import run_tests_helper
 from pylib import constants
-from pylib.utils import run_tests_helper
 from pylib.utils import time_profile
 
 prev_sys_path = list(sys.path)
@@ -86,7 +85,8 @@ def Uninstall(device, package, enable_device_cache=False):
 
 def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
             enable_device_cache=False, use_concurrency=True,
-            show_proguard_warning=False, permissions=()):
+            show_proguard_warning=False, permissions=(),
+            allow_downgrade=True):
   """Installs the given incremental apk and all required supporting files.
 
   Args:
@@ -119,9 +119,11 @@ def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
       for split_glob in split_globs:
         splits.extend((f for f in glob.glob(split_glob)))
       device.InstallSplitApk(apk, splits, reinstall=True,
-                             allow_cached_props=True, permissions=permissions)
+                             allow_cached_props=True, permissions=permissions,
+                             allow_downgrade=allow_downgrade)
     else:
-      device.Install(apk, reinstall=True, permissions=permissions)
+      device.Install(apk, reinstall=True, permissions=permissions,
+                     allow_downgrade=allow_downgrade)
     install_timer.Stop(log=False)
 
   # Push .so and .dex files to the device (if they have changed).
@@ -162,7 +164,7 @@ def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
     has_selinux = device.build_version_sdk >= version_codes.LOLLIPOP
     if has_selinux and apk.HasIsolatedProcesses():
       raise Exception('Cannot use incremental installs on Android L+ without '
-                      'first disabling isoloated processes.\n'
+                      'first disabling isolated processes.\n'
                       'To do so, use GN arg:\n'
                       '    disable_incremental_isolated_processes=true')
 
@@ -272,6 +274,12 @@ def main():
                       default=0,
                       action='count',
                       help='Verbose level (multiple times for more)')
+  parser.add_argument('--disable-downgrade',
+                      action='store_false',
+                      default=True,
+                      dest='allow_downgrade',
+                      help='Disable install of apk with lower version number'
+                           'than the version already on the device.')
 
   args = parser.parse_args()
 
@@ -286,27 +294,12 @@ def main():
     logging.fatal(args.dont_even_try)
     return 1
 
-  if args.device:
-    # Retries are annoying when commands fail for legitimate reasons. Might want
-    # to enable them if this is ever used on bots though.
-    device = device_utils.DeviceUtils(
-        args.device, default_retries=0, enable_device_files_cache=True)
-  else:
-    devices = device_utils.DeviceUtils.HealthyDevices(
-        default_retries=0, enable_device_files_cache=True)
-    if not devices:
-      raise device_errors.NoDevicesError()
-    elif len(devices) == 1:
-      device = devices[0]
-    else:
-      all_devices = device_utils.DeviceUtils.parallel(devices)
-      msg = ('More than one device available.\n'
-             'Use --device=SERIAL to select a device.\n'
-             'Available devices:\n')
-      descriptions = all_devices.pMap(lambda d: d.build_description).pGet(None)
-      for d, desc in zip(devices, descriptions):
-        msg += '  %s (%s)\n' % (d, desc)
-      raise Exception(msg)
+  # Retries are annoying when commands fail for legitimate reasons. Might want
+  # to enable them if this is ever used on bots though.
+  device = device_utils.DeviceUtils.HealthyDevices(
+      device_arg=args.device,
+      default_retries=0,
+      enable_device_files_cache=True)[0]
 
   apk = apk_helper.ToHelper(args.apk_path)
   if args.uninstall:
@@ -315,7 +308,8 @@ def main():
     Install(device, apk, split_globs=args.splits, native_libs=args.native_libs,
             dex_files=args.dex_files, enable_device_cache=args.cache,
             use_concurrency=args.threading,
-            show_proguard_warning=args.show_proguard_warning)
+            show_proguard_warning=args.show_proguard_warning,
+            allow_downgrade=args.allow_downgrade)
 
 
 if __name__ == '__main__':

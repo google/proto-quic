@@ -40,8 +40,10 @@ scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
     SequencedWorkerPool::SequenceToken sequence_token =
         SequencedWorkerPool::GetSequenceTokenForCurrentThread();
     DCHECK(sequence_token.IsValid());
-    DCHECK(pool->IsRunningSequenceOnCurrentThread(sequence_token));
-    return pool->GetSequencedTaskRunner(sequence_token);
+    scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
+        pool->GetSequencedTaskRunner(sequence_token));
+    DCHECK(sequenced_task_runner->RunsTasksOnCurrentThread());
+    return sequenced_task_runner;
   }
 
   // Return the SingleThreadTaskRunner for the current thread otherwise.

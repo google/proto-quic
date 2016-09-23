@@ -1,0 +1,34 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# See https://bugs.chromium.org/p/webrtc/issues/detail?id=5453.
+# Some WebRTC targets require the 10.7 deployment version of the Mac SDK
+# and a 10.11 min SDK, but those targets are only used in non-Chromium
+# builds. We can remove this when Chromium drops 10.6 support and also
+# requires 10.7.
+mac_sdk_min_build_override = "10.10"
+mac_deployment_target_build_override = "10.7"
+
+# Variable that can be used to support multiple build scenarios, like having
+# Chromium specific targets in a client project's GN file etc.
+build_with_chromium = true
+
+# Uncomment these to specify a different NDK location and version in
+# non-Chromium builds.
+# default_android_ndk_root = "//third_party/android_tools/ndk"
+# default_android_ndk_version = "r10e"
+
+# Some non-Chromium builds don't support building java targets.
+enable_java_templates = true
+
+# Some non-Chromium builds don't use Chromium's third_party/binutils.
+linux_use_bundled_binutils_override = true
+
+# Allows different projects to specify their own suppressions files.
+asan_suppressions_file = "//build/sanitizers/asan_suppressions.cc"
+lsan_suppressions_file = "//build/sanitizers/lsan_suppressions.cc"
+tsan_suppressions_file = "//build/sanitizers/tsan_suppressions.cc"
+
+# Uncomment these to specify a different lint suppressions file for android
+# lint_suppressions_file = path/to/your/suppressions/file/suppressions.xml

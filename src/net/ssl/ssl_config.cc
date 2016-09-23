@@ -14,9 +14,13 @@ const uint16_t kDefaultSSLVersionMax = SSL_PROTOCOL_VERSION_TLS1_2;
 
 const uint16_t kDefaultSSLVersionFallbackMin = SSL_PROTOCOL_VERSION_TLS1_2;
 
-SSLConfig::CertAndStatus::CertAndStatus() : cert_status(0) {}
-
-SSLConfig::CertAndStatus::~CertAndStatus() {}
+SSLConfig::CertAndStatus::CertAndStatus() = default;
+SSLConfig::CertAndStatus::CertAndStatus(scoped_refptr<X509Certificate> cert_arg,
+                                        CertStatus status)
+    : cert(std::move(cert_arg)), cert_status(status) {}
+SSLConfig::CertAndStatus::CertAndStatus(const CertAndStatus& other)
+    : cert(other.cert), cert_status(other.cert_status) {}
+SSLConfig::CertAndStatus::~CertAndStatus() = default;
 
 SSLConfig::SSLConfig()
     : rev_checking_enabled(false),
@@ -43,18 +47,10 @@ SSLConfig::~SSLConfig() {}
 
 bool SSLConfig::IsAllowedBadCert(X509Certificate* cert,
                                  CertStatus* cert_status) const {
-  std::string der_cert;
-  if (!X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der_cert))
-    return false;
-  return IsAllowedBadCert(der_cert, cert_status);
-}
-
-bool SSLConfig::IsAllowedBadCert(const base::StringPiece& der_cert,
-                                 CertStatus* cert_status) const {
-  for (size_t i = 0; i < allowed_bad_certs.size(); ++i) {
-    if (der_cert == allowed_bad_certs[i].der_cert) {
+  for (const auto& allowed_bad_cert : allowed_bad_certs) {
+    if (cert->Equals(allowed_bad_cert.cert.get())) {
       if (cert_status)
-        *cert_status = allowed_bad_certs[i].cert_status;
+        *cert_status = allowed_bad_cert.cert_status;
       return true;
     }
   }

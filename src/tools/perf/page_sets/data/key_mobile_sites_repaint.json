@@ -1,0 +1,71 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "key_mobile_sites_005.wpr": [
+            "http://mobile-news.sandbox.google.com/news/pt0"
+        ], 
+        "key_mobile_sites_007.wpr": [
+            "http://ftw.usatoday.com/2014/05/spelling-bee-rules-shenanigans", 
+            "http://www.latimes.com"
+        ], 
+        "key_mobile_sites_001.wpr": [
+            "http://mobile-news.sandbox.google.com/news/p#2"
+        ], 
+        "key_mobile_sites_003.wpr": [
+            "https://facebook.com/barackobama"
+        ], 
+        "key_mobile_sites_008.wpr": [
+            "http://m.espn.go.com/nhl/rankings"
+        ], 
+        "key_mobile_sites_004.wpr": [
+            "http://groupcloned.com/test/list-images-variable/index.html"
+        ], 
+        "key_mobile_sites_006.wpr": [
+            "http://mobile-news.sandbox.google.com/news/pt1"
+        ], 
+        "key_mobile_sites_000.wpr": [
+            "http://www.androidpolice.com/2012/10/03/rumor-evidence-mounts-that-an-lg-optimus-g-nexus-is-coming-along-with-a-nexus-phone-certification-program/", 
+            "http://nytimes.com/", 
+            "http://iphone.capitolvolkswagen.com/index.htm#new-inventory_p_2Fsb-new_p_2Ehtm_p_3Freset_p_3DInventoryListing", 
+            "http://gsp.ro", 
+            "http://cuteoverload.com", 
+            "http://theverge.com", 
+            "http://www.theverge.com/2012/10/28/3568746/amazon-7-inch-fire-hd-ipad-mini-ad-ballsy", 
+            "http://www.cnn.com/2012/10/03/politics/michelle-obama-debate/index.html", 
+            "https://www.google.com/#hl=en&q=barack+obama", 
+            "https://plus.google.com/app/basic/110031535020051778989/posts?source=apppromo", 
+            "http://m.youtube.com/watch?v=9hBpF_Zj4OA", 
+            "http://googlewebmastercentral.blogspot.com/", 
+            "http://en.blog.wordpress.com/2012/09/04/freshly-pressed-editors-picks-for-august-2012/", 
+            "http://en.wikipedia.org/wiki/Wikipedia", 
+            "http://pinterest.com", 
+            "http://news.yahoo.com", 
+            "http://www.cnn.com", 
+            "http://www.amazon.com/gp/aw/s/ref=is_box_?k=nicolas+cage", 
+            "http://shop.mobileweb.ebay.com/searchresults?kw=viking+helmet", 
+            "http://www.booking.com/searchresults.html?src=searchresults&latitude=65.0500&longitude=25.4667", 
+            "http://answers.yahoo.com/question/index?qid=20110117024343AAopj8f", 
+            "http://sports.yahoo.com/", 
+            "http://techcrunch.com", 
+            "https://mail.google.com/mail/", 
+            "https://www.google.com/calendar/", 
+            "http://mlb.mlb.com/index.jsp", 
+            "http://www.sfgate.com/", 
+            "http://slashdot.org/", 
+            "http://worldjournal.com/", 
+            "http://www.wowwiki.com/World_of_Warcraft:_Mists_of_Pandaria", 
+            "http://online.wsj.com/home-page", 
+            "http://www.deviantart.com/", 
+            "http://www.baidu.com/s?wd=barack+obama&rsv_bp=0&rsv_spt=3&rsv_sug3=9&rsv_sug=0&rsv_sug4=3824&rsv_sug1=3&inputT=4920", 
+            "http://www.bing.com/search?q=sloths", 
+            "http://www.reddit.com/r/programming/comments/1g96ve", 
+            "http://www.boingboing.net"
+        ], 
+        "key_mobile_sites_002.wpr": [
+            "http://digg.com", 
+            "https://www.linkedin.com/in/linustorvalds", 
+            "http://mlb.com/", 
+            "http://groupcloned.com"
+        ]
+    }
+}

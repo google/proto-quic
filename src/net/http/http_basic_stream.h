@@ -21,7 +21,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class ClientSocketHandle;
 class HttpResponseInfo;
 struct HttpRequestInfo;
@@ -41,14 +41,12 @@ class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
   // HttpStream methods:
   int InitializeStream(const HttpRequestInfo* request_info,
                        RequestPriority priority,
-                       const BoundNetLog& net_log,
+                       const NetLogWithSource& net_log,
                        const CompletionCallback& callback) override;
 
   int SendRequest(const HttpRequestHeaders& headers,
                   HttpResponseInfo* response,
                   const CompletionCallback& callback) override;
-
-  UploadProgress GetUploadProgress() const override;
 
   int ReadResponseHeaders(const CompletionCallback& callback) override;
 
@@ -80,8 +78,9 @@ class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
 
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override;
 
-  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                    std::vector<uint8_t>* out) override;
+  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                 TokenBindingType tb_type,
+                                 std::vector<uint8_t>* out) override;
 
   void Drain(HttpNetworkSession* session) override;
 

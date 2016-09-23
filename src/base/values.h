@@ -457,8 +457,10 @@ class BASE_EXPORT ListValue : public Value {
 
   // Appends a Value to the end of the list.
   void Append(std::unique_ptr<Value> in_value);
+#if !defined(OS_LINUX) || defined(OS_CHROMEOS)
   // Deprecated version of the above. TODO(estade): remove.
   void Append(Value* in_value);
+#endif
 
   // Convenience forms of Append.
   void AppendBoolean(bool in_value);
@@ -469,14 +471,13 @@ class BASE_EXPORT ListValue : public Value {
   void AppendStrings(const std::vector<std::string>& in_values);
   void AppendStrings(const std::vector<string16>& in_values);
 
-  // Appends a Value if it's not already present. Takes ownership of the
-  // |in_value|. Returns true if successful, or false if the value was already
-  // present. If the value was already present the |in_value| is deleted.
-  bool AppendIfNotPresent(Value* in_value);
+  // Appends a Value if it's not already present. Returns true if successful,
+  // or false if the value was already
+  bool AppendIfNotPresent(std::unique_ptr<Value> in_value);
 
   // Insert a Value at index.
   // Returns true if successful, or false if the index was out of range.
-  bool Insert(size_t index, Value* in_value);
+  bool Insert(size_t index, std::unique_ptr<Value> in_value);
 
   // Searches for the first instance of |value| in the list using the Equals
   // method of the Value type.

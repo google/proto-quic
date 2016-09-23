@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "Chromium code coverage: deprecated UI",
+  "description": "Adds coverage stats to Rietveld.",
+  "version": "1.0.0",
+  "permissions": [
+    "https://uberchromegw.corp.google.com/",
+    "https://build.chromium.org/"
+  ],
+  "content_scripts": [{
+    "matches": ["https://codereview.chromium.org/*",
+                "https://chromereviews.googleplex.com/*"],
+    "js": [
+      "js/app.js"
+    ],
+    "run_at": "document_end"
+  }]
+}

@@ -1,0 +1,8 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "dromaeo.jslibtraversejquery_000.wpr": [
+            "http://dromaeo.com?jslib-traverse-jquery"
+        ]
+    }
+}

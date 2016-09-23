@@ -4,7 +4,6 @@
 
 import("//build/config/android/config.gni")
 import("//build/config/sanitizers/sanitizers.gni")
-import("//build/config/sysroot.gni")
 
 assert(is_android)
 
@@ -22,47 +21,28 @@ config("compiler") {
     # The NDK has these things, but doesn't define the constants to say that it
     # does. Define them here instead.
     "HAVE_SYS_UIO_H",
-  ]
-  ldflags = []
 
-  if (!is_clang) {
-    # Clang doesn't support these flags.
-    cflags += [ "-finline-limit=64" ]
-  }
+    # Forces full rebuilds on NDK rolls.
+    "ANDROID_NDK_VERSION=${android_ndk_version}",
+  ]
+
   if (is_clang) {
     rebased_android_toolchain_root =
         rebase_path(android_toolchain_root, root_build_dir)
     assert(rebased_android_toolchain_root != "")  # Mark as used.
-    if (current_cpu == "mipsel") {
+    if (current_cpu == "mipsel" || current_cpu == "mips64el") {
       cflags += [
         # TODO(gordanac) Enable integrated-as.
-        "-no-integrated-as",
+        "-fno-integrated-as",
         "-B${rebased_android_toolchain_root}/bin",  # Else /usr/bin/as gets picked up.
       ]
     }
+  } else {
+    # Clang doesn't support these flags.
+    cflags += [ "-finline-limit=64" ]
   }
 
-  # Use gold for Android for most CPU architectures.
-  if (current_cpu == "x86" || current_cpu == "x64" || current_cpu == "arm") {
-    ldflags += [ "-fuse-ld=gold" ]
-    if (is_clang) {
-      # Let clang find the ld.gold in the NDK.
-      ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
-    }
-
-    # Use -mstackrealign due to a bug on ia32 Jelly Bean.
-    # See crbug.com/521527
-    if (current_cpu == "x86") {
-      cflags += [ "-mstackrealign" ]
-    }
-  }
-
-  if (current_cpu == "mipsel" && is_clang) {
-    # Let clang find the ld.bfd in the NDK.
-    ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
-  }
-
-  ldflags += [
+  ldflags = [
     "-Wl,--build-id=sha1",
     "-Wl,--no-undefined",
 
@@ -76,12 +56,6 @@ config("compiler") {
     # http://crbug.com/448386
     "-Wl,--exclude-libs=libvpx_assembly_arm.a",
   ]
-  if (current_cpu == "arm" && !use_order_profiling) {
-    ldflags += [
-      # Enable identical code folding to reduce size.
-      "-Wl,--icf=all",
-    ]
-  }
 
   if (is_clang) {
     if (current_cpu == "arm") {
@@ -91,7 +65,7 @@ config("compiler") {
     } else if (current_cpu == "arm64") {
       # Place holder for arm64 support, not tested.
       # TODO: Enable clang support for Android Arm64. http://crbug.com/539781
-      abi_target = "aarch64-linux-androideabi"
+      abi_target = "aarch64-linux-android"
     } else if (current_cpu == "x64") {
       # Place holder for x64 support, not tested.
       # TODO: Enable clang support for Android x64. http://crbug.com/539781
@@ -104,14 +78,8 @@ config("compiler") {
     } else {
       assert(false, "Architecture not supported")
     }
-    cflags += [
-      "-target",
-      abi_target,
-    ]
-    ldflags += [
-      "-target",
-      abi_target,
-    ]
+    cflags += [ "--target=$abi_target" ]
+    ldflags += [ "--target=$abi_target" ]
   }
 
   # Assign any flags set for the C compiler to asmflags so that they are sent
@@ -143,7 +111,7 @@ config("runtime_library") {
 
   defines = [ "__GNU_SOURCE=1" ]  # Necessary for clone().
   ldflags = [ "-nostdlib" ]
-  lib_dirs = [ "$android_libcpp_root/libs/$android_app_abi" ]
+  lib_dirs = [ android_libcpp_lib_dir ]
 
   # The libc++ runtime library (must come first).
   # ASan needs to dynamically link to libc++ even in static builds so
@@ -152,6 +120,15 @@ config("runtime_library") {
     libs = [ "c++_shared" ]
   } else {
     libs = [ "c++_static" ]
+  }
+  libs += [
+    "c++abi",
+    "android_support",
+  ]
+
+  # arm builds of libc++ starting in NDK r12 depend on unwind.
+  if (current_cpu == "arm") {
+    libs += [ "unwind" ]
   }
 
   # Manually link the libgcc.a that the cross compiler uses. This is

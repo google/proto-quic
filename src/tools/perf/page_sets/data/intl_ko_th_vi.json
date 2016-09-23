@@ -1,0 +1,20 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "intl_ko_th_vi_000.wpr": [
+            "http://us.24h.com.vn/", 
+            "http://vnexpress.net/", 
+            "http://vietnamnet.vn/", 
+            "http://news.zing.vn/the-gioi/ba-dam-thep-margaret-thatcher-qua-doi/a312895.html#home_noibat1", 
+            "http://kenh14.vn/home.chn", 
+            "http://www.naver.com/", 
+            "http://www.daum.net/", 
+            "http://www.donga.com/", 
+            "http://www.chosun.com/", 
+            "http://www.danawa.com/", 
+            "http://www.sanook.com/", 
+            "http://pantip.com/", 
+            "http://thaimisc.com/"
+        ]
+    }
+}

@@ -73,24 +73,15 @@ enum CreateSessionFailure {
   CREATION_ERROR_MAX
 };
 
-enum QuicConnectionMigrationStatus {
-  MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
-  MIGRATION_STATUS_ALREADY_MIGRATED,
-  MIGRATION_STATUS_INTERNAL_ERROR,
-  MIGRATION_STATUS_TOO_MANY_CHANGES,
-  MIGRATION_STATUS_SUCCESS,
-  MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
-  MIGRATION_STATUS_DISABLED,
-  MIGRATION_STATUS_NO_ALTERNATE_NETWORK,
-  MIGRATION_STATUS_MAX
-};
-
 // The maximum receive window sizes for QUIC sessions and streams.
 const int32_t kQuicSessionMaxRecvWindowSize = 15 * 1024 * 1024;  // 15 MB
 const int32_t kQuicStreamMaxRecvWindowSize = 6 * 1024 * 1024;    // 6 MB
 
 // Set the maximum number of undecryptable packets the connection will store.
 const int32_t kMaxUndecryptablePackets = 100;
+
+// How long QUIC will be disabled for because of timeouts with open streams.
+const int kDisableQuicTimeoutSecs = 5 * 60;
 
 std::unique_ptr<base::Value> NetLogQuicConnectionMigrationTriggerCallback(
     std::string trigger,
@@ -122,9 +113,9 @@ std::unique_ptr<base::Value> NetLogQuicConnectionMigrationSuccessCallback(
 class ScopedConnectionMigrationEventLog {
  public:
   ScopedConnectionMigrationEventLog(NetLog* net_log, std::string trigger)
-      : net_log_(
-            BoundNetLog::Make(net_log,
-                              NetLogSourceType::QUIC_CONNECTION_MIGRATION)) {
+      : net_log_(NetLogWithSource::Make(
+            net_log,
+            NetLogSourceType::QUIC_CONNECTION_MIGRATION)) {
     net_log_.BeginEvent(
         NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED,
         base::Bind(&NetLogQuicConnectionMigrationTriggerCallback, trigger));
@@ -134,10 +125,10 @@ class ScopedConnectionMigrationEventLog {
     net_log_.EndEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED);
   }
 
-  const BoundNetLog& net_log() { return net_log_; }
+  const NetLogWithSource& net_log() { return net_log_; }
 
  private:
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 };
 
 void HistogramCreateSessionFailure(enum CreateSessionFailure error) {
@@ -145,7 +136,7 @@ void HistogramCreateSessionFailure(enum CreateSessionFailure error) {
                             CREATION_ERROR_MAX);
 }
 
-void HistogramAndLogMigrationFailure(const BoundNetLog& net_log,
+void HistogramAndLogMigrationFailure(const NetLogWithSource& net_log,
                                      enum QuicConnectionMigrationStatus status,
                                      QuicConnectionId connection_id,
                                      std::string reason) {
@@ -227,7 +218,7 @@ class QuicStreamFactory::CertVerifierJob {
 
   CertVerifierJob(const QuicServerId& server_id,
                   int cert_verify_flags,
-                  const BoundNetLog& net_log)
+                  const NetLogWithSource& net_log)
       : server_id_(server_id),
         verify_callback_(nullptr),
         verify_context_(base::WrapUnique(
@@ -275,7 +266,7 @@ class QuicStreamFactory::CertVerifierJob {
   std::unique_ptr<ProofVerifyDetails> verify_details_;
   std::string verify_error_details_;
   base::TimeTicks start_time_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
   CompletionCallback callback_;
   base::WeakPtrFactory<CertVerifierJob> weak_factory_;
 
@@ -292,7 +283,7 @@ class QuicStreamFactory::Job {
       bool was_alternative_service_recently_broken,
       int cert_verify_flags,
       QuicServerInfo* server_info,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 
   // Creates a new job to handle the resumption of for connecting an
   // existing session.
@@ -347,7 +338,7 @@ class QuicStreamFactory::Job {
   bool was_alternative_service_recently_broken_;
   std::unique_ptr<QuicServerInfo> server_info_;
   bool started_another_job_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
   int num_sent_client_hellos_;
   QuicChromiumClientSession* session_;
   CompletionCallback callback_;
@@ -364,7 +355,7 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
                             bool was_alternative_service_recently_broken,
                             int cert_verify_flags,
                             QuicServerInfo* server_info,
-                            const BoundNetLog& net_log)
+                            const NetLogWithSource& net_log)
     : io_state_(STATE_RESOLVE_HOST),
       factory_(factory),
       host_resolver_(host_resolver),
@@ -659,7 +650,7 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
                                int cert_verify_flags,
                                const GURL& url,
                                base::StringPiece method,
-                               const BoundNetLog& net_log,
+                               const NetLogWithSource& net_log,
                                const CompletionCallback& callback) {
   DCHECK(callback_.is_null());
   DCHECK(factory_);
@@ -733,11 +724,6 @@ QuicStreamFactory::QuicStreamFactory(
     bool enable_non_blocking_io,
     bool disable_disk_cache,
     bool prefer_aes,
-    int max_number_of_lossy_connections,
-    float packet_loss_threshold,
-    int max_disabled_reasons,
-    int threshold_public_resets_post_handshake,
-    int threshold_timeouts_with_open_streams,
     int socket_receive_buffer_size,
     bool delay_tcp_race,
     int max_server_configs_stored_in_properties,
@@ -784,17 +770,10 @@ QuicStreamFactory::QuicStreamFactory(
       enable_non_blocking_io_(enable_non_blocking_io),
       disable_disk_cache_(disable_disk_cache),
       prefer_aes_(prefer_aes),
-      max_number_of_lossy_connections_(max_number_of_lossy_connections),
-      packet_loss_threshold_(packet_loss_threshold),
-      max_disabled_reasons_(max_disabled_reasons),
-      num_public_resets_post_handshake_(0),
-      num_timeouts_with_open_streams_(0),
-      max_public_resets_post_handshake_(0),
-      max_timeouts_with_open_streams_(0),
-      threshold_timeouts_with_open_streams_(
-          threshold_timeouts_with_open_streams),
-      threshold_public_resets_post_handshake_(
-          threshold_public_resets_post_handshake),
+      disable_quic_on_timeout_with_open_streams_(
+          disable_quic_on_timeout_with_open_streams),
+      consecutive_disabled_count_(0),
+      need_to_evaluate_consecutive_disabled_count_(false),
       socket_receive_buffer_size_(socket_receive_buffer_size),
       delay_tcp_race_(delay_tcp_race),
       ping_timeout_(QuicTime::Delta::FromSeconds(kPingTimeoutSecs)),
@@ -823,8 +802,6 @@ QuicStreamFactory::QuicStreamFactory(
       weak_factory_(this) {
   if (ssl_config_service_.get())
     ssl_config_service_->AddObserver(this);
-  if (disable_quic_on_timeout_with_open_streams)
-    threshold_timeouts_with_open_streams_ = 1;
   DCHECK(transport_security_state_);
   DCHECK(http_server_properties_);
   crypto_config_.set_user_agent_id(user_agent_id);
@@ -839,7 +816,7 @@ QuicStreamFactory::QuicStreamFactory(
         new ChannelIDSourceChromium(channel_id_service));
   }
   if (enable_token_binding && channel_id_service)
-    crypto_config_.tb_key_params.push_back(kP256);
+    crypto_config_.tb_key_params.push_back(kTB10);
   crypto::EnsureOpenSSLInit();
   bool has_aes_hardware_support = !!EVP_has_aes_hardware();
   UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.PreferAesGcm",
@@ -948,7 +925,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
                               int cert_verify_flags,
                               const GURL& url,
                               base::StringPiece method,
-                              const BoundNetLog& net_log,
+                              const NetLogWithSource& net_log,
                               QuicStreamRequest* request) {
   DCHECK(server_id.host_port_pair().Equals(HostPortPair::FromURL(url)));
   // Enforce session affinity for promised streams.
@@ -1065,7 +1042,7 @@ bool QuicStreamFactory::QuicSessionKey::operator==(
 
 void QuicStreamFactory::CreateAuxilaryJob(const QuicSessionKey& key,
                                           int cert_verify_flags,
-                                          const BoundNetLog& net_log) {
+                                          const NetLogWithSource& net_log) {
   Job* aux_job =
       new Job(this, host_resolver_, key, WasQuicRecentlyBroken(key.server_id()),
               cert_verify_flags, nullptr, net_log);
@@ -1160,86 +1137,19 @@ std::unique_ptr<QuicHttpStream> QuicStreamFactory::CreateFromSession(
       new QuicHttpStream(session->GetWeakPtr()));
 }
 
-QuicChromiumClientSession::QuicDisabledReason
-QuicStreamFactory::QuicDisabledReason(uint16_t port) const {
-  if (max_number_of_lossy_connections_ > 0 &&
-      number_of_lossy_connections_.find(port) !=
-          number_of_lossy_connections_.end() &&
-      number_of_lossy_connections_.at(port) >=
-          max_number_of_lossy_connections_) {
-    return QuicChromiumClientSession::QUIC_DISABLED_BAD_PACKET_LOSS_RATE;
-  }
-  if (threshold_public_resets_post_handshake_ > 0 &&
-      num_public_resets_post_handshake_ >=
-          threshold_public_resets_post_handshake_) {
-    return QuicChromiumClientSession::QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE;
-  }
-  if (threshold_timeouts_with_open_streams_ > 0 &&
-      num_timeouts_with_open_streams_ >=
-          threshold_timeouts_with_open_streams_) {
-    return QuicChromiumClientSession::QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS;
-  }
-  return QuicChromiumClientSession::QUIC_DISABLED_NOT;
-}
-
-const char* QuicStreamFactory::QuicDisabledReasonString() const {
-  // TODO(ckrasic) - better solution for port/lossy connections?
-  const uint16_t port = 443;
-  switch (QuicDisabledReason(port)) {
-    case QuicChromiumClientSession::QUIC_DISABLED_BAD_PACKET_LOSS_RATE:
-      return "Bad packet loss rate.";
-    case QuicChromiumClientSession::QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE:
-      return "Public resets after successful handshakes.";
-    case QuicChromiumClientSession::QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS:
-      return "Connection timeouts with streams open.";
-    default:
-      return "";
-  }
-}
-
-bool QuicStreamFactory::IsQuicDisabled(uint16_t port) const {
+bool QuicStreamFactory::IsQuicDisabled() const {
   return status_ != OPEN;
 }
 
-bool QuicStreamFactory::OnHandshakeConfirmed(QuicChromiumClientSession* session,
-                                             float packet_loss_rate) {
-  DCHECK(session);
-  uint16_t port = session->server_id().port();
-  if (packet_loss_rate < packet_loss_threshold_) {
-    number_of_lossy_connections_[port] = 0;
+bool QuicStreamFactory::OnHandshakeConfirmed(
+    QuicChromiumClientSession* session) {
+  if (!IsQuicDisabled())
     return false;
-  }
 
-  // We mark it as recently broken, which means that 0-RTT will be disabled
-  // but we'll still race.
-  http_server_properties_->MarkAlternativeServiceRecentlyBroken(
-      AlternativeService(QUIC, session->server_id().host(), port));
+  session->CloseSessionOnErrorAndNotifyFactoryLater(
+      ERR_ABORTED, QUIC_TIMEOUTS_WITH_OPEN_STREAMS);
 
-  bool was_quic_disabled = IsQuicDisabled(port);
-  ++number_of_lossy_connections_[port];
-
-  // Collect data for port 443 for packet loss events.
-  if (port == 443 && max_number_of_lossy_connections_ > 0) {
-    UMA_HISTOGRAM_SPARSE_SLOWLY(
-        base::StringPrintf("Net.QuicStreamFactory.BadPacketLossEvents%d",
-                           max_number_of_lossy_connections_),
-        std::min(number_of_lossy_connections_[port],
-                 max_number_of_lossy_connections_));
-  }
-
-  MaybeDisableQuic(port);
-
-  bool is_quic_disabled = IsQuicDisabled(port);
-  if (is_quic_disabled) {
-    // Close QUIC connection if Quic is disabled for this port.
-    session->CloseSessionOnErrorAndNotifyFactoryLater(
-        ERR_ABORTED, QUIC_BAD_PACKET_LOSS_RATE);
-
-    // If this bad packet loss rate disabled the QUIC, then record it.
-    if (!was_quic_disabled)
-      UMA_HISTOGRAM_SPARSE_SLOWLY("Net.QuicStreamFactory.QuicIsDisabled", port);
-  }
-  return is_quic_disabled;
+  return true;
 }
 
 void QuicStreamFactory::OnTcpJobCompleted(bool succeeded) {
@@ -1255,7 +1165,6 @@ void QuicStreamFactory::OnTcpJobCompleted(bool succeeded) {
   }
 
   status_ = OPEN;
-  num_timeouts_with_open_streams_ = 0;
 }
 
 void QuicStreamFactory::OnIdleSession(QuicChromiumClientSession* session) {}
@@ -1287,97 +1196,8 @@ void QuicStreamFactory::OnSessionGoingAway(QuicChromiumClientSession* session) {
   session_aliases_.erase(session);
 }
 
-void QuicStreamFactory::MaybeDisableQuic(QuicChromiumClientSession* session) {
-  DCHECK(session);
-  uint16_t port = session->server_id().port();
-  if (IsQuicDisabled(port))
-    return;
-
-  // Expire the oldest disabled_reason if appropriate.  This enforces that we
-  // only consider the max_disabled_reasons_ most recent sessions.
-  QuicChromiumClientSession::QuicDisabledReason disabled_reason;
-  if (static_cast<int>(disabled_reasons_.size()) == max_disabled_reasons_) {
-    disabled_reason = disabled_reasons_.front();
-    disabled_reasons_.pop_front();
-    if (disabled_reason ==
-        QuicChromiumClientSession::QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE) {
-      --num_public_resets_post_handshake_;
-    } else if (disabled_reason == QuicChromiumClientSession::
-                                      QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS) {
-      --num_timeouts_with_open_streams_;
-    }
-  }
-  disabled_reason = session->disabled_reason();
-  disabled_reasons_.push_back(disabled_reason);
-  if (disabled_reason ==
-      QuicChromiumClientSession::QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE) {
-    ++num_public_resets_post_handshake_;
-  } else if (disabled_reason == QuicChromiumClientSession::
-                                    QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS) {
-    ++num_timeouts_with_open_streams_;
-  }
-  if (num_timeouts_with_open_streams_ > max_timeouts_with_open_streams_) {
-    max_timeouts_with_open_streams_ = num_timeouts_with_open_streams_;
-    UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicStreamFactory.TimeoutsWithOpenStreams",
-                                num_timeouts_with_open_streams_, 1, 20, 10);
-  }
-
-  if (num_public_resets_post_handshake_ > max_public_resets_post_handshake_) {
-    max_public_resets_post_handshake_ = num_public_resets_post_handshake_;
-    UMA_HISTOGRAM_CUSTOM_COUNTS(
-        "Net.QuicStreamFactory.PublicResetsPostHandshake",
-        num_public_resets_post_handshake_, 1, 20, 10);
-  }
-
-  MaybeDisableQuic(port);
-  if (IsQuicDisabled(port)) {
-    if (disabled_reason ==
-        QuicChromiumClientSession::QUIC_DISABLED_PUBLIC_RESET_POST_HANDSHAKE) {
-      session->CloseSessionOnErrorAndNotifyFactoryLater(
-          ERR_ABORTED, QUIC_PUBLIC_RESETS_POST_HANDSHAKE);
-    } else if (disabled_reason == QuicChromiumClientSession::
-                                      QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS) {
-      session->CloseSessionOnErrorAndNotifyFactoryLater(
-          ERR_ABORTED, QUIC_TIMEOUTS_WITH_OPEN_STREAMS);
-    }
-    UMA_HISTOGRAM_ENUMERATION("Net.QuicStreamFactory.DisabledReasons",
-                              disabled_reason,
-                              QuicChromiumClientSession::QUIC_DISABLED_MAX);
-  }
-}
-
-void QuicStreamFactory::MaybeDisableQuic(uint16_t port) {
-  if (status_ == DISABLED)
-    return;
-
-  QuicChromiumClientSession::QuicDisabledReason disabled_reason =
-      QuicDisabledReason(port);
-  if (disabled_reason == QuicChromiumClientSession::QUIC_DISABLED_NOT) {
-    DCHECK_EQ(OPEN, status_);
-    return;
-  }
-
-  if (disabled_reason ==
-      QuicChromiumClientSession::QUIC_DISABLED_TIMEOUT_WITH_OPEN_STREAMS) {
-    // When QUIC there are too many timeouts with open stream, the factory
-    // should be closed. When TCP jobs complete, they will move the factory
-    // to either fully disabled or back to open.
-    status_ = CLOSED;
-    DCHECK(IsQuicDisabled(port));
-    DCHECK_NE(QuicChromiumClientSession::QuicDisabledReason(port),
-              QuicChromiumClientSession::QUIC_DISABLED_NOT);
-    return;
-  }
-
-  status_ = DISABLED;
-  DCHECK(IsQuicDisabled(port));
-  DCHECK_NE(QuicChromiumClientSession::QuicDisabledReason(port),
-            QuicChromiumClientSession::QUIC_DISABLED_NOT);
-}
-
 void QuicStreamFactory::OnSessionClosed(QuicChromiumClientSession* session) {
   DCHECK_EQ(0u, session->GetNumActiveStreams());
-  MaybeDisableQuic(session);
   OnSessionGoingAway(session);
   delete session;
   all_sessions_.erase(session);
@@ -1387,6 +1207,18 @@ void QuicStreamFactory::OnTimeoutWithOpenStreams() {
   // Reduce PING timeout when connection times out with open stream.
   if (ping_timeout_ > reduced_ping_timeout_) {
     ping_timeout_ = reduced_ping_timeout_;
+  }
+  if (disable_quic_on_timeout_with_open_streams_) {
+    if (status_ == OPEN) {
+      task_runner_->PostDelayedTask(
+          FROM_HERE, base::Bind(&QuicStreamFactory::OpenFactory,
+                                weak_factory_.GetWeakPtr()),
+          base::TimeDelta::FromSeconds(kDisableQuicTimeoutSecs *
+                                       (1 << consecutive_disabled_count_)));
+      consecutive_disabled_count_++;
+      need_to_evaluate_consecutive_disabled_count_ = true;
+    }
+    status_ = CLOSED;
   }
 }
 
@@ -1442,15 +1274,22 @@ void QuicStreamFactory::ClearCachedStatesInCryptoConfig(
 }
 
 void QuicStreamFactory::OnIPAddressChanged() {
-  num_timeouts_with_open_streams_ = 0;
   status_ = OPEN;
   CloseAllSessions(ERR_NETWORK_CHANGED, QUIC_IP_ADDRESS_CHANGED);
   set_require_confirmation(true);
 }
 
 void QuicStreamFactory::OnNetworkConnected(NetworkHandle network) {
-  num_timeouts_with_open_streams_ = 0;
   status_ = OPEN;
+  ScopedConnectionMigrationEventLog scoped_event_log(net_log_,
+                                                     "OnNetworkConnected");
+  QuicStreamFactory::SessionIdMap::iterator it = all_sessions_.begin();
+  // Sessions may be deleted while iterating through the map.
+  while (it != all_sessions_.end()) {
+    QuicChromiumClientSession* session = it->first;
+    ++it;
+    session->OnNetworkConnected(network, scoped_event_log.net_log());
+  }
 }
 
 void QuicStreamFactory::OnNetworkMadeDefault(NetworkHandle network) {
@@ -1489,34 +1328,24 @@ NetworkHandle QuicStreamFactory::FindAlternateNetwork(
 void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     NetworkHandle new_network,
     bool close_if_cannot_migrate,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   QuicStreamFactory::SessionIdMap::iterator it = all_sessions_.begin();
   while (it != all_sessions_.end()) {
     QuicChromiumClientSession* session = it->first;
     ++it;
 
-    // Migration attempted, but no new network was found. Close session.
-    if (new_network == NetworkChangeNotifier::kInvalidNetworkHandle) {
-      HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_NO_ALTERNATE_NETWORK,
-          session->connection_id(), "No alternate network found");
-      session->CloseSessionOnError(ERR_NETWORK_CHANGED,
-                                   QUIC_CONNECTION_MIGRATION_NO_NEW_NETWORK);
-      continue;
-    }
-
     // If session is already bound to |new_network|, move on.
     if (session->GetDefaultSocket()->GetBoundNetwork() == new_network) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_ALREADY_MIGRATED,
-          session->connection_id(), "Already bound to new network");
+          net_log, MIGRATION_STATUS_ALREADY_MIGRATED, session->connection_id(),
+          "Already bound to new network");
       continue;
     }
 
     // Close idle sessions.
     if (session->GetNumActiveStreams() == 0) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
+          net_log, MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
           session->connection_id(), "No active sessions");
       session->CloseSessionOnError(
           ERR_NETWORK_CHANGED, QUIC_CONNECTION_MIGRATION_NO_MIGRATABLE_STREAMS);
@@ -1528,7 +1357,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
 
     // Do not migrate sessions where connection migration is disabled.
     if (session->config()->DisableConnectionMigration()) {
-      HistogramAndLogMigrationFailure(bound_net_log, MIGRATION_STATUS_DISABLED,
+      HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_DISABLED,
                                       session->connection_id(),
                                       "Migration disabled");
       if (close_if_cannot_migrate) {
@@ -1541,7 +1370,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     // Do not migrate sessions with non-migratable streams.
     if (session->HasNonMigratableStreams()) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
+          net_log, MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
           session->connection_id(), "Non-migratable stream");
       if (close_if_cannot_migrate) {
         session->CloseSessionOnError(
@@ -1551,16 +1380,21 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
       continue;
     }
 
+    // No new network was found. Notify session, so it can wait for a
+    // new network.
+    if (new_network == NetworkChangeNotifier::kInvalidNetworkHandle) {
+      session->OnNoNewNetwork();
+      continue;
+    }
+
     MigrateSessionToNewNetwork(session, new_network,
-                               /*close_session_on_error=*/true, bound_net_log,
-                               nullptr);
+                               /*close_session_on_error=*/true, net_log);
   }
 }
 
-void QuicStreamFactory::MaybeMigrateSingleSession(
+MigrationResult QuicStreamFactory::MaybeMigrateSingleSession(
     QuicChromiumClientSession* session,
-    MigrationCause migration_cause,
-    scoped_refptr<StringIOBuffer> packet) {
+    MigrationCause migration_cause) {
   ScopedConnectionMigrationEventLog scoped_event_log(
       net_log_,
       migration_cause == EARLY_MIGRATION ? "EarlyMigration" : "WriteError");
@@ -1571,7 +1405,7 @@ void QuicStreamFactory::MaybeMigrateSingleSession(
     HistogramAndLogMigrationFailure(
         scoped_event_log.net_log(), MIGRATION_STATUS_DISABLED,
         session->connection_id(), "Migration disabled");
-    return;
+    return MigrationResult::FAILURE;
   }
   NetworkHandle new_network =
       FindAlternateNetwork(session->GetDefaultSocket()->GetBoundNetwork());
@@ -1580,18 +1414,18 @@ void QuicStreamFactory::MaybeMigrateSingleSession(
     HistogramAndLogMigrationFailure(
         scoped_event_log.net_log(), MIGRATION_STATUS_NO_ALTERNATE_NETWORK,
         session->connection_id(), "No alternate network found");
-    return;
+    return MigrationResult::NO_NEW_NETWORK;
   }
   OnSessionGoingAway(session);
-  MigrateSessionToNewNetwork(session, new_network,
-                             migration_cause != WRITE_ERROR,
-                             scoped_event_log.net_log(), packet);
+  return MigrateSessionToNewNetwork(session, new_network,
+                                    migration_cause != WRITE_ERROR,
+                                    scoped_event_log.net_log());
 }
 
 void QuicStreamFactory::MigrateSessionToNewPeerAddress(
     QuicChromiumClientSession* session,
     IPEndPoint peer_address,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   if (!allow_server_migration_)
     return;
 
@@ -1601,27 +1435,26 @@ void QuicStreamFactory::MigrateSessionToNewPeerAddress(
 
   // Specifying kInvalidNetworkHandle for the |network| parameter
   // causes the session to use the default network for the new socket.
-  MigrateSession(session, peer_address,
-                 NetworkChangeNotifier::kInvalidNetworkHandle,
-                 /*close_session_on_error=*/true, bound_net_log, nullptr);
+  MigrateSessionInner(session, peer_address,
+                      NetworkChangeNotifier::kInvalidNetworkHandle,
+                      /*close_session_on_error=*/true, net_log);
 }
 
-void QuicStreamFactory::MigrateSessionToNewNetwork(
+MigrationResult QuicStreamFactory::MigrateSessionToNewNetwork(
     QuicChromiumClientSession* session,
     NetworkHandle network,
     bool close_session_on_error,
-    const BoundNetLog& bound_net_log,
-    scoped_refptr<StringIOBuffer> packet) {
-  MigrateSession(session, session->connection()->peer_address(), network,
-                 close_session_on_error, bound_net_log, packet);
+    const NetLogWithSource& net_log) {
+  return MigrateSessionInner(session, session->connection()->peer_address(),
+                             network, close_session_on_error, net_log);
 }
 
-void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
-                                       IPEndPoint peer_address,
-                                       NetworkHandle network,
-                                       bool close_session_on_error,
-                                       const BoundNetLog& bound_net_log,
-                                       scoped_refptr<StringIOBuffer> packet) {
+MigrationResult QuicStreamFactory::MigrateSessionInner(
+    QuicChromiumClientSession* session,
+    IPEndPoint peer_address,
+    NetworkHandle network,
+    bool close_session_on_error,
+    const NetLogWithSource& net_log) {
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
   // using the PortSuggester since the connection is being migrated
   // and not being newly created.
@@ -1630,13 +1463,13 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
           DatagramSocket::DEFAULT_BIND, RandIntCallback(),
           session->net_log().net_log(), session->net_log().source()));
   if (ConfigureSocket(socket.get(), peer_address, network) != OK) {
-    HistogramAndLogMigrationFailure(
-        bound_net_log, MIGRATION_STATUS_INTERNAL_ERROR,
-        session->connection_id(), "Socket configuration failed");
+    HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_INTERNAL_ERROR,
+                                    session->connection_id(),
+                                    "Socket configuration failed");
     if (close_session_on_error) {
       session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
     }
-    return;
+    return MigrationResult::FAILURE;
   }
   std::unique_ptr<QuicChromiumPacketReader> new_reader(
       new QuicChromiumPacketReader(socket.get(), clock_.get(), session,
@@ -1647,26 +1480,21 @@ void QuicStreamFactory::MigrateSession(QuicChromiumClientSession* session,
   new_writer->set_delegate(session);
 
   if (!session->MigrateToSocket(std::move(socket), std::move(new_reader),
-                                std::move(new_writer), packet)) {
-    // TODO(jokulik): It's not clear how we could end up on this code
-    // path.  We would theoretically hit this failure if we've
-    // performed too many migrations on this session.  However, the
-    // session will be marked as going away after a previous
-    // migration, making subsequent migration impossible.
-    HistogramAndLogMigrationFailure(
-        bound_net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
-        session->connection_id(), "Too many migrations");
+                                std::move(new_writer))) {
+    HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
+                                    session->connection_id(),
+                                    "Too many migrations");
     if (close_session_on_error) {
       session->CloseSessionOnError(ERR_NETWORK_CHANGED,
                                    QUIC_CONNECTION_MIGRATION_TOO_MANY_CHANGES);
     }
-    return;
+    return MigrationResult::FAILURE;
   }
   HistogramMigrationStatus(MIGRATION_STATUS_SUCCESS);
-  bound_net_log.AddEvent(
-      NetLogEventType::QUIC_CONNECTION_MIGRATION_SUCCESS,
-      base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
-                 session->connection_id()));
+  net_log.AddEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_SUCCESS,
+                   base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
+                              session->connection_id()));
+  return MigrationResult::SUCCESS;
 }
 
 void QuicStreamFactory::OnSSLConfigChanged() {
@@ -1772,8 +1600,17 @@ int QuicStreamFactory::CreateSession(
     const AddressList& address_list,
     base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     QuicChromiumClientSession** session) {
+  if (need_to_evaluate_consecutive_disabled_count_) {
+    task_runner_->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&QuicStreamFactory::MaybeClearConsecutiveDisabledCount,
+                   weak_factory_.GetWeakPtr()),
+        base::TimeDelta::FromSeconds(kDisableQuicTimeoutSecs));
+
+    need_to_evaluate_consecutive_disabled_count_ = false;
+  }
   TRACE_EVENT0("net", "QuicStreamFactory::CreateSession");
   IPEndPoint addr = *address_list.begin();
   bool enable_port_selection = enable_port_selection_;
@@ -1864,8 +1701,7 @@ int QuicStreamFactory::CreateSession(
       server_id, yield_after_packets_, yield_after_duration_, cert_verify_flags,
       config, &crypto_config_, network_connection_.GetDescription(),
       dns_resolution_start_time, dns_resolution_end_time, &push_promise_index_,
-      base::ThreadTaskRunnerHandle::Get().get(),
-      std::move(socket_performance_watcher), net_log.net_log());
+      task_runner_, std::move(socket_performance_watcher), net_log.net_log());
 
   all_sessions_[*session] = key;  // owning pointer
   writer->set_delegate(*session);
@@ -1926,7 +1762,7 @@ bool QuicStreamFactory::CryptoConfigCacheIsEmpty(
 QuicAsyncStatus QuicStreamFactory::StartCertVerifyJob(
     const QuicServerId& server_id,
     int cert_verify_flags,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   if (!race_cert_verification_)
     return QUIC_FAILURE;
   QuicCryptoClientConfig::CachedState* cached =
@@ -2065,6 +1901,15 @@ void QuicStreamFactory::ProcessGoingAwaySession(
   // still race.
   http_server_properties_->MarkAlternativeServiceRecentlyBroken(
       alternative_service);
+}
+
+void QuicStreamFactory::OpenFactory() {
+  status_ = OPEN;
+}
+
+void QuicStreamFactory::MaybeClearConsecutiveDisabledCount() {
+  if (status_ == OPEN)
+    consecutive_disabled_count_ = 0;
 }
 
 }  // namespace net

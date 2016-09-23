@@ -7,6 +7,8 @@ from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_gtest_run
 from pylib.local.device import local_device_instrumentation_test_run
+from pylib.local.device import local_device_perf_test_run
+from pylib.perf import perf_test_instance
 from pylib.uirobot import uirobot_test_instance
 
 try:
@@ -21,7 +23,18 @@ except ImportError:
   remote_device_uirobot_test_run = None
 
 
-def CreateTestRun(_args, env, test_instance, error_func):
+def _CreatePerfTestRun(args, env, test_instance):
+  if args.print_step:
+    return local_device_perf_test_run.PrintStep(
+        env, test_instance)
+  elif args.output_json_list:
+    return local_device_perf_test_run.OutputJsonList(
+        env, test_instance)
+  return local_device_perf_test_run.LocalDevicePerfTestRun(
+      env, test_instance)
+
+
+def CreateTestRun(args, env, test_instance, error_func):
   if isinstance(env, local_device_environment.LocalDeviceEnvironment):
     if isinstance(test_instance, gtest_test_instance.GtestTestInstance):
       return local_device_gtest_run.LocalDeviceGtestRun(env, test_instance)
@@ -29,6 +42,9 @@ def CreateTestRun(_args, env, test_instance, error_func):
                   instrumentation_test_instance.InstrumentationTestInstance):
       return (local_device_instrumentation_test_run
               .LocalDeviceInstrumentationTestRun(env, test_instance))
+    if isinstance(test_instance,
+                  perf_test_instance.PerfTestInstance):
+      return _CreatePerfTestRun(args, env, test_instance)
 
   if (remote_device_environment
       and isinstance(env, remote_device_environment.RemoteDeviceEnvironment)):

@@ -49,10 +49,6 @@ class NET_EXPORT_PRIVATE WebSocketExtensionParser {
   void ConsumeSpaces();
   WARN_UNUSED_RESULT bool Lookahead(char c);
   WARN_UNUSED_RESULT bool ConsumeIfMatch(char c);
-  size_t UnconsumedBytes() const { return end_ - current_; }
-
-  static bool IsControl(char c);
-  static bool IsSeparator(char c);
 
   // The current position in the input string.
   const char* current_;

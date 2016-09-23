@@ -115,18 +115,19 @@ void QuicCryptoServerStream::OnHandshakeMessage(
 
   CryptoUtils::HashHandshakeMessage(message, &chlo_hash_);
 
-  validate_client_hello_cb_ = new ValidateCallback(this);
+  std::unique_ptr<ValidateCallback> cb(new ValidateCallback(this));
+  validate_client_hello_cb_ = cb.get();
   crypto_config_->ValidateClientHello(
       message, session()->connection()->peer_address().address(),
       session()->connection()->self_address().address(), version(),
-      session()->connection()->clock(), &crypto_proof_,
-      validate_client_hello_cb_);
+      session()->connection()->clock(), &crypto_proof_, std::move(cb));
 }
 
 void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
-    const CryptoHandshakeMessage& message,
-    const ValidateClientHelloResultCallback::Result& result,
+    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
     std::unique_ptr<ProofSource::Details> details) {
+  const CryptoHandshakeMessage& message = result->client_hello;
+
   // Clear the callback that got us here.
   DCHECK(validate_client_hello_cb_ != nullptr);
   validate_client_hello_cb_ = nullptr;
@@ -139,7 +140,7 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
   DiversificationNonce diversification_nonce;
   string error_details;
   QuicErrorCode error =
-      ProcessClientHello(message, result, std::move(details), &reply,
+      ProcessClientHello(result, std::move(details), &reply,
                          &diversification_nonce, &error_details);
 
   if (error != QUIC_NO_ERROR) {
@@ -379,26 +380,26 @@ bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
 }
 
 QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
-    const CryptoHandshakeMessage& message,
-    const ValidateClientHelloResultCallback::Result& result,
+    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
     std::unique_ptr<ProofSource::Details> proof_source_details,
     CryptoHandshakeMessage* reply,
     DiversificationNonce* out_diversification_nonce,
     string* error_details) {
+  const CryptoHandshakeMessage& message = result->client_hello;
   if (!helper_->CanAcceptClientHello(
           message, session()->connection()->self_address(), error_details)) {
     return QUIC_HANDSHAKE_FAILED;
   }
 
-  if (!result.info.server_nonce.empty()) {
+  if (!result->info.server_nonce.empty()) {
     ++num_handshake_messages_with_server_nonces_;
   }
   // Store the bandwidth estimate from the client.
-  if (result.cached_network_params.bandwidth_estimate_bytes_per_second() > 0) {
+  if (result->cached_network_params.bandwidth_estimate_bytes_per_second() > 0) {
     previous_cached_network_params_.reset(
-        new CachedNetworkParameters(result.cached_network_params));
+        new CachedNetworkParameters(result->cached_network_params));
   }
-  previous_source_address_tokens_ = result.info.source_address_tokens;
+  previous_source_address_tokens_ = result->info.source_address_tokens;
 
   const bool use_stateless_rejects_in_crypto_config =
       use_stateless_rejects_if_peer_supported_ &&
@@ -427,12 +428,11 @@ void QuicCryptoServerStream::ValidateCallback::Cancel() {
   parent_ = nullptr;
 }
 
-void QuicCryptoServerStream::ValidateCallback::RunImpl(
-    const CryptoHandshakeMessage& client_hello,
-    const Result& result,
+void QuicCryptoServerStream::ValidateCallback::Run(
+    scoped_refptr<Result> result,
     std::unique_ptr<ProofSource::Details> details) {
   if (parent_ != nullptr) {
-    parent_->FinishProcessingHandshakeMessage(client_hello, result,
+    parent_->FinishProcessingHandshakeMessage(std::move(result),
                                               std::move(details));
   }
 }

@@ -35,6 +35,12 @@ void QuicFramerPeer::SetLastPacketNumber(QuicFramer* framer,
 }
 
 // static
+void QuicFramerPeer::SetLargestPacketNumber(QuicFramer* framer,
+                                            QuicPacketNumber packet_number) {
+  framer->largest_packet_number_ = packet_number;
+}
+
+// static
 void QuicFramerPeer::SetPerspective(QuicFramer* framer,
                                     Perspective perspective) {
   framer->perspective_ = perspective;

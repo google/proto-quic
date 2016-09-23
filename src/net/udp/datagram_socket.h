@@ -9,7 +9,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class IPEndPoint;
 
 // A datagram socket is an interface to a protocol which exchanges
@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE DatagramSocket {
   virtual int SetDoNotFragment() = 0;
 
   // Gets the NetLog for this socket.
-  virtual const BoundNetLog& NetLog() const = 0;
+  virtual const NetLogWithSource& NetLog() const = 0;
 };
 
 }  // namespace net

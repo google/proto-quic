@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
              std::unique_ptr<Request>* out_req,
-             const BoundNetLog& net_log) override;
+             const NetLogWithSource& net_log) override;
 
   bool SupportsOCSPStapling() override;
 

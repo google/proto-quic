@@ -55,9 +55,10 @@ void RunTestCaseUsingPolicy(VerifyResult expected_result,
 
   ASSERT_TRUE(ReadTestDataFromPemFile(path, mappings));
 
+  CertErrors algorithm_errors;
   std::unique_ptr<SignatureAlgorithm> signature_algorithm =
-      SignatureAlgorithm::CreateFromDer(der::Input(&algorithm));
-  ASSERT_TRUE(signature_algorithm);
+      SignatureAlgorithm::Create(der::Input(&algorithm), &algorithm_errors);
+  ASSERT_TRUE(signature_algorithm) << algorithm_errors.ToDebugString();
 
   der::BitString signature_value_bit_string;
   der::Parser signature_value_parser((der::Input(&signature_value)));
@@ -66,12 +67,15 @@ void RunTestCaseUsingPolicy(VerifyResult expected_result,
 
   bool expected_result_bool = expected_result == SUCCESS;
 
+  CertErrors verify_errors;
+  bool result =
+      VerifySignedData(*signature_algorithm, der::Input(&signed_data),
+                       signature_value_bit_string, der::Input(&public_key),
+                       policy, &verify_errors);
+  EXPECT_EQ(expected_result_bool, result);
   // TODO(crbug.com/634443): Verify the returned errors.
-  CertErrors errors;
-  EXPECT_EQ(expected_result_bool,
-            VerifySignedData(*signature_algorithm, der::Input(&signed_data),
-                             signature_value_bit_string,
-                             der::Input(&public_key), policy, &errors));
+  // if (!result)
+  //   EXPECT_FALSE(verify_errors.empty());
 }
 
 // RunTestCase() is the same as RunTestCaseUsingPolicy(), only it uses a

@@ -5,14 +5,25 @@
 # echo "import(\"//build/args/blimp_engine.gn\")" > out/foo/args.gn
 # gn gen out/foo
 #
+# This file contains Blimp engine build args common to both
+# official builds and personal development builds.
 # Use gn args to add your own build preference args.
 
 use_aura = true
 use_ozone = true
+ozone_auto_platforms = false
+ozone_platform = "headless"
+ozone_platform_headless = true
 metrics_use_blimp = true
+use_low_quality_image_interpolation = true
+use_external_popup_menu = true
 
 # Not available within docker container.
 use_alsa = false
 use_pulseaudio = false
 use_cups = false
 use_glib = false
+
+# udev is not supported on targeted platform and also not something that will
+# be used by Blimp Engine.
+use_udev = false

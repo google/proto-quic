@@ -305,17 +305,12 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
     ret->options |= SSL_OP_NO_TICKET;
   }
 
-  ret->min_version = ret->method->min_version;
-  ret->max_version = ret->method->max_version;
-
   /* Lock the SSL_CTX to the specified version, for compatibility with legacy
    * uses of SSL_METHOD. */
-  if (method->version != 0) {
-    SSL_CTX_set_max_version(ret, method->version);
-    SSL_CTX_set_min_version(ret, method->version);
-  } else if (!method->method->is_dtls) {
-    /* TODO(svaldez): Enable TLS 1.3 by default once fully implemented. */
-    SSL_CTX_set_max_version(ret, TLS1_2_VERSION);
+  if (!SSL_CTX_set_max_proto_version(ret, method->version) ||
+      !SSL_CTX_set_min_proto_version(ret, method->version)) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+    goto err2;
   }
 
   return ret;
@@ -392,6 +387,8 @@ SSL *SSL_new(SSL_CTX *ctx) {
 
   ssl->min_version = ctx->min_version;
   ssl->max_version = ctx->max_version;
+
+  ssl->state = SSL_ST_INIT;
 
   /* RFC 6347 states that implementations SHOULD use an initial timer value of
    * 1 second. */
@@ -529,13 +526,11 @@ void SSL_free(SSL *ssl) {
 
 void SSL_set_connect_state(SSL *ssl) {
   ssl->server = 0;
-  ssl->state = SSL_ST_CONNECT;
   ssl->handshake_func = ssl3_connect;
 }
 
 void SSL_set_accept_state(SSL *ssl) {
   ssl->server = 1;
-  ssl->state = SSL_ST_ACCEPT;
   ssl->handshake_func = ssl3_accept;
 }
 
@@ -681,7 +676,7 @@ static int ssl_do_renegotiate(SSL *ssl) {
 
   /* Begin a new handshake. */
   ssl->s3->total_renegotiations++;
-  ssl->state = SSL_ST_CONNECT;
+  ssl->state = SSL_ST_INIT;
   return 1;
 
 no_renegotiation:
@@ -949,24 +944,44 @@ int SSL_get_error(const SSL *ssl, int ret_code) {
   return SSL_ERROR_SYSCALL;
 }
 
-void SSL_CTX_set_min_version(SSL_CTX *ctx, uint16_t version) {
-  ctx->min_version = ctx->method->version_from_wire(version);
+static int set_min_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
+                           uint16_t version) {
+  if (version == 0) {
+    *out = method->min_version;
+    return 1;
+  }
+
+  return method->version_from_wire(out, version);
 }
 
-void SSL_CTX_set_max_version(SSL_CTX *ctx, uint16_t version) {
-  ctx->max_version = ctx->method->version_from_wire(version);
+static int set_max_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
+                           uint16_t version) {
+  if (version == 0) {
+    *out = method->max_version;
+    /* TODO(svaldez): Enable TLS 1.3 by default once fully implemented. */
+    if (*out > TLS1_2_VERSION) {
+      *out = TLS1_2_VERSION;
+    }
+    return 1;
+  }
+
+  return method->version_from_wire(out, version);
 }
 
-void SSL_set_min_version(SSL *ssl, uint16_t version) {
-  ssl->min_version = ssl->method->version_from_wire(version);
+int SSL_CTX_set_min_proto_version(SSL_CTX *ctx, uint16_t version) {
+  return set_min_version(ctx->method, &ctx->min_version, version);
 }
 
-void SSL_set_max_version(SSL *ssl, uint16_t version) {
-  ssl->max_version = ssl->method->version_from_wire(version);
+int SSL_CTX_set_max_proto_version(SSL_CTX *ctx, uint16_t version) {
+  return set_max_version(ctx->method, &ctx->max_version, version);
 }
 
-void SSL_set_fallback_version(SSL *ssl, uint16_t version) {
-  ssl->fallback_version = ssl->method->version_from_wire(version);
+int SSL_set_min_proto_version(SSL *ssl, uint16_t version) {
+  return set_min_version(ssl->method, &ssl->min_version, version);
+}
+
+int SSL_set_max_proto_version(SSL *ssl, uint16_t version) {
+  return set_max_version(ssl->method, &ssl->max_version, version);
 }
 
 uint32_t SSL_CTX_set_options(SSL_CTX *ctx, uint32_t options) {
@@ -2443,7 +2458,11 @@ int SSL_use_psk_identity_hint(SSL *ssl, const char *identity_hint) {
   OPENSSL_free(ssl->psk_identity_hint);
   ssl->psk_identity_hint = NULL;
 
-  if (identity_hint != NULL) {
+  /* Treat the empty hint as not supplying one. Plain PSK makes it possible to
+   * send either no hint (omit ServerKeyExchange) or an empty hint, while
+   * ECDHE_PSK can only spell empty hint. Having different capabilities is odd,
+   * so we interpret empty and missing as identical. */
+  if (identity_hint != NULL && identity_hint[0] != '\0') {
     ssl->psk_identity_hint = BUF_strdup(identity_hint);
     if (ssl->psk_identity_hint == NULL) {
       return 0;
@@ -2524,6 +2543,11 @@ void SSL_CTX_set_keylog_callback(SSL_CTX *ctx,
   ctx->keylog_callback = cb;
 }
 
+void (*SSL_CTX_get_keylog_callback(const SSL_CTX *ctx))(const SSL *ssl,
+                                                        const char *line) {
+  return ctx->keylog_callback;
+}
+
 void SSL_CTX_set_current_time_cb(SSL_CTX *ctx,
                                  void (*cb)(const SSL *ssl,
                                             struct timeval *out_clock)) {
@@ -2533,13 +2557,12 @@ void SSL_CTX_set_current_time_cb(SSL_CTX *ctx,
 static int cbb_add_hex(CBB *cbb, const uint8_t *in, size_t in_len) {
   static const char hextable[] = "0123456789abcdef";
   uint8_t *out;
-  size_t i;
 
   if (!CBB_add_space(cbb, &out, in_len * 2)) {
     return 0;
   }
 
-  for (i = 0; i < in_len; i++) {
+  for (size_t i = 0; i < in_len; i++) {
     *(out++) = (uint8_t)hextable[in[i] >> 4];
     *(out++) = (uint8_t)hextable[in[i] & 0xf];
   }
@@ -2674,9 +2697,8 @@ const struct {
 
 static const size_t kVersionsLen = OPENSSL_ARRAY_SIZE(kVersions);
 
-int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
-                               uint16_t *out_fallback_version,
-                               uint16_t *out_max_version) {
+int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
+                          uint16_t *out_max_version) {
   /* For historical reasons, |SSL_OP_NO_DTLSv1| aliases |SSL_OP_NO_TLSv1|, but
    * DTLS 1.0 should be mapped to TLS 1.1. */
   uint32_t options = ssl->options;
@@ -2708,9 +2730,8 @@ int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
    * as a min/max range by picking the lowest contiguous non-empty range of
    * enabled protocols. Note that this means it is impossible to set a maximum
    * version of the higest supported TLS version in a future-proof way. */
-  size_t i;
   int any_enabled = 0;
-  for (i = 0; i < kVersionsLen; i++) {
+  for (size_t i = 0; i < kVersionsLen; i++) {
     /* Only look at the versions already enabled. */
     if (min_version > kVersions[i].version) {
       continue;
@@ -2736,35 +2757,27 @@ int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
     }
   }
 
-  uint16_t fallback_version = max_version;
-  if (ssl->fallback_version != 0 && ssl->fallback_version < fallback_version) {
-    fallback_version = ssl->fallback_version;
-  }
-
-  if (!any_enabled || fallback_version < min_version) {
+  if (!any_enabled) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_SSL_VERSION);
     return 0;
   }
 
   *out_min_version = min_version;
-  *out_fallback_version = fallback_version;
   *out_max_version = max_version;
   return 1;
 }
 
-int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
-                          uint16_t *out_effective_max_version) {
-  /* This function returns the effective maximum version and not the fallback
-   * version. */
-  uint16_t real_max_version_unused;
-  return ssl_get_full_version_range(ssl, out_min_version,
-                                    out_effective_max_version,
-                                    &real_max_version_unused);
-}
-
 uint16_t ssl3_protocol_version(const SSL *ssl) {
   assert(ssl->s3->have_version);
-  return ssl->method->version_from_wire(ssl->version);
+  uint16_t version;
+  if (!ssl->method->version_from_wire(&version, ssl->version)) {
+    /* TODO(davidben): Use the internal version representation for ssl->version
+     * and map to the public API representation at API boundaries. */
+    assert(0);
+    return 0;
+  }
+
+  return version;
 }
 
 int SSL_is_server(const SSL *ssl) { return ssl->server; }
@@ -2788,16 +2801,6 @@ void SSL_set_renegotiate_mode(SSL *ssl, enum ssl_renegotiate_mode_t mode) {
 void SSL_set_reject_peer_renegotiations(SSL *ssl, int reject) {
   SSL_set_renegotiate_mode(
       ssl, reject ? ssl_renegotiate_never : ssl_renegotiate_freely);
-}
-
-int SSL_get_rc4_state(const SSL *ssl, const RC4_KEY **read_key,
-                      const RC4_KEY **write_key) {
-  if (ssl->s3->aead_read_ctx == NULL || ssl->s3->aead_write_ctx == NULL) {
-    return 0;
-  }
-
-  return EVP_AEAD_CTX_get_rc4_state(&ssl->s3->aead_read_ctx->ctx, read_key) &&
-         EVP_AEAD_CTX_get_rc4_state(&ssl->s3->aead_write_ctx->ctx, write_key);
 }
 
 int SSL_get_ivs(const SSL *ssl, const uint8_t **out_read_iv,
@@ -2887,25 +2890,13 @@ int SSL_clear(SSL *ssl) {
     return 0;
   }
 
-  /* SSL_clear may be called before or after the |ssl| is initialized in either
-   * accept or connect state. In the latter case, SSL_clear should preserve the
-   * half and reset |ssl->state| accordingly. */
-  if (ssl->handshake_func != NULL) {
-    if (ssl->server) {
-      SSL_set_accept_state(ssl);
-    } else {
-      SSL_set_connect_state(ssl);
-    }
-  } else {
-    assert(ssl->state == 0);
-  }
-
   /* TODO(davidben): Some state on |ssl| is reset both in |SSL_new| and
    * |SSL_clear| because it is per-connection state rather than configuration
    * state. Per-connection state should be on |ssl->s3| and |ssl->d1| so it is
    * naturally reset at the right points between |SSL_new|, |SSL_clear|, and
    * |ssl3_new|. */
 
+  ssl->state = SSL_ST_INIT;
   ssl->rwstate = SSL_NOTHING;
 
   BUF_MEM_free(ssl->init_buf);
@@ -2949,12 +2940,29 @@ void ssl_do_info_callback(const SSL *ssl, int type, int value) {
   }
 }
 
-void ssl_do_msg_callback(SSL *ssl, int is_write, int version, int content_type,
+void ssl_do_msg_callback(SSL *ssl, int is_write, int content_type,
                          const void *buf, size_t len) {
-  if (ssl->msg_callback != NULL) {
-    ssl->msg_callback(is_write, version, content_type, buf, len, ssl,
-                      ssl->msg_callback_arg);
+  if (ssl->msg_callback == NULL) {
+    return;
   }
+
+  /* |version| is zero when calling for |SSL3_RT_HEADER| and |SSL2_VERSION| for
+   * a V2ClientHello. */
+  int version;
+  switch (content_type) {
+    case 0:
+      /* V2ClientHello */
+      version = SSL2_VERSION;
+      break;
+    case SSL3_RT_HEADER:
+      version = 0;
+      break;
+    default:
+      version = ssl->version;
+  }
+
+  ssl->msg_callback(is_write, version, content_type, buf, len, ssl,
+                    ssl->msg_callback_arg);
 }
 
 int SSL_CTX_sess_connect(const SSL_CTX *ctx) { return 0; }
@@ -3013,4 +3021,20 @@ void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock) {
 #else
   gettimeofday(out_clock, NULL);
 #endif
+}
+
+int SSL_CTX_set_min_version(SSL_CTX *ctx, uint16_t version) {
+  return SSL_CTX_set_min_proto_version(ctx, version);
+}
+
+int SSL_CTX_set_max_version(SSL_CTX *ctx, uint16_t version) {
+  return SSL_CTX_set_max_proto_version(ctx, version);
+}
+
+int SSL_set_min_version(SSL *ssl, uint16_t version) {
+  return SSL_set_min_proto_version(ssl, version);
+}
+
+int SSL_set_max_version(SSL *ssl, uint16_t version) {
+  return SSL_set_max_proto_version(ssl, version);
 }

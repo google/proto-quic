@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/strings/string_util.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
@@ -14,6 +15,23 @@
 namespace net {
 
 namespace {
+
+DEFINE_CERT_ERROR_ID(kCertificateNotSequence,
+                     "Failed parsing Certificate SEQUENCE");
+DEFINE_CERT_ERROR_ID(kUnconsumedDataInsideCertificateSequence,
+                     "Unconsumed data inside Certificate SEQUENCE");
+DEFINE_CERT_ERROR_ID(kUnconsumedDataAfterCertificateSequence,
+                     "Unconsumed data after Certificate SEQUENCE");
+DEFINE_CERT_ERROR_ID(kTbsCertificateNotSequence,
+                     "Couldn't read tbsCertificate as SEQUENCE");
+DEFINE_CERT_ERROR_ID(
+    kSignatureAlgorithmNotSequence,
+    "Couldn't read Certificate.signatureAlgorithm as SEQUENCE");
+DEFINE_CERT_ERROR_ID(kSignatureValueNotBitString,
+                     "Couldn't read Certificate.signatureValue as BIT STRING");
+
+DEFINE_CERT_ERROR_ID(kUnconsumedDataInsideTbsCertificateSequence,
+                     "Unconsumed data inside TBSCertificate");
 
 // Returns true if |input| is a SEQUENCE and nothing else.
 WARN_UNUSED_RESULT bool IsSequenceTLV(const der::Input& input) {
@@ -170,34 +188,56 @@ bool VerifySerialNumber(const der::Input& value) {
 bool ParseCertificate(const der::Input& certificate_tlv,
                       der::Input* out_tbs_certificate_tlv,
                       der::Input* out_signature_algorithm_tlv,
-                      der::BitString* out_signature_value) {
+                      der::BitString* out_signature_value,
+                      CertErrors* out_errors) {
+  // |out_errors| is optional. But ensure it is non-null for the remainder of
+  // this function.
+  if (!out_errors) {
+    CertErrors unused_errors;
+    return ParseCertificate(certificate_tlv, out_tbs_certificate_tlv,
+                            out_signature_algorithm_tlv, out_signature_value,
+                            &unused_errors);
+  }
+
   der::Parser parser(certificate_tlv);
 
   //   Certificate  ::=  SEQUENCE  {
   der::Parser certificate_parser;
-  if (!parser.ReadSequence(&certificate_parser))
+  if (!parser.ReadSequence(&certificate_parser)) {
+    out_errors->AddError(kCertificateNotSequence);
     return false;
+  }
 
   //        tbsCertificate       TBSCertificate,
-  if (!ReadSequenceTLV(&certificate_parser, out_tbs_certificate_tlv))
+  if (!ReadSequenceTLV(&certificate_parser, out_tbs_certificate_tlv)) {
+    out_errors->AddError(kTbsCertificateNotSequence);
     return false;
+  }
 
   //        signatureAlgorithm   AlgorithmIdentifier,
-  if (!ReadSequenceTLV(&certificate_parser, out_signature_algorithm_tlv))
+  if (!ReadSequenceTLV(&certificate_parser, out_signature_algorithm_tlv)) {
+    out_errors->AddError(kSignatureAlgorithmNotSequence);
     return false;
+  }
 
   //        signatureValue       BIT STRING  }
-  if (!certificate_parser.ReadBitString(out_signature_value))
+  if (!certificate_parser.ReadBitString(out_signature_value)) {
+    out_errors->AddError(kSignatureValueNotBitString);
     return false;
+  }
 
   // There isn't an extension point at the end of Certificate.
-  if (certificate_parser.HasMore())
+  if (certificate_parser.HasMore()) {
+    out_errors->AddError(kUnconsumedDataInsideCertificateSequence);
     return false;
+  }
 
   // By definition the input was a single Certificate, so there shouldn't be
   // unconsumed data.
-  if (parser.HasMore())
+  if (parser.HasMore()) {
+    out_errors->AddError(kUnconsumedDataAfterCertificateSequence);
     return false;
+  }
 
   return true;
 }
@@ -221,7 +261,16 @@ bool ParseCertificate(const der::Input& certificate_tlv,
 //        }
 bool ParseTbsCertificate(const der::Input& tbs_tlv,
                          const ParseCertificateOptions& options,
-                         ParsedTbsCertificate* out) {
+                         ParsedTbsCertificate* out,
+                         CertErrors* errors) {
+  // The rest of this function assumes that |errors| is non-null.
+  if (!errors) {
+    CertErrors unused_errors;
+    return ParseTbsCertificate(tbs_tlv, options, out, &unused_errors);
+  }
+
+  // TODO(crbug.com/634443): Add useful error information to |errors|.
+
   der::Parser parser(tbs_tlv);
 
   //   Certificate  ::=  SEQUENCE  {
@@ -337,8 +386,10 @@ bool ParseTbsCertificate(const der::Input& tbs_tlv,
   // However because only v1, v2, and v3 certificates are supported by the
   // parsing, there shouldn't be any subsequent data in those versions, so
   // reject.
-  if (tbs_parser.HasMore())
+  if (tbs_parser.HasMore()) {
+    errors->AddError(kUnconsumedDataInsideTbsCertificateSequence);
     return false;
+  }
 
   // By definition the input was a single TBSCertificate, so there shouldn't be
   // unconsumed data.

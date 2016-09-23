@@ -1,0 +1,61 @@
+{
+  "V8 Android GN (dbg)": {
+    "additional_compile_targets": [
+      "chrome_public_apk"
+    ],
+    "gtest_tests": []
+  },
+  "V8 Linux GN": {
+    "additional_compile_targets": [
+      "accessibility_unittests",
+      "aura_unittests",
+      "browser_tests",
+      "cacheinvalidation_unittests",
+      "capture_unittests",
+      "cast_unittests",
+      "cc_unittests",
+      "chromedriver_unittests",
+      "components_browsertests",
+      "components_unittests",
+      "content_browsertests",
+      "content_unittests",
+      "crypto_unittests",
+      "dbus_unittests",
+      "device_unittests",
+      "display_unittests",
+      "events_unittests",
+      "extensions_browsertests",
+      "extensions_unittests",
+      "gcm_unit_tests",
+      "gfx_unittests",
+      "gn_unittests",
+      "google_apis_unittests",
+      "gpu_ipc_service_unittests",
+      "gpu_unittests",
+      "interactive_ui_tests",
+      "ipc_tests",
+      "jingle_unittests",
+      "media_unittests",
+      "media_blink_unittests",
+      "mojo_common_unittests",
+      "mojo_public_bindings_unittests",
+      "mojo_public_system_unittests",
+      "mojo_system_unittests",
+      "nacl_loader_unittests",
+      "net_unittests",
+      "ppapi_unittests",
+      "printing_unittests",
+      "remoting_unittests",
+      "sandbox_linux_unittests",
+      "skia_unittests",
+      "sql_unittests",
+      "sync_integration_tests",
+      "ui_base_unittests",
+      "ui_touch_selection_unittests",
+      "unit_tests",
+      "url_unittests",
+      "views_unittests",
+      "wm_unittests"
+    ]
+  }
+}

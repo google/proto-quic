@@ -172,26 +172,36 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // PostSequencedWorkerTask(). Valid tokens are always nonzero.
   static SequenceToken GetSequenceToken();
 
-  // Invoke this once on the main thread of a process, before any other threads
-  // are created and before any tasks are posted to that process'
-  // SequencedWorkerPools but after TaskScheduler was instantiated, to force all
-  // SequencedWorkerPools in that process to redirect their tasks to the
-  // TaskScheduler. Note: SequencedWorkerPool instances with |max_threads == 1|
-  // will be special cased to send all of their work as
-  // ExecutionMode::SINGLE_THREADED.
+  // Starts redirecting tasks posted to this process' SequencedWorkerPools to
+  // the registered TaskScheduler. This cannot be called after a task has been
+  // posted to a SequencedWorkerPool. This is not thread-safe; proper
+  // synchronization is required to use any SequencedWorkerPool method after
+  // calling this. There must be a registered TaskScheduler when this is called.
+  // Ideally, call this on the main thread of a process, before any other
+  // threads are created and before any tasks are posted to that process'
+  // SequencedWorkerPools.
   // TODO(gab): Remove this if http://crbug.com/622400 fails
   // (SequencedWorkerPool will be phased out completely otherwise).
-  static void RedirectSequencedWorkerPoolsToTaskSchedulerForProcess();
+  static void RedirectToTaskSchedulerForProcess();
+
+  // Stops redirecting tasks posted to this process' SequencedWorkerPools to the
+  // registered TaskScheduler and allows RedirectToTaskSchedulerForProcess() to
+  // be called even if tasks have already posted to a SequencedWorkerPool in
+  // this process. Calling this while there are active SequencedWorkerPools is
+  // not supported. This is not thread-safe; proper synchronization is required
+  // to use any SequencedWorkerPool method after calling this.
+  static void ResetRedirectToTaskSchedulerForProcessForTesting();
 
   // When constructing a SequencedWorkerPool, there must be a
   // ThreadTaskRunnerHandle on the current thread unless you plan to
   // deliberately leak it.
 
-  // Pass the maximum number of threads (they will be lazily created as needed)
-  // and a prefix for the thread name to aid in debugging. |task_priority| will
-  // be used to hint base::TaskScheduler for an experiment in which all
-  // SequencedWorkerPool tasks will be redirected to it in processes where a
-  // base::TaskScheduler was instantiated.
+  // Constructs a SequencedWorkerPool which will lazily create up to
+  // |max_threads| and a prefix for the thread name to aid in debugging.
+  // |max_threads| must be greater than 1. |task_priority| will be used to hint
+  // base::TaskScheduler for an experiment in which all SequencedWorkerPool
+  // tasks will be redirected to it in processes where a base::TaskScheduler was
+  // instantiated.
   SequencedWorkerPool(size_t max_threads,
                       const std::string& thread_name_prefix,
                       base::TaskPriority task_priority);
@@ -323,10 +333,6 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
                        TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 
-  // Returns true if the current thread is processing a task with the given
-  // sequence_token.
-  bool IsRunningSequenceOnCurrentThread(SequenceToken sequence_token) const;
-
   // Blocks until all pending tasks are complete. This should only be called in
   // unit tests when you want to validate something that should have happened.
   // This will not flush delayed tasks; delayed tasks get deleted.
@@ -371,7 +377,12 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   friend class DeleteHelper<SequencedWorkerPool>;
 
   class Inner;
+  class PoolSequencedTaskRunner;
   class Worker;
+
+  // Returns true if the current thread is processing a task with the given
+  // sequence_token.
+  bool IsRunningSequenceOnCurrentThread(SequenceToken sequence_token) const;
 
   const scoped_refptr<SingleThreadTaskRunner> constructor_task_runner_;
 

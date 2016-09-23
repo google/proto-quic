@@ -31,7 +31,7 @@ class Value;
 namespace net {
 
 class AuthCredentials;
-class BoundNetLog;
+class NetLogWithSource;
 class BidirectionalStreamImpl;
 class HostMappingRules;
 class HostPortPair;
@@ -180,8 +180,8 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   // Returns the LoadState for the request.
   virtual LoadState GetLoadState() const = 0;
 
-  // Returns true if TLS/NPN was negotiated for this stream.
-  virtual bool was_npn_negotiated() const = 0;
+  // Returns true if TLS/ALPN was negotiated for this stream.
+  virtual bool was_alpn_negotiated() const = 0;
 
   // Protocol negotiated with the server.
   virtual NextProto negotiated_protocol() const = 0;
@@ -212,7 +212,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
-      const BoundNetLog& net_log) = 0;
+      const NetLogWithSource& net_log) = 0;
 
   // Request a WebSocket handshake stream.
   // Will call delegate->OnWebSocketHandshakeStreamReady on successful
@@ -224,7 +224,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
-      const BoundNetLog& net_log) = 0;
+      const NetLogWithSource& net_log) = 0;
 
   // Request a BidirectionalStreamImpl.
   // Will call delegate->OnBidirectionalStreamImplReady on successful
@@ -235,7 +235,7 @@ class NET_EXPORT HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
-      const BoundNetLog& net_log) = 0;
+      const NetLogWithSource& net_log) = 0;
 
   // Requests that enough connections for |num_streams| be opened.
   virtual void PreconnectStreams(int num_streams,

@@ -87,6 +87,7 @@ class QuicServerEpollInTest : public ::testing::Test {
   }
 
  protected:
+  QuicFlagSaver saver_;
   int port_;
   IPEndPoint server_address_;
   TestQuicServer server_;

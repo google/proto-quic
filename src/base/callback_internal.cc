@@ -9,19 +9,32 @@
 namespace base {
 namespace internal {
 
-BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
-                             void (*destructor)(BindStateBase*),
-                             bool (*is_cancelled)(const BindStateBase*))
-      : polymorphic_invoke_(polymorphic_invoke),
-        ref_count_(0),
-        destructor_(destructor),
-        is_cancelled_(is_cancelled) {}
+namespace {
 
-void BindStateBase::AddRef() {
+bool ReturnFalse(const BindStateBase*) {
+  return false;
+}
+
+}  // namespace
+
+BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
+                             void (*destructor)(const BindStateBase*))
+    : BindStateBase(polymorphic_invoke, destructor, &ReturnFalse) {
+}
+
+BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
+                             void (*destructor)(const BindStateBase*),
+                             bool (*is_cancelled)(const BindStateBase*))
+    : polymorphic_invoke_(polymorphic_invoke),
+      ref_count_(0),
+      destructor_(destructor),
+      is_cancelled_(is_cancelled) {}
+
+void BindStateBase::AddRef() const {
   AtomicRefCountInc(&ref_count_);
 }
 
-void BindStateBase::Release() {
+void BindStateBase::Release() const {
   if (!AtomicRefCountDec(&ref_count_))
     destructor_(this);
 }
@@ -30,6 +43,16 @@ CallbackBase<CopyMode::MoveOnly>::CallbackBase(CallbackBase&& c) = default;
 
 CallbackBase<CopyMode::MoveOnly>&
 CallbackBase<CopyMode::MoveOnly>::operator=(CallbackBase&& c) = default;
+
+CallbackBase<CopyMode::MoveOnly>::CallbackBase(
+    const CallbackBase<CopyMode::Copyable>& c)
+    : bind_state_(c.bind_state_) {}
+
+CallbackBase<CopyMode::MoveOnly>& CallbackBase<CopyMode::MoveOnly>::operator=(
+    const CallbackBase<CopyMode::Copyable>& c) {
+  bind_state_ = c.bind_state_;
+  return *this;
+}
 
 void CallbackBase<CopyMode::MoveOnly>::Reset() {
   // NULL the bind_state_ last, since it may be holding the last ref to whatever

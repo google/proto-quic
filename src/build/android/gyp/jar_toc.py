@@ -107,17 +107,10 @@ def main():
 
   options, _ = parser.parse_args()
 
-  if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
-
   DoJarToc(options)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, options.toc_path)
 
   if options.stamp:
     build_utils.Touch(options.stamp)

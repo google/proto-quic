@@ -13,7 +13,6 @@ import sys
 import landmine_utils
 
 
-builder = landmine_utils.builder
 distributor = landmine_utils.distributor
 gyp_defines = landmine_utils.gyp_defines
 gyp_msvs_version = landmine_utils.gyp_msvs_version
@@ -30,31 +29,22 @@ def print_landmines():
   # dependency problems, fix the dependency problems instead of adding a
   # landmine.
 
-  if (distributor() == 'goma' and platform() == 'win32' and
-      builder() == 'ninja'):
+  if distributor() == 'goma' and platform() == 'win32':
     print 'Need to clobber winja goma due to backend cwd cache fix.'
   if platform() == 'android':
     print 'Clobber: to handle new way of suppressing findbugs failures.'
     print 'Clobber to fix gyp not rename package name (crbug.com/457038)'
-  if platform() == 'win' and builder() == 'ninja':
+  if platform() == 'win':
     print 'Compile on cc_unittests fails due to symbols removed in r185063.'
-  if platform() == 'linux' and builder() == 'ninja':
+  if platform() == 'linux':
     print 'Builders switching from make to ninja will clobber on this.'
   if platform() == 'mac':
     print 'Switching from bundle to unbundled dylib (issue 14743002).'
   if platform() in ('win', 'mac'):
     print ('Improper dependency for create_nmf.py broke in r240802, '
            'fixed in r240860.')
-  if (platform() == 'win' and builder() == 'ninja' and
-      gyp_msvs_version() == '2012' and
-      gyp_defines().get('target_arch') == 'x64' and
-      gyp_defines().get('dcheck_always_on') == '1'):
-    print "Switched win x64 trybots from VS2010 to VS2012."
-  if (platform() == 'win' and builder() == 'ninja' and
-      gyp_msvs_version().startswith('2013')):
-    print "Switch to VS2013"
   if (platform() == 'win' and gyp_msvs_version().startswith('2015')):
-    print 'Switch to VS2015 Update 2 almost-done'
+    print 'Switch to VS2015 Update 3'
   print 'Need to clobber everything due to an IDL change in r154579 (blink)'
   print 'Need to clobber everything due to gen file moves in r175513 (Blink)'
   if (platform() != 'ios'):
@@ -77,6 +67,8 @@ def print_landmines():
     print 'Clobber to support new location/infra for chrome_sync_shell_apk'
   if platform() == 'mac':
     print 'Clobber to get rid of evil libsqlite3.dylib (crbug.com/526208)'
+  if platform() == 'mac':
+    print 'Clobber to remove libsystem.dylib. See crbug.com/620075'
 
 
 def main():

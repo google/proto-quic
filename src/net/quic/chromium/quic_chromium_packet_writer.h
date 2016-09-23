@@ -32,8 +32,10 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
     // |error_code| otherwise.
     virtual int HandleWriteError(int error_code,
                                  scoped_refptr<StringIOBuffer> last_packet) = 0;
+
     // Called to propagate the final write error to the delegate.
     virtual void OnWriteError(int error_code) = 0;
+
     // Called when the writer is unblocked due to a write completion.
     virtual void OnWriteUnblocked() = 0;
   };
@@ -46,8 +48,10 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   // |delegate| must outlive writer.
   void set_delegate(Delegate* delegate) { delegate_ = delegate; }
 
+  void set_write_blocked(bool write_blocked) { write_blocked_ = write_blocked; }
+
   // Writes |packet| to the socket and returns the error code from the write.
-  int WritePacketToSocket(StringIOBuffer* packet);
+  WriteResult WritePacketToSocket(scoped_refptr<StringIOBuffer> packet);
 
   // QuicPacketWriter
   WriteResult WritePacket(const char* buffer,
@@ -61,9 +65,6 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   QuicByteCount GetMaxPacketSize(const IPEndPoint& peer_address) const override;
 
   void OnWriteComplete(int rv);
-
- protected:
-  void set_write_blocked(bool is_blocked) { write_blocked_ = is_blocked; }
 
  private:
   Socket* socket_;      // Unowned.

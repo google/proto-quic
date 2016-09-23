@@ -9,7 +9,7 @@ if (is_mac) {
 # Allows the source set to inject ldflags for targets that link to it.
 config("util_link_config") {
   if (is_mac) {
-    ldflags = [ "/usr/lib/libbsm.dylib" ]
+    libs = [ "bsm" ]
   }
 }
 
@@ -35,7 +35,7 @@ if (is_mac) {
   }
 }
 
-source_set("util") {
+static_library("util") {
   sources = [
     "file/file_io.cc",
     "file/file_io.h",
@@ -66,6 +66,8 @@ source_set("util") {
     "misc/initialization_state.h",
     "misc/initialization_state_dcheck.cc",
     "misc/initialization_state_dcheck.h",
+    "misc/metrics.cc",
+    "misc/metrics.h",
     "misc/pdb_structures.cc",
     "misc/pdb_structures.h",
     "misc/random_string.cc",
@@ -228,7 +230,9 @@ source_set("util") {
       "/wd4577",  # 'noexcept' used with no exception handling mode specified.
     ]
 
-    # TODO(GYP) UseSafeExceptionHandlers masm rule.
+    if (current_cpu == "x86") {
+      asmflags = [ "/safeseh" ]
+    }
   } else if (is_mac) {
     sources += get_target_outputs(":mig")
     deps += [ ":mig" ]

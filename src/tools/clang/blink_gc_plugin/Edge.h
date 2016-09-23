@@ -14,14 +14,16 @@
 class RecordInfo;
 
 class Edge;
-class Value;
+class Collection;
+class CrossThreadPersistent;
+class Member;
+class OwnPtr;
+class Persistent;
 class RawPtr;
 class RefPtr;
-class OwnPtr;
-class Member;
+class UniquePtr;
+class Value;
 class WeakMember;
-class Persistent;
-class Collection;
 
 // Bare-bones visitor.
 class EdgeVisitor {
@@ -31,9 +33,11 @@ class EdgeVisitor {
   virtual void VisitRawPtr(RawPtr*) {}
   virtual void VisitRefPtr(RefPtr*) {}
   virtual void VisitOwnPtr(OwnPtr*) {}
+  virtual void VisitUniquePtr(UniquePtr*) {}
   virtual void VisitMember(Member*) {}
   virtual void VisitWeakMember(WeakMember*) {}
   virtual void VisitPersistent(Persistent*) {}
+  virtual void VisitCrossThreadPersistent(CrossThreadPersistent*) {}
   virtual void VisitCollection(Collection*) {}
 };
 
@@ -45,9 +49,11 @@ class RecursiveEdgeVisitor : public EdgeVisitor {
   void VisitRawPtr(RawPtr*) override;
   void VisitRefPtr(RefPtr*) override;
   void VisitOwnPtr(OwnPtr*) override;
+  void VisitUniquePtr(UniquePtr*) override;
   void VisitMember(Member*) override;
   void VisitWeakMember(WeakMember*) override;
   void VisitPersistent(Persistent*) override;
+  void VisitCrossThreadPersistent(CrossThreadPersistent*) override;
   void VisitCollection(Collection*) override;
 
  protected:
@@ -62,9 +68,11 @@ class RecursiveEdgeVisitor : public EdgeVisitor {
   virtual void AtRawPtr(RawPtr*);
   virtual void AtRefPtr(RefPtr*);
   virtual void AtOwnPtr(OwnPtr*);
+  virtual void AtUniquePtr(UniquePtr*);
   virtual void AtMember(Member*);
   virtual void AtWeakMember(WeakMember*);
   virtual void AtPersistent(Persistent*);
+  virtual void AtCrossThreadPersistent(CrossThreadPersistent*);
   virtual void AtCollection(Collection*);
 
  private:
@@ -87,12 +95,11 @@ class Edge {
 
   virtual bool IsValue() { return false; }
   virtual bool IsRawPtr() { return false; }
-  virtual bool IsRawPtrClass() { return false; }
   virtual bool IsRefPtr() { return false; }
   virtual bool IsOwnPtr() { return false; }
+  virtual bool IsUniquePtr() { return false; }
   virtual bool IsMember() { return false; }
   virtual bool IsWeakMember() { return false; }
-  virtual bool IsPersistent() { return false; }
   virtual bool IsCollection() { return false; }
 };
 
@@ -126,26 +133,22 @@ class PtrEdge : public Edge {
 
 class RawPtr : public PtrEdge {
  public:
-  RawPtr(Edge* ptr, bool is_ptr_class, bool is_ref_type)
+  RawPtr(Edge* ptr, bool is_ref_type)
       : PtrEdge(ptr)
-      , is_ptr_class_(is_ptr_class)
       , is_ref_type_(is_ref_type)
   {
-      assert(!(is_ptr_class_ && is_ref_type_));
   }
 
   bool IsRawPtr() { return true; }
-  bool IsRawPtrClass() { return is_ptr_class_; }
   LivenessKind Kind() { return kWeak; }
   bool NeedsFinalization() { return false; }
   TracingStatus NeedsTracing(NeedsTracingOption) {
-    return TracingStatus::Unneeded();
+    return TracingStatus::Illegal();
   }
   void Accept(EdgeVisitor* visitor) { visitor->VisitRawPtr(this); }
 
   bool HasReferenceType() { return is_ref_type_; }
  private:
-  bool is_ptr_class_;
   bool is_ref_type_;
 };
 
@@ -156,7 +159,7 @@ class RefPtr : public PtrEdge {
   LivenessKind Kind() { return kStrong; }
   bool NeedsFinalization() { return true; }
   TracingStatus NeedsTracing(NeedsTracingOption) {
-    return TracingStatus::Unneeded();
+    return TracingStatus::Illegal();
   }
   void Accept(EdgeVisitor* visitor) { visitor->VisitRefPtr(this); }
 };
@@ -168,9 +171,21 @@ class OwnPtr : public PtrEdge {
   LivenessKind Kind() { return kStrong; }
   bool NeedsFinalization() { return true; }
   TracingStatus NeedsTracing(NeedsTracingOption) {
-    return TracingStatus::Unneeded();
+    return TracingStatus::Illegal();
   }
   void Accept(EdgeVisitor* visitor) { visitor->VisitOwnPtr(this); }
+};
+
+class UniquePtr : public PtrEdge {
+ public:
+  explicit UniquePtr(Edge* ptr) : PtrEdge(ptr) { }
+  bool IsUniquePtr() { return true; }
+  LivenessKind Kind() { return kStrong; }
+  bool NeedsFinalization() { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) {
+    return TracingStatus::Illegal();
+  }
+  void Accept(EdgeVisitor* visitor) { visitor->VisitUniquePtr(this); }
 };
 
 class Member : public PtrEdge {
@@ -200,13 +215,25 @@ class WeakMember : public PtrEdge {
 class Persistent : public PtrEdge {
  public:
   explicit Persistent(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsPersistent() { return true; }
   LivenessKind Kind() { return kRoot; }
   bool NeedsFinalization() { return true; }
   TracingStatus NeedsTracing(NeedsTracingOption) {
     return TracingStatus::Unneeded();
   }
   void Accept(EdgeVisitor* visitor) { visitor->VisitPersistent(this); }
+};
+
+class CrossThreadPersistent : public PtrEdge {
+ public:
+  explicit CrossThreadPersistent(Edge* ptr) : PtrEdge(ptr) { }
+  LivenessKind Kind() { return kRoot; }
+  bool NeedsFinalization() { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) {
+    return TracingStatus::Illegal();
+  }
+  void Accept(EdgeVisitor* visitor) {
+    visitor->VisitCrossThreadPersistent(this);
+  }
 };
 
 class Collection : public Edge {

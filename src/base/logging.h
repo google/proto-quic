@@ -731,7 +731,7 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // defined.
 //
 // You may append to the error message like so:
-//   DCHECK_NE(1, 2) << ": The world must be ending!";
+//   DCHECK_NE(1, 2) << "The world must be ending!";
 //
 // We are very careful to ensure that each argument is evaluated exactly
 // once, and that anything which is legal to pass as a function argument is
@@ -794,6 +794,9 @@ class BASE_EXPORT LogMessage {
   ~LogMessage();
 
   std::ostream& stream() { return stream_; }
+
+  LogSeverity severity() { return severity_; }
+  std::string str() { return stream_.str(); }
 
  private:
   void Init(const char* file, int line);

@@ -57,20 +57,6 @@ const char* SSLClientSocket::NextProtoToString(NextProto next_proto) {
 }
 
 // static
-const char* SSLClientSocket::NextProtoStatusToString(
-    const SSLClientSocket::NextProtoStatus status) {
-  switch (status) {
-    case kNextProtoUnsupported:
-      return "unsupported";
-    case kNextProtoNegotiated:
-      return "negotiated";
-    case kNextProtoNoOverlap:
-      return "no-overlap";
-  }
-  return NULL;
-}
-
-// static
 void SSLClientSocket::SetSSLKeyLogFile(
     const base::FilePath& path,
     const scoped_refptr<base::SequencedTaskRunner>& task_runner) {
@@ -104,11 +90,11 @@ std::vector<uint8_t> SSLClientSocket::SerializeNextProtos(
   for (const NextProto next_proto : next_protos) {
     const std::string proto = NextProtoToString(next_proto);
     if (proto.size() > 255) {
-      LOG(WARNING) << "Ignoring overlong NPN/ALPN protocol: " << proto;
+      LOG(WARNING) << "Ignoring overlong ALPN protocol: " << proto;
       continue;
     }
     if (proto.size() == 0) {
-      LOG(WARNING) << "Ignoring empty NPN/ALPN protocol";
+      LOG(WARNING) << "Ignoring empty ALPN protocol";
       continue;
     }
     wire_protos.push_back(proto.size());

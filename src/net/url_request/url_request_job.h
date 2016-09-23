@@ -19,7 +19,6 @@
 #include "net/base/net_error_details.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
-#include "net/base/upload_progress.h"
 #include "net/cookies/canonical_cookie.h"
 #include "net/socket/connection_attempts.h"
 #include "net/url_request/redirect_info.h"
@@ -117,9 +116,6 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Called to fetch the current load state for the job.
   virtual LoadState GetLoadState() const;
 
-  // Called to get the upload progress in bytes.
-  virtual UploadProgress GetUploadProgress() const;
-
   // Called to fetch the charset for this request.  Only makes sense for some
   // types of requests. Returns true on success.  Calling this on a type that
   // doesn't have a charset will return false.
@@ -196,9 +192,6 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
 
   // Continue processing the request ignoring the last error.
   virtual void ContinueDespiteLastError();
-
-  // Continue with the network request.
-  virtual void ResumeNetworkStart();
 
   void FollowDeferredRedirect();
 

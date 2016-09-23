@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <body>
+  <script>
+    function addAudio(id, file) {
+      var audio = document.createElement('audio');
+      audio.src = file;
+      audio.loop = true;
+      audio.id = id;
+      document.body.appendChild(audio);
+    }
+
+    function getIDFromURL() {
+      var query = window.location.search;
+      return query.substring(query.lastIndexOf("id=") + 3);
+    }
+
+    addAudio('background_audio', 'pink_noise_20s.wav');
+    // Main audio file is identified by an ID passed in the page-set.
+    addAudio(getIDFromURL(), 'pink_noise_140ms.wav');
+  </script>
+  </body>
+</html>

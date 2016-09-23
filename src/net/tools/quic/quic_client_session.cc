@@ -122,7 +122,7 @@ QuicSpdyStream* QuicClientSession::CreateIncomingDynamicStream(
 
 QuicCryptoClientStreamBase* QuicClientSession::CreateQuicCryptoStream() {
   return new QuicCryptoClientStream(
-      server_id_, this, new ProofVerifyContextChromium(0, BoundNetLog()),
+      server_id_, this, new ProofVerifyContextChromium(0, NetLogWithSource()),
       crypto_config_, this);
 }
 

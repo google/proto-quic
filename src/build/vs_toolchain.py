@@ -7,7 +7,9 @@ import glob
 import json
 import os
 import pipes
+import platform
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -30,6 +32,8 @@ def SetEnvironmentAndGetRuntimeDllDirs():
   """Sets up os.environ to use the depot_tools VS toolchain with gyp, and
   returns the location of the VS runtime DLLs so they can be copied into
   the output directory after gyp generation.
+
+  Return value is [x64path, x86path] or None
   """
   vs_runtime_dll_dirs = None
   depot_tools_win_toolchain = \
@@ -74,6 +78,16 @@ def SetEnvironmentAndGetRuntimeDllDirs():
       os.environ['GYP_MSVS_OVERRIDE_PATH'] = DetectVisualStudioPath()
     if not 'GYP_MSVS_VERSION' in os.environ:
       os.environ['GYP_MSVS_VERSION'] = GetVisualStudioVersion()
+
+    # When using an installed toolchain these files aren't needed in the output
+    # directory in order to run binaries locally, but they are needed in order
+    # to create isolates or the mini_installer. Copying them to the output
+    # directory ensures that they are available when needed.
+    bitness = platform.architecture()[0]
+    # When running 64-bit python the x64 DLLs will be in System32
+    x64_path = 'System32' if bitness == '64bit' else 'Sysnative'
+    x64_path = os.path.join(r'C:\Windows', x64_path)
+    vs_runtime_dll_dirs = [x64_path, r'C:\Windows\SysWOW64']
 
   return vs_runtime_dll_dirs
 
@@ -153,17 +167,23 @@ def _VersionNumber():
 
 
 def _CopyRuntimeImpl(target, source, verbose=True):
-  """Copy |source| to |target| if it doesn't already exist or if it
-  needs to be updated.
+  """Copy |source| to |target| if it doesn't already exist or if it needs to be
+  updated (comparing last modified time as an approximate float match as for
+  some reason the values tend to differ by ~1e-07 despite being copies of the
+  same file... https://crbug.com/603603).
   """
   if (os.path.isdir(os.path.dirname(target)) and
       (not os.path.isfile(target) or
-      os.stat(target).st_mtime != os.stat(source).st_mtime)):
+       abs(os.stat(target).st_mtime - os.stat(source).st_mtime) >= 0.01)):
     if verbose:
       print 'Copying %s to %s...' % (source, target)
     if os.path.exists(target):
+      # Make the file writable so that we can delete it now.
+      os.chmod(target, stat.S_IWRITE)
       os.unlink(target)
     shutil.copy2(source, target)
+    # Make the file writable so that we can overwrite or delete it later.
+    os.chmod(target, stat.S_IWRITE)
 
 
 def _CopyRuntime2013(target_dir, source_dir, dll_pattern):
@@ -184,9 +204,16 @@ def _CopyRuntime2015(target_dir, source_dir, dll_pattern, suffix):
     target = os.path.join(target_dir, dll)
     source = os.path.join(source_dir, dll)
     _CopyRuntimeImpl(target, source)
-  ucrt_src_dir = os.path.join(source_dir, 'api-ms-win-*.dll')
-  print 'Copying %s to %s...' % (ucrt_src_dir, target_dir)
-  for ucrt_src_file in glob.glob(ucrt_src_dir):
+  # OS installs of Visual Studio (and all installs of Windows 10) put the
+  # universal CRT files in c:\Windows\System32\downlevel - look for them there
+  # to support DEPOT_TOOLS_WIN_TOOLCHAIN=0.
+  if os.path.exists(os.path.join(source_dir, 'downlevel')):
+    ucrt_src_glob = os.path.join(source_dir, 'downlevel', 'api-ms-win-*.dll')
+  else:
+    ucrt_src_glob = os.path.join(source_dir, 'api-ms-win-*.dll')
+  ucrt_files = glob.glob(ucrt_src_glob)
+  assert len(ucrt_files) > 0
+  for ucrt_src_file in ucrt_files:
     file_part = os.path.basename(ucrt_src_file)
     ucrt_dst_file = os.path.join(target_dir, file_part)
     _CopyRuntimeImpl(ucrt_dst_file, ucrt_src_file, False)
@@ -278,10 +305,10 @@ def _GetDesiredVsToolchainHashes():
   """Load a list of SHA1s corresponding to the toolchains that we want installed
   to build with."""
   if GetVisualStudioVersion() == '2015':
-    # Update 1 with hot fixes.
-    return ['a3796183a9fc4d22a687c5212b9c76dbd136d70d']
+    # Update 3 final with patches with 10.0.10586.0 SDK.
+    return ['d5dc33b15d1b2c086f2f6632e2fd15882f80dbd3']
   else:
-    return ['4087e065abebdca6dbd0caca2910c6718d2ec67f']
+    return ['03a4e939cd325d6bc5216af41b92d02dda1366a6']
 
 
 def ShouldUpdateToolchain():
@@ -331,6 +358,12 @@ def Update(force=False):
   return 0
 
 
+def NormalizePath(path):
+  while path.endswith("\\"):
+    path = path[:-1]
+  return path
+
+
 def GetToolchainDir():
   """Gets location information about the current toolchain (must have been
   previously updated by 'update'). This is used for the GN build."""
@@ -348,10 +381,10 @@ vs_version = "%s"
 wdk_dir = "%s"
 runtime_dirs = "%s"
 ''' % (
-      os.environ['GYP_MSVS_OVERRIDE_PATH'],
-      os.environ['WINDOWSSDKDIR'],
+      NormalizePath(os.environ['GYP_MSVS_OVERRIDE_PATH']),
+      NormalizePath(os.environ['WINDOWSSDKDIR']),
       GetVisualStudioVersion(),
-      os.environ.get('WDK_DIR', ''),
+      NormalizePath(os.environ.get('WDK_DIR', '')),
       os.path.pathsep.join(runtime_dll_dirs or ['None']))
 
 

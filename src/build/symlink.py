@@ -3,8 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Make a symlink and optionally touch a file (to handle dependencies)."""
+"""Make a symlink and optionally touch a file (to handle dependencies).
 
+Usage:
+  symlink.py [options] sources... target
+
+A sym link to source is created at target. If multiple sources are specfied,
+then target is assumed to be a directory, and will contain all the links to
+the sources (basenames identical to their source).
+"""
 
 import errno
 import optparse
@@ -28,6 +35,7 @@ def Main(argv):
     t = os.path.join(target, os.path.basename(s))
     if len(sources) == 1 and not os.path.isdir(target):
       t = target
+    t = os.path.expanduser(t)
     if os.path.realpath(t) == s:
       continue
     try:

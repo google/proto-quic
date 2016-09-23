@@ -28,6 +28,8 @@ class BuildDevice(object):
     self.id = configuration['id']
     self.description = configuration['description']
     self.install_metadata = configuration['install_metadata']
+    assert all(isinstance(entry, dict) for entry in self.install_metadata), (
+        'Invalid BuildDevice configuration')
     self.device = device_utils.DeviceUtils(self.id)
 
   def RunShellCommand(self, *args, **kwargs):
@@ -45,16 +47,23 @@ class BuildDevice(object):
   def InstallSplitApk(self, *args, **kwargs):
     return self.device.InstallSplitApk(*args, **kwargs)
 
-  def GetInstallMetadata(self, apk_package):
-    """Gets the metadata on the device for the apk_package apk."""
-    # Matches lines like:
-    # -rw-r--r-- system   system    7376582 2013-04-19 16:34 \
-    #   org.chromium.chrome.apk
-    # -rw-r--r-- system   system    7376582 2013-04-19 16:34 \
-    #   org.chromium.chrome-1.apk
-    apk_matcher = lambda s: re.match('.*%s(-[0-9]*)?.apk$' % apk_package, s)
-    matches = filter(apk_matcher, self.install_metadata)
-    return matches[0] if matches else None
+  def GetInstallMetadata(self, apk_package, refresh=False):
+    """Gets the metadata on the device for a given apk.
+
+    Args:
+      apk_package: A string with the package name for which to get metadata.
+      refresh: A boolean indicating whether to re-read package metadata from
+        the device, or use the values from the current configuration.
+    """
+    if refresh:
+      self.install_metadata = self.device.StatDirectory(
+          '/data/app/', as_root=True)
+    # Matches names like: org.chromium.chrome.apk, org.chromium.chrome-1.apk
+    apk_pattern = re.compile('%s(-[0-9]*)?(.apk)?$' % re.escape(apk_package))
+    return next(
+        (entry for entry in self.install_metadata
+         if apk_pattern.match(entry['filename'])),
+        None)
 
 
 def GetConfigurationForDevice(device_id):
@@ -63,25 +72,11 @@ def GetConfigurationForDevice(device_id):
   has_root = False
   is_online = device.IsOnline()
   if is_online:
-    cmd = 'ls -l /data/app; getprop ro.build.description'
-    cmd_output = device.RunShellCommand(cmd)
-    has_root = not 'Permission denied' in cmd_output[0]
-    if not has_root:
-      # Disable warning log messages from EnableRoot()
-      logging.getLogger().disabled = True
-      try:
-        device.EnableRoot()
-        has_root = True
-      except device_errors.CommandFailedError:
-        has_root = False
-      finally:
-        logging.getLogger().disabled = False
-      cmd_output = device.RunShellCommand(cmd)
-
+    has_root = device.HasRoot()
     configuration = {
         'id': device_id,
-        'description': cmd_output[-1],
-        'install_metadata': cmd_output[:-1],
+        'description': device.build_description,
+        'install_metadata': device.StatDirectory('/data/app/', as_root=True),
       }
   return configuration, is_online, has_root
 
@@ -105,4 +100,3 @@ def GetBuildDeviceFromPath(path):
   if len(configurations) > 0:
     return GetBuildDevice(ReadConfigurations(path))
   return None
-

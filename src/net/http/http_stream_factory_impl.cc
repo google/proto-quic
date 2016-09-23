@@ -103,7 +103,7 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStream(
     const SSLConfig& server_ssl_config,
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(!for_websockets_);
   return RequestStreamInternal(request_info, priority, server_ssl_config,
                                proxy_ssl_config, delegate, nullptr,
@@ -117,7 +117,7 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestWebSocketHandshakeStream(
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
     WebSocketHandshakeStreamBase::CreateHelper* create_helper,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(for_websockets_);
   DCHECK(create_helper);
   return RequestStreamInternal(request_info, priority, server_ssl_config,
@@ -131,7 +131,7 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestBidirectionalStreamImpl(
     const SSLConfig& server_ssl_config,
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(!for_websockets_);
   DCHECK(request_info.url.SchemeIs(url::kHttpsScheme));
 
@@ -149,7 +149,7 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
     WebSocketHandshakeStreamBase::CreateHelper*
         websocket_handshake_stream_create_helper,
     HttpStreamRequest::StreamType stream_type,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   JobController* job_controller =
       new JobController(this, delegate, session_, job_factory_.get());
   job_controller_set_.insert(base::WrapUnique(job_controller));
@@ -189,10 +189,10 @@ void HttpStreamFactoryImpl::OnNewSpdySessionReady(
     bool direct,
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info,
-    bool was_npn_negotiated,
+    bool was_alpn_negotiated,
     NextProto negotiated_protocol,
     bool using_spdy,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   while (true) {
     if (!spdy_session)
       break;
@@ -207,7 +207,7 @@ void HttpStreamFactoryImpl::OnNewSpdySessionReady(
     if (!base::ContainsKey(spdy_session_request_map_, spdy_session_key))
       break;
     Request* request = *spdy_session_request_map_[spdy_session_key].begin();
-    request->Complete(was_npn_negotiated, negotiated_protocol, using_spdy);
+    request->Complete(was_alpn_negotiated, negotiated_protocol, using_spdy);
     if (for_websockets_) {
       // TODO(ricea): Restore this code path when WebSocket over SPDY
       // implementation is ready.

@@ -66,11 +66,6 @@ const int32_t kSpdyStreamMaxRecvWindowSize = 6 * 1024 * 1024;    //  6 MB
 // and does not consume "too much" memory.
 const int32_t kQuicSocketReceiveBufferSize = 1024 * 1024;  // 1MB
 
-// Number of recent connections to consider for certain thresholds
-// that trigger disabling QUIC.  E.g. disable QUIC if PUBLIC_RESET was
-// received post handshake for at least 2 of 20 recent connections.
-const int32_t kQuicMaxRecentDisabledReasons = 20;
-
 HttpNetworkSession::Params::Params()
     : client_socket_factory(NULL),
       host_resolver(NULL),
@@ -106,8 +101,6 @@ HttpNetworkSession::Params::Params()
       quic_enable_non_blocking_io(false),
       quic_disable_disk_cache(false),
       quic_prefer_aes(false),
-      quic_max_number_of_lossy_connections(0),
-      quic_packet_loss_threshold(1.0f),
       quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
       quic_delay_tcp_race(true),
       quic_max_server_configs_stored_in_properties(0u),
@@ -117,9 +110,6 @@ HttpNetworkSession::Params::Params()
       enable_user_alternate_protocol_ports(false),
       quic_crypto_client_stream_factory(
           QuicCryptoClientStreamFactory::GetDefaultFactory()),
-      quic_max_recent_disabled_reasons(kQuicMaxRecentDisabledReasons),
-      quic_threshold_public_resets_post_handshake(0),
-      quic_threshold_timeouts_streams_open(0),
       quic_close_sessions_on_ip_change(false),
       quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_reduced_ping_timeout_seconds(kPingTimeoutSecs),
@@ -179,11 +169,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_enable_non_blocking_io,
           params.quic_disable_disk_cache,
           params.quic_prefer_aes,
-          params.quic_max_number_of_lossy_connections,
-          params.quic_packet_loss_threshold,
-          params.quic_max_recent_disabled_reasons,
-          params.quic_threshold_public_resets_post_handshake,
-          params.quic_threshold_timeouts_streams_open,
           params.quic_socket_receive_buffer_size,
           params.quic_delay_tcp_race,
           params.quic_max_server_configs_stored_in_properties,
@@ -256,9 +241,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 HttpNetworkSession::~HttpNetworkSession() {
   base::STLDeleteElements(&response_drainers_);
   spdy_session_pool_.CloseAllSessions();
-
-  // TODO(ricea): Remove this by October 2016. See bug 641013.
-  CHECK_EQ(active_websockets_, 0);
 }
 
 void HttpNetworkSession::AddResponseDrainer(HttpResponseBodyDrainer* drainer) {
@@ -339,9 +321,6 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
                    params_.quic_enable_connection_racing);
   dict->SetBoolean("disable_disk_cache", params_.quic_disable_disk_cache);
   dict->SetBoolean("prefer_aes", params_.quic_prefer_aes);
-  dict->SetInteger("max_number_of_lossy_connections",
-                   params_.quic_max_number_of_lossy_connections);
-  dict->SetDouble("packet_loss_threshold", params_.quic_packet_loss_threshold);
   dict->SetBoolean("delay_tcp_race", params_.quic_delay_tcp_race);
   dict->SetInteger("max_server_configs_stored_in_properties",
                    params_.quic_max_server_configs_stored_in_properties);
@@ -356,8 +335,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
                    params_.quic_disable_preconnect_if_0rtt);
   dict->SetBoolean("disable_quic_on_timeout_with_open_streams",
                    params_.disable_quic_on_timeout_with_open_streams);
-  dict->SetString("disabled_reason",
-                  quic_stream_factory_.QuicDisabledReasonString());
+  dict->SetBoolean("is_quic_disabled", quic_stream_factory_.IsQuicDisabled());
   dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
   dict->SetBoolean("race_cert_verification",
                    params_.quic_race_cert_verification);
@@ -387,16 +365,11 @@ void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
   *alpn_protos = next_protos_;
 }
 
-void HttpNetworkSession::GetNpnProtos(NextProtoVector* npn_protos) const {
-  npn_protos->clear();
-}
-
 void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,
                                       SSLConfig* server_config,
                                       SSLConfig* proxy_config) const {
   ssl_config_service_->GetSSLConfig(server_config);
   GetAlpnProtos(&server_config->alpn_protos);
-  GetNpnProtos(&server_config->npn_protos);
   *proxy_config = *server_config;
   if (request.privacy_mode == PRIVACY_MODE_ENABLED) {
     server_config->channel_id_enabled = false;

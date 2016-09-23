@@ -27,12 +27,6 @@ QuicChromiumPacketWriter::QuicChromiumPacketWriter(Socket* socket)
 
 QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
 
-int QuicChromiumPacketWriter::WritePacketToSocket(StringIOBuffer* packet) {
-  return socket_->Write(packet, packet->size(),
-                        base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
-                                   weak_factory_.GetWeakPtr()));
-}
-
 WriteResult QuicChromiumPacketWriter::WritePacket(
     const char* buffer,
     size_t buf_len,
@@ -42,15 +36,21 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
   scoped_refptr<StringIOBuffer> buf(
       new StringIOBuffer(std::string(buffer, buf_len)));
   DCHECK(!IsWriteBlocked());
-  base::TimeTicks now = base::TimeTicks::Now();
+  return WritePacketToSocket(buf);
+}
 
-  int rv = WritePacketToSocket(buf.get());
+WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
+    scoped_refptr<StringIOBuffer> packet) {
+  base::TimeTicks now = base::TimeTicks::Now();
+  int rv = socket_->Write(packet.get(), packet.get()->size(),
+                          base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
+                                     weak_factory_.GetWeakPtr()));
 
   if (rv < 0 && rv != ERR_IO_PENDING && delegate_ != nullptr) {
     // If write error, then call delegate's HandleWriteError, which
     // may be able to migrate and rewrite packet on a new socket.
     // HandleWriteError returns the outcome of that rewrite attempt.
-    rv = delegate_->HandleWriteError(rv, buf);
+    rv = delegate_->HandleWriteError(rv, packet);
   }
 
   WriteStatus status = WRITE_STATUS_OK;
@@ -61,7 +61,7 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
     } else {
       status = WRITE_STATUS_BLOCKED;
       write_blocked_ = true;
-      packet_ = buf;
+      packet_ = packet;
     }
   }
 

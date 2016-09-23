@@ -62,8 +62,6 @@ const std::string StatusToString(SCTVerifyStatus status) {
   switch (status) {
     case SCT_STATUS_LOG_UNKNOWN:
       return "From unknown log";
-    case SCT_STATUS_INVALID:
-      return "Invalid";
     case SCT_STATUS_INVALID_SIGNATURE:
       return "Invalid signature";
     case SCT_STATUS_OK:

@@ -48,8 +48,7 @@ private:
 
 class NeedsNoFinalization
     : public GarbageCollected<NeedsNoFinalization>
-    , public MixinNotFinalizable
-    , public ScriptWrappable {
+    , public MixinNotFinalizable {
     USING_GARBAGE_COLLECTED_MIXIN(NeedsNoFinalization);
 public:
     virtual void trace(Visitor*) override;

@@ -1,0 +1,71 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/features.gni")
+import("//build/json_schema_api.gni")
+import("//tools/json_schema_compiler/json_features.gni")
+
+json_schema_api("api") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "additional_properties.json",
+    "any.json",
+    "arrays.json",
+    "callbacks.json",
+    "choices.json",
+    "crossref.json",
+    "enums.json",
+    "error_generation.json",
+    "functions_as_parameters.json",
+    "functions_on_types.json",
+    "idl_basics.idl",
+    "idl_object_types.idl",
+    "idl_other_namespace.idl",
+    "idl_other_namespace_sub_namespace.idl",
+    "objects.json",
+    "objects_movable.idl",
+    "objects_movable_json.json",
+    "simple_api.json",
+  ]
+
+  schemas = true
+  root_namespace = "test::api::%(namespace)s"
+}
+
+if (enable_extensions) {
+  json_features("features_compiler_test") {
+    feature_class = "APIFeature"
+    provider_class = "CompilerTestFeatureProvider"
+    sources = [
+      "features_test.json",
+      "features_test2.json",
+    ]
+  }
+}
+
+source_set("schema_test") {
+  testonly = true
+  sources = [
+    "test_util.cc",
+    "test_util.h",
+  ]
+
+  # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+  configs += [ "//build/config/compiler:no_size_t_to_int_warning" ]
+
+  public_deps = [
+    ":api",
+    "//base",
+  ]
+}
+
+if (enable_extensions) {
+  source_set("features_generation_test") {
+    testonly = true
+    public_deps = [
+      ":features_compiler_test",
+    ]
+  }
+}

@@ -94,8 +94,6 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
     return num_duplicate_frames_received_;
   }
 
-  int num_early_frames_received() const { return num_early_frames_received_; }
-
   bool ignore_read_data() const { return ignore_read_data_; }
 
   // Returns std::string describing internal state.
@@ -134,10 +132,6 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
 
   // Count of the number of duplicate frames received.
   int num_duplicate_frames_received_;
-
-  // Count of the number of frames received before all previous frames were
-  // received.
-  int num_early_frames_received_;
 
   // Not owned.
   const QuicClock* clock_;

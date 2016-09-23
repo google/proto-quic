@@ -108,7 +108,7 @@ class NET_EXPORT TCPSocketPosix {
 
   void SetTickClockForTesting(std::unique_ptr<base::TickClock> tick_clock);
 
-  const BoundNetLog& net_log() const { return net_log_; }
+  const NetLogWithSource& net_log() const { return net_log_; }
 
  private:
   // States that using a socket with TCP FastOpen can lead to.
@@ -246,7 +246,7 @@ class NET_EXPORT TCPSocketPosix {
 
   bool logging_multiple_connect_attempts_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(TCPSocketPosix);
 };

@@ -45,6 +45,7 @@ class ProguardCmdBuilder(object):
     self._outjar = None
     self._cmd = None
     self._verbose = False
+    self._disabled_optimizations = []
 
   def outjar(self, path):
     assert self._cmd is None
@@ -87,6 +88,10 @@ class ProguardCmdBuilder(object):
     assert self._cmd is None
     self._verbose = verbose
 
+  def disable_optimizations(self, optimizations):
+    assert self._cmd is None
+    self._disabled_optimizations += optimizations
+
   def build(self):
     if self._cmd:
       return self._cmd
@@ -98,21 +103,8 @@ class ProguardCmdBuilder(object):
       '-forceprocessing',
     ]
     if self._tested_apk_info_path:
-      assert len(self._configs) == 1
       tested_apk_info = build_utils.ReadJson(self._tested_apk_info_path)
       self._configs += tested_apk_info['configs']
-      self._injars = [
-          p for p in self._injars if not p in tested_apk_info['inputs']]
-      if not self._libraries:
-        self._libraries = []
-      self._libraries += tested_apk_info['inputs']
-      self._mapping = tested_apk_info['mapping']
-      cmd += [
-        '-dontobfuscate',
-        '-dontoptimize',
-        '-dontshrink',
-        '-dontskipnonpubliclibraryclassmembers',
-      ]
 
     if self._mapping:
       cmd += [
@@ -123,6 +115,9 @@ class ProguardCmdBuilder(object):
       cmd += [
         '-libraryjars', ':'.join(self._libraries),
       ]
+
+    for optimization in self._disabled_optimizations:
+      cmd += [ '-optimizations', '!' + optimization ]
 
     cmd += [
       '-injars', ':'.join(self._injars)

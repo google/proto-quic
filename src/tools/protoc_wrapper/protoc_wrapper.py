@@ -5,130 +5,135 @@
 
 """
 A simple wrapper for protoc.
-
-- Adds includes in generated headers.
-- Handles building with system protobuf as an option.
+Script for //third_party/protobuf/proto_library.gni .
+Features:
+- Inserts #include for extra header automatically.
+- Prevents bad proto names.
 """
 
-import fnmatch
-import optparse
+from __future__ import print_function
+import argparse
 import os.path
-import shutil
 import subprocess
 import sys
 import tempfile
 
-PROTOC_INCLUDE_POINT = '// @@protoc_insertion_point(includes)\n'
-
-def ModifyHeader(header_file, extra_header):
-  """Adds |extra_header| to |header_file|. Returns 0 on success.
-
-  |extra_header| is the name of the header file to include.
-  |header_file| is a generated protobuf cpp header.
-  """
-  include_point_found = False
-  header_contents = []
-  with open(header_file) as f:
-    for line in f:
-      header_contents.append(line)
-      if line == PROTOC_INCLUDE_POINT:
-        extra_header_msg = '#include "%s"\n' % extra_header
-        header_contents.append(extra_header_msg)
-        include_point_found = True;
-  if not include_point_found:
-    return 1
-
-  with open(header_file, 'wb') as f:
-    f.write(''.join(header_contents))
-  return 0
-
-def ScanForBadFiles(scan_root):
-  """Scan for bad file names, see http://crbug.com/386125 for details.
-  Returns True if any filenames are bad. Outputs errors to stderr.
-
-  |scan_root| is the path to the directory to be recursively scanned.
-  """
-  badname = False
-  real_scan_root = os.path.realpath(scan_root)
-  for dirpath, dirnames, filenames in os.walk(real_scan_root):
-    matches = fnmatch.filter(filenames, '*-*.proto')
-    if len(matches) > 0:
-      if not badname:
-        badname = True
-        sys.stderr.write('proto files must not have hyphens in their names ('
-                         'see http://crbug.com/386125 for more information):\n')
-      for filename in matches:
-        sys.stderr.write('  ' + os.path.join(real_scan_root,
-                                             dirpath, filename) + '\n')
-  return badname
+PROTOC_INCLUDE_POINT = "// @@protoc_insertion_point(includes)"
 
 
-def RewriteProtoFilesForSystemProtobuf(path):
-  wrapper_dir = tempfile.mkdtemp()
-  try:
-    for filename in os.listdir(path):
-      if not filename.endswith('.proto'):
-        continue
-      with open(os.path.join(path, filename), 'r') as src_file:
-        with open(os.path.join(wrapper_dir, filename), 'w') as dst_file:
-          for line in src_file:
-            # Remove lines that break build with system protobuf.
-            # We cannot optimize for lite runtime, because system lite runtime
-            # does not have a Chromium-specific hack to retain unknown fields.
-            # Similarly, it does not understand corresponding option to control
-            # the usage of that hack.
-            if 'LITE_RUNTIME' in line or 'retain_unknown_fields' in line:
-              continue
-            dst_file.write(line)
+def FormatGeneratorOptions(options):
+  if not options:
+    return ""
+  if options.endswith(":"):
+    return options
+  return options + ":"
 
-    return wrapper_dir
-  except:
-    shutil.rmtree(wrapper_dir)
-    raise
+
+def VerifyProtoNames(protos):
+  for filename in protos:
+    if "-" in filename:
+      raise RuntimeError("Proto file names must not contain hyphens "
+                         "(see http://crbug.com/386125 for more information).")
+
+
+def StripProtoExtension(filename):
+  if not filename.endswith(".proto"):
+    raise RuntimeError("Invalid proto filename extension: "
+                       "{0} .".format(filename))
+  return filename.rsplit(".", 1)[0]
+
+
+def WriteIncludes(headers, include):
+  for filename in headers:
+    include_point_found = False
+    contents = []
+    with open(filename) as f:
+      for line in f:
+        stripped_line = line.strip()
+        contents.append(stripped_line)
+        if stripped_line == PROTOC_INCLUDE_POINT:
+          if include_point_found:
+            raise RuntimeException("Multiple include points found.")
+          include_point_found = True
+          extra_statement = "#include \"{0}\"".format(include)
+          contents.append(extra_statement)
+
+      if not include_point_found:
+        raise RuntimeError("Include point not found in header: "
+                           "{0} .".format(filename))
+
+    with open(filename, "w") as f:
+      for line in contents:
+        print(line, file=f)
 
 
 def main(argv):
-  parser = optparse.OptionParser()
-  parser.add_option('--include', dest='extra_header',
-                    help='The extra header to include. This must be specified '
-                         'along with --protobuf.')
-  parser.add_option('--protobuf', dest='generated_header',
-                    help='The c++ protobuf header to add the extra header to. '
-                         'This must be specified along with --include.')
-  parser.add_option('--proto-in-dir',
-                    help='The directory containing .proto files.')
-  parser.add_option('--proto-in-file', help='Input file to compile.')
-  parser.add_option('--use-system-protobuf', type=int, default=0,
-                    help='Option to use system-installed protobuf '
-                         'instead of bundled one.')
-  (options, args) = parser.parse_args(sys.argv)
-  if len(args) < 2:
-    return 1
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--protoc",
+                      help="Relative path to compiler.")
 
-  if ScanForBadFiles(options.proto_in_dir):
-    return 1
+  parser.add_argument("--proto-in-dir",
+                      help="Base directory with source protos.")
+  parser.add_argument("--cc-out-dir",
+                      help="Output directory for standard C++ generator.")
+  parser.add_argument("--py-out-dir",
+                      help="Output directory for standard Python generator.")
+  parser.add_argument("--plugin-out-dir",
+                      help="Output directory for custom generator plugin.")
 
-  proto_path = options.proto_in_dir
-  if options.use_system_protobuf == 1:
-    proto_path = RewriteProtoFilesForSystemProtobuf(proto_path)
+  parser.add_argument("--plugin",
+                      help="Relative path to custom generator plugin.")
+  parser.add_argument("--plugin-options",
+                      help="Custom generator plugin options.")
+  parser.add_argument("--cc-options",
+                      help="Standard C++ generator options.")
+  parser.add_argument("--include",
+                      help="Name of include to insert into generated headers.")
+
+  parser.add_argument("protos", nargs="+",
+                      help="Input protobuf definition file(s).")
+
+  options = parser.parse_args()
+
+  proto_dir = os.path.relpath(options.proto_in_dir)
+  protoc_cmd = [os.path.realpath(options.protoc)]
+
+  protos = options.protos
+  headers = []
+  VerifyProtoNames(protos)
+
+  if options.py_out_dir:
+    protoc_cmd += ["--python_out", options.py_out_dir]
+
+  if options.cc_out_dir:
+    cc_out_dir = options.cc_out_dir
+    cc_options = FormatGeneratorOptions(options.cc_options)
+    protoc_cmd += ["--cpp_out", cc_options + cc_out_dir]
+    for filename in protos:
+      stripped_name = StripProtoExtension(filename)
+      headers.append(os.path.join(cc_out_dir, stripped_name + ".pb.h"))
+
+  if options.plugin_out_dir:
+    plugin_options = FormatGeneratorOptions(options.plugin_options)
+    protoc_cmd += [
+      "--plugin", "protoc-gen-plugin=" + os.path.relpath(options.plugin),
+      "--plugin_out", plugin_options + options.plugin_out_dir
+    ]
+
+  protoc_cmd += ["--proto_path", proto_dir]
+  protoc_cmd += [os.path.join(proto_dir, name) for name in protos]
+  ret = subprocess.call(protoc_cmd)
+  if ret != 0:
+    raise RuntimeError("Protoc has returned non-zero status: "
+                       "{0} .".format(ret))
+
+  if options.include:
+    WriteIncludes(headers, options.include)
+
+
+if __name__ == "__main__":
   try:
-    # Run what is hopefully protoc.
-    protoc_args = args[1:]
-    protoc_args += ['--proto_path=%s' % proto_path,
-                    os.path.join(proto_path, options.proto_in_file)]
-    ret = subprocess.call(protoc_args)
-    if ret != 0:
-      return ret
-  finally:
-    if options.use_system_protobuf == 1:
-      # Remove temporary directory holding re-written files.
-      shutil.rmtree(proto_path)
-
-  # protoc succeeded, check to see if the generated cpp header needs editing.
-  if not options.extra_header or not options.generated_header:
-    return 0
-  return ModifyHeader(options.generated_header, options.extra_header)
-
-
-if __name__ == '__main__':
-  sys.exit(main(sys.argv))
+    main(sys.argv)
+  except RuntimeError as e:
+    print(e, file=sys.stderr)
+    sys.exit(1)

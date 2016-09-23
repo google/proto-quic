@@ -33,7 +33,7 @@ def IsWindows():
 
 @memoize()
 def IsLinux():
-  return sys.platform.startswith(('linux', 'freebsd', 'openbsd'))
+  return sys.platform.startswith(('linux', 'freebsd', 'netbsd', 'openbsd'))
 
 
 @memoize()
@@ -47,27 +47,27 @@ def gyp_defines():
   return dict(arg.split('=', 1)
       for arg in shlex.split(os.environ.get('GYP_DEFINES', '')))
 
+
 @memoize()
 def gyp_generator_flags():
   """Parses and returns GYP_GENERATOR_FLAGS env var as a dictionary."""
   return dict(arg.split('=', 1)
       for arg in shlex.split(os.environ.get('GYP_GENERATOR_FLAGS', '')))
 
+
 @memoize()
 def gyp_msvs_version():
   return os.environ.get('GYP_MSVS_VERSION', '')
+
 
 @memoize()
 def distributor():
   """
   Returns a string which is the distributed build engine in use (if any).
-  Possible values: 'goma', 'ib', ''
+  Possible values: 'goma', None
   """
   if 'goma' in gyp_defines():
     return 'goma'
-  elif IsWindows():
-    if 'CHROME_HEADLESS' in os.environ:
-      return 'ib' # use (win and !goma and headless) as approximation of ib
 
 
 @memoize()
@@ -87,34 +87,3 @@ def platform():
     return 'linux'
   else:
     return 'mac'
-
-
-@memoize()
-def builder():
-  """
-  Returns a string representing the build engine (not compiler) to use.
-  Possible values: 'make', 'ninja', 'xcode', 'msvs', 'scons'
-  """
-  if 'GYP_GENERATORS' in os.environ:
-    # for simplicity, only support the first explicit generator
-    generator = os.environ['GYP_GENERATORS'].split(',')[0]
-    if generator.endswith('-android'):
-      return generator.split('-')[0]
-    elif generator.endswith('-ninja'):
-      return 'ninja'
-    else:
-      return generator
-  else:
-    if platform() == 'android':
-      # Good enough for now? Do any android bots use make?
-      return 'ninja'
-    elif platform() == 'ios':
-      return 'xcode'
-    elif IsWindows():
-      return 'ninja'
-    elif IsLinux():
-      return 'ninja'
-    elif IsMac():
-      return 'ninja'
-    else:
-      assert False, 'Don\'t know what builder we\'re using!'

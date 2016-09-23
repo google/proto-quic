@@ -16,6 +16,7 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 class RecordCache;
 
@@ -26,6 +27,7 @@ class GraphPoint {
   virtual ~GraphPoint() {}
   void MarkTraced() { traced_ = true; }
   bool IsProperlyTraced() { return traced_ || !NeedsTracing().IsNeeded(); }
+  bool IsInproperlyTraced() { return traced_ && NeedsTracing().IsIllegal(); }
   virtual const TracingStatus NeedsTracing() = 0;
 
  private:
@@ -69,8 +71,15 @@ class FieldPoint : public GraphPoint {
 // Wrapper class to lazily collect information about a C++ record.
 class RecordInfo {
  public:
-  typedef std::map<clang::CXXRecordDecl*, BasePoint> Bases;
-  typedef std::map<clang::FieldDecl*, FieldPoint> Fields;
+  typedef std::vector<std::pair<clang::CXXRecordDecl*, BasePoint>> Bases;
+
+  struct FieldDeclCmp {
+    bool operator()(clang::FieldDecl* a, clang::FieldDecl *b) const {
+      return a->getLocStart() < b->getLocStart();
+    }
+  };
+  typedef std::map<clang::FieldDecl*, FieldPoint, FieldDeclCmp> Fields;
+
   typedef std::vector<const clang::Type*> TemplateArgs;
 
   ~RecordInfo();
@@ -94,7 +103,6 @@ class RecordInfo {
   bool IsNonNewable();
   bool IsOnlyPlacementNewable();
   bool IsEagerlyFinalized();
-  bool IsGCRefCounted();
 
   bool HasDefinition();
 
@@ -152,6 +160,11 @@ class RecordInfo {
 
 class RecordCache {
  public:
+  RecordCache(clang::CompilerInstance& instance)
+    : instance_(instance)
+  {
+  }
+
   RecordInfo* Lookup(clang::CXXRecordDecl* record);
 
   RecordInfo* Lookup(const clang::CXXRecordDecl* record) {
@@ -182,7 +195,11 @@ class RecordCache {
     }
   }
 
+  clang::CompilerInstance& instance() const { return instance_; }
+
  private:
+  clang::CompilerInstance& instance_;
+
   typedef std::map<clang::CXXRecordDecl*, RecordInfo> Cache;
   Cache cache_;
 };

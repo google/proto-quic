@@ -359,8 +359,7 @@ void QuicSpdyStream::OnCanWrite() {
   ReliableQuicStream::OnCanWrite();
 
   // Trailers (and hence a FIN) may have been sent ahead of queued body bytes.
-  if (FLAGS_quic_close_stream_after_writing_queued_data && !HasBufferedData() &&
-      fin_sent()) {
+  if (!HasBufferedData() && fin_sent()) {
     CloseWriteSide();
   }
 }

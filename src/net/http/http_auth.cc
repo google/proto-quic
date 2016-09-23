@@ -29,7 +29,7 @@ void HttpAuth::ChooseBestChallenge(
     Target target,
     const GURL& origin,
     const std::set<Scheme>& disabled_schemes,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<HttpAuthHandler>* handler) {
   DCHECK(http_auth_handler_factory);
   DCHECK(handler->get() == NULL);

@@ -157,19 +157,6 @@ class Interval {
   // to represent that interval, and returns true iff *this was modified.
   bool SpanningUnion(const Interval& i);
 
-  // Determines the difference between two intervals by finding all points that
-  // are contained in *this but not in i, coalesces those points into the
-  // largest possible contiguous intervals, and appends those intervals to the
-  // *difference vector. Intuitively this can be thought of as "erasing" i from
-  // *this. This will either completely erase *this (leaving nothing behind),
-  // partially erase some of *this from the left or right side (leaving some
-  // residual behind), or erase a hole in the middle of *this (leaving behind an
-  // interval on either side). Therefore, 0, 1, or 2 intervals will be appended
-  // to *difference. The method returns true iff the intersection of *this and i
-  // is non-empty. The caller owns the vector and the Interval* pointers
-  // inside it. The difference vector is required to be non-null.
-  bool Difference(const Interval& i, std::vector<Interval*>* difference) const;
-
   // Determines the difference between two intervals as in
   // Difference(Interval&, vector*), but stores the results directly in out
   // parameters rather than dynamically allocating an Interval* and appending
@@ -262,53 +249,6 @@ bool Interval<T>::SpanningUnion(const Interval& i) {
     modified = true;
   }
   return modified;
-}
-
-template <typename T>
-bool Interval<T>::Difference(const Interval& i,
-                             std::vector<Interval*>* difference) const {
-  if (Empty()) {
-    // <empty> - <i> = <empty>
-    return false;
-  }
-  if (i.Empty()) {
-    // <this> - <empty> = <this>
-    difference->push_back(new Interval(*this));
-    return false;
-  }
-  if (min() < i.max() && min() >= i.min() && max() > i.max()) {
-    //            [------ this ------)
-    // [------ i ------)
-    //                 [-- result ---)
-    difference->push_back(new Interval(i.max(), max()));
-    return true;
-  }
-  if (max() > i.min() && max() <= i.max() && min() < i.min()) {
-    // [------ this ------)
-    //            [------ i ------)
-    // [- result -)
-    difference->push_back(new Interval(min(), i.min()));
-    return true;
-  }
-  if (min() < i.min() && max() > i.max()) {
-    // [------- this --------)
-    //      [---- i ----)
-    // [ R1 )           [ R2 )
-    // There are two results: R1 and R2.
-    difference->push_back(new Interval(min(), i.min()));
-    difference->push_back(new Interval(i.max(), max()));
-    return true;
-  }
-  if (min() >= i.min() && max() <= i.max()) {
-    //   [--- this ---)
-    // [------ i --------)
-    // Intersection is <this>, so difference yields the empty interval.
-    // Nothing is appended to *difference.
-    return true;
-  }
-  // No intersection. Append <this>.
-  difference->push_back(new Interval(*this));
-  return false;
 }
 
 template <typename T>

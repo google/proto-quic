@@ -39,17 +39,12 @@ void QuicAlarm::Update(QuicTime new_deadline, QuicTime::Delta granularity) {
       granularity.ToMicroseconds()) {
     return;
   }
-  if (FLAGS_quic_change_alarms_efficiently) {
-    const bool was_set = IsSet();
-    deadline_ = new_deadline;
-    if (was_set) {
-      UpdateImpl();
-    } else {
-      SetImpl();
-    }
+  const bool was_set = IsSet();
+  deadline_ = new_deadline;
+  if (was_set) {
+    UpdateImpl();
   } else {
-    Cancel();
-    Set(new_deadline);
+    SetImpl();
   }
 }
 

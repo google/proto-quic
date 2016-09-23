@@ -11,9 +11,6 @@
 # This assumption is valid for a range of sysroots, in particular: a
 # LSB-compliant root filesystem mounted at the sysroot, and a board build
 # directory of a Chromium OS chroot.
-# Additional directories containing .pc files may be specified by setting
-# the PKG_CONFIG_PATH environment variable- these will be prepended to the
-# generated paths.
 
 set -o nounset
 set -o errexit

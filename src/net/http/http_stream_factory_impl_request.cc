@@ -21,7 +21,7 @@ HttpStreamFactoryImpl::Request::Request(
     HttpStreamRequest::Delegate* delegate,
     WebSocketHandshakeStreamBase::CreateHelper*
         websocket_handshake_stream_create_helper,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     StreamType stream_type)
     : url_(url),
       helper_(helper),
@@ -30,7 +30,7 @@ HttpStreamFactoryImpl::Request::Request(
       delegate_(delegate),
       net_log_(net_log),
       completed_(false),
-      was_npn_negotiated_(false),
+      was_alpn_negotiated_(false),
       negotiated_protocol_(kProtoUnknown),
       using_spdy_(false),
       stream_type_(stream_type) {
@@ -49,12 +49,12 @@ void HttpStreamFactoryImpl::Request::SetSpdySessionKey(
   spdy_session_key_.reset(new SpdySessionKey(spdy_session_key));
 }
 
-void HttpStreamFactoryImpl::Request::Complete(bool was_npn_negotiated,
+void HttpStreamFactoryImpl::Request::Complete(bool was_alpn_negotiated,
                                               NextProto negotiated_protocol,
                                               bool using_spdy) {
   DCHECK(!completed_);
   completed_ = true;
-  was_npn_negotiated_ = was_npn_negotiated;
+  was_alpn_negotiated_ = was_alpn_negotiated;
   negotiated_protocol_ = negotiated_protocol;
   using_spdy_ = using_spdy;
 }
@@ -135,9 +135,9 @@ LoadState HttpStreamFactoryImpl::Request::GetLoadState() const {
   return helper_->GetLoadState();
 }
 
-bool HttpStreamFactoryImpl::Request::was_npn_negotiated() const {
+bool HttpStreamFactoryImpl::Request::was_alpn_negotiated() const {
   DCHECK(completed_);
-  return was_npn_negotiated_;
+  return was_alpn_negotiated_;
 }
 
 NextProto HttpStreamFactoryImpl::Request::negotiated_protocol() const {

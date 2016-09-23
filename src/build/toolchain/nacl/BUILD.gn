@@ -23,52 +23,49 @@ revisions = exec_script("//native_client/build/get_toolchain_revision.py",
 nacl_x86_glibc_rev = revisions[0]
 nacl_arm_glibc_rev = revisions[1]
 
-# TODO(mcgrathr): Uncomment this when
-# https://code.google.com/p/chromium/issues/detail?id=395883 is fixed.
-#pnacl_newlib_rev = revisions[2]
+pnacl_newlib_rev = revisions[2]
+
+if (host_os == "win") {
+  toolsuffix = ".exe"
+} else {
+  toolsuffix = ""
+}
+
+# The PNaCl toolchain tools are all wrapper scripts rather than binary
+# executables.  On POSIX systems, nobody cares what kind of executable
+# file you are.  But on Windows, scripts (.bat files) cannot be run
+# directly and need the Windows shell (cmd.exe) specified explicily.
+if (host_os == "win") {
+  # NOTE!  The //build/toolchain/gcc_*_wrapper.py scripts recognize
+  # this exact prefix string, so they must be updated if this string
+  # is changed in any way.
+  scriptprefix = "cmd /c call "
+  scriptsuffix = ".bat"
+} else {
+  scriptprefix = ""
+  scriptsuffix = ""
+}
+
+# When the compilers are run via goma or ccache rather than directly by
+# GN/Ninja, the goma/ccache wrapper handles .bat files but gets confused
+# by being given the scriptprefix.
+if (host_os == "win" && !use_goma && cc_wrapper == "") {
+  compiler_scriptprefix = scriptprefix
+} else {
+  compiler_scriptprefix = ""
+}
 
 template("pnacl_toolchain") {
   assert(defined(invoker.executable_extension),
          "Must define executable_extension")
 
-  # TODO(mcgrathr): See above.
-  pnacl_newlib_rev = revisions[2]
-
-  # The PNaCl toolchain tools are all wrapper scripts rather than binary
-  # executables.  On POSIX systems, nobody cares what kind of executable
-  # file you are.  But on Windows, scripts (.bat files) cannot be run
-  # directly and need the Windows shell (cmd.exe) specified explicily.
-  # TODO(mcgrathr): Hoist this to top level when
-  # https://code.google.com/p/chromium/issues/detail?id=395883 is fixed.
-  if (host_os == "win") {
-    # NOTE!  The //build/toolchain/gcc_*_wrapper.py scripts recognize
-    # this exact prefix string, so they must be updated if this string
-    # is changed in any way.
-    scriptprefix = "cmd /c call "
-    scriptsuffix = ".bat"
-  } else {
-    scriptprefix = ""
-    scriptsuffix = ""
-  }
-
-  # When the compilers are run via goma or ccache rather than directly by
-  # GN/Ninja, the goma/ccache wrapper handles .bat files but gets confused
-  # by being given the scriptprefix.
-  if (host_os == "win" && !use_goma && cc_wrapper == "") {
-    compiler_scriptprefix = scriptprefix
-  } else {
-    compiler_scriptprefix = ""
-  }
-
   nacl_toolchain(target_name) {
     toolchain_package = "pnacl_newlib"
     toolchain_revision = pnacl_newlib_rev
-    toolchain_cpu = "pnacl"
     toolprefix =
         rebase_path("${nacl_toolchain_dir}/${toolchain_package}/bin/pnacl-",
                     root_build_dir)
 
-    is_clang = true
     cc = compiler_scriptprefix + toolprefix + "clang" + scriptsuffix
     cxx = compiler_scriptprefix + toolprefix + "clang++" + scriptsuffix
     ar = scriptprefix + toolprefix + "ar" + scriptsuffix
@@ -83,6 +80,11 @@ template("pnacl_toolchain") {
     ld = scriptprefix + toolprefix + "clang++" + scriptsuffix
 
     executable_extension = invoker.executable_extension
+
+    toolchain_args = {
+      is_clang = true
+      current_cpu = "pnacl"
+    }
   }
 }
 
@@ -119,18 +121,7 @@ template("nacl_glibc_toolchain") {
                                invoker.toolchain_tuple + "-",
                            root_build_dir)
 
-  # TODO(mcgrathr): Hoist this to top level when
-  # https://code.google.com/p/chromium/issues/detail?id=395883 is fixed.
-  if (host_os == "win") {
-    toolsuffix = ".exe"
-  } else {
-    toolsuffix = ""
-  }
-
   nacl_toolchain("glibc_" + toolchain_cpu) {
-    is_clang = false
-    is_nacl_glibc = true
-
     cc = toolprefix + "gcc" + toolsuffix
     cxx = toolprefix + "g++" + toolsuffix
     ar = toolprefix + "ar" + toolsuffix
@@ -138,6 +129,12 @@ template("nacl_glibc_toolchain") {
     readelf = toolprefix + "readelf" + toolsuffix
     nm = toolprefix + "nm" + toolsuffix
     strip = toolprefix + "strip" + toolsuffix
+
+    toolchain_args = {
+      current_cpu = toolchain_cpu
+      is_clang = false
+      is_nacl_glibc = true
+    }
   }
 }
 
@@ -169,25 +166,13 @@ template("nacl_clang_toolchain") {
   toolchain_cpu = target_name
   assert(defined(invoker.toolchain_tuple), "Must define toolchain_tuple")
 
-  # TODO(mcgrathr): See above.
-  pnacl_newlib_rev = revisions[2]
-
   toolchain_package = "pnacl_newlib"
   toolchain_revision = pnacl_newlib_rev
   toolprefix = rebase_path("${nacl_toolchain_dir}/${toolchain_package}/bin/" +
                                invoker.toolchain_tuple + "-",
                            root_build_dir)
 
-  # TODO(mcgrathr): Hoist this to top level when
-  # https://code.google.com/p/chromium/issues/detail?id=395883 is fixed.
-  if (host_os == "win") {
-    toolsuffix = ".exe"
-  } else {
-    toolsuffix = ""
-  }
-
   nacl_toolchain("clang_newlib_" + toolchain_cpu) {
-    is_clang = true
     cc = toolprefix + "clang" + toolsuffix
     cxx = toolprefix + "clang++" + toolsuffix
     ar = toolprefix + "ar" + toolsuffix
@@ -195,6 +180,11 @@ template("nacl_clang_toolchain") {
     readelf = toolprefix + "readelf" + toolsuffix
     nm = toolprefix + "nm" + toolsuffix
     strip = toolprefix + "strip" + toolsuffix
+
+    toolchain_args = {
+      current_cpu = toolchain_cpu
+      is_clang = true
+    }
   }
 }
 
@@ -202,22 +192,11 @@ template("nacl_irt_toolchain") {
   toolchain_cpu = target_name
   assert(defined(invoker.toolchain_tuple), "Must define toolchain_tuple")
 
-  # TODO(mcgrathr): See above.
-  pnacl_newlib_rev = revisions[2]
-
   toolchain_package = "pnacl_newlib"
   toolchain_revision = pnacl_newlib_rev
   toolprefix = rebase_path("${nacl_toolchain_dir}/${toolchain_package}/bin/" +
                                invoker.toolchain_tuple + "-",
                            root_build_dir)
-
-  # TODO(mcgrathr): Hoist this to top level when
-  # https://code.google.com/p/chromium/issues/detail?id=395883 is fixed.
-  if (host_os == "win") {
-    toolsuffix = ".exe"
-  } else {
-    toolsuffix = ""
-  }
 
   link_irt = rebase_path("//native_client/build/link_irt.py", root_build_dir)
 
@@ -229,7 +208,6 @@ template("nacl_irt_toolchain") {
   tls_edit = "${host_toolchain_out_dir}/tls_edit"
 
   nacl_toolchain("irt_" + toolchain_cpu) {
-    is_clang = true
     cc = toolprefix + "clang" + toolsuffix
     cxx = toolprefix + "clang++" + toolsuffix
     ar = toolprefix + "ar" + toolsuffix
@@ -237,13 +215,18 @@ template("nacl_irt_toolchain") {
     nm = toolprefix + "nm" + toolsuffix
     strip = toolprefix + "strip" + toolsuffix
 
-    # Always build the IRT with full debugging symbols, regardless of
-    # how Chromium itself is being built (or other NaCl executables).
-    symbol_level = 2
-
     # Some IRT implementations (notably, Chromium's) contain C++ code,
     # so we need to link w/ the C++ linker.
     ld = "${python_path} ${link_irt} --tls-edit=${tls_edit} --link-cmd=${cxx} --readelf-cmd=${readelf}"
+
+    toolchain_args = {
+      current_cpu = toolchain_cpu
+      is_clang = true
+
+      # Always build the IRT with full debugging symbols, regardless of
+      # how Chromium itself is being built (or other NaCl executables).
+      symbol_level = 2
+    }
 
     # TODO(ncbray): depend on link script
     deps = [
@@ -273,4 +256,8 @@ nacl_clang_toolchains("x64") {
 
 nacl_clang_toolchains("arm") {
   toolchain_tuple = "arm-nacl"
+}
+
+nacl_clang_toolchains("mipsel") {
+  toolchain_tuple = "mipsel-nacl"
 }

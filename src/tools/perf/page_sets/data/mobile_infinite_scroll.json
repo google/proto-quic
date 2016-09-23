@@ -1,0 +1,12 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "mobile_infinite_scroll_000.wpr": [
+            "facebook", 
+            "flickr", 
+            "tumblr", 
+            "discourse", 
+            "twitter"
+        ]
+    }
+}

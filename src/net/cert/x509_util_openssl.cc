@@ -322,11 +322,11 @@ bool GetTLSServerEndPointChannelBinding(const X509Certificate& certificate,
   der::BitString signature_value;
   if (!ParseCertificate(der::Input(&der_encoded_certificate),
                         &tbs_certificate_tlv, &signature_algorithm_tlv,
-                        &signature_value))
+                        &signature_value, nullptr))
     return false;
 
   std::unique_ptr<SignatureAlgorithm> signature_algorithm =
-      SignatureAlgorithm::CreateFromDer(signature_algorithm_tlv);
+      SignatureAlgorithm::Create(signature_algorithm_tlv, nullptr);
   if (!signature_algorithm)
     return false;
 

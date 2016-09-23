@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 # Defines the configuration of Goma.
-#
-# This is currently designed to match the GYP build exactly, so as not to break
-# people during the transition.
 
 declare_args() {
   # Set to true to enable distributed compilation using Goma.

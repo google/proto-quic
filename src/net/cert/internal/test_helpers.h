@@ -76,10 +76,12 @@ template <size_t N>
   return ReadTestDataFromPemFile(file_path_ascii, mappings, N);
 }
 
-// Reads a test case from |file_name|. Test cases are comprised of a
-// certificate chain, trust anchor, a timestamp to validate at, and the
-// expected result of verification.
-void ReadVerifyCertChainTestFromFile(const std::string& file_name,
+// Reads a test case from |file_path_ascii| (which is relative to //src). Test
+// cases are comprised of a certificate chain, trust anchor, a timestamp to
+// validate at, and the expected result of verification.
+// Generally |file_path_ascii| will start with:
+//   net/data/verify_certificate_chain_unittest/
+void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
                                      ParsedCertificateList* chain,
                                      scoped_refptr<TrustAnchor>* trust_anchor,
                                      der::GeneralizedTime* time,
@@ -87,7 +89,7 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
                                      std::string* expected_errors);
 
 // Reads a data file relative to the src root directory.
-std::string ReadTestFileToString(const std::string& file_name);
+std::string ReadTestFileToString(const std::string& file_path_ascii);
 
 }  // namespace net
 

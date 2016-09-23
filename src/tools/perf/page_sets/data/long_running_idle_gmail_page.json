@@ -1,0 +1,8 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "long_running_idle_gmail_page_000.wpr": [
+            "https://mail.google.com/mail/"
+        ]
+    }
+}

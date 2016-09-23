@@ -25,6 +25,7 @@ enum MessageLoopProblems {
   MESSAGE_POST_ERROR,
   COMPLETION_POST_ERROR,
   SET_TIMER_ERROR,
+  RECEIVED_WM_QUIT_ERROR,
   MESSAGE_LOOP_PROBLEM_MAX,
 };
 
@@ -453,6 +454,9 @@ bool MessagePumpForUI::ProcessMessageHelper(const MSG& msg) {
   TRACE_EVENT1("base", "MessagePumpForUI::ProcessMessageHelper",
                "message", msg.message);
   if (WM_QUIT == msg.message) {
+    // Receiving WM_QUIT is unusual and unexpected on most message loops.
+    UMA_HISTOGRAM_ENUMERATION("Chrome.MessageLoopProblem",
+                              RECEIVED_WM_QUIT_ERROR, MESSAGE_LOOP_PROBLEM_MAX);
     // Repost the QUIT message so that it will be retrieved by the primary
     // GetMessage() loop.
     state_->should_quit = true;
@@ -636,11 +640,12 @@ bool MessagePumpForGpu::ProcessNextMessage() {
     return false;
 
   if (msg.message == WM_QUIT) {
-    // Repost the QUIT message so that it will be retrieved by the primary
-    // GetMessage() loop.
-    state_->should_quit = true;
-    g_post_quit(static_cast<int>(msg.wParam));
-    return false;
+    UMA_HISTOGRAM_ENUMERATION("Chrome.MessageLoopProblem",
+                              RECEIVED_WM_QUIT_ERROR, MESSAGE_LOOP_PROBLEM_MAX);
+    // WM_QUIT messages shouldn't be received by any threads in the GPU
+    // process. If they are, just ignore them instead of causing threads to
+    // exit prematurely.
+    return true;
   }
 
   if (!g_call_msg_filter(const_cast<MSG*>(&msg), kMessageFilterCode)) {

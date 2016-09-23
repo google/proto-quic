@@ -159,10 +159,6 @@ def main(argv):
   if len(args) != 1:
     parser.error('Wrong number of unparsed args')
   base_dir = args[0]
-  if options.output_path:
-    output_file = open(options.output_path, 'w')
-  else:
-    output_file = sys.stdout
 
   log_stringio = cStringIO.StringIO()
   logger = logging.getLogger('LogcatPrinter')
@@ -171,6 +167,19 @@ def main(argv):
   sh.setFormatter(logging.Formatter('%(asctime)-2s %(levelname)-8s'
                                     ' %(message)s'))
   logger.addHandler(sh)
+
+  if options.output_path:
+    if not os.path.exists(os.path.dirname(options.output_path)):
+      logger.warning('Output dir %s doesn\'t exist. Creating it.',
+                      os.path.dirname(options.output_path))
+      os.makedirs(os.path.dirname(options.output_path))
+    output_file = open(options.output_path, 'w')
+    logger.info('Dumping logcat to local file %s. If running in a build, '
+                'this file will likely will be uploaded to google storage '
+                'in a later step. It can be downloaded from there.',
+                options.output_path)
+  else:
+    output_file = sys.stdout
 
   try:
     # Wait at least 5 seconds after base_dir is created before printing.

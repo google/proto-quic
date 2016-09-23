@@ -5,6 +5,7 @@
 #include "net/cert/internal/signature_policy.h"
 
 #include "base/logging.h"
+#include "net/cert/internal/cert_error_params.h"
 #include "net/cert/internal/cert_errors.h"
 
 #include <openssl/obj.h>
@@ -13,11 +14,21 @@ namespace net {
 
 namespace {
 
-DEFINE_CERT_ERROR_TYPE(kUnacceptableCurveForEcdsa,
-                       "Only P-256, P-384, P-521 are supported for ECDSA");
-DEFINE_CERT_ERROR_TYPE(kRsaModulusLessThan2048,
-                       "RSA modulus must be at least 2048 bits");
-DEFINE_CERT_ERROR_TYPE(kRsaModulusTooSmall, "RSA modulus too small");
+DEFINE_CERT_ERROR_ID(kUnacceptableCurveForEcdsa,
+                     "Only P-256, P-384, P-521 are supported for ECDSA");
+DEFINE_CERT_ERROR_ID(kRsaModulusTooSmall, "RSA modulus too small");
+
+bool IsModulusSizeGreaterOrEqual(size_t modulus_length_bits,
+                                 size_t min_length_bits,
+                                 CertErrors* errors) {
+  if (modulus_length_bits < min_length_bits) {
+    errors->AddError(kRsaModulusTooSmall,
+                     CreateCertErrorParams2SizeT("actual", modulus_length_bits,
+                                                 "minimum", min_length_bits));
+    return false;
+  }
+  return true;
+}
 
 }  // namespace
 
@@ -36,20 +47,14 @@ bool SignaturePolicy::IsAcceptableCurveForEcdsa(int curve_nid,
       return true;
   }
 
-  errors->Add(kUnacceptableCurveForEcdsa);
+  errors->AddError(kUnacceptableCurveForEcdsa);
   return false;
 }
 
 bool SignaturePolicy::IsAcceptableModulusLengthForRsa(
     size_t modulus_length_bits,
     CertErrors* errors) const {
-  if (modulus_length_bits < 2048) {
-    // TODO(crbug.com/634443): Add a parameter for actual modulus size.
-    errors->Add(kRsaModulusLessThan2048);
-    return false;
-  }
-
-  return true;
+  return IsModulusSizeGreaterOrEqual(modulus_length_bits, 2048, errors);
 }
 
 SimpleSignaturePolicy::SimpleSignaturePolicy(size_t min_rsa_modulus_length_bits)
@@ -58,14 +63,8 @@ SimpleSignaturePolicy::SimpleSignaturePolicy(size_t min_rsa_modulus_length_bits)
 bool SimpleSignaturePolicy::IsAcceptableModulusLengthForRsa(
     size_t modulus_length_bits,
     CertErrors* errors) const {
-  if (modulus_length_bits < min_rsa_modulus_length_bits_) {
-    // TODO(crbug.com/634443): Add parameters for actual and expected modulus
-    //                         size.
-    errors->Add(kRsaModulusTooSmall);
-    return false;
-  }
-
-  return true;
+  return IsModulusSizeGreaterOrEqual(modulus_length_bits,
+                                     min_rsa_modulus_length_bits_, errors);
 }
 
 }  // namespace net

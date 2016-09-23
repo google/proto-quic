@@ -19,7 +19,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class ClientSocketHandle;
 class GrowableIOBuffer;
 class HttpStreamParser;
@@ -35,7 +35,7 @@ class NET_EXPORT_PRIVATE HttpBasicState {
   // Initialize() must be called before using any of the other methods.
   int Initialize(const HttpRequestInfo* request_info,
                  RequestPriority priority,
-                 const BoundNetLog& net_log,
+                 const NetLogWithSource& net_log,
                  const CompletionCallback& callback);
 
   HttpStreamParser* parser() const { return parser_.get(); }

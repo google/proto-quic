@@ -382,14 +382,13 @@ int tls1_get_shared_group(SSL *ssl, uint16_t *out_group_id) {
 int tls1_set_curves(uint16_t **out_group_ids, size_t *out_group_ids_len,
                     const int *curves, size_t ncurves) {
   uint16_t *group_ids;
-  size_t i;
 
   group_ids = OPENSSL_malloc(ncurves * sizeof(uint16_t));
   if (group_ids == NULL) {
     return 0;
   }
 
-  for (i = 0; i < ncurves; i++) {
+  for (size_t i = 0; i < ncurves; i++) {
     if (!ssl_nid_to_group_id(&group_ids[i], curves[i])) {
       OPENSSL_free(group_ids);
       return 0;
@@ -1039,12 +1038,14 @@ static int ext_ticket_add_clienthello(SSL *ssl, CBB *out) {
    * advertise the extension to avoid potentially breaking servers which carry
    * over the state from the previous handshake, such as OpenSSL servers
    * without upstream's 3c3f0259238594d77264a78944d409f2127642c4. */
+  uint16_t session_version;
   if (!ssl->s3->initial_handshake_complete &&
       ssl->session != NULL &&
       ssl->session->tlsext_tick != NULL &&
       /* Don't send TLS 1.3 session tickets in the ticket extension. */
-      ssl->method->version_from_wire(ssl->session->ssl_version) <
-          TLS1_3_VERSION) {
+      ssl->method->version_from_wire(&session_version,
+                                     ssl->session->ssl_version) &&
+      session_version < TLS1_3_VERSION) {
     ticket_data = ssl->session->tlsext_tick;
     ticket_len = ssl->session->tlsext_ticklen;
   }
@@ -1108,7 +1109,12 @@ static int ext_ticket_add_serverhello(SSL *ssl, CBB *out) {
  * https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1 */
 
 static int ext_sigalgs_add_clienthello(SSL *ssl, CBB *out) {
-  if (ssl->method->version_from_wire(ssl->client_version) < TLS1_2_VERSION) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
+    return 0;
+  }
+
+  if (max_version < TLS1_2_VERSION) {
     return 1;
   }
 
@@ -1739,8 +1745,7 @@ static int ext_srtp_add_clienthello(SSL *ssl, CBB *out) {
     return 0;
   }
 
-  size_t i;
-  for (i = 0; i < num_profiles; i++) {
+  for (size_t i = 0; i < num_profiles; i++) {
     if (!CBB_add_u16(&profile_ids,
                      sk_SRTP_PROTECTION_PROFILE_value(profiles, i)->id)) {
       return 0;
@@ -1787,8 +1792,7 @@ static int ext_srtp_parse_serverhello(SSL *ssl, uint8_t *out_alert,
 
   /* Check to see if the server gave us something we support (and presumably
    * offered). */
-  size_t i;
-  for (i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(profiles); i++) {
+  for (size_t i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(profiles); i++) {
     const SRTP_PROTECTION_PROFILE *profile =
         sk_SRTP_PROTECTION_PROFILE_value(profiles, i);
 
@@ -1823,8 +1827,7 @@ static int ext_srtp_parse_clienthello(SSL *ssl, uint8_t *out_alert,
       SSL_get_srtp_profiles(ssl);
 
   /* Pick the server's most preferred profile. */
-  size_t i;
-  for (i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(server_profiles); i++) {
+  for (size_t i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(server_profiles); i++) {
     const SRTP_PROTECTION_PROFILE *server_profile =
         sk_SRTP_PROTECTION_PROFILE_value(server_profiles, i);
 
@@ -1877,8 +1880,7 @@ static int ssl_any_ec_cipher_suites_enabled(const SSL *ssl) {
 
   const STACK_OF(SSL_CIPHER) *cipher_stack = SSL_get_ciphers(ssl);
 
-  size_t i;
-  for (i = 0; i < sk_SSL_CIPHER_num(cipher_stack); i++) {
+  for (size_t i = 0; i < sk_SSL_CIPHER_num(cipher_stack); i++) {
     const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(cipher_stack, i);
 
     const uint32_t alg_k = cipher->algorithm_mkey;
@@ -1995,9 +1997,11 @@ static int ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
     return 0;
   }
 
+  uint16_t session_version;
   if (max_version < TLS1_3_VERSION || ssl->session == NULL ||
-      ssl->method->version_from_wire(ssl->session->ssl_version) <
-          TLS1_3_VERSION) {
+      !ssl->method->version_from_wire(&session_version,
+                                      ssl->session->ssl_version) ||
+      session_version < TLS1_3_VERSION) {
     return 1;
   }
 
@@ -2089,8 +2093,7 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
     return 0;
   }
 
-  const uint16_t *groups;
-  size_t groups_len;
+  uint16_t group_id;
   if (ssl->s3->hs->retry_group) {
     /* Append the new key share to the old list. */
     if (!CBB_add_bytes(&kse_bytes, ssl->s3->hs->key_share_bytes,
@@ -2099,36 +2102,29 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
     }
     OPENSSL_free(ssl->s3->hs->key_share_bytes);
     ssl->s3->hs->key_share_bytes = NULL;
+    ssl->s3->hs->key_share_bytes_len = 0;
 
-    groups = &ssl->s3->hs->retry_group;
-    groups_len = 1;
+    group_id = ssl->s3->hs->retry_group;
   } else {
+    /* Predict the most preferred group. */
+    const uint16_t *groups;
+    size_t groups_len;
     tls1_get_grouplist(ssl, 0 /* local groups */, &groups, &groups_len);
-    /* Only send the top two preferred key shares. */
-    if (groups_len > 2) {
-      groups_len = 2;
+    if (groups_len == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_GROUPS_SPECIFIED);
+      return 0;
     }
+
+    group_id = groups[0];
   }
 
-  ssl->s3->hs->groups = OPENSSL_malloc(groups_len * sizeof(SSL_ECDH_CTX));
-  if (ssl->s3->hs->groups == NULL) {
+  CBB key_exchange;
+  if (!CBB_add_u16(&kse_bytes, group_id) ||
+      !CBB_add_u16_length_prefixed(&kse_bytes, &key_exchange) ||
+      !SSL_ECDH_CTX_init(&ssl->s3->hs->ecdh_ctx, group_id) ||
+      !SSL_ECDH_CTX_offer(&ssl->s3->hs->ecdh_ctx, &key_exchange) ||
+      !CBB_flush(&kse_bytes)) {
     return 0;
-  }
-  memset(ssl->s3->hs->groups, 0, groups_len * sizeof(SSL_ECDH_CTX));
-  ssl->s3->hs->groups_len = groups_len;
-
-  for (size_t i = 0; i < groups_len; i++) {
-    if (!CBB_add_u16(&kse_bytes, groups[i])) {
-      return 0;
-    }
-
-    CBB key_exchange;
-    if (!CBB_add_u16_length_prefixed(&kse_bytes, &key_exchange) ||
-        !SSL_ECDH_CTX_init(&ssl->s3->hs->groups[i], groups[i]) ||
-        !SSL_ECDH_CTX_offer(&ssl->s3->hs->groups[i], &key_exchange) ||
-        !CBB_flush(&kse_bytes)) {
-      return 0;
-    }
   }
 
   if (!ssl->s3->hs->retry_group) {
@@ -2157,28 +2153,21 @@ int ssl_ext_key_share_parse_serverhello(SSL *ssl, uint8_t **out_secret,
     return 0;
   }
 
-  SSL_ECDH_CTX *group_ctx = NULL;
-  for (size_t i = 0; i < ssl->s3->hs->groups_len; i++) {
-    if (SSL_ECDH_CTX_get_id(&ssl->s3->hs->groups[i]) == group_id) {
-      group_ctx = &ssl->s3->hs->groups[i];
-      break;
-    }
-  }
-
-  if (group_ctx == NULL) {
+  if (SSL_ECDH_CTX_get_id(&ssl->s3->hs->ecdh_ctx) != group_id) {
     *out_alert = SSL_AD_ILLEGAL_PARAMETER;
     OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
     return 0;
   }
 
-  if (!SSL_ECDH_CTX_finish(group_ctx, out_secret, out_secret_len, out_alert,
-                           CBS_data(&peer_key), CBS_len(&peer_key))) {
+  if (!SSL_ECDH_CTX_finish(&ssl->s3->hs->ecdh_ctx, out_secret, out_secret_len,
+                           out_alert, CBS_data(&peer_key),
+                           CBS_len(&peer_key))) {
     *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
 
   ssl->s3->new_session->key_exchange_info = group_id;
-  ssl_handshake_clear_groups(ssl->s3->hs);
+  SSL_ECDH_CTX_cleanup(&ssl->s3->hs->ecdh_ctx);
   return 1;
 }
 
@@ -2191,41 +2180,66 @@ int ssl_ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
   if (!tls1_get_shared_group(ssl, &group_id) ||
       !CBS_get_u16_length_prefixed(contents, &key_shares) ||
       CBS_len(contents) != 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     return 0;
   }
 
-  *out_found = 0;
+  /* Find the corresponding key share. */
+  int found = 0;
+  CBS peer_key;
   while (CBS_len(&key_shares) > 0) {
     uint16_t id;
-    CBS peer_key;
+    CBS peer_key_tmp;
     if (!CBS_get_u16(&key_shares, &id) ||
-        !CBS_get_u16_length_prefixed(&key_shares, &peer_key)) {
+        !CBS_get_u16_length_prefixed(&key_shares, &peer_key_tmp)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
       return 0;
     }
 
-    if (id != group_id || *out_found) {
-      continue;
-    }
+    if (id == group_id) {
+      if (found) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_KEY_SHARE);
+        *out_alert = SSL_AD_ILLEGAL_PARAMETER;
+        return 0;
+      }
 
-    SSL_ECDH_CTX group;
-    memset(&group, 0, sizeof(SSL_ECDH_CTX));
-    CBB public_key;
-    if (!CBB_init(&public_key, 0) ||
-        !SSL_ECDH_CTX_init(&group, group_id) ||
-        !SSL_ECDH_CTX_accept(&group, &public_key, out_secret, out_secret_len,
-                             out_alert, CBS_data(&peer_key),
-                             CBS_len(&peer_key)) ||
-        !CBB_finish(&public_key, &ssl->s3->hs->public_key,
-                    &ssl->s3->hs->public_key_len)) {
-      SSL_ECDH_CTX_cleanup(&group);
-      CBB_cleanup(&public_key);
-      return 0;
+      found = 1;
+      peer_key = peer_key_tmp;
+      /* Continue parsing the structure to keep peers honest. */
     }
-    SSL_ECDH_CTX_cleanup(&group);
-
-    *out_found = 1;
   }
 
+  if (!found) {
+    *out_found = 0;
+    *out_secret = NULL;
+    *out_secret_len = 0;
+    return 1;
+  }
+
+  /* Compute the DH secret. */
+  uint8_t *secret = NULL;
+  size_t secret_len;
+  SSL_ECDH_CTX group;
+  memset(&group, 0, sizeof(SSL_ECDH_CTX));
+  CBB public_key;
+  if (!CBB_init(&public_key, 32) ||
+      !SSL_ECDH_CTX_init(&group, group_id) ||
+      !SSL_ECDH_CTX_accept(&group, &public_key, &secret, &secret_len,
+                           out_alert, CBS_data(&peer_key),
+                           CBS_len(&peer_key)) ||
+      !CBB_finish(&public_key, &ssl->s3->hs->public_key,
+                  &ssl->s3->hs->public_key_len)) {
+    OPENSSL_free(secret);
+    SSL_ECDH_CTX_cleanup(&group);
+    CBB_cleanup(&public_key);
+    return 0;
+  }
+
+  SSL_ECDH_CTX_cleanup(&group);
+
+  *out_secret = secret;
+  *out_secret_len = secret_len;
+  *out_found = 1;
   return 1;
 }
 
@@ -2246,6 +2260,10 @@ int ssl_ext_key_share_add_serverhello(SSL *ssl, CBB *out) {
       !CBB_flush(out)) {
     return 0;
   }
+
+  OPENSSL_free(ssl->s3->hs->public_key);
+  ssl->s3->hs->public_key = NULL;
+  ssl->s3->hs->public_key_len = 0;
 
   ssl->s3->new_session->key_exchange_info = group_id;
   return 1;
@@ -2279,8 +2297,7 @@ static int ext_supported_groups_add_clienthello(SSL *ssl, CBB *out) {
   size_t groups_len;
   tls1_get_grouplist(ssl, 0, &groups, &groups_len);
 
-  size_t i;
-  for (i = 0; i < groups_len; i++) {
+  for (size_t i = 0; i < groups_len; i++) {
     if (!CBB_add_u16(&groups_bytes, groups[i])) {
       return 0;
     }
@@ -2318,8 +2335,7 @@ static int ext_supported_groups_parse_clienthello(SSL *ssl, uint8_t *out_alert,
   }
 
   const size_t num_groups = CBS_len(&supported_group_list) / 2;
-  size_t i;
-  for (i = 0; i < num_groups; i++) {
+  for (size_t i = 0; i < num_groups; i++) {
     if (!CBS_get_u16(&supported_group_list,
                      &ssl->s3->tmp.peer_supported_group_list[i])) {
       goto err;
@@ -2524,14 +2540,13 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
   ssl->s3->tmp.extensions.sent = 0;
   ssl->s3->tmp.custom_extensions.sent = 0;
 
-  size_t i;
-  for (i = 0; i < kNumExtensions; i++) {
+  for (size_t i = 0; i < kNumExtensions; i++) {
     if (kExtensions[i].init != NULL) {
       kExtensions[i].init(ssl);
     }
   }
 
-  for (i = 0; i < kNumExtensions; i++) {
+  for (size_t i = 0; i < kNumExtensions; i++) {
     const size_t len_before = CBB_len(&extensions);
     if (!kExtensions[i].add_clienthello(ssl, &extensions)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_ADDING_EXTENSION);
@@ -2787,8 +2802,7 @@ static int ssl_scan_serverhello_tlsext(SSL *ssl, CBS *cbs, int *out_alert) {
     }
   }
 
-  size_t i;
-  for (i = 0; i < kNumExtensions; i++) {
+  for (size_t i = 0; i < kNumExtensions; i++) {
     if (!(received & (1u << i))) {
       /* Extension wasn't observed so call the callback with a NULL
        * parameter. */

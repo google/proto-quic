@@ -18,7 +18,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class CertVerifyResult;
 class CRLSet;
 
@@ -167,7 +167,7 @@ class NET_EXPORT CertVerifier {
                      CertVerifyResult* verify_result,
                      const CompletionCallback& callback,
                      std::unique_ptr<Request>* out_req,
-                     const BoundNetLog& net_log) = 0;
+                     const NetLogWithSource& net_log) = 0;
 
   // Returns true if this CertVerifier supports stapled OCSP responses.
   virtual bool SupportsOCSPStapling();

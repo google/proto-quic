@@ -36,7 +36,7 @@ function on_exit {
     echo "done"
   fi
 
-  if [ -f "$directory" ]; then
+  if [ -d "$directory" ]; then
     echo -n "Removing temp directory $directory..."
     rm -rf "$directory"
     echo done

@@ -8,8 +8,10 @@ namespace blink {
 int frameCount = 0;
 // Make sure that underscore-insertion doesn't get too confused by acronyms.
 static int variableMentioningHTTPAndHTTPS = 1;
+// g_ prefix, but doesn't follow Google style.
+int g_withBlinkNaming;
 // Already Google style, should not change.
-int already_google_style_;
+int g_already_google_style_;
 
 // Function parameters
 int function(int interestingNumber) {
@@ -25,8 +27,10 @@ int function(int interestingNumber) {
 
 }  // namespace blink
 
+using blink::frameCount;
+
 int F() {
   // Make sure variables qualified with a namespace name are still rewritten
   // correctly.
-  return blink::frameCount;
+  return frameCount + blink::frameCount;
 }

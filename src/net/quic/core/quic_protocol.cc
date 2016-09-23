@@ -311,7 +311,8 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
   }
   if (header.public_header.nonce != nullptr) {
     os << ", diversification_nonce: "
-       << net::QuicUtils::HexDecode(*header.public_header.nonce);
+       << QuicUtils::HexEncode(StringPiece(header.public_header.nonce->data(),
+                                           header.public_header.nonce->size()));
   }
   os << ", fec_flag: " << header.fec_flag
      << ", entropy_flag: " << header.entropy_flag

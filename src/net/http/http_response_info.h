@@ -120,8 +120,8 @@ class NET_EXPORT HttpResponseInfo {
   // True if the request was fetched over a SPDY channel.
   bool was_fetched_via_spdy;
 
-  // True if the npn was negotiated for this request.
-  bool was_npn_negotiated;
+  // True if ALPN was negotiated for this request.
+  bool was_alpn_negotiated;
 
   // True if the request was fetched via an explicit proxy.  The proxy could
   // be any type of proxy, HTTP or SOCKS.  Note, we do not know if a
@@ -152,7 +152,7 @@ class NET_EXPORT HttpResponseInfo {
   HostPortPair socket_address;
 
   // Protocol negotiated with the server.
-  std::string npn_negotiated_protocol;
+  std::string alpn_negotiated_protocol;
 
   // The type of connection used for this response.
   ConnectionInfo connection_info;

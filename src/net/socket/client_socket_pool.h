@@ -106,7 +106,7 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
                             RespectLimits respect_limits,
                             ClientSocketHandle* handle,
                             const CompletionCallback& callback,
-                            const BoundNetLog& net_log) = 0;
+                            const NetLogWithSource& net_log) = 0;
 
   // RequestSockets is used to request that |num_sockets| be connected in the
   // connection group for |group_name|.  If the connection group already has
@@ -121,7 +121,7 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   virtual void RequestSockets(const std::string& group_name,
                               const void* params,
                               int num_sockets,
-                              const BoundNetLog& net_log) = 0;
+                              const NetLogWithSource& net_log) = 0;
 
   // Called to cancel a RequestSocket call that returned ERR_IO_PENDING.  The
   // same handle parameter must be passed to this method as was passed to the
@@ -197,7 +197,7 @@ void RequestSocketsForPool(
     const std::string& group_name,
     const scoped_refptr<typename PoolType::SocketParams>& params,
     int num_sockets,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   pool->RequestSockets(group_name, &params, num_sockets, net_log);
 }
 

@@ -57,7 +57,7 @@ void WorkerPoolImpl::PostTask(const tracked_objects::Location& from_here,
   pool_->PostTask(from_here, task);
 }
 
-base::LazyInstance<WorkerPoolImpl> g_lazy_worker_pool =
+base::LazyInstance<WorkerPoolImpl>::Leaky g_lazy_worker_pool =
     LAZY_INSTANCE_INITIALIZER;
 
 class WorkerThread : public PlatformThread::Delegate {
