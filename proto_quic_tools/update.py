@@ -29,33 +29,32 @@ if chrome_root == None or libquic_root == None:
   sys.exit(usage)
 
 full_copy_directories =[
-                 'base/allocator',
-                 'base/third_party/nspr',
-                 'base/third_party/dmg_fp',
-                 'base/third_party/symbolize',
-                 'base/third_party/valgrind',
-                 'base/third_party/xdg_user_dirs',
-                 'base/third_party/dynamic_annotations',
-                 'base/third_party/libevent',
-                 'base/third_party/superfasthash',
-                 'base/third_party/icu',
-                 'base/trace_event',
-                 'net/quic/core/',
-                 'net/quic/test_tools/',
+                 'base',
+                 'build_overrides',
+                 'buildtools',
+                 'net/quic/core',
+                 'net/quic/test_tools',
                  'net/third_party/mozilla_security_manager',
                  'third_party/apple_apsl',
                  'third_party/binutils',
                  'third_party/boringssl',
                  'third_party/brotli',
+                 'third_party/ced',
+                 'third_party/closure_compiler',
+                 'third_party/drmemory',
                  'third_party/icu',
                  'third_party/instrumented_libraries',
                  'third_party/libxml/',
+                 'third_party/llvm-build',
                  'third_party/modp_b64',
                  'third_party/protobuf',
+                 'third_party/pyftpdlib',
+                 'third_party/pywebsocket',
                  'third_party/tcmalloc',
+                 'third_party/tlslite',
                  'third_party/yasm',
                  'third_party/zlib',
-                 'sdch/open-vcdiff',
+                 'sdch',
                  'url/third_party/mozilla',
 ]
 
@@ -72,7 +71,7 @@ def directory_to_skip(name):
   return False
 
 def clean_build_file(file_to_remove, filename):
-  if "gyp" not in filename:
+  if not filename.endswith("gyp") and not filename.endswith("gypi") and not filename.endswith("gn") and not filename.endswith("gni"):
     return
   print "   removing " + file_to_remove + " from " + filename
   for line in fileinput.input(filename, inplace=True):
@@ -82,7 +81,7 @@ def clean_build_file(file_to_remove, filename):
 def copy_each_file(directory):
   for filename in os.listdir(libquic_root + "/" + directory):
     if os.path.isfile(libquic_root + "/" + directory + "/" + filename):
-      if filename.endswith("gyp") or filename.endswith("gypi") or filename.endswith("run_all_unittests.cc"):
+      if filename.endswith("gyp") or filename.endswith("gypi") or filename.endswith("run_all_unittests.cc") or filename.endswith("gn") or filename.endswith("gni"):
         print "skipping build file ", directory + "/" + filename
       else:
         libquic_file = libquic_root + "/" + directory + "/" + filename
@@ -136,5 +135,3 @@ if len(sys.argv) > 1:
   copy_file()
 else:
   copy_all()
-
-
