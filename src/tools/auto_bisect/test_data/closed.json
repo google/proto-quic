@@ -1,0 +1,140 @@
+{
+ "version": "1.0",
+ "encoding": "UTF-8",
+ "feed": {
+  "xmlns": "http://www.w3.org/2005/Atom",
+  "xmlns$openSearch": "http://a9.com/-/spec/opensearch/1.1/",
+  "xmlns$gd": "http://schemas.google.com/g/2005",
+  "xmlns$issues": "http://schemas.google.com/projecthosting/issues/2009",
+  "id": {
+   "$t": "http://code.google.com/feeds/issues/p/chromium/issues/full"
+  },
+  "updated": {
+   "$t": "2014-10-31T23:44:30.795Z"
+  },
+  "title": {
+   "$t": "Issues - chromium"
+  },
+  "subtitle": {
+   "$t": "Issues - chromium"
+  },
+  "link": [
+   {
+    "rel": "alternate",
+    "type": "text/html",
+    "href": "http://code.google.com/p/chromium/issues/list"
+   },
+   {
+    "rel": "http://schemas.google.com/g/2005#feed",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full"
+   },
+   {
+    "rel": "http://schemas.google.com/g/2005#post",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full"
+   },
+   {
+    "rel": "self",
+    "type": "application/atom+xml",
+    "href": "https://code.google.com/feeds/issues/p/chromium/issues/full?alt=json&max-results=1&id=422382"
+   }
+  ],
+  "generator": {
+   "$t": "ProjectHosting",
+   "version": "1.0",
+   "uri": "http://code.google.com/feeds/issues"
+  },
+  "openSearch$totalResults": {
+   "$t": 1
+  },
+  "openSearch$startIndex": {
+   "$t": 1
+  },
+  "openSearch$itemsPerPage": {
+   "$t": 1
+  },
+  "entry": [
+   {
+    "gd$etag": "W/\"CUUFSX47eCl7ImA9XRdQGEk.\"",
+    "id": {
+     "$t": "http://code.google.com/feeds/issues/p/chromium/issues/full/422382"
+    },
+    "published": {
+     "$t": "2014-10-10T17:07:06.000Z"
+    },
+    "updated": {
+     "$t": "2014-10-20T22:13:38.000Z"
+    },
+    "title": {
+     "$t": "11.1% regression in indexeddb_perf at 298653:298680"
+    },
+    "content": {
+     "$t": "See the link to graphs below.",
+     "type": "html"
+    },
+    "link": [
+     {
+      "rel": "replies",
+      "type": "application/atom+xml",
+      "href": "http://code.google.com/feeds/issues/p/chromium/issues/422382/comments/full"
+     },
+     {
+      "rel": "alternate",
+      "type": "text/html",
+      "href": "http://code.google.com/p/chromium/issues/detail?id=422382"
+     },
+     {
+      "rel": "self",
+      "type": "application/atom+xml",
+      "href": "https://code.google.com/feeds/issues/p/chromium/issues/full/422382"
+     }
+    ],
+    "author": [
+     {
+      "name": {
+       "$t": "gov...@chromium.org"
+      },
+      "uri": {
+       "$t": "/u/104724762920274240672/"
+      }
+     }
+    ],
+    "issues$closedDate": {
+     "$t": "2014-10-20T22:10:22.000Z"
+    },
+    "issues$id": {
+     "$t": 422382
+    },
+    "issues$label": [
+     {
+      "$t": "Type-Bug-Regression"
+     },
+     {
+      "$t": "Performance-Sheriff"
+     },
+     {
+      "$t": "Pri-2"
+     }
+    ],
+    "issues$owner": {
+     "issues$uri": {
+      "$t": "/u/104724762920274240672/"
+     },
+     "issues$username": {
+      "$t": "gov...@chromium.org"
+     }
+    },
+    "issues$stars": {
+     "$t": 0
+    },
+    "issues$state": {
+     "$t": "closed"
+    },
+    "issues$status": {
+     "$t": "WontFix"
+    }
+   }
+  ]
+ }
+}

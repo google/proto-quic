@@ -20,9 +20,6 @@ template("generate_library_loader") {
     visibility = action_visibility
 
     script = "//tools/generate_library_loader/generate_library_loader.py"
-    if (defined(invoker.visibility)) {
-      visibility = invoker.visibility
-    }
 
     outputs = [
       output_h,

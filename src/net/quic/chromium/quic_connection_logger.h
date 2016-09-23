@@ -37,7 +37,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
       QuicSpdySession* session,
       const char* const connection_description,
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 
   ~QuicConnectionLogger() override;
 
@@ -50,6 +50,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
                     QuicPacketNumber original_packet_number,
                     TransmissionType transmission_type,
                     QuicTime sent_time) override;
+  void OnPingSent() override;
   void OnPacketReceived(const IPEndPoint& self_address,
                         const IPEndPoint& peer_address,
                         const QuicEncryptedPacket& packet) override;
@@ -97,12 +98,14 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   // the overall packet loss rate, and record it into a histogram.
   void RecordAggregatePacketLossRate() const;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   QuicSpdySession* session_;  // Unowned.
   // The last packet number received.
   QuicPacketNumber last_received_packet_number_;
   // The size of the most recently received packet.
   size_t last_received_packet_size_;
+  // True if a PING frame has been sent and no packet has been received.
+  bool no_packet_received_after_ping_;
   // The size of the previously received packet.
   size_t previous_received_packet_size_;
   // The largest packet number received.  In the case where a packet is

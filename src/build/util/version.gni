@@ -6,7 +6,7 @@
 #
 # PREFER NOT TO USE THESE. The GYP build uses this kind of thing extensively.
 # However, it is far better to write an action (or use the process_version
-# wrapper in chrome/version.gni) to generate a file at build-time with the
+# wrapper in build/util/version.gni) to generate a file at build-time with the
 # information you need. This allows better dependency checking and GN will
 # run faster.
 #
@@ -17,14 +17,10 @@
 # all values we need at once.
 _version_dictionary_template = "full = \"@MAJOR@.@MINOR@.@BUILD@.@PATCH@\" " +
                                "major = \"@MAJOR@\" minor = \"@MINOR@\" " +
-                               "build = \"@BUILD@\" patch = \"@PATCH@\" " +
-                               "remoting = \"@REMOTING_PATCH\" "
+                               "build = \"@BUILD@\" patch = \"@PATCH@\" "
 
 # The file containing the Chrome version number.
 chrome_version_file = "//chrome/VERSION"
-
-# The file containing the Chromoting version number.
-remoting_version_file = "//remoting/VERSION"
 
 _result = exec_script("version.py",
                       [
@@ -44,4 +40,20 @@ chrome_version_major = _result.major
 chrome_version_minor = _result.minor
 chrome_version_build = _result.build
 chrome_version_patch = _result.patch
-remoting_version_patch = _result.remoting
+
+if (is_mac) {
+  _result = exec_script("version.py",
+                        [
+                          "-f",
+                          rebase_path(chrome_version_file, root_build_dir),
+                          "-t",
+                          "@BUILD@.@PATCH_HI@.@PATCH_LO@",
+                          "-e",
+                          "PATCH_HI=int(PATCH)/256",
+                          "-e",
+                          "PATCH_LO=int(PATCH)%256",
+                        ],
+                        "trim string",
+                        [ chrome_version_file ])
+  chrome_dylib_version = _result
+}

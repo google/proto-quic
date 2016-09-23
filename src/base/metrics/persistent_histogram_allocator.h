@@ -394,11 +394,40 @@ class BASE_EXPORT GlobalHistogramAllocator
   // Create a global allocator by memory-mapping a |file|. If the file does
   // not exist, it will be created with the specified |size|. If the file does
   // exist, the allocator will use and add to its contents, ignoring the passed
-  // size in favor of the existing size.
-  static void CreateWithFile(const FilePath& file_path,
+  // size in favor of the existing size. Returns whether the global allocator
+  // was set.
+  static bool CreateWithFile(const FilePath& file_path,
                              size_t size,
                              uint64_t id,
                              StringPiece name);
+
+  // Creates a new file at |active_path|. If it already exists, it will first be
+  // moved to |base_path|. In all cases, any old file at |base_path| will be
+  // removed. The file will be created using the given size, id, and name.
+  // Returns whether the global allocator was set.
+  static bool CreateWithActiveFile(const FilePath& base_path,
+                                   const FilePath& active_path,
+                                   size_t size,
+                                   uint64_t id,
+                                   StringPiece name);
+
+  // Uses ConstructBaseActivePairFilePaths() to build a pair of file names which
+  // are then used for CreateWithActiveFile(). |name| is used for both the
+  // internal name for the allocator and also for the name of the file inside
+  // |dir|.
+  static bool CreateWithActiveFileInDir(const FilePath& dir,
+                                        size_t size,
+                                        uint64_t id,
+                                        StringPiece name);
+
+  // Constructs a pair of names in |dir| based on name that can be used for a
+  // base + active persistent memory mapped location for CreateWithActiveFile().
+  // |name| will be used as the basename of the file inside |dir|.
+  // |out_base_path| or |out_active_path| may be null if not needed.
+  static void ConstructFilePaths(const FilePath& dir,
+                                 StringPiece name,
+                                 FilePath* out_base_path,
+                                 FilePath* out_active_path);
 #endif
 
   // Create a global allocator using a block of shared |memory| of the
@@ -448,6 +477,10 @@ class BASE_EXPORT GlobalHistogramAllocator
   // the filesystem. The data is written in an atomic manner. The return value
   // indicates success.
   bool WriteToPersistentLocation();
+
+  // If there is a global metrics file being updated on disk, mark it to be
+  // deleted when the process exits.
+  void DeletePersistentLocation();
 
  private:
   friend class StatisticsRecorder;

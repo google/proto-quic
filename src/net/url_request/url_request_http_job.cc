@@ -194,14 +194,14 @@ class URLRequestHttpJob::HttpFilterContext : public FilterContext {
   int GetResponseCode() const override;
   const URLRequestContext* GetURLRequestContext() const override;
   void RecordPacketStats(StatisticSelector statistic) const override;
-  const BoundNetLog& GetNetLog() const override;
+  const NetLogWithSource& GetNetLog() const override;
 
  private:
   URLRequestHttpJob* job_;
 
   // URLRequestHttpJob may be detached from URLRequest, but we still need to
   // return something.
-  BoundNetLog dummy_log_;
+  NetLogWithSource dummy_log_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpFilterContext);
 };
@@ -257,7 +257,8 @@ void URLRequestHttpJob::HttpFilterContext::RecordPacketStats(
   job_->RecordPacketStats(statistic);
 }
 
-const BoundNetLog& URLRequestHttpJob::HttpFilterContext::GetNetLog() const {
+const NetLogWithSource& URLRequestHttpJob::HttpFilterContext::GetNetLog()
+    const {
   return job_->request() ? job_->request()->net_log() : dummy_log_;
 }
 
@@ -1088,11 +1089,6 @@ LoadState URLRequestHttpJob::GetLoadState() const {
       transaction_->GetLoadState() : LOAD_STATE_IDLE;
 }
 
-UploadProgress URLRequestHttpJob::GetUploadProgress() const {
-  return transaction_.get() ?
-      transaction_->GetUploadProgress() : UploadProgress();
-}
-
 bool URLRequestHttpJob::GetMimeType(std::string* mime_type) const {
   DCHECK(transaction_.get());
 
@@ -1330,11 +1326,6 @@ void URLRequestHttpJob::ContinueDespiteLastError() {
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, base::Bind(&URLRequestHttpJob::OnStartCompleted,
                             weak_factory_.GetWeakPtr(), rv));
-}
-
-void URLRequestHttpJob::ResumeNetworkStart() {
-  DCHECK(transaction_.get());
-  transaction_->ResumeNetworkStart();
 }
 
 bool URLRequestHttpJob::ShouldFixMismatchedContentLength(int rv) const {
@@ -1587,7 +1578,8 @@ void URLRequestHttpJob::DoneWithRequest(CompletionCause reason) {
     NetworkQualityEstimator* network_quality_estimator =
         request()->context()->network_quality_estimator();
     if (network_quality_estimator)
-      network_quality_estimator->NotifyRequestCompleted(*request());
+      network_quality_estimator->NotifyRequestCompleted(
+          *request(), request_->status().error());
   }
 
   RecordPerfHistograms(reason);

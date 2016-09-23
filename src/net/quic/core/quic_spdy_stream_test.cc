@@ -971,9 +971,6 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
     EXPECT_FALSE(stream_->write_side_closed());
   }
 
-  if (!FLAGS_quic_close_stream_after_writing_queued_data) {
-    return;
-  }
   // Writing the queued bytes will close the write side of the stream.
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(1, false)));

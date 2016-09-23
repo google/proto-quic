@@ -17,4 +17,4 @@ if len(sys.argv) != 3:
 
 result = subprocess.check_output([sys.argv[1], sys.argv[2]]).strip()
 
-print '"' + result + '"'
+print result.replace(" ", "\n")

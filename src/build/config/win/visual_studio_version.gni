@@ -20,8 +20,6 @@ declare_args() {
   # This value is the default location, override if you have a different
   # installation location.
   windows_sdk_path = "C:\Program Files (x86)\Windows Kits\10"
-
-  is_win_fastlink = false
 }
 
 if (visual_studio_path == "") {

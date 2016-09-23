@@ -17,6 +17,7 @@
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/spdy/hpack/hpack_constants.h"
@@ -2389,6 +2390,61 @@ bool SpdyFramer::ParseHeaderBlockInBuffer(const char* header_data,
   return true;
 }
 
+SpdyFramer::SpdyHeaderFrameIterator::SpdyHeaderFrameIterator(
+    SpdyFramer* framer,
+    std::unique_ptr<SpdyHeadersIR> headers_ir)
+    : headers_ir_(std::move(headers_ir)),
+      framer_(framer),
+      debug_total_size_(0),
+      is_first_frame_(true),
+      has_next_frame_(true) {
+  encoder_ = framer_->GetHpackEncoder()->EncodeHeaderSet(
+      headers_ir_->header_block(), framer_->enable_compression_);
+}
+
+SpdyFramer::SpdyHeaderFrameIterator::~SpdyHeaderFrameIterator() {}
+
+SpdySerializedFrame SpdyFramer::SpdyHeaderFrameIterator::NextFrame() {
+  if (!has_next_frame_) {
+    SPDY_BUG << "SpdyFramer::SpdyHeaderFrameIterator::NextFrame called without "
+             << "a next frame.";
+    return SpdySerializedFrame();
+  }
+
+  size_t size_without_block =
+      is_first_frame_ ? framer_->GetHeaderFrameSizeSansBlock(*headers_ir_)
+                      : framer_->GetContinuationMinimumSize();
+  auto encoding = base::MakeUnique<string>();
+  encoder_->Next(kMaxControlFrameSize - size_without_block, encoding.get());
+  has_next_frame_ = encoder_->HasNext();
+
+  if (framer_->debug_visitor_ != nullptr) {
+    debug_total_size_ += size_without_block;
+    debug_total_size_ += encoding->size();
+    if (!has_next_frame_) {
+      // HTTP2 uses HPACK for header compression. However, continue to
+      // use GetSerializedLength() for an apples-to-apples comparision of
+      // compression performance between HPACK and SPDY w/ deflate.
+      size_t debug_payload_len =
+          framer_->GetSerializedLength(HTTP2, &headers_ir_->header_block());
+      framer_->debug_visitor_->OnSendCompressedFrame(headers_ir_->stream_id(),
+                                                     HEADERS, debug_payload_len,
+                                                     debug_total_size_);
+    }
+  }
+
+  if (is_first_frame_) {
+    is_first_frame_ = false;
+    headers_ir_->set_end_headers(!has_next_frame_);
+    return framer_->SerializeHeadersGivenEncoding(*headers_ir_, *encoding);
+  } else {
+    SpdyContinuationIR continuation_ir(headers_ir_->stream_id());
+    continuation_ir.set_end_headers(!has_next_frame_);
+    continuation_ir.take_encoding(std::move(encoding));
+    return framer_->SerializeContinuation(continuation_ir);
+  }
+}
+
 SpdySerializedFrame SpdyFramer::SerializeData(const SpdyDataIR& data_ir) const {
   uint8_t flags = DATA_FLAG_NONE;
   if (data_ir.fin()) {
@@ -2861,35 +2917,50 @@ SpdySerializedFrame SpdyFramer::SerializePushPromise(
   return builder.take();
 }
 
-// TODO(jgraettinger): This implementation is incorrect. The continuation
-// frame continues a previously-begun HPACK encoding; it doesn't begin a
-// new one. Figure out whether it makes sense to keep SerializeContinuation().
+SpdySerializedFrame SpdyFramer::SerializeHeadersGivenEncoding(
+    const SpdyHeadersIR& headers,
+    const string& encoding) const {
+  DCHECK_EQ(HTTP2, protocol_version_);
+
+  size_t frame_size = GetHeaderFrameSizeSansBlock(headers) + encoding.size();
+  SpdyFrameBuilder builder(frame_size, protocol_version_);
+  builder.BeginNewFrame(*this, HEADERS, SerializeHeaderFrameFlags(headers),
+                        headers.stream_id());
+  DCHECK_EQ(GetFrameHeaderSize(), builder.length());
+
+  if (headers.padded()) {
+    builder.WriteUInt8(headers.padding_payload_len());
+  }
+
+  if (headers.has_priority()) {
+    int weight = ClampHttp2Weight(headers.weight());
+    builder.WriteUInt32(PackStreamDependencyValues(headers.exclusive(),
+                                                   headers.parent_stream_id()));
+    // Per RFC 7540 section 6.3, serialized weight value is actual value - 1.
+    builder.WriteUInt8(weight - 1);
+  }
+
+  builder.WriteBytes(&encoding[0], encoding.size());
+
+  if (headers.padding_payload_len() > 0) {
+    string padding(headers.padding_payload_len(), 0);
+    builder.WriteBytes(padding.data(), padding.length());
+  }
+  return builder.take();
+}
+
 SpdySerializedFrame SpdyFramer::SerializeContinuation(
-    const SpdyContinuationIR& continuation) {
-  CHECK_EQ(HTTP2, protocol_version_);
-  uint8_t flags = 0;
-  if (continuation.end_headers()) {
-    flags |= HEADERS_FLAG_END_HEADERS;
-  }
+    const SpdyContinuationIR& continuation) const {
+  DCHECK_EQ(HTTP2, protocol_version_);
 
-  // The size of this frame, including variable-length name-value block.
-  size_t size = GetContinuationMinimumSize();
-  string hpack_encoding;
-  if (enable_compression_) {
-    GetHpackEncoder()->EncodeHeaderSet(continuation.header_block(),
-                                       &hpack_encoding);
-  } else {
-    GetHpackEncoder()->EncodeHeaderSetWithoutCompression(
-        continuation.header_block(), &hpack_encoding);
-  }
-  size += hpack_encoding.size();
+  const string& encoding = continuation.encoding();
+  size_t frame_size = GetContinuationMinimumSize() + encoding.size();
+  SpdyFrameBuilder builder(frame_size, protocol_version_);
+  uint8_t flags = continuation.end_headers() ? HEADERS_FLAG_END_HEADERS : 0;
+  builder.BeginNewFrame(*this, CONTINUATION, flags, continuation.stream_id());
+  DCHECK_EQ(GetFrameHeaderSize(), builder.length());
 
-  SpdyFrameBuilder builder(size, protocol_version_);
-  builder.BeginNewFrame(*this, CONTINUATION, flags,
-      continuation.stream_id());
-  DCHECK_EQ(GetContinuationMinimumSize(), builder.length());
-
-  builder.WriteBytes(&hpack_encoding[0], hpack_encoding.size());
+  builder.WriteBytes(&encoding[0], encoding.size());
   return builder.take();
 }
 
@@ -3013,6 +3084,40 @@ size_t SpdyFramer::GetNumberRequiredContinuationFrames(size_t size) {
   size_t payload_size = kMaxControlFrameSize - GetContinuationMinimumSize();
   // This is ceiling(overflow/payload_size) using integer arithmetics.
   return (overflow - 1) / payload_size + 1;
+}
+
+size_t SpdyFramer::GetHeaderFrameSizeSansBlock(
+    const SpdyHeadersIR& header_ir) const {
+  size_t min_size = GetFrameHeaderSize();
+
+  if (header_ir.padded()) {
+    min_size += 1;
+    min_size += header_ir.padding_payload_len();
+  }
+
+  if (header_ir.has_priority()) {
+    min_size += 5;
+  }
+
+  return min_size;
+}
+
+uint8_t SpdyFramer::SerializeHeaderFrameFlags(
+    const SpdyHeadersIR& header_ir) const {
+  uint8_t flags = 0;
+  if (header_ir.fin()) {
+    flags |= CONTROL_FLAG_FIN;
+  }
+  if (header_ir.end_headers()) {
+    flags |= HEADERS_FLAG_END_HEADERS;
+  }
+  if (header_ir.padded()) {
+    flags |= HEADERS_FLAG_PADDED;
+  }
+  if (header_ir.has_priority()) {
+    flags |= HEADERS_FLAG_PRIORITY;
+  }
+  return flags;
 }
 
 void SpdyFramer::WritePayloadWithContinuation(SpdyFrameBuilder* builder,

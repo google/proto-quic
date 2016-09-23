@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+# Copyright 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import os
+import sys
+
+from chrome_telemetry_build import chromium_config
+sys.path.insert(1, chromium_config.GetTelemetryDir())
+
+from profile_creators import profile_generator
+
+if __name__ == '__main__':
+  sys.exit(profile_generator.Main())

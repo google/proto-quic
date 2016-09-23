@@ -41,6 +41,7 @@ class BaseTestResult(object):
     self._test_type = test_type
     self._duration = duration
     self._log = log
+    self._tombstones = None
 
   def __str__(self):
     return self._name
@@ -88,6 +89,11 @@ class BaseTestResult(object):
     """Get the test log."""
     return self._log
 
+  def SetTombstones(self, tombstones):
+    self._tombstones = tombstones
+
+  def GetTombstones(self):
+    return self._tombstones
 
 class TestRunResults(object):
   """Set of results for a test run."""
@@ -161,6 +167,7 @@ class TestRunResults(object):
     """
     assert isinstance(result, BaseTestResult)
     with self._results_lock:
+      self._results.discard(result)
       self._results.add(result)
 
   def AddResults(self, results):
@@ -179,7 +186,8 @@ class TestRunResults(object):
     Args:
       results: An instance of TestRunResults.
     """
-    assert isinstance(results, TestRunResults)
+    assert isinstance(results, TestRunResults), (
+           'Expected TestRunResult object: %s' % type(results))
     with self._results_lock:
       # pylint: disable=W0212
       self._results.update(results._results)

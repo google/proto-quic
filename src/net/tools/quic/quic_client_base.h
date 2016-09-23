@@ -95,7 +95,9 @@ class QuicClientBase {
   // headers to requests if so.  The negotiated token binding parameters can be
   // found on the QuicCryptoNegotiatedParameters object in
   // token_binding_key_param.
-  void UseTokenBinding() { crypto_config_.UseTokenBinding(); }
+  void UseTokenBinding() {
+    crypto_config_.tb_key_params = QuicTagVector{kP256};
+  }
 
   const QuicVersionVector& supported_versions() const {
     return supported_versions_;

@@ -12,12 +12,9 @@ library files.  This step is inserted after the libraries are stripped.
 
 If --enable-packing is zero, the script copies files verbatim, with no
 attempt to pack relocations.
-
-Any library listed in --exclude-packing-list is also copied verbatim,
-irrespective of any --enable-packing setting.  Typically this would be
-'libchromium_android_linker.so'.
 """
 
+import ast
 import optparse
 import os
 import shutil
@@ -52,9 +49,6 @@ def main(args):
       choices=['0', '1'],
       help=('Pack relocations if 1 and configuration name is \'Release\','
             ' otherwise plain file copy'))
-  parser.add_option('--exclude-packing-list',
-      default='',
-      help='Names of any libraries explicitly not packed')
   parser.add_option('--android-pack-relocations',
       help='Path to the relocations packer binary')
   parser.add_option('--stripped-libraries-dir',
@@ -62,7 +56,7 @@ def main(args):
   parser.add_option('--packed-libraries-dir',
       help='Directory for packed libraries')
   parser.add_option('--libraries', action='append',
-      help='List of libraries')
+      help='List of libraries in Python dictionary format')
   parser.add_option('--stamp', help='Path to touch on success')
   parser.add_option('--filelistjson',
                     help='Output path of filelist.json to write')
@@ -70,12 +64,10 @@ def main(args):
   options, _ = parser.parse_args(args)
   enable_packing = (options.enable_packing == '1' and
                     options.configuration_name == 'Release')
-  exclude_packing_set = set(build_utils.ParseGypList(
-      options.exclude_packing_list))
 
   libraries = []
   for libs_arg in options.libraries:
-    libraries += build_utils.ParseGypList(libs_arg)
+    libraries += ast.literal_eval(libs_arg)
 
   if options.clear_dir:
     build_utils.DeleteDirectory(options.packed_libraries_dir)
@@ -89,7 +81,7 @@ def main(args):
         options.packed_libraries_dir, os.path.basename(library))
     output_paths.append(output_path)
 
-    if enable_packing and library not in exclude_packing_set:
+    if enable_packing:
       PackLibraryRelocations(options.android_pack_relocations,
                              library_path,
                              output_path)
@@ -98,11 +90,10 @@ def main(args):
 
   if options.filelistjson:
     build_utils.WriteJson({ 'files': output_paths }, options.filelistjson)
+    output_paths.append(options.filelistjson)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        libraries + build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, output_paths[-1], libraries)
 
   if options.stamp:
     build_utils.Touch(options.stamp)

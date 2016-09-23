@@ -12,7 +12,6 @@
 #include "net/quic/core/interval.h"
 
 #include "base/logging.h"
-#include "base/stl_util.h"
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -205,22 +204,6 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_TRUE(!d.Contains(201));
 
   // Difference:
-  vector<Interval<int64_t>*> diff;
-
-  EXPECT_TRUE(!d.Difference(empty, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(200u, diff[0]->max());
-  base::STLDeleteElements(&diff);
-  EXPECT_TRUE(!empty.Difference(d, &diff) && diff.empty());
-
-  EXPECT_TRUE(d.Difference(d, &diff) && diff.empty());
-  EXPECT_TRUE(!d.Difference(d1, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(200u, diff[0]->max());
-  base::STLDeleteElements(&diff);
-
   Interval<int64_t> lo;
   Interval<int64_t> hi;
 
@@ -228,69 +211,36 @@ TEST_F(IntervalTest, CoveringOps) {
   EXPECT_TRUE(lo.Empty());
   EXPECT_EQ(110u, hi.min());
   EXPECT_EQ(200u, hi.max());
-  EXPECT_TRUE(d.Difference(d2, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(110u, diff[0]->min());
-  EXPECT_EQ(200u, diff[0]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d3, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
   EXPECT_EQ(110u, lo.max());
   EXPECT_EQ(180u, hi.min());
   EXPECT_EQ(200u, hi.max());
-  EXPECT_TRUE(d.Difference(d3, &diff));
-  EXPECT_EQ(2u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(110u, diff[0]->max());
-  EXPECT_EQ(180u, diff[1]->min());
-  EXPECT_EQ(200u, diff[1]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d4, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
   EXPECT_EQ(180u, lo.max());
   EXPECT_TRUE(hi.Empty());
-  EXPECT_TRUE(d.Difference(d4, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(180u, diff[0]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_FALSE(d.Difference(d5, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
   EXPECT_EQ(200u, lo.max());
   EXPECT_TRUE(hi.Empty());
-  EXPECT_FALSE(d.Difference(d5, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(200u, diff[0]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d6, &lo, &hi));
   EXPECT_TRUE(lo.Empty());
   EXPECT_EQ(150u, hi.min());
   EXPECT_EQ(200u, hi.max());
-  EXPECT_TRUE(d.Difference(d6, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(150u, diff[0]->min());
-  EXPECT_EQ(200u, diff[0]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d7, &lo, &hi));
   EXPECT_EQ(100u, lo.min());
   EXPECT_EQ(150u, lo.max());
   EXPECT_TRUE(hi.Empty());
-  EXPECT_TRUE(d.Difference(d7, &diff));
-  EXPECT_EQ(1u, diff.size());
-  EXPECT_EQ(100u, diff[0]->min());
-  EXPECT_EQ(150u, diff[0]->max());
-  base::STLDeleteElements(&diff);
 
   EXPECT_TRUE(d.Difference(d8, &lo, &hi));
   EXPECT_TRUE(lo.Empty());
   EXPECT_TRUE(hi.Empty());
-  EXPECT_TRUE(d.Difference(d8, &diff) && diff.empty());
 }
 
 TEST_F(IntervalTest, Length) {

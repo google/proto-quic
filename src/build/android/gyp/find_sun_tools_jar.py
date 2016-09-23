@@ -35,9 +35,7 @@ def main():
   shutil.copyfile(sun_tools_jar_path, args.output)
 
   if args.depfile:
-    build_utils.WriteDepfile(
-        args.depfile,
-        [sun_tools_jar_path] + build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(args.depfile, args.output, [sun_tools_jar_path])
 
 
 def FindSunToolsJarPath():

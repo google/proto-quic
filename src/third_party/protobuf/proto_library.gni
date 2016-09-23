@@ -43,8 +43,15 @@
 #       GN label for plugin executable which generates custom cc stubs.
 #       Don't specify a toolchain, host toolchain is assumed.
 #
-#   generator_plugin_suffix (required if |generator_plugin_label| set)
-#       Suffix (before extension) for generated .cc and .h files.
+#   generator_plugin_script (optional)
+#       Path to plugin script. Mutually exclusive with |generator_plugin_label|.
+#
+#   generator_plugin_script_deps (optional)
+#       List of additional files required for generator plugin script.
+#
+#   generator_plugin_suffix[es] (required if using a plugin)
+#       Suffix (before extension) for generated .cc and .h files
+#       or list of suffixes for all files (with extensions).
 #
 #   generator_plugin_options (optional)
 #       Extra flags passed to the plugin. See cc_generator_options.
@@ -99,43 +106,34 @@ template("proto_library") {
   }
 
   if (defined(invoker.generator_plugin_label)) {
-    generator_plugin_label = invoker.generator_plugin_label
-    generator_plugin_suffix = invoker.generator_plugin_suffix
-    generate_with_plugin = true
-
     # Straightforward way to get the name of executable doesn't work because
     # |root_out_dir| and |root_build_dir| may differ in cross-compilation and
     # also Windows executables have .exe at the end.
 
-    plugin_host_label = generator_plugin_label + "($host_toolchain)"
+    plugin_host_label = invoker.generator_plugin_label + "($host_toolchain)"
     plugin_path = get_label_info(plugin_host_label, "root_out_dir") + "/" +
                   get_label_info(plugin_host_label, "name")
     if (host_os == "win") {
       plugin_path += ".exe"
     }
-    plugin_path = rebase_path(plugin_path, root_build_dir)
+    generate_with_plugin = true
+  } else if (defined(invoker.generator_plugin_script)) {
+    plugin_path = invoker.generator_plugin_script
+    generate_with_plugin = true
   } else {
     generate_with_plugin = false
   }
 
-  # TODO(kraynov): Remove (in the next CL) merge conflict temporary workaround.
-  # This option along with |inputs| would be replaced by the following pattern:
-  # source_set("some_python_plugin") {
-  #   sources = [
-  #     "bar.py",
-  #     ...
-  #   ]
-  # }
-  # proto_library("some_proto_lib") {
-  #   generator_plugin_label = ":some_python_plugin"
-  #   generator_plugin_suffix = ".pb.foo"
-  #   generator_plugin_script = "bar.py"
-  # }
-  if (defined(invoker.json_converter)) {
-    generator_plugin_suffix = "_json_converter"
-    plugin_path = rebase_path(invoker.json_converter)
-    invoker.generator_plugin_options = "output_dir=:"
-    generate_with_plugin = true
+  if (generate_with_plugin) {
+    if (defined(invoker.generator_plugin_suffix)) {
+      generator_plugin_suffixes = [
+        "${invoker.generator_plugin_suffix}.h",
+        "${invoker.generator_plugin_suffix}.cc",
+      ]
+    } else {
+      generator_plugin_suffixes = invoker.generator_plugin_suffixes
+    }
+    plugin_path = rebase_path(plugin_path, root_build_dir)
   }
 
   if (defined(invoker.proto_in_dir)) {
@@ -201,14 +199,8 @@ template("proto_library") {
       protogens += [ "$py_out_dir/${proto_path}_pb2.py" ]
     }
     if (generate_with_plugin) {
-      # TODO(kraynov): Remove merge conflict temporary workaround.
-      if (defined(invoker.json_converter)) {
-        protogens += [ "$cc_out_dir/${proto_path}$generator_plugin_suffix.h" ]
-      } else {
-        protogens += [
-          "$cc_out_dir/${proto_path}$generator_plugin_suffix.h",
-          "$cc_out_dir/${proto_path}$generator_plugin_suffix.cc",
-        ]
+      foreach(suffix, generator_plugin_suffixes) {
+        protogens += [ "$cc_out_dir/${proto_path}${suffix}" ]
       }
     }
   }
@@ -224,8 +216,13 @@ template("proto_library") {
     outputs = get_path_info(protogens, "abspath")
     args = protos
 
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
+    if (defined(invoker.generator_plugin_script)) {
+      inputs = [
+        invoker.generator_plugin_script,
+      ]
+    }
+    if (defined(invoker.generator_plugin_script_deps)) {
+      inputs += invoker.generator_plugin_script_deps
     }
 
     protoc_label = "//third_party/protobuf:protoc($host_toolchain)"

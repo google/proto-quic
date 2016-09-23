@@ -52,7 +52,7 @@ UploadDataStream::~UploadDataStream() {
 }
 
 int UploadDataStream::Init(const CompletionCallback& callback,
-                           const BoundNetLog& net_log) {
+                           const NetLogWithSource& net_log) {
   Reset();
   DCHECK(!initialized_successfully_);
   DCHECK(callback_.is_null());
@@ -186,6 +186,14 @@ void UploadDataStream::OnReadCompleted(int result) {
 
   if (!callback_.is_null())
     base::ResetAndReturn(&callback_).Run(result);
+}
+
+UploadProgress UploadDataStream::GetUploadProgress() const {
+  // While initialization / rewinding is in progress, return nothing.
+  if (!initialized_successfully_)
+    return UploadProgress();
+
+  return UploadProgress(current_position_, total_size_);
 }
 
 }  // namespace net

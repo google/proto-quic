@@ -410,11 +410,12 @@ void NetLog::AddEntry(NetLogEventType type,
   FOR_EACH_OBSERVER(ThreadSafeObserver, observers_, OnAddEntryData(entry_data));
 }
 
-BoundNetLog::~BoundNetLog() {
+NetLogWithSource::~NetLogWithSource() {
   liveness_ = DEAD;
 }
 
-void BoundNetLog::AddEntry(NetLogEventType type, NetLogEventPhase phase) const {
+void NetLogWithSource::AddEntry(NetLogEventType type,
+                                NetLogEventPhase phase) const {
   CrashIfInvalid();
 
   if (!net_log_)
@@ -422,7 +423,7 @@ void BoundNetLog::AddEntry(NetLogEventType type, NetLogEventPhase phase) const {
   net_log_->AddEntry(type, source_, phase, NULL);
 }
 
-void BoundNetLog::AddEntry(
+void NetLogWithSource::AddEntry(
     NetLogEventType type,
     NetLogEventPhase phase,
     const NetLog::ParametersCallback& get_parameters) const {
@@ -433,38 +434,38 @@ void BoundNetLog::AddEntry(
   net_log_->AddEntry(type, source_, phase, &get_parameters);
 }
 
-void BoundNetLog::AddEvent(NetLogEventType type) const {
+void NetLogWithSource::AddEvent(NetLogEventType type) const {
   AddEntry(type, NetLogEventPhase::NONE);
 }
 
-void BoundNetLog::AddEvent(
+void NetLogWithSource::AddEvent(
     NetLogEventType type,
     const NetLog::ParametersCallback& get_parameters) const {
   AddEntry(type, NetLogEventPhase::NONE, get_parameters);
 }
 
-void BoundNetLog::BeginEvent(NetLogEventType type) const {
+void NetLogWithSource::BeginEvent(NetLogEventType type) const {
   AddEntry(type, NetLogEventPhase::BEGIN);
 }
 
-void BoundNetLog::BeginEvent(
+void NetLogWithSource::BeginEvent(
     NetLogEventType type,
     const NetLog::ParametersCallback& get_parameters) const {
   AddEntry(type, NetLogEventPhase::BEGIN, get_parameters);
 }
 
-void BoundNetLog::EndEvent(NetLogEventType type) const {
+void NetLogWithSource::EndEvent(NetLogEventType type) const {
   AddEntry(type, NetLogEventPhase::END);
 }
 
-void BoundNetLog::EndEvent(
+void NetLogWithSource::EndEvent(
     NetLogEventType type,
     const NetLog::ParametersCallback& get_parameters) const {
   AddEntry(type, NetLogEventPhase::END, get_parameters);
 }
 
-void BoundNetLog::AddEventWithNetErrorCode(NetLogEventType event_type,
-                                           int net_error) const {
+void NetLogWithSource::AddEventWithNetErrorCode(NetLogEventType event_type,
+                                                int net_error) const {
   DCHECK_NE(ERR_IO_PENDING, net_error);
   if (net_error >= 0) {
     AddEvent(event_type);
@@ -473,8 +474,8 @@ void BoundNetLog::AddEventWithNetErrorCode(NetLogEventType event_type,
   }
 }
 
-void BoundNetLog::EndEventWithNetErrorCode(NetLogEventType event_type,
-                                           int net_error) const {
+void NetLogWithSource::EndEventWithNetErrorCode(NetLogEventType event_type,
+                                                int net_error) const {
   DCHECK_NE(ERR_IO_PENDING, net_error);
   if (net_error >= 0) {
     EndEvent(event_type);
@@ -483,27 +484,28 @@ void BoundNetLog::EndEventWithNetErrorCode(NetLogEventType event_type,
   }
 }
 
-void BoundNetLog::AddByteTransferEvent(NetLogEventType event_type,
-                                       int byte_count,
-                                       const char* bytes) const {
+void NetLogWithSource::AddByteTransferEvent(NetLogEventType event_type,
+                                            int byte_count,
+                                            const char* bytes) const {
   AddEvent(event_type, base::Bind(BytesTransferredCallback, byte_count, bytes));
 }
 
-bool BoundNetLog::IsCapturing() const {
+bool NetLogWithSource::IsCapturing() const {
   CrashIfInvalid();
   return net_log_ && net_log_->IsCapturing();
 }
 
 // static
-BoundNetLog BoundNetLog::Make(NetLog* net_log, NetLogSourceType source_type) {
+NetLogWithSource NetLogWithSource::Make(NetLog* net_log,
+                                        NetLogSourceType source_type) {
   if (!net_log)
-    return BoundNetLog();
+    return NetLogWithSource();
 
   NetLog::Source source(source_type, net_log->NextID());
-  return BoundNetLog(source, net_log);
+  return NetLogWithSource(source, net_log);
 }
 
-void BoundNetLog::CrashIfInvalid() const {
+void NetLogWithSource::CrashIfInvalid() const {
   Liveness liveness = liveness_;
 
   if (liveness == ALIVE)

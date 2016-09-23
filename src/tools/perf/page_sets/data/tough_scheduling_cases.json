@@ -1,0 +1,38 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "tough_scheduling_cases_001.wpr": [
+            "split_animation.html", 
+            "http://www.latimes.com", 
+            "touch_handler_scrolling.html?slow_handler", 
+            "empty_touch_handler_desktop.html?bounce_desktop_slow_handler", 
+            "touch_handler_scrolling.html?janky_handler", 
+            "empty_touch_handler.html?slow_handler", 
+            "touch_handler_scrolling.html?occasionally_janky_handler", 
+            "touch_handler_scrolling.html?medium_handler", 
+            "touch_handler_scrolling.html?super_slow_handler", 
+            "div_touch_handler.html", 
+            "empty_touch_handler_desktop.html?desktop_slow_handler", 
+            "raf.html", 
+            "simple_text_page.html", 
+            "empty_touch_handler.html?bounce", 
+            "raf_canvas.html", 
+            "raf.html?gpu_bound", 
+            "empty_touch_handler.html?baseline", 
+            "raf.html?heavy_first_frame", 
+            "simple_text_page.html?main_busy", 
+            "raf_animation.html", 
+            "raf_touch_animation.html", 
+            "http://m.espn.go.com/nhl/rankings", 
+            "simple_text_page.html?main_very_busy", 
+            "sync_scroll_offset.html", 
+            "simple_touch_drag.html", 
+            "simple_text_page.html?medium_layers", 
+            "empty_touch_handler.html?bounce_slow_handler", 
+            "raf_touch_animation.html?medium", 
+            "simple_text_page.html?many_layers", 
+            "raf_touch_animation.html?heavy", 
+            "touch_handler_scrolling.html"
+        ]
+    }
+}

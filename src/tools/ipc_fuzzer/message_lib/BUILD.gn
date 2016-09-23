@@ -1,0 +1,44 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/features.gni")
+
+static_library("ipc_message_lib") {
+  configs += [ "//tools/ipc_fuzzer:ipc_fuzzer_tool_config" ]
+  public_deps = [
+    "//base",
+    "//chrome/common",
+    "//chrome/common/safe_browsing:proto",
+    "//components/content_settings/content/common",
+    "//components/network_hints/common",
+    "//components/pdf/common",
+    "//components/spellcheck/common",
+    "//components/tracing",
+    "//content/child",
+    "//content/public/child",
+    "//ipc",
+    "//media/cast:net",
+    "//ppapi/proxy:ipc",
+    "//skia",
+    "//third_party/WebKit/public:blink",
+    "//third_party/WebKit/public:blink_headers",
+    "//third_party/libjingle",
+    "//third_party/mt19937ar",
+    "//ui/accessibility:ax_gen",
+  ]
+  sources = [
+    "all_messages.h",
+    "message_cracker.h",
+    "message_file.h",
+    "message_file_format.h",
+    "message_file_reader.cc",
+    "message_file_writer.cc",
+    "message_names.cc",
+    "message_names.h",
+  ]
+
+  if (enable_nacl) {
+    public_deps += [ "//components/nacl/common" ]
+  }
+}

@@ -134,7 +134,7 @@ class NET_EXPORT UDPSocketWin
   // Returns true if the socket is already connected or bound.
   bool is_connected() const { return is_connected_; }
 
-  const BoundNetLog& NetLog() const { return net_log_; }
+  const NetLogWithSource& NetLog() const { return net_log_; }
 
   // Sets corresponding flags in |socket_options_| to allow the socket
   // to share the local address to which the socket will be bound with
@@ -317,7 +317,7 @@ class NET_EXPORT UDPSocketWin
   // External callback; called when write is complete.
   CompletionCallback write_callback_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   // QWAVE data. Used to set DSCP bits on outgoing packets.
   HANDLE qos_handle_;

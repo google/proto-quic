@@ -140,6 +140,9 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // carefully for production code.
   bool WaitUntilThreadStarted() const;
 
+  // Blocks until all tasks previously posted to this thread have been executed.
+  void FlushForTesting();
+
   // Signals the thread to exit and returns once the thread has exited. The
   // Thread object is completely reset and may be used as if it were newly
   // constructed (i.e., Start may be called again). Can only be called if

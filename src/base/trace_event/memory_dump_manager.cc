@@ -672,14 +672,14 @@ void MemoryDumpManager::OnTraceLogEnabled() {
     TRACE_EVENT_API_ADD_METADATA_EVENT(
         TraceLog::GetCategoryGroupEnabled("__metadata"), "stackFrames",
         "stackFrames",
-        WrapUnique(new SessionStateConvertableProxy<StackFrameDeduplicator>(
-            session_state, &MemoryDumpSessionState::stack_frame_deduplicator)));
+        MakeUnique<SessionStateConvertableProxy<StackFrameDeduplicator>>(
+            session_state, &MemoryDumpSessionState::stack_frame_deduplicator));
 
     TRACE_EVENT_API_ADD_METADATA_EVENT(
         TraceLog::GetCategoryGroupEnabled("__metadata"), "typeNames",
         "typeNames",
-        WrapUnique(new SessionStateConvertableProxy<TypeNameDeduplicator>(
-            session_state, &MemoryDumpSessionState::type_name_deduplicator)));
+        MakeUnique<SessionStateConvertableProxy<TypeNameDeduplicator>>(
+            session_state, &MemoryDumpSessionState::type_name_deduplicator));
   }
 
   {

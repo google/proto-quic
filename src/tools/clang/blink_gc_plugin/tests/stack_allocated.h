@@ -12,7 +12,7 @@ namespace blink {
 class HeapObject;
 
 class PartObject {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 private:
     Member<HeapObject> m_obj; // Needs tracing.
 };
@@ -23,12 +23,6 @@ private:
     Member<HeapObject> m_obj; // Does not need tracing.
 };
 
-class AnotherStackObject : public PartObject { // Invalid base.
-    STACK_ALLOCATED();
-private:
-    StackObject m_part; // Can embed a stack allocated object.
-};
-
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
     void trace(Visitor*);
@@ -36,10 +30,19 @@ private:
     StackObject m_part; // Cannot embed a stack allocated object.
 };
 
+// Cannot derive from both heap- and stack-allocated objects.
+class DerivedHeapObject : public HeapObject, public StackObject {
+};
+
+// Cannot be stack-allocated and derive from a heap-allocated object.
+class DerivedHeapObject2 : public HeapObject {
+  STACK_ALLOCATED();
+};
+
 // STACK_ALLOCATED is inherited.
 class DerivedStackObject : public StackObject {
 private:
-    AnotherStackObject m_anotherPart; // Also fine.
+    StackObject m_anotherPart; // Also fine.
 };
 
 }

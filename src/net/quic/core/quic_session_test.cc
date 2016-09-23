@@ -494,8 +494,6 @@ TEST_P(QuicSessionTestServer, TestBatchedWrites) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   // Encryption needs to be established before data can be sent.
   CryptoHandshakeMessage msg;
   session_.GetCryptoStream()->OnHandshakeMessage(msg);
@@ -544,8 +542,6 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   InSequence s;
 
   // Drive congestion control manually.
@@ -592,8 +588,6 @@ TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteWriterBlocks) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   // Drive congestion control manually in order to ensure that
   // application-limited signaling is handled correctly.
   MockSendAlgorithm* send_algorithm = new StrictMock<MockSendAlgorithm>;
@@ -683,8 +677,6 @@ TEST_P(QuicSessionTestServer, OnCanWriteWithClosedStream) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteLimitsNumWritesIfFlowControlBlocked) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   // Drive congestion control manually in order to ensure that
   // application-limited signaling is handled correctly.
   MockSendAlgorithm* send_algorithm = new StrictMock<MockSendAlgorithm>;

@@ -24,7 +24,7 @@ namespace net {
 QuicChromiumClientStream::QuicChromiumClientStream(
     QuicStreamId id,
     QuicClientSessionBase* session,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : QuicSpdyStream(id, session),
       net_log_(net_log),
       delegate_(nullptr),

@@ -1,0 +1,4 @@
+import("//build/args/blimp_engine.gn")
+is_debug = true
+use_goma = true
+is_component_build = true

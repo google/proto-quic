@@ -1,0 +1,26 @@
+# Fields automatically updated by update_remote_extensions.py.
+# Do not manually alter individual fields.
+# To manually add extension, append line:
+#     <extension_name>,<extension_id>,,
+# and run update_remote_extensions.py to update hash and version columns.
+# To manually remove extension, remove the entire line.
+extension_name,id,hash,version
+Avast Online Security,gomekmidlodglbbmalcneegieacbdmki,YTIzNDZlYjE4NWI5NzM4ZTExYTI0MDBhN2RkODg2ZGRiZTE5MTdlYg==,10.2.0.190
+Skype Click to Call,lifbcibllhkdhoafpjfnlhfpfgnpldfl,OWY2MTYwNDg0ZDkyNmNjZDlmMGNlMWUyOWFiNjJmMWMxZTY3N2ZlNw==,7.4.0.9058
+AdBlock,gighmmpiobklfepjocnamgkkbiglidom,NDNlMmEwZTNjMjFjNzk2OTQzMWFkMWYzYmZkM2Q2YjViODA0OTRkZQ==,2.36.2
+Bookmark Manager,gmlllbghnfkpflemihljekbapjopfjik,ZGJlNmRkMDE3N2I2ZTZlZmNjYjE5MTBkY2M5NDJkNTRlMDM3NTQ1Yg==,2.2015.611.10417
+Adblock Plus,cfhdojbkjhnklbpkdaibdccddilifddb,YjJhNjljMWFkNjFhNjA3ODk3OTJhNjVjZmY4ZTJmMzFkN2UyYzU0Nw==,1.9.1
+iLivid,nafaimnnclfjfedmmabolbppcngeolgf,MzdiZGE1NmRjODRlOTZjNmIwYTM0ZDVjYjJhYzcxZGJmOGZiYjg0YQ==,1.1
+SiteAdvisor,fheoggkfdfchfphceeifdbepaooicaho,MzE1YjNhYjg2Mjk0NTYwYTllZGJlYTk5MjMyZjYwZGNmOGNlMGQ2Mw==,4.0.0.0
+Avast SafePrice,eofcbnmajmjmplflapaojjnihcjkigck,MWVlYjBlYWYyZGUzNjQxMWE4NWRkNDczMzRlZWY5Nzc1N2M4Y2M0Yg==,10.2.0.190
+Norton Identity Safe,iikflkcanblccfahdhdonehdalibjnif,OTA1NGI5MThiZGFkOWRkNjAzNGQ2N2EzODdhNzUwNTNkZTIyMjAyZA==,1.0.5
+Application Launcher for Drive (by Google),lmjegmlicamnimmfhcmpkclmigmmcbeh,NWY0NjY2ZDNhNGNlOWU3MTY4MjlhMTE5MWFhZTk4Y2FlZTI5NmUwMQ==,3.2
+Norton Security Toolbar,mkfokfffehpeedafpekjeddnmnjhmcmk,NTdlOWVlZjQ0OTU3MDYyMzlhODEzZDc4N2FiYWIyNDhjMTQxYmI1Yw==,2014.7.12.29
+Ask App for iLivid,mppnoffgpafgpgbaigljliadgbnhljfl,ZTg5YzhhMWIyMDk5MGMzN2ZlNTU5ZGU3MjM5NjMwZTAyZTc1Y2E5NA==,1.1
+Avira Browser Safety,flliilndjeohchalpbbcdekjklbdgfkk,ZTk5NGQ4NzRiNWQ2ZGNmZmE1MWFlMTM3YWYxYzcwZTA1NmI3N2RlYw==,1.4.10
+MSN Homepage & Bing Search Engine,fcfenmboojpjinhpgggodefccipikbpd,NjNkNGVkZDFlNTYzNTBkOGY1ZDFiOWZmZGQyOWIxZDkzOWMwODM0Yg==,0.0.0.8
+Google Cast,boadgeojelhgndaghljhdicfkmllpafd,YjUzYTNhYzA5YWVlZDliZThkZjc1Mzc5Y2U3ZDIyNGRhMWQ4MGJlZQ==,15.623.0.6
+Adobe Acrobat - Create PDF,efaidnbmnnnibpcajpcglclefindmkaj,MjdkNzdjM2MwYzNhMDJmZDRlYTI1ODc3MjZkZGViMDJmMjkzNTFlMw==,15.0.0.0
+Cisco WebEx Extension,jlhmfgmfgeifomenelglieieghnjghma,NmQ0Y2VhMDI0OGU5YzcxNDAxZjdmYWZmYzBjNGUwZjgzYjI0YWZmYg==,1.0.1
+IDM Helper Module,ngpampappnmepgilojfohadhhmbhlaek,YzIzYzUwYmQ3MGNmOGRmMzFhOWE4OGI0NDg0ZWRhNzU1OTIxZGI5Zg==,6.22.3
+Pin It Button,gpdjojdkbbmdfjfahjcgigfpmkopogic,M2Q2NGU0ZTkwZDBhMmI5M2NkYzFkY2I2ZTFiYTFiZjE3ZDVhZjZhMQ==,1.38.2

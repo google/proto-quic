@@ -88,9 +88,8 @@ def main():
     f.write(split_manifest)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        [options.main_manifest] + build_utils.GetPythonDependencies())
+    deps = [options.main_manifest]
+    build_utils.WriteDepfile(options.depfile, options.out_manifest, deps)
 
 
 if __name__ == '__main__':

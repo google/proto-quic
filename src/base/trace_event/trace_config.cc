@@ -271,7 +271,7 @@ std::string TraceConfig::ToString() const {
 
 std::unique_ptr<ConvertableToTraceFormat>
 TraceConfig::AsConvertableToTraceFormat() const {
-  return WrapUnique(new ConvertableTraceConfigToTraceFormat(*this));
+  return MakeUnique<ConvertableTraceConfigToTraceFormat>(*this);
 }
 
 std::string TraceConfig::ToCategoryFilterString() const {

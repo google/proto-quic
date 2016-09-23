@@ -11,6 +11,9 @@ STATUS_CODE_OK = 0
 STATUS_CODE_ERROR = -1
 STATUS_CODE_FAILURE = -2
 
+# AndroidJUnitRunner would status output -3 to indicate a test is skipped
+STATUS_CODE_SKIP = -3
+
 # http://developer.android.com/reference/android/app/Activity.html
 RESULT_CODE_OK = -1
 RESULT_CODE_CANCELED = 0

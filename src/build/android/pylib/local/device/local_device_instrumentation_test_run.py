@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import logging
+import os
+import posixpath
 import re
 import time
 
@@ -11,8 +13,9 @@ from devil.android import flag_changer
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
 from pylib.base import base_test_result
+from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
-
+import tombstones
 
 TIMEOUT_ANNOTATIONS = [
   ('Manual', 10 * 60 * 60),
@@ -54,30 +57,31 @@ class LocalDeviceInstrumentationTestRun(
     self._flag_changers = {}
 
   def TestPackage(self):
-    return None
+    return self._test_instance.suite
 
   def SetUp(self):
-    def substitute_external_storage(d, external_storage):
+    def substitute_device_root(d, device_root):
       if not d:
-        return external_storage
+        return device_root
       elif isinstance(d, list):
-        return '/'.join(p if p else external_storage for p in d)
+        return posixpath.join(*(p if p else device_root for p in d))
       else:
         return d
 
-    @local_device_test_run.handle_shard_failures_with(
+    @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
     def individual_device_set_up(dev, host_device_tuples):
       def install_apk():
-        if self._test_instance.apk_under_test_incremental_install_script:
-          local_device_test_run.IncrementalInstall(
-              dev,
-              self._test_instance.apk_under_test,
-              self._test_instance.apk_under_test_incremental_install_script)
-        else:
-          permissions = self._test_instance.apk_under_test.GetPermissions()
-          dev.Install(self._test_instance.apk_under_test,
-                      permissions=permissions)
+        if self._test_instance.apk_under_test:
+          if self._test_instance.apk_under_test_incremental_install_script:
+            local_device_test_run.IncrementalInstall(
+                dev,
+                self._test_instance.apk_under_test,
+                self._test_instance.apk_under_test_incremental_install_script)
+          else:
+            permissions = self._test_instance.apk_under_test.GetPermissions()
+            dev.Install(self._test_instance.apk_under_test,
+                        permissions=permissions)
 
         if self._test_instance.test_apk_incremental_install_script:
           local_device_test_run.IncrementalInstall(
@@ -104,14 +108,19 @@ class LocalDeviceInstrumentationTestRun(
                                 check_return=True)
 
       def push_test_data():
-        external_storage = dev.GetExternalStoragePath()
+        device_root = posixpath.join(dev.GetExternalStoragePath(),
+                                     'chromium_tests_root')
         host_device_tuples_substituted = [
-            (h, substitute_external_storage(d, external_storage))
+            (h, substitute_device_root(d, device_root))
             for h, d in host_device_tuples]
         logging.info('instrumentation data deps:')
         for h, d in host_device_tuples_substituted:
           logging.info('%r -> %r', h, d)
-        dev.PushChangedFiles(host_device_tuples_substituted)
+        dev.PushChangedFiles(host_device_tuples_substituted,
+                             delete_device_stale=True)
+        if not host_device_tuples_substituted:
+          dev.RunShellCommand(['rm', '-rf', device_root], check_return=True)
+          dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
 
       def create_flag_changer():
         if self._test_instance.flags:
@@ -134,12 +143,16 @@ class LocalDeviceInstrumentationTestRun(
       else:
         for step in steps:
           step()
+      if self._test_instance.store_tombstones:
+        tombstones.ClearAllTombstones(dev)
 
     self._env.parallel_devices.pMap(
         individual_device_set_up,
         self._test_instance.GetDataDependencies())
 
   def TearDown(self):
+    @local_device_environment.handle_shard_failures_with(
+        self._env.BlacklistDevice)
     def individual_device_tear_down(dev):
       if str(dev) in self._flag_changers:
         self._flag_changers[str(dev)].Restore()
@@ -164,17 +177,20 @@ class LocalDeviceInstrumentationTestRun(
   def _GetTests(self):
     return self._test_instance.GetTests()
 
-  #override
   def _GetTestName(self, test):
+    # pylint: disable=no-self-use
     return '%s#%s' % (test['class'], test['method'])
 
-  def _GetTestNameForDisplay(self, test):
+  #override
+  def _GetUniqueTestName(self, test):
     display_name = self._GetTestName(test)
-    flags = test['flags']
-    if flags.add:
-      display_name = '%s with {%s}' % (display_name, ' '.join(flags.add))
-    if flags.remove:
-      display_name = '%s without {%s}' % (display_name, ' '.join(flags.remove))
+    if 'flags' in test:
+      flags = test['flags']
+      if flags.add:
+        display_name = '%s with {%s}' % (display_name, ' '.join(flags.add))
+      if flags.remove:
+        display_name = '%s without {%s}' % (
+            display_name, ' '.join(flags.remove))
     return display_name
 
   #override
@@ -183,6 +199,16 @@ class LocalDeviceInstrumentationTestRun(
 
     flags = None
     test_timeout_scale = None
+    if self._test_instance.coverage_directory:
+      coverage_basename = '%s.ec' % ('%s_group' % test[0]['method']
+          if isinstance(test, list) else test['method'])
+      extras['coverage'] = 'true'
+      coverage_directory = os.path.join(
+          device.GetExternalStoragePath(), 'chrome', 'test', 'coverage')
+      coverage_device_file = os.path.join(
+          coverage_directory, coverage_basename)
+      extras['coverageFile'] = coverage_device_file
+
     if isinstance(test, list):
       if not self._test_instance.driver_apk:
         raise Exception('driver_apk does not exist. '
@@ -206,13 +232,12 @@ class LocalDeviceInstrumentationTestRun(
       timeout = sum(timeouts)
     else:
       test_name = self._GetTestName(test)
-      test_display_name = test_name
+      test_display_name = self._GetUniqueTestName(test)
       target = '%s/%s' % (
           self._test_instance.test_package, self._test_instance.test_runner)
       extras['class'] = test_name
       if 'flags' in test:
         flags = test['flags']
-        test_display_name = self._GetTestNameForDisplay(test)
       timeout = self._GetTimeoutFromAnnotations(
         test['annotations'], test_display_name)
 
@@ -244,25 +269,88 @@ class LocalDeviceInstrumentationTestRun(
 
     # TODO(jbudorick): Make instrumentation tests output a JSON so this
     # doesn't have to parse the output.
-    logging.debug('output from %s:', test_display_name)
-    for l in output:
-      logging.debug('  %s', l)
-
     result_code, result_bundle, statuses = (
         self._test_instance.ParseAmInstrumentRawOutput(output))
     results = self._test_instance.GenerateTestResults(
         result_code, result_bundle, statuses, start_ms, duration_ms)
+
+    # Update the result name if the test used flags.
     if flags:
       for r in results:
         if r.GetName() == test_name:
           r.SetName(test_display_name)
+
+    # Add UNKNOWN results for any missing tests.
+    iterable_test = test if isinstance(test, list) else [test]
+    test_names = set(self._GetUniqueTestName(t) for t in iterable_test)
+    results_names = set(r.GetName() for r in results)
+    results.extend(
+        base_test_result.BaseTestResult(u, base_test_result.ResultType.UNKNOWN)
+        for u in test_names.difference(results_names))
+
+    # Update the result type if we detect a crash.
     if DidPackageCrashOnDevice(self._test_instance.test_package, device):
       for r in results:
         if r.GetType() == base_test_result.ResultType.UNKNOWN:
           r.SetType(base_test_result.ResultType.CRASH)
-    # TODO(jbudorick): ClearApplicationState on failure before switching
-    # instrumentation tests to platform mode (but respect --skip-clear-data).
+
+    # Handle failures by:
+    #   - optionally taking a screenshot
+    #   - logging the raw output at INFO level
+    #   - clearing the application state while persisting permissions
+    if any(r.GetType() not in (base_test_result.ResultType.PASS,
+                               base_test_result.ResultType.SKIP)
+           for r in results):
+      if self._test_instance.screenshot_dir:
+        file_name = '%s-%s.png' % (
+            test_display_name,
+            time.strftime('%Y%m%dT%H%M%S', time.localtime()))
+        saved_dir = device.TakeScreenshot(
+            os.path.join(self._test_instance.screenshot_dir, file_name))
+        logging.info(
+            'Saved screenshot for %s to %s.',
+            test_display_name, saved_dir)
+      logging.info('detected failure in %s. raw output:', test_display_name)
+      for l in output:
+        logging.info('  %s', l)
+      if (not self._env.skip_clear_data
+          and self._test_instance.package_info):
+        permissions = (
+            self._test_instance.apk_under_test.GetPermissions()
+            if self._test_instance.apk_under_test
+            else None)
+        device.ClearApplicationState(self._test_instance.package_info.package,
+                                     permissions=permissions)
+
+    else:
+      logging.debug('raw output from %s:', test_display_name)
+      for l in output:
+        logging.debug('  %s', l)
+    if self._test_instance.coverage_directory:
+      device.PullFile(coverage_directory,
+          self._test_instance.coverage_directory)
+      device.RunShellCommand('rm -f %s' % os.path.join(coverage_directory,
+          '*'))
+    if self._test_instance.store_tombstones:
+      for result in results:
+        if result.GetType() == base_test_result.ResultType.CRASH:
+          resolved_tombstones = tombstones.ResolveTombstones(
+              device,
+              resolve_all_tombstones=True,
+              include_stack_symbols=False,
+              wipe_tombstones=True)
+          result.SetTombstones('\n'.join(resolved_tombstones))
     return results
+
+  #override
+  def _ShouldRetry(self, test):
+    if 'RetryOnFailure' in test.get('annotations', {}):
+      return True
+
+    # TODO(jbudorick): Remove this log message once @RetryOnFailure has been
+    # enabled for a while. See crbug.com/619055 for more details.
+    logging.error('Default retries are being phased out. crbug.com/619055')
+    return False
 
   #override
   def _ShouldShard(self):

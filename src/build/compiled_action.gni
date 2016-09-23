@@ -81,8 +81,6 @@ template("compiled_action") {
          "compiled_action doesn't take a sources arg. Use inputs instead.")
 
   action(target_name) {
-    deps = []
-    inputs = []
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -91,6 +89,12 @@ template("compiled_action") {
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (!defined(inputs)) {
+      inputs = []
+    }
 
     script = "//build/gn_run_binary.py"
 
@@ -124,8 +128,6 @@ template("compiled_action_foreach") {
   assert(defined(invoker.args), "args must be defined for $target_name")
 
   action_foreach(target_name) {
-    deps = []
-    inputs = []
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -135,6 +137,12 @@ template("compiled_action_foreach") {
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (!defined(inputs)) {
+      inputs = []
+    }
 
     script = "//build/gn_run_binary.py"
 

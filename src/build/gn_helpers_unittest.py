@@ -27,6 +27,13 @@ class UnitTest(unittest.TestCase):
       parser = gn_helpers.GNValueParser('123 456')
       parser.Parse()
 
+  def test_ParseBool(self):
+    parser = gn_helpers.GNValueParser('true')
+    self.assertEqual(parser.Parse(), True)
+
+    parser = gn_helpers.GNValueParser('false')
+    self.assertEqual(parser.Parse(), False)
+
   def test_ParseNumber(self):
     parser = gn_helpers.GNValueParser('123')
     self.assertEqual(parser.ParseNumber(), 123)
@@ -68,6 +75,43 @@ class UnitTest(unittest.TestCase):
     with self.assertRaises(gn_helpers.GNException):
       parser = gn_helpers.GNValueParser('[1 2]')  # No separating comma.
       parser.ParseList()
+
+  def test_FromGNArgs(self):
+    # Booleans and numbers should work; whitespace is allowed works.
+    self.assertEqual(gn_helpers.FromGNArgs('foo = true\nbar = 1\n'),
+                     {'foo': True, 'bar': 1})
+
+    # Whitespace is not required; strings should also work.
+    self.assertEqual(gn_helpers.FromGNArgs('foo="bar baz"'),
+                     {'foo': 'bar baz'})
+
+    # Lists should work.
+    self.assertEqual(gn_helpers.FromGNArgs('foo=[1, 2, 3]'),
+                     {'foo': [1, 2, 3]})
+
+    # Empty strings should return an empty dict.
+    self.assertEqual(gn_helpers.FromGNArgs(''), {})
+    self.assertEqual(gn_helpers.FromGNArgs(' \n '), {})
+
+    # Non-identifiers should raise an exception.
+    with self.assertRaises(gn_helpers.GNException):
+      gn_helpers.FromGNArgs('123 = true')
+
+    # References to other variables should raise an exception.
+    with self.assertRaises(gn_helpers.GNException):
+      gn_helpers.FromGNArgs('foo = bar')
+
+    # References to functions should raise an exception.
+    with self.assertRaises(gn_helpers.GNException):
+      gn_helpers.FromGNArgs('foo = exec_script("//build/baz.py")')
+
+    # Underscores in identifiers should work.
+    self.assertEqual(gn_helpers.FromGNArgs('_foo = true'),
+                     {'_foo': True})
+    self.assertEqual(gn_helpers.FromGNArgs('foo_bar = true'),
+                     {'foo_bar': True})
+    self.assertEqual(gn_helpers.FromGNArgs('foo_=true'),
+                     {'foo_': True})
 
 if __name__ == '__main__':
   unittest.main()

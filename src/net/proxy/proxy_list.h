@@ -92,7 +92,7 @@ class NET_EXPORT_PRIVATE ProxyList {
   // is another server available in the list.
   bool Fallback(ProxyRetryInfoMap* proxy_retry_info,
                 int net_error,
-                const BoundNetLog& net_log);
+                const NetLogWithSource& net_log);
 
   // Updates |proxy_retry_info| to indicate that the first proxy in the list
   // is bad. This is distinct from Fallback(), above, to allow updating proxy
@@ -109,7 +109,7 @@ class NET_EXPORT_PRIVATE ProxyList {
       bool reconsider,
       const std::vector<ProxyServer>& additional_proxies_to_bypass,
       int net_error,
-      const BoundNetLog& net_log) const;
+      const NetLogWithSource& net_log) const;
 
  private:
   // Updates |proxy_retry_info| to indicate that the |proxy_to_retry| in
@@ -122,7 +122,7 @@ class NET_EXPORT_PRIVATE ProxyList {
                            bool try_while_bad,
                            const ProxyServer& proxy_to_retry,
                            int net_error,
-                           const BoundNetLog& net_log) const;
+                           const NetLogWithSource& net_log) const;
 
   // List of proxies.
   std::vector<ProxyServer> proxies_;

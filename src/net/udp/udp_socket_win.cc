@@ -257,7 +257,7 @@ UDPSocketWin::UDPSocketWin(DatagramSocket::BindType bind_type,
       read_iobuffer_len_(0),
       write_iobuffer_len_(0),
       recv_from_address_(NULL),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::UDP_SOCKET)),
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::UDP_SOCKET)),
       qos_handle_(NULL),
       qos_flow_id_(0) {
   EnsureWinsockInit();

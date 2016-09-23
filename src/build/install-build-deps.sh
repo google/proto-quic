@@ -109,7 +109,7 @@ dev_list="bison cdbs curl dpkg-dev elfutils devscripts fakeroot
           libwww-perl libxslt1-dev libxss-dev libxt-dev libxtst-dev openbox
           patch perl pkg-config python python-cherrypy3 python-crypto
           python-dev python-numpy python-opencv python-openssl python-psutil
-          python-yaml rpm ruby subversion ttf-dejavu-core wdiff zip
+          python-yaml rpm ruby subversion ttf-dejavu-core wdiff xcompmgr zip
           $chromeos_dev_list"
 
 # 64-bit systems need a minimum set of 32-bit compat packages for the pre-built
@@ -125,18 +125,19 @@ chromeos_lib_list="libpulse0 libbz2-1.0"
 lib_list="libatk1.0-0 libc6 libasound2 libcairo2 libcap2 libcups2 libexpat1
           libffi6 libfontconfig1 libfreetype6 libglib2.0-0 libgnome-keyring0
           libgtk2.0-0 libpam0g libpango1.0-0 libpci3 libpcre3 libpixman-1-0
-          libpng12-0 libspeechd2 libstdc++6 libsqlite3-0 libx11-6 libxau6
-          libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxdmcp6 libxext6
-          libxfixes3 libxi6 libxinerama1 libxrandr2 libxrender1 libxtst6
-          zlib1g $chromeos_lib_list"
+          libpng12-0 libspeechd2 libstdc++6 libsqlite3-0 libx11-6 libx11-xcb1
+          libxau6 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxdmcp6
+          libxext6 libxfixes3 libxi6 libxinerama1 libxrandr2 libxrender1
+          libxtst6 zlib1g $chromeos_lib_list"
 
 # Debugging symbols for all of the run-time libraries
 dbg_list="libatk1.0-dbg libc6-dbg libcairo2-dbg libffi6-dbg libfontconfig1-dbg
           libglib2.0-0-dbg libgtk2.0-0-dbg libpango1.0-0-dbg libpcre3-dbg
-          libpixman-1-0-dbg libsqlite3-0-dbg libx11-6-dbg libxau6-dbg
-          libxcb1-dbg libxcomposite1-dbg libxcursor1-dbg libxdamage1-dbg
-          libxdmcp6-dbg libxext6-dbg libxfixes3-dbg libxi6-dbg libxinerama1-dbg
-          libxrandr2-dbg libxrender1-dbg libxtst6-dbg zlib1g-dbg"
+          libpixman-1-0-dbg libsqlite3-0-dbg libx11-6-dbg libx11-xcb1-dbg
+          libxau6-dbg libxcb1-dbg libxcomposite1-dbg libxcursor1-dbg
+          libxdamage1-dbg libxdmcp6-dbg libxext6-dbg libxfixes3-dbg libxi6-dbg
+          libxinerama1-dbg libxrandr2-dbg libxrender1-dbg libxtst6-dbg
+          zlib1g-dbg"
 
 # Find the proper version of libstdc++6-4.x-dbg.
 if [ "x$lsb_release" = "xprecise" ]; then
@@ -243,28 +244,26 @@ if package_exists apache2-bin; then
 else
   dev_list="${dev_list} apache2.2-bin"
 fi
-if package_exists fonts-stix; then
-  dev_list="${dev_list} fonts-stix"
-else
+if package_exists xfonts-mathml; then
   dev_list="${dev_list} xfonts-mathml"
 fi
 if package_exists fonts-indic; then
-    dev_list="${dev_list} fonts-indic"
+  dev_list="${dev_list} fonts-indic"
 else
-    dev_list="${dev_list} ttf-indic-fonts"
+  dev_list="${dev_list} ttf-indic-fonts"
 fi
 if package_exists php7.0-cgi; then
-    dev_list="${dev_list} php7.0-cgi libapache2-mod-php7.0"
+  dev_list="${dev_list} php7.0-cgi libapache2-mod-php7.0"
 else
-    dev_list="${dev_list} php5-cgi libapache2-mod-php5"
+  dev_list="${dev_list} php5-cgi libapache2-mod-php5"
 fi
 # Ubuntu 16.04 has this package deleted.
 if package_exists ttf-kochi-gothic; then
-    dev_list="${dev_list} ttf-kochi-gothic"
+  dev_list="${dev_list} ttf-kochi-gothic"
 fi
 # Ubuntu 16.04 has this package deleted.
 if package_exists ttf-kochi-mincho; then
-    dev_list="${dev_list} ttf-kochi-mincho"
+  dev_list="${dev_list} ttf-kochi-mincho"
 fi
 
 # Some packages are only needed if the distribution actually supports
@@ -426,7 +425,7 @@ echo
 new_list_cmd="sudo apt-get install --reinstall $(echo $packages)"
 if new_list="$(yes n | LANGUAGE=en LANG=C $new_list_cmd)"; then
   # We probably never hit this following line.
-  echo "No missing packages, and the packages are up-to-date."
+  echo "No missing packages, and the packages are up to date."
 elif [ $? -eq 1 ]; then
   # We expect apt-get to have exit status of 1.
   # This indicates that we cancelled the install with "yes n|".
@@ -434,7 +433,7 @@ elif [ $? -eq 1 ]; then
     sed -e '1,/The following NEW packages will be installed:/d;s/^  //;t;d')
   new_list=$(echo "$new_list" | sed 's/ *$//')
   if [ -z "$new_list" ] ; then
-    echo "No missing packages, and the packages are up-to-date."
+    echo "No missing packages, and the packages are up to date."
   else
     echo "Installing missing packages: $new_list."
     sudo apt-get install ${do_quietly-} ${new_list}

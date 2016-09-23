@@ -20,6 +20,8 @@
 #ifndef TOOLS_CLANG_PLUGINS_FINDBADCONSTRUCTSCONSUMER_H_
 #define TOOLS_CLANG_PLUGINS_FINDBADCONSTRUCTSCONSUMER_H_
 
+#include <memory>
+
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
@@ -29,6 +31,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceLocation.h"
 
+#include "CheckIPCVisitor.h"
 #include "ChromeClassTester.h"
 #include "Options.h"
 #include "SuppressibleDiagnosticBuilder.h"
@@ -43,8 +46,14 @@ class FindBadConstructsConsumer
   FindBadConstructsConsumer(clang::CompilerInstance& instance,
                             const Options& options);
 
+  void Traverse(clang::ASTContext& context);
+
   // RecursiveASTVisitor:
-  bool VisitDecl(clang::Decl* decl);
+  bool TraverseDecl(clang::Decl* decl);
+  bool VisitTagDecl(clang::TagDecl* tag_decl);
+  bool VisitVarDecl(clang::VarDecl* var_decl);
+  bool VisitTemplateSpecializationType(clang::TemplateSpecializationType* spec);
+  bool VisitCallExpr(clang::CallExpr* call_expr);
 
   // ChromeClassTester overrides:
   void CheckChromeClass(clang::SourceLocation record_location,
@@ -97,6 +106,9 @@ class FindBadConstructsConsumer
 
   void CheckWeakPtrFactoryMembers(clang::SourceLocation record_location,
                                   clang::CXXRecordDecl* record);
+  void CheckVarDecl(clang::VarDecl* decl);
+
+  void ParseFunctionTemplates(clang::TranslationUnitDecl* decl);
 
   unsigned diag_method_requires_override_;
   unsigned diag_redundant_virtual_specifier_;
@@ -106,10 +118,13 @@ class FindBadConstructsConsumer
   unsigned diag_protected_non_virtual_dtor_;
   unsigned diag_weak_ptr_factory_order_;
   unsigned diag_bad_enum_last_value_;
+  unsigned diag_auto_deduced_to_a_pointer_type_;
   unsigned diag_note_inheritance_;
   unsigned diag_note_implicit_dtor_;
   unsigned diag_note_public_dtor_;
   unsigned diag_note_protected_non_virtual_dtor_;
+
+  std::unique_ptr<CheckIPCVisitor> ipc_visitor_;
 };
 
 }  // namespace chrome_checker

@@ -43,7 +43,7 @@ class NET_EXPORT ElementsUploadDataStream : public UploadDataStream {
   bool IsInMemory() const override;
   const std::vector<std::unique_ptr<UploadElementReader>>* GetElementReaders()
       const override;
-  int InitInternal(const net::BoundNetLog& net_log) override;
+  int InitInternal(const NetLogWithSource& net_log) override;
   int ReadInternal(IOBuffer* buf, int buf_len) override;
   void ResetInternal() override;
 

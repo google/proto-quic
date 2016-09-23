@@ -7,6 +7,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/AST/Attr.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -40,6 +41,9 @@ const char kWeakPtrFactoryOrder[] =
 const char kBadLastEnumValue[] =
     "[chromium-style] _LAST/Last constants of enum types must have the maximal "
     "value for any constant of that type.";
+const char kAutoDeducedToAPointerType[] =
+    "[chromium-style] auto variable type must not deduce to a raw pointer "
+    "type.";
 const char kNoteInheritance[] = "[chromium-style] %0 inherits from %1 here";
 const char kNoteImplicitDtor[] =
     "[chromium-style] No explicit destructor for %0 defined";
@@ -47,13 +51,6 @@ const char kNotePublicDtor[] =
     "[chromium-style] Public destructor declared here";
 const char kNoteProtectedNonVirtualDtor[] =
     "[chromium-style] Protected non-virtual destructor declared here";
-
-bool TypeHasNonTrivialDtor(const Type* type) {
-  if (const CXXRecordDecl* cxx_r = type->getAsCXXRecordDecl())
-    return !cxx_r->hasTrivialDestructor();
-
-  return false;
-}
 
 // Returns the underlying Type for |type| by expanding typedefs and removing
 // any namespace qualifiers. This is similar to desugaring, except that for
@@ -98,11 +95,53 @@ bool IsPodOrTemplateType(const CXXRecordDecl& record) {
          record.isDependentType();
 }
 
+// Use a local RAV implementation to simply collect all FunctionDecls marked for
+// late template parsing. This happens with the flag -fdelayed-template-parsing,
+// which is on by default in MSVC-compatible mode.
+std::set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
+  struct Visitor : public RecursiveASTVisitor<Visitor> {
+    bool VisitFunctionDecl(FunctionDecl* function_decl) {
+      if (function_decl->isLateTemplateParsed())
+        late_parsed_decls.insert(function_decl);
+      return true;
+    }
+
+    std::set<FunctionDecl*> late_parsed_decls;
+  } v;
+  v.TraverseDecl(decl);
+  return v.late_parsed_decls;
+}
+
+std::string GetAutoReplacementTypeAsString(QualType type) {
+  QualType non_reference_type = type.getNonReferenceType();
+  if (!non_reference_type->isPointerType())
+    return "auto";
+
+  std::string result =
+      GetAutoReplacementTypeAsString(non_reference_type->getPointeeType());
+  result += "*";
+  if (non_reference_type.isLocalConstQualified())
+    result += " const";
+  if (non_reference_type.isLocalVolatileQualified())
+    result += " volatile";
+  if (type->isReferenceType() && !non_reference_type.isLocalConstQualified()) {
+    if (type->isLValueReferenceType())
+      result += "&";
+    else if (type->isRValueReferenceType())
+      result += "&&";
+  }
+  return result;
+}
+
 }  // namespace
 
 FindBadConstructsConsumer::FindBadConstructsConsumer(CompilerInstance& instance,
                                                      const Options& options)
     : ChromeClassTester(instance, options) {
+  if (options.check_ipc) {
+    ipc_visitor_.reset(new CheckIPCVisitor(instance));
+  }
+
   // Messages for virtual method specifiers.
   diag_method_requires_override_ =
       diagnostic().getCustomDiagID(getErrorLevel(), kMethodRequiresOverride);
@@ -124,6 +163,8 @@ FindBadConstructsConsumer::FindBadConstructsConsumer(CompilerInstance& instance,
       diagnostic().getCustomDiagID(getErrorLevel(), kWeakPtrFactoryOrder);
   diag_bad_enum_last_value_ =
       diagnostic().getCustomDiagID(getErrorLevel(), kBadLastEnumValue);
+  diag_auto_deduced_to_a_pointer_type_ =
+      diagnostic().getCustomDiagID(getErrorLevel(), kAutoDeducedToAPointerType);
 
   // Registers notes to make it easier to interpret warnings.
   diag_note_inheritance_ =
@@ -136,22 +177,46 @@ FindBadConstructsConsumer::FindBadConstructsConsumer(CompilerInstance& instance,
       DiagnosticsEngine::Note, kNoteProtectedNonVirtualDtor);
 }
 
-bool FindBadConstructsConsumer::VisitDecl(clang::Decl* decl) {
-  clang::TagDecl* tag_decl = dyn_cast<clang::TagDecl>(decl);
-  if (tag_decl && tag_decl->isCompleteDefinition())
+void FindBadConstructsConsumer::Traverse(ASTContext& context) {
+  if (ipc_visitor_) {
+    ipc_visitor_->set_context(&context);
+    ParseFunctionTemplates(context.getTranslationUnitDecl());
+  }
+  RecursiveASTVisitor::TraverseDecl(context.getTranslationUnitDecl());
+  if (ipc_visitor_) ipc_visitor_->set_context(nullptr);
+}
+
+bool FindBadConstructsConsumer::TraverseDecl(Decl* decl) {
+  if (ipc_visitor_) ipc_visitor_->BeginDecl(decl);
+  bool result = RecursiveASTVisitor::TraverseDecl(decl);
+  if (ipc_visitor_) ipc_visitor_->EndDecl();
+  return result;
+}
+
+bool FindBadConstructsConsumer::VisitTagDecl(clang::TagDecl* tag_decl) {
+  if (tag_decl->isCompleteDefinition())
     CheckTag(tag_decl);
+  return true;
+}
+
+bool FindBadConstructsConsumer::VisitTemplateSpecializationType(
+    TemplateSpecializationType* spec) {
+  if (ipc_visitor_) ipc_visitor_->VisitTemplateSpecializationType(spec);
+  return true;
+}
+
+bool FindBadConstructsConsumer::VisitCallExpr(CallExpr* call_expr) {
+  if (ipc_visitor_) ipc_visitor_->VisitCallExpr(call_expr);
+  return true;
+}
+
+bool FindBadConstructsConsumer::VisitVarDecl(clang::VarDecl* var_decl) {
+  CheckVarDecl(var_decl);
   return true;
 }
 
 void FindBadConstructsConsumer::CheckChromeClass(SourceLocation record_location,
                                                  CXXRecordDecl* record) {
-  // By default, the clang checker doesn't check some types (templates, etc).
-  // That was only a mistake; once Chromium code passes these checks, we should
-  // remove the "check-templates" option and remove this code.
-  // See crbug.com/441916
-  if (!options_.check_templates && IsPodOrTemplateType(*record))
-    return;
-
   bool implementation_file = InImplementationFile(record_location);
 
   if (!implementation_file) {
@@ -228,6 +293,14 @@ void FindBadConstructsConsumer::CheckCtorDtorWeight(
   //   ...
   // } name_;
   if (record->getIdentifier() == NULL)
+    return;
+
+  // We don't handle unions.
+  if (record->isUnion())
+    return;
+
+  // Skip records that derive from ignored base classes.
+  if (HasIgnoredBases(record))
     return;
 
   // Count the number of templated base classes as a feature of whether the
@@ -560,12 +633,17 @@ void FindBadConstructsConsumer::CountType(const Type* type,
                                           int* templated_non_trivial_member) {
   switch (type->getTypeClass()) {
     case Type::Record: {
+      auto* record_decl = type->getAsCXXRecordDecl();
       // Simplifying; the whole class isn't trivial if the dtor is, but
       // we use this as a signal about complexity.
-      if (TypeHasNonTrivialDtor(type))
-        (*non_trivial_member)++;
-      else
+      // Note that if a record doesn't have a definition, it doesn't matter how
+      // it's counted, since the translation unit will fail to build. In that
+      // case, just count it as a trivial member to avoid emitting warnings that
+      // might be spurious.
+      if (!record_decl->hasDefinition() || record_decl->hasTrivialDestructor())
         (*trivial_member)++;
+      else
+        (*non_trivial_member)++;
       break;
     }
     case Type::TemplateSpecialization: {
@@ -720,7 +798,7 @@ unsigned FindBadConstructsConsumer::DiagnosticForIssue(RefcountIssue issue) {
 // ref-counting classes (base::RefCounted / base::RefCountedThreadSafe),
 // ensure that there are no public destructors in the class hierarchy. This
 // is to guard against accidentally stack-allocating a RefCounted class or
-// sticking it in a non-ref-counted container (like scoped_ptr<>).
+// sticking it in a non-ref-counted container (like std::unique_ptr<>).
 void FindBadConstructsConsumer::CheckRefCountedDtors(
     SourceLocation record_location,
     CXXRecordDecl* record) {
@@ -869,6 +947,76 @@ void FindBadConstructsConsumer::CheckWeakPtrFactoryMembers(
       diagnostic().Report(weak_ptr_factory_location,
                           diag_weak_ptr_factory_order_);
     }
+  }
+}
+
+// Copied from BlinkGCPlugin, see crrev.com/1135333007
+void FindBadConstructsConsumer::ParseFunctionTemplates(
+    TranslationUnitDecl* decl) {
+  if (!instance().getLangOpts().DelayedTemplateParsing)
+    return;  // Nothing to do.
+
+  std::set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(decl);
+  clang::Sema& sema = instance().getSema();
+
+  for (const FunctionDecl* fd : late_parsed_decls) {
+    assert(fd->isLateTemplateParsed());
+
+    if (instance().getSourceManager().isInSystemHeader(
+            instance().getSourceManager().getSpellingLoc(fd->getLocation())))
+      continue;
+
+    // Parse and build AST for yet-uninstantiated template functions.
+    clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd];
+    sema.LateTemplateParser(sema.OpaqueParser, *lpt);
+  }
+}
+
+void FindBadConstructsConsumer::CheckVarDecl(clang::VarDecl* var_decl) {
+  if (!options_.check_auto_raw_pointer)
+    return;
+
+  // Check whether auto deduces to a raw pointer.
+  QualType non_reference_type = var_decl->getType().getNonReferenceType();
+  // We might have a case where the type is written as auto*, but the actual
+  // type is deduced to be an int**. For that reason, keep going down the
+  // pointee type until we get an 'auto' or a non-pointer type.
+  for (;;) {
+    const clang::AutoType* auto_type =
+        non_reference_type->getAs<clang::AutoType>();
+    if (auto_type) {
+      if (auto_type->isDeduced()) {
+        QualType deduced_type = auto_type->getDeducedType();
+        if (!deduced_type.isNull() && deduced_type->isPointerType() &&
+            !deduced_type->isFunctionPointerType()) {
+          // Check if we should even be considering this type (note that there
+          // should be fewer auto types than banned namespace/directory types,
+          // so check this last.
+          if (!InBannedNamespace(var_decl) &&
+              !InBannedDirectory(var_decl->getLocStart())) {
+            // The range starts from |var_decl|'s loc start, which is the
+            // beginning of the full expression defining this |var_decl|. It
+            // ends, however, where this |var_decl|'s type loc ends, since
+            // that's the end of the type of |var_decl|.
+            // Note that the beginning source location of type loc omits cv
+            // qualifiers, which is why it's not a good candidate to use for the
+            // start of the range.
+            clang::SourceRange range(
+                var_decl->getLocStart(),
+                var_decl->getTypeSourceInfo()->getTypeLoc().getLocEnd());
+            ReportIfSpellingLocNotIgnored(range.getBegin(),
+                                          diag_auto_deduced_to_a_pointer_type_)
+                << FixItHint::CreateReplacement(
+                       range,
+                       GetAutoReplacementTypeAsString(var_decl->getType()));
+          }
+        }
+      }
+    } else if (non_reference_type->isPointerType()) {
+      non_reference_type = non_reference_type->getPointeeType();
+      continue;
+    }
+    break;
   }
 }
 

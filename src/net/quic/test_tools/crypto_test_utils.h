@@ -60,16 +60,17 @@ class CryptoTestUtils {
   // server in HandshakeWithFakeServer.
   struct FakeServerOptions {
     FakeServerOptions();
+    ~FakeServerOptions();
 
-    // If token_binding_enabled is true, then the server will attempt to
-    // negotiate Token Binding.
-    bool token_binding_enabled;
+    // The Token Binding params that the server supports and will negotiate.
+    QuicTagVector token_binding_params;
   };
 
   // FakeClientOptions bundles together a number of options for configuring
   // HandshakeWithFakeClient.
   struct FakeClientOptions {
     FakeClientOptions();
+    ~FakeClientOptions();
 
     // If channel_id_enabled is true then the client will attempt to send a
     // ChannelID.
@@ -79,9 +80,8 @@ class CryptoTestUtils {
     // ChannelIDSource for testing. Ignored if channel_id_enabled is false.
     bool channel_id_source_async;
 
-    // If token_binding_enabled is true, then the client will attempt to
-    // negotiate Token Binding.
-    bool token_binding_enabled;
+    // The Token Binding params that the client supports and will negotiate.
+    QuicTagVector token_binding_params;
   };
 
   // returns: the number of client hellos that the client sent.

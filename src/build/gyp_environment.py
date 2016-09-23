@@ -9,6 +9,7 @@ make sure settings are consistent between them, all setup should happen here.
 """
 
 import gyp_helper
+import mac_toolchain
 import os
 import sys
 import vs_toolchain
@@ -23,11 +24,9 @@ def SetEnvironment():
   # . -f / --format has precedence over the env var, no need to check for it
   # . set the env var only if it hasn't been set yet
   # . chromium.gyp_env has been applied to os.environ at this point already
-  if sys.platform.startswith(('linux', 'win', 'freebsd')) and \
+  if sys.platform.startswith(('linux', 'win', 'freebsd', 'darwin')) and \
       not os.environ.get('GYP_GENERATORS'):
-    os.environ['GYP_GENERATORS'] = 'ninja'
-  elif sys.platform == 'darwin' and not os.environ.get('GYP_GENERATORS') and \
-      not 'OS=ios' in os.environ.get('GYP_DEFINES', []):
     os.environ['GYP_GENERATORS'] = 'ninja'
 
   vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
+  mac_toolchain.SetToolchainEnvironment()

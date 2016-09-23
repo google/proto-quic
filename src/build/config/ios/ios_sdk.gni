@@ -9,11 +9,12 @@ declare_args() {
   ios_sdk_name = ""
   ios_sdk_version = ""
   ios_sdk_platform = ""
+  ios_sdk_platform_path = ""
   xcode_version = ""
   xcode_build = ""
   machine_os_build = ""
 
-  use_ios_simulator = target_cpu == "x86" || target_cpu == "x64"
+  use_ios_simulator = current_cpu == "x86" || current_cpu == "x64"
 
   # Version of iOS that we're targeting.
   ios_deployment_target = "9.0"
@@ -23,6 +24,43 @@ declare_args() {
   # ios_enable_code_signing_flag=<bool> flag to make the invocation clearer.
   ios_enable_code_signing = true
   ios_code_signing_identity = ""
+
+  # If non-empty, this list must contain valid cpu architecture, and the final
+  # build will be a multi-architecture build (aka fat build) supporting the
+  # main $target_cpu architecture and all of $additional_target_cpus.
+  #
+  # For example to build an application that will run on both arm64 and armv7
+  # devices, you would use the following in args.gn file when running "gn args":
+  #
+  #   target_os = "ios"
+  #   target_cpu = "arm64"
+  #   additional_target_cpus = [ "arm" ]
+  #
+  # You can also pass the value via "--args" parameter for "gn gen" command by
+  # using the syntax --args='additional_target_cpus=["arm"] target_cpu="arm64"'.
+  additional_target_cpus = []
+}
+
+assert(custom_toolchain == "" || additional_target_cpus == [],
+       "cannot define both custom_toolchain and additional_target_cpus")
+
+# Initialize additional_toolchains from additional_target_cpus. Assert here
+# that the list does not contains $target_cpu nor duplicates as this would
+# cause weird errors during the build.
+additional_toolchains = []
+if (additional_target_cpus != []) {
+  foreach(_additional_target_cpu, additional_target_cpus) {
+    assert(_additional_target_cpu != target_cpu,
+           "target_cpu must not be listed in additional_target_cpus")
+
+    _toolchain = "//build/toolchain/mac:ios_clang_$_additional_target_cpu"
+    foreach(_additional_toolchain, additional_toolchains) {
+      assert(_toolchain != _additional_toolchain,
+             "additional_target_cpus must not contains duplicate values")
+    }
+
+    additional_toolchains += [ _toolchain ]
+  }
 }
 
 if (ios_sdk_path == "") {
@@ -34,10 +72,12 @@ if (ios_sdk_path == "") {
     ios_sdk_name = "iphoneos"
     ios_sdk_platform = "iPhoneOS"
   }
-  _ios_sdk_result = exec_script("ios_sdk.py", [ ios_sdk_name ], "scope")
-  ios_sdk_path = _ios_sdk_result.ios_sdk_path
-  ios_sdk_version = _ios_sdk_result.ios_sdk_version
-  ios_sdk_build = _ios_sdk_result.ios_sdk_build
+  _ios_sdk_result =
+      exec_script("//build/config/mac/sdk_info.py", [ ios_sdk_name ], "scope")
+  ios_sdk_path = _ios_sdk_result.sdk_path
+  ios_sdk_version = _ios_sdk_result.sdk_version
+  ios_sdk_platform_path = _ios_sdk_result.sdk_platform_path
+  ios_sdk_build = _ios_sdk_result.sdk_build
   xcode_version = _ios_sdk_result.xcode_version
   xcode_build = _ios_sdk_result.xcode_build
   machine_os_build = _ios_sdk_result.machine_os_build
@@ -50,13 +90,7 @@ if (ios_sdk_path == "") {
   }
 }
 
-if (use_ios_simulator) {
-  # Always disable code signing on the simulator
-  ios_enable_code_signing = false
-  ios_code_signing_identity = ""
-}
-
-if (ios_enable_code_signing) {
+if (ios_enable_code_signing && !use_ios_simulator) {
   # If an identity is not provided, look for one on the host
   if (ios_code_signing_identity == "") {
     _ios_identities = exec_script("find_signing_identity.py", [], "list lines")
@@ -66,7 +100,7 @@ if (ios_enable_code_signing) {
   if (ios_code_signing_identity == "") {
     print("Tried to prepare a device build without specifying a code signing")
     print("identity and could not detect one automatically either.")
-    print("TIP: Simulator builds dont require code signing...")
+    print("TIP: Simulator builds don't require code signing...")
     assert(false)
   }
 }

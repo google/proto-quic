@@ -992,6 +992,8 @@ class NET_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
     // The pad field takes one octet on the wire.
     padding_payload_len_ = padding_len - 1;
   }
+  bool end_headers() const { return end_headers_; }
+  void set_end_headers(bool end_headers) { end_headers_ = end_headers; }
 
  private:
   bool has_priority_ = false;
@@ -1000,6 +1002,7 @@ class NET_EXPORT_PRIVATE SpdyHeadersIR : public SpdyFrameWithHeaderBlockIR {
   bool exclusive_ = false;
   bool padded_ = false;
   int padding_payload_len_ = 0;
+  bool end_headers_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyHeadersIR);
 };
@@ -1071,23 +1074,22 @@ class NET_EXPORT_PRIVATE SpdyPushPromiseIR : public SpdyFrameWithHeaderBlockIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyPushPromiseIR);
 };
 
-// TODO(jgraettinger): This representation needs review. SpdyContinuationIR
-// needs to frame a portion of a single, arbitrarily-broken encoded buffer.
-class NET_EXPORT_PRIVATE SpdyContinuationIR
-    : public SpdyFrameWithHeaderBlockIR {
+class NET_EXPORT_PRIVATE SpdyContinuationIR : public SpdyFrameWithStreamIdIR {
  public:
-  explicit SpdyContinuationIR(SpdyStreamId stream_id)
-      : SpdyContinuationIR(stream_id, SpdyHeaderBlock()) {}
-  SpdyContinuationIR(SpdyStreamId stream_id, SpdyHeaderBlock header_block)
-      : SpdyFrameWithHeaderBlockIR(stream_id, std::move(header_block)),
-        end_headers_(false) {}
+  explicit SpdyContinuationIR(SpdyStreamId stream_id);
+  ~SpdyContinuationIR() override;
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
   bool end_headers() const { return end_headers_; }
   void set_end_headers(bool end_headers) {end_headers_ = end_headers;}
+  const std::string& encoding() const { return *encoding_; }
+  void take_encoding(std::unique_ptr<std::string> encoding) {
+    encoding_ = std::move(encoding);
+  }
 
  private:
+  std::unique_ptr<std::string> encoding_;
   bool end_headers_;
   DISALLOW_COPY_AND_ASSIGN(SpdyContinuationIR);
 };

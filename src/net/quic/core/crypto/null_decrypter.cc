@@ -30,7 +30,7 @@ bool NullDecrypter::SetPreliminaryKey(StringPiece key) {
   return false;
 }
 
-bool NullDecrypter::SetDiversificationNonce(DiversificationNonce nonce) {
+bool NullDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
   QUIC_BUG << "Should not be called";
   return true;
 }

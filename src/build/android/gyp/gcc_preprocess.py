@@ -46,9 +46,7 @@ def main(args):
   DoGcc(options)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, options.output)
 
   if options.stamp:
     build_utils.Touch(options.stamp)

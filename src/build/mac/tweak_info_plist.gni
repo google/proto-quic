@@ -1,0 +1,46 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Template to run the tweak_info_plist.py script on a plist.
+#
+# Arguments:
+#
+#     info_plist:
+#         string, the plist to tweak.
+#
+#     args:
+#         list of string, the arguments to pass to the tweak_info_plist.py
+#         script.
+#
+# Callers should use get_target_outputs() to get the output name.
+template("tweak_info_plist") {
+  assert(defined(invoker.info_plist),
+         "The info_plist must be specified in $target_name")
+  assert(defined(invoker.args),
+         "The args to tweak_info_plist.py must be specified in $target_name")
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    script = "//build/mac/tweak_info_plist.py"
+    inputs = [
+      script,
+      "//build/util/version.py",
+      "//build/util/LASTCHANGE",
+      "//chrome/VERSION",
+    ]
+    sources = [
+      invoker.info_plist,
+    ]
+    _output_name = "$target_gen_dir/${target_name}_tweaked.plist"
+    outputs = [
+      _output_name,
+    ]
+    args = invoker.args + [
+             "--plist",
+             rebase_path(invoker.info_plist, root_build_dir),
+             "--output",
+             rebase_path(_output_name, root_build_dir),
+           ]
+  }
+}

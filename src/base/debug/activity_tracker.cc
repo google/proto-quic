@@ -481,8 +481,8 @@ void GlobalActivityTracker::CreateWithFile(const FilePath& file_path,
                               {0, static_cast<int64_t>(size)},
                               MemoryMappedFile::READ_WRITE_EXTEND);
   DCHECK(success);
-  CreateWithAllocator(WrapUnique(new FilePersistentMemoryAllocator(
-                          std::move(mapped_file), size, id, name, false)),
+  CreateWithAllocator(MakeUnique<FilePersistentMemoryAllocator>(
+                          std::move(mapped_file), size, id, name, false),
                       stack_depth);
 }
 #endif  // !defined(OS_NACL)
@@ -493,8 +493,7 @@ void GlobalActivityTracker::CreateWithLocalMemory(size_t size,
                                                   StringPiece name,
                                                   int stack_depth) {
   CreateWithAllocator(
-      WrapUnique(new LocalPersistentMemoryAllocator(size, id, name)),
-      stack_depth);
+      MakeUnique<LocalPersistentMemoryAllocator>(size, id, name), stack_depth);
 }
 
 ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {

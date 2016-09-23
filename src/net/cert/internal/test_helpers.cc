@@ -8,6 +8,7 @@
 #include "base/base_paths.h"
 #include "base/files/file_util.h"
 #include "base/path_service.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/pem_tokenizer.h"
 #include "net/der/parser.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -100,7 +101,7 @@ der::Input SequenceValueFromString(const std::string* s) {
   return ::testing::AssertionSuccess();
 }
 
-void ReadVerifyCertChainTestFromFile(const std::string& file_name,
+void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
                                      ParsedCertificateList* chain,
                                      scoped_refptr<TrustAnchor>* trust_anchor,
                                      der::GeneralizedTime* time,
@@ -110,8 +111,7 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
   *trust_anchor = nullptr;
   expected_errors->clear();
 
-  std::string file_data = ReadTestFileToString(
-      std::string("net/data/verify_certificate_chain_unittest/") + file_name);
+  std::string file_data = ReadTestFileToString(file_path_ascii);
 
   std::vector<std::string> pem_headers;
 
@@ -141,19 +141,17 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
     const std::string& block_data = pem_tokenizer.data();
 
     if (block_type == kCertificateHeader) {
-      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(
-          reinterpret_cast<const uint8_t*>(block_data.data()),
-          block_data.size(), net::ParsedCertificate::DataSource::INTERNAL_COPY,
-          {}, chain));
+      CertErrors errors;
+      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(block_data, {},
+                                                               chain, &errors))
+          << errors.ToDebugString();
     } else if (block_type == kTrustAnchorUnconstrained ||
                block_type == kTrustAnchorConstrained) {
       ASSERT_FALSE(*trust_anchor) << "Duplicate trust anchor";
+      CertErrors errors;
       scoped_refptr<ParsedCertificate> root =
-          net::ParsedCertificate::CreateFromCertificateData(
-              reinterpret_cast<const uint8_t*>(block_data.data()),
-              block_data.size(),
-              net::ParsedCertificate::DataSource::INTERNAL_COPY, {});
-      ASSERT_TRUE(root);
+          net::ParsedCertificate::Create(block_data, {}, &errors);
+      ASSERT_TRUE(root) << errors.ToDebugString();
       *trust_anchor =
           block_type == kTrustAnchorUnconstrained
               ? TrustAnchor::CreateFromCertificateNoConstraints(std::move(root))
@@ -181,11 +179,11 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_name,
   ASSERT_TRUE(*trust_anchor);
 }
 
-std::string ReadTestFileToString(const std::string& file_name) {
+std::string ReadTestFileToString(const std::string& file_path_ascii) {
   // Compute the full path, relative to the src/ directory.
   base::FilePath src_root;
   PathService::Get(base::DIR_SOURCE_ROOT, &src_root);
-  base::FilePath filepath = src_root.AppendASCII(file_name);
+  base::FilePath filepath = src_root.AppendASCII(file_path_ascii);
 
   // Read the full contents of the file.
   std::string file_data;

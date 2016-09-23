@@ -71,20 +71,13 @@ void QuicStreamFactoryPeer::SetTaskRunner(QuicStreamFactory* factory,
   factory->task_runner_ = task_runner;
 }
 
-int QuicStreamFactoryPeer::GetNumberOfLossyConnections(
-    QuicStreamFactory* factory,
-    uint16_t port) {
-  return factory->number_of_lossy_connections_[port];
-}
-
 QuicTime::Delta QuicStreamFactoryPeer::GetPingTimeout(
     QuicStreamFactory* factory) {
   return factory->ping_timeout_;
 }
 
-bool QuicStreamFactoryPeer::IsQuicDisabled(QuicStreamFactory* factory,
-                                           uint16_t port) {
-  return factory->IsQuicDisabled(port);
+bool QuicStreamFactoryPeer::IsQuicDisabled(QuicStreamFactory* factory) {
+  return factory->IsQuicDisabled();
 }
 
 bool QuicStreamFactoryPeer::GetDelayTcpRace(QuicStreamFactory* factory) {
@@ -111,7 +104,7 @@ QuicAsyncStatus QuicStreamFactoryPeer::StartCertVerifyJob(
     QuicStreamFactory* factory,
     const QuicServerId& server_id,
     int cert_verify_flags,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   return factory->StartCertVerifyJob(server_id, cert_verify_flags, net_log);
 }
 
@@ -130,16 +123,6 @@ size_t QuicStreamFactoryPeer::GetNumberOfActiveJobs(
     QuicStreamFactory* factory,
     const QuicServerId& server_id) {
   return (factory->active_jobs_[server_id]).size();
-}
-
-int QuicStreamFactoryPeer::GetNumTimeoutsWithOpenStreams(
-    QuicStreamFactory* factory) {
-  return factory->num_timeouts_with_open_streams_;
-}
-
-int QuicStreamFactoryPeer::GetNumPublicResetsPostHandshake(
-    QuicStreamFactory* factory) {
-  return factory->num_public_resets_post_handshake_;
 }
 
 void QuicStreamFactoryPeer::MaybeInitialize(QuicStreamFactory* factory) {

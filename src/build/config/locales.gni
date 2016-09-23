@@ -2,6 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Chrome on iOS only ships with a subset of the locales supported by other
+# version of Chrome as the corresponding locales are not supported by the
+# operating system (but for simplicity, the corresponding .pak files are
+# still generated).
+if (is_ios) {
+  ios_unsupported_locales = [
+    "am",
+    "bn",
+    "et",
+    "fil",
+    "gu",
+    "kn",
+    "lv",
+    "ml",
+    "mr",
+    "sl",
+    "sw",
+    "ta",
+    "te",
+  ]
+}
+
 # Note: keep in sync with below.
 locales = [
   "am",
@@ -15,7 +37,6 @@ locales = [
   "el",
   "en-GB",
   "en-US",
-  "es-419",
   "es",
   "et",
   "fa",
@@ -40,7 +61,6 @@ locales = [
   "nb",
   "nl",
   "pl",
-  "pt-BR",
   "pt-PT",
   "ro",
   "ru",
@@ -59,6 +79,24 @@ locales = [
   "zh-TW",
 ]
 
+# Chrome on iOS uses different names for "es-419" and "pt-BR" (called
+# respectively "es-MX" and "pt" on iOS).
+if (!is_ios) {
+  locales += [
+    "es-419",
+    "pt-BR",
+  ]
+} else {
+  locales += [
+    "es-MX",
+    "pt",
+  ]
+
+  ios_packed_locales = locales - ios_unsupported_locales
+}
+
+locales_with_fake_bidi = locales + [ "fake-bidi" ]
+
 # Same as the locales list but in the format Mac expects for output files:
 # it uses underscores instead of hyphens, and "en" instead of "en-US".
 locales_as_mac_outputs = [
@@ -73,7 +111,6 @@ locales_as_mac_outputs = [
   "el",
   "en_GB",
   "en",
-  "es_419",
   "es",
   "et",
   "fa",
@@ -98,7 +135,6 @@ locales_as_mac_outputs = [
   "nb",
   "nl",
   "pl",
-  "pt_BR",
   "pt_PT",
   "ro",
   "ru",
@@ -116,3 +152,20 @@ locales_as_mac_outputs = [
   "zh_CN",
   "zh_TW",
 ]
+
+# Chrome on iOS uses different names for "es-419" and "pt-BR" (called
+# respectively "es-MX" and "pt" on iOS).
+if (!is_ios) {
+  locales_as_mac_outputs += [
+    "es_419",
+    "pt_BR",
+  ]
+} else {
+  locales_as_mac_outputs += [
+    "es_MX",
+    "pt",
+  ]
+
+  ios_packed_locales_as_mac_outputs =
+      locales_as_mac_outputs - ios_unsupported_locales
+}

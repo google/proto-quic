@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<AutoVisualizer
+    xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="SkPoint">
+    <AlternativeType Name="SkIPoint"/>
+    <DisplayString>({fX}, {fY})</DisplayString>
+    <Expand>
+      <Item Name="X">fX</Item>
+      <Item Name="Y">fY</Item>
+    </Expand>
+  </Type>
+  <Type Name="SkSize">
+    <DisplayString>({fWidth}, {fHeight})</DisplayString>
+    <Expand>
+      <Item Name="Width">fWidth</Item>
+      <Item Name="Height">fHeight</Item>
+    </Expand>
+  </Type>
+  <Type Name="SkRect">
+    <AlternativeType Name="SkIRect"/>
+    <DisplayString>({fLeft}, {fTop}) x ({fRight - fLeft}, {fBottom - fTop})</DisplayString>
+    <Expand>
+      <Item Name="Left">fLeft</Item>
+      <Item Name="Top">fTop</Item>
+      <Item Name="Right">fRight</Item>
+      <Item Name="Bottom">fBottom</Item>
+      <Synthetic Name="Width">
+        <DisplayString>{fRight - fLeft}</DisplayString>
+      </Synthetic>
+      <Synthetic Name="Height">
+        <DisplayString>{fBottom - fTop}</DisplayString>
+      </Synthetic>
+    </Expand>
+  </Type>
+  <Type Name="LogFontTypeface">
+    <DisplayString>{fLogFont.lfFaceName,su}</DisplayString>
+  </Type>
+</AutoVisualizer>

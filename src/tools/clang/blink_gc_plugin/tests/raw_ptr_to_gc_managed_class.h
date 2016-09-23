@@ -12,11 +12,10 @@ namespace blink {
 class HeapObject;
 
 class PartObject {
-    DISALLOW_ALLOCATION();
+    DISALLOW_NEW();
 private:
     PartObject();
 
-    RawPtr<HeapObject> m_obj;
     HeapObject* m_rawObj;
     HeapObject& m_refObj;
 };

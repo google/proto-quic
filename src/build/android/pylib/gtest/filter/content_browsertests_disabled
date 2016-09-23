@@ -1,8 +1,5 @@
 # List of suppressions
 # Timeouts
-Http/MediaTest.*
-File/MediaTest.*
-MediaTest.*
 DatabaseTest.*
 
 # Crashes
@@ -23,11 +20,10 @@ DumpAccessibilityTreeTest.AccessibilityAriaProgressbar
 DumpAccessibilityTreeTest.AccessibilityListMarkers
 DumpAccessibilityTreeTest.AccessibilityUl
 DumpAccessibilityTreeTest.AccessibilityCanvas
-RendererAccessibilityTest.DetachAccessibilityObject
 DumpAccessibilityTreeTest.AccessibilityDialog
 DumpAccessibilityTreeTest.AccessibilityModalDialogClosed
 DumpAccessibilityTreeTest.AccessibilityModalDialogInIframeOpened
-RendererAccessibilityTest.EventOnObjectNotInTree
+RenderAccessibilityImplTest.DetachAccessibilityObject
 
 # http://crbug.com/187500
 RenderViewImplTest.ImeComposition

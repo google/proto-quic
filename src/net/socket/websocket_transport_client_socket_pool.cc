@@ -40,14 +40,14 @@ WebSocketTransportConnectJob::WebSocketTransportConnectJob(
     ClientSocketHandle* handle,
     Delegate* delegate,
     NetLog* pool_net_log,
-    const BoundNetLog& request_net_log)
+    const NetLogWithSource& request_net_log)
     : ConnectJob(
           group_name,
           timeout_duration,
           priority,
           respect_limits,
           delegate,
-          BoundNetLog::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
+          NetLogWithSource::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
@@ -324,7 +324,7 @@ int WebSocketTransportClientSocketPool::RequestSocket(
     RespectLimits respect_limits,
     ClientSocketHandle* handle,
     const CompletionCallback& callback,
-    const BoundNetLog& request_net_log) {
+    const NetLogWithSource& request_net_log) {
   DCHECK(params);
   const scoped_refptr<TransportSocketParams>& casted_params =
       *static_cast<const scoped_refptr<TransportSocketParams>*>(params);
@@ -362,44 +362,30 @@ int WebSocketTransportClientSocketPool::RequestSocket(
           ConnectionTimeout(), callback, client_socket_factory_, host_resolver_,
           handle, &connect_job_delegate_, pool_net_log_, request_net_log));
 
-  int rv = connect_job->Connect();
+  int result = connect_job->Connect();
+
   // Regardless of the outcome of |connect_job|, it will always be bound to
   // |handle|, since this pool uses early-binding. So the binding is logged
   // here, without waiting for the result.
   request_net_log.AddEvent(
       NetLogEventType::SOCKET_POOL_BOUND_TO_CONNECT_JOB,
       connect_job->net_log().source().ToEventParametersCallback());
-  if (rv == OK) {
-    HandOutSocket(connect_job->PassSocket(),
-                  connect_job->connect_timing(),
-                  handle,
-                  request_net_log);
-    request_net_log.EndEvent(NetLogEventType::SOCKET_POOL);
-  } else if (rv == ERR_IO_PENDING) {
+
+  if (result == ERR_IO_PENDING) {
     // TODO(ricea): Implement backup job timer?
     AddJob(handle, std::move(connect_job));
   } else {
-    std::unique_ptr<StreamSocket> error_socket;
-    connect_job->GetAdditionalErrorState(handle);
-    error_socket = connect_job->PassSocket();
-    if (error_socket) {
-      HandOutSocket(std::move(error_socket), connect_job->connect_timing(),
-                    handle, request_net_log);
-    }
+    TryHandOutSocket(result, connect_job.get());
   }
 
-  if (rv != ERR_IO_PENDING) {
-    request_net_log.EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL, rv);
-  }
-
-  return rv;
+  return result;
 }
 
 void WebSocketTransportClientSocketPool::RequestSockets(
     const std::string& group_name,
     const void* params,
     int num_sockets,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   NOTIMPLEMENTED();
 }
 
@@ -414,8 +400,8 @@ void WebSocketTransportClientSocketPool::CancelRequest(
     ReleaseSocket(handle->group_name(), std::move(socket), handle->id());
   if (!DeleteJob(handle))
     pending_callbacks_.erase(handle);
-  if (!ReachedMaxSocketsLimit() && !stalled_request_queue_.empty())
-    ActivateStalledRequest();
+
+  ActivateStalledRequest();
 }
 
 void WebSocketTransportClientSocketPool::ReleaseSocket(
@@ -425,11 +411,13 @@ void WebSocketTransportClientSocketPool::ReleaseSocket(
   WebSocketEndpointLockManager::GetInstance()->UnlockSocket(socket.get());
   CHECK_GT(handed_out_socket_count_, 0);
   --handed_out_socket_count_;
-  if (!ReachedMaxSocketsLimit() && !stalled_request_queue_.empty())
-    ActivateStalledRequest();
+
+  ActivateStalledRequest();
 }
 
 void WebSocketTransportClientSocketPool::FlushWithError(int error) {
+  DCHECK_NE(error, OK);
+
   // Sockets which are in LOAD_STATE_CONNECTING are in danger of unlocking
   // sockets waiting for the endpoint lock. If they connected synchronously,
   // then OnConnectJobComplete(). The |flushing_| flag tells this object to
@@ -506,47 +494,68 @@ bool WebSocketTransportClientSocketPool::IsStalled() const {
   return !stalled_request_queue_.empty();
 }
 
+bool WebSocketTransportClientSocketPool::TryHandOutSocket(
+    int result,
+    WebSocketTransportConnectJob* job) {
+  DCHECK_NE(result, ERR_IO_PENDING);
+
+  std::unique_ptr<StreamSocket> socket = job->PassSocket();
+  ClientSocketHandle* const handle = job->handle();
+  NetLogWithSource request_net_log = job->request_net_log();
+  LoadTimingInfo::ConnectTiming connect_timing = job->connect_timing();
+
+  if (result == OK) {
+    DCHECK(socket);
+
+    HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
+
+    request_net_log.EndEvent(NetLogEventType::SOCKET_POOL);
+
+    return true;
+  }
+
+  bool handed_out_socket = false;
+
+  // If we got a socket, it must contain error information so pass that
+  // up so that the caller can retrieve it.
+  job->GetAdditionalErrorState(handle);
+  if (socket) {
+    HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
+    handed_out_socket = true;
+  }
+
+  request_net_log.EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
+                                           result);
+
+  return handed_out_socket;
+}
+
 void WebSocketTransportClientSocketPool::OnConnectJobComplete(
     int result,
     WebSocketTransportConnectJob* job) {
   DCHECK_NE(ERR_IO_PENDING, result);
 
-  std::unique_ptr<StreamSocket> socket = job->PassSocket();
-
   // See comment in FlushWithError.
   if (flushing_) {
+    std::unique_ptr<StreamSocket> socket = job->PassSocket();
     WebSocketEndpointLockManager::GetInstance()->UnlockSocket(socket.get());
     return;
   }
 
-  BoundNetLog request_net_log = job->request_net_log();
+  bool handed_out_socket = TryHandOutSocket(result, job);
+
   CompletionCallback callback = job->callback();
-  LoadTimingInfo::ConnectTiming connect_timing = job->connect_timing();
 
   ClientSocketHandle* const handle = job->handle();
-  bool handed_out_socket = false;
 
-  if (result == OK) {
-    DCHECK(socket.get());
-    handed_out_socket = true;
-    HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
-    request_net_log.EndEvent(NetLogEventType::SOCKET_POOL);
-  } else {
-    // If we got a socket, it must contain error information so pass that
-    // up so that the caller can retrieve it.
-    job->GetAdditionalErrorState(handle);
-    if (socket.get()) {
-      handed_out_socket = true;
-      HandOutSocket(std::move(socket), connect_timing, handle, request_net_log);
-    }
-    request_net_log.EndEventWithNetErrorCode(NetLogEventType::SOCKET_POOL,
-                                             result);
-  }
   bool delete_succeeded = DeleteJob(handle);
   DCHECK(delete_succeeded);
-  if (!handed_out_socket && !stalled_request_queue_.empty() &&
-      !ReachedMaxSocketsLimit())
+
+  job = NULL;
+
+  if (!handed_out_socket)
     ActivateStalledRequest();
+
   InvokeUserCallbackLater(handle, callback, result);
 }
 
@@ -580,11 +589,12 @@ void WebSocketTransportClientSocketPool::HandOutSocket(
     std::unique_ptr<StreamSocket> socket,
     const LoadTimingInfo::ConnectTiming& connect_timing,
     ClientSocketHandle* handle,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(socket);
-  handle->SetSocket(std::move(socket));
   DCHECK_EQ(ClientSocketHandle::UNUSED, handle->reuse_type());
   DCHECK_EQ(0, handle->idle_time().InMicroseconds());
+
+  handle->SetSocket(std::move(socket));
   handle->set_pool_id(0);
   handle->set_connect_timing(connect_timing);
 
@@ -628,8 +638,6 @@ WebSocketTransportClientSocketPool::LookupConnectJob(
 }
 
 void WebSocketTransportClientSocketPool::ActivateStalledRequest() {
-  DCHECK(!stalled_request_queue_.empty());
-  DCHECK(!ReachedMaxSocketsLimit());
   // Usually we will only be able to activate one stalled request at a time,
   // however if all the connects fail synchronously for some reason, we may be
   // able to clear the whole queue at once.
@@ -637,11 +645,13 @@ void WebSocketTransportClientSocketPool::ActivateStalledRequest() {
     StalledRequest request(stalled_request_queue_.front());
     stalled_request_queue_.pop_front();
     stalled_request_map_.erase(request.handle);
+
     int rv = RequestSocket("ignored", &request.params, request.priority,
                            // Stalled requests can't have |respect_limits|
                            // DISABLED.
                            RespectLimits::ENABLED, request.handle,
                            request.callback, request.net_log);
+
     // ActivateStalledRequest() never returns synchronously, so it is never
     // called re-entrantly.
     if (rv != ERR_IO_PENDING)
@@ -678,7 +688,7 @@ WebSocketTransportClientSocketPool::StalledRequest::StalledRequest(
     RequestPriority priority,
     ClientSocketHandle* handle,
     const CompletionCallback& callback,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : params(params),
       priority(priority),
       handle(handle),

@@ -59,10 +59,11 @@ OCSPFailure ParseOCSP(const std::string& file_name) {
   der::BitString cert_signature_value;
   if (!ParseCertificate(ca_input, &issuer_tbs_certificate_tlv,
                         &issuer_signature_algorithm_tlv,
-                        &issuer_signature_value))
+                        &issuer_signature_value, nullptr))
     return PARSE_CERT;
   if (!ParseCertificate(cert_input, &cert_tbs_certificate_tlv,
-                        &cert_signature_algorithm_tlv, &cert_signature_value))
+                        &cert_signature_algorithm_tlv, &cert_signature_value,
+                        nullptr))
     return PARSE_CERT;
   OCSPResponse parsed_ocsp;
   OCSPResponseData parsed_ocsp_data;

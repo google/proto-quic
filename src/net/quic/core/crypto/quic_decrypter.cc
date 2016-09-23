@@ -33,13 +33,13 @@ QuicDecrypter* QuicDecrypter::Create(QuicTag algorithm) {
 // static
 void QuicDecrypter::DiversifyPreliminaryKey(StringPiece preliminary_key,
                                             StringPiece nonce_prefix,
-                                            DiversificationNonce nonce,
+                                            const DiversificationNonce& nonce,
                                             size_t key_size,
                                             size_t nonce_prefix_size,
                                             string* out_key,
                                             string* out_nonce_prefix) {
   crypto::HKDF hkdf(preliminary_key.as_string() + nonce_prefix.as_string(),
-                    StringPiece(nonce, kDiversificationNonceSize),
+                    StringPiece(nonce.data(), nonce.size()),
                     "QUIC key diversification", 0, key_size, 0,
                     nonce_prefix_size, 0);
   *out_key = hkdf.server_write_key().as_string();

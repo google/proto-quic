@@ -1,0 +1,27 @@
+{
+  "Android Builder (dbg)": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
+  "Android Builder ARM64 (dbg)": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
+  "Linux Builder": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
+  "Mac Builder": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
+  "Win Builder": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "maps_002.wpr": [
+            "http://localhost:10020/tracker.html"
+        ], 
+        "maps_004.wpr": [
+            "http://localhost:8000/performance.html"
+        ]
+    }
+}

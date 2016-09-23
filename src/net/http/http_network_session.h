@@ -125,12 +125,6 @@ class NET_EXPORT HttpNetworkSession
     bool quic_disable_disk_cache;
     // Prefer AES-GCM to ChaCha20 even if no hardware support is present.
     bool quic_prefer_aes;
-    // Specifies the maximum number of connections with high packet loss in
-    // a row after which QUIC will be disabled.
-    int quic_max_number_of_lossy_connections;
-    // Specifies packet loss rate in fraction after which a connection is
-    // closed and is considered as a lossy connection.
-    float quic_packet_loss_threshold;
     // Size in bytes of the QUIC DUP socket receive buffer.
     int quic_socket_receive_buffer_size;
     // Delay starting a TCP connection when QUIC believes it can speak
@@ -155,9 +149,6 @@ class NET_EXPORT HttpNetworkSession
     QuicCryptoClientStreamFactory* quic_crypto_client_stream_factory;
     // Versions of QUIC which may be used.
     QuicVersionVector quic_supported_versions;
-    int quic_max_recent_disabled_reasons;
-    int quic_threshold_public_resets_post_handshake;
-    int quic_threshold_timeouts_streams_open;
     // Set of QUIC tags to send in the handshake's connection options.
     QuicTagVector quic_connection_options;
     // If true, all QUIC sessions are closed when any local IP address changes.
@@ -273,18 +264,11 @@ class NET_EXPORT HttpNetworkSession
   // Populates |*alpn_protos| with protocols to be used with ALPN.
   void GetAlpnProtos(NextProtoVector* alpn_protos) const;
 
-  // Populates |*npn_protos| with protocols to be used with NPN.
-  void GetNpnProtos(NextProtoVector* npn_protos) const;
-
   // Populates |server_config| and |proxy_config| based on this session and
   // |request|.
   void GetSSLConfig(const HttpRequestInfo& request,
                     SSLConfig* server_config,
                     SSLConfig* proxy_config) const;
-
-  // TODO(ricea): Remove this by October 2016.
-  void IncrementActiveWebSockets() { ++active_websockets_; }
-  void DecrementActiveWebSockets() { --active_websockets_; }
 
  private:
   friend class HttpNetworkSessionPeer;
@@ -320,9 +304,6 @@ class NET_EXPORT HttpNetworkSession
   Params params_;
 
   std::unique_ptr<base::MemoryPressureListener> memory_pressure_listener_;
-
-  // TODO(ricea): Remove this by October 2016.
-  int active_websockets_ = 0;
 };
 
 }  // namespace net

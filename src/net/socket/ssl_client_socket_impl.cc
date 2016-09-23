@@ -70,10 +70,6 @@ namespace {
 // overlap with any value of the net::Error range, including net::OK).
 const int kNoPendingResult = 1;
 
-// If a client doesn't have a list of protocols that it supports, but
-// the server supports NPN, choosing "http/1.1" is the best answer.
-const char kDefaultSupportedNPNProtocol[] = "http/1.1";
-
 // Default size of the internal BoringSSL buffers.
 const int kDefaultOpenSSLBufferSize = 17 * 1024;
 
@@ -82,9 +78,9 @@ const unsigned int kTbExtNum = 24;
 
 // Token Binding ProtocolVersions supported.
 const uint8_t kTbProtocolVersionMajor = 0;
-const uint8_t kTbProtocolVersionMinor = 8;
+const uint8_t kTbProtocolVersionMinor = 10;
 const uint8_t kTbMinProtocolVersionMajor = 0;
-const uint8_t kTbMinProtocolVersionMinor = 6;
+const uint8_t kTbMinProtocolVersionMinor = 10;
 
 bool EVP_MDToPrivateKeyHash(const EVP_MD* md, SSLPrivateKey::Hash* hash) {
   switch (EVP_MD_type(md)) {
@@ -248,10 +244,6 @@ class SSLClientSocketImpl::SSLContext {
     // is currently not sent on the network.
     // TODO(haavardm): Remove setting quiet shutdown once 118366 is fixed.
     SSL_CTX_set_quiet_shutdown(ssl_ctx_.get(), 1);
-    // Note that SSL_OP_DISABLE_NPN is used to disable NPN if
-    // ssl_config_.next_proto is empty.
-    SSL_CTX_set_next_proto_select_cb(ssl_ctx_.get(), SelectNextProtoCallback,
-                                     NULL);
 
     // Disable the internal session cache. Session caching is handled
     // externally (i.e. by SSLClientSessionCache).
@@ -314,16 +306,6 @@ class SSLClientSocketImpl::SSLContext {
     CHECK(socket);
 
     return socket->CertVerifyCallback(store_ctx);
-  }
-
-  static int SelectNextProtoCallback(SSL* ssl,
-                                     unsigned char** out,
-                                     unsigned char* outlen,
-                                     const unsigned char* in,
-                                     unsigned int inlen,
-                                     void* arg) {
-    SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
-    return socket->SelectNextProtoCallback(out, outlen, in, inlen);
   }
 
   static int NewSessionCallback(SSL* ssl, SSL_SESSION* session) {
@@ -450,29 +432,33 @@ void SSLClientSocketImpl::PeerCertificateChain::Reset(STACK_OF(X509) * chain) {
 
 scoped_refptr<X509Certificate>
 SSLClientSocketImpl::PeerCertificateChain::AsOSChain() const {
-#if defined(USE_OPENSSL_CERTS)
-  // When OSCertHandle is typedef'ed to X509, this implementation does a short
-  // cut to avoid converting back and forth between DER and the X509 struct.
-  X509Certificate::OSCertHandles intermediates;
-  for (size_t i = 1; i < sk_X509_num(openssl_chain_.get()); ++i) {
-    intermediates.push_back(sk_X509_value(openssl_chain_.get(), i));
-  }
-
-  return X509Certificate::CreateFromHandle(
-      sk_X509_value(openssl_chain_.get(), 0), intermediates);
-#else
   // DER-encode the chain and convert to a platform certificate handle.
-  std::vector<base::StringPiece> der_chain;
+  std::vector<std::string> chain;
+  chain.reserve(sk_X509_num(openssl_chain_.get()));
   for (size_t i = 0; i < sk_X509_num(openssl_chain_.get()); ++i) {
     X509* x = sk_X509_value(openssl_chain_.get(), i);
-    base::StringPiece der;
-    if (!x509_util::GetDER(x, &der))
-      return NULL;
-    der_chain.push_back(der);
+    // Note: This intentionally avoids using x509_util::GetDER(), which may
+    // cache the encoded DER on |x|, as |x| is shared with the underlying
+    // socket (SSL*) this chain belongs to. As the DER will only be used
+    // once in //net, within this code, this avoids needlessly caching
+    // additional data. See https://crbug.com/642082
+    int len = i2d_X509(x, nullptr);
+    if (len < 0)
+      return nullptr;
+    std::string cert;
+    uint8_t* ptr = reinterpret_cast<uint8_t*>(base::WriteInto(&cert, len + 1));
+    len = i2d_X509(x, &ptr);
+    if (len < 0) {
+      NOTREACHED();
+      return nullptr;
+    }
+    chain.push_back(std::move(cert));
   }
+  std::vector<base::StringPiece> stringpiece_chain;
+  for (const auto& cert : chain)
+    stringpiece_chain.push_back(cert);
 
-  return X509Certificate::CreateFromDERCertChain(der_chain);
-#endif
+  return X509Certificate::CreateFromDERCertChain(stringpiece_chain);
 }
 
 // static
@@ -501,7 +487,7 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       channel_id_service_(context.channel_id_service),
       tb_was_negotiated_(false),
       tb_negotiated_param_(TB_PARAM_ECDSAP256),
-      tb_signed_ekm_map_(10),
+      tb_signature_map_(10),
       ssl_(NULL),
       transport_bio_(NULL),
       transport_(std::move(transport_socket)),
@@ -510,9 +496,7 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       ssl_session_cache_shard_(context.ssl_session_cache_shard),
       next_handshake_state_(STATE_NONE),
       disconnected_(false),
-      npn_status_(kNextProtoUnsupported),
       negotiated_protocol_(kProtoUnknown),
-      negotiation_extension_(kExtensionUnknown),
       channel_id_sent_(false),
       certificate_verified_(false),
       signature_result_(kNoPendingResult),
@@ -550,16 +534,16 @@ ChannelIDService* SSLClientSocketImpl::GetChannelIDService() const {
   return channel_id_service_;
 }
 
-Error SSLClientSocketImpl::GetSignedEKMForTokenBinding(
-    crypto::ECPrivateKey* key,
-    std::vector<uint8_t>* out) {
+Error SSLClientSocketImpl::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                                    TokenBindingType tb_type,
+                                                    std::vector<uint8_t>* out) {
   // The same key will be used across multiple requests to sign the same value,
   // so the signature is cached.
   std::string raw_public_key;
   if (!key->ExportRawPublicKey(&raw_public_key))
     return ERR_FAILED;
-  SignedEkmMap::iterator it = tb_signed_ekm_map_.Get(raw_public_key);
-  if (it != tb_signed_ekm_map_.end()) {
+  auto it = tb_signature_map_.Get(std::make_pair(tb_type, raw_public_key));
+  if (it != tb_signature_map_.end()) {
     *out = it->second;
     return OK;
   }
@@ -573,13 +557,13 @@ Error SSLClientSocketImpl::GetSignedEKMForTokenBinding(
     return ERR_FAILED;
   }
 
-  if (!SignTokenBindingEkm(
+  if (!CreateTokenBindingSignature(
           base::StringPiece(reinterpret_cast<char*>(tb_ekm_buf),
                             sizeof(tb_ekm_buf)),
-          key, out))
+          tb_type, key, out))
     return ERR_FAILED;
 
-  tb_signed_ekm_map_.Put(raw_public_key, *out);
+  tb_signature_map_.Put(std::make_pair(tb_type, raw_public_key), *out);
   return OK;
 }
 
@@ -597,17 +581,14 @@ int SSLClientSocketImpl::ExportKeyingMaterial(const base::StringPiece& label,
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  int rv = SSL_export_keying_material(
-      ssl_, out, outlen, label.data(), label.size(),
-      reinterpret_cast<const unsigned char*>(context.data()), context.length(),
-      has_context ? 1 : 0);
-
-  if (rv != 1) {
-    int ssl_error = SSL_get_error(ssl_, rv);
-    LOG(ERROR) << "Failed to export keying material;"
-               << " returned " << rv << ", SSL error code " << ssl_error;
-    return MapOpenSSLError(ssl_error, err_tracer);
+  if (!SSL_export_keying_material(
+          ssl_, out, outlen, label.data(), label.size(),
+          reinterpret_cast<const unsigned char*>(context.data()),
+          context.length(), has_context ? 1 : 0)) {
+    LOG(ERROR) << "Failed to export keying material.";
+    return ERR_FAILED;
   }
+
   return OK;
 }
 
@@ -693,7 +674,6 @@ void SSLClientSocketImpl::Disconnect() {
 
   start_cert_verification_time_ = base::TimeTicks();
 
-  npn_status_ = kNextProtoUnsupported;
   negotiated_protocol_ = kProtoUnknown;
 
   channel_id_sent_ = false;
@@ -746,7 +726,7 @@ int SSLClientSocketImpl::GetLocalAddress(IPEndPoint* addressList) const {
   return transport_->socket()->GetLocalAddress(addressList);
 }
 
-const BoundNetLog& SSLClientSocketImpl::NetLog() const {
+const NetLogWithSource& SSLClientSocketImpl::NetLog() const {
   return net_log_;
 }
 
@@ -803,11 +783,8 @@ bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl_);
   CHECK(cipher);
   ssl_info->security_bits = SSL_CIPHER_get_bits(cipher, NULL);
-  if (SSL_CIPHER_is_ECDHE(cipher)) {
-    ssl_info->key_exchange_info = SSL_get_curve_id(ssl_);
-  } else if (SSL_CIPHER_is_DHE(cipher)) {
-    ssl_info->key_exchange_info = SSL_get_dhe_group_size(ssl_);
-  }
+  // Historically, the "group" was known as "curve".
+  ssl_info->key_exchange_group = SSL_get_curve_id(ssl_);
 
   SSLConnectionStatusSetCipherSuite(
       static_cast<uint16_t>(SSL_CIPHER_get_id(cipher)),
@@ -969,8 +946,10 @@ int SSLClientSocketImpl::Init() {
 
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_min);
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_max);
-  SSL_set_min_version(ssl_, ssl_config_.version_min);
-  SSL_set_max_version(ssl_, ssl_config_.version_max);
+  if (!SSL_set_min_proto_version(ssl_, ssl_config_.version_min) ||
+      !SSL_set_max_proto_version(ssl_, ssl_config_.version_max)) {
+    return ERR_UNEXPECTED;
+  }
 
   // OpenSSL defaults some options to on, others to off. To avoid ambiguity,
   // set everything we care about to an absolute value.
@@ -1060,9 +1039,6 @@ int SSLClientSocketImpl::Init() {
     SSL_set_alpn_protos(ssl_, wire_protos.empty() ? NULL : &wire_protos[0],
                         wire_protos.size());
   }
-
-  if (ssl_config_.npn_protos.empty())
-    SSL_set_options(ssl_, SSL_OP_DISABLE_NPN);
 
   if (ssl_config_.signed_cert_timestamps_enabled) {
     SSL_enable_signed_cert_timestamps(ssl_);
@@ -1197,25 +1173,23 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   }
 
   // Check that if token binding was negotiated, then extended master secret
-  // must also be negotiated.
-  if (tb_was_negotiated_ && !SSL_get_extms_support(ssl_))
+  // and renegotiation indication must also be negotiated.
+  if (tb_was_negotiated_ &&
+      !(SSL_get_extms_support(ssl_) &&
+        SSL_get_secure_renegotiation_support(ssl_))) {
     return ERR_SSL_PROTOCOL_ERROR;
-
-  // SSL handshake is completed. If NPN wasn't negotiated, see if ALPN was.
-  if (npn_status_ == kNextProtoUnsupported) {
-    const uint8_t* alpn_proto = NULL;
-    unsigned alpn_len = 0;
-    SSL_get0_alpn_selected(ssl_, &alpn_proto, &alpn_len);
-    if (alpn_len > 0) {
-      base::StringPiece proto(reinterpret_cast<const char*>(alpn_proto),
-                              alpn_len);
-      negotiated_protocol_ = NextProtoFromString(proto);
-      npn_status_ = kNextProtoNegotiated;
-      negotiation_extension_ = kExtensionALPN;
-    }
   }
 
-  RecordNegotiationExtension();
+  const uint8_t* alpn_proto = NULL;
+  unsigned alpn_len = 0;
+  SSL_get0_alpn_selected(ssl_, &alpn_proto, &alpn_len);
+  if (alpn_len > 0) {
+    base::StringPiece proto(reinterpret_cast<const char*>(alpn_proto),
+                            alpn_len);
+    negotiated_protocol_ = NextProtoFromString(proto);
+  }
+
+  RecordNegotiatedProtocol();
   RecordChannelIDSupport();
 
   const uint8_t* ocsp_response_raw;
@@ -1272,11 +1246,9 @@ int SSLClientSocketImpl::DoChannelIDLookupComplete(int result) {
   // type.
   DCHECK(channel_id_key_);
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  int rv = SSL_set1_tls_channel_id(ssl_, channel_id_key_->key());
-  if (!rv) {
+  if (!SSL_set1_tls_channel_id(ssl_, channel_id_key_->key())) {
     LOG(ERROR) << "Failed to set Channel ID.";
-    int err = SSL_get_error(ssl_, rv);
-    return MapOpenSSLError(err, err_tracer);
+    return ERR_FAILED;
   }
 
   // Return to the handshake.
@@ -1294,18 +1266,13 @@ int SSLClientSocketImpl::DoVerifyCert(int result) {
   // OpenSSL decoded the certificate, but the platform certificate
   // implementation could not. This is treated as a fatal SSL-level protocol
   // error rather than a certificate error. See https://crbug.com/91341.
-  if (!server_cert_.get())
+  if (!server_cert_)
     return ERR_SSL_SERVER_CERT_BAD_FORMAT;
 
   // If the certificate is bad and has been previously accepted, use
   // the previous status and bypass the error.
-  base::StringPiece der_cert;
-  if (!x509_util::GetDER(server_cert_chain_->Get(0), &der_cert)) {
-    NOTREACHED();
-    return ERR_CERT_INVALID;
-  }
   CertStatus cert_status;
-  if (ssl_config_.IsAllowedBadCert(der_cert, &cert_status)) {
+  if (ssl_config_.IsAllowedBadCert(server_cert_.get(), &cert_status)) {
     server_cert_verify_result_.Reset();
     server_cert_verify_result_.cert_status = cert_status;
     server_cert_verify_result_.verified_cert = server_cert_;
@@ -1988,56 +1955,6 @@ int SSLClientSocketImpl::CertVerifyCallback(X509_STORE_CTX* store_ctx) {
   return 1;
 }
 
-// SelectNextProtoCallback is called by OpenSSL during the handshake. If the
-// server supports NPN, selects a protocol from the list that the server
-// provides. According to third_party/boringssl/src/ssl/ssl_lib.c, the
-// callback can assume that |in| is syntactically valid.
-int SSLClientSocketImpl::SelectNextProtoCallback(unsigned char** out,
-                                                 unsigned char* outlen,
-                                                 const unsigned char* in,
-                                                 unsigned int inlen) {
-  if (ssl_config_.npn_protos.empty()) {
-    *out = reinterpret_cast<uint8_t*>(
-        const_cast<char*>(kDefaultSupportedNPNProtocol));
-    *outlen = arraysize(kDefaultSupportedNPNProtocol) - 1;
-    npn_status_ = kNextProtoUnsupported;
-    return SSL_TLSEXT_ERR_OK;
-  }
-
-  // Assume there's no overlap between our protocols and the server's list.
-  npn_status_ = kNextProtoNoOverlap;
-
-  // For each protocol in server preference order, see if we support it.
-  for (unsigned int i = 0; i < inlen; i += in[i] + 1) {
-    for (NextProto next_proto : ssl_config_.npn_protos) {
-      const std::string proto = NextProtoToString(next_proto);
-      if (in[i] == proto.size() &&
-          memcmp(&in[i + 1], proto.data(), in[i]) == 0) {
-        // We found a match.
-        negotiated_protocol_ = next_proto;
-        *out = const_cast<unsigned char*>(in) + i + 1;
-        *outlen = in[i];
-        npn_status_ = kNextProtoNegotiated;
-        break;
-      }
-    }
-    if (npn_status_ == kNextProtoNegotiated)
-      break;
-  }
-
-  // If we didn't find a protocol, we select the last one from our list.
-  if (npn_status_ == kNextProtoNoOverlap) {
-    negotiated_protocol_ = ssl_config_.npn_protos.back();
-    // NextProtoToString returns a pointer to a static string.
-    const char* proto = NextProtoToString(negotiated_protocol_);
-    *out = reinterpret_cast<unsigned char*>(const_cast<char*>(proto));
-    *outlen = strlen(proto);
-  }
-
-  negotiation_extension_ = kExtensionNPN;
-  return SSL_TLSEXT_ERR_OK;
-}
-
 long SSLClientSocketImpl::MaybeReplayTransportError(BIO* bio,
                                                     int cmd,
                                                     const char* argp,
@@ -2148,7 +2065,7 @@ bool SSLClientSocketImpl::IsRenegotiationAllowed() const {
   if (tb_was_negotiated_)
     return false;
 
-  if (npn_status_ == kNextProtoUnsupported)
+  if (negotiated_protocol_ == kProtoUnknown)
     return ssl_config_.renego_allowed_default;
 
   for (NextProto allowed : ssl_config_.renego_allowed_for_protos) {
@@ -2338,26 +2255,9 @@ void SSLClientSocketImpl::LogConnectEndEvent(int rv) {
                     base::Bind(&NetLogSSLInfoCallback, base::Unretained(this)));
 }
 
-void SSLClientSocketImpl::RecordNegotiationExtension() const {
-  if (negotiation_extension_ == kExtensionUnknown)
-    return;
-  if (npn_status_ == kNextProtoUnsupported)
-    return;
-  base::HistogramBase::Sample sample =
-      static_cast<base::HistogramBase::Sample>(negotiated_protocol_);
-  // In addition to the protocol negotiated, we want to record which TLS
-  // extension was used, and in case of NPN, whether there was overlap between
-  // server and client list of supported protocols.
-  if (negotiation_extension_ == kExtensionNPN) {
-    if (npn_status_ == kNextProtoNoOverlap) {
-      sample += 1000;
-    } else {
-      sample += 500;
-    }
-  } else {
-    DCHECK_EQ(kExtensionALPN, negotiation_extension_);
-  }
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLProtocolNegotiation", sample);
+void SSLClientSocketImpl::RecordNegotiatedProtocol() const {
+  UMA_HISTOGRAM_ENUMERATION("Net.SSLNegotiatedAlpnProtocol",
+                            negotiated_protocol_, kProtoLast + 1);
 }
 
 void SSLClientSocketImpl::RecordChannelIDSupport() const {

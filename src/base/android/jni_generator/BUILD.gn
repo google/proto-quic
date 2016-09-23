@@ -1,0 +1,58 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/rules.gni")
+import("//testing/test.gni")
+
+# GYP: //base/android/jni_generator/jni_generator.gyp:jni_generator_py_tests
+action("jni_generator_py_tests") {
+  _stamp = "$target_gen_dir/jni_generator_py_tests.stamp"
+  inputs = [
+    "jni_generator.py",
+    "jni_generator_tests.py",
+    "java/src/org/chromium/example/jni_generator/SampleForTests.java",
+    "golden_sample_for_tests_jni.h",
+  ]
+  outputs = [
+    _stamp,
+  ]
+  script = "jni_generator_tests.py"
+  args = [
+    "--stamp",
+    rebase_path(_stamp, root_build_dir),
+  ]
+}
+
+# GYP: //base/android/jni_generator/jni_generator.gyp:jni_sample_header
+generate_jni("jni_sample_header") {
+  sources = [
+    "java/src/org/chromium/example/jni_generator/SampleForTests.java",
+  ]
+  jni_package = "example"
+}
+
+# GYP: //base/android/jni_generator/jni_generator.gyp:jni_sample_java
+android_library("jni_sample_java") {
+  java_files =
+      [ "java/src/org/chromium/example/jni_generator/SampleForTests.java" ]
+  deps = [
+    "//base:base_java",
+  ]
+}
+
+# This executable doesn't actually run, but at least serves to test that
+# generated bindings compile properly.
+# GYP: //base/android/jni_generator/jni_generator.gyp:jni_generator_tests
+executable("jni_generator_tests") {
+  deps = [
+    ":jni_generator_py_tests",
+    ":jni_sample_header",
+    ":jni_sample_java",
+    "//base",
+  ]
+  sources = [
+    "sample_for_tests.cc",
+    "sample_for_tests.h",
+  ]
+}

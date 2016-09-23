@@ -8,9 +8,16 @@
 """
 
 import optparse
+import os
 import shutil
 import sys
 import tempfile
+import zipfile
+
+# resource_sizes modifies zipfile for zip64 compatibility. See
+# https://bugs.python.org/issue14315.
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
+import resource_sizes  # pylint: disable=unused-import
 
 from util import build_utils
 
@@ -142,6 +149,24 @@ def FinalizeApk(options):
     signed_apk_path = signed_apk_path_tmp.name
     JarSigner(options.key_path, options.key_name, options.key_passwd,
               apk_to_sign, signed_apk_path)
+
+    # Make the signing files hermetic.
+    with tempfile.NamedTemporaryFile(suffix='.zip') as hermetic_signed_apk:
+      with zipfile.ZipFile(signed_apk_path, 'r') as zi:
+        with zipfile.ZipFile(hermetic_signed_apk, 'w') as zo:
+          for info in zi.infolist():
+            # Ignore 'extended local file headers'. Python doesn't write them
+            # properly (see https://bugs.python.org/issue1742205) which causes
+            # zipalign to miscalculate alignment. Since we don't use them except
+            # for alignment anyway, we write a stripped file here and let
+            # zipalign add them properly later. eLFHs are controlled by 'general
+            # purpose bit flag 03' (0x08) so we mask that out.
+            info.flag_bits = info.flag_bits & 0xF7
+
+            info.date_time = build_utils.HERMETIC_TIMESTAMP
+            zo.writestr(info, zi.read(info.filename))
+
+      shutil.copy(hermetic_signed_apk.name, signed_apk_path)
 
     if options.load_library_from_zip:
       # Reorder the contents of the APK. This re-establishes the canonical

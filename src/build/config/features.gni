@@ -2,21 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file contains Chrome-feature-related build flags (see ui.gni for
-# UI-related ones). These should theoretically be moved to the build files of
-# the features themselves.
+# =============================================
+#   PLEASE DO NOT ADD MORE FLAGS TO THIS FILE
+# =============================================
 #
-# However, today we have many "bad" dependencies on some of these flags from,
-# e.g. base, so they need to be global to match the GYP configuration. Also,
-# anything that needs a grit define must be in either this file or ui.gni.
+# These flags are effectively global. Your feature flag should go near the
+# code it controls. Most of these items are here now because they control
+# legacy global #defines passed to the compiler (now replaced with generated
+# buildflag headers -- see //build/buildflag_header.gni).
 #
-# PLEASE TRY TO AVOID ADDING FLAGS TO THIS FILE in cases where grit isn't
-# required. See the declare_args block of BUILDCONFIG.gn for advice on how
-# to set up feature flags.
+# There is more advice on where to put build flags in the "Build flag" section
+# of //build/config/BUILDCONFIG.gn.
 
 import("//build/config/chrome_build.gni")
 import("//build/config/chromecast_build.gni")
-import("//build/config/headless_build.gni")
 if (is_android) {
   import("//build/config/android/config.gni")
 }
@@ -30,9 +29,13 @@ declare_args() {
   enable_pdf = !is_android && !is_ios && !is_chromecast
 
   # Enables Native Client support.
+  # Temporarily disable nacl on arm64 linux to get rid of compilation errors.
   # TODO(mcgrathr): When mipsel-nacl-clang is available, drop the exclusion.
-  enable_nacl =
-      !is_ios && !is_android && !is_chromecast && current_cpu != "mipsel"
+  enable_nacl = !is_ios && !is_android && !is_chromecast &&
+                current_cpu != "mipsel" && !(is_linux && target_cpu == "arm64")
+
+  # Non-SFI is not yet supported on mipsel
+  enable_nacl_nonsfi = current_cpu != "mipsel"
 
   # If debug_devtools is set to true, JavaScript files for DevTools are stored
   # as is and loaded from disk. Otherwise, a concatenated file is stored in
@@ -44,32 +47,25 @@ declare_args() {
   enable_webrtc = !is_ios
 
   # Enables the Media Router.
-  enable_media_router = !is_ios
+  enable_media_router = !is_ios && !is_chromecast
 
   # Enables proprietary codecs and demuxers; e.g. H264, AAC, MP3, and MP4.
   # We always build Google Chrome and Chromecast with proprietary codecs.
   proprietary_codecs = is_chrome_branded || is_chromecast
 
-  enable_configuration_policy = !is_ios
-
-  enable_captive_portal_detection = !is_android && !is_ios
+  enable_captive_portal_detection = !is_android && !is_ios && !is_chromecast
 
   # Enables use of the session service, which is enabled by default.
   # Android stores them separately on the Java side.
-  enable_session_service = !is_android && !is_ios
+  enable_session_service = !is_android && !is_ios && !is_chromecast
 
   enable_plugin_installation = is_win || is_mac
 
-  enable_app_list = !is_ios && !is_android
+  enable_app_list = is_chromeos
 
-  enable_supervised_users = !is_ios
+  enable_supervised_users = !is_ios && !is_chromecast
 
-  enable_autofill_dialog = !is_ios
-
-  enable_remoting = !is_ios && !is_chromecast && !is_headless
-
-  # Enable hole punching for the protected video.
-  enable_video_hole = is_android
+  enable_remoting = !is_ios && !is_chromecast
 
   # Enables browser side Content Decryption Modules. Required for embedders
   # (e.g. Android and ChromeCast) that use a browser side CDM.
@@ -85,7 +81,7 @@ declare_args() {
   # external API.
   if (is_android) {
     safe_browsing_mode = 2
-  } else if (is_ios) {
+  } else if (is_ios || is_chromecast) {
     safe_browsing_mode = 0
   } else {
     safe_browsing_mode = 1
@@ -96,22 +92,41 @@ declare_args() {
   # Note: this setting is ignored if is_chrome_branded.
   fieldtrial_testing_like_official_build = is_chrome_branded
 
-  use_cups = (is_desktop_linux || is_mac) && !is_chromecast && !is_headless
+  use_cups = (is_desktop_linux || is_mac) && !is_chromecast
 
   # Enables Wi-Fi Display functionality
   # WARNING: This enables MPEG Transport Stream (MPEG-TS) encoding!
   enable_wifi_display = false
+
+  # libudev usage. This currently only affects the content layer.
+  use_udev = is_linux && !is_chromecast
+
+  use_dbus = is_linux && !is_chromecast
+
+  # Option controlling the use of GConf (the classic GNOME configuration
+  # system).
+  use_gconf = is_linux && !is_chromeos && !is_chromecast
+
+  use_gio = is_linux && !is_chromeos && !is_chromecast
+
+  # Enable basic printing support and UI.
+  enable_basic_printing = !is_chromecast && !is_ios
+
+  # Enable printing with print preview. It does not imply
+  # enable_basic_printing. It's possible to build Chrome with preview only.
+  enable_print_preview = !is_android && !is_chromecast && !is_ios
+
+  # Whether or not to use external popup menu.
+  use_external_popup_menu = is_android || is_mac
+
+  # Enable WebVR support by default on Android
+  # Still requires command line flag to access API
+  enable_webvr = is_android && is_component_build &&
+                 (current_cpu == "x86" || current_cpu == "x64" ||
+                  current_cpu == "arm" || current_cpu == "arm64")
 }
 
 # Additional dependent variables -----------------------------------------------
-
-# Set the version of CLD.
-#   1: (DEPRECATED! See http://crbug.com/528305 for info) Use only CLD1.
-#   2: Use only CLD2.
-cld_version = 2
-
-# libudev usage. This currently only affects the content layer.
-use_udev = is_linux && !is_chromecast && !is_headless
 
 # Enable the spell checker.
 enable_spellcheck = !is_ios
@@ -119,13 +134,8 @@ enable_spellcheck = !is_ios
 # Use the operating system's spellchecker rather than hunspell.
 use_browser_spellchecker = is_android || is_mac
 
-# Enable basic printing support and UI.
-enable_basic_printing =
-    !is_chromeos && !is_chromecast && !is_ios && !is_headless
-
-# Enable printing with print preview. It does not imply
-# enable_basic_printing. It's possible to build Chrome with preview only.
-enable_print_preview = !is_android && !is_chromecast && !is_ios && !is_headless
+# Use Minikin hyphenation engine.
+use_minikin_hyphenation = is_android
 
 # Enables the use of CDMs in pepper plugins.
 enable_pepper_cdms =
@@ -145,8 +155,6 @@ enable_notifications = !is_ios
 
 enable_web_speech = !is_android && !is_ios
 
-use_dbus = is_linux && !is_chromecast && !is_headless
-
 enable_task_manager = !is_ios && !is_android
 
 enable_themes = !is_android && !is_ios
@@ -155,8 +163,6 @@ enable_themes = !is_android && !is_ios
 # rlz codes for searches but do not use the library.
 enable_rlz_support = is_win || is_mac || is_ios || is_chromeos
 enable_rlz = is_chrome_branded && enable_rlz_support
-
-enable_settings_app = enable_app_list && !is_chromeos
 
 enable_service_discovery = enable_mdns || is_mac
 
@@ -170,12 +176,12 @@ enable_chromevox_next = false
 # Use brlapi from brltty for braille display support.
 use_brlapi = is_chromeos
 
-# Option controlling the use of GConf (the classic GNOME configuration
-# system).
-use_gconf = is_linux && !is_chromeos && !is_chromecast && !is_headless
+enable_configuration_policy = !is_ios
 
-# Enable WebVR support by default on Android
-# Still requires command line flag to access API
-enable_webvr = is_android
-
-use_gio = is_linux && !is_chromeos && !is_chromecast && !is_headless
+enable_mac_keystone = is_mac && is_chrome_branded && is_official_build
+#
+# =============================================
+#   PLEASE DO NOT ADD MORE FLAGS TO THIS FILE
+# =============================================
+#
+# See comment at the top.

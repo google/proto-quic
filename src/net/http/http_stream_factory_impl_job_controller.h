@@ -38,7 +38,7 @@ class HttpStreamFactoryImpl::JobController
                  HttpStreamRequest::Delegate* delegate,
                  WebSocketHandshakeStreamBase::CreateHelper*
                      websocket_handshake_stream_create_helper,
-                 const BoundNetLog& net_log,
+                 const NetLogWithSource& net_log,
                  HttpStreamRequest::StreamType stream_type,
                  RequestPriority priority,
                  const SSLConfig& server_ssl_config,
@@ -158,7 +158,7 @@ class HttpStreamFactoryImpl::JobController
 
   // Remove session from the SpdySessionRequestMap.
   void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) override;
-  const BoundNetLog* GetNetLog(Job* job) const override;
+  const NetLogWithSource* GetNetLog(Job* job) const override;
 
   void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) override;
 
@@ -175,7 +175,7 @@ class HttpStreamFactoryImpl::JobController
                   const SSLConfig& proxy_ssl_config,
                   HttpStreamRequest::Delegate* delegate,
                   HttpStreamRequest::StreamType stream_type,
-                  const BoundNetLog& net_log);
+                  const NetLogWithSource& net_log);
 
   // Attaches |job| to |request_|. Does not mean that |request_| will use |job|.
   void AttachJob(Job* job);
@@ -197,9 +197,16 @@ class HttpStreamFactoryImpl::JobController
   void OnJobSucceeded(Job* job);
 
   // Marks completion of the |request_|.
-  void MarkRequestComplete(bool was_npn_negotiated,
+  void MarkRequestComplete(bool was_alpn_negotiated,
                            NextProto negotiated_protocol,
                            bool using_spdy);
+
+  // Must be called when |alternative_job_| fails.
+  void OnAlternativeJobFailed(Job* job);
+
+  // Called to report to http_server_properties to mark alternative service
+  // broken.
+  void ReportBrokenAlternativeService();
 
   void MaybeNotifyFactoryOfCompletion();
 
@@ -234,6 +241,13 @@ class HttpStreamFactoryImpl::JobController
       const GURL& url,
       ProxyServer* alternative_proxy_server) const;
 
+  // Records histogram metrics for the usage of alternative proxy server. Must
+  // be called when |job| has succeeded, and some other jobs will be orphaned.
+  void MaybeRecordAlternativeProxyServerUsage(Job* job) const;
+
+  // Starts the |alternative_job_|.
+  void StartAlternativeProxyServerJob();
+
   HttpStreamFactoryImpl* factory_;
   HttpNetworkSession* session_;
   JobFactory* job_factory_;
@@ -254,6 +268,15 @@ class HttpStreamFactoryImpl::JobController
   // |main_job_| to proceed and then race the two jobs.
   std::unique_ptr<Job> main_job_;
   std::unique_ptr<Job> alternative_job_;
+
+  // True if |alternative_job_| uses alternative service/proxy server and it
+  // fails.
+  bool alternative_job_failed_;
+
+  // Either and only one of these records failed alternative service/proxy
+  // server that |alternative_job_| uses.
+  AlternativeService failed_alternative_service_;
+  ProxyServer failed_alternative_proxy_server_;
 
   // True if a Job has ever been bound to the |request_|.
   bool job_bound_;

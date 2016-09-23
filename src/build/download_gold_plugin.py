@@ -34,13 +34,8 @@ def main():
 
   os.chdir(LLVM_BUILD_PATH)
 
-  # TODO(pcc): Fix gsutil.py cp url file < /dev/null 2>&0
-  # (currently aborts with exit code 1,
-  # https://github.com/GoogleCloudPlatform/gsutil/issues/289) or change the
-  # stdin->stderr redirect in update.py to do something else (crbug.com/494442).
   subprocess.check_call(['python', GSUTIL_PATH,
-                         'cp', remote_path, targz_name],
-                        stderr=open('/dev/null', 'w'))
+                         'cp', remote_path, targz_name])
   subprocess.check_call(['tar', 'xzf', targz_name])
   os.remove(targz_name)
   return 0

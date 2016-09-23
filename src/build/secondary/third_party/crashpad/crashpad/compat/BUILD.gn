@@ -3,17 +3,23 @@
 # found in the LICENSE file.
 
 config("compat_config") {
+  include_dirs = []
+
   if (is_win) {
-    include_dirs = [ "win" ]
-  } else if (is_mac) {
-    include_dirs = [
+    include_dirs += [ "win" ]
+  } else {
+    include_dirs += [ "non_win" ]
+  }
+
+  if (is_mac) {
+    include_dirs += [
       "mac",
       "non_cxx11_lib",
     ]
   }
 }
 
-source_set("compat") {
+static_library("compat") {
   sources = []
   if (is_mac) {
     sources += [

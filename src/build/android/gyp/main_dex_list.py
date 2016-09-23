@@ -54,7 +54,7 @@ def main(args):
       return 0
 
   if args.inputs:
-    args.paths.extend(build_utils.ParseGypList(args.inputs))
+    args.paths.extend(build_utils.ParseGnList(args.inputs))
 
   shrinked_android_jar = os.path.abspath(
       os.path.join(args.android_sdk_tools, 'lib', 'shrinkedAndroid.jar'))

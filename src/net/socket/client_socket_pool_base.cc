@@ -40,7 +40,7 @@ ConnectJob::ConnectJob(const std::string& group_name,
                        RequestPriority priority,
                        ClientSocketPool::RespectLimits respect_limits,
                        Delegate* delegate,
-                       const BoundNetLog& net_log)
+                       const NetLogWithSource& net_log)
     : group_name_(group_name),
       timeout_duration_(timeout_duration),
       priority_(priority),
@@ -131,7 +131,7 @@ ClientSocketPoolBaseHelper::Request::Request(
     RequestPriority priority,
     ClientSocketPool::RespectLimits respect_limits,
     Flags flags,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : handle_(handle),
       callback_(callback),
       priority_(priority),
@@ -860,7 +860,7 @@ void ClientSocketPoolBaseHelper::OnConnectJobComplete(
 
   // Copies of these are needed because |job| may be deleted before they are
   // accessed.
-  BoundNetLog job_log = job->net_log();
+  NetLogWithSource job_log = job->net_log();
   LoadTimingInfo::ConnectTiming connect_timing = job->connect_timing();
 
   // RemoveConnectJob(job, _) must be called by all branches below;
@@ -973,7 +973,7 @@ void ClientSocketPoolBaseHelper::HandOutSocket(
     ClientSocketHandle* handle,
     base::TimeDelta idle_time,
     Group* group,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(socket);
   handle->SetSocket(std::move(socket));
   handle->set_reuse_type(reuse_type);

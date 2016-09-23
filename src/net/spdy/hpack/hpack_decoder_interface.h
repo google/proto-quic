@@ -56,7 +56,7 @@ class NET_EXPORT_PRIVATE HpackDecoderInterface {
   virtual void SetHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) = 0;
 
-  // How much encoded data this decoder is willing to buffer.
+  // Set how much encoded data this decoder is willing to buffer.
   virtual void set_max_decode_buffer_size_bytes(
       size_t max_decode_buffer_size_bytes) = 0;
 };

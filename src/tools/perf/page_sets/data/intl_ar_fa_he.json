@@ -1,0 +1,17 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "intl_ar_fa_he_000.wpr": [
+            "http://msn.co.il/", 
+            "http://www.walla.co.il/", 
+            "http://ynet.co.il/", 
+            "http://www.islamweb.net/", 
+            "http://www.kooora.com/default.aspx", 
+            "http://farsnews.com/", 
+            "http://www.masrawy.com/", 
+            "http://www.startimes.com/f.aspx", 
+            "http://www.aljayyash.net/", 
+            "http://www.google.com.sa/"
+        ]
+    }
+}

@@ -9,9 +9,14 @@ For more info please read the following:
 For more Chromium-specific context please read
 http://spot.livejournal.com/312320.html .
 
+Additional resources which might provide even more context:
+
+  - http://events.linuxfoundation.org/sites/events/files/slides/LinuxCon%202014%20Slides_0.pdf
+  - https://lwn.net/Articles/619158/
+
 This directory is provided in the source tree to follow above guidelines.
 It is a compromise solution which takes into account Chromium developers
-who want to avoid the perceived burden of more conditional code in gyp,
+who want to avoid the perceived burden of more conditional code in build files,
 and expectations of Open Source community, where using system-provided
 libraries is the norm.
 
@@ -32,13 +37,6 @@ Usage:
    NOTE: by default this will not remove anything (for safety). Pass
    --do-remove flag to actually remove files.
 
-2. replace_gyp_files.py <gyp-flags>
+2. replace_gn_files.py --system-libraries lib...
 
-   For example: replace_gyp_files.py -Duse_system_harfbuzz=1
-
-   The script ignores flags other than -D for convenience. This makes it
-   possible to have a variable e.g. ${myconf} with all the options, and
-   execute:
-
-   build/linux/unbundle/replace_gyp_files.py ${myconf}
-   build/gyp_chromium ${myconf}
+   For example: replace_gn_files.py --system-libraries libxml

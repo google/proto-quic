@@ -195,7 +195,26 @@ void QuicPacketGenerator::SendQueuedFrames(bool flush) {
   // Only add pending frames if we are SURE we can then send the whole packet.
   while (HasPendingFrames() &&
          (flush || CanSendWithNextPendingFrameAddition())) {
-    AddNextPendingFrame();
+    if (FLAGS_quic_close_connection_on_huge_frames) {
+      bool first_frame = packet_creator_.CanSetMaxPacketLength();
+      if (!AddNextPendingFrame() && first_frame) {
+        // A single frame cannot fit into the packet, tear down the connection.
+        QUIC_BUG << "A single frame cannot fit into packet."
+                 << " should_send_ack: " << should_send_ack_
+                 << " should_send_stop_waiting: " << should_send_stop_waiting_
+                 << " number of queued_control_frames: "
+                 << queued_control_frames_.size();
+        if (!queued_control_frames_.empty()) {
+          DVLOG(1) << queued_control_frames_[0];
+        }
+        delegate_->OnUnrecoverableError(QUIC_FAILED_TO_SERIALIZE_PACKET,
+                                        "Single frame cannot fit into a packet",
+                                        ConnectionCloseSource::FROM_SELF);
+        return;
+      }
+    } else {
+      AddNextPendingFrame();
+    }
   }
   if (flush || !InBatchMode()) {
     packet_creator_.Flush();
@@ -264,7 +283,7 @@ void QuicPacketGenerator::StopSendingVersion() {
 }
 
 void QuicPacketGenerator::SetDiversificationNonce(
-    const DiversificationNonce nonce) {
+    const DiversificationNonce& nonce) {
   packet_creator_.SetDiversificationNonce(nonce);
 }
 

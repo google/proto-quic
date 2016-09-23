@@ -116,10 +116,10 @@ def _ParseArgs(args):
                       help='Prints this message and exits.')
 
   options = parser.parse_args(args)
-  options.dex_files += build_utils.ParseGypList(options.dex_file_list)
+  options.dex_files += build_utils.ParseGnList(options.dex_file_list)
   all_libs = []
   for gyp_list in options.native_libs:
-    all_libs.extend(build_utils.ParseGypList(gyp_list))
+    all_libs.extend(build_utils.ParseGnList(gyp_list))
   options.native_libs = all_libs
   return options
 
@@ -151,9 +151,7 @@ def main(args):
   os.chmod(options.script_output_path, 0750)
 
   if options.depfile:
-    build_utils.WriteDepfile(
-        options.depfile,
-        build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, options.script_output_path)
 
 
 if __name__ == '__main__':

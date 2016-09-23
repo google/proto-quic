@@ -20,7 +20,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class NetLog;
 
 // Class that registers URL request throttler entries for URLs being accessed
@@ -141,7 +141,7 @@ class NET_EXPORT URLRequestThrottlerManager
   bool logged_for_localhost_disabled_;
 
   // NetLog to use, if configured.
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   // Valid once we've registered for network notifications.
   base::PlatformThreadId registered_from_thread_;

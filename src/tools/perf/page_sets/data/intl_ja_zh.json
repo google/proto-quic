@@ -1,0 +1,26 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "intl_ja_zh_000.wpr": [
+            "http://www.amazon.co.jp", 
+            "http://mixi.jp/", 
+            "http://dtiblog.com/", 
+            "http://2ch.net/", 
+            "http://jugem.jp/", 
+            "http://hatena.ne.jp/", 
+            "http://goo.ne.jp/", 
+            "http://www.yahoo.co.jp/", 
+            "http://fc2.com/ja/", 
+            "http://kakaku.com/", 
+            "http://zol.com.cn/", 
+            "http://cn.yahoo.com/", 
+            "http://www.baidu.com/s?wd=%D0%C2%20%CE%C5", 
+            "http://www.qq.com/", 
+            "http://www.taobao.com/index_global.php", 
+            "http://www.sina.com.cn/", 
+            "http://www.google.com.hk/#q=%E9%82%84%E6%8F%90%E4%BE%9B&fp=c44d333e710cb480", 
+            "http://udn.com/NEWS/mainpage.shtml", 
+            "http://ruten.com.tw/"
+        ]
+    }
+}

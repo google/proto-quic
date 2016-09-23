@@ -21,6 +21,12 @@ char kLSanDefaultSuppressions[] =
 
 // False positives in libfontconfig. http://crbug.com/39050
 "leak:libfontconfig\n"
+// eglibc-2.19/string/strdup.c creates false positive leak errors because of the
+// same reason as crbug.com/39050. The leak error stack trace, when unwind on
+// malloc, includes a call to libfontconfig. But the default stack trace is too
+// short in leak sanitizer bot to make the libfontconfig suppression works.
+// http://crbug.com/605286
+"leak:__strdup\n"
 
 // Leaks in Nvidia's libGL.
 "leak:libGL.so\n"
@@ -75,6 +81,9 @@ char kLSanDefaultSuppressions[] =
 
 // http://crbug.com/356306
 "leak:content::SetProcessTitleFromCommandLine\n"
+
+// http://crbug.com/601435
+"leak:mojo/edk/js/handle.h\n"
 
 // PLEASE READ ABOVE BEFORE ADDING NEW SUPPRESSIONS.
 

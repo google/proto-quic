@@ -1,0 +1,94 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/symlink.gni")
+
+group("forwarder2") {
+  data_deps = [
+    ":host_forwarder",
+    ":device_forwarder_prepare_dist($default_toolchain)",
+  ]
+}
+
+if (current_toolchain == default_toolchain) {
+  import("//build/config/android/rules.gni")
+
+  executable("device_forwarder") {
+    sources = [
+      "command.cc",
+      "command.h",
+      "common.cc",
+      "common.h",
+      "daemon.cc",
+      "daemon.h",
+      "device_controller.cc",
+      "device_controller.h",
+      "device_forwarder_main.cc",
+      "device_listener.cc",
+      "device_listener.h",
+      "forwarder.cc",
+      "forwarder.h",
+      "forwarders_manager.cc",
+      "forwarders_manager.h",
+      "pipe_notifier.cc",
+      "pipe_notifier.h",
+      "self_deleter_helper.h",
+      "socket.cc",
+      "socket.h",
+      "util.h",
+    ]
+    deps = [
+      "//base",
+      "//build/config/sanitizers:deps",
+      "//tools/android/common",
+    ]
+    data_deps = [
+      "//build/android/pylib/device/commands",
+    ]
+  }
+
+  create_native_executable_dist("device_forwarder_prepare_dist") {
+    dist_dir = "$root_build_dir/forwarder_dist"
+    binary = "$root_build_dir/device_forwarder"
+    deps = [
+      ":device_forwarder",
+    ]
+  }
+}
+
+if (current_toolchain != default_toolchain) {
+  executable("host_forwarder") {
+    sources = [
+      "command.cc",
+      "command.h",
+      "common.cc",
+      "common.h",
+      "daemon.cc",
+      "daemon.h",
+      "forwarder.cc",
+      "forwarder.h",
+      "forwarders_manager.cc",
+      "forwarders_manager.h",
+      "host_controller.cc",
+      "host_controller.h",
+      "host_forwarder_main.cc",
+      "pipe_notifier.cc",
+      "pipe_notifier.h",
+      "self_deleter_helper.h",
+      "socket.cc",
+      "socket.h",
+      "util.h",
+    ]
+    deps = [
+      "//base",
+      "//build/config/sanitizers:deps",
+      "//tools/android/common",
+    ]
+  }
+} else {
+  # Create a symlink from root_build_dir -> clang_x64/host_forwarder.
+  binary_symlink("host_forwarder") {
+    binary_label = ":$target_name($host_toolchain)"
+  }
+}

@@ -76,12 +76,10 @@ SchedulerServiceThread::~SchedulerServiceThread() = default;
 // static
 std::unique_ptr<SchedulerServiceThread> SchedulerServiceThread::Create(
     TaskTracker* task_tracker, DelayedTaskManager* delayed_task_manager) {
-  std::unique_ptr<SchedulerWorker> worker =
-      SchedulerWorker::Create(
-          ThreadPriority::NORMAL,
-          WrapUnique(new ServiceThreadDelegate(delayed_task_manager)),
-          task_tracker,
-          SchedulerWorker::InitialState::ALIVE);
+  std::unique_ptr<SchedulerWorker> worker = SchedulerWorker::Create(
+      ThreadPriority::NORMAL,
+      MakeUnique<ServiceThreadDelegate>(delayed_task_manager), task_tracker,
+      SchedulerWorker::InitialState::ALIVE);
   if (!worker)
     return nullptr;
 

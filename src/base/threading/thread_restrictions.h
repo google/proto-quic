@@ -14,6 +14,9 @@ class HistogramSynchronizer;
 class NativeBackendKWallet;
 class ScopedAllowWaitForLegacyWebViewApi;
 
+namespace blimp {
+class BlimpBrowserTest;
+}
 namespace cc {
 class CompletionEvent;
 class SingleThreadTaskGraphRunner;
@@ -51,9 +54,6 @@ namespace gpu {
 class GpuChannelHost;
 }
 namespace mojo {
-namespace common {
-class MessagePumpMojo;
-}
 class SyncCallRestrictions;
 }
 namespace ui {
@@ -84,6 +84,10 @@ namespace base {
 
 namespace android {
 class JavaHandlerThread;
+}
+
+namespace internal {
+class TaskTracker;
 }
 
 class SequencedWorkerPool;
@@ -184,6 +188,7 @@ class BASE_EXPORT ThreadRestrictions {
  private:
   // DO NOT ADD ANY OTHER FRIEND STATEMENTS, talk to jam or brettw first.
   // BEGIN ALLOWED USAGE.
+  friend class blimp::BlimpBrowserTest;
   friend class content::BrowserShutdownProfileDumper;
   friend class content::BrowserSurfaceViewManager;
   friend class content::BrowserTestBase;
@@ -191,6 +196,7 @@ class BASE_EXPORT ThreadRestrictions {
   friend class content::ScopedAllowWaitForAndroidLayoutTests;
   friend class content::ScopedAllowWaitForDebugURL;
   friend class ::HistogramSynchronizer;
+  friend class internal::TaskTracker;
   friend class ::ScopedAllowWaitForLegacyWebViewApi;
   friend class cc::CompletionEvent;
   friend class cc::SingleThreadTaskGraphRunner;
@@ -204,7 +210,6 @@ class BASE_EXPORT ThreadRestrictions {
   friend class ThreadTestHelper;
   friend class PlatformThread;
   friend class android::JavaHandlerThread;
-  friend class mojo::common::MessagePumpMojo;
   friend class mojo::SyncCallRestrictions;
   friend class ui::CommandBufferClientImpl;
   friend class ui::CommandBufferLocal;

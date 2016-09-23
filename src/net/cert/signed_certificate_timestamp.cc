@@ -28,7 +28,8 @@ bool SignedCertificateTimestamp::LessThan::operator()(
   return lhs->version < rhs->version;
 }
 
-SignedCertificateTimestamp::SignedCertificateTimestamp() {}
+SignedCertificateTimestamp::SignedCertificateTimestamp()
+    : version(V1), origin(SCT_EMBEDDED) {}
 
 SignedCertificateTimestamp::~SignedCertificateTimestamp() {}
 
@@ -77,7 +78,7 @@ SignedCertificateTimestamp::CreateFromPickle(base::PickleIterator* iter) {
   return sct;
 }
 
-LogEntry::LogEntry() {}
+LogEntry::LogEntry() : type(LOG_ENTRY_TYPE_X509) {}
 
 LogEntry::~LogEntry() {}
 
@@ -87,7 +88,8 @@ void LogEntry::Reset() {
   tbs_certificate.clear();
 }
 
-DigitallySigned::DigitallySigned() {}
+DigitallySigned::DigitallySigned()
+    : hash_algorithm(HASH_ALGO_NONE), signature_algorithm(SIG_ALGO_ANONYMOUS) {}
 
 DigitallySigned::~DigitallySigned() {}
 

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")  # Imports android/config.gni.
 import("//build/toolchain/gcc_toolchain.gni")
 
@@ -9,106 +10,133 @@ import("//build/toolchain/gcc_toolchain.gni")
 # wrapper around gcc_toolchain to avoid duplication of logic.
 #
 # Parameters:
-#  - android_ndk_sysroot
+#  - toolchain_root
+#      Path to cpu-specific toolchain within the ndk.
+#  - sysroot
 #      Sysroot for this architecture.
-#  - android_ndk_lib_dir
-#      Subdirectory inside of android_ndk_sysroot where libs go.
-#  - toolchain_cpu
-#      Same as gcc_toolchain
+#  - lib_dir
+#      Subdirectory inside of sysroot where libs go.
+#  - binary_prefix
+#      Prefix of compiler executables.
 template("android_gcc_toolchain") {
   gcc_toolchain(target_name) {
+    assert(defined(invoker.toolchain_args),
+           "toolchain_args must be defined for android_gcc_toolchain()")
+    toolchain_args = invoker.toolchain_args
+    toolchain_args.current_os = "android"
+
     # Make our manually injected libs relative to the build dir.
-    android_ndk_lib = rebase_path(
-            invoker.android_ndk_sysroot + "/" + invoker.android_ndk_lib_dir,
-            root_build_dir)
+    _ndk_lib =
+        rebase_path(invoker.sysroot + "/" + invoker.lib_dir, root_build_dir)
 
-    libs_section_prefix = "$android_ndk_lib/crtbegin_dynamic.o"
-    libs_section_postfix = "$android_ndk_lib/crtend_android.o"
+    libs_section_prefix = "$_ndk_lib/crtbegin_dynamic.o"
+    libs_section_postfix = "$_ndk_lib/crtend_android.o"
 
-    solink_libs_section_prefix = "$android_ndk_lib/crtbegin_so.o"
-    solink_libs_section_postfix = "$android_ndk_lib/crtend_so.o"
+    solink_libs_section_prefix = "$_ndk_lib/crtbegin_so.o"
+    solink_libs_section_postfix = "$_ndk_lib/crtend_so.o"
+
+    _android_tool_prefix =
+        "${invoker.toolchain_root}/bin/${invoker.binary_prefix}-"
 
     # The tools should be run relative to the build dir.
-    tool_prefix = rebase_path("$android_tool_prefix", root_build_dir)
+    _tool_prefix = rebase_path("$_android_tool_prefix", root_build_dir)
 
-    is_clang = invoker.is_clang
-    if (is_clang) {
-      prefix = rebase_path("//third_party/llvm-build/Release+Asserts/bin",
-                           root_build_dir)
-      cc = "$prefix/clang"
-      cxx = "$prefix/clang++"
+    # Use the clang specified by the toolchain if there is one. Otherwise fall
+    # back to the global flag.
+    if (defined(toolchain_args.is_clang)) {
+      toolchain_uses_clang = toolchain_args.is_clang
     } else {
-      cc = "${tool_prefix}gcc"
-      cxx = "${tool_prefix}g++"
+      toolchain_uses_clang = is_clang
     }
-    ar = tool_prefix + "ar"
+
+    if (toolchain_uses_clang) {
+      _prefix = rebase_path("$clang_base_path/bin", root_build_dir)
+      cc = "$_prefix/clang"
+      cxx = "$_prefix/clang++"
+    } else {
+      cc = "${_tool_prefix}gcc"
+      cxx = "${_tool_prefix}g++"
+    }
+    ar = _tool_prefix + "ar"
     ld = cxx
-    readelf = tool_prefix + "readelf"
-    nm = tool_prefix + "nm"
-    strip = "${tool_prefix}strip"
+    readelf = _tool_prefix + "readelf"
+    nm = _tool_prefix + "nm"
+    strip = "${_tool_prefix}strip"
 
     # Don't use .cr.so for loadable_modules since they are always loaded via
     # absolute path.
     loadable_module_extension = ".so"
-
-    toolchain_os = "android"
-    toolchain_cpu = invoker.toolchain_cpu
   }
 }
 
 template("android_gcc_toolchains_helper") {
   android_gcc_toolchain(target_name) {
-    android_ndk_sysroot = invoker.android_ndk_sysroot
-    android_ndk_lib_dir = invoker.android_ndk_lib_dir
-    toolchain_cpu = invoker.toolchain_cpu
+    forward_variables_from(invoker, "*")
+    toolchain_args.is_clang = false
   }
 
   android_gcc_toolchain("clang_$target_name") {
-    android_ndk_sysroot = invoker.android_ndk_sysroot
-    android_ndk_lib_dir = invoker.android_ndk_lib_dir
-    toolchain_cpu = invoker.toolchain_cpu
-    is_clang = true
+    forward_variables_from(invoker, "*")
+    toolchain_args.is_clang = true
   }
 }
 
 android_gcc_toolchains_helper("x86") {
-  android_ndk_sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib"
-
-  toolchain_cpu = "x86"
+  toolchain_root = x86_android_toolchain_root
+  sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
+  lib_dir = "usr/lib"
+  binary_prefix = "i686-linux-android"
+  toolchain_args = {
+    current_cpu = "x86"
+  }
 }
 
 android_gcc_toolchains_helper("arm") {
-  android_ndk_sysroot = "$android_ndk_root/$arm_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib"
-
-  toolchain_cpu = "arm"
+  toolchain_root = arm_android_toolchain_root
+  sysroot = "$android_ndk_root/$arm_android_sysroot_subdir"
+  lib_dir = "usr/lib"
+  binary_prefix = "arm-linux-androideabi"
+  toolchain_args = {
+    current_cpu = "arm"
+  }
 }
 
 android_gcc_toolchains_helper("mipsel") {
-  android_ndk_sysroot = "$android_ndk_root/$mips_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib"
-
-  toolchain_cpu = "mipsel"
+  toolchain_root = mips_android_toolchain_root
+  sysroot = "$android_ndk_root/$mips_android_sysroot_subdir"
+  lib_dir = "usr/lib"
+  binary_prefix = "mipsel-linux-android"
+  toolchain_args = {
+    current_cpu = "mipsel"
+  }
 }
 
 android_gcc_toolchains_helper("x64") {
-  android_ndk_sysroot = "$android_ndk_root/$x86_64_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib64"
-
-  toolchain_cpu = "x86_64"
+  toolchain_root = x86_64_android_toolchain_root
+  sysroot = "$android_ndk_root/$x86_64_android_sysroot_subdir"
+  lib_dir = "usr/lib64"
+  binary_prefix = "x86_64-linux-android"
+  toolchain_args = {
+    current_cpu = "x64"
+  }
 }
 
 android_gcc_toolchains_helper("arm64") {
-  android_ndk_sysroot = "$android_ndk_root/$arm64_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib"
-
-  toolchain_cpu = "aarch64"
+  toolchain_root = arm64_android_toolchain_root
+  sysroot = "$android_ndk_root/$arm64_android_sysroot_subdir"
+  lib_dir = "usr/lib"
+  binary_prefix = "aarch64-linux-android"
+  toolchain_args = {
+    current_cpu = "arm64"
+  }
 }
 
 android_gcc_toolchains_helper("mips64el") {
-  android_ndk_sysroot = "$android_ndk_root/$mips64_android_sysroot_subdir"
-  android_ndk_lib_dir = "usr/lib64"
-
-  toolchain_cpu = "mipsel64el"
+  toolchain_root = mips64_android_toolchain_root
+  sysroot = "$android_ndk_root/$mips64_android_sysroot_subdir"
+  lib_dir = "usr/lib64"
+  binary_prefix = "mips64el-linux-android"
+  toolchain_args = {
+    current_cpu = "mips64el"
+  }
 }

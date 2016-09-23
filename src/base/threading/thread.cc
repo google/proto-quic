@@ -144,6 +144,18 @@ bool Thread::WaitUntilThreadStarted() const {
   return true;
 }
 
+void Thread::FlushForTesting() {
+  DCHECK(owning_sequence_checker_.CalledOnValidSequence());
+  if (!message_loop_)
+    return;
+
+  WaitableEvent done(WaitableEvent::ResetPolicy::AUTOMATIC,
+                     WaitableEvent::InitialState::NOT_SIGNALED);
+  task_runner()->PostTask(FROM_HERE,
+                          Bind(&WaitableEvent::Signal, Unretained(&done)));
+  done.Wait();
+}
+
 void Thread::Stop() {
   DCHECK(joinable_);
 

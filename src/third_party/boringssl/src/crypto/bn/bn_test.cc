@@ -67,7 +67,12 @@
  * Sheueling Chang Shantz and Douglas Stebila of Sun Microsystems
  * Laboratories. */
 
-/* For BIGNUM format macros. */
+/* Per C99, various stdint.h and inttypes.h macros (the latter used by bn.h) are
+ * unavailable in C++ unless some macros are defined. C++11 overruled this
+ * decision, but older Android NDKs still require it. */
+#if !defined(__STDC_CONSTANT_MACROS)
+#define __STDC_CONSTANT_MACROS
+#endif
 #if !defined(__STDC_FORMAT_MACROS)
 #define __STDC_FORMAT_MACROS
 #endif
@@ -1437,6 +1442,33 @@ static bool TestBN2Dec() {
   return true;
 }
 
+static bool TestBNSetU64() {
+  static const struct {
+    const char *hex;
+    uint64_t value;
+  } kU64Tests[] = {
+      {"0", UINT64_C(0x0)},
+      {"1", UINT64_C(0x1)},
+      {"ffffffff", UINT64_C(0xffffffff)},
+      {"100000000", UINT64_C(0x100000000)},
+      {"ffffffffffffffff", UINT64_C(0xffffffffffffffff)},
+  };
+
+  for (const auto& test : kU64Tests) {
+    bssl::UniquePtr<BIGNUM> bn(BN_new()), expected;
+    if (!bn ||
+        !BN_set_u64(bn.get(), test.value) ||
+        !HexToBIGNUM(&expected, test.hex) ||
+        BN_cmp(bn.get(), expected.get()) != 0) {
+      fprintf(stderr, "BN_set_u64 test failed for 0x%s.\n", test.hex);
+      ERR_print_errors_fp(stderr);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   CRYPTO_library_init();
 
@@ -1462,7 +1494,8 @@ int main(int argc, char *argv[]) {
       !TestExpModZero() ||
       !TestSmallPrime(ctx.get()) ||
       !TestCmpWord() ||
-      !TestBN2Dec()) {
+      !TestBN2Dec() ||
+      !TestBNSetU64()) {
     return 1;
   }
 

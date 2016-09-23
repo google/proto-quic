@@ -11,12 +11,7 @@ import re
 import subprocess
 import sys
 
-def _GetDefaultConcurrentLinks(is_lto):
-  # Inherit the legacy environment variable for people that have set it in GYP.
-  pool_size = int(os.getenv('GYP_LINK_CONCURRENCY', 0))
-  if pool_size:
-    return pool_size
-
+def _GetTotalMemoryInBytes():
   if sys.platform in ('win32', 'cygwin'):
     import ctypes
 
@@ -35,12 +30,7 @@ def _GetDefaultConcurrentLinks(is_lto):
 
     stat = MEMORYSTATUSEX(dwLength=ctypes.sizeof(MEMORYSTATUSEX))
     ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-
-    # VS 2015 uses 20% more working set than VS 2013 and can consume all RAM
-    # on a 64 GB machine.
-    mem_limit = max(1, stat.ullTotalPhys / (5 * (2 ** 30)))  # total / 5GB
-    hard_cap = max(1, int(os.getenv('GYP_LINK_CONCURRENCY_MAX', 2**32)))
-    return min(mem_limit, hard_cap)
+    return stat.ullTotalPhys
   elif sys.platform.startswith('linux'):
     if os.path.exists("/proc/meminfo"):
       with open("/proc/meminfo") as meminfo:
@@ -49,35 +39,38 @@ def _GetDefaultConcurrentLinks(is_lto):
           match = memtotal_re.match(line)
           if not match:
             continue
-          mem_total_gb = float(match.group(1)) / (2 ** 20)
-          # Allow 8Gb per link on Linux because Gold is quite memory hungry
-          mem_per_link_gb = 8
-          if is_lto:
-            mem_total_gb -= 10 # Reserve
-            # For LTO builds the RAM requirements are even higher
-            mem_per_link_gb = 16
-          return int(max(1, mem_total_gb / mem_per_link_gb))
-    return 1
+          return float(match.group(1)) * 2**10
   elif sys.platform == 'darwin':
     try:
-      avail_bytes = int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
-      # A static library debug build of Chromium's unit_tests takes ~2.7GB, so
-      # 4GB per ld process allows for some more bloat.
-      return max(1, avail_bytes / (4 * (2 ** 30)))  # total / 4GB
+      return int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
     except Exception:
-      return 1
-  else:
-    # TODO(scottmg): Implement this for other platforms.
-    return 1
+      return 0
+  # TODO(scottmg): Implement this for other platforms.
+  return 0
+
+
+def _GetDefaultConcurrentLinks(mem_per_link_gb, reserve_mem_gb):
+  # Inherit the legacy environment variable for people that have set it in GYP.
+  pool_size = int(os.getenv('GYP_LINK_CONCURRENCY', 0))
+  if pool_size:
+    return pool_size
+
+  mem_total_bytes = _GetTotalMemoryInBytes()
+  mem_total_bytes = max(0, mem_total_bytes - reserve_mem_gb * 2**30)
+  num_concurrent_links = int(max(1, mem_total_bytes / mem_per_link_gb / 2**30))
+  hard_cap = max(1, int(os.getenv('GYP_LINK_CONCURRENCY_MAX', 2**32)))
+  return min(num_concurrent_links, hard_cap)
+
 
 def main():
   parser = optparse.OptionParser()
-  parser.add_option('--lto', action="store_true", default=False,
-                    help='This is an LTO build with higher memory requirements')
+  parser.add_option('--mem_per_link_gb', action="store", type="int", default=8)
+  parser.add_option('--reserve_mem_gb', action="store", type="int", default=0)
   parser.disable_interspersed_args()
-  options, args = parser.parse_args()
+  options, _ = parser.parse_args()
 
-  print _GetDefaultConcurrentLinks(is_lto=options.lto)
+  print _GetDefaultConcurrentLinks(options.mem_per_link_gb,
+                                   options.reserve_mem_gb)
   return 0
 
 if __name__ == '__main__':

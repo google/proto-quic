@@ -2261,6 +2261,8 @@ class PBXNativeTarget(XCTarget):
                                                  '', ''],
     'com.apple.product-type.bundle.unit-test':  ['wrapper.cfbundle',
                                                  '', '.xctest'],
+    'com.apple.product-type.bundle.ui-testing':  ['wrapper.cfbundle',
+                                                  '', '.xctest'],
     'com.googlecode.gyp.xcode.bundle':          ['compiled.mach-o.dylib',
                                                  '', '.so'],
     'com.apple.product-type.kernel-extension':  ['wrapper.kext',
@@ -2317,7 +2319,9 @@ class PBXNativeTarget(XCTarget):
             force_extension = suffix[1:]
 
         if self._properties['productType'] == \
-           'com.apple.product-type-bundle.unit.test':
+           'com.apple.product-type-bundle.unit.test' or \
+           self._properties['productType'] == \
+           'com.apple.product-type-bundle.ui-testing':
           if force_extension is None:
             force_extension = suffix[1:]
 

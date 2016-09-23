@@ -58,6 +58,8 @@ def _AddInstrumentOptions(option_parser):
                            help='Space separated list of source files. '
                                 'source-dirs should not be specified if '
                                 'source-files is specified')
+  option_parser.add_option('--java-sources-file',
+                           help='File containing newline-separated .java paths')
   option_parser.add_option('--src-root',
                            help='Root of the src repository.')
   option_parser.add_option('--emma-jar',
@@ -98,21 +100,18 @@ def _RunCopyCommand(_command, options, _, option_parser):
     build_utils.Touch(options.stamp)
 
   if options.depfile:
-    build_utils.WriteDepfile(options.depfile,
-                             build_utils.GetPythonDependencies())
+    build_utils.WriteDepfile(options.depfile, options.output_path)
 
 
-def _GetSourceDirsFromSourceFiles(source_files_string):
-  """Returns list of directories for the files in |source_files_string|.
+def _GetSourceDirsFromSourceFiles(source_files):
+  """Returns list of directories for the files in |source_files|.
 
   Args:
-    source_files_string: String generated from GN or GYP containing the list
-      of source files.
+    source_files: List of source files.
 
   Returns:
     List of source directories.
   """
-  source_files = build_utils.ParseGypList(source_files_string)
   return list(set(os.path.dirname(source_file) for source_file in source_files))
 
 
@@ -158,7 +157,8 @@ def _RunInstrumentCommand(_command, options, _, option_parser):
   """
   if not (options.input_path and options.output_path and
           options.coverage_file and options.sources_list_file and
-          (options.source_files or options.source_dirs) and
+          (options.source_files or options.source_dirs or
+           options.java_sources_file) and
           options.src_root and options.emma_jar):
     option_parser.error('All arguments are required.')
 
@@ -194,9 +194,19 @@ def _RunInstrumentCommand(_command, options, _, option_parser):
     shutil.rmtree(temp_dir)
 
   if options.source_dirs:
-    source_dirs = build_utils.ParseGypList(options.source_dirs)
+    source_dirs = build_utils.ParseGnList(options.source_dirs)
   else:
-    source_dirs = _GetSourceDirsFromSourceFiles(options.source_files)
+    source_files = []
+    if options.source_files:
+      source_files += build_utils.ParseGnList(options.source_files)
+    if options.java_sources_file:
+      source_files.extend(
+          build_utils.ReadSourcesList(options.java_sources_file))
+    source_dirs = _GetSourceDirsFromSourceFiles(source_files)
+
+  # TODO(GYP): In GN, we are passed the list of sources, detecting source
+  # directories, then walking them to re-establish the list of sources.
+  # This can obviously be simplified!
   _CreateSourcesListFile(source_dirs, options.sources_list_file,
                          options.src_root)
 

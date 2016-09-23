@@ -26,14 +26,14 @@ namespace net {
 
 namespace {
 
-DEFINE_CERT_ERROR_TYPE(kUnacceptableSignatureAlgorithm,
-                       "Unacceptable signature algorithm");
-DEFINE_CERT_ERROR_TYPE(kUnacceptableRsaModulusLength,
-                       "Unacceptable modulus length for RSA key");
-DEFINE_CERT_ERROR_TYPE(kUnacceptableEcdsaCurve,
-                       "Unacceptable curve for ECDSA key");
-DEFINE_CERT_ERROR_TYPE(kSignatureVerificationFailed,
-                       "Signature verification failed");
+DEFINE_CERT_ERROR_ID(kUnacceptableSignatureAlgorithm,
+                     "Unacceptable signature algorithm");
+DEFINE_CERT_ERROR_ID(kUnacceptableRsaModulusLength,
+                     "Unacceptable modulus length for RSA key");
+DEFINE_CERT_ERROR_ID(kUnacceptableEcdsaCurve,
+                     "Unacceptable curve for ECDSA key");
+DEFINE_CERT_ERROR_ID(kSignatureVerificationFailed,
+                     "Signature verification failed");
 
 // Converts a DigestAlgorithm to an equivalent EVP_MD*.
 WARN_UNUSED_RESULT bool GetDigest(DigestAlgorithm digest, const EVP_MD** out) {
@@ -167,7 +167,7 @@ WARN_UNUSED_RESULT bool ParseRsaKeyFromSpki(const der::Input& public_key_spki,
   unsigned int modulus_length_bits = BN_num_bits(rsa->n);
 
   if (!policy->IsAcceptableModulusLengthForRsa(modulus_length_bits, errors)) {
-    errors->Add(kUnacceptableRsaModulusLength);
+    errors->AddError(kUnacceptableRsaModulusLength);
     return false;
   }
 
@@ -276,7 +276,7 @@ WARN_UNUSED_RESULT bool ParseEcKeyFromSpki(const der::Input& public_key_spki,
   int curve_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec.get()));
 
   if (!policy->IsAcceptableCurveForEcdsa(curve_nid, errors)) {
-    errors->Add(kUnacceptableEcdsaCurve);
+    errors->AddError(kUnacceptableEcdsaCurve);
     return false;
   }
 
@@ -292,7 +292,7 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
                       const SignaturePolicy* policy,
                       CertErrors* errors) {
   if (!policy->IsAcceptableSignatureAlgorithm(signature_algorithm, errors)) {
-    errors->Add(kUnacceptableSignatureAlgorithm);
+    errors->AddError(kUnacceptableSignatureAlgorithm);
     return false;
   }
 
@@ -313,7 +313,7 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
 
   if (!DoVerify(signature_algorithm, signed_data, signature_value,
                 public_key.get())) {
-    errors->Add(kSignatureVerificationFailed);
+    errors->AddError(kSignatureVerificationFailed);
     return false;
   }
 

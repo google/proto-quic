@@ -1,0 +1,7 @@
+# Flaky. crbug.com/234776
+DiskCacheEntryTest.SimpleCacheStreamAccess
+DiskCacheEntryTest.SimpleCacheGrowData
+DiskCacheEntryTest.SimpleCacheSizeChanges
+
+# Flaky. crbug.com/548006
+Spdy_SpdyNetworkTransactionTest.StartTransactionOnReadCallback_0

@@ -122,7 +122,7 @@ class ELFSymbolizer(object):
     self.disambiguate = source_root_path is not None
     self.disambiguation_table = {}
     self.strip_base_path = strip_base_path
-    if(self.disambiguate):
+    if self.disambiguate:
       self.source_root_path = os.path.abspath(source_root_path)
       self._CreateDisambiguationTable()
 
@@ -140,7 +140,7 @@ class ELFSymbolizer(object):
     Args:
       addr: address to symbolize.
       callback_arg: optional argument which will be passed to the |callback|."""
-    assert(isinstance(addr, int))
+    assert isinstance(addr, int)
 
     # Process all the symbols that have been resolved in the meanwhile.
     # Essentially, this drains all the addr2line(s) out queues.
@@ -178,7 +178,7 @@ class ELFSymbolizer(object):
       a2l.Terminate()
 
   def _CreateNewA2LInstance(self):
-    assert(len(self._a2l_instances) < self.max_concurrent_jobs)
+    assert len(self._a2l_instances) < self.max_concurrent_jobs
     a2l = ELFSymbolizer.Addr2Line(self)
     self._a2l_instances.append(a2l)
     return a2l
@@ -262,10 +262,10 @@ class ELFSymbolizer(object):
         timeout = datetime.timedelta(seconds=self._symbolizer.addr2line_timeout)
 
         # The inner loop guards against a2l crashing (checking if it exited).
-        while (datetime.datetime.now() - start_time < timeout):
+        while datetime.datetime.now() - start_time < timeout:
           # poll() returns !None if the process exited. a2l should never exit.
           if self._proc.poll():
-            logging.warning('addr2line crashed, respawning (lib: %s).' %
+            logging.warning('addr2line crashed, respawning (lib: %s).',
                             self._lib_file_name)
             self._RestartAddr2LineProcess()
             # TODO(primiano): the best thing to do in this case would be
@@ -284,7 +284,7 @@ class ELFSymbolizer(object):
           return
 
         # If this point is reached, we waited more than |addr2line_timeout|.
-        logging.warning('Hung addr2line process, respawning (lib: %s).' %
+        logging.warning('Hung addr2line process, respawning (lib: %s).',
                         self._lib_file_name)
         self._RestartAddr2LineProcess()
 
@@ -315,7 +315,8 @@ class ELFSymbolizer(object):
       try:
         self._proc.kill()
         self._proc.communicate()  # Essentially wait() without risking deadlock.
-      except Exception:  # An exception while terminating? How interesting.
+      except Exception: # pylint: disable=broad-except
+        # An exception while terminating? How interesting.
         pass
       self._proc = None
 
@@ -346,7 +347,7 @@ class ELFSymbolizer(object):
             if not m.group(2).startswith('?'):
               source_line = int(m.group(2))
         else:
-          logging.warning('Got invalid symbol path from addr2line: %s' % line2)
+          logging.warning('Got invalid symbol path from addr2line: %s', line2)
 
         # In case disambiguation is on, and needed
         was_ambiguous = False

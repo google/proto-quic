@@ -383,6 +383,100 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery2) {
   EXPECT_EQ(2u, visitor_.last_expired_packet_queue_.buffered_packets.size());
 }
 
+TEST_F(QuicBufferedPacketStoreTest, SimpleDiscardPackets) {
+  QuicConnectionId connection_id = 1;
+
+  // Enqueue some packets
+  store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
+                       false);
+  store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
+                       false);
+  EXPECT_TRUE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+
+  // Dicard the packets
+  store_.DiscardPackets(connection_id);
+
+  // No packets on connection 1 should remain in the store
+  EXPECT_TRUE(store_.DeliverPackets(connection_id).empty());
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+
+  // Check idempotency
+  store_.DiscardPackets(connection_id);
+  EXPECT_TRUE(store_.DeliverPackets(connection_id).empty());
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+}
+
+TEST_F(QuicBufferedPacketStoreTest, DiscardWithCHLOs) {
+  QuicConnectionId connection_id = 1;
+
+  // Enqueue some packets, which include a CHLO
+  store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
+                       false);
+  store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
+                       true);
+  store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
+                       false);
+  EXPECT_TRUE(store_.HasBufferedPackets(connection_id));
+  EXPECT_TRUE(store_.HasChlosBuffered());
+
+  // Dicard the packets
+  store_.DiscardPackets(connection_id);
+
+  // No packets on connection 1 should remain in the store
+  EXPECT_TRUE(store_.DeliverPackets(connection_id).empty());
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+
+  // Check idempotency
+  store_.DiscardPackets(connection_id);
+  EXPECT_TRUE(store_.DeliverPackets(connection_id).empty());
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+}
+
+TEST_F(QuicBufferedPacketStoreTest, MultipleDiscardPackets) {
+  QuicConnectionId connection_id_1 = 1;
+  QuicConnectionId connection_id_2 = 2;
+
+  // Enqueue some packets for two connection IDs
+  store_.EnqueuePacket(connection_id_1, packet_, server_address_,
+                       client_address_, false);
+  store_.EnqueuePacket(connection_id_1, packet_, server_address_,
+                       client_address_, false);
+  store_.EnqueuePacket(connection_id_2, packet_, server_address_,
+                       client_address_, false);
+  EXPECT_TRUE(store_.HasBufferedPackets(connection_id_1));
+  EXPECT_TRUE(store_.HasBufferedPackets(connection_id_2));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+
+  // Discard the packets for connection 1
+  store_.DiscardPackets(connection_id_1);
+
+  // No packets on connection 1 should remain in the store
+  EXPECT_TRUE(store_.DeliverPackets(connection_id_1).empty());
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id_1));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+
+  // Packets on connection 2 should remain
+  EXPECT_TRUE(store_.HasBufferedPackets(connection_id_2));
+  EXPECT_EQ(1u, store_.DeliverPackets(connection_id_2).size());
+  EXPECT_FALSE(store_.HasChlosBuffered());
+}
+
+TEST_F(QuicBufferedPacketStoreTest, DiscardPacketsEmpty) {
+  // Check that DiscardPackets on an unknown connection ID is safe and does
+  // nothing.
+  QuicConnectionId connection_id = 11235;
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+  store_.DiscardPackets(connection_id);
+  EXPECT_FALSE(store_.HasBufferedPackets(connection_id));
+  EXPECT_FALSE(store_.HasChlosBuffered());
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

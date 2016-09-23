@@ -1,0 +1,23 @@
+# Hangs sometimes; see http://crbug.com/22146
+VisitedLinkEventsTest.Coalescense
+# Hangs (or takes forever?) reliably on bots; see http://crbug.com/23580
+RenderViewTest.ImeComposition
+# Hangs sometimes; see http://crbug.com/52844
+PredictorTest.MassiveConcurrentLookupTest
+
+# Timing out all over the place. Disabling for now. http://crbug.com/149715
+ExtensionWebRequestTest.*
+# Timing out all over the place. Disabling for now. http://crbug.com/149882
+NativeMessagingTest.*
+
+# Failing, see http://crbug.com/408443
+SyncFileSystemServiceTest.SimpleLocalSyncFlow
+
+# Failing on CrOS, see http://crbug.com/408013
+ProxyConfigServiceImplTest.*
+
+# Failing gMock expectations on both Valgrind and Dr. Memory. Possibly timeouts?
+# https://crbug.com/567866
+ExtensionServiceTestSupervised.UpdateWithPermissionIncreaseApprovalMatchingVersion
+ExtensionServiceTestSupervised.UpdateWithPermissionIncreaseApprovalNewVersion
+ExtensionServiceTestSupervised.UpdateWithPermissionIncreaseApprovalOldVersion

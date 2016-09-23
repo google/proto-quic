@@ -151,7 +151,7 @@ class TaggingDecrypter : public QuicDecrypter {
     return false;
   }
 
-  bool SetDiversificationNonce(DiversificationNonce key) override {
+  bool SetDiversificationNonce(const DiversificationNonce& key) override {
     return true;
   }
 
@@ -2644,61 +2644,6 @@ TEST_P(QuicConnectionTest, RetransmitPacketsWithInitialEncryption) {
   connection_.RetransmitUnackedPackets(ALL_INITIAL_RETRANSMISSION);
 }
 
-TEST_P(QuicConnectionTest, DelayForwardSecureEncryptionUntilClientIsReady) {
-  FLAGS_quic_remove_obsolete_forward_secure = false;
-  // A TaggingEncrypter puts kTagSize copies of the given byte (0x02 here) at
-  // the end of the packet. We can test this to check which encrypter was used.
-  use_tagging_decrypter();
-  connection_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(0x02));
-  connection_.SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
-  SendAckPacketToPeer();
-  EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
-
-  // Set a forward-secure encrypter but do not make it the default, and verify
-  // that it is not yet used.
-  connection_.SetEncrypter(ENCRYPTION_FORWARD_SECURE,
-                           new TaggingEncrypter(0x03));
-  SendAckPacketToPeer();
-  EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
-
-  // Now simulate receipt of a forward-secure packet and verify that the
-  // forward-secure encrypter is now used.
-  connection_.OnDecryptedPacket(ENCRYPTION_FORWARD_SECURE);
-  SendAckPacketToPeer();
-  EXPECT_EQ(0x03030303u, writer_->final_bytes_of_last_packet());
-}
-
-TEST_P(QuicConnectionTest, DelayForwardSecureEncryptionUntilManyPacketSent) {
-  FLAGS_quic_remove_obsolete_forward_secure = false;
-  // Set a congestion window of 10 packets.
-  QuicPacketCount congestion_window = 10;
-  EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
-      .WillRepeatedly(Return(congestion_window * kDefaultMaxPacketSize));
-
-  // A TaggingEncrypter puts kTagSize copies of the given byte (0x02 here) at
-  // the end of the packet. We can test this to check which encrypter was used.
-  use_tagging_decrypter();
-  connection_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(0x02));
-  connection_.SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
-  SendAckPacketToPeer();
-  EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
-
-  // Set a forward-secure encrypter but do not make it the default, and
-  // verify that it is not yet used.
-  connection_.SetEncrypter(ENCRYPTION_FORWARD_SECURE,
-                           new TaggingEncrypter(0x03));
-  SendAckPacketToPeer();
-  EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
-
-  // Now send a packet "Far enough" after the encrypter was set and verify that
-  // the forward-secure encrypter is now used.
-  for (uint64_t i = 0; i < 3 * congestion_window - 1; ++i) {
-    EXPECT_EQ(0x02020202u, writer_->final_bytes_of_last_packet());
-    SendAckPacketToPeer();
-  }
-  EXPECT_EQ(0x03030303u, writer_->final_bytes_of_last_packet());
-}
-
 TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
   // SetFromConfig is always called after construction from InitializeSession.
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
@@ -3609,7 +3554,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
 }
 
-TEST_P(QuicConnectionTest, TimeoutAfter5RTOs) {
+TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
   connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
   EXPECT_TRUE(connection_.connected());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
@@ -3640,6 +3585,42 @@ TEST_P(QuicConnectionTest, TimeoutAfter5RTOs) {
   connection_.GetRetransmissionAlarm()->Fire();
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_FALSE(connection_.connected());
+}
+
+TEST_P(QuicConnectionTest, TimeoutAfter5ServerRTOs) {
+  FLAGS_quic_only_5rto_client_side = true;
+  connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
+  QuicConnectionPeer::SetPerspective(&connection_, Perspective::IS_SERVER);
+  QuicFramerPeer::SetPerspective(QuicConnectionPeer::GetFramer(&connection_),
+                                 Perspective::IS_SERVER);
+  creator_->StopSendingVersion();
+  EXPECT_TRUE(connection_.connected());
+  EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
+  QuicConfig config;
+  QuicTagVector connection_options;
+  connection_options.push_back(k5RTO);
+  config.SetConnectionOptionsToSend(connection_options);
+  connection_.SetFromConfig(config);
+
+  // Send stream data.
+  SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, kFin, nullptr);
+
+  EXPECT_CALL(visitor_, OnPathDegrading());
+  // Fire the retransmission alarm 6 times, twice for TLP and 4 times for RTO.
+  for (int i = 0; i < 6; ++i) {
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
+    connection_.GetRetransmissionAlarm()->Fire();
+    EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
+    EXPECT_TRUE(connection_.connected());
+  }
+
+  EXPECT_EQ(2u, connection_.sent_packet_manager().GetConsecutiveTlpCount());
+  EXPECT_EQ(4u, connection_.sent_packet_manager().GetConsecutiveRtoCount());
+  // The 5th RTO should not time out server side.
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
+  connection_.GetRetransmissionAlarm()->Fire();
+  EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
+  EXPECT_TRUE(connection_.connected());
 }
 
 TEST_P(QuicConnectionTest, SendScheduler) {
@@ -4951,12 +4932,11 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckOfNackedPacket) {
 TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
   QuicPacketHeader header;
 
-  std::unique_ptr<MockQuicConnectionDebugVisitor> debug_visitor(
-      new MockQuicConnectionDebugVisitor());
-  connection_.set_debug_visitor(debug_visitor.get());
-  EXPECT_CALL(*debug_visitor, OnPacketHeader(Ref(header))).Times(1);
+  MockQuicConnectionDebugVisitor debug_visitor;
+  connection_.set_debug_visitor(&debug_visitor);
+  EXPECT_CALL(debug_visitor, OnPacketHeader(Ref(header))).Times(1);
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_)).Times(1);
-  EXPECT_CALL(*debug_visitor, OnSuccessfulVersionNegotiation(_)).Times(1);
+  EXPECT_CALL(debug_visitor, OnSuccessfulVersionNegotiation(_)).Times(1);
   connection_.OnPacketHeader(header);
 }
 
@@ -5059,8 +5039,13 @@ TEST_P(QuicConnectionTest, SendAcksImmediately) {
 }
 
 TEST_P(QuicConnectionTest, SendPingImmediately) {
+  MockQuicConnectionDebugVisitor debug_visitor;
+  connection_.set_debug_visitor(&debug_visitor);
+
   CongestionBlockWrites();
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(1);
+  EXPECT_CALL(debug_visitor, OnPacketSent(_, _, _, _, _)).Times(1);
+  EXPECT_CALL(debug_visitor, OnPingSent()).Times(1);
   connection_.SendPing();
   EXPECT_FALSE(connection_.HasQueuedData());
 }
@@ -5199,11 +5184,13 @@ TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
 }
 
 TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {
-  FLAGS_quic_close_connection_on_packet_too_large = true;
   SimulateNextPacketTooLarge();
-  // Although the data packet cannot be written, the send packet manager is
-  // informed. Also a connection close packet is sent.
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  if (!FLAGS_quic_only_track_sent_packets) {
+    // Although the data packet cannot be written, the send packet manager is
+    // informed.
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  }
+  // A connection close packet is sent
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
                                            ConnectionCloseSource::FROM_SELF))
       .Times(1);
@@ -5213,9 +5200,10 @@ TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {
 TEST_P(QuicConnectionTest, AlwaysGetPacketTooLarge) {
   // Test even we always get packet too large, we do not infinitely try to send
   // close packet.
-  FLAGS_quic_close_connection_on_packet_too_large = true;
   AlwaysGetPacketTooLarge();
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  if (!FLAGS_quic_only_track_sent_packets) {
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  }
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
                                            ConnectionCloseSource::FROM_SELF))
       .Times(1);
@@ -5225,8 +5213,6 @@ TEST_P(QuicConnectionTest, AlwaysGetPacketTooLarge) {
 // Verify that if connection has no outstanding data, it notifies the send
 // algorithm after the write.
 TEST_P(QuicConnectionTest, SendDataAndBecomeApplicationLimited) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   EXPECT_CALL(*send_algorithm_, OnApplicationLimited(_)).Times(1);
   {
     InSequence seq;
@@ -5243,8 +5229,6 @@ TEST_P(QuicConnectionTest, SendDataAndBecomeApplicationLimited) {
 // Verify that the connection does not become app-limited if there is
 // outstanding data to send after the write.
 TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedIfMoreDataAvailable) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   EXPECT_CALL(*send_algorithm_, OnApplicationLimited(_)).Times(0);
   {
     InSequence seq;
@@ -5259,8 +5243,6 @@ TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedIfMoreDataAvailable) {
 // Verify that the connection does not become app-limited after blocked write
 // even if there is outstanding data to send after the write.
 TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedDueToWriteBlock) {
-  FLAGS_quic_enable_app_limited_check = true;
-
   EXPECT_CALL(*send_algorithm_, OnApplicationLimited(_)).Times(0);
   EXPECT_CALL(visitor_, WillingAndAbleToWrite()).WillRepeatedly(Return(true));
   BlockOnNextWrite();
@@ -5268,26 +5250,7 @@ TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedDueToWriteBlock) {
   connection_.SendStreamData3();
 }
 
-TEST_P(QuicConnectionTest, ForceSendingAckOnPacketTooLarge) {
-  FLAGS_quic_do_not_send_ack_on_emsgsize = false;
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  // Send an ack by simulating delayed ack alarm firing.
-  ProcessPacket(kDefaultPathId, 1);
-  QuicAlarm* ack_alarm = QuicConnectionPeer::GetAckAlarm(&connection_);
-  EXPECT_TRUE(ack_alarm->IsSet());
-  connection_.GetAckAlarm()->Fire();
-  // Simulate data packet causes write error.
-  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _, _));
-  SimulateNextPacketTooLarge();
-  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->connection_close_frames().empty());
-  // Ack frame is bundled.
-  EXPECT_FALSE(writer_->ack_frames().empty());
-}
-
 TEST_P(QuicConnectionTest, DonotForceSendingAckOnPacketTooLarge) {
-  FLAGS_quic_do_not_send_ack_on_emsgsize = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Send an ack by simulating delayed ack alarm firing.
   ProcessPacket(kDefaultPathId, 1);

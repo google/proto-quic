@@ -8,6 +8,7 @@
 import argparse
 import os
 import shutil
+import subprocess
 import sys
 
 
@@ -35,11 +36,20 @@ def extract_gn_build_commands(build_ninja_file):
   return result
 
 
+def delete_dir(build_dir):
+  # For unknown reasons (anti-virus?) rmtree of Chromium build directories
+  # often fails on Windows.
+  if sys.platform.startswith('win'):
+    subprocess.check_call(['rmdir', '/s', '/q', build_dir], shell=True)
+  else:
+    shutil.rmtree(build_dir)
+
+
 def delete_build_dir(build_dir):
   # GN writes a build.ninja.d file. Note that not all GN builds have args.gn.
   build_ninja_d_file = os.path.join(build_dir, 'build.ninja.d')
   if not os.path.exists(build_ninja_d_file):
-    shutil.rmtree(build_dir)
+    delete_dir(build_dir)
     return
 
   # GN builds aren't automatically regenerated when you sync. To avoid
@@ -56,10 +66,17 @@ def delete_build_dir(build_dir):
   except IOError:
     args_contents = ''
 
-  shutil.rmtree(build_dir)
+  e = None
+  try:
+    # delete_dir and os.mkdir() may fail, such as when chrome.exe is running,
+    # and we still want to restore args.gn/build.ninja/build.ninja.d, so catch
+    # the exception and rethrow it later.
+    delete_dir(build_dir)
+    os.mkdir(build_dir)
+  except Exception as e:
+    pass
 
   # Put back the args file (if any).
-  os.mkdir(build_dir)
   if args_contents != '':
     with open(gn_args_file, 'w') as f:
       f.write(args_contents)
@@ -84,6 +101,9 @@ depfile = build.ninja.d
   with open(build_ninja_d_file, 'w') as f:
     f.write('build.ninja: nonexistant_file.gn\n')
 
+  if e:
+    # Rethrow the exception we caught earlier.
+    raise e
 
 def clobber(out_dir):
   """Clobber contents of build directory.

@@ -1,0 +1,11 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "gmail_refresh_001.wpr": [
+            "https://mail.google.com/mail/"
+        ], 
+        "gmail_refresh_000.wpr": [
+            "https://www.google.com/calendar/"
+        ]
+    }
+}

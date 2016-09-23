@@ -49,16 +49,13 @@ class Config {
   }
 
   static bool IsPersistent(const std::string& name) {
-    return name == "Persistent";
+    return name == "Persistent" ||
+           name == "WeakPersistent" ;
   }
 
-  static bool IsPersistentHandle(const std::string& name) {
-    return IsPersistent(name) ||
-           IsPersistentGCCollection(name);
-  }
-
-  static bool IsRawPtr(const std::string& name) {
-    return name == "RawPtr";
+  static bool IsCrossThreadPersistent(const std::string& name) {
+    return name == "CrossThreadPersistent" ||
+           name == "CrossThreadWeakPersistent" ;
   }
 
   static bool IsRefPtr(const std::string& name) {
@@ -67,6 +64,10 @@ class Config {
 
   static bool IsOwnPtr(const std::string& name) {
     return name == "OwnPtr";
+  }
+
+  static bool IsUniquePtr(const std::string& name) {
+    return name == "unique_ptr";
   }
 
   static bool IsWTFCollection(const std::string& name) {
@@ -106,21 +107,9 @@ class Config {
            name == "PersistentHeapHashMap";
   }
 
-  // Following http://crrev.com/369633033 (Blink r177436),
-  // ignore blink::ScriptWrappable's destructor.
-  // TODO: remove when its non-Oilpan destructor is removed.
-  static bool HasIgnorableDestructor(const std::string& ns,
-                                     const std::string& name) {
-    return ns == "blink" && name == "ScriptWrappable";
-  }
-
   // Assumes name is a valid collection name.
   static size_t CollectionDimension(const std::string& name) {
     return (IsHashMap(name) || name == "pair") ? 2 : 1;
-  }
-
-  static bool IsDummyBase(const std::string& name) {
-    return name == "DummyBase";
   }
 
   static bool IsRefCountedBase(const std::string& name) {
@@ -133,14 +122,7 @@ class Config {
   }
 
   static bool IsGCFinalizedBase(const std::string& name) {
-    return name == "GarbageCollectedFinalized" ||
-           name == "RefCountedGarbageCollected" ||
-           name == "ThreadSafeRefCountedGarbageCollected";
-  }
-
-  static bool IsGCRefCountedBase(const std::string& name) {
-    return name == "RefCountedGarbageCollected" ||
-           name == "ThreadSafeRefCountedGarbageCollected";
+    return name == "GarbageCollectedFinalized";
   }
 
   static bool IsGCBase(const std::string& name) {
@@ -152,7 +134,7 @@ class Config {
   // Returns true of the base classes that do not need a vtable entry for trace
   // because they cannot possibly initiate a GC during construction.
   static bool IsSafePolymorphicBase(const std::string& name) {
-    return IsGCBase(name) || IsDummyBase(name) || IsRefCountedBase(name);
+    return IsGCBase(name) || IsRefCountedBase(name);
   }
 
   static bool IsAnnotated(clang::Decl* decl, const std::string& anno) {

@@ -27,35 +27,28 @@ import clobber
 import landmine_utils
 
 
-def get_build_dir(build_tool, src_dir, is_iphone=False):
+def get_build_dir(src_dir):
   """
   Returns output directory absolute path dependent on build and targets.
   Examples:
     r'c:\b\build\slave\win\build\src\out'
     '/mnt/data/b/build/slave/linux/build/src/out'
-    '/b/build/slave/ios_rel_device/build/src/xcodebuild'
+    '/b/build/slave/ios_rel_device/build/src/out'
 
   Keep this function in sync with tools/build/scripts/slave/compile.py
   """
-  ret = None
-  if build_tool == 'xcode':
-    ret = os.path.join(src_dir, 'xcodebuild')
-  elif build_tool in ['make', 'ninja', 'ninja-ios']:  # TODO: Remove ninja-ios.
-    if 'CHROMIUM_OUT_DIR' in os.environ:
-      output_dir = os.environ.get('CHROMIUM_OUT_DIR').strip()
-      if not output_dir:
-        raise Error('CHROMIUM_OUT_DIR environment variable is set but blank!')
-    else:
-      output_dir = landmine_utils.gyp_generator_flags().get('output_dir', 'out')
-    ret = os.path.join(src_dir, output_dir)
+  if 'CHROMIUM_OUT_DIR' in os.environ:
+    output_dir = os.environ.get('CHROMIUM_OUT_DIR').strip()
+    if not output_dir:
+      raise Error('CHROMIUM_OUT_DIR environment variable is set but blank!')
   else:
-    raise NotImplementedError('Unexpected GYP_GENERATORS (%s)' % build_tool)
-  return os.path.abspath(ret)
+    output_dir = landmine_utils.gyp_generator_flags().get('output_dir', 'out')
+  return os.path.abspath(os.path.join(src_dir, output_dir))
 
 
 def clobber_if_necessary(new_landmines, src_dir):
   """Does the work of setting, planting, and triggering landmines."""
-  out_dir = get_build_dir(landmine_utils.builder(), src_dir)
+  out_dir = get_build_dir(src_dir)
   landmines_path = os.path.normpath(os.path.join(src_dir, '.landmines'))
   try:
     os.makedirs(out_dir)
@@ -73,6 +66,7 @@ def clobber_if_necessary(new_landmines, src_dir):
           fromfiledate=old_date, tofiledate=time.ctime(), n=0)
       sys.stdout.write('Clobbering due to:\n')
       sys.stdout.writelines(diff)
+      sys.stdout.flush()
 
       clobber.clobber(out_dir)
 
@@ -127,9 +121,6 @@ def process_options():
 
 def main():
   options = process_options()
-
-  if landmine_utils.builder() in ('dump_dependency_json', 'eclipse'):
-    return 0
 
   gyp_environment.SetEnvironment()
 

@@ -18,7 +18,8 @@ class VerifyCertificateChainDelegate {
                      const scoped_refptr<TrustAnchor>& trust_anchor,
                      const der::GeneralizedTime& time,
                      bool expected_result,
-                     const std::string& expected_errors) {
+                     const std::string& expected_errors,
+                     const std::string& test_file_path) {
     ASSERT_TRUE(trust_anchor);
 
     SimpleSignaturePolicy signature_policy(1024);
@@ -27,7 +28,10 @@ class VerifyCertificateChainDelegate {
     bool result = VerifyCertificateChain(chain, trust_anchor.get(),
                                          &signature_policy, time, &errors);
     EXPECT_EQ(expected_result, result);
-    EXPECT_EQ(expected_errors, errors.ToDebugString());
+    EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
+                                                       << test_file_path;
+    if (!result)
+      EXPECT_FALSE(errors.empty());
   }
 };
 

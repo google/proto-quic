@@ -22,7 +22,6 @@
 
 import optparse
 import os
-from os import environ as env
 import plistlib
 import re
 import subprocess
@@ -30,6 +29,12 @@ import sys
 import tempfile
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
+
+def _ConvertPlist(source_plist, output_plist, fmt):
+  """Convert |source_plist| to |fmt| and save as |output_plist|."""
+  return subprocess.call(
+      ['plutil', '-convert', fmt, '-o', output_plist, source_plist])
 
 
 def _GetOutput(args):
@@ -62,47 +67,68 @@ def _RemoveKeys(plist, *keys):
       pass
 
 
-def _AddVersionKeys(plist, version=None):
+def _ApplyVersionOverrides(version, keys, overrides, separator='.'):
+  """Applies version overrides.
+
+  Given a |version| string as "a.b.c.d" (assuming a default separator) with
+  version components named by |keys| then overrides any value that is present
+  in |overrides|.
+
+  >>> _ApplyVersionOverrides('a.b', ['major', 'minor'], {'minor': 'd'})
+  'a.d'
+  """
+  if not overrides:
+    return version
+  version_values = version.split(separator)
+  for i, (key, value) in enumerate(zip(keys, version_values)):
+    if key in overrides:
+      version_values[i] = overrides[key]
+  return separator.join(version_values)
+
+
+def _GetVersion(version_format, values, overrides=None):
+  """Generates a version number according to |version_format| using the values
+  from |values| or |overrides| if given."""
+  result = version_format
+  for key in values:
+    if overrides and key in overrides:
+      value = overrides[key]
+    else:
+      value = values[key]
+    result = result.replace('@%s@' % key, value)
+  return result
+
+
+def _AddVersionKeys(
+    plist, version_format_for_key, version=None, overrides=None):
   """Adds the product version number into the plist. Returns True on success and
   False on error. The error will be printed to stderr."""
-  if version:
-    match = re.match('\d+\.\d+\.(\d+\.\d+)$', version)
-    if not match:
-      print >>sys.stderr, 'Invalid version string specified: "%s"' % version
-      return False
-
-    full_version = match.group(0)
-    bundle_version = match.group(1)
-
-  else:
+  if not version:
     # Pull in the Chrome version number.
     VERSION_TOOL = os.path.join(TOP, 'build/util/version.py')
     VERSION_FILE = os.path.join(TOP, 'chrome/VERSION')
+    (stdout, retval) = _GetOutput([
+        VERSION_TOOL, '-f', VERSION_FILE,
+        '-t', '@MAJOR@.@MINOR@.@BUILD@.@PATCH@'])
 
-    (stdout, retval1) = _GetOutput([VERSION_TOOL, '-f', VERSION_FILE, '-t',
-                                    '@MAJOR@.@MINOR@.@BUILD@.@PATCH@'])
-    full_version = stdout.rstrip()
-
-    (stdout, retval2) = _GetOutput([VERSION_TOOL, '-f', VERSION_FILE, '-t',
-                                    '@BUILD@.@PATCH@'])
-    bundle_version = stdout.rstrip()
-
-    # If either of the two version commands finished with non-zero returncode,
-    # report the error up.
-    if retval1 or retval2:
+    # If the command finished with a non-zero return code, then report the
+    # error up.
+    if retval != 0:
       return False
 
-  # Add public version info so "Get Info" works.
-  plist['CFBundleShortVersionString'] = full_version
+    version = stdout.strip()
 
-  # Honor the 429496.72.95 limit.  The maximum comes from splitting 2^32 - 1
-  # into  6, 2, 2 digits.  The limitation was present in Tiger, but it could
-  # have been fixed in later OS release, but hasn't been tested (it's easy
-  # enough to find out with "lsregister -dump).
-  # http://lists.apple.com/archives/carbon-dev/2006/Jun/msg00139.html
-  # BUILD will always be an increasing value, so BUILD_PATH gives us something
-  # unique that meetings what LS wants.
-  plist['CFBundleVersion'] = bundle_version
+  # Parse the given version number, that should be in MAJOR.MINOR.BUILD.PATCH
+  # format (where each value is a number). Note that str.isdigit() returns
+  # True if the string is composed only of digits (and thus match \d+ regexp).
+  groups = version.split('.')
+  if len(groups) != 4 or not all(element.isdigit() for element in groups):
+    print >>sys.stderr, 'Invalid version string specified: "%s"' % version
+    return False
+  values = dict(zip(('MAJOR', 'MINOR', 'BUILD', 'PATCH'), groups))
+
+  for key in version_format_for_key:
+    plist[key] = _GetVersion(version_format_for_key[key], values, overrides)
 
   # Return with no error.
   return True
@@ -132,13 +158,14 @@ def _DoSCMKeys(plist, add_keys):
   return True
 
 
-def _AddBreakpadKeys(plist, branding):
+def _AddBreakpadKeys(plist, branding, platform):
   """Adds the Breakpad keys. This must be called AFTER _AddVersionKeys() and
   also requires the |branding| argument."""
   plist['BreakpadReportInterval'] = '3600'  # Deliberately a string.
-  plist['BreakpadProduct'] = '%s_Mac' % branding
+  plist['BreakpadProduct'] = '%s_%s' % (branding, platform)
   plist['BreakpadProductDisplay'] = branding
-  plist['BreakpadVersion'] = plist['CFBundleShortVersionString']
+  plist['BreakpadURL'] = 'https://clients2.google.com/cr/report'
+
   # These are both deliberately strings and not boolean.
   plist['BreakpadSendAndExit'] = 'YES'
   plist['BreakpadSkipConfirm'] = 'YES'
@@ -202,11 +229,13 @@ def _RemoveKeystoneKeys(plist):
 
 def Main(argv):
   parser = optparse.OptionParser('%prog [options]')
+  parser.add_option('--plist', dest='plist_path', action='store',
+      type='string', default=None, help='The path of the plist to tweak.')
+  parser.add_option('--output', dest='plist_output', action='store',
+      type='string', default=None, help='If specified, the path to output ' + \
+      'the tweaked plist, rather than overwriting the input.')
   parser.add_option('--breakpad', dest='use_breakpad', action='store',
       type='int', default=False, help='Enable Breakpad [1 or 0]')
-  parser.add_option('--breakpad_uploads', dest='breakpad_uploads',
-      action='store', type='int', default=False,
-      help='Enable Breakpad\'s uploading of crash dumps [1 or 0]')
   parser.add_option('--keystone', dest='use_keystone', action='store',
       type='int', default=False, help='Enable Keystone [1 or 0]')
   parser.add_option('--scm', dest='add_scm_info', action='store', type='int',
@@ -216,6 +245,15 @@ def Main(argv):
   parser.add_option('--bundle_id', dest='bundle_identifier',
       action='store', type='string', default=None,
       help='The bundle id of the binary')
+  parser.add_option('--platform', choices=('ios', 'mac'), default='mac',
+      help='The target platform of the bundle')
+  parser.add_option('--version-overrides', action='append',
+      help='Key-value pair to override specific component of version '
+           'like key=value (can be passed multiple time to configure '
+           'more than one override)')
+  parser.add_option('--format', choices=('binary1', 'xml1', 'json'),
+      default='xml1', help='Format to use when writing property list '
+          '(default: %(default)s)')
   parser.add_option('--version', dest='version', action='store', type='string',
       default=None, help='The version string [major.minor.build.patch]')
   (options, args) = parser.parse_args(argv)
@@ -224,12 +262,59 @@ def Main(argv):
     print >>sys.stderr, parser.get_usage()
     return 1
 
-  # Read the plist into its parsed format.
-  DEST_INFO_PLIST = os.path.join(env['TARGET_BUILD_DIR'], env['INFOPLIST_PATH'])
-  plist = plistlib.readPlist(DEST_INFO_PLIST)
+  if not options.plist_path:
+    print >>sys.stderr, 'No --plist specified.'
+    return 1
+
+  # Read the plist into its parsed format. Convert the file to 'xml1' as
+  # plistlib only supports that format in Python 2.7.
+  with tempfile.NamedTemporaryFile() as temp_info_plist:
+    retcode = _ConvertPlist(options.plist_path, temp_info_plist.name, 'xml1')
+    if retcode != 0:
+      return retcode
+    plist = plistlib.readPlist(temp_info_plist.name)
+
+  # Convert overrides.
+  overrides = {}
+  if options.version_overrides:
+    for pair in options.version_overrides:
+      if not '=' in pair:
+        print >>sys.stderr, 'Invalid value for --version-overrides:', pair
+        return 1
+      key, value = pair.split('=', 1)
+      overrides[key] = value
+      if key not in ('MAJOR', 'MINOR', 'BUILD', 'PATCH'):
+        print >>sys.stderr, 'Unsupported key for --version-overrides:', key
+        return 1
+
+  if options.platform == 'mac':
+    version_format_for_key = {
+      # Add public version info so "Get Info" works.
+      'CFBundleShortVersionString': '@MAJOR@.@MINOR@.@BUILD@.@PATCH@',
+
+      # Honor the 429496.72.95 limit.  The maximum comes from splitting 2^32 - 1
+      # into  6, 2, 2 digits.  The limitation was present in Tiger, but it could
+      # have been fixed in later OS release, but hasn't been tested (it's easy
+      # enough to find out with "lsregister -dump).
+      # http://lists.apple.com/archives/carbon-dev/2006/Jun/msg00139.html
+      # BUILD will always be an increasing value, so BUILD_PATH gives us
+      # something unique that meetings what LS wants.
+      'CFBundleVersion': '@BUILD@.@PATCH@',
+    }
+  else:
+    version_format_for_key = {
+      'CFBundleShortVersionString': '@MAJOR@.@BUILD@.@PATCH@',
+      'CFBundleVersion': '@MAJOR@.@MINOR@.@BUILD@.@PATCH@'
+    }
+
+  if options.use_breakpad:
+    version_format_for_key['BreakpadVersion'] = \
+        '@MAJOR@.@MINOR@.@BUILD@.@PATCH@'
 
   # Insert the product version.
-  if not _AddVersionKeys(plist, version=options.version):
+  if not _AddVersionKeys(
+      plist, version_format_for_key, version=options.version,
+      overrides=overrides):
     return 2
 
   # Add Breakpad if configured to do so.
@@ -237,22 +322,15 @@ def Main(argv):
     if options.branding is None:
       print >>sys.stderr, 'Use of Breakpad requires branding.'
       return 1
-    _AddBreakpadKeys(plist, options.branding)
-    if options.breakpad_uploads:
-      plist['BreakpadURL'] = 'https://clients2.google.com/cr/report'
-    else:
-      # This allows crash dumping to a file without uploading the
-      # dump, for testing purposes.  Breakpad does not recognise
-      # "none" as a special value, but this does stop crash dump
-      # uploading from happening.  We need to specify something
-      # because if "BreakpadURL" is not present, Breakpad will not
-      # register its crash handler and no crash dumping will occur.
-      plist['BreakpadURL'] = 'none'
+    # Map gyp "OS" / gn "target_os" passed via the --platform parameter to
+    # the platform as known by breakpad.
+    platform = {'mac': 'Mac', 'ios': 'iOS'}[options.platform]
+    _AddBreakpadKeys(plist, options.branding, platform)
   else:
     _RemoveBreakpadKeys(plist)
 
-  # Only add Keystone in Release builds.
-  if options.use_keystone and env['CONFIGURATION'] == 'Release':
+  # Add Keystone if configured to do so.
+  if options.use_keystone:
     if options.bundle_identifier is None:
       print >>sys.stderr, 'Use of Keystone requires the bundle id.'
       return 1
@@ -264,16 +342,17 @@ def Main(argv):
   if not _DoSCMKeys(plist, options.add_scm_info):
     return 3
 
-  # Now that all keys have been mutated, rewrite the file.
-  temp_info_plist = tempfile.NamedTemporaryFile()
-  plistlib.writePlist(plist, temp_info_plist.name)
+  output_path = options.plist_path
+  if options.plist_output is not None:
+    output_path = options.plist_output
 
-  # Info.plist will work perfectly well in any plist format, but traditionally
-  # applications use xml1 for this, so convert it to ensure that it's valid.
-  proc = subprocess.Popen(['plutil', '-convert', 'xml1', '-o', DEST_INFO_PLIST,
-                           temp_info_plist.name])
-  proc.wait()
-  return proc.returncode
+  # Now that all keys have been mutated, rewrite the file.
+  with tempfile.NamedTemporaryFile() as temp_info_plist:
+    plistlib.writePlist(plist, temp_info_plist.name)
+
+    # Convert Info.plist to the format requested by the --format flag. Any
+    # format would work on Mac but iOS requires specific format.
+    return _ConvertPlist(temp_info_plist.name, output_path, options.format)
 
 
 if __name__ == '__main__':

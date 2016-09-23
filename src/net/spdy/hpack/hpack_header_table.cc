@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_static_table.h"
+#include "net/spdy/spdy_flags.h"
 
 namespace net {
 
@@ -125,7 +126,11 @@ void HpackHeaderTable::SetMaxSize(size_t max_size) {
 
 void HpackHeaderTable::SetSettingsHeaderTableSize(size_t settings_size) {
   settings_size_bound_ = settings_size;
-  if (settings_size_bound_ < max_size_) {
+  if (!FLAGS_chromium_reloadable_flag_increase_hpack_table_size) {
+    if (settings_size_bound_ < max_size_) {
+      SetMaxSize(settings_size_bound_);
+    }
+  } else {
     SetMaxSize(settings_size_bound_);
   }
 }

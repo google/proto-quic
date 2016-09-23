@@ -173,6 +173,8 @@ DETERMINISTIC_DEVICE_SETTINGS = [
     ('lockscreen.disabled', 1),
 
     ('screensaver_enabled', 0),
+
+    ('skip_first_use_hints', 1),
   ]),
   ('settings/system', [
     # Don't want devices to accidentally rotate the screen as that could

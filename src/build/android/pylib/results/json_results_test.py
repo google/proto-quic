@@ -128,6 +128,45 @@ class JsonResultsTest(unittest.TestCase):
       self.assertTrue('status' in test_iteration_result)
       self.assertEquals('SUCCESS', test_iteration_result['status'])
 
+  def testGenerateResultsDict_passOnRetry(self):
+    raw_results = []
+
+    result1 = base_test_result.BaseTestResult(
+        'test.package.TestName1', base_test_result.ResultType.FAIL)
+    run_results1 = base_test_result.TestRunResults()
+    run_results1.AddResult(result1)
+    raw_results.append(run_results1)
+
+    result2 = base_test_result.BaseTestResult(
+        'test.package.TestName1', base_test_result.ResultType.PASS)
+    run_results2 = base_test_result.TestRunResults()
+    run_results2.AddResult(result2)
+    raw_results.append(run_results2)
+
+    results_dict = json_results.GenerateResultsDict([raw_results])
+    self.assertEquals(['test.package.TestName1'], results_dict['all_tests'])
+
+    # Check that there's only one iteration.
+    self.assertIn('per_iteration_data', results_dict)
+    iterations = results_dict['per_iteration_data']
+    self.assertEquals(1, len(iterations))
+
+    # Check that test.package.TestName1 is the only test in the iteration.
+    self.assertEquals(1, len(iterations[0]))
+    self.assertIn('test.package.TestName1', iterations[0])
+
+    # Check that there are two results for test.package.TestName1.
+    actual_test_results = iterations[0]['test.package.TestName1']
+    self.assertEquals(2, len(actual_test_results))
+
+    # Check that the first result is a failure.
+    self.assertIn('status', actual_test_results[0])
+    self.assertEquals('FAILURE', actual_test_results[0]['status'])
+
+    # Check that the second result is a success.
+    self.assertIn('status', actual_test_results[1])
+    self.assertEquals('SUCCESS', actual_test_results[1]['status'])
+
 
 if __name__ == '__main__':
   unittest.main(verbosity=2)

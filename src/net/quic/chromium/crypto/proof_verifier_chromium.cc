@@ -60,7 +60,7 @@ class ProofVerifierChromium::Job {
       TransportSecurityState* transport_security_state,
       CTVerifier* cert_transparency_verifier,
       int cert_verify_flags,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
   ~Job();
 
   // Starts the proof verification.  If |QUIC_PENDING| is returned, then
@@ -155,7 +155,7 @@ class ProofVerifierChromium::Job {
 
   base::TimeTicks start_time_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(Job);
 };
@@ -167,7 +167,7 @@ ProofVerifierChromium::Job::Job(
     TransportSecurityState* transport_security_state,
     CTVerifier* cert_transparency_verifier,
     int cert_verify_flags,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : proof_verifier_(proof_verifier),
       verifier_(cert_verifier),
       policy_enforcer_(ct_policy_enforcer),

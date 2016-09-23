@@ -47,6 +47,10 @@
 #   A list of schema files which should not be compiled, but which should still
 #   be processed for API bundle generation.
 #
+# uncompiled_bundle_schema_sources [optional, only used when bundle = true]
+#   A list of schema files which should not be compiled nor registered, but
+#   should still be processed for the schema generation.
+#
 # configs [optional]
 #   Extra configs to apply to the compile step.
 #
@@ -139,6 +143,12 @@ template("json_schema_api") {
       uncompiled_sources = invoker.uncompiled_sources
     }
 
+    uncompiled_bundle_schema_sources = []
+    if (defined(invoker.uncompiled_bundle_schema_sources)) {
+      uncompiled_bundle_schema_sources =
+          invoker.uncompiled_bundle_schema_sources
+    }
+
     bundle_generator_schema_name = target_name + "_bundle_generator_schema"
     action(bundle_generator_schema_name) {
       script = compiler_script
@@ -155,7 +165,8 @@ template("json_schema_api") {
                "--generator=cpp-bundle-schema",
                "--include-rules=$schema_include_rules",
              ] + rebase_path(invoker.sources, root_build_dir) +
-             rebase_path(uncompiled_sources, root_build_dir)
+             rebase_path(uncompiled_sources, root_build_dir) +
+             rebase_path(uncompiled_bundle_schema_sources, root_build_dir)
     }
   }
 
@@ -226,37 +237,18 @@ template("json_schema_api") {
     lib_deps += invoker.deps
   }
 
-  # Generate either a static library or a source set.
-  if (defined(invoker.generate_static_library) &&
-      invoker.generate_static_library) {
-    static_library(target_name) {
-      sources = lib_sources
-      deps = lib_deps
-      public_deps = lib_public_deps
-      configs += lib_extra_configs
-      public_configs = [ ":$generated_config_name" ]
+  static_library(target_name) {
+    sources = lib_sources
+    deps = lib_deps
+    public_deps = lib_public_deps
+    configs += lib_extra_configs
+    public_configs = [ ":$generated_config_name" ]
 
-      if (defined(invoker.visibility)) {
-        visibility = invoker.visibility
-      }
-      if (defined(invoker.output_name)) {
-        output_name = invoker.output_name
-      }
+    if (defined(invoker.visibility)) {
+      visibility = invoker.visibility
     }
-  } else {
-    source_set(target_name) {
-      sources = lib_sources
-      deps = lib_deps
-      public_deps = lib_public_deps
-      configs += lib_extra_configs
-      public_configs = [ ":$generated_config_name" ]
-
-      if (defined(invoker.visibility)) {
-        visibility = invoker.visibility
-      }
-      if (defined(invoker.output_name)) {
-        output_name = invoker.output_name
-      }
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
     }
   }
 }

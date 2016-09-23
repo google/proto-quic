@@ -1,0 +1,14 @@
+{
+    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
+    "archives": {
+        "simple_mobile_sites_002.wpr": [
+            "http://www.ebay.co.uk/", 
+            "https://www.flickr.com/", 
+            "http://www.apple.com/mac/", 
+            "http://www.nyc.gov", 
+            "http://m.nytimes.com/", 
+            "https://www.yahoo.com/", 
+            "http://m.us.wsj.com/"
+        ]
+    }
+}

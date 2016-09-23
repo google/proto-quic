@@ -90,7 +90,7 @@ UDPSocketPosix::UDPSocketPosix(DatagramSocket::BindType bind_type,
       read_buf_len_(0),
       recv_from_address_(NULL),
       write_buf_len_(0),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::UDP_SOCKET)),
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::UDP_SOCKET)),
       bound_network_(NetworkChangeNotifier::kInvalidNetworkHandle) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());

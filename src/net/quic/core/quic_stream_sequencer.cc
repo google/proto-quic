@@ -35,7 +35,6 @@ QuicStreamSequencer::QuicStreamSequencer(ReliableQuicStream* quic_stream,
       blocked_(false),
       num_frames_received_(0),
       num_duplicate_frames_received_(0),
-      num_early_frames_received_(0),
       clock_(clock),
       ignore_read_data_(false) {}
 
@@ -72,10 +71,6 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
     ++num_duplicate_frames_received_;
     // Silently ignore duplicates.
     return;
-  }
-
-  if (byte_offset > buffered_frames_.BytesConsumed()) {
-    ++num_early_frames_received_;
   }
 
   if (blocked_) {

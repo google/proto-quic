@@ -40,15 +40,6 @@ QUIC_FLAG(bool, FLAGS_quic_enable_multipath, false)
 // TODO(rtenneti): Enable this flag after CryptoServerTest's are fixed.
 QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation, false)
 
-// If true, Cubic's epoch is shifted when the sender is application-limited.
-QUIC_FLAG(bool, FLAGS_shift_quic_cubic_epoch_when_app_limited, true)
-
-// If true, QUIC will measure head of line (HOL) blocking due between
-// streams due to packet losses on the headers stream.  The
-// measurements will be surfaced via UMA histogram
-// Net.QuicSession.HeadersHOLBlockedTime.
-QUIC_FLAG(bool, FLAGS_quic_measure_headers_hol_blocking_time, true)
-
 // If true, disable pacing in QUIC.
 QUIC_FLAG(bool, FLAGS_quic_disable_pacing_for_perf_tests, false)
 
@@ -72,45 +63,14 @@ QUIC_FLAG(bool, FLAGS_quic_respect_http2_settings_frame, true)
 QUIC_FLAG(bool, FLAGS_quic_enable_version_35, true)
 
 // If true, re-enables QUIC_VERSION_36.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_36, true)
-
-// If true, enables QUIC_VERSION_36.
 QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v2, true)
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
 QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
 
-// If true, QuicAlarm::Update will call a faster UpdateImpl implementation
-// instead of canceling and reregistering the alarm.
-QUIC_FLAG(bool, FLAGS_quic_change_alarms_efficiently, true)
-
 // If true, requires handshake confirmations for all QUIC handshakes with
 // versions less than 33.
 QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation_pre33, false)
-
-// If true, fix a bug with which QuicStreamSequencerBuffer can\'t release block
-// memory in time.
-QUIC_FLAG(bool, FLAGS_quic_sequencer_buffer_retire_block_in_time, true)
-
-// Remove obsolete code to force QUIC to go forward secure, now that the server
-// immediately goes forward secure.
-QUIC_FLAG(bool, FLAGS_quic_remove_obsolete_forward_secure, true)
-
-// If true, close QUIC connection explicitly on write error due to packet being
-// too large.
-QUIC_FLAG(bool, FLAGS_quic_close_connection_on_packet_too_large, true)
-
-// If true, close the write side of a QUIC spdy stream when all queued bytes
-// have been written and a FIN has been sent.
-QUIC_FLAG(bool, FLAGS_quic_close_stream_after_writing_queued_data, true)
-
-// If true, close connection with QUIC_TOO_MANY_FRAME_GAPS error when number of
-// gaps in QuicStreamSequenceBuffer exceeds allowed limit.
-QUIC_FLAG(bool, FLAGS_quic_limit_frame_gaps_in_buffer, true)
-
-// If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in public
-// flag.
-QUIC_FLAG(bool, FLAGS_quic_remove_v33_hacks, true)
 
 // If true, use the CHLO packet size, not message size when determining how
 // large a REJ can be.
@@ -118,14 +78,6 @@ QUIC_FLAG(bool, FLAGS_quic_use_chlo_packet_size, true)
 
 // If true, defer creation of new connection till its CHLO arrives.
 QUIC_FLAG(bool, FLAGS_quic_buffer_packet_till_chlo, true)
-
-// If true, the connection will check whether it is application-limited, and
-// notify the congestion controller about it.
-QUIC_FLAG(bool, FLAGS_quic_enable_app_limited_check, true)
-
-// Deprecate QuicPacketCreator::next_packet_number_length_ because it's no
-// longer necessary.
-QUIC_FLAG(bool, FLAGS_quic_simple_packet_number_length_2, true)
 
 // If true, disables QUIC version less than 32.
 QUIC_FLAG(bool, FLAGS_quic_disable_pre_32, true)
@@ -137,13 +89,6 @@ QUIC_FLAG(bool, FLAGS_quic_enforce_mtu_limit, false)
 // Disable MTU probing if MTU probe causes ERR_MSG_TOO_BIG instead of aborting
 // the connection.
 QUIC_FLAG(bool, FLAGS_graceful_emsgsize_on_mtu_probe, true)
-
-// If true, do not force sending ack when connection is closed because of
-// message too long (EMSGSIZE) write error.
-QUIC_FLAG(bool, FLAGS_quic_do_not_send_ack_on_emsgsize, true)
-
-// If true, postpone multipath flag validation to ProcessValidatedPacket.
-QUIC_FLAG(bool, FLAGS_quic_postpone_multipath_flag_validation, true)
 
 // If true, set a QUIC connection's last_sent_for_timeout_ to the send time of
 // the first packet sent after receiving a packet, even if the sent packet is
@@ -169,3 +114,25 @@ QUIC_FLAG(bool, FLAGS_quic_allow_server_address_change_for_mapped_ipv4, true)
 // If true, disables QUIC version less than 34.
 QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, false)
 
+// When true, decode the packet number from the largest received packet, rather
+// than the most recent.
+QUIC_FLAG(bool, FLAGS_quic_packet_numbers_largest_received, true)
+
+// Only close the connection on the 5th RTO client side when the 5RTO option
+// is enabled.
+QUIC_FLAG(bool, FLAGS_quic_only_5rto_client_side, true)
+
+// If true, QUIC server push will enabled by default.
+QUIC_FLAG(bool, FLAGS_quic_enable_server_push_by_default, false)
+
+// Only inform the QuicSentPacketManager of packets that were sent,
+// not those that we tried to send.
+QUIC_FLAG(bool, FLAGS_quic_only_track_sent_packets, false)
+
+// If true, connection is closed when packet generator is trying to
+// add a frame which alone cannot fit into a packet.
+QUIC_FLAG(bool, FLAGS_quic_close_connection_on_huge_frames, true)
+
+// As the Linux kernel does, limit QUIC's Cubic congestion control to
+// only increase the CWND 1 packet for every two packets acked.
+QUIC_FLAG(bool, FLAGS_quic_limit_cubic_cwnd_increase, true)

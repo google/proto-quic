@@ -205,6 +205,20 @@ class BASE_EXPORT PlatformThread {
 
   static ThreadPriority GetCurrentThreadPriority();
 
+#if defined(OS_LINUX)
+  // Toggles a specific thread's priority at runtime. This can be used to
+  // change the priority of a thread in a different process and will fail
+  // if the calling process does not have proper permissions. The
+  // SetCurrentThreadPriority() function above is preferred in favor of
+  // security but on platforms where sandboxed processes are not allowed to
+  // change priority this function exists to allow a non-sandboxed process
+  // to change the priority of sandboxed threads for improved performance.
+  // Warning: Don't use this for a main thread because that will change the
+  // whole thread group's (i.e. process) priority.
+  static void SetThreadPriority(PlatformThreadId thread_id,
+                                ThreadPriority priority);
+#endif
+
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(PlatformThread);
 };

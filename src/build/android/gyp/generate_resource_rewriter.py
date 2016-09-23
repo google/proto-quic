@@ -95,12 +95,12 @@ def main():
     output_dir = os.path.join(options.output_dir, *package.split('.'))
     CreateResourceRewriter(
         package,
-        build_utils.ParseGypList(options.dep_packages),
+        build_utils.ParseGnList(options.dep_packages),
         output_dir)
   else:
     CreateResourceRewriterSrcjar(
         package,
-        build_utils.ParseGypList(options.dep_packages),
+        build_utils.ParseGnList(options.dep_packages),
         options.srcjar)
 
   return 0

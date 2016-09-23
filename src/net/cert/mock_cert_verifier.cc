@@ -45,7 +45,7 @@ int MockCertVerifier::Verify(const RequestParams& params,
                              CertVerifyResult* verify_result,
                              const CompletionCallback& callback,
                              std::unique_ptr<Request>* out_req,
-                             const BoundNetLog& net_log) {
+                             const NetLogWithSource& net_log) {
   RuleList::const_iterator it;
   for (it = rules_.begin(); it != rules_.end(); ++it) {
     // Check just the server cert. Intermediates will be ignored.

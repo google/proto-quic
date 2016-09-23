@@ -1,0 +1,41 @@
+{
+  "Linux Builder": {
+    "additional_compile_targets": [
+      "browser_tests",
+      "capture_unittests",
+      "content_browsertests",
+      "content_unittests",
+      "frame_analyzer",
+      "gpu_ipc_service_unittests",
+      "media_unittests",
+      "midi_unittests",
+      "remoting_unittests"
+    ]
+  },
+  "Mac Builder": {
+    "additional_compile_targets": [
+      "browser_tests",
+      "capture_unittests",
+      "content_browsertests",
+      "content_unittests",
+      "frame_analyzer",
+      "gpu_ipc_service_unittests",
+      "media_unittests",
+      "midi_unittests",
+      "remoting_unittests"
+    ]
+  },
+  "Win Builder": {
+    "additional_compile_targets": [
+      "browser_tests",
+      "capture_unittests",
+      "content_browsertests",
+      "content_unittests",
+      "frame_analyzer",
+      "gpu_ipc_service_unittests",
+      "media_unittests",
+      "midi_unittests",
+      "remoting_unittests"
+    ]
+  }
+}

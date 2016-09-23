@@ -24,4 +24,3 @@ generate_library_loader("libgio") {
     "g_settings_list_schemas",
   ]
 }
-

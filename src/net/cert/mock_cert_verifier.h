@@ -31,7 +31,7 @@ class MockCertVerifier : public CertVerifier {
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
              std::unique_ptr<Request>* out_req,
-             const BoundNetLog& net_log) override;
+             const NetLogWithSource& net_log) override;
 
   // Sets the default return value for Verify() for certificates/hosts that do
   // not have explicit results added via the AddResult*() methods.

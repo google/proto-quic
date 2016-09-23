@@ -24,7 +24,7 @@ import devil_chromium
 from pylib import constants
 
 def DoPush(options):
-  libraries = build_utils.ParseGypList(options.libraries)
+  libraries = build_utils.ParseGnList(options.libraries)
 
   device = build_device.GetBuildDeviceFromPath(
       options.build_device_configuration)

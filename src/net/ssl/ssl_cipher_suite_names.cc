@@ -466,19 +466,4 @@ bool IsTLSCipherSuiteAllowedByHTTP2(uint16_t cipher_suite) {
   return true;
 }
 
-const char* ECCurveName(uint16_t cipher_suite, int key_exchange_info) {
-  int key_exchange, cipher, mac;
-  if (!GetCipherProperties(cipher_suite, &key_exchange, &cipher, &mac))
-    return nullptr;
-  switch (key_exchange) {
-    case 14:  // ECDHE_ECDSA
-    case 16:  // ECDHE_RSA
-    case 20:  // ECDHE_PSK
-      break;
-    default:
-      return nullptr;
-  }
-  return SSL_get_curve_name(key_exchange_info);
-}
-
 }  // namespace net

@@ -137,6 +137,7 @@ _packages_lib = (
   'libsqlite3-0',
   'libstdc++6',
   'libx11-6',
+  'libx11-xcb1',
   'libxau6',
   'libxcb1',
   'libxcomposite1',
@@ -167,6 +168,7 @@ _packages_dbg = (
   'libpixman-1-0-dbg',
   'libsqlite3-0-dbg',
   'libx11-6-dbg',
+  'libx11-xcb1-dbg',
   'libxau6-dbg',
   'libxcb1-dbg',
   'libxcomposite1-dbg',
@@ -361,9 +363,7 @@ def compute_dynamic_package_lists():
   else:
     _packages_dev += ('apache2.2-bin',)
 
-  if package_exists('fonts-stix'):
-    _packages_dev += ('fonts-stix',)
-  else:
+  if package_exists('xfonts-mathml'):
     _packages_dev += ('xfonts-mathml',)
 
   # Some packages are only needed if the distribution actually supports

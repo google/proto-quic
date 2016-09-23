@@ -1,0 +1,2 @@
+# https://crbug.com/582177
+End2EndTest.ShoveHighFrameRateDownYerThroat

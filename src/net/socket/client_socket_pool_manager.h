@@ -22,10 +22,10 @@ class Value;
 
 namespace net {
 
-typedef base::Callback<int(const AddressList&, const BoundNetLog& net_log)>
-OnHostResolutionCallback;
+typedef base::Callback<int(const AddressList&, const NetLogWithSource& net_log)>
+    OnHostResolutionCallback;
 
-class BoundNetLog;
+class NetLogWithSource;
 class ClientSocketHandle;
 class HostPortPair;
 class HttpNetworkSession;
@@ -108,7 +108,7 @@ int InitSocketHandleForHttpRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
     const OnHostResolutionCallback& resolution_callback,
     const CompletionCallback& callback);
@@ -134,7 +134,7 @@ int InitSocketHandleForWebSocketRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
     const OnHostResolutionCallback& resolution_callback,
     const CompletionCallback& callback);
@@ -150,7 +150,7 @@ NET_EXPORT int InitSocketHandleForRawConnect(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
     const CompletionCallback& callback);
 
@@ -165,7 +165,7 @@ NET_EXPORT int InitSocketHandleForTlsConnect(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
     const CompletionCallback& callback);
 
@@ -183,7 +183,7 @@ int PreconnectSocketsForHttpRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     int num_preconnect_streams);
 
 }  // namespace net

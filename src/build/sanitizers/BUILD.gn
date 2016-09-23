@@ -2,19 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if (is_linux && !is_chromeos) {
-  # TODO(GYP): Figure out which of these work and are needed on other platforms.
+import("//build/config/clang/clang.gni")
+
+if (is_clang) {
   copy("copy_llvm_symbolizer") {
     if (is_win) {
       sources = [
-        "//third_party/llvm-build/Release+Asserts/bin/llvm-symbolizer.exe",
+        "$clang_base_path/bin/llvm-symbolizer.exe",
       ]
       outputs = [
         "$root_out_dir/llvm-symbolizer.exe",
       ]
     } else {
       sources = [
-        "//third_party/llvm-build/Release+Asserts/bin/llvm-symbolizer",
+        "$clang_base_path/bin/llvm-symbolizer",
       ]
       outputs = [
         "$root_out_dir/llvm-symbolizer",

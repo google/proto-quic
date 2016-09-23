@@ -7,7 +7,7 @@
 """Renders one or more template files using the Jinja template engine."""
 
 import codecs
-import optparse
+import argparse
 import os
 import sys
 
@@ -21,8 +21,7 @@ sys.path.append(os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party'))
 import jinja2  # pylint: disable=F0401
 
 
-class RecordingFileSystemLoader(jinja2.FileSystemLoader):
-  '''A FileSystemLoader that stores a list of loaded templates.'''
+class _RecordingFileSystemLoader(jinja2.FileSystemLoader):
   def __init__(self, searchpath):
     jinja2.FileSystemLoader.__init__(self, searchpath)
     self.loaded_templates = set()
@@ -33,21 +32,39 @@ class RecordingFileSystemLoader(jinja2.FileSystemLoader):
     self.loaded_templates.add(os.path.relpath(filename))
     return contents, filename, uptodate
 
-  def get_loaded_templates(self):
-    return list(self.loaded_templates)
+
+class JinjaProcessor(object):
+  """Allows easy rendering of jinja templates with input file tracking."""
+  def __init__(self, loader_base_dir, variables=None):
+    self.loader_base_dir = loader_base_dir
+    self.variables = variables
+    self.loader = _RecordingFileSystemLoader(loader_base_dir)
+    self.env = jinja2.Environment(loader=self.loader)
+    self.env.undefined = jinja2.StrictUndefined
+    self.env.line_comment_prefix = '##'
+    self.env.trim_blocks = True
+    self.env.lstrip_blocks = True
+    self._template_cache = {}  # Map of path -> Template
+
+  def Render(self, input_filename, variables=None):
+    input_rel_path = os.path.relpath(input_filename, self.loader_base_dir)
+    template = self._template_cache.get(input_rel_path)
+    if not template:
+      template = self.env.get_template(input_rel_path)
+      self._template_cache[input_rel_path] = template
+    return template.render(variables or self.variables)
+
+  def GetLoadedTemplates(self):
+    return list(self.loader.loaded_templates)
 
 
-def ProcessFile(env, input_filename, loader_base_dir, output_filename,
-                variables):
-  input_rel_path = os.path.relpath(input_filename, loader_base_dir)
-  template = env.get_template(input_rel_path)
-  output = template.render(variables)
+def _ProcessFile(processor, input_filename, output_filename):
+  output = processor.Render(input_filename)
   with codecs.open(output_filename, 'w', 'utf-8') as output_file:
     output_file.write(output)
 
 
-def ProcessFiles(env, input_filenames, loader_base_dir, inputs_base_dir,
-                 outputs_zip, variables):
+def _ProcessFiles(processor, input_filenames, inputs_base_dir, outputs_zip):
   with build_utils.TempDir() as temp_dir:
     for input_filename in input_filenames:
       relpath = os.path.relpath(os.path.abspath(input_filename),
@@ -59,35 +76,44 @@ def ProcessFiles(env, input_filenames, loader_base_dir, inputs_base_dir,
       output_filename = os.path.join(temp_dir, relpath)
       parent_dir = os.path.dirname(output_filename)
       build_utils.MakeDirectory(parent_dir)
-      ProcessFile(env, input_filename, loader_base_dir, output_filename,
-                  variables)
+      _ProcessFile(processor, input_filename, output_filename)
 
     build_utils.ZipDir(outputs_zip, temp_dir)
 
 
-def main():
-  parser = optparse.OptionParser()
-  build_utils.AddDepfileOption(parser)
-  parser.add_option('--inputs', help='The template files to process.')
-  parser.add_option('--output', help='The output file to generate. Valid '
-                    'only if there is a single input.')
-  parser.add_option('--outputs-zip', help='A zip file containing the processed '
-                    'templates. Required if there are multiple inputs.')
-  parser.add_option('--inputs-base-dir', help='A common ancestor directory of '
-                    'the inputs. Each output\'s path in the output zip will '
-                    'match the relative path from INPUTS_BASE_DIR to the '
-                    'input. Required if --output-zip is given.')
-  parser.add_option('--loader-base-dir', help='Base path used by the template '
-                    'loader. Must be a common ancestor directory of '
-                    'the inputs. Defaults to DIR_SOURCE_ROOT.',
-                    default=host_paths.DIR_SOURCE_ROOT)
-  parser.add_option('--variables', help='Variables to be made available in the '
-                    'template processing environment, as a GYP list (e.g. '
-                    '--variables "channel=beta mstone=39")', default='')
-  options, args = parser.parse_args()
+def _ParseVariables(variables_arg, error_func):
+  variables = {}
+  for v in build_utils.ParseGnList(variables_arg):
+    if '=' not in v:
+      error_func('--variables argument must contain "=": ' + v)
+    name, _, value = v.partition('=')
+    variables[name] = value
+  return variables
 
-  build_utils.CheckOptions(options, parser, required=['inputs'])
-  inputs = build_utils.ParseGypList(options.inputs)
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--inputs', required=True,
+                      help='The template files to process.')
+  parser.add_argument('--output', help='The output file to generate. Valid '
+                      'only if there is a single input.')
+  parser.add_argument('--outputs-zip', help='A zip file for the processed '
+                      'templates. Required if there are multiple inputs.')
+  parser.add_argument('--inputs-base-dir', help='A common ancestor directory '
+                      'of the inputs. Each output\'s path in the output zip '
+                      'will match the relative path from INPUTS_BASE_DIR to '
+                      'the input. Required if --output-zip is given.')
+  parser.add_argument('--loader-base-dir', help='Base path used by the '
+                      'template loader. Must be a common ancestor directory of '
+                      'the inputs. Defaults to DIR_SOURCE_ROOT.',
+                      default=host_paths.DIR_SOURCE_ROOT)
+  parser.add_argument('--variables', help='Variables to be made available in '
+                      'the template processing environment, as a GYP list '
+                      '(e.g. --variables "channel=beta mstone=39")', default='')
+  build_utils.AddDepfileOption(parser)
+  options = parser.parse_args()
+
+  inputs = build_utils.ParseGnList(options.inputs)
 
   if (options.output is None) == (options.outputs_zip is None):
     parser.error('Exactly one of --output and --output-zip must be given')
@@ -95,29 +121,20 @@ def main():
     parser.error('--output cannot be used with multiple inputs')
   if options.outputs_zip and not options.inputs_base_dir:
     parser.error('--inputs-base-dir must be given when --output-zip is used')
-  if args:
-    parser.error('No positional arguments should be given.')
 
-  variables = {}
-  for v in build_utils.ParseGypList(options.variables):
-    if '=' not in v:
-      parser.error('--variables argument must contain "=": ' + v)
-    name, _, value = v.partition('=')
-    variables[name] = value
+  variables = _ParseVariables(options.variables, parser.error)
+  processor = JinjaProcessor(options.loader_base_dir, variables=variables)
 
-  loader = RecordingFileSystemLoader(options.loader_base_dir)
-  env = jinja2.Environment(loader=loader, undefined=jinja2.StrictUndefined,
-                           line_comment_prefix='##')
   if options.output:
-    ProcessFile(env, inputs[0], options.loader_base_dir, options.output,
-                variables)
+    _ProcessFile(processor, inputs[0], options.output)
   else:
-    ProcessFiles(env, inputs, options.loader_base_dir, options.inputs_base_dir,
-                 options.outputs_zip, variables)
+    _ProcessFiles(processor, inputs, options.inputs_base_dir,
+                  options.outputs_zip)
 
   if options.depfile:
-    deps = loader.get_loaded_templates() + build_utils.GetPythonDependencies()
-    build_utils.WriteDepfile(options.depfile, deps)
+    output = options.output or options.outputs_zip
+    deps = processor.GetLoadedTemplates()
+    build_utils.WriteDepfile(options.depfile, output, deps)
 
 
 if __name__ == '__main__':

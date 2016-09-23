@@ -1,0 +1,174 @@
+<script>
+var blobs = [];
+var bytes = 0;
+var timeStart;
+var timeEnd;
+var doneReading = false;
+var errors = [];
+var disableUI = false;
+
+function recordError(error) {
+  console.log(error);
+  errors.push(error);
+}
+
+function updateStats() {
+  if (disableUI) return;
+  var num_blobs = document.getElementById('num_blobs');
+  var total_bytes = document.getElementById('total_bytes');
+  var time = document.getElementById('time');
+  num_blobs.innerHTML = '' + blobs.length;
+  total_bytes.innerHTML = '' + bytes;
+  time.innerHTML = '' + (timeEnd - timeStart);
+}
+
+function createAndRead(size) {
+  doneReading = false;
+  errors = [];
+  var reader = new FileReader();
+  var currentBlob = 0;
+  var totalSize = 0;
+  var error = document.getElementById('error');
+  var numRead = 0;
+
+  var blob = new Blob([new Uint8Array(size)], {type: 'application/octet-string'});
+
+  reader.onloadend = function(e) {
+    if (reader.error) {
+      recordError('Error when reading blob: ' + reader.error);
+      doneReading = true;
+      return;
+    }
+    if (reader.result.byteLength != size) {
+      recordError("Sizes don't match");
+    }
+    doneReading = true;
+  }
+  reader.readAsArrayBuffer(blob);
+}
+
+function createBlob(size) {
+  timeStart = performance.now();
+  var blob = new Blob([new Uint8Array(size)], {type: 'application/octet-string'});
+  timeEnd = performance.now();
+  blobs.push(blob);
+  bytes += size;
+  updateStats();
+}
+
+function garbageCollect() {
+  if (typeof(Blob.prototype.close) !== "undefined") {
+    for (var blob of blobs) {
+      blob.close();
+    }
+  }
+  blobs = [];
+  bytes = 0;
+  updateStats();
+}
+
+function addCustom() {
+  var custom_input = document.getElementById('custom_input');
+  var custom_bytes = custom_input.value;
+  createBlob(custom_bytes * 1);
+}
+
+function readBlobsSerially() {
+  doneReading = false;
+  errors = [];
+  if (blobs.length == 0) {
+    return;
+  }
+  timeStart = performance.now();
+  var reader = new FileReader();
+  var currentBlob = 0;
+  var totalSize = 0;
+  var error = document.getElementById('error');
+  var numRead = 0;
+  reader.onloadend = function(e) {
+    if (reader.error) {
+      if (!disableUI)
+        error.innerHTML += '<br/>Reader error:<br/>' + reader.error.message;
+      recordError('Error when reading blob ' + currentBlob + ': ' + reader.error);
+      doneReading = true;
+      return;
+    }
+    totalSize += reader.result.byteLength;
+    currentBlob++;
+    if (currentBlob < blobs.length) {
+      reader.readAsArrayBuffer(blobs[currentBlob]);
+    } else {
+      timeEnd = performance.now();
+      // we're done reading
+      if (totalSize != bytes) {
+        recordError("Sizes don't match");
+        if (!disableUI)
+          error.innerHTML += '<br/>Sizes don\'t match: ' + totalSize + ' vs ' + bytes;
+      }
+      doneReading = true;
+      updateStats();
+    }
+  }
+  reader.readAsArrayBuffer(blobs[currentBlob]);
+}
+function readBlobsInParallel() {
+  doneReading = false;
+  errors = [];
+  if (blobs.length == 0) {
+    return;
+  }
+  timeStart = performance.now();
+  var currentBlob = 0;
+  var totalSize = 0;
+  var error = document.getElementById('error');
+  var numRead = 0;
+  for (; currentBlob < blobs.length; currentBlob++) {
+    var genReader = function(index) {
+      var reader = new FileReader();
+      reader.onloadend = function(e) {
+        if (reader.error) {
+          if (!disableUI)
+            error.innerHTML += '<br/>Reader error:<br/>' + reader.error.message;
+          recordError('Error when reading blob ' + index + ': ' + reader.error);
+          doneReading = true;
+          return;
+        }
+        totalSize += reader.result.byteLength;
+        numRead++;
+        if (numRead >= blobs.length) {
+          timeEnd = performance.now();
+          // we're done reading
+          if (totalSize != bytes) {
+            recordError("Sizes don't match");
+            if (!disableUI)
+              error.innerHTML += '<br/>Sizes don\'t match: ' + totalSize + ' vs ' + bytes;
+          }
+          doneReading = true;
+          updateStats();
+        }
+      }
+      return reader;
+    }
+    genReader(currentBlob).readAsArrayBuffer(blobs[currentBlob]);
+  }
+}
+</script>
+<div>Number of blobs: <span id="num_blobs">0</span>, total memory size: <span id="total_bytes">0</span> bytes.</div>
+<input type="button" id="custom_input_submit" value="Add Blob with Size" onclick="addCustom();"/>
+<input type="text" inputmode="numeric" id="custom_input" value=""/><br/>
+
+Shorcut buttons for person:
+<input type="button" value="2 bytes" onclick="createBlob(2);" />
+<input type="button" value="1 kb" onclick="createBlob(1024);" />
+<input type="button" value="16 kb" onclick="createBlob(16*1024);" />
+<input type="button" value="1 mb" onclick="createBlob(1024 * 1024);" />
+<input type="button" value="40 mb" onclick="createBlob(40 * 1024 * 1024);" />
+<input type="button" value="400 mb" onclick="createBlob(400 * 1024 * 1024);" />
+
+<input type="button" id="read_blobs_serial" value="Read Blobs Serially" onclick="readBlobsSerially();" />
+<input type="button" id="read_blobs_parallel" value="Read Blobs Parallel" onclick="readBlobsInParallel();" /><br/>
+<input type="button" id="garbage_collect" value="Garbage Collect Blobs" onclick="garbageCollect();" /><br/>
+Operation Time:
+<div id="time"></div>
+Errors:
+<div id="error"></div>

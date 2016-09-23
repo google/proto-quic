@@ -537,8 +537,11 @@ RsaPssParameters::RsaPssParameters(DigestAlgorithm mgf1_hash,
 SignatureAlgorithm::~SignatureAlgorithm() {
 }
 
-std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateFromDer(
-    const der::Input& algorithm_identifier) {
+std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::Create(
+    const der::Input& algorithm_identifier,
+    CertErrors* errors) {
+  // TODO(crbug.com/634443): Add useful error information.
+
   der::Input oid;
   der::Input params;
   if (!ParseAlgorithmIdentifier(algorithm_identifier, &oid, &params))
@@ -576,6 +579,9 @@ std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateFromDer(
 
   if (oid == der::Input(kOidSha1WithRsaSignature))
     return ParseRsaPkcs1(DigestAlgorithm::Sha1, params);
+
+  // TODO(crbug.com/634443): Add an error indicating what the OID
+  // was.
 
   return nullptr;  // Unsupported OID.
 }
