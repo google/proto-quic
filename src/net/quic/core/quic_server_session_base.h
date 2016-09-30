@@ -95,6 +95,8 @@ class NET_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
     serving_region_ = serving_region;
   }
 
+  bool server_push_enabled() const { return server_push_enabled_; }
+
  protected:
   // QuicSession methods(override them with return type of QuicSpdyStream*):
   QuicCryptoServerStreamBase* GetCryptoStream() override;
@@ -115,6 +117,8 @@ class NET_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
       QuicCompressedCertsCache* compressed_certs_cache) = 0;
 
   const QuicCryptoServerConfig* crypto_config() { return crypto_config_; }
+
+  void set_server_push_enabled(bool enable) { server_push_enabled_ = enable; }
 
   Visitor* visitor() { return visitor_; }
 
@@ -158,6 +162,10 @@ class NET_EXPORT_PRIVATE QuicServerSessionBase : public QuicSpdySession {
   // should go away once we fix http://b//27897982
   int32_t BandwidthToCachedParameterBytesPerSecond(
       const QuicBandwidth& bandwidth);
+
+  // Set during handshake. If true, resources in x-associated-content and link
+  // headers will be pushed. see: go/gfe_server_push.
+  bool server_push_enabled_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicServerSessionBase);
 };

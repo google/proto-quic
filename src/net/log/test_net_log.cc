@@ -104,8 +104,7 @@ NetLog::ThreadSafeObserver* TestNetLog::GetObserver() const {
 }
 
 BoundTestNetLog::BoundTestNetLog()
-    : net_log_(NetLogWithSource::Make(&test_net_log_, NetLogSourceType::NONE)) {
-}
+    : net_log_(BoundNetLog::Make(&test_net_log_, NetLogSourceType::NONE)) {}
 
 BoundTestNetLog::~BoundTestNetLog() {
 }

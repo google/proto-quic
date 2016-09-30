@@ -354,7 +354,7 @@ bool BaseTestServer::GetAddressList(AddressList* address_list) const {
   TestCompletionCallback callback;
   std::unique_ptr<HostResolver::Request> request;
   int rv = resolver->Resolve(info, DEFAULT_PRIORITY, address_list,
-                             callback.callback(), &request, NetLogWithSource());
+                             callback.callback(), &request, BoundNetLog());
   if (rv == ERR_IO_PENDING)
     rv = callback.WaitForResult();
   if (rv != OK) {

@@ -36,9 +36,8 @@ HttpAuthHandlerMock* CreateMockHandler(bool connection_based) {
                                          challenge_text.end());
   GURL origin("www.example.com");
   SSLInfo null_ssl_info;
-  EXPECT_TRUE(auth_handler->InitFromChallenge(&challenge, HttpAuth::AUTH_SERVER,
-                                              null_ssl_info, origin,
-                                              NetLogWithSource()));
+  EXPECT_TRUE(auth_handler->InitFromChallenge(
+      &challenge, HttpAuth::AUTH_SERVER, null_ssl_info, origin, BoundNetLog()));
   return auth_handler;
 }
 
@@ -139,8 +138,7 @@ TEST(HttpAuthTest, ChooseBestChallenge) {
     std::unique_ptr<HttpAuthHandler> handler;
     HttpAuth::ChooseBestChallenge(http_auth_handler_factory.get(), *headers,
                                   null_ssl_info, HttpAuth::AUTH_SERVER, origin,
-                                  disabled_schemes, NetLogWithSource(),
-                                  &handler);
+                                  disabled_schemes, BoundNetLog(), &handler);
 
     if (handler.get()) {
       EXPECT_EQ(tests[i].challenge_scheme, handler->auth_scheme());

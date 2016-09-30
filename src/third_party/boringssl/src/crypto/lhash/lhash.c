@@ -100,13 +100,15 @@ _LHASH *lh_new(lhash_hash_func hash, lhash_cmp_func comp) {
 }
 
 void lh_free(_LHASH *lh) {
+  size_t i;
+  LHASH_ITEM *n, *next;
+
   if (lh == NULL) {
     return;
   }
 
-  for (size_t i = 0; i < lh->num_buckets; i++) {
-    LHASH_ITEM *next;
-    for (LHASH_ITEM *n = lh->buckets[i]; n != NULL; n = next) {
+  for (i = 0; i < lh->num_buckets; i++) {
+    for (n = lh->buckets[i]; n != NULL; n = next) {
       next = n->next;
       OPENSSL_free(n);
     }
@@ -275,6 +277,9 @@ void *lh_delete(_LHASH *lh, const void *data) {
 
 static void lh_doall_internal(_LHASH *lh, void (*no_arg_func)(void *),
                               void (*arg_func)(void *, void *), void *arg) {
+  size_t i;
+  LHASH_ITEM *cur, *next;
+
   if (lh == NULL) {
     return;
   }
@@ -284,9 +289,8 @@ static void lh_doall_internal(_LHASH *lh, void (*no_arg_func)(void *),
     lh->callback_depth++;
   }
 
-  for (size_t i = 0; i < lh->num_buckets; i++) {
-    LHASH_ITEM *next;
-    for (LHASH_ITEM *cur = lh->buckets[i]; cur != NULL; cur = next) {
+  for (i = 0; i < lh->num_buckets; i++) {
+    for (cur = lh->buckets[i]; cur != NULL; cur = next) {
       next = cur->next;
       if (arg_func) {
         arg_func(cur->data, arg);

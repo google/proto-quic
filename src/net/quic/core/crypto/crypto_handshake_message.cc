@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/crypto_framer.h"
@@ -109,10 +108,6 @@ bool CryptoHandshakeMessage::GetStringPiece(QuicTag tag,
   }
   *out = it->second;
   return true;
-}
-
-bool CryptoHandshakeMessage::HasStringPiece(QuicTag tag) const {
-  return base::ContainsKey(tag_value_map_, tag);
 }
 
 QuicErrorCode CryptoHandshakeMessage::GetNthValue24(QuicTag tag,

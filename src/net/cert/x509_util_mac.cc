@@ -5,7 +5,6 @@
 #include "net/cert/x509_util_mac.h"
 
 #include "base/logging.h"
-#include "base/mac/mac_util.h"
 #include "third_party/apple_apsl/cssmapplePriv.h"
 
 namespace net {
@@ -101,9 +100,7 @@ OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
     // online revocation checking. Note that, as of OS X 10.7.2, the system
     // will set force this flag on according to system policies, so
     // online revocation checks cannot be completely disabled.
-    // Starting with OS X 10.12, if a CRL policy is added without the
-    // FETCH_CRL_FROM_NET flag, AIA fetching is disabled.
-    if (enable_revocation_checking || base::mac::IsAtLeastOS10_12())
+    if (enable_revocation_checking)
       tp_crl_options.CrlFlags = CSSM_TP_ACTION_FETCH_CRL_FROM_NET;
 
     SecPolicyRef crl_policy;

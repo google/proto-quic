@@ -73,9 +73,9 @@ URLRequestThrottlerEntry::URLRequestThrottlerEntry(
       backoff_entry_(&backoff_policy_),
       manager_(manager),
       url_id_(url_id),
-      net_log_(NetLogWithSource::Make(
-          manager->net_log(),
-          NetLogSourceType::EXPONENTIAL_BACKOFF_THROTTLING)) {
+      net_log_(
+          BoundNetLog::Make(manager->net_log(),
+                            NetLogSourceType::EXPONENTIAL_BACKOFF_THROTTLING)) {
   DCHECK(manager_);
   Initialize();
 }

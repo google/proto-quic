@@ -73,7 +73,7 @@ class FuzzedSocket : public StreamSocket {
   bool IsConnectedAndIdle() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
-  const NetLogWithSource& NetLog() const override;
+  const BoundNetLog& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -118,7 +118,7 @@ class FuzzedSocket : public StreamSocket {
   int64_t total_bytes_read_ = 0;
   int64_t total_bytes_written_ = 0;
 
-  NetLogWithSource net_log_;
+  BoundNetLog bound_net_log_;
 
   IPEndPoint remote_address_;
 

@@ -167,11 +167,11 @@ TEST_F(TraceNetLogObserverTest, TraceEventCaptured) {
 
   trace_net_log_observer()->WatchForTraceStart(net_log());
   EnableTraceLog();
-  NetLogWithSource net_log_with_source =
-      NetLogWithSource::Make(net_log(), net::NetLogSourceType::NONE);
+  BoundNetLog bound_net_log =
+      BoundNetLog::Make(net_log(), net::NetLogSourceType::NONE);
   net_log()->AddGlobalEntry(NetLogEventType::CANCELLED);
-  net_log_with_source.BeginEvent(NetLogEventType::URL_REQUEST_START_JOB);
-  net_log_with_source.EndEvent(NetLogEventType::REQUEST_ALIVE);
+  bound_net_log.BeginEvent(NetLogEventType::URL_REQUEST_START_JOB);
+  bound_net_log.EndEvent(NetLogEventType::REQUEST_ALIVE);
 
   net_log()->GetEntries(&entries);
   EXPECT_EQ(3u, entries.size());

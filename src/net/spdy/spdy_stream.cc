@@ -89,7 +89,7 @@ SpdyStream::SpdyStream(SpdyStreamType type,
                        RequestPriority priority,
                        int32_t initial_send_window_size,
                        int32_t max_recv_window_size,
-                       const NetLogWithSource& net_log)
+                       const BoundNetLog& net_log)
     : type_(type),
       stream_id_(0),
       url_(url),

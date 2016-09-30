@@ -32,10 +32,9 @@ bool BuildTokenBindingID(crypto::ECPrivateKey* key, CBB* out) {
           NULL) != kUncompressedPointLen) {
     return false;
   }
-  CBB public_key, ec_point;
+  CBB ec_point;
   return CBB_add_u8(out, TB_PARAM_ECDSAP256) &&
-         CBB_add_u16_length_prefixed(out, &public_key) &&
-         CBB_add_u8_length_prefixed(&public_key, &ec_point) &&
+         CBB_add_u8_length_prefixed(out, &ec_point) &&
          CBB_add_bytes(&ec_point, point_buf + 1, kUncompressedPointLen - 1) &&
          CBB_flush(out);
 }
@@ -69,26 +68,14 @@ ECDSA_SIG* RawToECDSA_SIG(EC_KEY* ec, base::StringPiece sig) {
 
 }  // namespace
 
-bool CreateTokenBindingSignature(base::StringPiece ekm,
-                                 TokenBindingType type,
-                                 crypto::ECPrivateKey* key,
-                                 std::vector<uint8_t>* out) {
-  crypto::ScopedEVP_MD_CTX digest_ctx(EVP_MD_CTX_create());
-  uint8_t tb_type = static_cast<uint8_t>(type);
-  uint8_t key_type = static_cast<uint8_t>(TB_PARAM_ECDSAP256);
-  uint8_t digest[EVP_MAX_MD_SIZE];
-  unsigned int digest_len;
-  if (!EVP_DigestInit(digest_ctx.get(), EVP_sha256()) ||
-      !EVP_DigestUpdate(digest_ctx.get(), &tb_type, 1) ||
-      !EVP_DigestUpdate(digest_ctx.get(), &key_type, 1) ||
-      !EVP_DigestUpdate(digest_ctx.get(), ekm.data(), ekm.size()) ||
-      !EVP_DigestFinal_ex(digest_ctx.get(), digest, &digest_len)) {
-    return false;
-  }
+bool SignTokenBindingEkm(base::StringPiece ekm,
+                         crypto::ECPrivateKey* key,
+                         std::vector<uint8_t>* out) {
+  const uint8_t* ekm_data = reinterpret_cast<const uint8_t*>(ekm.data());
   EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key->key());
   if (!ec_key)
     return false;
-  crypto::ScopedECDSA_SIG sig(ECDSA_do_sign(digest, digest_len, ec_key));
+  crypto::ScopedECDSA_SIG sig(ECDSA_do_sign(ekm_data, ekm.size(), ec_key));
   if (!sig)
     return false;
   return ECDSA_SIGToRaw(sig.get(), ec_key, out);
@@ -150,7 +137,7 @@ TokenBinding::TokenBinding() {}
 
 bool ParseTokenBindingMessage(base::StringPiece token_binding_message,
                               std::vector<TokenBinding>* token_bindings) {
-  CBS tb_message, tb, public_key, ec_point, signature, extensions;
+  CBS tb_message, tb, ec_point, signature, extensions;
   uint8_t tb_type, tb_param;
   CBS_init(&tb_message,
            reinterpret_cast<const uint8_t*>(token_binding_message.data()),
@@ -159,9 +146,7 @@ bool ParseTokenBindingMessage(base::StringPiece token_binding_message,
     return false;
   while (CBS_len(&tb)) {
     if (!CBS_get_u8(&tb, &tb_type) || !CBS_get_u8(&tb, &tb_param) ||
-        !CBS_get_u16_length_prefixed(&tb, &public_key) ||
-        !CBS_get_u8_length_prefixed(&public_key, &ec_point) ||
-        CBS_len(&public_key) != 0 ||
+        !CBS_get_u8_length_prefixed(&tb, &ec_point) ||
         !CBS_get_u16_length_prefixed(&tb, &signature) ||
         !CBS_get_u16_length_prefixed(&tb, &extensions) ||
         tb_param != TB_PARAM_ECDSAP256 ||
@@ -182,10 +167,9 @@ bool ParseTokenBindingMessage(base::StringPiece token_binding_message,
   return true;
 }
 
-bool VerifyTokenBindingSignature(base::StringPiece ec_point,
-                                 base::StringPiece signature,
-                                 TokenBindingType type,
-                                 base::StringPiece ekm) {
+bool VerifyEKMSignature(base::StringPiece ec_point,
+                        base::StringPiece signature,
+                        base::StringPiece ekm) {
   if (ec_point.size() != kUncompressedPointLen - 1)
     return false;
   uint8_t x9_62_ec_point[kUncompressedPointLen];
@@ -200,23 +184,11 @@ bool VerifyTokenBindingSignature(base::StringPiece ec_point,
     return false;
   }
 
-  crypto::ScopedEVP_MD_CTX digest_ctx(EVP_MD_CTX_create());
-  uint8_t tb_type = static_cast<uint8_t>(type);
-  uint8_t key_type = static_cast<uint8_t>(TB_PARAM_ECDSAP256);
-  uint8_t digest[EVP_MAX_MD_SIZE];
-  unsigned int digest_len;
-  if (!EVP_DigestInit(digest_ctx.get(), EVP_sha256()) ||
-      !EVP_DigestUpdate(digest_ctx.get(), &tb_type, 1) ||
-      !EVP_DigestUpdate(digest_ctx.get(), &key_type, 1) ||
-      !EVP_DigestUpdate(digest_ctx.get(), ekm.data(), ekm.size()) ||
-      !EVP_DigestFinal_ex(digest_ctx.get(), digest, &digest_len)) {
-    return false;
-  }
-
   crypto::ScopedECDSA_SIG sig(RawToECDSA_SIG(keyp, signature));
   if (!sig)
     return false;
-  return !!ECDSA_do_verify(digest, digest_len, sig.get(), keyp);
+  return !!ECDSA_do_verify(reinterpret_cast<const uint8_t*>(ekm.data()),
+                           ekm.size(), sig.get(), keyp);
 }
 
 }  // namespace net

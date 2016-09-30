@@ -87,46 +87,16 @@ class BASE_EXPORT RefCountedBase {
 
 class BASE_EXPORT RefCountedThreadSafeBase {
  public:
-  bool HasOneRef() const {
-    return AtomicRefCountIsOne(
-        &const_cast<RefCountedThreadSafeBase*>(this)->ref_count_);
-  }
+  bool HasOneRef() const;
 
  protected:
-  RefCountedThreadSafeBase() : ref_count_(0) {
-#ifndef NDEBUG
-    in_dtor_ = false;
-#endif
-  }
+  RefCountedThreadSafeBase();
+  ~RefCountedThreadSafeBase();
 
-  ~RefCountedThreadSafeBase() {
-#ifndef NDEBUG
-    DCHECK(in_dtor_) << "RefCountedThreadSafe object deleted without "
-                        "calling Release()";
-#endif
-  }
-
-  void AddRef() const {
-#ifndef NDEBUG
-    DCHECK(!in_dtor_);
-#endif
-    AtomicRefCountInc(&ref_count_);
-  }
+  void AddRef() const;
 
   // Returns true if the object should self-delete.
-  bool Release() const {
-#ifndef NDEBUG
-    DCHECK(!in_dtor_);
-    DCHECK(!AtomicRefCountIsZero(&ref_count_));
-#endif
-    if (!AtomicRefCountDec(&ref_count_)) {
-#ifndef NDEBUG
-      in_dtor_ = true;
-#endif
-      return true;
-    }
-    return false;
-  }
+  bool Release() const;
 
  private:
   mutable AtomicRefCount ref_count_;

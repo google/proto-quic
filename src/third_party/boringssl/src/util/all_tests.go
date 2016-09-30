@@ -104,7 +104,7 @@ func (t *testOutput) writeTo(name string) error {
 }
 
 func valgrindOf(dbAttach bool, path string, args ...string) *exec.Cmd {
-	valgrindArgs := []string{"--error-exitcode=99", "--track-origins=yes", "--leak-check=full", "--quiet"}
+	valgrindArgs := []string{"--error-exitcode=99", "--track-origins=yes", "--leak-check=full"}
 	if dbAttach {
 		valgrindArgs = append(valgrindArgs, "--db-attach=yes", "--db-command=xterm -e gdb -nw %f %p")
 	}

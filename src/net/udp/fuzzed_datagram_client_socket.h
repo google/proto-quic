@@ -44,7 +44,7 @@ class FuzzedDatagramClientSocket : public DatagramClientSocket {
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
   void UseNonBlockingIO() override;
-  const NetLogWithSource& NetLog() const override;
+  const BoundNetLog& NetLog() const override;
 
   // Socket implementation:
   int Read(IOBuffer* buf,
@@ -67,7 +67,7 @@ class FuzzedDatagramClientSocket : public DatagramClientSocket {
   bool read_pending_ = false;
   bool write_pending_ = false;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   IPEndPoint remote_address_;
 

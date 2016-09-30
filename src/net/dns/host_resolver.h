@@ -27,7 +27,7 @@ class Value;
 namespace net {
 
 class AddressList;
-class NetLogWithSource;
+class BoundNetLog;
 class HostResolverImpl;
 class HostResolverProc;
 class NetLog;
@@ -182,7 +182,7 @@ class NET_EXPORT HostResolver {
                       AddressList* addresses,
                       const CompletionCallback& callback,
                       std::unique_ptr<Request>* out_req,
-                      const NetLogWithSource& net_log) = 0;
+                      const BoundNetLog& net_log) = 0;
 
   // Resolves the given hostname (or IP address literal) out of cache or HOSTS
   // file (if enabled) only. This is guaranteed to complete synchronously.
@@ -190,7 +190,7 @@ class NET_EXPORT HostResolver {
   // or HOSTS entry exists. Otherwise, ERR_DNS_CACHE_MISS is returned.
   virtual int ResolveFromCache(const RequestInfo& info,
                                AddressList* addresses,
-                               const NetLogWithSource& net_log) = 0;
+                               const BoundNetLog& net_log) = 0;
 
   // Enable or disable the built-in asynchronous DnsClient.
   virtual void SetDnsClientEnabled(bool enabled);

@@ -218,7 +218,7 @@ class NET_EXPORT BidirectionalStream
 
   // BidirectionalStreamRequestInfo used when requesting the stream.
   std::unique_ptr<BidirectionalStreamRequestInfo> request_info_;
-  const NetLogWithSource net_log_;
+  const BoundNetLog net_log_;
 
   HttpNetworkSession* session_;
 

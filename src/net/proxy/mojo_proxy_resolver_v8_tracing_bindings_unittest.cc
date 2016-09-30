@@ -51,7 +51,7 @@ TEST_F(MojoProxyResolverV8TracingBindingsTest, Basic) {
   bindings_->OnError(-1, base::ASCIIToUTF16("error"));
 
   EXPECT_TRUE(bindings_->GetHostResolver());
-  EXPECT_FALSE(bindings_->GetNetLogWithSource().net_log());
+  EXPECT_FALSE(bindings_->GetBoundNetLog().net_log());
 
   ASSERT_EQ(1u, alerts_.size());
   EXPECT_EQ("alert", alerts_[0]);

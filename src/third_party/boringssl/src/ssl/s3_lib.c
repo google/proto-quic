@@ -210,6 +210,7 @@ void ssl3_free(SSL *ssl) {
   sk_X509_NAME_pop_free(ssl->s3->tmp.ca_names, X509_NAME_free);
   OPENSSL_free(ssl->s3->tmp.certificate_types);
   OPENSSL_free(ssl->s3->tmp.peer_supported_group_list);
+  OPENSSL_free(ssl->s3->tmp.peer_psk_identity_hint);
   SSL_SESSION_free(ssl->s3->new_session);
   SSL_SESSION_free(ssl->s3->established_session);
   ssl3_free_handshake_buffer(ssl);
@@ -251,6 +252,7 @@ const SSL_CIPHER *ssl3_choose_cipher(
     const struct ssl_cipher_preference_list_st *server_pref) {
   const SSL_CIPHER *c, *ret = NULL;
   STACK_OF(SSL_CIPHER) *srvr = server_pref->ciphers, *prio, *allow;
+  size_t i;
   int ok;
   size_t cipher_index;
   uint32_t alg_k, alg_a, mask_k, mask_a;
@@ -280,7 +282,7 @@ const SSL_CIPHER *ssl3_choose_cipher(
 
   ssl_get_compatible_server_ciphers(ssl, &mask_k, &mask_a);
 
-  for (size_t i = 0; i < sk_SSL_CIPHER_num(prio); i++) {
+  for (i = 0; i < sk_SSL_CIPHER_num(prio); i++) {
     c = sk_SSL_CIPHER_value(prio, i);
 
     ok = 1;

@@ -128,7 +128,7 @@ HttpNetworkTransaction::~HttpNetworkTransaction() {
 
 int HttpNetworkTransaction::Start(const HttpRequestInfo* request_info,
                                   const CompletionCallback& callback,
-                                  const NetLogWithSource& net_log) {
+                                  const BoundNetLog& net_log) {
   net_log_ = net_log;
   request_ = request_info;
 
@@ -450,8 +450,8 @@ void HttpNetworkTransaction::OnStreamReady(const SSLConfig& used_ssl_config,
   stream_.reset(stream);
   server_ssl_config_ = used_ssl_config;
   proxy_info_ = used_proxy_info;
-  response_.was_alpn_negotiated = stream_request_->was_alpn_negotiated();
-  response_.alpn_negotiated_protocol = SSLClientSocket::NextProtoToString(
+  response_.was_npn_negotiated = stream_request_->was_npn_negotiated();
+  response_.npn_negotiated_protocol = SSLClientSocket::NextProtoToString(
       stream_request_->negotiated_protocol());
   response_.was_fetched_via_spdy = stream_request_->using_spdy();
   response_.was_fetched_via_proxy = !proxy_info_.is_direct();
@@ -1022,9 +1022,8 @@ int HttpNetworkTransaction::BuildRequestHeaders(
 int HttpNetworkTransaction::BuildTokenBindingHeader(std::string* out) {
   base::TimeTicks start = base::TimeTicks::Now();
   std::vector<uint8_t> signed_ekm;
-  int rv = stream_->GetTokenBindingSignature(provided_token_binding_key_.get(),
-                                             TokenBindingType::PROVIDED,
-                                             &signed_ekm);
+  int rv = stream_->GetSignedEKMForTokenBinding(
+      provided_token_binding_key_.get(), &signed_ekm);
   if (rv != OK)
     return rv;
   std::string provided_token_binding;
@@ -1040,9 +1039,8 @@ int HttpNetworkTransaction::BuildTokenBindingHeader(std::string* out) {
   std::string referred_token_binding;
   if (referred_token_binding_key_) {
     std::vector<uint8_t> referred_signed_ekm;
-    int rv = stream_->GetTokenBindingSignature(
-        referred_token_binding_key_.get(), TokenBindingType::REFERRED,
-        &referred_signed_ekm);
+    int rv = stream_->GetSignedEKMForTokenBinding(
+        referred_token_binding_key_.get(), &referred_signed_ekm);
     if (rv != OK)
       return rv;
     rv = BuildTokenBinding(TokenBindingType::REFERRED,
@@ -1056,7 +1054,8 @@ int HttpNetworkTransaction::BuildTokenBindingHeader(std::string* out) {
   rv = BuildTokenBindingMessageFromTokenBindings(token_bindings, &header);
   if (rv != OK)
     return rv;
-  base::Base64UrlEncode(header, base::Base64UrlEncodePolicy::OMIT_PADDING, out);
+  base::Base64UrlEncode(header, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
+                        out);
   base::TimeDelta header_creation_time = base::TimeTicks::Now() - start;
   UMA_HISTOGRAM_CUSTOM_TIMES("Net.TokenBinding.HeaderCreationTime",
                              header_creation_time,

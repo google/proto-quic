@@ -122,7 +122,7 @@ bool URLRequestThrottlerManager::enable_thread_checks() const {
 
 void URLRequestThrottlerManager::set_net_log(NetLog* net_log) {
   DCHECK(net_log);
-  net_log_ = NetLogWithSource::Make(
+  net_log_ = BoundNetLog::Make(
       net_log, NetLogSourceType::EXPONENTIAL_BACKOFF_THROTTLING);
 }
 

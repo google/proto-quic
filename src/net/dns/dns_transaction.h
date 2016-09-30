@@ -16,7 +16,7 @@
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class DnsResponse;
 class DnsSession;
 
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE DnsTransactionFactory {
       const std::string& hostname,
       uint16_t qtype,
       const CallbackType& callback,
-      const NetLogWithSource& net_log) WARN_UNUSED_RESULT = 0;
+      const BoundNetLog& net_log) WARN_UNUSED_RESULT = 0;
 
   // Creates a DnsTransactionFactory which creates DnsTransactionImpl using the
   // |session|.

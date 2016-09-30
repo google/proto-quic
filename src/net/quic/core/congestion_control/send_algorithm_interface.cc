@@ -22,7 +22,6 @@ SendAlgorithmInterface* SendAlgorithmInterface::Create(
     QuicPacketCount initial_congestion_window) {
   QuicPacketCount max_congestion_window = kDefaultMaxCongestionWindowPackets;
   switch (congestion_control_type) {
-    case kBBR:
     case kCubic:
       return new TcpCubicSenderPackets(
           clock, rtt_stats, false /* don't use Reno */,
@@ -39,6 +38,14 @@ SendAlgorithmInterface* SendAlgorithmInterface::Create(
       return new TcpCubicSenderBytes(clock, rtt_stats, true /* use Reno */,
                                      initial_congestion_window,
                                      max_congestion_window, stats);
+    case kBBR:
+// TODO(rtenneti): Enable BbrTcpSender.
+#if 0
+      return new BbrTcpSender(clock, rtt_stats, initial_congestion_window,
+                              max_congestion_window, stats, true);
+#endif
+      LOG(DFATAL) << "BbrTcpSender is not supported.";
+      return nullptr;
   }
   return nullptr;
 }

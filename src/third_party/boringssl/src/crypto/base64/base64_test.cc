@@ -107,7 +107,8 @@ static std::string RemoveNewlines(const char *in) {
   std::string ret;
   const size_t in_len = strlen(in);
 
-  for (size_t i = 0; i < in_len; i++) {
+  size_t i;
+  for (i = 0; i < in_len; i++) {
     if (in[i] != '\n') {
       ret.push_back(in[i]);
     }

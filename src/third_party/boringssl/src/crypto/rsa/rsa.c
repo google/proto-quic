@@ -609,7 +609,8 @@ int RSA_check_key(const RSA *key) {
     num_additional_primes = sk_RSA_additional_prime_num(key->additional_primes);
   }
 
-  for (size_t i = 0; i < num_additional_primes; i++) {
+  size_t i;
+  for (i = 0; i < num_additional_primes; i++) {
     const RSA_additional_prime *ap =
         sk_RSA_additional_prime_value(key->additional_primes, i);
     if (!BN_mul(&n, &n, ap->prime, ctx) ||

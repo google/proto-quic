@@ -362,7 +362,7 @@ static int get_cert_by_subject(X509_LOOKUP *xl, int type, X509_NAME *name,
                                  postfix, k);
                 }
 #ifndef OPENSSL_NO_POSIX_IO
-# if defined(_WIN32) && !defined(stat)
+# ifdef _WIN32
 #  define stat _stat
 # endif
                 {

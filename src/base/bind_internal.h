@@ -470,8 +470,8 @@ struct BindState final : BindStateBase {
 
   ~BindState() {}
 
-  static void Destroy(const BindStateBase* self) {
-    delete static_cast<const BindState*>(self);
+  static void Destroy(BindStateBase* self) {
+    delete static_cast<BindState*>(self);
   }
 };
 

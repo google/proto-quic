@@ -37,7 +37,7 @@ namespace net {
 // SpdySession).
 //
 // To avoid needing to pass in the "source ID" to the logging functions, NetLog
-// is usually accessed through a NetLogWithSource, which will always pass in a
+// is usually accessed through a BoundNetLog, which will always pass in a
 // specific source ID.
 //
 // All methods are thread safe, with the exception that no NetLog or
@@ -275,7 +275,7 @@ class NET_EXPORT NetLog {
                                            const base::string16* value);
 
  private:
-  friend class NetLogWithSource;
+  friend class BoundNetLog;
 
   void AddEntry(NetLogEventType type,
                 const Source& source,
@@ -305,10 +305,10 @@ class NET_EXPORT NetLog {
 
 // Helper that binds a Source to a NetLog, and exposes convenience methods to
 // output log messages without needing to pass in the source.
-class NET_EXPORT NetLogWithSource {
+class NET_EXPORT BoundNetLog {
  public:
-  NetLogWithSource() : net_log_(NULL) {}
-  ~NetLogWithSource();
+  BoundNetLog() : net_log_(NULL) {}
+  ~BoundNetLog();
 
   // Add a log entry to the NetLog for the bound source.
   void AddEntry(NetLogEventType type, NetLogEventPhase phase) const;
@@ -352,10 +352,10 @@ class NET_EXPORT NetLogWithSource {
 
   bool IsCapturing() const;
 
-  // Helper to create a NetLogWithSource given a NetLog and a NetLogSourceType.
+  // Helper to create a BoundNetLog given a NetLog and a NetLogSourceType.
   // Takes care of creating a unique source ID, and handles
   //  the case of NULL net_log.
-  static NetLogWithSource Make(NetLog* net_log, NetLogSourceType source_type);
+  static BoundNetLog Make(NetLog* net_log, NetLogSourceType source_type);
 
   const NetLog::Source& source() const { return source_; }
   NetLog* net_log() const { return net_log_; }
@@ -367,7 +367,7 @@ class NET_EXPORT NetLogWithSource {
     DEAD = 0xDEADBEEF,
   };
 
-  NetLogWithSource(const NetLog::Source& source, NetLog* net_log)
+  BoundNetLog(const NetLog::Source& source, NetLog* net_log)
       : source_(source), net_log_(net_log) {}
 
   // TODO(eroman): Temporary until crbug.com/467797 is solved.

@@ -19,7 +19,7 @@ QuicChromiumPacketReader::QuicChromiumPacketReader(
     Visitor* visitor,
     int yield_after_packets,
     QuicTime::Delta yield_after_duration,
-    const NetLogWithSource& net_log)
+    const BoundNetLog& net_log)
     : socket_(socket),
       visitor_(visitor),
       read_pending_(false),

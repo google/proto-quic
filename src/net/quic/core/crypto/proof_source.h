@@ -62,8 +62,9 @@ class NET_EXPORT_PRIVATE ProofSource {
     // |leaf_cert_sct| holds the signed timestamp (RFC6962) of the leaf cert.
     //
     // |details| holds a pointer to an object representing the statistics, if
-    // any, gathered during the operation of GetProof.  If no stats are
-    // available, this will be nullptr.
+    // any,
+    // gathered during the operation of GetProof.  If no stats are available,
+    // this will be nullptr.
     virtual void Run(bool ok,
                      const scoped_refptr<Chain>& chain,
                      const std::string& signature,

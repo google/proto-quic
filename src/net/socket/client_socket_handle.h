@@ -82,7 +82,7 @@ class NET_EXPORT ClientSocketHandle {
            ClientSocketPool::RespectLimits respect_limits,
            const CompletionCallback& callback,
            PoolType* pool,
-           const NetLogWithSource& net_log);
+           const BoundNetLog& net_log);
 
   // An initialized handle can be reset, which causes it to return to the
   // un-initialized state.  This releases the underlying socket, which in the
@@ -236,7 +236,7 @@ int ClientSocketHandle::Init(
     ClientSocketPool::RespectLimits respect_limits,
     const CompletionCallback& callback,
     PoolType* pool,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   requesting_source_ = net_log.source();
 
   CHECK(!group_name.empty());

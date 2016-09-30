@@ -44,9 +44,7 @@ class CTVerifier;
 class SSLCertRequestInfo;
 class SSLInfo;
 
-using TokenBindingSignatureMap =
-    base::MRUCache<std::pair<TokenBindingType, std::string>,
-                   std::vector<uint8_t>>;
+using SignedEkmMap = base::MRUCache<std::string, std::vector<uint8_t>>;
 
 class SSLClientSocketImpl : public SSLClientSocket {
  public:
@@ -76,9 +74,8 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // SSLClientSocket implementation.
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override;
   ChannelIDService* GetChannelIDService() const override;
-  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                 TokenBindingType tb_type,
-                                 std::vector<uint8_t>* out) override;
+  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
+                                    std::vector<uint8_t>* out) override;
   crypto::ECPrivateKey* GetChannelIDKey() const override;
 
   // SSLSocket implementation.
@@ -95,7 +92,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   bool IsConnectedAndIdle() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
-  const NetLogWithSource& NetLog() const override;
+  const BoundNetLog& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -322,7 +319,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   ChannelIDService* channel_id_service_;
   bool tb_was_negotiated_;
   TokenBindingParam tb_negotiated_param_;
-  TokenBindingSignatureMap tb_signature_map_;
+  SignedEkmMap tb_signed_ekm_map_;
 
   // OpenSSL stuff
   SSL* ssl_;
@@ -378,7 +375,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // True if PKP is bypassed due to a local trust anchor.
   bool pkp_bypassed_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   base::WeakPtrFactory<SSLClientSocketImpl> weak_factory_;
 };
 

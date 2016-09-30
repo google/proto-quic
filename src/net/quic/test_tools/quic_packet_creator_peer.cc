@@ -40,6 +40,19 @@ void QuicPacketCreatorPeer::SetPacketNumberLength(
 }
 
 // static
+void QuicPacketCreatorPeer::SetNextPacketNumberLength(
+    QuicPacketCreator* creator,
+    QuicPacketNumberLength next_packet_number_length) {
+  creator->next_packet_number_length_ = next_packet_number_length;
+}
+
+// static
+QuicPacketNumberLength QuicPacketCreatorPeer::NextPacketNumberLength(
+    QuicPacketCreator* creator) {
+  return creator->next_packet_number_length_;
+}
+
+// static
 QuicPacketNumberLength QuicPacketCreatorPeer::GetPacketNumberLength(
     QuicPacketCreator* creator) {
   return creator->packet_.packet_number_length;

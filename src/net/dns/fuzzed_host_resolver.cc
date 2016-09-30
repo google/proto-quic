@@ -223,7 +223,7 @@ void FuzzedHostResolver::SetDnsClientEnabled(bool enabled) {
   SetDnsClient(std::move(dns_client));
 }
 
-bool FuzzedHostResolver::IsIPv6Reachable(const NetLogWithSource& net_log) {
+bool FuzzedHostResolver::IsIPv6Reachable(const BoundNetLog& net_log) {
   return is_ipv6_reachable_;
 }
 

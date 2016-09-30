@@ -183,8 +183,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       priority_(priority),
       server_ssl_config_(server_ssl_config),
       proxy_ssl_config_(proxy_ssl_config),
-      net_log_(
-          NetLogWithSource::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
+      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
       io_callback_(base::Bind(&Job::OnIOComplete, base::Unretained(this))),
       connection_(new ClientSocketHandle),
       session_(session),
@@ -203,7 +202,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       using_existing_quic_session_(false),
       spdy_certificate_error_(OK),
       establishing_tunnel_(false),
-      was_alpn_negotiated_(false),
+      was_npn_negotiated_(false),
       negotiated_protocol_(kProtoUnknown),
       num_streams_(0),
       spdy_session_direct_(false),
@@ -323,8 +322,8 @@ void HttpStreamFactoryImpl::Job::SetPriority(RequestPriority priority) {
   // preconnect state.
 }
 
-bool HttpStreamFactoryImpl::Job::was_alpn_negotiated() const {
-  return was_alpn_negotiated_;
+bool HttpStreamFactoryImpl::Job::was_npn_negotiated() const {
+  return was_npn_negotiated_;
 }
 
 NextProto HttpStreamFactoryImpl::Job::negotiated_protocol() const {
@@ -491,7 +490,7 @@ int HttpStreamFactoryImpl::Job::OnHostResolution(
     const SpdySessionKey& spdy_session_key,
     const GURL& origin_url,
     const AddressList& addresses,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   // It is OK to dereference spdy_session_pool, because the
   // ClientSocketPoolManager will be destroyed in the same callback that
   // destroys the SpdySessionPool.
@@ -684,7 +683,7 @@ int HttpStreamFactoryImpl::Job::StartInternal() {
 }
 
 int HttpStreamFactoryImpl::Job::DoStart() {
-  const NetLogWithSource* net_log = delegate_->GetNetLog(this);
+  const BoundNetLog* net_log = delegate_->GetNetLog(this);
 
   if (net_log) {
     net_log_.BeginEvent(
@@ -1007,13 +1006,13 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
 
   if (ssl_started && (result == OK || IsCertificateError(result))) {
     if (using_quic_ && result == OK) {
-      was_alpn_negotiated_ = true;
+      was_npn_negotiated_ = true;
       negotiated_protocol_ = kProtoQUIC1SPDY3;
     } else {
       SSLClientSocket* ssl_socket =
           static_cast<SSLClientSocket*>(connection_->socket());
       if (ssl_socket->WasNpnNegotiated()) {
-        was_alpn_negotiated_ = true;
+        was_npn_negotiated_ = true;
         negotiated_protocol_ = ssl_socket->GetNegotiatedProtocol();
         net_log_.AddEvent(
             NetLogEventType::HTTP_STREAM_REQUEST_PROTO,
@@ -1030,7 +1029,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     if (!proxy_socket->IsConnected())
       return ERR_CONNECTION_CLOSED;
     if (proxy_socket->IsUsingSpdy()) {
-      was_alpn_negotiated_ = true;
+      was_npn_negotiated_ = true;
       negotiated_protocol_ = proxy_socket->GetProxyNegotiatedProtocol();
       SwitchToSpdyMode();
     }
@@ -1055,7 +1054,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   }
 
   if (IsSpdyAlternative() && !using_spdy_)
-    return ERR_ALPN_NEGOTIATION_FAILED;
+    return ERR_NPN_NEGOTIATION_FAILED;
 
   if (!ssl_started && result < 0 &&
       (IsSpdyAlternative() || IsQuicAlternative()))

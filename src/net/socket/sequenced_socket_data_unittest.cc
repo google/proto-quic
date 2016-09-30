@@ -269,7 +269,7 @@ void SequencedSocketDataTest::Initialize(MockRead* reads,
                 endpoint_.ToString(), tcp_params_, LOWEST,
                 ClientSocketPool::RespectLimits::ENABLED, CompletionCallback(),
                 reinterpret_cast<TransportClientSocketPool*>(&socket_pool_),
-                NetLogWithSource()));
+                BoundNetLog()));
   sock_ = connection_.socket();
 }
 

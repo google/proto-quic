@@ -9,11 +9,9 @@
 #include <cmath>
 
 #include "base/logging.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_protocol.h"
 
 using std::max;
-using std::min;
 
 namespace net {
 
@@ -152,12 +150,6 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
 
   QuicByteCount target_congestion_window =
       origin_point_congestion_window_ - delta_congestion_window;
-  if (FLAGS_quic_limit_cubic_cwnd_increase) {
-    // Limit the CWND increase to half the acked bytes.
-    target_congestion_window =
-        min(target_congestion_window,
-            current_congestion_window + acked_bytes_count_ / 2);
-  }
 
   DCHECK_LT(0u, estimated_tcp_congestion_window_);
   // Increase the window by Alpha * 1 MSS of bytes every time we ack an

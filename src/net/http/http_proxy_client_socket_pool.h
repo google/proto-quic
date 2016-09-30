@@ -154,12 +154,12 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
                     RespectLimits respect_limits,
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
-                    const NetLogWithSource& net_log) override;
+                    const BoundNetLog& net_log) override;
 
   void RequestSockets(const std::string& group_name,
                       const void* params,
                       int num_sockets,
-                      const NetLogWithSource& net_log) override;
+                      const BoundNetLog& net_log) override;
 
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;

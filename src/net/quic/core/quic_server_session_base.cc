@@ -31,7 +31,8 @@ QuicServerSessionBase::QuicServerSessionBase(
       bandwidth_resumption_enabled_(false),
       bandwidth_estimate_sent_to_client_(QuicBandwidth::Zero()),
       last_scup_time_(QuicTime::Zero()),
-      last_scup_packet_number_(0) {}
+      last_scup_packet_number_(0),
+      server_push_enabled_(false) {}
 
 QuicServerSessionBase::~QuicServerSessionBase() {}
 
@@ -55,12 +56,8 @@ void QuicServerSessionBase::OnConfigNegotiated() {
       ContainsQuicTag(config()->ReceivedConnectionOptions(), kBWMX);
   bandwidth_resumption_enabled_ =
       last_bandwidth_resumption || max_bandwidth_resumption;
-
-  if (!FLAGS_quic_enable_server_push_by_default ||
-      connection()->version() < QUIC_VERSION_35) {
-    set_server_push_enabled(
-        ContainsQuicTag(config()->ReceivedConnectionOptions(), kSPSH));
-  }
+  server_push_enabled_ =
+      ContainsQuicTag(config()->ReceivedConnectionOptions(), kSPSH);
 
   // If the client has provided a bandwidth estimate from the same serving
   // region as this server, then decide whether to use the data for bandwidth

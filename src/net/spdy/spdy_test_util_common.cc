@@ -251,7 +251,7 @@ base::WeakPtr<SpdyStream> CreateStreamSynchronously(
     const base::WeakPtr<SpdySession>& session,
     const GURL& url,
     RequestPriority priority,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   SpdyStreamRequest stream_request;
   int rv = stream_request.StartRequest(type, session, url, priority, net_log,
                                        CompletionCallback());
@@ -412,7 +412,7 @@ class AllowAnyCertCTPolicyEnforcer : public CTPolicyEnforcer {
   ct::CertPolicyCompliance DoesConformToCertPolicy(
       X509Certificate* cert,
       const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     return ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
   }
 
@@ -420,7 +420,7 @@ class AllowAnyCertCTPolicyEnforcer : public CTPolicyEnforcer {
       X509Certificate* cert,
       const ct::EVCertsWhitelist* ev_whitelist,
       const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     return ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS;
   }
 };
@@ -434,7 +434,7 @@ class IgnoresCTVerifier : public net::CTVerifier {
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
              net::ct::CTVerifyResult* result,
-             const net::NetLogWithSource& net_log) override {
+             const net::BoundNetLog& net_log) override {
     return net::OK;
   }
 
@@ -486,7 +486,7 @@ SpdyURLRequestContext::~SpdyURLRequestContext() {
 
 bool HasSpdySession(SpdySessionPool* pool, const SpdySessionKey& key) {
   return static_cast<bool>(
-      pool->FindAvailableSession(key, GURL(), NetLogWithSource()));
+      pool->FindAvailableSession(key, GURL(), BoundNetLog()));
 }
 
 namespace {
@@ -494,7 +494,7 @@ namespace {
 base::WeakPtr<SpdySession> CreateSpdySessionHelper(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     Error expected_status,
     bool is_secure) {
   EXPECT_FALSE(HasSpdySession(http_session->spdy_session_pool(), key));
@@ -552,7 +552,7 @@ base::WeakPtr<SpdySession> CreateSpdySessionHelper(
 base::WeakPtr<SpdySession> CreateInsecureSpdySession(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   return CreateSpdySessionHelper(http_session, key, net_log,
                                  OK, false /* is_secure */);
 }
@@ -561,7 +561,7 @@ base::WeakPtr<SpdySession> TryCreateInsecureSpdySessionExpectingFailure(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
     Error expected_error,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   DCHECK_LT(expected_error, ERR_IO_PENDING);
   return CreateSpdySessionHelper(http_session, key, net_log,
                                  expected_error, false /* is_secure */);
@@ -570,7 +570,7 @@ base::WeakPtr<SpdySession> TryCreateInsecureSpdySessionExpectingFailure(
 base::WeakPtr<SpdySession> CreateSecureSpdySession(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   return CreateSpdySessionHelper(http_session, key, net_log,
                                  OK, true /* is_secure */);
 }
@@ -581,7 +581,7 @@ namespace {
 class FakeSpdySessionClientSocket : public MockClientSocket {
  public:
   explicit FakeSpdySessionClientSocket(int read_result)
-      : MockClientSocket(NetLogWithSource()), read_result_(read_result) {}
+      : MockClientSocket(BoundNetLog()), read_result_(read_result) {}
 
   ~FakeSpdySessionClientSocket() override {}
 
@@ -643,7 +643,7 @@ base::WeakPtr<SpdySession> CreateFakeSpdySessionHelper(
           expected_status == OK ? ERR_IO_PENDING : expected_status)));
   base::WeakPtr<SpdySession> spdy_session =
       pool->CreateAvailableSessionFromSocket(
-          key, std::move(handle), NetLogWithSource(), OK, true /* is_secure */);
+          key, std::move(handle), BoundNetLog(), OK, true /* is_secure */);
   // Failure is reported asynchronously.
   EXPECT_TRUE(spdy_session);
   EXPECT_TRUE(HasSpdySession(pool, key));
@@ -670,6 +670,10 @@ SpdySessionPoolPeer::SpdySessionPoolPeer(SpdySessionPool* pool) : pool_(pool) {
 
 void SpdySessionPoolPeer::RemoveAliases(const SpdySessionKey& key) {
   pool_->RemoveAliases(key);
+}
+
+void SpdySessionPoolPeer::DisableDomainAuthenticationVerification() {
+  pool_->verify_domain_authentication_ = false;
 }
 
 void SpdySessionPoolPeer::SetEnableSendingInitialData(bool enabled) {

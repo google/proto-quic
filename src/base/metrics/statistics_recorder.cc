@@ -93,17 +93,6 @@ StatisticsRecorder::~StatisticsRecorder() {
 
 // static
 void StatisticsRecorder::Initialize() {
-  // Tests sometimes create local StatisticsRecorders in order to provide a
-  // contained environment of histograms that can be later discarded. If a
-  // true global instance gets created in this environment then it will
-  // eventually get disconnected when the local instance destructs and
-  // restores the previous state, resulting in no StatisticsRecorder at all.
-  // The global lazy instance, however, will remain valid thus ensuring that
-  // another never gets installed via this method. If a |histograms_| map
-  // exists then assume the StatisticsRecorder is already "initialized".
-  if (histograms_)
-    return;
-
   // Ensure that an instance of the StatisticsRecorder object is created.
   g_statistics_recorder_.Get();
 }

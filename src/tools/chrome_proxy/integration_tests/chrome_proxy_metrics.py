@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import json
 import logging
 import os
 import time
@@ -872,53 +871,6 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
         results.current_page, 'succeeded_count', 'count', count))
     results.AddValue(scalar.ScalarValue(
         results.current_page, 'succeeded_sum', 'count', succeeded))
-
-  def AddResultsForQuicTransaction(self, tab, results):
-    histogram_type = histogram_util.BROWSER_HISTOGRAM
-    # This histogram should be synchronously created when the Navigate occurs.
-    # Verify that histogram DataReductionProxy.Quic.ProxyStatus has no samples
-    # in bucket >=1.
-    fail_counts_proxy_status = histogram_util.GetHistogramSum(
-        histogram_type,
-        'DataReductionProxy.Quic.ProxyStatus',
-        tab)
-    if fail_counts_proxy_status != 0:
-      raise ChromeProxyMetricException, (
-          'fail_counts_proxy_status is %d.' % fail_counts_proxy_status)
-
-    # Verify that histogram DataReductionProxy.Quic.ProxyStatus has at least 1
-    # sample. This sample must be in bucket 0 (QUIC_PROXY_STATUS_AVAILABLE).
-    success_counts_proxy_status = histogram_util.GetHistogramCount(
-        histogram_type,
-        'DataReductionProxy.Quic.ProxyStatus',
-        tab)
-    if success_counts_proxy_status <= 0:
-      raise ChromeProxyMetricException, (
-          'success_counts_proxy_status is %d.' % success_counts_proxy_status)
-
-    # Navigate to one more page to ensure that established QUIC connection
-    # is used for the next request. Give 1 second extra headroom for the QUIC
-    # connection to be established.
-    time.sleep(1)
-    tab.Navigate('http://check.googlezip.net/test.html')
-
-    proxy_usage_histogram_json = histogram_util.GetHistogram(histogram_type,
-        'Net.QuicAlternativeProxy.Usage',
-        tab)
-    proxy_usage_histogram = json.loads(proxy_usage_histogram_json)
-
-    # Bucket ALTERNATIVE_PROXY_USAGE_NO_RACE should have at least one sample.
-    if proxy_usage_histogram['buckets'][0]['count'] <= 0:
-      raise ChromeProxyMetricException, (
-          'Number of samples in ALTERNATIVE_PROXY_USAGE_NO_RACE bucket is %d.'
-             % proxy_usage_histogram['buckets'][0]['count'])
-
-    results.AddValue(scalar.ScalarValue(
-        results.current_page, 'fail_counts_proxy_status', 'count',
-        fail_counts_proxy_status))
-    results.AddValue(scalar.ScalarValue(
-        results.current_page, 'success_counts_proxy_status', 'count',
-        success_counts_proxy_status))
 
   def AddResultsForBypassOnTimeout(self, tab, results):
     bypass_count = 0

@@ -62,7 +62,7 @@ HttpStreamFactoryImpl::Request* HttpStreamFactoryImpl::JobController::Start(
     HttpStreamRequest::Delegate* delegate,
     WebSocketHandshakeStreamBase::CreateHelper*
         websocket_handshake_stream_create_helper,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     HttpStreamRequest::StreamType stream_type,
     RequestPriority priority,
     const SSLConfig& server_ssl_config,
@@ -175,7 +175,7 @@ void HttpStreamFactoryImpl::JobController::OnStreamReady(
   std::unique_ptr<HttpStream> stream = job->ReleaseStream();
   DCHECK(stream);
 
-  MarkRequestComplete(job->was_alpn_negotiated(), job->negotiated_protocol(),
+  MarkRequestComplete(job->was_npn_negotiated(), job->negotiated_protocol(),
                       job->using_spdy());
 
   if (!request_)
@@ -198,7 +198,7 @@ void HttpStreamFactoryImpl::JobController::OnBidirectionalStreamImplReady(
     return;
   }
 
-  MarkRequestComplete(job->was_alpn_negotiated(), job->negotiated_protocol(),
+  MarkRequestComplete(job->was_npn_negotiated(), job->negotiated_protocol(),
                       job->using_spdy());
 
   if (!request_)
@@ -220,7 +220,7 @@ void HttpStreamFactoryImpl::JobController::OnWebSocketHandshakeStreamReady(
     const ProxyInfo& used_proxy_info,
     WebSocketHandshakeStreamBase* stream) {
   DCHECK(job);
-  MarkRequestComplete(job->was_alpn_negotiated(), job->negotiated_protocol(),
+  MarkRequestComplete(job->was_npn_negotiated(), job->negotiated_protocol(),
                       job->using_spdy());
 
   if (!request_)
@@ -411,10 +411,10 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
   // Cache these values in case the job gets deleted.
   const SSLConfig used_ssl_config = job->server_ssl_config();
   const ProxyInfo used_proxy_info = job->proxy_info();
-  const bool was_alpn_negotiated = job->was_alpn_negotiated();
+  const bool was_npn_negotiated = job->was_npn_negotiated();
   const NextProto negotiated_protocol = job->negotiated_protocol();
   const bool using_spdy = job->using_spdy();
-  const NetLogWithSource net_log = job->net_log();
+  const BoundNetLog net_log = job->net_log();
 
   // Cache this so we can still use it if the JobController is deleted.
   HttpStreamFactoryImpl* factory = factory_;
@@ -431,7 +431,7 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
       BindJob(job);
     }
 
-    MarkRequestComplete(was_alpn_negotiated, negotiated_protocol, using_spdy);
+    MarkRequestComplete(was_npn_negotiated, negotiated_protocol, using_spdy);
 
     std::unique_ptr<HttpStream> stream;
     std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl;
@@ -457,7 +457,7 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
   // Notify |factory_|. |request_| and |bounded_job_| might be deleted already.
   if (spdy_session && spdy_session->IsAvailable()) {
     factory->OnNewSpdySessionReady(spdy_session, direct, used_ssl_config,
-                                   used_proxy_info, was_alpn_negotiated,
+                                   used_proxy_info, was_npn_negotiated,
                                    negotiated_protocol, using_spdy, net_log);
   }
   if (is_job_orphaned) {
@@ -594,7 +594,7 @@ void HttpStreamFactoryImpl::JobController::
   }
 }
 
-const NetLogWithSource* HttpStreamFactoryImpl::JobController::GetNetLog(
+const BoundNetLog* HttpStreamFactoryImpl::JobController::GetNetLog(
     Job* job) const {
   if (is_preconnect_ || (job_bound_ && bound_job_ != job))
     return nullptr;
@@ -621,7 +621,7 @@ void HttpStreamFactoryImpl::JobController::CreateJobs(
     const SSLConfig& proxy_ssl_config,
     HttpStreamRequest::Delegate* delegate,
     HttpStreamRequest::StreamType stream_type,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   DCHECK(!main_job_);
   DCHECK(!alternative_job_);
   HostPortPair destination(HostPortPair::FromURL(request_info.url));
@@ -752,11 +752,11 @@ void HttpStreamFactoryImpl::JobController::OnJobSucceeded(Job* job) {
 }
 
 void HttpStreamFactoryImpl::JobController::MarkRequestComplete(
-    bool was_alpn_negotiated,
+    bool was_npn_negotiated,
     NextProto negotiated_protocol,
     bool using_spdy) {
   if (request_)
-    request_->Complete(was_alpn_negotiated, negotiated_protocol, using_spdy);
+    request_->Complete(was_npn_negotiated, negotiated_protocol, using_spdy);
 }
 
 void HttpStreamFactoryImpl::JobController::OnAlternativeJobFailed(Job* job) {

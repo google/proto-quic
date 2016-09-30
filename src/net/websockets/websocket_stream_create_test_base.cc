@@ -117,7 +117,7 @@ void WebSocketStreamCreateTestBase::CreateAndConnectStream(
   stream_request_ = WebSocketStream::CreateAndConnectStreamForTesting(
       socket_url, std::move(create_helper), origin, first_party_for_cookies,
       additional_headers, url_request_context_host_.GetURLRequestContext(),
-      NetLogWithSource(), std::move(connect_delegate),
+      BoundNetLog(), std::move(connect_delegate),
       timer ? std::move(timer)
             : std::unique_ptr<base::Timer>(new base::Timer(false, false)));
 }

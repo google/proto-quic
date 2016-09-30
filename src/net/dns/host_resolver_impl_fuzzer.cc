@@ -146,14 +146,14 @@ class DnsRequest {
     // Decide if should be a cache-only resolution.
     if (data_provider_->ConsumeBool()) {
       return host_resolver_->ResolveFromCache(info, &address_list_,
-                                              net::NetLogWithSource());
+                                              net::BoundNetLog());
     }
 
     info.set_allow_cached_response(data_provider_->ConsumeBool());
     return host_resolver_->Resolve(
         info, priority, &address_list_,
         base::Bind(&DnsRequest::OnCallback, base::Unretained(this)), &request_,
-        net::NetLogWithSource());
+        net::BoundNetLog());
   }
 
   // Waits until the request is done, if it isn't done already.

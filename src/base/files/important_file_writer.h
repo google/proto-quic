@@ -94,23 +94,25 @@ class BASE_EXPORT ImportantFileWriter : public NonThreadSafe {
   // Serialize data pending to be saved and execute write on backend thread.
   void DoScheduledWrite();
 
-  // Registers |on_next_write_callback| to be synchronously invoked from
-  // WriteFileAtomically() on its next write (i.e. from |task_runner_|), with
-  // |success| indicating whether it succeeded or not.
-  // |on_next_write_callback| must be thread safe, as it will be called on
-  // |task_runner_| and may be called during Chrome shutdown.
-  // If called more than once before a write is scheduled on |task_runner|, the
-  // latest callback clobbers the others.
-  void RegisterOnNextWriteCallback(
-      const Callback<void(bool success)>& on_next_write_callback);
+  // Registers |on_next_successful_write| to be called once, on the next
+  // successful write event. Only one callback can be set at once.
+  void RegisterOnNextSuccessfulWriteCallback(
+      const Closure& on_next_successful_write);
 
   TimeDelta commit_interval() const {
     return commit_interval_;
   }
 
  private:
-  // Invoked synchronously on the next write event.
-  Callback<void(bool success)> on_next_write_callback_;
+  // Helper method for WriteNow().
+  bool PostWriteTask(const Callback<bool()>& task);
+
+  // If |result| is true and |on_next_successful_write_| is set, invokes
+  // |on_successful_write_| and then resets it; no-ops otherwise.
+  void ForwardSuccessfulWrite(bool result);
+
+  // Invoked once and then reset on the next successful write event.
+  Closure on_next_successful_write_;
 
   // Path being written to.
   const FilePath path_;

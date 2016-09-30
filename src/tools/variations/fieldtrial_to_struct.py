@@ -3,7 +3,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import itertools
 import json
 import os.path
 import sys
@@ -29,56 +28,38 @@ def _Load(filename):
     result = json.loads(json_comment_eater.Nom(handle.read()))
   return result
 
-def _LoadFieldTrialConfig(filename, platform):
+def _LoadFieldTrialConfig(filename):
   """Loads a field trial config JSON and converts it into a format that can be
   used by json_to_struct.
   """
-  return _FieldTrialConfigToDescription(_Load(filename), platform)
+  return _FieldTrialConfigToDescription(_Load(filename))
 
-def _CreateExperiment(experiment_data):
-  experiment = {'name': experiment_data['name']}
-  params_data = experiment_data.get('params')
+def _CreateGroup(group_data):
+  group = {'name': group_data['group_name']}
+  params_data = group_data.get('params')
   if (params_data):
-    experiment['params'] = [{'key': param, 'value': params_data[param]}
+    group['params'] = [{'key': param, 'value': params_data[param]}
                           for param in sorted(params_data.keys())];
-  enable_features_data = experiment_data.get('enable_features')
+  enable_features_data = group_data.get('enable_features')
   if enable_features_data:
-    experiment['enable_features'] = enable_features_data
-  disable_features_data = experiment_data.get('disable_features')
+    group['enable_features'] = enable_features_data
+  disable_features_data = group_data.get('disable_features')
   if disable_features_data:
-    experiment['disable_features'] = disable_features_data
-  return experiment
+    group['disable_features'] = disable_features_data
+  return group
 
-def _CreateTrial(study_name, experiment_configs, platform):
-  """Returns the applicable experiments for |study_name| and |platform|. This
-  iterates through all of the experiment_configs for |study_name| and picks out
-  the applicable experiments based off of the valid platforms.
-  """
-  platform_experiment_lists = [
-      config['experiments'] for config in experiment_configs
-      if platform in config['platforms']]
-  platform_experiments = list(itertools.chain.from_iterable(
-      platform_experiment_lists))
+def _CreateTrial(trial_name, groups):
   return {
-    'name': study_name,
-    'groups': [_CreateExperiment(experiment)
-               for experiment in platform_experiments],
+    'name': trial_name,
+    'groups': [_CreateGroup(group) for group in groups],
   }
 
-def _GenerateTrials(config, platform):
-  for study_name in sorted(config.keys()):
-    study = _CreateTrial(study_name, config[study_name], platform)
-    # To avoid converting studies with empty groups (e.g. the study doesn't
-    # apply to the target platform), this generator only yields studies that
-    # have non-empty groups.
-    if study['groups']:
-      yield study
-
-def _FieldTrialConfigToDescription(config, platform):
+def _FieldTrialConfigToDescription(config):
   return {
     'elements': {
       'kFieldTrialConfig': {
-        'trials': [study for study in _GenerateTrials(config, platform)]
+        'trials': [_CreateTrial(trial_name, config[trial_name])
+                      for trial_name in sorted(config.keys())]
       }
     }
   }
@@ -86,15 +67,13 @@ def _FieldTrialConfigToDescription(config, platform):
 def main(arguments):
   parser = optparse.OptionParser(
       description='Generates a struct from a JSON description.',
-      usage='usage: %prog [option] -s schema -p platform description')
+      usage='usage: %prog [option] -s schema description')
   parser.add_option('-b', '--destbase',
       help='base directory of generated files.')
   parser.add_option('-d', '--destdir',
       help='directory to output generated files, relative to destbase.')
   parser.add_option('-n', '--namespace',
       help='C++ namespace for generated files. e.g search_providers.')
-  parser.add_option('-p', '--platform',
-      help='target platform for the field trial, mandatory.')
   parser.add_option('-s', '--schema', help='path to the schema file, '
       'mandatory.')
   parser.add_option('-o', '--output', help='output filename, '
@@ -105,14 +84,6 @@ def main(arguments):
 
   if not opts.schema:
     parser.error('You must specify a --schema.')
-
-  if not opts.platform:
-    parser.error('You must specify a --platform.')
-
-  supported_platforms = ['android', 'chromeos', 'ios', 'linux', 'mac', 'win']
-  if opts.platform not in supported_platforms:
-    parser.error('\'%s\' is an unknown platform. Supported platforms: %s' %
-        (opts.platform, supported_platforms))
 
   description_filename = os.path.normpath(args[0])
   shortroot = opts.output
@@ -127,7 +98,7 @@ def main(arguments):
     basepath = ''
 
   schema = _Load(opts.schema)
-  description = _LoadFieldTrialConfig(description_filename, opts.platform)
+  description = _LoadFieldTrialConfig(description_filename)
   json_to_struct.GenerateStruct(
       basepath, output_root, opts.namespace, schema, description,
       os.path.split(description_filename)[1], os.path.split(opts.schema)[1],

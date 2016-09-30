@@ -88,8 +88,8 @@ ProxyScriptDecider::ProxyScriptDecider(
       current_pac_source_index_(0u),
       pac_mandatory_(false),
       next_state_(STATE_NONE),
-      net_log_(NetLogWithSource::Make(net_log,
-                                      NetLogSourceType::PROXY_SCRIPT_DECIDER)),
+      net_log_(
+          BoundNetLog::Make(net_log, NetLogSourceType::PROXY_SCRIPT_DECIDER)),
       fetch_pac_bytes_(false),
       quick_check_enabled_(true),
       host_resolver_(nullptr) {

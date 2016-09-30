@@ -369,7 +369,7 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
 
   std::queue<SimpleEntryOperation> pending_operations_;
 
-  net::NetLogWithSource net_log_;
+  net::BoundNetLog net_log_;
 
   std::unique_ptr<SimpleEntryOperation> executing_operation_;
 

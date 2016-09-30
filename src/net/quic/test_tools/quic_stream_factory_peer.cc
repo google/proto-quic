@@ -104,7 +104,7 @@ QuicAsyncStatus QuicStreamFactoryPeer::StartCertVerifyJob(
     QuicStreamFactory* factory,
     const QuicServerId& server_id,
     int cert_verify_flags,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   return factory->StartCertVerifyJob(server_id, cert_verify_flags, net_log);
 }
 

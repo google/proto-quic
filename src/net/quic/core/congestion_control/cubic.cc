@@ -14,7 +14,6 @@
 #include "net/quic/core/quic_time.h"
 
 using std::max;
-using std::min;
 
 namespace net {
 
@@ -75,7 +74,6 @@ void Cubic::Reset() {
   last_congestion_window_ = 0;
   last_max_congestion_window_ = 0;
   acked_packets_count_ = 0;
-  epoch_packets_count_ = 0;
   estimated_tcp_congestion_window_ = 0;
   origin_point_congestion_window_ = 0;
   time_to_origin_point_ = 0;
@@ -106,7 +104,6 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     QuicPacketCount current_congestion_window,
     QuicTime::Delta delay_min) {
   acked_packets_count_ += 1;  // Packets acked.
-  epoch_packets_count_ += 1;
   QuicTime current_time = clock_->ApproximateNow();
 
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
@@ -122,7 +119,6 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     // First ACK after a loss event.
     epoch_ = current_time;     // Start of epoch.
     acked_packets_count_ = 1;  // Reset count.
-    epoch_packets_count_ = 1;
     // Reset estimated_tcp_congestion_window_ to be in sync with cubic.
     estimated_tcp_congestion_window_ = current_congestion_window;
     if (last_max_congestion_window_ <= current_congestion_window) {
@@ -150,14 +146,6 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
   QuicPacketCount target_congestion_window =
       origin_point_congestion_window_ - delta_congestion_window;
 
-  if (FLAGS_quic_limit_cubic_cwnd_increase) {
-    // Limit the CWND increase to half the acked packets rounded up to the
-    // nearest packet.
-    target_congestion_window =
-        min(target_congestion_window,
-            current_congestion_window + (epoch_packets_count_ + 1) / 2);
-  }
-
   DCHECK_LT(0u, estimated_tcp_congestion_window_);
   // With dynamic beta/alpha based on number of active streams, it is possible
   // for the required_ack_count to become much lower than acked_packets_count_
@@ -172,7 +160,6 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     acked_packets_count_ -= required_ack_count;
     estimated_tcp_congestion_window_++;
   }
-  epoch_packets_count_ = 0;
 
   // We have a new cubic congestion window.
   last_target_congestion_window_ = target_congestion_window;

@@ -70,7 +70,7 @@ class QuicStreamFactoryPeer {
   static QuicAsyncStatus StartCertVerifyJob(QuicStreamFactory* factory,
                                             const QuicServerId& server_id,
                                             int cert_verify_flags,
-                                            const NetLogWithSource& net_log);
+                                            const BoundNetLog& net_log);
 
   static void SetYieldAfterPackets(QuicStreamFactory* factory,
                                    int yield_after_packets);

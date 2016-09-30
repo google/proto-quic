@@ -28,7 +28,8 @@ extern uint16_t newhope_psis_bitrev_montgomery[];
 extern uint16_t newhope_psis_inv_montgomery[];
 
 void NEWHOPE_POLY_frombytes(NEWHOPE_POLY* r, const uint8_t* a) {
-  for (int i = 0; i < PARAM_N / 4; i++) {
+  int i;
+  for (i = 0; i < PARAM_N / 4; i++) {
     r->coeffs[4 * i + 0] =
         a[7 * i + 0] | (((uint16_t)a[7 * i + 1] & 0x3f) << 8);
     r->coeffs[4 * i + 1] = (a[7 * i + 1] >> 6) |
@@ -43,9 +44,10 @@ void NEWHOPE_POLY_frombytes(NEWHOPE_POLY* r, const uint8_t* a) {
 }
 
 void NEWHOPE_POLY_tobytes(uint8_t* r, const NEWHOPE_POLY* p) {
+  int i;
   uint16_t t0, t1, t2, t3, m;
   int16_t c;
-  for (int i = 0; i < PARAM_N / 4; i++) {
+  for (i = 0; i < PARAM_N / 4; i++) {
     t0 = newhope_barrett_reduce(
         p->coeffs[4 * i + 0]); /* Make sure that coefficients
                           have only 14 bits */
@@ -134,11 +136,13 @@ void NEWHOPE_POLY_noise(NEWHOPE_POLY* r) {
   /* The reference implementation calls ChaCha20 here. */
   RAND_bytes((uint8_t *) tp, sizeof(tp));
 
-  for (size_t i = 0; i < PARAM_N; i++) {
+  size_t i;
+  for (i = 0; i < PARAM_N; i++) {
     const uint32_t t = tp[i];
 
+    size_t j;
     uint32_t d = 0;
-    for (size_t j = 0; j < 8; j++) {
+    for (j = 0; j < 8; j++) {
       d += (t >> j) & 0x01010101;
     }
 
@@ -150,7 +154,8 @@ void NEWHOPE_POLY_noise(NEWHOPE_POLY* r) {
 
 void newhope_poly_pointwise(NEWHOPE_POLY* r, const NEWHOPE_POLY* a,
                             const NEWHOPE_POLY* b) {
-  for (size_t i = 0; i < PARAM_N; i++) {
+  size_t i;
+  for (i = 0; i < PARAM_N; i++) {
     uint16_t t = newhope_montgomery_reduce(3186 * b->coeffs[i]);
     /* t is now in Montgomery domain */
     r->coeffs[i] = newhope_montgomery_reduce(a->coeffs[i] * t);
@@ -160,7 +165,8 @@ void newhope_poly_pointwise(NEWHOPE_POLY* r, const NEWHOPE_POLY* a,
 
 void newhope_poly_add(NEWHOPE_POLY* r, const NEWHOPE_POLY* a,
                       const NEWHOPE_POLY* b) {
-  for (size_t i = 0; i < PARAM_N; i++) {
+  size_t i;
+  for (i = 0; i < PARAM_N; i++) {
     r->coeffs[i] = newhope_barrett_reduce(a->coeffs[i] + b->coeffs[i]);
   }
 }

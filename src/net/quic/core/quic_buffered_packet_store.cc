@@ -156,11 +156,6 @@ list<BufferedPacket> QuicBufferedPacketStore::DeliverPackets(
   return packets_to_deliver;
 }
 
-void QuicBufferedPacketStore::DiscardPackets(QuicConnectionId connection_id) {
-  undecryptable_packets_.erase(connection_id);
-  connections_with_chlo_.erase(connection_id);
-}
-
 void QuicBufferedPacketStore::OnExpirationTimeout() {
   QuicTime expiration_time = clock_->ApproximateNow() - connection_life_span_;
   while (!undecryptable_packets_.empty()) {

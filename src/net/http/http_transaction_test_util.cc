@@ -163,7 +163,7 @@ TestTransactionConsumer::~TestTransactionConsumer() {
 }
 
 void TestTransactionConsumer::Start(const HttpRequestInfo* request,
-                                    const NetLogWithSource& net_log) {
+                                    const BoundNetLog& net_log) {
   state_ = STARTING;
   int result = trans_->Start(
       request, base::Bind(&TestTransactionConsumer::OnIOComplete,
@@ -239,7 +239,7 @@ MockNetworkTransaction::~MockNetworkTransaction() {}
 
 int MockNetworkTransaction::Start(const HttpRequestInfo* request,
                                   const CompletionCallback& callback,
-                                  const NetLogWithSource& net_log) {
+                                  const BoundNetLog& net_log) {
   if (request_)
     return ERR_FAILED;
 
@@ -271,7 +271,7 @@ int MockNetworkTransaction::RestartWithAuth(
   // Let the MockTransactionHandler worry about this: the only way for this
   // test to succeed is by using an explicit handler for the transaction so
   // that server behavior can be simulated.
-  return StartInternal(&auth_request_info, callback, NetLogWithSource());
+  return StartInternal(&auth_request_info, callback, BoundNetLog());
 }
 
 void MockNetworkTransaction::PopulateNetErrorDetails(
@@ -400,7 +400,7 @@ const int64_t MockNetworkTransaction::kTotalSentBytes = 100;
 
 int MockNetworkTransaction::StartInternal(const HttpRequestInfo* request,
                                           const CompletionCallback& callback,
-                                          const NetLogWithSource& net_log) {
+                                          const BoundNetLog& net_log) {
   const MockTransaction* t = FindMockTransaction(request->url);
   if (!t)
     return ERR_FAILED;

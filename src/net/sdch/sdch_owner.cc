@@ -365,7 +365,7 @@ void SdchOwner::OnDictionaryFetched(base::Time last_used,
                                     int use_count,
                                     const std::string& dictionary_text,
                                     const GURL& dictionary_url,
-                                    const NetLogWithSource& net_log,
+                                    const BoundNetLog& net_log,
                                     bool was_from_cache) {
   struct DictionaryItem {
     base::Time last_used;

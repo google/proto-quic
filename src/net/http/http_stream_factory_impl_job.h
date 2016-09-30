@@ -144,7 +144,7 @@ class HttpStreamFactoryImpl::Job {
     // Remove session from the SpdySessionRequestMap.
     virtual void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) = 0;
 
-    virtual const NetLogWithSource* GetNetLog(Job* job) const = 0;
+    virtual const BoundNetLog* GetNetLog(Job* job) const = 0;
 
     virtual WebSocketHandshakeStreamBase::CreateHelper*
     websocket_handshake_stream_create_helper() = 0;
@@ -212,10 +212,10 @@ class HttpStreamFactoryImpl::Job {
   void SetPriority(RequestPriority priority);
 
   RequestPriority priority() const { return priority_; }
-  bool was_alpn_negotiated() const;
+  bool was_npn_negotiated() const;
   NextProto negotiated_protocol() const;
   bool using_spdy() const;
-  const NetLogWithSource& net_log() const { return net_log_; }
+  const BoundNetLog& net_log() const { return net_log_; }
   HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
 
   std::unique_ptr<HttpStream> ReleaseStream() { return std::move(stream_); }
@@ -397,14 +397,14 @@ class HttpStreamFactoryImpl::Job {
                               const SpdySessionKey& spdy_session_key,
                               const GURL& origin_url,
                               const AddressList& addresses,
-                              const NetLogWithSource& net_log);
+                              const BoundNetLog& net_log);
 
   const HttpRequestInfo request_info_;
   RequestPriority priority_;
   ProxyInfo proxy_info_;
   SSLConfig server_ssl_config_;
   SSLConfig proxy_ssl_config_;
-  const NetLogWithSource net_log_;
+  const BoundNetLog net_log_;
 
   CompletionCallback io_callback_;
   std::unique_ptr<ClientSocketHandle> connection_;
@@ -463,8 +463,8 @@ class HttpStreamFactoryImpl::Job {
   std::unique_ptr<WebSocketHandshakeStreamBase> websocket_stream_;
   std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl_;
 
-  // True if we negotiated ALPN.
-  bool was_alpn_negotiated_;
+  // True if we negotiated NPN.
+  bool was_npn_negotiated_;
 
   // Protocol negotiated with the server.
   NextProto negotiated_protocol_;

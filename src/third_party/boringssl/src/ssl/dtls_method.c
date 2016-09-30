@@ -65,33 +65,31 @@
 #include "internal.h"
 
 
-static int dtls1_version_from_wire(uint16_t *out_version,
-                                   uint16_t wire_version) {
-  switch (wire_version) {
-    case DTLS1_VERSION:
-      /* DTLS 1.0 maps to TLS 1.1, not TLS 1.0. */
-      *out_version = TLS1_1_VERSION;
-      return 1;
-    case DTLS1_2_VERSION:
-      *out_version = TLS1_2_VERSION;
-      return 1;
+static uint16_t dtls1_version_from_wire(uint16_t wire_version) {
+  uint16_t tls_version = ~wire_version;
+  uint16_t version = tls_version + 0x0201;
+  /* If either component overflowed, clamp it so comparisons still work. */
+  if ((version >> 8) < (tls_version >> 8)) {
+    version = 0xff00 | (version & 0xff);
   }
-
-  return 0;
+  if ((version & 0xff) < (tls_version & 0xff)) {
+    version = (version & 0xff00) | 0xff;
+  }
+  /* DTLS 1.0 maps to TLS 1.1, not TLS 1.0. */
+  if (version == TLS1_VERSION) {
+    version = TLS1_1_VERSION;
+  }
+  return version;
 }
 
 static uint16_t dtls1_version_to_wire(uint16_t version) {
-  switch (version) {
-    case TLS1_1_VERSION:
-      /* DTLS 1.0 maps to TLS 1.1, not TLS 1.0. */
-      return DTLS1_VERSION;
-    case TLS1_2_VERSION:
-      return DTLS1_2_VERSION;
-  }
+  assert(version >= TLS1_1_VERSION);
 
-  /* It is an error to use this function with an invalid version. */
-  assert(0);
-  return 0;
+  /* DTLS 1.0 maps to TLS 1.1, not TLS 1.0. */
+  if (version == TLS1_1_VERSION) {
+    return DTLS1_VERSION;
+  }
+  return ~(version - 0x0201);
 }
 
 static int dtls1_set_read_state(SSL *ssl, SSL_AEAD_CTX *aead_ctx) {

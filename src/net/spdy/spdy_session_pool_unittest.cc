@@ -111,8 +111,8 @@ TEST_F(SpdySessionPoolTest, CloseCurrentSessions) {
   CreateNetworkSession();
 
   // Setup the first session to the first host.
-  base::WeakPtr<SpdySession> session = CreateInsecureSpdySession(
-      http_session_.get(), test_key, NetLogWithSource());
+  base::WeakPtr<SpdySession> session =
+      CreateInsecureSpdySession(http_session_.get(), test_key, BoundNetLog());
 
   // Flush the SpdySession::OnReadComplete() task.
   base::RunLoop().RunUntilIdle();
@@ -121,9 +121,10 @@ TEST_F(SpdySessionPoolTest, CloseCurrentSessions) {
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, test_key));
 
   // Set the stream to create a new session when it is closed.
-  base::WeakPtr<SpdyStream> spdy_stream = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, session, GURL("http://www.foo.com"), MEDIUM,
-      NetLogWithSource());
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                session, GURL("http://www.foo.com"),
+                                MEDIUM, BoundNetLog());
   SessionOpeningDelegate delegate(spdy_session_pool_, test_key);
   spdy_stream->SetDelegate(&delegate);
 
@@ -156,10 +157,11 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   SpdySessionKey key1(test_host_port_pair1, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> session1 =
-      CreateInsecureSpdySession(http_session_.get(), key1, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), key1, BoundNetLog());
   GURL url1(kTestHost1);
-  base::WeakPtr<SpdyStream> spdy_stream1 = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, session1, url1, MEDIUM, NetLogWithSource());
+  base::WeakPtr<SpdyStream> spdy_stream1 =
+      CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                session1, url1, MEDIUM, BoundNetLog());
   ASSERT_TRUE(spdy_stream1);
 
   // Set up session 2
@@ -171,10 +173,11 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   SpdySessionKey key2(test_host_port_pair2, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> session2 =
-      CreateInsecureSpdySession(http_session_.get(), key2, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), key2, BoundNetLog());
   GURL url2(kTestHost2);
-  base::WeakPtr<SpdyStream> spdy_stream2 = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, session2, url2, MEDIUM, NetLogWithSource());
+  base::WeakPtr<SpdyStream> spdy_stream2 =
+      CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                session2, url2, MEDIUM, BoundNetLog());
   ASSERT_TRUE(spdy_stream2);
 
   // Set up session 3
@@ -186,10 +189,11 @@ TEST_F(SpdySessionPoolTest, CloseCurrentIdleSessions) {
   SpdySessionKey key3(test_host_port_pair3, ProxyServer::Direct(),
                       PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> session3 =
-      CreateInsecureSpdySession(http_session_.get(), key3, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), key3, BoundNetLog());
   GURL url3(kTestHost3);
-  base::WeakPtr<SpdyStream> spdy_stream3 = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, session3, url3, MEDIUM, NetLogWithSource());
+  base::WeakPtr<SpdyStream> spdy_stream3 =
+      CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                session3, url3, MEDIUM, BoundNetLog());
   ASSERT_TRUE(spdy_stream3);
 
   // All sessions are active and not closed
@@ -282,8 +286,8 @@ TEST_F(SpdySessionPoolTest, CloseAllSessions) {
   CreateNetworkSession();
 
   // Setup the first session to the first host.
-  base::WeakPtr<SpdySession> session = CreateInsecureSpdySession(
-      http_session_.get(), test_key, NetLogWithSource());
+  base::WeakPtr<SpdySession> session =
+      CreateInsecureSpdySession(http_session_.get(), test_key, BoundNetLog());
 
   // Flush the SpdySession::OnReadComplete() task.
   base::RunLoop().RunUntilIdle();
@@ -292,9 +296,10 @@ TEST_F(SpdySessionPoolTest, CloseAllSessions) {
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, test_key));
 
   // Set the stream to create a new session when it is closed.
-  base::WeakPtr<SpdyStream> spdy_stream = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, session, GURL("http://www.foo.com"), MEDIUM,
-      NetLogWithSource());
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                session, GURL("http://www.foo.com"),
+                                MEDIUM, BoundNetLog());
   SessionOpeningDelegate delegate(spdy_session_pool_, test_key);
   spdy_stream->SetDelegate(&delegate);
 
@@ -346,7 +351,7 @@ void SpdySessionPoolTest::RunIPPoolingTest(
     HostResolver::RequestInfo info(HostPortPair(test_hosts[i].name, kTestPort));
     session_deps_.host_resolver->Resolve(
         info, DEFAULT_PRIORITY, &test_hosts[i].addresses, CompletionCallback(),
-        &request[i], NetLogWithSource());
+        &request[i], BoundNetLog());
 
     // Setup a SpdySessionKey
     test_hosts[i].key = SpdySessionKey(
@@ -370,7 +375,7 @@ void SpdySessionPoolTest::RunIPPoolingTest(
 
   // Setup the first session to the first host.
   base::WeakPtr<SpdySession> session = CreateInsecureSpdySession(
-      http_session_.get(), test_hosts[0].key, NetLogWithSource());
+      http_session_.get(), test_hosts[0].key, BoundNetLog());
 
   // Flush the SpdySession::OnReadComplete() task.
   base::RunLoop().RunUntilIdle();
@@ -395,7 +400,7 @@ void SpdySessionPoolTest::RunIPPoolingTest(
   data2.set_connect_data(connect_data);
   session_deps_.socket_factory->AddSocketDataProvider(&data2);
   base::WeakPtr<SpdySession> session2 = CreateInsecureSpdySession(
-      http_session_.get(), test_hosts[2].key, NetLogWithSource());
+      http_session_.get(), test_hosts[2].key, BoundNetLog());
 
   // Verify that we have sessions for everything.
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, test_hosts[0].key));
@@ -406,7 +411,7 @@ void SpdySessionPoolTest::RunIPPoolingTest(
   // we got with host 0, and that is a different from host 2's session.
   base::WeakPtr<SpdySession> session1 =
       spdy_session_pool_->FindAvailableSession(
-          test_hosts[1].key, GURL(test_hosts[1].url), NetLogWithSource());
+          test_hosts[1].key, GURL(test_hosts[1].url), BoundNetLog());
   EXPECT_EQ(session.get(), session1.get());
   EXPECT_NE(session2.get(), session1.get());
 
@@ -434,16 +439,17 @@ void SpdySessionPoolTest::RunIPPoolingTest(
       break;
     case SPDY_POOL_CLOSE_IDLE_SESSIONS:
       GURL url(test_hosts[0].url);
-      base::WeakPtr<SpdyStream> spdy_stream = CreateStreamSynchronously(
-          SPDY_BIDIRECTIONAL_STREAM, session, url, MEDIUM, NetLogWithSource());
+      base::WeakPtr<SpdyStream> spdy_stream =
+          CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                    session, url, MEDIUM, BoundNetLog());
       GURL url1(test_hosts[1].url);
       base::WeakPtr<SpdyStream> spdy_stream1 =
-          CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM, session1, url1,
-                                    MEDIUM, NetLogWithSource());
+          CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                    session1, url1, MEDIUM, BoundNetLog());
       GURL url2(test_hosts[2].url);
       base::WeakPtr<SpdyStream> spdy_stream2 =
-          CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM, session2, url2,
-                                    MEDIUM, NetLogWithSource());
+          CreateStreamSynchronously(SPDY_BIDIRECTIONAL_STREAM,
+                                    session2, url2, MEDIUM, BoundNetLog());
 
       // Close streams to make spdy_session and spdy_session1 inactive.
       session->CloseCreatedStream(spdy_stream, OK);
@@ -535,11 +541,11 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
   SpdySessionKey keyA(
       test_host_port_pairA, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> sessionA =
-      CreateInsecureSpdySession(http_session_.get(), keyA, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), keyA, BoundNetLog());
 
   GURL urlA(kTestHostA);
   base::WeakPtr<SpdyStream> spdy_streamA = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, sessionA, urlA, MEDIUM, NetLogWithSource());
+      SPDY_BIDIRECTIONAL_STREAM, sessionA, urlA, MEDIUM, BoundNetLog());
   test::StreamDelegateDoNothing delegateA(spdy_streamA);
   spdy_streamA->SetDelegate(&delegateA);
 
@@ -563,12 +569,12 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
   SpdySessionKey keyB(
       test_host_port_pairB, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> sessionB =
-      CreateInsecureSpdySession(http_session_.get(), keyB, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), keyB, BoundNetLog());
   EXPECT_TRUE(sessionB->IsAvailable());
 
   GURL urlB(kTestHostB);
   base::WeakPtr<SpdyStream> spdy_streamB = CreateStreamSynchronously(
-      SPDY_BIDIRECTIONAL_STREAM, sessionB, urlB, MEDIUM, NetLogWithSource());
+      SPDY_BIDIRECTIONAL_STREAM, sessionB, urlB, MEDIUM, BoundNetLog());
   test::StreamDelegateDoNothing delegateB(spdy_streamB);
   spdy_streamB->SetDelegate(&delegateB);
 
@@ -582,7 +588,7 @@ TEST_F(SpdySessionPoolTest, IPAddressChanged) {
   SpdySessionKey keyC(
       test_host_port_pairC, ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
   base::WeakPtr<SpdySession> sessionC =
-      CreateInsecureSpdySession(http_session_.get(), keyC, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), keyC, BoundNetLog());
 
   sessionC->CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, "Error!");
   EXPECT_TRUE(sessionC->IsDraining());
@@ -634,7 +640,7 @@ TEST_F(SpdySessionPoolTest, FindAvailableSession) {
   CreateNetworkSession();
 
   base::WeakPtr<SpdySession> session =
-      CreateInsecureSpdySession(http_session_.get(), key, NetLogWithSource());
+      CreateInsecureSpdySession(http_session_.get(), key, BoundNetLog());
 
   // Flush the SpdySession::OnReadComplete() task.
   base::RunLoop().RunUntilIdle();
@@ -643,14 +649,14 @@ TEST_F(SpdySessionPoolTest, FindAvailableSession) {
 
   // FindAvailableSession should return |session| if called with empty |url|.
   base::WeakPtr<SpdySession> session1 =
-      spdy_session_pool_->FindAvailableSession(key, GURL(), NetLogWithSource());
+      spdy_session_pool_->FindAvailableSession(key, GURL(), BoundNetLog());
   EXPECT_EQ(session.get(), session1.get());
 
   // FindAvailableSession should return |session| if called with |url| for which
   // there is no pushed stream on any sessions owned by |spdy_session_pool_|.
   base::WeakPtr<SpdySession> session2 =
       spdy_session_pool_->FindAvailableSession(
-          key, GURL("http://news.example.org/foo.html"), NetLogWithSource());
+          key, GURL("http://news.example.org/foo.html"), BoundNetLog());
   EXPECT_EQ(session.get(), session2.get());
 
   spdy_session_pool_->CloseCurrentSessions(ERR_ABORTED);

@@ -77,7 +77,7 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
                          const SSLConfig& ssl_config_for_proxy,
                          bool force_tunnel,
                          PrivacyMode privacy_mode,
-                         const NetLogWithSource& net_log,
+                         const BoundNetLog& net_log,
                          int num_preconnect_streams,
                          ClientSocketHandle* socket_handle,
                          HttpNetworkSession::SocketPoolType socket_pool_type,
@@ -357,7 +357,7 @@ int InitSocketHandleForHttpRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     ClientSocketHandle* socket_handle,
     const OnHostResolutionCallback& resolution_callback,
     const CompletionCallback& callback) {
@@ -382,7 +382,7 @@ int InitSocketHandleForWebSocketRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     ClientSocketHandle* socket_handle,
     const OnHostResolutionCallback& resolution_callback,
     const CompletionCallback& callback) {
@@ -395,15 +395,16 @@ int InitSocketHandleForWebSocketRequest(
       resolution_callback, callback);
 }
 
-int InitSocketHandleForRawConnect(const HostPortPair& host_port_pair,
-                                  HttpNetworkSession* session,
-                                  const ProxyInfo& proxy_info,
-                                  const SSLConfig& ssl_config_for_origin,
-                                  const SSLConfig& ssl_config_for_proxy,
-                                  PrivacyMode privacy_mode,
-                                  const NetLogWithSource& net_log,
-                                  ClientSocketHandle* socket_handle,
-                                  const CompletionCallback& callback) {
+int InitSocketHandleForRawConnect(
+    const HostPortPair& host_port_pair,
+    HttpNetworkSession* session,
+    const ProxyInfo& proxy_info,
+    const SSLConfig& ssl_config_for_origin,
+    const SSLConfig& ssl_config_for_proxy,
+    PrivacyMode privacy_mode,
+    const BoundNetLog& net_log,
+    ClientSocketHandle* socket_handle,
+    const CompletionCallback& callback) {
   DCHECK(socket_handle);
   HttpRequestHeaders request_extra_headers;
   int request_load_flags = 0;
@@ -423,7 +424,7 @@ int InitSocketHandleForTlsConnect(const HostPortPair& endpoint,
                                   const SSLConfig& ssl_config_for_origin,
                                   const SSLConfig& ssl_config_for_proxy,
                                   PrivacyMode privacy_mode,
-                                  const NetLogWithSource& net_log,
+                                  const BoundNetLog& net_log,
                                   ClientSocketHandle* socket_handle,
                                   const CompletionCallback& callback) {
   DCHECK(socket_handle);
@@ -451,7 +452,7 @@ int PreconnectSocketsForHttpRequest(
     const SSLConfig& ssl_config_for_origin,
     const SSLConfig& ssl_config_for_proxy,
     PrivacyMode privacy_mode,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     int num_preconnect_streams) {
   return InitSocketPoolHelper(
       group_type, endpoint, request_extra_headers, request_load_flags,

@@ -3421,7 +3421,7 @@ TEST_F(TokenBindingURLRequestTest, TokenBindingTest) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3432,9 +3432,8 @@ TEST_F(TokenBindingURLRequestTest, TokenBindingTest) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
-                                            token_bindings[0].signature,
-                                            TokenBindingType::PROVIDED, ekm));
+    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
+                                   token_bindings[0].signature, ekm));
   }
 }
 
@@ -3465,7 +3464,7 @@ TEST_F(TokenBindingURLRequestTest, ForwardTokenBinding) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3476,13 +3475,11 @@ TEST_F(TokenBindingURLRequestTest, ForwardTokenBinding) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
-                                            token_bindings[0].signature,
-                                            TokenBindingType::PROVIDED, ekm));
+    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
+                                   token_bindings[0].signature, ekm));
     EXPECT_EQ(TokenBindingType::REFERRED, token_bindings[1].type);
-    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[1].ec_point,
-                                            token_bindings[1].signature,
-                                            TokenBindingType::REFERRED, ekm));
+    EXPECT_TRUE(VerifyEKMSignature(token_bindings[1].ec_point,
+                                   token_bindings[1].signature, ekm));
   }
 }
 
@@ -3520,7 +3517,7 @@ TEST_F(TokenBindingURLRequestTest, DontForwardHeaderFromHttp) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3531,9 +3528,8 @@ TEST_F(TokenBindingURLRequestTest, DontForwardHeaderFromHttp) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
-                                            token_bindings[0].signature,
-                                            TokenBindingType::PROVIDED, ekm));
+    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
+                                   token_bindings[0].signature, ekm));
   }
 }
 
@@ -6356,7 +6352,7 @@ class MockCTVerifier : public CTVerifier {
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
              ct::CTVerifyResult* result,
-             const NetLogWithSource& net_log) override {
+             const BoundNetLog& net_log) override {
     return net::OK;
   }
 
@@ -6375,7 +6371,7 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   ct::CertPolicyCompliance DoesConformToCertPolicy(
       X509Certificate* cert,
       const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     return default_result_;
   }
 
@@ -8977,7 +8973,7 @@ class HTTPSOCSPTest : public HTTPSRequestTest {
     ct::CertPolicyCompliance DoesConformToCertPolicy(
         X509Certificate* cert,
         const SCTList& verified_scts,
-        const NetLogWithSource& net_log) override {
+        const BoundNetLog& net_log) override {
       return ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
     }
 
@@ -8985,7 +8981,7 @@ class HTTPSOCSPTest : public HTTPSRequestTest {
         X509Certificate* cert,
         const ct::EVCertsWhitelist* ev_whitelist,
         const SCTList& verified_scts,
-        const NetLogWithSource& net_log) override {
+        const BoundNetLog& net_log) override {
       return ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS;
     }
   };

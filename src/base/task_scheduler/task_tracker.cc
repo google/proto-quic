@@ -162,10 +162,7 @@ void TaskTracker::Shutdown() {
 
   // It is safe to access |shutdown_event_| without holding |lock_| because the
   // pointer never changes after being set above.
-  {
-    base::ThreadRestrictions::ScopedAllowWait allow_wait;
-    shutdown_event_->Wait();
-  }
+  shutdown_event_->Wait();
 
   {
     AutoSchedulerLock auto_lock(shutdown_lock_);

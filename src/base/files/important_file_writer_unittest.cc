@@ -46,45 +46,39 @@ class DataSerializer : public ImportantFileWriter::DataSerializer {
   const std::string data_;
 };
 
-enum WriteCallbackObservationState {
-  NOT_CALLED,
-  CALLED_WITH_ERROR,
-  CALLED_WITH_SUCCESS,
-};
-
-class WriteCallbackObserver {
+class SuccessfulWriteObserver {
  public:
-  WriteCallbackObserver() : observation_state_(NOT_CALLED) {}
+  SuccessfulWriteObserver() : successful_write_observed_(false) {}
 
-  // Register OnWrite() to be called on the next write of |writer|.
-  void ObserveNextWriteCallback(ImportantFileWriter* writer);
+  // Register on_successful_write() to be called on the next successful write
+  // of |writer|.
+  void ObserveNextSuccessfulWrite(ImportantFileWriter* writer);
 
-  // Returns true if a write was observed via OnWrite()
+  // Returns true if a successful write was observed via on_successful_write()
   // and resets the observation state to false regardless.
-  WriteCallbackObservationState GetAndResetObservationState();
+  bool GetAndResetObservationState();
 
  private:
-  void OnWrite(bool success) {
-    EXPECT_EQ(NOT_CALLED, observation_state_);
-    observation_state_ = success ? CALLED_WITH_SUCCESS : CALLED_WITH_ERROR;
+  void on_successful_write() {
+    EXPECT_FALSE(successful_write_observed_);
+    successful_write_observed_ = true;
   }
 
-  WriteCallbackObservationState observation_state_;
+  bool successful_write_observed_;
 
-  DISALLOW_COPY_AND_ASSIGN(WriteCallbackObserver);
+  DISALLOW_COPY_AND_ASSIGN(SuccessfulWriteObserver);
 };
 
-void WriteCallbackObserver::ObserveNextWriteCallback(
+void SuccessfulWriteObserver::ObserveNextSuccessfulWrite(
     ImportantFileWriter* writer) {
-  writer->RegisterOnNextWriteCallback(
-      base::Bind(&WriteCallbackObserver::OnWrite, base::Unretained(this)));
+  writer->RegisterOnNextSuccessfulWriteCallback(base::Bind(
+      &SuccessfulWriteObserver::on_successful_write, base::Unretained(this)));
 }
 
-WriteCallbackObservationState
-WriteCallbackObserver::GetAndResetObservationState() {
-  WriteCallbackObservationState state = observation_state_;
-  observation_state_ = NOT_CALLED;
-  return state;
+bool SuccessfulWriteObserver::GetAndResetObservationState() {
+  bool was_successful_write_observed = successful_write_observed_;
+  successful_write_observed_ = false;
+  return was_successful_write_observed;
 }
 
 }  // namespace
@@ -98,7 +92,7 @@ class ImportantFileWriterTest : public testing::Test {
   }
 
  protected:
-  WriteCallbackObserver write_callback_observer_;
+  SuccessfulWriteObserver successful_write_observer_;
   FilePath file_;
   MessageLoop loop_;
 
@@ -109,89 +103,47 @@ class ImportantFileWriterTest : public testing::Test {
 TEST_F(ImportantFileWriterTest, Basic) {
   ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
   EXPECT_FALSE(PathExists(writer.path()));
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
   writer.WriteNow(MakeUnique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
 }
 
-TEST_F(ImportantFileWriterTest, WriteWithObserver) {
+TEST_F(ImportantFileWriterTest, BasicWithSuccessfulWriteObserver) {
   ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
   EXPECT_FALSE(PathExists(writer.path()));
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-
-  // Confirm that the observer is invoked.
-  write_callback_observer_.ObserveNextWriteCallback(&writer);
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
+  successful_write_observer_.ObserveNextSuccessfulWrite(&writer);
   writer.WriteNow(MakeUnique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
-  EXPECT_EQ(CALLED_WITH_SUCCESS,
-            write_callback_observer_.GetAndResetObservationState());
+  // Confirm that the observer is invoked.
+  EXPECT_TRUE(successful_write_observer_.GetAndResetObservationState());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("foo", GetFileContent(writer.path()));
 
   // Confirm that re-installing the observer works for another write.
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-  write_callback_observer_.ObserveNextWriteCallback(&writer);
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
+  successful_write_observer_.ObserveNextSuccessfulWrite(&writer);
   writer.WriteNow(MakeUnique<std::string>("bar"));
   RunLoop().RunUntilIdle();
 
-  EXPECT_EQ(CALLED_WITH_SUCCESS,
-            write_callback_observer_.GetAndResetObservationState());
+  EXPECT_TRUE(successful_write_observer_.GetAndResetObservationState());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("bar", GetFileContent(writer.path()));
 
   // Confirm that writing again without re-installing the observer doesn't
   // result in a notification.
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
   writer.WriteNow(MakeUnique<std::string>("baz"));
   RunLoop().RunUntilIdle();
 
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
+  EXPECT_FALSE(successful_write_observer_.GetAndResetObservationState());
   ASSERT_TRUE(PathExists(writer.path()));
   EXPECT_EQ("baz", GetFileContent(writer.path()));
-}
-
-TEST_F(ImportantFileWriterTest, FailedWriteWithObserver) {
-  // Use an invalid file path (relative paths are invalid) to get a
-  // FILE_ERROR_ACCESS_DENIED error when trying to write the file.
-  ImportantFileWriter writer(FilePath().AppendASCII("bad/../path"),
-                             ThreadTaskRunnerHandle::Get());
-  EXPECT_FALSE(PathExists(writer.path()));
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-  write_callback_observer_.ObserveNextWriteCallback(&writer);
-  writer.WriteNow(MakeUnique<std::string>("foo"));
-  RunLoop().RunUntilIdle();
-
-  // Confirm that the write observer was invoked with its boolean parameter set
-  // to false.
-  EXPECT_EQ(CALLED_WITH_ERROR,
-            write_callback_observer_.GetAndResetObservationState());
-  EXPECT_FALSE(PathExists(writer.path()));
-}
-
-TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
-  base::Thread file_writer_thread("ImportantFileWriter test thread");
-  file_writer_thread.Start();
-  ImportantFileWriter writer(file_, file_writer_thread.task_runner());
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-
-  write_callback_observer_.ObserveNextWriteCallback(&writer);
-  writer.WriteNow(MakeUnique<std::string>("foo"));
-  RunLoop().RunUntilIdle();
-
-  // Expect the callback to not have been executed before the write.
-  EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-
-  // Make sure tasks posted by WriteNow() have ran before continuing.
-  file_writer_thread.FlushForTesting();
-  EXPECT_EQ(CALLED_WITH_SUCCESS,
-            write_callback_observer_.GetAndResetObservationState());
-  ASSERT_TRUE(PathExists(writer.path()));
-  EXPECT_EQ("foo", GetFileContent(writer.path()));
 }
 
 TEST_F(ImportantFileWriterTest, ScheduleWrite) {

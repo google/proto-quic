@@ -238,7 +238,7 @@ int FtpNetworkTransaction::Stop(int error) {
 
 int FtpNetworkTransaction::Start(const FtpRequestInfo* request_info,
                                  const CompletionCallback& callback,
-                                 const NetLogWithSource& net_log) {
+                                 const BoundNetLog& net_log) {
   net_log_ = net_log;
   request_ = request_info;
 

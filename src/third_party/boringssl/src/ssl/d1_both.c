@@ -217,6 +217,7 @@ static uint8_t bit_range(size_t start, size_t end) {
  * and |frag->reassembly| must not be NULL. */
 static void dtls1_hm_fragment_mark(hm_fragment *frag, size_t start,
                                    size_t end) {
+  size_t i;
   size_t msg_len = frag->msg_len;
 
   if (frag->reassembly == NULL || start > end || end > msg_len) {
@@ -230,7 +231,7 @@ static void dtls1_hm_fragment_mark(hm_fragment *frag, size_t start,
     frag->reassembly[start >> 3] |= bit_range(start & 7, end & 7);
   } else {
     frag->reassembly[start >> 3] |= bit_range(start & 7, 8);
-    for (size_t i = (start >> 3) + 1; i < (end >> 3); i++) {
+    for (i = (start >> 3) + 1; i < (end >> 3); i++) {
       frag->reassembly[i] = 0xff;
     }
     if ((end & 7) != 0) {
@@ -239,7 +240,7 @@ static void dtls1_hm_fragment_mark(hm_fragment *frag, size_t start,
   }
 
   /* Check if the fragment is complete. */
-  for (size_t i = 0; i < (msg_len >> 3); i++) {
+  for (i = 0; i < (msg_len >> 3); i++) {
     if (frag->reassembly[i] != 0xff) {
       return;
     }
@@ -437,8 +438,8 @@ int dtls1_get_message(SSL *ssl, int msg_type,
     return -1;
   }
 
-  ssl_do_msg_callback(ssl, 0 /* read */, SSL3_RT_HANDSHAKE, frag->data,
-                      ssl->init_num + DTLS1_HM_HEADER_LENGTH);
+  ssl_do_msg_callback(ssl, 0 /* read */, ssl->version, SSL3_RT_HANDSHAKE,
+                      frag->data, ssl->init_num + DTLS1_HM_HEADER_LENGTH);
   return 1;
 }
 
@@ -567,8 +568,9 @@ static int dtls1_write_change_cipher_spec(SSL *ssl,
     return ret;
   }
 
-  ssl_do_msg_callback(ssl, 1 /* write */, SSL3_RT_CHANGE_CIPHER_SPEC,
-                      kChangeCipherSpec, sizeof(kChangeCipherSpec));
+  ssl_do_msg_callback(ssl, 1 /* write */, ssl->version,
+                      SSL3_RT_CHANGE_CIPHER_SPEC, kChangeCipherSpec,
+                      sizeof(kChangeCipherSpec));
   return 1;
 }
 
@@ -666,7 +668,8 @@ static int dtls1_do_handshake_write(SSL *ssl, size_t *out_offset,
     offset += todo;
   } while (CBS_len(&body) != 0);
 
-  ssl_do_msg_callback(ssl, 1 /* write */, SSL3_RT_HANDSHAKE, in, len);
+  ssl_do_msg_callback(ssl, 1 /* write */, ssl->version, SSL3_RT_HANDSHAKE, in,
+                      len);
 
   ret = 1;
 
@@ -678,7 +681,8 @@ err:
 }
 
 void dtls_clear_outgoing_messages(SSL *ssl) {
-  for (size_t i = 0; i < ssl->d1->outgoing_messages_len; i++) {
+  size_t i;
+  for (i = 0; i < ssl->d1->outgoing_messages_len; i++) {
     OPENSSL_free(ssl->d1->outgoing_messages[i].data);
     ssl->d1->outgoing_messages[i].data = NULL;
   }
@@ -812,7 +816,8 @@ int dtls1_retransmit_outgoing_messages(SSL *ssl) {
   assert(ssl_is_wbio_buffered(ssl));
 
   int ret = -1;
-  for (size_t i = 0; i < ssl->d1->outgoing_messages_len; i++) {
+  size_t i;
+  for (i = 0; i < ssl->d1->outgoing_messages_len; i++) {
     if (dtls1_retransmit_message(ssl, &ssl->d1->outgoing_messages[i]) <= 0) {
       goto err;
     }

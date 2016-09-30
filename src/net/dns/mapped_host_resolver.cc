@@ -24,7 +24,7 @@ int MappedHostResolver::Resolve(const RequestInfo& original_info,
                                 AddressList* addresses,
                                 const CompletionCallback& callback,
                                 std::unique_ptr<Request>* request,
-                                const NetLogWithSource& net_log) {
+                                const BoundNetLog& net_log) {
   RequestInfo info = original_info;
   int rv = ApplyRules(&info);
   if (rv != OK)
@@ -35,7 +35,7 @@ int MappedHostResolver::Resolve(const RequestInfo& original_info,
 
 int MappedHostResolver::ResolveFromCache(const RequestInfo& original_info,
                                          AddressList* addresses,
-                                         const NetLogWithSource& net_log) {
+                                         const BoundNetLog& net_log) {
   RequestInfo info = original_info;
   int rv = ApplyRules(&info);
   if (rv != OK)

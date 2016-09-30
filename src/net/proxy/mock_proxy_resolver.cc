@@ -30,12 +30,11 @@ MockAsyncProxyResolver::Request::~Request() {}
 
 MockAsyncProxyResolver::~MockAsyncProxyResolver() {}
 
-int MockAsyncProxyResolver::GetProxyForURL(
-    const GURL& url,
-    ProxyInfo* results,
-    const CompletionCallback& callback,
-    RequestHandle* request_handle,
-    const NetLogWithSource& /*net_log*/) {
+int MockAsyncProxyResolver::GetProxyForURL(const GURL& url,
+                                           ProxyInfo* results,
+                                           const CompletionCallback& callback,
+                                           RequestHandle* request_handle,
+                                           const BoundNetLog& /*net_log*/) {
   scoped_refptr<Request> request = new Request(this, url, results, callback);
   pending_requests_.push_back(request);
 
@@ -161,7 +160,7 @@ int ForwardingProxyResolver::GetProxyForURL(const GURL& query_url,
                                             ProxyInfo* results,
                                             const CompletionCallback& callback,
                                             RequestHandle* request,
-                                            const NetLogWithSource& net_log) {
+                                            const BoundNetLog& net_log) {
   return impl_->GetProxyForURL(query_url, results, callback, request, net_log);
 }
 

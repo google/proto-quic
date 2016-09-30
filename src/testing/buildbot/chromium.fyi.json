@@ -861,16 +861,7 @@
       }
     ]
   },
-  "Android VR Tests": {
-    "gtest_tests": [
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "vr_shell_unittests"
-      }
-    ]
-  },
+  "Android VR Tests": {},
   "Browser Side Navigation Linux": {
     "gtest_tests": [
       {

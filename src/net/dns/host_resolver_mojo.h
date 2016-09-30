@@ -14,7 +14,7 @@
 
 namespace net {
 class AddressList;
-class NetLogWithSource;
+class BoundNetLog;
 
 // A HostResolver implementation that converts requests to mojo types and
 // forwards them to a mojo Impl interface.
@@ -38,10 +38,10 @@ class HostResolverMojo : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* request,
-              const NetLogWithSource& source_net_log) override;
+              const BoundNetLog& source_net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const NetLogWithSource& source_net_log) override;
+                       const BoundNetLog& source_net_log) override;
   HostCache* GetHostCache() override;
 
  private:

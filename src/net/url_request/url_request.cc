@@ -565,8 +565,8 @@ URLRequest::URLRequest(const GURL& url,
     : context_(context),
       network_delegate_(network_delegate ? network_delegate
                                          : context->network_delegate()),
-      net_log_(NetLogWithSource::Make(context->net_log(),
-                                      NetLogSourceType::URL_REQUEST)),
+      net_log_(
+          BoundNetLog::Make(context->net_log(), NetLogSourceType::URL_REQUEST)),
       url_chain_(1, url),
       method_("GET"),
       referrer_policy_(CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE),
@@ -816,6 +816,13 @@ void URLRequest::NotifyReceivedRedirect(const RedirectInfo& redirect_info,
     delegate_->OnReceivedRedirect(this, redirect_info, defer_redirect);
     // |this| may be have been destroyed here.
   }
+}
+
+void URLRequest::ResumeNetworkStart() {
+  DCHECK(job_.get());
+
+  OnCallToDelegateComplete();
+  job_->ResumeNetworkStart();
 }
 
 void URLRequest::NotifyResponseStarted(const URLRequestStatus& status) {

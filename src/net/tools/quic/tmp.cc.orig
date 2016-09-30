@@ -1,0 +1,59 @@
+--- a/quic_spdy_server_stream.cc
++++ b/tmp.cc
+@@ -152,10 +152,24 @@ void QuicSpdyServerStream::SendHeadersAndBody(
+   WriteHeaders(response_headers, body.empty(), nullptr);
+ 
+   if (!body.empty()) {
+-    WriteOrBufferData(body, true, nullptr);
++    response_body_offset_ = 0;
++    response_body_ = body;
++    SendResponseBody();
+   }
+ }
+ 
++void QuicSpdyServerStream::SendResponseBody() {
++  struct iovec data;
++  data.iov_len = response_body_.length() - response_body_offset_;
++  data.iov_base = static_cast<void*>(const_cast<char*>(response_body_.data()));
++  QuicConsumedData result = WritevData(&data, 1, true, nullptr);
++  response_body_offset_ += result.bytes_consumed;
++}
++
++void QuicSpdyServerStream::OnCanWrite() {
++  SendResponseBody();
++}
++
+ const string QuicSpdyServerStream::GetHostKey() {
+   // SPDY/4 uses ":authority" instead of ":host".
+   return version() > QUIC_VERSION_24 ? ":authority" : ":host";
+diff --git a/google3/gfe/quic/quic_spdy_server_stream.h b/google3/gfe/quic/quic_spdy_server_stream.h
+index c68bf80..5c9ead5 100644
+--- a/google3/gfe/quic/quic_spdy_server_stream.h
++++ b/google3/gfe/quic/quic_spdy_server_stream.h
+@@ -27,6 +27,7 @@ class QuicSpdyServerStream : public QuicDataStream {
+   // data for us.
+   uint32 ProcessData(const char* data, uint32 data_len) override;
+   void OnFinRead() override;
++  void OnCanWrite() override;
+ 
+  private:
+   friend class test::QuicSpdyServerStreamPeer;
+@@ -46,6 +47,8 @@ class QuicSpdyServerStream : public QuicDataStream {
+   void SendHeadersAndBody(const gfe_spdy::SpdyHeaderBlock& response_headers,
+                           StringPiece body);
+ 
++  void SendResponseBody();
++
+   // Returns the key for |request_headers_| which identifies the host.
+   const string GetHostKey();
+ 
+@@ -54,6 +57,10 @@ class QuicSpdyServerStream : public QuicDataStream {
+   int content_length_;
+   string body_;
+ 
++  // Response
++  StringPiece response_body_;
++  size_t response_body_offset_;
++
+   DISALLOW_COPY_AND_ASSIGN(QuicSpdyServerStream);
+ };

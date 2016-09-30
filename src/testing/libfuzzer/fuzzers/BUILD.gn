@@ -411,11 +411,3 @@ fuzzer_test("prtime_fuzzer") {
   dict = "dicts/prtime.dict"
   libfuzzer_options = [ "max_len=1024" ]
 }
-
-fuzzer_test("angle_translator_fuzzer") {
-  sources = []
-  deps = [
-    "//third_party/angle:translator_fuzzer",
-  ]
-  libfuzzer_options = [ "max_len=1000" ]
-}

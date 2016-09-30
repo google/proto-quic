@@ -133,9 +133,7 @@ bool Server(const std::vector<std::string> &args) {
               args_map["-max-version"].c_str());
       return false;
     }
-    if (!SSL_CTX_set_max_proto_version(ctx, version)) {
-      return false;
-    }
+    SSL_CTX_set_max_version(ctx, version);
   }
 
   if (args_map.count("-min-version") != 0) {
@@ -145,9 +143,7 @@ bool Server(const std::vector<std::string> &args) {
               args_map["-min-version"].c_str());
       return false;
     }
-    if (!SSL_CTX_set_min_proto_version(ctx, version)) {
-      return false;
-    }
+    SSL_CTX_set_min_version(ctx, version);
   }
 
   if (args_map.count("-ocsp-response") != 0 &&

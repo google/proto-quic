@@ -97,7 +97,7 @@ class MockCTVerifier : public CTVerifier {
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
              ct::CTVerifyResult* result,
-             const NetLogWithSource& net_log) override {
+             const BoundNetLog& net_log) override {
     return net::OK;
   }
 
@@ -111,7 +111,7 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   ct::CertPolicyCompliance DoesConformToCertPolicy(
       X509Certificate* cert,
       const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     return ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
   }
 
@@ -119,7 +119,7 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
       X509Certificate* cert,
       const ct::EVCertsWhitelist* ev_whitelist,
       const SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     return ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS;
   }
 };
@@ -293,7 +293,7 @@ class FakeSocket : public StreamSocket {
     return OK;
   }
 
-  const NetLogWithSource& NetLog() const override { return net_log_; }
+  const BoundNetLog& NetLog() const override { return net_log_; }
 
   void SetSubresourceSpeculation() override {}
   void SetOmniboxSpeculation() override {}
@@ -320,7 +320,7 @@ class FakeSocket : public StreamSocket {
   }
 
  private:
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   FakeDataChannel* incoming_;
   FakeDataChannel* outgoing_;
 

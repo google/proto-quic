@@ -171,7 +171,7 @@
 
 // DISABLE_CFI_PERF -- Disable Control Flow Integrity for perf reasons.
 #if !defined(DISABLE_CFI_PERF)
-#if defined(__clang__) && defined(OFFICIAL_BUILD)
+#if defined(__clang__)
 #define DISABLE_CFI_PERF __attribute__((no_sanitize("cfi")))
 #else
 #define DISABLE_CFI_PERF

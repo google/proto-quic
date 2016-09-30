@@ -49,7 +49,7 @@ class HttpAuthHandlerMock : public HttpAuthHandler {
                           const GURL& origin,
                           CreateReason reason,
                           int nonce_count,
-                          const NetLogWithSource& net_log,
+                          const BoundNetLog& net_log,
                           std::unique_ptr<HttpAuthHandler>* handler) override;
 
    private:

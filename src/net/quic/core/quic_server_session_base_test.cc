@@ -162,7 +162,6 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
   std::unique_ptr<TestServerSession> session_;
   std::unique_ptr<CryptoHandshakeMessage> handshake_message_;
   QuicConnectionVisitorInterface* visitor_;
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
 };
 
 // Compares CachedNetworkParameters.
@@ -186,18 +185,13 @@ INSTANTIATE_TEST_CASE_P(Tests,
                         ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicServerSessionBaseTest, ServerPushDisabledByDefault) {
-  FLAGS_quic_enable_server_push_by_default = true;
   // Without the client explicitly sending kSPSH, server push will be disabled
-  // at the server, until version 35 when it is enabled by default.
+  // at the server.
   EXPECT_FALSE(
       session_->config()->HasReceivedConnectionOptions() &&
       ContainsQuicTag(session_->config()->ReceivedConnectionOptions(), kSPSH));
   session_->OnConfigNegotiated();
-  if (GetParam() <= QUIC_VERSION_34) {
-    EXPECT_FALSE(session_->server_push_enabled());
-  } else {
-    EXPECT_TRUE(session_->server_push_enabled());
-  }
+  EXPECT_FALSE(session_->server_push_enabled());
 }
 
 TEST_P(QuicServerSessionBaseTest, CloseStreamDueToReset) {
@@ -348,11 +342,7 @@ TEST_P(QuicServerSessionBaseTest, MaxAvailableStreams) {
       session_.get(), kLimitingStreamId + 4));
 }
 
-// TODO(ckrasic): remove this when
-// FLAGS_quic_enable_server_push_by_default is
-// deprecated.
 TEST_P(QuicServerSessionBaseTest, EnableServerPushThroughConnectionOption) {
-  FLAGS_quic_enable_server_push_by_default = false;
   // Assume server received server push connection option.
   QuicTagVector copt;
   copt.push_back(kSPSH);

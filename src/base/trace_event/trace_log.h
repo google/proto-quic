@@ -403,8 +403,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   void UpdateCategoryGroupEnabledFlags();
   void UpdateCategoryGroupEnabledFlag(size_t category_index);
 
-  void CreateFiltersForTraceConfig();
-
   // Configure synthetic delays based on the values set in the current
   // trace config.
   void UpdateSyntheticDelaysFromTraceConfig();

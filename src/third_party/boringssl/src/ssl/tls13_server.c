@@ -88,7 +88,7 @@ static int resolve_ecdhe_secret(SSL *ssl, int *out_need_retry,
   int found_key_share;
   uint8_t *dhe_secret;
   size_t dhe_secret_len;
-  uint8_t alert = SSL_AD_DECODE_ERROR;
+  uint8_t alert;
   if (!ssl_ext_key_share_parse_clienthello(ssl, &found_key_share, &dhe_secret,
                                            &dhe_secret_len, &alert,
                                            &key_share)) {
@@ -172,7 +172,7 @@ static enum ssl_hs_wait_t do_process_client_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
       ssl->ctx->dos_protection_cb(&client_hello) == 0) {
     /* Connection rejected for DOS reasons. */
     OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ACCESS_DENIED);
     return ssl_hs_error;
   }
 

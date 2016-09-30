@@ -147,7 +147,7 @@ bool HttpProxyClientSocket::IsConnectedAndIdle() const {
     transport_->socket()->IsConnectedAndIdle();
 }
 
-const NetLogWithSource& HttpProxyClientSocket::NetLog() const {
+const BoundNetLog& HttpProxyClientSocket::NetLog() const {
   return net_log_;
 }
 

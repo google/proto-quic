@@ -31,7 +31,7 @@ HttpBasicState::~HttpBasicState() {}
 
 int HttpBasicState::Initialize(const HttpRequestInfo* request_info,
                                RequestPriority priority,
-                               const NetLogWithSource& net_log,
+                               const BoundNetLog& net_log,
                                const CompletionCallback& callback) {
   DCHECK(!parser_.get());
   request_info_ = request_info;

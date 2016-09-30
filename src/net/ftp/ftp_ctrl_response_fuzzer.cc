@@ -10,7 +10,7 @@
 
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  const net::NetLogWithSource log;
+  const net::BoundNetLog log;
   net::FtpCtrlResponseBuffer buffer(log);
   if (!buffer.ConsumeData(reinterpret_cast<const char*>(data), size)) {
     return 0;

@@ -23,7 +23,7 @@ class MojoHostResolverImpl::Job {
   Job(MojoHostResolverImpl* resolver_service,
       net::HostResolver* resolver,
       const net::HostResolver::RequestInfo& request_info,
-      const NetLogWithSource& net_log,
+      const BoundNetLog& net_log,
       interfaces::HostResolverRequestClientPtr client);
   ~Job();
 
@@ -39,7 +39,7 @@ class MojoHostResolverImpl::Job {
   MojoHostResolverImpl* resolver_service_;
   net::HostResolver* resolver_;
   net::HostResolver::RequestInfo request_info_;
-  const NetLogWithSource net_log_;
+  const BoundNetLog net_log_;
   interfaces::HostResolverRequestClientPtr client_;
   std::unique_ptr<net::HostResolver::Request> request_;
   AddressList result_;
@@ -47,8 +47,9 @@ class MojoHostResolverImpl::Job {
 };
 
 MojoHostResolverImpl::MojoHostResolverImpl(net::HostResolver* resolver,
-                                           const NetLogWithSource& net_log)
-    : resolver_(resolver), net_log_(net_log) {}
+                                           const BoundNetLog& net_log)
+    : resolver_(resolver), net_log_(net_log) {
+}
 
 MojoHostResolverImpl::~MojoHostResolverImpl() {
   DCHECK(thread_checker_.CalledOnValidThread());
@@ -84,7 +85,7 @@ MojoHostResolverImpl::Job::Job(
     MojoHostResolverImpl* resolver_service,
     net::HostResolver* resolver,
     const net::HostResolver::RequestInfo& request_info,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     interfaces::HostResolverRequestClientPtr client)
     : resolver_service_(resolver_service),
       resolver_(resolver),

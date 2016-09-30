@@ -82,9 +82,9 @@ void SOCKS5ClientSocketTest::SetUp() {
   HostResolver::RequestInfo info(HostPortPair("www.socks-proxy.com", 1080));
   TestCompletionCallback callback;
   std::unique_ptr<HostResolver::Request> request;
-  int rv = host_resolver_->Resolve(info, DEFAULT_PRIORITY, &address_list_,
-                                   callback.callback(), &request,
-                                   NetLogWithSource());
+  int rv =
+      host_resolver_->Resolve(info, DEFAULT_PRIORITY, &address_list_,
+                              callback.callback(), &request, BoundNetLog());
   ASSERT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   ASSERT_THAT(rv, IsOk());

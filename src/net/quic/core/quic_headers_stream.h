@@ -91,10 +91,6 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
   // willing to use to decode header blocks.
   void UpdateHeaderEncoderTableSize(uint32_t value);
 
-  // Called when SETTINGS_ENABLE_PUSH is received, only supported on
-  // server side.
-  void UpdateEnableServerPush(bool value);
-
   // Sets how much encoded data the hpack decoder of spdy_framer_ is willing to
   // buffer.
   void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes) {

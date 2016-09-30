@@ -399,14 +399,9 @@ TEST_P(SequencedWorkerPoolTest, DelayedTaskDuringShutdown) {
   // Verify that we didn't block until the task was due.
   ASSERT_LT(base::Time::Now() - posted_at, TestTimeouts::action_timeout());
 
-  // TaskScheduler shouldn't delete the delayed task before it is itself
-  // deleted. SequencedWorkerPool starts deleting tasks as soon as its
-  // Shutdown() method is called (see SequencedWorkerPool::Inner::GetWork).
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
-    EXPECT_FALSE(deleted_flag->data);
-
-  // Verify that the delayed task is deleted once the SequencedWorkerPool (and
-  // the TaskScheduler when applicable) have been deleted.
+  // Verify that the delayed task is deleted when the SequencedWorkerPool (and
+  // the TaskScheduler when applicable) are deleted.
+  EXPECT_FALSE(deleted_flag->data);
   DeletePool();
   if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
     DeleteTaskScheduler();

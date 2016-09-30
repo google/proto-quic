@@ -63,7 +63,7 @@ class GURL;
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class IOBuffer;
 class URLRequestContext;
 
@@ -128,8 +128,8 @@ class NET_EXPORT_PRIVATE FilterContext {
   // statistics as selected by the argument.
   virtual void RecordPacketStats(StatisticSelector statistic) const = 0;
 
-  // The NetLogWithSource of the associated request.
-  virtual const NetLogWithSource& GetNetLog() const = 0;
+  // The BoundNetLog of the associated request.
+  virtual const BoundNetLog& GetNetLog() const = 0;
 };
 
 //------------------------------------------------------------------------------

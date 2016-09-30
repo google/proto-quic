@@ -80,11 +80,12 @@ void MultiLogCTVerifier::SetObserver(Observer* observer) {
   observer_ = observer;
 }
 
-int MultiLogCTVerifier::Verify(X509Certificate* cert,
-                               const std::string& stapled_ocsp_response,
-                               const std::string& sct_list_from_tls_extension,
-                               ct::CTVerifyResult* result,
-                               const NetLogWithSource& net_log) {
+int MultiLogCTVerifier::Verify(
+    X509Certificate* cert,
+    const std::string& stapled_ocsp_response,
+    const std::string& sct_list_from_tls_extension,
+    ct::CTVerifyResult* result,
+    const BoundNetLog& net_log)  {
   DCHECK(cert);
   DCHECK(result);
 

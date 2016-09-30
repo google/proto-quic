@@ -4,7 +4,6 @@
 
 #include "net/tools/quic/stateless_rejector.h"
 
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_flags.h"
 
@@ -20,11 +19,11 @@ class StatelessRejector::ValidateCallback
 
   ~ValidateCallback() override {}
 
-  void Run(scoped_refptr<Result> result,
+  void Run(std::unique_ptr<Result> result,
            std::unique_ptr<ProofSource::Details> /* proof_source_details */)
       override {
     StatelessRejector* rejector_ptr = rejector_.get();
-    rejector_ptr->ProcessClientHello(std::move(result), std::move(rejector_),
+    rejector_ptr->ProcessClientHello(*result, std::move(rejector_),
                                      std::move(cb_));
   }
 
@@ -80,11 +79,11 @@ void StatelessRejector::OnChlo(QuicVersion version,
 }
 
 void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
-                                std::unique_ptr<ProcessDoneCallback> done_cb) {
+                                std::unique_ptr<ProcessDoneCallback> cb) {
   // If we were able to make a decision about this CHLO based purely on the
   // information available in OnChlo, just invoke the done callback immediately.
   if (rejector->state() != UNKNOWN) {
-    done_cb->Run(std::move(rejector));
+    cb->Run(std::move(rejector));
     return;
   }
 
@@ -94,13 +93,13 @@ void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
       rejector_ptr->server_address_.address(), rejector_ptr->version_,
       rejector_ptr->clock_, &rejector_ptr->proof_,
       std::unique_ptr<ValidateCallback>(
-          new ValidateCallback(std::move(rejector), std::move(done_cb))));
+          new ValidateCallback(std::move(rejector), std::move(cb))));
 }
 
 void StatelessRejector::ProcessClientHello(
-    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+    const ValidateClientHelloResultCallback::Result& result,
     std::unique_ptr<StatelessRejector> rejector,
-    std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb) {
+    std::unique_ptr<StatelessRejector::ProcessDoneCallback> cb) {
   QuicCryptoNegotiatedParameters params;
   DiversificationNonce diversification_nonce;
   QuicErrorCode error = crypto_config_->ProcessClientHello(
@@ -119,7 +118,7 @@ void StatelessRejector::ProcessClientHello(
   } else {
     state_ = ACCEPTED;
   }
-  done_cb->Run(std::move(rejector));
+  cb->Run(std::move(rejector));
 }
 
 }  // namespace net

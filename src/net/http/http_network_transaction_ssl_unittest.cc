@@ -149,7 +149,7 @@ TEST_F(HttpNetworkTransactionSSLTest, TokenBinding) {
   TestCompletionCallback callback;
   int rv = callback.GetResult(
       trans1.Start(GetRequestInfo("https://www.example.com/"),
-                   callback.callback(), NetLogWithSource()));
+                   callback.callback(), BoundNetLog()));
   EXPECT_THAT(rv, IsOk());
 
   HttpRequestHeaders headers1;
@@ -167,7 +167,7 @@ TEST_F(HttpNetworkTransactionSSLTest, TokenBinding) {
 
   rv = callback.GetResult(
       trans2.Start(GetRequestInfo("https://www.example.com/"),
-                   callback.callback(), NetLogWithSource()));
+                   callback.callback(), BoundNetLog()));
   EXPECT_THAT(rv, IsOk());
 
   HttpRequestHeaders headers2;
@@ -201,7 +201,7 @@ TEST_F(HttpNetworkTransactionSSLTest, NoTokenBindingOverHttp) {
   TestCompletionCallback callback;
   int rv =
       callback.GetResult(trans.Start(GetRequestInfo("http://www.example.com/"),
-                                     callback.callback(), NetLogWithSource()));
+                                     callback.callback(), BoundNetLog()));
   EXPECT_THAT(rv, IsOk());
 
   HttpRequestHeaders headers;

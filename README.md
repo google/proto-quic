@@ -31,7 +31,7 @@ Building on Linux
 0. Build the QUIC client, server, and tests
    ```
    cd src
-   gclient runhooks && ninja -C out/Release quic_client quic_server net_unittests
+   gn gen out/Default && ninja -C out/Default quic_client quic_server net_unittests
    ```
 
 From then on you can follow the usual Chromium instructions for playing with the

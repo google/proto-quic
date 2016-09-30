@@ -156,7 +156,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                    const CompletionCallback& callback,
                    PacRequest** pac_request,
                    ProxyDelegate* proxy_delegate,
-                   const NetLogWithSource& net_log);
+                   const BoundNetLog& net_log);
 
   // Returns true if the proxy information could be determined without spawning
   // an asynchronous task.  Otherwise, |result| is unmodified.
@@ -164,7 +164,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                                     const std::string& method,
                                     ProxyInfo* result,
                                     ProxyDelegate* proxy_delegate,
-                                    const NetLogWithSource& net_log);
+                                    const BoundNetLog& net_log);
 
   // This method is called after a failure to connect or resolve a host name.
   // It gives the proxy service an opportunity to reconsider the proxy to use.
@@ -187,7 +187,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                                 const CompletionCallback& callback,
                                 PacRequest** pac_request,
                                 ProxyDelegate* proxy_delegate,
-                                const NetLogWithSource& net_log);
+                                const BoundNetLog& net_log);
 
   // Explicitly trigger proxy fallback for the given |results| by updating our
   // list of bad proxies to include the first entry of |results|, and,
@@ -203,7 +203,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
       const ProxyInfo& results,
       base::TimeDelta retry_delay,
       const std::vector<ProxyServer>& additional_bad_proxies,
-      const NetLogWithSource& net_log);
+      const BoundNetLog& net_log);
 
   // Called to report that the last proxy connection succeeded.  If |proxy_info|
   // has a non empty proxy_retry_info map, the proxies that have been tried (and
@@ -365,7 +365,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                          const CompletionCallback& callback,
                          PacRequest** pac_request,
                          ProxyDelegate* proxy_delegate,
-                         const NetLogWithSource& net_log);
+                         const BoundNetLog& net_log);
 
   // Cancels all of the requests sent to the ProxyResolver. These will be
   // restarted when calling SetReady().
@@ -389,7 +389,7 @@ class NET_EXPORT ProxyService : public NetworkChangeNotifier::IPAddressObserver,
                               ProxyDelegate* proxy_delegate,
                               ProxyInfo* result,
                               int result_code,
-                              const NetLogWithSource& net_log,
+                              const BoundNetLog& net_log,
                               base::TimeTicks start_time,
                               bool script_executed);
 

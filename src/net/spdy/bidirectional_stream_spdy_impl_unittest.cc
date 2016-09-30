@@ -14,8 +14,6 @@
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "base/timer/mock_timer.h"
-#include "net/base/load_timing_info.h"
-#include "net/base/load_timing_info_test_util.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
@@ -43,28 +41,6 @@ const size_t kBodyDataSize = arraysize(kBodyData);
 // Size of the buffer to be allocated for each read.
 const size_t kReadBufferSize = 4096;
 
-// Tests the load timing of a stream that's connected and is not the first
-// request sent on a connection.
-void TestLoadTimingReused(const LoadTimingInfo& load_timing_info) {
-  EXPECT_TRUE(load_timing_info.socket_reused);
-  EXPECT_NE(NetLog::Source::kInvalidId, load_timing_info.socket_log_id);
-
-  ExpectConnectTimingHasNoTimes(load_timing_info.connect_timing);
-  ExpectLoadTimingHasOnlyConnectionTimes(load_timing_info);
-}
-
-// Tests the load timing of a stream that's connected and using a fresh
-// connection.
-void TestLoadTimingNotReused(const LoadTimingInfo& load_timing_info) {
-  EXPECT_FALSE(load_timing_info.socket_reused);
-  EXPECT_NE(NetLog::Source::kInvalidId, load_timing_info.socket_log_id);
-
-  ExpectConnectTimingHasTimes(
-      load_timing_info.connect_timing,
-      CONNECT_TIMING_HAS_SSL_TIMES | CONNECT_TIMING_HAS_DNS_TIMES);
-  ExpectLoadTimingHasOnlyConnectionTimes(load_timing_info);
-}
-
 class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
  public:
   TestDelegateBase(base::WeakPtr<SpdySession> session,
@@ -74,6 +50,8 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
         read_buf_(read_buf),
         read_buf_len_(read_buf_len),
         loop_(nullptr),
+        received_bytes_(0),
+        sent_bytes_(0),
         error_(OK),
         bytes_read_(0),
         on_data_read_count_(0),
@@ -132,7 +110,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   }
 
   void Start(const BidirectionalStreamRequestInfo* request,
-             const NetLogWithSource& net_log) {
+             const BoundNetLog& net_log) {
     stream_->Start(request, net_log,
                    /*send_request_headers_automatically=*/false, this,
                    base::MakeUnique<base::Timer>(false, false));
@@ -159,9 +137,6 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     loop_.reset(new base::RunLoop);
   }
 
-  // Wait until the stream reaches completion.
-  void WaitUntilCompletion() { loop_->Run(); }
-
   // Starts or continues read data from |stream_| until there is no more
   // byte can be read synchronously.
   void StartOrContinueReading() {
@@ -186,15 +161,15 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   NextProto GetProtocol() const { return stream_->GetProtocol(); }
 
   int64_t GetTotalReceivedBytes() const {
+    if (stream_)
       return stream_->GetTotalReceivedBytes();
+    return received_bytes_;
   }
 
   int64_t GetTotalSentBytes() const {
+    if (stream_)
       return stream_->GetTotalSentBytes();
-  }
-
-  bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
-    return stream_->GetLoadTimingInfo(load_timing_info);
+    return sent_bytes_;
   }
 
   // Const getters for internal states.
@@ -212,6 +187,8 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     do_not_start_read_ = do_not_start_read;
   }
 
+  void DeleteStream() { stream_.reset(); }
+
  private:
   std::unique_ptr<BidirectionalStreamSpdyImpl> stream_;
   scoped_refptr<IOBuffer> read_buf_;
@@ -220,6 +197,8 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   std::unique_ptr<base::RunLoop> loop_;
   SpdyHeaderBlock response_headers_;
   SpdyHeaderBlock trailers_;
+  int64_t received_bytes_;
+  int64_t sent_bytes_;
   int error_;
   int bytes_read_;
   int on_data_read_count_;
@@ -282,104 +261,6 @@ class BidirectionalStreamSpdyImplTest : public testing::Test {
  private:
   SSLSocketDataProvider ssl_data_;
 };
-
-TEST_F(BidirectionalStreamSpdyImplTest, SimplePostRequest) {
-  SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
-      kDefaultUrl, 1, kBodyDataSize, LOW, nullptr, 0));
-  SpdySerializedFrame data_frame(spdy_util_.ConstructSpdyDataFrame(
-      1, kBodyData, kBodyDataSize, /*fin=*/true));
-  MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(data_frame, 3),
-  };
-  SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
-  SpdySerializedFrame response_body_frame(
-      spdy_util_.ConstructSpdyDataFrame(1, /*fin=*/true));
-  MockRead reads[] = {
-      CreateMockRead(resp, 1),
-      MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause.
-      CreateMockRead(response_body_frame, 4), MockRead(ASYNC, 0, 5),
-  };
-  InitSession(reads, arraysize(reads), writes, arraysize(writes));
-
-  BidirectionalStreamRequestInfo request_info;
-  request_info.method = "POST";
-  request_info.url = default_url_;
-  request_info.extra_headers.SetHeader(net::HttpRequestHeaders::kContentLength,
-                                       base::SizeTToString(kBodyDataSize));
-
-  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
-  delegate->SetRunUntilCompletion(true);
-  delegate->Start(&request_info, net_log_.bound());
-  sequenced_data_->RunUntilPaused();
-
-  scoped_refptr<StringIOBuffer> write_buffer(
-      new StringIOBuffer(std::string(kBodyData, kBodyDataSize)));
-  delegate->SendData(write_buffer.get(), write_buffer->size(), true);
-  sequenced_data_->Resume();
-  base::RunLoop().RunUntilIdle();
-  delegate->WaitUntilCompletion();
-  LoadTimingInfo load_timing_info;
-  EXPECT_TRUE(delegate->GetLoadTimingInfo(&load_timing_info));
-  TestLoadTimingNotReused(load_timing_info);
-
-  EXPECT_EQ(1, delegate->on_data_read_count());
-  EXPECT_EQ(1, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoHTTP2, delegate->GetProtocol());
-  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
-            delegate->GetTotalSentBytes());
-  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
-            delegate->GetTotalReceivedBytes());
-}
-
-TEST_F(BidirectionalStreamSpdyImplTest, LoadTimingTwoRequests) {
-  SpdySerializedFrame req(
-      spdy_util_.ConstructSpdyGet(nullptr, 0, /*stream_id=*/1, LOW, true));
-  SpdySerializedFrame req2(
-      spdy_util_.ConstructSpdyGet(nullptr, 0, /*stream_id=*/3, LOW, true));
-  MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(req2, 2),
-  };
-  SpdySerializedFrame resp(
-      spdy_util_.ConstructSpdyGetReply(nullptr, 0, /*stream_id=*/1));
-  SpdySerializedFrame resp2(
-      spdy_util_.ConstructSpdyGetReply(nullptr, 0, /*stream_id=*/3));
-  SpdySerializedFrame resp_body(
-      spdy_util_.ConstructSpdyDataFrame(/*stream_id=*/1, /*fin=*/true));
-  SpdySerializedFrame resp_body2(
-      spdy_util_.ConstructSpdyDataFrame(/*stream_id=*/3, /*fin=*/true));
-  MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(resp_body, 3),
-                      CreateMockRead(resp2, 4), CreateMockRead(resp_body2, 5),
-                      MockRead(ASYNC, 0, 6)};
-  InitSession(reads, arraysize(reads), writes, arraysize(writes));
-
-  BidirectionalStreamRequestInfo request_info;
-  request_info.method = "GET";
-  request_info.url = default_url_;
-  request_info.end_stream_on_headers = true;
-
-  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  scoped_refptr<IOBuffer> read_buffer2(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate2(
-      new TestDelegateBase(session_, read_buffer2.get(), kReadBufferSize));
-  delegate->SetRunUntilCompletion(true);
-  delegate2->SetRunUntilCompletion(true);
-  delegate->Start(&request_info, net_log_.bound());
-  delegate2->Start(&request_info, net_log_.bound());
-
-  base::RunLoop().RunUntilIdle();
-  delegate->WaitUntilCompletion();
-  delegate2->WaitUntilCompletion();
-  LoadTimingInfo load_timing_info;
-  EXPECT_TRUE(delegate->GetLoadTimingInfo(&load_timing_info));
-  TestLoadTimingNotReused(load_timing_info);
-  LoadTimingInfo load_timing_info2;
-  EXPECT_TRUE(delegate2->GetLoadTimingInfo(&load_timing_info2));
-  TestLoadTimingReused(load_timing_info2);
-}
 
 TEST_F(BidirectionalStreamSpdyImplTest, SendDataAfterStreamFailed) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(

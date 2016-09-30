@@ -264,14 +264,6 @@ class ChromeProxySmoke(ChromeProxyBenchmark):
   def Name(cls):
     return 'chrome_proxy_benchmark.smoke.smoke'
 
-class ChromeProxyQuicSmoke(ChromeProxyBenchmark):
-  tag = 'smoke'
-  test = measurements.ChromeProxyQuicSmoke
-  page_set = pagesets.SmokeStorySet
-
-  @classmethod
-  def Name(cls):
-    return 'chrome_proxy_benchmark.quic.smoke'
 
 class ChromeProxyClientConfig(ChromeProxyBenchmark):
   tag = 'client_config'
@@ -354,14 +346,3 @@ class ChromeProxyPingback(ChromeProxyBenchmark):
   @classmethod
   def Name(cls):
     return 'chrome_proxy_benchmark.pingback'
-
-class ChromeProxyQuicTransaction(ChromeProxyBenchmark):
-  """Check that Chrome uses QUIC correctly when connecting to a proxy
-  that supports QUIC. """
-  tag = 'quic-proxy'
-  test = measurements.ChromeProxyQuicTransaction
-  page_set = pagesets.QuicStorySet
-
-  @classmethod
-  def Name(cls):
-    return 'chrome_proxy_benchmark.quic.transaction'

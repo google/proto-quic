@@ -18,7 +18,7 @@
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class ProxyInfo;
 
 // Interface for "proxy resolvers". A ProxyResolver fills in a list of proxies
@@ -44,7 +44,7 @@ class NET_EXPORT_PRIVATE ProxyResolver {
                              ProxyInfo* results,
                              const CompletionCallback& callback,
                              RequestHandle* request,
-                             const NetLogWithSource& net_log) = 0;
+                             const BoundNetLog& net_log) = 0;
 
   // Cancels |request|.
   virtual void CancelRequest(RequestHandle request) = 0;

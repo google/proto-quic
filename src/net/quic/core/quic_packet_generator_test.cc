@@ -452,7 +452,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
       GetPacketHeaderSize(
           framer_.version(), creator_->connection_id_length(), kIncludeVersion,
           !kIncludePathId, !kIncludeDiversificationNonce,
-          QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
+          QuicPacketCreatorPeer::NextPacketNumberLength(creator_)) +
       // Add an extra 3 bytes for the payload and 1 byte so BytesFree is larger
       // than the GetMinStreamFrameSize.
       QuicFramer::GetMinStreamFrameSize(1, 0, false) + 3 +
@@ -875,22 +875,6 @@ TEST_F(QuicPacketGeneratorTest, SetCurrentPath) {
   EXPECT_FALSE(generator_.HasQueuedFrames());
   generator_.SetCurrentPath(kTestPathId1, 1, 0);
   EXPECT_EQ(kTestPathId1, QuicPacketCreatorPeer::GetCurrentPath(creator_));
-}
-
-// Regression test for b/31486443.
-TEST_F(QuicPacketGeneratorTest, ConnectionCloseFrameLargerThanPacketSize) {
-  FLAGS_quic_close_connection_on_huge_frames = true;
-  delegate_.SetCanWriteAnything();
-  QuicConnectionCloseFrame* frame = new QuicConnectionCloseFrame();
-  frame->error_code = QUIC_PACKET_WRITE_ERROR;
-  char buf[2000];
-  StringPiece error_details(buf, 2000);
-  frame->error_details = error_details.as_string();
-  EXPECT_CALL(delegate_,
-              OnUnrecoverableError(QUIC_FAILED_TO_SERIALIZE_PACKET,
-                                   "Single frame cannot fit into a packet", _));
-  EXPECT_QUIC_BUG(generator_.AddControlFrame(QuicFrame(frame)), "");
-  EXPECT_TRUE(generator_.HasQueuedFrames());
 }
 
 }  // namespace test

@@ -62,7 +62,7 @@ class FailingSSLClientSocket : public SSLClientSocket {
     return ERR_SOCKET_NOT_CONNECTED;
   }
 
-  const NetLogWithSource& NetLog() const override { return net_log_; }
+  const BoundNetLog& NetLog() const override { return net_log_; }
 
   void SetSubresourceSpeculation() override {}
   void SetOmniboxSpeculation() override {}
@@ -105,9 +105,8 @@ class FailingSSLClientSocket : public SSLClientSocket {
     return nullptr;
   }
 
-  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                 TokenBindingType tb_type,
-                                 std::vector<uint8_t>* out) override {
+  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
+                                    std::vector<uint8_t>* out) override {
     NOTREACHED();
     return ERR_UNEXPECTED;
   }
@@ -118,7 +117,7 @@ class FailingSSLClientSocket : public SSLClientSocket {
   }
 
  private:
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(FailingSSLClientSocket);
 };

@@ -231,6 +231,7 @@ class MemoryLongRunningIdleGmail(_MemoryV8Benchmark):
 
 
 @benchmark.Enabled('has tabs')  # http://crbug.com/612210
+@benchmark.Disabled('android')  # http://crbug.com/648396
 class MemoryLongRunningIdleGmailBackground(_MemoryV8Benchmark):
   """Use (recorded) real world web sites and measure memory consumption
   of long running idle Gmail page """

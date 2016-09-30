@@ -14,7 +14,7 @@ import sys
 import time
 
 _SRC_PATH = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, os.pardir))
+    os.path.dirname(__file__), '..', '..'))
 
 sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
 from devil.android import device_errors
@@ -51,7 +51,7 @@ def RunOnce(device, url, warmup, no_prerendering, delay_to_may_launch_url,
       extras={'url': url, 'warmup': warmup, 'no_prerendering': no_prerendering,
               'delay_to_may_launch_url': delay_to_may_launch_url,
               'delay_to_launch_url': delay_to_launch_url})
-  result_line_re = re.compile(r'CUSTOMTABSBENCH.*: (.*)')
+  result_line_re = re.compile(r'W/CUSTOMTABSBENCH.*: (.*)')
   logcat_monitor = device.GetLogcatMonitor(clear=True)
   logcat_monitor.Start()
   device.ForceStop('com.google.android.apps.chrome')

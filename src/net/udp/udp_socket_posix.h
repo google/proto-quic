@@ -129,7 +129,7 @@ class NET_EXPORT UDPSocketPosix : public base::NonThreadSafe {
   // Returns true if the socket is already connected or bound.
   bool is_connected() const { return is_connected_; }
 
-  const NetLogWithSource& NetLog() const { return net_log_; }
+  const BoundNetLog& NetLog() const { return net_log_; }
 
   // Sets corresponding flags in |socket_options_| to allow the socket
   // to share the local address to which the socket will be bound with
@@ -315,7 +315,7 @@ class NET_EXPORT UDPSocketPosix : public base::NonThreadSafe {
   // External callback; called when write is complete.
   CompletionCallback write_callback_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   // Network that this socket is bound to via BindToNetwork().
   NetworkChangeNotifier::NetworkHandle bound_network_;

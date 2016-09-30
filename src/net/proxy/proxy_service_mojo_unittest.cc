@@ -115,7 +115,7 @@ class LoggingMockHostResolver : public MockHostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* out_req,
-              const NetLogWithSource& net_log) override {
+              const BoundNetLog& net_log) override {
     net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_JOB);
     return MockHostResolver::Resolve(info, priority, addresses, callback,
                                      out_req, net_log);
@@ -162,7 +162,7 @@ TEST_F(ProxyServiceMojoTest, Basic) {
   EXPECT_EQ(ERR_IO_PENDING,
             proxy_service_->ResolveProxy(GURL("http://foo"), std::string(),
                                          &info, callback.callback(), nullptr,
-                                         nullptr, NetLogWithSource()));
+                                         nullptr, BoundNetLog()));
 
   // Proxy script fetcher should have a fetch triggered by the first
   // |ResolveProxy()| request.
@@ -180,11 +180,11 @@ TEST_F(ProxyServiceMojoTest, Basic) {
 TEST_F(ProxyServiceMojoTest, DnsResolution) {
   ProxyInfo info;
   TestCompletionCallback callback;
-  BoundTestNetLog test_net_log;
+  BoundTestNetLog bound_net_log;
   EXPECT_EQ(ERR_IO_PENDING,
             proxy_service_->ResolveProxy(GURL("http://foo"), std::string(),
                                          &info, callback.callback(), nullptr,
-                                         nullptr, test_net_log.bound()));
+                                         nullptr, bound_net_log.bound()));
 
   // Proxy script fetcher should have a fetch triggered by the first
   // |ResolveProxy()| request.
@@ -199,7 +199,7 @@ TEST_F(ProxyServiceMojoTest, DnsResolution) {
   on_delete_closure_.WaitForResult();
 
   TestNetLogEntry::List entries;
-  test_net_log.GetEntries(&entries);
+  bound_net_log.GetEntries(&entries);
   // There should be one entry with type TYPE_HOST_RESOLVER_IMPL_JOB.
   EXPECT_EQ(1, std::count_if(entries.begin(), entries.end(),
                              [](const TestNetLogEntry& entry) {
@@ -211,11 +211,11 @@ TEST_F(ProxyServiceMojoTest, DnsResolution) {
 TEST_F(ProxyServiceMojoTest, Error) {
   ProxyInfo info;
   TestCompletionCallback callback;
-  BoundTestNetLog test_net_log;
+  BoundTestNetLog bound_net_log;
   EXPECT_EQ(ERR_IO_PENDING,
             proxy_service_->ResolveProxy(GURL("http://foo"), std::string(),
                                          &info, callback.callback(), nullptr,
-                                         nullptr, test_net_log.bound()));
+                                         nullptr, bound_net_log.bound()));
 
   // Proxy script fetcher should have a fetch triggered by the first
   // |ResolveProxy()| request.
@@ -231,7 +231,7 @@ TEST_F(ProxyServiceMojoTest, Error) {
   EXPECT_EQ(0u, mock_host_resolver_.num_resolve());
 
   TestNetLogEntry::List entries;
-  test_net_log.GetEntries(&entries);
+  bound_net_log.GetEntries(&entries);
   CheckCapturedNetLogEntries(entries);
   entries.clear();
   net_log_.GetEntries(&entries);
@@ -244,7 +244,7 @@ TEST_F(ProxyServiceMojoTest, ErrorOnInitialization) {
   EXPECT_EQ(ERR_IO_PENDING,
             proxy_service_->ResolveProxy(GURL("http://foo"), std::string(),
                                          &info, callback.callback(), nullptr,
-                                         nullptr, NetLogWithSource()));
+                                         nullptr, BoundNetLog()));
 
   // Proxy script fetcher should have a fetch triggered by the first
   // |ResolveProxy()| request.

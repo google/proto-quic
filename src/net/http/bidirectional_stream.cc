@@ -81,8 +81,8 @@ BidirectionalStream::BidirectionalStream(
     Delegate* delegate,
     std::unique_ptr<base::Timer> timer)
     : request_info_(std::move(request_info)),
-      net_log_(NetLogWithSource::Make(session->net_log(),
-                                      NetLogSourceType::BIDIRECTIONAL_STREAM)),
+      net_log_(BoundNetLog::Make(session->net_log(),
+                                 NetLogSourceType::BIDIRECTIONAL_STREAM)),
       session_(session),
       send_request_headers_automatically_(send_request_headers_automatically),
       request_headers_sent_(false),

@@ -23,7 +23,7 @@ ProxyConnectRedirectHttpStream::~ProxyConnectRedirectHttpStream() {}
 int ProxyConnectRedirectHttpStream::InitializeStream(
     const HttpRequestInfo* request_info,
     RequestPriority priority,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     const CompletionCallback& callback) {
   NOTREACHED();
   return OK;
@@ -102,9 +102,8 @@ bool ProxyConnectRedirectHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   return false;
 }
 
-Error ProxyConnectRedirectHttpStream::GetTokenBindingSignature(
+Error ProxyConnectRedirectHttpStream::GetSignedEKMForTokenBinding(
     crypto::ECPrivateKey* key,
-    TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
   NOTREACHED();
   return ERR_NOT_IMPLEMENTED;

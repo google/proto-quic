@@ -249,13 +249,13 @@ LoadState HttpCache::Transaction::GetWriterLoadState() const {
   return LOAD_STATE_WAITING_FOR_CACHE;
 }
 
-const NetLogWithSource& HttpCache::Transaction::net_log() const {
+const BoundNetLog& HttpCache::Transaction::net_log() const {
   return net_log_;
 }
 
 int HttpCache::Transaction::Start(const HttpRequestInfo* request,
                                   const CompletionCallback& callback,
-                                  const NetLogWithSource& net_log) {
+                                  const BoundNetLog& net_log) {
   DCHECK(request);
   DCHECK(!callback.is_null());
 
@@ -1836,7 +1836,7 @@ int HttpCache::Transaction::DoCacheWriteTruncatedResponseComplete(int result) {
 
 //-----------------------------------------------------------------------------
 
-void HttpCache::Transaction::SetRequest(const NetLogWithSource& net_log,
+void HttpCache::Transaction::SetRequest(const BoundNetLog& net_log,
                                         const HttpRequestInfo* request) {
   net_log_ = net_log;
   request_ = request;

@@ -547,7 +547,7 @@ class QuicStreamFactoryTestBase {
   GURL url4_;
 
   PrivacyMode privacy_mode_;
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   TestCompletionCallback callback_;
 
   // Variables to configure QuicStreamFactory.

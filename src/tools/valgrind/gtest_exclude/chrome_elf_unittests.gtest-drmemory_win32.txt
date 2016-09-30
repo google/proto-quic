@@ -1,0 +1,5 @@
+# https://crbug.com/621460
+ELFImportsTest.ChromeElfSanityCheck
+
+# https://crbug.com/628462
+BlacklistTest.*

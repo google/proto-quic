@@ -54,10 +54,9 @@ void ProxyClientSocket::BuildTunnelRequest(
 }
 
 // static
-int ProxyClientSocket::HandleProxyAuthChallenge(
-    HttpAuthController* auth,
-    HttpResponseInfo* response,
-    const NetLogWithSource& net_log) {
+int ProxyClientSocket::HandleProxyAuthChallenge(HttpAuthController* auth,
+                                                HttpResponseInfo* response,
+                                                const BoundNetLog& net_log) {
   DCHECK(response->headers.get());
   int rv = auth->HandleAuthChallenge(response->headers, response->ssl_info,
                                      false, true, net_log);

@@ -19,7 +19,7 @@ class GURL;
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class HttpAuthPreferences;
 class HostResolver;
 class HttpAuthChallengeTokenizer;
@@ -88,7 +88,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
                                 const GURL& origin,
                                 CreateReason create_reason,
                                 int digest_nonce_count,
-                                const NetLogWithSource& net_log,
+                                const BoundNetLog& net_log,
                                 std::unique_ptr<HttpAuthHandler>* handler) = 0;
 
   // Creates an HTTP authentication handler based on the authentication
@@ -100,7 +100,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
                                   HttpAuth::Target target,
                                   const SSLInfo& ssl_info,
                                   const GURL& origin,
-                                  const NetLogWithSource& net_log,
+                                  const BoundNetLog& net_log,
                                   std::unique_ptr<HttpAuthHandler>* handler);
 
   // Creates an HTTP authentication handler based on the authentication
@@ -113,7 +113,7 @@ class NET_EXPORT HttpAuthHandlerFactory {
       HttpAuth::Target target,
       const GURL& origin,
       int digest_nonce_count,
-      const NetLogWithSource& net_log,
+      const BoundNetLog& net_log,
       std::unique_ptr<HttpAuthHandler>* handler);
 
   // Creates a standard HttpAuthHandlerRegistryFactory. The caller is
@@ -186,7 +186,7 @@ class NET_EXPORT HttpAuthHandlerRegistryFactory
                         const GURL& origin,
                         CreateReason reason,
                         int digest_nonce_count,
-                        const NetLogWithSource& net_log,
+                        const BoundNetLog& net_log,
                         std::unique_ptr<HttpAuthHandler>* handler) override;
 
  private:

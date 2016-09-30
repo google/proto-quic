@@ -201,7 +201,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
       *called_ = false;
     }
 
-    void Run(scoped_refptr<Result> result,
+    void Run(std::unique_ptr<Result> result,
              std::unique_ptr<ProofSource::Details> /* details */) override {
       {
         // Ensure that the strike register client lock is not held.
@@ -213,15 +213,14 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         base::AutoLock lock(*m);
       }
       ASSERT_FALSE(*called_);
-      test_->ProcessValidationResult(std::move(result), should_succeed_,
-                                     error_substr_);
+      test_->ProcessValidationResult(*result, should_succeed_, error_substr_);
       *called_ = true;
     }
 
    private:
     CryptoServerTest* test_;
-    const bool should_succeed_;
-    const char* const error_substr_;
+    bool should_succeed_;
+    const char* error_substr_;
     bool* called_;
   };
 
@@ -271,7 +270,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
             new ValidateCallback(this, false, error_substr, called)));
   }
 
-  void ProcessValidationResult(scoped_refptr<ValidateCallback::Result> result,
+  void ProcessValidationResult(const ValidateCallback::Result& result,
                                bool should_succeed,
                                const char* error_substr) {
     IPAddress server_ip;
@@ -290,10 +289,10 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     if (should_succeed) {
       ASSERT_EQ(error, QUIC_NO_ERROR) << "Message failed with error "
                                       << error_details << ": "
-                                      << result->client_hello.DebugString();
+                                      << result.client_hello.DebugString();
     } else {
       ASSERT_NE(error, QUIC_NO_ERROR) << "Message didn't fail: "
-                                      << result->client_hello.DebugString();
+                                      << result.client_hello.DebugString();
 
       EXPECT_TRUE(error_details.find(error_substr) != string::npos)
           << error_substr << " not in " << error_details;

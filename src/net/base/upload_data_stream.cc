@@ -52,7 +52,7 @@ UploadDataStream::~UploadDataStream() {
 }
 
 int UploadDataStream::Init(const CompletionCallback& callback,
-                           const NetLogWithSource& net_log) {
+                           const BoundNetLog& net_log) {
   Reset();
   DCHECK(!initialized_successfully_);
   DCHECK(callback_.is_null());

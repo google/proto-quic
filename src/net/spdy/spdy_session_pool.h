@@ -29,7 +29,7 @@
 namespace net {
 
 class AddressList;
-class NetLogWithSource;
+class BoundNetLog;
 class ClientSocketHandle;
 class HostResolver;
 class HttpServerProperties;
@@ -79,17 +79,16 @@ class NET_EXPORT SpdySessionPool
   base::WeakPtr<SpdySession> CreateAvailableSessionFromSocket(
       const SpdySessionKey& key,
       std::unique_ptr<ClientSocketHandle> connection,
-      const NetLogWithSource& net_log,
+      const BoundNetLog& net_log,
       int certificate_error_code,
       bool is_secure);
 
   // Return an available session for |key| that has an unclaimed push stream for
   // |url| if such exists and |url| is not empty, or else an available session
   // for |key| if such exists, or else nullptr.
-  base::WeakPtr<SpdySession> FindAvailableSession(
-      const SpdySessionKey& key,
-      const GURL& url,
-      const NetLogWithSource& net_log);
+  base::WeakPtr<SpdySession> FindAvailableSession(const SpdySessionKey& key,
+                                                  const GURL& url,
+                                                  const BoundNetLog& net_log);
 
   // Remove all mappings and aliases for the given session, which must
   // still be available. Except for in tests, this must be called by
@@ -218,6 +217,7 @@ class NET_EXPORT SpdySessionPool
   HostResolver* const resolver_;
 
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
+  bool verify_domain_authentication_;
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
   size_t session_max_recv_window_size_;

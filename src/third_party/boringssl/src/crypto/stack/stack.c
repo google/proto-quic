@@ -131,11 +131,13 @@ void sk_free(_STACK *sk) {
 }
 
 void sk_pop_free(_STACK *sk, void (*func)(void *)) {
+  size_t i;
+
   if (sk == NULL) {
     return;
   }
 
-  for (size_t i = 0; i < sk->num; i++) {
+  for (i = 0; i < sk->num; i++) {
     if (sk->data[i] != NULL) {
       func(sk->data[i]);
     }
@@ -207,11 +209,13 @@ void *sk_delete(_STACK *sk, size_t where) {
 }
 
 void *sk_delete_ptr(_STACK *sk, void *p) {
+  size_t i;
+
   if (sk == NULL) {
     return NULL;
   }
 
-  for (size_t i = 0; i < sk->num; i++) {
+  for (i = 0; i < sk->num; i++) {
     if (sk->data[i] == p) {
       return sk_delete(sk, i);
     }
@@ -221,13 +225,17 @@ void *sk_delete_ptr(_STACK *sk, void *p) {
 }
 
 int sk_find(_STACK *sk, size_t *out_index, void *p) {
+  const void *const *r;
+  size_t i;
+  int (*comp_func)(const void *,const void *);
+
   if (sk == NULL) {
     return 0;
   }
 
   if (sk->comp == NULL) {
     /* Use pointer equality when no comparison function has been set. */
-    for (size_t i = 0; i < sk->num; i++) {
+    for (i = 0; i < sk->num; i++) {
       if (sk->data[i] == p) {
         if (out_index) {
           *out_index = i;
@@ -249,19 +257,18 @@ int sk_find(_STACK *sk, size_t *out_index, void *p) {
    * elements. However, since we're passing an array of pointers to
    * qsort/bsearch, we can just cast the comparison function and everything
    * works. */
-  const void *const *r = bsearch(&p, sk->data, sk->num, sizeof(void *),
-                                 (int (*)(const void *, const void *))sk->comp);
+  comp_func=(int (*)(const void *,const void *))(sk->comp);
+  r = bsearch(&p, sk->data, sk->num, sizeof(void *), comp_func);
   if (r == NULL) {
     return 0;
   }
-  size_t idx = ((void **)r) - sk->data;
+  i = ((void **)r) - sk->data;
   /* This function always returns the first result. */
-  while (idx > 0 &&
-         sk->comp((const void **)&p, (const void **)&sk->data[idx - 1]) == 0) {
-    idx--;
+  while (i > 0 && sk->comp((const void**) &p, (const void**) &sk->data[i-1]) == 0) {
+    i--;
   }
   if (out_index) {
-    *out_index = idx;
+    *out_index = i;
   }
   return 1;
 }
@@ -357,13 +364,15 @@ _STACK *sk_deep_copy(const _STACK *sk, void *(*copy_func)(void *),
     return NULL;
   }
 
-  for (size_t i = 0; i < ret->num; i++) {
+  size_t i;
+  for (i = 0; i < ret->num; i++) {
     if (ret->data[i] == NULL) {
       continue;
     }
     ret->data[i] = copy_func(ret->data[i]);
     if (ret->data[i] == NULL) {
-      for (size_t j = 0; j < i; j++) {
+      size_t j;
+      for (j = 0; j < i; j++) {
         if (ret->data[j] != NULL) {
           free_func(ret->data[j]);
         }

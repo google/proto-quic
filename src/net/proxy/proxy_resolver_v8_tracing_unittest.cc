@@ -114,9 +114,9 @@ class MockBindings {
       bindings_->OnError(line_number, error);
     }
 
-    NetLogWithSource GetNetLogWithSource() override {
+    BoundNetLog GetBoundNetLog() override {
       DCHECK(thread_checker_.CalledOnValidThread());
-      return NetLogWithSource();
+      return BoundNetLog();
     }
 
     HostResolver* GetHostResolver() override {
@@ -686,7 +686,7 @@ class BlockableHostResolver : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* out_req,
-              const NetLogWithSource& net_log) override {
+              const BoundNetLog& net_log) override {
     EXPECT_FALSE(callback.is_null());
     EXPECT_TRUE(out_req);
 
@@ -709,7 +709,7 @@ class BlockableHostResolver : public HostResolver {
 
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const NetLogWithSource& net_log) override {
+                       const BoundNetLog& net_log) override {
     NOTREACHED();
     return ERR_DNS_CACHE_MISS;
   }

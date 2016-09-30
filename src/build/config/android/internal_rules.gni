@@ -61,6 +61,7 @@ _java_target_whitelist = [
 
 # Targets that match the whitelist but are not actually java targets.
 _java_target_blacklist = [
+  "//chrome:packed_extra_resources",
   "//chrome:packed_resources",
   "//remoting/android:remoting_android_raw_resources",
   "*:*_unpack_aar",

@@ -46,6 +46,7 @@ SpdySessionPool::SpdySessionPool(
       transport_security_state_(transport_security_state),
       ssl_config_service_(ssl_config_service),
       resolver_(resolver),
+      verify_domain_authentication_(true),
       enable_sending_initial_data_(true),
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
@@ -77,7 +78,7 @@ SpdySessionPool::~SpdySessionPool() {
 base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
     const SpdySessionKey& key,
     std::unique_ptr<ClientSocketHandle> connection,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     int certificate_error_code,
     bool is_secure) {
   TRACE_EVENT0("net", "SpdySessionPool::CreateAvailableSessionFromSocket");
@@ -87,9 +88,10 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
 
   std::unique_ptr<SpdySession> new_session(new SpdySession(
       key, http_server_properties_, transport_security_state_,
-      enable_sending_initial_data_, enable_ping_based_connection_checking_,
-      session_max_recv_window_size_, stream_max_recv_window_size_, time_func_,
-      proxy_delegate_, net_log.net_log()));
+      verify_domain_authentication_, enable_sending_initial_data_,
+      enable_ping_based_connection_checking_, session_max_recv_window_size_,
+      stream_max_recv_window_size_, time_func_, proxy_delegate_,
+      net_log.net_log()));
 
   new_session->InitializeWithSocket(std::move(connection), this, is_secure,
                                     certificate_error_code);
@@ -119,7 +121,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
 base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
     const SpdySessionKey& key,
     const GURL& url,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   UnclaimedPushedStreamMap::iterator url_it =
       unclaimed_pushed_streams_.find(url);
   if (!url.is_empty() && url_it != unclaimed_pushed_streams_.end()) {

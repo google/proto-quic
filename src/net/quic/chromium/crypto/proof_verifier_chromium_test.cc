@@ -42,7 +42,7 @@ class FailsTestCertVerifier : public CertVerifier {
              CertVerifyResult* verify_result,
              const CompletionCallback& callback,
              std::unique_ptr<Request>* out_req,
-             const NetLogWithSource& net_log) override {
+             const BoundNetLog& net_log) override {
     ADD_FAILURE() << "CertVerifier::Verify() should not be called";
     return ERR_FAILED;
   }
@@ -58,7 +58,7 @@ class FailsTestCTPolicyEnforcer : public CTPolicyEnforcer {
       X509Certificate* cert,
       const ct::EVCertsWhitelist* ev_whitelist,
       const ct::SCTList& verified_scts,
-      const NetLogWithSource& net_log) override {
+      const BoundNetLog& net_log) override {
     ADD_FAILURE() << "CTPolicyEnforcer::DoesConformToCTEVPolicy() should "
                   << "not be called";
     return ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY;
@@ -71,12 +71,12 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   MOCK_METHOD3(DoesConformToCertPolicy,
                ct::CertPolicyCompliance(X509Certificate* cert,
                                         const ct::SCTList&,
-                                        const NetLogWithSource&));
+                                        const BoundNetLog&));
   MOCK_METHOD4(DoesConformToCTEVPolicy,
                ct::EVPolicyCompliance(X509Certificate* cert,
                                       const ct::EVCertsWhitelist*,
                                       const ct::SCTList&,
-                                      const NetLogWithSource&));
+                                      const BoundNetLog&));
 };
 
 class MockRequireCTDelegate : public TransportSecurityState::RequireCTDelegate {
@@ -108,7 +108,7 @@ class ProofVerifierChromiumTest : public ::testing::Test {
  public:
   ProofVerifierChromiumTest()
       : verify_context_(new ProofVerifyContextChromium(0 /*cert_verify_flags*/,
-                                                       NetLogWithSource())) {}
+                                                       BoundNetLog())) {}
 
   void SetUp() override {
     EXPECT_CALL(ct_policy_enforcer_, DoesConformToCertPolicy(_, _, _))

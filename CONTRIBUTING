@@ -1,4 +1,4 @@
-Currently proto-quic is supported by Google developers: any code changes should be
+Currently proto-quic is supported by Google developers. Any code changes should be
 submitted to upstream Chrome, and pulled locally.
 
 Should this change, any contributors must sign the google CLA

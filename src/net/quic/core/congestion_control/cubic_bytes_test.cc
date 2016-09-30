@@ -5,7 +5,6 @@
 #include "net/quic/core/congestion_control/cubic_bytes.h"
 
 #include "base/logging.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -34,9 +33,7 @@ TEST_F(CubicBytesTest, AboveOrigin) {
   // Convex growth.
   const QuicTime::Delta rtt_min = hundred_ms_;
   QuicByteCount current_cwnd = 10 * kDefaultTCPMSS;
-  QuicByteCount expected_cwnd =
-      current_cwnd + (FLAGS_quic_limit_cubic_cwnd_increase ? kDefaultTCPMSS / 2
-                                                           : kDefaultTCPMSS);
+  QuicByteCount expected_cwnd = current_cwnd + kDefaultTCPMSS;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd, cubic_.CongestionWindowAfterAck(
@@ -80,9 +77,7 @@ TEST_F(CubicBytesTest, AboveOrigin) {
 TEST_F(CubicBytesTest, LossEvents) {
   const QuicTime::Delta rtt_min = hundred_ms_;
   QuicByteCount current_cwnd = 422 * kDefaultTCPMSS;
-  QuicPacketCount expected_cwnd =
-      current_cwnd + (FLAGS_quic_limit_cubic_cwnd_increase ? kDefaultTCPMSS / 2
-                                                           : kDefaultTCPMSS);
+  QuicPacketCount expected_cwnd = current_cwnd + kDefaultTCPMSS;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd, cubic_.CongestionWindowAfterAck(
@@ -99,9 +94,7 @@ TEST_F(CubicBytesTest, BelowOrigin) {
   // Concave growth.
   const QuicTime::Delta rtt_min = hundred_ms_;
   QuicByteCount current_cwnd = 422 * kDefaultTCPMSS;
-  QuicPacketCount expected_cwnd =
-      current_cwnd + (FLAGS_quic_limit_cubic_cwnd_increase ? kDefaultTCPMSS / 2
-                                                           : kDefaultTCPMSS);
+  QuicPacketCount expected_cwnd = current_cwnd + kDefaultTCPMSS;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd, cubic_.CongestionWindowAfterAck(
@@ -119,8 +112,7 @@ TEST_F(CubicBytesTest, BelowOrigin) {
     current_cwnd =
         cubic_.CongestionWindowAfterAck(kDefaultTCPMSS, current_cwnd, rtt_min);
   }
-  expected_cwnd =
-      FLAGS_quic_limit_cubic_cwnd_increase ? 553632 : 422 * kDefaultTCPMSS;
+  expected_cwnd = 422 * kDefaultTCPMSS;
   EXPECT_EQ(expected_cwnd, current_cwnd);
 }
 

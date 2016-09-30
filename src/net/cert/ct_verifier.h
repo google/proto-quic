@@ -16,7 +16,7 @@ struct CTVerifyResult;
 struct SignedCertificateTimestamp;
 }  // namespace ct
 
-class NetLogWithSource;
+class BoundNetLog;
 class CTLogVerifier;
 class X509Certificate;
 
@@ -55,7 +55,7 @@ class NET_EXPORT CTVerifier {
                      const std::string& stapled_ocsp_response,
                      const std::string& sct_list_from_tls_extension,
                      ct::CTVerifyResult* result,
-                     const NetLogWithSource& net_log) = 0;
+                     const BoundNetLog& net_log) = 0;
 
   // Registers |observer| to receive notifications of validated SCTs. Does not
   // take ownership of the observer as the observer may be performing

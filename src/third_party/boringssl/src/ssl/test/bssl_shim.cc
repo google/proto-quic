@@ -552,13 +552,7 @@ static unsigned PskClientCallback(SSL *ssl, const char *hint,
                                   uint8_t *out_psk, unsigned max_psk_len) {
   const TestConfig *config = GetTestConfig(ssl);
 
-  if (config->psk_identity.empty()) {
-    if (hint != nullptr) {
-      fprintf(stderr, "Server PSK hint was non-null.\n");
-      return 0;
-    }
-  } else if (hint == nullptr ||
-             strcmp(hint, config->psk_identity.c_str()) != 0) {
+  if (strcmp(hint ? hint : "", config->psk_identity.c_str()) != 0) {
     fprintf(stderr, "Server PSK hint did not match.\n");
     return 0;
   }
@@ -640,7 +634,7 @@ static int DDoSCallback(const struct ssl_early_callback_ctx *early_context) {
 static void InfoCallback(const SSL *ssl, int type, int val) {
   if (type == SSL_CB_HANDSHAKE_DONE) {
     if (GetTestConfig(ssl)->handshake_never_done) {
-      fprintf(stderr, "Handshake unexpectedly completed.\n");
+      fprintf(stderr, "handshake completed\n");
       // Abort before any expected error code is printed, to ensure the overall
       // test fails.
       abort();
@@ -814,10 +808,9 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     return nullptr;
   }
 
-  // Enable TLS 1.3 for tests.
-  if (!config->is_dtls &&
-      !SSL_CTX_set_max_proto_version(ssl_ctx.get(), TLS1_3_VERSION)) {
-    return nullptr;
+  if (!config->is_dtls) {
+    // Enable TLS 1.3 for tests.
+    SSL_CTX_set_max_version(ssl_ctx.get(), TLS1_3_VERSION);
   }
 
   std::string cipher_list = "ALL";
@@ -1365,13 +1358,14 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
       !SSL_enable_signed_cert_timestamps(ssl.get())) {
     return false;
   }
-  if (config->min_version != 0 &&
-      !SSL_set_min_proto_version(ssl.get(), (uint16_t)config->min_version)) {
-    return false;
+  if (config->min_version != 0) {
+    SSL_set_min_version(ssl.get(), (uint16_t)config->min_version);
   }
-  if (config->max_version != 0 &&
-      !SSL_set_max_proto_version(ssl.get(), (uint16_t)config->max_version)) {
-    return false;
+  if (config->max_version != 0) {
+    SSL_set_max_version(ssl.get(), (uint16_t)config->max_version);
+  }
+  if (config->fallback_version != 0) {
+    SSL_set_fallback_version(ssl.get(), (uint16_t)config->fallback_version);
   }
   if (config->mtu != 0) {
     SSL_set_options(ssl.get(), SSL_OP_NO_QUERY_MTU);

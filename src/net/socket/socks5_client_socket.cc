@@ -90,7 +90,7 @@ bool SOCKS5ClientSocket::IsConnectedAndIdle() const {
   return completed_handshake_ && transport_->socket()->IsConnectedAndIdle();
 }
 
-const NetLogWithSource& SOCKS5ClientSocket::NetLog() const {
+const BoundNetLog& SOCKS5ClientSocket::NetLog() const {
   return net_log_;
 }
 

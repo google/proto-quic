@@ -32,7 +32,8 @@ void SSL_CUSTOM_EXTENSION_free(SSL_CUSTOM_EXTENSION *custom_extension) {
 static const SSL_CUSTOM_EXTENSION *custom_ext_find(
     STACK_OF(SSL_CUSTOM_EXTENSION) *stack,
     unsigned *out_index, uint16_t value) {
-  for (size_t i = 0; i < sk_SSL_CUSTOM_EXTENSION_num(stack); i++) {
+  size_t i;
+  for (i = 0; i < sk_SSL_CUSTOM_EXTENSION_num(stack); i++) {
     const SSL_CUSTOM_EXTENSION *ext = sk_SSL_CUSTOM_EXTENSION_value(stack, i);
     if (ext->value == value) {
       if (out_index != NULL) {
@@ -68,7 +69,8 @@ static int custom_ext_add_hello(SSL *ssl, CBB *extensions) {
     return 1;
   }
 
-  for (size_t i = 0; i < sk_SSL_CUSTOM_EXTENSION_num(stack); i++) {
+  size_t i;
+  for (i = 0; i < sk_SSL_CUSTOM_EXTENSION_num(stack); i++) {
     const SSL_CUSTOM_EXTENSION *ext = sk_SSL_CUSTOM_EXTENSION_value(stack, i);
 
     if (ssl->server &&

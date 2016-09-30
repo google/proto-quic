@@ -4904,7 +4904,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   unsigned char packet[] = {
       // public flags (version, 8 byte connection_id)
       static_cast<unsigned char>(
-          framer_.version() > QUIC_VERSION_32 ? 0x39 : 0x3D),
+          (FLAGS_quic_remove_v33_hacks &&
+            framer_.version() > QUIC_VERSION_32) ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -4925,7 +4926,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   };
   unsigned char packet_34[] = {
       // public flags (version, 8 byte connection_id)
-      0x39,
+      static_cast<unsigned char>(
+          FLAGS_quic_remove_v33_hacks ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -5057,7 +5059,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   unsigned char packet[] = {
     // public flags (8 byte connection_id)
     static_cast<unsigned char>(
-        framer_.version() > QUIC_VERSION_32 ? 0x79 : 0x7D),
+        (FLAGS_quic_remove_v33_hacks &&
+         framer_.version() > QUIC_VERSION_32) ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -5085,7 +5088,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   };
   unsigned char packet_34[] = {
     // public flags (8 byte connection_id)
-    0x79,
+    static_cast<unsigned char>(
+        FLAGS_quic_remove_v33_hacks ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,

@@ -113,7 +113,7 @@ class HangingHostResolverWithCancel : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* out_req,
-              const NetLogWithSource& net_log) override {
+              const BoundNetLog& net_log) override {
     DCHECK(addresses);
     DCHECK_EQ(false, callback.is_null());
     EXPECT_FALSE(HasOutstandingRequest());
@@ -124,7 +124,7 @@ class HangingHostResolverWithCancel : public HostResolver {
 
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const NetLogWithSource& net_log) override {
+                       const BoundNetLog& net_log) override {
     NOTIMPLEMENTED();
     return ERR_UNEXPECTED;
   }

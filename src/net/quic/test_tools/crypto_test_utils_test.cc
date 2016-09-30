@@ -32,14 +32,14 @@ class ShloVerifier : public ValidateClientHelloResultCallback {
         compressed_certs_cache_(compressed_certs_cache) {}
 
   // Verify that the output message is a SHLO.
-  void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+  void Run(std::unique_ptr<ValidateClientHelloResultCallback::Result> result,
            std::unique_ptr<ProofSource::Details> /* details */) override {
     QuicCryptoNegotiatedParameters params;
     string error_details;
     DiversificationNonce diversification_nonce;
     CryptoHandshakeMessage out;
     crypto_config_->ProcessClientHello(
-        result, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
+        *result, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
         client_addr_, AllSupportedVersions().front(), AllSupportedVersions(),
         /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
         clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params,

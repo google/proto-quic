@@ -134,9 +134,9 @@ class WebSocketBasicStreamSocketTest : public WebSocketBasicStreamTest {
     std::unique_ptr<ClientSocketHandle> transport_socket(
         new ClientSocketHandle);
     scoped_refptr<MockTransportSocketParams> params;
-    transport_socket->Init("a", params, MEDIUM,
-                           ClientSocketPool::RespectLimits::ENABLED,
-                           CompletionCallback(), &pool_, net_log_.bound());
+    transport_socket->Init(
+        "a", params, MEDIUM, ClientSocketPool::RespectLimits::ENABLED,
+        CompletionCallback(), &pool_, bound_net_log_.bound());
     return transport_socket;
   }
 
@@ -169,7 +169,7 @@ class WebSocketBasicStreamSocketTest : public WebSocketBasicStreamTest {
   std::unique_ptr<SocketDataProvider> socket_data_;
   MockClientSocketFactory factory_;
   MockTransportClientSocketPool pool_;
-  BoundTestNetLog(net_log_);
+  BoundTestNetLog(bound_net_log_);
   std::vector<std::unique_ptr<WebSocketFrame>> frames_;
   TestCompletionCallback cb_;
   scoped_refptr<GrowableIOBuffer> http_read_buffer_;

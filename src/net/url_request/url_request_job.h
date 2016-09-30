@@ -193,6 +193,9 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Continue processing the request ignoring the last error.
   virtual void ContinueDespiteLastError();
 
+  // Continue with the network request.
+  virtual void ResumeNetworkStart();
+
   void FollowDeferredRedirect();
 
   // Returns true if the Job is done producing response data and has called

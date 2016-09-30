@@ -23,8 +23,8 @@ namespace net {
 class ClientSocketFactory;
 class SocketPerformanceWatcherFactory;
 
-typedef base::Callback<int(const AddressList&, const NetLogWithSource& net_log)>
-    OnHostResolutionCallback;
+typedef base::Callback<int(const AddressList&, const BoundNetLog& net_log)>
+OnHostResolutionCallback;
 
 class NET_EXPORT_PRIVATE TransportSocketParams
     : public base::RefCounted<TransportSocketParams> {
@@ -215,11 +215,11 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
                     RespectLimits respect_limits,
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
-                    const NetLogWithSource& net_log) override;
+                    const BoundNetLog& net_log) override;
   void RequestSockets(const std::string& group_name,
                       const void* params,
                       int num_sockets,
-                      const NetLogWithSource& net_log) override;
+                      const BoundNetLog& net_log) override;
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
   void ReleaseSocket(const std::string& group_name,
@@ -245,7 +245,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool : public ClientSocketPool {
  protected:
   // Methods shared with WebSocketTransportClientSocketPool
   void NetLogTcpClientSocketPoolRequestedSocket(
-      const NetLogWithSource& net_log,
+      const BoundNetLog& net_log,
       const scoped_refptr<TransportSocketParams>* casted_params);
 
  private:

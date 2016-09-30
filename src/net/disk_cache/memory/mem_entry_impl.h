@@ -179,7 +179,7 @@ class NET_EXPORT_PRIVATE MemEntryImpl final
   MemBackendImpl* backend_;   // Back pointer to the cache.
   bool doomed_;               // True if this entry was removed from the cache.
 
-  net::NetLogWithSource net_log_;
+  net::BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(MemEntryImpl);
 };

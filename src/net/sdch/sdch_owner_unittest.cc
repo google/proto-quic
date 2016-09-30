@@ -264,7 +264,7 @@ class MockSdchDictionaryFetcher : public SdchDictionaryFetcher {
 
   bool CompletePendingRequest(const GURL& dictionary_url,
                               const std::string& dictionary_text,
-                              const NetLogWithSource& net_log,
+                              const BoundNetLog& net_log,
                               bool was_from_cache) {
     for (std::vector<PendingRequest>::iterator it = requests_.begin();
          it != requests_.end(); ++it) {
@@ -324,7 +324,7 @@ class SdchOwnerTest : public testing::Test {
 
   SdchManager& sdch_manager() { return sdch_manager_; }
   SdchOwner& sdch_owner() { return *(sdch_owner_.get()); }
-  NetLogWithSource& net_log() { return net_log_; }
+  BoundNetLog& bound_net_log() { return net_log_; }
 
   int JobsRecentlyCreated() {
     int result = error_jobs_created - last_jobs_created_;
@@ -397,7 +397,7 @@ class SdchOwnerTest : public testing::Test {
 
  private:
   int last_jobs_created_;
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   int dictionary_creation_index_;
 
   // The dependencies of these objects (sdch_owner_ -> {sdch_manager_,
@@ -426,7 +426,8 @@ TEST_F(SdchOwnerTest, OnGetDictionary_Fetching) {
   GURL dict_url2(std::string(generic_url) + "/d2");
   std::string dictionary1(NewSdchDictionary(kMaxSizeForTesting / 2));
   sdch_owner().OnDictionaryFetched(base::Time::Now(), base::Time::Now(), 1,
-                                   dictionary1, dict_url1, net_log(), false);
+                                   dictionary1, dict_url1, bound_net_log(),
+                                   false);
   EXPECT_EQ(0, JobsRecentlyCreated());
   SignalGetDictionaryAndClearJobs(request_url, dict_url2);
   EXPECT_EQ(1, JobsRecentlyCreated());
@@ -436,7 +437,8 @@ TEST_F(SdchOwnerTest, OnGetDictionary_Fetching) {
   std::string dictionary2(NewSdchDictionary(
       (kMaxSizeForTesting / 2 - kMinFetchSpaceForTesting / 2)));
   sdch_owner().OnDictionaryFetched(base::Time::Now(), base::Time::Now(), 1,
-                                   dictionary2, dict_url2, net_log(), false);
+                                   dictionary2, dict_url2, bound_net_log(),
+                                   false);
   EXPECT_EQ(0, JobsRecentlyCreated());
   SignalGetDictionaryAndClearJobs(request_url, dict_url3);
   EXPECT_EQ(0, JobsRecentlyCreated());
@@ -840,7 +842,7 @@ class SdchOwnerPersistenceTest : public ::testing::Test {
   }
 
  protected:
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   std::unique_ptr<SdchManager> manager_;
   MockSdchDictionaryFetcher* fetcher_;
   std::unique_ptr<SdchOwner> owner_;

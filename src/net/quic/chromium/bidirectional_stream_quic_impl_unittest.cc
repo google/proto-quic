@@ -10,10 +10,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/time/time.h"
 #include "net/base/ip_address.h"
-#include "net/base/load_timing_info.h"
-#include "net/base/load_timing_info_test_util.h"
 #include "net/base/net_errors.h"
 #include "net/http/bidirectional_stream_request_info.h"
 #include "net/http/transport_security_state.h"
@@ -76,7 +73,6 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
         next_proto_(kProtoUnknown),
         received_bytes_(0),
         sent_bytes_(0),
-        has_load_timing_info_(false),
         error_(OK),
         on_data_read_count_(0),
         on_data_sent_count_(0),
@@ -145,7 +141,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   }
 
   void Start(const BidirectionalStreamRequestInfo* request_info,
-             const NetLogWithSource& net_log,
+             const BoundNetLog& net_log,
              const base::WeakPtr<QuicChromiumClientSession> session) {
     stream_.reset(new BidirectionalStreamQuicImpl(session));
     stream_->Start(request_info, net_log, send_request_headers_automatically_,
@@ -206,13 +202,6 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     return sent_bytes_;
   }
 
-  bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) {
-    if (stream_)
-      return stream_->GetLoadTimingInfo(load_timing_info);
-    *load_timing_info = load_timing_info_;
-    return has_load_timing_info_;
-  }
-
   void DoNotSendRequestHeadersAutomatically() {
     send_request_headers_automatically_ = false;
   }
@@ -222,7 +211,6 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     next_proto_ = stream_->GetProtocol();
     received_bytes_ = stream_->GetTotalReceivedBytes();
     sent_bytes_ = stream_->GetTotalSentBytes();
-    has_load_timing_info_ = stream_->GetLoadTimingInfo(&load_timing_info_);
     stream_.reset();
   }
 
@@ -252,8 +240,6 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   NextProto next_proto_;
   int64_t received_bytes_;
   int64_t sent_bytes_;
-  bool has_load_timing_info_;
-  LoadTimingInfo load_timing_info_;
   int error_;
   int on_data_read_count_;
   int on_data_sent_count_;
@@ -412,8 +398,6 @@ class BidirectionalStreamQuicImplTest
         connection_id_, peer_addr_, helper_.get(), alarm_factory_.get(),
         new QuicChromiumPacketWriter(socket.get()), true /* owns_writer */,
         Perspective::IS_CLIENT, SupportedVersions(GetParam()));
-    base::TimeTicks dns_end = base::TimeTicks::Now();
-    base::TimeTicks dns_start = dns_end - base::TimeDelta::FromMilliseconds(1);
 
     session_.reset(new QuicChromiumClientSession(
         connection_, std::move(socket),
@@ -425,13 +409,11 @@ class BidirectionalStreamQuicImplTest
         kQuicYieldAfterPacketsRead,
         QuicTime::Delta::FromMilliseconds(kQuicYieldAfterDurationMilliseconds),
         /*cert_verify_flags=*/0, DefaultQuicConfig(), &crypto_config_,
-        "CONNECTION_UNKNOWN", dns_start, dns_end, &push_promise_index_,
-        base::ThreadTaskRunnerHandle::Get().get(),
+        "CONNECTION_UNKNOWN", base::TimeTicks::Now(), base::TimeTicks::Now(),
+        &push_promise_index_, base::ThreadTaskRunnerHandle::Get().get(),
         /*socket_performance_watcher=*/nullptr, net_log().bound().net_log()));
     session_->Initialize();
-    TestCompletionCallback callback;
-    session_->CryptoConnect(/*require_confirmation=*/false,
-                            callback.callback());
+    session_->GetCryptoStream()->CryptoConnect();
     EXPECT_TRUE(session_->IsEncryptionEstablished());
   }
 
@@ -495,27 +477,11 @@ class BidirectionalStreamQuicImplTest
       bool fin,
       RequestPriority request_priority,
       size_t* spdy_headers_frame_length) {
-    return ConstructRequestHeadersPacketInner(
-        packet_number, stream_id_, fin, request_priority,
-        spdy_headers_frame_length, /*offset=*/nullptr);
-  }
-
-  std::unique_ptr<QuicReceivedPacket> ConstructRequestHeadersPacketInner(
-      QuicPacketNumber packet_number,
-      QuicStreamId stream_id,
-      bool fin,
-      RequestPriority request_priority,
-      size_t* spdy_headers_frame_length,
-      QuicStreamOffset* offset) {
     SpdyPriority priority =
         ConvertRequestPriorityToQuicPriority(request_priority);
-    std::unique_ptr<QuicReceivedPacket> packet(
-        client_maker_.MakeRequestHeadersPacket(
-            packet_number, stream_id, kIncludeVersion, fin, priority,
-            std::move(request_headers_), spdy_headers_frame_length, offset));
-    DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
-    return packet;
+    return client_maker_.MakeRequestHeadersPacket(
+        packet_number, stream_id_, kIncludeVersion, fin, priority,
+        std::move(request_headers_), spdy_headers_frame_length);
   }
 
   std::unique_ptr<QuicReceivedPacket>
@@ -542,20 +508,8 @@ class BidirectionalStreamQuicImplTest
       SpdyHeaderBlock response_headers,
       size_t* spdy_headers_frame_length,
       QuicStreamOffset* offset) {
-    return ConstructResponseHeadersPacketInner(
-        packet_number, stream_id_, fin, std::move(response_headers),
-        spdy_headers_frame_length, offset);
-  }
-
-  std::unique_ptr<QuicReceivedPacket> ConstructResponseHeadersPacketInner(
-      QuicPacketNumber packet_number,
-      QuicStreamId stream_id,
-      bool fin,
-      SpdyHeaderBlock response_headers,
-      size_t* spdy_headers_frame_length,
-      QuicStreamOffset* offset) {
     return server_maker_.MakeResponseHeadersPacket(
-        packet_number, stream_id, !kIncludeVersion, fin,
+        packet_number, stream_id_, !kIncludeVersion, fin,
         std::move(response_headers), spdy_headers_frame_length, offset);
   }
 
@@ -638,20 +592,6 @@ class BidirectionalStreamQuicImplTest
                                        !kIncludeCongestionFeedback);
   }
 
-  void ExpectLoadTimingValid(const LoadTimingInfo& load_timing_info,
-                             bool session_reused) {
-    EXPECT_EQ(session_reused, load_timing_info.socket_reused);
-
-    if (session_reused) {
-      ExpectConnectTimingHasNoTimes(load_timing_info.connect_timing);
-    } else {
-      ExpectConnectTimingHasTimes(
-          load_timing_info.connect_timing,
-          CONNECT_TIMING_HAS_SSL_TIMES | CONNECT_TIMING_HAS_DNS_TIMES);
-    }
-    ExpectLoadTimingHasOnlyConnectionTimes(load_timing_info);
-  }
-
   const BoundTestNetLog& net_log() const { return net_log_; }
 
   QuicChromiumClientSession* session() const { return session_.get(); }
@@ -708,7 +648,6 @@ TEST_P(BidirectionalStreamQuicImplTest, GetRequest) {
       new TestDelegateBase(read_buffer.get(), kReadBufferSize));
   delegate->Start(&request, net_log().bound(), session()->GetWeakPtr());
   delegate->WaitUntilNextCallback();  // OnStreamReady
-  ConfirmHandshake();
 
   // Server acks the request.
   ProcessPacket(ConstructServerAckPacket(1, 0, 0));
@@ -723,9 +662,6 @@ TEST_P(BidirectionalStreamQuicImplTest, GetRequest) {
       &spdy_response_headers_frame_length, &offset));
 
   delegate->WaitUntilNextCallback();  // OnHeadersReceived
-  LoadTimingInfo load_timing_info;
-  EXPECT_TRUE(delegate->GetLoadTimingInfo(&load_timing_info));
-  ExpectLoadTimingValid(load_timing_info, /*session_reused=*/false);
   TestCompletionCallback cb;
   int rv = delegate->ReadData(cb.callback());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
@@ -780,70 +716,6 @@ TEST_P(BidirectionalStreamQuicImplTest, GetRequest) {
       entries, /*min_offset=*/pos,
       NetLogEventType::QUIC_CHROMIUM_CLIENT_STREAM_SEND_REQUEST_HEADERS,
       NetLogEventPhase::NONE);
-}
-
-TEST_P(BidirectionalStreamQuicImplTest, LoadTimingTwoRequests) {
-  SetRequest("GET", "/", DEFAULT_PRIORITY);
-  QuicStreamOffset offset = 0;
-  AddWrite(ConstructRequestHeadersPacketInner(
-      1, kClientDataStreamId1, kFin, DEFAULT_PRIORITY, nullptr, &offset));
-  // SetRequest() again for second request as |request_headers_| was moved.
-  SetRequest("GET", "/", DEFAULT_PRIORITY);
-  AddWrite(ConstructRequestHeadersPacketInner(
-      2, kClientDataStreamId2, kFin, DEFAULT_PRIORITY, nullptr, &offset));
-  AddWrite(ConstructClientAckPacket(3, 3, 1));
-  Initialize();
-
-  BidirectionalStreamRequestInfo request;
-  request.method = "GET";
-  request.url = GURL("http://www.google.com/");
-  request.end_stream_on_headers = true;
-  request.priority = DEFAULT_PRIORITY;
-
-  // Start first request.
-  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate(
-      new TestDelegateBase(read_buffer.get(), kReadBufferSize));
-  delegate->Start(&request, net_log().bound(), session()->GetWeakPtr());
-
-  // Start second request.
-  scoped_refptr<IOBuffer> read_buffer2(new IOBuffer(kReadBufferSize));
-  std::unique_ptr<TestDelegateBase> delegate2(
-      new TestDelegateBase(read_buffer2.get(), kReadBufferSize));
-  delegate2->Start(&request, net_log().bound(), session()->GetWeakPtr());
-
-  delegate->WaitUntilNextCallback();   // OnStreamReady
-  delegate2->WaitUntilNextCallback();  // OnStreamReady
-
-  ConfirmHandshake();
-  // Server acks the request.
-  ProcessPacket(ConstructServerAckPacket(1, 0, 0));
-
-  // Server sends the response headers.
-  offset = 0;
-  ProcessPacket(ConstructResponseHeadersPacketInner(
-      2, kClientDataStreamId1, kFin, ConstructResponseHeaders("200"), nullptr,
-      &offset));
-
-  ProcessPacket(ConstructResponseHeadersPacketInner(
-      3, kClientDataStreamId2, kFin, ConstructResponseHeaders("200"), nullptr,
-      &offset));
-
-  delegate->WaitUntilNextCallback();   // OnHeadersReceived
-  delegate2->WaitUntilNextCallback();  // OnHeadersReceived
-
-  LoadTimingInfo load_timing_info;
-  EXPECT_TRUE(delegate->GetLoadTimingInfo(&load_timing_info));
-  LoadTimingInfo load_timing_info2;
-  EXPECT_TRUE(delegate2->GetLoadTimingInfo(&load_timing_info2));
-  ExpectLoadTimingValid(load_timing_info, /*session_reused=*/false);
-  ExpectLoadTimingValid(load_timing_info2, /*session_reused=*/true);
-  EXPECT_EQ("200", delegate->response_headers().find(":status")->second);
-  EXPECT_EQ("200", delegate2->response_headers().find(":status")->second);
-  // No response body. ReadData() should return OK synchronously.
-  TestCompletionCallback dummy_callback;
-  EXPECT_EQ(OK, delegate->ReadData(dummy_callback.callback()));
-  EXPECT_EQ(OK, delegate2->ReadData(dummy_callback.callback()));
 }
 
 // Tests that when request headers are not delayed, only data buffers are

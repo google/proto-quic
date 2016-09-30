@@ -461,10 +461,9 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
                    "b", 1415);
 
     TRACE_COUNTER_WITH_TIMESTAMP1("all", "TRACE_COUNTER_WITH_TIMESTAMP1 call",
-                                  TimeTicks::FromInternalValue(42), 31415);
+                                  42, 31415);
     TRACE_COUNTER_WITH_TIMESTAMP2("all", "TRACE_COUNTER_WITH_TIMESTAMP2 call",
-                                  TimeTicks::FromInternalValue(42),
-                                  "a", 30000, "b", 1415);
+                                  42, "a", 30000, "b", 1415);
 
     TRACE_COUNTER_ID1("all", "TRACE_COUNTER_ID1 call", 0x319009, 31415);
     TRACE_COUNTER_ID2("all", "TRACE_COUNTER_ID2 call", 0x319009,
@@ -472,14 +471,14 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
 
     TRACE_EVENT_COPY_BEGIN_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_COPY_BEGIN_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId, kThreadId, TimeTicks::FromInternalValue(12345));
+        kAsyncId, kThreadId, 12345);
     TRACE_EVENT_COPY_END_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_COPY_END_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId, kThreadId, TimeTicks::FromInternalValue(23456));
+        kAsyncId, kThreadId, 23456);
 
     TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId2, kThreadId, TimeTicks::FromInternalValue(34567));
+        kAsyncId2, kThreadId, 34567);
     TRACE_EVENT_ASYNC_STEP_PAST0("all", "TRACE_EVENT_ASYNC_STEP_PAST0 call",
                                  kAsyncId2, "step_end1");
     TRACE_EVENT_ASYNC_STEP_PAST1("all", "TRACE_EVENT_ASYNC_STEP_PAST1 call",
@@ -487,7 +486,7 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
 
     TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0("all",
         "TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0 call",
-        kAsyncId2, kThreadId, TimeTicks::FromInternalValue(45678));
+        kAsyncId2, kThreadId, 45678);
 
     TRACE_EVENT_OBJECT_CREATED_WITH_ID("all", "tracked object 1", 0x42);
     TRACE_EVENT_OBJECT_SNAPSHOT_WITH_ID(
@@ -2814,9 +2813,9 @@ TEST_F(TraceEventTestFixture, TraceBufferVectorReportFull) {
       TraceBuffer::CreateTraceBufferVectorOfSize(100));
   do {
     TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0(
-        "all", "with_timestamp", 0, 0, TimeTicks::Now());
+        "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
     TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0(
-        "all", "with_timestamp", 0, 0, TimeTicks::Now());
+        "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
   } while (!trace_log->BufferIsFull());
 
   EndTraceAndFlush();
@@ -3208,9 +3207,9 @@ TEST_F(TraceEventTestFixture, TimeOffset) {
     TRACE_EVENT0("all", "duration2");
   }
   TRACE_EVENT_BEGIN_WITH_ID_TID_AND_TIMESTAMP0(
-      "all", "with_timestamp", 0, 0, TimeTicks::Now());
+      "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
   TRACE_EVENT_END_WITH_ID_TID_AND_TIMESTAMP0(
-      "all", "with_timestamp", 0, 0, TimeTicks::Now());
+      "all", "with_timestamp", 0, 0, TimeTicks::Now().ToInternalValue());
 
   EndTraceAndFlush();
   DropTracedMetadataRecords();

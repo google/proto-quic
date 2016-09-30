@@ -51,18 +51,17 @@ class ClientMixin : public ClientInterface {
   ClientMixin(HostResolver* host_resolver,
               ProxyResolverErrorObserver* error_observer,
               NetLog* net_log,
-              const NetLogWithSource& net_log_with_source)
-      : host_resolver_(host_resolver, net_log_with_source),
+              const BoundNetLog& bound_net_log)
+      : host_resolver_(host_resolver, bound_net_log),
         error_observer_(error_observer),
         net_log_(net_log),
-        net_log_with_source_(net_log_with_source) {}
+        bound_net_log_(bound_net_log) {}
 
   // Overridden from ClientInterface:
   void Alert(const mojo::String& message) override {
     base::string16 message_str = message.To<base::string16>();
     auto callback = NetLog::StringCallback("message", &message_str);
-    net_log_with_source_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ALERT,
-                                  callback);
+    bound_net_log_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ALERT, callback);
     if (net_log_)
       net_log_->AddGlobalEntry(NetLogEventType::PAC_JAVASCRIPT_ALERT, callback);
   }
@@ -70,8 +69,7 @@ class ClientMixin : public ClientInterface {
   void OnError(int32_t line_number, const mojo::String& message) override {
     base::string16 message_str = message.To<base::string16>();
     auto callback = base::Bind(&NetLogErrorCallback, line_number, &message_str);
-    net_log_with_source_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ERROR,
-                                  callback);
+    bound_net_log_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ERROR, callback);
     if (net_log_)
       net_log_->AddGlobalEntry(NetLogEventType::PAC_JAVASCRIPT_ERROR, callback);
     if (error_observer_)
@@ -92,7 +90,7 @@ class ClientMixin : public ClientInterface {
   MojoHostResolverImpl host_resolver_;
   ProxyResolverErrorObserver* const error_observer_;
   NetLog* const net_log_;
-  const NetLogWithSource net_log_with_source_;
+  const BoundNetLog bound_net_log_;
 };
 
 // Implementation of ProxyResolver that connects to a Mojo service to evaluate
@@ -122,7 +120,7 @@ class ProxyResolverMojo : public ProxyResolver {
                      ProxyInfo* results,
                      const net::CompletionCallback& callback,
                      RequestHandle* request,
-                     const NetLogWithSource& net_log) override;
+                     const BoundNetLog& net_log) override;
   void CancelRequest(RequestHandle request) override;
   LoadState GetLoadState(RequestHandle request) const override;
 
@@ -159,7 +157,7 @@ class ProxyResolverMojo::Job
       const GURL& url,
       ProxyInfo* results,
       const CompletionCallback& callback,
-      const NetLogWithSource& net_log);
+      const BoundNetLog& net_log);
   ~Job() override;
 
   // Cancels the job and prevents the callback from being run.
@@ -190,7 +188,7 @@ ProxyResolverMojo::Job::Job(ProxyResolverMojo* resolver,
                             const GURL& url,
                             ProxyInfo* results,
                             const CompletionCallback& callback,
-                            const NetLogWithSource& net_log)
+                            const BoundNetLog& net_log)
     : ClientMixin<interfaces::ProxyResolverRequestClient>(
           resolver->host_resolver_,
           resolver->error_observer_.get(),
@@ -287,7 +285,7 @@ int ProxyResolverMojo::GetProxyForURL(const GURL& url,
                                       ProxyInfo* results,
                                       const CompletionCallback& callback,
                                       RequestHandle* request,
-                                      const NetLogWithSource& net_log) {
+                                      const BoundNetLog& net_log) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   if (!mojo_proxy_resolver_ptr_)
@@ -321,7 +319,7 @@ LoadState ProxyResolverMojo::GetLoadState(RequestHandle request) const {
 //
 // Note: a Job instance is not tied to a particular resolve request, and hence
 // there is no per-request logging to be done (any netlog events are only sent
-// globally) so this always uses an empty NetLogWithSource.
+// globally) so this always uses an empty BoundNetLog.
 class ProxyResolverFactoryMojo::Job
     : public ClientMixin<interfaces::ProxyResolverFactoryRequestClient>,
       public ProxyResolverFactory::Request {
@@ -335,7 +333,7 @@ class ProxyResolverFactoryMojo::Job
             factory->host_resolver_,
             error_observer.get(),
             factory->net_log_,
-            NetLogWithSource()),
+            BoundNetLog()),
         factory_(factory),
         resolver_(resolver),
         callback_(callback),

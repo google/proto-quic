@@ -19,7 +19,7 @@
 namespace net {
 
 class AuthCredentials;
-class NetLogWithSource;
+class BoundNetLog;
 class HttpRequestHeaders;
 struct HttpRequestInfo;
 class HttpResponseInfo;
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   // Profiling information for the request is saved to |net_log| if non-NULL.
   virtual int Start(const HttpRequestInfo* request_info,
                     const CompletionCallback& callback,
-                    const NetLogWithSource& net_log) = 0;
+                    const BoundNetLog& net_log) = 0;
 
   // Restarts the HTTP transaction, ignoring the last error.  This call can
   // only be made after a call to Start (or RestartIgnoringLastError) failed.

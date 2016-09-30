@@ -100,9 +100,7 @@ class WrappedStreamSocket : public StreamSocket {
   int GetLocalAddress(IPEndPoint* address) const override {
     return transport_->GetLocalAddress(address);
   }
-  const NetLogWithSource& NetLog() const override {
-    return transport_->NetLog();
-  }
+  const BoundNetLog& NetLog() const override { return transport_->NetLog(); }
   void SetSubresourceSpeculation() override {
     transport_->SetSubresourceSpeculation();
   }
@@ -693,12 +691,11 @@ class AsyncFailingChannelIDStore : public ChannelIDStore {
 // anything.
 class MockCTVerifier : public CTVerifier {
  public:
-  MOCK_METHOD5(Verify,
-               int(X509Certificate*,
-                   const std::string&,
-                   const std::string&,
-                   ct::CTVerifyResult*,
-                   const NetLogWithSource&));
+  MOCK_METHOD5(Verify, int(X509Certificate*,
+                           const std::string&,
+                           const std::string&,
+                           ct::CTVerifyResult*,
+                           const BoundNetLog&));
   MOCK_METHOD1(SetObserver, void(CTVerifier::Observer*));
 };
 
@@ -708,12 +705,12 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   MOCK_METHOD3(DoesConformToCertPolicy,
                ct::CertPolicyCompliance(X509Certificate* cert,
                                         const ct::SCTList&,
-                                        const NetLogWithSource&));
+                                        const BoundNetLog&));
   MOCK_METHOD4(DoesConformToCTEVPolicy,
                ct::EVPolicyCompliance(X509Certificate* cert,
                                       const ct::EVCertsWhitelist*,
                                       const ct::SCTList&,
-                                      const NetLogWithSource&));
+                                      const BoundNetLog&));
 };
 
 class MockRequireCTDelegate : public TransportSecurityState::RequireCTDelegate {

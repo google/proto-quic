@@ -130,6 +130,7 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   void ContinueWithCertificate(X509Certificate* client_cert,
                                SSLPrivateKey* client_private_key) override;
   void ContinueDespiteLastError() override;
+  void ResumeNetworkStart() override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;
   void StopCaching() override;
   bool GetFullRequestHeaders(HttpRequestHeaders* headers) const override;

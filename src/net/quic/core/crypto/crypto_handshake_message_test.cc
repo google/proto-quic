@@ -117,13 +117,6 @@ TEST(CryptoHandshakeMessageTest, ServerDesignatedConnectionId) {
   EXPECT_EQ(str, message5.DebugString());
 }
 
-TEST(CryptoHandshakeMessageTest, HasStringPiece) {
-  CryptoHandshakeMessage message;
-  EXPECT_FALSE(message.HasStringPiece(kRCID));
-  message.SetStringPiece(kRCID, "foo");
-  EXPECT_TRUE(message.HasStringPiece(kRCID));
-}
-
 }  // namespace
 }  // namespace test
 }  // namespace net

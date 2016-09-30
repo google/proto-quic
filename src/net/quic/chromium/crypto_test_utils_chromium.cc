@@ -130,8 +130,7 @@ std::unique_ptr<ProofVerifier> CryptoTestUtils::RealProofVerifierForTesting() {
 
 // static
 ProofVerifyContext* CryptoTestUtils::ProofVerifyContextForTesting() {
-  return new ProofVerifyContextChromium(/*cert_verify_flags=*/0,
-                                        NetLogWithSource());
+  return new ProofVerifyContextChromium(/*cert_verify_flags=*/0, BoundNetLog());
 }
 
 }  // namespace test

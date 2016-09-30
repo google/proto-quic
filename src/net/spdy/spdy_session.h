@@ -83,7 +83,7 @@ const int kYieldAfterDurationMilliseconds = 20;
 const SpdyStreamId kFirstStreamId = 1;
 const SpdyStreamId kLastStreamId = 0x7fffffff;
 
-class NetLogWithSource;
+class BoundNetLog;
 struct LoadTimingInfo;
 class ProxyDelegate;
 class SpdyStream;
@@ -178,7 +178,7 @@ class NET_EXPORT_PRIVATE SpdyStreamRequest {
                    const base::WeakPtr<SpdySession>& session,
                    const GURL& url,
                    RequestPriority priority,
-                   const NetLogWithSource& net_log,
+                   const BoundNetLog& net_log,
                    const CompletionCallback& callback);
 
   // Cancels any pending stream creation request. May be called
@@ -207,7 +207,7 @@ class NET_EXPORT_PRIVATE SpdyStreamRequest {
   SpdyStreamType type() const { return type_; }
   const GURL& url() const { return url_; }
   RequestPriority priority() const { return priority_; }
-  const NetLogWithSource& net_log() const { return net_log_; }
+  const BoundNetLog& net_log() const { return net_log_; }
 
   void Reset();
 
@@ -216,7 +216,7 @@ class NET_EXPORT_PRIVATE SpdyStreamRequest {
   base::WeakPtr<SpdyStream> stream_;
   GURL url_;
   RequestPriority priority_;
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   CompletionCallback callback_;
 
   base::WeakPtrFactory<SpdyStreamRequest> weak_ptr_factory_;
@@ -294,6 +294,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   SpdySession(const SpdySessionKey& spdy_session_key,
               HttpServerProperties* http_server_properties,
               TransportSecurityState* transport_security_state,
+              bool verify_domain_authentication,
               bool enable_sending_initial_data,
               bool enable_ping_based_connection_checking,
               size_t session_max_recv_window_size,
@@ -321,9 +322,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // okay to create a new stream (in which case |spdy_stream| is
   // reset).  Returns an error (not ERR_IO_PENDING) otherwise, and
   // resets |spdy_stream|.
-  int GetPushStream(const GURL& url,
-                    base::WeakPtr<SpdyStream>* spdy_stream,
-                    const NetLogWithSource& stream_net_log);
+  int GetPushStream(
+      const GURL& url,
+      base::WeakPtr<SpdyStream>* spdy_stream,
+      const BoundNetLog& stream_net_log);
 
   // Initialize the session with the given connection. |is_secure|
   // must indicate whether |connection| uses an SSL socket or not; it
@@ -413,12 +415,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Returns the protocol negotiated via ALPN for the underlying socket.
   NextProto GetNegotiatedProtocol() const;
 
-  // Generates the signature used in Token Binding using |*key| and for a Token
-  // Binding of type |tb_type|, putting the signature in |*out|. Returns a net
-  // error code of OK or ERR_FAILED.
-  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                 TokenBindingType tb_type,
-                                 std::vector<uint8_t>* out);
+  // Signs the EKM value for Token Binding from the TLS layer using |*key| and
+  // puts the result in |*out|. Returns OK or ERR_FAILED.
+  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
+                                    std::vector<uint8_t>* out);
 
   // Send a WINDOW_UPDATE frame for a stream. Called by a stream
   // whenever receive window size is increased.
@@ -516,7 +516,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // session flow control.
   bool IsSendStalled() const { return session_send_window_size_ == 0; }
 
-  const NetLogWithSource& net_log() const { return net_log_; }
+  const BoundNetLog& net_log() const { return net_log_; }
 
   int GetPeerAddress(IPEndPoint* address) const;
   int GetLocalAddress(IPEndPoint* address) const;
@@ -1168,9 +1168,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // in the past.
   std::deque<SpdyStreamId> stream_send_unstall_queue_[NUM_PRIORITIES];
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   // Outside of tests, these should always be true.
+  bool verify_domain_authentication_;
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
 

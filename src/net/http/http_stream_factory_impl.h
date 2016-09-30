@@ -44,7 +44,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                                    const SSLConfig& server_ssl_config,
                                    const SSLConfig& proxy_ssl_config,
                                    HttpStreamRequest::Delegate* delegate,
-                                   const NetLogWithSource& net_log) override;
+                                   const BoundNetLog& net_log) override;
 
   HttpStreamRequest* RequestWebSocketHandshakeStream(
       const HttpRequestInfo& info,
@@ -53,7 +53,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
-      const NetLogWithSource& net_log) override;
+      const BoundNetLog& net_log) override;
 
   HttpStreamRequest* RequestBidirectionalStreamImpl(
       const HttpRequestInfo& info,
@@ -61,7 +61,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       const SSLConfig& server_ssl_config,
       const SSLConfig& proxy_ssl_config,
       HttpStreamRequest::Delegate* delegate,
-      const NetLogWithSource& net_log) override;
+      const BoundNetLog& net_log) override;
 
   void PreconnectStreams(int num_streams, const HttpRequestInfo& info) override;
   const HostMappingRules* GetHostMappingRules() const override;
@@ -101,7 +101,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
       HttpStreamRequest::Delegate* delegate,
       WebSocketHandshakeStreamBase::CreateHelper* create_helper,
       HttpStreamRequest::StreamType stream_type,
-      const NetLogWithSource& net_log);
+      const BoundNetLog& net_log);
 
   // Called when a SpdySession is ready. It will find appropriate Requests and
   // fulfill them. |direct| indicates whether or not |spdy_session| uses a
@@ -110,10 +110,10 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                              bool direct,
                              const SSLConfig& used_ssl_config,
                              const ProxyInfo& used_proxy_info,
-                             bool was_alpn_negotiated,
+                             bool was_npn_negotiated,
                              NextProto negotiated_protocol,
                              bool using_spdy,
-                             const NetLogWithSource& net_log);
+                             const BoundNetLog& net_log);
 
   // Called when the Job detects that the endpoint indicated by the
   // Alternate-Protocol does not work. Lets the factory update

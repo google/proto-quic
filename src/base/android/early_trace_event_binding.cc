@@ -32,12 +32,10 @@ static void RecordEarlyEvent(JNIEnv* env,
 
   INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(
       TRACE_EVENT_PHASE_BEGIN, kEarlyJavaCategory, name.c_str(),
-      trace_event_internal::kNoId, thread_id,
-      TimeTicks::FromInternalValue(begin_us), TRACE_EVENT_FLAG_COPY);
+      trace_event_internal::kNoId, thread_id, begin_us, TRACE_EVENT_FLAG_COPY);
   INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(
       TRACE_EVENT_PHASE_END, kEarlyJavaCategory, name.c_str(),
-      trace_event_internal::kNoId, thread_id,
-      TimeTicks::FromInternalValue(end_us), TRACE_EVENT_FLAG_COPY);
+      trace_event_internal::kNoId, thread_id, end_us, TRACE_EVENT_FLAG_COPY);
 }
 
 bool RegisterEarlyTraceEvent(JNIEnv* env) {

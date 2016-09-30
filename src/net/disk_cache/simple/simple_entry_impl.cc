@@ -184,8 +184,7 @@ SimpleEntryImpl::SimpleEntryImpl(net::CacheType cache_type,
       doomed_(false),
       state_(STATE_UNINITIALIZED),
       synchronous_entry_(NULL),
-      net_log_(
-          net::NetLogWithSource::Make(net_log,
+      net_log_(net::BoundNetLog::Make(net_log,
                                       net::NetLogSourceType::DISK_CACHE_ENTRY)),
       stream_0_data_(new net::GrowableIOBuffer()) {
   static_assert(arraysize(data_size_) == arraysize(crc32s_end_offset_),

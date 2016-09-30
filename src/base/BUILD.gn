@@ -485,6 +485,7 @@ component("base") {
     "memory/memory_pressure_monitor_win.h",
     "memory/ptr_util.h",
     "memory/raw_scoped_refptr_mismatch_checker.h",
+    "memory/ref_counted.cc",
     "memory/ref_counted.h",
     "memory/ref_counted_delete_on_message_loop.h",
     "memory/ref_counted_memory.cc",

@@ -144,7 +144,13 @@ error:
   return 0;
 }
 
-const EVP_AEAD *EVP_AEAD_CTX_aead(const EVP_AEAD_CTX *ctx) { return ctx->aead; }
+int EVP_AEAD_CTX_get_rc4_state(const EVP_AEAD_CTX *ctx, const RC4_KEY **out_key) {
+  if (ctx->aead->get_rc4_state == NULL) {
+    return 0;
+  }
+
+  return ctx->aead->get_rc4_state(ctx, out_key);
+}
 
 int EVP_AEAD_CTX_get_iv(const EVP_AEAD_CTX *ctx, const uint8_t **out_iv,
                         size_t *out_len) {

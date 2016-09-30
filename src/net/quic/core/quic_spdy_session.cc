@@ -16,9 +16,7 @@ namespace net {
 
 QuicSpdySession::QuicSpdySession(QuicConnection* connection,
                                  const QuicConfig& config)
-    : QuicSession(connection, config),
-      force_hol_blocking_(false),
-      server_push_enabled_(false) {}
+    : QuicSession(connection, config), force_hol_blocking_(false) {}
 
 QuicSpdySession::~QuicSpdySession() {
   // Set the streams' session pointers in closed and dynamic stream lists
@@ -163,10 +161,6 @@ void QuicSpdySession::OnConfigNegotiated() {
     // side (and mainly there just in tests and toys), where
     // autotuning and/or large buffers are not enabled by default.
     headers_stream_->flow_controller()->set_auto_tune_receive_window(true);
-  }
-
-  if (version > QUIC_VERSION_34) {
-    server_push_enabled_ = FLAGS_quic_enable_server_push_by_default;
   }
 }
 

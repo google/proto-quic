@@ -103,13 +103,12 @@ TransportConnectJob::TransportConnectJob(
     HostResolver* host_resolver,
     Delegate* delegate,
     NetLog* net_log)
-    : ConnectJob(
-          group_name,
-          timeout_duration,
-          priority,
-          respect_limits,
-          delegate,
-          NetLogWithSource::Make(net_log, NetLogSourceType::CONNECT_JOB)),
+    : ConnectJob(group_name,
+                 timeout_duration,
+                 priority,
+                 respect_limits,
+                 delegate,
+                 BoundNetLog::Make(net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
@@ -559,7 +558,7 @@ int TransportClientSocketPool::RequestSocket(const std::string& group_name,
                                              RespectLimits respect_limits,
                                              ClientSocketHandle* handle,
                                              const CompletionCallback& callback,
-                                             const NetLogWithSource& net_log) {
+                                             const BoundNetLog& net_log) {
   const scoped_refptr<TransportSocketParams>* casted_params =
       static_cast<const scoped_refptr<TransportSocketParams>*>(params);
 
@@ -570,7 +569,7 @@ int TransportClientSocketPool::RequestSocket(const std::string& group_name,
 }
 
 void TransportClientSocketPool::NetLogTcpClientSocketPoolRequestedSocket(
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     const scoped_refptr<TransportSocketParams>* casted_params) {
   if (net_log.IsCapturing()) {
     // TODO(eroman): Split out the host and port parameters.
@@ -585,7 +584,7 @@ void TransportClientSocketPool::RequestSockets(
     const std::string& group_name,
     const void* params,
     int num_sockets,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   const scoped_refptr<TransportSocketParams>* casted_params =
       static_cast<const scoped_refptr<TransportSocketParams>*>(params);
 

@@ -74,10 +74,6 @@
     "label": "//:All_syzygy",
     "type": "additional_compile_target",
   },
-  "AppRTCDemoTest": {
-    "label": "//webrtc/examples:AppRTCDemoTest",
-    "type": "additional_compile_target",
-  },
   "accessibility_unittests":  {
     "label": "//ui/accessibility:accessibility_unittests",
     "type": "raw",
@@ -85,7 +81,7 @@
   },
   "android_junit_tests": {
     "label": "//webrtc:android_juint_tests",
-    "type": "junit_test",
+    "type": "console_test_launcher",
   },
   "android_webview_test_apk": {
     "label": "//android_webview/test:android_webview_test_apk",
@@ -564,10 +560,6 @@
     "label": "//third_party/libaddressinput:libaddressinput_unittests",
     "type": "console_test_launcher",
   },
-  "libjingle_peerconnection_android_unittest": {
-    "label": "//webrtc/api:libjingle_peerconnection_android_unittest",
-    "type": "additional_compile_target",
-  },
   # See http://crbug.com/585151
   "libphonenumber_unittests": {
     "label": "//third_party/libphonenumber:libphonenumber_unittests",
@@ -926,10 +918,6 @@
   },
   "voice_engine_unittests": {
     "label": "//webrtc/voice_engine:voice_engine_unittests",
-    "type": "console_test_launcher",
-  },
-  "vr_shell_unittests": {
-    "label": "//chrome/browser/android/vr_shell:vr_shell_unittests",
     "type": "console_test_launcher",
   },
   "webapk_client_junit_tests": {

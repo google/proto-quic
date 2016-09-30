@@ -13,7 +13,6 @@
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_header_list.h"
-#include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/core/quic_time.h"
 #include "net/spdy/spdy_protocol.h"
@@ -196,22 +195,6 @@ class QuicHeadersStream::SpdyFramerVisitor
     switch (id) {
       case SETTINGS_HEADER_TABLE_SIZE:
         stream_->UpdateHeaderEncoderTableSize(value);
-        break;
-      case SETTINGS_ENABLE_PUSH:
-        if (FLAGS_quic_enable_server_push_by_default &&
-            stream_->session()->perspective() == Perspective::IS_SERVER) {
-          // See rfc7540, Section 6.5.2.
-          if (value > 1) {
-            CloseConnection("Invalid value for SETTINGS_ENABLE_PUSH: " +
-                            base::IntToString(value));
-            return;
-          }
-          stream_->UpdateEnableServerPush(value > 0);
-          break;
-        } else {
-          CloseConnection("Unsupported field of HTTP/2 SETTINGS frame: " +
-                          base::IntToString(id));
-        }
         break;
       // TODO(fayang): Need to support SETTINGS_MAX_HEADER_LIST_SIZE when
       // clients are actually sending it.
@@ -608,10 +591,6 @@ void QuicHeadersStream::SetHpackDecoderDebugVisitor(
 
 void QuicHeadersStream::UpdateHeaderEncoderTableSize(uint32_t value) {
   spdy_framer_.UpdateHeaderEncoderTableSize(value);
-}
-
-void QuicHeadersStream::UpdateEnableServerPush(bool value) {
-  spdy_session_->set_server_push_enabled(value);
 }
 
 bool QuicHeadersStream::OnDataFrameHeader(QuicStreamId stream_id,

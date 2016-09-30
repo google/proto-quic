@@ -27,7 +27,7 @@ bool HttpAuthHandler::InitFromChallenge(HttpAuthChallengeTokenizer* challenge,
                                         HttpAuth::Target target,
                                         const SSLInfo& ssl_info,
                                         const GURL& origin,
-                                        const NetLogWithSource& net_log) {
+                                        const BoundNetLog& net_log) {
   origin_ = origin;
   target_ = target;
   score_ = -1;

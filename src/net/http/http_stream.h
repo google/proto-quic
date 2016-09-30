@@ -22,7 +22,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
-#include "net/ssl/token_binding.h"
 
 namespace crypto {
 class ECPrivateKey;
@@ -30,7 +29,7 @@ class ECPrivateKey;
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class HttpNetworkSession;
 class HttpRequestHeaders;
 struct HttpRequestInfo;
@@ -51,7 +50,7 @@ class NET_EXPORT_PRIVATE HttpStream {
   // Returns a net error code, possibly ERR_IO_PENDING.
   virtual int InitializeStream(const HttpRequestInfo* request_info,
                                RequestPriority priority,
-                               const NetLogWithSource& net_log,
+                               const BoundNetLog& net_log,
                                const CompletionCallback& callback) = 0;
 
   // Writes the headers and uploads body data to the underlying socket.
@@ -158,12 +157,10 @@ class NET_EXPORT_PRIVATE HttpStream {
   // and does not modify |endpoint| if it is unavailable.
   virtual bool GetRemoteEndpoint(IPEndPoint* endpoint) = 0;
 
-  // Generates the signature used in Token Binding using |*key| and for a Token
-  // Binding of type |tb_type|, putting the signature in |*out|. Returns OK or
-  // ERR_FAILED.
-  virtual Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                         TokenBindingType tb_type,
-                                         std::vector<uint8_t>* out) = 0;
+  // Signs the EKM value for Token Binding from the TLS layer using |*key| and
+  // puts the result in |*out|. Returns OK or ERR_FAILED.
+  virtual Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
+                                            std::vector<uint8_t>* out) = 0;
 
   // In the case of an HTTP error or redirect, flush the response body (usually
   // a simple error or "this page has moved") so that we can re-use the

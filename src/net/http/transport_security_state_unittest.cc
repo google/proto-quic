@@ -11,7 +11,6 @@
 #include "base/base64.h"
 #include "base/files/file_path.h"
 #include "base/json/json_reader.h"
-#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/rand_util.h"
 #include "base/sha1.h"
@@ -2316,8 +2315,7 @@ TEST_F(TransportSecurityStateTest, RequireCTForSymantec) {
   // necessary.
   hashes.clear();
   hashes.push_back(HashValue(symantec_hash_value));
-  base::FieldTrialList field_trial_list(
-      base::MakeUnique<base::MockEntropyProvider>());
+  base::FieldTrialList field_trial_list(new base::MockEntropyProvider());
   base::FieldTrialList::CreateFieldTrial("EnforceCTForProblematicRoots",
                                          "disabled");
 

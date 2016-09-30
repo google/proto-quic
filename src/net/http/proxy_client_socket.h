@@ -68,7 +68,7 @@ class NET_EXPORT_PRIVATE ProxyClientSocket : public StreamSocket {
   // construction/ this method should be called.
   static int HandleProxyAuthChallenge(HttpAuthController* auth,
                                       HttpResponseInfo* response,
-                                      const NetLogWithSource& net_log);
+                                      const BoundNetLog& net_log);
 
   // Logs (to the log and in a histogram) a blocked CONNECT response.
   static void LogBlockedTunnelResponse(int http_response_code,

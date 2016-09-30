@@ -113,7 +113,7 @@ int UDPClientSocket::SetDoNotFragment() {
   return socket_.SetDoNotFragment();
 }
 
-const NetLogWithSource& UDPClientSocket::NetLog() const {
+const BoundNetLog& UDPClientSocket::NetLog() const {
   return socket_.NetLog();
 }
 

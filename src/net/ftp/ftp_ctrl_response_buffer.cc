@@ -25,8 +25,10 @@ FtpCtrlResponse::FtpCtrlResponse(const FtpCtrlResponse& other) = default;
 
 FtpCtrlResponse::~FtpCtrlResponse() {}
 
-FtpCtrlResponseBuffer::FtpCtrlResponseBuffer(const NetLogWithSource& net_log)
-    : multiline_(false), net_log_(net_log) {}
+FtpCtrlResponseBuffer::FtpCtrlResponseBuffer(const BoundNetLog& net_log)
+    : multiline_(false),
+      net_log_(net_log) {
+}
 
 FtpCtrlResponseBuffer::~FtpCtrlResponseBuffer() {}
 

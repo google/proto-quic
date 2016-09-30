@@ -15,7 +15,7 @@
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 
 // A client socket that uses UDP as the transport layer.
 class NET_EXPORT_PRIVATE UDPClientSocket : public DatagramClientSocket {
@@ -45,7 +45,7 @@ class NET_EXPORT_PRIVATE UDPClientSocket : public DatagramClientSocket {
   int SetReceiveBufferSize(int32_t size) override;
   int SetSendBufferSize(int32_t size) override;
   int SetDoNotFragment() override;
-  const NetLogWithSource& NetLog() const override;
+  const BoundNetLog& NetLog() const override;
 
   // Switch to use non-blocking IO. Must be called right after construction and
   // before other calls.

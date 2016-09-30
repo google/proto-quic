@@ -154,7 +154,7 @@ class NET_EXPORT URLRequestThrottlerEntry
   // Canonicalized URL string that this entry is for; used for logging only.
   std::string url_id_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestThrottlerEntry);
 };

@@ -49,7 +49,7 @@ class NET_EXPORT_PRIVATE HttpAuthHandlerNTLM : public HttpAuthHandler {
                           const GURL& origin,
                           CreateReason reason,
                           int digest_nonce_count,
-                          const NetLogWithSource& net_log,
+                          const BoundNetLog& net_log,
                           std::unique_ptr<HttpAuthHandler>* handler) override;
 #if defined(NTLM_SSPI)
     // Set the SSPILibrary to use. Typically the only callers which need to use

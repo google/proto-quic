@@ -148,7 +148,7 @@ bool QuicSimpleClient::CreateUDPSocket() {
   packet_reader_.reset(new QuicChromiumPacketReader(
       socket_.get(), &clock_, this, kQuicYieldAfterPacketsRead,
       QuicTime::Delta::FromMilliseconds(kQuicYieldAfterDurationMilliseconds),
-      NetLogWithSource()));
+      BoundNetLog()));
 
   if (socket != nullptr) {
     socket->Close();

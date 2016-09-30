@@ -46,7 +46,7 @@ class FakeStreamSocket : public StreamSocket {
 
   int GetLocalAddress(IPEndPoint* address) const override { return ERR_FAILED; }
 
-  const NetLogWithSource& NetLog() const override { return net_log_; }
+  const BoundNetLog& NetLog() const override { return bound_net_log_; }
 
   void SetSubresourceSpeculation() override { return; }
   void SetOmniboxSpeculation() override { return; }
@@ -90,7 +90,7 @@ class FakeStreamSocket : public StreamSocket {
   int SetSendBufferSize(int32_t size) override { return ERR_FAILED; }
 
  private:
-  NetLogWithSource net_log_;
+  BoundNetLog bound_net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(FakeStreamSocket);
 };

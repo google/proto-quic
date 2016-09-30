@@ -95,8 +95,9 @@ int ProducerToInt(std::unique_ptr<SpdyBufferProducer> producer) {
 // -- be careful to not call any functions that expect the session to
 // be there.
 SpdyStream* MakeTestStream(RequestPriority priority) {
-  return new SpdyStream(SPDY_BIDIRECTIONAL_STREAM, base::WeakPtr<SpdySession>(),
-                        GURL(), priority, 0, 0, NetLogWithSource());
+  return new SpdyStream(
+      SPDY_BIDIRECTIONAL_STREAM, base::WeakPtr<SpdySession>(),
+      GURL(), priority, 0, 0, BoundNetLog());
 }
 
 // Add some frame producers of different priority. The producers

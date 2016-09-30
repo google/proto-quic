@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketReader {
                            Visitor* visitor,
                            int yield_after_packets,
                            QuicTime::Delta yield_after_duration,
-                           const NetLogWithSource& net_log);
+                           const BoundNetLog& net_log);
   virtual ~QuicChromiumPacketReader();
 
   // Causes the QuicConnectionHelper to start reading from the socket
@@ -62,7 +62,7 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketReader {
   QuicTime::Delta yield_after_duration_;
   QuicTime yield_after_;
   scoped_refptr<IOBufferWithSize> read_buffer_;
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   base::WeakPtrFactory<QuicChromiumPacketReader> weak_factory_;
 

@@ -1284,11 +1284,8 @@ class MetaBuildWrapper(object):
       if 'invalid_targets' in gn_outp:
         outp['invalid_targets'] = gn_outp['invalid_targets']
       if 'compile_targets' in gn_outp:
-        if 'all' in gn_outp['compile_targets']:
-          outp['compile_targets'] = ['all']
-        else:
-          outp['compile_targets'] = [
-              label.replace('//', '') for label in gn_outp['compile_targets']]
+        outp['compile_targets'] = [
+          label.replace('//', '') for label in gn_outp['compile_targets']]
       if 'test_targets' in gn_outp:
         outp['test_targets'] = [
           labels_to_targets[label] for label in gn_outp['test_targets']]

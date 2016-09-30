@@ -31,7 +31,7 @@ class Origin;
 
 namespace net {
 
-class NetLogWithSource;
+class BoundNetLog;
 class IOBuffer;
 class URLRequestContext;
 struct WebSocketHandshakeRequestInfo;
@@ -54,7 +54,7 @@ class NET_EXPORT WebSocketChannel {
       const GURL&,
       const std::string&,
       URLRequestContext*,
-      const NetLogWithSource&,
+      const BoundNetLog&,
       std::unique_ptr<WebSocketStream::ConnectDelegate>)>
       WebSocketStreamRequestCreationCallback;
 

@@ -48,7 +48,7 @@ class NET_EXPORT UnixDomainClientSocket : public StreamSocket {
   bool IsConnectedAndIdle() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
-  const NetLogWithSource& NetLog() const override;
+  const BoundNetLog& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -81,7 +81,7 @@ class NET_EXPORT UnixDomainClientSocket : public StreamSocket {
   std::unique_ptr<SocketPosix> socket_;
   // This net log is just to comply StreamSocket::NetLog(). It throws away
   // everything.
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(UnixDomainClientSocket);
 };

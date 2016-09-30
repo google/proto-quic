@@ -182,14 +182,15 @@ extern "C" {
 #define SSL_aCERT (SSL_aRSA | SSL_aECDSA)
 
 /* Bits for |algorithm_enc| (symmetric encryption). */
-#define SSL_3DES                 0x00000001L
-#define SSL_AES128               0x00000002L
-#define SSL_AES256               0x00000004L
-#define SSL_AES128GCM            0x00000008L
-#define SSL_AES256GCM            0x00000010L
-#define SSL_CHACHA20POLY1305_OLD 0x00000020L
-#define SSL_eNULL                0x00000040L
-#define SSL_CHACHA20POLY1305     0x00000080L
+#define SSL_3DES 0x00000001L
+#define SSL_RC4 0x00000002L
+#define SSL_AES128 0x00000004L
+#define SSL_AES256 0x00000008L
+#define SSL_AES128GCM 0x00000010L
+#define SSL_AES256GCM 0x00000020L
+#define SSL_CHACHA20POLY1305_OLD 0x00000040L
+#define SSL_eNULL 0x00000080L
+#define SSL_CHACHA20POLY1305 0x00000100L
 
 #define SSL_AES (SSL_AES128 | SSL_AES256 | SSL_AES128GCM | SSL_AES256GCM)
 
@@ -683,7 +684,7 @@ void dtls_clear_outgoing_messages(SSL *ssl);
 void ssl_do_info_callback(const SSL *ssl, int type, int value);
 
 /* ssl_do_msg_callback calls |ssl|'s message callback, if set. */
-void ssl_do_msg_callback(SSL *ssl, int is_write, int content_type,
+void ssl_do_msg_callback(SSL *ssl, int is_write, int version, int content_type,
                          const void *buf, size_t len);
 
 
@@ -896,20 +897,13 @@ struct ssl_handshake_st {
   uint8_t secret[EVP_MAX_MD_SIZE];
   uint8_t traffic_secret_0[EVP_MAX_MD_SIZE];
 
-  /* ecdh_ctx is the active client ECDH offer in TLS 1.3. */
-  SSL_ECDH_CTX ecdh_ctx;
-
-  /* retry_group is the group ID selected by the server in HelloRetryRequest in
-   * TLS 1.3. */
+  SSL_ECDH_CTX *groups;
+  size_t groups_len;
+  /* retry_group is the group ID selected by the server in HelloRetryRequest. */
   uint16_t retry_group;
-
-  /* key_share_bytes is the value of the previously sent KeyShare extension by
-   * the client in TLS 1.3. */
+  /* key_share_bytes is the value of the previously sent KeyShare extension. */
   uint8_t *key_share_bytes;
   size_t key_share_bytes_len;
-
-  /* public_key, for servers, is the key share to be sent to the client in TLS
-   * 1.3. */
   uint8_t *public_key;
   size_t public_key_len;
 
@@ -921,13 +915,11 @@ struct ssl_handshake_st {
   size_t num_peer_sigalgs;
 
   uint8_t session_tickets_sent;
-
-  /* peer_psk_identity_hint, on the client, is the psk_identity_hint sent by the
-   * server when using a TLS 1.2 PSK key exchange. */
-  char *peer_psk_identity_hint;
 } /* SSL_HANDSHAKE */;
 
 SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl));
+
+void ssl_handshake_clear_groups(SSL_HANDSHAKE *hs);
 
 /* ssl_handshake_free releases all memory associated with |hs|. */
 void ssl_handshake_free(SSL_HANDSHAKE *hs);
@@ -976,10 +968,6 @@ int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
 int ssl_ext_pre_shared_key_add_serverhello(SSL *ssl, CBB *out);
 
 int ssl_add_client_hello_body(SSL *ssl, CBB *body);
-
-/* ssl_clear_tls13_state releases client state only needed for TLS 1.3. It
- * should be called once the version is known to be TLS 1.2 or earlier. */
-void ssl_clear_tls13_state(SSL *ssl);
 
 
 /* SSLKEYLOGFILE functions. */
@@ -1087,10 +1075,14 @@ struct ssl_protocol_method_st {
   uint16_t min_version;
   /* max_version is the maximum implemented version. */
   uint16_t max_version;
-  /* version_from_wire maps |wire_version| to a protocol version. On success, it
-   * sets |*out_version| to the result and returns one. If the version is
-   * unknown, it returns zero. */
-  int (*version_from_wire)(uint16_t *out_version, uint16_t wire_version);
+  /* version_from_wire maps |wire_version| to a protocol version. For
+   * SSLv3/TLS, the version is returned as-is. For DTLS, the corresponding TLS
+   * version is used. Note that this mapping is not injective but preserves
+   * comparisons.
+   *
+   * TODO(davidben): To normalize some DTLS-specific code, move away from using
+   * the wire version except at API boundaries. */
+  uint16_t (*version_from_wire)(uint16_t wire_version);
   /* version_to_wire maps |version| to the wire representation. It is an error
    * to call it with an invalid version. */
   uint16_t (*version_to_wire)(uint16_t version);
@@ -1269,8 +1261,6 @@ int ssl_session_is_context_valid(const SSL *ssl, const SSL_SESSION *session);
 /* ssl_session_is_time_valid returns one if |session| is still valid and zero if
  * it has expired. */
 int ssl_session_is_time_valid(const SSL *ssl, const SSL_SESSION *session);
-
-void ssl_set_session(SSL *ssl, SSL_SESSION *session);
 
 enum ssl_session_result_t {
   ssl_session_success,
@@ -1498,10 +1488,21 @@ int ssl3_can_false_start(const SSL *ssl);
  * |version|. */
 const SSL3_ENC_METHOD *ssl3_get_enc_method(uint16_t version);
 
-/* ssl_get_version_range sets |*out_min_version| and |*out_max_version| to the
- * minimum and maximum enabled protocol versions, respectively. */
+/* ssl_get_full_version_range sets |*out_min_version|, |*out_fallback_version|,
+ * and |*out_max_version| to the minimum, fallback, and maximum enabled protocol
+ * versions, respectively. The fallback version is the effective maximium
+ * version used throughout the stack and the maximum version is the true maximum
+ * for downgrade purposes. */
+int ssl_get_full_version_range(const SSL *ssl, uint16_t *out_min_version,
+                               uint16_t *out_fallback_version,
+                               uint16_t *out_max_version);
+
+/* ssl_get_version_range sets |*out_min_version| and
+ * |*out_effective_max_version| to the minimum and maximum enabled protocol
+ * versions, respectively. Note that, if there is a fallback version set, it
+ * returns it as the maximum version. */
 int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
-                          uint16_t *out_max_version);
+                          uint16_t *out_effective_max_version);
 
 /* ssl3_protocol_version returns |ssl|'s protocol version. It is an error to
  * call this function before the version is determined. */

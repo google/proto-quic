@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
   virtual int GetLocalAddress(IPEndPoint* address) const = 0;
 
   // Gets the NetLog for this socket.
-  virtual const NetLogWithSource& NetLog() const = 0;
+  virtual const BoundNetLog& NetLog() const = 0;
 
   // Set the annotation to indicate this socket was created for speculative
   // reasons.  This call is generally forwarded to a basic TCPClientSocket*,

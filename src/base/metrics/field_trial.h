@@ -58,7 +58,6 @@
 #include <stdint.h>
 
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -339,12 +338,11 @@ class BASE_EXPORT FieldTrialList {
 
   // This singleton holds the global list of registered FieldTrials.
   //
-  // To support one-time randomized field trials, specify a non-null
+  // To support one-time randomized field trials, specify a non-NULL
   // |entropy_provider| which should be a source of uniformly distributed
-  // entropy values. If one time randomization is not desired, pass in null for
-  // |entropy_provider|.
-  explicit FieldTrialList(
-      std::unique_ptr<const FieldTrial::EntropyProvider> entropy_provider);
+  // entropy values. Takes ownership of |entropy_provider|. If one time
+  // randomization is not desired, pass in NULL for |entropy_provider|.
+  explicit FieldTrialList(const FieldTrial::EntropyProvider* entropy_provider);
 
   // Destructor Release()'s references to all registered FieldTrial instances.
   ~FieldTrialList();

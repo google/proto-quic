@@ -165,13 +165,13 @@ const (
 	signatureECDSAWithP521AndSHA512 signatureAlgorithm = 0x0603
 
 	// RSASSA-PSS algorithms
-	signatureRSAPSSWithSHA256 signatureAlgorithm = 0x0804
-	signatureRSAPSSWithSHA384 signatureAlgorithm = 0x0805
-	signatureRSAPSSWithSHA512 signatureAlgorithm = 0x0806
+	signatureRSAPSSWithSHA256 signatureAlgorithm = 0x0700
+	signatureRSAPSSWithSHA384 signatureAlgorithm = 0x0701
+	signatureRSAPSSWithSHA512 signatureAlgorithm = 0x0702
 
 	// EdDSA algorithms
-	signatureEd25519 signatureAlgorithm = 0x0807
-	signatureEd448   signatureAlgorithm = 0x0808
+	signatureEd25519 signatureAlgorithm = 0x0703
+	signatureEd448   signatureAlgorithm = 0x0704
 )
 
 // supportedSignatureAlgorithms contains the default supported signature
@@ -791,10 +791,6 @@ type ProtocolBugs struct {
 	// type to be sent with the wrong value.
 	SendWrongMessageType byte
 
-	// SendTrailingMessageData, if non-zero, causes messages of the
-	// specified type to be sent with trailing data.
-	SendTrailingMessageData byte
-
 	// FragmentMessageTypeMismatch, if true, causes all non-initial
 	// handshake fragments in DTLS to have the wrong message type.
 	FragmentMessageTypeMismatch bool
@@ -1071,15 +1067,6 @@ type ProtocolBugs struct {
 	// SendCompressionMethods, if not nil, is the compression method list to
 	// send in the ClientHello.
 	SendCompressionMethods []byte
-
-	// AlwaysSendPreSharedKeyIdentityHint, if true, causes the server to
-	// always send a ServerKeyExchange for PSK ciphers, even if the identity
-	// hint is empty.
-	AlwaysSendPreSharedKeyIdentityHint bool
-
-	// TrailingKeyShareData, if true, causes the client key share list to
-	// include a trailing byte.
-	TrailingKeyShareData bool
 }
 
 func (c *Config) serverInit() {

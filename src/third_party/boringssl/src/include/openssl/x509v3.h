@@ -732,20 +732,7 @@ void ERR_load_X509V3_strings(void);
 
 #ifdef  __cplusplus
 }
-
-extern "C++" {
-
-namespace bssl {
-
-BORINGSSL_MAKE_STACK_DELETER(GENERAL_NAME, GENERAL_NAME_free)
-
-BORINGSSL_MAKE_DELETER(GENERAL_NAME, GENERAL_NAME_free)
-
-}  // namespace bssl
-
-}  /* extern C++ */
 #endif
-
 #define X509V3_R_BAD_IP_ADDRESS 100
 #define X509V3_R_BAD_OBJECT 101
 #define X509V3_R_BN_DEC2BN_ERROR 102

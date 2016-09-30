@@ -5,7 +5,6 @@
 #include "net/quic/core/congestion_control/cubic.h"
 
 #include "base/logging.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -106,7 +105,7 @@ TEST_F(CubicTest, BelowOrigin) {
     clock_.AdvanceTime(hundred_ms_);
     current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
   }
-  expected_cwnd = FLAGS_quic_limit_cubic_cwnd_increase ? 399 : 422;
+  expected_cwnd = 422;
   EXPECT_EQ(expected_cwnd, current_cwnd);
 }
 

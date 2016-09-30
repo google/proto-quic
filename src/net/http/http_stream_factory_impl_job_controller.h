@@ -38,7 +38,7 @@ class HttpStreamFactoryImpl::JobController
                  HttpStreamRequest::Delegate* delegate,
                  WebSocketHandshakeStreamBase::CreateHelper*
                      websocket_handshake_stream_create_helper,
-                 const NetLogWithSource& net_log,
+                 const BoundNetLog& net_log,
                  HttpStreamRequest::StreamType stream_type,
                  RequestPriority priority,
                  const SSLConfig& server_ssl_config,
@@ -158,7 +158,7 @@ class HttpStreamFactoryImpl::JobController
 
   // Remove session from the SpdySessionRequestMap.
   void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) override;
-  const NetLogWithSource* GetNetLog(Job* job) const override;
+  const BoundNetLog* GetNetLog(Job* job) const override;
 
   void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) override;
 
@@ -175,7 +175,7 @@ class HttpStreamFactoryImpl::JobController
                   const SSLConfig& proxy_ssl_config,
                   HttpStreamRequest::Delegate* delegate,
                   HttpStreamRequest::StreamType stream_type,
-                  const NetLogWithSource& net_log);
+                  const BoundNetLog& net_log);
 
   // Attaches |job| to |request_|. Does not mean that |request_| will use |job|.
   void AttachJob(Job* job);
@@ -197,7 +197,7 @@ class HttpStreamFactoryImpl::JobController
   void OnJobSucceeded(Job* job);
 
   // Marks completion of the |request_|.
-  void MarkRequestComplete(bool was_alpn_negotiated,
+  void MarkRequestComplete(bool was_npn_negotiated,
                            NextProto negotiated_protocol,
                            bool using_spdy);
 

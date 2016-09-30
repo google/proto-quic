@@ -44,14 +44,10 @@ class JinjaProcessor(object):
     self.env.line_comment_prefix = '##'
     self.env.trim_blocks = True
     self.env.lstrip_blocks = True
-    self._template_cache = {}  # Map of path -> Template
 
   def Render(self, input_filename, variables=None):
     input_rel_path = os.path.relpath(input_filename, self.loader_base_dir)
-    template = self._template_cache.get(input_rel_path)
-    if not template:
-      template = self.env.get_template(input_rel_path)
-      self._template_cache[input_rel_path] = template
+    template = self.env.get_template(input_rel_path)
     return template.render(variables or self.variables)
 
   def GetLoadedTemplates(self):

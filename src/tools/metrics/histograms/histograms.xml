@@ -1221,33 +1221,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Arc.Provisioning.Result" enum="ArcProvisioningResult">
-  <obsolete>
-    Deprecated on 2016-09-15 and replaced by Arc.Provisioning.Result.Managed and
-    Arc.Provisioning.Result.Unmanaged.
-  </obsolete>
   <owner>alexchau@google.com</owner>
   <owner>phweiss@google.com</owner>
   <summary>
     The result (success or the type of failure) of ARC provisioning.
-  </summary>
-</histogram>
-
-<histogram name="Arc.Provisioning.Result.Managed" enum="ArcProvisioningResult">
-  <owner>alexchau@google.com</owner>
-  <owner>phweiss@google.com</owner>
-  <summary>
-    The result (success or the type of failure) of ARC provisioning on managed
-    devices.
-  </summary>
-</histogram>
-
-<histogram name="Arc.Provisioning.Result.Unmanaged"
-    enum="ArcProvisioningResult">
-  <owner>alexchau@google.com</owner>
-  <owner>phweiss@google.com</owner>
-  <summary>
-    The result (success or the type of failure) of ARC provisioning on unmanaged
-    devices.
   </summary>
 </histogram>
 
@@ -4645,7 +4622,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Bluetooth.Web.RequestDevice.OptionalServices.Services"
-    enum="GATTServiceHash">
+    units="GATTServiceHash">
   <owner>jyasskin@chromium.org</owner>
   <owner>ortuno@chromium.org</owner>
   <owner>scheib@chromium.org</owner>
@@ -7426,33 +7403,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Crashpad.CrashReportSize" units="bytes">
-  <owner>crashpad-dev@chromium.org</owner>
+  <owner>scottmg@chromium.org</owner>
   <summary>The size of a crash report minidump on disk when captured.</summary>
-</histogram>
-
-<histogram name="Crashpad.ExceptionCaptureResult"
-    enum="CrashpadExceptionCaptureResult">
-  <owner>crashpad-dev@chromium.org</owner>
-  <summary>The outcome of execution of the Crashpad exception handler.</summary>
-</histogram>
-
-<histogram name="Crashpad.ExceptionCode.Mac" enum="CrashpadMacExceptionCodes">
-  <owner>crashpad-dev@chromium.org</owner>
-  <summary>The exception code encountered in a crash on Mac OS X.</summary>
-</histogram>
-
-<histogram name="Crashpad.ExceptionCode.Win" enum="CrashExitCodes">
-  <owner>crashpad-dev@chromium.org</owner>
-  <summary>The exception code encountered in a crash on Windows.</summary>
-</histogram>
-
-<histogram name="Crashpad.ExceptionEncountered"
-    enum="CrashpadExceptionProcessingState">
-  <owner>crashpad-dev@chromium.org</owner>
-  <summary>
-    A count of the number of exceptions handled by Crashpad with two buckets for
-    starting and finishing.
-  </summary>
 </histogram>
 
 <histogram name="CrashReport.BreakpadCrashDumpOutcome" enum="DumpOutcome">
@@ -8589,16 +8541,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     will see the snackbar that indicates the end of data use tracking from then
     on.
   </summary>
-</histogram>
-
-<histogram name="DataUse.BytesReceived" units="bytes">
-  <owner>tbansal@chromium.org</owner>
-  <summary>Count of total bytes received by the Chrome on the network.</summary>
-</histogram>
-
-<histogram name="DataUse.BytesSent" units="bytes">
-  <owner>tbansal@chromium.org</owner>
-  <summary>Count of total bytes sent by the Chrome on the network.</summary>
 </histogram>
 
 <histogram name="DataUse.MessageSize" units="bytes">
@@ -11044,23 +10986,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="Download.ApiFunctions" enum="DownloadFunctions">
   <owner>asanka@chromium.org</owner>
   <summary>Downloads extension API function calls.</summary>
-</histogram>
-
-<histogram name="Download.AttachmentServices.Duration" units="ms">
-  <owner>asanka@chromium.org</owner>
-  <summary>
-    Time taken to invoke IAttachmentExecute::Save() excluding the time taken to
-    instantiate CLSID_AttachmentServices.
-  </summary>
-</histogram>
-
-<histogram name="Download.AttachmentServices.Result"
-    enum="AttachmentServicesResult">
-  <owner>asanka@chromium.org</owner>
-  <summary>
-    Result of invoking (or attempting to invoke) Windows Attachment Services API
-    via IAttachmentExecute::Save().
-  </summary>
 </histogram>
 
 <histogram name="Download.BandwidthDiskBytesPerSecond">
@@ -20487,9 +20412,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="InstantExtended.PercentageMatchV2_QuerytoQuery" units="%">
-  <obsolete>
-    Removed in August 2016 with the removal of query in the omnibox code.
-  </obsolete>
   <owner>mpearson@chromium.org</owner>
   <summary>
     Records the number of matching characters at the start of the user's text as
@@ -20499,9 +20421,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="InstantExtended.PercentageMatchV2_QuerytoURL" units="%">
-  <obsolete>
-    Removed in August 2016 with the removal of query in the omnibox code.
-  </obsolete>
   <owner>mpearson@chromium.org</owner>
   <summary>
     Records the number of matching characters at the start of the user's text as
@@ -20512,17 +20431,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="InstantExtended.PercentageMatchV2_URLtoQuery" units="%">
-  <obsolete>
-    Removed in September 2016 because (i) this measurement was somewhat wrong,
-    (ii) it's difficult to understand the data, and (iii) there are better ways
-    to answer the same question.  The measurement is somewhat wrong because
-    reloads, link drops, and pasting URLs and pressing enter are all incorrectly
-    logged to the URLtoQuery histogram, not the URLtoURL histogram.  Futhermore,
-    this histogram is difficult to analyze because it's not broken up by input
-    length.  Short URLs can by random chance have a sizable percentage match
-    with a query.  Finally, there are better source for data like this; ask
-    mpearson for details.
-  </obsolete>
   <owner>mpearson@chromium.org</owner>
   <summary>
     Records the number of matching characters at the start of the user's text as
@@ -20532,14 +20440,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="InstantExtended.PercentageMatchV2_URLtoURL" units="%">
-  <obsolete>
-    Removed in September 2016 because (i) this measurement was somewhat wrong,
-    and (ii) there are better ways to answer the same question.  The measurement
-    is somewhat wrong because reloads, link drops, and pasting URLs and pressing
-    enter are all incorrectly logged to the URLtoQuery histogram, not the
-    URLtoURL histogram.  Furthermore, there are better source for data like
-    this; ask mpearson for details.
-  </obsolete>
   <owner>mpearson@chromium.org</owner>
   <summary>
     Records the number of matching characters at the start of the user's text as
@@ -21205,14 +21105,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>skobes@chromium.org</owner>
   <summary>
     Records the number of times ScrollAnchor adjusts the scroll offset.
-  </summary>
-</histogram>
-
-<histogram name="Layout.ScrollAnchor.SuppressedBySanaclap" enum="BooleanHit">
-  <owner>ymalik@chromium.org</owner>
-  <summary>
-    Records the number of times scroll anchoring is suppressed because of the
-    SANACLAP bit being set on an ancestor (see bit.ly/sanaclap).
   </summary>
 </histogram>
 
@@ -25532,9 +25424,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="MobileDownload.InterceptFailureReason"
     enum="MobileDownloadInterceptFailureReason">
-  <obsolete>
-    Deprecated 09/2016 in Issue 647755 with all downloads going through Chrome.
-  </obsolete>
   <owner>qinmin@chromium.org</owner>
   <summary>
     Android: Records the reason that Chrome fails to intercept a download and
@@ -41918,26 +41807,174 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="Platform.Mem" units="%">
+<histogram name="Platform.MeminfoActive">
   <owner>hajimehoshi@chromium.org</owner>
   <owner>kouhei@chromium.org</owner>
   <owner>sonnyrao@chromium.org</owner>
-  <owner>semenzato@chromium.org</owner>
-  <owner>bccheng@chromium.org</owner>
   <summary>
-    Various memory usage % of total memory on Chrome OS devices (snapshotted
+    Chrome OS size of active memory as % of total memory (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoActiveAnon">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS active anonymous memory (data segments) as % of total memory
+    (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoActiveFile">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS active file-backed memory (executables, ...) as % of total memory
+    (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoAnonPages">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of anonymous memory as % of total memory (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoBuffers">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of buffer cache as % of total memory (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoCached">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS: size of file-backed memory minus swap and buffer cache, as % of
+    total memory (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoInactive">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of inactive memory as % of total memory (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoInactiveAnon">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS inactive anonymous memory (data segments) as % of total memory
+    (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoInactiveFile">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS inactive file-backed memory as % of total memory (snapshotted
     every 30s).
   </summary>
 </histogram>
 
-<histogram name="Platform.Meminfo" units="KB">
+<histogram name="Platform.MeminfoMapped">
   <owner>hajimehoshi@chromium.org</owner>
   <owner>kouhei@chromium.org</owner>
   <owner>sonnyrao@chromium.org</owner>
-  <owner>semenzato@chromium.org</owner>
+  <summary>
+    Chrome OS size of mapped memory as % of total memory (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoMemFree">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of free memory as % of total memory (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoMemFreeDerived">
   <owner>bccheng@chromium.org</owner>
   <summary>
-    Various memory usage amount on Chrome OS devices (snapshotted every 30s).
+    Chrome OS size of free+buffers+cached memory in Kbytes (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoMemUsedDerived">
+  <owner>bccheng@chromium.org</owner>
+  <summary>
+    Chrome OS size of &quot;Total - FreeDerived&quot; memory in Kbytes
+    (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoShmem">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of shared memory in Kbytes (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoSlab">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS size of slab memory in Kbytes (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoSwapUsed" units="KB">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS amount of swapped-out memory in Kbytes (snapshotted every 30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoSwapUsedPercent" units="%">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS amount of swapped-out memory as % of total RAM (snapshotted every
+    30s).
+  </summary>
+</histogram>
+
+<histogram name="Platform.MeminfoUnevictable">
+  <owner>hajimehoshi@chromium.org</owner>
+  <owner>kouhei@chromium.org</owner>
+  <owner>sonnyrao@chromium.org</owner>
+  <summary>
+    Chrome OS unevictable memory (ramfs, SHM_LOCKED, mlocked) in Kbytes
+    (snapshotted every 30s).
   </summary>
 </histogram>
 
@@ -47525,28 +47562,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="PushMessaging.DeliveryStatus" enum="PushDeliveryStatus">
   <owner>johnme@google.com</owner>
   <summary>
-    When a Service Worker receives a push message, this records whether the
-    overall operation was successful, or otherwise the type of error
-    encountered.
-  </summary>
-</histogram>
-
-<histogram name="PushMessaging.DeliveryStatus.FindServiceWorker"
-    enum="ServiceWorkerStatusCode">
-  <owner>johnme@google.com</owner>
-  <summary>
-    When attempting to deliver a push message to a Service Worker, this records
-    the result of finding the Service Worker registration given its ID and
-    origin.
-  </summary>
-</histogram>
-
-<histogram name="PushMessaging.DeliveryStatus.ServiceWorkerEvent"
-    enum="ServiceWorkerStatusCode">
-  <owner>johnme@google.com</owner>
-  <summary>
-    When a Service Worker receives a push message, this records the precise
-    result received from the Service Worker code.
+    When a Service Worker receives a push message, this records whether it was
+    successful, or otherwise the type of error encountered.
   </summary>
 </histogram>
 
@@ -55911,70 +55928,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="Shutdown.browser_exit.time">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by the browser exit menu command.
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.browser_exit.time_per_process">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by the browser exit menu command per renderer
-    process.
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.end_session.time">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by an end session (user logs off, shuts down or
-    reboots without explicitly exiting).
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.end_session.time_per_process">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by an end session (user logs off, shuts down or
-    reboots without explicitly exiting) per renderer process.
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.renderers.slow">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    The number of renderer processes that couldn't be shutdown quickly due to
-    onbeforeunload or onunload listeners.
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.renderers.total">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    The number of renderer processes running when shutdown was called.
-  </summary>
-</histogram>
-
 <histogram name="Shutdown.ShutdownType" enum="ShutdownType">
   <owner>hashimoto@chromium.org</owner>
   <summary>The type of the last shutdown.</summary>
-</histogram>
-
-<histogram name="Shutdown.window_close.time" units="ms">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by the last browser window being closed.
-  </summary>
-</histogram>
-
-<histogram name="Shutdown.window_close.time_per_process">
-  <owner>hashimoto@chromium.org</owner>
-  <summary>
-    Time for shutdown initiated by the last browser window being closed per
-    renderer process.
-  </summary>
 </histogram>
 
 <histogram name="Signin" enum="SigninHelperFlow">
@@ -58275,23 +58231,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="SSL.MarkHttpAsStatus" enum="MarkHttpAsStatus">
-  <owner>estark@chromium.org</owner>
-  <owner>felt@chromium.org</owner>
-  <summary>
-    Reports whether the user has selected to mark HTTP origins with an
-    experimental UI treatment (such as showing a warning on HTTP pages that
-    collect sensitive information). This histogram is recorded whenever the
-    security level (the overall security state of a page, roughly corresponding
-    to the lock icon) is computed for an HTTP page.
-  </summary>
-</histogram>
-
 <histogram name="SSL.MarkNonSecureAsStatus" enum="MarkNonSecureAsStatus">
   <owner>palmer@chromium.org</owner>
-  <obsolete>
-    Deprecated 09/2016 and replaced with SSL.MarkHttpAsStatus.
-  </obsolete>
   <summary>
     Reports whether the user has selected to mark non-secure origins as Neutral
     (the status quo), Dubious, or Non-Secure.
@@ -59305,7 +59246,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Storage.BlacklistedImportantSites.Reason"
-    enum="ClearDataSiteBlacklistCrossedReason">
+    enum="ClearDataSiteBlacklistReason">
   <owner>dmurph@chromium.org</owner>
   <summary>
     This is recorded for every site that the user blacklists when they when they
@@ -59463,67 +59404,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     (which means the full file), or false if a specific file length was
     populated. Recorded in BlobStorageContext when we are adding a filesystem
     item to a blob.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.CBDChosenReason"
-    enum="ClearDataSiteBlacklistCrossedReason">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    When a user chooses to blacklist one or more sites when they clear browsing
-    data, this is recorded for every reason each chosen site was marked as
-    important. It indicates which signals were used to show the given site to
-    the user that the user then chose to exclude from clearing.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.CBDChosenReasonCount" units="count">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    This records the number of reasons each important site had that the user
-    chose to blacklist when clearing browsing data.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.CBDIgnoredReason"
-    enum="ClearDataSiteBlacklistCrossedReason">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    When a user chooses to blacklist one or more sites when they clear browsing
-    data, this is recorded for every reason each unchosen site was marked as
-    important. It indicates which signals were used to show the given site to
-    the user, which the user then ignored and did not select to blacklist from
-    clearing data.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.CBDIgnoredReasonCount" units="count">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    This records the number of reasons each important site had that the user
-    chose to NOT blacklist when clearing browsing data.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.GeneratedReason"
-    enum="ImportantSitesReason">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    Recorded when we generate a list of important sites. This can happen when
-    the user opens the Clear Browsing Data dialog on Android, views the Storage
-    tab in Site Settings on Android, or launches 'Manage Storage' from Android
-    System Settings for Chrome. We record every reason each site was chosen in
-    this metric. This means that we can report this metric multiple times for a
-    single site.
-  </summary>
-</histogram>
-
-<histogram name="Storage.ImportantSites.GeneratedReasonCount" units="count">
-  <owner>dmurph@chromium.org</owner>
-  <summary>
-    This records the number of reasons qualifying a site for being 'important'.
-    We record this for every site when we generate a list of important sites,
-    described in &quot;Storage.ImportantSites.GeneratedReason&quot;.
   </summary>
 </histogram>
 
@@ -63195,30 +63075,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Counts translation target page schemes.</summary>
 </histogram>
 
-<histogram name="Translate.Ranker.Model.Status"
-    enum="TranslateRankerModelStatus">
-  <owner>rogerm@google.com</owner>
-  <summary>
-    Tracks the outcome of attempts to download a Translate Ranker Model.
-  </summary>
-</histogram>
-
-<histogram name="Translate.Ranker.Model.Version" units="date stamp">
-  <owner>rogerm@google.com</owner>
-  <summary>
-    The date tamp (e.g., 20160916 -&gt; 15 Sept 2016) which denotes the
-    TranslateRankerModel's version.
-  </summary>
-</histogram>
-
-<histogram name="Translate.Ranker.QueryResult" enum="BooleanAccepted">
-  <owner>rogerm@google.com</owner>
-  <summary>
-    Whether the TranslateRanker accepts or denies to show the translation
-    prompt.
-  </summary>
-</histogram>
-
 <histogram name="Translate.ReportLanguageDetectionError">
   <owner>kenjibaheux@google.com</owner>
   <summary>
@@ -66158,57 +66014,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     old method of obtaining the url and trust level. The trust level was only
     relevant with UIWebView, so this method is only called from code which has
     not yet been updated since UIWebView was removed.
-  </summary>
-</histogram>
-
-<histogram name="WebApk.Install.InfoBarShown" enum="WebApkInstallInfoBarShown">
-  <owner>hanxi@chromium.org</owner>
-  <owner>pkotwicz@chromium.org</owner>
-  <owner>yfriedman@chromium.org</owner>
-  <summary>
-    WebAPKs are PWAs wrapped in an Android apk, installed from an app banner or
-    the add to homescreen menu item. This stat tracks whether the installation
-    is triggered by an app banner or by the add to homescreen menu.
-  </summary>
-</histogram>
-
-<histogram name="WebApk.Install.InstallEvent" enum="WebApkInstallEvent">
-  <owner>hanxi@chromium.org</owner>
-  <owner>pkotwicz@chromium.org</owner>
-  <owner>yfriedman@chromium.org</owner>
-  <summary>
-    WebAPKs are PWAs wrapped in an Android apk, installed from an app banner or
-    the add to homescreen menu item. This stat tracks the WebAPKs installation
-    events, including whether the infobar is ignored, whether the infobar is
-    dismissed by the user before or during the installation, as well as whether
-    the installation was successful.
-  </summary>
-</histogram>
-
-<histogram name="WebApk.Install.InstallSource" enum="WebApkInstallSource">
-  <owner>hanxi@chromium.org</owner>
-  <owner>pkotwicz@chromium.org</owner>
-  <owner>yfriedman@chromium.org</owner>
-  <summary>
-    WebAPKs are PWAs wrapped in an Android apk, installed from an app banner or
-    the add to homescreen menu item. If the installation is via an app banner,
-    user could either accept to install or dismiss the infobar; while via the
-    add to homescreen menu, the installation will start automatically. This stat
-    tracks the ways that user accepts to install a WebAPK.
-  </summary>
-</histogram>
-
-<histogram name="WebApk.Install.UserAction" enum="WebApkUserAction">
-  <owner>hanxi@chromium.org</owner>
-  <owner>pkotwicz@chromium.org</owner>
-  <owner>yfriedman@chromium.org</owner>
-  <summary>
-    WebAPKs are PWAs wrapped in an Android apk, installed from an app banner or
-    the add to homescreen menu item. If the user clicks the add to homescreen
-    menu, and a WebAPK has been installed before, an infobar with an open button
-    will show. The open button will also show on the infobar after a successful
-    installation. This stat tracks whether user clicks the open button on the
-    infobar or dismiss it.
   </summary>
 </histogram>
 
@@ -70895,22 +70700,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </int>
 </enum>
 
-<enum name="AttachmentServicesResult" type="int">
-  <int value="0" label="Succeeded with MOTW"/>
-  <int value="1" label="Succeeded without MOTW"/>
-  <int value="2" label="Succeeded but file was missing"/>
-  <int value="3" label="Failed to instantiate CLSID_AttachmentServices"/>
-  <int value="4" label="Failed while invoking IAE setter"/>
-  <int value="5" label="Blocked (file exists)"/>
-  <int value="6" label="Blocked (file missing)"/>
-  <int value="7" label="Virus infected (file exists)"/>
-  <int value="8" label="Virus infected (file missing)"/>
-  <int value="9" label="Access denied (file exists)"/>
-  <int value="10" label="Access denied (file missing)"/>
-  <int value="11" label="Other error (file exists)"/>
-  <int value="12" label="Other error (file missing)"/>
-</enum>
-
 <enum name="AudioCodec" type="int">
   <int value="0" label="kUnknownAudioCodec"/>
   <int value="1" label="kCodecAAC"/>
@@ -72552,7 +72341,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="20" label="RenderPassDrawQuad has a mask."/>
   <int value="21" label="RenderPassDrawQuad has unconvertable filters."/>
   <int value="22" label="RenderPassDrawQuad has a sorting context id."/>
-  <int value="23" label="Too many RenderPassDrawQuads."/>
 </enum>
 
 <enum name="CanvasContextType" type="int">
@@ -73662,7 +73450,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="2119087611" label="nl"/>
 </enum>
 
-<enum name="ClearDataSiteBlacklistCrossedReason" type="int">
+<enum name="ClearDataSiteBlacklistReason" type="int">
   <int value="0" label="Durable"/>
   <int value="1" label="Notifications"/>
   <int value="2" label="Engagement"/>
@@ -73945,7 +73733,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="-125" label="SSL_DECOMPRESSION_FAILURE_ALERT"/>
   <int value="-124" label="WINSOCK_UNEXPECTED_WRITTEN_BYTES"/>
   <int value="-123" label="SSL_NO_RENEGOTIATION"/>
-  <int value="-122" label="ALPN_NEGOTIATION_FAILED"/>
+  <int value="-122" label="NPN_NEGOTIATION_FAILED"/>
   <int value="-121" label="SOCKS_CONNECTION_HOST_UNREACHABLE"/>
   <int value="-120" label="SOCKS_CONNECTION_FAILED"/>
   <int value="-119" label="HOST_RESOLVER_QUEUE_TOO_LARGE"/>
@@ -74827,28 +74615,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="2147483644" label="STATUS_SINGLE_STEP"/>
   <int value="2147483645" label="STATUS_BREAKPOINT"/>
   <int value="2147483646" label="STATUS_DATATYPE_MISALIGNMENT"/>
-</enum>
-
-<enum name="CrashpadExceptionCaptureResult" type="int">
-  <int value="0" label="kSuccess"/>
-  <int value="1" label="kUnexpectedExceptionBehavior"/>
-  <int value="2" label="kFailedDueToSuspendSelf"/>
-  <int value="3" label="kSnapshotFailed"/>
-  <int value="4" label="kExceptionInitializationFailed"/>
-  <int value="5" label="kPrepareNewCrashReportFailed"/>
-  <int value="6" label="kMinidumpWriteFailed"/>
-  <int value="7" label="kFinishWritingCrashReportFailed"/>
-</enum>
-
-<enum name="CrashpadExceptionProcessingState" type="int">
-  <int value="0" label="kStarted"/>
-  <int value="1" label="kFinished"/>
-</enum>
-
-<enum name="CrashpadMacExceptionCodes" type="int">
-  <int value="1" label="EXC_BAD_ACCESS"/>
-  <int value="2" label="EXC_BAD_INSTRUCTION"/>
-  <int value="10" label="EXC_CRASH"/>
 </enum>
 
 <enum name="CreatePersistentHistogramResult" type="int">
@@ -76151,7 +75917,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="11" label="Calls to AppendDataToFile (Count) (Obsolete 8/2013)"/>
   <int value="12" label="Interrupted at End of Download"/>
   <int value="13" label="Attempt to Append to Detached File"/>
-  <int value="14" label="File Missing After Successful Scan (Obsolete 6/2016)"/>
+  <int value="14" label="File Missing After Successful Scan"/>
   <int value="15" label="Supports ranges and strong ETag (Obsolete 11/2013)"/>
   <int value="16" label="No WebContents at interruption"/>
   <int value="17" label="Supports ranges and strong validation"/>
@@ -79645,7 +79411,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="1145" label="LANGUAGESETTINGSPRIVATE_ENABLELANGUAGE"/>
   <int value="1146" label="LANGUAGESETTINGSPRIVATE_DISABLELANGUAGE"/>
   <int value="1147" label="FILEMANAGERPRIVATEINTERNAL_GETDIRECTORYSIZE"/>
-  <int value="1148" label="BLUETOOTHLOWENERGY_SETADVERTISINGINTERVAL"/>
 </enum>
 
 <enum name="ExtensionIconState" type="int">
@@ -84645,14 +84410,6 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <int value="6" label="Emoji"/>
 </enum>
 
-<enum name="ImportantSitesReason" type="int">
-  <int value="0" label="Engagement"/>
-  <int value="1" label="Durable"/>
-  <int value="2" label="Bookmarks"/>
-  <int value="3" label="Home Screen"/>
-  <int value="4" label="Notifications"/>
-</enum>
-
 <enum name="ImporterType" type="int">
   <int value="0" label="Unknown"/>
   <int value="1" label="IMPORTER_METRICS_IE">IE (Windows-only)</int>
@@ -86760,7 +86517,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="-918900957" label="AutofillCreditCardAssist:disabled"/>
   <int value="-918618075" label="enable-service-worker"/>
   <int value="-914210146" label="enable-web-based-signin"/>
-  <int value="-912456561" label="MidiManagerWinrt:enabled"/>
   <int value="-908421850" label="PointerEvent:enabled"/>
   <int value="-907234795" label="NewAudioRenderingMixingStrategy:disabled"/>
   <int value="-899334103" label="disable-fast-text-autosizing"/>
@@ -86882,7 +86638,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="-277144896" label="enable-viewport-meta"/>
   <int value="-268357961" label="enable-feature-policy"/>
   <int value="-254887599" label="google-profile-info"/>
-  <int value="-241353344" label="MidiManagerWinrt:disabled"/>
   <int value="-234966279" label="PointerEvent:disabled"/>
   <int value="-234687894"
       label="NonValidatingReloadOnRefreshContentV2:disabled"/>
@@ -86969,7 +86724,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="274103741" label="enable-ntp-popular-sites"/>
   <int value="278756320" label="disable-app-list-app-info"/>
   <int value="280322118" label="enable-unsafe-es3-apis"/>
-  <int value="280644887" label="mash"/>
   <int value="301869874" label="NTPPhysicalWebPageSuggestions:disabled"/>
   <int value="316182183" label="MediaDocumentDownloadButton:disabled"/>
   <int value="323605372" label="ui-disable-compositor-animation-timelines"/>
@@ -88139,8 +87893,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="541" label="offset-path"/>
   <int value="542" label="offset-rotation"/>
   <int value="543" label="offset"/>
-  <int value="544" label="offset-anchor"/>
-  <int value="545" label="offset-position"/>
 </enum>
 
 <enum name="MappedEditingCommands" type="int">
@@ -88285,12 +88037,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="137" label="Yank"/>
   <int value="138" label="YankAndSelect"/>
   <int value="139" label="AlignCenter"/>
-</enum>
-
-<enum name="MarkHttpAsStatus" type="int">
-  <int value="0" label="Neutral"/>
-  <int value="1" label="Non-Secure"/>
-  <int value="2" label="Neutral with a verbose warning"/>
 </enum>
 
 <enum name="MarkNonSecureAsStatus" type="int">
@@ -89271,7 +89017,7 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="119" label="HOST_RESOLVER_QUEUE_TOO_LARGE"/>
   <int value="120" label="SOCKS_CONNECTION_FAILED"/>
   <int value="121" label="SOCKS_CONNECTION_HOST_UNREACHABLE"/>
-  <int value="122" label="ALPN_NEGOTIATION_FAILED"/>
+  <int value="122" label="NPN_NEGOTIATION_FAILED"/>
   <int value="123" label="SSL_NO_RENEGOTIATION"/>
   <int value="124" label="WINSOCK_UNEXPECTED_WRITTEN_BYTES"/>
   <int value="125" label="SSL_DECOMPRESSION_FAILURE_ALERT"/>
@@ -90146,7 +89892,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="5" label="Prerendering failed"/>
   <int value="6" label="Save failed"/>
   <int value="7" label="Foreground transition canceled"/>
-  <int value="8" label="RequestCoordinator timed-out"/>
 </enum>
 
 <enum name="OfflinePagesClearAllStatus" type="int">
@@ -91878,7 +91623,7 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="8" label="PERMISSION_AUDIO_CAPTURE"/>
   <int value="9" label="PERMISSION_VIDEO_CAPTURE"/>
   <int value="10" label="PERMISSION_BACKGROUND_SYNC"/>
-  <int value="11" label="PERMISSION_FLASH"/>
+  <int value="11" label="PERMISSION_PLUGINS"/>
 </enum>
 
 <enum name="PersistentHistogramsInitResult" type="int">
@@ -96141,7 +95886,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="10" label="DOWNLOAD_FAILED"/>
   <int value="11" label="TAB_CLOSE_UNDO"/>
   <int value="12" label="TAB_CLOSE_ALL_UNDO"/>
-  <int value="13" label="DOWNLOAD_DELETE_UNDO"/>
 </enum>
 
 <enum name="SnippetOpenMethod" type="int">
@@ -97387,12 +97131,9 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="1283" label="ecdsa_secp384r1_sha384"/>
   <int value="1537" label="rsa_pkcs1_sha512"/>
   <int value="1539" label="ecdsa_secp521r1_sha512"/>
-  <int value="1792" label="rsa_pss_sha256 (old)"/>
-  <int value="1793" label="rsa_pss_sha384 (old)"/>
-  <int value="1794" label="rsa_pss_sha512 (old)"/>
-  <int value="2052" label="rsa_pss_sha256"/>
-  <int value="2053" label="rsa_pss_sha384"/>
-  <int value="2054" label="rsa_pss_sha512"/>
+  <int value="1792" label="rsa_pss_sha256"/>
+  <int value="1793" label="rsa_pss_sha384"/>
+  <int value="1794" label="rsa_pss_sha512"/>
 </enum>
 
 <enum name="StarsLaunchLocation" type="int">
@@ -98636,9 +98377,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="8" label="Auto translation by linked from a translated page"/>
   <int value="9" label="Show infobar"/>
   <int value="10" label="MIME-type is not supported"/>
-  <int value="11" label="Disabled by Key"/>
-  <int value="12" label="Language in ULP"/>
-  <int value="13" label="Aborted by translate ranker"/>
 </enum>
 
 <enum name="TranslateLanguage" type="int">
@@ -98661,14 +98399,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="4" label="CLD disagrees with Content-Language"/>
   <int value="5" label="CLD can be trusted"/>
   <int value="6" label="CLD can complement a sub code"/>
-</enum>
-
-<enum name="TranslateRankerModelStatus" type="int">
-  <int value="0" label="OK"/>
-  <int value="1" label="Download Throttled"/>
-  <int value="2" label="Download Failed"/>
-  <int value="3" label="Parse Failed"/>
-  <int value="4" label="Validation Failed"/>
 </enum>
 
 <enum name="TranslateScheme" type="int">
@@ -99580,31 +99310,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <int value="2" label="Session, No Warmup, Warmup called from another UID"/>
   <int value="3" label="Session, No Warmup"/>
   <int value="4" label="Session, Warmup"/>
-</enum>
-
-<enum name="WebApkInstallEvent" type="int">
-  <int value="0" label="Infobar is ignored"/>
-  <int value="1" label="Infobar is dismissed before installation"/>
-  <int value="2" label="Infobar is dismissed during installation"/>
-  <int value="3" label="Success"/>
-  <int value="4" label="Failed"/>
-</enum>
-
-<enum name="WebApkInstallInfoBarShown" type="int">
-  <int value="0" label="WebApk infobar shown from the app banner"/>
-  <int value="1" label="WebApk infobar shown from the add to homescreen menu"/>
-</enum>
-
-<enum name="WebApkInstallSource" type="int">
-  <int value="0" label="Installation started from the app banner"/>
-  <int value="1" label="Installation started from the add to homescreen menu"/>
-</enum>
-
-<enum name="WebApkUserAction" type="int">
-  <int value="0" label="Open a previously installed WebAPK"/>
-  <int value="1" label="Dismiss to open a previously installed WebAPK"/>
-  <int value="2" label="Open a newly installed WebAPK"/>
-  <int value="3" label="Dismiss to open a newly installed WebAPK"/>
 </enum>
 
 <enum name="WebBluetoothConnectGATTOutcome" type="int">
@@ -101610,15 +101315,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram name="DataUsage.ReportSubmission.Bytes"/>
 </histogram_suffixes>
 
-<histogram_suffixes name="DataUse.Bytes" separator=".">
-  <suffix name="Delegate" label="As reported by the network delegate."/>
-  <suffix name="OS"
-      label="As reported by the operating system. Currently logged only on
-             Android."/>
-  <affected-histogram name="DataUse.BytesReceived"/>
-  <affected-histogram name="DataUse.BytesSent"/>
-</histogram_suffixes>
-
 <histogram_suffixes name="DataUse.Dimensions" separator=".">
   <suffix name="Upstream.Background.NotCellular"/>
   <suffix name="Upstream.Background.Cellular"/>
@@ -102636,9 +102332,6 @@ To add a new entry, add it with any value and run test to compute valid value.
 </histogram_suffixes>
 
 <histogram_suffixes name="InstantExtended_QuerytoQuery">
-  <obsolete>
-    All relevant histograms have been marked as obsolete as of Sep 2016.
-  </obsolete>
   <owner>macourteau@chromium.org</owner>
   <suffix name="400" label="Omnibox width &lt; 400"/>
   <suffix name="700" label="Omnibox width &lt; 700"/>
@@ -104962,96 +104655,8 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram name="PageLoad.Timing2.NavigationToFirstBackground"/>
 </histogram_suffixes>
 
-<histogram_suffixes name="PageLoadMetricsCacheInfo" separator=".">
-  <suffix name="NoStore" label="Main resource had cache-control: no-store"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint.LoadType.ForwardBackNavigation"/>
-  <affected-histogram
-      name="PageLoad.ParseTiming.NavigationToParseStart.LoadType.ForwardBackNavigation"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsCssScanner" separator="."
+<histogram_suffixes name="PageLoadMetricsAbortClients" separator="."
     ordering="prefix">
-  <suffix name="Clients.CssScanner"
-      label="Metrics from pages scanned by the preload scanner for @import
-             CSS rules"/>
-  <affected-histogram
-      name="PageLoad.Experimental.PaintTiming.ParseStartToFirstMeaningfulPaint"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsDataReductionProxy"
-    separator="." ordering="prefix">
-  <suffix name="Clients.DataReductionProxy"
-      label="PageLoadMetrics that are a result of a navigation through the
-             data reduction proxy."/>
-  <suffix name="Clients.DataReductionProxy.LoFiOn"
-      label="PageLoadMetrics that are a result of a navigation through the
-             data reduction proxy with session in LoFi enabled or control
-             field trial, and when the connection was slow."/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram name="PageLoad.DocumentTiming.NavigationToFirstLayout"/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram name="PageLoad.PaintTiming.NavigationToFirstImagePaint"/>
-  <affected-histogram name="PageLoad.PaintTiming.NavigationToFirstPaint"/>
-  <affected-histogram name="PageLoad.PaintTiming.NavigationToFirstTextPaint"/>
-  <affected-histogram name="PageLoad.ParseTiming.NavigationToParseStart"/>
-  <affected-histogram name="PageLoad.ParseTiming.ParseBlockedOnScriptLoad"/>
-  <affected-histogram name="PageLoad.ParseTiming.ParseDuration"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsDocWrite" separator="."
-    ordering="prefix">
-  <suffix name="Clients.DocWrite.Block"
-      label="PageLoadMetrics from a page that has synchronous, cross-origin
-             document.written scripts that could be blocked if the
-             document.write script blocking feature is enabled."/>
-  <suffix name="Clients.DocWrite.Evaluator"
-      label="PageLoadMetrics from a page that could have been evaluated by
-             the DocumentWriteEvaluator"/>
-  <affected-histogram
-      name="PageLoad.Experimental.PaintTiming.ParseStartToFirstMeaningfulPaint"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.ParseStartToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.ParseTiming.ParseBlockedOnScriptExecution"/>
-  <affected-histogram
-      name="PageLoad.ParseTiming.ParseBlockedOnScriptExecutionFromDocumentWrite"/>
-  <affected-histogram name="PageLoad.ParseTiming.ParseBlockedOnScriptLoad"/>
-  <affected-histogram
-      name="PageLoad.ParseTiming.ParseBlockedOnScriptLoadFromDocumentWrite"/>
-  <affected-histogram name="PageLoad.ParseTiming.ParseDuration"/>
-  <affected-histogram name="PageLoad.Timing2.NavigationToFirstContentfulPaint"/>
-  <affected-histogram name="PageLoad.Timing2.ParseBlockedOnScriptLoad"/>
-  <affected-histogram
-      name="PageLoad.Timing2.ParseBlockedOnScriptLoad.ParseComplete"/>
-  <affected-histogram
-      name="PageLoad.Timing2.ParseBlockedOnScriptLoadFromDocumentWrite"/>
-  <affected-histogram
-      name="PageLoad.Timing2.ParseBlockedOnScriptLoadFromDocumentWrite.ParseComplete"/>
-  <affected-histogram name="PageLoad.Timing2.ParseDuration"/>
-  <affected-histogram name="PageLoad.Timing2.ParseStartToFirstContentfulPaint"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsFromGoogleSearch" separator="."
-    ordering="prefix">
-  <suffix name="Clients.FromGoogleSearch"
-      label="PageLoadMetrics that are a result of a navigation from a Google
-             web search"/>
-  <suffix name="Clients.FromGWS"
-      label="PageLoadMetrics that are a result of a navigation from a Google
-             web search">
-    <obsolete>
-      Deprecated in favor of Clients.FromGoogleSearch.
-    </obsolete>
-  </suffix>
   <suffix name="Clients.FromGWS2"
       label="PageLoadMetrics that are a result of a navigation from a Google
              web search">
@@ -105059,6 +104664,9 @@ To add a new entry, add it with any value and run test to compute valid value.
       Deprecated in favor of Clients.FromGoogleSearch.
     </obsolete>
   </suffix>
+  <suffix name="Clients.FromGoogleSearch"
+      label="PageLoadMetrics that are a result of a navigation from a Google
+             web search"/>
   <affected-histogram
       name="PageLoad.AbortTiming.Close.AfterCommit.BeforePaint"/>
   <affected-histogram
@@ -105083,10 +104691,68 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram name="PageLoad.AbortTiming.Stop.BeforeCommit"/>
   <affected-histogram
       name="PageLoad.AbortTiming.UnknownNavigation.BeforeCommit"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="PageLoadMetricsCacheInfo" separator=".">
+  <suffix name="NoStore" label="Main resource had cache-control: no-store"/>
+  <affected-histogram
+      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
+  <affected-histogram
+      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint.LoadType.ForwardBackNavigation"/>
+  <affected-histogram
+      name="PageLoad.ParseTiming.NavigationToParseStart.LoadType.ForwardBackNavigation"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="PageLoadMetricsClients" separator="."
+    ordering="prefix">
+  <suffix name="Clients.CssScanner"
+      label="Metrics from pages scanned by the preload scanner for @import
+             CSS rules"/>
+  <suffix name="Clients.DataReductionProxy"
+      label="PageLoadMetrics that are a result of a navigation through the
+             data reduction proxy."/>
+  <suffix name="Clients.DataReductionProxy.LoFiOn"
+      label="PageLoadMetrics that are a result of a navigation through the
+             data reduction proxy with session in LoFi enabled or control
+             field trial, and when the connection was slow."/>
+  <suffix name="Clients.DocWrite.Block"
+      label="PageLoadMetrics from a page that has synchronous, cross-origin
+             document.written scripts that could be blocked if the
+             document.write script blocking feature is enabled."/>
+  <suffix name="Clients.DocWrite.Evaluator"
+      label="PageLoadMetrics from a page that could have been evaluated by
+             the DocumentWriteEvaluator"/>
+  <suffix name="Clients.FromGoogleSearch"
+      label="PageLoadMetrics that are a result of a navigation from a Google
+             web search"/>
+  <suffix name="Clients.Previews.OfflinePages"
+      label="PageLoadMetrics that are a result of a navigation that shows
+             users an offline page preview. Offline page previews are shown
+             when a user's effective connection type is prohibitively slow."/>
+  <suffix name="Clients.ServiceWorker"
+      label="PageLoadMetrics from a page that is controlled by a Service
+             Worker"/>
+  <suffix name="Clients.FromGWS"
+      label="PageLoadMetrics that are a result of a navigation from a Google
+             web search">
+    <obsolete>
+      Deprecated in favor of Clients.FromGoogleSearch.
+    </obsolete>
+  </suffix>
+  <suffix name="Clients.FromGWS2"
+      label="PageLoadMetrics that are a result of a navigation from a Google
+             web search">
+    <obsolete>
+      Deprecated in favor of Clients.FromGoogleSearch.
+    </obsolete>
+  </suffix>
   <affected-histogram
       name="PageLoad.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
+  <affected-histogram name="PageLoad.DocumentTiming.NavigationToFirstLayout"/>
   <affected-histogram
       name="PageLoad.DocumentTiming.NavigationToLoadEventFired"/>
+  <affected-histogram
+      name="PageLoad.Experimental.PaintTiming.ParseStartToFirstMeaningfulPaint"/>
   <affected-histogram
       name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
   <affected-histogram name="PageLoad.PaintTiming.NavigationToFirstImagePaint"/>
@@ -105095,64 +104761,42 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram
       name="PageLoad.PaintTiming.ParseStartToFirstContentfulPaint"/>
   <affected-histogram name="PageLoad.ParseTiming.NavigationToParseStart"/>
+  <affected-histogram
+      name="PageLoad.ParseTiming.ParseBlockedOnScriptExecution"/>
+  <affected-histogram
+      name="PageLoad.ParseTiming.ParseBlockedOnScriptExecutionFromDocumentWrite"/>
+  <affected-histogram name="PageLoad.ParseTiming.ParseBlockedOnScriptLoad"/>
+  <affected-histogram
+      name="PageLoad.ParseTiming.ParseBlockedOnScriptLoadFromDocumentWrite"/>
   <affected-histogram name="PageLoad.ParseTiming.ParseDuration"/>
+  <affected-histogram
+      name="PageLoad.Timing2.DOMLoadingToDOMContentLoadedEventFired"/>
+  <affected-histogram name="PageLoad.Timing2.DOMLoadingToFirstContentfulPaint"/>
+  <affected-histogram
+      name="PageLoad.Timing2.NavigationToDOMContentLoadedEventFired"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToFirstContentfulPaint"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToFirstImagePaint"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToFirstLayout"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToFirstPaint"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToFirstTextPaint"/>
+  <affected-histogram name="PageLoad.Timing2.NavigationToLoadEventFired"/>
+  <affected-histogram name="PageLoad.Timing2.ParseBlockedOnScriptLoad"/>
+  <affected-histogram
+      name="PageLoad.Timing2.ParseBlockedOnScriptLoad.ParseComplete"/>
+  <affected-histogram
+      name="PageLoad.Timing2.ParseBlockedOnScriptLoadFromDocumentWrite"/>
+  <affected-histogram
+      name="PageLoad.Timing2.ParseBlockedOnScriptLoadFromDocumentWrite.ParseComplete"/>
+  <affected-histogram name="PageLoad.Timing2.ParseDuration"/>
+  <affected-histogram name="PageLoad.Timing2.ParseStartToFirstContentfulPaint"/>
 </histogram_suffixes>
 
-<histogram_suffixes name="PageLoadMetricsClientsOfflinePages" separator="."
-    ordering="prefix">
-  <suffix name="Clients.Previews.OfflinePages"
-      label="PageLoadMetrics that are a result of a navigation that shows
-             users an offline page preview. Offline page previews are shown
-             when a user's effective connection type is prohibitively slow."/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram name="PageLoad.DocumentTiming.NavigationToFirstLayout"/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram name="PageLoad.ParseTiming.NavigationToParseStart"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsReload" separator="."
+<histogram_suffixes name="PageLoadMetricsClients.Reload" separator="."
     ordering="prefix">
   <suffix name="Clients.Reload"
       label="PageLoadMetrics from a page that is reloaded"/>
   <affected-histogram
       name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsServiceWorker" separator="."
-    ordering="prefix">
-  <suffix name="Clients.ServiceWorker"
-      label="PageLoadMetrics from a page that is controlled by a Service
-             Worker"/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram
-      name="PageLoad.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.PaintTiming.ParseStartToFirstContentfulPaint"/>
-  <affected-histogram name="PageLoad.Timing2.NavigationToFirstContentfulPaint">
-    <obsolete>
-      Deprecated in favor of PaintTiming equivalent.
-    </obsolete>
-  </affected-histogram>
-</histogram_suffixes>
-
-<histogram_suffixes name="PageLoadMetricsClientsServiceWorkerSpecialApps"
-    separator=".">
-  <suffix name="inbox" label="Custom histogram for Inbox"/>
-  <affected-histogram
-      name="PageLoad.Clients.ServiceWorker.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
-  <affected-histogram
-      name="PageLoad.Clients.ServiceWorker.DocumentTiming.NavigationToLoadEventFired"/>
-  <affected-histogram
-      name="PageLoad.Clients.ServiceWorker.PaintTiming.NavigationToFirstContentfulPaint"/>
-  <affected-histogram
-      name="PageLoad.Clients.ServiceWorker.PaintTiming.ParseStartToFirstContentfulPaint"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="PageLoadMetricsLoadType" separator=".">
@@ -105396,7 +105040,7 @@ To add a new entry, add it with any value and run test to compute valid value.
   <suffix name="DurableStorage" label="Durable Storage permission actions"/>
   <suffix name="AudioCapture" label="Microphone permission actions"/>
   <suffix name="VideoCapture" label="Camera permission actions"/>
-  <suffix name="Flash" label="Flash permission actions"/>
+  <suffix name="Plugins" label="Plugins permission actions"/>
   <affected-histogram name="ContentSettings.PermissionActions"/>
   <affected-histogram name="ContentSettings.PermissionActionsInsecureOrigin"/>
   <affected-histogram name="ContentSettings.PermissionActionsSecureOrigin"/>
@@ -105429,38 +105073,6 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram name="PhysicalWeb.State.LocationPermission"/>
   <affected-histogram name="PhysicalWeb.State.LocationServices"/>
   <affected-histogram name="PhysicalWeb.State.Preference"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PlatformMeminfoPercentage" separator="">
-  <suffix name="infoActive" label="Active memory."/>
-  <suffix name="infoActiveAnon"
-      label="Active anonymous memory (data segments)."/>
-  <suffix name="infoActiveFile"
-      label="Active file-backed memory (executables, ...)."/>
-  <suffix name="infoAnonPages" label="Anonymous memory (executables, ...)."/>
-  <suffix name="infoBuffers" label="Buffer cache (executables, ...)."/>
-  <suffix name="infoCached"
-      label="size of file-backed memory minus swap and buffer cache."/>
-  <suffix name="infoInactive" label="Inactive memory."/>
-  <suffix name="infoInactiveAnon"
-      label="Inactive anonymous memory (data segments)."/>
-  <suffix name="infoInactiveFile" label="Inactive file-backed memory."/>
-  <suffix name="infoMapped" label="Mapped memory."/>
-  <suffix name="infoMemFree" label="Free memory."/>
-  <suffix name="infoSwapUsedPercent" label="Used swap memory."/>
-  <affected-histogram name="Platform.Mem"/>
-</histogram_suffixes>
-
-<histogram_suffixes name="PlatformMeminfoSize" separator="">
-  <suffix name="MemFreeDerived" label="Size derived from free+buffers+cached."/>
-  <suffix name="MemTotal" label="Size of total installed memory."/>
-  <suffix name="MemUsedDerived"
-      label="Size of &quot;Total - FreeDerived&quot; memory."/>
-  <suffix name="Shmem" label="Size of shared memory."/>
-  <suffix name="Slab" label="Size of slab memory."/>
-  <suffix name="SwapUsed" label="Size of used swap memory."/>
-  <suffix name="Unevictable" label="Size of unevictable memory."/>
-  <affected-histogram name="Platform.Meminfo"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="PNaClTranslatorTypes" separator=".">
@@ -106525,6 +106137,18 @@ To add a new entry, add it with any value and run test to compute valid value.
   <affected-histogram name="ServiceWorkerCache.Scheduler.OperationDuration"/>
   <affected-histogram name="ServiceWorkerCache.Scheduler.QueueDuration"/>
   <affected-histogram name="ServiceWorkerCache.Scheduler.QueueLength"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="ServiceWorkerSpecialApps" separator=".">
+  <suffix name="inbox" label="Custom histogram for Inbox"/>
+  <affected-histogram
+      name="PageLoad.Clients.ServiceWorker.DocumentTiming.NavigationToDOMContentLoadedEventFired"/>
+  <affected-histogram
+      name="PageLoad.Clients.ServiceWorker.DocumentTiming.NavigationToLoadEventFired"/>
+  <affected-histogram
+      name="PageLoad.Clients.ServiceWorker.PaintTiming.NavigationToFirstContentfulPaint"/>
+  <affected-histogram
+      name="PageLoad.Clients.ServiceWorker.PaintTiming.ParseStartToFirstContentfulPaint"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="ServiceWorkerSpecialAppsForEventDispatchingDelay"

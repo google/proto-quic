@@ -64,14 +64,6 @@
 #define TRACE_EVENT_GET_SAMPLING_STATE_FOR_BUCKET(bucket_number) \
     trace_event_internal::TraceEventSamplingStateScope<bucket_number>::Current()
 
-// Sets a current sampling state of the given bucket.
-// |category_and_name| doesn't need to be a constant string.
-// The format of the string is "category\0name".
-#define TRACE_EVENT_SET_NONCONST_SAMPLING_STATE_FOR_BUCKET( \
-    bucket_number, category_and_name)                       \
-        trace_event_internal::                              \
-        TraceEventSamplingStateScope<bucket_number>::Set(category_and_name)
-
 // Creates a scope of a sampling state of the given bucket.
 //
 // {  // The sampling state is set within this scope.
@@ -352,7 +344,8 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
           phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,     \
           trace_event_internal::kGlobalScope, trace_event_internal::kNoId,   \
           TRACE_EVENT_API_CURRENT_THREAD_ID,                                 \
-          timestamp, flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,            \
+          base::TimeTicks::FromInternalValue(timestamp),                     \
+          flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,                       \
           trace_event_internal::kNoId, ##__VA_ARGS__);                       \
     }                                                                        \
   } while (0)
@@ -370,7 +363,7 @@ TRACE_EVENT_API_CLASS_EXPORT extern \
       trace_event_internal::AddTraceEventWithThreadIdAndTimestamp(          \
           phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,    \
           trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),      \
-          thread_id, timestamp,                                             \
+          thread_id, base::TimeTicks::FromInternalValue(timestamp),         \
           trace_event_flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,          \
           trace_event_internal::kNoId, ##__VA_ARGS__);                      \
     }                                                                       \
@@ -1052,6 +1045,11 @@ class TRACE_EVENT_API_CLASS_EXPORT ScopedTracer {
     if (p_data_ && *data_.category_group_enabled) {
       TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION(
           data_.category_group_enabled, data_.name, data_.event_handle);
+      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_FILTERING_MODE(
+              *data_.category_group_enabled)) {
+        TRACE_EVENT_API_END_FILTERED_EVENT(data_.category_group_enabled,
+                                           data_.name, data_.event_handle);
+      }
     }
   }
 

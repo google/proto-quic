@@ -59,7 +59,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // HttpTransaction methods:
   int Start(const HttpRequestInfo* request_info,
             const CompletionCallback& callback,
-            const NetLogWithSource& net_log) override;
+            const BoundNetLog& net_log) override;
   int RestartIgnoringLastError(const CompletionCallback& callback) override;
   int RestartWithCertificate(X509Certificate* client_cert,
                              SSLPrivateKey* client_private_key,
@@ -310,7 +310,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
 
   HttpNetworkSession* session_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   const HttpRequestInfo* request_;
   RequestPriority priority_;
   HttpResponseInfo response_;

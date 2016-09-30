@@ -269,6 +269,9 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
                            size_t length,
                            char* buffer);
 
+  // Updates packet number length on packet boundary.
+  void MaybeUpdatePacketNumberLength();
+
   void FillPacketHeader(QuicPacketHeader* header);
 
   // Adds a |frame| if there is space and returns false and flushes all pending

@@ -82,8 +82,10 @@ extern "C" {
  * permits implicit context to be authenticated but may be empty if not needed.
  *
  * The "seal" and "open" operations may work in-place if the |out| and |in|
- * arguments are equal. Otherwise, if |out| and |in| alias, input data may be
- * overwritten before it is read. This situation will cause an error.
+ * arguments are equal. They may also be used to shift the data left inside the
+ * same buffer if |out| is less than |in|. However, |out| may not point inside
+ * the input data otherwise the input may be overwritten before it has been
+ * read. This situation will cause an error.
  *
  * The "seal" and "open" operations return one on success and zero on error. */
 
@@ -256,10 +258,6 @@ OPENSSL_EXPORT int EVP_AEAD_CTX_open(const EVP_AEAD_CTX *ctx, uint8_t *out,
                                      const uint8_t *in, size_t in_len,
                                      const uint8_t *ad, size_t ad_len);
 
-/* EVP_AEAD_CTX_aead returns the underlying AEAD for |ctx|, or NULL if one has
- * not been set. */
-OPENSSL_EXPORT const EVP_AEAD *EVP_AEAD_CTX_aead(const EVP_AEAD_CTX *ctx);
-
 
 /* TLS-specific AEAD algorithms.
  *
@@ -269,6 +267,9 @@ OPENSSL_EXPORT const EVP_AEAD *EVP_AEAD_CTX_aead(const EVP_AEAD_CTX *ctx);
  * not be used concurrently. Any nonces are used as IVs, so they must be
  * unpredictable. They only accept an |ad| parameter of length 11 (the standard
  * TLS one with length omitted). */
+
+OPENSSL_EXPORT const EVP_AEAD *EVP_aead_rc4_md5_tls(void);
+OPENSSL_EXPORT const EVP_AEAD *EVP_aead_rc4_sha1_tls(void);
 
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_aes_128_cbc_sha1_tls(void);
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_aes_128_cbc_sha1_tls_implicit_iv(void);
@@ -293,6 +294,8 @@ OPENSSL_EXPORT const EVP_AEAD *EVP_aead_null_sha1_tls(void);
  * and may not be used concurrently. They only accept an |ad| parameter of
  * length 9 (the standard TLS one with length and version omitted). */
 
+OPENSSL_EXPORT const EVP_AEAD *EVP_aead_rc4_md5_ssl3(void);
+OPENSSL_EXPORT const EVP_AEAD *EVP_aead_rc4_sha1_ssl3(void);
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_aes_128_cbc_sha1_ssl3(void);
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_aes_256_cbc_sha1_ssl3(void);
 OPENSSL_EXPORT const EVP_AEAD *EVP_aead_des_ede3_cbc_sha1_ssl3(void);
@@ -313,6 +316,11 @@ enum evp_aead_direction_t {
 OPENSSL_EXPORT int EVP_AEAD_CTX_init_with_direction(
     EVP_AEAD_CTX *ctx, const EVP_AEAD *aead, const uint8_t *key, size_t key_len,
     size_t tag_len, enum evp_aead_direction_t dir);
+
+/* EVP_AEAD_CTX_get_rc4_state sets |*out_key| to point to an RC4 key structure.
+ * It returns one on success or zero if |ctx| doesn't have an RC4 key. */
+OPENSSL_EXPORT int EVP_AEAD_CTX_get_rc4_state(const EVP_AEAD_CTX *ctx,
+                                              const RC4_KEY **out_key);
 
 /* EVP_AEAD_CTX_get_iv sets |*out_len| to the length of the IV for |ctx| and
  * sets |*out_iv| to point to that many bytes of the current IV. This is only

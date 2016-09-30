@@ -128,7 +128,7 @@ class NET_EXPORT SdchOwner : public SdchObserver {
                            int use_count,
                            const std::string& dictionary_text,
                            const GURL& dictionary_url,
-                           const NetLogWithSource& net_log,
+                           const BoundNetLog& net_log,
                            bool was_from_cache);
 
   void SetClockForTesting(std::unique_ptr<base::Clock> clock);

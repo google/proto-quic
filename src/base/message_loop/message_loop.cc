@@ -5,6 +5,7 @@
 #include "base/message_loop/message_loop.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -20,7 +21,10 @@
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
+#include "base/tracked_objects.h"
+#include "build/build_config.h"
 
 #if defined(OS_MACOSX)
 #include "base/message_loop/message_pump_mac.h"
@@ -271,6 +275,21 @@ void MessageLoop::RemoveNestingObserver(NestingObserver* observer) {
   DCHECK_EQ(this, current());
   nesting_observers_.RemoveObserver(observer);
 }
+
+#if !(defined(OS_MACOSX) && !defined(OS_IOS))
+void MessageLoop::PostTask(
+    const tracked_objects::Location& from_here,
+    const Closure& task) {
+  task_runner_->PostTask(from_here, task);
+}
+
+void MessageLoop::PostDelayedTask(
+    const tracked_objects::Location& from_here,
+    const Closure& task,
+    TimeDelta delay) {
+  task_runner_->PostDelayedTask(from_here, task, delay);
+}
+#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 void MessageLoop::Run() {
   DCHECK(pump_);
@@ -662,6 +681,21 @@ bool MessageLoop::DoIdleWork() {
 #endif
   return false;
 }
+
+#if !(defined(OS_MACOSX) && !defined(OS_IOS))
+void MessageLoop::DeleteSoonInternal(const tracked_objects::Location& from_here,
+                                     void(*deleter)(const void*),
+                                     const void* object) {
+  task_runner()->PostNonNestableTask(from_here, Bind(deleter, object));
+}
+
+void MessageLoop::ReleaseSoonInternal(
+    const tracked_objects::Location& from_here,
+    void(*releaser)(const void*),
+    const void* object) {
+  task_runner()->PostNonNestableTask(from_here, Bind(releaser, object));
+}
+#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 #if !defined(OS_NACL)
 //------------------------------------------------------------------------------

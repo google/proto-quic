@@ -192,7 +192,7 @@ class ProxyResolverMac : public ProxyResolver {
                      ProxyInfo* results,
                      const CompletionCallback& callback,
                      RequestHandle* request,
-                     const NetLogWithSource& net_log) override;
+                     const BoundNetLog& net_log) override;
 
   void CancelRequest(RequestHandle request) override;
 
@@ -215,7 +215,7 @@ int ProxyResolverMac::GetProxyForURL(const GURL& query_url,
                                      ProxyInfo* results,
                                      const CompletionCallback& /*callback*/,
                                      RequestHandle* /*request*/,
-                                     const NetLogWithSource& net_log) {
+                                     const BoundNetLog& net_log) {
   base::ScopedCFTypeRef<CFStringRef> query_ref(
       base::SysUTF8ToCFStringRef(query_url.spec()));
   base::ScopedCFTypeRef<CFURLRef> query_url_ref(

@@ -163,7 +163,6 @@
       'CrWinGoma': 'gn_release_bot_minimal_symbols_x86',
       'CrWinGoma(dll)': 'gn_shared_release_bot_minimal_symbols_x86',
       'ClangToTAndroidASan': 'android_clang_tot_asan',
-      'ClangToTAndroid (dbg)': 'android_clang_tot_dbg',
       'ClangToTLinux':
         'swarming_gn_clang_tot_linux_full_symbols_shared_release',
       'ClangToTLinux tester': 'none',
@@ -1078,11 +1077,6 @@
     'android_clang_tot_asan': [
       'android_without_codecs', 'clang_tot', 'asan', 'gn',
       'shared', 'debug', 'minimal_symbols',
-    ],
-
-    'android_clang_tot_dbg': [
-      'android_without_codecs', 'clang_tot', 'gn',
-      'shared', 'debug',
     ],
 
     'android_cronet_data_reduction_proxy_gn_release_bot_minimal_symbols_arm_no_neon': [

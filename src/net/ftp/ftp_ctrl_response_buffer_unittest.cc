@@ -20,7 +20,7 @@ namespace {
 
 class FtpCtrlResponseBufferTest : public testing::Test {
  public:
-  FtpCtrlResponseBufferTest() : buffer_(NetLogWithSource()) {}
+  FtpCtrlResponseBufferTest() : buffer_(BoundNetLog()) {}
 
  protected:
   int PushDataToBuffer(const char* data) {

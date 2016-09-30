@@ -204,8 +204,7 @@ bool ResemblesMulticastDNSName(const std::string& hostname) {
 }
 
 // Attempts to connect a UDP socket to |dest|:53.
-bool IsGloballyReachable(const IPAddress& dest,
-                         const NetLogWithSource& net_log) {
+bool IsGloballyReachable(const IPAddress& dest, const BoundNetLog& net_log) {
   // TODO(eroman): Remove ScopedTracker below once crbug.com/455942 is fixed.
   tracked_objects::ScopedTracker tracking_profile_1(
       FROM_HERE_WITH_EXPLICIT_FUNCTION("455942 IsGloballyReachable"));
@@ -427,14 +426,14 @@ std::unique_ptr<base::Value> NetLogIPv6AvailableCallback(
 // without a Request object.
 
 // Logs when a request has just been started.
-void LogStartRequest(const NetLogWithSource& source_net_log,
+void LogStartRequest(const BoundNetLog& source_net_log,
                      const HostResolver::RequestInfo& info) {
   source_net_log.BeginEvent(NetLogEventType::HOST_RESOLVER_IMPL_REQUEST,
                             base::Bind(&NetLogRequestInfoCallback, &info));
 }
 
 // Logs when a request has just completed (before its callback is run).
-void LogFinishRequest(const NetLogWithSource& source_net_log,
+void LogFinishRequest(const BoundNetLog& source_net_log,
                       const HostResolver::RequestInfo& info,
                       int net_error) {
   source_net_log.EndEventWithNetErrorCode(
@@ -442,7 +441,7 @@ void LogFinishRequest(const NetLogWithSource& source_net_log,
 }
 
 // Logs when a request has been cancelled.
-void LogCancelRequest(const NetLogWithSource& source_net_log,
+void LogCancelRequest(const BoundNetLog& source_net_log,
                       const HostResolverImpl::RequestInfo& info) {
   source_net_log.AddEvent(NetLogEventType::CANCELLED);
   source_net_log.EndEvent(NetLogEventType::HOST_RESOLVER_IMPL_REQUEST);
@@ -533,7 +532,7 @@ const unsigned HostResolverImpl::kMaximumDnsFailures = 16;
 // than removed from the Job's |requests_| list.
 class HostResolverImpl::RequestImpl : public HostResolver::Request {
  public:
-  RequestImpl(const NetLogWithSource& source_net_log,
+  RequestImpl(const BoundNetLog& source_net_log,
               const RequestInfo& info,
               RequestPriority priority,
               const CompletionCallback& callback,
@@ -573,7 +572,9 @@ class HostResolverImpl::RequestImpl : public HostResolver::Request {
   }
 
   // NetLog for the source, passed in HostResolver::Resolve.
-  const NetLogWithSource& source_net_log() { return source_net_log_; }
+  const BoundNetLog& source_net_log() {
+    return source_net_log_;
+  }
 
   const RequestInfo& info() const {
     return info_;
@@ -585,7 +586,7 @@ class HostResolverImpl::RequestImpl : public HostResolver::Request {
   base::TimeTicks request_time() const { return request_time_; }
 
  private:
-  const NetLogWithSource source_net_log_;
+  const BoundNetLog source_net_log_;
 
   // The request info that started the request.
   const RequestInfo info_;
@@ -629,7 +630,7 @@ class HostResolverImpl::ProcTask
            const ProcTaskParams& params,
            const Callback& callback,
            scoped_refptr<base::TaskRunner> worker_task_runner,
-           const NetLogWithSource& job_net_log)
+           const BoundNetLog& job_net_log)
       : key_(key),
         params_(params),
         callback_(callback),
@@ -988,7 +989,7 @@ class HostResolverImpl::ProcTask
 
   AddressList results_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(ProcTask);
 };
@@ -1066,7 +1067,7 @@ class HostResolverImpl::DnsTask : public base::SupportsWeakPtr<DnsTask> {
   DnsTask(DnsClient* client,
           const Key& key,
           Delegate* delegate,
-          const NetLogWithSource& job_net_log)
+          const BoundNetLog& job_net_log)
       : client_(client),
         key_(key),
         delegate_(delegate),
@@ -1249,7 +1250,7 @@ class HostResolverImpl::DnsTask : public base::SupportsWeakPtr<DnsTask> {
 
   // The listener to the results of this DnsTask.
   Delegate* delegate_;
-  const NetLogWithSource net_log_;
+  const BoundNetLog net_log_;
 
   std::unique_ptr<DnsTransaction> transaction_a_;
   std::unique_ptr<DnsTransaction> transaction_aaaa_;
@@ -1278,7 +1279,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       const Key& key,
       RequestPriority priority,
       scoped_refptr<base::TaskRunner> worker_task_runner,
-      const NetLogWithSource& source_net_log)
+      const BoundNetLog& source_net_log)
       : resolver_(resolver),
         key_(key),
         priority_tracker_(priority),
@@ -1289,8 +1290,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
         dns_task_error_(OK),
         creation_time_(base::TimeTicks::Now()),
         priority_change_time_(creation_time_),
-        net_log_(
-            NetLogWithSource::Make(source_net_log.net_log(),
+        net_log_(BoundNetLog::Make(source_net_log.net_log(),
                                    NetLogSourceType::HOST_RESOLVER_IMPL_JOB)) {
     source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_CREATE_JOB);
 
@@ -1846,7 +1846,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
   const base::TimeTicks creation_time_;
   base::TimeTicks priority_change_time_;
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
 
   // Resolves the host using a HostResolverProc.
   scoped_refptr<ProcTask> proc_task_;
@@ -1911,7 +1911,7 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
                               AddressList* addresses,
                               const CompletionCallback& callback,
                               std::unique_ptr<Request>* out_req,
-                              const NetLogWithSource& source_net_log) {
+                              const BoundNetLog& source_net_log) {
   DCHECK(addresses);
   DCHECK(CalledOnValidThread());
   DCHECK_EQ(false, callback.is_null());
@@ -2045,7 +2045,7 @@ int HostResolverImpl::ResolveHelper(const Key& key,
                                     AddressList* addresses,
                                     bool allow_stale,
                                     HostCache::EntryStaleness* stale_info,
-                                    const NetLogWithSource& source_net_log) {
+                                    const BoundNetLog& source_net_log) {
   DCHECK(allow_stale == !!stale_info);
   // The result of |getaddrinfo| for empty hosts is inconsistent across systems.
   // On Windows it gives the default interface's address, whereas on Linux it
@@ -2085,7 +2085,7 @@ int HostResolverImpl::ResolveHelper(const Key& key,
 
 int HostResolverImpl::ResolveFromCache(const RequestInfo& info,
                                        AddressList* addresses,
-                                       const NetLogWithSource& source_net_log) {
+                                       const BoundNetLog& source_net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(addresses);
 
@@ -2138,7 +2138,7 @@ int HostResolverImpl::ResolveStaleFromCache(
     const RequestInfo& info,
     AddressList* addresses,
     HostCache::EntryStaleness* stale_info,
-    const NetLogWithSource& source_net_log) {
+    const BoundNetLog& source_net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(addresses);
   DCHECK(stale_info);
@@ -2306,7 +2306,7 @@ void HostResolverImpl::RemoveJob(Job* job) {
 HostResolverImpl::Key HostResolverImpl::GetEffectiveKeyForRequest(
     const RequestInfo& info,
     const IPAddress* ip_address,
-    const NetLogWithSource& net_log) {
+    const BoundNetLog& net_log) {
   HostResolverFlags effective_flags =
       info.host_resolver_flags() | additional_resolver_flags_;
   AddressFamily effective_address_family = info.address_family();
@@ -2330,7 +2330,7 @@ HostResolverImpl::Key HostResolverImpl::GetEffectiveKeyForRequest(
   return Key(info.hostname(), effective_address_family, effective_flags);
 }
 
-bool HostResolverImpl::IsIPv6Reachable(const NetLogWithSource& net_log) {
+bool HostResolverImpl::IsIPv6Reachable(const BoundNetLog& net_log) {
   base::TimeTicks now = base::TimeTicks::Now();
   bool cached = true;
   if ((now - last_ipv6_probe_time_).InMilliseconds() > kIPv6ProbePeriodMs) {

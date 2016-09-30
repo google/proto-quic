@@ -54,12 +54,11 @@ class NET_EXPORT_PRIVATE ProofVerifyDetailsChromium
 // ProofVerifierChromium needs in order to log correctly.
 struct ProofVerifyContextChromium : public ProofVerifyContext {
  public:
-  ProofVerifyContextChromium(int cert_verify_flags,
-                             const NetLogWithSource& net_log)
+  ProofVerifyContextChromium(int cert_verify_flags, const BoundNetLog& net_log)
       : cert_verify_flags(cert_verify_flags), net_log(net_log) {}
 
   int cert_verify_flags;
-  NetLogWithSource net_log;
+  BoundNetLog net_log;
 };
 
 // ProofVerifierChromium implements the QUIC ProofVerifier interface.  It is

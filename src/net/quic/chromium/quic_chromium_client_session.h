@@ -48,8 +48,7 @@ class SSLInfo;
 class TransportSecurityState;
 
 using TokenBindingSignatureMap =
-    base::MRUCache<std::pair<TokenBindingType, std::string>,
-                   std::vector<uint8_t>>;
+    base::MRUCache<std::string, std::vector<uint8_t>>;
 
 namespace test {
 class QuicChromiumClientSessionPeer;
@@ -198,11 +197,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // Gets the SSL connection information.
   bool GetSSLInfo(SSLInfo* ssl_info) const;
 
-  // Generates the signature used in Token Binding using key |*key| and for a
-  // Token Binding of type |tb_type|, putting the signature in |*out|. Returns a
-  // net error code.
+  // Signs the exported keying material used for Token Binding using key |*key|
+  // and puts the signature in |*out|. Returns a net error code.
   Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                 TokenBindingType tb_type,
                                  std::vector<uint8_t>* out);
 
   // Performs a crypto handshake with the server.
@@ -228,7 +225,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   std::unique_ptr<base::Value> GetInfoAsValue(
       const std::set<HostPortPair>& aliases);
 
-  const NetLogWithSource& net_log() const { return net_log_; }
+  const BoundNetLog& net_log() const { return net_log_; }
 
   base::WeakPtr<QuicChromiumClientSession> GetWeakPtr();
 
@@ -268,7 +265,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // connected network. Migrates this session to the newly connected
   // network if the session has a pending migration.
   void OnNetworkConnected(NetworkChangeNotifier::NetworkHandle network,
-                          const NetLogWithSource& net_log);
+                          const BoundNetLog& bound_net_log);
 
   // Schedules a migration alarm to wait for a new network.
   void OnNoNewNetwork();
@@ -362,7 +359,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   CompletionCallback callback_;
   size_t num_total_streams_;
   base::TaskRunner* task_runner_;
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   std::vector<std::unique_ptr<QuicChromiumPacketReader>> packet_readers_;
   LoadTimingInfo::ConnectTiming connect_timing_;
   std::unique_ptr<QuicConnectionLogger> logger_;

@@ -312,7 +312,7 @@ WebSocketBasicHandshakeStream::~WebSocketBasicHandshakeStream() {}
 int WebSocketBasicHandshakeStream::InitializeStream(
     const HttpRequestInfo* request_info,
     RequestPriority priority,
-    const NetLogWithSource& net_log,
+    const BoundNetLog& net_log,
     const CompletionCallback& callback) {
   url_ = request_info->url;
   state_.Initialize(request_info, priority, net_log, callback);
@@ -447,9 +447,8 @@ void WebSocketBasicHandshakeStream::PopulateNetErrorDetails(
   return;
 }
 
-Error WebSocketBasicHandshakeStream::GetTokenBindingSignature(
+Error WebSocketBasicHandshakeStream::GetSignedEKMForTokenBinding(
     crypto::ECPrivateKey* key,
-    TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
   NOTREACHED();
   return ERR_NOT_IMPLEMENTED;

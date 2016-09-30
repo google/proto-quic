@@ -59,7 +59,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
 
   QuicChromiumClientStream(QuicStreamId id,
                            QuicClientSessionBase* session,
-                           const NetLogWithSource& net_log);
+                           const BoundNetLog& net_log);
 
   ~QuicChromiumClientStream() override;
 
@@ -113,7 +113,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   // it becomes writable.
   bool CanWrite(const CompletionCallback& callback);
 
-  const NetLogWithSource& net_log() const { return net_log_; }
+  const BoundNetLog& net_log() const { return net_log_; }
 
   // Prevents this stream from migrating to a new network. May cause other
   // concurrent streams within the session to also not migrate.
@@ -135,7 +135,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   void NotifyDelegateOfDataAvailable();
   void RunOrBuffer(base::Closure closure);
 
-  NetLogWithSource net_log_;
+  BoundNetLog net_log_;
   Delegate* delegate_;
 
   bool headers_delivered_;
