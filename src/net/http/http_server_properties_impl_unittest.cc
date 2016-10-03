@@ -441,7 +441,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
   // |alternative_service_map| has an entry for
   // |test_server2|.
   AlternativeServiceInfoVector alternative_service_info_vector;
-  const AlternativeService alternative_service2(NPN_SPDY_3_1, "bar2", 443);
+  const AlternativeService alternative_service2(NPN_HTTP_2, "bar2", 443);
   base::Time expiration2 = now + base::TimeDelta::FromDays(2);
   alternative_service_info_vector.push_back(
       AlternativeServiceInfo(alternative_service2, expiration2));
@@ -627,7 +627,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, ClearServerWithCanonical) {
 
 TEST_F(AlternateProtocolServerPropertiesTest, MRUOfGetAlternativeServices) {
   url::SchemeHostPort test_server1("http", "foo1", 80);
-  const AlternativeService alternative_service1(NPN_SPDY_3_1, "foo1", 443);
+  const AlternativeService alternative_service1(NPN_HTTP_2, "foo1", 443);
   SetAlternativeService(test_server1, alternative_service1);
   url::SchemeHostPort test_server2("http", "foo2", 80);
   const AlternativeService alternative_service2(NPN_HTTP_2, "foo2", 1234);
@@ -699,7 +699,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, MaxAge) {
 
   // First alternative service expired one day ago, should not be returned by
   // GetAlternativeServices().
-  const AlternativeService alternative_service1(NPN_SPDY_3_1, "foo", 443);
+  const AlternativeService alternative_service1(NPN_HTTP_2, "foo", 443);
   alternative_service_info_vector.push_back(
       AlternativeServiceInfo(alternative_service1, now - one_day));
 
@@ -725,7 +725,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, MaxAgeCanonical) {
 
   // First alternative service expired one day ago, should not be returned by
   // GetAlternativeServices().
-  const AlternativeService alternative_service1(NPN_SPDY_3_1, "foo", 443);
+  const AlternativeService alternative_service1(NPN_HTTP_2, "foo", 443);
   alternative_service_info_vector.push_back(
       AlternativeServiceInfo(alternative_service1, now - one_day));
 
@@ -748,7 +748,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, MaxAgeCanonical) {
 
 TEST_F(AlternateProtocolServerPropertiesTest, AlternativeServiceWithScheme) {
   AlternativeServiceInfoVector alternative_service_info_vector;
-  const AlternativeService alternative_service1(NPN_SPDY_3_1, "foo", 443);
+  const AlternativeService alternative_service1(NPN_HTTP_2, "foo", 443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   alternative_service_info_vector.push_back(
       AlternativeServiceInfo(alternative_service1, expiration));
@@ -784,7 +784,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, AlternativeServiceWithScheme) {
 
 TEST_F(AlternateProtocolServerPropertiesTest, ClearAlternativeServices) {
   AlternativeServiceInfoVector alternative_service_info_vector;
-  const AlternativeService alternative_service1(NPN_SPDY_3_1, "foo", 443);
+  const AlternativeService alternative_service1(NPN_HTTP_2, "foo", 443);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   alternative_service_info_vector.push_back(
       AlternativeServiceInfo(alternative_service1, expiration));

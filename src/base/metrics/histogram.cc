@@ -216,7 +216,7 @@ HistogramBase* Histogram::Factory::Build() {
     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
   }
 
-  DCHECK_EQ(histogram_type_, histogram->GetHistogramType()) << name_;
+  CHECK_EQ(histogram_type_, histogram->GetHistogramType()) << name_;
   if (bucket_count_ != 0 &&
       !histogram->HasConstructionArguments(minimum_, maximum_, bucket_count_)) {
     // The construction arguments do not match the existing histogram.  This can
@@ -673,15 +673,14 @@ void Histogram::WriteAsciiHeader(const SampleVector& samples,
                 "Histogram: %s recorded %d samples",
                 histogram_name().c_str(),
                 sample_count);
-  if (0 == sample_count) {
+  if (sample_count == 0) {
     DCHECK_EQ(samples.sum(), 0);
   } else {
-    double average = static_cast<float>(samples.sum()) / sample_count;
-
-    StringAppendF(output, ", average = %.1f", average);
+    double mean = static_cast<float>(samples.sum()) / sample_count;
+    StringAppendF(output, ", mean = %.1f", mean);
   }
-  if (flags() & ~kHexRangePrintingFlag)
-    StringAppendF(output, " (flags = 0x%x)", flags() & ~kHexRangePrintingFlag);
+  if (flags())
+    StringAppendF(output, " (flags = 0x%x)", flags());
 }
 
 void Histogram::WriteAsciiBucketContext(const int64_t past,

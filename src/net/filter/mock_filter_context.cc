@@ -58,7 +58,7 @@ const URLRequestContext* MockFilterContext::GetURLRequestContext() const {
   return context_.get();
 }
 
-const BoundNetLog& MockFilterContext::GetNetLog() const {
+const NetLogWithSource& MockFilterContext::GetNetLog() const {
   return net_log_;
 }
 

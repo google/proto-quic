@@ -234,7 +234,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       pkp_bypassed_(false),
       num_total_streams_(0),
       task_runner_(task_runner),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::QUIC_SESSION)),
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::QUIC_SESSION)),
       logger_(new QuicConnectionLogger(this,
                                        connection_description,
                                        std::move(socket_performance_watcher),
@@ -591,7 +591,7 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
   ssl_info->UpdateCertificateTransparencyInfo(*ct_verify_result_);
 
   if (crypto_stream_->crypto_negotiated_params().token_binding_key_param ==
-      kP256) {
+      kTB10) {
     ssl_info->token_binding_negotiated = true;
     ssl_info->token_binding_key_param = TB_PARAM_ECDSAP256;
   }
@@ -601,6 +601,7 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
 
 Error QuicChromiumClientSession::GetTokenBindingSignature(
     crypto::ECPrivateKey* key,
+    TokenBindingType tb_type,
     std::vector<uint8_t>* out) {
   // The same key will be used across multiple requests to sign the same value,
   // so the signature is cached.
@@ -608,7 +609,7 @@ Error QuicChromiumClientSession::GetTokenBindingSignature(
   if (!key->ExportRawPublicKey(&raw_public_key))
     return ERR_FAILED;
   TokenBindingSignatureMap::iterator it =
-      token_binding_signatures_.Get(raw_public_key);
+      token_binding_signatures_.Get(std::make_pair(tb_type, raw_public_key));
   if (it != token_binding_signatures_.end()) {
     *out = it->second;
     return OK;
@@ -617,9 +618,9 @@ Error QuicChromiumClientSession::GetTokenBindingSignature(
   std::string key_material;
   if (!crypto_stream_->ExportTokenBindingKeyingMaterial(&key_material))
     return ERR_FAILED;
-  if (!SignTokenBindingEkm(key_material, key, out))
+  if (!CreateTokenBindingSignature(key_material, tb_type, key, out))
     return ERR_FAILED;
-  token_binding_signatures_.Put(raw_public_key, *out);
+  token_binding_signatures_.Put(std::make_pair(tb_type, raw_public_key), *out);
   return OK;
 }
 
@@ -662,6 +663,16 @@ int QuicChromiumClientSession::ResumeCryptoConnect(
 
 int QuicChromiumClientSession::GetNumSentClientHellos() const {
   return crypto_stream_->num_sent_client_hellos();
+}
+
+QuicStreamId QuicChromiumClientSession::GetStreamIdForPush(
+    const GURL& pushed_url) {
+  QuicClientPromisedInfo* promised_info =
+      QuicClientSessionBase::GetPromisedByUrl(pushed_url.spec());
+  if (!promised_info)
+    return 0;
+
+  return promised_info->id();
 }
 
 bool QuicChromiumClientSession::CanPool(const std::string& hostname,
@@ -1096,7 +1107,7 @@ void QuicChromiumClientSession::OnMigrationTimeout(size_t num_sockets) {
 
 void QuicChromiumClientSession::OnNetworkConnected(
     NetworkChangeNotifier::NetworkHandle network,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   // If migration_pending_ is false, there was no migration pending or
   // an earlier task completed migration.
   if (!migration_pending_)
@@ -1107,7 +1118,7 @@ void QuicChromiumClientSession::OnNetworkConnected(
   // migration process. Allows tests to be more uniform.
   stream_factory_->OnSessionGoingAway(this);
   stream_factory_->MigrateSessionToNewNetwork(
-      this, network, /*close_session_on_error=*/true, bound_net_log);
+      this, network, /*close_session_on_error=*/true, net_log_);
 }
 
 void QuicChromiumClientSession::OnWriteError(int error_code) {

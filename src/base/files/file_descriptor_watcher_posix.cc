@@ -27,7 +27,15 @@ LazyInstance<ThreadLocalPointer<MessageLoopForIO>>::Leaky
 
 FileDescriptorWatcher::Controller::~Controller() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
+
+  // Delete |watcher_| on the MessageLoopForIO.
+  //
+  // If the MessageLoopForIO is deleted before Watcher::StartWatching() runs,
+  // |watcher_| is leaked. If the MessageLoopForIO is deleted after
+  // Watcher::StartWatching() runs but before the DeleteSoon task runs,
+  // |watcher_| is deleted from Watcher::WillDestroyCurrentMessageLoop().
   message_loop_for_io_task_runner_->DeleteSoon(FROM_HERE, watcher_.release());
+
   // Since WeakPtrs are invalidated by the destructor, RunCallback() won't be
   // invoked after this returns.
 }

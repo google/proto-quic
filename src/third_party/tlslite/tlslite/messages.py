@@ -140,6 +140,7 @@ class ClientHello(HandshakeMsg):
         self.tb_client_params = []
         self.support_signed_cert_timestamps = False
         self.status_request = False
+        self.ri = False
 
     def create(self, version, random, session_id, cipher_suites,
                certificate_types=None, srpUsername=None,
@@ -223,7 +224,7 @@ class ClientHello(HandshakeMsg):
                         p2 = Parser(tokenBindingBytes)
                         ver_minor = p2.get(1)
                         ver_major = p2.get(1)
-                        if (ver_major, ver_minor) >= (0, 6):
+                        if (ver_major, ver_minor) >= (0, 10):
                             p2.startLengthCheck(1)
                             while not p2.atLengthCheck():
                                 self.tb_client_params.append(p2.get(1))
@@ -244,12 +245,20 @@ class ClientHello(HandshakeMsg):
                         # request_extensions in the OCSP request.
                         p.getFixBytes(extLength)
                         self.status_request = True
+                    elif extType == ExtensionType.renegotiation_info:
+                        # We don't support renegotiation, so if we receive this
+                        # extension, it should contain a single null byte.
+                        if extLength != 1 or p.getFixBytes(extLength)[0] != 0:
+                            raise SyntaxError()
+                        self.ri = True
                     else:
                         _ = p.getFixBytes(extLength)
                     index2 = p.index
                     if index2 - index1 != extLength:
                         raise SyntaxError("Bad length for extension_data")
                     soFar += 4 + extLength
+            if CipherSuite.TLS_EMPTY_RENEGOTIATION_INFO_SCSV in self.cipher_suites:
+                self.ri = True
             p.stopLengthCheck()
         return self
 
@@ -327,6 +336,7 @@ class ServerHello(HandshakeMsg):
         self.tb_params = None
         self.signed_cert_timestamps = None
         self.status_request = False
+        self.send_ri = False
 
     def create(self, version, random, session_id, cipher_suite,
                certificate_type, tackExt, alpn_proto_selected,
@@ -421,7 +431,7 @@ class ServerHello(HandshakeMsg):
             w2.add(4, 2)
             # version
             w2.add(0, 1)
-            w2.add(6, 1)
+            w2.add(10, 1)
             # length of params (defined as variable length <1..2^8-1>, but in
             # this context the server can only send a single value.
             w2.add(1, 1)
@@ -432,6 +442,10 @@ class ServerHello(HandshakeMsg):
         if self.status_request:
             w2.add(ExtensionType.status_request, 2)
             w2.add(0, 2)
+        if self.send_ri:
+            w2.add(ExtensionType.renegotiation_info, 2)
+            w2.add(1, 2)
+            w2.add(0, 1)
         if len(w2.bytes):
             w.add(len(w2.bytes), 2)
             w.bytes += w2.bytes        

@@ -53,9 +53,9 @@ namespace {
       LoadTestSubjectAltNameData(basename, &san_der);
   if (!load_result)
     return load_result;
-  *result = GeneralNames::CreateFromDer(der::Input(&san_der));
+  *result = GeneralNames::Create(der::Input(&san_der));
   if (!*result)
-    return ::testing::AssertionFailure() << "CreateFromDer failed";
+    return ::testing::AssertionFailure() << "Create failed";
   return ::testing::AssertionSuccess();
 }
 
@@ -78,7 +78,7 @@ TEST_P(ParseNameConstraints, DNSNames) {
   ASSERT_TRUE(LoadTestNameConstraint("dnsname.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   EXPECT_TRUE(name_constraints->IsPermittedDNSName("permitted.example.com"));
@@ -161,7 +161,7 @@ TEST_P(ParseNameConstraints,
   std::string a;
   ASSERT_TRUE(LoadTestNameConstraint("dnsname2.pem", &a));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // Matches permitted exactly.
@@ -191,7 +191,7 @@ TEST_P(ParseNameConstraints, DNSNamesWithLeadingDot) {
   ASSERT_TRUE(
       LoadTestNameConstraint("dnsname-permitted_with_leading_dot.pem", &a));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // dNSName constraints should be specified as a host. A dNSName constraint
@@ -208,7 +208,7 @@ TEST_P(ParseNameConstraints, DNSNamesExcludeOnly) {
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-excluded.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // Only "excluded.permitted.example.com" is excluded, and since permitted is
@@ -227,7 +227,7 @@ TEST_P(ParseNameConstraints, DNSNamesExcludeAll) {
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-excludeall.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // "permitted.example.com" is in the permitted section, but since "" is
@@ -244,7 +244,7 @@ TEST_P(ParseNameConstraints, DNSNamesExcludeDot) {
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-exclude_dot.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // "." is excluded, which should match nothing.
@@ -262,7 +262,7 @@ TEST_P(ParseNameConstraints, DNSNamesFailOnInvalidIA5String) {
   ASSERT_NE(std::string::npos, replace_location);
   a.replace(replace_location, 1, 1, -1);
 
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, DirectoryNames) {
@@ -288,8 +288,7 @@ TEST_P(ParseNameConstraints, DirectoryNames) {
   ASSERT_TRUE(LoadTestName("name-ca.pem", &name_ca));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // Not in any permitted subtree.
@@ -351,8 +350,7 @@ TEST_P(ParseNameConstraints, DirectoryNamesExcludeOnly) {
   ASSERT_TRUE(
       LoadTestNameConstraint("directoryname-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_empty;
@@ -382,8 +380,7 @@ TEST_P(ParseNameConstraints, DirectoryNamesExcludeAll) {
   ASSERT_TRUE(
       LoadTestNameConstraint("directoryname-excludeall.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_empty;
@@ -415,7 +412,7 @@ TEST_P(ParseNameConstraints, IPAdresses) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // IPv4 tests:
@@ -530,7 +527,7 @@ TEST_P(ParseNameConstraints, IPAdressesExcludeOnly) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-excluded.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // Only 192.168.5.0/255.255.255.0 is excluded, and since permitted is empty,
@@ -546,7 +543,7 @@ TEST_P(ParseNameConstraints, IPAdressesExcludeAll) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-excludeall.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   // 192.168.0.0/255.255.0.0 and
@@ -565,7 +562,7 @@ TEST_P(ParseNameConstraints, IPAdressesNetmaskPermitSingleHost) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-permit_singlehost.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   EXPECT_FALSE(name_constraints->IsPermittedIP(IPAddress::IPv4AllZeros()));
@@ -581,7 +578,7 @@ TEST_P(ParseNameConstraints, IPAdressesNetmaskPermitPrefixLen31) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-permit_prefix31.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   EXPECT_FALSE(name_constraints->IsPermittedIP(IPAddress::IPv4AllZeros()));
@@ -598,7 +595,7 @@ TEST_P(ParseNameConstraints, IPAdressesNetmaskPermitPrefixLen1) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-permit_prefix1.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   EXPECT_FALSE(name_constraints->IsPermittedIP(IPAddress::IPv4AllZeros()));
@@ -614,7 +611,7 @@ TEST_P(ParseNameConstraints, IPAdressesNetmaskPermitAll) {
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-permit_all.pem", &a));
 
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+      NameConstraints::Create(der::Input(&a), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   EXPECT_TRUE(name_constraints->IsPermittedIP(IPAddress::IPv4AllZeros()));
@@ -626,26 +623,26 @@ TEST_P(ParseNameConstraints, IPAdressesFailOnInvalidAddr) {
   std::string a;
   ASSERT_TRUE(LoadTestNameConstraint("ipaddress-invalid_addr.pem", &a));
 
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, IPAdressesFailOnInvalidMaskNotContiguous) {
   std::string a;
   ASSERT_TRUE(LoadTestNameConstraint(
       "ipaddress-invalid_mask_not_contiguous_1.pem", &a));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 
   ASSERT_TRUE(LoadTestNameConstraint(
       "ipaddress-invalid_mask_not_contiguous_2.pem", &a));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 
   ASSERT_TRUE(LoadTestNameConstraint(
       "ipaddress-invalid_mask_not_contiguous_3.pem", &a));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 
   ASSERT_TRUE(LoadTestNameConstraint(
       "ipaddress-invalid_mask_not_contiguous_4.pem", &a));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&a), is_critical()));
+  EXPECT_FALSE(NameConstraints::Create(der::Input(&a), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, OtherNamesInPermitted) {
@@ -653,8 +650,7 @@ TEST_P(ParseNameConstraints, OtherNamesInPermitted) {
   ASSERT_TRUE(
       LoadTestNameConstraint("othername-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -675,8 +671,7 @@ TEST_P(ParseNameConstraints, OtherNamesInExcluded) {
   ASSERT_TRUE(
       LoadTestNameConstraint("othername-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -697,8 +692,7 @@ TEST_P(ParseNameConstraints, Rfc822NamesInPermitted) {
   ASSERT_TRUE(
       LoadTestNameConstraint("rfc822name-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -719,8 +713,7 @@ TEST_P(ParseNameConstraints, Rfc822NamesInExcluded) {
   ASSERT_TRUE(
       LoadTestNameConstraint("rfc822name-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -741,8 +734,7 @@ TEST_P(ParseNameConstraints, X400AddresssInPermitted) {
   ASSERT_TRUE(
       LoadTestNameConstraint("x400address-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -763,8 +755,7 @@ TEST_P(ParseNameConstraints, X400AddresssInExcluded) {
   ASSERT_TRUE(
       LoadTestNameConstraint("x400address-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -785,8 +776,7 @@ TEST_P(ParseNameConstraints, EdiPartyNamesInPermitted) {
   ASSERT_TRUE(
       LoadTestNameConstraint("edipartyname-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -807,8 +797,7 @@ TEST_P(ParseNameConstraints, EdiPartyNamesInExcluded) {
   ASSERT_TRUE(
       LoadTestNameConstraint("edipartyname-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -828,8 +817,7 @@ TEST_P(ParseNameConstraints, URIsInPermitted) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("uri-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -849,8 +837,7 @@ TEST_P(ParseNameConstraints, URIsInExcluded) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("uri-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -871,8 +858,7 @@ TEST_P(ParseNameConstraints, RegisteredIDsInPermitted) {
   ASSERT_TRUE(
       LoadTestNameConstraint("registeredid-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -893,8 +879,7 @@ TEST_P(ParseNameConstraints, RegisteredIDsInExcluded) {
   ASSERT_TRUE(
       LoadTestNameConstraint("registeredid-excluded.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   if (is_critical()) {
@@ -918,16 +903,16 @@ TEST_P(ParseNameConstraints,
   // The value should not be in the DER encoding if it is the default. But this
   // could be changed to allowed if there are buggy encoders out there that
   // include it anyway.
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnGeneralSubtreeWithMinimum) {
   std::string constraints_der;
   ASSERT_TRUE(
       LoadTestNameConstraint("dnsname-with_min_1.pem", &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints,
@@ -935,61 +920,60 @@ TEST_P(ParseNameConstraints,
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-with_min_0_and_max.pem",
                                      &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnGeneralSubtreeWithMinimumAndMaximum) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-with_min_1_and_max.pem",
                                      &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnGeneralSubtreeWithMaximum) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("dnsname-with_max.pem", &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnEmptyExtensionValue) {
   std::string constraints_der = "";
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnNoPermittedAndExcluded) {
   std::string constraints_der;
   ASSERT_TRUE(
       LoadTestNameConstraint("invalid-no_subtrees.pem", &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnEmptyPermitted) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("invalid-empty_permitted_subtree.pem",
                                      &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, FailsOnEmptyExcluded) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("invalid-empty_excluded_subtree.pem",
                                      &constraints_der));
-  EXPECT_FALSE(NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                              is_critical()));
+  EXPECT_FALSE(
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
 }
 
 TEST_P(ParseNameConstraints, IsPermittedCertSubjectEmailAddressIsOk) {
   std::string constraints_der;
   ASSERT_TRUE(LoadTestNameConstraint("directoryname.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_us_arizona_email;
@@ -1008,8 +992,7 @@ TEST_P(ParseNameConstraints, IsPermittedCertSubjectEmailAddressIsNotOk) {
   ASSERT_TRUE(
       LoadTestNameConstraint("rfc822name-permitted.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_us_arizona_email;
@@ -1031,8 +1014,7 @@ TEST_P(ParseNameConstraints, IsPermittedCertSubjectDnsNames) {
   ASSERT_TRUE(LoadTestNameConstraint("directoryname_and_dnsname.pem",
                                      &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_us_az_foocom;
@@ -1073,8 +1055,7 @@ TEST_P(ParseNameConstraints, IsPermittedCertSubjectIpAddresses) {
   ASSERT_TRUE(LoadTestNameConstraint(
       "directoryname_and_dnsname_and_ipaddress.pem", &constraints_der));
   std::unique_ptr<NameConstraints> name_constraints(
-      NameConstraints::CreateFromDer(der::Input(&constraints_der),
-                                     is_critical()));
+      NameConstraints::Create(der::Input(&constraints_der), is_critical()));
   ASSERT_TRUE(name_constraints);
 
   std::string name_us_az_1_1_1_1;
@@ -1116,20 +1097,19 @@ TEST_P(ParseNameConstraints, IsPermittedCertSubjectIpAddresses) {
       nullptr /* subject_alt_names */));
 }
 
-TEST_P(ParseNameConstraints,
-       GeneralNamesCreateFromDerFailsOnEmptySubjectAltName) {
+TEST_P(ParseNameConstraints, GeneralNamesCreateFailsOnEmptySubjectAltName) {
   std::string invalid_san_der;
   ASSERT_TRUE(
       LoadTestSubjectAltNameData("san-invalid-empty.pem", &invalid_san_der));
-  EXPECT_FALSE(GeneralNames::CreateFromDer(der::Input(&invalid_san_der)));
+  EXPECT_FALSE(GeneralNames::Create(der::Input(&invalid_san_der)));
 }
 
 TEST_P(ParseNameConstraints,
-       GeneralNamesCreateFromDerFailsOnInvalidIpInSubjectAltName) {
+       GeneralNamesCreateFailsOnInvalidIpInSubjectAltName) {
   std::string invalid_san_der;
   ASSERT_TRUE(LoadTestSubjectAltNameData("san-invalid-ipaddress.pem",
                                          &invalid_san_der));
-  EXPECT_FALSE(GeneralNames::CreateFromDer(der::Input(&invalid_san_der)));
+  EXPECT_FALSE(GeneralNames::Create(der::Input(&invalid_san_der)));
 }
 
 }  // namespace net

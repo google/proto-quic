@@ -85,10 +85,10 @@ class TestUDPClientSocket : public DatagramClientSocket {
     return OK;
   }
 
-  const BoundNetLog& NetLog() const override { return net_log_; }
+  const NetLogWithSource& NetLog() const override { return net_log_; }
 
  private:
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   const AddressMapping* mapping_;
   bool connected_;
   IPEndPoint local_endpoint_;

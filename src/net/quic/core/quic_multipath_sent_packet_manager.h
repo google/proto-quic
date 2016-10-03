@@ -143,8 +143,6 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   void OnConnectionMigration(QuicPathId path_id,
                              PeerAddressChangeType type) override;
 
-  bool IsHandshakeConfirmed() const override;
-
   // Sets debug delegate for all active paths.
   void SetDebugDelegate(DebugDelegate* debug_delegate) override;
 

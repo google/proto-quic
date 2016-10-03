@@ -16,7 +16,7 @@ namespace net {
 
 class IPAddress;
 class IPEndPoint;
-class BoundNetLog;
+class NetLogWithSource;
 
 // A client socket that uses UDP as the transport layer.
 class NET_EXPORT UDPServerSocket : public DatagramServerSocket {
@@ -41,7 +41,7 @@ class NET_EXPORT UDPServerSocket : public DatagramServerSocket {
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
   void UseNonBlockingIO() override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void AllowAddressReuse() override;
   void AllowBroadcast() override;
   int JoinGroup(const IPAddress& group_address) const override;

@@ -87,6 +87,10 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
     expect_cookies_ = expect_cookies;
   }
 
+  void set_expected_content_type(const std::string& content_type) {
+    expected_content_type_ = content_type;
+  }
+
   // NetworkDelegateImpl implementation.
   int OnBeforeURLRequest(URLRequest* request,
                          const CompletionCallback& callback,
@@ -102,6 +106,12 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
       EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SEND_COOKIES);
       EXPECT_TRUE(request->load_flags() & LOAD_DO_NOT_SAVE_COOKIES);
     }
+
+    const HttpRequestHeaders& extra_headers = request->extra_request_headers();
+    std::string content_type;
+    EXPECT_TRUE(extra_headers.GetHeader(HttpRequestHeaders::kContentType,
+                                        &content_type));
+    EXPECT_EQ(expected_content_type_, content_type);
 
     CheckUploadData(*request, &expect_reports_);
 
@@ -123,6 +133,7 @@ class TestReportSenderNetworkDelegate : public NetworkDelegateImpl {
   GURL expect_url_;
   std::set<std::string> expect_reports_;
   bool expect_cookies_;
+  std::string expected_content_type_;
 
   DISALLOW_COPY_AND_ASSIGN(TestReportSenderNetworkDelegate);
 };
@@ -154,10 +165,11 @@ class ReportSenderTest : public ::testing::Test {
 
     network_delegate_.set_expect_url(url);
     network_delegate_.ExpectReport(report);
+    network_delegate_.set_expected_content_type("application/foobar");
 
     EXPECT_EQ(request_sequence_number, network_delegate_.num_requests());
 
-    reporter->Send(url, report);
+    reporter->Send(url, "application/foobar", report);
 
     // The report is sent asynchronously, so wait for the report's
     // URLRequest to be destroyed before checking that the report was
@@ -197,13 +209,14 @@ TEST_F(ReportSenderTest, SendMultipleReportsSimultaneously) {
   network_delegate_.set_expect_url(url);
   network_delegate_.ExpectReport(kDummyReport);
   network_delegate_.ExpectReport(kSecondDummyReport);
+  network_delegate_.set_expected_content_type("application/foobar");
 
   ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
-  reporter.Send(url, kDummyReport);
-  reporter.Send(url, kSecondDummyReport);
+  reporter.Send(url, "application/foobar", kDummyReport);
+  reporter.Send(url, "application/foobar", kSecondDummyReport);
 
   run_loop.Run();
 
@@ -221,12 +234,13 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
       URLRequestFailedJob::START, ERR_IO_PENDING);
   network_delegate_.set_expect_url(url);
   network_delegate_.ExpectReport(kDummyReport);
+  network_delegate_.set_expected_content_type("application/foobar");
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
   std::unique_ptr<ReportSender> reporter(
       new ReportSender(context(), ReportSender::DO_NOT_SEND_COOKIES));
-  reporter->Send(url, kDummyReport);
+  reporter->Send(url, "application/foobar", kDummyReport);
   reporter.reset();
 
   EXPECT_EQ(1u, network_delegate_.num_requests());

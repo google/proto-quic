@@ -581,7 +581,7 @@ TEST(FilesystemUtils, ContentsEqual) {
 
   std::string data = "foo";
 
-  base::FilePath file_path = temp_dir.path().AppendASCII("foo.txt");
+  base::FilePath file_path = temp_dir.GetPath().AppendASCII("foo.txt");
   base::WriteFile(file_path, data.c_str(), static_cast<int>(data.size()));
 
   EXPECT_TRUE(ContentsEqual(file_path, data));
@@ -602,7 +602,7 @@ TEST(FilesystemUtils, WriteFileIfChanged) {
 
   // Write if file doesn't exist. Create also directory.
   base::FilePath file_path =
-      temp_dir.path().AppendASCII("bar").AppendASCII("foo.txt");
+      temp_dir.GetPath().AppendASCII("bar").AppendASCII("foo.txt");
   EXPECT_TRUE(WriteFileIfChanged(file_path, data, nullptr));
 
   base::File::Info file_info;

@@ -4,7 +4,6 @@
 
 import("//build/config/android/rules.gni")
 
-# GYP: //build/android/rezip.gyp:rezip_apk_jar
 java_library("rezip") {
   jar_path = "$root_build_dir/lib.java/rezip_apk.jar"
   java_files = [ "RezipApk.java" ]

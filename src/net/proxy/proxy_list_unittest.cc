@@ -178,7 +178,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     ProxyServer proxy_server(
         ProxyServer::FromURI("foopy1:80", ProxyServer::SCHEME_HTTP));
     std::vector<ProxyServer> bad_proxies;
@@ -198,7 +198,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     ProxyServer proxy_server(
         ProxyServer::FromURI("foopy1:80", ProxyServer::SCHEME_HTTP));
     std::vector<ProxyServer> bad_proxies;
@@ -217,7 +217,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     ProxyServer proxy_server = ProxyServer::FromURI("foopy3:80",
                                                     ProxyServer::SCHEME_HTTP);
     std::vector<ProxyServer> bad_proxies;
@@ -237,7 +237,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     ProxyServer proxy_server = ProxyServer::FromURI("foopy2:80",
                                                     ProxyServer::SCHEME_HTTP);
     std::vector<ProxyServer> bad_proxies;
@@ -255,7 +255,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     list.SetFromPacString("PROXY foopy1:80;PROXY foopy2:80;PROXY foopy3:80");
 
     // First, mark the proxy as bad for 60 seconds.
@@ -285,7 +285,7 @@ TEST(ProxyListTest, UpdateRetryInfoOnFallback) {
   {
     ProxyList list;
     ProxyRetryInfoMap retry_info_map;
-    BoundNetLog net_log;
+    NetLogWithSource net_log;
     list.SetFromPacString("PROXY foopy1:80;PROXY foopy2:80;PROXY foopy3:80");
 
     // First, mark the proxy as bad for 1 second.

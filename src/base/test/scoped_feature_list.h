@@ -5,6 +5,8 @@
 #ifndef BASE_TEST_SCOPED_FEATURE_LIST_H_
 #define BASE_TEST_SCOPED_FEATURE_LIST_H_
 
+#include <initializer_list>
+
 #include "base/feature_list.h"
 
 namespace base {
@@ -25,6 +27,12 @@ class ScopedFeatureList final {
 
   // Initializes and registers the given FeatureList instance.
   void InitWithFeatureList(std::unique_ptr<FeatureList> feature_list);
+
+  // Initializes and registers a FeatureList instance with the given enabled
+  // and disabled features.
+  void InitWithFeatures(
+      const std::initializer_list<base::Feature>& enabled_features,
+      const std::initializer_list<base::Feature>& disabled_features);
 
   // Initializes and registers a FeatureList instance with the given
   // enabled and disabled features (comma-separated names).

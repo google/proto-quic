@@ -83,6 +83,7 @@ class NET_EXPORT_PRIVATE CryptoHandshakeMessage {
                            size_t* out_len) const;
 
   bool GetStringPiece(QuicTag tag, base::StringPiece* out) const;
+  bool HasStringPiece(QuicTag tag) const;
 
   // GetNthValue24 interprets the value with the given tag to be a series of
   // 24-bit, length prefixed values and it returns the subvalue with the given

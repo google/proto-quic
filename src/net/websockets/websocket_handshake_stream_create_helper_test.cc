@@ -49,7 +49,7 @@ class MockClientSocketHandleFactory {
     std::unique_ptr<ClientSocketHandle> socket_handle(new ClientSocketHandle);
     socket_handle->Init("a", scoped_refptr<MockTransportSocketParams>(), MEDIUM,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        CompletionCallback(), &pool_, BoundNetLog());
+                        CompletionCallback(), &pool_, NetLogWithSource());
     return socket_handle;
   }
 
@@ -119,8 +119,9 @@ class WebSocketHandshakeStreamCreateHelperTest : public ::testing::Test {
     request_info.url = GURL("ws://localhost/");
     request_info.method = "GET";
     request_info.load_flags = LOAD_DISABLE_CACHE;
-    int rv = handshake->InitializeStream(
-        &request_info, DEFAULT_PRIORITY, BoundNetLog(), CompletionCallback());
+    int rv =
+        handshake->InitializeStream(&request_info, DEFAULT_PRIORITY,
+                                    NetLogWithSource(), CompletionCallback());
     EXPECT_THAT(rv, IsOk());
 
     HttpRequestHeaders headers;

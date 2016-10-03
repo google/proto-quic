@@ -4,6 +4,7 @@
 
 package org.chromium.net.test.util;
 
+import android.annotation.SuppressLint;
 import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
@@ -398,11 +399,15 @@ public class TestWebServer {
      */
     private static class TestTrustManager implements X509TrustManager {
         @Override
+        // TODO(crbug.com/635567): Fix this properly.
+        @SuppressLint("TrustAllX509TrustManager")
         public void checkClientTrusted(X509Certificate[] chain, String authType) {
             // Trust the TestWebServer...
         }
 
         @Override
+        // TODO(crbug.com/635567): Fix this properly.
+        @SuppressLint("TrustAllX509TrustManager")
         public void checkServerTrusted(X509Certificate[] chain, String authType) {
             // Trust the TestWebServer...
         }

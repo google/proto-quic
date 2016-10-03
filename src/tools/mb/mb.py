@@ -120,6 +120,17 @@ class MetaBuildWrapper(object):
                            'as a JSON object.')
     subp.set_defaults(func=self.CmdAnalyze)
 
+    subp = subps.add_parser('export',
+                            help='print out the expanded configuration for'
+                                 'each builder as a JSON object')
+    subp.add_argument('-f', '--config-file', metavar='PATH',
+                      default=self.default_config,
+                      help='path to config file '
+                          '(default is //tools/mb/mb_config.pyl)')
+    subp.add_argument('-g', '--goma-dir',
+                      help='path to goma directory')
+    subp.set_defaults(func=self.CmdExport)
+
     subp = subps.add_parser('gen',
                             help='generate a new set of build files')
     AddCommonOptions(subp)
@@ -248,6 +259,33 @@ class MetaBuildWrapper(object):
       return self.RunGNAnalyze(vals)
     else:
       return self.RunGYPAnalyze(vals)
+
+  def CmdExport(self):
+    self.ReadConfigFile()
+    obj = {}
+    for master, builders in self.masters.items():
+      obj[master] = {}
+      for builder in builders:
+        config = self.masters[master][builder]
+        if not config:
+          continue
+
+        if isinstance(config, list):
+          args = [self.FlattenConfig(c)['gn_args'] for c in config]
+        elif config.startswith('//'):
+          args = config
+        else:
+          args = self.FlattenConfig(config)['gn_args']
+          if 'error' in args:
+            continue
+
+        obj[master][builder] = args
+
+    # Dump object and trim trailing whitespace.
+    s = '\n'.join(l.rstrip() for l in
+                  json.dumps(obj, sort_keys=True, indent=2).splitlines())
+    self.Print(s)
+    return 0
 
   def CmdGen(self):
     vals = self.Lookup()
@@ -526,7 +564,7 @@ class MetaBuildWrapper(object):
   def GetConfig(self):
     build_dir = self.args.path[0]
 
-    vals = {}
+    vals = self.DefaultVals()
     if self.args.builder or self.args.master or self.args.config:
       vals = self.Lookup()
       if vals['type'] == 'gn':
@@ -550,14 +588,12 @@ class MetaBuildWrapper(object):
       mb_type = self.ReadFile(mb_type_path).strip()
 
     if mb_type == 'gn':
-      vals = self.GNValsFromDir(build_dir)
-    else:
-      vals = {}
+      vals['gn_args'] = self.GNArgsFromDir(build_dir)
     vals['type'] = mb_type
 
     return vals
 
-  def GNValsFromDir(self, build_dir):
+  def GNArgsFromDir(self, build_dir):
     args_contents = ""
     gn_args_path = self.PathJoin(self.ToAbsPath(build_dir), 'args.gn')
     if self.Exists(gn_args_path):
@@ -569,27 +605,18 @@ class MetaBuildWrapper(object):
       val = ' '.join(fields[2:])
       gn_args.append('%s=%s' % (name, val))
 
-    return {
-      'gn_args': ' '.join(gn_args),
-      'type': 'gn',
-    }
+    return ' '.join(gn_args)
 
   def Lookup(self):
-    vals = self.ReadBotConfig()
+    vals = self.ReadIOSBotConfig()
     if not vals:
       self.ReadConfigFile()
       config = self.ConfigFromArgs()
       if config.startswith('//'):
         if not self.Exists(self.ToAbsPath(config)):
           raise MBErr('args file "%s" not found' % config)
-        vals = {
-          'args_file': config,
-          'cros_passthrough': False,
-          'gn_args': '',
-          'gyp_crosscompile': False,
-          'gyp_defines': '',
-          'type': 'gn',
-        }
+        vals = self.DefaultVals()
+        vals['args_file'] = config
       else:
         if not config in self.configs:
           raise MBErr('Config "%s" not found in %s' %
@@ -598,13 +625,14 @@ class MetaBuildWrapper(object):
 
     # Do some basic sanity checking on the config so that we
     # don't have to do this in every caller.
-    assert 'type' in vals, 'No meta-build type specified in the config'
+    if 'type' not in vals:
+        vals['type'] = 'gn'
     assert vals['type'] in ('gn', 'gyp'), (
         'Unknown meta-build type "%s"' % vals['gn_args'])
 
     return vals
 
-  def ReadBotConfig(self):
+  def ReadIOSBotConfig(self):
     if not self.args.master or not self.args.builder:
       return {}
     path = self.PathJoin(self.chromium_src_dir, 'ios', 'build', 'bots',
@@ -620,14 +648,11 @@ class MetaBuildWrapper(object):
       gyp_defines = ' '.join(gyp_vals)
     gn_args = ' '.join(contents.get('gn_args', []))
 
-    return {
-        'args_file': '',
-        'cros_passthrough': False,
-        'gn_args': gn_args,
-        'gyp_crosscompile': False,
-        'gyp_defines': gyp_defines,
-        'type': contents.get('mb_type', ''),
-    }
+    vals = self.DefaultVals()
+    vals['gn_args'] = gn_args
+    vals['gyp_defines'] = gyp_defines
+    vals['type'] = contents.get('mb_type', 'gn')
+    return vals
 
   def ReadConfigFile(self):
     if not self.Exists(self.args.config_file):
@@ -685,18 +710,21 @@ class MetaBuildWrapper(object):
 
   def FlattenConfig(self, config):
     mixins = self.configs[config]
-    vals = {
-      'args_file': '',
-      'cros_passthrough': False,
-      'gn_args': [],
-      'gyp_defines': '',
-      'gyp_crosscompile': False,
-      'type': None,
-    }
+    vals = self.DefaultVals()
 
     visited = []
     self.FlattenMixins(mixins, vals, visited)
     return vals
+
+  def DefaultVals(self):
+    return {
+      'args_file': '',
+      'cros_passthrough': False,
+      'gn_args': '',
+      'gyp_defines': '',
+      'gyp_crosscompile': False,
+      'type': 'gn',
+    }
 
   def FlattenMixins(self, mixins, vals, visited):
     for m in mixins:
@@ -1284,8 +1312,11 @@ class MetaBuildWrapper(object):
       if 'invalid_targets' in gn_outp:
         outp['invalid_targets'] = gn_outp['invalid_targets']
       if 'compile_targets' in gn_outp:
-        outp['compile_targets'] = [
-          label.replace('//', '') for label in gn_outp['compile_targets']]
+        if 'all' in gn_outp['compile_targets']:
+          outp['compile_targets'] = ['all']
+        else:
+          outp['compile_targets'] = [
+              label.replace('//', '') for label in gn_outp['compile_targets']]
       if 'test_targets' in gn_outp:
         outp['test_targets'] = [
           labels_to_targets[label] for label in gn_outp['test_targets']]

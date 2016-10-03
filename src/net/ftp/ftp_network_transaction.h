@@ -38,7 +38,7 @@ class NET_EXPORT_PRIVATE FtpNetworkTransaction : public FtpTransaction {
   // FtpTransaction methods:
   int Start(const FtpRequestInfo* request_info,
             const CompletionCallback& callback,
-            const BoundNetLog& net_log) override;
+            const NetLogWithSource& net_log) override;
   int RestartWithAuth(const AuthCredentials& credentials,
                       const CompletionCallback& callback) override;
   int Read(IOBuffer* buf,
@@ -201,7 +201,7 @@ class NET_EXPORT_PRIVATE FtpNetworkTransaction : public FtpTransaction {
   CompletionCallback io_callback_;
   CompletionCallback user_callback_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   const FtpRequestInfo* request_;
   FtpResponseInfo response_;
 

@@ -74,7 +74,7 @@ def main():
   parser.add_option('--target-arch', action='store', dest='arch',
                     choices=['arm', 'arm64', 'x86', 'x86_64', 'x64', 'mips'],
                     help='The target architecture for the binary.')
-  parser.add_option('--threshold', action='store', dest='threshold', default=1,
+  parser.add_option('--threshold', action='store', dest='threshold', default=10,
                     help='The maximum allowed number of out-of-order symbols.')
   options, argv = parser.parse_args(sys.argv)
   if not options.arch:

@@ -265,48 +265,48 @@ CookieMonster::CookieItVector::iterator LowerBoundAccessDate(
                           LowerBoundAccessDateComparator);
 }
 
-// Mapping between DeletionCause and CookieMonsterDelegate::ChangeCause; the
+// Mapping between DeletionCause and CookieStore::ChangeCause; the
 // mapping also provides a boolean that specifies whether or not an
 // OnCookieChanged notification ought to be generated.
 typedef struct ChangeCausePair_struct {
-  CookieMonsterDelegate::ChangeCause cause;
+  CookieStore::ChangeCause cause;
   bool notify;
 } ChangeCausePair;
-ChangeCausePair ChangeCauseMapping[] = {
+const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_EXPLICIT
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPLICIT, true},
+    {CookieStore::ChangeCause::EXPLICIT, true},
     // DELETE_COOKIE_OVERWRITE
-    {CookieMonsterDelegate::CHANGE_COOKIE_OVERWRITE, true},
+    {CookieStore::ChangeCause::OVERWRITE, true},
     // DELETE_COOKIE_EXPIRED
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPIRED, true},
+    {CookieStore::ChangeCause::EXPIRED, true},
     // DELETE_COOKIE_EVICTED
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_DUPLICATE_IN_BACKING_STORE
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPLICIT, false},
+    {CookieStore::ChangeCause::EXPLICIT, false},
     // DELETE_COOKIE_DONT_RECORD
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPLICIT, false},
+    {CookieStore::ChangeCause::EXPLICIT, false},
     // DELETE_COOKIE_EVICTED_DOMAIN
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EVICTED_GLOBAL
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EVICTED_DOMAIN_PRE_SAFE
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EVICTED_DOMAIN_POST_SAFE
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EXPIRED_OVERWRITE
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPIRED_OVERWRITE, true},
+    {CookieStore::ChangeCause::EXPIRED_OVERWRITE, true},
     // DELETE_COOKIE_CONTROL_CHAR
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_NON_SECURE
-    {CookieMonsterDelegate::CHANGE_COOKIE_EVICTED, true},
+    {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_LAST_ENTRY
-    {CookieMonsterDelegate::CHANGE_COOKIE_EXPLICIT, false}};
+    {CookieStore::ChangeCause::EXPLICIT, false}};
 
 void RunAsync(scoped_refptr<base::TaskRunner> proxy,
               const CookieStore::CookieChangedCallback& callback,
               const CanonicalCookie& cookie,
-              bool removed) {
-  proxy->PostTask(FROM_HERE, base::Bind(callback, cookie, removed));
+              CookieStore::ChangeCause cause) {
+  proxy->PostTask(FROM_HERE, base::Bind(callback, cookie, cause));
 }
 
 bool IsCookieEligibleForEviction(CookiePriority current_priority_level,
@@ -1684,10 +1684,8 @@ CookieMonster::CookieMap::iterator CookieMonster::InternalInsertCookie(
     store_->AddCookie(*cc);
   CookieMap::iterator inserted =
       cookies_.insert(CookieMap::value_type(key, cc));
-  if (delegate_.get()) {
-    delegate_->OnCookieChanged(*cc, false,
-                               CookieMonsterDelegate::CHANGE_COOKIE_EXPLICIT);
-  }
+  if (delegate_.get())
+    delegate_->OnCookieChanged(*cc, false, CookieStore::ChangeCause::INSERTED);
 
   // See InitializeHistograms() for details.
   int32_t type_sample = cc->SameSite() != CookieSameSite::NO_RESTRICTION
@@ -1717,7 +1715,7 @@ CookieMonster::CookieMap::iterator CookieMonster::InternalInsertCookie(
     histogram_cookie_source_scheme_->Add(cookie_source_sample);
   }
 
-  RunCookieChangedCallbacks(*cc, false);
+  RunCookieChangedCallbacks(*cc, CookieStore::ChangeCause::INSERTED);
 
   return inserted;
 }
@@ -1839,11 +1837,11 @@ void CookieMonster::InternalDeleteCookie(CookieMap::iterator it,
                                          DeletionCause deletion_cause) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  // Ideally, this would be asserted up where we define ChangeCauseMapping,
+  // Ideally, this would be asserted up where we define kChangeCauseMapping,
   // but DeletionCause's visibility (or lack thereof) forces us to make
   // this check here.
-  static_assert(arraysize(ChangeCauseMapping) == DELETE_COOKIE_LAST_ENTRY + 1,
-                "ChangeCauseMapping size should match DeletionCause size");
+  static_assert(arraysize(kChangeCauseMapping) == DELETE_COOKIE_LAST_ENTRY + 1,
+                "kChangeCauseMapping size should match DeletionCause size");
 
   // See InitializeHistograms() for details.
   if (deletion_cause != DELETE_COOKIE_DONT_RECORD)
@@ -1857,13 +1855,10 @@ void CookieMonster::InternalDeleteCookie(CookieMap::iterator it,
   if ((cc->IsPersistent() || persist_session_cookies_) && store_.get() &&
       sync_to_store)
     store_->DeleteCookie(*cc);
-  if (delegate_.get()) {
-    ChangeCausePair mapping = ChangeCauseMapping[deletion_cause];
-
-    if (mapping.notify)
-      delegate_->OnCookieChanged(*cc, true, mapping.cause);
-  }
-  RunCookieChangedCallbacks(*cc, true);
+  ChangeCausePair mapping = kChangeCauseMapping[deletion_cause];
+  if (delegate_.get() && mapping.notify)
+    delegate_->OnCookieChanged(*cc, true, mapping.cause);
+  RunCookieChangedCallbacks(*cc, mapping.cause);
   cookies_.erase(it);
   delete cc;
 }
@@ -2375,7 +2370,7 @@ void CookieMonster::RunCallback(const base::Closure& callback) {
 }
 
 void CookieMonster::RunCookieChangedCallbacks(const CanonicalCookie& cookie,
-                                              bool removed) {
+                                              ChangeCause cause) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   CookieOptions opts;
@@ -2391,7 +2386,7 @@ void CookieMonster::RunCookieChangedCallbacks(const CanonicalCookie& cookie,
     std::pair<GURL, std::string> key = it->first;
     if (cookie.IncludeForRequestURL(key.first, opts) &&
         cookie.Name() == key.second) {
-      it->second->Notify(cookie, removed);
+      it->second->Notify(cookie, cause);
     }
   }
 }

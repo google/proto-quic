@@ -889,6 +889,14 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Accel_Toggle_High_Contrast">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    Metric recorded when the user toggles Chrome OS High Contrast mode with the
+    keyboard accelerator (Ctrl+Alt+H).
+  </description>
+</action>
+
 <action name="Accel_Toggle_Maximized">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -915,8 +923,8 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Accel_Toggle_Spoken_Feedback">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>dmazzoni@chromium.org</owner>
+  <description>Toggles Spoken Feedback (ChromeVox)</description>
 </action>
 
 <action name="Accel_Toggle_Touchpad">
@@ -1040,7 +1048,11 @@ should be able to be added at any place in this file.
   <owner>dfalcantara@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
   <owner>ianwen@chromium.org</owner>
-  <description>User deleted one or more download items.</description>
+  <description>
+    User deleted one or more download items. This is recorded when the snackbar
+    allowing the user to &quot;undo&quot; deletion is dismissed and the
+    downloads are deleted.
+  </description>
 </action>
 
 <action name="Android.DownloadManager.Item.ExternallyDeleted">
@@ -1071,6 +1083,15 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Android.DownloadManager.UndoDelete">
+  <owner>dfalcantara@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <owner>ianwen@chromium.org</owner>
+  <description>
+    User chose to &quot;undo&quot; the deletion of one or more download items.
+  </description>
+</action>
+
 <action name="Android.InstantApps.BannerDismissed">
   <owner>mariakhomenko@chromium.org</owner>
   <description>Promo banner for an instant app has been dismissed.</description>
@@ -1092,6 +1113,14 @@ should be able to be added at any place in this file.
   <owner>mariakhomenko@chromium.org</owner>
   <description>
     An instant app was launched without any user prompting.
+  </description>
+</action>
+
+<action name="Android.InstantApps.LaunchedFromWebsiteSettingsPopup">
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    An instant app was launched from the website settings popup.
   </description>
 </action>
 
@@ -3730,6 +3759,8 @@ should be able to be added at any place in this file.
 
 <action name="DownloadNotification.Button_Annotate">
   <owner>derat@chromium.org</owner>
+  <owner>jdufault@chromium.org</owner>
+  <owner>tbuckley@chromium.org</owner>
   <description>
     User pushes &quot;Annotate&quot; button on download notification.
   </description>
@@ -8630,6 +8661,11 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Media.Controls.Download">
+  <owner>mlamouri@chromium.org</owner>
+  <description>The user clicked on the controls' download button.</description>
+</action>
+
 <action name="Media.Controls.EnterFullscreen">
   <owner>mlamouri@chromium.org</owner>
   <description>The user entered fullscreen mode from the controls.</description>
@@ -8643,6 +8679,16 @@ should be able to be added at any place in this file.
 <action name="Media.Controls.Mute">
   <owner>mlamouri@chromium.org</owner>
   <description>The user muted a media element from the controls.</description>
+</action>
+
+<action name="Media.Controls.OverflowClose">
+  <owner>mlamouri@chromium.org</owner>
+  <description>The user closed the overflow menu via the controls.</description>
+</action>
+
+<action name="Media.Controls.OverflowOpen">
+  <owner>mlamouri@chromium.org</owner>
+  <description>The user opened the overflow menu via the controls.</description>
 </action>
 
 <action name="Media.Controls.Pause">
@@ -10553,6 +10599,7 @@ should be able to be added at any place in this file.
 <action name="OpenChangeProfilePictureDialog">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Deprecated 09/2016</obsolete>
 </action>
 
 <action name="OpenFile">
@@ -13467,6 +13514,16 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Screenshot_Annotate">
+  <owner>derat@chromium.org</owner>
+  <owner>jdufault@chromium.org</owner>
+  <owner>tbuckley@chromium.org</owner>
+  <description>
+    User clicks the &quot;Annotate&quot; button in the notification displayed
+    after taking a screenshot.
+  </description>
+</action>
+
 <action name="Screenshot_CopyClipboard">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -15013,6 +15070,7 @@ should be able to be added at any place in this file.
     tab closing buttons because those doesn't send the user back to the previous
     app.
   </description>
+  <obsolete>The button option was removed and code deleted.</obsolete>
 </action>
 
 <action name="TaskManager">

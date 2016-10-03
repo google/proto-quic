@@ -24,7 +24,7 @@
 namespace net {
 
 class ClientSocketHandle;
-class BoundNetLog;
+class NetLogWithSource;
 
 // The SOCKS client socket implementation
 class NET_EXPORT_PRIVATE SOCKSClientSocket : public StreamSocket {
@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE SOCKSClientSocket : public StreamSocket {
   void Disconnect() override;
   bool IsConnected() const override;
   bool IsConnectedAndIdle() const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -136,7 +136,7 @@ class NET_EXPORT_PRIVATE SOCKSClientSocket : public StreamSocket {
   HostResolver::RequestInfo host_request_info_;
   RequestPriority priority_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(SOCKSClientSocket);
 };

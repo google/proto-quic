@@ -220,8 +220,10 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   void InformDelegateUploadProgressInDelegateThread(int64_t current,
                                                     int64_t total);
   void InformDelegateDownloadProgress();
-  void InformDelegateDownloadProgressInDelegateThread(int64_t current,
-                                                      int64_t total);
+  void InformDelegateDownloadProgressInDelegateThread(
+      int64_t current,
+      int64_t total,
+      int64_t current_network_bytes);
 
   // Check if any upload data is set or not.
   void AssertHasNoUploadData() const;

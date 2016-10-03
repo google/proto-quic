@@ -12,7 +12,6 @@
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
 #include "crypto/rsa_private_key.h"
-#include "crypto/scoped_openssl_types.h"
 
 namespace crypto {
 
@@ -68,7 +67,7 @@ bool SignatureCreator::Sign(RSAPrivateKey* key,
                             const uint8_t* data,
                             int data_len,
                             std::vector<uint8_t>* signature) {
-  ScopedRSA rsa_key(EVP_PKEY_get1_RSA(key->key()));
+  bssl::UniquePtr<RSA> rsa_key(EVP_PKEY_get1_RSA(key->key()));
   if (!rsa_key)
     return false;
   signature->resize(RSA_size(rsa_key.get()));

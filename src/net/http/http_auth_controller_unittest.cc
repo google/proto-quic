@@ -50,7 +50,7 @@ void RunSingleRoundAuthTest(HandlerRunMode run_mode,
                             int handler_rv,
                             int expected_controller_rv,
                             SchemeState scheme_state) {
-  BoundNetLog dummy_log;
+  NetLogWithSource dummy_log;
   HttpAuthCache dummy_auth_cache;
 
   HttpRequestInfo request;
@@ -164,7 +164,7 @@ TEST(HttpAuthControllerTest, NoExplicitCredentialsAllowed) {
     HttpAuth::Scheme expected_scheme_;
   };
 
-  BoundNetLog dummy_log;
+  NetLogWithSource dummy_log;
   HttpAuthCache dummy_auth_cache;
   HttpRequestInfo request;
   request.method = "GET";

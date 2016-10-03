@@ -39,6 +39,7 @@ class HostController {
   // If |device_port| is zero then a dynamic port is allocated (and retrievable
   // through device_port() below).
   static std::unique_ptr<HostController> Create(
+      const std::string& device_serial,
       int device_port,
       int host_port,
       int adb_port,
@@ -55,7 +56,8 @@ class HostController {
   int device_port() const { return device_port_; }
 
  private:
-  HostController(int device_port,
+  HostController(const std::string& device_serial,
+                 int device_port,
                  int host_port,
                  int adb_port,
                  const ErrorCallback& error_callback,
@@ -65,7 +67,7 @@ class HostController {
   void ReadNextCommandSoon();
   void ReadCommandOnInternalThread();
 
-  void StartForwarder(std::unique_ptr<Socket> host_server_data_socket);
+  bool StartForwarder(std::unique_ptr<Socket> host_server_data_socket);
 
   // Note that this gets also called when ~HostController() is invoked.
   void OnInternalThreadError();
@@ -73,6 +75,7 @@ class HostController {
   void UnmapPortOnDevice();
 
   SelfDeleterHelper<HostController> self_deleter_helper_;
+  const std::string device_serial_;
   const int device_port_;
   const int host_port_;
   const int adb_port_;

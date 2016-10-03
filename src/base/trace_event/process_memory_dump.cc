@@ -18,7 +18,7 @@
 #include "build/build_config.h"
 
 #if defined(OS_IOS)
-#include <sys/sysctl.h>
+#include <mach/vm_page_size.h>
 #endif
 
 #if defined(OS_POSIX)
@@ -57,19 +57,13 @@ bool ProcessMemoryDump::is_black_hole_non_fatal_for_testing_ = false;
 size_t ProcessMemoryDump::GetSystemPageSize() {
 #if defined(OS_IOS)
   // On iOS, getpagesize() returns the user page sizes, but for allocating
-  // arrays for mincore(), kernel page sizes is needed. sysctlbyname() should
-  // be used for this. Refer to crbug.com/542671 and Apple rdar://23651782
-  int pagesize;
-  size_t pagesize_len;
-  int status = sysctlbyname("vm.pagesize", NULL, &pagesize_len, nullptr, 0);
-  if (!status && pagesize_len == sizeof(pagesize)) {
-    if (!sysctlbyname("vm.pagesize", &pagesize, &pagesize_len, nullptr, 0))
-      return pagesize;
-  }
-  LOG(ERROR) << "sysctlbyname(\"vm.pagesize\") failed.";
-  // Falls back to getpagesize() although it may be wrong in certain cases.
-#endif  // defined(OS_IOS)
+  // arrays for mincore(), kernel page sizes is needed. Use vm_kernel_page_size
+  // as recommended by Apple, https://forums.developer.apple.com/thread/47532/.
+  // Refer to http://crbug.com/542671 and Apple rdar://23651782
+  return vm_kernel_page_size;
+#else
   return base::GetPageSize();
+#endif  // defined(OS_IOS)
 }
 
 // static

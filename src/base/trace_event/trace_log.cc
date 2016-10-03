@@ -19,6 +19,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/singleton.h"
+#include "base/message_loop/message_loop.h"
 #include "base/process/process_metrics.h"
 #include "base/stl_util.h"
 #include "base/strings/string_split.h"
@@ -106,6 +107,15 @@ unsigned char g_category_group_enabled[MAX_CATEGORY_GROUPS] = {0};
 
 const char kEventNameWhitelist[] = "event_name_whitelist";
 
+#define MAX_TRACE_EVENT_FILTERS 32
+
+// List of TraceEventFilter objects from the most recent tracing session.
+base::LazyInstance<std::vector<std::unique_ptr<TraceLog::TraceEventFilter>>>::
+    Leaky g_category_group_filters = LAZY_INSTANCE_INITIALIZER;
+
+// Stores a bitmap of filters enabled for each category group.
+uint32_t g_category_group_filters_enabled[MAX_CATEGORY_GROUPS] = {0};
+
 class EventNameFilter : public TraceLog::TraceEventFilter {
  public:
   EventNameFilter(const base::DictionaryValue* filter_args) {
@@ -128,10 +138,6 @@ class EventNameFilter : public TraceLog::TraceEventFilter {
  private:
   std::unordered_set<std::string> whitelist_;
 };
-
-base::LazyInstance<
-    std::list<std::unique_ptr<TraceLog::TraceEventFilter>>>::Leaky
-    g_category_group_filter[MAX_CATEGORY_GROUPS] = {LAZY_INSTANCE_INITIALIZER};
 
 // This filter is used to record trace events as pseudo stack for the heap
 // profiler. It does not filter-out any events from the trace, ie. the behavior
@@ -271,6 +277,20 @@ uintptr_t GetCategoryIndex(const unsigned char* category_group_enabled) {
       (category_ptr - category_begin) / sizeof(g_category_group_enabled[0]);
 
   return category_index;
+}
+
+template <typename Function>
+void ForEachCategoryGroupFilter(const unsigned char* category_group_enabled,
+                                Function filter_fn) {
+  uint32_t filter_bitmap = g_category_group_filters_enabled[GetCategoryIndex(
+      category_group_enabled)];
+  int index = 0;
+  while (filter_bitmap) {
+    if (filter_bitmap & 1 && g_category_group_filters.Get()[index])
+      filter_fn(g_category_group_filters.Get()[index].get());
+    filter_bitmap = filter_bitmap >> 1;
+    index++;
+  }
 }
 
 }  // namespace
@@ -542,12 +562,6 @@ const char* TraceLog::GetCategoryGroupName(
   return g_category_groups[GetCategoryIndex(category_group_enabled)];
 }
 
-std::list<std::unique_ptr<TraceLog::TraceEventFilter>>* GetCategoryGroupFilter(
-    const unsigned char* category_group_enabled) {
-  return g_category_group_filter[GetCategoryIndex(category_group_enabled)]
-      .Pointer();
-}
-
 void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
   unsigned char enabled_flag = 0;
   const char* category_group = g_category_groups[category_index];
@@ -574,41 +588,59 @@ void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
   if (mode_ == RECORDING_MODE && !strcmp(category_group, "__metadata"))
     enabled_flag |= ENABLED_FOR_RECORDING;
 
-  // Having a filter is an exceptional case, so we avoid
-  // the LazyInstance creation in the common case.
-  if (!(g_category_group_filter[category_index] == nullptr))
-    g_category_group_filter[category_index].Get().clear();
-
+  uint32_t enabled_filters_bitmap = 0;
+  int index = 0;
   for (const auto& event_filter : trace_config_.event_filters()) {
     if (event_filter.IsCategoryGroupEnabled(category_group)) {
-      std::unique_ptr<TraceEventFilter> new_filter;
-
-      if (event_filter.predicate_name() ==
-          TraceEventFilter::kEventWhitelistPredicate) {
-        new_filter = MakeUnique<EventNameFilter>(event_filter.filter_args());
-      } else if (event_filter.predicate_name() ==
-                 TraceEventFilter::kHeapProfilerPredicate) {
-        new_filter = MakeUnique<HeapProfilerFilter>();
-      } else if (event_filter.predicate_name() == "testing_predicate") {
-        CHECK(g_trace_event_filter_constructor_for_testing);
-        new_filter = g_trace_event_filter_constructor_for_testing();
-      }
-
-      if (new_filter) {
-        g_category_group_filter[category_index].Get().push_back(
-            std::move(new_filter));
-        enabled_flag |= ENABLED_FOR_FILTERING;
-      }
+      enabled_flag |= ENABLED_FOR_FILTERING;
+      DCHECK(g_category_group_filters.Get()[index]);
+      enabled_filters_bitmap |= 1 << index;
+    }
+    if (index++ >= MAX_TRACE_EVENT_FILTERS) {
+      NOTREACHED();
+      break;
     }
   }
+  g_category_group_filters_enabled[category_index] = enabled_filters_bitmap;
 
   g_category_group_enabled[category_index] = enabled_flag;
 }
 
 void TraceLog::UpdateCategoryGroupEnabledFlags() {
+  CreateFiltersForTraceConfig();
   size_t category_index = base::subtle::NoBarrier_Load(&g_category_index);
   for (size_t i = 0; i < category_index; i++)
     UpdateCategoryGroupEnabledFlag(i);
+}
+
+void TraceLog::CreateFiltersForTraceConfig() {
+  // Filters were already added and tracing could be enabled. Filters list
+  // cannot be changed when trace events are using them.
+  if (g_category_group_filters.Get().size())
+    return;
+
+  for (auto& event_filter : trace_config_.event_filters()) {
+    if (g_category_group_filters.Get().size() >= MAX_TRACE_EVENT_FILTERS) {
+      NOTREACHED()
+          << "Too many trace event filters installed in the current session";
+      break;
+    }
+
+    std::unique_ptr<TraceEventFilter> new_filter;
+    if (event_filter.predicate_name() ==
+        TraceEventFilter::kEventWhitelistPredicate) {
+      new_filter = MakeUnique<EventNameFilter>(event_filter.filter_args());
+    } else if (event_filter.predicate_name() ==
+               TraceEventFilter::kHeapProfilerPredicate) {
+      new_filter = MakeUnique<HeapProfilerFilter>();
+    } else if (event_filter.predicate_name() == "testing_predicate") {
+      CHECK(g_trace_event_filter_constructor_for_testing);
+      new_filter = g_trace_event_filter_constructor_for_testing();
+    } else {
+      NOTREACHED();
+    }
+    g_category_group_filters.Get().push_back(std::move(new_filter));
+  }
 }
 
 void TraceLog::UpdateSyntheticDelaysFromTraceConfig() {
@@ -724,6 +756,10 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config, Mode mode) {
         DLOG(ERROR) << "Attempting to re-enable tracing with a different mode.";
       }
 
+      DCHECK(!trace_config.event_filters().size())
+          << "Adding new filters while tracing was already enabled is not "
+             "supported.";
+
       trace_config_.Merge(trace_config);
       UpdateCategoryGroupEnabledFlags();
       return;
@@ -743,6 +779,11 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config, Mode mode) {
     }
 
     num_traces_recorded_++;
+
+    // Clear all filters from previous tracing session. These filters are not
+    // cleared at the end of tracing because some threads which hit trace event
+    // when disabling, could try to use the filters.
+    g_category_group_filters.Get().clear();
 
     trace_config_ = TraceConfig(trace_config);
     UpdateCategoryGroupEnabledFlags();
@@ -1397,15 +1438,13 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
                                 bind_id, num_args, arg_names, arg_types,
                                 arg_values, convertable_values, flags);
 
-    auto filter_list = GetCategoryGroupFilter(category_group_enabled);
-    DCHECK(!filter_list->empty());
-
     disabled_by_filters = true;
-    for (const auto& trace_event_filter : *filter_list) {
-      if (trace_event_filter->FilterTraceEvent(*new_trace_event))
-        disabled_by_filters = false;
-    }
-
+    ForEachCategoryGroupFilter(
+        category_group_enabled, [&new_trace_event, &disabled_by_filters](
+                                    TraceEventFilter* trace_event_filter) {
+          if (trace_event_filter->FilterTraceEvent(*new_trace_event))
+            disabled_by_filters = false;
+        });
     if (!disabled_by_filters)
       filtered_trace_event = std::move(new_trace_event);
   }
@@ -1556,13 +1595,12 @@ std::string TraceLog::EventToConsoleMessage(unsigned char phase,
 void TraceLog::EndFilteredEvent(const unsigned char* category_group_enabled,
                                 const char* name,
                                 TraceEventHandle handle) {
-  auto filter_list = GetCategoryGroupFilter(category_group_enabled);
-  DCHECK(!filter_list->empty());
-
-  for (const auto& trace_event_filter : *filter_list) {
-    trace_event_filter->EndEvent(name,
-                                 GetCategoryGroupName(category_group_enabled));
-  }
+  const char* category_name = GetCategoryGroupName(category_group_enabled);
+  ForEachCategoryGroupFilter(
+      category_group_enabled,
+      [name, category_name](TraceEventFilter* trace_event_filter) {
+        trace_event_filter->EndEvent(name, category_name);
+      });
 }
 
 void TraceLog::UpdateTraceEventDuration(
@@ -1634,6 +1672,9 @@ void TraceLog::UpdateTraceEventDuration(
         nullptr, nullptr, nullptr, TRACE_EVENT_FLAG_NONE);
     }
   }
+
+  if (category_group_enabled_local & ENABLED_FOR_FILTERING)
+    EndFilteredEvent(category_group_enabled, name, handle);
 }
 
 void TraceLog::SetWatchEvent(const std::string& category_name,

@@ -586,7 +586,7 @@ void WebSocketChannel::SendAddChannelRequestWithSuppliedCallback(
                                                requested_subprotocols));
   stream_request_ = callback.Run(socket_url_, std::move(create_helper), origin,
                                  first_party_for_cookies, additional_headers,
-                                 url_request_context_, BoundNetLog(),
+                                 url_request_context_, NetLogWithSource(),
                                  std::move(connect_delegate));
   SetState(CONNECTING);
 }

@@ -61,7 +61,6 @@ _java_target_whitelist = [
 
 # Targets that match the whitelist but are not actually java targets.
 _java_target_blacklist = [
-  "//chrome:packed_extra_resources",
   "//chrome:packed_resources",
   "//remoting/android:remoting_android_raw_resources",
   "*:*_unpack_aar",
@@ -1828,11 +1827,23 @@ if (enable_java_templates) {
     }
 
     generate_interface_jar(_ijar_target_name) {
-      input_jar = _jar_path
+      if (!defined(invoker.proguard_preprocess) ||
+          !invoker.proguard_preprocess) {
+        # Always used the unfiltered .jar to create the interface jar so that
+        # other targets will resolve filtered classes when depending on
+        # BuildConfig, NativeLibraries, etc.
+        input_jar = invoker.jar_path
+        deps = _deps + _jar_deps
+      } else {
+        # However, still apply pre-proguarding, since ignoring that can break
+        # compiles.
+        input_jar = _jar_path
+        deps = [
+          ":$_process_jar_target_name",
+        ]
+      }
+
       output_jar = _ijar_path
-      deps = [
-        ":$_process_jar_target_name",
-      ]
     }
 
     if (_supports_android) {
@@ -2129,17 +2140,24 @@ if (enable_java_templates) {
     }
 
     generate_interface_jar(_ijar_target_name) {
-      input_jar = _final_jar_path
-      output_jar = _final_ijar_path
-      if (_emma_instrument) {
+      if (!defined(invoker.proguard_preprocess) ||
+          !invoker.proguard_preprocess) {
+        # Always used the unfiltered .jar to create the interface jar so that
+        # other targets will resolve filtered classes when depending on
+        # BuildConfig, NativeLibraries, etc.
+        input_jar = _javac_jar_path
         deps = [
-          ":$_emma_instr_target_name",
+          ":$_javac_target_name",
         ]
       } else {
+        # However, still apply pre-proguarding, since ignoring that can break
+        # compiles.
+        input_jar = _process_prebuilt_jar_path
         deps = [
           ":$_process_prebuilt_target_name",
         ]
       }
+      output_jar = _final_ijar_path
     }
 
     group(_final_target_name) {

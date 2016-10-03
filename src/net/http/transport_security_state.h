@@ -13,6 +13,7 @@
 #include "base/callback.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
+#include "base/strings/string_piece.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
 #include "net/base/expiring_cache.h"
@@ -252,8 +253,12 @@ class NET_EXPORT TransportSecurityState
   // An interface for asynchronously sending HPKP violation reports.
   class NET_EXPORT ReportSenderInterface {
    public:
-    // Sends the given serialized |report| to |report_uri|.
-    virtual void Send(const GURL& report_uri, const std::string& report) = 0;
+    // Sends the given serialized |report| to |report_uri| with
+    // Content-Type header as specified in
+    // |content_type|. |content_type| should be non-empty.
+    virtual void Send(const GURL& report_uri,
+                      base::StringPiece content_type,
+                      base::StringPiece report) = 0;
 
     // Sets a callback to be called when report sending fails.
     virtual void SetErrorCallback(

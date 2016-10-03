@@ -31,11 +31,22 @@ template("split_static_library") {
         forward_variables_from(invoker,
                                "*",
                                [
+                                 "check_includes",
                                  "sources",
                                  "visibility",
                                ])
         sources = current_sources
         visibility = [ ":$group_name" ]
+
+        # When splitting a target's sources up into a series of static
+        # libraries, those targets will naturally include headers from each
+        # other arbitrarily. We could theoretically generate a web of
+        # dependencies and allow_circular_includes_from between all pairs of
+        # targets, but that's very cumbersome. Typical usage in Chrome is that
+        # only official Windows builds use split static libraries due to the
+        # Visual Studio size limits, and this means we'll still get header
+        # checking coverage for the other configurations.
+        check_includes = false
 
         # Uniquify the output name if one is specified.
         if (defined(invoker.output_name)) {

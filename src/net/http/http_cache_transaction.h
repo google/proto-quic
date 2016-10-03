@@ -117,7 +117,7 @@ class HttpCache::Transaction : public HttpTransaction {
 
   const CompletionCallback& io_callback() { return io_callback_; }
 
-  const BoundNetLog& net_log() const;
+  const NetLogWithSource& net_log() const;
 
   // Bypasses the cache lock whenever there is lock contention.
   void BypassLockForTest() {
@@ -132,7 +132,7 @@ class HttpCache::Transaction : public HttpTransaction {
   // HttpTransaction methods:
   int Start(const HttpRequestInfo* request_info,
             const CompletionCallback& callback,
-            const BoundNetLog& net_log) override;
+            const NetLogWithSource& net_log) override;
   int RestartIgnoringLastError(const CompletionCallback& callback) override;
   int RestartWithCertificate(X509Certificate* client_cert,
                              SSLPrivateKey* client_private_key,
@@ -293,7 +293,8 @@ class HttpCache::Transaction : public HttpTransaction {
   int DoCacheWriteTruncatedResponseComplete(int result);
 
   // Sets request_ and fields derived from it.
-  void SetRequest(const BoundNetLog& net_log, const HttpRequestInfo* request);
+  void SetRequest(const NetLogWithSource& net_log,
+                  const HttpRequestInfo* request);
 
   // Returns true if the request should be handled exclusively by the network
   // layer (skipping the cache entirely).
@@ -431,7 +432,7 @@ class HttpCache::Transaction : public HttpTransaction {
   State next_state_;
   const HttpRequestInfo* request_;
   RequestPriority priority_;
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   std::unique_ptr<HttpRequestInfo> custom_request_;
   HttpRequestHeaders request_headers_copy_;
   // If extra_headers specified a "if-modified-since" or "if-none-match",

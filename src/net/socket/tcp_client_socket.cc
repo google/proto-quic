@@ -235,7 +235,7 @@ int TCPClientSocket::GetLocalAddress(IPEndPoint* address) const {
   return socket_->GetLocalAddress(address);
 }
 
-const BoundNetLog& TCPClientSocket::NetLog() const {
+const NetLogWithSource& TCPClientSocket::NetLog() const {
   return socket_->net_log();
 }
 

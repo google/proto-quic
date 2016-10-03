@@ -38,7 +38,7 @@ class HttpStreamFactoryImpl::JobController
                  HttpStreamRequest::Delegate* delegate,
                  WebSocketHandshakeStreamBase::CreateHelper*
                      websocket_handshake_stream_create_helper,
-                 const BoundNetLog& net_log,
+                 const NetLogWithSource& net_log,
                  HttpStreamRequest::StreamType stream_type,
                  RequestPriority priority,
                  const SSLConfig& server_ssl_config,
@@ -158,7 +158,7 @@ class HttpStreamFactoryImpl::JobController
 
   // Remove session from the SpdySessionRequestMap.
   void RemoveRequestFromSpdySessionRequestMapForJob(Job* job) override;
-  const BoundNetLog* GetNetLog(Job* job) const override;
+  const NetLogWithSource* GetNetLog(Job* job) const override;
 
   void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) override;
 
@@ -175,7 +175,7 @@ class HttpStreamFactoryImpl::JobController
                   const SSLConfig& proxy_ssl_config,
                   HttpStreamRequest::Delegate* delegate,
                   HttpStreamRequest::StreamType stream_type,
-                  const BoundNetLog& net_log);
+                  const NetLogWithSource& net_log);
 
   // Attaches |job| to |request_|. Does not mean that |request_| will use |job|.
   void AttachJob(Job* job);
@@ -197,7 +197,7 @@ class HttpStreamFactoryImpl::JobController
   void OnJobSucceeded(Job* job);
 
   // Marks completion of the |request_|.
-  void MarkRequestComplete(bool was_npn_negotiated,
+  void MarkRequestComplete(bool was_alpn_negotiated,
                            NextProto negotiated_protocol,
                            bool using_spdy);
 
@@ -241,9 +241,9 @@ class HttpStreamFactoryImpl::JobController
       const GURL& url,
       ProxyServer* alternative_proxy_server) const;
 
-  // Records histogram metrics for the usage of alternative proxy server. Must
-  // be called when |job| has succeeded, and some other jobs will be orphaned.
-  void MaybeRecordAlternativeProxyServerUsage(Job* job) const;
+  // Records histogram metrics for the usage of alternative protocol. Must be
+  // called when |job| has succeeded and the other job will be orphaned.
+  void ReportAlternateProtocolUsage(Job* job) const;
 
   // Starts the |alternative_job_|.
   void StartAlternativeProxyServerJob();

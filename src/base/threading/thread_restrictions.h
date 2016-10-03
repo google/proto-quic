@@ -86,6 +86,10 @@ namespace android {
 class JavaHandlerThread;
 }
 
+namespace internal {
+class TaskTracker;
+}
+
 class SequencedWorkerPool;
 class SimpleThread;
 class Thread;
@@ -192,6 +196,7 @@ class BASE_EXPORT ThreadRestrictions {
   friend class content::ScopedAllowWaitForAndroidLayoutTests;
   friend class content::ScopedAllowWaitForDebugURL;
   friend class ::HistogramSynchronizer;
+  friend class internal::TaskTracker;
   friend class ::ScopedAllowWaitForLegacyWebViewApi;
   friend class cc::CompletionEvent;
   friend class cc::SingleThreadTaskGraphRunner;

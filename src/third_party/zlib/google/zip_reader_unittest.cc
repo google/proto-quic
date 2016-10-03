@@ -121,7 +121,7 @@ class ZipReaderTest : public PlatformTest {
     PlatformTest::SetUp();
 
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-    test_dir_ = temp_dir_.path();
+    test_dir_ = temp_dir_.GetPath();
 
     ASSERT_TRUE(GetTestDataDirectory(&test_data_dir_));
 

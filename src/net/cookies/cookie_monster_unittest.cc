@@ -3362,13 +3362,13 @@ class CookieMonsterNotificationTest : public CookieMonsterTest {
 };
 
 void RecordCookieChanges(std::vector<CanonicalCookie>* out_cookies,
-                         std::vector<bool>* out_removes,
+                         std::vector<CookieStore::ChangeCause>* out_causes,
                          const CanonicalCookie& cookie,
-                         bool removed) {
+                         CookieStore::ChangeCause cause) {
   DCHECK(out_cookies);
   out_cookies->push_back(cookie);
-  if (out_removes)
-    out_removes->push_back(removed);
+  if (out_causes)
+    out_causes->push_back(cause);
 }
 
 TEST_F(CookieMonsterNotificationTest, NoNotifyWithNoCookie) {
@@ -3395,50 +3395,50 @@ TEST_F(CookieMonsterNotificationTest, NoNotifyWithInitialCookie) {
 
 TEST_F(CookieMonsterNotificationTest, NotifyOnSet) {
   std::vector<CanonicalCookie> cookies;
-  std::vector<bool> removes;
+  std::vector<CookieStore::ChangeCause> causes;
   std::unique_ptr<CookieStore::CookieChangedSubscription> sub(
       monster()->AddCallbackForCookie(
           test_url_, "abc",
-          base::Bind(&RecordCookieChanges, &cookies, &removes)));
+          base::Bind(&RecordCookieChanges, &cookies, &causes)));
   SetCookie(monster(), test_url_, "abc=def");
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(1U, cookies.size());
-  EXPECT_EQ(1U, removes.size());
+  EXPECT_EQ(1U, causes.size());
 
   EXPECT_EQ("abc", cookies[0].Name());
   EXPECT_EQ("def", cookies[0].Value());
-  EXPECT_FALSE(removes[0]);
+  EXPECT_EQ(CookieStore::ChangeCause::INSERTED, causes[0]);
 }
 
 TEST_F(CookieMonsterNotificationTest, NotifyOnDelete) {
   std::vector<CanonicalCookie> cookies;
-  std::vector<bool> removes;
+  std::vector<CookieStore::ChangeCause> causes;
   std::unique_ptr<CookieStore::CookieChangedSubscription> sub(
       monster()->AddCallbackForCookie(
           test_url_, "abc",
-          base::Bind(&RecordCookieChanges, &cookies, &removes)));
+          base::Bind(&RecordCookieChanges, &cookies, &causes)));
   SetCookie(monster(), test_url_, "abc=def");
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(1U, cookies.size());
-  EXPECT_EQ(1U, removes.size());
+  EXPECT_EQ(1U, causes.size());
 
   DeleteCookie(monster(), test_url_, "abc");
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(2U, cookies.size());
-  EXPECT_EQ(2U, removes.size());
+  EXPECT_EQ(2U, causes.size());
 
   EXPECT_EQ("abc", cookies[1].Name());
   EXPECT_EQ("def", cookies[1].Value());
-  EXPECT_TRUE(removes[1]);
+  EXPECT_EQ(CookieStore::ChangeCause::EXPLICIT, causes[1]);
 }
 
 TEST_F(CookieMonsterNotificationTest, NotifyOnUpdate) {
   std::vector<CanonicalCookie> cookies;
-  std::vector<bool> removes;
+  std::vector<CookieStore::ChangeCause> causes;
   std::unique_ptr<CookieStore::CookieChangedSubscription> sub(
       monster()->AddCallbackForCookie(
           test_url_, "abc",
-          base::Bind(&RecordCookieChanges, &cookies, &removes)));
+          base::Bind(&RecordCookieChanges, &cookies, &causes)));
   SetCookie(monster(), test_url_, "abc=def");
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(1U, cookies.size());
@@ -3449,15 +3449,15 @@ TEST_F(CookieMonsterNotificationTest, NotifyOnUpdate) {
   base::RunLoop().RunUntilIdle();
 
   EXPECT_EQ(3U, cookies.size());
-  EXPECT_EQ(3U, removes.size());
+  EXPECT_EQ(3U, causes.size());
 
   EXPECT_EQ("abc", cookies[1].Name());
   EXPECT_EQ("def", cookies[1].Value());
-  EXPECT_TRUE(removes[1]);
+  EXPECT_EQ(CookieStore::ChangeCause::OVERWRITE, causes[1]);
 
   EXPECT_EQ("abc", cookies[2].Name());
   EXPECT_EQ("ghi", cookies[2].Value());
-  EXPECT_FALSE(removes[2]);
+  EXPECT_EQ(CookieStore::ChangeCause::INSERTED, causes[2]);
 }
 
 TEST_F(CookieMonsterNotificationTest, MultipleNotifies) {

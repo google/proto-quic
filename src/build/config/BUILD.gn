@@ -72,10 +72,6 @@ config("feature_flags") {
     # TODO(brettw) should probably be "=1"
     defines += [ "ENABLE_PEPPER_CDMS" ]
   }
-  if (enable_browser_cdms) {
-    # TODO(brettw) should probably be "=1"
-    defines += [ "ENABLE_BROWSER_CDMS" ]
-  }
   if (enable_plugins) {
     defines += [ "ENABLE_PLUGINS=1" ]
   }
@@ -260,7 +256,6 @@ config("feature_flags") {
   if (is_syzyasan) {
     defines += [
       "SYZYASAN",
-      "MEMORY_TOOL_REPLACES_ALLOCATOR",
       "MEMORY_SANITIZER_INITIAL_SIZE",
     ]
   }

@@ -57,9 +57,11 @@ func (c *Conn) clientHandshake() error {
 		return errors.New("tls: NextProtos values too large")
 	}
 
+	minVersion := c.config.minVersion(c.isDTLS)
+	maxVersion := c.config.maxVersion(c.isDTLS)
 	hello := &clientHelloMsg{
 		isDTLS:                  c.isDTLS,
-		vers:                    c.config.maxVersion(c.isDTLS),
+		vers:                    versionToWire(maxVersion, c.isDTLS),
 		compressionMethods:      []uint8{compressionNone},
 		random:                  make([]byte, 32),
 		ocspStapling:            true,
@@ -73,7 +75,7 @@ func (c *Conn) clientHandshake() error {
 		duplicateExtension:      c.config.Bugs.DuplicateExtension,
 		channelIDSupported:      c.config.ChannelID != nil,
 		npnLast:                 c.config.Bugs.SwapNPNAndALPN,
-		extendedMasterSecret:    c.config.maxVersion(c.isDTLS) >= VersionTLS10,
+		extendedMasterSecret:    maxVersion >= VersionTLS10,
 		srtpProtectionProfiles:  c.config.SRTPProtectionProfiles,
 		srtpMasterKeyIdentifier: c.config.Bugs.SRTPMasterKeyIdentifer,
 		customExtension:         c.config.Bugs.CustomExtension,
@@ -110,9 +112,10 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	var keyShares map[CurveID]ecdhCurve
-	if hello.vers >= VersionTLS13 {
+	if maxVersion >= VersionTLS13 {
 		keyShares = make(map[CurveID]ecdhCurve)
 		hello.hasKeyShares = true
+		hello.trailingKeyShareData = c.config.Bugs.TrailingKeyShareData
 		curvesToSend := c.config.defaultCurves()
 		for _, curveID := range hello.supportedCurves {
 			if !curvesToSend[curveID] {
@@ -162,7 +165,7 @@ NextCipherSuite:
 			if !c.config.Bugs.EnableAllCiphers {
 				// Don't advertise TLS 1.2-only cipher suites unless
 				// we're attempting TLS 1.2.
-				if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+				if maxVersion < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
 					continue
 				}
 				// Don't advertise non-DTLS cipher suites in DTLS.
@@ -189,7 +192,7 @@ NextCipherSuite:
 		return errors.New("tls: short read from Rand: " + err.Error())
 	}
 
-	if hello.vers >= VersionTLS12 && !c.config.Bugs.NoSignatureAlgorithms {
+	if maxVersion >= VersionTLS12 && !c.config.Bugs.NoSignatureAlgorithms {
 		hello.signatureAlgorithms = c.config.verifySignatureAlgorithms()
 	}
 
@@ -233,8 +236,8 @@ NextCipherSuite:
 				}
 			}
 
-			versOk := candidateSession.vers >= c.config.minVersion(c.isDTLS) &&
-				candidateSession.vers <= c.config.maxVersion(c.isDTLS)
+			versOk := candidateSession.vers >= minVersion &&
+				candidateSession.vers <= maxVersion
 			if ticketOk && versOk && cipherSuiteOk {
 				session = candidateSession
 			}
@@ -281,6 +284,19 @@ NextCipherSuite:
 				hello.sessionId = session.sessionId
 			}
 		}
+	}
+
+	if maxVersion == VersionTLS13 && !c.config.Bugs.OmitSupportedVersions {
+		if hello.vers >= VersionTLS13 {
+			hello.vers = VersionTLS12
+		}
+		for version := maxVersion; version >= minVersion; version-- {
+			hello.supportedVersions = append(hello.supportedVersions, versionToWire(version, c.isDTLS))
+		}
+	}
+
+	if len(c.config.Bugs.SendSupportedVersions) > 0 {
+		hello.supportedVersions = c.config.Bugs.SendSupportedVersions
 	}
 
 	if c.config.Bugs.SendClientVersion != 0 {
@@ -351,23 +367,26 @@ NextCipherSuite:
 		}
 	}
 
-	var serverVersion uint16
+	var serverWireVersion uint16
 	switch m := msg.(type) {
 	case *helloRetryRequestMsg:
-		serverVersion = m.vers
+		serverWireVersion = m.vers
 	case *serverHelloMsg:
-		serverVersion = m.vers
+		serverWireVersion = m.vers
 	default:
 		c.sendAlert(alertUnexpectedMessage)
 		return fmt.Errorf("tls: received unexpected message of type %T when waiting for HelloRetryRequest or ServerHello", msg)
 	}
 
-	var ok bool
-	c.vers, ok = c.config.mutualVersion(serverVersion, c.isDTLS)
+	serverVersion, ok := wireToVersion(serverWireVersion, c.isDTLS)
+	if ok {
+		ok = c.config.isSupportedVersion(serverVersion, c.isDTLS)
+	}
 	if !ok {
 		c.sendAlert(alertProtocolVersion)
 		return fmt.Errorf("tls: server selected unsupported protocol version %x", c.vers)
 	}
+	c.vers = serverVersion
 	c.haveVers = true
 
 	helloRetryRequest, haveHelloRetryRequest := msg.(*helloRetryRequestMsg)
@@ -426,9 +445,9 @@ NextCipherSuite:
 		return unexpectedMessageError(serverHello, msg)
 	}
 
-	if c.vers != serverHello.vers {
+	if serverWireVersion != serverHello.vers {
 		c.sendAlert(alertProtocolVersion)
-		return fmt.Errorf("tls: server sent non-matching version %x vs %x", serverHello.vers, c.vers)
+		return fmt.Errorf("tls: server sent non-matching version %x vs %x", serverWireVersion, serverHello.vers)
 	}
 
 	// Check for downgrade signals in the server random, per
@@ -1348,6 +1367,9 @@ func (hs *clientHandshakeState) sendFinished(out []byte, isResume bool) error {
 		writeIntPadded(channelID[32:64], c.config.ChannelID.Y)
 		writeIntPadded(channelID[64:96], r)
 		writeIntPadded(channelID[96:128], s)
+		if c.config.Bugs.InvalidChannelIDSignature {
+			channelID[64] ^= 1
+		}
 		channelIDMsg.channelID = channelID
 
 		c.channelID = &c.config.ChannelID.PublicKey

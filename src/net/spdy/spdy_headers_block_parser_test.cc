@@ -9,10 +9,13 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "base/sys_byteorder.h"
+#include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_test_utils.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+using testing::_;
 
 namespace net {
 
@@ -27,6 +30,7 @@ class MockSpdyHeadersHandler : public SpdyHeadersHandlerInterface {
  public:
   MOCK_METHOD0(OnHeaderBlockStart, void());
   MOCK_METHOD1(OnHeaderBlockEnd, void(size_t bytes));
+  MOCK_METHOD2(OnHeaderBlockEnd, void(size_t bytes, size_t compressed_bytes));
   MOCK_METHOD2(OnHeader, void(StringPiece key, StringPiece value));
 };
 
@@ -118,8 +122,11 @@ TEST_P(SpdyHeadersBlockParserTest, BasicTest) {
                                  StringPiece(expect_value))).Times(1);
 
   string headers(CreateHeaders(1, false));
-  EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
-
+  if (FLAGS_chromium_http2_flag_log_compressed_size) {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length(), _)).Times(1);
+  } else {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  }
   EXPECT_TRUE(parser_->
       HandleControlFrameHeadersData(1, headers.c_str(), headers.length()));
   EXPECT_EQ(SpdyHeadersBlockParser::NO_PARSER_ERROR, parser_->get_error());
@@ -136,7 +143,11 @@ TEST_P(SpdyHeadersBlockParserTest, NullsSupportedTest) {
                                  StringPiece(expect_value))).Times(1);
 
   string headers(CreateHeaders(1, true));
-  EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  if (FLAGS_chromium_http2_flag_log_compressed_size) {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length(), _)).Times(1);
+  } else {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  }
 
   EXPECT_TRUE(parser_->
       HandleControlFrameHeadersData(1, headers.c_str(), headers.length()));
@@ -163,7 +174,11 @@ TEST_P(SpdyHeadersBlockParserTest, MultipleBlocksAndHeadersWithPartialData) {
           StringPiece(retained_arguments[2 * j]),
           StringPiece(retained_arguments[2 * j + 1]))).Times(1);
     }
-    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+    if (FLAGS_chromium_http2_flag_log_compressed_size) {
+      EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length(), _)).Times(1);
+    } else {
+      EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+    }
   }
   // Parse the header blocks, feeding the parser one byte at a time.
   for (int i = 1; i <= kNumHeaderBlocks; i++) {
@@ -190,7 +205,11 @@ TEST_P(SpdyHeadersBlockParserTest, HandlesEmptyCallsTest) {
                                  StringPiece(expect_value))).Times(1);
 
   string headers(CreateHeaders(1, false));
-  EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  if (FLAGS_chromium_http2_flag_log_compressed_size) {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length(), _)).Times(1);
+  } else {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  }
 
   // Send a header in pieces with intermediate empty calls.
   for (string::iterator it = headers.begin(); it != headers.end(); ++it) {
@@ -236,7 +255,11 @@ TEST_P(SpdyHeadersBlockParserTest, ExtraDataTest) {
                                  StringPiece(expect_value))).Times(1);
 
   string headers = CreateHeaders(1, false) + "foobar";
-  EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  if (FLAGS_chromium_http2_flag_log_compressed_size) {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length(), _)).Times(1);
+  } else {
+    EXPECT_CALL(handler_, OnHeaderBlockEnd(headers.length())).Times(1);
+  }
 
   EXPECT_FALSE(parser_->HandleControlFrameHeadersData(1, headers.c_str(),
                                                       headers.length()));

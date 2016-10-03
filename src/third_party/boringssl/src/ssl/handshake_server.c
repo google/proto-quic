@@ -197,6 +197,11 @@ int ssl3_accept(SSL *ssl) {
     state = ssl->state;
 
     switch (ssl->state) {
+      case SSL_ST_INIT:
+        ssl->state = SSL_ST_ACCEPT;
+        skip = 1;
+        break;
+
       case SSL_ST_ACCEPT:
         ssl_do_info_callback(ssl, SSL_CB_HANDSHAKE_START, 1);
 
@@ -559,20 +564,75 @@ static int negotiate_version(
     return 0;
   }
 
-  uint16_t client_version =
-      ssl->method->version_from_wire(client_hello->version);
-  ssl->client_version = client_hello->version;
+  uint16_t version = 0;
+  /* Check supported_versions extension if it is present. */
+  CBS supported_versions;
+  if (ssl_early_callback_get_extension(client_hello, &supported_versions,
+                                       TLSEXT_TYPE_supported_versions)) {
+    CBS versions;
+    if (!CBS_get_u8_length_prefixed(&supported_versions, &versions) ||
+        CBS_len(&supported_versions) != 0 ||
+        CBS_len(&versions) == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+      *out_alert = SSL_AD_DECODE_ERROR;
+      return 0;
+    }
 
-  /* Select the version to use. */
-  uint16_t version = client_version;
-  if (version > max_version) {
-    version = max_version;
-  }
+    int found_version = 0;
+    while (CBS_len(&versions) != 0) {
+      uint16_t ext_version;
+      if (!CBS_get_u16(&versions, &ext_version)) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+        *out_alert = SSL_AD_DECODE_ERROR;
+        return 0;
+      }
+      if (!ssl->method->version_from_wire(&ext_version, ext_version)) {
+        continue;
+      }
+      if (min_version <= ext_version &&
+          ext_version <= max_version) {
+        version = ext_version;
+        found_version = 1;
+        break;
+      }
+    }
 
-  if (version < min_version) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_PROTOCOL);
-    *out_alert = SSL_AD_PROTOCOL_VERSION;
-    return 0;
+    if (!found_version) {
+      goto unsupported_protocol;
+    }
+  } else {
+    /* Process ClientHello.version instead. Note that versions beyond (D)TLS 1.2
+     * do not use this mechanism. */
+    if (SSL_is_dtls(ssl)) {
+      if (client_hello->version <= DTLS1_2_VERSION) {
+        version = TLS1_2_VERSION;
+      } else if (client_hello->version <= DTLS1_VERSION) {
+        version = TLS1_1_VERSION;
+      } else {
+        goto unsupported_protocol;
+      }
+    } else {
+      if (client_hello->version >= TLS1_2_VERSION) {
+        version = TLS1_2_VERSION;
+      } else if (client_hello->version >= TLS1_1_VERSION) {
+        version = TLS1_1_VERSION;
+      } else if (client_hello->version >= TLS1_VERSION) {
+        version = TLS1_VERSION;
+      } else if (client_hello->version >= SSL3_VERSION) {
+        version = SSL3_VERSION;
+      } else {
+        goto unsupported_protocol;
+      }
+    }
+
+    /* Apply our minimum and maximum version. */
+    if (version > max_version) {
+      version = max_version;
+    }
+
+    if (version < min_version) {
+      goto unsupported_protocol;
+    }
   }
 
   /* Handle FALLBACK_SCSV. */
@@ -584,6 +644,7 @@ static int negotiate_version(
     return 0;
   }
 
+  ssl->client_version = client_hello->version;
   ssl->version = ssl->method->version_to_wire(version);
   ssl->s3->enc_method = ssl3_get_enc_method(version);
   assert(ssl->s3->enc_method != NULL);
@@ -593,6 +654,11 @@ static int negotiate_version(
   ssl->s3->have_version = 1;
 
   return 1;
+
+unsupported_protocol:
+  OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_PROTOCOL);
+  *out_alert = SSL_AD_PROTOCOL_VERSION;
+  return 0;
 }
 
 static int ssl3_get_client_hello(SSL *ssl) {
@@ -632,7 +698,7 @@ static int ssl3_get_client_hello(SSL *ssl) {
 
         case -1:
           /* Connection rejected. */
-          al = SSL_AD_ACCESS_DENIED;
+          al = SSL_AD_HANDSHAKE_FAILURE;
           OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
           goto f_err;
 
@@ -714,7 +780,7 @@ static int ssl3_get_client_hello(SSL *ssl) {
       session = NULL;
       ssl->s3->session_reused = 1;
     } else {
-      SSL_set_session(ssl, NULL);
+      ssl_set_session(ssl, NULL);
       if (!ssl_get_new_session(ssl, 1 /* server */)) {
         goto err;
       }
@@ -728,7 +794,7 @@ static int ssl3_get_client_hello(SSL *ssl) {
     if (ssl->ctx->dos_protection_cb != NULL &&
         ssl->ctx->dos_protection_cb(&client_hello) == 0) {
       /* Connection rejected for DOS reasons. */
-      al = SSL_AD_ACCESS_DENIED;
+      al = SSL_AD_INTERNAL_ERROR;
       OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
       goto f_err;
     }
@@ -870,20 +936,8 @@ static int ssl3_send_server_hello(SSL *ssl) {
     return -1;
   }
 
-  /* Fill in the TLS 1.2 downgrade signal. See draft-ietf-tls-tls13-14.
-   *
-   * TODO(davidben): Also implement the TLS 1.1 sentinel when things have
-   * settled down. */
-  uint16_t min_version, max_version;
-  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
-    return -1;
-  }
-  if (max_version >= TLS1_3_VERSION &&
-      ssl3_protocol_version(ssl) <= TLS1_2_VERSION) {
-    static const uint8_t kDowngradeTLS12[8] = {0x44, 0x4f, 0x57, 0x4e,
-                                               0x47, 0x52, 0x44, 0x01};
-    memcpy(ssl->s3->server_random + SSL3_RANDOM_SIZE - 8, kDowngradeTLS12, 8);
-  }
+  /* TODO(davidben): Implement the TLS 1.1 and 1.2 downgrade sentinels once TLS
+   * 1.3 is finalized and we are not implementing a draft version. */
 
   const SSL_SESSION *session = ssl->s3->new_session;
   if (ssl->session != NULL) {
@@ -1146,8 +1200,7 @@ static int add_cert_types(SSL *ssl, CBB *cbb) {
   int have_ecdsa_sign = 0;
   const uint16_t *sig_algs;
   size_t sig_algs_len = tls12_get_psigalgs(ssl, &sig_algs);
-  size_t i;
-  for (i = 0; i < sig_algs_len; i++) {
+  for (size_t i = 0; i < sig_algs_len; i++) {
     switch (sig_algs[i]) {
       case SSL_SIGN_RSA_PKCS1_SHA512:
       case SSL_SIGN_RSA_PKCS1_SHA384:
@@ -1495,8 +1548,7 @@ static int ssl3_get_client_key_exchange(SSL *ssl) {
     size_t padding_len = decrypt_len - premaster_secret_len;
     uint8_t good = constant_time_eq_int_8(decrypt_buf[0], 0) &
                    constant_time_eq_int_8(decrypt_buf[1], 2);
-    size_t i;
-    for (i = 2; i < padding_len - 1; i++) {
+    for (size_t i = 2; i < padding_len - 1; i++) {
       good &= ~constant_time_is_zero_8(decrypt_buf[i]);
     }
     good &= constant_time_is_zero_8(decrypt_buf[padding_len - 1]);
@@ -1510,7 +1562,7 @@ static int ssl3_get_client_key_exchange(SSL *ssl) {
 
     /* Select, in constant time, either the decrypted premaster or the random
      * premaster based on |good|. */
-    for (i = 0; i < premaster_secret_len; i++) {
+    for (size_t i = 0; i < premaster_secret_len; i++) {
       premaster_secret[i] = constant_time_select_8(
           good, decrypt_buf[padding_len + i], premaster_secret[i]);
     }
@@ -1733,8 +1785,13 @@ static int ssl3_get_next_proto(SSL *ssl) {
   CBS_init(&next_protocol, ssl->init_msg, ssl->init_num);
   if (!CBS_get_u8_length_prefixed(&next_protocol, &selected_protocol) ||
       !CBS_get_u8_length_prefixed(&next_protocol, &padding) ||
-      CBS_len(&next_protocol) != 0 ||
-      !CBS_stow(&selected_protocol, &ssl->s3->next_proto_negotiated,
+      CBS_len(&next_protocol) != 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    return 0;
+  }
+
+  if (!CBS_stow(&selected_protocol, &ssl->s3->next_proto_negotiated,
                 &ssl->s3->next_proto_negotiated_len)) {
     return 0;
   }
@@ -1783,7 +1840,8 @@ static int ssl3_get_channel_id(SSL *ssl) {
       CBS_len(&encrypted_extensions) != 0 ||
       extension_type != TLSEXT_TYPE_channel_id ||
       CBS_len(&extension) != TLSEXT_CHANNEL_ID_SIZE) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_MESSAGE);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
     return -1;
   }
 
@@ -1823,8 +1881,13 @@ static int ssl3_get_channel_id(SSL *ssl) {
 
   /* We stored the handshake hash in |tlsext_channel_id| the first time that we
    * were called. */
-  if (!ECDSA_do_verify(channel_id_hash, channel_id_hash_len, &sig, key)) {
+  int sig_ok = ECDSA_do_verify(channel_id_hash, channel_id_hash_len, &sig, key);
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  sig_ok = 1;
+#endif
+  if (!sig_ok) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_SIGNATURE_INVALID);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
     ssl->s3->tlsext_channel_id_valid = 0;
     goto err;
   }

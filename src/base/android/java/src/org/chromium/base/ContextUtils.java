@@ -54,14 +54,7 @@ public class ContextUtils {
         // Conceding that occasionally in tests, native is loaded before the browser process is
         // started, in which case the browser process re-sets the application context.
         if (sApplicationContext != null && sApplicationContext != appContext) {
-            // For webview, sometimes the client app overrides getApplicationContext in a poor way
-            // and fails to make it idempotent. We cannot crash in this scenario, so we ignore new
-            // assignments and assume that the first initialized context is the right application
-            // object. See http://crbug.com/637389.
-            // TODO(wnwen): Add runtime exception back once the underlying issue in LibraryLoader is
-            //     fixed.
-            Log.d(TAG, "Multiple contexts detected, ignoring new application context.");
-            return;
+            throw new RuntimeException("Attempting to set multiple global application contexts.");
         }
         initJavaSideApplicationContext(appContext);
     }

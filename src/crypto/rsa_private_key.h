@@ -5,6 +5,7 @@
 #ifndef CRYPTO_RSA_PRIVATE_KEY_H_
 #define CRYPTO_RSA_PRIVATE_KEY_H_
 
+#include <openssl/base.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -14,9 +15,6 @@
 #include "base/macros.h"
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
-
-// Forward declaration for openssl/*.h
-typedef struct evp_pkey_st EVP_PKEY;
 
 namespace crypto {
 
@@ -41,7 +39,7 @@ class CRYPTO_EXPORT RSAPrivateKey {
   // failure.
   static std::unique_ptr<RSAPrivateKey> CreateFromKey(EVP_PKEY* key);
 
-  EVP_PKEY* key() { return key_; }
+  EVP_PKEY* key() { return key_.get(); }
 
   // Creates a copy of the object.
   std::unique_ptr<RSAPrivateKey> Copy() const;
@@ -56,7 +54,7 @@ class CRYPTO_EXPORT RSAPrivateKey {
   // Constructor is private. Use one of the Create*() methods above instead.
   RSAPrivateKey();
 
-  EVP_PKEY* key_;
+  bssl::UniquePtr<EVP_PKEY> key_;
 
   DISALLOW_COPY_AND_ASSIGN(RSAPrivateKey);
 };

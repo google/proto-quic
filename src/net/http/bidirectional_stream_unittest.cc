@@ -14,6 +14,8 @@
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "base/timer/mock_timer.h"
+#include "net/base/load_timing_info.h"
+#include "net/base/load_timing_info_test_util.h"
 #include "net/base/net_errors.h"
 #include "net/http/bidirectional_stream_request_info.h"
 #include "net/http/http_network_session.h"
@@ -45,6 +47,38 @@ const char kBodyData[] = "Body data";
 const size_t kBodyDataSize = arraysize(kBodyData);
 // Size of the buffer to be allocated for each read.
 const size_t kReadBufferSize = 4096;
+
+// Expects that fields of |load_timing_info| are valid time stamps.
+void ExpectLoadTimingValid(const LoadTimingInfo& load_timing_info) {
+  EXPECT_FALSE(load_timing_info.request_start.is_null());
+  EXPECT_FALSE(load_timing_info.request_start_time.is_null());
+  EXPECT_FALSE(load_timing_info.receive_headers_end.is_null());
+  EXPECT_FALSE(load_timing_info.send_start.is_null());
+  EXPECT_FALSE(load_timing_info.send_end.is_null());
+  EXPECT_TRUE(load_timing_info.request_start <
+              load_timing_info.receive_headers_end);
+  EXPECT_TRUE(load_timing_info.send_start <= load_timing_info.send_end);
+}
+
+// Tests the load timing of a stream that's connected and is not the first
+// request sent on a connection.
+void TestLoadTimingReused(const LoadTimingInfo& load_timing_info) {
+  EXPECT_TRUE(load_timing_info.socket_reused);
+
+  ExpectConnectTimingHasNoTimes(load_timing_info.connect_timing);
+  ExpectLoadTimingValid(load_timing_info);
+}
+
+// Tests the load timing of a stream that's connected and using a fresh
+// connection.
+void TestLoadTimingNotReused(const LoadTimingInfo& load_timing_info) {
+  EXPECT_FALSE(load_timing_info.socket_reused);
+
+  ExpectConnectTimingHasTimes(
+      load_timing_info.connect_timing,
+      CONNECT_TIMING_HAS_SSL_TIMES | CONNECT_TIMING_HAS_DNS_TIMES);
+  ExpectLoadTimingValid(load_timing_info);
+}
 
 // Delegate that reads data but does not send any data.
 class TestDelegateBase : public BidirectionalStream::Delegate {
@@ -140,8 +174,10 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
     stream_.reset(new BidirectionalStream(std::move(request_info), session,
                                           true, this, std::move(timer_)));
     if (run_until_completion_)
-      loop_->Run();
+      WaitUntilCompletion();
   }
+
+  void WaitUntilCompletion() { loop_->Run(); }
 
   void SendData(const scoped_refptr<IOBuffer>& data,
                 int length,
@@ -185,6 +221,7 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
     next_proto_ = stream_->GetProtocol();
     received_bytes_ = stream_->GetTotalReceivedBytes();
     sent_bytes_ = stream_->GetTotalSentBytes();
+    stream_->GetLoadTimingInfo(&load_timing_info_);
     stream_.reset();
   }
 
@@ -204,6 +241,14 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
     if (stream_)
       return stream_->GetTotalSentBytes();
     return sent_bytes_;
+  }
+
+  void GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
+    if (stream_) {
+      stream_->GetLoadTimingInfo(load_timing_info);
+      return;
+    }
+    *load_timing_info = load_timing_info_;
   }
 
   // Const getters for internal states.
@@ -240,6 +285,7 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
   NextProto next_proto_;
   int64_t received_bytes_;
   int64_t sent_bytes_;
+  LoadTimingInfo load_timing_info_;
   int error_;
   int on_data_read_count_;
   int on_data_sent_count_;
@@ -404,6 +450,108 @@ TEST_F(BidirectionalStreamTest, CreateInsecureStream) {
   delegate.Start(std::move(request_info), session.get());
 
   EXPECT_THAT(delegate.error(), IsError(ERR_DISALLOWED_URL_SCHEME));
+}
+
+TEST_F(BidirectionalStreamTest, SimplePostRequest) {
+  SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
+      kDefaultUrl, 1, kBodyDataSize, LOW, nullptr, 0));
+  SpdySerializedFrame data_frame(spdy_util_.ConstructSpdyDataFrame(
+      1, kBodyData, kBodyDataSize, /*fin=*/true));
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(data_frame, 3),
+  };
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
+  SpdySerializedFrame response_body_frame(
+      spdy_util_.ConstructSpdyDataFrame(1, /*fin=*/true));
+  MockRead reads[] = {
+      CreateMockRead(resp, 1),
+      MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause.
+      CreateMockRead(response_body_frame, 4), MockRead(ASYNC, 0, 5),
+  };
+  InitSession(reads, arraysize(reads), writes, arraysize(writes));
+
+  std::unique_ptr<BidirectionalStreamRequestInfo> request_info(
+      new BidirectionalStreamRequestInfo);
+  request_info->method = "POST";
+  request_info->url = default_url_;
+  request_info->extra_headers.SetHeader(net::HttpRequestHeaders::kContentLength,
+                                        base::SizeTToString(kBodyDataSize));
+  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
+  std::unique_ptr<TestDelegateBase> delegate(
+      new TestDelegateBase(read_buffer.get(), kReadBufferSize));
+  delegate->Start(std::move(request_info), http_session_.get());
+  sequenced_data_->RunUntilPaused();
+
+  scoped_refptr<StringIOBuffer> write_buffer(
+      new StringIOBuffer(std::string(kBodyData, kBodyDataSize)));
+  delegate->SendData(write_buffer.get(), write_buffer->size(), true);
+  sequenced_data_->Resume();
+  base::RunLoop().RunUntilIdle();
+  LoadTimingInfo load_timing_info;
+  delegate->GetLoadTimingInfo(&load_timing_info);
+  TestLoadTimingNotReused(load_timing_info);
+
+  EXPECT_EQ(1, delegate->on_data_read_count());
+  EXPECT_EQ(1, delegate->on_data_sent_count());
+  EXPECT_EQ(kProtoHTTP2, delegate->GetProtocol());
+  EXPECT_EQ(CountWriteBytes(writes, arraysize(writes)),
+            delegate->GetTotalSentBytes());
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
+            delegate->GetTotalReceivedBytes());
+}
+
+TEST_F(BidirectionalStreamTest, LoadTimingTwoRequests) {
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, /*stream_id=*/1, LOW, true));
+  SpdySerializedFrame req2(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, /*stream_id=*/3, LOW, true));
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(req2, 2),
+  };
+  SpdySerializedFrame resp(
+      spdy_util_.ConstructSpdyGetReply(nullptr, 0, /*stream_id=*/1));
+  SpdySerializedFrame resp2(
+      spdy_util_.ConstructSpdyGetReply(nullptr, 0, /*stream_id=*/3));
+  SpdySerializedFrame resp_body(
+      spdy_util_.ConstructSpdyDataFrame(/*stream_id=*/1, /*fin=*/true));
+  SpdySerializedFrame resp_body2(
+      spdy_util_.ConstructSpdyDataFrame(/*stream_id=*/3, /*fin=*/true));
+  MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(resp_body, 3),
+                      CreateMockRead(resp2, 4), CreateMockRead(resp_body2, 5),
+                      MockRead(ASYNC, 0, 6)};
+  InitSession(reads, arraysize(reads), writes, arraysize(writes));
+
+  std::unique_ptr<BidirectionalStreamRequestInfo> request_info(
+      new BidirectionalStreamRequestInfo);
+  request_info->method = "GET";
+  request_info->url = default_url_;
+  request_info->end_stream_on_headers = true;
+  std::unique_ptr<BidirectionalStreamRequestInfo> request_info2(
+      new BidirectionalStreamRequestInfo);
+  request_info2->method = "GET";
+  request_info2->url = default_url_;
+  request_info2->end_stream_on_headers = true;
+
+  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
+  scoped_refptr<IOBuffer> read_buffer2(new IOBuffer(kReadBufferSize));
+  std::unique_ptr<TestDelegateBase> delegate(
+      new TestDelegateBase(read_buffer.get(), kReadBufferSize));
+  std::unique_ptr<TestDelegateBase> delegate2(
+      new TestDelegateBase(read_buffer2.get(), kReadBufferSize));
+  delegate->Start(std::move(request_info), http_session_.get());
+  delegate2->Start(std::move(request_info2), http_session_.get());
+  delegate->SetRunUntilCompletion(true);
+  delegate2->SetRunUntilCompletion(true);
+  base::RunLoop().RunUntilIdle();
+
+  delegate->WaitUntilCompletion();
+  delegate2->WaitUntilCompletion();
+  LoadTimingInfo load_timing_info;
+  delegate->GetLoadTimingInfo(&load_timing_info);
+  TestLoadTimingNotReused(load_timing_info);
+  LoadTimingInfo load_timing_info2;
+  delegate2->GetLoadTimingInfo(&load_timing_info2);
+  TestLoadTimingReused(load_timing_info2);
 }
 
 // Creates a BidirectionalStream with an insecure scheme. Destroy the stream

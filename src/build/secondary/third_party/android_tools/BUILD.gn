@@ -15,8 +15,6 @@ config("cpu_features_warnings") {
   }
 }
 
-# This is the GN version of
-# //build/android/ndk.gyp:cpu_features
 source_set("cpu_features") {
   sources = [
     "$android_ndk_root/sources/android/cpufeatures/cpu-features.c",

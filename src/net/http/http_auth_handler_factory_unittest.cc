@@ -36,7 +36,7 @@ class MockHttpAuthHandlerFactory : public HttpAuthHandlerFactory {
                         const GURL& origin,
                         CreateReason reason,
                         int nonce_count,
-                        const BoundNetLog& net_log,
+                        const NetLogWithSource& net_log,
                         std::unique_ptr<HttpAuthHandler>* handler) override {
     handler->reset();
     return return_code_;
@@ -70,42 +70,42 @@ TEST(HttpAuthHandlerFactoryTest, RegistryFactory) {
   EXPECT_EQ(ERR_UNSUPPORTED_AUTH_SCHEME,
             registry_factory.CreateAuthHandlerFromString(
                 "Basic", HttpAuth::AUTH_SERVER, null_ssl_info, gurl,
-                BoundNetLog(), &handler));
+                NetLogWithSource(), &handler));
 
   // Test what happens with a single scheme.
   registry_factory.RegisterSchemeFactory("Basic", mock_factory_basic);
   EXPECT_EQ(kBasicReturnCode, registry_factory.CreateAuthHandlerFromString(
                                   "Basic", HttpAuth::AUTH_SERVER, null_ssl_info,
-                                  gurl, BoundNetLog(), &handler));
+                                  gurl, NetLogWithSource(), &handler));
   EXPECT_EQ(ERR_UNSUPPORTED_AUTH_SCHEME,
             registry_factory.CreateAuthHandlerFromString(
                 "Digest", HttpAuth::AUTH_SERVER, null_ssl_info, gurl,
-                BoundNetLog(), &handler));
+                NetLogWithSource(), &handler));
 
   // Test multiple schemes
   registry_factory.RegisterSchemeFactory("Digest", mock_factory_digest);
   EXPECT_EQ(kBasicReturnCode, registry_factory.CreateAuthHandlerFromString(
                                   "Basic", HttpAuth::AUTH_SERVER, null_ssl_info,
-                                  gurl, BoundNetLog(), &handler));
+                                  gurl, NetLogWithSource(), &handler));
   EXPECT_EQ(kDigestReturnCode,
             registry_factory.CreateAuthHandlerFromString(
                 "Digest", HttpAuth::AUTH_SERVER, null_ssl_info, gurl,
-                BoundNetLog(), &handler));
+                NetLogWithSource(), &handler));
 
   // Test case-insensitivity
   EXPECT_EQ(kBasicReturnCode, registry_factory.CreateAuthHandlerFromString(
                                   "basic", HttpAuth::AUTH_SERVER, null_ssl_info,
-                                  gurl, BoundNetLog(), &handler));
+                                  gurl, NetLogWithSource(), &handler));
 
   // Test replacement of existing auth scheme
   registry_factory.RegisterSchemeFactory("Digest", mock_factory_digest_replace);
   EXPECT_EQ(kBasicReturnCode, registry_factory.CreateAuthHandlerFromString(
                                   "Basic", HttpAuth::AUTH_SERVER, null_ssl_info,
-                                  gurl, BoundNetLog(), &handler));
+                                  gurl, NetLogWithSource(), &handler));
   EXPECT_EQ(kDigestReturnCodeReplace,
             registry_factory.CreateAuthHandlerFromString(
                 "Digest", HttpAuth::AUTH_SERVER, null_ssl_info, gurl,
-                BoundNetLog(), &handler));
+                NetLogWithSource(), &handler));
 }
 
 TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
@@ -122,7 +122,7 @@ TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
     std::unique_ptr<HttpAuthHandler> handler;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         "Basic realm=\"FooBar\"", HttpAuth::AUTH_SERVER, null_ssl_info,
-        server_origin, BoundNetLog(), &handler);
+        server_origin, NetLogWithSource(), &handler);
     EXPECT_THAT(rv, IsOk());
     ASSERT_FALSE(handler.get() == NULL);
     EXPECT_EQ(HttpAuth::AUTH_SCHEME_BASIC, handler->auth_scheme());
@@ -135,7 +135,7 @@ TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
     std::unique_ptr<HttpAuthHandler> handler;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         "UNSUPPORTED realm=\"FooBar\"", HttpAuth::AUTH_SERVER, null_ssl_info,
-        server_origin, BoundNetLog(), &handler);
+        server_origin, NetLogWithSource(), &handler);
     EXPECT_THAT(rv, IsError(ERR_UNSUPPORTED_AUTH_SCHEME));
     EXPECT_TRUE(handler.get() == NULL);
   }
@@ -143,7 +143,7 @@ TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
     std::unique_ptr<HttpAuthHandler> handler;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         "Digest realm=\"FooBar\", nonce=\"xyz\"", HttpAuth::AUTH_PROXY,
-        null_ssl_info, proxy_origin, BoundNetLog(), &handler);
+        null_ssl_info, proxy_origin, NetLogWithSource(), &handler);
     EXPECT_THAT(rv, IsOk());
     ASSERT_FALSE(handler.get() == NULL);
     EXPECT_EQ(HttpAuth::AUTH_SCHEME_DIGEST, handler->auth_scheme());
@@ -156,7 +156,7 @@ TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
     std::unique_ptr<HttpAuthHandler> handler;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         "NTLM", HttpAuth::AUTH_SERVER, null_ssl_info, server_origin,
-        BoundNetLog(), &handler);
+        NetLogWithSource(), &handler);
     EXPECT_THAT(rv, IsOk());
     ASSERT_FALSE(handler.get() == NULL);
     EXPECT_EQ(HttpAuth::AUTH_SCHEME_NTLM, handler->auth_scheme());
@@ -169,7 +169,7 @@ TEST(HttpAuthHandlerFactoryTest, DefaultFactory) {
     std::unique_ptr<HttpAuthHandler> handler;
     int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
         "Negotiate", HttpAuth::AUTH_SERVER, null_ssl_info, server_origin,
-        BoundNetLog(), &handler);
+        NetLogWithSource(), &handler);
 // Note the default factory doesn't support Kerberos on Android
 #if defined(USE_KERBEROS) && !defined(OS_ANDROID)
     EXPECT_THAT(rv, IsOk());

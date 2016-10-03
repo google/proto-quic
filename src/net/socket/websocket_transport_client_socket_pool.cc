@@ -40,14 +40,14 @@ WebSocketTransportConnectJob::WebSocketTransportConnectJob(
     ClientSocketHandle* handle,
     Delegate* delegate,
     NetLog* pool_net_log,
-    const BoundNetLog& request_net_log)
+    const NetLogWithSource& request_net_log)
     : ConnectJob(
           group_name,
           timeout_duration,
           priority,
           respect_limits,
           delegate,
-          BoundNetLog::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
+          NetLogWithSource::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
@@ -324,7 +324,7 @@ int WebSocketTransportClientSocketPool::RequestSocket(
     RespectLimits respect_limits,
     ClientSocketHandle* handle,
     const CompletionCallback& callback,
-    const BoundNetLog& request_net_log) {
+    const NetLogWithSource& request_net_log) {
   DCHECK(params);
   const scoped_refptr<TransportSocketParams>& casted_params =
       *static_cast<const scoped_refptr<TransportSocketParams>*>(params);
@@ -385,7 +385,7 @@ void WebSocketTransportClientSocketPool::RequestSockets(
     const std::string& group_name,
     const void* params,
     int num_sockets,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   NOTIMPLEMENTED();
 }
 
@@ -501,7 +501,7 @@ bool WebSocketTransportClientSocketPool::TryHandOutSocket(
 
   std::unique_ptr<StreamSocket> socket = job->PassSocket();
   ClientSocketHandle* const handle = job->handle();
-  BoundNetLog request_net_log = job->request_net_log();
+  NetLogWithSource request_net_log = job->request_net_log();
   LoadTimingInfo::ConnectTiming connect_timing = job->connect_timing();
 
   if (result == OK) {
@@ -589,7 +589,7 @@ void WebSocketTransportClientSocketPool::HandOutSocket(
     std::unique_ptr<StreamSocket> socket,
     const LoadTimingInfo::ConnectTiming& connect_timing,
     ClientSocketHandle* handle,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(socket);
   DCHECK_EQ(ClientSocketHandle::UNUSED, handle->reuse_type());
   DCHECK_EQ(0, handle->idle_time().InMicroseconds());
@@ -688,7 +688,7 @@ WebSocketTransportClientSocketPool::StalledRequest::StalledRequest(
     RequestPriority priority,
     ClientSocketHandle* handle,
     const CompletionCallback& callback,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : params(params),
       priority(priority),
       handle(handle),

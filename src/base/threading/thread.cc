@@ -17,6 +17,10 @@
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
+#if defined(OS_POSIX) && !defined(OS_NACL)
+#include "base/files/file_descriptor_watcher_posix.h"
+#endif
+
 #if defined(OS_WIN)
 #include "base/win/scoped_com_initializer.h"
 #endif
@@ -294,6 +298,16 @@ void Thread::ThreadMain() {
   std::unique_ptr<MessageLoop> message_loop(message_loop_);
   message_loop_->BindToCurrentThread();
   message_loop_->SetTimerSlack(message_loop_timer_slack_);
+
+#if defined(OS_POSIX) && !defined(OS_NACL)
+  // Allow threads running a MessageLoopForIO to use FileDescriptorWatcher API.
+  std::unique_ptr<FileDescriptorWatcher> file_descriptor_watcher;
+  if (MessageLoopForIO::IsCurrent()) {
+    DCHECK_EQ(message_loop_, MessageLoopForIO::current());
+    file_descriptor_watcher.reset(
+        new FileDescriptorWatcher(MessageLoopForIO::current()));
+  }
+#endif
 
 #if defined(OS_WIN)
   std::unique_ptr<win::ScopedCOMInitializer> com_initializer;

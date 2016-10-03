@@ -173,12 +173,7 @@ void HistogramBase::WriteAsciiBucketGraph(double current_size,
 
 const std::string HistogramBase::GetSimpleAsciiBucketRange(
     Sample sample) const {
-  std::string result;
-  if (kHexRangePrintingFlag & flags())
-    StringAppendF(&result, "%#x", sample);
-  else
-    StringAppendF(&result, "%d", sample);
-  return result;
+  return StringPrintf("%d", sample);
 }
 
 void HistogramBase::WriteAsciiBucketValue(Count current,

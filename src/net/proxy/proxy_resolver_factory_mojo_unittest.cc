@@ -490,14 +490,14 @@ class MockHostResolver : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* request,
-              const BoundNetLog& source_net_log) override {
+              const NetLogWithSource& source_net_log) override {
     waiter_.NotifyEvent(DNS_REQUEST);
     return ERR_IO_PENDING;
   }
 
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const BoundNetLog& source_net_log) override {
+                       const NetLogWithSource& source_net_log) override {
     return ERR_DNS_CACHE_MISS;
   }
 
@@ -865,7 +865,7 @@ TEST_F(ProxyResolverFactoryMojoTest, GetProxyForURL_DeleteInCallback) {
   ProxyInfo results;
   TestCompletionCallback callback;
   ProxyResolver::RequestHandle handle;
-  BoundNetLog net_log;
+  NetLogWithSource net_log;
   EXPECT_EQ(
       OK,
       callback.GetResult(proxy_resolver_mojo_->GetProxyForURL(
@@ -885,7 +885,7 @@ TEST_F(ProxyResolverFactoryMojoTest,
   ProxyInfo results;
   TestCompletionCallback callback;
   ProxyResolver::RequestHandle handle;
-  BoundNetLog net_log;
+  NetLogWithSource net_log;
   EXPECT_EQ(
       ERR_PAC_SCRIPT_TERMINATED,
       callback.GetResult(proxy_resolver_mojo_->GetProxyForURL(

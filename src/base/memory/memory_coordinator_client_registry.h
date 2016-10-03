@@ -12,9 +12,20 @@
 
 namespace base {
 
-// MemoryCoordinatorClientRegistry is the registry for
-// MemoryCoordinatorClients. Callbacks of MemoryCoordinatorClient are called
-// via MemoryCoordinator.
+// MemoryCoordinatorClientRegistry is the registry of MemoryCoordinatorClients.
+// This class manages clients and provides a way to notify memory state changes
+// to clients, but this isn't responsible to determine how/when to change
+// memory states.
+//
+// Threading guarantees:
+// This class uses ObserverListThreadsafe internally, which means that
+//  * Registering/unregistering callbacks are thread-safe.
+//  * Callbacks are invoked on the same thread on which they are registered.
+// See base/observer_list_threadsafe.h for reference.
+//
+// Ownership management:
+// This class doesn't take the ownership of clients. Clients must be
+// unregistered before they are destroyed.
 class BASE_EXPORT MemoryCoordinatorClientRegistry {
  public:
   static MemoryCoordinatorClientRegistry* GetInstance();
@@ -25,14 +36,15 @@ class BASE_EXPORT MemoryCoordinatorClientRegistry {
   void Register(MemoryCoordinatorClient* client);
   void Unregister(MemoryCoordinatorClient* client);
 
-  using ClientList = ObserverListThreadSafe<MemoryCoordinatorClient>;
-  ClientList* clients() { return clients_.get(); }
+  // Notify clients of a memory state change.
+  void Notify(MemoryState state);
 
  private:
   friend struct DefaultSingletonTraits<MemoryCoordinatorClientRegistry>;
 
   MemoryCoordinatorClientRegistry();
 
+  using ClientList = ObserverListThreadSafe<MemoryCoordinatorClient>;
   scoped_refptr<ClientList> clients_;
 };
 

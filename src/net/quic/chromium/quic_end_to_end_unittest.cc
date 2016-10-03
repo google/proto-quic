@@ -219,9 +219,9 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
     request_.method = "POST";
     request_.url = GURL("https://test.example.com/");
     request_.upload_data_stream = upload_data_stream_.get();
-    ASSERT_THAT(
-        request_.upload_data_stream->Init(CompletionCallback(), BoundNetLog()),
-        IsOk());
+    ASSERT_THAT(request_.upload_data_stream->Init(CompletionCallback(),
+                                                  NetLogWithSource()),
+                IsOk());
   }
 
   // Checks that |consumer| completed and received |status_line| and |body|.
@@ -270,7 +270,7 @@ TEST_P(QuicEndToEndTest, LargeGetWithNoPacketLoss) {
 
   TestTransactionConsumer consumer(DEFAULT_PRIORITY,
                                    transaction_factory_.get());
-  consumer.Start(&request_, BoundNetLog());
+  consumer.Start(&request_, NetLogWithSource());
 
   // Will terminate when the last consumer completes.
   base::RunLoop().Run();
@@ -287,7 +287,7 @@ TEST_P(QuicEndToEndTest, TokenBinding) {
 
   TestTransactionConsumer consumer(DEFAULT_PRIORITY,
                                    transaction_factory_.get());
-  consumer.Start(&request_, BoundNetLog());
+  consumer.Start(&request_, NetLogWithSource());
 
   // Will terminate when the last consumer completes.
   base::RunLoop().Run();
@@ -310,7 +310,7 @@ TEST_P(QuicEndToEndTest, LargePostWithNoPacketLoss) {
 
   TestTransactionConsumer consumer(DEFAULT_PRIORITY,
                                    transaction_factory_.get());
-  consumer.Start(&request_, BoundNetLog());
+  consumer.Start(&request_, NetLogWithSource());
 
   // Will terminate when the last consumer completes.
   base::RunLoop().Run();
@@ -332,7 +332,7 @@ TEST_P(QuicEndToEndTest, LargePostWithPacketLoss) {
 
   TestTransactionConsumer consumer(DEFAULT_PRIORITY,
                                    transaction_factory_.get());
-  consumer.Start(&request_, BoundNetLog());
+  consumer.Start(&request_, NetLogWithSource());
 
   // Will terminate when the last consumer completes.
   base::RunLoop().Run();
@@ -357,7 +357,7 @@ TEST_P(QuicEndToEndTest, UberTest) {
     TestTransactionConsumer* consumer = new TestTransactionConsumer(
         DEFAULT_PRIORITY, transaction_factory_.get());
     consumers.push_back(consumer);
-    consumer->Start(&request_, BoundNetLog());
+    consumer->Start(&request_, NetLogWithSource());
   }
 
   // Will terminate when the last consumer completes.

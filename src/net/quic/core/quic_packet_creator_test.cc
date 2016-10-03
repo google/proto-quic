@@ -176,17 +176,10 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   // Returns the number of bytes consumed by the header of packet, including
   // the version.
   size_t GetPacketHeaderOverhead(QuicVersion version) {
-    if (FLAGS_quic_simple_packet_number_length_2) {
-      return GetPacketHeaderSize(
-          version, creator_.connection_id_length(), kIncludeVersion,
-          !kIncludePathId, !kIncludeDiversificationNonce,
-          QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-    } else {
-      return GetPacketHeaderSize(
-          version, creator_.connection_id_length(), kIncludeVersion,
-          !kIncludePathId, !kIncludeDiversificationNonce,
-          QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-    }
+    return GetPacketHeaderSize(
+        version, creator_.connection_id_length(), kIncludeVersion,
+        !kIncludePathId, !kIncludeDiversificationNonce,
+        QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
   }
 
   // Returns the number of bytes of overhead that will be added to a packet
@@ -277,165 +270,10 @@ TEST_P(QuicPacketCreatorTest, SerializeFrames) {
   }
 }
 
-TEST_P(QuicPacketCreatorTest, SerializeChangingSequenceNumberLength) {
-  FLAGS_quic_simple_packet_number_length_2 = false;
-  frames_.push_back(QuicFrame(new QuicAckFrame(MakeAckFrame(0u))));
-  creator_.AddSavedFrame(frames_[0]);
-  QuicPacketCreatorPeer::SetNextPacketNumberLength(&creator_,
-                                                   PACKET_4BYTE_PACKET_NUMBER);
-
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .WillRepeatedly(
-          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-  creator_.Flush();
-  // The packet number length will not change mid-packet.
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            serialized_packet_.packet_number_length);
-
-  {
-    InSequence s;
-    EXPECT_CALL(framer_visitor_, OnPacket());
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
-    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
-    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
-    EXPECT_CALL(framer_visitor_, OnAckFrame(_));
-    EXPECT_CALL(framer_visitor_, OnPacketComplete());
-  }
-  ProcessPacket(serialized_packet_);
-  DeleteSerializedPacket();
-
-  creator_.AddSavedFrame(frames_[0]);
-  creator_.Flush();
-  // Now the actual packet number length should have changed.
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            serialized_packet_.packet_number_length);
-  delete frames_[0].ack_frame;
-
-  {
-    InSequence s;
-    EXPECT_CALL(framer_visitor_, OnPacket());
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
-    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
-    EXPECT_CALL(framer_visitor_, OnPacketHeader(_));
-    EXPECT_CALL(framer_visitor_, OnAckFrame(_));
-    EXPECT_CALL(framer_visitor_, OnPacketComplete());
-  }
-  ProcessPacket(serialized_packet_);
-  DeleteSerializedPacket();
-}
-
-TEST_P(QuicPacketCreatorTest, ChangeSequenceNumberLengthMidPacket) {
-  FLAGS_quic_simple_packet_number_length_2 = false;
-  // Changing the packet number length with queued frames in the creator
-  // should hold the change until after any currently queued frames are
-  // serialized.
-
-  // Packet 1.
-  // Queue a frame in the creator.
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  QuicFrame ack_frame = QuicFrame(new QuicAckFrame(MakeAckFrame(0u)));
-  creator_.AddSavedFrame(ack_frame);
-
-  // Now change packet number length.
-  QuicPacketCreatorPeer::SetNextPacketNumberLength(&creator_,
-                                                   PACKET_4BYTE_PACKET_NUMBER);
-
-  // Add a STOP_WAITING frame since it contains a packet number,
-  // whose length should be 1.
-  QuicStopWaitingFrame stop_waiting_frame;
-  EXPECT_TRUE(creator_.AddSavedFrame(QuicFrame(&stop_waiting_frame)));
-  EXPECT_TRUE(creator_.HasPendingFrames());
-
-  // Ensure the packet is successfully created.
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .WillRepeatedly(
-          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-  creator_.Flush();
-  ASSERT_TRUE(serialized_packet_.encrypted_buffer);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            serialized_packet_.packet_number_length);
-
-  // Verify that header in transmitted packet has 1 byte sequence length.
-  QuicPacketHeader header;
-  {
-    InSequence s;
-    EXPECT_CALL(framer_visitor_, OnPacket());
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
-    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
-    EXPECT_CALL(framer_visitor_, OnPacketHeader(_))
-        .WillOnce(DoAll(SaveArg<0>(&header), Return(true)));
-    EXPECT_CALL(framer_visitor_, OnAckFrame(_));
-    EXPECT_CALL(framer_visitor_, OnStopWaitingFrame(_));
-    EXPECT_CALL(framer_visitor_, OnPacketComplete());
-  }
-  ProcessPacket(serialized_packet_);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            header.public_header.packet_number_length);
-  DeleteSerializedPacket();
-
-  // Packet 2.
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  // Generate Packet 2 with one frame -- packet number length should now
-  // change to 4 bytes.
-  EXPECT_TRUE(creator_.AddSavedFrame(QuicFrame(&stop_waiting_frame)));
-  EXPECT_TRUE(creator_.HasPendingFrames());
-
-  // Ensure the packet is successfully created.
-  creator_.Flush();
-  ASSERT_TRUE(serialized_packet_.encrypted_buffer);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            serialized_packet_.packet_number_length);
-
-  // Verify that header in transmitted packet has 4 byte sequence length.
-  {
-    InSequence s;
-    EXPECT_CALL(framer_visitor_, OnPacket());
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedPublicHeader(_));
-    EXPECT_CALL(framer_visitor_, OnUnauthenticatedHeader(_));
-    EXPECT_CALL(framer_visitor_, OnDecryptedPacket(_));
-    EXPECT_CALL(framer_visitor_, OnPacketHeader(_))
-        .WillOnce(DoAll(SaveArg<0>(&header), Return(true)));
-    EXPECT_CALL(framer_visitor_, OnStopWaitingFrame(_));
-    EXPECT_CALL(framer_visitor_, OnPacketComplete());
-  }
-  ProcessPacket(serialized_packet_);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            header.public_header.packet_number_length);
-
-  DeleteSerializedPacket();
-  delete ack_frame.ack_frame;
-}
-
-TEST_P(QuicPacketCreatorTest, ChangeSequenceNumberLengthMidPacketDoesNothing) {
-  FLAGS_quic_simple_packet_number_length_2 = true;
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  // Changing the packet number length with queued frames in the creator
-  // should do nothing.
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  QuicFrame ack_frame = QuicFrame(new QuicAckFrame(MakeAckFrame(0u)));
-  creator_.AddSavedFrame(ack_frame);
-
-  // Now change packet number length and expect a QUIC_BUG and no change in
-  // packet number length.
-  EXPECT_QUIC_BUG(creator_.UpdatePacketNumberLength(0, 256),
-                  "Called UpdatePacketNumberLength with 1 queued_frames.");
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  delete ack_frame.ack_frame;
-}
-
 TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
   // If the original packet number length, the current packet number
   // length, and the configured send packet number length are different, the
   // retransmit must sent with the original length and the others do not change.
-  if (!FLAGS_quic_simple_packet_number_length_2) {
-    QuicPacketCreatorPeer::SetNextPacketNumberLength(
-        &creator_, PACKET_4BYTE_PACKET_NUMBER);
-  }
   QuicPacketCreatorPeer::SetPacketNumberLength(&creator_,
                                                PACKET_2BYTE_PACKET_NUMBER);
   QuicStreamFrame* stream_frame =
@@ -449,17 +287,10 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSequenceNumberLength) {
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
-  if (FLAGS_quic_simple_packet_number_length_2) {
-    // The packet number length is updated after every packet is sent,
-    // so there is no need to restore the old length after sending.
-    EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  } else {
-    EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-              QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-    EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  }
+  // The packet number length is updated after every packet is sent,
+  // so there is no need to restore the old length after sending.
+  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
+            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
             serialized_packet_.packet_number_length);
 
@@ -548,9 +379,7 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithSpecifiedPadding) {
     PendingRetransmission retransmission(CreateRetransmission(
         frames, false /* has_crypto_handshake */,
         kNumPaddingBytes1 /* padding bytes */, ENCRYPTION_NONE,
-        FLAGS_quic_simple_packet_number_length_2
-            ? QuicPacketCreatorPeer::GetPacketNumberLength(&creator_)
-            : QuicPacketCreatorPeer::NextPacketNumberLength(&creator_)));
+        QuicPacketCreatorPeer::GetPacketNumberLength(&creator_)));
     EXPECT_CALL(delegate_, OnSerializedPacket(_))
         .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
     creator_.ReserializeAllFrames(retransmission, buffer, kMaxPacketSize);
@@ -812,59 +641,7 @@ TEST_P(QuicPacketCreatorTest, SerializeVersionNegotiationPacket) {
   client_framer_.ProcessPacket(*encrypted);
 }
 
-TEST_P(QuicPacketCreatorTest, UpdatePacketNumberLengthLeastAwaiting_Old) {
-  FLAGS_quic_simple_packet_number_length_2 = false;
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  QuicPacketCreatorPeer::SetPacketNumber(&creator_, 64);
-  creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  QuicPacketCreatorPeer::SetPacketNumber(&creator_, 64 * 256);
-  creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  QuicPacketCreatorPeer::SetPacketNumber(&creator_, 64 * 256 * 256);
-  creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  QuicPacketCreatorPeer::SetPacketNumber(&creator_,
-                                         UINT64_C(64) * 256 * 256 * 256 * 256);
-  creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-}
-
-TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthBandwidth_old) {
-  FLAGS_quic_simple_packet_number_length_2 = false;
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  creator_.UpdatePacketNumberLength(1, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  creator_.UpdatePacketNumberLength(1, 10000 * 256 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  creator_.UpdatePacketNumberLength(1,
-                                    10000 * 256 * 256 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_4BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  creator_.UpdatePacketNumberLength(
-      1, UINT64_C(1000) * 256 * 256 * 256 * 256 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-}
-
 TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthLeastAwaiting) {
-  FLAGS_quic_simple_packet_number_length_2 = true;
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
             QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
 
@@ -891,7 +668,6 @@ TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthLeastAwaiting) {
 }
 
 TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthCwnd) {
-  FLAGS_quic_simple_packet_number_length_2 = true;
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
             QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
 
@@ -1218,45 +994,6 @@ TEST_P(QuicPacketCreatorTest, SetCurrentPath) {
   EXPECT_EQ(1u, creator_.packet_number());
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
             QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-}
-
-TEST_P(QuicPacketCreatorTest,
-       SetCurrentPathAndUpdatePacketSequenceNumberLength) {
-  FLAGS_quic_simple_packet_number_length_2 = false;
-  // Current path is the default path.
-  EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-  QuicPacketCreatorPeer::SetPacketNumber(&creator_, 64 * 256 - 2);
-  // Add a stream frame to the creator and send the packet.
-  QuicFrame frame;
-  QuicIOVector io_vector(MakeIOVector("test"));
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
-                                   false, &frame));
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .Times(1)
-      .WillRepeatedly(
-          Invoke(this, &QuicPacketCreatorTest::ClearSerializedPacket));
-  creator_.Flush();
-  EXPECT_EQ(UINT64_C(64 * 256 - 1), creator_.packet_number());
-  creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  // Change current path.
-  QuicPathId kPathId1 = 1;
-  creator_.SetCurrentPath(kPathId1, 1, 0);
-  EXPECT_EQ(0u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
-
-  // Change current path back.
-  creator_.SetCurrentPath(kDefaultPathId, 2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(UINT64_C(64 * 256 - 1), creator_.packet_number());
-  EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::NextPacketNumberLength(&creator_));
 }
 
 TEST_P(QuicPacketCreatorTest, SerializePacketOnDifferentPath) {

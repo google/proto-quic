@@ -9,6 +9,10 @@ import("//build/config/clang/clang.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/toolchain.gni")
 
+if (is_ios) {
+  import("//build/config/ios/ios_sdk.gni")
+}
+
 # Contains the dependencies needed for sanitizers to link into executables and
 # shared_libraries. Unconditionally depend upon this target as it is empty if
 # |is_asan|, |is_lsan|, |is_tsan|, |is_msan| and |use_custom_libcxx| are false.
@@ -67,35 +71,65 @@ group("deps_no_options") {
       public_deps += [ "//buildtools/third_party/libc++:libcxx_proxy" ]
       data += [ "$root_out_dir/libc++.so" ]
     }
-    if (is_mac || is_win) {
+
+    # ASAN is supported on iOS but the runtime library depends on the compiler
+    # used (Chromium version of clang versus Xcode version of clang). Only copy
+    # the ASAN runtime on iOS if building with Chromium clang.
+    if (is_win || is_mac || (is_ios && !use_xcode_clang)) {
       data_deps = [
         ":copy_asan_runtime",
       ]
     }
-    if (is_mac) {
+    if (is_mac || (is_ios && !use_xcode_clang)) {
       public_deps += [ ":asan_runtime_bundle_data" ]
     }
   }
 }
 
-if ((is_mac || is_win) && using_sanitizer) {
-  copy("copy_asan_runtime") {
-    if (is_mac) {
-      clang_rt_dso_path = "darwin/libclang_rt.asan_osx_dynamic.dylib"
-    } else if (is_win && target_cpu == "x86") {
-      clang_rt_dso_path = "windows/clang_rt.asan_dynamic-i386.dll"
-    } else if (is_win && target_cpu == "x64") {
-      clang_rt_dso_path = "windows/clang_rt.asan_dynamic-x86_64.dll"
-    }
-    sources = [
-      "$clang_base_path/lib/clang/$clang_version/lib/$clang_rt_dso_path",
-    ]
-    outputs = [
-      "$root_out_dir/{{source_file_part}}",
-    ]
+if ((is_mac || is_win || (is_ios && !use_xcode_clang)) && using_sanitizer) {
+  if (is_mac) {
+    _clang_rt_dso_path = "darwin/libclang_rt.asan_osx_dynamic.dylib"
+  } else if (is_ios) {
+    _clang_rt_dso_path = "darwin/libclang_rt.asan_iossim_dynamic.dylib"
+  } else if (is_win && target_cpu == "x86") {
+    _clang_rt_dso_path = "windows/clang_rt.asan_dynamic-i386.dll"
+  } else if (is_win && target_cpu == "x64") {
+    _clang_rt_dso_path = "windows/clang_rt.asan_dynamic-x86_64.dll"
   }
 
-  if (is_mac) {
+  _clang_rt_dso_full_path =
+      "$clang_base_path/lib/clang/$clang_version/lib/$_clang_rt_dso_path"
+
+  if (!is_ios) {
+    copy("copy_asan_runtime") {
+      sources = [
+        _clang_rt_dso_full_path,
+      ]
+      outputs = [
+        "$root_out_dir/{{source_file_part}}",
+      ]
+    }
+  } else {
+    # On iOS, the runtime library need to be code signed (adhoc signature)
+    # starting with Xcode 8, so use an action instead of a copy on iOS.
+    action("copy_asan_runtime") {
+      script = "//build/config/ios/codesign.py"
+      sources = [
+        _clang_rt_dso_full_path,
+      ]
+      outputs = [
+        "$root_out_dir/" + get_path_info(sources[0], "file"),
+      ]
+      args = [
+        "code-sign-file",
+        "--identity=" + ios_code_signing_identity,
+        "--output=" + rebase_path(outputs[0], root_build_dir),
+        rebase_path(sources[0], root_build_dir),
+      ]
+    }
+  }
+
+  if (is_mac || is_ios) {
     bundle_data("asan_runtime_bundle_data") {
       sources = get_target_outputs(":copy_asan_runtime")
       outputs = [
@@ -109,7 +143,7 @@ if ((is_mac || is_win) && using_sanitizer) {
 }
 
 config("sanitizer_options_link_helper") {
-  if (is_mac) {
+  if (is_mac || is_ios) {
     ldflags = [ "-Wl,-U,_sanitizer_options_link_helper" ]
   } else if (!is_win) {
     ldflags = [ "-Wl,-u_sanitizer_options_link_helper" ]

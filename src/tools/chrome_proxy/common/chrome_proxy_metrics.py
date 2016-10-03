@@ -103,13 +103,13 @@ class ChromeProxyResponse(network_metrics.HTTPResponse):
   def HasChromeProxyLoFiResponse(self):
     return self.HasResponseHeader('Chrome-Proxy', "q=low")
 
-  def HasChromeProxyLoFiPreviewRequest(self):
+  def HasChromeProxyLitePageRequest(self):
     return self.HasRequestHeader('Chrome-Proxy', "q=preview")
 
-  def HasChromeProxyLoFiPreviewExpRequest(self):
+  def HasChromeProxyLitePageExpRequest(self):
     return self.HasRequestHeader('Chrome-Proxy', "exp=ignore_preview_blacklist")
 
-  def HasChromeProxyLoFiPreviewResponse(self):
+  def HasChromeProxyLitePageResponse(self):
     return self.HasResponseHeader('Chrome-Proxy', "q=preview")
 
   def HasChromeProxyPassThroughRequest(self):

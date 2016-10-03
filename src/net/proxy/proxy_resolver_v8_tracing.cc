@@ -710,7 +710,7 @@ void Job::DoDnsOperation() {
   int result = host_resolver()->Resolve(
       MakeDnsRequestInfo(pending_dns_host_, pending_dns_op_), DEFAULT_PRIORITY,
       &pending_dns_addresses_, base::Bind(&Job::OnDnsOperationComplete, this),
-      &dns_request, bindings_->GetBoundNetLog());
+      &dns_request, bindings_->GetNetLogWithSource());
 
   pending_dns_completed_synchronously_ = result != ERR_IO_PENDING;
 

@@ -44,7 +44,7 @@ TEST(HttpAuthHandlerBasicTest, GenerateAuthToken) {
     std::unique_ptr<HttpAuthHandler> basic;
     EXPECT_EQ(OK, factory.CreateAuthHandlerFromString(
                       challenge, HttpAuth::AUTH_SERVER, null_ssl_info, origin,
-                      BoundNetLog(), &basic));
+                      NetLogWithSource(), &basic));
     AuthCredentials credentials(base::ASCIIToUTF16(tests[i].username),
                                 base::ASCIIToUTF16(tests[i].password));
     HttpRequestInfo request_info;
@@ -98,7 +98,7 @@ TEST(HttpAuthHandlerBasicTest, HandleAnotherChallenge) {
   std::unique_ptr<HttpAuthHandler> basic;
   EXPECT_EQ(OK, factory.CreateAuthHandlerFromString(
                     tests[0].challenge, HttpAuth::AUTH_SERVER, null_ssl_info,
-                    origin, BoundNetLog(), &basic));
+                    origin, NetLogWithSource(), &basic));
 
   for (size_t i = 0; i < arraysize(tests); ++i) {
     std::string challenge(tests[i].challenge);
@@ -198,8 +198,8 @@ TEST(HttpAuthHandlerBasicTest, InitFromChallenge) {
     SSLInfo null_ssl_info;
     std::unique_ptr<HttpAuthHandler> basic;
     int rv = factory.CreateAuthHandlerFromString(
-        challenge, HttpAuth::AUTH_SERVER, null_ssl_info, origin, BoundNetLog(),
-        &basic);
+        challenge, HttpAuth::AUTH_SERVER, null_ssl_info, origin,
+        NetLogWithSource(), &basic);
     EXPECT_EQ(tests[i].expected_rv, rv);
     if (rv == OK)
       EXPECT_EQ(tests[i].expected_realm, basic->realm());

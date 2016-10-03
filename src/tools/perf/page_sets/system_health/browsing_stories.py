@@ -154,8 +154,7 @@ class NytimesDesktopStory(_NewsBrowsingStory):
 
 
 # Desktop qq.com opens a news item in a separate tab, for which the back button
-# does not work. Mobile qq.com is disabled due to crbug.com/627166.
-@decorators.Disabled('all')
+# does not work.
 class QqMobileStory(_NewsBrowsingStory):
   NAME = 'browse:news:qq'
   URL = 'http://news.qq.com'

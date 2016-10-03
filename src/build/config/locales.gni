@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Android doesn't ship all locales in order to save space (but webview does).
+# http://crbug.com/369218
+if (is_android) {
+  android_chrome_omitted_locales = [
+    "bn",
+    "et",
+    "gu",
+    "kn",
+    "ml",
+    "mr",
+    "ms",
+    "ta",
+    "te",
+  ]
+}
+
 # Chrome on iOS only ships with a subset of the locales supported by other
 # version of Chrome as the corresponding locales are not supported by the
 # operating system (but for simplicity, the corresponding .pak files are

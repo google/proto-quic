@@ -12,11 +12,10 @@
 #include <stdint.h>
 
 #include <memory>
+#include <utility>
 
 #include "base/logging.h"
-#include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 
 namespace crypto {
 
@@ -24,8 +23,8 @@ namespace crypto {
 std::unique_ptr<RSAPrivateKey> RSAPrivateKey::Create(uint16_t num_bits) {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  ScopedRSA rsa_key(RSA_new());
-  ScopedBIGNUM bn(BN_new());
+  bssl::UniquePtr<RSA> rsa_key(RSA_new());
+  bssl::UniquePtr<BIGNUM> bn(BN_new());
   if (!rsa_key.get() || !bn.get() || !BN_set_word(bn.get(), 65537L))
     return nullptr;
 
@@ -33,8 +32,8 @@ std::unique_ptr<RSAPrivateKey> RSAPrivateKey::Create(uint16_t num_bits) {
     return nullptr;
 
   std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
-  result->key_ = EVP_PKEY_new();
-  if (!result->key_ || !EVP_PKEY_set1_RSA(result->key_, rsa_key.get()))
+  result->key_.reset(EVP_PKEY_new());
+  if (!result->key_ || !EVP_PKEY_set1_RSA(result->key_.get(), rsa_key.get()))
     return nullptr;
 
   return result;
@@ -47,12 +46,12 @@ std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromPrivateKeyInfo(
 
   CBS cbs;
   CBS_init(&cbs, input.data(), input.size());
-  ScopedEVP_PKEY pkey(EVP_parse_private_key(&cbs));
+  bssl::UniquePtr<EVP_PKEY> pkey(EVP_parse_private_key(&cbs));
   if (!pkey || CBS_len(&cbs) != 0 || EVP_PKEY_id(pkey.get()) != EVP_PKEY_RSA)
     return nullptr;
 
   std::unique_ptr<RSAPrivateKey> result(new RSAPrivateKey);
-  result->key_ = pkey.release();
+  result->key_ = std::move(pkey);
   return result;
 }
 
@@ -63,24 +62,21 @@ std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromKey(EVP_PKEY* key) {
     return nullptr;
   std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey);
   EVP_PKEY_up_ref(key);
-  copy->key_ = key;
+  copy->key_.reset(key);
   return copy;
 }
 
-RSAPrivateKey::RSAPrivateKey() : key_(nullptr) {}
+RSAPrivateKey::RSAPrivateKey() {}
 
-RSAPrivateKey::~RSAPrivateKey() {
-  if (key_)
-    EVP_PKEY_free(key_);
-}
+RSAPrivateKey::~RSAPrivateKey() {}
 
 std::unique_ptr<RSAPrivateKey> RSAPrivateKey::Copy() const {
   std::unique_ptr<RSAPrivateKey> copy(new RSAPrivateKey);
-  ScopedRSA rsa(EVP_PKEY_get1_RSA(key_));
+  bssl::UniquePtr<RSA> rsa(EVP_PKEY_get1_RSA(key_.get()));
   if (!rsa)
     return nullptr;
-  copy->key_ = EVP_PKEY_new();
-  if (!EVP_PKEY_set1_RSA(copy->key_, rsa.get()))
+  copy->key_.reset(EVP_PKEY_new());
+  if (!EVP_PKEY_set1_RSA(copy->key_.get(), rsa.get()))
     return nullptr;
   return copy;
 }
@@ -89,9 +85,9 @@ bool RSAPrivateKey::ExportPrivateKey(std::vector<uint8_t>* output) const {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   uint8_t *der;
   size_t der_len;
-  AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   if (!CBB_init(cbb.get(), 0) ||
-      !EVP_marshal_private_key(cbb.get(), key_) ||
+      !EVP_marshal_private_key(cbb.get(), key_.get()) ||
       !CBB_finish(cbb.get(), &der, &der_len)) {
     return false;
   }
@@ -104,9 +100,9 @@ bool RSAPrivateKey::ExportPublicKey(std::vector<uint8_t>* output) const {
   OpenSSLErrStackTracer err_tracer(FROM_HERE);
   uint8_t *der;
   size_t der_len;
-  AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   if (!CBB_init(cbb.get(), 0) ||
-      !EVP_marshal_public_key(cbb.get(), key_) ||
+      !EVP_marshal_public_key(cbb.get(), key_.get()) ||
       !CBB_finish(cbb.get(), &der, &der_len)) {
     return false;
   }

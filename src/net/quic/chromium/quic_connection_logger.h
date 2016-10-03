@@ -37,7 +37,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
       QuicSpdySession* session,
       const char* const connection_description,
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 
   ~QuicConnectionLogger() override;
 
@@ -98,7 +98,7 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   // the overall packet loss rate, and record it into a histogram.
   void RecordAggregatePacketLossRate() const;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   QuicSpdySession* session_;  // Unowned.
   // The last packet number received.
   QuicPacketNumber last_received_packet_number_;

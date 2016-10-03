@@ -288,7 +288,7 @@ QuicConnectionLogger::QuicConnectionLogger(
     QuicSpdySession* session,
     const char* const connection_description,
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : net_log_(net_log),
       session_(session),
       last_received_packet_number_(0),

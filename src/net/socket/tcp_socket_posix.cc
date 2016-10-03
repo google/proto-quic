@@ -14,7 +14,6 @@
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/task_runner_util.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/default_tick_clock.h"
@@ -151,7 +150,7 @@ TCPSocketPosix::TCPSocketPosix(
       tcp_fastopen_connected_(false),
       tcp_fastopen_status_(TCP_FASTOPEN_STATUS_UNKNOWN),
       logging_multiple_connect_attempts_(false),
-      net_log_(BoundNetLog::Make(net_log, NetLogSourceType::SOCKET)) {
+      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::SOCKET)) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());
 }
@@ -723,11 +722,6 @@ int TCPSocketPosix::TcpFastOpenWrite(IOBuffer* buf,
 
 void TCPSocketPosix::NotifySocketPerformanceWatcher() {
 #if defined(TCP_INFO)
-  // TODO(tbansal): Remove ScopedTracker once crbug.com/590254 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "590254 TCPSocketPosix::NotifySocketPerformanceWatcher"));
-
   const base::TimeTicks now_ticks = tick_clock_->NowTicks();
   // Do not notify |socket_performance_watcher_| if the last notification was
   // recent than |rtt_notifications_minimum_interval_| ago. This helps in

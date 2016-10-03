@@ -179,7 +179,7 @@ class NET_EXPORT ChannelIDService
 
   // inflight_ maps from a server to an active generation which is taking
   // place.
-  std::map<std::string, ChannelIDServiceJob*> inflight_;
+  std::map<std::string, std::unique_ptr<ChannelIDServiceJob>> inflight_;
 
   uint64_t requests_;
   uint64_t key_store_hits_;

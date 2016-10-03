@@ -24,7 +24,7 @@
 namespace net {
 
 class ClientSocketHandle;
-class BoundNetLog;
+class NetLogWithSource;
 
 // This StreamSocket is used to setup a SOCKSv5 handshake with a socks proxy.
 // Currently no SOCKSv5 authentication is supported.
@@ -49,7 +49,7 @@ class NET_EXPORT_PRIVATE SOCKS5ClientSocket : public StreamSocket {
   void Disconnect() override;
   bool IsConnected() const override;
   bool IsConnectedAndIdle() const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -153,7 +153,7 @@ class NET_EXPORT_PRIVATE SOCKS5ClientSocket : public StreamSocket {
 
   HostResolver::RequestInfo host_request_info_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(SOCKS5ClientSocket);
 };

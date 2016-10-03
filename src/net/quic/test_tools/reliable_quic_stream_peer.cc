@@ -93,5 +93,11 @@ void ReliableQuicStreamPeer::WriteOrBufferData(
   stream->WriteOrBufferData(data, fin, ack_notifier_delegate);
 }
 
+// static
+net::QuicStreamSequencer* ReliableQuicStreamPeer::sequencer(
+    ReliableQuicStream* stream) {
+  return &(stream->sequencer_);
+}
+
 }  // namespace test
 }  // namespace net

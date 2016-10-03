@@ -84,7 +84,7 @@ class MobileInfiniteScrollPageSet(story.StorySet):
     SCROLL_PAGE = 1
     pages = [
         ('https://m.facebook.com/shakira', 'facebook', SCROLL_FAR, 0, 0),
-        ('https://mobile.twitter.com/taylorswift13', 'twitter', SCROLL_PAGE, 10, 30),
+        ('https://www.pinterest.com/all', 'pinterest', SCROLL_FAR, 0, 0),
         ('http://techcrunch.tumblr.com/', 'tumblr', SCROLL_FAR, 0, 0),
         ('https://www.flickr.com/explore', 'flickr', SCROLL_FAR, 0, 0),
         ('https://meta.discourse.org/t/the-official-discourse-tags-plugin-discourse-tagging/26482',

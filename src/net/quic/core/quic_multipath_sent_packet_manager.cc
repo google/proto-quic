@@ -354,12 +354,6 @@ void QuicMultipathSentPacketManager::OnConnectionMigration(
   path_manager->OnConnectionMigration(path_id, type);
 }
 
-bool QuicMultipathSentPacketManager::IsHandshakeConfirmed() const {
-  QuicSentPacketManagerInterface* path_manager =
-      MaybeGetSentPacketManagerForActivePath(kDefaultPathId);
-  return path_manager != nullptr && path_manager->IsHandshakeConfirmed();
-}
-
 void QuicMultipathSentPacketManager::SetDebugDelegate(
     DebugDelegate* debug_delegate) {
   for (PathSentPacketManagerInfo path_manager_info : path_managers_info_) {

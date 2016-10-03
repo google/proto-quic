@@ -127,7 +127,7 @@ class CertVerifierRequest : public base::LinkNode<CertVerifierRequest>,
   CertVerifierRequest(CertVerifierJob* job,
                       const CompletionCallback& callback,
                       CertVerifyResult* verify_result,
-                      const BoundNetLog& net_log)
+                      const NetLogWithSource& net_log)
       : job_(job),
         callback_(callback),
         verify_result_(verify_result),
@@ -166,13 +166,13 @@ class CertVerifierRequest : public base::LinkNode<CertVerifierRequest>,
     callback_.Reset();
   }
 
-  const BoundNetLog& net_log() const { return net_log_; }
+  const NetLogWithSource& net_log() const { return net_log_; }
 
  private:
   CertVerifierJob* job_;  // Not owned.
   CompletionCallback callback_;
   CertVerifyResult* verify_result_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 };
 
 // DoVerifyOnWorkerThread runs the verification synchronously on a worker
@@ -210,8 +210,8 @@ class CertVerifierJob {
                   MultiThreadedCertVerifier* cert_verifier)
       : key_(key),
         start_time_(base::TimeTicks::Now()),
-        net_log_(
-            BoundNetLog::Make(net_log, NetLogSourceType::CERT_VERIFIER_JOB)),
+        net_log_(NetLogWithSource::Make(net_log,
+                                        NetLogSourceType::CERT_VERIFIER_JOB)),
         cert_verifier_(cert_verifier),
         is_first_job_(false),
         weak_ptr_factory_(this) {
@@ -269,7 +269,7 @@ class CertVerifierJob {
   std::unique_ptr<CertVerifierRequest> CreateRequest(
       const CompletionCallback& callback,
       CertVerifyResult* verify_result,
-      const BoundNetLog& net_log) {
+      const NetLogWithSource& net_log) {
     std::unique_ptr<CertVerifierRequest> request(
         new CertVerifierRequest(this, callback, verify_result, net_log));
 
@@ -329,7 +329,7 @@ class CertVerifierJob {
 
   RequestList requests_;  // Non-owned.
 
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
   MultiThreadedCertVerifier* cert_verifier_;  // Non-owned.
 
   bool is_first_job_;
@@ -349,7 +349,7 @@ int MultiThreadedCertVerifier::Verify(const RequestParams& params,
                                       CertVerifyResult* verify_result,
                                       const CompletionCallback& callback,
                                       std::unique_ptr<Request>* out_req,
-                                      const BoundNetLog& net_log) {
+                                      const NetLogWithSource& net_log) {
   out_req->reset();
 
   DCHECK(CalledOnValidThread());

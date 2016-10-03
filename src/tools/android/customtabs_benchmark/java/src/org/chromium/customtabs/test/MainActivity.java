@@ -40,26 +40,37 @@ public class MainActivity extends Activity {
         String packageName = intent.getStringExtra("package_name");
         if (packageName == null) packageName = DEFAULT_PACKAGE;
         boolean warmup = intent.getBooleanExtra("warmup", false);
-        boolean noPrerendering = intent.getBooleanExtra("no_prerendering", false);
         int delayToMayLaunchUrl = intent.getIntExtra("delay_to_may_launch_url", -1);
         int delayToLaunchUrl = intent.getIntExtra("delay_to_launch_url", -1);
+
+        int prerenderMode = 0;
+        switch(intent.getStringExtra("prerender_mode")) {
+            case "disabled": prerenderMode = 0; break;
+            case "enabled": prerenderMode = 1; break;
+            case "prefetch": prerenderMode = 2; break;
+            default:
+                throw new IllegalArgumentException(
+                    "Invalid prerender mode: " + intent.getStringExtra("prerender_mode"));
+        }
+
         launchCustomTabs(
-                packageName, url, warmup, noPrerendering, delayToMayLaunchUrl, delayToLaunchUrl);
+                packageName, url, warmup, prerenderMode, delayToMayLaunchUrl, delayToLaunchUrl);
     }
 
     private static final class CustomCallback extends CustomTabsCallback {
         private final boolean mWarmup;
-        private final boolean mNoPrerendering;
+        private final int mPrerenderMode;
         private final int mDelayToMayLaunchUrl;
         private final int mDelayToLaunchUrl;
         private long mIntentSentMs = 0;
         private long mPageLoadStartedMs = 0;
         private long mPageLoadFinishedMs = 0;
+        private long mFirstContentfulPaintMs = -1;
 
-        public CustomCallback(boolean warmup, boolean noPrerendering, int delayToMayLaunchUrl,
+        public CustomCallback(boolean warmup, int prerenderMode, int delayToMayLaunchUrl,
                 int delayToLaunchUrl) {
             mWarmup = warmup;
-            mNoPrerendering = noPrerendering;
+            mPrerenderMode = prerenderMode;
             mDelayToMayLaunchUrl = delayToMayLaunchUrl;
             mDelayToLaunchUrl = delayToLaunchUrl;
         }
@@ -77,10 +88,10 @@ public class MainActivity extends Activity {
                 case CustomTabsCallback.NAVIGATION_FINISHED:
                     mPageLoadFinishedMs = SystemClock.elapsedRealtime();
                     if (mIntentSentMs != 0 && mPageLoadStartedMs != 0) {
-                        String logLine = (mWarmup ? "1" : "0") + "," + (mNoPrerendering ? "1" : "0")
+                        String logLine = (mWarmup ? "1" : "0") + "," + mPrerenderMode
                                 + "," + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + ","
                                 + mIntentSentMs + "," + mPageLoadStartedMs + ","
-                                + mPageLoadFinishedMs;
+                                + mPageLoadFinishedMs + "," + mFirstContentfulPaintMs;
                         Log.w(TAG, logLine);
                     }
                     break;
@@ -88,10 +99,18 @@ public class MainActivity extends Activity {
                     break;
             }
         }
+
+        @Override
+        public void extraCallback(String callbackName, Bundle args) {
+            assert "NavigationMetrics".equals(callbackName);
+            long value = args.getLong("firstContentfulPaint", -1);
+            // Can be reported several times, only record the first one.
+            if (mFirstContentfulPaintMs == -1) mFirstContentfulPaintMs = value;
+        }
     }
 
     private void onCustomTabsServiceConnected(CustomTabsClient client, final Uri uri,
-            final CustomCallback cb, boolean warmup, final boolean noPrerendering,
+            final CustomCallback cb, boolean warmup, final int prerenderMode,
             int delayToMayLaunchUrl, final int delayToLaunchUrl) {
         final Handler handler = new Handler(Looper.getMainLooper());
         final CustomTabsSession session = client.newSession(cb);
@@ -108,7 +127,8 @@ public class MainActivity extends Activity {
             public void run() {
                 Bundle extras = new Bundle();
                 extras.putBoolean(
-                        "android.support.customtabs.maylaunchurl.NO_PRERENDERING", noPrerendering);
+                        "android.support.customtabs.maylaunchurl.NO_PRERENDERING",
+                        prerenderMode == 0);
                 session.mayLaunchUrl(uri, extras, null);
                 handler.postDelayed(launchRunnable, delayToLaunchUrl);
             }
@@ -123,10 +143,10 @@ public class MainActivity extends Activity {
     }
 
     private void launchCustomTabs(String packageName, String url, final boolean warmup,
-            final boolean noPrerendering, final int delayToMayLaunchUrl,
+            final int prerenderMode, final int delayToMayLaunchUrl,
             final int delayToLaunchUrl) {
         final CustomCallback cb =
-                new CustomCallback(warmup, noPrerendering, delayToMayLaunchUrl, delayToLaunchUrl);
+                new CustomCallback(warmup, prerenderMode, delayToMayLaunchUrl, delayToLaunchUrl);
         final Uri uri = Uri.parse(url);
         CustomTabsClient.bindCustomTabsService(
                 this, packageName, new CustomTabsServiceConnection() {
@@ -134,7 +154,7 @@ public class MainActivity extends Activity {
                     public void onCustomTabsServiceConnected(
                             ComponentName name, final CustomTabsClient client) {
                         MainActivity.this.onCustomTabsServiceConnected(client, uri, cb, warmup,
-                                noPrerendering, delayToMayLaunchUrl, delayToLaunchUrl);
+                                prerenderMode, delayToMayLaunchUrl, delayToLaunchUrl);
                     }
 
                     @Override

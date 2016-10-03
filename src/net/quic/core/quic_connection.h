@@ -686,6 +686,10 @@ class NET_EXPORT_PRIVATE QuicConnection
     return packet_generator_;
   }
 
+  const QuicReceivedPacketManager& received_packet_manager() const {
+    return received_packet_manager_;
+  }
+
   EncryptionLevel encryption_level() const { return encryption_level_; }
 
   const IPEndPoint& last_packet_source_address() const {

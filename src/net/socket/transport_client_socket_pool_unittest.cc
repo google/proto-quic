@@ -182,7 +182,7 @@ TEST_F(TransportClientSocketPoolTest, Basic) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -204,7 +204,7 @@ TEST_F(TransportClientSocketPoolTest, SetResolvePriorityOnInit) {
     EXPECT_EQ(ERR_IO_PENDING,
               handle.Init("a", params_, priority,
                           ClientSocketPool::RespectLimits::ENABLED,
-                          callback.callback(), &pool_, BoundNetLog()));
+                          callback.callback(), &pool_, NetLogWithSource()));
     EXPECT_EQ(priority, host_resolver_->last_request_priority());
   }
 }
@@ -220,7 +220,7 @@ TEST_F(TransportClientSocketPoolTest, InitHostResolutionFailure) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", dest, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_NAME_NOT_RESOLVED));
   ASSERT_EQ(1u, handle.connection_attempts().size());
   EXPECT_TRUE(handle.connection_attempts()[0].endpoint.address().empty());
@@ -236,7 +236,7 @@ TEST_F(TransportClientSocketPoolTest, InitConnectionFailure) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_CONNECTION_FAILED));
   ASSERT_EQ(1u, handle.connection_attempts().size());
   EXPECT_EQ("127.0.0.1:80",
@@ -249,7 +249,7 @@ TEST_F(TransportClientSocketPoolTest, InitConnectionFailure) {
   EXPECT_EQ(ERR_CONNECTION_FAILED,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   ASSERT_EQ(1u, handle.connection_attempts().size());
   EXPECT_EQ("127.0.0.1:80",
             handle.connection_attempts()[0].endpoint.ToString());
@@ -362,7 +362,7 @@ TEST_F(TransportClientSocketPoolTest, CancelRequestClearGroup) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   handle.Reset();
 }
 
@@ -375,11 +375,11 @@ TEST_F(TransportClientSocketPoolTest, TwoRequestsCancelOne) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_EQ(ERR_IO_PENDING,
             handle2.Init("a", params_, kDefaultPriority,
                          ClientSocketPool::RespectLimits::ENABLED,
-                         callback2.callback(), &pool_, BoundNetLog()));
+                         callback2.callback(), &pool_, NetLogWithSource()));
 
   handle.Reset();
 
@@ -395,7 +395,7 @@ TEST_F(TransportClientSocketPoolTest, ConnectCancelConnect) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
 
   handle.Reset();
 
@@ -403,7 +403,7 @@ TEST_F(TransportClientSocketPoolTest, ConnectCancelConnect) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback2.callback(), &pool_, BoundNetLog()));
+                        callback2.callback(), &pool_, NetLogWithSource()));
 
   host_resolver_->set_synchronous_mode(true);
   // At this point, handle has two ConnectingSockets out for it.  Due to the
@@ -516,7 +516,7 @@ class RequestSocketCallback : public TestCompletionCallbackBase {
           TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
       int rv = handle_->Init("a", dest, LOWEST,
                              ClientSocketPool::RespectLimits::ENABLED,
-                             callback(), pool_, BoundNetLog());
+                             callback(), pool_, NetLogWithSource());
       EXPECT_THAT(rv, IsOk());
     }
   }
@@ -537,7 +537,7 @@ TEST_F(TransportClientSocketPoolTest, RequestTwice) {
       TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
   int rv =
       handle.Init("a", dest, LOWEST, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   ASSERT_THAT(rv, IsError(ERR_IO_PENDING));
 
   // The callback is going to request "www.google.com". We want it to complete
@@ -602,7 +602,7 @@ TEST_F(TransportClientSocketPoolTest, IdleSocketLoadTiming) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -620,7 +620,7 @@ TEST_F(TransportClientSocketPoolTest, IdleSocketLoadTiming) {
   EXPECT_EQ(1, pool_.IdleSocketCount());
 
   rv = handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                   callback.callback(), &pool_, BoundNetLog());
+                   callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsOk());
   EXPECT_EQ(0, pool_.IdleSocketCount());
   TestLoadTimingInfoConnectedReused(handle);
@@ -631,7 +631,7 @@ TEST_F(TransportClientSocketPoolTest, ResetIdleSocketsOnIPAddressChange) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -688,7 +688,7 @@ TEST_F(TransportClientSocketPoolTest, BackupSocketConnect) {
     ClientSocketHandle handle;
     int rv =
         handle.Init("b", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                    callback.callback(), &pool_, BoundNetLog());
+                    callback.callback(), &pool_, NetLogWithSource());
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
     EXPECT_FALSE(handle.is_initialized());
     EXPECT_FALSE(handle.socket());
@@ -731,7 +731,7 @@ TEST_F(TransportClientSocketPoolTest, BackupSocketCancel) {
     ClientSocketHandle handle;
     int rv =
         handle.Init("c", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                    callback.callback(), &pool_, BoundNetLog());
+                    callback.callback(), &pool_, NetLogWithSource());
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
     EXPECT_FALSE(handle.is_initialized());
     EXPECT_FALSE(handle.socket());
@@ -778,7 +778,7 @@ TEST_F(TransportClientSocketPoolTest, BackupSocketFailAfterStall) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("b", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -830,7 +830,7 @@ TEST_F(TransportClientSocketPoolTest, BackupSocketFailAfterDelay) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("b", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -887,7 +887,7 @@ TEST_F(TransportClientSocketPoolTest, IPv6FallbackSocketIPv4FinishesFirst) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -938,7 +938,7 @@ TEST_F(TransportClientSocketPoolTest, IPv6FallbackSocketIPv6FinishesFirst) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -979,7 +979,7 @@ TEST_F(TransportClientSocketPoolTest, IPv6NoIPv4AddressesToFallbackTo) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -1011,7 +1011,7 @@ TEST_F(TransportClientSocketPoolTest, IPv4HasNoFallback) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -1044,7 +1044,7 @@ TEST_F(TransportClientSocketPoolTest, TCPFastOpenOnIPv4WithNoFallback) {
   // Enable TCP FastOpen in TransportSocketParams.
   scoped_refptr<TransportSocketParams> params = CreateParamsForTCPFastOpen();
   handle.Init("a", params, LOW, ClientSocketPool::RespectLimits::ENABLED,
-              callback.callback(), &pool, BoundNetLog());
+              callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
   EXPECT_TRUE(socket_data.IsUsingTCPFastOpen());
 }
@@ -1070,7 +1070,7 @@ TEST_F(TransportClientSocketPoolTest, TCPFastOpenOnIPv6WithNoFallback) {
   // Enable TCP FastOpen in TransportSocketParams.
   scoped_refptr<TransportSocketParams> params = CreateParamsForTCPFastOpen();
   handle.Init("a", params, LOW, ClientSocketPool::RespectLimits::ENABLED,
-              callback.callback(), &pool, BoundNetLog());
+              callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
   EXPECT_TRUE(socket_data.IsUsingTCPFastOpen());
 }
@@ -1100,7 +1100,7 @@ TEST_F(TransportClientSocketPoolTest,
   // Enable TCP FastOpen in TransportSocketParams.
   scoped_refptr<TransportSocketParams> params = CreateParamsForTCPFastOpen();
   handle.Init("a", params, LOW, ClientSocketPool::RespectLimits::ENABLED,
-              callback.callback(), &pool, BoundNetLog());
+              callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
   // Verify that the socket used is connected to the fallback IPv4 address.
   IPEndPoint endpoint;
@@ -1132,7 +1132,7 @@ TEST_F(TransportClientSocketPoolTest,
   // Enable TCP FastOpen in TransportSocketParams.
   scoped_refptr<TransportSocketParams> params = CreateParamsForTCPFastOpen();
   handle.Init("a", params, LOW, ClientSocketPool::RespectLimits::ENABLED,
-              callback.callback(), &pool, BoundNetLog());
+              callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(callback.WaitForResult(), IsOk());
   IPEndPoint endpoint;
   handle.socket()->GetPeerAddress(&endpoint);

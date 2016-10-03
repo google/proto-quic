@@ -22,7 +22,6 @@ static_library("test_config") {
   ]
 }
 
-# GYP: //base/base.gyp:test_support_base
 static_library("test_support") {
   testonly = true
   sources = [

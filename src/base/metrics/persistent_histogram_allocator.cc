@@ -38,6 +38,8 @@ enum : uint32_t {
   kTypeIdHistogram   = 0xF1645910 + 2,  // SHA1(Histogram)   v2
   kTypeIdRangesArray = 0xBCEA225A + 1,  // SHA1(RangesArray) v1
   kTypeIdCountsArray = 0x53215530 + 1,  // SHA1(CountsArray) v1
+
+  kTypeIdHistogramUnderConstruction = ~kTypeIdHistogram,
 };
 
 // The current globally-active persistent allocator for all new histograms.
@@ -274,8 +276,15 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::GetHistogram(
       memory_allocator_->GetAsObject<PersistentHistogramData>(
           ref, kTypeIdHistogram);
   size_t length = memory_allocator_->GetAllocSize(ref);
+
+  // Check that metadata is reasonable: name is NUL terminated and non-empty,
+  // ID fields have been loaded with a hash of the name (0 is considered
+  // unset/invalid).
   if (!histogram_data ||
-      reinterpret_cast<char*>(histogram_data)[length - 1] != '\0') {
+      reinterpret_cast<char*>(histogram_data)[length - 1] != '\0' ||
+      histogram_data->name[0] == '\0' ||
+      histogram_data->samples_metadata.id == 0 ||
+      histogram_data->logged_metadata.id == 0) {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_INVALID_METADATA);
     NOTREACHED();
     return nullptr;
@@ -302,14 +311,17 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
 
   // Create the metadata necessary for a persistent sparse histogram. This
   // is done first because it is a small subset of what is required for
-  // other histograms.
+  // other histograms. The type is "under construction" so that a crash
+  // during the datafill doesn't leave a bad record around that could cause
+  // confusion by another process trying to read it. It will be corrected
+  // once histogram construction is complete.
   PersistentMemoryAllocator::Reference histogram_ref =
       memory_allocator_->Allocate(
           offsetof(PersistentHistogramData, name) + name.length() + 1,
-          kTypeIdHistogram);
+          kTypeIdHistogramUnderConstruction);
   PersistentHistogramData* histogram_data =
-      memory_allocator_->GetAsObject<PersistentHistogramData>(histogram_ref,
-                                                              kTypeIdHistogram);
+      memory_allocator_->GetAsObject<PersistentHistogramData>(
+          histogram_ref, kTypeIdHistogramUnderConstruction);
   if (histogram_data) {
     memcpy(histogram_data->name, name.c_str(), name.size() + 1);
     histogram_data->histogram_type = histogram_type;
@@ -365,6 +377,11 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
     // correct before commiting the new histogram to persistent space.
     std::unique_ptr<HistogramBase> histogram = CreateHistogram(histogram_data);
     DCHECK(histogram);
+    DCHECK_NE(0U, histogram_data->samples_metadata.id);
+    DCHECK_NE(0U, histogram_data->logged_metadata.id);
+    memory_allocator_->ChangeType(histogram_ref, kTypeIdHistogram,
+                                  kTypeIdHistogramUnderConstruction);
+
     if (ref_ptr != nullptr)
       *ref_ptr = histogram_ref;
 
@@ -897,7 +914,11 @@ void GlobalHistogramAllocator::DeletePersistentLocation() {
 GlobalHistogramAllocator::GlobalHistogramAllocator(
     std::unique_ptr<PersistentMemoryAllocator> memory)
     : PersistentHistogramAllocator(std::move(memory)),
-      import_iterator_(this) {}
+      import_iterator_(this) {
+  // Make sure the StatisticsRecorder is initialized to prevent duplicate
+  // histograms from being created. It's safe to call this multiple times.
+  StatisticsRecorder::Initialize();
+}
 
 void GlobalHistogramAllocator::ImportHistogramsToStatisticsRecorder() {
   // Skip the import if it's the histogram that was last created. Should a

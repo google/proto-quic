@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "base/bind.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
@@ -94,9 +94,9 @@ void IncrementBytesSent(uint64_t bytes) {
 }  // namespace
 
 TEST_F(NetworkActivityMontiorTest, Threading) {
-  std::vector<base::Thread*> threads;
+  std::vector<std::unique_ptr<base::Thread>> threads;
   for (size_t i = 0; i < 3; ++i) {
-    threads.push_back(new base::Thread(base::SizeTToString(i)));
+    threads.push_back(base::MakeUnique<base::Thread>(base::SizeTToString(i)));
     ASSERT_TRUE(threads.back()->Start());
   }
 
@@ -119,7 +119,7 @@ TEST_F(NetworkActivityMontiorTest, Threading) {
         base::Bind(&VerifyBytesReceivedIsMultipleOf, bytes_received));
   }
 
-  base::STLDeleteElements(&threads);
+  threads.clear();
 
   NetworkActivityMonitor* monitor = NetworkActivityMonitor::GetInstance();
   EXPECT_EQ(num_increments * bytes_received, monitor->GetBytesReceived());

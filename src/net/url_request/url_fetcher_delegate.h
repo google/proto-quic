@@ -26,9 +26,12 @@ class NET_EXPORT URLFetcherDelegate {
   // This will be called when some part of the response is read. |current|
   // denotes the number of bytes received up to the call, and |total| is the
   // expected total size of the response (or -1 if not determined).
+  // |current_network_bytes| denotes the number of network bytes received
+  // up to the call, excluding redirect bodies, SSL and proxy handshakes.
   virtual void OnURLFetchDownloadProgress(const URLFetcher* source,
                                           int64_t current,
-                                          int64_t total);
+                                          int64_t total,
+                                          int64_t current_network_bytes);
 
   // This will be called when uploading of POST or PUT requests proceeded.
   // |current| denotes the number of bytes sent so far, and |total| is the

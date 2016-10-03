@@ -54,7 +54,7 @@ class FilePathWatcherFSEvents : public FilePathWatcher::PlatformDelegate {
                       const FilePath& resolved_target);
 
   // Cleans up and stops the event stream.
-  void CancelOnMessageLoopThread() override;
+  void CancelOnMessageLoopThread();
 
   // (Re-)Initialize the event stream to start reporting events from
   // |start_event|.

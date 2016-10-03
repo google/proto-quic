@@ -30,6 +30,8 @@ class VerifyCertificateChainDelegate {
     EXPECT_EQ(expected_result, result);
     EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
                                                        << test_file_path;
+    if (!result)
+      EXPECT_FALSE(errors.empty());
   }
 };
 

@@ -25,8 +25,8 @@ struct FakeBindState1 : internal::BindStateBase {
   FakeBindState1() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
  private:
   ~FakeBindState1() {}
-  static void Destroy(internal::BindStateBase* self) {
-    delete static_cast<FakeBindState1*>(self);
+  static void Destroy(const internal::BindStateBase* self) {
+    delete static_cast<const FakeBindState1*>(self);
   }
   static bool IsCancelled(const internal::BindStateBase*) {
     return false;
@@ -37,8 +37,8 @@ struct FakeBindState2 : internal::BindStateBase {
   FakeBindState2() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
  private:
   ~FakeBindState2() {}
-  static void Destroy(internal::BindStateBase* self) {
-    delete static_cast<FakeBindState2*>(self);
+  static void Destroy(const internal::BindStateBase* self) {
+    delete static_cast<const FakeBindState2*>(self);
   }
   static bool IsCancelled(const internal::BindStateBase*) {
     return false;

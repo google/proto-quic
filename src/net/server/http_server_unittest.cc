@@ -543,7 +543,7 @@ class MockStreamSocket : public StreamSocket {
   int GetLocalAddress(IPEndPoint* address) const override {
     return ERR_NOT_IMPLEMENTED;
   }
-  const BoundNetLog& NetLog() const override { return net_log_; }
+  const NetLogWithSource& NetLog() const override { return net_log_; }
   void SetSubresourceSpeculation() override {}
   void SetOmniboxSpeculation() override {}
   bool WasEverUsed() const override { return true; }
@@ -611,7 +611,7 @@ class MockStreamSocket : public StreamSocket {
   int read_buf_len_;
   CompletionCallback read_callback_;
   std::string pending_read_data_;
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(MockStreamSocket);
 };

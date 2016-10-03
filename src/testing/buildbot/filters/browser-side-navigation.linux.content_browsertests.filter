@@ -1,6 +1,9 @@
--BackgroundSyncBrowserTest*
 -IFrameZoomBrowserTest.RedirectToPageWithSubframeZoomsCorrectly
 -IFrameZoomBrowserTest.SubframesDontZoomIndependently
 -NavigationControllerBrowserTest.EnsureSamePageNavigationUpdatesFrameNavigationEntry
 -RequestDataResourceDispatcherHostBrowserTest.*
--ServiceWorker*
+
+# Fail in Debug
+-DevToolsProtocolTest.ControlNavigationsMainFrame
+-IsolatedDevToolsProtocolTest.ControlNavigationsChildFrames
+-NavigationControllerBrowserTest.RaceCrossOriginNavigationAndSamePageHistoryNavigation

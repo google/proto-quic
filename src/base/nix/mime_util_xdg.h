@@ -30,9 +30,6 @@ namespace nix {
 // If the mime type is unknown, this will return application/octet-stream.
 BASE_EXPORT std::string GetFileMimeType(const FilePath& filepath);
 
-// Get the mime type for a byte vector.
-BASE_EXPORT std::string GetDataMimeType(const std::string& data);
-
 }  // namespace nix
 }  // namespace base
 

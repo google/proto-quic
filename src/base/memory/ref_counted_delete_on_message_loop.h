@@ -33,10 +33,8 @@ namespace base {
 template <class T>
 class RefCountedDeleteOnMessageLoop : public subtle::RefCountedThreadSafeBase {
  public:
-  // This constructor will accept a MessageL00pProxy object, but new code should
-  // prefer a SingleThreadTaskRunner. A SingleThreadTaskRunner for the
-  // MessageLoop on the current thread can be acquired by calling
-  // MessageLoop::current()->task_runner().
+  // A SingleThreadTaskRunner for the current thread can be acquired by calling
+  // ThreadTaskRunnerHandle::Get().
   RefCountedDeleteOnMessageLoop(
       scoped_refptr<SingleThreadTaskRunner> task_runner)
       : task_runner_(std::move(task_runner)) {

@@ -108,15 +108,12 @@ class NET_EXPORT BackoffEntry : NON_EXPORTED_BASE(public base::NonThreadSafe) {
   // Returns the failure count for this entry.
   int failure_count() const { return failure_count_; }
 
-  // Returns the TickClock passed in to the constructor. May be NULL.
-  base::TickClock* tick_clock() const { return clock_; }
+  // Equivalent to TimeTicks::Now(), using clock_ if provided.
+  base::TimeTicks GetTimeTicksNow() const;
 
  private:
   // Calculates when requests should again be allowed through.
   base::TimeTicks CalculateReleaseTime() const;
-
-  // Equivalent to TimeTicks::Now(), using clock_ if provided.
-  base::TimeTicks GetTimeTicksNow() const;
 
   // Timestamp calculated by the exponential back-off algorithm at which we are
   // allowed to start sending requests again.

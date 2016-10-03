@@ -36,9 +36,33 @@ struct ScopedBlockTraits {
 
 // ScopedBlock<> is patterned after ScopedCFTypeRef<>, but uses Block_copy() and
 // Block_release() instead of CFRetain() and CFRelease().
-
 template <typename B>
-using ScopedBlock = ScopedTypeRef<B, internal::ScopedBlockTraits<B>>;
+class ScopedBlock : public ScopedTypeRef<B, internal::ScopedBlockTraits<B>> {
+ public:
+  using Traits = internal::ScopedBlockTraits<B>;
+
+#if !defined(__has_feature) || !__has_feature(objc_arc)
+  explicit ScopedBlock(
+      B block = Traits::InvalidValue(),
+      base::scoped_policy::OwnershipPolicy policy = base::scoped_policy::ASSUME)
+      : ScopedTypeRef<B, Traits>(block, policy) {}
+#else
+  explicit ScopedBlock(B block = Traits::InvalidValue())
+      : ScopedTypeRef<B, Traits>(block, base::scoped_policy::RETAIN) {}
+#endif
+
+#if !defined(__has_feature) || !__has_feature(objc_arc)
+  void reset(B block = Traits::InvalidValue(),
+             base::scoped_policy::OwnershipPolicy policy =
+                 base::scoped_policy::ASSUME) {
+    ScopedTypeRef<B, Traits>::reset(block, policy);
+  }
+#else
+  void reset(B block = Traits::InvalidValue()) {
+    ScopedTypeRef<B, Traits>::reset(block, base::scoped_policy::RETAIN);
+  }
+#endif
+};
 
 }  // namespace mac
 }  // namespace base

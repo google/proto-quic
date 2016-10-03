@@ -364,7 +364,7 @@ std::unique_ptr<WebSocketStreamRequest> WebSocketStream::CreateAndConnectStream(
     const GURL& first_party_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<ConnectDelegate> connect_delegate) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(
       new WebSocketStreamRequestImpl(
@@ -383,7 +383,7 @@ WebSocketStream::CreateAndConnectStreamForTesting(
     const GURL& first_party_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
     std::unique_ptr<base::Timer> timer) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(

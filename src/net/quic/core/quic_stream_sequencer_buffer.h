@@ -125,7 +125,10 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
 
   // Reads from this buffer into given iovec array, up to number of iov_len
   // iovec objects and returns the number of bytes read.
-  size_t Readv(const struct iovec* dest_iov, size_t dest_count);
+  QuicErrorCode Readv(const struct iovec* dest_iov,
+                      size_t dest_count,
+                      size_t* bytes_read,
+                      std::string* error_details);
 
   // Returns the readable region of valid data in iovec format. The readable
   // region is the buffer region where there is valid data not yet read by
@@ -174,13 +177,15 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // Dispose the given buffer block.
   // After calling this method, blocks_[index] is set to nullptr
   // in order to indicate that no memory set is allocated for that block.
-  void RetireBlock(size_t index);
+  // Returns true on success, false otherwise.
+  bool RetireBlock(size_t index);
 
   // Should only be called after the indexed block is read till the end of the
   // block or a gap has been reached.
-  // If the block at |block_index| contains no buffered data, then the block is
-  // retired.
-  void RetireBlockIfEmpty(size_t block_index);
+  // If the block at |block_index| contains no buffered data, the block
+  // should be retired.
+  // Return false on success, or false otherwise.
+  bool RetireBlockIfEmpty(size_t block_index);
 
   // Called within OnStreamData() to update the gap OnStreamData() writes into
   // (remove, split or change begin/end offset).

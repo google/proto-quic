@@ -166,6 +166,14 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
 
   // Returns the SequencedWorkerPool that owns this thread, or null if the
   // current thread is not a SequencedWorkerPool worker thread.
+  //
+  // Always returns nullptr when SequencedWorkerPool is redirected to
+  // TaskScheduler.
+  //
+  // DEPRECATED. Use SequencedTaskRunnerHandle::Get() instead. Consequentially
+  // the only remaining use case is in sequenced_task_runner_handle.cc to
+  // implement that and will soon be removed along with SequencedWorkerPool:
+  // http://crbug.com/622400.
   static scoped_refptr<SequencedWorkerPool> GetWorkerPoolForCurrentThread();
 
   // Returns a unique token that can be used to sequence tasks posted to
@@ -335,13 +343,19 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
 
   // Blocks until all pending tasks are complete. This should only be called in
   // unit tests when you want to validate something that should have happened.
-  // This will not flush delayed tasks; delayed tasks get deleted.
+  // Does not wait for delayed tasks. If redirection to TaskScheduler is
+  // disabled, delayed tasks are deleted. If redirection to TaskScheduler is
+  // enabled, this will wait for all tasks posted to TaskScheduler (not just
+  // tasks posted to this SequencedWorkerPool).
   //
   // Note that calling this will not prevent other threads from posting work to
   // the queue while the calling thread is waiting on Flush(). In this case,
   // Flush will return only when there's no more work in the queue. Normally,
   // this doesn't come up since in a test, all the work is being posted from
   // the main thread.
+  //
+  // TODO(gab): Remove mentions of TaskScheduler in this comment if
+  // http://crbug.com/622400 fails.
   void FlushForTesting();
 
   // Spuriously signal that there is work to be done.

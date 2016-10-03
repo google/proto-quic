@@ -1084,9 +1084,7 @@ config("chromium_code") {
       defines += [ "_FORTIFY_SOURCE=2" ]
     }
 
-    if (is_mac) {
-      # Warn if automatic synthesis is triggered. This triggers numerous
-      # warnings for internal iOS directories.
+    if (is_mac || is_ios) {
       cflags_objc = [ "-Wobjc-missing-property-synthesis" ]
       cflags_objcc = [ "-Wobjc-missing-property-synthesis" ]
     }

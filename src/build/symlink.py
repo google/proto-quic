@@ -24,7 +24,6 @@ def Main(argv):
   parser = optparse.OptionParser()
   parser.add_option('-f', '--force', action='store_true')
   parser.add_option('--touch')
-  parser.add_option('--update-target-mtimes', action='store_true')
 
   options, args = parser.parse_args(argv[1:])
   if len(args) < 2:
@@ -50,10 +49,6 @@ def Main(argv):
         os.symlink(s, t)
       else:
         raise
-    if options.update_target_mtimes:
-      # Work-around for ninja bug:
-      # https://github.com/ninja-build/ninja/issues/1186
-      os.utime(s, None)
 
 
   if options.touch:

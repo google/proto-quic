@@ -106,7 +106,7 @@ int MockHostResolverBase::Resolve(const RequestInfo& info,
                                   AddressList* addresses,
                                   const CompletionCallback& callback,
                                   std::unique_ptr<Request>* request,
-                                  const BoundNetLog& net_log) {
+                                  const NetLogWithSource& net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(request);
   last_request_priority_ = priority;
@@ -140,7 +140,7 @@ int MockHostResolverBase::Resolve(const RequestInfo& info,
 
 int MockHostResolverBase::ResolveFromCache(const RequestInfo& info,
                                            AddressList* addresses,
-                                           const BoundNetLog& net_log) {
+                                           const NetLogWithSource& net_log) {
   num_resolve_from_cache_++;
   DCHECK(CalledOnValidThread());
   next_request_id_++;
@@ -452,13 +452,13 @@ int HangingHostResolver::Resolve(const RequestInfo& info,
                                  AddressList* addresses,
                                  const CompletionCallback& callback,
                                  std::unique_ptr<Request>* request,
-                                 const BoundNetLog& net_log) {
+                                 const NetLogWithSource& net_log) {
   return ERR_IO_PENDING;
 }
 
 int HangingHostResolver::ResolveFromCache(const RequestInfo& info,
                                           AddressList* addresses,
-                                          const BoundNetLog& net_log) {
+                                          const NetLogWithSource& net_log) {
   return ERR_DNS_CACHE_MISS;
 }
 

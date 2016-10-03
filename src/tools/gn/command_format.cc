@@ -323,7 +323,7 @@ void Printer::AnnotatePreferredMultilineAssignment(const BinaryOpNode* binop) {
 }
 
 void Printer::SortIfSourcesOrDeps(const BinaryOpNode* binop) {
-  if (binop && binop->comments() && !binop->comments()->before().empty() &&
+  if (binop->comments() && !binop->comments()->before().empty() &&
       binop->comments()->before()[0].value().as_string() == "# NOSORT") {
     // Allow disabling of sort for specific actions that might be
     // order-sensitive.
@@ -746,7 +746,7 @@ int Printer::FunctionCall(const FunctionCallNode* func_call,
   const auto& list = func_call->args()->contents();
   const ParseNode* end = func_call->args()->End();
 
-  if (end && end->comments() && !end->comments()->before().empty())
+  if (end->comments() && !end->comments()->before().empty())
     force_multiline = true;
 
   // If there's before line comments, make sure we have a place to put them.

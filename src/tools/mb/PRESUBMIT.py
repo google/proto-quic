@@ -22,13 +22,6 @@ def _CommonChecks(input_api, output_api):
                         cmd=cmd, kwargs=kwargs,
                         message=output_api.PresubmitError)]))
 
-  results.extend(
-      input_api.canned_checks.CheckLongLines(
-          input_api,
-          output_api,
-          maxlen=80,
-          source_file_filter=lambda x: 'mb_config.pyl' in x.LocalPath()))
-
   return results
 
 

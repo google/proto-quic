@@ -165,7 +165,7 @@ net::NetLogEventType GetSparseEventType(
 
 // Logs the end event for |operation| on a child entry.  Range operations log
 // no events for each child they search through.
-void LogChildOperationEnd(const net::BoundNetLog& net_log,
+void LogChildOperationEnd(const net::NetLogWithSource& net_log,
                           disk_cache::SparseControl::SparseOperation operation,
                           int result) {
   if (net_log.IsCapturing()) {

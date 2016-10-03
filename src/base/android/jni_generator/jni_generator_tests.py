@@ -402,6 +402,10 @@ class TestGenerator(unittest.TestCase):
           return
       }
     }
+    @CalledByNative
+    public static @Status int updateStatus(@Status int status) {
+        return getAndUpdateStatus(status);
+    }
     @CalledByNativeUnchecked
     private void uncheckedCall(int iParam);
 
@@ -522,6 +526,17 @@ class TestGenerator(unittest.TestCase):
                    ],
             env_call=('Void', ''),
             unchecked=False,
+        ),
+        CalledByNative(
+          return_type='int',
+          system_class=False,
+          static=True,
+          name='updateStatus',
+          method_id_var_name='updateStatus',
+          java_class_name='',
+          params=[Param(datatype='int', name='status')],
+          env_call=('Integer', ''),
+          unchecked=False,
         ),
         CalledByNative(
             return_type='void',

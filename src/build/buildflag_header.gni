@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 # Generates a header with preprocessor defines specified by the build file.
-# The GYP version of this (with instructions) is build/buildflag_header.gypi.
 #
 # The flags are converted to function-style defines with mangled names and
 # code uses an accessor macro to access the values. This is to try to

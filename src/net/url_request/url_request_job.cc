@@ -318,12 +318,6 @@ void URLRequestJob::FollowDeferredRedirect() {
   FollowRedirect(redirect_info);
 }
 
-void URLRequestJob::ResumeNetworkStart() {
-  // This should only be called for HTTP Jobs, and implemented in the derived
-  // class.
-  NOTREACHED();
-}
-
 bool URLRequestJob::GetMimeType(std::string* mime_type) const {
   return false;
 }
@@ -974,6 +968,7 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
   std::string include_referer;
   request_->GetResponseHeaderByName("include-referred-token-binding-id",
                                     &include_referer);
+  include_referer = base::ToLowerASCII(include_referer);
   if (include_referer == "true" &&
       request_->ssl_info().token_binding_negotiated) {
     redirect_info.referred_token_binding_host = url.host();

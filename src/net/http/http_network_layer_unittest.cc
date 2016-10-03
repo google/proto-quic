@@ -73,7 +73,7 @@ class HttpNetworkLayerTest : public PlatformTest {
     int rv = factory_->CreateTransaction(DEFAULT_PRIORITY, &trans);
     EXPECT_THAT(rv, IsOk());
 
-    rv = trans->Start(&request_info, callback.callback(), BoundNetLog());
+    rv = trans->Start(&request_info, callback.callback(), NetLogWithSource());
     if (rv == ERR_IO_PENDING)
       rv = callback.WaitForResult();
     ASSERT_THAT(rv, IsOk());
@@ -331,7 +331,7 @@ TEST_F(HttpNetworkLayerTest, GET) {
   int rv = factory_->CreateTransaction(DEFAULT_PRIORITY, &trans);
   EXPECT_THAT(rv, IsOk());
 
-  rv = trans->Start(&request_info, callback.callback(), BoundNetLog());
+  rv = trans->Start(&request_info, callback.callback(), NetLogWithSource());
   rv = callback.GetResult(rv);
   ASSERT_THAT(rv, IsOk());
 
@@ -370,7 +370,7 @@ TEST_F(HttpNetworkLayerTest, NetworkVerified) {
   int rv = factory_->CreateTransaction(DEFAULT_PRIORITY, &trans);
   EXPECT_THAT(rv, IsOk());
 
-  rv = trans->Start(&request_info, callback.callback(), BoundNetLog());
+  rv = trans->Start(&request_info, callback.callback(), NetLogWithSource());
   ASSERT_THAT(callback.GetResult(rv), IsOk());
 
   EXPECT_TRUE(trans->GetResponseInfo()->network_accessed);
@@ -403,7 +403,7 @@ TEST_F(HttpNetworkLayerTest, NetworkUnVerified) {
   int rv = factory_->CreateTransaction(DEFAULT_PRIORITY, &trans);
   EXPECT_THAT(rv, IsOk());
 
-  rv = trans->Start(&request_info, callback.callback(), BoundNetLog());
+  rv = trans->Start(&request_info, callback.callback(), NetLogWithSource());
   ASSERT_THAT(callback.GetResult(rv), IsError(ERR_CONNECTION_RESET));
 
   // network_accessed is true; the HTTP stack did try to make a connection.

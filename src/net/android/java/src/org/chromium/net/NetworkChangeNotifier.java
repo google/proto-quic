@@ -77,9 +77,9 @@ public class NetworkChangeNotifier {
 
     @CalledByNative
     public int getCurrentConnectionSubtype() {
-        return mAutoDetector == null
-                ? ConnectionSubtype.SUBTYPE_UNKNOWN
-                : mAutoDetector.getCurrentConnectionSubtype(mAutoDetector.getCurrentNetworkState());
+        return mAutoDetector == null ? ConnectionSubtype.SUBTYPE_UNKNOWN
+                                     : NetworkChangeNotifierAutoDetect.convertToConnectionSubtype(
+                                               mAutoDetector.getCurrentNetworkState());
     }
 
     @CalledByNative
@@ -217,7 +217,8 @@ public class NetworkChangeNotifier {
                         mContext, policy);
                 final NetworkChangeNotifierAutoDetect.NetworkState networkState =
                         mAutoDetector.getCurrentNetworkState();
-                updateCurrentConnectionType(mAutoDetector.getCurrentConnectionType(networkState));
+                updateCurrentConnectionType(
+                        NetworkChangeNotifierAutoDetect.convertToConnectionType(networkState));
                 updateCurrentMaxBandwidth(mAutoDetector.getCurrentMaxBandwidthInMbps(networkState));
             }
         } else {

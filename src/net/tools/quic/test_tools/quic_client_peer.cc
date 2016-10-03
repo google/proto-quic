@@ -16,7 +16,9 @@ QuicCryptoClientConfig* QuicClientPeer::GetCryptoConfig(QuicClient* client) {
 
 // static
 bool QuicClientPeer::CreateUDPSocketAndBind(QuicClient* client) {
-  return client->CreateUDPSocketAndBind();
+  return client->CreateUDPSocketAndBind(client->server_address(),
+                                        client->bind_to_address(),
+                                        client->local_port());
 }
 
 // static

@@ -154,6 +154,11 @@ struct BASE_EXPORT LaunchOptions {
 #endif  // defined(OS_LINUX)
 
 #if defined(OS_POSIX)
+  // If not empty, launch the specified executable instead of
+  // cmdline.GetProgram(). This is useful when it is necessary to pass a custom
+  // argv[0].
+  base::FilePath real_path;
+
   // If non-null, a delegate to be run immediately prior to executing the new
   // program in the child process.
   //

@@ -12,6 +12,10 @@ deps = {
         "https://chromium.googlesource.com/chromium/canvas_bench.git",
     "src/chrome/test/data/third_party/spaceport":
         "https://src.chromium.org/chrome/trunk/src/chrome/test/data/third_party/spaceport",
+    "src/tools/json_comment_eater":
+        "https://src.chromium.org/chrome/trunk/src/tools/json_comment_eater",
+    "src/tools/json_to_struct":
+        "https://src.chromium.org/chrome/trunk/src/tools/json_to_struct",
     "src/tools/perf/benchmarks":
         "https://src.chromium.org/chrome/trunk/src/tools/perf/benchmarks",
     "src/tools/perf/core":

@@ -47,7 +47,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
                         const std::string& user_agent,
                         const HostPortPair& endpoint,
                         const HostPortPair& proxy_server,
-                        const BoundNetLog& source_net_log,
+                        const NetLogWithSource& source_net_log,
                         HttpAuthController* auth_controller);
 
   // On destruction Disconnect() is called.
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
   void Disconnect() override;
   bool IsConnected() const override;
   bool IsConnectedAndIdle() const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -169,7 +169,7 @@ class NET_EXPORT_PRIVATE SpdyProxyClientSocket : public ProxyClientSocket,
   bool redirect_has_load_timing_info_;
   LoadTimingInfo redirect_load_timing_info_;
 
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 
   // The default weak pointer factory.
   base::WeakPtrFactory<SpdyProxyClientSocket> weak_factory_;

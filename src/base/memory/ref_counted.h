@@ -75,7 +75,7 @@ class BASE_EXPORT RefCountedBase {
   }
 
  private:
-  mutable int ref_count_;
+  mutable size_t ref_count_;
 #ifndef NDEBUG
   mutable bool in_dtor_;
 #endif

@@ -24,6 +24,5 @@
 #include "components/pdf/common/pdf_message_generator.h"
 #include "components/spellcheck/common/spellcheck_message_generator.h"
 #include "components/tracing/common/tracing_messages.h"
-#include "components/visitedlink/common/visitedlink_message_generator.h"
 #include "content/common/all_messages.h"
 #include "extensions/common/extension_message_generator.h"

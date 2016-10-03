@@ -17,7 +17,7 @@ namespace net {
 class AuthCredentials;
 class FtpResponseInfo;
 class FtpRequestInfo;
-class BoundNetLog;
+class NetLogWithSource;
 
 // Represents a single FTP transaction.
 class NET_EXPORT_PRIVATE FtpTransaction {
@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE FtpTransaction {
   // Profiling information for the request is saved to |net_log| if non-NULL.
   virtual int Start(const FtpRequestInfo* request_info,
                     const CompletionCallback& callback,
-                    const BoundNetLog& net_log) = 0;
+                    const NetLogWithSource& net_log) = 0;
 
   // Restarts the FTP transaction with authentication credentials.
   virtual int RestartWithAuth(const AuthCredentials& credentials,

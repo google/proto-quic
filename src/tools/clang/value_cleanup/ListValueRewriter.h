@@ -8,6 +8,7 @@
 #define TOOLS_CLANG_VALUE_CLEANUP_LIST_VALUE_REWRITER_H_
 
 #include <memory>
+#include <set>
 #include <unordered_set>
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,7 +16,8 @@
 
 class ListValueRewriter {
  public:
-  explicit ListValueRewriter(clang::tooling::Replacements* replacements);
+  explicit ListValueRewriter(
+      std::set<clang::tooling::Replacement>* replacements);
 
   void RegisterMatchers(clang::ast_matchers::MatchFinder* match_finder);
 
@@ -23,18 +25,20 @@ class ListValueRewriter {
   class AppendCallback
       : public clang::ast_matchers::MatchFinder::MatchCallback {
    public:
-    explicit AppendCallback(clang::tooling::Replacements* replacements);
+    explicit AppendCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
 
    protected:
-    clang::tooling::Replacements* const replacements_;
+    std::set<clang::tooling::Replacement>* const replacements_;
   };
 
   class AppendBooleanCallback : public AppendCallback {
    public:
-    explicit AppendBooleanCallback(clang::tooling::Replacements* replacements);
+    explicit AppendBooleanCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
@@ -42,7 +46,8 @@ class ListValueRewriter {
 
   class AppendIntegerCallback : public AppendCallback {
    public:
-    explicit AppendIntegerCallback(clang::tooling::Replacements* replacements);
+    explicit AppendIntegerCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
@@ -50,7 +55,8 @@ class ListValueRewriter {
 
   class AppendDoubleCallback : public AppendCallback {
    public:
-    explicit AppendDoubleCallback(clang::tooling::Replacements* replacements);
+    explicit AppendDoubleCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
@@ -58,7 +64,8 @@ class ListValueRewriter {
 
   class AppendStringCallback : public AppendCallback {
    public:
-    explicit AppendStringCallback(clang::tooling::Replacements* replacements);
+    explicit AppendStringCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
@@ -68,25 +75,26 @@ class ListValueRewriter {
       : public clang::ast_matchers::MatchFinder::MatchCallback {
    public:
     explicit AppendReleasedUniquePtrCallback(
-        clang::tooling::Replacements* replacements);
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
 
    private:
-    clang::tooling::Replacements* const replacements_;
+    std::set<clang::tooling::Replacement>* const replacements_;
   };
 
   class AppendRawPtrCallback
       : public clang::ast_matchers::MatchFinder::MatchCallback {
    public:
-    explicit AppendRawPtrCallback(clang::tooling::Replacements* replacements);
+    explicit AppendRawPtrCallback(
+        std::set<clang::tooling::Replacement>* replacements);
 
     void run(
         const clang::ast_matchers::MatchFinder::MatchResult& result) override;
 
    private:
-    clang::tooling::Replacements* const replacements_;
+    std::set<clang::tooling::Replacement>* const replacements_;
     std::unordered_set<const clang::VarDecl*> visited_;
   };
 

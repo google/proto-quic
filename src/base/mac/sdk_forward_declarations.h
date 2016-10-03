@@ -117,6 +117,18 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
              topLevelObjects:(NSArray**)topLevelObjects;
 @end
 
+@interface NSArray (MountainLionSDK)
+- (id)objectAtIndexedSubscript:(NSUInteger)idx;
+@end
+
+@interface NSDictionary (MountainLionSDK)
+- (id)objectForKeyedSubscript:(id)key;
+@end
+
+@interface NSMutableDictionary (MountainLionSDK)
+- (void)setObject:(id)obj forKeyedSubscript:(id<NSCopying>)key;
+@end
+
 #endif  // MAC_OS_X_VERSION_10_8
 
 // Once Chrome no longer supports OSX 10.8, everything within this preprocessor

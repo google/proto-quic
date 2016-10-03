@@ -5,6 +5,7 @@
 #include "base/metrics/field_trial.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "base/build_time.h"
 #include "base/logging.h"
@@ -308,8 +309,8 @@ FieldTrialList::Observer::~Observer() {
 }
 
 FieldTrialList::FieldTrialList(
-    const FieldTrial::EntropyProvider* entropy_provider)
-    : entropy_provider_(entropy_provider),
+    std::unique_ptr<const FieldTrial::EntropyProvider> entropy_provider)
+    : entropy_provider_(std::move(entropy_provider)),
       observer_list_(new ObserverListThreadSafe<FieldTrialList::Observer>(
           ObserverListBase<FieldTrialList::Observer>::NOTIFY_EXISTING_ONLY)) {
   DCHECK(!global_);

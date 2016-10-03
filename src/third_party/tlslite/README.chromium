@@ -53,3 +53,6 @@ Local Modifications:
 - patches/save_randoms.patch: Save client and server randoms when resuming
   sessions.
 - patches/alpn.path: Implement Application-Layer Protocol Negotiation Extension.
+- patches/token_binding_version.patch: Update Token Binding version number.
+- patches/renegotiation_indication.patch: Implement the renegotiation
+  indication extension (RFC 5746) without supporting renegotiation.

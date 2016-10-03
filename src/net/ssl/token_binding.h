@@ -9,9 +9,12 @@
 #include <vector>
 
 #include "base/strings/string_piece.h"
-#include "crypto/ec_private_key.h"
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
+
+namespace crypto {
+class ECPrivateKey;
+}
 
 namespace net {
 
@@ -20,12 +23,16 @@ enum class TokenBindingType {
   REFERRED = 1,
 };
 
-// Takes an exported keying material value |ekm| from the TLS layer and a token
-// binding key |key| and signs the EKM, putting the signature in |*out|. Returns
-// true on success or false if there's an error in the signing operations.
-bool SignTokenBindingEkm(base::StringPiece ekm,
-                         crypto::ECPrivateKey* key,
-                         std::vector<uint8_t>* out);
+// Takes an exported keying material value |ekm| from the TLS layer, the type of
+// Token Binding |type|, and a token binding key |key| and concatenates the
+// Token Binding type, key type, and ekm. This concatenation is signed with
+// |key| in accordance with section 3.3 of draft-ietf-tokbind-protocol-10, with
+// the signature written to |*out|. Returns true on success or false if there's
+// an error in the signing operations.
+bool CreateTokenBindingSignature(base::StringPiece ekm,
+                                 TokenBindingType type,
+                                 crypto::ECPrivateKey* key,
+                                 std::vector<uint8_t>* out);
 
 // Given a vector of serialized TokenBinding structs (as defined in
 // draft-ietf-tokbind-protocol-04), this function combines them to form the
@@ -99,14 +106,15 @@ NET_EXPORT_PRIVATE bool ParseTokenBindingMessage(
     base::StringPiece token_binding_message,
     std::vector<TokenBinding>* token_bindings);
 
-// Takes an ECPoint |ec_point| from a TokenBindingID and |signature| from a
-// TokenBinding and verifies that |signature| is the signature of |ekm| using
-// |ec_point| as the public key. Returns true if the signature verifies and
-// false if it doesn't or some other error occurs in verification. This function
-// is only provided for testing.
-NET_EXPORT_PRIVATE bool VerifyEKMSignature(base::StringPiece ec_point,
-                                           base::StringPiece signature,
-                                           base::StringPiece ekm);
+// Takes an ECPoint |ec_point| from a TokenBindingID, |signature| from a
+// TokenBinding, and a Token Binding type |type| and verifies that |signature|
+// is the signature of |ekm| using |ec_point| as the public key. Returns true if
+// the signature verifies and false if it doesn't or some other error occurs in
+// verification. This function is only provided for testing.
+NET_EXPORT_PRIVATE bool VerifyTokenBindingSignature(base::StringPiece ec_point,
+                                                    base::StringPiece signature,
+                                                    TokenBindingType type,
+                                                    base::StringPiece ekm);
 
 }  // namespace net
 

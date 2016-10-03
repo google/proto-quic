@@ -34,7 +34,7 @@ covers), but it's good to be aware of this distinction.
 
 The Event View shows events logged by the NetLog.  The NetLog model is that
 long-lived network stack objects, called sources, emit events over their
-lifetime.  When looking at the code, a "BoundNetLog" object contains a source
+lifetime.  When looking at the code, a "NetLogWithSource" object contains a source
 ID, and a pointer to the NetLog the source emits events to.  Some events have a
 beginning and end point (during which other subevents may occur), and some only
 occur at a single point in time.  Generally only one event can be occuring for a

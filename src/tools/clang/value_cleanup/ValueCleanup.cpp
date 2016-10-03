@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <memory>
+#include <set>
 #include <string>
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -24,7 +25,6 @@
 using namespace clang::ast_matchers;
 using clang::tooling::CommonOptionsParser;
 using clang::tooling::Replacement;
-using clang::tooling::Replacements;
 using llvm::StringRef;
 
 static llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
                                  options.getSourcePathList());
 
   MatchFinder match_finder;
-  Replacements replacements;
+  std::set<Replacement> replacements;
 
   ListValueRewriter list_value_rewriter(&replacements);
   list_value_rewriter.RegisterMatchers(&match_finder);

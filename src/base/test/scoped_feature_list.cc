@@ -4,8 +4,25 @@
 
 #include "base/test/scoped_feature_list.h"
 
+#include <string>
+
 namespace base {
 namespace test {
+
+namespace {
+
+static std::string GetFeatureString(
+    const std::initializer_list<base::Feature>& features) {
+  std::string output;
+  for (const base::Feature& feature : features) {
+    if (!output.empty())
+      output += ",";
+    output += feature.name;
+  }
+  return output;
+}
+
+}  // namespace
 
 ScopedFeatureList::ScopedFeatureList() {}
 
@@ -21,6 +38,13 @@ void ScopedFeatureList::Init() {
   std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
   feature_list->InitializeFromCommandLine(std::string(), std::string());
   InitWithFeatureList(std::move(feature_list));
+}
+
+void ScopedFeatureList::InitWithFeatures(
+    const std::initializer_list<base::Feature>& enabled_features,
+    const std::initializer_list<base::Feature>& disabled_features) {
+  InitFromCommandLine(GetFeatureString(enabled_features),
+                      GetFeatureString(disabled_features));
 }
 
 void ScopedFeatureList::InitWithFeatureList(

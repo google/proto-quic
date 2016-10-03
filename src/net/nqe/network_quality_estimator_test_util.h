@@ -150,7 +150,6 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
 
   using NetworkQualityEstimator::SetTickClockForTesting;
   using NetworkQualityEstimator::OnConnectionTypeChanged;
-  using NetworkQualityEstimator::NetworkQualityStoreForTesting;
 
  private:
   // NetworkQualityEstimator implementation that returns the overridden

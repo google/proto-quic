@@ -662,6 +662,30 @@ TEST_F(QuicStreamSequencerTest, OutOfOrderTimestamps) {
   EXPECT_EQ(0u, sequencer_->NumBytesBuffered());
 }
 
+TEST_F(QuicStreamSequencerTest, OnStreamFrameWithNullSource) {
+  FLAGS_quic_stream_sequencer_buffer_debug = true;
+  // Pass in a frame with data pointing to null address, expect to close
+  // connection with error.
+  StringPiece source(nullptr, 5u);
+  QuicStreamFrame frame(kClientDataStreamId1, false, 1, source);
+  EXPECT_CALL(stream_, CloseConnectionWithDetails(
+                           QUIC_STREAM_SEQUENCER_INVALID_STATE, _));
+  sequencer_->OnStreamFrame(frame);
+}
+
+TEST_F(QuicStreamSequencerTest, ReadvError) {
+  FLAGS_quic_stream_sequencer_buffer_debug = true;
+  EXPECT_CALL(stream_, OnDataAvailable());
+  string source(100, 'a');
+  OnFrame(0u, source.data());
+  EXPECT_EQ(source.length(), sequencer_->NumBytesBuffered());
+  // Pass in a null iovec, expect to tear down connection.
+  EXPECT_CALL(stream_, CloseConnectionWithDetails(
+                           QUIC_STREAM_SEQUENCER_INVALID_STATE, _));
+  iovec iov{nullptr, 512};
+  sequencer_->Readv(&iov, 1u);
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

@@ -18,6 +18,7 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using ::testing::_;
 using ::testing::Mock;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -36,6 +37,8 @@ class NoRef {
 
   MOCK_METHOD0(IntMethod0, int());
   MOCK_CONST_METHOD0(IntConstMethod0, int());
+
+  MOCK_METHOD1(VoidMethodWithIntArg, void(int));
 
  private:
   // Particularly important in this test to ensure no copies are made.
@@ -1035,16 +1038,17 @@ TEST_F(BindTest, CapturelessLambda) {
 }
 
 TEST_F(BindTest, Cancellation) {
-  EXPECT_CALL(no_ref_, VoidMethod0()).Times(2);
+  EXPECT_CALL(no_ref_, VoidMethodWithIntArg(_)).Times(2);
 
   WeakPtrFactory<NoRef> weak_factory(&no_ref_);
-  Closure cb = Bind(&NoRef::VoidMethod0, weak_factory.GetWeakPtr());
-  Closure cb2 = Bind(cb);
+  base::Callback<void(int)> cb =
+      Bind(&NoRef::VoidMethodWithIntArg, weak_factory.GetWeakPtr());
+  Closure cb2 = Bind(cb, 8);
 
   EXPECT_FALSE(cb.IsCancelled());
   EXPECT_FALSE(cb2.IsCancelled());
 
-  cb.Run();
+  cb.Run(6);
   cb2.Run();
 
   weak_factory.InvalidateWeakPtrs();
@@ -1052,7 +1056,7 @@ TEST_F(BindTest, Cancellation) {
   EXPECT_TRUE(cb.IsCancelled());
   EXPECT_TRUE(cb2.IsCancelled());
 
-  cb.Run();
+  cb.Run(6);
   cb2.Run();
 }
 

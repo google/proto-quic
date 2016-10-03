@@ -119,7 +119,7 @@ bool SOCKSClientSocket::IsConnectedAndIdle() const {
   return completed_handshake_ && transport_->socket()->IsConnectedAndIdle();
 }
 
-const BoundNetLog& SOCKSClientSocket::NetLog() const {
+const NetLogWithSource& SOCKSClientSocket::NetLog() const {
   return net_log_;
 }
 

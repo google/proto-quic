@@ -5,7 +5,6 @@
 #include "base/message_loop/message_loop.h"
 
 #include <algorithm>
-#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -14,17 +13,12 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_pump_default.h"
-#include "base/metrics/histogram.h"
-#include "base/metrics/statistics_recorder.h"
 #include "base/run_loop.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
-#include "base/tracked_objects.h"
-#include "build/build_config.h"
 
 #if defined(OS_MACOSX)
 #include "base/message_loop/message_pump_mac.h"
@@ -47,47 +41,6 @@ namespace {
 // loop, if one exists.  This should be safe and free of static constructors.
 LazyInstance<base::ThreadLocalPointer<MessageLoop> >::Leaky lazy_tls_ptr =
     LAZY_INSTANCE_INITIALIZER;
-
-// Logical events for Histogram profiling. Run with --message-loop-histogrammer
-// to get an accounting of messages and actions taken on each thread.
-const int kTaskRunEvent = 0x1;
-#if !defined(OS_NACL)
-const int kTimerEvent = 0x2;
-
-// Provide range of message IDs for use in histogramming and debug display.
-const int kLeastNonZeroMessageId = 1;
-const int kMaxMessageId = 1099;
-const int kNumberOfDistinctMessagesDisplayed = 1100;
-
-// Provide a macro that takes an expression (such as a constant, or macro
-// constant) and creates a pair to initialize an array of pairs.  In this case,
-// our pair consists of the expressions value, and the "stringized" version
-// of the expression (i.e., the expression put in quotes).  For example, if
-// we have:
-//    #define FOO 2
-//    #define BAR 5
-// then the following:
-//    VALUE_TO_NUMBER_AND_NAME(FOO + BAR)
-// will expand to:
-//   {7, "FOO + BAR"}
-// We use the resulting array as an argument to our histogram, which reads the
-// number as a bucket identifier, and proceeds to use the corresponding name
-// in the pair (i.e., the quoted string) when printing out a histogram.
-#define VALUE_TO_NUMBER_AND_NAME(name) {name, #name},
-
-const LinearHistogram::DescriptionPair event_descriptions_[] = {
-  // Provide some pretty print capability in our histogram for our internal
-  // messages.
-
-  // A few events we handle (kindred to messages), and used to profile actions.
-  VALUE_TO_NUMBER_AND_NAME(kTaskRunEvent)
-  VALUE_TO_NUMBER_AND_NAME(kTimerEvent)
-
-  {-1, NULL}  // The list must be null-terminated, per API to histogram.
-};
-#endif  // !defined(OS_NACL)
-
-bool enable_histogrammer_ = false;
 
 MessageLoop::MessagePumpFactory* message_pump_for_ui_factory_ = NULL;
 
@@ -196,11 +149,6 @@ MessageLoop* MessageLoop::current() {
 }
 
 // static
-void MessageLoop::EnableHistogrammer(bool enable) {
-  enable_histogrammer_ = enable;
-}
-
-// static
 bool MessageLoop::InitMessagePumpForUIFactory(MessagePumpFactory* factory) {
   if (message_pump_for_ui_factory_)
     return false;
@@ -274,33 +222,6 @@ void MessageLoop::AddNestingObserver(NestingObserver* observer) {
 void MessageLoop::RemoveNestingObserver(NestingObserver* observer) {
   DCHECK_EQ(this, current());
   nesting_observers_.RemoveObserver(observer);
-}
-
-#if !(defined(OS_MACOSX) && !defined(OS_IOS))
-void MessageLoop::PostTask(
-    const tracked_objects::Location& from_here,
-    const Closure& task) {
-  task_runner_->PostTask(from_here, task);
-}
-
-void MessageLoop::PostDelayedTask(
-    const tracked_objects::Location& from_here,
-    const Closure& task,
-    TimeDelta delay) {
-  task_runner_->PostDelayedTask(from_here, task, delay);
-}
-#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
-
-void MessageLoop::Run() {
-  DCHECK(pump_);
-  RunLoop run_loop;
-  run_loop.Run();
-}
-
-void MessageLoop::RunUntilIdle() {
-  DCHECK(pump_);
-  RunLoop run_loop;
-  run_loop.RunUntilIdle();
 }
 
 void MessageLoop::QuitWhenIdle() {
@@ -393,7 +314,6 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
 #endif
       nestable_tasks_allowed_(true),
       pump_factory_(pump_factory),
-      message_histogram_(NULL),
       run_loop_(NULL),
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
       unbound_task_runner_(
@@ -447,7 +367,6 @@ void MessageLoop::SetThreadTaskRunnerHandle() {
 
 void MessageLoop::RunHandler() {
   DCHECK_EQ(this, current());
-  StartHistogrammer();
   pump_->Run(this);
 }
 
@@ -478,8 +397,6 @@ void MessageLoop::RunTask(const PendingTask& pending_task) {
 
   // Execute the task and assume the worst: It is probably not reentrant.
   nestable_tasks_allowed_ = false;
-
-  HistogramEvent(kTaskRunEvent);
 
   TRACE_TASK_EXECUTION("MessageLoop::RunTask", pending_task);
 
@@ -564,31 +481,6 @@ bool MessageLoop::MessagePumpWasSignaled() {
   return pump_->WasSignaled();
 }
 #endif
-
-//------------------------------------------------------------------------------
-// Method and data for histogramming events and actions taken by each instance
-// on each thread.
-
-void MessageLoop::StartHistogrammer() {
-#if !defined(OS_NACL)  // NaCl build has no metrics code.
-  if (enable_histogrammer_ && !message_histogram_
-      && StatisticsRecorder::IsActive()) {
-    std::string thread_name = GetThreadName();
-    DCHECK(!thread_name.empty());
-    message_histogram_ = LinearHistogram::FactoryGetWithRangeDescription(
-        "MsgLoop:" + thread_name, kLeastNonZeroMessageId, kMaxMessageId,
-        kNumberOfDistinctMessagesDisplayed,
-        HistogramBase::kHexRangePrintingFlag, event_descriptions_);
-  }
-#endif
-}
-
-void MessageLoop::HistogramEvent(int event) {
-#if !defined(OS_NACL)
-  if (message_histogram_)
-    message_histogram_->Add(event);
-#endif
-}
 
 void MessageLoop::NotifyBeginNestedLoop() {
   FOR_EACH_OBSERVER(NestingObserver, nesting_observers_,
@@ -681,21 +573,6 @@ bool MessageLoop::DoIdleWork() {
 #endif
   return false;
 }
-
-#if !(defined(OS_MACOSX) && !defined(OS_IOS))
-void MessageLoop::DeleteSoonInternal(const tracked_objects::Location& from_here,
-                                     void(*deleter)(const void*),
-                                     const void* object) {
-  task_runner()->PostNonNestableTask(from_here, Bind(deleter, object));
-}
-
-void MessageLoop::ReleaseSoonInternal(
-    const tracked_objects::Location& from_here,
-    void(*releaser)(const void*),
-    const void* object) {
-  task_runner()->PostNonNestableTask(from_here, Bind(releaser, object));
-}
-#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
 #if !defined(OS_NACL)
 //------------------------------------------------------------------------------

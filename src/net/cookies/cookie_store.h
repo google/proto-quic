@@ -33,14 +33,39 @@ class CookieMonster;
 // Destroying the CookieStore will cancel pending async callbacks.
 class NET_EXPORT CookieStore {
  public:
+  // The publicly relevant reasons a cookie might be changed.
+  enum class ChangeCause {
+    // The cookie was inserted.
+    INSERTED,
+    // The cookie was changed directly by a consumer's action.
+    EXPLICIT,
+    // The cookie was deleted, but no more details are known.
+    UNKNOWN_DELETION,
+    // The cookie was automatically removed due to an insert operation that
+    // overwrote it.
+    OVERWRITE,
+    // The cookie was automatically removed as it expired.
+    EXPIRED,
+    // The cookie was automatically evicted during garbage collection.
+    EVICTED,
+    // The cookie was overwritten with an already-expired expiration date.
+    EXPIRED_OVERWRITE
+  };
+
+  // Returns whether |cause| is one that could be a reason for deleting a
+  // cookie. This function assumes that ChangeCause::EXPLICIT is a reason for
+  // deletion.
+  static bool ChangeCauseIsDeletion(ChangeCause cause);
+
   // Callback definitions.
   typedef base::Callback<void(const CookieList& cookies)> GetCookieListCallback;
   typedef base::Callback<void(const std::string& cookie)> GetCookiesCallback;
   typedef base::Callback<void(bool success)> SetCookiesCallback;
   typedef base::Callback<void(int num_deleted)> DeleteCallback;
-  typedef base::Callback<void(const CanonicalCookie& cookie, bool removed)>
+  typedef base::Callback<void(const CanonicalCookie& cookie, ChangeCause cause)>
       CookieChangedCallback;
-  typedef base::CallbackList<void(const CanonicalCookie& cookie, bool removed)>
+  typedef base::CallbackList<void(const CanonicalCookie& cookie,
+                                  ChangeCause cause)>
       CookieChangedCallbackList;
   typedef CookieChangedCallbackList::Subscription CookieChangedSubscription;
   typedef base::Callback<bool(const CanonicalCookie& cookie)> CookiePredicate;
@@ -198,6 +223,8 @@ class NET_EXPORT CookieStore {
   // (url, name) pair are removed. If this method ever needs to support an
   // unbounded amount of such pairs, this contract needs to change and
   // implementors need to be improved to not behave this way.
+  //
+  // The callback must not synchronously modify another cookie.
   virtual std::unique_ptr<CookieChangedSubscription> AddCallbackForCookie(
       const GURL& url,
       const std::string& name,

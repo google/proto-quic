@@ -61,6 +61,10 @@ specific_include_rules = {
     "+third_party/brotli",
   ],
 
+  "brotli_source_stream\.cc": [
+    "+third_party/brotli",
+  ],
+
   "fuzzer_test_support.cc": [
     "+base/i18n",
   ],

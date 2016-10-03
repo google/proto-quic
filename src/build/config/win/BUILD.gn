@@ -193,33 +193,6 @@ config("runtime_library") {
     # However it is prohibited when using /analyze
     defines += [ "_USING_V110_SDK71_" ]
   }
-
-  if (is_component_build) {
-    # Component mode: dynamic CRT. Since the library is shared, it requires
-    # exceptions or will give errors about things not matching, so keep
-    # exceptions on.
-    if (is_debug) {
-      cflags += [ "/MDd" ]
-    } else {
-      cflags += [ "/MD" ]
-    }
-  } else {
-    if (current_os != "win") {
-      # WindowsRT: use the dynamic CRT.
-      if (is_debug) {
-        cflags += [ "/MDd" ]
-      } else {
-        cflags += [ "/MD" ]
-      }
-    } else {
-      # Desktop Windows: static CRT.
-      if (is_debug) {
-        cflags += [ "/MTd" ]
-      } else {
-        cflags += [ "/MT" ]
-      }
-    }
-  }
 }
 
 # Sets the default Windows build version. This is separated because some
@@ -288,6 +261,44 @@ config("common_linker_setup") {
       "/time",
       "/verbose:incr",
     ]
+  }
+}
+
+# CRT --------------------------------------------------------------------------
+
+# Configures how the runtime library (CRT) is going to be used.
+# See https://msdn.microsoft.com/en-us/library/2kzt1wy3.aspx for a reference of
+# what each value does.
+config("default_crt") {
+  if (is_component_build) {
+    # Component mode: dynamic CRT. Since the library is shared, it requires
+    # exceptions or will give errors about things not matching, so keep
+    # exceptions on.
+    configs = [ ":dynamic_crt" ]
+  } else {
+    if (current_os != "win") {
+      # WindowsRT: use the dynamic CRT.
+      configs = [ ":dynamic_crt" ]
+    } else {
+      # Desktop Windows: static CRT.
+      configs = [ ":static_crt" ]
+    }
+  }
+}
+
+config("dynamic_crt") {
+  if (is_debug) {
+    cflags = [ "/MDd" ]
+  } else {
+    cflags = [ "/MD" ]
+  }
+}
+
+config("static_crt") {
+  if (is_debug) {
+    cflags = [ "/MTd" ]
+  } else {
+    cflags = [ "/MT" ]
   }
 }
 

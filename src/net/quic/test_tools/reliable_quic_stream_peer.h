@@ -10,6 +10,7 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_stream_sequencer.h"
 
 namespace net {
 
@@ -43,6 +44,8 @@ class ReliableQuicStreamPeer {
       base::StringPiece data,
       bool fin,
       QuicAckListenerInterface* ack_notifier_delegate);
+
+  static net::QuicStreamSequencer* sequencer(ReliableQuicStream* stream);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ReliableQuicStreamPeer);

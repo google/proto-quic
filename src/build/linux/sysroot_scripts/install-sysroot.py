@@ -108,6 +108,10 @@ def DetectHostArch():
     return 'arm64'
   elif detected_host_arch == 'mips':
     return 'mips'
+  elif detected_host_arch == 'ppc':
+    return 'ppc'
+  elif detected_host_arch == 's390':
+    return 's390'
 
   raise Error('Unrecognized host arch: %s' % detected_host_arch)
 
@@ -137,7 +141,7 @@ def DetectTargetArch():
   return None
 
 
-def InstallDefaultSysroots():
+def InstallDefaultSysroots(host_arch):
   """Install the default set of sysroot images.
 
   This includes at least the sysroot for host architecture, and the 32-bit
@@ -149,7 +153,6 @@ def InstallDefaultSysroots():
   flipping things back and forth and whether the sysroots have been downloaded
   or not.
   """
-  host_arch = DetectHostArch()
   InstallDefaultSysrootForArch(host_arch)
 
   if host_arch == 'amd64':
@@ -182,7 +185,11 @@ def main(args):
     return 0
 
   if options.running_as_hook:
-    InstallDefaultSysroots()
+    host_arch = DetectHostArch()
+    # PPC/s390 don't use sysroot, see http://crbug.com/646169
+    if host_arch in ['ppc','s390']:
+      return 0
+    InstallDefaultSysroots(host_arch)
   else:
     if not options.arch:
       print 'You much specify either --arch or --running-as-hook'

@@ -353,15 +353,21 @@ TEST(SpdyUtilsTest, GetHostNameFromHeaderBlock) {
   EXPECT_EQ(SpdyUtils::GetHostNameFromHeaderBlock(headers), "192.168.1.1");
 }
 
-TEST(SpdyUtilsTest, UrlIsValid) {
+TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrl) {
+  string url = "https://www.google.com/index.html";
   SpdyHeaderBlock headers;
-  EXPECT_FALSE(SpdyUtils::UrlIsValid(headers));
-  headers[":scheme"] = "https";
-  EXPECT_FALSE(SpdyUtils::UrlIsValid(headers));
-  headers[":authority"] = "www.google.com";
-  EXPECT_FALSE(SpdyUtils::UrlIsValid(headers));
-  headers[":path"] = "/index.html";
-  EXPECT_TRUE(SpdyUtils::UrlIsValid(headers));
+  EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
+  EXPECT_EQ("https", headers[":scheme"].as_string());
+  EXPECT_EQ("www.google.com", headers[":authority"].as_string());
+  EXPECT_EQ("/index.html", headers[":path"].as_string());
+}
+
+TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlFails) {
+  SpdyHeaderBlock headers;
+  EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/", &headers));
+  EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/index.html", &headers));
+  EXPECT_FALSE(
+      SpdyUtils::PopulateHeaderBlockFromUrl("www.google.com/", &headers));
 }
 
 }  // namespace test

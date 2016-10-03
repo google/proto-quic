@@ -23,7 +23,6 @@
 #include "base/strings/string_util.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
-#include "base/threading/thread.h"
 #include "base/threading/thread_local.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 #include "build/build_config.h"

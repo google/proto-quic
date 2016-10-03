@@ -489,7 +489,7 @@ class QuicNetworkTransactionTest
     ASSERT_TRUE(response->headers.get() != nullptr);
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
     EXPECT_TRUE(response->was_fetched_via_spdy);
-    EXPECT_TRUE(response->was_npn_negotiated);
+    EXPECT_TRUE(response->was_alpn_negotiated);
     EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
               response->connection_info);
   }
@@ -506,7 +506,7 @@ class QuicNetworkTransactionTest
     ASSERT_TRUE(response->headers.get() != nullptr);
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
     EXPECT_FALSE(response->was_fetched_via_spdy);
-    EXPECT_FALSE(response->was_npn_negotiated);
+    EXPECT_FALSE(response->was_alpn_negotiated);
     EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_HTTP1_1,
               response->connection_info);
   }
@@ -2093,7 +2093,7 @@ TEST_P(QuicNetworkTransactionTest, RstSteamErrorHandling) {
   ASSERT_TRUE(response->headers.get() != nullptr);
   EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
   EXPECT_TRUE(response->was_fetched_via_spdy);
-  EXPECT_TRUE(response->was_npn_negotiated);
+  EXPECT_TRUE(response->was_alpn_negotiated);
   EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
             response->connection_info);
 
@@ -3042,7 +3042,7 @@ class QuicNetworkTransactionWithDestinationTest
     ASSERT_TRUE(response->headers.get() != nullptr);
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
     EXPECT_TRUE(response->was_fetched_via_spdy);
-    EXPECT_TRUE(response->was_npn_negotiated);
+    EXPECT_TRUE(response->was_alpn_negotiated);
     EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
               response->connection_info);
     EXPECT_EQ(443, response->socket_address.port());

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "base/bind.h"
+#include "base/callback.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -17,12 +18,14 @@
 #include "base/sequence_token.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
+#include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task_scheduler/scheduler_lock.h"
 #include "base/task_scheduler/task.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/test/gtest_util.h"
 #include "base/test/test_simple_task_runner.h"
+#include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/simple_thread.h"
@@ -37,28 +40,25 @@ namespace {
 
 constexpr size_t kLoadTestNumIterations = 100;
 
-// Calls TaskTracker::Shutdown() asynchronously.
-class ThreadCallingShutdown : public SimpleThread {
+// Invokes a closure asynchronously.
+class CallbackThread : public SimpleThread {
  public:
-  explicit ThreadCallingShutdown(TaskTracker* tracker)
-      : SimpleThread("ThreadCallingShutdown"),
-        tracker_(tracker),
-        has_returned_(WaitableEvent::ResetPolicy::MANUAL,
-                      WaitableEvent::InitialState::NOT_SIGNALED) {}
+  explicit CallbackThread(const Closure& closure)
+      : SimpleThread("CallbackThread"), closure_(closure) {}
 
-  // Returns true once the async call to Shutdown() has returned.
-  bool has_returned() { return has_returned_.IsSignaled(); }
+  // Returns true once the callback returns.
+  bool has_returned() { return has_returned_.IsSet(); }
 
  private:
   void Run() override {
-    tracker_->Shutdown();
-    has_returned_.Signal();
+    closure_.Run();
+    has_returned_.Set();
   }
 
-  TaskTracker* const tracker_;
-  WaitableEvent has_returned_;
+  const Closure closure_;
+  AtomicFlag has_returned_;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadCallingShutdown);
+  DISALLOW_COPY_AND_ASSIGN(CallbackThread);
 };
 
 class ThreadPostingAndRunningTask : public SimpleThread {
@@ -131,7 +131,8 @@ class TaskSchedulerTaskTrackerTest
   // returned.
   void CallShutdownAsync() {
     ASSERT_FALSE(thread_calling_shutdown_);
-    thread_calling_shutdown_.reset(new ThreadCallingShutdown(&tracker_));
+    thread_calling_shutdown_.reset(new CallbackThread(
+        Bind(&TaskTracker::Shutdown, Unretained(&tracker_))));
     thread_calling_shutdown_->Start();
     while (!tracker_.HasShutdownStarted())
       PlatformThread::YieldCurrentThread();
@@ -151,6 +152,25 @@ class TaskSchedulerTaskTrackerTest
     EXPECT_FALSE(tracker_.IsShutdownComplete());
   }
 
+  // Calls tracker_->Flush() on a new thread.
+  void CallFlushAsync() {
+    ASSERT_FALSE(thread_calling_flush_);
+    thread_calling_flush_.reset(
+        new CallbackThread(Bind(&TaskTracker::Flush, Unretained(&tracker_))));
+    thread_calling_flush_->Start();
+  }
+
+  void WaitForAsyncFlushReturned() {
+    ASSERT_TRUE(thread_calling_flush_);
+    thread_calling_flush_->Join();
+    EXPECT_TRUE(thread_calling_flush_->has_returned());
+  }
+
+  void VerifyAsyncFlushInProgress() {
+    ASSERT_TRUE(thread_calling_flush_);
+    EXPECT_FALSE(thread_calling_flush_->has_returned());
+  }
+
   size_t NumTasksExecuted() {
     AutoSchedulerLock auto_lock(lock_);
     return num_tasks_executed_;
@@ -164,7 +184,8 @@ class TaskSchedulerTaskTrackerTest
     ++num_tasks_executed_;
   }
 
-  std::unique_ptr<ThreadCallingShutdown> thread_calling_shutdown_;
+  std::unique_ptr<CallbackThread> thread_calling_shutdown_;
+  std::unique_ptr<CallbackThread> thread_calling_flush_;
 
   // Synchronizes accesses to |num_tasks_executed_|.
   SchedulerLock lock_;
@@ -184,6 +205,18 @@ class TaskSchedulerTaskTrackerTest
   do {                                      \
     SCOPED_TRACE("");                       \
     VerifyAsyncShutdownInProgress();        \
+  } while (false)
+
+#define WAIT_FOR_ASYNC_FLUSH_RETURNED() \
+  do {                                  \
+    SCOPED_TRACE("");                   \
+    WaitForAsyncFlushReturned();        \
+  } while (false)
+
+#define VERIFY_ASYNC_FLUSH_IN_PROGRESS() \
+  do {                                   \
+    SCOPED_TRACE("");                    \
+    VerifyAsyncFlushInProgress();        \
   } while (false)
 
 }  // namespace
@@ -453,6 +486,134 @@ TEST_P(TaskSchedulerTaskTrackerTest,
   verify_task->single_thread_task_runner_ref = test_task_runner;
 
   RunTaskRunnerHandleVerificationTask(&tracker_, std::move(verify_task));
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingDelayedTask) {
+  const Task delayed_task(FROM_HERE, Bind(&DoNothing),
+                          TaskTraits().WithShutdownBehavior(GetParam()),
+                          TimeDelta::FromDays(1));
+  tracker_.WillPostTask(&delayed_task);
+  // Flush() should return even if the delayed task didn't run.
+  tracker_.Flush();
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, FlushPendingUndelayedTask) {
+  const Task undelayed_task(FROM_HERE, Bind(&DoNothing),
+                            TaskTraits().WithShutdownBehavior(GetParam()),
+                            TimeDelta());
+  tracker_.WillPostTask(&undelayed_task);
+
+  // Flush() shouldn't return before the undelayed task runs.
+  CallFlushAsync();
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Flush() should return after the undelayed task runs.
+  tracker_.RunTask(&undelayed_task, SequenceToken::Create());
+  WAIT_FOR_ASYNC_FLUSH_RETURNED();
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, PostTaskDuringFlush) {
+  const Task undelayed_task(FROM_HERE, Bind(&DoNothing),
+                            TaskTraits().WithShutdownBehavior(GetParam()),
+                            TimeDelta());
+  tracker_.WillPostTask(&undelayed_task);
+
+  // Flush() shouldn't return before the undelayed task runs.
+  CallFlushAsync();
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Simulate posting another undelayed task.
+  const Task other_undelayed_task(FROM_HERE, Bind(&DoNothing),
+                                  TaskTraits().WithShutdownBehavior(GetParam()),
+                                  TimeDelta());
+  tracker_.WillPostTask(&other_undelayed_task);
+
+  // Run the first undelayed task.
+  tracker_.RunTask(&undelayed_task, SequenceToken::Create());
+
+  // Flush() shouldn't return before the second undelayed task runs.
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Flush() should return after the second undelayed task runs.
+  tracker_.RunTask(&other_undelayed_task, SequenceToken::Create());
+  WAIT_FOR_ASYNC_FLUSH_RETURNED();
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, RunDelayedTaskDuringFlush) {
+  // Simulate posting a delayed and an undelayed task.
+  const Task delayed_task(FROM_HERE, Bind(&DoNothing),
+                          TaskTraits().WithShutdownBehavior(GetParam()),
+                          TimeDelta::FromDays(1));
+  tracker_.WillPostTask(&delayed_task);
+  const Task undelayed_task(FROM_HERE, Bind(&DoNothing),
+                            TaskTraits().WithShutdownBehavior(GetParam()),
+                            TimeDelta());
+  tracker_.WillPostTask(&undelayed_task);
+
+  // Flush() shouldn't return before the undelayed task runs.
+  CallFlushAsync();
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Run the delayed task.
+  tracker_.RunTask(&delayed_task, SequenceToken::Create());
+
+  // Flush() shouldn't return since there is still a pending undelayed
+  // task.
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Run the undelayed task.
+  tracker_.RunTask(&undelayed_task, SequenceToken::Create());
+
+  // Flush() should now return.
+  WAIT_FOR_ASYNC_FLUSH_RETURNED();
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, FlushAfterShutdown) {
+  if (GetParam() == TaskShutdownBehavior::BLOCK_SHUTDOWN)
+    return;
+
+  // Simulate posting a task.
+  const Task undelayed_task(FROM_HERE, Bind(&DoNothing),
+                            TaskTraits().WithShutdownBehavior(GetParam()),
+                            TimeDelta());
+  tracker_.WillPostTask(&undelayed_task);
+
+  // Shutdown() should return immediately since there are no pending
+  // BLOCK_SHUTDOWN tasks.
+  tracker_.Shutdown();
+
+  // Flush() should return immediately after shutdown, even if an
+  // undelayed task hasn't run.
+  tracker_.Flush();
+}
+
+TEST_P(TaskSchedulerTaskTrackerTest, ShutdownDuringFlush) {
+  if (GetParam() == TaskShutdownBehavior::BLOCK_SHUTDOWN)
+    return;
+
+  // Simulate posting a task.
+  const Task undelayed_task(FROM_HERE, Bind(&DoNothing),
+                            TaskTraits().WithShutdownBehavior(GetParam()),
+                            TimeDelta());
+  tracker_.WillPostTask(&undelayed_task);
+
+  // Flush() shouldn't return before the undelayed task runs or
+  // shutdown completes.
+  CallFlushAsync();
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  VERIFY_ASYNC_FLUSH_IN_PROGRESS();
+
+  // Shutdown() should return immediately since there are no pending
+  // BLOCK_SHUTDOWN tasks.
+  tracker_.Shutdown();
+
+  // Flush() should now return, even if an undelayed task hasn't run.
+  WAIT_FOR_ASYNC_FLUSH_RETURNED();
 }
 
 INSTANTIATE_TEST_CASE_P(

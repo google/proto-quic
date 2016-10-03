@@ -172,8 +172,8 @@ class QuicChromiumClientStreamTest
                                         Perspective::IS_CLIENT,
                                         SupportedVersions(GetParam())),
                  &push_promise_index_) {
-    stream_ =
-        new QuicChromiumClientStream(kTestStreamId, &session_, BoundNetLog());
+    stream_ = new QuicChromiumClientStream(kTestStreamId, &session_,
+                                           NetLogWithSource());
     session_.ActivateStream(stream_);
     stream_->SetDelegate(&delegate_);
   }
@@ -538,7 +538,7 @@ TEST_P(QuicChromiumClientStreamTest, HeadersBeforeDelegate) {
   // We don't use stream_ because we want an incoming server push
   // stream.
   QuicChromiumClientStream* stream = new QuicChromiumClientStream(
-      kServerDataStreamId1, &session_, BoundNetLog());
+      kServerDataStreamId1, &session_, NetLogWithSource());
   session_.ActivateStream(stream);
 
   InitializeHeaders();

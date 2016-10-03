@@ -204,15 +204,77 @@ func (hs *serverHandshakeState) readClientHello() error {
 			return fmt.Errorf("tls: client offered different version on renego")
 		}
 	}
+
 	c.clientVersion = hs.clientHello.vers
 
+	// Convert the ClientHello wire version to a protocol version.
+	var clientVersion uint16
+	if c.isDTLS {
+		if hs.clientHello.vers <= 0xfefd {
+			clientVersion = VersionTLS12
+		} else if hs.clientHello.vers <= 0xfeff {
+			clientVersion = VersionTLS10
+		}
+	} else {
+		if hs.clientHello.vers >= VersionTLS12 {
+			clientVersion = VersionTLS12
+		} else if hs.clientHello.vers >= VersionTLS11 {
+			clientVersion = VersionTLS11
+		} else if hs.clientHello.vers >= VersionTLS10 {
+			clientVersion = VersionTLS10
+		} else if hs.clientHello.vers >= VersionSSL30 {
+			clientVersion = VersionSSL30
+		}
+	}
+
+	if config.Bugs.NegotiateVersion != 0 {
+		c.vers = config.Bugs.NegotiateVersion
+	} else if c.haveVers && config.Bugs.NegotiateVersionOnRenego != 0 {
+		c.vers = config.Bugs.NegotiateVersionOnRenego
+	} else if len(hs.clientHello.supportedVersions) > 0 {
+		// Use the versions extension if supplied.
+		var foundVersion, foundGREASE bool
+		for _, extVersion := range hs.clientHello.supportedVersions {
+			if isGREASEValue(extVersion) {
+				foundGREASE = true
+			}
+			extVersion, ok = wireToVersion(extVersion, c.isDTLS)
+			if !ok {
+				continue
+			}
+			if config.isSupportedVersion(extVersion, c.isDTLS) && !foundVersion {
+				c.vers = extVersion
+				foundVersion = true
+				break
+			}
+		}
+		if !foundVersion {
+			c.sendAlert(alertProtocolVersion)
+			return errors.New("tls: client did not offer any supported protocol versions")
+		}
+		if config.Bugs.ExpectGREASE && !foundGREASE {
+			return errors.New("tls: no GREASE version value found")
+		}
+	} else {
+		// Otherwise, use the legacy ClientHello version.
+		version := clientVersion
+		if maxVersion := config.maxVersion(c.isDTLS); version > maxVersion {
+			version = maxVersion
+		}
+		if version == 0 || !config.isSupportedVersion(version, c.isDTLS) {
+			return fmt.Errorf("tls: client offered an unsupported, maximum protocol version of %x", hs.clientHello.vers)
+		}
+		c.vers = version
+	}
+	c.haveVers = true
+
 	// Reject < 1.2 ClientHellos with signature_algorithms.
-	if c.clientVersion < VersionTLS12 && len(hs.clientHello.signatureAlgorithms) > 0 {
+	if clientVersion < VersionTLS12 && len(hs.clientHello.signatureAlgorithms) > 0 {
 		return fmt.Errorf("tls: client included signature_algorithms before TLS 1.2")
 	}
 
 	// Check the client cipher list is consistent with the version.
-	if hs.clientHello.vers < VersionTLS12 {
+	if clientVersion < VersionTLS12 {
 		for _, id := range hs.clientHello.cipherSuites {
 			if isTLS12Cipher(id) {
 				return fmt.Errorf("tls: client offered TLS 1.2 cipher before TLS 1.2")
@@ -233,24 +295,13 @@ func (hs *serverHandshakeState) readClientHello() error {
 		return fmt.Errorf("tls: client offered unexpected PSK identities")
 	}
 
-	if config.Bugs.NegotiateVersion != 0 {
-		c.vers = config.Bugs.NegotiateVersion
-	} else if c.haveVers && config.Bugs.NegotiateVersionOnRenego != 0 {
-		c.vers = config.Bugs.NegotiateVersionOnRenego
-	} else {
-		c.vers, ok = config.mutualVersion(hs.clientHello.vers, c.isDTLS)
-		if !ok {
-			c.sendAlert(alertProtocolVersion)
-			return fmt.Errorf("tls: client offered an unsupported, maximum protocol version of %x", hs.clientHello.vers)
-		}
-	}
-	c.haveVers = true
-
-	var scsvFound bool
+	var scsvFound, greaseFound bool
 	for _, cipherSuite := range hs.clientHello.cipherSuites {
 		if cipherSuite == fallbackSCSV {
 			scsvFound = true
-			break
+		}
+		if isGREASEValue(cipherSuite) {
+			greaseFound = true
 		}
 	}
 
@@ -258,6 +309,36 @@ func (hs *serverHandshakeState) readClientHello() error {
 		return errors.New("tls: no fallback SCSV found when expected")
 	} else if scsvFound && !config.Bugs.FailIfNotFallbackSCSV {
 		return errors.New("tls: fallback SCSV found when not expected")
+	}
+
+	if !greaseFound && config.Bugs.ExpectGREASE {
+		return errors.New("tls: no GREASE cipher suite value found")
+	}
+
+	greaseFound = false
+	for _, curve := range hs.clientHello.supportedCurves {
+		if isGREASEValue(uint16(curve)) {
+			greaseFound = true
+			break
+		}
+	}
+
+	if !greaseFound && config.Bugs.ExpectGREASE {
+		return errors.New("tls: no GREASE curve value found")
+	}
+
+	if len(hs.clientHello.keyShares) > 0 {
+		greaseFound = false
+		for _, keyShare := range hs.clientHello.keyShares {
+			if isGREASEValue(uint16(keyShare.group)) {
+				greaseFound = true
+				break
+			}
+		}
+
+		if !greaseFound && config.Bugs.ExpectGREASE {
+			return errors.New("tls: no GREASE curve value found")
+		}
 	}
 
 	if config.Bugs.IgnorePeerSignatureAlgorithmPreferences {
@@ -278,12 +359,9 @@ func (hs *serverHandshakeState) doTLS13Handshake() error {
 	config := c.config
 
 	hs.hello = &serverHelloMsg{
-		isDTLS: c.isDTLS,
-		vers:   c.vers,
-	}
-
-	if config.Bugs.SendServerHelloVersion != 0 {
-		hs.hello.vers = config.Bugs.SendServerHelloVersion
+		isDTLS:       c.isDTLS,
+		vers:         versionToWire(c.vers, c.isDTLS),
+		versOverride: config.Bugs.SendServerHelloVersion,
 	}
 
 	hs.hello.random = make([]byte, 32)
@@ -451,7 +529,7 @@ Curves:
 		ResendHelloRetryRequest:
 			// Send HelloRetryRequest.
 			helloRetryRequestMsg := helloRetryRequestMsg{
-				vers:          c.vers,
+				vers:          versionToWire(c.vers, c.isDTLS),
 				cipherSuite:   hs.hello.cipherSuite,
 				selectedGroup: selectedCurve,
 			}
@@ -784,12 +862,9 @@ func (hs *serverHandshakeState) processClientHello() (isResume bool, err error) 
 
 	hs.hello = &serverHelloMsg{
 		isDTLS:            c.isDTLS,
-		vers:              c.vers,
+		vers:              versionToWire(c.vers, c.isDTLS),
+		versOverride:      config.Bugs.SendServerHelloVersion,
 		compressionMethod: compressionNone,
-	}
-
-	if config.Bugs.SendServerHelloVersion != 0 {
-		hs.hello.vers = config.Bugs.SendServerHelloVersion
 	}
 
 	hs.hello.random = make([]byte, 32)
@@ -1000,6 +1075,10 @@ func (hs *serverHandshakeState) processClientExtensions(serverExtensions *server
 
 	if c.config.Bugs.AdvertiseTicketExtension {
 		serverExtensions.ticketSupported = true
+	}
+
+	if !hs.clientHello.hasGREASEExtension && config.Bugs.ExpectGREASE {
+		return errors.New("tls: no GREASE extension found")
 	}
 
 	return nil
@@ -1672,4 +1751,8 @@ func isTLS12Cipher(id uint16) bool {
 	}
 	// Unknown cipher.
 	return false
+}
+
+func isGREASEValue(val uint16) bool {
+	return val&0x0f0f == 0x0a0a && val&0xff == val>>8
 }

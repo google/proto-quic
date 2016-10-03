@@ -28,7 +28,7 @@ int HttpAuthHandlerFactory::CreateAuthHandlerFromString(
     HttpAuth::Target target,
     const SSLInfo& ssl_info,
     const GURL& origin,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<HttpAuthHandler>* handler) {
   HttpAuthChallengeTokenizer props(challenge.begin(), challenge.end());
   return CreateAuthHandler(&props, target, ssl_info, origin, CREATE_CHALLENGE,
@@ -40,7 +40,7 @@ int HttpAuthHandlerFactory::CreatePreemptiveAuthHandlerFromString(
     HttpAuth::Target target,
     const GURL& origin,
     int digest_nonce_count,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<HttpAuthHandler>* handler) {
   HttpAuthChallengeTokenizer props(challenge.begin(), challenge.end());
   SSLInfo null_ssl_info;
@@ -170,7 +170,7 @@ int HttpAuthHandlerRegistryFactory::CreateAuthHandler(
     const GURL& origin,
     CreateReason reason,
     int digest_nonce_count,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<HttpAuthHandler>* handler) {
   std::string scheme = challenge->scheme();
   if (scheme.empty()) {

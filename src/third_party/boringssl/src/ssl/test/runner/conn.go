@@ -200,7 +200,7 @@ func (hc *halfConn) changeCipherSpec(config *Config) error {
 	hc.incEpoch()
 
 	if config.Bugs.NullAllCiphers {
-		hc.cipher = nil
+		hc.cipher = nullCipher{}
 		hc.mac = nil
 	}
 	return nil
@@ -210,6 +210,9 @@ func (hc *halfConn) changeCipherSpec(config *Config) error {
 func (hc *halfConn) useTrafficSecret(version uint16, suite *cipherSuite, secret, phase []byte, side trafficDirection) {
 	hc.version = version
 	hc.cipher = deriveTrafficAEAD(version, suite, secret, phase, side)
+	if hc.config.Bugs.NullAllCiphers {
+		hc.cipher = nullCipher{}
+	}
 	hc.trafficSecret = secret
 	hc.incEpoch()
 }
@@ -423,18 +426,6 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, contentType recor
 			if err != nil {
 				return false, 0, 0, alertBadRecordMAC
 			}
-			if hc.version >= VersionTLS13 {
-				i := len(payload)
-				for i > 0 && payload[i-1] == 0 {
-					i--
-				}
-				payload = payload[:i]
-				if len(payload) == 0 {
-					return false, 0, 0, alertUnexpectedMessage
-				}
-				contentType = recordType(payload[len(payload)-1])
-				payload = payload[:len(payload)-1]
-			}
 			b.resize(recordHeaderLen + explicitIVLen + len(payload))
 		case cbcMode:
 			blockSize := c.BlockSize()
@@ -472,6 +463,20 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, contentType recor
 			break
 		default:
 			panic("unknown cipher type")
+		}
+
+		if hc.version >= VersionTLS13 {
+			i := len(payload)
+			for i > 0 && payload[i-1] == 0 {
+				i--
+			}
+			payload = payload[:i]
+			if len(payload) == 0 {
+				return false, 0, 0, alertUnexpectedMessage
+			}
+			contentType = recordType(payload[len(payload)-1])
+			payload = payload[:len(payload)-1]
+			b.resize(recordHeaderLen + len(payload))
 		}
 	}
 
@@ -545,29 +550,26 @@ func (hc *halfConn) encrypt(b *block, explicitIVLen int, typ recordType) (bool, 
 
 	// encrypt
 	if hc.cipher != nil {
+		// Add TLS 1.3 padding.
+		if hc.version >= VersionTLS13 {
+			paddingLen := hc.config.Bugs.RecordPadding
+			if hc.config.Bugs.OmitRecordContents {
+				b.resize(recordHeaderLen + paddingLen)
+			} else {
+				b.resize(len(b.data) + 1 + paddingLen)
+				b.data[len(b.data)-paddingLen-1] = byte(typ)
+			}
+			for i := 0; i < paddingLen; i++ {
+				b.data[len(b.data)-paddingLen+i] = 0
+			}
+		}
+
 		switch c := hc.cipher.(type) {
 		case cipher.Stream:
 			c.XORKeyStream(payload, payload)
 		case *tlsAead:
 			payloadLen := len(b.data) - recordHeaderLen - explicitIVLen
-			paddingLen := 0
-			if hc.version >= VersionTLS13 {
-				payloadLen++
-				paddingLen = hc.config.Bugs.RecordPadding
-			}
-			if hc.config.Bugs.OmitRecordContents {
-				payloadLen = 0
-			}
-			b.resize(recordHeaderLen + explicitIVLen + payloadLen + paddingLen + c.Overhead())
-			if hc.version >= VersionTLS13 {
-				if !hc.config.Bugs.OmitRecordContents {
-					b.data[payloadLen+recordHeaderLen-1] = byte(typ)
-				}
-				for i := 0; i < hc.config.Bugs.RecordPadding; i++ {
-					b.data[payloadLen+recordHeaderLen+i] = 0
-				}
-				payloadLen += paddingLen
-			}
+			b.resize(len(b.data) + c.Overhead())
 			nonce := hc.outSeq[:]
 			if c.explicitNonce {
 				nonce = b.data[recordHeaderLen : recordHeaderLen+explicitIVLen]
@@ -955,11 +957,28 @@ func (c *Conn) writeV2Record(data []byte) (n int, err error) {
 // to the connection and updates the record layer state.
 // c.out.Mutex <= L.
 func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
-	if wrongType := c.config.Bugs.SendWrongMessageType; wrongType != 0 {
-		if typ == recordTypeHandshake && data[0] == wrongType {
+	if msgType := c.config.Bugs.SendWrongMessageType; msgType != 0 {
+		if typ == recordTypeHandshake && data[0] == msgType {
 			newData := make([]byte, len(data))
 			copy(newData, data)
 			newData[0] += 42
+			data = newData
+		}
+	}
+
+	if msgType := c.config.Bugs.SendTrailingMessageData; msgType != 0 {
+		if typ == recordTypeHandshake && data[0] == msgType {
+			newData := make([]byte, len(data))
+			copy(newData, data)
+
+			// Add a 0 to the body.
+			newData = append(newData, 0)
+			// Fix the header.
+			newLen := len(newData) - 4
+			newData[1] = byte(newLen >> 16)
+			newData[2] = byte(newLen >> 8)
+			newData[3] = byte(newLen)
+
 			data = newData
 		}
 	}

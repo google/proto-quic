@@ -23,9 +23,7 @@ public class EarlyTraceEventTest extends InstrumentationTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER)
-                .ensureInitialized(getInstrumentation().getTargetContext());
-
+        LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER).ensureInitialized();
         EarlyTraceEvent.sState = EarlyTraceEvent.STATE_DISABLED;
         EarlyTraceEvent.sCompletedEvents = null;
         EarlyTraceEvent.sPendingEvents = null;

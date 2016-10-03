@@ -64,7 +64,7 @@ class LocalDeviceInstrumentationTestRun(
       if not d:
         return device_root
       elif isinstance(d, list):
-        return posixpath.join(p if p else device_root for p in d)
+        return posixpath.join(*(p if p else device_root for p in d))
       else:
         return d
 

@@ -120,7 +120,6 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
 
   // Cancel the watch. This unregisters the instance with InotifyReader.
   void Cancel() override;
-  void CancelOnMessageLoopThread() override;
   void CancelOnMessageLoopThreadOrInDestructor();
 
   // Inotify watches are installed for all directory components of |target_|.
@@ -329,8 +328,8 @@ void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
     return;
   }
 
-  // Check to see if CancelOnMessageLoopThread() has already been called.
-  // May happen when code flow reaches here from the PostTask() above.
+  // Check to see if CancelOnMessageLoopThreadOrInDestructor() has already been
+  // called. May happen when code flow reaches here from the PostTask() above.
   if (watches_.empty()) {
     DCHECK(target_.empty());
     return;
@@ -445,17 +444,15 @@ void FilePathWatcherImpl::Cancel() {
     return;
   }
 
-  // Switch to the message_loop() if necessary so we can access |watches_|.
+  // Switch to the task_runner() if necessary so we can access |watches_|.
   if (!task_runner()->BelongsToCurrentThread()) {
-    task_runner()->PostTask(FROM_HERE, Bind(&FilePathWatcher::CancelWatch,
-                                            make_scoped_refptr(this)));
+    task_runner()->PostTask(
+        FROM_HERE,
+        Bind(&FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor,
+             this));
   } else {
-    CancelOnMessageLoopThread();
+    CancelOnMessageLoopThreadOrInDestructor();
   }
-}
-
-void FilePathWatcherImpl::CancelOnMessageLoopThread() {
-  CancelOnMessageLoopThreadOrInDestructor();
 }
 
 void FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor() {
@@ -479,7 +476,7 @@ void FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor() {
 }
 
 void FilePathWatcherImpl::UpdateWatches() {
-  // Ensure this runs on the message_loop() exclusively in order to avoid
+  // Ensure this runs on the task_runner() exclusively in order to avoid
   // concurrency issues.
   DCHECK(task_runner()->BelongsToCurrentThread());
   DCHECK(HasValidWatchVector());

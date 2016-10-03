@@ -100,19 +100,23 @@ std::string RenderJSON(const BuildSettings* build_settings,
         !outputs_value->empty()) {
       description->MergeDictionary(outputs.get());
     }
-    targets->Set(target->label().GetUserVisibleName(default_toolchain_label),
-                 std::move(description));
+    targets->SetWithoutPathExpansion(
+        target->label().GetUserVisibleName(default_toolchain_label),
+        std::move(description));
   }
 
   auto settings = base::MakeUnique<base::DictionaryValue>();
-  settings->SetString("root_path", build_settings->root_path_utf8());
-  settings->SetString("build_dir", build_settings->build_dir().value());
-  settings->SetString("default_toolchain",
-                      default_toolchain_label.GetUserVisibleName(false));
+  settings->SetStringWithoutPathExpansion("root_path",
+                                          build_settings->root_path_utf8());
+  settings->SetStringWithoutPathExpansion("build_dir",
+                                          build_settings->build_dir().value());
+  settings->SetStringWithoutPathExpansion(
+      "default_toolchain",
+      default_toolchain_label.GetUserVisibleName(false));
 
   auto output = base::MakeUnique<base::DictionaryValue>();
-  output->Set("targets", std::move(targets));
-  output->Set("build_settings", std::move(settings));
+  output->SetWithoutPathExpansion("targets", std::move(targets));
+  output->SetWithoutPathExpansion("build_settings", std::move(settings));
 
   std::string s;
   base::JSONWriter::WriteWithOptions(

@@ -285,6 +285,9 @@ def AddGTestOptions(parser):
                           'device for the list of all tests. Speeds up local '
                           'development, but is not safe to use on bots ('
                           'http://crbug.com/549214')
+  group.add_argument('--enable-xml-result-parsing',
+                     action='store_true',
+                     help=argparse.SUPPRESS)
 
   filter_group = group.add_mutually_exclusive_group()
   filter_group.add_argument('-f', '--gtest_filter', '--gtest-filter',

@@ -51,7 +51,8 @@ enum AlternateProtocolUsage {
 };
 
 // Log a histogram to reflect |usage|.
-NET_EXPORT void HistogramAlternateProtocolUsage(AlternateProtocolUsage usage);
+NET_EXPORT void HistogramAlternateProtocolUsage(AlternateProtocolUsage usage,
+                                                bool proxy_server_used);
 
 enum BrokenAlternateProtocolLocation {
   BROKEN_ALTERNATE_PROTOCOL_LOCATION_HTTP_STREAM_FACTORY_IMPL_JOB = 0,
@@ -66,26 +67,12 @@ NET_EXPORT void HistogramBrokenAlternateProtocolLocation(
     BrokenAlternateProtocolLocation location);
 
 enum AlternateProtocol {
-  NPN_SPDY_3_1,
-  ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION = NPN_SPDY_3_1,
-  NPN_SPDY_MINIMUM_VERSION = NPN_SPDY_3_1,
   NPN_HTTP_2,
-  NPN_SPDY_MAXIMUM_VERSION = NPN_HTTP_2,
   QUIC,
-  ALTERNATE_PROTOCOL_MAXIMUM_VALID_VERSION = QUIC,
   UNINITIALIZED_ALTERNATE_PROTOCOL,
 };
 
-// Simply returns whether |protocol| is between
-// ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION and
-// ALTERNATE_PROTOCOL_MAXIMUM_VALID_VERSION (inclusive).
 NET_EXPORT bool IsAlternateProtocolValid(AlternateProtocol protocol);
-
-enum AlternateProtocolSize {
-  NUM_VALID_ALTERNATE_PROTOCOLS =
-    ALTERNATE_PROTOCOL_MAXIMUM_VALID_VERSION -
-    ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION + 1,
-};
 
 NET_EXPORT const char* AlternateProtocolToString(AlternateProtocol protocol);
 NET_EXPORT AlternateProtocol AlternateProtocolFromString(

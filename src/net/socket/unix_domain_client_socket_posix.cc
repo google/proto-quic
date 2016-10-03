@@ -118,7 +118,7 @@ int UnixDomainClientSocket::GetLocalAddress(IPEndPoint* address) const {
   return ERR_ADDRESS_INVALID;
 }
 
-const BoundNetLog& UnixDomainClientSocket::NetLog() const {
+const NetLogWithSource& UnixDomainClientSocket::NetLog() const {
   return net_log_;
 }
 

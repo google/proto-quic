@@ -30,7 +30,9 @@
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/spdy/spdy_test_util_common.h"
+#include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
+#include "net/test/test_data_directory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
@@ -181,15 +183,20 @@ void SpdyProxyClientSocketTest::Initialize(MockRead* reads,
   data_.reset(
       new SequencedSocketData(reads, reads_count, writes, writes_count));
   data_->set_connect_data(connect_data_);
-
   session_deps_.socket_factory->AddSocketDataProvider(data_.get());
+
+  SSLSocketDataProvider ssl(SYNCHRONOUS, OK);
+  ssl.cert = ImportCertFromFile(GetTestCertsDirectory(), "spdy_pooling.pem");
+  ASSERT_TRUE(ssl.cert);
+  session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl);
+
   session_deps_.host_resolver->set_synchronous_mode(true);
 
   session_ = SpdySessionDependencies::SpdyCreateSession(&session_deps_);
 
   // Creates the SPDY session and stream.
-  spdy_session_ = CreateInsecureSpdySession(
-      session_.get(), endpoint_spdy_session_key_, BoundNetLog());
+  spdy_session_ = CreateSecureSpdySession(
+      session_.get(), endpoint_spdy_session_key_, NetLogWithSource());
   base::WeakPtr<SpdyStream> spdy_stream(
       CreateStreamSynchronously(
           SPDY_BIDIRECTIONAL_STREAM, spdy_session_, url_, LOWEST,

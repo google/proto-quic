@@ -205,6 +205,29 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
 
 }
 
+static base::subtle::AtomicWord g_TestJni_updateStatus = 0;
+static jint Java_TestJni_updateStatus(JNIEnv* env, JniIntWrapper status) {
+  CHECK_CLAZZ(env, TestJni_clazz(env),
+      TestJni_clazz(env), 0);
+  jmethodID method_id =
+      base::android::MethodID::LazyGet<
+      base::android::MethodID::TYPE_STATIC>(
+      env, TestJni_clazz(env),
+      "updateStatus",
+
+"("
+"I"
+")"
+"I",
+      &g_TestJni_updateStatus);
+
+  jint ret =
+      env->CallStaticIntMethod(TestJni_clazz(env),
+          method_id, as_jint(status));
+  jni_generator::CheckException(env);
+  return ret;
+}
+
 static base::subtle::AtomicWord g_TestJni_uncheckedCall = 0;
 static void Java_TestJni_uncheckedCall(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper iParam) {

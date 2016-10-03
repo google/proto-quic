@@ -1197,6 +1197,23 @@ class SpdySerializedFrame {
   // Returns the actual size of the underlying buffer.
   size_t size() const { return size_; }
 
+  // Returns a buffer containing the contents of the frame, of which the caller
+  // takes ownership, and clears this SpdySerializedFrame.
+  char* ReleaseBuffer() {
+    char* buffer;
+    if (owns_buffer_) {
+      // If the buffer is owned, relinquish ownership to the caller.
+      buffer = frame_;
+      owns_buffer_ = false;
+    } else {
+      // Otherwise, we need to make a copy to give to the caller.
+      buffer = new char[size_];
+      memcpy(buffer, frame_, size_);
+    }
+    *this = SpdySerializedFrame();
+    return buffer;
+  }
+
  protected:
   char* frame_;
 

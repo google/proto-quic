@@ -35,11 +35,11 @@ class BindingsImpl : public ProxyResolverV8Tracing::Bindings {
   BindingsImpl(ProxyResolverErrorObserver* error_observer,
                HostResolver* host_resolver,
                NetLog* net_log,
-               const BoundNetLog& bound_net_log)
+               const NetLogWithSource& net_log_with_source)
       : error_observer_(error_observer),
         host_resolver_(host_resolver),
         net_log_(net_log),
-        bound_net_log_(bound_net_log) {}
+        net_log_with_source_(net_log_with_source) {}
 
   // ProxyResolverV8Tracing::Bindings overrides.
   void Alert(const base::string16& message) override {
@@ -60,13 +60,15 @@ class BindingsImpl : public ProxyResolverV8Tracing::Bindings {
 
   HostResolver* GetHostResolver() override { return host_resolver_; }
 
-  BoundNetLog GetBoundNetLog() override { return bound_net_log_; }
+  NetLogWithSource GetNetLogWithSource() override {
+    return net_log_with_source_;
+  }
 
  private:
   void LogEventToCurrentRequestAndGlobally(
       NetLogEventType type,
       const NetLog::ParametersCallback& parameters_callback) {
-    bound_net_log_.AddEvent(type, parameters_callback);
+    net_log_with_source_.AddEvent(type, parameters_callback);
 
     // Emit to the global NetLog event stream.
     if (net_log_)
@@ -76,7 +78,7 @@ class BindingsImpl : public ProxyResolverV8Tracing::Bindings {
   ProxyResolverErrorObserver* error_observer_;
   HostResolver* host_resolver_;
   NetLog* net_log_;
-  BoundNetLog bound_net_log_;
+  NetLogWithSource net_log_with_source_;
 };
 
 class ProxyResolverV8TracingWrapper : public ProxyResolver {
@@ -91,7 +93,7 @@ class ProxyResolverV8TracingWrapper : public ProxyResolver {
                      ProxyInfo* results,
                      const CompletionCallback& callback,
                      RequestHandle* request,
-                     const BoundNetLog& net_log) override;
+                     const NetLogWithSource& net_log) override;
 
   void CancelRequest(RequestHandle request) override;
 
@@ -121,7 +123,7 @@ int ProxyResolverV8TracingWrapper::GetProxyForURL(
     ProxyInfo* results,
     const CompletionCallback& callback,
     RequestHandle* request,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   resolver_impl_->GetProxyForURL(
       url, results, callback, request,
       base::WrapUnique(new BindingsImpl(error_observer_.get(), host_resolver_,
@@ -171,7 +173,7 @@ int ProxyResolverFactoryV8TracingWrapper::CreateProxyResolver(
   factory_impl_->CreateProxyResolverV8Tracing(
       pac_script,
       base::WrapUnique(new BindingsImpl(error_observer_local, host_resolver_,
-                                        net_log_, BoundNetLog())),
+                                        net_log_, NetLogWithSource())),
       v8_resolver_local,
       base::Bind(&ProxyResolverFactoryV8TracingWrapper::OnProxyResolverCreated,
                  base::Unretained(this), base::Passed(&v8_resolver), resolver,

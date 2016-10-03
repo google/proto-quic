@@ -18,6 +18,7 @@ namespace net {
 
 QuicUnackedPacketMap::QuicUnackedPacketMap()
     : largest_sent_packet_(0),
+      largest_sent_retransmittable_packet_(0),
       largest_observed_(0),
       least_unacked_(1),
       bytes_in_flight_(0),
@@ -59,6 +60,7 @@ void QuicUnackedPacketMap::AddSentPacket(SerializedPacket* packet,
   if (set_in_flight) {
     bytes_in_flight_ += bytes_sent;
     info.in_flight = true;
+    largest_sent_retransmittable_packet_ = packet_number;
   }
   unacked_packets_.push_back(info);
   // Swap the ack listeners and retransmittable frames to avoid allocations.

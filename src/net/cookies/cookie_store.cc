@@ -12,6 +12,10 @@ namespace net {
 
 CookieStore::~CookieStore() {}
 
+bool CookieStore::ChangeCauseIsDeletion(CookieStore::ChangeCause cause) {
+  return cause != CookieStore::ChangeCause::INSERTED;
+}
+
 std::string CookieStore::BuildCookieLine(
     const std::vector<CanonicalCookie>& cookies) {
   std::string cookie_line;

@@ -398,7 +398,7 @@ void FakeURLFetcher::RunDelegate() {
   // this with a weak pointer, and only call OnURLFetchComplete if this still
   // exists.
   auto weak_this = weak_factory_.GetWeakPtr();
-  delegate()->OnURLFetchDownloadProgress(this, response_bytes_,
+  delegate()->OnURLFetchDownloadProgress(this, response_bytes_, response_bytes_,
                                          response_bytes_);
   if (weak_this.get())
     delegate()->OnURLFetchComplete(this);

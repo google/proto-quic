@@ -13,6 +13,7 @@
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/threading/thread.h"
 #include "base/trace_event/trace_event.h"
 
 namespace base {

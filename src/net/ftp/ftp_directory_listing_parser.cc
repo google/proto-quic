@@ -45,8 +45,8 @@ int ParseListing(const base::string16& text,
                  const base::Time& current_time,
                  std::vector<FtpDirectoryListingEntry>* entries,
                  FtpServerType* server_type) {
-  std::vector<base::string16> lines;
-  base::SplitStringUsingSubstr(text, newline_separator, &lines);
+  std::vector<base::string16> lines = base::SplitStringUsingSubstr(
+      text, newline_separator, base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
 
   struct {
     base::Callback<bool(void)> callback;

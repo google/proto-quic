@@ -36,9 +36,9 @@ class BASE_EXPORT BindStateBase {
 
  protected:
   BindStateBase(InvokeFuncStorage polymorphic_invoke,
-                void (*destructor)(BindStateBase*));
+                void (*destructor)(const BindStateBase*));
   BindStateBase(InvokeFuncStorage polymorphic_invoke,
-                void (*destructor)(BindStateBase*),
+                void (*destructor)(const BindStateBase*),
                 bool (*is_cancelled)(const BindStateBase*));
   ~BindStateBase() = default;
 
@@ -51,8 +51,8 @@ class BASE_EXPORT BindStateBase {
     return is_cancelled_(this);
   }
 
-  void AddRef();
-  void Release();
+  void AddRef() const;
+  void Release() const;
 
   // In C++, it is safe to cast function pointers to function pointers of
   // another type. It is not okay to use void*. We create a InvokeFuncStorage
@@ -60,10 +60,10 @@ class BASE_EXPORT BindStateBase {
   // the original type on usage.
   InvokeFuncStorage polymorphic_invoke_;
 
-  AtomicRefCount ref_count_;
+  mutable AtomicRefCount ref_count_;
 
   // Pointer to a function that will properly destroy |this|.
-  void (*destructor_)(BindStateBase*);
+  void (*destructor_)(const BindStateBase*);
   bool (*is_cancelled_)(const BindStateBase*);
 
   DISALLOW_COPY_AND_ASSIGN(BindStateBase);

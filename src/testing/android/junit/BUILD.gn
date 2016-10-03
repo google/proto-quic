@@ -6,7 +6,6 @@ assert(is_android)
 
 import("//build/config/android/rules.gni")
 
-# GYP: //testing/android/junit_test.gyp:junit_test_support
 java_library("junit_test_support") {
   testonly = true
   java_files = [
@@ -27,17 +26,10 @@ java_library("junit_test_support") {
   deps = [
     "//third_party/junit",
     "//third_party/mockito:mockito_java",
-    "//third_party/robolectric:android-all-5.0.0_r2-robolectric-1",
-    "//third_party/robolectric:robolectric_annotations_java",
-    "//third_party/robolectric:robolectric_java",
-    "//third_party/robolectric:robolectric_resources_java",
-    "//third_party/robolectric:robolectric_utils_java",
-    "//third_party/robolectric:shadows-core-3.0-21",
-    "//third_party/robolectric:shadows-multidex-3.0",
+    "//third_party/robolectric:robolectric_all_java",
   ]
 }
 
-# GYP: //testing/android/junit_test.gyp:junit_unit_tests
 junit_binary("junit_unit_tests") {
   java_files = [
     "javatests/src/org/chromium/testing/local/GtestFilterTest.java",

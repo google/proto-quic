@@ -998,5 +998,43 @@ TEST_F(TcpCubicSenderPacketsTest, DefaultMaxCwnd) {
             sender->GetCongestionWindow() / kDefaultTCPMSS);
 }
 
+TEST_F(TcpCubicSenderPacketsTest, LimitCwndIncreaseInCongestionAvoidance) {
+  FLAGS_quic_limit_cubic_cwnd_increase = true;
+  // Enable Cubic.
+  sender_.reset(new TcpCubicSenderPacketsPeer(
+      &clock_, false, kDefaultMaxCongestionWindowPackets));
+
+  int num_sent = SendAvailableSendWindow();
+
+  // Make sure we fall out of slow start.
+  QuicByteCount saved_cwnd = sender_->GetCongestionWindow();
+  LoseNPackets(1);
+  EXPECT_GT(saved_cwnd, sender_->GetCongestionWindow());
+
+  // Ack the rest of the outstanding packets to get out of recovery.
+  for (int i = 1; i < num_sent; ++i) {
+    AckNPackets(1);
+  }
+  EXPECT_EQ(0u, bytes_in_flight_);
+  // Send a new window of data and ack all; cubic growth should occur.
+  saved_cwnd = sender_->GetCongestionWindow();
+  num_sent = SendAvailableSendWindow();
+
+  // Ack packets until the CWND increases.
+  while (sender_->GetCongestionWindow() == saved_cwnd) {
+    AckNPackets(1);
+    SendAvailableSendWindow();
+  }
+  EXPECT_EQ(bytes_in_flight_, sender_->GetCongestionWindow());
+  saved_cwnd = sender_->GetCongestionWindow();
+
+  // Advance time 2 seconds waiting for an ack.
+  clock_.AdvanceTime(QuicTime::Delta::FromMilliseconds(2000));
+
+  // Ack one packet.  The CWND should increase by only one packet.
+  AckNPackets(1);
+  EXPECT_EQ(saved_cwnd + kDefaultTCPMSS, sender_->GetCongestionWindow());
+}
+
 }  // namespace test
 }  // namespace net

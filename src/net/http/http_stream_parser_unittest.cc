@@ -79,7 +79,7 @@ class ReadErrorUploadDataStream : public UploadDataStream {
   void CompleteRead() { UploadDataStream::OnReadCompleted(ERR_FAILED); }
 
   // UploadDataStream implementation:
-  int InitInternal(const BoundNetLog& net_log) override { return OK; }
+  int InitInternal(const NetLogWithSource& net_log) override { return OK; }
 
   int ReadInternal(IOBuffer* buf, int buf_len) override {
     if (async_ == FailureMode::ASYNC) {
@@ -119,7 +119,7 @@ TEST(HttpStreamParser, DataReadErrorSynchronous) {
   EXPECT_EQ(0u, progress.position());
 
   ASSERT_THAT(upload_data_stream.Init(TestCompletionCallback().callback(),
-                                      BoundNetLog()),
+                                      NetLogWithSource()),
               IsOk());
 
   // Test upload progress after init.
@@ -134,7 +134,7 @@ TEST(HttpStreamParser, DataReadErrorSynchronous) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Content-Length", "12");
@@ -165,7 +165,7 @@ TEST(HttpStreamParser, DataReadErrorAsynchronous) {
   ReadErrorUploadDataStream upload_data_stream(
       ReadErrorUploadDataStream::FailureMode::ASYNC);
   ASSERT_THAT(upload_data_stream.Init(TestCompletionCallback().callback(),
-                                      BoundNetLog()),
+                                      NetLogWithSource()),
               IsOk());
 
   HttpRequestInfo request;
@@ -175,7 +175,7 @@ TEST(HttpStreamParser, DataReadErrorAsynchronous) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Content-Length", "12");
@@ -203,7 +203,7 @@ class InitAsyncUploadDataStream : public ChunkedUploadDataStream {
  private:
   void CompleteInit() { UploadDataStream::OnInitCompleted(OK); }
 
-  int InitInternal(const BoundNetLog& net_log) override {
+  int InitInternal(const NetLogWithSource& net_log) override {
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&InitAsyncUploadDataStream::CompleteInit,
                               weak_factory_.GetWeakPtr()));
@@ -219,7 +219,7 @@ TEST(HttpStreamParser, InitAsynchronousUploadDataStream) {
   InitAsyncUploadDataStream upload_data_stream(0);
 
   TestCompletionCallback callback;
-  int result = upload_data_stream.Init(callback.callback(), BoundNetLog());
+  int result = upload_data_stream.Init(callback.callback(), NetLogWithSource());
   ASSERT_THAT(result, IsError(ERR_IO_PENDING));
 
   // Should be empty progress while initialization is in progress.
@@ -251,7 +251,7 @@ TEST(HttpStreamParser, InitAsynchronousUploadDataStream) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Transfer-Encoding", "chunked");
@@ -345,7 +345,7 @@ TEST(HttpStreamParser, ShouldMergeRequestHeadersAndBody_EmptyBody) {
   std::unique_ptr<UploadDataStream> body(
       base::MakeUnique<ElementsUploadDataStream>(std::move(element_readers),
                                                  0));
-  ASSERT_THAT(body->Init(CompletionCallback(), BoundNetLog()), IsOk());
+  ASSERT_THAT(body->Init(CompletionCallback(), NetLogWithSource()), IsOk());
   // Shouldn't be merged if upload data is empty.
   ASSERT_FALSE(HttpStreamParser::ShouldMergeRequestHeadersAndBody(
       "some header", body.get()));
@@ -355,8 +355,9 @@ TEST(HttpStreamParser, ShouldMergeRequestHeadersAndBody_ChunkedBody) {
   const std::string payload = "123";
   std::unique_ptr<ChunkedUploadDataStream> body(new ChunkedUploadDataStream(0));
   body->AppendData(payload.data(), payload.size(), true);
-  ASSERT_THAT(body->Init(TestCompletionCallback().callback(), BoundNetLog()),
-              IsOk());
+  ASSERT_THAT(
+      body->Init(TestCompletionCallback().callback(), NetLogWithSource()),
+      IsOk());
   // Shouldn't be merged if upload data carries chunked data.
   ASSERT_FALSE(HttpStreamParser::ShouldMergeRequestHeadersAndBody(
       "some header", body.get()));
@@ -380,7 +381,7 @@ TEST(HttpStreamParser, ShouldMergeRequestHeadersAndBody_FileBody) {
     std::unique_ptr<UploadDataStream> body(
         new ElementsUploadDataStream(std::move(element_readers), 0));
     TestCompletionCallback callback;
-    ASSERT_THAT(body->Init(callback.callback(), BoundNetLog()),
+    ASSERT_THAT(body->Init(callback.callback(), NetLogWithSource()),
                 IsError(ERR_IO_PENDING));
     ASSERT_THAT(callback.WaitForResult(), IsOk());
     // Shouldn't be merged if upload data carries a file, as it's not in-memory.
@@ -400,7 +401,7 @@ TEST(HttpStreamParser, ShouldMergeRequestHeadersAndBody_SmallBodyInMemory) {
 
   std::unique_ptr<UploadDataStream> body(
       new ElementsUploadDataStream(std::move(element_readers), 0));
-  ASSERT_THAT(body->Init(CompletionCallback(), BoundNetLog()), IsOk());
+  ASSERT_THAT(body->Init(CompletionCallback(), NetLogWithSource()), IsOk());
   // Yes, should be merged if the in-memory body is small here.
   ASSERT_TRUE(HttpStreamParser::ShouldMergeRequestHeadersAndBody(
       "some header", body.get()));
@@ -414,7 +415,7 @@ TEST(HttpStreamParser, ShouldMergeRequestHeadersAndBody_LargeBodyInMemory) {
 
   std::unique_ptr<UploadDataStream> body(
       new ElementsUploadDataStream(std::move(element_readers), 0));
-  ASSERT_THAT(body->Init(CompletionCallback(), BoundNetLog()), IsOk());
+  ASSERT_THAT(body->Init(CompletionCallback(), NetLogWithSource()), IsOk());
   // Shouldn't be merged if the in-memory body is large here.
   ASSERT_FALSE(HttpStreamParser::ShouldMergeRequestHeadersAndBody(
       "some header", body.get()));
@@ -435,7 +436,7 @@ TEST(HttpStreamParser, SentBytesNoHeaders) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpResponseInfo response;
   TestCompletionCallback callback;
@@ -463,7 +464,7 @@ TEST(HttpStreamParser, SentBytesWithHeaders) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Host", "localhost");
@@ -494,7 +495,7 @@ TEST(HttpStreamParser, SentBytesWithHeadersMultiWrite) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Host", "localhost");
@@ -526,7 +527,7 @@ TEST(HttpStreamParser, SentBytesWithErrorWritingHeaders) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Host", "localhost");
@@ -557,7 +558,7 @@ TEST(HttpStreamParser, SentBytesPost) {
       base::MakeUnique<UploadBytesElementReader>("hello world!", 12));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
   ASSERT_THAT(upload_data_stream.Init(TestCompletionCallback().callback(),
-                                      BoundNetLog()),
+                                      NetLogWithSource()),
               IsOk());
 
   HttpRequestInfo request;
@@ -567,7 +568,7 @@ TEST(HttpStreamParser, SentBytesPost) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Content-Length", "12");
@@ -600,7 +601,7 @@ TEST(HttpStreamParser, SentBytesChunkedPostError) {
 
   ChunkedUploadDataStream upload_data_stream(0);
   ASSERT_THAT(upload_data_stream.Init(TestCompletionCallback().callback(),
-                                      BoundNetLog()),
+                                      NetLogWithSource()),
               IsOk());
 
   HttpRequestInfo request;
@@ -610,7 +611,7 @@ TEST(HttpStreamParser, SentBytesChunkedPostError) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders headers;
   headers.SetHeader("Transfer-Encoding", "chunked");
@@ -661,9 +662,9 @@ TEST(HttpStreamParser, AsyncSingleChunkAndAsyncSocket) {
   };
 
   ChunkedUploadDataStream upload_stream(0);
-  ASSERT_THAT(
-      upload_stream.Init(TestCompletionCallback().callback(), BoundNetLog()),
-      IsOk());
+  ASSERT_THAT(upload_stream.Init(TestCompletionCallback().callback(),
+                                 NetLogWithSource()),
+              IsOk());
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   std::unique_ptr<ClientSocketHandle> socket_handle =
@@ -676,7 +677,7 @@ TEST(HttpStreamParser, AsyncSingleChunkAndAsyncSocket) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   request_headers.SetHeader("Transfer-Encoding", "chunked");
@@ -739,9 +740,9 @@ TEST(HttpStreamParser, SyncSingleChunkAndAsyncSocket) {
   };
 
   ChunkedUploadDataStream upload_stream(0);
-  ASSERT_THAT(
-      upload_stream.Init(TestCompletionCallback().callback(), BoundNetLog()),
-      IsOk());
+  ASSERT_THAT(upload_stream.Init(TestCompletionCallback().callback(),
+                                 NetLogWithSource()),
+              IsOk());
   // Append the only chunk.
   upload_stream.AppendData(kChunk, arraysize(kChunk) - 1, true);
 
@@ -756,7 +757,7 @@ TEST(HttpStreamParser, SyncSingleChunkAndAsyncSocket) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   request_headers.SetHeader("Transfer-Encoding", "chunked");
@@ -821,9 +822,9 @@ TEST(HttpStreamParser, AsyncChunkAndAsyncSocketWithMultipleChunks) {
 
   ChunkedUploadDataStream upload_stream(0);
   upload_stream.AppendData(kChunk1, arraysize(kChunk1) - 1, false);
-  ASSERT_THAT(
-      upload_stream.Init(TestCompletionCallback().callback(), BoundNetLog()),
-      IsOk());
+  ASSERT_THAT(upload_stream.Init(TestCompletionCallback().callback(),
+                                 NetLogWithSource()),
+              IsOk());
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   std::unique_ptr<ClientSocketHandle> socket_handle =
@@ -835,8 +836,8 @@ TEST(HttpStreamParser, AsyncChunkAndAsyncSocketWithMultipleChunks) {
   request_info.upload_data_stream = &upload_stream;
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
-  HttpStreamParser parser(
-      socket_handle.get(), &request_info, read_buffer.get(), BoundNetLog());
+  HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   request_headers.SetHeader("Transfer-Encoding", "chunked");
@@ -905,9 +906,9 @@ TEST(HttpStreamParser, AsyncEmptyChunkedUpload) {
   };
 
   ChunkedUploadDataStream upload_stream(0);
-  ASSERT_THAT(
-      upload_stream.Init(TestCompletionCallback().callback(), BoundNetLog()),
-      IsOk());
+  ASSERT_THAT(upload_stream.Init(TestCompletionCallback().callback(),
+                                 NetLogWithSource()),
+              IsOk());
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   std::unique_ptr<ClientSocketHandle> socket_handle =
@@ -920,7 +921,7 @@ TEST(HttpStreamParser, AsyncEmptyChunkedUpload) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   request_headers.SetHeader("Transfer-Encoding", "chunked");
@@ -978,9 +979,9 @@ TEST(HttpStreamParser, SyncEmptyChunkedUpload) {
   };
 
   ChunkedUploadDataStream upload_stream(0);
-  ASSERT_THAT(
-      upload_stream.Init(TestCompletionCallback().callback(), BoundNetLog()),
-      IsOk());
+  ASSERT_THAT(upload_stream.Init(TestCompletionCallback().callback(),
+                                 NetLogWithSource()),
+              IsOk());
   // Append final empty chunk.
   upload_stream.AppendData(nullptr, 0, true);
 
@@ -995,7 +996,7 @@ TEST(HttpStreamParser, SyncEmptyChunkedUpload) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
-                          BoundNetLog());
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   request_headers.SetHeader("Transfer-Encoding", "chunked");
@@ -1096,8 +1097,8 @@ TEST(HttpStreamParser, TruncatedHeaders) {
       request_info.load_flags = LOAD_NORMAL;
 
       scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
-      HttpStreamParser parser(
-          socket_handle.get(), &request_info, read_buffer.get(), BoundNetLog());
+      HttpStreamParser parser(socket_handle.get(), &request_info,
+                              read_buffer.get(), NetLogWithSource());
 
       HttpRequestHeaders request_headers;
       HttpResponseInfo response_info;
@@ -1153,8 +1154,8 @@ TEST(HttpStreamParser, Websocket101Response) {
   request_info.load_flags = LOAD_NORMAL;
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
-  HttpStreamParser parser(
-      socket_handle.get(), &request_info, read_buffer.get(), BoundNetLog());
+  HttpStreamParser parser(socket_handle.get(), &request_info, read_buffer.get(),
+                          NetLogWithSource());
 
   HttpRequestHeaders request_headers;
   HttpResponseInfo response_info;
@@ -1224,8 +1225,8 @@ class SimpleGetRunner {
     request_info_.url = url_;
     request_info_.load_flags = LOAD_NORMAL;
 
-    parser_.reset(new HttpStreamParser(
-        socket_handle_.get(), &request_info_, read_buffer(), BoundNetLog()));
+    parser_.reset(new HttpStreamParser(socket_handle_.get(), &request_info_,
+                                       read_buffer(), NetLogWithSource()));
 
     parser_->set_http_09_on_non_default_ports_enabled(
         http_09_on_non_default_ports_enabled_);
@@ -1597,7 +1598,7 @@ TEST(HttpStreamParser, ReadAfterUnownedObjectsDestroyed) {
 
   scoped_refptr<GrowableIOBuffer> read_buffer(new GrowableIOBuffer);
   HttpStreamParser parser(socket_handle.get(), request_info.get(),
-                          read_buffer.get(), BoundNetLog());
+                          read_buffer.get(), NetLogWithSource());
 
   std::unique_ptr<HttpRequestHeaders> request_headers(new HttpRequestHeaders());
   std::unique_ptr<HttpResponseInfo> response_info(new HttpResponseInfo());

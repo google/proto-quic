@@ -300,7 +300,7 @@ GeneralNames::GeneralNames() {}
 GeneralNames::~GeneralNames() {}
 
 // static
-std::unique_ptr<GeneralNames> GeneralNames::CreateFromDer(
+std::unique_ptr<GeneralNames> GeneralNames::Create(
     const der::Input& general_names_tlv) {
   // RFC 5280 section 4.2.1.6:
   // GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
@@ -332,7 +332,7 @@ std::unique_ptr<GeneralNames> GeneralNames::CreateFromDer(
 NameConstraints::~NameConstraints() {}
 
 // static
-std::unique_ptr<NameConstraints> NameConstraints::CreateFromDer(
+std::unique_ptr<NameConstraints> NameConstraints::Create(
     const der::Input& extension_value,
     bool is_critical) {
   std::unique_ptr<NameConstraints> name_constraints(new NameConstraints());

@@ -19,15 +19,15 @@ def CheckChange(input_api, output_api):
           ['python', 'pretty_print.py', '--presubmit'], cwd=cwd)
       if exit_code != 0:
         return [output_api.PresubmitError(
-            'histograms.xml is not formatted correctly; run pretty_print.py '
-            'to fix')]
+            'histograms.xml is not formatted correctly; run %s/pretty_print.py '
+            'to fix' % input_api.PresubmitLocalPath())]
 
       exit_code = input_api.subprocess.call(
           ['python', 'validate_format.py'], cwd=cwd)
       if exit_code != 0:
         return [output_api.PresubmitError(
-            'histograms.xml is not well formatted; run validate_format.py '
-            'and fix the reported errors')]
+            'histograms.xml is not well formatted; run %s/validate_format.py '
+            'and fix the reported errors' % input_api.PresubmitLocalPath())]
   return []
 
 

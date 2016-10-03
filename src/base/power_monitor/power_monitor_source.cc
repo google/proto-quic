@@ -5,16 +5,12 @@
 #include "base/power_monitor/power_monitor_source.h"
 
 #include "base/power_monitor/power_monitor.h"
+#include "build/build_config.h"
 
 namespace base {
 
-PowerMonitorSource::PowerMonitorSource()
-    : on_battery_power_(false),
-      suspended_(false) {
-}
-
-PowerMonitorSource::~PowerMonitorSource() {
-}
+PowerMonitorSource::PowerMonitorSource() {}
+PowerMonitorSource::~PowerMonitorSource() {}
 
 bool PowerMonitorSource::IsOnBatteryPower() {
   AutoLock auto_lock(battery_lock_);
@@ -61,6 +57,13 @@ void PowerMonitorSource::ProcessPowerEvent(PowerEvent event_id) {
       }
       break;
   }
+}
+
+void PowerMonitorSource::SetInitialOnBatteryPowerState(bool on_battery_power) {
+  // Must only be called before a monitor exists, otherwise the caller should
+  // have just used a normal ProcessPowerEvent(POWER_STATE_EVENT) call.
+  DCHECK(!PowerMonitor::Get());
+  on_battery_power_ = on_battery_power;
 }
 
 }  // namespace base

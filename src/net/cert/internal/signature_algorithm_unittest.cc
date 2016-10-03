@@ -24,19 +24,25 @@ namespace {
 template <size_t N>
 bool ParseDer(const uint8_t (&data)[N],
               std::unique_ptr<SignatureAlgorithm>* out) {
-  // TODO(crbug.com/634443): Test the errors.
   CertErrors errors;
   *out = SignatureAlgorithm::Create(der::Input(data, N), &errors);
-  return !!*out;
+  bool success = !!*out;
+
+  // TODO(crbug.com/634443): Test the errors.
+  // if (!success)
+  //   EXPECT_FALSE(errors.empty());
+
+  return success;
 }
 
 // Parses a SignatureAlgorithm given an empty DER input.
 TEST(SignatureAlgorithmTest, ParseDerEmpty) {
-  // TODO(crbug.com/634443): Test the errors.
   CertErrors errors;
   std::unique_ptr<SignatureAlgorithm> algorithm =
       SignatureAlgorithm::Create(der::Input(), &errors);
   ASSERT_FALSE(algorithm);
+  // TODO(crbug.com/634443): Test the errors.
+  // EXPECT_FALSE(errors.empty());
 }
 
 // Parses a SignatureAlgorithm given invalid DER input.

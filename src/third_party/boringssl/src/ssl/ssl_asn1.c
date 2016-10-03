@@ -85,6 +85,7 @@
 #include <limits.h>
 #include <string.h>
 
+#include <openssl/buf.h>
 #include <openssl/bytestring.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
@@ -339,8 +340,7 @@ static int SSL_SESSION_to_bytes_full(const SSL_SESSION *in, uint8_t **out_data,
       OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       goto err;
     }
-    size_t i;
-    for (i = 0; i < sk_X509_num(in->cert_chain); i++) {
+    for (size_t i = 0; i < sk_X509_num(in->cert_chain); i++) {
       if (!ssl_add_cert_to_cbb(&child, sk_X509_value(in->cert_chain, i))) {
         goto err;
       }
@@ -377,6 +377,22 @@ static int SSL_SESSION_to_bytes_full(const SSL_SESSION *in, uint8_t **out_data,
 
 int SSL_SESSION_to_bytes(const SSL_SESSION *in, uint8_t **out_data,
                          size_t *out_len) {
+  if (in->not_resumable) {
+    /* If the caller has an unresumable session, e.g. if |SSL_get_session| were
+     * called on a TLS 1.3 or False Started connection, serialize with a
+     * placeholder value so it is not accidentally deserialized into a resumable
+     * one. */
+    static const char kNotResumableSession[] = "NOT RESUMABLE";
+
+    *out_len = strlen(kNotResumableSession);
+    *out_data = BUF_memdup(kNotResumableSession, *out_len);
+    if (*out_data == NULL) {
+      return 0;
+    }
+
+    return 1;
+  }
+
   return SSL_SESSION_to_bytes_full(in, out_data, out_len, 0);
 }
 
@@ -525,12 +541,6 @@ static SSL_SESSION *SSL_SESSION_parse(CBS *cbs) {
       version != kVersion ||
       !CBS_get_asn1_uint64(&session, &ssl_version)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_SSL_SESSION);
-    goto err;
-  }
-  /* Only support SSLv3/TLS and DTLS. */
-  if ((ssl_version >> 8) != SSL3_VERSION_MAJOR &&
-      (ssl_version >> 8) != (DTLS1_VERSION >> 8)) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_UNKNOWN_SSL_VERSION);
     goto err;
   }
   ret->ssl_version = ssl_version;

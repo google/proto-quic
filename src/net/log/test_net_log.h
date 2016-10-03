@@ -48,18 +48,18 @@ class TestNetLog : public NetLog {
   DISALLOW_COPY_AND_ASSIGN(TestNetLog);
 };
 
-// Helper class that exposes a similar API as BoundNetLog, but uses a
+// Helper class that exposes a similar API as NetLogWithSource, but uses a
 // TestNetLog rather than the more generic NetLog.
 //
-// A BoundTestNetLog can easily be converted to a BoundNetLog using the
+// A BoundTestNetLog can easily be converted to a NetLogWithSource using the
 // bound() method.
 class BoundTestNetLog {
  public:
   BoundTestNetLog();
   ~BoundTestNetLog();
 
-  // The returned BoundNetLog is only valid while |this| is alive.
-  BoundNetLog bound() const { return net_log_; }
+  // The returned NetLogWithSource is only valid while |this| is alive.
+  NetLogWithSource bound() const { return net_log_; }
 
   // Fills |entry_list| with all entries in the log.
   void GetEntries(TestNetLogEntry::List* entry_list) const;
@@ -78,7 +78,7 @@ class BoundTestNetLog {
 
  private:
   TestNetLog test_net_log_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(BoundTestNetLog);
 };

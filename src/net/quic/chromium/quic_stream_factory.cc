@@ -113,9 +113,9 @@ std::unique_ptr<base::Value> NetLogQuicConnectionMigrationSuccessCallback(
 class ScopedConnectionMigrationEventLog {
  public:
   ScopedConnectionMigrationEventLog(NetLog* net_log, std::string trigger)
-      : net_log_(
-            BoundNetLog::Make(net_log,
-                              NetLogSourceType::QUIC_CONNECTION_MIGRATION)) {
+      : net_log_(NetLogWithSource::Make(
+            net_log,
+            NetLogSourceType::QUIC_CONNECTION_MIGRATION)) {
     net_log_.BeginEvent(
         NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED,
         base::Bind(&NetLogQuicConnectionMigrationTriggerCallback, trigger));
@@ -125,10 +125,10 @@ class ScopedConnectionMigrationEventLog {
     net_log_.EndEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_TRIGGERED);
   }
 
-  const BoundNetLog& net_log() { return net_log_; }
+  const NetLogWithSource& net_log() { return net_log_; }
 
  private:
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 };
 
 void HistogramCreateSessionFailure(enum CreateSessionFailure error) {
@@ -136,7 +136,7 @@ void HistogramCreateSessionFailure(enum CreateSessionFailure error) {
                             CREATION_ERROR_MAX);
 }
 
-void HistogramAndLogMigrationFailure(const BoundNetLog& net_log,
+void HistogramAndLogMigrationFailure(const NetLogWithSource& net_log,
                                      enum QuicConnectionMigrationStatus status,
                                      QuicConnectionId connection_id,
                                      std::string reason) {
@@ -218,7 +218,7 @@ class QuicStreamFactory::CertVerifierJob {
 
   CertVerifierJob(const QuicServerId& server_id,
                   int cert_verify_flags,
-                  const BoundNetLog& net_log)
+                  const NetLogWithSource& net_log)
       : server_id_(server_id),
         verify_callback_(nullptr),
         verify_context_(base::WrapUnique(
@@ -266,7 +266,7 @@ class QuicStreamFactory::CertVerifierJob {
   std::unique_ptr<ProofVerifyDetails> verify_details_;
   std::string verify_error_details_;
   base::TimeTicks start_time_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
   CompletionCallback callback_;
   base::WeakPtrFactory<CertVerifierJob> weak_factory_;
 
@@ -283,7 +283,7 @@ class QuicStreamFactory::Job {
       bool was_alternative_service_recently_broken,
       int cert_verify_flags,
       QuicServerInfo* server_info,
-      const BoundNetLog& net_log);
+      const NetLogWithSource& net_log);
 
   // Creates a new job to handle the resumption of for connecting an
   // existing session.
@@ -338,7 +338,7 @@ class QuicStreamFactory::Job {
   bool was_alternative_service_recently_broken_;
   std::unique_ptr<QuicServerInfo> server_info_;
   bool started_another_job_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
   int num_sent_client_hellos_;
   QuicChromiumClientSession* session_;
   CompletionCallback callback_;
@@ -355,7 +355,7 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
                             bool was_alternative_service_recently_broken,
                             int cert_verify_flags,
                             QuicServerInfo* server_info,
-                            const BoundNetLog& net_log)
+                            const NetLogWithSource& net_log)
     : io_state_(STATE_RESOLVE_HOST),
       factory_(factory),
       host_resolver_(host_resolver),
@@ -650,7 +650,7 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
                                int cert_verify_flags,
                                const GURL& url,
                                base::StringPiece method,
-                               const BoundNetLog& net_log,
+                               const NetLogWithSource& net_log,
                                const CompletionCallback& callback) {
   DCHECK(callback_.is_null());
   DCHECK(factory_);
@@ -816,7 +816,7 @@ QuicStreamFactory::QuicStreamFactory(
         new ChannelIDSourceChromium(channel_id_service));
   }
   if (enable_token_binding && channel_id_service)
-    crypto_config_.tb_key_params.push_back(kP256);
+    crypto_config_.tb_key_params.push_back(kTB10);
   crypto::EnsureOpenSSLInit();
   bool has_aes_hardware_support = !!EVP_has_aes_hardware();
   UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.PreferAesGcm",
@@ -925,7 +925,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
                               int cert_verify_flags,
                               const GURL& url,
                               base::StringPiece method,
-                              const BoundNetLog& net_log,
+                              const NetLogWithSource& net_log,
                               QuicStreamRequest* request) {
   DCHECK(server_id.host_port_pair().Equals(HostPortPair::FromURL(url)));
   // Enforce session affinity for promised streams.
@@ -1042,7 +1042,7 @@ bool QuicStreamFactory::QuicSessionKey::operator==(
 
 void QuicStreamFactory::CreateAuxilaryJob(const QuicSessionKey& key,
                                           int cert_verify_flags,
-                                          const BoundNetLog& net_log) {
+                                          const NetLogWithSource& net_log) {
   Job* aux_job =
       new Job(this, host_resolver_, key, WasQuicRecentlyBroken(key.server_id()),
               cert_verify_flags, nullptr, net_log);
@@ -1328,7 +1328,7 @@ NetworkHandle QuicStreamFactory::FindAlternateNetwork(
 void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     NetworkHandle new_network,
     bool close_if_cannot_migrate,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   QuicStreamFactory::SessionIdMap::iterator it = all_sessions_.begin();
   while (it != all_sessions_.end()) {
     QuicChromiumClientSession* session = it->first;
@@ -1337,15 +1337,15 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     // If session is already bound to |new_network|, move on.
     if (session->GetDefaultSocket()->GetBoundNetwork() == new_network) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_ALREADY_MIGRATED,
-          session->connection_id(), "Already bound to new network");
+          net_log, MIGRATION_STATUS_ALREADY_MIGRATED, session->connection_id(),
+          "Already bound to new network");
       continue;
     }
 
     // Close idle sessions.
     if (session->GetNumActiveStreams() == 0) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
+          net_log, MIGRATION_STATUS_NO_MIGRATABLE_STREAMS,
           session->connection_id(), "No active sessions");
       session->CloseSessionOnError(
           ERR_NETWORK_CHANGED, QUIC_CONNECTION_MIGRATION_NO_MIGRATABLE_STREAMS);
@@ -1357,7 +1357,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
 
     // Do not migrate sessions where connection migration is disabled.
     if (session->config()->DisableConnectionMigration()) {
-      HistogramAndLogMigrationFailure(bound_net_log, MIGRATION_STATUS_DISABLED,
+      HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_DISABLED,
                                       session->connection_id(),
                                       "Migration disabled");
       if (close_if_cannot_migrate) {
@@ -1370,7 +1370,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     // Do not migrate sessions with non-migratable streams.
     if (session->HasNonMigratableStreams()) {
       HistogramAndLogMigrationFailure(
-          bound_net_log, MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
+          net_log, MIGRATION_STATUS_NON_MIGRATABLE_STREAM,
           session->connection_id(), "Non-migratable stream");
       if (close_if_cannot_migrate) {
         session->CloseSessionOnError(
@@ -1388,7 +1388,7 @@ void QuicStreamFactory::MaybeMigrateOrCloseSessions(
     }
 
     MigrateSessionToNewNetwork(session, new_network,
-                               /*close_session_on_error=*/true, bound_net_log);
+                               /*close_session_on_error=*/true, net_log);
   }
 }
 
@@ -1425,7 +1425,7 @@ MigrationResult QuicStreamFactory::MaybeMigrateSingleSession(
 void QuicStreamFactory::MigrateSessionToNewPeerAddress(
     QuicChromiumClientSession* session,
     IPEndPoint peer_address,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   if (!allow_server_migration_)
     return;
 
@@ -1437,16 +1437,16 @@ void QuicStreamFactory::MigrateSessionToNewPeerAddress(
   // causes the session to use the default network for the new socket.
   MigrateSessionInner(session, peer_address,
                       NetworkChangeNotifier::kInvalidNetworkHandle,
-                      /*close_session_on_error=*/true, bound_net_log);
+                      /*close_session_on_error=*/true, net_log);
 }
 
 MigrationResult QuicStreamFactory::MigrateSessionToNewNetwork(
     QuicChromiumClientSession* session,
     NetworkHandle network,
     bool close_session_on_error,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   return MigrateSessionInner(session, session->connection()->peer_address(),
-                             network, close_session_on_error, bound_net_log);
+                             network, close_session_on_error, net_log);
 }
 
 MigrationResult QuicStreamFactory::MigrateSessionInner(
@@ -1454,7 +1454,7 @@ MigrationResult QuicStreamFactory::MigrateSessionInner(
     IPEndPoint peer_address,
     NetworkHandle network,
     bool close_session_on_error,
-    const BoundNetLog& bound_net_log) {
+    const NetLogWithSource& net_log) {
   // Use OS-specified port for socket (DEFAULT_BIND) instead of
   // using the PortSuggester since the connection is being migrated
   // and not being newly created.
@@ -1463,9 +1463,9 @@ MigrationResult QuicStreamFactory::MigrateSessionInner(
           DatagramSocket::DEFAULT_BIND, RandIntCallback(),
           session->net_log().net_log(), session->net_log().source()));
   if (ConfigureSocket(socket.get(), peer_address, network) != OK) {
-    HistogramAndLogMigrationFailure(
-        bound_net_log, MIGRATION_STATUS_INTERNAL_ERROR,
-        session->connection_id(), "Socket configuration failed");
+    HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_INTERNAL_ERROR,
+                                    session->connection_id(),
+                                    "Socket configuration failed");
     if (close_session_on_error) {
       session->CloseSessionOnError(ERR_NETWORK_CHANGED, QUIC_INTERNAL_ERROR);
     }
@@ -1481,9 +1481,9 @@ MigrationResult QuicStreamFactory::MigrateSessionInner(
 
   if (!session->MigrateToSocket(std::move(socket), std::move(new_reader),
                                 std::move(new_writer))) {
-    HistogramAndLogMigrationFailure(
-        bound_net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
-        session->connection_id(), "Too many migrations");
+    HistogramAndLogMigrationFailure(net_log, MIGRATION_STATUS_TOO_MANY_CHANGES,
+                                    session->connection_id(),
+                                    "Too many migrations");
     if (close_session_on_error) {
       session->CloseSessionOnError(ERR_NETWORK_CHANGED,
                                    QUIC_CONNECTION_MIGRATION_TOO_MANY_CHANGES);
@@ -1491,10 +1491,9 @@ MigrationResult QuicStreamFactory::MigrateSessionInner(
     return MigrationResult::FAILURE;
   }
   HistogramMigrationStatus(MIGRATION_STATUS_SUCCESS);
-  bound_net_log.AddEvent(
-      NetLogEventType::QUIC_CONNECTION_MIGRATION_SUCCESS,
-      base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
-                 session->connection_id()));
+  net_log.AddEvent(NetLogEventType::QUIC_CONNECTION_MIGRATION_SUCCESS,
+                   base::Bind(&NetLogQuicConnectionMigrationSuccessCallback,
+                              session->connection_id()));
   return MigrationResult::SUCCESS;
 }
 
@@ -1601,7 +1600,7 @@ int QuicStreamFactory::CreateSession(
     const AddressList& address_list,
     base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     QuicChromiumClientSession** session) {
   if (need_to_evaluate_consecutive_disabled_count_) {
     task_runner_->PostDelayedTask(
@@ -1763,7 +1762,7 @@ bool QuicStreamFactory::CryptoConfigCacheIsEmpty(
 QuicAsyncStatus QuicStreamFactory::StartCertVerifyJob(
     const QuicServerId& server_id,
     int cert_verify_flags,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   if (!race_cert_verification_)
     return QUIC_FAILURE;
   QuicCryptoClientConfig::CachedState* cached =

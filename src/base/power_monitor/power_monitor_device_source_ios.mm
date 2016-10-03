@@ -8,6 +8,11 @@
 
 namespace base {
 
+bool PowerMonitorDeviceSource::IsOnBatteryPowerImpl() {
+  NOTIMPLEMENTED();
+  return false;
+}
+
 void PowerMonitorDeviceSource::PlatformInit() {
   NSNotificationCenter* nc = [NSNotificationCenter defaultCenter];
   id foreground =

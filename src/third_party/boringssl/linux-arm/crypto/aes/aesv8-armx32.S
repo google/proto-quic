@@ -12,11 +12,11 @@
 .long	0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d	@ rotate-n-splat
 .long	0x1b,0x1b,0x1b,0x1b
 
-.globl	aes_v8_set_encrypt_key
-.hidden	aes_v8_set_encrypt_key
-.type	aes_v8_set_encrypt_key,%function
+.globl	aes_hw_set_encrypt_key
+.hidden	aes_hw_set_encrypt_key
+.type	aes_hw_set_encrypt_key,%function
 .align	5
-aes_v8_set_encrypt_key:
+aes_hw_set_encrypt_key:
 .Lenc_key:
 	mov	r3,#-1
 	cmp	r0,#0
@@ -181,13 +181,13 @@ aes_v8_set_encrypt_key:
 	mov	r0,r3			@ return value
 
 	bx	lr
-.size	aes_v8_set_encrypt_key,.-aes_v8_set_encrypt_key
+.size	aes_hw_set_encrypt_key,.-aes_hw_set_encrypt_key
 
-.globl	aes_v8_set_decrypt_key
-.hidden	aes_v8_set_decrypt_key
-.type	aes_v8_set_decrypt_key,%function
+.globl	aes_hw_set_decrypt_key
+.hidden	aes_hw_set_decrypt_key
+.type	aes_hw_set_decrypt_key,%function
 .align	5
-aes_v8_set_decrypt_key:
+aes_hw_set_decrypt_key:
 	stmdb	sp!,{r4,lr}
 	bl	.Lenc_key
 
@@ -220,12 +220,12 @@ aes_v8_set_decrypt_key:
 	eor	r0,r0,r0		@ return value
 .Ldec_key_abort:
 	ldmia	sp!,{r4,pc}
-.size	aes_v8_set_decrypt_key,.-aes_v8_set_decrypt_key
-.globl	aes_v8_encrypt
-.hidden	aes_v8_encrypt
-.type	aes_v8_encrypt,%function
+.size	aes_hw_set_decrypt_key,.-aes_hw_set_decrypt_key
+.globl	aes_hw_encrypt
+.hidden	aes_hw_encrypt
+.type	aes_hw_encrypt,%function
 .align	5
-aes_v8_encrypt:
+aes_hw_encrypt:
 	ldr	r3,[r2,#240]
 	vld1.32	{q0},[r2]!
 	vld1.8	{q2},[r0]
@@ -250,12 +250,12 @@ aes_v8_encrypt:
 
 	vst1.8	{q2},[r1]
 	bx	lr
-.size	aes_v8_encrypt,.-aes_v8_encrypt
-.globl	aes_v8_decrypt
-.hidden	aes_v8_decrypt
-.type	aes_v8_decrypt,%function
+.size	aes_hw_encrypt,.-aes_hw_encrypt
+.globl	aes_hw_decrypt
+.hidden	aes_hw_decrypt
+.type	aes_hw_decrypt,%function
 .align	5
-aes_v8_decrypt:
+aes_hw_decrypt:
 	ldr	r3,[r2,#240]
 	vld1.32	{q0},[r2]!
 	vld1.8	{q2},[r0]
@@ -280,12 +280,12 @@ aes_v8_decrypt:
 
 	vst1.8	{q2},[r1]
 	bx	lr
-.size	aes_v8_decrypt,.-aes_v8_decrypt
-.globl	aes_v8_cbc_encrypt
-.hidden	aes_v8_cbc_encrypt
-.type	aes_v8_cbc_encrypt,%function
+.size	aes_hw_decrypt,.-aes_hw_decrypt
+.globl	aes_hw_cbc_encrypt
+.hidden	aes_hw_cbc_encrypt
+.type	aes_hw_cbc_encrypt,%function
 .align	5
-aes_v8_cbc_encrypt:
+aes_hw_cbc_encrypt:
 	mov	ip,sp
 	stmdb	sp!,{r4,r5,r6,r7,r8,lr}
 	vstmdb	sp!,{d8,d9,d10,d11,d12,d13,d14,d15}            @ ABI specification says so
@@ -573,12 +573,12 @@ aes_v8_cbc_encrypt:
 .Lcbc_abort:
 	vldmia	sp!,{d8,d9,d10,d11,d12,d13,d14,d15}
 	ldmia	sp!,{r4,r5,r6,r7,r8,pc}
-.size	aes_v8_cbc_encrypt,.-aes_v8_cbc_encrypt
-.globl	aes_v8_ctr32_encrypt_blocks
-.hidden	aes_v8_ctr32_encrypt_blocks
-.type	aes_v8_ctr32_encrypt_blocks,%function
+.size	aes_hw_cbc_encrypt,.-aes_hw_cbc_encrypt
+.globl	aes_hw_ctr32_encrypt_blocks
+.hidden	aes_hw_ctr32_encrypt_blocks
+.type	aes_hw_ctr32_encrypt_blocks,%function
 .align	5
-aes_v8_ctr32_encrypt_blocks:
+aes_hw_ctr32_encrypt_blocks:
 	mov	ip,sp
 	stmdb	sp!,{r4,r5,r6,r7,r8,r9,r10,lr}
 	vstmdb	sp!,{d8,d9,d10,d11,d12,d13,d14,d15}            @ ABI specification says so
@@ -757,6 +757,6 @@ aes_v8_ctr32_encrypt_blocks:
 .Lctr32_done:
 	vldmia	sp!,{d8,d9,d10,d11,d12,d13,d14,d15}
 	ldmia	sp!,{r4,r5,r6,r7,r8,r9,r10,pc}
-.size	aes_v8_ctr32_encrypt_blocks,.-aes_v8_ctr32_encrypt_blocks
+.size	aes_hw_ctr32_encrypt_blocks,.-aes_hw_ctr32_encrypt_blocks
 #endif
 #endif

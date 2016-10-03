@@ -23,6 +23,11 @@ def HostArch():
     host_arch = 'arm'
   elif host_arch.startswith('mips'):
     host_arch = 'mips'
+  elif host_arch.startswith('ppc'):
+    host_arch = 'ppc'
+  elif host_arch.startswith('s390'):
+    host_arch = 's390'
+
 
   # platform.machine is based on running kernel. It's possible to use 64-bit
   # kernel with 32-bit userland, e.g. to give linker slightly more memory.

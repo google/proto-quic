@@ -244,7 +244,7 @@ class SequencedWorkerPoolTest
         tracker_(new TestTracker) {}
 
   void SetUp() override {
-    if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER) {
+    if (RedirectedToTaskScheduler()) {
       std::vector<SchedulerWorkerPoolParams> worker_pool_params;
       worker_pool_params.emplace_back(
           "SchedulerWorkerPoolName", ThreadPriority::NORMAL,
@@ -265,10 +265,14 @@ class SequencedWorkerPoolTest
     // TaskScheduler.
     DeletePool();
 
-    if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER) {
+    if (RedirectedToTaskScheduler()) {
       SequencedWorkerPool::ResetRedirectToTaskSchedulerForProcessForTesting();
       DeleteTaskScheduler();
     }
+  }
+
+  bool RedirectedToTaskScheduler() const {
+    return GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER;
   }
 
   const scoped_refptr<SequencedWorkerPool>& pool() {
@@ -393,17 +397,22 @@ TEST_P(SequencedWorkerPoolTest, DelayedTaskDuringShutdown) {
 
   // Shutdown the pool.
   pool()->Shutdown();
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     TaskScheduler::GetInstance()->Shutdown();
 
   // Verify that we didn't block until the task was due.
   ASSERT_LT(base::Time::Now() - posted_at, TestTimeouts::action_timeout());
 
-  // Verify that the delayed task is deleted when the SequencedWorkerPool (and
-  // the TaskScheduler when applicable) are deleted.
-  EXPECT_FALSE(deleted_flag->data);
+  // TaskScheduler shouldn't delete the delayed task before it is itself
+  // deleted. SequencedWorkerPool starts deleting tasks as soon as its
+  // Shutdown() method is called (see SequencedWorkerPool::Inner::GetWork).
+  if (RedirectedToTaskScheduler())
+    EXPECT_FALSE(deleted_flag->data);
+
+  // Verify that the delayed task is deleted once the SequencedWorkerPool (and
+  // the TaskScheduler when applicable) have been deleted.
   DeletePool();
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     DeleteTaskScheduler();
   EXPECT_TRUE(deleted_flag->data);
 }
@@ -591,7 +600,7 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
   // TaskScheduler allows tasks to be posted during shutdown. However, since it
   // doesn't provide a way to run a callback from inside its Shutdown() method,
   // it would be hard to make this test work with redirection enabled.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   // Test that <n> new blocking tasks are allowed provided they're posted
@@ -645,7 +654,7 @@ TEST_P(SequencedWorkerPoolTest,
   // TaskScheduler allows tasks to be posted during shutdown. However, since it
   // doesn't provide a way to run a callback from inside its Shutdown() method,
   // it would be hard to make this test work with redirection enabled.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   EnsureAllWorkersCreated();
@@ -681,7 +690,7 @@ TEST_P(SequencedWorkerPoolTest, DiscardOnShutdown) {
   // CONTINUE_ON_SHUTDOWN tasks and runs BLOCK_SHUTDOWN tasks. However, since it
   // doesn't provide a way to run a callback from inside its Shutdown() method,
   // it would be hard to make this test work with redirection enabled.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   // Start tasks to take all the threads and block them.
@@ -754,7 +763,7 @@ TEST_P(SequencedWorkerPoolTest, ContinueOnShutdown) {
 
   // This should not block. If this test hangs, it means it failed.
   pool()->Shutdown();
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     TaskScheduler::GetInstance()->Shutdown();
 
   // The task should not have completed yet.
@@ -784,7 +793,7 @@ TEST_P(SequencedWorkerPoolTest, SkipOnShutdown) {
   // TaskScheduler correctly handles SKIP_ON_SHUTDOWN tasks. However, since it
   // doesn't provide a way to run a callback from inside its Shutdown() method,
   // it would be hard to make this test work with redirection enabled.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   // Start tasks to take all the threads and block them.
@@ -839,7 +848,7 @@ TEST_P(SequencedWorkerPoolTest, SkipOnShutdown) {
 // triggered. This is a regression test for http://crbug.com/117469.
 TEST_P(SequencedWorkerPoolTest, SpuriousWorkSignal) {
   // This test doesn't apply when tasks are redirected to the TaskScheduler.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   EnsureAllWorkersCreated();
@@ -851,7 +860,7 @@ TEST_P(SequencedWorkerPoolTest, SpuriousWorkSignal) {
 }
 
 void VerifyRunsTasksOnCurrentThread(
-    SequencedWorkerPoolRedirection redirection,
+    bool redirected_to_task_scheduler,
     scoped_refptr<TaskRunner> test_positive_task_runner,
     scoped_refptr<TaskRunner> test_negative_task_runner,
     SequencedWorkerPool* pool,
@@ -862,7 +871,7 @@ void VerifyRunsTasksOnCurrentThread(
 
   // Tasks posted to different SequencedWorkerPools may run on the same
   // TaskScheduler threads.
-  if (redirection == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (redirected_to_task_scheduler)
     EXPECT_TRUE(unused_pool->RunsTasksOnCurrentThread());
   else
     EXPECT_FALSE(unused_pool->RunsTasksOnCurrentThread());
@@ -893,20 +902,22 @@ TEST_P(SequencedWorkerPoolTest, RunsTasksOnCurrentThread) {
   // - pool()->RunsTasksOnCurrentThread() returns true.
   // - unused_pool_owner.pool()->RunsTasksOnCurrentThread() returns false.
   sequenced_task_runner_1->PostTask(
-      FROM_HERE, base::Bind(&VerifyRunsTasksOnCurrentThread, GetParam(),
-                            sequenced_task_runner_1, sequenced_task_runner_2,
-                            base::RetainedRef(pool()),
-                            base::RetainedRef(unused_pool_owner.pool())));
+      FROM_HERE,
+      base::Bind(&VerifyRunsTasksOnCurrentThread, RedirectedToTaskScheduler(),
+                 sequenced_task_runner_1, sequenced_task_runner_2,
+                 base::RetainedRef(pool()),
+                 base::RetainedRef(unused_pool_owner.pool())));
   // From a task posted to |unsequenced_task_runner|:
   // - unsequenced_task_runner->RunsTasksOnCurrentThread() returns true.
   // - sequenced_task_runner_1->RunsTasksOnCurrentThread() returns false.
   // - pool()->RunsTasksOnCurrentThread() returns true.
   // - unused_pool_owner.pool()->RunsTasksOnCurrentThread() returns false.
   unsequenced_task_runner->PostTask(
-      FROM_HERE, base::Bind(&VerifyRunsTasksOnCurrentThread, GetParam(),
-                            unsequenced_task_runner, sequenced_task_runner_1,
-                            base::RetainedRef(pool()),
-                            base::RetainedRef(unused_pool_owner.pool())));
+      FROM_HERE,
+      base::Bind(&VerifyRunsTasksOnCurrentThread, RedirectedToTaskScheduler(),
+                 unsequenced_task_runner, sequenced_task_runner_1,
+                 base::RetainedRef(pool()),
+                 base::RetainedRef(unused_pool_owner.pool())));
 }
 
 // Checks that tasks are destroyed in the right context during shutdown. If a
@@ -935,7 +946,7 @@ TEST_P(SequencedWorkerPoolTest,
   // (PostRepostingBlockingTask). It can't run when tasks are redirected to
   // TaskScheduler because TaskScheduler doesn't provide a way to limit the
   // number of BLOCK_SHUTDOWN tasks posted during shutdown.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   const std::string sequence_token_name("name");
@@ -956,11 +967,6 @@ TEST_P(SequencedWorkerPoolTest,
 
 // Verify that FlushForTesting works as intended.
 TEST_P(SequencedWorkerPoolTest, FlushForTesting) {
-  // FlushForTesting() can't be called when tasks are redirected to the
-  // TaskScheduler.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
-    return;
-
   // Should be fine to call on a new instance.
   pool()->FlushForTesting();
 
@@ -986,8 +992,10 @@ TEST_P(SequencedWorkerPoolTest, FlushForTesting) {
   // tracker.
   EXPECT_FALSE(tracker()->HasOneRef());
   pool()->FlushForTesting();
-  EXPECT_TRUE(tracker()->HasOneRef());
   EXPECT_EQ(1 + kNumFastTasks + 1 + 3, tracker()->GetTasksCompletedCount());
+  // TaskScheduler deletes unexecuted delayed tasks as part of ~TaskScheduler()
+  // instead of TaskScheduler::FlushForTesting().
+  EXPECT_EQ(!RedirectedToTaskScheduler(), tracker()->HasOneRef());
 
   // Should be fine to call on an idle instance with all threads created, and
   // spamming the method shouldn't deadlock or confuse the class.
@@ -996,7 +1004,16 @@ TEST_P(SequencedWorkerPoolTest, FlushForTesting) {
 
   // Should be fine to call after shutdown too.
   pool()->Shutdown();
+  if (RedirectedToTaskScheduler())
+    TaskScheduler::GetInstance()->Shutdown();
   pool()->FlushForTesting();
+
+  // Verify that all tasks are deleted once the SequencedWorkerPool and the
+  // TaskScheduler are deleted.
+  DeletePool();
+  if (RedirectedToTaskScheduler())
+    DeleteTaskScheduler();
+  EXPECT_TRUE(tracker()->HasOneRef());
 }
 
 namespace {
@@ -1021,7 +1038,7 @@ TEST_P(SequencedWorkerPoolTest, GetWorkerPoolAndSequenceTokenForCurrentThread) {
   // SequencedWorkerPool when redirection to TaskScheduler is enabled. These
   // methods are only used from SequencedTaskRunnerHandle and
   // SequenceCheckerImpl which work fine in TaskScheduler.
-  if (GetParam() == SequencedWorkerPoolRedirection::TO_TASK_SCHEDULER)
+  if (RedirectedToTaskScheduler())
     return;
 
   EnsureAllWorkersCreated();

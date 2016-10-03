@@ -735,13 +735,13 @@ void EntryImpl::ReportIOTime(Operation op, const base::TimeTicks& start) {
 
 void EntryImpl::BeginLogging(net::NetLog* net_log, bool created) {
   DCHECK(!net_log_.net_log());
-  net_log_ =
-      net::BoundNetLog::Make(net_log, net::NetLogSourceType::DISK_CACHE_ENTRY);
+  net_log_ = net::NetLogWithSource::Make(
+      net_log, net::NetLogSourceType::DISK_CACHE_ENTRY);
   net_log_.BeginEvent(net::NetLogEventType::DISK_CACHE_ENTRY_IMPL,
                       CreateNetLogEntryCreationCallback(this, created));
 }
 
-const net::BoundNetLog& EntryImpl::net_log() const {
+const net::NetLogWithSource& EntryImpl::net_log() const {
   return net_log_;
 }
 

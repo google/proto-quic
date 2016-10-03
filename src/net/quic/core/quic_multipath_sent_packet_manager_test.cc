@@ -275,11 +275,6 @@ TEST_F(QuicMultipathSentPacketManagerTest, OnConnectionMigration) {
       multipath_manager_.OnConnectionMigration(kTestPathId3, PORT_CHANGE), "");
 }
 
-TEST_F(QuicMultipathSentPacketManagerTest, IsHandshakeConfirmed) {
-  EXPECT_CALL(*manager_0_, IsHandshakeConfirmed()).WillOnce(Return(true));
-  EXPECT_TRUE(multipath_manager_.IsHandshakeConfirmed());
-}
-
 TEST_F(QuicMultipathSentPacketManagerTest, SetDebugDelegate) {
   EXPECT_CALL(*manager_0_, SetDebugDelegate(nullptr));
   EXPECT_CALL(*manager_1_, SetDebugDelegate(nullptr));

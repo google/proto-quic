@@ -21,8 +21,6 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
 
   void Cancel() override {}
 
-  void CancelOnMessageLoopThread() override {}
-
  protected:
   ~FilePathWatcherImpl() override {}
 };

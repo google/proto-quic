@@ -321,10 +321,10 @@ ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
       return 1;
     if (rv == QUIC_PENDING) {
       // May need to retry request if asynchronous rendezvous fails.
-      auto* new_headers = new BalsaHeaders;
-      new_headers->CopyFrom(*headers);
-      push_promise_data_to_resend_.reset(
-          new TestClientDataToResend(new_headers, body, fin, this, delegate));
+      std::unique_ptr<SpdyHeaderBlock> new_headers(new SpdyHeaderBlock(
+          SpdyBalsaUtils::RequestHeadersToSpdyHeaders(*headers)));
+      push_promise_data_to_resend_.reset(new TestClientDataToResend(
+          std::move(new_headers), body, fin, this, delegate));
       return 1;
     }
   }
@@ -359,14 +359,15 @@ ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
     ret = body.length();
   }
   if (FLAGS_enable_quic_stateless_reject_support) {
-    BalsaHeaders* new_headers = nullptr;
+    std::unique_ptr<SpdyHeaderBlock> new_headers;
     if (headers) {
-      new_headers = new BalsaHeaders;
-      new_headers->CopyFrom(*headers);
+      new_headers.reset(new SpdyHeaderBlock(
+          SpdyBalsaUtils::RequestHeadersToSpdyHeaders(*headers)));
     }
-    auto* data_to_resend =
-        new TestClientDataToResend(new_headers, body, fin, this, delegate);
-    client()->MaybeAddQuicDataToResend(data_to_resend);
+    std::unique_ptr<QuicClientBase::QuicDataToResend> data_to_resend(
+        new TestClientDataToResend(std::move(new_headers), body, fin, this,
+                                   delegate));
+    client()->MaybeAddQuicDataToResend(std::move(data_to_resend));
   }
   return ret;
 }
@@ -736,12 +737,11 @@ void QuicTestClient::WaitForWriteToFlush() {
 }
 
 void QuicTestClient::TestClientDataToResend::Resend() {
-  test_client_->GetOrCreateStreamAndSendRequest(headers_, body_, fin_,
+  BalsaHeaders balsa_headers;
+  SpdyBalsaUtils::SpdyHeadersToRequestHeaders(*headers_, &balsa_headers);
+  test_client_->GetOrCreateStreamAndSendRequest(&balsa_headers, body_, fin_,
                                                 delegate_);
-  if (headers_ != nullptr) {
-    delete headers_;
-    headers_ = nullptr;
-  }
+  headers_.reset();
 }
 
 // static

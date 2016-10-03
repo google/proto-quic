@@ -87,6 +87,8 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
   void OnHeaderBlockStart() override {}
   void OnHeader(base::StringPiece key, base::StringPiece value) override {}
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override {}
+  void OnHeaderBlockEnd(size_t /* uncompressed_header_bytes */,
+                        size_t /* compressed_header_bytes */) override {}
 };
 
 }  // namespace test

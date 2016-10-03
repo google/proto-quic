@@ -86,7 +86,7 @@ class SSLServerSocketImpl : public SSLServerSocket {
   bool IsConnectedAndIdle() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -138,7 +138,7 @@ class SSLServerSocketImpl : public SSLServerSocket {
   scoped_refptr<DrainableIOBuffer> send_buffer_;
   scoped_refptr<IOBuffer> recv_buffer_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   CompletionCallback user_handshake_callback_;
   CompletionCallback user_read_callback_;
@@ -337,7 +337,7 @@ int SSLServerSocketImpl::GetLocalAddress(IPEndPoint* address) const {
   return transport_socket_->GetLocalAddress(address);
 }
 
-const BoundNetLog& SSLServerSocketImpl::NetLog() const {
+const NetLogWithSource& SSLServerSocketImpl::NetLog() const {
   return net_log_;
 }
 

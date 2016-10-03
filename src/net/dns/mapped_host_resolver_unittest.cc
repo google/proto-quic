@@ -51,7 +51,7 @@ TEST(MappedHostResolverTest, Inclusion) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.google.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsError(ERR_NAME_NOT_RESOLVED));
@@ -64,7 +64,7 @@ TEST(MappedHostResolverTest, Inclusion) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.google.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -75,7 +75,7 @@ TEST(MappedHostResolverTest, Inclusion) {
   // is "foo.com:77".
   rv = resolver->Resolve(HostResolver::RequestInfo(HostPortPair("foo.com", 77)),
                          DEFAULT_PRIORITY, &address_list, callback.callback(),
-                         &request, BoundNetLog());
+                         &request, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -89,7 +89,7 @@ TEST(MappedHostResolverTest, Inclusion) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("chromium.org", 61)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -123,7 +123,7 @@ TEST(MappedHostResolverTest, Exclusion) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.google.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -134,7 +134,7 @@ TEST(MappedHostResolverTest, Exclusion) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("chrome.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -164,7 +164,7 @@ TEST(MappedHostResolverTest, SetRulesFromString) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.google.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -175,7 +175,7 @@ TEST(MappedHostResolverTest, SetRulesFromString) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("chrome.net", 80)),
       DEFAULT_PRIORITY, &address_list, callback.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
@@ -218,7 +218,7 @@ TEST(MappedHostResolverTest, MapToError) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.google.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback1.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_NAME_NOT_RESOLVED));
   request.reset();
 
@@ -227,7 +227,7 @@ TEST(MappedHostResolverTest, MapToError) {
   rv = resolver->Resolve(
       HostResolver::RequestInfo(HostPortPair("www.foo.com", 80)),
       DEFAULT_PRIORITY, &address_list, callback2.callback(), &request,
-      BoundNetLog());
+      NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback2.WaitForResult();
   EXPECT_THAT(rv, IsOk());

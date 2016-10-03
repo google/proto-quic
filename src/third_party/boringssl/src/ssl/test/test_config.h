@@ -66,7 +66,6 @@ struct TestConfig {
   std::string expected_signed_cert_timestamps;
   int min_version = 0;
   int max_version = 0;
-  int fallback_version = 0;
   int mtu = 0;
   bool implicit_handshake = false;
   bool use_early_callback = false;
@@ -113,6 +112,8 @@ struct TestConfig {
   int initial_timeout_duration_ms = 0;
   bool use_null_client_ca_list = false;
   bool send_alert = false;
+  bool peek_then_read = false;
+  bool enable_grease = false;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

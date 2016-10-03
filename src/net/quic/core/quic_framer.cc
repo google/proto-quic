@@ -723,11 +723,6 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
     case PACKET_8BYTE_CONNECTION_ID:
       if (quic_version_ > QUIC_VERSION_32) {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID;
-        if (!FLAGS_quic_remove_v33_hacks &&
-            perspective_ == Perspective::IS_CLIENT) {
-          public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
-        }
-
       } else {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
       }

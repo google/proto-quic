@@ -29,6 +29,7 @@
 #include "base/memory/linked_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/pickle.h"
+#include "base/process/launch.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
@@ -50,6 +51,12 @@ const char kLogFilePath[] = "/tmp/host_forwarder_log";
 const char kDaemonIdentifier[] = "chrome_host_forwarder_daemon";
 
 const int kBufSize = 256;
+
+enum : int {
+  MAP = 0,
+  UNMAP = 1,
+  UNMAP_ALL = 2,
+};
 
 // Needs to be global to be able to be accessed from the signal handler.
 PipeNotifier* g_notifier = NULL;
@@ -100,6 +107,7 @@ class HostControllersManager {
 
   void HandleRequest(const std::string& adb_path,
                      const std::string& device_serial,
+                     int command,
                      int device_port,
                      int host_port,
                      std::unique_ptr<Socket> client_socket) {
@@ -108,8 +116,8 @@ class HostControllersManager {
     thread_->task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&HostControllersManager::HandleRequestOnInternalThread,
-                   base::Unretained(this), adb_path, device_serial, device_port,
-                   host_port, base::Passed(&client_socket)));
+                   base::Unretained(this), adb_path, device_serial, command,
+                   device_port, host_port, base::Passed(&client_socket)));
   }
 
   bool has_failed() const { return has_failed_; }
@@ -152,37 +160,14 @@ class HostControllersManager {
         manager->controllers_.get());
   }
 
-  void HandleRequestOnInternalThread(const std::string& adb_path,
-                                     const std::string& device_serial,
-                                     int device_port,
-                                     int host_port,
-                                     std::unique_ptr<Socket> client_socket) {
-    const int adb_port = GetAdbPortForDevice(adb_path, device_serial);
-    if (adb_port < 0) {
-      SendMessage(
-          "ERROR: could not get adb port for device. You might need to add "
-          "'adb' to your PATH or provide the device serial id.",
-          client_socket.get());
-      return;
-    }
-    if (device_port < 0) {
-      // Remove the previously created host controller.
-      const std::string controller_key = MakeHostControllerMapKey(
-          adb_port, -device_port);
-      const bool controller_did_exist = DeleteRefCountedValueInMap(
-          controller_key, controllers_.get());
-      if (!controller_did_exist) {
-        SendMessage("ERROR: could not unmap port.", client_socket.get());
-        LogExistingControllers(client_socket);
-      } else {
-        SendMessage("OK", client_socket.get());
-      }
-
-      RemoveAdbPortForDeviceIfNeeded(adb_path, device_serial);
-      return;
-    }
+  void Map(const std::string& adb_path,
+           const std::string& device_serial,
+           int adb_port,
+           int device_port,
+           int host_port,
+           Socket* client_socket) {
     if (host_port < 0) {
-      SendMessage("ERROR: missing host port", client_socket.get());
+      SendMessage("ERROR: missing host port\n", client_socket);
       return;
     }
     const bool use_dynamic_port_allocation = device_port == 0;
@@ -193,18 +178,18 @@ class HostControllersManager {
         LOG(INFO) << "Already forwarding device port " << device_port
                   << " to host port " << host_port;
         SendMessage(base::StringPrintf("%d:%d", device_port, host_port),
-                    client_socket.get());
+                    client_socket);
         return;
       }
     }
     // Create a new host controller.
     std::unique_ptr<HostController> host_controller(HostController::Create(
-        device_port, host_port, adb_port, GetExitNotifierFD(),
+        device_serial, device_port, host_port, adb_port, GetExitNotifierFD(),
         base::Bind(&HostControllersManager::DeleteHostController,
                    weak_ptr_factory_.GetWeakPtr())));
     if (!host_controller.get()) {
       has_failed_ = true;
-      SendMessage("ERROR: Connection to device failed.", client_socket.get());
+      SendMessage("ERROR: Connection to device failed.\n", client_socket);
       LogExistingControllers(client_socket);
       return;
     }
@@ -213,7 +198,7 @@ class HostControllersManager {
     LOG(INFO) << "Forwarding device port " << device_port << " to host port "
               << host_port;
     const std::string msg = base::StringPrintf("%d:%d", device_port, host_port);
-    if (!SendMessage(msg, client_socket.get()))
+    if (!SendMessage(msg, client_socket))
       return;
     host_controller->Start();
     controllers_->insert(
@@ -221,11 +206,90 @@ class HostControllersManager {
                        linked_ptr<HostController>(host_controller.release())));
   }
 
-  void LogExistingControllers(const std::unique_ptr<Socket>& client_socket) {
-    SendMessage("ERROR: Existing controllers:", client_socket.get());
-    for (const auto& controller : *controllers_) {
-      SendMessage(base::StringPrintf("ERROR:   %s", controller.first.c_str()),
+  void Unmap(const std::string& adb_path,
+             const std::string& device_serial,
+             int adb_port,
+             int device_port,
+             Socket* client_socket) {
+    // Remove the previously created host controller.
+    const std::string controller_key =
+        MakeHostControllerMapKey(adb_port, device_port);
+    const bool controller_did_exist =
+        DeleteRefCountedValueInMap(controller_key, controllers_.get());
+    if (!controller_did_exist) {
+      SendMessage("ERROR: could not unmap port.\n", client_socket);
+      LogExistingControllers(client_socket);
+    } else {
+      SendMessage("OK", client_socket);
+    }
+
+    RemoveAdbPortForDeviceIfNeeded(adb_path, device_serial);
+  }
+
+  void UnmapAll(const std::string& adb_path,
+                const std::string& device_serial,
+                int adb_port,
+                Socket* client_socket) {
+    const std::string adb_port_str = base::StringPrintf("%d", adb_port);
+    for (HostControllerMap::const_iterator controller_key =
+             controllers_->cbegin();
+         controller_key != controllers_->cend(); ++controller_key) {
+      std::vector<std::string> pieces =
+          base::SplitString(controller_key->first, ":", base::KEEP_WHITESPACE,
+                            base::SPLIT_WANT_ALL);
+      if (pieces.size() == 2) {
+        if (pieces[0] == adb_port_str) {
+          DeleteRefCountedValueInMapFromIterator(controller_key,
+                                                 controllers_.get());
+        }
+      } else {
+        LOG(ERROR) << "Unexpected controller key: " << controller_key->first;
+      }
+    }
+
+    RemoveAdbPortForDeviceIfNeeded(adb_path, device_serial);
+    SendMessage("OK", client_socket);
+  }
+
+  void HandleRequestOnInternalThread(const std::string& adb_path,
+                                     const std::string& device_serial,
+                                     int command,
+                                     int device_port,
+                                     int host_port,
+                                     std::unique_ptr<Socket> client_socket) {
+    const int adb_port = GetAdbPortForDevice(adb_path, device_serial);
+    if (adb_port < 0) {
+      SendMessage(
+          "ERROR: could not get adb port for device. You might need to add "
+          "'adb' to your PATH or provide the device serial id.\n",
           client_socket.get());
+      return;
+    }
+    switch (command) {
+      case MAP:
+        Map(adb_path, device_serial, adb_port, device_port, host_port,
+            client_socket.get());
+        break;
+      case UNMAP:
+        Unmap(adb_path, device_serial, adb_port, device_port,
+              client_socket.get());
+        break;
+      case UNMAP_ALL:
+        UnmapAll(adb_path, device_serial, adb_port, client_socket.get());
+        break;
+      default:
+        SendMessage(
+            base::StringPrintf("ERROR: unrecognized command %d\n", command),
+            client_socket.get());
+        break;
+    }
+  }
+
+  void LogExistingControllers(Socket* client_socket) {
+    SendMessage("ERROR: Existing controllers:\n", client_socket);
+    for (const auto& controller : *controllers_) {
+      SendMessage(base::StringPrintf("ERROR: %s\n", controller.first.c_str()),
+                  client_socket);
     }
   }
 
@@ -255,16 +319,25 @@ class HostControllersManager {
         adb_path.c_str(),
         serial_part.c_str(),
         port);
-    const int ret = system(command.c_str());
-    LOG(INFO) << command << " ret: " << ret;
+    const base::CommandLine command_line(base::SplitString(
+        command, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY));
+    int ret;
+    std::string output;
+    base::GetAppOutputWithExitCode(command_line, &output, &ret);
+    LOG(INFO) << command << " ret: " << ret << " output: " << output;
     // Wait for the socket to be fully unmapped.
     const std::string port_mapped_cmd = base::StringPrintf(
         "lsof -nPi:%d",
         port);
+    const base::CommandLine port_mapped_cmd_line(
+        base::SplitString(port_mapped_cmd, " ", base::TRIM_WHITESPACE,
+                          base::SPLIT_WANT_NONEMPTY));
     const int poll_interval_us = 500 * 1000;
     int retries = 3;
     while (retries) {
-      const int port_unmapped = system(port_mapped_cmd.c_str());
+      int port_unmapped;
+      base::GetAppOutputWithExitCode(port_mapped_cmd_line, &output,
+                                     &port_unmapped);
       LOG(INFO) << "Device " << device_serial << " port " << port << " unmap "
                 << port_unmapped;
       if (port_unmapped)
@@ -291,8 +364,12 @@ class HostControllersManager {
         adb_path.c_str(),
         serial_part.c_str(),
         port);
-    LOG(INFO) << command;
-    const int ret = system(command.c_str());
+    const base::CommandLine command_line(base::SplitString(
+        command, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY));
+    int ret;
+    std::string output;
+    base::GetAppOutputWithExitCode(command_line, &output, &ret);
+    LOG(INFO) << command << " ret: " << ret << " output: " << output;
     if (ret < 0 || !WIFEXITED(ret) || WEXITSTATUS(ret) != 0)
       return -1;
     device_serial_to_adb_port_map_[device_serial] = port;
@@ -346,18 +423,26 @@ class ServerDelegate : public Daemon::ServerDelegate {
     }
     const base::Pickle command_pickle(buf, bytes_read);
     base::PickleIterator pickle_it(command_pickle);
+
     std::string device_serial;
     CHECK(pickle_it.ReadString(&device_serial));
-    int device_port;
-    if (!pickle_it.ReadInt(&device_port)) {
-      client_socket->WriteString("ERROR: missing device port");
+
+    int command;
+    if (!pickle_it.ReadInt(&command)) {
+      client_socket->WriteString("Error: missing command\n");
       return;
     }
+
+    int device_port;
+    if (!pickle_it.ReadInt(&device_port))
+      device_port = -1;
+
     int host_port;
     if (!pickle_it.ReadInt(&host_port))
       host_port = -1;
-    controllers_manager_.HandleRequest(adb_path_, device_serial, device_port,
-                                       host_port, std::move(client_socket));
+    controllers_manager_.HandleRequest(adb_path_, device_serial, command,
+                                       device_port, host_port,
+                                       std::move(client_socket));
   }
 
  private:
@@ -407,6 +492,7 @@ void ExitWithUsage() {
                "  --serial-id=[0-9A-Z]{16}]\n"
                "  --map DEVICE_PORT HOST_PORT\n"
                "  --unmap DEVICE_PORT\n"
+               "  --unmap-all\n"
                "  --adb PATH_TO_ADB\n"
                "  --kill-server\n";
   exit(1);
@@ -440,11 +526,14 @@ int RunHostForwarder(int argc, char** argv) {
   } else if (cmd_line.HasSwitch("unmap")) {
     if (args.size() != 1)
       ExitWithUsage();
-    // Note the minus sign below.
-    pickle.WriteInt(-PortToInt(args[0]));
+    pickle.WriteInt(UNMAP);
+    pickle.WriteInt(PortToInt(args[0]));
+  } else if (cmd_line.HasSwitch("unmap-all")) {
+    pickle.WriteInt(UNMAP_ALL);
   } else if (cmd_line.HasSwitch("map")) {
     if (args.size() != 2)
       ExitWithUsage();
+    pickle.WriteInt(MAP);
     pickle.WriteInt(PortToInt(args[0]));
     pickle.WriteInt(PortToInt(args[1]));
   } else {

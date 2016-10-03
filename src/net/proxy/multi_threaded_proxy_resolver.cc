@@ -119,7 +119,7 @@ class MultiThreadedProxyResolver : public ProxyResolver,
                      ProxyInfo* results,
                      const CompletionCallback& callback,
                      RequestHandle* request,
-                     const BoundNetLog& net_log) override;
+                     const NetLogWithSource& net_log) override;
   void CancelRequest(RequestHandle request) override;
   LoadState GetLoadState(RequestHandle request) const override;
 
@@ -282,7 +282,7 @@ class MultiThreadedProxyResolver::GetProxyForURLJob : public Job {
   GetProxyForURLJob(const GURL& url,
                     ProxyInfo* results,
                     const CompletionCallback& callback,
-                    const BoundNetLog& net_log)
+                    const NetLogWithSource& net_log)
       : Job(TYPE_GET_PROXY_FOR_URL, callback),
         results_(results),
         net_log_(net_log),
@@ -291,7 +291,7 @@ class MultiThreadedProxyResolver::GetProxyForURLJob : public Job {
     DCHECK(!callback.is_null());
   }
 
-  BoundNetLog* net_log() { return &net_log_; }
+  NetLogWithSource* net_log() { return &net_log_; }
 
   void WaitingForThread() override {
     was_waiting_for_thread_ = true;
@@ -342,7 +342,7 @@ class MultiThreadedProxyResolver::GetProxyForURLJob : public Job {
   ProxyInfo* results_;
 
   // Can be used on either "origin" or worker thread.
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   const GURL url_;
 
   // Usable from within DoQuery on the worker thread.
@@ -443,8 +443,11 @@ MultiThreadedProxyResolver::~MultiThreadedProxyResolver() {
 }
 
 int MultiThreadedProxyResolver::GetProxyForURL(
-    const GURL& url, ProxyInfo* results, const CompletionCallback& callback,
-    RequestHandle* request, const BoundNetLog& net_log) {
+    const GURL& url,
+    ProxyInfo* results,
+    const CompletionCallback& callback,
+    RequestHandle* request,
+    const NetLogWithSource& net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(!callback.is_null());
 

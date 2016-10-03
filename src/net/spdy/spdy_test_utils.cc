@@ -176,22 +176,16 @@ void TestHeadersHandler::OnHeaderBlockStart() {
 
 void TestHeadersHandler::OnHeader(base::StringPiece name,
                                   base::StringPiece value) {
-  if (FLAGS_chromium_http2_flag_use_new_spdy_header_block_header_joining) {
-    block_.AppendValueOrAddHeader(name, value);
-  } else {
-    auto it = block_.find(name);
-    if (it == block_.end()) {
-      block_[name] = value;
-    } else {
-      string new_value = it->second.as_string();
-      new_value.append((name == "cookie") ? "; " : string(1, '\0'));
-      value.AppendToString(&new_value);
-      block_.ReplaceOrAppendHeader(name, new_value);
-    }
-  }
+  block_.AppendValueOrAddHeader(name, value);
 }
 
 void TestHeadersHandler::OnHeaderBlockEnd(size_t header_bytes_parsed) {
+  header_bytes_parsed_ = header_bytes_parsed;
+}
+
+void TestHeadersHandler::OnHeaderBlockEnd(
+    size_t header_bytes_parsed,
+    size_t /* compressed_header_bytes_parsed */) {
   header_bytes_parsed_ = header_bytes_parsed;
 }
 

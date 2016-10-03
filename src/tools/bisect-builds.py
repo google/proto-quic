@@ -157,6 +157,8 @@ class PathContext(object):
       self._binary_name = 'Chromium.app/Contents/MacOS/Chromium'
     elif self.platform == 'win':
       self._listing_platform_dir = 'Win/'
+    elif self.platform == 'win64':
+      self._listing_platform_dir = 'Win_x64/'
 
   def GetASANPlatformDir(self):
     """ASAN builds are in directories like "linux-release", or have filenames

@@ -688,7 +688,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelAll) {
   for (size_t i = 0; i < kNumRequests; ++i) {
     int rv = resolver->GetProxyForURL(GURL("http://foo/"), &proxy_info[i],
                                       base::Bind(&CrashCallback), &request[i],
-                                      BoundNetLog());
+                                      NetLogWithSource());
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   }
 
@@ -717,11 +717,12 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelSome) {
 
   int rv = resolver->GetProxyForURL(GURL("http://foo/"), &proxy_info1,
                                     base::Bind(&CrashCallback), &request1,
-                                    BoundNetLog());
+                                    NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   rv = resolver->GetProxyForURL(GURL("http://foo/"), &proxy_info2,
-                                callback.callback(), &request2, BoundNetLog());
+                                callback.callback(), &request2,
+                                NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   resolver->CancelRequest(request1);
@@ -748,7 +749,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelWhilePendingCompletionTask) {
 
   int rv = resolver->GetProxyForURL(GURL("http://throw-an-error/"),
                                     &proxy_info1, base::Bind(&CrashCallback),
-                                    &request1, BoundNetLog());
+                                    &request1, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   // Wait until the first request has finished running on the worker thread.
@@ -761,7 +762,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelWhilePendingCompletionTask) {
   // Start another request, to make sure it is able to complete.
   rv = resolver->GetProxyForURL(GURL("http://i-have-no-idea-what-im-doing/"),
                                 &proxy_info2, callback.callback(), &request2,
-                                BoundNetLog());
+                                NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   EXPECT_THAT(callback.WaitForResult(), IsOk());
@@ -781,7 +782,7 @@ class BlockableHostResolver : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* out_req,
-              const BoundNetLog& net_log) override {
+              const NetLogWithSource& net_log) override {
     EXPECT_FALSE(callback.is_null());
     EXPECT_TRUE(out_req);
 
@@ -804,7 +805,7 @@ class BlockableHostResolver : public HostResolver {
 
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const BoundNetLog& net_log) override {
+                       const NetLogWithSource& net_log) override {
     NOTREACHED();
     return ERR_DNS_CACHE_MISS;
   }
@@ -863,7 +864,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest,
 
   int rv = resolver->GetProxyForURL(GURL("http://foo/req1"), &proxy_info1,
                                     base::Bind(&CrashCallback), &request1,
-                                    BoundNetLog());
+                                    NetLogWithSource());
 
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
@@ -871,7 +872,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest,
 
   rv = resolver->GetProxyForURL(GURL("http://foo/req2"), &proxy_info2,
                                 base::Bind(&CrashCallback), &request2,
-                                BoundNetLog());
+                                NetLogWithSource());
 
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
@@ -912,7 +913,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelWhileBlockedInNonBlockingDns) {
 
   int rv = resolver->GetProxyForURL(GURL("http://foo/"), &proxy_info,
                                     base::Bind(&CrashCallback), &request,
-                                    BoundNetLog());
+                                    NetLogWithSource());
 
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
@@ -936,7 +937,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, CancelWhileBlockedInNonBlockingDns2) {
 
   int rv = resolver->GetProxyForURL(GURL("http://foo/"), &proxy_info,
                                     base::Bind(&CrashCallback), &request,
-                                    BoundNetLog());
+                                    NetLogWithSource());
 
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
@@ -1116,7 +1117,7 @@ TEST_F(ProxyResolverV8TracingWrapperTest, MultipleResolvers) {
     size_t resolver_i = i % kNumResolvers;
     int rv = resolver[resolver_i]->GetProxyForURL(
         GURL("http://foo/"), &proxy_info[i], callback[i].callback(), NULL,
-        BoundNetLog());
+        NetLogWithSource());
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   }
 

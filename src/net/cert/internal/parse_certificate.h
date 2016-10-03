@@ -85,7 +85,7 @@ struct NET_EXPORT ParseCertificateOptions {
 //
 // This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
 // guarantees are made regarding the value of this SEQUENCE.
-// This can be further parsed using SignatureValue::CreateFromDer().
+// This can be further parsed using SignatureValue::Create().
 //
 // The |out_signature_value| parameter corresponds with "signatureValue" from
 // RFC 5280:
@@ -183,7 +183,7 @@ struct NET_EXPORT ParsedTbsCertificate {
   // This contains the full (unverified) Tag-Length-Value for a SEQUENCE. No
   // guarantees are made regarding the value of this SEQUENCE.
   //
-  // This can be further parsed using SignatureValue::CreateFromDer().
+  // This can be further parsed using SignatureValue::Create().
   der::Input signature_algorithm_tlv;
 
   // Corresponds with "issuer" from RFC 5280:

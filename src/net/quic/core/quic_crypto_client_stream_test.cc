@@ -14,7 +14,9 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/quic/test_tools/simple_quic_framer.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -229,6 +231,10 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
   test::CompareCharArraysWithHexError(
       "scfg", cached_scfg.data(), cached_scfg.length(),
       QuicUtils::AsChars(scfg), arraysize(scfg));
+  QuicStreamSequencer* sequencer = ReliableQuicStreamPeer::sequencer(stream());
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateBeforeHandshake) {

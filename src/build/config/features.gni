@@ -67,10 +67,6 @@ declare_args() {
 
   enable_remoting = !is_ios && !is_chromecast
 
-  # Enables browser side Content Decryption Modules. Required for embedders
-  # (e.g. Android and ChromeCast) that use a browser side CDM.
-  enable_browser_cdms = is_android || is_chromecast
-
   # Hangout services is an extension that adds extra features to Hangouts.
   # For official GYP builds, this flag is set.
   enable_hangout_services_extension = false
@@ -79,10 +75,10 @@ declare_args() {
   # safe browsing feature. Safe browsing can be compiled in 3 different levels:
   # 0 disables it, 1 enables it fully, and 2 enables mobile protection via an
   # external API.
-  if (is_android) {
-    safe_browsing_mode = 2
-  } else if (is_ios || is_chromecast) {
+  if (is_ios || is_chromecast) {
     safe_browsing_mode = 0
+  } else if (is_android) {
+    safe_browsing_mode = 2
   } else {
     safe_browsing_mode = 1
   }

@@ -59,6 +59,7 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
       const TaskTraits& traits,
       ExecutionMode execution_mode) override;
   void Shutdown() override;
+  void FlushForTesting() override;
 
   // Joins all threads of this scheduler. Tasks that are already running are
   // allowed to complete their execution. This can only be called once.

@@ -270,8 +270,8 @@ MemEntryImpl::MemEntryImpl(MemBackendImpl* backend,
       backend_(backend),
       doomed_(false) {
   backend_->OnEntryInserted(this);
-  net_log_ = net::BoundNetLog::Make(net_log,
-                                    net::NetLogSourceType::MEMORY_CACHE_ENTRY);
+  net_log_ = net::NetLogWithSource::Make(
+      net_log, net::NetLogSourceType::MEMORY_CACHE_ENTRY);
   net_log_.BeginEvent(net::NetLogEventType::DISK_CACHE_MEM_ENTRY_IMPL,
                       base::Bind(&NetLogEntryCreationCallback, this));
 }

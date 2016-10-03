@@ -400,6 +400,11 @@ set_defaults("mac_framework_bundle") {
 #
 # Arguments
 #
+#     package_type:
+#         (optional) string, the product package type to create. Options are:
+#             "app" to create a .app bundle (default)
+#             "xpc" to create an .xpc service bundle
+#
 #     info_plist:
 #         (optional) string, path to the Info.plist file that will be used for
 #         the bundle.
@@ -430,6 +435,23 @@ template("mac_app_bundle") {
     _output_name = invoker.output_name
   }
 
+  _package_type = "app"
+  if (defined(invoker.package_type)) {
+    _package_type = invoker.package_type
+  }
+
+  if (_package_type == "app") {
+    _output_extension = "app"
+    _product_type = "com.apple.product-type.application"
+    _write_pkg_info = true
+  } else if (_package_type == "xpc") {
+    _output_extension = "xpc"
+    _product_type = "com.apple.product-type.xpc-service"
+    _write_pkg_info = false
+  } else {
+    assert(false, "Unsupported packge_type: " + packge_type)
+  }
+
   _executable_target = target_name + "_executable"
   _executable_bundle_data = _executable_target + "_bundle_data"
 
@@ -446,20 +468,22 @@ template("mac_app_bundle") {
                            ])
   }
 
-  _pkg_info_target = target_name + "_pkg_info"
+  if (_write_pkg_info) {
+    _pkg_info_target = target_name + "_pkg_info"
 
-  action(_pkg_info_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    script = "//build/config/mac/write_pkg_info.py"
-    sources = get_target_outputs(":$_info_plist_target")
-    outputs = [
-      "$target_gen_dir/$_pkg_info_target",
-    ]
-    args = [ "--plist" ] + rebase_path(sources, root_build_dir) +
-           [ "--output" ] + rebase_path(outputs, root_build_dir)
-    deps = [
-      ":$_info_plist_target",
-    ]
+    action(_pkg_info_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      script = "//build/config/mac/write_pkg_info.py"
+      sources = get_target_outputs(":$_info_plist_target")
+      outputs = [
+        "$target_gen_dir/$_pkg_info_target",
+      ]
+      args = [ "--plist" ] + rebase_path(sources, root_build_dir) +
+             [ "--output" ] + rebase_path(outputs, root_build_dir)
+      deps = [
+        ":$_info_plist_target",
+      ]
+    }
   }
 
   executable(_executable_target) {
@@ -511,18 +535,20 @@ template("mac_app_bundle") {
     ]
   }
 
-  _pkg_info_bundle_data = _pkg_info_target + "_bundle_data"
+  if (_write_pkg_info) {
+    _pkg_info_bundle_data = _pkg_info_target + "_bundle_data"
 
-  bundle_data(_pkg_info_bundle_data) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":$_target_name" ]
-    sources = get_target_outputs(":$_pkg_info_target")
-    outputs = [
-      "{{bundle_root_dir}}/PkgInfo",
-    ]
-    public_deps = [
-      ":$_pkg_info_target",
-    ]
+    bundle_data(_pkg_info_bundle_data) {
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":$_target_name" ]
+      sources = get_target_outputs(":$_pkg_info_target")
+      outputs = [
+        "{{bundle_root_dir}}/PkgInfo",
+      ]
+      public_deps = [
+        ":$_pkg_info_target",
+      ]
+    }
   }
 
   create_bundle(_target_name) {
@@ -539,10 +565,13 @@ template("mac_app_bundle") {
     deps += [
       ":$_executable_bundle_data",
       ":$_info_plist_bundle_data",
-      ":$_pkg_info_bundle_data",
     ]
-    product_type = "com.apple.product-type.application"
-    bundle_root_dir = "$root_out_dir/${_output_name}.app/Contents"
+    if (_write_pkg_info) {
+      deps += [ ":$_pkg_info_bundle_data" ]
+    }
+    product_type = _product_type
+    bundle_root_dir =
+        "$root_out_dir/${_output_name}.${_output_extension}/Contents"
     bundle_resources_dir = "$bundle_root_dir/Resources"
     bundle_executable_dir = "$bundle_root_dir/MacOS"
   }

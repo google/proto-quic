@@ -89,6 +89,10 @@ static const struct argument kArguments[] = {
       " values: 'smtp'",
     },
     {
+     "-grease", kBooleanArgument,
+     "Enable GREASE",
+    },
+    {
      "", kOptionalArgument, "",
     },
 };
@@ -169,7 +173,9 @@ bool Client(const std::vector<std::string> &args) {
               args_map["-max-version"].c_str());
       return false;
     }
-    SSL_CTX_set_max_version(ctx.get(), version);
+    if (!SSL_CTX_set_max_proto_version(ctx.get(), version)) {
+      return false;
+    }
   }
 
   if (args_map.count("-min-version") != 0) {
@@ -179,7 +185,9 @@ bool Client(const std::vector<std::string> &args) {
               args_map["-min-version"].c_str());
       return false;
     }
-    SSL_CTX_set_min_version(ctx.get(), version);
+    if (!SSL_CTX_set_min_proto_version(ctx.get(), version)) {
+      return false;
+    }
   }
 
   if (args_map.count("-select-next-proto") != 0) {
@@ -263,6 +271,10 @@ bool Client(const std::vector<std::string> &args) {
     }
     SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_CLIENT);
     SSL_CTX_sess_set_new_cb(ctx.get(), NewSessionCallback);
+  }
+
+  if (args_map.count("-grease") != 0) {
+    SSL_CTX_set_grease_enabled(ctx.get(), 1);
   }
 
   int sock = -1;

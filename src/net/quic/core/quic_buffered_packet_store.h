@@ -102,6 +102,9 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
   // connection are present.
   std::list<BufferedPacket> DeliverPackets(QuicConnectionId connection_id);
 
+  // Discards packets buffered for |connection_id|, if any.
+  void DiscardPackets(QuicConnectionId connection_id);
+
   // Examines how long packets have been buffered in the store for each
   // connection. If they stay too long, removes them for new coming packets and
   // calls |visitor_|'s OnPotentialConnectionExpire().

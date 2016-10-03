@@ -14,10 +14,13 @@
 
 import("//build/config/chrome_build.gni")
 
-_branding_dictionary_template = "full_name = \"@PRODUCT_FULLNAME@\" " +
-                                "short_name = \"@PRODUCT_SHORTNAME@\" " +
-                                "bundle_id = \"@MAC_BUNDLE_ID@\" " +
-                                "creator_code = \"@MAC_CREATOR_CODE@\" "
+_branding_dictionary_template =
+    "full_name = \"@PRODUCT_FULLNAME@\" " +
+    "short_name = \"@PRODUCT_SHORTNAME@\" " +
+    "bundle_id = \"@MAC_BUNDLE_ID@\" " +
+    "creator_code = \"@MAC_CREATOR_CODE@\" " +
+    "installer_full_name = \"@PRODUCT_INSTALLER_FULLNAME@\" " +
+    "installer_short_name = \"@PRODUCT_INSTALLER_SHORTNAME@\" "
 
 _branding_file = "//chrome/app/theme/$branding_path_component/BRANDING"
 _result = exec_script("version.py",
@@ -32,6 +35,8 @@ _result = exec_script("version.py",
 
 chrome_product_full_name = _result.full_name
 chrome_product_short_name = _result.short_name
+chrome_product_installer_full_name = _result.installer_full_name
+chrome_product_installer_short_name = _result.installer_short_name
 
 if (is_mac) {
   chrome_mac_bundle_id = _result.bundle_id

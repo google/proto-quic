@@ -53,11 +53,6 @@ class BASE_EXPORT FilePathWatcher {
 
     virtual ~PlatformDelegate();
 
-    // Stop watching. This is only called on the thread of the appropriate
-    // message loop. Since it can also be called more than once, it should
-    // check |is_cancelled()| to avoid duplicate work.
-    virtual void CancelOnMessageLoopThread() = 0;
-
     scoped_refptr<base::SingleThreadTaskRunner> task_runner() const {
       return task_runner_;
     }

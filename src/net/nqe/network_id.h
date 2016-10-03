@@ -11,6 +11,10 @@
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 
+namespace {
+const char kValueSeparator[] = ",";
+}
+
 namespace net {
 namespace nqe {
 namespace internal {
@@ -36,6 +40,11 @@ struct NET_EXPORT_PRIVATE NetworkID {
   // Overloaded to support ordered collections.
   bool operator<(const NetworkID& other) const {
     return std::tie(type, id) < std::tie(other.type, other.id);
+  }
+
+  std::string ToString() const {
+    return id + kValueSeparator +
+           NetworkChangeNotifier::ConnectionTypeToString(type);
   }
 
   // Connection type of the network.

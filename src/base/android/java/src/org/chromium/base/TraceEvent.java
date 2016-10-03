@@ -180,11 +180,16 @@ public class TraceEvent {
     @CalledByNative
     public static void setEnabled(boolean enabled) {
         if (enabled) EarlyTraceEvent.disable();
-        sEnabled = enabled;
-        // Android M+ systrace logs this on its own. Only log it if not writing to Android systrace.
-        if (sATraceEnabled) return;
-        ThreadUtils.getUiThreadLooper().setMessageLogging(
-                enabled ? LooperMonitorHolder.sInstance : null);
+        // Only disable logging if Chromium enabled it originally, so as to not disrupt logging done
+        // by other applications
+        if (sEnabled != enabled) {
+            sEnabled = enabled;
+            // Android M+ systrace logs this on its own. Only log it if not writing to Android
+            // systrace.
+            if (sATraceEnabled) return;
+            ThreadUtils.getUiThreadLooper().setMessageLogging(
+                    enabled ? LooperMonitorHolder.sInstance : null);
+        }
     }
 
     /**

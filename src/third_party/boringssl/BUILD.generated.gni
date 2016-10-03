@@ -105,6 +105,7 @@ crypto_sources = [
   "src/crypto/cpu-arm-linux.c",
   "src/crypto/cpu-arm.c",
   "src/crypto/cpu-intel.c",
+  "src/crypto/cpu-ppc64le.c",
   "src/crypto/crypto.c",
   "src/crypto/curve25519/curve25519.c",
   "src/crypto/curve25519/internal.h",
@@ -440,6 +441,11 @@ crypto_sources_linux_arm = [
   "linux-arm/crypto/sha/sha512-armv4.S",
   "src/crypto/curve25519/asm/x25519-asm-arm.S",
   "src/crypto/poly1305/poly1305_arm_asm.S",
+]
+
+crypto_sources_linux_ppc64le = [
+  "linux-ppc64le/crypto/aes/aesp8-ppc.S",
+  "linux-ppc64le/crypto/modes/ghashp8-ppc.S",
 ]
 
 crypto_sources_linux_x86 = [

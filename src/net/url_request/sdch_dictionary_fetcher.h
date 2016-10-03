@@ -24,7 +24,7 @@
 
 namespace net {
 
-class BoundNetLog;
+class NetLogWithSource;
 class URLRequest;
 class URLRequestThrottlerEntryInterface;
 
@@ -38,7 +38,7 @@ class NET_EXPORT SdchDictionaryFetcher : public URLRequest::Delegate,
  public:
   typedef base::Callback<void(const std::string& dictionary_text,
                               const GURL& dictionary_url,
-                              const BoundNetLog& net_log,
+                              const NetLogWithSource& net_log,
                               bool was_from_cache)>
       OnDictionaryFetchedCallback;
 

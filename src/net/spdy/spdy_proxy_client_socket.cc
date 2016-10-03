@@ -35,7 +35,7 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
     const std::string& user_agent,
     const HostPortPair& endpoint,
     const HostPortPair& proxy_server,
-    const BoundNetLog& source_net_log,
+    const NetLogWithSource& source_net_log,
     HttpAuthController* auth_controller)
     : next_state_(STATE_DISCONNECTED),
       spdy_stream_(spdy_stream),
@@ -46,8 +46,8 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
       write_buffer_len_(0),
       was_ever_used_(false),
       redirect_has_load_timing_info_(false),
-      net_log_(BoundNetLog::Make(spdy_stream->net_log().net_log(),
-                                 NetLogSourceType::PROXY_CLIENT_SOCKET)),
+      net_log_(NetLogWithSource::Make(spdy_stream->net_log().net_log(),
+                                      NetLogSourceType::PROXY_CLIENT_SOCKET)),
       weak_factory_(this),
       write_callback_weak_factory_(this) {
   request_.method = "CONNECT";
@@ -150,7 +150,7 @@ bool SpdyProxyClientSocket::IsConnectedAndIdle() const {
       spdy_stream_->IsOpen();
 }
 
-const BoundNetLog& SpdyProxyClientSocket::NetLog() const {
+const NetLogWithSource& SpdyProxyClientSocket::NetLog() const {
   return net_log_;
 }
 

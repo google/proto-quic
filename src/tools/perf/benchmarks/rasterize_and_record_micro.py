@@ -100,6 +100,20 @@ class RasterizeAndRecordMicroPolymer(_RasterizeAndRecordMicro):
     return page_sets.PolymerPageSet(run_no_page_interactions=True)
 
 
+# New benchmark only enabled on Linux until we've observed behavior for a
+# reasonable period of time.
+@benchmark.Disabled('mac', 'win', 'android')
+class RasterizeAndRecordMicroPartialInvalidation(_RasterizeAndRecordMicro):
+  """Measures rasterize and record performance for partial inval. on big pages.
+
+  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
+  page_set = page_sets.PartialInvalidationCasesPageSet
+
+  @classmethod
+  def Name(cls):
+    return 'rasterize_and_record_micro.partial_invalidation'
+
+
 # Disabled because we do not plan on running CT benchmarks on the perf
 # waterfall any time soon.
 @benchmark.Disabled('all')

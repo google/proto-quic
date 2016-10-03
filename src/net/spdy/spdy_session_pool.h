@@ -29,10 +29,10 @@
 namespace net {
 
 class AddressList;
-class BoundNetLog;
 class ClientSocketHandle;
 class HostResolver;
 class HttpServerProperties;
+class NetLogWithSource;
 class ProxyDelegate;
 class SpdySession;
 class TransportSecurityState;
@@ -68,10 +68,7 @@ class NET_EXPORT SpdySessionPool
   // not already be a session for the given key.
   //
   // |is_secure| can be false for testing or when SPDY is configured
-  // to work with non-secure sockets. If |is_secure| is true,
-  // |certificate_error_code| indicates that the certificate error
-  // encountered when connecting the SSL socket, with OK meaning there
-  // was no error.
+  // to work with non-secure sockets.
   //
   // Returns the new SpdySession. Note that the SpdySession begins reading from
   // |connection| on a subsequent event loop iteration, so it may be closed
@@ -79,16 +76,16 @@ class NET_EXPORT SpdySessionPool
   base::WeakPtr<SpdySession> CreateAvailableSessionFromSocket(
       const SpdySessionKey& key,
       std::unique_ptr<ClientSocketHandle> connection,
-      const BoundNetLog& net_log,
-      int certificate_error_code,
+      const NetLogWithSource& net_log,
       bool is_secure);
 
   // Return an available session for |key| that has an unclaimed push stream for
   // |url| if such exists and |url| is not empty, or else an available session
   // for |key| if such exists, or else nullptr.
-  base::WeakPtr<SpdySession> FindAvailableSession(const SpdySessionKey& key,
-                                                  const GURL& url,
-                                                  const BoundNetLog& net_log);
+  base::WeakPtr<SpdySession> FindAvailableSession(
+      const SpdySessionKey& key,
+      const GURL& url,
+      const NetLogWithSource& net_log);
 
   // Remove all mappings and aliases for the given session, which must
   // still be available. Except for in tests, this must be called by
@@ -217,7 +214,6 @@ class NET_EXPORT SpdySessionPool
   HostResolver* const resolver_;
 
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
-  bool verify_domain_authentication_;
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
   size_t session_max_recv_window_size_;

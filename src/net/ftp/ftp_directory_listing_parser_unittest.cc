@@ -69,8 +69,8 @@ TEST_P(FtpDirectoryListingParserTest, Parse) {
       test_dir.AppendASCII(std::string(param.name) + ".expected"),
       &expected_listing));
 
-  std::vector<std::string> lines;
-  base::SplitStringUsingSubstr(expected_listing, "\r\n", &lines);
+  std::vector<std::string> lines = base::SplitStringUsingSubstr(
+      expected_listing, "\r\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
 
   // Special case for empty listings.
   if (lines.size() == 1 && lines[0].empty())

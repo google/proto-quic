@@ -12,7 +12,8 @@ _PASSWORD_INPUT_VISIBLE_CONDITION = (
     'document.querySelector("#Passwd:not(.hidden)") !== null')
 
 
-def LoginGoogleAccount(action_runner, credential,
+def LoginGoogleAccount(action_runner,
+                       credential='googletest',  # Recommended credential.
                        credentials_path=login_utils.DEFAULT_CREDENTIAL_PATH):
   """Logs in into Google account.
 

@@ -441,6 +441,20 @@ void SimpleIndex::MergeInitializingSet(
   SIMPLE_CACHE_UMA(CUSTOM_COUNTS,
                    "IndexInitializationWaiters", cache_type_,
                    to_run_when_initialized_.size(), 0, 100, 20);
+  SIMPLE_CACHE_UMA(CUSTOM_COUNTS, "IndexNumEntriesOnInit", cache_type_,
+                   entries_set_.size(), 0, 100000, 50);
+  SIMPLE_CACHE_UMA(
+      MEMORY_KB, "CacheSizeOnInit", cache_type_,
+      static_cast<base::HistogramBase::Sample>(cache_size_ / kBytesInKb));
+  SIMPLE_CACHE_UMA(
+      MEMORY_KB, "MaxCacheSizeOnInit", cache_type_,
+      static_cast<base::HistogramBase::Sample>(max_size_ / kBytesInKb));
+  if (max_size_ > 0) {
+    SIMPLE_CACHE_UMA(PERCENTAGE, "PercentFullOnInit", cache_type_,
+                     static_cast<base::HistogramBase::Sample>(
+                         (cache_size_ * 100) / max_size_));
+  }
+
   // Run all callbacks waiting for the index to come up.
   for (CallbackList::iterator it = to_run_when_initialized_.begin(),
        end = to_run_when_initialized_.end(); it != end; ++it) {

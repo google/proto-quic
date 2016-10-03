@@ -5,6 +5,7 @@
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 
 #include "net/quic/core/quic_stream_sequencer.h"
+#include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
 
 using std::map;
 using std::string;
@@ -22,6 +23,13 @@ size_t QuicStreamSequencerPeer::GetNumBufferedBytes(
 QuicStreamOffset QuicStreamSequencerPeer::GetCloseOffset(
     QuicStreamSequencer* sequencer) {
   return sequencer->close_offset_;
+}
+
+// static
+bool QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(
+    QuicStreamSequencer* sequencer) {
+  QuicStreamSequencerBufferPeer buffer_peer(&(sequencer->buffered_frames_));
+  return buffer_peer.IsBufferAllocated();
 }
 
 }  // namespace test

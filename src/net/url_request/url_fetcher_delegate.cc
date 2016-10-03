@@ -6,9 +6,11 @@
 
 namespace net {
 
-void URLFetcherDelegate::OnURLFetchDownloadProgress(const URLFetcher* source,
-                                                    int64_t current,
-                                                    int64_t total) {}
+void URLFetcherDelegate::OnURLFetchDownloadProgress(
+    const URLFetcher* source,
+    int64_t current,
+    int64_t total,
+    int64_t current_network_bytes) {}
 
 void URLFetcherDelegate::OnURLFetchUploadProgress(const URLFetcher* source,
                                                   int64_t current,

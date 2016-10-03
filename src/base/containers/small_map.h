@@ -575,17 +575,13 @@ class SmallMap {
 
   // We want to call constructors and destructors manually, but we don't
   // want to allocate and deallocate the memory used for them separately.
-  // So, we use this crazy ManualConstructor class.
+  // So, we use this crazy ManualConstructor class. Since C++11 it's possible
+  // to use objects in unions like this, but the ManualDestructor syntax is
+  // a bit better and doesn't have limitations on object type.
   //
   // Since array_ and map_ are mutually exclusive, we'll put them in a
-  // union, too.  We add in a dummy_ value which quiets MSVC from otherwise
-  // giving an erroneous "union member has copy constructor" error message
-  // (C2621). This dummy member has to come before array_ to quiet the
-  // compiler.
-  //
-  // TODO(brettw) remove this and use C++11 unions when we require C++11.
+  // union.
   union {
-    ManualConstructor<value_type> dummy_;
     ManualConstructor<value_type> array_[kArraySize];
     ManualConstructor<NormalMap> map_;
   };

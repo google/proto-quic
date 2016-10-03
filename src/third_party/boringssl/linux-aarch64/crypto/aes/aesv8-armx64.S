@@ -12,11 +12,11 @@
 .long	0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d	// rotate-n-splat
 .long	0x1b,0x1b,0x1b,0x1b
 
-.globl	aes_v8_set_encrypt_key
-.hidden	aes_v8_set_encrypt_key
-.type	aes_v8_set_encrypt_key,%function
+.globl	aes_hw_set_encrypt_key
+.hidden	aes_hw_set_encrypt_key
+.type	aes_hw_set_encrypt_key,%function
 .align	5
-aes_v8_set_encrypt_key:
+aes_hw_set_encrypt_key:
 .Lenc_key:
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
@@ -178,13 +178,13 @@ aes_v8_set_encrypt_key:
 	mov	x0,x3			// return value
 	ldr	x29,[sp],#16
 	ret
-.size	aes_v8_set_encrypt_key,.-aes_v8_set_encrypt_key
+.size	aes_hw_set_encrypt_key,.-aes_hw_set_encrypt_key
 
-.globl	aes_v8_set_decrypt_key
-.hidden	aes_v8_set_decrypt_key
-.type	aes_v8_set_decrypt_key,%function
+.globl	aes_hw_set_decrypt_key
+.hidden	aes_hw_set_decrypt_key
+.type	aes_hw_set_decrypt_key,%function
 .align	5
-aes_v8_set_decrypt_key:
+aes_hw_set_decrypt_key:
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
 	bl	.Lenc_key
@@ -219,12 +219,12 @@ aes_v8_set_decrypt_key:
 .Ldec_key_abort:
 	ldp	x29,x30,[sp],#16
 	ret
-.size	aes_v8_set_decrypt_key,.-aes_v8_set_decrypt_key
-.globl	aes_v8_encrypt
-.hidden	aes_v8_encrypt
-.type	aes_v8_encrypt,%function
+.size	aes_hw_set_decrypt_key,.-aes_hw_set_decrypt_key
+.globl	aes_hw_encrypt
+.hidden	aes_hw_encrypt
+.type	aes_hw_encrypt,%function
 .align	5
-aes_v8_encrypt:
+aes_hw_encrypt:
 	ldr	w3,[x2,#240]
 	ld1	{v0.4s},[x2],#16
 	ld1	{v2.16b},[x0]
@@ -249,12 +249,12 @@ aes_v8_encrypt:
 
 	st1	{v2.16b},[x1]
 	ret
-.size	aes_v8_encrypt,.-aes_v8_encrypt
-.globl	aes_v8_decrypt
-.hidden	aes_v8_decrypt
-.type	aes_v8_decrypt,%function
+.size	aes_hw_encrypt,.-aes_hw_encrypt
+.globl	aes_hw_decrypt
+.hidden	aes_hw_decrypt
+.type	aes_hw_decrypt,%function
 .align	5
-aes_v8_decrypt:
+aes_hw_decrypt:
 	ldr	w3,[x2,#240]
 	ld1	{v0.4s},[x2],#16
 	ld1	{v2.16b},[x0]
@@ -279,12 +279,12 @@ aes_v8_decrypt:
 
 	st1	{v2.16b},[x1]
 	ret
-.size	aes_v8_decrypt,.-aes_v8_decrypt
-.globl	aes_v8_cbc_encrypt
-.hidden	aes_v8_cbc_encrypt
-.type	aes_v8_cbc_encrypt,%function
+.size	aes_hw_decrypt,.-aes_hw_decrypt
+.globl	aes_hw_cbc_encrypt
+.hidden	aes_hw_cbc_encrypt
+.type	aes_hw_cbc_encrypt,%function
 .align	5
-aes_v8_cbc_encrypt:
+aes_hw_cbc_encrypt:
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
 	subs	x2,x2,#16
@@ -570,12 +570,12 @@ aes_v8_cbc_encrypt:
 .Lcbc_abort:
 	ldr	x29,[sp],#16
 	ret
-.size	aes_v8_cbc_encrypt,.-aes_v8_cbc_encrypt
-.globl	aes_v8_ctr32_encrypt_blocks
-.hidden	aes_v8_ctr32_encrypt_blocks
-.type	aes_v8_ctr32_encrypt_blocks,%function
+.size	aes_hw_cbc_encrypt,.-aes_hw_cbc_encrypt
+.globl	aes_hw_ctr32_encrypt_blocks
+.hidden	aes_hw_ctr32_encrypt_blocks
+.type	aes_hw_ctr32_encrypt_blocks,%function
 .align	5
-aes_v8_ctr32_encrypt_blocks:
+aes_hw_ctr32_encrypt_blocks:
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
 	ldr	w5,[x3,#240]
@@ -752,6 +752,6 @@ aes_v8_ctr32_encrypt_blocks:
 .Lctr32_done:
 	ldr	x29,[sp],#16
 	ret
-.size	aes_v8_ctr32_encrypt_blocks,.-aes_v8_ctr32_encrypt_blocks
+.size	aes_hw_ctr32_encrypt_blocks,.-aes_hw_ctr32_encrypt_blocks
 #endif
 #endif

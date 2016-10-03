@@ -5,6 +5,9 @@
 #include "net/cert/x509_util_mac.h"
 
 #include "base/logging.h"
+#include "base/mac/mac_util.h"
+#include "base/mac/scoped_cftyperef.h"
+#include "base/strings/sys_string_conversions.h"
 #include "third_party/apple_apsl/cssmapplePriv.h"
 
 namespace net {
@@ -51,31 +54,26 @@ OSStatus CreatePolicy(const CSSM_OID* policy_oid,
 
 
 OSStatus CreateSSLClientPolicy(SecPolicyRef* policy) {
-  CSSM_APPLE_TP_SSL_OPTIONS tp_ssl_options;
-  memset(&tp_ssl_options, 0, sizeof(tp_ssl_options));
-  tp_ssl_options.Version = CSSM_APPLE_TP_SSL_OPTS_VERSION;
-  tp_ssl_options.Flags |= CSSM_APPLE_TP_SSL_CLIENT;
-
-  return CreatePolicy(&CSSMOID_APPLE_TP_SSL, &tp_ssl_options,
-                      sizeof(tp_ssl_options), policy);
+  *policy = SecPolicyCreateSSL(false /* server */, nullptr);
+  return *policy ? noErr : errSecNoPolicyModule;
 }
 
 OSStatus CreateSSLServerPolicy(const std::string& hostname,
                                SecPolicyRef* policy) {
-  CSSM_APPLE_TP_SSL_OPTIONS tp_ssl_options;
-  memset(&tp_ssl_options, 0, sizeof(tp_ssl_options));
-  tp_ssl_options.Version = CSSM_APPLE_TP_SSL_OPTS_VERSION;
+  base::ScopedCFTypeRef<CFStringRef> hostname_cfstring;
   if (!hostname.empty()) {
-    tp_ssl_options.ServerName = hostname.data();
-    tp_ssl_options.ServerNameLen = hostname.size();
+    hostname_cfstring.reset(base::SysUTF8ToCFStringRef(hostname));
+    if (!hostname_cfstring)
+      return errSecNoPolicyModule;
   }
 
-  return CreatePolicy(&CSSMOID_APPLE_TP_SSL, &tp_ssl_options,
-                      sizeof(tp_ssl_options), policy);
+  *policy = SecPolicyCreateSSL(true /* server */, hostname_cfstring.get());
+  return *policy ? noErr : errSecNoPolicyModule;
 }
 
 OSStatus CreateBasicX509Policy(SecPolicyRef* policy) {
-  return CreatePolicy(&CSSMOID_APPLE_X509_BASIC, NULL, 0, policy);
+  *policy = SecPolicyCreateBasicX509();
+  return *policy ? noErr : errSecNoPolicyModule;
 }
 
 OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
@@ -100,7 +98,9 @@ OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
     // online revocation checking. Note that, as of OS X 10.7.2, the system
     // will set force this flag on according to system policies, so
     // online revocation checks cannot be completely disabled.
-    if (enable_revocation_checking)
+    // Starting with OS X 10.12, if a CRL policy is added without the
+    // FETCH_CRL_FROM_NET flag, AIA fetching is disabled.
+    if (enable_revocation_checking || base::mac::IsAtLeastOS10_12())
       tp_crl_options.CrlFlags = CSSM_TP_ACTION_FETCH_CRL_FROM_NET;
 
     SecPolicyRef crl_policy;

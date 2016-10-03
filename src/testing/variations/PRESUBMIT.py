@@ -7,23 +7,26 @@ See http://dev.chromium.org/developers/how-tos/depottools/presubmit-scripts
 for more details on the presubmit API built into depot_tools.
 """
 
+import copy
 import json
 import sys
 
-VALID_GROUP_KEYS = ['group_name',
-                    'params',
-                    'enable_features',
-                    'disable_features',
-                    '//0',
-                    '//1',
-                    '//2',
-                    '//3',
-                    '//4',
-                    '//5',
-                    '//6',
-                    '//7',
-                    '//8',
-                    '//9']
+from collections import OrderedDict
+
+VALID_EXPERIMENT_KEYS = ['name',
+                         'params',
+                         'enable_features',
+                         'disable_features',
+                         '//0',
+                         '//1',
+                         '//2',
+                         '//3',
+                         '//4',
+                         '//5',
+                         '//6',
+                         '//7',
+                         '//8',
+                         '//9']
 
 def PrettyPrint(contents):
   """Pretty prints a fieldtrial configuration.
@@ -34,8 +37,61 @@ def PrettyPrint(contents):
   Returns:
     Pretty printed file contents.
   """
-  return json.dumps(json.loads(contents),
-                    sort_keys=True, indent=4,
+
+  # We have a preferred ordering of the fields (e.g. platforms on top). This
+  # code loads everything into OrderedDicts and then tells json to dump it out.
+  # The JSON dumper will respect the dict ordering.
+  #
+  # The ordering is as follows:
+  # {
+  #     'StudyName Alphabetical': [
+  #         {
+  #             'platforms': [sorted platforms]
+  #             'groups': [
+  #                 {
+  #                     name: ...
+  #                     params: {sorted dict}
+  #                     enable_features: [sorted features]
+  #                     disable_features: [sorted features]
+  #                     (Unexpected extra keys will be caught by the validator)
+  #                 }
+  #             ],
+  #             ....
+  #         },
+  #         ...
+  #     ]
+  #     ...
+  # }
+  config = json.loads(contents)
+  ordered_config = OrderedDict()
+  for key in sorted(config.keys()):
+    study = copy.deepcopy(config[key])
+    ordered_study = []
+    for experiment_config in study:
+      ordered_experiment_config = OrderedDict([
+          ('platforms', experiment_config['platforms']),
+          ('experiments', [])])
+      for experiment in experiment_config['experiments']:
+        ordered_experiment = OrderedDict()
+        for index in xrange(0, 10):
+          comment_key = '//' + str(index)
+          if comment_key in experiment:
+            ordered_experiment[comment_key] = experiment[comment_key]
+        ordered_experiment['name'] = experiment['name']
+        if 'params' in experiment:
+          ordered_experiment['params'] = OrderedDict(
+              sorted(experiment['params'].items(), key=lambda t: t[0]))
+        if 'enable_features' in experiment:
+          ordered_experiment['enable_features'] = \
+              sorted(experiment['enable_features'])
+        if 'disable_features' in experiment:
+          ordered_experiment['disable_features'] = \
+              sorted(experiment['disable_features'])
+        ordered_experiment_config['experiments'].append(ordered_experiment)
+      ordered_study.append(ordered_experiment_config)
+    ordered_config[key] = ordered_study
+  return json.dumps(ordered_config,
+                    sort_keys=False, indent=4,
                     separators=(',', ': ')) + '\n'
 
 def ValidateData(json_data, file_path, message_type):
@@ -52,49 +108,83 @@ def ValidateData(json_data, file_path, message_type):
     warnings/errors, this will return [].
   """
   if not isinstance(json_data, dict):
-    return [message_type(
-        'Malformed config file %s: Expecting dict' % file_path)]
-  for (study, groups) in json_data.iteritems():
+    return _CreateMalformedConfigMessage(message_type, file_path,
+                                         'Expecting dict')
+  for (study, experiment_configs) in json_data.iteritems():
     if not isinstance(study, unicode):
-      return [message_type(
-          'Malformed config file %s: Expecting keys to be string, got %s'
-          % (file_path, type(study)))]
-    if not isinstance(groups, list):
-      return [message_type(
-          'Malformed config file %s: Expecting list for study %s'
-          % (file_path, study))]
-    for group in groups:
-      if not isinstance(group, dict):
-        return [message_type(
-            'Malformed config file %s: Expecting dict for group in '
-            'Study[%s]' % (file_path, study))]
-      if not 'group_name' in group or not isinstance(group['group_name'],
-          unicode):
-        return [message_type(
-            'Malformed config file %s: Missing valid group_name for group'
-            ' in Study[%s]' % (file_path, study))]
-      if 'params' in group:
-        params = group['params']
-        if not isinstance(params, dict):
-          return [message_type(
-              'Malformed config file %s: Invalid params for Group[%s]'
-              ' in Study[%s]' % (file_path, group['group_name'],
-              study))]
-        for (key, value) in params.iteritems():
-          if not isinstance(key, unicode) or not isinstance(value,
-              unicode):
-            return [message_type(
-                'Malformed config file %s: Invalid params for Group[%s]'
-                ' in Study[%s]' % (file_path, group['group_name'],
-                study))]
-      for key in group.keys():
-        if key not in VALID_GROUP_KEYS:
-          return [message_type(
-              'Malformed config file %s: Key[%s] in Group[%s] in Study[%s] '
-              'is not a valid key.' % (
-                  file_path, key, group['group_name'], study))]
+      return _CreateMalformedConfigMessage(message_type, file_path,
+          'Expecting keys to be string, got %s', type(study))
+    if not isinstance(experiment_configs, list):
+      return _CreateMalformedConfigMessage(message_type, file_path,
+          'Expecting list for study %s', study)
+    for experiment_config in experiment_configs:
+      if not isinstance(experiment_config, dict):
+        return _CreateMalformedConfigMessage(message_type, file_path,
+            'Expecting dict for experiment config in Study[%s]', study)
+      if not 'experiments' in experiment_config:
+        return _CreateMalformedConfigMessage(message_type, file_path,
+            'Missing valid experiments for experiment config in Study[%s]',
+            study)
+      if not isinstance(experiment_config['experiments'], list):
+        return _CreateMalformedConfigMessage(message_type, file_path,
+            'Expecting list for experiments in Study[%s]', study)
+      for experiment in experiment_config['experiments']:
+        if not 'name' in experiment or not isinstance(experiment['name'],
+                                                      unicode):
+          return _CreateMalformedConfigMessage(message_type, file_path,
+              'Missing valid name for experiment in Study[%s]', study)
+        if 'params' in experiment:
+          params = experiment['params']
+          if not isinstance(params, dict):
+            return _CreateMalformedConfigMessage(message_type, file_path,
+                'Expected dict for params for Experiment[%s] in Study[%s]',
+                experiment['name'], study)
+          for (key, value) in params.iteritems():
+            if not isinstance(key, unicode) or not isinstance(value, unicode):
+              return _CreateMalformedConfigMessage(message_type, file_path,
+                  'Invalid param (%s: %s) for Experiment[%s] in Study[%s]',
+                  key, value, experiment['name'], study)
+        for key in experiment.keys():
+          if key not in VALID_EXPERIMENT_KEYS:
+            return _CreateMalformedConfigMessage(message_type, file_path,
+                'Key[%s] in Experiment[%s] in Study[%s] is not a valid key.',
+                key, experiment['name'], study)
+      if not 'platforms' in experiment_config:
+        return _CreateMalformedConfigMessage(message_type, file_path,
+            'Missing valid platforms for experiment config in Study[%s]', study)
+      if not isinstance(experiment_config['platforms'], list):
+        return _CreateMalformedConfigMessage(message_type, file_path,
+            'Expecting list for platforms in Study[%s]', study)
+      supported_platforms = ['android', 'chromeos', 'ios', 'linux', 'mac',
+                             'win']
+      experiment_platforms = experiment_config['platforms']
+      unsupported_platforms = list(set(experiment_platforms).difference(
+                                       supported_platforms))
+      if unsupported_platforms:
+        return _CreateMalformedConfigMessage(message_type, file_path,
+                              'Unsupported platforms %s in Study[%s]',
+                              unsupported_platforms, study)
 
   return []
+
+def _CreateMalformedConfigMessage(message_type, file_path, message_format,
+                                  *args):
+  """Returns a list containing one |message_type| with the error message.
+
+  Args:
+    message_type: Type of message from |output_api| to return in the case of
+        errors/warnings.
+    message_format: The error message format string.
+    file_path: The path to the config file.
+    *args: The args for message_format.
+
+  Returns:
+    A list containing a message_type with a formatted error message and
+    'Malformed config file [file]: ' prepended to it.
+  """
+  error_message_format = 'Malformed config file %s: ' + message_format
+  format_args = (file_path,) + args
+  return [message_type(error_message_format % format_args)]
 
 def CheckPretty(contents, file_path, message_type):
   """Validates the pretty printing of fieldtrial configuration.
@@ -124,11 +214,10 @@ def CommonChecks(input_api, output_api):
     contents = input_api.ReadFile(f)
     try:
       json_data = input_api.json.loads(contents)
-      result = CheckPretty(contents, f.LocalPath(), output_api.PresubmitError)
+      result = ValidateData(json_data, f.LocalPath(), output_api.PresubmitError)
       if len(result):
         return result
-      result =  ValidateData(json_data, f.LocalPath(),
-          output_api.PresubmitError)
+      result = CheckPretty(contents, f.LocalPath(), output_api.PresubmitError)
       if len(result):
         return result
     except ValueError:

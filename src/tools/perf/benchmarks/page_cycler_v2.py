@@ -55,6 +55,13 @@ class _PageCyclerV2(perf_benchmark.PerfBenchmark):
         possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X' or
         possible_browser.platform.GetDeviceTypeName() == 'AOSP on BullHead'):
       return True
+
+    # crbug.com/651188
+    if ((possible_browser.platform.GetDeviceTypeName() == 'Nexus 6' or
+         possible_browser.platform.GetDeviceTypeName() == 'AOSP on Shamu') and
+        possible_browser.browser_type == 'android-webview'):
+      return True
+
     return False
 
 

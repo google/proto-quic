@@ -675,9 +675,12 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(const GURL& report_uri, const std::string& report) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report) override {
     latest_report_uri_ = report_uri;
-    latest_report_ = report;
+    report.CopyToString(&latest_report_);
+    content_type.CopyToString(&latest_content_type_);
   }
 
   void SetErrorCallback(
@@ -685,10 +688,12 @@ class MockCertificateReportSender
 
   const GURL& latest_report_uri() { return latest_report_uri_; }
   const std::string& latest_report() { return latest_report_; }
+  const std::string& latest_content_type() { return latest_content_type_; }
 
  private:
   GURL latest_report_uri_;
   std::string latest_report_;
+  std::string latest_content_type_;
 };
 
 class TestExperimentalFeaturesNetworkDelegate : public TestNetworkDelegate {
@@ -3421,7 +3426,7 @@ TEST_F(TokenBindingURLRequestTest, TokenBindingTest) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3432,8 +3437,9 @@ TEST_F(TokenBindingURLRequestTest, TokenBindingTest) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
-                                   token_bindings[0].signature, ekm));
+    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
+                                            token_bindings[0].signature,
+                                            TokenBindingType::PROVIDED, ekm));
   }
 }
 
@@ -3464,7 +3470,7 @@ TEST_F(TokenBindingURLRequestTest, ForwardTokenBinding) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3475,11 +3481,13 @@ TEST_F(TokenBindingURLRequestTest, ForwardTokenBinding) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
-                                   token_bindings[0].signature, ekm));
+    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
+                                            token_bindings[0].signature,
+                                            TokenBindingType::PROVIDED, ekm));
     EXPECT_EQ(TokenBindingType::REFERRED, token_bindings[1].type);
-    EXPECT_TRUE(VerifyEKMSignature(token_bindings[1].ec_point,
-                                   token_bindings[1].signature, ekm));
+    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[1].ec_point,
+                                            token_bindings[1].signature,
+                                            TokenBindingType::REFERRED, ekm));
   }
 }
 
@@ -3517,7 +3525,7 @@ TEST_F(TokenBindingURLRequestTest, DontForwardHeaderFromHttp) {
     EXPECT_TRUE(headers.GetHeader(HttpRequestHeaders::kTokenBinding,
                                   &token_binding_header));
     EXPECT_TRUE(base::Base64UrlDecode(
-        token_binding_header, base::Base64UrlDecodePolicy::REQUIRE_PADDING,
+        token_binding_header, base::Base64UrlDecodePolicy::DISALLOW_PADDING,
         &token_binding_message));
     std::vector<TokenBinding> token_bindings;
     ASSERT_TRUE(
@@ -3528,8 +3536,9 @@ TEST_F(TokenBindingURLRequestTest, DontForwardHeaderFromHttp) {
     std::string ekm = d.data_received();
 
     EXPECT_EQ(TokenBindingType::PROVIDED, token_bindings[0].type);
-    EXPECT_TRUE(VerifyEKMSignature(token_bindings[0].ec_point,
-                                   token_bindings[0].signature, ekm));
+    EXPECT_TRUE(VerifyTokenBindingSignature(token_bindings[0].ec_point,
+                                            token_bindings[0].signature,
+                                            TokenBindingType::PROVIDED, ekm));
   }
 }
 
@@ -6018,6 +6027,8 @@ TEST_F(URLRequestTestHTTP, ProcessPKPAndSendReport) {
   // Check that a report was sent.
   EXPECT_EQ(report_uri, mock_report_sender.latest_report_uri());
   ASSERT_FALSE(mock_report_sender.latest_report().empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   std::unique_ptr<base::Value> value(
       base::JSONReader::Read(mock_report_sender.latest_report()));
   ASSERT_TRUE(value);
@@ -6081,6 +6092,8 @@ TEST_F(URLRequestTestHTTP, ProcessPKPReportOnly) {
   // Check that a report was sent.
   EXPECT_EQ(report_uri, mock_report_sender.latest_report_uri());
   ASSERT_FALSE(mock_report_sender.latest_report().empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   std::unique_ptr<base::Value> value(
       base::JSONReader::Read(mock_report_sender.latest_report()));
   ASSERT_TRUE(value);
@@ -6352,7 +6365,7 @@ class MockCTVerifier : public CTVerifier {
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
              ct::CTVerifyResult* result,
-             const BoundNetLog& net_log) override {
+             const NetLogWithSource& net_log) override {
     return net::OK;
   }
 
@@ -6371,7 +6384,7 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   ct::CertPolicyCompliance DoesConformToCertPolicy(
       X509Certificate* cert,
       const SCTList& verified_scts,
-      const BoundNetLog& net_log) override {
+      const NetLogWithSource& net_log) override {
     return default_result_;
   }
 
@@ -8973,7 +8986,7 @@ class HTTPSOCSPTest : public HTTPSRequestTest {
     ct::CertPolicyCompliance DoesConformToCertPolicy(
         X509Certificate* cert,
         const SCTList& verified_scts,
-        const BoundNetLog& net_log) override {
+        const NetLogWithSource& net_log) override {
       return ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS;
     }
 
@@ -8981,7 +8994,7 @@ class HTTPSOCSPTest : public HTTPSRequestTest {
         X509Certificate* cert,
         const ct::EVCertsWhitelist* ev_whitelist,
         const SCTList& verified_scts,
-        const BoundNetLog& net_log) override {
+        const NetLogWithSource& net_log) override {
       return ct::EVPolicyCompliance::EV_POLICY_COMPLIES_VIA_SCTS;
     }
   };
@@ -9002,7 +9015,7 @@ class HTTPSOCSPTest : public HTTPSRequestTest {
 };
 
 static CertStatus ExpectedCertStatusForFailedOnlineRevocationCheck() {
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_MACOSX)
   // Windows can return CERT_STATUS_UNABLE_TO_CHECK_REVOCATION but we don't
   // have that ability on other platforms.
   return CERT_STATUS_UNABLE_TO_CHECK_REVOCATION;
@@ -9041,6 +9054,19 @@ static bool SystemUsesChromiumEVMetadata() {
 #else
   return true;
 #endif
+}
+
+// Returns the expected CertStatus for tests that expect an online revocation
+// check failure as a result of checking a test EV cert, which will not
+// actually trigger an online revocation check on some platforms.
+static CertStatus ExpectedCertStatusForFailedOnlineEVRevocationCheck() {
+  if (SystemUsesChromiumEVMetadata()) {
+    return ExpectedCertStatusForFailedOnlineRevocationCheck();
+  } else {
+    // If SystemUsesChromiumEVMetadata is false, revocation checking will not
+    // be enabled, and thus there will not be a revocation check to fail.
+    return 0u;
+  }
 }
 
 static bool SystemSupportsOCSP() {
@@ -9094,10 +9120,7 @@ TEST_F(HTTPSOCSPTest, Revoked) {
   CertStatus cert_status;
   DoConnection(ssl_options, &cert_status);
 
-#if !(defined(OS_MACOSX) && !defined(OS_IOS))
-  // Doesn't pass on OS X yet for reasons that need to be investigated.
   EXPECT_EQ(CERT_STATUS_REVOKED, cert_status & CERT_STATUS_ALL_ERRORS);
-#endif
   EXPECT_FALSE(cert_status & CERT_STATUS_IS_EV);
   EXPECT_TRUE(cert_status & CERT_STATUS_REV_CHECKING_ENABLED);
 }
@@ -9604,7 +9627,7 @@ TEST_F(HTTPSEVCRLSetTest, MissingCRLSetAndInvalidOCSP) {
   CertStatus cert_status;
   DoConnection(ssl_options, &cert_status);
 
-  EXPECT_EQ(ExpectedCertStatusForFailedOnlineRevocationCheck(),
+  EXPECT_EQ(ExpectedCertStatusForFailedOnlineEVRevocationCheck(),
             cert_status & CERT_STATUS_ALL_ERRORS);
 
   EXPECT_FALSE(cert_status & CERT_STATUS_IS_EV);
@@ -9678,7 +9701,7 @@ TEST_F(HTTPSEVCRLSetTest, ExpiredCRLSet) {
   CertStatus cert_status;
   DoConnection(ssl_options, &cert_status);
 
-  EXPECT_EQ(ExpectedCertStatusForFailedOnlineRevocationCheck(),
+  EXPECT_EQ(ExpectedCertStatusForFailedOnlineEVRevocationCheck(),
             cert_status & CERT_STATUS_ALL_ERRORS);
 
   EXPECT_FALSE(cert_status & CERT_STATUS_IS_EV);
@@ -9731,7 +9754,7 @@ TEST_F(HTTPSEVCRLSetTest, FreshCRLSetNotCovered) {
   // Even with a fresh CRLSet, we should still do online revocation checks when
   // the certificate chain isn't covered by the CRLSet, which it isn't in this
   // test.
-  EXPECT_EQ(ExpectedCertStatusForFailedOnlineRevocationCheck(),
+  EXPECT_EQ(ExpectedCertStatusForFailedOnlineEVRevocationCheck(),
             cert_status & CERT_STATUS_ALL_ERRORS);
 
   EXPECT_FALSE(cert_status & CERT_STATUS_IS_EV);

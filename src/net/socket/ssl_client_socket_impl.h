@@ -37,6 +37,10 @@ class FilePath;
 class SequencedTaskRunner;
 }
 
+namespace crypto {
+class OpenSSLErrStackTracer;
+}
+
 namespace net {
 
 class CertVerifier;
@@ -44,7 +48,9 @@ class CTVerifier;
 class SSLCertRequestInfo;
 class SSLInfo;
 
-using SignedEkmMap = base::MRUCache<std::string, std::vector<uint8_t>>;
+using TokenBindingSignatureMap =
+    base::MRUCache<std::pair<TokenBindingType, std::string>,
+                   std::vector<uint8_t>>;
 
 class SSLClientSocketImpl : public SSLClientSocket {
  public:
@@ -74,8 +80,9 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // SSLClientSocket implementation.
   void GetSSLCertRequestInfo(SSLCertRequestInfo* cert_request_info) override;
   ChannelIDService* GetChannelIDService() const override;
-  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                    std::vector<uint8_t>* out) override;
+  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                 TokenBindingType tb_type,
+                                 std::vector<uint8_t>* out) override;
   crypto::ECPrivateKey* GetChannelIDKey() const override;
 
   // SSLSocket implementation.
@@ -92,7 +99,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   bool IsConnectedAndIdle() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
   int GetLocalAddress(IPEndPoint* address) const override;
-  const BoundNetLog& NetLog() const override;
+  const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
@@ -245,6 +252,12 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // Returns whether TLS channel ID is enabled.
   bool IsChannelIDEnabled() const;
 
+  // Returns the net error corresponding to the most recent OpenSSL
+  // error. ssl_error is the output of SSL_get_error.
+  int MapLastOpenSSLError(int ssl_error,
+                          const crypto::OpenSSLErrStackTracer& tracer,
+                          OpenSSLErrorInfo* info);
+
   bool transport_send_busy_;
   bool transport_recv_busy_;
 
@@ -319,7 +332,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   ChannelIDService* channel_id_service_;
   bool tb_was_negotiated_;
   TokenBindingParam tb_negotiated_param_;
-  SignedEkmMap tb_signed_ekm_map_;
+  TokenBindingSignatureMap tb_signature_map_;
 
   // OpenSSL stuff
   SSL* ssl_;
@@ -357,6 +370,8 @@ class SSLClientSocketImpl : public SSLClientSocket {
   ScopedSSL_SESSION pending_session_;
   // True if the initial handshake's certificate has been verified.
   bool certificate_verified_;
+  // Set to true if a CertificateRequest was received.
+  bool certificate_requested_;
   // The request handle for |channel_id_service_|.
   ChannelIDService::Request channel_id_request_;
 
@@ -375,7 +390,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   // True if PKP is bypassed due to a local trust anchor.
   bool pkp_bypassed_;
 
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   base::WeakPtrFactory<SSLClientSocketImpl> weak_factory_;
 };
 

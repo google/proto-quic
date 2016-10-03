@@ -297,8 +297,8 @@
 
 #define TRACE_EVENT_INSTANT_WITH_TIMESTAMP0(category_group, name, scope, \
                                             timestamp)                   \
-  INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                    \
-      TRACE_EVENT_PHASE_INSTANT, category_group, name, 0, 0, timestamp,  \
+  INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(                               \
+      TRACE_EVENT_PHASE_INSTANT, category_group, name, timestamp,        \
       TRACE_EVENT_FLAG_NONE | scope)
 
 // Syntactic sugars for the sampling tracing in the main thread.
@@ -308,8 +308,8 @@
   TRACE_EVENT_GET_SAMPLING_STATE_FOR_BUCKET(0)
 #define TRACE_EVENT_SET_SAMPLING_STATE(category, name) \
   TRACE_EVENT_SET_SAMPLING_STATE_FOR_BUCKET(0, category, name)
-#define TRACE_EVENT_SET_NONCONST_SAMPLING_STATE(categoryAndName) \
-  TRACE_EVENT_SET_NONCONST_SAMPLING_STATE_FOR_BUCKET(0, categoryAndName)
+#define TRACE_EVENT_SET_NONCONST_SAMPLING_STATE(category_and_name) \
+  TRACE_EVENT_SET_NONCONST_SAMPLING_STATE_FOR_BUCKET(0, category_and_name)
 
 // Records a single BEGIN event called "name" immediately, with 0, 1 or 2
 // associated arguments. If the category is not enabled, then this
@@ -395,10 +395,15 @@
                            TRACE_EVENT_FLAG_COPY, arg1_name, arg1_val,   \
                            arg2_name, arg2_val)
 
+#define TRACE_EVENT_MARK_WITH_TIMESTAMP0(category_group, name, timestamp) \
+  INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(                                \
+      TRACE_EVENT_PHASE_MARK, category_group, name, timestamp,            \
+      TRACE_EVENT_FLAG_NONE)
+
 #define TRACE_EVENT_MARK_WITH_TIMESTAMP1(category_group, name, timestamp, \
                                          arg1_name, arg1_val)             \
-  INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                     \
-      TRACE_EVENT_PHASE_MARK, category_group, name, 0, 0, timestamp,      \
+  INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(                                \
+      TRACE_EVENT_PHASE_MARK, category_group, name, timestamp,            \
       TRACE_EVENT_FLAG_NONE, arg1_name, arg1_val)
 
 #define TRACE_EVENT_COPY_MARK(category_group, name)                      \
@@ -406,8 +411,8 @@
                            TRACE_EVENT_FLAG_COPY)
 
 #define TRACE_EVENT_COPY_MARK_WITH_TIMESTAMP(category_group, name, timestamp) \
-  INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                         \
-      TRACE_EVENT_PHASE_MARK, category_group, name, 0, 0, timestamp,          \
+  INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(                                    \
+      TRACE_EVENT_PHASE_MARK, category_group, name, timestamp,                \
       TRACE_EVENT_FLAG_COPY)
 
 // Similar to TRACE_EVENT_ENDx but with a custom |at| timestamp provided.
@@ -543,6 +548,12 @@
   INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                          \
       TRACE_EVENT_PHASE_SAMPLE, category_group, name, 0, thread_id, timestamp, \
       TRACE_EVENT_FLAG_NONE, arg1_name, arg1_val, arg2_name, arg2_val)
+
+#define TRACE_EVENT_SAMPLE_WITH_ID1(category_group, name, id, arg1_name,       \
+                                    arg1_val)                                  \
+  INTERNAL_TRACE_EVENT_ADD_WITH_ID(TRACE_EVENT_PHASE_SAMPLE, category_group,   \
+                                   name, id, TRACE_EVENT_FLAG_NONE, arg1_name, \
+                                   arg1_val)
 
 // ASYNC_STEP_* APIs should be only used by legacy code. New code should
 // consider using NESTABLE_ASYNC_* APIs to describe substeps within an async
@@ -952,8 +963,8 @@
 #define TRACE_EVENT_CLOCK_SYNC_ISSUER(sync_id, issue_ts, issue_end_ts)         \
   INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(                                     \
       TRACE_EVENT_PHASE_CLOCK_SYNC, "__metadata", "clock_sync",                \
-      issue_end_ts.ToInternalValue(), TRACE_EVENT_FLAG_NONE,                   \
-      "sync_id", sync_id, "issue_ts", issue_ts.ToInternalValue())
+      issue_end_ts, TRACE_EVENT_FLAG_NONE,                                     \
+      "sync_id", sync_id, "issue_ts", issue_ts)
 
 // Macros to track the life time and value of arbitrary client objects.
 // See also TraceTrackableObject.

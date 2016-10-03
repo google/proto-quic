@@ -25,22 +25,8 @@
 
 namespace {
 
-int64_t ComputeCurrentTicks() {
-#if defined(OS_IOS)
-  // On iOS mach_absolute_time stops while the device is sleeping. Instead use
-  // now - KERN_BOOTTIME to get a time difference that is not impacted by clock
-  // changes. KERN_BOOTTIME will be updated by the system whenever the system
-  // clock change.
-  struct timeval boottime;
-  int mib[2] = {CTL_KERN, KERN_BOOTTIME};
-  size_t size = sizeof(boottime);
-  int kr = sysctl(mib, arraysize(mib), &boottime, &size, nullptr, 0);
-  DCHECK_EQ(KERN_SUCCESS, kr);
-  base::TimeDelta time_difference = base::Time::Now() -
-      (base::Time::FromTimeT(boottime.tv_sec) +
-       base::TimeDelta::FromMicroseconds(boottime.tv_usec));
-  return time_difference.InMicroseconds();
-#else
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+int64_t MachAbsoluteTimeToTicks(uint64_t mach_absolute_time) {
   static mach_timebase_info_data_t timebase_info;
   if (timebase_info.denom == 0) {
     // Zero-initialization of statics guarantees that denom will be 0 before
@@ -52,14 +38,10 @@ int64_t ComputeCurrentTicks() {
     MACH_DCHECK(kr == KERN_SUCCESS, kr) << "mach_timebase_info";
   }
 
-  // mach_absolute_time is it when it comes to ticks on the Mac.  Other calls
-  // with less precision (such as TickCount) just call through to
-  // mach_absolute_time.
-
   // timebase_info converts absolute time tick units into nanoseconds.  Convert
   // to microseconds up front to stave off overflows.
-  base::CheckedNumeric<uint64_t> result(
-      mach_absolute_time() / base::Time::kNanosecondsPerMicrosecond);
+  base::CheckedNumeric<uint64_t> result(mach_absolute_time /
+                                        base::Time::kNanosecondsPerMicrosecond);
   result *= timebase_info.numer;
   result /= timebase_info.denom;
 
@@ -67,6 +49,29 @@ int64_t ComputeCurrentTicks() {
   // With numer and denom = 1 (the expected case), the 64-bit absolute time
   // reported in nanoseconds is enough to last nearly 585 years.
   return base::checked_cast<int64_t>(result.ValueOrDie());
+}
+#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
+
+int64_t ComputeCurrentTicks() {
+#if defined(OS_IOS)
+  // On iOS mach_absolute_time stops while the device is sleeping. Instead use
+  // now - KERN_BOOTTIME to get a time difference that is not impacted by clock
+  // changes. KERN_BOOTTIME will be updated by the system whenever the system
+  // clock change.
+  struct timeval boottime;
+  int mib[2] = {CTL_KERN, KERN_BOOTTIME};
+  size_t size = sizeof(boottime);
+  int kr = sysctl(mib, arraysize(mib), &boottime, &size, nullptr, 0);
+  DCHECK_EQ(KERN_SUCCESS, kr);
+  base::TimeDelta time_difference =
+      base::Time::Now() - (base::Time::FromTimeT(boottime.tv_sec) +
+                           base::TimeDelta::FromMicroseconds(boottime.tv_usec));
+  return time_difference.InMicroseconds();
+#else
+  // mach_absolute_time is it when it comes to ticks on the Mac.  Other calls
+  // with less precision (such as TickCount) just call through to
+  // mach_absolute_time.
+  return MachAbsoluteTimeToTicks(mach_absolute_time());
 #endif  // defined(OS_IOS)
 }
 
@@ -262,6 +267,13 @@ bool TimeTicks::IsHighResolution() {
 bool TimeTicks::IsConsistentAcrossProcesses() {
   return true;
 }
+
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+// static
+TimeTicks TimeTicks::FromMachAbsoluteTime(uint64_t mach_absolute_time) {
+  return TimeTicks(MachAbsoluteTimeToTicks(mach_absolute_time));
+}
+#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
 // static
 TimeTicks::Clock TimeTicks::GetClock() {

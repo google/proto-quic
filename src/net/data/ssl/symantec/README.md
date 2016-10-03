@@ -48,10 +48,3 @@ Note: Not issuing new certificates and can be removed after October 2016.
 
   * [c3f697a92a293d86f9a3ee7ccb970e20e0050b8728cc83ed1b996ce9005d4c36.pem](excluded/c3f697a92a293d86f9a3ee7ccb970e20e0050b8728cc83ed1b996ce9005d4c36.pem)
 
-### Unicredit
-
-Audit information still undergoing review.
-[Certification Practices Statement](http://ca.unicredit.eu/CPS/cps.html)
-
-  * [8c31013d19f8eea618c95fda6d21f5777c6e930c7413031559ee863d78dfe809.pem](excluded/8c31013d19f8eea618c95fda6d21f5777c6e930c7413031559ee863d78dfe809.pem)
-

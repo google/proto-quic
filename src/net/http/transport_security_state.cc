@@ -813,7 +813,8 @@ void TransportSecurityState::CheckExpectStaple(
                                    &serialized_report)) {
     return;
   }
-  report_sender_->Send(expect_staple_state.report_uri, serialized_report);
+  report_sender_->Send(expect_staple_state.report_uri,
+                       "application/json; charset=utf-8", serialized_report);
 }
 
 bool TransportSecurityState::HasPublicKeyPins(const std::string& host) {
@@ -1071,7 +1072,8 @@ TransportSecurityState::CheckPinsAndMaybeSendReport(
       base::TimeTicks::Now() +
           base::TimeDelta::FromMinutes(kTimeToRememberHPKPReportsMins));
 
-  report_sender_->Send(pkp_state.report_uri, serialized_report);
+  report_sender_->Send(pkp_state.report_uri, "application/json; charset=utf-8",
+                       serialized_report);
   return PKPStatus::VIOLATED;
 }
 

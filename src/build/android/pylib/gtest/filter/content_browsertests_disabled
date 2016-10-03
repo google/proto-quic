@@ -1,9 +1,5 @@
 # List of suppressions
 # Timeouts
-Http/MediaTest.*
-File/MediaTest.*
-MediaTest.*
-MediaColorTest.*
 DatabaseTest.*
 
 # Crashes

@@ -157,7 +157,7 @@ class MockCookieMonsterDelegate : public CookieMonsterDelegate {
 
   void OnCookieChanged(const CanonicalCookie& cookie,
                        bool removed,
-                       CookieMonsterDelegate::ChangeCause cause) override;
+                       CookieStore::ChangeCause cause) override;
 
  private:
   ~MockCookieMonsterDelegate() override;

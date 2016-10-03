@@ -5,7 +5,9 @@
 #include "base/threading/thread_local_storage.h"
 
 #include "base/atomicops.h"
+#include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/synchronization/lock.h"
 #include "build/build_config.h"
 
 using base::internal::PlatformThreadLocalStorage;
@@ -18,37 +20,33 @@ namespace {
 // hold a pointer to a per-thread array (table) of slots that we allocate to
 // Chromium consumers.
 
-// g_native_tls_key is the one native TLS that we use.  It stores our table.
+// g_native_tls_key is the one native TLS that we use. It stores our table.
 base::subtle::Atomic32 g_native_tls_key =
     PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES;
 
-// g_last_used_tls_key is the high-water-mark of allocated thread local storage.
-// Each allocation is an index into our g_tls_destructors[].  Each such index is
-// assigned to the instance variable slot_ in a ThreadLocalStorage::Slot
-// instance.  We reserve the value slot_ == 0 to indicate that the corresponding
-// instance of ThreadLocalStorage::Slot has been freed (i.e., destructor called,
-// etc.).  This reserved use of 0 is then stated as the initial value of
-// g_last_used_tls_key, so that the first issued index will be 1.
-base::subtle::Atomic32 g_last_used_tls_key = 0;
+// The maximum number of slots in our thread local storage stack.
+constexpr int kThreadLocalStorageSize = 256;
+constexpr int kInvalidSlotValue = -1;
 
-// The maximum number of 'slots' in our thread local storage stack.
-const int kThreadLocalStorageSize = 256;
+enum TlsStatus {
+  FREE,
+  IN_USE,
+};
+
+struct TlsMetadata {
+  TlsStatus status;
+  base::ThreadLocalStorage::TLSDestructorFunc destructor;
+};
+
+// This LazyInstance isn't needed until after we've constructed the per-thread
+// TLS vector, so it's safe to use.
+base::LazyInstance<base::Lock>::Leaky g_tls_metadata_lock;
+TlsMetadata g_tls_metadata[kThreadLocalStorageSize];
+size_t g_last_assigned_slot = 0;
 
 // The maximum number of times to try to clear slots by calling destructors.
 // Use pthread naming convention for clarity.
-const int kMaxDestructorIterations = kThreadLocalStorageSize;
-
-// An array of destructor function pointers for the slots.  If a slot has a
-// destructor, it will be stored in its corresponding entry in this array.
-// The elements are volatile to ensure that when the compiler reads the value
-// to potentially call the destructor, it does so once, and that value is tested
-// for null-ness and then used. Yes, that would be a weird de-optimization,
-// but I can imagine some register machines where it was just as easy to
-// re-fetch an array element, and I want to be sure a call to free the key
-// (i.e., null out the destructor entry) that happens on a separate thread can't
-// hurt the racy calls to the destructors on another thread.
-volatile base::ThreadLocalStorage::TLSDestructorFunc
-    g_tls_destructors[kThreadLocalStorageSize];
+constexpr int kMaxDestructorIterations = kThreadLocalStorageSize;
 
 // This function is called to initialize our entire Chromium TLS system.
 // It may be called very early, and we need to complete most all of the setup
@@ -73,8 +71,8 @@ void** ConstructTlsVector() {
             key != PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES);
       PlatformThreadLocalStorage::FreeTLS(tmp);
     }
-    // Atomically test-and-set the tls_key.  If the key is
-    // TLS_KEY_OUT_OF_INDEXES, go ahead and set it.  Otherwise, do nothing, as
+    // Atomically test-and-set the tls_key. If the key is
+    // TLS_KEY_OUT_OF_INDEXES, go ahead and set it. Otherwise, do nothing, as
     // another thread already did our dirty work.
     if (PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES !=
         static_cast<PlatformThreadLocalStorage::TLSKey>(
@@ -90,14 +88,14 @@ void** ConstructTlsVector() {
   }
   CHECK(!PlatformThreadLocalStorage::GetTLSValue(key));
 
-  // Some allocators, such as TCMalloc, make use of thread local storage.
-  // As a result, any attempt to call new (or malloc) will lazily cause such a
-  // system to initialize, which will include registering for a TLS key.  If we
-  // are not careful here, then that request to create a key will call new back,
-  // and we'll have an infinite loop.  We avoid that as follows:
-  // Use a stack allocated vector, so that we don't have dependence on our
-  // allocator until our service is in place.  (i.e., don't even call new until
-  // after we're setup)
+  // Some allocators, such as TCMalloc, make use of thread local storage. As a
+  // result, any attempt to call new (or malloc) will lazily cause such a system
+  // to initialize, which will include registering for a TLS key. If we are not
+  // careful here, then that request to create a key will call new back, and
+  // we'll have an infinite loop. We avoid that as follows: Use a stack
+  // allocated vector, so that we don't have dependence on our allocator until
+  // our service is in place. (i.e., don't even call new until after we're
+  // setup)
   void* stack_allocated_tls_data[kThreadLocalStorageSize];
   memset(stack_allocated_tls_data, 0, sizeof(stack_allocated_tls_data));
   // Ensure that any rentrant calls change the temp version.
@@ -113,15 +111,15 @@ void** ConstructTlsVector() {
 void OnThreadExitInternal(void* value) {
   DCHECK(value);
   void** tls_data = static_cast<void**>(value);
-  // Some allocators, such as TCMalloc, use TLS.  As a result, when a thread
+  // Some allocators, such as TCMalloc, use TLS. As a result, when a thread
   // terminates, one of the destructor calls we make may be to shut down an
-  // allocator.  We have to be careful that after we've shutdown all of the
-  // known destructors (perchance including an allocator), that we don't call
-  // the allocator and cause it to resurrect itself (with no possibly destructor
-  // call to follow).  We handle this problem as follows:
-  // Switch to using a stack allocated vector, so that we don't have dependence
-  // on our allocator after we have called all g_tls_destructors.  (i.e., don't
-  // even call delete[] after we're done with destructors.)
+  // allocator. We have to be careful that after we've shutdown all of the known
+  // destructors (perchance including an allocator), that we don't call the
+  // allocator and cause it to resurrect itself (with no possibly destructor
+  // call to follow). We handle this problem as follows: Switch to using a stack
+  // allocated vector, so that we don't have dependence on our allocator after
+  // we have called all g_tls_metadata destructors. (i.e., don't even call
+  // delete[] after we're done with destructors.)
   void* stack_allocated_tls_data[kThreadLocalStorageSize];
   memcpy(stack_allocated_tls_data, tls_data, sizeof(stack_allocated_tls_data));
   // Ensure that any re-entrant calls change the temp version.
@@ -130,32 +128,37 @@ void OnThreadExitInternal(void* value) {
   PlatformThreadLocalStorage::SetTLSValue(key, stack_allocated_tls_data);
   delete[] tls_data;  // Our last dependence on an allocator.
 
+  // Snapshot the TLS Metadata so we don't have to lock on every access.
+  TlsMetadata tls_metadata[kThreadLocalStorageSize];
+  {
+    base::AutoLock auto_lock(g_tls_metadata_lock.Get());
+    memcpy(tls_metadata, g_tls_metadata, sizeof(g_tls_metadata));
+  }
+
   int remaining_attempts = kMaxDestructorIterations;
   bool need_to_scan_destructors = true;
   while (need_to_scan_destructors) {
     need_to_scan_destructors = false;
     // Try to destroy the first-created-slot (which is slot 1) in our last
-    // destructor call.  That user was able to function, and define a slot with
+    // destructor call. That user was able to function, and define a slot with
     // no other services running, so perhaps it is a basic service (like an
-    // allocator) and should also be destroyed last.  If we get the order wrong,
-    // then we'll itterate several more times, so it is really not that
-    // critical (but it might help).
-    base::subtle::Atomic32 last_used_tls_key =
-        base::subtle::NoBarrier_Load(&g_last_used_tls_key);
-    for (int slot = last_used_tls_key; slot > 0; --slot) {
+    // allocator) and should also be destroyed last. If we get the order wrong,
+    // then we'll iterate several more times, so it is really not that critical
+    // (but it might help).
+    for (int slot = 0; slot < kThreadLocalStorageSize ; ++slot) {
       void* tls_value = stack_allocated_tls_data[slot];
-      if (tls_value == NULL)
+      if (!tls_value || tls_metadata[slot].status == TlsStatus::FREE)
         continue;
 
       base::ThreadLocalStorage::TLSDestructorFunc destructor =
-          g_tls_destructors[slot];
-      if (destructor == NULL)
+          tls_metadata[slot].destructor;
+      if (!destructor)
         continue;
-      stack_allocated_tls_data[slot] = NULL;  // pre-clear the slot.
+      stack_allocated_tls_data[slot] = nullptr;  // pre-clear the slot.
       destructor(tls_value);
-      // Any destructor might have called a different service, which then set
-      // a different slot to a non-NULL value.  Hence we need to check
-      // the whole vector again.  This is a pthread standard.
+      // Any destructor might have called a different service, which then set a
+      // different slot to a non-null value. Hence we need to check the whole
+      // vector again. This is a pthread standard.
       need_to_scan_destructors = true;
     }
     if (--remaining_attempts <= 0) {
@@ -165,7 +168,7 @@ void OnThreadExitInternal(void* value) {
   }
 
   // Remove our stack allocated vector.
-  PlatformThreadLocalStorage::SetTLSValue(key, NULL);
+  PlatformThreadLocalStorage::SetTLSValue(key, nullptr);
 }
 
 }  // namespace
@@ -198,26 +201,47 @@ void ThreadLocalStorage::StaticSlot::Initialize(TLSDestructorFunc destructor) {
   PlatformThreadLocalStorage::TLSKey key =
       base::subtle::NoBarrier_Load(&g_native_tls_key);
   if (key == PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES ||
-      !PlatformThreadLocalStorage::GetTLSValue(key))
+      !PlatformThreadLocalStorage::GetTLSValue(key)) {
     ConstructTlsVector();
+  }
 
   // Grab a new slot.
-  slot_ = base::subtle::NoBarrier_AtomicIncrement(&g_last_used_tls_key, 1);
-  DCHECK_GT(slot_, 0);
+  slot_ = kInvalidSlotValue;
+  {
+    base::AutoLock auto_lock(g_tls_metadata_lock.Get());
+    for (int i = 0; i < kThreadLocalStorageSize; ++i) {
+      // Tracking the last assigned slot is an attempt to find the next
+      // available slot within one iteration. Under normal usage, slots remain
+      // in use for the lifetime of the process (otherwise before we reclaimed
+      // slots, we would have run out of slots). This makes it highly likely the
+      // next slot is going to be a free slot.
+      size_t slot_candidate =
+          (g_last_assigned_slot + 1 + i) % kThreadLocalStorageSize;
+      if (g_tls_metadata[slot_candidate].status == TlsStatus::FREE) {
+        g_tls_metadata[slot_candidate].status = TlsStatus::IN_USE;
+        g_tls_metadata[slot_candidate].destructor = destructor;
+        g_last_assigned_slot = slot_candidate;
+        slot_ = slot_candidate;
+        break;
+      }
+    }
+  }
+  CHECK_NE(slot_, kInvalidSlotValue);
   CHECK_LT(slot_, kThreadLocalStorageSize);
 
   // Setup our destructor.
-  g_tls_destructors[slot_] = destructor;
   base::subtle::Release_Store(&initialized_, 1);
 }
 
 void ThreadLocalStorage::StaticSlot::Free() {
-  // At this time, we don't reclaim old indices for TLS slots.
-  // So all we need to do is wipe the destructor.
-  DCHECK_GT(slot_, 0);
+  DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
-  g_tls_destructors[slot_] = NULL;
-  slot_ = 0;
+  {
+    base::AutoLock auto_lock(g_tls_metadata_lock.Get());
+    g_tls_metadata[slot_].status = TlsStatus::FREE;
+    g_tls_metadata[slot_].destructor = nullptr;
+  }
+  slot_ = kInvalidSlotValue;
   base::subtle::Release_Store(&initialized_, 0);
 }
 
@@ -227,7 +251,7 @@ void* ThreadLocalStorage::StaticSlot::Get() const {
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
   if (!tls_data)
     tls_data = ConstructTlsVector();
-  DCHECK_GT(slot_, 0);
+  DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
   return tls_data[slot_];
 }
@@ -238,7 +262,7 @@ void ThreadLocalStorage::StaticSlot::Set(void* value) {
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
   if (!tls_data)
     tls_data = ConstructTlsVector();
-  DCHECK_GT(slot_, 0);
+  DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
   tls_data[slot_] = value;
 }

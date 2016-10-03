@@ -4,6 +4,7 @@
 
 package org.chromium.base.library_loader;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.SystemClock;
@@ -129,18 +130,14 @@ public class LibraryLoader {
 
     /**
      *  This method blocks until the library is fully loaded and initialized.
-     *
-     *  @param context The context in which the method is called.
      */
-    public void ensureInitialized(Context context) throws ProcessInitException {
-        // TODO(wnwen): Move this call appropriately down to the tests that need it.
-        ContextUtils.initApplicationContext(context.getApplicationContext());
+    public void ensureInitialized() throws ProcessInitException {
         synchronized (sLock) {
             if (mInitialized) {
                 // Already initialized, nothing to do.
                 return;
             }
-            loadAlreadyLocked(context);
+            loadAlreadyLocked(ContextUtils.getApplicationContext());
             initializeAlreadyLocked();
         }
     }
@@ -159,13 +156,26 @@ public class LibraryLoader {
      * this is called on will be the thread that runs the native code's static initializers.
      * See the comment in doInBackground() for more considerations on this.
      *
-     * @param context The context the code is running.
-     *
      * @throws ProcessInitException if the native library failed to load.
      */
-    public void loadNow(Context context) throws ProcessInitException {
+    public void loadNow() throws ProcessInitException {
+        loadNowOverrideApplicationContext(ContextUtils.getApplicationContext());
+    }
+
+    /**
+     * Override kept for callers that need to load from a different app context. Do not use unless
+     * specifically required to load from another context that is not the current process's app
+     * context.
+     *
+     * @param appContext The overriding app context to be used to load libraries.
+     * @throws ProcessInitException if the native library failed to load with this context.
+     */
+    public void loadNowOverrideApplicationContext(Context appContext) throws ProcessInitException {
         synchronized (sLock) {
-            loadAlreadyLocked(context);
+            if (mLoaded && appContext != ContextUtils.getApplicationContext()) {
+                throw new IllegalStateException("Attempt to load again from alternate context.");
+            }
+            loadAlreadyLocked(appContext);
         }
     }
 
@@ -250,7 +260,9 @@ public class LibraryLoader {
 
     // Invoke either Linker.loadLibrary(...) or System.loadLibrary(...), triggering
     // JNI_OnLoad in native code
-    private void loadAlreadyLocked(Context context) throws ProcessInitException {
+    // TODO(crbug.com/635567): Fix this properly.
+    @SuppressLint("DefaultLocale")
+    private void loadAlreadyLocked(Context appContext) throws ProcessInitException {
         try {
             if (!mLoaded) {
                 assert !mInitialized;
@@ -276,7 +288,7 @@ public class LibraryLoader {
                         String libFilePath = System.mapLibraryName(library);
                         if (Linker.isInZipFile()) {
                             // Load directly from the APK.
-                            zipFilePath = context.getApplicationInfo().sourceDir;
+                            zipFilePath = appContext.getApplicationInfo().sourceDir;
                             Log.i(TAG, "Loading " + library + " from within " + zipFilePath);
                         } else {
                             // The library is in its own file.
@@ -290,7 +302,7 @@ public class LibraryLoader {
                     linker.finishLibraryLoad();
                 } else {
                     if (sLibraryPreloader != null) {
-                        mLibraryPreloaderStatus = sLibraryPreloader.loadLibrary(context);
+                        mLibraryPreloaderStatus = sLibraryPreloader.loadLibrary(appContext);
                     }
                     // Load libraries using the system linker.
                     for (String library : NativeLibraries.LIBRARIES) {
@@ -378,18 +390,19 @@ public class LibraryLoader {
     }
 
     // Called after all native initializations are complete.
-    public void onNativeInitializationComplete(Context context) {
-        recordBrowserProcessHistogram(context);
+    public void onNativeInitializationComplete() {
+        recordBrowserProcessHistogram();
     }
 
     // Record Chromium linker histogram state for the main browser process. Called from
     // onNativeInitializationComplete().
-    private void recordBrowserProcessHistogram(Context context) {
+    private void recordBrowserProcessHistogram() {
         if (Linker.getInstance().isUsed()) {
-            nativeRecordChromiumAndroidLinkerBrowserHistogram(mIsUsingBrowserSharedRelros,
-                                                              mLoadAtFixedAddressFailed,
-                                                              getLibraryLoadFromApkStatus(context),
-                                                              mLibraryLoadTimeMs);
+            nativeRecordChromiumAndroidLinkerBrowserHistogram(
+                    mIsUsingBrowserSharedRelros,
+                    mLoadAtFixedAddressFailed,
+                    getLibraryLoadFromApkStatus(),
+                    mLibraryLoadTimeMs);
         }
         if (sLibraryPreloader != null) {
             nativeRecordLibraryPreloaderBrowserHistogram(mLibraryPreloaderStatus);
@@ -398,7 +411,7 @@ public class LibraryLoader {
 
     // Returns the device's status for loading a library directly from the APK file.
     // This method can only be called when the Chromium linker is used.
-    private int getLibraryLoadFromApkStatus(Context context) {
+    private int getLibraryLoadFromApkStatus() {
         assert Linker.getInstance().isUsed();
 
         if (mLibraryWasLoadedFromApk) {

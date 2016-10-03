@@ -14,6 +14,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
+#include "net/base/load_timing_info.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_stream_factory.h"
 #include "net/log/net_log.h"
@@ -171,8 +172,8 @@ class NET_EXPORT BidirectionalStream
   // not associated with any stream, and are not included in this value.
   int64_t GetTotalSentBytes() const;
 
-  // TODO(xunjieli): Implement a method to do flow control and a method to ping
-  // remote end point.
+  // Gets LoadTimingInfo of this stream.
+  void GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const;
 
  private:
   // BidirectionalStreamImpl::Delegate implementation:
@@ -218,7 +219,7 @@ class NET_EXPORT BidirectionalStream
 
   // BidirectionalStreamRequestInfo used when requesting the stream.
   std::unique_ptr<BidirectionalStreamRequestInfo> request_info_;
-  const BoundNetLog net_log_;
+  const NetLogWithSource net_log_;
 
   HttpNetworkSession* session_;
 
@@ -246,11 +247,12 @@ class NET_EXPORT BidirectionalStream
   // List of buffer length.
   std::vector<int> write_buffer_len_list_;
 
-  base::TimeTicks start_time_;
-  base::TimeTicks read_start_time_;
+  // TODO(xunjieli): Remove this once LoadTimingInfo has response end.
   base::TimeTicks read_end_time_;
-  base::TimeTicks send_start_time_;
-  base::TimeTicks send_end_time_;
+
+  // Load timing info of this stream. |connect_timing| is obtained when headers
+  // are received. Other fields are populated at different stages of the request
+  LoadTimingInfo load_timing_info_;
 
   base::WeakPtrFactory<BidirectionalStream> weak_factory_;
 

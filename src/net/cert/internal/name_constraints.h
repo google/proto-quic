@@ -48,7 +48,7 @@ struct NET_EXPORT GeneralNames {
 
   // Create a GeneralNames object representing the DER-encoded
   // |general_names_tlv|.
-  static std::unique_ptr<GeneralNames> CreateFromDer(
+  static std::unique_ptr<GeneralNames> Create(
       const der::Input& general_names_tlv);
 
   // ASCII hostnames.
@@ -84,7 +84,7 @@ class NET_EXPORT NameConstraints {
   // the OCTET STRING tag). |is_critical| should be true if the extension was
   // marked critical. Returns nullptr if parsing the the extension failed.
   // The object lifetime is not bound to the lifetime of |extension_value| data.
-  static std::unique_ptr<NameConstraints> CreateFromDer(
+  static std::unique_ptr<NameConstraints> Create(
       const der::Input& extension_value,
       bool is_critical);
 

@@ -68,7 +68,7 @@ class MockFilterContext : public FilterContext {
 
   void RecordPacketStats(StatisticSelector statistic) const override {}
 
-  const BoundNetLog& GetNetLog() const override;
+  const NetLogWithSource& GetNetLog() const override;
 
  private:
   std::string mime_type_;
@@ -79,7 +79,7 @@ class MockFilterContext : public FilterContext {
   bool ok_to_call_get_url_;
   int response_code_;
   std::unique_ptr<URLRequestContext> context_;
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(MockFilterContext);
 };

@@ -29,11 +29,5 @@ std::string GetFileMimeType(const FilePath& filepath) {
   return xdg_mime_get_mime_type_from_file_name(filepath.value().c_str());
 }
 
-std::string GetDataMimeType(const std::string& data) {
-  ThreadRestrictions::AssertIOAllowed();
-  AutoLock scoped_lock(g_mime_util_xdg_lock.Get());
-  return xdg_mime_get_mime_type_for_data(data.data(), data.length(), NULL);
-}
-
 }  // namespace nix
 }  // namespace base

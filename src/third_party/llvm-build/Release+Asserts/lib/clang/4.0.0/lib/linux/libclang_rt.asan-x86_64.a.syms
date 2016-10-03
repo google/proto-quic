@@ -455,7 +455,7 @@
   __sanitizer_set_report_fd;
   __sanitizer_set_report_path;
   __sanitizer_start_switch_fiber;
-  __sanitizer_symbolize_data;
+  __sanitizer_symbolize_global;
   __sanitizer_symbolize_pc;
   __sanitizer_syscall_post_impl_accept;
   __sanitizer_syscall_post_impl_accept4;

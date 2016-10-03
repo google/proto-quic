@@ -52,7 +52,7 @@ class StatelessRejector {
   // be statelessly rejected, and invoke the callback once a decision has been
   // made.
   static void Process(std::unique_ptr<StatelessRejector> rejector,
-                      std::unique_ptr<ProcessDoneCallback> cb);
+                      std::unique_ptr<ProcessDoneCallback> done_cb);
 
   // Returns the state of the rejector after OnChlo() has been called.
   State state() const { return state_; }
@@ -76,9 +76,9 @@ class StatelessRejector {
   friend class ValidateCallback;
 
   void ProcessClientHello(
-      const ValidateClientHelloResultCallback::Result& result,
+      scoped_refptr<ValidateClientHelloResultCallback::Result> result,
       std::unique_ptr<StatelessRejector> rejector,
-      std::unique_ptr<StatelessRejector::ProcessDoneCallback> cb);
+      std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb);
 
   State state_;
   QuicErrorCode error_;

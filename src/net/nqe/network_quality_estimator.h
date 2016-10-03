@@ -233,6 +233,14 @@ class NET_EXPORT NetworkQualityEstimator
   void ReportEffectiveConnectionTypeForTesting(
       EffectiveConnectionType effective_connection_type);
 
+  // Adds and removes |observer| from the list of cache observers.
+  void AddNetworkQualitiesCacheObserver(
+      nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver*
+          observer);
+  void RemoveNetworkQualitiesCacheObserver(
+      nqe::internal::NetworkQualityStore::NetworkQualitiesCacheObserver*
+          observer);
+
  protected:
   // NetworkChangeNotifier::ConnectionTypeObserver implementation:
   void OnConnectionTypeChanged(
@@ -299,9 +307,6 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Returns a random double in the range [0.0, 1.0). Virtualized for testing.
   virtual double RandDouble() const;
-
-  // Returns a pointer to |network_quality_store_|. Used only for testing.
-  nqe::internal::NetworkQualityStore* NetworkQualityStoreForTesting() const;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,

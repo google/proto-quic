@@ -6,7 +6,6 @@ import("//build/config/android/config.gni")
 
 assert(is_android)
 
-# GYP: //base/base.gyp:chromium_android_linker
 shared_library("chromium_android_linker") {
   sources = [
     "android_dlext.h",

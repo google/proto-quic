@@ -53,6 +53,8 @@ void HistogramSnapshotManager::PrepareSamples(
     for (size_t i = 0; i < ranges->size(); ++i)
       ranges_copy.push_back(ranges->range(i));
     HistogramBase::Sample* ranges_ptr = &ranges_copy[0];
+    uint32_t ranges_checksum = ranges->checksum();
+    uint32_t ranges_calc_checksum = ranges->CalculateChecksum();
     const char* histogram_name = histogram->histogram_name().c_str();
     int32_t flags = histogram->flags();
     // The checksum should have caught this, so crash separately if it didn't.
@@ -60,7 +62,9 @@ void HistogramSnapshotManager::PrepareSamples(
     CHECK(false);  // Crash for the bucket order corruption.
     // Ensure that compiler keeps around pointers to |histogram| and its
     // internal |bucket_ranges_| for any minidumps.
-    base::debug::Alias(&ranges_ptr);
+    base::debug::Alias(ranges_ptr);
+    base::debug::Alias(&ranges_checksum);
+    base::debug::Alias(&ranges_calc_checksum);
     base::debug::Alias(&histogram_name);
     base::debug::Alias(&flags);
   }

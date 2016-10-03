@@ -109,7 +109,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
               int cert_verify_flags,
               const GURL& url,
               base::StringPiece method,
-              const BoundNetLog& net_log,
+              const NetLogWithSource& net_log,
               const CompletionCallback& callback);
 
   void OnRequestComplete(int rv);
@@ -127,12 +127,12 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
 
   const QuicServerId& server_id() const { return server_id_; }
 
-  const BoundNetLog& net_log() const { return net_log_; }
+  const NetLogWithSource& net_log() const { return net_log_; }
 
  private:
   QuicStreamFactory* factory_;
   QuicServerId server_id_;
-  BoundNetLog net_log_;
+  NetLogWithSource net_log_;
   CompletionCallback callback_;
   base::WeakPtr<QuicChromiumClientSession> session_;
 
@@ -232,7 +232,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
              int cert_verify_flags,
              const GURL& url,
              base::StringPiece method,
-             const BoundNetLog& net_log,
+             const NetLogWithSource& net_log,
              QuicStreamRequest* request);
 
   // Called when the handshake for |session| is confirmed. If QUIC is disabled
@@ -299,7 +299,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   void MaybeMigrateOrCloseSessions(
       NetworkChangeNotifier::NetworkHandle new_network,
       bool close_if_cannot_migrate,
-      const BoundNetLog& bound_net_log);
+      const NetLogWithSource& net_log);
 
   // Method that initiates migration of |session| if |session| is
   // active and if there is an alternate network than the one to which
@@ -313,13 +313,13 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       QuicChromiumClientSession* session,
       NetworkChangeNotifier::NetworkHandle network,
       bool close_session_on_error,
-      const BoundNetLog& bound_net_log);
+      const NetLogWithSource& net_log);
 
   // Migrates |session| over to using |peer_address|. Causes a PING frame
   // to be sent to the new peer address.
   void MigrateSessionToNewPeerAddress(QuicChromiumClientSession* session,
                                       IPEndPoint peer_address,
-                                      const BoundNetLog& bound_net_log);
+                                      const NetLogWithSource& net_log);
 
   // NetworkChangeNotifier::IPAddressObserver methods:
 
@@ -413,7 +413,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // disk cache. This job is started via a PostTask.
   void CreateAuxilaryJob(const QuicSessionKey& key,
                          int cert_verify_flags,
-                         const BoundNetLog& net_log);
+                         const NetLogWithSource& net_log);
 
   // Returns a newly created QuicHttpStream owned by the caller.
   std::unique_ptr<QuicHttpStream> CreateFromSession(
@@ -431,7 +431,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
                     const AddressList& address_list,
                     base::TimeTicks dns_resolution_start_time,
                     base::TimeTicks dns_resolution_end_time,
-                    const BoundNetLog& net_log,
+                    const NetLogWithSource& net_log,
                     QuicChromiumClientSession** session);
   void ActivateSession(const QuicSessionKey& key,
                        QuicChromiumClientSession* session);
@@ -452,7 +452,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // given |server_id|.
   QuicAsyncStatus StartCertVerifyJob(const QuicServerId& server_id,
                                      int cert_verify_flags,
-                                     const BoundNetLog& net_log);
+                                     const NetLogWithSource& net_log);
 
   // Initializes the cached state associated with |server_id| in
   // |crypto_config_| with the information in |server_info|. Populates
@@ -481,7 +481,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       IPEndPoint peer_address,
       NetworkChangeNotifier::NetworkHandle network,
       bool close_session_on_error,
-      const BoundNetLog& bound_net_log);
+      const NetLogWithSource& net_log);
 
   // Called to re-enable QUIC when QUIC has been disabled.
   void OpenFactory();

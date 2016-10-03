@@ -11,7 +11,7 @@ i.e., "adb forward" in reverse. Requires |host_forwarder| and |device_forwarder|
 to be built.
 """
 
-import optparse
+import argparse
 import sys
 import time
 
@@ -26,44 +26,57 @@ from pylib import constants
 
 
 def main(argv):
-  parser = optparse.OptionParser(usage='Usage: %prog [options] device_port '
-                                 'host_port [device_port_2 host_port_2] ...',
-                                 description=__doc__)
-  parser.add_option('-v',
-                    '--verbose',
-                    dest='verbose_count',
-                    default=0,
-                    action='count',
-                    help='Verbose level (multiple times for more)')
-  parser.add_option('--device',
-                    help='Serial number of device we should use.')
-  parser.add_option('--blacklist-file', help='Device blacklist JSON file.')
-  parser.add_option('--debug', action='store_const', const='Debug',
-                    dest='build_type', default='Release',
-                    help='Use Debug build of host tools instead of Release.')
+  parser = argparse.ArgumentParser(
+      usage='Usage: %(prog)s [options] device_port '
+            'host_port [device_port_2 host_port_2] ...',
+      description=__doc__)
+  parser.add_argument(
+      '-v', '--verbose',
+      dest='verbose_count',
+      default=0,
+      action='count',
+      help='Verbose level (multiple times for more)')
+  parser.add_argument(
+      '--device',
+      help='Serial number of device we should use.')
+  parser.add_argument(
+      '--blacklist-file',
+      help='Device blacklist JSON file.')
+  parser.add_argument(
+      '--debug',
+      action='store_const',
+      const='Debug',
+      dest='build_type',
+      default='Release',
+      help='DEPRECATED: use --output-directory instead.')
+  parser.add_argument(
+      '--output-directory',
+      help='Path to the root build directory.')
+  parser.add_argument(
+      'ports',
+      nargs='+',
+      type=int,
+      help='Port pair to reverse forward.')
 
-  options, args = parser.parse_args(argv)
-  run_tests_helper.SetLogLevel(options.verbose_count)
+  args = parser.parse_args(argv)
+  run_tests_helper.SetLogLevel(args.verbose_count)
 
-  devil_chromium.Initialize()
-
-  if len(args) < 2 or not len(args) % 2:
+  if len(args.ports) < 2 or len(args.ports) % 2:
     parser.error('Need even number of port pairs')
-    sys.exit(1)
 
-  try:
-    port_pairs = [int(a) for a in args[1:]]
-    port_pairs = zip(port_pairs[::2], port_pairs[1::2])
-  except ValueError:
-    parser.error('Bad port number')
-    sys.exit(1)
+  port_pairs = zip(args.ports[::2], args.ports[1::2])
 
-  blacklist = (device_blacklist.Blacklist(options.blacklist_file)
-               if options.blacklist_file
+  if args.build_type:
+    constants.SetBuildType(args.build_type)
+  if args.output_directory:
+    constants.SetOutputDirectory(args.output_directory)
+  devil_chromium.Initialize(output_directory=constants.GetOutDirectory())
+
+  blacklist = (device_blacklist.Blacklist(args.blacklist_file)
+               if args.blacklist_file
                else None)
   device = device_utils.DeviceUtils.HealthyDevices(
-      blacklist=blacklist, device_arg=options.device)[0]
-  constants.SetBuildType(options.build_type)
+      blacklist=blacklist, device_arg=args.device)[0]
   try:
     forwarder.Forwarder.Map(port_pairs, device)
     while True:
@@ -74,4 +87,4 @@ def main(argv):
     forwarder.Forwarder.UnmapAllDevicePorts(device)
 
 if __name__ == '__main__':
-  main(sys.argv)
+  sys.exit(main(sys.argv[1:]))

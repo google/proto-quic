@@ -26,16 +26,18 @@
 // to the message loop, the intensive test runs, the message loop is run,
 // then the callback is cancelled.
 //
+// RunLoop run_loop;
+//
 // void TimeoutCallback(const std::string& timeout_message) {
 //   FAIL() << timeout_message;
-//   MessageLoop::current()->QuitWhenIdle();
+//   run_loop.QuitWhenIdle();
 // }
 //
 // CancelableClosure timeout(base::Bind(&TimeoutCallback, "Test timed out."));
-// MessageLoop::current()->PostDelayedTask(FROM_HERE, timeout.callback(),
-//                                         4000)  // 4 seconds to run.
+// ThreadTaskRunnerHandle::Get()->PostDelayedTask(FROM_HERE, timeout.callback(),
+//                                                TimeDelta::FromSeconds(4));
 // RunIntensiveTest();
-// MessageLoop::current()->Run();
+// run_loop.Run();
 // timeout.Cancel();  // Hopefully this is hit before the timeout callback runs.
 //
 

@@ -114,6 +114,10 @@ void BackoffEntry::Reset() {
   exponential_backoff_release_time_ = base::TimeTicks();
 }
 
+base::TimeTicks BackoffEntry::GetTimeTicksNow() const {
+  return clock_ ? clock_->NowTicks() : base::TimeTicks::Now();
+}
+
 base::TimeTicks BackoffEntry::CalculateReleaseTime() const {
   int effective_failure_count =
       std::max(0, failure_count_ - policy_->num_errors_to_ignore);
@@ -177,10 +181,6 @@ base::TimeTicks BackoffEntry::BackoffDurationToReleaseTime(
                                          std::numeric_limits<int64_t>::max()));
 
   return base::TimeTicks() + base::TimeDelta::FromMicroseconds(release_time_us);
-}
-
-base::TimeTicks BackoffEntry::GetTimeTicksNow() const {
-  return clock_ ? clock_->NowTicks() : base::TimeTicks::Now();
 }
 
 }  // namespace net

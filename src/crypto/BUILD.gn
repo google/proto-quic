@@ -84,6 +84,10 @@ component("crypto") {
     "//base/third_party/dynamic_annotations",
   ]
 
+  public_deps = [
+    "//third_party/boringssl",
+  ]
+
   if (!is_mac && !is_ios) {
     sources -= [
       "apple_keychain.h",

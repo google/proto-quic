@@ -127,7 +127,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, Basic) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool_, BoundNetLog());
+                  callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -148,7 +148,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, SetResolvePriorityOnInit) {
     EXPECT_EQ(ERR_IO_PENDING,
               handle.Init("a", params_, priority,
                           ClientSocketPool::RespectLimits::ENABLED,
-                          callback.callback(), &pool_, BoundNetLog()));
+                          callback.callback(), &pool_, NetLogWithSource()));
     EXPECT_EQ(priority, host_resolver_->last_request_priority());
   }
 }
@@ -164,7 +164,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, InitHostResolutionFailure) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", dest, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_NAME_NOT_RESOLVED));
 }
 
@@ -176,7 +176,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, InitConnectionFailure) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_CONNECTION_FAILED));
 
   // Make the host resolutions complete synchronously this time.
@@ -184,7 +184,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, InitConnectionFailure) {
   EXPECT_EQ(ERR_CONNECTION_FAILED,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
 }
 
 TEST_F(WebSocketTransportClientSocketPoolTest, PendingRequestsFinishFifo) {
@@ -261,7 +261,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, CancelRequestClearGroup) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   handle.Reset();
 }
 
@@ -274,11 +274,11 @@ TEST_F(WebSocketTransportClientSocketPoolTest, TwoRequestsCancelOne) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
   EXPECT_EQ(ERR_IO_PENDING,
             handle2.Init("a", params_, kDefaultPriority,
                          ClientSocketPool::RespectLimits::ENABLED,
-                         callback2.callback(), &pool_, BoundNetLog()));
+                         callback2.callback(), &pool_, NetLogWithSource()));
 
   handle.Reset();
 
@@ -294,7 +294,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, ConnectCancelConnect) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback.callback(), &pool_, BoundNetLog()));
+                        callback.callback(), &pool_, NetLogWithSource()));
 
   handle.Reset();
 
@@ -302,7 +302,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, ConnectCancelConnect) {
   EXPECT_EQ(ERR_IO_PENDING,
             handle.Init("a", params_, kDefaultPriority,
                         ClientSocketPool::RespectLimits::ENABLED,
-                        callback2.callback(), &pool_, BoundNetLog()));
+                        callback2.callback(), &pool_, NetLogWithSource()));
 
   host_resolver_->set_synchronous_mode(true);
   // At this point, handle has two ConnectingSockets out for it.  Due to the
@@ -376,7 +376,7 @@ void RequestSocketOnComplete(ClientSocketHandle* handle,
       TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
   int rv =
       handle->Init("a", dest, LOWEST, ClientSocketPool::RespectLimits::ENABLED,
-                   nested_callback, pool, BoundNetLog());
+                   nested_callback, pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   if (ERR_IO_PENDING != rv)
     nested_callback.Run(rv);
@@ -398,7 +398,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, RequestTwice) {
       handle.Init("a", dest, LOWEST, ClientSocketPool::RespectLimits::ENABLED,
                   base::Bind(&RequestSocketOnComplete, &handle, &pool_,
                              second_result_callback.callback()),
-                  &pool_, BoundNetLog());
+                  &pool_, NetLogWithSource());
   ASSERT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_THAT(second_result_callback.WaitForResult(), IsOk());
 
@@ -471,7 +471,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, LockReleasedOnHandleDelete) {
   std::unique_ptr<ClientSocketHandle> handle(new ClientSocketHandle);
   int rv =
       handle->Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                   callback.callback(), &pool_, BoundNetLog());
+                   callback.callback(), &pool_, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   EXPECT_THAT(StartRequest("a", kDefaultPriority), IsError(ERR_IO_PENDING));
@@ -539,7 +539,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -582,7 +582,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -615,7 +615,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -646,7 +646,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv4HasNoFallback) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.is_initialized());
   EXPECT_FALSE(handle.socket());
@@ -688,7 +688,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv6InstantFail) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsOk());
   ASSERT_TRUE(handle.socket());
 
@@ -725,7 +725,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv6RapidFail) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_FALSE(handle.socket());
 
@@ -762,7 +762,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, FirstSuccessWins) {
   ClientSocketHandle handle;
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   ASSERT_FALSE(handle.socket());
 
@@ -815,7 +815,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, LastFailureWins) {
   base::TimeTicks start(base::TimeTicks::Now());
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_CONNECTION_FAILED));
@@ -853,7 +853,7 @@ TEST_F(WebSocketTransportClientSocketPoolTest, DISABLED_OverallTimeoutApplies) {
 
   int rv =
       handle.Init("a", params_, LOW, ClientSocketPool::RespectLimits::ENABLED,
-                  callback.callback(), &pool, BoundNetLog());
+                  callback.callback(), &pool, NetLogWithSource());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_TIMED_OUT));

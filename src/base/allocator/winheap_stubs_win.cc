@@ -35,8 +35,11 @@ void* WinHeapMalloc(size_t size) {
   return nullptr;
 }
 
-void WinHeapFree(void* size) {
-  HeapFree(get_heap_handle(), 0, size);
+void WinHeapFree(void* ptr) {
+  if (!ptr)
+    return;
+
+  HeapFree(get_heap_handle(), 0, ptr);
 }
 
 void* WinHeapRealloc(void* ptr, size_t size) {

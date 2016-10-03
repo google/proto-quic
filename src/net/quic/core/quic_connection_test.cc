@@ -3554,7 +3554,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
 }
 
-TEST_P(QuicConnectionTest, TimeoutAfter5RTOs) {
+TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
   connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
   EXPECT_TRUE(connection_.connected());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
@@ -3585,6 +3585,42 @@ TEST_P(QuicConnectionTest, TimeoutAfter5RTOs) {
   connection_.GetRetransmissionAlarm()->Fire();
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_FALSE(connection_.connected());
+}
+
+TEST_P(QuicConnectionTest, TimeoutAfter5ServerRTOs) {
+  FLAGS_quic_only_5rto_client_side = true;
+  connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
+  QuicConnectionPeer::SetPerspective(&connection_, Perspective::IS_SERVER);
+  QuicFramerPeer::SetPerspective(QuicConnectionPeer::GetFramer(&connection_),
+                                 Perspective::IS_SERVER);
+  creator_->StopSendingVersion();
+  EXPECT_TRUE(connection_.connected());
+  EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
+  QuicConfig config;
+  QuicTagVector connection_options;
+  connection_options.push_back(k5RTO);
+  config.SetConnectionOptionsToSend(connection_options);
+  connection_.SetFromConfig(config);
+
+  // Send stream data.
+  SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, kFin, nullptr);
+
+  EXPECT_CALL(visitor_, OnPathDegrading());
+  // Fire the retransmission alarm 6 times, twice for TLP and 4 times for RTO.
+  for (int i = 0; i < 6; ++i) {
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
+    connection_.GetRetransmissionAlarm()->Fire();
+    EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
+    EXPECT_TRUE(connection_.connected());
+  }
+
+  EXPECT_EQ(2u, connection_.sent_packet_manager().GetConsecutiveTlpCount());
+  EXPECT_EQ(4u, connection_.sent_packet_manager().GetConsecutiveRtoCount());
+  // The 5th RTO should not time out server side.
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
+  connection_.GetRetransmissionAlarm()->Fire();
+  EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
+  EXPECT_TRUE(connection_.connected());
 }
 
 TEST_P(QuicConnectionTest, SendScheduler) {
@@ -5148,11 +5184,13 @@ TEST_P(QuicConnectionTest, ClientReceivesRejOnNonCryptoStream) {
 }
 
 TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {
-  FLAGS_quic_close_connection_on_packet_too_large = true;
   SimulateNextPacketTooLarge();
-  // Although the data packet cannot be written, the send packet manager is
-  // informed. Also a connection close packet is sent.
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  if (!FLAGS_quic_only_track_sent_packets) {
+    // Although the data packet cannot be written, the send packet manager is
+    // informed.
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  }
+  // A connection close packet is sent
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
                                            ConnectionCloseSource::FROM_SELF))
       .Times(1);
@@ -5162,9 +5200,10 @@ TEST_P(QuicConnectionTest, CloseConnectionOnPacketTooLarge) {
 TEST_P(QuicConnectionTest, AlwaysGetPacketTooLarge) {
   // Test even we always get packet too large, we do not infinitely try to send
   // close packet.
-  FLAGS_quic_close_connection_on_packet_too_large = true;
   AlwaysGetPacketTooLarge();
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  if (!FLAGS_quic_only_track_sent_packets) {
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(2);
+  }
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
                                            ConnectionCloseSource::FROM_SELF))
       .Times(1);
@@ -5211,26 +5250,7 @@ TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedDueToWriteBlock) {
   connection_.SendStreamData3();
 }
 
-TEST_P(QuicConnectionTest, ForceSendingAckOnPacketTooLarge) {
-  FLAGS_quic_do_not_send_ack_on_emsgsize = false;
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  // Send an ack by simulating delayed ack alarm firing.
-  ProcessPacket(kDefaultPathId, 1);
-  QuicAlarm* ack_alarm = QuicConnectionPeer::GetAckAlarm(&connection_);
-  EXPECT_TRUE(ack_alarm->IsSet());
-  connection_.GetAckAlarm()->Fire();
-  // Simulate data packet causes write error.
-  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _, _));
-  SimulateNextPacketTooLarge();
-  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->connection_close_frames().empty());
-  // Ack frame is bundled.
-  EXPECT_FALSE(writer_->ack_frames().empty());
-}
-
 TEST_P(QuicConnectionTest, DonotForceSendingAckOnPacketTooLarge) {
-  FLAGS_quic_do_not_send_ack_on_emsgsize = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Send an ack by simulating delayed ack alarm firing.
   ProcessPacket(kDefaultPathId, 1);

@@ -5,6 +5,7 @@
 #ifndef CRYPTO_EC_PRIVATE_KEY_H_
 #define CRYPTO_EC_PRIVATE_KEY_H_
 
+#include <openssl/base.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,9 +16,6 @@
 #include "base/macros.h"
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
-
-// Forward declaration for openssl/*.h
-typedef struct evp_pkey_st EVP_PKEY;
 
 namespace crypto {
 
@@ -56,7 +54,7 @@ class CRYPTO_EXPORT ECPrivateKey {
   // Returns a copy of the object.
   std::unique_ptr<ECPrivateKey> Copy() const;
 
-  EVP_PKEY* key() { return key_; }
+  EVP_PKEY* key() { return key_.get(); }
 
   // Exports the private key to a PKCS #8 PrivateKeyInfo block.
   bool ExportPrivateKey(std::vector<uint8_t>* output) const;
@@ -83,7 +81,7 @@ class CRYPTO_EXPORT ECPrivateKey {
   // Constructor is private. Use one of the Create*() methods above instead.
   ECPrivateKey();
 
-  EVP_PKEY* key_;
+  bssl::UniquePtr<EVP_PKEY> key_;
 
   DISALLOW_COPY_AND_ASSIGN(ECPrivateKey);
 };

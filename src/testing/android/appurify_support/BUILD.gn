@@ -4,7 +4,6 @@
 
 import("//build/config/android/rules.gni")
 
-# GYP: //testing/android/appurify_support.gyp:appurify_support_java
 android_library("appurify_support_java") {
   chromium_code = true
 

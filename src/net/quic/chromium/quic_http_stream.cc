@@ -128,7 +128,7 @@ void QuicHttpStream::OnRendezvousResult(QuicSpdyStream* stream) {
 
 int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
                                      RequestPriority priority,
-                                     const BoundNetLog& stream_net_log,
+                                     const NetLogWithSource& stream_net_log,
                                      const CompletionCallback& callback) {
   CHECK(callback_.is_null());
   DCHECK(!stream_);
@@ -408,9 +408,10 @@ bool QuicHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   return true;
 }
 
-Error QuicHttpStream::GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                                  std::vector<uint8_t>* out) {
-  return session_->GetTokenBindingSignature(key, out);
+Error QuicHttpStream::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                               TokenBindingType tb_type,
+                                               std::vector<uint8_t>* out) {
+  return session_->GetTokenBindingSignature(key, tb_type, out);
 }
 
 void QuicHttpStream::Drain(HttpNetworkSession* session) {
@@ -782,8 +783,8 @@ int QuicHttpStream::ProcessResponseHeaders(const SpdyHeaderBlock& headers) {
       HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3;
   response_info_->vary_data.Init(*request_info_,
                                  *response_info_->headers.get());
-  response_info_->was_npn_negotiated = true;
-  response_info_->npn_negotiated_protocol = "quic/1+spdy/3";
+  response_info_->was_alpn_negotiated = true;
+  response_info_->alpn_negotiated_protocol = "quic/1+spdy/3";
   response_info_->response_time = base::Time::Now();
   response_info_->request_time = request_time_;
   response_headers_received_ = true;

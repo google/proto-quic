@@ -17,11 +17,11 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "crypto/ec_private_key.h"
@@ -285,7 +285,6 @@ ChannelIDService::ChannelIDService(
       weak_ptr_factory_(this) {}
 
 ChannelIDService::~ChannelIDService() {
-  base::STLDeleteValues(&inflight_);
 }
 
 // static
@@ -344,7 +343,7 @@ int ChannelIDService::GetOrCreateChannelID(
     }
     // We are waiting for key generation.  Create a job & request to track it.
     ChannelIDServiceJob* job = new ChannelIDServiceJob(create_if_missing);
-    inflight_[domain] = job;
+    inflight_[domain] = base::WrapUnique(job);
 
     job->AddRequest(out_req);
     out_req->RequestStarted(this, request_start, callback, key, job);
@@ -392,8 +391,7 @@ void ChannelIDService::GotChannelID(int err,
                                     std::unique_ptr<crypto::ECPrivateKey> key) {
   DCHECK(CalledOnValidThread());
 
-  std::map<std::string, ChannelIDServiceJob*>::iterator j;
-  j = inflight_.find(server_identifier);
+  auto j = inflight_.find(server_identifier);
   if (j == inflight_.end()) {
     NOTREACHED();
     return;
@@ -450,17 +448,15 @@ void ChannelIDService::HandleResult(int error,
                                     std::unique_ptr<crypto::ECPrivateKey> key) {
   DCHECK(CalledOnValidThread());
 
-  std::map<std::string, ChannelIDServiceJob*>::iterator j;
-  j = inflight_.find(server_identifier);
+  auto j = inflight_.find(server_identifier);
   if (j == inflight_.end()) {
     NOTREACHED();
     return;
   }
-  ChannelIDServiceJob* job = j->second;
+  std::unique_ptr<ChannelIDServiceJob> job = std::move(j->second);
   inflight_.erase(j);
 
   job->HandleResult(error, std::move(key));
-  delete job;
 }
 
 bool ChannelIDService::JoinToInFlightRequest(
@@ -471,13 +467,12 @@ bool ChannelIDService::JoinToInFlightRequest(
     const CompletionCallback& callback,
     Request* out_req) {
   ChannelIDServiceJob* job = NULL;
-  std::map<std::string, ChannelIDServiceJob*>::const_iterator j =
-      inflight_.find(domain);
+  auto j = inflight_.find(domain);
   if (j != inflight_.end()) {
     // A request for the same domain is in flight already. We'll attach our
     // callback, but we'll also mark it as requiring a channel ID if one's
     // mising.
-    job = j->second;
+    job = j->second.get();
     inflight_joins_++;
 
     job->AddRequest(out_req, create_if_missing);
@@ -513,7 +508,7 @@ int ChannelIDService::LookupChannelID(
   if (err == ERR_IO_PENDING) {
     // We are waiting for async DB lookup.  Create a job & request to track it.
     ChannelIDServiceJob* job = new ChannelIDServiceJob(create_if_missing);
-    inflight_[domain] = job;
+    inflight_[domain] = base::WrapUnique(job);
 
     job->AddRequest(out_req);
     out_req->RequestStarted(this, request_start, callback, key, job);

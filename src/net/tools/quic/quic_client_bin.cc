@@ -113,7 +113,7 @@ class FakeCertVerifier : public net::CertVerifier {
              net::CertVerifyResult* verify_result,
              const net::CompletionCallback& callback,
              std::unique_ptr<Request>* out_req,
-             const net::BoundNetLog& net_log) override {
+             const net::NetLogWithSource& net_log) override {
     return net::OK;
   }
 
@@ -258,8 +258,8 @@ int main(int argc, char* argv[]) {
       new ProofVerifierChromium(cert_verifier.get(), ct_policy_enforcer.get(),
                                 transport_security_state.get(),
                                 ct_verifier.get()));
-  net::QuicClient client(net::IPEndPoint(ip_addr, FLAGS_port), server_id,
-                         versions, &epoll_server, std::move(proof_verifier));
+  net::QuicClient client(net::IPEndPoint(ip_addr, port), server_id, versions,
+                         &epoll_server, std::move(proof_verifier));
   client.set_initial_max_packet_length(
       FLAGS_initial_mtu != 0 ? FLAGS_initial_mtu : net::kDefaultMaxPacketSize);
   if (!client.Initialize()) {
@@ -313,11 +313,10 @@ int main(int argc, char* argv[]) {
 
   // Make sure to store the response, for later output.
   client.set_store_response(true);
-
   // Send the request.
   net::SpdyHeaderBlock header_block =
       net::SpdyBalsaUtils::RequestHeadersToSpdyHeaders(headers);
-  client.SendRequestAndWaitForResponse(headers, body, /*fin=*/true);
+  client.SendRequestAndWaitForResponse(header_block, body, /*fin=*/true);
 
   // Print request and response details.
   if (!FLAGS_quiet) {

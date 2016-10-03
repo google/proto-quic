@@ -4,6 +4,7 @@
 
 package org.chromium.native_test;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Instrumentation;
@@ -142,6 +143,7 @@ public class NativeTestInstrumentationTestRunner extends Instrumentation {
     }
 
     @Override
+    @SuppressLint("DefaultLocale")
     public void onStart() {
         super.onStart();
 

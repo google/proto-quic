@@ -781,6 +781,10 @@ TEST(StringNumberConversionsTest, StringToDouble) {
     {"-", 0.0, false},
     {"+", 0.0, false},
     {"", 0.0, false},
+
+    // crbug.org/588726
+    {"-0.0010000000000000000000000000000000000000001e-256",
+     -1.0000000000000001e-259, true},
   };
 
   for (size_t i = 0; i < arraysize(cases); ++i) {

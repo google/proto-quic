@@ -32,7 +32,10 @@ ReportSender::~ReportSender() {
   base::STLDeleteElements(&inflight_requests_);
 }
 
-void ReportSender::Send(const GURL& report_uri, const std::string& report) {
+void ReportSender::Send(const GURL& report_uri,
+                        base::StringPiece content_type,
+                        base::StringPiece report) {
+  DCHECK(!content_type.empty());
   std::unique_ptr<URLRequest> url_request =
       request_context_->CreateRequest(report_uri, DEFAULT_PRIORITY, this);
 
@@ -43,10 +46,15 @@ void ReportSender::Send(const GURL& report_uri, const std::string& report) {
   }
   url_request->SetLoadFlags(load_flags);
 
+  HttpRequestHeaders extra_headers;
+  extra_headers.SetHeader(HttpRequestHeaders::kContentType, content_type);
+  url_request->SetExtraRequestHeaders(extra_headers);
+
   url_request->set_method("POST");
 
+  std::vector<char> report_data(report.begin(), report.end());
   std::unique_ptr<UploadElementReader> reader(
-      UploadOwnedBytesElementReader::CreateWithString(report));
+      new UploadOwnedBytesElementReader(&report_data));
   url_request->set_upload(
       ElementsUploadDataStream::CreateWithReader(std::move(reader), 0));
 

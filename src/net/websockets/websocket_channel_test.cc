@@ -711,7 +711,7 @@ struct WebSocketStreamCreationCallbackArgumentSaver {
       const GURL& first_party_for_cookies,
       const std::string& additional_headers,
       URLRequestContext* url_request_context,
-      const BoundNetLog& net_log,
+      const NetLogWithSource& net_log,
       std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate) {
     this->socket_url = socket_url;
     this->create_helper = std::move(create_helper);
@@ -728,7 +728,7 @@ struct WebSocketStreamCreationCallbackArgumentSaver {
   url::Origin origin;
   GURL first_party_for_cookies;
   URLRequestContext* url_request_context;
-  BoundNetLog net_log;
+  NetLogWithSource net_log;
   std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate;
 };
 

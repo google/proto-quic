@@ -35,7 +35,7 @@ std::unique_ptr<UploadDataStream> ElementsUploadDataStream::CreateWithReader(
       new ElementsUploadDataStream(std::move(readers), identifier));
 }
 
-int ElementsUploadDataStream::InitInternal(const BoundNetLog& net_log) {
+int ElementsUploadDataStream::InitInternal(const NetLogWithSource& net_log) {
   return InitElements(0);
 }
 

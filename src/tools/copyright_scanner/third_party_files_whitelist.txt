@@ -245,6 +245,7 @@ ui/webui/resources/js/cr/ui/array_data_model.js
 # Bundles of existing code.
 chrome/browser/resources/md_downloads/vulcanized.html
 chrome/browser/resources/md_history/app.vulcanized.html
+chrome/browser/resources/md_history/lazy_load.vulcanized.html
 # Generated config files, which are checked in outside of the third-party
 # library they configure. Copyright The open-vcdiff Authors; Apache2 license.
 sdch/ios/config.h

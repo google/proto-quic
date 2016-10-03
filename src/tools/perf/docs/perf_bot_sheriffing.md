@@ -38,10 +38,18 @@ Note that there are three different views:
         "Android Nexus5 Perf (2)"
     *   **start_time** is seconds since the epoch.
 
+
+There is also [milo](https://luci-milo.appspot.com), which has the same data as
+buildbot, but mirrored in a different datastore. It is generally faster than
+buildbot, and links to it will not break, as the data is kept around for much
+longer.
+
 In addition to watching the waterfall directly,
 [Sheriff-O-Matic](https://sheriff-o-matic.appspot.com/chromium.perf) may
 optionally be used to easily track the different issues and associate
-them with specific bugs.
+them with specific bugs. It also attempts to group together similar failures
+across different builders, so it can help to see a higher level perspective on
+what is happening on the perf waterfall.
 
 You can see a list of all previously filed bugs using the
 **[Performance-Sheriff-BotHealth](https://bugs.chromium.org/p/chromium/issues/list?can=2&q=label%3APerformance-Sheriff-BotHealth)**
@@ -70,7 +78,16 @@ connected" is not enough to indicate a problem. For each disconnected machine,
 you can also check the "Last heard from" column to ensure that it's been gone
 for at least an hour. To get it running again,
 [file a bug](https://bugs.chromium.org/p/chromium/issues/entry?labels=Pri-1,Performance-Sheriff-BotHealth,Infra-Troopers,OS-?&comment=Hostname:&summary=Buildslave+offline+on+chromium.perf)
-against the current trooper and read [go/bug-a-trooper](http://go/bug-a-trooper) for contacting troopers.
+against the current trooper and read [go/bug-a-trooper](http://go/bug-a-trooper)
+for contacting troopers.
+
+The chrome infrastructure team also maintains a set of dashboards you can use to
+view some debugging information about our systems. This is available at
+[vi/chrome_infra](http://vi/chrome_infra). To debug offline buildslaves,
+you can look at the "Individual machine" dashboard, (at
+[vi/chrome_infra/Machines/per_machine](http://vi/chrome_infra/Machines/per_machine)
+under the "Machines" section, which can show some useful information about the
+machine in question.
 
 ### Purple bots
 

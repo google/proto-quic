@@ -34,6 +34,7 @@ def print_landmines():
   if platform() == 'android':
     print 'Clobber: to handle new way of suppressing findbugs failures.'
     print 'Clobber to fix gyp not rename package name (crbug.com/457038)'
+    print 'Clobber to recalculate reversed dependency (crbug.com/639042)'
   if platform() == 'win':
     print 'Compile on cc_unittests fails due to symbols removed in r185063.'
   if platform() == 'linux':

@@ -9,7 +9,8 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "shards": 10
         },
         "test": "angle_unittests"
       },

@@ -57,9 +57,18 @@ void LogFailure(const FilePath& path, TempFileFailure failure_code,
 
 // Helper function to call WriteFileAtomically() with a
 // std::unique_ptr<std::string>.
-bool WriteScopedStringToFileAtomically(const FilePath& path,
-                                       std::unique_ptr<std::string> data) {
-  return ImportantFileWriter::WriteFileAtomically(path, *data);
+void WriteScopedStringToFileAtomically(
+    const FilePath& path,
+    std::unique_ptr<std::string> data,
+    Closure before_write_callback,
+    Callback<void(bool success)> after_write_callback) {
+  if (!before_write_callback.is_null())
+    before_write_callback.Run();
+
+  bool result = ImportantFileWriter::WriteFileAtomically(path, *data);
+
+  if (!after_write_callback.is_null())
+    after_write_callback.Run(result);
 }
 
 }  // namespace
@@ -168,8 +177,11 @@ void ImportantFileWriter::WriteNow(std::unique_ptr<std::string> data) {
   if (HasPendingWrite())
     timer_.Stop();
 
-  auto task = Bind(&WriteScopedStringToFileAtomically, path_, Passed(&data));
-  if (!PostWriteTask(task)) {
+  Closure task = Bind(&WriteScopedStringToFileAtomically, path_, Passed(&data),
+                      Passed(&before_next_write_callback_),
+                      Passed(&after_next_write_callback_));
+
+  if (!task_runner_->PostTask(FROM_HERE, MakeCriticalClosure(task))) {
     // Posting the task to background message loop is not expected
     // to fail, but if it does, avoid losing data and just hit the disk
     // on the current thread.
@@ -203,37 +215,11 @@ void ImportantFileWriter::DoScheduledWrite() {
   serializer_ = nullptr;
 }
 
-void ImportantFileWriter::RegisterOnNextSuccessfulWriteCallback(
-    const Closure& on_next_successful_write) {
-  DCHECK(on_next_successful_write_.is_null());
-  on_next_successful_write_ = on_next_successful_write;
-}
-
-bool ImportantFileWriter::PostWriteTask(const Callback<bool()>& task) {
-  // TODO(gab): This code could always use PostTaskAndReplyWithResult and let
-  // ForwardSuccessfulWrite() no-op if |on_next_successful_write_| is null, but
-  // PostTaskAndReply causes memory leaks in tests (crbug.com/371974) and
-  // suppressing all of those is unrealistic hence we avoid most of them by
-  // using PostTask() in the typical scenario below.
-  if (!on_next_successful_write_.is_null()) {
-    return PostTaskAndReplyWithResult(
-        task_runner_.get(),
-        FROM_HERE,
-        MakeCriticalClosure(task),
-        Bind(&ImportantFileWriter::ForwardSuccessfulWrite,
-             weak_factory_.GetWeakPtr()));
-  }
-  return task_runner_->PostTask(
-      FROM_HERE,
-      MakeCriticalClosure(Bind(IgnoreResult(task))));
-}
-
-void ImportantFileWriter::ForwardSuccessfulWrite(bool result) {
-  DCHECK(CalledOnValidThread());
-  if (result && !on_next_successful_write_.is_null()) {
-    on_next_successful_write_.Run();
-    on_next_successful_write_.Reset();
-  }
+void ImportantFileWriter::RegisterOnNextWriteCallbacks(
+    const Closure& before_next_write_callback,
+    const Callback<void(bool success)>& after_next_write_callback) {
+  before_next_write_callback_ = before_next_write_callback;
+  after_next_write_callback_ = after_next_write_callback;
 }
 
 }  // namespace base

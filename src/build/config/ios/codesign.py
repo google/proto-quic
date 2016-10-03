@@ -232,7 +232,6 @@ def GenerateEntitlements(path, provisioning_profile, bundle_identifier):
 
 
 class Action(object):
-
   """Class implementing one action supported by the script."""
 
   @classmethod
@@ -243,7 +242,6 @@ class Action(object):
 
 
 class CodeSignBundleAction(Action):
-
   """Class implementing the code-sign-bundle action."""
 
   name = 'code-sign-bundle'
@@ -321,8 +319,49 @@ class CodeSignBundleAction(Action):
     CodeSignBundle(bundle.path, args.identity, codesign_extra_args)
 
 
-class GenerateEntitlementsAction(Action):
+class CodeSignFileAction(Action):
+  """Class implementing code signature for a single file."""
 
+  name = 'code-sign-file'
+  help = 'code-sign a single file'
+
+  @staticmethod
+  def _Register(parser):
+    parser.add_argument(
+        'path', help='path to the file to codesign')
+    parser.add_argument(
+        '--identity', '-i', required=True,
+        help='identity to use to codesign')
+    parser.add_argument(
+        '--output', '-o',
+        help='if specified copy the file to that location before signing it')
+    parser.set_defaults(sign=True)
+
+  @staticmethod
+  def _Execute(args):
+    if not args.identity:
+      args.identity = '-'
+
+    install_path = args.path
+    if args.output:
+
+      if os.path.isfile(args.output):
+        os.unlink(args.output)
+      elif os.path.isdir(args.output):
+        shutil.rmtree(args.output)
+
+      if os.path.isfile(args.path):
+        shutil.copy(args.path, args.output)
+      elif os.path.isdir(args.path):
+        shutil.copytree(args.path, args.output)
+
+      install_path = args.output
+
+    CodeSignBundle(install_path, args.identity,
+      ['--deep', '--preserve-metadata=identifier,entitlements'])
+
+
+class GenerateEntitlementsAction(Action):
   """Class implementing the generate-entitlements action."""
 
   name = 'generate-entitlements'
@@ -353,7 +392,13 @@ def Main():
   parser = argparse.ArgumentParser('codesign iOS bundles')
   subparsers = parser.add_subparsers()
 
-  for action in [ CodeSignBundleAction, GenerateEntitlementsAction ]:
+  actions = [
+      CodeSignBundleAction,
+      CodeSignFileAction,
+      GenerateEntitlementsAction,
+  ]
+
+  for action in actions:
     action.Register(subparsers)
 
   args = parser.parse_args()

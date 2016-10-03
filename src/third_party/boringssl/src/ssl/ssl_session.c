@@ -136,6 +136,7 @@
 #include <openssl/ssl.h>
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <openssl/err.h>
@@ -233,6 +234,9 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int dup_flags) {
   memcpy(new_session->peer_sha256, session->peer_sha256, SHA256_DIGEST_LENGTH);
   new_session->peer_sha256_valid = session->peer_sha256_valid;
 
+  new_session->timeout = session->timeout;
+  new_session->time = session->time;
+
   /* Copy non-authentication connection properties. */
   if (dup_flags & SSL_SESSION_INCLUDE_NONAUTH) {
     new_session->session_id_length = session->session_id_length;
@@ -240,8 +244,6 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int dup_flags) {
            session->session_id_length);
 
     new_session->key_exchange_info = session->key_exchange_info;
-    new_session->timeout = session->timeout;
-    new_session->time = session->time;
 
     if (session->tlsext_hostname != NULL) {
       new_session->tlsext_hostname = BUF_strdup(session->tlsext_hostname);
@@ -482,7 +484,7 @@ int ssl_get_new_session(SSL *ssl, int is_server) {
 
   SSL_SESSION_free(ssl->s3->new_session);
   ssl->s3->new_session = session;
-  SSL_set_session(ssl, NULL);
+  ssl_set_session(ssl, NULL);
   return 1;
 
 err:
@@ -546,8 +548,12 @@ int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
     goto err;
   }
 
-  int len;
   size_t total = 0;
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  memcpy(ptr, session_buf, session_len);
+  total = session_len;
+#else
+  int len;
   if (!EVP_EncryptUpdate(&ctx, ptr + total, &len, session_buf, session_len)) {
     goto err;
   }
@@ -556,6 +562,7 @@ int ssl_encrypt_ticket(SSL *ssl, CBB *out, const SSL_SESSION *session) {
     goto err;
   }
   total += len;
+#endif
   if (!CBB_did_write(out, total)) {
     goto err;
   }
@@ -792,8 +799,18 @@ static int remove_session_lock(SSL_CTX *ctx, SSL_SESSION *session, int lock) {
 }
 
 int SSL_set_session(SSL *ssl, SSL_SESSION *session) {
+  /* SSL_set_session may only be called before the handshake has started. */
+  if (ssl->state != SSL_ST_INIT || ssl->s3->initial_handshake_complete) {
+    abort();
+  }
+
+  ssl_set_session(ssl, session);
+  return 1;
+}
+
+void ssl_set_session(SSL *ssl, SSL_SESSION *session) {
   if (ssl->session == session) {
-    return 1;
+    return;
   }
 
   SSL_SESSION_free(ssl->session);
@@ -801,8 +818,6 @@ int SSL_set_session(SSL *ssl, SSL_SESSION *session) {
   if (session != NULL) {
     SSL_SESSION_up_ref(session);
   }
-
-  return 1;
 }
 
 long SSL_CTX_set_timeout(SSL_CTX *ctx, long timeout) {

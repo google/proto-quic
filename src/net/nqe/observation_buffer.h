@@ -9,12 +9,16 @@
 
 #include <algorithm>
 #include <deque>
+#include <memory>
+#include <utility>
 #include <vector>
 
-#include "base/gtest_prod_util.h"
 #include "base/macros.h"
+#include "base/time/default_tick_clock.h"
+#include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
+#include "net/nqe/network_quality_observation.h"
 #include "net/nqe/network_quality_observation_source.h"
 #include "net/nqe/weighted_observation.h"
 
@@ -29,7 +33,8 @@ template <typename ValueType>
 class NET_EXPORT_PRIVATE ObservationBuffer {
  public:
   explicit ObservationBuffer(double weight_multiplier_per_second)
-      : weight_multiplier_per_second_(weight_multiplier_per_second) {
+      : weight_multiplier_per_second_(weight_multiplier_per_second),
+        tick_clock_(new base::DefaultTickClock()) {
     static_assert(kMaximumObservationsBufferSize > 0U,
                   "Minimum size of observation buffer must be > 0");
     DCHECK_GE(weight_multiplier_per_second_, 0.0);
@@ -70,6 +75,7 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
   // value is unavailable if all the values in observation buffer are older
   // than |begin_timestamp|.
   // |result| must not be null.
+  // TODO(tbansal): Move out param |result| as the last param of the function.
   bool GetPercentile(const base::TimeTicks& begin_timestamp,
                      ValueType* result,
                      int percentile,
@@ -116,6 +122,10 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     return true;
   }
 
+  void SetTickClockForTesting(std::unique_ptr<base::TickClock> tick_clock) {
+    tick_clock_ = std::move(tick_clock);
+  }
+
  private:
   // Maximum number of observations that can be held in the ObservationBuffer.
   static const size_t kMaximumObservationsBufferSize = 300;
@@ -136,7 +146,7 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
 
     weighted_observations.clear();
     double total_weight_observations = 0.0;
-    base::TimeTicks now = base::TimeTicks::Now();
+    base::TimeTicks now = tick_clock_->NowTicks();
 
     for (const auto& observation : observations_) {
       if (observation.timestamp < begin_timestamp)
@@ -173,6 +183,8 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
   // Calculated from |kHalfLifeSeconds| by solving the following equation:
   //     weight_multiplier_per_second_ ^ kHalfLifeSeconds = 0.5
   const double weight_multiplier_per_second_;
+
+  std::unique_ptr<base::TickClock> tick_clock_;
 
   DISALLOW_COPY_AND_ASSIGN(ObservationBuffer);
 };

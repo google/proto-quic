@@ -165,8 +165,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
   virtual void OnConnectionMigration(QuicPathId path_id,
                                      PeerAddressChangeType type) = 0;
 
-  virtual bool IsHandshakeConfirmed() const = 0;
-
   virtual void SetDebugDelegate(DebugDelegate* debug_delegate) = 0;
 
   virtual QuicPacketNumber GetLargestObserved(QuicPathId path_id) const = 0;

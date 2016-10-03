@@ -10,6 +10,7 @@
 #include "base/compiler_specific.h"
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
+#include "base/memory/memory_coordinator_client_registry.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -208,25 +209,8 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
   websocket_socket_pool_manager_.reset(CreateSocketPoolManager(
       WEBSOCKET_SOCKET_POOL, params, ssl_session_cache_shard));
 
-  for (int i = ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION;
-       i <= ALTERNATE_PROTOCOL_MAXIMUM_VALID_VERSION; ++i) {
-    enabled_protocols_[i - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION] = false;
-  }
-
-  // TODO(rtenneti): https://crbug.com/116575
-  // Consider combining the NextProto and AlternateProtocol.
   if (params_.enable_http2) {
     next_protos_.push_back(kProtoHTTP2);
-    AlternateProtocol alternate = AlternateProtocolFromNextProto(kProtoHTTP2);
-    enabled_protocols_[alternate - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION] =
-        true;
-  }
-
-  if (params_.enable_quic) {
-    AlternateProtocol alternate =
-        AlternateProtocolFromNextProto(kProtoQUIC1SPDY3);
-    enabled_protocols_[alternate - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION] =
-        true;
   }
 
   next_protos_.push_back(kProtoHTTP11);
@@ -236,11 +220,13 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 
   memory_pressure_listener_.reset(new base::MemoryPressureListener(base::Bind(
       &HttpNetworkSession::OnMemoryPressure, base::Unretained(this))));
+  base::MemoryCoordinatorClientRegistry::GetInstance()->Register(this);
 }
 
 HttpNetworkSession::~HttpNetworkSession() {
   base::STLDeleteElements(&response_drainers_);
   spdy_session_pool_.CloseAllSessions();
+  base::MemoryCoordinatorClientRegistry::GetInstance()->Unregister(this);
 }
 
 void HttpNetworkSession::AddResponseDrainer(HttpResponseBodyDrainer* drainer) {
@@ -356,9 +342,17 @@ void HttpNetworkSession::CloseIdleConnections() {
 }
 
 bool HttpNetworkSession::IsProtocolEnabled(AlternateProtocol protocol) const {
-  DCHECK(IsAlternateProtocolValid(protocol));
-  return enabled_protocols_[
-      protocol - ALTERNATE_PROTOCOL_MINIMUM_VALID_VERSION];
+  switch (protocol) {
+    case NPN_HTTP_2:
+      return params_.enable_http2;
+    case QUIC:
+      return params_.enable_quic;
+    case UNINITIALIZED_ALTERNATE_PROTOCOL:
+      NOTREACHED();
+      return false;
+  }
+  NOTREACHED();
+  return false;
 }
 
 void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
@@ -400,6 +394,24 @@ void HttpNetworkSession::OnMemoryPressure(
     case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE:
     case base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL:
       CloseIdleConnections();
+      break;
+  }
+}
+
+void HttpNetworkSession::OnMemoryStateChange(base::MemoryState state) {
+  // TODO(hajimehoshi): When the state changes, adjust the sizes of the caches
+  // to reduce the limits. HttpNetworkSession doesn't have the ability to limit
+  // at present.
+  switch (state) {
+    case base::MemoryState::NORMAL:
+      break;
+    case base::MemoryState::THROTTLED:
+      CloseIdleConnections();
+      break;
+    case base::MemoryState::SUSPENDED:
+    // Note: Not supported at present. Fall through.
+    case base::MemoryState::UNKNOWN:
+      NOTREACHED();
       break;
   }
 }

@@ -44,7 +44,7 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
     SpdySessionPool* spdy_session_pool,
     bool tunnel,
     ProxyDelegate* proxy_delegate,
-    const BoundNetLog& net_log)
+    const NetLogWithSource& net_log)
     : next_state_(STATE_NONE),
       group_name_(group_name),
       priority_(priority),
@@ -69,9 +69,9 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
                        http_auth_cache,
                        http_auth_handler_factory)
                  : nullptr),
-      net_log_(
-          BoundNetLog::Make(net_log.net_log(),
-                            NetLogSourceType::PROXY_CLIENT_SOCKET_WRAPPER)) {
+      net_log_(NetLogWithSource::Make(
+          net_log.net_log(),
+          NetLogSourceType::PROXY_CLIENT_SOCKET_WRAPPER)) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       net_log.source().ToEventParametersCallback());
   DCHECK(transport_params || ssl_params);
@@ -207,7 +207,7 @@ bool HttpProxyClientSocketWrapper::IsConnectedAndIdle() const {
   return false;
 }
 
-const BoundNetLog& HttpProxyClientSocketWrapper::NetLog() const {
+const NetLogWithSource& HttpProxyClientSocketWrapper::NetLog() const {
   return net_log_;
 }
 
@@ -532,7 +532,7 @@ int HttpProxyClientSocketWrapper::DoSpdyProxyCreateStream() {
   } else {
     // Create a session direct to the proxy itself
     spdy_session = spdy_session_pool_->CreateAvailableSessionFromSocket(
-        key, std::move(transport_socket_handle_), net_log_, OK,
+        key, std::move(transport_socket_handle_), net_log_,
         /*using_ssl_*/ true);
     DCHECK(spdy_session);
   }

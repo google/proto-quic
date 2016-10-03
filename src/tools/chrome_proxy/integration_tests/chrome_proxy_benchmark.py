@@ -83,14 +83,14 @@ class ChromeProxyCacheProxyDisabled(ChromeProxyBenchmark):
 
 
 @benchmark.Disabled(*WEBVIEW_PLATFORMS)
-class ChromeProxyPreviewLoFi(ChromeProxyBenchmark):
-  tag = 'lo_fi_preview'
-  test = measurements.ChromeProxyLoFiPreview
-  page_set = pagesets.LoFiPreviewStorySet
+class ChromeProxyLitePage(ChromeProxyBenchmark):
+  tag = 'lite_page'
+  test = measurements.ChromeProxyLitePage
+  page_set = pagesets.LitePageStorySet
 
   @classmethod
   def Name(cls):
-    return 'chrome_proxy_benchmark.lo_fi_preview.lo_fi_preview'
+    return 'chrome_proxy_benchmark.lite_page.lite_page'
 
 
 class ChromeProxyExpDirective(ChromeProxyBenchmark):
@@ -264,6 +264,14 @@ class ChromeProxySmoke(ChromeProxyBenchmark):
   def Name(cls):
     return 'chrome_proxy_benchmark.smoke.smoke'
 
+class ChromeProxyQuicSmoke(ChromeProxyBenchmark):
+  tag = 'smoke'
+  test = measurements.ChromeProxyQuicSmoke
+  page_set = pagesets.SmokeStorySet
+
+  @classmethod
+  def Name(cls):
+    return 'chrome_proxy_benchmark.quic.smoke'
 
 class ChromeProxyClientConfig(ChromeProxyBenchmark):
   tag = 'client_config'
@@ -346,3 +354,14 @@ class ChromeProxyPingback(ChromeProxyBenchmark):
   @classmethod
   def Name(cls):
     return 'chrome_proxy_benchmark.pingback'
+
+class ChromeProxyQuicTransaction(ChromeProxyBenchmark):
+  """Check that Chrome uses QUIC correctly when connecting to a proxy
+  that supports QUIC. """
+  tag = 'quic-proxy'
+  test = measurements.ChromeProxyQuicTransaction
+  page_set = pagesets.QuicStorySet
+
+  @classmethod
+  def Name(cls):
+    return 'chrome_proxy_benchmark.quic.transaction'

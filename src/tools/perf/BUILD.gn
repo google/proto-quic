@@ -15,6 +15,10 @@ group("perf") {
     "//tools/variations/",
     "//testing/variations/",
 
+    # Field trial dependencies
+    "//tools/json_comment_eater/",
+    "//tools/json_to_struct/",
+
     # For blink_perf benchmarks.
     "//third_party/WebKit/PerformanceTests/",
 

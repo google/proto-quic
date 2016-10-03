@@ -94,6 +94,10 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
                                scoped_refptr<Sequence> sequence,
                                SchedulerWorker* worker) override;
 
+  const HistogramBase* num_tasks_between_waits_histogram_for_testing() const {
+    return num_tasks_between_waits_histogram_;
+  }
+
  private:
   class SchedulerSingleThreadTaskRunner;
   class SchedulerWorkerDelegateImpl;
@@ -176,6 +180,10 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally
   // leaked.
   HistogramBase* const detach_duration_histogram_;
+
+  // TaskScheduler.NumTasksBetweenWaits.[worker pool name] histogram.
+  // Intentionally leaked.
+  HistogramBase* const num_tasks_between_waits_histogram_;
 
   // TaskScheduler.TaskLatency.[worker pool name].[task priority] histograms.
   // Indexed by task priority. Histograms are allocated on demand to reduce

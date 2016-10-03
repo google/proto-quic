@@ -22,6 +22,8 @@ class QuicStreamSequencerPeer {
 
   static QuicStreamOffset GetCloseOffset(QuicStreamSequencer* sequencer);
 
+  static bool IsUnderlyingBufferAllocated(QuicStreamSequencer* sequencer);
+
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicStreamSequencerPeer);
 };

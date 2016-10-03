@@ -471,7 +471,7 @@ void GDig::ReplayNextEntry() {
     ++replay_log_index_;
     int ret = resolver_->Resolve(
         info, DEFAULT_PRIORITY, addrlist, callback, &request_,
-        BoundNetLog::Make(log_.get(), net::NetLogSourceType::NONE));
+        NetLogWithSource::Make(log_.get(), net::NetLogSourceType::NONE));
     if (ret != ERR_IO_PENDING)
       callback.Run(ret);
   }

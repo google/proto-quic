@@ -89,11 +89,10 @@ class NET_EXPORT_PRIVATE ValidateClientHelloResultCallback {
  public:
   // Opaque token that holds information about the client_hello and
   // its validity.  Can be interpreted by calling ProcessClientHello.
-  struct NET_EXPORT_PRIVATE Result {
+  struct NET_EXPORT_PRIVATE Result : public base::RefCountedThreadSafe<Result> {
     Result(const CryptoHandshakeMessage& in_client_hello,
            IPAddress in_client_ip,
            QuicWallTime in_now);
-    ~Result();
 
     CryptoHandshakeMessage client_hello;
     ClientHelloInfo info;
@@ -102,12 +101,16 @@ class NET_EXPORT_PRIVATE ValidateClientHelloResultCallback {
 
     // Populated if the CHLO STK contained a CachedNetworkParameters proto.
     CachedNetworkParameters cached_network_params;
+
+   private:
+    friend class base::RefCountedThreadSafe<Result>;
+    ~Result();
   };
 
   ValidateClientHelloResultCallback();
-  virtual ~ValidateClientHelloResultCallback();
-  virtual void Run(std::unique_ptr<Result> result,
+  virtual void Run(scoped_refptr<Result> result,
                    std::unique_ptr<ProofSource::Details> details) = 0;
+  virtual ~ValidateClientHelloResultCallback();
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ValidateClientHelloResultCallback);
@@ -123,6 +126,20 @@ class BuildServerConfigUpdateMessageResultCallback {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BuildServerConfigUpdateMessageResultCallback);
+};
+
+// Object that is interested in built rejections (which include REJ, SREJ and
+// cheap SREJ).
+class RejectionObserver {
+ public:
+  RejectionObserver() = default;
+  virtual ~RejectionObserver() {}
+  // Called after a rejection is built.
+  virtual void OnRejectionBuilt(const std::vector<uint32_t>& reasons,
+                                CryptoHandshakeMessage* out) const = 0;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(RejectionObserver);
 };
 
 // QuicCryptoServerConfig contains the crypto configuration of a QUIC server.
@@ -285,7 +302,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   //     initially encrypted packets.
   // error_details: used to store a std::string describing any error.
   QuicErrorCode ProcessClientHello(
-      const ValidateClientHelloResultCallback::Result& validate_chlo_result,
+      scoped_refptr<ValidateClientHelloResultCallback::Result>
+          validate_chlo_result,
       bool reject_only,
       QuicConnectionId connection_id,
       const IPAddress& server_ip,
@@ -423,6 +441,12 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // Returns the number of configs this object owns.
   int NumberOfConfigs() const;
 
+  // Callers retain the ownership of |rejection_observer| which must outlive the
+  // config.
+  void set_rejection_observer(RejectionObserver* rejection_observer) {
+    rejection_observer_ = rejection_observer;
+  }
+
  private:
   friend class test::QuicCryptoServerConfigPeer;
   friend struct QuicCryptoProof;
@@ -518,12 +542,13 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,
       QuicCryptoProof* crypto_proof,
-      std::unique_ptr<ValidateClientHelloResultCallback::Result>
+      scoped_refptr<ValidateClientHelloResultCallback::Result>
           client_hello_state,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const;
 
   // Callback class for bridging between EvaluateClientHello and
-  // EvaluateClientHelloAfterGetProof
+  // EvaluateClientHelloAfterGetProof.
+  class EvaluateClientHelloCallback;
   friend class EvaluateClientHelloCallback;
 
   // Continuation of EvaluateClientHello after the call to
@@ -541,7 +566,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicCryptoProof* crypto_proof,
       std::unique_ptr<ProofSource::Details> proof_source_details,
       bool get_proof_failed,
-      std::unique_ptr<ValidateClientHelloResultCallback::Result>
+      scoped_refptr<ValidateClientHelloResultCallback::Result>
           client_hello_state,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const;
 
@@ -778,6 +803,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
 
   // Enable serving SCT or not.
   bool enable_serving_sct_;
+
+  // Does not own this observer.
+  RejectionObserver* rejection_observer_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerConfig);
 };

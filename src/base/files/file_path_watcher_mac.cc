@@ -40,12 +40,6 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
     set_cancelled();
   }
 
-  void CancelOnMessageLoopThread() override {
-    if (impl_.get())
-      impl_->Cancel();
-    set_cancelled();
-  }
-
  protected:
   ~FilePathWatcherImpl() override {}
 

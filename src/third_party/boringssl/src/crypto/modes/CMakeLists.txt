@@ -34,6 +34,14 @@ if (${ARCH} STREQUAL "aarch64")
   )
 endif()
 
+if (${ARCH} STREQUAL "ppc64le")
+  set(
+    MODES_ARCH_SOURCES
+
+    ghashp8-ppc.${ASM_EXT}
+  )
+endif()
+
 add_library(
   modes
 
@@ -53,11 +61,12 @@ perlasm(ghash-x86_64.${ASM_EXT} asm/ghash-x86_64.pl)
 perlasm(ghash-x86.${ASM_EXT} asm/ghash-x86.pl)
 perlasm(ghash-armv4.${ASM_EXT} asm/ghash-armv4.pl)
 perlasm(ghashv8-armx.${ASM_EXT} asm/ghashv8-armx.pl)
+perlasm(ghashp8-ppc.${ASM_EXT} asm/ghashp8-ppc.pl)
 
 add_executable(
   gcm_test
 
-  gcm_test.c
+  gcm_test.cc
 
   $<TARGET_OBJECTS:test_support>
 )

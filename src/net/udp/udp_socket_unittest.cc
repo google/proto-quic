@@ -10,10 +10,10 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/weak_ptr.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_address.h"
@@ -364,7 +364,7 @@ class TestPrng {
 };
 
 TEST_F(UDPSocketTest, ConnectRandomBind) {
-  std::vector<UDPClientSocket*> sockets;
+  std::vector<std::unique_ptr<UDPClientSocket>> sockets;
   IPEndPoint peer_address;
   CreateUDPAddress("127.0.0.1", 53, &peer_address);
 
@@ -376,7 +376,7 @@ TEST_F(UDPSocketTest, ConnectRandomBind) {
                             RandIntCallback(),
                             NULL,
                             NetLog::Source());
-    sockets.push_back(socket);
+    sockets.push_back(base::WrapUnique(socket));
     EXPECT_THAT(socket->Connect(peer_address), IsOk());
 
     IPEndPoint client_address;
@@ -385,7 +385,6 @@ TEST_F(UDPSocketTest, ConnectRandomBind) {
   }
 
   // Free the last socket, its local port is still in |used_ports|.
-  delete sockets.back();
   sockets.pop_back();
 
   TestPrng test_prng(used_ports);
@@ -401,8 +400,6 @@ TEST_F(UDPSocketTest, ConnectRandomBind) {
   IPEndPoint client_address;
   EXPECT_THAT(test_socket->GetLocalAddress(&client_address), IsOk());
   EXPECT_EQ(used_ports.back(), client_address.port());
-
-  base::STLDeleteElements(&sockets);
 }
 
 // Return a privileged port (under 1024) so binding will fail.

@@ -284,7 +284,7 @@ TEST_P(HttpServerPropertiesManagerTest,
   // Set up alternative_services for https://mail.google.com.
   std::unique_ptr<base::DictionaryValue> alternative_service_dict2(
       new base::DictionaryValue);
-  alternative_service_dict2->SetString("protocol_str", "npn-spdy/3.1");
+  alternative_service_dict2->SetString("protocol_str", "h2");
   alternative_service_dict2->SetInteger("port", 444);
   base::ListValue* alternative_service_list1 = new base::ListValue;
   alternative_service_list1->Append(std::move(alternative_service_dict2));
@@ -381,7 +381,7 @@ TEST_P(HttpServerPropertiesManagerTest,
     AlternativeServiceMap::const_iterator map_it = map.begin();
     EXPECT_EQ("mail.google.com", map_it->first.host());
     ASSERT_EQ(1u, map_it->second.size());
-    EXPECT_EQ(NPN_SPDY_3_1, map_it->second[0].alternative_service.protocol);
+    EXPECT_EQ(NPN_HTTP_2, map_it->second[0].alternative_service.protocol);
     EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
     EXPECT_EQ(444, map_it->second[0].alternative_service.port);
     ++map_it;
@@ -409,7 +409,7 @@ TEST_P(HttpServerPropertiesManagerTest,
     ++map_it;
     EXPECT_EQ("mail.google.com", map_it->first.host());
     ASSERT_EQ(1u, map_it->second.size());
-    EXPECT_EQ(NPN_SPDY_3_1, map_it->second[0].alternative_service.protocol);
+    EXPECT_EQ(NPN_HTTP_2, map_it->second[0].alternative_service.protocol);
     EXPECT_TRUE(map_it->second[0].alternative_service.host.empty());
     EXPECT_EQ(444, map_it->second[0].alternative_service.port);
   }
@@ -1082,7 +1082,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
   http_server_props_manager_->SetAlternativeServices(
       server_www, alternative_service_info_vector);
 
-  AlternativeService mail_alternative_service(NPN_SPDY_3_1, "foo.google.com",
+  AlternativeService mail_alternative_service(NPN_HTTP_2, "foo.google.com",
                                               444);
   base::Time expiration3 = base::Time::Max();
   http_server_props_manager_->SetAlternativeService(
@@ -1121,7 +1121,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
       "\"port\":1234,\"protocol_str\":\"h2\"}]}},"
       "{\"http://mail.google.com\":{\"alternative_service\":[{"
       "\"expiration\":\"9223372036854775807\",\"host\":\"foo.google.com\","
-      "\"port\":444,\"protocol_str\":\"npn-spdy/3.1\"}],"
+      "\"port\":444,\"protocol_str\":\"h2\"}],"
       "\"network_stats\":{\"srtt\":42}}}"
       "],"
       "\"supports_quic\":{\"address\":\"127.0.0.1\",\"used_quic\":true},"

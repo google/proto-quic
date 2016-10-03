@@ -212,7 +212,24 @@ TEST_F(AnalyzerTest, BuildFilesWereModified) {
       "  \"test_targets\": [ \"//:a\" ]"
       "}",
       "{"
-      "\"compile_targets\":[],"
+      "\"compile_targets\":[\"//:a\"],"
+      "\"status\":\"Found dependency (all)\","
+      "\"test_targets\":[\"//:a\"]"
+      "}");
+}
+
+TEST_F(AnalyzerTest, BuildFilesWereModifiedAndCompilingAll) {
+  // This tests that if a build file is modified, we bail out early with
+  // "Found dependency (all)" error since we can't handle changes to
+  // build files yet (crbug.com/555273).
+  RunBasicTest(
+      "{"
+      "  \"files\": [ \"//a.cc\", \"//BUILD.gn\" ],"
+      "  \"additional_compile_targets\": [ \"all\" ],"
+      "  \"test_targets\": [ \"//:a\" ]"
+      "}",
+      "{"
+      "\"compile_targets\":[\"all\"],"
       "\"status\":\"Found dependency (all)\","
       "\"test_targets\":[\"//:a\"]"
       "}");

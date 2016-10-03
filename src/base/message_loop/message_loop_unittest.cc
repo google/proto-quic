@@ -456,7 +456,7 @@ void RunTest_RecursiveSupport2(MessageLoop::Type message_loop_type) {
 
 void PostNTasksThenQuit(int posts_remaining) {
   if (posts_remaining > 1) {
-    MessageLoop::current()->task_runner()->PostTask(
+    ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, Bind(&PostNTasksThenQuit, posts_remaining - 1));
   } else {
     MessageLoop::current()->QuitWhenIdle();
@@ -872,7 +872,7 @@ TEST(MessageLoopTest, ThreadMainTaskRunner) {
       &Foo::Test1ConstRef, foo, a));
 
   // Post quit task;
-  MessageLoop::current()->task_runner()->PostTask(
+  ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       Bind(&MessageLoop::QuitWhenIdle, Unretained(MessageLoop::current())));
 

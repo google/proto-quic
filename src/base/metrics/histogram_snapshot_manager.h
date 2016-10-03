@@ -24,7 +24,7 @@ class HistogramFlattener;
 // histograms for recording either to disk or for transmission (such as from
 // renderer to browser, or from browser to UMA upload). Since histograms can sit
 // in memory for an extended period of time, and are vulnerable to memory
-// corruption, this class also validates as much rendundancy as it can before
+// corruption, this class also validates as much redundancy as it can before
 // calling for the marginal change (a.k.a., delta) in a histogram to be
 // recorded.
 class BASE_EXPORT HistogramSnapshotManager {

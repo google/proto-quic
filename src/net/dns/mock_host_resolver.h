@@ -86,10 +86,10 @@ class MockHostResolverBase : public HostResolver,
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* request,
-              const BoundNetLog& net_log) override;
+              const NetLogWithSource& net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const BoundNetLog& net_log) override;
+                       const NetLogWithSource& net_log) override;
   HostCache* GetHostCache() override;
 
   // Detach cancelled request.
@@ -244,10 +244,10 @@ class HangingHostResolver : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* out_req,
-              const BoundNetLog& net_log) override;
+              const NetLogWithSource& net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const BoundNetLog& net_log) override;
+                       const NetLogWithSource& net_log) override;
 };
 
 // This class sets the default HostResolverProc for a particular scope.  The

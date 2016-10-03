@@ -79,6 +79,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     DataSource source,
     const ParseCertificateOptions& options,
     CertErrors* errors) {
+  // TODO(crbug.com/634443): Add errors
   scoped_refptr<ParsedCertificate> result(new ParsedCertificate);
 
   switch (source) {
@@ -104,7 +105,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
   }
 
   // Attempt to parse the signature algorithm contained in the Certificate.
-  // Do not give up on failure here, since SignatureAlgorithm::CreateFromDer
+  // Do not give up on failure here, since SignatureAlgorithm::Create
   // will fail on valid but unsupported signature algorithms.
   // TODO(mattm): should distinguish between unsupported algorithms and parsing
   // errors.
@@ -155,8 +156,8 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
                          &result->subject_alt_names_extension_)) {
       // RFC 5280 section 4.2.1.6:
       // SubjectAltName ::= GeneralNames
-      result->subject_alt_names_ = GeneralNames::CreateFromDer(
-          result->subject_alt_names_extension_.value);
+      result->subject_alt_names_ =
+          GeneralNames::Create(result->subject_alt_names_extension_.value);
       if (!result->subject_alt_names_)
         return nullptr;
       // RFC 5280 section 4.1.2.6:
@@ -174,7 +175,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     if (ConsumeExtension(NameConstraintsOid(), &result->unparsed_extensions_,
                          &extension)) {
       result->name_constraints_ =
-          NameConstraints::CreateFromDer(extension.value, extension.critical);
+          NameConstraints::Create(extension.value, extension.critical);
       if (!result->name_constraints_)
         return nullptr;
     }

@@ -731,7 +731,7 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // defined.
 //
 // You may append to the error message like so:
-//   DCHECK_NE(1, 2) << ": The world must be ending!";
+//   DCHECK_NE(1, 2) << "The world must be ending!";
 //
 // We are very careful to ensure that each argument is evaluated exactly
 // once, and that anything which is legal to pass as a function argument is

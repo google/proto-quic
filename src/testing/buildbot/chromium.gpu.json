@@ -196,13 +196,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -493,13 +493,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -774,13 +774,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -1071,13 +1071,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -1360,13 +1360,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -1670,13 +1670,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -1955,13 +1955,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"
@@ -2252,13 +2252,13 @@
           "--test-machine-name",
           "${buildername}"
         ],
-        "isolate_name": "telemetry_gpu_test",
+        "isolate_name": "telemetry_gpu_integration_test",
         "name": "pixel_test",
         "non_precommit_args": [
           "--upload-refimg-to-cloud-storage"
         ],
         "override_compile_targets": [
-          "telemetry_gpu_test_run"
+          "telemetry_gpu_integration_test_run"
         ],
         "precommit_args": [
           "--download-refimg-from-cloud-storage"

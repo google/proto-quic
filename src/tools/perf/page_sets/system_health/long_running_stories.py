@@ -6,7 +6,7 @@ from page_sets.login_helpers import google_login
 from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 
-from telemetry import decorators
+from telemetry import benchmark
 
 
 IDLE_TIME_IN_SECONDS = 100
@@ -58,6 +58,11 @@ class _LongRunningGmailBase(_LongRunningStory):
 class _LongRunningGmailMobileBase(_LongRunningGmailBase):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    # crbug.com/651198
+    return possible_browser.platform.IsSvelte()
+
   def _DidLoadDocument(self, action_runner):
     # Close the "Get Inbox by Gmail" interstitial.
     action_runner.WaitForJavaScriptCondition(
@@ -86,8 +91,7 @@ class LongRunningGmailDesktopForegroundStory(_LongRunningGmailDesktopBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
-# crbug.com/643110
-@decorators.Disabled('android')
+@benchmark.Disabled('android-webview')  # Webview does not have tabs.
 class LongRunningGmailMobileBackgroundStory(_LongRunningGmailMobileBase):
   BACKGROUND = True
   NAME = 'long_running:tools:gmail-background'

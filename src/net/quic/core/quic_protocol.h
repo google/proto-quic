@@ -724,8 +724,12 @@ enum QuicErrorCode {
   // maintains too many gaps.
   QUIC_TOO_MANY_FRAME_GAPS = 93,
 
+  // Sequencer buffer get into weird state where continuing read/write will lead
+  // to crash.
+  QUIC_STREAM_SEQUENCER_INVALID_STATE = 95,
+
   // No error. Used as bound while iterating.
-  QUIC_LAST_ERROR = 95,
+  QUIC_LAST_ERROR = 96,
 };
 
 typedef std::array<char, 32> DiversificationNonce;

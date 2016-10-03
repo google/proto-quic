@@ -40,7 +40,7 @@ TEST(WriteFile, WithData) {
   // Make a real directory for writing the files.
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  setup.build_settings()->SetRootPath(temp_dir.path());
+  setup.build_settings()->SetRootPath(temp_dir.GetPath());
   setup.build_settings()->SetBuildDir(SourceDir("//out/"));
 
   Value some_string(nullptr, "some string contents");
@@ -52,8 +52,9 @@ TEST(WriteFile, WithData) {
 
   // Should be able to write to a new dir inside the out dir.
   EXPECT_TRUE(CallWriteFile(setup.scope(), "//out/foo.txt", some_string));
-  base::FilePath foo_name = temp_dir.path().Append(FILE_PATH_LITERAL("out"))
-      .Append(FILE_PATH_LITERAL("foo.txt"));
+  base::FilePath foo_name = temp_dir.GetPath()
+                                .Append(FILE_PATH_LITERAL("out"))
+                                .Append(FILE_PATH_LITERAL("foo.txt"));
   std::string result_contents;
   EXPECT_TRUE(base::ReadFileToString(foo_name, &result_contents));
   EXPECT_EQ(some_string.string_value(), result_contents);

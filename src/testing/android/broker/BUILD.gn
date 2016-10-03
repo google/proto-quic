@@ -4,7 +4,6 @@
 
 import("//build/config/android/rules.gni")
 
-# GYP: //testing/android/on_device_instrumentation.gyp:broker_java
 android_library("broker_java") {
   chromium_code = true
 

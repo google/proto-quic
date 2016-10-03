@@ -72,7 +72,8 @@ TEST_F(CachingCertVerifierTest, CacheHit) {
   error = callback.GetResult(verifier_.Verify(
       CertVerifier::RequestParams(test_cert, "www.example.com", 0,
                                   std::string(), CertificateList()),
-      nullptr, &verify_result, callback.callback(), &request, BoundNetLog()));
+      nullptr, &verify_result, callback.callback(), &request,
+      NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error));
   ASSERT_EQ(1u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());
@@ -81,7 +82,8 @@ TEST_F(CachingCertVerifierTest, CacheHit) {
   error = verifier_.Verify(
       CertVerifier::RequestParams(test_cert, "www.example.com", 0,
                                   std::string(), CertificateList()),
-      nullptr, &verify_result, callback.callback(), &request, BoundNetLog());
+      nullptr, &verify_result, callback.callback(), &request,
+      NetLogWithSource());
   // Synchronous completion.
   ASSERT_NE(ERR_IO_PENDING, error);
   ASSERT_TRUE(IsCertificateError(error));
@@ -104,9 +106,9 @@ TEST_F(CachingCertVerifierTest, Visitor) {
   CertVerifier::RequestParams params1(test_cert, "www.example.com", 0,
                                       std::string(), CertificateList());
   CertVerifyResult result1;
-  int error1 = callback.GetResult(verifier_.Verify(params1, nullptr, &result1,
-                                                   callback.callback(),
-                                                   &request, BoundNetLog()));
+  int error1 = callback.GetResult(
+      verifier_.Verify(params1, nullptr, &result1, callback.callback(),
+                       &request, NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error1));
   ASSERT_EQ(1u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());
@@ -115,9 +117,9 @@ TEST_F(CachingCertVerifierTest, Visitor) {
   CertVerifier::RequestParams params2(test_cert, "www.example.net", 0,
                                       std::string(), CertificateList());
   CertVerifyResult result2;
-  int error2 = callback.GetResult(verifier_.Verify(params2, nullptr, &result2,
-                                                   callback.callback(),
-                                                   &request, BoundNetLog()));
+  int error2 = callback.GetResult(
+      verifier_.Verify(params2, nullptr, &result2, callback.callback(),
+                       &request, NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error2));
   ASSERT_EQ(2u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());
@@ -126,9 +128,9 @@ TEST_F(CachingCertVerifierTest, Visitor) {
   CertVerifier::RequestParams params3(test_cert, "www.example.org", 0,
                                       std::string(), CertificateList());
   CertVerifyResult result3;
-  int error3 = callback.GetResult(verifier_.Verify(params3, nullptr, &result3,
-                                                   callback.callback(),
-                                                   &request, BoundNetLog()));
+  int error3 = callback.GetResult(
+      verifier_.Verify(params3, nullptr, &result3, callback.callback(),
+                       &request, NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error3));
   ASSERT_EQ(3u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());
@@ -191,7 +193,7 @@ TEST_F(CachingCertVerifierTest, AddsEntries) {
   CertVerifyResult cached_result;
   int error = callback.GetResult(
       verifier_.Verify(params, nullptr, &cached_result, callback.callback(),
-                       &request, BoundNetLog()));
+                       &request, NetLogWithSource()));
   ASSERT_THAT(error, IsError(ERR_CERT_WEAK_KEY));
   EXPECT_TRUE(cached_result.has_md2);
   EXPECT_FALSE(cached_result.is_issued_by_known_root);
@@ -207,7 +209,7 @@ TEST_F(CachingCertVerifierTest, AddsEntries) {
 
   error = callback.GetResult(verifier_.Verify(params, nullptr, &cached_result,
                                               callback.callback(), &request,
-                                              BoundNetLog()));
+                                              NetLogWithSource()));
   ASSERT_THAT(error, IsError(ERR_CERT_WEAK_KEY));
   EXPECT_TRUE(cached_result.has_md2);
   EXPECT_FALSE(cached_result.is_issued_by_known_root);
@@ -257,7 +259,8 @@ TEST_F(CachingCertVerifierTest, DifferentCACerts) {
   error = callback.GetResult(verifier_.Verify(
       CertVerifier::RequestParams(cert_chain1, "www.example.com", 0,
                                   std::string(), CertificateList()),
-      nullptr, &verify_result, callback.callback(), &request, BoundNetLog()));
+      nullptr, &verify_result, callback.callback(), &request,
+      NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error));
   ASSERT_EQ(1u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());
@@ -266,7 +269,8 @@ TEST_F(CachingCertVerifierTest, DifferentCACerts) {
   error = callback.GetResult(verifier_.Verify(
       CertVerifier::RequestParams(cert_chain2, "www.example.com", 0,
                                   std::string(), CertificateList()),
-      nullptr, &verify_result, callback.callback(), &request, BoundNetLog()));
+      nullptr, &verify_result, callback.callback(), &request,
+      NetLogWithSource()));
   ASSERT_TRUE(IsCertificateError(error));
   ASSERT_EQ(2u, verifier_.requests());
   ASSERT_EQ(0u, verifier_.cache_hits());

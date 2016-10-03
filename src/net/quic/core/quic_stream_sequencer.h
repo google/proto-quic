@@ -82,6 +82,9 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
   // Free the memory of underlying buffer.
   void ReleaseBuffer();
 
+  // Free the memory of underlying buffer when no bytes remain in it.
+  void ReleaseBufferIfEmpty();
+
   // Number of bytes in the buffer right now.
   size_t NumBytesBuffered() const;
 

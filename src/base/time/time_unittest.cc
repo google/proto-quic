@@ -806,22 +806,29 @@ TEST(TimeDelta, FromAndIn) {
 
 #if defined(OS_POSIX)
 TEST(TimeDelta, TimeSpecConversion) {
-  struct timespec result = TimeDelta::FromSeconds(0).ToTimeSpec();
+  TimeDelta delta = TimeDelta::FromSeconds(0);
+  struct timespec result = delta.ToTimeSpec();
   EXPECT_EQ(result.tv_sec, 0);
   EXPECT_EQ(result.tv_nsec, 0);
+  EXPECT_EQ(delta, TimeDelta::FromTimeSpec(result));
 
-  result = TimeDelta::FromSeconds(1).ToTimeSpec();
+  delta = TimeDelta::FromSeconds(1);
+  result = delta.ToTimeSpec();
   EXPECT_EQ(result.tv_sec, 1);
   EXPECT_EQ(result.tv_nsec, 0);
+  EXPECT_EQ(delta, TimeDelta::FromTimeSpec(result));
 
-  result = TimeDelta::FromMicroseconds(1).ToTimeSpec();
+  delta = TimeDelta::FromMicroseconds(1);
+  result = delta.ToTimeSpec();
   EXPECT_EQ(result.tv_sec, 0);
   EXPECT_EQ(result.tv_nsec, 1000);
+  EXPECT_EQ(delta, TimeDelta::FromTimeSpec(result));
 
-  result = TimeDelta::FromMicroseconds(
-      Time::kMicrosecondsPerSecond + 1).ToTimeSpec();
+  delta = TimeDelta::FromMicroseconds(Time::kMicrosecondsPerSecond + 1);
+  result = delta.ToTimeSpec();
   EXPECT_EQ(result.tv_sec, 1);
   EXPECT_EQ(result.tv_nsec, 1000);
+  EXPECT_EQ(delta, TimeDelta::FromTimeSpec(result));
 }
 #endif  // OS_POSIX
 

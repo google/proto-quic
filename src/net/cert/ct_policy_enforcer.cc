@@ -381,7 +381,7 @@ ct::EVPolicyCompliance CertPolicyComplianceToEVPolicyCompliance(
 void CheckCTEVPolicyCompliance(X509Certificate* cert,
                                const ct::EVCertsWhitelist* ev_whitelist,
                                const ct::SCTList& verified_scts,
-                               const BoundNetLog& net_log,
+                               const NetLogWithSource& net_log,
                                EVComplianceDetails* result) {
   result->status = CertPolicyComplianceToEVPolicyCompliance(
       CheckCertPolicyCompliance(*cert, verified_scts));
@@ -399,7 +399,7 @@ void CheckCTEVPolicyCompliance(X509Certificate* cert,
 ct::CertPolicyCompliance CTPolicyEnforcer::DoesConformToCertPolicy(
     X509Certificate* cert,
     const ct::SCTList& verified_scts,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   // If the build is not timely, no certificate is considered compliant
   // with CT policy. The reasoning is that, for example, a log might
   // have been pulled and is no longer considered valid; thus, a client
@@ -427,7 +427,7 @@ ct::EVPolicyCompliance CTPolicyEnforcer::DoesConformToCTEVPolicy(
     X509Certificate* cert,
     const ct::EVCertsWhitelist* ev_whitelist,
     const ct::SCTList& verified_scts,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   EVComplianceDetails details;
   // If the build is not timely, no certificate is considered compliant
   // with EV policy. The reasoning is that, for example, a log might

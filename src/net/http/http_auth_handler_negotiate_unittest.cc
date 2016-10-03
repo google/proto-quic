@@ -216,8 +216,8 @@ class HttpAuthHandlerNegotiateTest : public PlatformTest {
     std::unique_ptr<HttpAuthHandler> generic_handler;
     SSLInfo null_ssl_info;
     int rv = factory_->CreateAuthHandlerFromString(
-        "Negotiate", HttpAuth::AUTH_SERVER, null_ssl_info, gurl, BoundNetLog(),
-        &generic_handler);
+        "Negotiate", HttpAuth::AUTH_SERVER, null_ssl_info, gurl,
+        NetLogWithSource(), &generic_handler);
     if (rv != OK)
       return rv;
     HttpAuthHandlerNegotiate* negotiate_handler =
@@ -381,10 +381,7 @@ TEST_F(HttpAuthHandlerNegotiateTest, MissingGSSAPI) {
   GURL gurl("http://www.example.com");
   std::unique_ptr<HttpAuthHandler> generic_handler;
   int rv = negotiate_factory->CreateAuthHandlerFromString(
-      "Negotiate",
-      HttpAuth::AUTH_SERVER,
-      gurl,
-      BoundNetLog(),
+      "Negotiate", HttpAuth::AUTH_SERVER, gurl, NetLogWithSource(),
       &generic_handler);
   EXPECT_THAT(rv, IsError(ERR_UNSUPPORTED_AUTH_SCHEME));
   EXPECT_TRUE(generic_handler.get() == NULL);

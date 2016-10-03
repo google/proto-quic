@@ -287,7 +287,30 @@ class BASE_EXPORT PersistentMemoryAllocator {
   void UpdateTrackingHistograms();
 
  protected:
+  enum MemoryType {
+    MEM_EXTERNAL,
+    MEM_MALLOC,
+    MEM_VIRTUAL,
+    MEM_SHARED,
+    MEM_FILE,
+  };
+
+  struct Memory {
+    Memory(void* b, MemoryType t) : base(b), type(t) {}
+
+    void* base;
+    MemoryType type;
+  };
+
+  // Constructs the allocator. Everything is the same as the public allocator
+  // except |memory| which is a structure with additional information besides
+  // the base address.
+  PersistentMemoryAllocator(Memory memory, size_t size, size_t page_size,
+                            uint64_t id, base::StringPiece name,
+                            bool readonly);
+
   volatile char* const mem_base_;  // Memory base. (char so sizeof guaranteed 1)
+  const MemoryType mem_type_;      // Type of memory allocation.
   const uint32_t mem_size_;        // Size of entire memory segment.
   const uint32_t mem_page_;        // Page size allocations shouldn't cross.
 
@@ -359,10 +382,10 @@ class BASE_EXPORT LocalPersistentMemoryAllocator
   // Allocates a block of local memory of the specified |size|, ensuring that
   // the memory will not be physically allocated until accessed and will read
   // as zero when that happens.
-  static void* AllocateLocalMemory(size_t size);
+  static Memory AllocateLocalMemory(size_t size);
 
   // Deallocates a block of local |memory| of the specified |size|.
-  static void DeallocateLocalMemory(void* memory, size_t size);
+  static void DeallocateLocalMemory(void* memory, size_t size, MemoryType type);
 
   DISALLOW_COPY_AND_ASSIGN(LocalPersistentMemoryAllocator);
 };
@@ -382,7 +405,7 @@ class BASE_EXPORT SharedPersistentMemoryAllocator
 
   SharedMemory* shared_memory() { return shared_memory_.get(); }
 
-  // Ensure that the memory isn't so invalid that it won't crash when passing it
+  // Ensure that the memory isn't so invalid that it would crash when passing it
   // to the allocator. This doesn't guarantee the data is valid, just that it
   // won't cause the program to abort. The existing IsCorrupt() call will handle
   // the rest.
@@ -411,7 +434,7 @@ class BASE_EXPORT FilePersistentMemoryAllocator
                                 bool read_only);
   ~FilePersistentMemoryAllocator() override;
 
-  // Ensure that the file isn't so invalid that it won't crash when passing it
+  // Ensure that the file isn't so invalid that it would crash when passing it
   // to the allocator. This doesn't guarantee the file is valid, just that it
   // won't cause the program to abort. The existing IsCorrupt() call will handle
   // the rest.

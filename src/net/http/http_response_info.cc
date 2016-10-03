@@ -85,8 +85,8 @@ enum {
   // This bit is set if the response was received via SPDY.
   RESPONSE_INFO_WAS_SPDY = 1 << 13,
 
-  // This bit is set if the request has NPN negotiated.
-  RESPONSE_INFO_WAS_NPN = 1 << 14,
+  // This bit is set if the request has ALPN negotiated.
+  RESPONSE_INFO_WAS_ALPN = 1 << 14,
 
   // This bit is set if the request was fetched via an explicit proxy.
   RESPONSE_INFO_WAS_PROXY = 1 << 15,
@@ -97,7 +97,7 @@ enum {
   RESPONSE_INFO_HAS_SSL_CONNECTION_STATUS = 1 << 16,
 
   // This bit is set if the response info has protocol version.
-  RESPONSE_INFO_HAS_NPN_NEGOTIATED_PROTOCOL = 1 << 17,
+  RESPONSE_INFO_HAS_ALPN_NEGOTIATED_PROTOCOL = 1 << 17,
 
   // This bit is set if the response info has connection info.
   RESPONSE_INFO_HAS_CONNECTION_INFO = 1 << 18,
@@ -127,7 +127,7 @@ HttpResponseInfo::HttpResponseInfo()
       server_data_unavailable(false),
       network_accessed(false),
       was_fetched_via_spdy(false),
-      was_npn_negotiated(false),
+      was_alpn_negotiated(false),
       was_fetched_via_proxy(false),
       did_use_http_auth(false),
       unused_since_prefetch(false),
@@ -140,14 +140,14 @@ HttpResponseInfo::HttpResponseInfo(const HttpResponseInfo& rhs)
       server_data_unavailable(rhs.server_data_unavailable),
       network_accessed(rhs.network_accessed),
       was_fetched_via_spdy(rhs.was_fetched_via_spdy),
-      was_npn_negotiated(rhs.was_npn_negotiated),
+      was_alpn_negotiated(rhs.was_alpn_negotiated),
       was_fetched_via_proxy(rhs.was_fetched_via_proxy),
       proxy_server(rhs.proxy_server),
       did_use_http_auth(rhs.did_use_http_auth),
       unused_since_prefetch(rhs.unused_since_prefetch),
       async_revalidation_required(rhs.async_revalidation_required),
       socket_address(rhs.socket_address),
-      npn_negotiated_protocol(rhs.npn_negotiated_protocol),
+      alpn_negotiated_protocol(rhs.alpn_negotiated_protocol),
       connection_info(rhs.connection_info),
       request_time(rhs.request_time),
       response_time(rhs.response_time),
@@ -168,13 +168,13 @@ HttpResponseInfo& HttpResponseInfo::operator=(const HttpResponseInfo& rhs) {
   network_accessed = rhs.network_accessed;
   was_fetched_via_spdy = rhs.was_fetched_via_spdy;
   proxy_server = rhs.proxy_server;
-  was_npn_negotiated = rhs.was_npn_negotiated;
+  was_alpn_negotiated = rhs.was_alpn_negotiated;
   was_fetched_via_proxy = rhs.was_fetched_via_proxy;
   did_use_http_auth = rhs.did_use_http_auth;
   unused_since_prefetch = rhs.unused_since_prefetch;
   async_revalidation_required = rhs.async_revalidation_required;
   socket_address = rhs.socket_address;
-  npn_negotiated_protocol = rhs.npn_negotiated_protocol;
+  alpn_negotiated_protocol = rhs.alpn_negotiated_protocol;
   connection_info = rhs.connection_info;
   request_time = rhs.request_time;
   response_time = rhs.response_time;
@@ -285,8 +285,8 @@ bool HttpResponseInfo::InitFromPickle(const base::Pickle& pickle,
   }
 
   // Read protocol-version.
-  if (flags & RESPONSE_INFO_HAS_NPN_NEGOTIATED_PROTOCOL) {
-    if (!iter.ReadString(&npn_negotiated_protocol))
+  if (flags & RESPONSE_INFO_HAS_ALPN_NEGOTIATED_PROTOCOL) {
+    if (!iter.ReadString(&alpn_negotiated_protocol))
       return false;
   }
 
@@ -317,7 +317,7 @@ bool HttpResponseInfo::InitFromPickle(const base::Pickle& pickle,
 
   was_fetched_via_spdy = (flags & RESPONSE_INFO_WAS_SPDY) != 0;
 
-  was_npn_negotiated = (flags & RESPONSE_INFO_WAS_NPN) != 0;
+  was_alpn_negotiated = (flags & RESPONSE_INFO_WAS_ALPN) != 0;
 
   was_fetched_via_proxy = (flags & RESPONSE_INFO_WAS_PROXY) != 0;
 
@@ -352,9 +352,9 @@ void HttpResponseInfo::Persist(base::Pickle* pickle,
     flags |= RESPONSE_INFO_TRUNCATED;
   if (was_fetched_via_spdy)
     flags |= RESPONSE_INFO_WAS_SPDY;
-  if (was_npn_negotiated) {
-    flags |= RESPONSE_INFO_WAS_NPN;
-    flags |= RESPONSE_INFO_HAS_NPN_NEGOTIATED_PROTOCOL;
+  if (was_alpn_negotiated) {
+    flags |= RESPONSE_INFO_WAS_ALPN;
+    flags |= RESPONSE_INFO_HAS_ALPN_NEGOTIATED_PROTOCOL;
   }
   if (was_fetched_via_proxy)
     flags |= RESPONSE_INFO_WAS_PROXY;
@@ -411,8 +411,8 @@ void HttpResponseInfo::Persist(base::Pickle* pickle,
   pickle->WriteString(socket_address.host());
   pickle->WriteUInt16(socket_address.port());
 
-  if (was_npn_negotiated)
-    pickle->WriteString(npn_negotiated_protocol);
+  if (was_alpn_negotiated)
+    pickle->WriteString(alpn_negotiated_protocol);
 
   if (connection_info != CONNECTION_INFO_UNKNOWN)
     pickle->WriteInt(static_cast<int>(connection_info));

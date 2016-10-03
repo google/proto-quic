@@ -26,9 +26,8 @@ const (
 	VersionTLS13 = 0x0304
 )
 
-// The draft version of TLS 1.3 that is implemented here and sent in the draft
-// indicator extension.
-const tls13DraftVersion = 14
+// A draft version of TLS 1.3 that is sent over the wire for the current draft.
+const tls13DraftVersion = 0x7f0e
 
 const (
 	maxPlaintext        = 16384        // maximum plaintext payload length
@@ -93,11 +92,11 @@ const (
 	extensionKeyShare                   uint16 = 40    // draft-ietf-tls-tls13-13
 	extensionPreSharedKey               uint16 = 41    // draft-ietf-tls-tls13-13
 	extensionEarlyData                  uint16 = 42    // draft-ietf-tls-tls13-13
+	extensionSupportedVersions          uint16 = 43    // draft-ietf-tls-tls13-16
 	extensionCookie                     uint16 = 44    // draft-ietf-tls-tls13-13
 	extensionCustom                     uint16 = 1234  // not IANA assigned
 	extensionNextProtoNeg               uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo          uint16 = 0xff01
-	extensionTLS13Draft                 uint16 = 0xff02
 	extensionChannelID                  uint16 = 30032 // not IANA assigned
 )
 
@@ -165,13 +164,13 @@ const (
 	signatureECDSAWithP521AndSHA512 signatureAlgorithm = 0x0603
 
 	// RSASSA-PSS algorithms
-	signatureRSAPSSWithSHA256 signatureAlgorithm = 0x0700
-	signatureRSAPSSWithSHA384 signatureAlgorithm = 0x0701
-	signatureRSAPSSWithSHA512 signatureAlgorithm = 0x0702
+	signatureRSAPSSWithSHA256 signatureAlgorithm = 0x0804
+	signatureRSAPSSWithSHA384 signatureAlgorithm = 0x0805
+	signatureRSAPSSWithSHA512 signatureAlgorithm = 0x0806
 
 	// EdDSA algorithms
-	signatureEd25519 signatureAlgorithm = 0x0703
-	signatureEd448   signatureAlgorithm = 0x0704
+	signatureEd25519 signatureAlgorithm = 0x0807
+	signatureEd448   signatureAlgorithm = 0x0808
 )
 
 // supportedSignatureAlgorithms contains the default supported signature
@@ -597,9 +596,17 @@ type ProtocolBugs struct {
 	// send a NewSessionTicket message during an abbreviated handshake.
 	RenewTicketOnResume bool
 
-	// SendClientVersion, if non-zero, causes the client to send a different
-	// TLS version in the ClientHello than the maximum supported version.
+	// SendClientVersion, if non-zero, causes the client to send the
+	// specified value in the ClientHello version field.
 	SendClientVersion uint16
+
+	// OmitSupportedVersions, if true, causes the client to omit the
+	// supported versions extension.
+	OmitSupportedVersions bool
+
+	// SendSupportedVersions, if non-empty, causes the client to send a
+	// supported versions extension with the values from array.
+	SendSupportedVersions []uint16
 
 	// NegotiateVersion, if non-zero, causes the server to negotiate the
 	// specifed TLS version rather than the version supported by either
@@ -736,8 +743,8 @@ type ProtocolBugs struct {
 	// across a renego.
 	RequireSameRenegoClientVersion bool
 
-	// ExpectInitialRecordVersion, if non-zero, is the expected
-	// version of the records before the version is determined.
+	// ExpectInitialRecordVersion, if non-zero, is the expected value of
+	// record-layer version field before the version is determined.
 	ExpectInitialRecordVersion uint16
 
 	// MaxPacketLength, if non-zero, is the maximum acceptable size for a
@@ -790,6 +797,10 @@ type ProtocolBugs struct {
 	// SendWrongMessageType, if non-zero, causes messages of the specified
 	// type to be sent with the wrong value.
 	SendWrongMessageType byte
+
+	// SendTrailingMessageData, if non-zero, causes messages of the
+	// specified type to be sent with trailing data.
+	SendTrailingMessageData byte
 
 	// FragmentMessageTypeMismatch, if true, causes all non-initial
 	// handshake fragments in DTLS to have the wrong message type.
@@ -1036,7 +1047,7 @@ type ProtocolBugs struct {
 	SecondHelloRetryRequest bool
 
 	// SendServerHelloVersion, if non-zero, causes the server to send the
-	// specified version in ServerHello rather than the true version.
+	// specified value in ServerHello version field.
 	SendServerHelloVersion uint16
 
 	// SkipHelloRetryRequest, if true, causes the TLS 1.3 server to not send
@@ -1067,6 +1078,23 @@ type ProtocolBugs struct {
 	// SendCompressionMethods, if not nil, is the compression method list to
 	// send in the ClientHello.
 	SendCompressionMethods []byte
+
+	// AlwaysSendPreSharedKeyIdentityHint, if true, causes the server to
+	// always send a ServerKeyExchange for PSK ciphers, even if the identity
+	// hint is empty.
+	AlwaysSendPreSharedKeyIdentityHint bool
+
+	// TrailingKeyShareData, if true, causes the client key share list to
+	// include a trailing byte.
+	TrailingKeyShareData bool
+
+	// InvalidChannelIDSignature, if true, causes the client to generate an
+	// invalid Channel ID signature.
+	InvalidChannelIDSignature bool
+
+	// ExpectGREASE, if true, causes the server to reject a ClientHello
+	// unless it contains GREASE values. See draft-davidben-tls-grease-01.
+	ExpectGREASE bool
 }
 
 func (c *Config) serverInit() {
@@ -1167,24 +1195,10 @@ func (c *Config) defaultCurves() map[CurveID]bool {
 	return defaultCurves
 }
 
-// mutualVersion returns the protocol version to use given the advertised
-// version of the peer.
-func (c *Config) mutualVersion(vers uint16, isDTLS bool) (uint16, bool) {
-	// There is no such thing as DTLS 1.1.
-	if isDTLS && vers == VersionTLS11 {
-		vers = VersionTLS10
-	}
-
-	minVersion := c.minVersion(isDTLS)
-	maxVersion := c.maxVersion(isDTLS)
-
-	if vers < minVersion {
-		return 0, false
-	}
-	if vers > maxVersion {
-		vers = maxVersion
-	}
-	return vers, true
+// isSupportedVersion returns true if the specified protocol version is
+// acceptable.
+func (c *Config) isSupportedVersion(vers uint16, isDTLS bool) bool {
+	return c.minVersion(isDTLS) <= vers && vers <= c.maxVersion(isDTLS)
 }
 
 // getCertificateForName returns the best certificate for the given name,

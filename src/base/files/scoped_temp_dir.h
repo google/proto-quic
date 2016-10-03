@@ -47,10 +47,6 @@ class BASE_EXPORT ScopedTempDir {
   // when this object goes out of scope.
   FilePath Take();
 
-  // DEPRECATED: Use GetPath instead. See https://crbug.com/640599 for more
-  // info.
-  const FilePath& path() const { return path_; }
-
   // Returns the path to the created directory. Call one of the
   // CreateUniqueTempDir* methods before getting the path.
   const FilePath& GetPath() const;

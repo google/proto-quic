@@ -632,9 +632,6 @@ bool QuicSentPacketManager::MaybeRetransmitTailLossProbe() {
     if (!it->in_flight || it->retransmittable_frames.empty()) {
       continue;
     }
-    if (!handshake_confirmed_) {
-      DCHECK(!it->has_crypto_handshake);
-    }
     MarkForRetransmission(packet_number, TLP_RETRANSMISSION);
     return true;
   }
@@ -743,7 +740,8 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
 
   QuicTime::Delta send_delta = ack_receive_time - transmission_info.sent_time;
   const int kMaxSendDeltaSeconds = 30;
-  if (send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
+  if (!FLAGS_quic_allow_large_send_deltas &&
+      send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
     // send_delta can be very high if local clock is changed mid-connection.
     LOG(WARNING) << "Excessive send delta: " << send_delta.ToSeconds()
                  << ", setting to: " << kMaxSendDeltaSeconds
@@ -946,9 +944,6 @@ void QuicSentPacketManager::OnConnectionMigration(QuicPathId,
   send_algorithm_->OnConnectionMigration();
 }
 
-bool QuicSentPacketManager::IsHandshakeConfirmed() const {
-  return handshake_confirmed_;
-}
 
 void QuicSentPacketManager::SetDebugDelegate(DebugDelegate* debug_delegate) {
   debug_delegate_ = debug_delegate;

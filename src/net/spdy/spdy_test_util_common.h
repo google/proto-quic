@@ -40,10 +40,10 @@ class GURL;
 
 namespace net {
 
-class BoundNetLog;
 class CTVerifier;
 class CTPolicyEnforcer;
 class HostPortPair;
+class NetLogWithSource;
 class SpdySession;
 class SpdySessionKey;
 class SpdySessionPool;
@@ -105,7 +105,7 @@ base::WeakPtr<SpdyStream> CreateStreamSynchronously(
     const base::WeakPtr<SpdySession>& session,
     const GURL& url,
     RequestPriority priority,
-    const BoundNetLog& net_log);
+    const NetLogWithSource& net_log);
 
 // Helper class used by some tests to release a stream as soon as it's
 // created.
@@ -221,7 +221,8 @@ class SpdyURLRequestContext : public URLRequestContext {
   URLRequestContextStorage storage_;
 };
 
-// Equivalent to pool->GetIfExists(spdy_session_key, BoundNetLog()) != NULL.
+// Equivalent to pool->GetIfExists(spdy_session_key, NetLogWithSource()) !=
+// NULL.
 bool HasSpdySession(SpdySessionPool* pool, const SpdySessionKey& key);
 
 // Creates a SPDY session for the given key and puts it in the SPDY
@@ -230,23 +231,23 @@ bool HasSpdySession(SpdySessionPool* pool, const SpdySessionKey& key);
 base::WeakPtr<SpdySession> CreateInsecureSpdySession(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
-    const BoundNetLog& net_log);
+    const NetLogWithSource& net_log);
 
 // Tries to create a SPDY session for the given key but expects the
 // attempt to fail with the given error. A SPDY session for |key| must
 // not already exist. The session will be created but close in the
 // next event loop iteration.
-base::WeakPtr<SpdySession> TryCreateInsecureSpdySessionExpectingFailure(
+base::WeakPtr<SpdySession> TryCreateSpdySessionExpectingFailure(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
     Error expected_error,
-    const BoundNetLog& net_log);
+    const NetLogWithSource& net_log);
 
 // Like CreateInsecureSpdySession(), but uses TLS.
 base::WeakPtr<SpdySession> CreateSecureSpdySession(
     HttpNetworkSession* http_session,
     const SpdySessionKey& key,
-    const BoundNetLog& net_log);
+    const NetLogWithSource& net_log);
 
 // Creates an insecure SPDY session for the given key and puts it in
 // |pool|. The returned session will neither receive nor send any
@@ -269,7 +270,6 @@ class SpdySessionPoolPeer {
   explicit SpdySessionPoolPeer(SpdySessionPool* pool);
 
   void RemoveAliases(const SpdySessionKey& key);
-  void DisableDomainAuthenticationVerification();
   void SetEnableSendingInitialData(bool enabled);
   void SetSessionMaxRecvWindowSize(size_t window);
   void SetStreamInitialRecvWindowSize(size_t window);

@@ -21,6 +21,7 @@
 #include "base/test/gtest_util.h"
 #include "base/third_party/libevent/event.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -174,8 +175,7 @@ void QuitMessageLoopAndStart(const Closure& quit_closure) {
 
   MessageLoop::ScopedNestableTaskAllower allow(MessageLoop::current());
   RunLoop runloop;
-  MessageLoop::current()->task_runner()->PostTask(FROM_HERE,
-                                                  runloop.QuitClosure());
+  ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, runloop.QuitClosure());
   runloop.Run();
 }
 
@@ -186,7 +186,7 @@ class NestedPumpWatcher : public MessagePumpLibevent::Watcher {
 
   void OnFileCanReadWithoutBlocking(int /* fd */) override {
     RunLoop runloop;
-    MessageLoop::current()->task_runner()->PostTask(
+    ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, Bind(&QuitMessageLoopAndStart, runloop.QuitClosure()));
     runloop.Run();
   }
@@ -218,8 +218,7 @@ class QuitWatcher : public BaseWatcher {
 
   void OnFileCanReadWithoutBlocking(int /* fd */) override {
     // Post a fatal closure to the MessageLoop before we quit it.
-    MessageLoop::current()->task_runner()->PostTask(FROM_HERE,
-                                                    Bind(&FatalClosure));
+    ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, Bind(&FatalClosure));
 
     // Now quit the MessageLoop.
     run_loop_->Quit();

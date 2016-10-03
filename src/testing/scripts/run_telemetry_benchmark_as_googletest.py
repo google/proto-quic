@@ -45,8 +45,7 @@ def main():
       '--isolated-script-test-output', type=argparse.FileType('w'),
       required=True)
   parser.add_argument(
-    '--isolated-script-test-chartjson-output', type=argparse.FileType('w'),
-    required=False)
+      '--isolated-script-test-chartjson-output', required=False)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
   args, rest_args = parser.parse_known_args()
   xvfb_proc = None
@@ -65,8 +64,7 @@ def main():
     tempfile_dir = tempfile.mkdtemp('telemetry')
     valid = True
     failures = []
-    chartjson = (args.isolated_script_test_chartjson_output is not None and
-      '--output-format=chartjson' in rest_args)
+    chartjson_results_present = '--output-format=chartjson' in rest_args
     chartresults = None
     try:
       rc = common.run_command([sys.executable] + rest_args + [
@@ -83,7 +81,7 @@ def main():
       # If we have also output chartjson read it in and return it.
       # results-chart.json is the file name output by telemetry when the
       # chartjson output format is included
-      if chartjson:
+      if chartjson_results_present:
         chart_tempfile_name = os.path.join(tempfile_dir, 'results-chart.json')
         with open(chart_tempfile_name) as f:
           chartresults = json.load(f)
@@ -98,8 +96,10 @@ def main():
       if rc == 0:
         rc = 1  # Signal an abnormal exit.
 
-    if chartjson:
-      json.dump(chartresults, args.isolated_script_test_chartjson_output)
+    if chartjson_results_present and args.isolated_script_test_chartjson_output:
+      chartjson_output_file = \
+        open(args.isolated_script_test_chartjson_output, 'w')
+      json.dump(chartresults, chartjson_output_file)
 
     json.dump({
         'valid': valid,

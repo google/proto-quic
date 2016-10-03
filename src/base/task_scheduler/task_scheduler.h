@@ -59,6 +59,13 @@ class BASE_EXPORT TaskScheduler {
   // called once.
   virtual void Shutdown() = 0;
 
+  // Waits until there are no pending undelayed tasks. May be called in tests
+  // to validate that a condition is met after all undelayed tasks have run.
+  //
+  // Does not wait for delayed tasks. Waits for undelayed tasks posted from
+  // other threads during the call. Returns immediately when shutdown completes.
+  virtual void FlushForTesting() = 0;
+
   // CreateAndSetDefaultTaskScheduler() and SetInstance() register a
   // TaskScheduler to handle tasks posted through the post_task.h API for this
   // process. The registered TaskScheduler will only be deleted when a new

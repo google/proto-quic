@@ -112,38 +112,32 @@ class MultiLogCTVerifierTest : public ::testing::Test {
   }
 
   bool VerifySinglePrecertificateChain(scoped_refptr<X509Certificate> chain,
-                                       const BoundNetLog& bound_net_log,
+                                       const NetLogWithSource& net_log,
                                        ct::CTVerifyResult* result) {
-    return verifier_->Verify(chain.get(),
-                             std::string(),
-                             std::string(),
-                             result,
-                             bound_net_log) == OK;
+    return verifier_->Verify(chain.get(), std::string(), std::string(), result,
+                             net_log) == OK;
   }
 
   bool VerifySinglePrecertificateChain(scoped_refptr<X509Certificate> chain) {
     ct::CTVerifyResult result;
-    TestNetLog net_log;
-    BoundNetLog bound_net_log =
-        BoundNetLog::Make(&net_log, NetLogSourceType::CONNECT_JOB);
+    TestNetLog test_net_log;
+    NetLogWithSource net_log =
+        NetLogWithSource::Make(&test_net_log, NetLogSourceType::CONNECT_JOB);
 
-    return verifier_->Verify(chain.get(),
-                             std::string(),
-                             std::string(),
-                             &result,
-                             bound_net_log) == OK;
+    return verifier_->Verify(chain.get(), std::string(), std::string(), &result,
+                             net_log) == OK;
   }
 
   bool CheckPrecertificateVerification(scoped_refptr<X509Certificate> chain) {
     ct::CTVerifyResult result;
-    TestNetLog net_log;
-    BoundNetLog bound_net_log =
-        BoundNetLog::Make(&net_log, NetLogSourceType::CONNECT_JOB);
-    return (VerifySinglePrecertificateChain(chain, bound_net_log, &result) &&
+    TestNetLog test_net_log;
+    NetLogWithSource net_log =
+        NetLogWithSource::Make(&test_net_log, NetLogSourceType::CONNECT_JOB);
+    return (VerifySinglePrecertificateChain(chain, net_log, &result) &&
             ct::CheckForSingleVerifiedSCTInResult(result, kLogDescription) &&
             ct::CheckForSCTOrigin(
                 result, ct::SignedCertificateTimestamp::SCT_EMBEDDED) &&
-            CheckForEmbeddedSCTInNetLog(net_log));
+            CheckForEmbeddedSCTInNetLog(test_net_log));
   }
 
   // Histogram-related helper methods
@@ -217,9 +211,8 @@ TEST_F(MultiLogCTVerifierTest, VerifiesSCTOverX509Cert) {
   std::string sct_list = ct::GetSCTListForTesting();
 
   ct::CTVerifyResult result;
-  EXPECT_EQ(OK,
-            verifier_->Verify(
-                chain_.get(), std::string(), sct_list, &result, BoundNetLog()));
+  EXPECT_EQ(OK, verifier_->Verify(chain_.get(), std::string(), sct_list,
+                                  &result, NetLogWithSource()));
   ASSERT_TRUE(ct::CheckForSingleVerifiedSCTInResult(result, kLogDescription));
   ASSERT_TRUE(ct::CheckForSCTOrigin(
       result, ct::SignedCertificateTimestamp::SCT_FROM_TLS_EXTENSION));
@@ -229,9 +222,8 @@ TEST_F(MultiLogCTVerifierTest, IdentifiesSCTFromUnknownLog) {
   std::string sct_list = ct::GetSCTListWithInvalidSCT();
   ct::CTVerifyResult result;
 
-  EXPECT_NE(OK,
-            verifier_->Verify(
-                chain_.get(), std::string(), sct_list, &result, BoundNetLog()));
+  EXPECT_NE(OK, verifier_->Verify(chain_.get(), std::string(), sct_list,
+                                  &result, NetLogWithSource()));
   EXPECT_EQ(1U, result.scts.size());
   EXPECT_EQ("", result.scts[0].sct->log_description);
   EXPECT_EQ(ct::SCT_STATUS_LOG_UNKNOWN, result.scts[0].status);
@@ -252,9 +244,8 @@ TEST_F(MultiLogCTVerifierTest, CountsInvalidSCTsInStatusHistogram) {
   int num_invalid_scts = GetValueFromHistogram(
       "Net.CertificateTransparency.SCTStatus", ct::SCT_STATUS_LOG_UNKNOWN);
 
-  EXPECT_NE(OK,
-            verifier_->Verify(
-                chain_.get(), std::string(), sct_list, &result, BoundNetLog()));
+  EXPECT_NE(OK, verifier_->Verify(chain_.get(), std::string(), sct_list,
+                                  &result, NetLogWithSource()));
 
   ASSERT_EQ(num_valid_scts, NumValidSCTsInStatusHistogram());
   ASSERT_EQ(num_invalid_scts + 1,

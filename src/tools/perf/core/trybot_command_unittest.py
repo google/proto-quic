@@ -83,16 +83,24 @@ class TrybotCommandTest(unittest.TestCase):
       func(*args)
     self.assertIn(message, e.exception.message)
 
-  def _SetupTrybotCommand(self, try_json_dict, trybot):
+  def _SetupTrybotCommand(
+      self, try_json_dict, trybot, benchmark_name='sunspider',
+      repo_path=trybot_command.CHROMIUM_SRC_PATH, deps_revision=None):
     self._MockTryserverJson(try_json_dict)
     command = trybot_command.Trybot()
     command._InitializeBuilderNames(trybot)
-    return command
+    opts = argparse.Namespace(
+        trybot=trybot, benchmark_name=benchmark_name, repo_path=repo_path,
+        deps_revision=deps_revision)
 
-  def _GetConfigForTrybot(self, name, platform, extra_benchmark_args=None):
+    return command, opts
+
+  def _GetConfigForTrybot(self, name, platform, extra_benchmark_args=None,
+                          repo_path=trybot_command.CHROMIUM_SRC_PATH,
+                          deps_revision=None):
     bot = '%s_perf_bisect' % name.replace('', '').replace('-', '_')
-    command = self._SetupTrybotCommand({bot: 'stuff'}, name)
-    options = argparse.Namespace(trybot=name, benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand(
+        {bot: 'stuff'}, name, repo_path=repo_path, deps_revision=deps_revision)
     extra_benchmark_args = extra_benchmark_args or []
     arguments = [options.benchmark_name] + extra_benchmark_args
     cfg = command._GetPerfConfig(platform, arguments)
@@ -277,8 +285,22 @@ class TrybotCommandTest(unittest.TestCase):
         ['linux_perf_bisect'],
         sorted(command._builder_names.get('linux')))
 
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value='/dummy/path'))
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value=False))
+  def testRepoPathExists(self):
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux', repo_path='/dummy/path')
+    command.Run(options)
+    self.assertEquals((
+        '(ERROR) Perf Try Job: Repository path "/dummy/path" does not exist, '
+        'please check the value of <repo_path> argument.'),
+                      sys.stdout.getvalue().strip())
+
   def testNoGit(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (128, None, None)),
@@ -287,11 +309,12 @@ class TrybotCommandTest(unittest.TestCase):
         ('%s is not a git repository, must be in a git repository to send '
          'changes to trybots.' % os.getcwd()),
         command._GetRepoAndBranchName,
-        trybot_command.CHROMIUM_SRC_PATH
+        options.repo_path
     )
 
   def testDettachedBranch(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nHEAD\n', None)),
@@ -299,51 +322,52 @@ class TrybotCommandTest(unittest.TestCase):
     self._AssertTryBotExceptions(
         'Not on a valid branch, looks like branch is dettached. [branch:HEAD]',
         command._GetRepoAndBranchName,
-        trybot_command.CHROMIUM_SRC_PATH
+        options.repo_path
     )
 
   def testDirtyTree(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nbr\n', None)),
-        (['git', 'update-index', '--refresh', '-q'], (0, None, None,)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
         (['git', 'diff-index', 'HEAD'], (0, 'dirty tree', None)),
     ))
     self._AssertTryBotExceptions(
         'Cannot send a try job with a dirty tree.',
         command._GetRepoAndBranchName,
-        trybot_command.CHROMIUM_SRC_PATH
+        options.repo_path
     )
 
   def testNoLocalCommits(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nbr\n', None)),
-        (['git', 'update-index', '--refresh', '-q'], (0, None, None,)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
         (['git', 'diff-index', 'HEAD'], (0, '', None)),
         (['git', 'footers', 'HEAD'], (0, 'CL footers', None)),
     ))
     self._AssertTryBotExceptions(
-        'No local changes found in %s repository.' %
-        trybot_command.CHROMIUM_SRC_PATH,
+        'No local changes found in %s repository.' %  options.repo_path,
         command._GetRepoAndBranchName,
-        trybot_command.CHROMIUM_SRC_PATH
+        options.repo_path
     )
 
   def testGetRepoAndBranchName(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nbr\n', None)),
-        (['git', 'update-index', '--refresh', '-q'], (0, None, None,)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
         (['git', 'diff-index', 'HEAD'], (0, '', None)),
         (['git', 'footers', 'HEAD'], (0, '', None)),
     ))
     self.assertEquals(
-        command._GetRepoAndBranchName(
-            trybot_command.CHROMIUM_SRC_PATH), ('src', 'br'))
+        command._GetRepoAndBranchName(options.repo_path), ('src', 'br'))
 
   def testErrorOnBrowserArgSpecified(self):
     parser = trybot_command.Trybot.CreateParser()
@@ -419,8 +443,8 @@ class TrybotCommandTest(unittest.TestCase):
     )
 
   def testUploadPatchToRietveldGitCommandFailed(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
           ('CL for src perf tryjob to run sunspider benchmark on linux '
@@ -435,8 +459,8 @@ class TrybotCommandTest(unittest.TestCase):
     )
 
   def testUploadPatchToRietveldNoURLMatchFound(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
           ('CL for src perf tryjob to run sunspider benchmark on linux '
@@ -451,8 +475,8 @@ class TrybotCommandTest(unittest.TestCase):
     )
 
   def testUploadPatchToRietveldOnSuccess(self):
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
           ('CL for src perf tryjob to run sunspider benchmark on linux '
@@ -464,8 +488,8 @@ class TrybotCommandTest(unittest.TestCase):
 
   def testRunTryJobFailed(self):
     test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux', repo_path='path_to_repo/src')
     arguments = [options.benchmark_name] + []
     self._ExpectProcesses((
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
@@ -474,31 +498,127 @@ class TrybotCommandTest(unittest.TestCase):
           'linux_perf_bisect'], (128, None, None)),))
     self._AssertTryBotExceptions(
         'Could not try CL for linux',
-        command._RunTryJob, 'linux', arguments)
+        command._RunTryJob, 'linux', arguments, None)
+
+  def testRunTryJobWithDepsOverrideFailed(self):
+    test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
+    deps_override_arg = 'deps_revision_overrides={"src/v8": "feedbeed"}'
+
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux', repo_path='path_to_repo/v8',
+        deps_revision='feedbeed')
+    arguments = [options.benchmark_name] + []
+    self._ExpectProcesses((
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', test_args,
+          '-p', deps_override_arg,
+          '-b',
+          'linux_perf_bisect'], (128, None, None)),))
+    self._AssertTryBotExceptions(
+        'Could not try CL for linux with DEPS override',
+        command._RunTryJob, 'linux', arguments, {'src/v8': 'feedbeed'})
 
   def testRunTryJobSuccess(self):
     test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux', repo_path='path_to_repo/src')
     arguments = [options.benchmark_name] + []
     self._ExpectProcesses((
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
           '-p', test_args,
           '-b',
-          'linux_perf_bisect'], (0, None, None)),))
-    command._RunTryJob('linux', arguments)
+          'linux_perf_bisect'], (0, '', None)),))
+    command._RunTryJob('linux', arguments, None)
     self.assertEquals('Perf Try job sent to rietveld for linux platform.',
                       sys.stdout.getvalue().strip())
 
+  def testNoUpstream(self):
+    command, _ = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                          'linux')
+    self._ExpectProcesses((
+        (['git', 'config', 'branch.br.remote'], (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (128, 'None', None,)),
+    ))
+    self._AssertTryBotExceptions(
+        'Failed to get upstream branch name.',
+        command._GetBaseGitHashForRepo, 'br', 'http://repo/git/url.git')
+
+  def testGitConfigBranchRemote(self):
+    command, _ = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                          'linux')
+    self._ExpectProcesses((
+        (['git', 'config', 'branch.br.remote'],
+         (128, 'None', None)),
+    ))
+    self._AssertTryBotExceptions(
+        'Failed to get branch.br.remote from git config',
+        command._GetBaseGitHashForRepo, 'br', 'http://repo/git/url.git')
+
+  def testGitConfigBranchRemoteUrl(self):
+    command, _ = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                          'linux')
+    self._ExpectProcesses((
+        (['git', 'config', 'branch.br.remote'], (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (0, 'br1', None,)),
+        (['git', 'config', 'branch.br1.remote'], (0, 'origin', None)),
+        (['git', 'config', 'remote.origin.url'], (128, 'None', None)),
+    ))
+    self._AssertTryBotExceptions(
+        'Failed to get remote.origin.url from git config',
+        command._GetBaseGitHashForRepo, 'br', 'http://repo/git/url.git')
+
+  def testGetBaseGitHashForRemoteURLMatchFound(self):
+    command, _ = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                          'linux')
+    self._ExpectProcesses((
+        (['git', 'config', 'branch.br.remote'],
+         (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (0, 'br1', None,)),
+        (['git', 'config', 'branch.br1.remote'], (0, 'origin', None)),
+        (['git', 'config', 'remote.origin.url'],
+         (0, 'http://repo/git/url.git', None)),
+        (['git', 'rev-parse', 'br1@{upstream}'], (0, 'feedbeed', None)),
+    ))
+    self.assertEquals(
+        command._GetBaseGitHashForRepo('br', 'http://repo/git/url.git'),
+        'feedbeed')
+
+  def testGetBaseGitHashForRemoteUrlNoMatchFound(self):
+    command, _ = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                          'linux')
+    self._ExpectProcesses((
+        (['git', 'config', 'branch.br.remote'],
+         (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (0, 'br1', None,)),
+        (['git', 'config', 'branch.br1.remote'],
+         (0, 'origin', None)),
+        (['git', 'config', 'remote.origin.url'],
+         (0, 'http://non_maching_repo/git/url.git', None)),
+        (['git', 'rev-parse', 'br1@{upstream}'],
+         (0, 'feedbeed', None)),
+    ))
+    self._AssertTryBotExceptions(
+        ('URL http://non_maching_repo/git/url.git on remote origin is not '
+         'recognized on branch'),
+        command._GetBaseGitHashForRepo, 'br', 'http://repo/git/url.git')
+
+  @mock.patch('core.trybot_command.os.chdir', mock.MagicMock())
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value='True'))
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value=trybot_command.CHROMIUM_SRC_PATH))
   def testAttemptTryjobForCrRepo(self):
     test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
-    command = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'}, 'linux')
-    options = argparse.Namespace(trybot='linux', benchmark_name='sunspider')
-
+    command, options = self._SetupTrybotCommand({'linux_perf_bisect': 'stuff'},
+                                                'linux')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nbr\n', None)),
-        (['git', 'update-index', '--refresh', '-q'], (0, None, None,)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
         (['git', 'diff-index', 'HEAD'], (0, '', None)),
         (['git', 'footers', 'HEAD'], (0, '', None)),
         (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
@@ -506,9 +626,9 @@ class TrybotCommandTest(unittest.TestCase):
            'platform(s)')],
          (0, 'stuff https://codereview.chromium.org/12345 stuff', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', test_args, '-b', 'linux_perf_bisect'], (0, None, None))
+          '-p', test_args, '-b', 'linux_perf_bisect'], (0, '', None))
     ))
-    command._AttemptTryjob(trybot_command.CHROMIUM_SRC_PATH, options, [])
+    command._AttemptTryjob(options, [])
 
     output = ('Uploaded try job to rietveld.\n'
               'view progress here https://codereview.chromium.org/12345.\n'
@@ -516,9 +636,14 @@ class TrybotCommandTest(unittest.TestCase):
               '\tPath: %s\n'
               '\tBranch: br\n'
               'Perf Try job sent to rietveld for linux platform.') % (
-                  trybot_command.CHROMIUM_SRC_PATH)
+                  options.repo_path)
     self.assertEquals(output, sys.stdout.getvalue().strip())
 
+  @mock.patch('core.trybot_command.os.chdir', mock.MagicMock())
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value='True'))
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value=trybot_command.CHROMIUM_SRC_PATH))
   def testAttemptTryjobAllForCrRepo(self):
     default_config = self._ExpectedGitTryTestArgs('sunspider', 'release')
     winx64_config = self._ExpectedGitTryTestArgs(
@@ -526,17 +651,16 @@ class TrybotCommandTest(unittest.TestCase):
     android_config = self._ExpectedGitTryTestArgs(
         'sunspider', 'android-chromium', 'ia32')
 
-    command = self._SetupTrybotCommand(
+    command, options = self._SetupTrybotCommand(
         {'linux_perf_bisect': 'stuff',
          'win_perf_bisect': 'stuff',
          'winx64_perf_bisect': 'stuff',
          'android_perf_bisect': 'stuff',
          'mac_perf_bisect': 'stuff'}, 'all')
-    options = argparse.Namespace(trybot='all', benchmark_name='sunspider')
     self._ExpectProcesses((
         (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
          (0, '/root/path_to/repo/src\nbr\n', None)),
-        (['git', 'update-index', '--refresh', '-q'], (0, None, None,)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
         (['git', 'diff-index', 'HEAD'], (0, '', None)),
         (['git', 'footers', 'HEAD'], (0, '', None)),
         (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
@@ -544,17 +668,17 @@ class TrybotCommandTest(unittest.TestCase):
            'platform(s)')],
          (0, 'stuff https://codereview.chromium.org/12345 stuff', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', default_config, '-b', 'win_perf_bisect'], (0, None, None)),
+          '-p', default_config, '-b', 'win_perf_bisect'], (0, '', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', android_config, '-b', 'android_perf_bisect'], (0, None, None)),
+          '-p', android_config, '-b', 'android_perf_bisect'], (0, '', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', winx64_config, '-b', 'winx64_perf_bisect'], (0, None, None)),
+          '-p', winx64_config, '-b', 'winx64_perf_bisect'], (0, '', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', default_config, '-b', 'mac_perf_bisect'], (0, None, None)),
+          '-p', default_config, '-b', 'mac_perf_bisect'], (0, '', None)),
         (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
-          '-p', default_config, '-b', 'linux_perf_bisect'], (0, None, None)),
+          '-p', default_config, '-b', 'linux_perf_bisect'], (0, '', None)),
     ))
-    command._AttemptTryjob(trybot_command.CHROMIUM_SRC_PATH, options, [])
+    command._AttemptTryjob(options, [])
     output = ('Uploaded try job to rietveld.\n'
               'view progress here https://codereview.chromium.org/12345.\n'
               '\tRepo Name: src\n'
@@ -565,7 +689,141 @@ class TrybotCommandTest(unittest.TestCase):
               'Perf Try job sent to rietveld for win-x64 platform.\n'
               'Perf Try job sent to rietveld for mac platform.\n'
               'Perf Try job sent to rietveld for linux platform.') % (
-                  trybot_command.CHROMIUM_SRC_PATH)
+                  options.repo_path)
+    self.assertEquals(output, sys.stdout.getvalue().strip())
+
+  @mock.patch('core.trybot_command.os.chdir', mock.MagicMock())
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value='True'))
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value='root/path_to/repo/v8'))
+  def testAttemptTryjobForDepsRepo(self):
+    test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
+    deps_override_arg = 'deps_revision_overrides={"src/v8": "feedbeed"}'
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux',
+        repo_path='root/path_to/repo/v8')
+    self._ExpectProcesses((
+        (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
+         (0, 'root/path_to/repo/v8\nbr\n', None)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
+        (['git', 'diff-index', 'HEAD'], (0, '', None)),
+        (['git', 'footers', 'HEAD'], (0, '', None)),
+        (['git', 'config', 'branch.br.remote'], (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (0, 'br1', None,)),
+        (['git', 'config', 'branch.br1.remote'], (0, 'origin', None)),
+        (['git', 'config', 'remote.origin.url'],
+         (0, 'https://chromium.googlesource.com/v8/v8.git', None)),
+        (['git', 'rev-parse', 'br1@{upstream}'], (0, 'feedbeed', None)),
+        (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
+          ('CL for v8 perf tryjob to run sunspider benchmark on linux '
+           'platform(s)')],
+         (0, 'stuff https://codereview.chromium.org/12345 stuff', None)),
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', test_args, '-p', deps_override_arg,
+          '-b', 'linux_perf_bisect'], (0, '', None))
+    ))
+    command._AttemptTryjob(options, [])
+
+    output = ('Uploaded try job to rietveld.\n'
+              'view progress here https://codereview.chromium.org/12345.\n'
+              '\tRepo Name: v8\n'
+              '\tPath: root/path_to/repo/v8\n'
+              '\tBranch: br\n'
+              'Perf Try job sent to rietveld for linux platform.')
+    self.assertEquals(output, sys.stdout.getvalue().strip())
+
+  @mock.patch('core.trybot_command.os.chdir', mock.MagicMock())
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value='True'))
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value='root/path_to/repo/v8'))
+  def testAttemptTryjobAllForDepsRepo(self):
+    default_config = self._ExpectedGitTryTestArgs('sunspider', 'release')
+    deps_override_arg = 'deps_revision_overrides={"src/v8": "feedbeed"}'
+    winx64_config = self._ExpectedGitTryTestArgs(
+        'sunspider', 'release_x64', 'x64')
+    android_config = self._ExpectedGitTryTestArgs(
+        'sunspider', 'android-chromium', 'ia32')
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff',
+         'winx64_perf_bisect': 'stuff',
+         'android_perf_bisect': 'stuff'},
+        'all', repo_path='root/path_to/repo/v8')
+
+    self._ExpectProcesses((
+        (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
+         (0, 'root/path_to/repo/v8\nbr\n', None)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
+        (['git', 'diff-index', 'HEAD'], (0, '', None)),
+        (['git', 'footers', 'HEAD'], (0, '', None)),
+        (['git', 'config', 'branch.br.remote'], (0, '.', None)),
+        (['git', 'rev-parse', '--abbrev-ref', 'br@{upstream}'],
+         (0, 'br1', None,)),
+        (['git', 'config', 'branch.br1.remote'], (0, 'origin', None)),
+        (['git', 'config', 'remote.origin.url'],
+         (0, 'https://chromium.googlesource.com/v8/v8.git', None)),
+        (['git', 'rev-parse', 'br1@{upstream}'],
+         (0, 'feedbeed', None)),
+        (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
+          ('CL for v8 perf tryjob to run sunspider benchmark on all '
+           'platform(s)')],
+         (0, 'stuff https://codereview.chromium.org/12345 stuff', None)),
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', android_config, '-p', deps_override_arg,
+          '-b', 'android_perf_bisect'], (0, '', None)),
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', winx64_config, '-p', deps_override_arg,
+          '-b', 'winx64_perf_bisect'], (0, '', None)),
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', default_config, '-p', deps_override_arg,
+          '-b', 'linux_perf_bisect'], (0, '', None)),
+    ))
+    command._AttemptTryjob(options, [])
+    output = ('Uploaded try job to rietveld.\n'
+              'view progress here https://codereview.chromium.org/12345.\n'
+              '\tRepo Name: v8\n'
+              '\tPath: root/path_to/repo/v8\n'
+              '\tBranch: br\n'
+              'Perf Try job sent to rietveld for android platform.\n'
+              'Perf Try job sent to rietveld for win-x64 platform.\n'
+              'Perf Try job sent to rietveld for linux platform.')
+    self.assertEquals(output, sys.stdout.getvalue().strip())
+
+  @mock.patch('core.trybot_command.os.chdir', mock.MagicMock())
+  @mock.patch('core.trybot_command.os.path.exists',
+              mock.MagicMock(return_value='True'))
+  @mock.patch('core.trybot_command.os.path.abspath',
+              mock.MagicMock(return_value='root/path_to/repo/v8'))
+  def testAttemptTryjobWithDepsRevisionArg(self):
+    test_args = self._ExpectedGitTryTestArgs('sunspider', 'release')
+    deps_override_arg = 'deps_revision_overrides={"src/v8": "feedbeed"}'
+    command, options = self._SetupTrybotCommand(
+        {'linux_perf_bisect': 'stuff'}, 'linux',
+        repo_path='root/path_to/repo/v8', deps_revision='feedbeed')
+    self._ExpectProcesses((
+        (['git', 'rev-parse', '--abbrev-ref', '--show-toplevel', 'HEAD'],
+         (0, 'root/path_to/repo/v8\nbr\n', None)),
+        (['git', 'update-index', '--refresh', '-q'], (0, '', None,)),
+        (['git', 'diff-index', 'HEAD'], (0, '', None)),
+        (['git', 'footers', 'HEAD'], (0, '', None)),
+        (['git', 'cl', 'upload', '-f', '--bypass-hooks', '-m',
+          ('CL for v8 perf tryjob to run sunspider benchmark on linux '
+           'platform(s)')],
+         (0, 'stuff https://codereview.chromium.org/12345 stuff', None)),
+        (['git', 'cl', 'try', '-m', 'tryserver.chromium.perf',
+          '-p', test_args, '-p', deps_override_arg,
+          '-b', 'linux_perf_bisect'], (0, '', None))
+    ))
+    command._AttemptTryjob(options, [])
+
+    output = ('Uploaded try job to rietveld.\n'
+              'view progress here https://codereview.chromium.org/12345.\n'
+              '\tRepo Name: v8\n'
+              '\tPath: root/path_to/repo/v8\n'
+              '\tBranch: br\n'
+              'Perf Try job sent to rietveld for linux platform.')
     self.assertEquals(output, sys.stdout.getvalue().strip())
 
 

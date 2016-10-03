@@ -38,9 +38,9 @@ class NET_EXPORT ProxyResolverV8Tracing {
     // Returns a HostResolver to use for DNS resolution.
     virtual HostResolver* GetHostResolver() = 0;
 
-    // Returns a BoundNetLog to be passed to the HostResolver returned by
+    // Returns a NetLogWithSource to be passed to the HostResolver returned by
     // GetHostResolver().
-    virtual BoundNetLog GetBoundNetLog() = 0;
+    virtual NetLogWithSource GetNetLogWithSource() = 0;
 
    private:
     DISALLOW_COPY_AND_ASSIGN(Bindings);

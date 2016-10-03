@@ -7,10 +7,14 @@
 
 #include "base/power_monitor/power_monitor_device_source.h"
 
+#include "base/mac/foundation_util.h"
+#include "base/mac/scoped_cftyperef.h"
 #include "base/power_monitor/power_monitor.h"
 #include "base/power_monitor/power_monitor_source.h"
 
 #include <IOKit/IOMessage.h>
+#include <IOKit/ps/IOPSKeys.h>
+#include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/pwr_mgt/IOPMLib.h>
 
 namespace base {
@@ -19,11 +23,44 @@ void ProcessPowerEventHelper(PowerMonitorSource::PowerEvent event) {
   PowerMonitorSource::ProcessPowerEvent(event);
 }
 
+bool PowerMonitorDeviceSource::IsOnBatteryPowerImpl() {
+  base::ScopedCFTypeRef<CFTypeRef> info(IOPSCopyPowerSourcesInfo());
+  base::ScopedCFTypeRef<CFArrayRef> power_sources_list(
+      IOPSCopyPowerSourcesList(info));
+
+  const CFIndex count = CFArrayGetCount(power_sources_list);
+  for (CFIndex i = 0; i < count; ++i) {
+    const CFDictionaryRef description = IOPSGetPowerSourceDescription(
+        info, CFArrayGetValueAtIndex(power_sources_list, i));
+    if (!description)
+      continue;
+
+    CFStringRef current_state = base::mac::GetValueFromDictionary<CFStringRef>(
+        description, CFSTR(kIOPSPowerSourceStateKey));
+
+    if (!current_state)
+      continue;
+
+    // We only report "on battery power" if no source is on AC power.
+    if (CFStringCompare(current_state, CFSTR(kIOPSBatteryPowerValue), 0) !=
+        kCFCompareEqualTo) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 namespace {
 
 io_connect_t g_system_power_io_port = 0;
 IONotificationPortRef g_notification_port_ref = 0;
 io_object_t g_notifier_object = 0;
+CFRunLoopSourceRef g_battery_status_ref = 0;
+
+void BatteryEventCallback(void*) {
+  ProcessPowerEventHelper(PowerMonitorSource::POWER_STATE_EVENT);
+}
 
 void SystemPowerEventCallback(void*,
                               io_service_t service,
@@ -73,11 +110,16 @@ void PowerMonitorDeviceSource::PlatformInit() {
   if (g_system_power_io_port == 0)
     return;
 
-  // Add the notification port to the application runloop
-  CFRunLoopAddSource(
-      CFRunLoopGetCurrent(),
-      IONotificationPortGetRunLoopSource(g_notification_port_ref),
-      kCFRunLoopCommonModes);
+  // Add the notification port and battery monitor to the application runloop
+  CFRunLoopAddSource(CFRunLoopGetCurrent(), IONotificationPortGetRunLoopSource(
+                                                g_notification_port_ref),
+                     kCFRunLoopCommonModes);
+
+  base::ScopedCFTypeRef<CFRunLoopSourceRef> battery_status_ref(
+      IOPSNotificationCreateRunLoopSource(BatteryEventCallback, nullptr));
+  CFRunLoopAddSource(CFRunLoopGetCurrent(), battery_status_ref,
+                     kCFRunLoopDefaultMode);
+  g_battery_status_ref = battery_status_ref.release();
 }
 
 void PowerMonitorDeviceSource::PlatformDestroy() {
@@ -90,6 +132,12 @@ void PowerMonitorDeviceSource::PlatformDestroy() {
       CFRunLoopGetCurrent(),
       IONotificationPortGetRunLoopSource(g_notification_port_ref),
       kCFRunLoopCommonModes);
+
+  base::ScopedCFTypeRef<CFRunLoopSourceRef> battery_status_ref(
+      g_battery_status_ref);
+  CFRunLoopRemoveSource(CFRunLoopGetCurrent(), g_battery_status_ref,
+                        kCFRunLoopDefaultMode);
+  g_battery_status_ref = 0;
 
   // Deregister for system sleep notifications
   IODeregisterForSystemPower(&g_notifier_object);

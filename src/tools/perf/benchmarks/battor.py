@@ -18,11 +18,13 @@ class _BattOrBenchmark(perf_benchmark.PerfBenchmark):
         filter_string='toplevel')
     options = timeline_based_measurement.Options(category_filter)
     options.config.chrome_trace_config.category_filter.AddFilterString('rail')
+    # TODO(charliea): Reenable the CPU tracing agent once it no longer causes
+    # indefinite hangs on Windows.
+    # https://crbug.com/647443
     options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
     options.config.enable_atrace_trace = True
     options.config.atrace_config.categories = ['sched']
-    options.config.enable_cpu_trace = True
     options.SetTimelineBasedMetrics(
         ['powerMetric', 'clockSyncLatencyMetric', 'cpuTimeMetric'])
     return options
@@ -45,9 +47,10 @@ class _BattOrBenchmark(perf_benchmark.PerfBenchmark):
 
 # android: See battor.android.tough_video_cases below
 # win8: crbug.com/531618
+# mac: crbug.com/650411
 # crbug.com/565180: Only include cases that report time_to_play
 # Taken directly from media benchmark.
-@benchmark.Disabled('android', 'win8')
+@benchmark.Disabled('android', 'win8', 'mac')
 class BattOrToughVideoCases(_BattOrBenchmark):
   """Obtains media metrics for key user scenarios."""
   page_set = page_sets.ToughVideoCasesPageSet
@@ -106,6 +109,7 @@ class BattOrPowerCases(_BattOrBenchmark):
     return 'battor.power_cases'
 
 
+@benchmark.Disabled('all')  # crbug.com/651384.
 class BattOrPowerCasesNoChromeTrace(_BattOrBenchmark):
   page_set = page_sets.power_cases.PowerCasesPageSet
 

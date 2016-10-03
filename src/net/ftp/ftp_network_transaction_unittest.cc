@@ -897,7 +897,7 @@ class FtpNetworkTransactionTest
     EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
     ASSERT_EQ(ERR_IO_PENDING,
               transaction_.Start(&request_info, callback_.callback(),
-                                 BoundNetLog()));
+                                 NetLogWithSource()));
     EXPECT_NE(LOAD_STATE_IDLE, transaction_.GetLoadState());
     ASSERT_EQ(expected_result, callback_.WaitForResult());
     if (expected_result == OK) {
@@ -949,7 +949,7 @@ TEST_P(FtpNetworkTransactionTest, FailedLookup) {
   EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
   ASSERT_EQ(ERR_IO_PENDING,
             transaction_.Start(&request_info, callback_.callback(),
-                               BoundNetLog()));
+                               NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_NAME_NOT_RESOLVED));
   EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
 }
@@ -1180,7 +1180,7 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvUnsafeHost) {
   // Start the transaction.
   ASSERT_EQ(ERR_IO_PENDING,
             transaction_.Start(&request_info, callback_.callback(),
-                               BoundNetLog()));
+                               NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsOk());
 
   // The transaction fires the callback when we can start reading data. That
@@ -1365,7 +1365,7 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartUser) {
 
   ASSERT_EQ(ERR_IO_PENDING,
             transaction_.Start(&request_info, callback_.callback(),
-                               BoundNetLog()));
+                               NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_FTP_FAILED));
 
   MockRead ctrl_reads[] = {
@@ -1399,7 +1399,7 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartPassword) {
 
   ASSERT_EQ(ERR_IO_PENDING,
             transaction_.Start(&request_info, callback_.callback(),
-                               BoundNetLog()));
+                               NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_FTP_FAILED));
 
   MockRead ctrl_reads[] = {

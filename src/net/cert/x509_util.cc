@@ -159,7 +159,7 @@ bool ParseCertificateSandboxed(const base::StringPiece& certificate,
   auto iter = extensions.find(SubjectAltNameOid());
   if (iter != extensions.end()) {
     std::unique_ptr<GeneralNames> subject_alt_names =
-        GeneralNames::CreateFromDer(iter->second.value);
+        GeneralNames::Create(iter->second.value);
     if (subject_alt_names) {
       *dns_names = subject_alt_names->dns_names;
       for (const auto& ip : subject_alt_names->ip_addresses)

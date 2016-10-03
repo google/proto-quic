@@ -9,7 +9,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:2.1.2"
+        classpath "com.android.tools.build:gradle:2.2.0"
     }
 }
 
@@ -19,7 +19,11 @@ apply plugin: "java"
 
 sourceSets {
     main {
-        java.srcDirs = {{ java_dirs }}
+        java.srcDirs = [
+{% for path in java_dirs %}
+            "{{ path }}",
+{% endfor %}
+        ]
     }
 }
 

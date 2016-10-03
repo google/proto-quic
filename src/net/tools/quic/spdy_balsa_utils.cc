@@ -189,24 +189,28 @@ void SpdyHeadersToRequestHeaders(const SpdyHeaderBlock& header_block,
     method = method_it->second.as_string();
   }
   string uri;
-  if (path_it == end_it) {
-    uri = "/";
+  if (scheme_it == end_it) {
+    uri += "https";
   } else {
-    uri = path_it->second.as_string();
+    uri += scheme_it->second.as_string();
+  }
+  uri += "://";
+
+  if (authority_it != end_it) {
+    uri += authority_it->second.as_string();
+    request_headers->AppendHeader("host", authority_it->second);
+  } else if (host_it != end_it) {
+    uri += host_it->second.as_string();
+    request_headers->AppendHeader("host", host_it->second);
+  }
+
+  if (path_it == end_it) {
+    uri += "/";
+  } else {
+    uri += path_it->second.as_string();
   }
   request_headers->SetRequestFirstlineFromStringPieces(
       method, uri, net::kHttp2VersionString);
-
-  if (scheme_it == end_it) {
-    request_headers->AppendHeader("Scheme", "https");
-  } else {
-    request_headers->AppendHeader("Scheme", scheme_it->second);
-  }
-  if (authority_it != end_it) {
-    request_headers->AppendHeader("host", authority_it->second);
-  } else if (host_it != end_it) {
-    request_headers->AppendHeader("host", host_it->second);
-  }
 
   for (BlockIt it = header_block.begin(); it != header_block.end(); ++it) {
     if (!IsSpecialSpdyHeader(it, request_headers)) {

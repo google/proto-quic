@@ -8,6 +8,7 @@
 #include <io.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <utility>
 
 #include "base/bind.h"

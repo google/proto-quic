@@ -54,7 +54,9 @@ class NET_EXPORT ReportSender
   ~ReportSender() override;
 
   // TransportSecurityState::ReportSenderInterface implementation.
-  void Send(const GURL& report_uri, const std::string& report) override;
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report) override;
   void SetErrorCallback(const ErrorCallback& error_callback) override;
 
   // net::URLRequest::Delegate implementation.

@@ -4,6 +4,7 @@
 
 from page_sets import repeatable_synthesize_scroll_gesture_shared_state
 
+from telemetry.core import util
 from telemetry.page import page as page_module
 from telemetry import story
 
@@ -16,6 +17,8 @@ class SwiffyPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(SwiffyPage, self).RunNavigateSteps(action_runner)
+    # Make sure the ad has finished loading.
+    util.WaitFor(action_runner.tab.HasReachedQuiescence, 60)
     # Swiffy overwrites toString() to return a constant string, so "undo" that
     # here so that we don't think it has stomped over console.time.
     action_runner.EvaluateJavaScript(

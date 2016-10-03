@@ -31,7 +31,7 @@ from chrome_telemetry_build import chromium_config
 
 sys.path.append(chromium_config.GetTelemetryDir())
 from telemetry.internal.image_processing import video
-from telemetry.internal.util import webpagereplay
+from telemetry.internal.util import wpr_server
 
 sys.path.append(os.path.join(
     _CATAPULT_DIR, 'telemetry', 'third_party', 'webpagereplay'))
@@ -216,16 +216,16 @@ def _WprHost(wpr_archive_path, record=False,
       os.remove(out_log_path)
 
   # Set up WPR server and device forwarder.
-  wpr_server = webpagereplay.ReplayServer(PathWorkaround(wpr_archive_path),
+  server = wpr_server.ReplayServer(PathWorkaround(wpr_archive_path),
       '127.0.0.1', 0, 0, None, wpr_server_args)
-  http_port, https_port = wpr_server.StartServer()[:-1]
+  http_port, https_port = server.StartServer()[:-1]
 
   logging.info('WPR server listening on HTTP=%s, HTTPS=%s (options=%s)' % (
       http_port, https_port, wpr_server_args))
   try:
     yield http_port, https_port
   finally:
-    wpr_server.StopServer()
+    server.StopServer()
 
 
 def _VerifySilentWprHost(record, network_condition_name):

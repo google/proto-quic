@@ -20,9 +20,9 @@
 namespace net {
 
 class AuthCredentials;
-class BoundNetLog;
 class HttpRequestHeaders;
 class IOBuffer;
+class NetLogWithSource;
 class SSLPrivateKey;
 class X509Certificate;
 
@@ -39,7 +39,7 @@ class FailingHttpTransaction : public HttpTransaction {
   // HttpTransaction
   int Start(const HttpRequestInfo* request_info,
             const CompletionCallback& callback,
-            const BoundNetLog& net_log) override;
+            const NetLogWithSource& net_log) override;
   int RestartIgnoringLastError(const CompletionCallback& callback) override;
   int RestartWithCertificate(X509Certificate* client_cert,
                              SSLPrivateKey* client_private_key,
@@ -84,7 +84,7 @@ FailingHttpTransaction::~FailingHttpTransaction() {}
 
 int FailingHttpTransaction::Start(const HttpRequestInfo* request_info,
                                   const CompletionCallback& callback,
-                                  const BoundNetLog& net_log)  {
+                                  const NetLogWithSource& net_log) {
   base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
                                                 base::Bind(callback, error_));
   return ERR_IO_PENDING;

@@ -566,7 +566,8 @@ TEST(NetworkQualityEstimatorTest, DefaultTransportRTTBasedThresholds) {
       {false, 3000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 2000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
-      {false, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
+      {false, 1000, EFFECTIVE_CONNECTION_TYPE_3G},
+      {false, 100, EFFECTIVE_CONNECTION_TYPE_4G},
       {false, 20, EFFECTIVE_CONNECTION_TYPE_4G},
       // Override default thresholds using variation params.
       {true, 5000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
@@ -623,7 +624,8 @@ TEST(NetworkQualityEstimatorTest, DefaultHttpRTTBasedThresholds) {
       {false, 3000, EFFECTIVE_CONNECTION_TYPE_SLOW_2G},
       {false, 2000, EFFECTIVE_CONNECTION_TYPE_2G},
       {false, 1500, EFFECTIVE_CONNECTION_TYPE_2G},
-      {false, 1000, EFFECTIVE_CONNECTION_TYPE_4G},
+      {false, 1000, EFFECTIVE_CONNECTION_TYPE_3G},
+      {false, 100, EFFECTIVE_CONNECTION_TYPE_4G},
       {false, 20, EFFECTIVE_CONNECTION_TYPE_4G},
       // Override default thresholds using variation params.
       {true, 5000, EFFECTIVE_CONNECTION_TYPE_OFFLINE},
@@ -2003,8 +2005,7 @@ TEST(NetworkQualityEstimatorTest, CacheObserver) {
   TestNetworkQualityEstimator estimator(variation_params);
 
   // Add |observer| as a persistent caching observer.
-  estimator.NetworkQualityStoreForTesting()->AddNetworkQualitiesCacheObserver(
-      &observer);
+  estimator.AddNetworkQualitiesCacheObserver(&observer);
 
   estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
   estimator.SimulateNetworkChange(
@@ -2037,8 +2038,7 @@ TEST(NetworkQualityEstimatorTest, CacheObserver) {
   EXPECT_EQ(1u, observer.get_notification_received_and_reset());
 
   // Remove |observer|, and it should not receive any notifications.
-  estimator.NetworkQualityStoreForTesting()
-      ->RemoveNetworkQualitiesCacheObserver(&observer);
+  estimator.RemoveNetworkQualitiesCacheObserver(&observer);
   estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test2g");

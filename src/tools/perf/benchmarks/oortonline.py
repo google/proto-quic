@@ -48,11 +48,6 @@ class OortOnline(perf_benchmark.PerfBenchmark):
     return page_sets.OortOnlinePageSet()
 
 
-# Disabled on reference builds because they don't support the new
-# Tracing.requestMemoryDump DevTools API. See http://crbug.com/540022.
-@benchmark.Disabled('reference')
-@benchmark.Disabled('android')
-@benchmark.Disabled('win')
 class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
   URL: http://oortonline.gl/#run

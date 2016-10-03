@@ -378,7 +378,7 @@ template("create_tests") {
 
   executable("boringssl_gcm_test") {
     sources = [
-      "src/crypto/modes/gcm_test.c",
+      "src/crypto/modes/gcm_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {

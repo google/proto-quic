@@ -462,16 +462,18 @@ int RunDesc(const std::vector<std::string>& args) {
     auto res = base::MakeUnique<base::DictionaryValue>();
     if (!target_matches.empty()) {
       for (const auto* target : target_matches) {
-        res->Set(target->label().GetUserVisibleName(
-                     target->settings()->default_toolchain_label()),
-                 DescBuilder::DescriptionForTarget(
-                     target, what_to_print, cmdline->HasSwitch(kAll),
-                     cmdline->HasSwitch(kTree), cmdline->HasSwitch(kBlame)));
+        res->SetWithoutPathExpansion(
+            target->label().GetUserVisibleName(
+                target->settings()->default_toolchain_label()),
+            DescBuilder::DescriptionForTarget(
+                target, what_to_print, cmdline->HasSwitch(kAll),
+                cmdline->HasSwitch(kTree), cmdline->HasSwitch(kBlame)));
       }
     } else if (!config_matches.empty()) {
       for (const auto* config : config_matches) {
-        res->Set(config->label().GetUserVisibleName(false),
-                 DescBuilder::DescriptionForConfig(config, what_to_print));
+        res->SetWithoutPathExpansion(
+            config->label().GetUserVisibleName(false),
+            DescBuilder::DescriptionForConfig(config, what_to_print));
       }
     }
     std::string s;

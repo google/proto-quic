@@ -427,8 +427,8 @@ TEST_F(QuicDispatcherTest, TimeWaitListManager) {
   packet.nonce_proof = 132232;
   std::unique_ptr<QuicEncryptedPacket> encrypted(
       QuicFramer::BuildPublicResetPacket(packet));
-  std::unique_ptr<QuicReceivedPacket> received(
-      ConstructReceivedPacket(*encrypted, helper_.GetClock()->Now()));
+  std::unique_ptr<QuicReceivedPacket> received(ConstructReceivedPacket(
+      *encrypted, session1_->connection()->clock()->Now()));
   EXPECT_CALL(*session1_, OnConnectionClosed(QUIC_PUBLIC_RESET, _,
                                              ConnectionCloseSource::FROM_PEER))
       .Times(1)

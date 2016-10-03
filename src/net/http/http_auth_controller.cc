@@ -142,8 +142,9 @@ HttpAuthController::~HttpAuthController() {
 }
 
 int HttpAuthController::MaybeGenerateAuthToken(
-    const HttpRequestInfo* request, const CompletionCallback& callback,
-    const BoundNetLog& net_log) {
+    const HttpRequestInfo* request,
+    const CompletionCallback& callback,
+    const NetLogWithSource& net_log) {
   DCHECK(CalledOnValidThread());
   bool needs_auth = HaveAuth() || SelectPreemptiveAuth(net_log);
   if (!needs_auth)
@@ -166,7 +167,7 @@ int HttpAuthController::MaybeGenerateAuthToken(
   return rv;
 }
 
-bool HttpAuthController::SelectPreemptiveAuth(const BoundNetLog& net_log) {
+bool HttpAuthController::SelectPreemptiveAuth(const NetLogWithSource& net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(!HaveAuth());
   DCHECK(identity_.invalid);
@@ -221,7 +222,7 @@ int HttpAuthController::HandleAuthChallenge(
     const SSLInfo& ssl_info,
     bool do_not_send_server_auth,
     bool establishing_tunnel,
-    const BoundNetLog& net_log) {
+    const NetLogWithSource& net_log) {
   DCHECK(CalledOnValidThread());
   DCHECK(headers.get());
   DCHECK(auth_origin_.is_valid());

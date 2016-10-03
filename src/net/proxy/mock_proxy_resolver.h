@@ -54,7 +54,7 @@ class MockAsyncProxyResolver : public ProxyResolver {
                      ProxyInfo* results,
                      const CompletionCallback& callback,
                      RequestHandle* request_handle,
-                     const BoundNetLog& /*net_log*/) override;
+                     const NetLogWithSource& /*net_log*/) override;
   void CancelRequest(RequestHandle request_handle) override;
   LoadState GetLoadState(RequestHandle request_handle) const override;
   const RequestsList& pending_requests() const {
@@ -147,7 +147,7 @@ class ForwardingProxyResolver : public ProxyResolver {
                      ProxyInfo* results,
                      const CompletionCallback& callback,
                      RequestHandle* request,
-                     const BoundNetLog& net_log) override;
+                     const NetLogWithSource& net_log) override;
   void CancelRequest(RequestHandle request) override;
   LoadState GetLoadState(RequestHandle request) const override;
 

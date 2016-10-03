@@ -252,11 +252,9 @@ class TransactionHelper {
   void StartTransaction(DnsTransactionFactory* factory) {
     EXPECT_EQ(NULL, transaction_.get());
     transaction_ = factory->CreateTransaction(
-        hostname_,
-        qtype_,
-        base::Bind(&TransactionHelper::OnTransactionComplete,
-                   base::Unretained(this)),
-        BoundNetLog());
+        hostname_, qtype_, base::Bind(&TransactionHelper::OnTransactionComplete,
+                                      base::Unretained(this)),
+        NetLogWithSource());
     EXPECT_EQ(hostname_, transaction_->GetHostname());
     EXPECT_EQ(qtype_, transaction_->GetType());
     transaction_->Start();

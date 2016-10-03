@@ -240,7 +240,7 @@ void HttpCache::MetadataWriter::Write(const GURL& url,
   int rv = transaction_->Start(
       &request_info_,
       base::Bind(&MetadataWriter::OnIOComplete, base::Unretained(this)),
-      BoundNetLog());
+      NetLogWithSource());
   if (rv != ERR_IO_PENDING)
     VerifyResponse(rv);
 }

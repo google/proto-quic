@@ -171,7 +171,7 @@ class MockTransactionFactory : public DnsTransactionFactory {
       const std::string& hostname,
       uint16_t qtype,
       const DnsTransactionFactory::CallbackType& callback,
-      const BoundNetLog&) override {
+      const NetLogWithSource&) override {
     MockTransaction* transaction =
         new MockTransaction(rules_, hostname, qtype, callback);
     if (transaction->delayed())

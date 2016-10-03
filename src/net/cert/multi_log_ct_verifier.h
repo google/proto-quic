@@ -38,7 +38,7 @@ class NET_EXPORT MultiLogCTVerifier : public CTVerifier {
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
              ct::CTVerifyResult* result,
-             const BoundNetLog& net_log) override;
+             const NetLogWithSource& net_log) override;
 
   void SetObserver(Observer* observer) override;
 

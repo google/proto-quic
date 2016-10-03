@@ -113,7 +113,7 @@ class FakeCertVerifier : public net::CertVerifier {
              net::CertVerifyResult* verify_result,
              const net::CompletionCallback& callback,
              std::unique_ptr<Request>* out_req,
-             const net::BoundNetLog& net_log) override {
+             const net::NetLogWithSource& net_log) override {
     return net::OK;
   }
 
@@ -318,7 +318,7 @@ int main(int argc, char* argv[]) {
   net::SpdyHeaderBlock header_block;
   net::CreateSpdyHeadersFromHttpRequest(request, request.extra_headers,
                                         /*direct=*/true, &header_block);
-  client.SendRequestAndWaitForResponse(request, body, /*fin=*/true);
+  client.SendRequestAndWaitForResponse(header_block, body, /*fin=*/true);
 
   // Print request and response details.
   if (!FLAGS_quiet) {

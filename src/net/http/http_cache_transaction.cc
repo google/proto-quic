@@ -82,6 +82,21 @@ enum ExternallyConditionalizedType {
 
 }  // namespace
 
+#define CACHE_STATUS_HISTOGRAMS(type)                                        \
+  do {                                                                       \
+    UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern" type, cache_entry_status_, \
+                              CacheEntryStatus::ENTRY_MAX);                  \
+    if (validation_request) {                                                \
+      UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause" type,            \
+                                validation_cause_, VALIDATION_CAUSE_MAX);    \
+    }                                                                        \
+    if (stale_request) {                                                     \
+      UMA_HISTOGRAM_COUNTS(                                                  \
+          "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed" type,         \
+          freshness_periods_since_last_used);                                \
+    }                                                                        \
+  } while (0)
+
 struct HeaderNameAndValue {
   const char* name;
   const char* value;
@@ -249,13 +264,13 @@ LoadState HttpCache::Transaction::GetWriterLoadState() const {
   return LOAD_STATE_WAITING_FOR_CACHE;
 }
 
-const BoundNetLog& HttpCache::Transaction::net_log() const {
+const NetLogWithSource& HttpCache::Transaction::net_log() const {
   return net_log_;
 }
 
 int HttpCache::Transaction::Start(const HttpRequestInfo* request,
                                   const CompletionCallback& callback,
-                                  const BoundNetLog& net_log) {
+                                  const NetLogWithSource& net_log) {
   DCHECK(request);
   DCHECK(!callback.is_null());
 
@@ -1836,7 +1851,7 @@ int HttpCache::Transaction::DoCacheWriteTruncatedResponseComplete(int result) {
 
 //-----------------------------------------------------------------------------
 
-void HttpCache::Transaction::SetRequest(const BoundNetLog& net_log,
+void HttpCache::Transaction::SetRequest(const NetLogWithSource& net_log,
                                         const HttpRequestInfo* request) {
   net_log_ = net_log;
   request_ = request;
@@ -2790,9 +2805,6 @@ void HttpCache::Transaction::RecordHistograms() {
     freshness_periods_since_last_used =
         (time_since_use * 1000) / stale_entry_freshness_;
 
-    UMA_HISTOGRAM_COUNTS("HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed",
-                         freshness_periods_since_last_used);
-
     if (validation_request) {
       int64_t age_in_freshness_periods =
           (stale_entry_age_ * 100) / stale_entry_freshness_;
@@ -2821,123 +2833,37 @@ void HttpCache::Transaction::RecordHistograms() {
     // estimate.
     if (mime_type == "text/html" &&
         (request_->load_flags & LOAD_MAIN_FRAME_DEPRECATED)) {
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.MainFrameHTML",
-                                cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.MainFrameHTML",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.MainFrameHTML",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".MainFrameHTML");
     } else if (mime_type == "text/html") {
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.NonMainFrameHTML",
-                                cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.NonMainFrameHTML",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed."
-            "NonMainFrameHTML",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".NonMainFrameHTML");
     } else if (mime_type == "text/css") {
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.CSS", cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.CSS",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.CSS",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".CSS");
     } else if (base::StartsWith(mime_type, "image/",
                                 base::CompareCase::SENSITIVE)) {
       int64_t content_length = response_headers->GetContentLength();
       if (content_length >= 0 && content_length < 100) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.TinyImage",
-                                  cache_entry_status_,
-                                  CacheEntryStatus::ENTRY_MAX);
-        if (validation_request) {
-          UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.TinyImage",
-                                    validation_cause_, VALIDATION_CAUSE_MAX);
-        }
-        if (stale_request) {
-          UMA_HISTOGRAM_COUNTS(
-              "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.TinyImage",
-              freshness_periods_since_last_used);
-        }
+        CACHE_STATUS_HISTOGRAMS(".TinyImage");
       } else if (content_length >= 100) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.NonTinyImage",
-                                  cache_entry_status_,
-                                  CacheEntryStatus::ENTRY_MAX);
-        if (validation_request) {
-          UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.NonTinyImage",
-                                    validation_cause_, VALIDATION_CAUSE_MAX);
-        }
-        if (stale_request) {
-          UMA_HISTOGRAM_COUNTS(
-              "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.NonTinyImage",
-              freshness_periods_since_last_used);
-        }
+        CACHE_STATUS_HISTOGRAMS(".NonTinyImage");
       }
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.Image", cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.Image",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.Image",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".Image");
     } else if (base::EndsWith(mime_type, "javascript",
                               base::CompareCase::SENSITIVE) ||
                base::EndsWith(mime_type, "ecmascript",
                               base::CompareCase::SENSITIVE)) {
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.JavaScript",
-                                cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.JavaScript",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.JavaScript",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".JavaScript");
     } else if (mime_type.find("font") != std::string::npos) {
-      UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern.Font", cache_entry_status_,
-                                CacheEntryStatus::ENTRY_MAX);
-      if (validation_request) {
-        UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause.Font",
-                                  validation_cause_, VALIDATION_CAUSE_MAX);
-      }
-      if (stale_request) {
-        UMA_HISTOGRAM_COUNTS(
-            "HttpCache.StaleEntry.FreshnessPeriodsSinceLastUsed.Font",
-            freshness_periods_since_last_used);
-      }
+      CACHE_STATUS_HISTOGRAMS(".Font");
+    } else if (base::StartsWith(mime_type, "audio/",
+                                base::CompareCase::SENSITIVE)) {
+      CACHE_STATUS_HISTOGRAMS(".Audio");
+    } else if (base::StartsWith(mime_type, "video/",
+                                base::CompareCase::SENSITIVE)) {
+      CACHE_STATUS_HISTOGRAMS(".Video");
     }
   }
 
-  UMA_HISTOGRAM_ENUMERATION("HttpCache.Pattern", cache_entry_status_,
-                            CacheEntryStatus::ENTRY_MAX);
-
-  if (validation_request) {
-    UMA_HISTOGRAM_ENUMERATION("HttpCache.ValidationCause", validation_cause_,
-                              VALIDATION_CAUSE_MAX);
-  }
+  CACHE_STATUS_HISTOGRAMS("");
 
   if (cache_entry_status_ == CacheEntryStatus::ENTRY_CANT_CONDITIONALIZE) {
     UMA_HISTOGRAM_ENUMERATION("HttpCache.CantConditionalizeCause",

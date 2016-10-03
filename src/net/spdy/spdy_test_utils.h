@@ -76,6 +76,9 @@ class TestHeadersHandler : public SpdyHeadersHandlerInterface {
 
   void OnHeaderBlockEnd(size_t header_bytes_parsed) override;
 
+  void OnHeaderBlockEnd(size_t header_bytes_parsed,
+                        size_t /* compressed_header_bytes_parsed */) override;
+
   const SpdyHeaderBlock& decoded_block() const { return block_; }
   size_t header_bytes_parsed() { return header_bytes_parsed_; }
 

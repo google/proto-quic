@@ -206,6 +206,7 @@
       <property name="message" value="Avoid StringBuffer; use StringBuilder instead, which is faster (it's not thread-safe, but this is almost never needed)"/>
     </module>
     <module name="RegexpSinglelineJava">
+      <property name="id" value="AlertDialogCheck"/>
       <property name="severity" value="warning"/>
       <property name="format" value="android\.app\.AlertDialog"/>
       <property name="ignoreComments" value="true"/>

@@ -59,9 +59,6 @@ Still reading?
   </issue>
   <issue id="HandlerLeak">
     <ignore regexp="android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/compositor/overlays/strip/StripLayoutHelper.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/gsa/GSAServiceClient.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/tab/Tab.java" />
     <ignore regexp="chromecast/internal" />
     <ignore regexp="remoting/android/java/src/org/chromium/chromoting/TapGestureDetector.java" />
   </issue>
@@ -136,6 +133,9 @@ Still reading?
   </issue>
   <issue id="InflateParams" severity="ignore" />
   <issue id="InlinedApi" severity="ignore" />
+  <issue id="InvalidPackage" severity="Error">
+    <ignore regexp="espresso/espresso_core_java.interface.jar"/>
+  </issue>
   <issue id="LabelFor" severity="Error">
     <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml" />
   </issue>

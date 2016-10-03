@@ -58,7 +58,7 @@ TEST(SpdyBalsaUtilsTest, SpdyHeadersToRequestHeaders) {
   SpdyBalsaUtils::SpdyHeadersToRequestHeaders(spdy_headers, &request_headers);
   EXPECT_EQ("GET", request_headers.request_method());
   EXPECT_EQ("HTTP/1.1", request_headers.request_version());
-  EXPECT_EQ("/foo", request_headers.request_uri());
+  EXPECT_EQ("https://www.google.com/foo", request_headers.request_uri());
   EXPECT_EQ("www.google.com", request_headers.GetHeader("host"));
   EXPECT_TRUE(request_headers.HasHeader("bar"));
   EXPECT_EQ("", request_headers.GetHeader("bar"));
@@ -76,7 +76,7 @@ TEST(SpdyBalsaUtilsTest, SpdyHeadersToRequestHeaders) {
   SpdyBalsaUtils::SpdyHeadersToRequestHeaders(spdy_headers1, &request_headers1);
   EXPECT_EQ("GET", request_headers1.request_method());
   EXPECT_EQ("HTTP/1.1", request_headers1.request_version());
-  EXPECT_EQ("/foo", request_headers1.request_uri());
+  EXPECT_EQ("http://www.google.com/foo", request_headers1.request_uri());
   EXPECT_EQ("www.google.com", request_headers1.GetHeader("host"));
 }
 

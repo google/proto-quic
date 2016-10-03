@@ -152,6 +152,11 @@ OPENSSL_EXPORT long BIO_int_ctrl(BIO *bp, int cmd, long larg, int iarg);
  * otherwise. */
 OPENSSL_EXPORT int BIO_reset(BIO *bio);
 
+/* BIO_eof returns non-zero when |bio| has reached end-of-file. The precise
+ * meaning of which depends on the concrete type of |bio|. Note that in the
+ * case of BIO_pair this always returns non-zero. */
+OPENSSL_EXPORT int BIO_eof(BIO *bio);
+
 /* BIO_set_flags ORs |flags| with |bio->flags|. */
 OPENSSL_EXPORT void BIO_set_flags(BIO *bio, int flags);
 
@@ -732,14 +737,6 @@ OPENSSL_EXPORT int BIO_zero_copy_get_write_buf_done(BIO* bio,
 
 /* BIO_CTRL_DUP is never used, but exists to allow code to compile more easily. */
 #define BIO_CTRL_DUP	12
-
-
-/* Android compatibility section.
- *
- * A previous version of BoringSSL used in Android renamed ERR_print_errors_fp
- * to BIO_print_errors_fp. It has subsequently been renamed back to
- * ERR_print_errors_fp. */
-#define BIO_print_errors_fp ERR_print_errors_fp
 
 
 /* Deprecated functions. */

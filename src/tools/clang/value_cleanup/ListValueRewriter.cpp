@@ -22,7 +22,6 @@
 
 using namespace clang::ast_matchers;
 using clang::tooling::Replacement;
-using clang::tooling::Replacements;
 using llvm::StringRef;
 
 namespace {
@@ -74,7 +73,9 @@ class CollectDeclRefExprVisitor
     return false;
   }
 
-  const Replacements& replacements() const { return replacements_; }
+  const std::set<clang::tooling::Replacement>& replacements() const {
+    return replacements_;
+  }
 
  private:
   bool HandleMemberCallExpr(const clang::CXXMemberCallExpr* member_call_expr,
@@ -145,12 +146,13 @@ class CollectDeclRefExprVisitor
   // argument to base::ListValue::Append(base::Value*).
   bool is_valid_;
   clang::ParentMap map_;
-  Replacements replacements_;
+  std::set<clang::tooling::Replacement> replacements_;
 };
 
 }  // namespace
 
-ListValueRewriter::AppendCallback::AppendCallback(Replacements* replacements)
+ListValueRewriter::AppendCallback::AppendCallback(
+    std::set<clang::tooling::Replacement>* replacements)
     : replacements_(replacements) {}
 
 void ListValueRewriter::AppendCallback::run(
@@ -172,7 +174,7 @@ void ListValueRewriter::AppendCallback::run(
 }
 
 ListValueRewriter::AppendBooleanCallback::AppendBooleanCallback(
-    Replacements* replacements)
+    std::set<clang::tooling::Replacement>* replacements)
     : AppendCallback(replacements) {}
 
 void ListValueRewriter::AppendBooleanCallback::run(
@@ -188,7 +190,7 @@ void ListValueRewriter::AppendBooleanCallback::run(
 }
 
 ListValueRewriter::AppendIntegerCallback::AppendIntegerCallback(
-    Replacements* replacements)
+    std::set<clang::tooling::Replacement>* replacements)
     : AppendCallback(replacements) {}
 
 void ListValueRewriter::AppendIntegerCallback::run(
@@ -204,7 +206,7 @@ void ListValueRewriter::AppendIntegerCallback::run(
 }
 
 ListValueRewriter::AppendDoubleCallback::AppendDoubleCallback(
-    Replacements* replacements)
+    std::set<clang::tooling::Replacement>* replacements)
     : AppendCallback(replacements) {}
 
 void ListValueRewriter::AppendDoubleCallback::run(
@@ -220,7 +222,7 @@ void ListValueRewriter::AppendDoubleCallback::run(
 }
 
 ListValueRewriter::AppendStringCallback::AppendStringCallback(
-    Replacements* replacements)
+    std::set<clang::tooling::Replacement>* replacements)
     : AppendCallback(replacements) {}
 
 void ListValueRewriter::AppendStringCallback::run(
@@ -236,7 +238,8 @@ void ListValueRewriter::AppendStringCallback::run(
 }
 
 ListValueRewriter::AppendReleasedUniquePtrCallback::
-    AppendReleasedUniquePtrCallback(Replacements* replacements)
+    AppendReleasedUniquePtrCallback(
+        std::set<clang::tooling::Replacement>* replacements)
     : replacements_(replacements) {}
 
 void ListValueRewriter::AppendReleasedUniquePtrCallback::run(
@@ -263,7 +266,7 @@ void ListValueRewriter::AppendReleasedUniquePtrCallback::run(
 }
 
 ListValueRewriter::AppendRawPtrCallback::AppendRawPtrCallback(
-    Replacements* replacements)
+    std::set<clang::tooling::Replacement>* replacements)
     : replacements_(replacements) {}
 
 void ListValueRewriter::AppendRawPtrCallback::run(
@@ -334,7 +337,8 @@ void ListValueRewriter::AppendRawPtrCallback::run(
                         visitor.replacements().end());
 }
 
-ListValueRewriter::ListValueRewriter(Replacements* replacements)
+ListValueRewriter::ListValueRewriter(
+    std::set<clang::tooling::Replacement>* replacements)
     : append_boolean_callback_(replacements),
       append_integer_callback_(replacements),
       append_double_callback_(replacements),

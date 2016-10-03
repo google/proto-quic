@@ -285,7 +285,7 @@ class SdchDictionaryFetcherTest : public ::testing::Test {
 
   void OnDictionaryFetched(const std::string& dictionary_text,
                            const GURL& dictionary_url,
-                           const BoundNetLog& net_log,
+                           const NetLogWithSource& net_log,
                            bool was_from_cache) {
     dictionary_additions_.push_back(
         DictionaryAdditions(dictionary_text, dictionary_url));

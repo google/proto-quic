@@ -34,6 +34,12 @@ class NET_EXPORT_PRIVATE SpdyUtils {
                            int64_t* content_length,
                            SpdyHeaderBlock* headers);
 
+  // Populate |content length| with the value of the content-length header if
+  // one or more are present in the headers. Returns true on success, false if
+  // parsing fails.
+  static bool ExtractContentLengthFromHeaders(int64_t* content_length,
+                                              SpdyHeaderBlock* headers);
+
   // Parses |data| as a std::string containing serialized HTTP/2 HEADERS frame,
   // populating |trailers| with the key->value std:pairs found.
   // The final offset header will be excluded from |trailers|, and instead the
@@ -66,6 +72,11 @@ class NET_EXPORT_PRIVATE SpdyUtils {
   // Returns true if result of |GetUrlFromHeaderBlock()| is non-empty
   // and is a well-formed URL.
   static bool UrlIsValid(const net::SpdyHeaderBlock& headers);
+
+  // Populates the fields of |headers| to make a GET request of |url|,
+  // which must be fully-qualified.
+  static bool PopulateHeaderBlockFromUrl(const std::string url,
+                                         SpdyHeaderBlock* headers);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(SpdyUtils);

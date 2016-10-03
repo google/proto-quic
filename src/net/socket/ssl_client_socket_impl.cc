@@ -78,9 +78,9 @@ const unsigned int kTbExtNum = 24;
 
 // Token Binding ProtocolVersions supported.
 const uint8_t kTbProtocolVersionMajor = 0;
-const uint8_t kTbProtocolVersionMinor = 8;
+const uint8_t kTbProtocolVersionMinor = 10;
 const uint8_t kTbMinProtocolVersionMajor = 0;
-const uint8_t kTbMinProtocolVersionMinor = 6;
+const uint8_t kTbMinProtocolVersionMinor = 10;
 
 bool EVP_MDToPrivateKeyHash(const EVP_MD* md, SSLPrivateKey::Hash* hash) {
   switch (EVP_MD_type(md)) {
@@ -250,6 +250,8 @@ class SSLClientSocketImpl::SSLContext {
     SSL_CTX_set_session_cache_mode(
         ssl_ctx_.get(), SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL);
     SSL_CTX_sess_set_new_cb(ssl_ctx_.get(), NewSessionCallback);
+
+    SSL_CTX_set_grease_enabled(ssl_ctx_.get(), 1);
 
     if (!SSL_CTX_add_client_custom_ext(ssl_ctx_.get(), kTbExtNum,
                                        &TokenBindingAddCallback,
@@ -487,7 +489,7 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       channel_id_service_(context.channel_id_service),
       tb_was_negotiated_(false),
       tb_negotiated_param_(TB_PARAM_ECDSAP256),
-      tb_signed_ekm_map_(10),
+      tb_signature_map_(10),
       ssl_(NULL),
       transport_bio_(NULL),
       transport_(std::move(transport_socket)),
@@ -499,6 +501,7 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       negotiated_protocol_(kProtoUnknown),
       channel_id_sent_(false),
       certificate_verified_(false),
+      certificate_requested_(false),
       signature_result_(kNoPendingResult),
       transport_security_state_(context.transport_security_state),
       policy_enforcer_(context.ct_policy_enforcer),
@@ -534,16 +537,16 @@ ChannelIDService* SSLClientSocketImpl::GetChannelIDService() const {
   return channel_id_service_;
 }
 
-Error SSLClientSocketImpl::GetSignedEKMForTokenBinding(
-    crypto::ECPrivateKey* key,
-    std::vector<uint8_t>* out) {
+Error SSLClientSocketImpl::GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                                    TokenBindingType tb_type,
+                                                    std::vector<uint8_t>* out) {
   // The same key will be used across multiple requests to sign the same value,
   // so the signature is cached.
   std::string raw_public_key;
   if (!key->ExportRawPublicKey(&raw_public_key))
     return ERR_FAILED;
-  SignedEkmMap::iterator it = tb_signed_ekm_map_.Get(raw_public_key);
-  if (it != tb_signed_ekm_map_.end()) {
+  auto it = tb_signature_map_.Get(std::make_pair(tb_type, raw_public_key));
+  if (it != tb_signature_map_.end()) {
     *out = it->second;
     return OK;
   }
@@ -557,13 +560,13 @@ Error SSLClientSocketImpl::GetSignedEKMForTokenBinding(
     return ERR_FAILED;
   }
 
-  if (!SignTokenBindingEkm(
+  if (!CreateTokenBindingSignature(
           base::StringPiece(reinterpret_cast<char*>(tb_ekm_buf),
                             sizeof(tb_ekm_buf)),
-          key, out))
+          tb_type, key, out))
     return ERR_FAILED;
 
-  tb_signed_ekm_map_.Put(raw_public_key, *out);
+  tb_signature_map_.Put(std::make_pair(tb_type, raw_public_key), *out);
   return OK;
 }
 
@@ -680,6 +683,7 @@ void SSLClientSocketImpl::Disconnect() {
   tb_was_negotiated_ = false;
   pending_session_ = nullptr;
   certificate_verified_ = false;
+  certificate_requested_ = false;
   channel_id_request_.Cancel();
 
   signature_result_ = kNoPendingResult;
@@ -726,7 +730,7 @@ int SSLClientSocketImpl::GetLocalAddress(IPEndPoint* addressList) const {
   return transport_->socket()->GetLocalAddress(addressList);
 }
 
-const BoundNetLog& SSLClientSocketImpl::NetLog() const {
+const NetLogWithSource& SSLClientSocketImpl::NetLog() const {
   return net_log_;
 }
 
@@ -946,8 +950,10 @@ int SSLClientSocketImpl::Init() {
 
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_min);
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_max);
-  SSL_set_min_version(ssl_, ssl_config_.version_min);
-  SSL_set_max_version(ssl_, ssl_config_.version_max);
+  if (!SSL_set_min_proto_version(ssl_, ssl_config_.version_min) ||
+      !SSL_set_max_proto_version(ssl_, ssl_config_.version_max)) {
+    return ERR_UNEXPECTED;
+  }
 
   // OpenSSL defaults some options to on, others to off. To avoid ambiguity,
   // set everything we care about to an absolute value.
@@ -1133,7 +1139,7 @@ int SSLClientSocketImpl::DoHandshake() {
     }
 
     OpenSSLErrorInfo error_info;
-    net_error = MapOpenSSLErrorWithDetails(ssl_error, err_tracer, &error_info);
+    net_error = MapLastOpenSSLError(ssl_error, err_tracer, &error_info);
     if (net_error == ERR_IO_PENDING) {
       // If not done, stay in this state
       next_handshake_state_ = STATE_HANDSHAKE;
@@ -1171,9 +1177,12 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   }
 
   // Check that if token binding was negotiated, then extended master secret
-  // must also be negotiated.
-  if (tb_was_negotiated_ && !SSL_get_extms_support(ssl_))
+  // and renegotiation indication must also be negotiated.
+  if (tb_was_negotiated_ &&
+      !(SSL_get_extms_support(ssl_) &&
+        SSL_get_secure_renegotiation_support(ssl_))) {
     return ERR_SSL_PROTOCOL_ERROR;
+  }
 
   const uint8_t* alpn_proto = NULL;
   unsigned alpn_len = 0;
@@ -1532,7 +1541,7 @@ int SSLClientSocketImpl::DoPayloadRead() {
       DCHECK_NE(kNoPendingResult, signature_result_);
       pending_read_error_ = ERR_IO_PENDING;
     } else {
-      pending_read_error_ = MapOpenSSLErrorWithDetails(
+      pending_read_error_ = MapLastOpenSSLError(
           pending_read_ssl_error_, err_tracer, &pending_read_error_info_);
     }
 
@@ -1591,8 +1600,7 @@ int SSLClientSocketImpl::DoPayloadWrite() {
   if (ssl_error == SSL_ERROR_WANT_PRIVATE_KEY_OPERATION)
     return ERR_IO_PENDING;
   OpenSSLErrorInfo error_info;
-  int net_error =
-      MapOpenSSLErrorWithDetails(ssl_error, err_tracer, &error_info);
+  int net_error = MapLastOpenSSLError(ssl_error, err_tracer, &error_info);
 
   if (net_error != ERR_IO_PENDING) {
     net_log_.AddEvent(
@@ -1816,6 +1824,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
   DCHECK(ssl == ssl_);
 
   net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_REQUESTED);
+  certificate_requested_ = true;
 
   // Clear any currently configured certificates.
   SSL_certs_clear(ssl_);
@@ -2281,6 +2290,38 @@ void SSLClientSocketImpl::RecordChannelIDSupport() const {
 
 bool SSLClientSocketImpl::IsChannelIDEnabled() const {
   return ssl_config_.channel_id_enabled && channel_id_service_;
+}
+
+int SSLClientSocketImpl::MapLastOpenSSLError(
+    int ssl_error,
+    const crypto::OpenSSLErrStackTracer& tracer,
+    OpenSSLErrorInfo* info) {
+  int net_error = MapOpenSSLErrorWithDetails(ssl_error, tracer, info);
+
+  if (ssl_error == SSL_ERROR_SSL &&
+      ERR_GET_LIB(info->error_code) == ERR_LIB_SSL) {
+    // TLS does not provide an alert for missing client certificates, so most
+    // servers send a generic handshake_failure alert. Detect this case by
+    // checking if we have received a CertificateRequest but sent no
+    // certificate. See https://crbug.com/646567.
+    if (ERR_GET_REASON(info->error_code) ==
+            SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE &&
+        certificate_requested_ && ssl_config_.send_client_cert &&
+        !ssl_config_.client_cert) {
+      net_error = ERR_BAD_SSL_CLIENT_AUTH_CERT;
+    }
+
+    // Per spec, access_denied is only for client-certificate-based access
+    // control, but some buggy firewalls use it when blocking a page. To avoid a
+    // confusing error, map it to a generic protocol error if no
+    // CertificateRequest was sent. See https://crbug.com/630883.
+    if (ERR_GET_REASON(info->error_code) == SSL_R_TLSV1_ALERT_ACCESS_DENIED &&
+        !certificate_requested_) {
+      net_error = ERR_SSL_PROTOCOL_ERROR;
+    }
+  }
+
+  return net_error;
 }
 
 }  // namespace net

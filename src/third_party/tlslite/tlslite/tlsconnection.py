@@ -1370,6 +1370,8 @@ class TLSConnection(TLSRecordLayer):
             serverHello.signed_cert_timestamps = signedCertTimestamps
         if clientHello.status_request:
             serverHello.status_request = ocspResponse
+        if clientHello.ri:
+            serverHello.send_ri = True
 
         # Perform the SRP key exchange
         clientCertChain = None
@@ -1583,6 +1585,8 @@ class TLSConnection(TLSRecordLayer):
                     if param in settings.supportedTokenBindingParams:
                           serverHello.tb_params = param
                           break
+                if clientHello.ri:
+                    serverHello.send_ri = True
                 for result in self._sendMsg(serverHello):
                     yield result
 

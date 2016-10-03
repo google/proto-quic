@@ -127,7 +127,8 @@ class WaitingURLFetcherDelegate : public URLFetcherDelegate {
 
   void OnURLFetchDownloadProgress(const URLFetcher* source,
                                   int64_t current,
-                                  int64_t total) override {
+                                  int64_t total,
+                                  int64_t current_network_bytes) override {
     // Note that the current progress may be greater than the previous progress,
     // in the case of retrying the request.
     EXPECT_FALSE(did_complete_);
@@ -924,10 +925,11 @@ class CheckDownloadProgressDelegate : public WaitingURLFetcherDelegate {
 
   void OnURLFetchDownloadProgress(const URLFetcher* source,
                                   int64_t current,
-                                  int64_t total) override {
+                                  int64_t total,
+                                  int64_t current_network_bytes) override {
     // Run default checks.
-    WaitingURLFetcherDelegate::OnURLFetchDownloadProgress(source, current,
-                                                          total);
+    WaitingURLFetcherDelegate::OnURLFetchDownloadProgress(
+        source, current, total, current_network_bytes);
 
     EXPECT_LE(last_seen_progress_, current);
     EXPECT_EQ(file_size_, total);
@@ -1011,7 +1013,8 @@ class CancelOnDownloadProgressDelegate : public WaitingURLFetcherDelegate {
 
   void OnURLFetchDownloadProgress(const URLFetcher* source,
                                   int64_t current,
-                                  int64_t total) override {
+                                  int64_t total,
+                                  int64_t current_network_bytes) override {
     CancelFetch();
   }
 

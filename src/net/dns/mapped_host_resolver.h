@@ -50,10 +50,10 @@ class NET_EXPORT MappedHostResolver : public HostResolver {
               AddressList* addresses,
               const CompletionCallback& callback,
               std::unique_ptr<Request>* request,
-              const BoundNetLog& net_log) override;
+              const NetLogWithSource& net_log) override;
   int ResolveFromCache(const RequestInfo& info,
                        AddressList* addresses,
-                       const BoundNetLog& net_log) override;
+                       const NetLogWithSource& net_log) override;
   void SetDnsClientEnabled(bool enabled) override;
   HostCache* GetHostCache() override;
   std::unique_ptr<base::Value> GetDnsConfigAsValue() const override;

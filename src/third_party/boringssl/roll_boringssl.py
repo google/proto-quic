@@ -28,8 +28,6 @@ import generate_build_files
 GENERATED_FILES = [
     'BUILD.generated.gni',
     'BUILD.generated_tests.gni',
-    'boringssl.gypi',
-    'boringssl_tests.gypi',
     'err_data.c',
 ]
 
@@ -99,7 +97,7 @@ def main():
   subprocess.check_call(['python',
                          os.path.join(BORINGSSL_SRC_PATH, 'util',
                                       'generate_build_files.py'),
-                         'gn', 'gyp'],
+                         'gn'],
                         cwd=BORINGSSL_PATH)
 
   # Commit everything.

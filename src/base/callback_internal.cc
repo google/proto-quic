@@ -18,23 +18,23 @@ bool ReturnFalse(const BindStateBase*) {
 }  // namespace
 
 BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
-                             void (*destructor)(BindStateBase*))
+                             void (*destructor)(const BindStateBase*))
     : BindStateBase(polymorphic_invoke, destructor, &ReturnFalse) {
 }
 
 BindStateBase::BindStateBase(InvokeFuncStorage polymorphic_invoke,
-                             void (*destructor)(BindStateBase*),
+                             void (*destructor)(const BindStateBase*),
                              bool (*is_cancelled)(const BindStateBase*))
     : polymorphic_invoke_(polymorphic_invoke),
       ref_count_(0),
       destructor_(destructor),
       is_cancelled_(is_cancelled) {}
 
-void BindStateBase::AddRef() {
+void BindStateBase::AddRef() const {
   AtomicRefCountInc(&ref_count_);
 }
 
-void BindStateBase::Release() {
+void BindStateBase::Release() const {
   if (!AtomicRefCountDec(&ref_count_))
     destructor_(this);
 }

@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 
+import org.chromium.base.ContextUtils;
 import org.chromium.base.Log;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
@@ -44,7 +45,7 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
     }
 
     private <V> V runOnHandlerThread(Callable<V> c) {
-        FutureTask<V> t = new FutureTask<V>(c);
+        FutureTask<V> t = new FutureTask<>(c);
         mHandler.post(t);
         try {
             return t.get();
@@ -62,9 +63,11 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
      */
     @Override
     public boolean initializeNative() {
+        // This is necessary as EmbeddedTestServerImpl is in a different process than the tests
+        // using it, so it needs to initialize its own application context.
+        ContextUtils.initApplicationContext(mContext.getApplicationContext());
         try {
-            LibraryLoader libraryLoader = LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER);
-            libraryLoader.ensureInitialized(mContext);
+            LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER).ensureInitialized();
         } catch (ProcessInitException e) {
             Log.e(TAG, "Failed to load native libraries.", e);
             return false;

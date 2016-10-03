@@ -253,12 +253,12 @@ class QuicTestClient : public test::SimpleClient,
  private:
   class TestClientDataToResend : public QuicClient::QuicDataToResend {
    public:
-    TestClientDataToResend(BalsaHeaders* headers,
-                           StringPiece body,
+    TestClientDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
+                           base::StringPiece body,
                            bool fin,
                            QuicTestClient* test_client,
                            QuicAckListenerInterface* delegate)
-        : QuicClient::QuicDataToResend(headers, body, fin),
+        : QuicClient::QuicDataToResend(std::move(headers), body, fin),
           test_client_(test_client),
           delegate_(delegate) {}
 

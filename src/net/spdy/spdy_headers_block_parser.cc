@@ -6,6 +6,7 @@
 
 #include "base/sys_byteorder.h"
 #include "net/spdy/spdy_bug_tracker.h"
+#include "net/spdy/spdy_flags.h"
 
 namespace net {
 namespace {
@@ -113,7 +114,16 @@ bool SpdyHeadersBlockParser::HandleControlFrameHeadersData(
           next_state = READING_KEY_LEN;
         } else {
           next_state = READING_HEADER_BLOCK_LEN;
-          handler_->OnHeaderBlockEnd(total_bytes_received_);
+          if (FLAGS_chromium_http2_flag_log_compressed_size) {
+            // We reach here in two cases: 1) Spdy3 or 2) HTTP/2 without hpack
+            // encoding. For the first case, we just log the uncompressed size
+            // since we are going to deprecate Spdy3 soon. For the second case,
+            // the compressed size is the same as the uncompressed size.
+            handler_->OnHeaderBlockEnd(total_bytes_received_,
+                                       total_bytes_received_);
+          } else {
+            handler_->OnHeaderBlockEnd(total_bytes_received_);
+          }
           stream_id_ = kInvalidStreamId;
           // Expect to have consumed all buffer.
           if (reader.Available() != 0) {

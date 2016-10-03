@@ -850,7 +850,7 @@ class FakeWebSocketHandshakeStream : public WebSocketHandshakeStreamBase {
   // Fake implementation of HttpStreamBase methods.
   int InitializeStream(const HttpRequestInfo* request_info,
                        RequestPriority priority,
-                       const BoundNetLog& net_log,
+                       const NetLogWithSource& net_log,
                        const CompletionCallback& callback) override {
     initialize_stream_was_called_ = true;
     return ERR_IO_PENDING;
@@ -894,8 +894,9 @@ class FakeWebSocketHandshakeStream : public WebSocketHandshakeStreamBase {
 
   bool GetRemoteEndpoint(IPEndPoint* endpoint) override { return false; }
 
-  Error GetSignedEKMForTokenBinding(crypto::ECPrivateKey* key,
-                                    std::vector<uint8_t>* out) override {
+  Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
+                                 TokenBindingType tb_type,
+                                 std::vector<uint8_t>* out) override {
     ADD_FAILURE();
     return ERR_NOT_IMPLEMENTED;
   }

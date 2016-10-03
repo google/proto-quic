@@ -196,6 +196,11 @@ int ssl3_connect(SSL *ssl) {
     state = ssl->state;
 
     switch (ssl->state) {
+      case SSL_ST_INIT:
+        ssl->state = SSL_ST_CONNECT;
+        skip = 1;
+        break;
+
       case SSL_ST_CONNECT:
         ssl_do_info_callback(ssl, SSL_CB_HANDSHAKE_START, 1);
 
@@ -574,10 +579,21 @@ end:
   return ret;
 }
 
+uint16_t ssl_get_grease_value(const SSL *ssl, enum ssl_grease_index_t index) {
+  /* Use the client_random for entropy. This both avoids calling |RAND_bytes| on
+   * a single byte repeatedly and ensures the values are deterministic. This
+   * allows the same ClientHello be sent twice for a HelloRetryRequest or the
+   * same group be advertised in both supported_groups and key_shares. */
+  uint16_t ret = ssl->s3->client_random[index];
+  /* This generates a random value of the form 0xωaωa, for all 0 ≤ ω < 16. */
+  ret = (ret & 0xf0) | 0x0a;
+  ret |= ret << 8;
+  return ret;
+}
+
 static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
                                         uint16_t min_version,
-                                        uint16_t max_version,
-                                        uint16_t real_max_version) {
+                                        uint16_t max_version) {
   /* Prepare disabled cipher masks. */
   ssl_set_client_disabled(ssl);
 
@@ -586,11 +602,16 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
     return 0;
   }
 
+  /* Add a fake cipher suite. See draft-davidben-tls-grease-01. */
+  if (ssl->ctx->grease_enabled &&
+      !CBB_add_u16(&child, ssl_get_grease_value(ssl, ssl_grease_cipher))) {
+    return 0;
+  }
+
   STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
 
   int any_enabled = 0;
-  size_t i;
-  for (i = 0; i < sk_SSL_CIPHER_num(ciphers); i++) {
+  for (size_t i = 0; i < sk_SSL_CIPHER_num(ciphers); i++) {
     const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(ciphers, i);
     /* Skip disabled ciphers */
     if ((cipher->algorithm_mkey & ssl->cert->mask_k) ||
@@ -606,9 +627,11 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
       return 0;
     }
     /* Add PSK ciphers for TLS 1.3 resumption. */
+    uint16_t session_version;
     if (ssl->session != NULL &&
-        ssl->method->version_from_wire(ssl->session->ssl_version) >=
-            TLS1_3_VERSION) {
+        ssl->method->version_from_wire(&session_version,
+                                       ssl->session->ssl_version) &&
+        session_version >= TLS1_3_VERSION) {
       uint16_t resumption_cipher;
       if (ssl_cipher_get_ecdhe_psk_cipher(cipher, &resumption_cipher) &&
           !CBB_add_u16(&child, resumption_cipher)) {
@@ -632,8 +655,7 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
     }
   }
 
-  if ((ssl->mode & SSL_MODE_SEND_FALLBACK_SCSV) ||
-      real_max_version > max_version) {
+  if (ssl->mode & SSL_MODE_SEND_FALLBACK_SCSV) {
     if (!CBB_add_u16(&child, SSL3_CK_FALLBACK_SCSV & 0xffff)) {
       return 0;
     }
@@ -643,9 +665,8 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
 }
 
 int ssl_add_client_hello_body(SSL *ssl, CBB *body) {
-  uint16_t min_version, max_version, real_max_version;
-  if (!ssl_get_full_version_range(ssl, &min_version, &max_version,
-                                  &real_max_version)) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
     return 0;
   }
 
@@ -672,8 +693,7 @@ int ssl_add_client_hello_body(SSL *ssl, CBB *body) {
 
   size_t header_len =
       SSL_is_dtls(ssl) ? DTLS1_HM_HEADER_LENGTH : SSL3_HM_HEADER_LENGTH;
-  if (!ssl_write_client_cipher_list(ssl, body, min_version, max_version,
-                                    real_max_version) ||
+  if (!ssl_write_client_cipher_list(ssl, body, min_version, max_version) ||
       !CBB_add_u8(body, 1 /* one compression method */) ||
       !CBB_add_u8(body, 0 /* null compression */) ||
       !ssl_add_clienthello_tlsext(ssl, body, header_len + CBB_len(body))) {
@@ -711,19 +731,24 @@ static int ssl3_send_client_hello(SSL *ssl) {
      * key exchange, the ClientHello version is checked in the premaster secret.
      * Some servers fail when this value changes. */
     ssl->client_version = ssl->version;
+
+    if (max_version >= TLS1_3_VERSION) {
+      ssl->client_version = ssl->method->version_to_wire(TLS1_2_VERSION);
+    }
   }
 
   /* If the configured session has expired or was created at a disabled
    * version, drop it. */
   if (ssl->session != NULL) {
-    uint16_t session_version =
-        ssl->method->version_from_wire(ssl->session->ssl_version);
-    if ((session_version < TLS1_3_VERSION &&
+    uint16_t session_version;
+    if (!ssl->method->version_from_wire(&session_version,
+                                        ssl->session->ssl_version) ||
+        (session_version < TLS1_3_VERSION &&
          ssl->session->session_id_length == 0) ||
         ssl->session->not_resumable ||
         !ssl_session_is_time_valid(ssl, ssl->session) ||
         session_version < min_version || session_version > max_version) {
-      SSL_set_session(ssl, NULL);
+      ssl_set_session(ssl, NULL);
     }
   }
 
@@ -797,7 +822,7 @@ static int ssl3_get_server_hello(SSL *ssl) {
   CERT *ct = ssl->cert;
   int al = SSL_AD_INTERNAL_ERROR;
   CBS server_hello, server_random, session_id;
-  uint16_t server_wire_version, server_version, cipher_suite;
+  uint16_t server_wire_version, cipher_suite;
   uint8_t compression_method;
 
   int ret = ssl->method->ssl_get_message(ssl, -1, ssl_hash_message);
@@ -831,11 +856,9 @@ static int ssl3_get_server_hello(SSL *ssl) {
     goto f_err;
   }
 
-  server_version = ssl->method->version_from_wire(server_wire_version);
-
-  uint16_t min_version, max_version, real_max_version;
-  if (!ssl_get_full_version_range(ssl, &min_version, &max_version,
-                                  &real_max_version) ||
+  uint16_t min_version, max_version, server_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version) ||
+      !ssl->method->version_from_wire(&server_version, server_wire_version) ||
       server_version < min_version || server_version > max_version) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_PROTOCOL);
     al = SSL_AD_PROTOCOL_VERSION;
@@ -861,6 +884,8 @@ static int ssl3_get_server_hello(SSL *ssl) {
     return 1;
   }
 
+  ssl_clear_tls13_state(ssl);
+
   if (ssl->s3->tmp.message_type != SSL3_MT_SERVER_HELLO) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
@@ -880,20 +905,8 @@ static int ssl3_get_server_hello(SSL *ssl) {
   /* Copy over the server random. */
   memcpy(ssl->s3->server_random, CBS_data(&server_random), SSL3_RANDOM_SIZE);
 
-  /* Check for a TLS 1.3 downgrade signal. See draft-ietf-tls-tls13-14.
-   *
-   * TODO(davidben): Also implement the TLS 1.1 sentinel when things have
-   * settled down. */
-  static const uint8_t kDowngradeTLS12[8] = {0x44, 0x4f, 0x57, 0x4e,
-                                             0x47, 0x52, 0x44, 0x01};
-  if (real_max_version >= TLS1_3_VERSION &&
-      ssl3_protocol_version(ssl) <= TLS1_2_VERSION &&
-      memcmp(ssl->s3->server_random + SSL3_RANDOM_SIZE - 8, kDowngradeTLS12,
-             8) == 0) {
-    al = SSL_AD_ILLEGAL_PARAMETER;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_DOWNGRADE_DETECTED);
-    goto f_err;
-  }
+  /* TODO(davidben): Implement the TLS 1.1 and 1.2 downgrade sentinels once TLS
+   * 1.3 is finalized and we are not implementing a draft version. */
 
   if (!ssl->s3->initial_handshake_complete && ssl->session != NULL &&
       ssl->session->session_id_length != 0 &&
@@ -903,7 +916,7 @@ static int ssl3_get_server_hello(SSL *ssl) {
   } else {
     /* The session wasn't resumed. Create a fresh SSL_SESSION to
      * fill out. */
-    SSL_set_session(ssl, NULL);
+    ssl_set_session(ssl, NULL);
     if (!ssl_get_new_session(ssl, 0 /* client */)) {
       goto f_err;
     }
@@ -991,7 +1004,7 @@ static int ssl3_get_server_hello(SSL *ssl) {
   if (CBS_len(&server_hello) != 0) {
     /* wrong packet length */
     al = SSL_AD_DECODE_ERROR;
-    OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_PACKET_LENGTH);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     goto f_err;
   }
 
@@ -1122,20 +1135,13 @@ static int ssl3_get_server_key_exchange(SSL *ssl) {
   }
 
   if (ssl->s3->tmp.message_type != SSL3_MT_SERVER_KEY_EXCHANGE) {
+    /* Some ciphers (pure PSK) have an optional ServerKeyExchange message. */
     if (ssl_cipher_requires_server_key_exchange(ssl->s3->tmp.new_cipher)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
       return -1;
     }
 
-    /* In plain PSK ciphersuite, ServerKeyExchange may be omitted to send no
-     * identity hint. */
-    if (ssl->s3->tmp.new_cipher->algorithm_auth & SSL_aPSK) {
-      /* TODO(davidben): This should be reset in one place with the rest of the
-       * handshake state. */
-      OPENSSL_free(ssl->s3->tmp.peer_psk_identity_hint);
-      ssl->s3->tmp.peer_psk_identity_hint = NULL;
-    }
     ssl->s3->tmp.reuse_message = 1;
     return 1;
   }
@@ -1173,8 +1179,13 @@ static int ssl3_get_server_key_exchange(SSL *ssl) {
       goto f_err;
     }
 
-    /* Save the identity hint as a C string. */
-    if (!CBS_strdup(&psk_identity_hint, &ssl->s3->tmp.peer_psk_identity_hint)) {
+    /* Save non-empty identity hints as a C string. Empty identity hints we
+     * treat as missing. Plain PSK makes it possible to send either no hint
+     * (omit ServerKeyExchange) or an empty hint, while ECDHE_PSK can only spell
+     * empty hint. Having different capabilities is odd, so we interpret empty
+     * and missing as identical. */
+    if (CBS_len(&psk_identity_hint) != 0 &&
+        !CBS_strdup(&psk_identity_hint, &ssl->s3->hs->peer_psk_identity_hint)) {
       al = SSL_AD_INTERNAL_ERROR;
       OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       goto f_err;
@@ -1436,6 +1447,13 @@ static int ssl3_get_certificate_request(SSL *ssl) {
     return -1;
   }
 
+  if (CBS_len(&cbs) != 0) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    sk_X509_NAME_pop_free(ca_sk, X509_NAME_free);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    return -1;
+  }
+
   ssl->s3->tmp.cert_request = 1;
   sk_X509_NAME_pop_free(ssl->s3->tmp.ca_names, X509_NAME_free);
   ssl->s3->tmp.ca_names = ca_sk;
@@ -1452,7 +1470,7 @@ static int ssl3_get_server_hello_done(SSL *ssl) {
   /* ServerHelloDone is empty. */
   if (ssl->init_num > 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    OPENSSL_PUT_ERROR(SSL, SSL_R_LENGTH_MISMATCH);
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     return -1;
   }
 
@@ -1541,7 +1559,7 @@ static int ssl3_send_client_key_exchange(SSL *ssl) {
     char identity[PSK_MAX_IDENTITY_LEN + 1];
     memset(identity, 0, sizeof(identity));
     psk_len = ssl->psk_client_callback(
-        ssl, ssl->s3->tmp.peer_psk_identity_hint, identity, sizeof(identity),
+        ssl, ssl->s3->hs->peer_psk_identity_hint, identity, sizeof(identity),
         psk, sizeof(psk));
     if (psk_len == 0) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_PSK_IDENTITY_NOT_FOUND);

@@ -102,3 +102,9 @@ if (symbol_level == -1) {
     symbol_level = 0
   }
 }
+
+# Assert that the configuration isn't going to hit https://crbug.com/648948.
+assert(!is_android || android_64bit_target_cpu || is_component_build ||
+           symbol_level < 2,
+       "Android 32-bit non-component builds cannot have symbol_level=2 " +
+           "due to 4GiB file size limit, see https://crbug.com/648948")

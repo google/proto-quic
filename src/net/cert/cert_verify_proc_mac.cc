@@ -28,6 +28,7 @@
 #include "net/cert/cert_verifier.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
+#include "net/cert/test_keychain_search_list_mac.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_mac.h"
@@ -148,21 +149,19 @@ CertStatus CertStatusFromOSStatus(OSStatus status) {
 }
 
 // Creates a series of SecPolicyRefs to be added to a SecTrustRef used to
-// validate a certificate for an SSL server. |hostname| contains the name of
-// the SSL server that the certificate should be verified against. |flags| is
-// a bitwise-OR of VerifyFlags that can further alter how trust is validated,
-// such as how revocation is checked. If successful, returns noErr, and
-// stores the resultant array of SecPolicyRefs in |policies|.
-OSStatus CreateTrustPolicies(const std::string& hostname,
-                             int flags,
-                             ScopedCFTypeRef<CFArrayRef>* policies) {
+// validate a certificate for an SSL server. |flags| is a bitwise-OR of
+// VerifyFlags that can further alter how trust is validated, such as how
+// revocation is checked. If successful, returns noErr, and stores the
+// resultant array of SecPolicyRefs in |policies|.
+OSStatus CreateTrustPolicies(int flags, ScopedCFTypeRef<CFArrayRef>* policies) {
   ScopedCFTypeRef<CFMutableArrayRef> local_policies(
       CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks));
   if (!local_policies)
     return memFullErr;
 
   SecPolicyRef ssl_policy;
-  OSStatus status = x509_util::CreateSSLServerPolicy(hostname, &ssl_policy);
+  OSStatus status =
+      x509_util::CreateSSLServerPolicy(std::string(), &ssl_policy);
   if (status)
     return status;
   CFArrayAppendValue(local_policies, ssl_policy);
@@ -377,6 +376,7 @@ bool CheckRevocationWithCRLSet(CFArrayRef chain, CRLSet* crl_set) {
 int BuildAndEvaluateSecTrustRef(CFArrayRef cert_array,
                                 CFArrayRef trust_policies,
                                 int flags,
+                                CFArrayRef keychain_search_list,
                                 ScopedCFTypeRef<SecTrustRef>* trust_ref,
                                 SecTrustResultType* trust_result,
                                 ScopedCFTypeRef<CFArrayRef>* verified_chain,
@@ -390,6 +390,12 @@ int BuildAndEvaluateSecTrustRef(CFArrayRef cert_array,
 
   if (TestRootCerts::HasInstance()) {
     status = TestRootCerts::GetInstance()->FixupSecTrustRef(tmp_trust);
+    if (status)
+      return NetErrorFromOSStatus(status);
+  }
+
+  if (keychain_search_list) {
+    status = SecTrustSetKeychains(tmp_trust, keychain_search_list);
     if (status)
       return NetErrorFromOSStatus(status);
   }
@@ -540,17 +546,9 @@ int CertVerifyProcMac::VerifyInternal(
     const CertificateList& additional_trust_anchors,
     CertVerifyResult* verify_result) {
   ScopedCFTypeRef<CFArrayRef> trust_policies;
-  OSStatus status = CreateTrustPolicies(hostname, flags, &trust_policies);
+  OSStatus status = CreateTrustPolicies(flags, &trust_policies);
   if (status)
     return NetErrorFromOSStatus(status);
-
-  // Create and configure a SecTrustRef, which takes our certificate(s)
-  // and our SSL SecPolicyRef. SecTrustCreateWithCertificates() takes an
-  // array of certificates, the first of which is the certificate we're
-  // verifying, and the subsequent (optional) certificates are used for
-  // chain building.
-  ScopedCFTypeRef<CFMutableArrayRef> cert_array(
-      cert->CreateOSCertChainForCert());
 
   // Serialize all calls that may use the Keychain, to work around various
   // issues in OS X 10.6+ with multi-threaded access to Security.framework.
@@ -562,6 +560,7 @@ int CertVerifyProcMac::VerifyInternal(
   CSSM_TP_APPLE_EVIDENCE_INFO* chain_info = NULL;
   bool candidate_untrusted = true;
   bool candidate_weak = false;
+  bool completed_chain_revoked = false;
 
   // OS X lacks proper path discovery; it will take the input certs and never
   // backtrack the graph attempting to discover valid paths.
@@ -597,6 +596,10 @@ int CertVerifyProcMac::VerifyInternal(
   //   present in the AIA of A is signed using a strong algorithm. Since a
   //   'strong' chain exists, it would be desirable to prefer this chain.
   //
+  // - A user keychain may contain a less desirable intermediate or root.
+  //   OS X gives the user keychains higher priority than the system keychain,
+  //   so it may build a weak chain.
+  //
   // Because of this, the code below first attempts to validate the peer's
   // identity using the supplied chain. If it is not trusted (e.g. the OS only
   // trusts C, but the version of C signed by D was sent, and D is not trusted),
@@ -605,73 +608,163 @@ int CertVerifyProcMac::VerifyInternal(
   // chain is found, it is used, otherwise, the algorithm continues until only
   // the peer's certificate remains.
   //
+  // If the loop does not find a trusted chain, the loop will be repeated with
+  // the keychain search order altered to give priority to the System Roots
+  // keychain.
+  //
   // This does cause a performance hit for these users, but only in cases where
   // OS X is building weaker chains than desired, or when it would otherwise
   // fail the connection.
-  while (CFArrayGetCount(cert_array) > 0) {
-    ScopedCFTypeRef<SecTrustRef> temp_ref;
-    SecTrustResultType temp_trust_result = kSecTrustResultDeny;
-    ScopedCFTypeRef<CFArrayRef> temp_chain;
-    CSSM_TP_APPLE_EVIDENCE_INFO* temp_chain_info = NULL;
-
-    int rv = BuildAndEvaluateSecTrustRef(cert_array, trust_policies, flags,
-                                         &temp_ref, &temp_trust_result,
-                                         &temp_chain, &temp_chain_info);
-    if (rv != OK)
-      return rv;
-
-    bool untrusted = (temp_trust_result != kSecTrustResultUnspecified &&
-                      temp_trust_result != kSecTrustResultProceed);
-    bool weak_chain = false;
-    if (CFArrayGetCount(temp_chain) == 0) {
-      // If the chain is empty, it cannot be trusted or have recoverable
-      // errors.
-      DCHECK(untrusted);
-      DCHECK_NE(kSecTrustResultRecoverableTrustFailure, temp_trust_result);
-    } else {
-      CertVerifyResult temp_verify_result;
-      bool leaf_is_weak = false;
-      GetCertChainInfo(temp_chain, temp_chain_info, &temp_verify_result,
-                       &leaf_is_weak);
-      weak_chain = !leaf_is_weak &&
-                   (temp_verify_result.has_md2 || temp_verify_result.has_md4 ||
-                    temp_verify_result.has_md5 || temp_verify_result.has_sha1);
+  for (bool try_reordered_keychain : {false, true}) {
+    ScopedCFTypeRef<CFArrayRef> scoped_alternate_keychain_search_list;
+    if (TestKeychainSearchList::HasInstance()) {
+      // Unit tests need to be able to hermetically simulate situations where a
+      // user has an undesirable certificate in a per-user keychain.
+      // Adding/Removing a Keychain using SecKeychainCreate/SecKeychainDelete
+      // has global side effects, which would break other tests and processes
+      // running on the same machine, so instead tests may load pre-created
+      // keychains using SecKeychainOpen and then inject them through
+      // TestKeychainSearchList.
+      CFArrayRef keychain_search_list;
+      status = TestKeychainSearchList::GetInstance()->CopySearchList(
+          &keychain_search_list);
+      if (status)
+        return NetErrorFromOSStatus(status);
+      scoped_alternate_keychain_search_list.reset(keychain_search_list);
     }
-    // Set the result to the current chain if:
-    // - This is the first verification attempt. This ensures that if
-    //   everything is awful (e.g. it may just be an untrusted cert), that
-    //   what is reported is exactly what was sent by the server
-    // - If the current chain is trusted, and the old chain was not trusted,
-    //   then prefer this chain. This ensures that if there is at least a
-    //   valid path to a trust anchor, it's preferred over reporting an error.
-    // - If the current chain is trusted, and the old chain is trusted, but
-    //   the old chain contained weak algorithms while the current chain only
-    //   contains strong algorithms, then prefer the current chain over the
-    //   old chain.
-    //
-    // Note: If the leaf certificate itself is weak, then the only
-    // consideration is whether or not there is a trusted chain. That's
-    // because no amount of path discovery will fix a weak leaf.
-    if (!trust_ref || (!untrusted && (candidate_untrusted ||
-                                      (candidate_weak && !weak_chain)))) {
-      trust_ref = temp_ref;
-      trust_result = temp_trust_result;
-      completed_chain = temp_chain;
-      chain_info = temp_chain_info;
+    if (try_reordered_keychain) {
+      // If a TestKeychainSearchList is present, it will have already set
+      // |scoped_alternate_keychain_search_list|, which will be used as the
+      // basis for reordering the keychain. Otherwise, get the current keychain
+      // search list and use that.
+      if (!scoped_alternate_keychain_search_list) {
+        CFArrayRef keychain_search_list;
+        status = SecKeychainCopySearchList(&keychain_search_list);
+        if (status)
+          return NetErrorFromOSStatus(status);
+        scoped_alternate_keychain_search_list.reset(keychain_search_list);
+      }
+      CFMutableArrayRef mutable_keychain_search_list = CFArrayCreateMutableCopy(
+          kCFAllocatorDefault,
+          CFArrayGetCount(scoped_alternate_keychain_search_list.get()) + 1,
+          scoped_alternate_keychain_search_list.get());
+      if (!mutable_keychain_search_list)
+        return ERR_OUT_OF_MEMORY;
+      scoped_alternate_keychain_search_list.reset(mutable_keychain_search_list);
 
-      candidate_untrusted = untrusted;
-      candidate_weak = weak_chain;
+      SecKeychainRef keychain;
+      // Get a reference to the System Roots keychain. The System Roots
+      // keychain is not normally present in the keychain search list, but is
+      // implicitly checked after the keychains in the search list. By
+      // including it directly, force it to be checked first.  This is a gross
+      // hack, but the path is known to be valid on OS X 10.9-10.11.
+      status = SecKeychainOpen(
+          "/System/Library/Keychains/SystemRootCertificates.keychain",
+          &keychain);
+      if (status)
+        return NetErrorFromOSStatus(status);
+      ScopedCFTypeRef<SecKeychainRef> scoped_keychain(keychain);
+
+      CFArrayInsertValueAtIndex(mutable_keychain_search_list, 0, keychain);
+    }
+
+    ScopedCFTypeRef<CFMutableArrayRef> cert_array(
+        cert->CreateOSCertChainForCert());
+
+    // Beginning with the certificate chain as supplied by the server, attempt
+    // to verify the chain. If a failure is encountered, trim a certificate
+    // from the end (so long as one remains) and retry, in the hope of forcing
+    // OS X to find a better path.
+    while (CFArrayGetCount(cert_array) > 0) {
+      ScopedCFTypeRef<SecTrustRef> temp_ref;
+      SecTrustResultType temp_trust_result = kSecTrustResultDeny;
+      ScopedCFTypeRef<CFArrayRef> temp_chain;
+      CSSM_TP_APPLE_EVIDENCE_INFO* temp_chain_info = NULL;
+
+      int rv = BuildAndEvaluateSecTrustRef(
+          cert_array, trust_policies, flags,
+          scoped_alternate_keychain_search_list.get(), &temp_ref,
+          &temp_trust_result, &temp_chain, &temp_chain_info);
+      if (rv != OK)
+        return rv;
+
+      // Check to see if the path |temp_chain| has been revoked. This is less
+      // than ideal to perform after path building, rather than during, because
+      // there may be multiple paths to trust anchors, and only some of them
+      // are revoked. Ideally, CRLSets would be part of path building, which
+      // they are when using NSS (Linux) or CryptoAPI (Windows).
+      //
+      // The CRLSet checking is performed inside the loop in the hope that if a
+      // path is revoked, it's an older path, and the only reason it was built
+      // is because the server forced it (by supplying an older or less
+      // desirable intermediate) or because the user had installed a
+      // certificate in their Keychain forcing this path. However, this means
+      // its still possible for a CRLSet block of an intermediate to prevent
+      // access, even when there is a 'good' chain. To fully remedy this, a
+      // solution might be to have CRLSets contain enough knowledge about what
+      // the 'desired' path might be, but for the time being, the
+      // implementation is kept as 'simple' as it can be.
+      bool revoked =
+          (crl_set && !CheckRevocationWithCRLSet(temp_chain, crl_set));
+      bool untrusted = (temp_trust_result != kSecTrustResultUnspecified &&
+                        temp_trust_result != kSecTrustResultProceed) ||
+                       revoked;
+      bool weak_chain = false;
+      if (CFArrayGetCount(temp_chain) == 0) {
+        // If the chain is empty, it cannot be trusted or have recoverable
+        // errors.
+        DCHECK(untrusted);
+        DCHECK_NE(kSecTrustResultRecoverableTrustFailure, temp_trust_result);
+      } else {
+        CertVerifyResult temp_verify_result;
+        bool leaf_is_weak = false;
+        GetCertChainInfo(temp_chain, temp_chain_info, &temp_verify_result,
+                         &leaf_is_weak);
+        weak_chain =
+            !leaf_is_weak &&
+            (temp_verify_result.has_md2 || temp_verify_result.has_md4 ||
+             temp_verify_result.has_md5 || temp_verify_result.has_sha1);
+      }
+      // Set the result to the current chain if:
+      // - This is the first verification attempt. This ensures that if
+      //   everything is awful (e.g. it may just be an untrusted cert), that
+      //   what is reported is exactly what was sent by the server
+      // - If the current chain is trusted, and the old chain was not trusted,
+      //   then prefer this chain. This ensures that if there is at least a
+      //   valid path to a trust anchor, it's preferred over reporting an error.
+      // - If the current chain is trusted, and the old chain is trusted, but
+      //   the old chain contained weak algorithms while the current chain only
+      //   contains strong algorithms, then prefer the current chain over the
+      //   old chain.
+      //
+      // Note: If the leaf certificate itself is weak, then the only
+      // consideration is whether or not there is a trusted chain. That's
+      // because no amount of path discovery will fix a weak leaf.
+      if (!trust_ref || (!untrusted && (candidate_untrusted ||
+                                        (candidate_weak && !weak_chain)))) {
+        trust_ref = temp_ref;
+        trust_result = temp_trust_result;
+        completed_chain = temp_chain;
+        completed_chain_revoked = revoked;
+        chain_info = temp_chain_info;
+
+        candidate_untrusted = untrusted;
+        candidate_weak = weak_chain;
+      }
+      // Short-circuit when a current, trusted chain is found.
+      if (!untrusted && !weak_chain)
+        break;
+      CFArrayRemoveValueAtIndex(cert_array, CFArrayGetCount(cert_array) - 1);
     }
     // Short-circuit when a current, trusted chain is found.
-    if (!untrusted && !weak_chain)
+    if (!candidate_untrusted && !candidate_weak)
       break;
-    CFArrayRemoveValueAtIndex(cert_array, CFArrayGetCount(cert_array) - 1);
   }
 
   if (flags & CertVerifier::VERIFY_REV_CHECKING_ENABLED)
     verify_result->cert_status |= CERT_STATUS_REV_CHECKING_ENABLED;
 
-  if (crl_set && !CheckRevocationWithCRLSet(completed_chain, crl_set))
+  if (completed_chain_revoked)
     verify_result->cert_status |= CERT_STATUS_REVOKED;
 
   if (CFArrayGetCount(completed_chain) > 0) {

@@ -1,0 +1,3 @@
+import("//build/args/blimp_client.gn")
+is_debug = false
+dcheck_always_on = true

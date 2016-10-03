@@ -3,4 +3,6 @@
 
 <suppressions>
   <suppress id="SharedPreferencesCheck" files="ContextUtils.java"/>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <suppress id="AlertDialogCheck" files="MultiFieldTimePickerDialog.java"/>
 </suppressions>

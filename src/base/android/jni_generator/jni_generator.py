@@ -518,6 +518,7 @@ RE_SCOPED_JNI_TYPES = re.compile('jobject|jclass|jstring|jthrowable|.*Array')
 RE_CALLED_BY_NATIVE = re.compile(
     '@CalledByNative(?P<Unchecked>(Unchecked)*?)(?:\("(?P<annotation>.*)"\))?'
     '\s+(?P<prefix>[\w ]*?)'
+    '(:?\s*@\w+)?'  # Ignore annotations in return types.
     '\s*(?P<return_type>\S+?)'
     '\s+(?P<name>\w+)'
     '\s*\((?P<params>[^\)]*)\)')

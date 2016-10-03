@@ -116,6 +116,7 @@ OSInfo::OSInfo()
       version_number_.major, version_number_.minor, version_number_.build);
   service_pack_.major = version_info.wServicePackMajor;
   service_pack_.minor = version_info.wServicePackMinor;
+  service_pack_str_ = base::WideToUTF8(version_info.szCSDVersion);
 
   SYSTEM_INFO system_info = {};
   ::GetNativeSystemInfo(&system_info);
@@ -169,14 +170,14 @@ OSInfo::OSInfo()
     if (version_info.wProductType == VER_NT_WORKSTATION &&
         system_info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
       version_type_ = SUITE_PROFESSIONAL;
-    } else if (version_info.wSuiteMask & VER_SUITE_WH_SERVER ) {
+    } else if (version_info.wSuiteMask & VER_SUITE_WH_SERVER) {
       version_type_ = SUITE_HOME;
     } else {
       version_type_ = SUITE_SERVER;
     }
   } else if (version_info.dwMajorVersion == 5 &&
              version_info.dwMinorVersion == 1) {
-    if(version_info.wSuiteMask & VER_SUITE_PERSONAL)
+    if (version_info.wSuiteMask & VER_SUITE_PERSONAL)
       version_type_ = SUITE_HOME;
     else
       version_type_ = SUITE_PROFESSIONAL;

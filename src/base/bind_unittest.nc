@@ -5,6 +5,8 @@
 // This is a "No Compile Test" suite.
 // http://dev.chromium.org/developers/testing/no-compile-tests
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/macros.h"
@@ -206,6 +208,20 @@ void WontCompile() {
 void WontCompile() {
   int i = 0;
   Bind([i]() {});
+}
+
+#elif defined(NCTEST_DISALLOW_BINDING_ONCE_CALLBACK_WITH_NO_ARGS)  // [r"static_assert failed \"Attempting to bind a base::Callback with no additional arguments: save a heap allocation and use the original base::Callback object\""]
+
+void WontCompile() {
+  internal::OnceClosure cb = internal::BindOnce([] {});
+  internal::OnceClosure cb2 = internal::BindOnce(std::move(cb));
+}
+
+#elif defined(NCTEST_DISALLOW_BINDING_REPEATING_CALLBACK_WITH_NO_ARGS)  // [r"static_assert failed \"Attempting to bind a base::Callback with no additional arguments: save a heap allocation and use the original base::Callback object\""]
+
+void WontCompile() {
+  Closure cb = Bind([] {});
+  Closure cb2 = Bind(cb);
 }
 
 #endif

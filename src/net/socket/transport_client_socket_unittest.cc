@@ -120,7 +120,7 @@ void TransportClientSocketTest::SetUp() {
   TestCompletionCallback callback;
   std::unique_ptr<HostResolver::Request> request;
   int rv = resolver->Resolve(info, DEFAULT_PRIORITY, &addr, callback.callback(),
-                             &request, BoundNetLog());
+                             &request, NetLogWithSource());
   CHECK_EQ(ERR_IO_PENDING, rv);
   rv = callback.WaitForResult();
   CHECK_EQ(rv, OK);

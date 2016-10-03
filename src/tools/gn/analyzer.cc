@@ -34,7 +34,7 @@ struct Inputs {
   std::vector<SourceFile> source_vec;
   std::vector<Label> compile_vec;
   std::vector<Label> test_vec;
-  bool compile_included_all;
+  bool compile_included_all = false;
   SourceFileSet source_files;
   LabelSet compile_labels;
   LabelSet test_labels;
@@ -43,6 +43,7 @@ struct Inputs {
 struct Outputs {
   std::string status;
   std::string error;
+  bool compile_includes_all = false;
   LabelSet compile_labels;
   LabelSet test_labels;
   LabelSet invalid_labels;
@@ -101,7 +102,7 @@ std::vector<std::string> GetStringVector(const base::DictionaryValue& dict,
 void WriteString(base::DictionaryValue& dict,
                  const std::string& key,
                  const std::string& value) {
-  dict.SetString(key, value);
+  dict.SetStringWithoutPathExpansion(key, value);
 };
 
 void WriteLabels(const Label& default_toolchain,
@@ -114,7 +115,7 @@ void WriteLabels(const Label& default_toolchain,
     strings.push_back(l.GetUserVisibleName(default_toolchain));
   std::sort(strings.begin(), strings.end());
   value->AppendStrings(strings);
-  dict.Set(key, std::move(value));
+  dict.SetWithoutPathExpansion(key, std::move(value));
 }
 
 Label AbsoluteOrSourceAbsoluteStringToLabel(const Label& default_toolchain,
@@ -203,8 +204,15 @@ std::string OutputsToJSON(const Outputs& outputs,
                 outputs.invalid_labels);
   } else {
     WriteString(*value, "status", outputs.status);
-    WriteLabels(default_toolchain, *value, "compile_targets",
-                outputs.compile_labels);
+    if (outputs.compile_includes_all) {
+      auto compile_targets = base::WrapUnique(new base::ListValue());
+      compile_targets->AppendString("all");
+      value->SetWithoutPathExpansion("compile_targets",
+                                     std::move(compile_targets));
+    } else {
+      WriteLabels(default_toolchain, *value, "compile_targets",
+                  outputs.compile_labels);
+    }
     WriteLabels(default_toolchain, *value, "test_targets", outputs.test_labels);
   }
 
@@ -259,7 +267,14 @@ std::string Analyzer::Analyze(const std::string& input, Err* err) const {
   // or toolchain defined in that file.
   if (AnyBuildFilesWereModified(inputs.source_files)) {
     outputs.status = "Found dependency (all)";
-    outputs.compile_labels = inputs.compile_labels;
+    if (inputs.compile_included_all) {
+      outputs.compile_includes_all = true;
+    } else {
+      outputs.compile_labels.insert(inputs.compile_labels.begin(),
+                                    inputs.compile_labels.end());
+      outputs.compile_labels.insert(inputs.test_labels.begin(),
+                                    inputs.test_labels.end());
+    }
     outputs.test_labels = inputs.test_labels;
     return OutputsToJSON(outputs, default_toolchain_, err);
   }

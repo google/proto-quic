@@ -35,6 +35,7 @@
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
+#include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/test/gtest_util.h"
@@ -287,12 +288,12 @@ vector<TestParams> GetTestParams() {
                     }  // End of version for loop.
                   }    // End of 2nd version for loop.
                 }      // End of small_client_mtu loop.
-              }      // End of buffer_packet_till_chlo loop.
-            }        // End of use_cheap_stateless_reject for loop.
-          }          // End of force_hol_blocking loop.
-        }            // End of disable_hpack_dynamic_table for loop.
-      }              // End of congestion_control_tag for loop.
-    }                // End of client_supports_stateless_rejects for loop.
+              }        // End of buffer_packet_till_chlo loop.
+            }          // End of use_cheap_stateless_reject for loop.
+          }            // End of force_hol_blocking loop.
+        }              // End of disable_hpack_dynamic_table for loop.
+      }                // End of congestion_control_tag for loop.
+    }                  // End of client_supports_stateless_rejects for loop.
     CHECK_EQ(kMaxEnabledOptions, max_enabled_options);
   }  // End of server_uses_stateless_rejects_if_peer_supported for loop.
   return params;
@@ -658,6 +659,27 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
 INSTANTIATE_TEST_CASE_P(EndToEndTests,
                         EndToEndTest,
                         ::testing::ValuesIn(GetTestParams()));
+
+TEST_P(EndToEndTest, HandshakeSuccessful) {
+  ASSERT_TRUE(Initialize());
+  client_->client()->WaitForCryptoHandshakeConfirmed();
+  QuicCryptoStream* crypto_stream =
+      QuicSessionPeer::GetCryptoStream(client_->client()->session());
+  QuicStreamSequencer* sequencer =
+      ReliableQuicStreamPeer::sequencer(crypto_stream);
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+  server_thread_->Pause();
+  QuicDispatcher* dispatcher =
+      QuicServerPeer::GetDispatcher(server_thread_->server());
+  QuicSession* server_session = dispatcher->session_map().begin()->second;
+  crypto_stream = QuicSessionPeer::GetCryptoStream(server_session);
+  sequencer = ReliableQuicStreamPeer::sequencer(crypto_stream);
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+}
 
 TEST_P(EndToEndTest, SimpleRequestResponse) {
   ASSERT_TRUE(Initialize());
@@ -1359,7 +1381,9 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kReno;
       break;
     case kTBBR:
-      expected_congestion_control_type = kBBR;
+      // TODO(vasilvv): switch this back to kBBR when new BBR implementation is
+      // in.
+      expected_congestion_control_type = kCubic;
       break;
     case kQBIC:
       expected_congestion_control_type = kCubic;
@@ -1866,10 +1890,9 @@ class TestAckListener : public QuicAckListenerInterface {
 class TestResponseListener : public QuicClient::ResponseListener {
  public:
   void OnCompleteResponse(QuicStreamId id,
-                          const BalsaHeaders& response_headers,
+                          const SpdyHeaderBlock& response_headers,
                           const string& response_body) override {
-    string debug_string;
-    response_headers.DumpHeadersToString(&debug_string);
+    string debug_string = response_headers.DebugString();
     DVLOG(1) << "response for stream " << id << " " << debug_string << "\n"
              << response_body;
   }
@@ -2582,7 +2605,9 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
   AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
                                       push_urls, kNumResources, 0);
 
-  client_->client()->set_response_listener(new TestResponseListener);
+  client_->client()->set_response_listener(
+      std::unique_ptr<QuicClientBase::ResponseListener>(
+          new TestResponseListener));
 
   DVLOG(1) << "send request for /push_example";
   EXPECT_EQ(kBody, client_->SendSynchronousRequest(
@@ -2618,7 +2643,9 @@ TEST_P(EndToEndTestServerPush, ServerPushUnderLimit) {
   };
   AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
                                       push_urls, kNumResources, 0);
-  client_->client()->set_response_listener(new TestResponseListener);
+  client_->client()->set_response_listener(
+      std::unique_ptr<QuicClientBase::ResponseListener>(
+          new TestResponseListener));
 
   // Send the first request: this will trigger the server to send all the push
   // resources associated with this request, and these will be cached by the
@@ -2664,7 +2691,9 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitNonBlocking) {
   }
   AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
                                       push_urls, kNumResources, 0);
-  client_->client()->set_response_listener(new TestResponseListener);
+  client_->client()->set_response_listener(
+      std::unique_ptr<QuicClientBase::ResponseListener>(
+          new TestResponseListener));
 
   // Send the first request: this will trigger the server to send all the push
   // resources associated with this request, and these will be cached by the
@@ -2720,7 +2749,9 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
                                       push_urls, kNumResources, kBodySize);
 
-  client_->client()->set_response_listener(new TestResponseListener);
+  client_->client()->set_response_listener(
+      std::unique_ptr<QuicClientBase::ResponseListener>(
+          new TestResponseListener));
 
   client_->SendRequest("https://example.com/push_example");
 
@@ -2766,7 +2797,10 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   EXPECT_EQ(12u, client_->num_responses());
 }
 
+// TODO(ckrasic) - remove this when deprecating
+// FLAGS_quic_enable_server_push_by_default.
 TEST_P(EndToEndTestServerPush, DisabledWithoutConnectionOption) {
+  FLAGS_quic_enable_server_push_by_default = false;
   // Tests that server push won't be triggered when kSPSH is not set by client.
   support_server_push_ = false;
   ASSERT_TRUE(Initialize());
@@ -2781,7 +2815,9 @@ TEST_P(EndToEndTestServerPush, DisabledWithoutConnectionOption) {
   };
   AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
                                       push_urls, kNumResources, 0);
-  client_->client()->set_response_listener(new TestResponseListener);
+  client_->client()->set_response_listener(
+      std::unique_ptr<QuicClientBase::ResponseListener>(
+          new TestResponseListener));
   EXPECT_EQ(kBody, client_->SendSynchronousRequest(
                        "https://example.com/push_example"));
 

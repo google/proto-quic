@@ -352,11 +352,14 @@ namespace {
 
 class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
  public:
-  ControllableDetachDelegate()
-      : work_processed_(WaitableEvent::ResetPolicy::MANUAL,
+  ControllableDetachDelegate(TaskTracker* task_tracker)
+      : task_tracker_(task_tracker),
+        work_processed_(WaitableEvent::ResetPolicy::MANUAL,
                         WaitableEvent::InitialState::NOT_SIGNALED),
         detach_requested_(WaitableEvent::ResetPolicy::MANUAL,
-                          WaitableEvent::InitialState::NOT_SIGNALED) {}
+                          WaitableEvent::InitialState::NOT_SIGNALED) {
+    EXPECT_TRUE(task_tracker_);
+  }
 
   ~ControllableDetachDelegate() override = default;
 
@@ -376,6 +379,7 @@ class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
     std::unique_ptr<Task> task(new Task(
         FROM_HERE, Bind(&WaitableEvent::Signal, Unretained(&work_processed_)),
         TaskTraits(), TimeDelta()));
+    EXPECT_TRUE(task_tracker_->WillPostTask(task.get()));
     sequence->PushTask(std::move(task));
     return sequence;
   }
@@ -404,6 +408,7 @@ class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
   void set_can_detach(bool can_detach) { can_detach_ = can_detach; }
 
  private:
+  TaskTracker* const task_tracker_;
   bool work_requested_ = false;
   bool can_detach_ = false;
   WaitableEvent work_processed_;
@@ -418,7 +423,7 @@ TEST(TaskSchedulerWorkerTest, WorkerDetaches) {
   TaskTracker task_tracker;
   // Will be owned by SchedulerWorker.
   ControllableDetachDelegate* delegate =
-      new StrictMock<ControllableDetachDelegate>;
+      new StrictMock<ControllableDetachDelegate>(&task_tracker);
   delegate->set_can_detach(true);
   EXPECT_CALL(*delegate, OnMainEntry(_, TimeDelta::Max()));
   std::unique_ptr<SchedulerWorker> worker =
@@ -438,7 +443,7 @@ TEST(TaskSchedulerWorkerTest, WorkerDetachesAndWakes) {
   TaskTracker task_tracker;
   // Will be owned by SchedulerWorker.
   ControllableDetachDelegate* delegate =
-      new StrictMock<ControllableDetachDelegate>;
+      new StrictMock<ControllableDetachDelegate>(&task_tracker);
   delegate->set_can_detach(true);
   EXPECT_CALL(*delegate, OnMainEntry(_, TimeDelta::Max()));
   std::unique_ptr<SchedulerWorker> worker =
@@ -471,7 +476,7 @@ TEST(TaskSchedulerWorkerTest, CreateDetached) {
   TaskTracker task_tracker;
   // Will be owned by SchedulerWorker.
   ControllableDetachDelegate* delegate =
-      new StrictMock<ControllableDetachDelegate>;
+      new StrictMock<ControllableDetachDelegate>(&task_tracker);
   std::unique_ptr<SchedulerWorker> worker =
       SchedulerWorker::Create(
           ThreadPriority::NORMAL, WrapUnique(delegate), &task_tracker,

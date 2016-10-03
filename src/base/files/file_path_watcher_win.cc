@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/message_loop/message_loop.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/win/object_watcher.h"
@@ -59,7 +60,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
   void DestroyWatch();
 
   // Cleans up and stops observing the |task_runner_| thread.
-  void CancelOnMessageLoopThread() override;
+  void CancelOnMessageLoopThread();
 
   // Callback to notify upon changes.
   FilePathWatcher::Callback callback_;
@@ -121,8 +122,8 @@ void FilePathWatcherImpl::Cancel() {
 
   // Switch to the file thread if necessary so we can stop |watcher_|.
   if (!task_runner()->BelongsToCurrentThread()) {
-    task_runner()->PostTask(FROM_HERE, Bind(&FilePathWatcher::CancelWatch,
-                                            make_scoped_refptr(this)));
+    task_runner()->PostTask(
+        FROM_HERE, Bind(&FilePathWatcherImpl::CancelOnMessageLoopThread, this));
   } else {
     CancelOnMessageLoopThread();
   }

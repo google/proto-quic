@@ -279,6 +279,10 @@ class ChromeProxyClientType(ChromeProxyValidation):
         metrics=metrics.ChromeProxyMetric())
     self._chrome_proxy_client_type = None
 
+  def CustomizeBrowserOptions(self, options):
+    super(ChromeProxyClientType, self).CustomizeBrowserOptions(options)
+    options.AppendExtraBrowserArgs('--disable-quic')
+
   def AddResults(self, tab, results):
     # Get the Chrome-Proxy client type from the first page in the page set, so
     # that the client type value can be used to determine which of the later
@@ -307,6 +311,7 @@ class ChromeProxyLoFi(ChromeProxyValidation):
     # Disable server experiments such as tamper detection.
     options.AppendExtraBrowserArgs(
         '--data-reduction-proxy-server-experiments-disabled')
+    options.AppendExtraBrowserArgs('--disable-quic')
 
   def AddResults(self, tab, results):
     self._metrics.AddResultsForLoFi(tab, results)
@@ -334,6 +339,7 @@ class ChromeProxyCacheLoFiDisabled(ChromeProxyValidation):
 
   def WillStartBrowser(self, platform):
     super(ChromeProxyCacheLoFiDisabled, self).WillStartBrowser(platform)
+    self.options.AppendExtraBrowserArgs('--disable-quic')
     if not self._page:
       # First page load, enable LoFi and chrome proxy. Disable server
       # experiments such as tamper detection.
@@ -386,6 +392,7 @@ class ChromeProxyCacheProxyDisabled(ChromeProxyValidation):
 
   def WillStartBrowser(self, platform):
     super(ChromeProxyCacheProxyDisabled, self).WillStartBrowser(platform)
+    self.options.AppendExtraBrowserArgs('--disable-quic')
     if not self._page:
       # First page load, enable LoFi and chrome proxy. Disable server
       # experiments such as tamper detection.
@@ -408,23 +415,24 @@ class ChromeProxyCacheProxyDisabled(ChromeProxyValidation):
       tab.ExecuteJavaScript('window.location.reload()')
       util.WaitFor(tab.HasReachedQuiescence, 3)
 
-class ChromeProxyLoFiPreview(ChromeProxyValidation):
-  """Correctness measurement for Lo-Fi preview in Chrome-Proxy header."""
+class ChromeProxyLitePage(ChromeProxyValidation):
+  """Correctness measurement for lite pages in the Chrome-Proxy header."""
 
   def __init__(self):
-    super(ChromeProxyLoFiPreview, self).__init__(
+    super(ChromeProxyLitePage, self).__init__(
         restart_after_each_page=True,
         metrics=metrics.ChromeProxyMetric())
 
   def CustomizeBrowserOptions(self, options):
-    super(ChromeProxyLoFiPreview, self).CustomizeBrowserOptions(options)
+    super(ChromeProxyLitePage, self).CustomizeBrowserOptions(options)
     options.AppendExtraBrowserArgs(
         '--data-reduction-proxy-lo-fi=always-on')
     options.AppendExtraBrowserArgs(
-        '--enable-data-reduction-proxy-lo-fi-preview')
+        '--enable-data-reduction-proxy-lite-page')
+    options.AppendExtraBrowserArgs('--disable-quic')
 
   def AddResults(self, tab, results):
-    self._metrics.AddResultsForLoFiPreview(tab, results)
+    self._metrics.AddResultsForLitePage(tab, results)
 
 class ChromeProxyExpDirective(ChromeProxyValidation):
   """Correctness measurement for experiment directives in Chrome-Proxy header.
@@ -459,6 +467,7 @@ class ChromeProxyPassThrough(ChromeProxyValidation):
 
   def CustomizeBrowserOptions(self, options):
     super(ChromeProxyPassThrough, self).CustomizeBrowserOptions(options)
+    options.AppendExtraBrowserArgs('--disable-quic')
 
   def AddResults(self, tab, results):
     self._metrics.AddResultsForPassThrough(tab, results)
@@ -564,6 +573,58 @@ class ChromeProxySmoke(ChromeProxyValidation):
     for add_result in page_to_metrics[self._page.name]:
       add_result(tab, results)
 
+class ChromeProxyQuicSmoke(page_test.PageTest):
+  """Smoke measurement for basic chrome proxy correctness when using a
+  proxy that supports QUIC."""
+
+  def __init__(self, *args, **kwargs):
+    super(ChromeProxyQuicSmoke, self).__init__(*args, **kwargs)
+    self._metrics = metrics.ChromeProxyMetric()
+    self._enable_proxy = True
+
+  def CustomizeBrowserOptions(self, options):
+    super(ChromeProxyQuicSmoke, self).CustomizeBrowserOptions(options)
+    options.AppendExtraBrowserArgs(
+      '--enable-quic')
+    options.AppendExtraBrowserArgs(
+      '--data-reduction-proxy-http-proxies=https://proxy.googlezip.net:443')
+    options.AppendExtraBrowserArgs(
+      '--force-fieldtrials=DataReductionProxyUseQuic/Enabled')
+    options.AppendExtraBrowserArgs('--enable-spdy-proxy-auth')
+
+  def WillNavigateToPage(self, page, tab):
+    if self._enable_proxy:
+      measurements.WaitForViaHeader(tab)
+    tab.ClearCache(force=True)
+    self._metrics.Start(page, tab)
+
+  def ValidateAndMeasurePage(self, page, tab, results):
+    # Wait for the load event.
+    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    self._metrics.Stop(page, tab)
+    page_to_metrics = {
+        'header validation': [self._metrics.AddResultsForHeaderValidation],
+        'compression: image': [
+            self._metrics.AddResultsForHeaderValidation,
+            self._metrics.AddResultsForDataSaving,
+            ],
+        'compression: javascript': [
+            self._metrics.AddResultsForHeaderValidation,
+            self._metrics.AddResultsForDataSaving,
+            ],
+        'compression: css': [
+            self._metrics.AddResultsForHeaderValidation,
+            self._metrics.AddResultsForDataSaving,
+            ],
+        'bypass': [self._metrics.AddResultsForBypass],
+        }
+    if not page.name in page_to_metrics:
+      raise page_test.MeasurementFailure(
+          'Invalid page name (%s) in QUIC smoke. '
+          'Page name must be one of:\n%s' % (
+          page.name, page_to_metrics.keys()))
+    for add_result in page_to_metrics[page.name]:
+      add_result(tab, results)
 
 PROXIED = metrics.PROXIED
 DIRECT = metrics.DIRECT
@@ -580,6 +641,7 @@ class ChromeProxyClientConfig(ChromeProxyValidation):
     super(ChromeProxyClientConfig, self).CustomizeBrowserOptions(options)
     options.AppendExtraBrowserArgs(
       '--enable-data-reduction-proxy-config-client')
+    options.AppendExtraBrowserArgs('--disable-quic')
 
   def AddResults(self, tab, results):
     self._metrics.AddResultsForClientConfig(tab, results)
@@ -707,3 +769,35 @@ class ChromeProxyPingback(ChromeProxyValidation):
 
   def AddResults(self, tab, results):
     self._metrics.AddResultsForPingback(tab, results)
+
+class ChromeProxyQuicTransaction(page_test.PageTest):
+  """Chrome quic proxy usage validation when connecting to a proxy that
+  supports QUIC."""
+
+  def __init__(self, *args, **kwargs):
+    super(ChromeProxyQuicTransaction, self).__init__(*args, **kwargs)
+    self._metrics = metrics.ChromeProxyMetric()
+    self._enable_proxy = True
+
+  def CustomizeBrowserOptions(self, options):
+    options.AppendExtraBrowserArgs(
+      '--enable-quic')
+    options.AppendExtraBrowserArgs(
+      '--data-reduction-proxy-http-proxies=https://proxy.googlezip.net:443')
+    options.AppendExtraBrowserArgs(
+      '--force-fieldtrials=DataReductionProxyUseQuic/Enabled')
+    options.AppendExtraBrowserArgs('--enable-spdy-proxy-auth')
+    options.AppendExtraBrowserArgs(
+      '--enable-stats-collection-bindings')
+
+  def WillNavigateToPage(self, page, tab):
+    if self._enable_proxy:
+      measurements.WaitForViaHeader(tab)
+    tab.ClearCache(force=True)
+    self._metrics.Start(page, tab)
+
+  def ValidateAndMeasurePage(self, page, tab, results):
+    # Wait for the load event.
+    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    self._metrics.Stop(page, tab)
+    self._metrics.AddResultsForQuicTransaction(tab, results)

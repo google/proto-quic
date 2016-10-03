@@ -19,9 +19,9 @@
 
 namespace net {
 
-class BoundNetLog;
 class ClientSocketFactory;
 class IPEndPoint;
+class NetLogWithSource;
 class StreamSocket;
 
 // Attempts to connect to a subset of the addresses required by a
@@ -67,7 +67,7 @@ class WebSocketTransportConnectSubJob
 
   ClientSocketFactory* client_socket_factory() const;
 
-  const BoundNetLog& net_log() const;
+  const NetLogWithSource& net_log() const;
 
   const IPEndPoint& CurrentAddress() const;
 

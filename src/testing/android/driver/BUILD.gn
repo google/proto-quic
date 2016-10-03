@@ -4,7 +4,6 @@
 
 import("//build/config/android/rules.gni")
 
-# GYP: //testing/android/on_device_instrumentation.gyp:driver_apk
 android_apk("driver_apk") {
   android_manifest = "java/AndroidManifest.xml"
   apk_name = "OnDeviceInstrumentationDriver"

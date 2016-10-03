@@ -11,6 +11,7 @@
 #include "base/base64.h"
 #include "base/files/file_path.h"
 #include "base/json/json_reader.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/rand_util.h"
 #include "base/sha1.h"
@@ -89,9 +90,12 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(const GURL& report_uri, const std::string& report) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report) override {
     latest_report_uri_ = report_uri;
-    latest_report_ = report;
+    report.CopyToString(&latest_report_);
+    content_type.CopyToString(&latest_content_type_);
   }
 
   void SetErrorCallback(
@@ -100,14 +104,17 @@ class MockCertificateReportSender
   void Clear() {
     latest_report_uri_ = GURL();
     latest_report_ = std::string();
+    latest_content_type_ = std::string();
   }
 
   const GURL& latest_report_uri() { return latest_report_uri_; }
   const std::string& latest_report() { return latest_report_; }
+  const std::string& latest_content_type() { return latest_content_type_; }
 
  private:
   GURL latest_report_uri_;
   std::string latest_report_;
+  std::string latest_content_type_;
 };
 
 // A mock ReportSenderInterface that simulates a net error on every report sent.
@@ -120,7 +127,9 @@ class MockFailingCertificateReportSender
   int net_error() { return net_error_; }
 
   // TransportSecurityState::ReportSenderInterface:
-  void Send(const GURL& report_uri, const std::string& report) override {
+  void Send(const GURL& report_uri,
+            base::StringPiece content_type,
+            base::StringPiece report) override {
     ASSERT_FALSE(error_callback_.is_null());
     error_callback_.Run(report_uri, net_error_);
   }
@@ -338,6 +347,7 @@ void CheckExpectStapleReport(TransportSecurityState* state,
   state->SetReportSender(reporter);
   state->CheckExpectStaple(host_port, ssl_info, ocsp_response);
   EXPECT_EQ(GURL(kExpectStapleStaticReportURI), reporter->latest_report_uri());
+  EXPECT_EQ("application/json; charset=utf-8", reporter->latest_content_type());
   std::string serialized_report = reporter->latest_report();
   EXPECT_NO_FATAL_FAILURE(CheckSerializedExpectStapleReport(
       serialized_report, host_port, ssl_info, ocsp_response, response_status,
@@ -1443,6 +1453,8 @@ TEST_F(TransportSecurityStateTest, HPKPReporting) {
   EXPECT_EQ(report_uri, mock_report_sender.latest_report_uri());
   std::string report = mock_report_sender.latest_report();
   ASSERT_FALSE(report.empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   ASSERT_NO_FATAL_FAILURE(CheckHPKPReport(report, host_port_pair, true, kHost,
                                           cert1.get(), cert2.get(),
                                           good_hashes));
@@ -1458,6 +1470,8 @@ TEST_F(TransportSecurityStateTest, HPKPReporting) {
   EXPECT_EQ(report_uri, mock_report_sender.latest_report_uri());
   report = mock_report_sender.latest_report();
   ASSERT_FALSE(report.empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   ASSERT_NO_FATAL_FAILURE(CheckHPKPReport(report, subdomain_host_port_pair,
                                           true, kHost, cert1.get(), cert2.get(),
                                           good_hashes));
@@ -1568,6 +1582,8 @@ TEST_F(TransportSecurityStateTest, HPKPReportOnly) {
   EXPECT_EQ(report_uri, mock_report_sender.latest_report_uri());
   std::string report = mock_report_sender.latest_report();
   ASSERT_FALSE(report.empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   ASSERT_NO_FATAL_FAILURE(CheckHPKPReport(report, host_port_pair, true, kHost,
                                           cert1.get(), cert2.get(),
                                           ssl_info.public_key_hashes));
@@ -1694,6 +1710,8 @@ TEST_F(TransportSecurityStateTest, PreloadedPKPReportUri) {
 
   std::string report = mock_report_sender.latest_report();
   ASSERT_FALSE(report.empty());
+  EXPECT_EQ("application/json; charset=utf-8",
+            mock_report_sender.latest_content_type());
   ASSERT_NO_FATAL_FAILURE(CheckHPKPReport(
       report, host_port_pair, pkp_state.include_subdomains, pkp_state.domain,
       cert1.get(), cert2.get(), pkp_state.spki_hashes));
@@ -2315,7 +2333,8 @@ TEST_F(TransportSecurityStateTest, RequireCTForSymantec) {
   // necessary.
   hashes.clear();
   hashes.push_back(HashValue(symantec_hash_value));
-  base::FieldTrialList field_trial_list(new base::MockEntropyProvider());
+  base::FieldTrialList field_trial_list(
+      base::MakeUnique<base::MockEntropyProvider>());
   base::FieldTrialList::CreateFieldTrial("EnforceCTForProblematicRoots",
                                          "disabled");
 

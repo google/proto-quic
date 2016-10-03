@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import HTMLParser
 import logging
 import os
 import re
 import tempfile
+import xml.etree.ElementTree
 
 from devil.android import apk_helper
 from pylib import constants
@@ -169,6 +171,33 @@ def ParseGTestOutput(output):
   return results
 
 
+def ParseGTestXML(xml_content):
+  """Parse gtest XML result."""
+  results = []
+
+  html = HTMLParser.HTMLParser()
+
+  # TODO(jbudorick): Unclear how this handles crashes.
+  testsuites = xml.etree.ElementTree.fromstring(xml_content)
+  for testsuite in testsuites:
+    suite_name = testsuite.attrib['name']
+    for testcase in testsuite:
+      case_name = testcase.attrib['name']
+      result_type = base_test_result.ResultType.PASS
+      log = []
+      for failure in testcase:
+        result_type = base_test_result.ResultType.FAIL
+        log.append(html.unescape(failure.attrib['message']))
+
+      results.append(base_test_result.BaseTestResult(
+          '%s.%s' % (suite_name, case_name),
+          result_type,
+          int(float(testcase.attrib['time']) * 1000),
+          log=('\n'.join(log) if log else '')))
+
+  return results
+
+
 class GtestTestInstance(test_instance.TestInstance):
 
   def __init__(self, args, isolate_delegate, error_func):
@@ -251,6 +280,9 @@ class GtestTestInstance(test_instance.TestInstance):
 
     self._test_arguments = args.test_arguments
 
+    # TODO(jbudorick): Remove this once it's deployed.
+    self._enable_xml_result_parsing = args.enable_xml_result_parsing
+
   @property
   def activity(self):
     return self._apk_helper and self._apk_helper.GetActivityName()
@@ -270,6 +302,10 @@ class GtestTestInstance(test_instance.TestInstance):
   @property
   def app_files(self):
     return self._app_data_files
+
+  @property
+  def enable_xml_result_parsing(self):
+    return self._enable_xml_result_parsing
 
   @property
   def exe_dist_dir(self):

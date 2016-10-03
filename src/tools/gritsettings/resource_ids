@@ -215,7 +215,7 @@
     "includes": [25500],
     "structures": [25600],
   },
-  "extensions/extensions_strings.grd": {
+  "extensions/strings/extensions_strings.grd": {
     "messages": [25650],
   },
   "extensions/shell/app_shell_resources.grd": {
@@ -255,6 +255,9 @@
   "components/components_strings.grd": {
     "messages": [28020],
   },
+  "chrome/browser/resources/task_scheduler_internals/resources.grd": {
+    "includes": [29000],
+  },
   # Chromium strings and Google Chrome strings must start at the same id.
   # We only use one file depending on whether we're building Chromium or
   # Google Chrome.
@@ -282,6 +285,12 @@
   },
   "headless/lib/resources/headless_lib_resources.grd": {
     "includes": [30670],
+  },
+  "blimp/engine/app/blimp_browser_resources.grd": {
+    "includes": [30680],
+  },
+  "chromecast/browser/cast_browser_resources.grd": {
+    "includes": [30690],
   },
 
   # Resource ids starting at 31000 are reserved for projects built on Chromium.

@@ -15,17 +15,7 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
-
-// Windows HiRes timers drain the battery faster so we need to know the battery
-// status.  This isn't true for other platforms.
-#define ENABLE_BATTERY_MONITORING 1
-#else
-#undef ENABLE_BATTERY_MONITORING
 #endif  // !OS_WIN
-
-#if defined(ENABLE_BATTERY_MONITORING)
-#include "base/timer/timer.h"
-#endif  // defined(ENABLE_BATTERY_MONITORING)
 
 #if defined(OS_IOS)
 #include <objc/runtime.h>
@@ -93,17 +83,9 @@ class BASE_EXPORT PowerMonitorDeviceSource : public PowerMonitorSource {
   // false otherwise.
   bool IsOnBatteryPowerImpl() override;
 
-  // Checks the battery status and notifies observers if the battery
-  // status has changed.
-  void BatteryCheck();
-
 #if defined(OS_IOS)
   // Holds pointers to system event notification observers.
   std::vector<id> notification_observers_;
-#endif
-
-#if defined(ENABLE_BATTERY_MONITORING)
-  base::OneShotTimer delayed_battery_check_;
 #endif
 
 #if defined(OS_WIN)

@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include "build/build_config.h"
@@ -103,7 +104,7 @@ class CRYPTO_EXPORT SignatureVerifier {
   std::vector<uint8_t> signature_;
 
   struct VerifyContext;
-  VerifyContext* verify_context_;
+  std::unique_ptr<VerifyContext> verify_context_;
 };
 
 }  // namespace crypto

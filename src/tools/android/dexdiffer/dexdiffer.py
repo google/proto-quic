@@ -5,16 +5,20 @@
 """Tool to diff 2 dex files that have been proguarded.
 
 To use this tool, first get dextra. http://newandroidbook.com/tools/dextra.html
-Then use the dextra binary on a classes.dex file like so:
-  dextra_binary -j -f -m classes.dex > output.dextra
-Do this for both the dex files you want to compare. Then, take the appropriate
-proguard mapping files uesd to generate those dex files, and use this script:
-  python dexdiffer.py mappingfile1 output1.dextra mappingfile2 output2.dextra
+Then invoke script like:
+
+  PATH=$PATH:/path/to/dextra dexdiffer.py --old classes1.dex --new classes2.dex
+
+apks files may be used as well.
 """
 
 import argparse
+import errno
 import re
+import subprocess
 import sys
+import tempfile
+import zipfile
 
 
 _QUALIFIERS = set(['public', 'protected', 'private', 'final', 'static',
@@ -255,31 +259,82 @@ def _DiffDexDicts(dex_base, dex_new):
   return diffs
 
 
+def _RunDextraOnDex(dex_path):
+  try:
+    out = subprocess.check_output(
+        ['dextra.ELF64', '-j', '-f', '-m', dex_path])
+    return out.splitlines()
+  except OSError as e:
+    if e.errno == errno.ENOENT:
+      raise Exception('Ensure dextra.ELF64 is in your PATH')
+    raise
+
+
+def _RunDextra(dex_or_apk_path):
+  if dex_or_apk_path.endswith('.dex'):
+    return _RunDextraOnDex(dex_or_apk_path)
+
+  with tempfile.NamedTemporaryFile(suffix='.dex') as tmp_file:
+    with zipfile.ZipFile(dex_or_apk_path) as apk:
+      tmp_file.write(apk.read('classes.dex'))
+      tmp_file.flush()
+    return _RunDextraOnDex(tmp_file.name)
+
+
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('base_mapping_file',
+  parser.add_argument('--base-mapping-file',
                       help='Mapping file from proguard output for base dex')
-  parser.add_argument('base_dextra_output',
+  parser.add_argument('--base-dextra-output',
                       help='dextra -j -f -m output for base dex')
-  parser.add_argument('new_mapping_file',
+  parser.add_argument('--new-mapping-file',
                       help='Mapping file from proguard output for new dex')
-  parser.add_argument('new_dextra_output',
+  parser.add_argument('--new-dextra-output',
                       help='dextra -j -f -m output for new dex')
+  parser.add_argument('--old',
+                      help='Path to base apk / classes.dex')
+  parser.add_argument('--new',
+                      help='Path to new apk / classes.dex')
   args = parser.parse_args()
 
-  with open(args.base_mapping_file) as f:
-    mapping_base = _ReadMappingDict(f)
-  with open(args.base_dextra_output) as f:
-    dex_base = _BuildMappedDexDict(f, mapping_base)
-  with open(args.new_mapping_file) as f:
-    mapping_new = _ReadMappingDict(f)
-  with open(args.new_dextra_output) as f:
-    dex_new = _BuildMappedDexDict(f, mapping_new)
+  mapping_base = {}
+  mapping_new = {}
+  if args.base_mapping_file:
+    with open(args.base_mapping_file) as f:
+      mapping_base = _ReadMappingDict(f)
+  if args.new_mapping_file:
+    with open(args.new_mapping_file) as f:
+      mapping_new = _ReadMappingDict(f)
 
+  if args.base_dextra_output:
+    with open(args.base_dextra_output) as f:
+      dex_base = _BuildMappedDexDict(f, mapping_base)
+  else:
+    assert args.old, 'Must pass either --old or --base-dextra-output'
+    print 'Running dextra #1'
+    lines = _RunDextra(args.old)
+    dex_base = _BuildMappedDexDict(lines, mapping_base)
+  if args.new_dextra_output:
+    with open(args.new_dextra_output) as f:
+      dex_new = _BuildMappedDexDict(f, mapping_new)
+  else:
+    assert args.new, 'Must pass either --new or --new-dextra-output'
+    print 'Running dextra #2'
+    lines = _RunDextra(args.new)
+    dex_new = _BuildMappedDexDict(lines, mapping_base)
+
+  print 'Analyzing...'
   diffs = _DiffDexDicts(dex_base, dex_new)
   if diffs:
     for diff in diffs:
       print diff
+    sys.exit(1)
+  else:
+    class_count = len(dex_base)
+    method_count = sum(len(v) for v in dex_base.itervalues())
+    print ('No meaningful differences: '
+           'both have the same %d classes and %d methods.' %
+           (class_count, method_count))
 
 
 if __name__ == '__main__':

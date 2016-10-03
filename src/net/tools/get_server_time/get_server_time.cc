@@ -83,7 +83,8 @@ class QuitDelegate : public net::URLFetcherDelegate {
 
   void OnURLFetchDownloadProgress(const net::URLFetcher* source,
                                   int64_t current,
-                                  int64_t total) override {
+                                  int64_t total,
+                                  int64_t current_network_bytes) override {
     NOTREACHED();
   }
 

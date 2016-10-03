@@ -18,12 +18,6 @@ FilePathWatcher::~FilePathWatcher() {
 }
 
 // static
-void FilePathWatcher::CancelWatch(
-    const scoped_refptr<PlatformDelegate>& delegate) {
-  delegate->CancelOnMessageLoopThread();
-}
-
-// static
 bool FilePathWatcher::RecursiveWatchAvailable() {
 #if (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_WIN) || \
     defined(OS_LINUX) || defined(OS_ANDROID)

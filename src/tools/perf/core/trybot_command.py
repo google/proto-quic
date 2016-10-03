@@ -63,6 +63,33 @@ DEFAULT_TRYBOTS = [
 ]
 
 CHROMIUM_SRC_PATH = path_util.GetChromiumSrcDir()
+# Mapping of repo to its root path and git remote URL.
+# Values for 'src' key in the map are related to path to the repo in the
+# DEPS file, These values are to used create the DEPS patch along with patch
+# that is being tried.
+REPO_INFO_MAP = {
+    'src': {
+        'src': 'src',
+        'url': 'https://chromium.googlesource.com/chromium/src.git',
+    },
+    'v8': {
+        'src': 'src/v8',
+        'url': 'https://chromium.googlesource.com/v8/v8.git',
+    },
+    'skia': {
+        'src': 'src/third_party/skia',
+        'url': 'https://chromium.googlesource.com/skia.git',
+    },
+    'angle': {
+        'src': 'src/third_party/angle',
+        'url': 'https://chromium.googlesource.com/angle/angle.git',
+    },
+    'catapult': {
+        'src': 'src/third_party/catapult',
+        'url': ('https://chromium.googlesource.com/external/github.com/'
+                'catapult-project/catapult.git')
+    }
+}
 
 assert not set(DEFAULT_TRYBOTS) & set(EXCLUDED_BOTS), (
     'A trybot cannot present in both Default as well as Excluded bots lists.')
@@ -157,7 +184,7 @@ def RunGit(cmd, msg_on_error='', ignore_return_code=False):
       return None
     raise TrybotError('%s. \n%s' % (msg_on_error, err))
 
-  return output
+  return output.strip()
 
 
 class Trybot(command_line.ArgParseCommand):
@@ -292,6 +319,36 @@ class Trybot(command_line.ArgParseCommand):
         help=('specify which benchmark to run. To see all available benchmarks,'
               ' run `run_benchmark list`'),
         metavar='<benchmark name>')
+    parser.add_argument(
+        '--repo_path', type=str, default=CHROMIUM_SRC_PATH,
+        help=("""specify the repo path where the patch is created.'
+This argument should only be used if the changes are made outside chromium repo.
+E.g.,
+1) Assume you are running run_benchmarks command from $HOME/cr/src/ direcory:'
+  a) If your changes are in $HOME/cr/src/v8, then --repo_path=v8 or
+     --repo-path=$HOME/cr/src/v8
+  b) If your changes are in $HOME/cr/src/third_party/catapult, then
+     --repo_path=third_party/catapult or
+     --repo_path = $HOME/cr/src/third_party/catapult'
+  c) If your changes are not relative to src/ e.g. you created changes in some
+     other direcotry say $HOME/mydir/v8/v8/, then the
+     --repo_path=$HOME/mydir/v8/v8
+2) Assume you are running run_benchmarks command not relatvie to src i.e.,
+   you are running from $HOME/mydir/ direcory:'
+   a) If your changes are in $HOME/cr/src/v8, then --repo-path=$HOME/cr/src/v8
+   b) If your changes are in $HOME/cr/src/third_party/catapult, then
+      --repo_path=$HOME/cr/src/third_party/catapult'
+  c) If your changes are in $HOME/mydir/v8/v8/, then the
+     --repo_path=$HOME/mydir/v8/v8 or --repo_path=v8/v8"""),
+        metavar='<repo path>')
+    parser.add_argument(
+        '--deps_revision', type=str, default=None,
+        help=('specify DEPS revision to modify DEPS entry in Chromium to a '
+              'certain pushed revision.\n'
+              'This revision overrides value in DEPS on TOT Chromium for the '
+              'repo specified in --repo_path.\nIt is applied for both with and '
+              'wihout patch.'),
+        metavar='<deps revision>')
 
   def Run(self, options, extra_args=None):
     """Sends a tryjob to a perf trybot.
@@ -303,12 +360,8 @@ class Trybot(command_line.ArgParseCommand):
     if extra_args is None:
       extra_args = []
     self._InitializeBuilderNames(options.trybot)
-    try:
-      self._AttemptTryjob(CHROMIUM_SRC_PATH, options, extra_args)
-    except TrybotError, error:
-      print error
-      return 1
-    return 0
+
+    return self._AttemptTryjob(options, extra_args)
 
   def _GetPerfConfig(self, bot_platform, arguments):
     """Generates the perf config for try job.
@@ -403,31 +456,107 @@ class Trybot(command_line.ArgParseCommand):
 
     return (repo_name, branch_name)
 
-  def _AttemptTryjob(self, repo_path, options, extra_args):
+  def _GetBaseGitHashForRepo(self, branch_name, git_url):
+    """Gets the base revision for the repo on which local changes are made.
+
+    Finds the upstream of the current branch that it is set to and gets
+    the HEAD revision from upstream. This also checks if the remote URL on
+    the upstream is supported by Perf Try job.
+
+    Args:
+      branch_name: Current working branch name.
+      git_url: Remote URL of the repo.
+
+    Returns:
+      Git hash of the HEAD revision from the upstream branch.
+
+    Raises:
+      TrybotError: This exception is raised when a GIT command fails or if the
+      remote URL of the repo found is not supported.
+    """
+    # Check if there is any upstream branch associated with current working
+    # branch, Once the upstream branch is found i.e., then validates the
+    # remote URL and then returns the HEAD revision from the remote branch.
+    while not self._IsRepoSupported(branch_name, git_url):
+      branch_name = RunGit(
+          ['rev-parse', '--abbrev-ref', '%s@{upstream}' % branch_name],
+          'Failed to get upstream branch name.')
+
+    return RunGit(
+        ['rev-parse', '%s@{upstream}' % branch_name],
+        'Failed to get base revision hash on upstream.')
+
+  def _IsRepoSupported(self, current_branch, repo_git_url):
+    cur_remote = RunGit(
+        ['config', 'branch.%s.remote'% current_branch],
+        'Failed to get branch.%s.remote from git config' % current_branch)
+    cur_remote = cur_remote.strip()
+    if cur_remote == '.':
+      return False
+    cur_remote_url = RunGit(
+        ['config', 'remote.%s.url' % cur_remote],
+        'Failed to get remote.%s.url from git config' % cur_remote)
+    if cur_remote_url.lower() == repo_git_url:
+      return True
+    raise TrybotError('URL %s on remote %s is not recognized on branch.'% (
+        cur_remote_url, cur_remote))
+
+  def _AttemptTryjob(self, options, extra_args):
     """Attempts to run a tryjob from a repo directory.
 
     Args:
-      repo_path: Path to the repository.
       options: Command line arguments to run benchmark.
       extra_args: Extra arugments to run benchmark.
+
+    Returns:
+     If successful returns 0, otherwise 1.
     """
-    repo_name, branch_name = self._GetRepoAndBranchName(repo_path)
+    original_workdir = os.getcwd()
+    repo_path = os.path.abspath(options.repo_path)
+    try:
+      # Check the existence of repo path.
+      if not os.path.exists(repo_path):
+        raise TrybotError('Repository path "%s" does not exist, please check '
+                          'the value of <repo_path> argument.' % repo_path)
+      # Change to the repo directory.
+      os.chdir(repo_path)
+      repo_name, branch_name = self._GetRepoAndBranchName(repo_path)
 
-    arguments = [options.benchmark_name] + extra_args
+      repo_info = REPO_INFO_MAP.get(repo_name, None)
+      if not repo_info:
+        raise TrybotError('Unsupported repository %s' % repo_name)
 
-    rietveld_url = self._UploadPatchToRietveld(repo_name, options)
-    print ('\nUploaded try job to rietveld.\nview progress here %s.'
-           '\n\tRepo Name: %s\n\tPath: %s\n\tBranch: %s' % (
-               rietveld_url, repo_name, repo_path, branch_name))
+      deps_override = None
+      if repo_name != 'src':
+        if not options.deps_revision:
+          options.deps_revision = self._GetBaseGitHashForRepo(
+              branch_name, repo_info.get('url'))
+        deps_override = {repo_info.get('src'): options.deps_revision}
 
-    for bot_platform in self._builder_names:
-      if not self._builder_names[bot_platform]:
-        logging.warning('No builder is found for %s', bot_platform)
-        continue
-      try:
-        self._RunTryJob(bot_platform, arguments)
-      except TrybotError, err:
-        print err
+      arguments = [options.benchmark_name] + extra_args
+
+      rietveld_url = self._UploadPatchToRietveld(repo_name, options)
+      print ('\nUploaded try job to rietveld.\nview progress here %s.'
+             '\n\tRepo Name: %s\n\tPath: %s\n\tBranch: %s' % (
+                 rietveld_url, repo_name, repo_path, branch_name))
+
+      for bot_platform in self._builder_names:
+        if not self._builder_names[bot_platform]:
+          logging.warning('No builder is found for %s', bot_platform)
+          continue
+        try:
+          self._RunTryJob(bot_platform, arguments, deps_override)
+        # Even if git cl try throws TrybotError exception for any platform,
+        # keep sending try jobs to other platforms.
+        except TrybotError, err:
+          print err
+    except TrybotError, error:
+      print error
+      return 1
+    finally:
+      # Restore to original working directory.
+      os.chdir(original_workdir)
+    return 0
 
   def _UploadPatchToRietveld(self, repo_name, options):
     """Uploads the patch to rietveld and returns rietveld URL."""
@@ -443,12 +572,13 @@ class Trybot(command_line.ArgParseCommand):
                         (repo_name, output))
     return match.group(0)
 
-  def _RunTryJob(self, bot_platform, arguments):
+  def _RunTryJob(self, bot_platform, arguments, deps_override):
     """Executes perf try job with benchmark test properties.
 
     Args:
       bot_platform: Name of the platform to be generated.
       arguments: Command line arguments.
+      deps_override: DEPS revision if needs to be overridden.
 
     Raises:
       TrybotError: When trybot fails to upload CL or run git try.
@@ -461,8 +591,14 @@ class Trybot(command_line.ArgParseCommand):
      # Add Perf Test config to git try --properties arg.
     git_try_command.extend(['-p', 'perf_try_config=%s' % json.dumps(config)])
 
+    error_msg_on_fail = 'Could not try CL for %s' % bot_platform
+    # Add deps overrides to git try --properties arg.
+    if deps_override:
+      git_try_command.extend([
+          '-p', 'deps_revision_overrides=%s' % json.dumps(deps_override)])
+      error_msg_on_fail += ' with DEPS override (%s)' % deps_override
     for bot in self._builder_names[bot_platform]:
       git_try_command.extend(['-b', bot])
 
-    RunGit(git_try_command, 'Could not try CL for %s' % bot_platform)
+    RunGit(git_try_command, error_msg_on_fail)
     print 'Perf Try job sent to rietveld for %s platform.' % bot_platform

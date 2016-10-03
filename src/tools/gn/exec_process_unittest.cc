@@ -26,6 +26,7 @@ bool ExecPython(const std::string& command,
                 std::string* std_err,
                 int* exit_code) {
   base::ScopedTempDir temp_dir;
+  CHECK(temp_dir.CreateUniqueTempDir());
   base::CommandLine::StringVector args;
 #if defined(OS_WIN)
   args.push_back(L"python");
@@ -36,8 +37,8 @@ bool ExecPython(const std::string& command,
   args.push_back("-c");
   args.push_back(command);
 #endif
-  return ExecProcess(
-      base::CommandLine(args), temp_dir.path(), std_out, std_err, exit_code);
+  return ExecProcess(base::CommandLine(args), temp_dir.GetPath(), std_out,
+                     std_err, exit_code);
 }
 }  // namespace
 

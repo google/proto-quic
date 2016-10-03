@@ -80,6 +80,11 @@ class NET_EXPORT_PRIVATE QuicUnackedPacketMap {
   // Returns the largest packet number that has been sent.
   QuicPacketNumber largest_sent_packet() const { return largest_sent_packet_; }
 
+  // Returns the largest retransmittable packet number that has been sent.
+  QuicPacketNumber largest_sent_retransmittable_packet() const {
+    return largest_sent_retransmittable_packet_;
+  }
+
   // Returns the largest packet number that has been acked.
   QuicPacketNumber largest_observed() const { return largest_observed_; }
 
@@ -169,6 +174,8 @@ class NET_EXPORT_PRIVATE QuicUnackedPacketMap {
                        const TransmissionInfo& info) const;
 
   QuicPacketNumber largest_sent_packet_;
+  // The largest sent packet we expect to receive an ack for.
+  QuicPacketNumber largest_sent_retransmittable_packet_;
   QuicPacketNumber largest_observed_;
 
   // Newly serialized retransmittable packets are added to this map, which

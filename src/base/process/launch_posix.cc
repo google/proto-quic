@@ -487,7 +487,10 @@ Process LaunchProcess(const std::vector<std::string>& argv,
       options.pre_exec_delegate->RunAsyncSafe();
     }
 
-    execvp(argv_cstr[0], argv_cstr.get());
+    const char* executable_path = !options.real_path.empty() ?
+        options.real_path.value().c_str() : argv_cstr[0];
+
+    execvp(executable_path, argv_cstr.get());
 
     RAW_LOG(ERROR, "LaunchProcess: failed to execvp:");
     RAW_LOG(ERROR, argv_cstr[0]);

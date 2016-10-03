@@ -223,7 +223,7 @@ template("create_signed_bundle") {
       code_signing_outputs +=
           [ "$_bundle_root_dir/_CodeSignature/CodeResources" ]
     }
-    if (ios_code_signing_identity != "" && ios_sdk_name != "iphonesimulator") {
+    if (ios_code_signing_identity != "" && !use_ios_simulator) {
       code_signing_outputs += [ "$_bundle_root_dir/embedded.mobileprovision" ]
     }
 

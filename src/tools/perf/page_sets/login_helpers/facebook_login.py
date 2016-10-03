@@ -5,7 +5,8 @@ from page_sets.login_helpers import login_utils
 
 
 def LoginWithMobileSite(
-    action_runner, credential,
+    action_runner,
+    credential='facebooktest', # Recommended testing account.
     credentials_path=login_utils.DEFAULT_CREDENTIAL_PATH):
   """Logs in into mobile Facebook account.
 
@@ -15,7 +16,11 @@ def LoginWithMobileSite(
   Args:
     action_runner: Action runner responsible for running actions on the page.
     credential: The credential to retrieve from the credentials file
-        (type string).
+        (type string). It's recommended to use 'facebooktest' account since
+        it's a test account and will not trigger credential verification.
+        However, the limitation is the test account cannot access actual
+        facebook's pages & people (more restrictions in
+        https://developers.facebook.com/docs/apps/test-users#rules)
     credentials_path: The string that specifies the path to credential file.
 
   Raises:

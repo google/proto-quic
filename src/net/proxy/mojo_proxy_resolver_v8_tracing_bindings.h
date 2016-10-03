@@ -18,7 +18,8 @@ namespace net {
 // An implementation of ProxyResolverV8Tracing::Bindings that forwards requests
 // onto a Client mojo interface. Alert() and OnError() may be called from any
 // thread; when they are called from another thread, the calls are proxied to
-// the origin task runner. GetHostResolver() and GetBoundNetLog() may only be
+// the origin task runner. GetHostResolver() and GetNetLogWithSource() may only
+// be
 // called from the origin task runner.
 template <typename Client>
 class MojoProxyResolverV8TracingBindings
@@ -46,9 +47,9 @@ class MojoProxyResolverV8TracingBindings
     return &host_resolver_;
   }
 
-  BoundNetLog GetBoundNetLog() override {
+  NetLogWithSource GetNetLogWithSource() override {
     DCHECK(thread_checker_.CalledOnValidThread());
-    return BoundNetLog();
+    return NetLogWithSource();
   }
 
  private:

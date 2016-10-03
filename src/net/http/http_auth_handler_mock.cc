@@ -173,7 +173,7 @@ int HttpAuthHandlerMock::Factory::CreateAuthHandler(
     const GURL& origin,
     CreateReason reason,
     int nonce_count,
-    const BoundNetLog& net_log,
+    const NetLogWithSource& net_log,
     std::unique_ptr<HttpAuthHandler>* handler) {
   if (handlers_[target].empty())
     return ERR_UNEXPECTED;
