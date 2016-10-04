@@ -80,6 +80,12 @@ declare_args() {
   # of binutils can cause linker warning.
   # See: https://bugs.chromium.org/p/chromium/issues/detail?id=457359
   fatal_linker_warnings = true
+
+  # AFDO (Automatic Feedback Directed Optimizer) is a form of profile-guided
+  # optimization that GCC supports. It used by ChromeOS in their official
+  # builds. To use it, set auto_profile_path to the path to a file containing
+  # the needed gcov profiling data.
+  auto_profile_path = ""
 }
 
 if (is_clang && !is_nacl) {
@@ -1474,6 +1480,18 @@ config("default_optimization") {
     configs = [ ":no_optimize" ]
   } else {
     configs = [ ":optimize" ]
+  }
+}
+
+# GCC supports a form of profile-guided optimization called AFDO, which
+# is used by ChromeOS in their official builds. However,
+# //base/allocator:tcmalloc currently doesn't work correctly with AFDO
+# so we provide separate config so that the flag can be disabled per-target.
+# TODO(crbug.com/633719): Remove this config once tcmalloc works with AFDO
+# or we remove tcmalloc or we stop using AFDO.
+config("afdo") {
+  if (auto_profile_path != "" && current_toolchain == default_toolchain) {
+    cflags = [ "-fauto-profile=${auto_profile_path}" ]
   }
 }
 

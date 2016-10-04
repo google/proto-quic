@@ -222,6 +222,9 @@ if (use_allocator == "tcmalloc") {
       ":tcmalloc_flags",
     ]
 
+    # TODO(crbug.com/633719) Make tcmalloc work with AFDO if possible.
+    configs -= [ "//build/config/compiler:afdo" ]
+
     deps = []
 
     if (enable_profiling) {

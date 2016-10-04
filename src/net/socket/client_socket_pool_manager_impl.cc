@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/values.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_proxy_client_socket_pool.h"
@@ -89,8 +90,8 @@ ClientSocketPoolManagerImpl::ClientSocketPoolManagerImpl(
                                                ssl_session_cache_shard,
                                                socket_factory,
                                                transport_socket_pool_.get(),
-                                               NULL /* no socks proxy */,
-                                               NULL /* no http proxy */,
+                                               nullptr /* no socks proxy */,
+                                               nullptr /* no http proxy */,
                                                ssl_config_service,
                                                net_log)) {
   CertDatabase::GetInstance()->AddObserver(this);
@@ -214,7 +215,7 @@ SOCKSClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPoolForSOCKSProxy(
   if (it != socks_socket_pools_.end()) {
     DCHECK(base::ContainsKey(transport_socket_pools_for_socks_proxies_,
                              socks_proxy));
-    return it->second;
+    return it->second.get();
   }
 
   DCHECK(!base::ContainsKey(transport_socket_pools_for_socks_proxies_,
@@ -226,19 +227,19 @@ SOCKSClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPoolForSOCKSProxy(
   std::pair<TransportSocketPoolMap::iterator, bool> tcp_ret =
       transport_socket_pools_for_socks_proxies_.insert(std::make_pair(
           socks_proxy,
-          new TransportClientSocketPool(sockets_per_proxy_server,
-                                        sockets_per_group, host_resolver_,
-                                        socket_factory_, nullptr, net_log_)));
+          base::MakeUnique<TransportClientSocketPool>(
+              sockets_per_proxy_server, sockets_per_group, host_resolver_,
+              socket_factory_, nullptr, net_log_)));
   DCHECK(tcp_ret.second);
 
   std::pair<SOCKSSocketPoolMap::iterator, bool> ret =
       socks_socket_pools_.insert(std::make_pair(
           socks_proxy,
-          new SOCKSClientSocketPool(sockets_per_proxy_server, sockets_per_group,
-                                    host_resolver_, tcp_ret.first->second,
-                                    nullptr, net_log_)));
+          base::MakeUnique<SOCKSClientSocketPool>(
+              sockets_per_proxy_server, sockets_per_group, host_resolver_,
+              tcp_ret.first->second.get(), nullptr, net_log_)));
 
-  return ret.first->second;
+  return ret.first->second.get();
 }
 
 HttpProxyClientSocketPool*
@@ -252,7 +253,7 @@ ClientSocketPoolManagerImpl::GetSocketPoolForHTTPProxy(
     DCHECK(base::ContainsKey(transport_socket_pools_for_https_proxies_,
                              http_proxy));
     DCHECK(base::ContainsKey(ssl_socket_pools_for_https_proxies_, http_proxy));
-    return it->second;
+    return it->second.get();
   }
 
   DCHECK(
@@ -268,7 +269,7 @@ ClientSocketPoolManagerImpl::GetSocketPoolForHTTPProxy(
   std::pair<TransportSocketPoolMap::iterator, bool> tcp_http_ret =
       transport_socket_pools_for_http_proxies_.insert(std::make_pair(
           http_proxy,
-          new TransportClientSocketPool(
+          base::MakeUnique<TransportClientSocketPool>(
               sockets_per_proxy_server, sockets_per_group, host_resolver_,
               socket_factory_, socket_performance_watcher_factory_, net_log_)));
   DCHECK(tcp_http_ret.second);
@@ -276,7 +277,7 @@ ClientSocketPoolManagerImpl::GetSocketPoolForHTTPProxy(
   std::pair<TransportSocketPoolMap::iterator, bool> tcp_https_ret =
       transport_socket_pools_for_https_proxies_.insert(std::make_pair(
           http_proxy,
-          new TransportClientSocketPool(
+          base::MakeUnique<TransportClientSocketPool>(
               sockets_per_proxy_server, sockets_per_group, host_resolver_,
               socket_factory_, socket_performance_watcher_factory_, net_log_)));
   DCHECK(tcp_https_ret.second);
@@ -284,28 +285,24 @@ ClientSocketPoolManagerImpl::GetSocketPoolForHTTPProxy(
   std::pair<SSLSocketPoolMap::iterator, bool> ssl_https_ret =
       ssl_socket_pools_for_https_proxies_.insert(std::make_pair(
           http_proxy,
-          new SSLClientSocketPool(
+          base::MakeUnique<SSLClientSocketPool>(
               sockets_per_proxy_server, sockets_per_group, cert_verifier_,
               channel_id_service_, transport_security_state_,
               cert_transparency_verifier_, ct_policy_enforcer_,
               ssl_session_cache_shard_, socket_factory_,
-              tcp_https_ret.first->second /* https proxy */,
-              NULL /* no socks proxy */, NULL /* no http proxy */,
+              tcp_https_ret.first->second.get() /* https proxy */,
+              nullptr /* no socks proxy */, nullptr /* no http proxy */,
               ssl_config_service_.get(), net_log_)));
   DCHECK(tcp_https_ret.second);
 
   std::pair<HTTPProxySocketPoolMap::iterator, bool> ret =
-      http_proxy_socket_pools_.insert(
-          std::make_pair(
-              http_proxy,
-              new HttpProxyClientSocketPool(
-                  sockets_per_proxy_server,
-                  sockets_per_group,
-                  tcp_http_ret.first->second,
-                  ssl_https_ret.first->second,
-                  net_log_)));
+      http_proxy_socket_pools_.insert(std::make_pair(
+          http_proxy, base::MakeUnique<HttpProxyClientSocketPool>(
+                          sockets_per_proxy_server, sockets_per_group,
+                          tcp_http_ret.first->second.get(),
+                          ssl_https_ret.first->second.get(), net_log_)));
 
-  return ret.first->second;
+  return ret.first->second.get();
 }
 
 SSLClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPoolForSSLWithProxy(
@@ -313,27 +310,26 @@ SSLClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPoolForSSLWithProxy(
   SSLSocketPoolMap::const_iterator it =
       ssl_socket_pools_for_proxies_.find(proxy_server);
   if (it != ssl_socket_pools_for_proxies_.end())
-    return it->second;
+    return it->second.get();
 
   int sockets_per_proxy_server = max_sockets_per_proxy_server(pool_type_);
   int sockets_per_group = std::min(sockets_per_proxy_server,
                                    max_sockets_per_group(pool_type_));
 
-  SSLClientSocketPool* new_pool = new SSLClientSocketPool(
-      sockets_per_proxy_server, sockets_per_group, cert_verifier_,
-      channel_id_service_, transport_security_state_,
-      cert_transparency_verifier_, ct_policy_enforcer_,
-      ssl_session_cache_shard_, socket_factory_,
-      NULL, /* no tcp pool, we always go through a proxy */
-      GetSocketPoolForSOCKSProxy(proxy_server),
-      GetSocketPoolForHTTPProxy(proxy_server), ssl_config_service_.get(),
-      net_log_);
-
   std::pair<SSLSocketPoolMap::iterator, bool> ret =
-      ssl_socket_pools_for_proxies_.insert(std::make_pair(proxy_server,
-                                                          new_pool));
+      ssl_socket_pools_for_proxies_.insert(std::make_pair(
+          proxy_server,
+          base::MakeUnique<SSLClientSocketPool>(
+              sockets_per_proxy_server, sockets_per_group, cert_verifier_,
+              channel_id_service_, transport_security_state_,
+              cert_transparency_verifier_, ct_policy_enforcer_,
+              ssl_session_cache_shard_, socket_factory_,
+              nullptr, /* no tcp pool, we always go through a proxy */
+              GetSocketPoolForSOCKSProxy(proxy_server),
+              GetSocketPoolForHTTPProxy(proxy_server),
+              ssl_config_service_.get(), net_log_)));
 
-  return ret.first->second;
+  return ret.first->second.get();
 }
 
 std::unique_ptr<base::Value>

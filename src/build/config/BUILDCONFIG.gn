@@ -467,6 +467,7 @@ set_sources_assignment_filter(sources_assignment_filter)
 # Holds all configs used for running the compiler.
 default_compiler_configs = [
   "//build/config:feature_flags",
+  "//build/config/compiler:afdo",
   "//build/config/compiler:compiler",
   "//build/config/compiler:clang_stackrealign",
   "//build/config/compiler:compiler_arm_fpu",

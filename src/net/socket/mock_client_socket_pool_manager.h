@@ -20,11 +20,12 @@ class MockClientSocketPoolManager : public ClientSocketPoolManager {
   void SetTransportSocketPool(TransportClientSocketPool* pool);
   void SetSSLSocketPool(SSLClientSocketPool* pool);
   void SetSocketPoolForSOCKSProxy(const HostPortPair& socks_proxy,
-                                  SOCKSClientSocketPool* pool);
-  void SetSocketPoolForHTTPProxy(const HostPortPair& http_proxy,
-                                 HttpProxyClientSocketPool* pool);
+                                  std::unique_ptr<SOCKSClientSocketPool> pool);
+  void SetSocketPoolForHTTPProxy(
+      const HostPortPair& http_proxy,
+      std::unique_ptr<HttpProxyClientSocketPool> pool);
   void SetSocketPoolForSSLWithProxy(const HostPortPair& proxy_server,
-                                    SSLClientSocketPool* pool);
+                                    std::unique_ptr<SSLClientSocketPool> pool);
 
   // ClientSocketPoolManager methods:
   void FlushSocketPoolsWithError(int error) override;
@@ -40,14 +41,14 @@ class MockClientSocketPoolManager : public ClientSocketPoolManager {
   std::unique_ptr<base::Value> SocketPoolInfoToValue() const override;
 
  private:
-  typedef internal::OwnedPoolMap<HostPortPair, TransportClientSocketPool*>
-      TransportSocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, SOCKSClientSocketPool*>
-      SOCKSSocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, HttpProxyClientSocketPool*>
-      HTTPProxySocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, SSLClientSocketPool*>
-      SSLSocketPoolMap;
+  using TransportSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<TransportClientSocketPool>>;
+  using SOCKSSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<SOCKSClientSocketPool>>;
+  using HTTPProxySocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<HttpProxyClientSocketPool>>;
+  using SSLSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<SSLClientSocketPool>>;
 
   std::unique_ptr<TransportClientSocketPool> transport_socket_pool_;
   std::unique_ptr<SSLClientSocketPool> ssl_socket_pool_;

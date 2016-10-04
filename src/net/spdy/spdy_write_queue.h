@@ -64,19 +64,20 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
   // A struct holding a frame producer and its associated stream.
   struct PendingWrite {
     SpdyFrameType frame_type;
-    // This has to be a raw pointer since we store this in an STL
-    // container.
-    SpdyBufferProducer* frame_producer;
+    std::unique_ptr<SpdyBufferProducer> frame_producer;
     base::WeakPtr<SpdyStream> stream;
     // Whether |stream| was non-NULL when enqueued.
     bool has_stream;
 
     PendingWrite();
     PendingWrite(SpdyFrameType frame_type,
-                 SpdyBufferProducer* frame_producer,
+                 std::unique_ptr<SpdyBufferProducer> frame_producer,
                  const base::WeakPtr<SpdyStream>& stream);
-    PendingWrite(const PendingWrite& other);
     ~PendingWrite();
+    PendingWrite(PendingWrite&& other);
+    PendingWrite& operator=(PendingWrite&& other);
+
+    DISALLOW_COPY_AND_ASSIGN(PendingWrite);
   };
 
   bool removing_writes_;

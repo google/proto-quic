@@ -380,6 +380,8 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
   // |active_socket_count| tracks the number of sockets held by clients.
   class Group {
    public:
+    using JobList = std::list<std::unique_ptr<ConnectJob>>;
+
     Group();
     ~Group();
 
@@ -464,7 +466,7 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     void DecrementActiveSocketCount() { active_socket_count_--; }
 
     int unassigned_job_count() const { return unassigned_job_count_; }
-    const std::list<ConnectJob*>& jobs() const { return jobs_; }
+    const JobList& jobs() const { return jobs_; }
     const std::list<IdleSocket>& idle_sockets() const { return idle_sockets_; }
     int active_socket_count() const { return active_socket_count_; }
     std::list<IdleSocket>* mutable_idle_sockets() { return &idle_sockets_; }
@@ -493,7 +495,7 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     size_t unassigned_job_count_;
 
     std::list<IdleSocket> idle_sockets_;
-    std::list<ConnectJob*> jobs_;
+    JobList jobs_;
     RequestQueue pending_requests_;
     int active_socket_count_;  // number of active sockets used by clients
     // A timer for when to start the backup job.

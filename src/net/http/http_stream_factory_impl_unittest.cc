@@ -11,6 +11,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "net/base/port_util.h"
 #include "net/base/test_completion_callback.h"
@@ -536,8 +537,10 @@ TEST_F(HttpStreamFactoryTest, PreconnectHttpProxy) {
             session_deps.ct_policy_enforcer.get());
     std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
         new MockClientSocketPoolManager);
-    mock_pool_manager->SetSocketPoolForHTTPProxy(proxy_host, http_proxy_pool);
-    mock_pool_manager->SetSocketPoolForSSLWithProxy(proxy_host, ssl_conn_pool);
+    mock_pool_manager->SetSocketPoolForHTTPProxy(
+        proxy_host, base::WrapUnique(http_proxy_pool));
+    mock_pool_manager->SetSocketPoolForSSLWithProxy(
+        proxy_host, base::WrapUnique(ssl_conn_pool));
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
     PreconnectHelper(kTests[i], session.get());
     if (kTests[i].ssl)
@@ -569,8 +572,10 @@ TEST_F(HttpStreamFactoryTest, PreconnectSocksProxy) {
             session_deps.ct_policy_enforcer.get());
     std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
         new MockClientSocketPoolManager);
-    mock_pool_manager->SetSocketPoolForSOCKSProxy(proxy_host, socks_proxy_pool);
-    mock_pool_manager->SetSocketPoolForSSLWithProxy(proxy_host, ssl_conn_pool);
+    mock_pool_manager->SetSocketPoolForSOCKSProxy(
+        proxy_host, base::WrapUnique(socks_proxy_pool));
+    mock_pool_manager->SetSocketPoolForSSLWithProxy(
+        proxy_host, base::WrapUnique(ssl_conn_pool));
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
     PreconnectHelper(kTests[i], session.get());
     if (kTests[i].ssl)
@@ -1136,8 +1141,10 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
             session_deps.ct_policy_enforcer.get());
     std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
         new MockClientSocketPoolManager);
-    mock_pool_manager->SetSocketPoolForHTTPProxy(proxy_host, http_proxy_pool);
-    mock_pool_manager->SetSocketPoolForSSLWithProxy(proxy_host, ssl_conn_pool);
+    mock_pool_manager->SetSocketPoolForHTTPProxy(
+        proxy_host, base::WrapUnique(http_proxy_pool));
+    mock_pool_manager->SetSocketPoolForSSLWithProxy(
+        proxy_host, base::WrapUnique(ssl_conn_pool));
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
     PreconnectHelperForURL(num_streams, url, session.get());
     EXPECT_EQ(num_streams, ssl_conn_pool->last_num_streams());

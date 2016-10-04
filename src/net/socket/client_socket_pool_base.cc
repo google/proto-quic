@@ -13,7 +13,6 @@
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -541,7 +540,7 @@ void ClientSocketPoolBaseHelper::CancelRequest(
     // not another request waiting on the job.
     if (group->jobs().size() > group->pending_request_count() &&
         ReachedMaxSocketsLimit()) {
-      RemoveConnectJob(*group->jobs().begin(), group);
+      RemoveConnectJob(group->jobs().begin()->get(), group);
       CheckForStalledSocketGroups();
     }
   }
@@ -633,8 +632,7 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
     group_dict->Set("idle_sockets", idle_socket_list);
 
     base::ListValue* connect_jobs_list = new base::ListValue();
-    std::list<ConnectJob*>::const_iterator job = group->jobs().begin();
-    for (job = group->jobs().begin(); job != group->jobs().end(); job++) {
+    for (auto job = group->jobs().begin(); job != group->jobs().end(); job++) {
       int source_id = (*job)->net_log().source().id;
       connect_jobs_list->AppendInteger(source_id);
     }
@@ -1189,16 +1187,20 @@ void ClientSocketPoolBaseHelper::Group::AddJob(std::unique_ptr<ConnectJob> job,
 
   if (is_preconnect)
     ++unassigned_job_count_;
-  jobs_.push_back(job.release());
+  jobs_.push_back(std::move(job));
 }
 
 void ClientSocketPoolBaseHelper::Group::RemoveJob(ConnectJob* job) {
-  std::unique_ptr<ConnectJob> owned_job(job);
   SanityCheck();
 
   // Check that |job| is in the list.
-  DCHECK_EQ(*std::find(jobs_.begin(), jobs_.end(), job), job);
-  jobs_.remove(job);
+  auto it = std::find_if(jobs_.begin(), jobs_.end(),
+                         [job](const std::unique_ptr<ConnectJob>& ptr) {
+                           return ptr.get() == job;
+                         });
+  DCHECK(it != jobs_.end());
+  std::unique_ptr<ConnectJob> owned_job = std::move(*it);
+  jobs_.erase(it);
   size_t job_count = jobs_.size();
   if (job_count < unassigned_job_count_)
     unassigned_job_count_ = job_count;
@@ -1251,7 +1253,7 @@ void ClientSocketPoolBaseHelper::Group::RemoveAllJobs() {
   SanityCheck();
 
   // Delete active jobs.
-  base::STLDeleteElements(&jobs_);
+  jobs_.clear();
   unassigned_job_count_ = 0;
 
   // Stop backup job timer.

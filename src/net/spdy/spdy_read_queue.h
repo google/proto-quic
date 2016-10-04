@@ -40,7 +40,7 @@ class NET_EXPORT_PRIVATE SpdyReadQueue {
   void Clear();
 
  private:
-  std::deque<SpdyBuffer*> queue_;
+  std::deque<std::unique_ptr<SpdyBuffer>> queue_;
   size_t total_size_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyReadQueue);

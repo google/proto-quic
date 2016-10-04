@@ -12,7 +12,6 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/stl_util.h"
 #include "base/threading/non_thread_safe.h"
 #include "net/cert/cert_database.h"
 #include "net/http/http_network_session.h"
@@ -33,21 +32,6 @@ class SSLClientSocketPool;
 class SSLConfigService;
 class TransportClientSocketPool;
 class TransportSecurityState;
-
-namespace internal {
-
-// A helper class for auto-deleting Values in the destructor.
-template <typename Key, typename Value>
-class OwnedPoolMap : public std::map<Key, Value> {
- public:
-  OwnedPoolMap() {
-    static_assert(std::is_pointer<Value>::value, "value must be a pointer");
-  }
-
-  ~OwnedPoolMap() { base::STLDeleteValues(this); }
-};
-
-}  // namespace internal
 
 class ClientSocketPoolManagerImpl : public base::NonThreadSafe,
                                     public ClientSocketPoolManager,
@@ -92,14 +76,14 @@ class ClientSocketPoolManagerImpl : public base::NonThreadSafe,
   void OnCACertChanged(const X509Certificate* cert) override;
 
  private:
-  typedef internal::OwnedPoolMap<HostPortPair, TransportClientSocketPool*>
-      TransportSocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, SOCKSClientSocketPool*>
-      SOCKSSocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, HttpProxyClientSocketPool*>
-      HTTPProxySocketPoolMap;
-  typedef internal::OwnedPoolMap<HostPortPair, SSLClientSocketPool*>
-      SSLSocketPoolMap;
+  using TransportSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<TransportClientSocketPool>>;
+  using SOCKSSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<SOCKSClientSocketPool>>;
+  using HTTPProxySocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<HttpProxyClientSocketPool>>;
+  using SSLSocketPoolMap =
+      std::map<HostPortPair, std::unique_ptr<SSLClientSocketPool>>;
 
   NetLog* const net_log_;
   ClientSocketFactory* const socket_factory_;

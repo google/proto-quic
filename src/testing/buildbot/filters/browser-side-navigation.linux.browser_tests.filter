@@ -108,6 +108,8 @@
 
 # Fail in Debug.
 -BookmarkBubbleSignInDelegateTest.OnSignInLinkClicked
+-BookmarkBubbleSignInDelegateTest.OnSignInLinkClickedReusesBlank
 -GetAuthTokenFunctionTest.ComponentWithNormalClientId
 -GetAuthTokenFunctionTest.ComponentWithChromeClientId
 -PolicyTest.ExtensionInstallBlacklistSharedModules
+-WebNavigationApiTest.ServerRedirect

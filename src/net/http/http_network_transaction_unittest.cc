@@ -9154,8 +9154,10 @@ TEST_F(HttpNetworkTransactionTest, GroupNameForHTTPProxyConnections) {
 
     std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
         new MockClientSocketPoolManager);
-    mock_pool_manager->SetSocketPoolForHTTPProxy(proxy_host, http_proxy_pool);
-    mock_pool_manager->SetSocketPoolForSSLWithProxy(proxy_host, ssl_conn_pool);
+    mock_pool_manager->SetSocketPoolForHTTPProxy(
+        proxy_host, base::WrapUnique(http_proxy_pool));
+    mock_pool_manager->SetSocketPoolForSSLWithProxy(
+        proxy_host, base::WrapUnique(ssl_conn_pool));
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
 
     EXPECT_EQ(ERR_IO_PENDING,
@@ -9222,8 +9224,10 @@ TEST_F(HttpNetworkTransactionTest, GroupNameForSOCKSConnections) {
 
     std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
         new MockClientSocketPoolManager);
-    mock_pool_manager->SetSocketPoolForSOCKSProxy(proxy_host, socks_conn_pool);
-    mock_pool_manager->SetSocketPoolForSSLWithProxy(proxy_host, ssl_conn_pool);
+    mock_pool_manager->SetSocketPoolForSOCKSProxy(
+        proxy_host, base::WrapUnique(socks_conn_pool));
+    mock_pool_manager->SetSocketPoolForSSLWithProxy(
+        proxy_host, base::WrapUnique(ssl_conn_pool));
     peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
 
     HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
