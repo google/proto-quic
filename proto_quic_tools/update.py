@@ -74,5 +74,11 @@ def copy_modified_files():
   print "running", command;
   os.system(command)
 
+def sync():
+  command = "/" + proto_quic_root + "/../proto_quic_tools/sync.sh"
+  print "running", command;
+  os.system(command)
+
+sync()
 copy_directories()
 copy_modified_files()
