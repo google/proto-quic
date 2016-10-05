@@ -75,7 +75,7 @@ def copy_modified_files():
   os.system(command)
 
 def sync():
-  command = "/" + proto_quic_root + "/../proto_quic_tools/sync.sh"
+  command = "/" + proto_quic_root + "/third_party/binutils/download.py"
   print "running", command;
   os.system(command)
 
