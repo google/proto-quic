@@ -46,6 +46,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     (PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   assert(png_ptr);
 
+#ifdef MEMORY_SANITIZER
+  // To avoid OOM with MSan (crbug.com/648073). These values are recommended as
+  // safe settings by https://github.com/glennrp/libpng/blob/libpng16/pngusr.dfa
+  png_set_user_limits(png_ptr, 65535, 65535);
+#endif
+
   png_set_crc_action(png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
 
   png_infop info_ptr = png_create_info_struct(png_ptr);

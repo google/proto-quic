@@ -2602,7 +2602,7 @@ bool SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
                      stream_max_recv_window_size_, net_log_));
   stream->set_stream_id(stream_id);
 
-  // In spdy4/http2 PUSH_PROMISE arrives on associated stream.
+  // In HTTP2 PUSH_PROMISE arrives on associated stream.
   if (associated_it != active_streams_.end()) {
     associated_it->second.stream->AddRawReceivedBytes(
         last_compressed_frame_len_);

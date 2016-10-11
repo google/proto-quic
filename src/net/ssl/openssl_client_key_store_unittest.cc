@@ -6,7 +6,6 @@
 
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/test_data_directory.h"

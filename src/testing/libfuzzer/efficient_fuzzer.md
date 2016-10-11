@@ -11,6 +11,13 @@ if it results in new coverage. The set of all interesting inputs is called
 Items in corpus are constantly mutated in search of new interesting input.
 Corpus is usually maintained between multiple fuzzer runs.
 
+Following things can be so effective for a fuzzer, that we *strongly recommend*
+for any fuzzer:
+
+* [seed corpus](#Seed-Corpus) gives your fuzzer examples of input.
+* [fuzzer dictionary](#Fuzzer-Dictionary) improves fuzzer mutations by using
+  supplied dictionary.
+
 There are several metrics you should look at to determine your fuzzer effectiveness:
 
 * [fuzzer speed](#Fuzzer-Speed) (exec/s)
@@ -19,6 +26,95 @@ There are several metrics you should look at to determine your fuzzer effectiven
 
 You can collect these metrics manually or take them from [ClusterFuzz status]
 pages.
+
+## Seed Corpus
+
+You can pass a corpus directory to a fuzzer that you run manually:
+
+```
+./out/libfuzzer/my_fuzzer ~/tmp/my_fuzzer_corpus
+```
+
+The directory can initially be empty. The fuzzer would store all the interesting
+items it finds in the directory. You can help the fuzzer by "seeding" the corpus:
+simply copy interesting inputs for your function to the corpus directory before
+running. This works especially well for strictly defined file formats or data
+transmission protocols.
+
+* For file-parsing functionality just use some valid files from your test suite.
+
+* For protocol processing targets put raw streams from test suite into separate
+files.
+
+
+ClusterFuzz uses seed corpus stored in Chromium repository. You need to add
+`seed_corpus` attribute to fuzzer target:
+
+```
+fuzzer_test("my_protocol_fuzzer") {
+  ...
+  seed_corpus = "src/fuzz/testcases"
+  ...
+}
+```
+
+If you don't want to store seed corpus in Chromium repository, you can upload
+corpus to Google Cloud Storage bucket used by ClusterFuzz:
+
+
+1) go to [Corpus GCS Bucket]
+
+2) open directory named `%YOUR_FUZZER_NAME%_static`
+
+3) upload corpus files into the directory
+
+
+Alternative way is to use `gsutil` tool:
+```bash
+gsutil -m rsync <corpus_dir_on_disk> gs://clusterfuzz-corpus/libfuzzer/%YOUR_FUZZER_NAME%_static
+```
+
+## Fuzzer Dictionary
+
+It is very useful to provide fuzzer a set of common words/values that you expect
+to find in the input. This greatly improves efficiency of finding new units and
+works especially well while fuzzing file format decoders.
+
+To add a dictionary, first create a dictionary file.
+Dictionary syntax is similar to that used by [AFL] for its -x option:
+
+```
+# Lines starting with '#' and empty lines are ignored.
+
+# Adds "blah" (w/o quotes) to the dictionary.
+kw1="blah"
+# Use \\ for backslash and \" for quotes.
+kw2="\"ac\\dc\""
+# Use \xAB for hex values
+kw3="\xF7\xF8"
+# the name of the keyword followed by '=' may be omitted:
+"foo\x0Abar"
+```
+
+Test your dictionary by running your fuzzer locally:
+
+```bash
+./out/libfuzzer/my_protocol_fuzzer -dict=<path_to_dict> <path_to_corpus>
+```
+
+You should see lots of new units discovered.
+
+Add `dict` attribute to fuzzer target:
+
+```
+fuzzer_test("my_protocol_fuzzer") {
+  ...
+  dict = "protocol.dict"
+}
+```
+
+Make sure to submit dictionary file to git. The dictionary will be used
+automatically by ClusterFuzz once it picks up new fuzzer version (once a day).
 
 ## Fuzzer Speed
 
@@ -88,22 +184,6 @@ if (size > kSizeLimit)
 For more information check out the discussion in [issue 638836].
 
 
-## Corpus Size
-
-After running for a while the fuzzer would reach a plateau and won't discover
-new interesting input. Corpus for a reasonably complex functionality
-should contain hundreds (if not thousands) of items.
-
-Too small corpus size indicates some code barrier that
-libFuzzer is having problems penetrating. Common cases include: checksums,
-magic numbers etc. The easiest way to diagnose this problem is to generate a 
-[coverage report](#Coverage). To fix the issue you can:
-
-* change the code (e.g. disable crc checks while fuzzing)
-* prepare [corpus seed](#Corpus-Seed)
-* prepare [fuzzer dictionary](#Fuzzer-Dictionary)
-* specify [custom options](#Custom-Options)
-
 ## Coverage
 
 You can easily generate source-level coverage report for a given corpus:
@@ -119,96 +199,22 @@ option variable if your are using another sanitizer (e.g. `MSAN_OPTIONS`).
 `sancov_path` can be omitted by adding llvm bin directory to `PATH` environment
 variable.
 
-### Corpus Seed
 
-You can pass a corpus directory to a fuzzer that you run manually:
+## Corpus Size
 
-```
-./out/libfuzzer/my_fuzzer ~/tmp/my_fuzzer_corpus
-```
+After running for a while the fuzzer would reach a plateau and won't discover
+new interesting input. Corpus for a reasonably complex functionality
+should contain hundreds (if not thousands) of items.
 
-The directory can initially be empty. The fuzzer would store all the interesting
-items it finds in the directory. You can help the fuzzer by "seeding" the corpus:
-simply copy interesting inputs for your function to the corpus directory before
-running. This works especially well for strictly defined file formats or data
-transmission protocols.
+Too small corpus size indicates some code barrier that
+libFuzzer is having problems penetrating. Common cases include: checksums,
+magic numbers etc. The easiest way to diagnose this problem is to generate a 
+[coverage report](#Coverage). To fix the issue you can:
 
-* For file-parsing functionality just use some valid files from your test suite.
-
-* For protocol processing targets put raw streams from test suite into separate
-files.
-
-
-ClusterFuzz uses seed corpus stored in Chromium repository. You need to add
-`seed_corpus` attribute to fuzzer target:
-
-```
-fuzzer_test("my_protocol_fuzzer") {
-  ...
-  seed_corpus = "src/fuzz/testcases"
-  ...
-}
-```
-
-If you don't want to store seed corpus in Chromium repository, you can upload
-corpus to Google Cloud Storage bucket used by ClusterFuzz:
-
-
-1) go to [Corpus GCS Bucket]
-
-2) open directory named `%YOUR_FUZZER_NAME%_static`
-
-3) upload corpus files into the directory
-
-
-Alternative way is to use `gsutil` tool:
-```bash
-gsutil -m rsync <corpus_dir_on_disk> gs://clusterfuzz-corpus/libfuzzer/%YOUR_FUZZER_NAME%_static
-```
-
-
-### Fuzzer Dictionary
-
-It is very useful to provide fuzzer a set of common words/values that you expect
-to find in the input. This greatly improves efficiency of finding new units and
-works especially well while fuzzing file format decoders.
-
-To add a dictionary, first create a dictionary file.
-Dictionary syntax is similar to that used by [AFL] for its -x option:
-
-```
-# Lines starting with '#' and empty lines are ignored.
-
-# Adds "blah" (w/o quotes) to the dictionary.
-kw1="blah"
-# Use \\ for backslash and \" for quotes.
-kw2="\"ac\\dc\""
-# Use \xAB for hex values
-kw3="\xF7\xF8"
-# the name of the keyword followed by '=' may be omitted:
-"foo\x0Abar"
-```
-
-Test your dictionary by running your fuzzer locally:
-
-```bash
-./out/libfuzzer/my_protocol_fuzzer -dict=<path_to_dict> <path_to_corpus>
-```
-
-You should see lots of new units discovered.
-
-Add `dict` attribute to fuzzer target:
-
-```
-fuzzer_test("my_protocol_fuzzer") {
-  ...
-  dict = "protocol.dict"
-}
-```
-
-Make sure to submit dictionary file to git. The dictionary will be used
-automatically by ClusterFuzz once it picks up new fuzzer version (once a day).
-
+* change the code (e.g. disable crc checks while fuzzing)
+* prepare [corpus seed](#Corpus-Seed)
+* prepare [fuzzer dictionary](#Fuzzer-Dictionary)
+* specify [custom options](#Custom-Options)
 
 ### Custom Options
 

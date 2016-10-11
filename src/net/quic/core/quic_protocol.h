@@ -728,8 +728,12 @@ enum QuicErrorCode {
   // to crash.
   QUIC_STREAM_SEQUENCER_INVALID_STATE = 95,
 
+  // Connection closed because of server hits max number of sessions allowed.
+  // TODO(fayang): Add monitoring for QUIC_TOO_MANY_SESSIONS_ON_SERVER.
+  QUIC_TOO_MANY_SESSIONS_ON_SERVER = 96,
+
   // No error. Used as bound while iterating.
-  QUIC_LAST_ERROR = 96,
+  QUIC_LAST_ERROR = 97,
 };
 
 typedef std::array<char, 32> DiversificationNonce;

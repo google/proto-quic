@@ -7,6 +7,7 @@
 #ifndef TOOLS_ANDROID_MEMTRACK_HELPER_H_
 #define TOOLS_ANDROID_MEMTRACK_HELPER_H_
 
+#include <android/log.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,7 @@
 
 static inline void exit_with_failure(const char* reason) {
   perror(reason);
+  __android_log_write(ANDROID_LOG_ERROR, "memtrack_helper", reason);
   exit(EXIT_FAILURE);
 }
 

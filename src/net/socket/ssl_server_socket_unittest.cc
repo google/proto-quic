@@ -38,7 +38,6 @@
 #include "build/build_config.h"
 #include "crypto/nss_util.h"
 #include "crypto/rsa_private_key.h"
-#include "crypto/scoped_openssl_types.h"
 #include "crypto/signature_creator.h"
 #include "net/base/address_list.h"
 #include "net/base/completion_callback.h"
@@ -53,6 +52,7 @@
 #include "net/cert/ct_verifier.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/mock_client_cert_verifier.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/cert/x509_certificate.h"
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log_with_source.h"
@@ -60,7 +60,6 @@
 #include "net/socket/socket_test_util.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/stream_socket.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_cipher_suite_names.h"
 #include "net/ssl/ssl_connection_status_flags.h"
@@ -96,7 +95,7 @@ class MockCTVerifier : public CTVerifier {
   int Verify(X509Certificate* cert,
              const std::string& stapled_ocsp_response,
              const std::string& sct_list_from_tls_extension,
-             ct::CTVerifyResult* result,
+             SignedCertificateTimestampAndStatusList* output_scts,
              const NetLogWithSource& net_log) override {
     return net::OK;
   }
@@ -452,14 +451,14 @@ class SSLServerSocketTest : public PlatformTest {
 
     EVP_PKEY_up_ref(key->key());
     client_ssl_config_.client_private_key =
-        WrapOpenSSLPrivateKey(crypto::ScopedEVP_PKEY(key->key()));
+        WrapOpenSSLPrivateKey(bssl::UniquePtr<EVP_PKEY>(key->key()));
   }
 
   void ConfigureClientCertsForServer() {
     server_ssl_config_.client_cert_type =
         SSLServerConfig::ClientCertType::REQUIRE_CLIENT_CERT;
 
-    ScopedX509NameStack cert_names(
+    bssl::UniquePtr<STACK_OF(X509_NAME)> cert_names(
         SSL_load_client_CA_file(GetTestCertsDirectory()
                                     .AppendASCII(kClientCertCAFileName)
                                     .MaybeAsASCII()

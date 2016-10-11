@@ -11,7 +11,6 @@
 #include "base/strings/string_number_conversions.h"
 #include "crypto/openssl_util.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/ssl/scoped_openssl_types.h"
 
 using std::string;
 using std::vector;
@@ -90,7 +89,7 @@ bool ProofSourceChromium::GetProof(const IPAddress& server_ip,
   DCHECK(private_key_.get()) << " this: " << this;
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  crypto::ScopedEVP_MD_CTX sign_context(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX sign_context;
   EVP_PKEY_CTX* pkey_ctx;
 
   if (quic_version > QUIC_VERSION_30) {

@@ -89,19 +89,6 @@ enum AuthState {
   AUTH_STATE_CANCELED
 };
 
-class AuthData : public base::RefCountedThreadSafe<AuthData> {
- public:
-  AuthState state;  // whether we need, have, or gave up on authentication.
-  AuthCredentials credentials; // The credentials to use for auth.
-
-  // We wouldn't instantiate this class if we didn't need authentication.
-  AuthData();
-
- private:
-  friend class base::RefCountedThreadSafe<AuthData>;
-  ~AuthData();
-};
-
 }  // namespace net
 
 #endif  // NET_BASE_AUTH_H__

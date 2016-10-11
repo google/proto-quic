@@ -252,7 +252,13 @@ class GtestTestInstance(test_instance.TestInstance):
       self._gtest_filter = args.test_filter
     elif args.test_filter_file:
       with open(args.test_filter_file, 'r') as f:
-        self._gtest_filter = ':'.join(l.strip() for l in f)
+        # Strip whitespace + skip empty lines and lines beginning with '#'.
+        # This should be consistent with processing of
+        # --test-launcher-filter-file in base/test/launcher/test_launcher.cc.
+        stripped_lines = (l.strip() for l in f)
+        filter_lines = (l for l in stripped_lines if l and l[0] != '#')
+        # Join the filter lines into one, big --gtest_filter argument.
+        self._gtest_filter = ':'.join(filter_lines)
     else:
       self._gtest_filter = None
 

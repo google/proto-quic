@@ -199,10 +199,10 @@ class ProofVerifierChromiumTest : public ::testing::Test {
     const ct::CTVerifyResult& ct_verify_result =
         proof_details->ct_verify_result;
     if (sct_expected_ok) {
-      ASSERT_TRUE(ct::CheckForSingleVerifiedSCTInResult(ct_verify_result,
+      ASSERT_TRUE(ct::CheckForSingleVerifiedSCTInResult(ct_verify_result.scts,
                                                         kLogDescription));
       ASSERT_TRUE(ct::CheckForSCTOrigin(
-          ct_verify_result,
+          ct_verify_result.scts,
           ct::SignedCertificateTimestamp::SCT_FROM_TLS_EXTENSION));
     } else {
       EXPECT_EQ(1U, ct_verify_result.scts.size());

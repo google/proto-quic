@@ -37,7 +37,6 @@ class NET_EXPORT_PRIVATE QuicMultipathReceivedPacketManager {
 
   // Records packet receipt information on path with |path_id|.
   void RecordPacketReceived(QuicPathId path_id,
-                            QuicByteCount bytes,
                             const QuicPacketHeader& header,
                             QuicTime receipt_time);
 

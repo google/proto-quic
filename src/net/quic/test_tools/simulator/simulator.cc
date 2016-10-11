@@ -12,7 +12,8 @@ namespace simulator {
 Simulator::Simulator()
     : random_generator_(nullptr),
       alarm_factory_(this, "Default Alarm Manager"),
-      run_for_should_stop_(false) {
+      run_for_should_stop_(false),
+      enable_random_delays_(false) {
   run_for_alarm_.reset(
       alarm_factory_.CreateAlarm(new RunForDelegate(&run_for_should_stop_)));
 }

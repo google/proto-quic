@@ -26,7 +26,6 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/mojo_proxy_resolver_factory.h"
-#include "net/proxy/mojo_proxy_type_converters.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_resolver.h"
 #include "net/proxy/proxy_resolver_error_observer.h"
@@ -82,7 +81,7 @@ class ClientMixin : public ClientInterface {
       error_observer_->OnPACScriptError(line_number, message_str);
   }
 
-  void ResolveDns(interfaces::HostResolverRequestInfoPtr request_info,
+  void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
                   interfaces::HostResolverRequestClientPtr client) override {
     host_resolver_.Resolve(std::move(request_info), std::move(client));
   }
@@ -177,9 +176,7 @@ class ProxyResolverMojo::Job
   void OnConnectionError();
 
   // Overridden from interfaces::ProxyResolverRequestClient:
-  void ReportResult(
-      int32_t error,
-      mojo::Array<interfaces::ProxyServerPtr> proxy_servers) override;
+  void ReportResult(int32_t error, const net::ProxyInfo& proxy_info) override;
 
   ProxyResolverMojo* resolver_;
   const GURL url_;
@@ -234,14 +231,13 @@ void ProxyResolverMojo::Job::OnConnectionError() {
   resolver_->RemoveJob(this);
 }
 
-void ProxyResolverMojo::Job::ReportResult(
-    int32_t error,
-    mojo::Array<interfaces::ProxyServerPtr> proxy_servers) {
+void ProxyResolverMojo::Job::ReportResult(int32_t error,
+                                          const ProxyInfo& proxy_info) {
   DCHECK(thread_checker_.CalledOnValidThread());
   DVLOG(1) << "ProxyResolverMojo::Job::ReportResult: " << error;
 
   if (error == OK) {
-    *results_ = proxy_servers.To<ProxyInfo>();
+    *results_ = proxy_info;
     DVLOG(1) << "Servers: " << results_->ToPacString();
   }
 

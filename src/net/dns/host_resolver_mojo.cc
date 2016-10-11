@@ -10,7 +10,6 @@
 #include "mojo/public/cpp/bindings/binding.h"
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
-#include "net/dns/mojo_host_type_converters.h"
 
 namespace net {
 namespace {
@@ -38,8 +37,7 @@ class HostResolverMojo::Job : public interfaces::HostResolverRequestClient {
 
  private:
   // interfaces::HostResolverRequestClient override.
-  void ReportResult(int32_t error,
-                    interfaces::AddressListPtr address_list) override;
+  void ReportResult(int32_t error, const AddressList& address_list) override;
 
   // Mojo error handler.
   void OnConnectionError();
@@ -95,7 +93,7 @@ int HostResolverMojo::Resolve(const RequestInfo& info,
                                    host_cache_weak_factory_.GetWeakPtr()));
   request->reset(new RequestImpl(std::move(job)));
 
-  impl_->ResolveDns(interfaces::HostResolverRequestInfo::From(info),
+  impl_->ResolveDns(base::MakeUnique<HostResolver::RequestInfo>(info),
                     std::move(handle));
   return ERR_IO_PENDING;
 }
@@ -142,11 +140,10 @@ HostResolverMojo::Job::Job(
       &HostResolverMojo::Job::OnConnectionError, base::Unretained(this)));
 }
 
-void HostResolverMojo::Job::ReportResult(
-    int32_t error,
-    interfaces::AddressListPtr address_list) {
-  if (error == OK && address_list)
-    *addresses_ = address_list->To<AddressList>();
+void HostResolverMojo::Job::ReportResult(int32_t error,
+                                         const AddressList& address_list) {
+  if (error == OK)
+    *addresses_ = address_list;
   if (host_cache_) {
     base::TimeDelta ttl = base::TimeDelta::FromSeconds(
         error == OK ? kCacheEntryTTLSeconds : kNegativeCacheEntryTTLSeconds);
@@ -159,7 +156,7 @@ void HostResolverMojo::Job::ReportResult(
 }
 
 void HostResolverMojo::Job::OnConnectionError() {
-  ReportResult(ERR_FAILED, interfaces::AddressListPtr());
+  ReportResult(ERR_FAILED, AddressList());
 }
 
 }  // namespace net

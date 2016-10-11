@@ -105,5 +105,6 @@ SHIM_ALWAYS_EXPORT int __posix_memalign(void** r, size_t a, size_t s)
 
 // Safety check.
 #if !defined(__GLIBC__)
-#error The current platform does not seem to use Glibc.
+#error The target platform does not seem to use Glibc. Disable the allocator \
+shim by setting use_experimental_allocator_shim=false in GN args.
 #endif

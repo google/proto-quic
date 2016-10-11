@@ -420,7 +420,6 @@ TEST(URLRequestJob, RedirectTransactionWithReferrerPolicyHeader) {
 
     MockNetworkLayer network_layer;
     TestURLRequestContext context;
-    context.set_enable_referrer_policy_header(true);
     context.set_http_transaction_factory(&network_layer);
 
     TestDelegate d;

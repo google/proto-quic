@@ -476,12 +476,6 @@ void MessageLoop::ScheduleWork() {
   pump_->ScheduleWork();
 }
 
-#if defined(OS_WIN)
-bool MessageLoop::MessagePumpWasSignaled() {
-  return pump_->WasSignaled();
-}
-#endif
-
 void MessageLoop::NotifyBeginNestedLoop() {
   FOR_EACH_OBSERVER(NestingObserver, nesting_observers_,
                     OnBeginNestedMessageLoop());

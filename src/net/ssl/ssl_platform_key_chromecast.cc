@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <keyhi.h>
+#include <openssl/mem.h>
+#include <openssl/nid.h>
 #include <openssl/rsa.h>
 #include <pk11pub.h>
 #include <prerror.h>
@@ -12,7 +14,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/sequenced_task_runner.h"
 #include "crypto/scoped_nss_types.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/client_key_store.h"
 #include "net/ssl/ssl_platform_key.h"
@@ -63,7 +64,7 @@ class SSLPlatformKeyChromecast : public ThreadedSSLPrivateKey::Delegate {
         const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(input.data()));
     digest_item.len = input.size();
 
-    crypto::ScopedOpenSSLBytes free_digest_info;
+    bssl::UniquePtr<uint8_t> free_digest_info;
     // PK11_Sign expects the caller to prepend the DigestInfo.
     int hash_nid = NID_undef;
     switch (hash) {

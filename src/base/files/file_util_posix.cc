@@ -351,6 +351,29 @@ bool CopyDirectory(const FilePath& from_path,
 }
 #endif  // !defined(OS_NACL_NONSFI)
 
+bool CreateLocalNonBlockingPipe(int fds[2]) {
+#if defined(OS_LINUX)
+  return pipe2(fds, O_CLOEXEC | O_NONBLOCK) == 0;
+#else
+  int raw_fds[2];
+  if (pipe(raw_fds) != 0)
+    return false;
+  ScopedFD fd_out(raw_fds[0]);
+  ScopedFD fd_in(raw_fds[1]);
+  if (!SetCloseOnExec(fd_out.get()))
+    return false;
+  if (!SetCloseOnExec(fd_in.get()))
+    return false;
+  if (!SetNonBlocking(fd_out.get()))
+    return false;
+  if (!SetNonBlocking(fd_in.get()))
+    return false;
+  fds[0] = fd_out.release();
+  fds[1] = fd_in.release();
+  return true;
+#endif
+}
+
 bool SetNonBlocking(int fd) {
   const int flags = fcntl(fd, F_GETFL);
   if (flags == -1)
@@ -358,6 +381,21 @@ bool SetNonBlocking(int fd) {
   if (flags & O_NONBLOCK)
     return true;
   if (HANDLE_EINTR(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) == -1)
+    return false;
+  return true;
+}
+
+bool SetCloseOnExec(int fd) {
+#if defined(OS_NACL_NONSFI)
+  const int flags = 0;
+#else
+  const int flags = fcntl(fd, F_GETFD);
+  if (flags == -1)
+    return false;
+  if (flags & FD_CLOEXEC)
+    return true;
+#endif  // defined(OS_NACL_NONSFI)
+  if (HANDLE_EINTR(fcntl(fd, F_SETFD, flags | FD_CLOEXEC)) == -1)
     return false;
   return true;
 }

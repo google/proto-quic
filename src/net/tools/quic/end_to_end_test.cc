@@ -157,7 +157,7 @@ vector<TestParams> GetTestParams() {
   // is compatible. When clients encounter QUIC version negotiation
   // they simply retransmit all packets using the new version's
   // QUIC framing. However, they are unable to change the intra-frame
-  // layout (for example to change SPDY/4 headers to SPDY/3). So
+  // layout (for example to change HTTP2 headers to SPDY/3). So
   // these tests need to ensure that clients are never attempting
   // to do 0-RTT across incompatible versions. Chromium only supports
   // a single version at a time anyway. :)

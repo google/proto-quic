@@ -294,10 +294,17 @@ int Socket::GetPort() {
 }
 
 int Socket::ReadNumBytes(void* buffer, size_t num_bytes) {
+  return ReadNumBytesWithTimeout(buffer, num_bytes, kNoTimeout);
+}
+
+int Socket::ReadNumBytesWithTimeout(void* buffer,
+                                    size_t num_bytes,
+                                    int timeout_secs) {
   size_t bytes_read = 0;
   int ret = 1;
   while (bytes_read < num_bytes && ret > 0) {
-    ret = Read(static_cast<char*>(buffer) + bytes_read, num_bytes - bytes_read);
+    ret = ReadWithTimeout(static_cast<char*>(buffer) + bytes_read,
+                          num_bytes - bytes_read, timeout_secs);
     if (ret >= 0)
       bytes_read += ret;
   }
@@ -312,7 +319,13 @@ void Socket::SetSocketError() {
 }
 
 int Socket::Read(void* buffer, size_t buffer_size) {
-  if (!WaitForEvent(READ, kNoTimeout)) {
+  return ReadWithTimeout(buffer, buffer_size, kNoTimeout);
+}
+
+int Socket::ReadWithTimeout(void* buffer,
+                            size_t buffer_size,
+                            int timeout_secs) {
+  if (!WaitForEvent(READ, timeout_secs)) {
     SetSocketError();
     return 0;
   }
@@ -419,8 +432,8 @@ bool Socket::WaitForEvent(EventType type, int timeout_secs) {
   for (size_t i = 0; i < events_.size(); ++i)
     if (events_[i].fd > max_fd)
       max_fd = events_[i].fd;
-  if (HANDLE_EINTR(
-          select(max_fd + 1, &read_fds, &write_fds, NULL, tv_ptr)) <= 0) {
+  if (HANDLE_EINTR(select(max_fd + 1, &read_fds, &write_fds, NULL, tv_ptr)) <
+      0) {
     PLOG(ERROR) << "select";
     return false;
   }

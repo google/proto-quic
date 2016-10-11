@@ -5,6 +5,8 @@
 #include "net/ssl/ssl_platform_key_android.h"
 
 #include <openssl/ecdsa.h>
+#include <openssl/mem.h>
+#include <openssl/nid.h>
 #include <openssl/rsa.h>
 #include <strings.h>
 
@@ -18,7 +20,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/android/keystore.h"
 #include "net/android/legacy_openssl.h"
 #include "net/base/net_errors.h"
@@ -101,7 +102,7 @@ class SSLPlatformKeyAndroid : public ThreadedSSLPrivateKey::Delegate {
     base::StringPiece input = input_in;
 
     // Prepend the DigestInfo for RSA.
-    crypto::ScopedOpenSSLBytes digest_info_storage;
+    bssl::UniquePtr<uint8_t> digest_info_storage;
     if (type_ == SSLPrivateKey::Type::RSA) {
       int hash_nid = NID_undef;
       switch (hash) {

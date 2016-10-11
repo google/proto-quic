@@ -15,7 +15,6 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/ip_address.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/ssl/openssl_ssl_util.h"
@@ -25,9 +24,6 @@ using base::ScopedCFTypeRef;
 namespace net {
 
 namespace {
-
-using ScopedGENERAL_NAMES =
-    crypto::ScopedOpenSSL<GENERAL_NAMES, GENERAL_NAMES_free>;
 
 // Returns true if a given |cert_handle| is actually a valid X.509 certificate
 // handle.
@@ -109,7 +105,7 @@ void ParseSubjectAltName(X509Certificate::OSCertHandle os_cert,
                          std::vector<std::string>* dns_names,
                          std::vector<std::string>* ip_addresses) {
   DCHECK(dns_names || ip_addresses);
-  ScopedX509 cert = OSCertHandleToOpenSSL(os_cert);
+  bssl::UniquePtr<X509> cert = OSCertHandleToOpenSSL(os_cert);
   if (!cert.get())
     return;
   int index = X509_get_ext_by_NID(cert.get(), NID_subject_alt_name, -1);
@@ -117,7 +113,7 @@ void ParseSubjectAltName(X509Certificate::OSCertHandle os_cert,
   if (!alt_name_ext)
     return;
 
-  ScopedGENERAL_NAMES alt_names(
+  bssl::UniquePtr<GENERAL_NAMES> alt_names(
       reinterpret_cast<GENERAL_NAMES*>(X509V3_EXT_d2i(alt_name_ext)));
   if (!alt_names.get())
     return;
@@ -150,11 +146,6 @@ void ParseSubjectAltName(X509Certificate::OSCertHandle os_cert,
   }
 }
 
-// Used to free a list of X509_NAMEs and the objects it points to.
-void sk_X509_NAME_free_all(STACK_OF(X509_NAME) * sk) {
-  sk_X509_NAME_pop_free(sk, X509_NAME_free);
-}
-
 }  // namespace
 
 // static
@@ -173,7 +164,7 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 
 void X509Certificate::Initialize() {
   crypto::EnsureOpenSSLInit();
-  ScopedX509 x509_cert = OSCertHandleToOpenSSL(cert_handle_);
+  bssl::UniquePtr<X509> x509_cert = OSCertHandleToOpenSSL(cert_handle_);
   if (!x509_cert)
     return;
   ASN1_INTEGER* serial_num = X509_get_serialNumber(x509_cert.get());
@@ -342,10 +333,10 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle os_cert,
                                        PublicKeyType* type) {
   *type = kPublicKeyTypeUnknown;
   *size_bits = 0;
-  ScopedX509 cert = OSCertHandleToOpenSSL(os_cert);
+  bssl::UniquePtr<X509> cert = OSCertHandleToOpenSSL(os_cert);
   if (!cert)
     return;
-  crypto::ScopedEVP_PKEY scoped_key(X509_get_pubkey(cert.get()));
+  bssl::UniquePtr<EVP_PKEY> scoped_key(X509_get_pubkey(cert.get()));
   if (!scoped_key)
     return;
 
@@ -392,8 +383,7 @@ bool X509Certificate::IsIssuedByEncoded(
 
   // Convert to a temporary list of X509_NAME objects.
   // It will own the objects it points to.
-  crypto::ScopedOpenSSL<STACK_OF(X509_NAME), sk_X509_NAME_free_all>
-      issuer_names(sk_X509_NAME_new_null());
+  bssl::UniquePtr<STACK_OF(X509_NAME)> issuer_names(sk_X509_NAME_new_null());
   if (!issuer_names)
     return false;
 
@@ -407,7 +397,7 @@ bool X509Certificate::IsIssuedByEncoded(
     sk_X509_NAME_push(issuer_names.get(), ca_name);
   }
 
-  ScopedX509 x509_cert = OSCertHandleToOpenSSL(cert_handle_);
+  bssl::UniquePtr<X509> x509_cert = OSCertHandleToOpenSSL(cert_handle_);
   if (!x509_cert)
     return false;
   X509_NAME* cert_issuer = X509_get_issuer_name(x509_cert.get());
@@ -423,7 +413,7 @@ bool X509Certificate::IsIssuedByEncoded(
 
   for (OSCertHandles::iterator it = intermediate_ca_certs_.begin();
        it != intermediate_ca_certs_.end(); ++it) {
-    ScopedX509 intermediate_cert = OSCertHandleToOpenSSL(*it);
+    bssl::UniquePtr<X509> intermediate_cert = OSCertHandleToOpenSSL(*it);
     if (!intermediate_cert)
       return false;
     cert_issuer = X509_get_issuer_name(intermediate_cert.get());
@@ -443,10 +433,10 @@ bool X509Certificate::IsIssuedByEncoded(
 
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle os_cert) {
-  ScopedX509 cert = OSCertHandleToOpenSSL(os_cert);
+  bssl::UniquePtr<X509> cert = OSCertHandleToOpenSSL(os_cert);
   if (!cert)
     return false;
-  crypto::ScopedEVP_PKEY scoped_key(X509_get_pubkey(cert.get()));
+  bssl::UniquePtr<EVP_PKEY> scoped_key(X509_get_pubkey(cert.get()));
   if (!scoped_key)
     return false;
   if (!X509_verify(cert.get(), scoped_key.get()))

@@ -125,7 +125,7 @@ void GetCertChainInfo(CFArrayRef cert_chain, CertVerifyResult* verify_result) {
     if (!X509Certificate::GetDEREncoded(chain_cert, &der_bytes))
       return;
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_bytes.data());
-    ScopedX509 x509_cert(d2i_X509(NULL, &bytes, der_bytes.size()));
+    bssl::UniquePtr<X509> x509_cert(d2i_X509(NULL, &bytes, der_bytes.size()));
 
     base::StringPiece spki_bytes;
     if (!asn1::ExtractSPKIFromDERCert(der_bytes, &spki_bytes))

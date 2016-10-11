@@ -13,7 +13,8 @@
 // Macros for efficient use of histograms.
 //
 // For best practices on deciding when to emit to a histogram and what form
-// the histogram should take, see tools/metrics/histograms/README.md
+// the histogram should take, see
+// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
 //
 // TODO(nikunjb): Move sparse macros to this file.
 //

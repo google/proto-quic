@@ -113,7 +113,7 @@ bool SpdyUtils::ParseTrailers(const char* data,
   for (const auto& trailer : *trailers) {
     base::StringPiece key = trailer.first;
     base::StringPiece value = trailer.second;
-    if (key.starts_with(":")) {
+    if (base::StartsWith(key, ":", base::CompareCase::INSENSITIVE_ASCII)) {
       DVLOG(1) << "Trailers must not contain pseudo-header: '" << key << "','"
                << value << "'.";
       return false;

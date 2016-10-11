@@ -128,7 +128,7 @@ float TcpCubicSenderBase::RenoBeta() const {
 
 void TcpCubicSenderBase::OnCongestionEvent(
     bool rtt_updated,
-    QuicByteCount bytes_in_flight,
+    QuicByteCount prior_in_flight,
     const CongestionVector& acked_packets,
     const CongestionVector& lost_packets) {
   if (rtt_updated && InSlowStart() &&
@@ -139,17 +139,17 @@ void TcpCubicSenderBase::OnCongestionEvent(
   }
   for (CongestionVector::const_iterator it = lost_packets.begin();
        it != lost_packets.end(); ++it) {
-    OnPacketLost(it->first, it->second, bytes_in_flight);
+    OnPacketLost(it->first, it->second, prior_in_flight);
   }
   for (CongestionVector::const_iterator it = acked_packets.begin();
        it != acked_packets.end(); ++it) {
-    OnPacketAcked(it->first, it->second, bytes_in_flight);
+    OnPacketAcked(it->first, it->second, prior_in_flight);
   }
 }
 
 void TcpCubicSenderBase::OnPacketAcked(QuicPacketNumber acked_packet_number,
                                        QuicByteCount acked_bytes,
-                                       QuicByteCount bytes_in_flight) {
+                                       QuicByteCount prior_in_flight) {
   largest_acked_packet_number_ =
       max(acked_packet_number, largest_acked_packet_number_);
   if (InRecovery()) {
@@ -159,7 +159,7 @@ void TcpCubicSenderBase::OnPacketAcked(QuicPacketNumber acked_packet_number,
     }
     return;
   }
-  MaybeIncreaseCwnd(acked_packet_number, acked_bytes, bytes_in_flight);
+  MaybeIncreaseCwnd(acked_packet_number, acked_bytes, prior_in_flight);
   if (InSlowStart()) {
     hybrid_slow_start_.OnPacketAcked(acked_packet_number);
   }
@@ -236,13 +236,6 @@ QuicBandwidth TcpCubicSenderBase::BandwidthEstimate() const {
     return QuicBandwidth::Zero();
   }
   return QuicBandwidth::FromBytesAndTimeDelta(GetCongestionWindow(), srtt);
-}
-
-QuicTime::Delta TcpCubicSenderBase::RetransmissionDelay() const {
-  if (rtt_stats_->smoothed_rtt().IsZero()) {
-    return QuicTime::Delta::Zero();
-  }
-  return rtt_stats_->smoothed_rtt() + 4 * rtt_stats_->mean_deviation();
 }
 
 bool TcpCubicSenderBase::InSlowStart() const {

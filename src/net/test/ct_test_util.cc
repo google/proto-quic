@@ -397,16 +397,16 @@ std::string GetSCTListWithInvalidSCT() {
   return sct_list;
 }
 
-bool CheckForSingleVerifiedSCTInResult(const ct::CTVerifyResult& result,
-                                       const std::string& log_description) {
-  return (result.scts.size() == 1 &&
-          result.scts[0].status == ct::SCT_STATUS_OK &&
-          result.scts[0].sct->log_description == log_description);
+bool CheckForSingleVerifiedSCTInResult(
+    const SignedCertificateTimestampAndStatusList& scts,
+    const std::string& log_description) {
+  return (scts.size() == 1 && scts[0].status == ct::SCT_STATUS_OK &&
+          scts[0].sct->log_description == log_description);
 }
 
-bool CheckForSCTOrigin(const ct::CTVerifyResult& result,
+bool CheckForSCTOrigin(const SignedCertificateTimestampAndStatusList& scts,
                        ct::SignedCertificateTimestamp::Origin origin) {
-  for (const auto& sct_and_status : result.scts)
+  for (const auto& sct_and_status : scts)
     if (sct_and_status.status == SCT_STATUS_OK &&
         sct_and_status.sct->origin == origin)
       return true;

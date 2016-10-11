@@ -18,7 +18,6 @@ class TraceConfigMemoryTestUtil {
     return StringPrintf(
         "{"
           "\"enable_argument_filter\":false,"
-          "\"enable_sampling\":false,"
           "\"enable_systrace\":false,"
           "\"included_categories\":["
             "\"%s\""
@@ -47,7 +46,6 @@ class TraceConfigMemoryTestUtil {
     return StringPrintf(
         "{"
           "\"enable_argument_filter\":false,"
-          "\"enable_sampling\":false,"
           "\"enable_systrace\":false,"
           "\"included_categories\":["
             "\"%s\""
@@ -65,7 +63,6 @@ class TraceConfigMemoryTestUtil {
     return StringPrintf(
         "{"
           "\"enable_argument_filter\":false,"
-          "\"enable_sampling\":false,"
           "\"enable_systrace\":false,"
           "\"included_categories\":["
             "\"%s\""
@@ -78,7 +75,6 @@ class TraceConfigMemoryTestUtil {
     return StringPrintf(
         "{"
           "\"enable_argument_filter\":false,"
-          "\"enable_sampling\":false,"
           "\"enable_systrace\":false,"
           "\"included_categories\":["
             "\"%s\""

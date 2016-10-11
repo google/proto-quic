@@ -18,6 +18,16 @@ import tempfile
 import threading
 import urllib
 import bisect_repackage_utils
+import re
+# This script uses cloud_storage module which contains gsutils wrappers.
+# cloud_storage module is a part of catapult repo, so please make sure
+# catapult is checked out before running this script.
+_PY_UTILS_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', '..', 'third_party', 'catapult',
+    'common', 'py_utils'))
+if _PY_UTILS_PATH not in sys.path:
+  sys.path.insert(1, _PY_UTILS_PATH)
+from py_utils import cloud_storage
 
 # Declares required files to run manual bisect script on chrome Linux
 # builds in perf. Binary files that should be stripped to reduce zip file
@@ -26,6 +36,8 @@ import bisect_repackage_utils
 # in chrome and following the executable path. The list needs to be updated if
 # future chrome versions require additional files.
 CHROME_REQUIRED_FILES = {
+    'arm': ['apks/'],
+    'arm64': ['apks/'],
     'linux': [
         'chrome',
         'chrome_100_percent.pak',
@@ -72,22 +84,13 @@ CHROME_REQUIRED_FILES = {
 }
 
 CHROME_WHITELIST_FILES = {
-    # ^$ means not to include any files from whitelist
-    'linux': '^$',
     'win64': '^\d+\.\d+\.\d+\.\d+\.manifest$',
-    'mac': '^$'
 }
-
+# No stripping symbols from android, windows or mac archives
 CHROME_STRIP_LIST = {
     'linux': [
         'chrome',
         'nacl_helper'
-    ],
-    'win64': [
-        # No stripping symbols from win64 archives
-    ],
-    'mac': [
-        # No stripping symbols from mac archives
     ]
 }
 
@@ -98,6 +101,8 @@ CHROMIUM_GITHASH_TO_SVN_URL = (
 REVISION_MAP_FILE = 'revision_map.json'
 
 BUILDER_NAME = {
+    'arm': 'Android Builder',
+    'arm64': 'Android arm64 Builder',
     'linux': 'Linux Builder',
     'mac': 'Mac Builder',
     'win32': 'Win Builder',
@@ -105,11 +110,16 @@ BUILDER_NAME = {
 }
 
 ARCHIVE_PREFIX = {
+    'arm': 'full-build-linux',
+    'arm64': 'full-build-linux',
     'linux': 'full-build-linux',
     'mac': 'full-build-mac',
     'win32': 'full-build-win32',
     'win64': 'full-build-win32'
 }
+
+CHROME_TEST_BUCKET_SUBFOLDER = 'official-by-commit'
+
 
 class ChromeExecutionError(Exception):
   """Raised when Chrome execution fails."""
@@ -126,15 +136,25 @@ class PathContext(object):
   paths when dealing with the storage server and archives.
   """
 
-  def __init__(self, original_gs_url, repackage_gs_url,
+  def __init__(self, source_bucket, repackage_bucket,
                archive, revision_file=REVISION_MAP_FILE):
     super(PathContext, self).__init__()
-    self.original_gs_url = original_gs_url
-    self.repackage_gs_url = repackage_gs_url
     self.archive = archive
     self.builder_name = BUILDER_NAME[archive]
+    self.original_gs_bucket = source_bucket
+    self.original_remote_path = BUILDER_NAME[archive]
+    self.repackage_gs_bucket = repackage_bucket
+    self.repackage_remote_path = '%s/%s' % (CHROME_TEST_BUCKET_SUBFOLDER,
+                                            BUILDER_NAME[archive])
+
     self.file_prefix = ARCHIVE_PREFIX[archive]
-    self.revision_file = revision_file
+    self.revision_file = os.path.join(os.getcwd(), revision_file)
+
+  def GetExtractedDir(self):
+    # Perf builders archives the binaries in out/Release directory.
+    if self.archive in ['arm', 'arm64']:
+      return os.path.join('out', 'Release')
+    self.file_prefix
 
 
 def get_cp_from_hash(git_hash):
@@ -190,7 +210,7 @@ def get_list_of_suffix(bucket_address, prefix, filter_function):
   Returns:
     (List) list of proper suffixes in the bucket.
   """
-  file_list = bisect_repackage_utils.GSutilList(bucket_address)
+  file_list = cloud_storage.List(bucket_address)
   suffix_list = []
   extract_suffix = '.*?%s_(.*?)\.zip' %(prefix)
   for file in file_list:
@@ -202,24 +222,23 @@ def get_list_of_suffix(bucket_address, prefix, filter_function):
 
 def download_build(cp_num, revision_map, zip_file_name, context):
   """Download a single build corresponding to the cp_num and context."""
-  file_url = '%s/%s/%s_%s.zip' %(context.original_gs_url, context.builder_name,
-                                 context.file_prefix, revision_map[cp_num])
-  bisect_repackage_utils.GSUtilDownloadFile(file_url, zip_file_name)
+  remote_file_path = '%s/%s_%s.zip' % (context.original_remote_path,
+                                       context.file_prefix,
+                                       revision_map[cp_num])
+  cloud_storage.Get(context.original_gs_bucket, remote_file_path, zip_file_name)
 
 
 def upload_build(zip_file, context):
   """Uploads a single build in zip_file to the repackage_gs_url in context."""
-  gs_base_url = '%s/%s' %(context.repackage_gs_url, context.builder_name)
-  upload_url = gs_base_url + '/'
-  bisect_repackage_utils.GSUtilCopy(zip_file, upload_url)
+  cloud_storage.Insert(
+      context.repackage_gs_bucket, context.repackage_remote_path, zip_file)
 
 
 def download_revision_map(context):
   """Downloads the revision map in original_gs_url in context."""
-  gs_base_url = '%s/%s' %(context.repackage_gs_url, context.builder_name)
-  download_url = gs_base_url + '/' + context.revision_file
-  bisect_repackage_utils.GSUtilDownloadFile(download_url,
-                                            context.revision_file)
+  download_file = '%s/%s' % (context.repackage_remote_path, REVISION_MAP_FILE)
+  cloud_storage.Get(context.repackage_gs_bucket, download_file,
+                    context.revision_file)
 
 
 def get_revision_map(context):
@@ -236,15 +255,16 @@ def upload_revision_map(revision_map, context):
   """Upload the given revision_map to the repackage_gs_url in context."""
   with open(context.revision_file, 'w') as revision_file:
     json.dump(revision_map, revision_file)
-  gs_base_url = '%s/%s' %(context.repackage_gs_url, context.builder_name)
-  upload_url = gs_base_url + '/'
-  bisect_repackage_utils.GSUtilCopy(context.revision_file, upload_url)
+  cloud_storage.Insert(context.repackage_gs_bucket,
+                       context.repackage_remote_path,
+                       context.revision_file)
   bisect_repackage_utils.RemoveFile(context.revision_file)
 
 
 def create_upload_revision_map(context):
   """Creates and uploads a dictionary that maps from GitHash to CP number."""
-  gs_base_url = '%s/%s' %(context.original_gs_url, context.builder_name)
+  gs_base_url = '%s/%s' % (context.original_gs_bucket,
+                           context.original_remote_path)
   hash_list = get_list_of_suffix(gs_base_url, context.file_prefix,
                                  bisect_repackage_utils.IsGitCommitHash)
   cp_num_to_hash_map = create_cp_from_hash_map(hash_list)
@@ -253,7 +273,8 @@ def create_upload_revision_map(context):
 
 def update_upload_revision_map(context):
   """Updates and uploads a dictionary that maps from GitHash to CP number."""
-  gs_base_url = '%s/%s' %(context.original_gs_url, context.builder_name)
+  gs_base_url = '%s/%s' % (context.original_gs_bucket,
+                           context.original_remote_path)
   revision_map = get_revision_map(context)
   hash_list = get_list_of_suffix(gs_base_url, context.file_prefix,
                                  bisect_repackage_utils.IsGitCommitHash)
@@ -264,20 +285,18 @@ def update_upload_revision_map(context):
 
 
 def make_lightweight_archive(file_archive, archive_name, files_to_archive,
-                             context, staging_dir):
+                             context, staging_dir, ignore_sub_folder):
   """Repackages and strips the archive.
 
   Repacakges and strips according to CHROME_REQUIRED_FILES and
   CHROME_STRIP_LIST.
   """
-  strip_list = CHROME_STRIP_LIST[context.archive]
+  strip_list = CHROME_STRIP_LIST.get(context.archive)
   tmp_archive = os.path.join(staging_dir, 'tmp_%s' % archive_name)
-  (zip_file, zip_dir) = bisect_repackage_utils.MakeZip(tmp_archive,
-                                                       archive_name,
-                                                       files_to_archive,
-                                                       file_archive,
-                                                       raise_error=False,
-                                                       strip_files=strip_list)
+  (zip_file, zip_dir) = bisect_repackage_utils.MakeZip(
+      tmp_archive, archive_name, files_to_archive, file_archive,
+      raise_error=False, strip_files=strip_list,
+      ignore_sub_folder=ignore_sub_folder)
   return (zip_file, zip_dir, tmp_archive)
 
 
@@ -309,7 +328,7 @@ def get_whitelist_files(extracted_folder, archive):
   whitelist_files = []
   all_files = os.listdir(extracted_folder)
   for file in all_files:
-    if re.match(CHROME_WHITELIST_FILES[archive], file):
+    if re.match(CHROME_WHITELIST_FILES.get(archive), file):
       whitelist_files.append(file)
   return whitelist_files
 
@@ -320,24 +339,39 @@ def repackage_single_revision(revision_map, verify_run, staging_dir,
   archive_name = '%s_%s' %(context.file_prefix, cp_num)
   file_archive = os.path.join(staging_dir, archive_name)
   zip_file_name = '%s.zip' % (file_archive)
+
   download_build(cp_num, revision_map, zip_file_name, context)
+
   extract_dir = os.path.join(staging_dir, archive_name)
-  bisect_repackage_utils.ExtractZip(zip_file_name, extract_dir)
-  extracted_folder = os.path.join(extract_dir, context.file_prefix)
-  if CHROME_WHITELIST_FILES[context.archive]:
+  is_android = context.archive in ['arm', 'arm64']
+  if CHROME_WHITELIST_FILES.get(context.archive):
     whitelist_files = get_whitelist_files(extracted_folder, context.archive)
-    files_to_include = whitelist_files + CHROME_REQUIRED_FILES[context.archive]
+    files_to_include = (whitelist_files +
+                        CHROME_REQUIRED_FILES.get(context.archive))
   else:
-    files_to_include = CHROME_REQUIRED_FILES[context.archive]
+    files_to_include = CHROME_REQUIRED_FILES.get(context.archive)
+
+  dir_path_in_zip = context.GetExtractedDir()
+  extract_file_list = []
+  # Only extract required files and directories.
+  if is_android:
+    for f in files_to_include:
+      if f.endswith('/'):
+        f += '*'
+      extract_file_list.append(os.path.join(dir_path_in_zip, f))
+  bisect_repackage_utils.ExtractZip(
+      zip_file_name, extract_dir, extract_file_list)
+  extracted_folder = os.path.join(extract_dir, dir_path_in_zip)
+
   (zip_dir, zip_file, tmp_archive) = make_lightweight_archive(extracted_folder,
                                                               archive_name,
                                                               files_to_include,
                                                               context,
-                                                              staging_dir)
+                                                              staging_dir,
+                                                              is_android)
 
   if verify_run:
     verify_chrome_run(zip_dir)
-
   upload_build(zip_file, context)
   # Removed temporary files created during repackaging process.
   remove_created_files_and_path([zip_file_name],
@@ -360,7 +394,8 @@ def repackage_revisions(revisions, revision_map, verify_run, staging_dir,
 
 def get_uploaded_builds(context):
   """Returns already uploaded revisions in original bucket."""
-  gs_base_url = '%s/%s' %(context.repackage_gs_url, context.builder_name)
+  gs_base_url = '%s/%s' % (context.repackage_gs_bucket,
+                           context.repackage_remote_path)
   return get_list_of_suffix(gs_base_url, context.file_prefix,
                             bisect_repackage_utils.IsCommitPosition)
 
@@ -424,7 +459,7 @@ class RepackageJob(object):
 def main(argv):
   option_parser = optparse.OptionParser()
 
-  choices = ['mac', 'win32', 'win64', 'linux']
+  choices = ['mac', 'win32', 'win64', 'linux', 'arm', 'arm64']
 
   option_parser.add_option('-a', '--archive',
                            choices=choices,
@@ -450,14 +485,14 @@ def main(argv):
   # Original bucket that contains perf builds
   option_parser.add_option('-o', '--original',
                            type='str',
-                           help='Google storage url containing original'
+                           help='Google storage bucket name containing original'
                                 'Chrome builds')
 
   # Bucket that should archive lightweight perf builds
   option_parser.add_option('-r', '--repackage',
                            type='str',
-                           help='Google storage url to re-archive Chrome'
-                                'builds')
+                           help='Google storage bucket name '
+                                 'to re-archive Chrome builds')
 
   verify_run = False
   (opts, args) = option_parser.parse_args()

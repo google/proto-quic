@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/nqe/network_quality_estimator.h"
+#ifndef NET_NQE_NETWORK_QUALITY_ESTIMATOR_TEST_UTIL_H_
+#define NET_NQE_NETWORK_QUALITY_ESTIMATOR_TEST_UTIL_H_
 
 #include <map>
 #include <memory>
@@ -13,6 +14,7 @@
 #include "base/time/time.h"
 #include "net/base/network_change_notifier.h"
 #include "net/nqe/effective_connection_type.h"
+#include "net/nqe/network_quality_estimator.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
@@ -195,3 +197,5 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
 };
 
 }  // namespace net
+
+#endif  // NET_NQE_NETWORK_QUALITY_ESTIMATOR_TEST_UTIL_H_

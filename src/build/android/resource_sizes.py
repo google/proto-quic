@@ -184,16 +184,12 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
   NO = lambda _: False
   FILE_GROUPS = (
       FileGroup('Native code', r'\.so$', lambda f: 'crazy' not in f),
-      FileGroup('Java code', r'^classes.*\.dex$', YES),
-      FileGroup('Native resources (no l10n)',
-                r'^assets/.*(resources|percent)\.pak$', NO),
+      FileGroup('Java code', r'\.dex$', YES),
+      FileGroup('Native resources (no l10n)', r'\.pak$', NO),
       # For locale paks, assume only english paks are extracted.
-      # Handles locale paks as bother resources or assets (.lpak or .pak).
-      FileGroup('Native resources (l10n)',
-                r'\.lpak$|^assets/.*(?!resources|percent)\.pak$',
-                lambda f: 'en_' in f or 'en-' in f),
-      FileGroup('ICU (i18n library) data', r'^assets/icudtl\.dat$', NO),
-      FileGroup('V8 Snapshots', r'^assets/.*\.bin$', NO),
+      FileGroup('Native resources (l10n)', r'\.lpak$', lambda f: 'en_' in f),
+      FileGroup('ICU (i18n library) data', r'assets/icudtl\.dat$', NO),
+      FileGroup('V8 Snapshots', r'\.bin$', NO),
       FileGroup('PNG drawables', r'\.png$', NO),
       FileGroup('Non-compiled Android resources', r'^res/', NO),
       FileGroup('Compiled Android resources', r'\.arsc$', NO),
@@ -225,18 +221,13 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
   total_install_size = total_apk_size
 
   for group in FILE_GROUPS:
-    uncompressed_size = 0
-    packed_size = 0
-    extracted_size = 0
-    for member in found_files[group]:
-      uncompressed_size += member.file_size
-      packed_size += member.compress_size
-      # Assume that if a file is not compressed, then it is not extracted.
-      is_compressed = member.compress_type != zipfile.ZIP_STORED
-      if is_compressed and group.extracted(member.filename):
-        extracted_size += member.file_size
-    install_size = packed_size + extracted_size
-    total_install_size += extracted_size
+    uncompressed_size = sum(member.file_size for member in found_files[group])
+    packed_size = sum(member.compress_size for member in found_files[group])
+    install_size = packed_size
+    install_bytes = sum(member.file_size for member in found_files[group]
+                        if group.extracted(member.filename))
+    install_size += install_bytes
+    total_install_size += install_bytes
 
     ReportPerfResult(chartjson, apk_basename + '_Breakdown',
                      group.name + ' size', packed_size, 'bytes')

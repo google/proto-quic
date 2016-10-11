@@ -91,11 +91,13 @@ class BASE_EXPORT ConditionVariable {
   ~ConditionVariable();
 
   // Wait() releases the caller's critical section atomically as it starts to
-  // sleep, and the reacquires it when it is signaled.
+  // sleep, and the reacquires it when it is signaled. The wait functions are
+  // susceptible to spurious wakeups. (See usage note 1 for more details.)
   void Wait();
   void TimedWait(const TimeDelta& max_time);
 
-  // Broadcast() revives all waiting threads.
+  // Broadcast() revives all waiting threads. (See usage note 2 for more
+  // details.)
   void Broadcast();
   // Signal() revives one waiting thread.
   void Signal();

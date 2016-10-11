@@ -532,6 +532,8 @@ static_library("test_support") {
     "log/test_net_log_entry.h",
     "log/test_net_log_util.cc",
     "log/test_net_log_util.h",
+    "nqe/network_quality_estimator_test_util.cc",
+    "nqe/network_quality_estimator_test_util.h",
     "proxy/mock_proxy_resolver.cc",
     "proxy/mock_proxy_resolver.h",
     "proxy/mock_proxy_script_fetcher.cc",

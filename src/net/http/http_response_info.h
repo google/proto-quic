@@ -8,9 +8,9 @@
 #include <string>
 
 #include "base/time/time.h"
-#include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
 #include "net/http/http_vary_data.h"
+#include "net/proxy/proxy_server.h"
 #include "net/socket/next_proto.h"
 #include "net/ssl/ssl_info.h"
 
@@ -126,9 +126,10 @@ class NET_EXPORT HttpResponseInfo {
   // True if the request was fetched via an explicit proxy.  The proxy could
   // be any type of proxy, HTTP or SOCKS.  Note, we do not know if a
   // transparent proxy may have been involved. If true, |proxy_server| contains
-  // the name of the proxy server that was used.
+  // the proxy server that was used.
+  // TODO(tbansal): crbug.com/653354. Remove |was_fetched_via_proxy|.
   bool was_fetched_via_proxy;
-  HostPortPair proxy_server;
+  ProxyServer proxy_server;
 
   // Whether the request use http proxy or server authentication.
   bool did_use_http_auth;

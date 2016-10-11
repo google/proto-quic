@@ -20,26 +20,15 @@
 #include "crypto/ec_private_key.h"
 #include "crypto/openssl_util.h"
 #include "crypto/rsa_private_key.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/x509_cert_types.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
-#include "net/ssl/scoped_openssl_types.h"
 
 namespace net {
 
 namespace {
-
-using ScopedASN1_INTEGER =
-    crypto::ScopedOpenSSL<ASN1_INTEGER, ASN1_INTEGER_free>;
-using ScopedASN1_OCTET_STRING =
-    crypto::ScopedOpenSSL<ASN1_OCTET_STRING, ASN1_OCTET_STRING_free>;
-using ScopedASN1_STRING = crypto::ScopedOpenSSL<ASN1_STRING, ASN1_STRING_free>;
-using ScopedASN1_TIME = crypto::ScopedOpenSSL<ASN1_TIME, ASN1_TIME_free>;
-using ScopedX509_EXTENSION =
-    crypto::ScopedOpenSSL<X509_EXTENSION, X509_EXTENSION_free>;
 
 const EVP_MD* ToEVP(x509_util::DigestAlgorithm alg) {
   switch (alg) {
@@ -57,34 +46,34 @@ namespace x509_util {
 
 namespace {
 
-X509* CreateCertificate(EVP_PKEY* key,
-                        DigestAlgorithm alg,
-                        const std::string& common_name,
-                        uint32_t serial_number,
-                        base::Time not_valid_before,
-                        base::Time not_valid_after) {
+bssl::UniquePtr<X509> CreateCertificate(EVP_PKEY* key,
+                                        DigestAlgorithm alg,
+                                        const std::string& common_name,
+                                        uint32_t serial_number,
+                                        base::Time not_valid_before,
+                                        base::Time not_valid_after) {
   // Put the serial number into an OpenSSL-friendly object.
-  ScopedASN1_INTEGER asn1_serial(ASN1_INTEGER_new());
+  bssl::UniquePtr<ASN1_INTEGER> asn1_serial(ASN1_INTEGER_new());
   if (!asn1_serial.get() ||
       !ASN1_INTEGER_set(asn1_serial.get(), static_cast<long>(serial_number))) {
     LOG(ERROR) << "Invalid serial number " << serial_number;
-    return NULL;
+    return nullptr;
   }
 
   // Do the same for the time stamps.
-  ScopedASN1_TIME asn1_not_before_time(
-      ASN1_TIME_set(NULL, not_valid_before.ToTimeT()));
+  bssl::UniquePtr<ASN1_TIME> asn1_not_before_time(
+      ASN1_TIME_set(nullptr, not_valid_before.ToTimeT()));
   if (!asn1_not_before_time.get()) {
     LOG(ERROR) << "Invalid not_valid_before time: "
                << not_valid_before.ToTimeT();
-    return NULL;
+    return nullptr;
   }
 
-  ScopedASN1_TIME asn1_not_after_time(
-      ASN1_TIME_set(NULL, not_valid_after.ToTimeT()));
+  bssl::UniquePtr<ASN1_TIME> asn1_not_after_time(
+      ASN1_TIME_set(nullptr, not_valid_after.ToTimeT()));
   if (!asn1_not_after_time.get()) {
     LOG(ERROR) << "Invalid not_valid_after time: " << not_valid_after.ToTimeT();
-    return NULL;
+    return nullptr;
   }
 
   // Because |common_name| only contains a common name and starts with 'CN=',
@@ -95,11 +84,11 @@ X509* CreateCertificate(EVP_PKEY* key,
   if (common_name.size() < kCommonNamePrefixLen ||
       strncmp(common_name.c_str(), kCommonNamePrefix, kCommonNamePrefixLen)) {
     LOG(ERROR) << "Common name must begin with " << kCommonNamePrefix;
-    return NULL;
+    return nullptr;
   }
   if (common_name.size() > INT_MAX) {
     LOG(ERROR) << "Common name too long";
-    return NULL;
+    return nullptr;
   }
   unsigned char* common_name_str =
       reinterpret_cast<unsigned char*>(const_cast<char*>(common_name.data())) +
@@ -107,7 +96,7 @@ X509* CreateCertificate(EVP_PKEY* key,
   int common_name_len =
       static_cast<int>(common_name.size() - kCommonNamePrefixLen);
 
-  ScopedX509_NAME name(X509_NAME_new());
+  bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
   if (!name.get() || !X509_NAME_add_entry_by_NID(name.get(),
                                                  NID_commonName,
                                                  MBSTRING_ASC,
@@ -116,11 +105,11 @@ X509* CreateCertificate(EVP_PKEY* key,
                                                  -1,
                                                  0)) {
     LOG(ERROR) << "Can't parse common name: " << common_name.c_str();
-    return NULL;
+    return nullptr;
   }
 
   // Now create certificate and populate it.
-  ScopedX509 cert(X509_new());
+  bssl::UniquePtr<X509> cert(X509_new());
   if (!cert.get() || !X509_set_version(cert.get(), 2L) /* i.e. version 3 */ ||
       !X509_set_pubkey(cert.get(), key) ||
       !X509_set_serialNumber(cert.get(), asn1_serial.get()) ||
@@ -129,10 +118,10 @@ X509* CreateCertificate(EVP_PKEY* key,
       !X509_set_subject_name(cert.get(), name.get()) ||
       !X509_set_issuer_name(cert.get(), name.get())) {
     LOG(ERROR) << "Could not create certificate";
-    return NULL;
+    return nullptr;
   }
 
-  return cert.release();
+  return cert;
 }
 
 // DER-encodes |x509|. On success, returns true and writes the
@@ -211,13 +200,10 @@ bool CreateSelfSignedCert(crypto::RSAPrivateKey* key,
                           base::Time not_valid_after,
                           std::string* der_encoded) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  ScopedX509 cert(CreateCertificate(key->key(),
-                                    alg,
-                                    common_name,
-                                    serial_number,
-                                    not_valid_before,
-                                    not_valid_after));
-  if (!cert.get())
+  bssl::UniquePtr<X509> cert =
+      CreateCertificate(key->key(), alg, common_name, serial_number,
+                        not_valid_before, not_valid_after);
+  if (!cert)
     return false;
 
   return SignAndDerEncodeCert(cert.get(), key->key(), alg, der_encoded);

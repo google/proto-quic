@@ -12,7 +12,6 @@
 #include "mojo/public/cpp/bindings/binding.h"
 #include "net/base/net_errors.h"
 #include "net/proxy/mock_proxy_resolver.h"
-#include "net/proxy/mojo_proxy_type_converters.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_resolver_v8_tracing.h"
 #include "net/proxy/proxy_server.h"
@@ -40,16 +39,15 @@ class TestRequestClient : public interfaces::ProxyResolverRequestClient {
   void WaitForResult();
 
   Error error() { return error_; }
-  const mojo::Array<interfaces::ProxyServerPtr>& results() { return results_; }
+  const ProxyInfo& results() { return results_; }
   EventWaiter<Event>& event_waiter() { return event_waiter_; }
 
  private:
   // interfaces::ProxyResolverRequestClient override.
-  void ReportResult(int32_t error,
-                    mojo::Array<interfaces::ProxyServerPtr> results) override;
+  void ReportResult(int32_t error, const ProxyInfo& results) override;
   void Alert(const mojo::String& message) override;
   void OnError(int32_t line_number, const mojo::String& message) override;
-  void ResolveDns(interfaces::HostResolverRequestInfoPtr request_info,
+  void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
                   interfaces::HostResolverRequestClientPtr client) override;
 
   // Mojo error handler.
@@ -57,7 +55,7 @@ class TestRequestClient : public interfaces::ProxyResolverRequestClient {
 
   bool done_ = false;
   Error error_ = ERR_FAILED;
-  mojo::Array<interfaces::ProxyServerPtr> results_;
+  ProxyInfo results_;
 
   mojo::Binding<interfaces::ProxyResolverRequestClient> binding_;
 
@@ -79,13 +77,11 @@ void TestRequestClient::WaitForResult() {
   ASSERT_TRUE(done_);
 }
 
-void TestRequestClient::ReportResult(
-    int32_t error,
-    mojo::Array<interfaces::ProxyServerPtr> results) {
+void TestRequestClient::ReportResult(int32_t error, const ProxyInfo& results) {
   event_waiter_.NotifyEvent(RESULT_RECEIVED);
   ASSERT_FALSE(done_);
   error_ = static_cast<Error>(error);
-  results_ = std::move(results);
+  results_ = results;
   done_ = true;
 }
 
@@ -97,9 +93,8 @@ void TestRequestClient::OnError(int32_t line_number,
 }
 
 void TestRequestClient::ResolveDns(
-    interfaces::HostResolverRequestInfoPtr request_info,
-    interfaces::HostResolverRequestClientPtr client) {
-}
+    std::unique_ptr<HostResolver::RequestInfo> request_info,
+    interfaces::HostResolverRequestClientPtr client) {}
 
 void TestRequestClient::OnConnectionError() {
   event_waiter_.NotifyEvent(CONNECTION_ERROR);
@@ -214,8 +209,7 @@ TEST_F(MojoProxyResolverImplTest, GetProxyForUrl) {
   client.WaitForResult();
 
   EXPECT_THAT(client.error(), IsOk());
-  std::vector<ProxyServer> servers =
-      client.results().To<std::vector<ProxyServer>>();
+  std::vector<ProxyServer> servers = client.results().proxy_list().GetAll();
   ASSERT_EQ(6u, servers.size());
   EXPECT_EQ(ProxyServer::SCHEME_HTTP, servers[0].scheme());
   EXPECT_EQ("proxy.example.com", servers[0].host_port_pair().host());
@@ -254,7 +248,7 @@ TEST_F(MojoProxyResolverImplTest, GetProxyForUrlFailure) {
 
   EXPECT_THAT(client.error(), IsError(ERR_FAILED));
   std::vector<ProxyServer> proxy_servers =
-      client.results().To<std::vector<ProxyServer>>();
+      client.results().proxy_list().GetAll();
   EXPECT_TRUE(proxy_servers.empty());
 }
 
@@ -283,7 +277,7 @@ TEST_F(MojoProxyResolverImplTest, GetProxyForUrlMultiple) {
 
   EXPECT_THAT(client1.error(), IsOk());
   std::vector<ProxyServer> proxy_servers1 =
-      client1.results().To<std::vector<ProxyServer>>();
+      client1.results().proxy_list().GetAll();
   ASSERT_EQ(1u, proxy_servers1.size());
   ProxyServer& server1 = proxy_servers1[0];
   EXPECT_EQ(ProxyServer::SCHEME_HTTPS, server1.scheme());
@@ -292,7 +286,7 @@ TEST_F(MojoProxyResolverImplTest, GetProxyForUrlMultiple) {
 
   EXPECT_THAT(client2.error(), IsOk());
   std::vector<ProxyServer> proxy_servers2 =
-      client2.results().To<std::vector<ProxyServer>>();
+      client2.results().proxy_list().GetAll();
   ASSERT_EQ(1u, proxy_servers1.size());
   ProxyServer& server2 = proxy_servers2[0];
   EXPECT_EQ(ProxyServer::SCHEME_SOCKS5, server2.scheme());

@@ -538,7 +538,6 @@
   __sanitizer_dtor_callback;
   __sanitizer_get_allocated_size;
   __sanitizer_get_coverage_guards;
-  __sanitizer_get_coverage_pc_buffer_pos;
   __sanitizer_get_current_allocated_bytes;
   __sanitizer_get_estimated_allocated_size;
   __sanitizer_get_free_bytes;
@@ -554,7 +553,6 @@
   __sanitizer_report_error_summary;
   __sanitizer_reset_coverage;
   __sanitizer_sandbox_on_notify;
-  __sanitizer_set_coverage_pc_buffer;
   __sanitizer_set_death_callback;
   __sanitizer_set_report_fd;
   __sanitizer_set_report_path;

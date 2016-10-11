@@ -23,7 +23,7 @@ namespace base {
 namespace {
 
 // Used to ensure only one profiler is running at a time.
-LazyInstance<Lock> concurrent_profiling_lock = LAZY_INSTANCE_INITIALIZER;
+LazyInstance<Lock>::Leaky concurrent_profiling_lock = LAZY_INSTANCE_INITIALIZER;
 
 // AsyncRunner ----------------------------------------------------------------
 

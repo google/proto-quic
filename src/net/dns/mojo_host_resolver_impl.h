@@ -28,7 +28,7 @@ class MojoHostResolverImpl {
                        const NetLogWithSource& net_log);
   ~MojoHostResolverImpl();
 
-  void Resolve(interfaces::HostResolverRequestInfoPtr request_info,
+  void Resolve(std::unique_ptr<HostResolver::RequestInfo> request_info,
                interfaces::HostResolverRequestClientPtr client);
 
   bool request_in_progress() { return !pending_jobs_.empty(); }

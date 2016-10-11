@@ -4,6 +4,8 @@
 
 #include "net/ssl/ssl_client_session_cache.h"
 
+#include <openssl/ssl.h>
+
 #include <utility>
 
 #include "base/memory/memory_coordinator_client_registry.h"
@@ -31,7 +33,8 @@ size_t SSLClientSessionCache::size() const {
   return cache_.size();
 }
 
-ScopedSSL_SESSION SSLClientSessionCache::Lookup(const std::string& cache_key) {
+bssl::UniquePtr<SSL_SESSION> SSLClientSessionCache::Lookup(
+    const std::string& cache_key) {
   base::AutoLock lock(lock_);
 
   // Expire stale sessions.
@@ -51,7 +54,7 @@ ScopedSSL_SESSION SSLClientSessionCache::Lookup(const std::string& cache_key) {
 
   SSL_SESSION* session = iter->second->session.get();
   SSL_SESSION_up_ref(session);
-  return ScopedSSL_SESSION(session);
+  return bssl::UniquePtr<SSL_SESSION>(session);
 }
 
 void SSLClientSessionCache::Insert(const std::string& cache_key,

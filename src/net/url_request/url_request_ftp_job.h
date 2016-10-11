@@ -5,6 +5,7 @@
 #ifndef NET_URL_REQUEST_URL_REQUEST_FTP_JOB_H_
 #define NET_URL_REQUEST_URL_REQUEST_FTP_JOB_H_
 
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
@@ -49,6 +50,8 @@ class NET_EXPORT_PRIVATE URLRequestFtpJob : public URLRequestJob {
   RequestPriority priority() const { return priority_; }
 
  private:
+  class AuthData;
+
   void OnResolveProxyComplete(int result);
 
   void StartFtpTransaction();
@@ -89,7 +92,7 @@ class NET_EXPORT_PRIVATE URLRequestFtpJob : public URLRequestJob {
 
   bool read_in_progress_;
 
-  scoped_refptr<AuthData> auth_data_;
+  std::unique_ptr<AuthData> auth_data_;
 
   FtpTransactionFactory* ftp_transaction_factory_;
   FtpAuthCache* ftp_auth_cache_;

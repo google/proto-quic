@@ -12,7 +12,8 @@
 #include "net/base/net_export.h"
 
 #if defined(USE_NSS_CERTS)
-#include <list>
+#include <cert.h>
+#include <vector>
 #elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
 #include <vector>
 #elif defined(OS_WIN)
@@ -24,9 +25,7 @@
 #include "base/mac/scoped_cftyperef.h"
 #endif
 
-#if defined(USE_NSS_CERTS)
-typedef struct CERTCertificateStr CERTCertificate;
-#elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
+#if defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
 typedef struct x509_st X509;
 #endif
 
@@ -103,12 +102,35 @@ class NET_EXPORT TestRootCerts {
   void Init();
 
 #if defined(USE_NSS_CERTS)
+  // TrustEntry is used to store the original CERTCertificate and CERTCertTrust
+  // for a certificate whose trust status has been changed by the
+  // TestRootCerts.
+  class TrustEntry {
+   public:
+    // Creates a new TrustEntry by incrementing the reference to |certificate|
+    // and copying |trust|.
+    TrustEntry(CERTCertificate* certificate, const CERTCertTrust& trust);
+    ~TrustEntry();
+
+    CERTCertificate* certificate() const { return certificate_; }
+    const CERTCertTrust& trust() const { return trust_; }
+
+   private:
+    // The temporary root certificate.
+    CERTCertificate* certificate_;
+
+    // The original trust settings, before |certificate_| was manipulated to
+    // be a temporarily trusted root.
+    CERTCertTrust trust_;
+
+    DISALLOW_COPY_AND_ASSIGN(TrustEntry);
+  };
+
   // It is necessary to maintain a cache of the original certificate trust
   // settings, in order to restore them when Clear() is called.
-  class TrustEntry;
-  std::list<TrustEntry*> trust_cache_;
+  std::vector<std::unique_ptr<TrustEntry>> trust_cache_;
 #elif defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
-  std::vector<scoped_refptr<X509Certificate> > temporary_roots_;
+  std::vector<scoped_refptr<X509Certificate>> temporary_roots_;
 #elif defined(OS_WIN)
   HCERTSTORE temporary_roots_;
 #elif defined(OS_MACOSX)

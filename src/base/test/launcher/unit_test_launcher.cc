@@ -31,6 +31,10 @@
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+#if defined(OS_POSIX)
+#include "base/files/file_descriptor_watcher_posix.h"
+#endif
+
 namespace base {
 
 namespace {
@@ -229,6 +233,9 @@ int LaunchUnitTestsInternal(const RunTestSuiteCallback& run_test_suite,
   fflush(stdout);
 
   MessageLoopForIO message_loop;
+#if defined(OS_POSIX)
+  FileDescriptorWatcher file_descriptor_watcher(&message_loop);
+#endif
 
   DefaultUnitTestPlatformDelegate platform_delegate;
   UnitTestLauncherDelegate delegate(

@@ -14,10 +14,8 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
-#include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
 #include "crypto/rsa_private_key.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/keygen_handler.h"
 #include "net/base/openssl_private_key_store.h"
 
@@ -54,7 +52,7 @@ std::string KeygenHandler::GenKeyAndSignChallenge() {
   crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
 
   // Serialize up to the PublicKeyAndChallenge.
-  crypto::AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   CBB spkac, public_key_and_challenge, challenge;
   if (!CBB_init(cbb.get(), 0) ||
       !CBB_add_asn1(cbb.get(), &spkac, CBS_ASN1_SEQUENCE) ||
@@ -70,7 +68,7 @@ std::string KeygenHandler::GenKeyAndSignChallenge() {
   }
 
   // Hash what's been written so far.
-  crypto::ScopedEVP_MD_CTX ctx(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX ctx;
   if (!EVP_DigestSignInit(ctx.get(), nullptr, EVP_md5(), nullptr, pkey) ||
       !EVP_DigestSignUpdate(ctx.get(), CBB_data(&spkac), CBB_len(&spkac))) {
     return std::string();

@@ -181,6 +181,18 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
       scoped_refptr<ValidateClientHelloResultCallback::Result> result,
       std::unique_ptr<ProofSource::Details> details);
 
+  class ProcessClientHelloCallback;
+  friend class ProcessClientHelloCallback;
+
+  // Portion of FinishProcessingHandshakeMessage which executes after
+  // ProcessClientHello has been called.
+  void FinishProcessingHandshakeMessageAfterProcessClientHello(
+      const ValidateClientHelloResultCallback::Result& result,
+      QuicErrorCode error,
+      const std::string& error_details,
+      std::unique_ptr<CryptoHandshakeMessage> reply,
+      std::unique_ptr<DiversificationNonce> diversification_nonce);
+
   // Invoked by SendServerConfigUpdateCallback::RunImpl once the proof has been
   // received.  |ok| indicates whether or not the proof was successfully
   // acquired, and |message| holds the partially-constructed message from

@@ -153,8 +153,7 @@ void URLRequestThrottlerEntry::DetachManager() {
 bool URLRequestThrottlerEntry::ShouldRejectRequest(
     const URLRequest& request) const {
   bool reject_request = false;
-  if (!is_backoff_disabled_ && !ExplicitUserRequest(request.load_flags()) &&
-      GetBackoffEntry()->ShouldRejectRequest()) {
+  if (!is_backoff_disabled_ && GetBackoffEntry()->ShouldRejectRequest()) {
     net_log_.AddEvent(NetLogEventType::THROTTLING_REJECTED_REQUEST,
                       base::Bind(&NetLogRejectedRequestCallback, &url_id_,
                                  GetBackoffEntry()->failure_count(),
@@ -283,11 +282,6 @@ const BackoffEntry* URLRequestThrottlerEntry::GetBackoffEntry() const {
 
 BackoffEntry* URLRequestThrottlerEntry::GetBackoffEntry() {
   return &backoff_entry_;
-}
-
-// static
-bool URLRequestThrottlerEntry::ExplicitUserRequest(const int load_flags) {
-  return (load_flags & LOAD_MAYBE_USER_GESTURE) != 0;
 }
 
 }  // namespace net

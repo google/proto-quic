@@ -19,12 +19,6 @@ bool AuthChallengeInfo::Equals(const AuthChallengeInfo& that) const {
 AuthChallengeInfo::~AuthChallengeInfo() {
 }
 
-AuthData::AuthData() : state(AUTH_STATE_NEED_AUTH) {
-}
-
-AuthData::~AuthData() {
-}
-
 AuthCredentials::AuthCredentials() {
 }
 

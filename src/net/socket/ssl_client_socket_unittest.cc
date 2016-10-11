@@ -22,7 +22,6 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -32,6 +31,7 @@
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/ct_verifier.h"
 #include "net/cert/mock_cert_verifier.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/cert/test_root_certs.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
@@ -706,7 +706,7 @@ class MockCTVerifier : public CTVerifier {
                int(X509Certificate*,
                    const std::string&,
                    const std::string&,
-                   ct::CTVerifyResult*,
+                   SignedCertificateTimestampAndStatusList*,
                    const NetLogWithSource&));
   MOCK_METHOD1(SetObserver, void(CTVerifier::Observer*));
 };
@@ -1255,8 +1255,7 @@ TEST_F(SSLClientSocketTest, Read) {
 }
 
 // Tests that SSLClientSocket properly handles when the underlying transport
-// synchronously fails a transport read in during the handshake. The error code
-// should be preserved so SSLv3 fallback logic can condition on it.
+// synchronously fails a transport read in during the handshake.
 TEST_F(SSLClientSocketTest, Connect_WithSynchronousError) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
@@ -2655,62 +2654,6 @@ TEST_F(SSLClientSocketTest, CertificateErrorNoResume) {
   EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
 }
 
-// Tests that session caches are sharded by max_version.
-TEST_F(SSLClientSocketTest, FallbackShardSessionCache) {
-  ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
-
-  // Prepare a normal and fallback SSL config.
-  SSLConfig ssl_config;
-  SSLConfig fallback_ssl_config;
-  fallback_ssl_config.version_max = SSL_PROTOCOL_VERSION_TLS1;
-  fallback_ssl_config.version_fallback_min = SSL_PROTOCOL_VERSION_TLS1;
-  fallback_ssl_config.version_fallback = true;
-
-  // Connect with a fallback config from the test server to add an entry to the
-  // session cache.
-  int rv;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(fallback_ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  SSLInfo ssl_info;
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-  EXPECT_EQ(SSL_CONNECTION_VERSION_TLS1,
-            SSLConnectionStatusToVersion(ssl_info.connection_status));
-
-  // A non-fallback connection needs a full handshake.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
-  EXPECT_EQ(SSL_CONNECTION_VERSION_TLS1_2,
-            SSLConnectionStatusToVersion(ssl_info.connection_status));
-
-  // Note: if the server (correctly) declines to resume a TLS 1.0 session at TLS
-  // 1.2, the above test would not be sufficient to prove the session caches are
-  // sharded. Implementations vary here, so, to avoid being sensitive to this,
-  // attempt to resume with two more connections.
-
-  // The non-fallback connection added a > TLS 1.0 entry to the session cache.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_RESUME, ssl_info.handshake_type);
-  // This does not check for equality because TLS 1.2 support is conditional on
-  // system NSS features.
-  EXPECT_LT(SSL_CONNECTION_VERSION_TLS1,
-            SSLConnectionStatusToVersion(ssl_info.connection_status));
-
-  // The fallback connection still resumes from its session cache. It cannot
-  // offer the > TLS 1.0 session, so this must have been the session from the
-  // first fallback connection.
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(fallback_ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-  EXPECT_TRUE(sock_->GetSSLInfo(&ssl_info));
-  EXPECT_EQ(SSLInfo::HANDSHAKE_RESUME, ssl_info.handshake_type);
-  EXPECT_EQ(SSL_CONNECTION_VERSION_TLS1,
-            SSLConnectionStatusToVersion(ssl_info.connection_status));
-}
-
 // Test that DHE is removed but gives a dedicated error. Also test that the
 // dhe_enabled option can restore it.
 TEST_F(SSLClientSocketTest, DHE) {
@@ -3197,13 +3140,13 @@ scoped_refptr<SSLPrivateKey> LoadPrivateKeyOpenSSL(
     LOG(ERROR) << "Could not read private key file: " << filepath.value();
     return nullptr;
   }
-  crypto::ScopedBIO bio(BIO_new_mem_buf(const_cast<char*>(data.data()),
-                                        static_cast<int>(data.size())));
+  bssl::UniquePtr<BIO> bio(BIO_new_mem_buf(const_cast<char*>(data.data()),
+                                           static_cast<int>(data.size())));
   if (!bio) {
     LOG(ERROR) << "Could not allocate BIO for buffer?";
     return nullptr;
   }
-  crypto::ScopedEVP_PKEY result(
+  bssl::UniquePtr<EVP_PKEY> result(
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
   if (!result) {
     LOG(ERROR) << "Could not decode private key file: " << filepath.value();

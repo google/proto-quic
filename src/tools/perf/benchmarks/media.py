@@ -85,9 +85,16 @@ class MediaAndroid(perf_benchmark.PerfBenchmark):
   options = {'story_label_filter_exclude': 'is_4k,is_50fps'}
 
   @classmethod
-  def ShouldDisable(cls, possible_browser):  # crbug.com/448092
-    """Disable test for Android One device."""
-    return cls.IsSvelte(possible_browser)
+  def ShouldDisable(cls, possible_browser):
+    # crbug.com/448092
+    if cls.IsSvelte(possible_browser):
+        return True
+
+    # crbug.com/647372
+    if possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X':
+      return True
+
+    return False
 
   @classmethod
   def Name(cls):

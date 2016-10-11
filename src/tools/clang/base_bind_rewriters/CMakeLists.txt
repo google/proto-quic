@@ -2,8 +2,11 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   MCParser
   Option
+  Support
   X86AsmParser
   X86CodeGen
+  X86Desc
+  X86Info
   )
 
 add_llvm_executable(base_bind_rewriters
@@ -23,6 +26,7 @@ target_link_libraries(base_bind_rewriters
   clangSema
   clangSerialization
   clangTooling
+  clangToolingCore
   )
 
 cr_install(TARGETS base_bind_rewriters RUNTIME DESTINATION bin)

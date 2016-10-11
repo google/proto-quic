@@ -365,6 +365,17 @@ BASE_EXPORT int GetUniquePathNumber(const FilePath& path,
 BASE_EXPORT bool SetNonBlocking(int fd);
 
 #if defined(OS_POSIX)
+// Creates a non-blocking, close-on-exec pipe.
+// This creates a non-blocking pipe that is not intended to be shared with any
+// child process. This will be done atomically if the operating system supports
+// it. Returns true if it was able to create the pipe, otherwise false.
+BASE_EXPORT bool CreateLocalNonBlockingPipe(int fds[2]);
+
+// Sets the given |fd| to close-on-exec mode.
+// Returns true if it was able to set it in the close-on-exec mode, otherwise
+// false.
+BASE_EXPORT bool SetCloseOnExec(int fd);
+
 // Test that |path| can only be changed by a given user and members of
 // a given set of groups.
 // Specifically, test that all parts of |path| under (and including) |base|:

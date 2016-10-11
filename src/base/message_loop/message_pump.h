@@ -124,15 +124,6 @@ class BASE_EXPORT MessagePump : public NonThreadSafe {
 
   // Sets the timer slack to the specified value.
   virtual void SetTimerSlack(TimerSlack timer_slack);
-
-#if defined(OS_WIN)
-  // TODO (stanisc): crbug.com/596190: Remove this after the signaling issue
-  // has been investigated.
-  // This should be used for diagnostic only. If message pump wake-up mechanism
-  // is based on auto-reset event this call would reset the event to unset
-  // state.
-  virtual bool WasSignaled();
-#endif
 };
 
 }  // namespace base

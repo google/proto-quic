@@ -50,6 +50,9 @@ class Socket {
   // Returns the number of bytes read.
   int Read(void* buffer, size_t buffer_size);
 
+  // Same as Read() but with a timeout.
+  int ReadWithTimeout(void* buffer, size_t buffer_size, int timeout_secs);
+
   // Non-blocking version of Read() above. This must be called after a
   // successful call to select(). The socket must also be in non-blocking mode
   // before calling this method.
@@ -66,6 +69,9 @@ class Socket {
   // Returns number of bytes read, which can be different from num_bytes in case
   // of errror.
   int ReadNumBytes(void* buffer, size_t num_bytes);
+
+  // Same as ReadNumBytes() but with a timeout.
+  int ReadNumBytesWithTimeout(void* buffer, size_t num_bytes, int timeout_secs);
 
   // Calls Write() multiple times until num_bytes is written. No bounds checking
   // is performed. Returns number of bytes written, which can be different from

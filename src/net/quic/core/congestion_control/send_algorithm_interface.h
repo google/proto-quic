@@ -49,11 +49,11 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
 
   // Indicates an update to the congestion state, caused either by an incoming
   // ack or loss event timeout.  |rtt_updated| indicates whether a new
-  // latest_rtt sample has been taken, |byte_in_flight| the bytes in flight
-  // prior to the congestion event.  |acked_packets| and |lost_packets| are
-  // any packets considered acked or lost as a result of the congestion event.
+  // latest_rtt sample has been taken, |prior_in_flight| the bytes in flight
+  // prior to the congestion event.  |acked_packets| and |lost_packets| are any
+  // packets considered acked or lost as a result of the congestion event.
   virtual void OnCongestionEvent(bool rtt_updated,
-                                 QuicByteCount bytes_in_flight,
+                                 QuicByteCount prior_in_flight,
                                  const CongestionVector& acked_packets,
                                  const CongestionVector& lost_packets) = 0;
 
@@ -87,11 +87,6 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
   // What's the current estimated bandwidth in bytes per second.
   // Returns 0 when it does not have an estimate.
   virtual QuicBandwidth BandwidthEstimate() const = 0;
-
-  // Get the send algorithm specific retransmission delay, called RTO in TCP,
-  // Note 1: the caller is responsible for sanity checking this value.
-  // Note 2: this will return zero if we don't have enough data for an estimate.
-  virtual QuicTime::Delta RetransmissionDelay() const = 0;
 
   // Returns the size of the current congestion window in bytes.  Note, this is
   // not the *available* window.  Some send algorithms may not use a congestion

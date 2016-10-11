@@ -26,14 +26,12 @@ JavaObjectWeakGlobalRef::JavaObjectWeakGlobalRef(JavaObjectWeakGlobalRef&& orig)
 
 JavaObjectWeakGlobalRef::JavaObjectWeakGlobalRef(JNIEnv* env, jobject obj)
     : obj_(env->NewWeakGlobalRef(obj)) {
-  DCHECK(obj_);
 }
 
 JavaObjectWeakGlobalRef::JavaObjectWeakGlobalRef(
     JNIEnv* env,
     const base::android::JavaRef<jobject>& obj)
     : obj_(env->NewWeakGlobalRef(obj.obj())) {
-  DCHECK(obj_);
 }
 
 JavaObjectWeakGlobalRef::~JavaObjectWeakGlobalRef() {

@@ -140,11 +140,15 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // Marks |bytes_consumed| of the headers data as consumed.
   void MarkHeadersConsumed(size_t bytes_consumed);
 
-  // Marks |bytes_consumed| of the trailers data as consumed.
+  // Marks |bytes_consumed| of the trailers data as consumed. This applies to
+  // the case where this object receives headers and trailers data via calls to
+  // OnStreamHeaders().
   void MarkTrailersConsumed(size_t bytes_consumed);
 
-  // Marks the trailers as consumed.
-  void MarkTrailersDelivered();
+  // Marks the trailers as consumed. This applies to the case where this object
+  // receives headers and trailers as QuicHeaderLists via calls to
+  // OnStreamHeaderList().
+  void MarkTrailersConsumed();
 
   // Clears |header_list_|.
   void ConsumeHeaderList();
@@ -189,6 +193,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // Returns true if headers have been fully read and consumed.
   bool FinishedReadingHeaders() const;
 
+  // Returns true if trailers have been fully read and consumed.
+  bool FinishedReadingTrailers() const;
+
   virtual SpdyPriority priority() const;
 
   // Sets priority_ to priority.  This should only be called before bytes are
@@ -230,9 +237,6 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   friend class test::ReliableQuicStreamPeer;
   friend class QuicStreamUtils;
 
-  // Returns true if trailers have been fully read and consumed.
-  bool FinishedReadingTrailers() const;
-
   QuicSpdySession* spdy_session_;
 
   Visitor* visitor_;
@@ -250,7 +254,7 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // True if the trailers have been completely decompressed.
   bool trailers_decompressed_;
   // True if the trailers have been consumed.
-  bool trailers_delivered_;
+  bool trailers_consumed_;
   // Contains a copy of the decompressed trailers until they are consumed
   // via ProcessData or Readv.
   std::string decompressed_trailers_;

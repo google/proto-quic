@@ -72,6 +72,10 @@ void OneWayLink::ScheduleNextPacketDeparture() {
 }
 
 QuicTime::Delta OneWayLink::GetRandomDelay(QuicTime::Delta transfer_time) {
+  if (!simulator_->enable_random_delays()) {
+    return QuicTime::Delta::Zero();
+  }
+
   QuicTime::Delta delta = QuicTime::Delta::FromMicroseconds(
       simulator_->GetRandomGenerator()->RandUint64() % (kMaxRandomDelayUs + 1));
   // Have an upper bound on the delay to ensure packets do not go out of order.

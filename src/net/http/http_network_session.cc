@@ -11,8 +11,8 @@
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
 #include "base/memory/memory_coordinator_client_registry.h"
+#include "base/memory/ptr_util.h"
 #include "base/profiler/scoped_tracker.h"
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
@@ -224,19 +224,22 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
 }
 
 HttpNetworkSession::~HttpNetworkSession() {
-  base::STLDeleteElements(&response_drainers_);
+  response_drainers_.clear();
   spdy_session_pool_.CloseAllSessions();
   base::MemoryCoordinatorClientRegistry::GetInstance()->Unregister(this);
 }
 
-void HttpNetworkSession::AddResponseDrainer(HttpResponseBodyDrainer* drainer) {
-  DCHECK(!base::ContainsKey(response_drainers_, drainer));
-  response_drainers_.insert(drainer);
+void HttpNetworkSession::AddResponseDrainer(
+    std::unique_ptr<HttpResponseBodyDrainer> drainer) {
+  DCHECK(!base::ContainsKey(response_drainers_, drainer.get()));
+  HttpResponseBodyDrainer* drainer_ptr = drainer.get();
+  response_drainers_[drainer_ptr] = std::move(drainer);
 }
 
 void HttpNetworkSession::RemoveResponseDrainer(
     HttpResponseBodyDrainer* drainer) {
   DCHECK(base::ContainsKey(response_drainers_, drainer));
+  response_drainers_[drainer].release();
   response_drainers_.erase(drainer);
 }
 

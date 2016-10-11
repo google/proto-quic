@@ -50,7 +50,7 @@ def main(argv):
           data = fileobj.read()
         pkg_name = re.search(r'^\s*package\s+(.*?)\s*;', data, re.M).group(1)
         arcname = '%s/%s' % (pkg_name.replace('.', '/'), os.path.basename(path))
-        srcjar.writestr(arcname, data)
+        build_utils.AddToZipHermetic(srcjar, arcname, data=data)
 
   if options.depfile:
     build_utils.WriteDepfile(options.depfile, options.srcjar)

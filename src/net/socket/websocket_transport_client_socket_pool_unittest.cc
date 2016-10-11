@@ -67,7 +67,7 @@ class WebSocketTransportClientSocketPoolTest : public ::testing::Test {
               kMaxSocketsPerGroup,
               host_resolver_.get(),
               &client_socket_factory_,
-              NULL) {}
+              nullptr) {}
 
   ~WebSocketTransportClientSocketPoolTest() override {
     RunUntilIdle();
@@ -517,11 +517,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
 // socket which finishes first.
 TEST_F(WebSocketTransportClientSocketPoolTest,
        IPv6FallbackSocketIPv4FinishesFirst) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   MockTransportClientSocketFactory::ClientSocketType case_types[] = {
       // This is the IPv6 socket.
@@ -558,11 +556,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
 // finish first.
 TEST_F(WebSocketTransportClientSocketPoolTest,
        IPv6FallbackSocketIPv6FinishesFirst) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   MockTransportClientSocketFactory::ClientSocketType case_types[] = {
       // This is the IPv6 socket.
@@ -598,11 +594,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
 
 TEST_F(WebSocketTransportClientSocketPoolTest,
        IPv6NoIPv4AddressesToFallbackTo) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   client_socket_factory_.set_default_client_socket_type(
       MockTransportClientSocketFactory::MOCK_DELAYED_CLIENT_SOCKET);
@@ -630,11 +624,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest,
 }
 
 TEST_F(WebSocketTransportClientSocketPoolTest, IPv4HasNoFallback) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   client_socket_factory_.set_default_client_socket_type(
       MockTransportClientSocketFactory::MOCK_DELAYED_CLIENT_SOCKET);
@@ -663,11 +655,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv4HasNoFallback) {
 // If all IPv6 addresses fail to connect synchronously, then IPv4 connections
 // proceeed immediately.
 TEST_F(WebSocketTransportClientSocketPoolTest, IPv6InstantFail) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   MockTransportClientSocketFactory::ClientSocketType case_types[] = {
       // First IPv6 socket.
@@ -700,11 +690,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv6InstantFail) {
 // If all IPv6 addresses fail before the IPv4 fallback timeout, then the IPv4
 // connections proceed immediately.
 TEST_F(WebSocketTransportClientSocketPoolTest, IPv6RapidFail) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   MockTransportClientSocketFactory::ClientSocketType case_types[] = {
       // First IPv6 socket.
@@ -745,11 +733,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest, IPv6RapidFail) {
 // can only happen if the sockets are different types, since sockets of the same
 // type do not race).
 TEST_F(WebSocketTransportClientSocketPoolTest, FirstSuccessWins) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   client_socket_factory_.set_default_client_socket_type(
       MockTransportClientSocketFactory::MOCK_TRIGGERABLE_CLIENT_SOCKET);
@@ -784,11 +770,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest, FirstSuccessWins) {
 
 // We should not report failure until all connections have failed.
 TEST_F(WebSocketTransportClientSocketPoolTest, LastFailureWins) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
 
   client_socket_factory_.set_default_client_socket_type(
       MockTransportClientSocketFactory::MOCK_DELAYED_FAILING_CLIENT_SOCKET);
@@ -827,11 +811,9 @@ TEST_F(WebSocketTransportClientSocketPoolTest, LastFailureWins) {
 // because it takes 4 minutes. Run with --gtest_also_run_disabled_tests if you
 // want to run it.
 TEST_F(WebSocketTransportClientSocketPoolTest, DISABLED_OverallTimeoutApplies) {
-  WebSocketTransportClientSocketPool pool(kMaxSockets,
-                                          kMaxSocketsPerGroup,
+  WebSocketTransportClientSocketPool pool(kMaxSockets, kMaxSocketsPerGroup,
                                           host_resolver_.get(),
-                                          &client_socket_factory_,
-                                          NULL);
+                                          &client_socket_factory_, nullptr);
   const base::TimeDelta connect_job_timeout = pool.ConnectionTimeout();
 
   client_socket_factory_.set_default_client_socket_type(

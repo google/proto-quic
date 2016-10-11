@@ -50,7 +50,7 @@ class CookieMonsterDelegate;
 // backing store. Otherwise, callbacks may be invoked immediately.
 //
 // A cookie task is either pending loading of the entire cookie store, or
-// loading of cookies for a specfic domain key(eTLD+1). In the former case, the
+// loading of cookies for a specific domain key(eTLD+1). In the former case, the
 // cookie task will be queued in tasks_pending_ while PersistentCookieStore
 // chain loads the cookie store on DB thread. In the latter case, the cookie
 // task will be queued in tasks_pending_for_key_ while PermanentCookieStore
@@ -97,10 +97,11 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // for the hashing might not overcome the O(log(1000)) for querying
   // a multimap.  Also, multimap is standard, another reason to use it.
   // TODO(rdsmith): This benchmark should be re-done now that we're allowing
-  // subtantially more entries in the map.
-  typedef std::multimap<std::string, CanonicalCookie*> CookieMap;
-  typedef std::pair<CookieMap::iterator, CookieMap::iterator> CookieMapItPair;
-  typedef std::vector<CookieMap::iterator> CookieItVector;
+  // substantially more entries in the map.
+  using CookieMap =
+      std::multimap<std::string, std::unique_ptr<CanonicalCookie>>;
+  using CookieMapItPair = std::pair<CookieMap::iterator, CookieMap::iterator>;
+  using CookieItVector = std::vector<CookieMap::iterator>;
 
   // Cookie garbage collection thresholds.  Based off of the Mozilla defaults.
   // When the number of cookies gets to k{Domain,}MaxCookies
@@ -243,7 +244,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
       CookieMonsterTest,
       TestCookieDeleteAllCreatedBetweenTimestampsWithPredicate);
 
-  // For gargage collection constants.
+  // For garbage collection constants.
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, TestHostGarbageCollection);
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, TestTotalGarbageCollection);
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, GarbageCollectionTriggers);
@@ -451,7 +452,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // was invoked and is used for reporting histogram_time_blocked_on_load_.
   // See PersistentCookieStore::Load for details on the contents of cookies.
   void OnLoaded(base::TimeTicks beginning_time,
-                const std::vector<CanonicalCookie*>& cookies);
+                std::vector<std::unique_ptr<CanonicalCookie>> cookies);
 
   // Stores cookies loaded from the backing store and invokes the deferred
   // task(s) pending loading of cookies associated with the domain key
@@ -459,10 +460,11 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // loaded from DB. See PersistentCookieStore::Load for details on the contents
   // of cookies.
   void OnKeyLoaded(const std::string& key,
-                   const std::vector<CanonicalCookie*>& cookies);
+                   std::vector<std::unique_ptr<CanonicalCookie>> cookies);
 
   // Stores the loaded cookies.
-  void StoreLoadedCookies(const std::vector<CanonicalCookie*>& cookies);
+  void StoreLoadedCookies(
+      std::vector<std::unique_ptr<CanonicalCookie>> cookies);
 
   // Invokes deferred calls.
   void InvokeQueue();
@@ -505,10 +507,10 @@ class NET_EXPORT CookieMonster : public CookieStore {
                                  bool already_expired,
                                  bool enforce_strict_secure);
 
-  // Takes ownership of *cc. Returns an iterator that points to the inserted
+  // Inserts |cc| into cookies_. Returns an iterator that points to the inserted
   // cookie in cookies_. Guarantee: all iterators to cookies_ remain valid.
   CookieMap::iterator InternalInsertCookie(const std::string& key,
-                                           CanonicalCookie* cc,
+                                           std::unique_ptr<CanonicalCookie> cc,
                                            const GURL& source_url,
                                            bool sync_to_store);
 
@@ -536,7 +538,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // |deletion_cause| argument is used for collecting statistics and choosing
   // the correct CookieStore::ChangeCause for OnCookieChanged
   // notifications.  Guarantee: All iterators to cookies_ except to the
-  // deleted entry remain vaild.
+  // deleted entry remain valid.
   void InternalDeleteCookie(CookieMap::iterator it,
                             bool sync_to_store,
                             DeletionCause deletion_cause);
@@ -714,8 +716,9 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   bool persist_session_cookies_;
 
-  typedef std::map<std::pair<GURL, std::string>,
-                   linked_ptr<CookieChangedCallbackList>> CookieChangedHookMap;
+  using CookieChangedHookMap =
+      std::map<std::pair<GURL, std::string>,
+               std::unique_ptr<CookieChangedCallbackList>>;
   CookieChangedHookMap hook_map_;
 
   base::ThreadChecker thread_checker_;
@@ -754,7 +757,7 @@ typedef base::RefCountedThreadSafe<CookieMonster::PersistentCookieStore>
 class NET_EXPORT CookieMonster::PersistentCookieStore
     : public RefcountedPersistentCookieStore {
  public:
-  typedef base::Callback<void(const std::vector<CanonicalCookie*>&)>
+  typedef base::Callback<void(std::vector<std::unique_ptr<CanonicalCookie>>)>
       LoadedCallback;
 
   // TODO(erikchen): Depending on the results of the cookie monster Finch

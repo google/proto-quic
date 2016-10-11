@@ -45,7 +45,6 @@ void QuicMultipathReceivedPacketManager::OnPathClosed(QuicPathId path_id) {
 
 void QuicMultipathReceivedPacketManager::RecordPacketReceived(
     QuicPathId path_id,
-    QuicByteCount bytes,
     const QuicPacketHeader& header,
     QuicTime receipt_time) {
   QuicReceivedPacketManager* manager = path_managers_[path_id];
@@ -54,7 +53,7 @@ void QuicMultipathReceivedPacketManager::RecordPacketReceived(
     return;
   }
 
-  manager->RecordPacketReceived(bytes, header, receipt_time);
+  manager->RecordPacketReceived(header, receipt_time);
 }
 
 bool QuicMultipathReceivedPacketManager::IsMissing(

@@ -11,6 +11,7 @@
 #include <limits>
 #include <vector>
 
+#include "base/gtest_prod_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -46,11 +47,14 @@
 //     }
 //
 //     void NotifyFoo() {
-//       FOR_EACH_OBSERVER(Observer, observer_list_, OnFoo(this));
+//       for (auto& observer : observer_list_)
+//         observer.OnFoo(this);
 //     }
 //
 //     void NotifyBar(int x, int y) {
-//       FOR_EACH_OBSERVER(Observer, observer_list_, OnBar(this, x, y));
+//       for (FooList::iterator i = observer_list.begin(),
+//           e = observer_list.end(); i != e; ++i)
+//        i->OnBar(this, x, y);
 //     }
 //
 //    private:
@@ -80,19 +84,68 @@ class ObserverListBase
     NOTIFY_EXISTING_ONLY
   };
 
-  // An iterator class that can be used to access the list of observers.  See
-  // also the FOR_EACH_OBSERVER macro defined below.
-  class Iterator {
+  // An iterator class that can be used to access the list of observers.
+  template <class ContainerType>
+  class Iter {
    public:
-    explicit Iterator(ObserverListBase<ObserverType>* list);
-    ~Iterator();
+    Iter();
+    explicit Iter(ContainerType* list);
+    ~Iter();
+
+    // Deprecated.
     ObserverType* GetNext();
 
+    // A workaround for C2244. MSVC requires fully qualified type name for
+    // return type on a function definition to match a function declaration.
+    using ThisType =
+        typename ObserverListBase<ObserverType>::template Iter<ContainerType>;
+
+    bool operator==(const Iter& other) const;
+    bool operator!=(const Iter& other) const;
+    ThisType& operator++();
+    ObserverType* operator->() const;
+    ObserverType& operator*() const;
+
    private:
+    FRIEND_TEST_ALL_PREFIXES(ObserverListTest, BasicStdIterator);
+    FRIEND_TEST_ALL_PREFIXES(ObserverListTest, StdIteratorRemoveFront);
+
+    ObserverType* GetCurrent() const;
+    void EnsureValidIndex();
+
+    size_t clamped_max_index() const {
+      return std::min(max_index_, list_->observers_.size());
+    }
+
+    bool is_end() const { return !list_ || index_ == clamped_max_index(); }
+
     WeakPtr<ObserverListBase<ObserverType>> list_;
+    // When initially constructed and each time the iterator is incremented,
+    // |index_| is guaranteed to point to a non-null index if the iterator
+    // has not reached the end of the ObserverList.
     size_t index_;
     size_t max_index_;
   };
+
+  using Iterator = Iter<ObserverListBase<ObserverType>>;
+
+  using iterator = Iter<ObserverListBase<ObserverType>>;
+  iterator begin() {
+    // An optimization: do not involve weak pointers for empty list.
+    // Note: can't use ?: operator here due to some MSVC bug (unit tests fail)
+    if (observers_.empty())
+      return iterator();
+    return iterator(this);
+  }
+  iterator end() { return iterator(); }
+
+  using const_iterator = Iter<const ObserverListBase<ObserverType>>;
+  const_iterator begin() const {
+    if (observers_.empty())
+      return const_iterator();
+    return const_iterator(this);
+  }
+  const_iterator end() const { return const_iterator(); }
 
   ObserverListBase() : notify_depth_(0), type_(NOTIFY_ALL) {}
   explicit ObserverListBase(NotificationType type)
@@ -124,37 +177,108 @@ class ObserverListBase
   int notify_depth_;
   NotificationType type_;
 
-  friend class ObserverListBase::Iterator;
+  template <class ContainerType>
+  friend class Iter;
 
   DISALLOW_COPY_AND_ASSIGN(ObserverListBase);
 };
 
 template <class ObserverType>
-ObserverListBase<ObserverType>::Iterator::Iterator(
-    ObserverListBase<ObserverType>* list)
-    : list_(list->AsWeakPtr()),
+template <class ContainerType>
+ObserverListBase<ObserverType>::Iter<ContainerType>::Iter()
+    : index_(0), max_index_(0) {}
+
+template <class ObserverType>
+template <class ContainerType>
+ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
+    : list_(const_cast<ObserverListBase<ObserverType>*>(list)->AsWeakPtr()),
       index_(0),
       max_index_(list->type_ == NOTIFY_ALL ? std::numeric_limits<size_t>::max()
                                            : list->observers_.size()) {
+  EnsureValidIndex();
+  DCHECK(list_);
   ++list_->notify_depth_;
 }
 
 template <class ObserverType>
-ObserverListBase<ObserverType>::Iterator::~Iterator() {
-  if (list_.get() && --list_->notify_depth_ == 0)
+template <class ContainerType>
+ObserverListBase<ObserverType>::Iter<ContainerType>::~Iter() {
+  if (list_ && --list_->notify_depth_ == 0)
     list_->Compact();
 }
 
 template <class ObserverType>
-ObserverType* ObserverListBase<ObserverType>::Iterator::GetNext() {
-  if (!list_.get())
-    return nullptr;
-  ListType& observers = list_->observers_;
-  // Advance if the current element is null
-  size_t max_index = std::min(max_index_, observers.size());
-  while (index_ < max_index && !observers[index_])
+template <class ContainerType>
+bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator==(
+    const Iter& other) const {
+  if (is_end() && other.is_end())
+    return true;
+  return list_.get() == other.list_.get() && index_ == other.index_;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator!=(
+    const Iter& other) const {
+  return !operator==(other);
+}
+
+template <class ObserverType>
+template <class ContainerType>
+typename ObserverListBase<ObserverType>::template Iter<ContainerType>&
+    ObserverListBase<ObserverType>::Iter<ContainerType>::operator++() {
+  if (list_) {
     ++index_;
-  return index_ < max_index ? observers[index_++] : nullptr;
+    EnsureValidIndex();
+  }
+  return *this;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->()
+    const {
+  ObserverType* current = GetCurrent();
+  DCHECK(current);
+  return current;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*()
+    const {
+  ObserverType* current = GetCurrent();
+  DCHECK(current);
+  return *current;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::GetCurrent()
+    const {
+  if (!list_)
+    return nullptr;
+  return index_ < clamped_max_index() ? list_->observers_[index_] : nullptr;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
+  if (!list_)
+    return;
+
+  size_t max_index = clamped_max_index();
+  while (index_ < max_index && !list_->observers_[index_])
+    ++index_;
+}
+
+template <class ObserverType>
+template <class ContainerType>
+ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::GetNext() {
+  EnsureValidIndex();
+  ObserverType* current = GetCurrent();
+  operator++();
+  return current;
 }
 
 template <class ObserverType>
@@ -205,9 +329,8 @@ void ObserverListBase<ObserverType>::Clear() {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::Compact() {
-  observers_.erase(
-      std::remove(observers_.begin(), observers_.end(), nullptr),
-      observers_.end());
+  observers_.erase(std::remove(observers_.begin(), observers_.end(), nullptr),
+                   observers_.end());
 }
 
 template <class ObserverType, bool check_empty = false>
@@ -233,15 +356,11 @@ class ObserverList : public ObserverListBase<ObserverType> {
   }
 };
 
-#define FOR_EACH_OBSERVER(ObserverType, observer_list, func)             \
-  do {                                                                   \
-    if ((observer_list).might_have_observers()) {                        \
-      typename base::ObserverListBase<ObserverType>::Iterator            \
-          it_inside_observer_macro(&observer_list);                      \
-      ObserverType* obs;                                                 \
-      while ((obs = it_inside_observer_macro.GetNext()) != nullptr)      \
-        obs->func;                                                       \
-    }                                                                    \
+// Deprecated. Use the range-based for loop instead.
+#define FOR_EACH_OBSERVER(ObserverType, observer_list, func) \
+  do {                                                       \
+    for (ObserverType & o : observer_list)                   \
+      o.func;                                                \
   } while (0)
 
 }  // namespace base

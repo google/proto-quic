@@ -126,14 +126,22 @@ enum class ExecutionMode {
   SINGLE_THREADED,
 };
 
-// Stream operators so TaskPriority and TaskShutdownBehavior can be used in
-// DCHECK statements.
+// Returns string literals for the enums defined in this file. These methods
+// should only be used for tracing and debugging.
+BASE_EXPORT const char* TaskPriorityToString(TaskPriority task_priority);
+BASE_EXPORT const char* TaskShutdownBehaviorToString(
+    TaskShutdownBehavior task_priority);
+BASE_EXPORT const char* ExecutionModeToString(ExecutionMode task_priority);
+
+// Stream operators so that the enums defined in this file can be used in
+// DCHECK and EXPECT statements.
 BASE_EXPORT std::ostream& operator<<(std::ostream& os,
                                      const TaskPriority& shutdown_behavior);
-
 BASE_EXPORT std::ostream& operator<<(
     std::ostream& os,
     const TaskShutdownBehavior& shutdown_behavior);
+BASE_EXPORT std::ostream& operator<<(std::ostream& os,
+                                     const ExecutionMode& execution_mode);
 
 }  // namespace base
 

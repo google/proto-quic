@@ -36,6 +36,7 @@ class HttpResponseInfo;
 class IOBuffer;
 struct LoadTimingInfo;
 class NetworkDelegate;
+class ProxyServer;
 class SSLCertRequestInfo;
 class SSLInfo;
 class SSLPrivateKey;
@@ -325,7 +326,7 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   const URLRequestStatus GetStatus();
 
   // Set the proxy server that was used, if any.
-  void SetProxyServer(const HostPortPair& proxy_server);
+  void SetProxyServer(const ProxyServer& proxy_server);
 
   // The number of bytes read after passing through the filter. This value
   // reflects bytes read even when there is no filter.

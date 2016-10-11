@@ -112,11 +112,6 @@ class NET_EXPORT URLRequestThrottlerEntry
   virtual const BackoffEntry* GetBackoffEntry() const;
   virtual BackoffEntry* GetBackoffEntry();
 
-  // Returns true if |load_flags| contains a flag that indicates an
-  // explicit request by the user to load the resource. We never
-  // throttle requests with such load flags.
-  static bool ExplicitUserRequest(const int load_flags);
-
   // Used by tests.
   base::TimeTicks sliding_window_release_time() const {
     return sliding_window_release_time_;

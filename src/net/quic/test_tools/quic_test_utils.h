@@ -756,7 +756,6 @@ class MockSendAlgorithm : public SendAlgorithmInterface {
   MOCK_CONST_METHOD0(BandwidthEstimate, QuicBandwidth(void));
   MOCK_CONST_METHOD0(HasReliableBandwidthEstimate, bool());
   MOCK_METHOD1(OnRttUpdated, void(QuicPacketNumber));
-  MOCK_CONST_METHOD0(RetransmissionDelay, QuicTime::Delta(void));
   MOCK_CONST_METHOD0(GetCongestionWindow, QuicByteCount());
   MOCK_CONST_METHOD0(GetDebugState, std::string());
   MOCK_CONST_METHOD0(InSlowStart, bool());
@@ -900,10 +899,8 @@ class MockReceivedPacketManager : public QuicReceivedPacketManager {
   explicit MockReceivedPacketManager(QuicConnectionStats* stats);
   ~MockReceivedPacketManager() override;
 
-  MOCK_METHOD3(RecordPacketReceived,
-               void(QuicByteCount bytes,
-                    const QuicPacketHeader& header,
-                    QuicTime receipt_time));
+  MOCK_METHOD2(RecordPacketReceived,
+               void(const QuicPacketHeader& header, QuicTime receipt_time));
   MOCK_METHOD1(IsMissing, bool(QuicPacketNumber packet_number));
   MOCK_METHOD1(IsAwaitingPacket, bool(QuicPacketNumber packet_number));
   MOCK_METHOD1(UpdatePacketInformationSentByPeer,

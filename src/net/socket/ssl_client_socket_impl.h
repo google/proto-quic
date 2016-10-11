@@ -29,7 +29,6 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/openssl_ssl_util.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_client_cert_type.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -336,8 +335,8 @@ class SSLClientSocketImpl : public SSLClientSocket {
   TokenBindingSignatureMap tb_signature_map_;
 
   // OpenSSL stuff
-  SSL* ssl_;
-  BIO* transport_bio_;
+  bssl::UniquePtr<SSL> ssl_;
+  bssl::UniquePtr<BIO> transport_bio_;
 
   std::unique_ptr<ClientSocketHandle> transport_;
   const HostPortPair host_and_port_;
@@ -368,7 +367,7 @@ class SSLClientSocketImpl : public SSLClientSocket {
   bool channel_id_sent_;
   // If non-null, the newly-established to be inserted into the session cache
   // once certificate verification is done.
-  ScopedSSL_SESSION pending_session_;
+  bssl::UniquePtr<SSL_SESSION> pending_session_;
   // True if the initial handshake's certificate has been verified.
   bool certificate_verified_;
   // Set to true if a CertificateRequest was received.

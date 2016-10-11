@@ -160,8 +160,6 @@ enable_themes = !is_android && !is_ios
 enable_rlz_support = is_win || is_mac || is_ios || is_chromeos
 enable_rlz = is_chrome_branded && enable_rlz_support
 
-enable_service_discovery = enable_mdns || is_mac
-
 # Image loader extension is enabled on ChromeOS only.
 enable_image_loader_extension = is_chromeos
 

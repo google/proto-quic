@@ -4,6 +4,7 @@
 
 #include "net/cert/internal/verify_signed_data.h"
 
+#include <openssl/bn.h>
 #include <openssl/bytestring.h>
 #include <openssl/digest.h>
 #include <openssl/ec.h>
@@ -14,7 +15,6 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/signature_policy.h"
@@ -81,7 +81,7 @@ WARN_UNUSED_RESULT bool ApplyRsaPssOptions(const RsaPssParameters* params,
 // See https://crbug.com/522228 and https://crbug.com/522232
 WARN_UNUSED_RESULT bool ImportPkeyFromSpki(const der::Input& spki,
                                            int expected_pkey_id,
-                                           crypto::ScopedEVP_PKEY* pkey) {
+                                           bssl::UniquePtr<EVP_PKEY>* pkey) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   CBS cbs;
@@ -153,7 +153,7 @@ WARN_UNUSED_RESULT bool ImportPkeyFromSpki(const der::Input& spki,
 //
 // Following RFC 3279 in this case.
 WARN_UNUSED_RESULT bool ParseRsaKeyFromSpki(const der::Input& public_key_spki,
-                                            crypto::ScopedEVP_PKEY* pkey,
+                                            bssl::UniquePtr<EVP_PKEY>* pkey,
                                             const SignaturePolicy* policy,
                                             CertErrors* errors) {
   // TODO(crbug.com/634443): Add more specific errors.
@@ -161,7 +161,7 @@ WARN_UNUSED_RESULT bool ParseRsaKeyFromSpki(const der::Input& public_key_spki,
     return false;
 
   // Extract the modulus length from the key.
-  crypto::ScopedRSA rsa(EVP_PKEY_get1_RSA(pkey->get()));
+  RSA* rsa = EVP_PKEY_get0_RSA(pkey->get());
   if (!rsa)
     return false;
   unsigned int modulus_length_bits = BN_num_bits(rsa->n);
@@ -191,7 +191,7 @@ WARN_UNUSED_RESULT bool DoVerify(const SignatureAlgorithm& algorithm,
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  crypto::ScopedEVP_MD_CTX ctx(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX ctx;
   EVP_PKEY_CTX* pctx = nullptr;  // Owned by |ctx|.
 
   const EVP_MD* digest;
@@ -262,7 +262,7 @@ WARN_UNUSED_RESULT bool DoVerify(const SignatureAlgorithm& algorithm,
 //     ... -- Extensible
 //     }
 WARN_UNUSED_RESULT bool ParseEcKeyFromSpki(const der::Input& public_key_spki,
-                                           crypto::ScopedEVP_PKEY* pkey,
+                                           bssl::UniquePtr<EVP_PKEY>* pkey,
                                            const SignaturePolicy* policy,
                                            CertErrors* errors) {
   // TODO(crbug.com/634443): Add more specific errors.
@@ -270,10 +270,10 @@ WARN_UNUSED_RESULT bool ParseEcKeyFromSpki(const der::Input& public_key_spki,
     return false;
 
   // Extract the curve name.
-  crypto::ScopedEC_KEY ec(EVP_PKEY_get1_EC_KEY(pkey->get()));
-  if (!ec.get())
+  EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey->get());
+  if (!ec)
     return false;  // Unexpected.
-  int curve_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec.get()));
+  int curve_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec));
 
   if (!policy->IsAcceptableCurveForEcdsa(curve_nid, errors)) {
     errors->AddError(kUnacceptableEcdsaCurve);
@@ -296,7 +296,7 @@ bool VerifySignedData(const SignatureAlgorithm& signature_algorithm,
     return false;
   }
 
-  crypto::ScopedEVP_PKEY public_key;
+  bssl::UniquePtr<EVP_PKEY> public_key;
 
   // Parse the SPKI to an EVP_PKEY appropriate for the signature algorithm.
   switch (signature_algorithm.algorithm()) {

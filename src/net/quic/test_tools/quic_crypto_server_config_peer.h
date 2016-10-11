@@ -17,6 +17,9 @@ class QuicCryptoServerConfigPeer {
       const QuicCryptoServerConfig* server_config)
       : server_config_(server_config) {}
 
+  // Returns the proof source.
+  ProofSource* GetProofSource();
+
   // Returns the primary config.
   scoped_refptr<QuicCryptoServerConfig::Config> GetPrimaryConfig();
 

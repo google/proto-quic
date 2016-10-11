@@ -128,9 +128,12 @@ TEST(ThreadLocalStorageTest, MAYBE_TLSDestructors) {
 }
 
 TEST(ThreadLocalStorageTest, TLSReclaim) {
-  // Creates and destroys many TLS slots.
+  // Creates and destroys many TLS slots and ensures they all zero-inited.
   for (int i = 0; i < 1000; ++i) {
     ThreadLocalStorage::Slot slot(nullptr);
+    EXPECT_EQ(nullptr, slot.Get());
+    slot.Set(reinterpret_cast<void*>(0xBAADF00D));
+    EXPECT_EQ(reinterpret_cast<void*>(0xBAADF00D), slot.Get());
   }
 }
 

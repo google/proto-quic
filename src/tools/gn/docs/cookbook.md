@@ -259,7 +259,6 @@ places are noted in the table below.
 | `enable_basic_printing` (0/1)           | `enable_basic_printing` (true/false)           | `//build/config/features.gni` |
 | `enable_print_preview` (0/1)            | `enable_print_preview` (true/false)            | `//build/config/features.gni` |
 | `enable_rlz` (0/1)                      | `enable_rlz` (true/false)                      | `//build/config/features.gni` |
-| `enable_service_discovery` (0/1)        | `enable_service_discovery` (true/false)        | `//build/config/features.gni` |
 | `enable_spellcheck` (0/1)               | `enable_spellcheck` (true/false)               | `//build/config/features.gni` |
 | `enable_session_service` (0/1)          | `enable_session_service` (true/false)          | `//build/config/features.gni` |
 | `enable_task_manager` (0/1)             | `enable_task_manager` (true/false)             | `//build/config/features.gni` |

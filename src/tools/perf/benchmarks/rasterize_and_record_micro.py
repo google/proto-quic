@@ -56,11 +56,10 @@ class RasterizeAndRecordMicroTop25(_RasterizeAndRecordMicro):
 
   @classmethod
   def Name(cls):
-    return 'rasterize_and_record_micro.top_25_smooth'
+    return 'rasterize_and_record_micro.top_25'
 
 
-@benchmark.Disabled('mac', 'win',
-                    'android')  # http://crbug.com/531597
+@benchmark.Disabled('mac', 'win', 'android')  # http://crbug.com/531597
 class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
   """Measures rasterize and record performance on the key mobile sites.
 
@@ -69,7 +68,7 @@ class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
 
   @classmethod
   def Name(cls):
-    return 'rasterize_and_record_micro.key_mobile_sites_smooth'
+    return 'rasterize_and_record_micro.key_mobile_sites'
 
 
 @benchmark.Disabled('mac', 'win', 'android') # http://crbug.com/610424

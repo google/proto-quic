@@ -30,10 +30,8 @@
 #include "base/threading/thread_local.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
-#include "crypto/auto_cbb.h"
 #include "crypto/ec_private_key.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/cert/cert_verifier.h"
@@ -47,7 +45,6 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_parameters_callback.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_cipher_suite_names.h"
 #include "net/ssl/ssl_client_session_cache.h"
@@ -358,7 +355,7 @@ class SSLClientSocketImpl::SSLContext {
   // SSLClientSocketImpl object from an SSL instance.
   int ssl_socket_data_index_;
 
-  ScopedSSL_CTX ssl_ctx_;
+  bssl::UniquePtr<SSL_CTX> ssl_ctx_;
 
 #if !defined(OS_NACL)
   std::unique_ptr<SSLKeyLogger> ssl_key_logger_;
@@ -417,7 +414,7 @@ class SSLClientSocketImpl::PeerCertificateChain {
   }
 
  private:
-  ScopedX509Stack openssl_chain_;
+  bssl::UniquePtr<STACK_OF(X509)> openssl_chain_;
 };
 
 SSLClientSocketImpl::PeerCertificateChain&
@@ -492,8 +489,6 @@ SSLClientSocketImpl::SSLClientSocketImpl(
       tb_was_negotiated_(false),
       tb_negotiated_param_(TB_PARAM_ECDSAP256),
       tb_signature_map_(10),
-      ssl_(NULL),
-      transport_bio_(NULL),
       transport_(std::move(transport_socket)),
       host_and_port_(host_and_port),
       ssl_config_(ssl_config),
@@ -555,7 +550,7 @@ Error SSLClientSocketImpl::GetTokenBindingSignature(crypto::ECPrivateKey* key,
 
   uint8_t tb_ekm_buf[32];
   static const char kTokenBindingExporterLabel[] = "EXPORTER-Token-Binding";
-  if (!SSL_export_keying_material(ssl_, tb_ekm_buf, sizeof(tb_ekm_buf),
+  if (!SSL_export_keying_material(ssl_.get(), tb_ekm_buf, sizeof(tb_ekm_buf),
                                   kTokenBindingExporterLabel,
                                   strlen(kTokenBindingExporterLabel), nullptr,
                                   0, false /* no context */)) {
@@ -587,7 +582,7 @@ int SSLClientSocketImpl::ExportKeyingMaterial(const base::StringPiece& label,
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   if (!SSL_export_keying_material(
-          ssl_, out, outlen, label.data(), label.size(),
+          ssl_.get(), out, outlen, label.data(), label.size(),
           reinterpret_cast<const unsigned char*>(context.data()),
           context.length(), has_context ? 1 : 0)) {
     LOG(ERROR) << "Failed to export keying material.";
@@ -616,7 +611,7 @@ int SSLClientSocketImpl::Connect(const CompletionCallback& callback) {
   }
 
   // Set SSL to client mode. Handshake happens in the loop below.
-  SSL_set_connect_state(ssl_);
+  SSL_set_connect_state(ssl_.get());
 
   next_handshake_state_ = STATE_HANDSHAKE;
   rv = DoHandshakeLoop(OK);
@@ -635,14 +630,10 @@ void SSLClientSocketImpl::Disconnect() {
   if (ssl_) {
     // Calling SSL_shutdown prevents the session from being marked as
     // unresumable.
-    SSL_shutdown(ssl_);
-    SSL_free(ssl_);
-    ssl_ = NULL;
+    SSL_shutdown(ssl_.get());
+    ssl_.reset();
   }
-  if (transport_bio_) {
-    BIO_free_all(transport_bio_);
-    transport_bio_ = NULL;
-  }
+  transport_bio_.reset();
 
   disconnected_ = true;
 
@@ -718,7 +709,7 @@ bool SSLClientSocketImpl::IsConnectedAndIdle() const {
   // that has not yet been flushed to the network. |Write| returns early, so
   // this can cause race conditions which cause a socket to not be treated
   // reusable when it should be. See https://crbug.com/466147.
-  if (BIO_wpending(transport_bio_) > 0)
+  if (BIO_wpending(transport_bio_.get()) > 0)
     return false;
 
   return transport_->socket()->IsConnectedAndIdle();
@@ -786,25 +777,22 @@ bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
 
   AddCTInfoToSSLInfo(ssl_info);
 
-  const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl_);
+  const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl_.get());
   CHECK(cipher);
   ssl_info->security_bits = SSL_CIPHER_get_bits(cipher, NULL);
   // Historically, the "group" was known as "curve".
-  ssl_info->key_exchange_group = SSL_get_curve_id(ssl_);
+  ssl_info->key_exchange_group = SSL_get_curve_id(ssl_.get());
 
   SSLConnectionStatusSetCipherSuite(
       static_cast<uint16_t>(SSL_CIPHER_get_id(cipher)),
       &ssl_info->connection_status);
-  SSLConnectionStatusSetVersion(GetNetSSLVersion(ssl_),
+  SSLConnectionStatusSetVersion(GetNetSSLVersion(ssl_.get()),
                                 &ssl_info->connection_status);
 
-  if (!SSL_get_secure_renegotiation_support(ssl_))
+  if (!SSL_get_secure_renegotiation_support(ssl_.get()))
     ssl_info->connection_status |= SSL_CONNECTION_NO_RENEGOTIATION_EXTENSION;
 
-  if (ssl_config_.version_fallback)
-    ssl_info->connection_status |= SSL_CONNECTION_VERSION_FALLBACK;
-
-  ssl_info->handshake_type = SSL_session_reused(ssl_)
+  ssl_info->handshake_type = SSL_session_reused(ssl_.get())
                                  ? SSLInfo::HANDSHAKE_RESUME
                                  : SSLInfo::HANDSHAKE_FULL;
 
@@ -882,8 +870,8 @@ int SSLClientSocketImpl::Init() {
   SSLContext* context = SSLContext::GetInstance();
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  ssl_ = SSL_new(context->ssl_ctx());
-  if (!ssl_ || !context->SetClientSocketForSSL(ssl_, this))
+  ssl_.reset(SSL_new(context->ssl_ctx()));
+  if (!ssl_ || !context->SetClientSocketForSSL(ssl_.get(), this))
     return ERR_UNEXPECTED;
 
   // SNI should only contain valid DNS hostnames, not IP addresses (see RFC
@@ -893,14 +881,14 @@ int SSLClientSocketImpl::Init() {
   // See https://crbug.com/496472 and https://crbug.com/496468 for discussion.
   IPAddress unused;
   if (!unused.AssignFromIPLiteral(host_and_port_.host()) &&
-      !SSL_set_tlsext_host_name(ssl_, host_and_port_.host().c_str())) {
+      !SSL_set_tlsext_host_name(ssl_.get(), host_and_port_.host().c_str())) {
     return ERR_UNEXPECTED;
   }
 
-  ScopedSSL_SESSION session =
+  bssl::UniquePtr<SSL_SESSION> session =
       context->session_cache()->Lookup(GetSessionCacheKey());
   if (session)
-    SSL_set_session(ssl_, session.get());
+    SSL_set_session(ssl_.get(), session.get());
 
   // Get read and write buffer sizes from field trials, if possible. If values
   // not present, use default.  Also make sure values are in reasonable range.
@@ -935,12 +923,14 @@ int SSLClientSocketImpl::Init() {
   BIO* ssl_bio = NULL;
 
   // SSLClientSocketImpl retains ownership of the BIO buffers.
+  BIO* transport_bio_raw;
   if (!BIO_new_bio_pair_external_buf(
           &ssl_bio, send_buffer_->capacity(),
-          reinterpret_cast<uint8_t*>(send_buffer_->data()), &transport_bio_,
+          reinterpret_cast<uint8_t*>(send_buffer_->data()), &transport_bio_raw,
           recv_buffer_->capacity(),
           reinterpret_cast<uint8_t*>(recv_buffer_->data())))
     return ERR_UNEXPECTED;
+  transport_bio_.reset(transport_bio_raw);
   DCHECK(ssl_bio);
   DCHECK(transport_bio_);
 
@@ -948,12 +938,12 @@ int SSLClientSocketImpl::Init() {
   BIO_set_callback(ssl_bio, &SSLClientSocketImpl::BIOCallback);
   BIO_set_callback_arg(ssl_bio, reinterpret_cast<char*>(this));
 
-  SSL_set_bio(ssl_, ssl_bio, ssl_bio);
+  SSL_set_bio(ssl_.get(), ssl_bio, ssl_bio);
 
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_min);
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_max);
-  if (!SSL_set_min_proto_version(ssl_, ssl_config_.version_min) ||
-      !SSL_set_max_proto_version(ssl_, ssl_config_.version_max)) {
+  if (!SSL_set_min_proto_version(ssl_.get(), ssl_config_.version_min) ||
+      !SSL_set_max_proto_version(ssl_.get(), ssl_config_.version_max)) {
     return ERR_UNEXPECTED;
   }
 
@@ -965,8 +955,8 @@ int SSLClientSocketImpl::Init() {
   // TODO(joth): Set this conditionally, see http://crbug.com/55410
   options.ConfigureFlag(SSL_OP_LEGACY_SERVER_CONNECT, true);
 
-  SSL_set_options(ssl_, options.set_mask);
-  SSL_clear_options(ssl_, options.clear_mask);
+  SSL_set_options(ssl_.get(), options.set_mask);
+  SSL_clear_options(ssl_.get(), options.clear_mask);
 
   // Same as above, this time for the SSL mode.
   SslSetClearMask mode;
@@ -977,10 +967,8 @@ int SSLClientSocketImpl::Init() {
   mode.ConfigureFlag(SSL_MODE_ENABLE_FALSE_START,
                      ssl_config_.false_start_enabled);
 
-  mode.ConfigureFlag(SSL_MODE_SEND_FALLBACK_SCSV, ssl_config_.version_fallback);
-
-  SSL_set_mode(ssl_, mode.set_mask);
-  SSL_clear_mode(ssl_, mode.clear_mask);
+  SSL_set_mode(ssl_.get(), mode.set_mask);
+  SSL_clear_mode(ssl_.get(), mode.clear_mask);
 
   // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
   // (note that SHA256 and SHA384 only select legacy CBC ciphers). Also disable
@@ -1026,7 +1014,7 @@ int SSLClientSocketImpl::Init() {
     }
   }
 
-  int rv = SSL_set_cipher_list(ssl_, command.c_str());
+  int rv = SSL_set_cipher_list(ssl_.get(), command.c_str());
   // If this fails (rv = 0) it means there are no ciphers enabled on this SSL.
   // This will almost certainly result in the socket failing to complete the
   // handshake at which point the appropriate error is bubbled up to the client.
@@ -1036,23 +1024,24 @@ int SSLClientSocketImpl::Init() {
 
   // TLS channel ids.
   if (IsChannelIDEnabled()) {
-    SSL_enable_tls_channel_id(ssl_);
+    SSL_enable_tls_channel_id(ssl_.get());
   }
 
   if (!ssl_config_.alpn_protos.empty()) {
     std::vector<uint8_t> wire_protos =
         SerializeNextProtos(ssl_config_.alpn_protos);
-    SSL_set_alpn_protos(ssl_, wire_protos.empty() ? NULL : &wire_protos[0],
+    SSL_set_alpn_protos(ssl_.get(),
+                        wire_protos.empty() ? NULL : &wire_protos[0],
                         wire_protos.size());
   }
 
   if (ssl_config_.signed_cert_timestamps_enabled) {
-    SSL_enable_signed_cert_timestamps(ssl_);
-    SSL_enable_ocsp_stapling(ssl_);
+    SSL_enable_signed_cert_timestamps(ssl_.get());
+    SSL_enable_ocsp_stapling(ssl_.get());
   }
 
   if (cert_verifier_->SupportsOCSPStapling())
-    SSL_enable_ocsp_stapling(ssl_);
+    SSL_enable_ocsp_stapling(ssl_.get());
 
   return OK;
 }
@@ -1105,7 +1094,7 @@ int SSLClientSocketImpl::DoHandshake() {
   // TODO(cbentzel): Leave only 1 call to SSL_do_handshake once crbug.com/424386
   // is fixed.
   if (ssl_config_.send_client_cert && ssl_config_.client_cert.get()) {
-    rv = SSL_do_handshake(ssl_);
+    rv = SSL_do_handshake(ssl_.get());
   } else {
     if (g_first_run_completed.Get().Get()) {
       // TODO(cbentzel): Remove ScopedTracker below once crbug.com/424386 is
@@ -1113,16 +1102,16 @@ int SSLClientSocketImpl::DoHandshake() {
       tracked_objects::ScopedTracker tracking_profile(
           FROM_HERE_WITH_EXPLICIT_FUNCTION("424386 SSL_do_handshake()"));
 
-      rv = SSL_do_handshake(ssl_);
+      rv = SSL_do_handshake(ssl_.get());
     } else {
       g_first_run_completed.Get().Set(true);
-      rv = SSL_do_handshake(ssl_);
+      rv = SSL_do_handshake(ssl_.get());
     }
   }
 
   int net_error = OK;
   if (rv <= 0) {
-    int ssl_error = SSL_get_error(ssl_, rv);
+    int ssl_error = SSL_get_error(ssl_.get(), rv);
     if (ssl_error == SSL_ERROR_WANT_CHANNEL_ID_LOOKUP) {
       // The server supports channel ID. Stop to look one up before returning to
       // the handshake.
@@ -1163,32 +1152,27 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   if (result < 0)
     return result;
 
-  if (ssl_config_.version_fallback &&
-      ssl_config_.version_max < ssl_config_.version_fallback_min) {
-    return ERR_SSL_FALLBACK_BEYOND_MINIMUM_VERSION;
-  }
-
   // DHE is offered on the deprecated cipher fallback and then rejected
   // afterwards. This is to aid in diagnosing connection failures because a
   // server requires DHE ciphers.
   //
   // TODO(davidben): A few releases after DHE's removal, remove this logic.
   if (!ssl_config_.dhe_enabled &&
-      SSL_CIPHER_is_DHE(SSL_get_current_cipher(ssl_))) {
+      SSL_CIPHER_is_DHE(SSL_get_current_cipher(ssl_.get()))) {
     return ERR_SSL_OBSOLETE_CIPHER;
   }
 
   // Check that if token binding was negotiated, then extended master secret
   // and renegotiation indication must also be negotiated.
   if (tb_was_negotiated_ &&
-      !(SSL_get_extms_support(ssl_) &&
-        SSL_get_secure_renegotiation_support(ssl_))) {
+      !(SSL_get_extms_support(ssl_.get()) &&
+        SSL_get_secure_renegotiation_support(ssl_.get()))) {
     return ERR_SSL_PROTOCOL_ERROR;
   }
 
   const uint8_t* alpn_proto = NULL;
   unsigned alpn_len = 0;
-  SSL_get0_alpn_selected(ssl_, &alpn_proto, &alpn_len);
+  SSL_get0_alpn_selected(ssl_.get(), &alpn_proto, &alpn_len);
   if (alpn_len > 0) {
     base::StringPiece proto(reinterpret_cast<const char*>(alpn_proto),
                             alpn_len);
@@ -1200,7 +1184,7 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
 
   const uint8_t* ocsp_response_raw;
   size_t ocsp_response_len;
-  SSL_get0_ocsp_response(ssl_, &ocsp_response_raw, &ocsp_response_len);
+  SSL_get0_ocsp_response(ssl_.get(), &ocsp_response_raw, &ocsp_response_len);
   std::string ocsp_response;
   if (ocsp_response_len > 0) {
     ocsp_response_.assign(reinterpret_cast<const char*>(ocsp_response_raw),
@@ -1211,13 +1195,13 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
 
   const uint8_t* sct_list;
   size_t sct_list_len;
-  SSL_get0_signed_cert_timestamp_list(ssl_, &sct_list, &sct_list_len);
+  SSL_get0_signed_cert_timestamp_list(ssl_.get(), &sct_list, &sct_list_len);
   set_signed_cert_timestamps_received(sct_list_len != 0);
 
   if (IsRenegotiationAllowed())
-    SSL_set_renegotiate_mode(ssl_, ssl_renegotiate_freely);
+    SSL_set_renegotiate_mode(ssl_.get(), ssl_renegotiate_freely);
 
-  uint16_t signature_algorithm = SSL_get_peer_signature_algorithm(ssl_);
+  uint16_t signature_algorithm = SSL_get_peer_signature_algorithm(ssl_.get());
   if (signature_algorithm != 0) {
     UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSLSignatureAlgorithm",
                                 signature_algorithm);
@@ -1252,7 +1236,7 @@ int SSLClientSocketImpl::DoChannelIDLookupComplete(int result) {
   // type.
   DCHECK(channel_id_key_);
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  if (!SSL_set1_tls_channel_id(ssl_, channel_id_key_->key())) {
+  if (!SSL_set1_tls_channel_id(ssl_.get(), channel_id_key_->key())) {
     LOG(ERROR) << "Failed to set Channel ID.";
     return ERR_FAILED;
   }
@@ -1367,7 +1351,7 @@ void SSLClientSocketImpl::DoConnectCallback(int rv) {
 }
 
 void SSLClientSocketImpl::UpdateServerCert() {
-  server_cert_chain_->Reset(SSL_get_peer_cert_chain(ssl_));
+  server_cert_chain_->Reset(SSL_get_peer_cert_chain(ssl_.get()));
   server_cert_ = server_cert_chain_->AsOSChain();
   if (server_cert_.get()) {
     net_log_.AddEvent(NetLogEventType::SSL_CERTIFICATES_RECEIVED,
@@ -1513,7 +1497,7 @@ int SSLClientSocketImpl::DoPayloadRead() {
   int total_bytes_read = 0;
   int ssl_ret;
   do {
-    ssl_ret = SSL_read(ssl_, user_read_buf_->data() + total_bytes_read,
+    ssl_ret = SSL_read(ssl_.get(), user_read_buf_->data() + total_bytes_read,
                        user_read_buf_len_ - total_bytes_read);
     if (ssl_ret > 0)
       total_bytes_read += ssl_ret;
@@ -1531,7 +1515,7 @@ int SSLClientSocketImpl::DoPayloadRead() {
     // TransportReadComplete converts the first to an ERR_CONNECTION_CLOSED
     // error, so it does not occur. The second and third are distinguished by
     // SSL_ERROR_ZERO_RETURN.
-    pending_read_ssl_error_ = SSL_get_error(ssl_, ssl_ret);
+    pending_read_ssl_error_ = SSL_get_error(ssl_.get(), ssl_ret);
     if (pending_read_ssl_error_ == SSL_ERROR_ZERO_RETURN) {
       pending_read_error_ = 0;
     } else if (pending_read_ssl_error_ == SSL_ERROR_WANT_X509_LOOKUP &&
@@ -1590,7 +1574,7 @@ int SSLClientSocketImpl::DoPayloadRead() {
 
 int SSLClientSocketImpl::DoPayloadWrite() {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-  int rv = SSL_write(ssl_, user_write_buf_->data(), user_write_buf_len_);
+  int rv = SSL_write(ssl_.get(), user_write_buf_->data(), user_write_buf_len_);
 
   if (rv >= 0) {
     net_log_.AddByteTransferEvent(NetLogEventType::SSL_SOCKET_BYTES_SENT, rv,
@@ -1598,7 +1582,7 @@ int SSLClientSocketImpl::DoPayloadWrite() {
     return rv;
   }
 
-  int ssl_error = SSL_get_error(ssl_, rv);
+  int ssl_error = SSL_get_error(ssl_.get(), rv);
   if (ssl_error == SSL_ERROR_WANT_PRIVATE_KEY_OPERATION)
     return ERR_IO_PENDING;
   OpenSSLErrorInfo error_info;
@@ -1646,7 +1630,7 @@ int SSLClientSocketImpl::BufferSend(void) {
   size_t buffer_read_offset;
   uint8_t* read_buf;
   size_t max_read;
-  int status = BIO_zero_copy_get_read_buf(transport_bio_, &read_buf,
+  int status = BIO_zero_copy_get_read_buf(transport_bio_.get(), &read_buf,
                                           &buffer_read_offset, &max_read);
   DCHECK_EQ(status, 1);  // Should never fail.
   if (!max_read)
@@ -1673,7 +1657,7 @@ int SSLClientSocketImpl::BufferRecv(void) {
 
   // Determine how much was requested from |transport_bio_| that was not
   // actually available.
-  size_t requested = BIO_ctrl_get_read_request(transport_bio_);
+  size_t requested = BIO_ctrl_get_read_request(transport_bio_.get());
   if (requested == 0) {
     // This is not a perfect match of error codes, as no operation is
     // actually pending. However, returning 0 would be interpreted as
@@ -1693,7 +1677,7 @@ int SSLClientSocketImpl::BufferRecv(void) {
   size_t buffer_write_offset;
   uint8_t* write_buf;
   size_t max_write;
-  int status = BIO_zero_copy_get_write_buf(transport_bio_, &write_buf,
+  int status = BIO_zero_copy_get_write_buf(transport_bio_.get(), &write_buf,
                                            &buffer_write_offset, &max_write);
   DCHECK_EQ(status, 1);  // Should never fail.
   if (!max_write)
@@ -1737,7 +1721,8 @@ void SSLClientSocketImpl::TransportWriteComplete(int result) {
     bytes_written = result;
   }
   DCHECK_GE(send_buffer_->RemainingCapacity(), bytes_written);
-  int ret = BIO_zero_copy_get_read_buf_done(transport_bio_, bytes_written);
+  int ret =
+      BIO_zero_copy_get_read_buf_done(transport_bio_.get(), bytes_written);
   DCHECK_EQ(1, ret);
   transport_send_busy_ = false;
 }
@@ -1757,7 +1742,7 @@ int SSLClientSocketImpl::TransportReadComplete(int result) {
     bytes_read = result;
   }
   DCHECK_GE(recv_buffer_->RemainingCapacity(), bytes_read);
-  int ret = BIO_zero_copy_get_write_buf_done(transport_bio_, bytes_read);
+  int ret = BIO_zero_copy_get_write_buf_done(transport_bio_.get(), bytes_read);
   DCHECK_EQ(1, ret);
   transport_recv_busy_ = false;
   return result;
@@ -1766,7 +1751,7 @@ int SSLClientSocketImpl::TransportReadComplete(int result) {
 int SSLClientSocketImpl::VerifyCT() {
   const uint8_t* sct_list_raw;
   size_t sct_list_len;
-  SSL_get0_signed_cert_timestamp_list(ssl_, &sct_list_raw, &sct_list_len);
+  SSL_get0_signed_cert_timestamp_list(ssl_.get(), &sct_list_raw, &sct_list_len);
   std::string sct_list;
   if (sct_list_len > 0)
     sct_list.assign(reinterpret_cast<const char*>(sct_list_raw), sct_list_len);
@@ -1776,7 +1761,7 @@ int SSLClientSocketImpl::VerifyCT() {
   // external communication.
   cert_transparency_verifier_->Verify(
       server_cert_verify_result_.verified_cert.get(), ocsp_response_, sct_list,
-      &ct_verify_result_, net_log_);
+      &ct_verify_result_.scts, net_log_);
 
   ct_verify_result_.ct_policies_applied = true;
   ct_verify_result_.ev_policy_compliance =
@@ -1823,13 +1808,13 @@ int SSLClientSocketImpl::VerifyCT() {
 }
 
 int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
-  DCHECK(ssl == ssl_);
+  DCHECK(ssl == ssl_.get());
 
   net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_REQUESTED);
   certificate_requested_ = true;
 
   // Clear any currently configured certificates.
-  SSL_certs_clear(ssl_);
+  SSL_certs_clear(ssl_.get());
 
 #if defined(OS_IOS)
   // TODO(droger): Support client auth on iOS. See http://crbug.com/145954).
@@ -1862,7 +1847,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
 
   // Second pass: a client certificate should have been selected.
   if (ssl_config_.client_cert.get()) {
-    ScopedX509 leaf_x509 =
+    bssl::UniquePtr<X509> leaf_x509 =
         OSCertHandleToOpenSSL(ssl_config_.client_cert->os_cert_handle());
     if (!leaf_x509) {
       LOG(WARNING) << "Failed to import certificate";
@@ -1870,7 +1855,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       return -1;
     }
 
-    ScopedX509Stack chain = OSCertHandlesToOpenSSL(
+    bssl::UniquePtr<STACK_OF(X509)> chain = OSCertHandlesToOpenSSL(
         ssl_config_.client_cert->GetIntermediateCertificates());
     if (!chain) {
       LOG(WARNING) << "Failed to import intermediate certificates";
@@ -1878,8 +1863,8 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       return -1;
     }
 
-    if (!SSL_use_certificate(ssl_, leaf_x509.get()) ||
-        !SSL_set1_chain(ssl_, chain.get())) {
+    if (!SSL_use_certificate(ssl_.get(), leaf_x509.get()) ||
+        !SSL_set1_chain(ssl_.get(), chain.get())) {
       LOG(WARNING) << "Failed to set client certificate";
       return -1;
     }
@@ -1892,7 +1877,7 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       return -1;
     }
 
-    SSL_set_private_key_method(ssl_, &SSLContext::kPrivateKeyMethod);
+    SSL_set_private_key_method(ssl_.get(), &SSLContext::kPrivateKeyMethod);
 
     std::vector<SSLPrivateKey::Hash> digest_prefs =
         ssl_config_.client_private_key->GetDigestPreferences();
@@ -1919,7 +1904,8 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
       }
     }
 
-    SSL_set_private_key_digest_prefs(ssl_, digests.data(), digests.size());
+    SSL_set_private_key_digest_prefs(ssl_.get(), digests.data(),
+                                     digests.size());
 
     int cert_count = 1 + sk_X509_num(chain.get());
     net_log_.AddEvent(NetLogEventType::SSL_CLIENT_CERT_PROVIDED,
@@ -2035,26 +2021,6 @@ std::string SSLClientSocketImpl::GetSessionCacheKey() const {
   std::string result = host_and_port_.ToString();
   result.append("/");
   result.append(ssl_session_cache_shard_);
-
-  // Shard the session cache based on maximum protocol version. This causes
-  // fallback connections to use a separate session cache.
-  result.append("/");
-  switch (ssl_config_.version_max) {
-    case SSL_PROTOCOL_VERSION_TLS1:
-      result.append("tls1");
-      break;
-    case SSL_PROTOCOL_VERSION_TLS1_1:
-      result.append("tls1.1");
-      break;
-    case SSL_PROTOCOL_VERSION_TLS1_2:
-      result.append("tls1.2");
-      break;
-    case SSL_PROTOCOL_VERSION_TLS1_3:
-      result.append("tls1.3");
-      break;
-    default:
-      NOTREACHED();
-  }
 
   result.append("/");
   if (ssl_config_.deprecated_cipher_suites_enabled)
@@ -2178,7 +2144,7 @@ int SSLClientSocketImpl::TokenBindingAdd(const uint8_t** out,
   if (ssl_config_.token_binding_params.empty()) {
     return 0;
   }
-  crypto::AutoCBB output;
+  bssl::ScopedCBB output;
   CBB parameters_list;
   if (!CBB_init(output.get(), 7) ||
       !CBB_add_u8(output.get(), kTbProtocolVersionMajor) ||

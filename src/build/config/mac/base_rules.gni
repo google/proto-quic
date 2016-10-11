@@ -155,12 +155,18 @@ template("compile_xibs") {
     outputs = [
       "$target_gen_dir/$target_name/{{source_name_part}}.nib",
     ]
-    args =
-        [
-          "--input",
-          "{{source}}",
-          "--output",
-          rebase_path("$target_gen_dir/$target_name/{{source_name_part}}.nib"),
-        ] + ibtool_flags
+    args = [
+      "--input",
+      "{{source}}",
+      "--output",
+      rebase_path("$target_gen_dir/$target_name/{{source_name_part}}.nib"),
+    ]
+    if (!use_system_xcode) {
+      args += [
+        "--developer_dir",
+        hermetic_xcode_path,
+      ]
+    }
+    args += ibtool_flags
   }
 }

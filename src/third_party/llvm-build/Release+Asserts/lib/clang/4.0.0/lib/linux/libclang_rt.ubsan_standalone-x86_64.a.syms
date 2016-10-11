@@ -20,7 +20,6 @@
   __sanitizer_cov_trace_switch;
   __sanitizer_cov_with_check;
   __sanitizer_get_coverage_guards;
-  __sanitizer_get_coverage_pc_buffer_pos;
   __sanitizer_get_number_of_counters;
   __sanitizer_get_total_unique_caller_callee_pairs;
   __sanitizer_get_total_unique_coverage;
@@ -29,7 +28,6 @@
   __sanitizer_report_error_summary;
   __sanitizer_reset_coverage;
   __sanitizer_sandbox_on_notify;
-  __sanitizer_set_coverage_pc_buffer;
   __sanitizer_set_death_callback;
   __sanitizer_set_report_fd;
   __sanitizer_set_report_path;

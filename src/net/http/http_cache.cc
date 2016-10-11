@@ -21,7 +21,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -112,12 +111,12 @@ HttpCache::ActiveEntry::~ActiveEntry() {
 // This structure keeps track of work items that are attempting to create or
 // open cache entries or the backend itself.
 struct HttpCache::PendingOp {
-  PendingOp() : disk_entry(NULL), writer(NULL) {}
+  PendingOp() : disk_entry(NULL) {}
   ~PendingOp() {}
 
   disk_cache::Entry* disk_entry;
   std::unique_ptr<disk_cache::Backend> backend;
-  WorkItem* writer;
+  std::unique_ptr<WorkItem> writer;
   CompletionCallback callback;  // BackendCallback.
   WorkItemList pending_queue;
 };
@@ -335,7 +334,7 @@ HttpCache::~HttpCache() {
   // won't run (due to our destruction), we can simply ignore the corresponding
   // will_process_pending_queue flag.
   while (!active_entries_.empty()) {
-    ActiveEntry* entry = active_entries_.begin()->second;
+    ActiveEntry* entry = active_entries_.begin()->second.get();
     entry->will_process_pending_queue = false;
     entry->pending_queue.clear();
     entry->readers.clear();
@@ -343,18 +342,18 @@ HttpCache::~HttpCache() {
     DeactivateEntry(entry);
   }
 
-  base::STLDeleteElements(&doomed_entries_);
+  doomed_entries_.clear();
 
   // Before deleting pending_ops_, we have to make sure that the disk cache is
   // done with said operations, or it will attempt to use deleted data.
   disk_cache_.reset();
 
-  PendingOpsMap::iterator pending_it = pending_ops_.begin();
-  for (; pending_it != pending_ops_.end(); ++pending_it) {
+  for (auto pending_it = pending_ops_.begin(); pending_it != pending_ops_.end();
+       ++pending_it) {
     // We are not notifying the transactions about the cache going away, even
     // though they are waiting for a callback that will never fire.
     PendingOp* pending_op = pending_it->second;
-    delete pending_op->writer;
+    pending_op->writer.reset();
     bool delete_pending_op = true;
     if (building_backend_) {
       // If we don't have a backend, when its construction finishes it will
@@ -367,7 +366,7 @@ HttpCache::~HttpCache() {
       pending_op->callback.Reset();
     }
 
-    base::STLDeleteElements(&pending_op->pending_queue);
+    pending_op->pending_queue.clear();
     if (delete_pending_op)
       delete pending_op;
   }
@@ -488,21 +487,21 @@ int HttpCache::CreateBackend(disk_cache::Backend** backend,
 
   building_backend_ = true;
 
-  std::unique_ptr<WorkItem> item(
-      new WorkItem(WI_CREATE_BACKEND, NULL, callback, backend));
+  std::unique_ptr<WorkItem> item =
+      base::MakeUnique<WorkItem>(WI_CREATE_BACKEND, nullptr, callback, backend);
 
   // This is the only operation that we can do that is not related to any given
   // entry, so we use an empty key for it.
   PendingOp* pending_op = GetPendingOp(std::string());
   if (pending_op->writer) {
     if (!callback.is_null())
-      pending_op->pending_queue.push_back(item.release());
+      pending_op->pending_queue.push_back(std::move(item));
     return ERR_IO_PENDING;
   }
 
   DCHECK(pending_op->pending_queue.empty());
 
-  pending_op->writer = item.release();
+  pending_op->writer = std::move(item);
   pending_op->callback = base::Bind(&HttpCache::OnPendingOpComplete,
                                     GetWeakPtr(), pending_op);
 
@@ -523,11 +522,11 @@ int HttpCache::GetBackendForTransaction(Transaction* trans) {
   if (!building_backend_)
     return ERR_FAILED;
 
-  WorkItem* item =
-      new WorkItem(WI_CREATE_BACKEND, trans, CompletionCallback(), NULL);
+  std::unique_ptr<WorkItem> item = base::MakeUnique<WorkItem>(
+      WI_CREATE_BACKEND, trans, CompletionCallback(), nullptr);
   PendingOp* pending_op = GetPendingOp(std::string());
   DCHECK(pending_op->writer);
-  pending_op->pending_queue.push_back(item);
+  pending_op->pending_queue.push_back(std::move(item));
   return ERR_IO_PENDING;
 }
 
@@ -549,7 +548,7 @@ std::string HttpCache::GenerateCacheKey(const HttpRequestInfo* request) {
 }
 
 void HttpCache::DoomActiveEntry(const std::string& key) {
-  ActiveEntriesMap::iterator it = active_entries_.find(key);
+  auto it = active_entries_.find(key);
   if (it == active_entries_.end())
     return;
 
@@ -564,44 +563,47 @@ int HttpCache::DoomEntry(const std::string& key, Transaction* trans) {
   // should not be impacted.  Dooming an entry only means that it will no
   // longer be returned by FindActiveEntry (and it will also be destroyed once
   // all consumers are finished with the entry).
-  ActiveEntriesMap::iterator it = active_entries_.find(key);
+  auto it = active_entries_.find(key);
   if (it == active_entries_.end()) {
     DCHECK(trans);
     return AsyncDoomEntry(key, trans);
   }
 
-  ActiveEntry* entry = it->second;
+  std::unique_ptr<ActiveEntry> entry = std::move(it->second);
   active_entries_.erase(it);
 
   // We keep track of doomed entries so that we can ensure that they are
   // cleaned up properly when the cache is destroyed.
-  doomed_entries_.insert(entry);
+  ActiveEntry* entry_ptr = entry.get();
+  DCHECK_EQ(0u, doomed_entries_.count(entry_ptr));
+  doomed_entries_[entry_ptr] = std::move(entry);
 
-  entry->disk_entry->Doom();
-  entry->doomed = true;
+  entry_ptr->disk_entry->Doom();
+  entry_ptr->doomed = true;
 
-  DCHECK(entry->writer || !entry->readers.empty() ||
-         entry->will_process_pending_queue);
+  DCHECK(entry_ptr->writer || !entry_ptr->readers.empty() ||
+         entry_ptr->will_process_pending_queue);
   return OK;
 }
 
 int HttpCache::AsyncDoomEntry(const std::string& key, Transaction* trans) {
-  WorkItem* item = new WorkItem(WI_DOOM_ENTRY, trans, NULL);
+  std::unique_ptr<WorkItem> item =
+      base::MakeUnique<WorkItem>(WI_DOOM_ENTRY, trans, nullptr);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
-    pending_op->pending_queue.push_back(item);
+    pending_op->pending_queue.push_back(std::move(item));
     return ERR_IO_PENDING;
   }
 
   DCHECK(pending_op->pending_queue.empty());
 
-  pending_op->writer = item;
+  pending_op->writer = std::move(item);
   pending_op->callback = base::Bind(&HttpCache::OnPendingOpComplete,
                                     GetWeakPtr(), pending_op);
 
   int rv = disk_cache_->DoomEntry(key, pending_op->callback);
   if (rv != ERR_IO_PENDING) {
-    item->ClearTransaction();
+    pending_op->writer->ClearTransaction();
     pending_op->callback.Run(rv);
   }
 
@@ -631,23 +633,21 @@ void HttpCache::FinalizeDoomedEntry(ActiveEntry* entry) {
   DCHECK(entry->readers.empty());
   DCHECK(entry->pending_queue.empty());
 
-  ActiveEntriesSet::iterator it = doomed_entries_.find(entry);
+  auto it = doomed_entries_.find(entry);
   DCHECK(it != doomed_entries_.end());
   doomed_entries_.erase(it);
-
-  delete entry;
 }
 
 HttpCache::ActiveEntry* HttpCache::FindActiveEntry(const std::string& key) {
-  ActiveEntriesMap::const_iterator it = active_entries_.find(key);
-  return it != active_entries_.end() ? it->second : NULL;
+  auto it = active_entries_.find(key);
+  return it != active_entries_.end() ? it->second.get() : NULL;
 }
 
 HttpCache::ActiveEntry* HttpCache::ActivateEntry(
     disk_cache::Entry* disk_entry) {
   DCHECK(!FindActiveEntry(disk_entry->GetKey()));
   ActiveEntry* entry = new ActiveEntry(disk_entry);
-  active_entries_[disk_entry->GetKey()] = entry;
+  active_entries_[disk_entry->GetKey()] = base::WrapUnique(entry);
   return entry;
 }
 
@@ -663,21 +663,18 @@ void HttpCache::DeactivateEntry(ActiveEntry* entry) {
   if (key.empty())
     return SlowDeactivateEntry(entry);
 
-  ActiveEntriesMap::iterator it = active_entries_.find(key);
+  auto it = active_entries_.find(key);
   DCHECK(it != active_entries_.end());
-  DCHECK(it->second == entry);
+  DCHECK(it->second.get() == entry);
 
   active_entries_.erase(it);
-  delete entry;
 }
 
 // We don't know this entry's key so we have to find it without it.
 void HttpCache::SlowDeactivateEntry(ActiveEntry* entry) {
-  for (ActiveEntriesMap::iterator it = active_entries_.begin();
-       it != active_entries_.end(); ++it) {
-    if (it->second == entry) {
+  for (auto it = active_entries_.begin(); it != active_entries_.end(); ++it) {
+    if (it->second.get() == entry) {
       active_entries_.erase(it);
-      delete entry;
       break;
     }
   }
@@ -686,7 +683,7 @@ void HttpCache::SlowDeactivateEntry(ActiveEntry* entry) {
 HttpCache::PendingOp* HttpCache::GetPendingOp(const std::string& key) {
   DCHECK(!FindActiveEntry(key));
 
-  PendingOpsMap::const_iterator it = pending_ops_.find(key);
+  auto it = pending_ops_.find(key);
   if (it != pending_ops_.end())
     return it->second;
 
@@ -701,12 +698,11 @@ void HttpCache::DeletePendingOp(PendingOp* pending_op) {
     key = pending_op->disk_entry->GetKey();
 
   if (!key.empty()) {
-    PendingOpsMap::iterator it = pending_ops_.find(key);
+    auto it = pending_ops_.find(key);
     DCHECK(it != pending_ops_.end());
     pending_ops_.erase(it);
   } else {
-    for (PendingOpsMap::iterator it = pending_ops_.begin();
-         it != pending_ops_.end(); ++it) {
+    for (auto it = pending_ops_.begin(); it != pending_ops_.end(); ++it) {
       if (it->second == pending_op) {
         pending_ops_.erase(it);
         break;
@@ -726,23 +722,24 @@ int HttpCache::OpenEntry(const std::string& key, ActiveEntry** entry,
     return OK;
   }
 
-  WorkItem* item = new WorkItem(WI_OPEN_ENTRY, trans, entry);
+  std::unique_ptr<WorkItem> item =
+      base::MakeUnique<WorkItem>(WI_OPEN_ENTRY, trans, entry);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
-    pending_op->pending_queue.push_back(item);
+    pending_op->pending_queue.push_back(std::move(item));
     return ERR_IO_PENDING;
   }
 
   DCHECK(pending_op->pending_queue.empty());
 
-  pending_op->writer = item;
+  pending_op->writer = std::move(item);
   pending_op->callback = base::Bind(&HttpCache::OnPendingOpComplete,
                                     GetWeakPtr(), pending_op);
 
   int rv = disk_cache_->OpenEntry(key, &(pending_op->disk_entry),
                                   pending_op->callback);
   if (rv != ERR_IO_PENDING) {
-    item->ClearTransaction();
+    pending_op->writer->ClearTransaction();
     pending_op->callback.Run(rv);
   }
 
@@ -755,23 +752,24 @@ int HttpCache::CreateEntry(const std::string& key, ActiveEntry** entry,
     return ERR_CACHE_RACE;
   }
 
-  WorkItem* item = new WorkItem(WI_CREATE_ENTRY, trans, entry);
+  std::unique_ptr<WorkItem> item =
+      base::MakeUnique<WorkItem>(WI_CREATE_ENTRY, trans, entry);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
-    pending_op->pending_queue.push_back(item);
+    pending_op->pending_queue.push_back(std::move(item));
     return ERR_IO_PENDING;
   }
 
   DCHECK(pending_op->pending_queue.empty());
 
-  pending_op->writer = item;
+  pending_op->writer = std::move(item);
   pending_op->callback = base::Bind(&HttpCache::OnPendingOpComplete,
                                     GetWeakPtr(), pending_op);
 
   int rv = disk_cache_->CreateEntry(key, &(pending_op->disk_entry),
                                     pending_op->callback);
   if (rv != ERR_IO_PENDING) {
-    item->ClearTransaction();
+    pending_op->writer->ClearTransaction();
     pending_op->callback.Run(rv);
   }
 
@@ -882,8 +880,7 @@ void HttpCache::DoneWritingToEntry(ActiveEntry* entry, bool success) {
 void HttpCache::DoneReadingFromEntry(ActiveEntry* entry, Transaction* trans) {
   DCHECK(!entry->writer);
 
-  TransactionList::iterator it =
-      std::find(entry->readers.begin(), entry->readers.end(), trans);
+  auto it = std::find(entry->readers.begin(), entry->readers.end(), trans);
   DCHECK(it != entry->readers.end());
 
   entry->readers.erase(it);
@@ -906,7 +903,7 @@ void HttpCache::ConvertWriterToReader(ActiveEntry* entry) {
 
 LoadState HttpCache::GetLoadStateForPendingTransaction(
       const Transaction* trans) {
-  ActiveEntriesMap::const_iterator i = active_entries_.find(trans->key());
+  auto i = active_entries_.find(trans->key());
   if (i == active_entries_.end()) {
     // If this is really a pending transaction, and it is not part of
     // active_entries_, we should be creating the backend or the entry.
@@ -918,16 +915,16 @@ LoadState HttpCache::GetLoadStateForPendingTransaction(
 }
 
 void HttpCache::RemovePendingTransaction(Transaction* trans) {
-  ActiveEntriesMap::const_iterator i = active_entries_.find(trans->key());
+  auto i = active_entries_.find(trans->key());
   bool found = false;
   if (i != active_entries_.end())
-    found = RemovePendingTransactionFromEntry(i->second, trans);
+    found = RemovePendingTransactionFromEntry(i->second.get(), trans);
 
   if (found)
     return;
 
   if (building_backend_) {
-    PendingOpsMap::const_iterator j = pending_ops_.find(std::string());
+    auto j = pending_ops_.find(std::string());
     if (j != pending_ops_.end())
       found = RemovePendingTransactionFromPendingOp(j->second, trans);
 
@@ -935,16 +932,17 @@ void HttpCache::RemovePendingTransaction(Transaction* trans) {
       return;
   }
 
-  PendingOpsMap::const_iterator j = pending_ops_.find(trans->key());
+  auto j = pending_ops_.find(trans->key());
   if (j != pending_ops_.end())
     found = RemovePendingTransactionFromPendingOp(j->second, trans);
 
   if (found)
     return;
 
-  ActiveEntriesSet::iterator k = doomed_entries_.begin();
-  for (; k != doomed_entries_.end() && !found; ++k)
-    found = RemovePendingTransactionFromEntry(*k, trans);
+  for (auto k = doomed_entries_.begin(); k != doomed_entries_.end() && !found;
+       ++k) {
+    found = RemovePendingTransactionFromEntry(k->first, trans);
+  }
 
   DCHECK(found) << "Pending transaction not found";
 }
@@ -953,8 +951,7 @@ bool HttpCache::RemovePendingTransactionFromEntry(ActiveEntry* entry,
                                                   Transaction* trans) {
   TransactionList& pending_queue = entry->pending_queue;
 
-  TransactionList::iterator j =
-      find(pending_queue.begin(), pending_queue.end(), trans);
+  auto j = find(pending_queue.begin(), pending_queue.end(), trans);
   if (j == pending_queue.end())
     return false;
 
@@ -971,10 +968,8 @@ bool HttpCache::RemovePendingTransactionFromPendingOp(PendingOp* pending_op,
   }
   WorkItemList& pending_queue = pending_op->pending_queue;
 
-  WorkItemList::iterator it = pending_queue.begin();
-  for (; it != pending_queue.end(); ++it) {
+  for (auto it = pending_queue.begin(); it != pending_queue.end(); ++it) {
     if ((*it)->Matches(trans)) {
-      delete *it;
       pending_queue.erase(it);
       return true;
     }
@@ -1026,7 +1021,7 @@ void HttpCache::OnIOComplete(int result, PendingOp* pending_op) {
   if (op == WI_CREATE_BACKEND)
     return OnBackendCreated(result, pending_op);
 
-  std::unique_ptr<WorkItem> item(pending_op->writer);
+  std::unique_ptr<WorkItem> item = std::move(pending_op->writer);
   bool fail_requests = false;
 
   ActiveEntry* entry = NULL;
@@ -1066,7 +1061,7 @@ void HttpCache::OnIOComplete(int result, PendingOp* pending_op) {
   item->NotifyTransaction(result, entry);
 
   while (!pending_items.empty()) {
-    item.reset(pending_items.front());
+    item = std::move(pending_items.front());
     pending_items.pop_front();
 
     if (item->operation() == WI_DOOM_ENTRY) {
@@ -1122,7 +1117,7 @@ void HttpCache::OnPendingOpComplete(const base::WeakPtr<HttpCache>& cache,
 }
 
 void HttpCache::OnBackendCreated(int result, PendingOp* pending_op) {
-  std::unique_ptr<WorkItem> item(pending_op->writer);
+  std::unique_ptr<WorkItem> item = std::move(pending_op->writer);
   WorkItemOperation op = item->operation();
   DCHECK_EQ(WI_CREATE_BACKEND, op);
 
@@ -1140,13 +1135,14 @@ void HttpCache::OnBackendCreated(int result, PendingOp* pending_op) {
   }
 
   if (!pending_op->pending_queue.empty()) {
-    WorkItem* pending_item = pending_op->pending_queue.front();
+    std::unique_ptr<WorkItem> pending_item =
+        std::move(pending_op->pending_queue.front());
     pending_op->pending_queue.pop_front();
     DCHECK_EQ(WI_CREATE_BACKEND, pending_item->operation());
 
     // We want to process a single callback at a time, because the cache may
     // go away from the callback.
-    pending_op->writer = pending_item;
+    pending_op->writer = std::move(pending_item);
 
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&HttpCache::OnBackendCreated, GetWeakPtr(),

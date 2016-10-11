@@ -51,6 +51,11 @@ class Simulator : public QuicConnectionHelperInterface {
     random_generator_ = random;
   }
 
+  inline bool enable_random_delays() const { return enable_random_delays_; }
+  inline void set_enable_random_delays(bool enable_random_delays) {
+    enable_random_delays_ = enable_random_delays;
+  }
+
   // Run the simulation until either no actors are scheduled or
   // |termination_predicate| returns true.  Returns true if terminated due to
   // predicate, and false otherwise.
@@ -107,6 +112,10 @@ class Simulator : public QuicConnectionHelperInterface {
   std::unique_ptr<QuicAlarm> run_for_alarm_;
   // Flag used to stop simulations ran via RunFor().
   bool run_for_should_stop_;
+
+  // Indicates whether the simulator should add random delays on the links in
+  // order to avoid synchronization issues.
+  bool enable_random_delays_;
 
   // Schedule of when the actors will be executed via an Act() call.  The
   // schedule is subject to the following invariants:

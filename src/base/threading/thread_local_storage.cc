@@ -12,6 +12,52 @@
 
 using base::internal::PlatformThreadLocalStorage;
 
+// Chrome Thread Local Storage (TLS)
+//
+// This TLS system allows Chrome to use a single OS level TLS slot process-wide,
+// and allows us to control the slot limits instead of being at the mercy of the
+// platform. To do this, Chrome TLS replicates an array commonly found in the OS
+// thread metadata.
+//
+// Overview:
+//
+// OS TLS Slots       Per-Thread                 Per-Process Global
+//     ...
+//     []             Chrome TLS Array           Chrome TLS Metadata
+//     [] ----------> [][][][][ ][][][][]        [][][][][ ][][][][]
+//     []                      |                          |
+//     ...                     V                          V
+//                      Metadata Version           Slot Information
+//                         Your Data!
+//
+// Using a single OS TLS slot, Chrome TLS allocates an array on demand for the
+// lifetime of each thread that requests Chrome TLS data. Each per-thread TLS
+// array matches the length of the per-process global metadata array.
+//
+// A per-process global TLS metadata array tracks information about each item in
+// the per-thread array:
+//   * Status: Tracks if the slot is allocated or free to assign.
+//   * Destructor: An optional destructor to call on thread destruction for that
+//                 specific slot.
+//   * Version: Tracks the current version of the TLS slot. Each TLS slot
+//              allocation is associated with a unique version number.
+//
+//              Most OS TLS APIs guarantee that a newly allocated TLS slot is
+//              initialized to 0 for all threads. The Chrome TLS system provides
+//              this guarantee by tracking the version for each TLS slot here
+//              on each per-thread Chrome TLS array entry. Threads that access
+//              a slot with a mismatched version will receive 0 as their value.
+//              The metadata version is incremented when the client frees a
+//              slot. The per-thread metadata version is updated when a client
+//              writes to the slot. This scheme allows for constant time
+//              invalidation and avoids the need to iterate through each Chrome
+//              TLS array to mark the slot as zero.
+//
+// Just like an OS TLS API, clients of the Chrome TLS are responsible for
+// managing any necessary lifetime of the data in their slots. The only
+// convenience provided is automatic destruction when a thread ends. If a client
+// frees a slot, that client is responsible for destroying the data in the slot.
+
 namespace {
 // In order to make TLS destructors work, we need to keep around a function
 // pointer to the destructor for each slot. We keep this array of pointers in a
@@ -36,6 +82,12 @@ enum TlsStatus {
 struct TlsMetadata {
   TlsStatus status;
   base::ThreadLocalStorage::TLSDestructorFunc destructor;
+  uint32_t version;
+};
+
+struct TlsVectorEntry {
+  void* data;
+  uint32_t version;
 };
 
 // This LazyInstance isn't needed until after we've constructed the per-thread
@@ -54,7 +106,7 @@ constexpr int kMaxDestructorIterations = kThreadLocalStorageSize;
 // recursively depend on this initialization.
 // As a result, we use Atomics, and avoid anything (like a singleton) that might
 // require memory allocations.
-void** ConstructTlsVector() {
+TlsVectorEntry* ConstructTlsVector() {
   PlatformThreadLocalStorage::TLSKey key =
       base::subtle::NoBarrier_Load(&g_native_tls_key);
   if (key == PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES) {
@@ -96,21 +148,20 @@ void** ConstructTlsVector() {
   // allocated vector, so that we don't have dependence on our allocator until
   // our service is in place. (i.e., don't even call new until after we're
   // setup)
-  void* stack_allocated_tls_data[kThreadLocalStorageSize];
+  TlsVectorEntry stack_allocated_tls_data[kThreadLocalStorageSize];
   memset(stack_allocated_tls_data, 0, sizeof(stack_allocated_tls_data));
   // Ensure that any rentrant calls change the temp version.
   PlatformThreadLocalStorage::SetTLSValue(key, stack_allocated_tls_data);
 
   // Allocate an array to store our data.
-  void** tls_data = new void*[kThreadLocalStorageSize];
+  TlsVectorEntry* tls_data = new TlsVectorEntry[kThreadLocalStorageSize];
   memcpy(tls_data, stack_allocated_tls_data, sizeof(stack_allocated_tls_data));
   PlatformThreadLocalStorage::SetTLSValue(key, tls_data);
   return tls_data;
 }
 
-void OnThreadExitInternal(void* value) {
-  DCHECK(value);
-  void** tls_data = static_cast<void**>(value);
+void OnThreadExitInternal(TlsVectorEntry* tls_data) {
+  DCHECK(tls_data);
   // Some allocators, such as TCMalloc, use TLS. As a result, when a thread
   // terminates, one of the destructor calls we make may be to shut down an
   // allocator. We have to be careful that after we've shutdown all of the known
@@ -120,7 +171,7 @@ void OnThreadExitInternal(void* value) {
   // allocated vector, so that we don't have dependence on our allocator after
   // we have called all g_tls_metadata destructors. (i.e., don't even call
   // delete[] after we're done with destructors.)
-  void* stack_allocated_tls_data[kThreadLocalStorageSize];
+  TlsVectorEntry stack_allocated_tls_data[kThreadLocalStorageSize];
   memcpy(stack_allocated_tls_data, tls_data, sizeof(stack_allocated_tls_data));
   // Ensure that any re-entrant calls change the temp version.
   PlatformThreadLocalStorage::TLSKey key =
@@ -146,15 +197,16 @@ void OnThreadExitInternal(void* value) {
     // then we'll iterate several more times, so it is really not that critical
     // (but it might help).
     for (int slot = 0; slot < kThreadLocalStorageSize ; ++slot) {
-      void* tls_value = stack_allocated_tls_data[slot];
-      if (!tls_value || tls_metadata[slot].status == TlsStatus::FREE)
+      void* tls_value = stack_allocated_tls_data[slot].data;
+      if (!tls_value || tls_metadata[slot].status == TlsStatus::FREE ||
+          stack_allocated_tls_data[slot].version != tls_metadata[slot].version)
         continue;
 
       base::ThreadLocalStorage::TLSDestructorFunc destructor =
           tls_metadata[slot].destructor;
       if (!destructor)
         continue;
-      stack_allocated_tls_data[slot] = nullptr;  // pre-clear the slot.
+      stack_allocated_tls_data[slot].data = nullptr;  // pre-clear the slot.
       destructor(tls_value);
       // Any destructor might have called a different service, which then set a
       // different slot to a non-null value. Hence we need to check the whole
@@ -187,11 +239,11 @@ void PlatformThreadLocalStorage::OnThreadExit() {
   // Maybe we have never initialized TLS for this thread.
   if (!tls_data)
     return;
-  OnThreadExitInternal(tls_data);
+  OnThreadExitInternal(static_cast<TlsVectorEntry*>(tls_data));
 }
 #elif defined(OS_POSIX)
 void PlatformThreadLocalStorage::OnThreadExit(void* value) {
-  OnThreadExitInternal(value);
+  OnThreadExitInternal(static_cast<TlsVectorEntry*>(value));
 }
 #endif  // defined(OS_WIN)
 
@@ -207,6 +259,7 @@ void ThreadLocalStorage::StaticSlot::Initialize(TLSDestructorFunc destructor) {
 
   // Grab a new slot.
   slot_ = kInvalidSlotValue;
+  version_ = 0;
   {
     base::AutoLock auto_lock(g_tls_metadata_lock.Get());
     for (int i = 0; i < kThreadLocalStorageSize; ++i) {
@@ -222,6 +275,7 @@ void ThreadLocalStorage::StaticSlot::Initialize(TLSDestructorFunc destructor) {
         g_tls_metadata[slot_candidate].destructor = destructor;
         g_last_assigned_slot = slot_candidate;
         slot_ = slot_candidate;
+        version_ = g_tls_metadata[slot_candidate].version;
         break;
       }
     }
@@ -240,31 +294,36 @@ void ThreadLocalStorage::StaticSlot::Free() {
     base::AutoLock auto_lock(g_tls_metadata_lock.Get());
     g_tls_metadata[slot_].status = TlsStatus::FREE;
     g_tls_metadata[slot_].destructor = nullptr;
+    ++(g_tls_metadata[slot_].version);
   }
   slot_ = kInvalidSlotValue;
   base::subtle::Release_Store(&initialized_, 0);
 }
 
 void* ThreadLocalStorage::StaticSlot::Get() const {
-  void** tls_data = static_cast<void**>(
+  TlsVectorEntry* tls_data = static_cast<TlsVectorEntry*>(
       PlatformThreadLocalStorage::GetTLSValue(
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
   if (!tls_data)
     tls_data = ConstructTlsVector();
   DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
-  return tls_data[slot_];
+  // Version mismatches means this slot was previously freed.
+  if (tls_data[slot_].version != version_)
+    return nullptr;
+  return tls_data[slot_].data;
 }
 
 void ThreadLocalStorage::StaticSlot::Set(void* value) {
-  void** tls_data = static_cast<void**>(
+  TlsVectorEntry* tls_data = static_cast<TlsVectorEntry*>(
       PlatformThreadLocalStorage::GetTLSValue(
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
   if (!tls_data)
     tls_data = ConstructTlsVector();
   DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
-  tls_data[slot_] = value;
+  tls_data[slot_].data = value;
+  tls_data[slot_].version = version_;
 }
 
 ThreadLocalStorage::Slot::Slot(TLSDestructorFunc destructor) {

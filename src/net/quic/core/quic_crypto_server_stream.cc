@@ -136,20 +136,36 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
     peer_supports_stateless_rejects_ = DoesPeerSupportStatelessRejects(message);
   }
 
-  CryptoHandshakeMessage reply;
-  DiversificationNonce diversification_nonce;
   string error_details;
+  std::unique_ptr<CryptoHandshakeMessage> reply(new CryptoHandshakeMessage);
+  std::unique_ptr<DiversificationNonce> diversification_nonce(
+      new DiversificationNonce);
   QuicErrorCode error =
-      ProcessClientHello(result, std::move(details), &reply,
-                         &diversification_nonce, &error_details);
+      ProcessClientHello(result, std::move(details), reply.get(),
+                         diversification_nonce.get(), &error_details);
 
+  // Note: this split exists to facilitate a future conversion of
+  // ProcessClientHello to an async signature.
+  FinishProcessingHandshakeMessageAfterProcessClientHello(
+      *result, error, error_details, std::move(reply),
+      std::move(diversification_nonce));
+}
+
+void QuicCryptoServerStream::
+    FinishProcessingHandshakeMessageAfterProcessClientHello(
+        const ValidateClientHelloResultCallback::Result& result,
+        QuicErrorCode error,
+        const string& error_details,
+        std::unique_ptr<CryptoHandshakeMessage> reply,
+        std::unique_ptr<DiversificationNonce> diversification_nonce) {
+  const CryptoHandshakeMessage& message = result.client_hello;
   if (error != QUIC_NO_ERROR) {
     CloseConnectionWithDetails(error, error_details);
     return;
   }
 
-  if (reply.tag() != kSHLO) {
-    if (reply.tag() == kSREJ) {
+  if (reply->tag() != kSHLO) {
+    if (reply->tag() == kSREJ) {
       DCHECK(use_stateless_rejects_if_peer_supported_);
       DCHECK(peer_supports_stateless_rejects_);
       // Before sending the SREJ, cause the connection to save crypto packets
@@ -157,9 +173,9 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
       // retransmitted.
       session()->connection()->EnableSavingCryptoPackets();
     }
-    SendHandshakeMessage(reply);
+    SendHandshakeMessage(*reply);
 
-    if (reply.tag() == kSREJ) {
+    if (reply->tag() == kSREJ) {
       DCHECK(use_stateless_rejects_if_peer_supported_);
       DCHECK(peer_supports_stateless_rejects_);
       DCHECK(!handshake_confirmed());
@@ -178,15 +194,17 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
   // session config.
   QuicConfig* config = session()->config();
   OverrideQuicConfigDefaults(config);
-  error = config->ProcessPeerHello(message, CLIENT, &error_details);
-  if (error != QUIC_NO_ERROR) {
-    CloseConnectionWithDetails(error, error_details);
+  string process_error_details;
+  const QuicErrorCode process_error =
+      config->ProcessPeerHello(message, CLIENT, &process_error_details);
+  if (process_error != QUIC_NO_ERROR) {
+    CloseConnectionWithDetails(process_error, process_error_details);
     return;
   }
 
   session()->OnConfigNegotiated();
 
-  config->ToHandshakeMessage(&reply);
+  config->ToHandshakeMessage(reply.get());
 
   // Receiving a full CHLO implies the client is prepared to decrypt with
   // the new server write key.  We can start to encrypt with the new server
@@ -203,10 +221,10 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
       ENCRYPTION_INITIAL,
       crypto_negotiated_params_.initial_crypters.decrypter.release());
   if (version() > QUIC_VERSION_32) {
-    session()->connection()->SetDiversificationNonce(diversification_nonce);
+    session()->connection()->SetDiversificationNonce(*diversification_nonce);
   }
 
-  SendHandshakeMessage(reply);
+  SendHandshakeMessage(*reply);
 
   session()->connection()->SetEncrypter(
       ENCRYPTION_FORWARD_SECURE,
@@ -379,6 +397,43 @@ bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
   return true;
 }
 
+class QuicCryptoServerStream::ProcessClientHelloCallback
+    : public ProcessClientHelloResultCallback {
+ public:
+  ProcessClientHelloCallback(QuicErrorCode* error,
+                             string* error_details,
+                             CryptoHandshakeMessage* message,
+                             DiversificationNonce* diversification_nonce)
+      : error_(error),
+        error_details_(error_details),
+        message_(message),
+        diversification_nonce_(diversification_nonce) {}
+
+  void Run(
+      QuicErrorCode error,
+      const string& error_details,
+      std::unique_ptr<CryptoHandshakeMessage> message,
+      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+    *error_ = error;
+    *error_details_ = error_details;
+    if (message != nullptr) {
+      *message_ = *message;
+    }
+    if (diversification_nonce != nullptr) {
+      *diversification_nonce_ = *diversification_nonce;
+    }
+    // NOTE: copies the message, nonce, and error details.  This is a temporary
+    // condition until this codepath is fully asynchronized.
+    // TODO(gredner): Fix this.
+  }
+
+ private:
+  QuicErrorCode* error_;
+  string* error_details_;
+  CryptoHandshakeMessage* message_;
+  DiversificationNonce* diversification_nonce_;
+};
+
 QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
     scoped_refptr<ValidateClientHelloResultCallback::Result> result,
     std::unique_ptr<ProofSource::Details> proof_source_details,
@@ -407,7 +462,11 @@ QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
   QuicConnection* connection = session()->connection();
   const QuicConnectionId server_designated_connection_id =
       GenerateConnectionIdForReject(use_stateless_rejects_in_crypto_config);
-  return crypto_config_->ProcessClientHello(
+
+  QuicErrorCode error = QUIC_NO_ERROR;
+  std::unique_ptr<ProcessClientHelloCallback> cb(new ProcessClientHelloCallback(
+      &error, error_details, reply, out_diversification_nonce));
+  crypto_config_->ProcessClientHello(
       result, /*reject_only=*/false, connection->connection_id(),
       connection->self_address().address(), connection->peer_address(),
       version(), connection->supported_versions(),
@@ -415,7 +474,13 @@ QuicErrorCode QuicCryptoServerStream::ProcessClientHello(
       connection->clock(), connection->random_generator(),
       compressed_certs_cache_, &crypto_negotiated_params_, &crypto_proof_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version()),
-      chlo_packet_size_, reply, out_diversification_nonce, error_details);
+      chlo_packet_size_, std::move(cb));
+  // NOTE: assumes that ProcessClientHello invokes the callback synchronously.
+  // This is a temporary condition until these codepaths are fully
+  // asynchronized.
+  // TODO(gredner): fix this.
+
+  return error;
 }
 
 void QuicCryptoServerStream::OverrideQuicConfigDefaults(QuicConfig* config) {}

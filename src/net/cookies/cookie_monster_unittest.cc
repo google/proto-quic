@@ -974,11 +974,11 @@ class DeferredCookieTaskTest : public CookieMonsterTest {
   // and PersistentCookieStore::Load completion callback.
   void CompleteLoading() {
     while (!loaded_for_key_callbacks_.empty()) {
-      loaded_for_key_callbacks_.front().Run(loaded_cookies_);
+      loaded_for_key_callbacks_.front().Run(std::move(loaded_cookies_));
       loaded_cookies_.clear();
       loaded_for_key_callbacks_.pop();
     }
-    loaded_callback_.Run(loaded_cookies_);
+    loaded_callback_.Run(std::move(loaded_cookies_));
   }
 
   // Performs the provided action, expecting it to cause a call to
@@ -1027,7 +1027,7 @@ class DeferredCookieTaskTest : public CookieMonsterTest {
   testing::InSequence in_sequence_;
   // Holds cookies to be returned from PersistentCookieStore::Load or
   // PersistentCookieStore::LoadCookiesForKey.
-  std::vector<CanonicalCookie*> loaded_cookies_;
+  std::vector<std::unique_ptr<CanonicalCookie>> loaded_cookies_;
   // Stores the callback passed from the CookieMonster to the
   // PersistentCookieStore::Load
   CookieMonster::PersistentCookieStore::LoadedCallback loaded_callback_;
@@ -1310,7 +1310,7 @@ TEST_F(DeferredCookieTaskTest,
 }
 
 TEST_F(DeferredCookieTaskTest, DeferredDeleteCanonicalCookie) {
-  std::vector<CanonicalCookie*> cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies;
   std::unique_ptr<CanonicalCookie> cookie = BuildCanonicalCookie(
       http_www_google_.url(), "X=1; path=/", base::Time::Now());
 
@@ -1789,7 +1789,7 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCookies) {
   // be careful not to have any duplicate creation times at all (as it's a
   // violation of a CookieMonster invariant) even if Time::Now() doesn't
   // move between calls.
-  std::vector<CanonicalCookie*> initial_cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> initial_cookies;
 
   // Insert 4 cookies with name "X" on path "/", with varying creation
   // dates. We expect only the most recent one to be preserved following
@@ -1830,7 +1830,7 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCookies) {
                   Time::Now() + TimeDelta::FromDays(10), &initial_cookies);
 
   // Inject our initial cookies into the mock PersistentCookieStore.
-  store->SetLoadExpectation(true, initial_cookies);
+  store->SetLoadExpectation(true, std::move(initial_cookies));
 
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 
@@ -1866,7 +1866,7 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCreationTimes) {
   // four with the earlier time as creation times.  We should only get
   // two cookies remaining, but which two (other than that there should
   // be one from each set) will be random.
-  std::vector<CanonicalCookie*> initial_cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> initial_cookies;
   AddCookieToList(GURL("http://www.google.com"), "X=1; path=/", now,
                   &initial_cookies);
   AddCookieToList(GURL("http://www.google.com"), "X=2; path=/", now,
@@ -1886,7 +1886,7 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCreationTimes) {
                   &initial_cookies);
 
   // Inject our initial cookies into the mock PersistentCookieStore.
-  store->SetLoadExpectation(true, initial_cookies);
+  store->SetLoadExpectation(true, std::move(initial_cookies));
 
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 
@@ -2301,7 +2301,8 @@ TEST_F(CookieMonsterTest, WhileLoadingLoadCompletesBeforeKeyLoadCompletes) {
             store->commands()[1].type);
 
   // The main load completes first (With no cookies).
-  store->commands()[0].loaded_callback.Run(std::vector<CanonicalCookie*>());
+  store->commands()[0].loaded_callback.Run(
+      std::vector<std::unique_ptr<CanonicalCookie>>());
 
   // The tasks should run in order, and the get should see the cookies.
 
@@ -2313,7 +2314,8 @@ TEST_F(CookieMonsterTest, WhileLoadingLoadCompletesBeforeKeyLoadCompletes) {
 
   // The loaded for key event completes late, with not cookies (Since they
   // were already loaded).
-  store->commands()[1].loaded_callback.Run(std::vector<CanonicalCookie*>());
+  store->commands()[1].loaded_callback.Run(
+      std::vector<std::unique_ptr<CanonicalCookie>>());
 
   // The just set cookie should still be in the store.
   GetCookieListCallback get_cookie_list_callback2;
@@ -2348,14 +2350,13 @@ TEST_F(CookieMonsterTest, WhileLoadingDeleteAllGetForURL) {
   ASSERT_EQ(1u, store->commands().size());
   ASSERT_EQ(CookieStoreCommand::LOAD, store->commands()[0].type);
 
-  std::vector<CanonicalCookie*> cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies;
   // When passed to the CookieMonster, it takes ownership of the pointed to
   // cookies.
   cookies.push_back(
-      CanonicalCookie::Create(kUrl, "a=b", base::Time(), CookieOptions())
-          .release());
+      CanonicalCookie::Create(kUrl, "a=b", base::Time(), CookieOptions()));
   ASSERT_TRUE(cookies[0]);
-  store->commands()[0].loaded_callback.Run(cookies);
+  store->commands()[0].loaded_callback.Run(std::move(cookies));
 
   delete_callback.WaitUntilDone();
   EXPECT_EQ(1, delete_callback.result());
@@ -2396,7 +2397,8 @@ TEST_F(CookieMonsterTest, WhileLoadingGetAllSetGetAll) {
   ASSERT_EQ(CookieStoreCommand::LOAD, store->commands()[0].type);
 
   // The load completes (With no cookies).
-  store->commands()[0].loaded_callback.Run(std::vector<CanonicalCookie*>());
+  store->commands()[0].loaded_callback.Run(
+      std::vector<std::unique_ptr<CanonicalCookie>>());
 
   get_cookie_list_callback1.WaitUntilDone();
   EXPECT_EQ(0u, get_cookie_list_callback1.cookies().size());
@@ -2448,7 +2450,8 @@ TEST_F(CookieMonsterTest, CheckOrderOfCookieTaskQueueWhenLoadingCompletes) {
   ASSERT_EQ(CookieStoreCommand::LOAD, store->commands()[0].type);
 
   // The load completes.
-  store->commands()[0].loaded_callback.Run(std::vector<CanonicalCookie*>());
+  store->commands()[0].loaded_callback.Run(
+      std::vector<std::unique_ptr<CanonicalCookie>>());
 
   // The get cookies call should see no cookies set.
   get_cookie_list_callback1.WaitUntilDone();
@@ -2474,11 +2477,9 @@ class FlushablePersistentStore : public CookieMonster::PersistentCookieStore {
   FlushablePersistentStore() : flush_count_(0) {}
 
   void Load(const LoadedCallback& loaded_callback) override {
-    std::vector<CanonicalCookie*> out_cookies;
+    std::vector<std::unique_ptr<CanonicalCookie>> out_cookies;
     base::ThreadTaskRunnerHandle::Get()->PostTask(
-        FROM_HERE,
-        base::Bind(&LoadedCallbackTask::Run,
-                   new LoadedCallbackTask(loaded_callback, out_cookies)));
+        FROM_HERE, base::Bind(loaded_callback, base::Passed(&out_cookies)));
   }
 
   void LoadCookiesForKey(const std::string& key,
@@ -2881,7 +2882,7 @@ TEST_F(CookieMonsterTest, ControlCharacterPurge) {
 
   scoped_refptr<MockPersistentCookieStore> store(new MockPersistentCookieStore);
 
-  std::vector<CanonicalCookie*> initial_cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> initial_cookies;
 
   AddCookieToList(url, "foo=bar; path=" + path, now1, &initial_cookies);
 
@@ -2893,12 +2894,12 @@ TEST_F(CookieMonsterTest, ControlCharacterPurge) {
       "boo",
       domain, path, now2, later, false, false, CookieSameSite::DEFAULT_MODE,
       false, COOKIE_PRIORITY_DEFAULT);
-  initial_cookies.push_back(cc.release());
+  initial_cookies.push_back(std::move(cc));
 
   AddCookieToList(url, "hello=world; path=" + path, now3, &initial_cookies);
 
   // Inject our initial cookies into the mock PersistentCookieStore.
-  store->SetLoadExpectation(true, initial_cookies);
+  store->SetLoadExpectation(true, std::move(initial_cookies));
 
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 

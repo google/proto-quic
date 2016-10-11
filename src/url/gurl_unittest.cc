@@ -232,7 +232,6 @@ TEST(GURLTest, IsValid) {
     "http://user:pass@google.com:12345/path?k=v#fragment",
     "http:/path",
     "http:path",
-    "://google.com",
   };
   for (size_t i = 0; i < arraysize(valid_cases); i++) {
     EXPECT_TRUE(GURL(valid_cases[i]).is_valid())
@@ -244,6 +243,7 @@ TEST(GURLTest, IsValid) {
     "http:://google.com",
     "http//google.com",
     "http://google.com:12three45",
+    "://google.com",
     "path",
   };
   for (size_t i = 0; i < arraysize(invalid_cases); i++) {

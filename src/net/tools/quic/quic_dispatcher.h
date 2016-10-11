@@ -197,7 +197,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   virtual QuicTimeWaitListManager* CreateQuicTimeWaitListManager();
 
   // Called when |current_packet_| is a data packet that has arrived before
-  // the CHLO. Buffers the current packet until the CHLO arrives.
+  // the CHLO or it is any kind of packet while a CHLO on same connection has
+  // already been in the buffer.
   void BufferEarlyPacket(QuicConnectionId connection_id);
 
   // Called when |current_packet_| is a CHLO packet. Creates a new connection

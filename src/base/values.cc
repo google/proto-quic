@@ -397,10 +397,11 @@ void DictionaryValue::Set(StringPiece path, std::unique_ptr<Value> in_value) {
        delimiter_position = current_path.find('.')) {
     // Assume that we're indexing into a dictionary.
     StringPiece key = current_path.substr(0, delimiter_position);
-    DictionaryValue* child_dictionary = NULL;
+    DictionaryValue* child_dictionary = nullptr;
     if (!current_dictionary->GetDictionary(key, &child_dictionary)) {
       child_dictionary = new DictionaryValue;
-      current_dictionary->SetWithoutPathExpansion(key, child_dictionary);
+      current_dictionary->SetWithoutPathExpansion(
+          key, base::WrapUnique(child_dictionary));
     }
 
     current_dictionary = child_dictionary;
@@ -447,27 +448,30 @@ void DictionaryValue::SetWithoutPathExpansion(StringPiece key,
 
 void DictionaryValue::SetBooleanWithoutPathExpansion(StringPiece path,
                                                      bool in_value) {
-  SetWithoutPathExpansion(path, new FundamentalValue(in_value));
+  SetWithoutPathExpansion(path,
+                          base::MakeUnique<base::FundamentalValue>(in_value));
 }
 
 void DictionaryValue::SetIntegerWithoutPathExpansion(StringPiece path,
                                                      int in_value) {
-  SetWithoutPathExpansion(path, new FundamentalValue(in_value));
+  SetWithoutPathExpansion(path,
+                          base::MakeUnique<base::FundamentalValue>(in_value));
 }
 
 void DictionaryValue::SetDoubleWithoutPathExpansion(StringPiece path,
                                                     double in_value) {
-  SetWithoutPathExpansion(path, new FundamentalValue(in_value));
+  SetWithoutPathExpansion(path,
+                          base::MakeUnique<base::FundamentalValue>(in_value));
 }
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
                                                     StringPiece in_value) {
-  SetWithoutPathExpansion(path, new StringValue(in_value));
+  SetWithoutPathExpansion(path, base::MakeUnique<base::StringValue>(in_value));
 }
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
                                                     const string16& in_value) {
-  SetWithoutPathExpansion(path, new StringValue(in_value));
+  SetWithoutPathExpansion(path, base::MakeUnique<base::StringValue>(in_value));
 }
 
 bool DictionaryValue::Get(StringPiece path,
@@ -795,7 +799,8 @@ void DictionaryValue::MergeDictionary(const DictionaryValue* dictionary) {
       }
     }
     // All other cases: Make a copy and hook it up.
-    SetWithoutPathExpansion(it.key(), merge_value->DeepCopy());
+    SetWithoutPathExpansion(it.key(),
+                            base::WrapUnique(merge_value->DeepCopy()));
   }
 }
 

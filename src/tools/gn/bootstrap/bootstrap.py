@@ -504,7 +504,6 @@ def write_gn_ninja(path, root_gen_dir, options):
       'base/trace_event/trace_event_synthetic_delay.cc',
       'base/trace_event/trace_log.cc',
       'base/trace_event/trace_log_constants.cc',
-      'base/trace_event/trace_sampling_thread.cc',
       'base/trace_event/tracing_agent.cc',
       'base/tracked_objects.cc',
       'base/tracking_info.cc',

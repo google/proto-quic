@@ -153,6 +153,9 @@ GURL SchemeHostPort::GetURL() const {
   url::Parsed parsed;
   std::string serialized = SerializeInternal(&parsed);
 
+  if (IsInvalid())
+    return GURL(std::move(serialized), parsed, false);
+
   // If the serialized string is passed to GURL for parsing, it will append an
   // empty path "/". Add that here. Note: per RFC 6454 we cannot do this for
   // normal Origin serialization.
@@ -177,13 +180,17 @@ std::string SchemeHostPort::SerializeInternal(url::Parsed* parsed) const {
   if (IsInvalid())
     return result;
 
-  parsed->scheme = Component(0, scheme_.length());
-  result.append(scheme_);
+  if (!scheme_.empty()) {
+    parsed->scheme = Component(0, scheme_.length());
+    result.append(scheme_);
+  }
 
   result.append(kStandardSchemeSeparator);
 
-  parsed->host = Component(result.length(), host_.length());
-  result.append(host_);
+  if (!host_.empty()) {
+    parsed->host = Component(result.length(), host_.length());
+    result.append(host_);
+  }
 
   if (port_ == 0)
     return result;

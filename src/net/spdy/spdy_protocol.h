@@ -752,7 +752,8 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
   ~SpdyDataIR() override;
 
-  base::StringPiece data() const { return data_; }
+  const char* data() const { return data_; }
+  size_t data_len() const { return data_len_; }
 
   bool padded() const { return padded_; }
 
@@ -768,14 +769,24 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
   // Deep-copy of data (keep private copy).
   void SetDataDeep(base::StringPiece data) {
-    data_store_.reset(new std::string(data.data(), data.length()));
-    data_ = *(data_store_.get());
+    data_store_.reset(new std::string(data.data(), data.size()));
+    data_ = data_store_->data();
+    data_len_ = data.size();
   }
 
   // Shallow-copy of data (do not keep private copy).
   void SetDataShallow(base::StringPiece data) {
     data_store_.reset();
-    data_ = data;
+    data_ = data.data();
+    data_len_ = data.size();
+  }
+
+  // Use this method if we don't have a contiguous buffer and only
+  // need a length.
+  void SetDataShallow(size_t len) {
+    data_store_.reset();
+    data_ = nullptr;
+    data_len_ = len;
   }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
@@ -783,7 +794,8 @@ class NET_EXPORT_PRIVATE SpdyDataIR
  private:
   // Used to store data that this SpdyDataIR should own.
   std::unique_ptr<std::string> data_store_;
-  base::StringPiece data_;
+  const char* data_;
+  size_t data_len_;
 
   bool padded_;
   // padding_payload_len_ = desired padding length - len(padding length field).

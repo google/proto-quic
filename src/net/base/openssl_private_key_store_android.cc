@@ -10,9 +10,7 @@
 
 #include "base/logging.h"
 #include "base/memory/singleton.h"
-#include "crypto/auto_cbb.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/android/network_library.h"
 
 namespace net {
@@ -23,12 +21,12 @@ bool OpenSSLPrivateKeyStore::StoreKeyPair(const GURL& url, EVP_PKEY* pkey) {
 
   uint8_t* public_key;
   size_t public_len;
-  crypto::AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   if (!CBB_init(cbb.get(), 0) || !EVP_marshal_public_key(cbb.get(), pkey) ||
       !CBB_finish(cbb.get(), &public_key, &public_len)) {
     return false;
   }
-  crypto::ScopedOpenSSLBytes free_public_key(public_key);
+  bssl::UniquePtr<uint8_t> free_public_key(public_key);
 
   uint8_t* private_key;
   size_t private_len;
@@ -37,7 +35,7 @@ bool OpenSSLPrivateKeyStore::StoreKeyPair(const GURL& url, EVP_PKEY* pkey) {
       !CBB_finish(cbb.get(), &private_key, &private_len)) {
     return false;
   }
-  crypto::ScopedOpenSSLBytes free_private_key(private_key);
+  bssl::UniquePtr<uint8_t> free_private_key(private_key);
 
   if (!android::StoreKeyPair(public_key, public_len, private_key,
                              private_len)) {

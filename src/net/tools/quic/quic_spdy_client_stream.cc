@@ -103,7 +103,7 @@ void QuicSpdyClientStream::OnTrailingHeadersComplete(
     size_t frame_len,
     const QuicHeaderList& header_list) {
   QuicSpdyStream::OnTrailingHeadersComplete(fin, frame_len, header_list);
-  MarkTrailersConsumed(decompressed_trailers().length());
+  MarkTrailersConsumed();
 }
 
 void QuicSpdyClientStream::OnPromiseHeadersComplete(QuicStreamId promised_id,

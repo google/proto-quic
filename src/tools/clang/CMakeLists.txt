@@ -19,14 +19,20 @@ else(UNIX)
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}/include"
-                    "${CMAKE_SOURCE_DIR}/tools/clang/include"
                     "${CMAKE_BINARY_DIR}/include"
                     "${CMAKE_BINARY_DIR}/tools/clang/include")
 
 link_directories("${CMAKE_SOURCE_DIR}/lib"
-                 "${CMAKE_SOURCE_DIR}/tools/clang/lib"
                  "${CMAKE_BINARY_DIR}/lib"
                  "${CMAKE_BINARY_DIR}/tools/clang/lib")
+
+if (DEFINED LLVM_EXTERNAL_CLANG_SOURCE_DIR)
+  include_directories("${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include")
+  link_directories("${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/lib")
+else ()
+  include_directories("${CMAKE_SOURCE_DIR}/tools/clang/include")
+  link_directories("${CMAKE_SOURCE_DIR}/tools/clang/lib")
+endif ()
 
 # Tests for all enabled tools can be run by building this target.
 add_custom_target(cr-check-all COMMAND ${CMAKE_CTEST_COMMAND} -V)

@@ -22,7 +22,7 @@
 -BrowserTest.WindowOpenClose
 
 # crbug.com/483522
-ExtensionApiTest.Tabs2
+-ExtensionApiTest.Tabs2
 
 # crbug.com/448592: Get extension browsertests to pass with --site-per-process
 -ExtensionApiTest.TabMove

@@ -62,6 +62,14 @@ TEST(SequenceTokenTest, GetForCurrentThread) {
   EXPECT_FALSE(SequenceToken::GetForCurrentThread().IsValid());
 }
 
+TEST(SequenceTokenTest, ToInternalValue) {
+  const SequenceToken token1 = SequenceToken::Create();
+  const SequenceToken token2 = SequenceToken::Create();
+
+  // Confirm that internal values are unique.
+  EXPECT_NE(token1.ToInternalValue(), token2.ToInternalValue());
+}
+
 // Expect a default-constructed TaskToken to be invalid and not equal to
 // another invalid TaskToken.
 TEST(TaskTokenTest, InvalidDefaultConstructed) {

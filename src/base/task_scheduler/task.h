@@ -29,12 +29,12 @@ struct BASE_EXPORT Task : public PendingTask {
   // automatically adjusted to SKIP_ON_SHUTDOWN.
   Task(const tracked_objects::Location& posted_from,
        const Closure& task,
-       const TaskTraits& traits_in,
+       const TaskTraits& traits,
        const TimeDelta& delay);
   ~Task();
 
   // The TaskTraits of this task.
-  TaskTraits traits;
+  const TaskTraits traits;
 
   // The time at which the task was inserted in its sequence. For an undelayed
   // task, this happens at post time. For a delayed task, this happens some

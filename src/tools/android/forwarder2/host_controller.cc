@@ -176,7 +176,7 @@ void HostController::UnmapPortOnDevice() {
                << device_port_;
     return;
   }
-  if (!ReceivedCommand(command::UNLISTEN_SUCCESS, &socket)) {
+  if (!ReceivedCommandWithTimeout(command::UNLISTEN_SUCCESS, &socket, 10)) {
     LOG(ERROR) << device_serial_
                << ": Unmap command failed for port "
                << device_port_;

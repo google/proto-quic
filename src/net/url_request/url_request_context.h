@@ -230,14 +230,6 @@ class NET_EXPORT URLRequestContext
 
   bool enable_brotli() const { return enable_brotli_; }
 
-  void set_enable_referrer_policy_header(bool enable_referrer_policy_header) {
-    enable_referrer_policy_header_ = enable_referrer_policy_header;
-  }
-
-  bool enable_referrer_policy_header() const {
-    return enable_referrer_policy_header_;
-  }
-
  private:
   // ---------------------------------------------------------------------------
   // Important: When adding any new members below, consider whether they need to
@@ -276,11 +268,6 @@ class NET_EXPORT URLRequestContext
 
   // Enables Brotli Content-Encoding support.
   bool enable_brotli_;
-
-  // Enables parsing and applying the Referrer-Policy header when
-  // following redirects. TODO(estark): remove this flag once
-  // Referrer-Policy ships (https://crbug.com/619228).
-  bool enable_referrer_policy_header_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContext);
 };

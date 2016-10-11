@@ -49,9 +49,16 @@ class SmoothnessTop25(_Smoothness):
     return 'smoothness.top_25_smooth'
 
   @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-      return (possible_browser.browser_type == 'reference' and
-              possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
+  def ShouldDisable(cls, possible_browser):
+    # http://crbug.com/597656
+    if (possible_browser.browser_type == 'reference' and
+        possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'):
+      return True
+    # http://crbug.com/650762
+    if (possible_browser.browser_type == 'reference' and
+        possible_browser.platform.GetOSName() == 'win'):
+      return True
+    return False
 
 
 class SmoothnessToughFiltersCases(_Smoothness):
@@ -115,6 +122,7 @@ class SmoothnessToughWebGLCases(_Smoothness):
 
 
 @benchmark.Enabled('android')
+@benchmark.Disabled('android-webview')  # http://crbug.com/653933
 class SmoothnessMaps(perf_benchmark.PerfBenchmark):
   page_set = page_sets.MapsPageSet
 
@@ -384,6 +392,7 @@ class SmoothnessGpuRasterizationToughScrollingCases(_Smoothness):
 
 
 @benchmark.Disabled('android')  # http://crbug.com/531593
+@benchmark.Disabled('win')  # http://crbug.com/652372
 class SmoothnessToughImageDecodeCases(_Smoothness):
   page_set = page_sets.ToughImageDecodeCasesPageSet
 

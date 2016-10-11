@@ -3,6 +3,8 @@
 
 <suppressions>
   <suppress id="SharedPreferencesCheck" files="ContextUtils.java"/>
-  <!-- TODO(crbug.com/635567): Fix this properly. -->
-  <suppress id="AlertDialogCheck" files="MultiFieldTimePickerDialog.java"/>
+  <!-- Only chrome/, blimp/, and remoting/ can depend on the support library.
+       Ref: crbug.com/640248 -->
+  <suppress id="AlertDialogCheck"
+    files="src/(android_webview|base|build|chromecast|components|content|device|media|mojo|net|printing|services|testing|third_party|tools|ui|url)/"/>
 </suppressions>

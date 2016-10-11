@@ -210,6 +210,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       current_packet_data_(nullptr),
       last_decrypted_packet_level_(ENCRYPTION_NONE),
       should_last_packet_instigate_acks_(false),
+      was_last_packet_missing_(false),
       largest_seen_packet_with_ack_(0),
       largest_seen_packet_with_stop_waiting_(0),
       max_undecryptable_packets_(0),
@@ -289,7 +290,9 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
   framer_.set_received_entropy_calculator(&received_packet_manager_);
-  last_stop_waiting_frame_.least_unacked = 0;
+  if (!FLAGS_quic_receive_packet_once_decrypted) {
+    last_stop_waiting_frame_.least_unacked = 0;
+  }
   stats_.connection_creation_time = clock_->ApproximateNow();
   if (FLAGS_quic_enable_multipath) {
     sent_packet_manager_.reset(new QuicMultipathSentPacketManager(
@@ -661,6 +664,17 @@ bool QuicConnection::OnPacketHeader(const QuicPacketHeader& header) {
   --stats_.packets_dropped;
   DVLOG(1) << ENDPOINT << "Received packet header: " << header;
   last_header_ = header;
+  if (FLAGS_quic_receive_packet_once_decrypted) {
+    // An ack will be sent if a missing retransmittable packet was received;
+    was_last_packet_missing_ =
+        received_packet_manager_.IsMissing(last_header_.packet_number);
+
+    // Record received to populate ack info correctly before processing stream
+    // frames, since the processing may result in a response packet with a
+    // bundled ack.
+    received_packet_manager_.RecordPacketReceived(
+        last_header_, time_of_last_received_packet_);
+  }
   DCHECK(connected_);
   return true;
 }
@@ -778,7 +792,11 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
     debug_visitor_->OnStopWaitingFrame(frame);
   }
 
-  last_stop_waiting_frame_ = frame;
+  if (FLAGS_quic_receive_packet_once_decrypted) {
+    ProcessStopWaitingFrame(frame);
+  } else {
+    last_stop_waiting_frame_ = frame;
+  }
   return connected_;
 }
 
@@ -986,27 +1004,39 @@ void QuicConnection::OnPacketComplete() {
   DVLOG(1) << ENDPOINT << "Got packet " << last_header_.packet_number << " for "
            << last_header_.public_header.connection_id;
 
-  // An ack will be sent if a missing retransmittable packet was received;
-  const bool was_missing =
-      should_last_packet_instigate_acks_ &&
-      received_packet_manager_.IsMissing(last_header_.packet_number);
+  if (FLAGS_quic_receive_packet_once_decrypted) {
+    // An ack will be sent if a missing retransmittable packet was received;
+    const bool was_missing =
+        should_last_packet_instigate_acks_ && was_last_packet_missing_;
 
-  // Record received to populate ack info correctly before processing stream
-  // frames, since the processing may result in a response packet with a bundled
-  // ack.
-  received_packet_manager_.RecordPacketReceived(last_size_, last_header_,
-                                                time_of_last_received_packet_);
-
-  // Process stop waiting frames here, instead of inline, because the packet
-  // needs to be considered 'received' before the entropy can be updated.
-  if (last_stop_waiting_frame_.least_unacked > 0) {
-    ProcessStopWaitingFrame(last_stop_waiting_frame_);
-    if (!connected_) {
-      return;
+    // It's possible the ack frame was sent along with response data, so it
+    // no longer needs to be sent.
+    if (ack_frame_updated()) {
+      MaybeQueueAck(was_missing);
     }
-  }
+  } else {
+    // An ack will be sent if a missing retransmittable packet was received;
+    const bool was_missing =
+        should_last_packet_instigate_acks_ &&
+        received_packet_manager_.IsMissing(last_header_.packet_number);
 
-  MaybeQueueAck(was_missing);
+    // Record received to populate ack info correctly before processing stream
+    // frames, since the processing may result in a response packet with a
+    // bundled ack.
+    received_packet_manager_.RecordPacketReceived(
+        last_header_, time_of_last_received_packet_);
+
+    // Process stop waiting frames here, instead of inline, because the packet
+    // needs to be considered 'received' before the entropy can be updated.
+    if (last_stop_waiting_frame_.least_unacked > 0) {
+      ProcessStopWaitingFrame(last_stop_waiting_frame_);
+      if (!connected_) {
+        return;
+      }
+    }
+
+    MaybeQueueAck(was_missing);
+  }
 
   ClearLastFrames();
   MaybeCloseIfTooManyOutstandingPackets();
@@ -1078,7 +1108,9 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
 
 void QuicConnection::ClearLastFrames() {
   should_last_packet_instigate_acks_ = false;
-  last_stop_waiting_frame_.least_unacked = 0;
+  if (!FLAGS_quic_receive_packet_once_decrypted) {
+    last_stop_waiting_frame_.least_unacked = 0;
+  }
 }
 
 void QuicConnection::MaybeCloseIfTooManyOutstandingPackets() {
@@ -1712,22 +1744,14 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   }
   if (packet->transmission_type == NOT_RETRANSMISSION) {
     time_of_last_sent_new_packet_ = packet_send_time;
-    if (!FLAGS_quic_better_last_send_for_timeout) {
-      if (IsRetransmittable(*packet) == HAS_RETRANSMITTABLE_DATA &&
-          last_send_for_timeout_ <= time_of_last_received_packet_) {
-        last_send_for_timeout_ = packet_send_time;
-      }
-    }
   }
-  if (FLAGS_quic_better_last_send_for_timeout) {
-    // Only adjust the last sent time (for the purpose of tracking the idle
-    // timeout) if this is the first retransmittable packet sent after a
-    // packet is received. If it were updated on every sent packet, then
-    // sending into a black hole might never timeout.
-    if (IsRetransmittable(*packet) == HAS_RETRANSMITTABLE_DATA &&
-        last_send_for_timeout_ <= time_of_last_received_packet_) {
-      last_send_for_timeout_ = packet_send_time;
-    }
+  // Only adjust the last sent time (for the purpose of tracking the idle
+  // timeout) if this is the first retransmittable packet sent after a
+  // packet is received. If it were updated on every sent packet, then
+  // sending into a black hole might never timeout.
+  if (IsRetransmittable(*packet) == HAS_RETRANSMITTABLE_DATA &&
+      last_send_for_timeout_ <= time_of_last_received_packet_) {
+    last_send_for_timeout_ = packet_send_time;
   }
   SetPingAlarm();
   MaybeSetMtuAlarm();
@@ -2236,10 +2260,8 @@ void QuicConnection::CheckForTimeout() {
 void QuicConnection::SetTimeoutAlarm() {
   QuicTime time_of_last_packet =
       max(time_of_last_received_packet_, time_of_last_sent_new_packet_);
-  if (FLAGS_quic_better_last_send_for_timeout) {
-    time_of_last_packet =
-        max(time_of_last_received_packet_, last_send_for_timeout_);
-  }
+  time_of_last_packet =
+      max(time_of_last_received_packet_, last_send_for_timeout_);
 
   QuicTime deadline = time_of_last_packet + idle_network_timeout_;
   if (!handshake_timeout_.IsInfinite()) {

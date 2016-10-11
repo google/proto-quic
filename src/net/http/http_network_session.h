@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -208,8 +210,9 @@ class NET_EXPORT HttpNetworkSession
     return &ssl_client_auth_cache_;
   }
 
-  void AddResponseDrainer(HttpResponseBodyDrainer* drainer);
+  void AddResponseDrainer(std::unique_ptr<HttpResponseBodyDrainer> drainer);
 
+  // Removes the drainer from the session. Does not dispose of it.
   void RemoveResponseDrainer(HttpResponseBodyDrainer* drainer);
 
   TransportClientSocketPool* GetTransportSocketPool(SocketPoolType pool_type);
@@ -301,7 +304,8 @@ class NET_EXPORT HttpNetworkSession
   SpdySessionPool spdy_session_pool_;
   std::unique_ptr<HttpStreamFactory> http_stream_factory_;
   std::unique_ptr<HttpStreamFactory> http_stream_factory_for_websocket_;
-  std::set<HttpResponseBodyDrainer*> response_drainers_;
+  std::map<HttpResponseBodyDrainer*, std::unique_ptr<HttpResponseBodyDrainer>>
+      response_drainers_;
 
   NextProtoVector next_protos_;
 

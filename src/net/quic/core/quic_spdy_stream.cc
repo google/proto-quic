@@ -32,7 +32,7 @@ QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
       headers_decompressed_(false),
       priority_(kDefaultPriority),
       trailers_decompressed_(false),
-      trailers_delivered_(false) {
+      trailers_consumed_(false) {
   DCHECK_NE(kCryptoStreamId, id);
   // Don't receive any callbacks from the sequencer until headers
   // are complete.
@@ -162,8 +162,8 @@ void QuicSpdyStream::MarkTrailersConsumed(size_t bytes_consumed) {
   decompressed_trailers_.erase(0, bytes_consumed);
 }
 
-void QuicSpdyStream::MarkTrailersDelivered() {
-  trailers_delivered_ = true;
+void QuicSpdyStream::MarkTrailersConsumed() {
+  trailers_consumed_ = true;
 }
 
 void QuicSpdyStream::ConsumeHeaderList() {
@@ -293,9 +293,8 @@ void QuicSpdyStream::OnTrailingHeadersComplete(bool fin, size_t /*frame_len*/) {
   // The data on this stream ends at |final_byte_offset|.
   DVLOG(1) << "Stream ends at byte offset: " << final_byte_offset
            << "  currently read: " << stream_bytes_read();
-
-  OnStreamFrame(QuicStreamFrame(id(), fin, final_byte_offset, StringPiece()));
   trailers_decompressed_ = true;
+  OnStreamFrame(QuicStreamFrame(id(), fin, final_byte_offset, StringPiece()));
 }
 
 void QuicSpdyStream::OnTrailingHeadersComplete(
@@ -327,8 +326,8 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return;
   }
-  OnStreamFrame(QuicStreamFrame(id(), fin, final_byte_offset, StringPiece()));
   trailers_decompressed_ = true;
+  OnStreamFrame(QuicStreamFrame(id(), fin, final_byte_offset, StringPiece()));
 }
 
 void QuicSpdyStream::OnStreamReset(const QuicRstStreamFrame& frame) {
@@ -398,7 +397,7 @@ bool QuicSpdyStream::FinishedReadingTrailers() const {
   } else if (!trailers_decompressed_) {
     return true;
   } else {
-    return trailers_delivered_ && decompressed_trailers_.empty();
+    return trailers_consumed_ && decompressed_trailers_.empty();
   }
 }
 

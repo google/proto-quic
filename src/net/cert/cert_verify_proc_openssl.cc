@@ -12,7 +12,6 @@
 #include "base/logging.h"
 #include "base/sha1.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
 #include "net/cert/asn1_util.h"
@@ -90,11 +89,9 @@ CertStatus MapCertErrorToCertStatus(int err) {
   }
 }
 
-// sk_X509_free is a function-style macro, so can't be used as a template
-// param directly.
-void sk_X509_free_fn(STACK_OF(X509)* st) {
-  sk_X509_free(st);
-}
+struct ShallowX509StackDeleter {
+  void operator()(STACK_OF(X509) * st) const { sk_X509_free(st); }
+};
 
 void GetCertChainInfo(X509_STORE_CTX* store_ctx,
                       CertVerifyResult* verify_result) {
@@ -211,10 +208,9 @@ int CertVerifyProcOpenSSL::VerifyInternal(
     verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
   }
 
-  crypto::ScopedOpenSSL<X509_STORE_CTX, X509_STORE_CTX_free> ctx(
-      X509_STORE_CTX_new());
+  bssl::UniquePtr<X509_STORE_CTX> ctx(X509_STORE_CTX_new());
 
-  crypto::ScopedOpenSSL<STACK_OF(X509), sk_X509_free_fn> intermediates(
+  std::unique_ptr<STACK_OF(X509), ShallowX509StackDeleter> intermediates(
       sk_X509_new_null());
   if (!intermediates.get())
     return ERR_OUT_OF_MEMORY;

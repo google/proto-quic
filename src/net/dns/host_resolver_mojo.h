@@ -23,8 +23,9 @@ class HostResolverMojo : public HostResolver {
   class Impl {
    public:
     virtual ~Impl() = default;
-    virtual void ResolveDns(interfaces::HostResolverRequestInfoPtr,
-                            interfaces::HostResolverRequestClientPtr) = 0;
+    virtual void ResolveDns(
+        std::unique_ptr<HostResolver::RequestInfo> request_info,
+        interfaces::HostResolverRequestClientPtr) = 0;
   };
 
   // |impl| must outlive |this|.

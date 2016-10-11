@@ -6,6 +6,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_network_session.h"
@@ -32,7 +33,7 @@ void HttpResponseBodyDrainer::Start(HttpNetworkSession* session) {
                  this,
                  &HttpResponseBodyDrainer::OnTimerFired);
     session_ = session;
-    session->AddResponseDrainer(this);
+    session->AddResponseDrainer(base::WrapUnique(this));
     return;
   }
 

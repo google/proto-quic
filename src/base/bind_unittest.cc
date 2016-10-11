@@ -24,6 +24,14 @@ using ::testing::Return;
 using ::testing::StrictMock;
 
 namespace base {
+
+using internal::OnceCallback;
+using internal::RepeatingCallback;
+using internal::OnceClosure;
+using internal::RepeatingClosure;
+using internal::BindOnce;
+using internal::BindRepeating;
+
 namespace {
 
 class IncompleteType;
@@ -1041,12 +1049,21 @@ TEST_F(BindTest, Cancellation) {
   EXPECT_CALL(no_ref_, VoidMethodWithIntArg(_)).Times(2);
 
   WeakPtrFactory<NoRef> weak_factory(&no_ref_);
-  base::Callback<void(int)> cb =
-      Bind(&NoRef::VoidMethodWithIntArg, weak_factory.GetWeakPtr());
-  Closure cb2 = Bind(cb, 8);
+  RepeatingCallback<void(int)> cb =
+      BindRepeating(&NoRef::VoidMethodWithIntArg, weak_factory.GetWeakPtr());
+  RepeatingClosure cb2 = BindRepeating(cb, 8);
+  OnceClosure cb3 = BindOnce(cb, 8);
+
+  OnceCallback<void(int)> cb4 =
+      BindOnce(&NoRef::VoidMethodWithIntArg, weak_factory.GetWeakPtr());
+  EXPECT_FALSE(cb4.IsCancelled());
+
+  OnceClosure cb5 = BindOnce(std::move(cb4), 8);
 
   EXPECT_FALSE(cb.IsCancelled());
   EXPECT_FALSE(cb2.IsCancelled());
+  EXPECT_FALSE(cb3.IsCancelled());
+  EXPECT_FALSE(cb5.IsCancelled());
 
   cb.Run(6);
   cb2.Run();
@@ -1055,9 +1072,13 @@ TEST_F(BindTest, Cancellation) {
 
   EXPECT_TRUE(cb.IsCancelled());
   EXPECT_TRUE(cb2.IsCancelled());
+  EXPECT_TRUE(cb3.IsCancelled());
+  EXPECT_TRUE(cb5.IsCancelled());
 
   cb.Run(6);
   cb2.Run();
+  std::move(cb3).Run();
+  std::move(cb5).Run();
 }
 
 TEST_F(BindTest, OnceCallback) {

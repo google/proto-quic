@@ -142,7 +142,11 @@ class BlinkPerfBindings(perf_benchmark.PerfBenchmark):
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/563979
+    # http://crbug.com/563979
+    return (cls.IsSvelte(possible_browser)
+      # http://crbug.com/653970
+      or (possible_browser.browser_type == 'reference' and
+        possible_browser.platform.GetOSName() == 'android'))
 
 
 @benchmark.Enabled('content-shell')
@@ -210,6 +214,15 @@ class BlinkPerfDOM(perf_benchmark.PerfBenchmark):
   def CreateStorySet(self, options):
     path = os.path.join(BLINK_PERF_BASE_DIR, 'DOM')
     return CreateStorySetFromPath(path, SKIPPED_FILE)
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    # http://crbug.com/652724
+    if (possible_browser.browser_type == 'reference' and
+        possible_browser.platform.GetOSName() in ['win', 'linux']):
+      return True
+
+    return False
 
 
 @benchmark.Disabled('win')  # http://crbug.com/588819

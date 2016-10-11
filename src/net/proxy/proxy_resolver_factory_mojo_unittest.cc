@@ -28,7 +28,6 @@
 #include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log.h"
 #include "net/proxy/mojo_proxy_resolver_factory.h"
-#include "net/proxy/mojo_proxy_type_converters.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_resolver.h"
 #include "net/proxy/proxy_resolver_error_observer.h"
@@ -127,12 +126,7 @@ struct GetProxyForUrlAction {
   };
 
   GetProxyForUrlAction() {}
-  GetProxyForUrlAction(const GetProxyForUrlAction& old) {
-    action = old.action;
-    error = old.error;
-    expected_url = old.expected_url;
-    proxy_servers = old.proxy_servers.Clone();
-  }
+  GetProxyForUrlAction(const GetProxyForUrlAction& other) = default;
 
   static GetProxyForUrlAction ReturnError(const GURL& url, Error error) {
     GetProxyForUrlAction result;
@@ -141,12 +135,11 @@ struct GetProxyForUrlAction {
     return result;
   }
 
-  static GetProxyForUrlAction ReturnServers(
-      const GURL& url,
-      const mojo::Array<interfaces::ProxyServerPtr>& proxy_servers) {
+  static GetProxyForUrlAction ReturnServers(const GURL& url,
+                                            const ProxyInfo& proxy_info) {
     GetProxyForUrlAction result;
     result.expected_url = url;
-    result.proxy_servers = proxy_servers.Clone();
+    result.proxy_info = proxy_info;
     return result;
   }
 
@@ -180,7 +173,7 @@ struct GetProxyForUrlAction {
 
   Action action = COMPLETE;
   Error error = OK;
-  mojo::Array<interfaces::ProxyServerPtr> proxy_servers;
+  ProxyInfo proxy_info;
   GURL expected_url;
 };
 
@@ -263,7 +256,7 @@ void MockMojoProxyResolver::GetProxyForUrl(
   client->OnError(12345, url.spec());
   switch (action.action) {
     case GetProxyForUrlAction::COMPLETE: {
-      client->ReportResult(action.error, std::move(action.proxy_servers));
+      client->ReportResult(action.error, action.proxy_info);
       break;
     }
     case GetProxyForUrlAction::DROP: {
@@ -284,10 +277,8 @@ void MockMojoProxyResolver::GetProxyForUrl(
       break;
     }
     case GetProxyForUrlAction::MAKE_DNS_REQUEST: {
-      interfaces::HostResolverRequestInfoPtr request(
-          interfaces::HostResolverRequestInfo::New());
-      request->host = url.spec();
-      request->port = 12345;
+      auto request = base::MakeUnique<HostResolver::RequestInfo>(
+          HostPortPair(url.spec(), 12345));
       interfaces::HostResolverRequestClientPtr dns_client;
       mojo::GetProxy(&dns_client);
       client->ResolveDns(std::move(request), std::move(dns_client));
@@ -453,10 +444,8 @@ void MockMojoProxyResolverFactory::CreateResolver(
       break;
     }
     case CreateProxyResolverAction::MAKE_DNS_REQUEST: {
-      interfaces::HostResolverRequestInfoPtr request(
-          interfaces::HostResolverRequestInfo::New());
-      request->host = pac_script;
-      request->port = 12345;
+      auto request = base::MakeUnique<HostResolver::RequestInfo>(
+          HostPortPair(pac_script, 12345));
       interfaces::HostResolverRequestClientPtr dns_client;
       mojo::GetProxy(&dns_client);
       client->ResolveDns(std::move(request), std::move(dns_client));
@@ -554,13 +543,10 @@ class ProxyResolverFactoryMojoTest : public testing::Test,
         on_delete_callback_.closure());
   }
 
-  mojo::Array<interfaces::ProxyServerPtr> ProxyServersFromPacString(
-      const std::string& pac_string) {
+  ProxyInfo ProxyServersFromPacString(const std::string& pac_string) {
     ProxyInfo proxy_info;
     proxy_info.UsePacString(pac_string);
-
-    return mojo::Array<interfaces::ProxyServerPtr>::From(
-        proxy_info.proxy_list().GetAll());
+    return proxy_info;
   }
 
   void CreateProxyResolver() {

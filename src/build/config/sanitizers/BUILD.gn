@@ -480,7 +480,7 @@ config("ubsan_security_flags") {
     ubsan_security_blacklist_path =
         rebase_path("//tools/ubsan/security_blacklist.txt", root_build_dir)
     cflags = [
-      "-fsanitize=signed-integer-overflow,shift,vptr",
+      "-fsanitize=signed-integer-overflow,shift,vptr,function,vla-bound",
       "-fsanitize-blacklist=$ubsan_security_blacklist_path",
     ]
   }

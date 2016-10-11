@@ -15,11 +15,4 @@ MessagePump::~MessagePump() {
 void MessagePump::SetTimerSlack(TimerSlack) {
 }
 
-#if defined(OS_WIN)
-bool MessagePump::WasSignaled() {
-  NOTREACHED();
-  return false;
-}
-#endif
-
 }  // namespace base

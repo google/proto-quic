@@ -9,7 +9,6 @@
 
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/stl_util.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "net/base/net_errors.h"
 #include "net/proxy/mojo_proxy_resolver_impl.h"
@@ -92,7 +91,6 @@ MojoProxyResolverFactoryImpl::MojoProxyResolverFactoryImpl()
     : MojoProxyResolverFactoryImpl(ProxyResolverV8TracingFactory::Create()) {}
 
 MojoProxyResolverFactoryImpl::~MojoProxyResolverFactoryImpl() {
-  base::STLDeleteElements(&jobs_);
 }
 
 void MojoProxyResolverFactoryImpl::CreateResolver(
@@ -101,16 +99,18 @@ void MojoProxyResolverFactoryImpl::CreateResolver(
     interfaces::ProxyResolverFactoryRequestClientPtr client) {
   // The Job will call RemoveJob on |this| when either the create request
   // finishes or |request| or |client| encounters a connection error.
-  jobs_.insert(new Job(
+  std::unique_ptr<Job> job = base::MakeUnique<Job>(
       this, ProxyResolverScriptData::FromUTF8(pac_script.To<std::string>()),
       proxy_resolver_impl_factory_.get(), std::move(request),
-      std::move(client)));
+      std::move(client));
+  Job* job_ptr = job.get();
+  jobs_[job_ptr] = std::move(job);
 }
 
 void MojoProxyResolverFactoryImpl::RemoveJob(Job* job) {
-  size_t erased = jobs_.erase(job);
-  DCHECK_EQ(1u, erased);
-  delete job;
+  auto it = jobs_.find(job);
+  DCHECK(it != jobs_.end());
+  jobs_.erase(it);
 }
 
 }  // namespace net

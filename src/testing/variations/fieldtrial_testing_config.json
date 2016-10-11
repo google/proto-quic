@@ -1,19 +1,4 @@
 {
-    "AllBookmarks": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Disabled",
-                    "disable_features": [
-                        "AllBookmarks"
-                    ]
-                }
-            ]
-        }
-    ],
     "AndroidSessionNotifications": [
         {
             "platforms": [
@@ -1435,21 +1420,6 @@
             ]
         }
     ],
-    "ReadItLater": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "ReadItLaterInMenu"
-                    ]
-                }
-            ]
-        }
-    ],
     "ReaderModeUI": [
         {
             "platforms": [
@@ -2205,22 +2175,6 @@
         }
     ],
     "WebRTC-LocalIPPermissionCheck": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled"
-                }
-            ]
-        }
-    ],
-    "WebRTC-PeerConnectionDTLS1.2": [
         {
             "platforms": [
                 "android",

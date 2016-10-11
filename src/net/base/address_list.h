@@ -82,6 +82,9 @@ class NET_EXPORT AddressList {
   iterator end() { return endpoints_.end(); }
   const_iterator end() const { return endpoints_.end(); }
 
+  const std::vector<net::IPEndPoint>& endpoints() const { return endpoints_; }
+  std::vector<net::IPEndPoint>& endpoints() { return endpoints_; }
+
  private:
   std::vector<IPEndPoint> endpoints_;
   // TODO(szym): Remove. http://crbug.com/126134

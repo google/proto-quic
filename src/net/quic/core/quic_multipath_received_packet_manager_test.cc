@@ -39,7 +39,6 @@ namespace {
 const QuicPathId kPathId1 = 1;
 const QuicPathId kPathId2 = 2;
 const QuicPathId kPathId3 = 3;
-const QuicByteCount kBytes = 1350;
 
 class QuicMultipathReceivedPacketManagerTest : public testing::Test {
  public:
@@ -93,11 +92,11 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, OnPathCreatedAndClosed) {
 }
 
 TEST_F(QuicMultipathReceivedPacketManagerTest, RecordPacketReceived) {
-  EXPECT_CALL(*manager_0_, RecordPacketReceived(_, _, _)).Times(1);
-  multipath_manager_.RecordPacketReceived(kDefaultPathId, kBytes, header_,
+  EXPECT_CALL(*manager_0_, RecordPacketReceived(_, _)).Times(1);
+  multipath_manager_.RecordPacketReceived(kDefaultPathId, header_,
                                           QuicTime::Zero());
-  EXPECT_QUIC_BUG(multipath_manager_.RecordPacketReceived(
-                      kPathId2, kBytes, header_, QuicTime::Zero()),
+  EXPECT_QUIC_BUG(multipath_manager_.RecordPacketReceived(kPathId2, header_,
+                                                          QuicTime::Zero()),
                   "Received a packet on a non-existent path");
 }
 

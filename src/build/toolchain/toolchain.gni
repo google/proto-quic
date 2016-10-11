@@ -40,7 +40,19 @@ declare_args() {
   # with the build. Used on iOS to ship official builds (as they are built
   # with the version of clang shipped with Xcode).
   use_xcode_clang = is_ios && is_official_build
+
+  # Use the system install of Xcode for tools like ibtool, libtool, etc.
+  # This does not affect the compiler. When this variable is false, targets will
+  # instead use a hermetic install of Xcode. [The hermetic install can be
+  # obtained with gclient sync after setting the environment variable
+  # FORCE_MAC_TOOLCHAIN].
+  use_system_xcode = true
 }
+
+# The path to the hermetic install of Xcode. Only relevant when
+# use_system_xcode = false.
+hermetic_xcode_path =
+    rebase_path("//build/mac_files/Xcode.app", "", root_build_dir)
 
 declare_args() {
   if (is_clang) {

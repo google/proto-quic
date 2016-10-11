@@ -97,24 +97,59 @@ void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
           new ValidateCallback(std::move(rejector), std::move(done_cb))));
 }
 
+class StatelessRejector::ProcessClientHelloCallback
+    : public ProcessClientHelloResultCallback {
+ public:
+  ProcessClientHelloCallback(
+      std::unique_ptr<StatelessRejector> rejector,
+      std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb)
+      : rejector_(std::move(rejector)), done_cb_(std::move(done_cb)) {}
+
+  void Run(
+      QuicErrorCode error,
+      const std::string& error_details,
+      std::unique_ptr<CryptoHandshakeMessage> message,
+      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+    StatelessRejector* rejector_ptr = rejector_.get();
+    rejector_ptr->ProcessClientHelloDone(
+        error, error_details, std::move(message), std::move(rejector_),
+        std::move(done_cb_));
+  }
+
+ private:
+  std::unique_ptr<StatelessRejector> rejector_;
+  std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb_;
+};
+
 void StatelessRejector::ProcessClientHello(
     scoped_refptr<ValidateClientHelloResultCallback::Result> result,
     std::unique_ptr<StatelessRejector> rejector,
     std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb) {
-  QuicCryptoNegotiatedParameters params;
-  DiversificationNonce diversification_nonce;
-  QuicErrorCode error = crypto_config_->ProcessClientHello(
+  std::unique_ptr<ProcessClientHelloCallback> cb(
+      new ProcessClientHelloCallback(std::move(rejector), std::move(done_cb)));
+  crypto_config_->ProcessClientHello(
       result,
       /*reject_only=*/true, connection_id_, server_address_.address(),
       client_address_, version_, versions_,
       /*use_stateless_rejects=*/true, server_designated_connection_id_, clock_,
-      random_, compressed_certs_cache_, &params, &proof_,
+      random_, compressed_certs_cache_, &params_, &proof_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version_),
-      chlo_packet_size_, &reply_, &diversification_nonce, &error_details_);
+      chlo_packet_size_, std::move(cb));
+}
+
+void StatelessRejector::ProcessClientHelloDone(
+    QuicErrorCode error,
+    const std::string& error_details,
+    std::unique_ptr<CryptoHandshakeMessage> message,
+    std::unique_ptr<StatelessRejector> rejector,
+    std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb) {
+  reply_ = std::move(message);
+
   if (error != QUIC_NO_ERROR) {
     error_ = error;
+    error_details_ = error_details;
     state_ = FAILED;
-  } else if (reply_.tag() == kSREJ) {
+  } else if (reply_->tag() == kSREJ) {
     state_ = REJECTED;
   } else {
     state_ = ACCEPTED;

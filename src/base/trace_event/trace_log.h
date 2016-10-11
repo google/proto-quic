@@ -34,7 +34,6 @@ class TraceBuffer;
 class TraceBufferChunk;
 class TraceEvent;
 class TraceEventMemoryOverhead;
-class TraceSamplingThread;
 
 struct BASE_EXPORT TraceLogStatus {
   TraceLogStatus();
@@ -307,8 +306,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Exposed for unittesting:
 
-  void WaitSamplingEventForTesting();
-
   // Allows deleting our singleton instance.
   static void DeleteForTesting();
 
@@ -475,7 +472,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   static const InternalTraceOptions kInternalRecordUntilFull;
   static const InternalTraceOptions kInternalRecordContinuously;
   static const InternalTraceOptions kInternalEchoToConsole;
-  static const InternalTraceOptions kInternalEnableSampling;
   static const InternalTraceOptions kInternalRecordAsMuchAsPossible;
   static const InternalTraceOptions kInternalEnableArgumentFilter;
 
@@ -520,10 +516,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   std::string watch_event_name_;
 
   subtle::AtomicWord /* Options */ trace_options_;
-
-  // Sampling thread handles.
-  std::unique_ptr<TraceSamplingThread> sampling_thread_;
-  PlatformThreadHandle sampling_thread_handle_;
 
   TraceConfig trace_config_;
   TraceConfig event_callback_trace_config_;

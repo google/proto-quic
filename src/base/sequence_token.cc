@@ -37,6 +37,10 @@ bool SequenceToken::IsValid() const {
   return token_ != kInvalidSequenceToken;
 }
 
+int SequenceToken::ToInternalValue() const {
+  return token_;
+}
+
 SequenceToken SequenceToken::Create() {
   return SequenceToken(g_sequence_token_generator.GetNext());
 }

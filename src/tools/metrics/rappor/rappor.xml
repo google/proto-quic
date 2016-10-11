@@ -437,6 +437,38 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="ContentSettings.PermissionActions_Flash.Denied.Url2"
+    type="LOW_FREQUENCY_ETLD_PLUS_ONE">
+  <owner>dominickn@chromium.org</owner>
+  <summary>
+    The domain for which a Flash permission prompt was Denied.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="ContentSettings.PermissionActions_Flash.Dismissed.Url2"
+    type="LOW_FREQUENCY_ETLD_PLUS_ONE">
+  <owner>dominickn@chromium.org</owner>
+  <summary>
+    The domain for which a Flash permission prompt was Dismissed.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="ContentSettings.PermissionActions_Flash.Granted.Url2"
+    type="LOW_FREQUENCY_ETLD_PLUS_ONE">
+  <owner>dominickn@chromium.org</owner>
+  <summary>
+    The domain for which a Flash permission prompt was Granted.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="ContentSettings.PermissionActions_Flash.Ignored.Url2"
+    type="LOW_FREQUENCY_ETLD_PLUS_ONE">
+  <owner>dominickn@chromium.org</owner>
+  <summary>
+    The domain for which a Flash permission prompt was Ignored.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="ContentSettings.PermissionActions_Geolocation.Denied.Url"
     type="ETLD_PLUS_ONE">
   <owner>miguelg@chromium.org</owner>
@@ -830,6 +862,14 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="ContentSettings.PermissionRequested.ProtectedMedia.Url2"
+    type="LOW_FREQUENCY_ETLD_PLUS_ONE">
+  <owner>xhwang@chromium.org</owner>
+  <summary>
+    The domain that issues a Protected Media Identifier permission prompt.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="ContentSettings.Plugins.AddedAllowException"
     type="ETLD_PLUS_ONE">
   <owner>tommycli@chromium.org</owner>
@@ -1194,6 +1234,18 @@ now we are only interested in H264, VP8 and VP9.
       to de-noise than this one.
     </summary>
   </flags-field>
+</rappor-metric>
+
+<rappor-metric
+    name="PageLoad.Experimental.PaintTiming.FirstMeaningfulPaintNotRecorded"
+    type="ETLD_PLUS_ONE">
+  <owner>ksakamoto@chromium.org</owner>
+  <summary>
+    The domain and registry of the URL of a page which did not report
+    PageLoad.Experimental.PaintTiming.NavigationToFirstMeaningfulPaint UMA
+    because the user left the page before the page's network activity settles
+    down.
+  </summary>
 </rappor-metric>
 
 <rappor-metric name="Permissions.Action.AudioCapture"

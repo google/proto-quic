@@ -125,22 +125,22 @@ class BASE_EXPORT TraceConfig {
   //
   // |trace_options_string| is a comma-delimited list of trace options.
   // Possible options are: "record-until-full", "record-continuously",
-  // "record-as-much-as-possible", "trace-to-console", "enable-sampling",
-  // "enable-systrace" and "enable-argument-filter".
+  // "record-as-much-as-possible", "trace-to-console", "enable-systrace" and
+  // "enable-argument-filter".
   // The first 4 options are trace recoding modes and hence
   // mutually exclusive. If more than one trace recording modes appear in the
   // options_string, the last one takes precedence. If none of the trace
   // recording mode is specified, recording mode is RECORD_UNTIL_FULL.
   //
   // The trace option will first be reset to the default option
-  // (record_mode set to RECORD_UNTIL_FULL, enable_sampling, enable_systrace,
-  // and enable_argument_filter set to false) before options parsed from
+  // (record_mode set to RECORD_UNTIL_FULL, enable_systrace and
+  // enable_argument_filter set to false) before options parsed from
   // |trace_options_string| are applied on it. If |trace_options_string| is
   // invalid, the final state of trace options is undefined.
   //
   // Example: TraceConfig("test_MyTest*", "record-until-full");
   // Example: TraceConfig("test_MyTest*,test_OtherStuff",
-  //                      "record-continuously, enable-sampling");
+  //                      "record-continuously");
   // Example: TraceConfig("-excluded_category1,-excluded_category2",
   //                      "record-until-full, trace-to-console");
   //          would set ECHO_TO_CONSOLE as the recording mode.
@@ -170,7 +170,6 @@ class BASE_EXPORT TraceConfig {
   // Example:
   //   {
   //     "record_mode": "record-continuously",
-  //     "enable_sampling": true,
   //     "enable_systrace": true,
   //     "enable_argument_filter": true,
   //     "included_categories": ["included",
@@ -206,12 +205,10 @@ class BASE_EXPORT TraceConfig {
   const StringList& GetSyntheticDelayValues() const;
 
   TraceRecordMode GetTraceRecordMode() const { return record_mode_; }
-  bool IsSamplingEnabled() const { return enable_sampling_; }
   bool IsSystraceEnabled() const { return enable_systrace_; }
   bool IsArgumentFilterEnabled() const { return enable_argument_filter_; }
 
   void SetTraceRecordMode(TraceRecordMode mode) { record_mode_ = mode; }
-  void EnableSampling() { enable_sampling_ = true; }
   void EnableSystrace() { enable_systrace_ = true; }
   void EnableArgumentFilter() { enable_argument_filter_ = true; }
 
@@ -306,7 +303,6 @@ class BASE_EXPORT TraceConfig {
   bool HasIncludedPatterns() const;
 
   TraceRecordMode record_mode_;
-  bool enable_sampling_ : 1;
   bool enable_systrace_ : 1;
   bool enable_argument_filter_ : 1;
 

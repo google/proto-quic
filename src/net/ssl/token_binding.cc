@@ -4,15 +4,16 @@
 
 #include "net/ssl/token_binding.h"
 
+#include <openssl/bn.h>
 #include <openssl/bytestring.h>
 #include <openssl/ec.h>
 #include <openssl/ec_key.h>
+#include <openssl/ecdsa.h>
 #include <openssl/evp.h>
 #include <openssl/mem.h>
 
 #include "base/stl_util.h"
 #include "crypto/ec_private_key.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_config.h"
 
@@ -54,7 +55,7 @@ bool ECDSA_SIGToRaw(ECDSA_SIG* ec_sig, EC_KEY* ec, std::vector<uint8_t>* out) {
 }
 
 ECDSA_SIG* RawToECDSA_SIG(EC_KEY* ec, base::StringPiece sig) {
-  crypto::ScopedECDSA_SIG raw_sig(ECDSA_SIG_new());
+  bssl::UniquePtr<ECDSA_SIG> raw_sig(ECDSA_SIG_new());
   const EC_GROUP* group = EC_KEY_get0_group(ec);
   const BIGNUM* order = EC_GROUP_get0_order(group);
   size_t group_size = BN_num_bytes(order);
@@ -74,7 +75,7 @@ bool CreateTokenBindingSignature(base::StringPiece ekm,
                                  TokenBindingType type,
                                  crypto::ECPrivateKey* key,
                                  std::vector<uint8_t>* out) {
-  crypto::ScopedEVP_MD_CTX digest_ctx(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX digest_ctx;
   uint8_t tb_type = static_cast<uint8_t>(type);
   uint8_t key_type = static_cast<uint8_t>(TB_PARAM_ECDSAP256);
   uint8_t digest[EVP_MAX_MD_SIZE];
@@ -89,7 +90,7 @@ bool CreateTokenBindingSignature(base::StringPiece ekm,
   EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key->key());
   if (!ec_key)
     return false;
-  crypto::ScopedECDSA_SIG sig(ECDSA_do_sign(digest, digest_len, ec_key));
+  bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_do_sign(digest, digest_len, ec_key));
   if (!sig)
     return false;
   return ECDSA_SIGToRaw(sig.get(), ec_key, out);
@@ -192,16 +193,16 @@ bool VerifyTokenBindingSignature(base::StringPiece ec_point,
   uint8_t x9_62_ec_point[kUncompressedPointLen];
   x9_62_ec_point[0] = 4;
   memcpy(x9_62_ec_point + 1, ec_point.data(), kUncompressedPointLen - 1);
-  crypto::ScopedEC_Key key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+  bssl::UniquePtr<EC_KEY> key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EC_KEY* keyp = key.get();
-  crypto::ScopedEC_POINT pub_key(EC_POINT_new(EC_KEY_get0_group(keyp)));
+  bssl::UniquePtr<EC_POINT> pub_key(EC_POINT_new(EC_KEY_get0_group(keyp)));
   if (!EC_POINT_oct2point(EC_KEY_get0_group(keyp), pub_key.get(),
                           x9_62_ec_point, kUncompressedPointLen, nullptr) ||
       !EC_KEY_set_public_key(keyp, pub_key.get())) {
     return false;
   }
 
-  crypto::ScopedEVP_MD_CTX digest_ctx(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX digest_ctx;
   uint8_t tb_type = static_cast<uint8_t>(type);
   uint8_t key_type = static_cast<uint8_t>(TB_PARAM_ECDSAP256);
   uint8_t digest[EVP_MAX_MD_SIZE];
@@ -214,7 +215,7 @@ bool VerifyTokenBindingSignature(base::StringPiece ec_point,
     return false;
   }
 
-  crypto::ScopedECDSA_SIG sig(RawToECDSA_SIG(keyp, signature));
+  bssl::UniquePtr<ECDSA_SIG> sig(RawToECDSA_SIG(keyp, signature));
   if (!sig)
     return false;
   return !!ECDSA_do_verify(digest, digest_len, sig.get(), keyp);

@@ -18,6 +18,7 @@ def _CreatePageClassWithSmoothInteractions(page_cls):
   class DerivedSmoothPage(page_cls):  # pylint: disable=no-init
 
     def RunPageInteractions(self, action_runner):
+      action_runner.Wait(1)
       _IssueMarkerAndScroll(action_runner)
   return DerivedSmoothPage
 
@@ -32,6 +33,7 @@ class TopSmoothPage(page_module.Page):
     self.credentials = credentials
 
   def RunPageInteractions(self, action_runner):
+    action_runner.Wait(1)
     _IssueMarkerAndScroll(action_runner)
 
 
@@ -67,6 +69,7 @@ class GmailSmoothPage(top_pages.TopPages):
         });''')
     action_runner.WaitForJavaScriptCondition(
         'window.__scrollableElementForTelemetry != null')
+    action_runner.Wait(1)
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollElement(
           element_function='window.__scrollableElementForTelemetry')
@@ -77,6 +80,7 @@ class GoogleCalendarSmoothPage(top_pages.GoogleCalendarPage):
   """ Why: productivity, top google properties """
 
   def RunPageInteractions(self, action_runner):
+    action_runner.Wait(1)
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollElement(selector='#scrolltimedeventswk')
 
@@ -86,6 +90,7 @@ class GoogleDocSmoothPage(top_pages.GoogleDocPage):
   """ Why: productivity, top google properties; Sample doc in the link """
 
   def RunPageInteractions(self, action_runner):
+    action_runner.Wait(1)
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollElement(selector='.kix-appview-editor')
 
@@ -95,6 +100,7 @@ class ESPNSmoothPage(top_pages.ESPNPage):
   """ Why: #1 sports """
 
   def RunPageInteractions(self, action_runner):
+    action_runner.Wait(1)
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage(left_start_ratio=0.1)
 

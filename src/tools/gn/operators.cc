@@ -155,7 +155,7 @@ bool ValueDestination::Init(Scope* exec_scope,
 
 const Value* ValueDestination::GetExistingValue() const {
   if (type_ == SCOPE)
-    return scope_->GetValue(name_token_->value(), false);
+    return scope_->GetValue(name_token_->value(), true);
   else if (type_ == LIST)
     return &list_->list_value()[index_];
   return nullptr;

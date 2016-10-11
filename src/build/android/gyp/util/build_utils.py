@@ -328,7 +328,14 @@ def MergeZips(output, inputs, exclude_patterns=None, path_transform=None):
   path_transform = path_transform or (lambda p, z: p)
   added_names = set()
 
-  with zipfile.ZipFile(output, 'w') as out_zip:
+  output_is_already_open = not isinstance(output, basestring)
+  if output_is_already_open:
+    assert isinstance(output, zipfile.ZipFile)
+    out_zip = output
+  else:
+    out_zip = zipfile.ZipFile(output, 'w')
+
+  try:
     for in_file in inputs:
       with zipfile.ZipFile(in_file, 'r') as in_zip:
         in_zip._expected_crc = None
@@ -339,8 +346,12 @@ def MergeZips(output, inputs, exclude_patterns=None, path_transform=None):
           dst_name = path_transform(info.filename, in_file)
           already_added = dst_name in added_names
           if not already_added and not MatchesGlob(dst_name, exclude_patterns):
-            AddToZipHermetic(out_zip, dst_name, data=in_zip.read(info))
+            AddToZipHermetic(out_zip, dst_name, data=in_zip.read(info),
+                             compress=info.compress_type != zipfile.ZIP_STORED)
             added_names.add(dst_name)
+  finally:
+    if not output_is_already_open:
+      out_zip.close()
 
 
 def PrintWarning(message):

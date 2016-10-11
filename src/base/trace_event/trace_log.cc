@@ -40,15 +40,11 @@
 #include "base/trace_event/trace_buffer.h"
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_synthetic_delay.h"
-#include "base/trace_event/trace_sampling_thread.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
 #include "base/trace_event/trace_event_etw_export_win.h"
 #endif
-
-// The thread buckets for the sampling profiler.
-BASE_EXPORT TRACE_EVENT_API_ATOMIC_WORD g_trace_state[3];
 
 namespace base {
 namespace internal {
@@ -475,7 +471,6 @@ TraceLog::TraceLog()
       process_id_(0),
       watch_category_(0),
       trace_options_(kInternalRecordUntilFull),
-      sampling_thread_handle_(0),
       trace_config_(TraceConfig()),
       event_callback_trace_config_(TraceConfig()),
       thread_shared_chunk_index_(0),
@@ -789,23 +784,6 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config, Mode mode) {
     UpdateCategoryGroupEnabledFlags();
     UpdateSyntheticDelaysFromTraceConfig();
 
-    if (new_options & kInternalEnableSampling) {
-      sampling_thread_.reset(new TraceSamplingThread);
-      sampling_thread_->RegisterSampleBucket(
-          &g_trace_state[0], "bucket0",
-          Bind(&TraceSamplingThread::DefaultSamplingCallback));
-      sampling_thread_->RegisterSampleBucket(
-          &g_trace_state[1], "bucket1",
-          Bind(&TraceSamplingThread::DefaultSamplingCallback));
-      sampling_thread_->RegisterSampleBucket(
-          &g_trace_state[2], "bucket2",
-          Bind(&TraceSamplingThread::DefaultSamplingCallback));
-      if (!PlatformThread::Create(0, sampling_thread_.get(),
-                                  &sampling_thread_handle_)) {
-        NOTREACHED() << "failed to create thread";
-      }
-    }
-
     dispatching_to_observer_list_ = true;
     observer_list = enabled_state_observer_list_;
     observer_map = async_observers_;
@@ -835,10 +813,9 @@ void TraceLog::SetArgumentFilterPredicate(
 
 TraceLog::InternalTraceOptions TraceLog::GetInternalOptionsFromTraceConfig(
     const TraceConfig& config) {
-  InternalTraceOptions ret =
-      config.IsSamplingEnabled() ? kInternalEnableSampling : kInternalNone;
-  if (config.IsArgumentFilterEnabled())
-    ret |= kInternalEnableArgumentFilter;
+  InternalTraceOptions ret = config.IsArgumentFilterEnabled()
+                                 ? kInternalEnableArgumentFilter
+                                 : kInternalNone;
   switch (config.GetTraceRecordMode()) {
     case RECORD_UNTIL_FULL:
       return ret | kInternalRecordUntilFull;
@@ -876,16 +853,6 @@ void TraceLog::SetDisabledWhileLocked() {
   }
 
   mode_ = DISABLED;
-
-  if (sampling_thread_) {
-    // Stop the sampling thread.
-    sampling_thread_->Stop();
-    lock_.Release();
-    PlatformThread::Join(sampling_thread_handle_);
-    lock_.Acquire();
-    sampling_thread_handle_ = PlatformThreadHandle();
-    sampling_thread_.reset();
-  }
 
   trace_config_.Clear();
   subtle::NoBarrier_Store(&watch_category_, 0);
@@ -1763,12 +1730,6 @@ void TraceLog::AddMetadataEventsWhileLocked() {
                             "overflowed_at_ts",
                             buffer_limit_reached_timestamp_);
   }
-}
-
-void TraceLog::WaitSamplingEventForTesting() {
-  if (!sampling_thread_)
-    return;
-  sampling_thread_->WaitSamplingEventForTesting();
 }
 
 void TraceLog::DeleteForTesting() {

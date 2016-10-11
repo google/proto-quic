@@ -13,24 +13,15 @@
 #include "base/logging.h"
 #include "base/sha1.h"
 #include "base/strings/string_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "crypto/sha2.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/signed_certificate_timestamp.h"
-#include "net/ssl/scoped_openssl_types.h"
 
 namespace net {
 
 namespace ct {
 
 namespace {
-
-void FreeX509_EXTENSIONS(X509_EXTENSIONS* ptr) {
-  sk_X509_EXTENSION_pop_free(ptr, X509_EXTENSION_free);
-}
-
-using ScopedX509_EXTENSIONS =
-    crypto::ScopedOpenSSL<X509_EXTENSIONS, FreeX509_EXTENSIONS>;
 
 // The wire form of the OID 1.3.6.1.4.1.11129.2.4.2. See Section 3.3 of
 // RFC6962.
@@ -49,15 +40,16 @@ bool StringEqualToCBS(const std::string& value1, const CBS* value2) {
   return memcmp(value1.data(), CBS_data(value2), CBS_len(value2)) == 0;
 }
 
-ScopedX509 OSCertHandleToOpenSSL(X509Certificate::OSCertHandle os_handle) {
+bssl::UniquePtr<X509> OSCertHandleToOpenSSL(
+    X509Certificate::OSCertHandle os_handle) {
 #if defined(USE_OPENSSL_CERTS)
-  return ScopedX509(X509Certificate::DupOSCertHandle(os_handle));
+  return bssl::UniquePtr<X509>(X509Certificate::DupOSCertHandle(os_handle));
 #else
   std::string der_encoded;
   if (!X509Certificate::GetDEREncoded(os_handle, &der_encoded))
-    return ScopedX509();
+    return bssl::UniquePtr<X509>();
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_encoded.data());
-  return ScopedX509(d2i_X509(NULL, &bytes, der_encoded.size()));
+  return bssl::UniquePtr<X509>(d2i_X509(NULL, &bytes, der_encoded.size()));
 #endif
 }
 
@@ -171,7 +163,7 @@ bool FindMatchingSingleResponse(CBS* responses,
 
 bool ExtractEmbeddedSCTList(X509Certificate::OSCertHandle cert,
                             std::string* sct_list) {
-  ScopedX509 x509(OSCertHandleToOpenSSL(cert));
+  bssl::UniquePtr<X509> x509(OSCertHandleToOpenSSL(cert));
   if (!x509)
     return false;
   X509_EXTENSIONS* x509_exts = x509->cert_info->extensions;
@@ -187,7 +179,7 @@ bool GetPrecertLogEntry(X509Certificate::OSCertHandle leaf,
                         LogEntry* result) {
   result->Reset();
 
-  ScopedX509 leaf_x509(OSCertHandleToOpenSSL(leaf));
+  bssl::UniquePtr<X509> leaf_x509(OSCertHandleToOpenSSL(leaf));
   if (!leaf_x509)
     return false;
 
@@ -203,7 +195,7 @@ bool GetPrecertLogEntry(X509Certificate::OSCertHandle leaf,
 
   // The Precertificate log entry is the final certificate's TBSCertificate
   // without the SCT extension (RFC6962, section 3.2).
-  ScopedX509 leaf_copy(X509_dup(leaf_x509.get()));
+  bssl::UniquePtr<X509> leaf_copy(X509_dup(leaf_x509.get()));
   if (!leaf_copy || !leaf_copy->cert_info->extensions) {
     NOTREACHED();
     return false;
@@ -346,7 +338,7 @@ bool ExtractSCTListFromOCSPResponse(X509Certificate::OSCertHandle issuer,
   if (!CBS_get_asn1(&single_response, &extensions, kSingleExtensionsTag))
     return false;
   const uint8_t* ptr = CBS_data(&extensions);
-  ScopedX509_EXTENSIONS x509_exts(
+  bssl::UniquePtr<X509_EXTENSIONS> x509_exts(
       d2i_X509_EXTENSIONS(NULL, &ptr, CBS_len(&extensions)));
   if (!x509_exts || ptr != CBS_data(&extensions) + CBS_len(&extensions))
     return false;

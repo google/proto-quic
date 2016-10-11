@@ -53,7 +53,7 @@ QUIC_FLAG(bool, FLAGS_quic_use_old_public_reset_packets, true)
 
 // If true, QUIC will use cheap stateless rejects without creating a full
 // connection.
-QUIC_FLAG(bool, FLAGS_quic_use_cheap_stateless_rejects, false)
+QUIC_FLAG(bool, FLAGS_quic_use_cheap_stateless_rejects, true)
 
 // If true, QUIC respect HTTP2 SETTINGS frame rather than always close the
 // connection.
@@ -85,15 +85,6 @@ QUIC_FLAG(bool, FLAGS_quic_enforce_mtu_limit, false)
 // Disable MTU probing if MTU probe causes ERR_MSG_TOO_BIG instead of aborting
 // the connection.
 QUIC_FLAG(bool, FLAGS_graceful_emsgsize_on_mtu_probe, true)
-
-// If true, set a QUIC connection's last_sent_for_timeout_ to the send time of
-// the first packet sent after receiving a packet, even if the sent packet is
-// a retransmission
-QUIC_FLAG(bool, FLAGS_quic_better_last_send_for_timeout, true)
-
-// If true, send an explicit TTL in QUIC REJ messages to mitigate client clock
-// skew.
-QUIC_FLAG(bool, FLAGS_quic_send_scfg_ttl, true)
 
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event. This flag can be turned on only if
@@ -150,3 +141,16 @@ QUIC_FLAG(bool, FLAGS_quic_stream_sequencer_buffer_debug, true)
 // If true, release QuicCryptoStream\'s read buffer when stream are less
 // frequently used.
 QUIC_FLAG(bool, FLAGS_quic_release_crypto_stream_buffer, false)
+
+// Use a more conservative backoff of 2x instead of 1.5x for handshake
+// retransmissions, as well as a larger minimum.
+QUIC_FLAG(bool, FLAGS_quic_conservative_handshake_retransmits, true)
+
+// If true, buffer packets while parsing public headers instead of parsing down
+// if CHLO is already buffered.
+QUIC_FLAG(bool, FLAGS_quic_buffer_packets_after_chlo, false)
+
+// Previously QUIC didn't register a packet as received until it was fully
+// processed, but now that flow control is implemented, it can be received once
+// decrypted.
+QUIC_FLAG(bool, FLAGS_quic_receive_packet_once_decrypted, false)

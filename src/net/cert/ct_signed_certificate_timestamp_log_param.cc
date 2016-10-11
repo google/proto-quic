@@ -13,7 +13,6 @@
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
 #include "net/cert/ct_sct_to_string.h"
-#include "net/cert/ct_verify_result.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/log/net_log_capture_mode.h"
 
@@ -76,11 +75,11 @@ std::unique_ptr<base::ListValue> SCTListToPrintableValues(
 }  // namespace
 
 std::unique_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
-    const ct::CTVerifyResult* ct_result,
+    const SignedCertificateTimestampAndStatusList* scts,
     NetLogCaptureMode capture_mode) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-  dict->Set("scts", SCTListToPrintableValues(ct_result->scts));
+  dict->Set("scts", SCTListToPrintableValues(*scts));
 
   return std::move(dict);
 }

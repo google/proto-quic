@@ -27,6 +27,9 @@ public @interface Restriction {
     /** Specifies the test is only valid on a device that can reach the internet. */
     public static final String RESTRICTION_TYPE_INTERNET = "Internet";
 
+    /** Specifies the test is only valid on a device that has a camera. */
+    public static final String RESTRICTION_TYPE_HAS_CAMERA = "Has_Camera";
+
     /**
      * @return A list of restrictions.
      */

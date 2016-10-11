@@ -29,6 +29,10 @@ class BASE_EXPORT SequenceToken {
   // Returns true if this is a valid SequenceToken.
   bool IsValid() const;
 
+  // Returns the integer uniquely representing this SequenceToken. This method
+  // should only be used for tracing and debugging.
+  int ToInternalValue() const;
+
   // Returns a valid SequenceToken which isn't equal to any previously returned
   // SequenceToken.
   static SequenceToken Create();

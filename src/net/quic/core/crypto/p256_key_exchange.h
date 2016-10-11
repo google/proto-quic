@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_CRYPTO_P256_KEY_EXCHANGE_H_
 #define NET_QUIC_CRYPTO_P256_KEY_EXCHANGE_H_
 
+#include <openssl/base.h>
 #include <stdint.h>
 
 #include <memory>
@@ -13,7 +14,6 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/key_exchange.h"
 
@@ -54,11 +54,12 @@ class NET_EXPORT_PRIVATE P256KeyExchange : public KeyExchange {
     kUncompressedECPointForm = 0x04,
   };
 
-  // P256KeyExchange takes ownership of |private_key|, and expects
-  // |public_key| consists of |kUncompressedP256PointBytes| bytes.
-  P256KeyExchange(EC_KEY* private_key, const uint8_t* public_key);
+  // P256KeyExchange wraps |private_key|, and expects |public_key| consists of
+  // |kUncompressedP256PointBytes| bytes.
+  P256KeyExchange(bssl::UniquePtr<EC_KEY> private_key,
+                  const uint8_t* public_key);
 
-  crypto::ScopedEC_KEY private_key_;
+  bssl::UniquePtr<EC_KEY> private_key_;
   // The public key stored as an uncompressed P-256 point.
   uint8_t public_key_[kUncompressedP256PointBytes];
 

@@ -282,7 +282,7 @@ TEST_F(CookieMonsterTest, TestDomainLine) {
 
 TEST_F(CookieMonsterTest, TestImport) {
   scoped_refptr<MockPersistentCookieStore> store(new MockPersistentCookieStore);
-  std::vector<CanonicalCookie*> initial_cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> initial_cookies;
   GetCookiesCallback getCookiesCallback;
 
   // We want to setup a fairly large backing store, with 300 domains of 50
@@ -300,7 +300,7 @@ TEST_F(CookieMonsterTest, TestImport) {
     }
   }
 
-  store->SetLoadExpectation(true, initial_cookies);
+  store->SetLoadExpectation(true, std::move(initial_cookies));
 
   std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
 

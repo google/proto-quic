@@ -231,7 +231,7 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
     // gets all the data it needs for SCT verification and does not do any
     // external communication.
     cert_transparency_verifier_->Verify(cert_.get(), std::string(), cert_sct,
-                                        &verify_details_->ct_verify_result,
+                                        &verify_details_->ct_verify_result.scts,
                                         net_log_);
   }
 

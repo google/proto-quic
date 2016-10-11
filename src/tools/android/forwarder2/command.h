@@ -36,9 +36,18 @@ bool ReadCommand(Socket* socket,
                  int* port_out,
                  command::Type* command_type_out);
 
+bool ReadCommandWithTimeout(Socket* socket,
+                            int* port_out,
+                            command::Type* command_type_out,
+                            int timeout_secs);
+
 // Helper function to read the command from the |socket| and return true if the
 // |command| is equal to the given command parameter.
 bool ReceivedCommand(command::Type command, Socket* socket);
+
+bool ReceivedCommandWithTimeout(command::Type command,
+                                Socket* socket,
+                                int timeout_secs);
 
 bool SendCommand(command::Type command, int port, Socket* socket);
 

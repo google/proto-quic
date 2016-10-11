@@ -7,7 +7,10 @@ SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 
 DISTRO=debian
 DIST=jessie
+DIST_UPDATES=jessie-updates
+
 PACKAGES_EXT=xz
+
 APT_REPO=http://http.us.debian.org/debian
 # gpg keyring file generated using:
 #   export KEYS="518E17E1 46925553 2B90D010"

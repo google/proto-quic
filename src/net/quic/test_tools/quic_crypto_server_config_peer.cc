@@ -18,6 +18,10 @@ using std::vector;
 namespace net {
 namespace test {
 
+ProofSource* QuicCryptoServerConfigPeer::GetProofSource() {
+  return server_config_->proof_source_.get();
+}
+
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfigPeer::GetPrimaryConfig() {
   base::AutoLock locked(server_config_->configs_lock_);

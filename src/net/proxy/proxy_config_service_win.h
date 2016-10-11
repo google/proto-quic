@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <winhttp.h>
 
+#include <memory>
 #include <vector>
 
 #include "base/compiler_specific.h"
@@ -56,7 +57,6 @@ class NET_EXPORT_PRIVATE ProxyConfigServiceWin
 
  private:
   FRIEND_TEST_ALL_PREFIXES(ProxyConfigServiceWinTest, SetFromIEConfig);
-  typedef std::vector<base::win::RegKey*> RegKeyList;
 
   // Registers change observers on the registry keys relating to proxy settings.
   void StartWatchingRegistryForChanges();
@@ -75,7 +75,7 @@ class NET_EXPORT_PRIVATE ProxyConfigServiceWin
       ProxyConfig* config,
       const WINHTTP_CURRENT_USER_IE_PROXY_CONFIG& ie_config);
 
-  RegKeyList keys_to_watch_;
+  std::vector<std::unique_ptr<base::win::RegKey>> keys_to_watch_;
 };
 
 }  // namespace net

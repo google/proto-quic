@@ -287,7 +287,7 @@ WebSocketTransportClientSocketPool::WebSocketTransportClientSocketPool(
                                 max_sockets_per_group,
                                 host_resolver,
                                 client_socket_factory,
-                                NULL,
+                                nullptr,
                                 net_log),
       connect_job_delegate_(this),
       pool_net_log_(net_log),
@@ -430,7 +430,7 @@ void WebSocketTransportClientSocketPool::FlushWithError(int error) {
        ++it) {
     InvokeUserCallbackLater(
         it->second->handle(), it->second->callback(), error);
-    delete it->second, it->second = NULL;
+    delete it->second, it->second = nullptr;
   }
   pending_connects_.clear();
   for (StalledRequestQueue::iterator it = stalled_request_queue_.begin();
@@ -551,7 +551,7 @@ void WebSocketTransportClientSocketPool::OnConnectJobComplete(
   bool delete_succeeded = DeleteJob(handle);
   DCHECK(delete_succeeded);
 
-  job = NULL;
+  job = nullptr;
 
   if (!handed_out_socket)
     ActivateStalledRequest();
@@ -623,7 +623,7 @@ bool WebSocketTransportClientSocketPool::DeleteJob(ClientSocketHandle* handle) {
   // (usually because of a failure) then it can trigger that job to be
   // deleted. |it| remains valid because std::map guarantees that erase() does
   // not invalid iterators to other entries.
-  delete it->second, it->second = NULL;
+  delete it->second, it->second = nullptr;
   DCHECK(pending_connects_.find(handle) == it);
   pending_connects_.erase(it);
   return true;

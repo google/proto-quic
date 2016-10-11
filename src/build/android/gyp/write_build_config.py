@@ -209,18 +209,11 @@ def _ExtractSharedLibsFromRuntimeDeps(runtime_deps_files):
   ret.reverse()
   return ret
 
-
 def _CreateJavaLibrariesList(library_paths):
-  """Returns a java literal array with the "base" library names:
+  """ Create a java literal array with the "base" library names:
   e.g. libfoo.so -> foo
   """
   return ('{%s}' % ','.join(['"%s"' % s[3:-3] for s in library_paths]))
-
-
-def _CreateJavaAssetList(assets):
-  """Returns a java literal array from a list of assets in the form src:dst."""
-  return '{%s}' % ','.join(sorted(['"%s"' % a.split(':')[1] for a in assets]))
-
 
 def main(argv):
   parser = optparse.OptionParser()
@@ -240,6 +233,8 @@ def main(argv):
   parser.add_option('--package-name',
       help='Java package name for these resources.')
   parser.add_option('--android-manifest', help='Path to android manifest.')
+  parser.add_option('--is-locale-resource', action='store_true',
+                    help='Whether it is locale resource.')
   parser.add_option('--resource-dirs', action='append', default=[],
                     help='GYP-list of resource dirs')
 
@@ -295,6 +290,8 @@ def main(argv):
       help='GYP-list of proguard flag files to use in final apk.')
   parser.add_option('--proguard-info',
       help='Path to the proguard .info output for this apk.')
+  parser.add_option('--has-alternative-locale-resource', action='store_true',
+      help='Whether there is alternative-locale-resource in direct deps')
   parser.add_option('--fail',
       help='GYP-list of error message lines to fail with.')
 
@@ -341,6 +338,21 @@ def main(argv):
 
   deps = Deps(direct_deps_config_paths)
   all_inputs = deps.AllConfigPaths()
+
+  # Remove other locale resources if there is alternative_locale_resource in
+  # direct deps.
+  if options.has_alternative_locale_resource:
+    alternative = [r['path'] for r in deps.Direct('android_resources')
+                   if r.get('is_locale_resource')]
+    # We can only have one locale resources in direct deps.
+    if len(alternative) != 1:
+      raise Exception('The number of locale resource in direct deps is wrong %d'
+                       % len(alternative))
+    unwanted = [r['path'] for r in deps.All('android_resources')
+                if r.get('is_locale_resource') and r['path'] not in alternative]
+    for p in unwanted:
+      deps.RemoveNonDirectDep(p)
+
 
   direct_library_deps = deps.Direct('java_library')
   all_library_deps = deps.All('java_library')
@@ -473,6 +485,8 @@ def main(argv):
       deps_info['package_name'] = options.package_name
     if options.r_text:
       deps_info['r_text'] = options.r_text
+    if options.is_locale_resource:
+      deps_info['is_locale_resource'] = True
 
     deps_info['resources_dirs'] = []
     if options.resource_dirs:
@@ -644,10 +658,6 @@ def main(argv):
     }
     config['assets'], config['uncompressed_assets'] = (
         _MergeAssets(deps.All('android_assets')))
-    config['compressed_assets_java_list'] = (
-        _CreateJavaAssetList(config['assets']))
-    config['uncompressed_assets_java_list'] = (
-        _CreateJavaAssetList(config['uncompressed_assets']))
 
   build_utils.WriteJson(config, options.build_config, only_if_changed=True)
 

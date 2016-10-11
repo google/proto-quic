@@ -411,11 +411,15 @@ struct CancellationChecker<
   }
 };
 
-template <typename Signature, typename... BoundArgs>
-struct CancellationChecker<BindState<Callback<Signature>, BoundArgs...>> {
+template <typename Signature,
+          typename... BoundArgs,
+          CopyMode copy_mode,
+          RepeatMode repeat_mode>
+struct CancellationChecker<
+    BindState<Callback<Signature, copy_mode, repeat_mode>, BoundArgs...>> {
   static constexpr bool is_cancellable = true;
   static bool Run(const BindStateBase* base) {
-    using Functor = Callback<Signature>;
+    using Functor = Callback<Signature, copy_mode, repeat_mode>;
     using BindStateType = BindState<Functor, BoundArgs...>;
     const BindStateType* bind_state = static_cast<const BindStateType*>(base);
     return bind_state->functor_.IsCancelled();

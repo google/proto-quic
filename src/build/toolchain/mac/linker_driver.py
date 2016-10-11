@@ -130,8 +130,8 @@ def RunDsymUtil(dsym_path_prefix, full_args):
     raise ValueError('Unspecified dSYM output file')
 
   linker_out = _FindLinkerOutput(full_args)
-  (head, tail) = os.path.split(linker_out)
-  dsym_out = os.path.join(dsym_path_prefix, tail + '.dSYM')
+  base = os.path.basename(linker_out)
+  dsym_out = os.path.join(dsym_path_prefix, base + '.dSYM')
 
   # Remove old dSYMs before invoking dsymutil.
   _RemovePath(dsym_out)
@@ -155,8 +155,8 @@ def RunSaveUnstripped(unstripped_path_prefix, full_args):
     raise ValueError('Unspecified unstripped output file')
 
   linker_out = _FindLinkerOutput(full_args)
-  (head, tail) = os.path.split(linker_out)
-  unstripped_out = os.path.join(unstripped_path_prefix, tail + '.unstripped')
+  base = os.path.basename(linker_out)
+  unstripped_out = os.path.join(unstripped_path_prefix, base + '.unstripped')
 
   shutil.copyfile(linker_out, unstripped_out)
   return [unstripped_out]

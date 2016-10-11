@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "net/cert/signed_certificate_timestamp_and_status.h"
+
 namespace base {
 class Value;
 }
@@ -16,16 +18,12 @@ namespace net {
 
 class NetLogCaptureMode;
 
-namespace ct {
-struct CTVerifyResult;
-}
-
 // Creates a dictionary of processed Signed Certificate Timestamps to be
 // logged in the NetLog.
 // See the documentation for SIGNED_CERTIFICATE_TIMESTAMPS_CHECKED
 // in net/log/net_log_event_type_list.h
 std::unique_ptr<base::Value> NetLogSignedCertificateTimestampCallback(
-    const ct::CTVerifyResult* ct_result,
+    const SignedCertificateTimestampAndStatusList* scts,
     NetLogCaptureMode capture_mode);
 
 // Creates a dictionary of raw Signed Certificate Timestamps to be logged

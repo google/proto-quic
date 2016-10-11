@@ -49,7 +49,7 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
       bool max_bandwidth_resumption) override;
   void SetNumEmulatedConnections(int num_connections) override;
   void OnCongestionEvent(bool rtt_updated,
-                         QuicByteCount bytes_in_flight,
+                         QuicByteCount prior_in_flight,
                          const CongestionVector& acked_packets,
                          const CongestionVector& lost_packets) override;
   bool OnPacketSent(QuicTime sent_time,
@@ -63,7 +63,6 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
                                 QuicByteCount bytes_in_flight) const override;
   QuicBandwidth PacingRate(QuicByteCount bytes_in_flight) const override;
   QuicBandwidth BandwidthEstimate() const override;
-  QuicTime::Delta RetransmissionDelay() const override;
   bool InSlowStart() const override;
   bool InRecovery() const override;
   std::string GetDebugState() const override;
@@ -88,13 +87,13 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   // Called when a packet is lost.
   virtual void OnPacketLost(QuicPacketNumber largest_loss,
                             QuicByteCount lost_bytes,
-                            QuicByteCount bytes_in_flight) = 0;
+                            QuicByteCount prior_in_flight) = 0;
 
   // Called when a packet has been acked to possibly increase the congestion
   // window.
   virtual void MaybeIncreaseCwnd(QuicPacketNumber acked_packet_number,
                                  QuicByteCount acked_bytes,
-                                 QuicByteCount bytes_in_flight) = 0;
+                                 QuicByteCount prior_in_flight) = 0;
 
   // Called when a retransmission has occured which resulted in packets
   // being retransmitted.
@@ -111,7 +110,7 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   // TODO(ianswett): Remove these and migrate to OnCongestionEvent.
   void OnPacketAcked(QuicPacketNumber acked_packet_number,
                      QuicByteCount acked_bytes,
-                     QuicByteCount bytes_in_flight);
+                     QuicByteCount prior_in_flight);
 
  protected:
   // TODO(rch): Make these private and clean up subclass access to them.

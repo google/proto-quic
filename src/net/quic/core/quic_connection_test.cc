@@ -722,8 +722,6 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         .WillRepeatedly(Return(QuicTime::Delta::Zero()));
     EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _))
         .Times(AnyNumber());
-    EXPECT_CALL(*send_algorithm_, RetransmissionDelay())
-        .WillRepeatedly(Return(QuicTime::Delta::Zero()));
     EXPECT_CALL(*send_algorithm_, GetCongestionWindow())
         .WillRepeatedly(Return(kDefaultTCPMSS));
     EXPECT_CALL(*send_algorithm_, PacingRate(_))
@@ -2774,15 +2772,18 @@ TEST_P(QuicConnectionTest, DelayRTOWithAckReceipt) {
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _));
   QuicAckFrame ack = InitAckFrame(1);
   ProcessAckPacket(&ack);
+  // Now we have an RTT sample of DefaultRetransmissionTime(500ms),
+  // so the RTO has increased to 2 * SRTT.
   EXPECT_TRUE(retransmission_alarm->IsSet());
-  EXPECT_GT(retransmission_alarm->deadline(), clock_.Now());
+  EXPECT_EQ(retransmission_alarm->deadline(),
+            clock_.Now() + 2 * DefaultRetransmissionTime());
 
   // Move forward past the original RTO and ensure the RTO is still pending.
   clock_.AdvanceTime(2 * DefaultRetransmissionTime());
 
   // Ensure the second packet gets retransmitted when it finally fires.
   EXPECT_TRUE(retransmission_alarm->IsSet());
-  EXPECT_LT(retransmission_alarm->deadline(), clock_.ApproximateNow());
+  EXPECT_EQ(retransmission_alarm->deadline(), clock_.ApproximateNow());
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   // Manually cancel the alarm to simulate a real test.
   connection_.GetRetransmissionAlarm()->Fire();
@@ -3286,13 +3287,8 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_TRUE(connection_.connected());
-  if (FLAGS_quic_better_last_send_for_timeout) {
-    EXPECT_EQ(default_timeout + five_ms,
-              connection_.GetTimeoutAlarm()->deadline());
-  } else {
-    EXPECT_EQ(default_timeout + five_ms + five_ms,
-              connection_.GetTimeoutAlarm()->deadline());
-  }
+  EXPECT_EQ(default_timeout + five_ms,
+            connection_.GetTimeoutAlarm()->deadline());
 
   // This time, we should time out.
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_NETWORK_IDLE_TIMEOUT, _,
@@ -3306,7 +3302,6 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
 }
 
 TEST_P(QuicConnectionTest, TimeoutAfterRetransmission) {
-  FLAGS_quic_better_last_send_for_timeout = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_TRUE(connection_.connected());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
@@ -3429,13 +3424,8 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
   connection_.GetTimeoutAlarm()->Fire();
   EXPECT_TRUE(connection_.GetTimeoutAlarm()->IsSet());
   EXPECT_TRUE(connection_.connected());
-  if (FLAGS_quic_better_last_send_for_timeout) {
-    EXPECT_EQ(default_timeout + five_ms,
-              connection_.GetTimeoutAlarm()->deadline());
-  } else {
-    EXPECT_EQ(default_timeout + five_ms + five_ms,
-              connection_.GetTimeoutAlarm()->deadline());
-  }
+  EXPECT_EQ(default_timeout + five_ms,
+            connection_.GetTimeoutAlarm()->deadline());
 
   // This time, we should time out.
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_NETWORK_IDLE_TIMEOUT, _,
@@ -4242,6 +4232,7 @@ TEST_P(QuicConnectionTest, BundleAckForSecondCHLO) {
   EXPECT_FALSE(writer_->stop_waiting_frames().empty());
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_EQ(2u, writer_->ack_frames().front().largest_observed);
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
@@ -4291,6 +4282,7 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
   EXPECT_EQ(3u, writer_->frame_count());
   EXPECT_FALSE(writer_->stop_waiting_frames().empty());
   EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_EQ(3u, writer_->ack_frames().front().largest_observed);
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -4931,6 +4923,7 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckOfNackedPacket) {
 
 TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
   QuicPacketHeader header;
+  header.packet_number = 1;
 
   MockQuicConnectionDebugVisitor debug_visitor;
   connection_.set_debug_visitor(&debug_visitor);

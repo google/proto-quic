@@ -419,14 +419,3 @@ fuzzer_test("angle_translator_fuzzer") {
   ]
   libfuzzer_options = [ "max_len=1000" ]
 }
-
-fuzzer_test("openssl_bio_string_fuzzer") {
-  sources = [
-    "openssl_bio_string_fuzzer.cc",
-  ]
-  deps = [
-    "//crypto",
-    "//third_party/boringssl",
-  ]
-  libfuzzer_options = [ "max_len=512" ]
-}

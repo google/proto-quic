@@ -11,7 +11,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/network_interfaces.h"
 #include "net/dns/host_resolver.h"
-#include "net/dns/mojo_host_type_converters.h"
 
 namespace net {
 
@@ -56,19 +55,17 @@ MojoHostResolverImpl::~MojoHostResolverImpl() {
 }
 
 void MojoHostResolverImpl::Resolve(
-    interfaces::HostResolverRequestInfoPtr request_info,
+    std::unique_ptr<HostResolver::RequestInfo> request_info,
     interfaces::HostResolverRequestClientPtr client) {
   DCHECK(thread_checker_.CalledOnValidThread());
-  HostResolver::RequestInfo host_request_info =
-      request_info->To<net::HostResolver::RequestInfo>();
-  if (host_request_info.is_my_ip_address()) {
+  if (request_info->is_my_ip_address()) {
     // The proxy resolver running inside a sandbox may not be able to get the
     // correct host name. Instead, fill it ourself if the request is for our own
     // IP address.
-    host_request_info.set_host_port_pair(HostPortPair(GetHostName(), 80));
+    request_info->set_host_port_pair(HostPortPair(GetHostName(), 80));
   }
-  Job* job = new Job(this, resolver_, host_request_info, net_log_,
-                     std::move(client));
+  Job* job =
+      new Job(this, resolver_, *request_info, net_log_, std::move(client));
   pending_jobs_.insert(job);
   job->Start();
 }
@@ -119,11 +116,7 @@ void MojoHostResolverImpl::Job::OnResolveDone(int result) {
   for (const auto& address : result_) {
     DVLOG(1) << address.ToString();
   }
-  if (result == OK)
-    client_->ReportResult(result, interfaces::AddressList::From(result_));
-  else
-    client_->ReportResult(result, nullptr);
-
+  client_->ReportResult(result, result_);
   resolver_service_->DeleteJob(this);
 }
 

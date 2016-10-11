@@ -22,7 +22,6 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_util_openssl.h"
@@ -35,9 +34,6 @@
 namespace net {
 
 namespace {
-
-using ScopedGENERAL_NAMES =
-    crypto::ScopedOpenSSL<GENERAL_NAMES, GENERAL_NAMES_free>;
 
 void CreateOSCertHandlesFromPKCS7Bytes(
     const char* data,
@@ -106,7 +102,7 @@ void ParseSubjectAltName(X509Certificate::OSCertHandle cert,
   if (!alt_name_ext)
     return;
 
-  ScopedGENERAL_NAMES alt_names(
+  bssl::UniquePtr<GENERAL_NAMES> alt_names(
       reinterpret_cast<GENERAL_NAMES*>(X509V3_EXT_d2i(alt_name_ext)));
   if (!alt_names.get())
     return;
@@ -164,15 +160,10 @@ class X509InitSingleton {
     ResetCertStore();
   }
 
-  crypto::ScopedOpenSSL<X509_STORE, X509_STORE_free> store_;
+  bssl::UniquePtr<X509_STORE> store_;
 
   DISALLOW_COPY_AND_ASSIGN(X509InitSingleton);
 };
-
-// Used to free a list of X509_NAMEs and the objects it points to.
-void sk_X509_NAME_free_all(STACK_OF(X509_NAME)* sk) {
-  sk_X509_NAME_pop_free(sk, X509_NAME_free);
-}
 
 }  // namespace
 
@@ -361,11 +352,10 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
   *type = kPublicKeyTypeUnknown;
   *size_bits = 0;
 
-  crypto::ScopedEVP_PKEY scoped_key(X509_get_pubkey(cert_handle));
+  bssl::UniquePtr<EVP_PKEY> scoped_key(X509_get_pubkey(cert_handle));
   if (!scoped_key.get())
     return;
 
-  CHECK(scoped_key.get());
   EVP_PKEY* key = scoped_key.get();
 
   switch (key->type) {
@@ -395,8 +385,7 @@ bool X509Certificate::IsIssuedByEncoded(
 
   // Convert to a temporary list of X509_NAME objects.
   // It will own the objects it points to.
-  crypto::ScopedOpenSSL<STACK_OF(X509_NAME), sk_X509_NAME_free_all>
-      issuer_names(sk_X509_NAME_new_null());
+  bssl::UniquePtr<STACK_OF(X509_NAME)> issuer_names(sk_X509_NAME_new_null());
   if (!issuer_names.get())
     return false;
 
@@ -442,7 +431,7 @@ bool X509Certificate::IsIssuedByEncoded(
 
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
-  crypto::ScopedEVP_PKEY scoped_key(X509_get_pubkey(cert_handle));
+  bssl::UniquePtr<EVP_PKEY> scoped_key(X509_get_pubkey(cert_handle));
   if (!scoped_key)
     return false;
   if (!X509_verify(cert_handle, scoped_key.get()))

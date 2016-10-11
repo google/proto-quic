@@ -314,7 +314,8 @@ def RemoveDirectory(*path):
 
 
 def MakeZip(output_dir, archive_name, file_list, file_relative_dir,
-            raise_error=True, remove_archive_directory=True, strip_files=None):
+            raise_error=True, remove_archive_directory=True, strip_files=None,
+            ignore_sub_folder=False):
   """Packs files into a new zip archive.
 
   Files are first copied into a directory within the output_dir named for
@@ -441,6 +442,8 @@ def MakeZip(output_dir, archive_name, file_list, file_relative_dir,
       zip_cmd = ['zip', '-yr1']
     else:
       zip_cmd = windows_zip_cmd
+    if ignore_sub_folder:
+      zip_cmd.extend(['-j'])
     saved_dir = os.getcwd()
     os.chdir(os.path.dirname(archive_dir))
     command = zip_cmd + [output_file, os.path.basename(archive_dir)]
@@ -454,7 +457,7 @@ def MakeZip(output_dir, archive_name, file_list, file_relative_dir,
   return (archive_dir, output_file)
 
 
-def ExtractZip(filename, output_dir, verbose=True):
+def ExtractZip(filename, output_dir, extract_file_list=[], verbose=True):
   """Extract the zip archive in the output directory."""
   MaybeMakeDirectory(output_dir)
 
@@ -481,6 +484,7 @@ def ExtractZip(filename, output_dir, verbose=True):
     saved_dir = os.getcwd()
     os.chdir(output_dir)
     command = unzip_cmd + [filepath]
+    command.extend(extract_file_list)
     result = RunCommand(command)
     os.chdir(saved_dir)
     if result:

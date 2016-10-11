@@ -224,7 +224,7 @@ class QuicReceivedPacketManagerTest
     QuicPacketHeader header;
     header.packet_number = packet_number;
     header.entropy_hash = entropy_hash;
-    received_manager_.RecordPacketReceived(0u, header, receipt_time);
+    received_manager_.RecordPacketReceived(header, receipt_time);
   }
 
   QuicConnectionStats stats_;
@@ -328,9 +328,9 @@ TEST_P(QuicReceivedPacketManagerTest, SetCumulativeEntropyUpTo) {
 TEST_P(QuicReceivedPacketManagerTest, DontWaitForPacketsBefore) {
   QuicPacketHeader header;
   header.packet_number = 2u;
-  received_manager_.RecordPacketReceived(0u, header, QuicTime::Zero());
+  received_manager_.RecordPacketReceived(header, QuicTime::Zero());
   header.packet_number = 7u;
-  received_manager_.RecordPacketReceived(0u, header, QuicTime::Zero());
+  received_manager_.RecordPacketReceived(header, QuicTime::Zero());
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(3u));
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(6u));
   EXPECT_TRUE(QuicReceivedPacketManagerPeer::DontWaitForPacketsBefore(
@@ -344,7 +344,7 @@ TEST_P(QuicReceivedPacketManagerTest, GetUpdatedAckFrame) {
   header.packet_number = 2u;
   QuicTime two_ms = QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(2);
   EXPECT_FALSE(received_manager_.ack_frame_updated());
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
+  received_manager_.RecordPacketReceived(header, two_ms);
   EXPECT_TRUE(received_manager_.ack_frame_updated());
 
   QuicFrame ack = received_manager_.GetUpdatedAckFrame(QuicTime::Zero());
@@ -365,11 +365,11 @@ TEST_P(QuicReceivedPacketManagerTest, GetUpdatedAckFrame) {
   EXPECT_EQ(1u, ack.ack_frame->received_packet_times.size());
 
   header.packet_number = 999u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
+  received_manager_.RecordPacketReceived(header, two_ms);
   header.packet_number = 4u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
+  received_manager_.RecordPacketReceived(header, two_ms);
   header.packet_number = 1000u;
-  received_manager_.RecordPacketReceived(0u, header, two_ms);
+  received_manager_.RecordPacketReceived(header, two_ms);
   EXPECT_TRUE(received_manager_.ack_frame_updated());
   ack = received_manager_.GetUpdatedAckFrame(two_ms);
   EXPECT_FALSE(received_manager_.ack_frame_updated());

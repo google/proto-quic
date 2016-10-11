@@ -4,6 +4,7 @@
 
 #include "net/extras/sqlite/sqlite_persistent_cookie_store.h"
 
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
@@ -108,8 +109,9 @@ class SQLitePersistentCookieStore::Backend
 
   // Steps through all results of |smt|, makes a cookie from each, and adds the
   // cookie to |cookies|. This method also updates |num_cookies_read_|.
-  void MakeCookiesFromSQLStatement(std::vector<CanonicalCookie*>* cookies,
-                                   sql::Statement* statement);
+  void MakeCookiesFromSQLStatement(
+      std::vector<std::unique_ptr<CanonicalCookie>>* cookies,
+      sql::Statement* statement);
 
   // Batch a cookie addition.
   void AddCookie(const CanonicalCookie& cc);
@@ -138,10 +140,6 @@ class SQLitePersistentCookieStore::Backend
     DCHECK(!db_.get()) << "Close should have already been called.";
     DCHECK_EQ(0u, num_pending_);
     DCHECK(pending_.empty());
-
-    for (CanonicalCookie* cookie : cookies_) {
-      delete cookie;
-    }
   }
 
   // Database upgrade statements.
@@ -254,9 +252,7 @@ class SQLitePersistentCookieStore::Backend
   // Temporary buffer for cookies loaded from DB. Accumulates cookies to reduce
   // the number of messages sent to the client runner. Sent back in response to
   // individual load requests for domain keys or when all loading completes.
-  // Ownership of the cookies in this vector is transferred to the client in
-  // response to individual load requests or when all loading completes.
-  std::vector<CanonicalCookie*> cookies_;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies_;
 
   // Map of domain keys(eTLD+1) to domains/hosts that are to be loaded from DB.
   std::map<std::string, std::set<std::string>> keys_to_load_;
@@ -620,13 +616,13 @@ void SQLitePersistentCookieStore::Backend::Notify(
     bool load_success) {
   DCHECK(client_task_runner_->RunsTasksOnCurrentThread());
 
-  std::vector<CanonicalCookie*> cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies;
   {
     base::AutoLock locked(lock_);
     cookies.swap(cookies_);
   }
 
-  loaded_callback.Run(cookies);
+  loaded_callback.Run(std::move(cookies));
 }
 
 bool SQLitePersistentCookieStore::Backend::InitializeDatabase() {
@@ -792,7 +788,7 @@ bool SQLitePersistentCookieStore::Backend::LoadCookiesForDomains(
     return false;
   }
 
-  std::vector<CanonicalCookie*> cookies;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies;
   std::set<std::string>::const_iterator it = domains.begin();
   for (; it != domains.end(); ++it) {
     smt.BindString(0, *it);
@@ -801,13 +797,13 @@ bool SQLitePersistentCookieStore::Backend::LoadCookiesForDomains(
   }
   {
     base::AutoLock locked(lock_);
-    cookies_.insert(cookies_.end(), cookies.begin(), cookies.end());
+    std::move(cookies.begin(), cookies.end(), std::back_inserter(cookies_));
   }
   return true;
 }
 
 void SQLitePersistentCookieStore::Backend::MakeCookiesFromSQLStatement(
-    std::vector<CanonicalCookie*>* cookies,
+    std::vector<std::unique_ptr<CanonicalCookie>>* cookies,
     sql::Statement* statement) {
   sql::Statement& smt = *statement;
   while (smt.Step()) {
@@ -835,7 +831,7 @@ void SQLitePersistentCookieStore::Backend::MakeCookiesFromSQLStatement(
             static_cast<DBCookiePriority>(smt.ColumnInt(13)))));  // priority
     DLOG_IF(WARNING, cc->CreationDate() > Time::Now())
         << L"CreationDate too recent";
-    cookies->push_back(cc.release());
+    cookies->push_back(std::move(cc));
     ++num_cookies_read_;
   }
 }
@@ -1402,7 +1398,7 @@ void SQLitePersistentCookieStore::Load(const LoadedCallback& loaded_callback) {
   if (backend_)
     backend_->Load(loaded_callback);
   else
-    loaded_callback.Run(std::vector<CanonicalCookie*>());
+    loaded_callback.Run(std::vector<std::unique_ptr<CanonicalCookie>>());
 }
 
 void SQLitePersistentCookieStore::LoadCookiesForKey(
@@ -1412,7 +1408,7 @@ void SQLitePersistentCookieStore::LoadCookiesForKey(
   if (backend_)
     backend_->LoadCookiesForKey(key, loaded_callback);
   else
-    loaded_callback.Run(std::vector<CanonicalCookie*>());
+    loaded_callback.Run(std::vector<std::unique_ptr<CanonicalCookie>>());
 }
 
 void SQLitePersistentCookieStore::AddCookie(const CanonicalCookie& cc) {

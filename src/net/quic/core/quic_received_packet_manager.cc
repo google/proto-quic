@@ -142,11 +142,10 @@ QuicReceivedPacketManager::QuicReceivedPacketManager(QuicConnectionStats* stats)
 QuicReceivedPacketManager::~QuicReceivedPacketManager() {}
 
 void QuicReceivedPacketManager::RecordPacketReceived(
-    QuicByteCount bytes,
     const QuicPacketHeader& header,
     QuicTime receipt_time) {
   QuicPacketNumber packet_number = header.packet_number;
-  DCHECK(IsAwaitingPacket(packet_number));
+  DCHECK(IsAwaitingPacket(packet_number)) << " packet_number:" << packet_number;
   if (!ack_frame_updated_) {
     ack_frame_.received_packet_times.clear();
   }

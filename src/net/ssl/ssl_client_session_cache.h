@@ -5,7 +5,7 @@
 #ifndef NET_SSL_SSL_CLIENT_SESSION_CACHE_H
 #define NET_SSL_SSL_CLIENT_SESSION_CACHE_H
 
-#include <openssl/ssl.h>
+#include <openssl/base.h>
 #include <stddef.h>
 
 #include <memory>
@@ -20,7 +20,6 @@
 #include "base/threading/thread_checker.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
-#include "net/ssl/scoped_openssl_types.h"
 
 namespace base {
 class Clock;
@@ -46,7 +45,7 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
 
   // Returns the session associated with |cache_key| and moves it to the front
   // of the MRU list. Returns nullptr if there is none.
-  ScopedSSL_SESSION Lookup(const std::string& cache_key);
+  bssl::UniquePtr<SSL_SESSION> Lookup(const std::string& cache_key);
 
   // Inserts |session| into the cache at |cache_key|. If there is an existing
   // one, it is released. Every |expiration_check_count| calls, the cache is
@@ -63,7 +62,7 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
     CacheEntry();
     ~CacheEntry();
 
-    ScopedSSL_SESSION session;
+    bssl::UniquePtr<SSL_SESSION> session;
     // The time at which this entry was created.
     base::Time creation_time;
   };

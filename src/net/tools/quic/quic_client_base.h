@@ -167,7 +167,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // found on the QuicCryptoNegotiatedParameters object in
   // token_binding_key_param.
   void UseTokenBinding() {
-    crypto_config_.tb_key_params = QuicTagVector{kP256};
+    crypto_config_.tb_key_params = QuicTagVector{kTB10};
   }
 
   const QuicVersionVector& supported_versions() const {

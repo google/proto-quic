@@ -12,7 +12,7 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/logging.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -46,10 +46,10 @@ ProxyConfigServiceWin::ProxyConfigServiceWin()
 }
 
 ProxyConfigServiceWin::~ProxyConfigServiceWin() {
-  // The registry functions below will end up going to disk.  Do this on another
-  // thread to avoid slowing the IO thread.  http://crbug.com/61453
+  // The registry functions below will end up going to disk.  TODO: Do this on
+  // another thread to avoid slowing the IO thread.  http://crbug.com/61453
   base::ThreadRestrictions::ScopedAllowIO allow_io;
-  base::STLDeleteElements(&keys_to_watch_);
+  keys_to_watch_.clear();
 }
 
 void ProxyConfigServiceWin::AddObserver(Observer* observer) {
@@ -96,7 +96,8 @@ void ProxyConfigServiceWin::StartWatchingRegistryForChanges() {
 
 bool ProxyConfigServiceWin::AddKeyToWatchList(HKEY rootkey,
                                               const wchar_t* subkey) {
-  std::unique_ptr<base::win::RegKey> key(new base::win::RegKey);
+  std::unique_ptr<base::win::RegKey> key =
+      base::MakeUnique<base::win::RegKey>();
   if (key->Create(rootkey, subkey, KEY_NOTIFY) != ERROR_SUCCESS)
     return false;
 
@@ -106,21 +107,22 @@ bool ProxyConfigServiceWin::AddKeyToWatchList(HKEY rootkey,
     return false;
   }
 
-  keys_to_watch_.push_back(key.release());
+  keys_to_watch_.push_back(std::move(key));
   return true;
 }
 
 void ProxyConfigServiceWin::OnObjectSignaled(base::win::RegKey* key) {
   // Figure out which registry key signalled this change.
-  RegKeyList::iterator it =
-      std::find(keys_to_watch_.begin(), keys_to_watch_.end(), key);
+  auto it = std::find_if(keys_to_watch_.begin(), keys_to_watch_.end(),
+                         [key](const std::unique_ptr<base::win::RegKey>& ptr) {
+                           return ptr.get() == key;
+                         });
   DCHECK(it != keys_to_watch_.end());
 
   // Keep watching the registry key.
   if (!key->StartWatching(base::Bind(&ProxyConfigServiceWin::OnObjectSignaled,
                                      base::Unretained(this),
                                      base::Unretained(key)))) {
-    delete *it;
     keys_to_watch_.erase(it);
   }
 

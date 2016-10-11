@@ -78,7 +78,7 @@ void WebSocketEndpointLockManager::UnlockSocket(StreamSocket* socket) {
            << socket_lock_info_map_.size() << " socket(s) left)";
   socket_lock_info_map_.erase(socket_it);
   DCHECK_EQ(socket, lock_info_it->second.socket);
-  lock_info_it->second.socket = NULL;
+  lock_info_it->second.socket = nullptr;
   UnlockEndpointAfterDelay(lock_info_it->first);
 }
 
@@ -102,7 +102,7 @@ base::TimeDelta WebSocketEndpointLockManager::SetUnlockDelayForTesting(
   return old_delay;
 }
 
-WebSocketEndpointLockManager::LockInfo::LockInfo() : socket(NULL) {}
+WebSocketEndpointLockManager::LockInfo::LockInfo() : socket(nullptr) {}
 WebSocketEndpointLockManager::LockInfo::~LockInfo() {
   DCHECK(!socket);
 }
@@ -165,7 +165,7 @@ void WebSocketEndpointLockManager::EraseSocket(
            << socket_lock_info_map_.size() << " socket(s) left)";
   size_t erased = socket_lock_info_map_.erase(lock_info_it->second.socket);
   DCHECK_EQ(1U, erased);
-  lock_info_it->second.socket = NULL;
+  lock_info_it->second.socket = nullptr;
 }
 
 }  // namespace net

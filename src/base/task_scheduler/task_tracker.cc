@@ -8,7 +8,9 @@
 
 #include "base/callback.h"
 #include "base/debug/task_annotator.h"
+#include "base/json/json_writer.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/sequence_token.h"
 #include "base/synchronization/condition_variable.h"
@@ -16,11 +18,48 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
+#include "base/values.h"
 
 namespace base {
 namespace internal {
 
 namespace {
+
+// An immutable copy of a scheduler task's info required by tracing.
+class TaskTracingInfo : public trace_event::ConvertableToTraceFormat {
+ public:
+  TaskTracingInfo(const TaskTraits& task_traits,
+                  ExecutionMode execution_mode,
+                  const SequenceToken& sequence_token)
+      : task_traits_(task_traits),
+        execution_mode_(execution_mode),
+        sequence_token_(sequence_token) {}
+
+  // trace_event::ConvertableToTraceFormat implementation.
+  void AppendAsTraceFormat(std::string* out) const override;
+
+ private:
+  const TaskTraits task_traits_;
+  const ExecutionMode execution_mode_;
+  const SequenceToken sequence_token_;
+
+  DISALLOW_COPY_AND_ASSIGN(TaskTracingInfo);
+};
+
+void TaskTracingInfo::AppendAsTraceFormat(std::string* out) const {
+  DictionaryValue dict;
+
+  dict.SetString("task_priority",
+                 base::TaskPriorityToString(task_traits_.priority()));
+  dict.SetString("execution_mode",
+                 base::ExecutionModeToString(execution_mode_));
+  if (execution_mode_ != ExecutionMode::PARALLEL)
+    dict.SetInteger("sequence_token", sequence_token_.ToInternalValue());
+
+  std::string tmp;
+  JSONWriter::Write(dict, &tmp);
+  out->append(tmp);
+}
 
 const char kQueueFunctionName[] = "base::PostTask";
 
@@ -202,6 +241,18 @@ bool TaskTracker::RunTask(const Task* task,
       }
 
       TRACE_TASK_EXECUTION(kRunFunctionName, *task);
+
+      const ExecutionMode execution_mode =
+          task->single_thread_task_runner_ref
+              ? ExecutionMode::SINGLE_THREADED
+              : (task->sequenced_task_runner_ref ? ExecutionMode::SEQUENCED
+                                                 : ExecutionMode::PARALLEL);
+      // TODO(gab): In a better world this would be tacked on as an extra arg
+      // to the trace event generated above. This is not possible however until
+      // http://crbug.com/652692 is resolved.
+      TRACE_EVENT1("task_scheduler", "TaskTracker::RunTask", "task_info",
+                   MakeUnique<TaskTracingInfo>(task->traits, execution_mode,
+                                               sequence_token));
 
       debug::TaskAnnotator task_annotator;
       task_annotator.RunTask(kQueueFunctionName, *task);

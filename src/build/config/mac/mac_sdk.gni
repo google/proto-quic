@@ -16,8 +16,8 @@ declare_args() {
   # Minimum supported version of OSX.
   mac_deployment_target = mac_deployment_target_build_override
 
-  # Path to a specific version of the Mac SDK, not including a backslash at
-  # the end. If empty, the path to the lowest version greater than or equal to
+  # Path to a specific version of the Mac SDK, not including a slash at the end.
+  # If empty, the path to the lowest version greater than or equal to
   # mac_sdk_min is used.
   mac_sdk_path = ""
 

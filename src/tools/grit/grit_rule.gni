@@ -307,12 +307,6 @@ if (enable_notifications) {
     "enable_notifications",
   ]
 }
-if (enable_service_discovery) {
-  grit_defines += [
-    "-D",
-    "enable_service_discovery",
-  ]
-}
 if (mac_views_browser) {
   grit_defines += [
     "-D",

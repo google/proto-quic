@@ -330,3 +330,34 @@ TEST(Operators, NonemptyOverwriting) {
   ASSERT_EQ(Value::SCOPE, new_value->type());
   ASSERT_FALSE(new_value->scope_value()->HasValues(Scope::SEARCH_CURRENT));
 }
+
+// Tests this case:
+//  foo = 1
+//  target(...) {
+//    foo += 1
+//
+// This should mark the outer "foo" as used, and the inner "foo" as unused.
+TEST(Operators, PlusEqualsUsed) {
+  Err err;
+  TestWithScope setup;
+
+  // Outer "foo" definition, it should be unused.
+  const char foo[] = "foo";
+  Value old_value(nullptr, static_cast<int64_t>(1));
+  setup.scope()->SetValue(foo, old_value, nullptr);
+  EXPECT_TRUE(setup.scope()->IsSetButUnused(foo));
+
+  // Nested scope.
+  Scope nested(setup.scope());
+
+  // Run "foo += 1".
+  TestBinaryOpNode node(Token::PLUS_EQUALS, "+=");
+  node.SetLeftToIdentifier(foo);
+  node.SetRightToValue(Value(nullptr, static_cast<int64_t>(1)));
+  node.Execute(&nested, &err);
+  ASSERT_FALSE(err.has_error());
+
+  // Outer foo should be used, inner foo should not be.
+  EXPECT_FALSE(setup.scope()->IsSetButUnused(foo));
+  EXPECT_TRUE(nested.IsSetButUnused(foo));
+}

@@ -490,15 +490,6 @@ void URLRequest::SetReferrer(const std::string& referrer) {
 
 void URLRequest::set_referrer_policy(ReferrerPolicy referrer_policy) {
   DCHECK(!is_pending_);
-  // External callers shouldn't be setting NO_REFERRER or
-  // ORIGIN. |referrer_policy_| is only applied during server redirects,
-  // so external callers must set the referrer themselves using
-  // SetReferrer() for the initial request. Once the referrer has been
-  // set to an origin or to an empty string, there is no point in
-  // setting the policy to NO_REFERRER or ORIGIN as it would have the
-  // same effect as using NEVER_CLEAR_REFERRER across redirects.
-  DCHECK_NE(referrer_policy, NO_REFERRER);
-  DCHECK_NE(referrer_policy, ORIGIN);
   referrer_policy_ = referrer_policy;
 }
 
@@ -916,7 +907,7 @@ void URLRequest::PrepareToRestart() {
 
   status_ = URLRequestStatus();
   is_pending_ = false;
-  proxy_server_ = HostPortPair();
+  proxy_server_ = ProxyServer();
 }
 
 void URLRequest::OrphanJob() {

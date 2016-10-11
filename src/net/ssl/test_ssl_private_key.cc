@@ -6,13 +6,13 @@
 
 #include <openssl/digest.h>
 #include <openssl/evp.h>
+#include <openssl/rsa.h>
 
 #include <utility>
 
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_platform_key_task_runner.h"
 #include "net/ssl/ssl_private_key.h"
@@ -24,7 +24,7 @@ namespace {
 
 class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
  public:
-  TestSSLPlatformKey(crypto::ScopedEVP_PKEY key, SSLPrivateKey::Type type)
+  TestSSLPlatformKey(bssl::UniquePtr<EVP_PKEY> key, SSLPrivateKey::Type type)
       : key_(std::move(key)), type_(type) {}
 
   ~TestSSLPlatformKey() override {}
@@ -46,8 +46,7 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
   Error SignDigest(SSLPrivateKey::Hash hash,
                    const base::StringPiece& input,
                    std::vector<uint8_t>* signature) override {
-    crypto::ScopedEVP_PKEY_CTX ctx =
-        crypto::ScopedEVP_PKEY_CTX(EVP_PKEY_CTX_new(key_.get(), NULL));
+    bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(key_.get(), nullptr));
     if (!ctx)
       return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
     if (!EVP_PKEY_sign_init(ctx.get()))
@@ -98,7 +97,7 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
   }
 
  private:
-  crypto::ScopedEVP_PKEY key_;
+  bssl::UniquePtr<EVP_PKEY> key_;
   SSLPrivateKey::Type type_;
 
   DISALLOW_COPY_AND_ASSIGN(TestSSLPlatformKey);
@@ -106,7 +105,8 @@ class TestSSLPlatformKey : public ThreadedSSLPrivateKey::Delegate {
 
 }  // namespace
 
-scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(crypto::ScopedEVP_PKEY key) {
+scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
+    bssl::UniquePtr<EVP_PKEY> key) {
   if (!key)
     return nullptr;
 

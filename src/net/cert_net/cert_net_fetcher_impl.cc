@@ -13,7 +13,6 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/numerics/safe_math.h"
-#include "base/stl_util.h"
 #include "base/timer/timer.h"
 #include "net/base/load_flags.h"
 #include "net/url_request/redirect_info.h"
@@ -428,7 +427,7 @@ CertNetFetcherImpl::CertNetFetcherImpl(URLRequestContext* context)
 }
 
 CertNetFetcherImpl::~CertNetFetcherImpl() {
-  base::STLDeleteElements(&jobs_);
+  jobs_.clear();
 
   // The CertNetFetcherImpl was destroyed in a FetchCallback. Detach all
   // remaining requests from the job so no further callbacks are called.
@@ -500,7 +499,7 @@ std::unique_ptr<CertNetFetcher::Request> CertNetFetcherImpl::Fetch(
 
   if (!job) {
     job = new Job(std::move(request_params), this);
-    jobs_.insert(job);
+    jobs_[job] = base::WrapUnique(job);
     job->StartURLRequest(context_);
   }
 
@@ -508,9 +507,9 @@ std::unique_ptr<CertNetFetcher::Request> CertNetFetcherImpl::Fetch(
 }
 
 struct CertNetFetcherImpl::JobToRequestParamsComparator {
-  bool operator()(const Job* job,
+  bool operator()(const CertNetFetcherImpl::JobSet::value_type& job,
                   const CertNetFetcherImpl::RequestParams& value) const {
-    return job->request_params() < value;
+    return job.first->request_params() < value;
   }
 };
 
@@ -522,17 +521,19 @@ CertNetFetcherImpl::Job* CertNetFetcherImpl::FindJob(
   // search.
   JobSet::iterator it = std::lower_bound(jobs_.begin(), jobs_.end(), params,
                                          JobToRequestParamsComparator());
-  if (it != jobs_.end() && !(params < (*it)->request_params()))
-    return *it;
+  if (it != jobs_.end() && !(params < (*it).first->request_params()))
+    return (*it).first;
   return nullptr;
 }
 
 std::unique_ptr<CertNetFetcherImpl::Job> CertNetFetcherImpl::RemoveJob(
     Job* job) {
   DCHECK(thread_checker_.CalledOnValidThread());
-  bool erased_job = jobs_.erase(job) == 1;
-  CHECK(erased_job);
-  return base::WrapUnique(job);
+  auto it = jobs_.find(job);
+  CHECK(it != jobs_.end());
+  std::unique_ptr<Job> owned_job = std::move(it->second);
+  jobs_.erase(it);
+  return owned_job;
 }
 
 void CertNetFetcherImpl::SetCurrentlyCompletingJob(Job* job) {

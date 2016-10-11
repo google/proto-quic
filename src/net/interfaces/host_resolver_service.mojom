@@ -42,5 +42,5 @@ struct AddressList {
 
 interface HostResolverRequestClient {
   // |error| is a value in net::Error.
-  ReportResult(int32 error, AddressList? result);
+  ReportResult(int32 error, AddressList result);
 };

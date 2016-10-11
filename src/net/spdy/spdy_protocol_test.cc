@@ -75,16 +75,16 @@ TEST(SpdyProtocolTest, IsValidHTTP2FrameStreamId) {
 
 TEST(SpdyDataIRTest, Construct) {
   // Confirm that it makes a string of zero length from a StringPiece(nullptr).
-  base::StringPiece s1(nullptr);
+  base::StringPiece s1;
   SpdyDataIR d1(1, s1);
-  EXPECT_EQ(d1.data().size(), (uint64_t)0);
-  EXPECT_NE(d1.data().data(), nullptr);
+  EXPECT_EQ(d1.data_len(), 0ul);
+  EXPECT_NE(d1.data(), nullptr);
 
   // Confirms makes a copy of char array.
   const char s2[] = "something";
   SpdyDataIR d2(2, s2);
-  EXPECT_EQ(d2.data(), s2);
-  EXPECT_NE(d1.data().data(), s2);
+  EXPECT_EQ(base::StringPiece(d2.data(), d2.data_len()), s2);
+  EXPECT_NE(base::StringPiece(d1.data(), d1.data_len()), s2);
 
   // Confirm copies a const string.
   const std::string foo = "foo";
@@ -94,26 +94,19 @@ TEST(SpdyDataIRTest, Construct) {
   // Confirm copies a non-const string.
   std::string bar = "bar";
   SpdyDataIR d4(4, bar);
-  bar[0] = 'B';
-  EXPECT_EQ("bar", d4.data());
+  EXPECT_EQ("bar", bar);
+  EXPECT_EQ("bar", base::StringPiece(d4.data(), d4.data_len()));
 
   // Confirm moves an rvalue reference. Note that the test string "baz" is too
   // short to trigger the move optimization, and instead a copy occurs.
-  std::string baz = "The quick brown fox jumps over the lazy dog.";
-  const char* baz_data = baz.data();
+  std::string baz = "the quick brown fox";
   SpdyDataIR d5(5, std::move(baz));
   EXPECT_EQ("", baz);
-  EXPECT_EQ(d5.data(), "The quick brown fox jumps over the lazy dog.");
-  EXPECT_EQ(d5.data().data(), baz_data);
-
-  // Confirm that it makes a string of zero length from a nullptr.
-  SpdyDataIR d6(6, nullptr);
-  EXPECT_EQ(d6.data().size(), (uint64_t)0);
-  EXPECT_NE(d6.data().data(), nullptr);
+  EXPECT_EQ(base::StringPiece(d5.data(), d5.data_len()), "the quick brown fox");
 
   // Confirms makes a copy of string literal.
   SpdyDataIR d7(7, "something else");
-  EXPECT_EQ(d7.data(), "something else");
+  EXPECT_EQ(base::StringPiece(d7.data(), d7.data_len()), "something else");
 }
 
 TEST(SpdyProtocolTest, ClampSpdy3Priority) {

@@ -85,12 +85,33 @@ min appropriate for your particular situation.
 Choose the smallest number of buckets that will get you the granularity you
 need.  By default count histograms bucket sizes scale exponentially so you can
 get fine granularity when the numbers are small yet still reasonable resolution
-for larger numbers.  The macros default to 50 (or 100 for large) buckets which
-is appropriate for most purposes.  Because histograms pre-allocate all the
-buckets, the number of buckets selected directly dictate how much memory is
-used.  Do not exceed 100 buckets without good reason (and consider whether
-[sparse histograms](#When-To-Use-Sparse-Histograms) might work better for you
-in that case--they do not pre- allocate their buckets).
+for larger numbers.  The macros default to 50 buckets (or 100 buckets for
+histograms with wide ranges) which is appropriate for most purposes.  Because
+histograms pre-allocate all the buckets, the number of buckets selected
+directly dictate how much memory is used.  Do not exceed 100 buckets without
+good reason (and consider whether [sparse histograms](#When-To-Use-Sparse-
+Histograms) might work better for you in that case--they do not pre- allocate
+their buckets).
+
+### Local Histograms
+
+Histograms can be added via [Local macros](https://codesearch.chromium.org/chromium/src/base/metrics/histogram_macros_local.h). These will still record
+locally, but will not be uploaded to UMA and will therefore not be available
+for analysis. This can be useful for metrics only needed for local debugging.
+We don't recommend using local histograms outside of that scenario.
+
+### Multidimensional Histograms
+
+It is common to be interested in logging multidimensional data - where multiple
+pieces of information need to be logged together. For example, a developer may
+be interested in the counts of features X and Y based on whether a user is in
+state A or B. In this case, they want to know the count of X under state A,
+as well as the other three permutations.
+
+There is no general purpose solution for this type of analysis. We suggest
+using the workaround of using an enum of length MxN, where you log each unique
+pair {state, feature} as a separate entry in the same enum. If this causes a
+large explosion in data (i.e. >100 enum entries), a [sparse histogram](#When-To-Use-Sparse-Histograms) may be appropriate. If you are unsure of the best way to proceed, please contact someone from the OWNERS file.
 
 ### Testing
 
@@ -101,10 +122,10 @@ that buckets capture enough precision for your needs over the range.
 
 ### Revising Histograms
 
-If you're changing the semantics of a histogram (when it's emitted, what buckets
-mean, etc.), make it into a new histogram with a new name.  Otherwise the
-"Everything" view on the dashboard will be mixing two different interpretations
-of the data and make no sense.
+If you're changing the semantics of a histogram (when it's emitted, what
+buckets mean, etc.), make it into a new histogram with a new name.  Otherwise
+the "Everything" view on the dashboard will be mixing two different
+interpretations of the data and make no sense.
 
 ### Deleting Histograms
 
@@ -138,6 +159,17 @@ on Mac.
 
 Histogram descriptions should clearly state when the histogram is emitted
 (profile open? network request received? etc.).
+
+### Owners 
+
+Histograms need to be owned by a person or set of people. These indicate who
+the current experts on this metric are. Being the owner means you are
+responsible for answering questions about the metric, handling the maintenance
+if there are functional changes, and deprecating the metric if it outlives its
+usefulness. The owners should be added in the original histogram description.
+If you are using a metric heavily and understand it intimately, feel free to
+add yourself as an owner. @chromium.org email addresses are preferred.
+
 
 ### Deleting Histogram Entries
 

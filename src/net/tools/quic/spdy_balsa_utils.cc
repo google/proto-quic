@@ -77,7 +77,7 @@ void PopulateSpdyHeaderBlock(const BalsaHeaders& headers,
   }
 }
 
-void PopulateSpdy4RequestHeaderBlock(const BalsaHeaders& headers,
+void PopulateHttp2RequestHeaderBlock(const BalsaHeaders& headers,
                                      const string& scheme,
                                      const string& host_and_port,
                                      const string& path,
@@ -88,7 +88,7 @@ void PopulateSpdy4RequestHeaderBlock(const BalsaHeaders& headers,
     DCHECK(host_and_port.empty() || host_header == host_and_port);
     block->insert(make_pair(kV4Host, host_header));
     // PopulateSpdyHeaderBlock already added the "host" header,
-    // which is invalid for SPDY4.
+    // which is invalid for HTTP2.
     block->erase("host");
   } else {
     block->insert(make_pair(kV4Host, host_and_port));
@@ -272,7 +272,7 @@ SpdyHeaderBlock SpdyBalsaUtils::RequestHeadersToSpdyHeaders(
   DCHECK(!path.empty());
 
   SpdyHeaderBlock block;
-  PopulateSpdy4RequestHeaderBlock(request_headers, scheme, host_and_port, path,
+  PopulateHttp2RequestHeaderBlock(request_headers, scheme, host_and_port, path,
                                   &block);
   return block;
 }

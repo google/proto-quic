@@ -1073,7 +1073,7 @@ TEST_F(HttpNetworkTransactionTest, TwoIdenticalLocationHeaders) {
   std::string url;
   EXPECT_TRUE(response->headers->IsRedirect(&url));
   EXPECT_EQ("http://good.com/", url);
-  EXPECT_TRUE(response->proxy_server.IsEmpty());
+  EXPECT_TRUE(response->proxy_server.is_direct());
 }
 
 // Checks that two distinct Location headers result in an error.
@@ -1137,7 +1137,7 @@ TEST_F(HttpNetworkTransactionTest, Head) {
   EXPECT_TRUE(response->headers);
   EXPECT_EQ(1234, response->headers->GetContentLength());
   EXPECT_EQ("HTTP/1.1 404 Not Found", response->headers->GetStatusLine());
-  EXPECT_TRUE(response->proxy_server.IsEmpty());
+  EXPECT_TRUE(response->proxy_server.is_direct());
   EXPECT_TRUE(headers_handler.observed_before_headers_sent());
   EXPECT_FALSE(headers_handler.observed_before_headers_sent_with_proxy());
 
@@ -1194,7 +1194,7 @@ TEST_F(HttpNetworkTransactionTest, ReuseConnection) {
 
     EXPECT_TRUE(response->headers);
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
-    EXPECT_TRUE(response->proxy_server.IsEmpty());
+    EXPECT_TRUE(response->proxy_server.is_direct());
 
     std::string response_data;
     rv = ReadTransaction(&trans, &response_data);
@@ -1426,6 +1426,7 @@ void HttpNetworkTransactionTest::KeepAliveConnectionResendRequestTest(
     ASSERT_TRUE(response);
 
     EXPECT_TRUE(response->headers);
+    EXPECT_TRUE(response->proxy_server.is_direct());
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
 
     std::string response_data;
@@ -4198,6 +4199,7 @@ TEST_F(HttpNetworkTransactionTest, HttpProxyLoadTimingNoPacTwoRequests) {
 
   const HttpResponseInfo* response1 = trans1->GetResponseInfo();
   ASSERT_TRUE(response1);
+  EXPECT_TRUE(response1->proxy_server.is_http());
   ASSERT_TRUE(response1->headers);
   EXPECT_EQ(1, response1->headers->GetContentLength());
 
@@ -4219,6 +4221,7 @@ TEST_F(HttpNetworkTransactionTest, HttpProxyLoadTimingNoPacTwoRequests) {
 
   const HttpResponseInfo* response2 = trans2->GetResponseInfo();
   ASSERT_TRUE(response2);
+  EXPECT_TRUE(response2->proxy_server.is_http());
   ASSERT_TRUE(response2->headers);
   EXPECT_EQ(2, response2->headers->GetContentLength());
 
@@ -4382,6 +4385,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxyGet) {
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
 
+  EXPECT_TRUE(response->proxy_server.is_https());
   EXPECT_TRUE(response->headers->IsKeepAlive());
   EXPECT_EQ(200, response->headers->response_code());
   EXPECT_EQ(100, response->headers->GetContentLength());
@@ -4440,6 +4444,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxySpdyGet) {
 
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
+  EXPECT_TRUE(response->proxy_server.is_https());
   ASSERT_TRUE(response->headers);
   EXPECT_EQ("HTTP/1.1 200", response->headers->GetStatusLine());
 
@@ -7557,6 +7562,7 @@ TEST_F(HttpNetworkTransactionTest, HTTPSViaHttpsProxy) {
 
   ASSERT_TRUE(response);
 
+  EXPECT_TRUE(response->proxy_server.is_https());
   EXPECT_TRUE(response->headers->IsKeepAlive());
   EXPECT_EQ(200, response->headers->response_code());
   EXPECT_EQ(100, response->headers->GetContentLength());
@@ -8720,6 +8726,7 @@ TEST_F(HttpNetworkTransactionTest, SOCKS4_HTTP_GET) {
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
 
+  EXPECT_EQ(ProxyServer::SCHEME_SOCKS4, response->proxy_server.scheme());
   LoadTimingInfo load_timing_info;
   EXPECT_TRUE(trans.GetLoadTimingInfo(&load_timing_info));
   TestLoadTimingNotReusedWithPac(load_timing_info,
@@ -8787,6 +8794,7 @@ TEST_F(HttpNetworkTransactionTest, SOCKS4_SSL_GET) {
 
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
+  EXPECT_EQ(ProxyServer::SCHEME_SOCKS4, response->proxy_server.scheme());
 
   std::string response_text;
   rv = ReadTransaction(&trans, &response_text);
@@ -8911,6 +8919,7 @@ TEST_F(HttpNetworkTransactionTest, SOCKS5_HTTP_GET) {
 
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
+  EXPECT_EQ(ProxyServer::SCHEME_SOCKS5, response->proxy_server.scheme());
 
   LoadTimingInfo load_timing_info;
   EXPECT_TRUE(trans.GetLoadTimingInfo(&load_timing_info));
@@ -8987,6 +8996,7 @@ TEST_F(HttpNetworkTransactionTest, SOCKS5_SSL_GET) {
 
   const HttpResponseInfo* response = trans.GetResponseInfo();
   ASSERT_TRUE(response);
+  EXPECT_EQ(ProxyServer::SCHEME_SOCKS5, response->proxy_server.scheme());
 
   LoadTimingInfo load_timing_info;
   EXPECT_TRUE(trans.GetLoadTimingInfo(&load_timing_info));
@@ -12438,8 +12448,9 @@ TEST_F(HttpNetworkTransactionTest, ProxyGet) {
   EXPECT_EQ(200, response->headers->response_code());
   EXPECT_EQ(100, response->headers->GetContentLength());
   EXPECT_TRUE(response->was_fetched_via_proxy);
-  EXPECT_TRUE(
-      response->proxy_server.Equals(HostPortPair::FromString("myproxy:70")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("myproxy:70")),
+            response->proxy_server);
   EXPECT_TRUE(headers_handler.observed_before_headers_sent());
   EXPECT_TRUE(headers_handler.observed_before_headers_sent_with_proxy());
   EXPECT_EQ("myproxy:70", headers_handler.observed_proxy_server_uri());
@@ -12520,8 +12531,9 @@ TEST_F(HttpNetworkTransactionTest, ProxyTunnelGet) {
   EXPECT_EQ(100, response->headers->GetContentLength());
   EXPECT_TRUE(HttpVersion(1, 1) == response->headers->GetHttpVersion());
   EXPECT_TRUE(response->was_fetched_via_proxy);
-  EXPECT_TRUE(
-      response->proxy_server.Equals(HostPortPair::FromString("myproxy:70")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("myproxy:70")),
+            response->proxy_server);
   EXPECT_TRUE(headers_handler.observed_before_headers_sent());
   EXPECT_TRUE(headers_handler.observed_before_headers_sent_with_proxy());
   EXPECT_EQ("myproxy:70", headers_handler.observed_proxy_server_uri());
@@ -12598,8 +12610,9 @@ TEST_F(HttpNetworkTransactionTest, ProxyTunnelGetIPv6) {
   EXPECT_EQ(100, response->headers->GetContentLength());
   EXPECT_TRUE(HttpVersion(1, 1) == response->headers->GetHttpVersion());
   EXPECT_TRUE(response->was_fetched_via_proxy);
-  EXPECT_TRUE(
-      response->proxy_server.Equals(HostPortPair::FromString("myproxy:70")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("myproxy:70")),
+            response->proxy_server);
 
   LoadTimingInfo load_timing_info;
   EXPECT_TRUE(trans.GetLoadTimingInfo(&load_timing_info));

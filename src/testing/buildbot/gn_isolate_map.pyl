@@ -174,7 +174,7 @@
     "type": "console_test_launcher",
   },
   "blimp_test_apk": {
-    "label": "//blimp/client:blimp_test_apk",
+    "label": "//blimp/client/app:blimp_test_apk",
     "type": "console_test_launcher",
   },
   "blimp_unittests": {
@@ -391,6 +391,10 @@
     "label": "//components/cronet/android:cronet_package",
     "type": "additional_compile_target",
   },
+  "cronet_test": {
+    "label": "//components/cronet/ios:cronet_test",
+    "type": "raw",
+  },
   "cronet_test_instrumentation_apk": {
     "label": "//components/cronet/android:cronet_test_instrumentation_apk",
     "type": "additional_compile_target",
@@ -596,6 +600,10 @@
   "media_blink_unittests": {
     "label": "//media/blink:media_blink_unittests",
     "type": "windowed_test_launcher",
+  },
+  "media_remoting_unittests": {
+    "label": "//media/remoting:media_remoting_unittests",
+    "type": "console_test_launcher",
   },
   "midi_unittests": {
     "label": "//media/midi:midi_unittests",

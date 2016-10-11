@@ -15,7 +15,6 @@
 
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "crypto/secure_hash.h"
 #include "net/quic/core/crypto/channel_id.h"
 #include "net/quic/core/crypto/common_cert_set.h"
@@ -136,9 +135,8 @@ class TestChannelIDKey : public ChannelIDKey {
   // ChannelIDKey implementation.
 
   bool Sign(StringPiece signed_data, string* out_signature) const override {
-    crypto::ScopedEVP_MD_CTX md_ctx(EVP_MD_CTX_create());
-    if (!md_ctx ||
-        EVP_DigestSignInit(md_ctx.get(), nullptr, EVP_sha256(), nullptr,
+    bssl::ScopedEVP_MD_CTX md_ctx;
+    if (EVP_DigestSignInit(md_ctx.get(), nullptr, EVP_sha256(), nullptr,
                            ecdsa_key_.get()) != 1) {
       return false;
     }
@@ -160,7 +158,7 @@ class TestChannelIDKey : public ChannelIDKey {
     }
 
     uint8_t* derp = der_sig.get();
-    crypto::ScopedECDSA_SIG sig(
+    bssl::UniquePtr<ECDSA_SIG> sig(
         d2i_ECDSA_SIG(nullptr, const_cast<const uint8_t**>(&derp), sig_len));
     if (sig.get() == nullptr) {
       return false;
@@ -199,7 +197,7 @@ class TestChannelIDKey : public ChannelIDKey {
   }
 
  private:
-  crypto::ScopedEVP_PKEY ecdsa_key_;
+  bssl::UniquePtr<EVP_PKEY> ecdsa_key_;
 };
 
 class TestChannelIDSource : public ChannelIDSource {
@@ -235,24 +233,24 @@ class TestChannelIDSource : public ChannelIDSource {
     // clearing the most-significant bit.
     digest[0] &= 0x7f;
 
-    crypto::ScopedBIGNUM k(BN_new());
+    bssl::UniquePtr<BIGNUM> k(BN_new());
     CHECK(BN_bin2bn(digest, sizeof(digest), k.get()) != nullptr);
 
-    crypto::ScopedEC_GROUP p256(
+    bssl::UniquePtr<EC_GROUP> p256(
         EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
     CHECK(p256);
 
-    crypto::ScopedEC_KEY ecdsa_key(EC_KEY_new());
+    bssl::UniquePtr<EC_KEY> ecdsa_key(EC_KEY_new());
     CHECK(ecdsa_key && EC_KEY_set_group(ecdsa_key.get(), p256.get()));
 
-    crypto::ScopedEC_POINT point(EC_POINT_new(p256.get()));
+    bssl::UniquePtr<EC_POINT> point(EC_POINT_new(p256.get()));
     CHECK(EC_POINT_mul(p256.get(), point.get(), k.get(), nullptr, nullptr,
                        nullptr));
 
     EC_KEY_set_private_key(ecdsa_key.get(), k.get());
     EC_KEY_set_public_key(ecdsa_key.get(), point.get());
 
-    crypto::ScopedEVP_PKEY pkey(EVP_PKEY_new());
+    bssl::UniquePtr<EVP_PKEY> pkey(EVP_PKEY_new());
     // EVP_PKEY_set1_EC_KEY takes a reference so no |release| here.
     EVP_PKEY_set1_EC_KEY(pkey.get(), ecdsa_key.get());
 
@@ -275,7 +273,7 @@ namespace {
 // This class is used by GenerateFullCHLO() to extract SCID and STK from
 // REJ/SREJ and to construct a full CHLO with these fields and given inchoate
 // CHLO.
-class FullChloGenerator : public ValidateClientHelloResultCallback {
+class FullChloGenerator {
  public:
   FullChloGenerator(QuicCryptoServerConfig* crypto_config,
                     IPAddress server_ip,
@@ -292,36 +290,77 @@ class FullChloGenerator : public ValidateClientHelloResultCallback {
         compressed_certs_cache_(compressed_certs_cache),
         out_(out) {}
 
-  void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
-           std::unique_ptr<ProofSource::Details> /* details */) override {
-    QuicCryptoNegotiatedParameters params;
-    string error_details;
-    DiversificationNonce diversification_nonce;
-    CryptoHandshakeMessage rej;
+  class ValidateClientHelloCallback : public ValidateClientHelloResultCallback {
+   public:
+    explicit ValidateClientHelloCallback(FullChloGenerator* generator)
+        : generator_(generator) {}
+    void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+             std::unique_ptr<ProofSource::Details> /* details */) override {
+      generator_->ValidateClientHelloDone(std::move(result));
+    }
+
+   private:
+    FullChloGenerator* generator_;
+  };
+
+  std::unique_ptr<ValidateClientHelloCallback>
+  GetValidateClientHelloCallback() {
+    return std::unique_ptr<ValidateClientHelloCallback>(
+        new ValidateClientHelloCallback(this));
+  }
+
+ private:
+  void ValidateClientHelloDone(
+      scoped_refptr<ValidateClientHelloResultCallback::Result> result) {
+    result_ = result;
     crypto_config_->ProcessClientHello(
-        result, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
+        result_, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
         client_addr_, AllSupportedVersions().front(), AllSupportedVersions(),
         /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
-        clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params,
-        proof_, /*total_framing_overhead=*/50, kDefaultMaxPacketSize, &rej,
-        &diversification_nonce, &error_details);
+        clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params_,
+        proof_, /*total_framing_overhead=*/50, kDefaultMaxPacketSize,
+        GetProcessClientHelloCallback());
+  }
+
+  class ProcessClientHelloCallback : public ProcessClientHelloResultCallback {
+   public:
+    explicit ProcessClientHelloCallback(FullChloGenerator* generator)
+        : generator_(generator) {}
+    void Run(
+        QuicErrorCode error,
+        const string& error_details,
+        std::unique_ptr<CryptoHandshakeMessage> message,
+        std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+      generator_->ProcessClientHelloDone(std::move(message));
+    }
+
+   private:
+    FullChloGenerator* generator_;
+  };
+
+  std::unique_ptr<ProcessClientHelloCallback> GetProcessClientHelloCallback() {
+    return std::unique_ptr<ProcessClientHelloCallback>(
+        new ProcessClientHelloCallback(this));
+  }
+
+  void ProcessClientHelloDone(std::unique_ptr<CryptoHandshakeMessage> rej) {
     // Verify output is a REJ or SREJ.
-    EXPECT_THAT(rej.tag(),
+    EXPECT_THAT(rej->tag(),
                 testing::AnyOf(testing::Eq(kSREJ), testing::Eq(kREJ)));
 
-    VLOG(1) << "Extract valid STK and SCID from\n" << rej.DebugString();
+    VLOG(1) << "Extract valid STK and SCID from\n" << rej->DebugString();
     StringPiece srct;
-    ASSERT_TRUE(rej.GetStringPiece(kSourceAddressTokenTag, &srct));
+    ASSERT_TRUE(rej->GetStringPiece(kSourceAddressTokenTag, &srct));
 
     StringPiece scfg;
-    ASSERT_TRUE(rej.GetStringPiece(kSCFG, &scfg));
+    ASSERT_TRUE(rej->GetStringPiece(kSCFG, &scfg));
     std::unique_ptr<CryptoHandshakeMessage> server_config(
         CryptoFramer::ParseMessage(scfg));
 
     StringPiece scid;
     ASSERT_TRUE(server_config->GetStringPiece(kSCID, &scid));
 
-    *out_ = result->client_hello;
+    *out_ = result_->client_hello;
     out_->SetStringPiece(kSCID, scid);
     out_->SetStringPiece(kSourceAddressTokenTag, srct);
     uint64_t xlct = CryptoTestUtils::LeafCertHashForTesting();
@@ -336,7 +375,11 @@ class FullChloGenerator : public ValidateClientHelloResultCallback {
   QuicCryptoProof* proof_;
   QuicCompressedCertsCache* compressed_certs_cache_;
   CryptoHandshakeMessage* out_;
+
+  QuicCryptoNegotiatedParameters params_;
+  scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
 };
+
 }  // namespace
 
 // static
@@ -412,18 +455,21 @@ int CryptoTestUtils::HandshakeWithFakeClient(
       client_conn, client_session.GetCryptoStream(), server_conn, server,
       async_channel_id_source);
 
-  CompareClientAndServerKeys(client_session.GetCryptoStream(), server);
+  if (server->handshake_confirmed() && server->encryption_established()) {
+    CompareClientAndServerKeys(client_session.GetCryptoStream(), server);
 
-  if (options.channel_id_enabled) {
-    std::unique_ptr<ChannelIDKey> channel_id_key;
-    QuicAsyncStatus status = crypto_config.channel_id_source()->GetChannelIDKey(
-        server_id.host(), &channel_id_key, nullptr);
-    EXPECT_EQ(QUIC_SUCCESS, status);
-    EXPECT_EQ(channel_id_key->SerializeKey(),
-              server->crypto_negotiated_params().channel_id);
-    EXPECT_EQ(
-        options.channel_id_source_async,
-        client_session.GetCryptoStream()->WasChannelIDSourceCallbackRun());
+    if (options.channel_id_enabled) {
+      std::unique_ptr<ChannelIDKey> channel_id_key;
+      QuicAsyncStatus status =
+          crypto_config.channel_id_source()->GetChannelIDKey(
+              server_id.host(), &channel_id_key, nullptr);
+      EXPECT_EQ(QUIC_SUCCESS, status);
+      EXPECT_EQ(channel_id_key->SerializeKey(),
+                server->crypto_negotiated_params().channel_id);
+      EXPECT_EQ(
+          options.channel_id_source_async,
+          client_session.GetCryptoStream()->WasChannelIDSourceCallbackRun());
+    }
   }
 
   return client_session.GetCryptoStream()->num_sent_client_hellos();
@@ -964,11 +1010,11 @@ void CryptoTestUtils::GenerateFullCHLO(
     QuicCompressedCertsCache* compressed_certs_cache,
     CryptoHandshakeMessage* out) {
   // Pass a inchoate CHLO.
+  FullChloGenerator generator(crypto_config, server_ip, client_addr, clock,
+                              proof, compressed_certs_cache, out);
   crypto_config->ValidateClientHello(
       inchoate_chlo, client_addr.address(), server_ip, version, clock, proof,
-      std::unique_ptr<FullChloGenerator>(
-          new FullChloGenerator(crypto_config, server_ip, client_addr, clock,
-                                proof, compressed_certs_cache, out)));
+      generator.GetValidateClientHelloCallback());
 }
 
 }  // namespace test

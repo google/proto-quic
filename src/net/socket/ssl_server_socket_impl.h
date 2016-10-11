@@ -5,6 +5,7 @@
 #ifndef NET_SOCKET_SSL_SERVER_SOCKET_IMPL_H_
 #define NET_SOCKET_SSL_SERVER_SOCKET_IMPL_H_
 
+#include <openssl/base.h>
 #include <stdint.h>
 
 #include <memory>
@@ -13,15 +14,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
 #include "net/socket/ssl_server_socket.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_server_config.h"
-
-// Avoid including misc OpenSSL headers, i.e.:
-// <openssl/bio.h>
-typedef struct bio_st BIO;
-// <openssl/ssl.h>
-typedef struct ssl_st SSL;
-typedef struct x509_store_ctx_st X509_STORE_CTX;
 
 namespace net {
 
@@ -38,7 +31,7 @@ class SSLServerContextImpl : public SSLServerContext {
       std::unique_ptr<StreamSocket> socket) override;
 
  private:
-  ScopedSSL_CTX ssl_ctx_;
+  bssl::UniquePtr<SSL_CTX> ssl_ctx_;
 
   // Options for the SSL socket.
   SSLServerConfig ssl_server_config_;

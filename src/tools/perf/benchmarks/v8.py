@@ -137,9 +137,6 @@ class V8TodoMVC(perf_benchmark.PerfBenchmark):
     return True
 
 
-# Disabled on reference builds because they don't support the new
-# Tracing.requestMemoryDump DevTools API. See http://crbug.com/540022.
-@benchmark.Disabled('reference')
 class V8TodoMVCIgnition(V8TodoMVC):
   """Measures V8 Execution metrics on the TodoMVC examples using ignition."""
   page_set = page_sets.TodoMVCPageSet
@@ -153,9 +150,6 @@ class V8TodoMVCIgnition(V8TodoMVC):
     return 'v8.todomvc-ignition'
 
 
-# Disabled on reference builds because they don't support the new
-# Tracing.requestMemoryDump DevTools API. See http://crbug.com/540022.
-@benchmark.Disabled('reference')
 class V8InfiniteScroll(_InfiniteScrollBenchmark):
   """Measures V8 GC metrics and memory usage while scrolling the top web pages.
   http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
@@ -167,9 +161,6 @@ class V8InfiniteScroll(_InfiniteScrollBenchmark):
     return 'v8.infinite_scroll_tbmv2'
 
 
-# Disabled on reference builds because they don't support the new
-# Tracing.requestMemoryDump DevTools API. See http://crbug.com/540022.
-@benchmark.Disabled('reference')  # crbug.com/579546
 class V8InfiniteScrollIgnition(V8InfiniteScroll):
   """Measures V8 GC metrics using Ignition."""
 

@@ -1374,7 +1374,7 @@ TEST_P(BufferedPacketStoreTest, ProcessCHLOsUptoLimitAndBufferTheRest) {
 }
 
 // Duplicated CHLO shouldn't be buffered.
-TEST_P(BufferedPacketStoreTest, DropDuplicatedCHLO) {
+TEST_P(BufferedPacketStoreTest, BufferDuplicatedCHLO) {
   FLAGS_quic_limit_num_new_sessions_per_epoll_loop = true;
   for (QuicConnectionId conn_id = 1; conn_id <= kMaxNumSessionsToCreate + 1;
        ++conn_id) {
@@ -1399,6 +1399,12 @@ TEST_P(BufferedPacketStoreTest, DropDuplicatedCHLO) {
   ProcessPacket(client_addr_, last_connection, true, false,
                 SerializeFullCHLO());
 
+  size_t packets_buffered = 2;
+  if (!FLAGS_quic_buffer_packets_after_chlo) {
+    // The packet sent above is dropped when flag is off.
+    packets_buffered = 1;
+  }
+
   // Reset counter and process buffered CHLO.
   EXPECT_CALL(*dispatcher_, CreateQuicSession(last_connection, client_addr_))
       .WillOnce(testing::Return(CreateSession(
@@ -1408,7 +1414,8 @@ TEST_P(BufferedPacketStoreTest, DropDuplicatedCHLO) {
   // Only one packet(CHLO) should be process.
   EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
               ProcessUdpPacket(_, _, _))
-      .WillOnce(testing::WithArg<2>(
+      .Times(packets_buffered)
+      .WillRepeatedly(testing::WithArg<2>(
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), last_connection))));
   dispatcher_->ProcessBufferedChlos(kMaxNumSessionsToCreate);

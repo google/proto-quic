@@ -207,5 +207,11 @@ bool QuicSentPacketManagerPeer::HasRetransmittableFrames(
       packet_number);
 }
 
+// static
+QuicUnackedPacketMap* QuicSentPacketManagerPeer::GetUnackedPacketMap(
+    QuicSentPacketManager* sent_packet_manager) {
+  return &sent_packet_manager->unacked_packets_;
+}
+
 }  // namespace test
 }  // namespace net

@@ -5,6 +5,7 @@
 #ifndef NET_PROXY_PROXY_BYPASS_RULES_H_
 #define NET_PROXY_PROXY_BYPASS_RULES_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -32,8 +33,8 @@ class NET_EXPORT ProxyBypassRules {
     // visualizing the rules, and also to test equality of a rules list.
     virtual std::string ToString() const = 0;
 
-    // Creates a copy of this rule. (Caller is responsible for deleting it)
-    virtual Rule* Clone() const = 0;
+    // Creates a copy of this rule.
+    virtual std::unique_ptr<Rule> Clone() const = 0;
 
     bool Equals(const Rule& rule) const;
 
@@ -41,7 +42,7 @@ class NET_EXPORT ProxyBypassRules {
     DISALLOW_COPY_AND_ASSIGN(Rule);
   };
 
-  typedef std::vector<const Rule*> RuleList;
+  typedef std::vector<std::unique_ptr<Rule>> RuleList;
 
   // Note: This class supports copy constructor and assignment.
   ProxyBypassRules();
@@ -69,7 +70,7 @@ class NET_EXPORT ProxyBypassRules {
   // This is a variant of ParseFromString, which interprets hostname patterns
   // as suffix tests rather than hostname tests (so "google.com" would actually
   // match "*google.com"). This is only currently used for the linux no_proxy
-  // evironment variable. It is less flexible, since with the suffix matching
+  // environment variable. It is less flexible, since with the suffix matching
   // format you can't match an individual host.
   // NOTE: Use ParseFromString() unless you truly need this behavior.
   void ParseFromStringUsingSuffixMatching(const std::string& raw);

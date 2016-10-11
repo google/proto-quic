@@ -18,7 +18,8 @@ bool LockImpl::Try() {
 }
 
 void LockImpl::Lock() {
-  base::debug::ScopedLockAcquireActivity lock_activity(this);
+  // Commented out pending https://crbug.com/652432
+  // base::debug::ScopedLockAcquireActivity lock_activity(this);
   ::AcquireSRWLockExclusive(&native_handle_);
 }
 

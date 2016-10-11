@@ -4,6 +4,7 @@
 
 #include "net/tools/quic/chlo_extractor.h"
 
+#include "base/strings/string_util.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
@@ -92,7 +93,7 @@ bool ChloFramerVisitor::OnPacketHeader(const QuicPacketHeader& header) {
 bool ChloFramerVisitor::OnStreamFrame(const QuicStreamFrame& frame) {
   StringPiece data(frame.data_buffer, frame.data_length);
   if (frame.stream_id == kCryptoStreamId && frame.offset == 0 &&
-      data.starts_with("CHLO")) {
+      base::StartsWith(data, "CHLO", base::CompareCase::INSENSITIVE_ASCII)) {
     CryptoFramer crypto_framer;
     crypto_framer.set_visitor(this);
     if (!crypto_framer.ProcessInput(data)) {

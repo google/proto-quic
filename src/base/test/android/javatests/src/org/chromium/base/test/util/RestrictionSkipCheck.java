@@ -60,6 +60,10 @@ public class RestrictionSkipCheck extends SkipCheck {
                 && !isNetworkAvailable()) {
             return true;
         }
+        if (TextUtils.equals(restriction, Restriction.RESTRICTION_TYPE_HAS_CAMERA)
+                && !SysUtils.hasCamera(mTargetContext)) {
+            return true;
+        }
         return false;
     }
 

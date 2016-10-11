@@ -19,6 +19,7 @@
 #include "net/proxy/mock_proxy_resolver.h"
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_config_service_fixed.h"
+#include "net/proxy/proxy_server.h"
 #include "net/socket/socket_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/ftp_protocol_handler.h"
@@ -311,8 +312,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequest) {
   base::RunLoop().Run();
 
   EXPECT_THAT(request_delegate.request_status(), IsOk());
-  EXPECT_TRUE(url_request->proxy_server().Equals(
-      HostPortPair::FromString("localhost:80")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("localhost:80")),
+            url_request->proxy_server());
   EXPECT_EQ(1, network_delegate()->completed_requests());
   EXPECT_EQ(0, network_delegate()->error_count());
   EXPECT_FALSE(request_delegate.auth_required_called());
@@ -407,8 +409,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedProxyAuthNoCredentials) {
   base::RunLoop().Run();
 
   EXPECT_THAT(request_delegate.request_status(), IsOk());
-  EXPECT_TRUE(url_request->proxy_server().Equals(
-      HostPortPair::FromString("localhost:80")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("localhost:80")),
+            url_request->proxy_server());
   EXPECT_EQ(1, network_delegate()->completed_requests());
   EXPECT_EQ(0, network_delegate()->error_count());
   EXPECT_TRUE(request_delegate.auth_required_called());
@@ -714,8 +717,9 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestReuseSocket) {
   base::RunLoop().Run();
 
   EXPECT_TRUE(url_request1->status().is_success());
-  EXPECT_TRUE(url_request1->proxy_server().Equals(
-      HostPortPair::FromString("localhost:80")));
+  EXPECT_EQ(ProxyServer(ProxyServer::SCHEME_HTTP,
+                        HostPortPair::FromString("localhost:80")),
+            url_request1->proxy_server());
   EXPECT_EQ(1, network_delegate()->completed_requests());
   EXPECT_EQ(0, network_delegate()->error_count());
   EXPECT_FALSE(request_delegate1.auth_required_called());

@@ -246,7 +246,7 @@ def InstallSysroot(target_platform, target_arch):
   sys.stdout.flush()
   sys.stderr.flush()
   subprocess.check_call(
-      ['curl', '--fail', '--retry', '3', '-L', url, '-o', tarball])
+      ['wget', '--quiet', '-t', '3', '-O', tarball, url])
   sha1sum = GetSha1(tarball)
   if sha1sum != tarball_sha1sum:
     raise Error('Tarball sha1sum is wrong.'

@@ -341,7 +341,10 @@ prefer to omit the colon and name in these cases.
   5. When a target's dependencies are resolved, write out the `.ninja`
      file to disk.
   6. When all targets are resolved, write out the root `build.ninja`
-     file.
+     file. If the top-level build file defines a group called "default"
+     (i.e., `//:default`), GN will tell Ninja to use that for the
+     default build target, rather than building everything. (You can
+     still use `ninja all` to build everything).
 
 ### The build config file
 

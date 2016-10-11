@@ -7,21 +7,13 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/scoped_ptr.h"
-#include "net/gfe2/balsa_headers.h"
-#include "net/quic/core/quic_client.h"
-#include "net/quic/core/quic_client_session.h"
-#include "net/quic/core/quic_spdy_client_stream.h"
-#include "net/quic/core/quic_utils.h"
-#include "net/quic/core/spdy_balsa_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
-#include "net/quic/test_tools/quic_test_utils.h"
-#include "net/util/ipaddress.h"
-#include "testing/base/public/gunit.h"
+#include "net/test/gtest_util.h"
+#include "net/tools/quic/quic_client_session.h"
+#include "net/tools/quic/spdy_balsa_utils.h"
 
-using SpdyHeaderBlock;
-using BalsaHeaders;
+using std::string;
 using testing::StrictMock;
 
 namespace net {
@@ -77,15 +69,14 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
                                                        Perspective::IS_CLIENT)),
         session_(connection_, &push_promise_index_),
         body_("hello world"),
-        promise_id_(gfe_quic::test::kServerDataStreamId1) {
+        promise_id_(kServerDataStreamId1) {
     session_.Initialize();
 
-    headers_.SetResponseFirstline("HTTP/1.1", 200, "Ok");
+    headers_.SetResponseFirstlineFromStringPieces("HTTP/1.1", "200", "Ok");
     headers_.ReplaceOrAppendHeader("content-length", "11");
     headers_string_ = SpdyBalsaUtils::SerializeResponseHeaders(headers_);
 
-    stream_.reset(new QuicSpdyClientStream(gfe_quic::test::kClientDataStreamId1,
-                                           &session_));
+    stream_.reset(new QuicSpdyClientStream(kClientDataStreamId1, &session_));
     stream_visitor_.reset(new StreamVisitor());
     stream_->set_visitor(stream_visitor_.get());
 
@@ -122,18 +113,18 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
       return match_;
     }
 
-    void OnRendezvousResult(QuicSpdyClientStream* stream) override {
+    void OnRendezvousResult(QuicSpdyStream* stream) override {
       rendezvous_fired_ = true;
       rendezvous_stream_ = stream;
     }
 
-    QuicSpdyClientStream* rendezvous_stream() { return rendezvous_stream_; }
+    QuicSpdyStream* rendezvous_stream() { return rendezvous_stream_; }
     bool rendezvous_fired() { return rendezvous_fired_; }
 
    private:
     bool match_;
     bool rendezvous_fired_;
-    QuicSpdyClientStream* rendezvous_stream_;
+    QuicSpdyStream* rendezvous_stream_;
   };
 
   void ReceivePromise(QuicStreamId id) {
@@ -208,21 +199,6 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseInvalidUrl) {
 
   EXPECT_CALL(*connection_,
               SendRstStream(promise_id_, QUIC_INVALID_PROMISE_URL, 0));
-  ReceivePromise(promise_id_);
-
-  // Verify that the promise headers were ignored
-  EXPECT_EQ(session_.GetPromisedById(promise_id_), nullptr);
-  EXPECT_EQ(session_.GetPromisedByUrl(promise_url_), nullptr);
-}
-
-TEST_F(QuicClientPromisedInfoTest, PushPromiseInvalidUrl) {
-  // Promise with an unsafe method
-  push_promise_[":method"] = "PUT";
-  serialized_push_promise_ =
-      SpdyUtils::SerializeUncompressedHeaders(push_promise_);
-
-  EXPECT_CALL(*connection_,
-              SendRstStream(promise_id_, QUIC_INVALID_PROMISE_METHOD, 0));
   ReceivePromise(promise_id_);
 
   // Verify that the promise headers were ignored

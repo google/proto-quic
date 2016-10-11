@@ -145,6 +145,8 @@ TEST_F(QuicEndpointTest, TwoWayTransmission) {
 
 // Simulate three hosts trying to send data to a fourth one simultaneously.
 TEST_F(QuicEndpointTest, Competition) {
+  simulator_.set_enable_random_delays(true);
+
   auto endpoint_a = base::MakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint A", "Endpoint D (A)", Perspective::IS_CLIENT, 42);
   auto endpoint_b = base::MakeUnique<QuicEndpoint>(

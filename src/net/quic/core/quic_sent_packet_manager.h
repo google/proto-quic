@@ -269,10 +269,10 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   // Invokes OnCongestionEvent if |rtt_updated| is true, there are pending acks,
   // or pending losses.  Clears pending acks and pending losses afterwards.
-  // |bytes_in_flight| is the number of bytes in flight before the losses or
+  // |prior_in_flight| is the number of bytes in flight before the losses or
   // acks.
   void MaybeInvokeCongestionEvent(bool rtt_updated,
-                                  QuicByteCount bytes_in_flight);
+                                  QuicByteCount prior_in_flight);
 
   // Called when frames of |packet_number| has been received but the packet
   // itself has not been received by the peer. Currently, this method is not
@@ -387,6 +387,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // If true, cancel pending retransmissions if they're larger than
   // largest_newly_acked.
   bool undo_pending_retransmits_;
+  // If true, use a more conservative handshake retransmission policy.
+  bool conservative_handshake_retransmits_;
 
   // Vectors packets acked and lost as a result of the last congestion event.
   SendAlgorithmInterface::CongestionVector packets_acked_;

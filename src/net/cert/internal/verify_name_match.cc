@@ -4,13 +4,14 @@
 
 #include "net/cert/internal/verify_name_match.h"
 
+#include <openssl/bytestring.h>
+#include <openssl/mem.h>
+
 #include <algorithm>
 #include <vector>
 
 #include "base/strings/string_util.h"
 #include "base/tuple.h"
-#include "crypto/auto_cbb.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/cert/internal/parse_name.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
@@ -294,7 +295,7 @@ bool NormalizeName(const der::Input& name_rdn_sequence,
   // RDNSequence ::= SEQUENCE OF RelativeDistinguishedName
   der::Parser rdn_sequence_parser(name_rdn_sequence);
 
-  crypto::AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   if (!CBB_init(cbb.get(), 0))
     return false;
 
@@ -316,13 +317,13 @@ bool NormalizeName(const der::Input& name_rdn_sequence,
     CBB rdn_cbb;
     if (!CBB_add_asn1(cbb.get(), &rdn_cbb, CBS_ASN1_SET))
       return false;
-    std::vector<crypto::ScopedOpenSSLBytes>
+    std::vector<bssl::UniquePtr<uint8_t>>
         scoped_encoded_attribute_type_and_values;
     std::vector<der::Input> encoded_attribute_type_and_values;
 
     for (const auto& type_and_value : type_and_values) {
       // A top-level CBB for encoding each individual AttributeTypeAndValue.
-      crypto::AutoCBB type_and_value_encoder_cbb;
+      bssl::ScopedCBB type_and_value_encoder_cbb;
       if (!CBB_init(type_and_value_encoder_cbb.get(), 0))
         return false;
 
@@ -367,7 +368,7 @@ bool NormalizeName(const der::Input& name_rdn_sequence,
       if (!CBB_finish(type_and_value_encoder_cbb.get(), &bytes, &len))
         return false;
       scoped_encoded_attribute_type_and_values.push_back(
-          crypto::ScopedOpenSSLBytes(bytes));
+          bssl::UniquePtr<uint8_t>(bytes));
       encoded_attribute_type_and_values.push_back(der::Input(bytes, len));
     }
 

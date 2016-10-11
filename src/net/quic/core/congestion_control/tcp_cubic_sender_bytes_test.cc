@@ -494,41 +494,6 @@ TEST_F(TcpCubicSenderBytesTest, RTOCongestionWindowNoRetransmission) {
   EXPECT_EQ(kDefaultWindowTCP, sender_->GetCongestionWindow());
 }
 
-TEST_F(TcpCubicSenderBytesTest, RetransmissionDelay) {
-  const int64_t kRttMs = 10;
-  const int64_t kDeviationMs = 3;
-  EXPECT_EQ(QuicTime::Delta::Zero(), sender_->RetransmissionDelay());
-
-  sender_->rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(kRttMs),
-                                QuicTime::Delta::Zero(), clock_.Now());
-
-  // Initial value is to set the median deviation to half of the initial rtt,
-  // the median in then multiplied by a factor of 4 and finally the smoothed rtt
-  // is added which is the initial rtt.
-  QuicTime::Delta expected_delay =
-      QuicTime::Delta::FromMilliseconds(kRttMs + kRttMs / 2 * 4);
-  EXPECT_EQ(expected_delay, sender_->RetransmissionDelay());
-
-  for (int i = 0; i < 100; ++i) {
-    // Run to make sure that we converge.
-    sender_->rtt_stats_.UpdateRtt(
-        QuicTime::Delta::FromMilliseconds(kRttMs + kDeviationMs),
-        QuicTime::Delta::Zero(), clock_.Now());
-    sender_->rtt_stats_.UpdateRtt(
-        QuicTime::Delta::FromMilliseconds(kRttMs - kDeviationMs),
-        QuicTime::Delta::Zero(), clock_.Now());
-  }
-  expected_delay = QuicTime::Delta::FromMilliseconds(kRttMs + kDeviationMs * 4);
-
-  EXPECT_NEAR(kRttMs, sender_->rtt_stats_.smoothed_rtt().ToMilliseconds(), 1);
-  EXPECT_NEAR(expected_delay.ToMilliseconds(),
-              sender_->RetransmissionDelay().ToMilliseconds(), 1);
-  EXPECT_EQ(static_cast<int64_t>(
-                sender_->GetCongestionWindow() * kNumMicrosPerSecond /
-                sender_->rtt_stats_.smoothed_rtt().ToMicroseconds()),
-            sender_->BandwidthEstimate().ToBytesPerSecond());
-}
-
 TEST_F(TcpCubicSenderBytesTest, TcpCubicResetEpochOnQuiescence) {
   const int kMaxCongestionWindow = 50;
   const QuicByteCount kMaxCongestionWindowBytes =

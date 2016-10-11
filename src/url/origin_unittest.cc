@@ -13,24 +13,26 @@
 
 namespace {
 
-void ExpectParsedComponentEqual(const url::Component& a,
-                                const url::Component& b) {
-  EXPECT_EQ(a.begin, b.begin);
-  EXPECT_EQ(a.len, b.len);
-}
-
 void ExpectParsedUrlsEqual(const GURL& a, const GURL& b) {
   EXPECT_EQ(a, b);
   const url::Parsed& a_parsed = a.parsed_for_possibly_invalid_spec();
   const url::Parsed& b_parsed = b.parsed_for_possibly_invalid_spec();
-  ExpectParsedComponentEqual(a_parsed.scheme, b_parsed.scheme);
-  ExpectParsedComponentEqual(a_parsed.username, b_parsed.username);
-  ExpectParsedComponentEqual(a_parsed.password, b_parsed.password);
-  ExpectParsedComponentEqual(a_parsed.host, b_parsed.host);
-  ExpectParsedComponentEqual(a_parsed.port, b_parsed.port);
-  ExpectParsedComponentEqual(a_parsed.path, b_parsed.path);
-  ExpectParsedComponentEqual(a_parsed.query, b_parsed.query);
-  ExpectParsedComponentEqual(a_parsed.ref, b_parsed.ref);
+  EXPECT_EQ(a_parsed.scheme.begin, b_parsed.scheme.begin);
+  EXPECT_EQ(a_parsed.scheme.len, b_parsed.scheme.len);
+  EXPECT_EQ(a_parsed.username.begin, b_parsed.username.begin);
+  EXPECT_EQ(a_parsed.username.len, b_parsed.username.len);
+  EXPECT_EQ(a_parsed.password.begin, b_parsed.password.begin);
+  EXPECT_EQ(a_parsed.password.len, b_parsed.password.len);
+  EXPECT_EQ(a_parsed.host.begin, b_parsed.host.begin);
+  EXPECT_EQ(a_parsed.host.len, b_parsed.host.len);
+  EXPECT_EQ(a_parsed.port.begin, b_parsed.port.begin);
+  EXPECT_EQ(a_parsed.port.len, b_parsed.port.len);
+  EXPECT_EQ(a_parsed.path.begin, b_parsed.path.begin);
+  EXPECT_EQ(a_parsed.path.len, b_parsed.path.len);
+  EXPECT_EQ(a_parsed.query.begin, b_parsed.query.begin);
+  EXPECT_EQ(a_parsed.query.len, b_parsed.query.len);
+  EXPECT_EQ(a_parsed.ref.begin, b_parsed.ref.begin);
+  EXPECT_EQ(a_parsed.ref.len, b_parsed.ref.len);
 }
 
 TEST(OriginTest, UniqueOriginComparison) {

@@ -67,7 +67,7 @@ class StatelessRejector {
   QuicConnectionId connection_id() const { return connection_id_; }
 
   // Returns the SREJ message when state() returns REJECTED.
-  const CryptoHandshakeMessage& reply() const { return reply_; }
+  const CryptoHandshakeMessage& reply() const { return *reply_; }
 
  private:
   // Helper class which is passed in to
@@ -75,8 +75,18 @@ class StatelessRejector {
   class ValidateCallback;
   friend class ValidateCallback;
 
+  class ProcessClientHelloCallback;
+  friend class ProcessClientHelloCallback;
+
   void ProcessClientHello(
       scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+      std::unique_ptr<StatelessRejector> rejector,
+      std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb);
+
+  void ProcessClientHelloDone(
+      QuicErrorCode error,
+      const std::string& error_details,
+      std::unique_ptr<CryptoHandshakeMessage> message,
       std::unique_ptr<StatelessRejector> rejector,
       std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb);
 
@@ -95,9 +105,10 @@ class StatelessRejector {
   const QuicCryptoServerConfig* crypto_config_;
   QuicCompressedCertsCache* compressed_certs_cache_;
   CryptoHandshakeMessage chlo_;
-  CryptoHandshakeMessage reply_;
+  std::unique_ptr<CryptoHandshakeMessage> reply_;
   CryptoFramer crypto_framer_;
   QuicCryptoProof proof_;
+  QuicCryptoNegotiatedParameters params_;
 
   DISALLOW_COPY_AND_ASSIGN(StatelessRejector);
 };

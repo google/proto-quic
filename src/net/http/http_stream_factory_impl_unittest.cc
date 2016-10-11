@@ -5,6 +5,8 @@
 #include "net/http/http_stream_factory_impl.h"
 
 #include <stdint.h>
+
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -813,12 +815,12 @@ class MockQuicData {
  public:
   MockQuicData() : packet_number_(0) {}
 
-  ~MockQuicData() { base::STLDeleteElements(&packets_); }
+  ~MockQuicData() {}
 
   void AddRead(std::unique_ptr<QuicEncryptedPacket> packet) {
     reads_.push_back(
         MockRead(ASYNC, packet->data(), packet->length(), packet_number_++));
-    packets_.push_back(packet.release());
+    packets_.push_back(std::move(packet));
   }
 
   void AddRead(IoMode mode, int rv) {
@@ -828,7 +830,7 @@ class MockQuicData {
   void AddWrite(std::unique_ptr<QuicEncryptedPacket> packet) {
     writes_.push_back(MockWrite(SYNCHRONOUS, packet->data(), packet->length(),
                                 packet_number_++));
-    packets_.push_back(packet.release());
+    packets_.push_back(std::move(packet));
   }
 
   void AddSocketDataToFactory(MockClientSocketFactory* factory) {
@@ -840,7 +842,7 @@ class MockQuicData {
   }
 
  private:
-  std::vector<QuicEncryptedPacket*> packets_;
+  std::vector<std::unique_ptr<QuicEncryptedPacket>> packets_;
   std::vector<MockWrite> writes_;
   std::vector<MockRead> reads_;
   size_t packet_number_;

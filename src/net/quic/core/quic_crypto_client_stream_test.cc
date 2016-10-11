@@ -148,7 +148,6 @@ TEST_F(QuicCryptoClientStreamTest, ExpiredServerConfig) {
 }
 
 TEST_F(QuicCryptoClientStreamTest, ClockSkew) {
-  FLAGS_quic_send_scfg_ttl = true;
   // Test that if the client's clock is skewed with respect to the server,
   // the handshake succeeds. In the past, the client would get the server
   // config, notice that it had already expired and then close the connection.

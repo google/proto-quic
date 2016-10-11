@@ -910,8 +910,12 @@ class NET_EXPORT_PRIVATE QuicConnection
                                      // parsed or nullptr.
   EncryptionLevel last_decrypted_packet_level_;
   QuicPacketHeader last_header_;
+  // TODO(ianswett): Remove last_stop_waiting_frame_ once
+  // FLAGS_quic_receive_packet_once_decrypted is deprecated.
   QuicStopWaitingFrame last_stop_waiting_frame_;
   bool should_last_packet_instigate_acks_;
+  // Whether the most recent packet was missing before it was received.
+  bool was_last_packet_missing_;
 
   // Track some peer state so we can do less bookkeeping
   // Largest sequence sent by the peer which had an ack frame (latest ack info).

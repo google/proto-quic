@@ -65,10 +65,10 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
                             SpdyStreamId stream_id,
                             uint8_t flags);
 
-  // Populates this frame with a SPDY4/HTTP2 frame prefix using
-  // version-specific information from the |framer| and length information from
-  // capacity_. The given type must be a control frame type.
-  // Used only for SPDY versions >=4.
+  // Populates this frame with a HTTP2 frame prefix using version-specific
+  // information from the |framer| and length information from |capacity_|.
+  // The given type must be a control frame type. Used only for SPDY versions
+  // >=4.
   bool BeginNewFrame(const SpdyFramer& framer,
                      SpdyFrameType type,
                      uint8_t flags,

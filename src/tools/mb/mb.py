@@ -78,9 +78,10 @@ class MetaBuildWrapper(object):
                         help='master name to look up config from')
       subp.add_argument('-c', '--config',
                         help='configuration to analyze')
-      subp.add_argument('--phase', type=int,
-                        help=('build phase for a given build '
-                              '(int in [1, 2, ...))'))
+      subp.add_argument('--phase',
+                        help='optional phase name (used when builders '
+                             'do multiple compiles with different '
+                             'arguments in a single build)')
       subp.add_argument('-f', '--config-file', metavar='PATH',
                         default=self.default_config,
                         help='path to config file '
@@ -270,8 +271,9 @@ class MetaBuildWrapper(object):
         if not config:
           continue
 
-        if isinstance(config, list):
-          args = [self.FlattenConfig(c)['gn_args'] for c in config]
+        if isinstance(config, dict):
+          args = {k: self.FlattenConfig(v)['gn_args']
+                  for k, v in config.items()}
         elif config.startswith('//'):
           args = config
         else:
@@ -369,8 +371,8 @@ class MetaBuildWrapper(object):
     all_configs = {}
     for master in self.masters:
       for config in self.masters[master].values():
-        if isinstance(config, list):
-          for c in config:
+        if isinstance(config, dict):
+          for c in config.values():
             all_configs[c] = master
         else:
           all_configs[config] = master
@@ -521,8 +523,8 @@ class MetaBuildWrapper(object):
         config = self.masters[master][builder]
         if config == 'tbd':
           tbd.add(builder)
-        elif isinstance(config, list):
-          vals = self.FlattenConfig(config[0])
+        elif isinstance(config, dict):
+          vals = self.FlattenConfig(config.values()[0])
           if vals['type'] == 'gyp':
             gyp.add(builder)
           else:
@@ -693,15 +695,15 @@ class MetaBuildWrapper(object):
                   (self.args.builder, self.args.master, self.args.config_file))
 
     config = self.masters[self.args.master][self.args.builder]
-    if isinstance(config, list):
+    if isinstance(config, dict):
       if self.args.phase is None:
         raise MBErr('Must specify a build --phase for %s on %s' %
                     (self.args.builder, self.args.master))
-      phase = int(self.args.phase)
-      if phase < 1 or phase > len(config):
-        raise MBErr('Phase %d out of bounds for %s on %s' %
+      phase = str(self.args.phase)
+      if phase not in config:
+        raise MBErr('Phase %s doesn\'t exist for %s on %s' %
                     (phase, self.args.builder, self.args.master))
-      return config[phase-1]
+      return config[phase]
 
     if self.args.phase is not None:
       raise MBErr('Must not specify a build --phase for %s on %s' %

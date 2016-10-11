@@ -29,19 +29,4 @@ public class BuildConfig {
     public static final boolean DCHECK_IS_ON = false;
 #endif
 
-    // Sorted list of compressed assets contained in the apk (AssetManager.list() is slow).
-    public static final String[] COMPRESSED_ASSETS =
-#if defined(COMPRESSED_ASSETS_LIST)
-      COMPRESSED_ASSETS_LIST;
-#else
-      {};
-#endif
-
-    // Sorted list of uncompressed assets contained in the apk (AssetManager.list() is slow).
-    public static final String[] UNCOMPRESSED_ASSETS =
-#if defined(UNCOMPRESSED_ASSETS_LIST)
-      UNCOMPRESSED_ASSETS_LIST;
-#else
-      {};
-#endif
 }

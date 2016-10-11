@@ -89,7 +89,7 @@ bool DoScheme(const CHAR* spec,
     // Scheme is unspecified or empty, convert to empty by appending a colon.
     *out_scheme = Component(output->length(), 0);
     output->push_back(':');
-    return true;
+    return false;
   }
 
   // The output scheme starts from the current position.

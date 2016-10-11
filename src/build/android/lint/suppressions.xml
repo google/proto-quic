@@ -346,7 +346,7 @@ Still reading?
     <ignore regexp="content/shell/android/java/res/mipmap-hdpi/app_icon.png"/>
     <ignore regexp="gen/android_webview/locale_paks.resources.zip/*"/>
     <ignore regexp="gen/android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
-    <ignore regexp="gen/blimp/client/blimp_strings_grd.resources.zip/values/android_blimp_strings.xml"/>
+    <ignore regexp="gen/blimp/client/app/blimp_strings_grd.resources.zip/values/android_blimp_strings.xml" />
     <ignore regexp="gen/components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
     <ignore regexp="gen/remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>

@@ -7,6 +7,8 @@ SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 
 DISTRO=debian
 DIST=wheezy
+DIST_UPDATES=wheezy-updates
+
 APT_REPO=http://http.us.debian.org/debian
 KEYRING_FILE=${SCRIPT_DIR}/debian-archive-wheezy-stable.gpg
 

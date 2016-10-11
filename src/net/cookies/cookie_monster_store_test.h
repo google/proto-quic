@@ -30,29 +30,6 @@ class Time;
 
 namespace net {
 
-// Wrapper class for posting a loaded callback. Since the Callback class is not
-// reference counted, we cannot post a callback to the message loop directly,
-// instead we post a LoadedCallbackTask.
-class LoadedCallbackTask
-    : public base::RefCountedThreadSafe<LoadedCallbackTask> {
- public:
-  typedef CookieMonster::PersistentCookieStore::LoadedCallback LoadedCallback;
-
-  LoadedCallbackTask(LoadedCallback loaded_callback,
-                     std::vector<CanonicalCookie*> cookies);
-
-  void Run() { loaded_callback_.Run(cookies_); }
-
- private:
-  friend class base::RefCountedThreadSafe<LoadedCallbackTask>;
-  ~LoadedCallbackTask();
-
-  LoadedCallback loaded_callback_;
-  std::vector<CanonicalCookie*> cookies_;
-
-  DISALLOW_COPY_AND_ASSIGN(LoadedCallbackTask);
-};  // Wrapper class LoadedCallbackTask
-
 // Describes a call to one of the 5 functions of PersistentCookieStore.
 struct CookieStoreCommand {
   enum Type {
@@ -107,7 +84,7 @@ class MockPersistentCookieStore : public CookieMonster::PersistentCookieStore {
   }
 
   void SetLoadExpectation(bool return_value,
-                          const std::vector<CanonicalCookie*>& result);
+                          std::vector<std::unique_ptr<CanonicalCookie>> result);
 
   const CommandList& commands() const { return commands_; }
 
@@ -136,7 +113,7 @@ class MockPersistentCookieStore : public CookieMonster::PersistentCookieStore {
 
   // Deferred result to use when Load() is called.
   bool load_return_value_;
-  std::vector<CanonicalCookie*> load_result_;
+  std::vector<std::unique_ptr<CanonicalCookie>> load_result_;
   // Indicates if the store has been fully loaded to avoid returning duplicate
   // cookies.
   bool loaded_;
@@ -177,7 +154,7 @@ std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
 void AddCookieToList(const GURL& url,
                      const std::string& cookie_line,
                      const base::Time& creation_time,
-                     std::vector<CanonicalCookie*>* out_list);
+                     std::vector<std::unique_ptr<CanonicalCookie>>* out_list);
 
 // Just act like a backing database.  Keep cookie information from
 // Add/Update/Delete and regurgitate it when Load is called.

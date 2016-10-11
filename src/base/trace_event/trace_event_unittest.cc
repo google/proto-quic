@@ -2152,56 +2152,6 @@ TEST_F(TraceEventTestFixture, TraceWithDisabledByDefaultCategoryFilters) {
   trace_log->SetDisabled();
 }
 
-TEST_F(TraceEventTestFixture, TraceSampling) {
-  TraceLog::GetInstance()->SetEnabled(
-    TraceConfig(kRecordAllCategoryFilter, "record-until-full,enable-sampling"),
-    TraceLog::RECORDING_MODE);
-
-  TRACE_EVENT_SET_SAMPLING_STATE_FOR_BUCKET(1, "cc", "Stuff");
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-  TRACE_EVENT_SET_SAMPLING_STATE_FOR_BUCKET(1, "cc", "Things");
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-
-  EndTraceAndFlush();
-
-  // Make sure we hit at least once.
-  EXPECT_TRUE(FindNamePhase("Stuff", "P"));
-  EXPECT_TRUE(FindNamePhase("Things", "P"));
-}
-
-TEST_F(TraceEventTestFixture, TraceSamplingScope) {
-  TraceLog::GetInstance()->SetEnabled(
-    TraceConfig(kRecordAllCategoryFilter, "record-until-full,enable-sampling"),
-    TraceLog::RECORDING_MODE);
-
-  TRACE_EVENT_SCOPED_SAMPLING_STATE("AAA", "name");
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-  {
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "AAA");
-    TRACE_EVENT_SCOPED_SAMPLING_STATE("BBB", "name");
-    TraceLog::GetInstance()->WaitSamplingEventForTesting();
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "BBB");
-  }
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-  {
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "AAA");
-    TRACE_EVENT_SCOPED_SAMPLING_STATE("CCC", "name");
-    TraceLog::GetInstance()->WaitSamplingEventForTesting();
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "CCC");
-  }
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-  {
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "AAA");
-    TRACE_EVENT_SET_SAMPLING_STATE("DDD", "name");
-    TraceLog::GetInstance()->WaitSamplingEventForTesting();
-    EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "DDD");
-  }
-  TraceLog::GetInstance()->WaitSamplingEventForTesting();
-  EXPECT_STREQ(TRACE_EVENT_GET_SAMPLING_STATE(), "DDD");
-
-  EndTraceAndFlush();
-}
-
 class MyData : public ConvertableToTraceFormat {
  public:
   MyData() {}
@@ -3027,29 +2977,9 @@ TEST_F(TraceEventTestFixture, ConvertTraceConfigToInternalOptions) {
             trace_log->GetInternalOptionsFromTraceConfig(
                 TraceConfig(kRecordAllCategoryFilter, ECHO_TO_CONSOLE)));
 
-  EXPECT_EQ(
-      TraceLog::kInternalRecordUntilFull | TraceLog::kInternalEnableSampling,
-      trace_log->GetInternalOptionsFromTraceConfig(
-          TraceConfig(kRecordAllCategoryFilter,
-                      "record-until-full,enable-sampling")));
-
-  EXPECT_EQ(
-      TraceLog::kInternalRecordContinuously | TraceLog::kInternalEnableSampling,
-      trace_log->GetInternalOptionsFromTraceConfig(
-          TraceConfig(kRecordAllCategoryFilter,
-                      "record-continuously,enable-sampling")));
-
-  EXPECT_EQ(
-      TraceLog::kInternalEchoToConsole | TraceLog::kInternalEnableSampling,
-      trace_log->GetInternalOptionsFromTraceConfig(
-          TraceConfig(kRecordAllCategoryFilter,
-                      "trace-to-console,enable-sampling")));
-
-  EXPECT_EQ(
-      TraceLog::kInternalEchoToConsole | TraceLog::kInternalEnableSampling,
-      trace_log->GetInternalOptionsFromTraceConfig(
-          TraceConfig("*",
-                      "trace-to-console,enable-sampling,enable-systrace")));
+  EXPECT_EQ(TraceLog::kInternalEchoToConsole,
+            trace_log->GetInternalOptionsFromTraceConfig(
+                TraceConfig("*", "trace-to-console,enable-systrace")));
 }
 
 void SetBlockingFlagAndBlockUntilStopped(WaitableEvent* task_start_event,

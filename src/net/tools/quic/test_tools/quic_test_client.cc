@@ -131,7 +131,9 @@ BalsaHeaders* MungeHeaders(const BalsaHeaders* const_headers) {
   }
   BalsaHeaders* headers = new BalsaHeaders;
   headers->CopyFrom(*const_headers);
-  if (!uri.starts_with("https://") && !uri.starts_with("http://")) {
+  if (!base::StartsWith(uri, "https://",
+                        base::CompareCase::INSENSITIVE_ASCII) &&
+      !base::StartsWith(uri, "http://", base::CompareCase::INSENSITIVE_ASCII)) {
     // If we have a relative URL, set some defaults.
     string full_uri = "https://test.example.com";
     full_uri.append(uri.as_string());

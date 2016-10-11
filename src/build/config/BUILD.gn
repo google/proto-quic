@@ -214,9 +214,6 @@ config("feature_flags") {
   if (enable_supervised_users) {
     defines += [ "ENABLE_SUPERVISED_USERS=1" ]
   }
-  if (enable_service_discovery) {
-    defines += [ "ENABLE_SERVICE_DISCOVERY=1" ]
-  }
   if (enable_image_loader_extension) {
     defines += [ "IMAGE_LOADER_EXTENSION=1" ]
   }

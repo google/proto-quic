@@ -4,11 +4,11 @@
 
 #include "net/cert/cert_database.h"
 
+#include <openssl/evp.h>
 #include <openssl/x509.h>
 
 #include "base/logging.h"
 #include "base/observer_list_threadsafe.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/crypto_module.h"
 #include "net/base/net_errors.h"
 #include "net/base/openssl_private_key_store.h"
@@ -40,7 +40,7 @@ int CertDatabase::CheckUserCert(X509Certificate* cert) {
     return ERR_CERT_DATE_INVALID;
 
   // X509_PUBKEY_get() transfers ownership, not X509_get_X509_PUBKEY()
-  crypto::ScopedEVP_PKEY public_key(
+  bssl::UniquePtr<EVP_PKEY> public_key(
       X509_PUBKEY_get(X509_get_X509_PUBKEY(cert->os_cert_handle())));
 
   if (!OpenSSLPrivateKeyStore::HasPrivateKey(public_key.get()))

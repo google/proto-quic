@@ -60,10 +60,10 @@ class NET_EXPORT_PRIVATE TcpCubicSenderPackets : public TcpCubicSenderBase {
   void ExitSlowstart() override;
   void OnPacketLost(QuicPacketNumber largest_loss,
                     QuicByteCount lost_bytes,
-                    QuicByteCount bytes_in_flight) override;
+                    QuicByteCount prior_in_flight) override;
   void MaybeIncreaseCwnd(QuicPacketNumber acked_packet_number,
                          QuicByteCount acked_bytes,
-                         QuicByteCount bytes_in_flight) override;
+                         QuicByteCount prior_in_flight) override;
   void HandleRetransmissionTimeout() override;
 
  private:

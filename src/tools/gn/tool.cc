@@ -5,7 +5,8 @@
 #include "tools/gn/tool.h"
 
 Tool::Tool()
-    : depsformat_(DEPS_GCC),
+    : defined_from_(nullptr),
+      depsformat_(DEPS_GCC),
       precompiled_header_type_(PCH_NONE),
       restat_(false),
       complete_(false) {

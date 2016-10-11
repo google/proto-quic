@@ -83,7 +83,9 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
         not_expect_callback_(false),
         on_failed_called_(false),
         send_request_headers_automatically_(true),
-        is_ready_(false) {
+        is_ready_(false),
+        trailers_expected_(false),
+        trailers_received_(false) {
     loop_.reset(new base::RunLoop);
   }
 
@@ -111,6 +113,9 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     CHECK(!not_expect_callback_);
     CHECK(!callback_.is_null());
 
+    // If read EOF, make sure this callback is after trailers callback.
+    if (bytes_read == 0)
+      EXPECT_TRUE(!trailers_expected_ || trailers_received_);
     ++on_data_read_count_;
     CHECK_GE(bytes_read, OK);
     data_received_.append(read_buf_->data(), bytes_read);
@@ -129,6 +134,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     CHECK(!on_failed_called_);
     CHECK(!not_expect_callback_);
 
+    trailers_received_ = true;
     trailers_ = trailers.Clone();
     loop_->Quit();
   }
@@ -226,6 +232,9 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
     stream_.reset();
   }
 
+  void set_trailers_expected(bool trailers_expected) {
+    trailers_expected_ = trailers_expected;
+  }
   // Const getters for internal states.
   const std::string& data_received() const { return data_received_; }
   int error() const { return error_; }
@@ -264,6 +273,8 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   CompletionCallback callback_;
   bool send_request_headers_automatically_;
   bool is_ready_;
+  bool trailers_expected_;
+  bool trailers_received_;
 
   DISALLOW_COPY_AND_ASSIGN(TestDelegateBase);
 };
@@ -706,6 +717,7 @@ TEST_P(BidirectionalStreamQuicImplTest, GetRequest) {
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
   std::unique_ptr<TestDelegateBase> delegate(
       new TestDelegateBase(read_buffer.get(), kReadBufferSize));
+  delegate->set_trailers_expected(true);
   delegate->Start(&request, net_log().bound(), session()->GetWeakPtr());
   delegate->WaitUntilNextCallback();  // OnStreamReady
   ConfirmHandshake();
@@ -1700,6 +1712,7 @@ TEST_P(BidirectionalStreamQuicImplTest, DeleteStreamDuringOnTrailersReceived) {
   AddWrite(ConstructRequestHeadersPacket(1, kFin, DEFAULT_PRIORITY,
                                          &spdy_request_headers_frame_length));
   AddWrite(ConstructClientAckPacket(2, 3, 1));  // Ack the data packet
+  AddWrite(ConstructClientAckAndRstStreamPacket(3, 4, 4, 1));
 
   Initialize();
 

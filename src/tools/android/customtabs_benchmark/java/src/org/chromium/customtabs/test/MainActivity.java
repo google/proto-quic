@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
         private long mPageLoadStartedMs = 0;
         private long mPageLoadFinishedMs = 0;
         private long mFirstContentfulPaintMs = -1;
+        private boolean mAlreadyLogged = false;
 
         public CustomCallback(boolean warmup, int prerenderMode, int delayToMayLaunchUrl,
                 int delayToLaunchUrl) {
@@ -88,11 +89,17 @@ public class MainActivity extends Activity {
                 case CustomTabsCallback.NAVIGATION_FINISHED:
                     mPageLoadFinishedMs = SystemClock.elapsedRealtime();
                     if (mIntentSentMs != 0 && mPageLoadStartedMs != 0) {
-                        String logLine = (mWarmup ? "1" : "0") + "," + mPrerenderMode
-                                + "," + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + ","
-                                + mIntentSentMs + "," + mPageLoadStartedMs + ","
-                                + mPageLoadFinishedMs + "," + mFirstContentfulPaintMs;
-                        Log.w(TAG, logLine);
+                        if (mFirstContentfulPaintMs != -1) {
+                            logMetrics();
+                        } else {
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    logMetrics();
+                                }
+                            }, 3000);
+                        }
                     }
                     break;
                 default:
@@ -106,6 +113,17 @@ public class MainActivity extends Activity {
             long value = args.getLong("firstContentfulPaint", -1);
             // Can be reported several times, only record the first one.
             if (mFirstContentfulPaintMs == -1) mFirstContentfulPaintMs = value;
+            if (!mAlreadyLogged && mPageLoadFinishedMs != 0) logMetrics();
+        }
+
+        private void logMetrics() {
+            if (mAlreadyLogged) return;
+            String logLine = (mWarmup ? "1" : "0") + "," + mPrerenderMode + ","
+                    + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + "," + mIntentSentMs + ","
+                    + mPageLoadStartedMs + "," + mPageLoadFinishedMs + ","
+                    + mFirstContentfulPaintMs;
+            Log.w(TAG, logLine);
+            mAlreadyLogged = true;
         }
     }
 

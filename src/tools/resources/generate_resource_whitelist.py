@@ -55,22 +55,6 @@ def _FindResourceIds(header, resource_names):
   return set(res_ids)
 
 
-# TODO(estevenson): Remove this after updating official build scripts.
-def _GetResourceIdsInPragmaWarnings(input):
-   """Returns set of resource ids that are inside unknown pragma warnings
-      for the given input.
-   """
-   used_resources = set()
-   unknown_pragma_warning_pattern = re.compile(
-       'whitelisted_resource_(?P<resource_id>[0-9]+)')
-   for ln in input:
-     match = unknown_pragma_warning_pattern.search(ln)
-     if match:
-       resource_id = int(match.group('resource_id'))
-       used_resources.add(resource_id)
-   return used_resources
-
-
 def main():
   parser = argparse.ArgumentParser(usage=USAGE)
   parser.add_argument(
@@ -82,18 +66,10 @@ def main():
   parser.add_argument(
       '--out-dir', required=True,
       help='The out target directory, for example out/Release')
-  parser.add_argument(
-      '--use-existing-resource-ids', action='store_true', default=False,
-      help='Specifies that the input file already contains resource ids')
 
   args = parser.parse_args()
 
-  used_resources = set()
-  if args.use_existing_resource_ids:
-    used_resources.update([int(resource_id) for resource_id in args.input])
-  else:
-    used_resources.update(_GetResourceIdsInPragmaWarnings(args.input))
-
+  used_resources = set(int(resource_id) for resource_id in args.input)
   used_resources |= _FindResourceIds(
       os.path.join(args.out_dir, COMPONENTS_STRINGS_HEADER),
       ARCH_SPECIFIC_RESOURCES)

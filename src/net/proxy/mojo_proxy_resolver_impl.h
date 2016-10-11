@@ -8,7 +8,6 @@
 #include <map>
 #include <memory>
 #include <queue>
-#include <set>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -36,7 +35,7 @@ class MojoProxyResolverImpl : public interfaces::ProxyResolver {
   void DeleteJob(Job* job);
 
   std::unique_ptr<ProxyResolverV8Tracing> resolver_;
-  std::set<Job*> resolve_jobs_;
+  std::map<Job*, std::unique_ptr<Job>> resolve_jobs_;
 
   DISALLOW_COPY_AND_ASSIGN(MojoProxyResolverImpl);
 };

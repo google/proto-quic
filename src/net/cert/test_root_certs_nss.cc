@@ -8,7 +8,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "crypto/nss_util.h"
 #include "net/cert/x509_certificate.h"
 
@@ -18,29 +18,6 @@
 
 namespace net {
 
-// TrustEntry is used to store the original CERTCertificate and CERTCertTrust
-// for a certificate whose trust status has been changed by the
-// TestRootCerts.
-class TestRootCerts::TrustEntry {
- public:
-  // Creates a new TrustEntry by incrementing the reference to |certificate|
-  // and copying |trust|.
-  TrustEntry(CERTCertificate* certificate, const CERTCertTrust& trust);
-  ~TrustEntry();
-
-  CERTCertificate* certificate() const { return certificate_; }
-  const CERTCertTrust& trust() const { return trust_; }
-
- private:
-  // The temporary root certificate.
-  CERTCertificate* certificate_;
-
-  // The original trust settings, before |certificate_| was manipulated to
-  // be a temporarily trusted root.
-  CERTCertTrust trust_;
-
-  DISALLOW_COPY_AND_ASSIGN(TrustEntry);
-};
 
 TestRootCerts::TrustEntry::TrustEntry(CERTCertificate* certificate,
                                       const CERTCertTrust& trust)
@@ -87,7 +64,8 @@ bool TestRootCerts::Add(X509Certificate* certificate) {
     return false;
   }
 
-  trust_cache_.push_back(new TrustEntry(cert_handle, original_trust));
+  trust_cache_.push_back(
+      base::MakeUnique<TrustEntry>(cert_handle, original_trust));
   return true;
 }
 
@@ -97,8 +75,7 @@ void TestRootCerts::Clear() {
   // added twice, the second entry's original trust status will be that of
   // the first entry, while the first entry contains the desired resultant
   // status.
-  for (std::list<TrustEntry*>::reverse_iterator it = trust_cache_.rbegin();
-       it != trust_cache_.rend(); ++it) {
+  for (auto it = trust_cache_.rbegin(); it != trust_cache_.rend(); ++it) {
     CERTCertTrust original_trust = (*it)->trust();
     SECStatus rv = CERT_ChangeCertTrust(CERT_GetDefaultCertDB(),
                                         (*it)->certificate(),
@@ -108,7 +85,7 @@ void TestRootCerts::Clear() {
     // occur after Clear() has been called.
     DCHECK_EQ(SECSuccess, rv) << "Cannot restore certificate trust.";
   }
-  base::STLDeleteElements(&trust_cache_);
+  trust_cache_.clear();
 }
 
 bool TestRootCerts::IsEmpty() const {
@@ -117,11 +94,10 @@ bool TestRootCerts::IsEmpty() const {
 
 #if defined(USE_NSS_CERTS)
 bool TestRootCerts::Contains(CERTCertificate* cert) const {
-  for (std::list<TrustEntry*>::const_iterator it = trust_cache_.begin();
-       it != trust_cache_.end(); ++it) {
-    if (X509Certificate::IsSameOSCert(cert, (*it)->certificate()))
+  for (const auto& item : trust_cache_)
+    if (X509Certificate::IsSameOSCert(cert, item->certificate()))
       return true;
-  }
+
   return false;
 }
 #endif

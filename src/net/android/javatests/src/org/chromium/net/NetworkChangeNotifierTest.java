@@ -10,8 +10,11 @@ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.ConnectivityManager.NetworkCallback;
 import android.net.Network;
@@ -371,7 +374,22 @@ public class NetworkChangeNotifierTest extends InstrumentationTestCase {
      *            it is in the foreground.
      */
     private void createTestNotifier(WatchForChanges watchForChanges) {
-        Context context = getInstrumentation().getTargetContext();
+        Context context = new ContextWrapper(getInstrumentation().getTargetContext()) {
+            // Mock out to avoid unintended system interaction.
+            @Override
+            public Intent registerReceiver(BroadcastReceiver receiver, IntentFilter filter) {
+                return null;
+            }
+
+            @Override
+            public void unregisterReceiver(BroadcastReceiver receiver) {}
+
+            // Don't allow escaping the mock via the application context.
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+        };
         mNotifier = new TestNetworkChangeNotifier(context);
         NetworkChangeNotifier.resetInstanceForTests(mNotifier);
         if (watchForChanges == WatchForChanges.ALWAYS) {

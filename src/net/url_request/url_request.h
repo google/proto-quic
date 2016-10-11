@@ -31,6 +31,7 @@
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/log/net_log_with_source.h"
+#include "net/proxy/proxy_server.h"
 #include "net/socket/connection_attempts.h"
 #include "net/url_request/url_request_status.h"
 #include "url/gurl.h"
@@ -83,7 +84,11 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   // A ReferrerPolicy for the request can be set with
   // set_referrer_policy() and controls the contents of the Referer
-  // header when URLRequest follows server redirects.
+  // header when URLRequest follows server redirects. Note that setting
+  // a ReferrerPolicy on the request has no effect on the Referer header
+  // of the initial leg of the request; the caller is responsible for
+  // setting the initial Referer, and the ReferrerPolicy only controls
+  // what happens to the Referer while following redirects.
   enum ReferrerPolicy {
     // Clear the referrer header if the protocol changes from HTTPS to
     // HTTP. This is the default behavior of URLRequest.
@@ -631,9 +636,7 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   // Available at NetworkDelegate::NotifyHeadersReceived() time, which is before
   // the more general response_info() is available, even though it is a subset.
-  const HostPortPair& proxy_server() const {
-    return proxy_server_;
-  }
+  const ProxyServer& proxy_server() const { return proxy_server_; }
 
   // Gets the connection attempts made in the process of servicing this
   // URLRequest. Only guaranteed to be valid if called after the request fails
@@ -849,7 +852,7 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   LoadTimingInfo load_timing_info_;
 
   // The proxy server used for this request, if any.
-  HostPortPair proxy_server_;
+  ProxyServer proxy_server_;
 
   // The raw header size of the response.
   int raw_header_size_;

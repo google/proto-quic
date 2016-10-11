@@ -97,9 +97,8 @@ class ProvisioningProfile(object):
         '%s.%s' % (self.team_identifier, bundle_identifier),
         self.application_identifier_pattern)
 
-  def Install(self, bundle):
-    """Copies mobile provisioning profile info the bundle."""
-    installation_path = os.path.join(bundle.path, 'embedded.mobileprovision')
+  def Install(self, installation_path):
+    """Copies mobile provisioning profile info to |installation_path|."""
     shutil.copy2(self.path, installation_path)
 
 
@@ -264,12 +263,12 @@ class CodeSignBundleAction(Action):
         '--framework', '-F', action='append', default=[], dest='frameworks',
         help='install and resign system framework')
     parser.add_argument(
-        '--disable-code-signature', action='store_false', dest='sign',
+        '--disable-code-signature', action='store_true', dest='no_signature',
         help='disable code signature')
     parser.add_argument(
         '--platform', '-t', required=True,
         help='platform the signed bundle is targetting')
-    parser.set_defaults(sign=True)
+    parser.set_defaults(no_signature=False)
 
   @staticmethod
   def _Execute(args):
@@ -278,19 +277,16 @@ class CodeSignBundleAction(Action):
 
     bundle = Bundle(args.path)
 
-    # Find mobile provisioning profile and embeds it into the bundle (if a code
-    # signing identify has been provided, fails if no valid mobile provisioning
-    # is found).
-    provisioning_profile_required = args.identity != '-'
-    provisioning_profile = FindProvisioningProfile(
-        bundle.identifier, provisioning_profile_required)
-    if provisioning_profile and args.platform != 'iphonesimulator':
-      provisioning_profile.Install(bundle)
+    # Delete existing embedded mobile provisioning.
+    embedded_provisioning_profile = os.path.join(
+        bundle.path, 'embedded.mobileprovision')
+    if os.path.isfile(embedded_provisioning_profile):
+      os.unlink(embedded_provisioning_profile)
 
     # Delete existing code signature.
     signature_file = os.path.join(args.path, '_CodeSignature', 'CodeResources')
     if os.path.isfile(signature_file):
-      os.unlink(signature_file)
+      shutil.rmtree(os.path.dirname(signature_file))
 
     # Install system frameworks if requested.
     for framework_path in args.frameworks:
@@ -301,13 +297,20 @@ class CodeSignBundleAction(Action):
       os.unlink(bundle.binary_path)
     shutil.copy(args.binary, bundle.binary_path)
 
-    if not args.sign:
+    if args.no_signature:
       return
 
-    # Embeds entitlements into the code signature (if code signing identify has
-    # been provided).
     codesign_extra_args = []
+
+    # Find mobile provisioning profile and embeds it into the bundle (if a code
+    # signing identify has been provided, fails if no valid mobile provisioning
+    # is found).
+    provisioning_profile_required = args.identity != '-'
+    provisioning_profile = FindProvisioningProfile(
+        bundle.identifier, provisioning_profile_required)
     if provisioning_profile and args.platform != 'iphonesimulator':
+      provisioning_profile.Install(embedded_provisioning_profile)
+
       temporary_entitlements_file = tempfile.NamedTemporaryFile(suffix='.xcent')
       codesign_extra_args.extend(
           ['--entitlements', temporary_entitlements_file.name])

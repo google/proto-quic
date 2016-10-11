@@ -607,6 +607,69 @@ if (enable_java_templates) {
     }
   }
 
+  # Creates a resources.zip with locale.pak files placed into appropriate
+  # resource configs (e.g. en-GB.pak -> res/raw-en/en_gb.pak). Also generates
+  # a locale_paks TypedArray so that resource files can be enumerated at runtime.
+  #
+  # If this target is included in the deps of an android resources/library/apk,
+  # the resources will be included with that target.
+  #
+  # Variables:
+  #   sources: List of .pak files. Names must be of the form "en.pak" or
+  #       "en-US.pak".
+  #   deps: (optional) List of dependencies that might be needed to generate
+  #       the .pak files.
+  #
+  # Example
+  #   locale_pak_resources("locale_paks") {
+  #     sources = [ "path/en-US.pak", "path/fr.pak", ... ]
+  #   }
+  template("locale_pak_resources") {
+    set_sources_assignment_filter([])
+    assert(defined(invoker.sources))
+
+    _base_path = "$target_gen_dir/$target_name"
+    _resources_zip = _base_path + ".resources.zip"
+    _build_config = _base_path + ".build_config"
+
+    write_build_config("${target_name}__build_config") {
+      build_config = _build_config
+      resources_zip = _resources_zip
+      type = "android_resources"
+      is_locale_resource = true
+    }
+
+    action("${target_name}__create_resources_zip") {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "sources",
+                             ])
+      script = "//build/android/gyp/locale_pak_resources.py"
+      depfile = "$target_gen_dir/$target_name.d"
+
+      outputs = [
+        _resources_zip,
+      ]
+
+      _rebased_sources = rebase_path(sources, root_build_dir)
+      args = [
+        "--locale-paks=${_rebased_sources}",
+        "--resources-zip",
+        rebase_path(_resources_zip, root_build_dir),
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
+      ]
+    }
+
+    group(target_name) {
+      public_deps = [
+        ":${target_name}__build_config",
+        ":${target_name}__create_resources_zip",
+      ]
+    }
+  }
+
   # Declare an Android resources target
   #
   # This creates a resources zip file that will be used when building an Android
@@ -1368,6 +1431,8 @@ if (enable_java_templates) {
   #   testonly: Marks this target as "test-only".
   #   write_asset_list: Adds an extra file to the assets, which contains a list of
   #     all other asset files.
+  #   alternative_locale_resource_dep: The locale resource target which overrides
+  #     any exsting locale resources in dep graph.
   #   requires_sdk_api_level_23: If defined and true, the apk is intended for
   #     installation only on Android M or later. In these releases the system
   #     linker does relocation unpacking, so we can enable it unconditionally.
@@ -1600,6 +1665,11 @@ if (enable_java_templates) {
         possible_config_deps = invoker.deps
       }
 
+      if (defined(invoker.alternative_locale_resource_dep)) {
+        possible_config_deps += [ invoker.alternative_locale_resource_dep ]
+        has_alternative_locale_resource = true
+      }
+
       # Added emma to the target's classpath via its .build_config.
       if (emma_coverage && !_emma_never_instrument) {
         possible_config_deps += [ "//third_party/android_tools:emma_device" ]
@@ -1649,6 +1719,9 @@ if (enable_java_templates) {
       deps = _android_manifest_deps + [ ":$build_config_target" ]
       if (defined(invoker.deps)) {
         deps += invoker.deps
+      }
+      if (defined(invoker.alternative_locale_resource_dep)) {
+        deps += [ invoker.alternative_locale_resource_dep ]
       }
     }
     _srcjar_deps += [ ":$process_resources_target" ]
@@ -1720,9 +1793,6 @@ if (enable_java_templates) {
         sources = [
           "//base/android/java/templates/BuildConfig.template",
         ]
-        deps = [
-          ":$build_config_target",
-        ]
 
         defines = []
         if (enable_multidex) {
@@ -1731,12 +1801,6 @@ if (enable_java_templates) {
         if (is_java_debug || dcheck_always_on) {
           defines += [ "_DCHECK_IS_ON" ]
         }
-        defines += [
-          "COMPRESSED_ASSETS_LIST=" +
-              "@FileArg($_rebased_build_config:compressed_assets_java_list)",
-          "UNCOMPRESSED_ASSETS_LIST=" +
-              "@FileArg($_rebased_build_config:uncompressed_assets_java_list)",
-        ]
       }
       _srcjar_deps += [ ":${_template_name}__build_config_java" ]
     }

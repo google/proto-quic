@@ -30,13 +30,11 @@ const char kRecordUntilFull[] = "record-until-full";
 const char kRecordContinuously[] = "record-continuously";
 const char kRecordAsMuchAsPossible[] = "record-as-much-as-possible";
 const char kTraceToConsole[] = "trace-to-console";
-const char kEnableSampling[] = "enable-sampling";
 const char kEnableSystrace[] = "enable-systrace";
 const char kEnableArgumentFilter[] = "enable-argument-filter";
 
 // String parameters that can be used to parse the trace config string.
 const char kRecordModeParam[] = "record_mode";
-const char kEnableSamplingParam[] = "enable_sampling";
 const char kEnableSystraceParam[] = "enable_systrace";
 const char kEnableArgumentFilterParam[] = "enable_argument_filter";
 const char kIncludedCategoriesParam[] = "included_categories";
@@ -228,7 +226,6 @@ TraceConfig::TraceConfig(StringPiece config_string) {
 
 TraceConfig::TraceConfig(const TraceConfig& tc)
     : record_mode_(tc.record_mode_),
-      enable_sampling_(tc.enable_sampling_),
       enable_systrace_(tc.enable_systrace_),
       enable_argument_filter_(tc.enable_argument_filter_),
       memory_dump_config_(tc.memory_dump_config_),
@@ -246,7 +243,6 @@ TraceConfig& TraceConfig::operator=(const TraceConfig& rhs) {
     return *this;
 
   record_mode_ = rhs.record_mode_;
-  enable_sampling_ = rhs.enable_sampling_;
   enable_systrace_ = rhs.enable_systrace_;
   enable_argument_filter_ = rhs.enable_argument_filter_;
   memory_dump_config_ = rhs.memory_dump_config_;
@@ -342,7 +338,6 @@ bool TraceConfig::IsCategoryGroupEnabled(
 
 void TraceConfig::Merge(const TraceConfig& config) {
   if (record_mode_ != config.record_mode_
-      || enable_sampling_ != config.enable_sampling_
       || enable_systrace_ != config.enable_systrace_
       || enable_argument_filter_ != config.enable_argument_filter_) {
     DLOG(ERROR) << "Attempting to merge trace config with a different "
@@ -377,7 +372,6 @@ void TraceConfig::Merge(const TraceConfig& config) {
 
 void TraceConfig::Clear() {
   record_mode_ = RECORD_UNTIL_FULL;
-  enable_sampling_ = false;
   enable_systrace_ = false;
   enable_argument_filter_ = false;
   included_categories_.clear();
@@ -390,7 +384,6 @@ void TraceConfig::Clear() {
 
 void TraceConfig::InitializeDefault() {
   record_mode_ = RECORD_UNTIL_FULL;
-  enable_sampling_ = false;
   enable_systrace_ = false;
   enable_argument_filter_ = false;
 }
@@ -411,7 +404,6 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
   }
 
   bool val;
-  enable_sampling_ = dict.GetBoolean(kEnableSamplingParam, &val) ? val : false;
   enable_systrace_ = dict.GetBoolean(kEnableSystraceParam, &val) ? val : false;
   enable_argument_filter_ =
       dict.GetBoolean(kEnableArgumentFilterParam, &val) ? val : false;
@@ -482,7 +474,6 @@ void TraceConfig::InitializeFromStrings(StringPiece category_filter_string,
   }
 
   record_mode_ = RECORD_UNTIL_FULL;
-  enable_sampling_ = false;
   enable_systrace_ = false;
   enable_argument_filter_ = false;
   if (!trace_options_string.empty()) {
@@ -497,8 +488,6 @@ void TraceConfig::InitializeFromStrings(StringPiece category_filter_string,
         record_mode_ = ECHO_TO_CONSOLE;
       } else if (token == kRecordAsMuchAsPossible) {
         record_mode_ = RECORD_AS_MUCH_AS_POSSIBLE;
-      } else if (token == kEnableSampling) {
-        enable_sampling_ = true;
       } else if (token == kEnableSystrace) {
         enable_systrace_ = true;
       } else if (token == kEnableArgumentFilter) {
@@ -710,7 +699,6 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
       NOTREACHED();
   }
 
-  dict->SetBoolean(kEnableSamplingParam, enable_sampling_);
   dict->SetBoolean(kEnableSystraceParam, enable_systrace_);
   dict->SetBoolean(kEnableArgumentFilterParam, enable_argument_filter_);
 
@@ -810,8 +798,6 @@ std::string TraceConfig::ToTraceOptionsString() const {
     default:
       NOTREACHED();
   }
-  if (enable_sampling_)
-    ret = ret + "," + kEnableSampling;
   if (enable_systrace_)
     ret = ret + "," + kEnableSystrace;
   if (enable_argument_filter_)

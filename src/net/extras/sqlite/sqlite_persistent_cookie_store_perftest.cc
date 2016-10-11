@@ -39,13 +39,13 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
         key_loaded_event_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                           base::WaitableEvent::InitialState::NOT_SIGNALED) {}
 
-  void OnLoaded(const std::vector<CanonicalCookie*>& cookies) {
-    cookies_ = cookies;
+  void OnLoaded(std::vector<std::unique_ptr<CanonicalCookie>> cookies) {
+    cookies_.swap(cookies);
     loaded_event_.Signal();
   }
 
-  void OnKeyLoaded(const std::vector<CanonicalCookie*>& cookies) {
-    cookies_ = cookies;
+  void OnKeyLoaded(std::vector<std::unique_ptr<CanonicalCookie>> cookies) {
+    cookies_.swap(cookies);
     key_loaded_event_.Signal();
   }
 
@@ -109,12 +109,12 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
   std::unique_ptr<base::SequencedWorkerPoolOwner> pool_owner_;
   base::WaitableEvent loaded_event_;
   base::WaitableEvent key_loaded_event_;
-  std::vector<CanonicalCookie*> cookies_;
+  std::vector<std::unique_ptr<CanonicalCookie>> cookies_;
   base::ScopedTempDir temp_dir_;
   scoped_refptr<SQLitePersistentCookieStore> store_;
 };
 
-// Test the performance of priority load of cookies for a specfic domain key
+// Test the performance of priority load of cookies for a specific domain key
 TEST_F(SQLitePersistentCookieStorePerfTest, TestLoadForKeyPerformance) {
   for (int domain_num = 0; domain_num < 3; ++domain_num) {
     std::string domain_name(base::StringPrintf("domain_%d.com", domain_num));

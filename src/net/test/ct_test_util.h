@@ -13,12 +13,12 @@
 
 #include "base/memory/ref_counted.h"
 #include "net/cert/signed_certificate_timestamp.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 
 namespace net {
 
 namespace ct {
 
-struct CTVerifyResult;
 struct DigitallySigned;
 struct LogEntry;
 struct MerkleTreeLeaf;
@@ -120,11 +120,12 @@ std::string GetSCTListWithInvalidSCT();
 
 // Returns true if |log_description| is in the |result|'s |verified_scts| and
 // number of |verified_scts| in |result| is equal to 1.
-bool CheckForSingleVerifiedSCTInResult(const CTVerifyResult& result,
-                                       const std::string& log_description);
+bool CheckForSingleVerifiedSCTInResult(
+    const SignedCertificateTimestampAndStatusList& scts,
+    const std::string& log_description);
 
 // Returns true if |origin| is in the |result|'s |verified_scts|.
-bool CheckForSCTOrigin(const CTVerifyResult& result,
+bool CheckForSCTOrigin(const SignedCertificateTimestampAndStatusList& scts,
                        SignedCertificateTimestamp::Origin origin);
 
 }  // namespace ct

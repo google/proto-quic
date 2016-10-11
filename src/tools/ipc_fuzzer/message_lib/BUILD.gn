@@ -10,7 +10,6 @@ static_library("ipc_message_lib") {
     "//base",
     "//chrome/common",
     "//chrome/common/safe_browsing:proto",
-    "//components/content_settings/content/common",
     "//components/network_hints/common",
     "//components/pdf/common",
     "//components/spellcheck/common",

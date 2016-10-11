@@ -123,7 +123,7 @@ class MojoProxyResolverFactoryImplTest
 
   void OnError(int32_t line_number, const mojo::String& message) override {}
 
-  void ResolveDns(interfaces::HostResolverRequestInfoPtr request_info,
+  void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
                   interfaces::HostResolverRequestClientPtr client) override {}
 
  protected:

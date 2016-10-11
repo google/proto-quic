@@ -119,9 +119,10 @@ void QuicInMemoryCache::ResourceFile::SetHostPathFromBase(StringPiece base) {
 }
 
 StringPiece QuicInMemoryCache::ResourceFile::RemoveScheme(StringPiece url) {
-  if (url.starts_with("https://")) {
+  if (base::StartsWith(url, "https://", base::CompareCase::INSENSITIVE_ASCII)) {
     url.remove_prefix(8);
-  } else if (url.starts_with("http://")) {
+  } else if (base::StartsWith(url, "http://",
+                              base::CompareCase::INSENSITIVE_ASCII)) {
     url.remove_prefix(7);
   }
   return url;

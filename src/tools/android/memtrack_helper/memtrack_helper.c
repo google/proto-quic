@@ -211,8 +211,13 @@ int main(int argc, char** argv) {
   if (argc > 1 && strcmp(argv[1], "-d") == 0)
     daemonize();
 
-  if(memtrack_init())
-    exit_with_failure("memtrack_init() returned non-zero");
+  res = memtrack_init();
+  if (res == -ENOENT) {
+    exit_with_failure("Unable to load memtrack module in libhardware. "
+                      "Probably implementation is missing in this ROM.");
+  } else if (res != 0) {
+    exit_with_failure("memtrack_init() returned non-zero status.");
+  }
 
   if (listen(server_fd, 128 /* max number of queued requests */))
     exit_with_failure("listen");

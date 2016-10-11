@@ -11,8 +11,6 @@
 #include <utility>
 
 #include "base/memory/singleton.h"
-#include "crypto/auto_cbb.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_private_key.h"
 
@@ -22,13 +20,13 @@ namespace {
 
 // Serializes the SubjectPublicKeyInfo for |cert|.
 bool GetCertificateSPKI(const X509Certificate* cert, std::string* spki) {
-  crypto::ScopedEVP_PKEY pkey(X509_get_pubkey(cert->os_cert_handle()));
+  bssl::UniquePtr<EVP_PKEY> pkey(X509_get_pubkey(cert->os_cert_handle()));
   if (!pkey) {
     LOG(ERROR) << "Can't extract private key from certificate!";
     return false;
   }
 
-  crypto::AutoCBB cbb;
+  bssl::ScopedCBB cbb;
   uint8_t* der;
   size_t der_len;
   if (!CBB_init(cbb.get(), 0) ||

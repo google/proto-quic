@@ -26,8 +26,12 @@ struct ProxyServer {
   ProxyScheme scheme;
 
   // |host| and |port| are only valid if |scheme| is not INVALID or DIRECT.
-  string? host;
+  string host;
   uint16 port;
+};
+
+struct ProxyInfo {
+  array<ProxyServer> proxy_servers;
 };
 
 interface ProxyResolver {
@@ -37,7 +41,7 @@ interface ProxyResolver {
 };
 
 interface ProxyResolverRequestClient {
-  ReportResult(int32 error, array<ProxyServer>? proxy_servers);
+  ReportResult(int32 error, ProxyInfo proxy_info);
 
   Alert(string error);
   OnError(int32 line_number, string error);

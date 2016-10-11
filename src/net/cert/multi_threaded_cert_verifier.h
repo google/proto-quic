@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -64,8 +64,6 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
                     const CertVerifierJob* job2) const;
   };
 
-  using JobSet = std::set<CertVerifierJob*, JobComparator>;
-
   // Returns an inflight job for |key|. If there is no such job then returns
   // null.
   CertVerifierJob* FindJob(const RequestParams& key);
@@ -78,8 +76,12 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier
   uint64_t requests() const { return requests_; }
   uint64_t inflight_joins() const { return inflight_joins_; }
 
-  // inflight_ holds the jobs for which an active verification is taking place.
-  JobSet inflight_;
+  // inflight_ holds the jobs for which an active verification is taking place,
+  // mapping the job's raw pointer to an owned pointer. Would be a
+  // set<unique_ptr> but extraction of owned objects from a set of owned types
+  // doesn't come until C++17.
+  std::map<CertVerifierJob*, std::unique_ptr<CertVerifierJob>, JobComparator>
+      inflight_;
 
   uint64_t requests_;
   uint64_t inflight_joins_;

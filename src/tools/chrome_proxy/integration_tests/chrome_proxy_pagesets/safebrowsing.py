@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 import logging
 
+from common.chrome_proxy_shared_page_state import ChromeProxySharedPageState
 from telemetry.core import exceptions
 from telemetry.page import page as page_module
 from telemetry import story
@@ -16,7 +17,8 @@ class SafebrowsingPage(page_module.Page):
   """
 
   def __init__(self, url, page_set, expect_timeout):
-    super(SafebrowsingPage, self).__init__(url=url, page_set=page_set)
+    super(SafebrowsingPage, self).__init__(url=url, page_set=page_set,
+        shared_page_state_class=ChromeProxySharedPageState)
     self._expect_timeout = expect_timeout
 
   def RunNavigateSteps(self, action_runner):

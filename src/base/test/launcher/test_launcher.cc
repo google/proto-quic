@@ -47,6 +47,8 @@
 
 #if defined(OS_POSIX)
 #include <fcntl.h>
+
+#include "base/files/file_descriptor_watcher_posix.h"
 #endif
 
 #if defined(OS_MACOSX)
@@ -152,26 +154,15 @@ void KillSpawnedTestProcesses() {
 
 // I/O watcher for the reading end of the self-pipe above.
 // Terminates any launched child processes and exits the process.
-class SignalFDWatcher : public MessageLoopForIO::Watcher {
- public:
-  SignalFDWatcher() {
-  }
+void OnShutdownPipeReadable() {
+  fprintf(stdout, "\nCaught signal. Killing spawned test processes...\n");
+  fflush(stdout);
 
-  void OnFileCanReadWithoutBlocking(int fd) override {
-    fprintf(stdout, "\nCaught signal. Killing spawned test processes...\n");
-    fflush(stdout);
+  KillSpawnedTestProcesses();
 
-    KillSpawnedTestProcesses();
-
-    // The signal would normally kill the process, so exit now.
-    _exit(1);
-  }
-
-  void OnFileCanWriteWithoutBlocking(int fd) override { NOTREACHED(); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SignalFDWatcher);
-};
+  // The signal would normally kill the process, so exit now.
+  _exit(1);
+}
 #endif  // defined(OS_POSIX)
 
 // Parses the environment variable var as an Int32.  If it is unset, returns
@@ -530,15 +521,8 @@ bool TestLauncher::Run() {
   CHECK_EQ(0, sigaction(SIGQUIT, &action, NULL));
   CHECK_EQ(0, sigaction(SIGTERM, &action, NULL));
 
-  MessageLoopForIO::FileDescriptorWatcher controller;
-  SignalFDWatcher watcher;
-
-  CHECK(MessageLoopForIO::current()->WatchFileDescriptor(
-            g_shutdown_pipe[0],
-            true,
-            MessageLoopForIO::WATCH_READ,
-            &controller,
-            &watcher));
+  auto controller = base::FileDescriptorWatcher::WatchReadable(
+      g_shutdown_pipe[0], base::Bind(&OnShutdownPipeReadable));
 #endif  // defined(OS_POSIX)
 
   // Start the watchdog timer.

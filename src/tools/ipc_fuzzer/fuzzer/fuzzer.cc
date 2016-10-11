@@ -15,7 +15,6 @@
 #include "build/build_config.h"
 #include "ipc/ipc_message.h"
 #include "ipc/ipc_message_utils.h"
-#include "ipc/ipc_switches.h"
 #include "ipc/ipc_sync_channel.h"
 #include "ipc/ipc_sync_message.h"
 #include "tools/ipc_fuzzer/fuzzer/fuzzer.h"
@@ -682,16 +681,10 @@ struct FuzzTraits<cc::CompositorFrame> {
     if (!FuzzParam(&p->metadata, fuzzer))
       return false;
 
-    switch (RandInRange(3)) {
+    switch (RandInRange(2)) {
       case 0: {
         p->delegated_frame_data.reset(new cc::DelegatedFrameData());
         if (!FuzzParam(p->delegated_frame_data.get(), fuzzer))
-          return false;
-        return true;
-      }
-      case 1: {
-        p->gl_frame_data.reset(new cc::GLFrameData());
-        if (!FuzzParam(p->gl_frame_data.get(), fuzzer))
           return false;
         return true;
       }

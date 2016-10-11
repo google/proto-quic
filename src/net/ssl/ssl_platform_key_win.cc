@@ -25,7 +25,6 @@
 #include "crypto/wincrypt_shim.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_certificate.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_platform_key_task_runner.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
@@ -220,7 +219,7 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
       size_t order_len = signature->size() / 2;
 
       // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
-      crypto::ScopedECDSA_SIG sig(ECDSA_SIG_new());
+      bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
       if (!sig || !BN_bin2bn(signature->data(), order_len, sig->r) ||
           !BN_bin2bn(signature->data() + order_len, order_len, sig->s)) {
         return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
@@ -260,10 +259,10 @@ bool GetKeyInfo(const X509Certificate* certificate,
                                       &der_encoded))
     return false;
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_encoded.data());
-  ScopedX509 x509(d2i_X509(nullptr, &bytes, der_encoded.size()));
+  bssl::UniquePtr<X509> x509(d2i_X509(nullptr, &bytes, der_encoded.size()));
   if (!x509)
     return false;
-  crypto::ScopedEVP_PKEY key(X509_get_pubkey(x509.get()));
+  bssl::UniquePtr<EVP_PKEY> key(X509_get_pubkey(x509.get()));
   if (!key)
     return false;
   switch (EVP_PKEY_id(key.get())) {

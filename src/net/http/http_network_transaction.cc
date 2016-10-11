@@ -53,6 +53,7 @@
 #include "net/http/transport_security_state.h"
 #include "net/http/url_security_manager.h"
 #include "net/log/net_log_event_type.h"
+#include "net/proxy/proxy_server.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/socks_client_socket_pool.h"
 #include "net/socket/ssl_client_socket.h"
@@ -456,7 +457,11 @@ void HttpNetworkTransaction::OnStreamReady(const SSLConfig& used_ssl_config,
   response_.was_fetched_via_spdy = stream_request_->using_spdy();
   response_.was_fetched_via_proxy = !proxy_info_.is_direct();
   if (response_.was_fetched_via_proxy && !proxy_info_.is_empty())
-    response_.proxy_server = proxy_info_.proxy_server().host_port_pair();
+    response_.proxy_server = proxy_info_.proxy_server();
+  else if (!response_.was_fetched_via_proxy && proxy_info_.is_direct())
+    response_.proxy_server = ProxyServer::Direct();
+  else
+    response_.proxy_server = ProxyServer();
   OnIOComplete(OK);
 }
 

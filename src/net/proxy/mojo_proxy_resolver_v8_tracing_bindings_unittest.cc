@@ -31,7 +31,7 @@ class MojoProxyResolverV8TracingBindingsTest : public testing::Test {
     errors_.push_back(std::make_pair(line_number, message.To<std::string>()));
   }
 
-  void ResolveDns(interfaces::HostResolverRequestInfoPtr request_info,
+  void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
                   interfaces::HostResolverRequestClientPtr client) {}
 
  protected:

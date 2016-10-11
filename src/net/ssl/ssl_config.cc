@@ -12,8 +12,6 @@ const uint16_t kDefaultSSLVersionMin = SSL_PROTOCOL_VERSION_TLS1;
 
 const uint16_t kDefaultSSLVersionMax = SSL_PROTOCOL_VERSION_TLS1_2;
 
-const uint16_t kDefaultSSLVersionFallbackMin = SSL_PROTOCOL_VERSION_TLS1_2;
-
 SSLConfig::CertAndStatus::CertAndStatus() = default;
 SSLConfig::CertAndStatus::CertAndStatus(scoped_refptr<X509Certificate> cert_arg,
                                         CertStatus status)
@@ -28,7 +26,6 @@ SSLConfig::SSLConfig()
       sha1_local_anchors_enabled(false),
       version_min(kDefaultSSLVersionMin),
       version_max(kDefaultSSLVersionMax),
-      version_fallback_min(kDefaultSSLVersionFallbackMin),
       deprecated_cipher_suites_enabled(false),
       dhe_enabled(false),
       channel_id_enabled(true),
@@ -37,7 +34,6 @@ SSLConfig::SSLConfig()
       require_ecdhe(false),
       send_client_cert(false),
       verify_ev_cert(false),
-      version_fallback(false),
       cert_io_enabled(true),
       renego_allowed_default(false) {}
 

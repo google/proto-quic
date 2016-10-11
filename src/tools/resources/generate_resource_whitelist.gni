@@ -42,7 +42,6 @@ template("generate_resource_whitelist") {
       "-o",
       rebase_path(invoker.output, root_build_dir),
       "--out-dir=.",
-      "--use-existing-resource-ids",
     ]
   }
 }

@@ -453,6 +453,9 @@ class ChromeTests:
   def TestSql(self):
     return self.SimpleTest("chrome", "sql_unittests")
 
+  def TestStorage(self):
+    return self.SimpleTest("storage", "storage_unittests")
+
   def TestLinuxSandbox(self):
     return self.SimpleTest("sandbox", "sandbox_linux_unittests")
 
@@ -706,6 +709,7 @@ class ChromeTests:
     "sandbox": TestLinuxSandbox, "sandbox_linux_unittests": TestLinuxSandbox,
     "skia": TestSkia,            "skia_unittests": TestSkia,
     "sql": TestSql,              "sql_unittests": TestSql,
+    "storage": TestStorage,      "storage_unittests": TestStorage,
     "sync_integration_tests": TestSyncIntegration,
     "sync_integration": TestSyncIntegration,
     "ui_base_unit": TestUIBaseUnit,       "ui_base_unittests": TestUIBaseUnit,

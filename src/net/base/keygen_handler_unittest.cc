@@ -20,7 +20,6 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/worker_pool.h"
 #include "build/build_config.h"
-#include "crypto/scoped_openssl_types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(USE_NSS_CERTS)
@@ -123,7 +122,8 @@ void AssertValidSignedPublicKeyAndChallenge(const std::string& result,
   ASSERT_TRUE(
       CBS_get_asn1(&copy, &public_key_and_challenge, CBS_ASN1_SEQUENCE));
   ASSERT_EQ(0u, CBS_len(&copy));
-  crypto::ScopedEVP_PKEY key(EVP_parse_public_key(&public_key_and_challenge));
+  bssl::UniquePtr<EVP_PKEY> key(
+      EVP_parse_public_key(&public_key_and_challenge));
   ASSERT_TRUE(key);
   CBS challenge_spkac;
   ASSERT_TRUE(CBS_get_asn1(&public_key_and_challenge, &challenge_spkac,
@@ -154,7 +154,7 @@ void AssertValidSignedPublicKeyAndChallenge(const std::string& result,
   ASSERT_EQ(0u, pad);
 
   // Check the signature.
-  crypto::ScopedEVP_MD_CTX ctx(EVP_MD_CTX_create());
+  bssl::ScopedEVP_MD_CTX ctx;
   ASSERT_TRUE(
       EVP_DigestVerifyInit(ctx.get(), nullptr, EVP_md5(), nullptr, key.get()));
   ASSERT_TRUE(EVP_DigestVerifyUpdate(ctx.get(),

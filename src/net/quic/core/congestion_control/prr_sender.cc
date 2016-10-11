@@ -23,9 +23,9 @@ void PrrSender::OnPacketSent(QuicByteCount sent_bytes) {
   bytes_sent_since_loss_ += sent_bytes;
 }
 
-void PrrSender::OnPacketLost(QuicByteCount bytes_in_flight) {
+void PrrSender::OnPacketLost(QuicByteCount prior_in_flight) {
   bytes_sent_since_loss_ = 0;
-  bytes_in_flight_before_loss_ = bytes_in_flight;
+  bytes_in_flight_before_loss_ = prior_in_flight;
   bytes_delivered_since_loss_ = 0;
   ack_count_since_loss_ = 0;
 }

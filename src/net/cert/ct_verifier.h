@@ -8,13 +8,9 @@
 #include <string>
 
 #include "net/base/net_export.h"
+#include "net/cert/signed_certificate_timestamp_and_status.h"
 
 namespace net {
-
-namespace ct {
-struct CTVerifyResult;
-struct SignedCertificateTimestamp;
-}  // namespace ct
 
 class CTLogVerifier;
 class NetLogWithSource;
@@ -54,7 +50,7 @@ class NET_EXPORT CTVerifier {
   virtual int Verify(X509Certificate* cert,
                      const std::string& stapled_ocsp_response,
                      const std::string& sct_list_from_tls_extension,
-                     ct::CTVerifyResult* result,
+                     SignedCertificateTimestampAndStatusList* output_scts,
                      const NetLogWithSource& net_log) = 0;
 
   // Registers |observer| to receive notifications of validated SCTs. Does not

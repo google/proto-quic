@@ -48,6 +48,7 @@ class OortOnline(perf_benchmark.PerfBenchmark):
     return page_sets.OortOnlinePageSet()
 
 
+@benchmark.Disabled('win')
 class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
   URL: http://oortonline.gl/#run

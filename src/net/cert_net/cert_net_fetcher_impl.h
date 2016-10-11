@@ -5,8 +5,8 @@
 #ifndef NET_CERT_NET_CERT_NET_FETCHER_H_
 #define NET_CERT_NET_CERT_NET_FETCHER_H_
 
+#include <map>
 #include <memory>
-#include <set>
 
 #include "base/callback.h"
 #include "base/macros.h"
@@ -61,8 +61,9 @@ class NET_EXPORT CertNetFetcherImpl : public CertNetFetcher {
     bool operator()(const Job* job1, const Job* job2) const;
   };
 
-  // Owns the jobs.
-  using JobSet = std::set<Job*, JobComparator>;
+  // Would be a set<unique_ptr> but extraction of owned objects from a set of
+  // owned types doesn't come until C++17.
+  using JobSet = std::map<Job*, std::unique_ptr<Job>, JobComparator>;
 
   // Starts an asynchronous request to fetch the given URL. On completion
   // |callback| will be invoked.

@@ -48,9 +48,12 @@ namespace test {
     return ::testing::AssertionFailure();
   if (expected.fin() != actual.fin())
     return ::testing::AssertionFailure();
-  if (expected.data().size() != actual.data().size())
+  if (expected.data_len() != actual.data_len())
     return ::testing::AssertionFailure();
-  if (expected.data() != actual.data())
+  if (expected.data() == nullptr && actual.data() != nullptr)
+    return ::testing::AssertionFailure();
+  if (base::StringPiece(expected.data(), expected.data_len()) !=
+      base::StringPiece(actual.data(), actual.data_len()))
     return ::testing::AssertionFailure();
   if (!VerifySpdyFrameWithPaddingIREquals(expected, actual))
     return ::testing::AssertionFailure();

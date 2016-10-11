@@ -18,7 +18,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/sha1.h"
-#include "base/stl_util.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
@@ -345,7 +344,6 @@ MultiThreadedCertVerifier::MultiThreadedCertVerifier(
     : requests_(0), inflight_joins_(0), verify_proc_(verify_proc) {}
 
 MultiThreadedCertVerifier::~MultiThreadedCertVerifier() {
-  base::STLDeleteElements(&inflight_);
 }
 
 int MultiThreadedCertVerifier::Verify(const RequestParams& params,
@@ -371,8 +369,8 @@ int MultiThreadedCertVerifier::Verify(const RequestParams& params,
     inflight_joins_++;
   } else {
     // Need to make a new job.
-    std::unique_ptr<CertVerifierJob> new_job(
-        new CertVerifierJob(params, net_log.net_log(), this));
+    std::unique_ptr<CertVerifierJob> new_job =
+        base::MakeUnique<CertVerifierJob>(params, net_log.net_log(), this);
 
     if (!new_job->Start(verify_proc_, crl_set)) {
       // TODO(wtc): log to the NetLog.
@@ -380,8 +378,8 @@ int MultiThreadedCertVerifier::Verify(const RequestParams& params,
       return ERR_INSUFFICIENT_RESOURCES;  // Just a guess.
     }
 
-    job = new_job.release();
-    inflight_.insert(job);
+    job = new_job.get();
+    inflight_[job] = std::move(new_job);
 
     if (requests_ == 1)
       job->set_is_first_job(true);
@@ -406,15 +404,18 @@ bool MultiThreadedCertVerifier::JobComparator::operator()(
 std::unique_ptr<CertVerifierJob> MultiThreadedCertVerifier::RemoveJob(
     CertVerifierJob* job) {
   DCHECK(CalledOnValidThread());
-  bool erased_job = inflight_.erase(job) == 1;
-  DCHECK(erased_job);
-  return base::WrapUnique(job);
+  auto it = inflight_.find(job);
+  DCHECK(it != inflight_.end());
+  std::unique_ptr<CertVerifierJob> job_ptr = std::move(it->second);
+  inflight_.erase(it);
+  return job_ptr;
 }
 
 struct MultiThreadedCertVerifier::JobToRequestParamsComparator {
-  bool operator()(const CertVerifierJob* job,
+  bool operator()(const std::pair<CertVerifierJob* const,
+                                  std::unique_ptr<CertVerifierJob>>& item,
                   const CertVerifier::RequestParams& value) const {
-    return job->key() < value;
+    return item.first->key() < value;
   }
 };
 
@@ -425,8 +426,8 @@ CertVerifierJob* MultiThreadedCertVerifier::FindJob(const RequestParams& key) {
   // search.
   auto it = std::lower_bound(inflight_.begin(), inflight_.end(), key,
                              JobToRequestParamsComparator());
-  if (it != inflight_.end() && !(key < (*it)->key()))
-    return *it;
+  if (it != inflight_.end() && !(key < it->first->key()))
+    return it->first;
   return nullptr;
 }
 

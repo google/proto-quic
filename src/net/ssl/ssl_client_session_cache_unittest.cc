@@ -10,7 +10,6 @@
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/test/simple_test_clock.h"
-#include "net/ssl/scoped_openssl_types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -20,9 +19,9 @@ TEST(SSLClientSessionCacheTest, Basic) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  ScopedSSL_SESSION session1(SSL_SESSION_new());
-  ScopedSSL_SESSION session2(SSL_SESSION_new());
-  ScopedSSL_SESSION session3(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
   EXPECT_EQ(1u, session1->references);
   EXPECT_EQ(1u, session2->references);
   EXPECT_EQ(1u, session3->references);
@@ -70,7 +69,7 @@ TEST(SSLClientSessionCacheTest, DoubleInsert) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  ScopedSSL_SESSION session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
   EXPECT_EQ(1u, session->references);
 
   EXPECT_EQ(nullptr, cache.Lookup("key1").get());
@@ -105,10 +104,10 @@ TEST(SSLClientSessionCacheTest, MaxEntries) {
   config.max_entries = 3;
   SSLClientSessionCache cache(config);
 
-  ScopedSSL_SESSION session1(SSL_SESSION_new());
-  ScopedSSL_SESSION session2(SSL_SESSION_new());
-  ScopedSSL_SESSION session3(SSL_SESSION_new());
-  ScopedSSL_SESSION session4(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session4(SSL_SESSION_new());
 
   // Insert three entries.
   cache.Insert("key1", session1.get());
@@ -152,14 +151,14 @@ TEST(SSLClientSessionCacheTest, Expiration) {
 
   // Add |kNumEntries - 1| entries.
   for (size_t i = 0; i < kNumEntries - 1; i++) {
-    ScopedSSL_SESSION session(SSL_SESSION_new());
+    bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
     cache.Insert(base::SizeTToString(i), session.get());
   }
   EXPECT_EQ(kNumEntries - 1, cache.size());
 
   // Expire all the previous entries and insert one more entry.
   clock->Advance(kTimeout * 2);
-  ScopedSSL_SESSION session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
   cache.Insert("key", session.get());
 
   // All entries are still in the cache.
@@ -199,7 +198,7 @@ TEST(SSLClientSessionCacheTest, LookupExpirationCheck) {
   cache.SetClockForTesting(base::WrapUnique(clock));
 
   // Insert an entry into the session cache.
-  ScopedSSL_SESSION session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
   cache.Insert("key", session.get());
   EXPECT_EQ(session.get(), cache.Lookup("key").get());
   EXPECT_EQ(1u, cache.size());
@@ -240,7 +239,7 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
   cache.SetClockForTesting(base::WrapUnique(clock));
 
   // Insert an entry into the session cache.
-  ScopedSSL_SESSION session1(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
   cache.Insert("key1", session1.get());
   EXPECT_EQ(session1.get(), cache.Lookup("key1").get());
   EXPECT_EQ(1u, cache.size());
@@ -248,7 +247,7 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
   // Expire the session.
   clock->Advance(kTimeout * 2);
   // Add one more session.
-  ScopedSSL_SESSION session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
   cache.Insert("key2", session2.get());
   EXPECT_EQ(2u, cache.size());
 

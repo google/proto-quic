@@ -241,13 +241,9 @@ void BidirectionalStreamQuicImpl::OnHeadersAvailable(
     if (delegate_)
       delegate_->OnHeadersReceived(headers);
   } else {
-    if (stream_->IsDoneReading()) {
-      // If the write side is closed, OnFinRead() will call
-      // BidirectionalStreamQuicImpl::OnClose().
-      stream_->OnFinRead();
-    }
     if (delegate_)
       delegate_->OnTrailersReceived(headers);
+    // |this| can be destroyed after this point.
   }
 }
 
@@ -256,8 +252,6 @@ void BidirectionalStreamQuicImpl::OnDataAvailable() {
   if (!read_buffer_)
     return;
 
-  CHECK(read_buffer_);
-  CHECK_NE(0, read_buffer_len_);
   int rv = ReadData(read_buffer_.get(), read_buffer_len_);
   if (rv == ERR_IO_PENDING) {
     // Spurrious notification. Wait for the next one.

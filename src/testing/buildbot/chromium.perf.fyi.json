@@ -20,14 +20,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400
@@ -51,14 +47,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400
@@ -81,14 +73,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400
@@ -112,14 +100,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400
@@ -142,14 +126,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build186-b4"
             }
           ],
           "expiration": 14400
@@ -173,14 +153,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build186-b4"
             }
           ],
           "expiration": 14400
@@ -203,14 +179,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build186-b4"
             }
           ],
           "expiration": 14400
@@ -234,14 +206,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build186-b4"
             }
           ],
           "expiration": 14400
@@ -264,14 +232,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400
@@ -295,14 +259,10 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "gpu": "8086:22b1",
-              "os": "Windows-10-10240",
-              "pool": "Chrome-perf"
+              "id": "build187-b4"
             },
             {
-              "gpu": "1002:9830",
-              "os": "Windows-10-10586",
-              "pool": "Chrome-perf"
+              "id": "build171-b4"
             }
           ],
           "expiration": 14400

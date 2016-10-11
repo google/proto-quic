@@ -36,6 +36,8 @@ const int kCommandTypeStringSize = 2;
 // Command string size also includes the ':' separator char.
 const int kCommandStringSize = kPortStringSize + kCommandTypeStringSize + 1;
 
+const int kNoTimeout = -1;
+
 }  // namespace
 
 namespace forwarder2 {
@@ -43,11 +45,19 @@ namespace forwarder2 {
 bool ReadCommand(Socket* socket,
                  int* port_out,
                  command::Type* command_type_out) {
+  return ReadCommandWithTimeout(socket, port_out, command_type_out, kNoTimeout);
+}
+
+bool ReadCommandWithTimeout(Socket* socket,
+                            int* port_out,
+                            command::Type* command_type_out,
+                            int timeout_secs) {
   char command_buffer[kCommandStringSize + 1];
   // To make logging easier.
   command_buffer[kCommandStringSize] = '\0';
 
-  int bytes_read = socket->ReadNumBytes(command_buffer, kCommandStringSize);
+  int bytes_read = socket->ReadNumBytesWithTimeout(
+      command_buffer, kCommandStringSize, timeout_secs);
   if (bytes_read != kCommandStringSize) {
     if (bytes_read < 0)
       LOG(ERROR) << "Read() error: " << base::safe_strerror(errno);
@@ -86,6 +96,12 @@ bool SendCommand(command::Type command, int port, Socket* socket) {
 }
 
 bool ReceivedCommand(command::Type command, Socket* socket) {
+  return ReceivedCommandWithTimeout(command, socket, kNoTimeout);
+}
+
+bool ReceivedCommandWithTimeout(command::Type command,
+                                Socket* socket,
+                                int timeout_secs) {
   int port;
   command::Type received_command;
   if (!ReadCommand(socket, &port, &received_command))

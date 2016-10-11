@@ -50,7 +50,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // |stream_id| The stream receiving data.
   // |data| A buffer containing the data received.
   // |len| The length of the data buffer (at most 2^24 - 1 for SPDY/3,
-  // but 2^16 - 1 - 8 for SPDY/4).
+  // but 2^16 - 1 - 8 for HTTP2).
   virtual void OnStreamFrameData(SpdyStreamId stream_id,
                                  const char* data,
                                  size_t len) = 0;

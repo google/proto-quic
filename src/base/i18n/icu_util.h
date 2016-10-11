@@ -50,10 +50,10 @@ BASE_I18N_EXPORT const uint8_t* GetRawIcuMemory();
 //
 // This does nothing in component builds; this initialization should only be
 // done in cases where there could be two copies of base in a single process in
-// non-component builds. (The big example is mojo: the shell will have a copy
-// of base linked in, and the majority of mojo applications will have base
-// linked in but in non-component builds, these will be separate copies of
-// base.)
+// non-component builds. (The big example is standalone service libraries: the
+// Service Manager will have a copy of base linked in, and the majority of
+// service libraries will have base linked in but in non-component builds,
+// these will be separate copies of base.)
 BASE_I18N_EXPORT bool InitializeICUFromRawMemory(const uint8_t* raw_memory);
 #endif  // ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE
 #endif  // !defined(OS_NACL)

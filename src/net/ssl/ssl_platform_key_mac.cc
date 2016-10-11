@@ -10,7 +10,8 @@
 #include <Security/SecKey.h>
 #include <Security/cssm.h>
 #include <openssl/ecdsa.h>
-#include <openssl/obj.h>
+#include <openssl/mem.h>
+#include <openssl/nid.h>
 #include <openssl/rsa.h>
 
 #include <memory>
@@ -26,7 +27,6 @@
 #include "base/synchronization/lock.h"
 #include "crypto/mac_security_services_lock.h"
 #include "crypto/openssl_util.h"
-#include "crypto/scoped_openssl_types.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_platform_key_task_runner.h"
@@ -161,7 +161,7 @@ class SSLPlatformKeyMac : public ThreadedSSLPrivateKey::Delegate {
     hash_data.Data =
         const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(input.data()));
 
-    crypto::ScopedOpenSSLBytes free_digest_info;
+    bssl::UniquePtr<uint8_t> free_digest_info;
     if (cssm_key_->KeyHeader.AlgorithmId == CSSM_ALGID_RSA) {
       // CSSM expects the caller to prepend the DigestInfo.
       int hash_nid = NID_undef;

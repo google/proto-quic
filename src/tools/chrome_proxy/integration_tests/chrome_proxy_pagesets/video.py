@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from common.chrome_proxy_shared_page_state import ChromeProxySharedPageState
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
 from telemetry import story
 
 
-class ControllableProxySharedState(shared_page_state.SharedPageState):
+class ControllableProxySharedState(ChromeProxySharedPageState):
 
   def WillRunStory(self, page):
     if page.use_chrome_proxy:

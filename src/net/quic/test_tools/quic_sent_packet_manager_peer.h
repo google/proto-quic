@@ -100,6 +100,9 @@ class QuicSentPacketManagerPeer {
       QuicSentPacketManager* sent_packet_manager,
       QuicPacketNumber packet_number);
 
+  static QuicUnackedPacketMap* GetUnackedPacketMap(
+      QuicSentPacketManager* sent_packet_manager);
+
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSentPacketManagerPeer);
 };
