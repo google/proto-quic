@@ -214,8 +214,8 @@ QuicByteCount QuicEndpoint::Writer::GetMaxPacketSize(
 
 void QuicEndpoint::WriteStreamData() {
   // Instantiate a bundler which would normally be here due to QuicSession.
-  QuicConnection::ScopedPacketBundler packet_bundler(&connection_,
-                                                     QuicConnection::SEND_ACK);
+  QuicConnection::ScopedPacketBundler packet_bundler(
+      &connection_, QuicConnection::SEND_ACK_IF_QUEUED);
 
   while (bytes_to_transfer_ > 0) {
     // Transfer data in chunks of size at most |kWriteChunkSize|.

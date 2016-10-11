@@ -4236,6 +4236,30 @@ TEST_P(QuicConnectionTest, BundleAckForSecondCHLO) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
+TEST_P(QuicConnectionTest, BundleAckForSecondCHLOTwoPacketReject) {
+  FLAGS_quic_receive_packet_once_decrypted = true;
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+
+  // Process two packets from the crypto stream, which is frame1_'s default,
+  // simulating a 2 packet reject.
+  {
+    ProcessPacket(kDefaultPathId, 1);
+    // Send the new CHLO when the REJ is processed.
+    EXPECT_CALL(visitor_, OnStreamFrame(_))
+        .WillOnce(IgnoreResult(InvokeWithoutArgs(
+            &connection_, &TestConnection::SendCryptoStreamData)));
+    ProcessDataPacket(kDefaultPathId, 2, kEntropyFlag);
+  }
+  // Check that ack is sent and that delayed ack alarm is reset.
+  EXPECT_EQ(3u, writer_->frame_count());
+  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  EXPECT_EQ(1u, writer_->stream_frames().size());
+  EXPECT_FALSE(writer_->ack_frames().empty());
+  EXPECT_EQ(2u, writer_->ack_frames().front().largest_observed);
+  EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
+}
+
 TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 0, !kFin,

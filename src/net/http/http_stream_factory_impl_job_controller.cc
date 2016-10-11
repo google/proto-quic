@@ -830,13 +830,6 @@ GURL HttpStreamFactoryImpl::JobController::ApplyHostMappingRules(
 bool HttpStreamFactoryImpl::JobController::IsQuicWhitelistedForHost(
     const std::string& host) {
   bool whitelist_needed = false;
-  for (QuicVersion version : session_->params().quic_supported_versions) {
-    if (version <= QUIC_VERSION_30) {
-      whitelist_needed = true;
-      break;
-    }
-  }
-
   // The QUIC whitelist is not needed in QUIC versions after 30.
   if (!whitelist_needed)
     return true;

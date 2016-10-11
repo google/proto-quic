@@ -23,6 +23,9 @@ using std::pair;
 using std::string;
 using std::vector;
 
+// If true, enforce that QUIC CHLOs fit in one packet.
+bool FLAGS_quic_enforce_single_packet_chlo = true;
+
 namespace net {
 
 QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
@@ -138,7 +141,8 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
       strncmp(frame->stream_frame->data_buffer,
               reinterpret_cast<const char*>(&kCHLO), sizeof(kCHLO)) == 0) {
     DCHECK_EQ(static_cast<size_t>(0), iov_offset);
-    if (frame->stream_frame->data_length < iov.iov->iov_len) {
+    if (FLAGS_quic_enforce_single_packet_chlo &&
+        frame->stream_frame->data_length < iov.iov->iov_len) {
       const string error_details = "Client hello won't fit in a single packet.";
       QUIC_BUG << error_details << " Constructed stream frame length: "
                << frame->stream_frame->data_length

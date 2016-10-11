@@ -174,7 +174,7 @@ void QuicBufferedPacketStore::OnExpirationTimeout() {
     connections_with_chlo_.erase(connection_id);
   }
   if (!undecryptable_packets_.empty()) {
-    expiration_alarm_->Set(clock_->ApproximateNow() + connection_life_span_);
+    MaybeSetExpirationAlarm();
   }
 }
 

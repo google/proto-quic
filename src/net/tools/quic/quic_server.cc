@@ -188,8 +188,7 @@ void QuicServer::OnEvent(int fd, EpollEvent* event) {
     bool more_to_read = true;
     while (more_to_read) {
       more_to_read = packet_reader_->ReadAndDispatchPackets(
-          fd_, port_, false /* potentially_small_mtu */,
-          QuicEpollClock(&epoll_server_), dispatcher_.get(),
+          fd_, port_, QuicEpollClock(&epoll_server_), dispatcher_.get(),
           overflow_supported_ ? &packets_dropped_ : nullptr);
     }
 

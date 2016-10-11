@@ -48,6 +48,7 @@ using testing::CreateFunctor;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Invoke;
+using testing::Return;
 using testing::WithoutArgs;
 using testing::_;
 
@@ -132,7 +133,8 @@ class TestDispatcher : public QuicDispatcher {
                QuicServerSessionBase*(QuicConnectionId connection_id,
                                       const IPEndPoint& client_address));
 
-  MOCK_METHOD1(OnNewConnectionAdded, void(QuicConnectionId connection_id));
+  MOCK_METHOD1(ShouldCreateOrBufferPacketForConnection,
+               bool(QuicConnectionId connection_id));
 
   using QuicDispatcher::current_server_address;
   using QuicDispatcher::current_client_address;
@@ -187,6 +189,8 @@ class QuicDispatcherTest : public ::testing::Test {
     // Set the counter to some value to start with.
     QuicDispatcherPeer::set_new_sessions_allowed_per_event_loop(
         dispatcher_.get(), kMaxNumSessionsToCreate);
+    ON_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(_))
+        .WillByDefault(Return(true));
   }
 
   ~QuicDispatcherTest() override {}
@@ -1135,8 +1139,9 @@ TEST_P(BufferedPacketStoreTest, ProcessNonChloPacketsUptoLimitAndProcessChlo) {
   server_address_ = IPEndPoint(Any4(), 5);
   QuicConnectionId conn_id = 1;
   // A bunch of non-CHLO should be buffered upon arrival, and the first one
-  // should trigger OnNewConnectionAdded().
-  EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id)).Times(1);
+  // should trigger ShouldCreateOrBufferPacketForConnection().
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(conn_id))
+      .Times(1);
   for (size_t i = 1; i <= kDefaultMaxUndecryptablePackets + 1; ++i) {
     ProcessPacket(client_address, conn_id, true, false,
                   "data packet " + IntToString(i + 1),
@@ -1180,10 +1185,17 @@ TEST_P(BufferedPacketStoreTest,
   for (size_t i = 1; i <= kNumConnections; ++i) {
     IPEndPoint client_address(Loopback4(), i);
     QuicConnectionId conn_id = i;
-    if (i <= kNumConnections - 1) {
-      // As they are on different connection, they should trigger
-      // OnNewConnectionAdded(). The last packet should be dropped.
-      EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+    if (FLAGS_quic_create_session_after_insertion) {
+      EXPECT_CALL(*dispatcher_,
+                  ShouldCreateOrBufferPacketForConnection(conn_id));
+    } else {
+      if (i <= kNumConnections - 1) {
+        // As they are on different connection, they should trigger
+        // ShouldCreateOrBufferPacketForConnection(). The last packet should be
+        // dropped.
+        EXPECT_CALL(*dispatcher_,
+                    ShouldCreateOrBufferPacketForConnection(conn_id));
+      }
     }
     ProcessPacket(client_address, conn_id, true, false,
                   "data packet on connection " + IntToString(i),
@@ -1204,15 +1216,22 @@ TEST_P(BufferedPacketStoreTest,
   for (size_t i = 1; i <= kNumConnections; ++i) {
     IPEndPoint client_address(Loopback4(), i);
     QuicConnectionId conn_id = i;
+    if (FLAGS_quic_create_session_after_insertion &&
+        conn_id == kNumConnections) {
+      EXPECT_CALL(*dispatcher_,
+                  ShouldCreateOrBufferPacketForConnection(conn_id));
+    }
     EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
         .WillOnce(testing::Return(CreateSession(
             dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
             &mock_alarm_factory_, &crypto_config_,
             QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
-    if (conn_id == kNumConnections) {
-      // The last CHLO should trigger OnNewConnectionAdded() since it's the
-      // first packet arrives on that connection.
-      EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+    if (!FLAGS_quic_create_session_after_insertion &&
+        conn_id == kNumConnections) {
+      // The last CHLO should trigger ShouldCreateOrBufferPacketForConnection()
+      // since it's the first packet arrives on that connection.
+      EXPECT_CALL(*dispatcher_,
+                  ShouldCreateOrBufferPacketForConnection(conn_id));
     }
     // First |kNumConnections| - 1 connections should have buffered
     // a packet in store. The rest should have been dropped.
@@ -1234,7 +1253,7 @@ TEST_P(BufferedPacketStoreTest,
 TEST_P(BufferedPacketStoreTest, DeliverEmptyPackets) {
   QuicConnectionId conn_id = 1;
   IPEndPoint client_address(Loopback4(), 1);
-  EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+  EXPECT_CALL(*dispatcher_, ShouldCreateOrBufferPacketForConnection(conn_id));
   EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_address))
       .WillOnce(testing::Return(CreateSession(
           dispatcher_.get(), config_, conn_id, client_address, &mock_helper_,
@@ -1315,10 +1334,15 @@ TEST_P(BufferedPacketStoreTest, ProcessCHLOsUptoLimitAndBufferTheRest) {
   const size_t kNumCHLOs =
       kMaxNumSessionsToCreate + kDefaultMaxConnectionsInStore + 1;
   for (size_t conn_id = 1; conn_id <= kNumCHLOs; ++conn_id) {
-    if (conn_id < kNumCHLOs) {
+    if (FLAGS_quic_create_session_after_insertion) {
+      EXPECT_CALL(*dispatcher_,
+                  ShouldCreateOrBufferPacketForConnection(conn_id));
+    }
+    if (!FLAGS_quic_create_session_after_insertion && conn_id < kNumCHLOs) {
       // Except the last connection, all connections for previous CHLOs should
       // be regarded as newly added.
-      EXPECT_CALL(*dispatcher_, OnNewConnectionAdded(conn_id));
+      EXPECT_CALL(*dispatcher_,
+                  ShouldCreateOrBufferPacketForConnection(conn_id));
     }
     if (conn_id <= kMaxNumSessionsToCreate) {
       EXPECT_CALL(*dispatcher_, CreateQuicSession(conn_id, client_addr_))

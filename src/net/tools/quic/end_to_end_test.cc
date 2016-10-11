@@ -103,8 +103,7 @@ struct TestParams {
              bool disable_hpack_dynamic_table,
              bool force_hol_blocking,
              bool use_cheap_stateless_reject,
-             bool buffer_packet_till_chlo,
-             bool small_client_mtu)
+             bool buffer_packet_till_chlo)
       : client_supported_versions(client_supported_versions),
         server_supported_versions(server_supported_versions),
         negotiated_version(negotiated_version),
@@ -115,8 +114,7 @@ struct TestParams {
         disable_hpack_dynamic_table(disable_hpack_dynamic_table),
         force_hol_blocking(force_hol_blocking),
         use_cheap_stateless_reject(use_cheap_stateless_reject),
-        buffer_packet_till_chlo(buffer_packet_till_chlo),
-        small_client_mtu(small_client_mtu) {}
+        buffer_packet_till_chlo(buffer_packet_till_chlo) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     os << "{ server_supported_versions: "
@@ -133,8 +131,7 @@ struct TestParams {
     os << " disable_hpack_dynamic_table: " << p.disable_hpack_dynamic_table;
     os << " force_hol_blocking: " << p.force_hol_blocking;
     os << " use_cheap_stateless_reject: " << p.use_cheap_stateless_reject;
-    os << " buffer_packet_till_chlo: " << p.buffer_packet_till_chlo;
-    os << " small_client_mtu: " << p.small_client_mtu << " }";
+    os << " buffer_packet_till_chlo: " << p.buffer_packet_till_chlo << " }";
     return os;
   }
 
@@ -148,7 +145,6 @@ struct TestParams {
   bool force_hol_blocking;
   bool use_cheap_stateless_reject;
   bool buffer_packet_till_chlo;
-  bool small_client_mtu;
 };
 
 // Constructs various test permutations.
@@ -162,32 +158,28 @@ vector<TestParams> GetTestParams() {
   // to do 0-RTT across incompatible versions. Chromium only supports
   // a single version at a time anyway. :)
   QuicVersionVector all_supported_versions = AllSupportedVersions();
-  QuicVersionVector version_buckets[4];
+  QuicVersionVector version_buckets[3];
 
   for (const QuicVersion version : all_supported_versions) {
-    if (version <= QUIC_VERSION_30) {
-      // Versions: 30
-      // v26 adds a hash of the expected leaf cert in the XLCT tag.
-      version_buckets[0].push_back(version);
-    } else if (version <= QUIC_VERSION_32) {
+    if (version <= QUIC_VERSION_32) {
       // Versions: 31-32
       // v31 adds a hash of the CHLO into the proof signature.
-      version_buckets[1].push_back(version);
+      version_buckets[0].push_back(version);
     } else if (version <= QUIC_VERSION_33) {
       // Versions: 33
       // v33 adds a diversification nonce into the hkdf.
-      version_buckets[2].push_back(version);
+      version_buckets[1].push_back(version);
     } else {
       // Versions: 34+
       // QUIC_VERSION_34 deprecates entropy and uses new ack and stop waiting
       // wire formats.
-      version_buckets[3].push_back(version);
+      version_buckets[2].push_back(version);
     }
   }
 
   // This must be kept in sync with the number of nested for-loops below as it
   // is used to prune the number of tests that are run.
-  const int kMaxEnabledOptions = 7;
+  const int kMaxEnabledOptions = 6;
   int max_enabled_options = 0;
   vector<TestParams> params;
   for (bool server_uses_stateless_rejects_if_peer_supported : {true, false}) {
@@ -197,97 +189,92 @@ vector<TestParams> GetTestParams() {
           for (bool force_hol_blocking : {true, false}) {
             for (bool use_cheap_stateless_reject : {true, false}) {
               for (bool buffer_packet_till_chlo : {true, false}) {
-                for (bool small_client_mtu : {true, false}) {
-                  if (!buffer_packet_till_chlo && use_cheap_stateless_reject) {
-                    // Doing stateless reject while not buffering packet
-                    // before CHLO is not allowed.
-                    break;
-                  }
-                  int enabled_options = 0;
-                  if (force_hol_blocking) {
-                    ++enabled_options;
-                  }
-                  if (congestion_control_tag != kQBIC) {
-                    ++enabled_options;
-                  }
-                  if (disable_hpack_dynamic_table) {
-                    ++enabled_options;
-                  }
-                  if (client_supports_stateless_rejects) {
-                    ++enabled_options;
-                  }
-                  if (server_uses_stateless_rejects_if_peer_supported) {
-                    ++enabled_options;
-                  }
-                  if (buffer_packet_till_chlo) {
-                    ++enabled_options;
-                  }
-                  if (use_cheap_stateless_reject) {
-                    ++enabled_options;
-                  }
-                  if (small_client_mtu) {
-                    ++enabled_options;
-                  }
-                  CHECK_GE(kMaxEnabledOptions, enabled_options);
-                  if (enabled_options > max_enabled_options) {
-                    max_enabled_options = enabled_options;
-                  }
+                if (!buffer_packet_till_chlo && use_cheap_stateless_reject) {
+                  // Doing stateless reject while not buffering packet
+                  // before CHLO is not allowed.
+                  break;
+                }
+                int enabled_options = 0;
+                if (force_hol_blocking) {
+                  ++enabled_options;
+                }
+                if (congestion_control_tag != kQBIC) {
+                  ++enabled_options;
+                }
+                if (disable_hpack_dynamic_table) {
+                  ++enabled_options;
+                }
+                if (client_supports_stateless_rejects) {
+                  ++enabled_options;
+                }
+                if (server_uses_stateless_rejects_if_peer_supported) {
+                  ++enabled_options;
+                }
+                if (buffer_packet_till_chlo) {
+                  ++enabled_options;
+                }
+                if (use_cheap_stateless_reject) {
+                  ++enabled_options;
+                }
+                CHECK_GE(kMaxEnabledOptions, enabled_options);
+                if (enabled_options > max_enabled_options) {
+                  max_enabled_options = enabled_options;
+                }
 
-                  // Run tests with no options, a single option, or all the
-                  // options enabled to avoid a combinatorial explosion.
+                // Run tests with no options, a single option, or all the
+                // options enabled to avoid a combinatorial explosion.
+                if (enabled_options > 1 &&
+                    enabled_options < kMaxEnabledOptions) {
+                  continue;
+                }
+
+                for (const QuicVersionVector& client_versions :
+                     version_buckets) {
+                  CHECK(!client_versions.empty());
+                  if (FilterSupportedVersions(client_versions).empty()) {
+                    continue;
+                  }
+                  // Add an entry for server and client supporting all
+                  // versions.
+                  params.push_back(TestParams(
+                      client_versions, all_supported_versions,
+                      client_versions.front(),
+                      client_supports_stateless_rejects,
+                      server_uses_stateless_rejects_if_peer_supported,
+                      congestion_control_tag, disable_hpack_dynamic_table,
+                      force_hol_blocking, use_cheap_stateless_reject,
+                      buffer_packet_till_chlo));
+
+                  // Run version negotiation tests tests with no options, or
+                  // all the options enabled to avoid a combinatorial
+                  // explosion.
                   if (enabled_options > 1 &&
                       enabled_options < kMaxEnabledOptions) {
                     continue;
                   }
 
-                  for (const QuicVersionVector& client_versions :
-                       version_buckets) {
-                    CHECK(!client_versions.empty());
-                    if (FilterSupportedVersions(client_versions).empty()) {
+                  // Test client supporting all versions and server supporting
+                  // 1 version. Simulate an old server and exercise version
+                  // downgrade in the client. Protocol negotiation should
+                  // occur.  Skip the i = 0 case because it is essentially the
+                  // same as the default case.
+                  for (size_t i = 1; i < client_versions.size(); ++i) {
+                    QuicVersionVector server_supported_versions;
+                    server_supported_versions.push_back(client_versions[i]);
+                    if (FilterSupportedVersions(server_supported_versions)
+                            .empty()) {
                       continue;
                     }
-                    // Add an entry for server and client supporting all
-                    // versions.
                     params.push_back(TestParams(
-                        client_versions, all_supported_versions,
-                        client_versions.front(),
+                        client_versions, server_supported_versions,
+                        server_supported_versions.front(),
                         client_supports_stateless_rejects,
                         server_uses_stateless_rejects_if_peer_supported,
                         congestion_control_tag, disable_hpack_dynamic_table,
                         force_hol_blocking, use_cheap_stateless_reject,
-                        buffer_packet_till_chlo, small_client_mtu));
-
-                    // Run version negotiation tests tests with no options, or
-                    // all the options enabled to avoid a combinatorial
-                    // explosion.
-                    if (enabled_options > 1 &&
-                        enabled_options < kMaxEnabledOptions) {
-                      continue;
-                    }
-
-                    // Test client supporting all versions and server supporting
-                    // 1 version. Simulate an old server and exercise version
-                    // downgrade in the client. Protocol negotiation should
-                    // occur.  Skip the i = 0 case because it is essentially the
-                    // same as the default case.
-                    for (size_t i = 1; i < client_versions.size(); ++i) {
-                      QuicVersionVector server_supported_versions;
-                      server_supported_versions.push_back(client_versions[i]);
-                      if (FilterSupportedVersions(server_supported_versions)
-                              .empty()) {
-                        continue;
-                      }
-                      params.push_back(TestParams(
-                          client_versions, server_supported_versions,
-                          server_supported_versions.front(),
-                          client_supports_stateless_rejects,
-                          server_uses_stateless_rejects_if_peer_supported,
-                          congestion_control_tag, disable_hpack_dynamic_table,
-                          force_hol_blocking, use_cheap_stateless_reject,
-                          buffer_packet_till_chlo, small_client_mtu));
-                    }  // End of version for loop.
-                  }    // End of 2nd version for loop.
-                }      // End of small_client_mtu loop.
+                        buffer_packet_till_chlo));
+                  }    // End of version for loop.
+                }      // End of 2nd version for loop.
               }        // End of buffer_packet_till_chlo loop.
             }          // End of use_cheap_stateless_reject for loop.
           }            // End of force_hol_blocking loop.
@@ -298,19 +285,6 @@ vector<TestParams> GetTestParams() {
   }  // End of server_uses_stateless_rejects_if_peer_supported for loop.
   return params;
 }
-
-class SmallMtuPacketReader : public QuicPacketReader {
- public:
-  bool ReadAndDispatchPackets(int fd,
-                              int port,
-                              bool potentially_small_mtu,
-                              const QuicClock& clock,
-                              ProcessPacketInterface* processor,
-                              QuicPacketCount* packets_dropped) override {
-    return QuicPacketReader::ReadAndDispatchPackets(fd, port, true, clock,
-                                                    processor, packets_dropped);
-  }
-};
 
 class ServerDelegate : public PacketDroppingTestWriter::Delegate {
  public:
@@ -505,11 +479,6 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     auto test_server =
         new QuicTestServer(CryptoTestUtils::ProofSourceForTesting(),
                            server_config_, server_supported_versions_);
-    if (GetParam().small_client_mtu) {
-      FLAGS_quic_enforce_mtu_limit = true;
-      QuicServerPeer::SetReader(test_server, new SmallMtuPacketReader);
-      server_writer_->set_max_allowed_packet_size(kMinimumSupportedPacketSize);
-    }
     server_thread_.reset(new ServerThread(test_server, server_address_,
                                           strike_register_no_startup_period_));
     if (chlo_multiplier_ != 0) {
@@ -2962,7 +2931,6 @@ TEST_P(EndToEndBufferedPacketsTest, Buffer0RttRequest) {
   EXPECT_EQ(0u, client_stats.packets_lost);
   EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
 }
-
 }  // namespace
 }  // namespace test
 }  // namespace net

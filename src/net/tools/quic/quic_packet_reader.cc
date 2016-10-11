@@ -63,23 +63,21 @@ QuicPacketReader::~QuicPacketReader() {}
 bool QuicPacketReader::ReadAndDispatchPackets(
     int fd,
     int port,
-    bool potentially_small_mtu,
     const QuicClock& clock,
     ProcessPacketInterface* processor,
     QuicPacketCount* packets_dropped) {
 #if MMSG_MORE
-  return ReadAndDispatchManyPackets(fd, port, potentially_small_mtu, clock,
-                                    processor, packets_dropped);
+  return ReadAndDispatchManyPackets(fd, port, clock, processor,
+                                    packets_dropped);
 #else
-  return ReadAndDispatchSinglePacket(fd, port, potentially_small_mtu, clock,
-                                     processor, packets_dropped);
+  return ReadAndDispatchSinglePacket(fd, port, clock, processor,
+                                     packets_dropped);
 #endif
 }
 
 bool QuicPacketReader::ReadAndDispatchManyPackets(
     int fd,
     int port,
-    bool potentially_small_mtu,
     const QuicClock& clock,
     ProcessPacketInterface* processor,
     QuicPacketCount* packets_dropped) {
@@ -136,8 +134,8 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
     bool has_ttl =
         QuicSocketUtils::GetTtlFromMsghdr(&mmsg_hdr_[i].msg_hdr, &ttl);
     QuicReceivedPacket packet(reinterpret_cast<char*>(packets_[i].iov.iov_base),
-                              mmsg_hdr_[i].msg_len, timestamp, false,
-                              potentially_small_mtu, ttl, has_ttl);
+                              mmsg_hdr_[i].msg_len, timestamp, false, ttl,
+                              has_ttl);
     IPEndPoint server_address(server_ip, port);
     processor->ProcessPacket(server_address, client_address, packet);
   }
@@ -159,7 +157,6 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
 bool QuicPacketReader::ReadAndDispatchSinglePacket(
     int fd,
     int port,
-    bool potentially_small_mtu,
     const QuicClock& clock,
     ProcessPacketInterface* processor,
     QuicPacketCount* packets_dropped) {
@@ -186,9 +183,7 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
   }
   QuicTime timestamp = clock.ConvertWallTimeToQuicTime(walltimestamp);
 
-  QuicReceivedPacket packet(buf, bytes_read, timestamp, false /* owns_buffer */,
-                            potentially_small_mtu, -1 /* ttl */,
-                            false /* ttl_valid */);
+  QuicReceivedPacket packet(buf, bytes_read, timestamp, false);
   IPEndPoint server_address(server_ip, port);
   processor->ProcessPacket(server_address, client_address, packet);
 

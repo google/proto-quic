@@ -89,62 +89,34 @@ TEST_F(RttStatsTest, MinRtt) {
   rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(200),
                        QuicTime::Delta::Zero(), QuicTime::Zero());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200),
-            rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(10), QuicTime::Delta::Zero(),
       QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(10));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
       QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(20));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
       QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(30));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(50), QuicTime::Delta::Zero(),
       QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(40));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
   // Verify that ack_delay does not go into recording of min_rtt_.
   rtt_stats_.UpdateRtt(
       QuicTime::Delta::FromMilliseconds(7),
       QuicTime::Delta::FromMilliseconds(2),
       QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(50));
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(7), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(7), rtt_stats_.WindowedMinRtt());
-}
-
-TEST_F(RttStatsTest, WindowedMinRtt) {
-  rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(10),
-                       QuicTime::Delta::Zero(), QuicTime::Zero());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.WindowedMinRtt());
-
-  rtt_stats_.SampleNewWindowedMinRtt(4);
-  for (int i = 0; i < 3; ++i) {
-    rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(50),
-                         QuicTime::Delta::Zero(), QuicTime::Zero());
-    EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-    EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10),
-              rtt_stats_.WindowedMinRtt());
-  }
-  rtt_stats_.UpdateRtt(QuicTime::Delta::FromMilliseconds(50),
-                       QuicTime::Delta::Zero(), QuicTime::Zero());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(10), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(50), rtt_stats_.WindowedMinRtt());
 }
 
 TEST_F(RttStatsTest, ExpireSmoothedMetrics) {
   QuicTime::Delta initial_rtt = QuicTime::Delta::FromMilliseconds(10);
   rtt_stats_.UpdateRtt(initial_rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
   EXPECT_EQ(initial_rtt, rtt_stats_.min_rtt());
-  EXPECT_EQ(initial_rtt, rtt_stats_.WindowedMinRtt());
   EXPECT_EQ(initial_rtt, rtt_stats_.smoothed_rtt());
 
   EXPECT_EQ(0.5 * initial_rtt, rtt_stats_.mean_deviation());
@@ -174,7 +146,6 @@ TEST_F(RttStatsTest, UpdateRttWithBadSendDeltas) {
   QuicTime::Delta initial_rtt = QuicTime::Delta::FromMilliseconds(10);
   rtt_stats_.UpdateRtt(initial_rtt, QuicTime::Delta::Zero(), QuicTime::Zero());
   EXPECT_EQ(initial_rtt, rtt_stats_.min_rtt());
-  EXPECT_EQ(initial_rtt, rtt_stats_.WindowedMinRtt());
   EXPECT_EQ(initial_rtt, rtt_stats_.smoothed_rtt());
 
   vector<QuicTime::Delta> bad_send_deltas;
@@ -190,7 +161,6 @@ TEST_F(RttStatsTest, UpdateRttWithBadSendDeltas) {
     rtt_stats_.UpdateRtt(bad_send_delta, QuicTime::Delta::Zero(),
                          QuicTime::Zero());
     EXPECT_EQ(initial_rtt, rtt_stats_.min_rtt());
-    EXPECT_EQ(initial_rtt, rtt_stats_.WindowedMinRtt());
     EXPECT_EQ(initial_rtt, rtt_stats_.smoothed_rtt());
   }
 }
@@ -202,15 +172,12 @@ TEST_F(RttStatsTest, ResetAfterConnectionMigrations) {
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.latest_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(200), rtt_stats_.smoothed_rtt());
   EXPECT_EQ(QuicTime::Delta::FromMilliseconds(300), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::FromMilliseconds(300),
-            rtt_stats_.WindowedMinRtt());
 
   // Reset rtt stats on connection migrations.
   rtt_stats_.OnConnectionMigration();
   EXPECT_EQ(QuicTime::Delta::Zero(), rtt_stats_.latest_rtt());
   EXPECT_EQ(QuicTime::Delta::Zero(), rtt_stats_.smoothed_rtt());
   EXPECT_EQ(QuicTime::Delta::Zero(), rtt_stats_.min_rtt());
-  EXPECT_EQ(QuicTime::Delta::Zero(), rtt_stats_.WindowedMinRtt());
 }
 
 }  // namespace test

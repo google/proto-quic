@@ -267,13 +267,23 @@ SpdyHeaderBlock SpdyBalsaUtils::RequestHeadersToSpdyHeaders(
     }
   }
 
-  DCHECK(!scheme.empty());
-  DCHECK(!host_and_port.empty());
-  DCHECK(!path.empty());
+  if (scheme.empty()) {
+    if (request_headers.HasHeader("Scheme")) {
+      request_headers.GetAllOfHeaderAsString("Scheme", &scheme);
+    } else {
+      // Requests must contain a :scheme header, and unless another scheme is
+      // detected, https is assumed.
+      scheme = "https";
+    }
+  }
 
   SpdyHeaderBlock block;
   PopulateHttp2RequestHeaderBlock(request_headers, scheme, host_and_port, path,
                                   &block);
+
+  // If a "Scheme" header existed in request_headers, it would have been
+  // propagated to |block|.
+  block.erase("scheme");
   return block;
 }
 

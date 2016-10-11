@@ -43,9 +43,6 @@ IndexedDBBrowserTest.VersionChangeCrashResilience
 # http://crbug.com/233118
 IndexedDBBrowserTest.NullKeyPathPersistence
 
-# http://crbug.com/342525
-IndexedDBBrowserTestSingleProcess.RenderThreadShutdownTest
-
 # http://crbug.com/338421
 GinBrowserTest.GinAndGarbageCollection
 

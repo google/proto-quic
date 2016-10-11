@@ -158,13 +158,13 @@ int HttpAuthController::MaybeGenerateAuthToken(
       credentials, request,
       base::Bind(&HttpAuthController::OnIOComplete, base::Unretained(this)),
       &auth_token_);
-  if (DisableOnAuthHandlerResult(rv))
-    rv = OK;
-  if (rv == ERR_IO_PENDING)
+
+  if (rv == ERR_IO_PENDING) {
     callback_ = callback;
-  else
-    OnIOComplete(rv);
-  return rv;
+    return rv;
+  }
+
+  return HandleGenerateTokenResult(rv);
 }
 
 bool HttpAuthController::SelectPreemptiveAuth(const NetLogWithSource& net_log) {
@@ -471,10 +471,21 @@ void HttpAuthController::PopulateAuthChallenge() {
   auth_info_->realm = handler_->realm();
 }
 
-bool HttpAuthController::DisableOnAuthHandlerResult(int result) {
+int HttpAuthController::HandleGenerateTokenResult(int result) {
   DCHECK(CalledOnValidThread());
-
   switch (result) {
+    case ERR_INVALID_AUTH_CREDENTIALS:
+      // If the GenerateAuthToken call fails with this error, this means that
+      // the handler can no longer be used. However, the authentication scheme
+      // is considered still usable. This allows a scheme that attempted and
+      // failed to use default credentials to recover and use explicit
+      // credentials.
+      //
+      // If the handler does not support any remaining identity sources, then
+      // the authentication controller will pick another authentication handler.
+      auth_token_.clear();
+      return OK;
+
     // Occurs with GSSAPI, if the user has not already logged in.
     case ERR_MISSING_AUTH_CREDENTIALS:
 
@@ -494,17 +505,16 @@ bool HttpAuthController::DisableOnAuthHandlerResult(int result) {
       // succeed.
       DisableAuthScheme(handler_->auth_scheme());
       auth_token_.clear();
-      return true;
+      return OK;
 
     default:
-      return false;
+      return result;
   }
 }
 
 void HttpAuthController::OnIOComplete(int result) {
   DCHECK(CalledOnValidThread());
-  if (DisableOnAuthHandlerResult(result))
-    result = OK;
+  result = HandleGenerateTokenResult(result);
   if (!callback_.is_null()) {
     CompletionCallback c = callback_;
     callback_.Reset();

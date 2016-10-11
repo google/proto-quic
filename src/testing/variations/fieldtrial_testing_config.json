@@ -555,21 +555,6 @@
             ]
         }
     ],
-    "EnableWin32kLockDownMimeTypes": [
-        {
-            "platforms": [
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "PPAPILockdown_Enabled",
-                    "params": {
-                        "*": "Enabled"
-                    }
-                }
-            ]
-        }
-    ],
     "ExpectCTReporting": [
         {
             "platforms": [

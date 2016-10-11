@@ -94,14 +94,8 @@ class NET_EXPORT_PRIVATE ProofSource {
   // the ProofSource retains ownership of the contents of |out_chain|. The
   // expectation is that they will be cached forever.
   //
-  // For version before QUIC_VERSION_30, the signature values should be cached
-  // because |server_config| will be somewhat static. However, since they aren't
-  // bounded, the ProofSource may wish to evict entries from that cache, thus
-  // the caller takes ownership of |*out_signature|.
-  //
-  // For QUIC_VERSION_30 and later, the signature depends on |chlo_hash|
-  // which means that the signature can not be cached. The caller takes
-  // ownership of |*out_signature|.
+  // The signature depends on |chlo_hash| which means that the signature can not
+  // be cached. The caller takes ownership of |*out_signature|.
   //
   // |hostname| may be empty to signify that a default certificate should be
   // used.

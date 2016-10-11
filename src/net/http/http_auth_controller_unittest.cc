@@ -114,8 +114,15 @@ TEST(HttpAuthControllerTest, PermanentErrors) {
 
   // If a non-permanent error is returned by the handler, then the
   // controller should report it unchanged.
-  RunSingleRoundAuthTest(RUN_HANDLER_ASYNC, ERR_INVALID_AUTH_CREDENTIALS,
-                         ERR_INVALID_AUTH_CREDENTIALS, SCHEME_IS_ENABLED);
+  RunSingleRoundAuthTest(RUN_HANDLER_ASYNC, ERR_UNEXPECTED, ERR_UNEXPECTED,
+                         SCHEME_IS_ENABLED);
+
+  // ERR_INVALID_AUTH_CREDENTIALS is special. It's a non-permanet error, but
+  // the error isn't propagated, nor is the auth scheme disabled. This allows
+  // the scheme to re-attempt the authentication attempt using a different set
+  // of credentials.
+  RunSingleRoundAuthTest(RUN_HANDLER_ASYNC, ERR_INVALID_AUTH_CREDENTIALS, OK,
+                         SCHEME_IS_ENABLED);
 }
 
 // If an HttpAuthHandler indicates that it doesn't allow explicit
