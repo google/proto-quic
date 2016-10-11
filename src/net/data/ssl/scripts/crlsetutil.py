@@ -138,6 +138,18 @@ def _der_cert_to_spki(der_bytes):
   return iterator.contents()
 
 
+def der_cert_to_spki_hash(der_cert):
+  """Gets the SHA-256 hash of the subjectPublicKeyInfo of a DER encoded cert
+
+  Args:
+    der_cert: A string containing the DER-encoded certificate
+
+  Returns:
+    The SHA-256 hash of the certificate, as a byte sequence
+  """
+  return hashlib.sha256(_der_cert_to_spki(der_cert)).digest()
+
+
 def pem_cert_file_to_spki_hash(pem_filename):
   """Gets the SHA-256 hash of the subjectPublicKeyInfo of a cert in a file
 
@@ -147,8 +159,7 @@ def pem_cert_file_to_spki_hash(pem_filename):
   Returns:
     The SHA-256 hash of the first certificate in the file, as a byte sequence
   """
-  return hashlib.sha256(
-    _der_cert_to_spki(_pem_cert_to_binary(pem_filename))).digest()
+  return der_cert_to_spki_hash(_pem_cert_to_binary(pem_filename))
 
 
 def main():

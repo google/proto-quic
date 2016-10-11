@@ -45,7 +45,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
     int info_sources);
 
 // Takes in a set of contexts and a NetLog::Observer, and passes in
-// NetLog::Entries to the observer for certain NetLog::Sources with pending
+// NetLog::Entries to the observer for certain NetLogSources with pending
 // events.  This allows requests that were ongoing when logging was started to
 // have an initial event that has some information.  This is particularly useful
 // for hung requests.  Note that these calls are not protected by the NetLog's

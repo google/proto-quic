@@ -24,13 +24,15 @@
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/rand_callback.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/udp/datagram_socket.h"
 #include "net/udp/diff_serv_code_point.h"
 
 namespace net {
 
 class IPAddress;
+class NetLog;
+struct NetLogSource;
 
 class NET_EXPORT UDPSocketWin
     : NON_EXPORTED_BASE(public base::NonThreadSafe),
@@ -39,7 +41,7 @@ class NET_EXPORT UDPSocketWin
   UDPSocketWin(DatagramSocket::BindType bind_type,
                const RandIntCallback& rand_int_cb,
                net::NetLog* net_log,
-               const net::NetLog::Source& source);
+               const net::NetLogSource& source);
   ~UDPSocketWin() override;
 
   // Opens the socket.

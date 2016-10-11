@@ -16,6 +16,7 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -31,9 +32,7 @@ const int kListenBacklog = 5;
 
 class TCPServerSocketTest : public PlatformTest {
  protected:
-  TCPServerSocketTest()
-      : socket_(NULL, NetLog::Source()) {
-  }
+  TCPServerSocketTest() : socket_(NULL, NetLogSource()) {}
 
   void SetUpIPv4() {
     IPEndPoint address(IPAddress::IPv4Localhost(), 0);
@@ -72,7 +71,7 @@ TEST_F(TCPServerSocketTest, Accept) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback accept_callback;
@@ -103,7 +102,7 @@ TEST_F(TCPServerSocketTest, AcceptAsync) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   EXPECT_THAT(connect_callback.WaitForResult(), IsOk());
@@ -128,12 +127,12 @@ TEST_F(TCPServerSocketTest, Accept2Connections) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback connect_callback2;
   TCPClientSocket connecting_socket2(local_address_list(), NULL, NULL,
-                                     NetLog::Source());
+                                     NetLogSource());
   connecting_socket2.Connect(connect_callback2.callback());
 
   EXPECT_THAT(accept_callback.WaitForResult(), IsOk());
@@ -165,7 +164,7 @@ TEST_F(TCPServerSocketTest, AcceptIPv6) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback accept_callback;
@@ -189,7 +188,7 @@ TEST_F(TCPServerSocketTest, AcceptIO) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback accept_callback;

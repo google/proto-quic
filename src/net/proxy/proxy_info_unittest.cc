@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/base/net_errors.h"
-#include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_info.h"
+
+#include "net/base/net_errors.h"
+#include "net/log/net_log_with_source.h"
+#include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_list.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

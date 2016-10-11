@@ -5,15 +5,21 @@
 #ifndef NET_BASE_SDCH_NET_LOG_PARAMS_H_
 #define NET_BASE_SDCH_NET_LOG_PARAMS_H_
 
+#include <memory>
 #include <string>
 
 #include "net/base/net_export.h"
 #include "net/base/sdch_problem_codes.h"
-#include "net/log/net_log.h"
 
 class GURL;
 
+namespace base {
+class Value;
+}
+
 namespace net {
+
+class NetLogCaptureMode;
 
 NET_EXPORT std::unique_ptr<base::Value> NetLogSdchResourceProblemCallback(
     SdchProblemCode problem,

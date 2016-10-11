@@ -5,14 +5,13 @@
 #include "net/udp/udp_client_socket.h"
 
 #include "net/base/net_errors.h"
-#include "net/log/net_log.h"
 
 namespace net {
 
 UDPClientSocket::UDPClientSocket(DatagramSocket::BindType bind_type,
                                  const RandIntCallback& rand_int_cb,
                                  net::NetLog* net_log,
-                                 const net::NetLog::Source& source)
+                                 const net::NetLogSource& source)
     : socket_(bind_type, rand_int_cb, net_log, source),
       network_(NetworkChangeNotifier::kInvalidNetworkHandle) {}
 

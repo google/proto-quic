@@ -22,8 +22,6 @@
 
 #include <stdint.h>
 
-#include "net/base/net_export.h"
-
 namespace disk_cache {
 
 typedef uint32_t CacheAddr;

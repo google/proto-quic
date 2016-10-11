@@ -55,8 +55,12 @@
 #include "net/dns/dns_util.h"
 #include "net/dns/host_resolver_proc.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/udp/datagram_client_socket.h"
 #include "url/url_canon_ip.h"
@@ -370,7 +374,7 @@ std::unique_ptr<base::Value> NetLogDnsTaskFailedCallback(
 }
 
 // Creates NetLog parameters containing the information in a RequestInfo object,
-// along with the associated NetLog::Source.
+// along with the associated NetLogSource.
 std::unique_ptr<base::Value> NetLogRequestInfoCallback(
     const HostResolver::RequestInfo* info,
     NetLogCaptureMode /* capture_mode */) {
@@ -386,7 +390,7 @@ std::unique_ptr<base::Value> NetLogRequestInfoCallback(
 
 // Creates NetLog parameters for the creation of a HostResolverImpl::Job.
 std::unique_ptr<base::Value> NetLogJobCreationCallback(
-    const NetLog::Source& source,
+    const NetLogSource& source,
     const std::string* host,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
@@ -397,7 +401,7 @@ std::unique_ptr<base::Value> NetLogJobCreationCallback(
 
 // Creates NetLog parameters for HOST_RESOLVER_IMPL_JOB_ATTACH/DETACH events.
 std::unique_ptr<base::Value> NetLogJobAttachCallback(
-    const NetLog::Source& source,
+    const NetLogSource& source,
     RequestPriority priority,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
@@ -792,7 +796,7 @@ class HostResolverImpl::ProcTask
     if (was_canceled())
       return;
 
-    NetLog::ParametersCallback net_log_callback;
+    NetLogParametersCallback net_log_callback;
     if (error != OK) {
       net_log_callback = base::Bind(&NetLogProcTaskFailedCallback,
                                     attempt_number,

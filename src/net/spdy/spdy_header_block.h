@@ -18,10 +18,16 @@
 #include "net/base/net_export.h"
 #include "net/log/net_log.h"
 
+namespace base {
+class Value;
+}
+
 namespace net {
 
 // Allows arg-dependent lookup to work for logging's operator<<.
 using ::operator<<;
+
+class NetLogCaptureMode;
 
 namespace test {
 class StringPieceProxyPeer;

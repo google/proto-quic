@@ -390,13 +390,13 @@ void DictionaryValue::Set(StringPiece path, std::unique_ptr<Value> in_value) {
   DCHECK(IsStringUTF8(path));
   DCHECK(in_value);
 
-  std::string current_path(path.as_string());
+  StringPiece current_path(path);
   DictionaryValue* current_dictionary = this;
   for (size_t delimiter_position = current_path.find('.');
-       delimiter_position != std::string::npos;
+       delimiter_position != StringPiece::npos;
        delimiter_position = current_path.find('.')) {
     // Assume that we're indexing into a dictionary.
-    std::string key(current_path, 0, delimiter_position);
+    StringPiece key = current_path.substr(0, delimiter_position);
     DictionaryValue* child_dictionary = NULL;
     if (!current_dictionary->GetDictionary(key, &child_dictionary)) {
       child_dictionary = new DictionaryValue;
@@ -404,7 +404,7 @@ void DictionaryValue::Set(StringPiece path, std::unique_ptr<Value> in_value) {
     }
 
     current_dictionary = child_dictionary;
-    current_path.erase(0, delimiter_position + 1);
+    current_path = current_path.substr(delimiter_position + 1);
   }
 
   current_dictionary->SetWithoutPathExpansion(current_path,
@@ -428,7 +428,7 @@ void DictionaryValue::SetDouble(StringPiece path, double in_value) {
 }
 
 void DictionaryValue::SetString(StringPiece path, StringPiece in_value) {
-  Set(path, new StringValue(in_value.as_string()));
+  Set(path, new StringValue(in_value));
 }
 
 void DictionaryValue::SetString(StringPiece path, const string16& in_value) {
@@ -462,7 +462,7 @@ void DictionaryValue::SetDoubleWithoutPathExpansion(StringPiece path,
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
                                                     StringPiece in_value) {
-  SetWithoutPathExpansion(path, new StringValue(in_value.as_string()));
+  SetWithoutPathExpansion(path, new StringValue(in_value));
 }
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
@@ -480,8 +480,7 @@ bool DictionaryValue::Get(StringPiece path,
        delimiter_position = current_path.find('.')) {
     const DictionaryValue* child_dictionary = NULL;
     if (!current_dictionary->GetDictionaryWithoutPathExpansion(
-            current_path.substr(0, delimiter_position).as_string(),
-            &child_dictionary)) {
+            current_path.substr(0, delimiter_position), &child_dictionary)) {
       return false;
     }
 
@@ -489,8 +488,7 @@ bool DictionaryValue::Get(StringPiece path,
     current_path = current_path.substr(delimiter_position + 1);
   }
 
-  return current_dictionary->GetWithoutPathExpansion(current_path.as_string(),
-                                                     out_value);
+  return current_dictionary->GetWithoutPathExpansion(current_path, out_value);
 }
 
 bool DictionaryValue::Get(StringPiece path, Value** out_value)  {
@@ -727,14 +725,14 @@ bool DictionaryValue::GetListWithoutPathExpansion(StringPiece key,
 bool DictionaryValue::Remove(StringPiece path,
                              std::unique_ptr<Value>* out_value) {
   DCHECK(IsStringUTF8(path));
-  std::string current_path(path.as_string());
+  StringPiece current_path(path);
   DictionaryValue* current_dictionary = this;
   size_t delimiter_position = current_path.rfind('.');
-  if (delimiter_position != std::string::npos) {
+  if (delimiter_position != StringPiece::npos) {
     if (!GetDictionary(current_path.substr(0, delimiter_position),
                        &current_dictionary))
       return false;
-    current_path.erase(0, delimiter_position + 1);
+    current_path = current_path.substr(delimiter_position + 1);
   }
 
   return current_dictionary->RemoveWithoutPathExpansion(current_path,
@@ -1062,7 +1060,7 @@ void ListValue::AppendDouble(double in_value) {
 }
 
 void ListValue::AppendString(StringPiece in_value) {
-  Append(MakeUnique<StringValue>(in_value.as_string()));
+  Append(MakeUnique<StringValue>(in_value));
 }
 
 void ListValue::AppendString(const string16& in_value) {

@@ -122,6 +122,14 @@ class URL_EXPORT Origin {
     return IsSameOriginWith(other);
   }
 
+  // Efficiently returns what GURL(Serialize()) would without re-parsing the
+  // URL. This can be used for the (rare) times a GURL representation is needed
+  // for an Origin.
+  // Note: The returned URL will not necessarily be serialized to the same value
+  // as the Origin would. The GURL will have an added "/" path for Origins with
+  // valid SchemeHostPorts and file Origins.
+  GURL GetURL() const;
+
   // Same as GURL::DomainIs. If |this| origin is unique, then returns false.
   bool DomainIs(base::StringPiece lower_ascii_domain) const;
 

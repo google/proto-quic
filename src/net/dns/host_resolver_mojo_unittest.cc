@@ -15,6 +15,7 @@
 #include "net/base/request_priority.h"
 #include "net/base/test_completion_callback.h"
 #include "net/dns/mojo_host_type_converters.h"
+#include "net/log/net_log_with_source.h"
 #include "net/test/event_waiter.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"

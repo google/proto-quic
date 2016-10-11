@@ -8,8 +8,6 @@
 #include <stddef.h>
 #include <winsock2.h>
 
-#include "net/base/net_export.h"
-
 namespace net {
 
 // Bluetooth address size. Windows Bluetooth is supported via winsock.

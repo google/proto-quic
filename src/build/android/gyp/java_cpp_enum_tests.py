@@ -108,6 +108,74 @@ public class ClassName {
                                               ('VALUE_ONE', '1 << 1')]),
                      definition.entries)
 
+  def testParseMultilineEnumEntry(self):
+    test_data = """
+      // GENERATED_JAVA_ENUM_PACKAGE: bar.namespace
+      enum Foo {
+        VALUE_ZERO = 1 << 0,
+        VALUE_ONE =
+            SymbolKey | FnKey | AltGrKey | MetaKey | AltKey | ControlKey,
+        VALUE_TWO = 1 << 18,
+      };
+    """.split('\n')
+    expected_entries = collections.OrderedDict([
+        ('VALUE_ZERO', '1 << 0'),
+        ('VALUE_ONE', 'SymbolKey | FnKey | AltGrKey | MetaKey | AltKey | '
+         'ControlKey'),
+        ('VALUE_TWO', '1 << 18')])
+    definitions = HeaderParser(test_data).ParseDefinitions()
+    self.assertEqual(1, len(definitions))
+    definition = definitions[0]
+    self.assertEqual('Foo', definition.class_name)
+    self.assertEqual('bar.namespace', definition.enum_package)
+    self.assertEqual(expected_entries, definition.entries)
+
+  def testParseEnumEntryWithTrailingMultilineEntry(self):
+    test_data = """
+      // GENERATED_JAVA_ENUM_PACKAGE: bar.namespace
+      enum Foo {
+        VALUE_ZERO = 1,
+        VALUE_ONE =
+            SymbolKey | FnKey | AltGrKey | MetaKey |
+            AltKey | ControlKey | ShiftKey,
+      };
+    """.split('\n')
+    expected_entries = collections.OrderedDict([
+        ('VALUE_ZERO', '1'),
+        ('VALUE_ONE', 'SymbolKey | FnKey | AltGrKey | MetaKey | AltKey | '
+         'ControlKey | ShiftKey')])
+    definitions = HeaderParser(test_data).ParseDefinitions()
+    self.assertEqual(1, len(definitions))
+    definition = definitions[0]
+    self.assertEqual('Foo', definition.class_name)
+    self.assertEqual('bar.namespace', definition.enum_package)
+    self.assertEqual(expected_entries, definition.entries)
+
+  def testParseNoCommaAfterLastEntry(self):
+    test_data = """
+      // GENERATED_JAVA_ENUM_PACKAGE: bar.namespace
+      enum Foo {
+        VALUE_ZERO = 1,
+
+        // This is a multiline
+        //
+        // comment with an empty line.
+        VALUE_ONE = 2
+      };
+    """.split('\n')
+    expected_entries = collections.OrderedDict([
+        ('VALUE_ZERO', '1'),
+        ('VALUE_ONE', '2')])
+    expected_comments = collections.OrderedDict([
+        ('VALUE_ONE', 'This is a multiline comment with an empty line.')])
+    definitions = HeaderParser(test_data).ParseDefinitions()
+    self.assertEqual(1, len(definitions))
+    definition = definitions[0]
+    self.assertEqual('Foo', definition.class_name)
+    self.assertEqual('bar.namespace', definition.enum_package)
+    self.assertEqual(expected_entries, definition.entries)
+    self.assertEqual(expected_comments, definition.comments)
+
   def testParseClassNameOverride(self):
     test_data = """
       // GENERATED_JAVA_ENUM_PACKAGE: test.namespace

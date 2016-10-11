@@ -10,6 +10,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/crypto/channel_id.h"
 #include "net/quic/core/crypto/proof_verifier.h"
 #include "net/quic/core/crypto/quic_crypto_client_config.h"

@@ -52,16 +52,11 @@ void RunTest_BasicSignal(MessageLoop::Type message_loop_type) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
 
   WaitableEventWatcher watcher;
-  EXPECT_TRUE(watcher.GetWatchedEvent() == NULL);
-
   watcher.StartWatching(&event, Bind(&QuitWhenSignaled));
-  EXPECT_EQ(&event, watcher.GetWatchedEvent());
 
   event.Signal();
 
   RunLoop().Run();
-
-  EXPECT_TRUE(watcher.GetWatchedEvent() == NULL);
 }
 
 void RunTest_BasicCancel(MessageLoop::Type message_loop_type) {

@@ -34,9 +34,9 @@ class NET_EXPORT_PRIVATE SpdyUtils {
                            int64_t* content_length,
                            SpdyHeaderBlock* headers);
 
-  // Populate |content length| with the value of the content-length header if
-  // one or more are present in the headers. Returns true on success, false if
-  // parsing fails.
+  // Populate |content length| with the value of the content-length header.
+  // Returns true on success, false if parsing fails or content-length header is
+  // missing.
   static bool ExtractContentLengthFromHeaders(int64_t* content_length,
                                               SpdyHeaderBlock* headers);
 

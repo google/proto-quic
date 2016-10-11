@@ -15,9 +15,10 @@
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "net/base/load_timing_info.h"
+#include "net/base/net_export.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_stream_factory.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 
 class GURL;
 

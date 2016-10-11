@@ -12,6 +12,8 @@
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/disk_cache.h"
+#include "net/log/net_log_capture_mode.h"
+#include "net/log/net_log_source.h"
 
 namespace {
 
@@ -66,7 +68,7 @@ std::unique_ptr<base::Value> NetLogSparseOperationCallback(
 }
 
 std::unique_ptr<base::Value> NetLogSparseReadWriteCallback(
-    const net::NetLog::Source& source,
+    const net::NetLogSource& source,
     int child_len,
     net::NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
@@ -93,40 +95,39 @@ std::unique_ptr<base::Value> NetLogGetAvailableRangeResultCallback(
 
 namespace disk_cache {
 
-net::NetLog::ParametersCallback CreateNetLogEntryCreationCallback(
+net::NetLogParametersCallback CreateNetLogEntryCreationCallback(
     const Entry* entry,
     bool created) {
   DCHECK(entry);
   return base::Bind(&NetLogEntryCreationCallback, entry, created);
 }
 
-net::NetLog::ParametersCallback CreateNetLogReadWriteDataCallback(
-    int index,
-    int offset,
-    int buf_len,
-    bool truncate) {
+net::NetLogParametersCallback CreateNetLogReadWriteDataCallback(int index,
+                                                                int offset,
+                                                                int buf_len,
+                                                                bool truncate) {
   return base::Bind(&NetLogReadWriteDataCallback,
                     index, offset, buf_len, truncate);
 }
 
-net::NetLog::ParametersCallback CreateNetLogReadWriteCompleteCallback(
+net::NetLogParametersCallback CreateNetLogReadWriteCompleteCallback(
     int bytes_copied) {
   return base::Bind(&NetLogReadWriteCompleteCallback, bytes_copied);
 }
 
-net::NetLog::ParametersCallback CreateNetLogSparseOperationCallback(
+net::NetLogParametersCallback CreateNetLogSparseOperationCallback(
     int64_t offset,
     int buf_len) {
   return base::Bind(&NetLogSparseOperationCallback, offset, buf_len);
 }
 
-net::NetLog::ParametersCallback CreateNetLogSparseReadWriteCallback(
-    const net::NetLog::Source& source,
+net::NetLogParametersCallback CreateNetLogSparseReadWriteCallback(
+    const net::NetLogSource& source,
     int child_len) {
   return base::Bind(&NetLogSparseReadWriteCallback, source, child_len);
 }
 
-net::NetLog::ParametersCallback CreateNetLogGetAvailableRangeResultCallback(
+net::NetLogParametersCallback CreateNetLogGetAvailableRangeResultCallback(
     int64_t start,
     int result) {
   return base::Bind(&NetLogGetAvailableRangeResultCallback, start, result);

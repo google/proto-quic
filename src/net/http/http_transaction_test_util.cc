@@ -25,6 +25,9 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_transaction.h"
+#include "net/log/net_log.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -231,7 +234,7 @@ MockNetworkTransaction::MockNetworkTransaction(RequestPriority priority,
       transaction_factory_(factory->AsWeakPtr()),
       received_bytes_(0),
       sent_bytes_(0),
-      socket_log_id_(NetLog::Source::kInvalidId),
+      socket_log_id_(NetLogSource::kInvalidId),
       done_reading_called_(false),
       weak_factory_(this) {}
 
@@ -358,7 +361,7 @@ void MockNetworkTransaction::SetQuicServerInfo(
 
 bool MockNetworkTransaction::GetLoadTimingInfo(
     LoadTimingInfo* load_timing_info) const {
-  if (socket_log_id_ != NetLog::Source::kInvalidId) {
+  if (socket_log_id_ != NetLogSource::kInvalidId) {
     // The minimal set of times for a request that gets a response, assuming it
     // gets a new socket.
     load_timing_info->socket_reused = false;

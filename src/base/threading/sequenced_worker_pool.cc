@@ -924,11 +924,12 @@ void SequencedWorkerPool::Inner::Shutdown(
       return;
     shutdown_called_ = true;
 
-    if (subtle::NoBarrier_Load(&g_all_pools_state) !=
-        AllPoolsState::WORKER_CREATED)
-      return;
-
     max_blocking_tasks_after_shutdown_ = max_new_blocking_tasks_after_shutdown;
+
+    if (subtle::NoBarrier_Load(&g_all_pools_state) !=
+        AllPoolsState::WORKER_CREATED) {
+      return;
+    }
 
     // Tickle the threads. This will wake up a waiting one so it will know that
     // it can exit, which in turn will wake up any other waiting ones.

@@ -5,6 +5,8 @@
 #ifndef NET_HTTP_HTTP_AUTH_SCHEME_H_
 #define NET_HTTP_HTTP_AUTH_SCHEME_H_
 
+#include "net/base/net_export.h"
+
 namespace net {
 NET_EXPORT extern const char kBasicAuthScheme[];
 NET_EXPORT extern const char kDigestAuthScheme[];

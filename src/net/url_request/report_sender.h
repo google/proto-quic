@@ -5,12 +5,13 @@
 #ifndef NET_URL_REQUEST_REPORT_SENDER_H_
 #define NET_URL_REQUEST_REPORT_SENDER_H_
 
+#include <map>
 #include <memory>
-#include <set>
 #include <string>
 
 #include "base/callback.h"
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/http/transport_security_state.h"
 #include "net/url_request/url_request.h"
 
@@ -68,8 +69,7 @@ class NET_EXPORT ReportSender
 
   CookiesPreference cookies_preference_;
 
-  // Owns the contained requests.
-  std::set<URLRequest*> inflight_requests_;
+  std::map<URLRequest*, std::unique_ptr<URLRequest>> inflight_requests_;
 
   // Called when a sent report results in an error.
   ErrorCallback error_callback_;

@@ -1,14 +1,9 @@
 -ActivityLogApiTest.TriggerEvent
 -BrowserActionApiTest.BrowserActionPopupWithIframe
--BrowserTest.BeforeUnloadVsBeforeReload
--BrowserTest.CancelBeforeUnloadResetsURL
 -BrowserTest.ClearPendingOnFailUnlessNTP
--BrowserTest.InterstitialCancelsGuestViewDialogs
--BrowserTest.ReloadThenCancelBeforeUnload
 -ChromeRenderProcessHostTest.DevToolsOnSelfInOwnProcess
 -ChromeRenderProcessHostTest.DevToolsOnSelfInOwnProcessPPT
 -ChromeServiceWorker*
--ContentSettingsExceptionsAreaBrowserTest.OpenIncognitoWindow
 -ContinueWhereILeftOffTest.PostWithPassword
 -ContinueWhereILeftOffTest.PostWithPasswordBrowserClose
 -ContinueWhereILeftOffTest.PostWithPasswordCloseAllBrowsers
@@ -24,7 +19,10 @@
 -ExtensionBindingsApiTest.ModuleSystem
 -ExtensionBrowserTest.WindowOpenExtension
 -ExtensionResourceRequestPolicyTest.Iframe
--ExtensionWebRequestApiTest*
+-ExtensionWebRequestApiTest.WebRequestComplex
+-ExtensionWebRequestApiTest.WebRequestDeclarative2
+-ExtensionWebRequestApiTest.WebRequestUnloadImmediately
+-ExtensionWebRequestApiTest.WebRequestWithWithheldPermissions
 -ExternallyConnectableMessagingTest.FromPopup
 -FindInPageControllerTest.SearchWithinSpecialURL
 -IsolatedAppTest.CookieIsolation
@@ -41,13 +39,6 @@
 -PredictorBrowserTest.RendererInitiatedNavigationPreconnect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirectNoHang
--PrerenderBrowserTest.PrerenderSafeBrowsingClientRedirect
--PrerenderBrowserTest.PrerenderSafeBrowsingIframe
--PrerenderBrowserTest.PrerenderSafeBrowsingServerRedirect
--PrerenderBrowserTest.PrerenderSafeBrowsingTopLevel
--PrerenderBrowserTest.PrerenderSSLClientCertIframe
--PrerenderBrowserTest.PrerenderSSLClientCertTopLevel
--PrerenderBrowserTestWithExtensions.StreamsTest
 -RedirectTest.ClientServerServer
 -RestartTest.PostWithPassword
 -SafeBrowsing*
@@ -58,8 +49,6 @@
 -TabManagerTest.TabManagerBasics
 -TemplateURLScraperTest.ScrapeWithOnSubmit
 -ThreatDOMDetailsTest.Everything
--TracingBrowserTest.TestBackgroundMemoryInfra
--TracingBrowserTest.TestMemoryInfra
 -WebBluetoothTest.WebBluetoothAfterCrash
 -WebNavigationApiTest.Crash
 -WebNavigationApiTest.CrossProcess
@@ -107,8 +96,7 @@
 -WebViewTests/WebViewFocusTest.TouchFocusesEmbedder/0
 
 # Fail in Debug.
--BookmarkBubbleSignInDelegateTest.OnSignInLinkClicked
--BookmarkBubbleSignInDelegateTest.OnSignInLinkClickedReusesBlank
+-BookmarkBubbleSignInDelegateTest.*
 -GetAuthTokenFunctionTest.ComponentWithNormalClientId
 -GetAuthTokenFunctionTest.ComponentWithChromeClientId
 -PolicyTest.ExtensionInstallBlacklistSharedModules

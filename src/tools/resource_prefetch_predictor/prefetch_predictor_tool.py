@@ -31,13 +31,23 @@ class Entry(object):
     self.score = self._Score()
 
   def _Score(self):
-    """Mirrors ResourcePrefetchPredictorTables::ResourceRow::UpdateScore."""
-    multiplier = 1
+    """Mirrors ResourcePrefetchPredictorTables::ComputeResourceScore."""
+    priority_multiplier = 1
+    type_multiplier = 1
+
+    if self.proto.priority == ResourceData.REQUEST_PRIORITY_HIGHEST:
+      priority_multiplier = 3
+    elif self.proto.priority == ResourceData.REQUEST_PRIORITY_MEDIUM:
+      priority_multiplier = 2
+
     if self.proto.resource_type in (ResourceData.RESOURCE_TYPE_STYLESHEET,
-                                    ResourceData.RESOURCE_TYPE_SCRIPT,
-                                    ResourceData.RESOURCE_TYPE_FONT_RESOURCE):
-      multiplier = 2
-    return multiplier * 100 - self.proto.average_position
+                                    ResourceData.RESOURCE_TYPE_SCRIPT):
+      type_multiplier = 3
+    elif self.proto.resource_type == ResourceData.RESOURCE_TYPE_FONT_RESOURCE:
+      type_multiplier = 2
+
+      return (100 * (priority_multiplier * 100 + type_multiplier * 10)
+              - self.proto.average_position)
 
   @classmethod
   def FromRow(cls, row):

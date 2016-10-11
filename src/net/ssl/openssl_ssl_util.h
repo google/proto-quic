@@ -10,7 +10,7 @@
 #include <openssl/ssl.h>
 
 #include "net/cert/x509_certificate.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_parameters_callback.h"
 #include "net/ssl/scoped_openssl_types.h"
 
 namespace crypto {
@@ -68,7 +68,7 @@ int MapOpenSSLErrorWithDetails(int err,
                                OpenSSLErrorInfo* out_error_info);
 
 // Creates NetLog callback for an OpenSSL error.
-NetLog::ParametersCallback CreateNetLogOpenSSLErrorCallback(
+NetLogParametersCallback CreateNetLogOpenSSLErrorCallback(
     int net_error,
     int ssl_error,
     const OpenSSLErrorInfo& error_info);

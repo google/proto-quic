@@ -30,7 +30,7 @@
 #include "net/http/http_response_info.h"
 #include "net/http/http_transaction.h"
 #include "net/http/partial_data.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/connection_attempts.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
 

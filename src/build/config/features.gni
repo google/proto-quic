@@ -117,7 +117,7 @@ declare_args() {
 
   # Enable WebVR support by default on Android
   # Still requires command line flag to access API
-  enable_webvr = is_android && is_component_build &&
+  enable_webvr = is_android && is_component_build && is_debug &&
                  (current_cpu == "x86" || current_cpu == "x64" ||
                   current_cpu == "arm" || current_cpu == "arm64")
 }

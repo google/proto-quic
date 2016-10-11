@@ -38,9 +38,9 @@ bool TestSimpleTaskRunner::RunsTasksOnCurrentThread() const {
   return thread_ref_ == PlatformThread::CurrentRef();
 }
 
-std::deque<TestPendingTask> TestSimpleTaskRunner::GetPendingTasks() const {
+std::deque<TestPendingTask> TestSimpleTaskRunner::TakePendingTasks() {
   AutoLock auto_lock(lock_);
-  return pending_tasks_;
+  return std::move(pending_tasks_);
 }
 
 size_t TestSimpleTaskRunner::NumPendingTasks() const {
@@ -56,6 +56,11 @@ bool TestSimpleTaskRunner::HasPendingTask() const {
 base::TimeDelta TestSimpleTaskRunner::NextPendingTaskDelay() const {
   AutoLock auto_lock(lock_);
   return pending_tasks_.front().GetTimeToRun() - base::TimeTicks();
+}
+
+base::TimeDelta TestSimpleTaskRunner::FinalPendingTaskDelay() const {
+  AutoLock auto_lock(lock_);
+  return pending_tasks_.back().GetTimeToRun() - base::TimeTicks();
 }
 
 void TestSimpleTaskRunner::ClearPendingTasks() {

@@ -16,6 +16,7 @@
 #include "net/http/http_proxy_client_socket.h"
 #include "net/http/http_response_info.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/spdy/spdy_proxy_client_socket.h"

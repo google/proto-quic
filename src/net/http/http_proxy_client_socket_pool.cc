@@ -16,6 +16,7 @@
 #include "net/http/http_network_session.h"
 #include "net/http/http_proxy_client_socket_wrapper.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"

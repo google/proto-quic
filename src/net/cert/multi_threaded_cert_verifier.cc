@@ -30,15 +30,19 @@
 #include "net/cert/crl_set.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_certificate_net_log_param.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 
 #if defined(USE_NSS_CERTS)
 #include <private/pprthred.h>  // PR_DetachThread
 #endif
 
 namespace net {
+
+class NetLogCaptureMode;
 
 ////////////////////////////////////////////////////////////////////////////
 //

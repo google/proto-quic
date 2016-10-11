@@ -18,6 +18,7 @@
 #include "net/base/request_priority.h"
 #include "net/dns/fuzzed_host_resolver.h"
 #include "net/dns/host_resolver.h"
+#include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log.h"
 
 namespace {

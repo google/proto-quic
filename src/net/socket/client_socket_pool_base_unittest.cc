@@ -33,6 +33,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
@@ -70,7 +71,7 @@ void TestLoadTimingInfoConnectedReused(const ClientSocketHandle& handle) {
   EXPECT_TRUE(handle.GetLoadTimingInfo(true, &load_timing_info));
 
   EXPECT_EQ(true, load_timing_info.socket_reused);
-  EXPECT_NE(NetLog::Source::kInvalidId, load_timing_info.socket_log_id);
+  EXPECT_NE(NetLogSource::kInvalidId, load_timing_info.socket_log_id);
 
   ExpectConnectTimingHasNoTimes(load_timing_info.connect_timing);
   ExpectLoadTimingHasOnlyConnectionTimes(load_timing_info);
@@ -87,7 +88,7 @@ void TestLoadTimingInfoConnectedNotReused(const ClientSocketHandle& handle) {
   EXPECT_TRUE(handle.GetLoadTimingInfo(false, &load_timing_info));
 
   EXPECT_FALSE(load_timing_info.socket_reused);
-  EXPECT_NE(NetLog::Source::kInvalidId, load_timing_info.socket_log_id);
+  EXPECT_NE(NetLogSource::kInvalidId, load_timing_info.socket_log_id);
 
   ExpectConnectTimingHasTimes(load_timing_info.connect_timing,
                               CONNECT_TIMING_HAS_CONNECT_TIMES_ONLY);
@@ -106,7 +107,7 @@ void TestLoadTimingInfoNotConnected(const ClientSocketHandle& handle) {
   EXPECT_FALSE(handle.GetLoadTimingInfo(false, &load_timing_info));
 
   EXPECT_FALSE(load_timing_info.socket_reused);
-  EXPECT_EQ(NetLog::Source::kInvalidId, load_timing_info.socket_log_id);
+  EXPECT_EQ(NetLogSource::kInvalidId, load_timing_info.socket_log_id);
 
   ExpectConnectTimingHasNoTimes(load_timing_info.connect_timing);
   ExpectLoadTimingHasOnlyConnectionTimes(load_timing_info);
@@ -214,7 +215,7 @@ class MockClientSocketFactory : public ClientSocketFactory {
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) override {
+      const NetLogSource& source) override {
     NOTREACHED();
     return std::unique_ptr<DatagramClientSocket>();
   }
@@ -224,7 +225,7 @@ class MockClientSocketFactory : public ClientSocketFactory {
       std::unique_ptr<
           SocketPerformanceWatcher> /* socket_performance_watcher */,
       NetLog* /* net_log */,
-      const NetLog::Source& /*source*/) override {
+      const NetLogSource& /*source*/) override {
     allocation_count_++;
     return std::unique_ptr<StreamSocket>();
   }
@@ -320,7 +321,7 @@ class TestConnectJob : public ConnectJob {
   int ConnectInternal() override {
     AddressList ignored;
     client_socket_factory_->CreateTransportClientSocket(ignored, NULL, NULL,
-                                                        NetLog::Source());
+                                                        NetLogSource());
     SetSocket(std::unique_ptr<StreamSocket>(
         new MockClientSocket(net_log().net_log())));
     switch (job_type_) {

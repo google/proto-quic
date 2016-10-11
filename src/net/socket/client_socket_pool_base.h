@@ -49,14 +49,19 @@
 #include "net/base/network_change_notifier.h"
 #include "net/base/priority_queue.h"
 #include "net/base/request_priority.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/stream_socket.h"
 
+namespace base {
+class DictionaryValue;
+}
+
 namespace net {
 
 class ClientSocketHandle;
+struct NetLogSource;
 
 // ConnectJob provides an abstract interface for "connecting" a socket.
 // The connection may involve host resolution, tcp connection, ssl connection,
@@ -576,7 +581,8 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
   bool AssignIdleSocketToRequest(const Request& request, Group* group);
 
   static void LogBoundConnectJobToRequest(
-      const NetLog::Source& connect_job_source, const Request& request);
+      const NetLogSource& connect_job_source,
+      const Request& request);
 
   // Same as CloseOneIdleSocket() except it won't close an idle socket in
   // |group|.  If |group| is NULL, it is ignored.  Returns true if it closed a

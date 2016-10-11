@@ -5,6 +5,8 @@
 from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 
+from page_sets.login_helpers import pinterest_login
+
 from telemetry import decorators
 
 
@@ -233,13 +235,19 @@ class _MediaBrowsingStory(_BrowsingStory):
   ITEM_VIEW_TIME_IN_SECONDS = 3
   ITEMS_TO_VISIT = 15
   ITEM_SELECTOR_INDEX = 0
+  INCREMENT_INDEX_AFTER_EACH_ITEM = False
 
   def _DidLoadDocument(self, action_runner):
+    index = self.ITEM_SELECTOR_INDEX
     for _ in xrange(self.ITEMS_TO_VISIT):
-      self._NavigateToItem(action_runner, self.ITEM_SELECTOR_INDEX)
-      self._ViewMediaItem(action_runner)
+      self._NavigateToItem(action_runner, index)
+      self._ViewMediaItem(action_runner, index)
+      if self.INCREMENT_INDEX_AFTER_EACH_ITEM:
+        index += 1
 
-  def _ViewMediaItem(self, action_runner):
+
+  def _ViewMediaItem(self, action_runner, index):
+    del index  # Unused.
     action_runner.tab.WaitForDocumentReadyStateToBeComplete()
     action_runner.Wait(self.ITEM_VIEW_TIME_IN_SECONDS)
 
@@ -300,3 +308,57 @@ class FacebookPhotosDesktopStory(_MediaBrowsingStory):
   # theater viewer.
   SUPPORTED_PLATFORMS = platforms.NO_PLATFORMS
   IS_SINGLE_PAGE_APP = True
+
+
+class TumblrDesktopStory(_MediaBrowsingStory):
+  NAME = 'browse:media:tumblr'
+  URL = 'https://tumblr.com/search/gifs'
+  ITEM_SELECTOR = '.photo'
+  IS_SINGLE_PAGE_APP = True
+  ITEMS_TO_VISIT = 2  # Increase when crbug.com/651909 is implemented.
+  ITEM_VIEW_TIME_IN_SECONDS = 5
+  INCREMENT_INDEX_AFTER_EACH_ITEM = True
+  SUPPORTED_PLATFORMS = platforms.NO_PLATFORMS  # crbug.com/651909.
+
+  def _ViewMediaItem(self, action_runner, index):
+    super(TumblrDesktopStory, self)._ViewMediaItem(action_runner, index)
+    action_runner.MouseClick(selector='#tumblr_lightbox_center_image')
+
+
+class PinterestDesktopStory(_MediaBrowsingStory):
+  NAME = 'browse:media:pinterest'
+  URL = 'https://pinterest.com'
+  ITEM_SELECTOR = '.pinImageDim'
+  IS_SINGLE_PAGE_APP = True
+  ITEMS_TO_VISIT = 5  # Increase when crbug.com/651909 is implemented.
+  ITEM_VIEW_TIME_IN_SECONDS = 5
+  INCREMENT_INDEX_AFTER_EACH_ITEM = True
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+
+  def _Login(self, action_runner):
+    pinterest_login.LoginDesktopAccount(action_runner, 'googletest',
+                                        self.credentials_path)
+
+  def _ViewMediaItem(self, action_runner, index):
+    super(PinterestDesktopStory, self)._ViewMediaItem(action_runner, index)
+    # To imitate real user interaction, we do not want to pin every post.
+    # We will only pin every other post.
+    if index % 2 == 0:
+      # Pin the selection.
+      save_function = ('document.querySelector('
+                       '".Button.Module.ShowModalButton.btn.hasIcon.hasText.'
+                       'isBrioFlat.medium.primary.primaryOnHover.repin.'
+                       'pinActionBarButton.isBrioFlat.rounded")')
+      action_runner.ClickElement(element_function=save_function)
+      action_runner.Wait(1)  # Wait to make navigation realistic.
+      # Select which board to pin to.
+      inner_save_function = 'document.querySelector(".nameAndIcons")'
+      action_runner.WaitForElement(element_function=inner_save_function)
+      action_runner.ClickElement(element_function=inner_save_function)
+      action_runner.Wait(1)  # Wait to make navigation realistic.
+
+    # Close selection.
+    x_element_function = ('document.querySelector('
+                          '".Button.borderless.close.visible")')
+    action_runner.ClickElement(element_function=x_element_function)
+    action_runner.Wait(1)  # Wait to make navigation realistic.

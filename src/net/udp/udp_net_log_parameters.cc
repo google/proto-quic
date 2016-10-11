@@ -42,7 +42,7 @@ std::unique_ptr<base::Value> NetLogUDPConnectCallback(
 
 }  // namespace
 
-NetLog::ParametersCallback CreateNetLogUDPDataTranferCallback(
+NetLogParametersCallback CreateNetLogUDPDataTranferCallback(
     int byte_count,
     const char* bytes,
     const IPEndPoint* address) {
@@ -50,7 +50,7 @@ NetLog::ParametersCallback CreateNetLogUDPDataTranferCallback(
   return base::Bind(&NetLogUDPDataTranferCallback, byte_count, bytes, address);
 }
 
-NetLog::ParametersCallback CreateNetLogUDPConnectCallback(
+NetLogParametersCallback CreateNetLogUDPConnectCallback(
     const IPEndPoint* address,
     NetworkChangeNotifier::NetworkHandle network) {
   DCHECK(address);

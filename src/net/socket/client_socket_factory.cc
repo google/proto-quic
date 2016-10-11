@@ -48,7 +48,7 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) override {
+      const NetLogSource& source) override {
     return std::unique_ptr<DatagramClientSocket>(
         new UDPClientSocket(bind_type, rand_int_cb, net_log, source));
   }
@@ -57,7 +57,7 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
       const AddressList& addresses,
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
-      const NetLog::Source& source) override {
+      const NetLogSource& source) override {
     return std::unique_ptr<StreamSocket>(new TCPClientSocket(
         addresses, std::move(socket_performance_watcher), net_log, source));
   }

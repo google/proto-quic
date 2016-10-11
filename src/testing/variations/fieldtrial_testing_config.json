@@ -84,6 +84,28 @@
             ]
         }
     ],
+    "AutofillCreditCardSigninPromo": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "EnabledFive",
+                    "params": {
+                        "impression_limit": "5"
+                    },
+                    "enable_features": [
+                        "AutofillCreditCardSigninPromo"
+                    ]
+                }
+            ]
+        }
+    ],
     "AutofillFieldMetadata": [
         {
             "platforms": [

@@ -9,6 +9,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/crypto/channel_id.h"
 
 namespace crypto {

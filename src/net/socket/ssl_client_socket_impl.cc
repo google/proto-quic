@@ -44,7 +44,9 @@
 #include "net/cert/x509_certificate_net_log_param.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/http/transport_security_state.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
 #include "net/ssl/scoped_openssl_types.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_cipher_suite_names.h"
@@ -1228,7 +1230,7 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
 }
 
 int SSLClientSocketImpl::DoChannelIDLookup() {
-  NetLog::ParametersCallback callback = base::Bind(
+  NetLogParametersCallback callback = base::Bind(
       &NetLogChannelIDLookupCallback, base::Unretained(channel_id_service_));
   net_log_.BeginEvent(NetLogEventType::SSL_GET_CHANNEL_ID, callback);
   next_handshake_state_ = STATE_CHANNEL_ID_LOOKUP_COMPLETE;

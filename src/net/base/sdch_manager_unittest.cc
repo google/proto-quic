@@ -14,7 +14,6 @@
 #include "base/strings/stringprintf.h"
 #include "base/test/simple_test_clock.h"
 #include "net/base/sdch_observer.h"
-#include "net/log/net_log.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
 

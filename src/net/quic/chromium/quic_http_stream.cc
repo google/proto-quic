@@ -16,6 +16,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/quic_http_utils.h"
 #include "net/quic/core/quic_utils.h"

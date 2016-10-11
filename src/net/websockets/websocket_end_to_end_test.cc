@@ -71,7 +71,8 @@ class ConnectTestingEventInterface : public WebSocketEventInterface {
 
   ChannelState OnDataFrame(bool fin,
                            WebSocketMessageType type,
-                           const std::vector<char>& data) override;
+                           scoped_refptr<IOBuffer> data,
+                           size_t data_size) override;
 
   ChannelState OnFlowControl(int64_t quota) override;
 
@@ -142,7 +143,8 @@ ChannelState ConnectTestingEventInterface::OnAddChannelResponse(
 ChannelState ConnectTestingEventInterface::OnDataFrame(
     bool fin,
     WebSocketMessageType type,
-    const std::vector<char>& data) {
+    scoped_refptr<IOBuffer> data,
+    size_t data_size) {
   return CHANNEL_ALIVE;
 }
 

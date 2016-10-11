@@ -12,13 +12,13 @@
 #include "base/task_runner.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/privacy_mode.h"
-#include "net/log/net_log.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_time.h"
 
 namespace net {
 
+class NetLogWithSource;
 class QuicConfig;
 class QuicCryptoClientConfig;
 class QuicHttpStream;

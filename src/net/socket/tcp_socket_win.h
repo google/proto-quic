@@ -18,7 +18,7 @@
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/socket_performance_watcher.h"
 
 namespace net {
@@ -26,6 +26,8 @@ namespace net {
 class AddressList;
 class IOBuffer;
 class IPEndPoint;
+class NetLog;
+struct NetLogSource;
 
 class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
                                 public base::win::ObjectWatcher::Delegate  {
@@ -33,7 +35,7 @@ class NET_EXPORT TCPSocketWin : NON_EXPORTED_BASE(public base::NonThreadSafe),
   TCPSocketWin(
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
-      const NetLog::Source& source);
+      const NetLogSource& source);
   ~TCPSocketWin() override;
 
   int Open(AddressFamily family);

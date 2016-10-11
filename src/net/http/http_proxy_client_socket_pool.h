@@ -27,6 +27,7 @@ namespace net {
 class HttpAuthCache;
 class HttpAuthHandlerFactory;
 class HttpProxyClientSocketWrapper;
+class NetLog;
 class ProxyDelegate;
 class SSLClientSocketPool;
 class SSLSocketParams;

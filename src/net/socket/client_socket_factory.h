@@ -10,7 +10,6 @@
 
 #include "net/base/net_export.h"
 #include "net/base/rand_callback.h"
-#include "net/log/net_log.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/udp/datagram_socket.h"
 
@@ -20,6 +19,8 @@ class AddressList;
 class ClientSocketHandle;
 class DatagramClientSocket;
 class HostPortPair;
+class NetLog;
+struct NetLogSource;
 class SSLClientSocket;
 struct SSLClientSocketContext;
 struct SSLConfig;
@@ -31,19 +32,19 @@ class NET_EXPORT ClientSocketFactory {
  public:
   virtual ~ClientSocketFactory() {}
 
-  // |source| is the NetLog::Source for the entity trying to create the socket,
+  // |source| is the NetLogSource for the entity trying to create the socket,
   // if it has one.
   virtual std::unique_ptr<DatagramClientSocket> CreateDatagramClientSocket(
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) = 0;
+      const NetLogSource& source) = 0;
 
   virtual std::unique_ptr<StreamSocket> CreateTransportClientSocket(
       const AddressList& addresses,
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
-      const NetLog::Source& source) = 0;
+      const NetLogSource& source) = 0;
 
   // It is allowed to pass in a |transport_socket| that is not obtained from a
   // socket pool. The caller could create a ClientSocketHandle directly and call

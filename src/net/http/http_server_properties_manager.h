@@ -18,6 +18,7 @@
 #include "base/timer/timer.h"
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
+#include "net/base/net_export.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/http_server_properties_impl.h"
 

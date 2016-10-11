@@ -11,6 +11,7 @@
 #include "net/http/http_auth_challenge_tokenizer.h"
 #include "net/http/http_auth_scheme.h"
 #include "net/http/http_util.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace net {
 

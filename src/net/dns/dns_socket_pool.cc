@@ -11,6 +11,7 @@
 #include "net/base/address_list.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/stream_socket.h"
 #include "net/udp/datagram_client_socket.h"
@@ -59,7 +60,7 @@ void DnsSocketPool::InitializeInternal(
 
 std::unique_ptr<StreamSocket> DnsSocketPool::CreateTCPSocket(
     unsigned server_index,
-    const NetLog::Source& source) {
+    const NetLogSource& source) {
   DCHECK_LT(server_index, nameservers_->size());
 
   return std::unique_ptr<StreamSocket>(
@@ -73,7 +74,7 @@ std::unique_ptr<DatagramClientSocket> DnsSocketPool::CreateConnectedSocket(
 
   std::unique_ptr<DatagramClientSocket> socket;
 
-  NetLog::Source no_source;
+  NetLogSource no_source;
   socket = socket_factory_->CreateDatagramClientSocket(
       kBindType, rand_int_callback_, net_log_, no_source);
 

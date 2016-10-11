@@ -11,6 +11,8 @@
 
 namespace net {
 
+class NetLogWithSource;
+
 // HttpStreamFactoryImpl::JobController manages Request and Job(s).
 class HttpStreamFactoryImpl::JobController
     : public HttpStreamFactoryImpl::Job::Delegate,

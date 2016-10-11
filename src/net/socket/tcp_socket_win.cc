@@ -24,7 +24,9 @@
 #include "net/base/sockaddr_storage.h"
 #include "net/base/winsock_init.h"
 #include "net/base/winsock_util.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
 #include "net/socket/socket_net_log_params.h"
@@ -246,7 +248,7 @@ void TCPSocketWin::Core::WriteDelegate::OnObjectSignaled(
 TCPSocketWin::TCPSocketWin(
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     net::NetLog* net_log,
-    const net::NetLog::Source& source)
+    const net::NetLogSource& source)
     : socket_(INVALID_SOCKET),
       socket_performance_watcher_(std::move(socket_performance_watcher)),
       accept_event_(WSA_INVALID_EVENT),

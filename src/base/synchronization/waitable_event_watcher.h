@@ -6,13 +6,14 @@
 #define BASE_SYNCHRONIZATION_WAITABLE_EVENT_WATCHER_H_
 
 #include "base/base_export.h"
+#include "base/macros.h"
+#include "base/sequence_checker.h"
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
 #include "base/win/object_watcher.h"
 #else
 #include "base/callback.h"
-#include "base/message_loop/message_loop.h"
 #include "base/synchronization/waitable_event.h"
 #endif
 
@@ -26,8 +27,8 @@ class WaitableEvent;
 // This class provides a way to wait on a WaitableEvent asynchronously.
 //
 // Each instance of this object can be waiting on a single WaitableEvent. When
-// the waitable event is signaled, a callback is made in the thread of a given
-// MessageLoop. This callback can be deleted by deleting the waiter.
+// the waitable event is signaled, a callback is invoked on the sequence that
+// called StartWatching(). This callback can be deleted by deleting the waiter.
 //
 // Typical usage:
 //
@@ -60,53 +61,56 @@ class WaitableEvent;
 
 class BASE_EXPORT WaitableEventWatcher
 #if defined(OS_WIN)
-    : public win::ObjectWatcher::Delegate {
-#else
-    : public MessageLoop::DestructionObserver {
+    : public win::ObjectWatcher::Delegate
 #endif
+{
  public:
   typedef Callback<void(WaitableEvent*)> EventCallback;
   WaitableEventWatcher();
-  ~WaitableEventWatcher() override;
 
-  // When @event is signaled, the given callback is called on the thread of the
-  // current message loop when StartWatching is called.
+#if defined(OS_WIN)
+  ~WaitableEventWatcher() override;
+#else
+  ~WaitableEventWatcher();
+#endif
+
+  // When |event| is signaled, |callback| is called on the sequence that called
+  // StartWatching().
   bool StartWatching(WaitableEvent* event, const EventCallback& callback);
 
-  // Cancel the current watch. Must be called from the same thread which
+  // Cancel the current watch. Must be called from the same sequence which
   // started the watch.
   //
   // Does nothing if no event is being watched, nor if the watch has completed.
   // The callback will *not* be called for the current watch after this
-  // function returns. Since the callback runs on the same thread as this
+  // function returns. Since the callback runs on the same sequence as this
   // function, it cannot be called during this function either.
   void StopWatching();
-
-  // Return the currently watched event, or NULL if no object is currently being
-  // watched.
-  WaitableEvent* GetWatchedEvent();
-
-  // Return the callback that will be invoked when the event is
-  // signaled.
-  const EventCallback& callback() const { return callback_; }
 
  private:
 #if defined(OS_WIN)
   void OnObjectSignaled(HANDLE h) override;
-  win::ObjectWatcher watcher_;
-#else
-  // Implementation of MessageLoop::DestructionObserver
-  void WillDestroyCurrentMessageLoop() override;
 
-  MessageLoop* message_loop_;
+  win::ObjectWatcher watcher_;
+  EventCallback callback_;
+  WaitableEvent* event_ = nullptr;
+#else
+  // Instantiated in StartWatching(). Set before the callback runs. Reset in
+  // StopWatching() or StartWatching().
   scoped_refptr<Flag> cancel_flag_;
-  AsyncWaiter* waiter_;
-  base::Closure internal_callback_;
+
+  // Enqueued in the wait list of the watched WaitableEvent.
+  AsyncWaiter* waiter_ = nullptr;
+
+  // Kernel of the watched WaitableEvent.
   scoped_refptr<WaitableEvent::WaitableEventKernel> kernel_;
+
+  // Ensures that StartWatching() and StopWatching() are called on the same
+  // sequence.
+  SequenceChecker sequence_checker_;
 #endif
 
-  WaitableEvent* event_;
-  EventCallback callback_;
+  DISALLOW_COPY_AND_ASSIGN(WaitableEventWatcher);
 };
 
 }  // namespace base

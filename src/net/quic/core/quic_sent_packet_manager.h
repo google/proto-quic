@@ -15,6 +15,7 @@
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/general_loss_algorithm.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/pacing_sender.h"

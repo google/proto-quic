@@ -29,6 +29,7 @@
 #include "net/disk_cache/simple/simple_net_log_parameters.h"
 #include "net/disk_cache/simple/simple_synchronous_entry.h"
 #include "net/disk_cache/simple/simple_util.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_source_type.h"
 #include "third_party/zlib/zlib.h"
 

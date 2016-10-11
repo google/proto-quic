@@ -20,7 +20,8 @@
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_response_info.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/stream_socket.h"
@@ -219,7 +220,7 @@ class NET_EXPORT ClientSocketHandle {
   base::TimeTicks init_time_;
   base::TimeDelta setup_time_;
 
-  NetLog::Source requesting_source_;
+  NetLogSource requesting_source_;
 
   // Timing information is set when a connection is successfully established.
   LoadTimingInfo::ConnectTiming connect_timing_;

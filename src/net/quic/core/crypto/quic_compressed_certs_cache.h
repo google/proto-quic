@@ -10,6 +10,7 @@
 
 #include "base/containers/mru_cache.h"
 #include "base/memory/ref_counted.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/crypto/proof_source.h"
 
 namespace net {

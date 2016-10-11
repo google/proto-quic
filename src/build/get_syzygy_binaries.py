@@ -48,6 +48,10 @@ _RESOURCES = [
       lambda x: x.filename.endswith('.dll.pdb'))]
 
 
+# Name of the MS DIA dll that we need to copy to the binaries directory.
+_DIA_DLL_NAME = "msdia140.dll"
+
+
 def _LoadState(output_dir):
   """Loads the contents of the state file for a given |output_dir|, returning
   None if it doesn't exist.
@@ -282,6 +286,31 @@ def _Download(resource):
   return tmp[1]
 
 
+def _MaybeCopyDIABinaries(options, contents):
+  """Try to copy the DIA DLL to the binaries exe directory."""
+  toolchain_data_file = os.path.join(os.path.dirname(__file__),
+                                     'win_toolchain.json')
+  if not os.path.exists(toolchain_data_file):
+    _LOGGER.debug('Toolchain JSON data file doesn\'t exist, skipping.')
+    return
+  with open(toolchain_data_file) as temp_f:
+    toolchain_data = json.load(temp_f)
+  if not os.path.isdir(toolchain_data['path']):
+    _LOGGER.error('The toolchain JSON file is invalid.')
+    return
+  dia_sdk_binaries_dir = os.path.join(toolchain_data['path'], 'DIA SDK', 'bin')
+  dia_dll = os.path.join(dia_sdk_binaries_dir, _DIA_DLL_NAME)
+  if not os.path.exists(dia_dll):
+    _LOGGER.debug('%s is missing, skipping.')
+    return
+  dia_dll_dest = os.path.join(options.output_dir, 'exe', _DIA_DLL_NAME)
+  _LOGGER.debug('Copying %s to %s.' % (dia_dll, dia_dll_dest))
+  if not options.dry_run:
+    shutil.copy(dia_dll, dia_dll_dest)
+    contents[os.path.relpath(dia_dll_dest, options.output_dir)] = (
+        _Md5(dia_dll_dest))
+
+
 def _InstallBinaries(options, deleted={}):
   """Installs Syzygy binaries. This assumes that the output directory has
   already been cleaned, as it will refuse to overwrite existing files."""
@@ -336,6 +365,10 @@ def _InstallBinaries(options, deleted={}):
     _LOGGER.debug('Removing temporary file "%s".', path)
     os.remove(path)
 
+  if options.copy_dia_binaries:
+    # Try to copy the DIA binaries to the binaries directory.
+    _MaybeCopyDIABinaries(options, contents)
+
   return state
 
 
@@ -367,6 +400,9 @@ def _ParseCommandLine():
   option_parser.add_option('--quiet', dest='log_level', action='store_const',
       default=logging.INFO, const=logging.ERROR,
       help='Disables all output except for errors.')
+  option_parser.add_option('--copy-dia-binaries', action='store_true',
+      default=False, help='If true then the DIA dll will get copied into the '
+                          'binaries directory if it\'s available.')
   options, args = option_parser.parse_args()
   if args:
     option_parser.error('Unexpected arguments: %s' % args)

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "net/http/http_log_util.h"
+
+#include "net/log/net_log_capture_mode.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include "net/base/address_tracker_linux.h"
+#include "net/base/net_export.h"
 #include "net/base/network_interfaces.h"
 
 namespace net {

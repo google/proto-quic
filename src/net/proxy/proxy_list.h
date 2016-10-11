@@ -7,11 +7,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
 #include "net/proxy/proxy_retry_info.h"
 
 namespace base {
@@ -22,6 +22,7 @@ class TimeDelta;
 namespace net {
 
 class ProxyServer;
+class NetLogWithSource;
 
 // This class is used to hold a list of proxies returned by GetProxyForUrl or
 // manually configured. It handles proxy fallback if multiple servers are

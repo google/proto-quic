@@ -22,287 +22,373 @@ Still reading?
   directory path (e.g. out/Debug)
 -->
   <issue id="AllowBackup">
-    <ignore path="AndroidManifest.xml" />
+    <ignore path="AndroidManifest.xml"/>
   </issue>
-  <issue id="Assert" severity="ignore" />
+  <issue id="Assert" severity="ignore"/>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <issue id="BadHostnameVerifier" severity="Error">
+    <ignore regexp="net/test/android/javatests/src/org/chromium/net/test/util/TestWebServer.java"/>
+  </issue>
   <issue id="ButtonOrder" severity="Error">
-    <ignore regexp="chrome/android/java/res/layout/homepage_editor.xml" />
+    <ignore regexp="chrome/android/java/res/layout/homepage_editor.xml"/>
   </issue>
   <issue id="ButtonStyle" severity="Error">
-    <ignore regexp="remoting/android/host/res/layout/main.xml" />
+    <ignore regexp="remoting/android/host/res/layout/main.xml"/>
   </issue>
   <issue id="CommitPrefEdits">
-    <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/ticl/android2/channel/AndroidChannelPreferences.java" />
+    <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/ticl/android2/channel/AndroidChannelPreferences.java"/>
   </issue>
   <issue id="ContentDescription" severity="Error">
-    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml" />
-    <ignore regexp="chrome/android/java/res/layout/download_content.xml" />
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml"/>
+    <ignore regexp="chrome/android/java/res/layout/download_content.xml"/>
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="DefaultLocale">
-    <ignore regexp="clank" />
-    <ignore regexp="com/android/tv" />
-    <ignore regexp="org/chromium/chrome/browser/payments/PaymentRequestMetricsTest.class" />
-    <ignore regexp="org/chromium/chrome/browser/preferences/website/UsbChooserPreferences" />
-    <ignore regexp="org/chromium/chrome/browser/preferences/website/UsbDevicePreferences" />
-    <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/external/client/contrib/AndroidListenerState.java" />
+    <ignore regexp="clank"/>
+    <ignore regexp="com/android/tv"/>
+    <ignore regexp="org/chromium/chrome/browser/payments/PaymentRequestMetricsTest.class"/>
+    <ignore regexp="org/chromium/chrome/browser/preferences/website/UsbChooserPreferences"/>
+    <ignore regexp="org/chromium/chrome/browser/preferences/website/UsbDevicePreferences"/>
+    <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/external/client/contrib/AndroidListenerState.java"/>
+  </issue>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <issue id="Deprecated" severity="Error">
+    <ignore regexp="AndroidManifest.xml"/>
   </issue>
   <issue id="DrawAllocation">
-    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ContentViewRenderView.java" />
-    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/PopupZoomer.java" />
+    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ContentViewRenderView.java"/>
+    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/PopupZoomer.java"/>
   </issue>
   <issue id="ExportedContentProvider">
-    <ignore path="AndroidManifest.xml" />
+    <ignore path="AndroidManifest.xml"/>
   </issue>
   <issue id="ExportedService" severity="Error">
-    <ignore regexp="AndroidManifest.xml" />
+    <ignore regexp="AndroidManifest.xml"/>
+  </issue>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <issue id="GoogleAppIndexingUrlError" severity="Error">
+    <ignore regexp="AndroidManifest.xml"/>
+  </issue>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <issue id="GoogleAppIndexingWarning" severity="Error">
+    <ignore regexp="AndroidManifest.xml"/>
   </issue>
   <issue id="HandlerLeak">
     <ignore regexp="android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java" />
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/compositor/overlays/strip/StripLayoutHelper.java"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/gsa/GSAServiceClient.java"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/tab/Tab.java"/>
     <ignore regexp="chromecast/internal" />
     <ignore regexp="remoting/android/java/src/org/chromium/chromoting/TapGestureDetector.java" />
   </issue>
   <issue id="HardcodedDebugMode" severity="Fatal">
-    <ignore path="AndroidManifest.xml" />
+    <ignore path="AndroidManifest.xml"/>
   </issue>
   <issue id="HardcodedText" severity="Error">
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="remoting/android/host/res/layout/main.xml" />
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="remoting/android/host/res/layout/main.xml"/>
   </issue>
   <issue id="IconColors" severity="Error">
-    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-hdpi/notification_icon.png" />
-    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-mdpi/notification_icon.png" />
-    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xhdpi/notification_icon.png" />
-    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xxhdpi/notification_icon.png" />
-    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xxxhdpi/notification_icon.png" />
+    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-hdpi/notification_icon.png"/>
+    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-mdpi/notification_icon.png"/>
+    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xhdpi/notification_icon.png"/>
+    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xxhdpi/notification_icon.png"/>
+    <ignore regexp="tools/android/audio_focus_grabber/java/res/drawable-xxxhdpi/notification_icon.png"/>
   </issue>
   <issue id="IconDensities">
-    <!-- crbug.com/457918 is tracking missing assets -->
-    <ignore regexp="chrome/android/java/res/drawable-xxhdpi" />
-    <ignore regexp="chrome/android/java/res/drawable-xxxhdpi" />
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxhdpi" />
-    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxxhdpi" />
-    <ignore regexp="content/public/android/java/res/drawable-xxhdpi" />
-    <ignore regexp="content/public/android/java/res/drawable-xxxhdpi" />
-    <ignore regexp="ui/android/java/res/drawable-xxhdpi" />
-    <ignore regexp="ui/android/java/res/drawable-xxxhdpi" />
     <!-- The large assets below only include a few densities to reduce APK size. -->
-    <ignore regexp=": data_reduction_illustration.png, google_icon_sprite.png, physical_web_logo.png, physical_web_logo_anim1.png, physical_web_logo_anim2.png$" />
+    <ignore regexp=": data_reduction_illustration.png, google_icon_sprite.png, physical_web_logo.png, physical_web_logo_anim1.png, physical_web_logo_anim2.png$"/>
+    <!-- crbug.com/457918 is tracking missing assets -->
+    <ignore regexp="chrome/android/java/res/drawable-xxhdpi"/>
+    <ignore regexp="chrome/android/java/res/drawable-xxxhdpi"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxhdpi"/>
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxxhdpi"/>
+    <ignore regexp="content/public/android/java/res/drawable-xxhdpi"/>
+    <ignore regexp="content/public/android/java/res/drawable-xxxhdpi"/>
+    <ignore regexp="ui/android/java/res/drawable-xxhdpi"/>
+    <ignore regexp="ui/android/java/res/drawable-xxxhdpi"/>
   </issue>
   <issue id="IconDipSize">
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="google_icon_sprite.png.*" />
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="google_icon_sprite.png.*"/>
   </issue>
   <issue id="IconDuplicates" severity="Error">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="IconDuplicatesConfig" severity="Error">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="IconLauncherShape" severity="Error">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="IconLocation">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
     <!-- It is OK for content_shell_apk to have missing assets. -->
-    <ignore regexp="content/shell/android/java/res/" />
+    <ignore regexp="content/shell/android/java/res/"/>
     <!-- TODO(lambroslambrou) remove this once crbug.com/502030 is fixed. -->
-    <ignore regexp="remoting/android/java/res" />
+    <ignore regexp="remoting/android/java/res"/>
     <!-- Suppression for chrome/test/chromedriver/test/webview_shell/java/res/drawable/icon.png -->
-    <ignore regexp="res/drawable/icon.png" />
+    <ignore regexp="res/drawable/icon.png"/>
   </issue>
   <issue id="IconMissingDensityFolder">
     <!-- see crbug.com/542435 -->
-    <ignore regexp="android_webview/apk/java/res" />
-    <ignore regexp="android_webview/tools/system_webview_shell/apk/res" />
-    <ignore regexp="chrome/android/webapk/shell_apk/res" />
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="tools/android/push_apps_to_background/res" />
+    <ignore regexp="android_webview/apk/java/res"/>
+    <ignore regexp="android_webview/tools/system_webview_shell/apk/res"/>
+    <ignore regexp="chrome/android/webapk/shell_apk/res"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="tools/android/push_apps_to_background/res"/>
   </issue>
   <issue id="ImpliedQuantity" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd"/>
   </issue>
   <issue id="InconsistentArrays" severity="Error">
-    <ignore regexp="gen/android_webview/locale_paks.resources.zip/values/locale-paks.xml" />
-    <ignore regexp="gen/chrome/android/chrome_locale_paks.resources.zip/values/locale-paks.xml" />
+    <ignore regexp="gen/android_webview/locale_paks.resources.zip/values/locale-paks.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_locale_paks.resources.zip/values/locale-paks.xml"/>
   </issue>
-  <issue id="InconsistentLayout" severity="ignore" />
+  <issue id="InconsistentLayout" severity="ignore"/>
   <issue id="InefficientWeight" severity="Error">
-    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml" />
+    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml"/>
   </issue>
-  <issue id="InflateParams" severity="ignore" />
-  <issue id="InlinedApi" severity="ignore" />
+  <issue id="InflateParams" severity="ignore"/>
+  <issue id="InlinedApi" severity="ignore"/>
   <issue id="InvalidPackage" severity="Error">
     <ignore regexp="espresso/espresso_core_java.interface.jar"/>
   </issue>
   <issue id="LabelFor" severity="Error">
-    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml" />
+    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml"/>
   </issue>
-  <issue id="LintError" severity="Error" />
-  <issue id="LogConditional" severity="ignore" />
-  <issue id="LongLogTag" severity="ignore" />
-  <issue id="MissingApplicationIcon" severity="ignore" />
-  <issue id="MissingPermission" severity="ignore" />
+  <issue id="LintError" severity="Error"/>
+  <issue id="LogConditional" severity="ignore"/>
+  <issue id="LongLogTag" severity="ignore"/>
+  <issue id="MissingApplicationIcon" severity="ignore"/>
+  <issue id="MissingPermission" severity="ignore"/>
   <issue id="MissingPrefix" severity="Error">
-    <ignore regexp="chrome/android/java/res/layout/download_content.xml" />
+    <ignore regexp="chrome/android/java/res/layout/download_content.xml"/>
   </issue>
   <!--
     TODO(estevenson) remove this once translations are added for
     IDS_ACCESSIBILITY_TOOLBAR_BTN_TABSWITCHER_TOGGLE (http://crbug.com/635677)
   -->
   <issue id="MissingQuantity">
-    <ignore regexp="android_chrome_strings.xml" />
+    <ignore regexp="android_chrome_strings.xml"/>
   </issue>
-  <issue id="MissingRegistered" severity="ignore" />
+  <issue id="MissingRegistered" severity="ignore"/>
   <issue id="MissingSuperCall" severity="Error">
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/widget/selection/SelectionToolbar.java" />
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/widget/selection/SelectionToolbar.java"/>
   </issue>
   <issue id="MissingTranslation">
-    <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml" />
+    <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml"/>
     <!-- http://crbug.com/450548 -->
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="restriction_values.xml.*" />
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="restriction_values.xml.*"/>
   </issue>
   <issue id="MissingVersion">
-    <ignore path="AndroidManifest.xml" />
+    <ignore path="AndroidManifest.xml"/>
   </issue>
   <issue id="NewApi">
-    <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17" />
-    <ignore regexp="chrome/android/java/res/values-v17/styles.xml" />
-    <ignore regexp="chrome/android/java/res/drawable/downloads_big.xml" />
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="com/android/tv" />
-    <ignore regexp="com/android/webview/chromium/WebViewChromiumFactoryProvider.class" />
-    <ignore regexp="com/chrome/cloud/experimental/airspeed/BenchmarksTest.class" />
-    <ignore regexp="com/google/android/apps/cast" />
-    <ignore regexp="com/google/android/apps/mediashell" />
-    <ignore regexp="org/chromium/base/AnimationFrameTimeHistogram.*Recorder.class" />
-    <ignore regexp="org/chromium/base/JavaHandlerThread.class" />
-    <ignore regexp="org/chromium/base/SysUtils.class" />
-    <ignore regexp="org/chromium/chrome/browser/TtsPlatformImpl.class" />
-    <ignore regexp="org/chromium/chrome/browser/ntp/IncognitoNewTabPage.class" />
-    <ignore regexp="org/chromium/chrome/browser/ntp/NewTabPage.class" />
-    <ignore regexp="org/chromium/chromecast/base/CastSettingsManager.class" />
-    <ignore regexp="org/chromium/memconsumer/MemConsumer.*.class" />
-    <ignore regexp="org/chromium/memconsumer/ResidentService.class" />
-    <ignore regexp="org/chromium/mojo/bindings/ValidationTest.class" />
+    <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
+    <ignore regexp="chrome/android/java/res/drawable/downloads_big.xml"/>
+    <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="com/android/tv"/>
+    <ignore regexp="com/android/webview/chromium/ServiceWorkerControllerAdapter.class"/>
+    <ignore regexp="com/android/webview/chromium/ServiceWorkerSettingsAdapter.class"/>
+    <ignore regexp="com/android/webview/chromium/WebViewChromium.class"/>
+    <ignore regexp="com/android/webview/chromium/WebViewChromiumFactoryProvider.class"/>
+    <ignore regexp="com/chrome/cloud/experimental/airspeed/BenchmarksTest.class"/>
+    <ignore regexp="com/google/android/apps/cast"/>
+    <ignore regexp="com/google/android/apps/mediashell"/>
+    <ignore regexp="org/chromium/base/AnimationFrameTimeHistogram.*Recorder.class"/>
+    <ignore regexp="org/chromium/base/JavaHandlerThread.class"/>
+    <ignore regexp="org/chromium/base/SysUtils.class"/>
+    <ignore regexp="org/chromium/chrome/browser/TtsPlatformImpl.class"/>
+    <ignore regexp="org/chromium/chrome/browser/ntp/IncognitoNewTabPage.class"/>
+    <ignore regexp="org/chromium/chrome/browser/ntp/NewTabPage.class"/>
+    <ignore regexp="org/chromium/chromecast/base/CastSettingsManager.class"/>
+    <ignore regexp="org/chromium/memconsumer/MemConsumer.*.class"/>
+    <ignore regexp="org/chromium/memconsumer/ResidentService.class"/>
+    <ignore regexp="org/chromium/mojo/bindings/ValidationTest.class"/>
   </issue>
   <issue id="OldTargetApi">
-    <ignore path="AndroidManifest.xml" />
+    <ignore path="AndroidManifest.xml"/>
   </issue>
-  <issue id="Overdraw" severity="ignore" />
+  <issue id="Overdraw" severity="ignore"/>
   <issue id="PackageManagerGetSignatures">
-    <ignore regexp="chrome/android/webapk/libs/client/src/org/chromium/webapk/lib/client/WebApkValidator.java" />
+    <ignore regexp="chrome/android/webapk/libs/client/src/org/chromium/webapk/lib/client/WebApkValidator.java"/>
   </issue>
   <issue id="PluralsCandidate" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-en-rGB/android_chrome_strings.xml" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-en-rGB/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
-  <issue id="Recycle" severity="ignore" />
-  <issue id="Registered" severity="ignore" />
-  <issue id="RtlCompat" severity="ignore" />
-  <issue id="RtlEnabled" severity="ignore" />
-  <issue id="RtlSymmetry" severity="ignore" />
+  <issue id="Recycle" severity="ignore"/>
+  <issue id="Registered" severity="ignore"/>
+  <issue id="RtlCompat" severity="ignore"/>
+  <issue id="RtlEnabled" severity="ignore"/>
+  <issue id="RtlSymmetry" severity="ignore"/>
   <issue id="SdCardPath">
-    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/MediaResourceGetter.java" />
+    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/MediaResourceGetter.java"/>
   </issue>
-  <issue id="SetJavaScriptEnabled" severity="ignore" />
-  <issue id="SignatureOrSystemPermissions" severity="ignore" />
+  <issue id="SetJavaScriptEnabled" severity="ignore"/>
+  <issue id="SignatureOrSystemPermissions" severity="ignore"/>
   <issue id="SpUsage" severity="Error">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="StringFormatCount" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
   <issue id="StringFormatInvalid" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-da/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-da/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml"/>
   </issue>
   <issue id="TextFields" severity="Error">
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="TypographyDashes" severity="Error">
-    <ignore regexp="chrome/app/policy/android/values-v21/restriction_values.xml" />
+    <ignore regexp="chrome/app/policy/android/values-v21/restriction_values.xml"/>
   </issue>
   <issue id="Typos" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rPT/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tr/android_chrome_strings.xml" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rPT/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tr/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
-  <issue id="UnusedAttribute" severity="ignore" />
-  <issue id="UnusedIds" severity="ignore" />
+  <issue id="UnusedAttribute" severity="ignore"/>
+  <issue id="UnusedIds" severity="ignore"/>
   <issue id="UnusedQuantity" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-in/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ja/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ko/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-lt/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sk/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-th/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-vi/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml" />
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml" />
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-in/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ja/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-ko/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-lt/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sk/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-th/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-vi/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml"/>
   </issue>
   <issue id="UnusedResources">
-    <ignore regexp="android_ui_strings.xml" />
-    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/" />
-    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml" />
-    <ignore regexp="blimp/client/app/android/java/res/layout/text_input_popup.xml" />
-    <ignore regexp="blimp/client/app/android/java/res/layout/toolbar_popup_item.xml" />
-    <ignore regexp="blimp/client/app/android/java/res/values/dimens.xml" />
-    <ignore regexp="blimp/client/app/android/java/res/xml/about_blimp_preferences.xml" />
-    <ignore regexp="blimp/client/app/android/java/res/xml/blimp_preferences.xml" />
+    <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits.html"/>
+    <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits_css.css"/>
+    <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits_js.js"/>
+    <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/main.css"/>
+    <ignore regexp="android_ui_strings.xml"/>
+    <ignore regexp="android_webview/java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png"/>
+    <ignore regexp="android_webview/test/shell/res/raw/resource_file.html"/>
+    <ignore regexp="android_webview/test/shell/res/raw/resource_icon.png"/>
+    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
+    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_menu.png"/>
+    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_reload.png"/>
+    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/textbox.9.png"/>
+    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/web_input_background.9.png"/>
+    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/layout/debug_stats_overlay.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/layout/text_input_popup.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/layout/toolbar_popup_item.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/mipmap-hdpi/app_icon.png"/>
+    <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/values/colors.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/values/dimens.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/xml/about_blimp_preferences.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/xml/blimp_preferences.xml"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/account_management_incognito.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/amex_card.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/bubble_white.9.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon_amex.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/discover_card.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/generic_card.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_folder_white_24dp.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_settings.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_3d_blocked.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_autofill_cc.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_blocked_popups.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_camera.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_desktop_notifications.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_geolocation.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_microphone.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_midi.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_multiple_downloads.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_previews.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_protected_media_identifier.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_restore.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_screen_share.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_subresource_filtering.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/mc_card.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_bad.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_good.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_warning.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/permission_images.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/pr_generic.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/progress_bar_background_white.9.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_incognito.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_newtab.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/signin_promo_illustration.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/visa_card.png"/>
+    <ignore regexp="chrome/android/java/res/drawable-nodpi/missing.png"/>
+    <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <!--
         This file isn't used if the target SDK version is less than 24.
         TODO(estevenson) remove this and the conditional inclusion in
         AndroidManifest.xml after rolling to SDK 24.
     -->
-    <ignore regexp="chrome/android/java/res/xml/network_security_config.xml" />
-    <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml" />
-    <ignore regexp="chromecast/internal" />
-    <ignore regexp="clank" />
-    <ignore regexp="gen/android_webview/locale_paks.resources.zip/values/locale-paks.xml" />
-    <ignore regexp="gen/android_webview/strings_grd.resources.zip/values/android_webview_strings.xml" />
-    <ignore regexp="gen/blimp/client/blimp_strings_grd.resources.zip/values/android_blimp_strings.xml" />
-    <ignore regexp="gen/components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml" />
-    <ignore regexp="gen/remoting/resources/strings_java.resources.zip/values/remoting_strings.xml" />
-    <ignore regexp="remoting/android/java/res/layout/navigation_list_item.xml" />
+    <ignore regexp="chrome/android/java/res/xml/network_security_config.xml"/>
+    <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="clank"/>
+    <ignore regexp="content/shell/android/java/res/mipmap-hdpi/app_icon.png"/>
+    <ignore regexp="gen/android_webview/locale_paks.resources.zip/*"/>
+    <ignore regexp="gen/android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
+    <ignore regexp="gen/blimp/client/blimp_strings_grd.resources.zip/values/android_blimp_strings.xml"/>
+    <ignore regexp="gen/components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
+    <ignore regexp="gen/remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_cardboard.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_voice_input.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_in.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_out.png"/>
+    <ignore regexp="remoting/android/java/res/layout/navigation_list_item.xml"/>
+    <ignore regexp="remoting/android/java/res/mipmap-hdpi/logo_remote_desktop_launcher.png"/>
+    <ignore regexp="remoting/android/java/res/values-v17/styles.xml"/>
     <!-- Used by Android's policies system -->
-    <ignore regexp="restriction_values.xml" />
+    <ignore regexp="restriction_values.xml"/>
+    <ignore regexp="ui/android/java/res/drawable-hdpi/verify_checkmark.png"/>
   </issue>
   <issue id="UseCompoundDrawables">
-    <ignore regexp="chrome/android/java/res/layout/download_content.xml" />
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="chrome/android/java/res/layout/download_content.xml"/>
+    <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="UselessParent">
-    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml" />
-    <ignore regexp="tools/android/kerberos/SpnegoAuthenticator/res/layout/activity_account_authenticator.xml" />
-    <ignore regexp="chrome/android/java/res/layout/data_reduction_promo_screen.xml" />
-    <ignore regexp="chromecast/internal" />
+    <ignore regexp="android_webview/tools/system_webview_shell/apk/res/layout/activity_webview_browser.xml"/>
+    <ignore regexp="chrome/android/java/res/layout/data_reduction_promo_screen.xml"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="tools/android/kerberos/SpnegoAuthenticator/res/layout/activity_account_authenticator.xml"/>
   </issue>
   <issue id="UsesMinSdkAttributes" severity="Error">
-    <ignore regexp="AndroidManifest.xml" />
+    <ignore regexp="AndroidManifest.xml"/>
   </issue>
   <issue id="ValidFragment" severity="Error">
-    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/BlimpPreferencesTest.java" />
-    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/MockPreferences.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/BaseMediaRouteDialogManager.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteChooserDialogManager.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteControllerDialogManager.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/preferences/privacy/OtherFormsOfHistoryDialogFragment.java" />
-    <ignore regexp="media/capture/content/android/java/src/org/chromium/media/ScreenCapture.java" />
+    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/BlimpPreferencesTest.java"/>
+    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/MockPreferences.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/BaseMediaRouteDialogManager.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteChooserDialogManager.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteControllerDialogManager.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/preferences/privacy/OtherFormsOfHistoryDialogFragment.java"/>
+    <ignore regexp="media/capture/content/android/java/src/org/chromium/media/ScreenCapture.java"/>
   </issue>
-  <issue id="ViewConstructor" severity="ignore" />
-  <issue id="WrongCall" severity="ignore" />
+  <issue id="ViewConstructor" severity="ignore"/>
+  <issue id="WrongCall" severity="ignore"/>
   <issue id="WrongConstant">
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorView.java" />
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/signin/SigninAndSyncView.java" />
-    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ChildProcessConnectionImpl.java" />
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorView.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/signin/SigninAndSyncView.java"/>
+    <ignore regexp="content/public/android/java/src/org/chromium/content/browser/ChildProcessConnectionImpl.java"/>
   </issue>
 </lint>

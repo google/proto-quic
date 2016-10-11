@@ -13,6 +13,26 @@
 
 namespace {
 
+void ExpectParsedComponentEqual(const url::Component& a,
+                                const url::Component& b) {
+  EXPECT_EQ(a.begin, b.begin);
+  EXPECT_EQ(a.len, b.len);
+}
+
+void ExpectParsedUrlsEqual(const GURL& a, const GURL& b) {
+  EXPECT_EQ(a, b);
+  const url::Parsed& a_parsed = a.parsed_for_possibly_invalid_spec();
+  const url::Parsed& b_parsed = b.parsed_for_possibly_invalid_spec();
+  ExpectParsedComponentEqual(a_parsed.scheme, b_parsed.scheme);
+  ExpectParsedComponentEqual(a_parsed.username, b_parsed.username);
+  ExpectParsedComponentEqual(a_parsed.password, b_parsed.password);
+  ExpectParsedComponentEqual(a_parsed.host, b_parsed.host);
+  ExpectParsedComponentEqual(a_parsed.port, b_parsed.port);
+  ExpectParsedComponentEqual(a_parsed.path, b_parsed.path);
+  ExpectParsedComponentEqual(a_parsed.query, b_parsed.query);
+  ExpectParsedComponentEqual(a_parsed.ref, b_parsed.ref);
+}
+
 TEST(OriginTest, UniqueOriginComparison) {
   url::Origin unique_origin;
   EXPECT_EQ("", unique_origin.scheme());
@@ -38,6 +58,8 @@ TEST(OriginTest, UniqueOriginComparison) {
     EXPECT_FALSE(origin.IsSameOriginWith(origin));
     EXPECT_FALSE(unique_origin.IsSameOriginWith(origin));
     EXPECT_FALSE(origin.IsSameOriginWith(unique_origin));
+
+    ExpectParsedUrlsEqual(GURL(origin.Serialize()), origin.GetURL());
   }
 }
 
@@ -103,6 +125,8 @@ TEST(OriginTest, ConstructFromGURL) {
     EXPECT_TRUE(origin.IsSameOriginWith(origin));
     EXPECT_FALSE(different_origin.IsSameOriginWith(origin));
     EXPECT_FALSE(origin.IsSameOriginWith(different_origin));
+
+    ExpectParsedUrlsEqual(GURL(origin.Serialize()), origin.GetURL());
   }
 }
 
@@ -127,7 +151,10 @@ TEST(OriginTest, Serialization) {
     GURL url(test_case.url);
     EXPECT_TRUE(url.is_valid());
     url::Origin origin(url);
-    EXPECT_EQ(test_case.expected, origin.Serialize());
+    std::string serialized = origin.Serialize();
+    ExpectParsedUrlsEqual(GURL(serialized), origin.GetURL());
+
+    EXPECT_EQ(test_case.expected, serialized);
 
     // The '<<' operator should produce the same serialization as Serialize().
     std::stringstream out;
@@ -186,6 +213,8 @@ TEST(OriginTest, UnsafelyCreate) {
     EXPECT_EQ(test.port, origin.port());
     EXPECT_FALSE(origin.unique());
     EXPECT_TRUE(origin.IsSameOriginWith(origin));
+
+    ExpectParsedUrlsEqual(GURL(origin.Serialize()), origin.GetURL());
   }
 }
 
@@ -221,6 +250,8 @@ TEST(OriginTest, UnsafelyCreateUniqueOnInvalidInput) {
     EXPECT_EQ(0, origin.port());
     EXPECT_TRUE(origin.unique());
     EXPECT_FALSE(origin.IsSameOriginWith(origin));
+
+    ExpectParsedUrlsEqual(GURL(origin.Serialize()), origin.GetURL());
   }
 }
 
@@ -249,6 +280,8 @@ TEST(OriginTest, UnsafelyCreateUniqueViaEmbeddedNulls) {
     EXPECT_EQ(0, origin.port());
     EXPECT_TRUE(origin.unique());
     EXPECT_FALSE(origin.IsSameOriginWith(origin));
+
+    ExpectParsedUrlsEqual(GURL(origin.Serialize()), origin.GetURL());
   }
 }
 

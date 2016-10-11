@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "net/base/hash_value.h"
+#include "net/base/net_export.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/ocsp_revocation_status.h"

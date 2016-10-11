@@ -21,6 +21,7 @@
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 
 using base::TimeDelta;
 
@@ -505,7 +506,8 @@ bool ClientSocketPoolBaseHelper::AssignIdleSocketToRequest(
 
 // static
 void ClientSocketPoolBaseHelper::LogBoundConnectJobToRequest(
-    const NetLog::Source& connect_job_source, const Request& request) {
+    const NetLogSource& connect_job_source,
+    const Request& request) {
   request.net_log().AddEvent(NetLogEventType::SOCKET_POOL_BOUND_TO_CONNECT_JOB,
                              connect_job_source.ToEventParametersCallback());
 }

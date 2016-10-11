@@ -24,7 +24,7 @@
 #include "net/dns/dns_session.h"
 #include "net/dns/dns_test_util.h"
 #include "net/dns/dns_util.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/socket_test_util.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -33,6 +33,8 @@
 using net::test::IsOk;
 
 namespace net {
+
+class NetLog;
 
 namespace {
 
@@ -195,7 +197,7 @@ class TestSocketFactory : public MockClientSocketFactory {
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) override {
+      const NetLogSource& source) override {
     if (fail_next_socket_) {
       fail_next_socket_ = false;
       return std::unique_ptr<DatagramClientSocket>(

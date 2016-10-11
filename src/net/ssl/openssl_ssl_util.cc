@@ -198,7 +198,7 @@ int MapOpenSSLErrorWithDetails(int err,
   }
 }
 
-NetLog::ParametersCallback CreateNetLogOpenSSLErrorCallback(
+NetLogParametersCallback CreateNetLogOpenSSLErrorCallback(
     int net_error,
     int ssl_error,
     const OpenSSLErrorInfo& error_info) {

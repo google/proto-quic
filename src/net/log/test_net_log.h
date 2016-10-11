@@ -13,9 +13,13 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log_entry.h"
 
 namespace net {
+
+class NetLogCaptureMode;
+struct NetLogSource;
 
 // TestNetLog is NetLog subclass which records all NetLog events that occur and
 // their parameters.  It is intended for testing only, and is part of the
@@ -29,7 +33,7 @@ class TestNetLog : public NetLog {
 
   // Below methods are forwarded to test_net_log_observer_.
   void GetEntries(TestNetLogEntry::List* entry_list) const;
-  void GetEntriesForSource(Source source,
+  void GetEntriesForSource(NetLogSource source,
                            TestNetLogEntry::List* entry_list) const;
   size_t GetSize() const;
   void Clear();
@@ -65,7 +69,7 @@ class BoundTestNetLog {
   void GetEntries(TestNetLogEntry::List* entry_list) const;
 
   // Fills |entry_list| with all entries in the log from the specified Source.
-  void GetEntriesForSource(NetLog::Source source,
+  void GetEntriesForSource(NetLogSource source,
                            TestNetLogEntry::List* entry_list) const;
 
   // Returns number of entries in the log.

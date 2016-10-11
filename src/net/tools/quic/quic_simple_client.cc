@@ -12,6 +12,8 @@
 #include "net/base/net_errors.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_info.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "net/quic/chromium/quic_chromium_alarm_factory.h"
 #include "net/quic/chromium/quic_chromium_connection_helper.h"
 #include "net/quic/chromium/quic_chromium_packet_reader.h"
@@ -74,7 +76,7 @@ bool QuicSimpleClient::CreateUDPSocketAndBind(IPEndPoint server_address,
                                               int bind_to_port) {
   std::unique_ptr<UDPClientSocket> socket(
       new UDPClientSocket(DatagramSocket::DEFAULT_BIND, RandIntCallback(),
-                          &net_log_, NetLog::Source()));
+                          &net_log_, NetLogSource()));
 
   int address_family = server_address.GetSockAddrFamily();
   if (bind_to_address.size() != 0) {

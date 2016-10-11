@@ -14,7 +14,9 @@
 #include "base/json/json_reader.h"
 #include "base/values.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_entry.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_util.h"
 #include "net/url_request/url_request.h"
@@ -91,11 +93,11 @@ TEST_F(WriteToFileNetLogObserverTest, GeneratesValidJSONWithOneEvent) {
   logger->StartObserving(&net_log_, std::move(file), nullptr, nullptr);
 
   const int kDummyId = 1;
-  NetLog::Source source(NetLogSourceType::HTTP2_SESSION, kDummyId);
-  NetLog::EntryData entry_data(NetLogEventType::PROXY_SERVICE, source,
-                               NetLogEventPhase::BEGIN, base::TimeTicks::Now(),
-                               NULL);
-  NetLog::Entry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
+  NetLogSource source(NetLogSourceType::HTTP2_SESSION, kDummyId);
+  NetLogEntryData entry_data(NetLogEventType::PROXY_SERVICE, source,
+                             NetLogEventPhase::BEGIN, base::TimeTicks::Now(),
+                             NULL);
+  NetLogEntry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
   logger->OnAddEntry(entry);
   logger->StopObserving(nullptr);
   logger.reset();
@@ -122,11 +124,11 @@ TEST_F(WriteToFileNetLogObserverTest, GeneratesValidJSONWithMultipleEvents) {
   logger->StartObserving(&net_log_, std::move(file), nullptr, nullptr);
 
   const int kDummyId = 1;
-  NetLog::Source source(NetLogSourceType::HTTP2_SESSION, kDummyId);
-  NetLog::EntryData entry_data(NetLogEventType::PROXY_SERVICE, source,
-                               NetLogEventPhase::BEGIN, base::TimeTicks::Now(),
-                               NULL);
-  NetLog::Entry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
+  NetLogSource source(NetLogSourceType::HTTP2_SESSION, kDummyId);
+  NetLogEntryData entry_data(NetLogEventType::PROXY_SERVICE, source,
+                             NetLogEventPhase::BEGIN, base::TimeTicks::Now(),
+                             NULL);
+  NetLogEntry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
 
   // Add the entry multiple times.
   logger->OnAddEntry(entry);

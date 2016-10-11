@@ -21,7 +21,10 @@
 #include "net/dns/mojo_host_resolver_impl.h"
 #include "net/interfaces/host_resolver_service.mojom.h"
 #include "net/interfaces/proxy_resolver_service.mojom.h"
+#include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/mojo_proxy_resolver_factory.h"
 #include "net/proxy/mojo_proxy_type_converters.h"
 #include "net/proxy/proxy_info.h"
@@ -30,6 +33,7 @@
 #include "net/proxy/proxy_resolver_script_data.h"
 
 namespace net {
+
 namespace {
 
 std::unique_ptr<base::Value> NetLogErrorCallback(

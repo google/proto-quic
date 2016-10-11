@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 
-#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/test_net_log_entry.h"
 #include "testing/gtest/include/gtest/gtest.h"

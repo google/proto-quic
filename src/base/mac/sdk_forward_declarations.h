@@ -192,12 +192,6 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @property(readonly, nonatomic) NSUUID* identifier;
 @end
 
-@interface NSVisualEffectView (MavericksSDK)
-- (void)setState:(NSVisualEffectState)state;
-@end
-
-@class NSVisualEffectView;
-
 @class NSUserActivity;
 
 #endif  // MAC_OS_X_VERSION_10_9
@@ -234,6 +228,12 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @interface NSProcessInfo (YosemiteSDK)
 @property(readonly) NSOperatingSystemVersion operatingSystemVersion;
 @end
+
+@interface NSVisualEffectView (YosemiteSDK)
+- (void)setState:(NSVisualEffectState)state;
+@end
+
+@class NSVisualEffectView;
 
 #endif  // MAC_OS_X_VERSION_10_10
 

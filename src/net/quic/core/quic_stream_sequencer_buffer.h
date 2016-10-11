@@ -67,6 +67,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_protocol.h"
 
 namespace net {

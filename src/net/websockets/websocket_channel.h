@@ -82,16 +82,17 @@ class NET_EXPORT WebSocketChannel {
   // caller to ensure that they have sufficient send quota to send this data,
   // otherwise the connection will be closed without sending. |fin| indicates
   // the last frame in a message, equivalent to "FIN" as specified in section
-  // 5.2 of RFC6455. |data| is the "Payload Data". If |op_code| is kOpCodeText,
-  // or it is kOpCodeContinuation and the type the message is Text, then |data|
-  // must be a chunk of a valid UTF-8 message, however there is no requirement
-  // for |data| to be split on character boundaries. Calling SendFrame may
-  // result in synchronous calls to |event_interface_| which may result in this
-  // object being deleted. In that case, the return value will be
-  // CHANNEL_DELETED.
+  // 5.2 of RFC6455. |buffer->data()| is the "Payload Data". If |op_code| is
+  // kOpCodeText, or it is kOpCodeContinuation and the type the message is
+  // Text, then |buffer->data()| must be a chunk of a valid UTF-8 message,
+  // however there is no requirement for |buffer->data()| to be split on
+  // character boundaries. Calling SendFrame may result in synchronous calls to
+  // |event_interface_| which may result in this object being deleted. In that
+  // case, the return value will be CHANNEL_DELETED.
   ChannelState SendFrame(bool fin,
                          WebSocketFrameHeader::OpCode op_code,
-                         const std::vector<char>& data);
+                         scoped_refptr<IOBuffer> buffer,
+                         size_t buffer_size);
 
   // Sends |quota| units of flow control to the remote side. If the underlying
   // transport has a concept of |quota|, then it permits the remote server to
@@ -159,7 +160,7 @@ class NET_EXPORT WebSocketChannel {
    public:
     PendingReceivedFrame(bool final,
                          WebSocketFrameHeader::OpCode opcode,
-                         const scoped_refptr<IOBuffer>& data,
+                         scoped_refptr<IOBuffer> data,
                          uint64_t offset,
                          uint64_t size);
     PendingReceivedFrame(const PendingReceivedFrame& other);
@@ -286,7 +287,7 @@ class NET_EXPORT WebSocketChannel {
   // HandleFrame() method.
   ChannelState HandleFrameByState(const WebSocketFrameHeader::OpCode opcode,
                                   bool final,
-                                  const scoped_refptr<IOBuffer>& data_buffer,
+                                  scoped_refptr<IOBuffer> data_buffer,
                                   uint64_t size) WARN_UNUSED_RESULT;
 
   // Forwards a received data frame to the renderer, if connected. If
@@ -294,7 +295,7 @@ class NET_EXPORT WebSocketChannel {
   // will fail the channel. Also checks the UTF-8 validity of text frames.
   ChannelState HandleDataFrame(WebSocketFrameHeader::OpCode opcode,
                                bool final,
-                               const scoped_refptr<IOBuffer>& data_buffer,
+                               scoped_refptr<IOBuffer> data_buffer,
                                uint64_t size) WARN_UNUSED_RESULT;
 
   // Handles an incoming close frame with |code| and |reason|.
@@ -309,10 +310,10 @@ class NET_EXPORT WebSocketChannel {
   // when the current write finishes. |fin| and |op_code| are defined as for
   // SendFrame() above, except that |op_code| may also be a control frame
   // opcode.
-  ChannelState SendFrameFromIOBuffer(bool fin,
-                                     WebSocketFrameHeader::OpCode op_code,
-                                     const scoped_refptr<IOBuffer>& buffer,
-                                     uint64_t size) WARN_UNUSED_RESULT;
+  ChannelState SendFrameInternal(bool fin,
+                                 WebSocketFrameHeader::OpCode op_code,
+                                 scoped_refptr<IOBuffer> buffer,
+                                 uint64_t buffer_size) WARN_UNUSED_RESULT;
 
   // Performs the "Fail the WebSocket Connection" operation as defined in
   // RFC6455. A NotifyFailure message is sent to the renderer with |message|.
@@ -340,7 +341,7 @@ class NET_EXPORT WebSocketChannel {
   // is 1, or the supplied code is not permitted to be sent over the network,
   // then false is returned and |message| is set to an appropriate console
   // message.
-  bool ParseClose(const scoped_refptr<IOBuffer>& buffer,
+  bool ParseClose(scoped_refptr<IOBuffer> buffer,
                   uint64_t size,
                   uint16_t* code,
                   std::string* reason,

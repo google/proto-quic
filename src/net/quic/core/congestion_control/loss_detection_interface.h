@@ -7,6 +7,7 @@
 #ifndef NET_QUIC_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
 #define NET_QUIC_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
 
+#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_time.h"

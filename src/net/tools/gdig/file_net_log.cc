@@ -11,6 +11,7 @@
 #include "base/json/json_string_value_serializer.h"
 #include "base/logging.h"
 #include "base/values.h"
+#include "net/log/net_log_entry.h"
 
 namespace net {
 
@@ -22,7 +23,7 @@ FileNetLogObserver::FileNetLogObserver(FILE* destination)
 FileNetLogObserver::~FileNetLogObserver() {
 }
 
-void FileNetLogObserver::OnAddEntry(const net::NetLog::Entry& entry) {
+void FileNetLogObserver::OnAddEntry(const net::NetLogEntry& entry) {
   // Only NetLogWithSources without a NetLog should have an invalid source.
   DCHECK(entry.source().IsValid());
 

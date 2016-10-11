@@ -11,7 +11,6 @@
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
 #include "net/dns/mojo_host_type_converters.h"
-#include "net/log/net_log.h"
 
 namespace net {
 namespace {

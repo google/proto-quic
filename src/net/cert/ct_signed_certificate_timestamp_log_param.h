@@ -6,10 +6,15 @@
 #define NET_CERT_CT_SIGNED_CERTIFICATE_TIMESTAMP_LOG_PARAM_H_
 
 #include <memory>
+#include <string>
 
-#include "net/log/net_log.h"
+namespace base {
+class Value;
+}
 
 namespace net {
+
+class NetLogCaptureMode;
 
 namespace ct {
 struct CTVerifyResult;

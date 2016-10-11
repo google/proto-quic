@@ -134,13 +134,8 @@ declare_args() {
 
   # Detect overflow/underflow for global objects.
   #
-  # Android build relies on -Wl,--gc-sections removing unreachable code.
-  # ASan instrumentation for globals inhibits this and results in a
-  # library with unresolvable relocations.
-  # TODO(eugenis): find a way to reenable this.
-  #
   # Mac: http://crbug.com/352073
-  asan_globals = !is_android && !is_mac
+  asan_globals = !is_mac
 }
 
 if (use_afl && sanitizer_coverage_flags == "") {

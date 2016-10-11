@@ -26,6 +26,8 @@
 #include "net/dns/dns_socket_pool.h"
 #include "net/dns/dns_util.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/stream_socket.h"
 #include "net/udp/datagram_client_socket.h"
 
@@ -271,7 +273,7 @@ base::TimeDelta DnsSession::NextTimeout(unsigned server_index, int attempt) {
 // Allocate a socket, already connected to the server address.
 std::unique_ptr<DnsSession::SocketLease> DnsSession::AllocateSocket(
     unsigned server_index,
-    const NetLog::Source& source) {
+    const NetLogSource& source) {
   std::unique_ptr<DatagramClientSocket> socket;
 
   socket = socket_pool_->AllocateSocket(server_index);
@@ -287,7 +289,7 @@ std::unique_ptr<DnsSession::SocketLease> DnsSession::AllocateSocket(
 
 std::unique_ptr<StreamSocket> DnsSession::CreateTCPSocket(
     unsigned server_index,
-    const NetLog::Source& source) {
+    const NetLogSource& source) {
   return socket_pool_->CreateTCPSocket(server_index, source);
 }
 

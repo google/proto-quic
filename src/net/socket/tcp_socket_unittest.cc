@@ -20,6 +20,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/base/test_completion_callback.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/test/gtest_util.h"
@@ -67,7 +68,7 @@ const int kListenBacklog = 5;
 
 class TCPSocketTest : public PlatformTest {
  protected:
-  TCPSocketTest() : socket_(NULL, NULL, NetLog::Source()) {}
+  TCPSocketTest() : socket_(NULL, NULL, NetLogSource()) {}
 
   void SetUpListenIPv4() {
     ASSERT_THAT(socket_.Open(ADDRESS_FAMILY_IPV4), IsOk());
@@ -101,7 +102,7 @@ class TCPSocketTest : public PlatformTest {
 
     TestCompletionCallback connect_callback;
     TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                      NetLog::Source());
+                                      NetLogSource());
     connecting_socket.Connect(connect_callback.callback());
 
     EXPECT_THAT(connect_callback.WaitForResult(), IsOk());
@@ -142,7 +143,7 @@ class TCPSocketTest : public PlatformTest {
         new TestSocketPerformanceWatcher(should_notify_updated_rtt));
     TestSocketPerformanceWatcher* watcher_ptr = watcher.get();
 
-    TCPSocket connecting_socket(std::move(watcher), NULL, NetLog::Source());
+    TCPSocket connecting_socket(std::move(watcher), NULL, NetLogSource());
     connecting_socket.SetTickClockForTesting(std::move(tick_clock));
 
     int result = connecting_socket.Open(ADDRESS_FAMILY_IPV4);
@@ -210,7 +211,7 @@ TEST_F(TCPSocketTest, Accept) {
   // TODO(yzshen): Switch to use TCPSocket when it supports client socket
   // operations.
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback accept_callback;
@@ -269,12 +270,12 @@ TEST_F(TCPSocketTest, Accept2Connections) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback connect_callback2;
   TCPClientSocket connecting_socket2(local_address_list(), NULL, NULL,
-                                     NetLog::Source());
+                                     NetLogSource());
   connecting_socket2.Connect(connect_callback2.callback());
 
   EXPECT_THAT(accept_callback.WaitForResult(), IsOk());
@@ -309,7 +310,7 @@ TEST_F(TCPSocketTest, AcceptIPv6) {
 
   TestCompletionCallback connect_callback;
   TCPClientSocket connecting_socket(local_address_list(), NULL, NULL,
-                                    NetLog::Source());
+                                    NetLogSource());
   connecting_socket.Connect(connect_callback.callback());
 
   TestCompletionCallback accept_callback;
@@ -333,7 +334,7 @@ TEST_F(TCPSocketTest, ReadWrite) {
   ASSERT_NO_FATAL_FAILURE(SetUpListenIPv4());
 
   TestCompletionCallback connect_callback;
-  TCPSocket connecting_socket(NULL, NULL, NetLog::Source());
+  TCPSocket connecting_socket(NULL, NULL, NetLogSource());
   int result = connecting_socket.Open(ADDRESS_FAMILY_IPV4);
   ASSERT_THAT(result, IsOk());
   connecting_socket.Connect(local_address_, connect_callback.callback());

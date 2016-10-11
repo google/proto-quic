@@ -66,7 +66,7 @@ TEST(NetLogTest, Basic) {
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ(NetLogEventType::CANCELLED, entries[0].type);
   EXPECT_EQ(NetLogSourceType::NONE, entries[0].source.type);
-  EXPECT_NE(NetLog::Source::kInvalidId, entries[0].source.id);
+  EXPECT_NE(NetLogSource::kInvalidId, entries[0].source.id);
   EXPECT_EQ(NetLogEventPhase::NONE, entries[0].phase);
   EXPECT_GE(base::TimeTicks::Now(), entries[0].time);
   EXPECT_FALSE(entries[0].params);
@@ -95,7 +95,7 @@ TEST(NetLogTest, CaptureModes) {
     ASSERT_EQ(1u, entries.size());
     EXPECT_EQ(NetLogEventType::SOCKET_ALIVE, entries[0].type);
     EXPECT_EQ(NetLogSourceType::NONE, entries[0].source.type);
-    EXPECT_NE(NetLog::Source::kInvalidId, entries[0].source.id);
+    EXPECT_NE(NetLogSource::kInvalidId, entries[0].source.id);
     EXPECT_EQ(NetLogEventPhase::NONE, entries[0].phase);
     EXPECT_GE(base::TimeTicks::Now(), entries[0].time);
 
@@ -117,7 +117,7 @@ class CountingObserver : public NetLog::ThreadSafeObserver {
       net_log()->DeprecatedRemoveObserver(this);
   }
 
-  void OnAddEntry(const NetLog::Entry& entry) override { ++count_; }
+  void OnAddEntry(const NetLogEntry& entry) override { ++count_; }
 
   int count() const { return count_; }
 
@@ -134,7 +134,7 @@ class LoggingObserver : public NetLog::ThreadSafeObserver {
       net_log()->DeprecatedRemoveObserver(this);
   }
 
-  void OnAddEntry(const NetLog::Entry& entry) override {
+  void OnAddEntry(const NetLogEntry& entry) override {
     std::unique_ptr<base::DictionaryValue> dict =
         base::DictionaryValue::From(entry.ToValue());
     ASSERT_TRUE(dict);

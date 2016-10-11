@@ -7,10 +7,13 @@
 
 #include <memory>
 
-#include "net/log/net_log.h"
+namespace base {
+class Value;
+}
 
 namespace net {
 
+class NetLogCaptureMode;
 class X509Certificate;
 
 // Creates NetLog parameter to describe an X509Certificate.

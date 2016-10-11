@@ -16,11 +16,12 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/address_list.h"
 #include "net/base/auth.h"
+#include "net/base/net_export.h"
 #include "net/dns/host_resolver.h"
 #include "net/ftp/ftp_ctrl_response_buffer.h"
 #include "net/ftp/ftp_response_info.h"
 #include "net/ftp/ftp_transaction.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 
 namespace net {
 

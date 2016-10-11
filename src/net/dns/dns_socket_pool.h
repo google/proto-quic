@@ -11,7 +11,6 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/base/rand_callback.h"
-#include "net/log/net_log.h"
 
 namespace net {
 
@@ -19,6 +18,7 @@ class ClientSocketFactory;
 class DatagramClientSocket;
 class IPEndPoint;
 class NetLog;
+struct NetLogSource;
 class StreamSocket;
 
 // A DnsSocketPool is an abstraction layer around a ClientSocketFactory that
@@ -67,7 +67,7 @@ class NET_EXPORT_PRIVATE DnsSocketPool {
   // Creates a StreamSocket from the factory for a transaction over TCP. These
   // sockets are not pooled.
   std::unique_ptr<StreamSocket> CreateTCPSocket(unsigned server_index,
-                                                const NetLog::Source& source);
+                                                const NetLogSource& source);
 
  protected:
   DnsSocketPool(ClientSocketFactory* socket_factory,

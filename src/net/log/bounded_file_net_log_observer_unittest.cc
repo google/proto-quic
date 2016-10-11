@@ -19,8 +19,10 @@
 #include "base/strings/string_util.h"
 #include "base/values.h"
 #include "net/base/test_completion_callback.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_entry.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_util.h"
 #include "net/url_request/url_request.h"
@@ -95,14 +97,14 @@ class BoundedFileNetLogObserverTest : public testing::Test {
     // Get base size of event.
     const int kDummyId = 0;
     std::string message = "";
-    NetLog::ParametersCallback callback =
+    NetLogParametersCallback callback =
         NetLog::StringCallback("message", &message);
-    NetLog::Source source(NetLogSourceType::HTTP2_SESSION, kDummyId);
-    NetLog::EntryData base_entry_data(NetLogEventType::PAC_JAVASCRIPT_ERROR,
-                                      source, NetLogEventPhase::BEGIN,
-                                      base::TimeTicks::Now(), &callback);
-    NetLog::Entry base_entry(&base_entry_data,
-                             NetLogCaptureMode::IncludeSocketBytes());
+    NetLogSource source(NetLogSourceType::HTTP2_SESSION, kDummyId);
+    NetLogEntryData base_entry_data(NetLogEventType::PAC_JAVASCRIPT_ERROR,
+                                    source, NetLogEventPhase::BEGIN,
+                                    base::TimeTicks::Now(), &callback);
+    NetLogEntry base_entry(&base_entry_data,
+                           NetLogCaptureMode::IncludeSocketBytes());
     std::unique_ptr<base::Value> value(base_entry.ToValue());
     std::string json;
     base::JSONWriter::Write(*value, &json);
@@ -122,17 +124,17 @@ class BoundedFileNetLogObserverTest : public testing::Test {
     EXPECT_GE(entry_size, base_entry_size);
 
     for (int i = 0; i < num_entries_to_add; i++) {
-      source = NetLog::Source(NetLogSourceType::HTTP2_SESSION, i);
+      source = NetLogSource(NetLogSourceType::HTTP2_SESSION, i);
       std::string id = std::to_string(i);
 
       // String size accounts for the number of digits in id so that all events
       // are the same size.
       message = std::string(entry_size - base_entry_size - id.size() + 1, 'x');
       callback = NetLog::StringCallback("message", &message);
-      NetLog::EntryData entry_data(NetLogEventType::PAC_JAVASCRIPT_ERROR,
-                                   source, NetLogEventPhase::BEGIN,
-                                   base::TimeTicks::Now(), &callback);
-      NetLog::Entry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
+      NetLogEntryData entry_data(NetLogEventType::PAC_JAVASCRIPT_ERROR, source,
+                                 NetLogEventPhase::BEGIN,
+                                 base::TimeTicks::Now(), &callback);
+      NetLogEntry entry(&entry_data, NetLogCaptureMode::IncludeSocketBytes());
       logger_->OnAddEntry(entry);
     }
   }

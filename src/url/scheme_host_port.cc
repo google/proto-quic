@@ -13,6 +13,7 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/strings/string_number_conversions.h"
 #include "url/gurl.h"
+#include "url/third_party/mozilla/url_parse.h"
 #include "url/url_canon.h"
 #include "url/url_canon_stdstring.h"
 #include "url/url_constants.h"
@@ -142,12 +143,46 @@ bool SchemeHostPort::IsInvalid() const {
 }
 
 std::string SchemeHostPort::Serialize() const {
+  // Null checking for |parsed| in SerializeInternal is probably slower than
+  // just filling it in and discarding it here.
+  url::Parsed parsed;
+  return SerializeInternal(&parsed);
+}
+
+GURL SchemeHostPort::GetURL() const {
+  url::Parsed parsed;
+  std::string serialized = SerializeInternal(&parsed);
+
+  // If the serialized string is passed to GURL for parsing, it will append an
+  // empty path "/". Add that here. Note: per RFC 6454 we cannot do this for
+  // normal Origin serialization.
+  DCHECK(!parsed.path.is_valid());
+  parsed.path = Component(serialized.length(), 1);
+  serialized.append("/");
+  return GURL(std::move(serialized), parsed, true);
+}
+
+bool SchemeHostPort::Equals(const SchemeHostPort& other) const {
+  return port_ == other.port() && scheme_ == other.scheme() &&
+         host_ == other.host();
+}
+
+bool SchemeHostPort::operator<(const SchemeHostPort& other) const {
+  return std::tie(port_, scheme_, host_) <
+         std::tie(other.port_, other.scheme_, other.host_);
+}
+
+std::string SchemeHostPort::SerializeInternal(url::Parsed* parsed) const {
   std::string result;
   if (IsInvalid())
     return result;
 
+  parsed->scheme = Component(0, scheme_.length());
   result.append(scheme_);
+
   result.append(kStandardSchemeSeparator);
+
+  parsed->host = Component(result.length(), host_.length());
   result.append(host_);
 
   if (port_ == 0)
@@ -161,20 +196,12 @@ std::string SchemeHostPort::Serialize() const {
     return result;
   if (port_ != default_port) {
     result.push_back(':');
-    result.append(base::UintToString(port_));
+    std::string port(base::UintToString(port_));
+    parsed->port = Component(result.length(), port.length());
+    result.append(std::move(port));
   }
 
   return result;
-}
-
-bool SchemeHostPort::Equals(const SchemeHostPort& other) const {
-  return port_ == other.port() && scheme_ == other.scheme() &&
-         host_ == other.host();
-}
-
-bool SchemeHostPort::operator<(const SchemeHostPort& other) const {
-  return std::tie(port_, scheme_, host_) <
-         std::tie(other.port_, other.scheme_, other.host_);
 }
 
 }  // namespace url

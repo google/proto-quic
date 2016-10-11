@@ -22,7 +22,7 @@ class NET_EXPORT TraceNetLogObserver
   ~TraceNetLogObserver() override;
 
   // net::NetLog::ThreadSafeObserver implementation:
-  void OnAddEntry(const NetLog::Entry& entry) override;
+  void OnAddEntry(const NetLogEntry& entry) override;
 
   // Start to watch for TraceLog enable and disable events.
   // This can't be called if already watching for events.

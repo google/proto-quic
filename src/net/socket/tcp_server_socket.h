@@ -10,15 +10,17 @@
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
 #include "net/socket/server_socket.h"
 #include "net/socket/tcp_socket.h"
 
 namespace net {
 
+class NetLog;
+struct NetLogSource;
+
 class NET_EXPORT TCPServerSocket : public ServerSocket {
  public:
-  TCPServerSocket(NetLog* net_log, const NetLog::Source& source);
+  TCPServerSocket(NetLog* net_log, const NetLogSource& source);
   ~TCPServerSocket() override;
 
   // net::ServerSocket implementation.

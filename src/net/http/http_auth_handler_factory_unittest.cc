@@ -12,6 +12,7 @@
 #include "net/http/http_auth_scheme.h"
 #include "net/http/mock_allow_http_auth_preferences.h"
 #include "net/http/url_security_manager.h"
+#include "net/log/net_log_with_source.h"
 #include "net/ssl/ssl_info.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"

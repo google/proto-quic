@@ -10,7 +10,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "net/base/net_errors.h"
-#include "net/log/net_log.h"
 #include "net/proxy/mojo_proxy_resolver_v8_tracing_bindings.h"
 #include "net/proxy/mojo_proxy_type_converters.h"
 #include "net/proxy/proxy_info.h"

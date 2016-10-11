@@ -15,6 +15,7 @@
 #include "net/http/http_basic_stream.h"
 #include "net/http/http_stream_factory_impl_request.h"
 #include "net/http/http_stream_factory_test_util.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/mock_proxy_resolver.h"
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/proxy/proxy_info.h"

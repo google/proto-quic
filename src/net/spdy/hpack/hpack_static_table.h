@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 
+#include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_header_table.h"
 
 namespace net {

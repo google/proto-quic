@@ -24,7 +24,9 @@
 #include "net/base/network_activity_monitor.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/sockaddr_storage.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_net_log_params.h"
 #include "net/socket/socket_posix.h"
@@ -141,7 +143,7 @@ void CheckSupportAndMaybeEnableTCPFastOpen(bool user_enabled) {
 TCPSocketPosix::TCPSocketPosix(
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
-    const NetLog::Source& source)
+    const NetLogSource& source)
     : socket_performance_watcher_(std::move(socket_performance_watcher)),
       tick_clock_(new base::DefaultTickClock()),
       rtt_notifications_minimum_interval_(base::TimeDelta::FromSeconds(1)),

@@ -10,7 +10,6 @@
 
 #include <string>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_protocol.h"
 
 // Version and Crypto tags are written to the wire with a big-endian

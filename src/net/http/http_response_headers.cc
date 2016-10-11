@@ -28,6 +28,7 @@
 #include "net/http/http_byte_range.h"
 #include "net/http/http_log_util.h"
 #include "net/http/http_util.h"
+#include "net/log/net_log_capture_mode.h"
 
 using base::StringPiece;
 using base::Time;

@@ -31,6 +31,10 @@ class Switch {
     return &ports_[port_number - 1];
   }
 
+  inline const Queue* port_queue(SwitchPortNumber port_number) {
+    return ports_[port_number - 1].queue();
+  }
+
  private:
   class Port : public Endpoint, public UnconstrainedPortInterface {
    public:
@@ -52,7 +56,8 @@ class Switch {
 
     void Act() override;
 
-    inline bool connected() { return connected_; }
+    inline bool connected() const { return connected_; }
+    inline const Queue* queue() const { return &queue_; }
 
    private:
     Switch* parent_;

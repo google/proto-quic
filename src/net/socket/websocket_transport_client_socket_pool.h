@@ -17,10 +17,14 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_base.h"
 #include "net/socket/transport_client_socket_pool.h"
+
+namespace base {
+class DictionaryValue;
+}
 
 namespace net {
 

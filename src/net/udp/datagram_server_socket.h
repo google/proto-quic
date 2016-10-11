@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "net/base/completion_callback.h"
+#include "net/base/net_export.h"
 #include "net/udp/datagram_socket.h"
 #include "net/udp/diff_serv_code_point.h"
 

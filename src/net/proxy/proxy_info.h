@@ -10,13 +10,14 @@
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_list.h"
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_server.h"
 
 namespace net {
+
+class NetLogWithSource;
 
 // This object holds proxy information returned by ResolveProxy.
 class NET_EXPORT ProxyInfo {

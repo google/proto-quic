@@ -13,6 +13,7 @@
 
 #include "base/callback.h"
 #include "net/base/ip_endpoint.h"
+#include "net/base/net_export.h"
 #include "net/dns/dns_query.h"
 #include "net/dns/dns_response.h"
 #include "net/dns/record_parsed.h"

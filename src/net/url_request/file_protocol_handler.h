@@ -8,6 +8,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "net/base/net_export.h"
 #include "net/url_request/url_request_job_factory.h"
 
 class GURL;

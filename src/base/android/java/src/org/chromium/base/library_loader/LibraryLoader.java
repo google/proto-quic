@@ -333,12 +333,6 @@ public class LibraryLoader {
         }
     }
 
-    // Returns whether the given split name is that of the ABI split.
-    private static boolean isAbiSplit(String splitName) {
-        // The split name for the ABI split is manually set in the build rules.
-        return splitName.startsWith("abi_");
-    }
-
     // The WebView requires the Command Line to be switched over before
     // initialization is done. This is okay in the WebView's case since the
     // JNI is already loaded by this point.

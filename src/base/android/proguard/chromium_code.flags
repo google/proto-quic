@@ -34,6 +34,9 @@
 -keepclasseswithmembers class * {
   @org.chromium.base.annotations.UsedByReflection <methods>;
 }
+-keepclasseswithmembers class * {
+  @org.chromium.base.annotations.UsedByReflection <fields>;
+}
 -keepclasseswithmembers,includedescriptorclasses class * {
   native <methods>;
 }

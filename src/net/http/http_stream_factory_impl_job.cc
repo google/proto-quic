@@ -35,8 +35,9 @@
 #include "net/http/http_server_properties.h"
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_factory_impl_request.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/quic/chromium/quic_http_stream.h"
 #include "net/socket/client_socket_handle.h"
@@ -116,7 +117,7 @@ void RecordChannelIDKeyMatch(SSLClientSocket* ssl_socket,
 
 // Returns parameters associated with the start of a HTTP stream job.
 std::unique_ptr<base::Value> NetLogHttpStreamJobCallback(
-    const NetLog::Source& source,
+    const NetLogSource& source,
     const GURL* original_url,
     const GURL* url,
     const AlternativeService* alternative_service,

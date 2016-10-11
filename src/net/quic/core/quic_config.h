@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_time.h"
 

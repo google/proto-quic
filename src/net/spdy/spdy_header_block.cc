@@ -14,6 +14,7 @@
 #include "base/values.h"
 #include "net/base/arena.h"
 #include "net/http/http_log_util.h"
+#include "net/log/net_log_capture_mode.h"
 
 using base::StringPiece;
 using std::dec;

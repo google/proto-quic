@@ -14,7 +14,7 @@
 #include "base/macros.h"
 #include "net/base/sdch_manager.h"
 #include "net/filter/filter.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "url/gurl.h"
 
 namespace net {

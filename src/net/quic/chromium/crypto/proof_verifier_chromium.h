@@ -16,7 +16,7 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/ct_verify_result.h"
 #include "net/cert/x509_certificate.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/quic/core/crypto/proof_verifier.h"
 
 namespace net {

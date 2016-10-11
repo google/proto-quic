@@ -447,8 +447,6 @@ class SmoothnessToughTextureUploadCases(_Smoothness):
     return 'smoothness.tough_texture_upload_cases'
 
 
-# http://crbug.com/647413
-@benchmark.Disabled('android')
 class SmoothnessToughAdCases(_Smoothness):
   """Measures rendering statistics while displaying advertisements."""
   page_set = page_sets.SyntheticToughAdCasesPageSet

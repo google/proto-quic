@@ -17,6 +17,9 @@ from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 import tombstones
 
+
+_TAG = 'test_runner_py'
+
 TIMEOUT_ANNOTATIONS = [
   ('Manual', 10 * 60 * 60),
   ('IntegrationTest', 30 * 60),
@@ -255,12 +258,18 @@ class LocalDeviceInstrumentationTestRun(
         add=flags.add, remove=flags.remove)
 
     try:
+      device.RunShellCommand(
+          ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
+          check_return=True)
       time_ms = lambda: int(time.time() * 1e3)
       start_ms = time_ms()
       output = device.StartInstrumentation(
           target, raw=True, extras=extras, timeout=timeout, retries=0)
-      duration_ms = time_ms() - start_ms
     finally:
+      device.RunShellCommand(
+          ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
+          check_return=True)
+      duration_ms = time_ms() - start_ms
       if flags:
         self._flag_changers[str(device)].Restore()
       if test_timeout_scale:

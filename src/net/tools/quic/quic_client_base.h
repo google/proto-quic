@@ -13,7 +13,6 @@
 
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
-#include "net/log/net_log.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/quic_crypto_client_config.h"
 #include "net/quic/core/quic_alarm_factory.h"

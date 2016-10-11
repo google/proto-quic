@@ -21,6 +21,7 @@
 #include "net/base/test_proxy_delegate.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/log/test_net_log_util.h"
@@ -1611,9 +1612,9 @@ TEST_F(SpdySessionTest, Initialize) {
   EXPECT_LT(0, pos);
 
   TestNetLogEntry entry = entries[pos];
-  NetLog::Source socket_source;
-  EXPECT_TRUE(NetLog::Source::FromEventParameters(entry.params.get(),
-                                                  &socket_source));
+  NetLogSource socket_source;
+  EXPECT_TRUE(
+      NetLogSource::FromEventParameters(entry.params.get(), &socket_source));
   EXPECT_TRUE(socket_source.IsValid());
   EXPECT_NE(log_.bound().source().id, socket_source.id);
 }

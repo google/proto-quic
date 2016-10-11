@@ -17,7 +17,6 @@
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "net/base/address_list.h"
-#include "net/log/net_log.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socket_performance_watcher.h"
@@ -27,6 +26,7 @@ namespace net {
 
 class ClientSocketHandle;
 class IPEndPoint;
+class NetLog;
 
 // Make sure |handle| sets load times correctly when it has been assigned a
 // reused socket. Uses gtest expectations.
@@ -77,14 +77,14 @@ class MockTransportClientSocketFactory : public ClientSocketFactory {
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) override;
+      const NetLogSource& source) override;
 
   std::unique_ptr<StreamSocket> CreateTransportClientSocket(
       const AddressList& addresses,
       std::unique_ptr<
           SocketPerformanceWatcher> /* socket_performance_watcher */,
       NetLog* /* net_log */,
-      const NetLog::Source& /* source */) override;
+      const NetLogSource& /* source */) override;
 
   std::unique_ptr<SSLClientSocket> CreateSSLClientSocket(
       std::unique_ptr<ClientSocketHandle> transport_socket,

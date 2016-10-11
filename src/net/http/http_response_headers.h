@@ -15,20 +15,22 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
+#include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/http/http_version.h"
-#include "net/log/net_log.h"
 
 namespace base {
 class Pickle;
 class PickleIterator;
 class Time;
 class TimeDelta;
+class Value;
 }
 
 namespace net {
 
 class HttpByteRange;
+class NetLogCaptureMode;
 
 enum ValidationType {
   VALIDATION_NONE,          // The resource is fresh.

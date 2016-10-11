@@ -151,9 +151,7 @@ class JSONStringValue : public Value {
     *out_value = UTF8ToUTF16(string_piece_);
     return true;
   }
-  Value* DeepCopy() const override {
-    return new StringValue(string_piece_.as_string());
-  }
+  Value* DeepCopy() const override { return new StringValue(string_piece_); }
   bool Equals(const Value* other) const override {
     std::string other_string;
     return other->IsType(TYPE_STRING) && other->GetAsString(&other_string) &&

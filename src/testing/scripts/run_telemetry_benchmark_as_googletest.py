@@ -71,20 +71,25 @@ def main():
         '--output-dir', tempfile_dir,
         '--output-format=json'
       ], env=env)
-      tempfile_name = os.path.join(tempfile_dir, 'results.json')
-      with open(tempfile_name) as f:
-        results = json.load(f)
-      for value in results['per_page_values']:
-        if value['type'] == 'failure':
-          failures.append(results['pages'][str(value['page_id'])]['name'])
-      valid = bool(rc == 0 or failures)
-      # If we have also output chartjson read it in and return it.
+            # If we have also output chartjson read it in and return it.
       # results-chart.json is the file name output by telemetry when the
       # chartjson output format is included
       if chartjson_results_present:
         chart_tempfile_name = os.path.join(tempfile_dir, 'results-chart.json')
         with open(chart_tempfile_name) as f:
           chartresults = json.load(f)
+      # We need to get chartjson results first as this may be a disabled
+      # benchmark that was run
+      if (not chartjson_results_present or
+         (chartjson_results_present and chartresults.get('enabled', True))):
+        tempfile_name = os.path.join(tempfile_dir, 'results.json')
+        with open(tempfile_name) as f:
+          results = json.load(f)
+        for value in results['per_page_values']:
+          if value['type'] == 'failure':
+            failures.append(results['pages'][str(value['page_id'])]['name'])
+        valid = bool(rc == 0 or failures)
+
     except Exception:
       traceback.print_exc()
       valid = False

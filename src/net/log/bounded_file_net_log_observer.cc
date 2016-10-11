@@ -17,6 +17,7 @@
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
+#include "net/log/net_log_entry.h"
 #include "net/log/net_log_util.h"
 #include "net/url_request/url_request_context.h"
 
@@ -248,7 +249,7 @@ void BoundedFileNetLogObserver::StopObserving(
   net_log()->DeprecatedRemoveObserver(this);
 }
 
-void BoundedFileNetLogObserver::OnAddEntry(const NetLog::Entry& entry) {
+void BoundedFileNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
   std::unique_ptr<std::string> json(new std::string);
 
   // If |entry| cannot be converted to proper JSON, ignore it.

@@ -7,6 +7,7 @@
 
 #include "base/compiler_specific.h"
 #include "net/base/net_errors.h"
+#include "net/base/net_export.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_config_service.h"
 

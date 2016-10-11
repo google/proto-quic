@@ -12,6 +12,7 @@
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_base.h"
@@ -20,6 +21,8 @@
 #include "net/socket/transport_client_socket_pool.h"
 
 namespace net {
+
+class NetLog;
 
 SOCKSSocketParams::SOCKSSocketParams(
     const scoped_refptr<TransportSocketParams>& proxy_server,

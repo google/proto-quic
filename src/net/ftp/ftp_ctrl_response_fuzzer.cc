@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "net/ftp/ftp_ctrl_response_buffer.h"
-#include "net/log/net_log.h"
 
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

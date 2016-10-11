@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_config.h"

@@ -52,7 +52,7 @@ constexpr size_t kNumTasksPostedPerThread = 150;
 constexpr TimeDelta kReclaimTimeForDetachTests =
     TimeDelta::FromMilliseconds(500);
 constexpr TimeDelta kExtraTimeToWaitForDetach =
-    TimeDelta::FromMilliseconds(200);
+    TimeDelta::FromSeconds(1);
 
 using IORestriction = SchedulerWorkerPoolParams::IORestriction;
 

@@ -29,7 +29,11 @@
 #include "net/http/http_server_properties.h"
 #include "net/http/http_transaction_factory.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
+#include "net/log/net_log_entry.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_service.h"
@@ -519,15 +523,15 @@ NET_EXPORT void CreateNetLogEntriesForActiveObjects(
 
   // Create fake events.
   for (auto* request : requests) {
-    NetLog::ParametersCallback callback =
+    NetLogParametersCallback callback =
         base::Bind(&GetRequestStateAsValue, base::Unretained(request));
 
     // Note that passing the hardcoded NetLogCaptureMode::Default() below is
     // fine, since GetRequestStateAsValue() ignores the capture mode.
-    NetLog::EntryData entry_data(
+    NetLogEntryData entry_data(
         NetLogEventType::REQUEST_ALIVE, request->net_log().source(),
         NetLogEventPhase::BEGIN, request->creation_time(), &callback);
-    NetLog::Entry entry(&entry_data, NetLogCaptureMode::Default());
+    NetLogEntry entry(&entry_data, NetLogCaptureMode::Default());
     observer->OnAddEntry(entry);
   }
 }

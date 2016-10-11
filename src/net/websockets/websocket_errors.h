@@ -6,6 +6,7 @@
 #define NET_WEBSOCKETS_WEBSOCKET_ERRORS_H_
 
 #include "net/base/net_errors.h"
+#include "net/base/net_export.h"
 
 namespace net {
 

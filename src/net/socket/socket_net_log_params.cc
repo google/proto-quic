@@ -10,6 +10,7 @@
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/ip_endpoint.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace net {
 
@@ -55,22 +56,22 @@ std::unique_ptr<base::Value> NetLogSourceAddressCallback(
 
 }  // namespace
 
-NetLog::ParametersCallback CreateNetLogSocketErrorCallback(int net_error,
-                                                           int os_error) {
+NetLogParametersCallback CreateNetLogSocketErrorCallback(int net_error,
+                                                         int os_error) {
   return base::Bind(&NetLogSocketErrorCallback, net_error, os_error);
 }
 
-NetLog::ParametersCallback CreateNetLogHostPortPairCallback(
+NetLogParametersCallback CreateNetLogHostPortPairCallback(
     const HostPortPair* host_and_port) {
   return base::Bind(&NetLogHostPortPairCallback, host_and_port);
 }
 
-NetLog::ParametersCallback CreateNetLogIPEndPointCallback(
+NetLogParametersCallback CreateNetLogIPEndPointCallback(
     const IPEndPoint* address) {
   return base::Bind(&NetLogIPEndPointCallback, address);
 }
 
-NetLog::ParametersCallback CreateNetLogSourceAddressCallback(
+NetLogParametersCallback CreateNetLogSourceAddressCallback(
     const struct sockaddr* net_address,
     socklen_t address_len) {
   return base::Bind(&NetLogSourceAddressCallback, net_address, address_len);

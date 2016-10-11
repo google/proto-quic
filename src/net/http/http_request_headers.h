@@ -10,15 +10,21 @@
 #ifndef NET_HTTP_HTTP_REQUEST_HEADERS_H_
 #define NET_HTTP_HTTP_REQUEST_HEADERS_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
+
+namespace base {
+class Value;
+}
 
 namespace net {
+
+class NetLogCaptureMode;
 
 class NET_EXPORT HttpRequestHeaders {
  public:

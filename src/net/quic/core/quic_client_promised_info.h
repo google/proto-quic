@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <string>
 
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_client_session_base.h"

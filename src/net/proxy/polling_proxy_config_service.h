@@ -9,6 +9,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/time/time.h"
+#include "net/base/net_export.h"
 #include "net/proxy/proxy_config_service.h"
 
 namespace net {

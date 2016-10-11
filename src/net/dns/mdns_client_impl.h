@@ -20,6 +20,7 @@
 #include "base/observer_list.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
+#include "net/base/net_export.h"
 #include "net/dns/mdns_cache.h"
 #include "net/dns/mdns_client.h"
 #include "net/udp/datagram_server_socket.h"

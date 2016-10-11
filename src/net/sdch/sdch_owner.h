@@ -12,8 +12,10 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/memory/memory_coordinator_client.h"
 #include "base/memory/memory_pressure_listener.h"
 #include "base/memory/ref_counted.h"
+#include "net/base/net_export.h"
 #include "net/base/sdch_observer.h"
 #include "net/url_request/sdch_dictionary_fetcher.h"
 
@@ -24,6 +26,7 @@ class Clock;
 }
 
 namespace net {
+class NetLogWithSource;
 class SdchManager;
 class URLRequestContext;
 
@@ -31,7 +34,8 @@ class URLRequestContext;
 // exposes interface for setting SDCH policy.  It should be instantiated by
 // the net/ embedder.
 // TODO(rdsmith): Implement dictionary prioritization.
-class NET_EXPORT SdchOwner : public SdchObserver {
+class NET_EXPORT SdchOwner : public SdchObserver,
+                             public base::MemoryCoordinatorClient {
  public:
   // Abstact storage interface for storing settings that allows the embedder
   // to provide the appropriate storage backend.
@@ -156,8 +160,14 @@ class NET_EXPORT SdchOwner : public SdchObserver {
     DictionaryInfo& operator=(const DictionaryInfo& rhs) = default;
   };
 
+  // base::MemoryCoordinatorClient implementation:
+  void OnMemoryStateChange(base::MemoryState state) override;
+
   void OnMemoryPressure(
       base::MemoryPressureListener::MemoryPressureLevel level);
+
+  // Clears data to save memory usage.
+  void ClearData();
 
   // Schedule loading of all dictionaries described in |persisted_info|.
   // Returns false and does not schedule a load if |persisted_info| has an

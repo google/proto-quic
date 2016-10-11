@@ -1,5 +1,5 @@
 {
-  "WebKit Linux": {
+  "WebKit Linux Precise": {
     "gtest_tests": [
       {
         "swarming": {
@@ -37,7 +37,7 @@
       }
     ]
   },
-  "WebKit Linux (dbg)": {
+  "WebKit Linux Precise (dbg)": {
     "gtest_tests": [
       {
         "swarming": {
@@ -75,7 +75,7 @@
       }
     ]
   },
-  "WebKit Linux Leak": {
+  "WebKit Linux Precise Leak": {
     "gtest_tests": [
       {
         "swarming": {

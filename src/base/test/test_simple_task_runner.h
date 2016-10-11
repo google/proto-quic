@@ -51,10 +51,11 @@ class TestSimpleTaskRunner : public SingleThreadTaskRunner {
 
   bool RunsTasksOnCurrentThread() const override;
 
-  std::deque<TestPendingTask> GetPendingTasks() const;
+  std::deque<TestPendingTask> TakePendingTasks();
   size_t NumPendingTasks() const;
   bool HasPendingTask() const;
   base::TimeDelta NextPendingTaskDelay() const;
+  base::TimeDelta FinalPendingTaskDelay() const;
 
   // Clears the queue of pending tasks without running them.
   void ClearPendingTasks();

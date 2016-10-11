@@ -52,8 +52,13 @@ std::string GetSelfInvocationCommand(const BuildSettings* build_settings) {
   PathService::Get(base::FILE_EXE, &executable);
 
   base::CommandLine cmdline(executable.NormalizePathSeparatorsTo('/'));
+
+  // Use "." for the directory to generate. When Ninja runs the command it
+  // will have the build directory as the current one. Coding it explicitly
+  // will cause everything to get confused if the user renames the directory.
   cmdline.AppendArg("gen");
-  cmdline.AppendArg(build_settings->build_dir().value());
+  cmdline.AppendArg(".");
+
   cmdline.AppendSwitchPath(std::string("--") + switches::kRoot,
                            build_settings->root_path());
   // Successful automatic invocations shouldn't print output.

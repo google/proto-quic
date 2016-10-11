@@ -13,6 +13,7 @@
 #include "net/base/test_completion_callback.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/http/transport_security_state.h"
+#include "net/log/net_log_source.h"
 #include "net/log/test_net_log.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/chromium/quic_chromium_alarm_factory.h"
@@ -104,7 +105,7 @@ class QuicChromiumClientSessionTest
     std::unique_ptr<DatagramClientSocket> socket =
         socket_factory_.CreateDatagramClientSocket(DatagramSocket::DEFAULT_BIND,
                                                    base::Bind(&base::RandInt),
-                                                   &net_log_, NetLog::Source());
+                                                   &net_log_, NetLogSource());
     socket->Connect(kIpEndPoint);
     QuicChromiumPacketWriter* writer =
         new net::QuicChromiumPacketWriter(socket.get());
@@ -413,7 +414,7 @@ TEST_P(QuicChromiumClientSessionTest, MigrateToSocket) {
   std::unique_ptr<DatagramClientSocket> new_socket =
       socket_factory_.CreateDatagramClientSocket(DatagramSocket::DEFAULT_BIND,
                                                  base::Bind(&base::RandInt),
-                                                 &net_log_, NetLog::Source());
+                                                 &net_log_, NetLogSource());
   EXPECT_THAT(new_socket->Connect(kIpEndPoint), IsOk());
 
   // Create reader and writer.
@@ -463,7 +464,7 @@ TEST_P(QuicChromiumClientSessionTest, MigrateToSocketMaxReaders) {
     std::unique_ptr<DatagramClientSocket> new_socket =
         socket_factory_.CreateDatagramClientSocket(DatagramSocket::DEFAULT_BIND,
                                                    base::Bind(&base::RandInt),
-                                                   &net_log_, NetLog::Source());
+                                                   &net_log_, NetLogSource());
     EXPECT_THAT(new_socket->Connect(kIpEndPoint), IsOk());
 
     // Create reader and writer.
@@ -524,7 +525,7 @@ TEST_P(QuicChromiumClientSessionTest, MigrateToSocketReadError) {
   std::unique_ptr<DatagramClientSocket> new_socket =
       socket_factory_.CreateDatagramClientSocket(DatagramSocket::DEFAULT_BIND,
                                                  base::Bind(&base::RandInt),
-                                                 &net_log_, NetLog::Source());
+                                                 &net_log_, NetLogSource());
   EXPECT_THAT(new_socket->Connect(kIpEndPoint), IsOk());
 
   // Create reader and writer.

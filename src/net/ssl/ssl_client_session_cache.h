@@ -14,6 +14,7 @@
 #include "base/bind.h"
 #include "base/containers/mru_cache.h"
 #include "base/macros.h"
+#include "base/memory/memory_coordinator_client.h"
 #include "base/memory/memory_pressure_monitor.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_checker.h"
@@ -27,7 +28,7 @@ class Clock;
 
 namespace net {
 
-class NET_EXPORT SSLClientSessionCache {
+class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
  public:
   struct Config {
     // The maximum number of entries in the cache.
@@ -39,7 +40,7 @@ class NET_EXPORT SSLClientSessionCache {
   };
 
   explicit SSLClientSessionCache(const Config& config);
-  ~SSLClientSessionCache();
+  ~SSLClientSessionCache() override;
 
   size_t size() const;
 
@@ -69,6 +70,9 @@ class NET_EXPORT SSLClientSessionCache {
 
   using CacheEntryMap =
       base::HashingMRUCache<std::string, std::unique_ptr<CacheEntry>>;
+
+  // base::MemoryCoordinatorClient implementation:
+  void OnMemoryStateChange(base::MemoryState state) override;
 
   // Returns true if |entry| is expired as of |now|.
   bool IsExpired(CacheEntry* entry, const base::Time& now);

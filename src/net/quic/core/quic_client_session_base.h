@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_spdy_session.h"
 

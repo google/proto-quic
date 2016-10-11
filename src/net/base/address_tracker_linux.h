@@ -23,6 +23,7 @@
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_checker.h"
 #include "net/base/ip_address.h"
+#include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 
 namespace net {

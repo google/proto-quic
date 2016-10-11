@@ -35,7 +35,9 @@
 #include "net/dns/host_cache.h"
 #include "net/dns/host_resolver_impl.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/tools/gdig/file_net_log.h"
 
 #if defined(OS_MACOSX)

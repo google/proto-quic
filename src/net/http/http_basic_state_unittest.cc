@@ -8,6 +8,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_request_info.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

@@ -8,6 +8,7 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "base/values.h"
+#include "net/log/net_log_capture_mode.h"
 #include "url/gurl.h"
 
 namespace net {

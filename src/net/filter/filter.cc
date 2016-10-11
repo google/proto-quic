@@ -32,6 +32,7 @@
 #include "net/filter/gzip_filter.h"
 #include "net/filter/sdch_filter.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/url_request/url_request_context.h"
 #include "url/gurl.h"
 

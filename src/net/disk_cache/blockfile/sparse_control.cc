@@ -22,7 +22,9 @@
 #include "net/disk_cache/blockfile/entry_impl.h"
 #include "net/disk_cache/blockfile/file.h"
 #include "net/disk_cache/net_log_parameters.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_with_source.h"
 
 using base::Time;
 

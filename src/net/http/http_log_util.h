@@ -9,7 +9,6 @@
 
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
 #include "net/spdy/spdy_header_block.h"
 
 namespace base {
@@ -17,6 +16,8 @@ class ListValue;
 }  // namespace base
 
 namespace net {
+
+class NetLogCaptureMode;
 
 // Given an HTTP header |header| with value |value|, returns the elided version
 // of the header value at |log_level|.

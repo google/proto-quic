@@ -8,12 +8,14 @@
 # authentication. Outputs for automated tests are stored in
 # net/data/ssl/certificates, but may be re-generated for manual testing.
 #
-# This script generates two chains of test client certificates:
+# This script generates several chains of test client certificates:
 #
 #   1. A (end-entity) -> B -> C (self-signed root)
 #   2. D (end-entity) -> E -> C (self-signed root)
+#   3. F (end-entity) -> E -> C (self-signed root)
+#   4. G (end-entity, P-256) -> E -> C (self-signed root)
 #
-# In which A, B, C, D, and E all have distinct keypairs. Both client
+# In which the certificates all have distinct keypairs. The client
 # certificates share the same root, but are issued by different
 # intermediates. The names of these intermediates are hardcoded within
 # unit tests, and thus should not be changed.
@@ -41,6 +43,8 @@ for i in A B C D E F
 do
   try openssl genrsa -out out/$i.key 2048
 done
+
+try openssl ecparam -name prime256v1 -genkey -noout -out out/G.key
 
 echo Generate the C CSR
 COMMON_NAME="C Root CA" \
@@ -104,7 +108,7 @@ COMMON_NAME="C CA" \
     -config client-certs.cnf
 
 echo Generate the leaf certs
-for id in A D F
+for id in A D F G
 do
   COMMON_NAME="Client Cert $id" \
   ID=$id \
@@ -154,11 +158,23 @@ COMMON_NAME="E CA" \
     -out out/F.pem \
     -config client-certs.cnf
 
+echo E signs G
+COMMON_NAME="E CA" \
+  CA_DIR=out \
+  ID=E \
+  try openssl ca \
+    -batch \
+    -extensions user_cert \
+    -in out/G.csr \
+    -out out/G.pem \
+    -config client-certs.cnf
+
 echo Package the client certs and private keys into PKCS12 files
 # This is done for easily importing all of the certs needed for clients.
 try /bin/sh -c "cat out/A.pem out/A.key out/B.pem out/C.pem > out/A-chain.pem"
 try /bin/sh -c "cat out/D.pem out/D.key out/E.pem out/C.pem > out/D-chain.pem"
 try /bin/sh -c "cat out/F.pem out/F.key out/E.pem out/C.pem > out/F-chain.pem"
+try /bin/sh -c "cat out/G.pem out/G.key out/E.pem out/C.pem > out/G-chain.pem"
 
 try openssl pkcs12 \
   -in out/A-chain.pem \
@@ -178,6 +194,12 @@ try openssl pkcs12 \
   -export \
   -passout pass:chrome
 
+try openssl pkcs12 \
+  -in out/G-chain.pem \
+  -out client_4.p12 \
+  -export \
+  -passout pass:chrome
+
 echo Package the client certs for unit tests
 try cp out/A.pem ../certificates/client_1.pem
 try cp out/A.key ../certificates/client_1.key
@@ -193,3 +215,10 @@ try cp out/F.pem ../certificates/client_3.pem
 try cp out/F.key ../certificates/client_3.key
 try cp out/F.pk8 ../certificates/client_3.pk8
 try cp out/E.pem ../certificates/client_3_ca.pem
+
+try cp out/G.pem ../certificates/client_4.pem
+try cp out/G.key ../certificates/client_4.key
+try cp out/G.pk8 ../certificates/client_4.pk8
+try cp out/E.pem ../certificates/client_4_ca.pem
+
+try cp out/C.pem ../certificates/client_root_ca.pem

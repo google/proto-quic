@@ -23,6 +23,7 @@
 
 #include "base/logging.h"
 #include "net/base/net_errors.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/udp/datagram_client_socket.h"
 
@@ -269,7 +270,7 @@ void AddressSorterPosix::Sort(const AddressList& list,
     std::unique_ptr<DatagramClientSocket> socket(
         socket_factory_->CreateDatagramClientSocket(
             DatagramSocket::DEFAULT_BIND, RandIntCallback(), NULL /* NetLog */,
-            NetLog::Source()));
+            NetLogSource()));
 
     // Even though no packets are sent, cannot use port 0 in Connect.
     IPEndPoint dest(info->address, 80 /* port */);

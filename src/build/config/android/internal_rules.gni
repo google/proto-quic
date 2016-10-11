@@ -275,13 +275,6 @@ template("write_build_config") {
           rebase_path(invoker.r_text, root_build_dir),
         ]
       }
-      if (defined(invoker.is_locale_resource) && invoker.is_locale_resource) {
-        args += [ "--is-locale-resource" ]
-      }
-      if (defined(invoker.has_alternative_locale_resource) &&
-          invoker.has_alternative_locale_resource) {
-        args += [ "--has-alternative-locale-resource" ]
-      }
     }
 
     if (is_android_resources && defined(invoker.resource_dirs)) {

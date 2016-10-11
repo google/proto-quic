@@ -7,43 +7,14 @@
 #include <utility>
 
 #include "base/bind.h"
-#include "base/debug/alias.h"
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/time/time.h"
 #include "base/values.h"
-#include "net/base/net_errors.h"
 
 namespace net {
 
 namespace {
-
-// Returns parameters for logging data transferred events. At a minimum includes
-// the number of bytes transferred. If the capture mode allows logging byte
-// contents and |byte_count| > 0, then will include the actual bytes. The
-// bytes are hex-encoded, since base::StringValue only supports UTF-8.
-std::unique_ptr<base::Value> BytesTransferredCallback(
-    int byte_count,
-    const char* bytes,
-    NetLogCaptureMode capture_mode) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->SetInteger("byte_count", byte_count);
-  if (capture_mode.include_socket_bytes() && byte_count > 0)
-    dict->SetString("hex_encoded_bytes", base::HexEncode(bytes, byte_count));
-  return std::move(dict);
-}
-
-std::unique_ptr<base::Value> SourceEventParametersCallback(
-    const NetLog::Source source,
-    NetLogCaptureMode /* capture_mode */) {
-  if (!source.IsValid())
-    return std::unique_ptr<base::Value>();
-  std::unique_ptr<base::DictionaryValue> event_params(
-      new base::DictionaryValue());
-  source.AddToEventParameters(event_params.get());
-  return std::move(event_params);
-}
 
 std::unique_ptr<base::Value> NetLogBoolCallback(
     const char* name,
@@ -107,106 +78,6 @@ std::unique_ptr<base::Value> NetLogString16Callback(
 
 }  // namespace
 
-// LoadTimingInfo requires this be 0.
-const uint32_t NetLog::Source::kInvalidId = 0;
-
-NetLog::Source::Source() : type(NetLogSourceType::NONE), id(kInvalidId) {}
-
-NetLog::Source::Source(NetLogSourceType type, uint32_t id)
-    : type(type), id(id) {}
-
-bool NetLog::Source::IsValid() const {
-  return id != kInvalidId;
-}
-
-void NetLog::Source::AddToEventParameters(
-    base::DictionaryValue* event_params) const {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->SetInteger("type", static_cast<int>(type));
-  dict->SetInteger("id", static_cast<int>(id));
-  event_params->Set("source_dependency", std::move(dict));
-}
-
-NetLog::ParametersCallback NetLog::Source::ToEventParametersCallback() const {
-  return base::Bind(&SourceEventParametersCallback, *this);
-}
-
-// static
-bool NetLog::Source::FromEventParameters(base::Value* event_params,
-                                         Source* source) {
-  base::DictionaryValue* dict = NULL;
-  base::DictionaryValue* source_dict = NULL;
-  int source_id = -1;
-  int source_type = static_cast<int>(NetLogSourceType::COUNT);
-  if (!event_params || !event_params->GetAsDictionary(&dict) ||
-      !dict->GetDictionary("source_dependency", &source_dict) ||
-      !source_dict->GetInteger("id", &source_id) ||
-      !source_dict->GetInteger("type", &source_type)) {
-    *source = Source();
-    return false;
-  }
-
-  DCHECK_GE(source_id, 0);
-  DCHECK_LT(source_type, static_cast<int>(NetLogSourceType::COUNT));
-  *source = Source(static_cast<NetLogSourceType>(source_type), source_id);
-  return true;
-}
-
-std::unique_ptr<base::Value> NetLog::Entry::ToValue() const {
-  std::unique_ptr<base::DictionaryValue> entry_dict(
-      new base::DictionaryValue());
-
-  entry_dict->SetString("time", TickCountToString(data_->time));
-
-  // Set the entry source.
-  std::unique_ptr<base::DictionaryValue> source_dict(
-      new base::DictionaryValue());
-  source_dict->SetInteger("id", data_->source.id);
-  source_dict->SetInteger("type", static_cast<int>(data_->source.type));
-  entry_dict->Set("source", std::move(source_dict));
-
-  // Set the event info.
-  entry_dict->SetInteger("type", static_cast<int>(data_->type));
-  entry_dict->SetInteger("phase", static_cast<int>(data_->phase));
-
-  // Set the event-specific parameters.
-  if (data_->parameters_callback) {
-    std::unique_ptr<base::Value> value(
-        data_->parameters_callback->Run(capture_mode_));
-    if (value)
-      entry_dict->Set("params", std::move(value));
-  }
-
-  return std::move(entry_dict);
-}
-
-std::unique_ptr<base::Value> NetLog::Entry::ParametersToValue() const {
-  if (data_->parameters_callback)
-    return data_->parameters_callback->Run(capture_mode_);
-  return nullptr;
-}
-
-NetLog::EntryData::EntryData(NetLogEventType type,
-                             Source source,
-                             NetLogEventPhase phase,
-                             base::TimeTicks time,
-                             const ParametersCallback* parameters_callback)
-    : type(type),
-      source(source),
-      phase(phase),
-      time(time),
-      parameters_callback(parameters_callback) {}
-
-NetLog::EntryData::~EntryData() {
-}
-
-NetLog::Entry::Entry(const EntryData* data, NetLogCaptureMode capture_mode)
-    : data_(data), capture_mode_(capture_mode) {
-}
-
-NetLog::Entry::~Entry() {
-}
-
 NetLog::ThreadSafeObserver::ThreadSafeObserver() : net_log_(NULL) {
 }
 
@@ -226,8 +97,9 @@ NetLog* NetLog::ThreadSafeObserver::net_log() const {
   return net_log_;
 }
 
-void NetLog::ThreadSafeObserver::OnAddEntryData(const EntryData& entry_data) {
-  OnAddEntry(Entry(&entry_data, capture_mode()));
+void NetLog::ThreadSafeObserver::OnAddEntryData(
+    const NetLogEntryData& entry_data) {
+  OnAddEntry(NetLogEntry(&entry_data, capture_mode()));
 }
 
 NetLog::NetLog() : last_id_(0), is_capturing_(0) {
@@ -237,14 +109,14 @@ NetLog::~NetLog() {
 }
 
 void NetLog::AddGlobalEntry(NetLogEventType type) {
-  AddEntry(type, Source(NetLogSourceType::NONE, NextID()),
+  AddEntry(type, NetLogSource(NetLogSourceType::NONE, NextID()),
            NetLogEventPhase::NONE, NULL);
 }
 
 void NetLog::AddGlobalEntry(
     NetLogEventType type,
-    const NetLog::ParametersCallback& parameters_callback) {
-  AddEntry(type, Source(NetLogSourceType::NONE, NextID()),
+    const NetLogParametersCallback& parameters_callback) {
+  AddEntry(type, NetLogSource(NetLogSourceType::NONE, NextID()),
            NetLogEventPhase::NONE, &parameters_callback);
 }
 
@@ -360,159 +232,54 @@ const char* NetLog::EventPhaseToString(NetLogEventPhase phase) {
 }
 
 // static
-NetLog::ParametersCallback NetLog::BoolCallback(const char* name, bool value) {
+NetLogParametersCallback NetLog::BoolCallback(const char* name, bool value) {
   return base::Bind(&NetLogBoolCallback, name, value);
 }
 
 // static
-NetLog::ParametersCallback NetLog::IntCallback(const char* name, int value) {
+NetLogParametersCallback NetLog::IntCallback(const char* name, int value) {
   return base::Bind(&NetLogIntCallback, name, value);
 }
 
 // static
-NetLog::ParametersCallback NetLog::Int64Callback(const char* name,
-                                                 int64_t value) {
+NetLogParametersCallback NetLog::Int64Callback(const char* name,
+                                               int64_t value) {
   return base::Bind(&NetLogInt64Callback, name, value);
 }
 
 // static
-NetLog::ParametersCallback NetLog::StringCallback(const char* name,
-                                                  const std::string* value) {
+NetLogParametersCallback NetLog::StringCallback(const char* name,
+                                                const std::string* value) {
   DCHECK(value);
   return base::Bind(&NetLogStringCallback, name, value);
 }
 
 // static
-NetLog::ParametersCallback NetLog::StringCallback(const char* name,
-                                                  const char* value) {
+NetLogParametersCallback NetLog::StringCallback(const char* name,
+                                                const char* value) {
   DCHECK(value);
   return base::Bind(&NetLogCharStringCallback, name, value);
 }
 
 // static
-NetLog::ParametersCallback NetLog::StringCallback(const char* name,
-                                                  const base::string16* value) {
+NetLogParametersCallback NetLog::StringCallback(const char* name,
+                                                const base::string16* value) {
   DCHECK(value);
   return base::Bind(&NetLogString16Callback, name, value);
 }
 
 void NetLog::AddEntry(NetLogEventType type,
-                      const Source& source,
+                      const NetLogSource& source,
                       NetLogEventPhase phase,
-                      const NetLog::ParametersCallback* parameters_callback) {
+                      const NetLogParametersCallback* parameters_callback) {
   if (!IsCapturing())
     return;
-  EntryData entry_data(type, source, phase, base::TimeTicks::Now(),
-                       parameters_callback);
+  NetLogEntryData entry_data(type, source, phase, base::TimeTicks::Now(),
+                             parameters_callback);
 
   // Notify all of the log observers.
   base::AutoLock lock(lock_);
   FOR_EACH_OBSERVER(ThreadSafeObserver, observers_, OnAddEntryData(entry_data));
-}
-
-NetLogWithSource::~NetLogWithSource() {
-  liveness_ = DEAD;
-}
-
-void NetLogWithSource::AddEntry(NetLogEventType type,
-                                NetLogEventPhase phase) const {
-  CrashIfInvalid();
-
-  if (!net_log_)
-    return;
-  net_log_->AddEntry(type, source_, phase, NULL);
-}
-
-void NetLogWithSource::AddEntry(
-    NetLogEventType type,
-    NetLogEventPhase phase,
-    const NetLog::ParametersCallback& get_parameters) const {
-  CrashIfInvalid();
-
-  if (!net_log_)
-    return;
-  net_log_->AddEntry(type, source_, phase, &get_parameters);
-}
-
-void NetLogWithSource::AddEvent(NetLogEventType type) const {
-  AddEntry(type, NetLogEventPhase::NONE);
-}
-
-void NetLogWithSource::AddEvent(
-    NetLogEventType type,
-    const NetLog::ParametersCallback& get_parameters) const {
-  AddEntry(type, NetLogEventPhase::NONE, get_parameters);
-}
-
-void NetLogWithSource::BeginEvent(NetLogEventType type) const {
-  AddEntry(type, NetLogEventPhase::BEGIN);
-}
-
-void NetLogWithSource::BeginEvent(
-    NetLogEventType type,
-    const NetLog::ParametersCallback& get_parameters) const {
-  AddEntry(type, NetLogEventPhase::BEGIN, get_parameters);
-}
-
-void NetLogWithSource::EndEvent(NetLogEventType type) const {
-  AddEntry(type, NetLogEventPhase::END);
-}
-
-void NetLogWithSource::EndEvent(
-    NetLogEventType type,
-    const NetLog::ParametersCallback& get_parameters) const {
-  AddEntry(type, NetLogEventPhase::END, get_parameters);
-}
-
-void NetLogWithSource::AddEventWithNetErrorCode(NetLogEventType event_type,
-                                                int net_error) const {
-  DCHECK_NE(ERR_IO_PENDING, net_error);
-  if (net_error >= 0) {
-    AddEvent(event_type);
-  } else {
-    AddEvent(event_type, NetLog::IntCallback("net_error", net_error));
-  }
-}
-
-void NetLogWithSource::EndEventWithNetErrorCode(NetLogEventType event_type,
-                                                int net_error) const {
-  DCHECK_NE(ERR_IO_PENDING, net_error);
-  if (net_error >= 0) {
-    EndEvent(event_type);
-  } else {
-    EndEvent(event_type, NetLog::IntCallback("net_error", net_error));
-  }
-}
-
-void NetLogWithSource::AddByteTransferEvent(NetLogEventType event_type,
-                                            int byte_count,
-                                            const char* bytes) const {
-  AddEvent(event_type, base::Bind(BytesTransferredCallback, byte_count, bytes));
-}
-
-bool NetLogWithSource::IsCapturing() const {
-  CrashIfInvalid();
-  return net_log_ && net_log_->IsCapturing();
-}
-
-// static
-NetLogWithSource NetLogWithSource::Make(NetLog* net_log,
-                                        NetLogSourceType source_type) {
-  if (!net_log)
-    return NetLogWithSource();
-
-  NetLog::Source source(source_type, net_log->NextID());
-  return NetLogWithSource(source, net_log);
-}
-
-void NetLogWithSource::CrashIfInvalid() const {
-  Liveness liveness = liveness_;
-
-  if (liveness == ALIVE)
-    return;
-
-  base::debug::Alias(&liveness);
-  CHECK_EQ(ALIVE, liveness);
 }
 
 }  // namespace net

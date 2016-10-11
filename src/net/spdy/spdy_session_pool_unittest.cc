@@ -14,6 +14,7 @@
 #include "base/run_loop.h"
 #include "net/dns/host_cache.h"
 #include "net/http/http_network_session.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/spdy/spdy_session.h"

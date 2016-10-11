@@ -13,7 +13,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/network_change_notifier.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 
 namespace base {
 class FuzzedDataProvider;

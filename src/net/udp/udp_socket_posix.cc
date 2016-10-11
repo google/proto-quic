@@ -29,6 +29,7 @@
 #include "net/base/sockaddr_storage.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
 #include "net/socket/socket_descriptor.h"
 #include "net/udp/udp_net_log_parameters.h"
@@ -76,7 +77,7 @@ int GetIPv4AddressFromIndex(int socket, uint32_t index, uint32_t* address) {
 UDPSocketPosix::UDPSocketPosix(DatagramSocket::BindType bind_type,
                                const RandIntCallback& rand_int_cb,
                                net::NetLog* net_log,
-                               const net::NetLog::Source& source)
+                               const net::NetLogSource& source)
     : socket_(kInvalidSocket),
       addr_family_(0),
       is_connected_(false),

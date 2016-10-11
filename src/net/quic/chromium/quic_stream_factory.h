@@ -23,11 +23,12 @@
 #include "net/base/address_list.h"
 #include "net/base/completion_callback.h"
 #include "net/base/host_port_pair.h"
+#include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
 #include "net/cert/cert_database.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/http_stream_factory.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
 #include "net/quic/chromium/network_connection.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
@@ -39,6 +40,10 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/ssl/ssl_config_service.h"
 
+namespace base {
+class Value;
+}
+
 namespace net {
 
 class CTPolicyEnforcer;
@@ -48,6 +53,7 @@ class ClientSocketFactory;
 class CTVerifier;
 class HostResolver;
 class HttpServerProperties;
+class NetLog;
 class QuicClock;
 class QuicChromiumAlarmFactory;
 class QuicChromiumConnectionHelper;

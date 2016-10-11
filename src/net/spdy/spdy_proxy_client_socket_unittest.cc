@@ -17,8 +17,8 @@
 #include "net/dns/mock_host_resolver.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
-#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/log/test_net_log_util.h"
@@ -1253,7 +1253,7 @@ TEST_F(SpdyProxyClientSocketTest, NetLog) {
   ResumeAndRun();
   AssertSyncReadEquals(kMsg1, kLen1);
 
-  NetLog::Source sock_source = sock_->NetLog().source();
+  NetLogSource sock_source = sock_->NetLog().source();
   sock_.reset();
 
   TestNetLogEntry::List entry_list;

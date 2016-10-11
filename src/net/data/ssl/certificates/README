@@ -225,6 +225,11 @@ unit tests.
 - client_3.key
 - client_3.pk8
 - client_3_ca.pem
+- client_4.pem
+- client_4.key
+- client_4.pk8
+- client_4_ca.pem
+- client_root_ca.pem
      This is a set of files used to unit test SSL client certificate
      authentication.
      - client_1_ca.pem and client_2_ca.pem are the certificates of
@@ -239,17 +244,9 @@ unit tests.
        to test wifi EAP-TLS authentication so it uses a different set
        of X509v3 extensions.  Specifically it includes two Subject
        Alternative Name fields recognized by Chrome OS.
-
-===== From net/data/ssl/scripts/generate-android-test-key.sh
-- android-test-key-rsa.pem
-- android-test-key-dsa.pem
-- android-test-key-dsa-public.pem
-- android-test-key-ecdsa.pem
-- android-test-key-ecdsa-public.pem
-     This is a set of test RSA/DSA/ECDSA keys used by the Android-specific
-     unit test in net/android/keystore_unittest.c. They are used to verify
-     that the OpenSSL-specific wrapper for platform PrivateKey objects
-     works properly. See the generate-android-test-keys.sh script.
+     - client_4.pem is similar to client_2.pem but is a P-256 ECDSA key rather
+       than RSA.
+     - client_root_ca.pem is the CA certificate which signed client_*_ca.pem.
 
 ===== From net/data/ssl/scripts/generate-bad-eku-certs.sh
 - eku-test-root.pem

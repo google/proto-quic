@@ -12,6 +12,7 @@
 #include <algorithm>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/windowed_filter.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_protocol.h"

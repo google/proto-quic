@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_headers_stream.h"
 #include "net/quic/core/quic_session.h"

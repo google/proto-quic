@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_compressed_certs_cache.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_protocol.h"

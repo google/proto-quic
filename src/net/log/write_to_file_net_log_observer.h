@@ -10,6 +10,7 @@
 #include "base/files/scoped_file.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "net/base/net_export.h"
 #include "net/log/net_log.h"
 
 namespace base {
@@ -60,7 +61,7 @@ class NET_EXPORT WriteToFileNetLogObserver : public NetLog::ThreadSafeObserver {
   void StopObserving(URLRequestContext* url_request_context);
 
   // net::NetLog::ThreadSafeObserver implementation:
-  void OnAddEntry(const NetLog::Entry& entry) override;
+  void OnAddEntry(const NetLogEntry& entry) override;
 
  private:
   // ----------------

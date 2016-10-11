@@ -13,7 +13,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/stream_socket.h"
 
 namespace base {
@@ -24,6 +24,7 @@ namespace net {
 
 class IPEndPoint;
 class IOBuffer;
+class NetLog;
 
 // A StreamSocket that uses a FuzzedDataProvider to generate responses. Writes
 // can succeed synchronously or asynchronously, can write some or all of the

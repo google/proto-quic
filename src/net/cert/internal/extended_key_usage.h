@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "net/base/net_export.h"
 #include "net/der/input.h"
 
 namespace net {

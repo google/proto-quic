@@ -13,7 +13,8 @@
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "net/base/backoff_entry.h"
-#include "net/log/net_log.h"
+#include "net/base/net_export.h"
+#include "net/log/net_log_with_source.h"
 #include "net/url_request/url_request_throttler_entry_interface.h"
 
 namespace net {

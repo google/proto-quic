@@ -21,7 +21,6 @@
 #include "net/base/load_states.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
-#include "net/log/net_log.h"
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_server.h"
@@ -38,6 +37,8 @@ namespace net {
 
 class DhcpProxyScriptFetcher;
 class HostResolver;
+class NetLog;
+class NetLogWithSource;
 class ProxyDelegate;
 class ProxyResolver;
 class ProxyResolverFactory;

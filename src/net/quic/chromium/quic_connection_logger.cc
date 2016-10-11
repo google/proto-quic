@@ -20,6 +20,8 @@
 #include "base/values.h"
 #include "net/base/ip_address.h"
 #include "net/cert/x509_certificate.h"
+#include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"

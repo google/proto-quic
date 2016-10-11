@@ -10,6 +10,7 @@
 #include "base/logging.h"
 #include "base/values.h"
 #include "net/base/sys_addrinfo.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace net {
 
@@ -92,7 +93,7 @@ void AddressList::SetDefaultCanonicalName() {
   set_canonical_name(front().ToStringWithoutPort());
 }
 
-NetLog::ParametersCallback AddressList::CreateNetLogCallback() const {
+NetLogParametersCallback AddressList::CreateNetLogCallback() const {
   return base::Bind(&NetLogAddressListCallback, this);
 }
 

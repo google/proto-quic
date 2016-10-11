@@ -7,7 +7,6 @@
 #include <set>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

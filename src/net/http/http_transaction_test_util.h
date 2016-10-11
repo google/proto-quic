@@ -26,7 +26,6 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
-#include "net/log/net_log.h"
 #include "net/socket/connection_attempts.h"
 
 namespace net {
@@ -35,6 +34,7 @@ class HttpRequestHeaders;
 class IOBuffer;
 class SSLPrivateKey;
 class X509Certificate;
+class NetLogWithSource;
 struct HttpRequestInfo;
 
 //-----------------------------------------------------------------------------

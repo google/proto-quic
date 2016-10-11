@@ -4,12 +4,12 @@
 
 #include "base/synchronization/waitable_event_watcher.h"
 
+#include <utility>
+
 #include "base/bind.h"
-#include "base/location.h"
-#include "base/macros.h"
-#include "base/single_thread_task_runner.h"
+#include "base/logging.h"
 #include "base/synchronization/lock.h"
-#include "base/synchronization/waitable_event.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 
 namespace base {
 
@@ -17,14 +17,15 @@ namespace base {
 // WaitableEventWatcher (async waits).
 //
 // The basic design is that we add an AsyncWaiter to the wait-list of the event.
-// That AsyncWaiter has a pointer to MessageLoop, and a Task to be posted to it.
-// The MessageLoop ends up running the task, which calls the delegate.
+// That AsyncWaiter has a pointer to SequencedTaskRunner, and a Task to be
+// posted to it. The task ends up calling the callback when it runs on the
+// sequence.
 //
 // Since the wait can be canceled, we have a thread-safe Flag object which is
 // set when the wait has been canceled. At each stage in the above, we check the
 // flag before going onto the next stage. Since the wait may only be canceled in
-// the MessageLoop which runs the Task, we are assured that the delegate cannot
-// be called after canceling...
+// the sequence which runs the Task, we are assured that the callback cannot be
+// called after canceling...
 
 // -----------------------------------------------------------------------------
 // A thread-safe, reference-counted, write-once flag.
@@ -54,23 +55,22 @@ class Flag : public RefCountedThreadSafe<Flag> {
 };
 
 // -----------------------------------------------------------------------------
-// This is an asynchronous waiter which posts a task to a MessageLoop when
-// fired. An AsyncWaiter may only be in a single wait-list.
+// This is an asynchronous waiter which posts a task to a SequencedTaskRunner
+// when fired. An AsyncWaiter may only be in a single wait-list.
 // -----------------------------------------------------------------------------
 class AsyncWaiter : public WaitableEvent::Waiter {
  public:
-  AsyncWaiter(MessageLoop* message_loop,
+  AsyncWaiter(scoped_refptr<SequencedTaskRunner> task_runner,
               const base::Closure& callback,
               Flag* flag)
-      : message_loop_(message_loop),
+      : task_runner_(std::move(task_runner)),
         callback_(callback),
-        flag_(flag) { }
+        flag_(flag) {}
 
   bool Fire(WaitableEvent* event) override {
     // Post the callback if we haven't been cancelled.
-    if (!flag_->value()) {
-      message_loop_->task_runner()->PostTask(FROM_HERE, callback_);
-    }
+    if (!flag_->value())
+      task_runner_->PostTask(FROM_HERE, callback_);
 
     // We are removed from the wait-list by the WaitableEvent itself. It only
     // remains to delete ourselves.
@@ -85,37 +85,37 @@ class AsyncWaiter : public WaitableEvent::Waiter {
   bool Compare(void* tag) override { return tag == flag_.get(); }
 
  private:
-  MessageLoop *const message_loop_;
-  base::Closure callback_;
-  scoped_refptr<Flag> flag_;
+  const scoped_refptr<SequencedTaskRunner> task_runner_;
+  const base::Closure callback_;
+  const scoped_refptr<Flag> flag_;
 };
 
 // -----------------------------------------------------------------------------
-// For async waits we need to make a callback in a MessageLoop thread. We do
-// this by posting a callback, which calls the delegate and keeps track of when
-// the event is canceled.
+// For async waits we need to run a callback on a sequence. We do this by
+// posting an AsyncCallbackHelper task, which calls the callback and keeps track
+// of when the event is canceled.
 // -----------------------------------------------------------------------------
 void AsyncCallbackHelper(Flag* flag,
                          const WaitableEventWatcher::EventCallback& callback,
                          WaitableEvent* event) {
-  // Runs in MessageLoop thread.
+  // Runs on the sequence that called StartWatching().
   if (!flag->value()) {
-    // This is to let the WaitableEventWatcher know that the event has occured
-    // because it needs to be able to return NULL from GetWatchedObject
+    // This is to let the WaitableEventWatcher know that the event has occured.
     flag->Set();
     callback.Run(event);
   }
 }
 
-WaitableEventWatcher::WaitableEventWatcher()
-    : message_loop_(NULL),
-      cancel_flag_(NULL),
-      waiter_(NULL),
-      event_(NULL) {
+WaitableEventWatcher::WaitableEventWatcher() {
+  sequence_checker_.DetachFromSequence();
 }
 
 WaitableEventWatcher::~WaitableEventWatcher() {
-  StopWatching();
+  // The destructor may be called from a different sequence than StartWatching()
+  // when there is no active watch. To avoid triggering a DCHECK in
+  // StopWatching(), do not call it when there is no active watch.
+  if (cancel_flag_ && !cancel_flag_->value())
+    StopWatching();
 }
 
 // -----------------------------------------------------------------------------
@@ -125,61 +125,44 @@ WaitableEventWatcher::~WaitableEventWatcher() {
 bool WaitableEventWatcher::StartWatching(
     WaitableEvent* event,
     const EventCallback& callback) {
-  MessageLoop *const current_ml = MessageLoop::current();
-  DCHECK(current_ml) << "Cannot create WaitableEventWatcher without a "
-                        "current MessageLoop";
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  DCHECK(SequencedTaskRunnerHandle::Get());
 
   // A user may call StartWatching from within the callback function. In this
   // case, we won't know that we have finished watching, expect that the Flag
   // will have been set in AsyncCallbackHelper().
-  if (cancel_flag_.get() && cancel_flag_->value()) {
-    if (message_loop_) {
-      message_loop_->RemoveDestructionObserver(this);
-      message_loop_ = NULL;
-    }
+  if (cancel_flag_.get() && cancel_flag_->value())
+    cancel_flag_ = nullptr;
 
-    cancel_flag_ = NULL;
-  }
-
-  DCHECK(!cancel_flag_.get()) << "StartWatching called while still watching";
+  DCHECK(!cancel_flag_) << "StartWatching called while still watching";
 
   cancel_flag_ = new Flag;
-  callback_ = callback;
-  internal_callback_ = base::Bind(
-      &AsyncCallbackHelper, base::RetainedRef(cancel_flag_), callback_, event);
+  const Closure internal_callback = base::Bind(
+      &AsyncCallbackHelper, base::RetainedRef(cancel_flag_), callback, event);
   WaitableEvent::WaitableEventKernel* kernel = event->kernel_.get();
 
   AutoLock locked(kernel->lock_);
-
-  event_ = event;
 
   if (kernel->signaled_) {
     if (!kernel->manual_reset_)
       kernel->signaled_ = false;
 
     // No hairpinning - we can't call the delegate directly here. We have to
-    // enqueue a task on the MessageLoop as normal.
-    current_ml->task_runner()->PostTask(FROM_HERE, internal_callback_);
+    // post a task to the SequencedTaskRunnerHandle as usual.
+    SequencedTaskRunnerHandle::Get()->PostTask(FROM_HERE, internal_callback);
     return true;
   }
 
-  message_loop_ = current_ml;
-  current_ml->AddDestructionObserver(this);
-
   kernel_ = kernel;
-  waiter_ = new AsyncWaiter(current_ml, internal_callback_, cancel_flag_.get());
+  waiter_ = new AsyncWaiter(SequencedTaskRunnerHandle::Get(), internal_callback,
+                            cancel_flag_.get());
   event->Enqueue(waiter_);
 
   return true;
 }
 
 void WaitableEventWatcher::StopWatching() {
-  callback_.Reset();
-
-  if (message_loop_) {
-    message_loop_->RemoveDestructionObserver(this);
-    message_loop_ = NULL;
-  }
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   if (!cancel_flag_.get())  // if not currently watching...
     return;
@@ -227,44 +210,24 @@ void WaitableEventWatcher::StopWatching() {
     // have been enqueued with the MessageLoop because the waiter was never
     // signaled)
     delete waiter_;
-    internal_callback_.Reset();
     cancel_flag_ = NULL;
     return;
   }
 
-  // Case 3: the waiter isn't on the wait-list, thus it was signaled. It may
-  // not have run yet, so we set the flag to tell it not to bother enqueuing the
-  // task on the MessageLoop, but to delete it instead. The Waiter deletes
-  // itself once run.
+  // Case 3: the waiter isn't on the wait-list, thus it was signaled. It may not
+  // have run yet, so we set the flag to tell it not to bother enqueuing the
+  // task on the SequencedTaskRunner, but to delete it instead. The Waiter
+  // deletes itself once run.
   cancel_flag_->Set();
   cancel_flag_ = NULL;
 
   // If the waiter has already run then the task has been enqueued. If the Task
   // hasn't yet run, the flag will stop the delegate from getting called. (This
-  // is thread safe because one may only delete a Handle from the MessageLoop
-  // thread.)
+  // is thread safe because one may only delete a Handle from the sequence that
+  // called StartWatching()).
   //
   // If the delegate has already been called then we have nothing to do. The
   // task has been deleted by the MessageLoop.
-}
-
-WaitableEvent* WaitableEventWatcher::GetWatchedEvent() {
-  if (!cancel_flag_.get())
-    return NULL;
-
-  if (cancel_flag_->value())
-    return NULL;
-
-  return event_;
-}
-
-// -----------------------------------------------------------------------------
-// This is called when the MessageLoop which the callback will be run it is
-// deleted. We need to cancel the callback as if we had been deleted, but we
-// will still be deleted at some point in the future.
-// -----------------------------------------------------------------------------
-void WaitableEventWatcher::WillDestroyCurrentMessageLoop() {
-  StopWatching();
 }
 
 }  // namespace base

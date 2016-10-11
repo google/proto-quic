@@ -15,7 +15,6 @@
 #include "net/base/test_completion_callback.h"
 #include "net/base/winsock_init.h"
 #include "net/dns/mock_host_resolver.h"
-#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
@@ -34,6 +33,8 @@ using net::test::IsOk;
 //-----------------------------------------------------------------------------
 
 namespace net {
+
+class NetLog;
 
 namespace {
 

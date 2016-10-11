@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "net/dns/mdns_client_impl.h"
+#include "net/log/net_log_with_source.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {

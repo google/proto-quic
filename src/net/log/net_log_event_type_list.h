@@ -797,7 +797,7 @@ EVENT_TYPE(BACKUP_CONNECT_JOB_CREATED)
 //   }
 EVENT_TYPE(SOCKET_POOL_BOUND_TO_CONNECT_JOB)
 
-// Identifies the NetLog::Source() for the Socket assigned to the pending
+// Identifies the NetLogSource() for the Socket assigned to the pending
 // request. The event parameters are:
 //   {
 //      "source_dependency": <Source identifier for the socket we acquired>,
@@ -1043,21 +1043,21 @@ EVENT_TYPE(HTTP_STREAM_REQUEST)
 //   }
 EVENT_TYPE(HTTP_STREAM_JOB)
 
-// Identifies the NetLog::Source() for a Job started by the Request.
+// Identifies the NetLogSource() for a Job started by the Request.
 // The event parameters are:
 //   {
 //      "source_dependency": <Source identifier for Job we started>,
 //   }
 EVENT_TYPE(HTTP_STREAM_REQUEST_STARTED_JOB)
 
-// Identifies the NetLog::Source() for the Job that fulfilled the Request.
+// Identifies the NetLogSource() for the Job that fulfilled the Request.
 // The event parameters are:
 //   {
 //      "source_dependency": <Source identifier for Job we acquired>,
 //   }
 EVENT_TYPE(HTTP_STREAM_REQUEST_BOUND_TO_JOB)
 
-// Identifies the NetLog::Source() for the Request that the Job was attached to.
+// Identifies the NetLogSource() for the Request that the Job was attached to.
 // The event parameters are:
 //   {
 //      "source_dependency": <Source identifier for the Request to which we were
@@ -1884,7 +1884,7 @@ EVENT_TYPE(QUIC_HTTP_STREAM_PUSH_PROMISE_RENDEZVOUS)
 //   }
 EVENT_TYPE(QUIC_HTTP_STREAM_ADOPTED_PUSH_STREAM)
 
-// Identifies the NetLog::Source() for the QuicSesssion that handled the stream.
+// Identifies the NetLogSource() for the QuicSesssion that handled the stream.
 // The event parameters are:
 //   {
 //      "source_dependency": <Source identifier for session that was used>,
@@ -3019,6 +3019,21 @@ EVENT_TYPE(SAFE_BROWSING_CHECKING_URL)
 //                       "resumed_redirect", "unchecked_redirect">
 //  }
 EVENT_TYPE(SAFE_BROWSING_DEFERRED)
+
+// The start/end of a Safe Browsing ping being sent.
+//
+// The BEGIN phase contains the following parameters:
+//  {
+//    "url": <The URL the ping is going to, which identifies the type of ping
+//            that is being sent (eg: ThreatReport, SafeBrowsingHit)>
+//    "data": <The base64 encoding of the payload sent with the ping>
+//
+// The END phase contains the following parameters:
+//  {
+//    "status": <The integer status of the report transmission. Corresponds to
+//               URLRequestStatus::Status>
+//    "error": <The error code returned by the server, 0 indicating success>
+EVENT_TYPE(SAFE_BROWSING_PING)
 
 // Marks start of UploadDataStream that is logged on initialization.
 // The END phase contains the following parameters:

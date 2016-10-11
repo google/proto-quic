@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
-#include "net/log/net_log.h"
 
 class GURL;
 
@@ -20,6 +20,8 @@ class Value;
 }
 
 namespace net {
+
+class NetLogCaptureMode;
 
 // Returns a Value containing NetLog parameters for starting a URLRequest.
 NET_EXPORT std::unique_ptr<base::Value> NetLogURLRequestStartCallback(

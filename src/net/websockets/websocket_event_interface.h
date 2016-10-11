@@ -13,12 +13,14 @@
 
 #include "base/compiler_specific.h"  // for WARN_UNUSED_RESULT
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 
 class GURL;
 
 namespace net {
 
+class IOBuffer;
 class SSLInfo;
 struct WebSocketHandshakeRequestInfo;
 struct WebSocketHandshakeResponseInfo;
@@ -47,10 +49,10 @@ class NET_EXPORT WebSocketEventInterface {
 
   // Called when a data frame has been received from the remote host and needs
   // to be forwarded to the renderer process.
-  virtual ChannelState OnDataFrame(
-      bool fin,
-      WebSocketMessageType type,
-      const std::vector<char>& data) WARN_UNUSED_RESULT = 0;
+  virtual ChannelState OnDataFrame(bool fin,
+                                   WebSocketMessageType type,
+                                   scoped_refptr<IOBuffer> buffer,
+                                   size_t buffer_size) WARN_UNUSED_RESULT = 0;
 
   // Called to provide more send quota for this channel to the renderer
   // process. Currently the quota units are always bytes of message body

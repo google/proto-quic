@@ -22,6 +22,7 @@
 #include "base/task_runner.h"
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
+#include "net/base/net_export.h"
 #include "net/disk_cache/disk_cache.h"
 #include "net/disk_cache/simple/simple_entry_impl.h"
 #include "net/disk_cache/simple/simple_index_delegate.h"

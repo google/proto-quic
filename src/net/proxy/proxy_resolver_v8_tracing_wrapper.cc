@@ -13,10 +13,14 @@
 #include "base/values.h"
 #include "net/base/net_errors.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_resolver_error_observer.h"
 
 namespace net {
+
 namespace {
 
 // Returns event parameters for a PAC error message (line number + message).
@@ -67,7 +71,7 @@ class BindingsImpl : public ProxyResolverV8Tracing::Bindings {
  private:
   void LogEventToCurrentRequestAndGlobally(
       NetLogEventType type,
-      const NetLog::ParametersCallback& parameters_callback) {
+      const NetLogParametersCallback& parameters_callback) {
     net_log_with_source_.AddEvent(type, parameters_callback);
 
     // Emit to the global NetLog event stream.

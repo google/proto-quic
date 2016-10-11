@@ -12,6 +12,7 @@
 
 #include "base/compiler_specific.h"
 #include "net/base/ip_address.h"
+#include "net/base/net_export.h"
 
 namespace net {
 

@@ -11,6 +11,7 @@
 #include "mojo/common/common_type_converters.h"
 #include "net/dns/host_resolver_mojo.h"
 #include "net/interfaces/proxy_resolver_service.mojom.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_resolver_v8_tracing.h"
 
 namespace net {

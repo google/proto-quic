@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 
+#include "net/base/net_export.h"
 #include "net/spdy/spdy_protocol.h"
 
 namespace net {

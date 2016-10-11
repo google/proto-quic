@@ -14,7 +14,7 @@
 #include "net/base/ip_address.h"
 #include "net/dns/dns_protocol.h"
 #include "net/dns/dns_socket_pool.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_test_util.h"
 #include "net/socket/ssl_client_socket.h"
@@ -33,13 +33,13 @@ class TestClientSocketFactory : public ClientSocketFactory {
       DatagramSocket::BindType bind_type,
       const RandIntCallback& rand_int_cb,
       NetLog* net_log,
-      const NetLog::Source& source) override;
+      const NetLogSource& source) override;
 
   std::unique_ptr<StreamSocket> CreateTransportClientSocket(
       const AddressList& addresses,
       std::unique_ptr<SocketPerformanceWatcher>,
       NetLog*,
-      const NetLog::Source&) override {
+      const NetLogSource&) override {
     NOTIMPLEMENTED();
     return std::unique_ptr<StreamSocket>();
   }
@@ -79,7 +79,7 @@ class DnsSessionTest : public testing::Test {
   DnsConfig config_;
   std::unique_ptr<TestClientSocketFactory> test_client_socket_factory_;
   scoped_refptr<DnsSession> session_;
-  NetLog::Source source_;
+  NetLogSource source_;
 
  private:
   bool ExpectEvent(const PoolEvent& event);
@@ -183,7 +183,7 @@ TestClientSocketFactory::CreateDatagramClientSocket(
     DatagramSocket::BindType bind_type,
     const RandIntCallback& rand_int_cb,
     NetLog* net_log,
-    const NetLog::Source& source) {
+    const NetLogSource& source) {
   // We're not actually expecting to send or receive any data, so use the
   // simplest SocketDataProvider with no data supplied.
   SocketDataProvider* data_provider = new StaticSocketDataProvider();

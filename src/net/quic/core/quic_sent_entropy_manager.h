@@ -12,6 +12,7 @@
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_protocol.h"
 

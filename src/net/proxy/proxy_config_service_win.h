@@ -12,6 +12,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/gtest_prod_util.h"
+#include "net/base/net_export.h"
 #include "net/proxy/polling_proxy_config_service.h"
 
 namespace base {

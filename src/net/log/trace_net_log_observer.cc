@@ -14,7 +14,7 @@
 #include "base/logging.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_entry.h"
 #include "net/log/net_log_event_type.h"
 
 namespace net {
@@ -56,7 +56,7 @@ TraceNetLogObserver::~TraceNetLogObserver() {
   DCHECK(!net_log());
 }
 
-void TraceNetLogObserver::OnAddEntry(const NetLog::Entry& entry) {
+void TraceNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
   std::unique_ptr<base::Value> params(entry.ParametersToValue());
   switch (entry.phase()) {
     case NetLogEventPhase::BEGIN:

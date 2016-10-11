@@ -15,7 +15,9 @@
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "net/base/net_export.h"
 #include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace base {
 class DictionaryValue;
@@ -99,7 +101,7 @@ class NET_EXPORT BoundedFileNetLogObserver : public NetLog::ThreadSafeObserver {
                      const base::Closure& callback);
 
   // NetLog::ThreadSafeObserver
-  void OnAddEntry(const NetLog::Entry& entry) override;
+  void OnAddEntry(const NetLogEntry& entry) override;
 
  private:
   class WriteQueue;

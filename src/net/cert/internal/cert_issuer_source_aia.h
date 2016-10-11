@@ -6,6 +6,7 @@
 #define NET_CERT_INTERNAL_CERT_ISSUER_SOURCE_AIA_H_
 
 #include "base/strings/string_piece.h"
+#include "net/base/net_export.h"
 #include "net/cert/internal/cert_issuer_source.h"
 
 namespace net {

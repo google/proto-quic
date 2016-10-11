@@ -14,8 +14,11 @@
 #include "net/dns/dns_session.h"
 #include "net/dns/dns_socket_pool.h"
 #include "net/dns/dns_transaction.h"
-#include "net/log/net_log.h"
 #include "net/socket/client_socket_factory.h"
+
+namespace base {
+class Value;
+}
 
 namespace net {
 

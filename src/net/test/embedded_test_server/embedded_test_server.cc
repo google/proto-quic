@@ -25,6 +25,7 @@
 #include "net/base/net_errors.h"
 #include "net/cert/pem_tokenizer.h"
 #include "net/cert/test_root_certs.h"
+#include "net/log/net_log_source.h"
 #include "net/socket/ssl_server_socket.h"
 #include "net/socket/stream_socket.h"
 #include "net/socket/tcp_server_socket.h"
@@ -91,7 +92,7 @@ bool EmbeddedTestServer::Start() {
 bool EmbeddedTestServer::InitializeAndListen() {
   DCHECK(!Started());
 
-  listen_socket_.reset(new TCPServerSocket(nullptr, NetLog::Source()));
+  listen_socket_.reset(new TCPServerSocket(nullptr, NetLogSource()));
 
   int result = listen_socket_->ListenWithAddressAndPort("127.0.0.1", 0, 10);
   if (result) {

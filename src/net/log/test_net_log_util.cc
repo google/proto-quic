@@ -6,6 +6,8 @@
 
 #include <cstddef>
 
+#include "net/log/net_log.h"
+
 namespace net {
 
 namespace {

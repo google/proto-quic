@@ -11,6 +11,7 @@
 
 #include "base/values.h"
 #include "net/cert/x509_certificate.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace net {
 

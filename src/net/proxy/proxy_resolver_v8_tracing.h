@@ -16,6 +16,7 @@
 namespace net {
 
 class HostResolver;
+class NetLogWithSource;
 
 // ProxyResolverV8Tracing is a non-blocking proxy resolver.
 class NET_EXPORT ProxyResolverV8Tracing {

@@ -18,11 +18,13 @@
 
 namespace net {
 
+class NetLogWithSource;
+
 TCPClientSocket::TCPClientSocket(
     const AddressList& addresses,
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     net::NetLog* net_log,
-    const net::NetLog::Source& source)
+    const net::NetLogSource& source)
     : socket_performance_watcher_(socket_performance_watcher.get()),
       socket_(new TCPSocket(std::move(socket_performance_watcher),
                             net_log,

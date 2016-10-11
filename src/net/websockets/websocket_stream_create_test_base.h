@@ -13,7 +13,6 @@
 #include "base/macros.h"
 #include "base/run_loop.h"
 #include "base/timer/timer.h"
-#include "net/base/net_export.h"
 #include "net/socket/socket_test_util.h"
 #include "net/ssl/ssl_info.h"
 #include "net/websockets/websocket_event_interface.h"

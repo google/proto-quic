@@ -36,7 +36,8 @@
 #include "net/base/test_completion_callback.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "net/server/http_server_request_info.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/socket/tcp_server_socket.h"
@@ -83,7 +84,7 @@ class TestHttpClient {
 
   int ConnectAndWait(const IPEndPoint& address) {
     AddressList addresses(address);
-    NetLog::Source source;
+    NetLogSource source;
     socket_.reset(new TCPClientSocket(addresses, NULL, NULL, source));
 
     base::RunLoop run_loop;
@@ -194,7 +195,7 @@ class HttpServerTest : public testing::Test,
 
   void SetUp() override {
     std::unique_ptr<ServerSocket> server_socket(
-        new TCPServerSocket(NULL, NetLog::Source()));
+        new TCPServerSocket(NULL, NetLogSource()));
     server_socket->ListenWithAddressAndPort("127.0.0.1", 0, 1);
     server_.reset(new HttpServer(std::move(server_socket), this));
     ASSERT_THAT(server_->GetLocalAddress(&server_address_), IsOk());

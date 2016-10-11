@@ -13,6 +13,7 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/host_port_pair.h"
+#include "net/base/net_export.h"
 #include "net/dns/host_resolver.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_base.h"
@@ -22,6 +23,8 @@ namespace net {
 
 class ClientSocketFactory;
 class SocketPerformanceWatcherFactory;
+class NetLog;
+class NetLogWithSource;
 
 typedef base::Callback<int(const AddressList&, const NetLogWithSource& net_log)>
     OnHostResolutionCallback;

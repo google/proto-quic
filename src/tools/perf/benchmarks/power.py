@@ -147,21 +147,29 @@ class PowerTop25(perf_benchmark.PerfBenchmark):
     return 'power.top_25'
 
   def CreateStorySet(self, _):
-    # Exclude techcrunch.com. It is not suitable for this benchmark because it
-    # does not consistently become quiescent within 60 seconds.
     stories = self.page_set()
-    found = next((x for x in stories if 'techcrunch.com' in x.url), None)
-    if found:
-      stories.RemoveStory(found)
+    to_remove = [x for x in stories if self.IsPageNotQuiescent(x.url)]
+    for story in to_remove:
+      stories.RemoveStory(story)
     return stories
+
+  @staticmethod
+  def IsPageNotQuiescent(page_url):
+    # Exclude sites not suitable for this benchmark because they do not
+    # consistently become quiescent within 60 seconds.
+    non_quiescent_urls = [
+      'techcrunch.com',
+      'docs.google.com',
+      'plus.google.com'
+    ]
+
+    return any(url in page_url for url in non_quiescent_urls)
 
 
 @benchmark.Enabled('mac')
-class PowerGpuRasterizationTop25(perf_benchmark.PerfBenchmark):
+class PowerGpuRasterizationTop25(PowerTop25):
   """Top 25 quiescent power test with GPU rasterization enabled."""
   tag = 'gpu_rasterization'
-  test = power.QuiescentPower
-  page_set = page_sets.Top25PageSet
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
@@ -170,15 +178,6 @@ class PowerGpuRasterizationTop25(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'power.gpu_rasterization.top_25'
-
-  def CreateStorySet(self, _):
-    # Exclude techcrunch.com. It is not suitable for this benchmark because it
-    # does not consistently become quiescent within 60 seconds.
-    stories = self.page_set()
-    found = next((x for x in stories if 'techcrunch.com' in x.url), None)
-    if found:
-      stories.RemoveStory(found)
-    return stories
 
 
 @benchmark.Enabled('mac')

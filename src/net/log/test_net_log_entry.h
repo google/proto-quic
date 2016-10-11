@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "base/time/time.h"
-#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_source.h"
 
 namespace base {
 class DictionaryValue;
@@ -20,7 +20,7 @@ class ListValue;
 
 namespace net {
 
-// TestNetLogEntry is much like NetLog::Entry, except it has its own copy of all
+// TestNetLogEntry is much like NetLogEntry, except it has its own copy of all
 // log data, so a list of entries can be gathered over the course of a test, and
 // then inspected at the end.  It is intended for testing only, and is part of
 // the net_test_support project.
@@ -30,7 +30,7 @@ struct TestNetLogEntry {
 
   TestNetLogEntry(NetLogEventType type,
                   const base::TimeTicks& time,
-                  NetLog::Source source,
+                  NetLogSource source,
                   NetLogEventPhase phase,
                   std::unique_ptr<base::DictionaryValue> params);
   // Copy constructor needed to store in a std::vector because of the
@@ -61,7 +61,7 @@ struct TestNetLogEntry {
 
   NetLogEventType type;
   base::TimeTicks time;
-  NetLog::Source source;
+  NetLogSource source;
   NetLogEventPhase phase;
   std::unique_ptr<base::DictionaryValue> params;
 };

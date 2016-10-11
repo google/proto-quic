@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/base/net_export.h"
 #include "net/http/http_auth_scheme.h"
 
 namespace net {

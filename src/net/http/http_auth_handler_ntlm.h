@@ -28,6 +28,7 @@
 #include <string>
 
 #include "base/strings/string16.h"
+#include "net/base/net_export.h"
 #include "net/http/http_auth_handler.h"
 #include "net/http/http_auth_handler_factory.h"
 

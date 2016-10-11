@@ -25,6 +25,7 @@ class DictionaryValue;
 namespace net {
 
 class ClientSocketHandle;
+class NetLogWithSource;
 class StreamSocket;
 
 // ClientSocketPools are layered. This defines an interface for lower level

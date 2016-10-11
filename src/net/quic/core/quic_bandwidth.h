@@ -13,6 +13,7 @@
 #include <ostream>
 
 #include "base/compiler_specific.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_time.h"
 
 namespace net {

@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_utils.h"
 

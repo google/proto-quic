@@ -10,7 +10,6 @@
 #include <string>
 
 #include "base/memory/weak_ptr.h"
-#include "net/base/net_export.h"
 #include "net/url_request/url_request_job.h"
 
 namespace net {

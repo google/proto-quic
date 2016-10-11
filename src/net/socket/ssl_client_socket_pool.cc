@@ -21,6 +21,7 @@
 #include "net/http/http_proxy_client_socket.h"
 #include "net/http/http_proxy_client_socket_pool.h"
 #include "net/log/net_log_source_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socks_client_socket_pool.h"
@@ -31,6 +32,8 @@
 #include "net/ssl/ssl_info.h"
 
 namespace net {
+
+class NetLog;
 
 SSLSocketParams::SSLSocketParams(
     const scoped_refptr<TransportSocketParams>& direct_params,

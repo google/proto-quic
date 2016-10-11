@@ -31,6 +31,7 @@ namespace net {
 class ClientSocketFactory;
 class DatagramClientSocket;
 class NetLog;
+struct NetLogSource;
 class StreamSocket;
 
 // Session parameters and state shared between DNS transactions.
@@ -103,12 +104,12 @@ class NET_EXPORT_PRIVATE DnsSession
   // Allocate a socket, already connected to the server address.
   // When the SocketLease is destroyed, the socket will be freed.
   std::unique_ptr<SocketLease> AllocateSocket(unsigned server_index,
-                                              const NetLog::Source& source);
+                                              const NetLogSource& source);
 
   // Creates a StreamSocket from the factory for a transaction over TCP. These
   // sockets are not pooled.
   std::unique_ptr<StreamSocket> CreateTCPSocket(unsigned server_index,
-                                                const NetLog::Source& source);
+                                                const NetLogSource& source);
 
   void ApplyPersistentData(const base::Value& data);
   std::unique_ptr<const base::Value> GetPersistentData() const;

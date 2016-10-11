@@ -11,7 +11,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/http/http_stream_factory_impl.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_session_key.h"

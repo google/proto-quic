@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include "base/stl_util.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/load_flags.h"
 #include "net/base/request_priority.h"
@@ -28,8 +27,6 @@ ReportSender::ReportSender(URLRequestContext* request_context,
       error_callback_(error_callback) {}
 
 ReportSender::~ReportSender() {
-  // Cancel all of the uncompleted requests.
-  base::STLDeleteElements(&inflight_requests_);
 }
 
 void ReportSender::Send(const GURL& report_uri,
@@ -59,7 +56,7 @@ void ReportSender::Send(const GURL& report_uri,
       ElementsUploadDataStream::CreateWithReader(std::move(reader), 0));
 
   URLRequest* raw_url_request = url_request.get();
-  inflight_requests_.insert(url_request.release());
+  inflight_requests_[raw_url_request] = std::move(url_request);
   raw_url_request->Start();
 }
 
@@ -77,8 +74,6 @@ void ReportSender::OnResponseStarted(URLRequest* request, int net_error) {
   }
 
   CHECK_GT(inflight_requests_.erase(request), 0u);
-  // Clean up the request, which cancels it.
-  delete request;
 }
 
 void ReportSender::OnReadCompleted(URLRequest* request, int bytes_read) {

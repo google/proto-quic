@@ -159,20 +159,19 @@ CERT_POLICY_OID = asn1.OID([1, 3, 6, 1, 4, 1, 11129, 2, 4, 1])
 
 # These result in the following root certificate:
 # -----BEGIN CERTIFICATE-----
-# MIIB0TCCATqgAwIBAgIBATANBgkqhkiG9w0BAQUFADAVMRMwEQYDVQQDEwpUZXN0aW5nIENBMB4X
+# MIIBzTCCATagAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwpUZXN0aW5nIENBMB4X
 # DTEwMDEwMTA2MDAwMFoXDTMyMTIwMTA2MDAwMFowFTETMBEGA1UEAxMKVGVzdGluZyBDQTCBnTAN
 # BgkqhkiG9w0BAQEFAAOBiwAwgYcCgYEApxmY8pML/nPQMah/Ez0vN47u7tUqd+RND8n/bwf/Msvz
 # 2pmd5O1lgyr8sIB/mHh1BlOdJYoM48LHeWdlMJmpA0qbEVqHbDmoxOTtSs0MZAlZRvs57utHoHBN
-# uwGKz0jDocS4lfxAn7SjQKmGsa/EVRmrnspHwwGFx3HGSqXs8H0CAQOjMzAxMBIGA1UdEwEB/wQI
-# MAYBAf8CAQAwGwYDVR0gAQEABBEwDzANBgsrBgEEAdZ5AgHODzANBgkqhkiG9w0BAQUFAAOBgQA/
-# STb40A6D+93jMfLGQzXc997IsaJZdoPt7tYa8PqGJBL62EiTj+erd/H5pDZx/2/bcpOG4m9J56yg
-# wOohbllw2TM+oeEd8syzV6X+1SIPnGI56JRrm3UXcHYx1Rq5loM9WKAiz/WmIWmskljsEQ7+542p
-# q0pkHjs8nuXovSkUYA==
+# uwGKz0jDocS4lfxAn7SjQKmGsa/EVRmrnspHwwGFx3HGSqXs8H0CAQOjLzAtMBIGA1UdEwEB/wQI
+# MAYBAf8CAQAwFwYDVR0gBBAwDjAMBgorBgEEAdZ5AgQBMA0GCSqGSIb3DQEBCwUAA4GBAHJJigXg
+# ArH/E9n3AilgivA58hawSRVqiTHHv7oAguDRrA4zC8IvsL6b/6LV7nA3KWM0OUSZSGE3zQb9UlB2
+# nNYsPMdv0Ls4GuOzVfy4bnQXqMWIflRw9L5Z5KH8Vu5U3ohoOUCfWN1sYMoeS9/22K9xtRsDPS+d
+# pQo7Q6ZoOo8o
 # -----END CERTIFICATE-----
 
-# If you update any of the above, you can generate a new root with the
-# following line:
-#   print DERToPEM(MakeCertificate(ISSUER_CN, ISSUER_CN, 1, KEY, KEY, None))
+# If you update any of the above, you can generate a new root by running this
+# file as a script.
 
 
 # Various OIDs
@@ -205,7 +204,7 @@ def MakeCertificate(
     o = None
     extensions.children.append(
       asn1.SEQUENCE([
-        basic_constraints,
+        BASIC_CONSTRAINTS,
         True,
         asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE([
           True, # IsCA
@@ -217,7 +216,8 @@ def MakeCertificate(
     extensions.children.append(
       asn1.SEQUENCE([
         AUTHORITY_INFORMATION_ACCESS,
-        False,
+        # There is implicitly a critical=False here. Since false is the default,
+        # encoding the value would be invalid DER.
         asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE([
           asn1.SEQUENCE([
             AIA_OCSP,
@@ -229,7 +229,8 @@ def MakeCertificate(
   extensions.children.append(
     asn1.SEQUENCE([
       CERT_POLICIES,
-      False,
+      # There is implicitly a critical=False here. Since false is the default,
+      # encoding the value would be invalid DER.
       asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE([
         asn1.SEQUENCE([ # PolicyInformation
           CERT_POLICY_OID,
@@ -438,3 +439,25 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
           ISSUER_CN, KEY, serial, ocsp_states, ocsp_dates, ocsp_produced)
 
   return (cert_pem + KEY_PEM, ocsp_der)
+
+
+if __name__ == '__main__':
+  def bin_to_array(s):
+    return ' '.join(['0x%02x,'%ord(c) for c in s])
+
+  import sys
+  sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                               '..', 'data', 'ssl', 'scripts'))
+  import crlsetutil
+
+  der_root = MakeCertificate(ISSUER_CN, ISSUER_CN, 1, KEY, KEY, None)
+  print 'ocsp-test-root.pem:'
+  print DERToPEM(der_root)
+
+  print
+  print 'kOCSPTestCertFingerprint:'
+  print bin_to_array(hashlib.sha1(der_root).digest())
+
+  print
+  print 'kOCSPTestCertSPKI:'
+  print bin_to_array(crlsetutil.der_cert_to_spki_hash(der_root))

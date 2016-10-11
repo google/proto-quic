@@ -19,6 +19,7 @@
 #include "net/cert/client_cert_verifier.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_with_source.h"
 #include "net/ssl/openssl_ssl_util.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"

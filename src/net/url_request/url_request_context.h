@@ -21,7 +21,6 @@
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/url_request/url_request.h"
 
@@ -35,6 +34,7 @@ class HostResolver;
 class HttpAuthHandlerFactory;
 class HttpTransactionFactory;
 class HttpUserAgentSettings;
+class NetLog;
 class NetworkDelegate;
 class NetworkQualityEstimator;
 class SdchManager;

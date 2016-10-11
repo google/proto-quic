@@ -19,14 +19,20 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/dns/host_resolver.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_resolver.h"
 #include "url/gurl.h"
 
+namespace base {
+class Value;
+}
+
 namespace net {
 
 class DhcpProxyScriptFetcher;
+class NetLog;
+class NetLogCaptureMode;
 class NetLogParameter;
 class ProxyResolver;
 class ProxyScriptFetcher;

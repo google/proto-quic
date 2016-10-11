@@ -5,6 +5,7 @@
 #ifndef NET_SPDY_SPDY_SESSION_KEY_H_
 #define NET_SPDY_SPDY_SESSION_KEY_H_
 
+#include "net/base/net_export.h"
 #include "net/base/privacy_mode.h"
 #include "net/proxy/proxy_server.h"
 

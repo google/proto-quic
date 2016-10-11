@@ -10,6 +10,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "net/base/net_export.h"
 #include "net/proxy/proxy_resolver_error_observer.h"
 
 namespace base {

@@ -10,9 +10,10 @@
 
 #include "net/base/net_export.h"
 #include "net/cert/signed_certificate_timestamp.h"
-#include "net/log/net_log.h"
 
 namespace net {
+
+class NetLogWithSource;
 
 namespace ct {
 

@@ -13,6 +13,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/threading/thread_checker.h"
 #include "net/base/completion_callback.h"
+#include "net/base/net_export.h"
 #include "net/socket/socket_descriptor.h"
 
 namespace net {

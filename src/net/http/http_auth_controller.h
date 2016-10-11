@@ -14,7 +14,6 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/http/http_auth.h"
-#include "net/log/net_log.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -25,6 +24,7 @@ class HttpAuthHandler;
 class HttpAuthHandlerFactory;
 class HttpAuthCache;
 class HttpRequestHeaders;
+class NetLogWithSource;
 struct HttpRequestInfo;
 class SSLInfo;
 

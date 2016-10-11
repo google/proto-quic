@@ -19,6 +19,7 @@
 #include "net/disk_cache/blockfile/sparse_control.h"
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/net_log_parameters.h"
+#include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source_type.h"
 

@@ -7,8 +7,6 @@
 
 #include <vector>
 
-#include "net/base/net_export.h"
-
 namespace net {
 
 // This enum is used in Net.SSLNegotiatedAlpnProtocol histogram.

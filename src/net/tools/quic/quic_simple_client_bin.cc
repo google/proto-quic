@@ -56,7 +56,6 @@
 #include "net/cert/multi_log_ct_verifier.h"
 #include "net/http/http_request_info.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_server_id.h"

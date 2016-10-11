@@ -65,6 +65,16 @@ std::string Origin::Serialize() const {
   return tuple_.Serialize();
 }
 
+GURL Origin::GetURL() const {
+  if (unique())
+    return GURL();
+
+  if (scheme() == kFileScheme)
+    return GURL("file:///");
+
+  return tuple_.GetURL();
+}
+
 bool Origin::IsSameOriginWith(const Origin& other) const {
   if (unique_ || other.unique_)
     return false;

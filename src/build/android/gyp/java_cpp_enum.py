@@ -130,7 +130,7 @@ class DirectiveSet(object):
 
 
 class HeaderParser(object):
-  single_line_comment_re = re.compile(r'\s*//\s*([^\n]+)')
+  single_line_comment_re = re.compile(r'\s*//\s*([^\n]*)')
   multi_line_comment_start_re = re.compile(r'\s*/\*')
   enum_line_re = re.compile(r'^\s*(\w+)(\s*\=\s*([^,\n]+))?,?')
   enum_end_re = re.compile(r'^\s*}\s*;\.*$')
@@ -159,6 +159,7 @@ class HeaderParser(object):
     self._current_comments = []
     self._generator_directives = DirectiveSet()
     self._multi_line_generator_directive = None
+    self._current_enum_entry = ''
 
   def _ApplyGeneratorDirectives(self):
     self._generator_directives.UpdateDefinition(self._current_definition)
@@ -178,28 +179,50 @@ class HeaderParser(object):
       self._ParseEnumLine(line)
 
   def _ParseEnumLine(self, line):
-    enum_comment = HeaderParser.single_line_comment_re.match(line)
-    if enum_comment:
-      self._current_comments.append(enum_comment.groups()[0])
-      return
     if HeaderParser.multi_line_comment_start_re.match(line):
       raise Exception('Multi-line comments in enums are not supported in ' +
                       self._path)
-    enum_end = HeaderParser.enum_end_re.match(line)
-    enum_entry = HeaderParser.enum_line_re.match(line)
-    if enum_end:
-      self._ApplyGeneratorDirectives()
-      self._current_definition.Finalize()
-      self._enum_definitions.append(self._current_definition)
-      self._in_enum = False
-    elif enum_entry:
-      enum_key = enum_entry.groups()[0]
-      enum_value = enum_entry.groups()[2]
-      self._current_definition.AppendEntry(enum_key, enum_value)
-      if self._current_comments:
-         self._current_definition.AppendEntryComment(
-                 enum_key, ' '.join(self._current_comments))
-         self._current_comments = []
+
+    enum_comment = HeaderParser.single_line_comment_re.match(line)
+    if enum_comment:
+      comment = enum_comment.groups()[0]
+      if comment:
+        self._current_comments.append(comment)
+    elif HeaderParser.enum_end_re.match(line):
+      self._FinalizeCurrentEnumEntry()
+    else:
+      self._AddToCurrentEnumEntry(line)
+      if ',' in line:
+        self._ParseCurrentEnumEntry()
+
+  def _ParseCurrentEnumEntry(self):
+    if not self._current_enum_entry:
+      return
+
+    enum_entry = HeaderParser.enum_line_re.match(self._current_enum_entry)
+    if not enum_entry:
+      raise Exception('Unexpected error while attempting to parse %s as enum '
+                      'entry.' % self._current_enum_entry)
+
+    enum_key = enum_entry.groups()[0]
+    enum_value = enum_entry.groups()[2]
+    self._current_definition.AppendEntry(enum_key, enum_value)
+    if self._current_comments:
+       self._current_definition.AppendEntryComment(
+               enum_key, ' '.join(self._current_comments))
+       self._current_comments = []
+    self._current_enum_entry = ''
+
+  def _AddToCurrentEnumEntry(self, line):
+    self._current_enum_entry += ' ' + line.strip()
+
+  def _FinalizeCurrentEnumEntry(self):
+    if self._current_enum_entry:
+      self._ParseCurrentEnumEntry()
+    self._ApplyGeneratorDirectives()
+    self._current_definition.Finalize()
+    self._enum_definitions.append(self._current_definition)
+    self._in_enum = False
 
   def _ParseMultiLineDirectiveLine(self, line):
     multi_line_directive_continuation = (

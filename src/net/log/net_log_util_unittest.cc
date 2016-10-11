@@ -15,6 +15,8 @@
 #include "net/base/test_completion_callback.h"
 #include "net/http/http_cache.h"
 #include "net/http/http_transaction.h"
+#include "net/log/net_log_source.h"
+#include "net/log/net_log_with_source.h"
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/url_request/url_request_test_util.h"

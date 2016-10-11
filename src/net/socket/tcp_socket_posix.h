@@ -16,7 +16,7 @@
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/socket/socket_performance_watcher.h"
 
 namespace base {
@@ -29,6 +29,8 @@ class AddressList;
 class IOBuffer;
 class IPEndPoint;
 class SocketPosix;
+class NetLog;
+struct NetLogSource;
 
 class NET_EXPORT TCPSocketPosix {
  public:
@@ -37,7 +39,7 @@ class NET_EXPORT TCPSocketPosix {
   TCPSocketPosix(
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
-      const NetLog::Source& source);
+      const NetLogSource& source);
   virtual ~TCPSocketPosix();
 
   int Open(AddressFamily family);

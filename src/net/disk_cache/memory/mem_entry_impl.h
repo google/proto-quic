@@ -16,8 +16,13 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/time/time.h"
+#include "net/base/net_export.h"
 #include "net/disk_cache/disk_cache.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
+
+namespace net {
+class NetLog;
+}
 
 namespace disk_cache {
 

@@ -10,7 +10,13 @@
 #include "base/metrics/histogram_macros_local.h"
 #include "base/time/time.h"
 
+// Macros for efficient use of histograms.
+//
+// For best practices on deciding when to emit to a histogram and what form
+// the histogram should take, see tools/metrics/histograms/README.md
+//
 // TODO(nikunjb): Move sparse macros to this file.
+//
 // UMA_HISTOGRAM_SPARSE_SLOWLY is defined in sparse_histogram.h as it has
 // different #include dependencies.
 
@@ -53,17 +59,26 @@
             base::HistogramBase::kUmaTargetedHistogramFlag))
 
 //------------------------------------------------------------------------------
-// Percentage histograms.
+// Linear histograms.
 
 // All of these macros must be called with |name| as a runtime constant.
+
+// Used for capturing integer data with a linear bucketing scheme. This can be
+// used when you want the exact value of some small numeric count, with a max of
+// 100 or less. If you need to capture a range of greater than 100, we recommend
+// the use of the COUNT histograms below.
+
+// Sample usage:
+//   UMA_HISTOGRAM_EXACT_LINEAR("Histogram.Linear", count, 10);
+#define UMA_HISTOGRAM_EXACT_LINEAR(name, sample, value_max)                    \
+    UMA_HISTOGRAM_ENUMERATION(name, sample, value_max+1)
 
 // Used for capturing basic percentages. This will be 100 buckets of size 1.
 
 // Sample usage:
 //   UMA_HISTOGRAM_PERCENTAGE("Histogram.Percent", percent_as_int);
-#define UMA_HISTOGRAM_PERCENTAGE(name, under_one_hundred)                      \
-    UMA_HISTOGRAM_ENUMERATION(name, under_one_hundred, 101)
-
+#define UMA_HISTOGRAM_PERCENTAGE(name, percent_as_int)                         \
+    UMA_HISTOGRAM_ENUMERATION(name, percent_as_int, 101)
 
 //------------------------------------------------------------------------------
 // Count histograms. These are used for collecting numeric data. Note that we
@@ -116,7 +131,6 @@
     INTERNAL_HISTOGRAM_CUSTOM_COUNTS_WITH_FLAG(                                \
         name, sample, min, max, bucket_count,                                  \
         base::HistogramBase::kUmaTargetedHistogramFlag)
-
 
 //------------------------------------------------------------------------------
 // Timing histograms. These are used for collecting timing data (generally

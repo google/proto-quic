@@ -596,13 +596,6 @@ TEST_P(SequencedWorkerPoolTest, DISABLED_IgnoresAfterShutdown) {
 }
 
 TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
-  // As tested by TaskSchedulerTaskTrackerTest.WillPostAndRunDuringShutdown,
-  // TaskScheduler allows tasks to be posted during shutdown. However, since it
-  // doesn't provide a way to run a callback from inside its Shutdown() method,
-  // it would be hard to make this test work with redirection enabled.
-  if (RedirectedToTaskScheduler())
-    return;
-
   // Test that <n> new blocking tasks are allowed provided they're posted
   // by a running tasks.
   EnsureAllWorkersCreated();
@@ -618,7 +611,7 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
   // Queue up shutdown blocking tasks behind those which will attempt to post
-  // additional tasks when run, PostAdditionalTasks attemtps to post 3
+  // additional tasks when run, PostAdditionalTasks attempts to post 3
   // new FastTasks, one for each shutdown_behavior.
   const int kNumQueuedTasks = static_cast<int>(kNumWorkerThreads);
   for (int i = 0; i < kNumQueuedTasks; ++i) {
@@ -628,15 +621,33 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
         SequencedWorkerPool::BLOCK_SHUTDOWN));
   }
 
-  // Setup to open the floodgates from within Shutdown().
-  SetWillWaitForShutdownCallback(
-      base::Bind(&EnsureTasksToCompleteCountAndUnblock,
-                 scoped_refptr<TestTracker>(tracker()),
-                 0, &blocker, kNumBlockTasks));
+  // Half the additional blocking tasks will be allowed to run.
+  constexpr int kNumNewBlockingTasksToAllow = kNumWorkerThreads / 2;
 
-  // Allow half of the additional blocking tasks thru.
-  const int kNumNewBlockingTasksToAllow = kNumWorkerThreads / 2;
-  pool()->Shutdown(kNumNewBlockingTasksToAllow);
+  if (RedirectedToTaskScheduler()) {
+    // When redirection to TaskScheduler is enabled,
+    // SequencedWorkerPool::Shutdown() sets the number of additional
+    // BLOCK_SHUTDOWN tasks that can be posted and returns without waiting for
+    // pending BLOCK_SHUTDOWN tasks to complete their execution.
+    pool()->Shutdown(kNumNewBlockingTasksToAllow);
+
+    // Unblock tasks.
+    EnsureTasksToCompleteCountAndUnblock(tracker(), 0, &blocker,
+                                         kNumBlockTasks);
+
+    // TaskScheduler::Shutdown() waits for pending BLOCK_SHUTDOWN tasks to
+    // complete their execution.
+    TaskScheduler::GetInstance()->Shutdown();
+  } else {
+    // Once shutdown starts, unblock tasks.
+    SetWillWaitForShutdownCallback(base::Bind(
+        &EnsureTasksToCompleteCountAndUnblock,
+        scoped_refptr<TestTracker>(tracker()), 0, &blocker, kNumBlockTasks));
+
+    // Set the number of additional BLOCK_SHUTDOWN tasks that can be posted and
+    // wait for pending BLOCK_SHUTDOWN tasks to complete their execution.
+    pool()->Shutdown(kNumNewBlockingTasksToAllow);
+  }
 
   // Ensure that the correct number of tasks actually got run.
   tracker()->WaitUntilTasksComplete(static_cast<size_t>(
@@ -650,13 +661,6 @@ TEST_P(SequencedWorkerPoolTest, AllowsAfterShutdown) {
 // the task is not being posted within the context of a running task.
 TEST_P(SequencedWorkerPoolTest,
        AllowsBlockingTasksDuringShutdownOutsideOfRunningTask) {
-  // As tested by TaskSchedulerTaskTrackerTest.WillPostAndRunDuringShutdown,
-  // TaskScheduler allows tasks to be posted during shutdown. However, since it
-  // doesn't provide a way to run a callback from inside its Shutdown() method,
-  // it would be hard to make this test work with redirection enabled.
-  if (RedirectedToTaskScheduler())
-    return;
-
   EnsureAllWorkersCreated();
   ThreadBlocker blocker;
 
@@ -669,15 +673,37 @@ TEST_P(SequencedWorkerPoolTest,
   }
   tracker()->WaitUntilTasksBlocked(kNumWorkerThreads);
 
-  // Setup to open the floodgates from within Shutdown().
-  SetWillWaitForShutdownCallback(
-      base::Bind(&TestTracker::PostBlockingTaskThenUnblockThreads,
-                 scoped_refptr<TestTracker>(tracker()), pool(), &blocker,
-                 kNumWorkerThreads));
-  pool()->Shutdown(kNumWorkerThreads + 1);
+  constexpr int kNumNewBlockingTasksToAllow = 1;
+
+  if (RedirectedToTaskScheduler()) {
+    // When redirection to TaskScheduler is enabled,
+    // SequencedWorkerPool::Shutdown() sets the number of additional
+    // BLOCK_SHUTDOWN tasks that can be posted and returns without waiting for
+    // pending BLOCK_SHUTDOWN tasks to complete their execution.
+    pool()->Shutdown(kNumNewBlockingTasksToAllow);
+
+    // Post a blocking task and unblock tasks.
+    tracker()->PostBlockingTaskThenUnblockThreads(pool(), &blocker,
+                                                  kNumWorkerThreads);
+
+    // TaskScheduler::Shutdown() waits for pending BLOCK_SHUTDOWN tasks to
+    // complete their execution.
+    TaskScheduler::GetInstance()->Shutdown();
+  } else {
+    // Once shutdown starts, post a blocking task and unblock tasks.
+    SetWillWaitForShutdownCallback(
+        base::Bind(&TestTracker::PostBlockingTaskThenUnblockThreads,
+                   scoped_refptr<TestTracker>(tracker()), pool(), &blocker,
+                   kNumWorkerThreads));
+
+    // Set the number of additional BLOCK_SHUTDOWN tasks that can be posted and
+    // wait for pending BLOCK_SHUTDOWN tasks to complete their execution.
+    pool()->Shutdown(kNumNewBlockingTasksToAllow);
+  }
 
   // Ensure that the correct number of tasks actually got run.
-  tracker()->WaitUntilTasksComplete(static_cast<size_t>(kNumWorkerThreads + 1));
+  tracker()->WaitUntilTasksComplete(
+      static_cast<size_t>(kNumWorkerThreads + kNumNewBlockingTasksToAllow));
   tracker()->ClearCompleteSequence();
 }
 

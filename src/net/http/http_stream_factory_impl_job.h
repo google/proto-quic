@@ -20,7 +20,7 @@
 #include "net/http/http_auth_controller.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_stream_factory_impl.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
 #include "net/quic/chromium/quic_stream_factory.h"
@@ -37,6 +37,7 @@ class HttpAuthController;
 class HttpNetworkSession;
 class HttpStream;
 class SpdySessionPool;
+class NetLog;
 struct SSLConfig;
 class QuicHttpStream;
 

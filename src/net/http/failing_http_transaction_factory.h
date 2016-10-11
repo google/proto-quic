@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "net/base/net_errors.h"
+#include "net/base/net_export.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_transaction.h"
 #include "net/http/http_transaction_factory.h"

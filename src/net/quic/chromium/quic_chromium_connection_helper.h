@@ -10,6 +10,7 @@
 
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"

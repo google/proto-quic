@@ -6,6 +6,7 @@
 #define NET_QUIC_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
 
 #include "base/macros.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_sustained_bandwidth_recorder.h"
 

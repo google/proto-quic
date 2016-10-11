@@ -27,8 +27,10 @@
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_certificate_net_log_param.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/log/net_log_parameters_callback.h"
+#include "net/log/net_log_with_source.h"
 
 namespace net {
 
@@ -413,7 +415,7 @@ ct::CertPolicyCompliance CTPolicyEnforcer::DoesConformToCertPolicy(
     compliance = CheckCertPolicyCompliance(*cert, verified_scts);
   }
 
-  NetLog::ParametersCallback net_log_callback =
+  NetLogParametersCallback net_log_callback =
       base::Bind(&NetLogCertComplianceCheckResultCallback,
                  base::Unretained(cert), build_timely, compliance);
 
@@ -442,7 +444,7 @@ ct::EVPolicyCompliance CTPolicyEnforcer::DoesConformToCTEVPolicy(
                               &details);
   }
 
-  NetLog::ParametersCallback net_log_callback =
+  NetLogParametersCallback net_log_callback =
       base::Bind(&NetLogEVComplianceCheckResultCallback, base::Unretained(cert),
                  base::Unretained(&details));
 

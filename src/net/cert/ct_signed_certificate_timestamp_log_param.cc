@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "base/base64.h"
@@ -16,6 +15,7 @@
 #include "net/cert/ct_sct_to_string.h"
 #include "net/cert/ct_verify_result.h"
 #include "net/cert/signed_certificate_timestamp.h"
+#include "net/log/net_log_capture_mode.h"
 
 namespace net {
 

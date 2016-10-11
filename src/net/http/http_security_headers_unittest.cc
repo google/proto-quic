@@ -13,7 +13,6 @@
 #include "net/http/http_security_headers.h"
 #include "net/http/http_util.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
 #include "net/ssl/ssl_info.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

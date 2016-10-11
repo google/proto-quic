@@ -31,7 +31,7 @@
 #include "net/http/http_server_properties_impl.h"
 #include "net/http/http_stream.h"
 #include "net/http/transport_security_state.h"
-#include "net/log/net_log.h"
+#include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_service.h"
 #include "net/quic/core/quic_http_utils.h"
@@ -65,6 +65,11 @@
 
 using net::test::IsError;
 using net::test::IsOk;
+
+namespace base {
+class Value;
+class DictionaryValue;
+}  // namespace base
 
 namespace net {
 

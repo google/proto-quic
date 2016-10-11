@@ -7,6 +7,7 @@
 
 #include "net/base/ip_address.h"
 #include "net/base/linked_hash_map.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_clock.h"

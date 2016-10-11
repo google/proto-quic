@@ -10,14 +10,10 @@
 namespace net {
 
 UDPServerSocket::UDPServerSocket(net::NetLog* net_log,
-                                 const net::NetLog::Source& source)
-    : socket_(DatagramSocket::DEFAULT_BIND,
-              RandIntCallback(),
-              net_log,
-              source),
+                                 const net::NetLogSource& source)
+    : socket_(DatagramSocket::DEFAULT_BIND, RandIntCallback(), net_log, source),
       allow_address_reuse_(false),
-      allow_broadcast_(false) {
-}
+      allow_broadcast_(false) {}
 
 UDPServerSocket::~UDPServerSocket() {
 }

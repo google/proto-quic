@@ -106,6 +106,10 @@
         ],
         "system_health_desktop_032.wpr": [
             "play:media:pandora"
+        ],
+        "system_health_desktop_033.wpr": [
+            "browse:media:pinterest",
+            "browse:media:tumblr"
         ]
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/values.h"
+#include "net/log/net_log_capture_mode.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
