@@ -193,7 +193,8 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // Returns true if headers have been fully read and consumed.
   bool FinishedReadingHeaders() const;
 
-  // Returns true if trailers have been fully read and consumed.
+  // Returns true if trailers have been fully read and consumed, or FIN has
+  // been received and there are no trailers.
   bool FinishedReadingTrailers() const;
 
   virtual SpdyPriority priority() const;

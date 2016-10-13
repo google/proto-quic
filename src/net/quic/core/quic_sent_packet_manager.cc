@@ -152,6 +152,10 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
       ContainsQuicTag(config.ReceivedConnectionOptions(), kATIM)) {
     general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
   }
+  if (FLAGS_quic_enable_lazy_fack && config.HasReceivedConnectionOptions() &&
+      ContainsQuicTag(config.ReceivedConnectionOptions(), kLFAK)) {
+    general_loss_algorithm_.SetLossDetectionType(kLazyFack);
+  }
   if (config.HasClientSentConnectionOption(kUNDO, perspective_)) {
     undo_pending_retransmits_ = true;
   }

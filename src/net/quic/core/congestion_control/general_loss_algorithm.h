@@ -65,6 +65,8 @@ class NET_EXPORT_PRIVATE GeneralLossAlgorithm : public LossDetectionInterface {
   // loss.  Fraction calculated by shifting max(SRTT, latest_rtt) to the right
   // by reordering_shift.
   int reordering_shift_;
+  // The largest newly acked from the previous call to DetectLosses.
+  QuicPacketNumber largest_previously_acked_;
 
   DISALLOW_COPY_AND_ASSIGN(GeneralLossAlgorithm);
 };

@@ -466,7 +466,9 @@ QuicEncryptedPacket* QuicFramer::BuildPublicResetPacket(
   CryptoHandshakeMessage reset;
   reset.set_tag(kPRST);
   reset.SetValue(kRNON, packet.nonce_proof);
-  reset.SetValue(kRSEQ, packet.rejected_packet_number);
+  if (!FLAGS_quic_remove_packet_number_from_public_reset) {
+    reset.SetValue(kRSEQ, packet.rejected_packet_number);
+  }
   if (!packet.client_address.address().empty()) {
     // packet.client_address is non-empty.
     QuicSocketAddressCoder address_coder(packet.client_address);
@@ -542,7 +544,7 @@ bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
   // First parse the public header.
   QuicPacketPublicHeader public_header;
   if (!ProcessPublicHeader(&reader, &public_header)) {
-    DLOG(WARNING) << "Unable to process public header.";
+    DVLOG(1) << "Unable to process public header.";
     DCHECK_NE("", detailed_error_);
     return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
@@ -609,7 +611,7 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
                                    size_t buffer_length) {
   QuicPacketHeader header(public_header);
   if (!ProcessUnauthenticatedHeader(encrypted_reader, &header)) {
-    DLOG(WARNING) << "Unable to process packet header.  Stopping parsing.";
+    DVLOG(1) << "Unable to process packet header.  Stopping parsing.";
     return false;
   }
 
@@ -623,7 +625,7 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
   QuicDataReader reader(decrypted_buffer, decrypted_length);
   if (quic_version_ <= QUIC_VERSION_33) {
     if (!ProcessAuthenticatedHeader(&reader, &header)) {
-      DLOG(WARNING) << "Unable to process packet header.  Stopping parsing.";
+      DVLOG(1) << "Unable to process packet header.  Stopping parsing.";
       return false;
     }
   }
@@ -643,7 +645,6 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
     return RaiseError(QUIC_PACKET_TOO_LARGE);
   }
 
-  DCHECK(!header.fec_flag);
   // Handle the payload.
   if (!ProcessFrameData(&reader, header)) {
     DCHECK_NE(QUIC_NO_ERROR, error_);  // ProcessFrameData sets the error.
@@ -1102,35 +1103,12 @@ bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
     return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
 
-  if (quic_version_ > QUIC_VERSION_31) {
-    if (private_flags > PACKET_PRIVATE_FLAGS_MAX_VERSION_32) {
-      set_detailed_error("Illegal private flags value.");
-      return RaiseError(QUIC_INVALID_PACKET_HEADER);
-    }
-  } else {
-    if (private_flags > PACKET_PRIVATE_FLAGS_MAX) {
-      set_detailed_error("Illegal private flags value.");
-      return RaiseError(QUIC_INVALID_PACKET_HEADER);
-    }
+  if (private_flags > PACKET_PRIVATE_FLAGS_MAX) {
+    set_detailed_error("Illegal private flags value.");
+    return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
 
   header->entropy_flag = (private_flags & PACKET_PRIVATE_FLAGS_ENTROPY) != 0;
-  header->fec_flag = (private_flags & PACKET_PRIVATE_FLAGS_FEC) != 0;
-
-  if ((private_flags & PACKET_PRIVATE_FLAGS_FEC_GROUP) != 0) {
-    uint8_t first_fec_protected_packet_offset;
-    if (!reader->ReadBytes(&first_fec_protected_packet_offset, 1)) {
-      set_detailed_error("Unable to read first fec protected packet offset.");
-      return RaiseError(QUIC_INVALID_PACKET_HEADER);
-    }
-    if (first_fec_protected_packet_offset >= header->packet_number) {
-      set_detailed_error(
-          "First fec protected packet offset must be less "
-          "than the packet number.");
-      return RaiseError(QUIC_INVALID_PACKET_HEADER);
-    }
-  }
-
   header->entropy_hash = GetPacketEntropyHash(*header);
   return true;
 }
@@ -1463,27 +1441,6 @@ bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
     // can't overlap by 1 packet number.  This allows a missing_delta of 0
     // to represent an adjacent nack range.
     last_packet_number -= (range_length + 1);
-  }
-
-  if (quic_version_ > QUIC_VERSION_31) {
-    return true;
-  }
-
-  // Parse the revived packets list.
-  // TODO(ianswett): Change the ack frame so it only expresses one revived.
-  uint8_t num_revived_packets;
-  if (!reader->ReadBytes(&num_revived_packets, 1)) {
-    set_detailed_error("Unable to read num revived packets.");
-    return false;
-  }
-
-  for (size_t i = 0; i < num_revived_packets; ++i) {
-    QuicPacketNumber revived_packet = 0;
-    if (!reader->ReadBytes(&revived_packet,
-                           largest_observed_packet_number_length)) {
-      set_detailed_error("Unable to read revived packet.");
-      return false;
-    }
   }
 
   return true;
@@ -1938,8 +1895,8 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
   }
 
   if (!success) {
-    DLOG(WARNING) << "DecryptPacket failed for packet_number:"
-                  << header.packet_number;
+    DVLOG(1) << "DecryptPacket failed for packet_number:"
+             << header.packet_number;
     return false;
   }
 
@@ -1968,9 +1925,6 @@ size_t QuicFramer::GetAckFrameSize(
     ack_size = GetMinAckFrameSize(quic_version_, largest_observed_length);
     if (!ack_info.nack_ranges.empty()) {
       ack_size += kNumberOfNackRangesSize;
-      if (quic_version_ <= QUIC_VERSION_31) {
-        ack_size += kNumberOfRevivedPacketsSize;
-      }
       ack_size += min(ack_info.nack_ranges.size(), kMaxNackRanges) *
                   (missing_packet_number_length + PACKET_1BYTE_PACKET_NUMBER);
     }
@@ -2177,9 +2131,6 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicPacketHeader& header,
   size_t available_range_bytes =
       writer->capacity() - writer->length() - kNumberOfNackRangesSize -
       GetMinAckFrameSize(quic_version_, largest_observed_length);
-  if (quic_version_ <= QUIC_VERSION_31) {
-    available_range_bytes -= kNumberOfRevivedPacketsSize;
-  }
   size_t max_num_ranges =
       available_range_bytes /
       (missing_packet_number_length + PACKET_1BYTE_PACKET_NUMBER);
@@ -2298,18 +2249,6 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicPacketHeader& header,
     ++num_ranges_written;
   }
   DCHECK_EQ(num_missing_ranges, num_ranges_written);
-
-  if (quic_version_ > QUIC_VERSION_31) {
-    return true;
-  }
-
-  // Append revived packets.
-  // FEC is not supported.
-  uint8_t num_revived_packets = 0;
-  if (!writer->WriteBytes(&num_revived_packets, 1)) {
-    QUIC_BUG << "num_revived_packets failed: " << num_revived_packets;
-    return false;
-  }
 
   return true;
 }

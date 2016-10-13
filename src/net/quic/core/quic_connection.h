@@ -697,10 +697,6 @@ class NET_EXPORT_PRIVATE QuicConnection
     return last_packet_source_address_;
   }
 
-  void set_largest_packet_size_supported(QuicByteCount size) {
-    largest_packet_size_supported_ = size;
-  }
-
  protected:
   // Calls cancel() on all the alarms owned by this connection.
   void CancelAllAlarms();
@@ -1096,9 +1092,6 @@ class NET_EXPORT_PRIVATE QuicConnection
 
   // The size of the largest packet received from peer.
   QuicByteCount largest_received_packet_size_;
-
-  // The maximum allowed packet size.
-  QuicByteCount largest_packet_size_supported_;
 
   // Whether a GoAway has been sent.
   bool goaway_sent_;

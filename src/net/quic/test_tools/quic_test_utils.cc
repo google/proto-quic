@@ -630,7 +630,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   header.packet_number = packet_number;
   header.entropy_flag = false;
   header.entropy_hash = 0;
-  header.fec_flag = false;
   QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
@@ -681,7 +680,6 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
   header.packet_number = packet_number;
   header.entropy_flag = false;
   header.entropy_hash = 0;
-  header.fec_flag = false;
   QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
@@ -775,7 +773,6 @@ static QuicPacket* ConstructPacketFromHandshakeMessage(
   header.packet_number = 1;
   header.entropy_flag = false;
   header.entropy_hash = 0;
-  header.fec_flag = false;
 
   QuicStreamFrame stream_frame(kCryptoStreamId, false, 0,
                                data->AsStringPiece());

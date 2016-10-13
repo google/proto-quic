@@ -701,18 +701,10 @@ TEST_F(TcpCubicSenderBytesTest, BandwidthResumption) {
   EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
             sender_->GetCongestionWindow());
 
-  if (FLAGS_quic_no_lower_bw_resumption_limit) {
-    // Resume with an illegal value of 0 and verify the server uses 1 instead.
-    cached_network_params.set_bandwidth_estimate_bytes_per_second(0);
-    sender_->ResumeConnectionState(cached_network_params, false);
-    EXPECT_EQ(sender_->min_congestion_window(), sender_->GetCongestionWindow());
-  } else {
-    cached_network_params.set_bandwidth_estimate_bytes_per_second(
-        (kMinCongestionWindowForBandwidthResumption - 1) * kDefaultTCPMSS);
-    sender_->ResumeConnectionState(cached_network_params, false);
-    EXPECT_EQ(kMinCongestionWindowForBandwidthResumption * kDefaultTCPMSS,
-              sender_->GetCongestionWindow());
-  }
+  // Resume with an illegal value of 0 and verify the server uses 1 instead.
+  cached_network_params.set_bandwidth_estimate_bytes_per_second(0);
+  sender_->ResumeConnectionState(cached_network_params, false);
+  EXPECT_EQ(sender_->min_congestion_window(), sender_->GetCongestionWindow());
 
   // Resume to the max value.
   cached_network_params.set_max_bandwidth_estimate_bytes_per_second(

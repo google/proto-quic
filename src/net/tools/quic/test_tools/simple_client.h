@@ -61,7 +61,7 @@ class SimpleClient {
   // expires. -1 for no timeout.
   virtual void WaitForInitialResponseForMs(int timeout_ms);
 
-  virtual void WaitUntil(int timeout_ms, std::function<bool()> trigger) = 0;
+  virtual bool WaitUntil(int timeout_ms, std::function<bool()> trigger) = 0;
 
   // Clears any outstanding state from the last request.
   virtual void ClearPerRequestState() = 0;

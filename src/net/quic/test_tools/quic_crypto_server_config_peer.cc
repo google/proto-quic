@@ -40,6 +40,10 @@ QuicCryptoServerConfigPeer::GetConfig(string config_id) {
   }
 }
 
+ProofSource* QuicCryptoServerConfigPeer::GetProofSource() const {
+  return server_config_->proof_source_.get();
+}
+
 string QuicCryptoServerConfigPeer::NewSourceAddressToken(
     string config_id,
     SourceAddressTokens previous_tokens,

@@ -515,19 +515,12 @@ bool ProofVerifierChromium::Job::VerifySignature(const string& signed_data,
     return false;
   }
 
-  if (quic_version <= QUIC_VERSION_30) {
-    verifier.VerifyUpdate(
-        reinterpret_cast<const uint8_t*>(kProofSignatureLabelOld),
-        sizeof(kProofSignatureLabelOld));
-  } else {
-    verifier.VerifyUpdate(
-        reinterpret_cast<const uint8_t*>(kProofSignatureLabel),
-        sizeof(kProofSignatureLabel));
-    uint32_t len = chlo_hash.length();
-    verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(&len), sizeof(len));
-    verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(chlo_hash.data()),
-                          len);
-  }
+  verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(kProofSignatureLabel),
+                        sizeof(kProofSignatureLabel));
+  uint32_t len = chlo_hash.length();
+  verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(&len), sizeof(len));
+  verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(chlo_hash.data()),
+                        len);
 
   verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(signed_data.data()),
                         signed_data.size());

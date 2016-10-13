@@ -78,16 +78,14 @@ QuicPacketHeader::QuicPacketHeader()
     : packet_number(0),
       path_id(kDefaultPathId),
       entropy_flag(false),
-      entropy_hash(0),
-      fec_flag(false) {}
+      entropy_hash(0) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketPublicHeader& header)
     : public_header(header),
       packet_number(0),
       path_id(kDefaultPathId),
       entropy_flag(false),
-      entropy_hash(0),
-      fec_flag(false) {}
+      entropy_hash(0) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketHeader& other) = default;
 
@@ -187,11 +185,7 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
   QuicVersionVector filtered_versions(versions.size());
   filtered_versions.clear();  // Guaranteed by spec not to change capacity.
   for (QuicVersion version : versions) {
-    if (version < QUIC_VERSION_32) {
-      if (!FLAGS_quic_disable_pre_32 && !FLAGS_quic_disable_pre_34) {
-        filtered_versions.push_back(version);
-      }
-    } else if (version < QUIC_VERSION_34) {
+    if (version < QUIC_VERSION_34) {
       if (!FLAGS_quic_disable_pre_34) {
         filtered_versions.push_back(version);
       }
@@ -223,10 +217,6 @@ QuicVersionVector VersionOfIndex(const QuicVersionVector& versions, int index) {
 
 QuicTag QuicVersionToQuicTag(const QuicVersion version) {
   switch (version) {
-    case QUIC_VERSION_30:
-      return MakeQuicTag('Q', '0', '3', '0');
-    case QUIC_VERSION_31:
-      return MakeQuicTag('Q', '0', '3', '1');
     case QUIC_VERSION_32:
       return MakeQuicTag('Q', '0', '3', '2');
     case QUIC_VERSION_33:
@@ -263,8 +253,6 @@ QuicVersion QuicTagToQuicVersion(const QuicTag version_tag) {
 
 string QuicVersionToString(const QuicVersion version) {
   switch (version) {
-    RETURN_STRING_LITERAL(QUIC_VERSION_30);
-    RETURN_STRING_LITERAL(QUIC_VERSION_31);
     RETURN_STRING_LITERAL(QUIC_VERSION_32);
     RETURN_STRING_LITERAL(QUIC_VERSION_33);
     RETURN_STRING_LITERAL(QUIC_VERSION_34);
@@ -314,8 +302,7 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
        << QuicUtils::HexEncode(StringPiece(header.public_header.nonce->data(),
                                            header.public_header.nonce->size()));
   }
-  os << ", fec_flag: " << header.fec_flag
-     << ", entropy_flag: " << header.entropy_flag
+  os << ", entropy_flag: " << header.entropy_flag
      << ", entropy hash: " << static_cast<int>(header.entropy_hash)
      << ", path_id: " << static_cast<int>(header.path_id)
      << ", packet_number: " << header.packet_number << " }\n";
@@ -726,40 +713,33 @@ ostream& operator<<(ostream& os, const QuicEncryptedPacket& s) {
 QuicReceivedPacket::QuicReceivedPacket(const char* buffer,
                                        size_t length,
                                        QuicTime receipt_time)
-    : QuicReceivedPacket(buffer,
-                         length,
-                         receipt_time,
-                         false /* owns_buffer */) {}
+    : QuicEncryptedPacket(buffer, length),
+      receipt_time_(receipt_time),
+      ttl_(0) {}
 
 QuicReceivedPacket::QuicReceivedPacket(const char* buffer,
                                        size_t length,
                                        QuicTime receipt_time,
                                        bool owns_buffer)
-    : QuicReceivedPacket(buffer,
-                         length,
-                         receipt_time,
-                         owns_buffer,
-                         false /* potentially_small_mtu */,
-                         -1 /* ttl */,
-                         false /* ttl_valid */) {}
+    : QuicEncryptedPacket(buffer, length, owns_buffer),
+      receipt_time_(receipt_time),
+      ttl_(0) {}
 
 QuicReceivedPacket::QuicReceivedPacket(const char* buffer,
                                        size_t length,
                                        QuicTime receipt_time,
                                        bool owns_buffer,
-                                       bool potentially_small_mtu,
                                        int ttl,
                                        bool ttl_valid)
     : QuicEncryptedPacket(buffer, length, owns_buffer),
       receipt_time_(receipt_time),
-      ttl_(ttl_valid ? ttl : -1),
-      potentially_small_mtu_(potentially_small_mtu) {}
+      ttl_(ttl_valid ? ttl : -1) {}
 
 QuicReceivedPacket* QuicReceivedPacket::Clone() const {
   char* buffer = new char[this->length()];
   memcpy(buffer, this->data(), this->length());
   return new QuicReceivedPacket(buffer, this->length(), receipt_time(), true,
-                                potentially_small_mtu(), ttl(), ttl() >= 0);
+                                ttl(), ttl() >= 0);
 }
 
 ostream& operator<<(ostream& os, const QuicReceivedPacket& s) {
@@ -784,8 +764,7 @@ StringPiece QuicPacket::Plaintext(QuicVersion version) const {
 }
 
 QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
-    : disable_pre_32_(FLAGS_quic_disable_pre_32),
-      disable_pre_34_(FLAGS_quic_disable_pre_34),
+    : disable_pre_34_(FLAGS_quic_disable_pre_34),
       enable_version_35_(FLAGS_quic_enable_version_35),
       enable_version_36_(FLAGS_quic_enable_version_36_v2),
       allowed_supported_versions_(supported_versions),
@@ -795,11 +774,9 @@ QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
 QuicVersionManager::~QuicVersionManager() {}
 
 const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
-  if (disable_pre_32_ != FLAGS_quic_disable_pre_32 ||
-      disable_pre_34_ != FLAGS_quic_disable_pre_34 ||
+  if (disable_pre_34_ != FLAGS_quic_disable_pre_34 ||
       enable_version_35_ != FLAGS_quic_enable_version_35 ||
       enable_version_36_ != FLAGS_quic_enable_version_36_v2) {
-    disable_pre_32_ = FLAGS_quic_disable_pre_32;
     disable_pre_34_ = FLAGS_quic_disable_pre_34;
     enable_version_35_ = FLAGS_quic_enable_version_35;
     enable_version_36_ = FLAGS_quic_enable_version_36_v2;

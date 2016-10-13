@@ -18,6 +18,7 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/quic/test_tools/quic_time_wait_list_manager_peer.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
@@ -63,24 +64,6 @@ class FramerVisitorCapturingPublicReset : public NoOpFramerVisitor {
 
  private:
   QuicPublicResetPacket public_reset_packet_;
-};
-
-class QuicTimeWaitListManagerPeer {
- public:
-  static bool ShouldSendResponse(QuicTimeWaitListManager* manager,
-                                 int received_packet_count) {
-    return manager->ShouldSendResponse(received_packet_count);
-  }
-
-  static QuicTime::Delta time_wait_period(QuicTimeWaitListManager* manager) {
-    return manager->time_wait_period_;
-  }
-
-  static QuicVersion GetQuicVersionFromConnectionId(
-      QuicTimeWaitListManager* manager,
-      QuicConnectionId connection_id) {
-    return manager->GetQuicVersionFromConnectionId(connection_id);
-  }
 };
 
 namespace {

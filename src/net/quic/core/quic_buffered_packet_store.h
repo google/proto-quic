@@ -141,7 +141,7 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
   BufferedPacketMap undecryptable_packets_;
 
   // The max time the packets of a connection can be buffer in the store.
-  QuicTime::Delta connection_life_span_;
+  const QuicTime::Delta connection_life_span_;
 
   VisitorInterface* visitor_;  // Unowned.
 

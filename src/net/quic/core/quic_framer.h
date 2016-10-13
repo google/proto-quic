@@ -61,8 +61,6 @@ const size_t kNumberOfAckBlocksSize = 1;
 const size_t kMaxNackRanges = (1 << (kNumberOfNackRangesSize * 8)) - 1;
 // Maximum number of ack blocks that can fit within an ack frame.
 const size_t kMaxAckBlocks = (1 << (kNumberOfAckBlocksSize * 8)) - 1;
-// Size in bytes reserved for the number of revived packets in ack frames.
-const size_t kNumberOfRevivedPacketsSize = 1;
 
 // This class receives callbacks from the framer when packets
 // are processed.

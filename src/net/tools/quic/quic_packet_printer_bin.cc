@@ -21,9 +21,8 @@
 // OnUnauthenticatedPublicHeader
 // OnUnauthenticatedHeader: { connection_id: 13845207862000976235,
 // connection_id_length:8, packet_number_length:1, multipath_flag: 0,
-// reset_flag: 0, version_flag: 0, fec_flag: 0, entropy_flag: 0,
-// entropy hash: 0, path_id: , packet_number: 4, is_in_fec_group:0,
-// fec_group: 0}
+// reset_flag: 0, version_flag: 0, entropy_flag: 0, entropy hash: 0, path_id: ,
+// packet_number: 4}
 // OnDecryptedPacket
 // OnPacketHeader
 // OnAckFrame:  entropy_hash: 2 largest_observed: 1 ack_delay_time: 3000

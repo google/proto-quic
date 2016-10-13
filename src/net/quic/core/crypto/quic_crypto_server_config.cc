@@ -541,13 +541,10 @@ void QuicCryptoServerConfig::ValidateClientHello(
   }
 
   if (result->error_code == QUIC_NO_ERROR) {
-    if (version > QUIC_VERSION_30) {
-      // QUIC v31 and above require a new proof for each CHLO so clear the
-      // existing proof, if any.
-      crypto_proof->chain = nullptr;
-      crypto_proof->signature = "";
-      crypto_proof->cert_sct = "";
-    }
+    // QUIC requires a new proof for each CHLO so clear any existing proof.
+    crypto_proof->chain = nullptr;
+    crypto_proof->signature = "";
+    crypto_proof->cert_sct = "";
     EvaluateClientHello(server_ip, version, primary_orbit, requested_config,
                         primary_config, crypto_proof, result,
                         std::move(done_cb));

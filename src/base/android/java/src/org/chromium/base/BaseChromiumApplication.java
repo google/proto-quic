@@ -42,6 +42,7 @@ public class BaseChromiumApplication extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
+        assert getBaseContext() != null;
         ChromiumMultiDexInstaller.install(this);
     }
 
@@ -58,7 +59,7 @@ public class BaseChromiumApplication extends Application {
     }
 
     private ObserverList<WindowFocusChangedListener> mWindowFocusListeners =
-            new ObserverList<WindowFocusChangedListener>();
+            new ObserverList<>();
 
     /**
      * Intercepts calls to an existing Window.Callback. Most invocations are passed on directly

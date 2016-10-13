@@ -106,6 +106,8 @@ const QuicTag kDHDT = TAG('D', 'H', 'D', 'T');   // Disable HPACK dynamic table.
 const QuicTag kIPFS = TAG('I', 'P', 'F', 'S');   // No Immediate Forward Secrecy
 const QuicTag kCONH = TAG('C', 'O', 'N', 'H');   // Conservative Handshake
                                                  // Retransmissions.
+const QuicTag kLFAK = TAG('L', 'F', 'A', 'K');   // Don't invoke FACK on the
+                                                 // first ack.
 
 // Optional support of truncated Connection IDs.  If sent by a peer, the value
 // is the minimum number of bytes allowed for the connection ID sent to the
@@ -233,11 +235,6 @@ const size_t kMaxEntries = 128;  // Max number of entries in a message.
 const size_t kNonceSize = 32;  // Size in bytes of the connection nonce.
 
 const size_t kOrbitSize = 8;  // Number of bytes in an orbit value.
-
-// kProofSignatureLabel is prepended to server configs before signing to avoid
-// any cross-protocol attacks on the signature.
-// TODO(rch): Remove this when QUIC_VERSION_30 is removed.
-const char kProofSignatureLabelOld[] = "QUIC server config signature";
 
 // kProofSignatureLabel is prepended to the CHLO hash and server configs before
 // signing to avoid any cross-protocol attacks on the signature.

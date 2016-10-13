@@ -257,8 +257,10 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   // Called when a new connection starts to be handled by this dispatcher.
   // Either this connection is created or its packets is buffered while waiting
-  // for CHLO.
-  virtual void OnNewConnectionAdded(QuicConnectionId connection_id);
+  // for CHLO. Returns true if a new connection should be created or its packets
+  // should be buffered, false otherwise.
+  virtual bool ShouldCreateOrBufferPacketForConnection(
+      QuicConnectionId connection_id);
 
   bool HasBufferedPackets(QuicConnectionId connection_id);
 

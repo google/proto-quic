@@ -140,7 +140,7 @@ class QuicTestClient : public test::SimpleClient,
   void Disconnect() override;
   IPEndPoint local_address() const override;
   void ClearPerRequestState() override;
-  void WaitUntil(int timeout_ms, std::function<bool()> trigger) override;
+  bool WaitUntil(int timeout_ms, std::function<bool()> trigger) override;
   ssize_t Send(const void* buffer, size_t size) override;
   bool response_complete() const override;
   bool response_headers_complete() const override;

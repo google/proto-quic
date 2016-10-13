@@ -51,16 +51,10 @@ void TcpCubicSenderPackets::SetCongestionWindowFromBandwidthAndRtt(
     QuicTime::Delta rtt) {
   QuicPacketCount new_congestion_window =
       bandwidth.ToBytesPerPeriod(rtt) / kDefaultTCPMSS;
-  if (FLAGS_quic_no_lower_bw_resumption_limit) {
-    // Limit new CWND to be in the range [1, kMaxCongestionWindow].
-    congestion_window_ =
-        max(min_congestion_window_,
-            min(new_congestion_window, kMaxResumptionCongestionWindow));
-  } else {
-    congestion_window_ =
-        max(min(new_congestion_window, kMaxResumptionCongestionWindow),
-            kMinCongestionWindowForBandwidthResumption);
-  }
+  // Limit new CWND to be in the range [1, kMaxCongestionWindow].
+  congestion_window_ =
+      max(min_congestion_window_,
+          min(new_congestion_window, kMaxResumptionCongestionWindow));
 }
 
 void TcpCubicSenderPackets::SetCongestionWindowInPackets(

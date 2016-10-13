@@ -31,6 +31,37 @@ TEST(SpdyBalsaUtilsTest, RequestHeadersToSpdyHeaders) {
   EXPECT_EQ(expected_headers, spdy_headers);
 }
 
+TEST(SpdyBalsaUtilsTest, RequestHeadersToSpdyHeadersRelativeUri) {
+  BalsaHeaders request_headers;
+  request_headers.SetRequestFirstlineFromStringPieces("GET", "/", "HTTP/1.1");
+  SpdyHeaderBlock spdy_headers =
+      SpdyBalsaUtils::RequestHeadersToSpdyHeaders(request_headers);
+
+  SpdyHeaderBlock expected_headers;
+  expected_headers[":authority"] = "";
+  expected_headers[":path"] = "/";
+  expected_headers[":scheme"] = "https";
+  expected_headers[":method"] = "GET";
+
+  EXPECT_EQ(expected_headers, spdy_headers);
+}
+
+TEST(SpdyBalsaUtilsTest, RequestHeadersToSpdyHeadersExplicitScheme) {
+  BalsaHeaders request_headers;
+  request_headers.SetRequestFirstlineFromStringPieces("GET", "/", "HTTP/1.1");
+  request_headers.AppendHeader("Scheme", "http");
+  SpdyHeaderBlock spdy_headers =
+      SpdyBalsaUtils::RequestHeadersToSpdyHeaders(request_headers);
+
+  SpdyHeaderBlock expected_headers;
+  expected_headers[":authority"] = "";
+  expected_headers[":path"] = "/";
+  expected_headers[":scheme"] = "http";
+  expected_headers[":method"] = "GET";
+
+  EXPECT_EQ(expected_headers, spdy_headers);
+}
+
 TEST(SpdyBalsaUtilsTest, ResponseHeadersToSpdyHeaders) {
   BalsaHeaders response_headers;
   response_headers.SetResponseFirstlineFromStringPieces("HTTP/1.1", "200",

@@ -12,9 +12,6 @@ using std::string;
 
 namespace {
 
-// TODO(rtenneti): Delete kQuicCryptoConfigVersionNoChloHash after
-// QUIC_VERSION_31 becomes the default.
-const int kQuicCryptoConfigVersionNoChloHash = 1;
 const int kQuicCryptoConfigVersion = 2;
 
 }  // namespace
@@ -75,10 +72,7 @@ bool QuicServerInfo::ParseInner(const string& data) {
     return false;
   }
 
-  // TODO(rtenneti): Delete kQuicCryptoConfigVersionNoChloHash after
-  // QUIC_VERSION_31 becomes the default.
-  if (!(version == kQuicCryptoConfigVersionNoChloHash ||
-        version == kQuicCryptoConfigVersion)) {
+  if (version != kQuicCryptoConfigVersion) {
     DVLOG(1) << "Unsupported version";
     return false;
   }
@@ -91,20 +85,13 @@ bool QuicServerInfo::ParseInner(const string& data) {
     DVLOG(1) << "Malformed source_address_token";
     return false;
   }
-  // TODO(rtenneti): Delete kQuicCryptoConfigVersionNoChloHash after
-  // QUIC_VERSION_31 becomes the default.
-  if (version == kQuicCryptoConfigVersionNoChloHash) {
-    state->cert_sct.clear();
-    state->chlo_hash.clear();
-  } else {
-    if (!iter.ReadString(&state->cert_sct)) {
-      DVLOG(1) << "Malformed cert_sct";
-      return false;
-    }
-    if (!iter.ReadString(&state->chlo_hash)) {
-      DVLOG(1) << "Malformed chlo_hash";
-      return false;
-    }
+  if (!iter.ReadString(&state->cert_sct)) {
+    DVLOG(1) << "Malformed cert_sct";
+    return false;
+  }
+  if (!iter.ReadString(&state->chlo_hash)) {
+    DVLOG(1) << "Malformed chlo_hash";
+    return false;
   }
   if (!iter.ReadString(&state->server_config_sig)) {
     DVLOG(1) << "Malformed server_config_sig";

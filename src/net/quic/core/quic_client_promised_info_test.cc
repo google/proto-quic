@@ -309,7 +309,7 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseWaitCancels) {
   EXPECT_CALL(session_, CloseStream(promise_id_));
   EXPECT_CALL(*connection_,
               SendRstStream(promise_id_, QUIC_STREAM_CANCELLED, 0));
-  promised->Cancel();
+  alarm_factory_.FireAlarm(QuicClientPromisedInfoPeer::GetAlarm(promised));
 
   // Promise is gone
   EXPECT_EQ(session_.GetPromisedById(promise_id_), nullptr);

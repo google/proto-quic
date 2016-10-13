@@ -13,7 +13,6 @@
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
-#include "net/quic/core/congestion_control/windowed_filter.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_time.h"
@@ -38,10 +37,6 @@ class NET_EXPORT_PRIVATE RttStats {
   // is larger. The mean deviation is increased to the most recent deviation if
   // it's larger.
   void ExpireSmoothedMetrics();
-
-  // Forces RttStats to sample a new windowed min rtt within the next
-  // |num_samples| UpdateRtt calls.
-  void SampleNewWindowedMinRtt(uint32_t num_samples);
 
   // Called when connection migrates and rtt measurement needs to be reset.
   void OnConnectionMigration();
@@ -74,14 +69,8 @@ class NET_EXPORT_PRIVATE RttStats {
 
   QuicTime::Delta mean_deviation() const { return mean_deviation_; }
 
-  QuicTime::Delta WindowedMinRtt() { return windowed_min_rtt_.GetBest(); }
-
  private:
   friend class test::RttStatsPeer;
-
-  // Updates the windowed min rtt. Also forces a new windowed_min_rtt sample,
-  // if set by a call to SampleNewWindowedMinRtt() above.
-  void UpdateWindowedMinRtt(QuicTime::Delta rtt_sample, QuicTime now);
 
   QuicTime::Delta latest_rtt_;
   QuicTime::Delta min_rtt_;
@@ -92,19 +81,6 @@ class NET_EXPORT_PRIVATE RttStats {
   // larger than the standard deviation, for a normally distributed signal.
   QuicTime::Delta mean_deviation_;
   int64_t initial_rtt_us_;
-
-  // Variables used to force a new windowed_min_rtt measurement within
-  // num_samples_for_forced_min_.
-  QuicTime::Delta forced_windowed_min_rtt_;
-  QuicTime forced_windowed_min_rtt_time_;
-  uint32_t num_samples_for_forced_min_;
-
-  // Windowed min_rtt.
-  WindowedFilter<QuicTime::Delta,
-                 MinFilter<QuicTime::Delta>,
-                 QuicTime,
-                 QuicTime::Delta>
-      windowed_min_rtt_;
 
   DISALLOW_COPY_AND_ASSIGN(RttStats);
 };

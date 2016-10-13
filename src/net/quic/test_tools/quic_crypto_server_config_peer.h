@@ -27,6 +27,9 @@ class QuicCryptoServerConfigPeer {
   scoped_refptr<QuicCryptoServerConfig::Config> GetConfig(
       std::string config_id);
 
+  // Returns a pointer to the ProofSource object.
+  ProofSource* GetProofSource() const;
+
   // Generates a new valid source address token.
   std::string NewSourceAddressToken(
       std::string config_id,

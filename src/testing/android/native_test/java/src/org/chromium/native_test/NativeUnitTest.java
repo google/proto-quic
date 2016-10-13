@@ -21,14 +21,16 @@ public class NativeUnitTest extends NativeTest {
     @Override
     public void preCreate(Activity activity) {
         super.preCreate(activity);
+        // Necessary because NativeUnitTestActivity uses BaseChromiumApplication which does not
+        // initialize ContextUtils.
+        ContextUtils.initApplicationContext(activity.getApplicationContext());
 
         // Needed by path_utils_unittest.cc
-        PathUtils.setPrivateDataDirectorySuffix("chrome", activity.getApplicationContext());
+        PathUtils.setPrivateDataDirectorySuffix("chrome");
 
         // Needed by system_monitor_unittest.cc
         PowerMonitor.createForTests(activity);
 
-        ContextUtils.initApplicationContext(activity.getApplicationContext());
         // For NativeActivity based tests,
         // dependency libraries must be loaded before NativeActivity::OnCreate,
         // otherwise loading android.app.lib_name will fail

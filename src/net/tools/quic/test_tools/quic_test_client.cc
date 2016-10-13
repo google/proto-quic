@@ -570,7 +570,7 @@ bool QuicTestClient::HaveActiveStream() {
           !client_->session()->IsClosedStream(stream_->id()));
 }
 
-void QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
+bool QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
   int64_t timeout_us = timeout_ms * base::Time::kMicrosecondsPerMillisecond;
   int64_t old_timeout_us = epoll_server()->timeout_in_us();
   if (timeout_us > 0) {
@@ -590,7 +590,9 @@ void QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
   }
   if (trigger && !trigger()) {
     VLOG(1) << "Client WaitUntil returning with trigger returning false.";
+    return false;
   }
+  return true;
 }
 
 ssize_t QuicTestClient::Send(const void* buffer, size_t size) {

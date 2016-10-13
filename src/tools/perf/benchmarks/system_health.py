@@ -40,6 +40,7 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options.config.enable_battor_trace = (
         os.environ.get('BUILDBOT_MASTERNAME') == 'chromium.perf.fyi')
     options.config.enable_chrome_trace = True
+    options.SetTimelineBasedMetrics(['clockSyncLatencyMetric', 'powerMetric'])
     return options
 
   def CreateStorySet(self, options):

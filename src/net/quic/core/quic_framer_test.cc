@@ -243,10 +243,6 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
   void OnDecryptedPacket(EncryptionLevel level) override {}
 
   bool OnPacketHeader(const QuicPacketHeader& header) override {
-    if (header.fec_flag) {
-      // Drop any FEC packet.
-      return false;
-    }
     ++packet_count_;
     header_.reset(new QuicPacketHeader(header));
     return accept_packet_;
@@ -686,7 +682,6 @@ TEST_P(QuicFramerTest, PacketHeader) {
   EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -756,7 +751,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith0ByteConnectionId) {
   EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -831,7 +825,6 @@ TEST_P(QuicFramerTest, PacketHeaderWithVersionFlag) {
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_TRUE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(GetParam(), visitor_.header_->public_header.versions[0]);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -907,7 +900,6 @@ TEST_P(QuicFramerTest, PacketHeaderWithMultipathFlag) {
   EXPECT_TRUE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPathId, visitor_.header_->path_id);
@@ -990,7 +982,6 @@ TEST_P(QuicFramerTest, PacketHeaderWithBothVersionFlagAndMultipathFlag) {
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_TRUE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(GetParam(), visitor_.header_->public_header.versions[0]);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPathId, visitor_.header_->path_id);
@@ -1235,7 +1226,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
   EXPECT_FALSE(visitor_.header_->public_header.multipath_flag);
   EXPECT_FALSE(visitor_.header_->public_header.reset_flag);
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -1312,7 +1302,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(PACKET_2BYTE_PACKET_NUMBER,
             visitor_.header_->public_header.packet_number_length);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -1389,7 +1378,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
   EXPECT_FALSE(visitor_.header_->public_header.version_flag);
   EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
             visitor_.header_->public_header.packet_number_length);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
   EXPECT_FALSE(visitor_.header_->entropy_flag);
   EXPECT_EQ(0, visitor_.header_->entropy_hash);
   EXPECT_EQ(kPacketNumber, visitor_.header_->packet_number);
@@ -1432,7 +1420,6 @@ TEST_P(QuicFramerTest, PacketNumberDecreasesThenIncreases) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber - 2;
 
@@ -1682,38 +1669,6 @@ TEST_P(QuicFramerTest, InvalidPrivateFlag) {
   CheckProcessingFails(packet, arraysize(packet),
                        "Illegal private flags value.",
                        QUIC_INVALID_PACKET_HEADER);
-};
-
-TEST_P(QuicFramerTest, InvalidFECGroupOffset) {
-  if (framer_.version() > QUIC_VERSION_33) {
-    return;
-  }
-  // clang-format off
-  unsigned char packet[] = {
-    // public flags (8 byte connection_id)
-    0x38,
-    // connection_id
-    0x10, 0x32, 0x54, 0x76,
-    0x98, 0xBA, 0xDC, 0xFE,
-    // packet number
-    0x01, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-    // private flags (fec group)
-    0x02,
-    // first fec protected packet offset
-    0x10
-  };
-  // clang-format on
-  if (framer_.version() > QUIC_VERSION_31) {
-    CheckProcessingFails(packet, arraysize(packet),
-                         "Illegal private flags value.",
-                         QUIC_INVALID_PACKET_HEADER);
-  } else {
-    CheckProcessingFails(packet, arraysize(packet),
-                         "First fec protected packet offset must be less "
-                         "than the packet number.",
-                         QUIC_INVALID_PACKET_HEADER);
-  }
 };
 
 TEST_P(QuicFramerTest, PaddingFrame) {
@@ -2376,133 +2331,6 @@ TEST_P(QuicFramerTest, RejectPublicHeader) {
   ASSERT_FALSE(visitor_.header_.get());
 }
 
-TEST_P(QuicFramerTest, AckFrameTwoTimestamp) {
-  // clang-format off
-  unsigned char packet[] = {
-    // public flags (8 byte connection_id)
-    0x38,
-    // connection_id
-    0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-    // packet number
-    0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-    // private flags (entropy)
-    0x01,
-
-    // frame type (ack frame)
-    // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-    0x6C,
-    // entropy hash of all received packets.
-    0xBA,
-    // largest observed packet number
-    0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-    // Zero delta time.
-    0x00, 0x00,
-    // Number of timestamps.
-    0x02,
-    // Delta from largest observed.
-    0x01,
-    // Delta time.
-    0x10, 0x32, 0x54, 0x76,
-    // Delta from largest observed.
-    0x02,
-    // Delta time.
-    0x10, 0x32,
-    // num missing packets
-    0x01,
-    // missing packet delta
-    0x01,
-    // 0 more missing packets in range.
-    0x00,
-    // Number of revived packets.
-    0x00,
-  };
-  // clang-format on
-
-  if (framer_.version() > QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame.entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame.largest_observed);
-  ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
-  ASSERT_EQ(2u, frame.received_packet_times.size());
-  EXPECT_EQ(kMissingPacket, frame.packets.Min());
-
-  const size_t kReceivedEntropyOffset = kQuicFrameTypeSize;
-  const size_t kLargestObservedOffset =
-      kReceivedEntropyOffset + kQuicEntropyHashSize;
-  const size_t kMissingDeltaTimeOffset =
-      kLargestObservedOffset + PACKET_6BYTE_PACKET_NUMBER;
-  const size_t kNumTimestampsOffset =
-      kMissingDeltaTimeOffset + kQuicDeltaTimeLargestObservedSize;
-  const size_t kTimestampDeltaLargestObserved1 =
-      kNumTimestampsOffset + kQuicNumTimestampsSize;
-  const size_t kTimestampTimeDeltaLargestObserved1 =
-      kTimestampDeltaLargestObserved1 + 1;
-  const size_t kTimestampDeltaLargestObserved2 =
-      kTimestampTimeDeltaLargestObserved1 + 4;
-  const size_t kTimestampTimeDeltaLargestObserved2 =
-      kTimestampDeltaLargestObserved2 + 1;
-  const size_t kNumMissingPacketOffset =
-      kTimestampTimeDeltaLargestObserved2 + 2;
-  const size_t kMissingPacketsOffset =
-      kNumMissingPacketOffset + kNumberOfNackRangesSize;
-  const size_t kMissingPacketsRange =
-      kMissingPacketsOffset + PACKET_1BYTE_PACKET_NUMBER;
-  const size_t kRevivedPacketsLength =
-      kMissingPacketsRange + PACKET_1BYTE_PACKET_NUMBER;
-  // Now test framing boundaries.
-  const size_t ack_frame_size =
-      kRevivedPacketsLength + PACKET_1BYTE_PACKET_NUMBER;
-  for (size_t i = kQuicFrameTypeSize; i < ack_frame_size; ++i) {
-    string expected_error;
-    if (i < kLargestObservedOffset) {
-      expected_error = "Unable to read entropy hash for received packets.";
-    } else if (i < kMissingDeltaTimeOffset) {
-      expected_error = "Unable to read largest observed.";
-    } else if (i < kNumTimestampsOffset) {
-      expected_error = "Unable to read ack delay time.";
-    } else if (i < kTimestampDeltaLargestObserved1) {
-      expected_error = "Unable to read num received packets.";
-    } else if (i < kTimestampTimeDeltaLargestObserved1) {
-      expected_error = "Unable to read sequence delta in received packets.";
-    } else if (i < kTimestampDeltaLargestObserved2) {
-      expected_error = "Unable to read time delta in received packets.";
-    } else if (i < kTimestampTimeDeltaLargestObserved2) {
-      expected_error = "Unable to read sequence delta in received packets.";
-    } else if (i < kNumMissingPacketOffset) {
-      expected_error =
-          "Unable to read incremental time delta in received packets.";
-    } else if (i < kMissingPacketsOffset) {
-      expected_error = "Unable to read num missing packet ranges.";
-    } else if (i < kMissingPacketsRange) {
-      expected_error = "Unable to read missing packet number delta.";
-    } else if (i < kRevivedPacketsLength) {
-      expected_error = "Unable to read missing packet number range.";
-    } else {
-      expected_error = "Unable to read num revived packets.";
-    }
-    CheckProcessingFails(
-        packet,
-        i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
-                                !kIncludeVersion, !kIncludePathId,
-                                !kIncludeDiversificationNonce,
-                                PACKET_6BYTE_PACKET_NUMBER),
-        expected_error, QUIC_INVALID_ACK_DATA);
-  }
-}
-
 TEST_P(QuicFramerTest, AckFrameTwoTimestampVersion32) {
   // clang-format off
   unsigned char packet[] = {
@@ -2543,8 +2371,7 @@ TEST_P(QuicFramerTest, AckFrameTwoTimestampVersion32) {
   };
   // clang-format on
 
-  if (framer_.version() <= QUIC_VERSION_31 ||
-      framer_.version() > QUIC_VERSION_33) {
+  if (framer_.version() > QUIC_VERSION_33) {
     return;
   }
 
@@ -2609,119 +2436,6 @@ TEST_P(QuicFramerTest, AckFrameTwoTimestampVersion32) {
       expected_error = "Unable to read num missing packet ranges.";
     } else {
       expected_error = "Unable to read missing packet number delta.";
-    }
-    CheckProcessingFails(
-        packet,
-        i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
-                                !kIncludeVersion, !kIncludePathId,
-                                !kIncludeDiversificationNonce,
-                                PACKET_6BYTE_PACKET_NUMBER),
-        expected_error, QUIC_INVALID_ACK_DATA);
-  }
-}
-
-TEST_P(QuicFramerTest, AckFrameOneTimestamp) {
-  // clang-format off
-  unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      0x38,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x6C,
-      // entropy hash of all received packets.
-      0xBA,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // Number of timestamps.
-      0x01,
-      // Delta from largest observed.
-      0x01,
-      // Delta time.
-      0x10, 0x32, 0x54, 0x76,
-      // num missing packets
-      0x01,
-      // missing packet delta
-      0x01,
-      // 0 more missing packets in range.
-      0x00,
-      // Number of revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  if (framer_.version() > QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame.entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame.largest_observed);
-  ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
-  ASSERT_EQ(1u, frame.received_packet_times.size());
-  EXPECT_EQ(kMissingPacket, frame.packets.Min());
-
-  const size_t kReceivedEntropyOffset = kQuicFrameTypeSize;
-  const size_t kLargestObservedOffset =
-      kReceivedEntropyOffset + kQuicEntropyHashSize;
-  const size_t kMissingDeltaTimeOffset =
-      kLargestObservedOffset + PACKET_6BYTE_PACKET_NUMBER;
-  const size_t kNumTimestampsOffset =
-      kMissingDeltaTimeOffset + kQuicDeltaTimeLargestObservedSize;
-  const size_t kTimestampDeltaLargestObserved =
-      kNumTimestampsOffset + kQuicNumTimestampsSize;
-  const size_t kTimestampTimeDeltaLargestObserved =
-      kTimestampDeltaLargestObserved + 1;
-  const size_t kNumMissingPacketOffset = kTimestampTimeDeltaLargestObserved + 4;
-  const size_t kMissingPacketsOffset =
-      kNumMissingPacketOffset + kNumberOfNackRangesSize;
-  const size_t kMissingPacketsRange =
-      kMissingPacketsOffset + PACKET_1BYTE_PACKET_NUMBER;
-  const size_t kRevivedPacketsLength =
-      kMissingPacketsRange + PACKET_1BYTE_PACKET_NUMBER;
-  // Now test framing boundaries.
-  const size_t ack_frame_size =
-      kRevivedPacketsLength + PACKET_1BYTE_PACKET_NUMBER;
-  for (size_t i = kQuicFrameTypeSize; i < ack_frame_size; ++i) {
-    string expected_error;
-    if (i < kLargestObservedOffset) {
-      expected_error = "Unable to read entropy hash for received packets.";
-    } else if (i < kMissingDeltaTimeOffset) {
-      expected_error = "Unable to read largest observed.";
-    } else if (i < kNumTimestampsOffset) {
-      expected_error = "Unable to read ack delay time.";
-    } else if (i < kTimestampDeltaLargestObserved) {
-      expected_error = "Unable to read num received packets.";
-    } else if (i < kTimestampTimeDeltaLargestObserved) {
-      expected_error = "Unable to read sequence delta in received packets.";
-    } else if (i < kNumMissingPacketOffset) {
-      expected_error = "Unable to read time delta in received packets.";
-    } else if (i < kMissingPacketsOffset) {
-      expected_error = "Unable to read num missing packet ranges.";
-    } else if (i < kMissingPacketsRange) {
-      expected_error = "Unable to read missing packet number delta.";
-    } else if (i < kRevivedPacketsLength) {
-      expected_error = "Unable to read missing packet number range.";
-    } else {
-      expected_error = "Unable to read num revived packets.";
     }
     CheckProcessingFails(
         packet,
@@ -2769,8 +2483,7 @@ TEST_P(QuicFramerTest, AckFrameOneTimestampVersion32) {
   };
   // clang-format on
 
-  if (framer_.version() <= QUIC_VERSION_31 ||
-      framer_.version() > QUIC_VERSION_33) {
+  if (framer_.version() > QUIC_VERSION_33) {
     return;
   }
 
@@ -2825,107 +2538,6 @@ TEST_P(QuicFramerTest, AckFrameOneTimestampVersion32) {
       expected_error = "Unable to read num missing packet ranges.";
     } else {
       expected_error = "Unable to read missing packet number delta.";
-    }
-    CheckProcessingFails(
-        packet,
-        i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
-                                !kIncludeVersion, !kIncludePathId,
-                                !kIncludeDiversificationNonce,
-                                PACKET_6BYTE_PACKET_NUMBER),
-        expected_error, QUIC_INVALID_ACK_DATA);
-  }
-}
-
-TEST_P(QuicFramerTest, AckFrame) {
-  // clang-format off
-  unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      0x3C,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x6C,
-      // entropy hash of all received packets.
-      0xBA,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // Number of timestamps.
-      0x00,
-      // num missing packets
-      0x01,
-      // missing packet delta
-      0x01,
-      // 0 more missing packets in range.
-      0x00,
-      // Number of revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  if (framer_.version() > QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame.entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame.largest_observed);
-  ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
-  EXPECT_EQ(kMissingPacket, frame.packets.Min());
-
-  const size_t kReceivedEntropyOffset = kQuicFrameTypeSize;
-  const size_t kLargestObservedOffset =
-      kReceivedEntropyOffset + kQuicEntropyHashSize;
-  const size_t kMissingDeltaTimeOffset =
-      kLargestObservedOffset + PACKET_6BYTE_PACKET_NUMBER;
-  const size_t kNumTimestampsOffset =
-      kMissingDeltaTimeOffset + kQuicDeltaTimeLargestObservedSize;
-  const size_t kNumMissingPacketOffset =
-      kNumTimestampsOffset + kQuicNumTimestampsSize;
-  const size_t kMissingPacketsOffset =
-      kNumMissingPacketOffset + kNumberOfNackRangesSize;
-  const size_t kMissingPacketsRange =
-      kMissingPacketsOffset + PACKET_1BYTE_PACKET_NUMBER;
-  const size_t kRevivedPacketsLength =
-      kMissingPacketsRange + PACKET_1BYTE_PACKET_NUMBER;
-  // Now test framing boundaries.
-  const size_t ack_frame_size =
-      kRevivedPacketsLength + PACKET_1BYTE_PACKET_NUMBER;
-  for (size_t i = kQuicFrameTypeSize; i < ack_frame_size; ++i) {
-    string expected_error;
-    if (i < kLargestObservedOffset) {
-      expected_error = "Unable to read entropy hash for received packets.";
-    } else if (i < kMissingDeltaTimeOffset) {
-      expected_error = "Unable to read largest observed.";
-    } else if (i < kNumTimestampsOffset) {
-      expected_error = "Unable to read ack delay time.";
-    } else if (i < kNumMissingPacketOffset) {
-      expected_error = "Unable to read num received packets.";
-    } else if (i < kMissingPacketsOffset) {
-      expected_error = "Unable to read num missing packet ranges.";
-    } else if (i < kMissingPacketsRange) {
-      expected_error = "Unable to read missing packet number delta.";
-    } else if (i < kRevivedPacketsLength) {
-      expected_error = "Unable to read missing packet number range.";
-    } else {
-      expected_error = "Unable to read num revived packets.";
     }
     CheckProcessingFails(
         packet,
@@ -3194,8 +2806,7 @@ TEST_P(QuicFramerTest, AckFrameVersion32) {
   };
   // clang-format on
 
-  if (framer_.version() <= QUIC_VERSION_31 ||
-      framer_.version() > QUIC_VERSION_33) {
+  if (framer_.version() > QUIC_VERSION_33) {
     return;
   }
 
@@ -3253,246 +2864,6 @@ TEST_P(QuicFramerTest, AckFrameVersion32) {
   }
 }
 
-TEST_P(QuicFramerTest, AckFrameRevivedPackets) {
-  // clang-format off
-  unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      0x38,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x6C,
-      // entropy hash of all received packets.
-      0xBA,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // num received packets.
-      0x00,
-      // num missing packets
-      0x01,
-      // missing packet delta
-      0x01,
-      // 0 more missing packets in range.
-      0x00,
-      // Number of revived packets.
-      0x01,
-      // Revived packet number.
-      0xBE, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Number of revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  if (framer_.version() > QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame.entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame.largest_observed);
-  ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
-  EXPECT_EQ(kMissingPacket, frame.packets.Min());
-
-  const size_t kReceivedEntropyOffset = kQuicFrameTypeSize;
-  const size_t kLargestObservedOffset =
-      kReceivedEntropyOffset + kQuicEntropyHashSize;
-  const size_t kMissingDeltaTimeOffset =
-      kLargestObservedOffset + PACKET_6BYTE_PACKET_NUMBER;
-  const size_t kNumTimestampsOffset =
-      kMissingDeltaTimeOffset + kQuicDeltaTimeLargestObservedSize;
-  const size_t kNumMissingPacketOffset =
-      kNumTimestampsOffset + kQuicNumTimestampsSize;
-  const size_t kMissingPacketsOffset =
-      kNumMissingPacketOffset + kNumberOfNackRangesSize;
-  const size_t kMissingPacketsRange =
-      kMissingPacketsOffset + PACKET_1BYTE_PACKET_NUMBER;
-  const size_t kRevivedPacketsLength =
-      kMissingPacketsRange + PACKET_1BYTE_PACKET_NUMBER;
-  const size_t kRevivedPacketSequenceNumberLength =
-      kRevivedPacketsLength + PACKET_1BYTE_PACKET_NUMBER;
-  // Now test framing boundaries.
-  const size_t ack_frame_size =
-      kRevivedPacketSequenceNumberLength + PACKET_6BYTE_PACKET_NUMBER;
-  for (size_t i = kQuicFrameTypeSize; i < ack_frame_size; ++i) {
-    string expected_error;
-    if (i < kReceivedEntropyOffset) {
-      expected_error = "Unable to read least unacked delta.";
-    } else if (i < kLargestObservedOffset) {
-      expected_error = "Unable to read entropy hash for received packets.";
-    } else if (i < kMissingDeltaTimeOffset) {
-      expected_error = "Unable to read largest observed.";
-    } else if (i < kNumTimestampsOffset) {
-      expected_error = "Unable to read ack delay time.";
-    } else if (i < kNumMissingPacketOffset) {
-      expected_error = "Unable to read num received packets.";
-    } else if (i < kMissingPacketsOffset) {
-      expected_error = "Unable to read num missing packet ranges.";
-    } else if (i < kMissingPacketsRange) {
-      expected_error = "Unable to read missing packet number delta.";
-    } else if (i < kRevivedPacketsLength) {
-      expected_error = "Unable to read missing packet number range.";
-    } else if (i < kRevivedPacketSequenceNumberLength) {
-      expected_error = "Unable to read num revived packets.";
-    } else {
-      expected_error = "Unable to read revived packet.";
-    }
-    CheckProcessingFails(
-        packet,
-        i + GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
-                                !kIncludeVersion, !kIncludePathId,
-                                !kIncludeDiversificationNonce,
-                                PACKET_6BYTE_PACKET_NUMBER),
-        expected_error, QUIC_INVALID_ACK_DATA);
-  }
-}
-
-TEST_P(QuicFramerTest, AckFrameNoNacks) {
-  // clang-format off
-  unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      static_cast<unsigned char>(
-          framer_.version() > QUIC_VERSION_32 ? 0x38 : 0x3C),
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (no nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x4C,
-      // entropy hash of all received packets.
-      0xBA,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // Number of received packets.
-      0x00,
-  };
-  // clang-format on
-  if (framer_.version() >= QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  QuicAckFrame* frame = visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame->entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame->largest_observed);
-  ASSERT_TRUE(frame->packets.Empty());
-
-  // Verify that the packet re-serializes identically.
-  QuicFrames frames;
-  frames.push_back(QuicFrame(frame));
-  std::unique_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
-  ASSERT_TRUE(data != nullptr);
-
-  test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                      data->length(), AsChars(packet),
-                                      arraysize(packet));
-}
-
-TEST_P(QuicFramerTest, AckFrame500Nacks) {
-  // clang-format off
-  unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      static_cast<unsigned char>(
-          framer_.version() > QUIC_VERSION_32 ? 0x38 : 0x3C),
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xA8, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x6C,
-      // entropy hash of all received packets.
-      0xBA,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // No received packets.
-      0x00,
-      // num missing packet ranges
-      0x02,
-      // missing packet delta
-      0x01,
-      // 243 more missing packets in range.
-      // The ranges are listed in this order so the re-constructed packet
-      // matches.
-      0xF3,
-      // No gap between ranges
-      0x00,
-      // 255 more missing packets in range.
-      0xFF,
-      // No revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  if (framer_.version() > QUIC_VERSION_31) {
-    return;
-  }
-
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-
-  EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  ASSERT_TRUE(visitor_.header_.get());
-  EXPECT_TRUE(CheckDecryption(encrypted, !kIncludeVersion, !kIncludePathId,
-                              !kIncludeDiversificationNonce));
-
-  EXPECT_EQ(0u, visitor_.stream_frames_.size());
-  ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  QuicAckFrame* frame = visitor_.ack_frames_[0];
-  EXPECT_EQ(0xBA, frame->entropy_hash);
-  EXPECT_EQ(kLargestObserved, frame->largest_observed);
-  ASSERT_EQ(500u, frame->packets.NumPacketsSlow());
-  EXPECT_EQ(kMissingPacket - 499, frame->packets.Min());
-  EXPECT_EQ(kMissingPacket, frame->packets.Max());
-
-  // Verify that the packet re-serializes identically.
-  QuicFrames frames;
-  frames.push_back(QuicFrame(frame));
-  std::unique_ptr<QuicPacket> data(BuildDataPacket(*visitor_.header_, frames));
-  ASSERT_TRUE(data != nullptr);
-
-  test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                      data->length(), AsChars(packet),
-                                      arraysize(packet));
-}
-
 TEST_P(QuicFramerTest, AckFrame500NacksVersion32) {
   // clang-format off
   unsigned char packet[] = {
@@ -3532,8 +2903,7 @@ TEST_P(QuicFramerTest, AckFrame500NacksVersion32) {
   };
   // clang-format on
 
-  if (framer_.version() <= QUIC_VERSION_31 ||
-      framer_.version() > QUIC_VERSION_33) {
+  if (framer_.version() > QUIC_VERSION_33) {
     return;
   }
 
@@ -4513,48 +3883,11 @@ TEST_P(QuicFramerTest, OldVersionNegotiationPacket) {
   }
 }
 
-TEST_P(QuicFramerTest, DropFecPacket) {
-  // clang-format off
-  unsigned char packet[] = {
-    // public flags (8 byte connection_id)
-    0x38,
-    // connection_id
-    0x10, 0x32, 0x54, 0x76,
-    0x98, 0xBA, 0xDC, 0xFE,
-    // packet number
-    0xBC, 0x9A, 0x78, 0x56,
-    0x34, 0x12,
-    // private flags (fec group & FEC)
-    0x06,
-    // first fec protected packet offset
-    0x01,
-
-    // redundancy
-    'a',  'b',  'c',  'd',
-    'e',  'f',  'g',  'h',
-    'i',  'j',  'k',  'l',
-    'm',  'n',  'o',  'p',
-  };
-  if (framer_.version() > QUIC_VERSION_33) {
-    return;
-  }
-  QuicEncryptedPacket encrypted(AsChars(packet), arraysize(packet), false);
-  if (framer_.version() <= QUIC_VERSION_31) {
-    EXPECT_TRUE(framer_.ProcessPacket(encrypted));
-    EXPECT_EQ(QUIC_NO_ERROR, framer_.error());
-  } else {
-    EXPECT_FALSE(framer_.ProcessPacket(encrypted));
-    EXPECT_EQ(QUIC_INVALID_PACKET_HEADER, framer_.error());
-  }
-  EXPECT_FALSE(visitor_.header_.get());
-}
-
 TEST_P(QuicFramerTest, BuildPaddingFramePacket) {
   QuicPacketHeader header;
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber;
 
@@ -4620,7 +3953,6 @@ TEST_P(QuicFramerTest, Build4ByteSequenceNumberPaddingFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.public_header.packet_number_length = PACKET_4BYTE_PACKET_NUMBER;
   header.packet_number = kPacketNumber;
@@ -4685,7 +4017,6 @@ TEST_P(QuicFramerTest, Build2ByteSequenceNumberPaddingFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.public_header.packet_number_length = PACKET_2BYTE_PACKET_NUMBER;
   header.packet_number = kPacketNumber;
@@ -4750,7 +4081,6 @@ TEST_P(QuicFramerTest, Build1ByteSequenceNumberPaddingFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = kPacketNumber;
@@ -4815,7 +4145,6 @@ TEST_P(QuicFramerTest, BuildStreamFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -4890,7 +4219,6 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = true;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -4961,7 +4289,6 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithMultipathFlag) {
   header.public_header.multipath_flag = true;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.path_id = kPathId;
   header.packet_number = kPacketNumber;
@@ -5042,7 +4369,6 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   header.public_header.multipath_flag = true;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = true;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.path_id = kPathId;
   header.packet_number = kPacketNumber;
@@ -5152,7 +4478,6 @@ TEST_P(QuicFramerTest, BuildAckFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -5168,39 +4493,6 @@ TEST_P(QuicFramerTest, BuildAckFramePacket) {
   // clang-format off
   unsigned char packet[] = {
       // public flags (8 byte connection_id)
-      0x3C,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, not truncated, 6 byte largest observed, 1 byte delta)
-      0x6C,
-      // entropy hash of all received packets.
-      0x43,
-      // largest observed packet number
-      0xBF, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // Zero delta time.
-      0x00, 0x00,
-      // num received packets.
-      0x00,
-      // num missing packet ranges
-      0x01,
-      // missing packet delta
-      0x01,
-      // 0 more missing packets in range.
-      0x00,
-      // 0 revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  // clang-format off
-  unsigned char packet_version32[] = {
-      // public flags (8 byte connection_id)
       static_cast<unsigned char>(
           framer_.version() > QUIC_VERSION_32 ? 0x38 : 0x3C),
       // connection_id
@@ -5233,15 +4525,9 @@ TEST_P(QuicFramerTest, BuildAckFramePacket) {
   std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
-  if (framer_.version() <= QUIC_VERSION_31) {
-    test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                        data->length(), AsChars(packet),
-                                        arraysize(packet));
-  } else {
-    test::CompareCharArraysWithHexError(
-        "constructed packet", data->data(), data->length(),
-        AsChars(packet_version32), arraysize(packet_version32));
-  }
+  test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                      data->length(), AsChars(packet),
+                                      arraysize(packet));
 }
 
 // TODO(jri): Add test for tuncated packets in which the original ack frame had
@@ -5256,7 +4542,6 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameLargePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -5276,85 +4561,6 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameLargePacket) {
 
   // clang-format off
   unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-      0x3C,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, is truncated, 2 byte largest observed, 1 byte delta)
-      0x74,
-      // entropy hash of all received packets, set to 1 by TestEntropyCalculator
-      // since ack is truncated.
-      0x01,
-      // 2-byte largest observed packet number.
-      // Expected to be 510 (0x1FE), since only 255 nack ranges can fit.
-      0xFE, 0x01,
-      // Zero delta time.
-      0x00, 0x00,
-      // num missing packet ranges (limited to 255 by size of this field).
-      0xFF,
-      // {missing packet delta, further missing packets in range}
-      // 6 nack ranges x 42 + 3 nack ranges
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-
-      // 0 revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  // clang-format off
-  unsigned char packet_version32[] = {
       // public flags (8 byte connection_id)
       static_cast<unsigned char>(
           framer_.version() > QUIC_VERSION_32 ? 0x38 : 0x3C),
@@ -5433,15 +4639,9 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameLargePacket) {
   std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames));
   ASSERT_TRUE(data != nullptr);
 
-  if (framer_.version() <= QUIC_VERSION_31) {
-    test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                        data->length(), AsChars(packet),
-                                        arraysize(packet));
-  } else {
-    test::CompareCharArraysWithHexError(
-        "constructed packet", data->data(), data->length(),
-        AsChars(packet_version32), arraysize(packet_version32));
-  }
+  test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                      data->length(), AsChars(packet),
+                                      arraysize(packet));
 }
 
 TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
@@ -5453,7 +4653,6 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -5473,38 +4672,6 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
 
   // clang-format off
   unsigned char packet[] = {
-      // public flags (8 byte connection_id)
-     0x3C,
-      // connection_id
-      0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
-      // packet number
-      0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12,
-      // private flags (entropy)
-      0x01,
-
-      // frame type (ack frame)
-      // (has nacks, is truncated, 2 byte largest observed, 1 byte delta)
-      0x74,
-      // entropy hash of all received packets, set to 1 by TestEntropyCalculator
-      // since ack is truncated.
-      0x01,
-      // 2-byte largest observed packet number.
-      // Expected to be 12 (0x0C), since only 6 nack ranges can fit.
-      0x0C, 0x00,
-      // Zero delta time.
-      0x00, 0x00,
-      // num missing packet ranges (limited to 6 by packet size of 37).
-      0x06,
-      // {missing packet delta, further missing packets in range}
-      // 6 nack ranges
-      0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
-      // 0 revived packets.
-      0x00,
-  };
-  // clang-format on
-
-  // clang-format off
-  unsigned char packet_version32[] = {
       // public flags (8 byte connection_id)
       static_cast<unsigned char>(
           framer_.version() > QUIC_VERSION_32 ? 0x38 : 0x3C),
@@ -5534,23 +4701,13 @@ TEST_P(QuicFramerTest, BuildTruncatedAckFrameSmallPacket) {
   };
   // clang-format on
 
-  if (framer_.version() <= QUIC_VERSION_31) {
-    std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames, 37u));
-    ASSERT_TRUE(data != nullptr);
-    // Expect 1 byte unused since at least 2 bytes are needed to fit more nacks.
-    EXPECT_EQ(36u, data->length());
-    test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                        data->length(), AsChars(packet),
-                                        arraysize(packet));
-  } else {
-    std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames, 36u));
-    ASSERT_TRUE(data != nullptr);
-    // Expect 1 byte unused since at least 2 bytes are needed to fit more nacks.
-    EXPECT_EQ(35u, data->length());
-    test::CompareCharArraysWithHexError(
-        "constructed packet", data->data(), data->length(),
-        AsChars(packet_version32), arraysize(packet_version32));
-  }
+  std::unique_ptr<QuicPacket> data(BuildDataPacket(header, frames, 36u));
+  ASSERT_TRUE(data != nullptr);
+  // Expect 1 byte unused since at least 2 bytes are needed to fit more nacks.
+  EXPECT_EQ(35u, data->length());
+  test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                      data->length(), AsChars(packet),
+                                      arraysize(packet));
 }
 
 TEST_P(QuicFramerTest, BuildNewAckFramePacketOneAckBlock) {
@@ -5813,7 +4970,6 @@ TEST_P(QuicFramerTest, BuildStopWaitingPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -5863,7 +5019,6 @@ TEST_P(QuicFramerTest, BuildNewStopWaitingPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber;
 
@@ -5904,7 +5059,6 @@ TEST_P(QuicFramerTest, BuildRstFramePacketQuic) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber;
 
@@ -5977,7 +5131,6 @@ TEST_P(QuicFramerTest, BuildCloseFramePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6054,7 +5207,6 @@ TEST_P(QuicFramerTest, BuildGoAwayPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6135,7 +5287,6 @@ TEST_P(QuicFramerTest, BuildWindowUpdatePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6203,7 +5354,6 @@ TEST_P(QuicFramerTest, BuildBlockedPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6264,7 +5414,6 @@ TEST_P(QuicFramerTest, BuildPingPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6322,7 +5471,6 @@ TEST_P(QuicFramerTest, BuildPathClosePacket) {
   header.public_header.multipath_flag = true;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.path_id = kDefaultPathId;
   header.packet_number = kPacketNumber;
@@ -6385,7 +5533,6 @@ TEST_P(QuicFramerTest, BuildMtuDiscoveryPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -6472,15 +5619,39 @@ TEST_P(QuicFramerTest, BuildPublicResetPacketOld) {
     0xBC, 0x9A, 0x78, 0x56,
     0x34, 0x12, 0x00, 0x00,
   };
+  unsigned char packet_no_rejected_packet_number[] = {
+    // public flags (public reset, 8 byte ConnectionId)
+    0x0E,
+    // connection_id
+    0x10, 0x32, 0x54, 0x76,
+    0x98, 0xBA, 0xDC, 0xFE,
+    // message tag (kPRST)
+    'P', 'R', 'S', 'T',
+    // num_entries (1) + padding
+    0x01, 0x00, 0x00, 0x00,
+    // tag kRNON
+    'R', 'N', 'O', 'N',
+    // end offset 8
+    0x08, 0x00, 0x00, 0x00,
+    // nonce proof
+    0x89, 0x67, 0x45, 0x23,
+    0x01, 0xEF, 0xCD, 0xAB,
+  };
   // clang-format on
 
   std::unique_ptr<QuicEncryptedPacket> data(
       framer_.BuildPublicResetPacket(reset_packet));
   ASSERT_TRUE(data != nullptr);
-
-  test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                      data->length(), AsChars(packet),
-                                      arraysize(packet));
+  if (FLAGS_quic_remove_packet_number_from_public_reset) {
+    test::CompareCharArraysWithHexError(
+        "constructed packet", data->data(), data->length(),
+        AsChars(packet_no_rejected_packet_number),
+        arraysize(packet_no_rejected_packet_number));
+  } else {
+    test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                        data->length(), AsChars(packet),
+                                        arraysize(packet));
+  }
 }
 
 TEST_P(QuicFramerTest, BuildPublicResetPacket) {
@@ -6518,15 +5689,40 @@ TEST_P(QuicFramerTest, BuildPublicResetPacket) {
     0xBC, 0x9A, 0x78, 0x56,
     0x34, 0x12, 0x00, 0x00,
   };
+  unsigned char packet_no_rejected_packet_number[] = {
+    // public flags (public reset, 8 byte ConnectionId)
+    0x0A,
+    // connection_id
+    0x10, 0x32, 0x54, 0x76,
+    0x98, 0xBA, 0xDC, 0xFE,
+    // message tag (kPRST)
+    'P', 'R', 'S', 'T',
+    // num_entries (1) + padding
+    0x01, 0x00, 0x00, 0x00,
+    // tag kRNON
+    'R', 'N', 'O', 'N',
+    // end offset 8
+    0x08, 0x00, 0x00, 0x00,
+    // nonce proof
+    0x89, 0x67, 0x45, 0x23,
+    0x01, 0xEF, 0xCD, 0xAB,
+  };
   // clang-format on
 
   std::unique_ptr<QuicEncryptedPacket> data(
       framer_.BuildPublicResetPacket(reset_packet));
   ASSERT_TRUE(data != nullptr);
 
-  test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                      data->length(), AsChars(packet),
-                                      arraysize(packet));
+  if (FLAGS_quic_remove_packet_number_from_public_reset) {
+    test::CompareCharArraysWithHexError(
+        "constructed packet", data->data(), data->length(),
+        AsChars(packet_no_rejected_packet_number),
+        arraysize(packet_no_rejected_packet_number));
+  } else {
+    test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                        data->length(), AsChars(packet),
+                                        arraysize(packet));
+  }
 }
 
 TEST_P(QuicFramerTest, BuildPublicResetPacketWithClientAddress) {
@@ -6573,15 +5769,48 @@ TEST_P(QuicFramerTest, BuildPublicResetPacketWithClientAddress) {
     0x7F, 0x00, 0x00, 0x01,
     0x34, 0x12,
   };
+  unsigned char packet_no_rejected_packet_number[] = {
+      // public flags (public reset, 8 byte ConnectionId)
+      0x0A,
+      // connection_id
+      0x10, 0x32, 0x54, 0x76,
+      0x98, 0xBA, 0xDC, 0xFE,
+      // message tag (kPRST)
+      'P', 'R', 'S', 'T',
+      // num_entries (2) + padding
+      0x02, 0x00, 0x00, 0x00,
+      // tag kRNON
+      'R', 'N', 'O', 'N',
+      // end offset 8
+      0x08, 0x00, 0x00, 0x00,
+      // tag kCADR
+      'C', 'A', 'D', 'R',
+      // end offset 16
+      0x10, 0x00, 0x00, 0x00,
+      // nonce proof
+      0x89, 0x67, 0x45, 0x23,
+      0x01, 0xEF, 0xCD, 0xAB,
+      // client address
+      0x02, 0x00,
+      0x7F, 0x00, 0x00, 0x01,
+      0x34, 0x12,
+    };
   // clang-format on
 
   std::unique_ptr<QuicEncryptedPacket> data(
       framer_.BuildPublicResetPacket(reset_packet));
   ASSERT_TRUE(data != nullptr);
 
-  test::CompareCharArraysWithHexError("constructed packet", data->data(),
-                                      data->length(), AsChars(packet),
-                                      arraysize(packet));
+  if (FLAGS_quic_remove_packet_number_from_public_reset) {
+    test::CompareCharArraysWithHexError(
+        "constructed packet", data->data(), data->length(),
+        AsChars(packet_no_rejected_packet_number),
+        arraysize(packet_no_rejected_packet_number));
+  } else {
+    test::CompareCharArraysWithHexError("constructed packet", data->data(),
+                                        data->length(), AsChars(packet),
+                                        arraysize(packet));
+  }
 }
 
 TEST_P(QuicFramerTest, EncryptPacket) {
@@ -6821,7 +6050,6 @@ TEST_P(QuicFramerTest, AckTruncationLargePacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber;
 
@@ -6873,7 +6101,6 @@ TEST_P(QuicFramerTest, AckTruncationSmallPacket) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = false;
   header.packet_number = kPacketNumber;
 
@@ -6926,7 +6153,6 @@ TEST_P(QuicFramerTest, CleanTruncation) {
   header.public_header.connection_id = kConnectionId;
   header.public_header.reset_flag = false;
   header.public_header.version_flag = false;
-  header.fec_flag = false;
   header.entropy_flag = true;
   header.packet_number = kPacketNumber;
 
@@ -7006,7 +6232,6 @@ TEST_P(QuicFramerTest, EntropyFlagTest) {
   ASSERT_TRUE(visitor_.header_.get());
   EXPECT_TRUE(visitor_.header_->entropy_flag);
   EXPECT_EQ(1 << 4, visitor_.header_->entropy_hash);
-  EXPECT_FALSE(visitor_.header_->fec_flag);
 };
 
 TEST_P(QuicFramerTest, StopPacketProcessing) {

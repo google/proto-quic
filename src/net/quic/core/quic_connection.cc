@@ -281,7 +281,6 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       packets_between_mtu_probes_(kPacketsBetweenMtuProbesBase),
       next_mtu_probe_at_(kPacketsBetweenMtuProbesBase),
       largest_received_packet_size_(0),
-      largest_packet_size_supported_(std::numeric_limits<QuicByteCount>::max()),
       goaway_sent_(false),
       goaway_received_(false),
       multipath_enabled_(false),
@@ -1418,11 +1417,6 @@ void QuicConnection::WriteAndBundleAcksIfNotBlocked() {
 }
 
 bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
-  if (header.fec_flag) {
-    // Drop any FEC packet.
-    return false;
-  }
-
   if (perspective_ == Perspective::IS_SERVER &&
       IsInitializedIPEndPoint(self_address_) &&
       IsInitializedIPEndPoint(last_packet_destination_address_) &&
@@ -2454,8 +2448,14 @@ QuicByteCount QuicConnection::GetLimitedMaxPacketSize(
 
   const QuicByteCount writer_limit = writer_->GetMaxPacketSize(peer_address());
 
-  return std::min({suggested_max_packet_size, writer_limit, kMaxPacketSize,
-                   largest_packet_size_supported_});
+  QuicByteCount max_packet_size = suggested_max_packet_size;
+  if (max_packet_size > writer_limit) {
+    max_packet_size = writer_limit;
+  }
+  if (max_packet_size > kMaxPacketSize) {
+    max_packet_size = kMaxPacketSize;
+  }
+  return max_packet_size;
 }
 
 void QuicConnection::SendMtuDiscoveryPacket(QuicByteCount target_mtu) {

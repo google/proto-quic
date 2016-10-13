@@ -645,8 +645,10 @@ bool QuicDispatcher::HasChlosBuffered() const {
   return buffered_packets_.HasChlosBuffered();
 }
 
-void QuicDispatcher::OnNewConnectionAdded(QuicConnectionId connection_id) {
+bool QuicDispatcher::ShouldCreateOrBufferPacketForConnection(
+    QuicConnectionId connection_id) {
   VLOG(1) << "Received packet from new connection " << connection_id;
+  return true;
 }
 
 // Return true if there is any packet buffered in the store.
@@ -675,13 +677,17 @@ QuicTimeWaitListManager* QuicDispatcher::CreateQuicTimeWaitListManager() {
 
 void QuicDispatcher::BufferEarlyPacket(QuicConnectionId connection_id) {
   bool is_new_connection = !buffered_packets_.HasBufferedPackets(connection_id);
+  if (FLAGS_quic_create_session_after_insertion && is_new_connection &&
+      !ShouldCreateOrBufferPacketForConnection(connection_id)) {
+    return;
+  }
   EnqueuePacketResult rs = buffered_packets_.EnqueuePacket(
       connection_id, *current_packet_, current_server_address_,
       current_client_address_, /*is_chlo=*/false);
   if (rs != EnqueuePacketResult::SUCCESS) {
     OnBufferPacketFailure(rs, connection_id);
-  } else if (is_new_connection) {
-    OnNewConnectionAdded(connection_id);
+  } else if (!FLAGS_quic_create_session_after_insertion && is_new_connection) {
+    ShouldCreateOrBufferPacketForConnection(connection_id);
   }
 }
 
@@ -692,6 +698,12 @@ void QuicDispatcher::ProcessChlo() {
          "supporting packet buffer. "
          "--quic_limit_num_new_sessions_per_epoll_loop = true "
          "--quic_buffer_packet_till_chlo = false";
+
+  if (FLAGS_quic_create_session_after_insertion &&
+      !buffered_packets_.HasBufferedPackets(current_connection_id_) &&
+      !ShouldCreateOrBufferPacketForConnection(current_connection_id_)) {
+    return;
+  }
 
   if (FLAGS_quic_limit_num_new_sessions_per_epoll_loop &&
       FLAGS_quic_buffer_packet_till_chlo &&
@@ -709,33 +721,28 @@ void QuicDispatcher::ProcessChlo() {
           current_client_address_, /*is_chlo=*/true);
       if (rs != EnqueuePacketResult::SUCCESS) {
         OnBufferPacketFailure(rs, current_connection_id_);
-      } else if (is_new_connection) {
-        OnNewConnectionAdded(current_connection_id_);
+      } else if (!FLAGS_quic_create_session_after_insertion &&
+                 is_new_connection) {
+        ShouldCreateOrBufferPacketForConnection(current_connection_id_);
       }
     }
     return;
   }
-
   // Creates a new session and process all buffered packets for this connection.
   QuicServerSessionBase* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
-  if (FLAGS_quic_enforce_mtu_limit &&
-      current_packet().potentially_small_mtu()) {
-    session->connection()->set_largest_packet_size_supported(
-        kMinimumSupportedPacketSize);
-  }
   DVLOG(1) << "Created new session for " << current_connection_id_;
   session_map_.insert(std::make_pair(current_connection_id_, session));
   std::list<BufferedPacket> packets =
       buffered_packets_.DeliverPackets(current_connection_id_);
   // Check if CHLO is the first packet arrived on this connection.
-  if (FLAGS_quic_buffer_packet_till_chlo && packets.empty()) {
-    OnNewConnectionAdded(current_connection_id_);
+  if (!FLAGS_quic_create_session_after_insertion &&
+      FLAGS_quic_buffer_packet_till_chlo && packets.empty()) {
+    ShouldCreateOrBufferPacketForConnection(current_connection_id_);
   }
   // Process CHLO at first.
   session->ProcessUdpPacket(current_server_address_, current_client_address_,
                             *current_packet_);
-
   // Deliver queued-up packets in the same order as they arrived.
   // Do this even when flag is off because there might be still some packets
   // buffered in the store before flag is turned off.

@@ -37,6 +37,7 @@
 #include <mmsystem.h>
 #include <stdint.h>
 
+#include "base/atomicops.h"
 #include "base/bit_cast.h"
 #include "base/cpu.h"
 #include "base/lazy_instance.h"
@@ -323,34 +324,69 @@ DWORD timeGetTimeWrapper() {
 
 DWORD (*g_tick_function)(void) = &timeGetTimeWrapper;
 
-// Accumulation of time lost due to rollover (in milliseconds).
-int64_t g_rollover_ms = 0;
+// A structure holding the most significant bits of "last seen" and a
+// "rollover" counter.
+union LastTimeAndRolloversState {
+  // The state as a single 32-bit opaque value.
+  base::subtle::Atomic32 as_opaque_32;
 
-// The last timeGetTime value we saw, to detect rollover.
-DWORD g_last_seen_now = 0;
-
-// Lock protecting rollover_ms and last_seen_now.
-// Note: this is a global object, and we usually avoid these. However, the time
-// code is low-level, and we don't want to use Singletons here (it would be too
-// easy to use a Singleton without even knowing it, and that may lead to many
-// gotchas). Its impact on startup time should be negligible due to low-level
-// nature of time code.
-base::Lock g_rollover_lock;
+  // The state as usable values.
+  struct {
+    // The top 8-bits of the "last" time. This is enough to check for rollovers
+    // and the small bit-size means fewer CompareAndSwap operations to store
+    // changes in state, which in turn makes for fewer retries.
+    uint8_t last_8;
+    // A count of the number of detected rollovers. Using this as bits 47-32
+    // of the upper half of a 64-bit value results in a 48-bit tick counter.
+    // This extends the total rollover period from about 49 days to about 8800
+    // years while still allowing it to be stored with last_8 in a single
+    // 32-bit value.
+    uint16_t rollovers;
+  } as_values;
+};
+base::subtle::Atomic32 g_last_time_and_rollovers = 0;
+static_assert(
+    sizeof(LastTimeAndRolloversState) <= sizeof(g_last_time_and_rollovers),
+    "LastTimeAndRolloversState does not fit in a single atomic word");
 
 // We use timeGetTime() to implement TimeTicks::Now().  This can be problematic
 // because it returns the number of milliseconds since Windows has started,
 // which will roll over the 32-bit value every ~49 days.  We try to track
 // rollover ourselves, which works if TimeTicks::Now() is called at least every
-// 49 days.
+// 48.8 days (not 49 days because only changes in the top 8 bits get noticed).
 TimeDelta RolloverProtectedNow() {
-  base::AutoLock locked(g_rollover_lock);
-  // We should hold the lock while calling tick_function to make sure that
-  // we keep last_seen_now stay correctly in sync.
-  DWORD now = g_tick_function();
-  if (now < g_last_seen_now)
-    g_rollover_ms += 0x100000000I64;  // ~49.7 days.
-  g_last_seen_now = now;
-  return TimeDelta::FromMilliseconds(now + g_rollover_ms);
+  LastTimeAndRolloversState state;
+  DWORD now;  // DWORD is always unsigned 32 bits.
+
+  while (true) {
+    // Fetch the "now" and "last" tick values, updating "last" with "now" and
+    // incrementing the "rollovers" counter if the tick-value has wrapped back
+    // around. Atomic operations ensure that both "last" and "rollovers" are
+    // always updated together.
+    int32_t original = base::subtle::Acquire_Load(&g_last_time_and_rollovers);
+    state.as_opaque_32 = original;
+    now = g_tick_function();
+    uint8_t now_8 = static_cast<uint8_t>(now >> 24);
+    if (now_8 < state.as_values.last_8)
+      ++state.as_values.rollovers;
+    state.as_values.last_8 = now_8;
+
+    // If the state hasn't changed, exit the loop.
+    if (state.as_opaque_32 == original)
+      break;
+
+    // Save the changed state. If the existing value is unchanged from the
+    // original, exit the loop.
+    int32_t check = base::subtle::Release_CompareAndSwap(
+        &g_last_time_and_rollovers, original, state.as_opaque_32);
+    if (check == original)
+      break;
+
+    // Another thread has done something in between so retry from the top.
+  }
+
+  return TimeDelta::FromMilliseconds(
+      now + (static_cast<uint64_t>(state.as_values.rollovers) << 32));
 }
 
 // Discussion of tick counter options on Windows:
@@ -483,11 +519,9 @@ TimeDelta InitialNowFunction() {
 // static
 TimeTicks::TickFunctionType TimeTicks::SetMockTickFunction(
     TickFunctionType ticker) {
-  base::AutoLock locked(g_rollover_lock);
   TickFunctionType old = g_tick_function;
   g_tick_function = ticker;
-  g_rollover_ms = 0;
-  g_last_seen_now = 0;
+  base::subtle::NoBarrier_Store(&g_last_time_and_rollovers, 0);
   return old;
 }
 

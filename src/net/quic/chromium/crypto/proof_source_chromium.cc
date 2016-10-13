@@ -92,43 +92,27 @@ bool ProofSourceChromium::GetProof(const IPAddress& server_ip,
   bssl::ScopedEVP_MD_CTX sign_context;
   EVP_PKEY_CTX* pkey_ctx;
 
-  if (quic_version > QUIC_VERSION_30) {
-    uint32_t len = chlo_hash.length();
-    if (!EVP_DigestSignInit(sign_context.get(), &pkey_ctx, EVP_sha256(),
-                            nullptr, private_key_->key()) ||
-        !EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) ||
-        !EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, -1) ||
-        !EVP_DigestSignUpdate(
-            sign_context.get(),
-            reinterpret_cast<const uint8_t*>(kProofSignatureLabel),
-            sizeof(kProofSignatureLabel)) ||
-        !EVP_DigestSignUpdate(sign_context.get(),
-                              reinterpret_cast<const uint8_t*>(&len),
-                              sizeof(len)) ||
-        !EVP_DigestSignUpdate(
-            sign_context.get(),
-            reinterpret_cast<const uint8_t*>(chlo_hash.data()), len) ||
-        !EVP_DigestSignUpdate(
-            sign_context.get(),
-            reinterpret_cast<const uint8_t*>(server_config.data()),
-            server_config.size())) {
-      return false;
-    }
-  } else if (!EVP_DigestSignInit(sign_context.get(), &pkey_ctx, EVP_sha256(),
-                                 nullptr, private_key_->key()) ||
-             !EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) ||
-             !EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, -1) ||
-             !EVP_DigestSignUpdate(
-                 sign_context.get(),
-                 reinterpret_cast<const uint8_t*>(kProofSignatureLabelOld),
-                 sizeof(kProofSignatureLabelOld)) ||
-             !EVP_DigestSignUpdate(
-                 sign_context.get(),
-                 reinterpret_cast<const uint8_t*>(server_config.data()),
-                 server_config.size())) {
+  uint32_t len_tmp = chlo_hash.length();
+  if (!EVP_DigestSignInit(sign_context.get(), &pkey_ctx, EVP_sha256(), nullptr,
+                          private_key_->key()) ||
+      !EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) ||
+      !EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, -1) ||
+      !EVP_DigestSignUpdate(
+          sign_context.get(),
+          reinterpret_cast<const uint8_t*>(kProofSignatureLabel),
+          sizeof(kProofSignatureLabel)) ||
+      !EVP_DigestSignUpdate(sign_context.get(),
+                            reinterpret_cast<const uint8_t*>(&len_tmp),
+                            sizeof(len_tmp)) ||
+      !EVP_DigestSignUpdate(sign_context.get(),
+                            reinterpret_cast<const uint8_t*>(chlo_hash.data()),
+                            len_tmp) ||
+      !EVP_DigestSignUpdate(
+          sign_context.get(),
+          reinterpret_cast<const uint8_t*>(server_config.data()),
+          server_config.size())) {
     return false;
   }
-
   // Determine the maximum length of the signature.
   size_t len = 0;
   if (!EVP_DigestSignFinal(sign_context.get(), nullptr, &len)) {
