@@ -25,7 +25,7 @@ Building on Linux
    git clone https://github.com/google/proto-quic.git
    cd proto-quic
    export PATH=$PATH:`pwd`/depot_tools
-   ./proto-quic-tools/sync.sh
+   ./proto_quic_tools/sync.sh
    ```
 
 0. Build the QUIC client, server, and tests
