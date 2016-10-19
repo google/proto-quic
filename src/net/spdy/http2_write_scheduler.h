@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "base/containers/linked_list.h"
+#include "base/containers/small_map.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -166,7 +167,8 @@ class Http2PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
   // Pointee owned by all_stream_infos_.
   StreamInfo* root_stream_info_;
   // Maps from stream IDs to StreamInfo objects.
-  std::unordered_map<StreamIdType, std::unique_ptr<StreamInfo>>
+  base::SmallMap<std::unordered_map<StreamIdType, std::unique_ptr<StreamInfo>>,
+                 10>
       all_stream_infos_;
   // Queue containing all ready streams, ordered with streams of higher
   // priority before streams of lower priority, and, among streams of equal

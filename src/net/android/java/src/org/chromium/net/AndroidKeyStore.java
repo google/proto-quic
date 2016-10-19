@@ -12,10 +12,7 @@ import java.lang.reflect.Method;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Signature;
-import java.security.interfaces.ECKey;
-import java.security.interfaces.RSAKey;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.ECParameterSpec;
 
 /**
  * Specifies all the dependencies from the native OpenSSL engine on an Android KeyStore.
@@ -23,43 +20,6 @@ import java.security.spec.ECParameterSpec;
 @JNINamespace("net::android")
 public class AndroidKeyStore {
     private static final String TAG = "AndroidKeyStore";
-
-    /**
-     * Returns the public modulus of a given RSA private key as a byte
-     * buffer.
-     * This can be used by native code to convert the modulus into
-     * an OpenSSL BIGNUM object. Required to craft a custom native RSA
-     * object where RSA_size() works as expected.
-     *
-     * @param privateKey A PrivateKey instance, must implement RSAKey.
-     * @return A byte buffer corresponding to the modulus. This is
-     *         big-endian representation of a BigInteger.
-     */
-    @CalledByNative
-    private static byte[] getRSAKeyModulus(PrivateKey privateKey) {
-        if (privateKey instanceof RSAKey) {
-            return ((RSAKey) privateKey).getModulus().toByteArray();
-        }
-        Log.w(TAG, "Not a RSAKey instance!");
-        return null;
-    }
-
-    /**
-     * Returns the 'order' parameter of a given ECDSA private key as a
-     * a byte buffer.
-     * @param privateKey A PrivateKey instance. Must implement ECKey.
-     * @return A byte buffer corresponding to the 'order' parameter.
-     * This is a big-endian representation of a BigInteger.
-     */
-    @CalledByNative
-    private static byte[] getECKeyOrder(PrivateKey privateKey) {
-        if (privateKey instanceof ECKey) {
-            ECParameterSpec params = ((ECKey) privateKey).getParams();
-            return params.getOrder().toByteArray();
-        }
-        Log.w(TAG, "Not an ECKey instance!");
-        return null;
-    }
 
     /**
      * Sign a given message with a given PrivateKey object. This method
@@ -123,25 +83,6 @@ public class AndroidKeyStore {
             Log.e(TAG, "Exception while signing message with " + privateKey.getAlgorithm()
                     + " private key: " + e);
             return null;
-        }
-    }
-
-    /**
-     * Return the type of a given PrivateKey object. This is an integer
-     * that maps to one of the values defined by org.chromium.net.PrivateKeyType,
-     * which is itself auto-generated from net/android/private_key_type_list.h
-     * @param privateKey The PrivateKey handle
-     * @return key type, or PrivateKeyType.INVALID if unknown.
-     */
-    @CalledByNative
-    private static int getPrivateKeyType(PrivateKey privateKey) {
-        String keyAlgorithm = privateKey.getAlgorithm();
-        if ("RSA".equalsIgnoreCase(keyAlgorithm)) {
-            return PrivateKeyType.RSA;
-        } else if ("EC".equalsIgnoreCase(keyAlgorithm)) {
-            return PrivateKeyType.ECDSA;
-        } else {
-            return PrivateKeyType.INVALID;
         }
     }
 

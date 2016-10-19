@@ -27,6 +27,18 @@ const char kEclair[] = "Eclair";
 const char kFroyo[] = "Froyo";
 const char kGingerbread[] = "Gingerbread";
 
+const char kFilteringTraceConfig[] =
+    "{"
+    "  \"event_filters\": ["
+    "    {"
+    "      \"excluded_categories\": [],"
+    "      \"filter_args\": {},"
+    "      \"filter_predicate\": \"heap_profiler_predicate\","
+    "      \"included_categories\": [\"*\"]"
+    "    }"
+    "  ]"
+    "}";
+
 // Asserts that the fixed-size array |expected_backtrace| matches the backtrace
 // in |AllocationContextTracker::GetContextSnapshot|.
 template <size_t N>
@@ -68,15 +80,15 @@ class AllocationContextTrackerTest : public testing::Test {
         AllocationContextTracker::CaptureMode::PSEUDO_STACK);
     // Enabling memory-infra category sets default memory dump config which
     // includes filters for capturing pseudo stack.
-    TraceConfig config(MemoryDumpManager::kTraceCategory, "");
-    TraceLog::GetInstance()->SetEnabled(config, TraceLog::RECORDING_MODE);
+    TraceConfig config(kFilteringTraceConfig);
+    TraceLog::GetInstance()->SetEnabled(config, TraceLog::FILTERING_MODE);
     AllocationContextTracker::SetCurrentThreadName(kThreadName);
   }
 
   void TearDown() override {
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::DISABLED);
-    TraceLog::GetInstance()->SetDisabled();
+    TraceLog::GetInstance()->SetDisabled(TraceLog::FILTERING_MODE);
   }
 };
 

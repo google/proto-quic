@@ -724,6 +724,11 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
     case PACKET_8BYTE_CONNECTION_ID:
       if (quic_version_ > QUIC_VERSION_32) {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID;
+        if (!FLAGS_quic_remove_v33_hacks2 &&
+            perspective_ == Perspective::IS_CLIENT) {
+          public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
+        }
+
       } else {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
       }
@@ -803,28 +808,15 @@ bool QuicFramer::IsValidPath(QuicPathId path_id,
     return false;
   }
 
-  if (FLAGS_quic_packet_numbers_largest_received) {
-    if (path_id == last_path_id_) {
-      *base_packet_number = largest_packet_number_;
-      return true;
-    }
+  if (path_id == last_path_id_) {
+    *base_packet_number = largest_packet_number_;
+    return true;
+  }
 
-    if (ContainsKey(largest_packet_numbers_, path_id)) {
-      *base_packet_number = largest_packet_numbers_[path_id];
-    } else {
-      *base_packet_number = 0;
-    }
+  if (ContainsKey(largest_packet_numbers_, path_id)) {
+    *base_packet_number = largest_packet_numbers_[path_id];
   } else {
-    if (path_id == last_path_id_) {
-      *base_packet_number = last_packet_number_;
-      return true;
-    }
-
-    if (ContainsKey(last_packet_numbers_, path_id)) {
-      *base_packet_number = last_packet_numbers_[path_id];
-    } else {
-      *base_packet_number = 0;
-    }
+    *base_packet_number = 0;
   }
 
   return true;
@@ -834,23 +826,18 @@ void QuicFramer::SetLastPacketNumber(const QuicPacketHeader& header) {
   if (header.public_header.multipath_flag && header.path_id != last_path_id_) {
     if (last_path_id_ != kInvalidPathId) {
       // Save current last packet number before changing path.
-      last_packet_numbers_[last_path_id_] = last_packet_number_;
-      if (FLAGS_quic_packet_numbers_largest_received) {
-        largest_packet_numbers_[last_path_id_] = largest_packet_number_;
-      }
+      largest_packet_numbers_[last_path_id_] = largest_packet_number_;
     }
     // Change path.
     last_path_id_ = header.path_id;
   }
   last_packet_number_ = header.packet_number;
-  if (FLAGS_quic_packet_numbers_largest_received) {
-    largest_packet_number_ = max(header.packet_number, largest_packet_number_);
-  }
+  largest_packet_number_ = max(header.packet_number, largest_packet_number_);
 }
 
 void QuicFramer::OnPathClosed(QuicPathId path_id) {
   closed_paths_.insert(path_id);
-  last_packet_numbers_.erase(path_id);
+  largest_packet_numbers_.erase(path_id);
 }
 
 QuicPacketNumber QuicFramer::CalculatePacketNumberFromWire(
@@ -1068,9 +1055,7 @@ bool QuicFramer::ProcessUnauthenticatedHeader(QuicDataReader* encrypted_reader,
     return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
 
-  QuicPacketNumber base_packet_number =
-      FLAGS_quic_packet_numbers_largest_received ? largest_packet_number_
-                                                 : last_packet_number_;
+  QuicPacketNumber base_packet_number = largest_packet_number_;
   if (header->public_header.multipath_flag &&
       !IsValidPath(header->path_id, &base_packet_number)) {
     // Stop processing because path is closed.

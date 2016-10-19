@@ -53,23 +53,11 @@ declare_args() {
   # We always build Google Chrome and Chromecast with proprietary codecs.
   proprietary_codecs = is_chrome_branded || is_chromecast
 
-  enable_captive_portal_detection = !is_android && !is_ios && !is_chromecast
-
   # Enables use of the session service, which is enabled by default.
   # Android stores them separately on the Java side.
   enable_session_service = !is_android && !is_ios && !is_chromecast
 
-  enable_plugin_installation = is_win || is_mac
-
-  enable_app_list = is_chromeos
-
   enable_supervised_users = !is_ios && !is_chromecast
-
-  enable_remoting = !is_ios && !is_chromecast
-
-  # Hangout services is an extension that adds extra features to Hangouts.
-  # For official GYP builds, this flag is set.
-  enable_hangout_services_extension = false
 
   # Variable safe_browsing is used to control the build time configuration for
   # safe browsing feature. Safe browsing can be compiled in 3 different levels:
@@ -132,10 +120,6 @@ use_browser_spellchecker = is_android || is_mac
 
 # Use Minikin hyphenation engine.
 use_minikin_hyphenation = is_android
-
-# Enables the use of CDMs in pepper plugins.
-enable_pepper_cdms =
-    enable_plugins && (is_linux || is_mac || is_win) && !is_chromecast
 
 # The seccomp-bpf sandbox is only supported on five architectures
 # currently.

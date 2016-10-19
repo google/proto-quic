@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
@@ -117,7 +118,7 @@ class ReliableQuicStreamTest : public ::testing::TestWithParam<bool> {
     stream_ = new TestStream(kTestStreamId, session_.get(),
                              stream_should_process_data);
     // session_ now owns stream_.
-    session_->ActivateStream(stream_);
+    session_->ActivateStream(base::WrapUnique(stream_));
     // Ignore resetting when session_ is terminated.
     EXPECT_CALL(*session_, SendRstStream(kTestStreamId, _, _))
         .Times(AnyNumber());

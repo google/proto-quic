@@ -35,7 +35,6 @@ class NET_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override;
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes,
                         size_t compressed_header_bytes) override;
-
   void Clear();
 
   const_iterator begin() const { return header_list_.begin(); }
@@ -48,10 +47,15 @@ class NET_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
 
   size_t compressed_header_bytes() const { return compressed_header_bytes_; }
 
+  void set_max_uncompressed_header_bytes(size_t max_uncompressed_header_bytes) {
+    max_uncompressed_header_bytes_ = max_uncompressed_header_bytes;
+  }
+
   std::string DebugString() const;
 
  private:
   std::deque<std::pair<std::string, std::string>> header_list_;
+  size_t max_uncompressed_header_bytes_;
   size_t uncompressed_header_bytes_;
   size_t compressed_header_bytes_;
 };

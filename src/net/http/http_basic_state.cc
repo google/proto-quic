@@ -24,8 +24,7 @@ HttpBasicState::HttpBasicState(std::unique_ptr<ClientSocketHandle> connection,
       connection_(std::move(connection)),
       using_proxy_(using_proxy),
       http_09_on_non_default_ports_enabled_(
-          http_09_on_non_default_ports_enabled),
-      request_info_(nullptr) {}
+          http_09_on_non_default_ports_enabled) {}
 
 HttpBasicState::~HttpBasicState() {}
 
@@ -34,7 +33,8 @@ int HttpBasicState::Initialize(const HttpRequestInfo* request_info,
                                const NetLogWithSource& net_log,
                                const CompletionCallback& callback) {
   DCHECK(!parser_.get());
-  request_info_ = request_info;
+  url_ = request_info->url;
+  request_method_ = request_info->method;
   parser_.reset(new HttpStreamParser(
       connection_.get(), request_info, read_buf_.get(), net_log));
   parser_->set_http_09_on_non_default_ports_enabled(
@@ -55,16 +55,14 @@ void HttpBasicState::DeleteParser() { parser_.reset(); }
 std::string HttpBasicState::GenerateRequestLine() const {
   static const char kSuffix[] = " HTTP/1.1\r\n";
   const size_t kSuffixLen = arraysize(kSuffix) - 1;
-  DCHECK(request_info_);
-  const GURL& url = request_info_->url;
   const std::string path =
-      using_proxy_ ? HttpUtil::SpecForRequest(url) : url.PathForRequest();
+      using_proxy_ ? HttpUtil::SpecForRequest(url_) : url_.PathForRequest();
   // Don't use StringPrintf for concatenation because it is very inefficient.
   std::string request_line;
-  const size_t expected_size = request_info_->method.size() + 1 + path.size() +
-      kSuffixLen;
+  const size_t expected_size =
+      request_method_.size() + 1 + path.size() + kSuffixLen;
   request_line.reserve(expected_size);
-  request_line.append(request_info_->method);
+  request_line.append(request_method_);
   request_line.append(1, ' ');
   request_line.append(path);
   request_line.append(kSuffix, kSuffixLen);

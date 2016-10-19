@@ -142,7 +142,7 @@ int QuicStreamSequencer::Readv(const struct iovec* iov, size_t iov_len) {
   size_t bytes_read;
   QuicErrorCode read_error =
       buffered_frames_.Readv(iov, iov_len, &bytes_read, &error_details);
-  if (FLAGS_quic_stream_sequencer_buffer_debug && read_error != QUIC_NO_ERROR) {
+  if (read_error != QUIC_NO_ERROR) {
     string details = StringPrintf("Stream %" PRIu32 ": %s", stream_->id(),
                                   error_details.c_str());
     stream_->CloseConnectionWithDetails(read_error, details);
@@ -198,7 +198,7 @@ void QuicStreamSequencer::ReleaseBuffer() {
 }
 
 void QuicStreamSequencer::ReleaseBufferIfEmpty() {
-  if (FLAGS_quic_release_crypto_stream_buffer && buffered_frames_.Empty()) {
+  if (buffered_frames_.Empty()) {
     buffered_frames_.ReleaseWholeBuffer();
   }
 }

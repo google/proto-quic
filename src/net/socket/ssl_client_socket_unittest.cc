@@ -1255,7 +1255,7 @@ TEST_F(SSLClientSocketTest, Read) {
 }
 
 // Tests that SSLClientSocket properly handles when the underlying transport
-// synchronously fails a transport read in during the handshake.
+// synchronously fails a transport write in during the handshake.
 TEST_F(SSLClientSocketTest, Connect_WithSynchronousError) {
   ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
 
@@ -1643,32 +1643,29 @@ TEST_F(SSLClientSocketTest, Read_WithWriteError) {
 
   raw_error_socket->SetNextWriteError(ERR_CONNECTION_RESET);
 
-  // Write as much data as possible until hitting an error. This is necessary
-  // for NSS. PR_Write will only consume as much data as it can encode into
-  // application data records before the internal memio buffer is full, which
-  // should only fill if writing a large amount of data and the underlying
-  // transport is blocked. Once this happens, NSS will return (total size of all
-  // application data records it wrote) - 1, with the caller expected to resume
-  // with the remaining unsent data.
+  // Write as much data as possible until hitting an error.
   do {
     rv = callback.GetResult(sock->Write(long_request_buffer.get(),
                                         long_request_buffer->BytesRemaining(),
                                         callback.callback()));
     if (rv > 0) {
       long_request_buffer->DidConsume(rv);
-      // Abort if the entire buffer is ever consumed.
+      // Abort if the entire input is ever consumed. The input is larger than
+      // the SSLClientSocket's write buffers.
       ASSERT_LT(0, long_request_buffer->BytesRemaining());
     }
   } while (rv > 0);
 
   EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
 
-  // Release the read.
-  raw_transport->UnblockReadResult();
+  // At this point the Read result is available. Transport write errors are
+  // surfaced through Writes. See https://crbug.com/249848.
   rv = read_callback.WaitForResult();
+  EXPECT_THAT(rv, IsError(ERR_CONNECTION_RESET));
 
-  // Should still read bytes despite the write error.
-  EXPECT_LT(0, rv);
+  // Release the read. This does not cause a crash.
+  raw_transport->UnblockReadResult();
+  base::RunLoop().RunUntilIdle();
 }
 
 // Tests that SSLClientSocket fails the handshake if the underlying

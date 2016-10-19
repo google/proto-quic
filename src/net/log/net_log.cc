@@ -279,7 +279,8 @@ void NetLog::AddEntry(NetLogEventType type,
 
   // Notify all of the log observers.
   base::AutoLock lock(lock_);
-  FOR_EACH_OBSERVER(ThreadSafeObserver, observers_, OnAddEntryData(entry_data));
+  for (auto& observer : observers_)
+    observer.OnAddEntryData(entry_data);
 }
 
 }  // namespace net

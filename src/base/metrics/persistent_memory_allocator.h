@@ -56,6 +56,11 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // That means that multiple threads can share an iterator and the same
   // reference will not be returned twice.
   //
+  // The order of the items returned by an iterator matches the order in which
+  // MakeIterable() was called on them. Once an allocation is made iterable,
+  // it is always such so the only possible difference between successive
+  // iterations is for more to be added to the end.
+  //
   // Iteration, in general, is tolerant of corrupted memory. It will return
   // what it can and stop only when corruption forces it to. Bad corruption
   // could cause the same object to be returned many times but it will
@@ -75,6 +80,17 @@ class BASE_EXPORT PersistentMemoryAllocator {
     // a run-time error.
     Iterator(const PersistentMemoryAllocator* allocator,
              Reference starting_after);
+
+    // Resets the iterator back to the beginning.
+    void Reset();
+
+    // Resets the iterator, resuming from the |starting_after| reference.
+    void Reset(Reference starting_after);
+
+    // Returns the previously retrieved reference, or kReferenceNull if none.
+    // If constructor or reset with a starting_after location, this will return
+    // that value.
+    Reference GetLast();
 
     // Gets the next iterable, storing that type in |type_return|. The actual
     // return value is a reference to the allocation inside the allocator or

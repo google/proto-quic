@@ -59,6 +59,8 @@ DEBIAN_PACKAGES="\
   libdrm-dev
   libdrm-nouveau2
   libdrm-radeon1
+  libegl1-mesa
+  libegl1-mesa-dev
   libelf1
   libelf-dev
   libexpat1
@@ -148,6 +150,11 @@ DEBIAN_PACKAGES="\
   libtasn1-6
   libudev-dev
   libudev1
+  libwayland-client0
+  libwayland-cursor0
+  libwayland-dev
+  libwayland-egl1-mesa
+  libwayland-server0
   libx11-6
   libx11-dev
   libx11-xcb1

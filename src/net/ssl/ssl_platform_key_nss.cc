@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cert.h>
 #include <keyhi.h>
 #include <openssl/bn.h>
+#include <openssl/bytestring.h>
+#include <openssl/ec.h>
+#include <openssl/ec_key.h>
 #include <openssl/ecdsa.h>
 #include <openssl/mem.h>
 #include <openssl/nid.h>
@@ -21,7 +25,7 @@
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/client_key_store.h"
 #include "net/ssl/ssl_platform_key.h"
-#include "net/ssl/ssl_platform_key_task_runner.h"
+#include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
 
@@ -29,19 +33,20 @@ namespace net {
 
 namespace {
 
-void LogPRError() {
+void LogPRError(const char* message) {
   PRErrorCode err = PR_GetError();
   const char* err_name = PR_ErrorToName(err);
   if (err_name == nullptr)
     err_name = "";
-  LOG(ERROR) << "Could not sign digest: " << err << " (" << err_name << ")";
+  LOG(ERROR) << message << ": " << err << " (" << err_name << ")";
 }
 
 class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
  public:
   SSLPlatformKeyNSS(SSLPrivateKey::Type type,
+                    size_t max_length,
                     crypto::ScopedSECKEYPrivateKey key)
-      : type_(type), key_(std::move(key)) {}
+      : type_(type), max_length_(max_length), key_(std::move(key)) {}
   ~SSLPlatformKeyNSS() override {}
 
   SSLPrivateKey::Type GetType() override { return type_; }
@@ -54,15 +59,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
                                             kHashes + arraysize(kHashes));
   }
 
-  size_t GetMaxSignatureLengthInBytes() override {
-    int len = PK11_SignatureLen(key_.get());
-    if (len <= 0)
-      return 0;
-    // NSS signs raw ECDSA signatures rather than a DER-encoded ECDSA-Sig-Value.
-    if (type_ == SSLPrivateKey::Type::ECDSA)
-      return ECDSA_SIG_max_len(static_cast<size_t>(len) / 2);
-    return static_cast<size_t>(len);
-  }
+  size_t GetMaxSignatureLengthInBytes() override { return max_length_; }
 
   Error SignDigest(SSLPrivateKey::Hash hash,
                    const base::StringPiece& input,
@@ -107,7 +104,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
     int len = PK11_SignatureLen(key_.get());
     if (len <= 0) {
-      LogPRError();
+      LogPRError("PK11_SignatureLen failed");
       return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
     }
     signature->resize(len);
@@ -117,14 +114,14 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
     SECStatus rv = PK11_Sign(key_.get(), &signature_item, &digest_item);
     if (rv != SECSuccess) {
-      LogPRError();
+      LogPRError("PK11_Sign failed");
       return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
     }
     signature->resize(signature_item.len);
 
     // NSS emits raw ECDSA signatures, but BoringSSL expects a DER-encoded
     // ECDSA-Sig-Value.
-    if (type_ == SSLPrivateKey::Type::ECDSA) {
+    if (SSLPrivateKey::IsECDSAType(type_)) {
       if (signature->size() % 2 != 0) {
         LOG(ERROR) << "Bad signature length";
         return ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED;
@@ -154,6 +151,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
  private:
   SSLPrivateKey::Type type_;
+  size_t max_length_;
   crypto::ScopedSECKEYPrivateKey key_;
 
   DISALLOW_COPY_AND_ASSIGN(SSLPlatformKeyNSS);
@@ -170,21 +168,13 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
         *certificate);
   }
 
-  KeyType nss_type = SECKEY_GetPrivateKeyType(key.get());
   SSLPrivateKey::Type type;
-  switch (nss_type) {
-    case rsaKey:
-      type = SSLPrivateKey::Type::RSA;
-      break;
-    case ecKey:
-      type = SSLPrivateKey::Type::ECDSA;
-      break;
-    default:
-      LOG(ERROR) << "Unknown key type: " << nss_type;
-      return nullptr;
-  }
+  size_t max_length;
+  if (!GetClientCertInfo(certificate, &type, &max_length))
+    return nullptr;
+
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      base::MakeUnique<SSLPlatformKeyNSS>(type, std::move(key)),
+      base::MakeUnique<SSLPlatformKeyNSS>(type, max_length, std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
 }
 

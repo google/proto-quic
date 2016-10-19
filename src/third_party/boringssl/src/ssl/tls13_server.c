@@ -51,32 +51,11 @@ enum server_hs_state_t {
 
 static const uint8_t kZeroes[EVP_MAX_MD_SIZE] = {0};
 
-static int resolve_psk_secret(SSL *ssl) {
-  SSL_HANDSHAKE *hs = ssl->s3->hs;
-
-  if (ssl->s3->tmp.new_cipher->algorithm_auth != SSL_aPSK) {
-    return tls13_advance_key_schedule(ssl, kZeroes, hs->hash_len);
-  }
-
-  uint8_t resumption_psk[EVP_MAX_MD_SIZE];
-  if (!tls13_resumption_psk(ssl, resumption_psk, hs->hash_len,
-                            ssl->s3->new_session) ||
-      !tls13_advance_key_schedule(ssl, resumption_psk, hs->hash_len)) {
-    return 0;
-  }
-
-  return 1;
-}
-
 static int resolve_ecdhe_secret(SSL *ssl, int *out_need_retry,
                                 struct ssl_early_callback_ctx *early_ctx) {
   *out_need_retry = 0;
-  SSL_HANDSHAKE *hs = ssl->s3->hs;
 
-  if (ssl->s3->tmp.new_cipher->algorithm_mkey != SSL_kECDHE) {
-    return tls13_advance_key_schedule(ssl, kZeroes, hs->hash_len);
-  }
-
+  /* We only support connections that include an ECDHE key exchange. */
   CBS key_share;
   if (!ssl_early_callback_get_extension(early_ctx, &key_share,
                                         TLSEXT_TYPE_key_share)) {
@@ -139,15 +118,11 @@ static enum ssl_hs_wait_t do_process_client_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
     return 0;
   }
 
-  uint16_t resumption_cipher;
   if (session != NULL &&
-      /* We currently only support ECDHE-PSK resumption. */
-      ((session->ticket_flags & SSL_TICKET_ALLOW_DHE_RESUMPTION) == 0 ||
-       /* Only resume if the session's version matches. */
-       session->ssl_version != ssl->version ||
-       !ssl_cipher_get_ecdhe_psk_cipher(session->cipher, &resumption_cipher) ||
-       !ssl_client_cipher_list_contains_cipher(&client_hello,
-                                               resumption_cipher))) {
+      /* Only resume if the session's version matches. */
+      (session->ssl_version != ssl->version ||
+       !ssl_client_cipher_list_contains_cipher(
+           &client_hello, (uint16_t)SSL_CIPHER_get_id(session->cipher)))) {
     SSL_SESSION_free(session);
     session = NULL;
   }
@@ -229,39 +204,32 @@ static enum ssl_hs_wait_t do_select_parameters(SSL *ssl, SSL_HANDSHAKE *hs) {
     }
 
     ssl->s3->new_session->cipher = cipher;
-    ssl->s3->tmp.new_cipher = cipher;
-  } else {
-    uint16_t resumption_cipher;
-    if (!ssl_cipher_get_ecdhe_psk_cipher(ssl->s3->new_session->cipher,
-                                         &resumption_cipher)) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
-      return ssl_hs_error;
-    }
-    ssl->s3->tmp.new_cipher = SSL_get_cipher_by_value(resumption_cipher);
   }
 
+  ssl->s3->tmp.new_cipher = ssl->s3->new_session->cipher;
   ssl->method->received_flight(ssl);
 
-  /* The PRF hash is now known. Set up the key schedule and hash the
-   * ClientHello. */
-  size_t resumption_ctx_len =
+
+  /* The PRF hash is now known. */
+  size_t hash_len =
       EVP_MD_size(ssl_get_handshake_digest(ssl_get_algorithm_prf(ssl)));
+
+  /* Derive resumption material. */
+  uint8_t resumption_ctx[EVP_MAX_MD_SIZE] = {0};
+  uint8_t psk_secret[EVP_MAX_MD_SIZE] = {0};
   if (ssl->s3->session_reused) {
-    uint8_t resumption_ctx[EVP_MAX_MD_SIZE];
-    if (!tls13_resumption_context(ssl, resumption_ctx, resumption_ctx_len,
+    if (!tls13_resumption_context(ssl, resumption_ctx, hash_len,
                                   ssl->s3->new_session) ||
-        !tls13_init_key_schedule(ssl, resumption_ctx, resumption_ctx_len)) {
-      return ssl_hs_error;
-    }
-  } else {
-    if (!tls13_init_key_schedule(ssl, kZeroes, resumption_ctx_len)) {
+        !tls13_resumption_psk(ssl, psk_secret, hash_len,
+                              ssl->s3->new_session)) {
       return ssl_hs_error;
     }
   }
 
-  /* Resolve PSK and incorporate it into the secret. */
-  if (!resolve_psk_secret(ssl)) {
+  /* Set up the key schedule, hash in the ClientHello, and incorporate the PSK
+   * into the running secret. */
+  if (!tls13_init_key_schedule(ssl, resumption_ctx, hash_len) ||
+      !tls13_advance_key_schedule(ssl, psk_secret, hash_len)) {
     return ssl_hs_error;
   }
 
@@ -286,10 +254,11 @@ static enum ssl_hs_wait_t do_send_hello_retry_request(SSL *ssl,
   if (!ssl->method->init_message(ssl, &cbb, &body,
                                  SSL3_MT_HELLO_RETRY_REQUEST) ||
       !CBB_add_u16(&body, ssl->version) ||
-      !CBB_add_u16(&body, ssl_cipher_get_value(ssl->s3->tmp.new_cipher)) ||
       !tls1_get_shared_group(ssl, &group_id) ||
-      !CBB_add_u16(&body, group_id) ||
       !CBB_add_u16_length_prefixed(&body, &extensions) ||
+      !CBB_add_u16(&extensions, TLSEXT_TYPE_key_share) ||
+      !CBB_add_u16(&extensions, 2 /* length */) ||
+      !CBB_add_u16(&extensions, group_id) ||
       !ssl->method->finish_message(ssl, &cbb)) {
     CBB_cleanup(&cbb);
     return ssl_hs_error;
@@ -347,14 +316,27 @@ static enum ssl_hs_wait_t do_send_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
       !CBB_add_u16(&body, ssl_cipher_get_value(ssl->s3->tmp.new_cipher)) ||
       !CBB_add_u16_length_prefixed(&body, &extensions) ||
       !ssl_ext_pre_shared_key_add_serverhello(ssl, &extensions) ||
-      !ssl_ext_key_share_add_serverhello(ssl, &extensions) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
-    CBB_cleanup(&cbb);
-    return ssl_hs_error;
+      !ssl_ext_key_share_add_serverhello(ssl, &extensions)) {
+    goto err;
+  }
+
+  if (!ssl->s3->session_reused) {
+    if (!CBB_add_u16(&extensions, TLSEXT_TYPE_signature_algorithms) ||
+        !CBB_add_u16(&extensions, 0)) {
+      goto err;
+    }
+  }
+
+  if (!ssl->method->finish_message(ssl, &cbb)) {
+    goto err;
   }
 
   hs->state = state_send_encrypted_extensions;
   return ssl_hs_write_message;
+
+err:
+  CBB_cleanup(&cbb);
+  return ssl_hs_error;
 }
 
 static enum ssl_hs_wait_t do_send_encrypted_extensions(SSL *ssl,
@@ -379,13 +361,13 @@ static enum ssl_hs_wait_t do_send_encrypted_extensions(SSL *ssl,
 static enum ssl_hs_wait_t do_send_certificate_request(SSL *ssl,
                                                       SSL_HANDSHAKE *hs) {
   /* Determine whether to request a client certificate. */
-  ssl->s3->tmp.cert_request = !!(ssl->verify_mode & SSL_VERIFY_PEER);
-  /* CertificateRequest may only be sent in certificate-based ciphers. */
-  if (!ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
-    ssl->s3->tmp.cert_request = 0;
+  ssl->s3->hs->cert_request = !!(ssl->verify_mode & SSL_VERIFY_PEER);
+  /* CertificateRequest may only be sent in non-resumption handshakes. */
+  if (ssl->s3->session_reused) {
+    ssl->s3->hs->cert_request = 0;
   }
 
-  if (!ssl->s3->tmp.cert_request) {
+  if (!ssl->s3->hs->cert_request) {
     /* Skip this state. */
     hs->state = state_send_server_certificate;
     return ssl_hs_ok;
@@ -426,7 +408,7 @@ err:
 
 static enum ssl_hs_wait_t do_send_server_certificate(SSL *ssl,
                                                      SSL_HANDSHAKE *hs) {
-  if (!ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
+  if (ssl->s3->session_reused) {
     hs->state = state_send_server_finished;
     return ssl_hs_ok;
   }
@@ -478,7 +460,7 @@ static enum ssl_hs_wait_t do_flush(SSL *ssl, SSL_HANDSHAKE *hs) {
   if (!tls13_advance_key_schedule(ssl, kZeroes, hs->hash_len) ||
       !tls13_derive_traffic_secret_0(ssl) ||
       !tls13_set_traffic_key(ssl, type_data, evp_aead_seal,
-                             hs->traffic_secret_0, hs->hash_len)) {
+                             hs->server_traffic_secret_0, hs->hash_len)) {
     return ssl_hs_error;
   }
 
@@ -488,7 +470,7 @@ static enum ssl_hs_wait_t do_flush(SSL *ssl, SSL_HANDSHAKE *hs) {
 
 static enum ssl_hs_wait_t do_process_client_certificate(SSL *ssl,
                                                         SSL_HANDSHAKE *hs) {
-  if (!ssl->s3->tmp.cert_request) {
+  if (!ssl->s3->hs->cert_request) {
     /* OpenSSL returns X509_V_OK when no certificates are requested. This is
      * classed by them as a bug, but it's assumed by at least NGINX. */
     ssl->s3->new_session->verify_result = X509_V_OK;
@@ -542,7 +524,7 @@ static enum ssl_hs_wait_t do_process_client_finished(SSL *ssl,
       !ssl->method->hash_current_message(ssl) ||
       /* evp_aead_seal keys have already been switched. */
       !tls13_set_traffic_key(ssl, type_data, evp_aead_open,
-                             hs->traffic_secret_0, hs->hash_len) ||
+                             hs->client_traffic_secret_0, hs->hash_len) ||
       !tls13_finalize_keys(ssl)) {
     return ssl_hs_error;
   }
@@ -556,31 +538,45 @@ static enum ssl_hs_wait_t do_send_new_session_ticket(SSL *ssl,
                                                      SSL_HANDSHAKE *hs) {
   SSL_SESSION *session = ssl->s3->new_session;
   session->tlsext_tick_lifetime_hint = session->timeout;
-  session->ticket_flags = SSL_TICKET_ALLOW_DHE_RESUMPTION;
-  if (!RAND_bytes((uint8_t *)&session->ticket_age_add,
-                  sizeof(session->ticket_age_add))) {
-    return 0;
-  }
-  session->ticket_age_add_valid = 1;
 
-  CBB cbb, body, ticket;
+  /* TODO(svaldez): Add support for sending 0RTT through TicketEarlyDataInfo
+   * extension. */
+
+  CBB cbb, body, ke_modes, auth_modes, ticket, extensions;
   if (!ssl->method->init_message(ssl, &cbb, &body,
                                  SSL3_MT_NEW_SESSION_TICKET) ||
       !CBB_add_u32(&body, session->tlsext_tick_lifetime_hint) ||
-      !CBB_add_u32(&body, session->ticket_flags) ||
-      !CBB_add_u32(&body, session->ticket_age_add) ||
-      !CBB_add_u16(&body, 0 /* no ticket extensions */) ||
+      !CBB_add_u8_length_prefixed(&body, &ke_modes) ||
+      !CBB_add_u8(&ke_modes, SSL_PSK_DHE_KE) ||
+      !CBB_add_u8_length_prefixed(&body, &auth_modes) ||
+      !CBB_add_u8(&auth_modes, SSL_PSK_AUTH) ||
       !CBB_add_u16_length_prefixed(&body, &ticket) ||
       !ssl_encrypt_ticket(ssl, &ticket, session) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
-    CBB_cleanup(&cbb);
-    return ssl_hs_error;
+      !CBB_add_u16_length_prefixed(&body, &extensions)) {
+    goto err;
+  }
+
+  /* Add a fake extension. See draft-davidben-tls-grease-01. */
+  if (ssl->ctx->grease_enabled) {
+    if (!CBB_add_u16(&extensions,
+                     ssl_get_grease_value(ssl, ssl_grease_ticket_extension)) ||
+        !CBB_add_u16(&extensions, 0 /* empty */)) {
+      goto err;
+    }
+  }
+
+  if (!ssl->method->finish_message(ssl, &cbb)) {
+    goto err;
   }
 
   hs->session_tickets_sent++;
 
   hs->state = state_flush_new_session_ticket;
   return ssl_hs_write_message;
+
+err:
+  CBB_cleanup(&cbb);
+  return ssl_hs_error;
 }
 
 /* TLS 1.3 recommends single-use tickets, so issue multiple tickets in case the

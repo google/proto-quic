@@ -314,6 +314,12 @@ class QuicHeadersStream::SpdyFramerVisitor
     }
   }
 
+  void set_max_uncompressed_header_bytes(
+      size_t set_max_uncompressed_header_bytes) {
+    header_list_.set_max_uncompressed_header_bytes(
+        set_max_uncompressed_header_bytes);
+  }
+
  private:
   void CloseConnection(const string& details) {
     if (stream_->IsConnected()) {
@@ -464,6 +470,12 @@ void QuicHeadersStream::OnDataAvailable() {
     }
     sequencer()->MarkConsumed(iov.iov_len);
   }
+}
+
+void QuicHeadersStream::set_max_uncompressed_header_bytes(
+    size_t set_max_uncompressed_header_bytes) {
+  spdy_framer_visitor_->set_max_uncompressed_header_bytes(
+      set_max_uncompressed_header_bytes);
 }
 
 void QuicHeadersStream::OnHeaders(SpdyStreamId stream_id,

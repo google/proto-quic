@@ -16,7 +16,7 @@ Use `use_libfuzzer` GN argument together with sanitizer to generate build files:
 
 ```bash
 # With address sanitizer
-gn gen out/libfuzzer '--args=use_libfuzzer=true is_asan=true enable_nacl=false' --check
+gn gen out/libfuzzer '--args=use_libfuzzer=true is_asan=true is_debug=false enable_nacl=false' --check
 ```
 
 Supported sanitizer configurations are:

@@ -43,7 +43,7 @@ template("mac_info_plist") {
       extra_substitutions = invoker.extra_substitutions
     }
     extra_substitutions += [
-      "MAC_SDK_BUILD=$mac_sdk_build",
+      "MAC_SDK_BUILD=$mac_sdk_version",
       "MAC_SDK_NAME=$mac_sdk_name$mac_sdk_version",
     ]
     plist_templates = [

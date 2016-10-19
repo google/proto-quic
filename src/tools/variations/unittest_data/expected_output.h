@@ -26,6 +26,7 @@ struct FieldTrialTestingExperiment {
   const size_t enable_features_size;
   const char* const * disable_features;
   const size_t disable_features_size;
+  const char* const forcing_flag;
 };
 
 struct FieldTrialTestingStudy {

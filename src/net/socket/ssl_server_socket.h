@@ -57,16 +57,6 @@ class SSLServerContext {
       std::unique_ptr<StreamSocket> socket) = 0;
 };
 
-// Configures the underlying SSL library for the use of SSL server sockets.
-//
-// Due to the requirements of the underlying libraries, this should be called
-// early in process initialization, before any SSL socket, client or server,
-// has been used.
-//
-// Note: If a process does not use SSL server sockets, this call may be
-// omitted.
-NET_EXPORT void EnableSSLServerSockets();
-
 // Creates an SSL server socket context where all sockets spawned using this
 // context will share the same session cache.
 //

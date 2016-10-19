@@ -25,8 +25,16 @@ class SSLPrivateKey : public base::RefCountedThreadSafe<SSLPrivateKey> {
 
   enum class Type {
     RSA,
-    ECDSA,
+    ECDSA_P256,
+    ECDSA_P384,
+    ECDSA_P521,
   };
+
+  // Returns true if |type| is an ECDSA key type.
+  static bool IsECDSAType(Type type) {
+    return type == Type::ECDSA_P256 || type == Type::ECDSA_P384 ||
+           type == Type::ECDSA_P521;
+  }
 
   enum class Hash {
     MD5_SHA1,

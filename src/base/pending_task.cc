@@ -9,17 +9,16 @@
 namespace base {
 
 PendingTask::PendingTask(const tracked_objects::Location& posted_from,
-                         base::Closure task)
+                         OnceClosure task)
     : base::TrackingInfo(posted_from, TimeTicks()),
       task(std::move(task)),
       posted_from(posted_from),
       sequence_num(0),
       nestable(true),
-      is_high_res(false) {
-}
+      is_high_res(false) {}
 
 PendingTask::PendingTask(const tracked_objects::Location& posted_from,
-                         base::Closure task,
+                         OnceClosure task,
                          TimeTicks delayed_run_time,
                          bool nestable)
     : base::TrackingInfo(posted_from, delayed_run_time),
@@ -27,8 +26,7 @@ PendingTask::PendingTask(const tracked_objects::Location& posted_from,
       posted_from(posted_from),
       sequence_num(0),
       nestable(nestable),
-      is_high_res(false) {
-}
+      is_high_res(false) {}
 
 PendingTask::PendingTask(PendingTask&& other) = default;
 

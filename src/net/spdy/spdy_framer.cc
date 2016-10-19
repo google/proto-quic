@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <cctype>
 #include <ios>
 #include <iterator>
 #include <list>
@@ -19,6 +20,7 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
+#include "base/strings/string_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/spdy_bitmasks.h"
@@ -1404,9 +1406,11 @@ void SpdyFramer::WriteHeaderBlockToZ(const SpdyHeaderBlock* headers,
   SpdyHeaderBlock::const_iterator it;
   for (it = headers->begin(); it != headers->end(); ++it) {
     WriteLengthZ(it->first.size(), length_length, kZStandardData, z);
-    WriteZ(it->first, kZStandardData, z);
 
-    if (it->first == "cookie") {
+    std::string lowercase_key = base::ToLowerASCII(it->first);
+    WriteZ(lowercase_key, kZStandardData, z);
+
+    if (lowercase_key == "cookie") {
       // We require the cookie values (save for the last) to end with a
       // semicolon and (save for the first) to start with a space. This is
       // typically the format that we are given them in but we reserialize them
@@ -1464,19 +1468,19 @@ void SpdyFramer::WriteHeaderBlockToZ(const SpdyHeaderBlock* headers,
         }
         WriteZ(cookie, kZCookieData, z);
       }
-    } else if (it->first == "accept" ||
-               it->first == "accept-charset" ||
-               it->first == "accept-encoding" ||
-               it->first == "accept-language" ||
-               it->first == "host" ||
-               it->first == "version" ||
-               it->first == "method" ||
-               it->first == "scheme" ||
-               it->first == ":host" ||
-               it->first == ":version" ||
-               it->first == ":method" ||
-               it->first == ":scheme" ||
-               it->first == "user-agent") {
+    } else if (lowercase_key == "accept" ||
+               lowercase_key == "accept-charset" ||
+               lowercase_key == "accept-encoding" ||
+               lowercase_key == "accept-language" ||
+               lowercase_key == "host" ||
+               lowercase_key == "version" ||
+               lowercase_key == "method" ||
+               lowercase_key == "scheme" ||
+               lowercase_key == ":host" ||
+               lowercase_key == ":version" ||
+               lowercase_key == ":method" ||
+               lowercase_key == ":scheme" ||
+               lowercase_key == "user-agent") {
       WriteLengthZ(it->second.size(), length_length, kZStandardData, z);
       WriteZ(it->second, kZStandardData, z);
     } else {
@@ -1696,7 +1700,7 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
 #endif
     }
 
-    if (use_new_methods_ && current_frame_type_ != CONTINUATION) {
+    if (current_frame_type_ != CONTINUATION) {
       header_handler_ = visitor_->OnHeaderFrameStart(current_frame_stream_id_);
       if (header_handler_ == nullptr) {
         SPDY_BUG << "visitor_->OnHeaderFrameStart returned nullptr";
@@ -1766,34 +1770,18 @@ size_t SpdyFramer::ProcessControlFrameHeaderBlock(const char* data,
         size_t compressed_len = 0;
         if (GetHpackDecoder()->HandleControlFrameHeadersComplete(
                 &compressed_len)) {
-          if (use_new_methods_) {
-            visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
-            if (state_ == SPDY_ERROR) {
-              return data_len;
-            }
-          } else {
-            // TODO(jgraettinger): To be removed with migration to
-            // SpdyHeadersHandlerInterface. Serializes the HPACK block as a
-            // SPDY3 block, delivered via reentrant call to
-            // ProcessControlFrameHeaderBlock().
-            DeliverHpackBlockAsSpdy3Block(compressed_len);
-            return process_bytes;
+          visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
+          if (state_ == SPDY_ERROR) {
+            return data_len;
           }
         } else {
           set_error(SPDY_DECOMPRESS_FAILURE);
           processed_successfully = false;
         }
       } else {
-        if (use_new_methods_) {
-          visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
-          if (state_ == SPDY_ERROR) {
-            return data_len;
-          }
-        } else {
-          // The complete header block has been delivered. We send a zero-length
-          // OnControlFrameHeaderData() to indicated this.
-          visitor_->OnControlFrameHeaderData(current_frame_stream_id_, nullptr,
-                                             0);
+        visitor_->OnHeaderFrameEnd(current_frame_stream_id_, true);
+        if (state_ == SPDY_ERROR) {
+          return data_len;
         }
       }
     }
@@ -2358,6 +2346,14 @@ bool SpdyFramer::ParseHeaderBlockInBuffer(const char* header_data,
     if (!reader.ReadStringPiece32(&temp)) {
       DVLOG(1) << "Unable to read header name (" << index + 1 << " of "
                << num_headers << ").";
+      return false;
+    }
+    const char* begin = temp.data();
+    const char* end = begin;
+    std::advance(end, temp.size());
+    if (protocol_version_ == HTTP2 && std::any_of(begin, end, isupper)) {
+      DVLOG(1) << "Malformed header: Header name " << temp
+               << " contains upper-case characters.";
       return false;
     }
     std::string name = temp.as_string();
@@ -3301,17 +3297,11 @@ bool SpdyFramer::IncrementallyDecompressControlFrameHeaderData(
     if ((rv == Z_OK) || input_exhausted) {
       size_t decompressed_len = arraysize(buffer) - decomp->avail_out;
       if (decompressed_len > 0) {
-        if (use_new_methods_) {
-          processed_successfully =
-              header_parser_->HandleControlFrameHeadersData(stream_id, buffer,
-                                                            decompressed_len);
-          if (header_parser_->get_error() ==
-              SpdyHeadersBlockParser::NEED_MORE_DATA) {
-            processed_successfully = true;
-          }
-        } else {
-          processed_successfully = visitor_->OnControlFrameHeaderData(
-              stream_id, buffer, decompressed_len);
+        processed_successfully = header_parser_->HandleControlFrameHeadersData(
+            stream_id, buffer, decompressed_len);
+        if (header_parser_->get_error() ==
+            SpdyHeadersBlockParser::NEED_MORE_DATA) {
+          processed_successfully = true;
         }
       }
       if (!processed_successfully) {
@@ -3333,16 +3323,10 @@ bool SpdyFramer::IncrementallyDeliverControlFrameHeaderData(
   bool read_successfully = true;
   while (read_successfully && len > 0) {
     size_t bytes_to_deliver = std::min(len, kHeaderDataChunkMaxSize);
-    if (use_new_methods_) {
-      read_successfully = header_parser_->HandleControlFrameHeadersData(
-          stream_id, data, bytes_to_deliver);
-      if (header_parser_->get_error() ==
-          SpdyHeadersBlockParser::NEED_MORE_DATA) {
-        read_successfully = true;
-      }
-    } else {
-      read_successfully =
-          visitor_->OnControlFrameHeaderData(stream_id, data, bytes_to_deliver);
+    read_successfully = header_parser_->HandleControlFrameHeadersData(
+        stream_id, data, bytes_to_deliver);
+    if (header_parser_->get_error() == SpdyHeadersBlockParser::NEED_MORE_DATA) {
+      read_successfully = true;
     }
     data += bytes_to_deliver;
     len -= bytes_to_deliver;
@@ -3393,7 +3377,7 @@ void SpdyFramer::SerializeHeaderBlockWithoutCompression(
 
   // Serialize each header.
   for (const auto& header : header_block) {
-    builder->WriteStringPiece32(header.first);
+    builder->WriteStringPiece32(base::ToLowerASCII(header.first));
     builder->WriteStringPiece32(header.second);
   }
 }

@@ -81,13 +81,9 @@ void StatelessRejector::OnChlo(QuicVersion version,
 
 void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
                                 std::unique_ptr<ProcessDoneCallback> done_cb) {
-  // If we were able to make a decision about this CHLO based purely on the
-  // information available in OnChlo, just invoke the done callback immediately.
-  if (rejector->state() != UNKNOWN) {
-    done_cb->Run(std::move(rejector));
-    return;
-  }
-
+  QUIC_BUG_IF(rejector->state() != UNKNOWN) << "StatelessRejector::Process "
+                                               "called for a rejector which "
+                                               "has already made a decision";
   StatelessRejector* rejector_ptr = rejector.get();
   rejector_ptr->crypto_config_->ValidateClientHello(
       rejector_ptr->chlo_, rejector_ptr->client_address_.address(),

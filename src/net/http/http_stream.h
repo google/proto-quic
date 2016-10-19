@@ -47,7 +47,9 @@ class NET_EXPORT_PRIVATE HttpStream {
   virtual ~HttpStream() {}
 
   // Initialize stream.  Must be called before calling SendRequest().
-  // |request_info| must outlive the HttpStream.
+  // The consumer should ensure that request_info points to a valid value till
+  // final response headers are received; after that point, the HttpStream
+  // will not access |*request_info| and it may be deleted.
   // Returns a net error code, possibly ERR_IO_PENDING.
   virtual int InitializeStream(const HttpRequestInfo* request_info,
                                RequestPriority priority,

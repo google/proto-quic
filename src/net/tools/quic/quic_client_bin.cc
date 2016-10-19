@@ -63,7 +63,6 @@
 #include "net/spdy/spdy_header_block.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client.h"
-#include "net/tools/quic/spdy_balsa_utils.h"
 #include "net/tools/quic/synchronous_host_resolver.h"
 #include "url/gurl.h"
 
@@ -73,6 +72,7 @@ using net::CTPolicyEnforcer;
 using net::CTVerifier;
 using net::MultiLogCTVerifier;
 using net::ProofVerifierChromium;
+using net::SpdyHeaderBlock;
 using net::TransportSecurityState;
 using std::cout;
 using std::cerr;
@@ -287,9 +287,11 @@ int main(int argc, char* argv[]) {
   }
 
   // Construct a GET or POST request for supplied URL.
-  net::BalsaHeaders headers;
-  headers.SetRequestFirstlineFromStringPieces(body.empty() ? "GET" : "POST",
-                                              url.spec(), "HTTP/1.1");
+  SpdyHeaderBlock header_block;
+  header_block[":method"] = body.empty() ? "GET" : "POST";
+  header_block[":scheme"] = url.scheme();
+  header_block[":authority"] = url.host();
+  header_block[":path"] = url.path();
 
   // Append any additional headers supplied on the command line.
   for (const std::string& header :
@@ -307,14 +309,12 @@ int main(int argc, char* argv[]) {
     base::TrimWhitespaceASCII(kv[0], base::TRIM_ALL, &key);
     string value;
     base::TrimWhitespaceASCII(kv[1], base::TRIM_ALL, &value);
-    headers.AppendHeader(key, value);
+    header_block[kv[0]] = kv[1];
   }
 
   // Make sure to store the response, for later output.
   client.set_store_response(true);
   // Send the request.
-  net::SpdyHeaderBlock header_block =
-      net::SpdyBalsaUtils::RequestHeadersToSpdyHeaders(headers);
   client.SendRequestAndWaitForResponse(header_block, body, /*fin=*/true);
 
   // Print request and response details.

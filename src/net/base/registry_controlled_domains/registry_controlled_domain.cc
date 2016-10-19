@@ -148,22 +148,23 @@ size_t GetRegistryLengthImpl(base::StringPiece host,
       (host.length() - curr_start) : 0;
 }
 
-std::string GetDomainAndRegistryImpl(base::StringPiece host,
-                                     PrivateRegistryFilter private_filter) {
+base::StringPiece GetDomainAndRegistryImpl(
+    base::StringPiece host,
+    PrivateRegistryFilter private_filter) {
   DCHECK(!host.empty());
 
   // Find the length of the registry for this host.
   const size_t registry_length =
       GetRegistryLengthImpl(host, INCLUDE_UNKNOWN_REGISTRIES, private_filter);
   if ((registry_length == std::string::npos) || (registry_length == 0))
-    return std::string();  // No registry.
+    return base::StringPiece();  // No registry.
   // The "2" in this next line is 1 for the dot, plus a 1-char minimum preceding
   // subcomponent length.
   DCHECK(host.length() >= 2);
   if (registry_length > (host.length() - 2)) {
     NOTREACHED() <<
         "Host does not have at least one subcomponent before registry!";
-    return std::string();
+    return base::StringPiece();
   }
 
   // Move past the dot preceding the registry, and search for the next previous
@@ -171,19 +172,28 @@ std::string GetDomainAndRegistryImpl(base::StringPiece host,
   // no dot.
   const size_t dot = host.rfind('.', host.length() - registry_length - 2);
   if (dot == std::string::npos)
-    return host.as_string();
-  return host.substr(dot + 1).as_string();
+    return host;
+  return host.substr(dot + 1);
 }
 
-}  // namespace
-
-std::string GetDomainAndRegistry(
+// Same as GetDomainAndRegistry, but returns the domain and registry as a
+// StringPiece that references the underlying string of the passed-in |gurl|.
+// TODO(pkalinnikov): Eliminate this helper by exposing StringPiece as the
+// interface type for all the APIs.
+base::StringPiece GetDomainAndRegistryAsStringPiece(
     const GURL& gurl,
     PrivateRegistryFilter filter) {
   base::StringPiece host = gurl.host_piece();
   if (host.empty() || gurl.HostIsIPAddress())
-    return std::string();
+    return base::StringPiece();
   return GetDomainAndRegistryImpl(host, filter);
+}
+
+}  // namespace
+
+std::string GetDomainAndRegistry(const GURL& gurl,
+                                 PrivateRegistryFilter filter) {
+  return GetDomainAndRegistryAsStringPiece(gurl, filter).as_string();
 }
 
 std::string GetDomainAndRegistry(base::StringPiece host,
@@ -192,7 +202,7 @@ std::string GetDomainAndRegistry(base::StringPiece host,
   const std::string canon_host(CanonicalizeHost(host, &host_info));
   if (canon_host.empty() || host_info.IsIPAddress())
     return std::string();
-  return GetDomainAndRegistryImpl(canon_host, filter);
+  return GetDomainAndRegistryImpl(canon_host, filter).as_string();
 }
 
 bool SameDomainOrHost(
@@ -201,8 +211,10 @@ bool SameDomainOrHost(
     PrivateRegistryFilter filter) {
   // See if both URLs have a known domain + registry, and those values are the
   // same.
-  const std::string domain1(GetDomainAndRegistry(gurl1, filter));
-  const std::string domain2(GetDomainAndRegistry(gurl2, filter));
+  const base::StringPiece domain1 =
+      GetDomainAndRegistryAsStringPiece(gurl1, filter);
+  const base::StringPiece domain2 =
+      GetDomainAndRegistryAsStringPiece(gurl2, filter);
   if (!domain1.empty() || !domain2.empty())
     return domain1 == domain2;
 
@@ -219,8 +231,7 @@ bool SameDomainOrHost(
 bool SameDomainOrHost(const url::Origin& origin1,
                       const url::Origin& origin2,
                       PrivateRegistryFilter filter) {
-  return SameDomainOrHost(GURL(origin1.Serialize()), GURL(origin2.Serialize()),
-                          filter);
+  return SameDomainOrHost(origin1.GetURL(), origin2.GetURL(), filter);
 }
 
 size_t GetRegistryLength(

@@ -69,15 +69,29 @@ def main():
     sources_file = os.path.splitext(f)[0] + '_sources.txt'
     with open(sources_file, 'r') as sf:
       sources.extend(json.load(sf))
-  sources = [os.path.join(host_paths.DIR_SOURCE_ROOT, s) for s in sources]
-  print 'Sources: %s' % sources
+
+  # Source paths should be passed to EMMA in a way that the relative file paths
+  # reflect the class package name.
+  PARTIAL_PACKAGE_NAMES = ['com/google', 'org/chromium', 'com/chrome']
+  fixed_source_paths = set()
+
+  for path in sources:
+    for partial in PARTIAL_PACKAGE_NAMES:
+      if partial in path:
+        fixed_path = os.path.join(
+            host_paths.DIR_SOURCE_ROOT, path[:path.index(partial)])
+        fixed_source_paths.add(fixed_path)
+        break
+
+  sources = list(fixed_source_paths)
 
   input_args = []
   for f in coverage_files + metadata_files:
     input_args.append('-in')
     input_args.append(f)
 
-  output_args = ['-Dreport.html.out.file', options.output]
+  output_args = ['-Dreport.html.out.file', options.output,
+                 '-Dreport.html.out.encoding', 'UTF-8']
   source_args = ['-sp', ','.join(sources)]
 
   exit_code = cmd_helper.RunCmd(

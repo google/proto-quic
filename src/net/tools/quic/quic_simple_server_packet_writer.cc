@@ -7,7 +7,7 @@
 #include "base/callback_helpers.h"
 #include "base/location.h"
 #include "base/logging.h"
-#include "base/metrics/sparse_histogram.h"
+#include "base/metrics/histogram_macros.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/udp/udp_server_socket.h"

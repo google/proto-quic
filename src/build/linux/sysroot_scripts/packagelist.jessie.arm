@@ -130,10 +130,13 @@ main/libx/libxt/libxt-dev_1.1.4-1+b1_armhf.deb
 main/libx/libxtst/libxtst6_1.2.2-1+b1_armhf.deb
 main/libx/libxtst/libxtst-dev_1.2.2-1+b1_armhf.deb
 main/libx/libxxf86vm/libxxf86vm1_1.1.3-1+b1_armhf.deb
-main/l/linux/linux-libc-dev_3.16.36-1+deb8u1_armhf.deb
+main/l/linux/linux-libc-dev_3.16.7-ckt25-2_armhf.deb
+main/m/mesa/libegl1-mesa_10.3.2-1+deb8u1_armhf.deb
+main/m/mesa/libegl1-mesa-dev_10.3.2-1+deb8u1_armhf.deb
 main/m/mesa/libgl1-mesa-dev_10.3.2-1+deb8u1_armhf.deb
 main/m/mesa/libgl1-mesa-glx_10.3.2-1+deb8u1_armhf.deb
 main/m/mesa/libglapi-mesa_10.3.2-1+deb8u1_armhf.deb
+main/m/mesa/libwayland-egl1-mesa_10.3.2-1+deb8u1_armhf.deb
 main/m/mesa/mesa-common-dev_10.3.2-1+deb8u1_armhf.deb
 main/n/nspr/libnspr4_4.10.7-1+deb8u1_armhf.deb
 main/n/nspr/libnspr4-dev_4.10.7-1+deb8u1_armhf.deb
@@ -166,6 +169,10 @@ main/s/speech-dispatcher/libspeechd-dev_0.8-7_armhf.deb
 main/s/speech-dispatcher/speech-dispatcher_0.8-7_armhf.deb
 main/s/systemd/libudev1_215-17+deb8u5_armhf.deb
 main/s/systemd/libudev-dev_215-17+deb8u5_armhf.deb
+main/w/wayland/libwayland-client0_1.6.0-2_armhf.deb
+main/w/wayland/libwayland-cursor0_1.6.0-2_armhf.deb
+main/w/wayland/libwayland-dev_1.6.0-2_armhf.deb
+main/w/wayland/libwayland-server0_1.6.0-2_armhf.deb
 main/x/x11proto-composite/x11proto-composite-dev_0.4.2-2_all.deb
 main/x/x11proto-core/x11proto-core-dev_7.0.26-1_all.deb
 main/x/x11proto-damage/x11proto-damage-dev_1.2.1-2_all.deb

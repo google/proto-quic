@@ -1,0 +1,5 @@
+import("//build/args/headless.gn")
+is_debug = false
+dcheck_always_on = true
+use_goma = true
+symbol_level = 1

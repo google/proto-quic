@@ -336,9 +336,10 @@ class ProxyConfigServiceAndroid::Delegate
   void SetNewConfigOnNetworkThread(const ProxyConfig& proxy_config) {
     DCHECK(OnNetworkThread());
     proxy_config_ = proxy_config;
-    FOR_EACH_OBSERVER(Observer, observers_,
-                      OnProxyConfigChanged(proxy_config,
-                                           ProxyConfigService::CONFIG_VALID));
+    for (auto& observer : observers_) {
+      observer.OnProxyConfigChanged(proxy_config,
+                                    ProxyConfigService::CONFIG_VALID);
+    }
   }
 
   bool OnJNIThread() const {

@@ -8,6 +8,7 @@
 #include "base/atomicops.h"
 #include "base/logging.h"
 #include "base/metrics/histogram.h"
+#include "base/metrics/sparse_histogram.h"
 #include "base/time/time.h"
 
 // This is for macros internal to base/metrics. They should not be used outside
@@ -127,3 +128,15 @@
   } scoped_histogram_timer_##key
 
 #endif  // BASE_METRICS_HISTOGRAM_MACROS_INTERNAL_H_
+
+// Macro for sparse histogram.
+// The implementation is more costly to add values to, and each value
+// stored has more overhead, compared to the other histogram types. However it
+// may be more efficient in memory if the total number of sample values is small
+// compared to the range of their values.
+#define INTERNAL_HISTOGRAM_SPARSE_SLOWLY(name, sample)                         \
+    do {                                                                       \
+      base::HistogramBase* histogram = base::SparseHistogram::FactoryGet(      \
+          name, base::HistogramBase::kUmaTargetedHistogramFlag);               \
+      histogram->Add(sample);                                                  \
+    } while (0)

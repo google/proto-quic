@@ -745,6 +745,8 @@ TEST(StringNumberConversionsTest, StringToDouble) {
     {"9e307", 9e307, true},
     {"1.7976e308", 1.7976e308, true},
     {"1.7977e308", HUGE_VAL, false},
+    {"1.797693134862315807e+308", HUGE_VAL, true},
+    {"1.797693134862315808e+308", HUGE_VAL, false},
     {"9e308", HUGE_VAL, false},
     {"9e309", HUGE_VAL, false},
     {"9e999", HUGE_VAL, false},
@@ -754,6 +756,8 @@ TEST(StringNumberConversionsTest, StringToDouble) {
     {"-9e307", -9e307, true},
     {"-1.7976e308", -1.7976e308, true},
     {"-1.7977e308", -HUGE_VAL, false},
+    {"-1.797693134862315807e+308", -HUGE_VAL, true},
+    {"-1.797693134862315808e+308", -HUGE_VAL, false},
     {"-9e308", -HUGE_VAL, false},
     {"-9e309", -HUGE_VAL, false},
     {"-9e999", -HUGE_VAL, false},
@@ -769,6 +773,7 @@ TEST(StringNumberConversionsTest, StringToDouble) {
     {"-1E-7", -0.0000001, true},
     {"01e02", 100, true},
     {"2.3e15", 2.3e15, true},
+    {"100e-309", 100e-309, true},
 
     // Test some invalid cases.
     {"\t\n\v\f\r -123.45e2", -12345.0, false},

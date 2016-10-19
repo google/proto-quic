@@ -2317,9 +2317,18 @@ static FILE *xpathOutput;
 static xmlDocPtr xpathDocument;
 
 static void
+ignoreGenericError(void *ctx ATTRIBUTE_UNUSED,
+        const char *msg ATTRIBUTE_UNUSED, ...) {
+}
+
+static void
 testXPath(const char *str, int xptr, int expr) {
+    xmlGenericErrorFunc handler = ignoreGenericError;
     xmlXPathObjectPtr res;
     xmlXPathContextPtr ctxt;
+
+    /* Don't print generic errors to stderr. */
+    initGenericErrorDefaultFunc(&handler);
 
     nb_tests++;
 #if defined(LIBXML_XPTR_ENABLED)
@@ -2349,6 +2358,9 @@ testXPath(const char *str, int xptr, int expr) {
     xmlXPathDebugDumpObject(xpathOutput, res, 0);
     xmlXPathFreeObject(res);
     xmlXPathFreeContext(ctxt);
+
+    /* Reset generic error handler. */
+    initGenericErrorDefaultFunc(NULL);
 }
 
 /**

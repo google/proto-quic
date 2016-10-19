@@ -178,7 +178,7 @@ int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
   if (sk_X509_num(chain) == 0) {
     if (!allow_anonymous) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_CERTIFICATE_REQUIRED);
       goto err;
     }
 
@@ -403,13 +403,20 @@ int tls13_prepare_finished(SSL *ssl) {
 }
 
 static int tls13_receive_key_update(SSL *ssl) {
-  if (ssl->init_num != 0) {
+  CBS cbs;
+  uint8_t key_update_request;
+  CBS_init(&cbs, ssl->init_msg, ssl->init_num);
+  if (!CBS_get_u8(&cbs, &key_update_request) ||
+      CBS_len(&cbs) != 0 ||
+      (key_update_request != SSL_KEY_UPDATE_NOT_REQUESTED &&
+       key_update_request != SSL_KEY_UPDATE_REQUESTED)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
     return 0;
   }
 
-  // TODO(svaldez): Send KeyUpdate.
+  /* TODO(svaldez): Send KeyUpdate if |key_update_request| is
+   * |SSL_KEY_UPDATE_REQUESTED|. */
   return tls13_rotate_traffic_key(ssl, evp_aead_open);
 }
 

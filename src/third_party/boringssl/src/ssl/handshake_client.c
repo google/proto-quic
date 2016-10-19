@@ -276,7 +276,7 @@ int ssl3_connect(SSL *ssl) {
         break;
 
       case SSL3_ST_CR_CERT_STATUS_A:
-        if (ssl->s3->tmp.certificate_status_expected) {
+        if (ssl->s3->hs->certificate_status_expected) {
           ret = ssl3_get_cert_status(ssl);
           if (ret <= 0) {
             goto end;
@@ -331,7 +331,7 @@ int ssl3_connect(SSL *ssl) {
       case SSL3_ST_CW_CERT_A:
       case SSL3_ST_CW_CERT_B:
       case SSL3_ST_CW_CERT_C:
-        if (ssl->s3->tmp.cert_request) {
+        if (ssl->s3->hs->cert_request) {
           ret = ssl3_send_client_certificate(ssl);
           if (ret <= 0) {
             goto end;
@@ -354,7 +354,7 @@ int ssl3_connect(SSL *ssl) {
       case SSL3_ST_CW_CERT_VRFY_A:
       case SSL3_ST_CW_CERT_VRFY_B:
       case SSL3_ST_CW_CERT_VRFY_C:
-        if (ssl->s3->tmp.cert_request) {
+        if (ssl->s3->hs->cert_request) {
           ret = ssl3_send_cert_verify(ssl);
           if (ret <= 0) {
             goto end;
@@ -382,7 +382,7 @@ int ssl3_connect(SSL *ssl) {
 
       case SSL3_ST_CW_NEXT_PROTO_A:
       case SSL3_ST_CW_NEXT_PROTO_B:
-        if (ssl->s3->next_proto_neg_seen) {
+        if (ssl->s3->hs->next_proto_neg_seen) {
           ret = ssl3_send_next_proto(ssl);
           if (ret <= 0) {
             goto end;
@@ -440,7 +440,7 @@ int ssl3_connect(SSL *ssl) {
 
       case SSL3_ST_FALSE_START:
         ssl->state = SSL3_ST_CR_SESSION_TICKET_A;
-        ssl->s3->tmp.in_false_start = 1;
+        ssl->s3->hs->in_false_start = 1;
 
         ssl_free_wbio_buffer(ssl);
         ret = 1;
@@ -541,10 +541,7 @@ int ssl3_connect(SSL *ssl) {
         ssl->s3->hs = NULL;
 
         const int is_initial_handshake = !ssl->s3->initial_handshake_complete;
-
-        ssl->s3->tmp.in_false_start = 0;
         ssl->s3->initial_handshake_complete = 1;
-
         if (is_initial_handshake) {
           /* Renegotiations do not participate in session resumption. */
           ssl_update_cache(ssl, SSL_SESS_CACHE_CLIENT);
@@ -625,18 +622,6 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
     any_enabled = 1;
     if (!CBB_add_u16(&child, ssl_cipher_get_value(cipher))) {
       return 0;
-    }
-    /* Add PSK ciphers for TLS 1.3 resumption. */
-    uint16_t session_version;
-    if (ssl->session != NULL &&
-        ssl->method->version_from_wire(&session_version,
-                                       ssl->session->ssl_version) &&
-        session_version >= TLS1_3_VERSION) {
-      uint16_t resumption_cipher;
-      if (ssl_cipher_get_ecdhe_psk_cipher(cipher, &resumption_cipher) &&
-          !CBB_add_u16(&child, resumption_cipher)) {
-        return 0;
-      }
     }
   }
 
@@ -952,14 +937,14 @@ static int ssl3_get_server_hello(SSL *ssl) {
   }
 
   if (ssl->session != NULL) {
-    if (ssl->session->cipher != c) {
-      al = SSL_AD_ILLEGAL_PARAMETER;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_CIPHER_NOT_RETURNED);
-      goto f_err;
-    }
     if (ssl->session->ssl_version != ssl->version) {
       al = SSL_AD_ILLEGAL_PARAMETER;
       OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_VERSION_NOT_RETURNED);
+      goto f_err;
+    }
+    if (ssl->session->cipher != c) {
+      al = SSL_AD_ILLEGAL_PARAMETER;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_CIPHER_NOT_RETURNED);
       goto f_err;
     }
     if (!ssl_session_is_context_valid(ssl, ssl->session)) {
@@ -1228,18 +1213,13 @@ static int ssl3_get_server_key_exchange(SSL *ssl) {
       goto err;
     }
 
-    SSL_ECDH_CTX_init_for_dhe(&ssl->s3->tmp.ecdh_ctx, dh);
+    SSL_ECDH_CTX_init_for_dhe(&ssl->s3->hs->ecdh_ctx, dh);
     dh = NULL;
 
     /* Save the peer public key for later. */
-    size_t peer_key_len;
-    if (!CBS_stow(&dh_Ys, &ssl->s3->tmp.peer_key, &peer_key_len)) {
+    if (!CBS_stow(&dh_Ys, &ssl->s3->hs->peer_key, &ssl->s3->hs->peer_key_len)) {
       goto err;
     }
-    /* |dh_Ys| was initialized with CBS_get_u16_length_prefixed, so peer_key_len
-     * fits in a uint16_t. */
-    assert(sizeof(ssl->s3->tmp.peer_key_len) == 2 && peer_key_len <= 0xffff);
-    ssl->s3->tmp.peer_key_len = (uint16_t)peer_key_len;
   } else if (alg_k & SSL_kECDHE) {
     /* Parse the server parameters. */
     uint8_t group_type;
@@ -1263,17 +1243,12 @@ static int ssl3_get_server_key_exchange(SSL *ssl) {
     }
 
     /* Initialize ECDH and save the peer public key for later. */
-    size_t peer_key_len;
-    if (!SSL_ECDH_CTX_init(&ssl->s3->tmp.ecdh_ctx, group_id) ||
-        !CBS_stow(&point, &ssl->s3->tmp.peer_key, &peer_key_len)) {
+    if (!SSL_ECDH_CTX_init(&ssl->s3->hs->ecdh_ctx, group_id) ||
+        !CBS_stow(&point, &ssl->s3->hs->peer_key, &ssl->s3->hs->peer_key_len)) {
       goto err;
     }
-    /* |point| was initialized with CBS_get_u8_length_prefixed, so peer_key_len
-     * fits in a uint16_t. */
-    assert(sizeof(ssl->s3->tmp.peer_key_len) == 2 && peer_key_len <= 0xffff);
-    ssl->s3->tmp.peer_key_len = (uint16_t)peer_key_len;
   } else if (alg_k & SSL_kCECPQ1) {
-    SSL_ECDH_CTX_init_for_cecpq1(&ssl->s3->tmp.ecdh_ctx);
+    SSL_ECDH_CTX_init_for_cecpq1(&ssl->s3->hs->ecdh_ctx);
     CBS key;
     if (!CBS_get_u16_length_prefixed(&server_key_exchange, &key)) {
       al = SSL_AD_DECODE_ERROR;
@@ -1281,14 +1256,9 @@ static int ssl3_get_server_key_exchange(SSL *ssl) {
       goto f_err;
     }
 
-    size_t peer_key_len;
-    if (!CBS_stow(&key, &ssl->s3->tmp.peer_key, &peer_key_len)) {
+    if (!CBS_stow(&key, &ssl->s3->hs->peer_key, &ssl->s3->hs->peer_key_len)) {
       goto err;
     }
-    /* |key| was initialized with CBS_get_u16_length_prefixed, so peer_key_len
-     * fits in a uint16_t. */
-    assert(sizeof(ssl->s3->tmp.peer_key_len) == 2 && peer_key_len <= 0xffff);
-    ssl->s3->tmp.peer_key_len = (uint16_t)peer_key_len;
   } else if (!(alg_k & SSL_kPSK)) {
     al = SSL_AD_UNEXPECTED_MESSAGE;
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
@@ -1397,8 +1367,6 @@ static int ssl3_get_certificate_request(SSL *ssl) {
     return msg_ret;
   }
 
-  ssl->s3->tmp.cert_request = 0;
-
   if (ssl->s3->tmp.message_type == SSL3_MT_SERVER_HELLO_DONE) {
     ssl->s3->tmp.reuse_message = 1;
     /* If we get here we don't need the handshake buffer as we won't be doing
@@ -1424,8 +1392,8 @@ static int ssl3_get_certificate_request(SSL *ssl) {
     return -1;
   }
 
-  if (!CBS_stow(&certificate_types, &ssl->s3->tmp.certificate_types,
-                &ssl->s3->tmp.num_certificate_types)) {
+  if (!CBS_stow(&certificate_types, &ssl->s3->hs->certificate_types,
+                &ssl->s3->hs->num_certificate_types)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
     return -1;
   }
@@ -1454,9 +1422,9 @@ static int ssl3_get_certificate_request(SSL *ssl) {
     return -1;
   }
 
-  ssl->s3->tmp.cert_request = 1;
-  sk_X509_NAME_pop_free(ssl->s3->tmp.ca_names, X509_NAME_free);
-  ssl->s3->tmp.ca_names = ca_sk;
+  ssl->s3->hs->cert_request = 1;
+  sk_X509_NAME_pop_free(ssl->s3->hs->ca_names, X509_NAME_free);
+  ssl->s3->hs->ca_names = ca_sk;
   return 1;
 }
 
@@ -1506,7 +1474,7 @@ static int ssl3_send_client_certificate(SSL *ssl) {
     }
 
     if (!ssl_has_certificate(ssl)) {
-      ssl->s3->tmp.cert_request = 0;
+      ssl->s3->hs->cert_request = 0;
       /* Without a client certificate, the handshake buffer may be released. */
       ssl3_free_handshake_buffer(ssl);
 
@@ -1637,15 +1605,15 @@ static int ssl3_send_client_key_exchange(SSL *ssl) {
   } else if (alg_k & (SSL_kECDHE|SSL_kDHE|SSL_kCECPQ1)) {
     /* Generate a keypair and serialize the public half. */
     CBB child;
-    if (!SSL_ECDH_CTX_add_key(&ssl->s3->tmp.ecdh_ctx, &body, &child)) {
+    if (!SSL_ECDH_CTX_add_key(&ssl->s3->hs->ecdh_ctx, &body, &child)) {
       goto err;
     }
 
     /* Compute the premaster. */
     uint8_t alert;
-    if (!SSL_ECDH_CTX_accept(&ssl->s3->tmp.ecdh_ctx, &child, &pms, &pms_len,
-                             &alert, ssl->s3->tmp.peer_key,
-                             ssl->s3->tmp.peer_key_len)) {
+    if (!SSL_ECDH_CTX_accept(&ssl->s3->hs->ecdh_ctx, &child, &pms, &pms_len,
+                             &alert, ssl->s3->hs->peer_key,
+                             ssl->s3->hs->peer_key_len)) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
       goto err;
     }
@@ -1654,9 +1622,10 @@ static int ssl3_send_client_key_exchange(SSL *ssl) {
     }
 
     /* The key exchange state may now be discarded. */
-    SSL_ECDH_CTX_cleanup(&ssl->s3->tmp.ecdh_ctx);
-    OPENSSL_free(ssl->s3->tmp.peer_key);
-    ssl->s3->tmp.peer_key = NULL;
+    SSL_ECDH_CTX_cleanup(&ssl->s3->hs->ecdh_ctx);
+    OPENSSL_free(ssl->s3->hs->peer_key);
+    ssl->s3->hs->peer_key = NULL;
+    ssl->s3->hs->peer_key_len = 0;
   } else if (alg_k & SSL_kPSK) {
     /* For plain PSK, other_secret is a block of 0s with the same length as
      * the pre-shared key. */

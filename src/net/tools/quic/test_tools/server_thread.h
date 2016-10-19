@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "base/synchronization/lock.h"
 #include "base/threading/simple_thread.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_config.h"
@@ -31,6 +32,9 @@ class ServerThread : public base::SimpleThread {
 
   // Runs the event loop. Will initialize if necessary.
   void Run() override;
+
+  // Schedules the given action for execution in the event loop.
+  void Schedule(std::function<void()> action);
 
   // Waits for the handshake to be confirmed for the first session created.
   void WaitForCryptoHandshakeConfirmed();
@@ -57,6 +61,7 @@ class ServerThread : public base::SimpleThread {
 
  private:
   void MaybeNotifyOfHandshakeConfirmation();
+  void ExecuteScheduledActions();
 
   base::WaitableEvent confirmed_;  // Notified when the first handshake is
                                    // confirmed.
@@ -71,6 +76,9 @@ class ServerThread : public base::SimpleThread {
   int port_;
 
   bool initialized_;
+
+  base::Lock scheduled_actions_lock_;
+  std::deque<std::function<void()>> scheduled_actions_;
 
   DISALLOW_COPY_AND_ASSIGN(ServerThread);
 };

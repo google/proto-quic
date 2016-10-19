@@ -201,7 +201,8 @@ TEST(ObserverListTest, BasicTest) {
   EXPECT_TRUE(observer_list.HasObserver(&a));
   EXPECT_FALSE(observer_list.HasObserver(&c));
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   observer_list.AddObserver(&evil);
   observer_list.AddObserver(&c);
@@ -210,7 +211,8 @@ TEST(ObserverListTest, BasicTest) {
   // Removing an observer not in the list should do nothing.
   observer_list.RemoveObserver(&e);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-20, b.total);
@@ -227,13 +229,15 @@ TEST(ObserverListTest, DisruptSelf) {
   observer_list.AddObserver(&a);
   observer_list.AddObserver(&b);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   observer_list.AddObserver(&evil);
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-20, b.total);
@@ -252,8 +256,10 @@ TEST(ObserverListTest, DisruptBefore) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(10));
+  for (auto& observer : observer_list)
+    observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-10, b.total);
@@ -495,7 +501,8 @@ TEST(ObserverListTest, Existing) {
   observer_list.AddObserver(&a);
   observer_list.AddObserver(&b);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(1));
+  for (auto& observer : observer_list)
+    observer.Observe(1);
 
   EXPECT_FALSE(b.to_add_);
   // B's adder should not have been notified because it was added during
@@ -503,7 +510,8 @@ TEST(ObserverListTest, Existing) {
   EXPECT_EQ(0, c.total);
 
   // Notify again to make sure b's adder is notified.
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(1));
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_EQ(1, c.total);
 }
 
@@ -561,7 +569,8 @@ TEST(ObserverListTest, ClearNotifyAll) {
 
   observer_list.AddObserver(&a);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(1));
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_TRUE(a.added());
   EXPECT_EQ(1, a.adder().total)
       << "Adder should observe once and have sum of 1.";
@@ -573,7 +582,8 @@ TEST(ObserverListTest, ClearNotifyExistingOnly) {
 
   observer_list.AddObserver(&a);
 
-  FOR_EACH_OBSERVER(Foo, observer_list, Observe(1));
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_TRUE(a.added());
   EXPECT_EQ(0, a.adder().total)
       << "Adder should not observe, so sum should still be 0.";
@@ -905,10 +915,18 @@ TEST(ObserverListTest, AddObserverInTheLastObserve) {
   a.SetToAdd(&b);
   observer_list.AddObserver(&a);
 
-  FooList::Iterator it(&observer_list);
-  Foo* foo;
-  while ((foo = it.GetNext()) != nullptr)
-    foo->Observe(10);
+  auto it = observer_list.begin();
+  while (it != observer_list.end()) {
+    auto& observer = *it;
+    // Intentionally increment the iterator before calling Observe(). The
+    // ObserverList starts with only one observer, and it == observer_list.end()
+    // should be true after the next line.
+    ++it;
+    // However, the first Observe() call will add a second observer: at this
+    // point, it != observer_list.end() should be true, and Observe() should be
+    // called on the newly added observer on the next iteration of the loop.
+    observer.Observe(10);
+  }
 
   EXPECT_EQ(-10, b.total);
 }

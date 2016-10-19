@@ -119,6 +119,17 @@ void TraceConfig::MemoryDumpConfig::Clear() {
   heap_profiler_options.Clear();
 }
 
+void TraceConfig::MemoryDumpConfig::Merge(
+    const TraceConfig::MemoryDumpConfig& config) {
+  triggers.insert(triggers.end(), config.triggers.begin(),
+                  config.triggers.end());
+  allowed_dump_modes.insert(config.allowed_dump_modes.begin(),
+                            config.allowed_dump_modes.end());
+  heap_profiler_options.breakdown_threshold_bytes =
+      std::min(heap_profiler_options.breakdown_threshold_bytes,
+               config.heap_profiler_options.breakdown_threshold_bytes);
+}
+
 TraceConfig::EventFilterConfig::EventFilterConfig(
     const std::string& predicate_name)
     : predicate_name_(predicate_name) {}
@@ -355,9 +366,7 @@ void TraceConfig::Merge(const TraceConfig& config) {
     included_categories_.clear();
   }
 
-  memory_dump_config_.triggers.insert(memory_dump_config_.triggers.end(),
-                             config.memory_dump_config_.triggers.begin(),
-                             config.memory_dump_config_.triggers.end());
+  memory_dump_config_.Merge(config.memory_dump_config_);
 
   disabled_categories_.insert(disabled_categories_.end(),
                               config.disabled_categories_.begin(),
@@ -368,6 +377,8 @@ void TraceConfig::Merge(const TraceConfig& config) {
   synthetic_delays_.insert(synthetic_delays_.end(),
                            config.synthetic_delays_.begin(),
                            config.synthetic_delays_.end());
+  event_filters_.insert(event_filters_.end(), config.event_filters().begin(),
+                        config.event_filters().end());
 }
 
 void TraceConfig::Clear() {
@@ -416,6 +427,10 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
   if (dict.GetList(kSyntheticDelaysParam, &category_list))
     SetSyntheticDelaysFromList(*category_list);
 
+  const base::ListValue* category_event_filters = nullptr;
+  if (dict.GetList(kEventFiltersParam, &category_event_filters))
+    SetEventFiltersFromConfigList(*category_event_filters);
+
   if (IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     // If dump triggers not set, the client is using the legacy with just
     // category enabled. So, use the default periodic dump config.
@@ -425,10 +440,6 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
     else
       SetDefaultMemoryDumpConfig();
   }
-
-  const base::ListValue* category_event_filters = nullptr;
-  if (dict.GetList(kEventFiltersParam, &category_event_filters))
-    SetEventFilters(*category_event_filters);
 }
 
 void TraceConfig::InitializeFromConfigString(StringPiece config_string) {
@@ -618,25 +629,9 @@ void TraceConfig::SetDefaultMemoryDumpConfig() {
   memory_dump_config_.triggers.push_back(kDefaultHeavyMemoryDumpTrigger);
   memory_dump_config_.triggers.push_back(kDefaultLightMemoryDumpTrigger);
   memory_dump_config_.allowed_dump_modes = GetDefaultAllowedMemoryDumpModes();
-
-  if (AllocationContextTracker::capture_mode() ==
-      AllocationContextTracker::CaptureMode::PSEUDO_STACK) {
-    for (const auto& filter : event_filters_) {
-      if (filter.predicate_name() ==
-          TraceLog::TraceEventFilter::kHeapProfilerPredicate)
-        return;
-    }
-    // Adds a filter predicate to filter all categories for the heap profiler.
-    // Note that the heap profiler predicate does not filter-out any events.
-    EventFilterConfig heap_profiler_config(
-        TraceLog::TraceEventFilter::kHeapProfilerPredicate);
-    heap_profiler_config.AddIncludedCategory("*");
-    heap_profiler_config.AddIncludedCategory(MemoryDumpManager::kTraceCategory);
-    event_filters_.push_back(heap_profiler_config);
-  }
 }
 
-void TraceConfig::SetEventFilters(
+void TraceConfig::SetEventFiltersFromConfigList(
     const base::ListValue& category_event_filters) {
   event_filters_.clear();
 

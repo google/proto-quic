@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 
 #include "base/macros.h"
 #include "net/quic/core/quic_protocol.h"
@@ -39,9 +40,11 @@ class QuicSessionPeer {
   static std::map<QuicStreamId, QuicStreamOffset>&
   GetLocallyClosedStreamsHighestOffset(QuicSession* session);
   static QuicSession::StaticStreamMap& static_streams(QuicSession* session);
+  static QuicSession::DynamicStreamMap& dynamic_streams(QuicSession* session);
   static std::unordered_set<QuicStreamId>* GetDrainingStreams(
       QuicSession* session);
-  static void ActivateStream(QuicSession* session, ReliableQuicStream* stream);
+  static void ActivateStream(QuicSession* session,
+                             std::unique_ptr<ReliableQuicStream> stream);
 
   // Discern the state of a stream.  Exactly one of these should be true at a
   // time for any stream id > 0 (other than the special streams 1 and 3).

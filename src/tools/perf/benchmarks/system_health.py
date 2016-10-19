@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import os
 import re
 
 from core import perf_benchmark
@@ -34,11 +33,7 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter())
     options.config.chrome_trace_config.category_filter.AddFilterString('rail')
-    # TODO(charliea): Reenable BattOr tracing on the main perf waterfall once
-    # the BattOrs stop crashing as their SD cards fill up.
-    # crbug.com/652384
-    options.config.enable_battor_trace = (
-        os.environ.get('BUILDBOT_MASTERNAME') == 'chromium.perf.fyi')
+    options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
     options.SetTimelineBasedMetrics(['clockSyncLatencyMetric', 'powerMetric'])
     return options
@@ -88,6 +83,7 @@ class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
 
   https://goo.gl/Jek2NL.
   """
+  options = {'pageset_repeat': 3}
 
   def SetExtraBrowserOptions(self, options):
     options.AppendExtraBrowserArgs([

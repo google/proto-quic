@@ -314,7 +314,15 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   debug::TaskAnnotator* task_annotator() { return &task_annotator_; }
 
   // Runs the specified PendingTask.
-  void RunTask(const PendingTask& pending_task);
+  void RunTask(PendingTask* pending_task);
+
+  // Disallow nesting. After this is called, running a nested RunLoop or calling
+  // Add/RemoveNestingObserver() on this MessageLoop will crash.
+  void DisallowNesting() { allow_nesting_ = false; }
+
+  // Disallow task observers. After this is called, calling
+  // Add/RemoveTaskObserver() on this MessageLoop will crash.
+  void DisallowTaskObservers() { allow_task_observers_ = false; }
 
   //----------------------------------------------------------------------------
  protected:
@@ -450,6 +458,12 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Id of the thread this message loop is bound to. Initialized once when the
   // MessageLoop is bound to its thread and constant forever after.
   PlatformThreadId thread_id_;
+
+  // Whether nesting is allowed.
+  bool allow_nesting_ = true;
+
+  // Whether task observers are allowed.
+  bool allow_task_observers_ = true;
 
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

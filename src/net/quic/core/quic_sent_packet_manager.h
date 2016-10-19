@@ -270,9 +270,12 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Invokes OnCongestionEvent if |rtt_updated| is true, there are pending acks,
   // or pending losses.  Clears pending acks and pending losses afterwards.
   // |prior_in_flight| is the number of bytes in flight before the losses or
-  // acks.
+  // acks, |event_time| is normally the timestamp of the ack packet which caused
+  // the event, although it can be the time at which loss detection was
+  // triggered.
   void MaybeInvokeCongestionEvent(bool rtt_updated,
-                                  QuicByteCount prior_in_flight);
+                                  QuicByteCount prior_in_flight,
+                                  QuicTime event_time);
 
   // Called when frames of |packet_number| has been received but the packet
   // itself has not been received by the peer. Currently, this method is not

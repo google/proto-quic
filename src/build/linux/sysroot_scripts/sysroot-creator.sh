@@ -375,7 +375,11 @@ InstallIntoSysroot() {
   Banner "Install Libs And Headers Into Jail"
 
   mkdir -p ${BUILD_DIR}/debian-packages
-  mkdir -p ${INSTALL_ROOT}
+  # The /debian directory is an implementation detail that's used to cd into
+  # when running dpkg-shlibdeps.
+  mkdir -p ${INSTALL_ROOT}/debian
+  # An empty control file is necessary to run dpkg-shlibdeps.
+  touch ${INSTALL_ROOT}/debian/control
   while (( "$#" )); do
     local file="$1"
     local package="${BUILD_DIR}/debian-packages/${file##*/}"
@@ -397,9 +401,11 @@ InstallIntoSysroot() {
     echo "${sha256sum}  ${package}" | sha256sum --quiet -c
 
     SubBanner "Extracting to ${INSTALL_ROOT}"
-    dpkg --fsys-tarfile ${package}\
-      | tar -xf - -C ${INSTALL_ROOT}
+    dpkg-deb -x ${package} ${INSTALL_ROOT}
 
+    base_package=$(dpkg-deb --field ${package} Package)
+    mkdir -p ${INSTALL_ROOT}/debian/${base_package}/DEBIAN
+    dpkg-deb -e ${package} ${INSTALL_ROOT}/debian/${base_package}/DEBIAN
   done
 
   # Prune /usr/share, leaving only pkgconfig

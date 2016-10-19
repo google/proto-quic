@@ -10,6 +10,18 @@
 #include "test_output.h"
 
 
+const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments_2[] = {
+    {
+      "ForcedGroup",
+      NULL,
+      0,
+      NULL,
+      0,
+      NULL,
+      0,
+      "my-forcing-flag",
+    },
+};
 const char* const array_kFieldTrialConfig_enable_features_1[] = {
       "X",
 };
@@ -22,6 +34,7 @@ const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments_1[] = {
       1,
       NULL,
       0,
+      NULL,
     },
 };
 const char* const array_kFieldTrialConfig_disable_features_0[] = {
@@ -67,6 +80,7 @@ const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments_0[] = {
       2,
       array_kFieldTrialConfig_disable_features,
       1,
+      NULL,
     },
     {
       "TestGroup2-2",
@@ -76,6 +90,7 @@ const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments_0[] = {
       2,
       array_kFieldTrialConfig_disable_features_0,
       1,
+      NULL,
     },
 };
 const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments[] = {
@@ -87,6 +102,7 @@ const FieldTrialTestingExperiment array_kFieldTrialConfig_experiments[] = {
       0,
       NULL,
       0,
+      NULL,
     },
 };
 const FieldTrialTestingStudy array_kFieldTrialConfig_studies[] = {
@@ -105,8 +121,13 @@ const FieldTrialTestingStudy array_kFieldTrialConfig_studies[] = {
     array_kFieldTrialConfig_experiments_1,
     1,
   },
+  {
+    "TrialWithForcingFlag",
+    array_kFieldTrialConfig_experiments_2,
+    1,
+  },
 };
 const FieldTrialTestingConfig kFieldTrialConfig = {
   array_kFieldTrialConfig_studies,
-  3,
+  4,
 };

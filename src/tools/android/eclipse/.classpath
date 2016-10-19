@@ -207,7 +207,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="out/Debug/java_mojo/mojo_public_test_interfaces_mojom/src"/>
     <classpathentry kind="src" path="out/Debug/java_proto/cacheinvalidation_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/java_proto/document_tab_model_info_proto_java/src"/>
-    <classpathentry kind="src" path="out/Debug/java_proto/test_support_sync_proto_java/src"/>
+    <classpathentry kind="src" path="out/Debug/java_proto/test_support_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/remoting_apk/gen"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/google/gcm/gcm-client/dist/gcm.jar" sourcepath="third_party/android_tools/sdk/extras/google/gcm/gcm-client/src"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-23/android.jar" sourcepath="third_party/android_tools/sdk/sources/">
@@ -272,7 +272,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="out/Debug/lib.java/net/android/net_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/printing/printing_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/sync/android/sync_java.jar"/>
-    <classpathentry kind="lib" path="out/Debug/lib.java/sync/test_support_sync_proto_java.jar"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/sync/test_support_proto_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_data_chart/android_data_chart_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_media/android_media_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/android_protobuf/protobuf_nano_javalib.jar"/>

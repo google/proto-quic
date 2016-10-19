@@ -235,6 +235,10 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @property(readonly) NSOperatingSystemVersion operatingSystemVersion;
 @end
 
+@interface NSLayoutConstraint (YosemiteSDK)
+@property(getter=isActive) BOOL active;
+@end
+
 @interface NSVisualEffectView (YosemiteSDK)
 - (void)setState:(NSVisualEffectState)state;
 @end
@@ -257,6 +261,22 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @end
 
 #endif  // MAC_OS_X_VERSION_10_10
+
+// Once Chrome no longer supports OSX 10.10, everything within this
+// preprocessor block can be removed.
+#if !defined(MAC_OS_X_VERSION_10_11) || \
+    MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_11
+
+@class NSLayoutXAxisAnchor;
+@class NSLayoutYAxisAnchor;
+
+@interface NSView (ElCapitanSDK)
+@property(readonly, strong) NSLayoutXAxisAnchor* leftAnchor;
+@property(readonly, strong) NSLayoutXAxisAnchor* rightAnchor;
+@property(readonly, strong) NSLayoutYAxisAnchor* bottomAnchor;
+@end
+
+#endif  // MAC_OS_X_VERSION_10_11
 
 // Once Chrome no longer supports OSX 10.11, everything within this
 // preprocessor block can be removed.

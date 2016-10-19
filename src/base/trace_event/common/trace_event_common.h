@@ -953,15 +953,15 @@
   INTERNAL_TRACE_EVENT_SCOPED_CONTEXT(category_group, name, context)
 
 // Macro to specify that two trace IDs are identical. For example,
-// TRACE_BIND_IDS(
+// TRACE_LINK_IDS(
 //     "category", "name",
 //     TRACE_ID_WITH_SCOPE("net::URLRequest", 0x1000),
 //     TRACE_ID_WITH_SCOPE("blink::ResourceFetcher::FetchRequest", 0x2000))
 // tells the trace consumer that events with ID ("net::URLRequest", 0x1000) from
 // the current process have the same ID as events with ID
 // ("blink::ResourceFetcher::FetchRequest", 0x2000).
-#define TRACE_BIND_IDS(category_group, name, id, bind_id) \
-  INTERNAL_TRACE_EVENT_ADD_BIND_IDS(category_group, name, id, bind_id);
+#define TRACE_LINK_IDS(category_group, name, id, linked_id) \
+  INTERNAL_TRACE_EVENT_ADD_LINK_IDS(category_group, name, id, linked_id);
 
 // Macro to efficiently determine if a given category group is enabled.
 #define TRACE_EVENT_CATEGORY_GROUP_ENABLED(category_group, ret)             \
@@ -1028,7 +1028,7 @@
 #define TRACE_EVENT_PHASE_CLOCK_SYNC ('c')
 #define TRACE_EVENT_PHASE_ENTER_CONTEXT ('(')
 #define TRACE_EVENT_PHASE_LEAVE_CONTEXT (')')
-#define TRACE_EVENT_PHASE_BIND_IDS ('=')
+#define TRACE_EVENT_PHASE_LINK_IDS ('=')
 
 // Flags for changing the behavior of TRACE_EVENT_API_ADD_TRACE_EVENT.
 #define TRACE_EVENT_FLAG_NONE (static_cast<unsigned int>(0))

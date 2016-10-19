@@ -104,7 +104,7 @@ OSStatus CertDatabase::Notifier::KeychainCallback(
   switch (keychain_event) {
     case kSecKeychainListChangedEvent:
     case kSecTrustSettingsChangedEvent:
-      that->cert_db_->NotifyObserversOfCACertChanged(NULL);
+      that->cert_db_->NotifyObserversCertDBChanged(NULL);
       break;
 
     default:
@@ -130,47 +130,6 @@ CertDatabase::~CertDatabase() {
   // Shutdown will take care to delete the notifier on the right thread.
   if (notifier_.get())
     notifier_.release()->Shutdown();
-}
-
-int CertDatabase::CheckUserCert(X509Certificate* cert) {
-  if (!cert)
-    return ERR_CERT_INVALID;
-  if (cert->HasExpired())
-    return ERR_CERT_DATE_INVALID;
-
-  // Verify the Keychain already has the corresponding private key:
-  SecIdentityRef identity = NULL;
-  OSStatus err = SecIdentityCreateWithCertificate(NULL, cert->os_cert_handle(),
-                                                  &identity);
-  if (err == errSecItemNotFound)
-    return ERR_NO_PRIVATE_KEY_FOR_CERT;
-
-  if (err != noErr || !identity) {
-    // TODO(snej): Map the error code more intelligently.
-    return ERR_CERT_INVALID;
-  }
-
-  CFRelease(identity);
-  return OK;
-}
-
-int CertDatabase::AddUserCert(X509Certificate* cert) {
-  OSStatus err;
-  {
-    base::AutoLock locked(crypto::GetMacSecurityServicesLock());
-    err = SecCertificateAddToKeychain(cert->os_cert_handle(), NULL);
-  }
-  switch (err) {
-    case noErr:
-      CertDatabase::NotifyObserversOfCertAdded(cert);
-      // Fall through.
-    case errSecDuplicateItem:
-      return OK;
-    default:
-      OSSTATUS_LOG(ERROR, err) << "CertDatabase failed to add cert to keychain";
-      // TODO(snej): Map the error code more intelligently.
-      return ERR_ADD_USER_CERT_FAILED;
-  }
 }
 
 }  // namespace net

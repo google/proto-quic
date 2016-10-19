@@ -10,6 +10,7 @@ import contextlib
 import logging
 import optparse
 import os
+import random
 import re
 import subprocess
 import sys
@@ -33,7 +34,8 @@ import device_setup
 
 # Local build of Chrome (not Chromium).
 _CHROME_PACKAGE = 'com.google.android.apps.chrome'
-
+_COMMAND_LINE_PATH = '/data/local/tmp/chrome-command-line'
+_TEST_APP_PACKAGE_NAME = 'org.chromium.customtabsclient.test'
 
 # Command line arguments for Chrome.
 _CHROME_ARGS = [
@@ -64,17 +66,19 @@ def ResetChromeLocalState(device):
   device.adb.Shell(subprocess.list2cmdline(cmd))
 
 
-def RunOnce(device, url, warmup, prerender_mode, delay_to_may_launch_url,
-            delay_to_launch_url, cold):
+def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
+            delay_to_launch_url, cold, chrome_args):
   """Runs a test on a device once.
 
   Args:
     device: (DeviceUtils) device to run the tests on.
+    url: (str) URL to load.
     warmup: (bool) Whether to call warmup.
-    prerender_mode: (str) Prerender mode (disabled, enabled or prefetch).
+    speculation_mode: (str) Speculation Mode.
     delay_to_may_launch_url: (int) Delay to mayLaunchUrl() in ms.
     delay_to_launch_url: (int) Delay to launchUrl() in ms.
     cold: (bool) Whether the page cache should be dropped.
+    chrome_args: ([str]) List of arguments to pass to Chrome.
 
   Returns:
     The output line (str), like this (one line only):
@@ -83,61 +87,80 @@ def RunOnce(device, url, warmup, prerender_mode, delay_to_may_launch_url,
       <first_contentful_paint>
     or None on error.
   """
-  launch_intent = intent.Intent(
-      action='android.intent.action.MAIN',
-      package='org.chromium.customtabsclient.test',
-      activity='org.chromium.customtabs.test.MainActivity',
-      extras={'url': url, 'warmup': warmup, 'prerender_mode': prerender_mode,
-              'delay_to_may_launch_url': delay_to_may_launch_url,
-              'delay_to_launch_url': delay_to_launch_url})
-  result_line_re = re.compile(r'CUSTOMTABSBENCH.*: (.*)')
-  logcat_monitor = device.GetLogcatMonitor(clear=True)
-  logcat_monitor.Start()
-  device.ForceStop(_CHROME_PACKAGE)
-  device.ForceStop('org.chromium.customtabsclient.test')
-  ResetChromeLocalState(device)
+  with device_setup.FlagReplacer(device, _COMMAND_LINE_PATH, chrome_args):
+    launch_intent = intent.Intent(
+        action='android.intent.action.MAIN',
+        package=_TEST_APP_PACKAGE_NAME,
+        activity='org.chromium.customtabs.test.MainActivity',
+        extras={'url': str(url), 'warmup': warmup,
+                'speculation_mode': str(speculation_mode),
+                'delay_to_may_launch_url': delay_to_may_launch_url,
+                'delay_to_launch_url': delay_to_launch_url})
+    result_line_re = re.compile(r'CUSTOMTABSBENCH.*: (.*)')
+    logcat_monitor = device.GetLogcatMonitor(clear=True)
+    logcat_monitor.Start()
+    device.ForceStop(_CHROME_PACKAGE)
+    device.ForceStop(_TEST_APP_PACKAGE_NAME)
 
-  if cold:
     if not device.HasRoot():
       device.EnableRoot()
-    cache_control.CacheControl(device).DropRamCaches()
-  device.StartActivity(launch_intent, blocking=True)
-  match = None
-  try:
-    match = logcat_monitor.WaitFor(result_line_re, timeout=20)
-  except device_errors.CommandTimeoutError as e:
-    logging.warning('Timeout waiting for the result line')
-  return match.group(1) if match is not None else None
+    ResetChromeLocalState(device)
+
+    if cold:
+      cache_control.CacheControl(device).DropRamCaches()
+
+    device.StartActivity(launch_intent, blocking=True)
+
+    match = None
+    try:
+      match = logcat_monitor.WaitFor(result_line_re, timeout=20)
+    except device_errors.CommandTimeoutError as _:
+      logging.warning('Timeout waiting for the result line')
+    return match.group(1) if match is not None else None
 
 
-def LoopOnDevice(device, url, warmup, prerender_mode, delay_to_may_launch_url,
-                 delay_to_launch_url, cold, output_filename, once=False):
+def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
+                 wpr_record=None, network_condition=None, wpr_log_path=None,
+                 once=False, should_stop=None):
   """Loops the tests on a device.
 
   Args:
     device: (DeviceUtils) device to run the tests on.
-    url: (str) URL to navigate to.
-    warmup: (bool) Whether to call warmup.
-    prerender_mode: (str) Prerender mode (disabled, enabled or prefetch).
-    delay_to_may_launch_url: (int) Delay to mayLaunchUrl() in ms.
-    delay_to_launch_url: (int) Delay to launchUrl() in ms.
-    cold: (bool) Whether the page cache should be dropped.
+    configs: ([dict])
     output_filename: (str) Output filename. '-' for stdout.
+    wpr_archive_path: (str) Path to the WPR archive.
+    wpr_record: (bool) Whether WPR is set to recording.
+    network_condition: (str) Name of the network configuration for throttling.
+    wpr_log_path: (str) Path the the WPR log.
     once: (bool) Run only once.
+    should_stop: (threading.Event or None) When the event is set, stop looping.
   """
-  while True:
-    out = sys.stdout if output_filename == '-' else open(output_filename, 'a')
+  with SetupWpr(device, wpr_archive_path, wpr_record, network_condition,
+                wpr_log_path) as wpr_attributes:
+    to_stdout = output_filename == '-'
+    out = sys.stdout if to_stdout else open(output_filename, 'a')
     try:
-      result = RunOnce(device, url, warmup, prerender_mode,
-                       delay_to_may_launch_url, delay_to_launch_url, cold)
-      if result is not None:
-        out.write(result + '\n')
-        out.flush()
-      if once:
-        return
-      time.sleep(10)
+      while should_stop is None or not should_stop.is_set():
+        config = configs[random.randint(0, len(configs) - 1)]
+        chrome_args = _CHROME_ARGS + wpr_attributes.chrome_args
+        if config['speculation_mode'] == 'no_state_prefetch':
+          chrome_args.append('--prerender=' + config['speculation_mode'])
+        result = RunOnce(device, config['url'], config['warmup'],
+                         config['speculation_mode'],
+                         config['delay_to_may_launch_url'],
+                         config['delay_to_launch_url'], config['cold'],
+                         chrome_args)
+        if result is not None:
+          out.write(result + '\n')
+          out.flush()
+        if once:
+          return
+        if should_stop is not None:
+          should_stop.wait(10.)
+        else:
+          time.sleep(10)
     finally:
-      if output_filename != '-':
+      if not to_stdout:
         out.close()
 
 
@@ -153,13 +176,13 @@ def ProcessOutput(filename):
   import numpy as np
   data = np.genfromtxt(filename, delimiter=',')
   result = np.array(np.zeros(len(data)),
-                    dtype=[('warmup', bool), ('prerender_mode', np.int32),
+                    dtype=[('warmup', bool), ('speculation_mode', np.int32),
                            ('delay_to_may_launch_url', np.int32),
                            ('delay_to_launch_url', np.int32),
                            ('commit', np.int32), ('plt', np.int32),
                            ('first_contentful_paint', np.int32)])
   result['warmup'] = data[:, 0]
-  result['prerender_mode'] = data[:, 1]
+  result['speculation_mode'] = data[:, 1]
   result['delay_to_may_launch_url'] = data[:, 2]
   result['delay_to_launch_url'] = data[:, 3]
   result['commit'] = data[:, 5] - data[:, 4]
@@ -177,9 +200,11 @@ def _CreateOptionParser():
                     default='https://www.android.com')
   parser.add_option('--warmup', help='Call warmup.', default=False,
                     action='store_true')
-  parser.add_option('--prerender_mode', default='enabled',
-                    help='The prerender mode (disabled, enabled or prefetch).',
-                    choices=['disabled', 'enabled', 'prefetch'])
+  parser.add_option('--speculation_mode', default='prerender',
+                    help='The speculation mode (prerender, disabled, '
+                    'speculative_prefetch or no_state_prefetch).',
+                    choices=['prerender', 'disabled', 'speculative_prefetch',
+                             'no_state_prefetch'])
   parser.add_option('--delay_to_may_launch_url',
                     help='Delay before calling mayLaunchUrl() in ms.',
                     type='int')
@@ -198,11 +223,11 @@ def _CreateOptionParser():
       parser, 'WebPageReplay options',
       'Setting any of these enables WebPageReplay.')
   group.add_option('--record', help='Record the WPR archive.',
-                    action='store_true', default=False)
+                   action='store_true', default=False)
   group.add_option('--wpr_archive', help='WPR archive path.')
   group.add_option('--wpr_log', help='WPR log path.')
   group.add_option('--network_condition',
-                    help='Network condition for emulation.')
+                   help='Network condition for emulation.')
   parser.add_option_group(group)
 
   return parser
@@ -236,20 +261,22 @@ def main():
     sys.exit(0)
   if options.device is not None:
     matching_devices = [d for d in devices if str(d) == options.device]
-    if len(matching_devices) == 0:
+    if not matching_devices:
       logging.error('Device not found.')
       sys.exit(0)
     device = matching_devices[0]
 
-  with SetupWpr(device, options.wpr_archive, options.record,
-                options.network_condition, options.wpr_log) as wpr_attributes:
-    chrome_args = (_CHROME_ARGS + ['--prerender=' + options.prerender_mode] +
-                   wpr_attributes.chrome_args)
-    with device_setup.FlagReplacer(
-        device, '/data/local/tmp/chrome-command-line', chrome_args):
-      LoopOnDevice(device, options.url, options.warmup, options.prerender_mode,
-                   options.delay_to_may_launch_url, options.delay_to_launch_url,
-                   options.cold, options.output_file, options.once)
+  config = {
+      'url': options.url,
+      'warmup': options.warmup,
+      'speculation_mode': options.speculation_mode,
+      'delay_to_may_launch_url': options.delay_to_may_launch_url,
+      'delay_to_launch_url': options.delay_to_launch_url,
+      'cold': options.cold,
+  }
+  LoopOnDevice(device, [config], options.output_file, options.wpr_archive,
+               options.record, options.network_condition, options.wpr_log,
+               once=options.once)
 
 
 if __name__ == '__main__':

@@ -131,6 +131,12 @@
     },
     "skia_unittests",
     "sql_unittests",
+    {
+      "swarming": {
+        "can_use_on_swarming_builders": true
+      },
+      "test": "storage_unittests"
+    },
     "ui_base_unittests",
     {
       "swarming": {

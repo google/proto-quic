@@ -29,14 +29,6 @@ namespace {
 
 typedef PlatformTest MacUtilTest;
 
-TEST_F(MacUtilTest, TestFSRef) {
-  FSRef ref;
-  std::string path("/System/Library");
-
-  ASSERT_TRUE(FSRefFromPath(path, &ref));
-  EXPECT_EQ(path, PathFromFSRef(ref));
-}
-
 TEST_F(MacUtilTest, GetUserDirectoryTest) {
   // Try a few keys, make sure they come back with non-empty paths.
   FilePath caches_dir;

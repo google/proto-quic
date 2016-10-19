@@ -96,7 +96,6 @@ def _ParseDepsDict(deps_content):
   local_scope = {}
   var = GClientKeywords.VarImpl({}, local_scope)
   global_scope = {
-    'File': GClientKeywords.FileImpl,
     'From': GClientKeywords.FromImpl,
     'Var': var.Lookup,
     'deps_os': {},

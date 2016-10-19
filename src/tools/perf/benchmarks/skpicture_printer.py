@@ -6,6 +6,7 @@ from core import perf_benchmark
 
 import ct_benchmarks_util
 import page_sets
+from page_sets import repaint_helpers
 from telemetry import benchmark
 from telemetry.core import discover
 from telemetry import story
@@ -82,4 +83,5 @@ class SkpicturePrinterCT(perf_benchmark.PerfBenchmark):
 
   def CreateStorySet(self, options):
     return page_sets.CTPageSet(
-        options.urls_list, options.user_agent, options.archive_data_file)
+        options.urls_list, options.user_agent, options.archive_data_file,
+        run_page_interaction_callback=repaint_helpers.WaitThenRepaint)

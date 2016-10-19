@@ -43,6 +43,7 @@ class NET_EXPORT_PRIVATE PacingSender {
   void OnCongestionEvent(
       bool rtt_updated,
       QuicByteCount bytes_in_flight,
+      QuicTime event_time,
       const SendAlgorithmInterface::CongestionVector& acked_packets,
       const SendAlgorithmInterface::CongestionVector& lost_packets);
   bool OnPacketSent(QuicTime sent_time,

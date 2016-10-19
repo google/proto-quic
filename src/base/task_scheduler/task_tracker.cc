@@ -205,7 +205,7 @@ bool TaskTracker::WillPostTask(const Task* task) {
   return true;
 }
 
-bool TaskTracker::RunTask(const Task* task,
+bool TaskTracker::RunTask(std::unique_ptr<Task> task,
                           const SequenceToken& sequence_token) {
   DCHECK(task);
   DCHECK(sequence_token.IsValid());
@@ -255,7 +255,7 @@ bool TaskTracker::RunTask(const Task* task,
                                                sequence_token));
 
       debug::TaskAnnotator task_annotator;
-      task_annotator.RunTask(kQueueFunctionName, *task);
+      task_annotator.RunTask(kQueueFunctionName, task.get());
     }
 
     AfterRunTask(shutdown_behavior);

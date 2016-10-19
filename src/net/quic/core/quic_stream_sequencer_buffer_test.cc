@@ -137,7 +137,6 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataInvalidSource) {
-  FLAGS_quic_stream_sequencer_buffer_debug = true;
   // Pass in an invalid source, expects to return error.
   StringPiece source;
   source.set(nullptr, 1024);
@@ -336,7 +335,6 @@ TEST_F(QuicStreamSequencerBufferTest, Readv100Bytes) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, ReadvError) {
-  FLAGS_quic_stream_sequencer_buffer_debug = true;
   string source = string(100, 'b');
   clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
   QuicTime t1 = clock_.ApproximateNow();

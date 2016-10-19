@@ -129,7 +129,9 @@ void AllocationContextTracker::PopPseudoStackFrame(
   // hit if some TRACE_EVENT macro is unbalanced (a TRACE_EVENT_END* call
   // without a corresponding TRACE_EVENT_BEGIN).
   DCHECK(stack_frame == pseudo_stack_.back())
-      << "Encountered an unmatched TRACE_EVENT_END";
+      << "Encountered an unmatched TRACE_EVENT_END: "
+      << stack_frame.trace_event_name
+      << " vs event in stack: " << pseudo_stack_.back().trace_event_name;
 
   pseudo_stack_.pop_back();
 }

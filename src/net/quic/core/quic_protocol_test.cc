@@ -16,18 +16,6 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicProtocolTest, AdjustErrorForVersion) {
-  ASSERT_EQ(14, QUIC_STREAM_LAST_ERROR)
-      << "Any additions to QuicRstStreamErrorCode require an addition to "
-      << "AdjustErrorForVersion and this associated test.";
-
-  // If we ever add different RST codes, we should have a test akin to the
-  // following.
-  //  EXPECT_EQ(QUIC_RST_ACKNOWLEDGEMENT, AdjustErrorForVersion(
-  //      QUIC_RST_ACKNOWLEDGEMENT,
-  //      QUIC_VERSION_28));
-}
-
 TEST(QuicProtocolTest, MakeQuicTag) {
   QuicTag tag = MakeQuicTag('A', 'B', 'C', 'D');
   char bytes[4];

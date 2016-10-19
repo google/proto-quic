@@ -69,7 +69,8 @@ void QuicCryptoStream::OnDataAvailable() {
       return;
     }
     sequencer()->MarkConsumed(iov.iov_len);
-    if (handshake_confirmed_ && crypto_framer_.InputBytesRemaining() == 0) {
+    if (handshake_confirmed_ && crypto_framer_.InputBytesRemaining() == 0 &&
+        FLAGS_quic_release_crypto_stream_buffer) {
       // If the handshake is complete and the current message has been fully
       // processed then no more handshake messages are likely to arrive soon
       // so release the memory in the stream sequencer.

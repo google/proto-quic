@@ -23,12 +23,10 @@ class MojoProxyResolverV8TracingBindingsTest : public testing::Test {
                     MojoProxyResolverV8TracingBindingsTest>(this));
   }
 
-  void Alert(const mojo::String& message) {
-    alerts_.push_back(message.To<std::string>());
-  }
+  void Alert(const std::string& message) { alerts_.push_back(message); }
 
-  void OnError(int32_t line_number, const mojo::String& message) {
-    errors_.push_back(std::make_pair(line_number, message.To<std::string>()));
+  void OnError(int32_t line_number, const std::string& message) {
+    errors_.push_back(std::make_pair(line_number, message));
   }
 
   void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,

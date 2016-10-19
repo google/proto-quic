@@ -32,6 +32,8 @@ std::string TestResult::StatusAsString() const {
       return "TIMEOUT";
     case TEST_SKIPPED:
       return "SKIPPED";
+    case TEST_EXCESSIVE_OUTPUT:
+      return "EXCESSIVE_OUTPUT";
      // Rely on compiler warnings to ensure all possible values are handled.
   }
 

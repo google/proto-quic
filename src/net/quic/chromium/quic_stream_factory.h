@@ -351,8 +351,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // CertDatabase::Observer methods:
 
   // We close all sessions when certificate database is changed.
-  void OnCertAdded(const X509Certificate* cert) override;
-  void OnCACertChanged(const X509Certificate* cert) override;
+  void OnCertDBChanged(const X509Certificate* cert) override;
 
   bool require_confirmation() const { return require_confirmation_; }
 

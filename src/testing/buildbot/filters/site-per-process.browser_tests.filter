@@ -1,34 +1,16 @@
 # crbug.com/417518: Get tests working with --site-per-process
--AllUrlsApiTest.WhitelistedExtension
--BrowserNavigatorTest.NavigateFromNTPToOptionsInSameTab
 -BrowserTest.OtherRedirectsDontForkProcess
 -ChromeRenderProcessHostTest.ProcessOverflow
 -ChromeRenderProcessHostTest.ProcessPerTab
 -ChromeRenderProcessHostTestWithCommandLine.ProcessOverflowCommandLine
--ErrorPageTest.DNSError_DoClickLink
--ErrorPageTest.DNSError_DoReload
--ErrorPageTest.DNSError_DoReloadAfterSamePageNavigation
--PolicyTest.HomepageLocation
 -PrerenderBrowserTest.PrerenderLocationReplaceGWSHistograms
 -ProcessManagementTest.ExtensionProcessBalancing
 -ProcessManagementTest.ProcessOverflow
 -RedirectTest.ClientEmptyReferer
 -ReferrerPolicyTest.HttpsRedirect
--RestoreOnStartupPolicyTestInstance/RestoreOnStartupPolicyTest.RunTest*
 -WebNavigationApiTest.ServerRedirectSingleProcess
 
-# crbug.com/467126: BrowserTest.WindowOpenClose is flaky in --site-per-process
-# mode:
--BrowserTest.WindowOpenClose
-
-# crbug.com/483522
--ExtensionApiTest.Tabs2
-
 # crbug.com/448592: Get extension browsertests to pass with --site-per-process
--ExtensionApiTest.TabMove
--ExtensionApiTest.TabsOnUpdated
--ExtensionURLRewriteBrowserTest.NewTabPageURL
--InputImeApiTest.SendKeyEventsOnNormalPage
 -IsolatedAppTest.CookieIsolation
 -IsolatedAppTest.CrossProcessClientRedirect
 -IsolatedAppTest.IsolatedAppProcessModel

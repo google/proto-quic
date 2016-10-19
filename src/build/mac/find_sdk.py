@@ -4,19 +4,17 @@
 # found in the LICENSE file.
 
 """Prints the lowest locally available SDK version greater than or equal to a
-given minimum sdk version to standard output.
+given minimum sdk version to standard output. If --developer_dir is passed, then
+the script will use the Xcode toolchain located at DEVELOPER_DIR.
 
 Usage:
-  python find_sdk.py 10.6  # Ignores SDKs < 10.6
+  python find_sdk.py [--developer_dir DEVELOPER_DIR] 10.6  # Ignores SDKs < 10.6
 """
 
 import os
 import re
 import subprocess
 import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import mac_toolchain
 
 from optparse import OptionParser
 
@@ -37,13 +35,14 @@ def main():
   parser.add_option("--print_sdk_path",
                     action="store_true", dest="print_sdk_path", default=False,
                     help="Additionaly print the path the SDK (appears first).")
+  parser.add_option("--developer_dir", help='Path to Xcode.')
   options, args = parser.parse_args()
   if len(args) != 1:
     parser.error('Please specify a minimum SDK version')
   min_sdk_version = args[0]
 
-  # Try using the toolchain in mac_files.
-  mac_toolchain.SetToolchainEnvironment()
+  if options.developer_dir:
+    os.environ['DEVELOPER_DIR'] = options.developer_dir
 
   job = subprocess.Popen(['xcode-select', '-print-path'],
                          stdout=subprocess.PIPE,

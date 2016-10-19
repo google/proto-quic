@@ -18,6 +18,8 @@
 #include <vector>
 
 #include "base/macros.h"
+#include "base/threading/platform_thread.h"
+#include "base/time/time.h"
 #include "build/build_config.h"
 
 #if defined(__GLIBCXX__)

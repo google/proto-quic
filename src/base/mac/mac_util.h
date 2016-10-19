@@ -5,9 +5,10 @@
 #ifndef BASE_MAC_MAC_UTIL_H_
 #define BASE_MAC_MAC_UTIL_H_
 
-#include <Carbon/Carbon.h>
 #include <stdint.h>
 #include <string>
+
+#import <CoreGraphics/CoreGraphics.h>
 
 #include "base/base_export.h"
 
@@ -29,9 +30,6 @@ enum FullScreenMode {
   // other classes, so we include it here.
   kFullScreenModeNormal = 10,
 };
-
-BASE_EXPORT std::string PathFromFSRef(const FSRef& ref);
-BASE_EXPORT bool FSRefFromPath(const std::string& path, FSRef* ref);
 
 // Returns an sRGB color space.  The return value is a static value; do not
 // release it!

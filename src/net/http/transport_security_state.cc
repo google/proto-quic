@@ -681,6 +681,7 @@ bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
                                  const SSLInfo& ssl_info,
                                  const std::string& ocsp_response,
                                  std::string* out_serialized_report) {
+  DCHECK(ssl_info.is_issued_by_known_root);
   base::DictionaryValue report;
   report.SetString("date-time", TimeToISO8601(base::Time::Now()));
   report.SetString("hostname", host_port_pair.host());
@@ -699,12 +700,11 @@ bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
                      SerializeExpectStapleRevocationStatus(
                          ssl_info.ocsp_result.revocation_status));
   }
-  if (ssl_info.is_issued_by_known_root) {
-    report.Set("served-certificate-chain",
-               GetPEMEncodedChainAsList(ssl_info.unverified_cert.get()));
-    report.Set("validated-certificate-chain",
-               GetPEMEncodedChainAsList(ssl_info.cert.get()));
-  }
+
+  report.Set("served-certificate-chain",
+             GetPEMEncodedChainAsList(ssl_info.unverified_cert.get()));
+  report.Set("validated-certificate-chain",
+             GetPEMEncodedChainAsList(ssl_info.cert.get()));
 
   if (!base::JSONWriter::Write(report, out_serialized_report))
     return false;
@@ -792,8 +792,10 @@ void TransportSecurityState::CheckExpectStaple(
     const SSLInfo& ssl_info,
     const std::string& ocsp_response) {
   DCHECK(CalledOnValidThread());
-  if (!enable_static_expect_staple_ || !report_sender_)
+  if (!enable_static_expect_staple_ || !report_sender_ ||
+      !ssl_info.is_issued_by_known_root) {
     return;
+  }
 
   // Determine if the host is on the Expect-Staple preload list. If the build is
   // not timely (i.e. the preload list is not fresh), this will fail and return

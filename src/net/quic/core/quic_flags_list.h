@@ -9,7 +9,7 @@
 
 // If true, QUIC BBR congestion control may be enabled via Finch and/or via QUIC
 // connection options.
-QUIC_FLAG(bool, FLAGS_quic_allow_bbr, false)
+QUIC_FLAG(bool, FLAGS_quic_allow_new_bbr, true)
 
 // Time period for which a given connection_id should live in the time-wait
 // state.
@@ -84,15 +84,8 @@ QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, true)
 // QuicStreamSequencerBuffer to buffer incoming data.
 QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
 
-// If true, allow server address change if it is because of mapped ipv4 address.
-QUIC_FLAG(bool, FLAGS_quic_allow_server_address_change_for_mapped_ipv4, true)
-
 // If true, disables QUIC version less than 34.
 QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, false)
-
-// When true, decode the packet number from the largest received packet, rather
-// than the most recent.
-QUIC_FLAG(bool, FLAGS_quic_packet_numbers_largest_received, true)
 
 // Only close the connection on the 5th RTO client side when the 5RTO option
 // is enabled.
@@ -104,10 +97,6 @@ QUIC_FLAG(bool, FLAGS_quic_enable_server_push_by_default, true)
 // Only inform the QuicSentPacketManager of packets that were sent,
 // not those that we tried to send.
 QUIC_FLAG(bool, FLAGS_quic_only_track_sent_packets, true)
-
-// If true, connection is closed when packet generator is trying to
-// add a frame which alone cannot fit into a packet.
-QUIC_FLAG(bool, FLAGS_quic_close_connection_on_huge_frames, true)
 
 // As the Linux kernel does, limit QUIC's Cubic congestion control to
 // only increase the CWND 1 packet for every two packets acked.
@@ -123,9 +112,6 @@ QUIC_FLAG(bool, FLAGS_quic_allow_large_send_deltas, true)
 // Engage early retransmit anytime the largest acked is greater than
 // or equal to the largest retransmittable packet.
 QUIC_FLAG(bool, FLAGS_quic_largest_sent_retransmittable, true)
-
-// If true, close connection when sequencer buffer enter into unexpected state.
-QUIC_FLAG(bool, FLAGS_quic_stream_sequencer_buffer_debug, true)
 
 // If true, release QuicCryptoStream\'s read buffer when stream are less
 // frequently used.
@@ -154,3 +140,18 @@ QUIC_FLAG(bool, FLAGS_quic_create_session_after_insertion, false)
 
 // If true, rejected packet number is removed from public reset packet.
 QUIC_FLAG(bool, FLAGS_quic_remove_packet_number_from_public_reset, false)
+
+// If true, will send QUIC_PUSH_STREAM_TIMED_OUT when push stream is unclaimed
+// and times out.
+QUIC_FLAG(bool, FLAGS_quic_send_push_stream_timed_out_error, true)
+
+// If true, enable bugfix for FHOL experiment (fin-only
+// WritevStreamData).
+QUIC_FLAG(bool, FLAGS_quic_bugfix_fhol_writev_fin_only_v2, true)
+
+// If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
+// public flag.
+QUIC_FLAG(bool, FLAGS_quic_remove_v33_hacks2, false)
+
+// If true, limits QUIC uncompressed headers to 16K.
+QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)

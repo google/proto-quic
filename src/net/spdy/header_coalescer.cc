@@ -60,7 +60,7 @@ void HeaderCoalescer::OnHeader(base::StringPiece key, base::StringPiece value) {
       base::StringPiece("\0", 1).AppendToString(&s);
     }
     value.AppendToString(&s);
-    headers_.ReplaceOrAppendHeader(key, s);
+    headers_[key] = s;
   }
 }
 

@@ -10,6 +10,7 @@
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task_scheduler/scheduler_lock.h"
 #include "base/task_scheduler/sequence.h"
@@ -53,10 +54,11 @@ class BASE_EXPORT SchedulerWorker {
     // run a Task.
     virtual scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) = 0;
 
-    // Called by the SchedulerWorker after it ran |task|. |task_latency| is the
-    // time elapsed between when the task was posted and when it started to run.
-    virtual void DidRunTask(const Task* task,
-                            const TimeDelta& task_latency) = 0;
+    // Called by the SchedulerWorker after it ran a task with |task_priority|.
+    // |task_latency| is the time elapsed between when the task was posted and
+    // when it started to run.
+    virtual void DidRunTaskWithPriority(TaskPriority task_priority,
+                                        const TimeDelta& task_latency) = 0;
 
     // Called when |sequence| isn't empty after the SchedulerWorker pops a Task
     // from it. |sequence| is the last Sequence returned by GetWork().
@@ -135,8 +137,6 @@ class BASE_EXPORT SchedulerWorker {
 
   void CreateThreadAssertSynchronized();
 
-  bool ShouldExitForTesting() const;
-
   // Synchronizes access to |thread_|.
   mutable SchedulerLock thread_lock_;
 
@@ -151,11 +151,8 @@ class BASE_EXPORT SchedulerWorker {
   const std::unique_ptr<Delegate> delegate_;
   TaskTracker* const task_tracker_;
 
-  // Synchronizes access to |should_exit_for_testing_|.
-  mutable SchedulerLock should_exit_for_testing_lock_;
-
-  // True once JoinForTesting() has been called.
-  bool should_exit_for_testing_ = false;
+  // Set once JoinForTesting() has been called.
+  AtomicFlag should_exit_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorker);
 };

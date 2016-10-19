@@ -5,6 +5,7 @@
 #include "net/tools/quic/test_tools/quic_test_server.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -54,7 +55,7 @@ class CustomStreamSession : public QuicSimpleServerSession {
     }
     if (stream_factory_) {
       QuicSpdyStream* stream = stream_factory_->CreateStream(id, this);
-      ActivateStream(stream);
+      ActivateStream(base::WrapUnique(stream));
       return stream;
     }
     return QuicSimpleServerSession::CreateIncomingDynamicStream(id);

@@ -11,12 +11,14 @@
 #include <map>
 
 #include "net/base/net_export.h"
+#include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/core/quic_unacked_packet_map.h"
 
 namespace net {
 
@@ -34,7 +36,9 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
   static SendAlgorithmInterface* Create(
       const QuicClock* clock,
       const RttStats* rtt_stats,
+      const QuicUnackedPacketMap* unacked_packets,
       CongestionControlType type,
+      QuicRandom* random,
       QuicConnectionStats* stats,
       QuicPacketCount initial_congestion_window);
 
@@ -54,6 +58,7 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
   // packets considered acked or lost as a result of the congestion event.
   virtual void OnCongestionEvent(bool rtt_updated,
                                  QuicByteCount prior_in_flight,
+                                 QuicTime event_time,
                                  const CongestionVector& acked_packets,
                                  const CongestionVector& lost_packets) = 0;
 

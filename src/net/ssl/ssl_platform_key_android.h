@@ -14,10 +14,13 @@
 namespace net {
 
 class SSLPrivateKey;
+class X509Certificate;
 
-// Returns a new SSLPrivateKey which uses |key| for signing operations or
-// nullptr on error. |key| must be a java.security.PrivateKey object.
+// Returns a new SSLPrivateKey for |cert| which uses |key| for signing
+// operations or nullptr on error. |key| must be a java.security.PrivateKey
+// object.
 NET_EXPORT scoped_refptr<SSLPrivateKey> WrapJavaPrivateKey(
+    const X509Certificate* cert,
     const base::android::JavaRef<jobject>& key);
 
 }  // namespace net

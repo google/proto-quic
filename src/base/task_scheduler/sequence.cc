@@ -26,37 +26,32 @@ bool Sequence::PushTask(std::unique_ptr<Task> task) {
   return queue_.size() == 1;
 }
 
-const Task* Sequence::PeekTask() const {
+std::unique_ptr<Task> Sequence::TakeTask() {
   AutoSchedulerLock auto_lock(lock_);
+  DCHECK(!queue_.empty());
+  DCHECK(queue_.front());
 
-  if (queue_.empty())
-    return nullptr;
+  const int priority_index =
+      static_cast<int>(queue_.front()->traits.priority());
+  DCHECK_GT(num_tasks_per_priority_[priority_index], 0U);
+  --num_tasks_per_priority_[priority_index];
 
-  return queue_.front().get();
+  return std::move(queue_.front());
 }
 
-bool Sequence::PopTask() {
-  // Delete the popped task outside the scope of |lock_|. This prevents a double
-  // acquisition of |lock_| if the task's destructor tries to post a task to
-  // this Sequence and reduces contention.
-  std::unique_ptr<Task> delete_outside_lock_scope;
-  bool sequence_empty_after_pop = false;
+TaskTraits Sequence::PeekTaskTraits() const {
+  AutoSchedulerLock auto_lock(lock_);
+  DCHECK(!queue_.empty());
+  DCHECK(queue_.front());
+  return queue_.front()->traits;
+}
 
-  {
-    AutoSchedulerLock auto_lock(lock_);
-    DCHECK(!queue_.empty());
-
-    const int priority_index =
-        static_cast<int>(queue_.front()->traits.priority());
-    DCHECK_GT(num_tasks_per_priority_[priority_index], 0U);
-    --num_tasks_per_priority_[priority_index];
-
-    delete_outside_lock_scope = std::move(queue_.front());
-    queue_.pop();
-    sequence_empty_after_pop = queue_.empty();
-  }
-
-  return sequence_empty_after_pop;
+bool Sequence::Pop() {
+  AutoSchedulerLock auto_lock(lock_);
+  DCHECK(!queue_.empty());
+  DCHECK(!queue_.front());
+  queue_.pop();
+  return queue_.empty();
 }
 
 SequenceSortKey Sequence::GetSortKey() const {

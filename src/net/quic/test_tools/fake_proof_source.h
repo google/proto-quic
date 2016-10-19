@@ -1,0 +1,84 @@
+// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef NET_QUIC_TEST_TOOLS_FAKE_PROOF_SOURCE_H_
+#define NET_QUIC_TEST_TOOLS_FAKE_PROOF_SOURCE_H_
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "net/quic/core/crypto/proof_source.h"
+
+namespace net {
+namespace test {
+
+// Implementation of ProofSource which delegates to a ProofSourceForTesting,
+// except that when the async GetProof is called, it captures the call and
+// allows tests to see that a call is pending, which they can then cause to
+// complete at a time of their choosing.
+class FakeProofSource : public ProofSource {
+ public:
+  FakeProofSource();
+  ~FakeProofSource() override;
+
+  // Before this object is "active", all calls to GetProof will be delegated
+  // immediately.  Once "active", the async ones will be intercepted.  This
+  // distinction is necessary to ensure that GetProof can be called without
+  // interference during test case setup.
+  void Activate();
+
+  // ProofSource interface
+  bool GetProof(const IPAddress& server_ip,
+                const std::string& hostname,
+                const std::string& server_config,
+                QuicVersion quic_version,
+                base::StringPiece chlo_hash,
+                scoped_refptr<ProofSource::Chain>* out_chain,
+                std::string* out_signature,
+                std::string* out_leaf_cert_sct) override;
+  void GetProof(const IPAddress& server_ip,
+                const std::string& hostname,
+                const std::string& server_config,
+                QuicVersion quic_version,
+                base::StringPiece chlo_hash,
+                std::unique_ptr<ProofSource::Callback> callback) override;
+
+  // Get the number of callbacks which are pending
+  int NumPendingCallbacks() const;
+
+  // Invoke a pending callback.  The index refers to the position in params_ of
+  // the callback to be completed.
+  void InvokePendingCallback(int n);
+
+ private:
+  std::unique_ptr<ProofSource> delegate_;
+  bool active_ = false;
+
+  struct Params {
+    Params(const IPAddress& server_ip,
+           std::string hostname,
+           std::string server_config,
+           QuicVersion quic_version,
+           std::string chlo_hash,
+           std::unique_ptr<ProofSource::Callback> callback);
+    ~Params();
+    Params(Params&& other);
+    Params& operator=(Params&& other);
+
+    IPAddress server_ip;
+    std::string hostname;
+    std::string server_config;
+    QuicVersion quic_version;
+    std::string chlo_hash;
+    std::unique_ptr<ProofSource::Callback> callback;
+  };
+
+  std::vector<Params> params_;
+};
+
+}  // namespace test
+}  // namespace net
+
+#endif  // NET_QUIC_TEST_TOOLS_FAKE_PROOF_SOURCE_H_

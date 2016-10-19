@@ -269,6 +269,8 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
   static const char kX64[] = "x64";
   static const char kArm[] = "arm";
   static const char kMips[] = "mipsel";
+  static const char kS390X[] = "s390x";
+  static const char kPPC64[] = "ppc64";
   const char* arch = nullptr;
 
   // Set the host CPU architecture based on the underlying OS, not
@@ -282,8 +284,12 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
     arch = kArm;
   else if (os_arch == "mips")
     arch = kMips;
+  else if (os_arch == "s390x")
+    arch = kS390X;
+  else if (os_arch == "mips")
+    arch = kPPC64;
   else
-    CHECK(false) << "OS architecture not handled.";
+    CHECK(false) << "OS architecture not handled. (" << os_arch << ")";
 
   // Save the OS and architecture as build arguments that are implicitly
   // declared. This is so they can be overridden in a toolchain build args

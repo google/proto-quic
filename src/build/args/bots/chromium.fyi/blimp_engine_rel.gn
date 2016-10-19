@@ -9,3 +9,4 @@ import("//build/args/blimp_engine.gn")
 is_debug = false
 is_official_build = true
 dcheck_always_on = true
+use_goma = true

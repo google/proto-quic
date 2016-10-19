@@ -232,8 +232,11 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   using StaticStreamMap =
       base::SmallMap<std::unordered_map<QuicStreamId, ReliableQuicStream*>, 2>;
 
-  using DynamicStreamMap =
-      base::SmallMap<std::unordered_map<QuicStreamId, ReliableQuicStream*>, 10>;
+  using DynamicStreamMap = base::SmallMap<
+      std::unordered_map<QuicStreamId, std::unique_ptr<ReliableQuicStream>>,
+      10>;
+
+  using ClosedStreams = std::vector<std::unique_ptr<ReliableQuicStream>>;
 
   // Creates a new stream to handle a peer-initiated stream.
   // Caller does not own the returned stream.
@@ -250,8 +253,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   virtual QuicCryptoStream* GetCryptoStream() = 0;
 
   // Adds |stream| to the dynamic stream map.
-  // Takes ownership of |stream|.
-  virtual void ActivateStream(ReliableQuicStream* stream);
+  virtual void ActivateStream(std::unique_ptr<ReliableQuicStream> stream);
 
   // Returns the stream ID for a new outgoing stream, and increments the
   // underlying counter.
@@ -287,9 +289,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
     return dynamic_stream_map_;
   }
 
-  std::vector<ReliableQuicStream*>* closed_streams() {
-    return &closed_streams_;
-  }
+  ClosedStreams* closed_streams() { return &closed_streams_; }
 
   void set_max_open_incoming_streams(size_t max_open_incoming_streams);
   void set_max_open_outgoing_streams(size_t max_open_outgoing_streams);
@@ -348,6 +348,12 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // control window in a negotiated config. Closes the connection if invalid.
   void OnNewSessionFlowControlWindow(QuicStreamOffset new_window);
 
+  // Debug helper for |OnCanWrite()|, check that OnStreamWrite() makes
+  // forward progress.  Returns false if busy loop detected.
+  bool CheckStreamNotBusyLooping(ReliableQuicStream* stream,
+                                 uint64_t previous_bytes_written,
+                                 bool previous_fin_sent);
+
   // Keep track of highest received byte offset of locally closed streams, while
   // waiting for a definitive final highest offset from the peer.
   std::map<QuicStreamId, QuicStreamOffset>
@@ -355,7 +361,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   QuicConnection* connection_;
 
-  std::vector<ReliableQuicStream*> closed_streams_;
+  ClosedStreams closed_streams_;
 
   QuicConfig config_;
 

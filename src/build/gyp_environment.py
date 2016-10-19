@@ -9,7 +9,6 @@ make sure settings are consistent between them, all setup should happen here.
 """
 
 import gyp_helper
-import mac_toolchain
 import os
 import sys
 import vs_toolchain
@@ -29,4 +28,3 @@ def SetEnvironment():
     os.environ['GYP_GENERATORS'] = 'ninja'
 
   vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
-  mac_toolchain.SetToolchainEnvironment()

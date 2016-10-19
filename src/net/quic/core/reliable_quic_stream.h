@@ -76,7 +76,7 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
 
   // Called by the stream subclass after it has consumed the final incoming
   // data.
-  void OnFinRead();
+  virtual void OnFinRead();
 
   // Called when new data is available from the sequencer.  Subclasses must
   // actively retrieve the data using the sequencer's Readv() or
@@ -111,6 +111,13 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
 
   uint64_t stream_bytes_read() const { return stream_bytes_read_; }
   uint64_t stream_bytes_written() const { return stream_bytes_written_; }
+  // For tests that override WritevData.
+  void set_stream_bytes_written(uint64_t bytes_written) {
+    stream_bytes_written_ = bytes_written;
+  }
+
+  size_t busy_counter() const { return busy_counter_; }
+  void set_busy_counter(size_t busy_counter) { busy_counter_ = busy_counter; }
 
   void set_fin_sent(bool fin_sent) { fin_sent_ = fin_sent; }
   void set_fin_received(bool fin_received) { fin_received_ = fin_received; }
@@ -302,6 +309,9 @@ class NET_EXPORT_PRIVATE ReliableQuicStream {
   // connection level flow control limits (but are stream level flow control
   // limited).
   bool stream_contributes_to_connection_flow_control_;
+
+  // For debugging only, used for busy loop check.
+  size_t busy_counter_;
 
   DISALLOW_COPY_AND_ASSIGN(ReliableQuicStream);
 };

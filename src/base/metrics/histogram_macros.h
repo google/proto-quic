@@ -10,16 +10,12 @@
 #include "base/metrics/histogram_macros_local.h"
 #include "base/time/time.h"
 
+
 // Macros for efficient use of histograms.
 //
 // For best practices on deciding when to emit to a histogram and what form
 // the histogram should take, see
 // https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
-//
-// TODO(nikunjb): Move sparse macros to this file.
-//
-// UMA_HISTOGRAM_SPARSE_SLOWLY is defined in sparse_histogram.h as it has
-// different #include dependencies.
 
 // TODO(rkaplow): Link to proper documentation on metric creation once we have
 // it in a good state.
@@ -243,6 +239,20 @@
         name, sample, enum_max,                                                \
         base::HistogramBase::kUmaStabilityHistogramFlag)
 
+//------------------------------------------------------------------------------
+// Sparse histograms.
+
+// Sparse histograms are well suited for recording counts of exact sample values
+// that are sparsely distributed over a large range.
+//
+// UMA_HISTOGRAM_SPARSE_SLOWLY is good for sparsely distributed and/or
+// infrequently recorded values since the implementation is slower
+// and takes more memory.
+//
+// For instance, Sqlite.Version.* are sparse because for any given database,
+// there's going to be exactly one version logged.
+#define UMA_HISTOGRAM_SPARSE_SLOWLY(name, sample)                              \
+    INTERNAL_HISTOGRAM_SPARSE_SLOWLY(name, sample)
 
 //------------------------------------------------------------------------------
 // Deprecated histogram macros. Not recommended for current use.

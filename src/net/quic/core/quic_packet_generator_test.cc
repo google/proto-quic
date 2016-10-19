@@ -207,7 +207,6 @@ class QuicPacketGeneratorTest : public ::testing::Test {
     return ::net::MakeIOVector(s, &iov_);
   }
 
-  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicFramer framer_;
   MockRandom random_;
   SimpleBufferAllocator buffer_allocator_;
@@ -879,7 +878,6 @@ TEST_F(QuicPacketGeneratorTest, SetCurrentPath) {
 
 // Regression test for b/31486443.
 TEST_F(QuicPacketGeneratorTest, ConnectionCloseFrameLargerThanPacketSize) {
-  FLAGS_quic_close_connection_on_huge_frames = true;
   delegate_.SetCanWriteAnything();
   QuicConnectionCloseFrame* frame = new QuicConnectionCloseFrame();
   frame->error_code = QUIC_PACKET_WRITE_ERROR;

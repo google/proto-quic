@@ -126,6 +126,7 @@ SKIP = {
 
   # One off builders. Note that Swarming does support ARM.
   'Linux ARM Cross-Compile',
+  'Site Isolation Android',
   'Site Isolation Linux',
   'Site Isolation Win',
 }

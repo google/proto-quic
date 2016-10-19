@@ -16,6 +16,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
+#include "url/gurl.h"
 
 namespace net {
 
@@ -70,7 +71,8 @@ class NET_EXPORT_PRIVATE HttpBasicState {
 
   const bool http_09_on_non_default_ports_enabled_;
 
-  const HttpRequestInfo* request_info_;
+  GURL url_;
+  std::string request_method_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpBasicState);
 };

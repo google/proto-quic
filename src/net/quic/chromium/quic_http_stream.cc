@@ -306,6 +306,14 @@ int QuicHttpStream::ReadResponseBody(IOBuffer* buf,
   CHECK(!user_buffer_.get());
   CHECK_EQ(0, user_buffer_len_);
 
+  // Invalidate HttpRequestInfo pointer. This is to allow the stream to be
+  // shared across multiple transactions which might require this
+  // stream to outlive the request_info_'s owner.
+  // Only allowed when Read state machine starts. It is safe to reset it at
+  // this point since request_info_->upload_data_stream is also not needed
+  // anymore.
+  request_info_ = nullptr;
+
   if (!stream_) {
     // If the stream is already closed, there is no body to read.
     return response_status_;
@@ -694,7 +702,7 @@ int QuicHttpStream::DoSendHeadersComplete(int rv) {
   if (rv < 0)
     return rv;
 
-  // If the stream is already closed, don't read the request the body.
+  // If the stream is already closed, don't read the request body.
   if (!stream_)
     return response_status_;
 

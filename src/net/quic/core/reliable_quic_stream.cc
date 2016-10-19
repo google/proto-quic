@@ -74,7 +74,8 @@ ReliableQuicStream::ReliableQuicStream(QuicStreamId id, QuicSession* session)
                        GetInitialStreamFlowControlWindowToSend(session),
                        session_->flow_controller()->auto_tune_receive_window()),
       connection_flow_controller_(session_->flow_controller()),
-      stream_contributes_to_connection_flow_control_(true) {
+      stream_contributes_to_connection_flow_control_(true),
+      busy_counter_(0) {
   SetFromConfig();
 }
 
@@ -303,6 +304,8 @@ QuicConsumedData ReliableQuicStream::WritevData(
 
     // Writing more data would be a violation of flow control.
     write_length = static_cast<size_t>(send_window);
+    DVLOG(1) << "stream " << id() << " shortens write length to "
+             << write_length << " due to flow control";
   }
 
   QuicConsumedData consumed_data =

@@ -142,8 +142,7 @@ class NET_EXPORT SpdySessionPool
 
   // We perform the same flushing as described above when certificate database
   // is changed.
-  void OnCertAdded(const X509Certificate* cert) override;
-  void OnCACertChanged(const X509Certificate* cert) override;
+  void OnCertDBChanged(const X509Certificate* cert) override;
 
  private:
   friend class SpdySessionPoolPeer;  // For testing.

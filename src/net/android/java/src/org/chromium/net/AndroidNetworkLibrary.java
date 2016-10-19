@@ -65,47 +65,6 @@ class AndroidNetworkLibrary {
     }
 
     /**
-      * Adds a cryptographic file (User certificate, a CA certificate or
-      * PKCS#12 keychain) through the system's CertInstaller activity.
-      *
-      * @param context current application context.
-      * @param certType cryptographic file type. E.g. CertificateMimeType.X509_USER_CERT
-      * @param data certificate/keychain data bytes.
-      * @return true on success, false on failure.
-      *
-      * Note that failure only indicates that the function couldn't launch the
-      * CertInstaller activity, not that the certificate/keychain was properly
-      * installed to the keystore.
-      */
-    @CalledByNative
-    public static boolean storeCertificate(Context context, int certType, byte[] data) {
-        try {
-            Intent intent = KeyChain.createInstallIntent();
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-            switch (certType) {
-                case CertificateMimeType.X509_USER_CERT:
-                case CertificateMimeType.X509_CA_CERT:
-                    intent.putExtra(KeyChain.EXTRA_CERTIFICATE, data);
-                    break;
-
-                case CertificateMimeType.PKCS12_ARCHIVE:
-                    intent.putExtra(KeyChain.EXTRA_PKCS12, data);
-                    break;
-
-                default:
-                    Log.w(TAG, "invalid certificate type: " + certType);
-                    return false;
-            }
-            context.startActivity(intent);
-            return true;
-        } catch (ActivityNotFoundException e) {
-            Log.w(TAG, "could not store crypto file: " + e);
-        }
-        return false;
-    }
-
-    /**
      * @return the mime type (if any) that is associated with the file
      *         extension. Returns null if no corresponding mime type exists.
      */

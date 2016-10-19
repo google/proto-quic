@@ -16,16 +16,4 @@ CertDatabase::CertDatabase()
 
 CertDatabase::~CertDatabase() {}
 
-int CertDatabase::CheckUserCert(X509Certificate* cert_obj) {
-  // iOS doesn't handle user certificates.
-  NOTREACHED();
-  return OK;
-}
-
-int CertDatabase::AddUserCert(X509Certificate* cert_obj) {
-  // iOS doesn't handle user certificates.
-  NOTREACHED();
-  return OK;
-}
-
 }  // namespace net

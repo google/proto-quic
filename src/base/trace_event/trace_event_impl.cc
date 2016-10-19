@@ -8,6 +8,7 @@
 
 #include "base/format_macros.h"
 #include "base/json/string_escape.h"
+#include "base/memory/ptr_util.h"
 #include "base/process/process_handle.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -15,6 +16,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/trace_event/trace_event.h"
+#include "base/trace_event/trace_event_argument.h"
 #include "base/trace_event/trace_log.h"
 
 namespace base {
@@ -391,8 +393,7 @@ void TraceEvent::AppendAsJSON(
     StringAppendF(out, ",\"bp\":\"e\"");
 
   if ((flags_ & TRACE_EVENT_FLAG_FLOW_OUT) ||
-      (flags_ & TRACE_EVENT_FLAG_FLOW_IN) ||
-      phase_ == TRACE_EVENT_PHASE_BIND_IDS) {
+      (flags_ & TRACE_EVENT_FLAG_FLOW_IN)) {
     StringAppendF(out, ",\"bind_id\":\"0x%" PRIx64 "\"",
                   static_cast<uint64_t>(bind_id_));
   }
@@ -448,3 +449,40 @@ void TraceEvent::AppendPrettyPrinted(std::ostringstream* out) const {
 
 }  // namespace trace_event
 }  // namespace base
+
+namespace trace_event_internal {
+
+std::unique_ptr<base::trace_event::ConvertableToTraceFormat>
+TraceID::AsConvertableToTraceFormat() const {
+  auto value = base::MakeUnique<base::trace_event::TracedValue>();
+
+  if (scope_ != kGlobalScope)
+    value->SetString("scope", scope_);
+  switch (id_flags_) {
+    case TRACE_EVENT_FLAG_HAS_ID:
+      value->SetString(
+          "id",
+          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
+      break;
+    case TRACE_EVENT_FLAG_HAS_GLOBAL_ID:
+      value->BeginDictionary("id2");
+      value->SetString(
+          "global",
+          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
+      value->EndDictionary();
+      break;
+    case TRACE_EVENT_FLAG_HAS_LOCAL_ID:
+      value->BeginDictionary("id2");
+      value->SetString(
+          "local",
+          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
+      value->EndDictionary();
+      break;
+    default:
+      NOTREACHED() << "Unrecognized ID flag";
+  }
+
+  return std::move(value);
+}
+
+}  // namespace trace_event_internal

@@ -160,14 +160,14 @@ extern "C" {
 #define TLS1_AD_END_OF_EARLY_DATA 1
 #define TLS1_AD_DECRYPTION_FAILED 21
 #define TLS1_AD_RECORD_OVERFLOW 22
-#define TLS1_AD_UNKNOWN_CA 48    /* fatal */
-#define TLS1_AD_ACCESS_DENIED 49 /* fatal */
-#define TLS1_AD_DECODE_ERROR 50  /* fatal */
+#define TLS1_AD_UNKNOWN_CA 48
+#define TLS1_AD_ACCESS_DENIED 49
+#define TLS1_AD_DECODE_ERROR 50
 #define TLS1_AD_DECRYPT_ERROR 51
-#define TLS1_AD_EXPORT_RESTRICTION 60    /* fatal */
-#define TLS1_AD_PROTOCOL_VERSION 70      /* fatal */
-#define TLS1_AD_INSUFFICIENT_SECURITY 71 /* fatal */
-#define TLS1_AD_INTERNAL_ERROR 80        /* fatal */
+#define TLS1_AD_EXPORT_RESTRICTION 60
+#define TLS1_AD_PROTOCOL_VERSION 70
+#define TLS1_AD_INSUFFICIENT_SECURITY 71
+#define TLS1_AD_INTERNAL_ERROR 80
 #define TLS1_AD_USER_CANCELLED 90
 #define TLS1_AD_NO_RENEGOTIATION 100
 #define TLS1_AD_MISSING_EXTENSION 109
@@ -177,7 +177,8 @@ extern "C" {
 #define TLS1_AD_UNRECOGNIZED_NAME 112
 #define TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE 113
 #define TLS1_AD_BAD_CERTIFICATE_HASH_VALUE 114
-#define TLS1_AD_UNKNOWN_PSK_IDENTITY 115 /* fatal */
+#define TLS1_AD_UNKNOWN_PSK_IDENTITY 115
+#define TLS1_AD_CERTIFICATE_REQUIRED 116
 
 /* ExtensionType values from RFC6066 */
 #define TLSEXT_TYPE_server_name 0
@@ -204,7 +205,7 @@ extern "C" {
 /* ExtensionType value from RFC4507 */
 #define TLSEXT_TYPE_session_ticket 35
 
-/* ExtensionType values from draft-ietf-tls-tls13-13 */
+/* ExtensionType values from draft-ietf-tls-tls13-16 */
 #define TLSEXT_TYPE_supported_groups 10
 #define TLSEXT_TYPE_key_share 40
 #define TLSEXT_TYPE_pre_shared_key 41
@@ -413,14 +414,15 @@ extern "C" {
 #define TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 0x0300CCA9
 #define TLS1_CK_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256 0x0300CCAC
 
-/* PSK ciphersuites from mattsson-tls-ecdhe-psk-aead */
-#define TLS1_CK_ECDHE_PSK_WITH_AES_128_GCM_SHA256 0x0300D001
-#define TLS1_CK_ECDHE_PSK_WITH_AES_256_GCM_SHA384 0x0300D002
-
 /* TODO(davidben): Remove this. Historically, the CK names for CHACHA20_POLY1305
  * were missing 'WITH' and 'SHA256'. */
 #define TLS1_CK_ECDHE_RSA_CHACHA20_POLY1305 \
   TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+
+/* TLS 1.3 ciphersuites from draft-ietf-tls-tls13-16 */
+#define TLS1_CK_AES_128_GCM_SHA256 0x03001301
+#define TLS1_CK_AES_256_GCM_SHA384 0x03001302
+#define TLS1_CK_CHACHA20_POLY1305_SHA256 0x03001303
 
 /* CECPQ1 ciphersuites.  These are specific to BoringSSL and not standard. */
 #define TLS1_CK_CECPQ1_RSA_WITH_CHACHA20_POLY1305_SHA256 0x030016B7
@@ -608,9 +610,10 @@ extern "C" {
 #define TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305 \
   TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
 
-/* PSK ciphersuites from mattsson-tls-ecdhe-psk-aead */
-#define TLS1_TXT_ECDHE_PSK_WITH_AES_128_GCM_SHA256 "ECDHE-PSK-AES128-GCM-SHA256"
-#define TLS1_TXT_ECDHE_PSK_WITH_AES_256_GCM_SHA384 "ECDHE-PSK-AES256-GCM-SHA384"
+/* TLS 1.3 ciphersuites from draft-ietf-tls-tls13-16 */
+#define TLS1_TXT_AES_128_GCM_SHA256 "AEAD-AES128-GCM-SHA256"
+#define TLS1_TXT_AES_256_GCM_SHA384 "AEAD-AES256-GCM-SHA384"
+#define TLS1_TXT_CHACHA20_POLY1305_SHA256 "AEAD-CHACHA20-POLY1305-SHA256"
 
 /* CECPQ1 ciphersuites.  These are specific to BoringSSL and not standard. */
 #define TLS1_TXT_CECPQ1_RSA_WITH_CHACHA20_POLY1305_SHA256 \

@@ -42,6 +42,17 @@ class FieldTrialToStruct(unittest.TestCase):
           'platforms': ['win'],
           'experiments': [{'name': 'OtherGroup'}]
         }
+      ],
+      'TrialWithForcingFlag':  [
+        {
+          'platforms': ['win'],
+          'experiments': [
+            {
+              'name': 'ForcedGroup',
+              'forcing_flag': "my-forcing-flag"
+            }
+          ]
+        }
       ]
     }
     result = fieldtrial_to_struct._FieldTrialConfigToDescription(config, 'win')
@@ -75,6 +86,15 @@ class FieldTrialToStruct(unittest.TestCase):
             {
               'name': 'Trial2',
               'experiments': [{'name': 'OtherGroup'}]
+            },
+            {
+              'name': 'TrialWithForcingFlag',
+              'experiments': [
+                  {
+                    'name': 'ForcedGroup',
+                    'forcing_flag': "my-forcing-flag"
+                  }
+              ]
             },
           ]
         }

@@ -46,6 +46,7 @@
       "printing_unittests",
       "remoting_unittests",
       "sql_unittests",
+      "storage_unittests",
       "unit_tests",
       "url_unittests"
     ]
@@ -64,6 +65,7 @@
       "media_unittests",
       "midi_unittests",
       "sql_unittests",
+      "storage_unittests",
       "crypto_unittests",
       "remoting_unittests",
       "ipc_tests",
@@ -369,6 +371,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "storage_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "ui_base_unittests"
       },
       {
@@ -668,6 +676,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "storage_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "ui_base_unittests"
       },
       {
@@ -920,6 +934,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "sql_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "storage_unittests"
       },
       {
         "swarming": {
@@ -1673,6 +1693,9 @@
         "test": "sql_unittests"
       },
       {
+        "test": "storage_unittests"
+      },
+      {
         "shard_index": 2,
         "test": "unit_tests",
         "total_shards": 6
@@ -1909,6 +1932,9 @@
         "test": "sql_unittests"
       },
       {
+        "test": "storage_unittests"
+      },
+      {
         "test": "unit_tests"
       },
       {
@@ -2043,6 +2069,9 @@
       },
       {
         "test": "sql_unittests"
+      },
+      {
+        "test": "storage_unittests"
       },
       {
         "test": "unit_tests"

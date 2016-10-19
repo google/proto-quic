@@ -1,16 +1,17 @@
 diff --git a/base/third_party/dmg_fp/dtoa.cc b/base/third_party/dmg_fp/dtoa.cc
-index 502c16c..f3d793e 100644
+index c0a51c2..ab4e056 100644
 --- a/base/third_party/dmg_fp/dtoa.cc
 +++ b/base/third_party/dmg_fp/dtoa.cc
-@@ -2597,8 +2597,11 @@ strtod
+@@ -2674,8 +2674,11 @@ strtod
  			if (c > '0' && c <= '9') {
  				L = c - '0';
  				s1 = s;
 -				while((c = *++s) >= '0' && c <= '9')
+-					L = 10*L + c - '0';
 +				while((c = *++s) >= '0' && c <= '9') {
- 					L = 10*L + c - '0';
-+					if (L > DBL_MAX_10_EXP)
-+						break;
++					if (L < (INT_MAX - 10) / 10) {
++						L = 10*L + c - '0';
++					}
 +				}
  				if (s - s1 > 8 || L > 19999)
  					/* Avoid confusion from exponents

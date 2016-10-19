@@ -133,7 +133,19 @@ PersistentMemoryAllocator::Iterator::Iterator(
 PersistentMemoryAllocator::Iterator::Iterator(
     const PersistentMemoryAllocator* allocator,
     Reference starting_after)
-    : allocator_(allocator), last_record_(starting_after), record_count_(0) {
+    : allocator_(allocator), last_record_(0), record_count_(0) {
+  Reset(starting_after);
+}
+
+void PersistentMemoryAllocator::Iterator::Reset() {
+  last_record_.store(kReferenceQueue, std::memory_order_relaxed);
+  record_count_.store(0, std::memory_order_relaxed);
+}
+
+void PersistentMemoryAllocator::Iterator::Reset(Reference starting_after) {
+  last_record_.store(starting_after, std::memory_order_relaxed);
+  record_count_.store(0, std::memory_order_relaxed);
+
   // Ensure that the starting point is a valid, iterable block (meaning it can
   // be read and has a non-zero "next" pointer).
   const volatile BlockHeader* block =
@@ -142,6 +154,14 @@ PersistentMemoryAllocator::Iterator::Iterator(
     NOTREACHED();
     last_record_.store(kReferenceQueue, std::memory_order_release);
   }
+}
+
+PersistentMemoryAllocator::Reference
+PersistentMemoryAllocator::Iterator::GetLast() {
+  Reference last = last_record_.load(std::memory_order_relaxed);
+  if (last == kReferenceQueue)
+    return kReferenceNull;
+  return last;
 }
 
 PersistentMemoryAllocator::Reference

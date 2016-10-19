@@ -11,7 +11,6 @@ import json
 import logging
 import optparse
 import os
-import random
 import sys
 import threading
 
@@ -27,7 +26,7 @@ sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
 import devil_chromium
 
 
-_KEYS = ['url', 'warmup', 'no_prerendering', 'delay_to_may_launch_url',
+_KEYS = ['url', 'warmup', 'speculation_mode', 'delay_to_may_launch_url',
          'delay_to_launch_url', 'cold']
 
 
@@ -42,11 +41,12 @@ def _ParseConfiguration(filename):
   {
     "url": "https://www.android.com",
     "warmup": [false, true],
-    "no_prerendering": false,
+    "speculation_mode": "speculative_prefetch",
     "delay_to_may_launch_url": [-1, 1000],
     "delay_to_launch_url": [-1, 1000],
     "cold": true
   }
+  See sample_config.json in this directory as well.
 
   Args:
     filename: (str) Point to a file containins a JSON dictionnary of config
@@ -58,7 +58,7 @@ def _ParseConfiguration(filename):
   config = json.load(open(filename, 'r'))
   has_all_values = all(k in config for k in _KEYS)
   assert has_all_values
-  config['url'] = str(config['url']) # Intents don't like unicode.
+  config['url'] = str(config['url'])  # Intents don't like unicode.
   has_list = any(isinstance(config[k], list) for k in _KEYS)
   if not has_list:
     return [config]
@@ -81,29 +81,9 @@ def _CreateOptionParser():
   parser.add_option('--config', help='JSON configuration file. Required.')
   parser.add_option('--output_file_prefix', help='Output file prefix. Actual '
                     'output file is prefix_<device ID>.csv', default='result')
+  parser.add_option('--once', help='Run only once.', default=False,
+                    action='store_true')
   return parser
-
-
-def _RunOnDevice(device, output_filename, configs, should_stop):
-  """Loops the tests described by configs on a device.
-
-  Args:
-    device: (DeviceUtils) device to run the tests on.
-    output_filename: (str) Output file name.
-    configs: (list of dict) List of configurations.
-    should_stop: (Event) When set, this function should return.
-  """
-  with open(output_filename, 'a') as f:
-    while not should_stop.is_set():
-      config = configs[random.randint(0, len(configs) - 1)]
-      result = customtabs_benchmark.RunOnce(
-          device, config['url'], config['warmup'], config['no_prerendering'],
-          config['delay_to_may_launch_url'], config['delay_to_launch_url'],
-          config['cold'])
-      if result is not None:
-        f.write(result + '\n')
-        f.flush()
-      should_stop.wait(10.)
 
 
 def _Run(output_file_prefix, configs):
@@ -111,23 +91,27 @@ def _Run(output_file_prefix, configs):
 
   Args:
     output_file_prefix: (str) Prefix for the output file name.
-    configs: (list of dict) List of configurations.
+    configs: ([dict]) List of configurations.
   """
   devices = device_utils.DeviceUtils.HealthyDevices()
-  should_stop = threading.Event()
+  stop_event = threading.Event()
   threads = []
   for device in devices:
     output_filename = '%s_%s.csv' % (output_file_prefix, str(device))
     thread = threading.Thread(
-        target=_RunOnDevice,
-        args=(device, output_filename, configs, should_stop))
+        target=customtabs_benchmark.LoopOnDevice,
+        args=(device, configs, output_filename),
+        kwargs={'should_stop': stop_event})
     thread.start()
     threads.append(thread)
-  for thread in threads:
+  while any(thread.is_alive() for thread in threads):
     try:
-      thread.join()
-    except KeyboardInterrupt as e:
-      should_stop.set()
+      for thread in threads:
+        if thread.is_alive():
+          thread.join(1.)
+    except KeyboardInterrupt as _:
+      logging.warning('Stopping now.')
+      stop_event.set()
 
 
 def main():
@@ -138,7 +122,11 @@ def main():
     sys.exit(0)
   devil_chromium.Initialize()
   configs = _ParseConfiguration(options.config)
-  _Run(options.output_file_prefix, configs)
+  if options.once:
+    device = device_utils.DeviceUtils.HealthyDevices()[0]
+    customtabs_benchmark.LoopOnDevice(device, [configs[0]], '-', once=True)
+  else:
+    _Run(options.output_file_prefix, configs)
 
 
 if __name__ == '__main__':

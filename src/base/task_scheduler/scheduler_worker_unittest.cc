@@ -46,8 +46,9 @@ class SchedulerWorkerDefaultDelegate : public SchedulerWorker::Delegate {
   scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
     return nullptr;
   }
-  void DidRunTask(const Task* task, const TimeDelta& task_latency) override {
-    ADD_FAILURE() << "Unexpected call to DidRunTask()";
+  void DidRunTaskWithPriority(TaskPriority task_priority,
+                              const TimeDelta& task_latency) override {
+    ADD_FAILURE() << "Unexpected call to DidRunTaskWithPriority()";
   }
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override {
     ADD_FAILURE() << "Unexpected call to ReEnqueueSequence()";
@@ -126,7 +127,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
         : outer_(outer) {}
 
     ~TestSchedulerWorkerDelegate() override {
-      EXPECT_FALSE(IsCallToDidRunTaskExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
     }
 
     // SchedulerWorker::Delegate:
@@ -134,7 +135,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
                      const TimeDelta& detach_duration) override {
       outer_->worker_set_.Wait();
       EXPECT_EQ(outer_->worker_.get(), worker);
-      EXPECT_FALSE(IsCallToDidRunTaskExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
 
       // Without synchronization, OnMainEntry() could be called twice without
       // generating an error.
@@ -144,7 +145,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     }
 
     scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
-      EXPECT_FALSE(IsCallToDidRunTaskExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
       EXPECT_EQ(outer_->worker_.get(), worker);
 
       {
@@ -174,7 +175,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
         sequence->PushTask(std::move(task));
       }
 
-      ExpectCallToDidRunTask(sequence->PeekTask());
+      ExpectCallToDidRunTaskWithPriority(sequence->PeekTaskTraits().priority());
 
       {
         // Add the Sequence to the vector of created Sequences.
@@ -185,11 +186,13 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
       return sequence;
     }
 
-    void DidRunTask(const Task* task, const TimeDelta& task_latency) override {
-      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
-      EXPECT_EQ(expect_did_run_task_, task);
-      expect_did_run_task_ = nullptr;
+    void DidRunTaskWithPriority(TaskPriority task_priority,
+                                const TimeDelta& task_latency) override {
+      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
+      EXPECT_TRUE(expect_did_run_task_with_priority_);
+      EXPECT_EQ(expected_task_priority_, task_priority);
       EXPECT_FALSE(task_latency.is_max());
+      expect_did_run_task_with_priority_ = false;
     }
 
     // This override verifies that |sequence| contains the expected number of
@@ -197,15 +200,14 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     // EnqueueSequence implementation, it doesn't reinsert |sequence| into a
     // queue for further execution.
     void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override {
-      EXPECT_FALSE(IsCallToDidRunTaskExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
       EXPECT_GT(outer_->TasksPerSequence(), 1U);
 
       // Verify that |sequence| contains TasksPerSequence() - 1 Tasks.
       for (size_t i = 0; i < outer_->TasksPerSequence() - 1; ++i) {
-        EXPECT_TRUE(sequence->PeekTask());
-        sequence->PopTask();
+        EXPECT_TRUE(sequence->TakeTask());
+        EXPECT_EQ(i == outer_->TasksPerSequence() - 2, sequence->Pop());
       }
-      EXPECT_FALSE(sequence->PeekTask());
 
       // Add |sequence| to |re_enqueued_sequences_|.
       AutoSchedulerLock auto_lock(outer_->lock_);
@@ -215,27 +217,31 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     }
 
    private:
-    // Expect a call to DidRunTask() with |task| as argument before the next
-    // call to any other method of this delegate.
-    void ExpectCallToDidRunTask(const Task* task) {
-      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
-      expect_did_run_task_ = task;
+    // Expect a call to DidRunTaskWithPriority() with |task_priority| as
+    // argument before the next call to any other method of this delegate.
+    void ExpectCallToDidRunTaskWithPriority(TaskPriority task_priority) {
+      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
+      expect_did_run_task_with_priority_ = true;
+      expected_task_priority_ = task_priority;
     }
 
-    bool IsCallToDidRunTaskExpected() const {
-      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
-      return expect_did_run_task_ != nullptr;
+    bool IsCallToDidRunTaskWithPriorityExpected() const {
+      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
+      return expect_did_run_task_with_priority_;
     }
 
     TaskSchedulerWorkerTest* outer_;
 
-    // Synchronizes access to |expect_did_run_task_|.
-    mutable SchedulerLock expect_did_run_task_lock_;
+    // Synchronizes access to |expect_did_run_task_with_priority_| and
+    // |expected_task_priority_|.
+    mutable SchedulerLock expect_did_run_task_with_priority_lock_;
 
-    // Expected task for the next call to DidRunTask(). DidRunTask() should not
-    // be called when this is nullptr. No method other than DidRunTask() should
-    // be called on this delegate when this is not nullptr.
-    const Task* expect_did_run_task_ = nullptr;
+    // Whether the next method called on this delegate should be
+    // DidRunTaskWithPriority().
+    bool expect_did_run_task_with_priority_ = false;
+
+    // Expected priority for the next call to DidRunTaskWithPriority().
+    TaskPriority expected_task_priority_ = TaskPriority::BACKGROUND;
   };
 
   void RunTaskCallback() {
@@ -384,7 +390,8 @@ class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
     return sequence;
   }
 
-  void DidRunTask(const Task* task, const TimeDelta& task_latency) override {}
+  void DidRunTaskWithPriority(TaskPriority task,
+                              const TimeDelta& task_latency) override {}
 
   bool CanDetach(SchedulerWorker* worker) override {
     detach_requested_.Signal();

@@ -9,6 +9,7 @@
 #include "base/bind.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/test/gtest_util.h"
 #include "base/time/time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -17,30 +18,6 @@ namespace internal {
 
 namespace {
 
-// A class that pushes a Task to a Sequence in its destructor.
-class PushTaskInDestructor {
- public:
-  explicit PushTaskInDestructor(scoped_refptr<Sequence> sequence)
-      : sequence_(std::move(sequence)) {}
-  PushTaskInDestructor(PushTaskInDestructor&&) = default;
-  PushTaskInDestructor& operator=(PushTaskInDestructor&&) = default;
-
-  ~PushTaskInDestructor() {
-    // |sequence_| may be nullptr in a temporary instance of this class.
-    if (sequence_) {
-      EXPECT_FALSE(sequence_->PeekTask());
-      sequence_->PushTask(WrapUnique(
-          new Task(FROM_HERE, Closure(), TaskTraits(), TimeDelta())));
-    }
-  }
-
- private:
-  scoped_refptr<Sequence> sequence_;
-
-  DISALLOW_COPY_AND_ASSIGN(PushTaskInDestructor);
-};
-
-void DoNothing(const PushTaskInDestructor&) {}
 
 class TaskSchedulerSequenceTest : public testing::Test {
  public:
@@ -99,54 +76,54 @@ class TaskSchedulerSequenceTest : public testing::Test {
 
 }  // namespace
 
-TEST_F(TaskSchedulerSequenceTest, PushPopPeek) {
+TEST_F(TaskSchedulerSequenceTest, PushTakeRemove) {
   scoped_refptr<Sequence> sequence(new Sequence);
 
   // Push task A in the sequence. Its sequenced time should be updated and it
   // should be in front of the sequence.
   EXPECT_TRUE(sequence->PushTask(std::move(task_a_owned_)));
   EXPECT_FALSE(task_a_->sequenced_time.is_null());
-  EXPECT_EQ(task_a_, sequence->PeekTask());
+  EXPECT_EQ(task_a_->traits.priority(), sequence->PeekTaskTraits().priority());
 
   // Push task B, C and D in the sequence. Their sequenced time should be
   // updated and task A should always remain in front of the sequence.
   EXPECT_FALSE(sequence->PushTask(std::move(task_b_owned_)));
   EXPECT_FALSE(task_b_->sequenced_time.is_null());
-  EXPECT_EQ(task_a_, sequence->PeekTask());
+  EXPECT_EQ(task_a_->traits.priority(), sequence->PeekTaskTraits().priority());
 
   EXPECT_FALSE(sequence->PushTask(std::move(task_c_owned_)));
   EXPECT_FALSE(task_c_->sequenced_time.is_null());
-  EXPECT_EQ(task_a_, sequence->PeekTask());
+  EXPECT_EQ(task_a_->traits.priority(), sequence->PeekTaskTraits().priority());
 
   EXPECT_FALSE(sequence->PushTask(std::move(task_d_owned_)));
   EXPECT_FALSE(task_d_->sequenced_time.is_null());
-  EXPECT_EQ(task_a_, sequence->PeekTask());
+  EXPECT_EQ(task_a_->traits.priority(), sequence->PeekTaskTraits().priority());
 
-  // Pop task A. Task B should now be in front.
-  EXPECT_FALSE(sequence->PopTask());
-  EXPECT_EQ(task_b_, sequence->PeekTask());
+  // Get the task in front of the sequence. It should be task A.
+  EXPECT_EQ(task_a_, sequence->TakeTask().get());
 
-  // Pop task B. Task C should now be in front.
-  EXPECT_FALSE(sequence->PopTask());
-  EXPECT_EQ(task_c_, sequence->PeekTask());
+  // Remove the empty slot. Task B should now be in front.
+  EXPECT_FALSE(sequence->Pop());
+  EXPECT_EQ(task_b_, sequence->TakeTask().get());
 
-  // Pop task C. Task D should now be in front.
-  EXPECT_FALSE(sequence->PopTask());
-  EXPECT_EQ(task_d_, sequence->PeekTask());
+  // Remove the empty slot. Task C should now be in front.
+  EXPECT_FALSE(sequence->Pop());
+  EXPECT_EQ(task_c_, sequence->TakeTask().get());
 
-  // Push task E in the sequence. Its sequenced time should be updated and
-  // task D should remain in front.
+  // Remove the empty slot. Task D should now be in front.
+  EXPECT_FALSE(sequence->Pop());
+  EXPECT_EQ(task_d_, sequence->TakeTask().get());
+
+  // Push task E in the sequence. Its sequenced time should be updated.
   EXPECT_FALSE(sequence->PushTask(std::move(task_e_owned_)));
   EXPECT_FALSE(task_e_->sequenced_time.is_null());
-  EXPECT_EQ(task_d_, sequence->PeekTask());
 
-  // Pop task D. Task E should now be in front.
-  EXPECT_FALSE(sequence->PopTask());
-  EXPECT_EQ(task_e_, sequence->PeekTask());
+  // Remove the empty slot. Task E should now be in front.
+  EXPECT_FALSE(sequence->Pop());
+  EXPECT_EQ(task_e_, sequence->TakeTask().get());
 
-  // Pop task E. The sequence should now be empty.
-  EXPECT_TRUE(sequence->PopTask());
-  EXPECT_EQ(nullptr, sequence->PeekTask());
+  // Remove the empty slot. The sequence should now be empty.
+  EXPECT_TRUE(sequence->Pop());
 }
 
 TEST_F(TaskSchedulerSequenceTest, GetSortKey) {
@@ -181,21 +158,24 @@ TEST_F(TaskSchedulerSequenceTest, GetSortKey) {
 
   // Pop task A. The highest priority is still USER_BLOCKING. The task in front
   // of the sequence is now task B.
-  sequence->PopTask();
+  sequence->TakeTask();
+  sequence->Pop();
   EXPECT_EQ(
       SequenceSortKey(TaskPriority::USER_BLOCKING, task_b_->sequenced_time),
       sequence->GetSortKey());
 
   // Pop task B. The highest priority is still USER_BLOCKING. The task in front
   // of the sequence is now task C.
-  sequence->PopTask();
+  sequence->TakeTask();
+  sequence->Pop();
   EXPECT_EQ(
       SequenceSortKey(TaskPriority::USER_BLOCKING, task_c_->sequenced_time),
       sequence->GetSortKey());
 
   // Pop task C. The highest priority is still USER_BLOCKING. The task in front
   // of the sequence is now task D.
-  sequence->PopTask();
+  sequence->TakeTask();
+  sequence->Pop();
   EXPECT_EQ(
       SequenceSortKey(TaskPriority::USER_BLOCKING, task_d_->sequenced_time),
       sequence->GetSortKey());
@@ -209,25 +189,37 @@ TEST_F(TaskSchedulerSequenceTest, GetSortKey) {
 
   // Pop task D. The highest priority is now from task E (BACKGROUND). The
   // task in front of the sequence is now task E.
-  sequence->PopTask();
+  sequence->TakeTask();
+  sequence->Pop();
   EXPECT_EQ(SequenceSortKey(TaskPriority::BACKGROUND, task_e_->sequenced_time),
             sequence->GetSortKey());
 }
 
-TEST_F(TaskSchedulerSequenceTest, CanPushTaskInTaskDestructor) {
+// Verify that a DCHECK fires if Pop() is called on a sequence whose front slot
+// isn't empty.
+TEST_F(TaskSchedulerSequenceTest, PopNonEmptyFrontSlot) {
   scoped_refptr<Sequence> sequence(new Sequence);
-  sequence->PushTask(MakeUnique<Task>(
-      FROM_HERE, Bind(&DoNothing, PushTaskInDestructor(sequence)), TaskTraits(),
-      TimeDelta()));
+  sequence->PushTask(
+      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), TimeDelta()));
 
-  // PushTask() is invoked on |sequence| when the popped Task is destroyed. If
-  // PopTask() destroys the Task outside the scope of its lock as expected, no
-  // deadlock will occur when PushTask() tries to acquire the Sequence's lock.
-  sequence->PopTask();
+  EXPECT_DCHECK_DEATH({ sequence->Pop(); });
+}
 
-  // Verify that |sequence| contains exactly one Task.
-  EXPECT_TRUE(sequence->PeekTask());
-  EXPECT_TRUE(sequence->PopTask());
+// Verify that a DCHECK fires if TakeTask() is called on a sequence whose front
+// slot is empty.
+TEST_F(TaskSchedulerSequenceTest, TakeEmptyFrontSlot) {
+  scoped_refptr<Sequence> sequence(new Sequence);
+  sequence->PushTask(
+      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), TimeDelta()));
+
+  EXPECT_TRUE(sequence->TakeTask());
+  EXPECT_DCHECK_DEATH({ sequence->TakeTask(); });
+}
+
+// Verify that a DCHECK fires if TakeTask() is called on an empty sequence.
+TEST_F(TaskSchedulerSequenceTest, TakeEmptySequence) {
+  scoped_refptr<Sequence> sequence(new Sequence);
+  EXPECT_DCHECK_DEATH({ sequence->TakeTask(); });
 }
 
 }  // namespace internal

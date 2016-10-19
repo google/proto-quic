@@ -159,8 +159,8 @@ class MockProxyConfigService: public ProxyConfigService {
   void SetConfig(const ProxyConfig& config) {
     availability_ = CONFIG_VALID;
     config_ = config;
-    FOR_EACH_OBSERVER(Observer, observers_,
-                      OnProxyConfigChanged(config_, availability_));
+    for (auto& observer : observers_)
+      observer.OnProxyConfigChanged(config_, availability_);
   }
 
  private:

@@ -60,9 +60,8 @@ void NetworkQualityStore::Add(
   DCHECK_LE(cached_network_qualities_.size(),
             static_cast<size_t>(kMaximumNetworkQualityCacheSize));
 
-  FOR_EACH_OBSERVER(
-      NetworkQualitiesCacheObserver, network_qualities_cache_observer_list_,
-      OnChangeInCachedNetworkQuality(network_id, cached_network_quality));
+  for (auto& observer : network_qualities_cache_observer_list_)
+    observer.OnChangeInCachedNetworkQuality(network_id, cached_network_quality);
 }
 
 bool NetworkQualityStore::GetById(

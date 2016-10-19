@@ -125,12 +125,10 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
       CachedNetworkParameters cached_network_params) override;
 
  protected:
-  virtual QuicErrorCode ProcessClientHello(
+  virtual void ProcessClientHello(
       scoped_refptr<ValidateClientHelloResultCallback::Result> result,
       std::unique_ptr<ProofSource::Details> proof_source_details,
-      CryptoHandshakeMessage* reply,
-      DiversificationNonce* out_diversification_nonce,
-      std::string* error_details);
+      std::unique_ptr<ProcessClientHelloResultCallback> done_cb);
 
   // Hook that allows the server to set QuicConfig defaults just
   // before going through the parameter negotiation step.

@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
@@ -96,7 +96,7 @@ QuicSpdyStream* QuicSimpleServerSession::CreateIncomingDynamicStream(
   }
 
   QuicSpdyStream* stream = new QuicSimpleServerStream(id, this);
-  ActivateStream(stream);
+  ActivateStream(base::WrapUnique(stream));
   return stream;
 }
 
@@ -109,7 +109,7 @@ QuicSimpleServerStream* QuicSimpleServerSession::CreateOutgoingDynamicStream(
   QuicSimpleServerStream* stream =
       new QuicSimpleServerStream(GetNextOutgoingStreamId(), this);
   stream->SetPriority(priority);
-  ActivateStream(stream);
+  ActivateStream(base::WrapUnique(stream));
   return stream;
 }
 
@@ -156,15 +156,15 @@ SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
 
   SpdyHeaderBlock spdy_headers = original_request_headers.Clone();
   // :authority could be different from original request.
-  spdy_headers.ReplaceOrAppendHeader(":authority", push_request_url.host());
-  spdy_headers.ReplaceOrAppendHeader(":path", path);
+  spdy_headers[":authority"] = push_request_url.host();
+  spdy_headers[":path"] = path;
   // Push request always use GET.
-  spdy_headers.ReplaceOrAppendHeader(":method", "GET");
-  spdy_headers.ReplaceOrAppendHeader("referer", request_url);
-  spdy_headers.ReplaceOrAppendHeader(":scheme", push_request_url.scheme());
+  spdy_headers[":method"] = "GET";
+  spdy_headers["referer"] = request_url;
+  spdy_headers[":scheme"] = push_request_url.scheme();
   // It is not possible to push a response to a request that includes a request
   // body.
-  spdy_headers.ReplaceOrAppendHeader("content-length", "0");
+  spdy_headers["content-length"] = "0";
   // Remove "host" field as push request is a directly generated HTTP2 request
   // which should use ":authority" instead of "host".
   spdy_headers.erase("host");

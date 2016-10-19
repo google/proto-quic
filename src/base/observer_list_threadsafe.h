@@ -222,11 +222,8 @@ class ObserverListThreadSafe
         return;
     }
 
-    {
-      typename ObserverList<ObserverType>::Iterator it(&context->list);
-      ObserverType* obs;
-      while ((obs = it.GetNext()) != nullptr)
-        method.Run(obs);
+    for (auto& observer : context->list) {
+      method.Run(&observer);
     }
 
     // If there are no more observers on the list, we can now delete it.

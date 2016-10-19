@@ -37,6 +37,9 @@ def _LoadFieldTrialConfig(filename, platform):
 
 def _CreateExperiment(experiment_data):
   experiment = {'name': experiment_data['name']}
+  forcing_flags_data = experiment_data.get('forcing_flag')
+  if forcing_flags_data:
+    experiment['forcing_flag'] = forcing_flags_data
   params_data = experiment_data.get('params')
   if (params_data):
     experiment['params'] = [{'key': param, 'value': params_data[param]}

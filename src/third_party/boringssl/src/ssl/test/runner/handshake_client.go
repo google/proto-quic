@@ -162,20 +162,22 @@ NextCipherSuite:
 			if suite.id != suiteId {
 				continue
 			}
-			if !c.config.Bugs.EnableAllCiphers {
-				// Don't advertise TLS 1.2-only cipher suites unless
-				// we're attempting TLS 1.2.
-				if maxVersion < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
-					continue
-				}
-				// Don't advertise non-DTLS cipher suites in DTLS.
-				if c.isDTLS && suite.flags&suiteNoDTLS != 0 {
-					continue
-				}
+			// Don't advertise TLS 1.2-only cipher suites unless
+			// we're attempting TLS 1.2.
+			if maxVersion < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+				continue
+			}
+			// Don't advertise non-DTLS cipher suites in DTLS.
+			if c.isDTLS && suite.flags&suiteNoDTLS != 0 {
+				continue
 			}
 			hello.cipherSuites = append(hello.cipherSuites, suiteId)
 			continue NextCipherSuite
 		}
+	}
+
+	if c.config.Bugs.AdvertiseAllConfiguredCiphers {
+		hello.cipherSuites = possibleCipherSuites
 	}
 
 	if c.config.Bugs.SendRenegotiationSCSV {
@@ -215,24 +217,10 @@ NextCipherSuite:
 			// Check that the ciphersuite/version used for the
 			// previous session are still valid.
 			cipherSuiteOk := false
-			if candidateSession.vers >= VersionTLS13 {
-				// Account for ciphers changing on resumption.
-				//
-				// TODO(davidben): This will be gone with the
-				// new cipher negotiation scheme.
-				resumeCipher := ecdhePSKSuite(candidateSession.cipherSuite)
-				for _, id := range hello.cipherSuites {
-					if ecdhePSKSuite(id) == resumeCipher {
-						cipherSuiteOk = true
-						break
-					}
-				}
-			} else {
-				for _, id := range hello.cipherSuites {
-					if id == candidateSession.cipherSuite {
-						cipherSuiteOk = true
-						break
-					}
+			for _, id := range hello.cipherSuites {
+				if id == candidateSession.cipherSuite {
+					cipherSuiteOk = true
+					break
 				}
 			}
 
@@ -259,10 +247,19 @@ NextCipherSuite:
 		if session.vers >= VersionTLS13 || c.config.Bugs.SendBothTickets {
 			// TODO(nharper): Support sending more
 			// than one PSK identity.
-			if session.ticketFlags&ticketAllowDHEResumption != 0 || c.config.Bugs.SendBothTickets {
-				hello.pskIdentities = [][]uint8{ticket}
-				hello.cipherSuites = append(hello.cipherSuites, ecdhePSKSuite(session.cipherSuite))
+			psk := pskIdentity{
+				keModes:   []byte{pskDHEKEMode},
+				authModes: []byte{pskAuthMode},
+				ticket:    ticket,
 			}
+			if len(c.config.Bugs.SendPSKKeyExchangeModes) != 0 {
+				psk.keModes = c.config.Bugs.SendPSKKeyExchangeModes
+			}
+			if len(c.config.Bugs.SendPSKAuthModes) != 0 {
+				psk.authModes = c.config.Bugs.SendPSKAuthModes
+			}
+
+			hello.pskIdentities = []pskIdentity{psk}
 		}
 
 		if session.vers < VersionTLS13 || c.config.Bugs.SendBothTickets {
@@ -392,34 +389,41 @@ NextCipherSuite:
 	helloRetryRequest, haveHelloRetryRequest := msg.(*helloRetryRequestMsg)
 	var secondHelloBytes []byte
 	if haveHelloRetryRequest {
-		var hrrCurveFound bool
+		if len(helloRetryRequest.cookie) > 0 {
+			hello.tls13Cookie = helloRetryRequest.cookie
+		}
+
 		if c.config.Bugs.MisinterpretHelloRetryRequestCurve != 0 {
+			helloRetryRequest.hasSelectedGroup = true
 			helloRetryRequest.selectedGroup = c.config.Bugs.MisinterpretHelloRetryRequestCurve
 		}
-		group := helloRetryRequest.selectedGroup
-		for _, curveID := range hello.supportedCurves {
-			if group == curveID {
-				hrrCurveFound = true
-				break
+		if helloRetryRequest.hasSelectedGroup {
+			var hrrCurveFound bool
+			group := helloRetryRequest.selectedGroup
+			for _, curveID := range hello.supportedCurves {
+				if group == curveID {
+					hrrCurveFound = true
+					break
+				}
 			}
+			if !hrrCurveFound || keyShares[group] != nil {
+				c.sendAlert(alertHandshakeFailure)
+				return errors.New("tls: received invalid HelloRetryRequest")
+			}
+			curve, ok := curveForCurveID(group)
+			if !ok {
+				return errors.New("tls: Unable to get curve requested in HelloRetryRequest")
+			}
+			publicKey, err := curve.offer(c.config.rand())
+			if err != nil {
+				return err
+			}
+			keyShares[group] = curve
+			hello.keyShares = append(hello.keyShares, keyShareEntry{
+				group:       group,
+				keyExchange: publicKey,
+			})
 		}
-		if !hrrCurveFound || keyShares[group] != nil {
-			c.sendAlert(alertHandshakeFailure)
-			return errors.New("tls: received invalid HelloRetryRequest")
-		}
-		curve, ok := curveForCurveID(group)
-		if !ok {
-			return errors.New("tls: Unable to get curve requested in HelloRetryRequest")
-		}
-		publicKey, err := curve.offer(c.config.rand())
-		if err != nil {
-			return err
-		}
-		keyShares[group] = curve
-		hello.keyShares = append(hello.keyShares, keyShareEntry{
-			group:       group,
-			keyExchange: publicKey,
-		})
 
 		if c.config.Bugs.SecondClientHelloMissingKeyShare {
 			hello.hasKeyShares = false
@@ -451,7 +455,7 @@ NextCipherSuite:
 	}
 
 	// Check for downgrade signals in the server random, per
-	// draft-ietf-tls-tls13-14, section 6.3.1.2.
+	// draft-ietf-tls-tls13-16, section 4.1.3.
 	if c.vers <= VersionTLS12 && c.config.maxVersion(c.isDTLS) >= VersionTLS13 {
 		if bytes.Equal(serverHello.random[len(serverHello.random)-8:], downgradeTLS13) {
 			c.sendAlert(alertProtocolVersion)
@@ -471,7 +475,7 @@ NextCipherSuite:
 		return fmt.Errorf("tls: server selected an unsupported cipher suite")
 	}
 
-	if haveHelloRetryRequest && (helloRetryRequest.cipherSuite != serverHello.cipherSuite || helloRetryRequest.selectedGroup != serverHello.keyShare.group) {
+	if haveHelloRetryRequest && helloRetryRequest.hasSelectedGroup && helloRetryRequest.selectedGroup != serverHello.keyShare.group {
 		c.sendAlert(alertHandshakeFailure)
 		return errors.New("tls: ServerHello parameters did not match HelloRetryRequest")
 	}
@@ -594,10 +598,10 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	// TODO(davidben): This will need to be handled slightly earlier once
 	// 0-RTT is implemented.
 	var psk []byte
-	if hs.suite.flags&suitePSK != 0 {
-		if !hs.serverHello.hasPSKIdentity {
-			c.sendAlert(alertMissingExtension)
-			return errors.New("tls: server omitted the PSK identity extension")
+	if hs.serverHello.hasPSKIdentity {
+		if hs.serverHello.useCertAuth || !hs.serverHello.hasKeyShare {
+			c.sendAlert(alertUnsupportedExtension)
+			return errors.New("tls: server omitted KeyShare or included SignatureAlgorithms on resumption.")
 		}
 
 		// We send at most one PSK identity.
@@ -605,17 +609,17 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 			c.sendAlert(alertUnknownPSKIdentity)
 			return errors.New("tls: server sent unknown PSK identity")
 		}
-		if ecdhePSKSuite(hs.session.cipherSuite) != hs.suite.id {
+		if hs.session.cipherSuite != hs.suite.id {
 			c.sendAlert(alertHandshakeFailure)
-			return errors.New("tls: server sent invalid cipher suite for PSK")
+			return errors.New("tls: server sent invalid cipher suite")
 		}
 		psk = deriveResumptionPSK(hs.suite, hs.session.masterSecret)
 		hs.finishedHash.setResumptionContext(deriveResumptionContext(hs.suite, hs.session.masterSecret))
 		c.didResume = true
 	} else {
-		if hs.serverHello.hasPSKIdentity {
+		if !hs.serverHello.useCertAuth || !hs.serverHello.hasKeyShare {
 			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server sent unexpected PSK identity")
+			return errors.New("tls: server omitted KeyShare and SignatureAlgorithms on non-resumption.")
 		}
 
 		psk = zeroSecret
@@ -626,12 +630,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// Resolve ECDHE and compute the handshake secret.
 	var ecdheSecret []byte
-	if hs.suite.flags&suiteECDHE != 0 && !c.config.Bugs.MissingKeyShare && !c.config.Bugs.SecondClientHelloMissingKeyShare {
-		if !hs.serverHello.hasKeyShare {
-			c.sendAlert(alertMissingExtension)
-			return errors.New("tls: server omitted the key share extension")
-		}
-
+	if !c.config.Bugs.MissingKeyShare && !c.config.Bugs.SecondClientHelloMissingKeyShare {
 		curve, ok := hs.keyShares[hs.serverHello.keyShare.group]
 		if !ok {
 			c.sendAlert(alertHandshakeFailure)
@@ -645,11 +644,6 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 			return err
 		}
 	} else {
-		if hs.serverHello.hasKeyShare {
-			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server sent unexpected key share extension")
-		}
-
 		ecdheSecret = zeroSecret
 	}
 
@@ -657,9 +651,10 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	handshakeSecret := hs.finishedHash.extractKey(earlySecret, ecdheSecret)
 
 	// Switch to handshake traffic keys.
-	handshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, handshakeTrafficLabel)
-	c.out.useTrafficSecret(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, clientWrite)
-	c.in.useTrafficSecret(c.vers, hs.suite, handshakeTrafficSecret, handshakePhase, serverWrite)
+	clientHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, clientHandshakeTrafficLabel)
+	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, handshakePhase, clientWrite)
+	serverHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, serverHandshakeTrafficLabel)
+	c.in.useTrafficSecret(c.vers, hs.suite, serverHandshakeTrafficSecret, handshakePhase, serverWrite)
 
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -680,7 +675,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	var chainToSend *Certificate
 	var certReq *certificateRequestMsg
-	if hs.suite.flags&suitePSK != 0 {
+	if !hs.serverHello.useCertAuth {
 		if encryptedExtensions.extensions.ocspResponse != nil {
 			c.sendAlert(alertUnsupportedExtension)
 			return errors.New("tls: server sent OCSP response without a certificate")
@@ -769,7 +764,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		return unexpectedMessageError(serverFinished, msg)
 	}
 
-	verify := hs.finishedHash.serverSum(handshakeTrafficSecret)
+	verify := hs.finishedHash.serverSum(serverHandshakeTrafficSecret)
 	if len(verify) != len(serverFinished.verifyData) ||
 		subtle.ConstantTimeCompare(verify, serverFinished.verifyData) != 1 {
 		c.sendAlert(alertHandshakeFailure)
@@ -781,7 +776,8 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	// The various secrets do not incorporate the client's final leg, so
 	// derive them now before updating the handshake context.
 	masterSecret := hs.finishedHash.extractKey(handshakeSecret, zeroSecret)
-	trafficSecret := hs.finishedHash.deriveSecret(masterSecret, applicationTrafficLabel)
+	clientTrafficSecret := hs.finishedHash.deriveSecret(masterSecret, clientApplicationTrafficLabel)
+	serverTrafficSecret := hs.finishedHash.deriveSecret(masterSecret, serverApplicationTrafficLabel)
 
 	if certReq != nil && !c.config.Bugs.SkipClientCertificate {
 		certMsg := &certificateMsg{
@@ -826,7 +822,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// Send a client Finished message.
 	finished := new(finishedMsg)
-	finished.verifyData = hs.finishedHash.clientSum(handshakeTrafficSecret)
+	finished.verifyData = hs.finishedHash.clientSum(clientHandshakeTrafficSecret)
 	if c.config.Bugs.BadFinished {
 		finished.verifyData[0]++
 	}
@@ -843,8 +839,8 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c.flushHandshake()
 
 	// Switch to application data keys.
-	c.out.useTrafficSecret(c.vers, hs.suite, trafficSecret, applicationPhase, clientWrite)
-	c.in.useTrafficSecret(c.vers, hs.suite, trafficSecret, applicationPhase, serverWrite)
+	c.out.useTrafficSecret(c.vers, hs.suite, clientTrafficSecret, applicationPhase, clientWrite)
+	c.in.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, applicationPhase, serverWrite)
 
 	c.exporterSecret = hs.finishedHash.deriveSecret(masterSecret, exporterLabel)
 	c.resumptionSecret = hs.finishedHash.deriveSecret(masterSecret, resumptionLabel)

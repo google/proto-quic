@@ -124,14 +124,18 @@ type keyShareEntry struct {
 	keyExchange []byte
 }
 
+type pskIdentity struct {
+	keModes   []byte
+	authModes []byte
+	ticket    []uint8
+}
+
 type clientHelloMsg struct {
-	raw       []byte
-	isDTLS    bool
-	vers      uint16
-	random    []byte
-	sessionId []byte
-	// TODO(davidben): Add support for TLS 1.3 cookies which are larger and
-	// use an extension.
+	raw                     []byte
+	isDTLS                  bool
+	vers                    uint16
+	random                  []byte
+	sessionId               []byte
 	cookie                  []byte
 	cipherSuites            []uint16
 	compressionMethods      []uint8
@@ -143,9 +147,10 @@ type clientHelloMsg struct {
 	hasKeyShares            bool
 	keyShares               []keyShareEntry
 	trailingKeyShareData    bool
-	pskIdentities           [][]uint8
+	pskIdentities           []pskIdentity
 	hasEarlyData            bool
 	earlyDataContext        []byte
+	tls13Cookie             []byte
 	ticketSupported         bool
 	sessionTicket           []uint8
 	signatureAlgorithms     []signatureAlgorithm
@@ -185,9 +190,10 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.hasKeyShares == m1.hasKeyShares &&
 		eqKeyShareEntryLists(m.keyShares, m1.keyShares) &&
 		m.trailingKeyShareData == m1.trailingKeyShareData &&
-		eqByteSlices(m.pskIdentities, m1.pskIdentities) &&
+		eqPSKIdentityLists(m.pskIdentities, m1.pskIdentities) &&
 		m.hasEarlyData == m1.hasEarlyData &&
 		bytes.Equal(m.earlyDataContext, m1.earlyDataContext) &&
+		bytes.Equal(m.tls13Cookie, m1.tls13Cookie) &&
 		m.ticketSupported == m1.ticketSupported &&
 		bytes.Equal(m.sessionTicket, m1.sessionTicket) &&
 		eqSignatureAlgorithms(m.signatureAlgorithms, m1.signatureAlgorithms) &&
@@ -316,8 +322,9 @@ func (m *clientHelloMsg) marshal() []byte {
 
 		pskIdentities := pskExtension.addU16LengthPrefixed()
 		for _, psk := range m.pskIdentities {
-			pskIdentity := pskIdentities.addU16LengthPrefixed()
-			pskIdentity.addBytes(psk)
+			pskIdentities.addU8LengthPrefixed().addBytes(psk.keModes)
+			pskIdentities.addU8LengthPrefixed().addBytes(psk.authModes)
+			pskIdentities.addU16LengthPrefixed().addBytes(psk.ticket)
 		}
 	}
 	if m.hasEarlyData {
@@ -326,6 +333,11 @@ func (m *clientHelloMsg) marshal() []byte {
 
 		context := earlyDataIndication.addU8LengthPrefixed()
 		context.addBytes(m.earlyDataContext)
+	}
+	if len(m.tls13Cookie) > 0 {
+		extensions.addU16(extensionCookie)
+		body := extensions.addU16LengthPrefixed()
+		body.addU16LengthPrefixed().addBytes(m.tls13Cookie)
 	}
 	if m.ticketSupported {
 		// http://tools.ietf.org/html/rfc5077#section-3.2
@@ -612,15 +624,39 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			}
 			d := data[2:length]
 			for len(d) > 0 {
+				var psk pskIdentity
+
+				if len(d) < 1 {
+					return false
+				}
+				keModesLen := int(d[0])
+				d = d[1:]
+				if len(d) < keModesLen {
+					return false
+				}
+				psk.keModes = d[:keModesLen]
+				d = d[keModesLen:]
+
+				if len(d) < 1 {
+					return false
+				}
+				authModesLen := int(d[0])
+				d = d[1:]
+				if len(d) < authModesLen {
+					return false
+				}
+				psk.authModes = d[:authModesLen]
+				d = d[authModesLen:]
 				if len(d) < 2 {
 					return false
 				}
 				pskLen := int(d[0])<<8 | int(d[1])
 				d = d[2:]
+
 				if len(d) < pskLen {
 					return false
 				}
-				psk := d[:pskLen]
+				psk.ticket = d[:pskLen]
 				m.pskIdentities = append(m.pskIdentities, psk)
 				d = d[pskLen:]
 			}
@@ -635,6 +671,15 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			}
 			m.hasEarlyData = true
 			m.earlyDataContext = data[1:length]
+		case extensionCookie:
+			if length < 2 {
+				return false
+			}
+			l := int(data[0])<<8 | int(data[1])
+			if l != length-2 || l == 0 {
+				return false
+			}
+			m.tls13Cookie = data[2 : 2+l]
 		case extensionSignatureAlgorithms:
 			// https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
 			if length < 2 || length&1 != 0 {
@@ -748,8 +793,11 @@ type serverHelloMsg struct {
 	keyShare            keyShareEntry
 	hasPSKIdentity      bool
 	pskIdentity         uint16
+	useCertAuth         bool
 	earlyDataIndication bool
 	compressionMethod   uint8
+	customExtension     string
+	unencryptedALPN     string
 	extensions          serverExtensions
 }
 
@@ -800,9 +848,26 @@ func (m *serverHelloMsg) marshal() []byte {
 			extensions.addU16(2) // Length
 			extensions.addU16(m.pskIdentity)
 		}
+		if m.useCertAuth {
+			extensions.addU16(extensionSignatureAlgorithms)
+			extensions.addU16(0) // Length
+		}
 		if m.earlyDataIndication {
 			extensions.addU16(extensionEarlyData)
 			extensions.addU16(0) // Length
+		}
+		if len(m.customExtension) > 0 {
+			extensions.addU16(extensionCustom)
+			customExt := extensions.addU16LengthPrefixed()
+			customExt.addBytes([]byte(m.customExtension))
+		}
+		if len(m.unencryptedALPN) > 0 {
+			extensions.addU16(extensionALPN)
+			extension := extensions.addU16LengthPrefixed()
+
+			protocolNameList := extension.addU16LengthPrefixed()
+			protocolName := protocolNameList.addU8LengthPrefixed()
+			protocolName.addBytes([]byte(m.unencryptedALPN))
 		}
 	} else {
 		m.extensions.marshal(extensions, vers)
@@ -897,6 +962,11 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				}
 				m.pskIdentity = uint16(d[0])<<8 | uint16(d[1])
 				m.hasPSKIdentity = true
+			case extensionSignatureAlgorithms:
+				if len(d) != 0 {
+					return false
+				}
+				m.useCertAuth = true
 			case extensionEarlyData:
 				if len(d) != 0 {
 					return false
@@ -1214,10 +1284,13 @@ func (m *serverExtensions) unmarshal(data []byte, version uint16) bool {
 }
 
 type helloRetryRequestMsg struct {
-	raw           []byte
-	vers          uint16
-	cipherSuite   uint16
-	selectedGroup CurveID
+	raw                 []byte
+	vers                uint16
+	hasSelectedGroup    bool
+	selectedGroup       CurveID
+	cookie              []byte
+	customExtension     string
+	duplicateExtensions bool
 }
 
 func (m *helloRetryRequestMsg) marshal() []byte {
@@ -1229,10 +1302,29 @@ func (m *helloRetryRequestMsg) marshal() []byte {
 	retryRequestMsg.addU8(typeHelloRetryRequest)
 	retryRequest := retryRequestMsg.addU24LengthPrefixed()
 	retryRequest.addU16(m.vers)
-	retryRequest.addU16(m.cipherSuite)
-	retryRequest.addU16(uint16(m.selectedGroup))
-	// Extensions field. We have none to send.
-	retryRequest.addU16(0)
+	extensions := retryRequest.addU16LengthPrefixed()
+
+	count := 1
+	if m.duplicateExtensions {
+		count = 2
+	}
+
+	for i := 0; i < count; i++ {
+		if m.hasSelectedGroup {
+			extensions.addU16(extensionKeyShare)
+			extensions.addU16(2) // length
+			extensions.addU16(uint16(m.selectedGroup))
+		}
+		if len(m.cookie) > 0 {
+			extensions.addU16(extensionCookie)
+			body := extensions.addU16LengthPrefixed()
+			body.addU16LengthPrefixed().addBytes(m.cookie)
+		}
+		if len(m.customExtension) > 0 {
+			extensions.addU16(extensionCustom)
+			extensions.addU16LengthPrefixed().addBytes([]byte(m.customExtension))
+		}
+	}
 
 	m.raw = retryRequestMsg.finish()
 	return m.raw
@@ -1240,16 +1332,47 @@ func (m *helloRetryRequestMsg) marshal() []byte {
 
 func (m *helloRetryRequestMsg) unmarshal(data []byte) bool {
 	m.raw = data
-	if len(data) < 12 {
+	if len(data) < 8 {
 		return false
 	}
 	m.vers = uint16(data[4])<<8 | uint16(data[5])
-	m.cipherSuite = uint16(data[6])<<8 | uint16(data[7])
-	m.selectedGroup = CurveID(data[8])<<8 | CurveID(data[9])
-	extLen := int(data[10])<<8 | int(data[11])
-	data = data[12:]
-	if len(data) != extLen {
+	extLen := int(data[6])<<8 | int(data[7])
+	data = data[8:]
+	if len(data) != extLen || len(data) == 0 {
 		return false
+	}
+	for len(data) > 0 {
+		if len(data) < 4 {
+			return false
+		}
+		extension := uint16(data[0])<<8 | uint16(data[1])
+		length := int(data[2])<<8 | int(data[3])
+		data = data[4:]
+		if len(data) < length {
+			return false
+		}
+
+		switch extension {
+		case extensionKeyShare:
+			if length != 2 {
+				return false
+			}
+			m.hasSelectedGroup = true
+			m.selectedGroup = CurveID(data[0])<<8 | CurveID(data[1])
+		case extensionCookie:
+			if length < 2 {
+				return false
+			}
+			cookieLen := int(data[0])<<8 | int(data[1])
+			if 2+cookieLen != length {
+				return false
+			}
+			m.cookie = data[2 : 2+cookieLen]
+		default:
+			// Unknown extensions are illegal from the server.
+			return false
+		}
+		data = data[length:]
 	}
 	return true
 }
@@ -1778,12 +1901,14 @@ func (m *certificateVerifyMsg) unmarshal(data []byte) bool {
 }
 
 type newSessionTicketMsg struct {
-	raw            []byte
-	version        uint16
-	ticketLifetime uint32
-	ticketFlags    uint32
-	ticketAgeAdd   uint32
-	ticket         []byte
+	raw                []byte
+	version            uint16
+	ticketLifetime     uint32
+	keModes            []byte
+	authModes          []byte
+	ticket             []byte
+	customExtension    string
+	hasGREASEExtension bool
 }
 
 func (m *newSessionTicketMsg) marshal() []byte {
@@ -1797,16 +1922,20 @@ func (m *newSessionTicketMsg) marshal() []byte {
 	body := ticketMsg.addU24LengthPrefixed()
 	body.addU32(m.ticketLifetime)
 	if m.version >= VersionTLS13 {
-		body.addU32(m.ticketFlags)
-		body.addU32(m.ticketAgeAdd)
-		// Send no extensions.
-		//
-		// TODO(davidben): Add an option to send a custom extension to
-		// test we correctly ignore unknown ones.
-		body.addU16(0)
+		body.addU8LengthPrefixed().addBytes(m.keModes)
+		body.addU8LengthPrefixed().addBytes(m.authModes)
 	}
+
 	ticket := body.addU16LengthPrefixed()
 	ticket.addBytes(m.ticket)
+
+	if m.version >= VersionTLS13 {
+		extensions := body.addU16LengthPrefixed()
+		if len(m.customExtension) > 0 {
+			extensions.addU16(ticketExtensionCustom)
+			extensions.addU16LengthPrefixed().addBytes([]byte(m.customExtension))
+		}
+	}
 
 	m.raw = ticketMsg.finish()
 	return m.raw
@@ -1822,31 +1951,75 @@ func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 	data = data[8:]
 
 	if m.version >= VersionTLS13 {
-		if len(data) < 10 {
+		if len(data) < 1 {
 			return false
 		}
-		m.ticketFlags = uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
-		m.ticketAgeAdd = uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])
-		extsLength := int(data[8])<<8 + int(data[9])
-		data = data[10:]
-		if len(data) < extsLength {
+		keModesLength := int(data[0])
+		if len(data)-1 < keModesLength {
 			return false
 		}
-		data = data[extsLength:]
+		m.keModes = data[1 : 1+keModesLength]
+		data = data[1+keModesLength:]
+
+		if len(data) < 1 {
+			return false
+		}
+		authModesLength := int(data[0])
+		if len(data)-1 < authModesLength {
+			return false
+		}
+		m.authModes = data[1 : 1+authModesLength]
+		data = data[1+authModesLength:]
 	}
 
 	if len(data) < 2 {
 		return false
 	}
 	ticketLen := int(data[0])<<8 + int(data[1])
-	if len(data)-2 != ticketLen {
+	data = data[2:]
+	if len(data) < ticketLen {
 		return false
 	}
+
 	if m.version >= VersionTLS13 && ticketLen == 0 {
 		return false
 	}
 
-	m.ticket = data[2:]
+	m.ticket = data[:ticketLen]
+	data = data[ticketLen:]
+
+	if m.version >= VersionTLS13 {
+		if len(data) < 2 {
+			return false
+		}
+		extsLength := int(data[0])<<8 + int(data[1])
+		data = data[2:]
+		if len(data) < extsLength {
+			return false
+		}
+		extensions := data[:extsLength]
+		data = data[extsLength:]
+
+		for len(extensions) > 0 {
+			if len(extensions) < 4 {
+				return false
+			}
+			extValue := uint16(extensions[0])<<8 | uint16(extensions[1])
+			extLength := int(extensions[2])<<8 | int(extensions[3])
+			if len(extensions) < 4+extLength {
+				return false
+			}
+			extensions = extensions[4+extLength:]
+
+			if isGREASEValue(extValue) {
+				m.hasGREASEExtension = true
+			}
+		}
+	}
+
+	if len(data) > 0 {
+		return false
+	}
 
 	return true
 }
@@ -1988,14 +2161,32 @@ func (*helloRequestMsg) unmarshal(data []byte) bool {
 }
 
 type keyUpdateMsg struct {
+	raw              []byte
+	keyUpdateRequest byte
 }
 
-func (*keyUpdateMsg) marshal() []byte {
-	return []byte{typeKeyUpdate, 0, 0, 0}
+func (m *keyUpdateMsg) marshal() []byte {
+	if m.raw != nil {
+		return m.raw
+	}
+
+	return []byte{typeKeyUpdate, 0, 0, 1, m.keyUpdateRequest}
 }
 
-func (*keyUpdateMsg) unmarshal(data []byte) bool {
-	return len(data) == 4
+func (m *keyUpdateMsg) unmarshal(data []byte) bool {
+	m.raw = data
+
+	if len(data) != 5 {
+		return false
+	}
+
+	length := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
+	if len(data)-4 != length {
+		return false
+	}
+
+	m.keyUpdateRequest = data[4]
+	return m.keyUpdateRequest == keyUpdateNotRequested || m.keyUpdateRequest == keyUpdateRequested
 }
 
 func eqUint16s(x, y []uint16) bool {
@@ -2065,6 +2256,19 @@ func eqKeyShareEntryLists(x, y []keyShareEntry) bool {
 	}
 	for i, v := range x {
 		if y[i].group != v.group || !bytes.Equal(y[i].keyExchange, v.keyExchange) {
+			return false
+		}
+	}
+	return true
+
+}
+
+func eqPSKIdentityLists(x, y []pskIdentity) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for i, v := range x {
+		if !bytes.Equal(y[i].keModes, v.keModes) || !bytes.Equal(y[i].authModes, v.authModes) || !bytes.Equal(y[i].ticket, v.ticket) {
 			return false
 		}
 	}

@@ -74,7 +74,8 @@ void SSLConfigService::RemoveObserver(Observer* observer) {
 }
 
 void SSLConfigService::NotifySSLConfigChange() {
-  FOR_EACH_OBSERVER(Observer, observer_list_, OnSSLConfigChanged());
+  for (auto& observer : observer_list_)
+    observer.OnSSLConfigChanged();
 }
 
 SSLConfigService::~SSLConfigService() {

@@ -101,6 +101,9 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
     spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
   }
 
+  void set_max_uncompressed_header_bytes(
+      size_t set_max_uncompressed_header_bytes);
+
  private:
   friend class test::QuicHeadersStreamPeer;
 

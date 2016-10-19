@@ -172,12 +172,14 @@ extern "C" {
 /* SSL_kPSK is only set for plain PSK, not ECDHE_PSK. */
 #define SSL_kPSK 0x00000008L
 #define SSL_kCECPQ1 0x00000010L
+#define SSL_kGENERIC 0x00000020L
 
 /* Bits for |algorithm_auth| (server authentication). */
 #define SSL_aRSA 0x00000001L
 #define SSL_aECDSA 0x00000002L
 /* SSL_aPSK is set for both PSK and ECDHE_PSK. */
 #define SSL_aPSK 0x00000004L
+#define SSL_aGENERIC 0x00000008L
 
 #define SSL_aCERT (SSL_aRSA | SSL_aECDSA)
 
@@ -240,11 +242,6 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
 
 /* ssl_cipher_get_value returns the cipher suite id of |cipher|. */
 uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher);
-
-/* ssl_cipher_get_resumption_cipher returns the cipher suite id of the cipher
- * matching |cipher| with PSK enabled. */
-int ssl_cipher_get_ecdhe_psk_cipher(const SSL_CIPHER *cipher,
-                                    uint16_t *out_cipher);
 
 /* ssl_cipher_get_key_type returns the |EVP_PKEY_*| value corresponding to the
  * server key used in |cipher| or |EVP_PKEY_NONE| if there is none. */
@@ -609,6 +606,11 @@ struct ssl_ecdh_method_st {
  * zero. */
 int ssl_nid_to_group_id(uint16_t *out_group_id, int nid);
 
+/* ssl_name_to_group_id looks up the group corresponding to the |name| string
+ * of length |len|. On success, it sets |*out_group_id| to the group ID and
+ * returns one. Otherwise, it returns zero. */
+int ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len);
+
 /* SSL_ECDH_CTX_init sets up |ctx| for use with curve |group_id|. It returns one
  * on success and zero on error. */
 int SSL_ECDH_CTX_init(SSL_ECDH_CTX *ctx, uint16_t group_id);
@@ -894,14 +896,42 @@ struct ssl_handshake_st {
   size_t hash_len;
   uint8_t resumption_hash[EVP_MAX_MD_SIZE];
   uint8_t secret[EVP_MAX_MD_SIZE];
-  uint8_t traffic_secret_0[EVP_MAX_MD_SIZE];
+  uint8_t client_traffic_secret_0[EVP_MAX_MD_SIZE];
+  uint8_t server_traffic_secret_0[EVP_MAX_MD_SIZE];
 
-  /* ecdh_ctx is the active client ECDH offer in TLS 1.3. */
+  union {
+    /* sent is a bitset where the bits correspond to elements of kExtensions
+     * in t1_lib.c. Each bit is set if that extension was sent in a
+     * ClientHello. It's not used by servers. */
+    uint32_t sent;
+    /* received is a bitset, like |sent|, but is used by servers to record
+     * which extensions were received from a client. */
+    uint32_t received;
+  } extensions;
+
+  union {
+    /* sent is a bitset where the bits correspond to elements of
+     * |client_custom_extensions| in the |SSL_CTX|. Each bit is set if that
+     * extension was sent in a ClientHello. It's not used by servers. */
+    uint16_t sent;
+    /* received is a bitset, like |sent|, but is used by servers to record
+     * which custom extensions were received from a client. The bits here
+     * correspond to |server_custom_extensions|. */
+    uint16_t received;
+  } custom_extensions;
+
+  /* ecdh_ctx is the current ECDH instance. */
   SSL_ECDH_CTX ecdh_ctx;
+
+  unsigned received_hello_retry_request:1;
 
   /* retry_group is the group ID selected by the server in HelloRetryRequest in
    * TLS 1.3. */
   uint16_t retry_group;
+
+  /* cookie is the value of the cookie received from the server, if any. */
+  uint8_t *cookie;
+  size_t cookie_len;
 
   /* key_share_bytes is the value of the previously sent KeyShare extension by
    * the client in TLS 1.3. */
@@ -920,11 +950,60 @@ struct ssl_handshake_st {
   /* num_peer_sigalgs is the number of entries in |peer_sigalgs|. */
   size_t num_peer_sigalgs;
 
+  /* peer_supported_group_list contains the supported group IDs advertised by
+   * the peer. This is only set on the server's end. The server does not
+   * advertise this extension to the client. */
+  uint16_t *peer_supported_group_list;
+  size_t peer_supported_group_list_len;
+
+  /* peer_key is the peer's ECDH key for a TLS 1.2 client. */
+  uint8_t *peer_key;
+  size_t peer_key_len;
+
+  /* server_params, in TLS 1.2, stores the ServerKeyExchange parameters to be
+   * signed while the signature is being computed. */
+  uint8_t *server_params;
+  size_t server_params_len;
+
+  /* session_tickets_sent, in TLS 1.3, is the number of tickets the server has
+   * sent. */
   uint8_t session_tickets_sent;
+
+  /* cert_request is one if a client certificate was requested and zero
+   * otherwise. */
+  unsigned cert_request:1;
+
+  /* certificate_status_expected is one if OCSP stapling was negotiated and the
+   * server is expected to send a CertificateStatus message. (This is used on
+   * both the client and server sides.) */
+  unsigned certificate_status_expected:1;
+
+  /* ocsp_stapling_requested is one if a client requested OCSP stapling. */
+  unsigned ocsp_stapling_requested:1;
+
+  /* should_ack_sni is used by a server and indicates that the SNI extension
+   * should be echoed in the ServerHello. */
+  unsigned should_ack_sni:1;
+
+  /* in_false_start is one if there is a pending client handshake in False
+   * Start. The client may write data at this point. */
+  unsigned in_false_start:1;
+
+  /* next_proto_neg_seen is one of NPN was negotiated. */
+  unsigned next_proto_neg_seen:1;
 
   /* peer_psk_identity_hint, on the client, is the psk_identity_hint sent by the
    * server when using a TLS 1.2 PSK key exchange. */
   char *peer_psk_identity_hint;
+
+  /* ca_names, on the client, contains the list of CAs received in a
+   * CertificateRequest message. */
+  STACK_OF(X509_NAME) *ca_names;
+
+  /* certificate_types, on the client, contains the set of certificate types
+   * received in a CertificateRequest message. */
+  uint8_t *certificate_types;
+  size_t num_certificate_types;
 } /* SSL_HANDSHAKE */;
 
 SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl));
@@ -1022,6 +1101,7 @@ enum ssl_grease_index_t {
   ssl_grease_extension1,
   ssl_grease_extension2,
   ssl_grease_version,
+  ssl_grease_ticket_extension,
 };
 
 /* ssl_get_grease_value returns a GREASE value for |ssl|. For a given
@@ -1267,10 +1347,17 @@ typedef struct dtls1_state_st {
 extern const SSL3_ENC_METHOD TLSv1_enc_data;
 extern const SSL3_ENC_METHOD SSLv3_enc_data;
 
-/* From draft-ietf-tls-tls13-14, used in determining ticket validity. */
-#define SSL_TICKET_ALLOW_EARLY_DATA 1
-#define SSL_TICKET_ALLOW_DHE_RESUMPTION 2
-#define SSL_TICKET_ALLOW_PSK_RESUMPTION 4
+/* From draft-ietf-tls-tls13-16, used in determining PSK modes. */
+#define SSL_PSK_KE        0x0
+#define SSL_PSK_DHE_KE    0x1
+
+#define SSL_PSK_AUTH      0x0
+#define SSL_PSK_SIGN_AUTH 0x1
+
+/* From draft-ietf-tls-tls13-16, used in determining whether to respond with a
+ * KeyUpdate. */
+#define SSL_KEY_UPDATE_NOT_REQUESTED 0
+#define SSL_KEY_UPDATE_REQUESTED 1
 
 CERT *ssl_cert_new(void);
 CERT *ssl_cert_dup(CERT *cert);
@@ -1449,15 +1536,12 @@ int tls1_generate_master_secret(SSL *ssl, uint8_t *out, const uint8_t *premaster
                                 size_t premaster_len);
 
 /* tls1_get_grouplist sets |*out_group_ids| and |*out_group_ids_len| to the
- * list of allowed group IDs. If |get_peer_groups| is non-zero, return the
- * peer's group list. Otherwise, return the preferred list. */
-void tls1_get_grouplist(SSL *ssl, int get_peer_groups,
-                        const uint16_t **out_group_ids,
+ * locally-configured group preference list. */
+void tls1_get_grouplist(SSL *ssl, const uint16_t **out_group_ids,
                         size_t *out_group_ids_len);
 
-/* tls1_check_group_id returns one if |group_id| is consistent with both our
- * and the peer's group preferences. Note: if called as the client, only our
- * preferences are checked; the peer (the server) does not send preferences. */
+/* tls1_check_group_id returns one if |group_id| is consistent with
+ * locally-configured group preferences. */
 int tls1_check_group_id(SSL *ssl, uint16_t group_id);
 
 /* tls1_get_shared_group sets |*out_group_id| to the first preferred shared
@@ -1472,10 +1556,12 @@ int tls1_get_shared_group(SSL *ssl, uint16_t *out_group_id);
 int tls1_set_curves(uint16_t **out_group_ids, size_t *out_group_ids_len,
                     const int *curves, size_t ncurves);
 
-/* tls1_check_ec_cert returns one if |x| is an ECC certificate with curve and
- * point format compatible with the client's preferences. Otherwise it returns
- * zero. */
-int tls1_check_ec_cert(SSL *ssl, X509 *x);
+/* tls1_set_curves_list converts the string of curves pointed to by |curves|
+ * into a newly allocated array of TLS group IDs. On success, the function
+ * returns one and writes the array to |*out_group_ids| and its size to
+ * |*out_group_ids_len|. Otherwise, it returns zero. */
+int tls1_set_curves_list(uint16_t **out_group_ids, size_t *out_group_ids_len,
+                         const char *curves);
 
 /* ssl_add_clienthello_tlsext writes ClientHello extensions to |out|. It
  * returns one on success and zero on failure. The |header_len| argument is the

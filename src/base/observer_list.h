@@ -92,9 +92,6 @@ class ObserverListBase
     explicit Iter(ContainerType* list);
     ~Iter();
 
-    // Deprecated.
-    ObserverType* GetNext();
-
     // A workaround for C2244. MSVC requires fully qualified type name for
     // return type on a function definition to match a function declaration.
     using ThisType =
@@ -270,15 +267,6 @@ void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
   size_t max_index = clamped_max_index();
   while (index_ < max_index && !list_->observers_[index_])
     ++index_;
-}
-
-template <class ObserverType>
-template <class ContainerType>
-ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::GetNext() {
-  EnsureValidIndex();
-  ObserverType* current = GetCurrent();
-  operator++();
-  return current;
 }
 
 template <class ObserverType>

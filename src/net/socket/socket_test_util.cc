@@ -201,10 +201,16 @@ const MockWrite& StaticSocketDataHelper::AdvanceWrite() {
   return writes_[write_index_++];
 }
 
+void StaticSocketDataHelper::Reset() {
+  read_index_ = 0;
+  write_index_ = 0;
+}
+
 bool StaticSocketDataHelper::VerifyWriteData(const std::string& data) {
   CHECK(!AllWriteDataConsumed());
-  // Check that what the actual data matches the expectations.
-  const MockWrite& next_write = PeekWrite();
+  // Check that the actual data matches the expectations, skipping over any
+  // pause events.
+  const MockWrite& next_write = PeekRealWrite();
   if (!next_write.data)
     return true;
 
@@ -221,9 +227,14 @@ bool StaticSocketDataHelper::VerifyWriteData(const std::string& data) {
   return expected_data == actual_data;
 }
 
-void StaticSocketDataHelper::Reset() {
-  read_index_ = 0;
-  write_index_ = 0;
+const MockWrite& StaticSocketDataHelper::PeekRealWrite() const {
+  for (size_t i = write_index_; i < write_count_; i++) {
+    if (writes_[i].mode != ASYNC || writes_[i].result != ERR_IO_PENDING)
+      return writes_[i];
+  }
+
+  CHECK(false) << "No write data available.";
+  return writes_[0];  // Avoid warning about unreachable missing return.
 }
 
 StaticSocketDataProvider::StaticSocketDataProvider()

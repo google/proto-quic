@@ -17,38 +17,18 @@ CertDatabase::CertDatabase()
 
 CertDatabase::~CertDatabase() {}
 
-int CertDatabase::CheckUserCert(X509Certificate* cert) {
-  // NOTE: This method shall never be called on Android.
-  //
-  // On other platforms, it is only used by the SSLAddCertHandler class
-  // to handle veritication and installation of downloaded certificates.
-  //
-  // On Android, the certificate data is passed directly to the system's
-  // CertInstaller activity, which handles verification, naming,
-  // installation and UI (for success/failure).
-  NOTIMPLEMENTED();
-  return ERR_NOT_IMPLEMENTED;
-}
-
-int CertDatabase::AddUserCert(X509Certificate* cert) {
-  // This method is only used by the content SSLAddCertHandler which is
-  // never used on Android.
-  NOTIMPLEMENTED();
-  return ERR_NOT_IMPLEMENTED;
-}
-
 void CertDatabase::OnAndroidKeyStoreChanged() {
-  NotifyObserversOfCertAdded(NULL);
+  NotifyObserversCertDBChanged(NULL);
   // Dump the OpenSSLClientKeyStore to drop references to now disconnected
   // PrivateKeys stored in the in-memory key store. Note: this assumes that
   // every SSLClientAuthCache is dumped as part of notifying
-  // OnCertAdded. Otherwise client auth decisions will be silently converted to
-  // no-certificate decisions. See https://crbug.com/382696
+  // OnCertDBChanged. Otherwise client auth decisions will be silently converted
+  // to no-certificate decisions. See https://crbug.com/382696
   OpenSSLClientKeyStore::GetInstance()->Flush();
 }
 
 void CertDatabase::OnAndroidKeyChainChanged() {
-  observer_list_->Notify(FROM_HERE, &Observer::OnCACertChanged, nullptr);
+  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged, nullptr);
 }
 
 }  // namespace net

@@ -1729,9 +1729,8 @@ void ProxyConfigServiceLinux::Delegate::SetNewProxyConfig(
   DCHECK(io_task_runner_->BelongsToCurrentThread());
   VLOG(1) << "Proxy configuration changed";
   cached_config_ = new_config;
-  FOR_EACH_OBSERVER(
-      Observer, observers_,
-      OnProxyConfigChanged(new_config, ProxyConfigService::CONFIG_VALID));
+  for (auto& observer : observers_)
+    observer.OnProxyConfigChanged(new_config, ProxyConfigService::CONFIG_VALID);
 }
 
 void ProxyConfigServiceLinux::Delegate::PostDestroyTask() {

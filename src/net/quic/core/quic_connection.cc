@@ -1230,8 +1230,8 @@ void QuicConnection::SendRstStream(QuicStreamId id,
                                    QuicStreamOffset bytes_written) {
   // Opportunistically bundle an ack with this outgoing packet.
   ScopedPacketBundler ack_bundler(this, SEND_ACK_IF_PENDING);
-  packet_generator_.AddControlFrame(QuicFrame(new QuicRstStreamFrame(
-      id, AdjustErrorForVersion(error, version()), bytes_written)));
+  packet_generator_.AddControlFrame(
+      QuicFrame(new QuicRstStreamFrame(id, error, bytes_written)));
 
   if (error == QUIC_STREAM_NO_ERROR) {
     // All data for streams which are reset with QUIC_STREAM_NO_ERROR must
@@ -1421,12 +1421,6 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
       IsInitializedIPEndPoint(self_address_) &&
       IsInitializedIPEndPoint(last_packet_destination_address_) &&
       (!(self_address_ == last_packet_destination_address_))) {
-    if (!FLAGS_quic_allow_server_address_change_for_mapped_ipv4) {
-      CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
-                      "Self address migration is not supported at the server.",
-                      ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-      return false;
-    }
     // Allow change between pure IPv4 and equivalent mapped IPv4 address.
     IPAddress self_ip = self_address_.address();
     if (self_ip.IsIPv4MappedIPv6()) {

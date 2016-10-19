@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <utility>
 
+#include "base/base_switches.h"
 #include "base/build_time.h"
+#include "base/command_line.h"
+#include "base/feature_list.h"
 #include "base/logging.h"
 #include "base/rand_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -27,6 +30,14 @@ const char kPersistentStringSeparator = '/';  // Currently a slash.
 // Define a marker character to be used as a prefix to a trial name on the
 // command line which forces its activation.
 const char kActivationMarker = '*';
+
+// Use shared memory to communicate field trial (experiment) state. Set to false
+// for now while the implementation is fleshed out (e.g. data format, single
+// shared memory segment). See https://codereview.chromium.org/2365273004/ and
+// crbug.com/653874
+#if defined(OS_WIN)
+const bool kUseSharedMemoryForFieldTrials = false;
+#endif
 
 // Created a time value based on |year|, |month| and |day_of_month| parameters.
 Time CreateTimeFromParams(int year, int month, int day_of_month) {
@@ -555,6 +566,77 @@ bool FieldTrialList::CreateTrialsFromString(
     }
   }
   return true;
+}
+
+// static
+void FieldTrialList::CreateTrialsFromCommandLine(
+    const base::CommandLine& cmd_line,
+    const char* field_trial_handle_switch) {
+  DCHECK(global_);
+
+#if defined(OS_WIN)
+  if (cmd_line.HasSwitch(field_trial_handle_switch)) {
+    std::string arg = cmd_line.GetSwitchValueASCII(field_trial_handle_switch);
+    size_t token = arg.find(",");
+    int field_trial_handle = std::stoi(arg.substr(0, token));
+    int field_trial_length = std::stoi(arg.substr(token + 1, arg.length()));
+
+    HANDLE handle = reinterpret_cast<HANDLE>(field_trial_handle);
+    base::SharedMemoryHandle shm_handle =
+        base::SharedMemoryHandle(handle, base::GetCurrentProcId());
+
+    // Gets deleted when it gets out of scope, but that's OK because we need it
+    // only for the duration of this call currently anyway.
+    base::SharedMemory shared_memory(shm_handle, false);
+    shared_memory.Map(field_trial_length);
+
+    char* field_trial_state = static_cast<char*>(shared_memory.memory());
+    bool result = FieldTrialList::CreateTrialsFromString(
+        std::string(field_trial_state), std::set<std::string>());
+    DCHECK(result);
+    return;
+  }
+#endif
+
+  if (cmd_line.HasSwitch(switches::kForceFieldTrials)) {
+    bool result = FieldTrialList::CreateTrialsFromString(
+        cmd_line.GetSwitchValueASCII(switches::kForceFieldTrials),
+        std::set<std::string>());
+    DCHECK(result);
+  }
+}
+
+// static
+std::unique_ptr<base::SharedMemory> FieldTrialList::CopyFieldTrialStateToFlags(
+    const char* field_trial_handle_switch,
+    base::CommandLine* cmd_line) {
+  std::string field_trial_states;
+  base::FieldTrialList::AllStatesToString(&field_trial_states);
+  if (!field_trial_states.empty()) {
+// Use shared memory to pass the state if the feature is enabled, otherwise
+// fallback to passing it via the command line as a string.
+#if defined(OS_WIN)
+    if (kUseSharedMemoryForFieldTrials) {
+      std::unique_ptr<base::SharedMemory> shm(new base::SharedMemory());
+      size_t length = field_trial_states.size() + 1;
+      shm->CreateAndMapAnonymous(length);
+      memcpy(shm->memory(), field_trial_states.c_str(), length);
+
+      // HANDLE is just typedef'd to void *
+      auto uintptr_handle =
+          reinterpret_cast<std::uintptr_t>(shm->handle().GetHandle());
+      std::string field_trial_handle =
+          std::to_string(uintptr_handle) + "," + std::to_string(length);
+
+      cmd_line->AppendSwitchASCII(field_trial_handle_switch,
+                                  field_trial_handle);
+      return shm;
+    }
+#endif
+    cmd_line->AppendSwitchASCII(switches::kForceFieldTrials,
+                                field_trial_states);
+  }
+  return std::unique_ptr<base::SharedMemory>(nullptr);
 }
 
 // static

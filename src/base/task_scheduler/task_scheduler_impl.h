@@ -79,15 +79,11 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   // worker pops a Task from it.
   void ReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence);
 
-  // Callback invoked when the delayed run time is changed from the
-  // DelayedTaskManager.
-  void OnDelayedRunTimeUpdated();
-
   TaskTracker task_tracker_;
-  DelayedTaskManager delayed_task_manager_;
+  Thread service_thread_;
+  std::unique_ptr<DelayedTaskManager> delayed_task_manager_;
   const WorkerPoolIndexForTraitsCallback worker_pool_index_for_traits_callback_;
   std::vector<std::unique_ptr<SchedulerWorkerPoolImpl>> worker_pools_;
-  std::unique_ptr<SchedulerServiceThread> service_thread_;
 
 #if DCHECK_IS_ON()
   // Set once JoinForTesting() has returned.

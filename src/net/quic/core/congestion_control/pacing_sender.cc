@@ -41,6 +41,7 @@ void PacingSender::set_sender(SendAlgorithmInterface* sender) {
 void PacingSender::OnCongestionEvent(
     bool rtt_updated,
     QuicByteCount bytes_in_flight,
+    QuicTime event_time,
     const SendAlgorithmInterface::CongestionVector& acked_packets,
     const SendAlgorithmInterface::CongestionVector& lost_packets) {
   DCHECK(sender_ != nullptr);
@@ -48,8 +49,8 @@ void PacingSender::OnCongestionEvent(
     // Clear any burst tokens when entering recovery.
     burst_tokens_ = 0;
   }
-  sender_->OnCongestionEvent(rtt_updated, bytes_in_flight, acked_packets,
-                             lost_packets);
+  sender_->OnCongestionEvent(rtt_updated, bytes_in_flight, event_time,
+                             acked_packets, lost_packets);
 }
 
 bool PacingSender::OnPacketSent(

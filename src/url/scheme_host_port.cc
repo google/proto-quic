@@ -49,7 +49,8 @@ bool IsCanonicalHost(const base::StringPiece& host) {
 
 bool IsValidInput(const base::StringPiece& scheme,
                   const base::StringPiece& host,
-                  uint16_t port) {
+                  uint16_t port,
+                  SchemeHostPort::ConstructPolicy policy) {
   SchemeType scheme_type = SCHEME_WITH_PORT;
   bool is_standard = GetStandardSchemeType(
       scheme.data(),
@@ -72,8 +73,14 @@ bool IsValidInput(const base::StringPiece& scheme,
       if (host.empty() || port == 0)
         return false;
 
-      if (!IsCanonicalHost(host))
+      // Don't do an expensive canonicalization if the host is already
+      // canonicalized.
+      DCHECK(policy == SchemeHostPort::CHECK_CANONICALIZATION ||
+             IsCanonicalHost(host));
+      if (policy == SchemeHostPort::CHECK_CANONICALIZATION &&
+          !IsCanonicalHost(host)) {
         return false;
+      }
 
       return true;
 
@@ -84,8 +91,14 @@ bool IsValidInput(const base::StringPiece& scheme,
         return false;
       }
 
-      if (!IsCanonicalHost(host))
+      // Don't do an expensive canonicalization if the host is already
+      // canonicalized.
+      DCHECK(policy == SchemeHostPort::CHECK_CANONICALIZATION ||
+             IsCanonicalHost(host));
+      if (policy == SchemeHostPort::CHECK_CANONICALIZATION &&
+          !IsCanonicalHost(host)) {
         return false;
+      }
 
       return true;
 
@@ -105,15 +118,24 @@ SchemeHostPort::SchemeHostPort() : port_(0) {
 
 SchemeHostPort::SchemeHostPort(base::StringPiece scheme,
                                base::StringPiece host,
-                               uint16_t port)
+                               uint16_t port,
+                               ConstructPolicy policy)
     : port_(0) {
-  if (!IsValidInput(scheme, host, port))
+  if (!IsValidInput(scheme, host, port, policy))
     return;
 
   scheme.CopyToString(&scheme_);
   host.CopyToString(&host_);
   port_ = port;
 }
+
+SchemeHostPort::SchemeHostPort(base::StringPiece scheme,
+                               base::StringPiece host,
+                               uint16_t port)
+    : SchemeHostPort(scheme,
+                     host,
+                     port,
+                     ConstructPolicy::CHECK_CANONICALIZATION) {}
 
 SchemeHostPort::SchemeHostPort(const GURL& url) : port_(0) {
   if (!url.is_valid())
@@ -127,7 +149,7 @@ SchemeHostPort::SchemeHostPort(const GURL& url) : port_(0) {
   if (port == PORT_UNSPECIFIED)
     port = 0;
 
-  if (!IsValidInput(scheme, host, port))
+  if (!IsValidInput(scheme, host, port, ALREADY_CANONICALIZED))
     return;
 
   scheme.CopyToString(&scheme_);

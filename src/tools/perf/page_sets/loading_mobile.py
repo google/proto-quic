@@ -34,8 +34,9 @@ class LoadingMobileStorySet(story.StorySet):
       # 'https://googleblog.blogspot.jp/2016/02/building-safer-web-for-everyone.html',
       'https://www.google.co.id/#q=pengiriman+bunga',
       'https://m.facebook.com/?soft=messages',
+      # Disabled because of crbug.com/656861
       # pylint: disable=line-too-long
-      'http://g1.globo.com/politica/noticia/2016/02/maioria-do-stf-autoriza-fisco-obter-dados-bancarios-sem-decisao-judicial.html',
+      # 'http://g1.globo.com/politica/noticia/2016/02/maioria-do-stf-autoriza-fisco-obter-dados-bancarios-sem-decisao-judicial.html',
       # pylint: disable=line-too-long
       'https://m.baidu.com/s?word=%E9%B2%9C%E8%8A%B1%E9%80%9F%E9%80%92&oq=%E9%B2%9C%E8%8A%B1',
       # pylint: disable=line-too-long

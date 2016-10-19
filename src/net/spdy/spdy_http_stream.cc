@@ -120,6 +120,14 @@ int SpdyHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
 
 int SpdyHttpStream::ReadResponseBody(
     IOBuffer* buf, int buf_len, const CompletionCallback& callback) {
+  // Invalidate HttpRequestInfo pointer. This is to allow the stream to be
+  // shared across multiple transactions which might require this
+  // stream to outlive the request_'s owner.
+  // Only allowed when Reading of response body starts. It is safe to reset it
+  // at this point since request_->upload_data_stream is also not needed
+  // anymore.
+  request_info_ = nullptr;
+
   if (stream_.get())
     CHECK(!stream_->IsIdle());
 
@@ -367,7 +375,7 @@ void SpdyHttpStream::OnTrailers(const SpdyHeaderBlock& trailers) {}
 
 void SpdyHttpStream::OnClose(int status) {
   // Cancel any pending reads from the upload data stream.
-  if (request_info_->upload_data_stream)
+  if (request_info_ && request_info_->upload_data_stream)
     request_info_->upload_data_stream->Reset();
 
   if (stream_.get()) {

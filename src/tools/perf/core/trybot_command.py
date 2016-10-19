@@ -7,8 +7,8 @@ import json
 import logging
 import os
 import platform
-import re
 import subprocess
+import tempfile
 import urllib2
 
 
@@ -446,13 +446,8 @@ E.g.,
     output = RunGit(['diff-index', 'HEAD'])
     if output:
       raise TrybotError(
-          'Cannot send a try job with a dirty tree. Please commit '
-          'your changes locally first in %s repository.' % repo_path)
-
-    # Make sure the tree does have local commits.
-    output = RunGit(['footers', 'HEAD'])
-    if output:
-      raise TrybotError('No local changes found in %s repository.' % repo_path)
+          'Cannot send a try job with a dirty tree.\nPlease commit locally and '
+          'upload your changes to rietveld in %s repository.' % repo_path)
 
     return (repo_name, branch_name)
 
@@ -501,6 +496,32 @@ E.g.,
     raise TrybotError('URL %s on remote %s is not recognized on branch.'% (
         cur_remote_url, cur_remote))
 
+  def _GetChangeList(self):
+    """Gets the codereview URL for the current changes."""
+    temp_file = None
+    json_output = None
+    try:
+      fd, temp_file = tempfile.mkstemp(suffix='.json', prefix='perf_try_cl')
+      os.close(fd)
+      RunGit(['cl', 'issue', '--json', temp_file],
+              'Failed to run "git cl issue" command.')
+      with open(temp_file, 'r') as f:
+        json_output = json.load(f)
+    finally:
+      try:
+        if temp_file:
+          os.remove(temp_file)
+      except OSError:
+        pass
+
+    # Make sure the local commits are uploaded to rietveld.
+    if not json_output.get('issue'):
+      raise TrybotError(
+          'PLEASE NOTE: The workflow for Perf Try jobs is changed. '
+          'In order to run the perf try job, you must first upload your '
+          'changes to rietveld.')
+    return json_output.get('issue_url')
+
   def _AttemptTryjob(self, options, extra_args):
     """Attempts to run a tryjob from a repo directory.
 
@@ -533,10 +554,8 @@ E.g.,
               branch_name, repo_info.get('url'))
         deps_override = {repo_info.get('src'): options.deps_revision}
 
-      arguments = [options.benchmark_name] + extra_args
-
-      rietveld_url = self._UploadPatchToRietveld(repo_name, options)
-      print ('\nUploaded try job to rietveld.\nview progress here %s.'
+      rietveld_url = self._GetChangeList()
+      print ('\nRunning try job....\nview progress here %s.'
              '\n\tRepo Name: %s\n\tPath: %s\n\tBranch: %s' % (
                  rietveld_url, repo_name, repo_path, branch_name))
 
@@ -545,6 +564,7 @@ E.g.,
           logging.warning('No builder is found for %s', bot_platform)
           continue
         try:
+          arguments = [options.benchmark_name] + extra_args
           self._RunTryJob(bot_platform, arguments, deps_override)
         # Even if git cl try throws TrybotError exception for any platform,
         # keep sending try jobs to other platforms.
@@ -557,20 +577,6 @@ E.g.,
       # Restore to original working directory.
       os.chdir(original_workdir)
     return 0
-
-  def _UploadPatchToRietveld(self, repo_name, options):
-    """Uploads the patch to rietveld and returns rietveld URL."""
-    output = RunGit(['cl', 'upload', '-f', '--bypass-hooks', '-m',
-                     ('CL for %s perf tryjob to run %s benchmark '
-                      'on %s platform(s)' % (
-                          repo_name, options.benchmark_name, options.trybot))],
-                    'Could not upload to rietveld for %s' % repo_name)
-
-    match = re.search(r'https://codereview.chromium.org/[\d]+', output)
-    if not match:
-      raise TrybotError('Could not upload CL to rietveld for %s! Output %s' %
-                        (repo_name, output))
-    return match.group(0)
 
   def _RunTryJob(self, bot_platform, arguments, deps_override):
     """Executes perf try job with benchmark test properties.

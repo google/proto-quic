@@ -12,10 +12,11 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+#include <openssl/err.h>
 #include <openssl/evp.h>
 
-extern "C" int LLVMFuzzerTestOneInput(uint8_t *buf, size_t len) {
-  const uint8_t *bufp = buf;
-  EVP_PKEY_free(d2i_AutoPrivateKey(NULL, &bufp, len));
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
+  EVP_PKEY_free(d2i_AutoPrivateKey(NULL, &buf, len));
+  ERR_clear_error();
   return 0;
 }

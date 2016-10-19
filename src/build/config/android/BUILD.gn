@@ -63,8 +63,6 @@ config("compiler") {
     } else if (current_cpu == "x86") {
       abi_target = "i686-linux-androideabi"
     } else if (current_cpu == "arm64") {
-      # Place holder for arm64 support, not tested.
-      # TODO: Enable clang support for Android Arm64. http://crbug.com/539781
       abi_target = "aarch64-linux-android"
     } else if (current_cpu == "x64") {
       # Place holder for x64 support, not tested.
@@ -149,6 +147,21 @@ config("runtime_library") {
       "__compiler_offsetof=__builtin_offsetof",
       "nan=__builtin_nan",
     ]
+
+    if (current_cpu == "x64" || current_cpu == "arm64" ||
+        current_cpu == "mips64el") {
+      # 64-bit targets build with NDK 21, 32-bit targets with NDK 16
+      # (see ./config.gni).  When using clang, NDK 21 defines snprintf to
+      # something for a kind of for of _FORTIFY_SOURCE support, see
+      # third_party/android_tools/ndk/platforms/android-21/arch-x86_64/usr/include/stdio.h
+      # Making snprintf a macro breaks base/strings/string_utils.h which
+      # defines base::snprintf().  So define snprintf to itself to force the
+      # NDK to not redefine it.  This disables _chk for snprintf, but since
+      # 32-bit versions use NDK 16 which doesn't have any fortify support, that
+      # seems ok.  b/32067310 tracks better fortify support with clang.
+      # TODO(thakis): Remove this once b/32067310 is fixed.
+      defines += [ "snprintf=snprintf" ]
+    }
   }
 
   # TODO(jdduke) Re-enable on mips after resolving linking

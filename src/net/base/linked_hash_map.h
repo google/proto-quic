@@ -117,6 +117,9 @@ class linked_hash_map {
     return list_.empty();
   }
 
+  // Removes the first element from the list.
+  void pop_front() { erase(begin()); }
+
   // Erases values with the provided key.  Returns the number of elements
   // erased.  In this implementation, this will be 0 or 1.
   size_type erase(const Key& key) {

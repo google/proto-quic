@@ -627,6 +627,7 @@ TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
 }
 
 TEST_P(QuicHeadersStreamTest, ProcessLargeRawData) {
+  headers_stream_->set_max_uncompressed_header_bytes(256 * 1024);
   // We want to create a frame that is more than the SPDY Framer's max control
   // frame size, which is 16K, but less than the HPACK decoders max decode
   // buffer size, which is 32K.

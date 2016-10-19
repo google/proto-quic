@@ -90,7 +90,7 @@ void WorkerThread::ThreadMain() {
 
     tracked_objects::TaskStopwatch stopwatch;
     stopwatch.Start();
-    pending_task.task.Run();
+    std::move(pending_task.task).Run();
     stopwatch.Stop();
 
     tracked_objects::ThreadData::TallyRunOnWorkerThreadIfTracking(

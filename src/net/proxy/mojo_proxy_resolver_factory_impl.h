@@ -29,7 +29,7 @@ class MojoProxyResolverFactoryImpl : public interfaces::ProxyResolverFactory {
 
   // interfaces::ProxyResolverFactory override.
   void CreateResolver(
-      const mojo::String& pac_script,
+      const std::string& pac_script,
       interfaces::ProxyResolverRequest request,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override;
 

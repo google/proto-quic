@@ -57,8 +57,8 @@ void URLRequestContextGetter::NotifyContextShuttingDown() {
   // Once shutdown starts, this must always return NULL.
   DCHECK(!GetURLRequestContext());
 
-  FOR_EACH_OBSERVER(URLRequestContextGetterObserver, observer_list_,
-                    OnContextShuttingDown());
+  for (auto& observer : observer_list_)
+    observer.OnContextShuttingDown();
 }
 
 TrivialURLRequestContextGetter::TrivialURLRequestContextGetter(

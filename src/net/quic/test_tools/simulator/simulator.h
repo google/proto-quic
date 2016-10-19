@@ -135,13 +135,15 @@ class Simulator : public QuicConnectionHelperInterface {
 
 template <class TerminationPredicate>
 bool Simulator::RunUntil(TerminationPredicate termination_predicate) {
-  while (!schedule_.empty()) {
-    if (termination_predicate()) {
-      return true;
+  bool predicate_value = false;
+  while (true) {
+    predicate_value = termination_predicate();
+    if (predicate_value || schedule_.empty()) {
+      break;
     }
     HandleNextScheduledActor();
   }
-  return false;
+  return predicate_value;
 }
 
 template <class TerminationPredicate>

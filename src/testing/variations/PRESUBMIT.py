@@ -14,6 +14,7 @@ import sys
 from collections import OrderedDict
 
 VALID_EXPERIMENT_KEYS = ['name',
+                         'forcing_flag',
                          'params',
                          'enable_features',
                          'disable_features',
@@ -50,6 +51,7 @@ def PrettyPrint(contents):
   #             'groups': [
   #                 {
   #                     name: ...
+  #                     forcing_flag: "forcing flag string"
   #                     params: {sorted dict}
   #                     enable_features: [sorted features]
   #                     disable_features: [sorted features]
@@ -78,6 +80,8 @@ def PrettyPrint(contents):
           if comment_key in experiment:
             ordered_experiment[comment_key] = experiment[comment_key]
         ordered_experiment['name'] = experiment['name']
+        if 'forcing_flag' in experiment:
+          ordered_experiment['forcing_flag'] = experiment['forcing_flag']
         if 'params' in experiment:
           ordered_experiment['params'] = OrderedDict(
               sorted(experiment['params'].items(), key=lambda t: t[0]))

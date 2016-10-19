@@ -1,0 +1,6 @@
+import("//build/args/headless.gn")
+
+# TODO(perezju): Remove this config after recipe is moved to release trybot.
+is_debug = true
+use_goma = true
+symbol_level = 1

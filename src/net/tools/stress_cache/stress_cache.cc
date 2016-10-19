@@ -341,11 +341,11 @@ void StressTheCache(int iteration) {
 bool g_crashing = false;
 
 // RunSoon() and CrashCallback() reference each other, unfortunately.
-void RunSoon(base::MessageLoop* target_loop);
+void RunSoon(scoped_refptr<base::SingleThreadTaskRunner> task_runner);
 
 void CrashCallback() {
   // Keep trying to run.
-  RunSoon(base::MessageLoop::current());
+  RunSoon(base::ThreadTaskRunnerHandle::Get());
 
   if (g_crashing)
     return;
@@ -363,10 +363,10 @@ void CrashCallback() {
   }
 }
 
-void RunSoon(base::MessageLoop* target_loop) {
+void RunSoon(scoped_refptr<base::SingleThreadTaskRunner> task_runner) {
   const base::TimeDelta kTaskDelay = base::TimeDelta::FromSeconds(10);
-  target_loop->task_runner()->PostDelayedTask(
-      FROM_HERE, base::Bind(&CrashCallback), kTaskDelay);
+  task_runner->PostDelayedTask(FROM_HERE, base::Bind(&CrashCallback),
+                               kTaskDelay);
 }
 
 // We leak everything here :)
@@ -375,7 +375,7 @@ bool StartCrashThread() {
   if (!thread->Start())
     return false;
 
-  RunSoon(thread->message_loop());
+  RunSoon(thread->task_runner());
   return true;
 }
 
