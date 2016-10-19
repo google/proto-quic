@@ -70,20 +70,18 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
 
   // Returns true iff the |percentile| value of the observations in this
   // buffer is available. Sets |result| to the computed |percentile|
-  // value among all observations since |begin_timestamp|. If the value is
-  // unavailable, false is returned and |result| is not modified. Percentile
-  // value is unavailable if all the values in observation buffer are older
-  // than |begin_timestamp|.
+  // value of all observations made on or after |begin_timestamp|. If the
+  // value is unavailable, false is returned and |result| is not modified.
+  // Percentile value is unavailable if all the values in observation buffer are
+  // older than |begin_timestamp|.
   // |result| must not be null.
   // TODO(tbansal): Move out param |result| as the last param of the function.
-  bool GetPercentile(const base::TimeTicks& begin_timestamp,
+  bool GetPercentile(base::TimeTicks begin_timestamp,
                      ValueType* result,
                      int percentile,
                      const std::vector<NetworkQualityObservationSource>&
                          disallowed_observation_sources) const {
-    DCHECK(result);
-    DCHECK_GE(Capacity(), Size());
-    // Stores WeightedObservation in increasing order of value.
+    // Stores weighted observations in increasing order by value.
     std::vector<WeightedObservation<ValueType>> weighted_observations;
 
     // Total weight of all observations in |weighted_observations|.
@@ -93,13 +91,6 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
                                 &total_weight, disallowed_observation_sources);
     if (weighted_observations.empty())
       return false;
-
-    DCHECK(!weighted_observations.empty());
-    DCHECK_GT(total_weight, 0.0);
-
-    // |weighted_observations| may have a smaller size than observations_ since
-    // the former contains only the observations later than begin_timestamp.
-    DCHECK_GE(observations_.size(), weighted_observations.size());
 
     double desired_weight = percentile / 100.0 * total_weight;
 
@@ -122,6 +113,72 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     return true;
   }
 
+  // Returns true iff the weighted average of the observations in this
+  // buffer is available. Sets |result| to the computed weighted average value
+  // of all observations made on or after |begin_timestamp|. If the value is
+  // unavailable, false is returned and |result| is not modified. The unweighted
+  // average value is unavailable if all the values in the observation buffer
+  // are older than |begin_timestamp|. |result| must not be null.
+  bool GetWeightedAverage(base::TimeTicks begin_timestamp,
+                          const std::vector<NetworkQualityObservationSource>&
+                              disallowed_observation_sources,
+                          ValueType* result) const {
+    // Stores weighted observations in increasing order by value.
+    std::vector<WeightedObservation<ValueType>> weighted_observations;
+
+    // Total weight of all observations in |weighted_observations|.
+    double total_weight = 0.0;
+
+    ComputeWeightedObservations(begin_timestamp, weighted_observations,
+                                &total_weight, disallowed_observation_sources);
+    if (weighted_observations.empty())
+      return false;
+
+    // Weighted average is the sum of observations times their respective
+    // weights, divided by the sum of the weights of all observations.
+    double total_weight_times_value = 0.0;
+    for (const auto& weighted_observation : weighted_observations) {
+      total_weight_times_value +=
+          (weighted_observation.weight *
+           ConvertValueTypeToDouble(weighted_observation.value));
+    }
+
+    ConvertDoubleToValueType(total_weight_times_value / total_weight, result);
+    return true;
+  }
+
+  // Returns true iff the unweighted average of the observations in this buffer
+  // is available. Sets |result| to the computed unweighted average value of
+  // all observations made on or after |begin_timestamp|. If the value is
+  // unavailable, false is returned and |result| is not modified. The weighted
+  // average value is unavailable if all the values in the observation buffer
+  // are older than |begin_timestamp|. |result| must not be null.
+  bool GetUnweightedAverage(base::TimeTicks begin_timestamp,
+                            const std::vector<NetworkQualityObservationSource>&
+                                disallowed_observation_sources,
+                            ValueType* result) const {
+    // Stores weighted observations in increasing order by value.
+    std::vector<WeightedObservation<ValueType>> weighted_observations;
+
+    // Total weight of all observations in |weighted_observations|.
+    double total_weight = 0.0;
+
+    ComputeWeightedObservations(begin_timestamp, weighted_observations,
+                                &total_weight, disallowed_observation_sources);
+    if (weighted_observations.empty())
+      return false;
+
+    // The unweighted average is the sum of all observations divided by the
+    // number of observations.
+    double total_value = 0.0;
+    for (const auto& weighted_observation : weighted_observations)
+      total_value += ConvertValueTypeToDouble(weighted_observation.value);
+
+    ConvertDoubleToValueType(total_value / weighted_observations.size(),
+                             result);
+    return true;
+  }
+
   void SetTickClockForTesting(std::unique_ptr<base::TickClock> tick_clock) {
     tick_clock_ = std::move(tick_clock);
   }
@@ -129,6 +186,21 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
  private:
   // Maximum number of observations that can be held in the ObservationBuffer.
   static const size_t kMaximumObservationsBufferSize = 300;
+
+  // Convert different ValueTypes to double to make it possible to perform
+  // arithmetic operations on them.
+  double ConvertValueTypeToDouble(base::TimeDelta input) const {
+    return input.InMilliseconds();
+  }
+  double ConvertValueTypeToDouble(int32_t input) const { return input; }
+
+  // Convert double to different ValueTypes.
+  void ConvertDoubleToValueType(double input, base::TimeDelta* output) const {
+    *output = base::TimeDelta::FromMilliseconds(input);
+  }
+  void ConvertDoubleToValueType(double input, int32_t* output) const {
+    *output = input;
+  }
 
   // Computes the weighted observations and stores them in
   // |weighted_observations| sorted by ascending |WeightedObservation.value|.
@@ -171,6 +243,14 @@ class NET_EXPORT_PRIVATE ObservationBuffer {
     // Sort the samples by value in ascending order.
     std::sort(weighted_observations.begin(), weighted_observations.end());
     *total_weight = total_weight_observations;
+
+    DCHECK_LE(0.0, *total_weight);
+    DCHECK(weighted_observations.empty() || 0.0 < *total_weight);
+
+    // |weighted_observations| may have a smaller size than |observations_|
+    // since the former contains only the observations later than
+    // |begin_timestamp|.
+    DCHECK_GE(observations_.size(), weighted_observations.size());
   }
 
   // Holds observations sorted by time, with the oldest observation at the

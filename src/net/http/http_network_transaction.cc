@@ -122,7 +122,6 @@ HttpNetworkTransaction::~HttpNetworkTransaction() {
       stream->Drain(session_);
     }
   }
-
   if (request_ && request_->upload_data_stream)
     request_->upload_data_stream->Reset();  // Invalidate pending callbacks.
 }
@@ -132,6 +131,7 @@ int HttpNetworkTransaction::Start(const HttpRequestInfo* request_info,
                                   const NetLogWithSource& net_log) {
   net_log_ = net_log;
   request_ = request_info;
+  url_ = request_->url;
 
   // Now that we have an HttpRequestInfo object, update server_ssl_config_.
   session_->GetSSLConfig(*request_, &server_ssl_config_, &proxy_ssl_config_);
@@ -295,8 +295,6 @@ int HttpNetworkTransaction::Read(IOBuffer* buf, int buf_len,
   DCHECK(buf);
   DCHECK_LT(0, buf_len);
 
-  State next_state = STATE_NONE;
-
   scoped_refptr<HttpResponseHeaders> headers(GetResponseHeaders());
   if (headers_valid_ && headers.get() && stream_request_.get()) {
     // We're trying to read the body of the response but we're still trying
@@ -312,17 +310,27 @@ int HttpNetworkTransaction::Read(IOBuffer* buf, int buf_len,
     DCHECK_EQ(headers->response_code(), HTTP_PROXY_AUTHENTICATION_REQUIRED);
     LOG(WARNING) << "Blocked proxy response with status "
                  << headers->response_code() << " to CONNECT request for "
-                 << GetHostAndPort(request_->url) << ".";
+                 << GetHostAndPort(url_) << ".";
     return ERR_TUNNEL_CONNECTION_FAILED;
   }
 
   // Are we using SPDY or HTTP?
-  next_state = STATE_READ_BODY;
+  next_state_ = STATE_READ_BODY;
+
+  // We have reached the end of Start state machine, reset the requestinfo to
+  // null.
+  // RequestInfo is a member of the HttpTransaction's consumer and is useful
+  // only till final response headers are received. A reset will ensure that
+  // HttpRequestInfo is only used up until final response headers are received.
+  // Resetting is allowed so that the transaction can be disassociated from its
+  // creating consumer in cases where it is shared for writing to the cache.
+  // It is also safe to reset it to null at this point since upload_data_stream
+  // is also not used in the Read state machine.
+  request_ = nullptr;
 
   read_buf_ = buf;
   read_buf_len_ = buf_len;
 
-  next_state_ = next_state;
   int rv = DoLoop(OK);
   if (rv == ERR_IO_PENDING)
     callback_ = callback;
@@ -652,7 +660,11 @@ int HttpNetworkTransaction::DoLoop(int result) {
         rv = DoCreateStream();
         break;
       case STATE_CREATE_STREAM_COMPLETE:
+        // TODO(zhongyi): remove liveness checks when crbug.com/652868 is
+        // solved.
+        net_log_.CrashIfInvalid();
         rv = DoCreateStreamComplete(rv);
+        net_log_.CrashIfInvalid();
         break;
       case STATE_INIT_STREAM:
         DCHECK_EQ(OK, rv);

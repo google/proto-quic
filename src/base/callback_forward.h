@@ -32,8 +32,6 @@ class Callback;
 // will be used in a lot of APIs with delayed execution.
 using Closure = Callback<void()>;
 
-namespace internal {
-
 template <typename Signature>
 using OnceCallback = Callback<Signature,
                               internal::CopyMode::MoveOnly,
@@ -45,7 +43,6 @@ using RepeatingCallback = Callback<Signature,
 using OnceClosure = OnceCallback<void()>;
 using RepeatingClosure = RepeatingCallback<void()>;
 
-}  // namespace internal
 }  // namespace base
 
 #endif  // BASE_CALLBACK_FORWARD_H_

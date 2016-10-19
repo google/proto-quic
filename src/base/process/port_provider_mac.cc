@@ -21,7 +21,8 @@ void PortProvider::RemoveObserver(Observer* observer) {
 
 void PortProvider::NotifyObservers(ProcessHandle process) {
   base::AutoLock l(lock_);
-  FOR_EACH_OBSERVER(Observer, observer_list_, OnReceivedTaskPort(process));
+  for (auto& observer : observer_list_)
+    observer.OnReceivedTaskPort(process);
 }
 
 }  // namespace base

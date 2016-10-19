@@ -2,7 +2,6 @@ include_rules = [
   "+crypto",
   "+gin",
   "+jni",
-  "+mojo/common",
   "+mojo/public",
   "+third_party/apple_apsl",
   "+third_party/nss",

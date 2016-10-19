@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
@@ -65,14 +66,15 @@ class TestQuicClientSession : public QuicClientSession {
                           crypto_config,
                           push_promise_index) {}
 
-  QuicSpdyClientStream* CreateClientStream() override {
-    return new MockQuicSpdyClientStream(GetNextOutgoingStreamId(), this);
+  std::unique_ptr<QuicSpdyClientStream> CreateClientStream() override {
+    return base::MakeUnique<MockQuicSpdyClientStream>(GetNextOutgoingStreamId(),
+                                                      this);
   }
 
   MockQuicSpdyClientStream* CreateIncomingDynamicStream(
       QuicStreamId id) override {
     MockQuicSpdyClientStream* stream = new MockQuicSpdyClientStream(id, this);
-    ActivateStream(stream);
+    ActivateStream(base::WrapUnique(stream));
     return stream;
   }
 };
@@ -233,9 +235,8 @@ TEST_P(QuicClientSessionTest, MaxNumStreamsWithRst) {
 
   // Close the stream and receive an RST frame to remove the unfinished stream
   session_->CloseStream(stream->id());
-  session_->OnRstStream(QuicRstStreamFrame(
-      stream->id(), AdjustErrorForVersion(QUIC_RST_ACKNOWLEDGEMENT, GetParam()),
-      0));
+  session_->OnRstStream(
+      QuicRstStreamFrame(stream->id(), QUIC_RST_ACKNOWLEDGEMENT, 0));
   // Check that a new one can be created.
   EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
   stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);

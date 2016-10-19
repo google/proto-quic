@@ -71,6 +71,8 @@ class BASE_EXPORT TraceConfig {
     // Reset the values in the config.
     void Clear();
 
+    void Merge(const MemoryDumpConfig& config);
+
     // Set of memory dump modes allowed for the tracing session. The explicitly
     // triggered dumps will be successful only if the dump mode is allowed in
     // the config.
@@ -240,6 +242,9 @@ class BASE_EXPORT TraceConfig {
   }
 
   const EventFilters& event_filters() const { return event_filters_; }
+  void SetEventFilters(const EventFilters& filter_configs) {
+    event_filters_ = filter_configs;
+  }
 
  private:
   FRIEND_TEST_ALL_PREFIXES(TraceConfigTest, TraceConfigFromValidLegacyFormat);
@@ -281,7 +286,7 @@ class BASE_EXPORT TraceConfig {
       const DictionaryValue& memory_dump_config);
   void SetDefaultMemoryDumpConfig();
 
-  void SetEventFilters(const base::ListValue& event_filters);
+  void SetEventFiltersFromConfigList(const base::ListValue& event_filters);
   std::unique_ptr<DictionaryValue> ToDict() const;
 
   std::string ToTraceOptionsString() const;

@@ -78,5 +78,8 @@ void BasicHttpResponse::SendResponse(const SendBytesCallback& send,
   send.Run(ToResponseString(), done);
 }
 
+void HungResponse::SendResponse(const SendBytesCallback& send,
+                                const SendCompleteCallback& done) {}
+
 }  // namespace test_server
 }  // namespace net

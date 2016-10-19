@@ -13,45 +13,17 @@
 #include <string>
 
 #include "base/base_export.h"
-#include "base/compiler_specific.h"
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_base.h"
-#include "base/metrics/sample_map.h"
+#include "base/metrics/histogram_samples.h"
 #include "base/synchronization/lock.h"
 
 namespace base {
 
-// Sparse histograms are well suited for recording counts of exact sample values
-// that are sparsely distributed over a large range.
-//
-// The implementation uses a lock and a map, whereas other histogram types use a
-// vector and no lock. It is thus more costly to add values to, and each value
-// stored has more overhead, compared to the other histogram types. However it
-// may be more efficient in memory if the total number of sample values is small
-// compared to the range of their values.
-//
-// UMA_HISTOGRAM_ENUMERATION would be better suited for a smaller range of
-// enumerations that are (nearly) contiguous. Also for code that is expected to
-// run often or in a tight loop.
-//
-// UMA_HISTOGRAM_SPARSE_SLOWLY is good for sparsely distributed and or
-// infrequently recorded values.
-//
-// For instance, Sqlite.Version.* are SPARSE because for any given database,
-// there's going to be exactly one version logged, meaning no gain to having a
-// pre-allocated vector of slots once the fleet gets to version 4 or 5 or 10.
-// Likewise Sqlite.Error.* are SPARSE, because most databases generate few or no
-// errors and there are large gaps in the set of possible errors.
-#define UMA_HISTOGRAM_SPARSE_SLOWLY(name, sample) \
-    do { \
-      base::HistogramBase* histogram = base::SparseHistogram::FactoryGet( \
-          name, base::HistogramBase::kUmaTargetedHistogramFlag); \
-      histogram->Add(sample); \
-    } while (0)
-
 class HistogramSamples;
 class PersistentHistogramAllocator;
+class Pickle;
+class PickleIterator;
 
 class BASE_EXPORT SparseHistogram : public HistogramBase {
  public:

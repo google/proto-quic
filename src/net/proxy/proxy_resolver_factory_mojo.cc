@@ -12,9 +12,9 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/stl_util.h"
+#include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_checker.h"
 #include "base/values.h"
-#include "mojo/common/common_type_converters.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "net/base/load_states.h"
 #include "net/base/net_errors.h"
@@ -37,7 +37,7 @@ namespace {
 
 std::unique_ptr<base::Value> NetLogErrorCallback(
     int line_number,
-    const base::string16* message,
+    const std::string* message,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("line_number", line_number);
@@ -61,24 +61,24 @@ class ClientMixin : public ClientInterface {
         net_log_with_source_(net_log_with_source) {}
 
   // Overridden from ClientInterface:
-  void Alert(const mojo::String& message) override {
-    base::string16 message_str = message.To<base::string16>();
-    auto callback = NetLog::StringCallback("message", &message_str);
+  void Alert(const std::string& message) override {
+    auto callback = NetLog::StringCallback("message", &message);
     net_log_with_source_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ALERT,
                                   callback);
     if (net_log_)
       net_log_->AddGlobalEntry(NetLogEventType::PAC_JAVASCRIPT_ALERT, callback);
   }
 
-  void OnError(int32_t line_number, const mojo::String& message) override {
-    base::string16 message_str = message.To<base::string16>();
-    auto callback = base::Bind(&NetLogErrorCallback, line_number, &message_str);
+  void OnError(int32_t line_number, const std::string& message) override {
+    auto callback = base::Bind(&NetLogErrorCallback, line_number, &message);
     net_log_with_source_.AddEvent(NetLogEventType::PAC_JAVASCRIPT_ERROR,
                                   callback);
     if (net_log_)
       net_log_->AddGlobalEntry(NetLogEventType::PAC_JAVASCRIPT_ERROR, callback);
-    if (error_observer_)
-      error_observer_->OnPACScriptError(line_number, message_str);
+    if (error_observer_) {
+      error_observer_->OnPACScriptError(line_number,
+                                        base::UTF8ToUTF16(message));
+    }
   }
 
   void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
@@ -342,7 +342,7 @@ class ProxyResolverFactoryMojo::Job
         binding_(this),
         error_observer_(std::move(error_observer)) {
     on_delete_callback_runner_ = factory_->mojo_proxy_factory_->CreateResolver(
-        mojo::String::From(pac_script->utf16()), mojo::GetProxy(&resolver_ptr_),
+        base::UTF16ToUTF8(pac_script->utf16()), mojo::GetProxy(&resolver_ptr_),
         binding_.CreateInterfacePtrAndBind());
     resolver_ptr_.set_connection_error_handler(
         base::Bind(&ProxyResolverFactoryMojo::Job::OnConnectionError,

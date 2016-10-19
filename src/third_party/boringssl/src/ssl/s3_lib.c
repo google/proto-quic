@@ -203,13 +203,7 @@ void ssl3_free(SSL *ssl) {
   ssl3_cleanup_key_block(ssl);
   ssl_read_buffer_clear(ssl);
   ssl_write_buffer_clear(ssl);
-  SSL_ECDH_CTX_cleanup(&ssl->s3->tmp.ecdh_ctx);
-  OPENSSL_free(ssl->s3->tmp.peer_key);
-  OPENSSL_free(ssl->s3->tmp.server_params);
 
-  sk_X509_NAME_pop_free(ssl->s3->tmp.ca_names, X509_NAME_free);
-  OPENSSL_free(ssl->s3->tmp.certificate_types);
-  OPENSSL_free(ssl->s3->tmp.peer_supported_group_list);
   SSL_SESSION_free(ssl->s3->new_session);
   SSL_SESSION_free(ssl->s3->established_session);
   ssl3_free_handshake_buffer(ssl);

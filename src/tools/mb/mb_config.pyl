@@ -78,6 +78,7 @@
       'Android Cloud Tests': 'android_debug_static_bot_x86',
       'Android Tests (x86 emulator)': 'android_debug_static_bot_x86',
       'Android Builder (dbg)': 'android_debug_static_bot_vr_shell',
+      'Android Builder Goma Canary (dbg)': 'android_debug_bot',
       'Android deterministic': 'android_without_codecs_release_bot_minimal_symbols',
       'Android deterministic (dbg)': 'android_debug_bot',
       'Blimp Android Client':
@@ -99,7 +100,7 @@
       'Chromium Linux32 Goma Canary (clobber)': 'release_bot_x86',
       'Chromium Mac 10.10 MacViews': 'mac_views_browser_release_bot',
       'Chromium Mac 10.11': 'release_bot',
-      'Chromium Mac 10.11 Force Mac Toolchain': 'release_bot',
+      'Chromium Mac 10.11 Force Mac Toolchain': 'release_bot_mac_hermetic',
       'Chromium Mac 10.9 Goma Canary': 'release_bot',
       'Chromium Mac 10.9 Goma Canary (clobber)': 'release_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)': 'debug_bot',
@@ -156,6 +157,7 @@
       'CrWinClngLLD64dbg': 'clang_tot_minimal_symbols_shared_debug_use_lld',
       'CrWinClngLLDdbg': 'clang_tot_minimal_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
+      'GomaCanaryiOS': 'ios',
       'Headless Linux (dbg)': '//build/args/bots/chromium.fyi/headless_linux_dbg.gn',
       'MD Top Chrome ChromeOS material-hybrid': 'chromeos_with_codecs_debug_bot',
       'MD Top Chrome ChromeOS non-material': 'chromeos_with_codecs_debug_bot',
@@ -178,11 +180,12 @@
       'Mac deterministic (dbg)': 'debug_bot',
       'Mojo ChromiumOS': 'chromeos_with_codecs_ozone_release_trybot',
       'Mojo Windows': 'release_bot_x86',
+      'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
       'Site Isolation Win': 'release_trybot_x86',
       'ThinLTO Linux ToT': 'thin_lto_clang_tot_release_static',
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
-      'WebKit Linux - TraceWrappables': 'release_bot',
+      'WebKit Linux - TraceWrappables': 'debug_bot',
       'WebKit Linux - WPTServe': 'release_bot',
       'WebKit Mac - WPTServe': 'release_bot',
       'WebKit Win - WPTServe': 'release_bot_x86',
@@ -471,7 +474,7 @@
       'android_compile_x86_dbg': 'android_debug_trybot_x86',
       'android_coverage': 'android_debug_trybot_java_coverage',
       'android_cronet': 'android_cronet_release_trybot_arm_no_neon',
- 
+
       # TODO(crbug/597596): Switch this back to debug_trybot when cronet's
       # shared library loading is fixed.
       'android_cronet_tester': 'android_cronet_debug_static_bot_arm_no_neon',
@@ -524,7 +527,8 @@
       'linux_chromium_dbg_32_ng': 'debug_trybot_x86',
       'linux_chromium_dbg_ng': 'debug_trybot',
       'linux_chromium_gn_upload': 'gn_linux_upload',
-      'linux_chromium_headless_dbg': '//build/args/bots/tryserver.chromium.linux/headless_linux_dbg_trybot.gn',
+      'linux_chromium_headless_dbg': '//build/args/bots/tryserver.chromium.linux/linux_chromium_headless_dbg.gn',
+      'linux_chromium_headless_rel': '//build/args/bots/tryserver.chromium.linux/linux_chromium_headless_rel.gn',
 
       # This is intentionally a release_bot and not a release_trybot;
       # enabling DCHECKs seems to cause flaky failures that don't show up
@@ -1329,6 +1333,10 @@
       'release_bot', 'chrome_with_codecs',
     ],
 
+    'release_bot_mac_hermetic': [
+      'release_bot', 'mac_hermetic_toolchain',
+    ],
+
     'release_bot_mac_strip': [
       'release_bot', 'mac_strip',
     ],
@@ -1631,6 +1639,10 @@
 
     'gpu_tests': {
       'mixins': ['chrome_with_codecs'],
+    },
+
+    'mac_hermetic_toolchain': {
+      'gn_args': 'use_system_xcode=false',
     },
 
     'hybrid': {

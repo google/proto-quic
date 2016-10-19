@@ -180,14 +180,6 @@ const std::string& GURL::spec() const {
   return EmptyStringForGURL();
 }
 
-bool GURL::operator==(const GURL& other) const {
-  return spec_ == other.spec_;
-}
-
-bool GURL::operator!=(const GURL& other) const {
-  return spec_ != other.spec_;
-}
-
 bool GURL::operator<(const GURL& other) const {
   return spec_ < other.spec_;
 }
@@ -509,4 +501,20 @@ void GURL::Swap(GURL* other) {
 
 std::ostream& operator<<(std::ostream& out, const GURL& url) {
   return out << url.possibly_invalid_spec();
+}
+
+bool operator==(const GURL& x, const GURL& y) {
+  return x.possibly_invalid_spec() == y.possibly_invalid_spec();
+}
+
+bool operator!=(const GURL& x, const GURL& y) {
+  return !(x == y);
+}
+
+bool operator==(const GURL& x, const base::StringPiece& spec) {
+  return x.possibly_invalid_spec() == spec;
+}
+
+bool operator!=(const GURL& x, const base::StringPiece& spec) {
+  return !(x == spec);
 }

@@ -38,8 +38,8 @@ class MemoryPressureObserver {
     async_observers_->Notify(FROM_HERE,
         &MemoryPressureListener::Notify, memory_pressure_level);
     AutoLock lock(sync_observers_lock_);
-    FOR_EACH_OBSERVER(MemoryPressureListener, *sync_observers_,
-        MemoryPressureListener::SyncNotify(memory_pressure_level));
+    for (auto& observer : *sync_observers_)
+      observer.MemoryPressureListener::SyncNotify(memory_pressure_level);
   }
 
  private:

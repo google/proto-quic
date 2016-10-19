@@ -35,7 +35,8 @@ void STHDistributor::NewSTHObserved(const SignedTreeHead& sth) {
   else
     *it = sth;
 
-  FOR_EACH_OBSERVER(STHObserver, observer_list_, NewSTHObserved(sth));
+  for (auto& observer : observer_list_)
+    observer.NewSTHObserved(sth);
 
   if (sth.log_id.compare(0, sth.log_id.size(),
                          reinterpret_cast<const char*>(kPilotLogID),

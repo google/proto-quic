@@ -79,12 +79,6 @@ class QuicSpdyClientStream : public QuicSpdyStream {
   // of client-side streams should be able to set the priority.
   using QuicSpdyStream::SetPriority;
 
-  void set_allow_bidirectional_data(bool value) {
-    allow_bidirectional_data_ = value;
-  }
-
-  bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
-
  private:
   // The parsed headers received from the server.
   SpdyHeaderBlock response_headers_;
@@ -95,9 +89,6 @@ class QuicSpdyClientStream : public QuicSpdyStream {
   std::string data_;
   size_t header_bytes_read_;
   size_t header_bytes_written_;
-  // When true allows the sending of a request to continue while the response is
-  // arriving.
-  bool allow_bidirectional_data_;
 
   QuicClientSession* session_;
 

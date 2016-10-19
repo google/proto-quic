@@ -7,7 +7,10 @@ from core import perf_benchmark
 from benchmarks import silk_flags
 import ct_benchmarks_util
 from measurements import smoothness
+
 import page_sets
+from page_sets import repaint_helpers
+
 from telemetry import benchmark
 
 
@@ -91,4 +94,5 @@ class RepaintCT(_Repaint):
 
   def CreateStorySet(self, options):
     return page_sets.CTPageSet(
-        options.urls_list, options.user_agent, options.archive_data_file)
+        options.urls_list, options.user_agent, options.archive_data_file,
+        run_page_interaction_callback=repaint_helpers.WaitThenRepaint)

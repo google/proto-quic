@@ -96,11 +96,6 @@ class NET_EXPORT SpdyHeaderBlock {
   // adds a new header to the end of the block.
   void insert(const MapType::value_type& value);
 
-  // If key already exists in the block, replaces the value of that key. Else
-  // adds a new header to the end of the block.
-  void ReplaceOrAppendHeader(const base::StringPiece key,
-                             const base::StringPiece value);
-
   // If a header with the key is already present, then append the value to the
   // existing header value, NUL ("\0") separated unless the key is cookie, in
   // which case the separator is "; ".

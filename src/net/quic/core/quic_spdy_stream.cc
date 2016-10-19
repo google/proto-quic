@@ -29,6 +29,7 @@ QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
     : ReliableQuicStream(id, spdy_session),
       spdy_session_(spdy_session),
       visitor_(nullptr),
+      allow_bidirectional_data_(false),
       headers_decompressed_(false),
       priority_(kDefaultPriority),
       trailers_decompressed_(false),
@@ -204,11 +205,25 @@ void QuicSpdyStream::OnStreamHeadersComplete(bool fin, size_t frame_len) {
 void QuicSpdyStream::OnStreamHeaderList(bool fin,
                                         size_t frame_len,
                                         const QuicHeaderList& header_list) {
+  // The headers list avoid infinite buffering by clearing the headers list
+  // if the current headers are too large. So if the list is empty here
+  // then the headers list must have been too large, and the stream should
+  // be reset.
+  if (FLAGS_quic_limit_uncompressed_headers && header_list.empty()) {
+    OnHeadersTooLarge();
+    if (IsDoneReading()) {
+      return;
+    }
+  }
   if (!headers_decompressed_) {
     OnInitialHeadersComplete(fin, frame_len, header_list);
   } else {
     OnTrailingHeadersComplete(fin, frame_len, header_list);
   }
+}
+
+void QuicSpdyStream::OnHeadersTooLarge() {
+  Reset(QUIC_HEADERS_TOO_LARGE);
 }
 
 void QuicSpdyStream::OnInitialHeadersComplete(bool fin, size_t /*frame_len*/) {

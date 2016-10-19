@@ -37,6 +37,7 @@ STABLE_TEST_SUITES = [
     'sandbox_linux_unittests',
     'skia_unittests',
     'sql_unittests',
+    'storage_unittests',
     'ui_android_unittests',
     'ui_base_unittests',
     'ui_touch_selection_unittests',

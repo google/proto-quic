@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_utils.h"
@@ -103,10 +104,10 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
     session_.reset(new testing::StrictMock<MockQuicSpdySession>(connection_));
     stream_ = new TestStream(kClientDataStreamId1, session_.get(),
                              stream_should_process_data);
-    session_->ActivateStream(stream_);
+    session_->ActivateStream(base::WrapUnique(stream_));
     stream2_ = new TestStream(kClientDataStreamId2, session_.get(),
                               stream_should_process_data);
-    session_->ActivateStream(stream2_);
+    session_->ActivateStream(base::WrapUnique(stream2_));
   }
 
  protected:
@@ -157,6 +158,19 @@ TEST_P(QuicSpdyStreamTest, ProcessHeaderList) {
   EXPECT_FALSE(stream_->IsDoneReading());
 }
 
+TEST_P(QuicSpdyStreamTest, ProcessEmptyHeaderList) {
+  FLAGS_quic_limit_uncompressed_headers = true;
+  Initialize(kShouldProcessData);
+
+  QuicHeaderList headers;
+  stream_->OnStreamHeadersPriority(kV3HighestPriority);
+
+  EXPECT_CALL(*session_,
+              SendRstStream(stream_->id(), QUIC_HEADERS_TOO_LARGE, 0));
+  stream_->OnStreamHeaderList(false, 1 << 20, headers);
+  EXPECT_EQ(QUIC_HEADERS_TOO_LARGE, stream_->stream_error());
+}
+
 TEST_P(QuicSpdyStreamTest, ProcessHeadersWithFin) {
   Initialize(kShouldProcessData);
 
@@ -197,40 +211,40 @@ TEST_P(QuicSpdyStreamTest, ParseHeaderStatusCode) {
   int status_code = 0;
 
   // Valid status code.
-  headers_.ReplaceOrAppendHeader(":status", "404");
+  headers_[":status"] = "404";
   EXPECT_TRUE(stream_->ParseHeaderStatusCode(headers_, &status_code));
   EXPECT_EQ(404, status_code);
 
   // Invalid status codes.
-  headers_.ReplaceOrAppendHeader(":status", "010");
+  headers_[":status"] = "010";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "600");
+  headers_[":status"] = "600";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "200 ok");
+  headers_[":status"] = "200 ok";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "2000");
+  headers_[":status"] = "2000";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "+200");
+  headers_[":status"] = "+200";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "+20");
+  headers_[":status"] = "+20";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   // Leading or trailing spaces are also invalid.
-  headers_.ReplaceOrAppendHeader(":status", " 200");
+  headers_[":status"] = " 200";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "200 ");
+  headers_[":status"] = "200 ";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", " 200 ");
+  headers_[":status"] = " 200 ";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
-  headers_.ReplaceOrAppendHeader(":status", "  ");
+  headers_[":status"] = "  ";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 }
 

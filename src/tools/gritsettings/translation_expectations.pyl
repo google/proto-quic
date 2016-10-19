@@ -49,6 +49,7 @@
     "files": [
       "android_webview/java/strings/android_webview_strings.grd",
       "blimp/client/app/android/java/strings/android_blimp_strings.grd",
+      "blimp/client/support/resources/blimp_strings.grd",
       "chrome/android/java/strings/android_chrome_strings.grd",
       "content/public/android/java/strings/android_content_strings.grd",
       "ui/android/java/strings/android_ui_strings.grd",

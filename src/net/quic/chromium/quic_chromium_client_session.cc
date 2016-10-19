@@ -32,6 +32,7 @@
 #include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/quic_crypto_client_stream_factory.h"
+#include "net/quic/core/spdy_utils.h"
 #include "net/spdy/spdy_session.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_connection_status_flags.h"
@@ -244,6 +245,8 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       token_binding_signatures_(kTokenBindingSignatureMapSize),
       streams_pushed_count_(0),
       streams_pushed_and_claimed_count_(0),
+      bytes_pushed_count_(0),
+      bytes_pushed_and_unclaimed_count_(0),
       migration_pending_(false),
       weak_factory_(this) {
   sockets_.push_back(std::move(socket));
@@ -316,6 +319,11 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.Pushed", streams_pushed_count_);
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.PushedAndClaimed",
                        streams_pushed_and_claimed_count_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.PushedBytes", bytes_pushed_count_);
+  DCHECK_LE(bytes_pushed_and_unclaimed_count_, bytes_pushed_count_);
+  UMA_HISTOGRAM_COUNTS_1M("Net.QuicSession.PushedAndUnclaimedBytes",
+                          bytes_pushed_and_unclaimed_count_);
+
   if (!IsCryptoHandshakeConfirmed())
     return;
 
@@ -513,7 +521,7 @@ QuicChromiumClientSession::CreateOutgoingReliableStreamImpl() {
   DCHECK(connection()->connected());
   QuicChromiumClientStream* stream =
       new QuicChromiumClientStream(GetNextOutgoingStreamId(), this, net_log_);
-  ActivateStream(stream);
+  ActivateStream(base::WrapUnique(stream));
   ++num_total_streams_;
   UMA_HISTOGRAM_COUNTS("Net.QuicSession.NumOpenStreams",
                        GetNumOpenOutgoingStreams());
@@ -539,9 +547,9 @@ bool QuicChromiumClientSession::GetSSLInfo(SSLInfo* ssl_info) const {
   ssl_info->cert_status = cert_verify_result_->cert_status;
   ssl_info->cert = cert_verify_result_->verified_cert;
 
-  // TODO(wtc): Define QUIC "cipher suites".
-  // Report the TLS cipher suite that most closely resembles the crypto
-  // parameters of the QUIC connection.
+  // TODO(davidben): Switch these to the TLS 1.3 AEAD-only ciphers. That will
+  // place them in the cache in the default configuration, so do this when we
+  // are comfortable supporting those values long-term.
   QuicTag aead = crypto_stream_->crypto_negotiated_params().aead;
   uint16_t cipher_suite;
   int security_bits;
@@ -730,7 +738,7 @@ QuicChromiumClientSession::CreateIncomingReliableStreamImpl(QuicStreamId id) {
   QuicChromiumClientStream* stream =
       new QuicChromiumClientStream(id, this, net_log_);
   stream->CloseWriteSide();
-  ActivateStream(stream);
+  ActivateStream(base::WrapUnique(stream));
   ++num_total_streams_;
   return stream;
 }
@@ -740,6 +748,10 @@ void QuicChromiumClientSession::CloseStream(QuicStreamId stream_id) {
   if (stream) {
     logger_->UpdateReceivedFrameCounts(stream_id, stream->num_frames_received(),
                                        stream->num_duplicate_frames_received());
+    if (stream_id % 2 == 0) {
+      // Stream with even stream is initiated by server for PUSH.
+      bytes_pushed_count_ += stream->stream_bytes_read();
+    }
   }
   QuicSpdySession::CloseStream(stream_id);
   OnClosedStream();
@@ -748,6 +760,13 @@ void QuicChromiumClientSession::CloseStream(QuicStreamId stream_id) {
 void QuicChromiumClientSession::SendRstStream(QuicStreamId id,
                                               QuicRstStreamErrorCode error,
                                               QuicStreamOffset bytes_written) {
+  ReliableQuicStream* stream = GetOrCreateStream(id);
+  if (stream) {
+    if (id % 2 == 0) {
+      // Stream with even stream is initiated by server for PUSH.
+      bytes_pushed_count_ += stream->stream_bytes_read();
+    }
+  }
   QuicSpdySession::SendRstStream(id, error, bytes_written);
   OnClosedStream();
 }
@@ -1221,7 +1240,7 @@ void QuicChromiumClientSession::CloseSessionOnErrorInner(
 
 void QuicChromiumClientSession::CloseAllStreams(int net_error) {
   while (!dynamic_streams().empty()) {
-    ReliableQuicStream* stream = dynamic_streams().begin()->second;
+    ReliableQuicStream* stream = dynamic_streams().begin()->second.get();
     QuicStreamId id = stream->id();
     static_cast<QuicChromiumClientStream*>(stream)->OnError(net_error);
     CloseStream(id);
@@ -1386,8 +1405,10 @@ bool QuicChromiumClientSession::IsAuthorized(const std::string& hostname) {
 
 bool QuicChromiumClientSession::HasNonMigratableStreams() const {
   for (const auto& stream : dynamic_streams()) {
-    if (!static_cast<QuicChromiumClientStream*>(stream.second)->can_migrate())
+    if (!static_cast<QuicChromiumClientStream*>(stream.second.get())
+             ->can_migrate()) {
       return true;
+    }
   }
   return false;
 }
@@ -1406,6 +1427,14 @@ void QuicChromiumClientSession::DeletePromised(
   if (IsOpenStream(promised->id()))
     streams_pushed_and_claimed_count_++;
   QuicClientSessionBase::DeletePromised(promised);
+}
+
+void QuicChromiumClientSession::OnPushStreamTimedOut(QuicStreamId stream_id) {
+  QuicSpdyStream* stream = GetPromisedStream(stream_id);
+  DCHECK(stream);
+  // TODO(zhongyi): re-enable metrics collection when crbug.com/656467 is
+  // solved.
+  // bytes_pushed_and_unclaimed_count_ += stream->stream_bytes_read();
 }
 
 const LoadTimingInfo::ConnectTiming&

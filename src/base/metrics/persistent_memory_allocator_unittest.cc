@@ -121,12 +121,15 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
 
   // Ensure that the test-object can be made iterable.
   PersistentMemoryAllocator::Iterator iter1a(allocator_.get());
+  EXPECT_EQ(0U, iter1a.GetLast());
   uint32_t type;
   EXPECT_EQ(0U, iter1a.GetNext(&type));
   allocator_->MakeIterable(block1);
   EXPECT_EQ(block1, iter1a.GetNext(&type));
   EXPECT_EQ(1U, type);
+  EXPECT_EQ(block1, iter1a.GetLast());
   EXPECT_EQ(0U, iter1a.GetNext(&type));
+  EXPECT_EQ(block1, iter1a.GetLast());
 
   // Create second test-object and ensure everything is good and it cannot
   // be confused with test-object of another type.
@@ -146,6 +149,24 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   allocator_->MakeIterable(block2);
   EXPECT_EQ(block2, iter1a.GetNext(&type));
   EXPECT_EQ(2U, type);
+  EXPECT_EQ(block2, iter1a.GetLast());
+  EXPECT_EQ(0U, iter1a.GetNext(&type));
+  EXPECT_EQ(block2, iter1a.GetLast());
+
+  // Check that the iterator can be reset to the beginning.
+  iter1a.Reset();
+  EXPECT_EQ(0U, iter1a.GetLast());
+  EXPECT_EQ(block1, iter1a.GetNext(&type));
+  EXPECT_EQ(block1, iter1a.GetLast());
+  EXPECT_EQ(block2, iter1a.GetNext(&type));
+  EXPECT_EQ(block2, iter1a.GetLast());
+  EXPECT_EQ(0U, iter1a.GetNext(&type));
+
+  // Check that the iterator can be reset to an arbitrary location.
+  iter1a.Reset(block1);
+  EXPECT_EQ(block1, iter1a.GetLast());
+  EXPECT_EQ(block2, iter1a.GetNext(&type));
+  EXPECT_EQ(block2, iter1a.GetLast());
   EXPECT_EQ(0U, iter1a.GetNext(&type));
 
   // Check that iteration can begin after an arbitrary location.

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/chrome_build.gni")
+import("//build/toolchain/toolchain.gni")
 
 # See https://bugs.chromium.org/p/webrtc/issues/detail?id=5453.
 # We can drop the rtc_require_mac_10_7_deployment flag when Chromium
@@ -38,6 +39,12 @@ declare_args() {
 _verify_sdk = is_chrome_branded && is_official_build && target_os != "ios"
 
 find_sdk_args = [ "--print_sdk_path" ]
+if (!use_system_xcode) {
+  find_sdk_args += [
+    "--developer_dir",
+    hermetic_xcode_path,
+  ]
+}
 if (_verify_sdk) {
   find_sdk_args += [
     "--verify",
@@ -58,8 +65,16 @@ if (mac_sdk_path == "") {
 }
 
 script_name = "//build/config/mac/sdk_info.py"
-_mac_sdk_result = exec_script(script_name, [ mac_sdk_name ], "scope")
-mac_sdk_build = _mac_sdk_result.sdk_build
+sdk_info_args = []
+if (!use_system_xcode) {
+  sdk_info_args += [
+    "--developer_dir",
+    hermetic_xcode_path,
+  ]
+}
+sdk_info_args += [ mac_sdk_name ]
+
+_mac_sdk_result = exec_script(script_name, sdk_info_args, "scope")
 xcode_version = _mac_sdk_result.xcode_version
 xcode_build = _mac_sdk_result.xcode_build
 machine_os_build = _mac_sdk_result.machine_os_build

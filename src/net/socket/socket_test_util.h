@@ -280,12 +280,12 @@ class StaticSocketDataHelper {
                          size_t writes_count);
   ~StaticSocketDataHelper();
 
-  // These functions get access to the next available read and write data,
-  // or null if there is no more data available.
+  // These functions get access to the next available read and write data. They
+  // CHECK fail if there is no data available.
   const MockRead& PeekRead() const;
   const MockWrite& PeekWrite() const;
 
-  // Returns the current read or write , and then advances to the next one.
+  // Returns the current read or write, and then advances to the next one.
   const MockRead& AdvanceRead();
   const MockWrite& AdvanceWrite();
 
@@ -306,6 +306,10 @@ class StaticSocketDataHelper {
   bool AllWriteDataConsumed() const { return write_index_ >= write_count_; }
 
  private:
+  // Returns the next available read or write that is not a pause event. CHECK
+  // fails if no data is available.
+  const MockWrite& PeekRealWrite() const;
+
   MockRead* reads_;
   size_t read_index_;
   size_t read_count_;
@@ -432,7 +436,7 @@ class SequencedSocketData : public SocketDataProvider {
     IDLE,        // No async operation is in progress.
     PENDING,     // An async operation in waiting for another opteration to
                  // complete.
-    COMPLETING,  // A task has been posted to complet an async operation.
+    COMPLETING,  // A task has been posted to complete an async operation.
     PAUSED,      // IO is paused until Resume() is called.
   };
 

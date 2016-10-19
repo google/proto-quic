@@ -105,7 +105,18 @@ struct WinHeapInfo {
 
 bool GetHeapInformation(WinHeapInfo* heap_info,
                         const std::set<void*>& block_to_skip) {
-  CHECK(::HeapLock(heap_info->heap_id) == TRUE);
+  // NOTE: crbug.com/464430
+  // As a part of the Client/Server Runtine Subsystem (CSRSS) lockdown in the
+  // referenced bug, it will invalidate the heap used by CSRSS. The author has
+  // not found a way to clean up an invalid heap handle, so it will be left in
+  // the process's heap list. Therefore we need to support when there is this
+  // invalid heap handle in the heap list.
+  // HeapLock implicitly checks certain aspects of the HEAP structure, such as
+  // the signature. If this passes, we assume that this heap is valid and is
+  // not the one owned by CSRSS.
+  if (!::HeapLock(heap_info->heap_id)) {
+    return false;
+  }
   PROCESS_HEAP_ENTRY heap_entry;
   heap_entry.lpData = nullptr;
   // Walk over all the entries in this heap.
@@ -161,15 +172,21 @@ void WinHeapMemoryDumpImpl(WinHeapInfo* all_heap_info) {
   block_to_skip.insert(all_heaps.get());
 
   // Retrieves some metrics about each heap.
+  size_t heap_info_errors = 0;
   for (size_t i = 0; i < number_of_heaps; ++i) {
     WinHeapInfo heap_info = {0};
     heap_info.heap_id = all_heaps[i];
-    GetHeapInformation(&heap_info, block_to_skip);
-
-    all_heap_info->allocated_size += heap_info.allocated_size;
-    all_heap_info->committed_size += heap_info.committed_size;
-    all_heap_info->uncommitted_size += heap_info.uncommitted_size;
-    all_heap_info->block_count += heap_info.block_count;
+    if (GetHeapInformation(&heap_info, block_to_skip)) {
+      all_heap_info->allocated_size += heap_info.allocated_size;
+      all_heap_info->committed_size += heap_info.committed_size;
+      all_heap_info->uncommitted_size += heap_info.uncommitted_size;
+      all_heap_info->block_count += heap_info.block_count;
+    } else {
+      ++heap_info_errors;
+      // See notes in GetHeapInformation() but we only expect 1 heap to not be
+      // able to be read.
+      CHECK_EQ(1u, heap_info_errors);
+    }
   }
 }
 #endif  // defined(OS_WIN)

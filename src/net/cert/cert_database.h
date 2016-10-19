@@ -39,17 +39,11 @@ class NET_EXPORT CertDatabase {
    public:
     virtual ~Observer() {}
 
-    // Will be called when a new certificate is added. If the imported cert can
-    // be determined, |cert| will be non-NULL, but if not, or if multiple
-    // certificates were imported, |cert| may be NULL.
-    virtual void OnCertAdded(const X509Certificate* cert) {}
-
-    // Will be called when a certificate is removed.
-    virtual void OnCertRemoved(const X509Certificate* cert) {}
-
-    // Will be called when a CA certificate was added, removed, or its trust
-    // changed. This can also mean that a client certificate's trust changed.
-    virtual void OnCACertChanged(const X509Certificate* cert) {}
+    // Called whenever the Cert Database is known to have changed.
+    // Typically, this will be in response to a CA certificate being added,
+    // removed, or its trust changed, but may also signal on client
+    // certificate events when they can be reliably detected.
+    virtual void OnCertDBChanged(const X509Certificate* cert) {}
 
    protected:
     Observer() {}
@@ -60,15 +54,6 @@ class NET_EXPORT CertDatabase {
 
   // Returns the CertDatabase singleton.
   static CertDatabase* GetInstance();
-
-  // Check whether this is a valid user cert that we have the private key for.
-  // Returns OK or a network error code such as ERR_CERT_CONTAINS_ERRORS.
-  int CheckUserCert(X509Certificate* cert);
-
-  // Store user (client) certificate. Assumes CheckUserCert has already passed.
-  // Returns OK, or ERR_ADD_USER_CERT_FAILED if there was a problem saving to
-  // the platform cert database, or possibly other network error codes.
-  int AddUserCert(X509Certificate* cert);
 
   // Registers |observer| to receive notifications of certificate changes.  The
   // thread on which this is called is the thread on which |observer| will be
@@ -101,9 +86,7 @@ class NET_EXPORT CertDatabase {
   // Synthetically injects notifications to all observers. In general, this
   // should only be called by the creator of the CertDatabase. Used to inject
   // notifcations from other DB interfaces.
-  void NotifyObserversOfCertAdded(const X509Certificate* cert);
-  void NotifyObserversOfCertRemoved(const X509Certificate* cert);
-  void NotifyObserversOfCACertChanged(const X509Certificate* cert);
+  void NotifyObserversCertDBChanged(const X509Certificate* cert);
 
  private:
   friend struct base::DefaultSingletonTraits<CertDatabase>;

@@ -28,7 +28,7 @@ class BASE_EXPORT TaskAnnotator {
 
   // Run a previously queued task. |queue_function| should match what was
   // passed into |DidQueueTask| for this task.
-  void RunTask(const char* queue_function, const PendingTask& pending_task);
+  void RunTask(const char* queue_function, PendingTask* pending_task);
 
  private:
   // Creates a process-wide unique ID to represent this task in trace events.

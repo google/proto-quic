@@ -6,14 +6,18 @@
 
 #include <stddef.h>
 
+#include "base/base_switches.h"
 #include "base/build_time.h"
+#include "base/feature_list.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/rand_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/test/gtest_util.h"
+#include "base/test/mock_entropy_provider.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -1130,6 +1134,21 @@ TEST(FieldTrialDeathTest, OneTimeRandomizedTrialWithoutFieldTrialList) {
           base::FieldTrialList::kNoExpirationYear, 1, 1,
           base::FieldTrial::ONE_TIME_RANDOMIZED, NULL),
       "");
+}
+
+TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
+  base::FieldTrialList field_trial_list(
+      base::MakeUnique<base::MockEntropyProvider>());
+  base::FieldTrialList::CreateFieldTrial("Trial1", "Group1");
+  base::FilePath test_file_path = base::FilePath(FILE_PATH_LITERAL("Program"));
+  base::CommandLine cmd_line = base::CommandLine(test_file_path);
+
+  std::unique_ptr<base::SharedMemory> field_trial_state =
+      base::FieldTrialList::CopyFieldTrialStateToFlags("field-trial-handle",
+                                                       &cmd_line);
+
+  EXPECT_TRUE(field_trial_state.get() == nullptr);
+  EXPECT_TRUE(cmd_line.HasSwitch(switches::kForceFieldTrials));
 }
 
 }  // namespace base

@@ -7,8 +7,8 @@
 
 #include <utility>
 
+#include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_checker.h"
-#include "mojo/common/common_type_converters.h"
 #include "net/dns/host_resolver_mojo.h"
 #include "net/interfaces/proxy_resolver_service.mojom.h"
 #include "net/log/net_log_with_source.h"
@@ -35,12 +35,12 @@ class MojoProxyResolverV8TracingBindings
   // ProxyResolverV8Tracing::Bindings overrides.
   void Alert(const base::string16& message) override {
     DCHECK(thread_checker_.CalledOnValidThread());
-    client_->Alert(mojo::String::From(message));
+    client_->Alert(base::UTF16ToUTF8(message));
   }
 
   void OnError(int line_number, const base::string16& message) override {
     DCHECK(thread_checker_.CalledOnValidThread());
-    client_->OnError(line_number, mojo::String::From(message));
+    client_->OnError(line_number, base::UTF16ToUTF8(message));
   }
 
   HostResolver* GetHostResolver() override {

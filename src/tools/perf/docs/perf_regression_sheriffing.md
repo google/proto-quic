@@ -128,10 +128,20 @@ file a bug on it (see [feedback](#feedback) links below).
 
 Also during your shift, please spend any spare time driving down bugs from the
 [regression backlog](http://go/triage-backlog). Treat these bugs as you would
-your own - investigate the regressions, find out what the next step should be,
-and then move the bug along. As the backlog only contains bugs that haven't been
-modified in some time, you should be able to end your shift with an empty
-backlog.
+your own -- investigate the regressions, find out what the next step should be,
+and then move the bug along. Some possible next steps and questions to answer
+are:
+
+*   Should the bug be closed?
+*   Are there questions that need to be answered?
+*   Are there people that should be added to the CC list?
+*   Is the correct owner assigned?
+
+When a bug does need to be pinged, rather than adding a generic "ping", it's
+much much more effective to include the username and action item.
+
+You should aim to end your shift with an empty backlog, but it's important to
+still advance each bug in a meaningful way.
 
 After your shift, please try to follow up on the bugs you filed weekly. Kick off
 new bisects if the previous ones failed, and if the bisect picks a likely

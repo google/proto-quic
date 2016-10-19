@@ -125,6 +125,53 @@ union ActivityData {
 // A "null" activity-data that can be passed to indicate "do not change".
 extern const ActivityData kNullActivityData;
 
+
+// A helper class that is used for managing memory allocations within a
+// persistent memory allocator. Instances of this class are NOT thread-safe.
+// Use from a single thread or protect access with a lock.
+class ActivityTrackerMemoryAllocator {
+ public:
+  using Reference = PersistentMemoryAllocator::Reference;
+
+  // Creates a instance for allocating objects of a fixed |object_type|, a
+  // corresponding |object_free| type, and the |object_size|. An internal
+  // cache of the last |cache_size| released references will be kept for
+  // quick future fetches.
+  ActivityTrackerMemoryAllocator(PersistentMemoryAllocator* allocator,
+                                 uint32_t object_type,
+                                 uint32_t object_free_type,
+                                 size_t object_size,
+                                 size_t cache_size);
+  ~ActivityTrackerMemoryAllocator();
+
+  // Gets a reference to an object of the configured type. This can return
+  // a null reference if it was not possible to allocate the memory.
+  Reference GetObjectReference();
+
+  // Returns an object to the "free" pool.
+  void ReleaseObjectReference(Reference ref);
+
+  // The current "used size" of the internal cache, visible for testing.
+  size_t cache_used() const { return cache_used_; }
+
+ private:
+  PersistentMemoryAllocator* const allocator_;
+  const uint32_t object_type_;
+  const uint32_t object_free_type_;
+  const size_t object_size_;
+  const size_t cache_size_;
+
+  // An iterator for going through persistent memory looking for free'd objects.
+  PersistentMemoryAllocator::Iterator iterator_;
+
+  // The cache of released object memories.
+  std::unique_ptr<Reference[]> cache_values_;
+  size_t cache_used_;
+
+  DISALLOW_COPY_AND_ASSIGN(ActivityTrackerMemoryAllocator);
+};
+
+
 // This structure is the full contents recorded for every activity pushed
 // onto the stack. The |activity_type| indicates what is actually stored in
 // the |data| field. All fields must be explicitly sized types to ensure no
@@ -344,46 +391,6 @@ class BASE_EXPORT ThreadActivityTracker {
 // the thread trackers is taken from a PersistentMemoryAllocator which allows
 // for the data to be analyzed by a parallel process or even post-mortem.
 class BASE_EXPORT GlobalActivityTracker {
-  template <typename T>
-  class ThreadSafeStack {
-   public:
-    ThreadSafeStack(size_t size)
-        : size_(size), values_(new T[size]), used_(0) {}
-    ~ThreadSafeStack() {}
-
-    size_t size() { return size_; }
-    size_t used() {
-      base::AutoLock autolock(lock_);
-      return used_;
-    }
-
-    bool push(T value) {
-      base::AutoLock autolock(lock_);
-      if (used_ == size_)
-        return false;
-      values_[used_++] = value;
-      return true;
-    }
-
-    bool pop(T* out_value) {
-      base::AutoLock autolock(lock_);
-      if (used_ == 0)
-        return false;
-      *out_value = values_[--used_];
-      return true;
-    }
-
-   private:
-    const size_t size_;
-
-    std::unique_ptr<T[]> values_;
-    size_t used_;
-    base::Lock lock_;
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(ThreadSafeStack);
-  };
-
  public:
   // Type identifiers used when storing in persistent memory so they can be
   // identified during extraction; the first 4 bytes of the SHA1 of the name
@@ -393,7 +400,7 @@ class BASE_EXPORT GlobalActivityTracker {
   // can recognize records of this type within an allocator.
   enum : uint32_t {
     kTypeIdActivityTracker     = 0x5D7381AF + 1,  // SHA1(ActivityTracker) v1
-    kTypeIdActivityTrackerFree = 0x3F0272FB + 1,  // SHA1(ActivityTrackerFree)
+    kTypeIdActivityTrackerFree = ~kTypeIdActivityTracker,
   };
 
   // This is a thin wrapper around the thread-tracker's ScopedActivity that
@@ -499,6 +506,7 @@ class BASE_EXPORT GlobalActivityTracker {
     // The maximum number of threads that can be tracked within a process. If
     // more than this number run concurrently, tracking of new ones may cease.
     kMaxThreadCount = 100,
+    kCachedThreadMemories = 10,
   };
 
   // A thin wrapper around the main thread-tracker that keeps additional
@@ -550,9 +558,9 @@ class BASE_EXPORT GlobalActivityTracker {
   // The number of thread trackers currently active.
   std::atomic<int> thread_tracker_count_;
 
-  // A cache of thread-tracker memories that have been previously freed and
-  // thus can be re-used instead of allocating new ones.
-  ThreadSafeStack<PersistentMemoryAllocator::Reference> available_memories_;
+  // A caching memory allocator for thread-tracker objects.
+  ActivityTrackerMemoryAllocator thread_tracker_allocator_;
+  base::Lock thread_tracker_allocator_lock_;
 
   // The active global activity tracker.
   static GlobalActivityTracker* g_tracker_;

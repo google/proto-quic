@@ -112,8 +112,14 @@ std::unique_ptr<base::Value> NetLogPrivateKeyOperationCallback(
     case SSLPrivateKey::Type::RSA:
       type_str = "RSA";
       break;
-    case SSLPrivateKey::Type::ECDSA:
-      type_str = "ECDSA";
+    case SSLPrivateKey::Type::ECDSA_P256:
+      type_str = "ECDSA_P256";
+      break;
+    case SSLPrivateKey::Type::ECDSA_P384:
+      type_str = "ECDSA_P384";
+      break;
+    case SSLPrivateKey::Type::ECDSA_P521:
+      type_str = "ECDSA_P521";
       break;
   }
 
@@ -194,6 +200,22 @@ std::unique_ptr<base::Value> NetLogSSLInfoCallback(
   return std::move(dict);
 }
 
+int GetBufferSize(const char* field_trial) {
+  // Get buffer sizes from field trials, if possible. If values not present,
+  // use default.  Also make sure values are in reasonable range.
+  int buffer_size = kDefaultOpenSSLBufferSize;
+#if !defined(OS_NACL)
+  int override_buffer_size;
+  if (base::StringToInt(base::FieldTrialList::FindFullName(field_trial),
+                        &override_buffer_size)) {
+    buffer_size = override_buffer_size;
+    buffer_size = std::max(buffer_size, 1000);
+    buffer_size = std::min(buffer_size, 2 * kDefaultOpenSSLBufferSize);
+  }
+#endif  // !defined(OS_NACL)
+  return buffer_size;
+}
+
 }  // namespace
 
 class SSLClientSocketImpl::SSLContext {
@@ -239,10 +261,6 @@ class SSLClientSocketImpl::SSLContext {
     SSL_CTX_set_cert_verify_callback(ssl_ctx_.get(), CertVerifyCallback, NULL);
     SSL_CTX_set_cert_cb(ssl_ctx_.get(), ClientCertRequestCallback, NULL);
     SSL_CTX_set_verify(ssl_ctx_.get(), SSL_VERIFY_PEER, NULL);
-    // This stops |SSL_shutdown| from generating the close_notify message, which
-    // is currently not sent on the network.
-    // TODO(haavardm): Remove setting quiet shutdown once 118366 is fixed.
-    SSL_CTX_set_quiet_shutdown(ssl_ctx_.get(), 1);
 
     // Disable the internal session cache. Session caching is handled
     // externally (i.e. by SSLClientSessionCache).
@@ -474,12 +492,8 @@ SSLClientSocketImpl::SSLClientSocketImpl(
     const HostPortPair& host_and_port,
     const SSLConfig& ssl_config,
     const SSLClientSocketContext& context)
-    : transport_send_busy_(false),
-      transport_recv_busy_(false),
-      pending_read_error_(kNoPendingResult),
+    : pending_read_error_(kNoPendingResult),
       pending_read_ssl_error_(SSL_ERROR_NONE),
-      transport_read_error_(OK),
-      transport_write_error_(OK),
       server_cert_chain_(new PeerCertificateChain(NULL)),
       completed_connect_(false),
       was_ever_used_(false),
@@ -625,28 +639,15 @@ int SSLClientSocketImpl::Connect(const CompletionCallback& callback) {
 }
 
 void SSLClientSocketImpl::Disconnect() {
-  crypto::OpenSSLErrStackTracer tracer(FROM_HERE);
-
-  if (ssl_) {
-    // Calling SSL_shutdown prevents the session from being marked as
-    // unresumable.
-    SSL_shutdown(ssl_.get());
-    ssl_.reset();
-  }
-  transport_bio_.reset();
-
   disconnected_ = true;
 
   // Shut down anything that may call us back.
   cert_verifier_request_.reset();
-  transport_->socket()->Disconnect();
+  channel_id_request_.Cancel();
+  weak_factory_.InvalidateWeakPtrs();
+  transport_adapter_.reset();
 
-  // Null all callbacks, delete all buffers.
-  transport_send_busy_ = false;
-  send_buffer_ = NULL;
-  transport_recv_busy_ = false;
-  recv_buffer_ = NULL;
-
+  // Release user callbacks.
   user_connect_callback_.Reset();
   user_read_callback_.Reset();
   user_write_callback_.Reset();
@@ -655,37 +656,13 @@ void SSLClientSocketImpl::Disconnect() {
   user_write_buf_ = NULL;
   user_write_buf_len_ = 0;
 
-  pending_read_error_ = kNoPendingResult;
-  pending_read_ssl_error_ = SSL_ERROR_NONE;
-  pending_read_error_info_ = OpenSSLErrorInfo();
-
-  transport_read_error_ = OK;
-  transport_write_error_ = OK;
-
-  server_cert_verify_result_.Reset();
-  completed_connect_ = false;
-
-  cert_authorities_.clear();
-  cert_key_types_.clear();
-
-  start_cert_verification_time_ = base::TimeTicks();
-
-  negotiated_protocol_ = kProtoUnknown;
-
-  channel_id_sent_ = false;
-  tb_was_negotiated_ = false;
-  pending_session_ = nullptr;
-  certificate_verified_ = false;
-  certificate_requested_ = false;
-  channel_id_request_.Cancel();
-
-  signature_result_ = kNoPendingResult;
-  signature_.clear();
+  transport_->socket()->Disconnect();
 }
 
 bool SSLClientSocketImpl::IsConnected() const {
-  // If the handshake has not yet completed.
-  if (!completed_connect_)
+  // If the handshake has not yet completed or the socket has been explicitly
+  // disconnected.
+  if (!completed_connect_ || disconnected_)
     return false;
   // If an asynchronous operation is still pending.
   if (user_read_buf_.get() || user_write_buf_.get())
@@ -695,8 +672,9 @@ bool SSLClientSocketImpl::IsConnected() const {
 }
 
 bool SSLClientSocketImpl::IsConnectedAndIdle() const {
-  // If the handshake has not yet completed.
-  if (!completed_connect_)
+  // If the handshake has not yet completed or the socket has been explicitly
+  // disconnected.
+  if (!completed_connect_ || disconnected_)
     return false;
   // If an asynchronous operation is still pending.
   if (user_read_buf_.get() || user_write_buf_.get())
@@ -705,11 +683,11 @@ bool SSLClientSocketImpl::IsConnectedAndIdle() const {
   // If there is data read from the network that has not yet been consumed, do
   // not treat the connection as idle.
   //
-  // Note that this does not check |BIO_pending|, whether there is ciphertext
-  // that has not yet been flushed to the network. |Write| returns early, so
-  // this can cause race conditions which cause a socket to not be treated
-  // reusable when it should be. See https://crbug.com/466147.
-  if (BIO_wpending(transport_bio_.get()) > 0)
+  // Note that this does not check whether there is ciphertext that has not yet
+  // been flushed to the network. |Write| returns early, so this can cause race
+  // conditions which cause a socket to not be treated reusable when it should
+  // be. See https://crbug.com/466147.
+  if (transport_adapter_->HasPendingReadData())
     return false;
 
   return transport_->socket()->IsConnectedAndIdle();
@@ -813,7 +791,7 @@ int SSLClientSocketImpl::Read(IOBuffer* buf,
   user_read_buf_ = buf;
   user_read_buf_len_ = buf_len;
 
-  int rv = DoReadLoop();
+  int rv = DoPayloadRead();
 
   if (rv == ERR_IO_PENDING) {
     user_read_callback_ = callback;
@@ -833,7 +811,7 @@ int SSLClientSocketImpl::Write(IOBuffer* buf,
   user_write_buf_ = buf;
   user_write_buf_len_ = buf_len;
 
-  int rv = DoWriteLoop();
+  int rv = DoPayloadWrite();
 
   if (rv == ERR_IO_PENDING) {
     user_write_callback_ = callback;
@@ -855,9 +833,20 @@ int SSLClientSocketImpl::SetSendBufferSize(int32_t size) {
   return transport_->socket()->SetSendBufferSize(size);
 }
 
+void SSLClientSocketImpl::OnReadReady() {
+  // During a renegotiation, either Read or Write calls may be blocked on a
+  // transport read.
+  RetryAllOperations();
+}
+
+void SSLClientSocketImpl::OnWriteReady() {
+  // During a renegotiation, either Read or Write calls may be blocked on a
+  // transport read.
+  RetryAllOperations();
+}
+
 int SSLClientSocketImpl::Init() {
   DCHECK(!ssl_);
-  DCHECK(!transport_bio_);
 
 #if defined(USE_NSS_CERTS)
   if (ssl_config_.cert_io_enabled) {
@@ -890,55 +879,16 @@ int SSLClientSocketImpl::Init() {
   if (session)
     SSL_set_session(ssl_.get(), session.get());
 
-  // Get read and write buffer sizes from field trials, if possible. If values
-  // not present, use default.  Also make sure values are in reasonable range.
-  int send_buffer_size = kDefaultOpenSSLBufferSize;
-#if !defined(OS_NACL)
-  int override_send_buffer_size;
-  if (base::StringToInt(base::FieldTrialList::FindFullName("SSLBufferSizeSend"),
-                        &override_send_buffer_size)) {
-    send_buffer_size = override_send_buffer_size;
-    send_buffer_size = std::max(send_buffer_size, 1000);
-    send_buffer_size =
-        std::min(send_buffer_size, 2 * kDefaultOpenSSLBufferSize);
-  }
-#endif  // !defined(OS_NACL)
-  send_buffer_ = new GrowableIOBuffer();
-  send_buffer_->SetCapacity(send_buffer_size);
+  transport_adapter_.reset(new SocketBIOAdapter(
+      transport_->socket(), GetBufferSize("SSLBufferSizeRecv"),
+      GetBufferSize("SSLBufferSizeSend"), this));
+  BIO* transport_bio = transport_adapter_->bio();
 
-  int recv_buffer_size = kDefaultOpenSSLBufferSize;
-#if !defined(OS_NACL)
-  int override_recv_buffer_size;
-  if (base::StringToInt(base::FieldTrialList::FindFullName("SSLBufferSizeRecv"),
-                        &override_recv_buffer_size)) {
-    recv_buffer_size = override_recv_buffer_size;
-    recv_buffer_size = std::max(recv_buffer_size, 1000);
-    recv_buffer_size =
-        std::min(recv_buffer_size, 2 * kDefaultOpenSSLBufferSize);
-  }
-#endif  // !defined(OS_NACL)
-  recv_buffer_ = new GrowableIOBuffer();
-  recv_buffer_->SetCapacity(recv_buffer_size);
+  BIO_up_ref(transport_bio);  // SSL_set0_rbio takes ownership.
+  SSL_set0_rbio(ssl_.get(), transport_bio);
 
-  BIO* ssl_bio = NULL;
-
-  // SSLClientSocketImpl retains ownership of the BIO buffers.
-  BIO* transport_bio_raw;
-  if (!BIO_new_bio_pair_external_buf(
-          &ssl_bio, send_buffer_->capacity(),
-          reinterpret_cast<uint8_t*>(send_buffer_->data()), &transport_bio_raw,
-          recv_buffer_->capacity(),
-          reinterpret_cast<uint8_t*>(recv_buffer_->data())))
-    return ERR_UNEXPECTED;
-  transport_bio_.reset(transport_bio_raw);
-  DCHECK(ssl_bio);
-  DCHECK(transport_bio_);
-
-  // Install a callback on OpenSSL's end to plumb transport errors through.
-  BIO_set_callback(ssl_bio, &SSLClientSocketImpl::BIOCallback);
-  BIO_set_callback_arg(ssl_bio, reinterpret_cast<char*>(this));
-
-  SSL_set_bio(ssl_.get(), ssl_bio, ssl_bio);
+  BIO_up_ref(transport_bio);  // SSL_set0_wbio takes ownership.
+  SSL_set0_wbio(ssl_.get(), transport_bio);
 
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_min);
   DCHECK_LT(SSL3_VERSION, ssl_config_.version_max);
@@ -1064,21 +1014,6 @@ void SSLClientSocketImpl::DoWriteCallback(int rv) {
   user_write_buf_ = NULL;
   user_write_buf_len_ = 0;
   base::ResetAndReturn(&user_write_callback_).Run(rv);
-}
-
-bool SSLClientSocketImpl::DoTransportIO() {
-  bool network_moved = false;
-  int rv;
-  // Read and write as much data as possible. The loop is necessary because
-  // Write() may return synchronously.
-  do {
-    rv = BufferSend();
-    if (rv != ERR_IO_PENDING && rv != 0)
-      network_moved = true;
-  } while (rv > 0);
-  if (transport_read_error_ == OK && BufferRecv() != ERR_IO_PENDING)
-    network_moved = true;
-  return network_moved;
 }
 
 // TODO(cbentzel): Remove including "base/threading/thread_local.h" and
@@ -1368,36 +1303,6 @@ void SSLClientSocketImpl::OnHandshakeIOComplete(int result) {
   }
 }
 
-void SSLClientSocketImpl::OnSendComplete(int result) {
-  if (next_handshake_state_ == STATE_HANDSHAKE) {
-    // In handshake phase.
-    OnHandshakeIOComplete(result);
-    return;
-  }
-
-  // During a renegotiation, a Read call may also be blocked on a transport
-  // write, so retry both operations.
-  PumpReadWriteEvents();
-}
-
-void SSLClientSocketImpl::OnRecvComplete(int result) {
-  TRACE_EVENT0("net", "SSLClientSocketImpl::OnRecvComplete");
-  if (next_handshake_state_ == STATE_HANDSHAKE) {
-    // In handshake phase.
-    OnHandshakeIOComplete(result);
-    return;
-  }
-
-  // Network layer received some data, check if client requested to read
-  // decrypted data.
-  if (!user_read_buf_.get())
-    return;
-
-  int rv = DoReadLoop();
-  if (rv != ERR_IO_PENDING)
-    DoReadCallback(rv);
-}
-
 int SSLClientSocketImpl::DoHandshakeLoop(int last_io_result) {
   TRACE_EVENT0("net", "SSLClientSocketImpl::DoHandshakeLoop");
   int rv = last_io_result;
@@ -1436,37 +1341,7 @@ int SSLClientSocketImpl::DoHandshakeLoop(int last_io_result) {
         NOTREACHED() << "unexpected state" << state;
         break;
     }
-
-    bool network_moved = DoTransportIO();
-    if (network_moved && next_handshake_state_ == STATE_HANDSHAKE) {
-      // In general we exit the loop if rv is ERR_IO_PENDING.  In this
-      // special case we keep looping even if rv is ERR_IO_PENDING because
-      // the transport IO may allow DoHandshake to make progress.
-      rv = OK;  // This causes us to stay in the loop.
-    }
   } while (rv != ERR_IO_PENDING && next_handshake_state_ != STATE_NONE);
-  return rv;
-}
-
-int SSLClientSocketImpl::DoReadLoop() {
-  bool network_moved;
-  int rv;
-  do {
-    rv = DoPayloadRead();
-    network_moved = DoTransportIO();
-  } while (rv == ERR_IO_PENDING && network_moved);
-
-  return rv;
-}
-
-int SSLClientSocketImpl::DoWriteLoop() {
-  bool network_moved;
-  int rv;
-  do {
-    rv = DoPayloadWrite();
-    network_moved = DoTransportIO();
-  } while (rv == ERR_IO_PENDING && network_moved);
-
   return rv;
 }
 
@@ -1546,9 +1421,7 @@ int SSLClientSocketImpl::DoPayloadRead() {
 
     // Do not treat insufficient data as an error to return in the next call to
     // DoPayloadRead() - instead, let the call fall through to check SSL_read()
-    // again. This is because DoTransportIO() may complete in between the next
-    // call to DoPayloadRead(), and thus it is important to check SSL_read() on
-    // subsequent invocations to see if a complete record may now be read.
+    // again. The transport may have data available by then.
     if (pending_read_error_ == ERR_IO_PENDING)
       pending_read_error_ = kNoPendingResult;
   } else {
@@ -1596,156 +1469,36 @@ int SSLClientSocketImpl::DoPayloadWrite() {
   return net_error;
 }
 
-void SSLClientSocketImpl::PumpReadWriteEvents() {
+void SSLClientSocketImpl::RetryAllOperations() {
+  // SSL_do_handshake, SSL_read, and SSL_write may all be retried when blocked,
+  // so retry all operations for simplicity. (Otherwise, SSL_get_error for each
+  // operation may be remembered to retry only the blocked ones.)
+
+  if (next_handshake_state_ == STATE_HANDSHAKE) {
+    // In handshake phase. The parameter to OnHandshakeIOComplete is unused.
+    OnHandshakeIOComplete(OK);
+    return;
+  }
+
   int rv_read = ERR_IO_PENDING;
   int rv_write = ERR_IO_PENDING;
-  bool network_moved;
-  do {
-    if (user_read_buf_.get())
-      rv_read = DoPayloadRead();
-    if (user_write_buf_.get())
-      rv_write = DoPayloadWrite();
-    network_moved = DoTransportIO();
-  } while (rv_read == ERR_IO_PENDING && rv_write == ERR_IO_PENDING &&
-           (user_read_buf_.get() || user_write_buf_.get()) && network_moved);
+  if (user_read_buf_)
+    rv_read = DoPayloadRead();
+  if (user_write_buf_)
+    rv_write = DoPayloadWrite();
 
   // Performing the Read callback may cause |this| to be deleted. If this
   // happens, the Write callback should not be invoked. Guard against this by
   // holding a WeakPtr to |this| and ensuring it's still valid.
   base::WeakPtr<SSLClientSocketImpl> guard(weak_factory_.GetWeakPtr());
-  if (user_read_buf_.get() && rv_read != ERR_IO_PENDING)
+  if (rv_read != ERR_IO_PENDING)
     DoReadCallback(rv_read);
 
   if (!guard.get())
     return;
 
-  if (user_write_buf_.get() && rv_write != ERR_IO_PENDING)
+  if (rv_write != ERR_IO_PENDING)
     DoWriteCallback(rv_write);
-}
-
-int SSLClientSocketImpl::BufferSend(void) {
-  if (transport_send_busy_)
-    return ERR_IO_PENDING;
-
-  size_t buffer_read_offset;
-  uint8_t* read_buf;
-  size_t max_read;
-  int status = BIO_zero_copy_get_read_buf(transport_bio_.get(), &read_buf,
-                                          &buffer_read_offset, &max_read);
-  DCHECK_EQ(status, 1);  // Should never fail.
-  if (!max_read)
-    return 0;  // Nothing pending in the OpenSSL write BIO.
-  CHECK_EQ(read_buf, reinterpret_cast<uint8_t*>(send_buffer_->StartOfBuffer()));
-  CHECK_LT(buffer_read_offset, static_cast<size_t>(send_buffer_->capacity()));
-  send_buffer_->set_offset(buffer_read_offset);
-
-  int rv = transport_->socket()->Write(
-      send_buffer_.get(), max_read,
-      base::Bind(&SSLClientSocketImpl::BufferSendComplete,
-                 base::Unretained(this)));
-  if (rv == ERR_IO_PENDING) {
-    transport_send_busy_ = true;
-  } else {
-    TransportWriteComplete(rv);
-  }
-  return rv;
-}
-
-int SSLClientSocketImpl::BufferRecv(void) {
-  if (transport_recv_busy_)
-    return ERR_IO_PENDING;
-
-  // Determine how much was requested from |transport_bio_| that was not
-  // actually available.
-  size_t requested = BIO_ctrl_get_read_request(transport_bio_.get());
-  if (requested == 0) {
-    // This is not a perfect match of error codes, as no operation is
-    // actually pending. However, returning 0 would be interpreted as
-    // a possible sign of EOF, which is also an inappropriate match.
-    return ERR_IO_PENDING;
-  }
-
-  // Known Issue: While only reading |requested| data is the more correct
-  // implementation, it has the downside of resulting in frequent reads:
-  // One read for the SSL record header (~5 bytes) and one read for the SSL
-  // record body. Rather than issuing these reads to the underlying socket
-  // (and constantly allocating new IOBuffers), a single Read() request to
-  // fill |transport_bio_| is issued. As long as an SSL client socket cannot
-  // be gracefully shutdown (via SSL close alerts) and re-used for non-SSL
-  // traffic, this over-subscribed Read()ing will not cause issues.
-
-  size_t buffer_write_offset;
-  uint8_t* write_buf;
-  size_t max_write;
-  int status = BIO_zero_copy_get_write_buf(transport_bio_.get(), &write_buf,
-                                           &buffer_write_offset, &max_write);
-  DCHECK_EQ(status, 1);  // Should never fail.
-  if (!max_write)
-    return ERR_IO_PENDING;
-
-  CHECK_EQ(write_buf,
-           reinterpret_cast<uint8_t*>(recv_buffer_->StartOfBuffer()));
-  CHECK_LT(buffer_write_offset, static_cast<size_t>(recv_buffer_->capacity()));
-
-  recv_buffer_->set_offset(buffer_write_offset);
-  int rv = transport_->socket()->Read(
-      recv_buffer_.get(), max_write,
-      base::Bind(&SSLClientSocketImpl::BufferRecvComplete,
-                 base::Unretained(this)));
-  if (rv == ERR_IO_PENDING) {
-    transport_recv_busy_ = true;
-  } else {
-    rv = TransportReadComplete(rv);
-  }
-  return rv;
-}
-
-void SSLClientSocketImpl::BufferSendComplete(int result) {
-  TransportWriteComplete(result);
-  OnSendComplete(result);
-}
-
-void SSLClientSocketImpl::BufferRecvComplete(int result) {
-  result = TransportReadComplete(result);
-  OnRecvComplete(result);
-}
-
-void SSLClientSocketImpl::TransportWriteComplete(int result) {
-  DCHECK(ERR_IO_PENDING != result);
-  int bytes_written = 0;
-  if (result < 0) {
-    // Record the error. Save it to be reported in a future read or write on
-    // transport_bio_'s peer.
-    transport_write_error_ = result;
-  } else {
-    bytes_written = result;
-  }
-  DCHECK_GE(send_buffer_->RemainingCapacity(), bytes_written);
-  int ret =
-      BIO_zero_copy_get_read_buf_done(transport_bio_.get(), bytes_written);
-  DCHECK_EQ(1, ret);
-  transport_send_busy_ = false;
-}
-
-int SSLClientSocketImpl::TransportReadComplete(int result) {
-  DCHECK(ERR_IO_PENDING != result);
-  // If an EOF, canonicalize to ERR_CONNECTION_CLOSED here so MapOpenSSLError
-  // does not report success.
-  if (result == 0)
-    result = ERR_CONNECTION_CLOSED;
-  int bytes_read = 0;
-  if (result < 0) {
-    // Received an error. Save it to be reported in a future read on
-    // transport_bio_'s peer.
-    transport_read_error_ = result;
-  } else {
-    bytes_read = result;
-  }
-  DCHECK_GE(recv_buffer_->RemainingCapacity(), bytes_read);
-  int ret = BIO_zero_copy_get_write_buf_done(transport_bio_.get(), bytes_read);
-  DCHECK_EQ(1, ret);
-  transport_recv_busy_ = false;
-  return result;
 }
 
 int SSLClientSocketImpl::VerifyCT() {
@@ -1947,53 +1700,6 @@ int SSLClientSocketImpl::CertVerifyCallback(X509_STORE_CTX* store_ctx) {
   return 1;
 }
 
-long SSLClientSocketImpl::MaybeReplayTransportError(BIO* bio,
-                                                    int cmd,
-                                                    const char* argp,
-                                                    int argi,
-                                                    long argl,
-                                                    long retvalue) {
-  if (cmd == (BIO_CB_READ | BIO_CB_RETURN) && retvalue <= 0) {
-    // If there is no more data in the buffer, report any pending errors that
-    // were observed. Note that both the readbuf and the writebuf are checked
-    // for errors, since the application may have encountered a socket error
-    // while writing that would otherwise not be reported until the application
-    // attempted to write again - which it may never do. See
-    // https://crbug.com/249848.
-    if (transport_read_error_ != OK) {
-      OpenSSLPutNetError(FROM_HERE, transport_read_error_);
-      return -1;
-    }
-    if (transport_write_error_ != OK) {
-      OpenSSLPutNetError(FROM_HERE, transport_write_error_);
-      return -1;
-    }
-  } else if (cmd == BIO_CB_WRITE) {
-    // Because of the write buffer, this reports a failure from the previous
-    // write payload. If the current payload fails to write, the error will be
-    // reported in a future write or read to |bio|.
-    if (transport_write_error_ != OK) {
-      OpenSSLPutNetError(FROM_HERE, transport_write_error_);
-      return -1;
-    }
-  }
-  return retvalue;
-}
-
-// static
-long SSLClientSocketImpl::BIOCallback(BIO* bio,
-                                      int cmd,
-                                      const char* argp,
-                                      int argi,
-                                      long argl,
-                                      long retvalue) {
-  SSLClientSocketImpl* socket =
-      reinterpret_cast<SSLClientSocketImpl*>(BIO_get_callback_arg(bio));
-  CHECK(socket);
-  return socket->MaybeReplayTransportError(bio, cmd, argp, argi, argl,
-                                           retvalue);
-}
-
 void SSLClientSocketImpl::MaybeCacheSession() {
   // Only cache the session once both a new session has been established and the
   // certificate has been verified. Due to False Start, these events may happen
@@ -2050,12 +1756,16 @@ bool SSLClientSocketImpl::IsRenegotiationAllowed() const {
 int SSLClientSocketImpl::PrivateKeyTypeCallback() {
   switch (ssl_config_.client_private_key->GetType()) {
     case SSLPrivateKey::Type::RSA:
-      return EVP_PKEY_RSA;
-    case SSLPrivateKey::Type::ECDSA:
-      return EVP_PKEY_EC;
+      return NID_rsaEncryption;
+    case SSLPrivateKey::Type::ECDSA_P256:
+      return NID_X9_62_prime256v1;
+    case SSLPrivateKey::Type::ECDSA_P384:
+      return NID_secp384r1;
+    case SSLPrivateKey::Type::ECDSA_P521:
+      return NID_secp521r1;
   }
   NOTREACHED();
-  return EVP_PKEY_NONE;
+  return NID_undef;
 }
 
 size_t SSLClientSocketImpl::PrivateKeyMaxSignatureLenCallback() {
@@ -2128,14 +1838,9 @@ void SSLClientSocketImpl::OnPrivateKeyComplete(
   if (signature_result_ == OK)
     signature_ = signature;
 
-  if (next_handshake_state_ == STATE_HANDSHAKE) {
-    OnHandshakeIOComplete(signature_result_);
-    return;
-  }
-
   // During a renegotiation, either Read or Write calls may be blocked on an
   // asynchronous private key operation.
-  PumpReadWriteEvents();
+  RetryAllOperations();
 }
 
 int SSLClientSocketImpl::TokenBindingAdd(const uint8_t** out,

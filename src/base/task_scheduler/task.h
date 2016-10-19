@@ -36,6 +36,9 @@ struct BASE_EXPORT Task : public PendingTask {
   // The TaskTraits of this task.
   const TaskTraits traits;
 
+  // The delay that must expire before the task runs.
+  const TimeDelta delay;
+
   // The time at which the task was inserted in its sequence. For an undelayed
   // task, this happens at post time. For a delayed task, this happens some
   // time after the task's delay has expired. If the task hasn't been inserted

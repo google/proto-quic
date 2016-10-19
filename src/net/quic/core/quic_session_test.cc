@@ -7,6 +7,7 @@
 #include <set>
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/rand_util.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -129,7 +130,7 @@ class TestSession : public QuicSpdySession {
   TestStream* CreateOutgoingDynamicStream(SpdyPriority priority) override {
     TestStream* stream = new TestStream(GetNextOutgoingStreamId(), this);
     stream->SetPriority(priority);
-    ActivateStream(stream);
+    ActivateStream(base::WrapUnique(stream));
     return stream;
   }
 
@@ -142,7 +143,7 @@ class TestSession : public QuicSpdySession {
       return nullptr;
     } else {
       TestStream* stream = new TestStream(id, this);
-      ActivateStream(stream);
+      ActivateStream(base::WrapUnique(stream));
       return stream;
     }
   }
@@ -173,6 +174,11 @@ class TestSession : public QuicSpdySession {
       consumed = QuicSession::WritevData(stream, id, data, offset, fin,
                                          ack_notifier_delegate);
     }
+    stream->set_stream_bytes_written(stream->stream_bytes_written() +
+                                     consumed.bytes_consumed);
+    if (fin && consumed.fin_consumed) {
+      stream->set_fin_sent(true);
+    }
     QuicSessionPeer::GetWriteBlockedStreams(this)->UpdateBytesForStream(
         id, consumed.bytes_consumed);
     return consumed;
@@ -187,8 +193,10 @@ class TestSession : public QuicSpdySession {
     if (stream->id() != kCryptoStreamId) {
       this->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
     }
-    return WritevData(stream, stream->id(), MakeIOVector("not empty", &iov), 0,
-                      true, nullptr);
+    QuicConsumedData consumed =
+        WritevData(stream, stream->id(), MakeIOVector("not empty", &iov), 0,
+                   true, nullptr);
+    return consumed;
   }
 
   QuicConsumedData SendLargeFakeData(ReliableQuicStream* stream, int bytes) {
@@ -389,6 +397,7 @@ TEST_P(QuicSessionTestServer, DebugDFatalIfMarkingClosedStreamWriteBlocked) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWrite) {
+  session_.set_writev_consumes_all_data(true);
   TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream4 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream6 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
@@ -402,17 +411,27 @@ TEST_P(QuicSessionTestServer, OnCanWrite) {
 
   // Reregister, to test the loop limit.
   EXPECT_CALL(*stream2, OnCanWrite())
-      .WillOnce(Invoke(&stream2_blocker,
-                       &StreamBlocker::MarkConnectionLevelWriteBlocked));
+      .WillOnce(DoAll(testing::IgnoreResult(Invoke(
+                          CreateFunctor(&TestSession::SendStreamData,
+                                        base::Unretained(&session_), stream2))),
+                      Invoke(&stream2_blocker,
+                             &StreamBlocker::MarkConnectionLevelWriteBlocked)));
   // 2 will get called a second time as it didn't finish its block
-  EXPECT_CALL(*stream2, OnCanWrite());
-  EXPECT_CALL(*stream6, OnCanWrite());
+  EXPECT_CALL(*stream2, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream2))));
+  EXPECT_CALL(*stream6, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream6))));
   // 4 will not get called, as we exceeded the loop limit.
   session_.OnCanWrite();
   EXPECT_TRUE(session_.WillingAndAbleToWrite());
 }
 
 TEST_P(QuicSessionTestServer, TestBatchedWrites) {
+  session_.set_writev_consumes_all_data(true);
   TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream4 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream6 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
@@ -471,9 +490,12 @@ TEST_P(QuicSessionTestServer, TestBatchedWrites) {
                       Invoke(&stream6_blocker,
                              &StreamBlocker::MarkConnectionLevelWriteBlocked)));
   EXPECT_CALL(*stream6, OnCanWrite())
-      .WillOnce(testing::IgnoreResult(
-          Invoke(CreateFunctor(&TestSession::SendLargeFakeData,
-                               base::Unretained(&session_), stream4, 6000))));
+      .WillOnce(DoAll(testing::IgnoreResult(Invoke(
+                          CreateFunctor(&TestSession::SendStreamData,
+                                        base::Unretained(&session_), stream6))),
+                      testing::IgnoreResult(Invoke(CreateFunctor(
+                          &TestSession::SendLargeFakeData,
+                          base::Unretained(&session_), stream4, 6000)))));
   session_.OnCanWrite();
 
   // Stream4 alread did 6k worth of writes, so after doing another 12k it should
@@ -542,6 +564,7 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
+  session_.set_writev_consumes_all_data(true);
   InSequence s;
 
   // Drive congestion control manually.
@@ -560,10 +583,16 @@ TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
   StreamBlocker stream2_blocker(&session_, stream2->id());
   EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Zero()));
-  EXPECT_CALL(*stream2, OnCanWrite());
+  EXPECT_CALL(*stream2, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream2))));
   EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Zero()));
-  EXPECT_CALL(*stream6, OnCanWrite());
+  EXPECT_CALL(*stream6, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream6))));
   EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Infinite()));
   // stream4->OnCanWrite is not called.
@@ -581,7 +610,10 @@ TEST_P(QuicSessionTestServer, OnCanWriteCongestionControlBlocks) {
   // congestion-control blocked.
   EXPECT_CALL(*send_algorithm, TimeUntilSend(_, _))
       .WillOnce(Return(QuicTime::Delta::Zero()));
-  EXPECT_CALL(*stream4, OnCanWrite());
+  EXPECT_CALL(*stream4, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream4))));
   EXPECT_CALL(*send_algorithm, OnApplicationLimited(_));
   session_.OnCanWrite();
   EXPECT_FALSE(session_.WillingAndAbleToWrite());
@@ -616,6 +648,7 @@ TEST_P(QuicSessionTestServer, OnCanWriteWriterBlocks) {
 }
 
 TEST_P(QuicSessionTestServer, BufferedHandshake) {
+  session_.set_writev_consumes_all_data(true);
   EXPECT_FALSE(session_.HasPendingHandshake());  // Default value.
 
   // Test that blocking other streams does not change our status.
@@ -648,11 +681,20 @@ TEST_P(QuicSessionTestServer, BufferedHandshake) {
   TestCryptoStream* crypto_stream = session_.GetCryptoStream();
   EXPECT_CALL(*crypto_stream, OnCanWrite());
 
-  EXPECT_CALL(*stream2, OnCanWrite());
-  EXPECT_CALL(*stream3, OnCanWrite());
+  EXPECT_CALL(*stream2, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream2))));
+  EXPECT_CALL(*stream3, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream3))));
   EXPECT_CALL(*stream4, OnCanWrite())
-      .WillOnce(Invoke(&stream4_blocker,
-                       &StreamBlocker::MarkConnectionLevelWriteBlocked));
+      .WillOnce(DoAll(testing::IgnoreResult(Invoke(
+                          CreateFunctor(&TestSession::SendStreamData,
+                                        base::Unretained(&session_), stream4))),
+                      Invoke(&stream4_blocker,
+                             &StreamBlocker::MarkConnectionLevelWriteBlocked)));
 
   session_.OnCanWrite();
   EXPECT_TRUE(session_.WillingAndAbleToWrite());
@@ -660,6 +702,7 @@ TEST_P(QuicSessionTestServer, BufferedHandshake) {
 }
 
 TEST_P(QuicSessionTestServer, OnCanWriteWithClosedStream) {
+  session_.set_writev_consumes_all_data(true);
   TestStream* stream2 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream4 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   TestStream* stream6 = session_.CreateOutgoingDynamicStream(kDefaultPriority);
@@ -670,8 +713,14 @@ TEST_P(QuicSessionTestServer, OnCanWriteWithClosedStream) {
   CloseStream(stream6->id());
 
   InSequence s;
-  EXPECT_CALL(*stream2, OnCanWrite());
-  EXPECT_CALL(*stream4, OnCanWrite());
+  EXPECT_CALL(*stream2, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream2))));
+  EXPECT_CALL(*stream4, OnCanWrite())
+      .WillOnce(testing::IgnoreResult(
+          Invoke(CreateFunctor(&TestSession::SendStreamData,
+                               base::Unretained(&session_), stream4))));
   session_.OnCanWrite();
   EXPECT_FALSE(session_.WillingAndAbleToWrite());
 }

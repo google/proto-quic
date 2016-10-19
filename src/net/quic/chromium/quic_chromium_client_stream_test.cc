@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/base/io_buffer.h"
@@ -174,7 +175,7 @@ class QuicChromiumClientStreamTest
                  &push_promise_index_) {
     stream_ = new QuicChromiumClientStream(kTestStreamId, &session_,
                                            NetLogWithSource());
-    session_.ActivateStream(stream_);
+    session_.ActivateStream(base::WrapUnique(stream_));
     stream_->SetDelegate(&delegate_);
   }
 
@@ -624,7 +625,7 @@ TEST_P(QuicChromiumClientStreamTest, HeadersBeforeDelegate) {
   // stream.
   QuicChromiumClientStream* stream = new QuicChromiumClientStream(
       kServerDataStreamId1, &session_, NetLogWithSource());
-  session_.ActivateStream(stream);
+  session_.ActivateStream(base::WrapUnique(stream));
 
   InitializeHeaders();
   std::string uncompressed_headers =

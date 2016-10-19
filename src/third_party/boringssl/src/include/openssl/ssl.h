@@ -562,7 +562,7 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define DTLS1_VERSION 0xfeff
 #define DTLS1_2_VERSION 0xfefd
 
-#define TLS1_3_DRAFT_VERSION 0x7f0e
+#define TLS1_3_DRAFT_VERSION 0x7f10
 
 /* SSL_CTX_set_min_proto_version sets the minimum protocol version for |ctx| to
  * |version|. If |version| is zero, the default minimum version is used. It
@@ -1197,7 +1197,8 @@ OPENSSL_EXPORT uint16_t SSL_CIPHER_get_max_version(const SSL_CIPHER *cipher);
 OPENSSL_EXPORT const char *SSL_CIPHER_get_name(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_get_kx_name returns a string that describes the key-exchange
- * method used by |cipher|. For example, "ECDHE_ECDSA". */
+ * method used by |cipher|. For example, "ECDHE_ECDSA". TLS 1.3 AEAD-only
+ * ciphers return the string "GENERIC". */
 OPENSSL_EXPORT const char *SSL_CIPHER_get_kx_name(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_get_rfc_name returns a newly-allocated string with the standard
@@ -1933,6 +1934,18 @@ OPENSSL_EXPORT int SSL_CTX_set1_curves(SSL_CTX *ctx, const int *curves,
  * values defined below. */
 OPENSSL_EXPORT int SSL_set1_curves(SSL *ssl, const int *curves,
                                    size_t curves_len);
+
+/* SSL_CTX_set1_curves_list sets the preferred curves for |ctx| to be the
+ * colon-separated list |curves|. Each element of |curves| should be a curve
+ * name (e.g. P-256, X25519, ...). It returns one on success and zero on
+ * failure. */
+OPENSSL_EXPORT int SSL_CTX_set1_curves_list(SSL_CTX *ctx, const char *curves);
+
+/* SSL_set1_curves_list sets the preferred curves for |ssl| to be the
+ * colon-separated list |curves|. Each element of |curves| should be a curve
+ * name (e.g. P-256, X25519, ...). It returns one on success and zero on
+ * failure. */
+OPENSSL_EXPORT int SSL_set1_curves_list(SSL *ssl, const char *curves);
 
 /* SSL_CURVE_* define TLS curve IDs. */
 #define SSL_CURVE_SECP256R1 23
@@ -2695,6 +2708,7 @@ OPENSSL_EXPORT const char *SSL_get_psk_identity(const SSL *ssl);
 #define SSL_AD_PROTOCOL_VERSION TLS1_AD_PROTOCOL_VERSION
 #define SSL_AD_INSUFFICIENT_SECURITY TLS1_AD_INSUFFICIENT_SECURITY
 #define SSL_AD_INTERNAL_ERROR TLS1_AD_INTERNAL_ERROR
+#define SSL_AD_INAPPROPRIATE_FALLBACK SSL3_AD_INAPPROPRIATE_FALLBACK
 #define SSL_AD_USER_CANCELLED TLS1_AD_USER_CANCELLED
 #define SSL_AD_NO_RENEGOTIATION TLS1_AD_NO_RENEGOTIATION
 #define SSL_AD_MISSING_EXTENSION TLS1_AD_MISSING_EXTENSION
@@ -2705,7 +2719,7 @@ OPENSSL_EXPORT const char *SSL_get_psk_identity(const SSL *ssl);
   TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE
 #define SSL_AD_BAD_CERTIFICATE_HASH_VALUE TLS1_AD_BAD_CERTIFICATE_HASH_VALUE
 #define SSL_AD_UNKNOWN_PSK_IDENTITY TLS1_AD_UNKNOWN_PSK_IDENTITY
-#define SSL_AD_INAPPROPRIATE_FALLBACK SSL3_AD_INAPPROPRIATE_FALLBACK
+#define SSL_AD_CERTIFICATE_REQUIRED TLS1_AD_CERTIFICATE_REQUIRED
 
 /* SSL_alert_type_string_long returns a string description of |value| as an
  * alert type (warning or fatal). */
@@ -3101,8 +3115,8 @@ OPENSSL_EXPORT const SSL_CIPHER *SSL_get_pending_cipher(const SSL *ssl);
 OPENSSL_EXPORT void SSL_CTX_set_retain_only_sha256_of_client_certs(SSL_CTX *ctx,
                                                                    int enable);
 
-/* SSL_CTX_set_grease_enabled configures whether client sockets on |ctx| should
- * enable GREASE. See draft-davidben-tls-grease-01. */
+/* SSL_CTX_set_grease_enabled configures whether sockets on |ctx| should enable
+ * GREASE. See draft-davidben-tls-grease-01. */
 OPENSSL_EXPORT void SSL_CTX_set_grease_enabled(SSL_CTX *ctx, int enabled);
 
 
@@ -3140,6 +3154,9 @@ OPENSSL_EXPORT int SSL_COMP_add_compression_method(int id, COMP_METHOD *cm);
 
 /* SSL_COMP_get_name returns NULL. */
 OPENSSL_EXPORT const char *SSL_COMP_get_name(const COMP_METHOD *comp);
+
+/* SSL_COMP_free_compression_methods does nothing. */
+OPENSSL_EXPORT void SSL_COMP_free_compression_methods(void);
 
 /* SSLv23_method calls |TLS_method|. */
 OPENSSL_EXPORT const SSL_METHOD *SSLv23_method(void);
@@ -3455,14 +3472,15 @@ OPENSSL_EXPORT int SSL_want(const SSL *ssl);
 
  /* SSL_get_finished writes up to |count| bytes of the Finished message sent by
   * |ssl| to |buf|. It returns the total untruncated length or zero if none has
-  * been sent yet.
+  * been sent yet. At SSL 3.0 or TLS 1.3 and later, it returns zero.
   *
   * Use |SSL_get_tls_unique| instead. */
 OPENSSL_EXPORT size_t SSL_get_finished(const SSL *ssl, void *buf, size_t count);
 
  /* SSL_get_peer_finished writes up to |count| bytes of the Finished message
   * received from |ssl|'s peer to |buf|. It returns the total untruncated length
-  * or zero if none has been received yet.
+  * or zero if none has been received yet. At SSL 3.0 or TLS 1.3 and later, it
+  * returns zero.
   *
   * Use |SSL_get_tls_unique| instead. */
 OPENSSL_EXPORT size_t SSL_get_peer_finished(const SSL *ssl, void *buf,
@@ -3700,7 +3718,6 @@ struct ssl_session_st {
 
   uint32_t tlsext_tick_lifetime_hint; /* Session lifetime hint in seconds */
 
-  uint32_t ticket_flags;
   uint32_t ticket_age_add;
 
   /* extended_master_secret is true if the master secret in this session was
@@ -4307,11 +4324,6 @@ typedef struct ssl3_state_st {
    * TODO(davidben): Move everything not needed after the handshake completes to
    * |hs| and remove this. */
   struct {
-    uint8_t finish_md[EVP_MAX_MD_SIZE];
-    uint8_t finish_md_len;
-    uint8_t peer_finish_md[EVP_MAX_MD_SIZE];
-    uint8_t peer_finish_md_len;
-
     int message_type;
 
     /* used to hold the new cipher we are going to use */
@@ -4322,64 +4334,12 @@ typedef struct ssl3_state_st {
 
     int reuse_message;
 
-    union {
-      /* sent is a bitset where the bits correspond to elements of kExtensions
-       * in t1_lib.c. Each bit is set if that extension was sent in a
-       * ClientHello. It's not used by servers. */
-      uint32_t sent;
-      /* received is a bitset, like |sent|, but is used by servers to record
-       * which extensions were received from a client. */
-      uint32_t received;
-    } extensions;
-
-    union {
-      /* sent is a bitset where the bits correspond to elements of
-       * |client_custom_extensions| in the |SSL_CTX|. Each bit is set if that
-       * extension was sent in a ClientHello. It's not used by servers. */
-      uint16_t sent;
-      /* received is a bitset, like |sent|, but is used by servers to record
-       * which custom extensions were received from a client. The bits here
-       * correspond to |server_custom_extensions|. */
-      uint16_t received;
-    } custom_extensions;
-
-    /* should_ack_sni is used by a server and indicates that the SNI extension
-     * should be echoed in the ServerHello. */
-    unsigned should_ack_sni:1;
-
-    /* Client-only: ca_names contains the list of CAs received in a
-     * CertificateRequest message. */
-    STACK_OF(X509_NAME) *ca_names;
-
-    /* Client-only: certificate_types contains the set of certificate types
-     * received in a CertificateRequest message. */
-    uint8_t *certificate_types;
-    size_t num_certificate_types;
-
     uint8_t *key_block;
     uint8_t key_block_length;
 
     uint8_t new_mac_secret_len;
     uint8_t new_key_len;
     uint8_t new_fixed_iv_len;
-
-    /* cert_request is true if a client certificate was requested and false
-     * otherwise. */
-    unsigned cert_request:1;
-
-    /* certificate_status_expected is true if OCSP stapling was negotiated and
-     * the server is expected to send a CertificateStatus message. (This is
-     * used on both the client and server sides.) */
-    unsigned certificate_status_expected:1;
-
-    /* ocsp_stapling_requested is true if a client requested OCSP stapling. */
-    unsigned ocsp_stapling_requested:1;
-
-    /* Server-only: peer_supported_group_list contains the supported group IDs
-     * advertised by the peer. This is only set on the server's end. The server
-     * does not advertise this extension to the client. */
-    uint16_t *peer_supported_group_list;
-    size_t peer_supported_group_list_len;
 
     /* extended_master_secret indicates whether the extended master secret
      * computation is used in this handshake. Note that this is different from
@@ -4389,25 +4349,9 @@ typedef struct ssl3_state_st {
      * didn't use it to create the master secret initially. */
     char extended_master_secret;
 
-    /* Client-only: in_false_start is one if there is a pending handshake in
-     * False Start. The client may write data at this point. */
-    char in_false_start;
-
     /* peer_signature_algorithm is the signature algorithm used to authenticate
      * the peer, or zero if not applicable. */
     uint16_t peer_signature_algorithm;
-
-    /* ecdh_ctx is the current ECDH instance. */
-    SSL_ECDH_CTX ecdh_ctx;
-
-    /* peer_key is the peer's ECDH key. */
-    uint8_t *peer_key;
-    uint16_t peer_key_len;
-
-    /* server_params stores the ServerKeyExchange parameters to be signed while
-     * the signature is being computed. */
-    uint8_t *server_params;
-    uint32_t server_params_len;
   } tmp;
 
   /* new_session is the new mutable session being established by the current
@@ -4423,14 +4367,11 @@ typedef struct ssl3_state_st {
   unsigned session_reused:1;
 
   /* Connection binding to prevent renegotiation attacks */
-  uint8_t previous_client_finished[EVP_MAX_MD_SIZE];
+  uint8_t previous_client_finished[12];
   uint8_t previous_client_finished_len;
-  uint8_t previous_server_finished[EVP_MAX_MD_SIZE];
+  uint8_t previous_server_finished[12];
   uint8_t previous_server_finished_len;
   int send_connection_binding;
-
-  /* Set if we saw the Next Protocol Negotiation extension from our peer. */
-  int next_proto_neg_seen;
 
   /* Next protocol negotiation. For the client, this is the protocol that we
    * sent in NextProtocol and is set when handling ServerHello extensions.
@@ -4514,6 +4455,7 @@ typedef struct ssl3_state_st {
 #define SSL_CTRL_SESS_NUMBER doesnt_exist
 #define SSL_CTRL_SET_CHANNEL_ID doesnt_exist
 #define SSL_CTRL_SET_CURVES doesnt_exist
+#define SSL_CTRL_SET_CURVES_LIST doesnt_exist
 #define SSL_CTRL_SET_MAX_CERT_LIST doesnt_exist
 #define SSL_CTRL_SET_MAX_SEND_FRAGMENT doesnt_exist
 #define SSL_CTRL_SET_MSG_CALLBACK doesnt_exist
@@ -4792,6 +4734,7 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_RENEGOTIATION_EMS_MISMATCH 263
 #define SSL_R_DUPLICATE_KEY_SHARE 264
 #define SSL_R_NO_GROUPS_SPECIFIED 265
+#define SSL_R_NO_SHARED_GROUP 266
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020
@@ -4822,5 +4765,7 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_TLSV1_UNRECOGNIZED_NAME 1112
 #define SSL_R_TLSV1_BAD_CERTIFICATE_STATUS_RESPONSE 1113
 #define SSL_R_TLSV1_BAD_CERTIFICATE_HASH_VALUE 1114
+#define SSL_R_TLSV1_UNKNOWN_PSK_IDENTITY 1115
+#define SSL_R_TLSV1_CERTIFICATE_REQUIRED 1116
 
 #endif /* OPENSSL_HEADER_SSL_H */

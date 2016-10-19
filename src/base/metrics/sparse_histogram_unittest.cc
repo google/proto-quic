@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/metrics/histogram_base.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/persistent_memory_allocator.h"

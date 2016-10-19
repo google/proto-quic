@@ -9,7 +9,6 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/memory/ptr_util.h"
-#include "base/task_scheduler/scheduler_service_thread.h"
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/sequence_sort_key.h"
 #include "base/task_scheduler/task.h"
@@ -67,7 +66,7 @@ void TaskSchedulerImpl::JoinForTesting() {
 #endif
   for (const auto& worker_pool : worker_pools_)
     worker_pool->JoinForTesting();
-  service_thread_->JoinForTesting();
+  service_thread_.Stop();
 #if DCHECK_IS_ON()
   join_for_testing_returned_.Set();
 #endif
@@ -75,11 +74,9 @@ void TaskSchedulerImpl::JoinForTesting() {
 
 TaskSchedulerImpl::TaskSchedulerImpl(const WorkerPoolIndexForTraitsCallback&
                                          worker_pool_index_for_traits_callback)
-    : delayed_task_manager_(
-          Bind(&TaskSchedulerImpl::OnDelayedRunTimeUpdated, Unretained(this))),
+    : service_thread_("TaskSchedulerServiceThread"),
       worker_pool_index_for_traits_callback_(
-          worker_pool_index_for_traits_callback)
-{
+          worker_pool_index_for_traits_callback) {
   DCHECK(!worker_pool_index_for_traits_callback_.is_null());
 }
 
@@ -87,23 +84,36 @@ void TaskSchedulerImpl::Initialize(
     const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector) {
   DCHECK(!worker_pool_params_vector.empty());
 
+  // Start the service thread.
+  constexpr MessageLoop::Type kServiceThreadMessageLoopType =
+#if defined(OS_POSIX)
+      MessageLoop::TYPE_IO;
+#else
+      MessageLoop::TYPE_DEFAULT;
+#endif
+  constexpr size_t kDefaultStackSize = 0;
+  CHECK(service_thread_.StartWithOptions(
+      Thread::Options(kServiceThreadMessageLoopType, kDefaultStackSize)));
+
   const SchedulerWorkerPoolImpl::ReEnqueueSequenceCallback
       re_enqueue_sequence_callback =
           Bind(&TaskSchedulerImpl::ReEnqueueSequenceCallback, Unretained(this));
 
+  // Instantiate the DelayedTaskManager. The service thread must be started
+  // before its TaskRunner is available.
+  delayed_task_manager_ =
+      base::MakeUnique<DelayedTaskManager>(service_thread_.task_runner());
+
+  // Start worker pools.
   for (const auto& worker_pool_params : worker_pool_params_vector) {
     // Passing pointers to objects owned by |this| to
     // SchedulerWorkerPoolImpl::Create() is safe because a TaskSchedulerImpl
     // can't be deleted before all its worker pools have been joined.
     worker_pools_.push_back(SchedulerWorkerPoolImpl::Create(
         worker_pool_params, re_enqueue_sequence_callback, &task_tracker_,
-        &delayed_task_manager_));
+        delayed_task_manager_.get()));
     CHECK(worker_pools_.back());
   }
-
-  service_thread_ = SchedulerServiceThread::Create(&task_tracker_,
-                                                   &delayed_task_manager_);
-  CHECK(service_thread_);
 }
 
 SchedulerWorkerPool* TaskSchedulerImpl::GetWorkerPoolForTraits(
@@ -118,19 +128,15 @@ void TaskSchedulerImpl::ReEnqueueSequenceCallback(
   DCHECK(sequence);
 
   const SequenceSortKey sort_key = sequence->GetSortKey();
-  TaskTraits traits(sequence->PeekTask()->traits);
 
-  // Update the priority of |traits| so that the next task in |sequence| runs
-  // with the highest priority in |sequence| as opposed to the next task's
-  // specific priority.
-  traits.WithPriority(sort_key.priority());
+  // The next task in |sequence| should run in a worker pool suited for its
+  // traits, except for the priority which is adjusted to the highest priority
+  // in |sequence|.
+  const TaskTraits traits =
+      sequence->PeekTaskTraits().WithPriority(sort_key.priority());
 
   GetWorkerPoolForTraits(traits)->ReEnqueueSequence(std::move(sequence),
                                                     sort_key);
-}
-
-void TaskSchedulerImpl::OnDelayedRunTimeUpdated() {
-  service_thread_->WakeUp();
 }
 
 }  // namespace internal

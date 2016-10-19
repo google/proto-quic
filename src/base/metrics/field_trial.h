@@ -64,9 +64,11 @@
 #include <vector>
 
 #include "base/base_export.h"
+#include "base/command_line.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/memory/shared_memory.h"
 #include "base/observer_list_threadsafe.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
@@ -463,6 +465,28 @@ class BASE_EXPORT FieldTrialList {
   static bool CreateTrialsFromString(
       const std::string& trials_string,
       const std::set<std::string>& ignored_trial_names);
+
+  // Achieves the same thing as CreateTrialsFromString, except wraps the logic
+  // by taking in the trials from the command line, either via shared memory
+  // handle or command line argument.
+  // If using shared memory to pass around the list of field trials, then
+  // expects |field_trial_handle_switch| command line argument to
+  // contain the shared memory handle.
+  // If not, then create the trials as before (using the kForceFieldTrials
+  // switch). Needs the |field_trial_handle_switch| argument to be passed in
+  // since base/ can't depend on content/.
+  static void CreateTrialsFromCommandLine(
+      const base::CommandLine& cmd_line,
+      const char* field_trial_handle_switch);
+
+  // Adds a switch to the command line containing the field trial state as a
+  // string (if not using shared memory to share field trial state), or the
+  // shared memory handle + length.
+  // Needs the |field_trial_handle_switch| argument to be passed in since base/
+  // can't depend on content/.
+  static std::unique_ptr<base::SharedMemory> CopyFieldTrialStateToFlags(
+      const char* field_trial_handle_switch,
+      base::CommandLine* cmd_line);
 
   // Create a FieldTrial with the given |name| and using 100% probability for
   // the FieldTrial, force FieldTrial to have the same group string as

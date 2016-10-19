@@ -124,6 +124,9 @@ main/libx/libxtst/libxtst6_1.2.1-1+deb7u1_i386.deb
 main/libx/libxtst/libxtst-dev_1.2.1-1+deb7u1_i386.deb
 main/libx/libxxf86vm/libxxf86vm1_1.1.2-1+deb7u1_i386.deb
 main/l/linux/linux-libc-dev_3.2.78-1_i386.deb
+main/m/mesa/libegl1-mesa_8.0.5-4+deb7u2_i386.deb
+main/m/mesa/libegl1-mesa-dev_8.0.5-4+deb7u2_i386.deb
+main/m/mesa/libegl1-mesa-drivers_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libgl1-mesa-dev_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libgl1-mesa-glx_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libglapi-mesa_8.0.5-4+deb7u2_i386.deb
@@ -155,6 +158,8 @@ main/s/speech-dispatcher/libspeechd-dev_0.7.1-6.2_i386.deb
 main/s/speech-dispatcher/speech-dispatcher_0.7.1-6.2_i386.deb
 main/u/udev/libudev0_175-7.2_i386.deb
 main/u/udev/libudev-dev_175-7.2_i386.deb
+main/w/wayland/libwayland0_0.85.0-2_i386.deb
+main/w/wayland/libwayland-dev_0.85.0-2_i386.deb
 main/x/x11proto-composite/x11proto-composite-dev_0.4.2-2_all.deb
 main/x/x11proto-core/x11proto-core-dev_7.0.23-1_all.deb
 main/x/x11proto-damage/x11proto-damage-dev_1.2.1-2_all.deb

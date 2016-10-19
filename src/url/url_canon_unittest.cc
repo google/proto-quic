@@ -2173,4 +2173,31 @@ TEST(URLCanonTest, ReplacementOverflow) {
   EXPECT_TRUE(expected == repl_str);
 }
 
+TEST(URLCanonTest, DefaultPortForScheme) {
+  struct TestCases {
+    const char* scheme;
+    const int expected_port;
+  } cases[]{
+      {"http", 80},
+      {"https", 443},
+      {"ftp", 21},
+      {"ws", 80},
+      {"wss", 443},
+      {"gopher", 70},
+      {"fake-scheme", PORT_UNSPECIFIED},
+      {"HTTP", PORT_UNSPECIFIED},
+      {"HTTPS", PORT_UNSPECIFIED},
+      {"FTP", PORT_UNSPECIFIED},
+      {"WS", PORT_UNSPECIFIED},
+      {"WSS", PORT_UNSPECIFIED},
+      {"GOPHER", PORT_UNSPECIFIED},
+  };
+
+  for (auto& test_case : cases) {
+    SCOPED_TRACE(test_case.scheme);
+    EXPECT_EQ(test_case.expected_port,
+              DefaultPortForScheme(test_case.scheme, strlen(test_case.scheme)));
+  }
+}
+
 }  // namespace url

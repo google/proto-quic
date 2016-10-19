@@ -50,6 +50,7 @@ class NET_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   void SetNumEmulatedConnections(int num_connections) override;
   void OnCongestionEvent(bool rtt_updated,
                          QuicByteCount prior_in_flight,
+                         QuicTime event_time,
                          const CongestionVector& acked_packets,
                          const CongestionVector& lost_packets) override;
   bool OnPacketSent(QuicTime sent_time,

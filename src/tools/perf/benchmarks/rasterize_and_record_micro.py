@@ -7,6 +7,7 @@ from core import perf_benchmark
 import ct_benchmarks_util
 from measurements import rasterize_and_record_micro
 import page_sets
+from page_sets import repaint_helpers
 from telemetry import benchmark
 
 
@@ -134,4 +135,5 @@ class RasterizeAndRecordMicroCT(_RasterizeAndRecordMicro):
 
   def CreateStorySet(self, options):
     return page_sets.CTPageSet(
-        options.urls_list, options.user_agent, options.archive_data_file)
+        options.urls_list, options.user_agent, options.archive_data_file,
+        run_page_interaction_callback=repaint_helpers.WaitThenRepaint)

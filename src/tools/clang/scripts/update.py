@@ -167,14 +167,6 @@ def WriteStampFile(s, path=STAMP_FILE):
 
 def GetSvnRevision(svn_repo):
   """Returns current revision of the svn repo at svn_repo."""
-  if sys.platform == 'darwin':
-    # mac_files toolchain must be set for hermetic builds.
-    root = os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.dirname(__file__))))
-    sys.path.append(os.path.join(root, 'build'))
-    import mac_toolchain
-
-    mac_toolchain.SetToolchainEnvironment()
   svn_info = subprocess.check_output('svn info ' + svn_repo, shell=True)
   m = re.search(r'Revision: (\d+)', svn_info)
   return m.group(1)
@@ -310,6 +302,17 @@ def DownloadHostGcc(args):
     DownloadAndUnpack(
         CDS_URL + '/tools/gcc485precise.tgz', LLVM_BUILD_TOOLS_DIR)
   args.gcc_toolchain = gcc_dir
+
+
+def AddSvnToPathOnWin():
+  """Download svn.exe and add it to PATH."""
+  if sys.platform != 'win32':
+    return
+  svn_ver = 'svn-1.6.6-win'
+  svn_dir = os.path.join(LLVM_BUILD_TOOLS_DIR, svn_ver)
+  if not os.path.exists(svn_dir):
+    DownloadAndUnpack(CDS_URL + '/tools/%s.zip' % svn_ver, LLVM_BUILD_TOOLS_DIR)
+  os.environ['PATH'] = svn_dir + os.pathsep + os.environ.get('PATH', '')
 
 
 def AddCMakeToPath():
@@ -448,6 +451,7 @@ def UpdateClang(args):
     return 1
 
   DownloadHostGcc(args)
+  AddSvnToPathOnWin()
   AddCMakeToPath()
   AddGnuWinToPath()
 

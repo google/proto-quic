@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "base/logging.h"
-#include "base/metrics/sparse_histogram.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/threading/thread_restrictions.h"
 
 namespace base {

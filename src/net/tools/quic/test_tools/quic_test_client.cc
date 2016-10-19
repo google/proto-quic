@@ -438,10 +438,6 @@ void QuicTestClient::set_buffer_body(bool buffer_body) {
   buffer_body_ = buffer_body;
 }
 
-bool QuicTestClient::ServerInLameDuckMode() const {
-  return false;
-}
-
 const string& QuicTestClient::response_body() {
   return response_;
 }
@@ -698,40 +694,20 @@ void QuicTestClient::UseConnectionId(QuicConnectionId connection_id) {
   client_->UseConnectionId(connection_id);
 }
 
-ssize_t QuicTestClient::SendAndWaitForResponse(const void* buffer,
-                                               size_t size) {
-  LOG(DFATAL) << "Not implemented";
-  return 0;
-}
-
-void QuicTestClient::Bind(IPEndPoint* local_address) {
-  DLOG(WARNING) << "Bind will be done during connect";
-}
-
 void QuicTestClient::MigrateSocket(const IPAddress& new_host) {
   client_->MigrateSocket(new_host);
-}
-
-string QuicTestClient::SerializeMessage(const HTTPMessage& message) {
-  LOG(DFATAL) << "Not implemented";
-  return "";
 }
 
 IPAddress QuicTestClient::bind_to_address() const {
   return client_->bind_to_address();
 }
 
-void QuicTestClient::set_bind_to_address(const IPAddress& address) {
+void QuicTestClient::set_bind_to_address(IPAddress address) {
   client_->set_bind_to_address(address);
 }
 
 const IPEndPoint& QuicTestClient::address() const {
   return client_->server_address();
-}
-
-size_t QuicTestClient::requests_sent() const {
-  LOG(DFATAL) << "Not implemented";
-  return 0;
 }
 
 void QuicTestClient::WaitForWriteToFlush() {

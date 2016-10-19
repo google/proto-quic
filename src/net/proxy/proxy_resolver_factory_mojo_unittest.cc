@@ -18,7 +18,6 @@
 #include "base/run_loop.h"
 #include "base/stl_util.h"
 #include "base/values.h"
-#include "mojo/common/common_type_converters.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "net/base/load_states.h"
 #include "net/base/net_errors.h"
@@ -348,7 +347,7 @@ class MockMojoProxyResolverFactory : public interfaces::ProxyResolverFactory {
  private:
   // Overridden from interfaces::ProxyResolver:
   void CreateResolver(
-      const mojo::String& pac_url,
+      const std::string& pac_url,
       mojo::InterfaceRequest<interfaces::ProxyResolver> request,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override;
 
@@ -399,14 +398,14 @@ void MockMojoProxyResolverFactory::ClearBlockedClients() {
 }
 
 void MockMojoProxyResolverFactory::CreateResolver(
-    const mojo::String& pac_script,
+    const std::string& pac_script,
     mojo::InterfaceRequest<interfaces::ProxyResolver> request,
     interfaces::ProxyResolverFactoryRequestClientPtr client) {
   ASSERT_FALSE(create_resolver_actions_.empty());
   CreateProxyResolverAction action = create_resolver_actions_.front();
   create_resolver_actions_.pop();
 
-  EXPECT_EQ(action.expected_pac_script, pac_script.To<std::string>());
+  EXPECT_EQ(action.expected_pac_script, pac_script);
   client->Alert(pac_script);
   client->OnError(12345, pac_script);
   switch (action.action) {
@@ -535,7 +534,7 @@ class ProxyResolverFactoryMojoTest : public testing::Test,
   }
 
   std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
-      const mojo::String& pac_script,
+      const std::string& pac_script,
       mojo::InterfaceRequest<interfaces::ProxyResolver> req,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override {
     factory_ptr_->CreateResolver(pac_script, std::move(req), std::move(client));

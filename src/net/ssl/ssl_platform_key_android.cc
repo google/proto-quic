@@ -25,7 +25,7 @@
 #include "net/base/net_errors.h"
 #include "net/ssl/openssl_client_key_store.h"
 #include "net/ssl/ssl_platform_key.h"
-#include "net/ssl/ssl_platform_key_task_runner.h"
+#include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/threaded_ssl_private_key.h"
 
 using base::android::JavaRef;
@@ -176,88 +176,50 @@ class SSLPlatformKeyAndroid : public ThreadedSSLPrivateKey::Delegate {
   DISALLOW_COPY_AND_ASSIGN(SSLPlatformKeyAndroid);
 };
 
-// VectorBignumSize returns the number of bytes needed to represent the bignum
-// given in |v|, i.e. the length of |v| less any leading zero bytes.
-size_t VectorBignumSize(const std::vector<uint8_t>& v) {
-  size_t size = v.size();
-  // Ignore any leading zero bytes.
-  for (size_t i = 0; i < v.size() && v[i] == 0; i++) {
-    size--;
-  }
-  return size;
-}
+}  // namespace
 
-std::unique_ptr<SSLPlatformKeyAndroid> CreateRsaKey(
+scoped_refptr<SSLPrivateKey> WrapJavaPrivateKey(
+    const X509Certificate* certificate,
     const JavaRef<jobject>& key) {
+  SSLPrivateKey::Type type;
+  size_t max_length;
+  if (!GetClientCertInfo(certificate, &type, &max_length))
+    return nullptr;
+
   android::AndroidRSA* sys_rsa = nullptr;
-  const int kAndroid42ApiLevel = 17;
-  if (base::android::BuildInfo::GetInstance()->sdk_int() < kAndroid42ApiLevel) {
-    // Route around platform limitations: if Android < 4.2, then
-    // base::android::RawSignDigestWithPrivateKey() cannot work, so try to get
-    // the system OpenSSL's EVP_PKEY backing this PrivateKey object.
-    android::AndroidEVP_PKEY* sys_pkey =
-        android::GetOpenSSLSystemHandleForPrivateKey(key);
-    if (!sys_pkey)
-      return nullptr;
+  if (type == SSLPrivateKey::Type::RSA) {
+    const int kAndroid42ApiLevel = 17;
+    if (base::android::BuildInfo::GetInstance()->sdk_int() <
+        kAndroid42ApiLevel) {
+      // Route around platform limitations: if Android < 4.2, then
+      // base::android::RawSignDigestWithPrivateKey() cannot work, so try to get
+      // the system OpenSSL's EVP_PKEY backing this PrivateKey object.
+      android::AndroidEVP_PKEY* sys_pkey =
+          android::GetOpenSSLSystemHandleForPrivateKey(key);
+      if (!sys_pkey)
+        return nullptr;
 
-    if (sys_pkey->type != android::ANDROID_EVP_PKEY_RSA) {
-      LOG(ERROR) << "Private key has wrong type!";
-      return nullptr;
-    }
+      if (sys_pkey->type != android::ANDROID_EVP_PKEY_RSA) {
+        LOG(ERROR) << "Private key has wrong type!";
+        return nullptr;
+      }
 
-    sys_rsa = sys_pkey->pkey.rsa;
-    if (sys_rsa->engine) {
-      // |private_key| may not have an engine if the PrivateKey did not come
-      // from the key store, such as in unit tests.
-      if (strcmp(sys_rsa->engine->id, "keystore") == 0) {
-        LeakEngine(key);
-      } else {
-        NOTREACHED();
+      sys_rsa = sys_pkey->pkey.rsa;
+      if (sys_rsa->engine) {
+        // |private_key| may not have an engine if the PrivateKey did not come
+        // from the key store, such as in unit tests.
+        if (strcmp(sys_rsa->engine->id, "keystore") == 0) {
+          LeakEngine(key);
+        } else {
+          NOTREACHED();
+        }
       }
     }
   }
 
-  std::vector<uint8_t> modulus;
-  if (!android::GetRSAKeyModulus(key, &modulus)) {
-    LOG(ERROR) << "Failed to get private key modulus";
-    return nullptr;
-  }
-
-  return base::MakeUnique<SSLPlatformKeyAndroid>(
-      SSLPrivateKey::Type::RSA, key, VectorBignumSize(modulus), sys_rsa);
-}
-
-std::unique_ptr<SSLPlatformKeyAndroid> CreateEcdsaKey(
-    const JavaRef<jobject>& key) {
-  std::vector<uint8_t> order;
-  if (!android::GetECKeyOrder(key, &order)) {
-    LOG(ERROR) << "Can't extract order parameter from EC private key";
-    return nullptr;
-  }
-
-  return base::MakeUnique<SSLPlatformKeyAndroid>(
-      SSLPrivateKey::Type::ECDSA, key,
-      ECDSA_SIG_max_len(VectorBignumSize(order)), nullptr);
-}
-
-}  // namespace
-
-scoped_refptr<SSLPrivateKey> WrapJavaPrivateKey(const JavaRef<jobject>& key) {
-  std::unique_ptr<SSLPlatformKeyAndroid> delegate;
-  switch (android::GetPrivateKeyType(key)) {
-    case android::PRIVATE_KEY_TYPE_RSA:
-      delegate = CreateRsaKey(key);
-      break;
-    case android::PRIVATE_KEY_TYPE_ECDSA:
-      delegate = CreateEcdsaKey(key);
-      break;
-    default:
-      LOG(WARNING) << "GetPrivateKeyType() returned invalid type";
-      return nullptr;
-  }
-
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      std::move(delegate), GetSSLPlatformKeyTaskRunner()));
+      base::MakeUnique<SSLPlatformKeyAndroid>(type, key, max_length, sys_rsa),
+      GetSSLPlatformKeyTaskRunner()));
 }
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(

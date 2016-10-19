@@ -292,6 +292,9 @@
   "chromecast/browser/cast_browser_resources.grd": {
     "includes": [30690],
   },
+  "blimp/client/support/resources/blimp_strings.grd": {
+    "messages": [30700],
+  },
 
   # Resource ids starting at 31000 are reserved for projects built on Chromium.
 }

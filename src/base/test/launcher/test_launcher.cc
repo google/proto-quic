@@ -90,6 +90,10 @@ const int kOutputTimeoutSeconds = 15;
 // the infrastructure.
 const size_t kOutputSnippetLinesLimit = 5000;
 
+// Limit of output snippet size. Exceeding this limit
+// results in truncating the output and failing the test.
+const size_t kOutputSnippetBytesLimit = 2.5 * 1024 * 1024;
+
 // Set of live launch test processes with corresponding lock (it is allowed
 // for callers to launch processes on different threads).
 LazyInstance<std::map<ProcessHandle, CommandLine> > g_live_processes
@@ -536,7 +540,7 @@ bool TestLauncher::Run() {
   if (requested_cycles != 1)
     results_tracker_.PrintSummaryOfAllIterations();
 
-  MaybeSaveSummaryAsJSON();
+  MaybeSaveSummaryAsJSON(std::vector<std::string>());
 
   return run_result_;
 }
@@ -568,8 +572,20 @@ void TestLauncher::LaunchChildGTestProcess(
            launched_callback));
 }
 
-void TestLauncher::OnTestFinished(const TestResult& result) {
+void TestLauncher::OnTestFinished(const TestResult& original_result) {
   ++test_finished_count_;
+
+  TestResult result(original_result);
+
+  if (result.output_snippet.length() > kOutputSnippetBytesLimit) {
+    if (result.status == TestResult::TEST_SUCCESS)
+      result.status = TestResult::TEST_EXCESSIVE_OUTPUT;
+    result.output_snippet = StringPrintf(
+        "<truncated (%" PRIuS " bytes)>\n", result.output_snippet.length()) +
+        result.output_snippet.substr(
+            result.output_snippet.length() - kOutputSnippetLinesLimit) +
+        "\n";
+  }
 
   bool print_snippet = false;
   std::string print_test_stdio("auto");
@@ -656,9 +672,7 @@ void TestLauncher::OnTestFinished(const TestResult& result) {
     KillSpawnedTestProcesses();
 #endif  // defined(OS_POSIX)
 
-    results_tracker_.AddGlobalTag("BROKEN_TEST_EARLY_EXIT");
-    results_tracker_.AddGlobalTag(kUnreliableResultsTag);
-    MaybeSaveSummaryAsJSON();
+    MaybeSaveSummaryAsJSON({"BROKEN_TEST_EARLY_EXIT", kUnreliableResultsTag});
 
     exit(1);
   }
@@ -989,6 +1003,9 @@ void TestLauncher::RunTests() {
     test_names.push_back(test_name);
   }
 
+  // Save an early test summary in case the launcher crashes or gets killed.
+  MaybeSaveSummaryAsJSON({"EARLY_SUMMARY", kUnreliableResultsTag});
+
   test_started_count_ = launcher_delegate_->RunTests(this, test_names);
 
   if (test_started_count_ == 0) {
@@ -1026,12 +1043,13 @@ void TestLauncher::RunTestIteration() {
       FROM_HERE, Bind(&TestLauncher::RunTests, Unretained(this)));
 }
 
-void TestLauncher::MaybeSaveSummaryAsJSON() {
+void TestLauncher::MaybeSaveSummaryAsJSON(
+    const std::vector<std::string>& additional_tags) {
   const CommandLine* command_line = CommandLine::ForCurrentProcess();
   if (command_line->HasSwitch(switches::kTestLauncherSummaryOutput)) {
     FilePath summary_path(command_line->GetSwitchValuePath(
                               switches::kTestLauncherSummaryOutput));
-    if (!results_tracker_.SaveSummaryAsJSON(summary_path)) {
+    if (!results_tracker_.SaveSummaryAsJSON(summary_path, additional_tags)) {
       LOG(ERROR) << "Failed to save test launcher output summary.";
     }
   }

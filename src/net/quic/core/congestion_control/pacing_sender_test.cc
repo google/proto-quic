@@ -43,11 +43,12 @@ class PacingSenderTest : public ::testing::Test {
     pacing_sender_->set_sender(mock_sender_.get());
     EXPECT_CALL(*mock_sender_, PacingRate(_)).WillRepeatedly(Return(bandwidth));
     if (burst_size == 0) {
-      EXPECT_CALL(*mock_sender_, OnCongestionEvent(_, _, _, _));
+      EXPECT_CALL(*mock_sender_, OnCongestionEvent(_, _, _, _, _));
       SendAlgorithmInterface::CongestionVector lost_packets;
       lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
       SendAlgorithmInterface::CongestionVector empty;
-      pacing_sender_->OnCongestionEvent(true, 1234, empty, lost_packets);
+      pacing_sender_->OnCongestionEvent(true, 1234, clock_.Now(), empty,
+                                        lost_packets);
     } else if (burst_size != kInitialBurstPackets) {
       LOG(FATAL) << "Unsupported burst_size " << burst_size
                  << " specificied, only 0 and " << kInitialBurstPackets
@@ -99,10 +100,11 @@ class PacingSenderTest : public ::testing::Test {
   }
 
   void UpdateRtt() {
-    EXPECT_CALL(*mock_sender_, OnCongestionEvent(true, kBytesInFlight, _, _));
+    EXPECT_CALL(*mock_sender_,
+                OnCongestionEvent(true, kBytesInFlight, _, _, _));
     SendAlgorithmInterface::CongestionVector empty_map;
-    pacing_sender_->OnCongestionEvent(true, kBytesInFlight, empty_map,
-                                      empty_map);
+    pacing_sender_->OnCongestionEvent(true, kBytesInFlight, clock_.Now(),
+                                      empty_map, empty_map);
   }
 
   const QuicTime::Delta zero_time_;
@@ -319,8 +321,9 @@ TEST_F(PacingSenderTest, NoBurstEnteringRecovery) {
   lost_packets.push_back(std::make_pair(1, kMaxPacketSize));
   SendAlgorithmInterface::CongestionVector empty;
   EXPECT_CALL(*mock_sender_,
-              OnCongestionEvent(true, kMaxPacketSize, empty, lost_packets));
-  pacing_sender_->OnCongestionEvent(true, kMaxPacketSize, empty, lost_packets);
+              OnCongestionEvent(true, kMaxPacketSize, _, empty, lost_packets));
+  pacing_sender_->OnCongestionEvent(true, kMaxPacketSize, clock_.Now(), empty,
+                                    lost_packets);
   // One packet is sent immediately, because of 1ms pacing granularity.
   CheckPacketIsSentImmediately();
   // Ensure packets are immediately paced.

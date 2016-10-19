@@ -44,7 +44,7 @@ void SSLClientAuthCache::Remove(const HostPortPair& server) {
   cache_.erase(server);
 }
 
-void SSLClientAuthCache::OnCertAdded(const X509Certificate* cert) {
+void SSLClientAuthCache::OnCertDBChanged(const X509Certificate* cert) {
   cache_.clear();
 }
 

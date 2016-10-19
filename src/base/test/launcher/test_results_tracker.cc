@@ -65,6 +65,7 @@ struct TestSuiteResultsAggregator {
       case TestResult::TEST_FAILURE:
         failures++;
         break;
+      case TestResult::TEST_EXCESSIVE_OUTPUT:
       case TestResult::TEST_FAILURE_ON_EXIT:
       case TestResult::TEST_TIMEOUT:
       case TestResult::TEST_CRASH:
@@ -247,6 +248,9 @@ void TestResultsTracker::PrintSummaryOfCurrentIteration() const {
   PrintTests(tests_by_status[TestResult::TEST_FAILURE_ON_EXIT].begin(),
              tests_by_status[TestResult::TEST_FAILURE_ON_EXIT].end(),
              "failed on exit");
+  PrintTests(tests_by_status[TestResult::TEST_EXCESSIVE_OUTPUT].begin(),
+             tests_by_status[TestResult::TEST_EXCESSIVE_OUTPUT].end(),
+             "produced excessive output");
   PrintTests(tests_by_status[TestResult::TEST_TIMEOUT].begin(),
              tests_by_status[TestResult::TEST_TIMEOUT].end(),
              "timed out");
@@ -275,6 +279,9 @@ void TestResultsTracker::PrintSummaryOfAllIterations() const {
   PrintTests(tests_by_status[TestResult::TEST_FAILURE_ON_EXIT].begin(),
              tests_by_status[TestResult::TEST_FAILURE_ON_EXIT].end(),
              "failed on exit");
+  PrintTests(tests_by_status[TestResult::TEST_EXCESSIVE_OUTPUT].begin(),
+             tests_by_status[TestResult::TEST_EXCESSIVE_OUTPUT].end(),
+             "produced excessive output");
   PrintTests(tests_by_status[TestResult::TEST_TIMEOUT].begin(),
              tests_by_status[TestResult::TEST_TIMEOUT].end(),
              "timed out");
@@ -296,12 +303,17 @@ void TestResultsTracker::AddGlobalTag(const std::string& tag) {
   global_tags_.insert(tag);
 }
 
-bool TestResultsTracker::SaveSummaryAsJSON(const FilePath& path) const {
+bool TestResultsTracker::SaveSummaryAsJSON(
+    const FilePath& path,
+    const std::vector<std::string>& additional_tags) const {
   std::unique_ptr<DictionaryValue> summary_root(new DictionaryValue);
 
   std::unique_ptr<ListValue> global_tags(new ListValue);
   for (const auto& global_tag : global_tags_) {
     global_tags->AppendString(global_tag);
+  }
+  for (const auto& tag : additional_tags) {
+    global_tags->AppendString(tag);
   }
   summary_root->Set("global_tags", std::move(global_tags));
 

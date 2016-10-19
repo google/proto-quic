@@ -313,10 +313,12 @@ class NET_EXPORT TransportSecurityState
   // 1. Sending Expect-Staple reports is enabled (via
   //    |enable_static_expect_staple_|)
   // 2. A report sender was provided via SetReportSender().
-  // 3. The build is timele (i.e. the preload list is fresh).
+  // 3. The build is timely (i.e. the preload list is fresh).
   // 4. The given host is present on the Expect-Staple preload list.
   // 5. |ssl_info| indicates the connection did not provide an OCSP response
   //    indicating a revocation status of GOOD.
+  // 6. The certificate chain in |ssl_info| chains to a known root. Reports
+  //    for OCSP responses behind MITM proxies are not useful to site owners.
   void CheckExpectStaple(const HostPortPair& host_port_pair,
                          const SSLInfo& ssl_info,
                          const std::string& ocsp_response);

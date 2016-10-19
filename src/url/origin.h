@@ -90,8 +90,8 @@ class URL_EXPORT Origin {
   explicit Origin(const GURL& url);
 
   // Creates an Origin from a |scheme|, |host|, and |port|. All the parameters
-  // must be valid and canonicalized. In particular, note that this cannot be
-  // used to create unique origins; 'url::Origin()' is the right way to do that.
+  // must be valid and canonicalized. Do not use this method to create unique
+  // origins. Use Origin() for that.
   //
   // This constructor should be used in order to pass 'Origin' objects back and
   // forth over IPC (as transitioning through GURL would risk potentially
@@ -101,6 +101,13 @@ class URL_EXPORT Origin {
       base::StringPiece scheme,
       base::StringPiece host,
       uint16_t port);
+
+  // Creates an origin without sanity checking that the host is canonicalized.
+  // This should only be used when converting between already normalized types,
+  // and should NOT be used for IPC.
+  static Origin CreateFromNormalizedTuple(base::StringPiece scheme,
+                                          base::StringPiece host,
+                                          uint16_t port);
 
   ~Origin();
 
@@ -138,7 +145,10 @@ class URL_EXPORT Origin {
   bool operator<(const Origin& other) const;
 
  private:
-  Origin(base::StringPiece scheme, base::StringPiece host, uint16_t port);
+  Origin(base::StringPiece scheme,
+         base::StringPiece host,
+         uint16_t port,
+         SchemeHostPort::ConstructPolicy policy);
 
   SchemeHostPort tuple_;
   bool unique_;

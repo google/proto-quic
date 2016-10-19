@@ -13,14 +13,16 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
 #include <openssl/bytestring.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/mem.h>
 
-extern "C" int LLVMFuzzerTestOneInput(uint8_t *buf, size_t len) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
   CBS cbs;
   CBS_init(&cbs, buf, len);
   EVP_PKEY *pkey = EVP_parse_public_key(&cbs);
   if (pkey == NULL) {
+    ERR_clear_error();
     return 0;
   }
 
@@ -34,5 +36,6 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *buf, size_t len) {
   }
   CBB_cleanup(&cbb);
   EVP_PKEY_free(pkey);
+  ERR_clear_error();
   return 0;
 }

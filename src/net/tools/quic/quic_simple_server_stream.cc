@@ -103,20 +103,6 @@ void QuicSimpleServerStream::OnDataAvailable() {
     return;
   }
 
-  if (request_headers_.empty()) {
-    DVLOG(1) << "Request headers empty.";
-    SendErrorResponse();
-    return;
-  }
-
-  if (content_length_ > 0 &&
-      static_cast<uint64_t>(content_length_) != body_.size()) {
-    DVLOG(1) << "Content length (" << content_length_ << ") != body size ("
-             << body_.size() << ").";
-    SendErrorResponse();
-    return;
-  }
-
   SendResponse();
 }
 
@@ -136,6 +122,20 @@ void QuicSimpleServerStream::PushResponse(
 }
 
 void QuicSimpleServerStream::SendResponse() {
+  if (request_headers_.empty()) {
+    DVLOG(1) << "Request headers empty.";
+    SendErrorResponse();
+    return;
+  }
+
+  if (content_length_ > 0 &&
+      static_cast<uint64_t>(content_length_) != body_.size()) {
+    DVLOG(1) << "Content length (" << content_length_ << ") != body size ("
+             << body_.size() << ").";
+    SendErrorResponse();
+    return;
+  }
+
   if (!base::ContainsKey(request_headers_, ":authority") ||
       !base::ContainsKey(request_headers_, ":path")) {
     DVLOG(1) << "Request headers do not contain :authority or :path.";
@@ -234,9 +234,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
     SpdyHeaderBlock response_headers,
     StringPiece body,
     SpdyHeaderBlock response_trailers) {
-  // This server only supports SPDY and HTTP, and neither handles bidirectional
-  // streaming.
-  if (!reading_stopped()) {
+  if (!allow_bidirectional_data() && !reading_stopped()) {
     StopReading();
   }
 

@@ -545,7 +545,6 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   void EvaluateClientHello(
       const IPAddress& server_ip,
       QuicVersion version,
-      const uint8_t* primary_orbit,
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,
       QuicCryptoProof* crypto_proof,
@@ -567,7 +566,6 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       bool found_error,
       const IPAddress& server_ip,
       QuicVersion version,
-      const uint8_t* primary_orbit,
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,
       QuicCryptoProof* crypto_proof,
@@ -577,8 +575,14 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
           client_hello_state,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const;
 
+  // Callback class for bridging between ProcessClientHello and
+  // ProcessClientHelloAfterGetProof.
+  class ProcessClientHelloCallback;
+  friend class ProcessClientHelloCallback;
+
   // Portion of ProcessClientHello which executes after GetProof.
   void ProcessClientHelloAfterGetProof(
+      bool found_error,
       const ValidateClientHelloResultCallback::Result& validate_chlo_result,
       bool reject_only,
       QuicConnectionId connection_id,

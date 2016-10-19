@@ -277,22 +277,10 @@ if (enable_themes) {
     "enable_themes",
   ]
 }
-if (enable_app_list) {
-  grit_defines += [
-    "-D",
-    "enable_app_list",
-  ]
-}
 if (enable_webrtc) {
   grit_defines += [
     "-D",
     "enable_webrtc",
-  ]
-}
-if (enable_hangout_services_extension) {
-  grit_defines += [
-    "-D",
-    "enable_hangout_services_extension",
   ]
 }
 if (enable_task_manager) {

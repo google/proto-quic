@@ -465,9 +465,8 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
 
   std::unique_ptr<QuicReceivedPacket> ConstructClientRstStreamPacket(
       QuicPacketNumber packet_number) {
-    return client_maker_.MakeRstPacket(
-        packet_number, true, stream_id_,
-        AdjustErrorForVersion(QUIC_RST_ACKNOWLEDGEMENT, GetParam()));
+    return client_maker_.MakeRstPacket(packet_number, true, stream_id_,
+                                       QUIC_RST_ACKNOWLEDGEMENT);
   }
 
   std::unique_ptr<QuicReceivedPacket> ConstructClientRstStreamCancelledPacket(

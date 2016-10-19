@@ -22,7 +22,7 @@ ATTRIBUTE_ORDER = {
     'enums': [],
     # TODO(yiyaoliu): Remove fieldtrial related pieces when it is not used.
     'fieldtrial': ['name', 'separator', 'ordering'],
-    'histogram': ['name', 'enum', 'units'],
+    'histogram': ['base', 'name', 'enum', 'units'],
     'histogram-configuration': ['logsource'],
     'histogram_suffixes': ['name', 'separator', 'ordering'],
     'histogram_suffixes_list': [],
@@ -31,7 +31,7 @@ ATTRIBUTE_ORDER = {
     'group': ['name', 'label'],
     'obsolete': [],
     'owner': [],
-    'suffix': ['name', 'label'],
+    'suffix': ['base', 'name', 'label'],
     'summary': [],
     'with-group': ['name'],
     'with-suffix': ['name'],

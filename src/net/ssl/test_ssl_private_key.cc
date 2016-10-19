@@ -5,6 +5,7 @@
 #include "net/ssl/test_ssl_private_key.h"
 
 #include <openssl/digest.h>
+#include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 
@@ -14,7 +15,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "net/base/net_errors.h"
-#include "net/ssl/ssl_platform_key_task_runner.h"
+#include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
 
@@ -115,9 +116,25 @@ scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
     case EVP_PKEY_RSA:
       type = SSLPrivateKey::Type::RSA;
       break;
-    case EVP_PKEY_EC:
-      type = SSLPrivateKey::Type::ECDSA;
+    case EVP_PKEY_EC: {
+      EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
+      int curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key));
+      switch (curve) {
+        case NID_X9_62_prime256v1:
+          type = SSLPrivateKey::Type::ECDSA_P256;
+          break;
+        case NID_secp384r1:
+          type = SSLPrivateKey::Type::ECDSA_P384;
+          break;
+        case NID_secp521r1:
+          type = SSLPrivateKey::Type::ECDSA_P384;
+          break;
+        default:
+          LOG(ERROR) << "Unknown curve: " << curve;
+          return nullptr;
+      }
       break;
+    }
     default:
       LOG(ERROR) << "Unknown key type: " << EVP_PKEY_id(key.get());
       return nullptr;

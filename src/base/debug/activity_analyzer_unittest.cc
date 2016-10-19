@@ -104,7 +104,7 @@ class SimpleActivityThread : public SimpleThread {
 
     {
       AutoLock auto_lock(lock_);
-      ready_.store(true, std::memory_order_relaxed);
+      ready_.store(true, std::memory_order_release);
       while (!exit_.load(std::memory_order_relaxed))
         exit_condition_.Wait();
     }
@@ -121,7 +121,7 @@ class SimpleActivityThread : public SimpleThread {
   }
 
   void WaitReady() {
-    SPIN_FOR_1_SECOND_OR_UNTIL_TRUE(ready_.load(std::memory_order_relaxed));
+    SPIN_FOR_1_SECOND_OR_UNTIL_TRUE(ready_.load(std::memory_order_acquire));
   }
 
  private:

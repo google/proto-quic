@@ -122,19 +122,6 @@ bool IsHiddenLoginItem(LSSharedFileListItemRef item) {
 
 }  // namespace
 
-std::string PathFromFSRef(const FSRef& ref) {
-  ScopedCFTypeRef<CFURLRef> url(
-      CFURLCreateFromFSRef(kCFAllocatorDefault, &ref));
-  NSString *path_string = [(NSURL *)url.get() path];
-  return [path_string fileSystemRepresentation];
-}
-
-bool FSRefFromPath(const std::string& path, FSRef* ref) {
-  OSStatus status = FSPathMakeRef((const UInt8*)path.c_str(),
-                                  ref, nil);
-  return status == noErr;
-}
-
 CGColorSpaceRef GetGenericRGBColorSpace() {
   // Leaked. That's OK, it's scoped to the lifetime of the application.
   static CGColorSpaceRef g_color_space_generic_rgb(

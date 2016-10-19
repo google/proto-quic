@@ -337,11 +337,6 @@ QuicAckFrame::QuicAckFrame(const QuicAckFrame& other) = default;
 
 QuicAckFrame::~QuicAckFrame() {}
 
-QuicRstStreamErrorCode AdjustErrorForVersion(QuicRstStreamErrorCode error_code,
-                                             QuicVersion /*version*/) {
-  return error_code;
-}
-
 QuicRstStreamFrame::QuicRstStreamFrame()
     : stream_id(0), error_code(QUIC_STREAM_NO_ERROR), byte_offset(0) {}
 

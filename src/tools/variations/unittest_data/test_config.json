@@ -35,5 +35,16 @@
       "platforms": ["win"],
       "experiments": [{"name": "TestGroup3", "enable_features": ["X"]}]
     }
+  ],
+  "TrialWithForcingFlag":  [
+    {
+      "platforms": ["win"],
+      "experiments": [
+        {
+          "name": "ForcedGroup",
+          "forcing_flag": "my-forcing-flag"
+        }
+      ]
+    }
   ]
 }

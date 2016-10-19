@@ -14,13 +14,14 @@ namespace base {
 // Structure containing result of a single test.
 struct TestResult {
   enum Status {
-    TEST_UNKNOWN,          // Status not set.
-    TEST_SUCCESS,          // Test passed.
-    TEST_FAILURE,          // Assertion failure (think EXPECT_TRUE, not DCHECK).
-    TEST_FAILURE_ON_EXIT,  // Test passed but executable exit code was non-zero.
-    TEST_TIMEOUT,          // Test timed out and was killed.
-    TEST_CRASH,            // Test crashed (includes CHECK/DCHECK failures).
-    TEST_SKIPPED,          // Test skipped (not run at all).
+    TEST_UNKNOWN,           // Status not set.
+    TEST_SUCCESS,           // Test passed.
+    TEST_FAILURE,           // Assertion failure (e.g. EXPECT_TRUE, not DCHECK).
+    TEST_FAILURE_ON_EXIT,   // Passed but executable exit code was non-zero.
+    TEST_TIMEOUT,           // Test timed out and was killed.
+    TEST_CRASH,             // Test crashed (includes CHECK/DCHECK failures).
+    TEST_SKIPPED,           // Test skipped (not run at all).
+    TEST_EXCESSIVE_OUTPUT,  // Test exceeded output limit.
   };
 
   TestResult();
@@ -41,7 +42,8 @@ struct TestResult {
   bool completed() const {
     return status == TEST_SUCCESS ||
         status == TEST_FAILURE ||
-        status == TEST_FAILURE_ON_EXIT;
+        status == TEST_FAILURE_ON_EXIT ||
+        status == TEST_EXCESSIVE_OUTPUT;
   }
 
   // Full name of the test (e.g. "A.B").

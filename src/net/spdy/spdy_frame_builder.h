@@ -53,8 +53,8 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
   // Populates this frame with a SPDY control frame header using
   // version-specific information from the |framer| and length information from
-  // capacity_. The given type must be a control frame type.
-  // Used only for SPDY versions <4.
+  // |capacity_|. The given type must be a control frame type.
+  // Used only for SPDY3.
   bool WriteControlFrameHeader(const SpdyFramer& framer,
                                SpdyFrameType type,
                                uint8_t flags);
@@ -66,9 +66,9 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
                             uint8_t flags);
 
   // Populates this frame with a HTTP2 frame prefix using version-specific
-  // information from the |framer| and length information from |capacity_|.
-  // The given type must be a control frame type. Used only for SPDY versions
-  // >=4.
+  // information from the |framer| and length information from |capacity_|. The
+  // given type must be a control frame type.
+  // Used only for HTTP2.
   bool BeginNewFrame(const SpdyFramer& framer,
                      SpdyFrameType type,
                      uint8_t flags,

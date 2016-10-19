@@ -303,6 +303,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   void DeletePromised(QuicClientPromisedInfo* promised) override;
 
+  void OnPushStreamTimedOut(QuicStreamId stream_id) override;
+
   const LoadTimingInfo::ConnectTiming& GetConnectTiming();
 
  protected:
@@ -382,6 +384,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // UMA histogram counters for streams pushed to this session.
   int streams_pushed_count_;
   int streams_pushed_and_claimed_count_;
+  uint64_t bytes_pushed_count_;
+  uint64_t bytes_pushed_and_unclaimed_count_;
   // Stores packet that witnesses socket write error. This packet is
   // written to a new socket after migration completes.
   scoped_refptr<StringIOBuffer> packet_;

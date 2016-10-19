@@ -37,8 +37,6 @@ namespace net {
 
 namespace test {
 
-static const size_t kMaxDecompressedSize = 1024;
-
 class MockDebugVisitor : public SpdyFramerDebugVisitorInterface {
  public:
   MOCK_METHOD4(OnSendCompressedFrame,
@@ -64,7 +62,7 @@ class SpdyFramerTestUtil {
   template <class SpdyFrameType>
   static SpdySerializedFrame DecompressFrame(SpdyFramer* framer,
                                              const SpdyFrameType& frame) {
-    NewDecompressionVisitor visitor;
+    DecompressionVisitor visitor;
     framer->set_visitor(&visitor);
     CHECK_EQ(frame.size(), framer->ProcessInput(frame.data(), frame.size()));
     CHECK_EQ(SpdyFramer::SPDY_READY_FOR_FRAME, framer->state());
@@ -74,9 +72,9 @@ class SpdyFramerTestUtil {
     return serializer.SerializeFrame(visitor.GetFrame());
   }
 
-  class NewDecompressionVisitor : public SpdyFramerVisitorInterface {
+  class DecompressionVisitor : public SpdyFramerVisitorInterface {
    public:
-    NewDecompressionVisitor() : finished_(false) {}
+    DecompressionVisitor() : finished_(false) {}
 
     const SpdyFrameIR& GetFrame() const {
       CHECK(finished_);
@@ -208,178 +206,6 @@ class SpdyFramerTestUtil {
    private:
     std::unique_ptr<TestHeadersHandler> headers_handler_;
     std::unique_ptr<SpdyFrameWithHeaderBlockIR> frame_;
-    bool finished_;
-
-    DISALLOW_COPY_AND_ASSIGN(NewDecompressionVisitor);
-  };
-
-  class DecompressionVisitor : public SpdyFramerVisitorInterface {
-   public:
-    explicit DecompressionVisitor(SpdyMajorVersion version)
-        : version_(version), size_(0), finished_(false) {}
-
-    void ResetBuffer() {
-      CHECK(buffer_.get() == NULL);
-      CHECK_EQ(0u, size_);
-      CHECK(!finished_);
-      buffer_.reset(new char[kMaxDecompressedSize]);
-    }
-
-    void OnError(SpdyFramer* framer) override { LOG(FATAL); }
-    void OnDataFrameHeader(SpdyStreamId stream_id,
-                           size_t length,
-                           bool fin) override {
-      LOG(FATAL) << "Unexpected data frame header";
-    }
-    void OnStreamFrameData(SpdyStreamId stream_id,
-                           const char* data,
-                           size_t len) override {
-      LOG(FATAL);
-    }
-
-    void OnStreamEnd(SpdyStreamId stream_id) override { LOG(FATAL); }
-
-    void OnStreamPadding(SpdyStreamId stream_id, size_t len) override {
-      LOG(FATAL);
-    }
-
-    SpdyHeadersHandlerInterface* OnHeaderFrameStart(
-        SpdyStreamId stream_id) override {
-      LOG(FATAL) << "Not implemented.";
-      return nullptr;
-    }
-
-    void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override {
-      LOG(FATAL) << "Not implemented.";
-    }
-
-    bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                  const char* header_data,
-                                  size_t len) override {
-      CHECK(buffer_.get() != NULL);
-      CHECK_GE(kMaxDecompressedSize, size_ + len);
-      CHECK(!finished_);
-      if (len != 0) {
-        memcpy(buffer_.get() + size_, header_data, len);
-        size_ += len;
-      } else {
-        // Done.
-        finished_ = true;
-      }
-      return true;
-    }
-
-    void OnSynStream(SpdyStreamId stream_id,
-                     SpdyStreamId associated_stream_id,
-                     SpdyPriority priority,
-                     bool fin,
-                     bool unidirectional) override {
-      SpdyFramer framer(version_);
-      framer.set_enable_compression(false);
-      SpdySynStreamIR syn_stream(stream_id);
-      syn_stream.set_associated_to_stream_id(associated_stream_id);
-      syn_stream.set_priority(priority);
-      syn_stream.set_fin(fin);
-      syn_stream.set_unidirectional(unidirectional);
-      SpdySerializedFrame frame(framer.SerializeSynStream(syn_stream));
-      ResetBuffer();
-      memcpy(buffer_.get(), frame.data(), framer.GetSynStreamMinimumSize());
-      size_ += framer.GetSynStreamMinimumSize();
-    }
-
-    void OnSynReply(SpdyStreamId stream_id, bool fin) override {
-      SpdyFramer framer(version_);
-      framer.set_enable_compression(false);
-      SpdyHeadersIR headers(stream_id);
-      headers.set_fin(fin);
-      SpdySerializedFrame frame(framer.SerializeHeaders(headers));
-      ResetBuffer();
-      memcpy(buffer_.get(), frame.data(), framer.GetHeadersMinimumSize());
-      size_ += framer.GetSynStreamMinimumSize();
-    }
-
-    void OnRstStream(SpdyStreamId stream_id,
-                     SpdyRstStreamStatus status) override {
-      LOG(FATAL);
-    }
-    void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override {
-      LOG(FATAL);
-    }
-    void OnPing(SpdyPingId unique_id, bool is_ack) override { LOG(FATAL); }
-    void OnSettingsEnd() override { LOG(FATAL); }
-    void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                  SpdyGoAwayStatus status) override {
-      LOG(FATAL);
-    }
-
-    void OnHeaders(SpdyStreamId stream_id,
-                   bool has_priority,
-                   int weight,
-                   SpdyStreamId parent_stream_id,
-                   bool exclusive,
-                   bool fin,
-                   bool end) override {
-      SpdyFramer framer(version_);
-      framer.set_enable_compression(false);
-      SpdyHeadersIR headers(stream_id);
-      headers.set_has_priority(has_priority);
-      headers.set_weight(weight);
-      headers.set_parent_stream_id(parent_stream_id);
-      headers.set_exclusive(exclusive);
-      headers.set_fin(fin);
-      SpdySerializedFrame frame(framer.SerializeHeaders(headers));
-      ResetBuffer();
-      memcpy(buffer_.get(), frame.data(), framer.GetHeadersMinimumSize());
-      size_ += framer.GetHeadersMinimumSize();
-    }
-
-    void OnWindowUpdate(SpdyStreamId stream_id,
-                        int delta_window_size) override {
-      LOG(FATAL);
-    }
-
-    void OnPushPromise(SpdyStreamId stream_id,
-                       SpdyStreamId promised_stream_id,
-                       bool end) override {
-      SpdyFramer framer(version_);
-      framer.set_enable_compression(false);
-      SpdyPushPromiseIR push_promise(stream_id, promised_stream_id);
-      SpdySerializedFrame frame(framer.SerializePushPromise(push_promise));
-      ResetBuffer();
-      memcpy(buffer_.get(), frame.data(), framer.GetPushPromiseMinimumSize());
-      size_ += framer.GetPushPromiseMinimumSize();
-    }
-
-    void OnContinuation(SpdyStreamId stream_id, bool end) override {
-      LOG(FATAL);
-    }
-
-    void OnPriority(SpdyStreamId stream_id,
-                    SpdyStreamId parent_stream_id,
-                    int weight,
-                    bool exclusive) override {
-      // Do nothing.
-    }
-
-    bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override {
-      LOG(FATAL);
-      return false;
-    }
-
-    char* ReleaseBuffer() {
-      CHECK(finished_);
-      return buffer_.release();
-    }
-
-    size_t size() const {
-      CHECK(finished_);
-      return size_;
-    }
-
-   private:
-    SpdyMajorVersion version_;
-    std::unique_ptr<char[]> buffer_;
-    size_t size_;
     bool finished_;
 
     DISALLOW_COPY_AND_ASSIGN(DecompressionVisitor);
@@ -1002,6 +828,73 @@ TEST_P(SpdyFramerTest, UndersizedHeaderBlockInBuffer) {
 
   EXPECT_EQ(0, visitor.zero_length_control_frame_header_data_count_);
   EXPECT_EQ(0u, visitor.headers_.size());
+}
+
+// Test that we make all header field names (keys) lower case on encoding.
+TEST_P(SpdyFramerTest, HeaderBlockToLowerCase) {
+  // The HPACK encoding path does not lowercase field names.
+  if (IsHttp2()) {
+    return;
+  }
+
+  SpdyFramer framer(spdy_version_);
+  framer.set_enable_compression(true);
+
+  // Encode the header block into a Headers frame.
+  SpdyHeadersIR headers_ir(1);
+  headers_ir.SetHeader("aLpha", "beta");
+  headers_ir.SetHeader("GAMMA", "charlie");
+  headers_ir.SetHeader("foo", "Bar");  // Upper case values are okay.
+  SpdySerializedFrame frame(
+      SpdyFramerPeer::SerializeHeaders(&framer, headers_ir));
+  TestSpdyVisitor visitor(spdy_version_);
+  visitor.use_compression_ = true;
+  visitor.SimulateInFramer(reinterpret_cast<unsigned char*>(frame.data()),
+                           frame.size());
+  EXPECT_EQ(1, visitor.headers_frame_count_);
+  EXPECT_EQ(headers_ir.header_block().size(), visitor.headers_.size());
+  EXPECT_EQ("beta", visitor.headers_["alpha"]);
+  EXPECT_EQ("charlie", visitor.headers_["gamma"]);
+  EXPECT_EQ("Bar", visitor.headers_["foo"]);
+}
+
+// Test that we treat incoming upper-case or mixed-case header values as
+// malformed for HTTP2.
+TEST_P(SpdyFramerTest, RejectUpperCaseHeaderBlockValue) {
+  if (!IsHttp2()) {
+    return;
+  }
+
+  SpdyFramer framer(spdy_version_);
+  framer.set_enable_compression(false);
+
+  SpdyFrameBuilder frame(1024, spdy_version_);
+  frame.BeginNewFrame(framer, HEADERS, 0, 1);
+  frame.WriteUInt32(1);
+  frame.WriteStringPiece32("Name1");
+  frame.WriteStringPiece32("value1");
+  frame.RewriteLength(framer);
+
+  SpdyFrameBuilder frame2(1024, spdy_version_);
+  frame2.BeginNewFrame(framer, HEADERS, 0, 1);
+  frame2.WriteUInt32(2);
+  frame2.WriteStringPiece32("name1");
+  frame2.WriteStringPiece32("value1");
+  frame2.WriteStringPiece32("nAmE2");
+  frame2.WriteStringPiece32("value2");
+  frame2.RewriteLength(framer);
+
+  SpdySerializedFrame control_frame(frame.take());
+  StringPiece serialized_headers = GetSerializedHeaders(control_frame, framer);
+  SpdySerializedFrame control_frame2(frame2.take());
+  StringPiece serialized_headers2 =
+      GetSerializedHeaders(control_frame2, framer);
+
+  SpdyHeaderBlock new_headers;
+  EXPECT_FALSE(framer.ParseHeaderBlockInBuffer(
+      serialized_headers.data(), serialized_headers.size(), &new_headers));
+  EXPECT_FALSE(framer.ParseHeaderBlockInBuffer(
+      serialized_headers2.data(), serialized_headers2.size(), &new_headers));
 }
 
 // Test that we can encode and decode stream dependency values in a header
@@ -4756,7 +4649,7 @@ TEST_P(SpdyFramerTest, ReadHeadersWithContinuation) {
   const unsigned char kInput[] = {
       0x00, 0x00, 0x14,                       // Length: 20
       0x01,                                   //   Type: HEADERS
-      0x09,                                   //  Flags: FIN, PADDED
+      0x08,                                   //  Flags: PADDED
       0x00, 0x00, 0x00, 0x01,                 // Stream: 1
       0x03,                                   // PadLen: 3 trailing bytes
       0x00,                                   // Unindexed Entry
@@ -4765,6 +4658,65 @@ TEST_P(SpdyFramerTest, ReadHeadersWithContinuation) {
       0x07,                                   // Value Len: 7
       'f',  'o',  'o',  '=',  'b', 'a', 'r',  // Value
       0x00, 0x00, 0x00,                       // Padding
+
+      0x00, 0x00, 0x14,                            // Length: 20
+      0x09,                                        //   Type: CONTINUATION
+      0x00,                                        //  Flags: none
+      0x00, 0x00, 0x00, 0x01,                      // Stream: 1
+      0x00,                                        // Unindexed Entry
+      0x06,                                        // Name Len: 6
+      'c',  'o',  'o',  'k',  'i', 'e',            // Name
+      0x08,                                        // Value Len: 7
+      'b',  'a',  'z',  '=',  'b', 'i', 'n', 'g',  // Value
+      0x00,                                        // Unindexed Entry
+      0x06,                                        // Name Len: 6
+      'c',                                         // Name (split)
+
+      0x00, 0x00, 0x12,             // Length: 18
+      0x09,                         //   Type: CONTINUATION
+      0x04,                         //  Flags: END_HEADERS
+      0x00, 0x00, 0x00, 0x01,       // Stream: 1
+      'o',  'o',  'k',  'i',  'e',  // Name (continued)
+      0x00,                         // Value Len: 0
+      0x00,                         // Unindexed Entry
+      0x04,                         // Name Len: 4
+      'n',  'a',  'm',  'e',        // Name
+      0x05,                         // Value Len: 5
+      'v',  'a',  'l',  'u',  'e',  // Value
+  };
+  // frame-format on
+
+  SpdyFramer framer(spdy_version_);
+  TestSpdyVisitor visitor(spdy_version_);
+  visitor.SimulateInFramer(kInput, sizeof(kInput));
+
+  EXPECT_EQ(0, visitor.error_count_);
+  EXPECT_EQ(1, visitor.headers_frame_count_);
+  EXPECT_EQ(2, visitor.continuation_count_);
+  EXPECT_EQ(0, visitor.zero_length_control_frame_header_data_count_);
+  EXPECT_EQ(0, visitor.end_of_stream_count_);
+
+  EXPECT_THAT(
+      visitor.headers_,
+      testing::ElementsAre(testing::Pair("cookie", "foo=bar; baz=bing; "),
+                           testing::Pair("name", "value")));
+}
+
+TEST_P(SpdyFramerTest, ReadHeadersWithContinuationAndFin) {
+  if (!IsHttp2()) {
+    return;
+  }
+  // frame-format off
+  const unsigned char kInput[] = {
+      0x00, 0x00, 0x10,                       // Length: 20
+      0x01,                                   //   Type: HEADERS
+      0x01,                                   //  Flags: END_STREAM
+      0x00, 0x00, 0x00, 0x01,                 // Stream: 1
+      0x00,                                   // Unindexed Entry
+      0x06,                                   // Name Len: 6
+      'c',  'o',  'o',  'k',  'i', 'e',       // Name
+      0x07,                                   // Value Len: 7
+      'f',  'o',  'o',  '=',  'b', 'a', 'r',  // Value
 
       0x00, 0x00, 0x14,                            // Length: 20
       0x09,                                        //   Type: CONTINUATION
@@ -5800,9 +5752,7 @@ TEST_P(SpdyFramerTest, PushPromiseFrameFlags) {
     bool end = flags & PUSH_PROMISE_FLAG_END_PUSH_PROMISE;
     EXPECT_CALL(debug_visitor,
                 OnReceiveCompressedFrame(client_id, PUSH_PROMISE, _));
-    EXPECT_CALL(visitor,
-                OnPushPromise(client_id, promised_id,
-                              flags & PUSH_PROMISE_FLAG_END_PUSH_PROMISE));
+    EXPECT_CALL(visitor, OnPushPromise(client_id, promised_id, end));
     EXPECT_CALL(visitor, OnHeaderFrameStart(client_id)).Times(1);
     if (end) {
       EXPECT_CALL(visitor, OnHeaderFrameEnd(client_id, _)).Times(1);

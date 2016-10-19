@@ -185,7 +185,7 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
   ObservationBuffer<int32_t> int_buffer(0.5);
   ObservationBuffer<base::TimeDelta> time_delta_buffer(0.5);
   const base::TimeTicks now = base::TimeTicks::Now();
-  const base::TimeTicks very_old = now - base::TimeDelta::FromDays(365);
+  const base::TimeTicks very_old = now - base::TimeDelta::FromDays(7);
 
   int32_t result;
   base::TimeDelta time_delta_result;
@@ -198,7 +198,7 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
       base::TimeTicks(), &time_delta_result, 50,
       std::vector<NetworkQualityObservationSource>()));
 
-  // First 50 samples have very old timestamp.
+  // First 50 samples have very old timestamps.
   for (int i = 1; i <= 50; ++i) {
     int_buffer.AddObservation(Observation<int32_t>(
         i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
@@ -207,7 +207,7 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
         NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
   }
 
-  // Next 50 (i.e., from 51 to 100) have recent timestamp.
+  // Next 50 (i.e., from 51 to 100) have recent timestamps.
   for (int i = 51; i <= 100; ++i) {
     int_buffer.AddObservation(Observation<int32_t>(
         i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
@@ -224,12 +224,11 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
     // what is expected due to floating point computation errors and integer
     // rounding off errors.
     EXPECT_TRUE(int_buffer.GetPercentile(
-        base::TimeTicks(), &result, i,
-        std::vector<NetworkQualityObservationSource>()));
+        very_old, &result, i, std::vector<NetworkQualityObservationSource>()));
     EXPECT_NEAR(result, 51 + 0.49 * i, 1);
 
     EXPECT_TRUE(time_delta_buffer.GetPercentile(
-        base::TimeTicks(), &time_delta_result, i,
+        very_old, &time_delta_result, i,
         std::vector<NetworkQualityObservationSource>()));
     EXPECT_NEAR(time_delta_result.InMilliseconds(), 51 + 0.49 * i, 1);
   }
@@ -241,6 +240,122 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
       now + base::TimeDelta::FromSeconds(1), &time_delta_result, 50,
       std::vector<NetworkQualityObservationSource>()));
 }
+
+#if !defined(OS_WIN)
+// Disabled on OS_WIN since the GetUnweightedAverage() and
+// GetUnweightedAverage() functions are not yet called outside tests, and so the
+// compiler on Windows does not generate the object code for these functions.
+// TODO(tbansal): crbug.com/656170 Enable these tests on Windows once these
+// functions are called outside the tests.
+TEST(NetworkQualityObservationBufferTest,
+     UnweightedAverageDifferentTimestamps) {
+  ObservationBuffer<base::TimeDelta> time_delta_buffer(0.5);
+  ObservationBuffer<int32_t> int_buffer(0.5);
+  const base::TimeTicks now = base::TimeTicks::Now();
+  const base::TimeTicks very_old = now - base::TimeDelta::FromDays(7);
+
+  base::TimeDelta time_delta_result;
+  int32_t int_result;
+
+  // Network quality should be unavailable when no observations are available.
+  EXPECT_FALSE(time_delta_buffer.GetUnweightedAverage(
+      base::TimeTicks(), std::vector<NetworkQualityObservationSource>(),
+      &time_delta_result));
+  EXPECT_FALSE(int_buffer.GetUnweightedAverage(
+      base::TimeTicks(), std::vector<NetworkQualityObservationSource>(),
+      &int_result));
+
+  // The first 50 samples have very old timestamps.
+  for (int i = 1; i <= 50; ++i) {
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), very_old,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+  }
+
+  // The next 50 (i.e., from 51 to 100) samples have recent timestamps.
+  for (int i = 51; i <= 100; ++i) {
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+  }
+
+  // All samples have equal weight. So, the unweighted average is the average of
+  // all samples.
+  EXPECT_TRUE(time_delta_buffer.GetUnweightedAverage(
+      very_old, std::vector<NetworkQualityObservationSource>(),
+      &time_delta_result));
+  EXPECT_NEAR(time_delta_result.InMilliseconds(), (1 + 100) / 2, 1);
+
+  EXPECT_TRUE(int_buffer.GetUnweightedAverage(
+      very_old, std::vector<NetworkQualityObservationSource>(), &int_result));
+  EXPECT_NEAR(int_result, (1 + 100) / 2, 1);
+
+  EXPECT_FALSE(time_delta_buffer.GetUnweightedAverage(
+      now + base::TimeDelta::FromSeconds(1),
+      std::vector<NetworkQualityObservationSource>(), &time_delta_result));
+  EXPECT_FALSE(int_buffer.GetUnweightedAverage(
+      now + base::TimeDelta::FromSeconds(1),
+      std::vector<NetworkQualityObservationSource>(), &int_result));
+}
+
+TEST(NetworkQualityObservationBufferTest, WeightedAverageDifferentTimestamps) {
+  ObservationBuffer<base::TimeDelta> time_delta_buffer(0.5);
+  ObservationBuffer<int32_t> int_buffer(0.5);
+  const base::TimeTicks now = base::TimeTicks::Now();
+  const base::TimeTicks very_old = now - base::TimeDelta::FromDays(7);
+
+  base::TimeDelta time_delta_result;
+  int32_t int_result;
+
+  // Network quality should be unavailable when no observations are available.
+  EXPECT_FALSE(time_delta_buffer.GetWeightedAverage(
+      base::TimeTicks(), std::vector<NetworkQualityObservationSource>(),
+      &time_delta_result));
+  EXPECT_FALSE(int_buffer.GetWeightedAverage(
+      base::TimeTicks(), std::vector<NetworkQualityObservationSource>(),
+      &int_result));
+
+  // The first 50 samples have very old timestamps.
+  for (int i = 1; i <= 50; ++i) {
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), very_old,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+  }
+
+  // The next 50 (i.e., from 51 to 100) samples have recent timestamps.
+  for (int i = 51; i <= 100; ++i) {
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST));
+  }
+
+  // The older samples have very little weight, and so the weighted average must
+  // be approximately equal to the average of all recent samples.
+  EXPECT_TRUE(time_delta_buffer.GetWeightedAverage(
+      very_old, std::vector<NetworkQualityObservationSource>(),
+      &time_delta_result));
+  EXPECT_NEAR(time_delta_result.InMilliseconds(), (51 + 100) / 2, 1);
+
+  EXPECT_TRUE(int_buffer.GetWeightedAverage(
+      very_old, std::vector<NetworkQualityObservationSource>(), &int_result));
+  EXPECT_NEAR(int_result, (51 + 100) / 2, 1);
+
+  EXPECT_FALSE(time_delta_buffer.GetWeightedAverage(
+      now + base::TimeDelta::FromSeconds(1),
+      std::vector<NetworkQualityObservationSource>(), &time_delta_result));
+  EXPECT_FALSE(int_buffer.GetWeightedAverage(
+      now + base::TimeDelta::FromSeconds(1),
+      std::vector<NetworkQualityObservationSource>(), &int_result));
+}
+#endif  // !defined(OS_WIN)
 
 // Verifies that the percentiles are correctly computed when some of the
 // observation sources are disallowed. All observations have the same timestamp.

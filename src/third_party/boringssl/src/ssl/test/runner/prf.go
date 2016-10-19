@@ -119,6 +119,7 @@ var extendedMasterSecretLabel = []byte("extended master secret")
 var keyExpansionLabel = []byte("key expansion")
 var clientFinishedLabel = []byte("client finished")
 var serverFinishedLabel = []byte("server finished")
+var finishedLabel = []byte("finished")
 var channelIDLabel = []byte("TLS Channel ID signature\x00")
 var channelIDResumeLabel = []byte("Resumption\x00")
 
@@ -311,7 +312,7 @@ func (h finishedHash) clientSum(baseKey []byte) []byte {
 		return out
 	}
 
-	clientFinishedKey := hkdfExpandLabel(h.hash, baseKey, clientFinishedLabel, nil, h.hash.Size())
+	clientFinishedKey := hkdfExpandLabel(h.hash, baseKey, finishedLabel, nil, h.hash.Size())
 	finishedHMAC := hmac.New(h.hash.New, clientFinishedKey)
 	finishedHMAC.Write(h.appendContextHashes(nil))
 	return finishedHMAC.Sum(nil)
@@ -330,7 +331,7 @@ func (h finishedHash) serverSum(baseKey []byte) []byte {
 		return out
 	}
 
-	serverFinishedKey := hkdfExpandLabel(h.hash, baseKey, serverFinishedLabel, nil, h.hash.Size())
+	serverFinishedKey := hkdfExpandLabel(h.hash, baseKey, finishedLabel, nil, h.hash.Size())
 	finishedHMAC := hmac.New(h.hash.New, serverFinishedKey)
 	finishedHMAC.Write(h.appendContextHashes(nil))
 	return finishedHMAC.Sum(nil)
@@ -367,7 +368,7 @@ func (h *finishedHash) discardHandshakeBuffer() {
 }
 
 // zeroSecretTLS13 returns the default all zeros secret for TLS 1.3, used when a
-// given secret is not available in the handshake. See draft-ietf-tls-tls13-13,
+// given secret is not available in the handshake. See draft-ietf-tls-tls13-16,
 // section 7.1.
 func (h *finishedHash) zeroSecret() []byte {
 	return make([]byte, h.hash.Size())
@@ -387,7 +388,7 @@ func (h *finishedHash) extractKey(salt, ikm []byte) []byte {
 }
 
 // hkdfExpandLabel implements TLS 1.3's HKDF-Expand-Label function, as defined
-// in section 7.1 of draft-ietf-tls-tls13-13.
+// in section 7.1 of draft-ietf-tls-tls13-16.
 func hkdfExpandLabel(hash crypto.Hash, secret, label, hashValue []byte, length int) []byte {
 	if len(label) > 255 || len(hashValue) > 255 {
 		panic("hkdfExpandLabel: label or hashValue too long")
@@ -417,15 +418,18 @@ func (h *finishedHash) appendContextHashes(b []byte) []byte {
 
 // The following are labels for traffic secret derivation in TLS 1.3.
 var (
-	earlyTrafficLabel       = []byte("early traffic secret")
-	handshakeTrafficLabel   = []byte("handshake traffic secret")
-	applicationTrafficLabel = []byte("application traffic secret")
-	exporterLabel           = []byte("exporter master secret")
-	resumptionLabel         = []byte("resumption master secret")
+	earlyTrafficLabel             = []byte("client early traffic secret")
+	clientHandshakeTrafficLabel   = []byte("client handshake traffic secret")
+	serverHandshakeTrafficLabel   = []byte("server handshake traffic secret")
+	clientApplicationTrafficLabel = []byte("client application traffic secret")
+	serverApplicationTrafficLabel = []byte("server application traffic secret")
+	applicationTrafficLabel       = []byte("application traffic secret")
+	exporterLabel                 = []byte("exporter master secret")
+	resumptionLabel               = []byte("resumption master secret")
 )
 
 // deriveSecret implements TLS 1.3's Derive-Secret function, as defined in
-// section 7.1 of draft ietf-tls-tls13-13.
+// section 7.1 of draft ietf-tls-tls13-16.
 func (h *finishedHash) deriveSecret(secret, label []byte) []byte {
 	if h.resumptionContextHash == nil {
 		panic("Resumption context not set.")
@@ -472,19 +476,9 @@ const (
 // deriveTrafficAEAD derives traffic keys and constructs an AEAD given a traffic
 // secret.
 func deriveTrafficAEAD(version uint16, suite *cipherSuite, secret, phase []byte, side trafficDirection) interface{} {
-	// We may have forcibly selected a non-AEAD cipher from the
-	// EnableAllCiphers bug. Use the NULL cipher to avoid crashing the test.
-	if suite.aead == nil {
-		return nil
-	}
-
 	label := make([]byte, 0, len(phase)+2+16)
 	label = append(label, phase...)
-	if side == clientWrite {
-		label = append(label, []byte(", client write key")...)
-	} else {
-		label = append(label, []byte(", server write key")...)
-	}
+	label = append(label, []byte(", key")...)
 	key := hkdfExpandLabel(suite.hash(), secret, label, nil, suite.keyLen)
 
 	label = label[:len(label)-3] // Remove "key" from the end.

@@ -2675,9 +2675,9 @@ strtod
 				L = c - '0';
 				s1 = s;
 				while((c = *++s) >= '0' && c <= '9') {
-					L = 10*L + c - '0';
-					if (L > DBL_MAX_10_EXP)
-						break;
+					if (L < (INT_MAX - 10) / 10) {
+						L = 10*L + c - '0';
+					}
 				}
 				if (s - s1 > 8 || L > 19999)
 					/* Avoid confusion from exponents

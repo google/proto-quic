@@ -49,6 +49,7 @@
       "sandbox_linux_unittests",
       "skia_unittests",
       "sql_unittests",
+      "storage_unittests",
       "sync_integration_tests",
       "ui_base_unittests",
       "ui_touch_selection_unittests",

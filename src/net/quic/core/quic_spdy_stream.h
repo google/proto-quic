@@ -100,6 +100,10 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
                                   size_t frame_len,
                                   const QuicHeaderList& header_list);
 
+  // Called when the received headers are too large. By default this will
+  // reset the stream.
+  virtual void OnHeadersTooLarge();
+
   // Called by the session when decompressed PUSH_PROMISE headers data
   // is received for this stream.
   // May be called multiple times, with each call providing additional headers
@@ -211,6 +215,12 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   // will be available.
   bool IsClosed() { return sequencer()->IsClosed(); }
 
+  void set_allow_bidirectional_data(bool value) {
+    allow_bidirectional_data_ = value;
+  }
+
+  bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
+
  protected:
   // Called by OnStreamHeadersComplete depending on which type (initial or
   // trailing) headers are expected next.
@@ -241,6 +251,9 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   QuicSpdySession* spdy_session_;
 
   Visitor* visitor_;
+  // If true, allow sending of a request to continue while the response is
+  // arriving.
+  bool allow_bidirectional_data_;
   // True if the headers have been completely decompressed.
   bool headers_decompressed_;
   // The priority of the stream, once parsed.

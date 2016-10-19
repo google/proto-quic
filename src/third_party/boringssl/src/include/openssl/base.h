@@ -60,6 +60,11 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#if defined(__MINGW32__)
+/* stdio.h is needed on MinGW for __MINGW_PRINTF_FORMAT. */
+#include <stdio.h>
+#endif
+
 #include <openssl/opensslconf.h>
 
 #if defined(BORINGSSL_PREFIX)
@@ -117,7 +122,7 @@ extern "C" {
 #define OPENSSL_IS_BORINGSSL
 #define BORINGSSL_201512
 #define BORINGSSL_201603
-#define OPENSSL_VERSION_NUMBER 0x10002000
+#define OPENSSL_VERSION_NUMBER 0x100020af
 #define SSLEAY_VERSION_NUMBER OPENSSL_VERSION_NUMBER
 
 /* BORINGSSL_API_VERSION is a positive integer that increments as BoringSSL
@@ -158,8 +163,17 @@ extern "C" {
 
 
 #if defined(__GNUC__)
+/* MinGW has two different printf implementations. Ensure the format macro
+ * matches the selected implementation. See
+ * https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/. */
+#if defined(__MINGW_PRINTF_FORMAT)
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check) \
-        __attribute__((__format__(__printf__, string_index, first_to_check)))
+  __attribute__(                                                 \
+      (__format__(__MINGW_PRINTF_FORMAT, string_index, first_to_check)))
+#else
+#define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check) \
+  __attribute__((__format__(__printf__, string_index, first_to_check)))
+#endif
 #else
 #define OPENSSL_PRINTF_FORMAT_FUNC(string_index, first_to_check)
 #endif
@@ -360,6 +374,9 @@ class StackAllocated {
  public:
   StackAllocated() { init(&ctx_); }
   ~StackAllocated() { cleanup(&ctx_); }
+
+  StackAllocated(const StackAllocated<T, CleanupRet, init, cleanup> &) = delete;
+  T& operator=(const StackAllocated<T, CleanupRet, init, cleanup> &) = delete;
 
   T *get() { return &ctx_; }
   const T *get() const { return &ctx_; }

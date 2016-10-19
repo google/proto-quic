@@ -13,7 +13,6 @@
 
 using base::android::AttachCurrentThread;
 using base::android::HasException;
-using base::android::JavaArrayOfByteArrayToStringVector;
 using base::android::JavaByteArrayToByteVector;
 using base::android::JavaRef;
 using base::android::ScopedJavaLocalRef;
@@ -21,33 +20,6 @@ using base::android::ToJavaByteArray;
 
 namespace net {
 namespace android {
-
-bool GetRSAKeyModulus(const JavaRef<jobject>& private_key_ref,
-                      std::vector<uint8_t>* result) {
-  JNIEnv* env = AttachCurrentThread();
-
-  ScopedJavaLocalRef<jbyteArray> modulus_ref =
-      Java_AndroidKeyStore_getRSAKeyModulus(env, private_key_ref);
-  if (modulus_ref.is_null())
-    return false;
-
-  JavaByteArrayToByteVector(env, modulus_ref.obj(), result);
-  return true;
-}
-
-bool GetECKeyOrder(const JavaRef<jobject>& private_key_ref,
-                   std::vector<uint8_t>* result) {
-  JNIEnv* env = AttachCurrentThread();
-
-  ScopedJavaLocalRef<jbyteArray> order_ref =
-      Java_AndroidKeyStore_getECKeyOrder(env, private_key_ref);
-
-  if (order_ref.is_null())
-    return false;
-
-  JavaByteArrayToByteVector(env, order_ref.obj(), result);
-  return true;
-}
 
 bool RawSignDigestWithPrivateKey(const JavaRef<jobject>& private_key_ref,
                                  const base::StringPiece& digest,
@@ -69,12 +41,6 @@ bool RawSignDigestWithPrivateKey(const JavaRef<jobject>& private_key_ref,
   // Write signature to string.
   JavaByteArrayToByteVector(env, signature_ref.obj(), signature);
   return true;
-}
-
-PrivateKeyType GetPrivateKeyType(const JavaRef<jobject>& private_key_ref) {
-  JNIEnv* env = AttachCurrentThread();
-  int type = Java_AndroidKeyStore_getPrivateKeyType(env, private_key_ref);
-  return static_cast<PrivateKeyType>(type);
 }
 
 AndroidEVP_PKEY* GetOpenSSLSystemHandleForPrivateKey(

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
@@ -93,7 +94,7 @@ class TestServerSession : public QuicServerSessionBase {
       return nullptr;
     }
     QuicSpdyStream* stream = new QuicSimpleServerStream(id, this);
-    ActivateStream(stream);
+    ActivateStream(base::WrapUnique(stream));
     return stream;
   }
 
@@ -105,7 +106,7 @@ class TestServerSession : public QuicServerSessionBase {
     QuicSpdyStream* stream =
         new QuicSimpleServerStream(GetNextOutgoingStreamId(), this);
     stream->SetPriority(priority);
-    ActivateStream(stream);
+    ActivateStream(base::WrapUnique(stream));
     return stream;
   }
 

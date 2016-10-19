@@ -42,18 +42,10 @@ class NET_EXPORT NSSCertDatabase {
    public:
     virtual ~Observer() {}
 
-    // Will be called when a new certificate is added.
-    // Called with |cert| == NULL after importing a list of certificates
-    // in ImportFromPKCS12().
-    virtual void OnCertAdded(const X509Certificate* cert) {}
-
-    // Will be called when a certificate is removed.
-    virtual void OnCertRemoved(const X509Certificate* cert) {}
-
     // Will be called when a CA certificate is changed.
     // Called with |cert| == NULL after importing a list of certificates
     // in ImportCACerts().
-    virtual void OnCACertChanged(const X509Certificate* cert) {}
+    virtual void OnCertDBChanged(const X509Certificate* cert) {}
 
    protected:
     Observer() {}
@@ -199,6 +191,7 @@ class NET_EXPORT NSSCertDatabase {
   // already be installed, otherwise we return ERR_NO_PRIVATE_KEY_FOR_CERT.
   // Returns OK or a network error code.
   int ImportUserCert(const std::string& data);
+  int ImportUserCert(X509Certificate* cert);
 
   // Import CA certificates.
   // Tries to import all the certificates given.  The root will be trusted
@@ -275,9 +268,7 @@ class NET_EXPORT NSSCertDatabase {
 
  protected:
   // Broadcasts notifications to all registered observers.
-  void NotifyObserversOfCertAdded(const X509Certificate* cert);
-  void NotifyObserversOfCertRemoved(const X509Certificate* cert);
-  void NotifyObserversOfCACertChanged(const X509Certificate* cert);
+  void NotifyObserversCertDBChanged(const X509Certificate* cert);
 
  private:
   // Registers |observer| to receive notifications of certificate changes.  The

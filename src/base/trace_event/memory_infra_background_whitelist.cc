@@ -17,6 +17,7 @@ namespace {
 // providers can be added here only if the background mode dump has very
 // less performance and memory overhead.
 const char* const kDumpProviderWhitelist[] = {
+    "android::ResourceManagerImpl",
     "BlinkGC",
     "ChildDiscardableSharedMemoryManager",
     "DOMStorage",
@@ -78,6 +79,7 @@ const char* const kAllocatorDumpNameWhitelist[] = {
     "skia/sk_glyph_cache",
     "skia/sk_resource_cache",
     "sqlite",
+    "ui/resource_manager_0x?",
     "v8/isolate_0x?/heap_spaces",
     "v8/isolate_0x?/heap_spaces/code_space",
     "v8/isolate_0x?/heap_spaces/large_object_space",

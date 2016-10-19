@@ -61,9 +61,12 @@ class TestResultsTracker {
   // conditions that affect the entire test run, as opposed to individual tests.
   void AddGlobalTag(const std::string& tag);
 
-  // Saves a JSON summary of all test iterations results to |path|. Returns
+  // Saves a JSON summary of all test iterations results to |path|. Adds
+  // |additional_tags| to the summary (just for this invocation). Returns
   // true on success.
-  bool SaveSummaryAsJSON(const FilePath& path) const WARN_UNUSED_RESULT;
+  bool SaveSummaryAsJSON(
+      const FilePath& path,
+      const std::vector<std::string>& additional_tags) const WARN_UNUSED_RESULT;
 
   // Map where keys are test result statuses, and values are sets of tests
   // which finished with that status.

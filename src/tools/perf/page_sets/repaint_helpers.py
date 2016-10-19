@@ -46,3 +46,8 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
                 "notify_done": true
               });
   """)
+
+
+def WaitThenRepaint(action_runner):
+  action_runner.Wait(2)
+  Repaint(action_runner)

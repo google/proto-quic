@@ -203,6 +203,8 @@ if (build_with_chromium) {
         libfuzzer_options = [ "max_len=4096" ]
       } else if ("spki" == fuzzer) {
         libfuzzer_options = [ "max_len=1024" ]
+      } else if ("ssl_ctx_api" == fuzzer) {
+        libfuzzer_options = [ "max_len=256" ]
       }
     }
   }

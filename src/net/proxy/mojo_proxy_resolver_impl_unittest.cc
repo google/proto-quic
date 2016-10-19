@@ -45,8 +45,8 @@ class TestRequestClient : public interfaces::ProxyResolverRequestClient {
  private:
   // interfaces::ProxyResolverRequestClient override.
   void ReportResult(int32_t error, const ProxyInfo& results) override;
-  void Alert(const mojo::String& message) override;
-  void OnError(int32_t line_number, const mojo::String& message) override;
+  void Alert(const std::string& message) override;
+  void OnError(int32_t line_number, const std::string& message) override;
   void ResolveDns(std::unique_ptr<HostResolver::RequestInfo> request_info,
                   interfaces::HostResolverRequestClientPtr client) override;
 
@@ -85,12 +85,10 @@ void TestRequestClient::ReportResult(int32_t error, const ProxyInfo& results) {
   done_ = true;
 }
 
-void TestRequestClient::Alert(const mojo::String& message) {
-}
+void TestRequestClient::Alert(const std::string& message) {}
 
 void TestRequestClient::OnError(int32_t line_number,
-                                const mojo::String& message) {
-}
+                                const std::string& message) {}
 
 void TestRequestClient::ResolveDns(
     std::unique_ptr<HostResolver::RequestInfo> request_info,

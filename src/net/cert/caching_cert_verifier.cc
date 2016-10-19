@@ -198,7 +198,7 @@ void CachingCertVerifier::VisitEntries(CacheVisitor* visitor) const {
   }
 }
 
-void CachingCertVerifier::OnCACertChanged(const X509Certificate* cert) {
+void CachingCertVerifier::OnCertDBChanged(const X509Certificate* cert) {
   ClearCache();
 }
 

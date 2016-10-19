@@ -967,7 +967,7 @@ void FindBadConstructsConsumer::ParseFunctionTemplates(
       continue;
 
     // Parse and build AST for yet-uninstantiated template functions.
-    clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd];
+    clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd].get();
     sema.LateTemplateParser(sema.OpaqueParser, *lpt);
   }
 }

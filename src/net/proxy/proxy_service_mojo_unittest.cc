@@ -139,7 +139,7 @@ class ProxyServiceMojoTest : public testing::Test,
   }
 
   std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
-      const mojo::String& pac_script,
+      const std::string& pac_script,
       mojo::InterfaceRequest<interfaces::ProxyResolver> req,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override {
     InProcessMojoProxyResolverFactory::GetInstance()->CreateResolver(

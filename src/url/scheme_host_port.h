@@ -88,6 +88,19 @@ class URL_EXPORT SchemeHostPort {
                  base::StringPiece host,
                  uint16_t port);
 
+  // Metadata influencing whether or not the constructor should sanity check
+  // host canonicalization.
+  enum ConstructPolicy { CHECK_CANONICALIZATION, ALREADY_CANONICALIZED };
+
+  // Creates a (scheme, host, port) tuple without performing sanity checking
+  // that the host and port are canonicalized. This should only be used when
+  // converting between already normalized types, and should NOT be used for
+  // IPC.
+  SchemeHostPort(base::StringPiece scheme,
+                 base::StringPiece host,
+                 uint16_t port,
+                 ConstructPolicy policy);
+
   // Creates a (scheme, host, port) tuple from |url|, as described at
   // https://tools.ietf.org/html/rfc6454#section-4
   //

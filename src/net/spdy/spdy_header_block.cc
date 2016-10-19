@@ -190,7 +190,16 @@ void SpdyHeaderBlock::clear() {
 
 void SpdyHeaderBlock::insert(
     const SpdyHeaderBlock::MapType::value_type& value) {
-  ReplaceOrAppendHeader(value.first, value.second);
+  // TODO(birenroy): Write new value in place of old value, if it fits.
+  auto iter = block_.find(value.first);
+  if (iter == block_.end()) {
+    DVLOG(1) << "Inserting: (" << value.first << ", " << value.second << ")";
+    AppendHeader(value.first, value.second);
+  } else {
+    DVLOG(1) << "Updating key: " << iter->first
+             << " with value: " << value.second;
+    iter->second = GetStorage()->Write(value.second);
+  }
 }
 
 SpdyHeaderBlock::StringPieceProxy SpdyHeaderBlock::operator[](
@@ -214,19 +223,6 @@ SpdyHeaderBlock::StringPieceProxy SpdyHeaderBlock::operator[](
 StringPiece SpdyHeaderBlock::GetHeader(const StringPiece key) const {
   auto iter = block_.find(key);
   return iter == block_.end() ? StringPiece() : iter->second;
-}
-
-void SpdyHeaderBlock::ReplaceOrAppendHeader(const StringPiece key,
-                                            const StringPiece value) {
-  // TODO(birenroy): Write new value in place of old value, if it fits.
-  auto iter = block_.find(key);
-  if (iter == block_.end()) {
-    DVLOG(1) << "Inserting: (" << key << ", " << value << ")";
-    AppendHeader(key, value);
-  } else {
-    DVLOG(1) << "Updating key: " << iter->first << " with value: " << value;
-    iter->second = GetStorage()->Write(value);
-  }
 }
 
 void SpdyHeaderBlock::AppendValueOrAddHeader(const StringPiece key,

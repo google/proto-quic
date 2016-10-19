@@ -10,6 +10,7 @@
 #include "net/quic/test_tools/simulator/link.h"
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/quic/test_tools/simulator/switch.h"
+#include "net/quic/test_tools/simulator/traffic_policer.h"
 
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -139,6 +140,9 @@ class LinkSaturator : public Endpoint {
   inline QuicPacketCount packets_transmitted() const {
     return packets_transmitted_;
   }
+
+  void Pause() { Unschedule(); }
+  void Resume() { Schedule(clock_->Now()); }
 
  private:
   QuicByteCount packet_size_;
@@ -558,6 +562,122 @@ TEST(SimulatorTest, RunFor) {
   simulator.RunFor(QuicTime::Delta::FromSeconds(100));
 
   EXPECT_EQ(33, counter.get_value());
+}
+
+// Set up a traffic policer in one direction that throttles at 25% of link
+// bandwidth, and put two link saturators at each endpoint.
+TEST(SimulatorTest, TrafficPolicer) {
+  const QuicBandwidth bandwidth =
+      QuicBandwidth::FromBytesPerSecond(1024 * 1024);
+  const QuicTime::Delta base_propagation_delay =
+      QuicTime::Delta::FromMilliseconds(5);
+  const QuicTime::Delta timeout = QuicTime::Delta::FromSeconds(10);
+
+  Simulator simulator;
+  LinkSaturator saturator1(&simulator, "Saturator 1", 1000, "Saturator 2");
+  LinkSaturator saturator2(&simulator, "Saturator 2", 1000, "Saturator 1");
+  Switch network_switch(&simulator, "Switch", 8,
+                        bandwidth * base_propagation_delay * 10);
+
+  const QuicByteCount initial_burst = 1000 * 10;
+  const QuicByteCount max_bucket_size = 1000 * 100;
+  const QuicBandwidth target_bandwidth = bandwidth * 0.25;
+  TrafficPolicer policer(&simulator, "Policer", initial_burst, max_bucket_size,
+                         target_bandwidth, network_switch.port(2));
+
+  SymmetricLink link1(&saturator1, network_switch.port(1), bandwidth,
+                      base_propagation_delay);
+  SymmetricLink link2(&saturator2, policer.output(), bandwidth,
+                      base_propagation_delay);
+
+  // Ensure the initial burst passes without being dropped at all.
+  bool simulator_result = simulator.RunUntilOrTimeout(
+      [&saturator1, initial_burst]() {
+        return saturator1.bytes_transmitted() == initial_burst;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+  saturator1.Pause();
+  simulator_result = simulator.RunUntilOrTimeout(
+      [&saturator2, initial_burst]() {
+        return saturator2.counter()->bytes() == initial_burst;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+  saturator1.Resume();
+
+  // Run for some time so that the initial burst is not visible.
+  const QuicTime::Delta simulation_time = QuicTime::Delta::FromSeconds(10);
+  simulator.RunFor(simulation_time);
+
+  // Ensure we've transmitted the amount of data we expected.
+  for (auto* saturator : {&saturator1, &saturator2}) {
+    test::ExpectApproxEq(bandwidth * simulation_time,
+                         saturator->bytes_transmitted(), 0.01f);
+  }
+
+  // Check that only one direction is throttled.
+  test::ExpectApproxEq(saturator1.bytes_transmitted() / 4,
+                       saturator2.counter()->bytes(), 0.1f);
+  test::ExpectApproxEq(saturator2.bytes_transmitted(),
+                       saturator1.counter()->bytes(), 0.1f);
+}
+
+// Ensure that a larger burst is allowed when the policed saturator exits
+// quiescence.
+TEST(SimulatorTest, TrafficPolicerBurst) {
+  const QuicBandwidth bandwidth =
+      QuicBandwidth::FromBytesPerSecond(1024 * 1024);
+  const QuicTime::Delta base_propagation_delay =
+      QuicTime::Delta::FromMilliseconds(5);
+  const QuicTime::Delta timeout = QuicTime::Delta::FromSeconds(10);
+
+  Simulator simulator;
+  LinkSaturator saturator1(&simulator, "Saturator 1", 1000, "Saturator 2");
+  LinkSaturator saturator2(&simulator, "Saturator 2", 1000, "Saturator 1");
+  Switch network_switch(&simulator, "Switch", 8,
+                        bandwidth * base_propagation_delay * 10);
+
+  const QuicByteCount initial_burst = 1000 * 10;
+  const QuicByteCount max_bucket_size = 1000 * 100;
+  const QuicBandwidth target_bandwidth = bandwidth * 0.25;
+  TrafficPolicer policer(&simulator, "Policer", initial_burst, max_bucket_size,
+                         target_bandwidth, network_switch.port(2));
+
+  SymmetricLink link1(&saturator1, network_switch.port(1), bandwidth,
+                      base_propagation_delay);
+  SymmetricLink link2(&saturator2, policer.output(), bandwidth,
+                      base_propagation_delay);
+
+  // Ensure at least one packet is sent on each side.
+  bool simulator_result = simulator.RunUntilOrTimeout(
+      [&saturator1, &saturator2]() {
+        return saturator1.packets_transmitted() > 0 &&
+               saturator2.packets_transmitted() > 0;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+
+  // Wait until the bucket fills up.
+  saturator1.Pause();
+  saturator2.Pause();
+  simulator.RunFor(1.5f * target_bandwidth.TransferTime(max_bucket_size));
+
+  // Send a burst.
+  saturator1.Resume();
+  simulator.RunFor(bandwidth.TransferTime(max_bucket_size));
+  saturator1.Pause();
+  simulator.RunFor(2 * base_propagation_delay);
+
+  // Expect the burst to pass without losses.
+  test::ExpectApproxEq(saturator1.bytes_transmitted(),
+                       saturator2.counter()->bytes(), 0.1f);
+
+  // Expect subsequent traffic to be policed.
+  saturator1.Resume();
+  simulator.RunFor(QuicTime::Delta::FromSeconds(10));
+  test::ExpectApproxEq(saturator1.bytes_transmitted() / 4,
+                       saturator2.counter()->bytes(), 0.1f);
 }
 
 }  // namespace simulator

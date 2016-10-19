@@ -201,10 +201,33 @@ void MemoryDumpManager::Initialize(MemoryDumpManagerDelegate* delegate,
                        nullptr);
 #endif
 
+  TRACE_EVENT_WARMUP_CATEGORY(kTraceCategory);
+
+  // TODO(ssid): This should be done in EnableHeapProfiling so that we capture
+  // more allocations (crbug.com/625170).
+  if (AllocationContextTracker::capture_mode() ==
+          AllocationContextTracker::CaptureMode::PSEUDO_STACK &&
+      !(TraceLog::GetInstance()->enabled_modes() & TraceLog::FILTERING_MODE)) {
+    // Create trace config with heap profiling filter.
+    TraceConfig::EventFilterConfig heap_profiler_filter_config(
+        TraceLog::TraceEventFilter::kHeapProfilerPredicate);
+    heap_profiler_filter_config.AddIncludedCategory("*");
+    heap_profiler_filter_config.AddIncludedCategory(
+        MemoryDumpManager::kTraceCategory);
+    TraceConfig::EventFilters filters;
+    filters.push_back(heap_profiler_filter_config);
+    TraceConfig filtering_trace_config;
+    filtering_trace_config.SetEventFilters(filters);
+
+    TraceLog::GetInstance()->SetEnabled(filtering_trace_config,
+                                        TraceLog::FILTERING_MODE);
+  }
+
   // If tracing was enabled before initializing MemoryDumpManager, we missed the
   // OnTraceLogEnabled() event. Synthetize it so we can late-join the party.
+  // IsEnabled is called before adding observer to avoid calling
+  // OnTraceLogEnabled twice.
   bool is_tracing_already_enabled = TraceLog::GetInstance()->IsEnabled();
-  TRACE_EVENT0(kTraceCategory, "init");  // Add to trace-viewer category list.
   TraceLog::GetInstance()->AddEnabledStateObserver(this);
   if (is_tracing_already_enabled)
     OnTraceLogEnabled();

@@ -79,22 +79,6 @@ bool StoreKeyPair(const uint8_t* public_key,
   return ret;
 }
 
-void StoreCertificate(net::CertificateMimeType cert_type,
-                      const void* data,
-                      size_t data_len) {
-  JNIEnv* env = AttachCurrentThread();
-  ScopedJavaLocalRef<jbyteArray> data_array =
-      ToJavaByteArray(env, reinterpret_cast<const uint8_t*>(data), data_len);
-  jboolean ret = Java_AndroidNetworkLibrary_storeCertificate(
-      env, GetApplicationContext(), cert_type, data_array);
-  LOG_IF(WARNING, !ret) <<
-      "Call to Java_AndroidNetworkLibrary_storeCertificate"
-      " failed";
-  // Intentionally do not return 'ret', there is little the caller can
-  // do in case of failure (the CertInstaller itself will deal with
-  // incorrect data and display the appropriate toast).
-}
-
 bool HaveOnlyLoopbackAddresses() {
   JNIEnv* env = AttachCurrentThread();
   return Java_AndroidNetworkLibrary_haveOnlyLoopbackAddresses(env);

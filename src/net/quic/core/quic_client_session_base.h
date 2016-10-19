@@ -103,6 +103,8 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
   // promised.
   virtual void DeletePromised(QuicClientPromisedInfo* promised);
 
+  virtual void OnPushStreamTimedOut(QuicStreamId stream_id);
+
   // Sends Rst for the stream, and makes sure that future calls to
   // IsClosedStream(id) return true, which ensures that any subsequent
   // frames related to this stream will be ignored (modulo flow

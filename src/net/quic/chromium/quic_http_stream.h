@@ -150,7 +150,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   // outlive this object, according to the HttpStream contract.
 
   // The request to send.
+  // Only valid before the response body is read.
   const HttpRequestInfo* request_info_;
+
   // The request body to send, if any, owned by the caller.
   UploadDataStream* request_body_stream_;
   // Time the request was issued.

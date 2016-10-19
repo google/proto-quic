@@ -284,6 +284,18 @@ TEST_F(QuicCryptoClientStreamTest, TokenBindingNotNegotiated) {
   EXPECT_EQ(0u, stream()->crypto_negotiated_params().token_binding_key_param);
 }
 
+TEST_F(QuicCryptoClientStreamTest, NoTokenBindingInPrivacyMode) {
+  server_options_.token_binding_params = QuicTagVector{kTB10};
+  crypto_config_.tb_key_params = QuicTagVector{kTB10};
+  server_id_ = QuicServerId(kServerHostname, kServerPort, PRIVACY_MODE_ENABLED);
+  CreateConnection();
+
+  CompleteCryptoHandshake();
+  EXPECT_TRUE(stream()->encryption_established());
+  EXPECT_TRUE(stream()->handshake_confirmed());
+  EXPECT_EQ(0u, stream()->crypto_negotiated_params().token_binding_key_param);
+}
+
 class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
  public:
   QuicCryptoClientStreamStatelessTest()

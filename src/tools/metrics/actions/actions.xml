@@ -3574,11 +3574,13 @@ should be able to be added at any place in this file.
 <action name="Destination_MostVisited">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="Destination_MostVisited_OpenURL">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="Destination_Sessions">
@@ -9950,86 +9952,103 @@ should be able to be added at any place in this file.
 <action name="MostVisited0">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited1">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited2">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited3">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited4">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited5">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited6">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited7">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited8">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited9">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisitedReordered">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited_BlacklistCleared">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited_Clicked">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>sfiera@chromium.org</owner>
+  <owner>treib@chromium.org</owner>
+  <description>An NTP tile was clicked. Desktop only.</description>
 </action>
 
 <action name="MostVisited_UrlBlacklisted">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>sfiera@chromium.org</owner>
+  <owner>treib@chromium.org</owner>
+  <description>An NTP tile was blacklisted. iOS only.</description>
 </action>
 
 <action name="MostVisited_UrlPinned">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited_UrlRemoved">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="MostVisited_UrlUnpinned">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>No longer recorded.</obsolete>
 </action>
 
 <action name="Mouse_Down">

@@ -4,6 +4,7 @@
 
 #include "net/quic/core/quic_session.h"
 
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
@@ -57,9 +58,6 @@ void QuicSession::Initialize() {
 }
 
 QuicSession::~QuicSession() {
-  base::STLDeleteElements(&closed_streams_);
-  base::STLDeleteValues(&dynamic_stream_map_);
-
   DLOG_IF(WARNING, num_locally_closed_incoming_streams_highest_offset() >
                        max_open_incoming_streams_)
       << "Surprisingly high number of locally closed peer initiated streams"
@@ -162,6 +160,36 @@ void QuicSession::OnBlockedFrame(const QuicBlockedFrame& frame) {
            << "Received BLOCKED frame with stream id: " << frame.stream_id;
 }
 
+bool QuicSession::CheckStreamNotBusyLooping(ReliableQuicStream* stream,
+                                            uint64_t previous_bytes_written,
+                                            bool previous_fin_sent) {
+  if (  // Stream should not be closed.
+      !stream->write_side_closed() &&
+      // Not connection flow control blocked.
+      !flow_controller_.IsBlocked() &&
+      // Detect lack of forward progress.
+      previous_bytes_written == stream->stream_bytes_written() &&
+      previous_fin_sent == stream->fin_sent()) {
+    stream->set_busy_counter(stream->busy_counter() + 1);
+    DVLOG(1) << "Suspected busy loop on stream id " << stream->id()
+             << " stream_bytes_written " << stream->stream_bytes_written()
+             << " fin " << stream->fin_sent() << " count "
+             << stream->busy_counter();
+    // Wait a few iterations before firing, the exact count is
+    // arbitrary, more than a few to cover a few test-only false
+    // positives.
+    if (stream->busy_counter() > 20) {
+      LOG(ERROR) << "Detected busy loop on stream id " << stream->id()
+                 << " stream_bytes_written " << stream->stream_bytes_written()
+                 << " fin " << stream->fin_sent();
+      return false;
+    }
+  } else {
+    stream->set_busy_counter(0);
+  }
+  return true;
+}
+
 void QuicSession::OnCanWrite() {
   // We limit the number of writes to the number of pending streams. If more
   // streams become pending, WillingAndAbleToWrite will be true, which will
@@ -205,7 +233,13 @@ void QuicSession::OnCanWrite() {
     if (stream != nullptr && !stream->flow_controller()->IsBlocked()) {
       // If the stream can't write all bytes it'll re-add itself to the blocked
       // list.
+      uint64_t previous_bytes_written = stream->stream_bytes_written();
+      bool previous_fin_sent = stream->fin_sent();
+      DVLOG(1) << "stream " << stream->id() << " bytes_written "
+               << previous_bytes_written << " fin " << previous_fin_sent;
       stream->OnCanWrite();
+      DCHECK(CheckStreamNotBusyLooping(stream, previous_bytes_written,
+                                       previous_fin_sent));
     }
     currently_writing_stream_id_ = 0;
   }
@@ -314,14 +348,14 @@ void QuicSession::CloseStreamInner(QuicStreamId stream_id, bool locally_reset) {
     DVLOG(1) << ENDPOINT << "Stream is already closed: " << stream_id;
     return;
   }
-  ReliableQuicStream* stream = it->second;
+  ReliableQuicStream* stream = it->second.get();
 
   // Tell the stream that a RST has been sent.
   if (locally_reset) {
     stream->set_rst_sent(true);
   }
 
-  closed_streams_.push_back(it->second);
+  closed_streams_.push_back(std::move(it->second));
 
   // If we haven't received a FIN or RST for this stream, we need to keep track
   // of the how many bytes the stream's flow controller believes it has
@@ -532,13 +566,14 @@ QuicConfig* QuicSession::config() {
   return &config_;
 }
 
-void QuicSession::ActivateStream(ReliableQuicStream* stream) {
+void QuicSession::ActivateStream(std::unique_ptr<ReliableQuicStream> stream) {
+  QuicStreamId stream_id = stream->id();
   DVLOG(1) << ENDPOINT << "num_streams: " << dynamic_stream_map_.size()
-           << ". activating " << stream->id();
-  DCHECK(!base::ContainsKey(dynamic_stream_map_, stream->id()));
-  DCHECK(!base::ContainsKey(static_stream_map_, stream->id()));
-  dynamic_stream_map_[stream->id()] = stream;
-  if (IsIncomingStream(stream->id())) {
+           << ". activating " << stream_id;
+  DCHECK(!base::ContainsKey(dynamic_stream_map_, stream_id));
+  DCHECK(!base::ContainsKey(static_stream_map_, stream_id));
+  dynamic_stream_map_[stream_id] = std::move(stream);
+  if (IsIncomingStream(stream_id)) {
     ++num_dynamic_incoming_streams_;
   }
   // Increase the number of streams being emulated when a new one is opened.
@@ -619,7 +654,7 @@ ReliableQuicStream* QuicSession::GetOrCreateDynamicStream(
 
   DynamicStreamMap::iterator it = dynamic_stream_map_.find(stream_id);
   if (it != dynamic_stream_map_.end()) {
-    return it->second;
+    return it->second.get();
   }
 
   if (IsClosedStream(stream_id)) {
@@ -728,7 +763,6 @@ bool QuicSession::HasDataToWrite() const {
 }
 
 void QuicSession::PostProcessAfterData() {
-  base::STLDeleteElements(&closed_streams_);
   closed_streams_.clear();
 }
 

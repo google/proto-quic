@@ -23,7 +23,6 @@
 // terms and concepts.
 
 namespace base {
-namespace internal {
 
 // Bind as OnceCallback.
 template <typename Functor, typename... Args>
@@ -69,16 +68,14 @@ BindRepeating(Functor&& functor, Args&&... args) {
       std::forward<Args>(args)...));
 }
 
-}  // namespace internal
-
 // Unannotated Bind.
 // TODO(tzik): Deprecate this and migrate to OnceCallback and
 // RepeatingCallback, once they get ready.
 template <typename Functor, typename... Args>
 inline Callback<MakeUnboundRunType<Functor, Args...>>
 Bind(Functor&& functor, Args&&... args) {
-  return internal::BindRepeating(std::forward<Functor>(functor),
-                                 std::forward<Args>(args)...);
+  return BindRepeating(std::forward<Functor>(functor),
+                       std::forward<Args>(args)...);
 }
 
 }  // namespace base

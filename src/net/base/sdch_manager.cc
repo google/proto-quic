@@ -96,7 +96,8 @@ void SdchManager::ClearData() {
   blacklisted_domains_.clear();
   allow_latency_experiment_.clear();
   dictionaries_.clear();
-  FOR_EACH_OBSERVER(SdchObserver, observers_, OnClearDictionaries());
+  for (auto& observer : observers_)
+    observer.OnClearDictionaries();
 }
 
 // static
@@ -192,16 +193,15 @@ SdchProblemCode SdchManager::OnGetDictionary(const GURL& request_url,
   if (rv != SDCH_OK)
     return rv;
 
-  FOR_EACH_OBSERVER(SdchObserver,
-                    observers_,
-                    OnGetDictionary(request_url, dictionary_url));
+  for (auto& observer : observers_)
+    observer.OnGetDictionary(request_url, dictionary_url);
 
   return SDCH_OK;
 }
 
 void SdchManager::OnDictionaryUsed(const std::string& server_hash) {
-  FOR_EACH_OBSERVER(SdchObserver, observers_,
-                    OnDictionaryUsed(server_hash));
+  for (auto& observer : observers_)
+    observer.OnDictionaryUsed(server_hash);
 }
 
 SdchProblemCode SdchManager::CanFetchDictionary(
@@ -423,8 +423,8 @@ SdchProblemCode SdchManager::AddSdchDictionary(
   if (server_hash_p)
     *server_hash_p = server_hash;
 
-  FOR_EACH_OBSERVER(SdchObserver, observers_,
-                    OnDictionaryAdded(dictionary_url, server_hash));
+  for (auto& observer : observers_)
+    observer.OnDictionaryAdded(dictionary_url, server_hash);
 
   return SDCH_OK;
 }
@@ -436,7 +436,8 @@ SdchProblemCode SdchManager::RemoveSdchDictionary(
 
   dictionaries_.erase(server_hash);
 
-  FOR_EACH_OBSERVER(SdchObserver, observers_, OnDictionaryRemoved(server_hash));
+  for (auto& observer : observers_)
+    observer.OnDictionaryRemoved(server_hash);
 
   return SDCH_OK;
 }

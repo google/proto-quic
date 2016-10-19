@@ -186,18 +186,28 @@ For more information check out the discussion in [issue 638836].
 
 ## Coverage
 
-You can easily generate source-level coverage report for a given corpus:
+[ClusterFuzz status] page provides fuzzer source-level coverage report 
+from the recent run. Looking at the report might provide an insight
+to improve fuzzer coverage.
 
-```
-ASAN_OPTIONS=html_cov_report=1:sancov_path=./third_party/llvm-build/Release+Asserts/bin/sancov \
-  ./out/libfuzzer/my_fuzzer -runs=0 ~/tmp/my_fuzzer_corpus
-```
+You can also access source-level coverage report locally:
 
-This will produce an .html file with colored source-code. It can be used to
-determine where your fuzzer is "stuck". Replace `ASAN_OPTIONS` by corresponding
-option variable if your are using another sanitizer (e.g. `MSAN_OPTIONS`).
-`sancov_path` can be omitted by adding llvm bin directory to `PATH` environment
-variable.
+```bash
+# produces binary .sancov file
+ASAN_OPTIONS=coverage=1 ./out/libfuzzer/my_fuzzer -runs=0 ~/tmp/my_fuzzer_corpus
+# Convert binary .sancov to symbolized .symcov file.
+./third_party/llvm-build/Release+Asserts/bin/sancov \
+  -symbolize my_fuzzer my_fuzzer.123.sancov > my_fuzzer.symcov
+# Launch coverage report server
+curl http://llvm.org/svn/llvm-project/llvm/trunk/tools/sancov/coverage-report-server.py | python3 \
+  --symcov my_fuzzer.symcov --srcpath path_to_chromium_sources
+# Navigate to http://localhost:8001/ to view coverage report
+```
+Replace `ASAN_OPTIONS` by corresponding option variable if your are using 
+another sanitizer (e.g. `MSAN_OPTIONS`).
+
+*NOTE: This is an experimental feature and an active area of work. We are 
+working on improving this process.*
 
 
 ## Corpus Size

@@ -20,18 +20,11 @@
 
 using ::testing::_;
 using ::testing::Mock;
+using ::testing::ByMove;
 using ::testing::Return;
 using ::testing::StrictMock;
 
 namespace base {
-
-using internal::OnceCallback;
-using internal::RepeatingCallback;
-using internal::OnceClosure;
-using internal::RepeatingClosure;
-using internal::BindOnce;
-using internal::BindRepeating;
-
 namespace {
 
 class IncompleteType;
@@ -47,6 +40,7 @@ class NoRef {
   MOCK_CONST_METHOD0(IntConstMethod0, int());
 
   MOCK_METHOD1(VoidMethodWithIntArg, void(int));
+  MOCK_METHOD0(UniquePtrMethod0, std::unique_ptr<int>());
 
  private:
   // Particularly important in this test to ensure no copies are made.
@@ -351,6 +345,15 @@ class BindTest : public ::testing::Test {
 };
 
 StrictMock<NoRef>* BindTest::static_func_mock_ptr;
+StrictMock<NoRef>* g_func_mock_ptr;
+
+void VoidFunc0() {
+  g_func_mock_ptr->VoidMethod0();
+}
+
+int IntFunc0() {
+  return g_func_mock_ptr->IntMethod0();
+}
 
 TEST_F(BindTest, BasicTest) {
   Callback<int(int, int, int)> cb = Bind(&Sum, 32, 16, 8);
@@ -371,7 +374,8 @@ TEST_F(BindTest, BasicTest) {
 //   - multiple runs of resulting Callback remain valid.
 TEST_F(BindTest, CurryingRvalueResultOfBind) {
   int n = 0;
-  Closure cb = base::Bind(&TakesACallback, base::Bind(&PtrArgSet, &n));
+  RepeatingClosure cb = BindRepeating(&TakesACallback,
+                                      BindRepeating(&PtrArgSet, &n));
 
   // If we implement Bind() such that the return value has auto_ptr-like
   // semantics, the second call here will fail because ownership of
@@ -385,76 +389,45 @@ TEST_F(BindTest, CurryingRvalueResultOfBind) {
   EXPECT_EQ(2, n);
 }
 
-// Function type support.
-//   - Normal function.
-//   - Normal function bound with non-refcounted first argument.
-//   - Method bound to non-const object.
-//   - Method bound to scoped_refptr.
-//   - Const method bound to non-const object.
-//   - Const method bound to const object.
-//   - Derived classes can be used with pointers to non-virtual base functions.
-//   - Derived classes can be used with pointers to virtual base functions (and
-//     preserve virtual dispatch).
-TEST_F(BindTest, FunctionTypeSupport) {
-  EXPECT_CALL(static_func_mock_, VoidMethod0());
-  EXPECT_CALL(has_ref_, AddRef()).Times(4);
-  EXPECT_CALL(has_ref_, Release()).Times(4);
-  EXPECT_CALL(has_ref_, VoidMethod0()).Times(2);
-  EXPECT_CALL(has_ref_, VoidConstMethod0()).Times(2);
+TEST_F(BindTest, RepeatingCallbackBasicTest) {
+  RepeatingCallback<int(int)> c0 = BindRepeating(&Sum, 1, 2, 4, 8, 16);
 
-  Closure normal_cb = Bind(&VoidFunc0);
-  Callback<NoRef*()> normal_non_refcounted_cb =
-      Bind(&PolymorphicIdentity<NoRef*>, &no_ref_);
-  normal_cb.Run();
-  EXPECT_EQ(&no_ref_, normal_non_refcounted_cb.Run());
+  // RepeatingCallback can run via a lvalue-reference.
+  EXPECT_EQ(63, c0.Run(32));
 
-  Closure method_cb = Bind(&HasRef::VoidMethod0, &has_ref_);
-  Closure method_refptr_cb = Bind(&HasRef::VoidMethod0,
-                                  make_scoped_refptr(&has_ref_));
-  Closure const_method_nonconst_obj_cb = Bind(&HasRef::VoidConstMethod0,
-                                              &has_ref_);
-  Closure const_method_const_obj_cb = Bind(&HasRef::VoidConstMethod0,
-                                           const_has_ref_ptr_);
-  method_cb.Run();
-  method_refptr_cb.Run();
-  const_method_nonconst_obj_cb.Run();
-  const_method_const_obj_cb.Run();
+  // It is valid to call a RepeatingCallback more than once.
+  EXPECT_EQ(54, c0.Run(23));
 
-  Child child;
-  child.value = 0;
-  Closure virtual_set_cb = Bind(&Parent::VirtualSet, &child);
-  virtual_set_cb.Run();
-  EXPECT_EQ(kChildValue, child.value);
+  // BindRepeating can handle a RepeatingCallback as the target functor.
+  RepeatingCallback<int()> c1 = BindRepeating(c0, 11);
 
-  child.value = 0;
-  Closure non_virtual_set_cb = Bind(&Parent::NonVirtualSet, &child);
-  non_virtual_set_cb.Run();
-  EXPECT_EQ(kParentValue, child.value);
+  // RepeatingCallback can run via a rvalue-reference.
+  EXPECT_EQ(42, std::move(c1).Run());
+
+  // BindRepeating can handle a rvalue-reference of RepeatingCallback.
+  EXPECT_EQ(32, BindRepeating(std::move(c0), 1).Run());
 }
 
-// Return value support.
-//   - Function with return value.
-//   - Method with return value.
-//   - Const method with return value.
-TEST_F(BindTest, ReturnValues) {
-  EXPECT_CALL(static_func_mock_, IntMethod0()).WillOnce(Return(1337));
-  EXPECT_CALL(has_ref_, AddRef()).Times(3);
-  EXPECT_CALL(has_ref_, Release()).Times(3);
-  EXPECT_CALL(has_ref_, IntMethod0()).WillOnce(Return(31337));
-  EXPECT_CALL(has_ref_, IntConstMethod0())
-      .WillOnce(Return(41337))
-      .WillOnce(Return(51337));
+TEST_F(BindTest, OnceCallbackBasicTest) {
+  OnceCallback<int(int)> c0 = BindOnce(&Sum, 1, 2, 4, 8, 16);
 
-  Callback<int()> normal_cb = Bind(&IntFunc0);
-  Callback<int()> method_cb = Bind(&HasRef::IntMethod0, &has_ref_);
-  Callback<int()> const_method_nonconst_obj_cb =
-      Bind(&HasRef::IntConstMethod0, &has_ref_);
-  Callback<int()> const_method_const_obj_cb =
-      Bind(&HasRef::IntConstMethod0, const_has_ref_ptr_);
-  EXPECT_EQ(1337, normal_cb.Run());
-  EXPECT_EQ(31337, method_cb.Run());
-  EXPECT_EQ(41337, const_method_nonconst_obj_cb.Run());
-  EXPECT_EQ(51337, const_method_const_obj_cb.Run());
+  // OnceCallback can run via a rvalue-reference.
+  EXPECT_EQ(63, std::move(c0).Run(32));
+
+  // After running via the rvalue-reference, the value of the OnceCallback
+  // is undefined. The implementation simply clears the instance after the
+  // invocation.
+  EXPECT_TRUE(c0.is_null());
+
+  c0 = BindOnce(&Sum, 2, 3, 5, 7, 11);
+
+  // BindOnce can handle a rvalue-reference of OnceCallback as the target
+  // functor.
+  OnceCallback<int()> c1 = BindOnce(std::move(c0), 13);
+  EXPECT_EQ(41, std::move(c1).Run());
+
+  RepeatingCallback<int(int)> c2 = BindRepeating(&Sum, 2, 3, 5, 7, 11);
+  EXPECT_EQ(41, BindOnce(c2, 13).Run());
 }
 
 // IgnoreResult adapter test.
@@ -463,7 +436,7 @@ TEST_F(BindTest, ReturnValues) {
 //   - Const Method with return.
 //   - Method with return value bound to WeakPtr<>.
 //   - Const Method with return bound to WeakPtr<>.
-TEST_F(BindTest, IgnoreResult) {
+TEST_F(BindTest, IgnoreResultForRepeating) {
   EXPECT_CALL(static_func_mock_, IntMethod0()).WillOnce(Return(1337));
   EXPECT_CALL(has_ref_, AddRef()).Times(2);
   EXPECT_CALL(has_ref_, Release()).Times(2);
@@ -472,26 +445,28 @@ TEST_F(BindTest, IgnoreResult) {
   EXPECT_CALL(no_ref_, IntMethod0()).WillOnce(Return(12));
   EXPECT_CALL(no_ref_, IntConstMethod0()).WillOnce(Return(13));
 
-  Closure normal_func_cb = Bind(IgnoreResult(&IntFunc0));
+  RepeatingClosure normal_func_cb = BindRepeating(IgnoreResult(&IntFunc0));
   normal_func_cb.Run();
 
-  Closure non_void_method_cb =
-      Bind(IgnoreResult(&HasRef::IntMethod0), &has_ref_);
+  RepeatingClosure non_void_method_cb =
+      BindRepeating(IgnoreResult(&HasRef::IntMethod0), &has_ref_);
   non_void_method_cb.Run();
 
-  Closure non_void_const_method_cb =
-      Bind(IgnoreResult(&HasRef::IntConstMethod0), &has_ref_);
+  RepeatingClosure non_void_const_method_cb =
+      BindRepeating(IgnoreResult(&HasRef::IntConstMethod0), &has_ref_);
   non_void_const_method_cb.Run();
 
   WeakPtrFactory<NoRef> weak_factory(&no_ref_);
   WeakPtrFactory<const NoRef> const_weak_factory(const_no_ref_ptr_);
 
-  Closure non_void_weak_method_cb  =
-      Bind(IgnoreResult(&NoRef::IntMethod0), weak_factory.GetWeakPtr());
+  RepeatingClosure non_void_weak_method_cb  =
+      BindRepeating(IgnoreResult(&NoRef::IntMethod0),
+                    weak_factory.GetWeakPtr());
   non_void_weak_method_cb.Run();
 
-  Closure non_void_weak_const_method_cb =
-      Bind(IgnoreResult(&NoRef::IntConstMethod0), weak_factory.GetWeakPtr());
+  RepeatingClosure non_void_weak_const_method_cb =
+      BindRepeating(IgnoreResult(&NoRef::IntConstMethod0),
+                    weak_factory.GetWeakPtr());
   non_void_weak_const_method_cb.Run();
 
   weak_factory.InvalidateWeakPtrs();
@@ -499,128 +474,86 @@ TEST_F(BindTest, IgnoreResult) {
   non_void_weak_method_cb.Run();
 }
 
-// Argument binding tests.
-//   - Argument binding to primitive.
-//   - Argument binding to primitive pointer.
-//   - Argument binding to a literal integer.
-//   - Argument binding to a literal string.
-//   - Argument binding with template function.
-//   - Argument binding to an object.
-//   - Argument binding to pointer to incomplete type.
-//   - Argument gets type converted.
-//   - Pointer argument gets converted.
-//   - Const Reference forces conversion.
-TEST_F(BindTest, ArgumentBinding) {
-  int n = 2;
+TEST_F(BindTest, IgnoreResultForOnce) {
+  EXPECT_CALL(static_func_mock_, IntMethod0()).WillOnce(Return(1337));
+  EXPECT_CALL(has_ref_, AddRef()).Times(2);
+  EXPECT_CALL(has_ref_, Release()).Times(2);
+  EXPECT_CALL(has_ref_, IntMethod0()).WillOnce(Return(10));
+  EXPECT_CALL(has_ref_, IntConstMethod0()).WillOnce(Return(11));
 
-  Callback<int()> bind_primitive_cb = Bind(&Identity, n);
-  EXPECT_EQ(n, bind_primitive_cb.Run());
+  OnceClosure normal_func_cb = BindOnce(IgnoreResult(&IntFunc0));
+  std::move(normal_func_cb).Run();
 
-  Callback<int*()> bind_primitive_pointer_cb =
-      Bind(&PolymorphicIdentity<int*>, &n);
-  EXPECT_EQ(&n, bind_primitive_pointer_cb.Run());
+  OnceClosure non_void_method_cb =
+      BindOnce(IgnoreResult(&HasRef::IntMethod0), &has_ref_);
+  std::move(non_void_method_cb).Run();
 
-  Callback<int()> bind_int_literal_cb = Bind(&Identity, 3);
-  EXPECT_EQ(3, bind_int_literal_cb.Run());
+  OnceClosure non_void_const_method_cb =
+      BindOnce(IgnoreResult(&HasRef::IntConstMethod0), &has_ref_);
+  std::move(non_void_const_method_cb).Run();
 
-  Callback<const char*()> bind_string_literal_cb =
-      Bind(&CStringIdentity, "hi");
-  EXPECT_STREQ("hi", bind_string_literal_cb.Run());
+  WeakPtrFactory<NoRef> weak_factory(&no_ref_);
+  WeakPtrFactory<const NoRef> const_weak_factory(const_no_ref_ptr_);
 
-  Callback<int()> bind_template_function_cb =
-      Bind(&PolymorphicIdentity<int>, 4);
-  EXPECT_EQ(4, bind_template_function_cb.Run());
+  OnceClosure non_void_weak_method_cb  =
+      BindOnce(IgnoreResult(&NoRef::IntMethod0),
+                  weak_factory.GetWeakPtr());
+  OnceClosure non_void_weak_const_method_cb =
+      BindOnce(IgnoreResult(&NoRef::IntConstMethod0),
+                  weak_factory.GetWeakPtr());
 
-  NoRefParent p;
-  p.value = 5;
-  Callback<int()> bind_object_cb = Bind(&UnwrapNoRefParent, p);
-  EXPECT_EQ(5, bind_object_cb.Run());
-
-  IncompleteType* incomplete_ptr = reinterpret_cast<IncompleteType*>(123);
-  Callback<IncompleteType*()> bind_incomplete_ptr_cb =
-      Bind(&PolymorphicIdentity<IncompleteType*>, incomplete_ptr);
-  EXPECT_EQ(incomplete_ptr, bind_incomplete_ptr_cb.Run());
-
-  NoRefChild c;
-  c.value = 6;
-  Callback<int()> bind_promotes_cb = Bind(&UnwrapNoRefParent, c);
-  EXPECT_EQ(6, bind_promotes_cb.Run());
-
-  c.value = 7;
-  Callback<int()> bind_pointer_promotes_cb =
-      Bind(&UnwrapNoRefParentPtr, &c);
-  EXPECT_EQ(7, bind_pointer_promotes_cb.Run());
-
-  c.value = 8;
-  Callback<int()> bind_const_reference_promotes_cb =
-      Bind(&UnwrapNoRefParentConstRef, c);
-  EXPECT_EQ(8, bind_const_reference_promotes_cb.Run());
-}
-
-// Unbound argument type support tests.
-//   - Unbound value.
-//   - Unbound pointer.
-//   - Unbound reference.
-//   - Unbound const reference.
-//   - Unbound unsized array.
-//   - Unbound sized array.
-//   - Unbound array-of-arrays.
-TEST_F(BindTest, UnboundArgumentTypeSupport) {
-  Callback<void(int)> unbound_value_cb = Bind(&VoidPolymorphic<int>::Run);
-  Callback<void(int*)> unbound_pointer_cb = Bind(&VoidPolymorphic<int*>::Run);
-  Callback<void(int&)> unbound_ref_cb = Bind(&VoidPolymorphic<int&>::Run);
-  Callback<void(const int&)> unbound_const_ref_cb =
-      Bind(&VoidPolymorphic<const int&>::Run);
-  Callback<void(int[])> unbound_unsized_array_cb =
-      Bind(&VoidPolymorphic<int[]>::Run);
-  Callback<void(int[2])> unbound_sized_array_cb =
-      Bind(&VoidPolymorphic<int[2]>::Run);
-  Callback<void(int[][2])> unbound_array_of_arrays_cb =
-      Bind(&VoidPolymorphic<int[][2]>::Run);
-
-  Callback<void(int&)> unbound_ref_with_bound_arg =
-      Bind(&VoidPolymorphic<int, int&>::Run, 1);
-}
-
-// Function with unbound reference parameter.
-//   - Original parameter is modified by callback.
-TEST_F(BindTest, UnboundReferenceSupport) {
-  int n = 0;
-  Callback<void(int&)> unbound_ref_cb = Bind(&RefArgSet);
-  unbound_ref_cb.Run(n);
-  EXPECT_EQ(2, n);
+  weak_factory.InvalidateWeakPtrs();
+  std::move(non_void_weak_const_method_cb).Run();
+  std::move(non_void_weak_method_cb).Run();
 }
 
 // Functions that take reference parameters.
 //  - Forced reference parameter type still stores a copy.
 //  - Forced const reference parameter type still stores a copy.
-TEST_F(BindTest, ReferenceArgumentBinding) {
+TEST_F(BindTest, ReferenceArgumentBindingForRepeating) {
   int n = 1;
   int& ref_n = n;
   const int& const_ref_n = n;
 
-  Callback<int()> ref_copies_cb = Bind(&Identity, ref_n);
+  RepeatingCallback<int()> ref_copies_cb = BindRepeating(&Identity, ref_n);
   EXPECT_EQ(n, ref_copies_cb.Run());
   n++;
   EXPECT_EQ(n - 1, ref_copies_cb.Run());
 
-  Callback<int()> const_ref_copies_cb = Bind(&Identity, const_ref_n);
+  RepeatingCallback<int()> const_ref_copies_cb =
+      BindRepeating(&Identity, const_ref_n);
   EXPECT_EQ(n, const_ref_copies_cb.Run());
   n++;
   EXPECT_EQ(n - 1, const_ref_copies_cb.Run());
 }
 
+TEST_F(BindTest, ReferenceArgumentBindingForOnce) {
+  int n = 1;
+  int& ref_n = n;
+  const int& const_ref_n = n;
+
+  OnceCallback<int()> ref_copies_cb = BindOnce(&Identity, ref_n);
+  n++;
+  EXPECT_EQ(n - 1, std::move(ref_copies_cb).Run());
+
+  OnceCallback<int()> const_ref_copies_cb =
+      BindOnce(&Identity, const_ref_n);
+  n++;
+  EXPECT_EQ(n - 1, std::move(const_ref_copies_cb).Run());
+}
+
 // Check that we can pass in arrays and have them be stored as a pointer.
 //  - Array of values stores a pointer.
 //  - Array of const values stores a pointer.
-TEST_F(BindTest, ArrayArgumentBinding) {
+TEST_F(BindTest, ArrayArgumentBindingForRepeating) {
   int array[4] = {1, 1, 1, 1};
   const int (*const_array_ptr)[4] = &array;
 
-  Callback<int()> array_cb = Bind(&ArrayGet, array, 1);
+  RepeatingCallback<int()> array_cb = BindRepeating(&ArrayGet, array, 1);
   EXPECT_EQ(1, array_cb.Run());
 
-  Callback<int()> const_array_cb = Bind(&ArrayGet, *const_array_ptr, 1);
+  RepeatingCallback<int()> const_array_cb =
+      BindRepeating(&ArrayGet, *const_array_ptr, 1);
   EXPECT_EQ(1, const_array_cb.Run());
 
   array[1] = 3;
@@ -628,25 +561,17 @@ TEST_F(BindTest, ArrayArgumentBinding) {
   EXPECT_EQ(3, const_array_cb.Run());
 }
 
-// Unretained() wrapper support.
-//   - Method bound to Unretained() non-const object.
-//   - Const method bound to Unretained() non-const object.
-//   - Const method bound to Unretained() const object.
-TEST_F(BindTest, Unretained) {
-  EXPECT_CALL(no_ref_, VoidMethod0());
-  EXPECT_CALL(no_ref_, VoidConstMethod0()).Times(2);
+TEST_F(BindTest, ArrayArgumentBindingForOnce) {
+  int array[4] = {1, 1, 1, 1};
+  const int (*const_array_ptr)[4] = &array;
 
-  Callback<void()> method_cb =
-      Bind(&NoRef::VoidMethod0, Unretained(&no_ref_));
-  method_cb.Run();
+  OnceCallback<int()> array_cb = BindOnce(&ArrayGet, array, 1);
+  OnceCallback<int()> const_array_cb =
+      BindOnce(&ArrayGet, *const_array_ptr, 1);
 
-  Callback<void()> const_method_cb =
-      Bind(&NoRef::VoidConstMethod0, Unretained(&no_ref_));
-  const_method_cb.Run();
-
-  Callback<void()> const_method_const_ptr_cb =
-      Bind(&NoRef::VoidConstMethod0, Unretained(const_no_ref_ptr_));
-  const_method_const_ptr_cb.Run();
+  array[1] = 3;
+  EXPECT_EQ(3, std::move(array_cb).Run());
+  EXPECT_EQ(3, std::move(const_array_cb).Run());
 }
 
 // WeakPtr() support.
@@ -655,27 +580,27 @@ TEST_F(BindTest, Unretained) {
 //   - Const method bound to WeakPtr<> to const object.
 //   - Normal Function with WeakPtr<> as P1 can have return type and is
 //     not canceled.
-TEST_F(BindTest, WeakPtr) {
+TEST_F(BindTest, WeakPtrForRepeating) {
   EXPECT_CALL(no_ref_, VoidMethod0());
   EXPECT_CALL(no_ref_, VoidConstMethod0()).Times(2);
 
   WeakPtrFactory<NoRef> weak_factory(&no_ref_);
   WeakPtrFactory<const NoRef> const_weak_factory(const_no_ref_ptr_);
 
-  Closure method_cb =
-      Bind(&NoRef::VoidMethod0, weak_factory.GetWeakPtr());
+  RepeatingClosure method_cb =
+      BindRepeating(&NoRef::VoidMethod0, weak_factory.GetWeakPtr());
   method_cb.Run();
 
-  Closure const_method_cb =
-      Bind(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
+  RepeatingClosure const_method_cb =
+      BindRepeating(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
   const_method_cb.Run();
 
-  Closure const_method_const_ptr_cb =
-      Bind(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
+  RepeatingClosure const_method_const_ptr_cb =
+      BindRepeating(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
   const_method_const_ptr_cb.Run();
 
-  Callback<int(int)> normal_func_cb =
-      Bind(&FunctionWithWeakFirstParam, weak_factory.GetWeakPtr());
+  RepeatingCallback<int(int)> normal_func_cb =
+      BindRepeating(&FunctionWithWeakFirstParam, weak_factory.GetWeakPtr());
   EXPECT_EQ(1, normal_func_cb.Run(1));
 
   weak_factory.InvalidateWeakPtrs();
@@ -689,15 +614,39 @@ TEST_F(BindTest, WeakPtr) {
   EXPECT_EQ(2, normal_func_cb.Run(2));
 }
 
+TEST_F(BindTest, WeakPtrForOnce) {
+  WeakPtrFactory<NoRef> weak_factory(&no_ref_);
+  WeakPtrFactory<const NoRef> const_weak_factory(const_no_ref_ptr_);
+
+  OnceClosure method_cb =
+      BindOnce(&NoRef::VoidMethod0, weak_factory.GetWeakPtr());
+  OnceClosure const_method_cb =
+      BindOnce(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
+  OnceClosure const_method_const_ptr_cb =
+      BindOnce(&NoRef::VoidConstMethod0, const_weak_factory.GetWeakPtr());
+  Callback<int(int)> normal_func_cb =
+      Bind(&FunctionWithWeakFirstParam, weak_factory.GetWeakPtr());
+
+  weak_factory.InvalidateWeakPtrs();
+  const_weak_factory.InvalidateWeakPtrs();
+
+  std::move(method_cb).Run();
+  std::move(const_method_cb).Run();
+  std::move(const_method_const_ptr_cb).Run();
+
+  // Still runs even after the pointers are invalidated.
+  EXPECT_EQ(2, std::move(normal_func_cb).Run(2));
+}
+
 // ConstRef() wrapper support.
 //   - Binding w/o ConstRef takes a copy.
 //   - Binding a ConstRef takes a reference.
 //   - Binding ConstRef to a function ConstRef does not copy on invoke.
-TEST_F(BindTest, ConstRef) {
+TEST_F(BindTest, ConstRefForRepeating) {
   int n = 1;
 
-  Callback<int()> copy_cb = Bind(&Identity, n);
-  Callback<int()> const_ref_cb = Bind(&Identity, ConstRef(n));
+  RepeatingCallback<int()> copy_cb = BindRepeating(&Identity, n);
+  RepeatingCallback<int()> const_ref_cb = BindRepeating(&Identity, ConstRef(n));
   EXPECT_EQ(n, copy_cb.Run());
   EXPECT_EQ(n, const_ref_cb.Run());
   n++;
@@ -709,8 +658,8 @@ TEST_F(BindTest, ConstRef) {
   int move_constructs = 0;
   int move_assigns = 0;
   CopyMoveCounter counter(&copies, &assigns, &move_constructs, &move_assigns);
-  Callback<int()> all_const_ref_cb =
-      Bind(&GetCopies, ConstRef(counter));
+  RepeatingCallback<int()> all_const_ref_cb =
+      BindRepeating(&GetCopies, ConstRef(counter));
   EXPECT_EQ(0, all_const_ref_cb.Run());
   EXPECT_EQ(0, copies);
   EXPECT_EQ(0, assigns);
@@ -718,25 +667,38 @@ TEST_F(BindTest, ConstRef) {
   EXPECT_EQ(0, move_assigns);
 }
 
-TEST_F(BindTest, ScopedRefptr) {
-  EXPECT_CALL(has_ref_, AddRef()).Times(1);
-  EXPECT_CALL(has_ref_, Release()).Times(1);
+TEST_F(BindTest, ConstRefForOnce) {
+  int n = 1;
 
-  const scoped_refptr<HasRef> refptr(&has_ref_);
-  Callback<int()> scoped_refptr_const_ref_cb =
-      Bind(&FunctionWithScopedRefptrFirstParam, base::ConstRef(refptr), 1);
-  EXPECT_EQ(1, scoped_refptr_const_ref_cb.Run());
+  OnceCallback<int()> copy_cb = BindOnce(&Identity, n);
+  OnceCallback<int()> const_ref_cb = BindOnce(&Identity, ConstRef(n));
+  n++;
+  EXPECT_EQ(n - 1, std::move(copy_cb).Run());
+  EXPECT_EQ(n, std::move(const_ref_cb).Run());
+
+  int copies = 0;
+  int assigns = 0;
+  int move_constructs = 0;
+  int move_assigns = 0;
+  CopyMoveCounter counter(&copies, &assigns, &move_constructs, &move_assigns);
+  OnceCallback<int()> all_const_ref_cb =
+      BindOnce(&GetCopies, ConstRef(counter));
+  EXPECT_EQ(0, std::move(all_const_ref_cb).Run());
+  EXPECT_EQ(0, copies);
+  EXPECT_EQ(0, assigns);
+  EXPECT_EQ(0, move_constructs);
+  EXPECT_EQ(0, move_assigns);
 }
 
 // Test Owned() support.
-TEST_F(BindTest, Owned) {
+TEST_F(BindTest, OwnedForRepeating) {
   int deletes = 0;
   DeleteCounter* counter = new DeleteCounter(&deletes);
 
   // If we don't capture, delete happens on Callback destruction/reset.
   // return the same value.
-  Callback<DeleteCounter*()> no_capture_cb =
-      Bind(&PolymorphicIdentity<DeleteCounter*>, Owned(counter));
+  RepeatingCallback<DeleteCounter*()> no_capture_cb =
+      BindRepeating(&PolymorphicIdentity<DeleteCounter*>, Owned(counter));
   ASSERT_EQ(counter, no_capture_cb.Run());
   ASSERT_EQ(counter, no_capture_cb.Run());
   EXPECT_EQ(0, deletes);
@@ -745,18 +707,272 @@ TEST_F(BindTest, Owned) {
 
   deletes = 0;
   counter = new DeleteCounter(&deletes);
-  base::Closure own_object_cb =
-      Bind(&DeleteCounter::VoidMethod0, Owned(counter));
+  RepeatingClosure own_object_cb =
+      BindRepeating(&DeleteCounter::VoidMethod0, Owned(counter));
   own_object_cb.Run();
   EXPECT_EQ(0, deletes);
   own_object_cb.Reset();
   EXPECT_EQ(1, deletes);
 }
 
-TEST_F(BindTest, UniquePtrReceiver) {
+TEST_F(BindTest, OwnedForOnce) {
+  int deletes = 0;
+  DeleteCounter* counter = new DeleteCounter(&deletes);
+
+  // If we don't capture, delete happens on Callback destruction/reset.
+  // return the same value.
+  OnceCallback<DeleteCounter*()> no_capture_cb =
+      BindOnce(&PolymorphicIdentity<DeleteCounter*>, Owned(counter));
+  EXPECT_EQ(0, deletes);
+  no_capture_cb.Reset();  // This should trigger a delete.
+  EXPECT_EQ(1, deletes);
+
+  deletes = 0;
+  counter = new DeleteCounter(&deletes);
+  OnceClosure own_object_cb =
+      BindOnce(&DeleteCounter::VoidMethod0, Owned(counter));
+  EXPECT_EQ(0, deletes);
+  own_object_cb.Reset();
+  EXPECT_EQ(1, deletes);
+}
+
+template <typename T>
+class BindVariantsTest : public ::testing::Test {
+};
+
+struct RepeatingTestConfig {
+  template <typename Signature>
+  using CallbackType = RepeatingCallback<Signature>;
+  using ClosureType = RepeatingClosure;
+
+  template <typename F, typename... Args>
+  static CallbackType<MakeUnboundRunType<F, Args...>>
+  Bind(F&& f, Args&&... args) {
+    return BindRepeating(std::forward<F>(f), std::forward<Args>(args)...);
+  }
+};
+
+struct OnceTestConfig {
+  template <typename Signature>
+  using CallbackType = OnceCallback<Signature>;
+  using ClosureType = OnceClosure;
+
+  template <typename F, typename... Args>
+  static CallbackType<MakeUnboundRunType<F, Args...>>
+  Bind(F&& f, Args&&... args) {
+    return BindOnce(std::forward<F>(f), std::forward<Args>(args)...);
+  }
+};
+
+using BindVariantsTestConfig = ::testing::Types<
+  RepeatingTestConfig, OnceTestConfig>;
+TYPED_TEST_CASE(BindVariantsTest, BindVariantsTestConfig);
+
+template <typename TypeParam, typename Signature>
+using CallbackType = typename TypeParam::template CallbackType<Signature>;
+
+// Function type support.
+//   - Normal function.
+//   - Normal function bound with non-refcounted first argument.
+//   - Method bound to non-const object.
+//   - Method bound to scoped_refptr.
+//   - Const method bound to non-const object.
+//   - Const method bound to const object.
+//   - Derived classes can be used with pointers to non-virtual base functions.
+//   - Derived classes can be used with pointers to virtual base functions (and
+//     preserve virtual dispatch).
+TYPED_TEST(BindVariantsTest, FunctionTypeSupport) {
+  using ClosureType = typename TypeParam::ClosureType;
+
+  StrictMock<HasRef> has_ref;
+  StrictMock<NoRef> no_ref;
+  StrictMock<NoRef> static_func_mock;
+  const HasRef* const_has_ref_ptr = &has_ref;
+  g_func_mock_ptr = &static_func_mock;
+
+  EXPECT_CALL(static_func_mock, VoidMethod0());
+  EXPECT_CALL(has_ref, AddRef()).Times(4);
+  EXPECT_CALL(has_ref, Release()).Times(4);
+  EXPECT_CALL(has_ref, VoidMethod0()).Times(2);
+  EXPECT_CALL(has_ref, VoidConstMethod0()).Times(2);
+
+  ClosureType normal_cb = TypeParam::Bind(&VoidFunc0);
+  CallbackType<TypeParam, NoRef*()> normal_non_refcounted_cb =
+      TypeParam::Bind(&PolymorphicIdentity<NoRef*>, &no_ref);
+  std::move(normal_cb).Run();
+  EXPECT_EQ(&no_ref, std::move(normal_non_refcounted_cb).Run());
+
+  ClosureType method_cb = TypeParam::Bind(&HasRef::VoidMethod0, &has_ref);
+  ClosureType method_refptr_cb = TypeParam::Bind(&HasRef::VoidMethod0,
+                                                 make_scoped_refptr(&has_ref));
+  ClosureType const_method_nonconst_obj_cb =
+      TypeParam::Bind(&HasRef::VoidConstMethod0, &has_ref);
+  ClosureType const_method_const_obj_cb =
+      TypeParam::Bind(&HasRef::VoidConstMethod0, const_has_ref_ptr);
+  std::move(method_cb).Run();
+  std::move(method_refptr_cb).Run();
+  std::move(const_method_nonconst_obj_cb).Run();
+  std::move(const_method_const_obj_cb).Run();
+
+  Child child;
+  child.value = 0;
+  ClosureType virtual_set_cb = TypeParam::Bind(&Parent::VirtualSet, &child);
+  std::move(virtual_set_cb).Run();
+  EXPECT_EQ(kChildValue, child.value);
+
+  child.value = 0;
+  ClosureType non_virtual_set_cb =
+      TypeParam::Bind(&Parent::NonVirtualSet, &child);
+  std::move(non_virtual_set_cb).Run();
+  EXPECT_EQ(kParentValue, child.value);
+}
+
+// Return value support.
+//   - Function with return value.
+//   - Method with return value.
+//   - Const method with return value.
+//   - Move-only return value.
+TYPED_TEST(BindVariantsTest, ReturnValues) {
+  StrictMock<NoRef> static_func_mock;
+  StrictMock<HasRef> has_ref;
+  g_func_mock_ptr = &static_func_mock;
+  const HasRef* const_has_ref_ptr = &has_ref;
+
+  EXPECT_CALL(static_func_mock, IntMethod0()).WillOnce(Return(1337));
+  EXPECT_CALL(has_ref, AddRef()).Times(4);
+  EXPECT_CALL(has_ref, Release()).Times(4);
+  EXPECT_CALL(has_ref, IntMethod0()).WillOnce(Return(31337));
+  EXPECT_CALL(has_ref, IntConstMethod0())
+      .WillOnce(Return(41337))
+      .WillOnce(Return(51337));
+  EXPECT_CALL(has_ref, UniquePtrMethod0())
+      .WillOnce(Return(ByMove(MakeUnique<int>(42))));
+
+  CallbackType<TypeParam, int()> normal_cb = TypeParam::Bind(&IntFunc0);
+  CallbackType<TypeParam, int()> method_cb =
+      TypeParam::Bind(&HasRef::IntMethod0, &has_ref);
+  CallbackType<TypeParam, int()> const_method_nonconst_obj_cb =
+      TypeParam::Bind(&HasRef::IntConstMethod0, &has_ref);
+  CallbackType<TypeParam, int()> const_method_const_obj_cb =
+      TypeParam::Bind(&HasRef::IntConstMethod0, const_has_ref_ptr);
+  CallbackType<TypeParam, std::unique_ptr<int>()> move_only_rv_cb =
+      TypeParam::Bind(&HasRef::UniquePtrMethod0, &has_ref);
+  EXPECT_EQ(1337, std::move(normal_cb).Run());
+  EXPECT_EQ(31337, std::move(method_cb).Run());
+  EXPECT_EQ(41337, std::move(const_method_nonconst_obj_cb).Run());
+  EXPECT_EQ(51337, std::move(const_method_const_obj_cb).Run());
+  EXPECT_EQ(42, *std::move(move_only_rv_cb).Run());
+}
+
+// Argument binding tests.
+//   - Argument binding to primitive.
+//   - Argument binding to primitive pointer.
+//   - Argument binding to a literal integer.
+//   - Argument binding to a literal string.
+//   - Argument binding with template function.
+//   - Argument binding to an object.
+//   - Argument binding to pointer to incomplete type.
+//   - Argument gets type converted.
+//   - Pointer argument gets converted.
+//   - Const Reference forces conversion.
+TYPED_TEST(BindVariantsTest, ArgumentBinding) {
+  int n = 2;
+
+  EXPECT_EQ(n, TypeParam::Bind(&Identity, n).Run());
+  EXPECT_EQ(&n, TypeParam::Bind(&PolymorphicIdentity<int*>, &n).Run());
+  EXPECT_EQ(3, TypeParam::Bind(&Identity, 3).Run());
+  EXPECT_STREQ("hi", TypeParam::Bind(&CStringIdentity, "hi").Run());
+  EXPECT_EQ(4, TypeParam::Bind(&PolymorphicIdentity<int>, 4).Run());
+
+  NoRefParent p;
+  p.value = 5;
+  EXPECT_EQ(5, TypeParam::Bind(&UnwrapNoRefParent, p).Run());
+
+  IncompleteType* incomplete_ptr = reinterpret_cast<IncompleteType*>(123);
+  EXPECT_EQ(incomplete_ptr,
+            TypeParam::Bind(&PolymorphicIdentity<IncompleteType*>,
+                            incomplete_ptr).Run());
+
+  NoRefChild c;
+  c.value = 6;
+  EXPECT_EQ(6, TypeParam::Bind(&UnwrapNoRefParent, c).Run());
+
+  c.value = 7;
+  EXPECT_EQ(7, TypeParam::Bind(&UnwrapNoRefParentPtr, &c).Run());
+
+  c.value = 8;
+  EXPECT_EQ(8, TypeParam::Bind(&UnwrapNoRefParentConstRef, c).Run());
+}
+
+// Unbound argument type support tests.
+//   - Unbound value.
+//   - Unbound pointer.
+//   - Unbound reference.
+//   - Unbound const reference.
+//   - Unbound unsized array.
+//   - Unbound sized array.
+//   - Unbound array-of-arrays.
+TYPED_TEST(BindVariantsTest, UnboundArgumentTypeSupport) {
+  CallbackType<TypeParam, void(int)> unbound_value_cb =
+      TypeParam::Bind(&VoidPolymorphic<int>::Run);
+  CallbackType<TypeParam, void(int*)> unbound_pointer_cb =
+      TypeParam::Bind(&VoidPolymorphic<int*>::Run);
+  CallbackType<TypeParam, void(int&)> unbound_ref_cb =
+      TypeParam::Bind(&VoidPolymorphic<int&>::Run);
+  CallbackType<TypeParam, void(const int&)> unbound_const_ref_cb =
+      TypeParam::Bind(&VoidPolymorphic<const int&>::Run);
+  CallbackType<TypeParam, void(int[])> unbound_unsized_array_cb =
+      TypeParam::Bind(&VoidPolymorphic<int[]>::Run);
+  CallbackType<TypeParam, void(int[2])> unbound_sized_array_cb =
+      TypeParam::Bind(&VoidPolymorphic<int[2]>::Run);
+  CallbackType<TypeParam, void(int[][2])> unbound_array_of_arrays_cb =
+      TypeParam::Bind(&VoidPolymorphic<int[][2]>::Run);
+  CallbackType<TypeParam, void(int&)> unbound_ref_with_bound_arg =
+      TypeParam::Bind(&VoidPolymorphic<int, int&>::Run, 1);
+}
+
+// Function with unbound reference parameter.
+//   - Original parameter is modified by callback.
+TYPED_TEST(BindVariantsTest, UnboundReferenceSupport) {
+  int n = 0;
+  CallbackType<TypeParam, void(int&)> unbound_ref_cb =
+      TypeParam::Bind(&RefArgSet);
+  std::move(unbound_ref_cb).Run(n);
+  EXPECT_EQ(2, n);
+}
+
+// Unretained() wrapper support.
+//   - Method bound to Unretained() non-const object.
+//   - Const method bound to Unretained() non-const object.
+//   - Const method bound to Unretained() const object.
+TYPED_TEST(BindVariantsTest, Unretained) {
+  StrictMock<NoRef> no_ref;
+  const NoRef* const_no_ref_ptr = &no_ref;
+
+  EXPECT_CALL(no_ref, VoidMethod0());
+  EXPECT_CALL(no_ref, VoidConstMethod0()).Times(2);
+
+  TypeParam::Bind(&NoRef::VoidMethod0, Unretained(&no_ref)).Run();
+  TypeParam::Bind(&NoRef::VoidConstMethod0, Unretained(&no_ref)).Run();
+  TypeParam::Bind(&NoRef::VoidConstMethod0, Unretained(const_no_ref_ptr)).Run();
+}
+
+TYPED_TEST(BindVariantsTest, ScopedRefptr) {
+  StrictMock<HasRef> has_ref;
+  EXPECT_CALL(has_ref, AddRef()).Times(1);
+  EXPECT_CALL(has_ref, Release()).Times(1);
+
+  const scoped_refptr<HasRef> refptr(&has_ref);
+  CallbackType<TypeParam, int()> scoped_refptr_const_ref_cb =
+      TypeParam::Bind(&FunctionWithScopedRefptrFirstParam,
+                      base::ConstRef(refptr), 1);
+  EXPECT_EQ(1, std::move(scoped_refptr_const_ref_cb).Run());
+}
+
+TYPED_TEST(BindVariantsTest, UniquePtrReceiver) {
   std::unique_ptr<StrictMock<NoRef>> no_ref(new StrictMock<NoRef>);
   EXPECT_CALL(*no_ref, VoidMethod0()).Times(1);
-  Bind(&NoRef::VoidMethod0, std::move(no_ref)).Run();
+  TypeParam::Bind(&NoRef::VoidMethod0, std::move(no_ref)).Run();
 }
 
 // Tests for Passed() wrapper support:
@@ -1082,12 +1298,6 @@ TEST_F(BindTest, Cancellation) {
 }
 
 TEST_F(BindTest, OnceCallback) {
-  using internal::OnceClosure;
-  using internal::RepeatingClosure;
-  using internal::BindOnce;
-  using internal::BindRepeating;
-  using internal::OnceCallback;
-
   // Check if Callback variants have declarations of conversions as expected.
   // Copy constructor and assignment of RepeatingCallback.
   static_assert(std::is_constructible<

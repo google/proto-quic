@@ -143,7 +143,6 @@ java_cpp_enum("net_java_test_support_enums_srcjar") {
 
 java_cpp_enum("net_android_java_enums_srcjar") {
   sources = [
-    "../base/mime_util.h",
     "../base/network_change_notifier.h",
     "cellular_signal_strength.cc",
     "cert_verify_result_android.h",

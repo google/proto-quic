@@ -1,0 +1,8 @@
+{
+  "url": "https://www.android.com",
+  "warmup": true,
+  "speculation_mode": "disabled",
+  "delay_to_may_launch_url": 1000,
+  "delay_to_launch_url": 3000,
+  "cold": true
+}

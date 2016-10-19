@@ -277,8 +277,8 @@ void ProxyConfigServiceMac::OnProxyConfigChanged(
   last_config_fetched_ = new_config;
 
   // Notify all the observers.
-  FOR_EACH_OBSERVER(Observer, observers_,
-                    OnProxyConfigChanged(new_config, CONFIG_VALID));
+  for (auto& observer : observers_)
+    observer.OnProxyConfigChanged(new_config, CONFIG_VALID);
 }
 
 }  // namespace net

@@ -8,6 +8,7 @@
 usage: generate_token.py [-h] [--key-file KEY_FILE]
                          [--expire-days EXPIRE_DAYS |
                           --expire-timestamp EXPIRE_TIMESTAMP]
+                         [--is_subdomain | --no-subdomain]
                          origin trial_name
 
 Run "generate_token.py -h" for more help on usage.
@@ -85,10 +86,13 @@ def ExpiryFromArgs(args):
     return int(args.expire_timestamp)
   return (int(time.time()) + (int(args.expire_days) * 86400))
 
-def GenerateTokenData(origin, api_name, expiry):
-  return json.dumps({"origin": origin,
-                     "feature": api_name,
-                     "expiry": expiry}).encode('utf-8')
+def GenerateTokenData(origin, is_subdomain, feature_name, expiry):
+  data = {"origin": origin,
+          "feature": feature_name,
+          "expiry": expiry}
+  if is_subdomain is not None:
+    data["isSubdomain"] = is_subdomain
+  return json.dumps(data).encode('utf-8')
 
 def GenerateDataToSign(version, data):
   return version + struct.pack(">I",len(data)) + data
@@ -104,11 +108,11 @@ def main():
   default_key_file_absolute = os.path.join(script_dir, DEFAULT_KEY_FILE)
 
   parser = argparse.ArgumentParser(
-      description="Generate tokens for enabling experimental APIs")
+      description="Generate tokens for enabling experimental features")
   parser.add_argument("origin",
-                      help="Origin for which to enable the API. This can be "
-                           "either a hostname (default scheme HTTPS, default "
-                           "port 443) or a URL.",
+                      help="Origin for which to enable the feature. This can "
+                           "be either a hostname (default scheme HTTPS, "
+                           "default port 443) or a URL.",
                       type=OriginFromArg)
   parser.add_argument("trial_name",
                       help="Feature to enable. The current list of "
@@ -117,14 +121,28 @@ def main():
   parser.add_argument("--key-file",
                       help="Ed25519 private key file to sign the token with",
                       default=default_key_file_absolute)
+
+  subdomain_group = parser.add_mutually_exclusive_group()
+  subdomain_group.add_argument("--is-subdomain",
+                               help="Token will enable the feature for all "
+                                    "subdomains that match the origin",
+                               dest="is_subdomain",
+                               action="store_true")
+  subdomain_group.add_argument("--no-subdomain",
+                               help="Token will only match the specified "
+                                    "origin (default behavior)",
+                               dest="is_subdomain",
+                               action="store_false")
+  parser.set_defaults(is_subdomain=None)
+
   expiry_group = parser.add_mutually_exclusive_group()
   expiry_group.add_argument("--expire-days",
-                            help="Days from now when the token should exipire",
+                            help="Days from now when the token should expire",
                             type=int,
                             default=42)
   expiry_group.add_argument("--expire-timestamp",
                             help="Exact time (seconds since 1970-01-01 "
-                                 "00:00:00 UTC) when the token should exipire",
+                                 "00:00:00 UTC) when the token should expire",
                             type=int)
 
   args = parser.parse_args()
@@ -141,7 +159,8 @@ def main():
     print("Unable to use the specified private key file.")
     sys.exit(1)
 
-  token_data = GenerateTokenData(args.origin, args.trial_name, expiry)
+  token_data = GenerateTokenData(args.origin, args.is_subdomain,
+                                 args.trial_name, expiry)
   data_to_sign = GenerateDataToSign(VERSION, token_data)
   signature = Sign(private_key, data_to_sign)
 
@@ -157,6 +176,7 @@ def main():
   # Output the token details
   print "Token details:"
   print " Origin: %s" % args.origin
+  print " Is Subdomain: %s" % args.is_subdomain
   print " Feature: %s" % args.trial_name
   print " Expiry: %d (%s UTC)" % (expiry, datetime.utcfromtimestamp(expiry))
   print

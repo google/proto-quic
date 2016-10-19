@@ -204,7 +204,7 @@ class NET_EXPORT_PRIVATE HttpStreamParser {
   // Next state of the request, when the current one completes.
   State io_state_;
 
-  // The request to send.
+  // Null when read state machine is invoked.
   const HttpRequestInfo* request_;
 
   // The request header data.  May include a merged request body.

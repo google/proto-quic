@@ -94,7 +94,11 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
                                scoped_refptr<Sequence> sequence,
                                SchedulerWorker* worker) override;
 
-  const HistogramBase* num_tasks_between_waits_histogram_for_testing() const {
+  const HistogramBase* num_tasks_before_detach_histogram() const {
+    return num_tasks_before_detach_histogram_;
+  }
+
+  const HistogramBase* num_tasks_between_waits_histogram() const {
     return num_tasks_between_waits_histogram_;
   }
 
@@ -113,6 +117,9 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
       ThreadPriority priority_hint,
       size_t max_threads,
       const ReEnqueueSequenceCallback& re_enqueue_sequence_callback);
+
+  // Wakes up |worker|.
+  void WakeUpWorker(SchedulerWorker* worker);
 
   // Wakes up the last worker from this worker pool to go idle, if any.
   void WakeUpOneWorker();
@@ -159,7 +166,11 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // details in GetWork()).
   mutable SchedulerLock idle_workers_stack_lock_;
 
-  // Stack of idle workers.
+  // Stack of idle workers. Initially, all workers are on this stack. A worker
+  // is removed from the stack before its WakeUp() function is called and when
+  // it receives work from GetWork() (a worker calls GetWork() when its sleep
+  // timeout expires, even if its WakeUp() method hasn't been called). A worker
+  // is pushed on this stack when it receives nullptr from GetWork().
   SchedulerWorkerStack idle_workers_stack_;
 
   // Signaled when all workers become idle.
@@ -180,6 +191,10 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally
   // leaked.
   HistogramBase* const detach_duration_histogram_;
+
+  // TaskScheduler.NumTasksBeforeDetach.[worker pool name] histogram.
+  // Intentionally leaked.
+  HistogramBase* const num_tasks_before_detach_histogram_;
 
   // TaskScheduler.NumTasksBetweenWaits.[worker pool name] histogram.
   // Intentionally leaked.

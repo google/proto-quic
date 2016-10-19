@@ -9,6 +9,7 @@
 
 #include <openssl/x509.h>
 
+#include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
 #include "net/log/net_log_parameters_callback.h"
 
@@ -42,7 +43,9 @@ struct SslSetClearMask {
 // Note that |tracer| is not currently used in the implementation, but is passed
 // in anyway as this ensures the caller will clear any residual codes left on
 // the error stack.
-int MapOpenSSLError(int err, const crypto::OpenSSLErrStackTracer& tracer);
+NET_EXPORT_PRIVATE int MapOpenSSLError(
+    int err,
+    const crypto::OpenSSLErrStackTracer& tracer);
 
 // Helper struct to store information about an OpenSSL error stack entry.
 struct OpenSSLErrorInfo {

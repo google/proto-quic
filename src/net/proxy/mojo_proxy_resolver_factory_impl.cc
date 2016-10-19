@@ -94,15 +94,15 @@ MojoProxyResolverFactoryImpl::~MojoProxyResolverFactoryImpl() {
 }
 
 void MojoProxyResolverFactoryImpl::CreateResolver(
-    const mojo::String& pac_script,
+    const std::string& pac_script,
     mojo::InterfaceRequest<interfaces::ProxyResolver> request,
     interfaces::ProxyResolverFactoryRequestClientPtr client) {
   // The Job will call RemoveJob on |this| when either the create request
   // finishes or |request| or |client| encounters a connection error.
-  std::unique_ptr<Job> job = base::MakeUnique<Job>(
-      this, ProxyResolverScriptData::FromUTF8(pac_script.To<std::string>()),
-      proxy_resolver_impl_factory_.get(), std::move(request),
-      std::move(client));
+  std::unique_ptr<Job> job =
+      base::MakeUnique<Job>(this, ProxyResolverScriptData::FromUTF8(pac_script),
+                            proxy_resolver_impl_factory_.get(),
+                            std::move(request), std::move(client));
   Job* job_ptr = job.get();
   jobs_[job_ptr] = std::move(job);
 }

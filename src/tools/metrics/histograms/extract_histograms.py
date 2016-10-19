@@ -63,6 +63,9 @@ OWNER_FIELD_PLACEHOLDER = (
 
 MAX_HISTOGRAM_SUFFIX_DEPENDENCY_DEPTH = 5
 
+DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON = (
+    'Base histogram. Use suffixes of this histogram instead.')
+
 
 class Error(Exception):
   pass
@@ -230,6 +233,14 @@ def _ExtractOwners(xml_node):
   return owners
 
 
+def _ProcessBaseHistogramAttribute(node, histogram_entry):
+  if node.hasAttribute('base'):
+    is_base = node.getAttribute('base').lower() == 'true'
+    histogram_entry['base'] = is_base
+    if is_base and 'obsolete' not in histogram_entry:
+      histogram_entry['obsolete'] = DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON
+
+
 def _ExtractHistogramsFromXmlTree(tree, enums):
   """Extract all <histogram> nodes in the tree into a dictionary."""
 
@@ -287,6 +298,8 @@ def _ExtractHistogramsFromXmlTree(tree, enums):
         have_errors = True
       else:
         histogram_entry['enum'] = enums[enum_name]
+
+    _ProcessBaseHistogramAttribute(histogram, histogram_entry)
 
   return histograms, have_errors
 
@@ -398,8 +411,17 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
           new_histogram_name = _ExpandHistogramNameWithSuffixes(
               suffix_name, histogram_name, histogram_suffixes)
           if new_histogram_name != histogram_name:
-            histograms[new_histogram_name] = copy.deepcopy(
-                histograms[histogram_name])
+            new_histogram = copy.deepcopy(histograms[histogram_name])
+            # Do not copy forward base histogram state to suffixed
+            # histograms. Any suffixed histograms that wish to remain base
+            # histograms must explicitly re-declare themselves as base
+            # histograms.
+            if new_histogram.get('base', False):
+              del new_histogram['base']
+              if (new_histogram.get('obsolete', '') ==
+                  DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON):
+                del new_histogram['obsolete']
+            histograms[new_histogram_name] = new_histogram
 
           suffix_label = suffix_labels.get(suffix_name, '')
 
@@ -435,6 +457,8 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
           # inherit it.
           if obsolete_reason:
             histograms[new_histogram_name]['obsolete'] = obsolete_reason
+
+          _ProcessBaseHistogramAttribute(suffix, histograms[new_histogram_name])
 
         except Error:
           have_errors = True

@@ -13,7 +13,6 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/quic/quic_client_session.h"
-#include "net/tools/quic/spdy_balsa_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -69,10 +68,9 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
         body_("hello world") {
     session_.Initialize();
 
-    headers_.SetResponseFirstlineFromStringPieces("HTTP/1.1", "200", "Ok");
-    headers_.ReplaceOrAppendHeader("content-length", "11");
-
-    headers_string_ = net::SpdyBalsaUtils::SerializeResponseHeaders(headers_);
+    headers_[":status"] = "200";
+    headers_["content-length"] = "11";
+    headers_string_ = SpdyUtils::SerializeUncompressedHeaders(headers_);
 
     stream_.reset(new QuicSpdyClientStream(kClientDataStreamId1, &session_));
     stream_visitor_.reset(new StreamVisitor());
@@ -93,14 +91,14 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
   MockQuicClientSession session_;
   std::unique_ptr<QuicSpdyClientStream> stream_;
   std::unique_ptr<StreamVisitor> stream_visitor_;
-  BalsaHeaders headers_;
+  SpdyHeaderBlock headers_;
   string headers_string_;
   string body_;
 };
 
 TEST_F(QuicSpdyClientStreamTest, TestReceivingIllegalResponseStatusCode) {
-  headers_.ReplaceOrAppendHeader(":status", "200 ok");
-  headers_string_ = SpdyBalsaUtils::SerializeResponseHeaders(headers_);
+  headers_[":status"] = "200 ok";
+  headers_string_ = SpdyUtils::SerializeUncompressedHeaders(headers_);
 
   stream_->OnStreamHeaders(headers_string_);
   EXPECT_CALL(*connection_,

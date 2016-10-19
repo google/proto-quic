@@ -109,6 +109,23 @@ TestNetworkQualityEstimator::GetRecentEffectiveConnectionType(
   return NetworkQualityEstimator::GetRecentEffectiveConnectionType(start_time);
 }
 
+EffectiveConnectionType
+TestNetworkQualityEstimator::GetRecentEffectiveConnectionTypeAndNetworkQuality(
+    const base::TimeTicks& start_time,
+    base::TimeDelta* http_rtt,
+    base::TimeDelta* transport_rtt,
+    int32_t* downstream_throughput_kbps) const {
+  if (recent_effective_connection_type_set_) {
+    *http_rtt = recent_http_rtt_;
+    *transport_rtt = recent_transport_rtt_;
+    *downstream_throughput_kbps = recent_downlink_throughput_kbps_;
+    return recent_effective_connection_type_;
+  }
+  return NetworkQualityEstimator::
+      GetRecentEffectiveConnectionTypeAndNetworkQuality(
+          start_time, http_rtt, transport_rtt, downstream_throughput_kbps);
+}
+
 bool TestNetworkQualityEstimator::GetHttpRTT(base::TimeDelta* rtt) const {
   if (http_rtt_set_) {
     *rtt = http_rtt_;

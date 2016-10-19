@@ -566,11 +566,6 @@ class NET_EXPORT_PRIVATE QuicFramer {
   // TODO(fayang): this set is never cleaned up. A possible improvement is to
   // use intervals.
   std::unordered_set<QuicPathId> closed_paths_;
-  // Map mapping path id to packet number of last successfully decrypted
-  // received packet.
-  // TODO(ianswett): Remove when
-  // gfe2_reloadable_flag_quic_packet_numbers_largest_received is deprecated.
-  std::unordered_map<QuicPathId, QuicPacketNumber> last_packet_numbers_;
   // Updated by ProcessPacketHeader when it succeeds.
   QuicPacketNumber last_packet_number_;
   // Map mapping path id to packet number of largest successfully decrypted

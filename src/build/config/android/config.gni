@@ -40,8 +40,10 @@ if (is_android) {
   }
 
   if (!defined(default_lint_android_sdk_root)) {
-    default_lint_android_sdk_root = default_android_sdk_root
-    default_lint_android_sdk_version = default_android_sdk_version
+    # Purposefully repeated so that downstream can change
+    # default_android_sdk_root without changing lint version.
+    default_lint_android_sdk_root = "//third_party/android_tools/sdk"
+    default_lint_android_sdk_version = "23"
   }
 
   if (!defined(default_android_keystore_path)) {
@@ -196,6 +198,7 @@ if (is_android) {
 
   # Subdirectories inside android_ndk_root that contain the sysroot for the
   # associated platform.
+  # If you raise this, reevaluate the snprintf=snprintf in ./BUILD.gn.
   _android_api_level = 16
   x86_android_sysroot_subdir =
       "platforms/android-${_android_api_level}/arch-x86"
@@ -203,6 +206,8 @@ if (is_android) {
       "platforms/android-${_android_api_level}/arch-arm"
   mips_android_sysroot_subdir =
       "platforms/android-${_android_api_level}/arch-mips"
+
+  # If you raise this, reevaluate the snprintf=snprintf in ./BUILD.gn.
   _android64_api_level = 21
   x86_64_android_sysroot_subdir =
       "platforms/android-${_android64_api_level}/arch-x86_64"

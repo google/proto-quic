@@ -109,6 +109,7 @@ ScopedJava GetPKCS8PrivateKeyJava(android::PrivateKeyType key_type,
 }
 
 const char kTestRsaKeyFile[] = "client_1.pk8";
+const char kTestRsaCertificateFile[] = "client_1.pem";
 
 // Retrieve a JNI local ref for our test RSA key.
 ScopedJava GetRSATestKeyJava() {
@@ -287,10 +288,14 @@ static const struct {
 TEST(SSLPlatformKeyAndroid, RSA) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(GetTestCertsDirectory(), kTestRsaCertificateFile);
+  ASSERT_TRUE(cert);
   ScopedJava rsa_key = GetRSATestKeyJava();
   ASSERT_FALSE(rsa_key.is_null());
 
-  scoped_refptr<SSLPrivateKey> wrapper_key = WrapJavaPrivateKey(rsa_key);
+  scoped_refptr<SSLPrivateKey> wrapper_key =
+      WrapJavaPrivateKey(cert.get(), rsa_key);
   ASSERT_TRUE(wrapper_key);
 
   bssl::UniquePtr<EVP_PKEY> openssl_key = ImportPrivateKeyFile(kTestRsaKeyFile);
@@ -319,10 +324,14 @@ TEST(SSLPlatformKeyAndroid, RSA) {
 TEST(SSLPlatformKeyAndroid, ECDSA) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(GetTestCertsDirectory(), kTestEcdsaCertificateFile);
+  ASSERT_TRUE(cert);
   ScopedJava ecdsa_key = GetECDSATestKeyJava();
   ASSERT_FALSE(ecdsa_key.is_null());
 
-  scoped_refptr<SSLPrivateKey> wrapper_key = WrapJavaPrivateKey(ecdsa_key);
+  scoped_refptr<SSLPrivateKey> wrapper_key =
+      WrapJavaPrivateKey(cert.get(), ecdsa_key);
   ASSERT_TRUE(wrapper_key);
 
   bssl::UniquePtr<EVP_PKEY> openssl_key =
@@ -330,7 +339,7 @@ TEST(SSLPlatformKeyAndroid, ECDSA) {
   ASSERT_TRUE(openssl_key);
 
   // Check that the wrapper key returns the correct length and type.
-  EXPECT_EQ(SSLPrivateKey::Type::ECDSA, wrapper_key->GetType());
+  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P256, wrapper_key->GetType());
   EXPECT_EQ(static_cast<size_t>(EVP_PKEY_size(openssl_key.get())),
             wrapper_key->GetMaxSignatureLengthInBytes());
 

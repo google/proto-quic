@@ -196,9 +196,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // will be owned by the dispatcher as time_wait_list_manager_
   virtual QuicTimeWaitListManager* CreateQuicTimeWaitListManager();
 
-  // Called when |current_packet_| is a data packet that has arrived before
-  // the CHLO or it is any kind of packet while a CHLO on same connection has
-  // already been in the buffer.
+  // Called when |connection_id| doesn't have an open connection yet, to buffer
+  // |current_packet_| until it can be delivered to the connection.
   void BufferEarlyPacket(QuicConnectionId connection_id);
 
   // Called when |current_packet_| is a CHLO packet. Creates a new connection
@@ -273,6 +272,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   friend class net::test::QuicDispatcherPeer;
   friend class StatelessRejectorProcessDoneCallback;
 
+  typedef std::unordered_set<QuicConnectionId> QuicConnectionIdSet;
+
   // Removes the session from the session map and write blocked list, and adds
   // the ConnectionId to the time-wait list.  If |session_closed_statelessly| is
   // true, any future packets for the ConnectionId will be black-holed.
@@ -300,6 +301,16 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
 
   // Invoked when StatelessRejector::Process completes.
   void OnStatelessRejectorProcessDone(
+      std::unique_ptr<StatelessRejector> rejector,
+      const IPEndPoint& current_client_address,
+      const IPEndPoint& current_server_address,
+      std::unique_ptr<QuicReceivedPacket> current_packet,
+      QuicPacketNumber packet_number,
+      QuicVersion first_version);
+
+  // Examine the state of the rejector and decide what to do with the current
+  // packet.
+  void ProcessStatelessRejectorState(
       std::unique_ptr<StatelessRejector> rejector,
       QuicPacketNumber packet_number,
       QuicVersion first_version);
@@ -345,6 +356,11 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Packets which are buffered until a connection can be created to handle
   // them.
   QuicBufferedPacketStore buffered_packets_;
+
+  // Set of connection IDs for which asynchronous CHLO processing is in
+  // progress, making it necessary to buffer any other packets which arrive on
+  // that connection until CHLO processing is complete.
+  QuicConnectionIdSet temporarily_buffered_connections_;
 
   // Information about the packet currently being handled.
   IPEndPoint current_client_address_;

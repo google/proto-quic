@@ -75,6 +75,9 @@ const uint32_t kMinimumFlowControlSendWindow = 16 * 1024;  // 16 KB
 const QuicByteCount kStreamReceiveWindowLimit = 16 * 1024 * 1024;   // 16 MB
 const QuicByteCount kSessionReceiveWindowLimit = 24 * 1024 * 1024;  // 24 MB
 
+// Default limit on the size of uncompressed headers.
+const QuicByteCount kDefaultMaxUncompressedHeaderSize = 16 * 1024;  // 16 KB
+
 // Minimum size of the CWND, in packets, when doing bandwidth resumption.
 const QuicPacketCount kMinCongestionWindowForBandwidthResumption = 10;
 
@@ -83,14 +86,6 @@ const QuicPacketCount kMaxTrackedPackets = 10000;
 
 // Default size of the socket receive buffer in bytes.
 const QuicByteCount kDefaultSocketReceiveBuffer = 1024 * 1024;
-// Minimum size of the socket receive buffer in bytes.
-// Smaller values are ignored.
-const QuicByteCount kMinSocketReceiveBuffer = 16 * 1024;
-
-// Fraction of the receive buffer that can be used, based on conservative
-// estimates and testing on Linux.
-// An alternative to kUsableRecieveBufferFraction.
-static const float kConservativeReceiveBufferFraction = 0.6f;
 
 // Don't allow a client to suggest an RTT shorter than 10ms.
 const uint32_t kMinInitialRoundTripTimeUs = 10 * kNumMicrosPerMilli;
@@ -490,6 +485,10 @@ enum QuicRstStreamErrorCode {
   QUIC_PROMISE_VARY_MISMATCH,
   // Only GET and HEAD methods allowed.
   QUIC_INVALID_PROMISE_METHOD,
+  // The push stream is unclaimed and timed out.
+  QUIC_PUSH_STREAM_TIMED_OUT,
+  // Received headers were too large.
+  QUIC_HEADERS_TOO_LARGE,
   // No error. Used as bound while iterating.
   QUIC_STREAM_LAST_ERROR,
 };
@@ -497,12 +496,6 @@ enum QuicRstStreamErrorCode {
 static_assert(static_cast<int>(QUIC_STREAM_LAST_ERROR) <=
                   std::numeric_limits<uint8_t>::max(),
               "QuicErrorCode exceeds single octet");
-
-// Because receiving an unknown QuicRstStreamErrorCode results in connection
-// teardown, we use this to make sure any errors predating a given version are
-// downgraded to the most appropriate existing error.
-NET_EXPORT_PRIVATE QuicRstStreamErrorCode
-AdjustErrorForVersion(QuicRstStreamErrorCode error_code, QuicVersion version);
 
 // These values must remain stable as they are uploaded to UMA histograms.
 // To add a new error code, use the current value of QUIC_LAST_ERROR and

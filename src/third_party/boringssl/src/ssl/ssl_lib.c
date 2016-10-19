@@ -151,7 +151,6 @@
 #include <openssl/lhash.h>
 #include <openssl/mem.h>
 #include <openssl/rand.h>
-#include <openssl/x509v3.h>
 
 #include "internal.h"
 #include "../crypto/internal.h"
@@ -636,8 +635,10 @@ int SSL_accept(SSL *ssl) {
 }
 
 static int ssl_do_renegotiate(SSL *ssl) {
-  /* We do not accept renegotiations as a server. */
-  if (ssl->server) {
+  /* We do not accept renegotiations as a server or SSL 3.0. SSL 3.0 will be
+   * removed entirely in the future and requires retaining more data for
+   * renegotiation_info. */
+  if (ssl->server || ssl->version == SSL3_VERSION) {
     goto no_renegotiation;
   }
 
@@ -1065,6 +1066,13 @@ STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
 
 int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
                        size_t max_out) {
+  /* tls-unique is not defined for SSL 3.0 or TLS 1.3. */
+  if (!ssl->s3->initial_handshake_complete ||
+      ssl3_protocol_version(ssl) < TLS1_VERSION ||
+      ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    goto err;
+  }
+
   /* The tls-unique value is the first Finished message in the handshake, which
    * is the client's in a full handshake and the server's for a resumption. See
    * https://tools.ietf.org/html/rfc5929#section-3.1. */
@@ -1077,11 +1085,6 @@ int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
     }
     finished = ssl->s3->previous_server_finished;
     finished_len = ssl->s3->previous_server_finished_len;
-  }
-
-  if (!ssl->s3->initial_handshake_complete ||
-      ssl->version < TLS1_VERSION) {
-    goto err;
   }
 
   *out_len = finished_len;
@@ -1232,32 +1235,45 @@ int SSL_set_rfd(SSL *ssl, int fd) {
   return 1;
 }
 
-size_t SSL_get_finished(const SSL *ssl, void *buf, size_t count) {
-  size_t ret = 0;
+static size_t copy_finished(void *out, size_t out_len, const uint8_t *in,
+                            size_t in_len) {
+  if (out_len > in_len) {
+    out_len = in_len;
+  }
+  memcpy(out, in, out_len);
+  return in_len;
+}
 
-  if (ssl->s3 != NULL) {
-    ret = ssl->s3->tmp.finish_md_len;
-    if (count > ret) {
-      count = ret;
-    }
-    memcpy(buf, ssl->s3->tmp.finish_md, count);
+size_t SSL_get_finished(const SSL *ssl, void *buf, size_t count) {
+  if (!ssl->s3->initial_handshake_complete ||
+      ssl3_protocol_version(ssl) < TLS1_VERSION ||
+      ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return 0;
   }
 
-  return ret;
+  if (ssl->server) {
+    return copy_finished(buf, count, ssl->s3->previous_server_finished,
+                         ssl->s3->previous_server_finished_len);
+  }
+
+  return copy_finished(buf, count, ssl->s3->previous_client_finished,
+                       ssl->s3->previous_client_finished_len);
 }
 
 size_t SSL_get_peer_finished(const SSL *ssl, void *buf, size_t count) {
-  size_t ret = 0;
-
-  if (ssl->s3 != NULL) {
-    ret = ssl->s3->tmp.peer_finish_md_len;
-    if (count > ret) {
-      count = ret;
-    }
-    memcpy(buf, ssl->s3->tmp.peer_finish_md, count);
+  if (!ssl->s3->initial_handshake_complete ||
+      ssl3_protocol_version(ssl) < TLS1_VERSION ||
+      ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return 0;
   }
 
-  return ret;
+  if (ssl->server) {
+    return copy_finished(buf, count, ssl->s3->previous_client_finished,
+                         ssl->s3->previous_client_finished_len);
+  }
+
+  return copy_finished(buf, count, ssl->s3->previous_server_finished,
+                       ssl->s3->previous_server_finished_len);
 }
 
 int SSL_get_verify_mode(const SSL *ssl) { return ssl->verify_mode; }
@@ -1499,13 +1515,24 @@ int SSL_set1_curves(SSL *ssl, const int *curves, size_t curves_len) {
                          curves_len);
 }
 
+int SSL_CTX_set1_curves_list(SSL_CTX *ctx, const char *curves) {
+  return tls1_set_curves_list(&ctx->supported_group_list,
+                              &ctx->supported_group_list_len, curves);
+}
+
+int SSL_set1_curves_list(SSL *ssl, const char *curves) {
+  return tls1_set_curves_list(&ssl->supported_group_list,
+                              &ssl->supported_group_list_len, curves);
+}
+
 uint16_t SSL_get_curve_id(const SSL *ssl) {
   /* TODO(davidben): This checks the wrong session if there is a renegotiation in
    * progress. */
   SSL_SESSION *session = SSL_get_session(ssl);
   if (session == NULL ||
       session->cipher == NULL ||
-      !SSL_CIPHER_is_ECDHE(session->cipher)) {
+      (ssl3_protocol_version(ssl) < TLS1_3_VERSION &&
+       !SSL_CIPHER_is_ECDHE(session->cipher))) {
     return 0;
   }
 
@@ -2010,16 +2037,22 @@ void SSL_set_cert_cb(SSL *ssl, int (*cb)(SSL *ssl, void *arg), void *arg) {
 }
 
 size_t SSL_get0_certificate_types(SSL *ssl, const uint8_t **out_types) {
-  if (ssl->server) {
+  if (ssl->server || ssl->s3->hs == NULL) {
     *out_types = NULL;
     return 0;
   }
-  *out_types = ssl->s3->tmp.certificate_types;
-  return ssl->s3->tmp.num_certificate_types;
+  *out_types = ssl->s3->hs->certificate_types;
+  return ssl->s3->hs->num_certificate_types;
 }
 
 void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
                                        uint32_t *out_mask_a) {
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    *out_mask_k = SSL_kGENERIC;
+    *out_mask_a = SSL_aGENERIC;
+    return;
+  }
+
   uint32_t mask_k = 0;
   uint32_t mask_a = 0;
 
@@ -2029,17 +2062,7 @@ void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
       mask_k |= SSL_kRSA;
       mask_a |= SSL_aRSA;
     } else if (ssl_is_ecdsa_key_type(type)) {
-      /* An ECC certificate may be usable for ECDSA cipher suites depending on
-       * the key usage extension and on the client's group preferences. */
-      X509 *x = ssl->cert->x509;
-      /* This call populates extension flags (ex_flags). */
-      X509_check_purpose(x, -1, 0);
-      int ecdsa_ok = (x->ex_flags & EXFLAG_KUSAGE)
-                         ? (x->ex_kusage & X509v3_KU_DIGITAL_SIGNATURE)
-                         : 1;
-      if (ecdsa_ok && tls1_check_ec_cert(ssl, x)) {
-        mask_a |= SSL_aECDSA;
-      }
+      mask_a |= SSL_aECDSA;
     }
   }
 
@@ -2657,7 +2680,10 @@ int SSL_in_init(const SSL *ssl) {
 }
 
 int SSL_in_false_start(const SSL *ssl) {
-  return ssl->s3->tmp.in_false_start;
+  if (ssl->s3->hs == NULL) {
+    return 0;
+  }
+  return ssl->s3->hs->in_false_start;
 }
 
 int SSL_cutthrough_complete(const SSL *ssl) {
@@ -2677,7 +2703,8 @@ int ssl3_can_false_start(const SSL *ssl) {
   /* False Start only for TLS 1.2 with an ECDHE+AEAD cipher and ALPN or NPN. */
   return !SSL_is_dtls(ssl) &&
       SSL_version(ssl) == TLS1_2_VERSION &&
-      (ssl->s3->alpn_selected || ssl->s3->next_proto_neg_seen) &&
+      (ssl->s3->alpn_selected != NULL ||
+       ssl->s3->next_proto_negotiated != NULL) &&
       cipher != NULL &&
       (cipher->algorithm_mkey == SSL_kECDHE ||
        cipher->algorithm_mkey == SSL_kCECPQ1) &&

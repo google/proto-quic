@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/memory/ptr_util.h"
 #include "base/memory/singleton.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/waitable_event.h"
@@ -1180,6 +1181,32 @@ TEST_P(EndToEndTest, InvalidStream) {
   EXPECT_EQ(QUIC_INVALID_STREAM_ID, client_->connection_error());
 }
 
+// Test that if the the server will close the connection if the client attempts
+// to send a request with overly large headers.
+TEST_P(EndToEndTest, LargeHeaders) {
+  ASSERT_TRUE(Initialize());
+  client_->client()->WaitForCryptoHandshakeConfirmed();
+
+  string body;
+  test::GenerateBody(&body, kMaxPacketSize);
+
+  HTTPMessage request(HttpConstants::HTTP_1_1, HttpConstants::POST, "/foo");
+  request.AddHeader("key1", string(15 * 1024, 'a'));
+  request.AddHeader("key2", string(15 * 1024, 'a'));
+  request.AddHeader("key3", string(15 * 1024, 'a'));
+  request.AddBody(body, true);
+
+  client_->SendCustomSynchronousRequest(request);
+  if (FLAGS_quic_limit_uncompressed_headers) {
+    EXPECT_EQ(QUIC_HEADERS_TOO_LARGE, client_->stream_error());
+  } else {
+    EXPECT_EQ(QUIC_STREAM_NO_ERROR, client_->stream_error());
+    EXPECT_EQ(kFooResponseBody, client_->response_body());
+    EXPECT_EQ(200u, client_->response_headers()->parsed_response_code());
+  }
+  EXPECT_EQ(QUIC_NO_ERROR, client_->connection_error());
+}
+
 TEST_P(EndToEndTest, EarlyResponseWithQuicStreamNoError) {
   ASSERT_TRUE(Initialize());
   client_->client()->WaitForCryptoHandshakeConfirmed();
@@ -1337,7 +1364,7 @@ TEST_P(EndToEndTest, SetIndependentMaxIncomingDynamicStreamsLimits) {
 }
 
 TEST_P(EndToEndTest, NegotiateCongestionControl) {
-  FLAGS_quic_allow_bbr = true;
+  FLAGS_quic_allow_new_bbr = true;
   // Disable this flag because if connection uses multipath sent packet manager,
   // static_cast here does not work.
   FLAGS_quic_enable_multipath = false;
@@ -1350,9 +1377,7 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kReno;
       break;
     case kTBBR:
-      // TODO(vasilvv): switch this back to kBBR when new BBR implementation is
-      // in.
-      expected_congestion_control_type = kCubic;
+      expected_congestion_control_type = kBBR;
       break;
     case kQBIC:
       expected_congestion_control_type = kCubic;
@@ -1759,9 +1784,11 @@ TEST_P(EndToEndTest, HeadersAndCryptoStreamsNoConnectionFlowControl) {
 
   QuicHeadersStream* headers_stream =
       QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
-  EXPECT_LT(
-      QuicFlowControllerPeer::SendWindowSize(headers_stream->flow_controller()),
-      kStreamIFCW);
+  if (!client_->client()->session()->force_hol_blocking()) {
+    EXPECT_LT(QuicFlowControllerPeer::SendWindowSize(
+                  headers_stream->flow_controller()),
+              kStreamIFCW);
+  }
   EXPECT_EQ(kSessionIFCW, QuicFlowControllerPeer::SendWindowSize(
                               client_->client()->session()->flow_controller()));
 
@@ -1801,12 +1828,14 @@ TEST_P(EndToEndTest, FlowControlsSynced) {
       QuicSpdySessionPeer::GetHeadersStream(client_session)->flow_controller(),
       QuicSpdySessionPeer::GetHeadersStream(server_session)->flow_controller());
 
-  EXPECT_EQ(static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
-                client_session->flow_controller())) /
-                QuicFlowControllerPeer::ReceiveWindowSize(
-                    QuicSpdySessionPeer::GetHeadersStream(client_session)
-                        ->flow_controller()),
-            kSessionToStreamRatio);
+  if (!client_session->force_hol_blocking()) {
+    EXPECT_EQ(static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
+                  client_session->flow_controller())) /
+                  QuicFlowControllerPeer::ReceiveWindowSize(
+                      QuicSpdySessionPeer::GetHeadersStream(client_session)
+                          ->flow_controller()),
+              kSessionToStreamRatio);
+  }
 
   server_thread_->Resume();
 }
@@ -2324,8 +2353,9 @@ class ClientSessionThatDropsBody : public QuicClientSession {
 
   ~ClientSessionThatDropsBody() override {}
 
-  QuicSpdyClientStream* CreateClientStream() override {
-    return new ClientStreamThatDropsBody(GetNextOutgoingStreamId(), this);
+  std::unique_ptr<QuicSpdyClientStream> CreateClientStream() override {
+    return base::MakeUnique<ClientStreamThatDropsBody>(
+        GetNextOutgoingStreamId(), this);
   }
 };
 

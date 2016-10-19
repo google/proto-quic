@@ -28,34 +28,32 @@ void TaskAnnotator::DidQueueTask(const char* queue_function,
 }
 
 void TaskAnnotator::RunTask(const char* queue_function,
-                            const PendingTask& pending_task) {
-  ScopedTaskRunActivity task_activity(pending_task);
+                            PendingTask* pending_task) {
+  ScopedTaskRunActivity task_activity(*pending_task);
 
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
   tracked_objects::Duration queue_duration =
-      stopwatch.StartTime() - pending_task.EffectiveTimePosted();
+      stopwatch.StartTime() - pending_task->EffectiveTimePosted();
 
-  TRACE_EVENT_WITH_FLOW1(TRACE_DISABLED_BY_DEFAULT("toplevel.flow"),
-                          queue_function,
-                          TRACE_ID_MANGLE(GetTaskTraceID(pending_task)),
-                          TRACE_EVENT_FLAG_FLOW_IN,
-                          "queue_duration",
-                          queue_duration.InMilliseconds());
+  TRACE_EVENT_WITH_FLOW1(
+      TRACE_DISABLED_BY_DEFAULT("toplevel.flow"), queue_function,
+      TRACE_ID_MANGLE(GetTaskTraceID(*pending_task)), TRACE_EVENT_FLAG_FLOW_IN,
+      "queue_duration", queue_duration.InMilliseconds());
 
   // Before running the task, store the program counter where it was posted
   // and deliberately alias it to ensure it is on the stack if the task
   // crashes. Be careful not to assume that the variable itself will have the
   // expected value when displayed by the optimizer in an optimized build.
   // Look at a memory dump of the stack.
-  const void* program_counter = pending_task.posted_from.program_counter();
+  const void* program_counter = pending_task->posted_from.program_counter();
   debug::Alias(&program_counter);
 
-  pending_task.task.Run();
+  std::move(pending_task->task).Run();
 
   stopwatch.Stop();
-  tracked_objects::ThreadData::TallyRunOnNamedThreadIfTracking(
-      pending_task, stopwatch);
+  tracked_objects::ThreadData::TallyRunOnNamedThreadIfTracking(*pending_task,
+                                                               stopwatch);
 }
 
 uint64_t TaskAnnotator::GetTaskTraceID(const PendingTask& task) const {

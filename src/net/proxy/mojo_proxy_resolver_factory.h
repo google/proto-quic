@@ -22,7 +22,7 @@ class MojoProxyResolverFactory {
   // when the connection to |req| is no longer needed.
   // Note: The connection request |req| may be resolved asynchronously.
   virtual std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
-      const mojo::String& pac_script,
+      const std::string& pac_script,
       mojo::InterfaceRequest<interfaces::ProxyResolver> req,
       interfaces::ProxyResolverFactoryRequestClientPtr client) = 0;
 

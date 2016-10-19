@@ -156,6 +156,9 @@ class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
   int64_t closed_stream_sent_bytes_;
 
   // The request to send.
+  // Set to null when response body is starting to be read. This is to allow
+  // the stream to be shared for reading and to possibly outlive request_info_'s
+  // owner.
   const HttpRequestInfo* request_info_;
 
   // |response_info_| is the HTTP response data object which is filled in

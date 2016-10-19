@@ -27,24 +27,32 @@ SCRIPT_TESTS = [
     ],
     'name': 'gpu_perftests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Android Galaxy S5 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Android Nexus5 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Android Nexus7v2 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Android Nexus9 Perf',
-        'shards': [2]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Android Galaxy S5 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Android Nexus5 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus7v2 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus9 Perf',
+          'shards': [2]
+        }
+      ],
+      'chromium.perf.fyi': [
+        {
+          'name': 'Android Galaxy S5 Perf',
+          'shards': [1]
+        },
+      ]
+    }
   },
   {
     'args': [
@@ -52,28 +60,36 @@ SCRIPT_TESTS = [
     ],
     'name': 'cc_perftests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Android Galaxy S5 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Android Nexus5 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Android Nexus6 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Android Nexus7v2 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Android Nexus9 Perf',
-        'shards': [2]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Android Galaxy S5 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Android Nexus5 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus6 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus7v2 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus9 Perf',
+          'shards': [2]
+        },
+      ],
+      'chromium.perf.fyi': [
+        {
+          'name': 'Android Galaxy S5 Perf',
+          'shards': [1]
+        },
+      ]
+    }
   },
   {
     'args': [
@@ -82,12 +98,14 @@ SCRIPT_TESTS = [
     ],
     'name': 'cc_perftests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Linux Perf',
-        'shards': [3]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Linux Perf',
+          'shards': [3]
+        },
+      ]
+    }
   },
   {
     'args': [
@@ -96,32 +114,34 @@ SCRIPT_TESTS = [
     ],
     'name': 'load_library_perf_tests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Linux Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Win 7 ATI GPU Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 7 Nvidia GPU Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 7 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Win 7 x64 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 8 Perf',
-        'shards': [2]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Linux Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Win 7 ATI GPU Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 7 Nvidia GPU Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 7 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Win 7 x64 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 8 Perf',
+          'shards': [2]
+        },
+      ]
+    }
   },
   {
     'args': [
@@ -133,36 +153,38 @@ SCRIPT_TESTS = [
     ],
     'name': 'performance_browser_tests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Mac 10.8 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Mac 10.9 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Win 7 ATI GPU Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 7 Nvidia GPU Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 7 Perf',
-        'shards': [3]
-      },
-      {
-        'name': 'Win 7 x64 Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 8 Perf',
-        'shards': [2]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Mac 10.8 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Mac 10.9 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Win 7 ATI GPU Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 7 Nvidia GPU Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 7 Perf',
+          'shards': [3]
+        },
+        {
+          'name': 'Win 7 x64 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 8 Perf',
+          'shards': [2]
+        },
+      ]
+    }
   },
   {
     'args': [
@@ -172,16 +194,18 @@ SCRIPT_TESTS = [
     ],
     'name': 'angle_perftests',
     'script': 'gtest_perf_test.py',
-    'testers': [
-      {
-        'name': 'Win 7 ATI GPU Perf',
-        'shards': [2]
-      },
-      {
-        'name': 'Win 7 Nvidia GPU Perf',
-        'shards': [2]
-      },
-    ]
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Win 7 ATI GPU Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Win 7 Nvidia GPU Perf',
+          'shards': [2]
+        },
+      ]
+    }
   },
 ]
 
@@ -204,13 +228,20 @@ def add_tester(waterfall, name, perf_id, platform, target_bits=64,
 def get_fyi_waterfall_config():
   waterfall = {'builders':[], 'testers': {}}
   waterfall = add_tester(
+    waterfall, 'Android Galaxy S5 Perf',
+    'android-galaxy-s5-perf', 'android')
+  waterfall = add_tester(
     waterfall, 'Win 10 Low-End Perf Tests',
     'win-low-end-2-core', 'win',
     swarming=[
       {
+       'gpu': '8086:22b1',
+       'os': 'Windows-10-10586',
        'device_ids': ['build187-b4']
       },
       {
+       'gpu': '1002:9874',
+       'os': 'Windows-10-10586',
        'device_ids': ['build171-b4', 'build186-b4']
       }
     ])
@@ -303,35 +334,39 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
   if browser == 'reference':
     test_args.append('--output-trace-tag=_ref')
     step_name += '.reference'
-  swarming = {
-    # Always say this is true regardless of whether the tester
-    # supports swarming. It doesn't hurt.
-    'can_use_on_swarming_builders': True,
-    'expiration': 14400,
-    'dimension_sets': swarming_dimensions
-  }
+
+  swarming = None
+  if swarming_dimensions:
+    swarming = {
+      # Always say this is true regardless of whether the tester
+      # supports swarming. It doesn't hurt.
+      'can_use_on_swarming_builders': True,
+      'expiration': 14400,
+      'dimension_sets': swarming_dimensions
+    }
 
   result = {
     'args': test_args,
     'isolate_name': 'telemetry_perf_tests',
     'name': step_name,
     'override_compile_targets': ['telemetry_perf_tests'],
-    'swarming': swarming,
   }
+  if swarming:
+    result['swarming'] = swarming
 
   return result
 
-def script_test_enabled_on_tester(test, tester_name, shard):
-  for enabled_tester in test['testers']:
+def script_test_enabled_on_tester(master, test, tester_name, shard):
+  for enabled_tester in test['testers'].get(master, []):
     if enabled_tester['name'] == tester_name:
       if shard in enabled_tester['shards']:
         return True
   return False
 
-def generate_script_tests(tester_name, shard):
+def generate_script_tests(master, tester_name, shard):
   script_tests = []
   for test in SCRIPT_TESTS:
-    if script_test_enabled_on_tester(test, tester_name, shard):
+    if script_test_enabled_on_tester(master, test, tester_name, shard):
       script = {
         'args': test['args'],
         'name': test['name'],
@@ -364,7 +399,10 @@ def generate_telemetry_tests(tester_config, benchmarks):
       # Id is unique within the swarming pool so it is the only needed
       # identifier for the bot to run the test on
       swarming_dimensions.append({
-        'id': device_id
+        'id': device_id,
+        'gpu': dimension['gpu'],
+        'os': dimension['os'],
+        'pool': 'Chrome-perf',
       })
 
     test = generate_telemetry_test(
@@ -377,23 +415,38 @@ def generate_telemetry_tests(tester_config, benchmarks):
 
   return isolated_scripts
 
+
+BENCHMARK_NAME_WHITELIST = set([
+    u'smoothness.top_25_smooth',
+    u'sunspider',
+    u'system_health.webview_startup',
+    u'page_cycler_v2.intl_hi_ru',
+    u'dromaeo.cssqueryjquery',
+])
+
+
 def current_benchmarks():
   current_dir = os.path.dirname(__file__)
   benchmarks_dir = os.path.join(current_dir, 'benchmarks')
   top_level_dir = os.path.dirname(benchmarks_dir)
 
-  return discover.DiscoverClasses(
+  all_benchmarks = discover.DiscoverClasses(
       benchmarks_dir, top_level_dir, benchmark_module.Benchmark,
       index_by_class_name=True).values()
+  return sorted((
+      bench for bench in all_benchmarks
+      if bench.Name() in BENCHMARK_NAME_WHITELIST), key=lambda b: b.Name())
 
-def generate_all_tests(waterfall, is_fyi):
+
+def generate_all_tests(waterfall):
   tests = {}
   for builder in waterfall['builders']:
     tests[builder] = {}
+  all_benchmarks = current_benchmarks()
+
   for name, config in waterfall['testers'].iteritems():
-    if is_fyi:
+    if config.get('swarming', False):
       # Right now we are only generating benchmarks for the fyi waterfall
-      all_benchmarks = current_benchmarks()
       isolated_scripts = generate_telemetry_tests(config, all_benchmarks)
       tests[name] = {
         'isolated_scripts': sorted(isolated_scripts, key=lambda x: x['name'])
@@ -405,15 +458,16 @@ def generate_all_tests(waterfall, is_fyi):
       # swarmed bots on the main waterfall.
       for shard in range(0, config['num_host_shards']):
         tester_name = '%s (%d)' % (name, shard + 1)
-        scripts = generate_script_tests(name, shard + 1)
+        scripts = generate_script_tests(waterfall['name'], name, shard + 1)
         if scripts:
           tests[tester_name] = {
             'scripts': sorted(scripts, key=lambda x: x['name'])
           }
 
   tests['AAAAA1 AUTOGENERATED FILE DO NOT EDIT'] = {}
-  tests['AAAAA2 See generate_perf_json.py to make changes'] = {}
-  filename = 'chromium.perf.fyi.json' if is_fyi else 'chromium.perf.json'
+  tests['AAAAA2 See //tools/perf/generate_perf_json.py to make changes'] = {}
+  filename = '%s.json' % waterfall['name']
+
   current_dir = os.path.dirname(os.path.abspath(__file__))
   src_dir = os.path.dirname(os.path.dirname(current_dir))
 
@@ -421,11 +475,15 @@ def generate_all_tests(waterfall, is_fyi):
     json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
     fp.write('\n')
 
+
 def main():
   waterfall = get_waterfall_config()
+  waterfall['name'] = 'chromium.perf'
   fyi_waterfall = get_fyi_waterfall_config()
-  generate_all_tests(fyi_waterfall, True)
-  generate_all_tests(waterfall, False)
+  fyi_waterfall['name'] = 'chromium.perf.fyi'
+
+  generate_all_tests(fyi_waterfall)
+  generate_all_tests(waterfall)
   return 0
 
 if __name__ == "__main__":

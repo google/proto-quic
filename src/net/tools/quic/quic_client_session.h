@@ -77,7 +77,7 @@ class QuicClientSession : public QuicClientSessionBase {
   // this simply returns a new QuicSpdyClientStream. This may be used by
   // subclasses which want to use a subclass of QuicSpdyClientStream for streams
   // but wish to use the sanity checks in CreateOutgoingDynamicStream.
-  virtual QuicSpdyClientStream* CreateClientStream();
+  virtual std::unique_ptr<QuicSpdyClientStream> CreateClientStream();
 
   const QuicServerId& server_id() { return server_id_; }
   QuicCryptoClientConfig* crypto_config() { return crypto_config_; }

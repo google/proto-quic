@@ -79,7 +79,7 @@ TEST(SpdyHeaderBlockTest, AddHeaders) {
   SpdyHeaderBlock block;
   block["foo"] = string(300, 'x');
   block["bar"] = "baz";
-  block.ReplaceOrAppendHeader("qux", "qux1");
+  block["qux"] = "qux1";
   block["qux"] = "qux2";
   block.insert(std::make_pair("key", "value"));
 
@@ -101,7 +101,7 @@ TEST(SpdyHeaderBlockTest, CopyBlocks) {
   SpdyHeaderBlock block1;
   block1["foo"] = string(300, 'x');
   block1["bar"] = "baz";
-  block1.ReplaceOrAppendHeader("qux", "qux1");
+  block1.insert(make_pair("qux", "qux1"));
 
   SpdyHeaderBlock block2 = block1.Clone();
   SpdyHeaderBlock block3(block1.Clone());
@@ -149,15 +149,15 @@ TEST(SpdyHeaderBlockTest, MovedFromIsValid) {
   SpdyHeaderBlock block2(std::move(block1));
   EXPECT_THAT(block2, ElementsAre(Pair("foo", "bar")));
 
-  block1.ReplaceOrAppendHeader("baz", "qux");
+  block1["baz"] = "qux";  // NOLINT  testing post-move behavior
 
   SpdyHeaderBlock block3(std::move(block1));
 
-  block1["foo"] = "bar";
+  block1["foo"] = "bar";  // NOLINT  testing post-move behavior
 
   SpdyHeaderBlock block4(std::move(block1));
 
-  block1.clear();
+  block1.clear();  // NOLINT  testing post-move behavior
   EXPECT_TRUE(block1.empty());
 
   block1["foo"] = "bar";
@@ -180,14 +180,11 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
   block["cookie"] = "key1=value1";
   block.AppendValueOrAddHeader("h1", "h1v1");
   block.insert(std::make_pair("h2", "h2v1"));
-  block.ReplaceOrAppendHeader("h3", "h3v1");
 
   block.AppendValueOrAddHeader("h3", "h3v2");
   block.AppendValueOrAddHeader("h2", "h2v2");
   block.AppendValueOrAddHeader("h1", "h1v2");
   block.AppendValueOrAddHeader("cookie", "key2=value2");
-
-  block.ReplaceOrAppendHeader("h4", "h4v1");
 
   block.AppendValueOrAddHeader("cookie", "key3=value3");
   block.AppendValueOrAddHeader("h1", "h1v3");
@@ -198,8 +195,7 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
   EXPECT_EQ("baz", block["foo"]);
   EXPECT_EQ(string("h1v1\0h1v2\0h1v3", 14), block["h1"]);
   EXPECT_EQ(string("h2v1\0h2v2\0h2v3", 14), block["h2"]);
-  EXPECT_EQ(string("h3v1\0h3v2\0h3v3", 14), block["h3"]);
-  EXPECT_EQ("h4v1", block["h4"]);
+  EXPECT_EQ(string("h3v2\0h3v3", 9), block["h3"]);
 }
 
 }  // namespace test

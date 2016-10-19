@@ -16,6 +16,7 @@
 
 #include <openssl/bio.h>
 #include <openssl/dh.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
@@ -250,7 +251,7 @@ struct GlobalState {
 
 static GlobalState g_state;
 
-extern "C" int LLVMFuzzerTestOneInput(uint8_t *buf, size_t len) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
   RAND_reset_for_fuzzing();
 
   // TODO(davidben): Extract an SSL_SESSION from |buf| and preconfigure the
@@ -289,5 +290,6 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *buf, size_t len) {
   }
   SSL_free(server);
 
+  ERR_clear_error();
   return 0;
 }

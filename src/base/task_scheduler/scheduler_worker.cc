@@ -45,7 +45,7 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     WaitForWork();
 
     while (!outer_->task_tracker_->IsShutdownComplete() &&
-           !outer_->ShouldExitForTesting()) {
+           !outer_->should_exit_for_testing_.IsSet()) {
       DCHECK(outer_);
 
 #if defined(OS_MACOSX)
@@ -70,12 +70,13 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
         continue;
       }
 
-      const Task* task = sequence->PeekTask();
-      const TimeTicks start_time = TimeTicks::Now();
-      if (outer_->task_tracker_->RunTask(task, sequence->token()))
-        outer_->delegate_->DidRunTask(task, start_time - task->sequenced_time);
+      std::unique_ptr<Task> task = sequence->TakeTask();
+      const TaskPriority task_priority = task->traits.priority();
+      const TimeDelta task_latency = TimeTicks::Now() - task->sequenced_time;
+      if (outer_->task_tracker_->RunTask(std::move(task), sequence->token()))
+        outer_->delegate_->DidRunTaskWithPriority(task_priority, task_latency);
 
-      const bool sequence_became_empty = sequence->PopTask();
+      const bool sequence_became_empty = sequence->Pop();
 
       // If |sequence| isn't empty immediately after the pop, re-enqueue it to
       // maintain the invariant that a non-empty Sequence is always referenced
@@ -216,10 +217,9 @@ void SchedulerWorker::WakeUp() {
 }
 
 void SchedulerWorker::JoinForTesting() {
-  {
-    AutoSchedulerLock auto_lock(should_exit_for_testing_lock_);
-    should_exit_for_testing_ = true;
-  }
+  DCHECK(!should_exit_for_testing_.IsSet());
+  should_exit_for_testing_.Set();
+
   WakeUp();
 
   // Normally holding a lock and joining is dangerous. However, since this is
@@ -249,7 +249,7 @@ SchedulerWorker::SchedulerWorker(ThreadPriority priority_hint,
 }
 
 std::unique_ptr<SchedulerWorker::Thread> SchedulerWorker::Detach() {
-  DCHECK(!ShouldExitForTesting()) << "Worker was already joined";
+  DCHECK(!should_exit_for_testing_.IsSet()) << "Worker was already joined";
   AutoSchedulerLock auto_lock(thread_lock_);
   // If a wakeup is pending, then a WakeUp() came in while we were deciding to
   // detach. This means we can't go away anymore since we would break the
@@ -267,11 +267,6 @@ void SchedulerWorker::CreateThread() {
 void SchedulerWorker::CreateThreadAssertSynchronized() {
   thread_lock_.AssertAcquired();
   CreateThread();
-}
-
-bool SchedulerWorker::ShouldExitForTesting() const {
-  AutoSchedulerLock auto_lock(should_exit_for_testing_lock_);
-  return should_exit_for_testing_;
 }
 
 }  // namespace internal

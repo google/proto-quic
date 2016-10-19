@@ -380,6 +380,12 @@ int HttpStreamParser::ReadResponseBody(IOBuffer* buf, int buf_len,
   user_read_buf_len_ = buf_len;
   io_state_ = STATE_READ_BODY;
 
+  // Invalidate HttpRequestInfo pointer. This is to allow the stream to be
+  // shared across multiple consumers.
+  // It is safe to reset it at this point since request_->upload_data_stream
+  // is also not needed anymore.
+  request_ = nullptr;
+
   int result = DoLoop(OK);
   if (result == ERR_IO_PENDING)
     callback_ = callback;

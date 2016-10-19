@@ -125,9 +125,8 @@ class PollingProxyConfigService::Core
       // If the configuration has changed, notify the observers.
       has_config_ = true;
       last_config_ = config;
-      FOR_EACH_OBSERVER(Observer, observers_,
-                        OnProxyConfigChanged(config,
-                                             ProxyConfigService::CONFIG_VALID));
+      for (auto& observer : observers_)
+        observer.OnProxyConfigChanged(config, ProxyConfigService::CONFIG_VALID);
     }
 
     if (poll_task_queued_)

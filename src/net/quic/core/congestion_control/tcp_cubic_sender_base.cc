@@ -129,6 +129,7 @@ float TcpCubicSenderBase::RenoBeta() const {
 void TcpCubicSenderBase::OnCongestionEvent(
     bool rtt_updated,
     QuicByteCount prior_in_flight,
+    QuicTime /*event_time*/,
     const CongestionVector& acked_packets,
     const CongestionVector& lost_packets) {
   if (rtt_updated && InSlowStart() &&

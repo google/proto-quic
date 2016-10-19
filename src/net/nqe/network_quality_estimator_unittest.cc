@@ -60,6 +60,41 @@ class TestEffectiveConnectionTypeObserver
   std::vector<EffectiveConnectionType> effective_connection_types_;
 };
 
+class TestRTTAndThroughputEstimatesObserver
+    : public NetworkQualityEstimator::RTTAndThroughputEstimatesObserver {
+ public:
+  TestRTTAndThroughputEstimatesObserver()
+      : http_rtt_(nqe::internal::InvalidRTT()),
+        transport_rtt_(nqe::internal::InvalidRTT()),
+        downstream_throughput_kbps_(nqe::internal::kInvalidThroughput),
+        notifications_received_(0) {}
+
+  // RTTAndThroughputEstimatesObserver implementation:
+  void OnRTTOrThroughputEstimatesComputed(
+      base::TimeDelta http_rtt,
+      base::TimeDelta transport_rtt,
+      int32_t downstream_throughput_kbps) override {
+    http_rtt_ = http_rtt;
+    transport_rtt_ = transport_rtt;
+    downstream_throughput_kbps_ = downstream_throughput_kbps;
+    notifications_received_++;
+  }
+
+  int notifications_received() const { return notifications_received_; }
+
+  base::TimeDelta http_rtt() const { return http_rtt_; }
+  base::TimeDelta transport_rtt() const { return transport_rtt_; }
+  int32_t downstream_throughput_kbps() const {
+    return downstream_throughput_kbps_;
+  }
+
+ private:
+  base::TimeDelta http_rtt_;
+  base::TimeDelta transport_rtt_;
+  int32_t downstream_throughput_kbps_;
+  int notifications_received_;
+};
+
 class TestRTTObserver : public NetworkQualityEstimator::RTTObserver {
  public:
   struct Observation {
@@ -1335,6 +1370,75 @@ TEST(NetworkQualityEstimatorTest, TestEffectiveConnectionTypeObserver) {
   // change event.
   estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
   EXPECT_EQ(2U, observer.effective_connection_types().size());
+}
+
+// Tests that the network quality is computed at the specified interval, and
+// that the network quality observers are notified of any change.
+TEST(NetworkQualityEstimatorTest, TestRTTAndThroughputEstimatesObserver) {
+  base::HistogramTester histogram_tester;
+  std::unique_ptr<base::SimpleTestTickClock> tick_clock(
+      new base::SimpleTestTickClock());
+  base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
+
+  TestRTTAndThroughputEstimatesObserver observer;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(variation_params);
+  estimator.AddRTTAndThroughputEstimatesObserver(&observer);
+  estimator.SetTickClockForTesting(std::move(tick_clock));
+
+  TestDelegate test_delegate;
+  TestURLRequestContext context(true);
+  context.set_network_quality_estimator(&estimator);
+  context.Init();
+
+  EXPECT_EQ(nqe::internal::InvalidRTT(), observer.http_rtt());
+  EXPECT_EQ(nqe::internal::InvalidRTT(), observer.transport_rtt());
+  EXPECT_EQ(nqe::internal::kInvalidThroughput,
+            observer.downstream_throughput_kbps());
+  int notifications_received = observer.notifications_received();
+  EXPECT_EQ(0, notifications_received);
+
+  base::TimeDelta http_rtt(base::TimeDelta::FromMilliseconds(100));
+  base::TimeDelta transport_rtt(base::TimeDelta::FromMilliseconds(200));
+  int32_t downstream_throughput_kbps(300);
+  estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
+  estimator.set_recent_http_rtt(http_rtt);
+  estimator.set_recent_transport_rtt(transport_rtt);
+  estimator.set_recent_downlink_throughput_kbps(downstream_throughput_kbps);
+  tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
+
+  std::unique_ptr<URLRequest> request(context.CreateRequest(
+      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  request->Start();
+  base::RunLoop().Run();
+  EXPECT_EQ(http_rtt, observer.http_rtt());
+  EXPECT_EQ(transport_rtt, observer.transport_rtt());
+  EXPECT_EQ(downstream_throughput_kbps, observer.downstream_throughput_kbps());
+  EXPECT_LE(1, observer.notifications_received() - notifications_received);
+  notifications_received = observer.notifications_received();
+
+  // The next request should not trigger recomputation of RTT or throughput
+  // since there has been no change in the clock.
+  std::unique_ptr<URLRequest> request2(context.CreateRequest(
+      estimator.GetEchoURL(), DEFAULT_PRIORITY, &test_delegate));
+  request2->Start();
+  base::RunLoop().Run();
+  EXPECT_LE(1, observer.notifications_received() - notifications_received);
+  notifications_received = observer.notifications_received();
+
+  // A change in the connection type should send out notification to the
+  // observers.
+  estimator.set_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
+  estimator.SimulateNetworkChange(NetworkChangeNotifier::CONNECTION_WIFI,
+                                  "test");
+  EXPECT_LE(1, observer.notifications_received() - notifications_received);
+  notifications_received = observer.notifications_received();
+
+  // A change in effective connection type does not trigger notification to the
+  // observers, since it is not accompanied by any new observation or a network
+  // change event.
+  estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
+  EXPECT_EQ(0, observer.notifications_received() - notifications_received);
 }
 
 // Tests that the effective connection type is computed on every RTT

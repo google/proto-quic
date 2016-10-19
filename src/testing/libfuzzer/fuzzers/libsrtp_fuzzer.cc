@@ -41,6 +41,7 @@ struct Environment {
       case LibSrtpFuzzer::LIKE_WEBRTC:
         crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
         crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
+        break;
       case LibSrtpFuzzer::LIKE_WEBRTC_WITHOUT_AUTH:
         crypto_policy_set_aes_cm_128_null_auth(&policy.rtp);
         crypto_policy_set_aes_cm_128_null_auth(&policy.rtcp);
@@ -110,7 +111,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   srtp_t session;
   err_status_t error = srtp_create(&session, &srtp_policy);
-  assert(error == err_status_ok);
+  if (error != err_status_ok) {
+    assert(false);
+    return 0;
+  }
 
   // Read one byte as a packet length N, then feed the next N bytes
   // into srtp_unprotect. Keep going until we run out of data.

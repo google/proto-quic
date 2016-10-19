@@ -24,7 +24,7 @@ class InProcessMojoProxyResolverFactory : public MojoProxyResolverFactory {
 
   // Overridden from MojoProxyResolverFactory:
   std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
-      const mojo::String& pac_script,
+      const std::string& pac_script,
       mojo::InterfaceRequest<interfaces::ProxyResolver> req,
       interfaces::ProxyResolverFactoryRequestClientPtr client) override;
 

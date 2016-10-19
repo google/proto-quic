@@ -103,8 +103,8 @@ class TcpCubicSenderPacketsTest : public ::testing::Test {
       acked_packets.push_back(
           std::make_pair(acked_packet_number_, kDefaultTCPMSS));
     }
-    sender_->OnCongestionEvent(true, bytes_in_flight_, acked_packets,
-                               lost_packets);
+    sender_->OnCongestionEvent(true, bytes_in_flight_, clock_.Now(),
+                               acked_packets, lost_packets);
     bytes_in_flight_ -= n * kDefaultTCPMSS;
     clock_.AdvanceTime(one_ms_);
   }
@@ -119,8 +119,8 @@ class TcpCubicSenderPacketsTest : public ::testing::Test {
       lost_packets.push_back(
           std::make_pair(acked_packet_number_, packet_length));
     }
-    sender_->OnCongestionEvent(false, bytes_in_flight_, acked_packets,
-                               lost_packets);
+    sender_->OnCongestionEvent(false, bytes_in_flight_, clock_.Now(),
+                               acked_packets, lost_packets);
     bytes_in_flight_ -= n * packet_length;
   }
 
@@ -129,8 +129,8 @@ class TcpCubicSenderPacketsTest : public ::testing::Test {
     SendAlgorithmInterface::CongestionVector acked_packets;
     SendAlgorithmInterface::CongestionVector lost_packets;
     lost_packets.push_back(std::make_pair(packet_number, kDefaultTCPMSS));
-    sender_->OnCongestionEvent(false, bytes_in_flight_, acked_packets,
-                               lost_packets);
+    sender_->OnCongestionEvent(false, bytes_in_flight_, clock_.Now(),
+                               acked_packets, lost_packets);
     bytes_in_flight_ -= kDefaultTCPMSS;
   }
 
@@ -941,14 +941,15 @@ TEST_F(TcpCubicSenderPacketsTest, DefaultMaxCwnd) {
   RttStats rtt_stats;
   QuicConnectionStats stats;
   std::unique_ptr<SendAlgorithmInterface> sender(SendAlgorithmInterface::Create(
-      &clock_, &rtt_stats, kCubic, &stats, kInitialCongestionWindow));
+      &clock_, &rtt_stats, /*unacked_packets=*/nullptr, kCubic,
+      QuicRandom::GetInstance(), &stats, kInitialCongestionWindow));
 
   SendAlgorithmInterface::CongestionVector acked_packets;
   SendAlgorithmInterface::CongestionVector missing_packets;
   for (uint64_t i = 1; i < kDefaultMaxCongestionWindowPackets; ++i) {
     acked_packets.clear();
     acked_packets.push_back(std::make_pair(i, 1350));
-    sender->OnCongestionEvent(true, sender->GetCongestionWindow(),
+    sender->OnCongestionEvent(true, sender->GetCongestionWindow(), clock_.Now(),
                               acked_packets, missing_packets);
   }
   EXPECT_EQ(kDefaultMaxCongestionWindowPackets,

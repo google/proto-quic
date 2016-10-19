@@ -29,4 +29,21 @@ public class BuildConfig {
     public static final boolean DCHECK_IS_ON = false;
 #endif
 
+    // Sorted list of locales that have a compressed .pak within assets.
+    // Stored as an array because AssetManager.list() is slow.
+    public static final String[] COMPRESSED_LOCALES =
+#if defined(COMPRESSED_LOCALE_LIST)
+      COMPRESSED_LOCALE_LIST;
+#else
+      {};
+#endif
+
+    // Sorted list of locales that have an uncompressed .pak within assets.
+    // Stored as an array because AssetManager.list() is slow.
+    public static final String[] UNCOMPRESSED_LOCALES =
+#if defined(UNCOMPRESSED_LOCALE_LIST)
+      UNCOMPRESSED_LOCALE_LIST;
+#else
+      {};
+#endif
 }

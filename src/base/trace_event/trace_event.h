@@ -55,7 +55,6 @@
 #define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE() \
   UNLIKELY(*INTERNAL_TRACE_EVENT_UID(category_group_enabled) &           \
            (base::trace_event::TraceLog::ENABLED_FOR_RECORDING |         \
-            base::trace_event::TraceLog::ENABLED_FOR_EVENT_CALLBACK |    \
             base::trace_event::TraceLog::ENABLED_FOR_ETW_EXPORT |        \
             base::trace_event::TraceLog::ENABLED_FOR_FILTERING))
 
@@ -335,29 +334,20 @@
     }                                                                       \
   } while (0)
 
-// This macro ignores whether the bind_id is local, global, or mangled.
-#define INTERNAL_TRACE_EVENT_ADD_BIND_IDS(category_group, name, id, bind_id,  \
-                                          ...)                                \
+// The linked ID will not be mangled.
+#define INTERNAL_TRACE_EVENT_ADD_LINK_IDS(category_group, name, id1, id2)     \
     do {                                                                      \
       INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
       if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-        trace_event_internal::TraceID source_id((id));                        \
+        trace_event_internal::TraceID source_id((id1));                       \
         unsigned int source_flags = source_id.id_flags();                     \
-        trace_event_internal::TraceID target_id((bind_id));                   \
-        if (target_id.scope() == trace_event_internal::kGlobalScope) {        \
-          trace_event_internal::AddTraceEvent(                                \
-              TRACE_EVENT_PHASE_BIND_IDS,                                     \
-              INTERNAL_TRACE_EVENT_UID(category_group_enabled),               \
-              name, source_id.scope(), source_id.raw_id(),                    \
-              source_flags, target_id.raw_id(), ##__VA_ARGS__);               \
-        } else {                                                              \
-          trace_event_internal::AddTraceEvent(                                \
-              TRACE_EVENT_PHASE_BIND_IDS,                                     \
-              INTERNAL_TRACE_EVENT_UID(category_group_enabled),               \
-              name, source_id.scope(), source_id.raw_id(),                    \
-              source_flags, target_id.raw_id(),                               \
-              "bind_scope", target_id.scope(), ##__VA_ARGS__);                \
-        }                                                                     \
+        trace_event_internal::TraceID target_id((id2));                       \
+        trace_event_internal::AddTraceEvent(                                  \
+            TRACE_EVENT_PHASE_LINK_IDS,                                       \
+            INTERNAL_TRACE_EVENT_UID(category_group_enabled),                 \
+            name, source_id.scope(), source_id.raw_id(), source_flags,        \
+            trace_event_internal::kNoId,                                      \
+            "linked_id", target_id.AsConvertableToTraceFormat());             \
       }                                                                       \
     } while (0)
 
@@ -415,7 +405,7 @@ const unsigned long long kNoId = 0;
 // TraceID encapsulates an ID that can either be an integer or pointer. Pointers
 // are by default mangled with the Process ID so that they are unlikely to
 // collide when the same pointer is used on different processes.
-class TraceID {
+class BASE_EXPORT TraceID {
  public:
   // Can be combined with WithScope.
   class LocalId {
@@ -540,6 +530,9 @@ class TraceID {
   unsigned long long raw_id() const { return raw_id_; }
   const char* scope() const { return scope_; }
   unsigned int id_flags() const { return id_flags_; }
+
+  std::unique_ptr<base::trace_event::ConvertableToTraceFormat>
+  AsConvertableToTraceFormat() const;
 
  private:
   const char* scope_ = nullptr;

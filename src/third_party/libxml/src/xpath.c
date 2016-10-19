@@ -14008,9 +14008,14 @@ xmlXPathCompOpEval(xmlXPathParserContextPtr ctxt, xmlXPathStepOpPtr op)
                 xmlNodeSetPtr oldset;
                 int i, j;
 
-                if (op->ch1 != -1)
+                if (op->ch1 != -1) {
                     total +=
                         xmlXPathCompOpEval(ctxt, &comp->steps[op->ch1]);
+                    CHECK_ERROR0;
+                }
+                if (ctxt->value == NULL) {
+                    XP_ERROR0(XPATH_INVALID_OPERAND);
+                }
                 if (op->ch2 == -1)
                     return (total);
 

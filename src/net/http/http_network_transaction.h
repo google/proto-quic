@@ -312,7 +312,12 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   HttpNetworkSession* session_;
 
   NetLogWithSource net_log_;
+
+  // Reset to null at the start of the Read state machine.
   const HttpRequestInfo* request_;
+
+  // The requested URL.
+  GURL url_;
   RequestPriority priority_;
   HttpResponseInfo response_;
 

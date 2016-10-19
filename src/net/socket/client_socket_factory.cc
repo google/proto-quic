@@ -33,14 +33,8 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
     CertDatabase::GetInstance()->RemoveObserver(this);
   }
 
-  void OnCertAdded(const X509Certificate* cert) override {
-    ClearSSLSessionCache();
-  }
-
-  void OnCACertChanged(const X509Certificate* cert) override {
-    // Per wtc, we actually only need to flush when trust is reduced.
-    // Always flush now because OnCACertChanged does not tell us this.
-    // See comments in ClientSocketPoolManager::OnCACertChanged.
+  void OnCertDBChanged(const X509Certificate* cert) override {
+    // Flush sockets whenever CA trust changes.
     ClearSSLSessionCache();
   }
 

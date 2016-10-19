@@ -62,7 +62,7 @@ void PopulateSpdyHeaderBlock(const BalsaHeaders& headers,
   for (const auto& header : header_values_map) {
     if (header.second.size() == 1) {
       // Avoid string allocation for the single value case.
-      block->ReplaceOrAppendHeader(header.first, header.second[0]);
+      (*block)[header.first] = header.second[0];
     } else {
       StringPiece separator("\0", 1);
       auto it = header.second.begin();
@@ -72,7 +72,7 @@ void PopulateSpdyHeaderBlock(const BalsaHeaders& headers,
         separator.AppendToString(&value);
         value.append(it->data(), it->size());
       }
-      block->ReplaceOrAppendHeader(header.first, value);
+      (*block)[header.first] = value;
     }
   }
 }

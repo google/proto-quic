@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include "base/logging.h"
-#include "base/metrics/sparse_histogram.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"

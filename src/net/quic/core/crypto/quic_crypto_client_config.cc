@@ -550,7 +550,8 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
   out->SetVector(kAEAD, QuicTagVector{out_params->aead});
   out->SetVector(kKEXS, QuicTagVector{out_params->key_exchange});
 
-  if (!tb_key_params.empty()) {
+  if (!tb_key_params.empty() &&
+      server_id.privacy_mode() == PRIVACY_MODE_DISABLED) {
     const QuicTag* their_tbkps;
     size_t num_their_tbkps;
     switch (scfg->GetTaglist(kTBKP, &their_tbkps, &num_their_tbkps)) {

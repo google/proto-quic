@@ -1187,11 +1187,7 @@ TEST_P(QuicFramerTest, ReceivedPacketOnClosedPath) {
 }
 
 TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
-  if (FLAGS_quic_packet_numbers_largest_received) {
-    QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
-  } else {
-    QuicFramerPeer::SetLastPacketNumber(&framer_, kPacketNumber - 2);
-  }
+  QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
 
   // clang-format off
   unsigned char packet[] = {
@@ -1261,11 +1257,7 @@ TEST_P(QuicFramerTest, PacketHeaderWith4BytePacketNumber) {
 }
 
 TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
-  if (FLAGS_quic_packet_numbers_largest_received) {
-    QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
-  } else {
-    QuicFramerPeer::SetLastPacketNumber(&framer_, kPacketNumber - 2);
-  }
+  QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
 
   // clang-format off
   unsigned char packet[] = {
@@ -1337,11 +1329,7 @@ TEST_P(QuicFramerTest, PacketHeaderWith2BytePacketNumber) {
 }
 
 TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
-  if (FLAGS_quic_packet_numbers_largest_received) {
-    QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
-  } else {
-    QuicFramerPeer::SetLastPacketNumber(&framer_, kPacketNumber - 2);
-  }
+  QuicFramerPeer::SetLargestPacketNumber(&framer_, kPacketNumber - 2);
 
   // clang-format off
   unsigned char packet[] = {
@@ -1413,7 +1401,6 @@ TEST_P(QuicFramerTest, PacketHeaderWith1BytePacketNumber) {
 }
 
 TEST_P(QuicFramerTest, PacketNumberDecreasesThenIncreases) {
-  FLAGS_quic_packet_numbers_largest_received = true;
   // Test the case when a packet is received from the past and future packet
   // numbers are still calculated relative to the largest received packet.
   QuicPacketHeader header;
@@ -4232,7 +4219,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   unsigned char packet[] = {
       // public flags (version, 8 byte connection_id)
       static_cast<unsigned char>(
-          framer_.version() > QUIC_VERSION_32 ? 0x39 : 0x3D),
+          (FLAGS_quic_remove_v33_hacks2 &&
+            framer_.version() > QUIC_VERSION_32) ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -4253,7 +4241,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   };
   unsigned char packet_34[] = {
       // public flags (version, 8 byte connection_id)
-      0x39,
+      static_cast<unsigned char>(
+          FLAGS_quic_remove_v33_hacks2 ? 0x39 : 0x3D),
       // connection_id
       0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE,
       // version tag
@@ -4383,7 +4372,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   unsigned char packet[] = {
     // public flags (8 byte connection_id)
     static_cast<unsigned char>(
-        framer_.version() > QUIC_VERSION_32 ? 0x79 : 0x7D),
+        (FLAGS_quic_remove_v33_hacks2 &&
+         framer_.version() > QUIC_VERSION_32) ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,
@@ -4411,7 +4401,8 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithBothVersionAndMultipathFlag) {
   };
   unsigned char packet_34[] = {
     // public flags (8 byte connection_id)
-    0x79,
+    static_cast<unsigned char>(
+        FLAGS_quic_remove_v33_hacks2 ? 0x79 : 0x7D),
     // connection_id
     0x10, 0x32, 0x54, 0x76,
     0x98, 0xBA, 0xDC, 0xFE,

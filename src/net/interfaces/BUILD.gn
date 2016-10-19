@@ -12,6 +12,4 @@ mojom("interfaces") {
   public_deps = [
     "//url/mojo:url_mojom_gurl",
   ]
-
-  use_new_wrapper_types = false
 }

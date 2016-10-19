@@ -66,6 +66,89 @@ ActivityData ActivityData::ForThread(const PlatformThreadHandle& handle) {
   return ForThread(thread_ref.as_id);
 }
 
+ActivityTrackerMemoryAllocator::ActivityTrackerMemoryAllocator(
+    PersistentMemoryAllocator* allocator,
+    uint32_t object_type,
+    uint32_t object_free_type,
+    size_t object_size,
+    size_t cache_size)
+    : allocator_(allocator),
+      object_type_(object_type),
+      object_free_type_(object_free_type),
+      object_size_(object_size),
+      cache_size_(cache_size),
+      iterator_(allocator),
+      cache_values_(new Reference[cache_size]),
+      cache_used_(0) {
+  DCHECK(allocator);
+}
+
+ActivityTrackerMemoryAllocator::~ActivityTrackerMemoryAllocator() {}
+
+ActivityTrackerMemoryAllocator::Reference
+ActivityTrackerMemoryAllocator::GetObjectReference() {
+  // First see if there is a cached value that can be returned. This is much
+  // faster than searching the memory system for free blocks.
+  while (cache_used_ > 0) {
+    Reference cached = cache_values_[--cache_used_];
+    // Change the type of the cached object to the proper type and return it.
+    // If the type-change fails that means another thread has taken this from
+    // under us (via the search below) so ignore it and keep trying.
+    if (allocator_->ChangeType(cached, object_type_, object_free_type_))
+      return cached;
+  }
+
+  // Fetch the next "free" object from persistent memory. Rather than restart
+  // the iterator at the head each time and likely waste time going again
+  // through objects that aren't relevant, the iterator continues from where
+  // it last left off and is only reset when the end is reached. If the
+  // returned reference matches |last|, then it has wrapped without finding
+  // anything.
+  const Reference last = iterator_.GetLast();
+  while (true) {
+    uint32_t type;
+    Reference found = iterator_.GetNext(&type);
+    if (found && type == object_free_type_) {
+      // Found a free object. Change it to the proper type and return it. If
+      // the type-change fails that means another thread has taken this from
+      // under us so ignore it and keep trying.
+      if (allocator_->ChangeType(found, object_type_, object_free_type_))
+        return found;
+    }
+    if (found == last) {
+      // Wrapped. No desired object was found.
+      break;
+    }
+    if (!found) {
+      // Reached end; start over at the beginning.
+      iterator_.Reset();
+    }
+  }
+
+  // No free block was found so instead allocate a new one.
+  Reference allocated = allocator_->Allocate(object_size_, object_type_);
+  if (allocated)
+    allocator_->MakeIterable(allocated);
+  return allocated;
+}
+
+void ActivityTrackerMemoryAllocator::ReleaseObjectReference(Reference ref) {
+  // Zero the memory so that it is ready for immediate use if needed later.
+  char* mem_base = allocator_->GetAsObject<char>(ref, object_type_);
+  DCHECK(mem_base);
+  memset(mem_base, 0, object_size_);
+
+  // Mark object as free.
+  bool success = allocator_->ChangeType(ref, object_free_type_, object_type_);
+  DCHECK(success);
+
+  // Add this reference to our "free" cache if there is space. If not, the type
+  // has still been changed to indicate that it is free so this (or another)
+  // thread can find it, albeit more slowly, using the iteration method above.
+  if (cache_used_ < cache_size_)
+    cache_values_[cache_used_++] = ref;
+}
+
 // static
 void Activity::FillFrom(Activity* activity,
                         const void* origin,
@@ -499,60 +582,25 @@ void GlobalActivityTracker::CreateWithLocalMemory(size_t size,
 ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   DCHECK(!this_thread_tracker_.Get());
 
-  PersistentMemoryAllocator::Reference mem_reference =
-      PersistentMemoryAllocator::kReferenceNull;
-  DCHECK(!mem_reference);  // invalid_value should be checkable with !
+  PersistentMemoryAllocator::Reference mem_reference;
 
-  while (true) {
-    // Get the first available memory from the top of the FIFO.
-    if (!available_memories_.pop(&mem_reference))
-      break;
-
-    // Turn the reference back into one of the activity-tracker type. This can
-    // fail if something else has already taken the block and changed its type.
-    if (allocator_->ChangeType(mem_reference, kTypeIdActivityTracker,
-                               kTypeIdActivityTrackerFree)) {
-      break;
-    }
+  {
+    base::AutoLock autolock(thread_tracker_allocator_lock_);
+    mem_reference = thread_tracker_allocator_.GetObjectReference();
   }
 
-  // Handle the case where no known available memories were found.
   if (!mem_reference) {
-    // Allocate a block of memory from the persistent segment.
-    mem_reference =
-        allocator_->Allocate(stack_memory_size_, kTypeIdActivityTracker);
-    if (mem_reference) {
-      // Success. Make the allocation iterable so it can be found later.
-      allocator_->MakeIterable(mem_reference);
-    } else {
-      // Failure. Look for any free blocks that weren't held in the cache
-      // of available memories and try to claim it. This can happen if the
-      // |available_memories_| stack isn't sufficiently large to hold all
-      // released memories or if multiple independent processes are sharing
-      // the memory segment.
-      PersistentMemoryAllocator::Iterator iter(allocator_.get());
-      while ((mem_reference = iter.GetNextOfType(kTypeIdActivityTrackerFree)) !=
-             0) {
-        if (allocator_->ChangeType(mem_reference, kTypeIdActivityTracker,
-                                   kTypeIdActivityTrackerFree)) {
-          break;
-        }
-        mem_reference = 0;
-      }
-      if (!mem_reference) {
-        // Dobule Failure. This shouldn't happen. But be graceful if it does,
-        // probably because the underlying allocator wasn't given enough memory
-        // to satisfy all possible requests.
-        NOTREACHED();
-        // Report the thread-count at which the allocator was full so that the
-        // failure can be seen and underlying memory resized appropriately.
-        UMA_HISTOGRAM_COUNTS_1000(
-            "ActivityTracker.ThreadTrackers.MemLimitTrackerCount",
-            thread_tracker_count_.load(std::memory_order_relaxed));
-        // Return null, just as if tracking wasn't enabled.
-        return nullptr;
-      }
-    }
+    // Failure. This shouldn't happen. But be graceful if it does, probably
+    // because the underlying allocator wasn't given enough memory to satisfy
+    // to all possible requests.
+    NOTREACHED();
+    // Report the thread-count at which the allocator was full so that the
+    // failure can be seen and underlying memory resized appropriately.
+    UMA_HISTOGRAM_COUNTS_1000(
+        "ActivityTracker.ThreadTrackers.MemLimitTrackerCount",
+        thread_tracker_count_.load(std::memory_order_relaxed));
+    // Return null, just as if tracking wasn't enabled.
+    return nullptr;
   }
 
   // Convert the memory block found above into an actual memory address.
@@ -589,7 +637,11 @@ GlobalActivityTracker::GlobalActivityTracker(
       stack_memory_size_(ThreadActivityTracker::SizeForStackDepth(stack_depth)),
       this_thread_tracker_(&OnTLSDestroy),
       thread_tracker_count_(0),
-      available_memories_(kMaxThreadCount) {
+      thread_tracker_allocator_(allocator_.get(),
+                                kTypeIdActivityTracker,
+                                kTypeIdActivityTrackerFree,
+                                stack_memory_size_,
+                                kCachedThreadMemories) {
   // Ensure the passed memory is valid and empty (iterator finds nothing).
   uint32_t type;
   DCHECK(!PersistentMemoryAllocator::Iterator(allocator_.get()).GetNext(&type));
@@ -612,25 +664,13 @@ void GlobalActivityTracker::ReturnTrackerMemory(
   DCHECK(mem_reference);
   DCHECK(mem_base);
 
-  // Zero the memory so that it is ready for use if needed again later. It's
-  // better to clear the memory now, when a thread is exiting, than to do it
-  // when it is first needed by a thread doing actual work.
-  memset(mem_base, 0, stack_memory_size_);
-
   // Remove the destructed tracker from the set of known ones.
   DCHECK_LE(1, thread_tracker_count_.load(std::memory_order_relaxed));
   thread_tracker_count_.fetch_sub(1, std::memory_order_relaxed);
 
-  // The memory was within the persistent memory allocator. Change its type
-  // so it is effectively marked as "free".
-  allocator_->ChangeType(mem_reference, kTypeIdActivityTrackerFree,
-                         kTypeIdActivityTracker);
-
-  // Push this on the internal cache of available memory blocks so it can
-  // be found and reused quickly. If the push somehow exceeds the maximum
-  // size of the cache, it will fail but a fallback check in CreateTracker
-  // will find it by (slow) iteration.
-  available_memories_.push(mem_reference);
+  // Release this memory for re-use at a later time.
+  base::AutoLock autolock(thread_tracker_allocator_lock_);
+  thread_tracker_allocator_.ReleaseObjectReference(mem_reference);
 }
 
 // static

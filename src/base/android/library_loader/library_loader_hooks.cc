@@ -10,7 +10,7 @@
 #include "base/android/library_loader/library_prefetcher.h"
 #include "base/at_exit.h"
 #include "base/metrics/histogram.h"
-#include "base/metrics/sparse_histogram.h"
+#include "base/metrics/histogram_macros.h"
 #include "jni/LibraryLoader_jni.h"
 
 namespace base {

@@ -132,10 +132,6 @@ class URL_EXPORT GURL {
     return parsed_;
   }
 
-  // Defiant equality operator!
-  bool operator==(const GURL& other) const;
-  bool operator!=(const GURL& other) const;
-
   // Allows GURL to used as a key in STL (for example, a std::set or std::map).
   bool operator<(const GURL& other) const;
   bool operator>(const GURL& other) const;
@@ -446,5 +442,14 @@ class URL_EXPORT GURL {
 
 // Stream operator so GURL can be used in assertion statements.
 URL_EXPORT std::ostream& operator<<(std::ostream& out, const GURL& url);
+
+URL_EXPORT bool operator==(const GURL& x, const GURL& y);
+URL_EXPORT bool operator!=(const GURL& x, const GURL& y);
+
+// Equality operator for comparing raw spec_. This should be used in place of
+// url == GURL(spec) where |spec| is known (i.e. constants). This is to prevent
+// needlessly re-parsing |spec| into a temporary GURL.
+URL_EXPORT bool operator==(const GURL& x, const base::StringPiece& spec);
+URL_EXPORT bool operator!=(const GURL& x, const base::StringPiece& spec);
 
 #endif  // URL_GURL_H_

@@ -33,7 +33,6 @@ class SpdyDeframerVisitorTest : public ::testing::Test {
  protected:
   SpdyDeframerVisitorTest() : encoder_(HTTP2), decoder_(HTTP2) {
     decoder_.set_process_single_input_frame(true);
-    decoder_.set_use_new_methods_for_test(true);
     auto collector = MakeUnique<DeframerCallbackCollector>(&collected_frames_);
     auto log_and_collect =
         SpdyDeframerVisitorInterface::LogBeforeVisiting(std::move(collector));

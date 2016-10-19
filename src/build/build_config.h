@@ -111,6 +111,31 @@
 #define ARCH_CPU_X86 1
 #define ARCH_CPU_32_BITS 1
 #define ARCH_CPU_LITTLE_ENDIAN 1
+#elif defined(__s390x__)
+#define ARCH_CPU_S390_FAMILY 1
+#define ARCH_CPU_S390X 1
+#define ARCH_CPU_64_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
+#elif defined(__s390__)
+#define ARCH_CPU_S390_FAMILY 1
+#define ARCH_CPU_S390 1
+#define ARCH_CPU_31_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
+#elif defined(__PPC64__) && defined(__BIG_ENDIAN__)
+#define ARCH_CPU_PPC64_FAMILY 1
+#define ARCH_CPU_PPC64 1
+#define ARCH_CPU_64_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
+#elif defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#define ARCH_CPU_PPC64_FAMILY 1
+#define ARCH_CPU_PPC64 1
+#define ARCH_CPU_64_BITS 1
+#define ARCH_CPU_LITTLE_ENDIAN 1
+#elif defined(__PPC__)
+#define ARCH_CPU_PPC_FAMILY 1
+#define ARCH_CPU_PPC 1
+#define ARCH_CPU_32_BITS 1
+#define ARCH_CPU_BIG_ENDIAN 1
 #elif defined(__ARMEL__)
 #define ARCH_CPU_ARM_FAMILY 1
 #define ARCH_CPU_ARMEL 1

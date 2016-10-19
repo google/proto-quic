@@ -735,9 +735,10 @@ class MockSendAlgorithm : public SendAlgorithmInterface {
   MOCK_METHOD1(SetNumEmulatedConnections, void(int num_connections));
   MOCK_METHOD1(SetMaxCongestionWindow,
                void(QuicByteCount max_congestion_window));
-  MOCK_METHOD4(OnCongestionEvent,
+  MOCK_METHOD5(OnCongestionEvent,
                void(bool rtt_updated,
                     QuicByteCount bytes_in_flight,
+                    QuicTime event_time,
                     const CongestionVector& acked_packets,
                     const CongestionVector& lost_packets));
   MOCK_METHOD5(OnPacketSent,
