@@ -71,6 +71,7 @@ using net::CertVerifier;
 using net::CTPolicyEnforcer;
 using net::CTVerifier;
 using net::MultiLogCTVerifier;
+using net::ProofVerifier;
 using net::ProofVerifierChromium;
 using net::SpdyHeaderBlock;
 using net::TransportSecurityState;
@@ -118,6 +119,35 @@ class FakeCertVerifier : public net::CertVerifier {
 
   // Returns true if this CertVerifier supports stapled OCSP responses.
   bool SupportsOCSPStapling() override { return false; }
+};
+
+class FakeProofVerifier : public ProofVerifier {
+ public:
+  net::QuicAsyncStatus VerifyProof(
+      const string& hostname,
+      const uint16_t port,
+      const string& server_config,
+      net::QuicVersion quic_version,
+      StringPiece chlo_hash,
+      const vector<string>& certs,
+      const string& cert_sct,
+      const string& signature,
+      const net::ProofVerifyContext* context,
+      string* error_details,
+      std::unique_ptr<net::ProofVerifyDetails>* details,
+      std::unique_ptr<net::ProofVerifierCallback> callback) override {
+    return net::QUIC_SUCCESS;
+  }
+
+  net::QuicAsyncStatus VerifyCertChain(
+      const std::string& hostname,
+      const std::vector<std::string>& certs,
+      const net::ProofVerifyContext* verify_context,
+      std::string* error_details,
+      std::unique_ptr<net::ProofVerifyDetails>* verify_details,
+      std::unique_ptr<net::ProofVerifierCallback> callback) override {
+    return net::QUIC_SUCCESS;
+  }
 };
 
 int main(int argc, char* argv[]) {
@@ -245,18 +275,21 @@ int main(int argc, char* argv[]) {
   }
   // For secure QUIC we need to verify the cert chain.
   std::unique_ptr<CertVerifier> cert_verifier(CertVerifier::CreateDefault());
-  if (line->HasSwitch("disable-certificate-verification")) {
-    cert_verifier.reset(new FakeCertVerifier());
-  }
   std::unique_ptr<TransportSecurityState> transport_security_state(
       new TransportSecurityState);
   transport_security_state.reset(new TransportSecurityState);
   std::unique_ptr<CTVerifier> ct_verifier(new MultiLogCTVerifier());
   std::unique_ptr<CTPolicyEnforcer> ct_policy_enforcer(new CTPolicyEnforcer());
-  std::unique_ptr<net::ProofVerifierChromium> proof_verifier(
-      new ProofVerifierChromium(cert_verifier.get(), ct_policy_enforcer.get(),
-                                transport_security_state.get(),
-                                ct_verifier.get()));
+  std::unique_ptr<ProofVerifier> proof_verifier;
+  if (line->HasSwitch("disable-certificate-verification")) {
+    cert_verifier.reset(new FakeCertVerifier());
+    proof_verifier.reset(new FakeProofVerifier());
+  } else {
+    proof_verifier.reset(
+       new ProofVerifierChromium(cert_verifier.get(), ct_policy_enforcer.get(),
+                                 transport_security_state.get(),
+                                 ct_verifier.get()));
+  }
   net::QuicClient client(net::IPEndPoint(ip_addr, port), server_id, versions,
                          &epoll_server, std::move(proof_verifier));
   client.set_initial_max_packet_length(
