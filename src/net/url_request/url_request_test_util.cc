@@ -194,6 +194,7 @@ TestDelegate::TestDelegate()
       certificate_errors_are_fatal_(false),
       auth_required_(false),
       have_full_request_headers_(false),
+      response_completed_(false),
       request_status_(ERR_IO_PENDING),
       buf_(new IOBuffer(kBufferSize)) {}
 
@@ -317,6 +318,7 @@ void TestDelegate::OnReadCompleted(URLRequest* request, int bytes_read) {
 }
 
 void TestDelegate::OnResponseCompleted(URLRequest* request) {
+  response_completed_ = true;
   if (quit_on_complete_)
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::MessageLoop::QuitWhenIdleClosure());
@@ -343,7 +345,8 @@ TestNetworkDelegate::TestNetworkDelegate()
       can_access_files_(true),
       experimental_cookie_features_enabled_(false),
       cancel_request_with_policy_violating_referrer_(false),
-      will_be_intercepted_on_next_error_(false) {}
+      will_be_intercepted_on_next_error_(false),
+      before_start_transaction_fails_(false) {}
 
 TestNetworkDelegate::~TestNetworkDelegate() {
   for (std::map<int, int>::iterator i = next_states_.begin();
@@ -399,6 +402,9 @@ int TestNetworkDelegate::OnBeforeStartTransaction(
     URLRequest* request,
     const CompletionCallback& callback,
     HttpRequestHeaders* headers) {
+  if (before_start_transaction_fails_)
+    return ERR_FAILED;
+
   int req_id = request->identifier();
   InitRequestStatesIfNew(req_id);
   event_order_[req_id] += "OnBeforeStartTransaction\n";

@@ -4,6 +4,7 @@
 
 #include "net/spdy/buffered_spdy_framer.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "base/logging.h"
@@ -15,10 +16,6 @@ namespace {
 
 // GOAWAY frame debug data is only buffered up to this many bytes.
 size_t kGoAwayDebugDataMaxSize = 1024;
-
-// Initial and maximum sizes for header block buffer.
-size_t kHeaderBufferInitialSize = 8 * 1024;
-size_t kHeaderBufferMaxSize = 256 * 1024;
 
 }  // namespace
 
@@ -82,71 +79,6 @@ void BufferedSpdyFramer::OnHeaders(SpdyStreamId stream_id,
 void BufferedSpdyFramer::OnSynReply(SpdyStreamId stream_id,
                                     bool fin) {
   NOTREACHED();
-}
-
-bool BufferedSpdyFramer::OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                                  const char* header_data,
-                                                  size_t len) {
-  CHECK_EQ(header_stream_id_, stream_id);
-
-  if (len == 0) {
-    // Indicates end-of-header-block.
-    CHECK(header_buffer_valid_);
-
-    SpdyHeaderBlock headers;
-    if (!spdy_framer_.ParseHeaderBlockInBuffer(
-            header_buffer_.data(), header_buffer_.size(), &headers)) {
-      visitor_->OnStreamError(
-          stream_id, "Could not parse Spdy Control Frame Header.");
-      return false;
-    }
-    DCHECK(control_frame_fields_.get());
-    switch (control_frame_fields_->type) {
-      case SYN_STREAM:
-        NOTREACHED();
-        break;
-      case SYN_REPLY:
-        NOTREACHED();
-        break;
-      case HEADERS:
-        visitor_->OnHeaders(control_frame_fields_->stream_id,
-                            control_frame_fields_->has_priority,
-                            control_frame_fields_->weight,
-                            control_frame_fields_->parent_stream_id,
-                            control_frame_fields_->exclusive,
-                            control_frame_fields_->fin, std::move(headers));
-        break;
-      case PUSH_PROMISE:
-        visitor_->OnPushPromise(control_frame_fields_->stream_id,
-                                control_frame_fields_->promised_stream_id,
-                                std::move(headers));
-        break;
-      default:
-        DCHECK(false) << "Unexpect control frame type: "
-                      << control_frame_fields_->type;
-        break;
-    }
-    control_frame_fields_.reset(NULL);
-    return true;
-  }
-
-  const size_t new_size = header_buffer_.size() + len;
-  if (new_size > kHeaderBufferMaxSize) {
-    header_buffer_valid_ = false;
-    visitor_->OnStreamError(stream_id, "Received too much header data.");
-    return false;
-  }
-
-  if (new_size > header_buffer_.capacity()) {
-    // Grow |header_buffer_| exponentially to reduce memory allocations and
-    // copies.
-    size_t new_capacity = std::max(new_size, kHeaderBufferInitialSize);
-    new_capacity = std::max(new_capacity, 2 * header_buffer_.capacity());
-    new_capacity = std::min(new_capacity, kHeaderBufferMaxSize);
-    header_buffer_.reserve(new_capacity);
-  }
-  header_buffer_.append(header_data, len);
-  return true;
 }
 
 void BufferedSpdyFramer::OnDataFrameHeader(SpdyStreamId stream_id,

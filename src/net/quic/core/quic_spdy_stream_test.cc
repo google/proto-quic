@@ -111,6 +111,7 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
  protected:
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   MockQuicConnection* connection_;

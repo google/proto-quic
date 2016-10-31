@@ -54,6 +54,7 @@ class CTVerifier;
 class HostResolver;
 class HttpServerProperties;
 class NetLog;
+class ProxyDelegate;
 class QuicClock;
 class QuicChromiumAlarmFactory;
 class QuicChromiumConnectionHelper;
@@ -184,6 +185,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       SSLConfigService* ssl_config_service,
       ClientSocketFactory* client_socket_factory,
       HttpServerProperties* http_server_properties,
+      ProxyDelegate* proxy_delegate,
       CertVerifier* cert_verifier,
       CTPolicyEnforcer* ct_policy_enforcer,
       ChannelIDService* channel_id_service,
@@ -400,7 +402,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   typedef std::set<QuicChromiumClientSession*> SessionSet;
   typedef std::map<IPEndPoint, SessionSet> IPAliasMap;
   typedef std::map<QuicChromiumClientSession*, IPEndPoint> SessionPeerIPMap;
-  typedef std::set<Job*> JobSet;
+  typedef std::map<Job*, std::unique_ptr<Job>> JobSet;
   typedef std::map<QuicServerId, JobSet> JobMap;
   typedef std::map<QuicStreamRequest*, QuicServerId> RequestMap;
   typedef std::set<QuicStreamRequest*> RequestSet;
@@ -499,6 +501,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   HostResolver* host_resolver_;
   ClientSocketFactory* client_socket_factory_;
   HttpServerProperties* http_server_properties_;
+  ProxyDelegate* proxy_delegate_;
   TransportSecurityState* transport_security_state_;
   CTVerifier* cert_transparency_verifier_;
   std::unique_ptr<QuicServerInfoFactory> quic_server_info_factory_;

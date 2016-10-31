@@ -211,7 +211,8 @@ def main(args):
   # See http://crbug.com/272064 for context on --force-jumbo.
   # See https://github.com/android/platform_dalvik/commit/dd140a22d for
   # --num-threads.
-  dex_cmd = [dx_binary, '--num-threads=8', '--dex', '--force-jumbo',
+  # See http://crbug.com/658782 for why -JXmx2G was added.
+  dex_cmd = [dx_binary, '-JXmx2G', '--num-threads=8', '--dex', '--force-jumbo',
              '--output', options.dex_path]
   if options.no_locals != '0':
     dex_cmd.append('--no-locals')

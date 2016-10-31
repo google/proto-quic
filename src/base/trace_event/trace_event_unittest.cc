@@ -69,9 +69,6 @@ class TraceEventTestFixture : public testing::Test {
       WaitableEvent* flush_complete_event,
       const scoped_refptr<base::RefCountedString>& events_str,
       bool has_more_events);
-  void OnWatchEventMatched() {
-    ++event_watch_notification_;
-  }
   DictionaryValue* FindMatchingTraceEntry(const JsonKeyValue* key_values);
   DictionaryValue* FindNamePhase(const char* name, const char* phase);
   DictionaryValue* FindNamePhaseKeyValue(const char* name,
@@ -93,7 +90,6 @@ class TraceEventTestFixture : public testing::Test {
   }
 
   void BeginSpecificTrace(const std::string& filter) {
-    event_watch_notification_ = 0;
     TraceLog::GetInstance()->SetEnabled(TraceConfig(filter, ""),
                                         TraceLog::RECORDING_MODE);
   }
@@ -154,7 +150,6 @@ class TraceEventTestFixture : public testing::Test {
     ASSERT_TRUE(tracelog);
     ASSERT_FALSE(tracelog->IsEnabled());
     trace_buffer_.SetOutputCallback(json_output_.GetCallback());
-    event_watch_notification_ = 0;
     num_flush_callbacks_ = 0;
   }
   void TearDown() override {
@@ -171,7 +166,6 @@ class TraceEventTestFixture : public testing::Test {
   ListValue trace_parsed_;
   TraceResultBuffer trace_buffer_;
   TraceResultBuffer::SimpleOutput json_output_;
-  int event_watch_notification_;
   size_t num_flush_callbacks_;
 
  private:
@@ -1568,59 +1562,6 @@ TEST_F(TraceEventTestFixture, Categories) {
   EXPECT_FALSE(FindMatchingValue("name", "not_inc"));
 }
 
-
-// Test EVENT_WATCH_NOTIFICATION
-TEST_F(TraceEventTestFixture, EventWatchNotification) {
-  // Basic one occurrence.
-  BeginTrace();
-  TraceLog::WatchEventCallback callback =
-      base::Bind(&TraceEventTestFixture::OnWatchEventMatched,
-                 base::Unretained(this));
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  TRACE_EVENT_INSTANT0("cat", "event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, 1);
-
-  // Auto-reset after end trace.
-  BeginTrace();
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  EndTraceAndFlush();
-  BeginTrace();
-  TRACE_EVENT_INSTANT0("cat", "event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, 0);
-
-  // Multiple occurrence.
-  BeginTrace();
-  int num_occurrences = 5;
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  for (int i = 0; i < num_occurrences; ++i)
-    TRACE_EVENT_INSTANT0("cat", "event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, num_occurrences);
-
-  // Wrong category.
-  BeginTrace();
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  TRACE_EVENT_INSTANT0("wrong_cat", "event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, 0);
-
-  // Wrong name.
-  BeginTrace();
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  TRACE_EVENT_INSTANT0("cat", "wrong_event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, 0);
-
-  // Canceled.
-  BeginTrace();
-  TraceLog::GetInstance()->SetWatchEvent("cat", "event", callback);
-  TraceLog::GetInstance()->CancelWatchEvent();
-  TRACE_EVENT_INSTANT0("cat", "event", TRACE_EVENT_SCOPE_THREAD);
-  EndTraceAndFlush();
-  EXPECT_EQ(event_watch_notification_, 0);
-}
 
 // Test ASYNC_BEGIN/END events
 TEST_F(TraceEventTestFixture, AsyncBeginEndEvents) {

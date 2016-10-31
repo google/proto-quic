@@ -26,10 +26,12 @@ class TraceItem {
     TRACE_FILE_PARSE,
     TRACE_FILE_EXECUTE,
     TRACE_FILE_WRITE,
+    TRACE_IMPORT_LOAD,
+    TRACE_IMPORT_BLOCK,
     TRACE_SCRIPT_EXECUTE,
     TRACE_DEFINE_TARGET,
     TRACE_ON_RESOLVED,
-    TRACE_CHECK_HEADER,  // One file.
+    TRACE_CHECK_HEADER,   // One file.
     TRACE_CHECK_HEADERS,  // All files.
   };
 
@@ -87,6 +89,9 @@ class ScopedTrace {
 
 // Call to turn tracing on. It's off by default.
 void EnableTracing();
+
+// Returns whether tracing is enabled.
+bool TracingEnabled();
 
 // Adds a trace event to the log. Takes ownership of the pointer.
 void AddTrace(TraceItem* item);

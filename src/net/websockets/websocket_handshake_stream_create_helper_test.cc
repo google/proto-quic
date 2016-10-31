@@ -65,6 +65,7 @@ class TestConnectDelegate : public WebSocketStream::ConnectDelegate {
  public:
   ~TestConnectDelegate() override {}
 
+  void OnCreateRequest(URLRequest* request) override {}
   void OnSuccess(std::unique_ptr<WebSocketStream> stream) override {}
   void OnFailure(const std::string& failure_message) override {}
   void OnStartOpeningHandshake(

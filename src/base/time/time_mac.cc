@@ -190,9 +190,18 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
       exploded.millisecond);
   CFAbsoluteTime seconds = absolute_time + kCFAbsoluteTimeIntervalSince1970;
 
-  base::Time converted_time =
-      Time(static_cast<int64_t>(seconds * kMicrosecondsPerSecond) +
-           kWindowsEpochDeltaMicroseconds);
+  // CFAbsolutTime is typedef of double. Convert seconds to
+  // microseconds and then cast to int64. If
+  // it cannot be suited to int64, then fail to avoid overflows.
+  double microseconds =
+      (seconds * kMicrosecondsPerSecond) + kWindowsEpochDeltaMicroseconds;
+  if (microseconds > std::numeric_limits<int64_t>::max() ||
+      microseconds < std::numeric_limits<int64_t>::min()) {
+    *time = Time(0);
+    return false;
+  }
+
+  base::Time converted_time = Time(static_cast<int64_t>(microseconds));
 
   // If |exploded.day_of_month| is set to 31
   // on a 28-30 day month, it will return the first day of the next month.

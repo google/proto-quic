@@ -490,7 +490,7 @@ class QuicNetworkTransactionTest
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
     EXPECT_TRUE(response->was_fetched_via_spdy);
     EXPECT_TRUE(response->was_alpn_negotiated);
-    EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
+    EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC,
               response->connection_info);
   }
 
@@ -2104,8 +2104,7 @@ TEST_P(QuicNetworkTransactionTest, RstSteamErrorHandling) {
   EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
   EXPECT_TRUE(response->was_fetched_via_spdy);
   EXPECT_TRUE(response->was_alpn_negotiated);
-  EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
-            response->connection_info);
+  EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC, response->connection_info);
 
   std::string response_data;
   ASSERT_EQ(ERR_QUIC_PROTOCOL_ERROR, ReadTransaction(&trans, &response_data));
@@ -2583,9 +2582,10 @@ TEST_P(QuicNetworkTransactionTest, QuicUploadWriteError) {
 
   request_.upload_data_stream = &upload_data;
 
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session_.get());
+  std::unique_ptr<HttpNetworkTransaction> trans(
+      new HttpNetworkTransaction(DEFAULT_PRIORITY, session_.get()));
   TestCompletionCallback callback;
-  int rv = trans.Start(&request_, callback.callback(), net_log_.bound());
+  int rv = trans->Start(&request_, callback.callback(), net_log_.bound());
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
 
   base::RunLoop().RunUntilIdle();
@@ -2593,6 +2593,7 @@ TEST_P(QuicNetworkTransactionTest, QuicUploadWriteError) {
   base::RunLoop().RunUntilIdle();
 
   EXPECT_NE(OK, callback.WaitForResult());
+  trans.reset();
   session_.reset();
 }
 
@@ -3053,7 +3054,7 @@ class QuicNetworkTransactionWithDestinationTest
     EXPECT_EQ("HTTP/1.1 200 OK", response->headers->GetStatusLine());
     EXPECT_TRUE(response->was_fetched_via_spdy);
     EXPECT_TRUE(response->was_alpn_negotiated);
-    EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3,
+    EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_QUIC,
               response->connection_info);
     EXPECT_EQ(443, response->socket_address.port());
   }

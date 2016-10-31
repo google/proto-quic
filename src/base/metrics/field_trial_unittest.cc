@@ -1143,12 +1143,50 @@ TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
   base::FilePath test_file_path = base::FilePath(FILE_PATH_LITERAL("Program"));
   base::CommandLine cmd_line = base::CommandLine(test_file_path);
 
-  std::unique_ptr<base::SharedMemory> field_trial_state =
-      base::FieldTrialList::CopyFieldTrialStateToFlags("field-trial-handle",
-                                                       &cmd_line);
+  base::FieldTrialList::CopyFieldTrialStateToFlags("field-trial-handle",
+                                                   &cmd_line);
 
-  EXPECT_TRUE(field_trial_state.get() == nullptr);
   EXPECT_TRUE(cmd_line.HasSwitch(switches::kForceFieldTrials));
+}
+
+TEST(FieldTrialListTest, InstantiateAllocator) {
+  FieldTrialList field_trial_list(nullptr);
+  FieldTrialList::CreateFieldTrial("Trial1", "Group1");
+
+  FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+  void* memory = field_trial_list.field_trial_allocator_->shared_memory();
+  size_t used = field_trial_list.field_trial_allocator_->used();
+
+  // Ensure that the function is idempotent.
+  FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+  void* new_memory = field_trial_list.field_trial_allocator_->shared_memory();
+  size_t new_used = field_trial_list.field_trial_allocator_->used();
+  EXPECT_EQ(memory, new_memory);
+  EXPECT_EQ(used, new_used);
+}
+
+TEST(FieldTrialListTest, AddTrialsToAllocator) {
+  std::string save_string;
+  base::SharedMemoryHandle handle;
+
+  // Scoping the first FieldTrialList, as we need another one to test that it
+  // matches.
+  {
+    FieldTrialList field_trial_list(nullptr);
+    FieldTrialList::CreateFieldTrial("Trial1", "Group1");
+    FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+    FieldTrialList::AllStatesToString(&save_string);
+    handle = base::SharedMemory::DuplicateHandle(
+        field_trial_list.field_trial_allocator_->shared_memory()->handle());
+  }
+
+  FieldTrialList field_trial_list2(nullptr);
+  std::unique_ptr<base::SharedMemory> shm(new SharedMemory(handle, true));
+  shm.get()->Map(4 << 10);  // Hardcoded, equal to kFieldTrialAllocationSize.
+  FieldTrialList::CreateTrialsFromSharedMemory(std::move(shm));
+  std::string check_string;
+  FieldTrialList::AllStatesToString(&check_string);
+  EXPECT_EQ(save_string, check_string);
 }
 
 }  // namespace base

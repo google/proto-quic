@@ -135,7 +135,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         config_.GenerateConfig(rand_, &clock_, config_options_));
     primary_config->set_primary_time(clock_.WallNow().ToUNIXSeconds());
     std::unique_ptr<CryptoHandshakeMessage> msg(
-        config_.AddConfig(primary_config.get(), clock_.WallNow()));
+        config_.AddConfig(std::move(primary_config), clock_.WallNow()));
 
     StringPiece orbit;
     CHECK(msg->GetStringPiece(kORBT, &orbit));

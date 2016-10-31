@@ -122,7 +122,10 @@ void QuicStreamFactoryPeer::SetYieldAfterDuration(
 size_t QuicStreamFactoryPeer::GetNumberOfActiveJobs(
     QuicStreamFactory* factory,
     const QuicServerId& server_id) {
-  return (factory->active_jobs_[server_id]).size();
+  auto it = factory->active_jobs_.find(server_id);
+  if (it == factory->active_jobs_.end())
+    return 0;
+  return it->second.size();
 }
 
 void QuicStreamFactoryPeer::MaybeInitialize(QuicStreamFactory* factory) {

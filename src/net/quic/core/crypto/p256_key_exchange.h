@@ -5,7 +5,6 @@
 #ifndef NET_QUIC_CRYPTO_P256_KEY_EXCHANGE_H_
 #define NET_QUIC_CRYPTO_P256_KEY_EXCHANGE_H_
 
-#include <openssl/base.h>
 #include <stdint.h>
 
 #include <memory>
@@ -16,7 +15,7 @@
 #include "crypto/openssl_util.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/key_exchange.h"
-
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
 

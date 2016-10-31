@@ -27,7 +27,6 @@
             "load:media:flickr"
         ],
         "system_health_mobile_004.wpr": [
-            "load:tools:gmail",
             "load:tools:maps",
             "load:tools:stackoverflow",
             "load:tools:dropbox",
@@ -110,6 +109,24 @@
         "system_health_mobile_042.wpr": [
             "long_running:tools:gmail-foreground",
             "long_running:tools:gmail-background"
+        ],
+        "system_health_mobile_043.wpr": [
+            "background:tools:gmail"
+        ],
+        "system_health_mobile_044.wpr": [
+            "background:search:google"
+        ],
+        "system_health_mobile_045.wpr": [
+            "background:social:facebook"
+        ],
+        "system_health_mobile_047.wpr": [
+            "background:media:imgur"
+        ],
+        "system_health_mobile_048.wpr": [
+            "load:tools:gmail"
+        ],
+        "system_health_mobile_052.wpr": [
+            "background:news:nytimes"
         ]
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."

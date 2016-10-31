@@ -9,7 +9,7 @@ namespace nqe {
 namespace internal {
 
 base::TimeDelta InvalidRTT() {
-  return base::TimeDelta::Max();
+  return base::TimeDelta::FromMilliseconds(INVALID_RTT_THROUGHPUT);
 }
 
 NetworkQuality::NetworkQuality()
@@ -21,7 +21,7 @@ NetworkQuality::NetworkQuality(const base::TimeDelta& http_rtt,
     : http_rtt_(http_rtt),
       transport_rtt_(transport_rtt),
       downstream_throughput_kbps_(downstream_throughput_kbps) {
-  DCHECK_GE(downstream_throughput_kbps_, 0);
+  DCHECK_GE(downstream_throughput_kbps_, kInvalidThroughput);
 }
 
 NetworkQuality::NetworkQuality(const NetworkQuality& other)

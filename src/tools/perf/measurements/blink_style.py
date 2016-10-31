@@ -4,12 +4,12 @@
 
 from collections import defaultdict
 from itertools import starmap
-from telemetry.core import exceptions
 from telemetry.core import util
 from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
 from measurements import timeline_controller
+import py_utils
 
 
 class BlinkStyle(legacy_page_test.LegacyPageTest):
@@ -33,7 +33,7 @@ class BlinkStyle(legacy_page_test.LegacyPageTest):
       tab.ExecuteJavaScript('console.time("");')
       try:
         util.WaitFor(tab.HasReachedQuiescence, 15)
-      except exceptions.TimeoutException:
+      except py_utils.TimeoutException:
         # Some sites never reach quiesence. As this benchmark normalizes/
         # categories results, it shouldn't be necessary to reach the same
         # state on every run.

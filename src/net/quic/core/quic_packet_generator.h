@@ -136,10 +136,9 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
   void SetDiversificationNonce(const DiversificationNonce& nonce);
 
   // Creates a version negotiation packet which supports |supported_versions|.
-  // Caller owns the created  packet. Also, sets the entropy hash of the
-  // serialized packet to a random bool and returns that value as a member of
-  // SerializedPacket.
-  QuicEncryptedPacket* SerializeVersionNegotiationPacket(
+  // Also, sets the entropy hash of the serialized packet to a random bool and
+  // returns that value as a member of SerializedPacket.
+  std::unique_ptr<QuicEncryptedPacket> SerializeVersionNegotiationPacket(
       const QuicVersionVector& supported_versions);
 
   // Re-serializes frames with the original packet's packet number length.

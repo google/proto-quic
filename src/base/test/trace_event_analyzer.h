@@ -573,7 +573,9 @@ class TraceAnalyzer {
   static TraceAnalyzer* Create(const std::string& json_events)
                                WARN_UNUSED_RESULT;
 
-  void SetIgnoreMetadataEvents(bool ignore) { ignore_metadata_events_ = true; }
+  void SetIgnoreMetadataEvents(bool ignore) {
+    ignore_metadata_events_ = ignore;
+  }
 
   // Associate BEGIN and END events with each other. This allows Query(OTHER_*)
   // to access the associated event and enables Query(EVENT_DURATION).

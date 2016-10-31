@@ -477,6 +477,7 @@ void URLFetcherCore::OnReadCompleted(URLRequest* request,
 
     // No more data to write.
     const int result = response_writer_->Finish(
+        bytes_read > 0 ? OK : bytes_read,
         base::Bind(&URLFetcherCore::DidFinishWriting, this));
     if (result != ERR_IO_PENDING)
       DidFinishWriting(result);
@@ -861,7 +862,7 @@ int URLFetcherCore::WriteBuffer(scoped_refptr<DrainableIOBuffer> data) {
 void URLFetcherCore::DidWriteBuffer(scoped_refptr<DrainableIOBuffer> data,
                                     int result) {
   if (result < 0) {  // Handle errors.
-    response_writer_->Finish(base::Bind(&EmptyCompletionCallback));
+    response_writer_->Finish(result, base::Bind(&EmptyCompletionCallback));
     CancelRequestAndInformDelegate(result);
     return;
   }

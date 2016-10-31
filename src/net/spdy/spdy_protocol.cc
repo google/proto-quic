@@ -390,7 +390,7 @@ bool SpdyConstants::IsValidRstStreamStatus(SpdyMajorVersion version,
     case HTTP2:
       // NO_ERROR is the first valid status code.
       if (rst_stream_status_field <
-          SerializeRstStreamStatus(version, RST_STREAM_PROTOCOL_ERROR)) {
+          SerializeRstStreamStatus(version, RST_STREAM_NO_ERROR)) {
         return false;
       }
 
@@ -447,6 +447,8 @@ SpdyRstStreamStatus SpdyConstants::ParseRstStreamStatus(
       break;
     case HTTP2:
       switch (rst_stream_status_field) {
+        case 0:
+          return RST_STREAM_NO_ERROR;
         case 1:
           return RST_STREAM_PROTOCOL_ERROR;
         case 2:
@@ -509,6 +511,8 @@ int SpdyConstants::SerializeRstStreamStatus(
       }
     case HTTP2:
       switch (rst_stream_status) {
+        case RST_STREAM_NO_ERROR:
+          return 0;
         case RST_STREAM_PROTOCOL_ERROR:
           return 1;
         case RST_STREAM_INTERNAL_ERROR:

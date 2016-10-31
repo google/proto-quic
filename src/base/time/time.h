@@ -545,7 +545,7 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
 
   // Converts an exploded structure representing either the local time or UTC
   // into a Time class. Returns false on a failure when, for example, a day of
-  // month is set to 31 on a 28-30 day month.
+  // month is set to 31 on a 28-30 day month. Returns Time(0) on overflow.
   static bool FromUTCExploded(const Exploded& exploded,
                               Time* time) WARN_UNUSED_RESULT {
     return FromExploded(false, exploded, time);

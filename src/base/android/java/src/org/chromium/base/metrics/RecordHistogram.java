@@ -111,7 +111,7 @@ public class RecordHistogram {
      * UMA_HISTOGRAM_CUSTOM_COUNTS C++ macro.
      * @param name name of the histogram
      * @param sample sample to be recorded, at least |min| and at most |max| - 1
-     * @param min lower bound for expected sample values
+     * @param min lower bound for expected sample values. It must be >= 1
      * @param max upper bounds for expected sample values
      * @param numBuckets the number of buckets
      */

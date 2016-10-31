@@ -110,6 +110,12 @@ uint64_t QPCNowRaw() {
   return perf_counter_now.QuadPart;
 }
 
+bool SafeConvertToWord(int in, WORD* out) {
+  base::CheckedNumeric<WORD> result = in;
+  *out = result.ValueOrDefault(std::numeric_limits<WORD>::max());
+  return result.IsValid();
+}
+
 }  // namespace
 
 // Time -----------------------------------------------------------------------
@@ -238,16 +244,20 @@ bool Time::IsHighResolutionTimerInUse() {
 // static
 bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   // Create the system struct representing our exploded time. It will either be
-  // in local time or UTC.
+  // in local time or UTC.If casting from int to WORD results in overflow,
+  // fail and return Time(0).
   SYSTEMTIME st;
-  st.wYear = static_cast<WORD>(exploded.year);
-  st.wMonth = static_cast<WORD>(exploded.month);
-  st.wDayOfWeek = static_cast<WORD>(exploded.day_of_week);
-  st.wDay = static_cast<WORD>(exploded.day_of_month);
-  st.wHour = static_cast<WORD>(exploded.hour);
-  st.wMinute = static_cast<WORD>(exploded.minute);
-  st.wSecond = static_cast<WORD>(exploded.second);
-  st.wMilliseconds = static_cast<WORD>(exploded.millisecond);
+  if (!SafeConvertToWord(exploded.year, &st.wYear) ||
+      !SafeConvertToWord(exploded.month, &st.wMonth) ||
+      !SafeConvertToWord(exploded.day_of_week, &st.wDayOfWeek) ||
+      !SafeConvertToWord(exploded.day_of_month, &st.wDay) ||
+      !SafeConvertToWord(exploded.hour, &st.wHour) ||
+      !SafeConvertToWord(exploded.minute, &st.wMinute) ||
+      !SafeConvertToWord(exploded.second, &st.wSecond) ||
+      !SafeConvertToWord(exploded.millisecond, &st.wMilliseconds)) {
+    *time = base::Time(0);
+    return false;
+  }
 
   FILETIME ft;
   bool success = true;

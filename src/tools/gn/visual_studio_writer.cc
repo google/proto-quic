@@ -153,6 +153,18 @@ void ParseCompilerOptions(const Target* target, CompilerOptions* options) {
   }
 }
 
+void ParseLinkerOptions(const std::vector<std::string>& ldflags,
+                        LinkerOptions* options) {
+  for (const std::string& flag : ldflags)
+    ParseLinkerOption(flag, options);
+}
+
+void ParseLinkerOptions(const Target* target, LinkerOptions* options) {
+  for (ConfigValuesIterator iter(target); !iter.done(); iter.Next()) {
+    ParseLinkerOptions(iter.cur().ldflags(), options);
+  }
+}
+
 // Returns a string piece pointing into the input string identifying the parent
 // directory path, excluding the last slash. Note that the input pointer must
 // outlive the output.
@@ -539,8 +551,17 @@ bool VisualStudioWriter::WriteProjectFileContents(
         cl_compile->SubElement("WarningLevel")->Text(options.warning_level);
     }
 
-    // We don't include resource compilation and link options as ninja files
-    // are used to generate real build.
+    std::unique_ptr<XmlElementWriter> link =
+        item_definitions->SubElement("Link");
+    {
+      LinkerOptions options;
+      ParseLinkerOptions(target, &options);
+      if (!options.subsystem.empty())
+        link->SubElement("SubSystem")->Text(options.subsystem);
+    }
+
+    // We don't include resource compilation and other link options as ninja
+    // files are used to generate real build.
   }
 
   {

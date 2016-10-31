@@ -2425,7 +2425,8 @@
       {
         "args": [
           "--browser=android-chromium",
-          "--device=android"
+          "--device=android",
+          "--skip=benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.*"
         ],
         "isolate_name": "telemetry_perf_unittests",
         "name": "telemetry_perf_unittests",

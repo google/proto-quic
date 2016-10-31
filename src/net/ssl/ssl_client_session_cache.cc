@@ -4,13 +4,12 @@
 
 #include "net/ssl/ssl_client_session_cache.h"
 
-#include <openssl/ssl.h>
-
 #include <utility>
 
 #include "base/memory/memory_coordinator_client_registry.h"
 #include "base/time/clock.h"
 #include "base/time/default_clock.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
 

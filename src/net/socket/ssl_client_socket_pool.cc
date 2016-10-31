@@ -4,8 +4,6 @@
 
 #include "net/socket/ssl_client_socket_pool.h"
 
-#include <openssl/ssl.h>
-
 #include <utility>
 
 #include "base/bind.h"
@@ -30,6 +28,7 @@
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
 

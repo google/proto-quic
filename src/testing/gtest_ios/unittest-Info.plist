@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.google.gtest.${BUNDLE_ID_TEST_NAME:rfc1034identifier}</string>
+	<string>${IOS_BUNDLE_ID_PREFIX}.gtest.${GTEST_BUNDLE_ID_SUFFIX:rfc1034identifier}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -151,10 +151,10 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>${BUNDLE_ID_TEST_NAME:rfc1034identifier}.http</string>
-				<string>${BUNDLE_ID_TEST_NAME:rfc1034identifier}.https</string>
-				<string>${BUNDLE_ID_TEST_NAME:rfc1034identifier}-x-callback</string>
-				<string>com.google.sso.${BUNDLE_ID_TEST_NAME:rfc1034identifier}</string>
+				<string>${PRODUCT_NAME:rfc1034identifier}.http</string>
+				<string>${PRODUCT_NAME:rfc1034identifier}.https</string>
+				<string>${PRODUCT_NAME:rfc1034identifier}-x-callback</string>
+				<string>${IOS_BUNDLE_ID_PREFIX}.sso.${PRODUCT_NAME:rfc1034identifier}</string>
 			</array>
 		</dict>
 	</array>
@@ -187,6 +187,6 @@
 		<string>fetch</string>
 	</array>
 	<key>SSOAuthURLScheme</key>
-	<string>com.google.sso.${BUNDLE_ID_TEST_NAME:rfc1034identifier}</string>
+	<string>${IOS_BUNDLE_ID_PREFIX}.sso.${PRODUCT_NAME:rfc1034identifier}</string>
 </dict>
 </plist>

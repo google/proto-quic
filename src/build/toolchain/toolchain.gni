@@ -46,7 +46,12 @@ declare_args() {
   # instead use a hermetic install of Xcode. [The hermetic install can be
   # obtained with gclient sync after setting the environment variable
   # FORCE_MAC_TOOLCHAIN].
-  use_system_xcode = true
+  use_system_xcode = ""
+}
+
+if ((is_mac || is_ios) && use_system_xcode == "") {
+  _result = getenv("FORCE_MAC_TOOLCHAIN")
+  use_system_xcode = _result == ""
 }
 
 # The path to the hermetic install of Xcode. Only relevant when

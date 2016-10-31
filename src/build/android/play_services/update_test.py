@@ -11,20 +11,23 @@ containing the configuration files and the android sdk directory.
 Tests run the script with various inputs and check the status of the filesystem
 '''
 
+import contextlib
+import logging
+import os
 import shutil
+import sys
 import tempfile
 import unittest
-import os
-import sys
 import zipfile
-import contextlib
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 from play_services import update
+import devil_chromium  # pylint: disable=import-error,unused-import
+from devil.utils import cmd_helper
 
 
 class TestFunctions(unittest.TestCase):
-  DEFAULT_CONFIG_VERSION = 42
+  DEFAULT_CONFIG_VERSION = '1.2.3'
   DEFAULT_LICENSE = 'Default License'
   DEFAULT_ZIP_SHA1 = 'zip0and0filling0to0forty0chars0000000000'
 
@@ -32,6 +35,9 @@ class TestFunctions(unittest.TestCase):
     super(TestFunctions, self).__init__(*args, **kwargs)
     self.paths = None  # Initialized in SetUpWorkdir
     self.workdir = None  # Initialized in setUp
+
+    # Uncomment for debug logs.
+    # logging.basicConfig(level=logging.DEBUG)
 
   #override
   def setUp(self):
@@ -43,10 +49,10 @@ class TestFunctions(unittest.TestCase):
     self.workdir = None
 
   def testUpload(self):
-    version = 1337
+    version = '2.3.4'
     self.SetUpWorkdir(
-        xml_version=version,
         gms_lib=True,
+        config_version=version,
         source_prop=True)
 
     status = update.main([
@@ -55,19 +61,18 @@ class TestFunctions(unittest.TestCase):
         '--skip-git',
         '--bucket', self.paths.bucket,
         '--config', self.paths.config_file,
-        '--sdk-root', self.paths.sdk_root
+        '--sdk-root', self.paths.gms.sdk_root
     ])
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
-    # bucket should contain license, name = license.sha1
+    # bucket should contain license, name = content from LICENSE.sha1
     self.assertTrue(os.path.isfile(self.paths.config_license_sha1))
     license_sha1 = _GetFileContent(self.paths.config_license_sha1)
-    bucket_license = os.path.join(self.paths.bucket, str(version),
-                                  license_sha1)
+    bucket_license = os.path.join(self.paths.bucket, version, license_sha1)
     self.assertTrue(os.path.isfile(bucket_license))
     self.assertEqual(_GetFileContent(bucket_license), self.DEFAULT_LICENSE)
 
-    # bucket should contain zip, name = zip.sha1
+    # bucket should contain zip, name = content from zip.sha1
     self.assertTrue(os.path.isfile(self.paths.config_zip_sha1))
     bucket_zip = os.path.join(self.paths.bucket, str(version),
                               _GetFileContent(self.paths.config_zip_sha1))
@@ -76,28 +81,7 @@ class TestFunctions(unittest.TestCase):
     # unzip, should contain expected files
     with zipfile.ZipFile(bucket_zip, "r") as bucket_zip_file:
       self.assertEqual(bucket_zip_file.namelist(),
-                       ['dummy_file', 'res/values/version.xml'])
-
-  def testUploadAlreadyLatestVersion(self):
-    self.SetUpWorkdir(
-        xml_version=self.DEFAULT_CONFIG_VERSION,
-        gms_lib=True,
-        source_prop=True)
-
-    status = update.main([
-        'upload',
-        '--dry-run',
-        '--skip-git',
-        '--bucket', self.paths.bucket,
-        '--config', self.paths.config_file,
-        '--sdk-root', self.paths.sdk_root,
-    ])
-    self.assertEqual(status, 0, 'the command should have succeeded.')
-
-    # bucket should be empty
-    self.assertFalse(os.listdir(self.paths.bucket))
-    self.assertFalse(os.path.isfile(self.paths.config_license_sha1))
-    self.assertFalse(os.path.isfile(self.paths.config_zip_sha1))
+                       ['com/google/android/gms/client/2.3.4/client-2.3.4.aar'])
 
   def testDownload(self):
     self.SetUpWorkdir(populate_bucket=True)
@@ -108,17 +92,16 @@ class TestFunctions(unittest.TestCase):
           '--dry-run',
           '--bucket', self.paths.bucket,
           '--config', self.paths.config_file,
-          '--sdk-root', self.paths.sdk_root,
+          '--sdk-root', self.paths.gms.sdk_root,
       ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # sdk_root should contain zip contents, zip sha1, license
-    self.assertTrue(os.path.isfile(os.path.join(self.paths.gms_lib,
-                                                'dummy_file')))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_sha1))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_license))
-    self.assertEquals(_GetFileContent(self.paths.gms_root_license),
+    self.assertTrue(os.path.isfile(self.paths.gms.client_paths[0]))
+    self.assertTrue(os.path.isfile(self.paths.gms.lib_zip_sha1))
+    self.assertTrue(os.path.isfile(self.paths.gms.license))
+    self.assertEquals(_GetFileContent(self.paths.gms.license),
                       self.DEFAULT_LICENSE)
 
   def testDownloadBot(self):
@@ -130,17 +113,16 @@ class TestFunctions(unittest.TestCase):
         '--dry-run',
         '--bucket', self.paths.bucket,
         '--config', self.paths.config_file,
-        '--sdk-root', self.paths.sdk_root,
+        '--sdk-root', self.paths.gms.sdk_root,
     ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # sdk_root should contain zip contents, zip sha1, license
-    self.assertTrue(os.path.isfile(os.path.join(self.paths.gms_lib,
-                                                'dummy_file')))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_sha1))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_license))
-    self.assertEquals(_GetFileContent(self.paths.gms_root_license),
+    self.assertTrue(os.path.isfile(self.paths.gms.client_paths[0]))
+    self.assertTrue(os.path.isfile(self.paths.gms.lib_zip_sha1))
+    self.assertTrue(os.path.isfile(self.paths.gms.license))
+    self.assertEquals(_GetFileContent(self.paths.gms.license),
                       self.DEFAULT_LICENSE)
 
   def testDownloadAlreadyUpToDate(self):
@@ -153,15 +135,15 @@ class TestFunctions(unittest.TestCase):
         '--dry-run',
         '--bucket', self.paths.bucket,
         '--config', self.paths.config_file,
-        '--sdk-root', self.paths.sdk_root,
+        '--sdk-root', self.paths.gms.sdk_root,
     ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # there should not be new files downloaded to sdk_root
-    self.assertFalse(os.path.isfile(os.path.join(self.paths.gms_lib,
+    self.assertFalse(os.path.isfile(os.path.join(self.paths.gms.client_paths[0],
                                                  'dummy_file')))
-    self.assertFalse(os.path.isfile(self.paths.gms_root_license))
+    self.assertFalse(os.path.isfile(self.paths.gms.license))
 
   def testDownloadAcceptedLicense(self):
     self.SetUpWorkdir(
@@ -174,17 +156,16 @@ class TestFunctions(unittest.TestCase):
         '--dry-run',
         '--bucket', self.paths.bucket,
         '--config', self.paths.config_file,
-        '--sdk-root', self.paths.sdk_root,
+        '--sdk-root', self.paths.gms.sdk_root,
     ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # sdk_root should contain zip contents, zip sha1, license
-    self.assertTrue(os.path.isfile(os.path.join(self.paths.gms_lib,
-                                                'dummy_file')))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_sha1))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_license))
-    self.assertEquals(_GetFileContent(self.paths.gms_root_license),
+    self.assertTrue(os.path.isfile(self.paths.gms.client_paths[0]))
+    self.assertTrue(os.path.isfile(self.paths.gms.lib_zip_sha1))
+    self.assertTrue(os.path.isfile(self.paths.gms.license))
+    self.assertEquals(_GetFileContent(self.paths.gms.license),
                       self.DEFAULT_LICENSE)
 
   def testDownloadNewLicense(self):
@@ -198,17 +179,16 @@ class TestFunctions(unittest.TestCase):
           '--dry-run',
           '--bucket', self.paths.bucket,
           '--config', self.paths.config_file,
-          '--sdk-root', self.paths.sdk_root,
+          '--sdk-root', self.paths.gms.sdk_root,
       ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # sdk_root should contain zip contents, zip sha1, NEW license
-    self.assertTrue(os.path.isfile(os.path.join(self.paths.gms_lib,
-                                                'dummy_file')))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_sha1))
-    self.assertTrue(os.path.isfile(self.paths.gms_root_license))
-    self.assertEquals(_GetFileContent(self.paths.gms_root_license),
+    self.assertTrue(os.path.isfile(self.paths.gms.client_paths[0]))
+    self.assertTrue(os.path.isfile(self.paths.gms.lib_zip_sha1))
+    self.assertTrue(os.path.isfile(self.paths.gms.license))
+    self.assertEquals(_GetFileContent(self.paths.gms.license),
                       self.DEFAULT_LICENSE)
 
   def testDownloadRefusedLicense(self):
@@ -222,15 +202,15 @@ class TestFunctions(unittest.TestCase):
           '--dry-run',
           '--bucket', self.paths.bucket,
           '--config', self.paths.config_file,
-          '--sdk-root', self.paths.sdk_root,
+          '--sdk-root', self.paths.gms.sdk_root,
       ])
 
     self.assertEqual(status, 0, 'the command should have succeeded.')
 
     # there should not be new files downloaded to sdk_root
-    self.assertFalse(os.path.isfile(os.path.join(self.paths.gms_lib,
+    self.assertFalse(os.path.isfile(os.path.join(self.paths.gms.client_paths[0],
                                                  'dummy_file')))
-    self.assertEquals(_GetFileContent(self.paths.gms_root_license),
+    self.assertEquals(_GetFileContent(self.paths.gms.license),
                       'Old license')
 
   def testDownloadNoAndroidSDK(self):
@@ -258,8 +238,7 @@ class TestFunctions(unittest.TestCase):
                    existing_zip_sha1=None,
                    gms_lib=False,
                    populate_bucket=False,
-                   source_prop=None,
-                   xml_version=None):
+                   source_prop=None):
     '''Prepares workdir by putting it in the specified state
 
     Args:
@@ -283,13 +262,12 @@ class TestFunctions(unittest.TestCase):
                  services SDK.
         source_prop: boolean. Create a source.properties file that contains
                      the license to upload.
-        xml_version: number. Create a version.xml file with the specified
-                     version that is used when uploading
     '''
-    self.paths = Paths(self.workdir)
+    client_name = 'client'
+    self.paths = Paths(self.workdir, config_version, [client_name])
 
     # Create the main directories
-    _MakeDirs(self.paths.sdk_root)
+    _MakeDirs(self.paths.gms.sdk_root)
     _MakeDirs(self.paths.config_dir)
     _MakeDirs(self.paths.bucket)
 
@@ -301,28 +279,28 @@ class TestFunctions(unittest.TestCase):
     if config_version:
       _MakeDirs(os.path.dirname(self.paths.config_file))
       with open(self.paths.config_file, 'w') as stream:
-        stream.write(('{"version_number":%d,'
-                      '"version_xml_path": "res/values/version.xml"}'
-                      '\n') % config_version)
+        stream.write(('{"clients": ["%s"],'
+                      '"version_number": "%s"}'
+                      '\n') % (client_name, config_version))
 
     if existing_license:
-      _MakeDirs(self.paths.gms_root)
-      with open(self.paths.gms_root_license, 'w') as stream:
+      _MakeDirs(self.paths.gms.package)
+      with open(self.paths.gms.license, 'w') as stream:
         stream.write(existing_license)
 
     if existing_zip_sha1:
-      _MakeDirs(self.paths.gms_root)
-      with open(self.paths.gms_root_sha1, 'w') as stream:
+      _MakeDirs(self.paths.gms.package)
+      with open(self.paths.gms.lib_zip_sha1, 'w') as stream:
         stream.write(existing_zip_sha1)
 
     if gms_lib:
-      _MakeDirs(self.paths.gms_lib)
-      with open(os.path.join(self.paths.gms_lib, 'dummy_file'), 'w') as stream:
+      _MakeDirs(os.path.dirname(self.paths.gms.client_paths[0]))
+      with open(self.paths.gms.client_paths[0], 'w') as stream:
         stream.write('foo\n')
 
     if source_prop:
-      _MakeDirs(os.path.dirname(self.paths.source_prop))
-      with open(self.paths.source_prop, 'w') as stream:
+      _MakeDirs(os.path.dirname(self.paths.gms.source_prop))
+      with open(self.paths.gms.source_prop, 'w') as stream:
         stream.write('Foo=Bar\n'
                      'Pkg.License=%s\n'
                      'Baz=Fizz\n' % self.DEFAULT_LICENSE)
@@ -345,29 +323,30 @@ class TestFunctions(unittest.TestCase):
       with open(self.paths.config_zip_sha1, 'w') as stream:
         stream.write(config_zip_sha1)
 
-      pre_zip_lib = os.path.join(self.workdir, 'pre_zip_lib')
+      pre_zip_client = os.path.join(
+          self.workdir,
+          'pre_zip_lib',
+          os.path.relpath(self.paths.gms.client_paths[0],
+                          self.paths.gms.package))
+      pre_zip_lib = os.path.dirname(pre_zip_client)
       post_zip_lib = os.path.join(bucket_dir, config_zip_sha1)
+      print(pre_zip_lib, post_zip_lib)
       _MakeDirs(pre_zip_lib)
-      with open(os.path.join(pre_zip_lib, 'dummy_file'), 'w') as stream:
+      with open(pre_zip_client, 'w') as stream:
         stream.write('foo\n')
-      shutil.make_archive(post_zip_lib, 'zip', pre_zip_lib)
-      # make_archive appends .zip
-      shutil.move(post_zip_lib + '.zip', post_zip_lib)
 
-    if xml_version:
-      _MakeDirs(os.path.dirname(self.paths.xml_version))
-      with open(self.paths.xml_version, 'w') as stream:
-        stream.write(
-            '<?xml version="1.0" encoding="utf-8"?>\n'
-            '<resources>\n'
-            '    <integer name="google_play_services_version">%d</integer>\n'
-            '</resources>\n' % xml_version)
+      # pylint: disable=protected-access
+      update._ZipLibrary(post_zip_lib, [pre_zip_client], os.path.join(
+          self.workdir, 'pre_zip_lib'))
+
+    if logging.getLogger().isEnabledFor(logging.DEBUG):
+      cmd_helper.Call(['tree', self.workdir])
 
 
 class Paths(object):
   '''Declaration of the paths commonly manipulated in the tests.'''
 
-  def __init__(self, workdir):
+  def __init__(self, workdir, version, clients):
     self.bucket = os.path.join(workdir, 'bucket')
 
     self.config_dir = os.path.join(workdir, 'config')
@@ -376,18 +355,8 @@ class Paths(object):
     self.config_zip_sha1 = os.path.join(
         self.config_dir,
         'google_play_services_library.zip.sha1')
-
-    self.sdk_root = os.path.join(workdir, 'sdk_root')
-    self.gms_root = os.path.join(self.sdk_root, 'extras', 'google',
-                                 'google_play_services')
-    self.gms_root_sha1 = os.path.join(self.gms_root,
-                                      'google_play_services_library.zip.sha1')
-    self.gms_root_license = os.path.join(self.gms_root, 'LICENSE')
-    self.source_prop = os.path.join(self.gms_root, 'source.properties')
-    self.gms_lib = os.path.join(self.gms_root, 'libproject',
-                                'google-play-services_lib')
-    self.xml_version = os.path.join(self.gms_lib, 'res', 'values',
-                                    'version.xml')
+    self.gms = update.PlayServicesPaths(os.path.join(workdir, 'sdk_root'),
+                                        version, clients)
 
 
 def _GetFileContent(file_path):
@@ -405,11 +374,18 @@ def _MakeDirs(path):
 def _MockedInput(typed_string):
   '''Makes raw_input return |typed_string| while inside the context.'''
   try:
-    original_raw_input = __builtins__.raw_input
-    __builtins__.raw_input = lambda _: typed_string
+    if isinstance(__builtins__, dict):
+      original_raw_input = __builtins__['raw_input']
+      __builtins__['raw_input'] = lambda _: typed_string
+    else:
+      original_raw_input = __builtins__.raw_input
+      __builtins__.raw_input = lambda _: typed_string
     yield
   finally:
-    __builtins__.raw_input = original_raw_input
+    if isinstance(__builtins__, dict):
+      __builtins__['raw_input'] = original_raw_input
+    else:
+      __builtins__.raw_input = original_raw_input
 
 
 if __name__ == '__main__':

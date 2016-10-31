@@ -59,6 +59,7 @@
       "third_party/jstemplate/.*(css|html|js)",
       "third_party/mocha/.*(css|html|js)",
       "third_party/polymer/v1_0/components-chromium/.*(css|html|js)",
+      "third_party/typ/.*",
       "third_party/web-animations-js/.*(css|html|js)",
       "third_party/zlib/google/test/data/.*",
       "tools/clang/scripts/update.py",

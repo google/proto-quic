@@ -28,7 +28,8 @@ SequencedWorkerPoolOwner::~SequencedWorkerPoolOwner() {
   exit_loop_.Run();
 }
 
-const scoped_refptr<SequencedWorkerPool>& SequencedWorkerPoolOwner::pool() {
+const scoped_refptr<SequencedWorkerPool>& SequencedWorkerPoolOwner::pool()
+    const {
   return pool_;
 }
 

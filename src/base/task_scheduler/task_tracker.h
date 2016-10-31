@@ -73,6 +73,11 @@ class BASE_EXPORT TaskTracker {
   // cannot be called after this.
   void SetHasShutdownStartedForTesting();
 
+ protected:
+  // Runs |task|. An override is expected to call its parent's implementation
+  // but is free to perform extra work before and after doing so.
+  virtual void PerformRunTask(std::unique_ptr<Task> task);
+
  private:
   class State;
 

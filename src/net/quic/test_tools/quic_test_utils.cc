@@ -6,8 +6,8 @@
 
 #include <memory>
 
+#include "base/memory/ptr_util.h"
 #include "base/sha1.h"
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
@@ -98,7 +98,10 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
 }
 
 QuicFlagSaver::QuicFlagSaver() {
-#define QUIC_FLAG(type, flag, value) CHECK_EQ(value, flag);
+#define QUIC_FLAG(type, flag, value)                                          \
+  CHECK_EQ(value, flag) << "Flag set to an expected value.  A prior test is " \
+                           "likely setting a flag "                           \
+                        << "without using a QuicFlagSaver";
 #include "net/quic/core/quic_flags_list.h"
 #undef QUIC_FLAG
 }
@@ -356,12 +359,10 @@ PacketSavingConnection::PacketSavingConnection(
                          perspective,
                          supported_versions) {}
 
-PacketSavingConnection::~PacketSavingConnection() {
-  base::STLDeleteElements(&encrypted_packets_);
-}
+PacketSavingConnection::~PacketSavingConnection() {}
 
 void PacketSavingConnection::SendOrQueuePacket(SerializedPacket* packet) {
-  encrypted_packets_.push_back(new QuicEncryptedPacket(
+  encrypted_packets_.push_back(base::MakeUnique<QuicEncryptedPacket>(
       QuicUtils::CopyBuffer(*packet), packet->encrypted_length, true));
   // Transfer ownership of the packet to the SentPacketManager and the
   // ack notifier to the AckNotifierManager.

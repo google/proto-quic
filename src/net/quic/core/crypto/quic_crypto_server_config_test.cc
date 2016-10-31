@@ -8,7 +8,6 @@
 
 #include <memory>
 
-#include "base/stl_util.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/core/crypto/cert_compressor.h"
 #include "net/quic/core/crypto/chacha20_poly1305_encrypter.h"
@@ -399,7 +398,7 @@ class CryptoServerConfigsTest : public ::testing::Test {
     bool has_invalid = false;
     bool is_empty = true;
 
-    vector<QuicServerConfigProtobuf*> protobufs;
+    vector<std::unique_ptr<QuicServerConfigProtobuf>> protobufs;
     bool first = true;
     for (;;) {
       const char* server_config_id;
@@ -421,20 +420,19 @@ class CryptoServerConfigsTest : public ::testing::Test {
       QuicCryptoServerConfig::ConfigOptions options;
       options.id = server_config_id;
       options.orbit = kOrbit;
-      QuicServerConfigProtobuf* protobuf(
-          QuicCryptoServerConfig::GenerateConfig(rand_, &clock_, options));
+      std::unique_ptr<QuicServerConfigProtobuf> protobuf =
+          QuicCryptoServerConfig::GenerateConfig(rand_, &clock_, options);
       protobuf->set_primary_time(primary_time);
       protobuf->set_priority(priority);
       if (string(server_config_id).find("INVALID") == 0) {
         protobuf->clear_key();
         has_invalid = true;
       }
-      protobufs.push_back(protobuf);
+      protobufs.push_back(std::move(protobuf));
     }
 
     ASSERT_EQ(!has_invalid && !is_empty,
               config_.SetConfigs(protobufs, clock_.WallNow()));
-    base::STLDeleteElements(&protobufs);
   }
 
  protected:

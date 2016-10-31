@@ -33,6 +33,7 @@ namespace net {
 
 class NetLogWithSource;
 class IOBuffer;
+class URLRequest;
 class URLRequestContext;
 struct WebSocketHandshakeRequestInfo;
 struct WebSocketHandshakeResponseInfo;
@@ -225,6 +226,9 @@ class NET_EXPORT WebSocketChannel {
       const GURL& first_party_for_cookies,
       const std::string& additional_headers,
       const WebSocketStreamRequestCreationCallback& callback);
+
+  // Called when a URLRequest is created for handshaking.
+  void OnCreateURLRequest(URLRequest* request);
 
   // Success callback from WebSocketStream::CreateAndConnectStream(). Reports
   // success to the event interface. May delete |this|.

@@ -236,12 +236,19 @@ class URL_EXPORT GURL {
   // higher-level and more complete semantics. See that function's documentation
   // for more detail.
   bool SchemeIsCryptographic() const {
-    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme);
+    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme) ||
+           SchemeIs(url::kHttpsSuboriginScheme);
   }
 
   // Returns true if the scheme is "blob".
   bool SchemeIsBlob() const {
     return SchemeIs(url::kBlobScheme);
+  }
+
+  // Returns true if the scheme indicates a serialized suborigin.
+  bool SchemeIsSuborigin() const {
+    return SchemeIs(url::kHttpSuboriginScheme) ||
+           SchemeIs(url::kHttpsSuboriginScheme);
   }
 
   // The "content" of the URL is everything after the scheme (skipping the

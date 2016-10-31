@@ -5,14 +5,13 @@
 #ifndef NET_CERT_X509_UTIL_OPENSSL_H_
 #define NET_CERT_X509_UTIL_OPENSSL_H_
 
-#include <openssl/asn1.h>
-#include <openssl/x509v3.h>
-
 #include <string>
 #include <vector>
 
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "third_party/boringssl/src/include/openssl/asn1.h"
+#include "third_party/boringssl/src/include/openssl/x509v3.h"
 
 namespace base {
 class Time;

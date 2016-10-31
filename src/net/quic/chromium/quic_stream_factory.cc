@@ -4,8 +4,6 @@
 
 #include "net/quic/chromium/quic_stream_factory.h"
 
-#include <openssl/aead.h>
-
 #include <algorithm>
 #include <tuple>
 #include <utility>
@@ -17,7 +15,6 @@
 #include "base/metrics/sparse_histogram.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -27,6 +24,7 @@
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
+#include "net/base/proxy_delegate.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_verifier.h"
 #include "net/dns/host_resolver.h"
@@ -56,6 +54,7 @@
 #include "net/socket/socket_performance_watcher_factory.h"
 #include "net/ssl/token_binding.h"
 #include "net/udp/udp_client_socket.h"
+#include "third_party/boringssl/src/include/openssl/aead.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
 
@@ -705,6 +704,7 @@ QuicStreamFactory::QuicStreamFactory(
     SSLConfigService* ssl_config_service,
     ClientSocketFactory* client_socket_factory,
     HttpServerProperties* http_server_properties,
+    ProxyDelegate* proxy_delegate,
     CertVerifier* cert_verifier,
     CTPolicyEnforcer* ct_policy_enforcer,
     ChannelIDService* channel_id_service,
@@ -746,6 +746,7 @@ QuicStreamFactory::QuicStreamFactory(
       host_resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
       http_server_properties_(http_server_properties),
+      proxy_delegate_(proxy_delegate),
       transport_security_state_(transport_security_state),
       cert_transparency_verifier_(cert_transparency_verifier),
       quic_crypto_client_stream_factory_(quic_crypto_client_stream_factory),
@@ -853,11 +854,7 @@ QuicStreamFactory::~QuicStreamFactory() {
     delete all_sessions_.begin()->first;
     all_sessions_.erase(all_sessions_.begin());
   }
-  while (!active_jobs_.empty()) {
-    const QuicServerId server_id = active_jobs_.begin()->first;
-    base::STLDeleteElements(&(active_jobs_[server_id]));
-    active_jobs_.erase(server_id);
-  }
+  active_jobs_.clear();
   while (!active_cert_verifier_jobs_.empty())
     active_cert_verifier_jobs_.erase(active_cert_verifier_jobs_.begin());
   if (ssl_config_service_.get())
@@ -998,15 +995,16 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   ignore_result(StartCertVerifyJob(server_id, cert_verify_flags, net_log));
 
   QuicSessionKey key(destination, server_id);
-  std::unique_ptr<Job> job(
-      new Job(this, host_resolver_, key, WasQuicRecentlyBroken(server_id),
-              cert_verify_flags, quic_server_info, net_log));
+  std::unique_ptr<Job> job = base::MakeUnique<Job>(
+      this, host_resolver_, key, WasQuicRecentlyBroken(server_id),
+      cert_verify_flags, quic_server_info, net_log);
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
     active_requests_[request] = server_id;
     job_requests_map_[server_id].insert(request);
-    active_jobs_[server_id].insert(job.release());
+    Job* job_ptr = job.get();
+    active_jobs_[server_id][job_ptr] = std::move(job);
     return rv;
   }
   if (rv == OK) {
@@ -1047,7 +1045,7 @@ void QuicStreamFactory::CreateAuxilaryJob(const QuicSessionKey& key,
   Job* aux_job =
       new Job(this, host_resolver_, key, WasQuicRecentlyBroken(key.server_id()),
               cert_verify_flags, nullptr, net_log);
-  active_jobs_[key.server_id()].insert(aux_job);
+  active_jobs_[key.server_id()][aux_job] = base::WrapUnique(aux_job);
   task_runner_->PostTask(FROM_HERE,
                          base::Bind(&QuicStreamFactory::Job::RunAuxilaryJob,
                                     aux_job->GetWeakPtr()));
@@ -1086,7 +1084,6 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
       // the other job handle the request.
       job->Cancel();
       jobs->erase(job);
-      delete job;
       return;
     }
   }
@@ -1118,12 +1115,12 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
     request->OnRequestComplete(rv);
   }
 
-  for (Job* other_job : active_jobs_[server_id]) {
-    if (other_job != job)
-      other_job->Cancel();
+  for (auto& other_job : active_jobs_[server_id]) {
+    if (other_job.first != job)
+      other_job.first->Cancel();
   }
 
-  base::STLDeleteElements(&(active_jobs_[server_id]));
+  active_jobs_[server_id].clear();
   active_jobs_.erase(server_id);
   job_requests_map_.erase(server_id);
 }
@@ -1822,6 +1819,16 @@ void QuicStreamFactory::MaybeInitialize() {
     return;
 
   has_initialized_data_ = true;
+
+  // Query the proxy delegate for the default alternative proxy server.
+  ProxyServer default_alternative_proxy_server =
+      proxy_delegate_ ? proxy_delegate_->GetDefaultAlternativeProxy()
+                      : ProxyServer();
+  if (default_alternative_proxy_server.is_quic()) {
+    quic_supported_servers_at_startup_.insert(
+        default_alternative_proxy_server.host_port_pair());
+  }
+
   for (const std::pair<const url::SchemeHostPort, AlternativeServiceInfoVector>&
            key_value : http_server_properties_->alternative_service_map()) {
     HostPortPair host_port_pair(key_value.first.host(), key_value.first.port());

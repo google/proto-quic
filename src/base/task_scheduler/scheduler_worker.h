@@ -38,7 +38,7 @@ class TaskTracker;
 class BASE_EXPORT SchedulerWorker {
  public:
   // Delegate interface for SchedulerWorker. The methods are always called from
-  // a thread managed by the SchedulerWorker instance.
+  // the thread managed by the SchedulerWorker instance.
   class Delegate {
    public:
     virtual ~Delegate() = default;
@@ -47,8 +47,7 @@ class BASE_EXPORT SchedulerWorker {
     // If a thread is recreated after detachment, |detach_duration| is the time
     // elapsed since detachment. Otherwise, if this is the first thread created
     // for |worker|, |detach_duration| is TimeDelta::Max().
-    virtual void OnMainEntry(SchedulerWorker* worker,
-                             const TimeDelta& detach_duration) = 0;
+    virtual void OnMainEntry(SchedulerWorker* worker) = 0;
 
     // Called by a thread managed by |worker| to get a Sequence from which to
     // run a Task.
@@ -83,6 +82,11 @@ class BASE_EXPORT SchedulerWorker {
     // This MUST return false if SchedulerWorker::JoinForTesting() is in
     // progress.
     virtual bool CanDetach(SchedulerWorker* worker) = 0;
+
+    // Called by a thread before it detaches. This method is not allowed to
+    // acquire a SchedulerLock because it is called within the scope of another
+    // SchedulerLock.
+    virtual void OnDetach() = 0;
   };
 
   enum class InitialState { ALIVE, DETACHED };
@@ -142,10 +146,6 @@ class BASE_EXPORT SchedulerWorker {
 
   // The underlying thread for this SchedulerWorker.
   std::unique_ptr<Thread> thread_;
-
-  // Time of the last successful Detach(). Is only accessed from the thread
-  // managed by this SchedulerWorker.
-  TimeTicks last_detach_time_;
 
   const ThreadPriority priority_hint_;
   const std::unique_ptr<Delegate> delegate_;

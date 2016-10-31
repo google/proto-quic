@@ -468,7 +468,6 @@ TraceLog::TraceLog()
       process_sort_index_(0),
       process_id_hash_(0),
       process_id_(0),
-      watch_category_(0),
       trace_options_(kInternalRecordUntilFull),
       trace_config_(TraceConfig()),
       thread_shared_chunk_index_(0),
@@ -884,9 +883,6 @@ void TraceLog::SetDisabledWhileLocked(uint8_t modes_to_disable) {
 
   if (modes_to_disable & RECORDING_MODE) {
     trace_config_.Clear();
-
-    subtle::NoBarrier_Store(&watch_category_, 0);
-    watch_event_name_.clear();
   }
 
   UpdateCategoryGroupEnabledFlags();
@@ -1481,21 +1477,6 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
   if (!console_message.empty())
     LOG(ERROR) << console_message;
 
-  if (reinterpret_cast<const unsigned char*>(
-          subtle::NoBarrier_Load(&watch_category_)) == category_group_enabled) {
-    bool event_name_matches;
-    WatchEventCallback watch_event_callback_copy;
-    {
-      AutoLock lock(lock_);
-      event_name_matches = watch_event_name_ == name;
-      watch_event_callback_copy = watch_event_callback_;
-    }
-    if (event_name_matches) {
-      if (!watch_event_callback_copy.is_null())
-        watch_event_callback_copy.Run();
-    }
-  }
-
   return handle;
 }
 
@@ -1645,25 +1626,6 @@ void TraceLog::UpdateTraceEventDuration(
 
   if (category_group_enabled_local & ENABLED_FOR_FILTERING)
     EndFilteredEvent(category_group_enabled, name, handle);
-}
-
-void TraceLog::SetWatchEvent(const std::string& category_name,
-                             const std::string& event_name,
-                             const WatchEventCallback& callback) {
-  const unsigned char* category =
-      GetCategoryGroupEnabled(category_name.c_str());
-  AutoLock lock(lock_);
-  subtle::NoBarrier_Store(&watch_category_,
-                          reinterpret_cast<subtle::AtomicWord>(category));
-  watch_event_name_ = event_name;
-  watch_event_callback_ = callback;
-}
-
-void TraceLog::CancelWatchEvent() {
-  AutoLock lock(lock_);
-  subtle::NoBarrier_Store(&watch_category_, 0);
-  watch_event_name_.clear();
-  watch_event_callback_.Reset();
 }
 
 uint64_t TraceLog::MangleEventId(uint64_t id) {

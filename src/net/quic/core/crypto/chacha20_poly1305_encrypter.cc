@@ -4,7 +4,7 @@
 
 #include "net/quic/core/crypto/chacha20_poly1305_encrypter.h"
 
-#include <openssl/evp.h>
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace net {
 

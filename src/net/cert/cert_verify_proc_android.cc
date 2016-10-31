@@ -4,8 +4,6 @@
 
 #include "net/cert/cert_verify_proc_android.h"
 
-#include <openssl/x509v3.h>
-
 #include <string>
 #include <vector>
 
@@ -20,6 +18,7 @@
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/x509_certificate.h"
+#include "third_party/boringssl/src/include/openssl/x509v3.h"
 
 namespace net {
 

@@ -14,6 +14,8 @@
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
+#elif defined(OS_WIN)
+#include "base/win/scoped_com_initializer.h"
 #endif
 
 namespace base {
@@ -36,13 +38,18 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     // Set if this thread was detached.
     std::unique_ptr<Thread> detached_thread;
 
-    outer_->delegate_->OnMainEntry(
-        outer_, outer_->last_detach_time_.is_null()
-                    ? TimeDelta::Max()
-                    : TimeTicks::Now() - outer_->last_detach_time_);
+    outer_->delegate_->OnMainEntry(outer_);
 
     // A SchedulerWorker starts out waiting for work.
     WaitForWork();
+
+#if defined(OS_WIN)
+    // This is required as SequencedWorkerPool previously blindly CoInitialized
+    // all of its threads.
+    // TODO: Get rid of this broad COM scope and force tasks that care about a
+    // CoInitialized environment to request one (via an upcoming ExecutionMode).
+    win::ScopedCOMInitializer com_initializer;
+#endif
 
     while (!outer_->task_tracker_->IsShutdownComplete() &&
            !outer_->should_exit_for_testing_.IsSet()) {
@@ -60,9 +67,9 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
         if (outer_->delegate_->CanDetach(outer_)) {
           detached_thread = outer_->Detach();
           if (detached_thread) {
+            outer_ = nullptr;
             DCHECK_EQ(detached_thread.get(), this);
             PlatformThread::Detach(thread_handle_);
-            outer_ = nullptr;
             break;
           }
         }
@@ -256,7 +263,11 @@ std::unique_ptr<SchedulerWorker::Thread> SchedulerWorker::Detach() {
   // guarantee that we call GetWork() after a successful wakeup.
   if (thread_->IsWakeUpPending())
     return nullptr;
-  last_detach_time_ = TimeTicks::Now();
+
+  // Call OnDetach() within the scope of |thread_lock_| to prevent the delegate
+  // from being used concurrently from an old and a new thread.
+  delegate_->OnDetach();
+
   return std::move(thread_);
 }
 

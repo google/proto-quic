@@ -495,7 +495,7 @@ class PacketSavingConnection : public MockQuicConnection {
 
   void SendOrQueuePacket(SerializedPacket* packet) override;
 
-  std::vector<QuicEncryptedPacket*> encrypted_packets_;
+  std::vector<std::unique_ptr<QuicEncryptedPacket>> encrypted_packets_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(PacketSavingConnection);

@@ -113,8 +113,12 @@ class BASE_EXPORT StackSamplingProfiler {
   // CallStackProfile represents a set of samples.
   struct BASE_EXPORT CallStackProfile {
     CallStackProfile();
-    CallStackProfile(const CallStackProfile& other);
+    CallStackProfile(CallStackProfile&& other);
     ~CallStackProfile();
+
+    CallStackProfile& operator=(CallStackProfile&& other);
+
+    CallStackProfile CopyForTesting() const;
 
     std::vector<Module> modules;
     std::vector<Sample> samples;
@@ -124,6 +128,13 @@ class BASE_EXPORT StackSamplingProfiler {
 
     // Time between samples.
     TimeDelta sampling_period;
+
+   private:
+    // Copying is possible but expensive so disallow it except for internal use
+    // (i.e. CopyForTesting); use std::move instead.
+    CallStackProfile(const CallStackProfile& other);
+
+    DISALLOW_ASSIGN(CallStackProfile);
   };
 
   using CallStackProfiles = std::vector<CallStackProfile>;
@@ -151,7 +162,8 @@ class BASE_EXPORT StackSamplingProfiler {
     TimeDelta sampling_interval;
   };
 
-  // The callback type used to collect completed profiles.
+  // The callback type used to collect completed profiles. The passed |profiles|
+  // are move-only.
   //
   // IMPORTANT NOTE: the callback is invoked on a thread the profiler
   // constructs, rather than on the thread used to construct the profiler and
@@ -159,7 +171,7 @@ class BASE_EXPORT StackSamplingProfiler {
   // threads with message loops that create StackSamplingProfilers, posting a
   // task to the message loop with a copy of the profiles is the recommended
   // thread-safe callback implementation.
-  using CompletedCallback = Callback<void(const CallStackProfiles&)>;
+  using CompletedCallback = Callback<void(CallStackProfiles)>;
 
   // Creates a profiler that sends completed profiles to |callback|. The second
   // constructor is for test purposes.

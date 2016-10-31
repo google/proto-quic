@@ -28,6 +28,7 @@
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties_impl.h"
 #include "net/http/transport_security_state.h"
+#include "net/net_features.h"
 #include "net/ssl/ssl_config_service_defaults.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "net/test/gtest_util.h"
@@ -39,7 +40,7 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 #include "net/url_request/file_protocol_handler.h"
 #endif
 
@@ -99,7 +100,7 @@ class RequestContext : public URLRequestContext {
         false));
     std::unique_ptr<URLRequestJobFactoryImpl> job_factory =
         base::MakeUnique<URLRequestJobFactoryImpl>();
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
     job_factory->SetProtocolHandler("file",
                                     base::MakeUnique<FileProtocolHandler>(
                                         base::ThreadTaskRunnerHandle::Get()));
@@ -113,7 +114,7 @@ class RequestContext : public URLRequestContext {
   URLRequestContextStorage storage_;
 };
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 // Get a file:// url relative to net/data/proxy/proxy_script_fetcher_unittest.
 GURL GetTestFileUrl(const std::string& relpath) {
   base::FilePath path;
@@ -124,7 +125,7 @@ GURL GetTestFileUrl(const std::string& relpath) {
   GURL base_url = FilePathToFileURL(path);
   return GURL(base_url.spec() + "/" + relpath);
 }
-#endif  // !defined(DISABLE_FILE_SUPPORT)
+#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
 // Really simple NetworkDelegate so we can allow local file access on ChromeOS
 // without introducing layering violations.  Also causes a test failure if a
@@ -213,7 +214,7 @@ class ProxyScriptFetcherImplTest : public PlatformTest {
   RequestContext context_;
 };
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 TEST_F(ProxyScriptFetcherImplTest, FileUrl) {
   ProxyScriptFetcherImpl pac_fetcher(&context_);
 
@@ -236,7 +237,7 @@ TEST_F(ProxyScriptFetcherImplTest, FileUrl) {
     EXPECT_EQ(ASCIIToUTF16("-pac.txt-\n"), text);
   }
 }
-#endif  // !defined(DISABLE_FILE_SUPPORT)
+#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
 // Note that all mime types are allowed for PAC file, to be consistent
 // with other browsers.
@@ -360,7 +361,7 @@ TEST_F(ProxyScriptFetcherImplTest, TooLarge) {
   // These two URLs are the same file, but are http:// vs file://
   GURL urls[] = {
     test_server_.GetURL("/large-pac.nsproxy"),
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
     GetTestFileUrl("large-pac.nsproxy")
 #endif
   };

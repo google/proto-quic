@@ -155,3 +155,11 @@ QUIC_FLAG(bool, FLAGS_quic_remove_v33_hacks2, false)
 
 // If true, limits QUIC uncompressed headers to 16K.
 QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)
+
+// If true, release headers stream\'s sequencer buffer when there is no active
+// stream.
+QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, false)
+
+// If enabled, fix double call of
+// InsertLocallyClosedStreamsHighestOffset in ResetPromised.
+QUIC_FLAG(bool, FLAGS_quic_bugfix_reset_promised, true)

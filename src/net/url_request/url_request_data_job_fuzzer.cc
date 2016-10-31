@@ -54,7 +54,7 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
     // header in consistent byte addresses so the fuzzer doesn't have to work as
     // hard.
     bool use_range = provider.ConsumeBool();
-    base::StringPiece range(provider.ConsumeBytes(kMaxLengthForFuzzedRange));
+    std::string range(provider.ConsumeBytes(kMaxLengthForFuzzedRange));
 
     // Generate a sequence of reads sufficient to read the entire data URL.
     size_t simulated_bytes_read = 0;
@@ -68,7 +68,7 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
     // ensure that if it's a URL, it's a data URL. If the URL is invalid just
     // use a test variant, so the fuzzer has a chance to execute something.
     std::string data_url_string =
-        std::string("data:") + provider.ConsumeRemainingBytes().as_string();
+        std::string("data:") + provider.ConsumeRemainingBytes();
     GURL data_url(data_url_string);
     if (!data_url.is_valid())
       data_url = GURL("data:text/html;charset=utf-8,<p>test</p>");
@@ -78,10 +78,9 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
     std::unique_ptr<net::URLRequest> request =
         context_.CreateRequest(data_url, net::DEFAULT_PRIORITY, this);
     if (use_range) {
-      std::string range_str = range.as_string();
-      if (!net::HttpUtil::IsValidHeaderValue(range_str))
-        range_str = "bytes=3-";
-      request->SetExtraRequestHeaderByName("Range", range_str, true);
+      if (!net::HttpUtil::IsValidHeaderValue(range))
+        range = "bytes=3-";
+      request->SetExtraRequestHeaderByName("Range", range, true);
     }
 
     // Block the thread while the request is read.

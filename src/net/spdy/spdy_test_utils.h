@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_TEST_UTILS_H_
-#define NET_SPDY_TEST_UTILS_H_
+#ifndef NET_SPDY_SPDY_TEST_UTILS_H_
+#define NET_SPDY_SPDY_TEST_UTILS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -25,8 +25,8 @@ class HashValue;
 class TransportSecurityState;
 
 inline bool operator==(base::StringPiece x,
-                       const SpdyHeaderBlock::StringPieceProxy& y) {
-  return x == y.operator base::StringPiece();
+                       const SpdyHeaderBlock::ValueProxy& y) {
+  return x == y.as_string();
 }
 
 namespace test {
@@ -92,4 +92,4 @@ class TestHeadersHandler : public SpdyHeadersHandlerInterface {
 }  // namespace test
 }  // namespace net
 
-#endif  // NET_SPDY_TEST_UTILS_H_
+#endif  // NET_SPDY_SPDY_TEST_UTILS_H_

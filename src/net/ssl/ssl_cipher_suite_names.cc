@@ -6,12 +6,11 @@
 
 #include <stdlib.h>
 
-#include <openssl/ssl.h>
-
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "net/ssl/ssl_connection_status_flags.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 // Rather than storing the names of all the ciphersuites we eliminate the
 // redundancy and break each cipher suite into a key exchange method, cipher

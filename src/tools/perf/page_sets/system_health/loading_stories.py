@@ -291,6 +291,7 @@ class _LoadGmailBaseStory(_LoadingStory):
     # navigate to a sub-URL to set up the session and hit the resulting
     # redirection loop. Afterwards, we can safely navigate to
     # https://mail.google.com.
+    action_runner.tab.WaitForDocumentReadyStateToBeComplete()
     action_runner.Navigate(
         'https://mail.google.com/mail/mu/mp/872/trigger_redirection_loop')
     action_runner.tab.WaitForDocumentReadyStateToBeComplete()
@@ -308,15 +309,10 @@ class LoadGmailMobileStory(_LoadGmailBaseStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
   def _DidLoadDocument(self, action_runner):
-    # Close the "Get Inbox by Gmail" interstitial.
-    action_runner.WaitForJavaScriptCondition(
-        'document.querySelector("#isppromo a") !== null')
-    action_runner.ExecuteJavaScript(
-        'document.querySelector("#isppromo a").click()')
     # Wait until the UI loads.
+    action_runner.WaitForElement('#apploadingdiv')
     action_runner.WaitForJavaScriptCondition(
         'document.getElementById("apploadingdiv").style.height === "0px"')
-
 
 class LoadMapsStory(_LoadingStory):
   NAME = 'load:tools:maps'

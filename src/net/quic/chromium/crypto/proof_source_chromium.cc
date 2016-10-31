@@ -4,13 +4,12 @@
 
 #include "net/quic/chromium/crypto/proof_source_chromium.h"
 
-#include <openssl/digest.h>
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
-
 #include "base/strings/string_number_conversions.h"
 #include "crypto/openssl_util.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 using std::string;
 using std::vector;

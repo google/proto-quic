@@ -4,9 +4,6 @@
 
 #include "net/socket/ssl_server_socket_impl.h"
 
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <openssl/x509.h>
 #include <utility>
 
 #include "base/callback_helpers.h"
@@ -24,6 +21,9 @@
 #include "net/ssl/openssl_ssl_util.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 #define GotoState(s) next_handshake_state_ = s
 

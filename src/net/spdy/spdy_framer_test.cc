@@ -165,13 +165,6 @@ class SpdyFramerTestUtil {
       LOG(FATAL);
     }
 
-    bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                  const char* header_data,
-                                  size_t len) override {
-      LOG(FATAL);
-      return true;
-    }
-
     void OnRstStream(SpdyStreamId stream_id,
                      SpdyRstStreamStatus status) override {
       LOG(FATAL);
@@ -389,31 +382,6 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
     if (end_headers) {
       headers_handler_.reset();
     }
-  }
-
-  bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                const char* header_data,
-                                size_t len) override {
-    VLOG(1) << "OnControlFrameHeaderData(" << stream_id << ", data, " << len
-            << ")";
-    ++control_frame_header_data_count_;
-    CHECK_EQ(header_stream_id_, stream_id);
-    if (len == 0) {
-      ++zero_length_control_frame_header_data_count_;
-      // Indicates end-of-header-block.
-      headers_.clear();
-      CHECK(header_buffer_valid_);
-      return framer_.ParseHeaderBlockInBuffer(header_buffer_.get(),
-                                              header_buffer_length_, &headers_);
-    }
-    const size_t available = header_buffer_size_ - header_buffer_length_;
-    if (len > available) {
-      header_buffer_valid_ = false;
-      return false;
-    }
-    memcpy(header_buffer_.get() + header_buffer_length_, header_data, len);
-    header_buffer_length_ += len;
-    return true;
   }
 
   void OnSynStream(SpdyStreamId stream_id,
@@ -5217,7 +5185,7 @@ TEST_P(SpdyFramerTest, ErrorCodeToStringTest) {
 }
 
 TEST_P(SpdyFramerTest, StatusCodeToStringTest) {
-  EXPECT_STREQ("INVALID", SpdyFramer::StatusCodeToString(RST_STREAM_INVALID));
+  EXPECT_STREQ("NO_ERROR", SpdyFramer::StatusCodeToString(RST_STREAM_NO_ERROR));
   EXPECT_STREQ("PROTOCOL_ERROR",
                SpdyFramer::StatusCodeToString(RST_STREAM_PROTOCOL_ERROR));
   EXPECT_STREQ("INVALID_STREAM",
@@ -5900,11 +5868,11 @@ TEST_P(SpdyFramerTest, RstStreamStatusBounds) {
   framer.set_visitor(&visitor);
 
   if (IsSpdy3()) {
-    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_INVALID));
+    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_NO_ERROR));
     framer.ProcessInput(reinterpret_cast<const char*>(kV3RstStreamInvalid),
                         arraysize(kV3RstStreamInvalid));
   } else {
-    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_INTERNAL_ERROR));
+    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_NO_ERROR));
     framer.ProcessInput(reinterpret_cast<const char*>(kH2RstStreamInvalid),
                         arraysize(kH2RstStreamInvalid));
   }
@@ -5915,7 +5883,7 @@ TEST_P(SpdyFramerTest, RstStreamStatusBounds) {
   framer.Reset();
 
   if (IsSpdy3()) {
-    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_INVALID));
+    EXPECT_CALL(visitor, OnRstStream(1, RST_STREAM_NO_ERROR));
     framer.ProcessInput(
         reinterpret_cast<const char*>(kV3RstStreamNumStatusCodes),
         arraysize(kV3RstStreamNumStatusCodes));

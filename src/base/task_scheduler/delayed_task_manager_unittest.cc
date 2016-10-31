@@ -75,8 +75,8 @@ TEST(TaskSchedulerDelayedTaskManagerTest, DelayedTaskDoesNotRunTooEarly) {
   // Send |task| to the DelayedTaskManager.
   manager.AddDelayedTask(std::move(task), sequence, nullptr, &worker_pool);
 
-  // Run tasks that are ripe for execution on the service thread. Don't expect
-  // any call to the mock method of |worker_pool|.
+  // Run tasks that are ripe for execution. Don't expect any call to the mock
+  // method of |worker_pool|.
   service_thread_task_runner->RunUntilIdle();
 }
 

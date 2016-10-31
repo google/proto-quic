@@ -43,6 +43,8 @@ class BattOrAgent : public BattOrConnection::Listener,
     virtual void OnStopTracingComplete(const std::string& trace,
                                        BattOrError error) = 0;
     virtual void OnRecordClockSyncMarkerComplete(BattOrError error) = 0;
+    virtual void OnGetFirmwareGitHashComplete(const std::string& version,
+                                              BattOrError error) = 0;
   };
 
   BattOrAgent(
@@ -55,6 +57,7 @@ class BattOrAgent : public BattOrConnection::Listener,
   void StartTracing();
   void StopTracing();
   void RecordClockSyncMarker(const std::string& marker);
+  void GetFirmwareGitHash();
 
   // Returns whether the BattOr is able to record clock sync markers in its own
   // trace log.
@@ -85,6 +88,7 @@ class BattOrAgent : public BattOrConnection::Listener,
     START_TRACING,
     STOP_TRACING,
     RECORD_CLOCK_SYNC_MARKER,
+    GET_FIRMWARE_GIT_HASH,
   };
 
   enum class Action {
@@ -111,6 +115,10 @@ class BattOrAgent : public BattOrConnection::Listener,
     // Actions required for recording a clock sync marker.
     SEND_CURRENT_SAMPLE_REQUEST,
     READ_CURRENT_SAMPLE,
+
+    // Actions required for returning firmware git hash.
+    SEND_GIT_HASH_REQUEST,
+    READ_GIT_HASH,
   };
 
   // Performs an action.
@@ -180,6 +188,9 @@ class BattOrAgent : public BattOrConnection::Listener,
 
   // The timeout that's run when an action times out.
   base::CancelableClosure timeout_callback_;
+
+  // The git hash of the BattOr firmware.
+  std::string firmware_git_hash_;
 
   DISALLOW_COPY_AND_ASSIGN(BattOrAgent);
 };

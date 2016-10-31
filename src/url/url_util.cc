@@ -19,25 +19,29 @@ namespace url {
 
 namespace {
 
-const int kNumStandardURLSchemes = 8;
+const int kNumStandardURLSchemes = 10;
 const SchemeWithType kStandardURLSchemes[kNumStandardURLSchemes] = {
-  {kHttpScheme, SCHEME_WITH_PORT},
-  {kHttpsScheme, SCHEME_WITH_PORT},
-  // Yes, file URLs can have a hostname, so file URLs should be handled as
-  // "standard". File URLs never have a port as specified by the SchemeType
-  // field.
-  {kFileScheme, SCHEME_WITHOUT_PORT},
-  {kFtpScheme, SCHEME_WITH_PORT},
-  {kGopherScheme, SCHEME_WITH_PORT},
-  {kWsScheme, SCHEME_WITH_PORT},    // WebSocket.
-  {kWssScheme, SCHEME_WITH_PORT},   // WebSocket secure.
-  {kFileSystemScheme, SCHEME_WITHOUT_AUTHORITY},
+    {kHttpScheme, SCHEME_WITH_PORT},
+    {kHttpsScheme, SCHEME_WITH_PORT},
+    // Yes, file URLs can have a hostname, so file URLs should be handled as
+    // "standard". File URLs never have a port as specified by the SchemeType
+    // field.
+    {kFileScheme, SCHEME_WITHOUT_PORT},
+    {kFtpScheme, SCHEME_WITH_PORT},
+    {kGopherScheme, SCHEME_WITH_PORT},
+    {kWsScheme, SCHEME_WITH_PORT},   // WebSocket.
+    {kWssScheme, SCHEME_WITH_PORT},  // WebSocket secure.
+    {kFileSystemScheme, SCHEME_WITHOUT_AUTHORITY},
+    {kHttpSuboriginScheme, SCHEME_WITH_PORT},
+    {kHttpsSuboriginScheme, SCHEME_WITH_PORT},
 };
 
-const int kNumReferrerURLSchemes = 2;
+const int kNumReferrerURLSchemes = 4;
 const SchemeWithType kReferrerURLSchemes[kNumReferrerURLSchemes] = {
-  {kHttpScheme, SCHEME_WITH_PORT},
-  {kHttpsScheme, SCHEME_WITH_PORT},
+    {kHttpScheme, SCHEME_WITH_PORT},
+    {kHttpsScheme, SCHEME_WITH_PORT},
+    {kHttpSuboriginScheme, SCHEME_WITH_PORT},
+    {kHttpsSuboriginScheme, SCHEME_WITH_PORT},
 };
 
 // Lists of the currently installed standard and referrer schemes. These lists

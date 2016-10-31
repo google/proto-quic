@@ -21,7 +21,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * The implementation (and the interface) is heavily influenced by the C++ ObserverList.
  * Notable differences:
  *   - The iterator implements NOTIFY_EXISTING_ONLY.
- *   - The FOR_EACH_OBSERVER closure is left to the clients to implement in terms of iterator().
+ *   - The range-based for loop is left to the clients to implement in terms of iterator().
  * <p/>
  * This class is not threadsafe. Observers MUST be added, removed and will be notified on the same
  * thread this is created.

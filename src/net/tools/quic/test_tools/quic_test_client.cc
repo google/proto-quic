@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "base/memory/ptr_util.h"
 #include "base/time/time.h"
@@ -188,9 +189,8 @@ void MockableQuicClient::ProcessPacket(const IPEndPoint& self_address,
                                        const IPEndPoint& peer_address,
                                        const QuicReceivedPacket& packet) {
   QuicClient::ProcessPacket(self_address, peer_address, packet);
-  if (track_last_incoming_packet_) {
-    last_incoming_packet_.reset(packet.Clone());
-  }
+  if (track_last_incoming_packet_)
+    last_incoming_packet_ = packet.Clone();
 }
 
 MockableQuicClient::~MockableQuicClient() {
@@ -350,7 +350,8 @@ ssize_t QuicTestClient::GetOrCreateStreamAndSendRequest(
       headers->GetAllOfHeaderAsString("transfer-encoding", &encoding);
       spdy_headers.insert(std::make_pair("transfer-encoding", encoding));
     }
-    if (static_cast<StringPiece>(spdy_headers[":authority"]).empty()) {
+    auto authority = spdy_headers.find(":authority");
+    if (authority == spdy_headers.end() || authority->second.empty()) {
       // HTTP/2 requests should include the :authority pseudo hader.
       spdy_headers[":authority"] = client_->server_id().host();
     }

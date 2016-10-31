@@ -430,7 +430,7 @@ void QuicHttpStream::Drain(HttpNetworkSession* session) {
 }
 
 void QuicHttpStream::PopulateNetErrorDetails(NetErrorDetails* details) {
-  details->connection_info = HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3;
+  details->connection_info = HttpResponseInfo::CONNECTION_INFO_QUIC;
   if (was_handshake_confirmed_)
     details->quic_connection_error = quic_connection_error_;
   if (session_) {
@@ -788,8 +788,7 @@ int QuicHttpStream::ProcessResponseHeaders(const SpdyHeaderBlock& headers) {
   // Put the peer's IP address and port into the response.
   IPEndPoint address = session_->peer_address();
   response_info_->socket_address = HostPortPair::FromIPEndPoint(address);
-  response_info_->connection_info =
-      HttpResponseInfo::CONNECTION_INFO_QUIC1_SPDY3;
+  response_info_->connection_info = HttpResponseInfo::CONNECTION_INFO_QUIC;
   response_info_->vary_data.Init(*request_info_,
                                  *response_info_->headers.get());
   response_info_->was_alpn_negotiated = true;

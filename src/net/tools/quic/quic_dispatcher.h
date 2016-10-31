@@ -92,8 +92,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   void OnPacketBeingDispatchedToSession(
       QuicServerSessionBase* session) override {}
 
-  typedef std::unordered_map<QuicConnectionId, QuicServerSessionBase*>
-      SessionMap;
+  using SessionMap = std::unordered_map<QuicConnectionId,
+                                        std::unique_ptr<QuicServerSessionBase>>;
 
   const SessionMap& session_map() const { return session_map_; }
 
@@ -277,7 +277,9 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Removes the session from the session map and write blocked list, and adds
   // the ConnectionId to the time-wait list.  If |session_closed_statelessly| is
   // true, any future packets for the ConnectionId will be black-holed.
-  void CleanUpSession(SessionMap::iterator it, bool session_closed_statelessly);
+  void CleanUpSession(SessionMap::iterator it,
+                      QuicConnection* connection,
+                      bool session_closed_statelessly);
 
   bool HandlePacketForTimeWait(const QuicPacketPublicHeader& header);
 
@@ -336,7 +338,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   std::unique_ptr<QuicTimeWaitListManager> time_wait_list_manager_;
 
   // The list of closed but not-yet-deleted sessions.
-  std::vector<QuicServerSessionBase*> closed_session_list_;
+  std::vector<std::unique_ptr<QuicServerSessionBase>> closed_session_list_;
 
   // The helper used for all connections.
   std::unique_ptr<QuicConnectionHelperInterface> helper_;

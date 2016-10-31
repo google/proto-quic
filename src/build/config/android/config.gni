@@ -35,8 +35,8 @@ if (is_android) {
 
   if (!defined(default_android_sdk_root)) {
     default_android_sdk_root = "//third_party/android_tools/sdk"
-    default_android_sdk_version = "23"
-    default_android_sdk_build_tools_version = "23.0.1"
+    default_android_sdk_version = "24"
+    default_android_sdk_build_tools_version = "24.0.2"
   }
 
   if (!defined(default_lint_android_sdk_root)) {
@@ -44,6 +44,13 @@ if (is_android) {
     # default_android_sdk_root without changing lint version.
     default_lint_android_sdk_root = "//third_party/android_tools/sdk"
     default_lint_android_sdk_version = "23"
+  }
+
+  if (!defined(default_extras_android_sdk_root)) {
+    # Purposefully repeated so that downstream can change
+    # default_android_sdk_root without changing where we load the SDK extras
+    # from. (Google Play services, etc.)
+    default_extras_android_sdk_root = "//third_party/android_tools/sdk"
   }
 
   if (!defined(default_android_keystore_path)) {

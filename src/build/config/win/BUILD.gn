@@ -48,36 +48,24 @@ config("compiler") {
   cflags_c = [ "/TC" ]
   cflags_cc = [ "/TP" ]
 
-  # Flags not supported in version 2013.
-  if (visual_studio_version != "2013" && visual_studio_version != "2013e") {
-    cflags += [
-      # Tell the compiler to crash on failures. This is undocumented
-      # and unsupported but very handy.
-      "/d2FastFail",
-    ]
-  }
+  cflags += [
+    # Tell the compiler to crash on failures. This is undocumented
+    # and unsupported but very handy.
+    "/d2FastFail",
 
-  if (visual_studio_version == "2015") {
-    cflags += [
-      # Work around crbug.com/526851, bug in VS 2015 RTM compiler.
-      "/Zc:sizedDealloc-",
+    # Work around crbug.com/526851, bug in VS 2015 RTM compiler.
+    "/Zc:sizedDealloc-",
 
-      # Disable thread-safe statics to avoid overhead and because
-      # they are disabled on other platforms. See crbug.com/587210
-      # and -fno-threadsafe-statics.
-      "/Zc:threadSafeInit-",
-    ]
-  }
+    # Disable thread-safe statics to avoid overhead and because
+    # they are disabled on other platforms. See crbug.com/587210
+    # and -fno-threadsafe-statics.
+    "/Zc:threadSafeInit-",
+  ]
 
   # Building with Clang on Windows is a work in progress and very
   # experimental. See crbug.com/82385.
-  # Keep this in sync with the similar block in build/common.gypi
   if (is_clang) {
-    if (visual_studio_version == "2013") {
-      cflags += [ "-fmsc-version=1800" ]
-    } else if (visual_studio_version == "2015") {
-      cflags += [ "-fmsc-version=1900" ]
-    }
+    cflags += [ "-fmsc-version=1900" ]
 
     if (current_cpu == "x86") {
       cflags += [ "-m32" ]

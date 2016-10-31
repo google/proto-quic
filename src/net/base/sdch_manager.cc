@@ -17,6 +17,7 @@
 #include "base/values.h"
 #include "crypto/sha2.h"
 #include "net/base/parse_number.h"
+#include "net/base/sdch_net_log_params.h"
 #include "net/base/sdch_observer.h"
 #include "net/url_request/url_request_http_job.h"
 
@@ -440,6 +441,14 @@ SdchProblemCode SdchManager::RemoveSdchDictionary(
     observer.OnDictionaryRemoved(server_hash);
 
   return SDCH_OK;
+}
+
+// static
+void SdchManager::LogSdchProblem(NetLogWithSource netlog,
+                                 SdchProblemCode problem) {
+  SdchManager::SdchErrorRecovery(problem);
+  netlog.AddEvent(NetLogEventType::SDCH_DECODING_ERROR,
+                  base::Bind(&NetLogSdchResourceProblemCallback, problem));
 }
 
 // static

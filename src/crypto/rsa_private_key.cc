@@ -4,11 +4,6 @@
 
 #include "crypto/rsa_private_key.h"
 
-#include <openssl/bn.h>
-#include <openssl/bytestring.h>
-#include <openssl/evp.h>
-#include <openssl/mem.h>
-#include <openssl/rsa.h>
 #include <stdint.h>
 
 #include <memory>
@@ -16,6 +11,11 @@
 
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
+#include "third_party/boringssl/src/include/openssl/bn.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 namespace crypto {
 

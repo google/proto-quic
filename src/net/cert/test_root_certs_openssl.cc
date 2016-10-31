@@ -4,13 +4,12 @@
 
 #include "net/cert/test_root_certs.h"
 
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
-
 #include "base/location.h"
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
 #include "net/cert/x509_certificate.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/x509v3.h"
 
 namespace net {
 

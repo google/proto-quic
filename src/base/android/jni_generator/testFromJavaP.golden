@@ -69,7 +69,6 @@ static void Java_InputStream_close(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_InputStream_mark = 0;
@@ -91,7 +90,6 @@ static void Java_InputStream_mark(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_InputStream_markSupported = 0;
@@ -208,7 +206,6 @@ static void Java_InputStream_reset(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_InputStream_skip = 0;

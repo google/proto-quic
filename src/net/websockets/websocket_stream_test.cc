@@ -325,11 +325,13 @@ class WebSocketStreamCreateUMATest : public ::testing::Test {
 
 // Confirm that the basic case works as expected.
 TEST_F(WebSocketStreamCreateTest, SimpleSuccess) {
+  EXPECT_FALSE(url_request_);
   CreateAndConnectStandard("ws://localhost/", "localhost", "/",
                            NoSubProtocols(), LocalhostOrigin(), LocalhostUrl(),
                            "", "", "");
   EXPECT_FALSE(request_info_);
   EXPECT_FALSE(response_info_);
+  EXPECT_TRUE(url_request_);
   WaitUntilConnectDone();
   EXPECT_FALSE(has_failed());
   EXPECT_TRUE(stream_);

@@ -4,7 +4,6 @@
 
 #include "net/ssl/ssl_platform_key_util.h"
 
-#include <openssl/ecdsa.h>
 #include <stddef.h>
 
 #include "base/memory/ref_counted.h"
@@ -13,6 +12,7 @@
 #include "net/test/cert_test_util.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/ecdsa.h"
 
 namespace net {
 

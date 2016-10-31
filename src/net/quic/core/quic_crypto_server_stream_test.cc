@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
@@ -94,20 +94,21 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     // |helpers_| is destroyed.
     server_session_.reset();
     client_session_.reset();
-    base::STLDeleteElements(&helpers_);
-    base::STLDeleteElements(&alarm_factories_);
+    helpers_.clear();
+    alarm_factories_.clear();
   }
 
   // Initializes the crypto server stream state for testing.  May be
   // called multiple times.
   void InitializeServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
-    helpers_.push_back(new MockQuicConnectionHelper);
-    alarm_factories_.push_back(new MockAlarmFactory);
+    helpers_.push_back(base::MakeUnique<MockQuicConnectionHelper>());
+    alarm_factories_.push_back(base::MakeUnique<MockAlarmFactory>());
     CreateServerSessionForTest(
         server_id_, QuicTime::Delta::FromSeconds(100000), supported_versions_,
-        helpers_.back(), alarm_factories_.back(), &server_crypto_config_,
-        &server_compressed_certs_cache_, &server_connection_, &server_session);
+        helpers_.back().get(), alarm_factories_.back().get(),
+        &server_crypto_config_, &server_compressed_certs_cache_,
+        &server_connection_, &server_session);
     CHECK(server_session);
     server_session_.reset(server_session);
     CryptoTestUtils::FakeServerOptions options;
@@ -129,14 +130,13 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // testing.  May be called multiple times.
   void InitializeFakeClient(bool supports_stateless_rejects) {
     TestQuicSpdyClientSession* client_session = nullptr;
-    helpers_.push_back(new MockQuicConnectionHelper);
-    alarm_factories_.push_back(new MockAlarmFactory);
+    helpers_.push_back(base::MakeUnique<MockQuicConnectionHelper>());
+    alarm_factories_.push_back(base::MakeUnique<MockAlarmFactory>());
     CreateClientSessionForTest(
         server_id_, supports_stateless_rejects,
         QuicTime::Delta::FromSeconds(100000), supported_versions_,
-
-        helpers_.back(), alarm_factories_.back(), &client_crypto_config_,
-        &client_connection_, &client_session);
+        helpers_.back().get(), alarm_factories_.back().get(),
+        &client_crypto_config_, &client_connection_, &client_session);
     CHECK(client_session);
     client_session_.reset(client_session);
   }
@@ -157,8 +157,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     CHECK(server_connection_);
     CHECK(server_session_ != nullptr);
     return CryptoTestUtils::HandshakeWithFakeClient(
-        helpers_.back(), alarm_factories_.back(), server_connection_,
-        server_stream(), server_id_, client_options_);
+        helpers_.back().get(), alarm_factories_.back().get(),
+        server_connection_, server_stream(), server_id_, client_options_);
   }
 
   // Performs a single round of handshake message-exchange between the
@@ -177,21 +177,19 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
 
   // Every connection gets its own MockQuicConnectionHelper and
-  // MockAlarmFactory,
-  // tracked separately from
-  // the server and client state so their lifetimes persist through the whole
-  // test.
-  std::vector<MockQuicConnectionHelper*> helpers_;
-  std::vector<MockAlarmFactory*> alarm_factories_;
+  // MockAlarmFactory, tracked separately from the server and client state so
+  // their lifetimes persist through the whole test.
+  std::vector<std::unique_ptr<MockQuicConnectionHelper>> helpers_;
+  std::vector<std::unique_ptr<MockAlarmFactory>> alarm_factories_;
 
-  // Server state
+  // Server state.
   PacketSavingConnection* server_connection_;
   std::unique_ptr<TestQuicSpdyServerSession> server_session_;
   QuicCryptoServerConfig server_crypto_config_;
   QuicCompressedCertsCache server_compressed_certs_cache_;
   QuicServerId server_id_;
 
-  // Client state
+  // Client state.
   PacketSavingConnection* client_connection_;
   QuicCryptoClientConfig client_crypto_config_;
   std::unique_ptr<TestQuicSpdyClientSession> client_session_;

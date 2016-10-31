@@ -150,9 +150,6 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                  bool exclusive,
                  bool fin,
                  bool end) override;
-  bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                const char* header_data,
-                                size_t len) override;
   void OnStreamFrameData(SpdyStreamId stream_id,
                          const char* data,
                          size_t len) override;

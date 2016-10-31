@@ -770,7 +770,7 @@ TEST_P(BidirectionalStreamQuicImplTest, GetRequest) {
 
   EXPECT_EQ(2, delegate->on_data_read_count());
   EXPECT_EQ(0, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length),
             delegate->GetTotalSentBytes());
   EXPECT_EQ(
@@ -955,7 +955,7 @@ TEST_P(BidirectionalStreamQuicImplTest, CoalesceDataBuffersNotHeadersFrame) {
 
   EXPECT_EQ(1, delegate->on_data_read_count());
   EXPECT_EQ(2, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(
       static_cast<int64_t>(spdy_request_headers_frame_length + strlen(kBody1) +
                            strlen(kBody2) + strlen(kBody3) + strlen(kBody4) +
@@ -1051,7 +1051,7 @@ TEST_P(BidirectionalStreamQuicImplTest,
 
   EXPECT_EQ(1, delegate->on_data_read_count());
   EXPECT_EQ(2, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length +
                                  strlen(kBody1) + strlen(kBody2)),
             delegate->GetTotalSentBytes());
@@ -1154,7 +1154,7 @@ TEST_P(BidirectionalStreamQuicImplTest,
 
   EXPECT_EQ(1, delegate->on_data_read_count());
   EXPECT_EQ(2, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(
       static_cast<int64_t>(spdy_request_headers_frame_length + strlen(kBody1) +
                            strlen(kBody2) + strlen(kBody3) + strlen(kBody4) +
@@ -1234,7 +1234,7 @@ TEST_P(BidirectionalStreamQuicImplTest, PostRequest) {
 
   EXPECT_EQ(1, delegate->on_data_read_count());
   EXPECT_EQ(1, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length +
                                  strlen(kUploadData)),
             delegate->GetTotalSentBytes());
@@ -1311,7 +1311,7 @@ TEST_P(BidirectionalStreamQuicImplTest, PutRequest) {
 
   EXPECT_EQ(1, delegate->on_data_read_count());
   EXPECT_EQ(1, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length +
                                  strlen(kUploadData)),
             delegate->GetTotalSentBytes());
@@ -1397,7 +1397,7 @@ TEST_P(BidirectionalStreamQuicImplTest, InterleaveReadDataAndSendData) {
   EXPECT_THAT(delegate->ReadData(cb.callback()), IsOk());
   EXPECT_EQ(2, delegate->on_data_read_count());
   EXPECT_EQ(2, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length +
                                  2 * strlen(kUploadData)),
             delegate->GetTotalSentBytes());
@@ -1552,7 +1552,7 @@ TEST_P(BidirectionalStreamQuicImplTest, SessionClosedBeforeReadData) {
   EXPECT_THAT(delegate->error(), IsError(ERR_UNEXPECTED));
   EXPECT_EQ(0, delegate->on_data_read_count());
   EXPECT_EQ(0, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length),
             delegate->GetTotalSentBytes());
   EXPECT_EQ(static_cast<int64_t>(spdy_response_headers_frame_length),
@@ -1603,7 +1603,7 @@ TEST_P(BidirectionalStreamQuicImplTest, DeleteStreamAfterReadData) {
 
   EXPECT_EQ(0, delegate->on_data_read_count());
   EXPECT_EQ(0, delegate->on_data_sent_count());
-  EXPECT_EQ(kProtoQUIC1SPDY3, delegate->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, delegate->GetProtocol());
   EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length),
             delegate->GetTotalSentBytes());
   EXPECT_EQ(static_cast<int64_t>(spdy_response_headers_frame_length),

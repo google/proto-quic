@@ -130,7 +130,6 @@ static void Java_MotionEvent_finalize(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord
@@ -429,7 +428,6 @@ static void Java_MotionEvent_recycle(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_getDeviceId = 0;
@@ -495,7 +493,6 @@ static void Java_MotionEvent_setSource(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_getAction = 0;
@@ -1193,7 +1190,6 @@ static void Java_MotionEvent_getPointerCoords(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0), p1.obj());
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_getPointerProperties = 0;
@@ -1216,7 +1212,6 @@ static void Java_MotionEvent_getPointerProperties(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0), p1.obj());
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_getMetaState = 0;
@@ -1891,7 +1886,6 @@ static void Java_MotionEvent_getHistoricalPointerCoords(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0), as_jint(p1), p2.obj());
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_getEdgeFlags = 0;
@@ -1935,7 +1929,6 @@ static void Java_MotionEvent_setEdgeFlags(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_setAction = 0;
@@ -1957,7 +1950,6 @@ static void Java_MotionEvent_setAction(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_offsetLocation = 0;
@@ -1980,7 +1972,6 @@ static void Java_MotionEvent_offsetLocation(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0, p1);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_setLocation = 0;
@@ -2003,7 +1994,6 @@ static void Java_MotionEvent_setLocation(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0, p1);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_transform = 0;
@@ -2026,7 +2016,6 @@ static void Java_MotionEvent_transform(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0.obj());
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_addBatchV_J_F_F_F_F_I = 0;
@@ -2057,7 +2046,6 @@ static void Java_MotionEvent_addBatchV_J_F_F_F_F_I(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0, p1, p2, p3, p4, as_jint(p5));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_addBatchV_J_LAVMEPC_I = 0;
@@ -2082,7 +2070,6 @@ static void Java_MotionEvent_addBatchV_J_LAVMEPC_I(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0, p1.obj(), as_jint(p2));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_MotionEvent_toString = 0;
@@ -2199,7 +2186,6 @@ static void Java_MotionEvent_writeToParcel(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, p0.obj(), as_jint(p1));
   jni_generator::CheckException(env);
-
 }
 
 // Step 3: RegisterNatives.

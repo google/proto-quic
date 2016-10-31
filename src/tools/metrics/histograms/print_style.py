@@ -16,24 +16,19 @@ import pretty_print_xml
 # { tag_name: [attribute_name, ...] }
 ATTRIBUTE_ORDER = {
     'affected-histogram': ['name'],
-    'detail': [],
     'details': [],
     'enum': ['name', 'type'],
     'enums': [],
-    # TODO(yiyaoliu): Remove fieldtrial related pieces when it is not used.
-    'fieldtrial': ['name', 'separator', 'ordering'],
     'histogram': ['base', 'name', 'enum', 'units'],
     'histogram-configuration': ['logsource'],
     'histogram_suffixes': ['name', 'separator', 'ordering'],
     'histogram_suffixes_list': [],
     'histograms': [],
     'int': ['value', 'label'],
-    'group': ['name', 'label'],
     'obsolete': [],
     'owner': [],
     'suffix': ['base', 'name', 'label'],
     'summary': [],
-    'with-group': ['name'],
     'with-suffix': ['name'],
 }
 

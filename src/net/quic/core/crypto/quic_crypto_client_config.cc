@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
@@ -62,7 +63,6 @@ QuicCryptoClientConfig::QuicCryptoClientConfig(
 }
 
 QuicCryptoClientConfig::~QuicCryptoClientConfig() {
-  base::STLDeleteValues(&cached_states_);
 }
 
 QuicCryptoClientConfig::CachedState::CachedState()
@@ -393,13 +393,13 @@ void QuicCryptoClientConfig::SetDefaults() {
 
 QuicCryptoClientConfig::CachedState* QuicCryptoClientConfig::LookupOrCreate(
     const QuicServerId& server_id) {
-  CachedStateMap::const_iterator it = cached_states_.find(server_id);
+  auto it = cached_states_.find(server_id);
   if (it != cached_states_.end()) {
-    return it->second;
+    return it->second.get();
   }
 
   CachedState* cached = new CachedState;
-  cached_states_.insert(std::make_pair(server_id, cached));
+  cached_states_.insert(std::make_pair(server_id, base::WrapUnique(cached)));
   bool cache_populated = PopulateFromCanonicalConfig(server_id, cached);
   UMA_HISTOGRAM_BOOLEAN(
       "Net.QuicCryptoClientConfig.PopulatedFromCanonicalConfig",
@@ -408,8 +408,7 @@ QuicCryptoClientConfig::CachedState* QuicCryptoClientConfig::LookupOrCreate(
 }
 
 void QuicCryptoClientConfig::ClearCachedStates(const ServerIdFilter& filter) {
-  for (CachedStateMap::const_iterator it = cached_states_.begin();
-       it != cached_states_.end(); ++it) {
+  for (auto it = cached_states_.begin(); it != cached_states_.end(); ++it) {
     if (filter.Matches(it->first))
       it->second->Clear();
   }
@@ -983,7 +982,7 @@ bool QuicCryptoClientConfig::PopulateFromCanonicalConfig(
 
   const QuicServerId& canonical_server_id =
       canonical_server_map_[suffix_server_id];
-  CachedState* canonical_state = cached_states_[canonical_server_id];
+  CachedState* canonical_state = cached_states_[canonical_server_id].get();
   if (!canonical_state->proof_valid()) {
     return false;
   }

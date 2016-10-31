@@ -5,8 +5,6 @@
 #ifndef NET_SOCKET_SSL_CLIENT_SOCKET_IMPL_H_
 #define NET_SOCKET_SSL_CLIENT_SOCKET_IMPL_H_
 
-#include <openssl/base.h>
-#include <openssl/ssl.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -32,6 +30,8 @@
 #include "net/ssl/openssl_ssl_util.h"
 #include "net/ssl/ssl_client_cert_type.h"
 #include "net/ssl/ssl_config_service.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace base {
 class FilePath;

@@ -16,6 +16,7 @@ namespace net {
 class ClientSocketPoolManager;
 class HttpNetworkSession;
 class HttpStreamFactory;
+class NetworkThrottleManager;
 class ProxyService;
 
 class NET_EXPORT_PRIVATE HttpNetworkSessionPeer {
@@ -31,6 +32,9 @@ class NET_EXPORT_PRIVATE HttpNetworkSessionPeer {
       std::unique_ptr<HttpStreamFactory> http_stream_factory);
   void SetHttpStreamFactoryForWebSocket(
       std::unique_ptr<HttpStreamFactory> http_stream_factory_for_websocket);
+
+  void SetNetworkStreamThrottler(
+      std::unique_ptr<NetworkThrottleManager> network_throttle_manager);
 
  private:
   HttpNetworkSession* const session_;

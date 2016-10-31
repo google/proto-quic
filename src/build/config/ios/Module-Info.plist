@@ -7,7 +7,7 @@
   <key>CFBundleExecutable</key>
   <string>${EXECUTABLE_NAME}</string>
   <key>CFBundleIdentifier</key>
-  <string>org.chromium.test.ios_web_shell_test_host.ios_web_shell_test</string>
+  <string>${IOS_BUNDLE_ID_PREFIX}.test.ios_web_shell_test_host.ios_web_shell_test</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>

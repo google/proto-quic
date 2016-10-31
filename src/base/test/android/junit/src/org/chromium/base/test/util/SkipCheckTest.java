@@ -6,11 +6,14 @@ package org.chromium.base.test.util;
 
 import junit.framework.TestCase;
 
-import org.chromium.testing.local.LocalRobolectricTestRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.model.FrameworkMethod;
+
 import org.robolectric.annotation.Config;
+
+import org.chromium.testing.local.LocalRobolectricTestRunner;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
@@ -31,18 +34,13 @@ public class SkipCheckTest {
         }
 
         @Override
-        public boolean shouldSkip(TestCase t) {
+        public boolean shouldSkip(FrameworkMethod m) {
             return false;
         }
     }
 
     @Retention(RetentionPolicy.RUNTIME)
     private @interface TestAnnotation {}
-
-    private class UnannotatedBaseClass {
-        public void unannotatedMethod() {}
-        @TestAnnotation public void annotatedMethod() {}
-    }
 
     @TestAnnotation
     private class AnnotatedBaseClass {
@@ -52,6 +50,18 @@ public class SkipCheckTest {
 
     private class ExtendsAnnotatedBaseClass extends AnnotatedBaseClass {
         public void anotherUnannotatedMethod() {}
+    }
+
+    private class ExtendsTestCaseClass extends TestCase {
+        public ExtendsTestCaseClass(String name) {
+            super(name);
+        }
+        public void testMethodA() {}
+    }
+
+    private class UnannotatedBaseClass {
+        public void unannotatedMethod() {}
+        @TestAnnotation public void annotatedMethod() {}
     }
 
     @Test
@@ -119,5 +129,4 @@ public class SkipCheckTest {
                 testMethod, TestAnnotation.class);
         Assert.assertEquals(2, annotations.size());
     }
-
 }

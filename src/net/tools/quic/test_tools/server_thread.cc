@@ -114,7 +114,7 @@ void ServerThread::MaybeNotifyOfHandshakeConfirmation() {
     // Wait for a session to be created.
     return;
   }
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   if (session->IsCryptoHandshakeConfirmed()) {
     confirmed_.Signal();
   }

@@ -427,7 +427,7 @@ void BidirectionalStream::UpdateHistograms() {
                          stream_impl_->GetTotalReceivedBytes());
     UMA_HISTOGRAM_COUNTS("Net.BidirectionalStream.SentBytes.HTTP2",
                          stream_impl_->GetTotalSentBytes());
-  } else if (GetProtocol() == kProtoQUIC1SPDY3) {
+  } else if (GetProtocol() == kProtoQUIC) {
     UMA_HISTOGRAM_TIMES("Net.BidirectionalStream.TimeToReadStart.QUIC",
                         load_timing_info_.receive_headers_end -
                             load_timing_info_.request_start);

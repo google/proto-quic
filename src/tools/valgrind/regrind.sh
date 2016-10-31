@@ -42,7 +42,8 @@ layout_list_failed_tests() {
 }
 
 # Generate a list of failed tests in regrind-failed.txt by scraping bot.
-# Scrape most recent first, so if user interrupts, he is left with fresh-ish data.
+# Scrape most recent first, so if user interrupts, they are left with fresh-ish
+# data.
 scrape_layout() {
   rm -f regrind-*.tmp* regrind-failed.txt regrind-failed-map.txt
   touch regrind-failed.txt

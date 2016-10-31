@@ -896,7 +896,7 @@ should be able to be added at any place in this file.
   <owner>dmazzoni@chromium.org</owner>
   <description>
     Metric recorded when the user toggles Chrome OS High Contrast mode with the
-    keyboard accelerator (Ctrl+Alt+H).
+    keyboard accelerator.
   </description>
 </action>
 
@@ -1034,6 +1034,14 @@ should be able to be added at any place in this file.
   <owner>miu@chromium.org</owner>
   <description>
     User clicked the tab alert indicator button to unmute the tab.
+  </description>
+</action>
+
+<action name="Android.ContentDetectorActivated">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User tapped on a phone number, address or email address, activating a
+    content detector and causing a content intent to be sent.
   </description>
 </action>
 
@@ -13016,6 +13024,15 @@ should be able to be added at any place in this file.
   <description>A Physical Web URL was selected.</description>
 </action>
 
+<action name="PhysicalWeb.WebUI.ListViewUrlSelected">
+  <owner>cco3@chromium.org</owner>
+  <owner>mattreynolds@chromium.org</owner>
+  <owner>mmocny@chromium.org</owner>
+  <description>
+    The user tapped an URL in the Physical Web list view.
+  </description>
+</action>
+
 <action name="PhysicalWeb.WebUI.Open">
   <owner>cco3@chromium.org</owner>
   <owner>mattreynolds@chromium.org</owner>
@@ -14099,7 +14116,6 @@ should be able to be added at any place in this file.
   <description>
     Recorded when showing sign in entry in the first run experience.
   </description>
-  <obsolete>Removed from codebase.</obsolete>
 </action>
 
 <action name="Signin_Impression_FromTabSwitcher">

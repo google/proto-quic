@@ -16,14 +16,14 @@ FuzzedDataProvider::FuzzedDataProvider(const uint8_t* data, size_t size)
 
 FuzzedDataProvider::~FuzzedDataProvider() {}
 
-StringPiece FuzzedDataProvider::ConsumeBytes(size_t num_bytes) {
+std::string FuzzedDataProvider::ConsumeBytes(size_t num_bytes) {
   num_bytes = std::min(num_bytes, remaining_data_.length());
   StringPiece result(remaining_data_.data(), num_bytes);
   remaining_data_ = remaining_data_.substr(num_bytes);
-  return result;
+  return result.as_string();
 }
 
-StringPiece FuzzedDataProvider::ConsumeRemainingBytes() {
+std::string FuzzedDataProvider::ConsumeRemainingBytes() {
   return ConsumeBytes(remaining_data_.length());
 }
 

@@ -5,8 +5,6 @@
 #ifndef NET_SSL_OPENSSL_CLIENT_KEY_STORE_H_
 #define NET_SSL_OPENSSL_CLIENT_KEY_STORE_H_
 
-#include <openssl/base.h>
-
 #include <map>
 #include <string>
 
@@ -14,6 +12,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/singleton.h"
 #include "net/base/net_export.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
 

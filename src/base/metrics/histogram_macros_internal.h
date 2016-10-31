@@ -127,8 +127,6 @@
     base::TimeTicks constructed_;                                              \
   } scoped_histogram_timer_##key
 
-#endif  // BASE_METRICS_HISTOGRAM_MACROS_INTERNAL_H_
-
 // Macro for sparse histogram.
 // The implementation is more costly to add values to, and each value
 // stored has more overhead, compared to the other histogram types. However it
@@ -140,3 +138,5 @@
           name, base::HistogramBase::kUmaTargetedHistogramFlag);               \
       histogram->Add(sample);                                                  \
     } while (0)
+
+#endif  // BASE_METRICS_HISTOGRAM_MACROS_INTERNAL_H_

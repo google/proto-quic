@@ -413,7 +413,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   GetSentPacketManagerFromFirstServerSession() const {
     QuicDispatcher* dispatcher =
         QuicServerPeer::GetDispatcher(server_thread_->server());
-    QuicSession* session = dispatcher->session_map().begin()->second;
+    QuicSession* session = dispatcher->session_map().begin()->second.get();
     return &session->connection()->sent_packet_manager();
   }
 
@@ -574,7 +574,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     QuicDispatcher* dispatcher =
         QuicServerPeer::GetDispatcher(server_thread_->server());
     ASSERT_EQ(1u, dispatcher->session_map().size());
-    QuicSession* session = dispatcher->session_map().begin()->second;
+    QuicSession* session = dispatcher->session_map().begin()->second.get();
     QuicConnectionStats server_stats = session->connection()->GetStats();
     if (!had_packet_loss) {
       EXPECT_EQ(0u, server_stats.packets_lost);
@@ -643,7 +643,7 @@ TEST_P(EndToEndTest, HandshakeSuccessful) {
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSession* server_session = dispatcher->session_map().begin()->second;
+  QuicSession* server_session = dispatcher->session_map().begin()->second.get();
   crypto_stream = QuicSessionPeer::GetCryptoStream(server_session);
   sequencer = ReliableQuicStreamPeer::sequencer(crypto_stream);
   EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
@@ -1357,7 +1357,7 @@ TEST_P(EndToEndTest, SetIndependentMaxIncomingDynamicStreamsLimits) {
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSession* server_session = dispatcher->session_map().begin()->second;
+  QuicSession* server_session = dispatcher->session_map().begin()->second.get();
   EXPECT_EQ(kClientMaxIncomingDynamicStreams,
             server_session->max_open_outgoing_streams());
   server_thread_->Resume();
@@ -1452,7 +1452,7 @@ TEST_P(EndToEndTest, MaxInitialRTT) {
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   const QuicSentPacketManagerInterface& client_sent_packet_manager =
       client_->client()->session()->connection()->sent_packet_manager();
 
@@ -1482,7 +1482,7 @@ TEST_P(EndToEndTest, MinInitialRTT) {
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   const QuicSentPacketManagerInterface& client_sent_packet_manager =
       client_->client()->session()->connection()->sent_packet_manager();
   const QuicSentPacketManagerInterface& server_sent_packet_manager =
@@ -1742,7 +1742,7 @@ TEST_P(EndToEndTest, DifferentFlowControlWindows) {
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   EXPECT_EQ(kClientStreamIFCW,
             session->config()->ReceivedInitialStreamFlowControlWindowBytes());
   EXPECT_EQ(kClientSessionIFCW,
@@ -1797,7 +1797,7 @@ TEST_P(EndToEndTest, HeadersAndCryptoStreamsNoConnectionFlowControl) {
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   QuicFlowController* server_connection_flow_controller =
       session->flow_controller();
   EXPECT_EQ(kSessionIFCW, QuicFlowControllerPeer::ReceiveWindowSize(
@@ -1817,7 +1817,8 @@ TEST_P(EndToEndTest, FlowControlsSynced) {
   QuicSpdySession* const client_session = client_->client()->session();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSpdySession* server_session = dispatcher->session_map().begin()->second;
+  QuicSpdySession* server_session =
+      dispatcher->session_map().begin()->second.get();
 
   ExpectFlowControlsSynced(client_session->flow_controller(),
                            server_session->flow_controller());
@@ -1854,7 +1855,7 @@ TEST_P(EndToEndTest, RequestWithNoBodyWillNeverSendStreamFrameWithFIN) {
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   EXPECT_EQ(
       0u,
       QuicSessionPeer::GetLocallyClosedStreamsHighestOffset(session).size());
@@ -2458,7 +2459,7 @@ TEST_P(EndToEndTest, EarlyResponseFinRecording) {
       QuicDispatcherPeer::session_map(dispatcher);
   QuicDispatcher::SessionMap::const_iterator it = map.begin();
   EXPECT_TRUE(it != map.end());
-  QuicServerSessionBase* server_session = it->second;
+  QuicServerSessionBase* server_session = it->second.get();
 
   // The stream is not waiting for the arrival of the peer's final offset.
   EXPECT_EQ(
@@ -2611,6 +2612,14 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
   DVLOG(1) << "send request for /push_example";
   EXPECT_EQ(kBody, client_->SendSynchronousRequest(
                        "https://example.com/push_example"));
+  QuicHeadersStream* headers_stream =
+      QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
+  QuicStreamSequencer* sequencer =
+      ReliableQuicStreamPeer::sequencer(headers_stream);
+  // Headers stream's sequencer buffer shouldn't be released because server push
+  // hasn't finished yet.
+  EXPECT_TRUE(QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+
   for (const string& url : push_urls) {
     DVLOG(1) << "send request for pushed stream on url " << url;
     string expected_body = "This is server push response body for " + url;
@@ -2618,6 +2627,9 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
     DVLOG(1) << "response body " << response_body;
     EXPECT_EQ(expected_body, response_body);
   }
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 TEST_P(EndToEndTestServerPush, ServerPushUnderLimit) {
@@ -2767,7 +2779,7 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
   ASSERT_EQ(1u, dispatcher->session_map().size());
-  QuicSession* session = dispatcher->session_map().begin()->second;
+  QuicSession* session = dispatcher->session_map().begin()->second.get();
   EXPECT_EQ(kNumMaxStreams, session->GetNumOpenOutgoingStreams());
   server_thread_->Resume();
 
@@ -2905,6 +2917,20 @@ TEST_P(EndToEndTest, DISABLED_TestHugeResponseWithPacketLoss) {
   if (!BothSidesSupportStatelessRejects()) {
     VerifyCleanConnection(true);
   }
+}
+
+TEST_P(EndToEndTest, ReleaseHeadersStreamBufferWhenIdle) {
+  // Tests that when client side has no active request and no waiting
+  // PUSH_PROMISE, its headers stream's sequencer buffer should be released.
+  ASSERT_TRUE(Initialize());
+  client_->SendSynchronousRequest("/foo");
+  QuicHeadersStream* headers_stream =
+      QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
+  QuicStreamSequencer* sequencer =
+      ReliableQuicStreamPeer::sequencer(headers_stream);
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 class EndToEndBufferedPacketsTest : public EndToEndTest {

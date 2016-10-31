@@ -1,0 +1,116 @@
+--- net/url_request/url_request_unittest.cc
++++ net/url_request/url_request_unittest.cc
+@@ -82,6 +82,7 @@
+ #include "net/log/test_net_log.h"
+ #include "net/log/test_net_log_entry.h"
+ #include "net/log/test_net_log_util.h"
++#include "net/net_features.h"
+ #include "net/nqe/external_estimate_provider.h"
+ #include "net/proxy/proxy_server.h"
+ #include "net/proxy/proxy_service.h"
+@@ -114,13 +115,13 @@
+ #include "testing/gtest/include/gtest/gtest.h"
+ #include "testing/platform_test.h"
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ #include "net/base/filename_util.h"
+ #include "net/url_request/file_protocol_handler.h"
+ #include "net/url_request/url_request_file_dir_job.h"
+ #endif
+ 
+-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+ #include "net/ftp/ftp_network_layer.h"
+ #include "net/url_request/ftp_protocol_handler.h"
+ #endif
+@@ -148,7 +149,7 @@
+ const base::FilePath::CharType kTestFilePath[] =
+     FILE_PATH_LITERAL("net/data/url_request_unittest");
+ 
+-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+ // Test file used in most FTP tests.
+ const char kFtpTestFile[] = "BullRunSpeech.txt";
+ #endif
+@@ -221,7 +222,7 @@
+   EXPECT_LE(load_timing_info.send_end, load_timing_info.receive_headers_end);
+ }
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ // Tests load timing information in the case of a cache hit, when no cache
+ // validation request was sent over the wire.
+ base::StringPiece TestNetResourceProvider(int key) {
+@@ -261,7 +262,7 @@
+   EXPECT_TRUE(load_timing_info.proxy_resolve_end.is_null());
+ }
+ 
+-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+ // Tests load timing in the case that there is no HTTP response.  This can be
+ // used to test in the case of errors or non-HTTP requests.
+ void TestLoadTimingNoHttpResponse(
+@@ -755,7 +756,7 @@
+   virtual void SetUpFactory() {
+     job_factory_impl_->SetProtocolHandler(
+         "data", base::WrapUnique(new DataProtocolHandler));
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+     job_factory_impl_->SetProtocolHandler(
+         "file", base::MakeUnique<FileProtocolHandler>(
+                     base::ThreadTaskRunnerHandle::Get()));
+@@ -853,7 +854,7 @@
+   }
+ }
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ TEST_F(URLRequestTest, FileTest) {
+   base::FilePath app_path;
+ 
+@@ -1164,7 +1165,7 @@
+ }
+ #endif  // defined(OS_WIN)
+ 
+-#endif  // !defined(DISABLE_FILE_SUPPORT)
++#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ 
+ TEST_F(URLRequestTest, InvalidUrlTest) {
+   TestDelegate d;
+@@ -6500,7 +6501,7 @@
+   EXPECT_FALSE(job_factory_->IsSafeRedirectTarget(data_url));
+ }
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ TEST_F(URLRequestTestHTTP, ProtocolHandlerAndFactoryRestrictFileRedirects) {
+   // Test URLRequestJobFactory::ProtocolHandler::IsSafeRedirectTarget().
+   GURL file_url("file:///foo.txt");
+@@ -6524,7 +6525,7 @@
+ 
+   EXPECT_EQ(ERR_UNSAFE_REDIRECT, d.request_status());
+ }
+-#endif  // !defined(DISABLE_FILE_SUPPORT)
++#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ 
+ TEST_F(URLRequestTestHTTP, RestrictDataRedirects) {
+   ASSERT_TRUE(http_test_server()->Start());
+@@ -9866,7 +9867,7 @@
+ }
+ #endif  // !defined(OS_IOS)
+ 
+-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+ // These tests aren't passing on Android.  Either the RemoteTestServer isn't
+ // starting up successfully, or it can't access the test files.
+ // TODO(mmenke):  Fix this.  See http://crbug.com/495220
+@@ -10183,7 +10184,7 @@
+   EXPECT_EQ(6, req->GetRawBodyBytes());
+ }
+ 
+-#endif  // !defined(DISABLE_FTP_SUPPORT)
++#endif  // !BUILDFLAG(DISABLE_FTP_SUPPORT)
+ 
+ TEST_F(URLRequestTest, NetworkAccessedClearOnDataRequest) {
+   TestDelegate d;

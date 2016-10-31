@@ -5,12 +5,6 @@
 #include "net/socket/ssl_client_socket_impl.h"
 
 #include <errno.h>
-#include <openssl/bio.h>
-#include <openssl/bytestring.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/mem.h>
-#include <openssl/ssl.h>
 #include <string.h>
 
 #include <utility>
@@ -52,6 +46,12 @@
 #include "net/ssl/ssl_info.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/token_binding.h"
+#include "third_party/boringssl/src/include/openssl/bio.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 #if !defined(OS_NACL)
 #include "net/ssl/ssl_key_logger.h"
@@ -920,11 +920,6 @@ int SSLClientSocketImpl::Init() {
   SSL_set_mode(ssl_.get(), mode.set_mask);
   SSL_clear_mode(ssl_.get(), mode.clear_mask);
 
-  // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
-  // (note that SHA256 and SHA384 only select legacy CBC ciphers). Also disable
-  // DHE_RSA_WITH_AES_256_GCM_SHA384. Historically, AES_256_GCM was not
-  // supported. As DHE is being deprecated, don't add a cipher only to remove it
-  // immediately.
   std::string command;
   if (SSLClientSocket::IsPostQuantumExperimentEnabled()) {
     // These are experimental, non-standard ciphersuites.  They are part of an
@@ -945,7 +940,18 @@ int SSLClientSocketImpl::Init() {
           "CECPQ1-ECDSA-AES256-GCM-SHA384:");
     }
   }
-  command.append("ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
+
+  // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
+  // (note that SHA256 and SHA384 only select legacy CBC ciphers). Additionally
+  // disable HMAC-SHA1 ciphers in ECDSA. Also disable
+  // DHE_RSA_WITH_AES_256_GCM_SHA384. Historically, AES_256_GCM was not
+  // supported. As DHE is being deprecated, don't add a cipher only to remove it
+  // immediately.
+  //
+  // TODO(davidben): Remove the DHE_RSA_WITH_AES_256_GCM_SHA384 exclusion when
+  // the DHEEnabled administrative policy expires.
+  command.append(
+      "ALL:!SHA256:!SHA384:!ECDSA+SHA1:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");

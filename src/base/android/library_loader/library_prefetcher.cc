@@ -16,6 +16,7 @@
 #include "base/macros.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/string_util.h"
+#include "build/build_config.h"
 
 namespace base {
 namespace android {
@@ -50,6 +51,13 @@ bool PathMatchesSuffix(const std::string& path) {
 // Heap allocations, syscalls and library functions are not allowed in this
 // function.
 // Returns true for success.
+#if defined(ADDRESS_SANITIZER)
+// Disable AddressSanitizer instrumentation for this function. It is touching
+// memory that hasn't been allocated by the app, though the addresses are
+// valid. Furthermore, this takes place in a child process. See crbug.com/653372
+// for the context.
+__attribute__((no_sanitize_address))
+#endif
 bool Prefetch(const std::vector<std::pair<uintptr_t, uintptr_t>>& ranges) {
   for (const auto& range : ranges) {
     const uintptr_t page_mask = kPageSize - 1;

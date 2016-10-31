@@ -230,7 +230,7 @@ void HttpCache::MetadataWriter::Write(const GURL& url,
   DCHECK(buf->data());
   request_info_.url = url;
   request_info_.method = "GET";
-  request_info_.load_flags = LOAD_ONLY_FROM_CACHE;
+  request_info_.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   expected_response_time_ = expected_response_time;
   buf_ = buf;

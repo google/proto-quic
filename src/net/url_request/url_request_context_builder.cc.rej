@@ -1,0 +1,62 @@
+--- net/url_request/url_request_context_builder.cc
++++ net/url_request/url_request_context_builder.cc
+@@ -35,6 +35,7 @@
+ #include "net/http/http_server_properties_manager.h"
+ #include "net/http/transport_security_persister.h"
+ #include "net/http/transport_security_state.h"
++#include "net/net_features.h"
+ #include "net/quic/chromium/quic_stream_factory.h"
+ #include "net/ssl/channel_id_service.h"
+ #include "net/ssl/default_channel_id_store.h"
+@@ -48,11 +49,11 @@
+ #include "net/url_request/url_request_job_factory_impl.h"
+ #include "net/url_request/url_request_throttler_manager.h"
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ #include "net/url_request/file_protocol_handler.h"  // nogncheck
+ #endif
+ 
+-#if !defined(DISABLE_FTP_SUPPORT)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT)
+ #include "net/ftp/ftp_network_layer.h"             // nogncheck
+ #include "net/url_request/ftp_protocol_handler.h"  // nogncheck
+ #endif
+@@ -201,10 +202,10 @@
+ 
+ URLRequestContextBuilder::URLRequestContextBuilder()
+     : data_enabled_(false),
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+       file_enabled_(false),
+ #endif
+-#if !defined(DISABLE_FTP_SUPPORT)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT)
+       ftp_enabled_(false),
+ #endif
+       http_cache_enabled_(true),
+@@ -495,20 +496,20 @@
+     job_factory->SetProtocolHandler("data",
+                                     base::WrapUnique(new DataProtocolHandler));
+ 
+-#if !defined(DISABLE_FILE_SUPPORT)
++#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
+   if (file_enabled_) {
+     job_factory->SetProtocolHandler(
+         "file",
+         base::MakeUnique<FileProtocolHandler>(context->GetFileTaskRunner()));
+   }
+-#endif  // !defined(DISABLE_FILE_SUPPORT)
++#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
+ 
+-#if !defined(DISABLE_FTP_SUPPORT)
++#if !BUILDFLAG(DISABLE_FTP_SUPPORT)
+   if (ftp_enabled_) {
+     job_factory->SetProtocolHandler(
+         "ftp", FtpProtocolHandler::Create(context->host_resolver()));
+   }
+-#endif  // !defined(DISABLE_FTP_SUPPORT)
++#endif  // !BUILDFLAG(DISABLE_FTP_SUPPORT)
+ 
+   std::unique_ptr<net::URLRequestJobFactory> top_job_factory(job_factory);
+   if (!url_request_interceptors_.empty()) {

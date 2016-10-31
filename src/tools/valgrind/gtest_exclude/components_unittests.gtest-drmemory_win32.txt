@@ -1,5 +1,0 @@
-# http://crbug.com/514421
-WatcherMetricsProviderWinTest.DoesNotReportOwnProcessId
-
-# http://crbug.com/632264
-MemoryCoordinatorTest.ReceivePressureLevels

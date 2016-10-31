@@ -49,6 +49,8 @@ main/g/gnutls28/libgnutls-openssl27_3.3.8-6+deb8u3_mipsel.deb
 main/g/gnutls28/libgnutlsxx28_3.3.8-6+deb8u3_mipsel.deb
 main/g/gtk+2.0/libgtk2.0-0_2.24.25-3+deb8u1_mipsel.deb
 main/g/gtk+2.0/libgtk2.0-dev_2.24.25-3+deb8u1_mipsel.deb
+main/g/gtk+3.0/libgtk-3-0_3.14.5-1+deb8u1_mipsel.deb
+main/g/gtk+3.0/libgtk-3-dev_3.14.5-1+deb8u1_mipsel.deb
 main/h/harfbuzz/libharfbuzz0b_0.9.35-2_mipsel.deb
 main/h/harfbuzz/libharfbuzz-dev_0.9.35-2_mipsel.deb
 main/h/harfbuzz/libharfbuzz-gobject0_0.9.35-2_mipsel.deb

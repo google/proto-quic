@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file overwrites the webkitRTCPeerConnection constructor with a
-// new constructor which tracks all created connections. It does this by
-// periodically gathering statistics on all connections, using the WebRTC
-// statistics API. All reports are gathered into window.peerConnectionReports,
-// which contains one list per connection. In each list there is a number of
-// report batches, which in turn contains metric names mapped to values.
+// This file overwrites the RTCPeerConnection constructor with a new constructor
+// which tracks all created connections. It does this by periodically gathering
+// statistics on all connections, using the WebRTC statistics API. All reports
+// are gathered into window.peerConnectionReports, which contains one list per
+// connection. In each list there is a number of report batches, which in turn
+// contains metric names mapped to values.
 
 window.peerConnectionReports = [];
 
-webkitRTCPeerConnection = (function() {
+RTCPeerConnection = webkitRTCPeerConnection = (function() {
   function getReportsAsDicts(getStatsResult) {
     var result = [];
     getStatsResult.forEach(function(report) {
@@ -37,7 +37,7 @@ webkitRTCPeerConnection = (function() {
     }, pollIntervalMs);
   }
 
-  var originalConstructor = webkitRTCPeerConnection;
+  var originalConstructor = RTCPeerConnection;
   return function() {
     // Bind the incoming arguments to the original constructor.
     var args = [null].concat(Array.prototype.slice.call(arguments));

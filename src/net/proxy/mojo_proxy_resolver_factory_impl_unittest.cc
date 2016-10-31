@@ -38,14 +38,8 @@ class FakeProxyResolver : public ProxyResolverV8Tracing {
   void GetProxyForURL(const GURL& url,
                       ProxyInfo* results,
                       const CompletionCallback& callback,
-                      ProxyResolver::RequestHandle* request,
+                      std::unique_ptr<ProxyResolver::Request>* request,
                       std::unique_ptr<Bindings> bindings) override {}
-
-  void CancelRequest(ProxyResolver::RequestHandle request) override {}
-
-  LoadState GetLoadState(ProxyResolver::RequestHandle request) const override {
-    return LOAD_STATE_RESOLVING_PROXY_FOR_URL;
-  }
 
   const base::Closure on_destruction_;
 };

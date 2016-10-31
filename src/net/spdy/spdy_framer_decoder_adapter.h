@@ -110,9 +110,6 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
   void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override;
-  bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                const char* header_data,
-                                size_t header_data_len) override;
   void OnSynStream(SpdyStreamId stream_id,
                    SpdyStreamId associated_stream_id,
                    SpdyPriority priority,

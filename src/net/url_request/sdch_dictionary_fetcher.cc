@@ -283,7 +283,7 @@ int SdchDictionaryFetcher::DoSendRequest(int rv) {
   current_request_ = context_->CreateRequest(info.url, IDLE, this);
   int load_flags = LOAD_DO_NOT_SEND_COOKIES | LOAD_DO_NOT_SAVE_COOKIES;
   if (info.cache_only)
-    load_flags |= LOAD_ONLY_FROM_CACHE;
+    load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   current_request_->SetLoadFlags(load_flags);
 
   buffer_ = new IOBuffer(kBufferSize);

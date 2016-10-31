@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -44,7 +45,6 @@ class NET_EXPORT URLRequestFileJob : public URLRequestJob {
   void Kill() override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;
   bool IsRedirectResponse(GURL* location, int* http_status_code) override;
-  std::unique_ptr<Filter> SetupFilter() const override;
   bool GetMimeType(std::string* mime_type) const override;
   void SetExtraRequestHeaders(const HttpRequestHeaders& headers) override;
 
@@ -54,6 +54,9 @@ class NET_EXPORT URLRequestFileJob : public URLRequestJob {
 
  protected:
   ~URLRequestFileJob() override;
+
+  // URLRequestJob implementation.
+  std::unique_ptr<SourceStream> SetUpSourceStream() override;
 
   int64_t remaining_bytes() const { return remaining_bytes_; }
 

@@ -5,7 +5,8 @@
 #ifndef NET_QUIC_CRYPTO_CHANNEL_ID_CHROMIUM_H_
 #define NET_QUIC_CRYPTO_CHANNEL_ID_CHROMIUM_H_
 
-#include <set>
+#include <map>
+#include <memory>
 #include <string>
 
 #include "base/macros.h"
@@ -48,12 +49,11 @@ class ChannelIDSourceChromium : public ChannelIDSource {
 
  private:
   class Job;
-  typedef std::set<Job*> JobSet;
 
   void OnJobComplete(Job* job);
 
   // Set owning pointers to active jobs.
-  JobSet active_jobs_;
+  std::map<Job*, std::unique_ptr<Job>> active_jobs_;
 
   // The service for retrieving Channel ID keys.
   ChannelIDService* const channel_id_service_;

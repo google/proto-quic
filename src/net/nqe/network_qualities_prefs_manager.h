@@ -5,32 +5,33 @@
 #ifndef NET_NQE_NETWORK_QUALITIES_PREFS_MANAGER_H_
 #define NET_NQE_NETWORK_QUALITIES_PREFS_MANAGER_H_
 
+#include <map>
 #include <memory>
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
+#include "base/time/time.h"
+#include "base/values.h"
 #include "net/base/net_export.h"
+#include "net/nqe/cached_network_quality.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_id.h"
 #include "net/nqe/network_quality_store.h"
 
 namespace base {
-class DictionaryValue;
 class SequencedTaskRunner;
 }
 
 namespace net {
-namespace nqe {
-namespace internal {
-class CachedNetworkQuality;
-}
-}
 class NetworkQualityEstimator;
 
 typedef base::Callback<void(
     const nqe::internal::NetworkID& network_id,
     const nqe::internal::CachedNetworkQuality& cached_network_quality)>
     OnChangeInCachedNetworkQualityCallback;
+
+typedef std::map<nqe::internal::NetworkID, nqe::internal::CachedNetworkQuality>
+    ParsedPrefs;
 
 // Using the provided PrefDelegate, NetworkQualitiesPrefsManager creates and
 // updates network quality information that is stored in prefs. Instances of
@@ -48,8 +49,13 @@ class NET_EXPORT NetworkQualitiesPrefsManager
   // Provides an interface that must be implemented by the embedder.
   class NET_EXPORT PrefDelegate {
    public:
+    virtual ~PrefDelegate() {}
+
     // Sets the persistent pref to the given value.
     virtual void SetDictionaryValue(const base::DictionaryValue& value) = 0;
+
+    // Returns the peristent prefs.
+    virtual const base::DictionaryValue& GetDictionaryValue() = 0;
   };
 
   // Creates an instance of the NetworkQualitiesPrefsManager. Ownership of
@@ -66,6 +72,13 @@ class NET_EXPORT NetworkQualitiesPrefsManager
   // Prepare for shutdown. Must be called on the pref thread before destruction.
   void ShutdownOnPrefThread();
 
+  // Clear the network quality estimator prefs.
+  void ClearPrefs();
+
+  // Reads the prefs again, parses them into a map of NetworkIDs and
+  // CachedNetworkQualities, and returns the map.
+  ParsedPrefs ForceReadPrefsForTesting() const;
+
  private:
   // Pref thread members:
   // Called on pref thread when there is a change in the cached network quality.
@@ -77,6 +90,9 @@ class NET_EXPORT NetworkQualitiesPrefsManager
   std::unique_ptr<PrefDelegate> pref_delegate_;
 
   scoped_refptr<base::SequencedTaskRunner> pref_task_runner_;
+
+  // Current prefs on the disk. Should be accessed only on the pref thread.
+  std::unique_ptr<base::DictionaryValue> prefs_;
 
   // Should be accessed only on the pref thread.
   base::WeakPtr<NetworkQualitiesPrefsManager> pref_weak_ptr_;
@@ -92,6 +108,10 @@ class NET_EXPORT NetworkQualitiesPrefsManager
   NetworkQualityEstimator* network_quality_estimator_;
 
   scoped_refptr<base::SequencedTaskRunner> network_task_runner_;
+
+  // Network quality prefs read from the disk at the time of startup. Can be
+  // accessed on any thread.
+  const ParsedPrefs read_prefs_startup_;
 
   // Used to get |weak_ptr_| to self on the pref thread.
   base::WeakPtrFactory<NetworkQualitiesPrefsManager> pref_weak_ptr_factory_;

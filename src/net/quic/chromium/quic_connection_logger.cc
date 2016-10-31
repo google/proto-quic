@@ -223,6 +223,16 @@ std::unique_ptr<base::Value> NetLogQuicVersionNegotiationPacketCallback(
   return std::move(dict);
 }
 
+std::unique_ptr<base::Value> NetLogQuicPublicResetPacketCallback(
+    const IPEndPoint* server_hello_address,
+    const IPEndPoint* public_reset_address,
+    NetLogCaptureMode /* capture_mode */) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("server_hello_address", server_hello_address->ToString());
+  dict->SetString("public_reset_address", public_reset_address->ToString());
+  return std::move(dict);
+}
+
 std::unique_ptr<base::Value> NetLogQuicCryptoHandshakeMessageCallback(
     const CryptoHandshakeMessage* message,
     NetLogCaptureMode /* capture_mode */) {
@@ -625,7 +635,10 @@ void QuicConnectionLogger::OnPingFrame(const QuicPingFrame& frame) {
 
 void QuicConnectionLogger::OnPublicResetPacket(
     const QuicPublicResetPacket& packet) {
-  net_log_.AddEvent(NetLogEventType::QUIC_SESSION_PUBLIC_RESET_PACKET_RECEIVED);
+  net_log_.AddEvent(
+      NetLogEventType::QUIC_SESSION_PUBLIC_RESET_PACKET_RECEIVED,
+      base::Bind(&NetLogQuicPublicResetPacketCallback,
+                 &local_address_from_shlo_, &packet.client_address));
   UpdatePublicResetAddressMismatchHistogram(local_address_from_shlo_,
                                             packet.client_address);
 }

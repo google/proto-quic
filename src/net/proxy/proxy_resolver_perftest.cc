@@ -239,16 +239,9 @@ class ProxyResolverV8Wrapper : public ProxyResolver {
   int GetProxyForURL(const GURL& url,
                      ProxyInfo* results,
                      const CompletionCallback& /*callback*/,
-                     RequestHandle* /*request*/,
+                     std::unique_ptr<Request>* /*request*/,
                      const NetLogWithSource& net_log) override {
     return resolver_->GetProxyForURL(url, results, bindings_.get());
-  }
-
-  void CancelRequest(RequestHandle request) override { NOTREACHED(); }
-
-  LoadState GetLoadState(RequestHandle request) const override {
-    NOTREACHED();
-    return LOAD_STATE_IDLE;
   }
 
  private:

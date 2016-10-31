@@ -93,6 +93,12 @@ template("proto_library") {
   # this template shouldn't re-apply the filter.
   set_sources_assignment_filter([])
 
+  if (host_os == "win") {
+    host_executable_suffix = ".exe"
+  } else {
+    host_executable_suffix = ""
+  }
+
   if (defined(invoker.generate_cc)) {
     generate_cc = invoker.generate_cc
   } else {
@@ -112,10 +118,8 @@ template("proto_library") {
 
     plugin_host_label = invoker.generator_plugin_label + "($host_toolchain)"
     plugin_path = get_label_info(plugin_host_label, "root_out_dir") + "/" +
-                  get_label_info(plugin_host_label, "name")
-    if (host_os == "win") {
-      plugin_path += ".exe"
-    }
+                  get_label_info(plugin_host_label, "name") +
+                  host_executable_suffix
     generate_with_plugin = true
   } else if (defined(invoker.generator_plugin_script)) {
     plugin_path = invoker.generator_plugin_script
@@ -133,7 +137,6 @@ template("proto_library") {
     } else {
       generator_plugin_suffixes = invoker.generator_plugin_suffixes
     }
-    plugin_path = rebase_path(plugin_path, root_build_dir)
   }
 
   if (defined(invoker.proto_in_dir)) {
@@ -216,23 +219,15 @@ template("proto_library") {
     outputs = get_path_info(protogens, "abspath")
     args = protos
 
-    if (defined(invoker.generator_plugin_script)) {
-      inputs = [
-        invoker.generator_plugin_script,
-      ]
-    }
-    if (defined(invoker.generator_plugin_script_deps)) {
-      inputs += invoker.generator_plugin_script_deps
-    }
-
     protoc_label = "//third_party/protobuf:protoc($host_toolchain)"
-    protoc_out_dir = get_label_info(protoc_label, "root_out_dir")
+    protoc_path = get_label_info(protoc_label, "root_out_dir") + "/protoc" +
+                  host_executable_suffix
     args += [
       # Wrapper should never pick a system protoc.
       # Path should be rebased because |root_build_dir| for current toolchain
       # may be different from |root_out_dir| of protoc built on host toolchain.
       "--protoc",
-      "./" + rebase_path(protoc_out_dir, root_build_dir) + "/protoc",
+      "./" + rebase_path(protoc_path, root_build_dir),
       "--proto-in-dir",
       rebase_path(proto_in_dir, root_build_dir),
     ]
@@ -266,7 +261,7 @@ template("proto_library") {
     if (generate_with_plugin) {
       args += [
         "--plugin",
-        plugin_path,
+        rebase_path(plugin_path, root_build_dir),
         "--plugin-out-dir",
         rel_cc_out_dir,
       ]
@@ -278,14 +273,26 @@ template("proto_library") {
       }
     }
 
+    # System protoc is not used so it's necessary to build a chromium one.
+    inputs = [
+      protoc_path,
+    ]
     deps = [
-      # System protoc is not used so it's necessary to build a chromium one.
       protoc_label,
     ]
-    if (defined(plugin_host_label)) {
-      # Action depends on generator plugin but for host toolchain only.
-      deps += [ plugin_host_label ]
+
+    if (generate_with_plugin) {
+      inputs += [ plugin_path ]
+      if (defined(invoker.generator_plugin_script_deps)) {
+        # Additional scripts for plugin.
+        inputs += invoker.generator_plugin_script_deps
+      }
+      if (defined(plugin_host_label)) {
+        # Action depends on native generator plugin but for host toolchain only.
+        deps += [ plugin_host_label ]
+      }
     }
+
     if (defined(invoker.deps)) {
       # The deps may have steps that have to run before running protoc.
       deps += invoker.deps

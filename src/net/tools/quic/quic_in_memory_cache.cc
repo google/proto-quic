@@ -8,6 +8,7 @@
 
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
@@ -145,7 +146,7 @@ const QuicInMemoryCache::Response* QuicInMemoryCache::GetResponse(
     StringPiece path) const {
   base::AutoLock lock(response_mutex_);
 
-  ResponseMap::const_iterator it = responses_.find(GetKey(host, path));
+  auto it = responses_.find(GetKey(host, path));
   if (it == responses_.end()) {
     DVLOG(1) << "Get response for resource failed: host " << host << " path "
              << path;
@@ -154,7 +155,7 @@ const QuicInMemoryCache::Response* QuicInMemoryCache::GetResponse(
     }
     return nullptr;
   }
-  return it->second;
+  return it->second.get();
 }
 
 typedef QuicInMemoryCache::ServerPushInfo ServerPushInfo;
@@ -213,7 +214,7 @@ QuicInMemoryCache::QuicInMemoryCache() {}
 
 void QuicInMemoryCache::ResetForTests() {
   base::AutoLock lock(response_mutex_);
-  base::STLDeleteValues(&responses_);
+  responses_.clear();
   server_push_resources_.clear();
 }
 
@@ -288,7 +289,7 @@ list<ServerPushInfo> QuicInMemoryCache::GetServerPushResources(
 QuicInMemoryCache::~QuicInMemoryCache() {
   {
     base::AutoLock lock(response_mutex_);
-    base::STLDeleteValues(&responses_);
+    responses_.clear();
   }
 }
 
@@ -306,13 +307,13 @@ void QuicInMemoryCache::AddResponseImpl(StringPiece host,
     QUIC_BUG << "Response for '" << key << "' already exists!";
     return;
   }
-  Response* new_response = new Response();
+  std::unique_ptr<Response> new_response = base::MakeUnique<Response>();
   new_response->set_response_type(response_type);
   new_response->set_headers(std::move(response_headers));
   new_response->set_body(response_body);
   new_response->set_trailers(std::move(response_trailers));
   DVLOG(1) << "Add response with key " << key;
-  responses_[key] = new_response;
+  responses_[key] = std::move(new_response);
 }
 
 string QuicInMemoryCache::GetKey(StringPiece host, StringPiece path) const {

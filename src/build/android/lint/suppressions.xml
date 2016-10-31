@@ -217,6 +217,22 @@ Still reading?
     <ignore path="AndroidManifest.xml"/>
   </issue>
   <issue id="Overdraw" severity="ignore"/>
+  <issue id="Override">
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="org/chromium/content/browser/input/ReplicaInputConnection.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="org/chromium/content/browser/input/ThreadedInputConnection.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="com/android/webview/chromium/ContentSettingsAdapter.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="com/android/webview/chromium/ServiceWorkerControllerAdapter.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="com/android/webview/chromium/ServiceWorkerSettingsAdapter.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="org/chromium/chrome/browser/ChromeActivity.class"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="org/chromium/chrome/browser/ChromeTabbedActivity.class"/>
+  </issue>
   <issue id="PackageManagerGetSignatures">
     <ignore regexp="chrome/android/webapk/libs/client/src/org/chromium/webapk/lib/client/WebApkValidator.java"/>
   </issue>
@@ -274,6 +290,8 @@ Still reading?
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rCN/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-zh-rTW/android_chrome_strings.xml"/>
   </issue>
+  <!-- TODO(crbug.com/635567): Fix this properly. -->
+  <issue id="UnusedResources" severity="ignore"/>
   <issue id="UnusedResources">
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits.html"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits_css.css"/>
@@ -298,7 +316,8 @@ Still reading?
     <ignore regexp="blimp/client/app/android/java/res/values/dimens.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/xml/about_blimp_preferences.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/xml/blimp_preferences.xml"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/account_management_incognito.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/*"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/amex_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/bubble_white.9.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon.png"/>
@@ -360,6 +379,84 @@ Still reading?
     <!-- Used by Android's policies system -->
     <ignore regexp="restriction_values.xml"/>
     <ignore regexp="ui/android/java/res/drawable-hdpi/verify_checkmark.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="ui/android/java/res/values/dimens.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/autofill/android/java/res/values/dimens.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/autofill/android/java/res/drawable/autofill_chip_inset.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/autofill/android/java/res/layout/autofill_keyboard_accessory_icon.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/autofill/android/java/res/layout/autofill_keyboard_accessory_item.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/java/res/raw/empty.wav"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/java/res/drawable-hdpi/ic_menu_share_holo_light.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/java/res/drawable-hdpi/ic_search.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/java/res/menu/select_action_menu.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="remoting/android/java/res/menu/chromoting_actionbar.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="remoting/android/java/res/menu/desktop_actionbar.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="remoting/android/java/res/menu/host_context_menu.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/*"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/java/res/values-v17/styles.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/public/android/content_strings_grd.resources.zip/values/android_content_strings.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-hdpi/bubble.9.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-hdpi/bubble_arrow_up.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-hdpi/ic_warning.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="components/web_contents_delegate_android/android/java/res/layout/validation_message_bubble.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/java/res/drawable/ic_refresh.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/java/res/drawable/progress.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/java/res/layout/shell_view.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/java/res/values/strings.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="android_webview/test/shell/res/values/config.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="android_webview/test/shell/res/layout/testshell_activity.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/anim/accelerate_quart.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/layout/accessibility_tab_switcher.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/drawable/accessibility_tab_switcher_divider.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/layout/accessibility_tab_switcher_list_item.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/layout/account_chooser_dialog_item.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/layout/account_chooser_dialog_title.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/drawable-hdpi/account_management_no_picture.png"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/xml/account_management_preferences.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/anim/activity_close_exit.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/java/res/anim/activity_open_enter.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/shell_apk/res/layout/content_shell_activity.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/linker_test_apk/res/layout/test_activity.xml"/>
+    <!-- TODO(crbug.com/635567): Fix this properly. -->
+    <ignore regexp="content/shell/android/shell_apk/res/values/strings.xml"/>
   </issue>
   <issue id="UseCompoundDrawables">
     <ignore regexp="chrome/android/java/res/layout/download_content.xml"/>

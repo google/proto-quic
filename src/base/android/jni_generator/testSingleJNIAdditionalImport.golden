@@ -48,7 +48,6 @@ static void Java_Foo_calledByNative(JNIEnv* env, const
       base::android::MethodID::TYPE_STATIC>(
       env, Foo_clazz(env),
       "calledByNative",
-
 "("
 "Lorg/chromium/foo/Bar$Callback;"
 ")"
@@ -58,7 +57,6 @@ static void Java_Foo_calledByNative(JNIEnv* env, const
      env->CallStaticVoidMethod(Foo_clazz(env),
           method_id, callback.obj());
   jni_generator::CheckException(env);
-
 }
 
 // Step 3: RegisterNatives.

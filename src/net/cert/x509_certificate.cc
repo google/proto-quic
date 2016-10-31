@@ -551,7 +551,7 @@ bool X509Certificate::VerifyHostname(
     // is not registry controlled, this ensures that all reference domains
     // contain at least three domain components when using wildcards.
     size_t registry_length =
-        registry_controlled_domains::GetRegistryLength(
+        registry_controlled_domains::GetCanonicalHostRegistryLength(
             reference_name,
             registry_controlled_domains::INCLUDE_UNKNOWN_REGISTRIES,
             registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);

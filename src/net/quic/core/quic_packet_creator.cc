@@ -532,11 +532,13 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
   packet_.encrypted_length = encrypted_length;
 }
 
-QuicEncryptedPacket* QuicPacketCreator::SerializeVersionNegotiationPacket(
+std::unique_ptr<QuicEncryptedPacket>
+QuicPacketCreator::SerializeVersionNegotiationPacket(
     const QuicVersionVector& supported_versions) {
   DCHECK_EQ(Perspective::IS_SERVER, framer_->perspective());
-  QuicEncryptedPacket* encrypted = QuicFramer::BuildVersionNegotiationPacket(
-      connection_id_, supported_versions);
+  std::unique_ptr<QuicEncryptedPacket> encrypted =
+      QuicFramer::BuildVersionNegotiationPacket(connection_id_,
+                                                supported_versions);
   DCHECK(encrypted);
   DCHECK_GE(max_packet_length_, encrypted->length());
   return encrypted;

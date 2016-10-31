@@ -113,7 +113,7 @@ enum SpdyProtocolErrorDetails {
   SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE = 37,
   SPDY_ERROR_OVERSIZED_PAYLOAD = 40,
   // SpdyRstStreamStatus mappings.
-  // RST_STREAM_INVALID not mapped.
+  STATUS_CODE_NO_ERROR = 41,
   STATUS_CODE_PROTOCOL_ERROR = 11,
   STATUS_CODE_INVALID_STREAM = 12,
   STATUS_CODE_REFUSED_STREAM = 13,
@@ -140,7 +140,7 @@ enum SpdyProtocolErrorDetails {
   PROTOCOL_ERROR_RECEIVE_WINDOW_VIOLATION = 28,
 
   // Next free value.
-  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 41,
+  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 42,
 };
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
     MapFramerErrorToProtocolError(SpdyFramer::SpdyError error);
@@ -572,6 +572,9 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, FailedPing);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, GetActivePushStream);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, DeleteExpiredPushStreams);
+  FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, MetricsCollectionOnPushStreams);
+  FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, CancelPushBeforeClaimed);
+  FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, CancelPushAfterExpired);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, ProtocolNegotiation);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, ClearSettings);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, AdjustRecvWindowSize);
@@ -673,6 +676,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                            SpdyStreamId associated_stream_id,
                            SpdyPriority priority,
                            SpdyHeaderBlock headers);
+
+  // Called when the pushed stream should be cancelled. If the pushed stream is
+  // not claimed and active, sends RST to the server to cancel the stream.
+  void CancelPush(const GURL& url);
 
   // Close the stream pointed to by the given iterator. Note that that
   // stream may hold the last reference to the session.
@@ -1050,6 +1057,12 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // remote state. Streams in reserved state are not counted towards any
   // concurrency limits.
   size_t num_active_pushed_streams_;
+
+  // Number of bytes that has been pushed by the server.
+  uint64_t bytes_pushed_count_;
+
+  // Number of bytes that has been pushed by the server but never claimed.
+  uint64_t bytes_pushed_and_unclaimed_count_;
 
   // The write queue.
   SpdyWriteQueue write_queue_;

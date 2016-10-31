@@ -1,7 +1,6 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include "tools/battor_agent/battor_agent.h"
 
 #include <iomanip>
@@ -107,7 +106,6 @@ bool ParseSampleFrame(BattOrMessageType type,
 
   return true;
 }
-
 }  // namespace
 
 BattOrAgent::BattOrAgent(
@@ -159,6 +157,13 @@ void BattOrAgent::RecordClockSyncMarker(const std::string& marker) {
   PerformAction(Action::REQUEST_CONNECTION);
 }
 
+void BattOrAgent::GetFirmwareGitHash() {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  command_ = Command::GET_FIRMWARE_GIT_HASH;
+  PerformAction(Action::REQUEST_CONNECTION);
+}
+
 void BattOrAgent::BeginConnect() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
@@ -186,6 +191,9 @@ void BattOrAgent::OnConnectionOpened(bool success) {
       return;
     case Command::RECORD_CLOCK_SYNC_MARKER:
       PerformAction(Action::SEND_CURRENT_SAMPLE_REQUEST);
+      return;
+    case Command::GET_FIRMWARE_GIT_HASH:
+      PerformAction(Action::SEND_GIT_HASH_REQUEST);
       return;
     case Command::INVALID:
       NOTREACHED();
@@ -228,6 +236,10 @@ void BattOrAgent::OnBytesSent(bool success) {
       num_read_attempts_ = 1;
       PerformAction(Action::READ_CURRENT_SAMPLE);
       return;
+    case Action::SEND_GIT_HASH_REQUEST:
+      num_read_attempts_ = 1;
+      PerformAction(Action::READ_GIT_HASH);
+      return;
     default:
       CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
   }
@@ -244,6 +256,7 @@ void BattOrAgent::OnMessageRead(bool success,
 
   if (!success) {
     switch (last_action_) {
+      case Action::READ_GIT_HASH:
       case Action::READ_EEPROM:
       case Action::READ_CALIBRATION_FRAME:
       case Action::READ_DATA_FRAME:
@@ -387,6 +400,15 @@ void BattOrAgent::OnMessageRead(bool success,
       CompleteCommand(BATTOR_ERROR_NONE);
       return;
 
+    case Action::READ_GIT_HASH:
+      if (type != BATTOR_MESSAGE_TYPE_CONTROL_ACK ){
+        CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+        return;
+      }
+      firmware_git_hash_ = std::string(bytes->begin(), bytes->end());
+      CompleteCommand(BATTOR_ERROR_NONE);
+      return;
+
     default:
       CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
   }
@@ -473,6 +495,15 @@ void BattOrAgent::PerformAction(Action action) {
       connection_->ReadMessage(BATTOR_MESSAGE_TYPE_CONTROL_ACK);
       return;
 
+    case Action::SEND_GIT_HASH_REQUEST:
+      SendControlMessage(
+          BATTOR_CONTROL_MESSAGE_TYPE_GET_FIRMWARE_GIT_HASH, 0, 0);
+      return;
+
+    case Action::READ_GIT_HASH:
+      connection_->ReadMessage(BATTOR_MESSAGE_TYPE_CONTROL_ACK);
+      return;
+
     case Action::INVALID:
       NOTREACHED();
   }
@@ -529,6 +560,12 @@ void BattOrAgent::CompleteCommand(BattOrError error) {
       base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::Bind(&Listener::OnRecordClockSyncMarkerComplete,
                                 base::Unretained(listener_), error));
+      break;
+    case Command::GET_FIRMWARE_GIT_HASH:
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE, base::Bind(&Listener::OnGetFirmwareGitHashComplete,
+                                base::Unretained(listener_),
+                                firmware_git_hash_, error));
       break;
     case Command::INVALID:
       NOTREACHED();

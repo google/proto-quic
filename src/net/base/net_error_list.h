@@ -679,6 +679,14 @@ NET_ERROR(PAC_SCRIPT_TERMINATED, -367)
 // than treat it as HTTP/0.9, this error is returned.
 NET_ERROR(INVALID_HTTP_RESPONSE, -370)
 
+// Initializing content decoding failed.
+NET_ERROR(CONTENT_DECODING_INIT_FAILED, -371)
+
+// Received HTTP/2 RST_STREAM frame with NO_ERROR error code.  This error should
+// be handled internally by HTTP/2 code, and should not make it above the
+// SpdyStream layer.
+NET_ERROR(SPDY_RST_STREAM_NO_ERROR_RECEIVED, -372)
+
 // The cache does not have the requested entry.
 NET_ERROR(CACHE_MISS, -400)
 

@@ -249,10 +249,16 @@ template("test") {
         info_plist = "//testing/gtest_ios/unittest-Info.plist"
       }
 
+      _bundle_id_suffix = target_name
+      if (ios_automatically_manage_certs) {
+        # Use the same bundle identifier for all unit tests when managing
+        # certificates automatically as the number of free certs is limited.
+        _bundle_id_suffix = "generic-unit-test"
+      }
       if (!defined(extra_substitutions)) {
         extra_substitutions = []
       }
-      extra_substitutions += [ "BUNDLE_ID_TEST_NAME=$target_name" ]
+      extra_substitutions += [ "GTEST_BUNDLE_ID_SUFFIX=$_bundle_id_suffix" ]
 
       if (!defined(deps)) {
         deps = []

@@ -102,6 +102,8 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
     return num_tasks_between_waits_histogram_;
   }
 
+  void GetHistograms(std::vector<const HistogramBase*>* histograms) const;
+
  private:
   class SchedulerSingleThreadTaskRunner;
   class SchedulerWorkerDelegateImpl;

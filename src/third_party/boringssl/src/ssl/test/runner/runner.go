@@ -2299,10 +2299,13 @@ func addBasicTests() {
 			config: Config{
 				MaxVersion: VersionTLS13,
 				Bugs: ProtocolBugs{
+					// TLS 1.3 servers are expected to
+					// always enable GREASE. TLS 1.3 is new,
+					// so there is no existing ecosystem to
+					// worry about.
 					ExpectGREASE: true,
 				},
 			},
-			flags: []string{"-enable-grease"},
 		},
 	}
 	testCases = append(testCases, basicTests...)
@@ -3940,33 +3943,54 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 			},
 		})
 
-		// Client sends a Channel ID.
-		tests = append(tests, testCase{
-			name: "ChannelID-Client",
-			config: Config{
-				MaxVersion:       VersionTLS12,
-				RequestChannelID: true,
-			},
-			flags:           []string{"-send-channel-id", path.Join(*resourceDir, channelIDKeyFile)},
-			resumeSession:   true,
-			expectChannelID: true,
-		})
+		// Test Channel ID
+		for _, ver := range tlsVersions {
+			if ver.version < VersionTLS10 {
+				continue
+			}
+			// Client sends a Channel ID.
+			tests = append(tests, testCase{
+				name: "ChannelID-Client-" + ver.name,
+				config: Config{
+					MaxVersion:       ver.version,
+					RequestChannelID: true,
+				},
+				flags:           []string{"-send-channel-id", path.Join(*resourceDir, channelIDKeyFile)},
+				resumeSession:   true,
+				expectChannelID: true,
+			})
 
-		// Server accepts a Channel ID.
-		tests = append(tests, testCase{
-			testType: serverTest,
-			name:     "ChannelID-Server",
-			config: Config{
-				MaxVersion: VersionTLS12,
-				ChannelID:  channelIDKey,
-			},
-			flags: []string{
-				"-expect-channel-id",
-				base64.StdEncoding.EncodeToString(channelIDBytes),
-			},
-			resumeSession:   true,
-			expectChannelID: true,
-		})
+			// Server accepts a Channel ID.
+			tests = append(tests, testCase{
+				testType: serverTest,
+				name:     "ChannelID-Server-" + ver.name,
+				config: Config{
+					MaxVersion: ver.version,
+					ChannelID:  channelIDKey,
+				},
+				flags: []string{
+					"-expect-channel-id",
+					base64.StdEncoding.EncodeToString(channelIDBytes),
+				},
+				resumeSession:   true,
+				expectChannelID: true,
+			})
+
+			tests = append(tests, testCase{
+				testType: serverTest,
+				name:     "InvalidChannelIDSignature-" + ver.name,
+				config: Config{
+					MaxVersion: ver.version,
+					ChannelID:  channelIDKey,
+					Bugs: ProtocolBugs{
+						InvalidChannelIDSignature: true,
+					},
+				},
+				flags:         []string{"-enable-channel-id"},
+				shouldFail:    true,
+				expectedError: ":CHANNEL_ID_SIGNATURE_INVALID:",
+			})
+		}
 
 		// Channel ID and NPN at the same time, to ensure their relative
 		// ordering is correct.
@@ -5171,19 +5195,6 @@ func addExtensionTests() {
 		expectedError: ":ERROR_PARSING_EXTENSION:",
 	})
 	testCases = append(testCases, testCase{
-		name: "ChannelID-Forbidden-TLS13",
-		config: Config{
-			MaxVersion:       VersionTLS13,
-			RequestChannelID: true,
-			Bugs: ProtocolBugs{
-				NegotiateChannelIDAtAllVersions: true,
-			},
-		},
-		flags:         []string{"-send-channel-id", path.Join(*resourceDir, channelIDKeyFile)},
-		shouldFail:    true,
-		expectedError: ":ERROR_PARSING_EXTENSION:",
-	})
-	testCases = append(testCases, testCase{
 		name: "Ticket-Forbidden-TLS13",
 		config: Config{
 			MaxVersion: VersionTLS12,
@@ -5205,37 +5216,12 @@ func addExtensionTests() {
 	// implicit in every test.)
 	testCases = append(testCases, testCase{
 		testType: serverTest,
-		name:     "ChannelID-Declined-TLS13",
-		config: Config{
-			MaxVersion: VersionTLS13,
-			ChannelID:  channelIDKey,
-		},
-		flags: []string{"-enable-channel-id"},
-	})
-	testCases = append(testCases, testCase{
-		testType: serverTest,
 		name:     "NPN-Declined-TLS13",
 		config: Config{
 			MaxVersion: VersionTLS13,
 			NextProtos: []string{"bar"},
 		},
 		flags: []string{"-advertise-npn", "\x03foo\x03bar\x03baz"},
-	})
-
-	testCases = append(testCases, testCase{
-		testType: serverTest,
-		name:     "InvalidChannelIDSignature",
-		config: Config{
-			MaxVersion: VersionTLS12,
-			ChannelID:  channelIDKey,
-			Bugs: ProtocolBugs{
-				InvalidChannelIDSignature: true,
-			},
-		},
-		flags:              []string{"-enable-channel-id"},
-		shouldFail:         true,
-		expectedError:      ":CHANNEL_ID_SIGNATURE_INVALID:",
-		expectedLocalError: "remote error: error decrypting message",
 	})
 
 	// OpenSSL sends the status_request extension on resumption in TLS 1.2. Test that this is
@@ -5380,6 +5366,31 @@ func addResumptionVersionTests() {
 			}
 		}
 	}
+
+	// Sessions with disabled ciphers are not resumed.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-CipherMismatch",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS12,
+		},
+		flags:                []string{"-cipher", "AES128", "-resume-cipher", "AES256"},
+		shouldFail:           false,
+		expectResumeRejected: true,
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-CipherMismatch-TLS13",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+		},
+		flags:                []string{"-cipher", "AES128", "-resume-cipher", "AES256"},
+		shouldFail:           false,
+		expectResumeRejected: true,
+	})
 
 	testCases = append(testCases, testCase{
 		name:          "Resume-Client-CipherMismatch",
@@ -5884,19 +5895,28 @@ func addSignatureAlgorithmTests() {
 				continue
 			}
 
-			var shouldFail bool
+			var shouldSignFail, shouldVerifyFail bool
 			// ecdsa_sha1 does not exist in TLS 1.3.
 			if ver.version >= VersionTLS13 && alg.id == signatureECDSAWithSHA1 {
-				shouldFail = true
+				shouldSignFail = true
+				shouldVerifyFail = true
 			}
 			// RSA-PKCS1 does not exist in TLS 1.3.
 			if ver.version == VersionTLS13 && hasComponent(alg.name, "PKCS1") {
-				shouldFail = true
+				shouldSignFail = true
+				shouldVerifyFail = true
+			}
+
+			// BoringSSL will sign SHA-1 and SHA-512 with ECDSA but not accept them.
+			if alg.id == signatureECDSAWithSHA1 || alg.id == signatureECDSAWithP521AndSHA512 {
+				shouldVerifyFail = true
 			}
 
 			var signError, verifyError string
-			if shouldFail {
+			if shouldSignFail {
 				signError = ":NO_COMMON_SIGNATURE_ALGORITHMS:"
+			}
+			if shouldVerifyFail {
 				verifyError = ":WRONG_SIGNATURE_TYPE:"
 			}
 
@@ -5918,7 +5938,7 @@ func addSignatureAlgorithmTests() {
 					"-key-file", path.Join(*resourceDir, getShimKey(alg.cert)),
 					"-enable-all-curves",
 				},
-				shouldFail:                     shouldFail,
+				shouldFail:                     shouldSignFail,
 				expectedError:                  signError,
 				expectedPeerSignatureAlgorithm: alg.id,
 			})
@@ -5933,11 +5953,10 @@ func addSignatureAlgorithmTests() {
 						alg.id,
 					},
 					Bugs: ProtocolBugs{
-						SkipECDSACurveCheck:          shouldFail,
-						IgnoreSignatureVersionChecks: shouldFail,
-						// The client won't advertise 1.3-only algorithms after
-						// version negotiation.
-						IgnorePeerSignatureAlgorithmPreferences: shouldFail,
+						SkipECDSACurveCheck:          shouldVerifyFail,
+						IgnoreSignatureVersionChecks: shouldVerifyFail,
+						// Some signature algorithms may not be advertised.
+						IgnorePeerSignatureAlgorithmPreferences: shouldVerifyFail,
 					},
 				},
 				flags: []string{
@@ -5945,7 +5964,7 @@ func addSignatureAlgorithmTests() {
 					"-expect-peer-signature-algorithm", strconv.Itoa(int(alg.id)),
 					"-enable-all-curves",
 				},
-				shouldFail:    shouldFail,
+				shouldFail:    shouldVerifyFail,
 				expectedError: verifyError,
 			})
 
@@ -5966,7 +5985,7 @@ func addSignatureAlgorithmTests() {
 					"-key-file", path.Join(*resourceDir, getShimKey(alg.cert)),
 					"-enable-all-curves",
 				},
-				shouldFail:                     shouldFail,
+				shouldFail:                     shouldSignFail,
 				expectedError:                  signError,
 				expectedPeerSignatureAlgorithm: alg.id,
 			})
@@ -5981,19 +6000,21 @@ func addSignatureAlgorithmTests() {
 						alg.id,
 					},
 					Bugs: ProtocolBugs{
-						SkipECDSACurveCheck:          shouldFail,
-						IgnoreSignatureVersionChecks: shouldFail,
+						SkipECDSACurveCheck:          shouldVerifyFail,
+						IgnoreSignatureVersionChecks: shouldVerifyFail,
+						// Some signature algorithms may not be advertised.
+						IgnorePeerSignatureAlgorithmPreferences: shouldVerifyFail,
 					},
 				},
 				flags: []string{
 					"-expect-peer-signature-algorithm", strconv.Itoa(int(alg.id)),
 					"-enable-all-curves",
 				},
-				shouldFail:    shouldFail,
+				shouldFail:    shouldVerifyFail,
 				expectedError: verifyError,
 			})
 
-			if !shouldFail {
+			if !shouldVerifyFail {
 				testCases = append(testCases, testCase{
 					testType: serverTest,
 					name:     "ClientAuth-InvalidSignature" + suffix,
@@ -6034,7 +6055,7 @@ func addSignatureAlgorithmTests() {
 				})
 			}
 
-			if ver.version >= VersionTLS12 && !shouldFail {
+			if ver.version >= VersionTLS12 && !shouldSignFail {
 				testCases = append(testCases, testCase{
 					name: "ClientAuth-Sign-Negotiate" + suffix,
 					config: Config{

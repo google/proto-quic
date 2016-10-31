@@ -125,9 +125,9 @@ std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
   // functions. Would be nice to export them, and re-use here.
   EXPECT_FALSE(pc.HasMaxAge());
   EXPECT_TRUE(pc.HasPath());
-  base::Time cookie_expires = pc.HasExpires()
-                                  ? cookie_util::ParseCookieTime(pc.Expires())
-                                  : base::Time();
+  base::Time cookie_expires =
+      pc.HasExpires() ? cookie_util::ParseCookieExpirationTime(pc.Expires())
+                      : base::Time();
   std::string cookie_path = pc.Path();
 
   return CanonicalCookie::Create(url, pc.Name(), pc.Value(), url.host(),

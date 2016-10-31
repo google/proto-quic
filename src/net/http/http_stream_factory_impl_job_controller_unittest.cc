@@ -619,18 +619,18 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   // Resolve proxy for the main job which then proceed to wait for the
   // alternative job which is IO_PENDING.
   int main_job_request_id =
-      resolver.pending_requests()[0]->url().SchemeIs("http") ? 0 : 1;
+      resolver.pending_jobs()[0]->url().SchemeIs("http") ? 0 : 1;
 
-  resolver.pending_requests()[main_job_request_id]->results()->UseNamedProxy(
+  resolver.pending_jobs()[main_job_request_id]->results()->UseNamedProxy(
       "result1:80");
-  resolver.pending_requests()[main_job_request_id]->CompleteNow(net::OK);
+  resolver.pending_jobs()[main_job_request_id]->CompleteNow(net::OK);
   EXPECT_TRUE(job_controller_->main_job()->is_waiting());
 
   // Resolve proxy for the alternative job to proceed to create a connection.
   // Use hanging HostResolver to fail creation of a SPDY session for the
   // alternative job. The alternative job will be IO_PENDING thus should resume
   // the main job.
-  resolver.pending_requests()[0]->CompleteNow(net::OK);
+  resolver.pending_jobs()[0]->CompleteNow(net::OK);
   EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
   EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(1);
 
@@ -680,18 +680,18 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   // Resolve proxy for the main job which then proceed to wait for the
   // alternative job which is IO_PENDING.
   int main_job_request_id =
-      resolver.pending_requests()[0]->url().SchemeIs("http") ? 0 : 1;
+      resolver.pending_jobs()[0]->url().SchemeIs("http") ? 0 : 1;
 
-  resolver.pending_requests()[main_job_request_id]->results()->UseNamedProxy(
+  resolver.pending_jobs()[main_job_request_id]->results()->UseNamedProxy(
       "result1:80");
-  resolver.pending_requests()[main_job_request_id]->CompleteNow(net::OK);
+  resolver.pending_jobs()[main_job_request_id]->CompleteNow(net::OK);
   EXPECT_TRUE(job_controller_->main_job()->is_waiting());
 
   // Resolve proxy for the alternative job to proceed to create a connection.
   // Use failing HostResolver to fail creation of a QUIC session for the
   // alternative job. The alternative job will thus resume the main job.
-  resolver.pending_requests()[0]->results()->UseNamedProxy("result1:80");
-  resolver.pending_requests()[0]->CompleteNow(net::OK);
+  resolver.pending_jobs()[0]->results()->UseNamedProxy("result1:80");
+  resolver.pending_jobs()[0]->CompleteNow(net::OK);
 
   // Wait until OnStreamFailedCallback is executed on the alternative job.
   // Request shouldn't be notified as the main job is still pending status.

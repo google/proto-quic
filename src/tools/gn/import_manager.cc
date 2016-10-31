@@ -8,6 +8,7 @@
 #include "tools/gn/parse_tree.h"
 #include "tools/gn/scheduler.h"
 #include "tools/gn/scope_per_file_provider.h"
+#include "tools/gn/trace.h"
 
 namespace {
 
@@ -16,6 +17,8 @@ std::unique_ptr<Scope> UncachedImport(const Settings* settings,
                                       const SourceFile& file,
                                       const ParseNode* node_for_err,
                                       Err* err) {
+  ScopedTrace load_trace(TraceItem::TRACE_IMPORT_LOAD, file.value());
+
   const ParseNode* node = g_scheduler->input_file_manager()->SyncLoadFile(
       node_for_err->GetRange(), settings->build_settings(), file, err);
   if (!node)
@@ -87,6 +90,7 @@ bool ImportManager::DoImport(const SourceFile& file,
   // is already processing the import.
   const Scope* import_scope = nullptr;
   {
+    base::TimeTicks import_block_begin = base::TimeTicks::Now();
     base::AutoLock lock(import_info->load_lock);
 
     if (!import_info->scope) {
@@ -98,6 +102,21 @@ bool ImportManager::DoImport(const SourceFile& file,
       if (import_info->load_result.has_error()) {
         *err = import_info->load_result;
         return false;
+      }
+    } else {
+      // Add trace if this thread was blocked for a long period of time and did
+      // not load the import itself.
+      base::TimeTicks import_block_end = base::TimeTicks::Now();
+      constexpr auto kImportBlockTraceThreshold =
+          base::TimeDelta::FromMilliseconds(20);
+      if (TracingEnabled() &&
+          import_block_end - import_block_begin > kImportBlockTraceThreshold) {
+        auto import_block_trace =
+            new TraceItem(TraceItem::TRACE_IMPORT_BLOCK, file.value(),
+                          base::PlatformThread::CurrentId());
+        import_block_trace->set_begin(import_block_begin);
+        import_block_trace->set_end(import_block_end);
+        AddTrace(import_block_trace);
       }
     }
 

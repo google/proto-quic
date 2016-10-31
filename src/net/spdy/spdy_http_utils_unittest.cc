@@ -27,6 +27,7 @@ TEST(SpdyHttpUtilsTest, ConvertRequestPriorityToSpdy3Priority) {
   EXPECT_EQ(2, ConvertRequestPriorityToSpdyPriority(LOW));
   EXPECT_EQ(3, ConvertRequestPriorityToSpdyPriority(LOWEST));
   EXPECT_EQ(4, ConvertRequestPriorityToSpdyPriority(IDLE));
+  EXPECT_EQ(5, ConvertRequestPriorityToSpdyPriority(THROTTLED));
 }
 
 TEST(SpdyHttpUtilsTest, ConvertSpdy3PriorityToRequestPriority) {
@@ -35,9 +36,10 @@ TEST(SpdyHttpUtilsTest, ConvertSpdy3PriorityToRequestPriority) {
   EXPECT_EQ(LOW, ConvertSpdyPriorityToRequestPriority(2));
   EXPECT_EQ(LOWEST, ConvertSpdyPriorityToRequestPriority(3));
   EXPECT_EQ(IDLE, ConvertSpdyPriorityToRequestPriority(4));
+  EXPECT_EQ(THROTTLED, ConvertSpdyPriorityToRequestPriority(5));
   // These are invalid values, but we should still handle them
   // gracefully.
-  for (int i = 5; i < std::numeric_limits<uint8_t>::max(); ++i) {
+  for (int i = 6; i < std::numeric_limits<uint8_t>::max(); ++i) {
     EXPECT_EQ(IDLE, ConvertSpdyPriorityToRequestPriority(i));
   }
 }

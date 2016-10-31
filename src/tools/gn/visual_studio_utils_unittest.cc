@@ -92,3 +92,12 @@ TEST(VisualStudioUtils, ParseCompilerOption) {
   ParseCompilerOption("/Zc:sizedDealloc", &options);
   ASSERT_EQ("/MP /bigobj /Zc:sizedDealloc ", options.additional_options);
 }
+
+TEST(VisualStudioUtils, ParseLinkerOption) {
+  LinkerOptions options;
+  ParseLinkerOption("/SUBSYSTEM:CONSOLE,5.02h", &options);
+  ASSERT_EQ("CONSOLE", options.subsystem);
+
+  ParseLinkerOption("/SUBSYSTEM:WINDOWS", &options);
+  ASSERT_EQ("WINDOWS", options.subsystem);
+}

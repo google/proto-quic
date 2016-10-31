@@ -4,17 +4,16 @@
 
 #include "net/cert/jwk_serializer.h"
 
-#include <openssl/bn.h>
-#include <openssl/bytestring.h>
-#include <openssl/ec.h>
-#include <openssl/ec_key.h>
-#include <openssl/evp.h>
-
 #include "base/base64url.h"
 #include "base/logging.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
 #include "crypto/openssl_util.h"
+#include "third_party/boringssl/src/include/openssl/bn.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/ec.h"
+#include "third_party/boringssl/src/include/openssl/ec_key.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace net {
 

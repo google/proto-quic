@@ -9,10 +9,6 @@
 
 #include <utility>
 
-#include <openssl/bio.h>
-#include <openssl/evp.h>
-#include <openssl/pem.h>
-
 #include "base/callback_helpers.h"
 #include "base/files/file_util.h"
 #include "base/location.h"
@@ -61,6 +57,9 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
+#include "third_party/boringssl/src/include/openssl/bio.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/pem.h"
 
 using net::test::IsError;
 using net::test::IsOk;

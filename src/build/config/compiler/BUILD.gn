@@ -16,9 +16,6 @@ if (current_cpu == "arm" || current_cpu == "arm64") {
 if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
 }
-if (is_win) {
-  import("//build/config/win/visual_studio_version.gni")
-}
 if (is_mac) {
   import("//build/config/mac/symbols.gni")
 }
@@ -904,28 +901,26 @@ config("default_warnings") {
       "/wd4459",
     ]
 
-    if (visual_studio_version == "2015") {
+    cflags += [
+      # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
+      # TODO(brucedawson): fix warnings, crbug.com/554200
+      "/wd4312",
+
+      # TODO(brucedawson): http://crbug.com/593448 - C4595 is an 'illegal
+      # inline operator new' warning that is new in VS 2015 Update 2.
+      # This is equivalent to clang's no-inline-new-delete warning.
+      # See http://bugs.icu-project.org/trac/ticket/11122
+      "/wd4595",
+    ]
+
+    if (current_cpu == "x86") {
       cflags += [
-        # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
-        # TODO(brucedawson): fix warnings, crbug.com/554200
-        "/wd4312",
-
-        # TODO(brucedawson): http://crbug.com/593448 - C4595 is an 'illegal
-        # inline operator new' warning that is new in VS 2015 Update 2.
-        # This is equivalent to clang's no-inline-new-delete warning.
-        # See http://bugs.icu-project.org/trac/ticket/11122
-        "/wd4595",
+        # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
+        # 4267. Example: short TruncTest(size_t x) { return x; }
+        # Since we disable 4244 we need to disable 4267 during migration.
+        # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+        "/wd4267",
       ]
-
-      if (current_cpu == "x86") {
-        cflags += [
-          # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
-          # 4267. Example: short TruncTest(size_t x) { return x; }
-          # Since we disable 4244 we need to disable 4267 during migration.
-          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-          "/wd4267",
-        ]
-      }
     }
 
     # VS xtree header file needs to be patched or 4702 (unreachable code
@@ -938,14 +933,12 @@ config("default_warnings") {
 
     # Building with Clang on Windows is a work in progress and very
     # experimental. See crbug.com/82385.
-    # Keep this in sync with the similar block in build/common.gypi
     if (is_clang) {
       cflags += [
         # TODO(hans): Make this list shorter eventually, http://crbug.com/504657
         "-Wno-microsoft-enum-value",  # http://crbug.com/505296
         "-Wno-unknown-pragmas",  # http://crbug.com/505314
         "-Wno-microsoft-cast",  # http://crbug.com/550065
-        "-Wno-ignored-pragmas",  # http://crbug.com/644841
       ]
     }
   } else {
@@ -1520,7 +1513,7 @@ config("symbols") {
     import("//build/toolchain/goma.gni")
     cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
 
-    if (is_win_fastlink && visual_studio_version != "2013") {
+    if (is_win_fastlink) {
       # Tell VS 2015+ to create a PDB that references debug
       # information in .obj and .lib files instead of copying
       # it all. This flag is incompatible with /PROFILE
@@ -1563,7 +1556,7 @@ config("minimal_symbols") {
   if (is_win) {
     # Linker symbols for backtraces only.
     cflags = []
-    if (is_win_fastlink && visual_studio_version != "2013") {
+    if (is_win_fastlink) {
       # Tell VS 2015+ to create a PDB that references debug
       # information in .obj and .lib files instead of copying
       # it all. This flag is incompatible with /PROFILE

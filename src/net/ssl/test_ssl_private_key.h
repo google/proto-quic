@@ -5,10 +5,9 @@
 #ifndef NET_SSL_TEST_SSL_PLATFORM_KEY_H_
 #define NET_SSL_TEST_SSL_PLATFORM_KEY_H_
 
-#include <openssl/base.h>
-
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
 

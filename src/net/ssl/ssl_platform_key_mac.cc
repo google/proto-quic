@@ -4,15 +4,11 @@
 
 #include "net/ssl/ssl_platform_key.h"
 
+#include <Security/cssm.h>
 #include <Security/SecBase.h>
 #include <Security/SecCertificate.h>
 #include <Security/SecIdentity.h>
 #include <Security/SecKey.h>
-#include <Security/cssm.h>
-#include <openssl/ecdsa.h>
-#include <openssl/mem.h>
-#include <openssl/nid.h>
-#include <openssl/rsa.h>
 
 #include <memory>
 
@@ -32,6 +28,10 @@
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/threaded_ssl_private_key.h"
+#include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/nid.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 namespace net {
 

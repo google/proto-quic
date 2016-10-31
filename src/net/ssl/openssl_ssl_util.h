@@ -7,11 +7,10 @@
 
 #include <stdint.h>
 
-#include <openssl/x509.h>
-
 #include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
 #include "net/log/net_log_parameters_callback.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace crypto {
 class OpenSSLErrStackTracer;

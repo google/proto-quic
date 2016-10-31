@@ -4,10 +4,6 @@
 
 #include "net/ssl/ssl_platform_key_util.h"
 
-#include <openssl/bytestring.h>
-#include <openssl/ec_key.h>
-#include <openssl/evp.h>
-
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
@@ -16,6 +12,9 @@
 #include "crypto/openssl_util.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/x509_certificate.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/ec_key.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace net {
 

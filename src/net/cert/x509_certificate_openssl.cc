@@ -4,15 +4,6 @@
 
 #include "net/cert/x509_certificate.h"
 
-#include <openssl/asn1.h>
-#include <openssl/bytestring.h>
-#include <openssl/crypto.h>
-#include <openssl/obj_mac.h>
-#include <openssl/pem.h>
-#include <openssl/sha.h>
-#include <openssl/ssl.h>
-#include <openssl/x509v3.h>
-
 #include "base/macros.h"
 #include "base/memory/singleton.h"
 #include "base/numerics/safe_conversions.h"
@@ -25,6 +16,14 @@
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_util_openssl.h"
+#include "third_party/boringssl/src/include/openssl/asn1.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/crypto.h"
+#include "third_party/boringssl/src/include/openssl/obj_mac.h"
+#include "third_party/boringssl/src/include/openssl/pem.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
+#include "third_party/boringssl/src/include/openssl/x509v3.h"
 
 #if defined(OS_ANDROID)
 #include "base/logging.h"

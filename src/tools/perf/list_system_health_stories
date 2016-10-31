@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import sys
+
+from core import path_util
+sys.path.insert(1, path_util.GetTelemetryDir())  # To resolve telemetry imports
+
+import page_sets
+
+
+def IterAllSystemHealthStories():
+  for s in page_sets.SystemHealthStorySet(platform='desktop'):
+    yield s
+  for s in page_sets.SystemHealthStorySet(platform='mobile'):
+    if len(s.SUPPORTED_PLATFORMS) < 2:
+      yield s
+
+
+def main():
+  system_health_stories = list(IterAllSystemHealthStories())
+  system_health_stories.sort(key=lambda s: s.name)
+  print '{0:60} {1}'.format('Story name', 'Supported platform')
+  print '-' * 79
+  for s in system_health_stories:
+    p = s.SUPPORTED_PLATFORMS
+    if len(p) == 2:
+      p = 'all'
+    else:
+      p = list(p)[0]
+    print '{0:60} {1}'.format(s.name, p)
+  return 0
+
+
+if __name__ == '__main__':
+  sys.exit(main())

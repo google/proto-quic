@@ -237,14 +237,14 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
   }
 
   // SchedulerWorker::Delegate:
-  void OnMainEntry(SchedulerWorker* worker,
-                   const TimeDelta& detach_duration) override;
+  void OnMainEntry(SchedulerWorker* worker) override;
   scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override;
   void DidRunTaskWithPriority(TaskPriority task_priority,
                               const TimeDelta& task_latency) override;
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override;
   TimeDelta GetSleepTimeout() override;
   bool CanDetach(SchedulerWorker* worker) override;
+  void OnDetach() override;
 
   void RegisterSingleThreadTaskRunner() {
     // No barrier as barriers only affect sequential consistency which is
@@ -267,6 +267,9 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
   // True if the last Sequence returned by GetWork() was extracted from
   // |single_threaded_priority_queue_|.
   bool last_sequence_is_single_threaded_ = false;
+
+  // Time of the last detach.
+  TimeTicks last_detach_time_;
 
   // Time when GetWork() first returned nullptr.
   TimeTicks idle_start_time_;
@@ -447,6 +450,12 @@ void SchedulerWorkerPoolImpl::PostTaskWithSequenceNow(
   }
 }
 
+void SchedulerWorkerPoolImpl::GetHistograms(
+    std::vector<const HistogramBase*>* histograms) const {
+  histograms->push_back(detach_duration_histogram_);
+  histograms->push_back(num_tasks_between_waits_histogram_);
+}
+
 SchedulerWorkerPoolImpl::SchedulerSingleThreadTaskRunner::
     SchedulerSingleThreadTaskRunner(const TaskTraits& traits,
                                     SchedulerWorkerPool* worker_pool,
@@ -481,8 +490,7 @@ SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
     ~SchedulerWorkerDelegateImpl() = default;
 
 void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
-    SchedulerWorker* worker,
-    const TimeDelta& detach_duration) {
+    SchedulerWorker* worker) {
 #if DCHECK_IS_ON()
   // Wait for |outer_->workers_created_| to avoid traversing
   // |outer_->workers_| while it is being filled by Initialize().
@@ -492,13 +500,9 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
 
   DCHECK_EQ(num_tasks_since_last_wait_, 0U);
 
-  // Record histograms if the worker detached in the past.
-  if (!detach_duration.is_max()) {
-    outer_->detach_duration_histogram_->AddTime(detach_duration);
-    outer_->num_tasks_before_detach_histogram_->Add(
-        num_tasks_since_last_detach_);
-    num_tasks_since_last_detach_ = 0;
-    did_detach_since_last_get_work_ = true;
+  if (!last_detach_time_.is_null()) {
+    outer_->detach_duration_histogram_->AddTime(TimeTicks::Now() -
+                                                last_detach_time_);
   }
 
   PlatformThread::SetName(
@@ -525,16 +529,15 @@ SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::GetWork(
   // Record the TaskScheduler.NumTasksBetweenWaits histogram if the
   // SchedulerWorker waited on its WaitableEvent since the last GetWork().
   //
-  // Note: When GetWork() returns nullptr for the first time after returning a
-  // Sequence, SchedulerWorker waits on its WaitableEvent. When the wait stops
-  // (either because WakeUp() was called or because the sleep timeout expired),
-  // GetWork() is called and the histogram is recorded. If GetWork() returns
-  // nullptr again, the SchedulerWorker may detach.
-  // |did_detach_since_last_get_work_| is set to true from OnMainEntry() if the
-  // SchedulerWorker detaches and wakes up again. The next call to GetWork()
-  // won't record the histogram (which is correct since the SchedulerWorker
-  // didn't wait on its WaitableEvent since the last time the histogram was
-  // recorded).
+  // Note: When GetWork() starts returning nullptr, the SchedulerWorker waits on
+  // its WaitableEvent. When it wakes up (either because WakeUp() was called or
+  // because the sleep timeout expired), it calls GetWork() again. The code
+  // below records the histogram and, if GetWork() returns nullptr again, the
+  // SchedulerWorker may detach. If that happens,
+  // |did_detach_since_last_get_work_| is set to true and the next call to
+  // GetWork() won't record the histogram  (which is correct since the
+  // SchedulerWorker didn't wait on its WaitableEvent since the last time the
+  // histogram was recorded).
   if (last_get_work_returned_nullptr_ && !did_detach_since_last_get_work_) {
     outer_->num_tasks_between_waits_histogram_->Add(num_tasks_since_last_wait_);
     num_tasks_since_last_wait_ = 0;
@@ -659,6 +662,14 @@ bool SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::CanDetach(
   return can_detach;
 }
 
+void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnDetach() {
+  DCHECK(!did_detach_since_last_get_work_);
+  outer_->num_tasks_before_detach_histogram_->Add(num_tasks_since_last_detach_);
+  num_tasks_since_last_detach_ = 0;
+  did_detach_since_last_get_work_ = true;
+  last_detach_time_ = TimeTicks::Now();
+}
+
 SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
     StringPiece name,
     SchedulerWorkerPoolParams::IORestriction io_restriction,
@@ -684,10 +695,9 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
           TimeDelta::FromHours(1),
           50,
           HistogramBase::kUmaTargetedHistogramFlag)),
-      // Mimics the UMA_HISTOGRAM_COUNTS_1000 macro. A SchedulerWorker is
-      // expected to run between zero and a few hundreds of tasks before
-      // detaching. When it runs more than 1000 tasks, there is no need to know
-      // the exact number of tasks that ran.
+      // Mimics the UMA_HISTOGRAM_COUNTS_1000 macro. When a worker runs more
+      // than 1000 tasks before detaching, there is no need to know the exact
+      // number of tasks that ran.
       num_tasks_before_detach_histogram_(Histogram::FactoryGet(
           kNumTasksBeforeDetachHistogramPrefix + name_ + kPoolNameSuffix,
           1,

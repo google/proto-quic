@@ -683,8 +683,9 @@ struct FuzzTraits<cc::CompositorFrame> {
 
     switch (RandInRange(2)) {
       case 0: {
-        p->delegated_frame_data.reset(new cc::DelegatedFrameData());
-        if (!FuzzParam(p->delegated_frame_data.get(), fuzzer))
+        if (!FuzzParam(&p->resource_list, fuzzer))
+          return false;
+        if (!FuzzParam(&p->render_pass_list, fuzzer))
           return false;
         return true;
       }
@@ -692,17 +693,6 @@ struct FuzzTraits<cc::CompositorFrame> {
         // Fuzz nothing to handle the no frame case.
         return true;
     }
-  }
-};
-
-template <>
-struct FuzzTraits<cc::DelegatedFrameData> {
-  static bool Fuzz(cc::DelegatedFrameData* p, Fuzzer* fuzzer) {
-    if (!FuzzParam(&p->resource_list, fuzzer))
-      return false;
-    if (!FuzzParam(&p->render_pass_list, fuzzer))
-      return false;
-    return true;
   }
 };
 

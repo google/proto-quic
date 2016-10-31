@@ -314,10 +314,18 @@ class ProxyResolverV8TracingImpl : public ProxyResolverV8Tracing,
   void GetProxyForURL(const GURL& url,
                       ProxyInfo* results,
                       const CompletionCallback& callback,
-                      ProxyResolver::RequestHandle* request,
+                      std::unique_ptr<ProxyResolver::Request>* request,
                       std::unique_ptr<Bindings> bindings) override;
-  void CancelRequest(ProxyResolver::RequestHandle request) override;
-  LoadState GetLoadState(ProxyResolver::RequestHandle request) const override;
+
+  class RequestImpl : public ProxyResolver::Request {
+   public:
+    explicit RequestImpl(scoped_refptr<Job> job);
+    ~RequestImpl() override;
+    LoadState GetLoadState() override;
+
+   private:
+    scoped_refptr<Job> job_;
+  };
 
  private:
   // The worker thread on which the ProxyResolverV8 will be run.
@@ -386,10 +394,16 @@ void Job::Cancel() {
   //     posted after the DNS dependency was resolved and saved to local cache.
   // (f) The script execution completed entirely, and posted a task to the
   //     origin thread to notify the caller.
+  // (g) The job is already completed.
   //
   // |cancelled_| is read on both the origin thread and worker thread. The
   // code that runs on the worker thread is littered with checks on
   // |cancelled_| to break out early.
+
+  // If the job already completed, there is nothing to be cancelled.
+  if (callback_.is_null())
+    return;
+
   cancelled_.Set();
 
   ReleaseCallback();
@@ -935,34 +949,33 @@ ProxyResolverV8TracingImpl::~ProxyResolverV8TracingImpl() {
   thread_.reset();
 }
 
+ProxyResolverV8TracingImpl::RequestImpl::RequestImpl(scoped_refptr<Job> job)
+    : job_(std::move(job)) {}
+
+ProxyResolverV8TracingImpl::RequestImpl::~RequestImpl() {
+  job_->Cancel();
+}
+
+LoadState ProxyResolverV8TracingImpl::RequestImpl::GetLoadState() {
+  return job_->GetLoadState();
+}
+
 void ProxyResolverV8TracingImpl::GetProxyForURL(
     const GURL& url,
     ProxyInfo* results,
     const CompletionCallback& callback,
-    ProxyResolver::RequestHandle* request,
+    std::unique_ptr<ProxyResolver::Request>* request,
     std::unique_ptr<Bindings> bindings) {
   DCHECK(CalledOnValidThread());
   DCHECK(!callback.is_null());
 
   scoped_refptr<Job> job = new Job(job_params_.get(), std::move(bindings));
 
-  if (request)
-    *request = job.get();
+  request->reset(new RequestImpl(job));
 
   job->StartGetProxyForURL(url, results, callback);
 }
 
-void ProxyResolverV8TracingImpl::CancelRequest(
-    ProxyResolver::RequestHandle request) {
-  Job* job = reinterpret_cast<Job*>(request);
-  job->Cancel();
-}
-
-LoadState ProxyResolverV8TracingImpl::GetLoadState(
-    ProxyResolver::RequestHandle request) const {
-  Job* job = reinterpret_cast<Job*>(request);
-  return job->GetLoadState();
-}
 
 class ProxyResolverV8TracingFactoryImpl : public ProxyResolverV8TracingFactory {
  public:

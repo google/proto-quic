@@ -4,6 +4,7 @@ include_rules = [
   "+jni",
   "+mojo/public",
   "+third_party/apple_apsl",
+  "+third_party/boringssl/src/include",
   "+third_party/nss",
   "+third_party/protobuf/src/google/protobuf",
   "+third_party/zlib",

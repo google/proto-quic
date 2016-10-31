@@ -92,7 +92,7 @@ const size_t kOutputSnippetLinesLimit = 5000;
 
 // Limit of output snippet size. Exceeding this limit
 // results in truncating the output and failing the test.
-const size_t kOutputSnippetBytesLimit = 2.5 * 1024 * 1024;
+const size_t kOutputSnippetBytesLimit = 1024 * 1024;
 
 // Set of live launch test processes with corresponding lock (it is allowed
 // for callers to launch processes on different threads).

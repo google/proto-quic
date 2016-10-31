@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 """Framework for stripping whitespace and comments from resource files"""
 
+from os import path
 import subprocess
+import sys
 
 __js_minifier = None
 
@@ -13,8 +15,14 @@ def SetJsMinifier(minifier):
   __js_minifier = minifier.split()
 
 
-def Minify(source, file_type):
+def Minify(source, filename):
+  file_type = path.splitext(filename)[1]
   if not file_type == '.js' or not __js_minifier:
+    return source
+  # TODO (BUG http://crbug/644392) searchbox_api.js uses Chrome extensions so
+  # can't be minified. Remove this when that is fixed.
+  if path.abspath(filename).endswith(
+      '/chrome/renderer/resources/extensions/searchbox_api.js'):
     return source
   p = subprocess.Popen(
       __js_minifier,
@@ -22,9 +30,8 @@ def Minify(source, file_type):
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE)
   (stdout, stderr) = p.communicate(source)
-  if stderr:
-    print stderr
   if p.returncode != 0:
-    print 'Minification failed, using original source'
-    return source
+    print 'Minification failed for %s' % filename
+    print stderr
+    sys.exit(p.returncode)
   return stdout

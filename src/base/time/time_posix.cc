@@ -242,7 +242,6 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   timestruct.tm_zone   = NULL;  // not a POSIX field, so mktime/timegm ignore
 #endif
 
-  int64_t milliseconds;
   SysTime seconds;
 
   // Certain exploded dates do not really exist due to daylight saving times,
@@ -280,6 +279,7 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   // return is the best that can be done here.  It's not ideal, but it's better
   // than failing here or ignoring the overflow case and treating each time
   // overflow as one second prior to the epoch.
+  int64_t milliseconds = 0;
   if (seconds == -1 &&
       (exploded.year < 1969 || exploded.year > 1970)) {
     // If exploded.year is 1969 or 1970, take -1 as correct, with the
@@ -312,13 +312,25 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
       milliseconds += (kMillisecondsPerSecond - 1);
     }
   } else {
-    milliseconds = seconds * kMillisecondsPerSecond + exploded.millisecond;
+    base::CheckedNumeric<int64_t> checked_millis = seconds;
+    checked_millis *= kMillisecondsPerSecond;
+    checked_millis += exploded.millisecond;
+    if (!checked_millis.IsValid()) {
+      *time = base::Time(0);
+      return false;
+    }
+    milliseconds = checked_millis.ValueOrDie();
   }
 
-  // Adjust from Unix (1970) to Windows (1601) epoch.
-  base::Time converted_time =
-      Time((milliseconds * kMicrosecondsPerMillisecond) +
-           kWindowsEpochDeltaMicroseconds);
+  // Adjust from Unix (1970) to Windows (1601) epoch avoiding overflows.
+  base::CheckedNumeric<int64_t> checked_microseconds_win_epoch = milliseconds;
+  checked_microseconds_win_epoch *= kMicrosecondsPerMillisecond;
+  checked_microseconds_win_epoch += kWindowsEpochDeltaMicroseconds;
+  if (!checked_microseconds_win_epoch.IsValid()) {
+    *time = base::Time(0);
+    return false;
+  }
+  base::Time converted_time(checked_microseconds_win_epoch.ValueOrDie());
 
   // If |exploded.day_of_month| is set to 31 on a 28-30 day month, it will
   // return the first day of the next month. Thus round-trip the time and

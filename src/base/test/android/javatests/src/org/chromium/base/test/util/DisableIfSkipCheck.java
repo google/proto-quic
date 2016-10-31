@@ -6,11 +6,10 @@ package org.chromium.base.test.util;
 
 import android.os.Build;
 
-import junit.framework.TestCase;
+import org.junit.runners.model.FrameworkMethod;
 
 import org.chromium.base.Log;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 
 /**
@@ -23,14 +22,12 @@ public class DisableIfSkipCheck extends SkipCheck {
     private static final String TAG = "cr_base_test";
 
     @Override
-    public boolean shouldSkip(TestCase testCase) {
-        Method method = getTestMethod(testCase);
+    public boolean shouldSkip(FrameworkMethod method) {
         if (method == null) return true;
-
         for (DisableIf.Build v : getAnnotations(method, DisableIf.Build.class)) {
             if (abi(v) && hardware(v) && product(v) && sdk(v)) {
                 if (!v.message().isEmpty()) {
-                    Log.i(TAG, "%s is disabled: %s", testCase.toString(), v.message());
+                    Log.i(TAG, "%s is disabled: %s", method.getName(), v.message());
                 }
                 return true;
             }
@@ -39,8 +36,8 @@ public class DisableIfSkipCheck extends SkipCheck {
         for (DisableIf.Device d : getAnnotations(method, DisableIf.Device.class)) {
             for (String deviceType : d.type()) {
                 if (deviceTypeApplies(deviceType)) {
-                    Log.i(TAG, "Test " + testCase.getClass().getName() + "#"
-                            + testCase.getName() + " disabled because of "
+                    Log.i(TAG, "Test " + method.getDeclaringClass().getName() + "#"
+                            + method.getName() + " disabled because of "
                             + d);
                     return true;
                 }

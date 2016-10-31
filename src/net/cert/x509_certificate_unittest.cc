@@ -492,6 +492,32 @@ TEST(X509CertificateTest, ExtractCRLURLsFromDERCert) {
   }
 }
 
+TEST(X509CertificateTest, HasTLSFeatureExtension) {
+  base::FilePath certs_dir = GetTestCertsDirectory();
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "tls_feature_extension.pem");
+  ASSERT_NE(static_cast<X509Certificate*>(NULL), cert.get());
+
+  std::string derBytes;
+  EXPECT_TRUE(
+      X509Certificate::GetDEREncoded(cert->os_cert_handle(), &derBytes));
+
+  EXPECT_TRUE(asn1::HasTLSFeatureExtension(derBytes));
+}
+
+TEST(X509CertificateTest, DoesNotHaveTLSFeatureExtension) {
+  base::FilePath certs_dir = GetTestCertsDirectory();
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, "ok_cert.pem");
+  ASSERT_NE(static_cast<X509Certificate*>(NULL), cert.get());
+
+  std::string derBytes;
+  EXPECT_TRUE(
+      X509Certificate::GetDEREncoded(cert->os_cert_handle(), &derBytes));
+
+  EXPECT_FALSE(asn1::HasTLSFeatureExtension(derBytes));
+}
+
 // Tests X509CertificateCache via X509Certificate::CreateFromHandle.  We
 // call X509Certificate::CreateFromHandle several times and observe whether
 // it returns a cached or new OSCertHandle.

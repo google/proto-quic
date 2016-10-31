@@ -15,6 +15,7 @@ class ToughFiltersCasesPage(page_module.Page):
 class PirateMarkPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
+    action_runner.WaitForNetworkQuiescence()
     with action_runner.CreateInteraction('Filter'):
       action_runner.EvaluateJavaScript(
           'document.getElementById("benchmarkButtonText").click()')

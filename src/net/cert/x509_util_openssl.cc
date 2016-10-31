@@ -5,9 +5,6 @@
 #include "net/cert/x509_util_openssl.h"
 
 #include <limits.h>
-#include <openssl/asn1.h>
-#include <openssl/digest.h>
-#include <openssl/mem.h>
 
 #include <algorithm>
 #include <memory>
@@ -25,6 +22,9 @@
 #include "net/cert/x509_cert_types.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
+#include "third_party/boringssl/src/include/openssl/asn1.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 

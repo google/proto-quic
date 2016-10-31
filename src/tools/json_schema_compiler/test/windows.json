@@ -166,7 +166,7 @@
               "type": {
                 "type": "string",
                 "optional": true,
-                "description": "Specifies what type of browser window to create. The 'panel' type creates a popup unless the '--enable-panels' flag is set.",
+                "description": "Specifies what type of browser window to create.",
                 "enum": ["normal", "popup", "panel"]
               }
             },

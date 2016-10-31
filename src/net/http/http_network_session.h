@@ -50,6 +50,7 @@ class HttpProxyClientSocketPool;
 class HttpResponseBodyDrainer;
 class HttpServerProperties;
 class NetLog;
+class NetworkThrottleManager;
 class ProxyDelegate;
 class ProxyService;
 class QuicClock;
@@ -244,6 +245,9 @@ class NET_EXPORT HttpNetworkSession
   HttpStreamFactory* http_stream_factory_for_websocket() {
     return http_stream_factory_for_websocket_.get();
   }
+  NetworkThrottleManager* throttler() {
+    return network_stream_throttler_.get();
+  }
   NetLog* net_log() {
     return net_log_;
   }
@@ -306,6 +310,7 @@ class NET_EXPORT HttpNetworkSession
   std::unique_ptr<HttpStreamFactory> http_stream_factory_for_websocket_;
   std::map<HttpResponseBodyDrainer*, std::unique_ptr<HttpResponseBodyDrainer>>
       response_drainers_;
+  std::unique_ptr<NetworkThrottleManager> network_stream_throttler_;
 
   NextProtoVector next_protos_;
 

@@ -16,14 +16,26 @@ namespace net {
 namespace nqe {
 namespace internal {
 
+// RTT and throughput values are set to |INVALID_RTT_THROUGHPUT| if a valid
+// value is unavailable.
+// GENERATED_JAVA_ENUM_PACKAGE: org.chromium.net
+enum RttThroughputValues {
+  // Invalid value.
+  INVALID_RTT_THROUGHPUT = -1,
+};
+
 // Returns the RTT value to be used when the valid RTT is unavailable. Readers
 // should discard RTT if it is set to the value returned by |InvalidRTT()|.
+// TODO(tbansal): Remove this method, and replace all calls by
+// |INVALID_RTT_THROUGHPUT|.
 NET_EXPORT_PRIVATE base::TimeDelta InvalidRTT();
 
 // Throughput is set to |kInvalidThroughput| if a valid value is
 // unavailable. Readers should discard throughput value if it is set to
 // |kInvalidThroughput|.
-const int32_t kInvalidThroughput = 0;
+// TODO(tbansal): Remove this variable, and replace all calls by
+// |INVALID_RTT_THROUGHPUT|.
+const int32_t kInvalidThroughput = INVALID_RTT_THROUGHPUT;
 
 // NetworkQuality is used to cache the quality of a network connection.
 class NET_EXPORT_PRIVATE NetworkQuality {

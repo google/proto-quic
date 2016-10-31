@@ -32,18 +32,6 @@ QuicSimpleServerStream::QuicSimpleServerStream(QuicStreamId id,
 
 QuicSimpleServerStream::~QuicSimpleServerStream() {}
 
-void QuicSimpleServerStream::OnInitialHeadersComplete(bool fin,
-                                                      size_t frame_len) {
-  QuicSpdyStream::OnInitialHeadersComplete(fin, frame_len);
-  if (!SpdyUtils::ParseHeaders(decompressed_headers().data(),
-                               decompressed_headers().length(),
-                               &content_length_, &request_headers_)) {
-    DVLOG(1) << "Invalid headers";
-    SendErrorResponse();
-  }
-  MarkHeadersConsumed(decompressed_headers().length());
-}
-
 void QuicSimpleServerStream::OnInitialHeadersComplete(
     bool fin,
     size_t frame_len,
@@ -55,12 +43,6 @@ void QuicSimpleServerStream::OnInitialHeadersComplete(
     SendErrorResponse();
   }
   ConsumeHeaderList();
-}
-
-void QuicSimpleServerStream::OnTrailingHeadersComplete(bool fin,
-                                                       size_t frame_len) {
-  QUIC_BUG << "Server does not support receiving Trailers.";
-  SendErrorResponse();
 }
 
 void QuicSimpleServerStream::OnTrailingHeadersComplete(
@@ -144,9 +126,13 @@ void QuicSimpleServerStream::SendResponse() {
   }
 
   // Find response in cache. If not found, send error response.
-  const QuicInMemoryCache::Response* response =
-      QuicInMemoryCache::GetInstance()->GetResponse(
-          request_headers_[":authority"], request_headers_[":path"]);
+  const QuicInMemoryCache::Response* response = nullptr;
+  auto authority = request_headers_.find(":authority");
+  auto path = request_headers_.find(":path");
+  if (authority != request_headers_.end() && path != request_headers_.end()) {
+    response = QuicInMemoryCache::GetInstance()->GetResponse(authority->second,
+                                                             path->second);
+  }
   if (response == nullptr) {
     DVLOG(1) << "Response not found in cache.";
     SendNotFoundResponse();
@@ -171,9 +157,14 @@ void QuicSimpleServerStream::SendResponse() {
   int response_code;
   const SpdyHeaderBlock& response_headers = response->headers();
   if (!ParseHeaderStatusCode(response_headers, &response_code)) {
-    LOG(WARNING) << "Illegal (non-integer) response :status from cache: "
-                 << response_headers.GetHeader(":status") << " for request "
-                 << request_url;
+    auto status = response_headers.find(":status");
+    if (status == response_headers.end()) {
+      LOG(WARNING) << ":status not present in response from cache for request "
+                   << request_url;
+    } else {
+      LOG(WARNING) << "Illegal (non-integer) response :status from cache: "
+                   << status->second << " for request " << request_url;
+    }
     SendErrorResponse();
     return;
   }

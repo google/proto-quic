@@ -4,13 +4,12 @@
 
 #include "net/quic/core/crypto/p256_key_exchange.h"
 
-#include <openssl/ec.h>
-#include <openssl/ecdh.h>
-#include <openssl/evp.h>
-
 #include <utility>
 
 #include "base/logging.h"
+#include "third_party/boringssl/src/include/openssl/ec.h"
+#include "third_party/boringssl/src/include/openssl/ecdh.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 using base::StringPiece;
 using std::string;

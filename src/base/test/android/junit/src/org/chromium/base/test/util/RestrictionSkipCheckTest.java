@@ -8,11 +8,13 @@ import android.text.TextUtils;
 
 import junit.framework.TestCase;
 
-import org.chromium.testing.local.LocalRobolectricTestRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.robolectric.annotation.Config;
+
+import org.chromium.testing.local.LocalRobolectricTestRunner;
 
 /** Unit tests for RestrictionSkipCheck. */
 @RunWith(LocalRobolectricTestRunner.class)
@@ -122,6 +124,5 @@ public class RestrictionSkipCheckTest {
         Assert.assertFalse(new TestRestrictionSkipCheck().shouldSkip(
                 new ExtendsUnrestrictedClass("unannotatedMethod")));
     }
-
 }
 

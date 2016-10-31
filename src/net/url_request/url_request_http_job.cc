@@ -28,10 +28,15 @@
 #include "net/base/network_delegate.h"
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "net/base/sdch_manager.h"
-#include "net/base/sdch_net_log_params.h"
+#include "net/base/sdch_problem_codes.h"
 #include "net/base/url_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cookies/cookie_store.h"
+#include "net/filter/brotli_source_stream.h"
+#include "net/filter/filter_source_stream.h"
+#include "net/filter/gzip_source_stream.h"
+#include "net/filter/sdch_source_stream.h"
+#include "net/filter/source_stream.h"
 #include "net/http/http_content_disposition.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_request_headers.h"
@@ -63,6 +68,12 @@
 static const char kAvailDictionaryHeader[] = "Avail-Dictionary";
 
 namespace {
+
+const char kDeflate[] = "deflate";
+const char kGZip[] = "gzip";
+const char kSdch[] = "sdch";
+const char kXGZip[] = "x-gzip";
+const char kBrotli[] = "br";
 
 // True if the request method is "safe" (per section 4.2.1 of RFC 7231).
 bool IsMethodSafe(const std::string& method) {
@@ -180,89 +191,6 @@ net::URLRequestRedirectJob* MaybeInternallyRedirect(
 
 namespace net {
 
-class URLRequestHttpJob::HttpFilterContext : public FilterContext {
- public:
-  explicit HttpFilterContext(URLRequestHttpJob* job);
-  ~HttpFilterContext() override;
-
-  // FilterContext implementation.
-  bool GetMimeType(std::string* mime_type) const override;
-  bool GetURL(GURL* gurl) const override;
-  base::Time GetRequestTime() const override;
-  bool IsCachedContent() const override;
-  SdchManager::DictionarySet* SdchDictionariesAdvertised() const override;
-  int64_t GetByteReadCount() const override;
-  int GetResponseCode() const override;
-  const URLRequestContext* GetURLRequestContext() const override;
-  void RecordPacketStats(StatisticSelector statistic) const override;
-  const NetLogWithSource& GetNetLog() const override;
-
- private:
-  URLRequestHttpJob* job_;
-
-  // URLRequestHttpJob may be detached from URLRequest, but we still need to
-  // return something.
-  NetLogWithSource dummy_log_;
-
-  DISALLOW_COPY_AND_ASSIGN(HttpFilterContext);
-};
-
-URLRequestHttpJob::HttpFilterContext::HttpFilterContext(URLRequestHttpJob* job)
-    : job_(job) {
-  DCHECK(job_);
-}
-
-URLRequestHttpJob::HttpFilterContext::~HttpFilterContext() {
-}
-
-bool URLRequestHttpJob::HttpFilterContext::GetMimeType(
-    std::string* mime_type) const {
-  return job_->GetMimeType(mime_type);
-}
-
-bool URLRequestHttpJob::HttpFilterContext::GetURL(GURL* gurl) const {
-  if (!job_->request())
-    return false;
-  *gurl = job_->request()->url();
-  return true;
-}
-
-base::Time URLRequestHttpJob::HttpFilterContext::GetRequestTime() const {
-  return job_->request() ? job_->request()->request_time() : base::Time();
-}
-
-bool URLRequestHttpJob::HttpFilterContext::IsCachedContent() const {
-  return job_->is_cached_content_;
-}
-
-SdchManager::DictionarySet*
-URLRequestHttpJob::HttpFilterContext::SdchDictionariesAdvertised() const {
-  return job_->dictionaries_advertised_.get();
-}
-
-int64_t URLRequestHttpJob::HttpFilterContext::GetByteReadCount() const {
-  return job_->prefilter_bytes_read();
-}
-
-int URLRequestHttpJob::HttpFilterContext::GetResponseCode() const {
-  return job_->GetResponseCode();
-}
-
-const URLRequestContext*
-URLRequestHttpJob::HttpFilterContext::GetURLRequestContext() const {
-  return job_->request() ? job_->request()->context() : NULL;
-}
-
-void URLRequestHttpJob::HttpFilterContext::RecordPacketStats(
-    StatisticSelector statistic) const {
-  job_->RecordPacketStats(statistic);
-}
-
-const NetLogWithSource& URLRequestHttpJob::HttpFilterContext::GetNetLog()
-    const {
-  return job_->request() ? job_->request()->net_log() : dummy_log_;
-}
-
 // TODO(darin): make sure the port blocking code is not lost
 // static
 URLRequestJob* URLRequestHttpJob::Factory(URLRequest* request,
@@ -312,7 +240,6 @@ URLRequestHttpJob::URLRequestHttpJob(
       bytes_observed_in_packets_(0),
       request_time_snapshot_(),
       final_packet_time_(),
-      filter_context_(new HttpFilterContext(this)),
       on_headers_received_callback_(
           base::Bind(&URLRequestHttpJob::OnHeadersReceivedCallback,
                      base::Unretained(this))),
@@ -334,13 +261,13 @@ URLRequestHttpJob::~URLRequestHttpJob() {
   DCHECK(!sdch_test_control_ || !sdch_test_activated_);
   if (!is_cached_content_) {
     if (sdch_test_control_)
-      RecordPacketStats(FilterContext::SDCH_EXPERIMENT_HOLDBACK);
+      RecordPacketStats(SdchPolicyDelegate::SDCH_EXPERIMENT_HOLDBACK);
     if (sdch_test_activated_)
-      RecordPacketStats(FilterContext::SDCH_EXPERIMENT_DECODE);
+      RecordPacketStats(SdchPolicyDelegate::SDCH_EXPERIMENT_DECODE);
   }
-  // Make sure SDCH filters are told to emit histogram data while
-  // filter_context_ is still alive.
-  DestroyFilters();
+  // Make sure SdchSourceStream are told to emit histogram data while |this|
+  // is still alive.
+  DestroySourceStream();
 
   DoneWithRequest(ABORTED);
 }
@@ -448,10 +375,7 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
   if (sdch_manager) {
     SdchProblemCode rv = sdch_manager->IsInSupportedDomain(request()->url());
     if (rv != SDCH_OK) {
-      SdchManager::SdchErrorRecovery(rv);
-      request()->net_log().AddEvent(
-          NetLogEventType::SDCH_DECODING_ERROR,
-          base::Bind(&NetLogSdchResourceProblemCallback, rv));
+      SdchManager::LogSdchProblem(request()->net_log(), rv);
     } else {
       const std::string name = "Get-Dictionary";
       std::string url_text;
@@ -472,13 +396,8 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
         if (sdch_dictionary_url.is_valid() && !is_cached_content_) {
           rv = sdch_manager->OnGetDictionary(request_->url(),
                                              sdch_dictionary_url);
-          if (rv != SDCH_OK) {
-            SdchManager::SdchErrorRecovery(rv);
-            request_->net_log().AddEvent(
-                NetLogEventType::SDCH_DICTIONARY_ERROR,
-                base::Bind(&NetLogSdchDictionaryFetchProblemCallback, rv,
-                           sdch_dictionary_url, false));
-          }
+          if (rv != SDCH_OK)
+            SdchManager::LogSdchProblem(request()->net_log(), rv);
         }
       }
     }
@@ -573,7 +492,12 @@ void URLRequestHttpJob::MaybeStartTransactionInternal(int result) {
     std::string source("delegate");
     request_->net_log().AddEvent(NetLogEventType::CANCELLED,
                                  NetLog::StringCallback("source", &source));
-    NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, result));
+    // Don't call back synchronously to the delegate.
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::Bind(&URLRequestHttpJob::NotifyStartError,
+                   weak_factory_.GetWeakPtr(),
+                   URLRequestStatus(URLRequestStatus::FAILED, result)));
   }
 }
 
@@ -667,10 +591,7 @@ void URLRequestHttpJob::AddExtraHeaders() {
       SdchProblemCode rv = sdch_manager->IsInSupportedDomain(request()->url());
       if (rv != SDCH_OK) {
         advertise_sdch = false;
-        SdchManager::SdchErrorRecovery(rv);
-        request()->net_log().AddEvent(
-            NetLogEventType::SDCH_DECODING_ERROR,
-            base::Bind(&NetLogSdchResourceProblemCallback, rv));
+        SdchManager::LogSdchProblem(request()->net_log(), rv);
       }
     }
     if (advertise_sdch) {
@@ -1156,27 +1077,80 @@ void URLRequestHttpJob::PopulateNetErrorDetails(
   return transaction_->PopulateNetErrorDetails(details);
 }
 
-std::unique_ptr<Filter> URLRequestHttpJob::SetupFilter() const {
+std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
   DCHECK(transaction_.get());
   if (!response_info_)
     return nullptr;
 
-  std::vector<Filter::FilterType> encoding_types;
-  std::string encoding_type;
+  std::unique_ptr<SourceStream> upstream = URLRequestJob::SetUpSourceStream();
   HttpResponseHeaders* headers = GetResponseHeaders();
+  std::string type;
+  std::vector<SourceStream::SourceType> types;
   size_t iter = 0;
-  while (headers->EnumerateHeader(&iter, "Content-Encoding", &encoding_type)) {
-    encoding_types.push_back(Filter::ConvertEncodingToType(encoding_type));
+  while (headers->EnumerateHeader(&iter, "Content-Encoding", &type)) {
+    if (base::LowerCaseEqualsASCII(type, kBrotli)) {
+      types.push_back(SourceStream::TYPE_BROTLI);
+    } else if (base::LowerCaseEqualsASCII(type, kDeflate)) {
+      types.push_back(SourceStream::TYPE_DEFLATE);
+    } else if (base::LowerCaseEqualsASCII(type, kGZip) ||
+               base::LowerCaseEqualsASCII(type, kXGZip)) {
+      types.push_back(SourceStream::TYPE_GZIP);
+    } else if (base::LowerCaseEqualsASCII(type, kSdch)) {
+      types.push_back(SourceStream::TYPE_SDCH);
+    } else {
+      // Unknown encoding type. Pass through raw response body.
+      return upstream;
+    }
   }
 
-  // Even if encoding types are empty, there is a chance that we need to add
-  // some decoding, as some proxies strip encoding completely. In such cases,
-  // we may need to add (for example) SDCH filtering (when the context suggests
-  // it is appropriate).
-  Filter::FixupEncodingTypes(*filter_context_, &encoding_types);
+  // Sdch specific hacks:
+  std::string mime_type;
+  bool success = GetMimeType(&mime_type);
+  DCHECK(success || mime_type.empty());
+  DCHECK(request());
+  SdchPolicyDelegate::FixUpSdchContentEncodings(
+      request()->net_log(), mime_type, dictionaries_advertised_.get(), &types);
 
-  return !encoding_types.empty()
-      ? Filter::Factory(encoding_types, *filter_context_) : NULL;
+  for (std::vector<SourceStream::SourceType>::reverse_iterator r_iter =
+           types.rbegin();
+       r_iter != types.rend(); ++r_iter) {
+    std::unique_ptr<FilterSourceStream> downstream;
+    SourceStream::SourceType type = *r_iter;
+    switch (type) {
+      case SourceStream::TYPE_BROTLI:
+        downstream = CreateBrotliSourceStream(std::move(upstream));
+        break;
+      case SourceStream::TYPE_SDCH:
+      case SourceStream::TYPE_SDCH_POSSIBLE: {
+        if (request()->context()->sdch_manager()) {
+          GURL url = request()->url();
+          std::unique_ptr<SdchPolicyDelegate> delegate(new SdchPolicyDelegate(
+              type == SourceStream::TYPE_SDCH_POSSIBLE, this, mime_type, url,
+              is_cached_content_, request()->context()->sdch_manager(),
+              std::move(dictionaries_advertised_), GetResponseCode(),
+              request()->net_log()));
+          downstream.reset(new SdchSourceStream(std::move(upstream),
+                                                std::move(delegate), type));
+        }
+        break;
+      }
+      case SourceStream::TYPE_GZIP:
+      case SourceStream::TYPE_DEFLATE:
+      case SourceStream::TYPE_GZIP_FALLBACK:
+        downstream = GzipSourceStream::Create(std::move(upstream), type);
+        break;
+      case SourceStream::TYPE_NONE:
+      case SourceStream::TYPE_INVALID:
+      case SourceStream::TYPE_MAX:
+        NOTREACHED();
+        return nullptr;
+    }
+    if (downstream == nullptr)
+      return nullptr;
+    upstream = std::move(downstream);
+  }
+
+  return upstream;
 }
 
 bool URLRequestHttpJob::CopyFragmentOnRedirect(const GURL& location) const {
@@ -1470,35 +1444,34 @@ void URLRequestHttpJob::UpdatePacketReadTimes() {
 }
 
 void URLRequestHttpJob::RecordPacketStats(
-    FilterContext::StatisticSelector statistic) const {
+    SdchPolicyDelegate::StatisticSelector statistic) const {
   if (!packet_timing_enabled_ || (final_packet_time_ == base::Time()))
     return;
 
   base::TimeDelta duration = final_packet_time_ - request_time_snapshot_;
   switch (statistic) {
-    case FilterContext::SDCH_DECODE: {
+    case SdchPolicyDelegate::StatisticSelector::SDCH_DECODE: {
       UMA_HISTOGRAM_CUSTOM_COUNTS("Sdch3.Network_Decode_Bytes_Processed_b",
-          static_cast<int>(bytes_observed_in_packets_), 500, 100000, 100);
+                                  static_cast<int>(bytes_observed_in_packets_),
+                                  500, 100000, 100);
       return;
     }
-    case FilterContext::SDCH_PASSTHROUGH: {
+    case SdchPolicyDelegate::StatisticSelector::SDCH_PASSTHROUGH: {
       // Despite advertising a dictionary, we handled non-sdch compressed
       // content.
       return;
     }
 
-    case FilterContext::SDCH_EXPERIMENT_DECODE: {
-      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Decode",
-                                  duration,
-                                  base::TimeDelta::FromMilliseconds(20),
-                                  base::TimeDelta::FromMinutes(10), 100);
+    case SdchPolicyDelegate::SDCH_EXPERIMENT_DECODE: {
+      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Decode", duration,
+                                 base::TimeDelta::FromMilliseconds(20),
+                                 base::TimeDelta::FromMinutes(10), 100);
       return;
     }
-    case FilterContext::SDCH_EXPERIMENT_HOLDBACK: {
-      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Holdback",
-                                  duration,
-                                  base::TimeDelta::FromMilliseconds(20),
-                                  base::TimeDelta::FromMinutes(10), 100);
+    case SdchPolicyDelegate::SDCH_EXPERIMENT_HOLDBACK: {
+      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Holdback", duration,
+                                 base::TimeDelta::FromMilliseconds(20),
+                                 base::TimeDelta::FromMinutes(10), 100);
       return;
     }
     default:

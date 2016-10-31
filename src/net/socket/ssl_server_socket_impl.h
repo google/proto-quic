@@ -5,7 +5,6 @@
 #ifndef NET_SOCKET_SSL_SERVER_SOCKET_IMPL_H_
 #define NET_SOCKET_SSL_SERVER_SOCKET_IMPL_H_
 
-#include <openssl/base.h>
 #include <stdint.h>
 
 #include <memory>
@@ -15,6 +14,7 @@
 #include "net/base/io_buffer.h"
 #include "net/socket/ssl_server_socket.h"
 #include "net/ssl/ssl_server_config.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
 

@@ -93,6 +93,14 @@ class BrotliSourceStream : public FilterSourceStream {
                  int input_buffer_size,
                  int* consumed_bytes,
                  bool /*upstream_eof_reached*/) override {
+    if (decoding_status_ == DecodingStatus::DECODING_DONE) {
+      *consumed_bytes = input_buffer_size;
+      return OK;
+    }
+
+    if (decoding_status_ != DecodingStatus::DECODING_IN_PROGRESS)
+      return ERR_CONTENT_DECODING_FAILED;
+
     const uint8_t* next_in = bit_cast<uint8_t*>(input_buffer->data());
     size_t available_in = input_buffer_size;
     uint8_t* next_out = bit_cast<uint8_t*>(output_buffer->data());
@@ -125,6 +133,9 @@ class BrotliSourceStream : public FilterSourceStream {
         return bytes_written;
       case BROTLI_RESULT_SUCCESS:
         decoding_status_ = DecodingStatus::DECODING_DONE;
+        // Consume remaining bytes to avoid DCHECK in FilterSourceStream.
+        // See crbug.com/659311.
+        *consumed_bytes = input_buffer_size;
         return bytes_written;
       case BROTLI_RESULT_NEEDS_MORE_INPUT:
         // Decompress needs more input has consumed all existing input.

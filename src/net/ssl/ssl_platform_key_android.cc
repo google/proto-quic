@@ -4,10 +4,6 @@
 
 #include "net/ssl/ssl_platform_key_android.h"
 
-#include <openssl/ecdsa.h>
-#include <openssl/mem.h>
-#include <openssl/nid.h>
-#include <openssl/rsa.h>
 #include <strings.h>
 
 #include <memory>
@@ -27,6 +23,10 @@
 #include "net/ssl/ssl_platform_key.h"
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/threaded_ssl_private_key.h"
+#include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/nid.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 using base::android::JavaRef;
 using base::android::ScopedJavaGlobalRef;

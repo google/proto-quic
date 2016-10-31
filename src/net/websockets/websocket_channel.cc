@@ -175,6 +175,10 @@ class WebSocketChannel::ConnectDelegate
  public:
   explicit ConnectDelegate(WebSocketChannel* creator) : creator_(creator) {}
 
+  void OnCreateRequest(net::URLRequest* request) override {
+    creator_->OnCreateURLRequest(request);
+  }
+
   void OnSuccess(std::unique_ptr<WebSocketStream> stream) override {
     creator_->OnConnectSuccess(std::move(stream));
     // |this| may have been deleted.
@@ -601,6 +605,10 @@ void WebSocketChannel::SendAddChannelRequestWithSuppliedCallback(
                                  url_request_context_, NetLogWithSource(),
                                  std::move(connect_delegate));
   SetState(CONNECTING);
+}
+
+void WebSocketChannel::OnCreateURLRequest(URLRequest* request) {
+  event_interface_->OnCreateURLRequest(request);
 }
 
 void WebSocketChannel::OnConnectSuccess(

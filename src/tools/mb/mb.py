@@ -45,6 +45,8 @@ class MetaBuildWrapper(object):
     self.chromium_src_dir = CHROMIUM_SRC_DIR
     self.default_config = os.path.join(self.chromium_src_dir, 'tools', 'mb',
                                        'mb_config.pyl')
+    self.default_isolate_map = os.path.join(self.chromium_src_dir, 'testing',
+                                            'buildbot', 'gn_isolate_map.pyl')
     self.executable = sys.executable
     self.platform = sys.platform
     self.sep = os.sep
@@ -85,7 +87,11 @@ class MetaBuildWrapper(object):
       subp.add_argument('-f', '--config-file', metavar='PATH',
                         default=self.default_config,
                         help='path to config file '
-                            '(default is //tools/mb/mb_config.pyl)')
+                             '(default is %(default)s)')
+      subp.add_argument('-i', '--isolate-map-file', metavar='PATH',
+                        default=self.default_isolate_map,
+                        help='path to isolate map file '
+                             '(default is %(default)s)')
       subp.add_argument('-g', '--goma-dir',
                         help='path to goma directory')
       subp.add_argument('--gyp-script', metavar='PATH',
@@ -126,8 +132,7 @@ class MetaBuildWrapper(object):
                                  'each builder as a JSON object')
     subp.add_argument('-f', '--config-file', metavar='PATH',
                       default=self.default_config,
-                      help='path to config file '
-                          '(default is //tools/mb/mb_config.pyl)')
+                      help='path to config file (default is %(default)s)')
     subp.add_argument('-g', '--goma-dir',
                       help='path to goma directory')
     subp.set_defaults(func=self.CmdExport)
@@ -203,16 +208,14 @@ class MetaBuildWrapper(object):
                             help='validate the config file')
     subp.add_argument('-f', '--config-file', metavar='PATH',
                       default=self.default_config,
-                      help='path to config file '
-                          '(default is //tools/mb/mb_config.pyl)')
+                      help='path to config file (default is %(default)s)')
     subp.set_defaults(func=self.CmdValidate)
 
     subp = subps.add_parser('audit',
                             help='Audit the config file to track progress')
     subp.add_argument('-f', '--config-file', metavar='PATH',
                       default=self.default_config,
-                      help='path to config file '
-                          '(default is //tools/mb/mb_config.pyl)')
+                      help='path to config file (default is %(default)s)')
     subp.add_argument('-i', '--internal', action='store_true',
                       help='check internal masters also')
     subp.add_argument('-m', '--master', action='append',
@@ -671,8 +674,14 @@ class MetaBuildWrapper(object):
     self.mixins = contents['mixins']
 
   def ReadIsolateMap(self):
-    return ast.literal_eval(self.ReadFile(self.PathJoin(
-        self.chromium_src_dir, 'testing', 'buildbot', 'gn_isolate_map.pyl')))
+    if not self.Exists(self.args.isolate_map_file):
+      raise MBErr('isolate map file not found at %s' %
+                  self.args.isolate_map_file)
+    try:
+      return ast.literal_eval(self.ReadFile(self.args.isolate_map_file))
+    except SyntaxError as e:
+      raise MBErr('Failed to parse isolate map file "%s": %s' %
+                  (self.args.isolate_map_file, e))
 
   def ConfigFromArgs(self):
     if self.args.config:

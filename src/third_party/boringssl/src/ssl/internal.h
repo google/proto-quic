@@ -269,7 +269,7 @@ size_t ssl_cipher_get_record_split_len(const SSL_CIPHER *cipher);
 
 /* SSL_AEAD_CTX contains information about an AEAD that is being used to encrypt
  * an SSL connection. */
-struct ssl_aead_ctx_st {
+typedef struct ssl_aead_ctx_st {
   const SSL_CIPHER *cipher;
   EVP_AEAD_CTX ctx;
   /* fixed_nonce contains any bytes of the nonce that are fixed for all
@@ -294,7 +294,7 @@ struct ssl_aead_ctx_st {
   /* xor_fixed_nonce is non-zero if the fixed nonce should be XOR'd into the
    * variable nonce rather than prepended. */
   char xor_fixed_nonce;
-} /* SSL_AEAD_CTX */;
+} SSL_AEAD_CTX;
 
 /* SSL_AEAD_CTX_new creates a newly-allocated |SSL_AEAD_CTX| using the supplied
  * key material. It returns NULL on error. Only one of |SSL_AEAD_CTX_open| or
@@ -557,9 +557,11 @@ int ssl3_update_handshake_hash(SSL *ssl, const uint8_t *in, size_t in_len);
 
 /* ECDH groups. */
 
+typedef struct ssl_ecdh_ctx_st SSL_ECDH_CTX;
+
 /* An SSL_ECDH_METHOD is an implementation of ECDH-like key exchanges for
  * TLS. */
-struct ssl_ecdh_method_st {
+typedef struct ssl_ecdh_method_st {
   int nid;
   uint16_t group_id;
   const char name[8];
@@ -599,7 +601,12 @@ struct ssl_ecdh_method_st {
    * be passed to |offer| or |accept|. It returns one on success and zero on
    * error. */
   int (*add_key)(CBB *cbb, CBB *out_contents);
-} /* SSL_ECDH_METHOD */;
+} SSL_ECDH_METHOD;
+
+struct ssl_ecdh_ctx_st {
+  const SSL_ECDH_METHOD *method;
+  void *data;
+};
 
 /* ssl_nid_to_group_id looks up the group corresponding to |nid|. On success, it
  * sets |*out_group_id| to the group ID and returns one. Otherwise, it returns
@@ -878,10 +885,11 @@ enum ssl_hs_wait_t {
   ssl_hs_flush,
   ssl_hs_flush_and_read_message,
   ssl_hs_x509_lookup,
+  ssl_hs_channel_id_lookup,
   ssl_hs_private_key_operation,
 };
 
-struct ssl_handshake_st {
+typedef struct ssl_handshake_st {
   /* wait contains the operation |do_handshake| is currently blocking on or
    * |ssl_hs_ok| if none. */
   enum ssl_hs_wait_t wait;
@@ -1004,7 +1012,7 @@ struct ssl_handshake_st {
    * received in a CertificateRequest message. */
   uint8_t *certificate_types;
   size_t num_certificate_types;
-} /* SSL_HANDSHAKE */;
+} SSL_HANDSHAKE;
 
 SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl));
 
@@ -1060,6 +1068,21 @@ int ssl_add_client_hello_body(SSL *ssl, CBB *body);
  * should be called once the version is known to be TLS 1.2 or earlier. */
 void ssl_clear_tls13_state(SSL *ssl);
 
+enum ssl_cert_verify_context_t {
+  ssl_cert_verify_server,
+  ssl_cert_verify_client,
+  ssl_cert_verify_channel_id,
+};
+
+/* tls13_get_cert_verify_signature_input generates the message to be signed for
+ * TLS 1.3's CertificateVerify message. |cert_verify_context| determines the
+ * type of signature. It sets |*out| and |*out_len| to a newly allocated buffer
+ * containing the result. The caller must free it with |OPENSSL_free| to release
+ * it. This function returns one on success and zero on failure. */
+int tls13_get_cert_verify_signature_input(
+    SSL *ssl, uint8_t **out, size_t *out_len,
+    enum ssl_cert_verify_context_t cert_verify_context);
+
 
 /* SSLKEYLOGFILE functions. */
 
@@ -1109,6 +1132,27 @@ enum ssl_grease_index_t {
  * same ClientHello be sent twice for a HelloRetryRequest or the same group be
  * advertised in both supported_groups and key_shares. */
 uint16_t ssl_get_grease_value(const SSL *ssl, enum ssl_grease_index_t index);
+
+
+/* Signature algorithms. */
+
+/* tls1_parse_peer_sigalgs parses |sigalgs| as the list of peer signature
+ * algorithms and them on |ssl|. It returns one on success and zero on error. */
+int tls1_parse_peer_sigalgs(SSL *ssl, const CBS *sigalgs);
+
+/* tls1_choose_signature_algorithm sets |*out| to a signature algorithm for use
+ * with |ssl|'s private key based on the peer's preferences and the algorithms
+ * supported. It returns one on success and zero on error. */
+int tls1_choose_signature_algorithm(SSL *ssl, uint16_t *out);
+
+/* tls12_get_verify_sigalgs sets |*out| to the signature algorithms acceptable
+ * for the peer signature and returns the length of the list. */
+size_t tls12_get_verify_sigalgs(const SSL *ssl, const uint16_t **out);
+
+/* tls12_check_peer_sigalg checks if |sigalg| is acceptable for the peer
+ * signature. It returns one on success and zero on error, setting |*out_alert|
+ * to an alert to send. */
+int tls12_check_peer_sigalg(SSL *ssl, int *out_alert, uint16_t sigalg);
 
 
 /* Underdocumented functions.
@@ -1250,7 +1294,7 @@ struct ssl_protocol_method_st {
 
 /* This is for the SSLv3/TLSv1.0 differences in crypto/hash stuff It is a bit
  * of a mess of functions, but hell, think of it as an opaque structure. */
-struct ssl3_enc_method {
+typedef struct ssl3_enc_method {
   /* prf computes the PRF function for |ssl|. It writes |out_len| bytes to
    * |out|, using |secret| as the secret and |label| as the label. |seed1| and
    * |seed2| are concatenated to form the seed parameter. It returns one on
@@ -1260,7 +1304,208 @@ struct ssl3_enc_method {
              size_t label_len, const uint8_t *seed1, size_t seed1_len,
              const uint8_t *seed2, size_t seed2_len);
   int (*final_finish_mac)(SSL *ssl, int from_server, uint8_t *out);
+} SSL3_ENC_METHOD;
+
+typedef struct ssl3_record_st {
+  /* type is the record type. */
+  uint8_t type;
+  /* length is the number of unconsumed bytes in the record. */
+  uint16_t length;
+  /* data is a non-owning pointer to the first unconsumed byte of the record. */
+  uint8_t *data;
+} SSL3_RECORD;
+
+typedef struct ssl3_buffer_st {
+  /* buf is the memory allocated for this buffer. */
+  uint8_t *buf;
+  /* offset is the offset into |buf| which the buffer contents start at. */
+  uint16_t offset;
+  /* len is the length of the buffer contents from |buf| + |offset|. */
+  uint16_t len;
+  /* cap is how much memory beyond |buf| + |offset| is available. */
+  uint16_t cap;
+} SSL3_BUFFER;
+
+/* An ssl_shutdown_t describes the shutdown state of one end of the connection,
+ * whether it is alive or has been shutdown via close_notify or fatal alert. */
+enum ssl_shutdown_t {
+  ssl_shutdown_none = 0,
+  ssl_shutdown_close_notify = 1,
+  ssl_shutdown_fatal_alert = 2,
 };
+
+typedef struct ssl3_state_st {
+  uint8_t read_sequence[8];
+  uint8_t write_sequence[8];
+
+  uint8_t server_random[SSL3_RANDOM_SIZE];
+  uint8_t client_random[SSL3_RANDOM_SIZE];
+
+  /* have_version is true if the connection's final version is known. Otherwise
+   * the version has not been negotiated yet. */
+  unsigned have_version:1;
+
+  /* v2_hello_done is true if the peer's V2ClientHello, if any, has been handled
+   * and future messages should use the record layer. */
+  unsigned v2_hello_done:1;
+
+  /* initial_handshake_complete is true if the initial handshake has
+   * completed. */
+  unsigned initial_handshake_complete:1;
+
+  /* read_buffer holds data from the transport to be processed. */
+  SSL3_BUFFER read_buffer;
+  /* write_buffer holds data to be written to the transport. */
+  SSL3_BUFFER write_buffer;
+
+  SSL3_RECORD rrec; /* each decoded record goes in here */
+
+  /* partial write - check the numbers match */
+  unsigned int wnum; /* number of bytes sent so far */
+  int wpend_tot;     /* number bytes written */
+  int wpend_type;
+  int wpend_ret; /* number of bytes submitted */
+  const uint8_t *wpend_buf;
+
+  /* handshake_buffer, if non-NULL, contains the handshake transcript. */
+  BUF_MEM *handshake_buffer;
+  /* handshake_hash, if initialized with an |EVP_MD|, maintains the handshake
+   * hash. For TLS 1.1 and below, it is the SHA-1 half. */
+  EVP_MD_CTX handshake_hash;
+  /* handshake_md5, if initialized with an |EVP_MD|, maintains the MD5 half of
+   * the handshake hash for TLS 1.1 and below. */
+  EVP_MD_CTX handshake_md5;
+
+  /* recv_shutdown is the shutdown state for the receive half of the
+   * connection. */
+  enum ssl_shutdown_t recv_shutdown;
+
+  /* recv_shutdown is the shutdown state for the send half of the connection. */
+  enum ssl_shutdown_t send_shutdown;
+
+  int alert_dispatch;
+  uint8_t send_alert[2];
+
+  int total_renegotiations;
+
+  /* empty_record_count is the number of consecutive empty records received. */
+  uint8_t empty_record_count;
+
+  /* warning_alert_count is the number of consecutive warning alerts
+   * received. */
+  uint8_t warning_alert_count;
+
+  /* key_update_count is the number of consecutive KeyUpdates received. */
+  uint8_t key_update_count;
+
+  /* aead_read_ctx is the current read cipher state. */
+  SSL_AEAD_CTX *aead_read_ctx;
+
+  /* aead_write_ctx is the current write cipher state. */
+  SSL_AEAD_CTX *aead_write_ctx;
+
+  /* enc_method is the method table corresponding to the current protocol
+   * version. */
+  const SSL3_ENC_METHOD *enc_method;
+
+  /* pending_message is the current outgoing handshake message. */
+  uint8_t *pending_message;
+  uint32_t pending_message_len;
+
+  /* hs is the handshake state for the current handshake or NULL if there isn't
+   * one. */
+  SSL_HANDSHAKE *hs;
+
+  uint8_t write_traffic_secret[EVP_MAX_MD_SIZE];
+  uint8_t write_traffic_secret_len;
+  uint8_t read_traffic_secret[EVP_MAX_MD_SIZE];
+  uint8_t read_traffic_secret_len;
+  uint8_t exporter_secret[EVP_MAX_MD_SIZE];
+  uint8_t exporter_secret_len;
+
+  /* State pertaining to the pending handshake.
+   *
+   * TODO(davidben): Move everything not needed after the handshake completes to
+   * |hs| and remove this. */
+  struct {
+    int message_type;
+
+    /* used to hold the new cipher we are going to use */
+    const SSL_CIPHER *new_cipher;
+
+    /* used when SSL_ST_FLUSH_DATA is entered */
+    int next_state;
+
+    int reuse_message;
+
+    uint8_t *key_block;
+    uint8_t key_block_length;
+
+    uint8_t new_mac_secret_len;
+    uint8_t new_key_len;
+    uint8_t new_fixed_iv_len;
+
+    /* extended_master_secret indicates whether the extended master secret
+     * computation is used in this handshake. Note that this is different from
+     * whether it was used for the current session. If this is a resumption
+     * handshake then EMS might be negotiated in the client and server hello
+     * messages, but it doesn't matter if the session that's being resumed
+     * didn't use it to create the master secret initially. */
+    char extended_master_secret;
+
+    /* peer_signature_algorithm is the signature algorithm used to authenticate
+     * the peer, or zero if not applicable. */
+    uint16_t peer_signature_algorithm;
+  } tmp;
+
+  /* new_session is the new mutable session being established by the current
+   * handshake. It should not be cached. */
+  SSL_SESSION *new_session;
+
+  /* established_session is the session established by the connection. This
+   * session is only filled upon the completion of the handshake and is
+   * immutable. */
+  SSL_SESSION *established_session;
+
+  /* session_reused indicates whether a session was resumed. */
+  unsigned session_reused:1;
+
+  /* Connection binding to prevent renegotiation attacks */
+  uint8_t previous_client_finished[12];
+  uint8_t previous_client_finished_len;
+  uint8_t previous_server_finished[12];
+  uint8_t previous_server_finished_len;
+  int send_connection_binding;
+
+  /* Next protocol negotiation. For the client, this is the protocol that we
+   * sent in NextProtocol and is set when handling ServerHello extensions.
+   *
+   * For a server, this is the client's selected_protocol from NextProtocol and
+   * is set when handling the NextProtocol message, before the Finished
+   * message. */
+  uint8_t *next_proto_negotiated;
+  size_t next_proto_negotiated_len;
+
+  /* ALPN information
+   * (we are in the process of transitioning from NPN to ALPN.) */
+
+  /* In a server these point to the selected ALPN protocol after the
+   * ClientHello has been processed. In a client these contain the protocol
+   * that the server selected once the ServerHello has been processed. */
+  uint8_t *alpn_selected;
+  size_t alpn_selected_len;
+
+  /* In a client, this means that the server supported Channel ID and that a
+   * Channel ID was sent. In a server it means that we echoed support for
+   * Channel IDs and that tlsext_channel_id will be valid after the
+   * handshake. */
+  char tlsext_channel_id_valid;
+  /* For a server:
+   *     If |tlsext_channel_id_valid| is true, then this contains the
+   *     verified Channel ID from the client: a P256 point, (x,y), where
+   *     each are big-endian values. */
+  uint8_t tlsext_channel_id[64];
+} SSL3_STATE;
 
 /* lengths of messages */
 #define DTLS1_COOKIE_LENGTH 256
@@ -1457,6 +1702,11 @@ int ssl3_read_handshake_bytes(SSL *ssl, uint8_t *buf, int len);
 int ssl3_write_app_data(SSL *ssl, const void *buf, int len);
 int ssl3_write_bytes(SSL *ssl, int type, const void *buf, int len);
 int ssl3_output_cert_chain(SSL *ssl);
+
+/* ssl_is_valid_cipher checks that |cipher| is valid according to the current
+ * server configuration in |ssl|. It returns 1 if valid, and 0 otherwise. */
+int ssl_is_valid_cipher(SSL *ssl, const SSL_CIPHER *cipher);
+
 const SSL_CIPHER *ssl3_choose_cipher(
     SSL *ssl, const struct ssl_early_callback_ctx *client_hello,
     const struct ssl_cipher_preference_list_st *srvr);
@@ -1586,12 +1836,28 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
                        size_t ticket_len, const uint8_t *session_id,
                        size_t session_id_len);
 
+/* tls1_verify_channel_id processes the current message as a Channel ID message,
+ * and verifies the signature. If the key is valid, it saves the Channel ID and
+ * returns one. Otherwise, it returns zero. */
+int tls1_verify_channel_id(SSL *ssl);
+
+/* tls1_write_channel_id generates a Channel ID message and puts the output in
+ * |cbb|. |ssl->tlsext_channel_id_private| must already be set before calling.
+ * This function returns one on success and zero on error. */
+int tls1_write_channel_id(SSL *ssl, CBB *cbb);
+
 /* tls1_channel_id_hash computes the hash to be signed by Channel ID and writes
  * it to |out|, which must contain at least |EVP_MAX_MD_SIZE| bytes. It returns
  * one on success and zero on failure. */
 int tls1_channel_id_hash(SSL *ssl, uint8_t *out, size_t *out_len);
 
 int tls1_record_handshake_hashes_for_channel_id(SSL *ssl);
+
+/* ssl_do_channel_id_callback checks runs |ssl->ctx->channel_id_cb| if
+ * necessary. It returns one on success and zero on fatal error. Note that, on
+ * success, |ssl->tlsext_channel_id_private| may be unset, in which case the
+ * operation should be retried later. */
+int ssl_do_channel_id_callback(SSL *ssl);
 
 /* ssl3_can_false_start returns one if |ssl| is allowed to False Start and zero
  * otherwise. */
@@ -1611,20 +1877,7 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
 uint16_t ssl3_protocol_version(const SSL *ssl);
 
 uint32_t ssl_get_algorithm_prf(const SSL *ssl);
-int tls1_parse_peer_sigalgs(SSL *ssl, const CBS *sigalgs);
 
-/* tls1_choose_signature_algorithm sets |*out| to a signature algorithm for use
- * with |ssl|'s private key based on the peer's preferences and the digests
- * supported. It returns one on success and zero on error. */
-int tls1_choose_signature_algorithm(SSL *ssl, uint16_t *out);
-
-size_t tls12_get_psigalgs(SSL *ssl, const uint16_t **psigs);
-
-/* tls12_check_peer_sigalg checks that |signature_algorithm| is consistent with
- * |ssl|'s sent, supported signature algorithms and returns 1. Otherwise it
- * returns 0 and writes an alert into |*out_alert|. */
-int tls12_check_peer_sigalg(SSL *ssl, int *out_alert,
-                            uint16_t signature_algorithm);
 void ssl_set_client_disabled(SSL *ssl);
 
 void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock);

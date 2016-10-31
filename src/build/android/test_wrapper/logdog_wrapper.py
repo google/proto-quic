@@ -8,6 +8,7 @@
 import argparse
 import logging
 import os
+import signal
 import subprocess
 import sys
 import urllib
@@ -39,13 +40,27 @@ def CreateUrl(server, project, prefix, name):
   return 'https://%s/v/?s=%s' % (server, urllib.quote_plus(stream_name))
 
 
+def CreateSignalForwarder(proc):
+  def handler(signum, _frame):
+    logging.error('Forwarding signal %s to test process', str(signum))
+    proc.send_signal(signum)
+
+  return handler
+
+
 def main():
   parser = CommandParser()
   args, test_cmd = parser.parse_known_args(sys.argv[1:])
   logging.basicConfig(level=logging.INFO)
   if not test_cmd:
     parser.error('Must specify command to run after the logdog flags')
-  result = subprocess.call(test_cmd)
+  test_proc = subprocess.Popen(test_cmd)
+  original_sigterm_handler = signal.signal(
+      signal.SIGTERM, CreateSignalForwarder(test_proc))
+  try:
+    result = test_proc.wait()
+  finally:
+    signal.signal(signal.SIGTERM, original_sigterm_handler)
   if '${SWARMING_TASK_ID}' in args.prefix:
     args.prefix = args.prefix.replace('${SWARMING_TASK_ID}',
                                       os.environ.get('SWARMING_TASK_ID'))

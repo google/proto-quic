@@ -57,6 +57,11 @@ TEST(CPU, RunExtendedInstructions) {
     __asm__ __volatile__("crc32 %%eax, %%eax\n" : : : "eax");
   }
 
+  if (cpu.has_popcnt()) {
+    // Execute a POPCNT instruction.
+    __asm__ __volatile__("popcnt %%eax, %%eax\n" : : : "eax");
+  }
+
   if (cpu.has_avx()) {
     // Execute an AVX instruction.
     __asm__ __volatile__("vzeroupper\n" : : : "xmm0");
@@ -98,6 +103,11 @@ TEST(CPU, RunExtendedInstructions) {
   if (cpu.has_sse42()) {
     // Execute an SSE 4.2 instruction.
     __asm crc32 eax, eax;
+  }
+
+  if (cpu.has_popcnt()) {
+    // Execute a POPCNT instruction.
+    __asm popcnt eax, eax;
   }
 
 // Visual C 2012 required for AVX.

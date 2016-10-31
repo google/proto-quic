@@ -130,6 +130,7 @@
       'CrWinGoma(dll)': 'shared_release_bot_x86',
       'ClangToTAndroidASan': 'android_clang_tot_asan',
       'ClangToTAndroid (dbg)': 'android_clang_tot_dbg',
+      'ClangToTAndroid x64': 'android_clang_tot_x64',
       'ClangToTLinux': 'clang_tot_linux_full_symbols_shared_release',
       'ClangToTLinux (dbg)': 'clang_tot_shared_debug',
       'ClangToTLinuxASan': 'clang_tot_asan_lsan_static_release',
@@ -189,6 +190,7 @@
       'WebKit Linux - WPTServe': 'release_bot',
       'WebKit Mac - WPTServe': 'release_bot',
       'WebKit Win - WPTServe': 'release_bot_x86',
+      'WebKit Linux - RandomOrder': 'release_bot',
       'Win 10 Fast Ring': 'release_trybot',
       'Windows deterministic': 'release_bot_x86',
       'Windows Clang deterministic': 'clang_release_bot_minimal_symbols_x86',
@@ -694,6 +696,10 @@
       'android_without_codecs', 'clang_tot', 'shared', 'debug',
     ],
 
+    'android_clang_tot_x64': [
+      'android_without_codecs', 'clang_tot', 'shared', 'x64',
+    ],
+
     'android_cronet_data_reduction_proxy_release_bot_minimal_symbols_arm_no_neon': [
       'android', 'cronet', 'data_reduction_proxy', 'release_bot', 'minimal_symbols', 'arm_no_neon',
     ],
@@ -799,7 +805,7 @@
     ],
 
     'android_debug_static_bot_vr_shell': [
-      'android', 'debug_static_bot', 'vr_shell',
+      'android', 'debug_shared_bot', 'vr_shell',
     ],
 
     'android_debug_static_minimal_symbols_mipsel': [
@@ -1573,6 +1579,10 @@
 
     'debug_symbols_static_bot': {
       'mixins': ['debug', 'static', 'goma'],
+    },
+
+    'debug_shared_bot': {
+      'mixins': ['debug', 'shared', 'minimal_symbols', 'goma'],
     },
 
     'debug_static_bot': {

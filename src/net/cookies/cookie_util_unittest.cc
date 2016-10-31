@@ -63,85 +63,133 @@ TEST(CookieUtilTest, TestCookieDateParsing) {
     const bool valid;
     const time_t epoch;
   } tests[] = {
-    { "Sat, 15-Apr-17 21:01:22 GMT",           true, 1492290082 },
-    { "Thu, 19-Apr-2007 16:00:00 GMT",         true, 1176998400 },
-    { "Wed, 25 Apr 2007 21:02:13 GMT",         true, 1177534933 },
-    { "Thu, 19/Apr\\2007 16:00:00 GMT",        true, 1176998400 },
-    { "Fri, 1 Jan 2010 01:01:50 GMT",          true, 1262307710 },
-    { "Wednesday, 1-Jan-2003 00:00:00 GMT",    true, 1041379200 },
-    { ", 1-Jan-2003 00:00:00 GMT",             true, 1041379200 },
-    { " 1-Jan-2003 00:00:00 GMT",              true, 1041379200 },
-    { "1-Jan-2003 00:00:00 GMT",               true, 1041379200 },
-    { "Wed,18-Apr-07 22:50:12 GMT",            true, 1176936612 },
-    { "WillyWonka  , 18-Apr-07 22:50:12 GMT",  true, 1176936612 },
-    { "WillyWonka  , 18-Apr-07 22:50:12",      true, 1176936612 },
-    { "WillyWonka  ,  18-apr-07   22:50:12",   true, 1176936612 },
-    { "Mon, 18-Apr-1977 22:50:13 GMT",         true, 230251813 },
-    { "Mon, 18-Apr-77 22:50:13 GMT",           true, 230251813 },
-    // If the cookie came in with the expiration quoted (which in terms of
-    // the RFC you shouldn't do), we will get string quoted.  Bug 1261605.
-    { "\"Sat, 15-Apr-17\\\"21:01:22\\\"GMT\"", true, 1492290082 },
-    // Test with full month names and partial names.
-    { "Partyday, 18- April-07 22:50:12",       true, 1176936612 },
-    { "Partyday, 18 - Apri-07 22:50:12",       true, 1176936612 },
-    { "Wednes, 1-Januar-2003 00:00:00 GMT",    true, 1041379200 },
-    // Test that we always take GMT even with other time zones or bogus
-    // values.  The RFC says everything should be GMT, and in the worst case
-    // we are 24 hours off because of zone issues.
-    { "Sat, 15-Apr-17 21:01:22",               true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 GMT-2",         true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 GMT BLAH",      true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 GMT-0400",      true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 GMT-0400 (EDT)",true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 DST",           true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 -0400",         true, 1492290082 },
-    { "Sat, 15-Apr-17 21:01:22 (hello there)", true, 1492290082 },
-    // Test that if we encounter multiple : fields, that we take the first
-    // that correctly parses.
-    { "Sat, 15-Apr-17 21:01:22 11:22:33",      true, 1492290082 },
-    { "Sat, 15-Apr-17 ::00 21:01:22",          true, 1492290082 },
-    { "Sat, 15-Apr-17 boink:z 21:01:22",       true, 1492290082 },
-    // We take the first, which in this case is invalid.
-    { "Sat, 15-Apr-17 91:22:33 21:01:22",      false, 0 },
-    // amazon.com formats their cookie expiration like this.
-    { "Thu Apr 18 22:50:12 2007 GMT",          true, 1176936612 },
-    // Test that hh:mm:ss can occur anywhere.
-    { "22:50:12 Thu Apr 18 2007 GMT",          true, 1176936612 },
-    { "Thu 22:50:12 Apr 18 2007 GMT",          true, 1176936612 },
-    { "Thu Apr 22:50:12 18 2007 GMT",          true, 1176936612 },
-    { "Thu Apr 18 22:50:12 2007 GMT",          true, 1176936612 },
-    { "Thu Apr 18 2007 22:50:12 GMT",          true, 1176936612 },
-    { "Thu Apr 18 2007 GMT 22:50:12",          true, 1176936612 },
-    // Test that the day and year can be anywhere if they are unambigious.
-    { "Sat, 15-Apr-17 21:01:22 GMT",           true, 1492290082 },
-    { "15-Sat, Apr-17 21:01:22 GMT",           true, 1492290082 },
-    { "15-Sat, Apr 21:01:22 GMT 17",           true, 1492290082 },
-    { "15-Sat, Apr 21:01:22 GMT 2017",         true, 1492290082 },
-    { "15 Apr 21:01:22 2017",                  true, 1492290082 },
-    { "15 17 Apr 21:01:22",                    true, 1492290082 },
-    { "Apr 15 17 21:01:22",                    true, 1492290082 },
-    { "Apr 15 21:01:22 17",                    true, 1492290082 },
-    { "2017 April 15 21:01:22",                true, 1492290082 },
-    { "15 April 2017 21:01:22",                true, 1492290082 },
-    // Some invalid dates
-    { "98 April 17 21:01:22",                    false, 0 },
-    { "Thu, 012-Aug-2008 20:49:07 GMT",          false, 0 },
-    { "Thu, 12-Aug-31841 20:49:07 GMT",          false, 0 },
-    { "Thu, 12-Aug-9999999999 20:49:07 GMT",     false, 0 },
-    { "Thu, 999999999999-Aug-2007 20:49:07 GMT", false, 0 },
-    { "Thu, 12-Aug-2007 20:61:99999999999 GMT",  false, 0 },
-    { "IAintNoDateFool",                         false, 0 },
+      {"Sat, 15-Apr-17 21:01:22 GMT", true, 1492290082},
+      {"Thu, 19-Apr-2007 16:00:00 GMT", true, 1176998400},
+      {"Wed, 25 Apr 2007 21:02:13 GMT", true, 1177534933},
+      {"Thu, 19/Apr\\2007 16:00:00 GMT", true, 1176998400},
+      {"Fri, 1 Jan 2010 01:01:50 GMT", true, 1262307710},
+      {"Wednesday, 1-Jan-2003 00:00:00 GMT", true, 1041379200},
+      {", 1-Jan-2003 00:00:00 GMT", true, 1041379200},
+      {" 1-Jan-2003 00:00:00 GMT", true, 1041379200},
+      {"1-Jan-2003 00:00:00 GMT", true, 1041379200},
+      {"Wed,18-Apr-07 22:50:12 GMT", true, 1176936612},
+      {"WillyWonka  , 18-Apr-07 22:50:12 GMT", true, 1176936612},
+      {"WillyWonka  , 18-Apr-07 22:50:12", true, 1176936612},
+      {"WillyWonka  ,  18-apr-07   22:50:12", true, 1176936612},
+      {"Mon, 18-Apr-1977 22:50:13 GMT", true, 230251813},
+      {"Mon, 18-Apr-77 22:50:13 GMT", true, 230251813},
+      // If the cookie came in with the expiration quoted (which in terms of
+      // the RFC you shouldn't do), we will get string quoted.  Bug 1261605.
+      {"\"Sat, 15-Apr-17\\\"21:01:22\\\"GMT\"", true, 1492290082},
+      // Test with full month names and partial names.
+      {"Partyday, 18- April-07 22:50:12", true, 1176936612},
+      {"Partyday, 18 - Apri-07 22:50:12", true, 1176936612},
+      {"Wednes, 1-Januar-2003 00:00:00 GMT", true, 1041379200},
+      // Test that we always take GMT even with other time zones or bogus
+      // values.  The RFC says everything should be GMT, and in the worst case
+      // we are 24 hours off because of zone issues.
+      {"Sat, 15-Apr-17 21:01:22", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 GMT-2", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 GMT BLAH", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 GMT-0400", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 GMT-0400 (EDT)", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 DST", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 -0400", true, 1492290082},
+      {"Sat, 15-Apr-17 21:01:22 (hello there)", true, 1492290082},
+      // Test that if we encounter multiple : fields, that we take the first
+      // that correctly parses.
+      {"Sat, 15-Apr-17 21:01:22 11:22:33", true, 1492290082},
+      {"Sat, 15-Apr-17 ::00 21:01:22", true, 1492290082},
+      {"Sat, 15-Apr-17 boink:z 21:01:22", true, 1492290082},
+      // We take the first, which in this case is invalid.
+      {"Sat, 15-Apr-17 91:22:33 21:01:22", false, 0},
+      // amazon.com formats their cookie expiration like this.
+      {"Thu Apr 18 22:50:12 2007 GMT", true, 1176936612},
+      // Test that hh:mm:ss can occur anywhere.
+      {"22:50:12 Thu Apr 18 2007 GMT", true, 1176936612},
+      {"Thu 22:50:12 Apr 18 2007 GMT", true, 1176936612},
+      {"Thu Apr 22:50:12 18 2007 GMT", true, 1176936612},
+      {"Thu Apr 18 22:50:12 2007 GMT", true, 1176936612},
+      {"Thu Apr 18 2007 22:50:12 GMT", true, 1176936612},
+      {"Thu Apr 18 2007 GMT 22:50:12", true, 1176936612},
+      // Test that the day and year can be anywhere if they are unambigious.
+      {"Sat, 15-Apr-17 21:01:22 GMT", true, 1492290082},
+      {"15-Sat, Apr-17 21:01:22 GMT", true, 1492290082},
+      {"15-Sat, Apr 21:01:22 GMT 17", true, 1492290082},
+      {"15-Sat, Apr 21:01:22 GMT 2017", true, 1492290082},
+      {"15 Apr 21:01:22 2017", true, 1492290082},
+      {"15 17 Apr 21:01:22", true, 1492290082},
+      {"Apr 15 17 21:01:22", true, 1492290082},
+      {"Apr 15 21:01:22 17", true, 1492290082},
+      {"2017 April 15 21:01:22", true, 1492290082},
+      {"15 April 2017 21:01:22", true, 1492290082},
+      // Some invalid dates
+      {"98 April 17 21:01:22", false, 0},
+      {"Thu, 012-Aug-2008 20:49:07 GMT", false, 0},
+      {"Thu, 12-Aug-9999999999 20:49:07 GMT", false, 0},
+      {"Thu, 999999999999-Aug-2007 20:49:07 GMT", false, 0},
+      {"Thu, 12-Aug-2007 20:61:99999999999 GMT", false, 0},
+      {"IAintNoDateFool", false, 0},
+      {"1600 April 33 21:01:22", false, 0},
+      {"1970 April 33 21:01:22", false, 0},
+      {"Thu, 33-Aug-31841 20:49:07 GMT", false, 0},
   };
 
   base::Time parsed_time;
   for (size_t i = 0; i < arraysize(tests); ++i) {
-    parsed_time = cookie_util::ParseCookieTime(tests[i].str);
+    parsed_time = cookie_util::ParseCookieExpirationTime(tests[i].str);
     if (!tests[i].valid) {
       EXPECT_TRUE(parsed_time.is_null()) << tests[i].str;
       continue;
     }
     EXPECT_TRUE(!parsed_time.is_null()) << tests[i].str;
     EXPECT_EQ(tests[i].epoch, parsed_time.ToTimeT()) << tests[i].str;
+  }
+}
+
+// Tests parsing dates that are beyond 2038. 32-bit (non-Mac) POSIX systems are
+// incapable of doing this, however the expectation is for cookie parsing to
+// succeed anyway (and return the minimum value Time::FromUTCExploded() can
+// parse on the current platform). Also checks a date outside the limit on
+// Windows, which is year 30827.
+TEST(CookieUtilTest, ParseCookieExpirationTimeBeyond2038) {
+  const char* kTests[] = {
+      "Thu, 12-Aug-31841 20:49:07 GMT", "2039 April 15 21:01:22",
+      "2039 April 15 21:01:22", "2038 April 15 21:01:22",
+  };
+
+  for (const auto& test : kTests) {
+    base::Time parsed_time = cookie_util::ParseCookieExpirationTime(test);
+    EXPECT_FALSE(parsed_time.is_null());
+
+    // It should either have an exact value, or be base::Time::Max(). For
+    // simplicity just check that it is greater than an arbitray date.
+    base::Time almost_jan_2038 =
+        base::Time::UnixEpoch() + base::TimeDelta::FromDays(365 * 68);
+    EXPECT_LT(almost_jan_2038, parsed_time);
+  }
+}
+
+// Tests parsing dates that are prior to (or around) 1970. Non-Mac POSIX systems
+// are incapable of doing this, however the expectation is for cookie parsing to
+// succeed anyway (and return a minimal base::Time).
+TEST(CookieUtilTest, ParseCookieExpirationTimeBefore1970) {
+  const char* kTests[] = {
+      // The unix epoch.
+      "1970 Jan 1 00:00:00",
+      // The windows epoch.
+      "1601 Jan 1 00:00:00",
+      // Other dates.
+      "1969 March 3 21:01:22", "1600 April 15 21:01:22",
+  };
+
+  for (const auto& test : kTests) {
+    base::Time parsed_time = cookie_util::ParseCookieExpirationTime(test);
+    EXPECT_FALSE(parsed_time.is_null());
+
+    // It should either have an exact value, or should be base::Time(1)
+    // For simplicity just check that it is less than the unix epoch.
+    EXPECT_LE(parsed_time, base::Time::UnixEpoch());
   }
 }
 

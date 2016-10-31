@@ -358,7 +358,7 @@ enum SpdySettingsIds {
 
 // Status codes for RST_STREAM frames.
 enum SpdyRstStreamStatus {
-  RST_STREAM_INVALID = 0,
+  RST_STREAM_NO_ERROR = 0,
   RST_STREAM_PROTOCOL_ERROR = 1,
   RST_STREAM_INVALID_STREAM = 2,
   RST_STREAM_STREAM_CLOSED = 2,  // Equivalent to INVALID_STREAM

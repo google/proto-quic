@@ -877,7 +877,7 @@ TEST(HttpCache, SimpleGET_LoadOnlyFromCache_Hit) {
 
   // Force this transaction to read from the cache.
   MockTransaction transaction(kSimpleGET_Transaction);
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   log.Clear();
 
@@ -917,7 +917,7 @@ TEST(HttpCache, SimpleGET_LoadOnlyFromCache_Miss) {
 
   // force this transaction to read from the cache
   MockTransaction transaction(kSimpleGET_Transaction);
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   MockHttpRequest request(transaction);
   TestCompletionCallback callback;
@@ -945,7 +945,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_Hit) {
 
   // force this transaction to read from the cache if valid
   MockTransaction transaction(kSimpleGET_Transaction);
-  transaction.load_flags |= LOAD_PREFERRING_CACHE;
+  transaction.load_flags |= LOAD_SKIP_CACHE_VALIDATION;
 
   RunTransactionTest(cache.http_cache(), transaction);
 
@@ -959,7 +959,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_Miss) {
 
   // force this transaction to read from the cache if valid
   MockTransaction transaction(kSimpleGET_Transaction);
-  transaction.load_flags |= LOAD_PREFERRING_CACHE;
+  transaction.load_flags |= LOAD_SKIP_CACHE_VALIDATION;
 
   RunTransactionTest(cache.http_cache(), transaction);
 
@@ -968,7 +968,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_Miss) {
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 }
 
-// Tests LOAD_PREFERRING_CACHE in the presence of vary headers.
+// Tests LOAD_SKIP_CACHE_VALIDATION in the presence of vary headers.
 TEST(HttpCache, SimpleGET_LoadPreferringCache_VaryMatch) {
   MockHttpCache cache;
 
@@ -981,7 +981,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_VaryMatch) {
   RunTransactionTest(cache.http_cache(), transaction);
 
   // Read from the cache.
-  transaction.load_flags |= LOAD_PREFERRING_CACHE;
+  transaction.load_flags |= LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTest(cache.http_cache(), transaction);
 
   EXPECT_EQ(1, cache.network_layer()->transaction_count());
@@ -990,7 +990,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_VaryMatch) {
   RemoveMockTransaction(&transaction);
 }
 
-// Tests LOAD_PREFERRING_CACHE in the presence of vary headers.
+// Tests LOAD_SKIP_CACHE_VALIDATION in the presence of vary headers.
 TEST(HttpCache, SimpleGET_LoadPreferringCache_VaryMismatch) {
   MockHttpCache cache;
 
@@ -1004,7 +1004,7 @@ TEST(HttpCache, SimpleGET_LoadPreferringCache_VaryMismatch) {
 
   // Attempt to read from the cache... this is a vary mismatch that must reach
   // the network again.
-  transaction.load_flags |= LOAD_PREFERRING_CACHE;
+  transaction.load_flags |= LOAD_SKIP_CACHE_VALIDATION;
   transaction.request_headers = "Foo: none\r\n";
   BoundTestNetLog log;
   LoadTimingInfo load_timing_info;
@@ -1340,7 +1340,7 @@ TEST(HttpCache, SimpleGET_RacingReaders) {
 
   MockHttpRequest request(kSimpleGET_Transaction);
   MockHttpRequest reader_request(kSimpleGET_Transaction);
-  reader_request.load_flags = LOAD_ONLY_FROM_CACHE;
+  reader_request.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   std::vector<Context*> context_list;
   const int kNumTransactions = 5;
@@ -2482,7 +2482,7 @@ static void ConditionalizedRequestUpdatesCacheHelper(
   // Request |kUrl| a second time. Now |kNetResponse1| it is in the HTTP
   // cache, so we don't hit the network.
 
-  request.load_flags = LOAD_ONLY_FROM_CACHE;
+  request.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   kUnexpectedResponse.AssignTo(&mock_network_response);  // Network mock.
   net_response_1.AssignTo(&request);                     // Expected result.
@@ -2520,7 +2520,7 @@ static void ConditionalizedRequestUpdatesCacheHelper(
   // value in the cache with the modified response.
 
   request.request_headers = "";
-  request.load_flags = LOAD_ONLY_FROM_CACHE;
+  request.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   kUnexpectedResponse.AssignTo(&mock_network_response);  // Network mock.
   cached_response_2.AssignTo(&request);                  // Expected result.
@@ -2874,7 +2874,7 @@ TEST(HttpCache, UrlContainingHash) {
   // Since the cache key strips the hash sections, this should be a cache hit.
   std::string url_with_hash = std::string(trans.url) + "#multiple#hashes";
   trans.url = url_with_hash.c_str();
-  trans.load_flags = LOAD_ONLY_FROM_CACHE;
+  trans.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   RunTransactionTest(cache.http_cache(), trans);
 
@@ -2911,7 +2911,7 @@ TEST(HttpCache, SimplePOST_LoadOnlyFromCache_Miss) {
   MockHttpCache cache;
 
   MockTransaction transaction(kSimplePOST_Transaction);
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   MockHttpRequest request(transaction);
   TestCompletionCallback callback;
@@ -2955,7 +2955,7 @@ TEST(HttpCache, SimplePOST_LoadOnlyFromCache_Hit) {
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 
   // Load from cache.
-  request.load_flags |= LOAD_ONLY_FROM_CACHE;
+  request.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTestWithRequest(cache.http_cache(), transaction, request, NULL);
 
   EXPECT_EQ(1, cache.network_layer()->transaction_count());
@@ -3165,7 +3165,7 @@ TEST(HttpCache, SimpleHEAD_LoadOnlyFromCache_Miss) {
   MockHttpCache cache;
   MockTransaction transaction(kSimplePOST_Transaction);
   AddMockTransaction(&transaction);
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.method = "HEAD";
 
   MockHttpRequest request(transaction);
@@ -3201,7 +3201,7 @@ TEST(HttpCache, SimpleHEAD_LoadOnlyFromCache_Hit) {
 
   // Load from cache.
   transaction.method = "HEAD";
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.data = "";
   RunTransactionTest(cache.http_cache(), transaction);
 
@@ -3223,7 +3223,7 @@ TEST(HttpCache, SimpleHEAD_ContentLengthOnHit_Read) {
 
   // Load from cache.
   transaction.method = "HEAD";
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.data = "";
   std::string headers;
 
@@ -3268,7 +3268,7 @@ TEST(HttpCache, SimpleHEAD_WithRanges) {
   // Load from cache.
   transaction.method = "HEAD";
   transaction.request_headers = "Range: bytes = 0-4\r\n";
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.return_code = ERR_CACHE_MISS;
   RunTransactionTest(cache.http_cache(), transaction);
 
@@ -3367,7 +3367,7 @@ TEST(HttpCache, TypicalHEAD_UpdatesResponse) {
   base::RunLoop().RunUntilIdle();
 
   // Load from the cache.
-  transaction2.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction2.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTestWithResponse(cache.http_cache(), transaction2, &headers);
 
   EXPECT_NE(std::string::npos, headers.find("Foo: bar\n"));
@@ -3407,7 +3407,7 @@ TEST(HttpCache, TypicalHEAD_ConditionalizedRequestUpdatesResponse) {
   base::RunLoop().RunUntilIdle();
 
   // Load from the cache.
-  transaction2.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction2.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTestWithResponse(cache.http_cache(), transaction2, &headers);
 
   EXPECT_NE(std::string::npos, headers.find("Foo: bar\n"));
@@ -3434,7 +3434,7 @@ TEST(HttpCache, SimpleHEAD_InvalidatesEntry) {
 
   // Load from the cache.
   transaction.method = "GET";
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.return_code = ERR_CACHE_MISS;
   RunTransactionTest(cache.http_cache(), transaction);
 
@@ -3720,7 +3720,7 @@ TEST(HttpCache, SimpleGET_DontInvalidateOnFailure) {
   EXPECT_EQ(2, cache.network_layer()->transaction_count());
   RemoveMockTransaction(&transaction);
 
-  transaction.load_flags = LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   transaction.return_code = OK;
   AddMockTransaction(&transaction);
   RunTransactionTest(cache.http_cache(), transaction);
@@ -5056,7 +5056,7 @@ TEST(HttpCache, MAYBE_RangeGET_Previous200) {
   MockTransaction transaction3(kRangeGET_TransactionOK);
   transaction3.request_headers = "Range: bytes = 80-90\r\n" EXTRA_HEADER;
   transaction3.data = transaction.data;
-  transaction3.load_flags = LOAD_PREFERRING_CACHE;
+  transaction3.load_flags = LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTestWithResponse(cache.http_cache(), transaction3, &headers);
   EXPECT_EQ(2, cache.disk_cache()->open_count());
   EXPECT_EQ(0U, headers.find("HTTP/1.1 200 "));
@@ -5561,7 +5561,7 @@ TEST(HttpCache, RangeGET_OK_LoadOnlyFromCache) {
 
   // Force this transaction to read from the cache.
   MockTransaction transaction(kRangeGET_TransactionOK);
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   MockHttpRequest request(transaction);
   TestCompletionCallback callback;
@@ -6297,10 +6297,10 @@ TEST(HttpCache, SyncRead) {
 
   c1.Start(&r1, NetLogWithSource());
 
-  r2.load_flags |= LOAD_ONLY_FROM_CACHE;
+  r2.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   c2.Start(&r2, NetLogWithSource());
 
-  r3.load_flags |= LOAD_ONLY_FROM_CACHE;
+  r3.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
   c3.Start(&r3, NetLogWithSource());
 
   base::RunLoop().Run();
@@ -6434,7 +6434,7 @@ TEST(HttpCache, CacheControlNoCacheNormalLoad) {
 }
 
 // Verify that no-cache resources are stored in cache and fetched from cache
-// when the LOAD_PREFERRING_CACHE flag is set.
+// when the LOAD_SKIP_CACHE_VALIDATION flag is set.
 TEST(HttpCache, CacheControlNoCacheHistoryLoad) {
   MockHttpCache cache;
 
@@ -6448,8 +6448,8 @@ TEST(HttpCache, CacheControlNoCacheHistoryLoad) {
   EXPECT_EQ(0, cache.disk_cache()->open_count());
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 
-  // Try loading again with LOAD_PREFERRING_CACHE.
-  transaction.load_flags = LOAD_PREFERRING_CACHE;
+  // Try loading again with LOAD_SKIP_CACHE_VALIDATION.
+  transaction.load_flags = LOAD_SKIP_CACHE_VALIDATION;
   RunTransactionTest(cache.http_cache(), transaction);
 
   EXPECT_EQ(1, cache.network_layer()->transaction_count());
@@ -6554,7 +6554,7 @@ TEST(HttpCache, SimpleGET_SSLError) {
   RunTransactionTest(cache.http_cache(), transaction);
 
   // Test that it was not cached.
-  transaction.load_flags |= LOAD_ONLY_FROM_CACHE;
+  transaction.load_flags |= LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   MockHttpRequest request(transaction);
   TestCompletionCallback callback;
@@ -6744,6 +6744,32 @@ TEST(HttpCache, WriteMetadata_Fail) {
   EXPECT_EQ(1, cache.disk_cache()->create_count());
 }
 
+// Tests that we only return valid entries with LOAD_ONLY_FROM_CACHE
+// transactions unless LOAD_SKIP_CACHE_VALIDATION is set.
+TEST(HttpCache, ValidLoadOnlyFromCache) {
+  MockHttpCache cache;
+  base::SimpleTestClock* clock = new base::SimpleTestClock();
+  cache.http_cache()->SetClockForTesting(base::WrapUnique(clock));
+  cache.network_layer()->SetClock(clock);
+
+  // Write a resource that will expire in 100 seconds.
+  ScopedMockTransaction transaction(kSimpleGET_Transaction);
+  transaction.response_headers = "Cache-Control: max-age=100\n";
+  RunTransactionTest(cache.http_cache(), transaction);
+
+  // Move forward in time such that the cached response is no longer valid.
+  clock->Advance(base::TimeDelta::FromSeconds(101));
+
+  // Skipping cache validation should still return a response.
+  transaction.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
+  RunTransactionTest(cache.http_cache(), transaction);
+
+  // If the cache entry is checked for validitiy, it should fail.
+  transaction.load_flags = LOAD_ONLY_FROM_CACHE;
+  transaction.return_code = ERR_CACHE_MISS;
+  RunTransactionTest(cache.http_cache(), transaction);
+}
+
 // Tests that we can read metadata after validating the entry and with READ mode
 // transactions.
 TEST(HttpCache, ReadMetadata) {
@@ -6768,7 +6794,7 @@ TEST(HttpCache, ReadMetadata) {
 
   // Start with a READ mode transaction.
   MockTransaction trans1(kTypicalGET_Transaction);
-  trans1.load_flags = LOAD_ONLY_FROM_CACHE;
+  trans1.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION;
 
   RunTransactionTestWithResponseInfo(cache.http_cache(), trans1, &response);
   ASSERT_TRUE(response.metadata.get() != NULL);
@@ -7649,7 +7675,8 @@ TEST_F(HttpCachePrefetchValidationTest, SkipValidationOnceOnly) {
 TEST_F(HttpCachePrefetchValidationTest, SkipValidationOnceReadOnly) {
   EXPECT_TRUE(TransactionRequiredNetwork(LOAD_PREFETCH));
   AdvanceTime(kRequireValidationSecs);
-  EXPECT_FALSE(TransactionRequiredNetwork(LOAD_ONLY_FROM_CACHE));
+  EXPECT_FALSE(TransactionRequiredNetwork(LOAD_ONLY_FROM_CACHE |
+                                          LOAD_SKIP_CACHE_VALIDATION));
   EXPECT_TRUE(TransactionRequiredNetwork(LOAD_NORMAL));
 }
 

@@ -25,8 +25,8 @@ namespace net {
 namespace {
 
 // Data encoded in kBrotliHelloData.
-const char kBrotliDecodedHelloData[] = "hello, world!\n";
-// kBrotliDecodedHelloData encoded with brotli.
+const char kHelloData[] = "hello, world!\n";
+// kHelloData encoded with brotli.
 const char kBrotliHelloData[] =
     "\033\015\0\0\244\024\102\152\020\111\152\072\235\126\034";
 
@@ -34,7 +34,7 @@ const char kBrotliHelloData[] =
 const char kGzipData[] = "\x1f\x08b\x08\0\0\0\0\0\0\3\3\0\0\0\0\0\0\0\0";
 const char kGzipDataWithName[] =
     "\x1f\x08b\x08\x08\0\0\0\0\0\0name\0\3\0\0\0\0\0\0\0\0";
-// Gzip data that contains the word hello with a newline character.
+// kHelloData encoded with gzip.
 const char kGzipHelloData[] =
     "\x1f\x8b\x08\x08\x46\x7d\x4e\x56\x00\x03\x67\x7a\x69\x70\x2e\x74\x78\x74"
     "\x00\xcb\x48\xcd\xc9\xc9\xe7\x02\x00\x20\x30\x3a\x36\x06\x00\x00\x00";
@@ -50,7 +50,7 @@ void GZipHelloServer(const HttpRequestInfo* request,
                      std::string* response_status,
                      std::string* response_headers,
                      std::string* response_data) {
-  response_data->assign(kGzipHelloData, sizeof(kGzipHelloData));
+  response_data->assign(kGzipHelloData, sizeof(kGzipHelloData) - 1);
 }
 
 void BigGZipServer(const HttpRequestInfo* request,
@@ -94,6 +94,15 @@ void MakeMockReferrerPolicyTransaction(const char* original_url,
   transaction->ssl_connection_status = 0;
   transaction->return_code = OK;
 }
+
+const MockTransaction kNoFilter_Transaction = {
+    "http://www.google.com/gzyp", "GET", base::Time(), "", LOAD_NORMAL,
+    "HTTP/1.1 200 OK",
+    "Cache-Control: max-age=10000\n"
+    "Content-Length: 30\n",  // Intentionally wrong.
+    base::Time(),
+    "hello", TEST_MODE_NORMAL, nullptr, nullptr, 0, 0, OK,
+};
 
 const MockTransaction kGZip_Transaction = {
     "http://www.google.com/gzyp", "GET", base::Time(), "", LOAD_NORMAL,
@@ -163,6 +172,29 @@ const MockTransaction kBrotli_Slow_Transaction = {
 
 }  // namespace
 
+TEST(URLRequestJob, TransactionNoFilter) {
+  MockNetworkLayer network_layer;
+  TestURLRequestContext context;
+  context.set_http_transaction_factory(&network_layer);
+
+  TestDelegate d;
+  std::unique_ptr<URLRequest> req(context.CreateRequest(
+      GURL(kNoFilter_Transaction.url), DEFAULT_PRIORITY, &d));
+  AddMockTransaction(&kNoFilter_Transaction);
+
+  req->set_method("GET");
+  req->Start();
+
+  base::RunLoop().Run();
+
+  EXPECT_FALSE(d.request_failed());
+  EXPECT_EQ(200, req->GetResponseCode());
+  EXPECT_EQ("hello", d.data_received());
+  EXPECT_TRUE(network_layer.done_reading_called());
+
+  RemoveMockTransaction(&kNoFilter_Transaction);
+}
+
 TEST(URLRequestJob, TransactionNotifiedWhenDone) {
   MockNetworkLayer network_layer;
   TestURLRequestContext context;
@@ -178,6 +210,10 @@ TEST(URLRequestJob, TransactionNotifiedWhenDone) {
 
   base::RunLoop().Run();
 
+  EXPECT_TRUE(d.response_completed());
+  EXPECT_EQ(OK, d.request_status());
+  EXPECT_EQ(200, req->GetResponseCode());
+  EXPECT_EQ("", d.data_received());
   EXPECT_TRUE(network_layer.done_reading_called());
 
   RemoveMockTransaction(&kGZip_Transaction);
@@ -200,6 +236,10 @@ TEST(URLRequestJob, SyncTransactionNotifiedWhenDone) {
 
   base::RunLoop().Run();
 
+  EXPECT_TRUE(d.response_completed());
+  EXPECT_EQ(OK, d.request_status());
+  EXPECT_EQ(200, req->GetResponseCode());
+  EXPECT_EQ("", d.data_received());
   EXPECT_TRUE(network_layer.done_reading_called());
 
   RemoveMockTransaction(&transaction);
@@ -224,6 +264,10 @@ TEST(URLRequestJob, SyncSlowTransaction) {
 
   base::RunLoop().Run();
 
+  EXPECT_TRUE(d.response_completed());
+  EXPECT_EQ(OK, d.request_status());
+  EXPECT_EQ(200, req->GetResponseCode());
+  EXPECT_EQ("", d.data_received());
   EXPECT_TRUE(network_layer.done_reading_called());
 
   RemoveMockTransaction(&transaction);
@@ -515,6 +559,7 @@ TEST(URLRequestJob, InvalidContentGZipTransaction) {
   // so should be false.
   EXPECT_FALSE(d.request_failed());
   EXPECT_EQ(200, req->GetResponseCode());
+  EXPECT_FALSE(req->status().is_success());
   EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, d.request_status());
   EXPECT_TRUE(d.data_received().empty());
   EXPECT_FALSE(network_layer.done_reading_called());
@@ -563,7 +608,7 @@ TEST(URLRequestJob, SlowBrotliRead) {
 
   EXPECT_FALSE(d.request_failed());
   EXPECT_EQ(200, req->GetResponseCode());
-  EXPECT_EQ(kBrotliDecodedHelloData, d.data_received());
+  EXPECT_EQ(kHelloData, d.data_received());
   EXPECT_TRUE(network_layer.done_reading_called());
 
   RemoveMockTransaction(&kBrotli_Slow_Transaction);

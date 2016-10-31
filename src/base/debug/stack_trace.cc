@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "base/logging.h"
 #include "base/macros.h"
 
 #if HAVE_TRACE_STACK_FRAME_POINTERS
@@ -176,6 +177,17 @@ uintptr_t ScanStackForNextFrame(uintptr_t fp, uintptr_t stack_end) {
   return 0;
 }
 
+// Links stack frame |fp| to |parent_fp|, so that during stack unwinding
+// TraceStackFramePointers() visits |parent_fp| after visiting |fp|.
+// Both frame pointers must come from __builtin_frame_address().
+// Returns previous stack frame |fp| was linked to.
+void* LinkStackFrames(void* fpp, void* parent_fp) {
+  uintptr_t fp = reinterpret_cast<uintptr_t>(fpp) - kStackFrameAdjustment;
+  void* prev_parent_fp = reinterpret_cast<void**>(fp)[0];
+  reinterpret_cast<void**>(fp)[0] = parent_fp;
+  return prev_parent_fp;
+}
+
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS
 
 }  // namespace
@@ -243,6 +255,17 @@ size_t TraceStackFramePointers(const void** out_trace,
   }
 
   return depth;
+}
+
+ScopedStackFrameLinker::ScopedStackFrameLinker(void* fp, void* parent_fp)
+    : fp_(fp),
+      parent_fp_(parent_fp),
+      original_parent_fp_(LinkStackFrames(fp, parent_fp)) {}
+
+ScopedStackFrameLinker::~ScopedStackFrameLinker() {
+  void* previous_parent_fp = LinkStackFrames(fp_, original_parent_fp_);
+  CHECK_EQ(parent_fp_, previous_parent_fp)
+      << "Stack frame's parent pointer has changed!";
 }
 
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS

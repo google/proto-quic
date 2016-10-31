@@ -4,8 +4,6 @@
 
 #include "net/quic/chromium/quic_chromium_client_session.h"
 
-#include <openssl/ssl.h>
-
 #include <utility>
 
 #include "base/callback_helpers.h"
@@ -39,6 +37,7 @@
 #include "net/ssl/ssl_info.h"
 #include "net/ssl/token_binding.h"
 #include "net/udp/datagram_client_socket.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
 
@@ -1431,10 +1430,28 @@ void QuicChromiumClientSession::DeletePromised(
 
 void QuicChromiumClientSession::OnPushStreamTimedOut(QuicStreamId stream_id) {
   QuicSpdyStream* stream = GetPromisedStream(stream_id);
-  DCHECK(stream);
-  // TODO(zhongyi): re-enable metrics collection when crbug.com/656467 is
-  // solved.
-  // bytes_pushed_and_unclaimed_count_ += stream->stream_bytes_read();
+  if (stream != nullptr)
+    bytes_pushed_and_unclaimed_count_ += stream->stream_bytes_read();
+}
+
+void QuicChromiumClientSession::CancelPush(const GURL& url) {
+  QuicClientPromisedInfo* promised_info =
+      QuicClientSessionBase::GetPromisedByUrl(url.spec());
+  if (!promised_info) {
+    // Push stream has already been claimed.
+    return;
+  }
+
+  QuicStreamId stream_id = promised_info->id();
+
+  // Collect data on the cancelled push stream.
+  QuicSpdyStream* stream = GetPromisedStream(stream_id);
+  if (stream != nullptr)
+    bytes_pushed_and_unclaimed_count_ += stream->stream_bytes_read();
+
+  // Send the reset and remove the promised info from the promise index.
+  QuicClientSessionBase::ResetPromised(stream_id, QUIC_STREAM_CANCELLED);
+  DeletePromised(promised_info);
 }
 
 const LoadTimingInfo::ConnectTiming&

@@ -385,7 +385,7 @@ class TestPacketWriter : public QuicPacketWriter {
     return framer_.rst_stream_frames();
   }
 
-  const vector<QuicStreamFrame*>& stream_frames() const {
+  const vector<std::unique_ptr<QuicStreamFrame>>& stream_frames() const {
     return framer_.stream_frames();
   }
 
@@ -1905,7 +1905,7 @@ TEST_P(QuicConnectionTest, FramePackingSendv) {
   // been packed into a single stream frame from one stream.
   EXPECT_EQ(1u, writer_->frame_count());
   EXPECT_EQ(1u, writer_->stream_frames().size());
-  QuicStreamFrame* frame = writer_->stream_frames()[0];
+  QuicStreamFrame* frame = writer_->stream_frames()[0].get();
   EXPECT_EQ(1u, frame->stream_id);
   EXPECT_EQ("ABCD", StringPiece(frame->data_buffer, frame->data_length));
 }

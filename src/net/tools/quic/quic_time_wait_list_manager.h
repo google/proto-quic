@@ -110,7 +110,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
       const IPEndPoint& client_address);
 
  protected:
-  virtual QuicEncryptedPacket* BuildPublicReset(
+  virtual std::unique_ptr<QuicEncryptedPacket> BuildPublicReset(
       const QuicPublicResetPacket& packet);
 
  private:
@@ -132,7 +132,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
 
   // Either sends the packet and deletes it or makes pending_packets_queue_ the
   // owner of the packet.
-  void SendOrQueuePacket(QueuedPacket* packet);
+  void SendOrQueuePacket(std::unique_ptr<QueuedPacket> packet);
 
   // Sends the packet out. Returns true if the packet was successfully consumed.
   // If the writer got blocked and did not buffer the packet, we'll need to keep
@@ -180,7 +180,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
 
   // Pending public reset packets that need to be sent out to the client
   // when we are given a chance to write by the dispatcher.
-  std::deque<QueuedPacket*> pending_packets_queue_;
+  std::deque<std::unique_ptr<QueuedPacket>> pending_packets_queue_;
 
   // Time period for which connection_ids should remain in time wait state.
   const QuicTime::Delta time_wait_period_;

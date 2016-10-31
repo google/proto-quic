@@ -74,18 +74,10 @@
     "label": "//:All_syzygy",
     "type": "additional_compile_target",
   },
-  "AppRTCMobileTest": {
-    "label": "//webrtc/examples:AppRTCMobileTest",
-    "type": "additional_compile_target",
-  },
   "accessibility_unittests":  {
     "label": "//ui/accessibility:accessibility_unittests",
     "type": "raw",
     "args": [],
-  },
-  "android_junit_tests": {
-    "label": "//webrtc:android_junit_tests",
-    "type": "junit_test",
   },
   "android_webview_test_apk": {
     "label": "//android_webview/test:android_webview_test_apk",
@@ -139,10 +131,6 @@
   "ash_unittests": {
     "label": "//ash:ash_unittests",
     "type": "windowed_test_launcher",
-  },
-  "audio_decoder_unittests": {
-    "label": "//webrtc/modules/audio_coding:audio_decoder_unittests",
-    "type": "console_test_launcher",
   },
   "audio_unittests": {
     "label": "//media:audio_unittests",
@@ -328,14 +316,6 @@
     "label": "//:chromiumos_preflight",
     "type": "additional_compile_target",
   },
-  "common_audio_unittests": {
-    "label": "//webrtc/common_audio:common_audio_unittests",
-    "type": "console_test_launcher",
-  },
-  "common_video_unittests": {
-    "label": "//webrtc/common_video:common_video_unittests",
-    "type": "console_test_launcher",
-  },
   "components_browsertests": {
     "label": "//components:components_browsertests",
     "type": "windowed_test_launcher",
@@ -385,7 +365,7 @@
     "type": "additional_compile_target",
   },
   "cronet_test": {
-    "label": "//components/cronet/ios:cronet_test",
+    "label": "//components/cronet/ios/test:cronet_test",
     "type": "raw",
   },
   "cronet_test_instrumentation_apk": {
@@ -561,10 +541,6 @@
     "label": "//third_party/libaddressinput:libaddressinput_unittests",
     "type": "console_test_launcher",
   },
-  "libjingle_peerconnection_android_unittest": {
-    "label": "//webrtc/api:libjingle_peerconnection_android_unittest",
-    "type": "additional_compile_target",
-  },
   # See http://crbug.com/585151
   "libphonenumber_unittests": {
     "label": "//third_party/libphonenumber:libphonenumber_unittests",
@@ -586,17 +562,9 @@
     "label": "//media/mojo/services:media_mojo_shell_unittests",
     "type": "console_test_launcher",
   },
-  "media_mojo_unittests": {
-    "label": "//media/mojo:media_mojo_unittests",
-    "type": "console_test_launcher",
-  },
   "media_blink_unittests": {
     "label": "//media/blink:media_blink_unittests",
     "type": "windowed_test_launcher",
-  },
-  "media_remoting_unittests": {
-    "label": "//media/remoting:media_remoting_unittests",
-    "type": "console_test_launcher",
   },
   "midi_unittests": {
     "label": "//media/midi:midi_unittests",
@@ -605,14 +573,6 @@
   "mini_installer": {
     "label": "//chrome/installer/mini_installer:mini_installer",
     "type": "additional_compile_target",
-  },
-  "modules_tests": {
-    "label": "//webrtc/modules:modules_tests",
-    "type": "console_test_launcher",
-  },
-  "modules_unittests": {
-    "label": "//webrtc/modules:modules_unittests",
-    "type": "windowed_test_launcher",
   },
   "mojo_common_unittests": {
     "label": "//mojo/common:mojo_common_unittests",
@@ -712,13 +672,13 @@
     "label": "//ui/ozone/gl:ozone_gl_unittests",
     "type": "console_test_launcher",
   },
+  "pdf_unittests": {
+    "label": "//pdf:pdf_unittests",
+    "type": "console_test_launcher",
+  },
   "pdfium_test": {
     "label": "//third_party/pdfium/samples:pdfium_test",
     "type": "additional_compile_target",
-  },
-  "peerconnection_unittests": {
-    "label": "//webrtc/api:peerconnection_unittests",
-    "type": "console_test_launcher",
   },
   "postmortem-metadata": {
     "label": "//v8:postmortem-metadata",
@@ -734,22 +694,6 @@
   },
   "remoting_unittests": {
     "label": "//remoting:remoting_unittests",
-    "type": "console_test_launcher",
-  },
-  "rtc_media_unittests": {
-    "label": "//webrtc/media:rtc_media_unittests",
-    "type": "console_test_launcher",
-  },
-  "rtc_pc_unittests": {
-    "label": "//webrtc/pc:rtc_pc_unittests",
-    "type": "console_test_launcher",
-  },
-  "rtc_stats_unittests": {
-    "label": "//webrtc/stats:rtc_stats_unittests",
-    "type": "console_test_launcher",
-  },
-  "rtc_unittests": {
-    "label": "//webrtc:rtc_unittests",
     "type": "console_test_launcher",
   },
   "sandbox_linux_unittests": {
@@ -800,10 +744,6 @@
   "system_webview_apk": {
     "label": "//android_webview:system_webview_apk",
     "type": "additional_compile_target",
-  },
-  "system_wrappers_unittests": {
-    "label": "//webrtc/system_wrappers:system_wrappers_unittests",
-    "type": "console_test_launcher",
   },
   "tab_capture_end2end_tests": {
     "label": "//chrome/test:browser_tests",
@@ -864,13 +804,13 @@
       "../../",
     ],
   },
-  "test_support_unittests": {
-    "label": "//webrtc/test:test_support_unittests",
-    "type": "console_test_launcher",
-  },
-  "tools_unittests": {
-    "label": "//webrtc/tools:tools_unittests",
-    "type": "console_test_launcher",
+  "cc_perftests": {
+    "label": "//cc:cc_perftests",
+    "type": "script",
+    "script": "//testing/scripts/run_gtest_perf_test.py",
+    "args": [
+      "cc_perftests",
+    ],
   },
   "mus_ime_unittests": {
     "label": "//services/ui/ime:mus_ime_unittests",
@@ -913,10 +853,6 @@
     "label": "//url:url_unittests",
     "type": "console_test_launcher",
   },
-  "video_engine_tests": {
-    "label": "//webrtc:video_engine_tests",
-    "type": "console_test_launcher",
-  },
   "views_mus_interactive_ui_tests": {
     "label": "//ui/views/mus:views_mus_interactive_ui_tests",
     "type": "windowed_test_launcher",
@@ -928,10 +864,6 @@
   "views_unittests": {
     "label": "//ui/views:views_unittests",
     "type": "windowed_test_launcher",
-  },
-  "voice_engine_unittests": {
-    "label": "//webrtc/voice_engine:voice_engine_unittests",
-    "type": "console_test_launcher",
   },
   "vr_shell_unittests": {
     "label": "//chrome/browser/android/vr_shell:vr_shell_unittests",
@@ -949,10 +881,6 @@
     "label": "//third_party/WebKit/Source/web:webkit_unit_tests",
     "type": "console_test_launcher",
   },
-  "webrtc_nonparallel_tests": {
-    "label": "//webrtc:webrtc_nonparallel_tests",
-    "type": "console_test_launcher",
-  },
   "wm_unittests": {
     "label": "//ui/wm:wm_unittests",
     "type": "windowed_test_launcher",
@@ -961,8 +889,4 @@
     "label": "//third_party/WebKit/Source/wtf:wtf_unittests",
     "type": "console_test_launcher",
   },
-  "xmllite_xmpp_unittests": {
-    "label": "//webrtc:xmllite_xmpp_unittests",
-    "type": "console_test_launcher",
-  }
 }

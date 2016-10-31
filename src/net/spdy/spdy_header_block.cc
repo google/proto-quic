@@ -80,7 +80,7 @@ class SpdyHeaderBlock::Storage {
   UnsafeArena arena_;
 };
 
-SpdyHeaderBlock::StringPieceProxy::StringPieceProxy(
+SpdyHeaderBlock::ValueProxy::ValueProxy(
     SpdyHeaderBlock::MapType* block,
     SpdyHeaderBlock::Storage* storage,
     SpdyHeaderBlock::MapType::iterator lookup_result,
@@ -89,9 +89,10 @@ SpdyHeaderBlock::StringPieceProxy::StringPieceProxy(
       storage_(storage),
       lookup_result_(lookup_result),
       key_(key),
-      valid_(true) {}
+      valid_(true) {
+}
 
-SpdyHeaderBlock::StringPieceProxy::StringPieceProxy(StringPieceProxy&& other)
+SpdyHeaderBlock::ValueProxy::ValueProxy(ValueProxy&& other)
     : block_(other.block_),
       storage_(other.storage_),
       lookup_result_(other.lookup_result_),
@@ -100,8 +101,8 @@ SpdyHeaderBlock::StringPieceProxy::StringPieceProxy(StringPieceProxy&& other)
   other.valid_ = false;
 }
 
-SpdyHeaderBlock::StringPieceProxy& SpdyHeaderBlock::StringPieceProxy::operator=(
-    SpdyHeaderBlock::StringPieceProxy&& other) {
+SpdyHeaderBlock::ValueProxy& SpdyHeaderBlock::ValueProxy::operator=(
+    SpdyHeaderBlock::ValueProxy&& other) {
   block_ = other.block_;
   storage_ = other.storage_;
   lookup_result_ = other.lookup_result_;
@@ -111,8 +112,8 @@ SpdyHeaderBlock::StringPieceProxy& SpdyHeaderBlock::StringPieceProxy::operator=(
   return *this;
 }
 
-SpdyHeaderBlock::StringPieceProxy::~StringPieceProxy() {
-  // If the StringPieceProxy is destroyed while lookup_result_ == block_->end(),
+SpdyHeaderBlock::ValueProxy::~ValueProxy() {
+  // If the ValueProxy is destroyed while lookup_result_ == block_->end(),
   // the assignment operator was never used, and the block's Storage can
   // reclaim the memory used by the key. This makes lookup-only access to
   // SpdyHeaderBlock through operator[] memory-neutral.
@@ -121,7 +122,7 @@ SpdyHeaderBlock::StringPieceProxy::~StringPieceProxy() {
   }
 }
 
-SpdyHeaderBlock::StringPieceProxy& SpdyHeaderBlock::StringPieceProxy::operator=(
+SpdyHeaderBlock::ValueProxy& SpdyHeaderBlock::ValueProxy::operator=(
     const StringPiece value) {
   if (lookup_result_ == block_->end()) {
     DVLOG(1) << "Inserting: (" << key_ << ", " << value << ")";
@@ -134,9 +135,12 @@ SpdyHeaderBlock::StringPieceProxy& SpdyHeaderBlock::StringPieceProxy::operator=(
   return *this;
 }
 
-SpdyHeaderBlock::StringPieceProxy::operator StringPiece() const {
-  return (lookup_result_ == block_->end()) ? StringPiece()
-                                           : lookup_result_->second;
+string SpdyHeaderBlock::ValueProxy::as_string() const {
+  if (lookup_result_ == block_->end()) {
+    return "";
+  } else {
+    return lookup_result_->second.as_string();
+  }
 }
 
 SpdyHeaderBlock::SpdyHeaderBlock() {}
@@ -202,13 +206,12 @@ void SpdyHeaderBlock::insert(
   }
 }
 
-SpdyHeaderBlock::StringPieceProxy SpdyHeaderBlock::operator[](
-    const StringPiece key) {
+SpdyHeaderBlock::ValueProxy SpdyHeaderBlock::operator[](const StringPiece key) {
   DVLOG(2) << "Operator[] saw key: " << key;
   StringPiece out_key;
   auto iter = block_.find(key);
   if (iter == block_.end()) {
-    // We write the key first, to assure that the StringPieceProxy has a
+    // We write the key first, to assure that the ValueProxy has a
     // reference to a valid StringPiece in its operator=.
     out_key = GetStorage()->Write(key);
     DVLOG(2) << "Key written as: " << std::hex
@@ -217,12 +220,7 @@ SpdyHeaderBlock::StringPieceProxy SpdyHeaderBlock::operator[](
   } else {
     out_key = iter->first;
   }
-  return StringPieceProxy(&block_, GetStorage(), iter, out_key);
-}
-
-StringPiece SpdyHeaderBlock::GetHeader(const StringPiece key) const {
-  auto iter = block_.find(key);
-  return iter == block_.end() ? StringPiece() : iter->second;
+  return ValueProxy(&block_, GetStorage(), iter, out_key);
 }
 
 void SpdyHeaderBlock::AppendValueOrAddHeader(const StringPiece key,

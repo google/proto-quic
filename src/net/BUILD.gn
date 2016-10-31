@@ -43,20 +43,15 @@ posix_avoid_mmap = is_android && current_cpu != "x86"
 use_v8_in_net = false
 enable_built_in_dns = false
 
-config("net_config") {
-  defines = []
-  if (posix_avoid_mmap) {
-    defines += [ "POSIX_AVOID_MMAP" ]
-  }
-  if (disable_file_support) {
-    defines += [ "DISABLE_FILE_SUPPORT" ]
-  }
-  if (disable_ftp_support) {
-    defines += [ "DISABLE_FTP_SUPPORT=1" ]
-  }
-  if (enable_websockets) {
-    defines += [ "ENABLE_WEBSOCKETS" ]
-  }
+buildflag_header("features") {
+  header = "net_features.h"
+  flags = [
+    "POSIX_AVOID_MMAP=$posix_avoid_mmap",
+    "DISABLE_FILE_SUPPORT=$disable_file_support",
+    "DISABLE_FTP_SUPPORT=$disable_ftp_support",
+    "ENABLE_MDNS=$enable_mdns",
+    "ENABLE_WEBSOCKETS=$enable_websockets",
+  ]
 }
 
 config("net_internal_config") {
@@ -314,9 +309,8 @@ component("net") {
 
   cflags = []
   configs += net_configs
-  public_configs = [ ":net_config" ]
 
-public_deps += [ "//url" ]
+public_deps += [ ":features", "//url" ]
 
   if (is_mac) {
     libs = [
@@ -393,9 +387,11 @@ public_deps += [ "//url" ]
     # Brotli support.
     if (!disable_brotli_filter) {
       sources += [ "filter/brotli_filter.cc" ]
+      sources += [ "filter/brotli_source_stream.cc" ]
       deps += [ "//third_party/brotli" ]
     } else {
       sources += [ "filter/brotli_filter_disabled.cc" ]
+      sources += [ "filter/brotli_source_stream_disabled.cc" ]
     }
   }
 }

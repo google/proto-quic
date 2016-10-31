@@ -195,8 +195,6 @@ class QuicInMemoryCache {
   std::list<ServerPushInfo> GetServerPushResources(std::string request_url);
 
  private:
-  typedef std::unordered_map<std::string, Response*> ResponseMap;
-
   friend struct base::DefaultSingletonTraits<QuicInMemoryCache>;
   friend class test::QuicInMemoryCachePeer;
 
@@ -226,7 +224,7 @@ class QuicInMemoryCache {
                                  ServerPushInfo resource);
 
   // Cached responses.
-  ResponseMap responses_;
+  std::unordered_map<std::string, std::unique_ptr<Response>> responses_;
 
   // The default response for cache misses, if set.
   std::unique_ptr<Response> default_response_;

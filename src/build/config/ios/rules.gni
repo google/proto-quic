@@ -5,6 +5,7 @@
 import("//build/config/ios/ios_sdk.gni")
 import("//build/config/mac/base_rules.gni")
 import("//build/config/mac/symbols.gni")
+import("//build/toolchain/toolchain.gni")
 
 # Invokes lipo on multiple arch-specific binaries to create a fat binary.
 #
@@ -75,13 +76,20 @@ template("lipo_binary") {
       deps += [ "$_arch_binary_target($_toolchain)" ]
     }
 
-    args = [
-             "xcrun",
-             "lipo",
-             "-create",
-             "-output",
-             rebase_path("$target_out_dir/$_output_name", root_build_dir),
-           ] + rebase_path(inputs, root_build_dir)
+    args = []
+    if (!use_system_xcode) {
+      args += [
+        "--developer_dir",
+        hermetic_xcode_path,
+      ]
+    }
+    args += [
+              "xcrun",
+              "lipo",
+              "-create",
+              "-output",
+              rebase_path("$target_out_dir/$_output_name", root_build_dir),
+            ] + rebase_path(inputs, root_build_dir)
 
     if (enable_dsyms) {
       _dsyms_output_dir = "$root_out_dir/$_output_name.dSYM"
@@ -234,7 +242,14 @@ template("create_signed_bundle") {
       }
     }
 
-    code_signing_args = [
+    code_signing_args = []
+    if (!use_system_xcode) {
+      code_signing_args += [
+        "--developer_dir",
+        hermetic_xcode_path,
+      ]
+    }
+    code_signing_args += [
       "code-sign-bundle",
       "-t=" + ios_sdk_name,
       "-i=" + ios_code_signing_identity,
@@ -295,6 +310,7 @@ template("ios_info_plist") {
       extra_substitutions = invoker.extra_substitutions
     }
     extra_substitutions += [
+      "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix",
       "IOS_DEPLOYMENT_TARGET=$ios_deployment_target",
       "IOS_PLATFORM_BUILD=$ios_platform_build",
       "IOS_PLATFORM_NAME=$ios_sdk_name",
@@ -398,7 +414,7 @@ template("ios_app_bundle") {
     visibility = [ ":$_arch_executable_target" ]
   }
 
-  if (use_ios_simulator) {
+  if (current_toolchain == default_toolchain || use_ios_simulator) {
     _generate_entitlements_target = _target_name + "_gen_entitlements"
     _generate_entitlements_output =
         get_label_info(":$_generate_entitlements_target($default_toolchain)",
@@ -522,7 +538,7 @@ template("ios_app_bundle") {
       executable_name = _output_name
     }
 
-    if (use_ios_simulator) {
+    if (current_toolchain == default_toolchain) {
       _entitlements_path = "//build/config/ios/entitlements.plist"
       if (defined(invoker.entitlements_path)) {
         _entitlements_path = invoker.entitlements_path
@@ -543,11 +559,19 @@ template("ios_app_bundle") {
         outputs = [
           _generate_entitlements_output,
         ]
-        args = [
-                 "generate-entitlements",
-                 "-e=" + rebase_path(_entitlements_path, root_build_dir),
-                 "-p=" + rebase_path(_info_plist_path, root_build_dir),
-               ] + rebase_path(outputs, root_build_dir)
+
+        args = []
+        if (!use_system_xcode) {
+          args += [
+            "--developer_dir",
+            hermetic_xcode_path,
+          ]
+        }
+        args += [
+                  "generate-entitlements",
+                  "-e=" + rebase_path(_entitlements_path, root_build_dir),
+                  "-p=" + rebase_path(_info_plist_path, root_build_dir),
+                ] + rebase_path(outputs, root_build_dir)
       }
     }
 

@@ -53,6 +53,15 @@ def canonicalizeUnits(tree):
       histogram.attributes['units'] = UNIT_REWRITES[units.value]
 
 
+def fixObsoleteOrder(tree):
+  """Put obsolete tags at the beginning of histogram tags."""
+  histograms = tree.getElementsByTagName('histogram')
+  for histogram in histograms:
+    obsoletes = histogram.getElementsByTagName('obsolete')
+    if obsoletes:
+      histogram.insertBefore(obsoletes[0], histogram.firstChild)
+
+
 def PrettyPrint(raw_xml):
   """Pretty-print the given XML.
 
@@ -64,6 +73,7 @@ def PrettyPrint(raw_xml):
   """
   tree = xml.dom.minidom.parseString(raw_xml)
   canonicalizeUnits(tree)
+  fixObsoleteOrder(tree)
   return print_style.GetPrintStyle().PrettyPrintXml(tree)
 
 

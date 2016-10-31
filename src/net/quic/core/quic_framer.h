@@ -279,12 +279,12 @@ class NET_EXPORT_PRIVATE QuicFramer {
                          char* buffer,
                          size_t packet_length);
 
-  // Returns a new public reset packet, owned by the caller.
-  static QuicEncryptedPacket* BuildPublicResetPacket(
+  // Returns a new public reset packet.
+  static std::unique_ptr<QuicEncryptedPacket> BuildPublicResetPacket(
       const QuicPublicResetPacket& packet);
 
-  // Returns a new version negotiation packet, owned by the caller.
-  static QuicEncryptedPacket* BuildVersionNegotiationPacket(
+  // Returns a new version negotiation packet.
+  static std::unique_ptr<QuicEncryptedPacket> BuildVersionNegotiationPacket(
       QuicConnectionId connection_id,
       const QuicVersionVector& versions);
 

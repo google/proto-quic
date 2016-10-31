@@ -339,8 +339,6 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   }
 
  private:
-  typedef std::map<QuicServerId, CachedState*> CachedStateMap;
-
   // Sets the members to reasonable, default values.
   void SetDefaults();
 
@@ -366,7 +364,7 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
 
   // cached_states_ maps from the server_id to the cached information about
   // that server.
-  CachedStateMap cached_states_;
+  std::map<QuicServerId, std::unique_ptr<CachedState>> cached_states_;
 
   // Contains a map of servers which could share the same server config. Map
   // from a canonical host suffix/port/scheme to a representative server with

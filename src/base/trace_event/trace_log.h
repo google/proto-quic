@@ -285,15 +285,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
                         const char* name,
                         TraceEventHandle handle);
 
-  // For every matching event, the callback will be called.
-  typedef base::Callback<void()> WatchEventCallback;
-  void SetWatchEvent(const std::string& category_name,
-                     const std::string& event_name,
-                     const WatchEventCallback& callback);
-  // Cancel the watch event. If tracing is enabled, this may race with the
-  // watch event notification firing.
-  void CancelWatchEvent();
-
   int process_id() const { return process_id_; }
 
   uint64_t MangleEventId(uint64_t id);
@@ -502,11 +493,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   int process_id_;
 
   TimeDelta time_offset_;
-
-  // Allow tests to wake up when certain events occur.
-  WatchEventCallback watch_event_callback_;
-  subtle::AtomicWord /* const unsigned char* */ watch_category_;
-  std::string watch_event_name_;
 
   subtle::AtomicWord /* Options */ trace_options_;
 

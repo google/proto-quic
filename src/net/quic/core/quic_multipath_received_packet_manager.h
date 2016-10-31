@@ -8,6 +8,7 @@
 #ifndef NET_QUIC_QUIC_MULTIPATH_RECEIVED_PACKET_MANAGER_H_
 #define NET_QUIC_QUIC_MULTIPATH_RECEIVED_PACKET_MANAGER_H_
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -23,11 +24,12 @@ class QuicMultipathReceivedPacketManagerPeer;
 
 class NET_EXPORT_PRIVATE QuicMultipathReceivedPacketManager {
  public:
-  typedef std::unordered_map<QuicPathId, QuicReceivedPacketManager*>
-      MultipathReceivedPacketManagerMap;
-
   explicit QuicMultipathReceivedPacketManager(QuicConnectionStats* stats);
   ~QuicMultipathReceivedPacketManager();
+  QuicMultipathReceivedPacketManager(
+      const QuicMultipathReceivedPacketManager&) = delete;
+  QuicMultipathReceivedPacketManager& operator=(
+      const QuicMultipathReceivedPacketManager&) = delete;
 
   // Called when a new path with |path_id| is created.
   void OnPathCreated(QuicPathId path_id, QuicConnectionStats* stats);
@@ -68,7 +70,8 @@ class NET_EXPORT_PRIVATE QuicMultipathReceivedPacketManager {
   friend class test::QuicMultipathReceivedPacketManagerPeer;
 
   // Map mapping path id to path received packet manager.
-  MultipathReceivedPacketManagerMap path_managers_;
+  std::unordered_map<QuicPathId, std::unique_ptr<QuicReceivedPacketManager>>
+      path_managers_;
 };
 
 }  // namespace net

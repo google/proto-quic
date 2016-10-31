@@ -13,6 +13,7 @@
 #include "base/macros.h"
 #include "base/sha1.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/test/histogram_tester.h"
 #include "build/build_config.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
@@ -47,6 +48,11 @@ using base::HexEncode;
 namespace net {
 
 namespace {
+
+const char kTLSFeatureExtensionHistogram[] =
+    "Net.Certificate.TLSFeatureExtensionWithPrivateRoot";
+const char kTLSFeatureExtensionOCSPHistogram[] =
+    "Net.Certificate.TLSFeatureExtensionWithPrivateRootHasOCSP";
 
 // Mock CertVerifyProc that sets the CertVerifyResult to a given value for
 // all certificates that are Verify()'d
@@ -161,6 +167,17 @@ class CertVerifyProcTest : public testing::Test {
              const CertificateList& additional_trust_anchors,
              CertVerifyResult* verify_result) {
     return verify_proc_->Verify(cert, hostname, std::string(), flags, crl_set,
+                                additional_trust_anchors, verify_result);
+  }
+
+  int VerifyWithOCSPResponse(X509Certificate* cert,
+                             const std::string& hostname,
+                             const std::string& ocsp_response,
+                             int flags,
+                             CRLSet* crl_set,
+                             const CertificateList& additional_trust_anchors,
+                             CertVerifyResult* verify_result) {
+    return verify_proc_->Verify(cert, hostname, ocsp_response, flags, crl_set,
                                 additional_trust_anchors, verify_result);
   }
 
@@ -1843,5 +1860,106 @@ TEST_F(CertVerifyProcTest, LargeKey) {
   EXPECT_EQ(CERT_STATUS_INVALID, verify_result.cert_status);
 }
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
+
+// Tests that CertVerifyProc records a histogram correctly when a
+// certificate chaining to a private root contains the TLS feature
+// extension and does not have a stapled OCSP response.
+TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionUMA) {
+  base::HistogramTester histograms;
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  CertVerifyResult result;
+  result.is_issued_by_known_root = false;
+  result.verified_cert = cert;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 0);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
+                     &verify_result);
+  EXPECT_EQ(OK, error);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 1);
+  histograms.ExpectBucketCount(kTLSFeatureExtensionHistogram, true, 1);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 1);
+  histograms.ExpectBucketCount(kTLSFeatureExtensionOCSPHistogram, false, 1);
+}
+
+// Tests that CertVerifyProc records a histogram correctly when a
+// certificate chaining to a private root contains the TLS feature
+// extension and does have a stapled OCSP response.
+TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionWithStapleUMA) {
+  base::HistogramTester histograms;
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  CertVerifyResult result;
+  result.is_issued_by_known_root = false;
+  result.verified_cert = cert;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 0);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error =
+      VerifyWithOCSPResponse(cert.get(), "127.0.0.1", "dummy response", flags,
+                             NULL, empty_cert_list_, &verify_result);
+  EXPECT_EQ(OK, error);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 1);
+  histograms.ExpectBucketCount(kTLSFeatureExtensionHistogram, true, 1);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 1);
+  histograms.ExpectBucketCount(kTLSFeatureExtensionOCSPHistogram, true, 1);
+}
+
+// Tests that CertVerifyProc records a histogram correctly when a
+// certificate chaining to a private root does not contain the TLS feature
+// extension.
+TEST_F(CertVerifyProcTest, DoesNotHaveTLSFeatureExtensionUMA) {
+  base::HistogramTester histograms;
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  CertVerifyResult result;
+  result.is_issued_by_known_root = false;
+  result.verified_cert = cert;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 0);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
+                     &verify_result);
+  EXPECT_EQ(OK, error);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 1);
+  histograms.ExpectBucketCount(kTLSFeatureExtensionHistogram, false, 1);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 0);
+}
+
+// Tests that CertVerifyProc does not record a histogram when a
+// certificate contains the TLS feature extension but chains to a public
+// root.
+TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionWithPublicRootUMA) {
+  base::HistogramTester histograms;
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  CertVerifyResult result;
+  result.is_issued_by_known_root = true;
+  result.verified_cert = cert;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
+                     &verify_result);
+  EXPECT_EQ(OK, error);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
+  histograms.ExpectTotalCount(kTLSFeatureExtensionOCSPHistogram, 0);
+}
 
 }  // namespace net

@@ -32,6 +32,7 @@
 #include "net/base/proxy_delegate.h"
 #include "net/dns/host_resolver.h"
 #include "net/http/http_network_session.h"
+#include "net/net_features.h"
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_service.h"
 #include "net/quic/core/quic_protocol.h"
@@ -144,14 +145,14 @@ class NET_EXPORT URLRequestContextBuilder {
     data_enabled_ = enable;
   }
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
   // Control support for file:// requests. By default it's disabled.
   void set_file_enabled(bool enable) {
     file_enabled_ = enable;
   }
 #endif
 
-#if !defined(DISABLE_FTP_SUPPORT)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT)
   // Control support for ftp:// requests. By default it's disabled.
   void set_ftp_enabled(bool enable) {
     ftp_enabled_ = enable;
@@ -331,11 +332,11 @@ class NET_EXPORT URLRequestContextBuilder {
   std::string user_agent_;
   // Include support for data:// requests.
   bool data_enabled_;
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
   // Include support for file:// requests.
   bool file_enabled_;
 #endif
-#if !defined(DISABLE_FTP_SUPPORT)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT)
   // Include support for ftp:// requests.
   bool ftp_enabled_;
 #endif
@@ -356,9 +357,6 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<NetworkDelegate> network_delegate_;
   std::unique_ptr<ProxyDelegate> proxy_delegate_;
   std::unique_ptr<CookieStore> cookie_store_;
-#if !defined(DISABLE_FTP_SUPPORT)
-  std::unique_ptr<FtpTransactionFactory> ftp_transaction_factory_;
-#endif
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<CTVerifier> ct_verifier_;

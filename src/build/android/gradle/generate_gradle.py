@@ -77,6 +77,11 @@ def _WriteFile(path, data):
     output_file.write(data)
 
 
+def _ReadBuildVars(output_dir):
+  with open(os.path.join(output_dir, 'build_vars.txt')) as f:
+    return dict(l.rstrip().split('=', 1) for l in f)
+
+
 def _RunNinja(output_dir, args):
   cmd = ['ninja', '-C', output_dir, '-j50']
   cmd.extend(args)
@@ -234,7 +239,7 @@ def _GenerateLocalProperties(sdk_dir):
       ''])
 
 
-def _GenerateGradleFile(build_config, config_json, java_dirs, relativize,
+def _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
                         use_gradle_process_resources, jinja_processor):
   """Returns the data for a project's build.gradle."""
   deps_info = build_config['deps_info']
@@ -253,8 +258,9 @@ def _GenerateGradleFile(build_config, config_json, java_dirs, relativize,
   variables = {}
   variables['template_type'] = target_type
   variables['use_gradle_process_resources'] = use_gradle_process_resources
-  variables['build_tools_version'] = config_json['build_tools_version']
-  variables['compile_sdk_version'] = config_json['compile_sdk_version']
+  variables['build_tools_version'] = (
+      build_vars['android_sdk_build_tools_version'])
+  variables['compile_sdk_version'] = build_vars['android_sdk_version']
   android_manifest = gradle.get('android_manifest',
                                 _DEFAULT_ANDROID_MANIFEST_PATH)
   variables['android_manifest'] = relativize(android_manifest)
@@ -386,8 +392,7 @@ def main():
 
   logging.warning('Writing .gradle files...')
   jinja_processor = jinja_template.JinjaProcessor(host_paths.DIR_SOURCE_ROOT)
-  config_json = build_utils.ReadJson(
-      os.path.join(output_dir, 'gradle', 'config.json'))
+  build_vars = _ReadBuildVars(output_dir)
   project_entries = []
   srcjar_tuples = []
   for entry in all_entries:
@@ -411,7 +416,7 @@ def main():
     if srcjars:
       java_dirs.append(os.path.join(entry_output_dir, _SRCJARS_SUBDIR))
 
-    data = _GenerateGradleFile(build_config, config_json, java_dirs, relativize,
+    data = _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
                                args.use_gradle_process_resources,
                                jinja_processor)
     if data:
@@ -426,7 +431,7 @@ def main():
   _WriteFile(os.path.join(gradle_output_dir, 'settings.gradle'),
              _GenerateSettingsGradle(project_entries))
 
-  sdk_path = _RebasePath(config_json['android_sdk_root'])
+  sdk_path = _RebasePath(build_vars['android_sdk_root'])
   _WriteFile(os.path.join(gradle_output_dir, 'local.properties'),
              _GenerateLocalProperties(sdk_path))
 

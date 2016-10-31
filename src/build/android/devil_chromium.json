@@ -5,7 +5,7 @@
       "file_info": {
         "linux2_x86_64": {
           "local_paths": [
-            "../../third_party/android_tools/sdk/build-tools/23.0.1/aapt"
+            "../../third_party/android_tools/sdk/build-tools/24.0.2/aapt"
           ]
         }
       }
@@ -32,7 +32,7 @@
       "file_info": {
         "linux2_x86_64": {
           "local_paths": [
-            "../../third_party/android_tools/sdk/build-tools/23.0.1/dexdump"
+            "../../third_party/android_tools/sdk/build-tools/24.0.2/dexdump"
           ]
         }
       }
@@ -41,7 +41,7 @@
       "file_info": {
         "linux2_x86_64": {
           "local_paths": [
-            "../../third_party/android_tools/sdk/build-tools/23.0.1/split-select"
+            "../../third_party/android_tools/sdk/build-tools/24.0.2/split-select"
           ]
         }
       }

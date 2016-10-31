@@ -4,14 +4,6 @@
 
 #include "net/cert/internal/verify_signed_data.h"
 
-#include <openssl/bn.h>
-#include <openssl/bytestring.h>
-#include <openssl/digest.h>
-#include <openssl/ec.h>
-#include <openssl/ec_key.h>
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
-
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
@@ -21,6 +13,13 @@
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
+#include "third_party/boringssl/src/include/openssl/bn.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/ec.h"
+#include "third_party/boringssl/src/include/openssl/ec_key.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 namespace net {
 

@@ -5,8 +5,8 @@
 #include "net/quic/core/quic_sent_packet_manager.h"
 
 #include <memory>
+
 #include "base/memory/ptr_util.h"
-#include "base/stl_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
@@ -106,7 +106,7 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
         .Times(AnyNumber());
   }
 
-  ~QuicSentPacketManagerTest() override { base::STLDeleteElements(&packets_); }
+  ~QuicSentPacketManagerTest() override {}
 
   QuicByteCount BytesInFlight() {
     return QuicSentPacketManagerPeer::GetBytesInFlight(&manager_);
@@ -305,7 +305,6 @@ class QuicSentPacketManagerTest : public ::testing::TestWithParam<TestParams> {
 
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicSentPacketManager manager_;
-  vector<QuicEncryptedPacket*> packets_;
   MockClock clock_;
   QuicConnectionStats stats_;
   MockSendAlgorithm* send_algorithm_;

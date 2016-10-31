@@ -12,6 +12,7 @@ import re
 from functools import partial
 
 from grit import util
+from grit.format import rc_header
 from grit.node import misc
 
 
@@ -260,34 +261,29 @@ _LANGUAGE_DIRECTIVE_PAIR = {
 def GetLangCharsetPair(language):
   if _LANGUAGE_CHARSET_PAIR.has_key(language):
     return _LANGUAGE_CHARSET_PAIR[language]
-  elif language == 'no-specific-language':
-    return ''
-  else:
-    print 'Warning:GetLangCharsetPair() found undefined language %s' %(language)
-    return ''
+  if language != 'no-specific-language':
+    print 'Warning:GetLangCharsetPair() found undefined language %s' % language
+  return ''
 
 def GetLangDirectivePair(language):
   if _LANGUAGE_DIRECTIVE_PAIR.has_key(language):
     return _LANGUAGE_DIRECTIVE_PAIR[language]
-  else:
-    # We don't check for 'no-specific-language' here because this
-    # function should only get called when output is being formatted,
-    # and at that point we would not want to get
-    # 'no-specific-language' passed as the language.
-    print ('Warning:GetLangDirectivePair() found undefined language %s' %
-           language)
-    return 'unknown language: see tools/grit/format/rc.py'
+
+  # We don't check for 'no-specific-language' here because this
+  # function should only get called when output is being formatted,
+  # and at that point we would not want to get
+  # 'no-specific-language' passed as the language.
+  print 'Warning:GetLangDirectivePair() found undefined language %s' % language
+  return 'unknown language: see tools/grit/format/rc.py'
 
 def GetLangIdHex(language):
   if _LANGUAGE_CHARSET_PAIR.has_key(language):
     langcharset = _LANGUAGE_CHARSET_PAIR[language]
     lang_id = '0x' + langcharset[0:4]
     return lang_id
-  elif language == 'no-specific-language':
-    return ''
-  else:
-    print 'Warning:GetLangIdHex() found undefined language %s' %(language)
-    return ''
+  if language != 'no-specific-language':
+    print 'Warning:GetLangIdHex() found undefined language %s' % language
+  return ''
 
 
 def GetCharsetIdDecimal(language):
@@ -295,11 +291,9 @@ def GetCharsetIdDecimal(language):
     langcharset = _LANGUAGE_CHARSET_PAIR[language]
     charset_decimal = int(langcharset[4:], 16)
     return str(charset_decimal)
-  elif language == 'no-specific-language':
-    return ''
-  else:
+  if language != 'no-specific-language':
     print 'Warning:GetCharsetIdDecimal() found undefined language %s' % language
-    return ''
+  return ''
 
 
 def GetUnifiedLangCode(language) :
@@ -307,8 +301,7 @@ def GetUnifiedLangCode(language) :
   if r.match(language) :
     underscore = language.find('_')
     return language[0:underscore] + '-' + language[underscore + 1:].upper()
-  else :
-    return language
+  return language
 
 
 def RcSubstitutions(substituter, lang):
@@ -386,18 +379,17 @@ def _FormatSection(item, lang, output_dir):
 
   if item.IsExcludedFromRc():
     return ''
-  else:
-    text = item.gatherer.Translate(
+
+  text = item.gatherer.Translate(
       lang, skeleton_gatherer=item.GetSkeletonGatherer(),
       pseudo_if_not_available=item.PseudoIsAllowed(),
       fallback_to_english=item.ShouldFallbackToEnglish()) + '\n\n'
 
-    # Replace the language expand_variables in version rc info.
-    if item.ExpandVariables() and hasattr(item.GetRoot(), 'GetSubstituter'):
-      substituter = item.GetRoot().GetSubstituter()
-      text = substituter.Substitute(text)
-
-    return text
+  # Replace the language expand_variables in version rc info.
+  if item.ExpandVariables() and hasattr(item.GetRoot(), 'GetSubstituter'):
+    substituter = item.GetRoot().GetSubstituter()
+    text = substituter.Substitute(text)
+  return text
 
 
 def FormatInclude(item, lang, output_dir, type=None, process_html=False):
@@ -448,8 +440,10 @@ def FormatInclude(item, lang, output_dir, type=None, process_html=False):
 
   if isinstance(item, structure.StructureNode) and item.IsExcludedFromRc():
     return ''
-  else:
-    return '%-18s %-18s "%s"\n' % (item.attrs['name'], type, filename)
+
+  name = item.attrs['name']
+  item_id = rc_header.GetIds(item.GetRoot())[name]
+  return '// ID: %d\n%-18s %-18s "%s"\n' % (item_id, name, type, filename)
 
 
 def _DoNotFormat(item, lang, output_dir):

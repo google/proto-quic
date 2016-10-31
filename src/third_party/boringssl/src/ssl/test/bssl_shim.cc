@@ -594,8 +594,10 @@ static unsigned PskServerCallback(SSL *ssl, const char *identity,
   return config->psk.size();
 }
 
+static timeval g_clock;
+
 static void CurrentTimeCallback(const SSL *ssl, timeval *out_clock) {
-  *out_clock = PacketedBioGetClock(GetTestState(ssl)->packeted_bio);
+  *out_clock = g_clock;
 }
 
 static void ChannelIdCallback(SSL *ssl, EVP_PKEY **out_pkey) {
@@ -774,6 +776,20 @@ static int CustomExtensionParseCallback(SSL *ssl, unsigned extension_value,
   return 1;
 }
 
+static int ServerNameCallback(SSL *ssl, int *out_alert, void *arg) {
+  // SNI must be accessible from the SNI callback.
+  const TestConfig *config = GetTestConfig(ssl);
+  const char *server_name = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+  if (server_name == nullptr ||
+      std::string(server_name) != config->expected_server_name) {
+    fprintf(stderr, "servername mismatch (got %s; want %s)\n", server_name,
+            config->expected_server_name.c_str());
+    return SSL_TLSEXT_ERR_ALERT_FATAL;
+  }
+
+  return SSL_TLSEXT_ERR_OK;
+}
+
 // Connect returns a new socket connected to localhost on |port| or -1 on
 // error.
 static int Connect(uint16_t port) {
@@ -923,9 +939,7 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
   SSL_CTX_enable_tls_channel_id(ssl_ctx.get());
   SSL_CTX_set_channel_id_cb(ssl_ctx.get(), ChannelIdCallback);
 
-  if (config->is_dtls) {
-    SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
-  }
+  SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
 
   SSL_CTX_set_info_callback(ssl_ctx.get(), InfoCallback);
   SSL_CTX_sess_set_new_cb(ssl_ctx.get(), NewSessionCallback);
@@ -969,6 +983,10 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
 
   if (config->enable_grease) {
     SSL_CTX_set_grease_enabled(ssl_ctx.get(), 1);
+  }
+
+  if (!config->expected_server_name.empty()) {
+    SSL_CTX_set_tlsext_servername_callback(ssl_ctx.get(), ServerNameCallback);
   }
 
   return ssl_ctx;
@@ -1171,7 +1189,8 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
   if (!config->expected_server_name.empty()) {
     const char *server_name =
         SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
-    if (server_name != config->expected_server_name) {
+    if (server_name == nullptr ||
+        server_name != config->expected_server_name) {
       fprintf(stderr, "servername mismatch (got %s; want %s)\n",
               server_name, config->expected_server_name.c_str());
       return false;
@@ -1456,6 +1475,11 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
   if (config->max_cert_list > 0) {
     SSL_set_max_cert_list(ssl.get(), config->max_cert_list);
   }
+  if (is_resume &&
+      !config->resume_cipher.empty() &&
+      !SSL_set_cipher_list(ssl.get(), config->resume_cipher.c_str())) {
+    return false;
+  }
 
   int sock = Connect(config->port);
   if (sock == -1) {
@@ -1468,7 +1492,7 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
     return false;
   }
   if (config->is_dtls) {
-    bssl::UniquePtr<BIO> packeted = PacketedBioCreate(!config->async);
+    bssl::UniquePtr<BIO> packeted = PacketedBioCreate(&g_clock, !config->async);
     if (!packeted) {
       return false;
     }
@@ -1742,6 +1766,11 @@ static int Main(int argc, char **argv) {
   if (!ParseConfig(argc - 1, argv + 1, &config)) {
     return Usage(argv[0]);
   }
+
+  // Some code treats the zero time special, so initialize the clock to a
+  // non-zero time.
+  g_clock.tv_sec = 1234;
+  g_clock.tv_usec = 1234;
 
   bssl::UniquePtr<SSL_CTX> ssl_ctx = SetupCtx(&config);
   if (!ssl_ctx) {

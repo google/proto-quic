@@ -24,6 +24,9 @@ const char kMailToScheme[] = "mailto";
 const char kWsScheme[] = "ws";
 const char kWssScheme[] = "wss";
 
+const char kHttpSuboriginScheme[] = "http-so";
+const char kHttpsSuboriginScheme[] = "https-so";
+
 const char kStandardSchemeSeparator[] = "://";
 
 const size_t kMaxURLChars = 2 * 1024 * 1024;

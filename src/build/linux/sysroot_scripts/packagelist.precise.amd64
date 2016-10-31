@@ -48,6 +48,8 @@ main/g/gnutls26/libgnutls-openssl27_2.12.14-5ubuntu3.12_amd64.deb
 main/g/gnutls26/libgnutlsxx27_2.12.14-5ubuntu3.12_amd64.deb
 main/g/gtk+2.0/libgtk2.0-0_2.24.10-0ubuntu6.3_amd64.deb
 main/g/gtk+2.0/libgtk2.0-dev_2.24.10-0ubuntu6.3_amd64.deb
+main/g/gtk+3.0/libgtk-3-0_3.4.2-0ubuntu0.9_amd64.deb
+main/g/gtk+3.0/libgtk-3-dev_3.4.2-0ubuntu0.9_amd64.deb
 main/k/keyutils/libkeyutils1_1.5.2-2_amd64.deb
 main/k/krb5/krb5-multidev_1.10+dfsg~beta1-2ubuntu0.7_amd64.deb
 main/k/krb5/libgssapi-krb5-2_1.10+dfsg~beta1-2ubuntu0.7_amd64.deb

@@ -9,6 +9,7 @@
 #include "base/macros.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_client_promised_info_peer.h"
 #include "net/test/gtest_util.h"
 #include "net/tools/quic/quic_client_session.h"
 
@@ -17,17 +18,6 @@ using testing::StrictMock;
 
 namespace net {
 namespace test {
-
-class QuicClientPromisedInfoPeer {
- public:
-  static QuicAlarm* GetAlarm(QuicClientPromisedInfo* promised_stream) {
-    return promised_stream->cleanup_alarm_.get();
-  }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(QuicClientPromisedInfoPeer);
-};
-
 namespace {
 
 class MockQuicClientSession : public QuicClientSession {

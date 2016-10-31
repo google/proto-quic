@@ -4,6 +4,7 @@
 
 #include "net/ftp/ftp_network_layer.h"
 
+#include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "net/ftp/ftp_network_session.h"
 #include "net/ftp/ftp_network_transaction.h"
@@ -14,6 +15,7 @@ namespace net {
 FtpNetworkLayer::FtpNetworkLayer(HostResolver* host_resolver)
     : session_(new FtpNetworkSession(host_resolver)),
       suspended_(false) {
+  DCHECK(host_resolver);
 }
 
 FtpNetworkLayer::~FtpNetworkLayer() {
