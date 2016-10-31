@@ -59,6 +59,14 @@ enum BattOrControlMessageType : uint8_t {
   // Tells the BattOr to send back the number of samples it's collected so far.
   // This is used for syncing the clocks between the agent and the BattOr.
   BATTOR_CONTROL_MESSAGE_TYPE_READ_SAMPLE_COUNT,
+  // Tells the BattOr to send back the git hash of the firmware.
+  BATTOR_CONTROL_MESSAGE_TYPE_GET_FIRMWARE_GIT_HASH,
+  // Read if the BattOr is portable or not.
+  BATTOR_CONTROL_MESSAGE_TYPE_GET_MODE_PORTABLE,
+  // Write the RTC seconds.
+  BATTOR_CONTROL_MESSAGE_TYPE_SET_RTC,
+  // Read the RTC seconds.
+  BATTOR_CONTROL_MESSAGE_TYPE_GET_RTC,
 };
 
 // The gain level for the BattOr to use.

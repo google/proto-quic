@@ -4,10 +4,6 @@
 
 #include "crypto/signature_verifier.h"
 
-#include <openssl/bytestring.h>
-#include <openssl/digest.h>
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
 #include <stdint.h>
 
 #include <memory>
@@ -15,6 +11,10 @@
 
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/rsa.h"
 
 namespace crypto {
 

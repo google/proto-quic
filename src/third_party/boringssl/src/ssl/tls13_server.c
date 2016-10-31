@@ -43,6 +43,7 @@ enum server_hs_state_t {
   state_flush,
   state_process_client_certificate,
   state_process_client_certificate_verify,
+  state_process_channel_id,
   state_process_client_finished,
   state_send_new_session_ticket,
   state_flush_new_session_ticket,
@@ -122,7 +123,8 @@ static enum ssl_hs_wait_t do_process_client_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
       /* Only resume if the session's version matches. */
       (session->ssl_version != ssl->version ||
        !ssl_client_cipher_list_contains_cipher(
-           &client_hello, (uint16_t)SSL_CIPHER_get_id(session->cipher)))) {
+           &client_hello, (uint16_t)SSL_CIPHER_get_id(session->cipher)) ||
+       !ssl_is_valid_cipher(ssl, session->cipher))) {
     SSL_SESSION_free(session);
     session = NULL;
   }
@@ -381,7 +383,7 @@ static enum ssl_hs_wait_t do_send_certificate_request(SSL *ssl,
   }
 
   const uint16_t *sigalgs;
-  size_t num_sigalgs = tls12_get_psigalgs(ssl, &sigalgs);
+  size_t num_sigalgs = tls12_get_verify_sigalgs(ssl, &sigalgs);
   if (!CBB_add_u16_length_prefixed(&body, &sigalgs_cbb)) {
     goto err;
   }
@@ -476,7 +478,7 @@ static enum ssl_hs_wait_t do_process_client_certificate(SSL *ssl,
     ssl->s3->new_session->verify_result = X509_V_OK;
 
     /* Skip this state. */
-    hs->state = state_process_client_finished;
+    hs->state = state_process_channel_id;
     return ssl_hs_ok;
   }
 
@@ -503,7 +505,7 @@ static enum ssl_hs_wait_t do_process_client_certificate_verify(
     SSL *ssl, SSL_HANDSHAKE *hs) {
   if (ssl->s3->new_session->peer == NULL) {
     /* Skip this state. */
-    hs->state = state_process_client_finished;
+    hs->state = state_process_channel_id;
     return ssl_hs_ok;
   }
 
@@ -511,6 +513,22 @@ static enum ssl_hs_wait_t do_process_client_certificate_verify(
       !tls13_process_certificate_verify(ssl) ||
       !ssl->method->hash_current_message(ssl)) {
     return 0;
+  }
+
+  hs->state = state_process_channel_id;
+  return ssl_hs_read_message;
+}
+
+static enum ssl_hs_wait_t do_process_channel_id(SSL *ssl, SSL_HANDSHAKE *hs) {
+  if (!ssl->s3->tlsext_channel_id_valid) {
+    hs->state = state_process_client_finished;
+    return ssl_hs_ok;
+  }
+
+  if (!tls13_check_message_type(ssl, SSL3_MT_CHANNEL_ID) ||
+      !tls1_verify_channel_id(ssl) ||
+      !ssl->method->hash_current_message(ssl)) {
+    return ssl_hs_error;
   }
 
   hs->state = state_process_client_finished;
@@ -557,12 +575,10 @@ static enum ssl_hs_wait_t do_send_new_session_ticket(SSL *ssl,
   }
 
   /* Add a fake extension. See draft-davidben-tls-grease-01. */
-  if (ssl->ctx->grease_enabled) {
-    if (!CBB_add_u16(&extensions,
-                     ssl_get_grease_value(ssl, ssl_grease_ticket_extension)) ||
-        !CBB_add_u16(&extensions, 0 /* empty */)) {
-      goto err;
-    }
+  if (!CBB_add_u16(&extensions,
+                   ssl_get_grease_value(ssl, ssl_grease_ticket_extension)) ||
+      !CBB_add_u16(&extensions, 0 /* empty */)) {
+    goto err;
   }
 
   if (!ssl->method->finish_message(ssl, &cbb)) {
@@ -644,6 +660,9 @@ enum ssl_hs_wait_t tls13_server_handshake(SSL *ssl) {
         break;
       case state_process_client_certificate_verify:
         ret = do_process_client_certificate_verify(ssl, hs);
+        break;
+      case state_process_channel_id:
+        ret = do_process_channel_id(ssl, hs);
         break;
       case state_process_client_finished:
         ret = do_process_client_finished(ssl, hs);

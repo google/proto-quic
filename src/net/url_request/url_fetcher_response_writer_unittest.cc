@@ -44,7 +44,7 @@ TEST_F(URLFetcherStringWriterTest, Basic) {
   EXPECT_THAT(callback.GetResult(rv), IsOk());
   rv = writer_->Write(buf_.get(), buf_->size(), callback.callback());
   EXPECT_EQ(buf_->size(), callback.GetResult(rv));
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Verify the result.
@@ -80,7 +80,7 @@ TEST_F(URLFetcherFileWriterTest, WriteToFile) {
   EXPECT_THAT(callback.GetResult(rv), IsOk());
   rv = writer_->Write(buf_.get(), buf_->size(), callback.callback());
   EXPECT_EQ(buf_->size(), callback.GetResult(rv));
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Verify the result.
@@ -103,7 +103,7 @@ TEST_F(URLFetcherFileWriterTest, InitializeAgain) {
   EXPECT_THAT(callback.GetResult(rv), IsOk());
   rv = writer_->Write(buf_.get(), buf_->size(), callback.callback());
   EXPECT_EQ(buf_->size(), callback.GetResult(rv));
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Verify the result.
@@ -119,7 +119,7 @@ TEST_F(URLFetcherFileWriterTest, InitializeAgain) {
   EXPECT_THAT(callback.GetResult(rv), IsOk());
   rv = writer_->Write(buf2.get(), buf2->size(), callback.callback());
   EXPECT_EQ(buf2->size(), callback.GetResult(rv));
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Verify the result.
@@ -128,13 +128,71 @@ TEST_F(URLFetcherFileWriterTest, InitializeAgain) {
   EXPECT_EQ(data2, file_contents);
 }
 
+TEST_F(URLFetcherFileWriterTest, FinishWhileWritePending) {
+  int rv = 0;
+  // Initialize(), Write() and Finish().
+  TestCompletionCallback callback;
+  rv = writer_->Initialize(callback.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  EXPECT_THAT(callback.WaitForResult(), IsOk());
+  TestCompletionCallback callback2;
+  rv = writer_->Write(buf_.get(), buf_->size(), callback2.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  TestCompletionCallback callback3;
+  rv = writer_->Finish(ERR_FAILED, callback3.callback());
+  EXPECT_EQ(OK, rv);
+
+  base::RunLoop().RunUntilIdle();
+  // Verify the result.
+  EXPECT_FALSE(base::PathExists(file_path_));
+}
+
+TEST_F(URLFetcherFileWriterTest, FinishWhileOpenPending) {
+  int rv = 0;
+  // Initialize() and Finish().
+  TestCompletionCallback callback;
+  rv = writer_->Initialize(callback.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  TestCompletionCallback callback2;
+  rv = writer_->Finish(ERR_FAILED, callback2.callback());
+  EXPECT_EQ(OK, rv);
+
+  base::RunLoop().RunUntilIdle();
+  // Verify the result.
+  EXPECT_FALSE(base::PathExists(file_path_));
+}
+
+TEST_F(URLFetcherFileWriterTest, InitializeAgainAfterFinishWithError) {
+  int rv = 0;
+  // Initialize(), Write() and Finish().
+  TestCompletionCallback callback;
+  rv = writer_->Initialize(callback.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  EXPECT_THAT(callback.WaitForResult(), IsOk());
+  TestCompletionCallback callback2;
+  rv = writer_->Write(buf_.get(), buf_->size(), callback2.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  TestCompletionCallback callback3;
+  rv = writer_->Finish(ERR_FAILED, callback3.callback());
+  EXPECT_EQ(OK, rv);
+
+  base::RunLoop().RunUntilIdle();
+  // Initialize() again and wait for it to complete.
+  TestCompletionCallback callback4;
+  rv = writer_->Initialize(callback4.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+  EXPECT_THAT(callback4.WaitForResult(), IsOk());
+  // Verify the result.
+  EXPECT_TRUE(base::PathExists(file_path_));
+}
+
 TEST_F(URLFetcherFileWriterTest, DisownFile) {
   int rv = 0;
   // Initialize() and Finish() to create a file.
   TestCompletionCallback callback;
   rv = writer_->Initialize(callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Disown file.
@@ -166,7 +224,7 @@ TEST_F(URLFetcherFileWriterTemporaryFileTest, WriteToTemporaryFile) {
   EXPECT_THAT(callback.GetResult(rv), IsOk());
   rv = writer_->Write(buf_.get(), buf_->size(), callback.callback());
   EXPECT_EQ(buf_->size(), callback.GetResult(rv));
-  rv = writer_->Finish(callback.callback());
+  rv = writer_->Finish(OK, callback.callback());
   EXPECT_THAT(callback.GetResult(rv), IsOk());
 
   // Verify the result.

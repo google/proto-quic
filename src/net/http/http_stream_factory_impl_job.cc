@@ -1009,7 +1009,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
   if (ssl_started && (result == OK || IsCertificateError(result))) {
     if (using_quic_ && result == OK) {
       was_alpn_negotiated_ = true;
-      negotiated_protocol_ = kProtoQUIC1SPDY3;
+      negotiated_protocol_ = kProtoQUIC;
     } else {
       SSLClientSocket* ssl_socket =
           static_cast<SSLClientSocket*>(connection_->socket());

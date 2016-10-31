@@ -5,8 +5,6 @@
 #include "net/cert/ct_log_verifier.h"
 
 #include <string.h>
-#include <openssl/bytestring.h>
-#include <openssl/evp.h>
 
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
@@ -15,6 +13,8 @@
 #include "net/cert/ct_serialization.h"
 #include "net/cert/merkle_consistency_proof.h"
 #include "net/cert/signed_tree_head.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace net {
 

@@ -5,7 +5,6 @@
 #ifndef CRYPTO_RSA_PRIVATE_KEY_H_
 #define CRYPTO_RSA_PRIVATE_KEY_H_
 
-#include <openssl/base.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,6 +14,7 @@
 #include "base/macros.h"
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace crypto {
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <openssl/err.h>
-#include <openssl/evp.h>
 #include <string.h>
 
 #include <memory>
@@ -11,6 +9,8 @@
 #include "net/quic/core/crypto/aead_base_encrypter.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 using base::StringPiece;
 

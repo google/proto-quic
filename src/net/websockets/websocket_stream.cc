@@ -116,6 +116,7 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
         WebSocketHandshakeStreamBase::CreateHelper::DataKey(),
         handshake_stream_create_helper_);
     url_request_->SetLoadFlags(LOAD_DISABLE_CACHE | LOAD_BYPASS_CACHE);
+    connect_delegate_->OnCreateRequest(url_request_.get());
   }
 
   // Destroying this object destroys the URLRequest, which cancels the request

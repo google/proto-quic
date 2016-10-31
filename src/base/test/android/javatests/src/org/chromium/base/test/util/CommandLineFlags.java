@@ -103,7 +103,9 @@ public final class CommandLineFlags {
         return flags;
     }
 
-    private CommandLineFlags() {}
+    private CommandLineFlags() {
+        throw new AssertionError("CommandLineFlags is a non-instantiable class");
+    }
 
     public static PreTestHook getRegistrationHook() {
         return new PreTestHook() {

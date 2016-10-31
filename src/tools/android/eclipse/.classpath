@@ -63,6 +63,8 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="components/precache/android/java/src"/>
     <classpathentry kind="src" path="components/precache/android/javatests/src"/>
     <classpathentry kind="src" path="components/safe_json/android/java/src"/>
+    <classpathentry kind="src" path="components/signin/core/browser/android/java/src"/>
+    <classpathentry kind="src" path="components/signin/core/browser/android/javatests/src"/>
     <classpathentry kind="src" path="components/sync/android/java/src"/>
     <classpathentry kind="src" path="components/sync/android/javatests/src"/>
     <classpathentry kind="src" path="components/test/android/browsertests_apk/src"/>
@@ -170,6 +172,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="out/Debug/gen/enums/popup_item_type_java"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/private_key_types_java"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/profile_account_management_metrics_java"/>
+    <classpathentry kind="src" path="out/Debug/gen/enums/quick_action_category_enum_java"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/readback_response_java"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/result_codes_java"/>
     <classpathentry kind="src" path="out/Debug/gen/enums/screen_orientation_values_java"/>
@@ -210,13 +213,13 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="out/Debug/java_proto/test_support_proto_java/src"/>
     <classpathentry kind="src" path="out/Debug/remoting_apk/gen"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/google/gcm/gcm-client/dist/gcm.jar" sourcepath="third_party/android_tools/sdk/extras/google/gcm/gcm-client/src"/>
-    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-23/android.jar" sourcepath="third_party/android_tools/sdk/sources/">
+    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-24/android.jar" sourcepath="third_party/android_tools/sdk/sources/">
         <attributes>
             <attribute name="javadoc_location" value="http://developer.android.com/reference/"/>
         </attributes>
     </classpathentry>
-    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-23/data/layoutlib.jar" sourcepath="third_party/android_tools/sdk/sources/"/>
-    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-23/uiautomator.jar" sourcepath="third_party/android_tools/sdk/sources"/>
+    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-24/data/layoutlib.jar" sourcepath="third_party/android_tools/sdk/sources/"/>
+    <classpathentry kind="lib" path="third_party/android_tools/sdk/platforms/android-24/uiautomator.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/design/libs/android-support-design.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/mediarouter/libs/android-support-v7-mediarouter.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/recyclerview/libs/android-support-v7-recyclerview.jar" sourcepath="third_party/android_tools/sdk/sources"/>

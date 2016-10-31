@@ -4,14 +4,13 @@
 
 #include "net/base/openssl_private_key_store.h"
 
-#include <openssl/bytestring.h>
-#include <openssl/evp.h>
-#include <openssl/mem.h>
-
 #include "base/logging.h"
 #include "base/memory/singleton.h"
 #include "crypto/openssl_util.h"
 #include "net/android/network_library.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 

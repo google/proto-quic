@@ -136,7 +136,7 @@ int FilterSourceStream::DoFilterData() {
          consumed_bytes == drainable_input_buffer_->BytesRemaining());
 
   if (bytes_output == ERR_CONTENT_DECODING_FAILED) {
-    UMA_HISTOGRAM_ENUMERATION("Net.ContentDecodingFailed.FilterType", type(),
+    UMA_HISTOGRAM_ENUMERATION("Net.ContentDecodingFailed2.FilterType", type(),
                               TYPE_MAX);
   }
   // FilterData() is not allowed to return ERR_IO_PENDING.

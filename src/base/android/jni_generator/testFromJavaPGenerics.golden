@@ -47,7 +47,6 @@ static void Java_HashSet_dummy(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 // Step 3: RegisterNatives.

@@ -4,14 +4,13 @@
 
 #include "net/ssl/ssl_info.h"
 
-#include <openssl/ssl.h>
-
 #include "base/pickle.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_connection_status_flags.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
 

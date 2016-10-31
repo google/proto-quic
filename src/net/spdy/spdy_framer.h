@@ -85,19 +85,6 @@ typedef std::map<SpdySettingsIds, SettingsFlagsAndValue> SettingsMap;
 // decompressed header block to be delivered in chunks to the visitor.
 // The following steps are followed:
 //   1. OnSynStream, OnSynReply, OnHeaders, or OnPushPromise is called.
-//   2. Repeated: OnControlFrameHeaderData is called with chunks of the
-//      decompressed header block. In each call the len parameter is greater
-//      than zero.
-//   3. OnControlFrameHeaderData is called with len set to zero, indicating
-//      that the full header block has been delivered for the control frame.
-// During step 2 the visitor may return false, indicating that the chunk of
-// header data could not be handled by the visitor (typically this indicates
-// resource exhaustion). If this occurs the framer will discontinue
-// delivering chunks to the visitor, set a SPDY_CONTROL_PAYLOAD_TOO_LARGE
-// error, and clean up appropriately. Note that this will cause the header
-// decompressor to lose synchronization with the sender's header compressor,
-// making the SPDY session unusable for future work. The visitor's OnError
-// function should deal with this condition by closing the SPDY connection.
 class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
  public:
   virtual ~SpdyFramerVisitorInterface() {}
@@ -150,22 +137,8 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // frames.
   virtual void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) = 0;
 
-  // Called when a chunk of header data is available. This is called
-  // after OnSynStream, OnSynReply, OnHeaders(), or OnPushPromise.
-  // |stream_id| The stream receiving the header data.
-  // |header_data| A buffer containing the header data chunk received.
-  // |len| The length of the header data buffer. A length of zero indicates
-  //       that the header data block has been completely sent.
-  // When this function returns true the visitor indicates that it accepted
-  // all of the data. Returning false indicates that that an unrecoverable
-  // error has occurred, such as bad header data or resource exhaustion.
-  virtual bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                        const char* header_data,
-                                        size_t len) = 0;
-
   // Called when a SYN_STREAM frame is received.
-  // Note that header block data is not included. See
-  // OnControlFrameHeaderData().
+  // Note that header block data is not included. See OnHeaderFrameStart().
   virtual void OnSynStream(SpdyStreamId stream_id,
                            SpdyStreamId associated_stream_id,
                            SpdyPriority priority,
@@ -173,8 +146,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
                            bool unidirectional) = 0;
 
   // Called when a SYN_REPLY frame is received.
-  // Note that header block data is not included. See
-  // OnControlFrameHeaderData().
+  // Note that header block data is not included. See OnHeaderFrameStart().
   virtual void OnSynReply(SpdyStreamId stream_id, bool fin) = 0;
 
   // Called when a RST_STREAM frame has been parsed.
@@ -203,8 +175,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
                         SpdyGoAwayStatus status) = 0;
 
   // Called when a HEADERS frame is received.
-  // Note that header block data is not included. See
-  // OnControlFrameHeaderData().
+  // Note that header block data is not included. See OnHeaderFrameStart().
   // |stream_id| The stream receiving the header.
   // |has_priority| Whether or not the headers frame included a priority value,
   //     and, if protocol version == HTTP2, stream dependency info.
@@ -253,15 +224,13 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   virtual void OnBlocked(SpdyStreamId stream_id) {}
 
   // Called when a PUSH_PROMISE frame is received.
-  // Note that header block data is not included. See
-  // OnControlFrameHeaderData().
+  // Note that header block data is not included. See OnHeaderFrameStart().
   virtual void OnPushPromise(SpdyStreamId stream_id,
                              SpdyStreamId promised_stream_id,
                              bool end) = 0;
 
   // Called when a CONTINUATION frame is received.
-  // Note that header block data is not included. See
-  // OnControlFrameHeaderData().
+  // Note that header block data is not included. See OnHeaderFrameStart().
   virtual void OnContinuation(SpdyStreamId stream_id, bool end) = 0;
 
   // Called when an ALTSVC frame has been parsed.
@@ -370,9 +339,8 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Constant for invalid (or unknown) stream IDs.
   static const SpdyStreamId kInvalidStream;
 
-  // The maximum size of header data chunks delivered to the framer visitor
-  // through OnControlFrameHeaderData. (It is exposed here for unit test
-  // purposes.)
+  // The maximum size of header data decompressed/delivered at once to the
+  // header block parser. (Exposed here for unit test purposes.)
   static const size_t kHeaderDataChunkMaxSize;
 
   void SerializeHeaderBlockWithoutCompression(
@@ -714,14 +682,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   SpdyFrameType ValidateFrameHeader(bool is_control_frame,
                                     int frame_type_field,
                                     size_t payload_length_field);
-
-  // TODO(jgraettinger): To be removed with migration to
-  // SpdyHeadersHandlerInterface.  Serializes the last-processed
-  // header block of |hpack_decoder_| as a SPDY3 format block, and
-  // delivers it to the visitor via reentrant call to
-  // ProcessControlFrameHeaderBlock().  |compressed_len| is used for
-  // logging compression percentage.
-  void DeliverHpackBlockAsSpdy3Block(size_t compressed_len);
 
   // Helpers for above internal breakouts from ProcessInput.
   void ProcessControlFrameHeader(int control_frame_type_field);

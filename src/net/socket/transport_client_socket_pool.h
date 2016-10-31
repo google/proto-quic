@@ -127,7 +127,7 @@ class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
 
   // Record the histograms Net.DNS_Resolution_And_TCP_Connection_Latency2 and
   // Net.TCP_Connection_Latency and return the connect duration.
-  static base::TimeDelta HistogramDuration(
+  static void HistogramDuration(
       const LoadTimingInfo::ConnectTiming& connect_timing,
       RaceResult race_result);
 
@@ -138,12 +138,6 @@ class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
     STATE_TRANSPORT_CONNECT,
     STATE_TRANSPORT_CONNECT_COMPLETE,
     STATE_NONE,
-  };
-
-  enum ConnectInterval {
-    CONNECT_INTERVAL_LE_10MS,
-    CONNECT_INTERVAL_LE_20MS,
-    CONNECT_INTERVAL_GT_20MS,
   };
 
   void OnIOComplete(int result);
@@ -180,9 +174,6 @@ class NET_EXPORT_PRIVATE TransportConnectJob : public ConnectJob {
   base::TimeTicks fallback_connect_start_time_;
   base::OneShotTimer fallback_timer_;
   SocketPerformanceWatcherFactory* socket_performance_watcher_factory_;
-
-  // Track the interval between this connect and previous connect.
-  ConnectInterval interval_between_connects_;
 
   int resolve_result_;
 

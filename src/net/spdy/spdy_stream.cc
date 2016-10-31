@@ -647,6 +647,13 @@ void SpdyStream::OnClose(int status) {
   // In most cases, the stream should already be CLOSED. The exception is when a
   // SpdySession is shutting down while the stream is in an intermediate state.
   io_state_ = STATE_CLOSED;
+  if (status == ERR_SPDY_RST_STREAM_NO_ERROR_RECEIVED) {
+    if (response_headers_status_ == RESPONSE_HEADERS_ARE_INCOMPLETE) {
+      status = ERR_SPDY_PROTOCOL_ERROR;
+    } else {
+      status = OK;
+    }
+  }
   response_status_ = status;
   Delegate* delegate = delegate_;
   delegate_ = NULL;

@@ -96,6 +96,8 @@ DEBIAN_PACKAGES="\
   libgpg-error-dev
   libgssapi-krb5-2
   libgssrpc4
+  libgtk-3-0
+  libgtk-3-dev
   libgtk2.0-0
   libgtk2.0-dev
   libharfbuzz0b

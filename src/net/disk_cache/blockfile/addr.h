@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "base/logging.h"
 #include "net/base/net_export.h"
 #include "net/disk_cache/blockfile/disk_format_base.h"
 
@@ -138,9 +139,11 @@ class NET_EXPORT_PRIVATE Addr {
         return 104;
       case BLOCK_EVICTED:
         return 48;
-      default:
+      case EXTERNAL:
+        NOTREACHED();
         return 0;
     }
+    return 0;
   }
 
   static FileType RequiredFileType(int size) {

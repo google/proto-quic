@@ -33,5 +33,16 @@ void QuicChromiumClientSessionPeer::SetHostname(
   session->server_id_ = server_id;
 }
 
+// static
+uint64_t QuicChromiumClientSessionPeer::GetPushedBytesCount(
+    QuicChromiumClientSession* session) {
+  return session->bytes_pushed_count_;
+}
+
+// static
+uint64_t QuicChromiumClientSessionPeer::GetPushedAndUnclaimedBytesCount(
+    QuicChromiumClientSession* session) {
+  return session->bytes_pushed_and_unclaimed_count_;
+}
 }  // namespace test
 }  // namespace net

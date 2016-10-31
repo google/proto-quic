@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <cstdlib>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
@@ -309,8 +310,8 @@ void SynchronousUnloadNativeLibrary(NativeLibrary library) {
 
 // Called on the profiler thread when complete, to collect profiles.
 void SaveProfiles(CallStackProfiles* profiles,
-                  const CallStackProfiles& pending_profiles) {
-  *profiles = pending_profiles;
+                  CallStackProfiles pending_profiles) {
+  *profiles = std::move(pending_profiles);
 }
 
 // Called on the profiler thread when complete. Collects profiles produced by
@@ -318,8 +319,8 @@ void SaveProfiles(CallStackProfiles* profiles,
 // the profiler is done.
 void SaveProfilesAndSignalEvent(CallStackProfiles* profiles,
                                 WaitableEvent* event,
-                                const CallStackProfiles& pending_profiles) {
-  *profiles = pending_profiles;
+                                CallStackProfiles pending_profiles) {
+  *profiles = std::move(pending_profiles);
   event->Signal();
 }
 

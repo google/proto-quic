@@ -9,7 +9,7 @@
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
@@ -219,8 +219,8 @@ QuicDispatcher::QuicDispatcher(
 }
 
 QuicDispatcher::~QuicDispatcher() {
-  base::STLDeleteValues(&session_map_);
-  base::STLDeleteElements(&closed_session_list_);
+  session_map_.clear();
+  closed_session_list_.clear();
 }
 
 void QuicDispatcher::InitializeWithWriter(QuicPacketWriter* writer) {
@@ -427,7 +427,7 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::ValidityChecks(
     return kFateTimeWait;
   }
 
-  // Check that the sequence numer is within the range that the client is
+  // Check that the sequence number is within the range that the client is
   // expected to send before receiving a response from the server.
   if (header.packet_number == kInvalidPacketNumber ||
       header.packet_number > kMaxReasonableInitialPacketNumber) {
@@ -438,9 +438,8 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::ValidityChecks(
 }
 
 void QuicDispatcher::CleanUpSession(SessionMap::iterator it,
+                                    QuicConnection* connection,
                                     bool should_close_statelessly) {
-  QuicConnection* connection = it->second->connection();
-
   write_blocked_list_.erase(connection);
   if (should_close_statelessly) {
     DCHECK(connection->termination_packets() != nullptr &&
@@ -453,7 +452,7 @@ void QuicDispatcher::CleanUpSession(SessionMap::iterator it,
 }
 
 void QuicDispatcher::DeleteSessions() {
-  base::STLDeleteElements(&closed_session_list_);
+  closed_session_list_.clear();
 }
 
 void QuicDispatcher::OnCanWrite() {
@@ -476,12 +475,13 @@ bool QuicDispatcher::HasPendingWrites() const {
 
 void QuicDispatcher::Shutdown() {
   while (!session_map_.empty()) {
-    QuicServerSessionBase* session = session_map_.begin()->second;
+    QuicServerSessionBase* session = session_map_.begin()->second.get();
     session->connection()->CloseConnection(
         QUIC_PEER_GOING_AWAY, "Server shutdown imminent",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     // Validate that the session removes itself from the session map on close.
-    DCHECK(session_map_.empty() || session_map_.begin()->second != session);
+    DCHECK(session_map_.empty() ||
+           session_map_.begin()->second.get() != session);
   }
   DeleteSessions();
 }
@@ -507,10 +507,11 @@ void QuicDispatcher::OnConnectionClosed(QuicConnectionId connection_id,
     delete_sessions_alarm_->Update(helper()->GetClock()->ApproximateNow(),
                                    QuicTime::Delta::Zero());
   }
-  closed_session_list_.push_back(it->second);
+  QuicConnection* connection = it->second->connection();
+  closed_session_list_.push_back(std::move(it->second));
   const bool should_close_statelessly =
       (error == QUIC_CRYPTO_HANDSHAKE_STATELESS_REJECT);
-  CleanUpSession(it, should_close_statelessly);
+  CleanUpSession(it, connection, should_close_statelessly);
 }
 
 void QuicDispatcher::OnWriteBlocked(
@@ -656,7 +657,8 @@ void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
     QuicServerSessionBase* session =
         CreateQuicSession(connection_id, packets.front().client_address);
     DVLOG(1) << "Created new session for " << connection_id;
-    session_map_.insert(std::make_pair(connection_id, session));
+    session_map_.insert(
+        std::make_pair(connection_id, base::WrapUnique(session)));
     DeliverPacketsToSession(packets, session);
   }
 }
@@ -752,7 +754,8 @@ void QuicDispatcher::ProcessChlo() {
   QuicServerSessionBase* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
   DVLOG(1) << "Created new session for " << current_connection_id_;
-  session_map_.insert(std::make_pair(current_connection_id_, session));
+  session_map_.insert(
+      std::make_pair(current_connection_id_, base::WrapUnique(session)));
   std::list<BufferedPacket> packets =
       buffered_packets_.DeliverPackets(current_connection_id_);
   // Check if CHLO is the first packet arrived on this connection.

@@ -180,6 +180,9 @@ unit tests.
    Certs to test that policies related to enforcing CT on Symantec are
    properly gated on the issuance date.
 
+- tls_feature_extension.pem
+  A certificate that contains the TLS Feature Extension.
+
 ===== From net/data/ssl/scripts/generate-weak-test-chains.sh
 - 2048-rsa-root.pem
 - {768-rsa,1024-rsa,2048-rsa,prime256v1-ecdsa}-intermediate.pem

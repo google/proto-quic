@@ -19,7 +19,7 @@ LOAD_FLAG(BYPASS_CACHE, 1 << 1)
 
 // This is a back/forward style navigation where the cached content should
 // be preferred over any protocol specific cache validation.
-LOAD_FLAG(PREFERRING_CACHE, 1 << 2)
+LOAD_FLAG(SKIP_CACHE_VALIDATION, 1 << 2)
 
 // This is a navigation that will fail if it cannot serve the requested
 // resource from the cache (or some equivalent local store).

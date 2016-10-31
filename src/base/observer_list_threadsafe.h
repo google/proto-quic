@@ -7,16 +7,17 @@
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <tuple>
 
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/observer_list.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 
@@ -96,8 +97,8 @@ class ObserverListThreadSafe
         ObserverListThreadSafe<ObserverType>,
         ObserverListThreadSafeTraits<ObserverType>> {
  public:
-  typedef typename ObserverList<ObserverType>::NotificationType
-      NotificationType;
+  using NotificationType =
+      typename ObserverList<ObserverType>::NotificationType;
 
   ObserverListThreadSafe()
       : type_(ObserverListBase<ObserverType>::NOTIFY_ALL) {}
@@ -115,8 +116,10 @@ class ObserverListThreadSafe
     PlatformThreadId thread_id = PlatformThread::CurrentId();
     {
       AutoLock lock(list_lock_);
-      if (observer_lists_.find(thread_id) == observer_lists_.end())
-        observer_lists_[thread_id] = new ObserverListContext(type_);
+      if (observer_lists_.find(thread_id) == observer_lists_.end()) {
+        observer_lists_[thread_id] =
+            base::MakeUnique<ObserverListContext>(type_);
+      }
       list = &(observer_lists_[thread_id]->list);
     }
     list->AddObserver(obs);
@@ -128,32 +131,24 @@ class ObserverListThreadSafe
   // If the observer to be removed is in the list, RemoveObserver MUST
   // be called from the same thread which called AddObserver.
   void RemoveObserver(ObserverType* obs) {
-    ObserverListContext* context = nullptr;
-    ObserverList<ObserverType>* list = nullptr;
     PlatformThreadId thread_id = PlatformThread::CurrentId();
     {
       AutoLock lock(list_lock_);
-      typename ObserversListMap::iterator it = observer_lists_.find(thread_id);
+      auto it = observer_lists_.find(thread_id);
       if (it == observer_lists_.end()) {
         // This will happen if we try to remove an observer on a thread
         // we never added an observer for.
         return;
       }
-      context = it->second;
-      list = &context->list;
+      ObserverList<ObserverType>& list = it->second->list;
 
-      // If we're about to remove the last observer from the list,
-      // then we can remove this observer_list entirely.
-      if (list->HasObserver(obs) && list->size() == 1)
+      list.RemoveObserver(obs);
+
+      // If that was the last observer in the list, remove the ObserverList
+      // entirely.
+      if (list.size() == 0)
         observer_lists_.erase(it);
     }
-    list->RemoveObserver(obs);
-
-    // If RemoveObserver is called from a notification, the size will be
-    // nonzero.  Instead of deleting here, the NotifyWrapper will delete
-    // when it finishes iterating.
-    if (list->size() == 0)
-      delete context;
   }
 
   // Verifies that the list is currently empty (i.e. there are no observers).
@@ -176,7 +171,7 @@ class ObserverListThreadSafe
 
     AutoLock lock(list_lock_);
     for (const auto& entry : observer_lists_) {
-      ObserverListContext* context = entry.second;
+      ObserverListContext* context = entry.second.get();
       context->task_runner->PostTask(
           from_here,
           Bind(&ObserverListThreadSafe<ObserverType>::NotifyWrapper,
@@ -200,7 +195,6 @@ class ObserverListThreadSafe
   };
 
   ~ObserverListThreadSafe() {
-    STLDeleteValues(&observer_lists_);
   }
 
   // Wrapper which is called to fire the notifications for each thread's
@@ -211,14 +205,13 @@ class ObserverListThreadSafe
     // Check that this list still needs notifications.
     {
       AutoLock lock(list_lock_);
-      typename ObserversListMap::iterator it =
-          observer_lists_.find(PlatformThread::CurrentId());
+      auto it = observer_lists_.find(PlatformThread::CurrentId());
 
       // The ObserverList could have been removed already.  In fact, it could
       // have been removed and then re-added!  If the master list's loop
       // does not match this one, then we do not need to finish this
       // notification.
-      if (it == observer_lists_.end() || it->second != context)
+      if (it == observer_lists_.end() || it->second.get() != context)
         return;
     }
 
@@ -233,24 +226,22 @@ class ObserverListThreadSafe
         // Remove |list| if it's not already removed.
         // This can happen if multiple observers got removed in a notification.
         // See http://crbug.com/55725.
-        typename ObserversListMap::iterator it =
-            observer_lists_.find(PlatformThread::CurrentId());
-        if (it != observer_lists_.end() && it->second == context)
+        auto it = observer_lists_.find(PlatformThread::CurrentId());
+        if (it != observer_lists_.end() && it->second.get() == context)
           observer_lists_.erase(it);
       }
-      delete context;
     }
   }
+
+  mutable Lock list_lock_;  // Protects the observer_lists_.
 
   // Key by PlatformThreadId because in tests, clients can attempt to remove
   // observers without a SingleThreadTaskRunner. If this were keyed by
   // SingleThreadTaskRunner, that operation would be silently ignored, leaving
   // garbage in the ObserverList.
-  typedef std::map<PlatformThreadId, ObserverListContext*>
-      ObserversListMap;
+  std::map<PlatformThreadId, std::unique_ptr<ObserverListContext>>
+      observer_lists_;
 
-  mutable Lock list_lock_;  // Protects the observer_lists_.
-  ObserversListMap observer_lists_;
   const NotificationType type_;
 
   DISALLOW_COPY_AND_ASSIGN(ObserverListThreadSafe);

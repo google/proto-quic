@@ -24,6 +24,16 @@ struct CompilerOptions {
   std::string warning_level;
 };
 
+// Some linker options which will be written to project file. We don't need to
+// specify all options because generated project file is going to be used only
+// for compilation of single file. For real build ninja files are used.
+struct LinkerOptions {
+  LinkerOptions();
+  ~LinkerOptions();
+
+  std::string subsystem;
+};
+
 // Generates something which looks like a GUID, but depends only on the name and
 // seed. This means the same name / seed will always generate the same GUID, so
 // that projects and solutions which refer to each other can explicitly
@@ -33,5 +43,8 @@ std::string MakeGuid(const std::string& entry_path, const std::string& seed);
 
 // Parses |cflag| value and stores it in |options|.
 void ParseCompilerOption(const std::string& cflag, CompilerOptions* options);
+
+// Parses |ldflags| value and stores it in |options|.
+void ParseLinkerOption(const std::string& ldflag, LinkerOptions* options);
 
 #endif  // TOOLS_GN_VISUAL_STUDIO_UTILS_H_

@@ -258,11 +258,13 @@ template("mac_framework_bundle") {
   # the versioned directory structure.
   _framework_target = _target_name
   _framework_name = _output_name + ".framework"
-  _framework_root_dir = "$root_out_dir/$_framework_name"
+  _framework_base_dir = "$root_out_dir/$_framework_name"
   if (defined(invoker.framework_version) && invoker.framework_version != "") {
     _framework_version = invoker.framework_version
-    _framework_root_dir += "/Versions/$_framework_version"
+    _framework_root_dir = _framework_base_dir + "/Versions/$_framework_version"
     _framework_target = _target_name + "_create_bundle"
+  } else {
+    _framework_root_dir = _framework_base_dir
   }
 
   _link_shared_library_target = target_name + "_shared_library"
@@ -301,6 +303,19 @@ template("mac_framework_bundle") {
       ":$_link_shared_library_target",
     ]
   }
+
+  # Clean the entire framework if the framework_version changes.
+  _version_arg = ""
+  if (defined(_framework_version)) {
+    _version_arg = _framework_version
+  }
+  _version_file = "$target_out_dir/${target_name}_version"
+  exec_script("//build/config/mac/prepare_framework_version.py",
+              [
+                rebase_path(_version_file),
+                rebase_path(_framework_base_dir),
+                "'$_version_arg'",
+              ])
 
   _framework_public_config = _target_name + "_public_config"
   config(_framework_public_config) {

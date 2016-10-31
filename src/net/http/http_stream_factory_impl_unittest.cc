@@ -1906,7 +1906,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
 
   scoped_refptr<IOBuffer> buffer = new net::IOBuffer(1);
   EXPECT_THAT(stream_impl->ReadData(buffer.get(), 1), IsOk());
-  EXPECT_EQ(kProtoQUIC1SPDY3, stream_impl->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, stream_impl->GetProtocol());
   EXPECT_EQ("200", delegate.response_headers().find(":status")->second);
   EXPECT_EQ(0, GetSocketPoolGroupCount(session()->GetTransportSocketPool(
                    HttpNetworkSession::NORMAL_SOCKET_POOL)));
@@ -2030,7 +2030,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   // Make sure the BidirectionalStream negotiated goes through QUIC.
   scoped_refptr<IOBuffer> buffer = new net::IOBuffer(1);
   EXPECT_THAT(stream_impl->ReadData(buffer.get(), 1), IsOk());
-  EXPECT_EQ(kProtoQUIC1SPDY3, stream_impl->GetProtocol());
+  EXPECT_EQ(kProtoQUIC, stream_impl->GetProtocol());
   EXPECT_EQ("200", delegate.response_headers().find(":status")->second);
   // There is no Http2 socket pool.
   EXPECT_EQ(0, GetSocketPoolGroupCount(session()->GetTransportSocketPool(

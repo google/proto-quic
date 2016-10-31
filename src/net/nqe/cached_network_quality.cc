@@ -14,6 +14,12 @@ CachedNetworkQuality::CachedNetworkQuality()
     : effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {}
 
 CachedNetworkQuality::CachedNetworkQuality(
+    EffectiveConnectionType effective_connection_type)
+    : CachedNetworkQuality(base::TimeTicks::Now(),
+                           NetworkQuality(),
+                           effective_connection_type) {}
+
+CachedNetworkQuality::CachedNetworkQuality(
     base::TimeTicks last_update_time,
     const NetworkQuality& network_quality,
     EffectiveConnectionType effective_connection_type)

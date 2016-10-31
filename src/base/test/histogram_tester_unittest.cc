@@ -21,6 +21,7 @@ const char kHistogram2[] = "Test2";
 const char kHistogram3[] = "Test3";
 const char kHistogram4[] = "Test4";
 const char kHistogram5[] = "Test5";
+const char kHistogramSuffix[] = "Test4.Test5";
 
 }  // namespace
 
@@ -115,6 +116,14 @@ TEST_F(HistogramTesterTest, TestGetAllSamples) {
 TEST_F(HistogramTesterTest, TestGetAllSamples_NoSamples) {
   HistogramTester tester;
   EXPECT_THAT(tester.GetAllSamples(kHistogram5), IsEmpty());
+}
+
+// Wrong behaviour for GetTotalCountForPrefix: https://crbug.com/659977
+TEST_F(HistogramTesterTest, DISABLED_TestGetTotalCountsForPrefix) {
+  HistogramTester tester;
+  UMA_HISTOGRAM_ENUMERATION(kHistogramSuffix, 2, 5);
+
+  EXPECT_TRUE(tester.GetTotalCountsForPrefix("Test5").empty());
 }
 
 }  // namespace base

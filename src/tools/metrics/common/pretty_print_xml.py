@@ -40,6 +40,29 @@ def XmlEscape(s):
   return s
 
 
+def SplitParagraphs(text):
+  """Split a block of text into paragraphs.
+
+  Args:
+    text: The text to split.
+  Returns:
+    A list of paragraphs as strings.
+  """
+  text = textwrap.dedent(text.strip('\n'))
+  lines = text.split('\n')
+  # Split the text into paragraphs at blank line boundaries.
+  paragraphs = [[]]
+  for l in lines:
+    if paragraphs[-1] and not l.strip():
+      paragraphs.append([])
+    else:
+      paragraphs[-1].append(l)
+  # Remove trailing empty paragraph if present.
+  if paragraphs and not paragraphs[-1]:
+    paragraphs = paragraphs[:-1]
+  return ['\n'.join(p) for p in paragraphs]
+
+
 class XmlStyle(object):
   """A class that stores all style specification for an output xml file."""
 
@@ -154,21 +177,9 @@ class XmlStyle(object):
       wrapper.break_long_words = False
       wrapper.width = WRAP_COLUMN
       text = XmlEscape(node.data)
-      # Remove any common indent.
-      text = textwrap.dedent(text.strip('\n'))
-      lines = text.split('\n')
-      # Split the text into paragraphs at blank line boundaries.
-      paragraphs = [[]]
-      for l in lines:
-        if paragraphs[-1] and not l.strip():
-          paragraphs.append([])
-        else:
-          paragraphs[-1].append(l)
-      # Remove trailing empty paragraph if present.
-      if paragraphs and not paragraphs[-1]:
-        paragraphs = paragraphs[:-1]
+      paragraphs = SplitParagraphs(text)
       # Wrap each paragraph and separate with two newlines.
-      return '\n\n'.join([wrapper.fill('\n'.join(p)) for p in paragraphs])
+      return '\n\n'.join(wrapper.fill(p) for p in paragraphs)
 
     # Handle element nodes.
     if node.nodeType == xml.dom.minidom.Node.ELEMENT_NODE:

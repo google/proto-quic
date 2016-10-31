@@ -67,9 +67,8 @@ class WebSocketFuzzedStream final : public WebSocketStream {
     frame->header.reserved3 = (flags >> 3) & 0x1;
     frame->header.masked = (flags >> 4) & 0x1;
     uint64_t payload_length = fuzzed_data_provider_.ConsumeInt32InRange(0, 64);
-    base::StringPiece payload =
-        fuzzed_data_provider_.ConsumeBytes(payload_length);
-    frame->data = new WrappedIOBuffer(payload.data());
+    std::string payload = fuzzed_data_provider_.ConsumeBytes(payload_length);
+    frame->data = new StringIOBuffer(payload);
     frame->header.payload_length = payload.size();
     return frame;
   }

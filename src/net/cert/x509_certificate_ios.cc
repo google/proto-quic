@@ -7,9 +7,6 @@
 #include <CommonCrypto/CommonDigest.h>
 #include <Security/Security.h>
 
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
-
 #include "base/mac/scoped_cftyperef.h"
 #include "base/pickle.h"
 #include "base/strings/string_piece.h"
@@ -18,6 +15,8 @@
 #include "net/base/ip_address.h"
 #include "net/cert/x509_util_openssl.h"
 #include "net/ssl/openssl_ssl_util.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
+#include "third_party/boringssl/src/include/openssl/x509v3.h"
 
 using base::ScopedCFTypeRef;
 

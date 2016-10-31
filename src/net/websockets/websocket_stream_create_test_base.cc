@@ -50,6 +50,10 @@ class WebSocketStreamCreateTestBase::TestConnectDelegate
                       const base::Closure& done_callback)
       : owner_(owner), done_callback_(done_callback) {}
 
+  void OnCreateRequest(URLRequest* request) override {
+    owner_->url_request_ = request;
+  }
+
   void OnSuccess(std::unique_ptr<WebSocketStream> stream) override {
     stream.swap(owner_->stream_);
     done_callback_.Run();
@@ -92,8 +96,7 @@ class WebSocketStreamCreateTestBase::TestConnectDelegate
 };
 
 WebSocketStreamCreateTestBase::WebSocketStreamCreateTestBase()
-    : has_failed_(false), ssl_fatal_(false) {
-}
+    : has_failed_(false), ssl_fatal_(false), url_request_(nullptr) {}
 
 WebSocketStreamCreateTestBase::~WebSocketStreamCreateTestBase() {
 }

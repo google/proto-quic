@@ -41,6 +41,7 @@ class TestOptions(object):
     self.cpp = 'cpp'
     self.javap = 'javap'
     self.native_exports_optional = True
+    self.enable_profiling = False
 
 class TestGenerator(unittest.TestCase):
   def assertObjEquals(self, first, second):

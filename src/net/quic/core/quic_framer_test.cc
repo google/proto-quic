@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/null_decrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
@@ -198,14 +198,7 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
         accept_packet_(true),
         accept_public_header_(true) {}
 
-  ~TestQuicVisitor() override {
-    base::STLDeleteElements(&stream_frames_);
-    base::STLDeleteElements(&ack_frames_);
-    base::STLDeleteElements(&stop_waiting_frames_);
-    base::STLDeleteElements(&padding_frames_);
-    base::STLDeleteElements(&ping_frames_);
-    base::STLDeleteElements(&stream_data_);
-  }
+  ~TestQuicVisitor() override {}
 
   void OnError(QuicFramer* f) override {
     DVLOG(1) << "QuicFramer Error: " << QuicUtils::ErrorToString(f->error())
@@ -254,32 +247,33 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
     string* string_data = new string();
     StringPiece(frame.data_buffer, frame.data_length)
         .AppendToString(string_data);
-    stream_data_.push_back(string_data);
-    stream_frames_.push_back(new QuicStreamFrame(frame.stream_id, frame.fin,
-                                                 frame.offset, *string_data));
+    stream_data_.push_back(base::WrapUnique(string_data));
+    stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(
+        frame.stream_id, frame.fin, frame.offset, *string_data));
     return true;
   }
 
   bool OnAckFrame(const QuicAckFrame& frame) override {
     ++frame_count_;
-    ack_frames_.push_back(new QuicAckFrame(frame));
+    ack_frames_.push_back(base::MakeUnique<QuicAckFrame>(frame));
     return true;
   }
 
   bool OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override {
     ++frame_count_;
-    stop_waiting_frames_.push_back(new QuicStopWaitingFrame(frame));
+    stop_waiting_frames_.push_back(
+        base::MakeUnique<QuicStopWaitingFrame>(frame));
     return true;
   }
 
   bool OnPaddingFrame(const QuicPaddingFrame& frame) override {
-    padding_frames_.push_back(new QuicPaddingFrame(frame));
+    padding_frames_.push_back(base::MakeUnique<QuicPaddingFrame>(frame));
     return true;
   }
 
   bool OnPingFrame(const QuicPingFrame& frame) override {
     ++frame_count_;
-    ping_frames_.push_back(new QuicPingFrame(frame));
+    ping_frames_.push_back(base::MakeUnique<QuicPingFrame>(frame));
     return true;
   }
 
@@ -328,18 +322,18 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
   std::unique_ptr<QuicPacketPublicHeader> public_header_;
   std::unique_ptr<QuicPublicResetPacket> public_reset_packet_;
   std::unique_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
-  vector<QuicStreamFrame*> stream_frames_;
-  vector<QuicAckFrame*> ack_frames_;
-  vector<QuicStopWaitingFrame*> stop_waiting_frames_;
-  vector<QuicPaddingFrame*> padding_frames_;
-  vector<QuicPingFrame*> ping_frames_;
+  vector<std::unique_ptr<QuicStreamFrame>> stream_frames_;
+  vector<std::unique_ptr<QuicAckFrame>> ack_frames_;
+  vector<std::unique_ptr<QuicStopWaitingFrame>> stop_waiting_frames_;
+  vector<std::unique_ptr<QuicPaddingFrame>> padding_frames_;
+  vector<std::unique_ptr<QuicPingFrame>> ping_frames_;
   QuicRstStreamFrame rst_stream_frame_;
   QuicConnectionCloseFrame connection_close_frame_;
   QuicGoAwayFrame goaway_frame_;
   QuicWindowUpdateFrame window_update_frame_;
   QuicBlockedFrame blocked_frame_;
   QuicPathCloseFrame path_close_frame_;
-  vector<string*> stream_data_;
+  vector<std::unique_ptr<string>> stream_data_;
 };
 
 class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
@@ -1811,7 +1805,7 @@ TEST_P(QuicFramerTest, StreamFrame) {
   EXPECT_EQ(kStreamId, visitor_.stream_frames_[0]->stream_id);
   EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
   EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
-  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0]);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 
   // Now test framing boundaries.
   CheckStreamFrameBoundaries(
@@ -1969,7 +1963,7 @@ TEST_P(QuicFramerTest, StreamFrame3ByteStreamId) {
   EXPECT_EQ(0x00FFFFFF & kStreamId, visitor_.stream_frames_[0]->stream_id);
   EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
   EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
-  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0]);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 
   // Now test framing boundaries.
   const size_t stream_id_size = 3;
@@ -2050,7 +2044,7 @@ TEST_P(QuicFramerTest, StreamFrame2ByteStreamId) {
   EXPECT_EQ(0x0000FFFF & kStreamId, visitor_.stream_frames_[0]->stream_id);
   EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
   EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
-  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0]);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 
   // Now test framing boundaries.
   const size_t stream_id_size = 2;
@@ -2131,7 +2125,7 @@ TEST_P(QuicFramerTest, StreamFrame1ByteStreamId) {
   EXPECT_EQ(0x000000FF & kStreamId, visitor_.stream_frames_[0]->stream_id);
   EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
   EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
-  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0]);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 
   // Now test framing boundaries.
   const size_t stream_id_size = 1;
@@ -2217,7 +2211,7 @@ TEST_P(QuicFramerTest, StreamFrameWithVersion) {
   EXPECT_EQ(kStreamId, visitor_.stream_frames_[0]->stream_id);
   EXPECT_TRUE(visitor_.stream_frames_[0]->fin);
   EXPECT_EQ(kStreamOffset, visitor_.stream_frames_[0]->offset);
-  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0]);
+  CheckStreamFrameData("hello world!", visitor_.stream_frames_[0].get());
 
   // Now test framing boundaries.
   CheckStreamFrameBoundaries(
@@ -2372,7 +2366,7 @@ TEST_P(QuicFramerTest, AckFrameTwoTimestampVersion32) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
+  const QuicAckFrame& frame = *visitor_.ack_frames_[0].get();
   EXPECT_EQ(0xBA, frame.entropy_hash);
   EXPECT_EQ(kLargestObserved, frame.largest_observed);
   ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
@@ -2484,7 +2478,7 @@ TEST_P(QuicFramerTest, AckFrameOneTimestampVersion32) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
+  const QuicAckFrame& frame = *visitor_.ack_frames_[0].get();
   EXPECT_EQ(0xBA, frame.entropy_hash);
   EXPECT_EQ(kLargestObserved, frame.largest_observed);
   ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
@@ -2574,7 +2568,7 @@ TEST_P(QuicFramerTest, NewAckFrameOneAckBlock) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
+  const QuicAckFrame& frame = *visitor_.ack_frames_[0].get();
   EXPECT_EQ(kSmallLargestObserved, frame.largest_observed);
   EXPECT_FALSE(frame.missing);
   ASSERT_EQ(4660u, frame.packets.NumPacketsSlow());
@@ -2674,7 +2668,7 @@ TEST_P(QuicFramerTest, NewAckFrameTwoTimeStampsMultipleAckBlocks) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
+  const QuicAckFrame& frame = *visitor_.ack_frames_[0].get();
   EXPECT_EQ(kSmallLargestObserved, frame.largest_observed);
   EXPECT_FALSE(frame.missing);
   ASSERT_EQ(4254u, frame.packets.NumPacketsSlow());
@@ -2807,7 +2801,7 @@ TEST_P(QuicFramerTest, AckFrameVersion32) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  const QuicAckFrame& frame = *visitor_.ack_frames_[0];
+  const QuicAckFrame& frame = *visitor_.ack_frames_[0].get();
   EXPECT_EQ(0xBA, frame.entropy_hash);
   EXPECT_EQ(kLargestObserved, frame.largest_observed);
   ASSERT_EQ(1u, frame.packets.NumPacketsSlow());
@@ -2904,7 +2898,7 @@ TEST_P(QuicFramerTest, AckFrame500NacksVersion32) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  QuicAckFrame* frame = visitor_.ack_frames_[0];
+  QuicAckFrame* frame = visitor_.ack_frames_[0].get();
   EXPECT_EQ(0xBA, frame->entropy_hash);
   EXPECT_EQ(kLargestObserved, frame->largest_observed);
   ASSERT_EQ(500u, frame->packets.NumPacketsSlow());
@@ -2960,7 +2954,7 @@ TEST_P(QuicFramerTest, StopWaitingFrame) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.stop_waiting_frames_.size());
-  const QuicStopWaitingFrame& frame = *visitor_.stop_waiting_frames_[0];
+  const QuicStopWaitingFrame& frame = *visitor_.stop_waiting_frames_[0].get();
   EXPECT_EQ(0xAB, frame.entropy_hash);
   EXPECT_EQ(kLeastUnacked, frame.least_unacked);
 
@@ -3016,7 +3010,7 @@ TEST_P(QuicFramerTest, NewStopWaitingFrame) {
 
   EXPECT_EQ(0u, visitor_.stream_frames_.size());
   ASSERT_EQ(1u, visitor_.stop_waiting_frames_.size());
-  const QuicStopWaitingFrame& frame = *visitor_.stop_waiting_frames_[0];
+  const QuicStopWaitingFrame& frame = *visitor_.stop_waiting_frames_[0].get();
   EXPECT_EQ(kLeastUnacked, frame.least_unacked);
 
   const size_t frame_size = 7;
@@ -6069,7 +6063,7 @@ TEST_P(QuicFramerTest, AckTruncationLargePacket) {
   ASSERT_TRUE(framer_.ProcessPacket(
       QuicEncryptedPacket(buffer, encrypted_length, false)));
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  QuicAckFrame& processed_ack_frame = *visitor_.ack_frames_[0];
+  QuicAckFrame& processed_ack_frame = *visitor_.ack_frames_[0].get();
   if (framer_.version() <= QUIC_VERSION_33) {
     EXPECT_TRUE(processed_ack_frame.is_truncated);
     EXPECT_EQ(510u, processed_ack_frame.largest_observed);
@@ -6121,7 +6115,7 @@ TEST_P(QuicFramerTest, AckTruncationSmallPacket) {
   ASSERT_TRUE(framer_.ProcessPacket(
       QuicEncryptedPacket(buffer, encrypted_length, false)));
   ASSERT_EQ(1u, visitor_.ack_frames_.size());
-  QuicAckFrame& processed_ack_frame = *visitor_.ack_frames_[0];
+  QuicAckFrame& processed_ack_frame = *visitor_.ack_frames_[0].get();
   if (framer_.version() <= QUIC_VERSION_33) {
     EXPECT_TRUE(processed_ack_frame.is_truncated);
     EXPECT_EQ(476u, processed_ack_frame.largest_observed);
@@ -6175,7 +6169,7 @@ TEST_P(QuicFramerTest, CleanTruncation) {
   // original packets to the re-serialized packets.
   frames.clear();
   frame.type = ACK_FRAME;
-  frame.ack_frame = visitor_.ack_frames_[0];
+  frame.ack_frame = visitor_.ack_frames_[0].get();
   frames.push_back(frame);
 
   size_t original_raw_length = raw_ack_packet->length();

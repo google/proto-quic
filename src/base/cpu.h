@@ -46,6 +46,7 @@ class BASE_EXPORT CPU {
   bool has_ssse3() const { return has_ssse3_; }
   bool has_sse41() const { return has_sse41_; }
   bool has_sse42() const { return has_sse42_; }
+  bool has_popcnt() const { return has_popcnt_; }
   bool has_avx() const { return has_avx_; }
   bool has_avx2() const { return has_avx2_; }
   bool has_aesni() const { return has_aesni_; }
@@ -74,6 +75,7 @@ class BASE_EXPORT CPU {
   bool has_ssse3_;
   bool has_sse41_;
   bool has_sse42_;
+  bool has_popcnt_;
   bool has_avx_;
   bool has_avx2_;
   bool has_aesni_;

@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <openssl/bytestring.h>
-#include <openssl/digest.h>
-#include <openssl/evp.h>
-#include <openssl/mem.h>
 #include <stdint.h>
 
 #include <memory>
@@ -18,6 +14,10 @@
 #include "crypto/rsa_private_key.h"
 #include "net/base/keygen_handler.h"
 #include "net/base/openssl_private_key_store.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/digest.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 

@@ -100,8 +100,8 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
   bool WatchFileDescriptor(int fd,
                            bool persistent,
                            int mode,
-                           FileDescriptorWatcher *controller,
-                           Watcher *delegate);
+                           FileDescriptorWatcher* controller,
+                           Watcher* delegate);
 
   // MessagePump methods:
   void Run(Delegate* delegate) override;
@@ -112,15 +112,11 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
  private:
   friend class MessagePumpLibeventTest;
 
-  void WillProcessIOEvent();
-  void DidProcessIOEvent();
-
   // Risky part of constructor.  Returns true on success.
   bool Init();
 
   // Called by libevent to tell us a registered FD can be read/written to.
-  static void OnLibeventNotification(int fd, short flags,
-                                     void* context);
+  static void OnLibeventNotification(int fd, short flags, void* context);
 
   // Unix pipe used to implement ScheduleWork()
   // ... callback; called by libevent inside Run() when pipe is ready to read

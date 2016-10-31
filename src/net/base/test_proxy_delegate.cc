@@ -97,4 +97,8 @@ void TestProxyDelegate::OnAlternativeProxyBroken(
   alternative_proxy_server_ = ProxyServer();
 }
 
+ProxyServer TestProxyDelegate::GetDefaultAlternativeProxy() const {
+  return alternative_proxy_server_;
+}
+
 }  // namespace net

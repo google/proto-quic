@@ -4,13 +4,13 @@
 
 #include "crypto/openssl_util.h"
 
-#include <openssl/crypto.h>
-#include <openssl/err.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
+#include "third_party/boringssl/src/include/openssl/crypto.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
 
 namespace crypto {
 

@@ -10,6 +10,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
@@ -459,7 +460,7 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
 }
 
 // static
-QuicEncryptedPacket* QuicFramer::BuildPublicResetPacket(
+std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
     const QuicPublicResetPacket& packet) {
   DCHECK(packet.public_header.reset_flag);
 
@@ -503,11 +504,11 @@ QuicEncryptedPacket* QuicFramer::BuildPublicResetPacket(
     return nullptr;
   }
 
-  return new QuicEncryptedPacket(buffer.release(), len, true);
+  return base::MakeUnique<QuicEncryptedPacket>(buffer.release(), len, true);
 }
 
 // static
-QuicEncryptedPacket* QuicFramer::BuildVersionNegotiationPacket(
+std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
     QuicConnectionId connection_id,
     const QuicVersionVector& versions) {
   DCHECK(!versions.empty());
@@ -533,7 +534,7 @@ QuicEncryptedPacket* QuicFramer::BuildVersionNegotiationPacket(
     }
   }
 
-  return new QuicEncryptedPacket(buffer.release(), len, true);
+  return base::MakeUnique<QuicEncryptedPacket>(buffer.release(), len, true);
 }
 
 bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {

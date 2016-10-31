@@ -62,9 +62,6 @@ declare_args() {
 config("feature_flags") {
   # Don't use deprecated V8 APIs anywhere.
   defines = [ "V8_DEPRECATION_WARNINGS" ]
-  if (enable_mdns) {
-    defines += [ "ENABLE_MDNS=1" ]
-  }
   if (enable_notifications) {
     defines += [ "ENABLE_NOTIFICATIONS" ]
   }

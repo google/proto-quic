@@ -16,6 +16,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
+#include "net/base/network_throttle_manager.h"
 #include "net/http/http_auth_handler_factory.h"
 #include "net/http/http_response_body_drainer.h"
 #include "net/http/http_stream_factory_impl.h"
@@ -150,6 +151,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
               ? params.client_socket_factory
               : ClientSocketFactory::GetDefaultFactory(),
           params.http_server_properties,
+          params.proxy_delegate,
           params.cert_verifier,
           params.ct_policy_enforcer,
           params.channel_id_service,
@@ -197,6 +199,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
                          params.proxy_delegate),
       http_stream_factory_(new HttpStreamFactoryImpl(this, false)),
       http_stream_factory_for_websocket_(new HttpStreamFactoryImpl(this, true)),
+      network_stream_throttler_(NetworkThrottleManager::CreateThrottler()),
       params_(params) {
   DCHECK(proxy_service_);
   DCHECK(ssl_config_service_.get());

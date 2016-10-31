@@ -12,6 +12,7 @@
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
+#include "net/net_features.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_error_job.h"
 #include "net/url_request/url_request_http_job.h"
@@ -33,10 +34,10 @@ static const SchemeToFactory kBuiltinFactories[] = {
     {"http", URLRequestHttpJob::Factory},
     {"https", URLRequestHttpJob::Factory},
 
-#if defined(ENABLE_WEBSOCKETS)
+#if BUILDFLAG(ENABLE_WEBSOCKETS)
     {"ws", URLRequestHttpJob::Factory},
     {"wss", URLRequestHttpJob::Factory},
-#endif  // defined(ENABLE_WEBSOCKETS)
+#endif  // BUILDFLAG(ENABLE_WEBSOCKETS)
 };
 
 // static

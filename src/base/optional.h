@@ -34,7 +34,22 @@ namespace internal {
 
 template <typename T, bool = base::is_trivially_destructible<T>::value>
 struct OptionalStorage {
-  OptionalStorage() {}
+  // Initializing |empty_| here instead of using default member initializing
+  // to avoid errors in g++ 4.8.
+  constexpr OptionalStorage() : empty_('\0') {}
+
+  constexpr explicit OptionalStorage(const T& value)
+      : is_null_(false), value_(value) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  explicit OptionalStorage(T&& value)
+      : is_null_(false), value_(std::move(value)) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
+  template <class... Args>
+  explicit OptionalStorage(base::in_place_t, Args&&... args)
+      : is_null_(false), value_(std::forward<Args>(args)...) {}
+
   // When T is not trivially destructible we must call its
   // destructor before deallocating its memory.
   ~OptionalStorage() {
@@ -45,16 +60,31 @@ struct OptionalStorage {
   bool is_null_ = true;
   union {
     // |empty_| exists so that the union will always be initialized, even when
-    // it doesn't contain a value. Not initializing it has been observed to
-    // trigger comiler warnings.
-    char empty_ = '\0';
+    // it doesn't contain a value. Union members must be initialized for the
+    // constructor to be 'constexpr'.
+    char empty_;
     T value_;
   };
 };
 
 template <typename T>
 struct OptionalStorage<T, true> {
-  OptionalStorage() {}
+  // Initializing |empty_| here instead of using default member initializing
+  // to avoid errors in g++ 4.8.
+  constexpr OptionalStorage() : empty_('\0') {}
+
+  constexpr explicit OptionalStorage(const T& value)
+      : is_null_(false), value_(value) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  explicit OptionalStorage(T&& value)
+      : is_null_(false), value_(std::move(value)) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
+  template <class... Args>
+  explicit OptionalStorage(base::in_place_t, Args&&... args)
+      : is_null_(false), value_(std::forward<Args>(args)...) {}
+
   // When T is trivially destructible (i.e. its destructor does nothing) there
   // is no need to call it. Explicitly defaulting the destructor means it's not
   // user-provided. Those two together make this destructor trivial.
@@ -63,9 +93,9 @@ struct OptionalStorage<T, true> {
   bool is_null_ = true;
   union {
     // |empty_| exists so that the union will always be initialized, even when
-    // it doesn't contain a value. Not initializing it has been observed to
-    // trigger comiler warnings.
-    char empty_ = '\0';
+    // it doesn't contain a value. Union members must be initialized for the
+    // constructor to be 'constexpr'.
+    char empty_;
     T value_;
   };
 };
@@ -90,8 +120,9 @@ class Optional {
  public:
   using value_type = T;
 
-  constexpr Optional() = default;
-  Optional(base::nullopt_t) : Optional() {}
+  constexpr Optional() {}
+
+  constexpr Optional(base::nullopt_t) {}
 
   Optional(const Optional& other) {
     if (!other.storage_.is_null_)
@@ -103,14 +134,15 @@ class Optional {
       Init(std::move(other.value()));
   }
 
-  Optional(const T& value) { Init(value); }
+  constexpr Optional(const T& value) : storage_(value) {}
 
-  Optional(T&& value) { Init(std::move(value)); }
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  Optional(T&& value) : storage_(std::move(value)) {}
 
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
   template <class... Args>
-  explicit Optional(base::in_place_t, Args&&... args) {
-    emplace(std::forward<Args>(args)...);
-  }
+  explicit Optional(base::in_place_t, Args&&... args)
+      : storage_(base::in_place, std::forward<Args>(args)...) {}
 
   ~Optional() = default;
 

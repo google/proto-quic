@@ -4,14 +4,17 @@
 
 #include "net/quic/chromium/quic_stream_factory.h"
 
+#include <memory>
 #include <ostream>
 #include <utility>
 
 #include "base/bind.h"
 #include "base/callback.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "net/base/test_proxy_delegate.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/multi_log_ct_verifier.h"
@@ -274,8 +277,8 @@ class QuicStreamFactoryTestBase {
     DCHECK(!factory_);
     factory_.reset(new QuicStreamFactory(
         net_log_.net_log(), &host_resolver_, ssl_config_service_.get(),
-        &socket_factory_, &http_server_properties_, cert_verifier_.get(),
-        &ct_policy_enforcer_, channel_id_service_.get(),
+        &socket_factory_, &http_server_properties_, &test_proxy_delegate_,
+        cert_verifier_.get(), &ct_policy_enforcer_, channel_id_service_.get(),
         &transport_security_state_, cert_transparency_verifier_.get(),
         /*SocketPerformanceWatcherFactory*/ nullptr,
         &crypto_client_stream_factory_, &random_generator_, clock_,
@@ -497,6 +500,186 @@ class QuicStreamFactoryTestBase {
     EXPECT_TRUE(socket_data2.AllWriteDataConsumed());
   }
 
+  // Verifies that the QUIC stream factory is initialized correctly.
+  // If |proxy_delegate_provides_quic_supported_proxy| is true, then
+  // ProxyDelegate provides a proxy that supports QUIC at startup. Otherwise,
+  // a non proxy server that support alternative services is added to the
+  // HttpServerProperties map.
+  void VerifyInitialization(bool proxy_delegate_provides_quic_supported_proxy) {
+    idle_connection_timeout_seconds_ = 500;
+    Initialize();
+    ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
+    crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+    const QuicConfig* config = QuicStreamFactoryPeer::GetConfig(factory_.get());
+    EXPECT_EQ(500, config->IdleConnectionStateLifetime().ToSeconds());
+
+    QuicStreamFactoryPeer::SetTaskRunner(factory_.get(), runner_.get());
+
+    const AlternativeService alternative_service1(QUIC, host_port_pair_.host(),
+                                                  host_port_pair_.port());
+    AlternativeServiceInfoVector alternative_service_info_vector;
+    base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
+    alternative_service_info_vector.push_back(
+        AlternativeServiceInfo(alternative_service1, expiration));
+    http_server_properties_.SetAlternativeServices(
+        url::SchemeHostPort(url_), alternative_service_info_vector);
+
+    HostPortPair host_port_pair2(kServer2HostName, kDefaultServerPort);
+    url::SchemeHostPort server2("https", kServer2HostName, kDefaultServerPort);
+    const AlternativeService alternative_service2(QUIC, host_port_pair2.host(),
+                                                  host_port_pair2.port());
+    AlternativeServiceInfoVector alternative_service_info_vector2;
+    alternative_service_info_vector2.push_back(
+        AlternativeServiceInfo(alternative_service2, expiration));
+    if (!proxy_delegate_provides_quic_supported_proxy) {
+      http_server_properties_.SetAlternativeServices(
+          server2, alternative_service_info_vector2);
+      // Verify that the properties of both QUIC servers are stored in the
+      // HTTP properties map.
+      EXPECT_EQ(2U, http_server_properties_.alternative_service_map().size());
+    } else {
+      test_proxy_delegate_.set_alternative_proxy_server(net::ProxyServer(
+          net::ProxyServer::SCHEME_QUIC,
+          net::HostPortPair(kServer2HostName, kDefaultServerPort)));
+      // Verify that the properties of only the first QUIC server are stored in
+      // the HTTP properties map.
+      EXPECT_EQ(1U, http_server_properties_.alternative_service_map().size());
+    }
+
+    http_server_properties_.SetMaxServerConfigsStoredInProperties(
+        kMaxQuicServersToPersist);
+
+    QuicServerId quic_server_id(kDefaultServerHostName, 80,
+                                PRIVACY_MODE_DISABLED);
+    QuicServerInfoFactory* quic_server_info_factory =
+        new PropertiesBasedQuicServerInfoFactory(&http_server_properties_);
+    factory_->set_quic_server_info_factory(quic_server_info_factory);
+
+    std::unique_ptr<QuicServerInfo> quic_server_info(
+        quic_server_info_factory->GetForServer(quic_server_id));
+
+    // Update quic_server_info's server_config and persist it.
+    QuicServerInfo::State* state = quic_server_info->mutable_state();
+    // Minimum SCFG that passes config validation checks.
+    const char scfg[] = {// SCFG
+                         0x53, 0x43, 0x46, 0x47,
+                         // num entries
+                         0x01, 0x00,
+                         // padding
+                         0x00, 0x00,
+                         // EXPY
+                         0x45, 0x58, 0x50, 0x59,
+                         // EXPY end offset
+                         0x08, 0x00, 0x00, 0x00,
+                         // Value
+                         '1', '2', '3', '4', '5', '6', '7', '8'};
+
+    // Create temporary strings becasue Persist() clears string data in |state|.
+    string server_config(reinterpret_cast<const char*>(&scfg), sizeof(scfg));
+    string source_address_token("test_source_address_token");
+    string cert_sct("test_cert_sct");
+    string chlo_hash("test_chlo_hash");
+    string signature("test_signature");
+    string test_cert("test_cert");
+    vector<string> certs;
+    certs.push_back(test_cert);
+    state->server_config = server_config;
+    state->source_address_token = source_address_token;
+    state->cert_sct = cert_sct;
+    state->chlo_hash = chlo_hash;
+    state->server_config_sig = signature;
+    state->certs = certs;
+
+    quic_server_info->Persist();
+
+    QuicServerId quic_server_id2(kServer2HostName, 80, PRIVACY_MODE_DISABLED);
+    std::unique_ptr<QuicServerInfo> quic_server_info2(
+        quic_server_info_factory->GetForServer(quic_server_id2));
+
+    // Update quic_server_info2's server_config and persist it.
+    QuicServerInfo::State* state2 = quic_server_info2->mutable_state();
+
+    // Minimum SCFG that passes config validation checks.
+    const char scfg2[] = {// SCFG
+                          0x53, 0x43, 0x46, 0x47,
+                          // num entries
+                          0x01, 0x00,
+                          // padding
+                          0x00, 0x00,
+                          // EXPY
+                          0x45, 0x58, 0x50, 0x59,
+                          // EXPY end offset
+                          0x08, 0x00, 0x00, 0x00,
+                          // Value
+                          '8', '7', '3', '4', '5', '6', '2', '1'};
+
+    // Create temporary strings becasue Persist() clears string data in
+    // |state2|.
+    string server_config2(reinterpret_cast<const char*>(&scfg2), sizeof(scfg2));
+    string source_address_token2("test_source_address_token2");
+    string cert_sct2("test_cert_sct2");
+    string chlo_hash2("test_chlo_hash2");
+    string signature2("test_signature2");
+    string test_cert2("test_cert2");
+    vector<string> certs2;
+    certs2.push_back(test_cert2);
+    state2->server_config = server_config2;
+    state2->source_address_token = source_address_token2;
+    state2->cert_sct = cert_sct2;
+    state2->chlo_hash = chlo_hash2;
+    state2->server_config_sig = signature2;
+    state2->certs = certs2;
+
+    quic_server_info2->Persist();
+
+    QuicStreamFactoryPeer::MaybeInitialize(factory_.get());
+    EXPECT_TRUE(QuicStreamFactoryPeer::HasInitializedData(factory_.get()));
+
+    // Verify the MRU order is maintained.
+    const QuicServerInfoMap& quic_server_info_map =
+        http_server_properties_.quic_server_info_map();
+    EXPECT_EQ(2u, quic_server_info_map.size());
+    QuicServerInfoMap::const_iterator quic_server_info_map_it =
+        quic_server_info_map.begin();
+    EXPECT_EQ(quic_server_info_map_it->first, quic_server_id2);
+    ++quic_server_info_map_it;
+    EXPECT_EQ(quic_server_info_map_it->first, quic_server_id);
+
+    EXPECT_TRUE(QuicStreamFactoryPeer::SupportsQuicAtStartUp(factory_.get(),
+                                                             host_port_pair_));
+    EXPECT_FALSE(QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(
+        factory_.get(), quic_server_id));
+    QuicCryptoClientConfig* crypto_config =
+        QuicStreamFactoryPeer::GetCryptoConfig(factory_.get());
+    QuicCryptoClientConfig::CachedState* cached =
+        crypto_config->LookupOrCreate(quic_server_id);
+    EXPECT_FALSE(cached->server_config().empty());
+    EXPECT_TRUE(cached->GetServerConfig());
+    EXPECT_EQ(server_config, cached->server_config());
+    EXPECT_EQ(source_address_token, cached->source_address_token());
+    EXPECT_EQ(cert_sct, cached->cert_sct());
+    EXPECT_EQ(chlo_hash, cached->chlo_hash());
+    EXPECT_EQ(signature, cached->signature());
+    ASSERT_EQ(1U, cached->certs().size());
+    EXPECT_EQ(test_cert, cached->certs()[0]);
+
+    EXPECT_TRUE(QuicStreamFactoryPeer::SupportsQuicAtStartUp(factory_.get(),
+                                                             host_port_pair2));
+    EXPECT_FALSE(QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(
+        factory_.get(), quic_server_id2));
+    QuicCryptoClientConfig::CachedState* cached2 =
+        crypto_config->LookupOrCreate(quic_server_id2);
+    EXPECT_FALSE(cached2->server_config().empty());
+    EXPECT_TRUE(cached2->GetServerConfig());
+    EXPECT_EQ(server_config2, cached2->server_config());
+    EXPECT_EQ(source_address_token2, cached2->source_address_token());
+    EXPECT_EQ(cert_sct2, cached2->cert_sct());
+    EXPECT_EQ(chlo_hash2, cached2->chlo_hash());
+    EXPECT_EQ(signature2, cached2->signature());
+    ASSERT_EQ(1U, cached->certs().size());
+    EXPECT_EQ(test_cert2, cached2->certs()[0]);
+  }
+
   void RunTestLoopUntilIdle() {
     while (!runner_->GetPostedTasks().empty())
       runner_->RunNextTask();
@@ -531,6 +714,7 @@ class QuicStreamFactoryTestBase {
   QuicTestPacketMaker client_maker_;
   QuicTestPacketMaker server_maker_;
   HttpServerPropertiesImpl http_server_properties_;
+  TestProxyDelegate test_proxy_delegate_;
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
   TransportSecurityState transport_security_state_;
@@ -1218,7 +1402,7 @@ TEST_P(QuicStreamFactoryTest, MaxOpenStream) {
   socket_data.AddSocketDataToFactory(&socket_factory_);
 
   HttpRequestInfo request_info;
-  vector<QuicHttpStream*> streams;
+  vector<std::unique_ptr<QuicHttpStream>> streams;
   // The MockCryptoClientStream sets max_open_streams to be
   // kDefaultMaxStreamsPerConnection / 2.
   for (size_t i = 0; i < kDefaultMaxStreamsPerConnection / 2; i++) {
@@ -1236,7 +1420,7 @@ TEST_P(QuicStreamFactoryTest, MaxOpenStream) {
     EXPECT_TRUE(stream);
     EXPECT_EQ(OK, stream->InitializeStream(&request_info, DEFAULT_PRIORITY,
                                            net_log_, CompletionCallback()));
-    streams.push_back(stream.release());
+    streams.push_back(std::move(stream));
   }
 
   QuicStreamRequest request(factory_.get());
@@ -1264,8 +1448,6 @@ TEST_P(QuicStreamFactoryTest, MaxOpenStream) {
   QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
   session->connection()->CloseConnection(QUIC_PUBLIC_RESET, "test",
                                          ConnectionCloseBehavior::SILENT_CLOSE);
-
-  base::STLDeleteElements(&streams);
 }
 
 TEST_P(QuicStreamFactoryTest, ResolutionErrorInCreate) {
@@ -4401,166 +4583,16 @@ TEST_P(QuicStreamFactoryTest, EnableDelayTcpRace) {
   QuicStreamFactoryPeer::SetDelayTcpRace(factory_.get(), delay_tcp_race);
 }
 
+// Verifies that the QUIC stream factory is initialized correctly.
 TEST_P(QuicStreamFactoryTest, MaybeInitialize) {
-  idle_connection_timeout_seconds_ = 500;
-  Initialize();
-  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-  const QuicConfig* config = QuicStreamFactoryPeer::GetConfig(factory_.get());
-  EXPECT_EQ(500, config->IdleConnectionStateLifetime().ToSeconds());
+  VerifyInitialization(false);
+}
 
-  QuicStreamFactoryPeer::SetTaskRunner(factory_.get(), runner_.get());
-
-  const AlternativeService alternative_service1(QUIC, host_port_pair_.host(),
-                                                host_port_pair_.port());
-  AlternativeServiceInfoVector alternative_service_info_vector;
-  base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
-  alternative_service_info_vector.push_back(
-      AlternativeServiceInfo(alternative_service1, expiration));
-  http_server_properties_.SetAlternativeServices(
-      url::SchemeHostPort(url_), alternative_service_info_vector);
-
-  HostPortPair host_port_pair2(kServer2HostName, kDefaultServerPort);
-  url::SchemeHostPort server2("https", kServer2HostName, kDefaultServerPort);
-  const AlternativeService alternative_service2(QUIC, host_port_pair2.host(),
-                                                host_port_pair2.port());
-  AlternativeServiceInfoVector alternative_service_info_vector2;
-  alternative_service_info_vector2.push_back(
-      AlternativeServiceInfo(alternative_service2, expiration));
-  http_server_properties_.SetAlternativeServices(
-      server2, alternative_service_info_vector2);
-
-  http_server_properties_.SetMaxServerConfigsStoredInProperties(
-      kMaxQuicServersToPersist);
-
-  QuicServerId quic_server_id(kDefaultServerHostName, 80,
-                              PRIVACY_MODE_DISABLED);
-  QuicServerInfoFactory* quic_server_info_factory =
-      new PropertiesBasedQuicServerInfoFactory(&http_server_properties_);
-  factory_->set_quic_server_info_factory(quic_server_info_factory);
-
-  std::unique_ptr<QuicServerInfo> quic_server_info(
-      quic_server_info_factory->GetForServer(quic_server_id));
-
-  // Update quic_server_info's server_config and persist it.
-  QuicServerInfo::State* state = quic_server_info->mutable_state();
-  // Minimum SCFG that passes config validation checks.
-  const char scfg[] = {// SCFG
-                       0x53, 0x43, 0x46, 0x47,
-                       // num entries
-                       0x01, 0x00,
-                       // padding
-                       0x00, 0x00,
-                       // EXPY
-                       0x45, 0x58, 0x50, 0x59,
-                       // EXPY end offset
-                       0x08, 0x00, 0x00, 0x00,
-                       // Value
-                       '1', '2', '3', '4', '5', '6', '7', '8'};
-
-  // Create temporary strings becasue Persist() clears string data in |state|.
-  string server_config(reinterpret_cast<const char*>(&scfg), sizeof(scfg));
-  string source_address_token("test_source_address_token");
-  string cert_sct("test_cert_sct");
-  string chlo_hash("test_chlo_hash");
-  string signature("test_signature");
-  string test_cert("test_cert");
-  vector<string> certs;
-  certs.push_back(test_cert);
-  state->server_config = server_config;
-  state->source_address_token = source_address_token;
-  state->cert_sct = cert_sct;
-  state->chlo_hash = chlo_hash;
-  state->server_config_sig = signature;
-  state->certs = certs;
-
-  quic_server_info->Persist();
-
-  QuicServerId quic_server_id2(kServer2HostName, 80, PRIVACY_MODE_DISABLED);
-  std::unique_ptr<QuicServerInfo> quic_server_info2(
-      quic_server_info_factory->GetForServer(quic_server_id2));
-
-  // Update quic_server_info2's server_config and persist it.
-  QuicServerInfo::State* state2 = quic_server_info2->mutable_state();
-
-  // Minimum SCFG that passes config validation checks.
-  const char scfg2[] = {// SCFG
-                        0x53, 0x43, 0x46, 0x47,
-                        // num entries
-                        0x01, 0x00,
-                        // padding
-                        0x00, 0x00,
-                        // EXPY
-                        0x45, 0x58, 0x50, 0x59,
-                        // EXPY end offset
-                        0x08, 0x00, 0x00, 0x00,
-                        // Value
-                        '8', '7', '3', '4', '5', '6', '2', '1'};
-
-  // Create temporary strings becasue Persist() clears string data in |state2|.
-  string server_config2(reinterpret_cast<const char*>(&scfg2), sizeof(scfg2));
-  string source_address_token2("test_source_address_token2");
-  string cert_sct2("test_cert_sct2");
-  string chlo_hash2("test_chlo_hash2");
-  string signature2("test_signature2");
-  string test_cert2("test_cert2");
-  vector<string> certs2;
-  certs2.push_back(test_cert2);
-  state2->server_config = server_config2;
-  state2->source_address_token = source_address_token2;
-  state2->cert_sct = cert_sct2;
-  state2->chlo_hash = chlo_hash2;
-  state2->server_config_sig = signature2;
-  state2->certs = certs2;
-
-  quic_server_info2->Persist();
-
-  QuicStreamFactoryPeer::MaybeInitialize(factory_.get());
-  EXPECT_TRUE(QuicStreamFactoryPeer::HasInitializedData(factory_.get()));
-
-  // Verify the MRU order is maintained.
-  const QuicServerInfoMap& quic_server_info_map =
-      http_server_properties_.quic_server_info_map();
-  EXPECT_EQ(2u, quic_server_info_map.size());
-  QuicServerInfoMap::const_iterator quic_server_info_map_it =
-      quic_server_info_map.begin();
-  EXPECT_EQ(quic_server_info_map_it->first, quic_server_id2);
-  ++quic_server_info_map_it;
-  EXPECT_EQ(quic_server_info_map_it->first, quic_server_id);
-
-  EXPECT_TRUE(QuicStreamFactoryPeer::SupportsQuicAtStartUp(factory_.get(),
-                                                           host_port_pair_));
-  EXPECT_FALSE(QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(factory_.get(),
-                                                               quic_server_id));
-  QuicCryptoClientConfig* crypto_config =
-      QuicStreamFactoryPeer::GetCryptoConfig(factory_.get());
-  QuicCryptoClientConfig::CachedState* cached =
-      crypto_config->LookupOrCreate(quic_server_id);
-  EXPECT_FALSE(cached->server_config().empty());
-  EXPECT_TRUE(cached->GetServerConfig());
-  EXPECT_EQ(server_config, cached->server_config());
-  EXPECT_EQ(source_address_token, cached->source_address_token());
-  EXPECT_EQ(cert_sct, cached->cert_sct());
-  EXPECT_EQ(chlo_hash, cached->chlo_hash());
-  EXPECT_EQ(signature, cached->signature());
-  ASSERT_EQ(1U, cached->certs().size());
-  EXPECT_EQ(test_cert, cached->certs()[0]);
-
-  EXPECT_TRUE(QuicStreamFactoryPeer::SupportsQuicAtStartUp(factory_.get(),
-                                                           host_port_pair2));
-  EXPECT_FALSE(QuicStreamFactoryPeer::CryptoConfigCacheIsEmpty(
-      factory_.get(), quic_server_id2));
-  QuicCryptoClientConfig::CachedState* cached2 =
-      crypto_config->LookupOrCreate(quic_server_id2);
-  EXPECT_FALSE(cached2->server_config().empty());
-  EXPECT_TRUE(cached2->GetServerConfig());
-  EXPECT_EQ(server_config2, cached2->server_config());
-  EXPECT_EQ(source_address_token2, cached2->source_address_token());
-  EXPECT_EQ(cert_sct2, cached2->cert_sct());
-  EXPECT_EQ(chlo_hash2, cached2->chlo_hash());
-  EXPECT_EQ(signature2, cached2->signature());
-  ASSERT_EQ(1U, cached->certs().size());
-  EXPECT_EQ(test_cert2, cached2->certs()[0]);
+// Verifies that the alternative proxy server provided by the proxy delegate
+// is added to the list of supported QUIC proxy servers, and the QUIC stream
+// factory is initialized correctly.
+TEST_P(QuicStreamFactoryTest, MaybeInitializeAlternativeProxyServer) {
+  VerifyInitialization(true);
 }
 
 TEST_P(QuicStreamFactoryTest, StartCertVerifyJob) {

@@ -21,8 +21,8 @@ components/rappor/rappor_parameters.h.
 
 <noise-level name="NO_NOISE">
   <summary>
-    Adds no noise at all. Only use this for non-sensitive fields, and only
-    for metrics from UMA opt-in users.
+    Adds no noise at all. Only use this for non-sensitive fields, and only for
+    metrics from UMA opt-in users.
   </summary>
   <noise-values fake-prob="0.0" fake-one-prob="0.0" one-coin-prob="1.0"
       zero-coin-prob="0.0"/>
@@ -38,10 +38,10 @@ components/rappor/rappor_parameters.h.
 
 <noise-level name="SPARSE_NOISE">
   <summary>
-    Reduced noise, suitable for metrics which receive limited reports (less
-    than 500,000 per day) or expect a highly skewed/sparse distribution over
-    a wide set of domains. Approval from the Chrome Privacy and Rappor teams
-    is required to implement a metric using this noise level.
+    Reduced noise, suitable for metrics which receive limited reports (less than
+    500,000 per day) or expect a highly skewed/sparse distribution over a wide
+    set of domains. Approval from the Chrome Privacy and Rappor teams is
+    required to implement a metric using this noise level.
   </summary>
   <noise-values fake-prob="0.25" fake-one-prob="0.5" one-coin-prob="0.75"
       zero-coin-prob="0.25"/>
@@ -60,8 +60,7 @@ components/rappor/rappor_parameters.h.
   <summary>
     Stricter parameters for metrics collected from a broader population.
   </summary>
-  <parameters num-cohorts="128" bytes="1" hash-functions="2" fake-prob="0.5"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="1" hash-functions="2"
       reporting-level="COARSE" noise-level="NORMAL_NOISE"/>
 </rappor-parameters>
 
@@ -70,8 +69,7 @@ components/rappor/rappor_parameters.h.
     Deprecated parameters for collecting the domain and registry of a URL from
     UMA opt-in users. Should use UMA_RAPPOR_TYPE instead.
   </summary>
-  <parameters num-cohorts="128" bytes="16" hash-functions="2" fake-prob="0.5"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="16" hash-functions="2"
       reporting-level="FINE" noise-level="NORMAL_NOISE"/>
 </rappor-parameters>
 
@@ -83,8 +81,7 @@ components/rappor/rappor_parameters.h.
     from the Chrome Privacy and Rappor teams is required to use this type. New
     metrics should also consider LOW_FREQUENCY_UMA_RAPPOR_TYPE instead.
   </summary>
-  <parameters num-cohorts="128" bytes="16" hash-functions="2" fake-prob="0.25"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="16" hash-functions="2"
       reporting-level="FINE" noise-level="SPARSE_NOISE"/>
 </rappor-parameters>
 
@@ -96,8 +93,7 @@ components/rappor/rappor_parameters.h.
     Explicit approval from the Chrome Privacy and Rappor teams is required to
     use this type.
   </summary>
-  <parameters num-cohorts="128" bytes="1" hash-functions="2" fake-prob="0.25"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="1" hash-functions="2"
       reporting-level="COARSE" noise-level="SPARSE_NOISE"/>
 </rappor-parameters>
 
@@ -108,8 +104,7 @@ components/rappor/rappor_parameters.h.
     500,000 reports per day). Explicit approval from the Chrome Privacy and
     Rappor teams is required to use this type.
   </summary>
-  <parameters num-cohorts="128" bytes="4" hash-functions="2" fake-prob="0.25"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="4" hash-functions="2"
       reporting-level="FINE" noise-level="SPARSE_NOISE"/>
 </rappor-parameters>
 
@@ -118,8 +113,7 @@ components/rappor/rappor_parameters.h.
     Parameters for metrics related to Safe Browsing, collected from all users
     with safe browsing enabled.
   </summary>
-  <parameters num-cohorts="128" bytes="1" hash-functions="2" fake-prob="0.5"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="1" hash-functions="2"
       reporting-level="COARSE" noise-level="NORMAL_NOISE"/>
 </rappor-parameters>
 
@@ -127,8 +121,7 @@ components/rappor/rappor_parameters.h.
   <summary>
     Parameters suitable for metrics from UMA opt-in users.
   </summary>
-  <parameters num-cohorts="128" bytes="4" hash-functions="2" fake-prob="0.5"
-      fake-one-prob="0.5" one-coin-prob="0.75" zero-coin-prob="0.25"
+  <parameters num-cohorts="128" bytes="4" hash-functions="2"
       reporting-level="FINE" noise-level="NORMAL_NOISE"/>
 </rappor-parameters>
 
@@ -273,8 +266,8 @@ components/rappor/rappor_parameters.h.
   <owner>avayvod@chromium.org</owner>
   <owner>aberent@chromium.org</owner>
   <summary>
-    The domain and registry of the frame URL that the user is trying to cast
-    the media from. Recorded every time the user casts the media.
+    The domain and registry of the frame URL that the user is trying to cast the
+    media from. Recorded every time the user casts the media.
   </summary>
 </rappor-metric>
 
@@ -338,8 +331,8 @@ components/rappor/rappor_parameters.h.
   <owner>tsergeant@chromium.org</owner>
   <summary>
     **DEPRECATED. Replaced by
-    ContentSettings.PermissionActions_AudioCapture.Dismissed.Url2 as of M52.
-    The domain for which an AudioCapture permission prompt was Dismissed.
+    ContentSettings.PermissionActions_AudioCapture.Dismissed.Url2 as of M52. The
+    domain for which an AudioCapture permission prompt was Dismissed.
   </summary>
 </rappor-metric>
 
@@ -432,8 +425,8 @@ components/rappor/rappor_parameters.h.
   <owner>jialiul@chromium.org</owner>
   <summary>
     **DEPRECATED. Renamed to
-    ContentSettings.PermissionActions_VideoCapture.Revoked.Url on
-    2016-01-07.** The domain for which a camera permission was revoked.
+    ContentSettings.PermissionActions_VideoCapture.Revoked.Url on 2016-01-07.**
+    The domain for which a camera permission was revoked.
   </summary>
 </rappor-metric>
 
@@ -494,8 +487,8 @@ components/rappor/rappor_parameters.h.
   <owner>miguelg@chromium.org</owner>
   <summary>
     **DEPRECATED. Replaced by
-    ContentSettings.PermissionActions_Geolocation.Dismissed.Url2 as of M52.
-    The domain for which a Geolocation permission prompt was Dismissed.
+    ContentSettings.PermissionActions_Geolocation.Dismissed.Url2 as of M52. The
+    domain for which a Geolocation permission prompt was Dismissed.
   </summary>
 </rappor-metric>
 
@@ -575,8 +568,8 @@ components/rappor/rappor_parameters.h.
   <owner>jialiul@chromium.org</owner>
   <summary>
     **DEPRECATED. Renamed to
-    ContentSettings.PermissionActions_AudioCapture.Revoked.Url on
-    2016-01-07.** The domain for which a microphone permission was revoked.
+    ContentSettings.PermissionActions_AudioCapture.Revoked.Url on 2016-01-07.**
+    The domain for which a microphone permission was revoked.
   </summary>
 </rappor-metric>
 
@@ -671,8 +664,8 @@ components/rappor/rappor_parameters.h.
   <summary>
     **DEPRECATED. Replaced by
     ContentSettings.PermissionActions_Notifications.Revoked.Url2 as of M52. The
-    domain for which a Notification permission was revoked. Note: This metric
-    is recorded for more revocation actions as of 2016-04-01 (M51).
+    domain for which a Notification permission was revoked. Note: This metric is
+    recorded for more revocation actions as of 2016-04-01 (M51).
   </summary>
 </rappor-metric>
 
@@ -830,8 +823,8 @@ components/rappor/rappor_parameters.h.
     type="ETLD_PLUS_ONE">
   <owner>toyoshim@chromium.org</owner>
   <summary>
-    **DEPRECATED: replaced by ContentSettings.PermissionRequested.Midi.Url2
-    as of M53. The domain that requests using MIDI devices.
+    **DEPRECATED: replaced by ContentSettings.PermissionRequested.Midi.Url2 as
+    of M53. The domain that requests using MIDI devices.
   </summary>
 </rappor-metric>
 
@@ -848,8 +841,8 @@ components/rappor/rappor_parameters.h.
   <owner>miguelg@chromium.org</owner>
   <summary>
     **DEPRECATED: replaced by
-    ContentSettings.PermissionRequested.Notifications.Url2 as of M52. The
-    domain that issues a Notification permission prompt.
+    ContentSettings.PermissionRequested.Notifications.Url2 as of M52. The domain
+    that issues a Notification permission prompt.
   </summary>
 </rappor-metric>
 
@@ -874,8 +867,8 @@ components/rappor/rappor_parameters.h.
     type="ETLD_PLUS_ONE">
   <owner>tommycli@chromium.org</owner>
   <summary>
-    The eTLD+1 of a URL that the user added to the ALLOW site exceptions for
-    the Plugins Content Setting.
+    The eTLD+1 of a URL that the user added to the ALLOW site exceptions for the
+    Plugins Content Setting.
   </summary>
 </rappor-metric>
 
@@ -905,8 +898,7 @@ components/rappor/rappor_parameters.h.
 <rappor-metric name="DomDistiller.OpenPanel" type="UMA_RAPPOR_TYPE">
   <owner>wychen@chromium.org</owner>
   <summary>
-    The eTLD+1 of the frame URL where Reader Mode panel is opened by the
-    user.
+    The eTLD+1 of the frame URL where Reader Mode panel is opened by the user.
   </summary>
 </rappor-metric>
 
@@ -1162,9 +1154,9 @@ now we are only interested in H264, VP8 and VP9.
     type="UMA_RAPPOR_TYPE">
   <owner>knn@chromium.org</owner>
   <summary>
-    The eTLD+1 of the website visited by a user by typing the URL in the
-    omnibox including those completed from suggestions but not including
-    those that end up being searches in the search engine.
+    The eTLD+1 of the website visited by a user by typing the URL in the omnibox
+    including those completed from suggestions but not including those that end
+    up being searches in the search engine.
   </summary>
 </rappor-metric>
 
@@ -1199,9 +1191,9 @@ now we are only interested in H264, VP8 and VP9.
   <owner>csharrison@chromium.org</owner>
   <owner>bmcquade@chromium.org</owner>
   <summary>
-    The eTLD+1 of the website visited, along with a bitfield representing
-    bucket membership in a coarse histogram of time from navigation start to the
-    time the first real content (text/image) is painted on the screen (See
+    The eTLD+1 of the website visited, along with a bitfield representing bucket
+    membership in a coarse histogram of time from navigation start to the time
+    the first real content (text/image) is painted on the screen (See
     PageLoad.PaintTiming.NavigationToFirstContentfulPaint). The bucket's name is
     the histogram's lower bound. Tracks the same sites that the rest of the
     PageLoad.* histogram metrics track, i.e. http/s, html, main frame
@@ -1214,24 +1206,24 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Bucket">
-    <flag>Bit 0: 0_2_SECONDS</flag>
-    <flag>Bit 1: 2_4_SECONDS</flag>
-    <flag>Bit 2: 4_8_SECONDS</flag>
-    <flag>Bit 3: 8_16_SECONDS</flag>
-    <flag>Bit 4: 16_32_SECONDS</flag>
-    <flag>Bit 5: 32_INF_SECONDS</flag>
+    <flag bit="0" label="0_2_SECONDS"/>
+    <flag bit="1" label="2_4_SECONDS"/>
+    <flag bit="2" label="4_8_SECONDS"/>
+    <flag bit="3" label="8_16_SECONDS"/>
+    <flag bit="4" label="16_32_SECONDS"/>
+    <flag bit="5" label="32_INF_SECONDS"/>
     <summary>
       Bitfield representing the bucket when the time to first contentful paint
       occurred.
     </summary>
   </flags-field>
   <flags-field name="IsSlow">
-    <flag>Bit 0</flag>
+    <flag bit="0" label="OVER_10_SECONDS"/>
     <summary>
       Whether or not the navigation to first contentful paint took over ten
       seconds. We send this over to ease in analysis. The Bucket field has many
-      dimensions of noise (i.e. bits flipped), so it will be much harder
-      to de-noise than this one.
+      dimensions of noise (i.e. bits flipped), so it will be much harder to
+      de-noise than this one.
     </summary>
   </flags-field>
 </rappor-metric>
@@ -1277,13 +1269,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1318,13 +1310,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1359,13 +1351,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1400,13 +1392,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1441,13 +1433,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1482,13 +1474,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1523,13 +1515,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1565,13 +1557,13 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="Actions">
-    <flag>Bit 0: GRANTED</flag>
-    <flag>Bit 1: DENIED</flag>
-    <flag>Bit 2: DISMISSED</flag>
-    <flag>Bit 3: IGNORED</flag>
-    <flag>Bit 4: REVOKED</flag>
-    <flag>Bit 5: REENABLED</flag>
-    <flag>Bit 6: REQUESTED</flag>
+    <flag bit="0" label="GRANTED"/>
+    <flag bit="1" label="DENIED"/>
+    <flag bit="2" label="DISMISSED"/>
+    <flag bit="3" label="IGNORED"/>
+    <flag bit="4" label="REVOKED"/>
+    <flag bit="5" label="REENABLED"/>
+    <flag bit="6" label="REQUESTED"/>
     <summary>
       Bitfield of the permission actions taken for this permission.
     </summary>
@@ -1582,9 +1574,9 @@ now we are only interested in H264, VP8 and VP9.
   <owner>wfh@chromium.org</owner>
   <summary>
     The domain and registry of the top level URL of a page which attempts to
-    launch a Flash NPAPI or PPAPI plugin, if the client has Flash installed
-    and enabled. Recorded when the plugin frame appears for each Flash object
-    found on the page, even if the plugin is click-to-play.
+    launch a Flash NPAPI or PPAPI plugin, if the client has Flash installed and
+    enabled. Recorded when the plugin frame appears for each Flash object found
+    on the page, even if the plugin is click-to-play.
   </summary>
 </rappor-metric>
 
@@ -1707,9 +1699,9 @@ now we are only interested in H264, VP8 and VP9.
     type="ETLD_PLUS_ONE">
   <owner>miguelg@chromium.org</owner>
   <summary>
-    Number of times the generic (forced) notification was shown per origin.
-    This happens if the site uses the push api but does not generate a
-    notification of their own.
+    Number of times the generic (forced) notification was shown per origin. This
+    happens if the site uses the push api but does not generate a notification
+    of their own.
   </summary>
 </rappor-metric>
 
@@ -1762,27 +1754,27 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="priority">
-    <flag>Bit 0: BACKGROUND</flag>
+    <flag bit="0" label="BACKGROUND"/>
     <summary>
       Bitfield for the task's process priority (whether it's foregrounded or
       backgrounded).
     </summary>
   </flags-field>
   <flags-field name="num_cores_range">
-    <flag>Bit 0: RANGE_CORES_1_CORE</flag>
-    <flag>Bit 1: RANGE_CORES_2_CORES</flag>
-    <flag>Bit 2: RANGE_CORES_3_TO_4_CORES</flag>
-    <flag>Bit 3: RANGE_CORES_5_TO_8_CORES</flag>
-    <flag>Bit 4: RANGE_CORES_9_TO_16_CORES</flag>
-    <flag>Bit 5: RANGE_CORES_ABOVE_16_CORES</flag>
+    <flag bit="0" label="RANGE_CORES_1_CORE"/>
+    <flag bit="1" label="RANGE_CORES_2_CORES"/>
+    <flag bit="2" label="RANGE_CORES_3_TO_4_CORES"/>
+    <flag bit="3" label="RANGE_CORES_5_TO_8_CORES"/>
+    <flag bit="4" label="RANGE_CORES_9_TO_16_CORES"/>
+    <flag bit="5" label="RANGE_CORES_ABOVE_16_CORES"/>
     <summary>
       Bitfield for the current system's number or cores range.
     </summary>
   </flags-field>
   <flags-field name="usage_range">
-    <flag>Bit 0: RANGE_10_TO_30_PERCENT</flag>
-    <flag>Bit 1: RANGE_30_TO_60_PERCENT</flag>
-    <flag>Bit 2: RANGE_ABOVE_60_PERCENT</flag>
+    <flag bit="0" label="RANGE_10_TO_30_PERCENT"/>
+    <flag bit="1" label="RANGE_30_TO_60_PERCENT"/>
+    <flag bit="2" label="RANGE_ABOVE_60_PERCENT"/>
     <summary>
       Bitfield for the tasks CPU usage range.
     </summary>
@@ -1801,18 +1793,18 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="priority">
-    <flag>Bit 0: BACKGROUND</flag>
+    <flag bit="0" label="BACKGROUND"/>
     <summary>
       Bitfield for the task's process priority (whether it's foregrounded or
       backgrounded).
     </summary>
   </flags-field>
   <flags-field name="usage_range">
-    <flag>Bit 0: RANGE_200_TO_400_MB</flag>
-    <flag>Bit 1: RANGE_400_TO_600_MB</flag>
-    <flag>Bit 2: RANGE_600_TO_800_MB</flag>
-    <flag>Bit 3: RANGE_800_TO_1_GB</flag>
-    <flag>Bit 4: RANGE_ABOVE_1_GB</flag>
+    <flag bit="0" label="RANGE_200_TO_400_MB"/>
+    <flag bit="1" label="RANGE_400_TO_600_MB"/>
+    <flag bit="2" label="RANGE_600_TO_800_MB"/>
+    <flag bit="3" label="RANGE_800_TO_1_GB"/>
+    <flag bit="4" label="RANGE_ABOVE_1_GB"/>
     <summary>
       Bitfield for the tasks memory usage range.
     </summary>
@@ -1834,9 +1826,9 @@ now we are only interested in H264, VP8 and VP9.
   <owner>nparker@chromium.org</owner>
   <summary>
     **DEPRECATED: No longer reported as of M52. The domain and registry of the
-    URL for which a download was allowed without being verified by Safe
-    Browsing because it was on a whitelisted domain. Recorded before the
-    download is started. The candidates should come from the domain whitelist.
+    URL for which a download was allowed without being verified by Safe Browsing
+    because it was on a whitelisted domain. Recorded before the download is
+    started. The candidates should come from the domain whitelist.
   </summary>
 </rappor-metric>
 
@@ -1846,9 +1838,9 @@ now we are only interested in H264, VP8 and VP9.
   <owner>nparker@chromium.org</owner>
   <summary>
     **DEPRECATED: No longer reported as of M52. The domain and registry of the
-    URL for which a download was allowed without being verified by Safe
-    Browsing because the service was disabled at the time. Recorded before the
-    download is started.
+    URL for which a download was allowed without being verified by Safe Browsing
+    because the service was disabled at the time. Recorded before the download
+    is started.
   </summary>
 </rappor-metric>
 
@@ -1857,17 +1849,17 @@ now we are only interested in H264, VP8 and VP9.
   <owner>nparker@chromium.org</owner>
   <summary>
     **DEPRECATED: No longer reported as of M52. The domain and registry of the
-    URL for which a download was blocked without being verified by Safe
-    Browsing because the extension matched the blacklist provided by Finch.
-    Recorded before the download is started.
+    URL for which a download was blocked without being verified by Safe Browsing
+    because the extension matched the blacklist provided by Finch. Recorded
+    before the download is started.
   </summary>
 </rappor-metric>
 
 <rappor-metric name="Search.DefaultSearchProvider" type="ETLD_PLUS_ONE">
   <owner>holte@chromium.org</owner>
   <summary>
-    The domain and registry of the URL for the default search engine.
-    Recorded when a profile is opened or after a profile reset.
+    The domain and registry of the URL for the default search engine. Recorded
+    when a profile is opened or after a profile reset.
   </summary>
 </rappor-metric>
 
@@ -1899,8 +1891,8 @@ now we are only interested in H264, VP8 and VP9.
 <rappor-metric name="Settings.NewTabPage" type="ETLD_PLUS_ONE">
   <owner>holte@chromium.org</owner>
   <summary>
-    The domain and registry of the URL chrome://newtab is rewritten to.
-    Recorded when a profile is loaded, if the URL is valid.
+    The domain and registry of the URL chrome://newtab is rewritten to. Recorded
+    when a profile is loaded, if the URL is valid.
   </summary>
 </rappor-metric>
 
@@ -1914,10 +1906,9 @@ now we are only interested in H264, VP8 and VP9.
 <rappor-metric name="Startup.BrowserLaunchURL" type="UMA_RAPPOR_TYPE">
   <owner>rkaplow@chromium.org</owner>
   <summary>
-    The eTLD+1 of a URL that was passed in from the command line when Chrome
-    is invoked. Note that this handles the case of a URL passed to Chrome
-    starting up, or when a running Chrome is given the message to open a new
-    URL.
+    The eTLD+1 of a URL that was passed in from the command line when Chrome is
+    invoked. Note that this handles the case of a URL passed to Chrome starting
+    up, or when a running Chrome is given the message to open a new URL.
   </summary>
 </rappor-metric>
 
@@ -1960,13 +1951,12 @@ now we are only interested in H264, VP8 and VP9.
   <string-field name="domain">
     <summary>
       **DEPRECATED: replaced by interstitial.harmful2 as of M52. The
-      domain+registry of a URL that triggered a safe-browsing UWS
-      interstitial.
+      domain+registry of a URL that triggered a safe-browsing UWS interstitial.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing UWS warning interstitial.
     </summary>
@@ -1988,8 +1978,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing UWS warning interstitial.
     </summary>
@@ -2010,8 +2000,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing malware warning interstitial.
     </summary>
@@ -2033,8 +2023,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing malware warning interstitial.
     </summary>
@@ -2055,8 +2045,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing phishing warning interstitial.
     </summary>
@@ -2078,8 +2068,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from a safe-browsing phishing warning interstitial.
     </summary>
@@ -2107,8 +2097,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from an SSL warning interstitial.
     </summary>
@@ -2127,8 +2117,8 @@ now we are only interested in H264, VP8 and VP9.
     </summary>
   </string-field>
   <flags-field name="flags">
-    <flag>Bit 0: DID_PROCEED</flag>
-    <flag>Bit 1: IS_REPEAT_VISIT</flag>
+    <flag bit="0" label="DID_PROCEED"/>
+    <flag bit="1" label="IS_REPEAT_VISIT"/>
     <summary>
       Bitfield of the state from an SSL warning interstitial.
     </summary>

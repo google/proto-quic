@@ -109,7 +109,7 @@ AlternateProtocol AlternateProtocolFromNextProto(NextProto next_proto) {
   switch (next_proto) {
     case kProtoHTTP2:
       return NPN_HTTP_2;
-    case kProtoQUIC1SPDY3:
+    case kProtoQUIC:
       return QUIC;
 
     case kProtoUnknown:

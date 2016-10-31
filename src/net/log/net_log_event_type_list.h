@@ -1166,6 +1166,12 @@ EVENT_TYPE(HTTP_TRANSACTION_DRAIN_BODY_FOR_AUTH_RESTART)
 // Measures the time taken to look up the key used for Token Binding.
 EVENT_TYPE(HTTP_TRANSACTION_GET_TOKEN_BINDING_KEY)
 
+// Measures the time taken due to throttling by the NetworkThrottleManager.
+EVENT_TYPE(HTTP_TRANSACTION_THROTTLED)
+
+// Record priority changes on the network transaction.
+EVENT_TYPE(HTTP_TRANSACTION_SET_PRIORITY)
+
 // This event is sent when we try to restart a transaction after an error.
 // The following parameters are attached:
 //   {

@@ -524,6 +524,11 @@ RE_CALLED_BY_NATIVE = re.compile(
     '\s*\((?P<params>[^\)]*)\)')
 
 
+# Removes empty lines that are indented (i.e. start with 2x spaces).
+def RemoveIndentedEmptyLines(string):
+  return re.sub('^(?: {2})+$\n', '', string, flags=re.MULTILINE)
+
+
 def ExtractCalledByNatives(contents):
   """Parses all methods annotated with @CalledByNative.
 
@@ -1001,6 +1006,9 @@ ${NATIVES}
       post_call = '.Release()'
       return_declaration = ('base::android::ScopedJavaLocalRef<' + return_type +
                             '>')
+    profiling_entered_native = ''
+    if self.options.enable_profiling:
+      profiling_entered_native = 'JNI_LINK_SAVED_FRAME_POINTER;'
     values = {
         'RETURN': return_type,
         'RETURN_DECLARATION': return_declaration,
@@ -1010,6 +1018,7 @@ ${NATIVES}
         'PARAMS_IN_CALL': params_in_call,
         'POST_CALL': post_call,
         'STUB_NAME': self.GetStubName(native),
+        'PROFILING_ENTERED_NATIVE': profiling_entered_native,
     }
 
     if is_method:
@@ -1025,6 +1034,7 @@ ${NATIVES}
 extern "C" __attribute__((visibility("default")))
 ${RETURN} ${STUB_NAME}(JNIEnv* env,
     ${PARAMS_IN_STUB}) {
+  ${PROFILING_ENTERED_NATIVE}
   ${P0_TYPE}* native = reinterpret_cast<${P0_TYPE}*>(${PARAM0_NAME});
   CHECK_NATIVE_PTR(env, jcaller, native, "${NAME}"${OPTIONAL_ERROR_RETURN});
   return native->${NAME}(${PARAMS_IN_CALL})${POST_CALL};
@@ -1036,11 +1046,12 @@ static ${RETURN_DECLARATION} ${NAME}(JNIEnv* env, ${PARAMS});
 
 extern "C" __attribute__((visibility("default")))
 ${RETURN} ${STUB_NAME}(JNIEnv* env, ${PARAMS_IN_STUB}) {
+  ${PROFILING_ENTERED_NATIVE}
   return ${NAME}(${PARAMS_IN_CALL})${POST_CALL};
 }
 """)
 
-    return template.substitute(values)
+    return RemoveIndentedEmptyLines(template.substitute(values))
 
   def GetArgument(self, param):
     if param.datatype == 'int':
@@ -1093,6 +1104,9 @@ ${RETURN} ${STUB_NAME}(JNIEnv* env, ${PARAMS_IN_STUB}) {
         return_clause = 'return ' + return_type + '(env, ret);'
       else:
         return_clause = 'return ret;'
+    profiling_leaving_native = ''
+    if self.options.enable_profiling:
+      profiling_leaving_native = 'JNI_SAVE_FRAME_POINTER;'
     return {
         'JAVA_CLASS': java_class,
         'RETURN_TYPE': return_type,
@@ -1108,7 +1122,8 @@ ${RETURN} ${STUB_NAME}(JNIEnv* env, ${PARAMS_IN_STUB}) {
         'PARAMS_IN_CALL': params_in_call,
         'METHOD_ID_VAR_NAME': called_by_native.method_id_var_name,
         'CHECK_EXCEPTION': check_exception,
-        'GET_METHOD_ID_IMPL': self.GetMethodIDImpl(called_by_native)
+        'GET_METHOD_ID_IMPL': self.GetMethodIDImpl(called_by_native),
+        'PROFILING_LEAVING_NATIVE': profiling_leaving_native,
     }
 
 
@@ -1129,6 +1144,7 @@ ${FUNCTION_HEADER}
       ${JAVA_CLASS}_clazz(env)${OPTIONAL_ERROR_RETURN});
   jmethodID method_id =
     ${GET_METHOD_ID_IMPL}
+  ${PROFILING_LEAVING_NATIVE}
   ${RETURN_DECLARATION}
      ${PRE_CALL}env->${ENV_CALL}(${FIRST_PARAM_IN_CALL},
           method_id${PARAMS_IN_CALL})${POST_CALL};
@@ -1143,7 +1159,7 @@ ${FUNCTION_HEADER}
           function_header_with_unused_template.substitute(values))
     else:
       values['FUNCTION_HEADER'] = function_header_template.substitute(values)
-    return template.substitute(values)
+    return RemoveIndentedEmptyLines(template.substitute(values))
 
   def GetKMethodArrayEntry(self, native):
     template = Template('    { "native${NAME}", ${JNI_SIGNATURE}, ' +
@@ -1363,6 +1379,8 @@ See SampleForTests.java for more details.
   option_parser.add_option('--native_exports_optional', action='store_true',
                            help='Support both explicit and native method'
                            'registration.')
+  option_parser.add_option('--enable_profiling', action='store_true',
+                           help='Add additional profiling instrumentation.')
   options, args = option_parser.parse_args(argv)
   if options.jar_file:
     input_file = ExtractJarInputFile(options.jar_file, options.input_file,

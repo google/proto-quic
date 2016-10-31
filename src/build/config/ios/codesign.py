@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import argparse
+import datetime
 import fnmatch
 import glob
 import os
@@ -65,7 +66,8 @@ class ProvisioningProfile(object):
     """Initializes the ProvisioningProfile with data from profile file."""
     self._path = provisioning_profile_path
     self._data = plistlib.readPlistFromString(subprocess.check_output([
-        'xcrun', 'security', 'cms', '-D', '-i', provisioning_profile_path]))
+        'xcrun', 'security', 'cms', '-D', '-u', 'certUsageAnyCA',
+        '-i', provisioning_profile_path]))
 
   @property
   def path(self):
@@ -82,6 +84,10 @@ class ProvisioningProfile(object):
   @property
   def entitlements(self):
     return self._data.get('Entitlements', {})
+
+  @property
+  def expiration_date(self):
+    return self._data.get('ExpirationDate', datetime.datetime.now())
 
   def ValidToSignBundle(self, bundle_identifier):
     """Checks whether the provisioning profile can sign bundle_identifier.
@@ -157,26 +163,41 @@ def FindProvisioningProfile(bundle_identifier, required):
       os.path.join(GetProvisioningProfilesDir(), '*.mobileprovision'))
 
   # Iterate over all installed mobile provisioning profiles and filter those
-  # that can be used to sign the bundle.
+  # that can be used to sign the bundle, ignoring expired ones.
+  now = datetime.datetime.now()
   valid_provisioning_profiles = []
+  one_hour = datetime.timedelta(0, 3600)
   for provisioning_profile_path in provisioning_profile_paths:
     provisioning_profile = ProvisioningProfile(provisioning_profile_path)
+    if provisioning_profile.expiration_date - now < one_hour:
+      sys.stderr.write(
+          'Warning: ignoring expired provisioning profile: %s.\n' %
+          provisioning_profile_path)
+      continue
     if provisioning_profile.ValidToSignBundle(bundle_identifier):
       valid_provisioning_profiles.append(provisioning_profile)
 
   if not valid_provisioning_profiles:
     if required:
       sys.stderr.write(
-          'No mobile provisioning profile found for "%s".\n' %
+          'Error: no mobile provisioning profile found for "%s".\n' %
           bundle_identifier)
       sys.exit(1)
     return None
 
   # Select the most specific mobile provisioning profile, i.e. the one with
-  # the longest application identifier pattern.
-  return max(
+  # the longest application identifier pattern (prefer the one with the latest
+  # expiration date as a secondary criteria).
+  selected_provisioning_profile = max(
       valid_provisioning_profiles,
-      key=lambda p: len(p.application_identifier_pattern))
+      key=lambda p: (len(p.application_identifier_pattern), p.expiration_date))
+
+  one_week = datetime.timedelta(7)
+  if selected_provisioning_profile.expiration_date - now < 2 * one_week:
+    sys.stderr.write(
+        'Warning: selected provisioning profile will expire soon: %s' %
+        selected_provisioning_profile.path)
+  return selected_provisioning_profile
 
 
 def CodeSignBundle(bundle_path, identity, extra_args):
@@ -393,6 +414,8 @@ class GenerateEntitlementsAction(Action):
 
 def Main():
   parser = argparse.ArgumentParser('codesign iOS bundles')
+  parser.add_argument('--developer_dir', required=False,
+                      help='Path to Xcode.')
   subparsers = parser.add_subparsers()
 
   actions = [
@@ -405,6 +428,8 @@ def Main():
     action.Register(subparsers)
 
   args = parser.parse_args()
+  if args.developer_dir:
+    os.environ['DEVELOPER_DIR'] = args.developer_dir
   args.func(args)
 
 

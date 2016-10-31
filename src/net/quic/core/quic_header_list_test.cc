@@ -5,6 +5,7 @@
 #include "net/quic/core/quic_header_list.h"
 
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -23,6 +24,7 @@ TEST(QuicHeaderListTest, OnHeader) {
 }
 
 TEST(QuicHeaderListTest, TooLarge) {
+  test::QuicFlagSaver flags;
   FLAGS_quic_limit_uncompressed_headers = true;
   QuicHeaderList headers;
   string key = "key";

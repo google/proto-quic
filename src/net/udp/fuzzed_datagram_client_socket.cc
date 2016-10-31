@@ -106,13 +106,13 @@ int FuzzedDatagramClientSocket::Read(IOBuffer* buf,
   CHECK(connected_);
 
   // Get contents of response.
-  base::StringPiece data(data_provider_->ConsumeBytes(
+  std::string data(data_provider_->ConsumeBytes(
       data_provider_->ConsumeUint32InRange(0, buf_len)));
 
   int result;
-  if (data.length() > 0) {
+  if (data.size() > 0) {
     // If the response is not empty, consider it a successful read.
-    result = data.length();
+    result = data.size();
     std::copy(data.begin(), data.end(), buf->data());
   } else {
     // If the response is empty, pick a random read error.

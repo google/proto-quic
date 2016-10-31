@@ -16,8 +16,8 @@ namespace android {
 
 BASE_EXPORT std::string GetDefaultCountryCode();
 
-// Return the current default locale of the device.
-BASE_EXPORT std::string GetDefaultLocale();
+// Return the current default locale of the device as string.
+BASE_EXPORT std::string GetDefaultLocaleString();
 
 }  // namespace android
 }  // namespace base

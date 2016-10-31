@@ -4,8 +4,6 @@
 
 #include "net/cert/cert_verifier.h"
 
-#include <openssl/sha.h>
-
 #include <algorithm>
 #include <memory>
 
@@ -13,6 +11,7 @@
 #include "base/strings/string_util.h"
 #include "build/build_config.h"
 #include "net/cert/cert_verify_proc.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 #if defined(OS_NACL)
 #include "base/logging.h"

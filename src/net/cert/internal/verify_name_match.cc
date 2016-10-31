@@ -4,9 +4,6 @@
 
 #include "net/cert/internal/verify_name_match.h"
 
-#include <openssl/bytestring.h>
-#include <openssl/mem.h>
-
 #include <algorithm>
 #include <vector>
 
@@ -16,6 +13,8 @@
 #include "net/der/input.h"
 #include "net/der/parser.h"
 #include "net/der/tag.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 

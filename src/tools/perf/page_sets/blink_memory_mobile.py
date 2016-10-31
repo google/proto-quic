@@ -81,8 +81,6 @@ class GmailPage(BlinkMemoryMobilePage):
     google_login.LoginGoogleAccount(action_runner, 'google',
                                     self.credentials_path)
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    # Needs to wait for navigation to handle redirects.
-    action_runner.WaitForNavigate()
     action_runner.WaitForElement(selector='#apploadingdiv')
     action_runner.WaitForJavaScriptCondition(
         'document.querySelector("#apploadingdiv").style.opacity == "0"')

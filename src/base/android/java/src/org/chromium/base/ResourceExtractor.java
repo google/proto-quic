@@ -173,7 +173,8 @@ public class ResourceExtractor {
     }
 
     private static String[] detectFilesToExtract() {
-        String language = LocaleUtils.getLanguage(Locale.getDefault());
+        Locale defaultLocale = Locale.getDefault();
+        String language = LocaleUtils.getUpdatedLanguageForChromium(defaultLocale.getLanguage());
         // Currenty (Oct 2016), this array can be as big as 4 entries, so using a capacity
         // that allows a bit of growth, but is still in the right ballpark..
         ArrayList<String> activeLocalePakFiles = new ArrayList<String>(6);

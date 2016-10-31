@@ -14,10 +14,8 @@
 #include "base/atomic_ref_count.h"
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
-#include "base/macros.h"
-#ifndef NDEBUG
 #include "base/logging.h"
-#endif
+#include "base/macros.h"
 #include "base/threading/thread_collision_warner.h"
 #include "build/build_config.h"
 
@@ -32,16 +30,16 @@ class BASE_EXPORT RefCountedBase {
  protected:
   RefCountedBase()
       : ref_count_(0)
-  #ifndef NDEBUG
+#if DCHECK_IS_ON()
       , in_dtor_(false)
-  #endif
+#endif
       {
   }
 
   ~RefCountedBase() {
-  #ifndef NDEBUG
+#if DCHECK_IS_ON()
     DCHECK(in_dtor_) << "RefCounted object deleted without calling Release()";
-  #endif
+#endif
   }
 
 
@@ -50,9 +48,9 @@ class BASE_EXPORT RefCountedBase {
     // Current thread books the critical section "AddRelease"
     // without release it.
     // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-  #ifndef NDEBUG
+#if DCHECK_IS_ON()
     DCHECK(!in_dtor_);
-  #endif
+#endif
     ++ref_count_;
   }
 
@@ -62,13 +60,13 @@ class BASE_EXPORT RefCountedBase {
     // Current thread books the critical section "AddRelease"
     // without release it.
     // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-  #ifndef NDEBUG
+#if DCHECK_IS_ON()
     DCHECK(!in_dtor_);
-  #endif
+#endif
     if (--ref_count_ == 0) {
-  #ifndef NDEBUG
+#if DCHECK_IS_ON()
       in_dtor_ = true;
-  #endif
+#endif
       return true;
     }
     return false;
@@ -76,7 +74,7 @@ class BASE_EXPORT RefCountedBase {
 
  private:
   mutable size_t ref_count_;
-#ifndef NDEBUG
+#if DCHECK_IS_ON()
   mutable bool in_dtor_;
 #endif
 
@@ -100,7 +98,7 @@ class BASE_EXPORT RefCountedThreadSafeBase {
 
  private:
   mutable AtomicRefCount ref_count_;
-#ifndef NDEBUG
+#if DCHECK_IS_ON()
   mutable bool in_dtor_;
 #endif
 
@@ -126,7 +124,7 @@ class BASE_EXPORT RefCountedThreadSafeBase {
 template <class T>
 class RefCounted : public subtle::RefCountedBase {
  public:
-  RefCounted() {}
+  RefCounted() = default;
 
   void AddRef() const {
     subtle::RefCountedBase::AddRef();
@@ -139,7 +137,7 @@ class RefCounted : public subtle::RefCountedBase {
   }
 
  protected:
-  ~RefCounted() {}
+  ~RefCounted() = default;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(RefCounted<T>);
@@ -176,7 +174,7 @@ struct DefaultRefCountedThreadSafeTraits {
 template <class T, typename Traits = DefaultRefCountedThreadSafeTraits<T> >
 class RefCountedThreadSafe : public subtle::RefCountedThreadSafeBase {
  public:
-  RefCountedThreadSafe() {}
+  RefCountedThreadSafe() = default;
 
   void AddRef() const {
     subtle::RefCountedThreadSafeBase::AddRef();
@@ -189,7 +187,7 @@ class RefCountedThreadSafe : public subtle::RefCountedThreadSafeBase {
   }
 
  protected:
-  ~RefCountedThreadSafe() {}
+  ~RefCountedThreadSafe() = default;
 
  private:
   friend struct DefaultRefCountedThreadSafeTraits<T>;
@@ -213,7 +211,7 @@ class RefCountedData
 
  private:
   friend class base::RefCountedThreadSafe<base::RefCountedData<T> >;
-  ~RefCountedData() {}
+  ~RefCountedData() = default;
 };
 
 }  // namespace base
@@ -237,7 +235,7 @@ class RefCountedData
 //   void some_other_function() {
 //     scoped_refptr<MyFoo> foo = new MyFoo();
 //     ...
-//     foo = NULL;  // explicitly releases |foo|
+//     foo = nullptr;  // explicitly releases |foo|
 //     ...
 //     if (foo)
 //       foo->Method(param);
@@ -252,7 +250,7 @@ class RefCountedData
 //     scoped_refptr<MyFoo> b;
 //
 //     b.swap(a);
-//     // now, |b| references the MyFoo object, and |a| references NULL.
+//     // now, |b| references the MyFoo object, and |a| references nullptr.
 //   }
 //
 // To make both |a| and |b| in the above example reference the same MyFoo
@@ -271,7 +269,7 @@ class scoped_refptr {
  public:
   typedef T element_type;
 
-  scoped_refptr() : ptr_(NULL) {
+  scoped_refptr() : ptr_(nullptr) {
   }
 
   scoped_refptr(T* p) : ptr_(p) {
@@ -314,12 +312,12 @@ class scoped_refptr {
   T* get() const { return ptr_; }
 
   T& operator*() const {
-    assert(ptr_ != NULL);
+    assert(ptr_ != nullptr);
     return *ptr_;
   }
 
   T* operator->() const {
-    assert(ptr_ != NULL);
+    assert(ptr_ != nullptr);
     return ptr_;
   }
 

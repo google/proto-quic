@@ -4,6 +4,8 @@
 
 #include "net/tools/quic/quic_simple_server_stream.h"
 
+#include <list>
+#include <memory>
 #include <utility>
 
 #include "base/memory/ptr_util.h"
@@ -47,6 +49,8 @@ using testing::WithArgs;
 
 namespace net {
 namespace test {
+
+size_t kFakeFrameLen = 60;
 
 class QuicSimpleServerStreamPeer : public QuicSimpleServerStream {
  public:
@@ -117,12 +121,13 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                                 QuicStreamOffset offset,
                                 bool fin,
                                 QuicAckListenerInterface*));
-  MOCK_METHOD2(OnStreamHeaders,
-               void(QuicStreamId stream_id, StringPiece headers_data));
+  MOCK_METHOD4(OnStreamHeaderList,
+               void(QuicStreamId stream_id,
+                    bool fin,
+                    size_t frame_len,
+                    const QuicHeaderList& header_list));
   MOCK_METHOD2(OnStreamHeadersPriority,
                void(QuicStreamId stream_id, SpdyPriority priority));
-  MOCK_METHOD3(OnStreamHeadersComplete,
-               void(QuicStreamId stream_id, bool fin, size_t frame_len));
   // Methods taking non-copyable types like SpdyHeaderBlock by value cannot be
   // mocked directly.
   size_t WriteHeaders(
@@ -191,16 +196,13 @@ class QuicSimpleServerStreamTest
                  crypto_config_.get(),
                  &compressed_certs_cache_),
         body_("hello world") {
-    SpdyHeaderBlock request_headers;
-    request_headers[":host"] = "";
-    request_headers[":authority"] = "www.google.com";
-    request_headers[":path"] = "/";
-    request_headers[":method"] = "POST";
-    request_headers[":version"] = "HTTP/1.1";
-    request_headers["content-length"] = "11";
-
-    headers_string_ =
-        net::SpdyUtils::SerializeUncompressedHeaders(request_headers);
+    header_list_.OnHeaderBlockStart();
+    header_list_.OnHeader(":authority", "www.google.com");
+    header_list_.OnHeader(":path", "/");
+    header_list_.OnHeader(":method", "POST");
+    header_list_.OnHeader(":version", "HTTP/1.1");
+    header_list_.OnHeader("content-length", "11");
+    header_list_.OnHeaderBlockEnd(128);
 
     // New streams rely on having the peer's flow control receive window
     // negotiated in the config.
@@ -224,8 +226,8 @@ class QuicSimpleServerStreamTest
     return QuicSimpleServerStreamPeer::body(stream_);
   }
 
-  StringPiece StreamHeadersValue(const string& key) {
-    return (*stream_->mutable_headers())[key];
+  string StreamHeadersValue(const string& key) {
+    return (*stream_->mutable_headers())[key].as_string();
   }
 
   SpdyHeaderBlock response_headers_;
@@ -240,6 +242,7 @@ class QuicSimpleServerStreamTest
   QuicSimpleServerStreamPeer* stream_;  // Owned by session_.
   string headers_string_;
   string body_;
+  QuicHeaderList header_list_;
 };
 
 INSTANTIATE_TEST_CASE_P(Tests,
@@ -250,8 +253,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFraming) {
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  stream_->OnStreamHeaderList(false, kFakeFrameLen, header_list_);
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
   EXPECT_EQ("11", StreamHeadersValue("content-length"));
@@ -265,8 +267,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFramingOnePacket) {
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
 
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  stream_->OnStreamHeaderList(false, kFakeFrameLen, header_list_);
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
   EXPECT_EQ("11", StreamHeadersValue("content-length"));
@@ -299,8 +300,7 @@ TEST_P(QuicSimpleServerStreamTest, TestFramingExtraData) {
       .WillOnce(Invoke(MockQuicSession::ConsumeAllData));
   EXPECT_CALL(session_, SendRstStream(_, QUIC_STREAM_NO_ERROR, _)).Times(0);
 
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  stream_->OnStreamHeaderList(false, kFakeFrameLen, header_list_);
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
   // Content length is still 11.  This will register as an error and we won't
@@ -538,7 +538,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidMultipleContentLength) {
 
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  request_headers["content-length"] = StringPiece("11\00012", 5);
+  header_list_.OnHeader("content-length", StringPiece("11\00012", 5));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
@@ -546,8 +546,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidMultipleContentLength) {
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(true, headers_string_.size());
+  stream_->OnStreamHeaderList(true, kFakeFrameLen, header_list_);
 
   EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
@@ -559,7 +558,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
 
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  request_headers["content-length"] = StringPiece("\00012", 3);
+  header_list_.OnHeader("content-length", StringPiece("\00012", 3));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
@@ -567,8 +566,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(true, headers_string_.size());
+  stream_->OnStreamHeaderList(true, kFakeFrameLen, header_list_);
 
   EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
@@ -578,12 +576,11 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
 TEST_P(QuicSimpleServerStreamTest, ValidMultipleContentLength) {
   SpdyHeaderBlock request_headers;
   // \000 is a way to write the null byte when followed by a literal digit.
-  request_headers["content-length"] = StringPiece("11\00011", 5);
+  header_list_.OnHeader("content-length", StringPiece("11\00011", 5));
 
   headers_string_ = SpdyUtils::SerializeUncompressedHeaders(request_headers);
 
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  stream_->OnStreamHeaderList(false, kFakeFrameLen, header_list_);
 
   EXPECT_EQ(11, QuicSimpleServerStreamPeer::content_length(stream_));
   EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));

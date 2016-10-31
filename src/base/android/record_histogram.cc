@@ -113,6 +113,8 @@ class HistogramCache {
       return histogram;
     }
 
+    DCHECK_GE(min, 1) << "The min expected sample must be >= 1";
+
     std::string histogram_name = ConvertJavaStringToUTF8(env, j_histogram_name);
     histogram =
         Histogram::FactoryGet(histogram_name, min, max, num_buckets,

@@ -29,8 +29,6 @@ class QuicSimpleServerStream : public QuicSpdyStream {
   ~QuicSimpleServerStream() override;
 
   // QuicSpdyStream
-  void OnInitialHeadersComplete(bool fin, size_t frame_len) override;
-  void OnTrailingHeadersComplete(bool fin, size_t frame_len) override;
   void OnInitialHeadersComplete(bool fin,
                                 size_t frame_len,
                                 const QuicHeaderList& header_list) override;

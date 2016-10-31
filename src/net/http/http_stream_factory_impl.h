@@ -16,6 +16,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
+#include "net/base/request_priority.h"
 #include "net/http/http_stream_factory.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/ssl_client_socket.h"

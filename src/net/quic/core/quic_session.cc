@@ -737,8 +737,12 @@ size_t QuicSession::GetNumOpenIncomingStreams() const {
 }
 
 size_t QuicSession::GetNumOpenOutgoingStreams() const {
-  return GetNumDynamicOutgoingStreams() - GetNumDrainingOutgoingStreams() +
-         GetNumLocallyClosedOutgoingStreamsHighestOffset();
+  CHECK_GE(GetNumDynamicOutgoingStreams() +
+               GetNumLocallyClosedOutgoingStreamsHighestOffset(),
+           GetNumDrainingOutgoingStreams());
+  return GetNumDynamicOutgoingStreams() +
+         GetNumLocallyClosedOutgoingStreamsHighestOffset() -
+         GetNumDrainingOutgoingStreams();
 }
 
 size_t QuicSession::GetNumActiveStreams() const {
@@ -767,14 +771,18 @@ void QuicSession::PostProcessAfterData() {
 }
 
 size_t QuicSession::GetNumDynamicOutgoingStreams() const {
+  DCHECK_GE(dynamic_stream_map_.size(), num_dynamic_incoming_streams_);
   return dynamic_stream_map_.size() - num_dynamic_incoming_streams_;
 }
 
 size_t QuicSession::GetNumDrainingOutgoingStreams() const {
+  DCHECK_GE(draining_streams_.size(), num_draining_incoming_streams_);
   return draining_streams_.size() - num_draining_incoming_streams_;
 }
 
 size_t QuicSession::GetNumLocallyClosedOutgoingStreamsHighestOffset() const {
+  DCHECK_GE(locally_closed_streams_highest_offset_.size(),
+            num_locally_closed_incoming_streams_highest_offset_);
   return locally_closed_streams_highest_offset_.size() -
          num_locally_closed_incoming_streams_highest_offset_;
 }

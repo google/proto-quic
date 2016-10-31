@@ -79,14 +79,6 @@ void SpdyFramerVisitorAdapter::OnHeaderFrameEnd(SpdyStreamId stream_id,
   visitor_->OnHeaderFrameEnd(stream_id, end_headers);
 }
 
-bool SpdyFramerVisitorAdapter::OnControlFrameHeaderData(
-    SpdyStreamId stream_id,
-    const char* header_data,
-    size_t header_data_len) {
-  return visitor_->OnControlFrameHeaderData(stream_id, header_data,
-                                            header_data_len);
-}
-
 void SpdyFramerVisitorAdapter::OnSynStream(SpdyStreamId stream_id,
                                            SpdyStreamId associated_stream_id,
                                            SpdyPriority priority,

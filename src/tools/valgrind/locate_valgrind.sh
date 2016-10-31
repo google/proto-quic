@@ -11,7 +11,7 @@
 
 export THISDIR=`dirname $0`
 
-# User may use his own valgrind by giving its path with CHROME_VALGRIND env.
+# User may use their own valgrind by giving its path with CHROME_VALGRIND env.
 if [ "$CHROME_VALGRIND" = "" ]
 then
   # Guess which binaries we should use by uname

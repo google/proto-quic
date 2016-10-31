@@ -4,7 +4,6 @@
 
 #include "net/socket/socket_bio_adapter.h"
 
-#include <openssl/bio.h>
 #include <string.h>
 
 #include <algorithm>
@@ -17,6 +16,7 @@
 #include "net/base/net_errors.h"
 #include "net/socket/stream_socket.h"
 #include "net/ssl/openssl_ssl_util.h"
+#include "third_party/boringssl/src/include/openssl/bio.h"
 
 namespace net {
 

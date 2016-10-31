@@ -113,9 +113,8 @@ class HistogramTester {
                        const base::HistogramSamples& samples) const;
 
   // Used to determine the histogram changes made during this instance's
-  // lifecycle. This instance takes ownership of the samples, which are deleted
-  // when the instance is destroyed.
-  std::map<std::string, HistogramSamples*> histograms_snapshot_;
+  // lifecycle.
+  std::map<std::string, std::unique_ptr<HistogramSamples>> histograms_snapshot_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramTester);
 };

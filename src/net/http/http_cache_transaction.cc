@@ -1984,12 +1984,15 @@ int HttpCache::Transaction::BeginCacheRead() {
     return ERR_CACHE_MISS;
   }
 
-  if (request_->method == "HEAD")
-    FixHeadersForHead();
-
   // We don't have the whole resource.
   if (truncated_)
     return ERR_CACHE_MISS;
+
+  if (RequiresValidation() != VALIDATION_NONE)
+    return ERR_CACHE_MISS;
+
+  if (request_->method == "HEAD")
+    FixHeadersForHead();
 
   if (entry_->disk_entry->GetDataSize(kMetadataIndex))
     next_state_ = STATE_CACHE_READ_METADATA;
@@ -2204,7 +2207,7 @@ ValidationType HttpCache::Transaction::RequiresValidation() {
     return VALIDATION_SYNCHRONOUS;
   }
 
-  if (effective_load_flags_ & LOAD_PREFERRING_CACHE)
+  if (effective_load_flags_ & LOAD_SKIP_CACHE_VALIDATION)
     return VALIDATION_NONE;
 
   if (response_.unused_since_prefetch &&

@@ -4,7 +4,6 @@
 
 #include "net/quic/core/quic_unacked_packet_map.h"
 
-#include "base/stl_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -26,7 +25,7 @@ class QuicUnackedPacketMapTest : public ::testing::Test {
       : unacked_packets_(),
         now_(QuicTime::Zero() + QuicTime::Delta::FromMilliseconds(1000)) {}
 
-  ~QuicUnackedPacketMapTest() override { base::STLDeleteElements(&packets_); }
+  ~QuicUnackedPacketMapTest() override {}
 
   SerializedPacket CreateRetransmittablePacket(QuicPacketNumber packet_number) {
     return CreateRetransmittablePacketForStream(packet_number,
@@ -109,7 +108,6 @@ class QuicUnackedPacketMapTest : public ::testing::Test {
           << " packets[" << i << "]:" << packets[i];
     }
   }
-  vector<QuicEncryptedPacket*> packets_;
   QuicUnackedPacketMap unacked_packets_;
   QuicTime now_;
 };

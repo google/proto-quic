@@ -344,13 +344,6 @@ class ObserverList : public ObserverListBase<ObserverType> {
   }
 };
 
-// Deprecated. Use the range-based for loop instead.
-#define FOR_EACH_OBSERVER(ObserverType, observer_list, func) \
-  do {                                                       \
-    for (ObserverType & o : observer_list)                   \
-      o.func;                                                \
-  } while (0)
-
 }  // namespace base
 
 #endif  // BASE_OBSERVER_LIST_H_

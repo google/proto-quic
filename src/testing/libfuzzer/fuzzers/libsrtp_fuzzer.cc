@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <vector>
 
-#include "third_party/libsrtp/srtp/include/rtp.h"
-#include "third_party/libsrtp/srtp/include/rtp_priv.h"
-#include "third_party/libsrtp/srtp/include/srtp.h"
+#include "third_party/libsrtp/include/rtp.h"
+#include "third_party/libsrtp/include/rtp_priv.h"
+#include "third_party/libsrtp/include/srtp.h"
 
 // TODO(katrielc) Also test the authenticated path, which is what
 // WebRTC uses.  This is nontrivial because you need to bypass the MAC
@@ -35,21 +35,21 @@ struct Environment {
     switch (crypto_policy) {
       case LibSrtpFuzzer::NUMBER_OF_POLICIES:
       case LibSrtpFuzzer::NONE:
-        crypto_policy_set_null_cipher_null_auth(&policy.rtp);
-        crypto_policy_set_null_cipher_null_auth(&policy.rtcp);
+        srtp_crypto_policy_set_null_cipher_null_auth(&policy.rtp);
+        srtp_crypto_policy_set_null_cipher_null_auth(&policy.rtcp);
         break;
       case LibSrtpFuzzer::LIKE_WEBRTC:
-        crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
-        crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
+        srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
+        srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
         break;
       case LibSrtpFuzzer::LIKE_WEBRTC_WITHOUT_AUTH:
-        crypto_policy_set_aes_cm_128_null_auth(&policy.rtp);
-        crypto_policy_set_aes_cm_128_null_auth(&policy.rtcp);
+        srtp_crypto_policy_set_aes_cm_128_null_auth(&policy.rtp);
+        srtp_crypto_policy_set_aes_cm_128_null_auth(&policy.rtcp);
         break;
       case LibSrtpFuzzer::AES_GCM:
         // There was a security bug in the GCM mode in libsrtp 1.5.2.
-        crypto_policy_set_aes_gcm_128_8_auth(&policy.rtp);
-        crypto_policy_set_aes_gcm_128_8_auth(&policy.rtcp);
+        srtp_crypto_policy_set_aes_gcm_128_8_auth(&policy.rtp);
+        srtp_crypto_policy_set_aes_gcm_128_8_auth(&policy.rtcp);
         break;
     }
 
@@ -74,10 +74,11 @@ struct Environment {
   srtp_policy_t policy;
   unsigned char key[SRTP_MASTER_KEY_LEN] = {0};
 
-  static void crypto_policy_set_null_cipher_null_auth(crypto_policy_t* p) {
-    p->cipher_type = NULL_CIPHER;
+  static void srtp_crypto_policy_set_null_cipher_null_auth(
+      srtp_crypto_policy_t* p) {
+    p->cipher_type = SRTP_NULL_CIPHER;
     p->cipher_key_len = 0;
-    p->auth_type = NULL_AUTH;
+    p->auth_type = SRTP_NULL_AUTH;
     p->auth_key_len = 0;
     p->auth_tag_len = 0;
     p->sec_serv = sec_serv_none;
@@ -110,8 +111,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size -= SRTP_MASTER_KEY_LEN;
 
   srtp_t session;
-  err_status_t error = srtp_create(&session, &srtp_policy);
-  if (error != err_status_ok) {
+  srtp_err_status_t error = srtp_create(&session, &srtp_policy);
+  if (error != srtp_err_status_ok) {
     assert(false);
     return 0;
   }

@@ -4,6 +4,8 @@
 
 #include "net/quic/core/quic_headers_stream.h"
 
+#include <algorithm>
+#include <string>
 #include <utility>
 
 #include "base/macros.h"
@@ -123,16 +125,6 @@ class QuicHeadersStream::SpdyFramerVisitor
 
   void OnSynReply(SpdyStreamId stream_id, bool fin) override {
     CloseConnection("SPDY SYN_REPLY frame received.");
-  }
-
-  bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                const char* header_data,
-                                size_t len) override {
-    if (!stream_->IsConnected()) {
-      return false;
-    }
-    stream_->OnControlFrameHeaderData(stream_id, header_data, len);
-    return true;
   }
 
   void OnStreamFrameData(SpdyStreamId stream_id,
@@ -321,7 +313,7 @@ class QuicHeadersStream::SpdyFramerVisitor
   }
 
  private:
-  void CloseConnection(const string& details) {
+  void CloseConnection(const std::string& details) {
     if (stream_->IsConnected()) {
       stream_->CloseConnectionWithDetails(QUIC_INVALID_HEADERS_STREAM_DATA,
                                           details);
@@ -469,6 +461,7 @@ void QuicHeadersStream::OnDataAvailable() {
       return;
     }
     sequencer()->MarkConsumed(iov.iov_len);
+    MaybeReleaseSequencerBuffer();
   }
 }
 
@@ -509,55 +502,6 @@ void QuicHeadersStream::OnPushPromise(SpdyStreamId stream_id,
   DCHECK_EQ(kInvalidStreamId, promised_stream_id_);
   stream_id_ = stream_id;
   promised_stream_id_ = promised_stream_id;
-}
-
-void QuicHeadersStream::OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                                 const char* header_data,
-                                                 size_t len) {
-  DCHECK_EQ(stream_id_, stream_id);
-  if (len == 0) {
-    DCHECK_NE(0u, stream_id_);
-    DCHECK_NE(0u, frame_len_);
-    if (prev_max_timestamp_ > cur_max_timestamp_) {
-      // prev_max_timestamp_ > cur_max_timestamp_ implies that
-      // headers from lower numbered streams actually came off the
-      // wire after headers for the current stream, hence there was
-      // HOL blocking.
-      QuicTime::Delta delta = prev_max_timestamp_ - cur_max_timestamp_;
-      DVLOG(1) << "stream " << stream_id
-               << ": Net.QuicSession.HeadersHOLBlockedTime "
-               << delta.ToMilliseconds();
-      spdy_session_->OnHeadersHeadOfLineBlocking(delta);
-    }
-    prev_max_timestamp_ = std::max(prev_max_timestamp_, cur_max_timestamp_);
-    cur_max_timestamp_ = QuicTime::Zero();
-    if (promised_stream_id_ == kInvalidStreamId) {
-      spdy_session_->OnStreamHeadersComplete(stream_id_, fin_, frame_len_);
-    } else {
-      spdy_session_->OnPromiseHeadersComplete(stream_id_, promised_stream_id_,
-                                              frame_len_);
-    }
-    if (uncompressed_frame_len_ != 0) {
-      int compression_pct = 100 - (100 * frame_len_) / uncompressed_frame_len_;
-      DVLOG(1) << "Net.QuicHpackDecompressionPercentage: " << compression_pct;
-      UMA_HISTOGRAM_PERCENTAGE("Net.QuicHpackDecompressionPercentage",
-                               compression_pct);
-    }
-    // Reset state for the next frame.
-    promised_stream_id_ = kInvalidStreamId;
-    stream_id_ = kInvalidStreamId;
-    fin_ = false;
-    frame_len_ = 0;
-    uncompressed_frame_len_ = 0;
-  } else {
-    uncompressed_frame_len_ += len;
-    if (promised_stream_id_ == kInvalidStreamId) {
-      spdy_session_->OnStreamHeaders(stream_id_, StringPiece(header_data, len));
-    } else {
-      spdy_session_->OnPromiseHeaders(stream_id_,
-                                      StringPiece(header_data, len));
-    }
-  }
 }
 
 void QuicHeadersStream::OnHeaderList(const QuicHeaderList& header_list) {
@@ -624,6 +568,13 @@ void QuicHeadersStream::UpdateHeaderEncoderTableSize(uint32_t value) {
 
 void QuicHeadersStream::UpdateEnableServerPush(bool value) {
   spdy_session_->set_server_push_enabled(value);
+}
+
+void QuicHeadersStream::MaybeReleaseSequencerBuffer() {
+  if (FLAGS_quic_headers_stream_release_sequencer_buffer &&
+      spdy_session_->ShouldReleaseHeadersStreamSequencerBuffer()) {
+    sequencer()->ReleaseBufferIfEmpty();
+  }
 }
 
 bool QuicHeadersStream::OnDataFrameHeader(QuicStreamId stream_id,

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/toolchain.gni")
+
 declare_args() {
   # SDK path to use. When empty this will use the default SDK based on the
   # value of use_ios_simulator.
@@ -14,8 +16,6 @@ declare_args() {
   xcode_build = ""
   machine_os_build = ""
 
-  use_ios_simulator = current_cpu == "x86" || current_cpu == "x64"
-
   # Version of iOS that we're targeting.
   ios_deployment_target = "9.0"
 
@@ -24,6 +24,17 @@ declare_args() {
   # ios_enable_code_signing_flag=<bool> flag to make the invocation clearer.
   ios_enable_code_signing = true
   ios_code_signing_identity = ""
+
+  # Prefix for CFBundleIdentifier property of iOS bundles (correspond to the
+  # "Organization Identifier" in Xcode). Code signing will fail if no mobile
+  # provisioning for the selected code signing identify support that prefix.
+  ios_app_bundle_id_prefix = "org.chromium"
+
+  # If true, then allow using Xcode to automatically manage certificates. This
+  # requires loading a separate Xcode project and enable automatically managed
+  # certificates. When true, all test application will use the same bundle id
+  # to avoid running out of certificates if using a free account.
+  ios_automatically_manage_certs = true
 
   # If non-empty, this list must contain valid cpu architecture, and the final
   # build will be a multi-architecture build (aka fat build) supporting the
@@ -43,6 +54,8 @@ declare_args() {
 
 assert(custom_toolchain == "" || additional_target_cpus == [],
        "cannot define both custom_toolchain and additional_target_cpus")
+
+use_ios_simulator = current_cpu == "x86" || current_cpu == "x64"
 
 # Initialize additional_toolchains from additional_target_cpus. Assert here
 # that the list does not contains $target_cpu nor duplicates as this would
@@ -72,8 +85,17 @@ if (ios_sdk_path == "") {
     ios_sdk_name = "iphoneos"
     ios_sdk_platform = "iPhoneOS"
   }
-  _ios_sdk_result =
-      exec_script("//build/config/mac/sdk_info.py", [ ios_sdk_name ], "scope")
+
+  ios_sdk_info_args = []
+  if (!use_system_xcode) {
+    ios_sdk_info_args += [
+      "--developer_dir",
+      hermetic_xcode_path,
+    ]
+  }
+  ios_sdk_info_args += [ ios_sdk_name ]
+  script_name = "//build/config/mac/sdk_info.py"
+  _ios_sdk_result = exec_script(script_name, ios_sdk_info_args, "scope")
   ios_sdk_path = _ios_sdk_result.sdk_path
   ios_sdk_version = _ios_sdk_result.sdk_version
   ios_sdk_platform_path = _ios_sdk_result.sdk_platform_path
@@ -91,9 +113,19 @@ if (ios_sdk_path == "") {
 }
 
 if (ios_enable_code_signing && !use_ios_simulator) {
+  find_signing_identity_args = []
+  if (!use_system_xcode) {
+    find_signing_identity_args += [
+      "--developer_dir",
+      hermetic_xcode_path,
+    ]
+  }
+
   # If an identity is not provided, look for one on the host
   if (ios_code_signing_identity == "") {
-    _ios_identities = exec_script("find_signing_identity.py", [], "list lines")
+    _ios_identities = exec_script("find_signing_identity.py",
+                                  find_signing_identity_args,
+                                  "list lines")
     ios_code_signing_identity = _ios_identities[0]
   }
 

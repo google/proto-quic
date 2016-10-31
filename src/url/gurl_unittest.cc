@@ -677,10 +677,40 @@ TEST(GURLTest, SchemeIsWSOrWSS) {
   EXPECT_FALSE(GURL("http://bar/").SchemeIsWSOrWSS());
 }
 
+TEST(GURLTest, SchemeIsCryptographic) {
+  EXPECT_TRUE(GURL("https://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("HTTPS://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("HtTpS://foo.bar.com/").SchemeIsCryptographic());
+
+  EXPECT_TRUE(GURL("wss://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("WSS://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("WsS://foo.bar.com/").SchemeIsCryptographic());
+
+  EXPECT_TRUE(GURL("https-so://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("HTTPS-SO://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_TRUE(GURL("HtTpS-So://foo.bar.com/").SchemeIsCryptographic());
+
+  EXPECT_FALSE(GURL("http://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_FALSE(GURL("ws://foo.bar.com/").SchemeIsCryptographic());
+  EXPECT_FALSE(GURL("http-so://foo.bar.com/").SchemeIsCryptographic());
+}
+
 TEST(GURLTest, SchemeIsBlob) {
   EXPECT_TRUE(GURL("BLOB://BAR/").SchemeIsBlob());
   EXPECT_TRUE(GURL("blob://bar/").SchemeIsBlob());
   EXPECT_FALSE(GURL("http://bar/").SchemeIsBlob());
+}
+
+TEST(GURLTest, SchemeIsSuborigin) {
+  EXPECT_TRUE(GURL("http-so://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_TRUE(GURL("HTTP-SO://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_TRUE(GURL("HtTp-So://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_FALSE(GURL("http://foo.bar.com/").SchemeIsSuborigin());
+
+  EXPECT_TRUE(GURL("https-so://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_TRUE(GURL("HTTPS-SO://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_TRUE(GURL("HtTpS-So://foo.bar.com/").SchemeIsSuborigin());
+  EXPECT_FALSE(GURL("https://foo.bar.com/").SchemeIsSuborigin());
 }
 
 TEST(GURLTest, ContentAndPathForNonStandardURLs) {

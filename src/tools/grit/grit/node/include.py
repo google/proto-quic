@@ -96,7 +96,7 @@ class IncludeNode(base.Node):
       data = util.ReadFile(filename, util.BINARY)
     # Note that the minifier will only do anything if a minifier command
     # has been set in the command line.
-    data = minifier.Minify(data, os.path.splitext(filename)[1])
+    data = minifier.Minify(data, filename)
     if 'compress' in self.attrs and self.attrs['compress'] == 'gzip':
       # We only use rsyncable compression on Linux.
       # We exclude ChromeOS since ChromeOS bots are Linux based but do not have

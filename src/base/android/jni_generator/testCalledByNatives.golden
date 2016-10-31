@@ -46,7 +46,6 @@ static base::android::ScopedJavaLocalRef<jobject>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "showConfirmInfoBar",
-
 "("
 "I"
 "Ljava/lang/String;"
@@ -79,7 +78,6 @@ static base::android::ScopedJavaLocalRef<jobject>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "showAutoLoginInfoBar",
-
 "("
 "I"
 "Ljava/lang/String;"
@@ -107,7 +105,6 @@ static void Java_InfoBar_dismiss(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, InfoBar_clazz(env),
       "dismiss",
-
 "("
 ")"
 "V",
@@ -116,7 +113,6 @@ static void Java_InfoBar_dismiss(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_TestJni_shouldShowAutoLogin = 0;
@@ -132,7 +128,6 @@ static jboolean Java_TestJni_shouldShowAutoLogin(JNIEnv* env, const
       base::android::MethodID::TYPE_STATIC>(
       env, TestJni_clazz(env),
       "shouldShowAutoLogin",
-
 "("
 "Landroid/view/View;"
 "Ljava/lang/String;"
@@ -159,7 +154,6 @@ static base::android::ScopedJavaLocalRef<jobject> Java_TestJni_openUrl(JNIEnv*
       base::android::MethodID::TYPE_STATIC>(
       env, TestJni_clazz(env),
       "openUrl",
-
 "("
 "Ljava/lang/String;"
 ")"
@@ -187,7 +181,6 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "activateHardwareAcceleration",
-
 "("
 "Z"
 "I"
@@ -202,7 +195,6 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
           method_id, activated, as_jint(iPid), as_jint(iType),
               as_jint(iPrimaryID), as_jint(iSecondaryID));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_TestJni_updateStatus = 0;
@@ -214,7 +206,6 @@ static jint Java_TestJni_updateStatus(JNIEnv* env, JniIntWrapper status) {
       base::android::MethodID::TYPE_STATIC>(
       env, TestJni_clazz(env),
       "updateStatus",
-
 "("
 "I"
 ")"
@@ -238,7 +229,6 @@ static void Java_TestJni_uncheckedCall(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "uncheckedCall",
-
 "("
 "I"
 ")"
@@ -247,7 +237,6 @@ static void Java_TestJni_uncheckedCall(JNIEnv* env, const
 
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(iParam));
-
 }
 
 static base::subtle::AtomicWord g_TestJni_returnByteArray = 0;
@@ -261,7 +250,6 @@ static base::android::ScopedJavaLocalRef<jbyteArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnByteArray",
-
 "("
 ")"
 "[B",
@@ -285,7 +273,6 @@ static base::android::ScopedJavaLocalRef<jbooleanArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnBooleanArray",
-
 "("
 ")"
 "[Z",
@@ -309,7 +296,6 @@ static base::android::ScopedJavaLocalRef<jcharArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnCharArray",
-
 "("
 ")"
 "[C",
@@ -333,7 +319,6 @@ static base::android::ScopedJavaLocalRef<jshortArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnShortArray",
-
 "("
 ")"
 "[S",
@@ -357,7 +342,6 @@ static base::android::ScopedJavaLocalRef<jintArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnIntArray",
-
 "("
 ")"
 "[I",
@@ -381,7 +365,6 @@ static base::android::ScopedJavaLocalRef<jlongArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnLongArray",
-
 "("
 ")"
 "[J",
@@ -405,7 +388,6 @@ static base::android::ScopedJavaLocalRef<jdoubleArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnDoubleArray",
-
 "("
 ")"
 "[D",
@@ -429,7 +411,6 @@ static base::android::ScopedJavaLocalRef<jobjectArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnObjectArray",
-
 "("
 ")"
 "[Ljava/lang/Object;",
@@ -453,7 +434,6 @@ static base::android::ScopedJavaLocalRef<jobjectArray>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "returnArrayOfByteArray",
-
 "("
 ")"
 "[[B",
@@ -477,7 +457,6 @@ static base::android::ScopedJavaLocalRef<jobject>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "getCompressFormat",
-
 "("
 ")"
 "Landroid/graphics/Bitmap$CompressFormat;",
@@ -501,7 +480,6 @@ static base::android::ScopedJavaLocalRef<jobject>
       base::android::MethodID::TYPE_INSTANCE>(
       env, TestJni_clazz(env),
       "getCompressFormatList",
-
 "("
 ")"
 "Ljava/util/List;",

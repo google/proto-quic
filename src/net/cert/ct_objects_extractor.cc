@@ -6,16 +6,15 @@
 
 #include <string.h>
 
-#include <openssl/bytestring.h>
-#include <openssl/obj.h>
-#include <openssl/x509.h>
-
 #include "base/logging.h"
 #include "base/sha1.h"
 #include "base/strings/string_util.h"
 #include "crypto/sha2.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/signed_certificate_timestamp.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/obj.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 

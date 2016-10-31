@@ -54,6 +54,11 @@ TEST(TimeTestOutOfBounds, FromExplodedOutOfBoundsTime) {
       {{2016, 10, 0, 25, 7, 47, 234, 0}, false},
       // Milliseconds are too large
       {{2016, 10, 0, 25, 6, 31, 23, 1643}, false},
+      // Test overflow. Time is valid, but overflow case
+      // results in Time(0).
+      {{9840633, 1, 0, 1, 1, 1, 0, 0}, true},
+      // Underflow will fail as well.
+      {{-9840633, 1, 0, 1, 1, 1, 0, 0}, true},
   };
 
   for (const auto& test : kDateTestData) {

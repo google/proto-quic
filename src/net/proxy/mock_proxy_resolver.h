@@ -17,34 +17,43 @@
 namespace net {
 
 // Asynchronous mock proxy resolver. All requests complete asynchronously,
-// user must call Request::CompleteNow() on a pending request to signal it.
+// user must call Job::CompleteNow() on a pending request to signal it.
 class MockAsyncProxyResolver : public ProxyResolver {
  public:
-  class Request : public base::RefCounted<Request> {
+  class Job {
    public:
-    Request(MockAsyncProxyResolver* resolver,
-            const GURL& url,
-            ProxyInfo* results,
-            const CompletionCallback& callback);
+    Job(MockAsyncProxyResolver* resolver,
+        const GURL& url,
+        ProxyInfo* results,
+        const CompletionCallback& callback);
 
     const GURL& url() const { return url_; }
     ProxyInfo* results() const { return results_; }
     const CompletionCallback& callback() const { return callback_; }
+    MockAsyncProxyResolver* Resolver() const { return resolver_; };
 
     void CompleteNow(int rv);
 
+    ~Job();
+
    private:
-    friend class base::RefCounted<Request>;
-
-    virtual ~Request();
-
     MockAsyncProxyResolver* resolver_;
     const GURL url_;
     ProxyInfo* results_;
     CompletionCallback callback_;
   };
 
-  typedef std::vector<scoped_refptr<Request> > RequestsList;
+  class RequestImpl : public ProxyResolver::Request {
+   public:
+    explicit RequestImpl(std::unique_ptr<Job> job);
+
+    ~RequestImpl() override;
+
+    LoadState GetLoadState() override;
+
+   private:
+    std::unique_ptr<Job> job_;
+  };
 
   MockAsyncProxyResolver();
   ~MockAsyncProxyResolver() override;
@@ -53,23 +62,20 @@ class MockAsyncProxyResolver : public ProxyResolver {
   int GetProxyForURL(const GURL& url,
                      ProxyInfo* results,
                      const CompletionCallback& callback,
-                     RequestHandle* request_handle,
+                     std::unique_ptr<Request>* request,
                      const NetLogWithSource& /*net_log*/) override;
-  void CancelRequest(RequestHandle request_handle) override;
-  LoadState GetLoadState(RequestHandle request_handle) const override;
-  const RequestsList& pending_requests() const {
-    return pending_requests_;
+  const std::vector<Job*>& pending_jobs() const { return pending_jobs_; }
+
+  const std::vector<std::unique_ptr<Job>>& cancelled_jobs() const {
+    return cancelled_jobs_;
   }
 
-  const RequestsList& cancelled_requests() const {
-    return cancelled_requests_;
-  }
-
-  void RemovePendingRequest(Request* request);
+  void AddCancelledJob(std::unique_ptr<Job> job);
+  void RemovePendingJob(Job* job);
 
  private:
-  RequestsList pending_requests_;
-  RequestsList cancelled_requests_;
+  std::vector<Job*> pending_jobs_;
+  std::vector<std::unique_ptr<Job>> cancelled_jobs_;
 };
 
 // Asynchronous mock proxy resolver factory . All requests complete
@@ -146,10 +152,8 @@ class ForwardingProxyResolver : public ProxyResolver {
   int GetProxyForURL(const GURL& query_url,
                      ProxyInfo* results,
                      const CompletionCallback& callback,
-                     RequestHandle* request,
+                     std::unique_ptr<Request>* request,
                      const NetLogWithSource& net_log) override;
-  void CancelRequest(RequestHandle request) override;
-  LoadState GetLoadState(RequestHandle request) const override;
 
  private:
   ProxyResolver* impl_;

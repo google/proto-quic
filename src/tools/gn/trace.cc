@@ -170,6 +170,10 @@ void EnableTracing() {
     trace_log = new TraceLog;
 }
 
+bool TracingEnabled() {
+  return !!trace_log;
+}
+
 void AddTrace(TraceItem* item) {
   trace_log->Add(item);
 }
@@ -203,6 +207,8 @@ std::string SummarizeTraces() {
       case TraceItem::TRACE_CHECK_HEADER:
         headers_checked++;
         break;
+      case TraceItem::TRACE_IMPORT_LOAD:
+      case TraceItem::TRACE_IMPORT_BLOCK:
       case TraceItem::TRACE_SETUP:
       case TraceItem::TRACE_FILE_LOAD:
       case TraceItem::TRACE_FILE_WRITE:
@@ -280,6 +286,12 @@ void SaveTraces(const base::FilePath& file_name) {
         break;
       case TraceItem::TRACE_FILE_WRITE:
         out << "\"file_write\"";
+        break;
+      case TraceItem::TRACE_IMPORT_LOAD:
+        out << "\"import_load\"";
+        break;
+      case TraceItem::TRACE_IMPORT_BLOCK:
+        out << "\"import_block\"";
         break;
       case TraceItem::TRACE_SCRIPT_EXECUTE:
         out << "\"script_exec\"";

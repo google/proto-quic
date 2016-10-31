@@ -9,6 +9,7 @@ import("//build/config/android/rules.gni")
 java_library("junit_test_support") {
   testonly = true
   java_files = [
+    "java/src/org/chromium/testing/local/AnnotationProcessor.java",
     "java/src/org/chromium/testing/local/BackgroundShadowAsyncTask.java",
     "java/src/org/chromium/testing/local/CustomShadowAsyncTask.java",
     "java/src/org/chromium/testing/local/GtestComputer.java",

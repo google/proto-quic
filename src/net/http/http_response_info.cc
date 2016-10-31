@@ -4,8 +4,6 @@
 
 #include "net/http/http_response_info.h"
 
-#include <openssl/ssl.h>
-
 #include "base/logging.h"
 #include "base/pickle.h"
 #include "base/time/time.h"
@@ -18,6 +16,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_connection_status_flags.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 using base::Time;
 
@@ -421,23 +420,6 @@ void HttpResponseInfo::Persist(base::Pickle* pickle,
     pickle->WriteInt(ssl_info.key_exchange_group);
 }
 
-HttpResponseInfo::ConnectionInfo HttpResponseInfo::ConnectionInfoFromNextProto(
-    NextProto next_proto) {
-  switch (next_proto) {
-    case kProtoHTTP2:
-      return CONNECTION_INFO_HTTP2;
-    case kProtoQUIC1SPDY3:
-      return CONNECTION_INFO_QUIC1_SPDY3;
-
-    case kProtoUnknown:
-    case kProtoHTTP11:
-      break;
-  }
-
-  NOTREACHED();
-  return CONNECTION_INFO_UNKNOWN;
-}
-
 // static
 std::string HttpResponseInfo::ConnectionInfoToString(
     ConnectionInfo connection_info) {
@@ -459,7 +441,7 @@ std::string HttpResponseInfo::ConnectionInfoToString(
     case CONNECTION_INFO_DEPRECATED_HTTP2_15:
     case CONNECTION_INFO_HTTP2:
       return "h2";
-    case CONNECTION_INFO_QUIC1_SPDY3:
+    case CONNECTION_INFO_QUIC:
       return "quic/1+spdy/3";
     case CONNECTION_INFO_HTTP0_9:
       return "http/0.9";

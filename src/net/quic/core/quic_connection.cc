@@ -312,7 +312,6 @@ QuicConnection::~QuicConnection() {
   if (owns_writer_) {
     delete writer_;
   }
-  base::STLDeleteElements(&undecryptable_packets_);
   ClearQueuedPackets();
 }
 
@@ -2032,7 +2031,7 @@ void QuicConnection::MaybeProcessUndecryptablePackets() {
 
   while (connected_ && !undecryptable_packets_.empty()) {
     DVLOG(1) << ENDPOINT << "Attempting to process undecryptable packet";
-    QuicEncryptedPacket* packet = undecryptable_packets_.front();
+    QuicEncryptedPacket* packet = undecryptable_packets_.front().get();
     if (!framer_.ProcessPacket(*packet) &&
         framer_.error() == QUIC_DECRYPTION_FAILURE) {
       DVLOG(1) << ENDPOINT << "Unable to process undecryptable packet...";
@@ -2040,7 +2039,6 @@ void QuicConnection::MaybeProcessUndecryptablePackets() {
     }
     DVLOG(1) << ENDPOINT << "Processed undecryptable packet!";
     ++stats_.packets_processed;
-    delete packet;
     undecryptable_packets_.pop_front();
   }
 
@@ -2056,7 +2054,7 @@ void QuicConnection::MaybeProcessUndecryptablePackets() {
         debug_visitor_->OnUndecryptablePacket();
       }
     }
-    base::STLDeleteElements(&undecryptable_packets_);
+    undecryptable_packets_.clear();
   }
 }
 

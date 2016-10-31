@@ -7,8 +7,7 @@
 #include "base/logging.h"
 #include "net/cert/internal/cert_error_params.h"
 #include "net/cert/internal/cert_errors.h"
-
-#include <openssl/obj.h>
+#include "third_party/boringssl/src/include/openssl/obj.h"
 
 namespace net {
 

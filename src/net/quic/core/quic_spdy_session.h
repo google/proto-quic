@@ -116,6 +116,10 @@ class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   // value from SETTINGS_ENABLE_PUSH.
   void set_server_push_enabled(bool enable) { server_push_enabled_ = enable; }
 
+  // Return true if this session wants to release headers stream's buffer
+  // aggressively.
+  virtual bool ShouldReleaseHeadersStreamSequencerBuffer();
+
  protected:
   // Override CreateIncomingDynamicStream() and CreateOutgoingDynamicStream()
   // with QuicSpdyStream return type to make sure that all data streams are

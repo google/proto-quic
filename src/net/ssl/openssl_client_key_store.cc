@@ -4,15 +4,14 @@
 
 #include "net/ssl/openssl_client_key_store.h"
 
-#include <openssl/evp.h>
-#include <openssl/mem.h>
-#include <openssl/x509.h>
-
 #include <utility>
 
 #include "base/memory/singleton.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_private_key.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 

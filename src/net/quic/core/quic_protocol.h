@@ -1286,7 +1286,7 @@ class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
   QuicEncryptedPacket(const char* buffer, size_t length, bool owns_buffer);
 
   // Clones the packet into a new packet which owns the buffer.
-  QuicEncryptedPacket* Clone() const;
+  std::unique_ptr<QuicEncryptedPacket> Clone() const;
 
   // By default, gtest prints the raw bytes of an object. The bool data
   // member (in the base class QuicData) causes this object to have padding
@@ -1316,7 +1316,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
                      bool ttl_valid);
 
   // Clones the packet into a new packet which owns the buffer.
-  QuicReceivedPacket* Clone() const;
+  std::unique_ptr<QuicReceivedPacket> Clone() const;
 
   // Returns the time at which the packet was received.
   QuicTime receipt_time() const { return receipt_time_; }

@@ -70,8 +70,8 @@ class QuicClientSession : public QuicClientSessionBase {
   // If an incoming stream can be created, return true.
   bool ShouldCreateIncomingDynamicStream(QuicStreamId id) override;
 
-  // Create the crypto stream. Called by Initialize()
-  virtual QuicCryptoClientStreamBase* CreateQuicCryptoStream();
+  // Create the crypto stream. Called by Initialize().
+  virtual std::unique_ptr<QuicCryptoClientStreamBase> CreateQuicCryptoStream();
 
   // Unlike CreateOutgoingDynamicStream, which applies a bunch of sanity checks,
   // this simply returns a new QuicSpdyClientStream. This may be used by

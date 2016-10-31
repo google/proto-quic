@@ -10,7 +10,6 @@
 #include "base/compiler_specific.h"
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
-#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/ip_address.h"
@@ -352,22 +351,19 @@ TEST_P(QuicEndToEndTest, UberTest) {
   const char kResponseBody[] = "some really big response body";
   AddToCache(request_.url.PathForRequest(), 200, "OK", kResponseBody);
 
-  std::vector<TestTransactionConsumer*> consumers;
-  size_t num_requests = 100;
-  for (size_t i = 0; i < num_requests; ++i) {
+  std::vector<std::unique_ptr<TestTransactionConsumer>> consumers;
+  for (size_t i = 0; i < 100; ++i) {
     TestTransactionConsumer* consumer = new TestTransactionConsumer(
         DEFAULT_PRIORITY, transaction_factory_.get());
-    consumers.push_back(consumer);
+    consumers.push_back(base::WrapUnique(consumer));
     consumer->Start(&request_, NetLogWithSource());
   }
 
   // Will terminate when the last consumer completes.
   base::RunLoop().Run();
 
-  for (size_t i = 0; i < num_requests; ++i) {
-    CheckResponse(*consumers[i], "HTTP/1.1 200", kResponseBody);
-  }
-  base::STLDeleteElements(&consumers);
+  for (const auto& consumer : consumers)
+    CheckResponse(*consumer.get(), "HTTP/1.1 200", kResponseBody);
 }
 
 }  // namespace test

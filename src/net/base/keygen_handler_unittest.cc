@@ -4,8 +4,6 @@
 
 #include "net/base/keygen_handler.h"
 
-#include <openssl/bytestring.h>
-#include <openssl/evp.h>
 #include <stdint.h>
 
 #include <string>
@@ -21,6 +19,8 @@
 #include "base/threading/worker_pool.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 #if defined(USE_NSS_CERTS)
 #include <private/pprthred.h>  // PR_DetachThread

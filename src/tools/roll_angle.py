@@ -87,7 +87,6 @@ def _ParseDepsDict(deps_content):
   local_scope = {}
   var = GClientKeywords.VarImpl({}, local_scope)
   global_scope = {
-    'File': GClientKeywords.FileImpl,
     'From': GClientKeywords.FromImpl,
     'Var': var.Lookup,
     'deps_os': {},
@@ -176,7 +175,8 @@ class AutoRoller(object):
     self._RunCommand(['git', 'fetch', 'origin'], working_dir=working_dir)
     revision_range = git_hash or 'origin'
     ret = self._RunCommand(
-        ['git', '--no-pager', 'log', revision_range, '--pretty=full', '-1'],
+        ['git', '--no-pager', 'log', revision_range,
+         '--no-abbrev-commit', '--pretty=full', '-1'],
         working_dir=working_dir)
     return CommitInfo(_ParseGitCommitHash(ret), git_repo_url)
 

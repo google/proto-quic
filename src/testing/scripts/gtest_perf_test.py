@@ -48,6 +48,7 @@ def main_run(args):
               'run_%s' % test_suite),
           '--verbose',
       ])
+      gtest_args.extend(script_args[1:])
     else:
       gtest_args.extend(['--xvfb'])
       gtest_args.extend(script_args)

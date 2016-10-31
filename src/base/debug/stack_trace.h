@@ -11,6 +11,7 @@
 #include <string>
 
 #include "base/base_export.h"
+#include "base/macros.h"
 #include "build/build_config.h"
 
 #if defined(OS_POSIX)
@@ -113,6 +114,57 @@ class BASE_EXPORT StackTrace {
 BASE_EXPORT size_t TraceStackFramePointers(const void** out_trace,
                                            size_t max_depth,
                                            size_t skip_initial);
+
+// Links stack frame |fp| to |parent_fp|, so that during stack unwinding
+// TraceStackFramePointers() visits |parent_fp| after visiting |fp|.
+// Both frame pointers must come from __builtin_frame_address().
+// Destructor restores original linkage of |fp| to avoid corrupting caller's
+// frame register on return.
+//
+// This class can be used to repair broken stack frame chain in cases
+// when execution flow goes into code built without frame pointers:
+//
+// void DoWork() {
+//   Call_SomeLibrary();
+// }
+// static __thread void*  g_saved_fp;
+// void Call_SomeLibrary() {
+//   g_saved_fp = __builtin_frame_address(0);
+//   some_library_call(...); // indirectly calls SomeLibrary_Callback()
+// }
+// void SomeLibrary_Callback() {
+//   ScopedStackFrameLinker linker(__builtin_frame_address(0), g_saved_fp);
+//   ...
+//   TraceStackFramePointers(...);
+// }
+//
+// This produces the following trace:
+//
+// #0 SomeLibrary_Callback()
+// #1 <address of the code inside SomeLibrary that called #0>
+// #2 DoWork()
+// ...rest of the trace...
+//
+// SomeLibrary doesn't use frame pointers, so when SomeLibrary_Callback()
+// is called, stack frame register contains bogus value that becomes callback'
+// parent frame address. Without ScopedStackFrameLinker unwinding would've
+// stopped at that bogus frame address yielding just two first frames (#0, #1).
+// ScopedStackFrameLinker overwrites callback's parent frame address with
+// Call_SomeLibrary's frame, so unwinder produces full trace without even
+// noticing that stack frame chain was broken.
+class BASE_EXPORT ScopedStackFrameLinker {
+ public:
+  ScopedStackFrameLinker(void* fp, void* parent_fp);
+  ~ScopedStackFrameLinker();
+
+ private:
+  void* fp_;
+  void* parent_fp_;
+  void* original_parent_fp_;
+
+  DISALLOW_COPY_AND_ASSIGN(ScopedStackFrameLinker);
+};
+
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS
 
 namespace internal {

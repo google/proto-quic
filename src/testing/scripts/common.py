@@ -70,6 +70,22 @@ def run_command(argv, env=None, cwd=None):
   return rc
 
 
+def run_command_with_output(argv, env=None, cwd=None, stdoutfile=None):
+  print 'Running %r in %r (env: %r)' % (argv, cwd, env)
+  rc = 1
+  try:
+    output = subprocess.check_output(argv, env=env, cwd=cwd)
+    if stdoutfile:
+      with open(stdoutfile, 'w') as fp:
+        fp.write(output)
+    rc = 0
+  except Exception:
+    # Exit code remains 1 and we don't write output
+    pass
+  print 'Command %r returned exit code %d' % (argv, rc)
+  return rc
+
+
 def run_runtest(cmd_args, runtest_args):
   if cmd_args.use_src_side_runtest_py:
     cmd = [

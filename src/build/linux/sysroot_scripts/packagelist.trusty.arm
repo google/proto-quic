@@ -35,8 +35,8 @@ main/g/gccgo-4.9/libgcc1_4.9.3-0ubuntu4_armhf.deb
 main/g/gconf/libgconf2-4_3.2.6-0ubuntu2_armhf.deb
 main/g/gconf/libgconf-2-4_3.2.6-0ubuntu2_armhf.deb
 main/g/gconf/libgconf2-dev_3.2.6-0ubuntu2_armhf.deb
-main/g/gdk-pixbuf/libgdk-pixbuf2.0-0_2.30.7-0ubuntu1.2_armhf.deb
-main/g/gdk-pixbuf/libgdk-pixbuf2.0-dev_2.30.7-0ubuntu1.2_armhf.deb
+main/g/gdk-pixbuf/libgdk-pixbuf2.0-0_2.30.7-0ubuntu1.6_armhf.deb
+main/g/gdk-pixbuf/libgdk-pixbuf2.0-dev_2.30.7-0ubuntu1.6_armhf.deb
 main/g/glib2.0/libglib2.0-0_2.40.2-0ubuntu1_armhf.deb
 main/g/glib2.0/libglib2.0-dev_2.40.2-0ubuntu1_armhf.deb
 main/g/gnutls26/libgnutls26_2.12.23-12ubuntu2.5_armhf.deb
@@ -45,6 +45,8 @@ main/g/gnutls26/libgnutls-openssl27_2.12.23-12ubuntu2.5_armhf.deb
 main/g/gnutls26/libgnutlsxx27_2.12.23-12ubuntu2.5_armhf.deb
 main/g/gtk+2.0/libgtk2.0-0_2.24.23-0ubuntu1.4_armhf.deb
 main/g/gtk+2.0/libgtk2.0-dev_2.24.23-0ubuntu1.4_armhf.deb
+main/g/gtk+3.0/libgtk-3-0_3.10.8-0ubuntu1.6_armhf.deb
+main/g/gtk+3.0/libgtk-3-dev_3.10.8-0ubuntu1.6_armhf.deb
 main/k/keyutils/libkeyutils1_1.5.6-1_armhf.deb
 main/k/krb5/krb5-multidev_1.12+dfsg-2ubuntu5.2_armhf.deb
 main/k/krb5/libgssapi-krb5-2_1.12+dfsg-2ubuntu5.2_armhf.deb
@@ -111,7 +113,7 @@ main/libx/libxt/libxt-dev_1.1.4-1_armhf.deb
 main/libx/libxtst/libxtst6_1.2.2-1_armhf.deb
 main/libx/libxtst/libxtst-dev_1.2.2-1_armhf.deb
 main/libx/libxxf86vm/libxxf86vm1_1.1.3-1_armhf.deb
-main/l/linux/linux-libc-dev_3.13.0-93.140_armhf.deb
+main/l/linux/linux-libc-dev_3.13.0-100.147_armhf.deb
 main/m/mesa/libgl1-mesa-dev_10.1.3-0ubuntu0.6_armhf.deb
 main/m/mesa/libgl1-mesa-glx_10.1.3-0ubuntu0.6_armhf.deb
 main/m/mesa/libglapi-mesa_10.1.3-0ubuntu0.6_armhf.deb
@@ -120,8 +122,8 @@ main/n/nspr/libnspr4_4.12-0ubuntu0.14.04.1_armhf.deb
 main/n/nspr/libnspr4-dev_4.12-0ubuntu0.14.04.1_armhf.deb
 main/n/nss/libnss3_3.23-0ubuntu0.14.04.1_armhf.deb
 main/n/nss/libnss3-dev_3.23-0ubuntu0.14.04.1_armhf.deb
-main/o/openssl/libssl1.0.0_1.0.1f-1ubuntu2.19_armhf.deb
-main/o/openssl/libssl-dev_1.0.1f-1ubuntu2.19_armhf.deb
+main/o/openssl/libssl1.0.0_1.0.1f-1ubuntu2.21_armhf.deb
+main/o/openssl/libssl-dev_1.0.1f-1ubuntu2.21_armhf.deb
 main/o/orbit2/liborbit2_2.14.19-0.3_armhf.deb
 main/p/p11-kit/libp11-kit0_0.20.2-2ubuntu2_armhf.deb
 main/p/pam/libpam0g_1.1.8-1ubuntu2.2_armhf.deb

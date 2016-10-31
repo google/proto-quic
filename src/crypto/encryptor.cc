@@ -4,8 +4,6 @@
 
 #include "crypto/encryptor.h"
 
-#include <openssl/aes.h>
-#include <openssl/evp.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -14,6 +12,8 @@
 #include "base/sys_byteorder.h"
 #include "crypto/openssl_util.h"
 #include "crypto/symmetric_key.h"
+#include "third_party/boringssl/src/include/openssl/aes.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
 
 namespace crypto {
 

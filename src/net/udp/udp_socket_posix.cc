@@ -738,7 +738,7 @@ int UDPSocketPosix::RandomBind(const IPAddress& address) {
   for (int i = 0; i < kBindRetries; ++i) {
     int rv = DoBind(IPEndPoint(address,
                                rand_int_cb_.Run(kPortStart, kPortEnd)));
-    if (rv == OK || rv != ERR_ADDRESS_IN_USE)
+    if (rv != ERR_ADDRESS_IN_USE)
       return rv;
   }
   return DoBind(IPEndPoint(address, 0));

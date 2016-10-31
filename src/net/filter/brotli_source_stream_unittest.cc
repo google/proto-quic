@@ -98,6 +98,74 @@ TEST_F(BrotliSourceStreamTest, DecodeBrotliOneBlockSync) {
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
+// Regression test for crbug.com/659311. The following example is taken out
+// of the bug report. For this specific example, Brotli will consume the first
+// byte in the 6 available bytes and return 0.
+TEST_F(BrotliSourceStreamTest, IgnoreExtraData) {
+  const unsigned char kResponse[] = {0x1A, 0xDF, 0x6E, 0x74, 0x74, 0x68};
+  source()->AddReadResult(reinterpret_cast<const char*>(kResponse),
+                          sizeof(kResponse), OK, MockSourceStream::SYNC);
+  // Add an EOF.
+  source()->AddReadResult(reinterpret_cast<const char*>(kResponse), 0, OK,
+                          MockSourceStream::SYNC);
+  out_buffer_ = new IOBufferWithSize(kDefaultBufferSize);
+  std::string actual_output;
+  TestCompletionCallback callback;
+  int bytes_read = ReadStream(callback);
+  EXPECT_EQ(0, bytes_read);
+  EXPECT_EQ("BROTLI", brotli_stream()->Description());
+}
+
+// If there are data after decoding is done, ignore the data. crbug.com/659311.
+TEST_F(BrotliSourceStreamTest, IgnoreExtraDataInOneRead) {
+  std::string response_with_extra_data(encoded_buffer(), encoded_len());
+  response_with_extra_data.append(1000, 'x');
+  source()->AddReadResult(response_with_extra_data.c_str(),
+                          response_with_extra_data.length(), OK,
+                          MockSourceStream::SYNC);
+  // Add an EOF.
+  source()->AddReadResult(response_with_extra_data.c_str(), 0, OK,
+                          MockSourceStream::SYNC);
+  out_buffer_ = new IOBufferWithSize(kDefaultBufferSize);
+  std::string actual_output;
+  TestCompletionCallback callback;
+  while (true) {
+    int bytes_read = ReadStream(callback);
+    if (bytes_read == OK)
+      break;
+    ASSERT_GT(bytes_read, OK);
+    actual_output.append(out_data(), bytes_read);
+  }
+  EXPECT_EQ(source_data_len(), actual_output.size());
+  EXPECT_EQ(source_data(), actual_output);
+  EXPECT_EQ("BROTLI", brotli_stream()->Description());
+}
+
+// Same as above but extra data is in a different read.
+TEST_F(BrotliSourceStreamTest, IgnoreExtraDataInDifferentRead) {
+  std::string extra_data;
+  extra_data.append(1000, 'x');
+  source()->AddReadResult(encoded_buffer(), encoded_len(), OK,
+                          MockSourceStream::SYNC);
+  source()->AddReadResult(extra_data.c_str(), extra_data.length(), OK,
+                          MockSourceStream::SYNC);
+  // Add an EOF.
+  source()->AddReadResult(extra_data.c_str(), 0, OK, MockSourceStream::SYNC);
+  out_buffer_ = new IOBufferWithSize(kDefaultBufferSize);
+  std::string actual_output;
+  TestCompletionCallback callback;
+  while (true) {
+    int bytes_read = ReadStream(callback);
+    if (bytes_read == OK)
+      break;
+    ASSERT_GT(bytes_read, OK);
+    actual_output.append(out_data(), bytes_read);
+  }
+  EXPECT_EQ(source_data_len(), actual_output.size());
+  EXPECT_EQ(source_data(), actual_output);
+  EXPECT_EQ("BROTLI", brotli_stream()->Description());
+}
+
 // Basic scenario: decoding brotli data with big enough buffer.
 TEST_F(BrotliSourceStreamTest, DecodeBrotliTwoBlockSync) {
   source()->AddReadResult(encoded_buffer(), 10, OK, MockSourceStream::SYNC);
@@ -221,14 +289,19 @@ TEST_F(BrotliSourceStreamTest, DecodeCorruptedData) {
   source()->AddReadResult(corrupt_data, corrupt_data_len, OK,
                           MockSourceStream::SYNC);
   out_buffer_ = new IOBufferWithSize(kDefaultBufferSize);
+  TestCompletionCallback callback;
   int error = OK;
   do {
-    TestCompletionCallback callback;
     error = ReadStream(callback);
     EXPECT_NE(ERR_IO_PENDING, error);
   } while (error > 0);
   // Expect failures
   EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, error);
+
+  // Calling Read again gives the same error.
+  error = ReadStream(callback);
+  EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, error);
+
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 

@@ -5,6 +5,21 @@
 # Flag completion rule for bash.
 # To load in your shell, "source path/to/this/file".
 
+# Usage examples
+# ==============
+#
+# Browser command line switches:
+# $ out/gn/chrome --site-per-pro<tab>
+# $ google-chrome --site-per-pro<tab>
+#
+# Test switches (i.e. --gtest_* and --test-launcher-* switches):
+# $ out/gn/unit_tests --gtest_filt<tab>
+# $ out/gn/unit_tests --test-launcher-j<tab>
+#
+# Layout test switches:
+# $ third_party/WebKit/Tools/Scripts/run-webkit-tests --additional-driver-f<tab>
+# $ .../run-webkit-tests --additional-driver-flag=--site-per-pro<tab>
+
 chrome_source=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
 
 _chrome_flag() {
@@ -17,9 +32,57 @@ _chrome_flag() {
     return 0
 }
 
+_gtest_flag() {
+    local cur gtest_flags launcher_flags
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    gtest_flags=$(sed -ne 's/^.*FromGTestEnv("\([^" /]\+\)".*$/--gtest_\1/p' \
+      "$chrome_source/testing/gtest/src/gtest.cc")
+    chrome_test_launcher_flags=$(sed -ne 's/^[^/]*"\([^" /]\{1,\}\)".*/--\1/p' \
+      "$chrome_source/base/test/test_switches.cc")
+    COMPREPLY=($(
+      compgen -W "$gtest_flags $chrome_test_launcher_flags" -- "$cur"))
+    return 0
+}
+
+_layout_test_flag() {
+    local cur targets webkitpy_dir prev_switch
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    # Complete content_shell switches if appropriate.
+    if [ "${COMP_CWORD}" -gt 2 -a "${COMP_WORDS[COMP_CWORD-1]}" = "=" ]
+    then
+      prev_switch="${COMP_WORDS[COMP_CWORD-2]}"
+      if [ "$prev_switch" = "--additional-drt-flag" -o \
+           "$prev_switch" = "--additional-driver-flag" ]
+      then
+        targets=$(cd $chrome_source; \
+            git ls-files 'content/*switches*.cc' | \
+            xargs sed -ne 's/^[^/]*"\([^" /]\{1,\}\)".*/--\1/p')
+        COMPREPLY=($(compgen -W "$targets" -- "$cur"))
+        return 0
+      fi
+    fi
+
+    # Complete run-webkit-tests switches.
+    webkitpy_dir="$chrome_source/third_party/WebKit/Tools/Scripts/webkitpy"
+    targets=$(sed -ne 's/^[[:space:]]*"\(--[a-z-]\+\)",[[:space:]]*$/\1/p' \
+        "$webkitpy_dir/layout_tests/run_webkit_tests.py")
+    COMPREPLY=($(compgen -W "$targets" -- "$cur"))
+    return 0
+}
+
 complete -F _chrome_flag google-chrome
 complete -F _chrome_flag chrome
 if [ $(uname) = "Darwin" ]
 then
   complete -F _chrome_flag Chromium
 fi
+
+for gtest_test_executable in $(
+  cd $chrome_source;
+  git ls-files '*/BUILD.gn' | xargs sed -ne 's/^.*test("\([^"]\+\)").*$/\1/p'
+); do
+  complete -F _gtest_flag $gtest_test_executable
+done
+
+complete -F _layout_test_flag run-webkit-tests

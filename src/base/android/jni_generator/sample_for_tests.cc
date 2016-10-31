@@ -117,7 +117,7 @@ int main() {
 
   // This is how you call a java method from C++. Note that you must have
   // obtained the jobject somehow.
-  jobject my_java_object = NULL;
+  ScopedJavaLocalRef<jobject> my_java_object;
   int bar = base::android::Java_SampleForTests_javaMethod(
       env, my_java_object, 1, 2);
 

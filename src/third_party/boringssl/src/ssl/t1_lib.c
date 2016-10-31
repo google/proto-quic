@@ -441,59 +441,93 @@ int tls1_check_group_id(SSL *ssl, uint16_t group_id) {
   return 0;
 }
 
-/* List of supported signature algorithms and hashes. Should make this
- * customisable at some point, for now include everything we support. */
-
-static const uint16_t kDefaultSignatureAlgorithms[] = {
-    /* For now, do not ship RSA-PSS signature algorithms on Android's system
-     * BoringSSL. Once TLS 1.3 is finalized and the change in Chrome has stuck,
-     * restore them. */
-#if !defined(BORINGSSL_ANDROID_SYSTEM)
-    SSL_SIGN_RSA_PSS_SHA512,
-#endif
-    SSL_SIGN_RSA_PKCS1_SHA512,
-    SSL_SIGN_ECDSA_SECP521R1_SHA512,
-
-#if !defined(BORINGSSL_ANDROID_SYSTEM)
-    SSL_SIGN_RSA_PSS_SHA384,
-#endif
-    SSL_SIGN_RSA_PKCS1_SHA384,
-    SSL_SIGN_ECDSA_SECP384R1_SHA384,
-
+/* kVerifySignatureAlgorithms is the default list of accepted signature
+ * algorithms for verifying.
+ *
+ * For now, RSA-PSS signature algorithms are not enabled on Android's system
+ * BoringSSL. Once the change in Chrome has stuck and the values are finalized,
+ * restore them. */
+static const uint16_t kVerifySignatureAlgorithms[] = {
+    /* Prefer SHA-256 algorithms. */
+    SSL_SIGN_ECDSA_SECP256R1_SHA256,
 #if !defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_RSA_PSS_SHA256,
 #endif
     SSL_SIGN_RSA_PKCS1_SHA256,
-    SSL_SIGN_ECDSA_SECP256R1_SHA256,
 
+    /* Larger hashes are acceptable. */
+    SSL_SIGN_ECDSA_SECP384R1_SHA384,
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_RSA_PSS_SHA384,
+#endif
+    SSL_SIGN_RSA_PKCS1_SHA384,
+
+    /* TODO(davidben): Remove this entry and SSL_CURVE_SECP521R1 from
+     * kDefaultGroups. */
+#if defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_ECDSA_SECP521R1_SHA512,
+#endif
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_RSA_PSS_SHA512,
+#endif
+    SSL_SIGN_RSA_PKCS1_SHA512,
+
+    /* For now, SHA-1 is still accepted but least preferable. */
     SSL_SIGN_RSA_PKCS1_SHA1,
-    SSL_SIGN_ECDSA_SHA1,
+
 };
 
-size_t tls12_get_psigalgs(SSL *ssl, const uint16_t **psigs) {
-  *psigs = kDefaultSignatureAlgorithms;
-  return OPENSSL_ARRAY_SIZE(kDefaultSignatureAlgorithms);
+/* kSignSignatureAlgorithms is the default list of supported signature
+ * algorithms for signing.
+ *
+ * For now, RSA-PSS signature algorithms are not enabled on Android's system
+ * BoringSSL. Once the change in Chrome has stuck and the values are finalized,
+ * restore them. */
+static const uint16_t kSignSignatureAlgorithms[] = {
+    /* Prefer SHA-256 algorithms. */
+    SSL_SIGN_ECDSA_SECP256R1_SHA256,
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_RSA_PSS_SHA256,
+#endif
+    SSL_SIGN_RSA_PKCS1_SHA256,
+
+    /* If needed, sign larger hashes.
+     *
+     * TODO(davidben): Determine which of these may be pruned. */
+    SSL_SIGN_ECDSA_SECP384R1_SHA384,
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_RSA_PSS_SHA384,
+#endif
+    SSL_SIGN_RSA_PKCS1_SHA384,
+
+    SSL_SIGN_ECDSA_SECP521R1_SHA512,
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    SSL_SIGN_RSA_PSS_SHA512,
+#endif
+    SSL_SIGN_RSA_PKCS1_SHA512,
+
+    /* If the peer supports nothing else, sign with SHA-1. */
+    SSL_SIGN_ECDSA_SHA1,
+    SSL_SIGN_RSA_PKCS1_SHA1,
+};
+
+size_t tls12_get_verify_sigalgs(const SSL *ssl, const uint16_t **out) {
+  *out = kVerifySignatureAlgorithms;
+  return OPENSSL_ARRAY_SIZE(kVerifySignatureAlgorithms);
 }
 
 int tls12_check_peer_sigalg(SSL *ssl, int *out_alert, uint16_t sigalg) {
-  const uint16_t *sent_sigs;
-  size_t sent_sigslen, i;
-
-  /* Check signature matches a type we sent */
-  sent_sigslen = tls12_get_psigalgs(ssl, &sent_sigs);
-  for (i = 0; i < sent_sigslen; i++) {
-    if (sigalg == sent_sigs[i]) {
-      break;
+  const uint16_t *verify_sigalgs;
+  size_t num_verify_sigalgs = tls12_get_verify_sigalgs(ssl, &verify_sigalgs);
+  for (size_t i = 0; i < num_verify_sigalgs; i++) {
+    if (sigalg == verify_sigalgs[i]) {
+      return 1;
     }
   }
 
-  if (i == sent_sigslen) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_SIGNATURE_TYPE);
-    *out_alert = SSL_AD_ILLEGAL_PARAMETER;
-    return 0;
-  }
-
-  return 1;
+  OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_SIGNATURE_TYPE);
+  *out_alert = SSL_AD_ILLEGAL_PARAMETER;
+  return 0;
 }
 
 /* Get a mask of disabled algorithms: an algorithm is disabled if it isn't
@@ -506,10 +540,10 @@ void ssl_set_client_disabled(SSL *ssl) {
   c->mask_a = 0;
   c->mask_k = 0;
 
-  /* Now go through all signature algorithms seeing if we support any for RSA,
-   * DSA, ECDSA. Do this for all versions not just TLS 1.2. */
+  /* Now go through all signature algorithms seeing if we support any for RSA or
+   * ECDSA. Do this for all versions not just TLS 1.2. */
   const uint16_t *sigalgs;
-  size_t num_sigalgs = tls12_get_psigalgs(ssl, &sigalgs);
+  size_t num_sigalgs = tls12_get_verify_sigalgs(ssl, &sigalgs);
   for (size_t i = 0; i < num_sigalgs; i++) {
     switch (sigalgs[i]) {
       case SSL_SIGN_RSA_PSS_SHA512:
@@ -1052,7 +1086,7 @@ static int ext_sigalgs_add_clienthello(SSL *ssl, CBB *out) {
   }
 
   const uint16_t *sigalgs;
-  const size_t num_sigalgs = tls12_get_psigalgs(ssl, &sigalgs);
+  const size_t num_sigalgs = tls12_get_verify_sigalgs(ssl, &sigalgs);
 
   CBB contents, sigalgs_cbb;
   if (!CBB_add_u16(out, TLSEXT_TYPE_signature_algorithms) ||
@@ -1610,10 +1644,6 @@ static int ext_channel_id_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 1;
   }
 
-  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    return 0;
-  }
-
   assert(!SSL_is_dtls(ssl));
   assert(ssl->tlsext_channel_id_enabled);
 
@@ -1642,10 +1672,6 @@ static int ext_channel_id_parse_clienthello(SSL *ssl, uint8_t *out_alert,
 }
 
 static int ext_channel_id_add_serverhello(SSL *ssl, CBB *out) {
-  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    return 1;
-  }
-
   if (!ssl->s3->tlsext_channel_id_valid) {
     return 1;
   }
@@ -3144,11 +3170,11 @@ int tls1_choose_signature_algorithm(SSL *ssl, uint16_t *out) {
     return 0;
   }
 
-  const uint16_t *sigalgs;
-  size_t num_sigalgs = tls12_get_psigalgs(ssl, &sigalgs);
-  if (cert->sigalgs != NULL) {
-    sigalgs = cert->sigalgs;
-    num_sigalgs = cert->num_sigalgs;
+  const uint16_t *sigalgs = cert->sigalgs;
+  size_t num_sigalgs = cert->num_sigalgs;
+  if (sigalgs == NULL) {
+    sigalgs = kSignSignatureAlgorithms;
+    num_sigalgs = OPENSSL_ARRAY_SIZE(kSignSignatureAlgorithms);
   }
 
   const uint16_t *peer_sigalgs = hs->peer_sigalgs;
@@ -3184,45 +3210,184 @@ int tls1_choose_signature_algorithm(SSL *ssl, uint16_t *out) {
   return 0;
 }
 
-int tls1_channel_id_hash(SSL *ssl, uint8_t *out, size_t *out_len) {
+int tls1_verify_channel_id(SSL *ssl) {
   int ret = 0;
-  EVP_MD_CTX ctx;
+  uint16_t extension_type;
+  CBS extension, channel_id;
 
-  EVP_MD_CTX_init(&ctx);
-  if (!EVP_DigestInit_ex(&ctx, EVP_sha256(), NULL)) {
+  /* A Channel ID handshake message is structured to contain multiple
+   * extensions, but the only one that can be present is Channel ID. */
+  CBS_init(&channel_id, ssl->init_msg, ssl->init_num);
+  if (!CBS_get_u16(&channel_id, &extension_type) ||
+      !CBS_get_u16_length_prefixed(&channel_id, &extension) ||
+      CBS_len(&channel_id) != 0 ||
+      extension_type != TLSEXT_TYPE_channel_id ||
+      CBS_len(&extension) != TLSEXT_CHANNEL_ID_SIZE) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+    return 0;
+  }
+
+  EC_GROUP *p256 = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+  if (!p256) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_P256_SUPPORT);
+    return 0;
+  }
+
+  EC_KEY *key = NULL;
+  EC_POINT *point = NULL;
+  BIGNUM x, y;
+  ECDSA_SIG sig;
+  BN_init(&x);
+  BN_init(&y);
+  sig.r = BN_new();
+  sig.s = BN_new();
+  if (sig.r == NULL || sig.s == NULL) {
     goto err;
   }
 
+  const uint8_t *p = CBS_data(&extension);
+  if (BN_bin2bn(p + 0, 32, &x) == NULL ||
+      BN_bin2bn(p + 32, 32, &y) == NULL ||
+      BN_bin2bn(p + 64, 32, sig.r) == NULL ||
+      BN_bin2bn(p + 96, 32, sig.s) == NULL) {
+    goto err;
+  }
+
+  point = EC_POINT_new(p256);
+  if (point == NULL ||
+      !EC_POINT_set_affine_coordinates_GFp(p256, point, &x, &y, NULL)) {
+    goto err;
+  }
+
+  key = EC_KEY_new();
+  if (key == NULL ||
+      !EC_KEY_set_group(key, p256) ||
+      !EC_KEY_set_public_key(key, point)) {
+    goto err;
+  }
+
+  uint8_t digest[EVP_MAX_MD_SIZE];
+  size_t digest_len;
+  if (!tls1_channel_id_hash(ssl, digest, &digest_len)) {
+    goto err;
+  }
+
+  int sig_ok = ECDSA_do_verify(digest, digest_len, &sig, key);
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  sig_ok = 1;
+#endif
+  if (!sig_ok) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CHANNEL_ID_SIGNATURE_INVALID);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
+    ssl->s3->tlsext_channel_id_valid = 0;
+    goto err;
+  }
+
+  memcpy(ssl->s3->tlsext_channel_id, p, 64);
+  ret = 1;
+
+err:
+  BN_free(&x);
+  BN_free(&y);
+  BN_free(sig.r);
+  BN_free(sig.s);
+  EC_KEY_free(key);
+  EC_POINT_free(point);
+  EC_GROUP_free(p256);
+  return ret;
+}
+
+int tls1_write_channel_id(SSL *ssl, CBB *cbb) {
+  uint8_t digest[EVP_MAX_MD_SIZE];
+  size_t digest_len;
+  if (!tls1_channel_id_hash(ssl, digest, &digest_len)) {
+    return 0;
+  }
+
+  EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(ssl->tlsext_channel_id_private);
+  if (ec_key == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+    return 0;
+  }
+
+  int ret = 0;
+  BIGNUM *x = BN_new();
+  BIGNUM *y = BN_new();
+  ECDSA_SIG *sig = NULL;
+  if (x == NULL || y == NULL ||
+      !EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(ec_key),
+                                           EC_KEY_get0_public_key(ec_key),
+                                           x, y, NULL)) {
+    goto err;
+  }
+
+  sig = ECDSA_do_sign(digest, digest_len, ec_key);
+  if (sig == NULL) {
+    goto err;
+  }
+
+  CBB child;
+  if (!CBB_add_u16(cbb, TLSEXT_TYPE_channel_id) ||
+      !CBB_add_u16_length_prefixed(cbb, &child) ||
+      !BN_bn2cbb_padded(&child, 32, x) ||
+      !BN_bn2cbb_padded(&child, 32, y) ||
+      !BN_bn2cbb_padded(&child, 32, sig->r) ||
+      !BN_bn2cbb_padded(&child, 32, sig->s) ||
+      !CBB_flush(cbb)) {
+    goto err;
+  }
+
+  ret = 1;
+
+err:
+  BN_free(x);
+  BN_free(y);
+  ECDSA_SIG_free(sig);
+  return ret;
+}
+
+int tls1_channel_id_hash(SSL *ssl, uint8_t *out, size_t *out_len) {
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    uint8_t *msg;
+    size_t msg_len;
+    if (!tls13_get_cert_verify_signature_input(ssl, &msg, &msg_len,
+                                               ssl_cert_verify_channel_id)) {
+      return 0;
+    }
+    SHA256(msg, msg_len, out);
+    *out_len = SHA256_DIGEST_LENGTH;
+    OPENSSL_free(msg);
+    return 1;
+  }
+
+  SHA256_CTX ctx;
+
+  SHA256_Init(&ctx);
   static const char kClientIDMagic[] = "TLS Channel ID signature";
-  EVP_DigestUpdate(&ctx, kClientIDMagic, sizeof(kClientIDMagic));
+  SHA256_Update(&ctx, kClientIDMagic, sizeof(kClientIDMagic));
 
   if (ssl->session != NULL) {
     static const char kResumptionMagic[] = "Resumption";
-    EVP_DigestUpdate(&ctx, kResumptionMagic, sizeof(kResumptionMagic));
+    SHA256_Update(&ctx, kResumptionMagic, sizeof(kResumptionMagic));
     if (ssl->session->original_handshake_hash_len == 0) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-      goto err;
+      return 0;
     }
-    EVP_DigestUpdate(&ctx, ssl->session->original_handshake_hash,
-                     ssl->session->original_handshake_hash_len);
+    SHA256_Update(&ctx, ssl->session->original_handshake_hash,
+                  ssl->session->original_handshake_hash_len);
   }
 
   uint8_t handshake_hash[EVP_MAX_MD_SIZE];
   int handshake_hash_len = tls1_handshake_digest(ssl, handshake_hash,
                                                  sizeof(handshake_hash));
   if (handshake_hash_len < 0) {
-    goto err;
+    return 0;
   }
-  EVP_DigestUpdate(&ctx, handshake_hash, (size_t)handshake_hash_len);
-  unsigned len_u;
-  EVP_DigestFinal_ex(&ctx, out, &len_u);
-  *out_len = len_u;
-
-  ret = 1;
-
-err:
-  EVP_MD_CTX_cleanup(&ctx);
-  return ret;
+  SHA256_Update(&ctx, handshake_hash, (size_t)handshake_hash_len);
+  SHA256_Final(out, &ctx);
+  *out_len = SHA256_DIGEST_LENGTH;
+  return 1;
 }
 
 /* tls1_record_handshake_hashes_for_channel_id records the current handshake
@@ -3248,4 +3413,22 @@ int tls1_record_handshake_hashes_for_channel_id(SSL *ssl) {
   ssl->s3->new_session->original_handshake_hash_len = digest_len;
 
   return 1;
+}
+
+int ssl_do_channel_id_callback(SSL *ssl) {
+  if (ssl->tlsext_channel_id_private != NULL ||
+      ssl->ctx->channel_id_cb == NULL) {
+    return 1;
+  }
+
+  EVP_PKEY *key = NULL;
+  ssl->ctx->channel_id_cb(ssl, &key);
+  if (key == NULL) {
+    /* The caller should try again later. */
+    return 1;
+  }
+
+  int ret = SSL_set1_tls_channel_id(ssl, key);
+  EVP_PKEY_free(key);
+  return ret;
 }

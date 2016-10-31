@@ -6,11 +6,9 @@ package org.chromium.base.test.util;
 
 import android.os.Build;
 
-import junit.framework.TestCase;
+import org.junit.runners.model.FrameworkMethod;
 
 import org.chromium.base.Log;
-
-import java.lang.reflect.Method;
 
 /**
  * Checks the device's SDK level against any specified minimum requirement.
@@ -27,21 +25,18 @@ public class MinAndroidSdkLevelSkipCheck extends SkipCheck {
      * @return true if the device's SDK level is below the specified minimum.
      */
     @Override
-    public boolean shouldSkip(TestCase testCase) {
-        Class testClass = testCase.getClass();
-        Method testMethod = getTestMethod(testCase);
-
+    public boolean shouldSkip(FrameworkMethod frameworkMethod) {
         int minSdkLevel = 0;
-        for (MinAndroidSdkLevel m : getAnnotations(testMethod, MinAndroidSdkLevel.class)) {
+        for (MinAndroidSdkLevel m : getAnnotations(frameworkMethod, MinAndroidSdkLevel.class)) {
             minSdkLevel = Math.max(minSdkLevel, m.value());
         }
-
         if (Build.VERSION.SDK_INT < minSdkLevel) {
-            Log.i(TAG, "Test " + testClass.getName() + "#" + testCase.getName()
-                    + " is not enabled at SDK level " + Build.VERSION.SDK_INT
-                    + ".");
+            Log.i(TAG, "Test " + frameworkMethod.getDeclaringClass().getName() + "#"
+                    + frameworkMethod.getName() + " is not enabled at SDK level "
+                    + Build.VERSION.SDK_INT + ".");
             return true;
         }
         return false;
     }
+
 }

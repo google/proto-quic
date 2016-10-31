@@ -35,7 +35,6 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
-#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
 #include "base/tracking_info.h"
@@ -992,14 +991,11 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
       GetWorkStatus status =
           GetWork(&task, &wait_time, &delete_these_outside_lock);
       if (status == GET_WORK_FOUND) {
-        TRACE_EVENT_WITH_FLOW2(TRACE_DISABLED_BY_DEFAULT("toplevel.flow"),
-            "SequencedWorkerPool::Inner::ThreadLoop",
+        TRACE_TASK_EXECUTION("SequencedWorkerPool::Inner::ThreadLoop", task);
+        TRACE_EVENT_WITH_FLOW0(TRACE_DISABLED_BY_DEFAULT("toplevel.flow"),
+            "SequencedWorkerPool::Inner::PostTask",
             TRACE_ID_MANGLE(GetTaskTraceID(task, static_cast<void*>(this))),
-            TRACE_EVENT_FLAG_FLOW_IN,
-            "src_file", task.posted_from.file_name(),
-            "src_func", task.posted_from.function_name());
-        TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION task_event(
-            task.posted_from.file_name());
+            TRACE_EVENT_FLAG_FLOW_IN);
         int new_thread_id = WillRunWorkerTask(task);
         {
           AutoUnlock unlock(lock_);

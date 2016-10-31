@@ -219,7 +219,8 @@ class AutoRoller(object):
     self._RunCommand(['git', 'fetch', 'origin'], working_dir=working_dir)
     revision_range = git_hash or 'origin'
     ret = self._RunCommand(
-        ['git', '--no-pager', 'log', revision_range, '--pretty=full', '-1'],
+        ['git', '--no-pager', 'log', revision_range,
+         '--no-abbrev-commit', '--pretty=full', '-1'],
         working_dir=working_dir)
     return CommitInfo(_ParseGitCommitPosition(ret), _ParseGitCommitHash(ret),
                       git_repo_url)

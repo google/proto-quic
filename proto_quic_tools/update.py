@@ -106,7 +106,7 @@ def copy_modified_files():
   print "running", command;
   os.system(command)
   # New version file
-  command = "cp " + chrome_root + "/chrome/VERSION " + proto_quic_root
+  command = "cp " + chrome_root + "/chrome/VERSION " + proto_quic_root + "/chrome/VERSION"
   print "running", command;
   os.system(command)
 

@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <string>
+
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
@@ -23,16 +25,13 @@ class FuzzedDataProvider {
   FuzzedDataProvider(const uint8_t* data, size_t size);
   ~FuzzedDataProvider();
 
-  // Returns a StringPiece containing |num_bytes| of input data. If fewer than
-  // |num_bytes| of data remain, returns a shorter StringPiece containing all
-  // of the data that's left. The data pointed at by the returned StringPiece
-  // must not be used after the FuzzedDataProvider is destroyed.
-  StringPiece ConsumeBytes(size_t num_bytes);
+  // Returns a std::string containing |num_bytes| of input data. If fewer than
+  // |num_bytes| of data remain, returns a shorter std::string containing all
+  // of the data that's left.
+  std::string ConsumeBytes(size_t num_bytes);
 
-  // Returns a StringPiece containing all remaining bytes of the input data.
-  // The data pointed at by the returned StringPiece must not be used after the
-  // FuzzedDataProvider is destroyed.
-  StringPiece ConsumeRemainingBytes();
+  // Returns a std::string containing all remaining bytes of the input data.
+  std::string ConsumeRemainingBytes();
 
   // Returns a number in the range [min, max] by consuming bytes from the input
   // data. The value might not be uniformly distributed in the given range. If

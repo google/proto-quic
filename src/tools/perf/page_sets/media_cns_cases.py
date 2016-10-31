@@ -7,8 +7,8 @@ from telemetry import story
 
 class BasicPlayPage(page_module.Page):
 
-  def __init__(self, url, page_set):
-    super(BasicPlayPage, self).__init__(url=url, page_set=page_set)
+  def __init__(self, url, page_set, name=''):
+    super(BasicPlayPage, self).__init__(url=url, page_set=page_set, name=name)
     self.add_browser_metrics = True
 
   def PlayAction(self, action_runner):
@@ -31,9 +31,10 @@ class BasicPlayPage(page_module.Page):
 
 class SeekBeforeAndAfterPlayheadPage(BasicPlayPage):
 
-  def __init__(self, url, page_set):
+  def __init__(self, url, page_set, name):
     super(SeekBeforeAndAfterPlayheadPage, self).__init__(url=url,
-                                                         page_set=page_set)
+                                                         page_set=page_set,
+                                                         name=name)
     self.add_browser_metrics = False
 
   def RunPageInteractions(self, action_runner):
@@ -113,4 +114,8 @@ class MediaCnsCasesPageSet(story.StorySet):
     ]
 
     for url in urls_list2:
-      self.AddStory(SeekBeforeAndAfterPlayheadPage(url, self))
+      if url in urls_list:
+        name = 'seek_' + url
+      else:
+        name = ''
+      self.AddStory(SeekBeforeAndAfterPlayheadPage(url, self, name=name))

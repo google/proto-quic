@@ -39,7 +39,7 @@ class SequencedWorkerPoolOwner : public SequencedWorkerPool::TestingObserver {
   ~SequencedWorkerPoolOwner() override;
 
   // Don't change the returned pool's testing observer.
-  const scoped_refptr<SequencedWorkerPool>& pool();
+  const scoped_refptr<SequencedWorkerPool>& pool() const;
 
   // The given callback will be called on WillWaitForShutdown().
   void SetWillWaitForShutdownCallback(const Closure& callback);

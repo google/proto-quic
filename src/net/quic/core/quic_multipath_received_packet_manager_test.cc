@@ -4,6 +4,7 @@
 
 #include "net/quic/core/quic_multipath_received_packet_manager.h"
 
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -28,9 +29,8 @@ class QuicMultipathReceivedPacketManagerPeer {
   static void SetPathReceivedPacketManager(
       QuicMultipathReceivedPacketManager* multipath_manager,
       QuicPathId path_id,
-      QuicReceivedPacketManager* manager) {
-    delete multipath_manager->path_managers_[path_id];
-    multipath_manager->path_managers_[path_id] = manager;
+      std::unique_ptr<QuicReceivedPacketManager> manager) {
+    multipath_manager->path_managers_[path_id] = std::move(manager);
   }
 };
 
@@ -47,9 +47,9 @@ class QuicMultipathReceivedPacketManagerTest : public testing::Test {
         manager_0_(new MockReceivedPacketManager(&stats_)),
         manager_1_(new MockReceivedPacketManager(&stats_)) {
     QuicMultipathReceivedPacketManagerPeer::SetPathReceivedPacketManager(
-        &multipath_manager_, kDefaultPathId, manager_0_);
+        &multipath_manager_, kDefaultPathId, base::WrapUnique(manager_0_));
     QuicMultipathReceivedPacketManagerPeer::SetPathReceivedPacketManager(
-        &multipath_manager_, kPathId1, manager_1_);
+        &multipath_manager_, kPathId1, base::WrapUnique(manager_1_));
   }
 
   QuicConnectionStats stats_;

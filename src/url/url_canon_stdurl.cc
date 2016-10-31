@@ -120,6 +120,14 @@ int DefaultPortForScheme(const char* scheme, int scheme_len) {
       if (!strncmp(scheme, kWsScheme, scheme_len))
         default_port = 80;
       break;
+    case 7:
+      if (!strncmp(scheme, kHttpSuboriginScheme, scheme_len))
+        default_port = 80;
+      break;
+    case 8:
+      if (!strncmp(scheme, kHttpsSuboriginScheme, scheme_len))
+        default_port = 443;
+      break;
   }
   return default_port;
 }

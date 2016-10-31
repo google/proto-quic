@@ -22,6 +22,7 @@ namespace net {
 
 class IOBuffer;
 class SSLInfo;
+class URLRequest;
 struct WebSocketHandshakeRequestInfo;
 struct WebSocketHandshakeResponseInfo;
 
@@ -40,6 +41,9 @@ class NET_EXPORT WebSocketEventInterface {
   };
 
   virtual ~WebSocketEventInterface() {}
+
+  // Called when a URLRequest is created for handshaking.
+  virtual void OnCreateURLRequest(URLRequest* request) = 0;
 
   // Called in response to an AddChannelRequest. This means that a response has
   // been received from the remote server.

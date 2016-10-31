@@ -371,6 +371,14 @@ CA_COMMON_NAME="Test Root CA" \
     -out ../certificates/post_june_2016.pem \
     -config ca.cnf
 
+# Includes the TLS feature extension
+try openssl req -x509 -newkey rsa:2048 \
+  -keyout out/tls_feature_extension.key \
+  -out ../certificates/tls_feature_extension.pem \
+  -days 365 \
+  -extensions req_extensions_with_tls_feature \
+  -nodes -config ee.cnf
+
 
 # Regenerate CRLSets
 ## Block a leaf cert directly by SPKI

@@ -4,13 +4,6 @@
 
 #include "net/quic/test_tools/crypto_test_utils.h"
 
-#include <openssl/bn.h>
-#include <openssl/ec.h>
-#include <openssl/ecdsa.h>
-#include <openssl/evp.h>
-#include <openssl/obj_mac.h>
-#include <openssl/sha.h>
-
 #include <memory>
 
 #include "base/strings/string_util.h"
@@ -34,6 +27,12 @@
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simple_quic_framer.h"
+#include "third_party/boringssl/src/include/openssl/bn.h"
+#include "third_party/boringssl/src/include/openssl/ec.h"
+#include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/obj_mac.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::StringPiece;
 using std::make_pair;
@@ -927,7 +926,7 @@ void CryptoTestUtils::MovePackets(PacketSavingConnection* source_conn,
       break;
     }
 
-    for (const QuicStreamFrame* stream_frame : framer.stream_frames()) {
+    for (const auto& stream_frame : framer.stream_frames()) {
       ASSERT_TRUE(crypto_framer.ProcessInput(
           StringPiece(stream_frame->data_buffer, stream_frame->data_length)));
       ASSERT_FALSE(crypto_visitor.error());
@@ -980,7 +979,7 @@ string CryptoTestUtils::GenerateClientNonceHex(
                                     new_config_options));
   primary_config->set_primary_time(clock->WallNow().ToUNIXSeconds());
   std::unique_ptr<net::CryptoHandshakeMessage> msg(
-      crypto_config->AddConfig(primary_config.get(), clock->WallNow()));
+      crypto_config->AddConfig(std::move(primary_config), clock->WallNow()));
   StringPiece orbit;
   CHECK(msg->GetStringPiece(net::kORBT, &orbit));
   string nonce;

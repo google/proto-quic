@@ -145,9 +145,6 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
   void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override;
-  bool OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                const char* header_data,
-                                size_t header_data_len) override;
   void OnDataFrameHeader(SpdyStreamId stream_id,
                          size_t length,
                          bool fin) override;
@@ -466,25 +463,6 @@ void SpdyTestDeframerImpl::OnContinuation(SpdyStreamId stream_id, bool end) {
 
   stream_id_ = stream_id;
   end_ = end;
-}
-
-// Called with the decompressed contents of headers, in zero or more pieces
-// (i.e. an empty headers frame doesn't have any non-zero length data).
-// Note that the end of the headers is indicated by header_data==nullptr
-// AND header_data_len==0, even if there were no non-zero pieces.
-// SpdyHeadersBlockParser decodes these.
-// Returning false kills the connection (SpdyFramer enters state SPDY_ERROR).
-bool SpdyTestDeframerImpl::OnControlFrameHeaderData(SpdyStreamId stream_id,
-                                                    const char* header_data,
-                                                    size_t header_data_len) {
-  DVLOG(1) << "OnControlFrameHeaderData stream_id: " << stream_id
-           << "      len: " << header_data_len;
-  CHECK(frame_type_ == HEADERS || frame_type_ == CONTINUATION ||
-        frame_type_ == PUSH_PROMISE)
-      << "   frame_type_=" << Http2FrameTypeToString(frame_type_);
-  CHECK_EQ(stream_id_, stream_id);
-  LOG(FATAL) << "Must call SpdyFramer::set_use_new_methods_for_test(true)";
-  return true;
 }
 
 // Note that length includes the padding length (0 to 256, when the optional

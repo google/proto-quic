@@ -201,11 +201,11 @@ public class EmbeddedTestServer {
      */
     public static EmbeddedTestServer createAndStartFileServer(Context context, File directory)
             throws InterruptedException {
-        // TODO(jbudorick): Update all callers to use createAndStartDefaultServer() directly.
+        // TODO(jbudorick): Update all callers to use createAndStartServer() directly.
         if (!directory.equals(Environment.getExternalStorageDirectory())) {
             throw new IllegalArgumentException("Expected directory to be ExternalStorageDirectory");
         }
-        return createAndStartDefaultServer(context);
+        return createAndStartServer(context);
     }
 
     /** Create and initialize a server with the default handlers.
@@ -217,6 +217,20 @@ public class EmbeddedTestServer {
      *  @return The created server.
      */
     public static EmbeddedTestServer createAndStartDefaultServer(Context context)
+            throws InterruptedException {
+        // TODO(pkotwicz): Update all callers to use createAndStartServer() directly.
+        return createAndStartServer(context);
+    }
+
+    /** Create and initialize a server with the default handlers.
+     *
+     *  This handles native object initialization, server configuration, and server initialization.
+     *  On returning, the server is ready for use.
+     *
+     *  @param context The context in which the server will run.
+     *  @return The created server.
+     */
+    public static EmbeddedTestServer createAndStartServer(Context context)
             throws InterruptedException {
         EmbeddedTestServer server = new EmbeddedTestServer();
         server.initializeNative(context);

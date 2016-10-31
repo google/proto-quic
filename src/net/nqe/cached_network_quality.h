@@ -20,6 +20,8 @@ namespace internal {
 class NET_EXPORT_PRIVATE CachedNetworkQuality {
  public:
   CachedNetworkQuality();
+  explicit CachedNetworkQuality(
+      EffectiveConnectionType effective_connection_type);
 
   // |last_update_time| is the time when the |network_quality| was computed.
   CachedNetworkQuality(base::TimeTicks last_update_time,

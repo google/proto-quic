@@ -1277,7 +1277,176 @@ TEST_F(SpdySessionTest, UnstallRacesWithStreamCreation) {
   EXPECT_THAT(callback2.WaitForResult(), IsOk());
 }
 
+TEST_F(SpdySessionTest, CancelPushAfterExpired) {
+  base::HistogramTester histogram_tester;
+  session_deps_.host_resolver->set_synchronous_mode(true);
+  session_deps_.time_func = TheNearFuture;
+
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+
+  SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
+  SpdySerializedFrame push_a_body(spdy_util_.ConstructSpdyDataFrame(2, false));
+  // In ascii "0" < "a". We use it to verify that we properly handle std::map
+  // iterators inside. See http://crbug.com/443490
+  SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
+  MockRead reads[] = {
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
+      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
+      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+  };
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+
+  // Process the principal request, and the first push stream request & body.
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, MEDIUM, NetLogWithSource());
+  test::StreamDelegateDoNothing delegate(spdy_stream);
+  spdy_stream->SetDelegate(&delegate);
+
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  spdy_stream->SendRequestHeaders(std::move(headers), NO_MORE_DATA_TO_SEND);
+
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that there is one unclaimed push stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/a.dat")));
+
+  // Unclaimed push body consumed bytes from the session window.
+  EXPECT_EQ(kDefaultInitialWindowSize - kUploadDataSize,
+            session_->session_recv_window_size_);
+  EXPECT_EQ(0, session_->session_unacked_recv_window_bytes_);
+
+  // Shift time to expire the push stream. Read the second HEADERS,
+  // and verify a RST_STREAM was written.
+  g_time_delta = base::TimeDelta::FromSeconds(301);
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that the second pushed stream evicted the first pushed stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/0.dat")));
+
+  // Cancel the first push after its expiration.
+  session_->CancelPush(GURL("https://www.example.org/a.dat"));
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_TRUE(session_);
+
+  // Verify that the session window reclaimed the evicted stream body.
+  EXPECT_EQ(kDefaultInitialWindowSize, session_->session_recv_window_size_);
+  EXPECT_EQ(kUploadDataSize, session_->session_unacked_recv_window_bytes_);
+  EXPECT_TRUE(session_);
+
+  // Read and process EOF.
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+  EXPECT_FALSE(session_);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
+                                     6, 1);
+}
+
+TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
+  base::HistogramTester histogram_tester;
+  session_deps_.host_resolver->set_synchronous_mode(true);
+  session_deps_.time_func = TheNearFuture;
+
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+
+  SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
+  SpdySerializedFrame push_a_body(spdy_util_.ConstructSpdyDataFrame(2, false));
+  // In ascii "0" < "a". We use it to verify that we properly handle std::map
+  // iterators inside. See http://crbug.com/443490
+  SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
+  MockRead reads[] = {
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
+      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
+      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+  };
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+
+  // Process the principal request, and the first push stream request & body.
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, MEDIUM, NetLogWithSource());
+  test::StreamDelegateDoNothing delegate(spdy_stream);
+  spdy_stream->SetDelegate(&delegate);
+
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  spdy_stream->SendRequestHeaders(std::move(headers), NO_MORE_DATA_TO_SEND);
+
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that there is one unclaimed push stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/a.dat")));
+
+  // Unclaimed push body consumed bytes from the session window.
+  EXPECT_EQ(kDefaultInitialWindowSize - kUploadDataSize,
+            session_->session_recv_window_size_);
+  EXPECT_EQ(0, session_->session_unacked_recv_window_bytes_);
+
+  // Shift time to expire the push stream. Read the second HEADERS,
+  // and verify a RST_STREAM was written.
+  g_time_delta = base::TimeDelta::FromSeconds(301);
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that the second pushed stream evicted the first pushed stream.
+  GURL pushed_url("https://www.example.org/0.dat");
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(pushed_url));
+
+  // Verify that the session window reclaimed the evicted stream body.
+  EXPECT_EQ(kDefaultInitialWindowSize, session_->session_recv_window_size_);
+  EXPECT_EQ(kUploadDataSize, session_->session_unacked_recv_window_bytes_);
+
+  EXPECT_TRUE(session_);
+  // Cancel the push before it's claimed.
+  session_->CancelPush(pushed_url);
+  EXPECT_EQ(0u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(0u, session_->count_unclaimed_pushed_streams_for_url(pushed_url));
+
+  // Read and process EOF.
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+  EXPECT_FALSE(session_);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
+                                     6, 1);
+}
+
 TEST_F(SpdySessionTest, DeleteExpiredPushStreams) {
+  base::HistogramTester histogram_tester;
   session_deps_.host_resolver->set_synchronous_mode(true);
   session_deps_.time_func = TheNearFuture;
 
@@ -1350,6 +1519,106 @@ TEST_F(SpdySessionTest, DeleteExpiredPushStreams) {
   data.Resume();
   base::RunLoop().RunUntilIdle();
   EXPECT_FALSE(session_);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
+                                     6, 1);
+}
+
+TEST_F(SpdySessionTest, MetricsCollectionOnPushStreams) {
+  base::HistogramTester histogram_tester;
+  session_deps_.host_resolver->set_synchronous_mode(true);
+  session_deps_.time_func = TheNearFuture;
+
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+
+  SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
+  SpdySerializedFrame push_a_body(spdy_util_.ConstructSpdyDataFrame(2, false));
+  // In ascii "0" < "a". We use it to verify that we properly handle std::map
+  // iterators inside. See http://crbug.com/443490
+  SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
+  SpdySerializedFrame push_c(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 6, 1, "https://www.example.org/1.dat"));
+  SpdySerializedFrame push_c_body(spdy_util_.ConstructSpdyDataFrame(6, false));
+
+  MockRead reads[] = {
+      CreateMockRead(push_a, 1),
+      CreateMockRead(push_a_body, 2),
+      MockRead(ASYNC, ERR_IO_PENDING, 3),
+      CreateMockRead(push_b, 4),
+      MockRead(ASYNC, ERR_IO_PENDING, 6),
+      CreateMockRead(push_c, 7),
+      CreateMockRead(push_c_body, 8),
+      MockRead(ASYNC, ERR_IO_PENDING, 9),
+      MockRead(ASYNC, 0, 10)  // EOF
+  };
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+
+  // Process the principal request, and the first push stream request & body.
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, MEDIUM, NetLogWithSource());
+  test::StreamDelegateDoNothing delegate(spdy_stream);
+  spdy_stream->SetDelegate(&delegate);
+
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  spdy_stream->SendRequestHeaders(std::move(headers), NO_MORE_DATA_TO_SEND);
+
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that there is one unclaimed push stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/a.dat")));
+
+  // Unclaimed push body consumed bytes from the session window.
+  EXPECT_EQ(kDefaultInitialWindowSize - kUploadDataSize,
+            session_->session_recv_window_size_);
+  EXPECT_EQ(0, session_->session_unacked_recv_window_bytes_);
+
+  // Shift time to expire the push stream. Read the second HEADERS,
+  // and verify a RST_STREAM was written.
+  g_time_delta = base::TimeDelta::FromSeconds(300);
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that the second pushed stream evicted the first pushed stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/0.dat")));
+
+  // Verify that the session window reclaimed the evicted stream body.
+  EXPECT_EQ(kDefaultInitialWindowSize, session_->session_recv_window_size_);
+  EXPECT_EQ(kUploadDataSize, session_->session_unacked_recv_window_bytes_);
+
+  // Read the third PUSH, this will not be expired when the test tear down.
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_EQ(2u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/1.dat")));
+
+  // Read and process EOF.
+  EXPECT_TRUE(session_);
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+  EXPECT_FALSE(session_);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 12, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
+                                     6, 1);
 }
 
 TEST_F(SpdySessionTest, FailedPing) {
@@ -1750,8 +2019,8 @@ TEST_F(SpdySessionTest, SynCompressionHistograms) {
 
   base::RunLoop().RunUntilIdle();
   // Regression test of compression performance under the request fixture.
-      histogram_tester.ExpectBucketCount(
-          "Net.SpdySynStreamCompressionPercentage", 81, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySynStreamCompressionPercentage",
+                                     81, 1);
 
   // Read and process EOF.
   EXPECT_TRUE(session_);

@@ -43,6 +43,7 @@
       "mojo_system_unittests",
       "nacl_loader_unittests",
       "net_unittests",
+      "pdf_unittests",
       "ppapi_unittests",
       "printing_unittests",
       "remoting_unittests",

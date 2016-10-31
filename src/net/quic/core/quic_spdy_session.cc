@@ -186,4 +186,8 @@ void QuicSpdySession::OnStreamFrameData(QuicStreamId stream_id,
   OnStreamFrame(frame);
 }
 
+bool QuicSpdySession::ShouldReleaseHeadersStreamSequencerBuffer() {
+  return false;
+}
+
 }  // namespace net

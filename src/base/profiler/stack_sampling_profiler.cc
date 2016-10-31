@@ -40,12 +40,13 @@ class AsyncRunner {
  private:
   AsyncRunner();
 
-  // Runs the callback and deletes the AsyncRunner instance.
+  // Runs the callback and deletes the AsyncRunner instance. |profiles| is not
+  // const& because it must be passed with std::move.
   static void RunCallbackAndDeleteInstance(
       std::unique_ptr<AsyncRunner> object_to_be_deleted,
       const StackSamplingProfiler::CompletedCallback& callback,
       scoped_refptr<SingleThreadTaskRunner> task_runner,
-      const StackSamplingProfiler::CallStackProfiles& profiles);
+      StackSamplingProfiler::CallStackProfiles profiles);
 
   std::unique_ptr<StackSamplingProfiler> profiler_;
 
@@ -75,8 +76,8 @@ void AsyncRunner::RunCallbackAndDeleteInstance(
     std::unique_ptr<AsyncRunner> object_to_be_deleted,
     const StackSamplingProfiler::CompletedCallback& callback,
     scoped_refptr<SingleThreadTaskRunner> task_runner,
-    const StackSamplingProfiler::CallStackProfiles& profiles) {
-  callback.Run(profiles);
+    StackSamplingProfiler::CallStackProfiles profiles) {
+  callback.Run(std::move(profiles));
   // Delete the instance on the original calling thread.
   task_runner->DeleteSoon(FROM_HERE, object_to_be_deleted.release());
 }
@@ -110,9 +111,21 @@ StackSamplingProfiler::Frame::Frame()
 StackSamplingProfiler::CallStackProfile::CallStackProfile() {}
 
 StackSamplingProfiler::CallStackProfile::CallStackProfile(
-    const CallStackProfile& other) = default;
+    CallStackProfile&& other) = default;
 
 StackSamplingProfiler::CallStackProfile::~CallStackProfile() {}
+
+StackSamplingProfiler::CallStackProfile&
+StackSamplingProfiler::CallStackProfile::operator=(CallStackProfile&& other) =
+    default;
+
+StackSamplingProfiler::CallStackProfile
+StackSamplingProfiler::CallStackProfile::CopyForTesting() const {
+  return CallStackProfile(*this);
+}
+
+StackSamplingProfiler::CallStackProfile::CallStackProfile(
+    const CallStackProfile& other) = default;
 
 // StackSamplingProfiler::SamplingThread --------------------------------------
 
@@ -139,7 +152,7 @@ void StackSamplingProfiler::SamplingThread::ThreadMain() {
   CallStackProfiles profiles;
   CollectProfiles(&profiles);
   concurrent_profiling_lock.Get().Release();
-  completed_callback_.Run(profiles);
+  completed_callback_.Run(std::move(profiles));
 }
 
 // Depending on how long the sampling takes and the length of the sampling
@@ -203,7 +216,7 @@ void StackSamplingProfiler::SamplingThread::CollectProfiles(
     bool was_stopped = false;
     CollectProfile(&profile, &previous_elapsed_profile_time, &was_stopped);
     if (!profile.samples.empty())
-      profiles->push_back(profile);
+      profiles->push_back(std::move(profile));
 
     if (was_stopped)
       return;

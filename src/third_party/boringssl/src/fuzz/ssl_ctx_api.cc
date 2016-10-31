@@ -325,9 +325,19 @@ static const std::function<void(SSL_CTX *, CBS *)> kAPIs[] = {
         return;
       }
 
-      SSL_CTX_set_signed_cert_timestamp_list(
+      SSL_CTX_set_ocsp_response(
           ctx, reinterpret_cast<const uint8_t *>(ocsp_data.data()),
           ocsp_data.size());
+    },
+    [](SSL_CTX *ctx, CBS *cbs) {
+      std::string signing_algos;
+      if (!GetString(&signing_algos, cbs)) {
+        return;
+      }
+
+      SSL_CTX_set_signing_algorithm_prefs(
+          ctx, reinterpret_cast<const uint16_t *>(signing_algos.data()),
+          signing_algos.size() / sizeof(uint16_t));
     },
     [](SSL_CTX *ctx, CBS *cbs) {
       std::string ciphers;
@@ -389,7 +399,7 @@ static const std::function<void(SSL_CTX *, CBS *)> kAPIs[] = {
         return;
       }
       SSL_CTX_set1_curves(ctx, reinterpret_cast<const int *>(curves.data()),
-                          curves.size());
+                          curves.size() / sizeof(int));
     },
     [](SSL_CTX *ctx, CBS *cbs) {
       std::string curves;

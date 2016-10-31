@@ -32,6 +32,7 @@ class Origin;
 namespace net {
 
 class NetLogWithSource;
+class URLRequest;
 class URLRequestContext;
 struct WebSocketFrame;
 class WebSocketHandshakeStreamBase;
@@ -71,6 +72,9 @@ class NET_EXPORT_PRIVATE WebSocketStream {
   class NET_EXPORT_PRIVATE ConnectDelegate {
    public:
     virtual ~ConnectDelegate();
+    // Called when the URLRequest is created.
+    virtual void OnCreateRequest(URLRequest* url_request) = 0;
+
     // Called on successful connection. The parameter is an object derived from
     // WebSocketStream.
     virtual void OnSuccess(std::unique_ptr<WebSocketStream> stream) = 0;

@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_multipath_received_packet_manager.h"
 
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 
 #include "net/quic/core/quic_bug_tracker.h"
 
@@ -12,11 +12,11 @@ namespace net {
 
 QuicMultipathReceivedPacketManager::QuicMultipathReceivedPacketManager(
     QuicConnectionStats* stats) {
-  path_managers_[kDefaultPathId] = new QuicReceivedPacketManager(stats);
+  path_managers_[kDefaultPathId] =
+      base::MakeUnique<QuicReceivedPacketManager>(stats);
 }
 
 QuicMultipathReceivedPacketManager::~QuicMultipathReceivedPacketManager() {
-  base::STLDeleteValues(&path_managers_);
 }
 
 void QuicMultipathReceivedPacketManager::OnPathCreated(
@@ -28,18 +28,17 @@ void QuicMultipathReceivedPacketManager::OnPathCreated(
     return;
   }
 
-  path_managers_[path_id] = new QuicReceivedPacketManager(stats);
+  path_managers_[path_id] = base::MakeUnique<QuicReceivedPacketManager>(stats);
 }
 
 void QuicMultipathReceivedPacketManager::OnPathClosed(QuicPathId path_id) {
-  QuicReceivedPacketManager* manager = path_managers_[path_id];
+  QuicReceivedPacketManager* manager = path_managers_[path_id].get();
   if (manager == nullptr) {
     QUIC_BUG << "Received packet manager of path does not exist: "
              << static_cast<uint32_t>(path_id);
     return;
   }
 
-  delete manager;
   path_managers_.erase(path_id);
 }
 
@@ -47,7 +46,7 @@ void QuicMultipathReceivedPacketManager::RecordPacketReceived(
     QuicPathId path_id,
     const QuicPacketHeader& header,
     QuicTime receipt_time) {
-  QuicReceivedPacketManager* manager = path_managers_[path_id];
+  QuicReceivedPacketManager* manager = path_managers_[path_id].get();
   if (manager == nullptr) {
     QUIC_BUG << "Received a packet on a non-existent path.";
     return;
@@ -59,7 +58,7 @@ void QuicMultipathReceivedPacketManager::RecordPacketReceived(
 bool QuicMultipathReceivedPacketManager::IsMissing(
     QuicPathId path_id,
     QuicPacketNumber packet_number) {
-  QuicReceivedPacketManager* manager = path_managers_[path_id];
+  QuicReceivedPacketManager* manager = path_managers_[path_id].get();
   if (manager == nullptr) {
     QUIC_BUG << "Check whether a packet is missing on a non-existent path.";
     return true;
@@ -71,7 +70,7 @@ bool QuicMultipathReceivedPacketManager::IsMissing(
 bool QuicMultipathReceivedPacketManager::IsAwaitingPacket(
     QuicPathId path_id,
     QuicPacketNumber packet_number) {
-  QuicReceivedPacketManager* manager = path_managers_[path_id];
+  QuicReceivedPacketManager* manager = path_managers_[path_id].get();
   if (manager == nullptr) {
     QUIC_BUG << "Check whether a packet is awaited on a non-existent path.";
     return false;
@@ -83,7 +82,8 @@ bool QuicMultipathReceivedPacketManager::IsAwaitingPacket(
 void QuicMultipathReceivedPacketManager::UpdatePacketInformationSentByPeer(
     const std::vector<QuicStopWaitingFrame>& stop_waitings) {
   for (QuicStopWaitingFrame stop_waiting : stop_waitings) {
-    QuicReceivedPacketManager* manager = path_managers_[stop_waiting.path_id];
+    QuicReceivedPacketManager* manager =
+        path_managers_[stop_waiting.path_id].get();
     if (manager != nullptr) {
       manager->UpdatePacketInformationSentByPeer(stop_waiting);
     }
@@ -92,8 +92,7 @@ void QuicMultipathReceivedPacketManager::UpdatePacketInformationSentByPeer(
 
 bool QuicMultipathReceivedPacketManager::HasNewMissingPackets(
     QuicPathId path_id) const {
-  MultipathReceivedPacketManagerMap::const_iterator it =
-      path_managers_.find(path_id);
+  auto it = path_managers_.find(path_id);
   if (it == path_managers_.end()) {
     QUIC_BUG << "Check whether has new missing packets on a non-existent path.";
     return false;
@@ -105,7 +104,7 @@ bool QuicMultipathReceivedPacketManager::HasNewMissingPackets(
 QuicPacketNumber
 QuicMultipathReceivedPacketManager::GetPeerLeastPacketAwaitingAck(
     QuicPathId path_id) {
-  QuicReceivedPacketManager* manager = path_managers_[path_id];
+  QuicReceivedPacketManager* manager = path_managers_[path_id].get();
   if (manager == nullptr) {
     QUIC_BUG
         << "Try to get peer_least_packet_awaiting_ack of a non-existent path.";

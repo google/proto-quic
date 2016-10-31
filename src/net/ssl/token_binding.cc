@@ -4,18 +4,17 @@
 
 #include "net/ssl/token_binding.h"
 
-#include <openssl/bn.h>
-#include <openssl/bytestring.h>
-#include <openssl/ec.h>
-#include <openssl/ec_key.h>
-#include <openssl/ecdsa.h>
-#include <openssl/evp.h>
-#include <openssl/mem.h>
-
 #include "base/stl_util.h"
 #include "crypto/ec_private_key.h"
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_config.h"
+#include "third_party/boringssl/src/include/openssl/bn.h"
+#include "third_party/boringssl/src/include/openssl/bytestring.h"
+#include "third_party/boringssl/src/include/openssl/ec.h"
+#include "third_party/boringssl/src/include/openssl/ec_key.h"
+#include "third_party/boringssl/src/include/openssl/ecdsa.h"
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/mem.h"
 
 namespace net {
 

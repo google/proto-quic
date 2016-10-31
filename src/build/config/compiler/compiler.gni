@@ -8,6 +8,7 @@ import("//build/config/chromecast_build.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/toolchain.gni")
+import("//build_overrides/build.gni")
 
 declare_args() {
   # How many symbols to include in the build. This affects the performance of
@@ -47,11 +48,6 @@ declare_args() {
   #
   # TODO(sebmarchand): Add support for the PGU (update) phase.
   chrome_pgo_phase = 0
-
-  # Android 32-bit non-component, non-clang builds cannot have symbol_level=2
-  # due to 4GiB file size limit, see https://crbug.com/648948.
-  # Set this flag to true to skip the assertion.
-  ignore_elf32_limitations = false
 }
 
 declare_args() {

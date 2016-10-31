@@ -342,10 +342,9 @@ bool IsHostnameNonUnique(const std::string& hostname) {
   // is updated. However, because gTLDs are expected to provide significant
   // advance notice to deprecate older versions of this code, this an
   // acceptable tradeoff.
-  return 0 == registry_controlled_domains::GetRegistryLength(
-                  canonical_name,
-                  registry_controlled_domains::EXCLUDE_UNKNOWN_REGISTRIES,
-                  registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);
+  return !registry_controlled_domains::HostHasRegistryControlledDomain(
+      canonical_name, registry_controlled_domains::EXCLUDE_UNKNOWN_REGISTRIES,
+      registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);
 }
 
 bool IsLocalhost(base::StringPiece host) {

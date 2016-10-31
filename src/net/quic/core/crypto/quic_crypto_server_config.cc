@@ -11,7 +11,6 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/stl_util.h"
 #include "crypto/hkdf.h"
 #include "crypto/secure_hash.h"
 #include "net/base/ip_address.h"
@@ -257,10 +256,10 @@ QuicCryptoServerConfig::~QuicCryptoServerConfig() {
 }
 
 // static
-QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
-    QuicRandom* rand,
-    const QuicClock* clock,
-    const ConfigOptions& options) {
+std::unique_ptr<QuicServerConfigProtobuf>
+QuicCryptoServerConfig::GenerateConfig(QuicRandom* rand,
+                                       const QuicClock* clock,
+                                       const ConfigOptions& options) {
   CryptoHandshakeMessage msg;
 
   const string curve25519_private_key =
@@ -351,7 +350,7 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
   }
   // Don't put new tags below this point. The SCID generation should hash over
   // everything but itself and so extra tags should be added prior to the
-  // preceeding if block.
+  // preceding if block.
 
   std::unique_ptr<QuicData> serialized(
       CryptoFramer::ConstructHandshakeMessage(msg));
@@ -369,11 +368,11 @@ QuicServerConfigProtobuf* QuicCryptoServerConfig::GenerateConfig(
     p256_key->set_private_key(p256_private_key);
   }
 
-  return config.release();
+  return config;
 }
 
 CryptoHandshakeMessage* QuicCryptoServerConfig::AddConfig(
-    QuicServerConfigProtobuf* protobuf,
+    std::unique_ptr<QuicServerConfigProtobuf> protobuf,
     const QuicWallTime now) {
   std::unique_ptr<CryptoHandshakeMessage> msg(
       CryptoFramer::ParseMessage(protobuf->config()));
@@ -411,20 +410,17 @@ CryptoHandshakeMessage* QuicCryptoServerConfig::AddDefaultConfig(
     QuicRandom* rand,
     const QuicClock* clock,
     const ConfigOptions& options) {
-  std::unique_ptr<QuicServerConfigProtobuf> config(
-      GenerateConfig(rand, clock, options));
-  return AddConfig(config.get(), clock->WallNow());
+  return AddConfig(GenerateConfig(rand, clock, options), clock->WallNow());
 }
 
 bool QuicCryptoServerConfig::SetConfigs(
-    const vector<QuicServerConfigProtobuf*>& protobufs,
+    const vector<std::unique_ptr<QuicServerConfigProtobuf>>& protobufs,
     const QuicWallTime now) {
   vector<scoped_refptr<Config>> parsed_configs;
   bool ok = true;
 
-  for (vector<QuicServerConfigProtobuf*>::const_iterator i = protobufs.begin();
-       i != protobufs.end(); ++i) {
-    scoped_refptr<Config> config(ParseConfigProtobuf(*i));
+  for (auto& protobuf : protobufs) {
+    scoped_refptr<Config> config(ParseConfigProtobuf(protobuf));
     if (!config.get()) {
       ok = false;
       break;
@@ -768,7 +764,7 @@ void QuicCryptoServerConfig::ProcessClientHello(
                                  primary_config->serialized, version, chlo_hash,
                                  &crypto_proof->chain, &crypto_proof->signature,
                                  &crypto_proof->cert_sct)) {
-      helper.Fail(QUIC_HANDSHAKE_FAILED, "");
+      helper.Fail(QUIC_HANDSHAKE_FAILED, "Missing or invalid crypto proof.");
       return;
     }
   }
@@ -893,7 +889,7 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
   }
 
   const KeyExchange* key_exchange =
-      requested_config->key_exchanges[key_exchange_index];
+      requested_config->key_exchanges[key_exchange_index].get();
   if (!key_exchange->CalculateSharedKey(public_value,
                                         &params->initial_premaster_secret)) {
     helper.Fail(QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER, "Invalid public value");
@@ -1760,7 +1756,7 @@ string QuicCryptoServerConfig::CompressChain(
 
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfig::ParseConfigProtobuf(
-    QuicServerConfigProtobuf* protobuf) {
+    const std::unique_ptr<QuicServerConfigProtobuf>& protobuf) {
   std::unique_ptr<CryptoHandshakeMessage> msg(
       CryptoFramer::ParseMessage(protobuf->config()));
 
@@ -1911,14 +1907,14 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
         return nullptr;
     }
 
-    for (const KeyExchange* key_exchange : config->key_exchanges) {
+    for (const auto& key_exchange : config->key_exchanges) {
       if (key_exchange->tag() == tag) {
         LOG(WARNING) << "Duplicate key exchange in config: " << tag;
         return nullptr;
       }
     }
 
-    config->key_exchanges.push_back(ka.release());
+    config->key_exchanges.push_back(std::move(ka));
   }
 
   uint64_t expiry_seconds;
@@ -2250,7 +2246,6 @@ QuicCryptoServerConfig::Config::Config()
       source_address_token_boxer(nullptr) {}
 
 QuicCryptoServerConfig::Config::~Config() {
-  base::STLDeleteElements(&key_exchanges);
 }
 
 QuicCryptoProof::QuicCryptoProof() {}

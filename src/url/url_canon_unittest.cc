@@ -887,6 +887,50 @@ TEST(URLCanonTest, IPEmpty) {
   EXPECT_FALSE(host_info.IsIPAddress());
 }
 
+// Verifies that CanonicalizeHostSubstring produces the expected output and
+// does not "fix" IP addresses. Because this code is a subset of
+// CanonicalizeHost, the shared functionality is not tested.
+TEST(URLCanonTest, CanonicalizeHostSubstring) {
+  // Basic sanity check.
+  {
+    std::string out_str;
+    StdStringCanonOutput output(&out_str);
+    EXPECT_TRUE(CanonicalizeHostSubstring("M\xc3\x9cNCHEN.com",
+                                          Component(0, 12), &output));
+    output.Complete();
+    EXPECT_EQ("xn--mnchen-3ya.com", out_str);
+  }
+
+  // Failure case.
+  {
+    std::string out_str;
+    StdStringCanonOutput output(&out_str);
+    EXPECT_FALSE(CanonicalizeHostSubstring(
+        WStringToUTF16(L"\xfdd0zyx.com").c_str(), Component(0, 8), &output));
+    output.Complete();
+    EXPECT_EQ("%EF%BF%BDzyx.com", out_str);
+  }
+
+  // Should return true for empty input strings.
+  {
+    std::string out_str;
+    StdStringCanonOutput output(&out_str);
+    EXPECT_TRUE(CanonicalizeHostSubstring("", Component(0, 0), &output));
+    output.Complete();
+    EXPECT_EQ(std::string(), out_str);
+  }
+
+  // Numbers that look like IP addresses should not be changed.
+  {
+    std::string out_str;
+    StdStringCanonOutput output(&out_str);
+    EXPECT_TRUE(
+        CanonicalizeHostSubstring("01.02.03.04", Component(0, 11), &output));
+    output.Complete();
+    EXPECT_EQ("01.02.03.04", out_str);
+  }
+}
+
 TEST(URLCanonTest, UserInfo) {
   // Note that the canonicalizer should escape and treat empty components as
   // not being there.
@@ -2184,6 +2228,8 @@ TEST(URLCanonTest, DefaultPortForScheme) {
       {"ws", 80},
       {"wss", 443},
       {"gopher", 70},
+      {"http-so", 80},
+      {"https-so", 443},
       {"fake-scheme", PORT_UNSPECIFIED},
       {"HTTP", PORT_UNSPECIFIED},
       {"HTTPS", PORT_UNSPECIFIED},
@@ -2191,6 +2237,8 @@ TEST(URLCanonTest, DefaultPortForScheme) {
       {"WS", PORT_UNSPECIFIED},
       {"WSS", PORT_UNSPECIFIED},
       {"GOPHER", PORT_UNSPECIFIED},
+      {"HTTP-SO", PORT_UNSPECIFIED},
+      {"HTTPS-SO", PORT_UNSPECIFIED},
   };
 
   for (auto& test_case : cases) {

@@ -106,9 +106,6 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
  private:
   friend class MessagePumpIOSForIOTest;
 
-  void WillProcessIOEvent();
-  void DidProcessIOEvent();
-
   static void HandleFdIOEvent(CFFileDescriptorRef fdref,
                               CFOptionFlags callback_types,
                               void* context);

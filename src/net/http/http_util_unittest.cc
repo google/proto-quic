@@ -964,10 +964,10 @@ TEST(HttpUtilTest, ParseRanges) {
 }
 
 TEST(HttpUtilTest, ParseRetryAfterHeader) {
-  base::Time::Exploded now_exploded = { 2014, 11, -1, 5, 22, 39, 30, 0 };
+  base::Time::Exploded now_exploded = {2014, 11, 4, 5, 22, 39, 30, 0};
   base::Time now = base::Time::FromUTCExploded(now_exploded);
 
-  base::Time::Exploded later_exploded = { 2015, 1, -1, 1, 12, 34, 56, 0 };
+  base::Time::Exploded later_exploded = {2015, 1, 5, 1, 12, 34, 56, 0};
   base::Time later = base::Time::FromUTCExploded(later_exploded);
 
   const struct {

@@ -472,6 +472,18 @@ template("create_tests") {
     deps = invoker.deps
   }
 
+  executable("boringssl_pool_test") {
+    sources = [
+      "src/crypto/pool/pool_test.cc",
+    ]
+    sources += _test_support_sources
+    if (defined(invoker.configs_exclude)) {
+      configs -= invoker.configs_exclude
+    }
+    configs += invoker.configs
+    deps = invoker.deps
+  }
+
   executable("boringssl_refcount_test") {
     sources = [
       "src/crypto/refcount_test.c",
@@ -607,6 +619,7 @@ template("create_tests") {
       ":boringssl_pkcs7_test",
       ":boringssl_pkcs8_test",
       ":boringssl_poly1305_test",
+      ":boringssl_pool_test",
       ":boringssl_refcount_test",
       ":boringssl_rsa_test",
       ":boringssl_spake25519_test",

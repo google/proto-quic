@@ -200,7 +200,6 @@ static jint Java_SampleForTests_javaMethod(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "javaMethod",
-
 "("
 "I"
 "I"
@@ -224,7 +223,6 @@ static jboolean Java_SampleForTests_staticJavaMethod(JNIEnv* env) {
       base::android::MethodID::TYPE_STATIC>(
       env, SampleForTests_clazz(env),
       "staticJavaMethod",
-
 "("
 ")"
 "Z",
@@ -247,7 +245,6 @@ static void Java_SampleForTests_packagePrivateJavaMethod(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "packagePrivateJavaMethod",
-
 "("
 ")"
 "V",
@@ -256,7 +253,6 @@ static void Java_SampleForTests_packagePrivateJavaMethod(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_SampleForTests_methodThatThrowsException = 0;
@@ -269,7 +265,6 @@ static void Java_SampleForTests_methodThatThrowsException(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "methodThatThrowsException",
-
 "("
 ")"
 "V",
@@ -277,7 +272,6 @@ static void Java_SampleForTests_methodThatThrowsException(JNIEnv* env, const
 
      env->CallVoidMethod(obj.obj(),
           method_id);
-
 }
 
 static base::subtle::AtomicWord g_SampleForTests_javaMethodWithAnnotatedParam =
@@ -291,7 +285,6 @@ static void Java_SampleForTests_javaMethodWithAnnotatedParam(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "javaMethodWithAnnotatedParam",
-
 "("
 "I"
 ")"
@@ -301,7 +294,6 @@ static void Java_SampleForTests_javaMethodWithAnnotatedParam(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(foo));
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_InnerStructA_create = 0;
@@ -316,7 +308,6 @@ static base::android::ScopedJavaLocalRef<jobject>
       base::android::MethodID::TYPE_STATIC>(
       env, InnerStructA_clazz(env),
       "create",
-
 "("
 "J"
 "I"
@@ -343,7 +334,6 @@ static void Java_SampleForTests_addStructA(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "addStructA",
-
 "("
 "Lorg/chromium/example/jni_generator/SampleForTests$InnerStructA;"
 ")"
@@ -353,7 +343,6 @@ static void Java_SampleForTests_addStructA(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id, a.obj());
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_SampleForTests_iterateAndDoSomething = 0;
@@ -366,7 +355,6 @@ static void Java_SampleForTests_iterateAndDoSomething(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, SampleForTests_clazz(env),
       "iterateAndDoSomething",
-
 "("
 ")"
 "V",
@@ -375,7 +363,6 @@ static void Java_SampleForTests_iterateAndDoSomething(JNIEnv* env, const
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
-
 }
 
 static base::subtle::AtomicWord g_InnerStructB_getKey = 0;
@@ -388,7 +375,6 @@ static jlong Java_InnerStructB_getKey(JNIEnv* env, const
       base::android::MethodID::TYPE_INSTANCE>(
       env, InnerStructB_clazz(env),
       "getKey",
-
 "("
 ")"
 "J",
@@ -412,7 +398,6 @@ static base::android::ScopedJavaLocalRef<jstring>
       base::android::MethodID::TYPE_INSTANCE>(
       env, InnerStructB_clazz(env),
       "getValue",
-
 "("
 ")"
 "Ljava/lang/String;",

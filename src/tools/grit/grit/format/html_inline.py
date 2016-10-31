@@ -343,8 +343,7 @@ def DoInline(
 
   if not preprocess_only:
     if strip_whitespace:
-      flat_text = minifier.Minify(flat_text,
-                                  os.path.splitext(input_filename)[1])
+      flat_text = minifier.Minify(flat_text, input_filename)
 
     if not allow_external_script:
       # We need to inline css and js before we inline images so that image

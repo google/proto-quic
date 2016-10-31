@@ -20,9 +20,9 @@ using ::testing::ElementsAre;
 namespace net {
 namespace test {
 
-class StringPieceProxyPeer {
+class ValueProxyPeer {
  public:
-  static base::StringPiece key(SpdyHeaderBlock::StringPieceProxy* p) {
+  static base::StringPiece key(SpdyHeaderBlock::ValueProxy* p) {
     return p->key_;
   }
 };
@@ -38,7 +38,6 @@ TEST(SpdyHeaderBlockTest, EmptyBlock) {
   EXPECT_TRUE(block.empty());
   EXPECT_EQ(0u, block.size());
   EXPECT_EQ(block.end(), block.find("foo"));
-  EXPECT_EQ("", block.GetHeader("foo"));
   EXPECT_TRUE(block.end() == block.begin());
 
   // Should have no effect.
@@ -50,12 +49,12 @@ TEST(SpdyHeaderBlockTest, KeyMemoryReclaimedOnLookup) {
   base::StringPiece copied_key1;
   {
     auto proxy1 = block["some key name"];
-    copied_key1 = StringPieceProxyPeer::key(&proxy1);
+    copied_key1 = ValueProxyPeer::key(&proxy1);
   }
   base::StringPiece copied_key2;
   {
     auto proxy2 = block["some other key name"];
-    copied_key2 = StringPieceProxyPeer::key(&proxy2);
+    copied_key2 = ValueProxyPeer::key(&proxy2);
   }
   // Because proxy1 was never used to modify the block, the memory used for the
   // key could be reclaimed and used for the second call to operator[].
@@ -69,8 +68,8 @@ TEST(SpdyHeaderBlockTest, KeyMemoryReclaimedOnLookup) {
   // Nothing should blow up when proxy1 is destructed, and we should be able to
   // modify and access the SpdyHeaderBlock.
   block["key"] = "value";
-  EXPECT_EQ(base::StringPiece("value"), block["key"]);
-  EXPECT_EQ(base::StringPiece("some value"), block["some other key name"]);
+  EXPECT_EQ("value", block["key"]);
+  EXPECT_EQ("some value", block["some other key name"]);
   EXPECT_TRUE(block.find("some key name") == block.end());
 }
 
@@ -85,15 +84,13 @@ TEST(SpdyHeaderBlockTest, AddHeaders) {
 
   EXPECT_EQ(Pair("foo", string(300, 'x')), *block.find("foo"));
   EXPECT_EQ("baz", block["bar"]);
-  EXPECT_EQ("baz", block.GetHeader("bar"));
   string qux("qux");
   EXPECT_EQ("qux2", block[qux]);
-  EXPECT_EQ("qux2", block.GetHeader(qux));
+  ASSERT_NE(block.end(), block.find("key"));
   EXPECT_EQ(Pair("key", "value"), *block.find("key"));
 
   block.erase("key");
   EXPECT_EQ(block.end(), block.find("key"));
-  EXPECT_EQ("", block.GetHeader("key"));
 }
 
 // This test verifies that SpdyHeaderBlock can be copied using Clone().

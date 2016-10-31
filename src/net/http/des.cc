@@ -4,10 +4,9 @@
 
 #include "net/http/des.h"
 
-#include <openssl/des.h>
-
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
+#include "third_party/boringssl/src/include/openssl/des.h"
 
 // The iOS version of DESEncrypt is our own code.
 // DESSetKeyParity and DESMakeKey are based on

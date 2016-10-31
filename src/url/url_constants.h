@@ -30,6 +30,11 @@ URL_EXPORT extern const char kMailToScheme[];
 URL_EXPORT extern const char kWsScheme[];
 URL_EXPORT extern const char kWssScheme[];
 
+// Special HTTP and HTTPS schemes for serialization of suborigins. See
+// https://w3c.github.io/webappsec-suborigins/.
+URL_EXPORT extern const char kHttpSuboriginScheme[];
+URL_EXPORT extern const char kHttpsSuboriginScheme[];
+
 // Used to separate a standard scheme and the hostname: "://".
 URL_EXPORT extern const char kStandardSchemeSeparator[];
 

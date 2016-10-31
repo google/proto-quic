@@ -538,8 +538,8 @@ const char* SpdyFramer::ErrorCodeToString(int error_code) {
 
 const char* SpdyFramer::StatusCodeToString(int status_code) {
   switch (status_code) {
-    case RST_STREAM_INVALID:
-      return "INVALID";
+    case RST_STREAM_NO_ERROR:
+      return "NO_ERROR";
     case RST_STREAM_PROTOCOL_ERROR:
       return "PROTOCOL_ERROR";
     case RST_STREAM_INVALID_STREAM:
@@ -1876,41 +1876,6 @@ size_t SpdyFramer::ProcessSettingsFramePayload(const char* data,
   return processed_bytes;
 }
 
-void SpdyFramer::DeliverHpackBlockAsSpdy3Block(size_t compressed_len) {
-  DCHECK_EQ(HTTP2, protocol_version_);
-  DCHECK_EQ(remaining_padding_payload_length_, remaining_data_length_);
-
-  const SpdyHeaderBlock& block = GetHpackDecoder()->decoded_block();
-  if (block.empty()) {
-    // Special-case this to make tests happy.
-    ProcessControlFrameHeaderBlock(NULL, 0, false);
-    return;
-  }
-  size_t payload_len = GetSerializedLength(protocol_version_, &block);
-  SpdyFrameBuilder builder(payload_len, SPDY3);
-
-  SerializeHeaderBlockWithoutCompression(&builder, block);
-  SpdySerializedFrame frame = builder.take();
-
-  // Preserve padding length, and reset it after the re-entrant call.
-  size_t remaining_padding = remaining_padding_payload_length_;
-
-  remaining_padding_payload_length_ = 0;
-  remaining_data_length_ = frame.size();
-
-  if (payload_len != 0) {
-    int compression_pct = 100 - (100 * compressed_len) / payload_len;
-    DVLOG(1) << "Net.SpdyHpackDecompressionPercentage: " << compression_pct;
-    UMA_HISTOGRAM_PERCENTAGE("Net.SpdyHpackDecompressionPercentage",
-                             compression_pct);
-  }
-
-  ProcessControlFrameHeaderBlock(frame.data(), frame.size(), false);
-
-  remaining_padding_payload_length_ = remaining_padding;
-  remaining_data_length_ = remaining_padding;
-}
-
 bool SpdyFramer::ProcessSetting(const char* data) {
   int id_field;
   SpdySettingsIds id;
@@ -2142,7 +2107,7 @@ size_t SpdyFramer::ProcessRstStreamFramePayload(const char* data, size_t len) {
         DCHECK(successful_read);
       }
 
-      SpdyRstStreamStatus status = RST_STREAM_INVALID;
+      SpdyRstStreamStatus status = RST_STREAM_NO_ERROR;
       uint32_t status_raw = status;
       bool successful_read = reader.ReadUInt32(&status_raw);
       DCHECK(successful_read);

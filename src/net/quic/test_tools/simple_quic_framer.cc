@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 
@@ -22,10 +22,7 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
  public:
   SimpleFramerVisitor() : error_(QUIC_NO_ERROR) {}
 
-  ~SimpleFramerVisitor() override {
-    base::STLDeleteElements(&stream_frames_);
-    base::STLDeleteElements(&stream_data_);
-  }
+  ~SimpleFramerVisitor() override {}
 
   void OnError(QuicFramer* framer) override { error_ = framer->error(); }
 
@@ -59,9 +56,9 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
     string* string_data = new string();
     StringPiece(frame.data_buffer, frame.data_length)
         .AppendToString(string_data);
-    stream_data_.push_back(string_data);
+    stream_data_.push_back(base::WrapUnique(string_data));
     // TODO(ianswett): A pointer isn't necessary with emplace_back.
-    stream_frames_.push_back(new QuicStreamFrame(
+    stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(
         frame.stream_id, frame.fin, frame.offset, StringPiece(*string_data)));
     return true;
   }
@@ -129,7 +126,7 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   const vector<QuicRstStreamFrame>& rst_stream_frames() const {
     return rst_stream_frames_;
   }
-  const vector<QuicStreamFrame*>& stream_frames() const {
+  const vector<std::unique_ptr<QuicStreamFrame>>& stream_frames() const {
     return stream_frames_;
   }
   const vector<QuicStopWaitingFrame>& stop_waiting_frames() const {
@@ -150,14 +147,14 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   vector<QuicStopWaitingFrame> stop_waiting_frames_;
   vector<QuicPaddingFrame> padding_frames_;
   vector<QuicPingFrame> ping_frames_;
-  vector<QuicStreamFrame*> stream_frames_;
+  vector<std::unique_ptr<QuicStreamFrame>> stream_frames_;
   vector<QuicRstStreamFrame> rst_stream_frames_;
   vector<QuicGoAwayFrame> goaway_frames_;
   vector<QuicConnectionCloseFrame> connection_close_frames_;
   vector<QuicWindowUpdateFrame> window_update_frames_;
   vector<QuicBlockedFrame> blocked_frames_;
   vector<QuicPathCloseFrame> path_close_frames_;
-  vector<string*> stream_data_;
+  vector<std::unique_ptr<string>> stream_data_;
 
   DISALLOW_COPY_AND_ASSIGN(SimpleFramerVisitor);
 };
@@ -219,7 +216,8 @@ const vector<QuicPingFrame>& SimpleQuicFramer::ping_frames() const {
   return visitor_->ping_frames();
 }
 
-const vector<QuicStreamFrame*>& SimpleQuicFramer::stream_frames() const {
+const vector<std::unique_ptr<QuicStreamFrame>>&
+SimpleQuicFramer::stream_frames() const {
   return visitor_->stream_frames();
 }
 

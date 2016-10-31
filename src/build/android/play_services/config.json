@@ -1,4 +1,15 @@
 {
-  "version_number": 8487000,
+  "clients": [
+    "play-services-basement",
+    "play-services-tasks",
+    "play-services-base",
+    "play-services-auth-base",
+    "play-services-auth",
+    "play-services-cast",
+    "play-services-iid",
+    "play-services-gcm",
+    "play-services-nearby"
+  ],
+  "version_number": "9.8.0",
   "version_xml_path": "res/values/version.xml"
 }

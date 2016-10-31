@@ -607,8 +607,8 @@ toolchain("32") {
   ... more tools ...
 
   # Arguments to the build when re-invoking as a secondary toolchain.
-  toolchain_args() {
-    toolchain_cpu = "x86"
+  toolchain_args = {
+    current_cpu = "x86"
   }
 }
 
@@ -619,8 +619,8 @@ toolchain("64") {
   ... more tools ...
 
   # Arguments to the build when re-invoking as a secondary toolchain.
-  toolchain_args() {
-    toolchain_cpu = "x64"
+  toolchain_args = {
+    current_cpu = "x64"
   }
 }
 ```

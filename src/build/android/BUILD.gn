@@ -41,18 +41,17 @@ if (enable_java_templates) {
     output_jar = "$root_out_dir/lib.java/android.interface.jar"
   }
 
-  _rebased_android_sdk_root = rebase_path(android_sdk_root, root_build_dir)
-
-  # Record GN vars that are needed by generate_gradle.py.
-  # One statement per-line to make GN's formatter leave it alone.
+  # Write to a file some GN vars that are useful to scripts that use the output
+  # directory. Format is chosen as easliy importable by both python and bash.
   CR = "$0x0A"
-  _json = "{$CR"
-  _json += "  \"android_sdk_root\": \"$_rebased_android_sdk_root\",$CR"
-  _json += "  \"android_sdk_root\": \"$_rebased_android_sdk_root\",$CR"
-  _json += "  \"compile_sdk_version\": \"$android_sdk_version\",$CR"
-  _json += "  \"build_tools_version\": \"$android_sdk_build_tools_version\"$CR"
-  _json += "}$CR"
-  write_file("$root_build_dir/gradle/config.json", _json)
+  _data = ""
+  _data += "android_sdk_build_tools=" +
+           rebase_path(android_sdk_build_tools, root_build_dir) + CR
+  _data += "android_sdk_build_tools_version=$android_sdk_build_tools_version$CR"
+  _data +=
+      "android_sdk_root=" + rebase_path(android_sdk_root, root_build_dir) + CR
+  _data += "android_sdk_version=$android_sdk_version$CR"
+  write_file("$root_build_dir/build_vars.txt", _data)
 }
 
 # Copy to the lib.unstripped directory so that gdb can easily find it.
@@ -113,10 +112,10 @@ group("test_runner_py") {
            "devil_chromium.json",
            "pylib/gtest/filter/",
            "test_wrapper/logdog_wrapper.py",
-           "//third_party/android_tools/sdk/build-tools/23.0.1/aapt",
-           "//third_party/android_tools/sdk/build-tools/23.0.1/dexdump",
-           "//third_party/android_tools/sdk/build-tools/23.0.1/lib/libc++.so",
-           "//third_party/android_tools/sdk/build-tools/23.0.1/split-select",
+           "//third_party/android_tools/sdk/build-tools/24.0.2/aapt",
+           "//third_party/android_tools/sdk/build-tools/24.0.2/dexdump",
+           "//third_party/android_tools/sdk/build-tools/24.0.2/lib64/libc++.so",
+           "//third_party/android_tools/sdk/build-tools/24.0.2/split-select",
            "//third_party/android_tools/sdk/platform-tools/adb",
            "//third_party/catapult/third_party/gsutil/",
            "//third_party/catapult/devil/devil/devil_dependencies.json",

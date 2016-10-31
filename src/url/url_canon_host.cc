@@ -308,7 +308,25 @@ bool DoComplexHost(const base::char16* host, int host_len,
   return DoIDNHost(host, host_len, output);
 }
 
-template<typename CHAR, typename UCHAR>
+template <typename CHAR, typename UCHAR>
+bool DoHostSubstring(const CHAR* spec,
+                     const Component& host,
+                     CanonOutput* output) {
+  bool has_non_ascii, has_escaped;
+  ScanHostname<CHAR, UCHAR>(spec, host, &has_non_ascii, &has_escaped);
+
+  if (has_non_ascii || has_escaped) {
+    return DoComplexHost(&spec[host.begin], host.len, has_non_ascii,
+                         has_escaped, output);
+  }
+
+  const bool success =
+      DoSimpleHost(&spec[host.begin], host.len, output, &has_non_ascii);
+  DCHECK(!has_non_ascii);
+  return success;
+}
+
+template <typename CHAR, typename UCHAR>
 void DoHost(const CHAR* spec,
             const Component& host,
             CanonOutput* output,
@@ -320,26 +338,10 @@ void DoHost(const CHAR* spec,
     return;
   }
 
-  bool has_non_ascii, has_escaped;
-  ScanHostname<CHAR, UCHAR>(spec, host, &has_non_ascii, &has_escaped);
-
   // Keep track of output's initial length, so we can rewind later.
   const int output_begin = output->length();
 
-  bool success;
-  if (!has_non_ascii && !has_escaped) {
-    success = DoSimpleHost(&spec[host.begin], host.len,
-                           output, &has_non_ascii);
-    DCHECK(!has_non_ascii);
-  } else {
-    success = DoComplexHost(&spec[host.begin], host.len,
-                            has_non_ascii, has_escaped, output);
-  }
-
-  if (!success) {
-    // Canonicalization failed. Set BROKEN to notify the caller.
-    host_info->family = CanonHostInfo::BROKEN;
-  } else {
+  if (DoHostSubstring<CHAR, UCHAR>(spec, host, output)) {
     // After all the other canonicalization, check if we ended up with an IP
     // address. IP addresses are small, so writing into this temporary buffer
     // should not cause an allocation.
@@ -355,6 +357,9 @@ void DoHost(const CHAR* spec,
       output->set_length(output_begin);
       output->Append(canon_ip.data(), canon_ip.length());
     }
+  } else {
+    // Canonicalization failed. Set BROKEN to notify the caller.
+    host_info->family = CanonHostInfo::BROKEN;
   }
 
   host_info->out_host = MakeRange(output_begin, output->length());
@@ -394,6 +399,18 @@ void CanonicalizeHostVerbose(const base::char16* spec,
                              CanonOutput* output,
                              CanonHostInfo* host_info) {
   DoHost<base::char16, base::char16>(spec, host, output, host_info);
+}
+
+bool CanonicalizeHostSubstring(const char* spec,
+                               const Component& host,
+                               CanonOutput* output) {
+  return DoHostSubstring<char, unsigned char>(spec, host, output);
+}
+
+bool CanonicalizeHostSubstring(const base::char16* spec,
+                               const Component& host,
+                               CanonOutput* output) {
+  return DoHostSubstring<base::char16, base::char16>(spec, host, output);
 }
 
 }  // namespace url

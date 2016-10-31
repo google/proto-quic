@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_protocol.h"
 
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
@@ -694,10 +694,10 @@ QuicEncryptedPacket::QuicEncryptedPacket(const char* buffer,
                                          bool owns_buffer)
     : QuicData(buffer, length, owns_buffer) {}
 
-QuicEncryptedPacket* QuicEncryptedPacket::Clone() const {
+std::unique_ptr<QuicEncryptedPacket> QuicEncryptedPacket::Clone() const {
   char* buffer = new char[this->length()];
   memcpy(buffer, this->data(), this->length());
-  return new QuicEncryptedPacket(buffer, this->length(), true);
+  return base::MakeUnique<QuicEncryptedPacket>(buffer, this->length(), true);
 }
 
 ostream& operator<<(ostream& os, const QuicEncryptedPacket& s) {
@@ -730,11 +730,11 @@ QuicReceivedPacket::QuicReceivedPacket(const char* buffer,
       receipt_time_(receipt_time),
       ttl_(ttl_valid ? ttl : -1) {}
 
-QuicReceivedPacket* QuicReceivedPacket::Clone() const {
+std::unique_ptr<QuicReceivedPacket> QuicReceivedPacket::Clone() const {
   char* buffer = new char[this->length()];
   memcpy(buffer, this->data(), this->length());
-  return new QuicReceivedPacket(buffer, this->length(), receipt_time(), true,
-                                ttl(), ttl() >= 0);
+  return base::MakeUnique<QuicReceivedPacket>(
+      buffer, this->length(), receipt_time(), true, ttl(), ttl() >= 0);
 }
 
 ostream& operator<<(ostream& os, const QuicReceivedPacket& s) {

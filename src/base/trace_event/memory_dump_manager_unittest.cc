@@ -16,6 +16,7 @@
 #include "base/run_loop.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/test/sequenced_worker_pool_owner.h"
 #include "base/test/test_io_thread.h"
 #include "base/test/trace_event_analyzer.h"
 #include "base/threading/platform_thread.h"
@@ -162,9 +163,7 @@ class MockMemoryDumpProvider : public MemoryDumpProvider {
 class TestSequencedTaskRunner : public SequencedTaskRunner {
  public:
   TestSequencedTaskRunner()
-      : worker_pool_(new SequencedWorkerPool(2 /* max_threads */,
-                                             "Test Task Runner",
-                                             base::TaskPriority::USER_VISIBLE)),
+      : worker_pool_(2 /* max_threads */, "Test Task Runner"),
         enabled_(true),
         num_of_post_tasks_(0) {}
 
@@ -182,19 +181,21 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
                        const Closure& task,
                        TimeDelta delay) override {
     num_of_post_tasks_++;
-    if (enabled_)
-      return worker_pool_->PostSequencedWorkerTask(token_, from_here, task);
+    if (enabled_) {
+      return worker_pool_.pool()->PostSequencedWorkerTask(token_, from_here,
+                                                          task);
+    }
     return false;
   }
 
   bool RunsTasksOnCurrentThread() const override {
-    return worker_pool_->RunsTasksOnCurrentThread();
+    return worker_pool_.pool()->RunsTasksOnCurrentThread();
   }
 
  private:
   ~TestSequencedTaskRunner() override {}
 
-  scoped_refptr<SequencedWorkerPool> worker_pool_;
+  SequencedWorkerPoolOwner worker_pool_;
   const SequencedWorkerPool::SequenceToken token_;
   bool enabled_;
   unsigned num_of_post_tasks_;

@@ -8,7 +8,9 @@ from telemetry import story
 # The PageSet searches for pages relative to the directory the page class is
 # defined in so we need to subclass here.
 class BlankPage(page_module.Page):
-  pass
+  def __init__(self, ps, prefix):
+    super(BlankPage, self).__init__('file://blank_page/blank_page.html', ps,
+                                    name=prefix+'_blank')
 
 
 class FiveBlankPagesPageSet(story.StorySet):
@@ -17,5 +19,5 @@ class FiveBlankPagesPageSet(story.StorySet):
 
   def __init__(self):
     super(FiveBlankPagesPageSet, self).__init__()
-    for _ in xrange(5):
-      self.AddStory(BlankPage('file://blank_page/blank_page.html', self))
+    for i in xrange(5):
+      self.AddStory(BlankPage(self, str(i)))

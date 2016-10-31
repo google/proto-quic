@@ -305,6 +305,10 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   void OnPushStreamTimedOut(QuicStreamId stream_id) override;
 
+  // Cancels the push if the push stream for |url| has not been claimed and is
+  // still active. Otherwise, no-op.
+  void CancelPush(const GURL& url);
+
   const LoadTimingInfo::ConnectTiming& GetConnectTiming();
 
  protected:

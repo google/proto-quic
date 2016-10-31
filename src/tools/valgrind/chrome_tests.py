@@ -174,8 +174,9 @@ class ChromeTests:
   def _AppendGtestFilter(self, tool, name, cmd):
     '''Append an appropriate --gtest_filter flag to the googletest binary
        invocation.
-       If the user passed his own filter mentioning only one test, just use it.
-       Othewise, filter out tests listed in the appropriate gtest_exclude files.
+       If the user passed their own filter mentioning only one test, just use
+       it. Otherwise, filter out tests listed in the appropriate gtest_exclude
+       files.
     '''
     if (self._gtest_filter and
         ":" not in self._gtest_filter and

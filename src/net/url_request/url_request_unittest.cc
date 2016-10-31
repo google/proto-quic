@@ -82,6 +82,7 @@
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/log/test_net_log_util.h"
+#include "net/net_features.h"
 #include "net/nqe/external_estimate_provider.h"
 #include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
@@ -114,13 +115,13 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 #include "net/base/filename_util.h"
 #include "net/url_request/file_protocol_handler.h"
 #include "net/url_request/url_request_file_dir_job.h"
 #endif
 
-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
 #include "net/ftp/ftp_network_layer.h"
 #include "net/url_request/ftp_protocol_handler.h"
 #endif
@@ -148,7 +149,7 @@ const base::string16 kUser(ASCIIToUTF16("user"));
 const base::FilePath::CharType kTestFilePath[] =
     FILE_PATH_LITERAL("net/data/url_request_unittest");
 
-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
 // Test file used in most FTP tests.
 const char kFtpTestFile[] = "BullRunSpeech.txt";
 #endif
@@ -221,7 +222,7 @@ void TestLoadTimingReusedWithProxy(
   EXPECT_LE(load_timing_info.send_end, load_timing_info.receive_headers_end);
 }
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 // Tests load timing information in the case of a cache hit, when no cache
 // validation request was sent over the wire.
 base::StringPiece TestNetResourceProvider(int key) {
@@ -261,7 +262,7 @@ void TestLoadTimingCacheHitNoNetwork(
   EXPECT_TRUE(load_timing_info.proxy_resolve_end.is_null());
 }
 
-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
 // Tests load timing in the case that there is no HTTP response.  This can be
 // used to test in the case of errors or non-HTTP requests.
 void TestLoadTimingNoHttpResponse(
@@ -755,7 +756,7 @@ class URLRequestTest : public PlatformTest {
   virtual void SetUpFactory() {
     job_factory_impl_->SetProtocolHandler(
         "data", base::WrapUnique(new DataProtocolHandler));
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
     job_factory_impl_->SetProtocolHandler(
         "file", base::MakeUnique<FileProtocolHandler>(
                     base::ThreadTaskRunnerHandle::Get()));
@@ -853,7 +854,7 @@ TEST_F(URLRequestTest, DataURLImageTest) {
   }
 }
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 TEST_F(URLRequestTest, FileTest) {
   base::FilePath app_path;
 
@@ -1164,7 +1165,7 @@ TEST_F(URLRequestTest, FileDirRedirectSingleSlash) {
 }
 #endif  // defined(OS_WIN)
 
-#endif  // !defined(DISABLE_FILE_SUPPORT)
+#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
 TEST_F(URLRequestTest, InvalidUrlTest) {
   TestDelegate d;
@@ -6500,7 +6501,7 @@ TEST_F(URLRequestTestHTTP, ProtocolHandlerAndFactoryRestrictDataRedirects) {
   EXPECT_FALSE(job_factory_->IsSafeRedirectTarget(data_url));
 }
 
-#if !defined(DISABLE_FILE_SUPPORT)
+#if !BUILDFLAG(DISABLE_FILE_SUPPORT)
 TEST_F(URLRequestTestHTTP, ProtocolHandlerAndFactoryRestrictFileRedirects) {
   // Test URLRequestJobFactory::ProtocolHandler::IsSafeRedirectTarget().
   GURL file_url("file:///foo.txt");
@@ -6524,7 +6525,7 @@ TEST_F(URLRequestTestHTTP, RestrictFileRedirects) {
 
   EXPECT_EQ(ERR_UNSAFE_REDIRECT, d.request_status());
 }
-#endif  // !defined(DISABLE_FILE_SUPPORT)
+#endif  // !BUILDFLAG(DISABLE_FILE_SUPPORT)
 
 TEST_F(URLRequestTestHTTP, RestrictDataRedirects) {
   ASSERT_TRUE(http_test_server()->Start());
@@ -7799,12 +7800,27 @@ TEST_F(URLRequestTestHTTP, NetworkAccessedClearOnLoadOnlyFromCache) {
   GURL test_url(http_test_server()->GetURL("/"));
   std::unique_ptr<URLRequest> req(
       default_context_.CreateRequest(test_url, DEFAULT_PRIORITY, &d));
-  req->SetLoadFlags(LOAD_ONLY_FROM_CACHE);
+  req->SetLoadFlags(LOAD_ONLY_FROM_CACHE | LOAD_SKIP_CACHE_VALIDATION);
 
   req->Start();
   base::RunLoop().Run();
 
   EXPECT_FALSE(req->response_info().network_accessed);
+}
+
+// Test that a single job with a throttled priority completes
+// correctly in the absence of contention.
+TEST_F(URLRequestTestHTTP, ThrottledPriority) {
+  ASSERT_TRUE(http_test_server()->Start());
+
+  TestDelegate d;
+  GURL test_url(http_test_server()->GetURL("/"));
+  std::unique_ptr<URLRequest> req(
+      default_context_.CreateRequest(test_url, THROTTLED, &d));
+  req->Start();
+  base::RunLoop().Run();
+
+  EXPECT_TRUE(req->status().is_success());
 }
 
 TEST_F(URLRequestTestHTTP, RawBodyBytesNoContentEncoding) {
@@ -7829,6 +7845,22 @@ TEST_F(URLRequestTestHTTP, RawBodyBytesGzipEncoding) {
   base::RunLoop().Run();
 
   EXPECT_EQ(30, req->GetRawBodyBytes());
+}
+
+// Check that if NetworkDelegate::OnBeforeStartTransaction returns an error,
+// the delegate isn't called back synchronously.
+TEST_F(URLRequestTestHTTP, TesBeforeStartTransactionFails) {
+  ASSERT_TRUE(http_test_server()->Start());
+  default_network_delegate_.set_before_start_transaction_fails();
+
+  TestDelegate d;
+  std::unique_ptr<URLRequest> req(default_context().CreateRequest(
+      http_test_server()->GetURL("/"), DEFAULT_PRIORITY, &d));
+  req->Start();
+  DCHECK(!d.response_completed());
+  base::RunLoop().Run();
+  DCHECK(d.response_completed());
+  EXPECT_EQ(ERR_FAILED, d.request_status());
 }
 
 class URLRequestInterceptorTestHTTP : public URLRequestTestHTTP {
@@ -9851,15 +9883,14 @@ TEST_F(HTTPSCRLSetTest, CRLSetRevoked) {
 }
 #endif  // !defined(OS_IOS)
 
-#if !defined(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
+#if !BUILDFLAG(DISABLE_FTP_SUPPORT) && !defined(OS_ANDROID)
 // These tests aren't passing on Android.  Either the RemoteTestServer isn't
 // starting up successfully, or it can't access the test files.
 // TODO(mmenke):  Fix this.  See http://crbug.com/495220
 class URLRequestTestFTP : public URLRequestTest {
  public:
   URLRequestTestFTP()
-      : ftp_transaction_factory_(&host_resolver_),
-        ftp_test_server_(SpawnedTestServer::TYPE_FTP,
+      : ftp_test_server_(SpawnedTestServer::TYPE_FTP,
                          SpawnedTestServer::kLocalhost,
                          base::FilePath(kTestFilePath)) {
     // Can't use |default_context_|'s HostResolver to set up the
@@ -9871,7 +9902,7 @@ class URLRequestTestFTP : public URLRequestTest {
   void SetUpFactory() override {
     // Add FTP support to the default URLRequestContext.
     job_factory_impl_->SetProtocolHandler(
-        "ftp", base::MakeUnique<FtpProtocolHandler>(&ftp_transaction_factory_));
+        "ftp", FtpProtocolHandler::Create(&host_resolver_));
   }
 
   std::string GetTestFileContents() {
@@ -9885,8 +9916,10 @@ class URLRequestTestFTP : public URLRequestTest {
   }
 
  protected:
+  // Note that this is destroyed before the FtpProtocolHandler that references
+  // it, which is owned by the parent class. Since no requests are made during
+  // teardown, this works, though it's not great.
   MockHostResolver host_resolver_;
-  FtpNetworkLayer ftp_transaction_factory_;
 
   SpawnedTestServer ftp_test_server_;
 };
@@ -10167,7 +10200,7 @@ TEST_F(URLRequestTestFTP, RawBodyBytes) {
   EXPECT_EQ(6, req->GetRawBodyBytes());
 }
 
-#endif  // !defined(DISABLE_FTP_SUPPORT)
+#endif  // !BUILDFLAG(DISABLE_FTP_SUPPORT)
 
 TEST_F(URLRequestTest, NetworkAccessedClearOnDataRequest) {
   TestDelegate d;

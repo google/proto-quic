@@ -15,8 +15,8 @@ enum NextProto {
   kProtoUnknown = 0,
   kProtoHTTP11 = 1,
   kProtoHTTP2 = 2,
-  kProtoQUIC1SPDY3 = 3,
-  kProtoLast = kProtoQUIC1SPDY3
+  kProtoQUIC = 3,
+  kProtoLast = kProtoQUIC
 };
 
 // List of protocols to use for NPN, used for configuring HttpNetworkSessions.

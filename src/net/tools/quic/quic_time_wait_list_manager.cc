@@ -10,7 +10,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
@@ -27,7 +27,7 @@ using base::StringPiece;
 namespace net {
 
 // A very simple alarm that just informs the QuicTimeWaitListManager to clean
-// up old connection_ids. This alarm should be cancelled  and deleted before
+// up old connection_ids. This alarm should be cancelled and deleted before
 // the QuicTimeWaitListManager is deleted.
 class ConnectionIdCleanUpAlarm : public QuicAlarm::Delegate {
  public:
@@ -57,10 +57,10 @@ class QuicTimeWaitListManager::QueuedPacket {
  public:
   QueuedPacket(const IPEndPoint& server_address,
                const IPEndPoint& client_address,
-               QuicEncryptedPacket* packet)
+               std::unique_ptr<QuicEncryptedPacket> packet)
       : server_address_(server_address),
         client_address_(client_address),
-        packet_(packet) {}
+        packet_(std::move(packet)) {}
 
   const IPEndPoint& server_address() const { return server_address_; }
   const IPEndPoint& client_address() const { return client_address_; }
@@ -91,7 +91,6 @@ QuicTimeWaitListManager::QuicTimeWaitListManager(
 
 QuicTimeWaitListManager::~QuicTimeWaitListManager() {
   connection_id_clean_up_alarm_->Cancel();
-  base::STLDeleteElements(&pending_packets_queue_);
 }
 
 void QuicTimeWaitListManager::AddConnectionIdToTimeWait(
@@ -139,12 +138,11 @@ QuicVersion QuicTimeWaitListManager::GetQuicVersionFromConnectionId(
 
 void QuicTimeWaitListManager::OnCanWrite() {
   while (!pending_packets_queue_.empty()) {
-    QueuedPacket* queued_packet = pending_packets_queue_.front();
+    QueuedPacket* queued_packet = pending_packets_queue_.front().get();
     if (!WriteToWire(queued_packet)) {
       return;
     }
     pending_packets_queue_.pop_front();
-    delete queued_packet;
   }
 }
 
@@ -174,10 +172,8 @@ void QuicTimeWaitListManager::ProcessPacket(
                << "for connection " << connection_id;
     }
     for (const auto& packet : connection_data->termination_packets) {
-      QueuedPacket* queued_packet =
-          new QueuedPacket(server_address, client_address, packet->Clone());
-      // Takes ownership of the packet.
-      SendOrQueuePacket(queued_packet);
+      SendOrQueuePacket(base::MakeUnique<QueuedPacket>(
+          server_address, client_address, packet->Clone()));
     }
     return;
   }
@@ -190,10 +186,9 @@ void QuicTimeWaitListManager::SendVersionNegotiationPacket(
     const QuicVersionVector& supported_versions,
     const IPEndPoint& server_address,
     const IPEndPoint& client_address) {
-  QueuedPacket* packet = new QueuedPacket(
+  SendOrQueuePacket(base::MakeUnique<QueuedPacket>(
       server_address, client_address, QuicFramer::BuildVersionNegotiationPacket(
-                                          connection_id, supported_versions));
-  SendOrQueuePacket(packet);
+                                          connection_id, supported_versions)));
 }
 
 // Returns true if the number of packets received for this connection_id is a
@@ -216,26 +211,25 @@ void QuicTimeWaitListManager::SendPublicReset(
   // TODO(satyamshekhar): generate a valid nonce for this connection_id.
   packet.nonce_proof = 1010101;
   packet.client_address = client_address;
-  QueuedPacket* queued_packet = new QueuedPacket(server_address, client_address,
-                                                 BuildPublicReset(packet));
   // Takes ownership of the packet.
-  SendOrQueuePacket(queued_packet);
+  SendOrQueuePacket(base::MakeUnique<QueuedPacket>(
+      server_address, client_address, BuildPublicReset(packet)));
 }
 
-QuicEncryptedPacket* QuicTimeWaitListManager::BuildPublicReset(
+std::unique_ptr<QuicEncryptedPacket> QuicTimeWaitListManager::BuildPublicReset(
     const QuicPublicResetPacket& packet) {
   return QuicFramer::BuildPublicResetPacket(packet);
 }
 
 // Either sends the packet and deletes it or makes pending queue the
 // owner of the packet.
-void QuicTimeWaitListManager::SendOrQueuePacket(QueuedPacket* packet) {
-  if (WriteToWire(packet)) {
-    delete packet;
-  } else {
-    // pending_packets_queue takes the ownership of the queued packet.
-    pending_packets_queue_.push_back(packet);
+void QuicTimeWaitListManager::SendOrQueuePacket(
+    std::unique_ptr<QueuedPacket> packet) {
+  if (WriteToWire(packet.get())) {
+    // Allow the packet to be deleted upon leaving this function.
+    return;
   }
+  pending_packets_queue_.push_back(std::move(packet));
 }
 
 bool QuicTimeWaitListManager::WriteToWire(QueuedPacket* queued_packet) {

@@ -4,8 +4,8 @@
 
 #include "net/quic/core/crypto/aes_128_gcm_12_decrypter.h"
 
-#include <openssl/evp.h>
-#include <openssl/tls1.h>
+#include "third_party/boringssl/src/include/openssl/evp.h"
+#include "third_party/boringssl/src/include/openssl/tls1.h"
 
 namespace net {
 

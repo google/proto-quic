@@ -111,6 +111,12 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
   // control accounting).
   void ResetPromised(QuicStreamId id, QuicRstStreamErrorCode error_code);
 
+  // Release headers stream's sequencer buffer if it's empty.
+  void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
+
+  // Returns true if there are no active requests and no promised streams.
+  bool ShouldReleaseHeadersStreamSequencerBuffer() override;
+
   size_t get_max_promises() const {
     return max_open_incoming_streams() * kMaxPromisedStreamsMultiplier;
   }

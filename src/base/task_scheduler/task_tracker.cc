@@ -213,6 +213,7 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
   const TaskShutdownBehavior shutdown_behavior =
       task->traits.shutdown_behavior();
   const bool can_run_task = BeforeRunTask(shutdown_behavior);
+  const bool is_delayed = !task->delayed_run_time.is_null();
 
   if (can_run_task) {
     // All tasks run through here and the scheduler itself doesn't use
@@ -254,14 +255,13 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
                    MakeUnique<TaskTracingInfo>(task->traits, execution_mode,
                                                sequence_token));
 
-      debug::TaskAnnotator task_annotator;
-      task_annotator.RunTask(kQueueFunctionName, task.get());
+      PerformRunTask(std::move(task));
     }
 
     AfterRunTask(shutdown_behavior);
   }
 
-  if (task->delayed_run_time.is_null())
+  if (!is_delayed)
     DecrementNumPendingUndelayedTasks();
 
   return can_run_task;
@@ -278,6 +278,10 @@ bool TaskTracker::IsShutdownComplete() const {
 
 void TaskTracker::SetHasShutdownStartedForTesting() {
   state_->StartShutdown();
+}
+
+void TaskTracker::PerformRunTask(std::unique_ptr<Task> task) {
+  debug::TaskAnnotator().RunTask(kQueueFunctionName, task.get());
 }
 
 void TaskTracker::PerformShutdown() {

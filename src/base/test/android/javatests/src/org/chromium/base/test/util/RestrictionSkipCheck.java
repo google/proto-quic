@@ -9,12 +9,10 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.text.TextUtils;
 
-import junit.framework.TestCase;
+import org.junit.runners.model.FrameworkMethod;
 
 import org.chromium.base.Log;
 import org.chromium.base.SysUtils;
-
-import java.lang.reflect.Method;
 
 /**
  * Checks if any restrictions exist and skip the test if it meets those restrictions.
@@ -30,15 +28,14 @@ public class RestrictionSkipCheck extends SkipCheck {
     }
 
     @Override
-    public boolean shouldSkip(TestCase testCase) {
-        Method method = getTestMethod(testCase);
-        if (method == null) return true;
+    public boolean shouldSkip(FrameworkMethod frameworkMethod) {
+        if (frameworkMethod == null) return true;
 
-        for (Restriction restriction : getAnnotations(method, Restriction.class)) {
+        for (Restriction restriction : getAnnotations(frameworkMethod, Restriction.class)) {
             for (String restrictionVal : restriction.value()) {
                 if (restrictionApplies(restrictionVal)) {
-                    Log.i(TAG, "Test " + testCase.getClass().getName() + "#"
-                            + testCase.getName() + " skipped because of restriction "
+                    Log.i(TAG, "Test " + frameworkMethod.getDeclaringClass().getName() + "#"
+                            + frameworkMethod.getName() + " skipped because of restriction "
                             + restriction);
                     return true;
                 }

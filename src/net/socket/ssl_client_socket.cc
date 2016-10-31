@@ -35,7 +35,7 @@ NextProto SSLClientSocket::NextProtoFromString(base::StringPiece proto_string) {
   } else if (proto_string == "h2") {
     return kProtoHTTP2;
   } else if (proto_string == "quic/1+spdy/3") {
-    return kProtoQUIC1SPDY3;
+    return kProtoQUIC;
   } else {
     return kProtoUnknown;
   }
@@ -48,7 +48,7 @@ const char* SSLClientSocket::NextProtoToString(NextProto next_proto) {
       return "http/1.1";
     case kProtoHTTP2:
       return "h2";
-    case kProtoQUIC1SPDY3:
+    case kProtoQUIC:
       return "quic/1+spdy/3";
     case kProtoUnknown:
       break;

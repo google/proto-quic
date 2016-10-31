@@ -4,12 +4,19 @@
 
 #include "tools/gn/visual_studio_utils.h"
 
+#include <vector>
+
 #include "base/md5.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 
 CompilerOptions::CompilerOptions() = default;
 
 CompilerOptions::~CompilerOptions() = default;
+
+LinkerOptions::LinkerOptions() = default;
+
+LinkerOptions::~LinkerOptions() = default;
 
 std::string MakeGuid(const std::string& entry_path, const std::string& seed) {
   std::string str = base::ToUpperASCII(base::MD5String(seed + entry_path));
@@ -114,4 +121,19 @@ void ParseCompilerOption(const std::string& cflag, CompilerOptions* options) {
 
   // Put everything else into additional_options.
   options->additional_options += cflag + ' ';
+}
+
+// Parses |ldflags| value and stores it in |options|.
+void ParseLinkerOption(const std::string& ldflag, LinkerOptions* options) {
+  const char kSubsytemPrefix[] ="/SUBSYSTEM:";
+  if (base::StartsWith(ldflag, kSubsytemPrefix,
+                       base::CompareCase::SENSITIVE)) {
+    const std::string subsystem(
+        ldflag.begin() + std::string(kSubsytemPrefix).length(),
+        ldflag.end());
+    const std::vector<std::string> tokens = base::SplitString(
+        subsystem, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+    if (!tokens.empty())
+      options->subsystem = tokens[0];
+  }
 }

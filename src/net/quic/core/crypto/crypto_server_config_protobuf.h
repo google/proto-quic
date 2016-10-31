@@ -8,12 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/stl_util.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
@@ -47,7 +48,7 @@ class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
 
   const PrivateKey& key(size_t i) const {
     DCHECK_GT(keys_.size(), i);
-    return *keys_[i];
+    return *keys_[i].get();
   }
 
   std::string config() const { return config_; }
@@ -55,11 +56,11 @@ class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
   void set_config(base::StringPiece config) { config.CopyToString(&config_); }
 
   QuicServerConfigProtobuf::PrivateKey* add_key() {
-    keys_.push_back(new PrivateKey);
-    return keys_.back();
+    keys_.push_back(base::MakeUnique<PrivateKey>());
+    return keys_.back().get();
   }
 
-  void clear_key() { base::STLDeleteElements(&keys_); }
+  void clear_key() { keys_.clear(); }
 
   bool has_primary_time() const { return primary_time_ > 0; }
 
@@ -88,7 +89,7 @@ class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
   }
 
  private:
-  std::vector<PrivateKey*> keys_;
+  std::vector<std::unique_ptr<PrivateKey>> keys_;
 
   // config_ is a serialised config in QUIC wire format.
   std::string config_;

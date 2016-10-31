@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/strings/utf_string_conversions.h"
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
 #include "url/origin.h"
+#include "url/url_features.h"
 
 namespace {
+
 namespace test1 {
 #include "net/base/registry_controlled_domains/effective_tld_names_unittest1-inc.cc"
 }
@@ -26,10 +29,12 @@ namespace test5 {
 namespace test6 {
 #include "net/base/registry_controlled_domains/effective_tld_names_unittest6-inc.cc"
 }
+
 }  // namespace
 
 namespace net {
 namespace registry_controlled_domains {
+
 namespace {
 
 std::string GetDomainFromURL(const std::string& url) {
@@ -56,16 +61,28 @@ size_t GetRegistryLengthFromURLIncludingPrivate(
                            INCLUDE_PRIVATE_REGISTRIES);
 }
 
-size_t GetRegistryLengthFromHost(
-    const std::string& host,
-    UnknownRegistryFilter unknown_filter) {
-  return GetRegistryLength(host, unknown_filter, EXCLUDE_PRIVATE_REGISTRIES);
+size_t PermissiveGetHostRegistryLength(base::StringPiece host) {
+  return PermissiveGetHostRegistryLength(host, EXCLUDE_UNKNOWN_REGISTRIES,
+                                         EXCLUDE_PRIVATE_REGISTRIES);
 }
 
-size_t GetRegistryLengthFromHostIncludingPrivate(
-    const std::string& host,
-    UnknownRegistryFilter unknown_filter) {
-  return GetRegistryLength(host, unknown_filter, INCLUDE_PRIVATE_REGISTRIES);
+// Only called when using ICU (avoids unused static function error).
+#if !BUILDFLAG(USE_PLATFORM_ICU_ALTERNATIVES)
+size_t PermissiveGetHostRegistryLength(base::StringPiece16 host) {
+  return PermissiveGetHostRegistryLength(host, EXCLUDE_UNKNOWN_REGISTRIES,
+                                         EXCLUDE_PRIVATE_REGISTRIES);
+}
+#endif
+
+size_t GetCanonicalHostRegistryLength(const std::string& host,
+                                      UnknownRegistryFilter unknown_filter) {
+  return GetCanonicalHostRegistryLength(host, unknown_filter,
+                                        EXCLUDE_PRIVATE_REGISTRIES);
+}
+
+size_t GetCanonicalHostRegistryLengthIncludingPrivate(const std::string& host) {
+  return GetCanonicalHostRegistryLength(host, EXCLUDE_UNKNOWN_REGISTRIES,
+                                        INCLUDE_PRIVATE_REGISTRIES);
 }
 
 }  // namespace
@@ -216,57 +233,89 @@ TEST_F(RegistryControlledDomainTest, TestGetRegistryLength) {
   // Test std::string version of GetRegistryLength().  Uses the same
   // underpinnings as the GURL version, so this is really more of a check of
   // CanonicalizeHost().
-  EXPECT_EQ(2U, GetRegistryLengthFromHost("a.baz.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 1
-  EXPECT_EQ(3U, GetRegistryLengthFromHost("a.baz.jp.",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 1
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("ac.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 2
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("a.bar.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 3
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("bar.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 3
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("baz.bar.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 3 4
-  EXPECT_EQ(12U, GetRegistryLengthFromHost("a.b.baz.bar.jp",
-                                           EXCLUDE_UNKNOWN_REGISTRIES)); // 4
-  EXPECT_EQ(6U, GetRegistryLengthFromHost("baz.pref.bar.jp",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 5
-  EXPECT_EQ(11U, GetRegistryLengthFromHost("a.b.bar.baz.com",
-                                           EXCLUDE_UNKNOWN_REGISTRIES)); // 6
-  EXPECT_EQ(3U, GetRegistryLengthFromHost("a.d.c",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 7
-  EXPECT_EQ(3U, GetRegistryLengthFromHost(".a.d.c",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 7
-  EXPECT_EQ(3U, GetRegistryLengthFromHost("..a.d.c",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 7
-  EXPECT_EQ(1U, GetRegistryLengthFromHost("a.b.c",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // 7 8
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("baz.com",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // none
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("baz.com.",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));  // none
-  EXPECT_EQ(3U, GetRegistryLengthFromHost("baz.com",
-                                          INCLUDE_UNKNOWN_REGISTRIES));  // none
-  EXPECT_EQ(4U, GetRegistryLengthFromHost("baz.com.",
-                                          INCLUDE_UNKNOWN_REGISTRIES));  // none
+  EXPECT_EQ(2U, GetCanonicalHostRegistryLength(
+                    "a.baz.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 1
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLength(
+                    "a.baz.jp.", EXCLUDE_UNKNOWN_REGISTRIES));  // 1
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "ac.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 2
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "a.bar.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 3
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "bar.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 3
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "baz.bar.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 3 4
+  EXPECT_EQ(12U, GetCanonicalHostRegistryLength(
+                     "a.b.baz.bar.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 4
+  EXPECT_EQ(6U, GetCanonicalHostRegistryLength(
+                    "baz.pref.bar.jp", EXCLUDE_UNKNOWN_REGISTRIES));  // 5
+  EXPECT_EQ(11U, GetCanonicalHostRegistryLength(
+                     "a.b.bar.baz.com", EXCLUDE_UNKNOWN_REGISTRIES));  // 6
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLength(
+                    "a.d.c", EXCLUDE_UNKNOWN_REGISTRIES));  // 7
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLength(
+                    ".a.d.c", EXCLUDE_UNKNOWN_REGISTRIES));  // 7
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLength(
+                    "..a.d.c", EXCLUDE_UNKNOWN_REGISTRIES));  // 7
+  EXPECT_EQ(1U, GetCanonicalHostRegistryLength(
+                    "a.b.c", EXCLUDE_UNKNOWN_REGISTRIES));  // 7 8
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "baz.com", EXCLUDE_UNKNOWN_REGISTRIES));  // none
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength(
+                    "baz.com.", EXCLUDE_UNKNOWN_REGISTRIES));  // none
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLength(
+                    "baz.com", INCLUDE_UNKNOWN_REGISTRIES));  // none
+  EXPECT_EQ(4U, GetCanonicalHostRegistryLength(
+                    "baz.com.", INCLUDE_UNKNOWN_REGISTRIES));  // none
 
-  EXPECT_EQ(std::string::npos,
-      GetRegistryLengthFromHost(std::string(), EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("foo.com..",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("..",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("192.168.0.1",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("localhost",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("localhost",
-                                          INCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("localhost.",
-                                          EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost("localhost.",
-                                          INCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(std::string::npos, GetCanonicalHostRegistryLength(
+                                   std::string(), EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("foo.com..",
+                                               EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength("..", EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("192.168.0.1",
+                                               EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("localhost",
+                                               EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("localhost",
+                                               INCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("localhost.",
+                                               EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLength("localhost.",
+                                               INCLUDE_UNKNOWN_REGISTRIES));
+
+  // IDN case.
+  EXPECT_EQ(10U, GetCanonicalHostRegistryLength("foo.xn--fiqs8s",
+                                                EXCLUDE_UNKNOWN_REGISTRIES));
+}
+
+TEST_F(RegistryControlledDomainTest, HostHasRegistryControlledDomain) {
+  UseDomainData(test1::kDafsa);
+
+  // Invalid hosts.
+  EXPECT_FALSE(HostHasRegistryControlledDomain(
+      std::string(), EXCLUDE_UNKNOWN_REGISTRIES, EXCLUDE_PRIVATE_REGISTRIES));
+  EXPECT_FALSE(HostHasRegistryControlledDomain(
+      "%00asdf", EXCLUDE_UNKNOWN_REGISTRIES, EXCLUDE_PRIVATE_REGISTRIES));
+
+  // Invalid host but valid R.C.D.
+  EXPECT_TRUE(HostHasRegistryControlledDomain(
+      "%00foo.jp", EXCLUDE_UNKNOWN_REGISTRIES, EXCLUDE_PRIVATE_REGISTRIES));
+
+  // Valid R.C.D. when canonicalized, even with an invalid prefix and an
+  // escaped dot.
+  EXPECT_TRUE(HostHasRegistryControlledDomain("%00foo.Google%2EjP",
+                                              EXCLUDE_UNKNOWN_REGISTRIES,
+                                              EXCLUDE_PRIVATE_REGISTRIES));
+
+  // Regular, no match.
+  EXPECT_FALSE(HostHasRegistryControlledDomain(
+      "bar.notatld", EXCLUDE_UNKNOWN_REGISTRIES, EXCLUDE_PRIVATE_REGISTRIES));
+
+  // Regular, match.
+  EXPECT_TRUE(HostHasRegistryControlledDomain(
+      "www.Google.Jp", EXCLUDE_UNKNOWN_REGISTRIES, EXCLUDE_PRIVATE_REGISTRIES));
 }
 
 TEST_F(RegistryControlledDomainTest, TestSameDomainOrHost) {
@@ -388,12 +437,13 @@ TEST_F(RegistryControlledDomainTest, TestDafsaTwoByteOffsets) {
       "a.b.a____________________________________________________"
       "________________________________________________8";
 
-  EXPECT_EQ(102U, GetRegistryLengthFromHost(key0, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key1, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(102U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key1, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key2, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key0, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key1, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(102U, GetCanonicalHostRegistryLengthIncludingPrivate(key1));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key2, EXCLUDE_UNKNOWN_REGISTRIES));
 }
 
 TEST_F(RegistryControlledDomainTest, TestDafsaThreeByteOffsets) {
@@ -412,21 +462,22 @@ TEST_F(RegistryControlledDomainTest, TestDafsaThreeByteOffsets) {
   // offset.
 
   const char key0[] =
-      "a.b.Z6___________________________________________________"
-      "_________________________________________________Z6";
+      "a.b.z6___________________________________________________"
+      "_________________________________________________z6";
   const char key1[] =
-      "a.b.Z7___________________________________________________"
-      "_________________________________________________Z7";
+      "a.b.z7___________________________________________________"
+      "_________________________________________________z7";
   const char key2[] =
-      "a.b.Za___________________________________________________"
-      "_________________________________________________Z8";
+      "a.b.za___________________________________________________"
+      "_________________________________________________z8";
 
-  EXPECT_EQ(104U, GetRegistryLengthFromHost(key0, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key1, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(104U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key1, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key2, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key0, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key1, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(104U, GetCanonicalHostRegistryLengthIncludingPrivate(key1));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key2, EXCLUDE_UNKNOWN_REGISTRIES));
 }
 
 TEST_F(RegistryControlledDomainTest, TestDafsaJoinedPrefixes) {
@@ -446,24 +497,22 @@ TEST_F(RegistryControlledDomainTest, TestDafsaJoinedPrefixes) {
   const char key6[] = "a.b.aaaam";
   const char key7[] = "a.b.bbbbn";
 
-  EXPECT_EQ(2U, GetRegistryLengthFromHost(key0, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key1, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(2U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key1, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(3U, GetRegistryLengthFromHost(key2, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key3, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key0, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key1, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(2U, GetCanonicalHostRegistryLengthIncludingPrivate(key1));
   EXPECT_EQ(3U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key3, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key2, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(0U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key4, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key5, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(5U, GetRegistryLengthFromHost(key6, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(5U, GetRegistryLengthFromHost(key7, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key3, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLengthIncludingPrivate(key3));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLengthIncludingPrivate(key4));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLengthIncludingPrivate(key5));
+  EXPECT_EQ(5U,
+            GetCanonicalHostRegistryLength(key6, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(5U,
+            GetCanonicalHostRegistryLength(key7, EXCLUDE_UNKNOWN_REGISTRIES));
 }
 
 TEST_F(RegistryControlledDomainTest, TestDafsaJoinedSuffixes) {
@@ -483,24 +532,74 @@ TEST_F(RegistryControlledDomainTest, TestDafsaJoinedSuffixes) {
   const char key6[] = "a.b.maaaa";
   const char key7[] = "a.b.nbbbb";
 
-  EXPECT_EQ(2U, GetRegistryLengthFromHost(key0, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key1, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(2U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key1, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(3U, GetRegistryLengthFromHost(key2, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U, GetRegistryLengthFromHost(key3, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key0, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(0U,
+            GetCanonicalHostRegistryLength(key1, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(2U, GetCanonicalHostRegistryLengthIncludingPrivate(key1));
   EXPECT_EQ(3U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key3, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key2, EXCLUDE_UNKNOWN_REGISTRIES));
   EXPECT_EQ(0U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key4, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(0U,
-            GetRegistryLengthFromHostIncludingPrivate(
-                key5, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(5U, GetRegistryLengthFromHost(key6, EXCLUDE_UNKNOWN_REGISTRIES));
-  EXPECT_EQ(5U, GetRegistryLengthFromHost(key7, EXCLUDE_UNKNOWN_REGISTRIES));
+            GetCanonicalHostRegistryLength(key3, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(3U, GetCanonicalHostRegistryLengthIncludingPrivate(key3));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLengthIncludingPrivate(key4));
+  EXPECT_EQ(0U, GetCanonicalHostRegistryLengthIncludingPrivate(key5));
+  EXPECT_EQ(5U,
+            GetCanonicalHostRegistryLength(key6, EXCLUDE_UNKNOWN_REGISTRIES));
+  EXPECT_EQ(5U,
+            GetCanonicalHostRegistryLength(key7, EXCLUDE_UNKNOWN_REGISTRIES));
 }
+
+TEST_F(RegistryControlledDomainTest, Permissive) {
+  UseDomainData(test1::kDafsa);
+
+  EXPECT_EQ(std::string::npos, PermissiveGetHostRegistryLength(""));
+
+  // Regular non-canonical host name.
+  EXPECT_EQ(2U, PermissiveGetHostRegistryLength("Www.Google.Jp"));
+  EXPECT_EQ(3U, PermissiveGetHostRegistryLength("Www.Google.Jp."));
+
+  // Empty returns npos.
+  EXPECT_EQ(std::string::npos, PermissiveGetHostRegistryLength(""));
+
+  // Trailing spaces are counted as part of the hostname, meaning this will
+  // not match a known registry.
+  EXPECT_EQ(0U, PermissiveGetHostRegistryLength("Www.Google.Jp "));
+
+  // Invalid characters at the beginning are OK if the suffix still matches.
+  EXPECT_EQ(2U, PermissiveGetHostRegistryLength("*%00#?.Jp"));
+
+  // Escaped period, this will add new components.
+  EXPECT_EQ(4U, PermissiveGetHostRegistryLength("Www.Googl%45%2e%4Ap"));
+
+// IDN cases (not supported when not linking ICU).
+#if !BUILDFLAG(USE_PLATFORM_ICU_ALTERNATIVES)
+  EXPECT_EQ(10U, PermissiveGetHostRegistryLength("foo.xn--fiqs8s"));
+  EXPECT_EQ(11U, PermissiveGetHostRegistryLength("foo.xn--fiqs8s."));
+  EXPECT_EQ(18U, PermissiveGetHostRegistryLength("foo.%E4%B8%AD%E5%9B%BD"));
+  EXPECT_EQ(19U, PermissiveGetHostRegistryLength("foo.%E4%B8%AD%E5%9B%BD."));
+  EXPECT_EQ(6U,
+            PermissiveGetHostRegistryLength("foo.\xE4\xB8\xAD\xE5\x9B\xBD"));
+  EXPECT_EQ(7U,
+            PermissiveGetHostRegistryLength("foo.\xE4\xB8\xAD\xE5\x9B\xBD."));
+  // UTF-16 IDN.
+  EXPECT_EQ(2U, PermissiveGetHostRegistryLength(
+                    base::WideToUTF16(L"foo.\x4e2d\x56fd")));
+
+  // Fullwidth dot (u+FF0E) that will get canonicalized to a dot.
+  EXPECT_EQ(2U, PermissiveGetHostRegistryLength("Www.Google\xEF\xBC\x8Ejp"));
+  // Same but also ending in a fullwidth dot.
+  EXPECT_EQ(5U, PermissiveGetHostRegistryLength(
+                    "Www.Google\xEF\xBC\x8Ejp\xEF\xBC\x8E"));
+  // Escaped UTF-8, also with an escaped fullwidth "Jp".
+  // "Jp" = U+FF2A, U+FF50, UTF-8 = EF BC AA EF BD 90
+  EXPECT_EQ(27U, PermissiveGetHostRegistryLength(
+                     "Www.Google%EF%BC%8E%EF%BC%AA%EF%BD%90%EF%BC%8E"));
+  // UTF-16 (ending in a dot).
+  EXPECT_EQ(3U, PermissiveGetHostRegistryLength(
+                    base::WideToUTF16(L"Www.Google\xFF0E\xFF2A\xFF50\xFF0E")));
+#endif
+}
+
 }  // namespace registry_controlled_domains
 }  // namespace net

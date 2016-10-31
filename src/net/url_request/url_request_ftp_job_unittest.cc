@@ -64,37 +64,46 @@ class MockProxyResolverFactory : public ProxyResolverFactory {
   MockAsyncProxyResolver* resolver_;
 };
 
+class MockFtpTransactionFactory : public FtpTransactionFactory {
+ public:
+  std::unique_ptr<FtpTransaction> CreateTransaction() override {
+    return std::unique_ptr<FtpTransaction>();
+  }
+
+  void Suspend(bool suspend) override {}
+};
+
 }  // namespace
 
 class FtpTestURLRequestContext : public TestURLRequestContext {
  public:
   FtpTestURLRequestContext(ClientSocketFactory* socket_factory,
                            std::unique_ptr<ProxyService> proxy_service,
-                           NetworkDelegate* network_delegate,
-                           FtpTransactionFactory* ftp_transaction_factory)
-      : TestURLRequestContext(true),
-        ftp_protocol_handler_(new FtpProtocolHandler(ftp_transaction_factory)) {
+                           NetworkDelegate* network_delegate)
+      : TestURLRequestContext(true) {
     set_client_socket_factory(socket_factory);
     context_storage_.set_proxy_service(std::move(proxy_service));
     set_network_delegate(network_delegate);
+    std::unique_ptr<FtpProtocolHandler> ftp_protocol_handler(
+        FtpProtocolHandler::CreateForTesting(
+            base::MakeUnique<MockFtpTransactionFactory>()));
+    auth_cache_ = ftp_protocol_handler->ftp_auth_cache_.get();
     std::unique_ptr<URLRequestJobFactoryImpl> job_factory =
         base::WrapUnique(new URLRequestJobFactoryImpl);
-    job_factory->SetProtocolHandler("ftp",
-                                    base::WrapUnique(ftp_protocol_handler_));
+    job_factory->SetProtocolHandler("ftp", std::move(ftp_protocol_handler));
     context_storage_.set_job_factory(std::move(job_factory));
     Init();
   }
 
-  FtpAuthCache* GetFtpAuthCache() {
-    return ftp_protocol_handler_->ftp_auth_cache_.get();
-  }
+  FtpAuthCache* GetFtpAuthCache() { return auth_cache_; }
 
   void set_proxy_service(std::unique_ptr<ProxyService> proxy_service) {
     context_storage_.set_proxy_service(std::move(proxy_service));
   }
 
  private:
-  FtpProtocolHandler* ftp_protocol_handler_;
+  // Owned by the JobFactory's FtpProtocolHandler.
+  FtpAuthCache* auth_cache_;
 };
 
 namespace {
@@ -145,15 +154,6 @@ class TestURLRequestFtpJob : public URLRequestFtpJob {
   using URLRequestFtpJob::priority;
 
  protected:
-};
-
-class MockFtpTransactionFactory : public FtpTransactionFactory {
- public:
-  std::unique_ptr<FtpTransaction> CreateTransaction() override {
-    return std::unique_ptr<FtpTransaction>();
-  }
-
-  void Suspend(bool suspend) override {}
 };
 
 // Fixture for priority-related tests. Priority matters when there is
@@ -257,8 +257,7 @@ class URLRequestFtpJobTest : public testing::Test {
                              base::WrapUnique(new SimpleProxyConfigService),
                              nullptr,
                              nullptr),
-                         &network_delegate_,
-                         &ftp_transaction_factory_) {}
+                         &network_delegate_) {}
 
   ~URLRequestFtpJobTest() override {
     // Clean up any remaining tasks that mess up unrelated tests.
@@ -283,7 +282,6 @@ class URLRequestFtpJobTest : public testing::Test {
   std::vector<std::unique_ptr<SequencedSocketData>> socket_data_;
   MockClientSocketFactory socket_factory_;
   TestNetworkDelegate network_delegate_;
-  MockFtpTransactionFactory ftp_transaction_factory_;
 
   FtpTestURLRequestContext request_context_;
 };
@@ -341,13 +339,13 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestOrphanJob) {
   // Verify PAC request is in progress.
   EXPECT_EQ(net::LoadState::LOAD_STATE_RESOLVING_PROXY_FOR_URL,
             url_request->GetLoadState().state);
-  EXPECT_EQ(1u, resolver_factory->resolver()->pending_requests().size());
-  EXPECT_EQ(0u, resolver_factory->resolver()->cancelled_requests().size());
+  EXPECT_EQ(1u, resolver_factory->resolver()->pending_jobs().size());
+  EXPECT_EQ(0u, resolver_factory->resolver()->cancelled_jobs().size());
 
   // Destroying the request should cancel the PAC request.
   url_request.reset();
-  EXPECT_EQ(0u, resolver_factory->resolver()->pending_requests().size());
-  EXPECT_EQ(1u, resolver_factory->resolver()->cancelled_requests().size());
+  EXPECT_EQ(0u, resolver_factory->resolver()->pending_jobs().size());
+  EXPECT_EQ(1u, resolver_factory->resolver()->cancelled_jobs().size());
 }
 
 // Make sure PAC requests are cancelled on request cancellation.  Requests can
@@ -372,14 +370,14 @@ TEST_F(URLRequestFtpJobTest, FtpProxyRequestCancelRequest) {
   url_request->Start();
   EXPECT_EQ(net::LoadState::LOAD_STATE_RESOLVING_PROXY_FOR_URL,
             url_request->GetLoadState().state);
-  EXPECT_EQ(1u, resolver_factory->resolver()->pending_requests().size());
-  EXPECT_EQ(0u, resolver_factory->resolver()->cancelled_requests().size());
+  EXPECT_EQ(1u, resolver_factory->resolver()->pending_jobs().size());
+  EXPECT_EQ(0u, resolver_factory->resolver()->cancelled_jobs().size());
 
   // Cancelling the request should cancel the PAC request.
   url_request->Cancel();
   EXPECT_EQ(net::LoadState::LOAD_STATE_IDLE, url_request->GetLoadState().state);
-  EXPECT_EQ(0u, resolver_factory->resolver()->pending_requests().size());
-  EXPECT_EQ(1u, resolver_factory->resolver()->cancelled_requests().size());
+  EXPECT_EQ(0u, resolver_factory->resolver()->pending_jobs().size());
+  EXPECT_EQ(1u, resolver_factory->resolver()->cancelled_jobs().size());
 }
 
 TEST_F(URLRequestFtpJobTest, FtpProxyRequestNeedProxyAuthNoCredentials) {

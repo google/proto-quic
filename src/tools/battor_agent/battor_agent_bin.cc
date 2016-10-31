@@ -74,6 +74,7 @@ const char kUsage[] =
     "  StopTracing <optional file path>\n"
     "  SupportsExplicitClockSync\n"
     "  RecordClockSyncMarker <marker>\n"
+    "  GetFirmwareGitHash\n"
     "  Exit\n"
     "  Help\n"
     "\n";
@@ -200,6 +201,9 @@ class BattOrAgentBin : public BattOrAgent::Listener {
       }
 
       RecordClockSyncMarker(tokens[1]);
+    } else if (cmd == "GetFirmwareGitHash") {
+      GetFirmwareGitHash();
+      return;
     } else if (cmd == "Exit" || std::cin.eof()) {
       ui_thread_message_loop_.task_runner()->PostTask(
           FROM_HERE, ui_thread_run_loop_.QuitClosure());
@@ -213,6 +217,23 @@ class BattOrAgentBin : public BattOrAgent::Listener {
     ui_thread_message_loop_.task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&BattOrAgentBin::RunNextCommand, base::Unretained(this)));
+  }
+
+  void GetFirmwareGitHash() {
+    io_thread_.task_runner()->PostTask(
+        FROM_HERE,
+        base::Bind(&BattOrAgent::GetFirmwareGitHash,
+                   base::Unretained(agent_.get())));
+  }
+
+  void OnGetFirmwareGitHashComplete(const std::string& firmware_git_hash,
+                                    BattOrError error) override {
+    if (error == BATTOR_ERROR_NONE)
+      std::cout << firmware_git_hash << endl;
+    else
+      HandleError(error);
+
+    PostRunNextCommand();
   }
 
   void StartTracing() {

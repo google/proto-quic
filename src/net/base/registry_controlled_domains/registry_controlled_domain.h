@@ -227,11 +227,58 @@ NET_EXPORT size_t GetRegistryLength(const GURL& gurl,
                                     UnknownRegistryFilter unknown_filter,
                                     PrivateRegistryFilter private_filter);
 
-// Like the GURL version, but takes a host (which is canonicalized internally)
-// instead of a full GURL.
-NET_EXPORT size_t GetRegistryLength(base::StringPiece host,
-                                    UnknownRegistryFilter unknown_filter,
-                                    PrivateRegistryFilter private_filter);
+// Returns true if the given host name has a registry-controlled domain. The
+// host name will be internally canonicalized. Also returns true for invalid
+// host names like "*.google.com" as long as it has a valid registry-controlled
+// portion (see PermissiveGetHostRegistryLength for particulars).
+NET_EXPORT bool HostHasRegistryControlledDomain(
+    base::StringPiece host,
+    UnknownRegistryFilter unknown_filter,
+    PrivateRegistryFilter private_filter);
+
+// Like GetRegistryLength, but takes a previously-canonicalized host instead of
+// a GURL. Prefer the GURL version or HasRegistryControlledDomain to eliminate
+// the possibility of bugs with non-canonical hosts.
+//
+// If you have a non-canonical host name, use the "Permissive" version instead.
+NET_EXPORT size_t
+GetCanonicalHostRegistryLength(base::StringPiece canon_host,
+                               UnknownRegistryFilter unknown_filter,
+                               PrivateRegistryFilter private_filter);
+
+// Like GetRegistryLength for a potentially non-canonicalized hostname.  This
+// splits the input into substrings at '.' characters, then attempts to
+// piecewise-canonicalize the substrings. After finding the registry length of
+// the concatenated piecewise string, it then maps back to the corresponding
+// length in the original input string.
+//
+// It will also handle hostnames that are otherwise invalid as long as they
+// contain a valid registry controlled domain at the end. Invalid dot-separated
+// portions of the domain will be left as-is when the string is looked up in
+// the registry database (which will result in no match).
+//
+// This will handle all cases except for the pattern:
+//   <invalid-host-chars> <non-literal-dot> <valid-registry-controlled-domain>
+// For example:
+//   "%00foo%2Ecom" (would canonicalize to "foo.com" if the "%00" was removed)
+// A non-literal dot (like "%2E" or a fullwidth period) will normally get
+// canonicalized to a dot if the host chars were valid. But since the %2E will
+// be in the same substring as the %00, the substring will fail to
+// canonicalize, the %2E will be left escaped, and the valid registry
+// controlled domain at the end won't match.
+//
+// The string won't be trimmed, so things like trailing spaces will be
+// considered part of the host and therefore won't match any TLD. It will
+// return std::string::npos like GetRegistryLength() for empty input, but
+// because invalid portions are skipped, it won't return npos in any other case.
+NET_EXPORT size_t
+PermissiveGetHostRegistryLength(base::StringPiece host,
+                                UnknownRegistryFilter unknown_filter,
+                                PrivateRegistryFilter private_filter);
+NET_EXPORT size_t
+PermissiveGetHostRegistryLength(base::StringPiece16 host,
+                                UnknownRegistryFilter unknown_filter,
+                                PrivateRegistryFilter private_filter);
 
 typedef const struct DomainRule* (*FindDomainPtr)(const char *, unsigned int);
 
@@ -241,6 +288,7 @@ NET_EXPORT_PRIVATE void SetFindDomainGraph();
 // Used for unit tests, so that a frozen list of domains is used.
 NET_EXPORT_PRIVATE void SetFindDomainGraph(const unsigned char* domains,
                                            size_t length);
+
 }  // namespace registry_controlled_domains
 }  // namespace net
 

@@ -127,22 +127,25 @@ void CreateSpdyHeadersFromHttpResponse(
   }
 }
 
-static_assert(HIGHEST - LOWEST < 4 && HIGHEST - MINIMUM_PRIORITY < 5,
+static_assert(HIGHEST - LOWEST < 4 && HIGHEST - MINIMUM_PRIORITY < 6,
               "request priority incompatible with spdy");
 
 SpdyPriority ConvertRequestPriorityToSpdyPriority(
     const RequestPriority priority) {
   DCHECK_GE(priority, MINIMUM_PRIORITY);
   DCHECK_LE(priority, MAXIMUM_PRIORITY);
-  return static_cast<SpdyPriority>(MAXIMUM_PRIORITY - priority);
+  return static_cast<SpdyPriority>(MAXIMUM_PRIORITY - priority +
+                                   kV3HighestPriority);
 }
 
 NET_EXPORT_PRIVATE RequestPriority
 ConvertSpdyPriorityToRequestPriority(SpdyPriority priority) {
   // Handle invalid values gracefully.
-  // Note that SpdyPriority is not an enum, hence the magic constants.
-  return (priority >= 5) ?
-      IDLE : static_cast<RequestPriority>(4 - priority);
+  return ((priority - kV3HighestPriority) >
+          (MAXIMUM_PRIORITY - MINIMUM_PRIORITY))
+             ? IDLE
+             : static_cast<RequestPriority>(MAXIMUM_PRIORITY -
+                                            (priority - kV3HighestPriority));
 }
 
 NET_EXPORT_PRIVATE void ConvertHeaderBlockToHttpRequestHeaders(

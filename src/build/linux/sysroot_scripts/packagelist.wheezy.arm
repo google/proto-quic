@@ -48,6 +48,8 @@ main/g/gnutls26/libgnutls-openssl27_2.12.20-8+deb7u5_armhf.deb
 main/g/gnutls26/libgnutlsxx27_2.12.20-8+deb7u5_armhf.deb
 main/g/gtk+2.0/libgtk2.0-0_2.24.10-2_armhf.deb
 main/g/gtk+2.0/libgtk2.0-dev_2.24.10-2_armhf.deb
+main/g/gtk+3.0/libgtk-3-0_3.4.2-7+deb7u1_armhf.deb
+main/g/gtk+3.0/libgtk-3-dev_3.4.2-7+deb7u1_armhf.deb
 main/k/keyutils/libkeyutils1_1.5.5-3+deb7u1_armhf.deb
 main/k/krb5/krb5-multidev_1.10.1+dfsg-5+deb7u7_armhf.deb
 main/k/krb5/libgssapi-krb5-2_1.10.1+dfsg-5+deb7u7_armhf.deb

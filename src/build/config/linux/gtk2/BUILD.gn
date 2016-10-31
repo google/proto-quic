@@ -25,7 +25,7 @@ pkg_config("gtk2_internal_config") {
 # parts that explicitly need GTK are whitelisted on this target.
 group("gtk2") {
   visibility = [
-    "//chrome/browser/ui/libgtk2ui",
+    "//chrome/browser/ui/libgtkui:libgtk2ui",
     "//gpu/gles2_conform_support:gles2_conform_test_windowless",
     "//remoting/host",
     "//remoting/host/it2me:common",
@@ -42,6 +42,6 @@ pkg_config("gtkprint2_internal_config") {
 }
 
 group("gtkprint2") {
-  visibility = [ "//chrome/browser/ui/libgtk2ui" ]
+  visibility = [ "//chrome/browser/ui/libgtkui:libgtk2ui" ]
   public_configs = [ ":gtkprint2_internal_config" ]
 }

@@ -144,7 +144,7 @@ int HttpNetworkTransaction::Start(const HttpRequestInfo* request_info,
   if (request_->load_flags & LOAD_PREFETCH)
     response_.unused_since_prefetch = true;
 
-  next_state_ = STATE_NOTIFY_BEFORE_CREATE_STREAM;
+  next_state_ = STATE_THROTTLE;
   int rv = DoLoop(OK);
   if (rv == ERR_IO_PENDING)
     callback_ = callback;
@@ -370,6 +370,8 @@ LoadState HttpNetworkTransaction::GetLoadState() const {
   // TODO(wtc): Define a new LoadState value for the
   // STATE_INIT_CONNECTION_COMPLETE state, which delays the HTTP request.
   switch (next_state_) {
+    case STATE_THROTTLE_COMPLETE:
+      return LOAD_STATE_THROTTLED;
     case STATE_CREATE_STREAM:
       return LOAD_STATE_WAITING_FOR_DELEGATE;
     case STATE_CREATE_STREAM_COMPLETE:
@@ -420,10 +422,20 @@ void HttpNetworkTransaction::PopulateNetErrorDetails(
 
 void HttpNetworkTransaction::SetPriority(RequestPriority priority) {
   priority_ = priority;
+
+  // TODO: Note that if throttling is ever implemented below this
+  // level, either of the two below calls may result in request
+  // completion, callbacks, and the potential deletion of this object
+  // (like the call below to throttle_->SetPriority()).  In that case,
+  // this code will need to be modified.
   if (stream_request_)
     stream_request_->SetPriority(priority);
   if (stream_)
     stream_->SetPriority(priority);
+
+  if (throttle_)
+    throttle_->SetPriority(priority);
+  // The above call may have resulted in deleting |*this|.
 }
 
 void HttpNetworkTransaction::SetWebSocketHandshakeStreamCreateHelper(
@@ -581,6 +593,17 @@ void HttpNetworkTransaction::GetConnectionAttempts(
   *out = connection_attempts_;
 }
 
+void HttpNetworkTransaction::OnThrottleStateChanged() {
+  // TODO(rdsmith): This DCHECK is dependent on the only transition
+  // being from throttled->unthrottled.  That is true right now, but may not
+  // be so in the future.
+  DCHECK_EQ(STATE_THROTTLE_COMPLETE, next_state_);
+
+  net_log_.EndEvent(NetLogEventType::HTTP_TRANSACTION_THROTTLED);
+
+  DoLoop(OK);
+}
+
 bool HttpNetworkTransaction::IsSecureRequest() const {
   return request_->url.SchemeIsCryptographic();
 }
@@ -651,6 +674,14 @@ int HttpNetworkTransaction::DoLoop(int result) {
     State state = next_state_;
     next_state_ = STATE_NONE;
     switch (state) {
+      case STATE_THROTTLE:
+        DCHECK_EQ(OK, rv);
+        rv = DoThrottle();
+        break;
+      case STATE_THROTTLE_COMPLETE:
+        DCHECK_EQ(OK, rv);
+        rv = DoThrottleComplete();
+        break;
       case STATE_NOTIFY_BEFORE_CREATE_STREAM:
         DCHECK_EQ(OK, rv);
         rv = DoNotifyBeforeCreateStream();
@@ -764,6 +795,28 @@ int HttpNetworkTransaction::DoLoop(int result) {
   } while (rv != ERR_IO_PENDING && next_state_ != STATE_NONE);
 
   return rv;
+}
+
+int HttpNetworkTransaction::DoThrottle() {
+  throttle_ = session_->throttler()->CreateThrottle(
+      this, priority_, (request_->load_flags & LOAD_IGNORE_LIMITS) != 0);
+  next_state_ = STATE_THROTTLE_COMPLETE;
+
+  if (throttle_->IsThrottled()) {
+    net_log_.BeginEvent(NetLogEventType::HTTP_TRANSACTION_THROTTLED);
+    return ERR_IO_PENDING;
+  }
+
+  return OK;
+}
+
+int HttpNetworkTransaction::DoThrottleComplete() {
+  DCHECK(throttle_);
+  DCHECK(!throttle_->IsThrottled());
+
+  next_state_ = STATE_NOTIFY_BEFORE_CREATE_STREAM;
+
+  return OK;
 }
 
 int HttpNetworkTransaction::DoNotifyBeforeCreateStream() {

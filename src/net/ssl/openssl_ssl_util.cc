@@ -5,9 +5,6 @@
 #include "net/ssl/openssl_ssl_util.h"
 
 #include <errno.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <openssl/x509.h>
 #include <utility>
 
 #include "base/bind.h"
@@ -18,6 +15,9 @@
 #include "crypto/openssl_util.h"
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_connection_status_flags.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 

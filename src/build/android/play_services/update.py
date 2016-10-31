@@ -47,7 +47,7 @@ CONFIG_DEFAULT_PATH = os.path.join(host_paths.DIR_SOURCE_ROOT, 'build',
 
 LICENSE_FILE_NAME = 'LICENSE'
 ZIP_FILE_NAME = 'google_play_services_library.zip'
-GMS_PACKAGE_ID = 'extra-google-google_play_services'  # used by sdk manager
+GMS_PACKAGE_ID = 'extra-google-m2repository'  # used by sdk manager
 
 LICENSE_PATTERN = re.compile(r'^Pkg\.License=(?P<text>.*)$', re.MULTILINE)
 
@@ -141,7 +141,7 @@ def Download(args):
   '''
   Downloads the Google Play services library from a Google Cloud Storage bucket
   and installs it to
-  //third_party/android_tools/sdk/extras/google/google_play_services.
+  //third_party/android_tools/sdk/extras/google/m2repository.
 
   A license check will be made, and the user might have to accept the license
   if that has not been done before.
@@ -155,7 +155,8 @@ def Download(args):
       return 0
 
   config = utils.ConfigParser(args.config)
-  paths = PlayServicesPaths(args.sdk_root, config.version_xml_path)
+  paths = PlayServicesPaths(args.sdk_root, config.version_number,
+                            config.clients)
 
   if os.path.isdir(paths.package) and not os.access(paths.package, os.W_OK):
     logging.error('Failed updating the Google Play Services library. '
@@ -202,14 +203,20 @@ def Download(args):
                         args.verbose, args.dry_run)
 
     try:
+      # Remove the deprecated sdk directory.
+      deprecated_package_path = os.path.join(args.sdk_root, 'extras', 'google',
+                                             'google_play_services')
+      if os.path.exists(deprecated_package_path):
+        shutil.rmtree(deprecated_package_path)
+
       # We remove the current version of the Google Play services SDK.
       if os.path.exists(paths.package):
         shutil.rmtree(paths.package)
       os.makedirs(paths.package)
 
-      logging.debug('Extracting the library to %s', paths.lib)
+      logging.debug('Extracting the library to %s', paths.package)
       with zipfile.ZipFile(new_lib_zip, "r") as new_lib_zip_file:
-        new_lib_zip_file.extractall(paths.lib)
+        new_lib_zip_file.extractall(paths.package)
 
       logging.debug('Copying %s to %s', new_license, paths.license)
       shutil.copy(new_license, paths.license)
@@ -234,13 +241,23 @@ def UpdateSdk(args):
   '''
   Uses the Android SDK Manager to download the latest Google Play services SDK
   locally. Its usual installation path is
-  //third_party/android_tools/sdk/extras/google/google_play_services
+  //third_party/android_tools/sdk/extras/google/m2repository
   '''
 
   # This should function should not run on bots and could fail for many user
   # and setup related reasons. Also, exceptions here are not caught, so we
   # disable breakpad to avoid spamming the logs.
   breakpad.IS_ENABLED = False
+
+  # `android update sdk` fails if the library is not installed yet, but it does
+  # not allow to install it from scratch using the command line. We then create
+  # a fake outdated installation.
+  paths = PlayServicesPaths(args.sdk_root, 'no_version_number', [])
+  if not os.path.isfile(paths.source_prop):
+    if not os.path.exists(os.path.dirname(paths.source_prop)):
+      os.makedirs(os.path.dirname(paths.source_prop))
+    with open(paths.source_prop, 'w') as prop_file:
+      prop_file.write('Pkg.Revision=0.0.0\n')
 
   sdk_manager = os.path.join(args.sdk_root, 'tools', 'android')
   cmd = [sdk_manager, 'update', 'sdk', '--no-ui', '--filter', GMS_PACKAGE_ID]
@@ -253,7 +270,8 @@ def UpdateSdk(args):
 def Upload(args):
   '''
   Uploads the library from the local Google Play services SDK to a Google Cloud
-  storage bucket.
+  storage bucket. The version of the library and the list of clients to be
+  uploaded will be taken from the configuration file. (see --config parameter)
 
   By default, a local commit will be made at the end of the operation.
   '''
@@ -264,32 +282,24 @@ def Upload(args):
   breakpad.IS_ENABLED = False
 
   config = utils.ConfigParser(args.config)
-  paths = PlayServicesPaths(args.sdk_root, config.version_xml_path)
+  paths = PlayServicesPaths(args.sdk_root, config.version_number,
+                            config.clients)
+  logging.debug('-- Loaded paths --\n%s\n------------------', paths)
 
   if not args.skip_git and utils.IsRepoDirty(host_paths.DIR_SOURCE_ROOT):
     logging.error('The repo is dirty. Please commit or stash your changes.')
     return -1
 
-  new_version_number = utils.GetVersionNumberFromLibraryResources(
-      paths.version_xml)
-  logging.debug('comparing versions: new=%d, old=%s',
-                new_version_number, config.version_number)
-  if new_version_number <= config.version_number and not args.force:
-    logging.info('The checked in version of the library is already the latest '
-                 'one. No update is needed. Please rerun with --force to skip '
-                 'this check.')
-    return 0
 
   tmp_root = tempfile.mkdtemp()
   try:
     new_lib_zip = os.path.join(tmp_root, ZIP_FILE_NAME)
     new_license = os.path.join(tmp_root, LICENSE_FILE_NAME)
 
-    # need to strip '.zip' from the file name here
-    shutil.make_archive(new_lib_zip[:-4], 'zip', paths.lib)
+    _ZipLibrary(new_lib_zip, paths.client_paths, paths.package)
     _ExtractLicenseFile(new_license, paths.source_prop)
 
-    bucket_path = _VerifyBucketPathFormat(args.bucket, new_version_number,
+    bucket_path = _VerifyBucketPathFormat(args.bucket, config.version_number,
                                           args.dry_run)
     files_to_upload = [new_lib_zip, new_license]
     logging.debug('Uploading %s to %s', files_to_upload, bucket_path)
@@ -304,11 +314,9 @@ def Upload(args):
   finally:
     shutil.rmtree(tmp_root)
 
-  config.UpdateVersionNumber(new_version_number)
-
   if not args.skip_git:
     commit_message = ('Update the Google Play services dependency to %s\n'
-                      '\n') % new_version_number
+                      '\n') % config.version_number
     utils.MakeLocalCommit(host_paths.DIR_SOURCE_ROOT,
                           [new_lib_zip_sha1, new_license_sha1, config.path],
                           commit_message)
@@ -388,7 +396,7 @@ def _CheckLicenseAgreement(expected_license_path, actual_license_path,
     # Uses plain print rather than logging to make sure this is not formatted
     # by the logger.
     print ('Updating the Google Play services SDK to '
-           'version %d.' % version_number)
+           'version %s.' % version_number)
 
     # The output is buffered when running as part of gclient hooks. We split
     # the text here and flush is explicitly to avoid having part of it dropped
@@ -400,7 +408,8 @@ def _CheckLicenseAgreement(expected_license_path, actual_license_path,
 
   # Need to put the prompt on a separate line otherwise the gclient hook buffer
   # only prints it after we received an input.
-  print 'Do you accept the license? [y/n]: '
+  print ('Do you accept the license for version %s of the Google Play services '
+         'client library? [y/n]: ' % version_number)
   sys.stdout.flush()
   return raw_input('> ') in ('Y', 'y')
 
@@ -427,9 +436,14 @@ def _VerifyBucketPathFormat(bucket_name, version_number, is_dry_run):
       # download/upload scripts and to make dry run transition easier.
       raise AttributeError('Please provide the bucket name without the gs:// '
                            'prefix (e.g. %s)' % GMS_CLOUD_STORAGE)
-    bucket_path = 'gs://%s/%d' % (bucket_name, version_number)
+    bucket_path = 'gs://%s/%s' % (bucket_name, version_number)
 
   return bucket_path
+
+def _ZipLibrary(zip_name, files, zip_root):
+  with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    for file_name in files:
+      zipf.write(file_name, os.path.relpath(file_name, zip_root))
 
 
 class PlayServicesPaths(object):
@@ -441,53 +455,64 @@ class PlayServicesPaths(object):
   [sdk_root]                                         | sdk_root / (1)
    +- extras                                         |
       +- google                                      |
-         +- google_play_services                     | package / (2)
+         +- m2repository                             | package / (2)
             +- source.properties                     | source_prop / (3)
             +- LICENSE                               | license / (4)
             +- google_play_services_library.zip.sha1 | lib_zip_sha1 / (5)
-            +- libproject                            |
-               +- google-play-services_lib           | lib / (6)
-                  +- res                             |
-                     +- values                       |
-                        +- version.xml               | version_xml (7)
+            +- com/google/android/gms/               |
+               +- [play-services-foo]                |
+                  +- [X.Y.Z]                         |
+                     +- play-services-foo-X.Y.Z.aar  | client_paths / (6)
 
   Notes:
 
    1. sdk_root: Path provided as a parameter to the script (--sdk_root)
    2. package: This directory contains the Google Play services SDK itself.
-      When downloaded via the Android SDK manager, it will contain,
-      documentation, samples and other files in addition to the library. When
-      the update script downloads the library from our cloud storage, it is
-      cleared.
+      When downloaded via the Android SDK manager, it will be a complete maven,
+      repository with the different versions of the library. When the update
+      script downloads the library from our cloud storage, it is cleared.
    3. source_prop: File created by the Android SDK manager that contains
       the package information, such as the version info and the license.
    4. license: File created by the update script. Contains the license accepted
       by the user.
-   5. lib_zip_sha1: sha1 of the library zip that has been installed by the
+   5. lib_zip_sha1: sha1 of the library that has been installed by the
       update script. It is compared with the one required by the config file to
       check if an update is necessary.
-   6. lib: Contains the library itself: jar and resources. This is what is
-      downloaded from the cloud storage.
-   7. version_xml: File that contains the exact Google Play services library
-      version, the one that we track. The version looks like 811500, is used in
-      the code and the on-device APK, as opposed to the SDK package version
-      which looks like 27.0.0 and is used only by the Android SDK manager.
+   6. client_paths: The client library jars we care about. They are zipped
+      zipped together and uploaded to the cloud storage.
 
   '''
 
-  def __init__(self, sdk_root, version_xml_path):
-    relative_package = os.path.join('extras', 'google', 'google_play_services')
-    relative_lib = os.path.join(relative_package, 'libproject',
-                                'google-play-services_lib')
+  def __init__(self, sdk_root, version_number, client_names):
+    '''
+    sdk_root: path to the root of the sdk directory
+    version_number: version of the library supposed to be installed locally.
+    client_names: names of client libraries to be uploaded. See
+        utils.ConfigParser for more info.
+    '''
+    relative_package = os.path.join('extras', 'google', 'm2repository')
     self.sdk_root = sdk_root
+    self.version_number = version_number
 
     self.package = os.path.join(sdk_root, relative_package)
     self.lib_zip_sha1 = os.path.join(self.package, ZIP_FILE_NAME + '.sha1')
     self.license = os.path.join(self.package, LICENSE_FILE_NAME)
     self.source_prop = os.path.join(self.package, 'source.properties')
 
-    self.lib = os.path.join(sdk_root, relative_lib)
-    self.version_xml = os.path.join(self.lib, version_xml_path)
+    self.client_paths = []
+    for client in client_names:
+      self.client_paths.append(os.path.join(
+              self.package, 'com', 'google', 'android', 'gms', client,
+              version_number, '%s-%s.aar' % (client, version_number)))
+
+  def __repr__(self):
+    return ("\nsdk_root: " + self.sdk_root +
+            "\nversion_number: " + self.version_number +
+            "\npackage: " + self.package +
+            "\nlib_zip_sha1: " + self.lib_zip_sha1 +
+            "\nlicense: " + self.license +
+            "\nsource_prop: " + self.source_prop +
+            "\nclient_paths: \n - " + '\n - '.join(self.client_paths))
 
 
 class DummyGsutil(download_from_google_storage.Gsutil):

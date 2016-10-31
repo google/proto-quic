@@ -4,13 +4,12 @@
 
 #include "net/ssl/ssl_client_session_cache.h"
 
-#include <openssl/ssl.h>
-
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/test/simple_test_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
 

@@ -70,6 +70,75 @@ bool SeekToSPKI(der::Input in, der::Parser* tbs_certificate) {
   return true;
 }
 
+// Parses input |in| which should point to the beginning of a
+// Certificate. If parsing fails, this function returns false, with
+// |*extensions_present| and |*extensions_parser| left in an undefined
+// state. If parsing succeeds and extensions are present, this function
+// sets |*extensions_present| to true and sets |*extensions_parser|
+// ready to parse the Extensions. If extensions are not present, it sets
+// |*extensions_present| to false and |*extensions_parser| is left in an
+// undefined state.
+bool SeekToExtensions(der::Input in,
+                      bool* extensions_present,
+                      der::Parser* extensions_parser) {
+  bool present;
+  der::Parser tbs_cert_parser;
+  if (!SeekToSPKI(in, &tbs_cert_parser))
+    return false;
+
+  // From RFC 5280, section 4.1
+  // TBSCertificate  ::=  SEQUENCE  {
+  //      ...
+  //      subjectPublicKeyInfo SubjectPublicKeyInfo,
+  //      issuerUniqueID  [1]  IMPLICIT UniqueIdentifier OPTIONAL,
+  //      subjectUniqueID [2]  IMPLICIT UniqueIdentifier OPTIONAL,
+  //      extensions      [3]  EXPLICIT Extensions OPTIONAL }
+
+  // subjectPublicKeyInfo
+  if (!tbs_cert_parser.SkipTag(der::kSequence))
+    return false;
+  // issuerUniqueID
+  if (!tbs_cert_parser.SkipOptionalTag(
+          der::kTagConstructed | der::kTagContextSpecific | 1, &present)) {
+    return false;
+  }
+  // subjectUniqueID
+  if (!tbs_cert_parser.SkipOptionalTag(
+          der::kTagConstructed | der::kTagContextSpecific | 2, &present)) {
+    return false;
+  }
+
+  der::Input extensions;
+  if (!tbs_cert_parser.ReadOptionalTag(
+          der::kTagConstructed | der::kTagContextSpecific | 3, &extensions,
+          &present)) {
+    return false;
+  }
+
+  if (!present) {
+    *extensions_present = false;
+    return true;
+  }
+
+  // Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
+  // Extension   ::=  SEQUENCE  {
+  //      extnID      OBJECT IDENTIFIER,
+  //      critical    BOOLEAN DEFAULT FALSE,
+  //      extnValue   OCTET STRING }
+
+  // |extensions| was EXPLICITly tagged, so we still need to remove the
+  // ASN.1 SEQUENCE header.
+  der::Parser explicit_extensions_parser(extensions);
+  if (!explicit_extensions_parser.ReadSequence(extensions_parser))
+    return false;
+
+  if (explicit_extensions_parser.HasMore())
+    return false;
+
+  *extensions_present = true;
+  return true;
+}
+
 }  // namespace
 
 bool ExtractSPKIFromDERCert(base::StringPiece cert,
@@ -118,59 +187,13 @@ bool ExtractCRLURLsFromDERCert(base::StringPiece cert,
                                std::vector<base::StringPiece>* urls_out) {
   urls_out->clear();
   std::vector<base::StringPiece> tmp_urls_out;
-
   bool present;
-  der::Parser tbs_cert_parser;
-  if (!SeekToSPKI(der::Input(cert), &tbs_cert_parser))
+  der::Parser extensions_parser;
+  if (!SeekToExtensions(der::Input(cert), &present, &extensions_parser))
     return false;
-
-  // From RFC 5280, section 4.1
-  // TBSCertificate  ::=  SEQUENCE  {
-  //      ...
-  //      subjectPublicKeyInfo SubjectPublicKeyInfo,
-  //      issuerUniqueID  [1]  IMPLICIT UniqueIdentifier OPTIONAL,
-  //      subjectUniqueID [2]  IMPLICIT UniqueIdentifier OPTIONAL,
-  //      extensions      [3]  EXPLICIT Extensions OPTIONAL }
-
-  // subjectPublicKeyInfo
-  if (!tbs_cert_parser.SkipTag(der::kSequence))
-    return false;
-  // issuerUniqueID
-  if (!tbs_cert_parser.SkipOptionalTag(
-          der::kTagConstructed | der::kTagContextSpecific | 1, &present)) {
-    return false;
-  }
-  // subjectUniqueID
-  if (!tbs_cert_parser.SkipOptionalTag(
-          der::kTagConstructed | der::kTagContextSpecific | 2, &present)) {
-    return false;
-  }
-
-  der::Input extensions;
-  if (!tbs_cert_parser.ReadOptionalTag(
-          der::kTagConstructed | der::kTagContextSpecific | 3, &extensions,
-          &present)) {
-    return false;
-  }
 
   if (!present)
     return true;
-
-  // Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
-  // Extension   ::=  SEQUENCE  {
-  //      extnID      OBJECT IDENTIFIER,
-  //      critical    BOOLEAN DEFAULT FALSE,
-  //      extnValue   OCTET STRING }
-
-  // |extensions| was EXPLICITly tagged, so we still need to remove the
-  // ASN.1 SEQUENCE header.
-  der::Parser explicit_extensions_parser(extensions);
-  der::Parser extensions_parser;
-  if (!explicit_extensions_parser.ReadSequence(&extensions_parser))
-    return false;
-
-  if (explicit_extensions_parser.HasMore())
-    return false;
 
   while (extensions_parser.HasMore()) {
     der::Parser extension_parser;
@@ -287,6 +310,34 @@ bool ExtractCRLURLsFromDERCert(base::StringPiece cert,
 
   urls_out->swap(tmp_urls_out);
   return true;
+}
+
+bool HasTLSFeatureExtension(base::StringPiece cert) {
+  bool present;
+  der::Parser extensions_parser;
+  if (!SeekToExtensions(der::Input(cert), &present, &extensions_parser))
+    return false;
+  if (!present)
+    return false;
+
+  while (extensions_parser.HasMore()) {
+    der::Parser extension_parser;
+    if (!extensions_parser.ReadSequence(&extension_parser))
+      return false;
+
+    der::Input oid;
+    if (!extension_parser.ReadTag(der::kOid, &oid))
+      return false;
+
+    // kTLSFeatureExtensionOID is the DER encoding of the OID for the
+    // X.509 TLS Feature Extension.
+    static const uint8_t kTLSFeatureExtensionOID[] = {0x2B, 0x06, 0x01, 0x05,
+                                                      0x05, 0x07, 0x01, 0x18};
+    if (oid == der::Input(kTLSFeatureExtensionOID))
+      return true;
+  }
+
+  return false;
 }
 
 } // namespace asn1

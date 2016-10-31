@@ -100,7 +100,7 @@ ReportSilkDetails = ["renderer_main"]
 # could change. We should formalize these traces to keep this robust.
 OverheadTraceCategory = "trace_event_overhead"
 OverheadTraceName = "overhead"
-FrameTraceName = "::SwapBuffers"
+FrameTraceName = "LayerTreeHostImpl::DrawLayers"
 FrameTraceThreadName = "renderer_compositor"
 
 IntervalNames = ["frame", "second"]

@@ -63,8 +63,8 @@ int FuzzedSocket::Read(IOBuffer* buf,
       result = buf_len;
 
     if (result > 0) {
-      base::StringPiece data = data_provider_->ConsumeBytes(result);
-      result = data.length();
+      std::string data = data_provider_->ConsumeBytes(result);
+      result = data.size();
       std::copy(data.data(), data.data() + result, buf->data());
     }
 

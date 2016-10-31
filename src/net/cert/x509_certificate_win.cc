@@ -6,8 +6,6 @@
 
 #include <memory>
 
-#include <openssl/sha.h>
-
 #include "base/logging.h"
 #include "base/memory/free_deleter.h"
 #include "base/numerics/safe_conversions.h"
@@ -19,6 +17,7 @@
 #include "crypto/scoped_capi_types.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::Time;
 

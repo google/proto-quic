@@ -31,7 +31,7 @@ QuicClientSession::QuicClientSession(
 QuicClientSession::~QuicClientSession() {}
 
 void QuicClientSession::Initialize() {
-  crypto_stream_.reset(CreateQuicCryptoStream());
+  crypto_stream_ = CreateQuicCryptoStream();
   QuicClientSessionBase::Initialize();
 }
 
@@ -124,8 +124,9 @@ QuicSpdyStream* QuicClientSession::CreateIncomingDynamicStream(
   return stream;
 }
 
-QuicCryptoClientStreamBase* QuicClientSession::CreateQuicCryptoStream() {
-  return new QuicCryptoClientStream(
+std::unique_ptr<QuicCryptoClientStreamBase>
+QuicClientSession::CreateQuicCryptoStream() {
+  return base::MakeUnique<QuicCryptoClientStream>(
       server_id_, this, new ProofVerifyContextChromium(0, NetLogWithSource()),
       crypto_config_, this);
 }

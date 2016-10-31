@@ -6,6 +6,7 @@
 # Some projects (e.g. V8) do not have non-build directories DEPS'ed in.
 import("//build/config/android/config.gni")
 import("//build/config/android/internal_rules.gni")
+import("//build/config/compiler/compiler.gni")
 import("//build/config/dcheck_always_on.gni")
 import("//build/toolchain/toolchain.gni")
 
@@ -199,6 +200,10 @@ if (enable_java_templates) {
         rebase_path(jni_generator_include, jni_output_dir),
         "--native_exports_optional",
       ]
+
+      if (enable_profiling) {
+        args += [ "--enable_profiling" ]
+      }
     }
 
     config("jni_includes_${target_name}") {
@@ -305,6 +310,10 @@ if (enable_java_templates) {
           rebase_path(jni_generator_include, jni_output_dir),
           "--native_exports_optional",
         ]
+
+        if (enable_profiling) {
+          args += [ "--enable_profiling" ]
+        }
       }
     }
 

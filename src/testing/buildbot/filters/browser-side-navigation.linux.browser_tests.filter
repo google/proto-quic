@@ -1,24 +1,11 @@
--ActivityLogApiTest.TriggerEvent
--BrowserActionApiTest.BrowserActionPopupWithIframe
--ChromeServiceWorker*
--CrazyExtensionTest.Crazy
--DevToolsSanityTest.TestNetworkRawHeadersText
+-ChromeServiceWorkerTest.FallbackMainResourceRequestWhenJSDisabled
 -ErrorPageTest.IFrameDNSError_JavaScript
 -ExecuteScriptApiTest.FrameWithHttp204
--ExtensionApiTest.Events
 -ExtensionApiTest.Incognito
 -ExtensionApiTest.JavaScriptURLPermissions
 -ExtensionApiTest.JavasScriptEncodedURL
--ExtensionApiTest.SandboxedPages
 -ExtensionBindingsApiTest.ModuleSystem
--ExtensionBrowserTest.WindowOpenExtension
--ExtensionResourceRequestPolicyTest.Iframe
-# ExtensionWebRequestApiTest.WebRequestDeclarative2 crashes on bots but passes locally
--ExtensionWebRequestApiTest.WebRequestDeclarative2
 -ExtensionWebRequestApiTest.WebRequestUnloadImmediately
--ExternallyConnectableMessagingTest.FromPopup
--FindInPageControllerTest.SearchWithinSpecialURL
--IsolatedAppTest.CookieIsolation
 -LogWebUIUrlTest.TestUberPage
 -MediaGalleriesPlatformAppBrowserTest.MediaGalleriesRead
 -MediaGalleriesPlatformAppBrowserTest.Scan
@@ -26,21 +13,15 @@
 -OptionsWebUIExtendedTest.OverlayBackToChild
 -PDFExtensionTest.PdfAccessibilityInOOPIF
 -PlatformAppBrowserTest.ActiveAppsAreRecorded
--PlatformAppBrowserTest.Restrictions
 -PlatformAppUrlRedirectorBrowserTest.PrerenderedClickInTabIntercepted
 -PredictorBrowserTest.RendererInitiatedNavigationPreconnect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirectNoHang
 -RedirectTest.ClientServerServer
--SafeBrowsing*
--SubresourceFilterBrowserTest.MainFrameActivation
--SubresourceFilterBrowserTest.MainFrameActivationOnStartup
--SubresourceFilterBrowserTest.SubFrameActivation
 # TabManagerTest.TabManagerBasics crashes sometimes
 -TabManagerTest.TabManagerBasics
 -TemplateURLScraperTest.ScrapeWithOnSubmit
 -ThreatDOMDetailsTest.Everything
--WebBluetoothTest.WebBluetoothAfterCrash
 -WebNavigationApiTest.Crash
 -WebNavigationApiTest.CrossProcess
 -WebNavigationApiTest.CrossProcessAbort
@@ -53,22 +34,10 @@
 -WebNavigationApiTest.RequestOpenTab
 -WebNavigationApiTest.SrcDoc
 -WebNavigationApiTest.UserAction
--WebViewTests/WebViewTest.Shim_TestInlineScriptFromAccessibleResources/*
--WebViewTests/WebViewTest.Shim_TestMailtoLink/*
--WebViewTests/WebViewTest.Shim_TestNavigationToExternalProtocol/*
--WebViewTests/WebViewTest.Shim_TestNestedSubframes/*
--WebViewTests/WebViewTest.Shim_TestWebViewInsideFrame/*
 
 # Errors related to forms submission.
 -PhishingDOMFeatureExtractorTest.SubFrames
 -PhishingDOMFeatureExtractorTest.SubframeRemoval
-
-# Fail in Debug.
--BookmarkBubbleSignInDelegateTest.*
--GetAuthTokenFunctionTest.ComponentWithNormalClientId
--GetAuthTokenFunctionTest.ComponentWithChromeClientId
--PolicyTest.ExtensionInstallBlacklistSharedModules
--WebNavigationApiTest.ServerRedirect
 
 # https://crbug.com/652767: NavigationHandle::GetResponseHeaders sometimes
 # returns null for browser-side navigations

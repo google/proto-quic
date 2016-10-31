@@ -27,8 +27,11 @@ class ProxyInfo;
 // requests at a time.
 class NET_EXPORT_PRIVATE ProxyResolver {
  public:
-  // Opaque pointer type, to return a handle to cancel outstanding requests.
-  typedef void* RequestHandle;
+  class Request {
+   public:
+    virtual ~Request() {}  // Cancels the request
+    virtual LoadState GetLoadState() = 0;
+  };
 
   ProxyResolver() {}
 
@@ -39,18 +42,12 @@ class NET_EXPORT_PRIVATE ProxyResolver {
   // by running |callback|.  If the result code is OK then
   // the request was successful and |results| contains the proxy
   // resolution information.  In the case of asynchronous completion
-  // |*request| is written to, and can be passed to CancelRequest().
+  // |*request| is written to. Call request_.reset() to cancel the request
   virtual int GetProxyForURL(const GURL& url,
                              ProxyInfo* results,
                              const CompletionCallback& callback,
-                             RequestHandle* request,
+                             std::unique_ptr<Request>* request,
                              const NetLogWithSource& net_log) = 0;
-
-  // Cancels |request|.
-  virtual void CancelRequest(RequestHandle request) = 0;
-
-  // Gets the LoadState for |request|.
-  virtual LoadState GetLoadState(RequestHandle request) const = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ProxyResolver);

@@ -14,7 +14,7 @@ import time             # for sleep
 import win32api         # for keybd_event and VkKeyCode
 import win32con         # Windows constants
 
-# TODO(jhaas): Ask the readability guys if this would be acceptable:
+# TODO(jhaas): Ask the readability people if this would be acceptable:
 #
 #  from win32con import VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, KEYEVENTF_KEYUP
 #

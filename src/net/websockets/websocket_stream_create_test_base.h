@@ -24,6 +24,7 @@ namespace net {
 
 class HttpRequestHeaders;
 class HttpResponseHeaders;
+class URLRequest;
 class WebSocketStream;
 class WebSocketStreamRequest;
 struct WebSocketHandshakeRequestInfo;
@@ -75,6 +76,7 @@ class WebSocketStreamCreateTestBase {
   SSLInfo ssl_info_;
   bool ssl_fatal_;
   std::vector<std::unique_ptr<SSLSocketDataProvider>> ssl_data_;
+  URLRequest* url_request_;
 
   // This temporarily sets WebSocketEndpointLockManager unlock delay to zero
   // during tests.

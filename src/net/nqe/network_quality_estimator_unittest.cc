@@ -185,6 +185,9 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   histogram_tester.ExpectTotalCount("NQE.PeakKbps.Unknown", 0);
   histogram_tester.ExpectTotalCount("NQE.FastestRTT.Unknown", 0);
   histogram_tester.ExpectUniqueSample(
+      "NQE.MainFrame.EffectiveConnectionType",
+      EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_UNKNOWN, 1);
+  histogram_tester.ExpectUniqueSample(
       "NQE.MainFrame.EffectiveConnectionType.Unknown",
       EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_UNKNOWN, 1);
 
@@ -193,6 +196,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   request2->SetLoadFlags(request2->load_flags() | LOAD_MAIN_FRAME_DEPRECATED);
   request2->Start();
   base::RunLoop().Run();
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.EffectiveConnectionType", 2);
   histogram_tester.ExpectTotalCount(
       "NQE.MainFrame.EffectiveConnectionType.Unknown", 2);
 
@@ -217,10 +221,14 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   EXPECT_FALSE(estimator.GetDownlinkThroughputKbps(&kbps));
 
   // Verify that metrics are logged correctly on main-frame requests.
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.RTT.Percentile50", 1);
   histogram_tester.ExpectTotalCount("NQE.MainFrame.RTT.Percentile50.Unknown",
                                     1);
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.TransportRTT.Percentile50",
+                                    0);
   histogram_tester.ExpectTotalCount(
       "NQE.MainFrame.TransportRTT.Percentile50.Unknown", 0);
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.Kbps.Percentile50", 1);
   histogram_tester.ExpectTotalCount("NQE.MainFrame.Kbps.Percentile50.Unknown",
                                     1);
 
@@ -242,6 +250,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   histogram_tester.ExpectUniqueSample(
       "NQE.MainFrame.EffectiveConnectionType.WiFi",
       EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_UNKNOWN, 1);
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.EffectiveConnectionType", 3);
 
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN, "test");
@@ -1346,6 +1355,8 @@ TEST(NetworkQualityEstimatorTest, TestEffectiveConnectionTypeObserver) {
   request->Start();
   base::RunLoop().Run();
   EXPECT_EQ(1U, observer.effective_connection_types().size());
+  histogram_tester.ExpectUniqueSample("NQE.MainFrame.EffectiveConnectionType",
+                                      EFFECTIVE_CONNECTION_TYPE_2G, 1);
   histogram_tester.ExpectUniqueSample(
       "NQE.MainFrame.EffectiveConnectionType.Unknown",
       EFFECTIVE_CONNECTION_TYPE_2G, 1);
@@ -1519,6 +1530,8 @@ TEST(NetworkQualityEstimatorTest,
   request->Start();
   base::RunLoop().Run();
   EXPECT_EQ(1U, observer.effective_connection_types().size());
+  histogram_tester.ExpectUniqueSample("NQE.MainFrame.EffectiveConnectionType",
+                                      EFFECTIVE_CONNECTION_TYPE_2G, 1);
   histogram_tester.ExpectUniqueSample(
       "NQE.MainFrame.EffectiveConnectionType.WiFi",
       EFFECTIVE_CONNECTION_TYPE_2G, 1);
@@ -1726,8 +1739,12 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestTCPSocketRTT) {
                                     1);
 
   // Verify that metrics are logged correctly on main-frame requests.
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.TransportRTT.Percentile50",
+                                    num_requests);
   histogram_tester.ExpectTotalCount(
       "NQE.MainFrame.TransportRTT.Percentile50.Unknown", num_requests);
+  histogram_tester.ExpectTotalCount("NQE.MainFrame.EffectiveConnectionType",
+                                    num_requests);
   histogram_tester.ExpectTotalCount(
       "NQE.MainFrame.EffectiveConnectionType.Unknown", num_requests);
   histogram_tester.ExpectBucketCount(
