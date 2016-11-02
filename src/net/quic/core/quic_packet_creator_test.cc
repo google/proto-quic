@@ -26,7 +26,6 @@
 using base::StringPiece;
 using std::ostream;
 using std::string;
-using std::vector;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
@@ -60,8 +59,8 @@ struct TestParams {
 };
 
 // Constructs various test permutations.
-vector<TestParams> GetTestParams() {
-  vector<TestParams> params;
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
   constexpr QuicConnectionIdLength kMax = PACKET_8BYTE_CONNECTION_ID;
   QuicVersionVector all_supported_versions = AllSupportedVersions();
   for (size_t i = 0; i < all_supported_versions.size(); ++i) {

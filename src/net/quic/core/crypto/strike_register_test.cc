@@ -231,10 +231,11 @@ class SlowStrikeRegister {
       return NONCE_INVALID_TIME_FAILURE;
     }
 
-    pair<uint32_t, string> nonce = std::make_pair(
+    std::pair<uint32_t, string> nonce = std::make_pair(
         nonce_time, string(reinterpret_cast<const char*>(nonce_bytes), 32));
 
-    set<pair<uint32_t, string>>::const_iterator it = nonces_.find(nonce);
+    std::set<std::pair<uint32_t, string>>::const_iterator it =
+        nonces_.find(nonce);
     if (it != nonces_.end()) {
       return NONCE_NOT_UNIQUE_FAILURE;
     }
@@ -271,7 +272,7 @@ class SlowStrikeRegister {
   }
 
   void DropOldestEntry() {
-    set<pair<uint32_t, string>>::iterator oldest = nonces_.begin();
+    std::set<std::pair<uint32_t, string>>::iterator oldest = nonces_.begin();
     horizon_ = oldest->first + 1;
     nonces_.erase(oldest);
   }
@@ -282,7 +283,7 @@ class SlowStrikeRegister {
   uint8_t orbit_[8];
   uint32_t horizon_;
 
-  set<pair<uint32_t, string>> nonces_;
+  std::set<std::pair<uint32_t, string>> nonces_;
 };
 
 class StrikeRegisterStressTest : public ::testing::Test {};

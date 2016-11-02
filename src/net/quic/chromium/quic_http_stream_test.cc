@@ -524,11 +524,11 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   void ReceivePromise(QuicStreamId id) {
+    auto headers = AsHeaderList(push_promise_);
     QuicChromiumClientStream* stream =
         QuicHttpStreamPeer::GetQuicChromiumClientStream(stream_.get());
-    stream->OnStreamHeaders(serialized_push_promise_);
-
-    stream->OnPromiseHeadersComplete(id, serialized_push_promise_.size());
+    stream->OnPromiseHeaderList(id, headers.uncompressed_header_bytes(),
+                                headers);
   }
 
   void ExpectLoadTimingValid(const LoadTimingInfo& load_timing_info,

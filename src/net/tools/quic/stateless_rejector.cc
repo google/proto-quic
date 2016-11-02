@@ -54,7 +54,9 @@ StatelessRejector::StatelessRejector(
       clock_(clock),
       random_(random),
       crypto_config_(crypto_config),
-      compressed_certs_cache_(compressed_certs_cache) {}
+      compressed_certs_cache_(compressed_certs_cache),
+      proof_(new QuicCryptoProof),
+      params_(new QuicCryptoNegotiatedParameters) {}
 
 StatelessRejector::~StatelessRejector() {}
 
@@ -88,7 +90,7 @@ void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
   rejector_ptr->crypto_config_->ValidateClientHello(
       rejector_ptr->chlo_, rejector_ptr->client_address_.address(),
       rejector_ptr->server_address_.address(), rejector_ptr->version_,
-      rejector_ptr->clock_, &rejector_ptr->proof_,
+      rejector_ptr->clock_, rejector_ptr->proof_,
       std::unique_ptr<ValidateCallback>(
           new ValidateCallback(std::move(rejector), std::move(done_cb))));
 }
@@ -128,7 +130,7 @@ void StatelessRejector::ProcessClientHello(
       /*reject_only=*/true, connection_id_, server_address_.address(),
       client_address_, version_, versions_,
       /*use_stateless_rejects=*/true, server_designated_connection_id_, clock_,
-      random_, compressed_certs_cache_, &params_, &proof_,
+      random_, compressed_certs_cache_, params_, proof_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version_),
       chlo_packet_size_, std::move(cb));
 }

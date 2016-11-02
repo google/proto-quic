@@ -51,9 +51,9 @@ struct HttpRequest;
 //
 // void SetUp() {
 //   test_server_.reset(new EmbeddedTestServer());
-//   ASSERT_TRUE(test_server_.Start());
 //   test_server_->RegisterRequestHandler(
 //       base::Bind(&FooTest::HandleRequest, base::Unretained(this)));
+//   ASSERT_TRUE(test_server_.Start());
 // }
 //
 // std::unique_ptr<HttpResponse> HandleRequest(const HttpRequest& request) {

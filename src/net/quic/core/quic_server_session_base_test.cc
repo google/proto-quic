@@ -16,8 +16,10 @@
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/fake_proof_source.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
+#include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
@@ -75,7 +77,7 @@ class TestServerSession : public QuicServerSessionBase {
  public:
   TestServerSession(const QuicConfig& config,
                     QuicConnection* connection,
-                    QuicServerSessionBase::Visitor* visitor,
+                    QuicSession::Visitor* visitor,
                     QuicCryptoServerStream::Helper* helper,
                     const QuicCryptoServerConfig* crypto_config,
                     QuicCompressedCertsCache* compressed_certs_cache)
@@ -124,9 +126,12 @@ const size_t kMaxStreamsForTest = 10;
 class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
  protected:
   QuicServerSessionBaseTest()
+      : QuicServerSessionBaseTest(CryptoTestUtils::ProofSourceForTesting()) {}
+
+  explicit QuicServerSessionBaseTest(std::unique_ptr<ProofSource> proof_source)
       : crypto_config_(QuicCryptoServerConfig::TESTING,
                        QuicRandom::GetInstance(),
-                       CryptoTestUtils::ProofSourceForTesting()),
+                       std::move(proof_source)),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize) {
     config_.SetMaxStreamsPerConnection(kMaxStreamsForTest, kMaxStreamsForTest);
@@ -152,7 +157,7 @@ class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
     visitor_ = QuicConnectionPeer::GetVisitor(connection_);
   }
 
-  StrictMock<MockQuicServerSessionVisitor> owner_;
+  StrictMock<MockQuicSessionVisitor> owner_;
   StrictMock<MockQuicCryptoServerStreamHelper> stream_helper_;
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
@@ -185,7 +190,6 @@ MATCHER_P(EqualsProto, network_params, "") {
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicServerSessionBaseTest,
                         ::testing::ValuesIn(AllSupportedVersions()));
-
 TEST_P(QuicServerSessionBaseTest, ServerPushDisabledByDefault) {
   FLAGS_quic_enable_server_push_by_default = true;
   // Without the client explicitly sending kSPSH, server push will be disabled
@@ -571,6 +575,79 @@ TEST_P(QuicServerSessionBaseTest, NoBandwidthResumptionByDefault) {
   session_->OnConfigNegotiated();
   EXPECT_FALSE(
       QuicServerSessionBasePeer::IsBandwidthResumptionEnabled(session_.get()));
+}
+
+// Tests which check the lifetime management of data members of
+// QuicCryptoServerStream objects when async GetProof is in use.
+class StreamMemberLifetimeTest : public QuicServerSessionBaseTest {
+ public:
+  StreamMemberLifetimeTest()
+      : QuicServerSessionBaseTest(
+            std::unique_ptr<FakeProofSource>(new FakeProofSource())),
+        crypto_config_peer_(&crypto_config_) {
+    GetFakeProofSource()->Activate();
+  }
+
+  FakeProofSource* GetFakeProofSource() const {
+    return static_cast<FakeProofSource*>(crypto_config_peer_.GetProofSource());
+  }
+
+ private:
+  QuicCryptoServerConfigPeer crypto_config_peer_;
+};
+
+INSTANTIATE_TEST_CASE_P(StreamMemberLifetimeTests,
+                        StreamMemberLifetimeTest,
+                        ::testing::ValuesIn(AllSupportedVersions()));
+
+// Trigger an operation which causes an async invocation of
+// ProofSource::GetProof.  Delay the completion of the operation until after the
+// stream has been destroyed, and verify that there are no memory bugs.
+TEST_P(StreamMemberLifetimeTest, Basic) {
+  FLAGS_enable_async_get_proof = true;
+  FLAGS_quic_buffer_packet_till_chlo = true;
+  FLAGS_enable_quic_stateless_reject_support = true;
+  FLAGS_quic_use_cheap_stateless_rejects = true;
+  FLAGS_quic_create_session_after_insertion = true;
+
+  const QuicClock* clock = helper_.GetClock();
+  QuicVersion version = AllSupportedVersions().front();
+  CryptoHandshakeMessage chlo = CryptoTestUtils::GenerateDefaultInchoateCHLO(
+      clock, version, &crypto_config_);
+  chlo.SetVector(kCOPT, QuicTagVector{kSREJ});
+  std::vector<QuicVersion> packet_version_list = {version};
+  std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
+      1, true, false, false, kDefaultPathId, 1,
+      chlo.GetSerialized().AsStringPiece().as_string(),
+      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
+      &packet_version_list));
+
+  EXPECT_CALL(stream_helper_, CanAcceptClientHello(_, _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(stream_helper_, GenerateConnectionIdForReject(_))
+      .WillOnce(testing::Return(12345));
+
+  // Set the current packet
+  QuicConnectionPeer::SetCurrentPacket(session_->connection(),
+                                       packet->AsStringPiece());
+
+  // Yes, this is horrible.  But it's the easiest way to trigger the behavior we
+  // need to exercise.
+  QuicCryptoServerStreamBase* crypto_stream =
+      const_cast<QuicCryptoServerStreamBase*>(session_->crypto_stream());
+
+  // Feed the CHLO into the crypto stream, which will trigger a call to
+  // ProofSource::GetProof
+  crypto_stream->OnHandshakeMessage(chlo);
+  ASSERT_EQ(GetFakeProofSource()->NumPendingCallbacks(), 1);
+
+  // Destroy the stream
+  session_.reset();
+
+  // Allow the async ProofSource::GetProof call to complete.  Verify (under
+  // asan) that this does not result in accesses to any freed memory from the
+  // session or its subobjects.
+  GetFakeProofSource()->InvokePendingCallback(0);
 }
 
 }  // namespace

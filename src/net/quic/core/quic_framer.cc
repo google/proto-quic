@@ -26,12 +26,9 @@
 
 using base::ContainsKey;
 using base::StringPiece;
-using std::map;
 using std::max;
 using std::min;
-using std::numeric_limits;
 using std::string;
-using std::vector;
 #define PREDICT_FALSE(x) (x)
 
 namespace net {
@@ -997,10 +994,10 @@ QuicFramer::AckFrameInfo QuicFramer::GetAckFrameInfo(
   for (const Interval<QuicPacketNumber>& interval : frame.packets) {
     for (QuicPacketNumber interval_start = interval.min();
          interval_start < interval.max();
-         interval_start += (1ull + numeric_limits<uint8_t>::max())) {
+         interval_start += (1ull + std::numeric_limits<uint8_t>::max())) {
       uint8_t cur_range_length =
-          interval.max() - interval_start > numeric_limits<uint8_t>::max()
-              ? numeric_limits<uint8_t>::max()
+          interval.max() - interval_start > std::numeric_limits<uint8_t>::max()
+              ? std::numeric_limits<uint8_t>::max()
               : (interval.max() - interval_start) - 1;
       ack_info.nack_ranges[interval_start] = cur_range_length;
     }
@@ -1034,13 +1031,13 @@ QuicFramer::NewAckFrameInfo QuicFramer::GetNewAckFrameInfo(
   // Don't do any more work after getting information for 256 ACK blocks; any
   // more can't be encoded anyway.
   for (; itr != frame.packets.rend() &&
-         new_ack_info.num_ack_blocks < numeric_limits<uint8_t>::max();
+         new_ack_info.num_ack_blocks < std::numeric_limits<uint8_t>::max();
        previous_start = itr->min(), ++itr) {
     const auto& interval = *itr;
     const QuicPacketNumber total_gap = previous_start - interval.max();
     new_ack_info.num_ack_blocks +=
-        (total_gap + numeric_limits<uint8_t>::max() - 1) /
-        numeric_limits<uint8_t>::max();
+        (total_gap + std::numeric_limits<uint8_t>::max() - 1) /
+        std::numeric_limits<uint8_t>::max();
     new_ack_info.max_block_length =
         max(new_ack_info.max_block_length, interval.Length());
   }
@@ -2085,7 +2082,7 @@ bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
     return false;
   }
   if (!no_stream_frame_length) {
-    if ((frame.data_length > numeric_limits<uint16_t>::max()) ||
+    if ((frame.data_length > std::numeric_limits<uint16_t>::max()) ||
         !writer->WriteUInt16(static_cast<uint16_t>(frame.data_length))) {
       QUIC_BUG << "Writing stream frame length failed";
       return false;
@@ -2296,8 +2293,8 @@ bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
 
   // Number of ack blocks.
   size_t num_ack_blocks = min(new_ack_info.num_ack_blocks, max_num_ack_blocks);
-  if (num_ack_blocks > numeric_limits<uint8_t>::max()) {
-    num_ack_blocks = numeric_limits<uint8_t>::max();
+  if (num_ack_blocks > std::numeric_limits<uint8_t>::max()) {
+    num_ack_blocks = std::numeric_limits<uint8_t>::max();
   }
 
   if (num_ack_blocks > 0) {
@@ -2333,16 +2330,16 @@ bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
       const auto& interval = *itr;
       const QuicPacketNumber total_gap = previous_start - interval.max();
       const size_t num_encoded_gaps =
-          (total_gap + numeric_limits<uint8_t>::max() - 1) /
-          numeric_limits<uint8_t>::max();
+          (total_gap + std::numeric_limits<uint8_t>::max() - 1) /
+          std::numeric_limits<uint8_t>::max();
       DCHECK_GT(num_encoded_gaps, 0u);
 
       // Append empty ACK blocks because the gap is longer than a single gap.
       for (size_t i = 1;
            i < num_encoded_gaps && num_ack_blocks_written < num_ack_blocks;
            ++i) {
-        if (!AppendAckBlock(numeric_limits<uint8_t>::max(), ack_block_length, 0,
-                            writer)) {
+        if (!AppendAckBlock(std::numeric_limits<uint8_t>::max(),
+                            ack_block_length, 0, writer)) {
           return false;
         }
         ++num_ack_blocks_written;
@@ -2356,7 +2353,8 @@ bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
       }
 
       const uint8_t last_gap =
-          total_gap - (num_encoded_gaps - 1) * numeric_limits<uint8_t>::max();
+          total_gap -
+          (num_encoded_gaps - 1) * std::numeric_limits<uint8_t>::max();
       // Append the final ACK block with a non-empty size.
       if (!AppendAckBlock(last_gap, ack_block_length, interval.Length(),
                           writer)) {
@@ -2387,9 +2385,11 @@ bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
 
 bool QuicFramer::AppendTimestampToAckFrame(const QuicAckFrame& frame,
                                            QuicDataWriter* writer) {
-  DCHECK_GE(numeric_limits<uint8_t>::max(), frame.received_packet_times.size());
+  DCHECK_GE(std::numeric_limits<uint8_t>::max(),
+            frame.received_packet_times.size());
   // num_received_packets is only 1 byte.
-  if (frame.received_packet_times.size() > numeric_limits<uint8_t>::max()) {
+  if (frame.received_packet_times.size() >
+      std::numeric_limits<uint8_t>::max()) {
     return false;
   }
 
@@ -2406,8 +2406,8 @@ bool QuicFramer::AppendTimestampToAckFrame(const QuicAckFrame& frame,
   QuicPacketNumber delta_from_largest_observed =
       frame.largest_observed - packet_number;
 
-  DCHECK_GE(numeric_limits<uint8_t>::max(), delta_from_largest_observed);
-  if (delta_from_largest_observed > numeric_limits<uint8_t>::max()) {
+  DCHECK_GE(std::numeric_limits<uint8_t>::max(), delta_from_largest_observed);
+  if (delta_from_largest_observed > std::numeric_limits<uint8_t>::max()) {
     return false;
   }
 
@@ -2431,7 +2431,7 @@ bool QuicFramer::AppendTimestampToAckFrame(const QuicAckFrame& frame,
     packet_number = it->first;
     delta_from_largest_observed = frame.largest_observed - packet_number;
 
-    if (delta_from_largest_observed > numeric_limits<uint8_t>::max()) {
+    if (delta_from_largest_observed > std::numeric_limits<uint8_t>::max()) {
       return false;
     }
 

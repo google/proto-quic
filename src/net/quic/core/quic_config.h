@@ -93,6 +93,9 @@ class NET_EXPORT_PRIVATE QuicNegotiableUint32 : public QuicNegotiableValue {
   // default_value_ (used to set default values before negotiation finishes).
   uint32_t GetUint32() const;
 
+  // Returns the maximum value negotiable.
+  uint32_t GetMax() const;
+
   // Serialises |name_| and value to |out|. If |negotiated_| is true then
   // |negotiated_value_| is serialised, otherwise |max_value_| is serialised.
   void ToHandshakeMessage(CryptoHandshakeMessage* out) const override;
@@ -277,11 +280,10 @@ class NET_EXPORT_PRIVATE QuicConfig {
   bool HasClientSentConnectionOption(QuicTag tag,
                                      Perspective perspective) const;
 
-  void SetIdleConnectionStateLifetime(
-      QuicTime::Delta max_idle_connection_state_lifetime,
-      QuicTime::Delta default_idle_conection_state_lifetime);
+  void SetIdleNetworkTimeout(QuicTime::Delta max_idle_network_timeout,
+                             QuicTime::Delta default_idle_network_timeout);
 
-  QuicTime::Delta IdleConnectionStateLifetime() const;
+  QuicTime::Delta IdleNetworkTimeout() const;
 
   void SetSilentClose(bool silent_close);
 
@@ -317,6 +319,10 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
   QuicTime::Delta max_idle_time_before_crypto_handshake() const {
     return max_idle_time_before_crypto_handshake_;
+  }
+
+  QuicNegotiableUint32 idle_network_timeout_seconds() const {
+    return idle_network_timeout_seconds_;
   }
 
   void set_max_undecryptable_packets(size_t max_undecryptable_packets) {
@@ -419,8 +425,8 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
   // Connection options.
   QuicFixedTagVector connection_options_;
-  // Idle connection state lifetime
-  QuicNegotiableUint32 idle_connection_state_lifetime_seconds_;
+  // Idle network timeout in seconds.
+  QuicNegotiableUint32 idle_network_timeout_seconds_;
   // Whether to use silent close.  Defaults to 0 (false) and is otherwise true.
   QuicNegotiableUint32 silent_close_;
   // Maximum number of streams that the connection can support.

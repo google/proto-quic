@@ -34,7 +34,7 @@ class CustomStreamSession : public QuicSimpleServerSession {
   CustomStreamSession(
       const QuicConfig& config,
       QuicConnection* connection,
-      QuicServerSessionBase::Visitor* visitor,
+      QuicSession::Visitor* visitor,
       QuicCryptoServerStream::Helper* helper,
       const QuicCryptoServerConfig* crypto_config,
       QuicCompressedCertsCache* compressed_certs_cache,
@@ -191,7 +191,7 @@ void QuicTestServer::SetCryptoStreamFactory(CryptoStreamFactory* factory) {
 ImmediateGoAwaySession::ImmediateGoAwaySession(
     const QuicConfig& config,
     QuicConnection* connection,
-    QuicServerSessionBase::Visitor* visitor,
+    QuicSession::Visitor* visitor,
     QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)

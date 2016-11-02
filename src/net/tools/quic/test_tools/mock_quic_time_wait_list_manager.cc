@@ -13,7 +13,7 @@ namespace test {
 
 MockTimeWaitListManager::MockTimeWaitListManager(
     QuicPacketWriter* writer,
-    QuicServerSessionBase::Visitor* visitor,
+    Visitor* visitor,
     QuicConnectionHelperInterface* helper,
     QuicAlarmFactory* alarm_factory)
     : QuicTimeWaitListManager(writer, visitor, helper, alarm_factory) {

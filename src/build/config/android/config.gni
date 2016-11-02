@@ -334,10 +334,10 @@ if (is_android) {
   if (defined(android_secondary_abi_cpu)) {
     if (is_clang) {
       android_secondary_abi_toolchain =
-          "//build/toolchain/android:clang_${android_secondary_abi_cpu}"
+          "//build/toolchain/android:android_clang_${android_secondary_abi_cpu}"
     } else {
       android_secondary_abi_toolchain =
-          "//build/toolchain/android:${android_secondary_abi_cpu}"
+          "//build/toolchain/android:android_${android_secondary_abi_cpu}"
     }
   }
 }

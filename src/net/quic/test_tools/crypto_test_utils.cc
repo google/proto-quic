@@ -36,9 +36,7 @@
 
 using base::StringPiece;
 using std::make_pair;
-using std::pair;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -58,11 +56,13 @@ class CryptoFramerVisitor : public CryptoFramerVisitorInterface {
 
   bool error() const { return error_; }
 
-  const vector<CryptoHandshakeMessage>& messages() const { return messages_; }
+  const std::vector<CryptoHandshakeMessage>& messages() const {
+    return messages_;
+  }
 
  private:
   bool error_;
-  vector<CryptoHandshakeMessage> messages_;
+  std::vector<CryptoHandshakeMessage> messages_;
 };
 
 // HexChar parses |c| as a hex character. If valid, it sets |*value| to the
@@ -278,7 +278,7 @@ class FullChloGenerator {
                     IPAddress server_ip,
                     IPEndPoint client_addr,
                     const QuicClock* clock,
-                    QuicCryptoProof* proof,
+                    scoped_refptr<QuicCryptoProof> proof,
                     QuicCompressedCertsCache* compressed_certs_cache,
                     CryptoHandshakeMessage* out)
       : crypto_config_(crypto_config),
@@ -287,7 +287,8 @@ class FullChloGenerator {
         clock_(clock),
         proof_(proof),
         compressed_certs_cache_(compressed_certs_cache),
-        out_(out) {}
+        out_(out),
+        params_(new QuicCryptoNegotiatedParameters) {}
 
   class ValidateClientHelloCallback : public ValidateClientHelloResultCallback {
    public:
@@ -316,7 +317,7 @@ class FullChloGenerator {
         result_, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
         client_addr_, AllSupportedVersions().front(), AllSupportedVersions(),
         /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
-        clock_, QuicRandom::GetInstance(), compressed_certs_cache_, &params_,
+        clock_, QuicRandom::GetInstance(), compressed_certs_cache_, params_,
         proof_, /*total_framing_overhead=*/50, kDefaultMaxPacketSize,
         GetProcessClientHelloCallback());
   }
@@ -371,11 +372,11 @@ class FullChloGenerator {
   IPAddress server_ip_;
   IPEndPoint client_addr_;
   const QuicClock* clock_;
-  QuicCryptoProof* proof_;
+  scoped_refptr<QuicCryptoProof> proof_;
   QuicCompressedCertsCache* compressed_certs_cache_;
   CryptoHandshakeMessage* out_;
 
-  QuicCryptoNegotiatedParameters params_;
+  scoped_refptr<QuicCryptoNegotiatedParameters> params_;
   scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
 };
 
@@ -530,7 +531,7 @@ void CryptoTestUtils::CommunicateHandshakeMessagesAndRunCallbacks(
 }
 
 // static
-pair<size_t, size_t> CryptoTestUtils::AdvanceHandshake(
+std::pair<size_t, size_t> CryptoTestUtils::AdvanceHandshake(
     PacketSavingConnection* client_conn,
     QuicCryptoStream* client,
     size_t client_i,
@@ -671,7 +672,7 @@ void CryptoTestUtils::FillInDummyReject(CryptoHandshakeMessage* rej,
   rej->SetStringPiece(kServerNonceTag, "SERVER_NONCE");
   int64_t ttl = 2 * 24 * 60 * 60;
   rej->SetValue(kSTTL, ttl);
-  vector<QuicTag> reject_reasons;
+  std::vector<QuicTag> reject_reasons;
   reject_reasons.push_back(CLIENT_NONCE_INVALID_FAILURE);
   rej->SetVector(kRREJ, reject_reasons);
 }
@@ -1005,7 +1006,7 @@ void CryptoTestUtils::GenerateFullCHLO(
     IPEndPoint client_addr,
     QuicVersion version,
     const QuicClock* clock,
-    QuicCryptoProof* proof,
+    scoped_refptr<QuicCryptoProof> proof,
     QuicCompressedCertsCache* compressed_certs_cache,
     CryptoHandshakeMessage* out) {
   // Pass a inchoate CHLO.

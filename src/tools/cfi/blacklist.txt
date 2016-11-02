@@ -15,8 +15,6 @@ type:*BlockIUnknownMethods*
 type:*BlockRefType*
 type:*SkAutoTUnref*
 type:*SkBlockComRef*
-# https://crbug.com/517959
-type:*NoAddRefRelease*
 
 # invalid downcasts for IPC messages
 # https://crbug.com/520760

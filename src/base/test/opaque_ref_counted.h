@@ -12,13 +12,18 @@ namespace base {
 // OpaqueRefCounted is a test class for scoped_refptr to ensure it still works
 // when the pointed-to type is opaque (i.e., incomplete).
 class OpaqueRefCounted;
+class OpaqueRefCountedThreadSafe;
 
 // Test functions that return and accept scoped_refptr<OpaqueRefCounted> values.
 scoped_refptr<OpaqueRefCounted> MakeOpaqueRefCounted();
 void TestOpaqueRefCounted(scoped_refptr<OpaqueRefCounted> p);
+scoped_refptr<OpaqueRefCountedThreadSafe> MakeOpaqueRefCountedThreadSafe();
+void TestOpaqueRefCountedThreadSafe(
+    scoped_refptr<OpaqueRefCountedThreadSafe> p);
 
 }  // namespace base
 
 extern template class scoped_refptr<base::OpaqueRefCounted>;
+extern template class scoped_refptr<base::OpaqueRefCountedThreadSafe>;
 
 #endif  // BASE_TEST_OPAQUE_REF_COUNTED_H_

@@ -12,8 +12,6 @@
 #include "net/quic/core/quic_data_writer.h"
 
 using base::StringPiece;
-using std::pair;
-using std::vector;
 
 namespace net {
 
@@ -260,7 +258,7 @@ QuicErrorCode CryptoFramer::Process(StringPiece input) {
       if (reader.BytesRemaining() < values_len_) {
         break;
       }
-      for (const pair<QuicTag, size_t>& item : tags_and_lengths_) {
+      for (const std::pair<QuicTag, size_t>& item : tags_and_lengths_) {
         StringPiece value;
         reader.ReadStringPiece(&value, item.second);
         message_.SetStringPiece(item.first, value);

@@ -46,7 +46,6 @@ using net::test::MockQuicConnection;
 using net::test::MockQuicConnectionHelper;
 using std::ostream;
 using std::string;
-using std::vector;
 using testing::CreateFunctor;
 using testing::DoAll;
 using testing::InSequence;
@@ -587,8 +586,8 @@ struct StatelessRejectTestParams {
 };
 
 // Constructs various test permutations for stateless rejects.
-vector<StatelessRejectTestParams> GetStatelessRejectTestParams() {
-  vector<StatelessRejectTestParams> params;
+std::vector<StatelessRejectTestParams> GetStatelessRejectTestParams() {
+  std::vector<StatelessRejectTestParams> params;
   for (bool enable_stateless_rejects_via_flag : {true, false}) {
     for (bool client_supports_statelesss_rejects : {true, false}) {
       for (bool crypto_handshake_successful : {true, false}) {
@@ -1083,8 +1082,8 @@ struct BufferedPacketStoreTestParams {
   bool support_cheap_stateless_reject;
 };
 
-vector<BufferedPacketStoreTestParams> GetBufferedPacketStoreTestParams() {
-  vector<BufferedPacketStoreTestParams> params;
+std::vector<BufferedPacketStoreTestParams> GetBufferedPacketStoreTestParams() {
+  std::vector<BufferedPacketStoreTestParams> params;
   for (bool enable_stateless_rejects_via_flag : {true, false}) {
     for (bool support_cheap_stateless_reject : {true, false}) {
       params.push_back(BufferedPacketStoreTestParams(
@@ -1100,7 +1099,9 @@ class BufferedPacketStoreTest
       public ::testing::WithParamInterface<BufferedPacketStoreTestParams> {
  public:
   BufferedPacketStoreTest()
-      : QuicDispatcherTest(), client_addr_(Loopback4(), 1234) {
+      : QuicDispatcherTest(),
+        client_addr_(Loopback4(), 1234),
+        proof_(new QuicCryptoProof) {
     FLAGS_quic_buffer_packet_till_chlo = true;
     FLAGS_quic_use_cheap_stateless_rejects =
         GetParam().support_cheap_stateless_reject;
@@ -1119,7 +1120,7 @@ class BufferedPacketStoreTest
     // Pass an inchoate CHLO.
     CryptoTestUtils::GenerateFullCHLO(
         chlo, &crypto_config_, server_ip_, client_addr_, version, clock_,
-        &proof_, QuicDispatcherPeer::GetCache(dispatcher_.get()), &full_chlo_);
+        proof_, QuicDispatcherPeer::GetCache(dispatcher_.get()), &full_chlo_);
   }
 
   string SerializeFullCHLO() {
@@ -1129,7 +1130,7 @@ class BufferedPacketStoreTest
  protected:
   IPAddress server_ip_;
   IPEndPoint client_addr_;
-  QuicCryptoProof proof_;
+  scoped_refptr<QuicCryptoProof> proof_;
   const QuicClock* clock_;
   CryptoHandshakeMessage full_chlo_;
 };
@@ -1548,7 +1549,8 @@ class AsyncGetProofTest : public QuicDispatcherTest {
       : QuicDispatcherTest(
             std::unique_ptr<FakeProofSource>(new FakeProofSource())),
         client_addr_(net::test::Loopback4(), 1234),
-        crypto_config_peer_(&crypto_config_) {
+        crypto_config_peer_(&crypto_config_),
+        proof_(new QuicCryptoProof) {
     FLAGS_enable_async_get_proof = true;
     FLAGS_quic_buffer_packet_till_chlo = true;
     FLAGS_enable_quic_stateless_reject_support = true;
@@ -1567,7 +1569,7 @@ class AsyncGetProofTest : public QuicDispatcherTest {
     // Pass an inchoate CHLO.
     CryptoTestUtils::GenerateFullCHLO(
         chlo_, &crypto_config_, server_ip_, client_addr_, version, clock_,
-        &proof_, QuicDispatcherPeer::GetCache(dispatcher_.get()), &full_chlo_);
+        proof_, QuicDispatcherPeer::GetCache(dispatcher_.get()), &full_chlo_);
 
     GetFakeProofSource()->Activate();
   }
@@ -1617,7 +1619,7 @@ class AsyncGetProofTest : public QuicDispatcherTest {
  private:
   QuicCryptoServerConfigPeer crypto_config_peer_;
   IPAddress server_ip_;
-  QuicCryptoProof proof_;
+  scoped_refptr<QuicCryptoProof> proof_;
   const QuicClock* clock_;
   CryptoHandshakeMessage chlo_;
   CryptoHandshakeMessage full_chlo_;

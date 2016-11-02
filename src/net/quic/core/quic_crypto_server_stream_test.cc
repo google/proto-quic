@@ -34,7 +34,6 @@ class QuicConnection;
 class ReliableQuicStream;
 }  // namespace net
 
-using std::pair;
 using std::string;
 using testing::_;
 
@@ -372,9 +371,10 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
 
     // Advance the handshake.  Expect that the server will be stuck waiting for
     // client nonce verification to complete.
-    pair<size_t, size_t> messages_moved = CryptoTestUtils::AdvanceHandshake(
-        client_connection_, client_stream(), 0, server_connection_,
-        server_stream(), 0);
+    std::pair<size_t, size_t> messages_moved =
+        CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(),
+                                          0, server_connection_,
+                                          server_stream(), 0);
     EXPECT_EQ(1u, messages_moved.first);
     EXPECT_EQ(0u, messages_moved.second);
     EXPECT_EQ(1, strike_register_client_->PendingVerifications());

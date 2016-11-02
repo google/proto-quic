@@ -475,7 +475,7 @@ bool QuicDispatcher::HasPendingWrites() const {
 
 void QuicDispatcher::Shutdown() {
   while (!session_map_.empty()) {
-    QuicServerSessionBase* session = session_map_.begin()->second.get();
+    QuicSession* session = session_map_.begin()->second.get();
     session->connection()->CloseConnection(
         QUIC_PEER_GOING_AWAY, "Server shutdown imminent",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -649,12 +649,12 @@ void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
   for (; new_sessions_allowed_per_event_loop_ > 0;
        --new_sessions_allowed_per_event_loop_) {
     QuicConnectionId connection_id;
-    list<BufferedPacket> packets =
+    std::list<BufferedPacket> packets =
         buffered_packets_.DeliverPacketsForNextConnection(&connection_id);
     if (packets.empty()) {
       return;
     }
-    QuicServerSessionBase* session =
+    QuicSession* session =
         CreateQuicSession(connection_id, packets.front().client_address);
     DVLOG(1) << "Created new session for " << connection_id;
     session_map_.insert(
@@ -751,7 +751,7 @@ void QuicDispatcher::ProcessChlo() {
     return;
   }
   // Creates a new session and process all buffered packets for this connection.
-  QuicServerSessionBase* session =
+  QuicSession* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
   DVLOG(1) << "Created new session for " << current_connection_id_;
   session_map_.insert(
@@ -1006,7 +1006,7 @@ const QuicVersionVector& QuicDispatcher::GetSupportedVersions() {
 
 void QuicDispatcher::DeliverPacketsToSession(
     const std::list<BufferedPacket>& packets,
-    QuicServerSessionBase* session) {
+    QuicSession* session) {
   for (const BufferedPacket& packet : packets) {
     session->ProcessUdpPacket(packet.server_address, packet.client_address,
                               *(packet.packet));

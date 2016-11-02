@@ -36,9 +36,7 @@
 
 using net::SpdyHeaderBlock;
 using net::SpdyPriority;
-using std::set;
 using std::string;
-using std::vector;
 using testing::CreateFunctor;
 using testing::AtLeast;
 using testing::InSequence;
@@ -115,7 +113,7 @@ class StreamBlocker {
 class TestSession : public QuicSpdySession {
  public:
   explicit TestSession(QuicConnection* connection)
-      : QuicSpdySession(connection, DefaultQuicConfig()),
+      : QuicSpdySession(connection, nullptr, DefaultQuicConfig()),
         crypto_stream_(this),
         writev_consumes_all_data_(false) {
     Initialize();
@@ -282,7 +280,7 @@ class QuicSessionTestBase : public ::testing::TestWithParam<QuicVersion> {
   MockAlarmFactory alarm_factory_;
   StrictMock<MockQuicConnection>* connection_;
   TestSession session_;
-  set<QuicStreamId> closed_streams_;
+  std::set<QuicStreamId> closed_streams_;
   SpdyHeaderBlock headers_;
 };
 

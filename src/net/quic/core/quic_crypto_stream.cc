@@ -27,11 +27,14 @@ namespace net {
 QuicCryptoStream::QuicCryptoStream(QuicSession* session)
     : ReliableQuicStream(kCryptoStreamId, session),
       encryption_established_(false),
-      handshake_confirmed_(false) {
+      handshake_confirmed_(false),
+      crypto_negotiated_params_(new QuicCryptoNegotiatedParameters) {
   crypto_framer_.set_visitor(this);
   // The crypto stream is exempt from connection level flow control.
   DisableConnectionFlowControlForThisStream();
 }
+
+QuicCryptoStream::~QuicCryptoStream() {}
 
 // static
 QuicByteCount QuicCryptoStream::CryptoMessageFramingOverhead(
@@ -98,7 +101,7 @@ bool QuicCryptoStream::ExportKeyingMaterial(StringPiece label,
     return false;
   }
   return CryptoUtils::ExportKeyingMaterial(
-      crypto_negotiated_params_.subkey_secret, label, context, result_len,
+      crypto_negotiated_params_->subkey_secret, label, context, result_len,
       result);
 }
 
@@ -109,13 +112,14 @@ bool QuicCryptoStream::ExportTokenBindingKeyingMaterial(string* result) const {
     return false;
   }
   return CryptoUtils::ExportKeyingMaterial(
-      crypto_negotiated_params_.initial_subkey_secret, "EXPORTER-Token-Binding",
+      crypto_negotiated_params_->initial_subkey_secret,
+      "EXPORTER-Token-Binding",
       /* context= */ "", 32, result);
 }
 
 const QuicCryptoNegotiatedParameters&
 QuicCryptoStream::crypto_negotiated_params() const {
-  return crypto_negotiated_params_;
+  return *crypto_negotiated_params_;
 }
 
 }  // namespace net

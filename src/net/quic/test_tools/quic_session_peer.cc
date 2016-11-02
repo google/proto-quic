@@ -8,8 +8,6 @@
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/reliable_quic_stream.h"
 
-using std::map;
-
 namespace net {
 namespace test {
 
@@ -55,7 +53,7 @@ ReliableQuicStream* QuicSessionPeer::GetOrCreateDynamicStream(
 }
 
 // static
-map<QuicStreamId, QuicStreamOffset>&
+std::map<QuicStreamId, QuicStreamOffset>&
 QuicSessionPeer::GetLocallyClosedStreamsHighestOffset(QuicSession* session) {
   return session->locally_closed_streams_highest_offset_;
 }

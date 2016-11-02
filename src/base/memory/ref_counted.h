@@ -31,9 +31,9 @@ class BASE_EXPORT RefCountedBase {
   RefCountedBase()
       : ref_count_(0)
 #if DCHECK_IS_ON()
-      , in_dtor_(false)
+        , in_dtor_(false)
 #endif
-      {
+  {
   }
 
   ~RefCountedBase() {
@@ -269,8 +269,7 @@ class scoped_refptr {
  public:
   typedef T element_type;
 
-  scoped_refptr() : ptr_(nullptr) {
-  }
+  scoped_refptr() {}
 
   scoped_refptr(T* p) : ptr_(p) {
     if (ptr_)
@@ -380,7 +379,7 @@ class scoped_refptr {
   }
 
  protected:
-  T* ptr_;
+  T* ptr_ = nullptr;
 
  private:
   // Friend required for move constructors that set r.ptr_ to null.

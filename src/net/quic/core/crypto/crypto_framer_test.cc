@@ -16,9 +16,7 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using base::StringPiece;
-using std::map;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -48,7 +46,7 @@ class TestCryptoVisitor : public CryptoFramerVisitorInterface {
   // Counters from the visitor callbacks.
   int error_count_;
 
-  vector<CryptoHandshakeMessage> messages_;
+  std::vector<CryptoHandshakeMessage> messages_;
 };
 
 TEST(CryptoFramerTest, ConstructHandshakeMessage) {

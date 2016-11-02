@@ -219,7 +219,7 @@ class CryptoTestUtils {
                                IPEndPoint client_addr,
                                QuicVersion version,
                                const QuicClock* clock,
-                               QuicCryptoProof* proof,
+                               scoped_refptr<QuicCryptoProof> proof,
                                QuicCompressedCertsCache* compressed_certs_cache,
                                CryptoHandshakeMessage* out);
 

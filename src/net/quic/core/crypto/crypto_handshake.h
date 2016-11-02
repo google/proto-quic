@@ -99,10 +99,10 @@ struct NET_EXPORT_PRIVATE CrypterPair {
 };
 
 // Parameters negotiated by the crypto handshake.
-struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters {
+struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
+    : public base::RefCounted<QuicCryptoNegotiatedParameters> {
   // Initializes the members to 0 or empty values.
   QuicCryptoNegotiatedParameters();
-  ~QuicCryptoNegotiatedParameters();
 
   QuicTag key_exchange;
   QuicTag aead;
@@ -149,6 +149,10 @@ struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters {
   // Default to false; set to true if the client indicates that it supports sct
   // by sending CSCT tag with an empty value in client hello.
   bool sct_supported_by_client;
+
+ private:
+  friend class base::RefCounted<QuicCryptoNegotiatedParameters>;
+  virtual ~QuicCryptoNegotiatedParameters();
 };
 
 // QuicCryptoConfig contains common configuration between clients and servers.

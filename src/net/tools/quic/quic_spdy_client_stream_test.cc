@@ -16,6 +16,7 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using base::IntToString;
 using net::test::CryptoTestUtils;
 using net::test::DefaultQuicConfig;
 using net::test::MockQuicConnection;
@@ -70,7 +71,6 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
 
     headers_[":status"] = "200";
     headers_["content-length"] = "11";
-    headers_string_ = SpdyUtils::SerializeUncompressedHeaders(headers_);
 
     stream_.reset(new QuicSpdyClientStream(kClientDataStreamId1, &session_));
     stream_visitor_.reset(new StreamVisitor());
@@ -92,24 +92,24 @@ class QuicSpdyClientStreamTest : public ::testing::Test {
   std::unique_ptr<QuicSpdyClientStream> stream_;
   std::unique_ptr<StreamVisitor> stream_visitor_;
   SpdyHeaderBlock headers_;
-  string headers_string_;
   string body_;
 };
 
 TEST_F(QuicSpdyClientStreamTest, TestReceivingIllegalResponseStatusCode) {
   headers_[":status"] = "200 ok";
-  headers_string_ = SpdyUtils::SerializeUncompressedHeaders(headers_);
 
-  stream_->OnStreamHeaders(headers_string_);
   EXPECT_CALL(*connection_,
               SendRstStream(stream_->id(), QUIC_BAD_APPLICATION_PAYLOAD, 0));
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
   EXPECT_EQ(QUIC_BAD_APPLICATION_PAYLOAD, stream_->stream_error());
 }
 
 TEST_F(QuicSpdyClientStreamTest, TestFraming) {
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
   EXPECT_EQ("200", stream_->response_headers().find(":status")->second);
@@ -118,8 +118,9 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming) {
 }
 
 TEST_F(QuicSpdyClientStreamTest, TestFramingOnePacket) {
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
   EXPECT_EQ("200", stream_->response_headers().find(":status")->second);
@@ -130,8 +131,9 @@ TEST_F(QuicSpdyClientStreamTest, TestFramingOnePacket) {
 TEST_F(QuicSpdyClientStreamTest, DISABLED_TestFramingExtraData) {
   string large_body = "hello world!!!!!!";
 
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
   // The headers should parse successfully.
   EXPECT_EQ(QUIC_STREAM_NO_ERROR, stream_->stream_error());
   EXPECT_EQ("200", stream_->response_headers().find(":status")->second);
@@ -157,18 +159,19 @@ TEST_F(QuicSpdyClientStreamTest, ReceivingTrailers) {
   // Test that receiving trailing headers, containing a final offset, results in
   // the stream being closed at that byte offset.
   // Send headers as usual.
-  stream_->OnStreamHeaders(headers_string_);
-  stream_->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
 
   // Send trailers before sending the body. Even though a FIN has been received
   // the stream should not be closed, as it does not yet have all the data bytes
   // promised by the final offset field.
-  SpdyHeaderBlock trailers;
-  trailers["trailer key"] = "trailer value";
-  trailers[kFinalOffsetHeaderKey] = base::IntToString(body_.size());
-  string trailers_string = SpdyUtils::SerializeUncompressedHeaders(trailers);
-  stream_->OnStreamHeaders(trailers_string);
-  stream_->OnStreamHeadersComplete(true, trailers_string.size());
+  SpdyHeaderBlock trailer_block;
+  trailer_block["trailer key"] = "trailer value";
+  trailer_block[kFinalOffsetHeaderKey] = IntToString(body_.size());
+  auto trailers = AsHeaderList(trailer_block);
+  stream_->OnStreamHeaderList(true, trailers.uncompressed_header_bytes(),
+                              trailers);
 
   // Now send the body, which should close the stream as the FIN has been
   // received, as well as all data.

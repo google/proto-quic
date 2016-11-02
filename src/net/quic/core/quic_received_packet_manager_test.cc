@@ -13,9 +13,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::pair;
-using std::vector;
-
 namespace net {
 namespace test {
 
@@ -197,8 +194,8 @@ struct TestParams {
   QuicVersion version;
 };
 
-vector<TestParams> GetTestParams() {
-  vector<TestParams> params;
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
   QuicVersionVector all_supported_versions = AllSupportedVersions();
   for (size_t i = 0; i < all_supported_versions.size(); ++i) {
     params.push_back(TestParams(all_supported_versions[i]));
@@ -239,7 +236,7 @@ TEST_P(QuicReceivedPacketManagerTest, ReceivedPacketEntropyHash) {
   if (GetParam().version > QUIC_VERSION_33) {
     return;
   }
-  vector<pair<QuicPacketNumber, QuicPacketEntropyHash>> entropies;
+  std::vector<std::pair<QuicPacketNumber, QuicPacketEntropyHash>> entropies;
   entropies.push_back(std::make_pair(1, 12));
   entropies.push_back(std::make_pair(7, 1));
   entropies.push_back(std::make_pair(2, 33));
@@ -291,7 +288,7 @@ TEST_P(QuicReceivedPacketManagerTest, SetCumulativeEntropyUpTo) {
   if (GetParam().version > QUIC_VERSION_33) {
     return;
   }
-  vector<pair<QuicPacketNumber, QuicPacketEntropyHash>> entropies;
+  std::vector<std::pair<QuicPacketNumber, QuicPacketEntropyHash>> entropies;
   entropies.push_back(std::make_pair(1, 12));
   entropies.push_back(std::make_pair(2, 1));
   entropies.push_back(std::make_pair(3, 33));

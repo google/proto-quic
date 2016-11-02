@@ -25,7 +25,6 @@ using base::IntToString;
 using base::StringPiece;
 using base::StringPrintf;
 using std::min;
-using std::numeric_limits;
 using std::string;
 
 namespace net {
@@ -34,7 +33,7 @@ QuicStreamSequencer::QuicStreamSequencer(ReliableQuicStream* quic_stream,
                                          const QuicClock* clock)
     : stream_(quic_stream),
       buffered_frames_(kStreamReceiveWindowLimit),
-      close_offset_(numeric_limits<QuicStreamOffset>::max()),
+      close_offset_(std::numeric_limits<QuicStreamOffset>::max()),
       blocked_(false),
       num_frames_received_(0),
       num_duplicate_frames_received_(0),
@@ -90,7 +89,8 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
 }
 
 void QuicStreamSequencer::CloseStreamAtOffset(QuicStreamOffset offset) {
-  const QuicStreamOffset kMaxOffset = numeric_limits<QuicStreamOffset>::max();
+  const QuicStreamOffset kMaxOffset =
+      std::numeric_limits<QuicStreamOffset>::max();
 
   // If there is a scheduled close, the new offset should match it.
   if (close_offset_ != kMaxOffset && offset != close_offset_) {

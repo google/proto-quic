@@ -211,7 +211,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
 
   // Server's certificate chain and signature of the server config, as provided
   // by ProofSource::GetProof.
-  QuicCryptoProof crypto_proof_;
+  scoped_refptr<QuicCryptoProof> crypto_proof_;
 
   // Hash of the last received CHLO message which can be used for generating
   // server config update messages.
@@ -264,6 +264,11 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
 
   // Size of the packet containing the most recently received CHLO.
   QuicByteCount chlo_packet_size_;
+
+  // Pointer to the active callback which will receive the results of
+  // ProcessClientHello and forward it to
+  // FinishProcessingHandshakeMessageAfterProcessClientHello.
+  ProcessClientHelloCallback* process_client_hello_cb_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerStream);
 };

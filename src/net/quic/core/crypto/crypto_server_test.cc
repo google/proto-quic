@@ -33,7 +33,6 @@ using base::StringPiece;
 using std::endl;
 using std::ostream;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -85,8 +84,8 @@ struct TestParams {
 };
 
 // Constructs various test permutations.
-vector<TestParams> GetTestParams() {
-  vector<TestParams> params;
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
   static const bool kTrueFalse[] = {true, false};
   for (bool enable_stateless_rejects : kTrueFalse) {
     for (bool use_stateless_rejects : kTrueFalse) {
@@ -112,6 +111,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
                 CryptoTestUtils::ProofSourceForTesting()),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
+        params_(new QuicCryptoNegotiatedParameters),
+        crypto_proof_(new QuicCryptoProof),
         chlo_packet_size_(kDefaultMaxPacketSize) {
     supported_versions_ = GetParam().supported_versions;
     config_.set_enable_serving_sct(true);
@@ -182,8 +183,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     ASSERT_TRUE(server_config_->GetStringPiece(kSCID, &scid));
     scid_hex_ = "#" + QuicUtils::HexEncode(scid);
 
-    crypto_proof_ = QuicCryptoProof();
-    DCHECK(crypto_proof_.chain.get() == nullptr);
+    crypto_proof_ = scoped_refptr<QuicCryptoProof>(new QuicCryptoProof());
+    DCHECK(crypto_proof_->chain.get() == nullptr);
   }
 
   // Helper used to accept the result of ValidateClientHello and pass
@@ -247,7 +248,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     IPAddress server_ip;
     config_.ValidateClientHello(
         message, client_address_.address(), server_ip,
-        supported_versions_.front(), &clock_, &crypto_proof_,
+        supported_versions_.front(), &clock_, crypto_proof_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, true, "", &called)));
     EXPECT_TRUE(called);
@@ -266,7 +267,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     IPAddress server_ip;
     config_.ValidateClientHello(
         message, client_address_.address(), server_ip,
-        supported_versions_.front(), &clock_, &crypto_proof_,
+        supported_versions_.front(), &clock_, crypto_proof_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, false, error_substr, called)));
   }
@@ -327,7 +328,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         result, /*reject_only=*/false, /*connection_id=*/1, server_ip,
         client_address_, supported_versions_.front(), supported_versions_,
         use_stateless_rejects_, server_designated_connection_id, &clock_, rand_,
-        &compressed_certs_cache_, &params_, &crypto_proof_,
+        &compressed_certs_cache_, params_, crypto_proof_,
         /*total_framing_overhead=*/50, chlo_packet_size_,
         std::unique_ptr<ProcessCallback>(new ProcessCallback(
             result, should_succeed, error_substr, &called, &out_)));
@@ -407,8 +408,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   QuicCryptoServerConfig config_;
   QuicCompressedCertsCache compressed_certs_cache_;
   QuicCryptoServerConfig::ConfigOptions config_options_;
-  QuicCryptoNegotiatedParameters params_;
-  QuicCryptoProof crypto_proof_;
+  scoped_refptr<QuicCryptoNegotiatedParameters> params_;
+  scoped_refptr<QuicCryptoProof> crypto_proof_;
   CryptoHandshakeMessage out_;
   uint8_t orbit_[kOrbitSize];
   bool use_stateless_rejects_;
@@ -908,9 +909,9 @@ TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {
 
   // Get certs from compressed certs.
   const CommonCertSets* common_cert_sets(CommonCertSets::GetInstanceQUIC());
-  vector<string> cached_certs;
+  std::vector<string> cached_certs;
 
-  vector<string> certs;
+  std::vector<string> certs;
   ASSERT_TRUE(CertCompressor::DecompressChain(cert, cached_certs,
                                               common_cert_sets, &certs));
 
@@ -1217,8 +1218,8 @@ TEST_P(AsyncStrikeServerVerificationTest, AsyncReplayProtection) {
   IPAddress server_ip;
   config_.ValidateClientHello(
       msg, client_address_.address(), server_ip, client_version_, &clock_,
-      &crypto_proof_, std::unique_ptr<ValidateCallback>(
-                          new ValidateCallback(this, true, "", &called)));
+      crypto_proof_, std::unique_ptr<ValidateCallback>(
+                         new ValidateCallback(this, true, "", &called)));
   // The verification request was queued.
   ASSERT_FALSE(called);
   EXPECT_EQ(0u, out_.tag());
@@ -1234,8 +1235,8 @@ TEST_P(AsyncStrikeServerVerificationTest, AsyncReplayProtection) {
   // Rejected if replayed.
   config_.ValidateClientHello(
       msg, client_address_.address(), server_ip, client_version_, &clock_,
-      &crypto_proof_, std::unique_ptr<ValidateCallback>(
-                          new ValidateCallback(this, true, "", &called)));
+      crypto_proof_, std::unique_ptr<ValidateCallback>(
+                         new ValidateCallback(this, true, "", &called)));
   // The verification request was queued.
   ASSERT_FALSE(called);
   EXPECT_EQ(1, strike_register_client_->PendingVerifications());

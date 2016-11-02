@@ -500,7 +500,7 @@ void QuicCryptoServerConfig::ValidateClientHello(
     const IPAddress& server_ip,
     QuicVersion version,
     const QuicClock* clock,
-    QuicCryptoProof* crypto_proof,
+    scoped_refptr<QuicCryptoProof> crypto_proof,
     std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const {
   const QuicWallTime now(clock->WallNow());
 
@@ -594,8 +594,8 @@ class QuicCryptoServerConfig::ProcessClientHelloCallback
       const QuicClock* clock,
       QuicRandom* rand,
       QuicCompressedCertsCache* compressed_certs_cache,
-      QuicCryptoNegotiatedParameters* params,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoNegotiatedParameters> params,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       QuicByteCount total_framing_overhead,
       QuicByteCount chlo_packet_size,
       const scoped_refptr<QuicCryptoServerConfig::Config>& requested_config,
@@ -654,8 +654,8 @@ class QuicCryptoServerConfig::ProcessClientHelloCallback
   const QuicClock* const clock_;
   QuicRandom* const rand_;
   QuicCompressedCertsCache* compressed_certs_cache_;
-  QuicCryptoNegotiatedParameters* params_;
-  QuicCryptoProof* crypto_proof_;
+  scoped_refptr<QuicCryptoNegotiatedParameters> params_;
+  scoped_refptr<QuicCryptoProof> crypto_proof_;
   const QuicByteCount total_framing_overhead_;
   const QuicByteCount chlo_packet_size_;
   const scoped_refptr<QuicCryptoServerConfig::Config> requested_config_;
@@ -677,8 +677,8 @@ void QuicCryptoServerConfig::ProcessClientHello(
     const QuicClock* clock,
     QuicRandom* rand,
     QuicCompressedCertsCache* compressed_certs_cache,
-    QuicCryptoNegotiatedParameters* params,
-    QuicCryptoProof* crypto_proof,
+    scoped_refptr<QuicCryptoNegotiatedParameters> params,
+    scoped_refptr<QuicCryptoProof> crypto_proof,
     QuicByteCount total_framing_overhead,
     QuicByteCount chlo_packet_size,
     std::unique_ptr<ProcessClientHelloResultCallback> done_cb) const {
@@ -791,8 +791,8 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
     const QuicClock* clock,
     QuicRandom* rand,
     QuicCompressedCertsCache* compressed_certs_cache,
-    QuicCryptoNegotiatedParameters* params,
-    QuicCryptoProof* crypto_proof,
+    scoped_refptr<QuicCryptoNegotiatedParameters> params,
+    scoped_refptr<QuicCryptoProof> crypto_proof,
     QuicByteCount total_framing_overhead,
     QuicByteCount chlo_packet_size,
     const scoped_refptr<Config>& requested_config,
@@ -1194,7 +1194,7 @@ class QuicCryptoServerConfig::EvaluateClientHelloCallback
       QuicVersion version,
       scoped_refptr<QuicCryptoServerConfig::Config> requested_config,
       scoped_refptr<QuicCryptoServerConfig::Config> primary_config,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       scoped_refptr<ValidateClientHelloResultCallback::Result>
           client_hello_state,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb)
@@ -1231,7 +1231,7 @@ class QuicCryptoServerConfig::EvaluateClientHelloCallback
   const QuicVersion version_;
   const scoped_refptr<QuicCryptoServerConfig::Config> requested_config_;
   const scoped_refptr<QuicCryptoServerConfig::Config> primary_config_;
-  QuicCryptoProof* crypto_proof_;
+  scoped_refptr<QuicCryptoProof> crypto_proof_;
   scoped_refptr<ValidateClientHelloResultCallback::Result> client_hello_state_;
   std::unique_ptr<ValidateClientHelloResultCallback> done_cb_;
 };
@@ -1241,7 +1241,7 @@ void QuicCryptoServerConfig::EvaluateClientHello(
     QuicVersion version,
     scoped_refptr<Config> requested_config,
     scoped_refptr<Config> primary_config,
-    QuicCryptoProof* crypto_proof,
+    scoped_refptr<QuicCryptoProof> crypto_proof,
     scoped_refptr<ValidateClientHelloResultCallback::Result> client_hello_state,
     std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const {
   ValidateClientHelloHelper helper(client_hello_state, &done_cb);
@@ -1355,7 +1355,7 @@ void QuicCryptoServerConfig::EvaluateClientHelloAfterGetProof(
     QuicVersion version,
     scoped_refptr<Config> requested_config,
     scoped_refptr<Config> primary_config,
-    QuicCryptoProof* crypto_proof,
+    scoped_refptr<QuicCryptoProof> crypto_proof,
     std::unique_ptr<ProofSource::Details> proof_source_details,
     bool get_proof_failed,
     scoped_refptr<ValidateClientHelloResultCallback::Result> client_hello_state,
@@ -1640,7 +1640,7 @@ void QuicCryptoServerConfig::BuildRejection(
     QuicConnectionId server_designated_connection_id,
     QuicRandom* rand,
     QuicCompressedCertsCache* compressed_certs_cache,
-    QuicCryptoNegotiatedParameters* params,
+    scoped_refptr<QuicCryptoNegotiatedParameters> params,
     const QuicCryptoProof& crypto_proof,
     QuicByteCount total_framing_overhead,
     QuicByteCount chlo_packet_size,
@@ -2250,4 +2250,5 @@ QuicCryptoServerConfig::Config::~Config() {
 
 QuicCryptoProof::QuicCryptoProof() {}
 QuicCryptoProof::~QuicCryptoProof() {}
+
 }  // namespace net

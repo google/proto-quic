@@ -61,7 +61,7 @@ bool ChannelIDVerifier::VerifyRaw(StringPiece key,
   }
 
   bssl::UniquePtr<EC_POINT> point(EC_POINT_new(p256.get()));
-  if (!point ||
+  if (point.get() == nullptr ||
       !EC_POINT_set_affine_coordinates_GFp(p256.get(), point.get(), x.get(),
                                            y.get(), nullptr)) {
     return false;

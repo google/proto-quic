@@ -18,7 +18,6 @@
 
 using std::ostream;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -57,8 +56,8 @@ string TestParamToString(const testing::TestParamInfo<TestParams>& params) {
                             FlagsModeToString(params.param.flags));
 }
 
-vector<TestParams> GetTestParams() {
-  vector<TestParams> params;
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
   for (FlagsMode flags :
        {ENABLED, STATELESS_DISABLED, CHEAP_DISABLED, BOTH_DISABLED}) {
     for (QuicVersion version : AllSupportedVersions()) {

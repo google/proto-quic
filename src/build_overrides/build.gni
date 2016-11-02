@@ -7,7 +7,7 @@
 # variables can be removed.
 # See https://bugs.chromium.org/p/webrtc/issues/detail?id=5453.
 mac_sdk_min_build_override = "10.10"
-mac_deployment_target_build_override = "10.8"
+mac_deployment_target_build_override = "10.9"
 
 # Variable that can be used to support multiple build scenarios, like having
 # Chromium specific targets in a client project's GN file etc.

@@ -71,10 +71,6 @@ QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation_pre33, false)
 // If true, defer creation of new connection till its CHLO arrives.
 QUIC_FLAG(bool, FLAGS_quic_buffer_packet_till_chlo, true)
 
-// Disable MTU probing if MTU probe causes ERR_MSG_TOO_BIG instead of aborting
-// the connection.
-QUIC_FLAG(bool, FLAGS_graceful_emsgsize_on_mtu_probe, true)
-
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event. This flag can be turned on only if
 // --quic_buffer_packet_till_chlo is true.
@@ -85,7 +81,7 @@ QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, true)
 QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
 
 // If true, disables QUIC version less than 34.
-QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, false)
+QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, true)
 
 // Only close the connection on the 5th RTO client side when the 5RTO option
 // is enabled.
@@ -160,6 +156,14 @@ QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)
 // stream.
 QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, false)
 
+// Default enable QUIC's Cubic in bytes implementation instead of
+// Cubic in packets.
+QUIC_FLAG(bool, FLAGS_quic_default_enable_cubic_bytes, true)
+
 // If enabled, fix double call of
 // InsertLocallyClosedStreamsHighestOffset in ResetPromised.
 QUIC_FLAG(bool, FLAGS_quic_bugfix_reset_promised, true)
+
+// Set the retransmission alarm only when there are unacked
+// retransmittable packets.
+QUIC_FLAG(bool, FLAGS_quic_more_conservative_retransmission_alarm, true)

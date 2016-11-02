@@ -76,7 +76,7 @@ class QuicTimeWaitListManager::QueuedPacket {
 
 QuicTimeWaitListManager::QuicTimeWaitListManager(
     QuicPacketWriter* writer,
-    QuicServerSessionBase::Visitor* visitor,
+    Visitor* visitor,
     QuicConnectionHelperInterface* helper,
     QuicAlarmFactory* alarm_factory)
     : time_wait_period_(

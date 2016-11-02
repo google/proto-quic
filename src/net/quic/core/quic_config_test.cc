@@ -31,8 +31,8 @@ TEST_F(QuicConfigTest, ToHandshakeMessage) {
       kInitialStreamFlowControlWindowForTest);
   config_.SetInitialSessionFlowControlWindowToSend(
       kInitialSessionFlowControlWindowForTest);
-  config_.SetIdleConnectionStateLifetime(QuicTime::Delta::FromSeconds(5),
-                                         QuicTime::Delta::FromSeconds(2));
+  config_.SetIdleNetworkTimeout(QuicTime::Delta::FromSeconds(5),
+                                QuicTime::Delta::FromSeconds(2));
   config_.SetMaxStreamsPerConnection(4, 2);
   config_.SetSocketReceiveBufferToSend(kDefaultSocketReceiveBuffer);
   CryptoHandshakeMessage msg;
@@ -64,7 +64,7 @@ TEST_F(QuicConfigTest, ProcessClientHello) {
   QuicConfig client_config;
   QuicTagVector cgst;
   cgst.push_back(kQBIC);
-  client_config.SetIdleConnectionStateLifetime(
+  client_config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(2 * kMaximumIdleTimeoutSecs),
       QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs));
   client_config.SetMaxStreamsPerConnection(2 * kDefaultMaxStreamsPerConnection,
@@ -98,7 +98,7 @@ TEST_F(QuicConfigTest, ProcessClientHello) {
   EXPECT_EQ(QUIC_NO_ERROR, error);
   EXPECT_TRUE(config_.negotiated());
   EXPECT_EQ(QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs),
-            config_.IdleConnectionStateLifetime());
+            config_.IdleNetworkTimeout());
   EXPECT_EQ(kDefaultMaxStreamsPerConnection, config_.MaxStreamsPerConnection());
   EXPECT_EQ(10 * kNumMicrosPerMilli, config_.ReceivedInitialRoundTripTimeUs());
   EXPECT_TRUE(config_.ForceHolBlocking(Perspective::IS_SERVER));
@@ -118,7 +118,7 @@ TEST_F(QuicConfigTest, ProcessServerHello) {
   QuicConfig server_config;
   QuicTagVector cgst;
   cgst.push_back(kQBIC);
-  server_config.SetIdleConnectionStateLifetime(
+  server_config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs / 2),
       QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs / 2));
   server_config.SetMaxStreamsPerConnection(kDefaultMaxStreamsPerConnection / 2,
@@ -138,7 +138,7 @@ TEST_F(QuicConfigTest, ProcessServerHello) {
   EXPECT_EQ(QUIC_NO_ERROR, error);
   EXPECT_TRUE(config_.negotiated());
   EXPECT_EQ(QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs / 2),
-            config_.IdleConnectionStateLifetime());
+            config_.IdleNetworkTimeout());
   EXPECT_EQ(kDefaultMaxStreamsPerConnection / 2,
             config_.MaxStreamsPerConnection());
   EXPECT_EQ(10 * kNumMicrosPerMilli, config_.ReceivedInitialRoundTripTimeUs());
@@ -202,7 +202,7 @@ TEST_F(QuicConfigTest, MissingValueInSHLO) {
 
 TEST_F(QuicConfigTest, OutOfBoundSHLO) {
   QuicConfig server_config;
-  server_config.SetIdleConnectionStateLifetime(
+  server_config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(2 * kMaximumIdleTimeoutSecs),
       QuicTime::Delta::FromSeconds(2 * kMaximumIdleTimeoutSecs));
 

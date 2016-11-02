@@ -14,7 +14,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using logging::LOG_WARNING;
-using std::vector;
 using testing::HasSubstr;
 using testing::Message;
 using testing::_;
@@ -148,7 +147,7 @@ TEST_F(RttStatsTest, UpdateRttWithBadSendDeltas) {
   EXPECT_EQ(initial_rtt, rtt_stats_.min_rtt());
   EXPECT_EQ(initial_rtt, rtt_stats_.smoothed_rtt());
 
-  vector<QuicTime::Delta> bad_send_deltas;
+  std::vector<QuicTime::Delta> bad_send_deltas;
   bad_send_deltas.push_back(QuicTime::Delta::Zero());
   bad_send_deltas.push_back(QuicTime::Delta::Infinite());
   bad_send_deltas.push_back(QuicTime::Delta::FromMicroseconds(-1000));

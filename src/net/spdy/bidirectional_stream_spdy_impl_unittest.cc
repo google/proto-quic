@@ -234,7 +234,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
 
 }  // namespace
 
-class BidirectionalStreamSpdyImplTest : public testing::Test {
+class BidirectionalStreamSpdyImplTest : public testing::TestWithParam<bool> {
  public:
   BidirectionalStreamSpdyImplTest()
       : default_url_(kDefaultUrl),
@@ -430,6 +430,93 @@ TEST_F(BidirectionalStreamSpdyImplTest, SendDataAfterStreamFailed) {
   EXPECT_EQ(CountWriteBytes(writes, 1), delegate->GetTotalSentBytes());
   EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
             delegate->GetTotalReceivedBytes());
+}
+
+INSTANTIATE_TEST_CASE_P(BidirectionalStreamSpdyImplTests,
+                        BidirectionalStreamSpdyImplTest,
+                        ::testing::Bool());
+
+// Tests that when received RST_STREAM with NO_ERROR, BidirectionalStream does
+// not crash when processing pending writes. See crbug.com/650438.
+TEST_P(BidirectionalStreamSpdyImplTest, RstWithNoErrorBeforeSendIsComplete) {
+  bool is_test_sendv = GetParam();
+  SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
+      kDefaultUrl, 1, kBodyDataSize * 3, LOW, nullptr, 0));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+  MockRead reads[] = {CreateMockRead(resp, 1),
+                      MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause.
+                      CreateMockRead(rst, 3), MockRead(ASYNC, 0, 4)};
+
+  InitSession(reads, arraysize(reads), writes, arraysize(writes));
+
+  BidirectionalStreamRequestInfo request_info;
+  request_info.method = "POST";
+  request_info.url = default_url_;
+  request_info.extra_headers.SetHeader(net::HttpRequestHeaders::kContentLength,
+                                       base::SizeTToString(kBodyDataSize * 3));
+
+  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
+  std::unique_ptr<TestDelegateBase> delegate(
+      new TestDelegateBase(session_, read_buffer.get(), kReadBufferSize));
+  delegate->SetRunUntilCompletion(true);
+  delegate->Start(&request_info, net_log_.bound());
+  sequenced_data_->RunUntilPaused();
+  // Make a write pending before receiving RST_STREAM.
+  scoped_refptr<StringIOBuffer> write_buffer(
+      new StringIOBuffer(std::string(kBodyData, kBodyDataSize)));
+  delegate->SendData(write_buffer.get(), write_buffer->size(), false);
+  sequenced_data_->Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Make sure OnClose() without an error completes any pending write().
+  EXPECT_EQ(1, delegate->on_data_sent_count());
+  EXPECT_FALSE(delegate->on_failed_called());
+
+  if (is_test_sendv) {
+    std::vector<scoped_refptr<IOBuffer>> three_buffers = {
+        write_buffer.get(), write_buffer.get(), write_buffer.get()};
+    std::vector<int> three_lengths = {
+        write_buffer->size(), write_buffer->size(), write_buffer->size()};
+    delegate->SendvData(three_buffers, three_lengths, /*end_of_stream=*/true);
+    base::RunLoop().RunUntilIdle();
+  } else {
+    for (size_t j = 0; j < 3; j++) {
+      delegate->SendData(write_buffer.get(), write_buffer->size(),
+                         /*end_of_stream=*/j == 2);
+      base::RunLoop().RunUntilIdle();
+    }
+  }
+  delegate->WaitUntilCompletion();
+  LoadTimingInfo load_timing_info;
+  EXPECT_TRUE(delegate->GetLoadTimingInfo(&load_timing_info));
+  TestLoadTimingNotReused(load_timing_info);
+
+  EXPECT_THAT(delegate->error(), IsError(OK));
+  EXPECT_EQ(1, delegate->on_data_read_count());
+  EXPECT_EQ(is_test_sendv ? 2 : 4, delegate->on_data_sent_count());
+  EXPECT_EQ(kProtoHTTP2, delegate->GetProtocol());
+  EXPECT_EQ(CountWriteBytes(writes, 1), delegate->GetTotalSentBytes());
+  // Should not count RST stream.
+  EXPECT_EQ(CountReadBytes(reads, arraysize(reads) - 2),
+            delegate->GetTotalReceivedBytes());
+
+  // Now call SendData again should produce an error because end of stream
+  // flag has been written.
+  if (is_test_sendv) {
+    std::vector<scoped_refptr<IOBuffer>> buffer = {write_buffer.get()};
+    std::vector<int> buffer_size = {write_buffer->size()};
+    delegate->SendvData(buffer, buffer_size, true);
+  } else {
+    delegate->SendData(write_buffer.get(), write_buffer->size(), true);
+  }
+  base::RunLoop().RunUntilIdle();
+  EXPECT_THAT(delegate->error(), IsError(ERR_UNEXPECTED));
+  EXPECT_TRUE(delegate->on_failed_called());
+  EXPECT_EQ(is_test_sendv ? 2 : 4, delegate->on_data_sent_count());
 }
 
 }  // namespace net

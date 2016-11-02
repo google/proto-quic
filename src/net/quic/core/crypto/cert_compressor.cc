@@ -13,7 +13,6 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -177,18 +176,18 @@ struct CertEntry {
 // efficiently represent |certs| to a peer who has the common sets identified
 // by |client_common_set_hashes| and who has cached the certificates with the
 // 64-bit, FNV-1a hashes in |client_cached_cert_hashes|.
-vector<CertEntry> MatchCerts(const vector<string>& certs,
-                             StringPiece client_common_set_hashes,
-                             StringPiece client_cached_cert_hashes,
-                             const CommonCertSets* common_sets) {
-  vector<CertEntry> entries;
+std::vector<CertEntry> MatchCerts(const std::vector<string>& certs,
+                                  StringPiece client_common_set_hashes,
+                                  StringPiece client_cached_cert_hashes,
+                                  const CommonCertSets* common_sets) {
+  std::vector<CertEntry> entries;
   entries.reserve(certs.size());
 
   const bool cached_valid =
       client_cached_cert_hashes.size() % sizeof(uint64_t) == 0 &&
       !client_cached_cert_hashes.empty();
 
-  for (vector<string>::const_iterator i = certs.begin(); i != certs.end();
+  for (std::vector<string>::const_iterator i = certs.begin(); i != certs.end();
        ++i) {
     CertEntry entry;
 
@@ -235,10 +234,10 @@ vector<CertEntry> MatchCerts(const vector<string>& certs,
 
 // CertEntriesSize returns the size, in bytes, of the serialised form of
 // |entries|.
-size_t CertEntriesSize(const vector<CertEntry>& entries) {
+size_t CertEntriesSize(const std::vector<CertEntry>& entries) {
   size_t entries_size = 0;
 
-  for (vector<CertEntry>::const_iterator i = entries.begin();
+  for (std::vector<CertEntry>::const_iterator i = entries.begin();
        i != entries.end(); ++i) {
     entries_size++;
     switch (i->type) {
@@ -260,8 +259,8 @@ size_t CertEntriesSize(const vector<CertEntry>& entries) {
 
 // SerializeCertEntries serialises |entries| to |out|, which must have enough
 // space to contain them.
-void SerializeCertEntries(uint8_t* out, const vector<CertEntry>& entries) {
-  for (vector<CertEntry>::const_iterator i = entries.begin();
+void SerializeCertEntries(uint8_t* out, const std::vector<CertEntry>& entries) {
+  for (std::vector<CertEntry>::const_iterator i = entries.begin();
        i != entries.end(); ++i) {
     *out++ = static_cast<uint8_t>(i->type);
     switch (i->type) {
@@ -288,8 +287,8 @@ void SerializeCertEntries(uint8_t* out, const vector<CertEntry>& entries) {
 // dictionary to use in order to decompress a zlib block following |entries|.
 // |certs| is one-to-one with |entries| and contains the certificates for those
 // entries that are CACHED or COMMON.
-string ZlibDictForEntries(const vector<CertEntry>& entries,
-                          const vector<string>& certs) {
+string ZlibDictForEntries(const std::vector<CertEntry>& entries,
+                          const std::vector<string>& certs) {
   string zlib_dict;
 
   // The dictionary starts with the common and cached certs in reverse order.
@@ -320,11 +319,11 @@ string ZlibDictForEntries(const vector<CertEntry>& entries,
 }
 
 // HashCerts returns the FNV-1a hashes of |certs|.
-vector<uint64_t> HashCerts(const vector<string>& certs) {
-  vector<uint64_t> ret;
+std::vector<uint64_t> HashCerts(const std::vector<string>& certs) {
+  std::vector<uint64_t> ret;
   ret.reserve(certs.size());
 
-  for (vector<string>::const_iterator i = certs.begin(); i != certs.end();
+  for (std::vector<string>::const_iterator i = certs.begin(); i != certs.end();
        ++i) {
     ret.push_back(QuicUtils::FNV1a_64_Hash(i->data(), i->size()));
   }
@@ -337,12 +336,12 @@ vector<uint64_t> HashCerts(const vector<string>& certs) {
 // resolved using |cached_certs| and |common_sets| and written to |out_certs|.
 // |in_out| is updated to contain the trailing data.
 bool ParseEntries(StringPiece* in_out,
-                  const vector<string>& cached_certs,
+                  const std::vector<string>& cached_certs,
                   const CommonCertSets* common_sets,
-                  vector<CertEntry>* out_entries,
-                  vector<string>* out_certs) {
+                  std::vector<CertEntry>* out_entries,
+                  std::vector<string>* out_certs) {
   StringPiece in = *in_out;
-  vector<uint64_t> cached_hashes;
+  std::vector<uint64_t> cached_hashes;
 
   out_entries->clear();
   out_certs->clear();
@@ -455,11 +454,11 @@ class ScopedZLib {
 }  // anonymous namespace
 
 // static
-string CertCompressor::CompressChain(const vector<string>& certs,
+string CertCompressor::CompressChain(const std::vector<string>& certs,
                                      StringPiece client_common_set_hashes,
                                      StringPiece client_cached_cert_hashes,
                                      const CommonCertSets* common_sets) {
-  const vector<CertEntry> entries = MatchCerts(
+  const std::vector<CertEntry> entries = MatchCerts(
       certs, client_common_set_hashes, client_cached_cert_hashes, common_sets);
   DCHECK_EQ(entries.size(), certs.size());
 
@@ -557,10 +556,10 @@ string CertCompressor::CompressChain(const vector<string>& certs,
 
 // static
 bool CertCompressor::DecompressChain(StringPiece in,
-                                     const vector<string>& cached_certs,
+                                     const std::vector<string>& cached_certs,
                                      const CommonCertSets* common_sets,
-                                     vector<string>* out_certs) {
-  vector<CertEntry> entries;
+                                     std::vector<string>* out_certs) {
+  std::vector<CertEntry> entries;
   if (!ParseEntries(&in, cached_certs, common_sets, &entries, out_certs)) {
     return false;
   }

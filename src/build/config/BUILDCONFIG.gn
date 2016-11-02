@@ -216,9 +216,9 @@ if (target_os == "android") {
   assert(host_os == "linux" || host_os == "mac",
          "Android builds are only supported on Linux and Mac hosts.")
   if (is_clang) {
-    _default_toolchain = "//build/toolchain/android:clang_$target_cpu"
+    _default_toolchain = "//build/toolchain/android:android_clang_$target_cpu"
   } else {
-    _default_toolchain = "//build/toolchain/android:$target_cpu"
+    _default_toolchain = "//build/toolchain/android:android_$target_cpu"
   }
 } else if (target_os == "chromeos" || target_os == "linux") {
   # See comments in build/toolchain/cros/BUILD.gn about board compiles.

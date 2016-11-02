@@ -22,7 +22,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_session.h"
 
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
@@ -37,7 +37,7 @@ namespace test {
 class QuicDispatcherPeer;
 }  // namespace test
 
-class QuicDispatcher : public QuicServerSessionBase::Visitor,
+class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
                        public ProcessPacketInterface,
                        public QuicBlockedWriterInterface,
                        public QuicFramerVisitorInterface,
@@ -76,24 +76,26 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Sends ConnectionClose frames to all connected clients.
   void Shutdown();
 
-  // QuicServerSessionBase::Visitor interface implementation:
+  // QuicSession::Visitor interface implementation (via inheritance of
+  // QuicTimeWaitListManager::Visitor):
   // Ensure that the closed connection is cleaned up asynchronously.
   void OnConnectionClosed(QuicConnectionId connection_id,
                           QuicErrorCode error,
                           const std::string& error_details) override;
 
+  // QuicSession::Visitor interface implementation (via inheritance of
+  // QuicTimeWaitListManager::Visitor):
   // Queues the blocked writer for later resumption.
   void OnWriteBlocked(QuicBlockedWriterInterface* blocked_writer) override;
 
-  // Called whenever the time wait list manager adds a new connection to the
-  // time-wait list.
+  // QuicTimeWaitListManager::Visitor interface implementation
+  // Called whenever the time wait std::list manager adds a new connection to
+  // the
+  // time-wait std::list.
   void OnConnectionAddedToTimeWaitList(QuicConnectionId connection_id) override;
 
-  void OnPacketBeingDispatchedToSession(
-      QuicServerSessionBase* session) override {}
-
-  using SessionMap = std::unordered_map<QuicConnectionId,
-                                        std::unique_ptr<QuicServerSessionBase>>;
+  using SessionMap =
+      std::unordered_map<QuicConnectionId, std::unique_ptr<QuicSession>>;
 
   const SessionMap& session_map() const { return session_map_; }
 
@@ -158,9 +160,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   virtual bool HasChlosBuffered() const;
 
  protected:
-  virtual QuicServerSessionBase* CreateQuicSession(
-      QuicConnectionId connection_id,
-      const IPEndPoint& client_address) = 0;
+  virtual QuicSession* CreateQuicSession(QuicConnectionId connection_id,
+                                         const IPEndPoint& client_address) = 0;
 
   // Called when a connection is rejected statelessly.
   virtual void OnConnectionRejectedStatelessly();
@@ -293,7 +294,7 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Deliver |packets| to |session| for further processing.
   void DeliverPacketsToSession(
       const std::list<QuicBufferedPacketStore::BufferedPacket>& packets,
-      QuicServerSessionBase* session);
+      QuicSession* session);
 
   // Perform the appropriate actions on the current packet based on |fate| -
   // either process, buffer, or drop it.
@@ -337,8 +338,8 @@ class QuicDispatcher : public QuicServerSessionBase::Visitor,
   // Entity that manages connection_ids in time wait state.
   std::unique_ptr<QuicTimeWaitListManager> time_wait_list_manager_;
 
-  // The list of closed but not-yet-deleted sessions.
-  std::vector<std::unique_ptr<QuicServerSessionBase>> closed_session_list_;
+  // The std::list of closed but not-yet-deleted sessions.
+  std::vector<std::unique_ptr<QuicSession>> closed_session_list_;
 
   // The helper used for all connections.
   std::unique_ptr<QuicConnectionHelperInterface> helper_;

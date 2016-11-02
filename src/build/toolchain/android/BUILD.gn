@@ -70,12 +70,12 @@ template("android_gcc_toolchain") {
 }
 
 template("android_gcc_toolchains_helper") {
-  android_gcc_toolchain(target_name) {
+  android_gcc_toolchain("android_$target_name") {
     forward_variables_from(invoker, "*")
     toolchain_args.is_clang = false
   }
 
-  android_gcc_toolchain("clang_$target_name") {
+  android_gcc_toolchain("android_clang_$target_name") {
     forward_variables_from(invoker, "*")
     toolchain_args.is_clang = true
   }

@@ -9,10 +9,6 @@
 
 #include "base/logging.h"
 
-using std::pair;
-using std::set;
-using std::vector;
-
 namespace net {
 
 namespace {
@@ -150,7 +146,7 @@ InsertStatus StrikeRegister::Insert(const uint8_t nonce[32],
   const uint32_t nonce_time = ExternalTimeToInternal(TimeFromBytes(nonce));
 
   // Check that the timestamp is in the valid range.
-  pair<uint32_t, uint32_t> valid_range =
+  std::pair<uint32_t, uint32_t> valid_range =
       StrikeRegister::GetValidRange(current_time);
   if (nonce_time < valid_range.first || nonce_time > valid_range.second) {
     return NONCE_INVALID_TIME_FAILURE;
@@ -276,7 +272,7 @@ const uint8_t* StrikeRegister::orbit() const {
 uint32_t StrikeRegister::GetCurrentValidWindowSecs(
     uint32_t current_time_external) const {
   uint32_t current_time = ExternalTimeToInternal(current_time_external);
-  pair<uint32_t, uint32_t> valid_range =
+  std::pair<uint32_t, uint32_t> valid_range =
       StrikeRegister::GetValidRange(current_time);
   if (valid_range.second >= valid_range.first) {
     return valid_range.second - current_time + 1;
@@ -286,7 +282,7 @@ uint32_t StrikeRegister::GetCurrentValidWindowSecs(
 }
 
 void StrikeRegister::Validate() {
-  set<uint32_t> free_internal_nodes;
+  std::set<uint32_t> free_internal_nodes;
   for (uint32_t i = internal_node_free_head_; i != kNil;
        i = internal_nodes_[i].next()) {
     CHECK_LT(i, max_entries_);
@@ -294,7 +290,7 @@ void StrikeRegister::Validate() {
     free_internal_nodes.insert(i);
   }
 
-  set<uint32_t> free_external_nodes;
+  std::set<uint32_t> free_external_nodes;
   for (uint32_t i = external_node_free_head_; i != kNil;
        i = external_node_next_ptr(i)) {
     CHECK_LT(i, max_entries_);
@@ -302,12 +298,12 @@ void StrikeRegister::Validate() {
     free_external_nodes.insert(i);
   }
 
-  set<uint32_t> used_external_nodes;
-  set<uint32_t> used_internal_nodes;
+  std::set<uint32_t> used_external_nodes;
+  std::set<uint32_t> used_internal_nodes;
 
   if (internal_node_head_ != kNil &&
       ((internal_node_head_ >> 8) & kExternalFlag) == 0) {
-    vector<pair<unsigned, bool>> bits;
+    std::vector<std::pair<unsigned, bool>> bits;
     ValidateTree(internal_node_head_ >> 8, -1, bits, free_internal_nodes,
                  free_external_nodes, &used_internal_nodes,
                  &used_external_nodes);
@@ -320,7 +316,7 @@ uint32_t StrikeRegister::TimeFromBytes(const uint8_t d[4]) {
          static_cast<uint32_t>(d[2]) << 8 | static_cast<uint32_t>(d[3]);
 }
 
-pair<uint32_t, uint32_t> StrikeRegister::GetValidRange(
+std::pair<uint32_t, uint32_t> StrikeRegister::GetValidRange(
     uint32_t current_time_internal) const {
   if (current_time_internal < horizon_) {
     // Empty valid range.
@@ -442,13 +438,14 @@ void StrikeRegister::FreeInternalNode(uint32_t index) {
   internal_node_free_head_ = index;
 }
 
-void StrikeRegister::ValidateTree(uint32_t internal_node,
-                                  int last_bit,
-                                  const vector<pair<unsigned, bool>>& bits,
-                                  const set<uint32_t>& free_internal_nodes,
-                                  const set<uint32_t>& free_external_nodes,
-                                  set<uint32_t>* used_internal_nodes,
-                                  set<uint32_t>* used_external_nodes) {
+void StrikeRegister::ValidateTree(
+    uint32_t internal_node,
+    int last_bit,
+    const std::vector<std::pair<unsigned, bool>>& bits,
+    const std::set<uint32_t>& free_internal_nodes,
+    const std::set<uint32_t>& free_external_nodes,
+    std::set<uint32_t>* used_internal_nodes,
+    std::set<uint32_t>* used_external_nodes) {
   CHECK_LT(internal_node, max_entries_);
   const InternalNode* i = &internal_nodes_[internal_node];
   unsigned bit = 0;
@@ -495,7 +492,7 @@ void StrikeRegister::ValidateTree(uint32_t internal_node,
       CHECK_EQ(used_external_nodes->count(ext), 0u);
       used_external_nodes->insert(ext);
       const uint8_t* bytes = external_node(ext);
-      for (const pair<unsigned, bool>& pair : bits) {
+      for (const std::pair<unsigned, bool>& pair : bits) {
         unsigned byte = pair.first / 8;
         DCHECK_LE(byte, 0xffu);
         unsigned bit_new = pair.first % 8;
@@ -505,8 +502,8 @@ void StrikeRegister::ValidateTree(uint32_t internal_node,
       }
     } else {
       uint32_t inter = i->child(child);
-      vector<pair<unsigned, bool>> new_bits(bits);
-      new_bits.push_back(pair<unsigned, bool>(bit, child != 0));
+      std::vector<std::pair<unsigned, bool>> new_bits(bits);
+      new_bits.push_back(std::pair<unsigned, bool>(bit, child != 0));
       CHECK_EQ(free_internal_nodes.count(inter), 0u);
       CHECK_EQ(used_internal_nodes->count(inter), 0u);
       used_internal_nodes->insert(inter);

@@ -251,6 +251,7 @@
 //
 // For instance, Sqlite.Version.* are sparse because for any given database,
 // there's going to be exactly one version logged.
+// The |sample| can be a negative or non-negative number.
 #define UMA_HISTOGRAM_SPARSE_SLOWLY(name, sample)                              \
     INTERNAL_HISTOGRAM_SPARSE_SLOWLY(name, sample)
 

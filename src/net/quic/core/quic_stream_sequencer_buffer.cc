@@ -75,7 +75,7 @@ void QuicStreamSequencerBuffer::Clear() {
   // total_bytes_read_ has been consumed, and those after total_bytes_read_
   // has never arrived.
   gaps_ = std::list<Gap>(
-      1, Gap(total_bytes_read_, std::numeric_limits<QuicStreamOffset>::max())),
+      1, Gap(total_bytes_read_, std::numeric_limits<QuicStreamOffset>::max()));
   frame_arrival_time_map_.clear();
 }
 

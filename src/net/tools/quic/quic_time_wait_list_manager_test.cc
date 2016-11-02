@@ -140,7 +140,7 @@ class QuicTimeWaitListManagerTest : public ::testing::Test {
   QuicEpollConnectionHelper helper_;
   QuicEpollAlarmFactory alarm_factory_;
   StrictMock<MockPacketWriter> writer_;
-  StrictMock<MockQuicServerSessionVisitor> visitor_;
+  StrictMock<MockQuicSessionVisitor> visitor_;
   QuicTimeWaitListManager time_wait_list_manager_;
   QuicConnectionId connection_id_;
   IPEndPoint server_address_;

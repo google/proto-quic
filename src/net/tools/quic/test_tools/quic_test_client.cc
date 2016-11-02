@@ -38,7 +38,6 @@ using net::test::QuicConnectionPeer;
 using net::test::QuicSpdySessionPeer;
 using net::test::ReliableQuicStreamPeer;
 using std::string;
-using std::vector;
 using testing::_;
 using testing::Invoke;
 
@@ -62,7 +61,7 @@ class RecordingProofVerifier : public ProofVerifier {
       const string& server_config,
       QuicVersion quic_version,
       StringPiece chlo_hash,
-      const vector<string>& certs,
+      const std::vector<string>& certs,
       const string& cert_sct,
       const string& signature,
       const ProofVerifyContext* context,
@@ -75,15 +74,14 @@ class RecordingProofVerifier : public ProofVerifier {
     }
 
     // Convert certs to X509Certificate.
-    vector<StringPiece> cert_pieces(certs.size());
+    std::vector<StringPiece> cert_pieces(certs.size());
     for (unsigned i = 0; i < certs.size(); i++) {
       cert_pieces[i] = StringPiece(certs[i]);
     }
     // TODO(rtenneti): Fix after adding support for real certs. Currently,
     // cert_pieces are "leaf" and "intermediate" and CreateFromDERCertChain
     // fails to return cert from these cert_pieces.
-    //    scoped_refptr<net::X509Certificate> cert =
-    //        net::X509Certificate::CreateFromDERCertChain(cert_pieces);
+    //    bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &data, certs[0].size()));
     //    if (!cert.get()) {
     //      return QUIC_FAILURE;
     //    }
@@ -301,7 +299,7 @@ ssize_t QuicTestClient::SendRequest(const string& uri) {
 }
 
 void QuicTestClient::SendRequestsAndWaitForResponses(
-    const vector<string>& url_list) {
+    const std::vector<string>& url_list) {
   for (const string& url : url_list) {
     SendRequest(url);
   }

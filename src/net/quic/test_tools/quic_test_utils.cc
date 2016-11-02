@@ -372,7 +372,7 @@ void PacketSavingConnection::SendOrQueuePacket(SerializedPacket* packet) {
 }
 
 MockQuicSession::MockQuicSession(QuicConnection* connection)
-    : QuicSession(connection, DefaultQuicConfig()) {
+    : QuicSession(connection, nullptr, DefaultQuicConfig()) {
   crypto_stream_.reset(new QuicCryptoStream(this));
   Initialize();
   ON_CALL(*this, WritevData(_, _, _, _, _, _))
@@ -395,7 +395,7 @@ QuicConsumedData MockQuicSession::ConsumeAllData(
 }
 
 MockQuicSpdySession::MockQuicSpdySession(QuicConnection* connection)
-    : QuicSpdySession(connection, DefaultQuicConfig()) {
+    : QuicSpdySession(connection, nullptr, DefaultQuicConfig()) {
   crypto_stream_.reset(new QuicCryptoStream(this));
   Initialize();
   ON_CALL(*this, WritevData(_, _, _, _, _, _))

@@ -666,7 +666,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
   MockQuicCryptoServerStreamHelper* helper() { return &helper_; }
 
  private:
-  MockQuicServerSessionVisitor visitor_;
+  MockQuicSessionVisitor visitor_;
   MockQuicCryptoServerStreamHelper helper_;
 
   DISALLOW_COPY_AND_ASSIGN(TestQuicSpdyServerSession);
@@ -1045,6 +1045,19 @@ void ExpectApproxEq(T expected, T actual, float relative_margin) {
 
   EXPECT_GE(expected + absolute_margin, actual);
   EXPECT_LE(expected - absolute_margin, actual);
+}
+
+template <typename T>
+QuicHeaderList AsHeaderList(const T& container) {
+  QuicHeaderList l;
+  l.OnHeaderBlockStart();
+  size_t total_size = 0;
+  for (auto p : container) {
+    total_size += p.first.size() + p.second.size();
+    l.OnHeader(p.first, p.second);
+  }
+  l.OnHeaderBlockEnd(total_size);
+  return l;
 }
 
 }  // namespace test

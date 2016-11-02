@@ -25,27 +25,20 @@ class QuicSpdySessionPeer;
 // A QUIC session with a headers stream.
 class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
  public:
-  // Does not take ownership of |connection|.
-  QuicSpdySession(QuicConnection* connection, const QuicConfig& config);
+  // Does not take ownership of |connection| or |visitor|.
+  QuicSpdySession(QuicConnection* connection,
+                  QuicSession::Visitor* visitor,
+                  const QuicConfig& config);
 
   ~QuicSpdySession() override;
 
   void Initialize() override;
 
-  // Called by |headers_stream_| when headers have been received for a stream.
-  virtual void OnStreamHeaders(QuicStreamId stream_id,
-                               base::StringPiece headers_data);
   // Called by |headers_stream_| when headers with a priority have been
   // received for this stream.  This method will only be called for server
   // streams.
   virtual void OnStreamHeadersPriority(QuicStreamId stream_id,
                                        SpdyPriority priority);
-  // Called by |headers_stream_| when headers have been completely received
-  // for a stream.  |fin| will be true if the fin flag was set in the headers
-  // frame.
-  virtual void OnStreamHeadersComplete(QuicStreamId stream_id,
-                                       bool fin,
-                                       size_t frame_len);
 
   // Called by |headers_stream_| when headers have been completely received
   // for a stream.  |fin| will be true if the fin flag was set in the headers
@@ -54,18 +47,6 @@ class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
                                   bool fin,
                                   size_t frame_len,
                                   const QuicHeaderList& header_list);
-
-  // Called by |headers_stream_| when push promise headers have been
-  // received for a stream.
-  virtual void OnPromiseHeaders(QuicStreamId stream_id,
-                                base::StringPiece headers_data);
-
-  // Called by |headers_stream_| when push promise headers have been
-  // completely received.  |fin| will be true if the fin flag was set
-  // in the headers.
-  virtual void OnPromiseHeadersComplete(QuicStreamId stream_id,
-                                        QuicStreamId promised_stream_id,
-                                        size_t frame_len);
 
   // Called by |headers_stream_| when push promise headers have been
   // completely received.  |fin| will be true if the fin flag was set

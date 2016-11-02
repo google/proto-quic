@@ -15,8 +15,9 @@ using std::string;
 namespace net {
 
 QuicSpdySession::QuicSpdySession(QuicConnection* connection,
+                                 QuicSession::Visitor* visitor,
                                  const QuicConfig& config)
-    : QuicSession(connection, config),
+    : QuicSession(connection, visitor, config),
       force_hol_blocking_(false),
       server_push_enabled_(false) {}
 
@@ -46,16 +47,6 @@ void QuicSpdySession::Initialize() {
   static_streams()[kHeadersStreamId] = headers_stream_.get();
 }
 
-void QuicSpdySession::OnStreamHeaders(QuicStreamId stream_id,
-                                      StringPiece headers_data) {
-  QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
-  if (!stream) {
-    // It's quite possible to receive headers after a stream has been reset.
-    return;
-  }
-  stream->OnStreamHeaders(headers_data);
-}
-
 void QuicSpdySession::OnStreamHeadersPriority(QuicStreamId stream_id,
                                               SpdyPriority priority) {
   QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
@@ -64,17 +55,6 @@ void QuicSpdySession::OnStreamHeadersPriority(QuicStreamId stream_id,
     return;
   }
   stream->OnStreamHeadersPriority(priority);
-}
-
-void QuicSpdySession::OnStreamHeadersComplete(QuicStreamId stream_id,
-                                              bool fin,
-                                              size_t frame_len) {
-  QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
-  if (!stream) {
-    // It's quite possible to receive headers after a stream has been reset.
-    return;
-  }
-  stream->OnStreamHeadersComplete(fin, frame_len);
 }
 
 void QuicSpdySession::OnStreamHeaderList(QuicStreamId stream_id,
@@ -120,23 +100,6 @@ void QuicSpdySession::UpdateStreamPriority(QuicStreamId id,
 QuicSpdyStream* QuicSpdySession::GetSpdyDataStream(
     const QuicStreamId stream_id) {
   return static_cast<QuicSpdyStream*>(GetOrCreateDynamicStream(stream_id));
-}
-
-void QuicSpdySession::OnPromiseHeaders(QuicStreamId stream_id,
-                                       StringPiece headers_data) {
-  string error = "OnPromiseHeaders should be overriden in client code.";
-  QUIC_BUG << error;
-  connection()->CloseConnection(QUIC_INTERNAL_ERROR, error,
-                                ConnectionCloseBehavior::SILENT_CLOSE);
-}
-
-void QuicSpdySession::OnPromiseHeadersComplete(QuicStreamId stream_id,
-                                               QuicStreamId promised_stream_id,
-                                               size_t frame_len) {
-  string error = "OnPromiseHeadersComplete should be overriden in client code.";
-  QUIC_BUG << error;
-  connection()->CloseConnection(QUIC_INTERNAL_ERROR, error,
-                                ConnectionCloseBehavior::SILENT_CLOSE);
 }
 
 void QuicSpdySession::OnPromiseHeaderList(QuicStreamId stream_id,

@@ -6,7 +6,6 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -42,10 +41,10 @@ int DelayedVerifyStrikeRegisterClient::PendingVerifications() const {
 }
 
 void DelayedVerifyStrikeRegisterClient::RunPendingVerifications() {
-  vector<VerifyArgs> pending;
+  std::vector<VerifyArgs> pending;
   pending_verifications_.swap(pending);
-  for (vector<VerifyArgs>::const_iterator it = pending.begin(),
-                                          end = pending.end();
+  for (std::vector<VerifyArgs>::const_iterator it = pending.begin(),
+                                               end = pending.end();
        it != end; ++it) {
     LocalStrikeRegisterClient::VerifyNonceIsValidAndUnique(it->nonce, it->now,
                                                            it->cb);

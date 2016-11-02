@@ -1479,7 +1479,7 @@ struct NET_EXPORT_PRIVATE TransmissionInfo {
   // Stores the packet number of the next retransmission of this packet.
   // Zero if the packet has not been retransmitted.
   QuicPacketNumber retransmission;
-  // Non-empty if there is a listener for this packet.
+  // Non-empty if there is a std::listener for this packet.
   std::list<AckListenerWrapper> ack_listeners;
 };
 
