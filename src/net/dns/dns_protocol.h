@@ -96,6 +96,9 @@ static const uint16_t kOffsetMask = 0x3fff;
 // section 10.2.
 static const uint16_t kMDnsClassMask = 0x7FFF;
 
+// RFC 1035, section 3.1: To simplify implementations, the total length of
+// a domain name (i.e., label octets and label length octets) is restricted
+// to 255 octets or less.
 static const int kMaxNameLength = 255;
 
 // RFC 1035, section 4.2.1: Messages carried by UDP are restricted to 512

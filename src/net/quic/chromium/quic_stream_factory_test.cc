@@ -511,7 +511,7 @@ class QuicStreamFactoryTestBase {
     ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
     crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
     const QuicConfig* config = QuicStreamFactoryPeer::GetConfig(factory_.get());
-    EXPECT_EQ(500, config->IdleConnectionStateLifetime().ToSeconds());
+    EXPECT_EQ(500, config->IdleNetworkTimeout().ToSeconds());
 
     QuicStreamFactoryPeer::SetTaskRunner(factory_.get(), runner_.get());
 

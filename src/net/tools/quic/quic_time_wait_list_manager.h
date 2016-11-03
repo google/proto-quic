@@ -21,7 +21,7 @@
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_session.h"
 
 namespace net {
 
@@ -41,12 +41,19 @@ class QuicTimeWaitListManagerPeer;
 // connection_id.
 class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
  public:
+  class Visitor : public QuicSession::Visitor {
+   public:
+    // Called after the given connection is added to the time-wait std::list.
+    virtual void OnConnectionAddedToTimeWaitList(
+        QuicConnectionId connection_id) = 0;
+  };
+
   // writer - the entity that writes to the socket. (Owned by the dispatcher)
   // visitor - the entity that manages blocked writers. (The dispatcher)
   // helper - provides a clock (Owned by the dispatcher)
   // alarm_factory - used to run clean up alarms. (Owned by the dispatcher)
   QuicTimeWaitListManager(QuicPacketWriter* writer,
-                          QuicServerSessionBase::Visitor* visitor,
+                          Visitor* visitor,
                           QuicConnectionHelperInterface* helper,
                           QuicAlarmFactory* alarm_factory);
   ~QuicTimeWaitListManager() override;
@@ -196,7 +203,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   QuicPacketWriter* writer_;
 
   // Interface that manages blocked writers.
-  QuicServerSessionBase::Visitor* visitor_;
+  Visitor* visitor_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicTimeWaitListManager);
 };

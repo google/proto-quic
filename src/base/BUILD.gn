@@ -27,6 +27,7 @@ import("//build/config/nacl/config.gni")
 import("//build/config/sysroot.gni")
 import("//build/config/ui.gni")
 import("//build/nocompile.gni")
+import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 
 declare_args() {
@@ -468,6 +469,7 @@ component("base") {
     "memory/free_deleter.h",
     "memory/linked_ptr.h",
     "memory/manual_constructor.h",
+    "memory/memory_coordinator_client.cc",
     "memory/memory_coordinator_client.h",
     "memory/memory_coordinator_client_registry.cc",
     "memory/memory_coordinator_client_registry.h",
@@ -531,6 +533,8 @@ component("base") {
     "metrics/bucket_ranges.h",
     "metrics/field_trial.cc",
     "metrics/field_trial.h",
+    "metrics/field_trial_param_associator.cc",
+    "metrics/field_trial_param_associator.h",
     "metrics/histogram.cc",
     "metrics/histogram.h",
     "metrics/histogram_base.cc",
@@ -2457,4 +2461,13 @@ if (is_android) {
       "test/android/java/src/org/chromium/base/TestSystemMessageHandler.java",
     ]
   }
+}
+
+fuzzer_test("base_json_correctness_fuzzer") {
+  sources = [
+    "json/correctness_fuzzer.cc",
+  ]
+  deps = [
+    ":base",
+  ]
 }

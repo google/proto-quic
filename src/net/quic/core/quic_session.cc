@@ -18,10 +18,8 @@
 using base::IntToString;
 using base::StringPiece;
 using std::make_pair;
-using std::map;
 using std::max;
 using std::string;
-using std::vector;
 using net::SpdyPriority;
 
 namespace net {
@@ -29,8 +27,11 @@ namespace net {
 #define ENDPOINT \
   (perspective() == Perspective::IS_SERVER ? "Server: " : " Client: ")
 
-QuicSession::QuicSession(QuicConnection* connection, const QuicConfig& config)
+QuicSession::QuicSession(QuicConnection* connection,
+                         Visitor* owner,
+                         const QuicConfig& config)
     : connection_(connection),
+      visitor_(owner),
       config_(config),
       max_open_outgoing_streams_(kDefaultMaxStreamsPerConnection),
       max_open_incoming_streams_(config_.GetMaxIncomingDynamicStreamsToSend()),
@@ -109,7 +110,7 @@ void QuicSession::OnGoAway(const QuicGoAwayFrame& frame) {
 }
 
 void QuicSession::OnConnectionClosed(QuicErrorCode error,
-                                     const string& /*error_details*/,
+                                     const string& error_details,
                                      ConnectionCloseSource source) {
   DCHECK(!connection_->connected());
   if (error_ == QUIC_NO_ERROR) {
@@ -125,6 +126,17 @@ void QuicSession::OnConnectionClosed(QuicErrorCode error,
       QUIC_BUG << ENDPOINT << "Stream failed to close under OnConnectionClosed";
       CloseStream(id);
     }
+  }
+
+  if (visitor_) {
+    visitor_->OnConnectionClosed(connection_->connection_id(), error,
+                                 error_details);
+  }
+}
+
+void QuicSession::OnWriteBlocked() {
+  if (visitor_) {
+    visitor_->OnWriteBlocked(connection_);
   }
 }
 
@@ -384,7 +396,7 @@ void QuicSession::CloseStreamInner(QuicStreamId stream_id, bool locally_reset) {
 void QuicSession::UpdateFlowControlOnFinalReceivedByteOffset(
     QuicStreamId stream_id,
     QuicStreamOffset final_byte_offset) {
-  map<QuicStreamId, QuicStreamOffset>::iterator it =
+  std::map<QuicStreamId, QuicStreamOffset>::iterator it =
       locally_closed_streams_highest_offset_.find(stream_id);
   if (it == locally_closed_streams_highest_offset_.end()) {
     return;

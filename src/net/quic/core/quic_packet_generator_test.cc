@@ -26,7 +26,6 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 using testing::InSequence;
 using testing::Return;
 using testing::StrictMock;
@@ -214,7 +213,7 @@ class QuicPacketGeneratorTest : public ::testing::Test {
   QuicPacketGenerator generator_;
   QuicPacketCreator* creator_;
   SimpleQuicFramer simple_framer_;
-  vector<SerializedPacket> packets_;
+  std::vector<SerializedPacket> packets_;
   QuicAckFrame ack_frame_;
 
  private:

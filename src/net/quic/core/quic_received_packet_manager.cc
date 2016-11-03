@@ -18,7 +18,6 @@
 
 using std::max;
 using std::min;
-using std::numeric_limits;
 
 namespace net {
 
@@ -213,7 +212,7 @@ struct isTooLarge {
   // Return true if the packet in p is too different from largest_observed_
   // to express.
   bool operator()(const std::pair<QuicPacketNumber, QuicTime>& p) const {
-    return largest_observed_ - p.first >= numeric_limits<uint8_t>::max();
+    return largest_observed_ - p.first >= std::numeric_limits<uint8_t>::max();
   }
 };
 }  // namespace
@@ -240,7 +239,7 @@ const QuicFrame QuicReceivedPacketManager::GetUpdatedAckFrame(
   for (PacketTimeVector::iterator it = ack_frame_.received_packet_times.begin();
        it != ack_frame_.received_packet_times.end();) {
     if (ack_frame_.largest_observed - it->first >=
-        numeric_limits<uint8_t>::max()) {
+        std::numeric_limits<uint8_t>::max()) {
       it = ack_frame_.received_packet_times.erase(it);
     } else {
       ++it;

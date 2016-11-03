@@ -156,7 +156,7 @@ QuicConfig InitializeQuicConfig(const QuicTagVector& connection_options,
                                 int idle_connection_timeout_seconds) {
   DCHECK_GT(idle_connection_timeout_seconds, 0);
   QuicConfig config;
-  config.SetIdleConnectionStateLifetime(
+  config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(idle_connection_timeout_seconds),
       QuicTime::Delta::FromSeconds(idle_connection_timeout_seconds));
   config.SetConnectionOptionsToSend(connection_options);

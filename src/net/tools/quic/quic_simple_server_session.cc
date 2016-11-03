@@ -23,7 +23,7 @@ namespace net {
 QuicSimpleServerSession::QuicSimpleServerSession(
     const QuicConfig& config,
     QuicConnection* connection,
-    QuicServerSessionBase::Visitor* visitor,
+    QuicSession::Visitor* visitor,
     QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)

@@ -17,7 +17,7 @@ QuicClientSessionBase::QuicClientSessionBase(
     QuicConnection* connection,
     QuicClientPushPromiseIndex* push_promise_index,
     const QuicConfig& config)
-    : QuicSpdySession(connection, config),
+    : QuicSpdySession(connection, nullptr, config),
       push_promise_index_(push_promise_index),
       largest_promised_stream_id_(kInvalidStreamId) {}
 
@@ -38,16 +38,6 @@ void QuicClientSessionBase::OnCryptoHandshakeEvent(CryptoHandshakeEvent event) {
   QuicSession::OnCryptoHandshakeEvent(event);
 }
 
-void QuicClientSessionBase::OnPromiseHeaders(QuicStreamId stream_id,
-                                             StringPiece headers_data) {
-  QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
-  if (!stream) {
-    // It's quite possible to receive headers after a stream has been reset.
-    return;
-  }
-  stream->OnPromiseHeaders(headers_data);
-}
-
 void QuicClientSessionBase::OnInitialHeadersComplete(
     QuicStreamId stream_id,
     const SpdyHeaderBlock& response_headers) {
@@ -61,29 +51,6 @@ void QuicClientSessionBase::OnInitialHeadersComplete(
     return;
 
   promised->OnResponseHeaders(response_headers);
-}
-
-void QuicClientSessionBase::OnPromiseHeadersComplete(
-    QuicStreamId stream_id,
-    QuicStreamId promised_stream_id,
-    size_t frame_len) {
-  if (promised_stream_id != kInvalidStreamId &&
-      promised_stream_id <= largest_promised_stream_id_) {
-    connection()->CloseConnection(
-        QUIC_INVALID_STREAM_ID,
-        "Received push stream id lesser or equal to the"
-        " last accepted before",
-        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-    return;
-  }
-  largest_promised_stream_id_ = promised_stream_id;
-
-  QuicSpdyStream* stream = GetSpdyDataStream(stream_id);
-  if (!stream) {
-    // It's quite possible to receive headers after a stream has been reset.
-    return;
-  }
-  stream->OnPromiseHeadersComplete(promised_stream_id, frame_len);
 }
 
 void QuicClientSessionBase::OnPromiseHeaderList(

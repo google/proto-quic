@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_QUIC_HEADER_LIST_H_
 #define NET_QUIC_QUIC_HEADER_LIST_H_
 
+#include <algorithm>
 #include <deque>
 #include <functional>
 
@@ -59,6 +60,14 @@ class NET_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
   size_t uncompressed_header_bytes_;
   size_t compressed_header_bytes_;
 };
+
+inline bool operator==(const QuicHeaderList& l1, const QuicHeaderList& l2) {
+  auto pred = [](const std::pair<std::string, std::string>& p1,
+                 const std::pair<std::string, std::string>& p2) {
+    return p1.first == p2.first && p1.second == p2.second;
+  };
+  return std::equal(l1.begin(), l1.end(), l2.begin(), pred);
+}
 
 }  // namespace net
 

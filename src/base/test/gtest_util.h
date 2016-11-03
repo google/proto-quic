@@ -78,6 +78,11 @@ struct TestIdentifier {
 std::string FormatFullTestName(const std::string& test_case_name,
                                const std::string& test_name);
 
+// Returns the full test name with the "DISABLED_" prefix stripped out.
+// e.g. for the full test names "A.DISABLED_B", "DISABLED_A.B", and
+// "DISABLED_A.DISABLED_B", returns "A.B".
+std::string TestNameWithoutDisabledPrefix(const std::string& full_test_name);
+
 // Returns a vector of gtest-based tests compiled into
 // current executable.
 std::vector<TestIdentifier> GetCompiledInTests();

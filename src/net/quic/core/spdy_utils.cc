@@ -63,8 +63,8 @@ bool SpdyUtils::ExtractContentLengthFromHeaders(int64_t* content_length,
     return false;
   } else {
     // Check whether multiple values are consistent.
-    base::StringPiece content_length_header = it->second;
-    vector<string> values =
+    StringPiece content_length_header = it->second;
+    std::vector<string> values =
         base::SplitString(content_length_header, base::StringPiece("\0", 1),
                           base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     for (const string& value : values) {

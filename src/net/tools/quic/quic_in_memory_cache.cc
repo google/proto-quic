@@ -21,7 +21,6 @@
 using base::FilePath;
 using base::IntToString;
 using base::StringPiece;
-using std::list;
 using std::string;
 
 namespace net {
@@ -76,7 +75,7 @@ class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
  private:
   scoped_refptr<HttpResponseHeaders> http_headers_;
   string url_;
-  list<std::unique_ptr<string>> push_url_values_;
+  std::list<std::unique_ptr<string>> push_url_values_;
 
   DISALLOW_COPY_AND_ASSIGN(ResourceFileImpl);
 };
@@ -176,7 +175,7 @@ void QuicInMemoryCache::AddSimpleResponseWithServerPushResources(
     StringPiece path,
     int response_code,
     StringPiece body,
-    list<ServerPushInfo> push_resources) {
+    std::list<ServerPushInfo> push_resources) {
   AddSimpleResponse(host, path, response_code, body);
   MaybeAddServerPushResources(host, path, push_resources);
 }
@@ -227,7 +226,7 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
           << cache_directory;
   FilePath directory(FilePath::FromUTF8Unsafe(cache_directory));
   base::FileEnumerator file_list(directory, true, base::FileEnumerator::FILES);
-  list<std::unique_ptr<ResourceFile>> resource_files;
+  std::list<std::unique_ptr<ResourceFile>> resource_files;
   for (FilePath file_iter = file_list.Next(); !file_iter.empty();
        file_iter = file_list.Next()) {
     // Need to skip files in .svn directories
@@ -255,7 +254,7 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
   }
 
   for (const auto& resource_file : resource_files) {
-    list<ServerPushInfo> push_resources;
+    std::list<ServerPushInfo> push_resources;
     for (const auto& push_url : resource_file->push_urls()) {
       GURL url(push_url);
       const Response* response = GetResponse(url.host(), url.path());
@@ -272,11 +271,11 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
   }
 }
 
-list<ServerPushInfo> QuicInMemoryCache::GetServerPushResources(
+std::list<ServerPushInfo> QuicInMemoryCache::GetServerPushResources(
     string request_url) {
   base::AutoLock lock(response_mutex_);
 
-  list<ServerPushInfo> resources;
+  std::list<ServerPushInfo> resources;
   auto resource_range = server_push_resources_.equal_range(request_url);
   for (auto it = resource_range.first; it != resource_range.second; ++it) {
     resources.push_back(it->second);
@@ -323,7 +322,7 @@ string QuicInMemoryCache::GetKey(StringPiece host, StringPiece path) const {
 void QuicInMemoryCache::MaybeAddServerPushResources(
     StringPiece request_host,
     StringPiece request_path,
-    list<ServerPushInfo> push_resources) {
+    std::list<ServerPushInfo> push_resources) {
   string request_url = GetKey(request_host, request_path);
 
   for (const auto& push_resource : push_resources) {

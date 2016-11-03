@@ -526,7 +526,19 @@ public class ApiCompatibilityUtils {
     }
 
     /**
-     * See {@link android.os.StatFs#getBlockCount()}.
+     * See {@link android.os.StatFs#getAvailableBlocksLong}.
+     */
+    @SuppressWarnings("deprecation")
+    public static long getAvailableBlocks(StatFs statFs) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            return statFs.getAvailableBlocksLong();
+        } else {
+            return statFs.getAvailableBlocks();
+        }
+    }
+
+    /**
+     * See {@link android.os.StatFs#getBlockCount}.
      */
     @SuppressWarnings("deprecation")
     public static long getBlockCount(StatFs statFs) {
@@ -538,7 +550,7 @@ public class ApiCompatibilityUtils {
     }
 
     /**
-     * See {@link android.os.StatFs#getBlockSize()}.
+     * See {@link android.os.StatFs#getBlockSize}.
      */
     @SuppressWarnings("deprecation")
     public static long getBlockSize(StatFs statFs) {

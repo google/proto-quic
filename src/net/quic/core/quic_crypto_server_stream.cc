@@ -23,6 +23,42 @@ using std::string;
 
 namespace net {
 
+class QuicCryptoServerStream::ProcessClientHelloCallback
+    : public ProcessClientHelloResultCallback {
+ public:
+  ProcessClientHelloCallback(
+      QuicCryptoServerStream* stream,
+      const scoped_refptr<ValidateClientHelloResultCallback::Result>& result)
+      : stream_(stream), result_(result) {}
+
+  void Run(
+      QuicErrorCode error,
+      const string& error_details,
+      std::unique_ptr<CryptoHandshakeMessage> message,
+      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+    if (stream_ == nullptr) {
+      return;
+    }
+
+    // Note: set the parent's callback to nullptr here because
+    // FinishProcessingHandshakeMessageAfterProcessClientHello can be invoked
+    // from either synchronous or asynchronous codepaths.  When the synchronous
+    // codepaths are removed, this assignment should move to
+    // FinishProcessingHandshakeMessageAfterProcessClientHello.
+    stream_->process_client_hello_cb_ = nullptr;
+
+    stream_->FinishProcessingHandshakeMessageAfterProcessClientHello(
+        *result_, error, error_details, std::move(message),
+        std::move(diversification_nonce));
+  }
+
+  void Cancel() { stream_ = nullptr; }
+
+ private:
+  QuicCryptoServerStream* stream_;
+  scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
+};
+
 QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(QuicSession* session)
     : QuicCryptoStream(session) {}
 
@@ -55,6 +91,7 @@ QuicCryptoServerStream::QuicCryptoServerStream(
     : QuicCryptoServerStreamBase(session),
       crypto_config_(crypto_config),
       compressed_certs_cache_(compressed_certs_cache),
+      crypto_proof_(new QuicCryptoProof),
       validate_client_hello_cb_(nullptr),
       helper_(helper),
       num_handshake_messages_(0),
@@ -64,7 +101,8 @@ QuicCryptoServerStream::QuicCryptoServerStream(
       use_stateless_rejects_if_peer_supported_(
           use_stateless_rejects_if_peer_supported),
       peer_supports_stateless_rejects_(false),
-      chlo_packet_size_(0) {
+      chlo_packet_size_(0),
+      process_client_hello_cb_(nullptr) {
   DCHECK_EQ(Perspective::IS_SERVER, session->connection()->perspective());
 }
 
@@ -81,6 +119,10 @@ void QuicCryptoServerStream::CancelOutstandingCallbacks() {
   if (send_server_config_update_cb_ != nullptr) {
     send_server_config_update_cb_->Cancel();
     send_server_config_update_cb_ = nullptr;
+  }
+  if (process_client_hello_cb_ != nullptr) {
+    process_client_hello_cb_->Cancel();
+    process_client_hello_cb_ = nullptr;
   }
 }
 
@@ -120,31 +162,8 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   crypto_config_->ValidateClientHello(
       message, session()->connection()->peer_address().address(),
       session()->connection()->self_address().address(), version(),
-      session()->connection()->clock(), &crypto_proof_, std::move(cb));
+      session()->connection()->clock(), crypto_proof_, std::move(cb));
 }
-
-class QuicCryptoServerStream::ProcessClientHelloCallback
-    : public ProcessClientHelloResultCallback {
- public:
-  ProcessClientHelloCallback(
-      QuicCryptoServerStream* stream,
-      const scoped_refptr<ValidateClientHelloResultCallback::Result>& result)
-      : stream_(stream), result_(result) {}
-
-  void Run(
-      QuicErrorCode error,
-      const string& error_details,
-      std::unique_ptr<CryptoHandshakeMessage> message,
-      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
-    stream_->FinishProcessingHandshakeMessageAfterProcessClientHello(
-        *result_, error, error_details, std::move(message),
-        std::move(diversification_nonce));
-  }
-
- private:
-  QuicCryptoServerStream* stream_;
-  scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
-};
 
 void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
     scoped_refptr<ValidateClientHelloResultCallback::Result> result,
@@ -161,6 +180,7 @@ void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
 
   std::unique_ptr<ProcessClientHelloCallback> cb(
       new ProcessClientHelloCallback(this, result));
+  process_client_hello_cb_ = cb.get();
   ProcessClientHello(result, std::move(details), std::move(cb));
 }
 
@@ -226,13 +246,13 @@ void QuicCryptoServerStream::
   // NOTE: the SHLO will be encrypted with the new server write key.
   session()->connection()->SetEncrypter(
       ENCRYPTION_INITIAL,
-      crypto_negotiated_params_.initial_crypters.encrypter.release());
+      crypto_negotiated_params_->initial_crypters.encrypter.release());
   session()->connection()->SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
   // Set the decrypter immediately so that we no longer accept unencrypted
   // packets.
   session()->connection()->SetDecrypter(
       ENCRYPTION_INITIAL,
-      crypto_negotiated_params_.initial_crypters.decrypter.release());
+      crypto_negotiated_params_->initial_crypters.decrypter.release());
   if (version() > QUIC_VERSION_32) {
     session()->connection()->SetDiversificationNonce(*diversification_nonce);
   }
@@ -241,12 +261,12 @@ void QuicCryptoServerStream::
 
   session()->connection()->SetEncrypter(
       ENCRYPTION_FORWARD_SECURE,
-      crypto_negotiated_params_.forward_secure_crypters.encrypter.release());
+      crypto_negotiated_params_->forward_secure_crypters.encrypter.release());
   session()->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
 
   session()->connection()->SetAlternativeDecrypter(
       ENCRYPTION_FORWARD_SECURE,
-      crypto_negotiated_params_.forward_secure_crypters.decrypter.release(),
+      crypto_negotiated_params_->forward_secure_crypters.decrypter.release(),
       false /* don't latch */);
 
   encryption_established_ = true;
@@ -277,7 +297,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
         session()->connection()->peer_address().address(),
         session()->connection()->clock(),
         session()->connection()->random_generator(), compressed_certs_cache_,
-        crypto_negotiated_params_, cached_network_params, std::move(cb));
+        *crypto_negotiated_params_, cached_network_params, std::move(cb));
     return;
   }
 
@@ -289,7 +309,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
           session()->connection()->peer_address().address(),
           session()->connection()->clock(),
           session()->connection()->random_generator(), compressed_certs_cache_,
-          crypto_negotiated_params_, cached_network_params,
+          *crypto_negotiated_params_, cached_network_params,
           &server_config_update_message)) {
     DVLOG(1) << "Server: Failed to build server config update (SCUP)!";
     return;
@@ -383,11 +403,11 @@ void QuicCryptoServerStream::SetPreviousCachedNetworkParams(
 bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
     string* output) const {
   if (!encryption_established_ ||
-      crypto_negotiated_params_.channel_id.empty()) {
+      crypto_negotiated_params_->channel_id.empty()) {
     return false;
   }
 
-  const string& channel_id(crypto_negotiated_params_.channel_id);
+  const string& channel_id(crypto_negotiated_params_->channel_id);
   std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
   hash->Update(channel_id.data(), channel_id.size());
@@ -444,7 +464,7 @@ void QuicCryptoServerStream::ProcessClientHello(
       version(), connection->supported_versions(),
       use_stateless_rejects_in_crypto_config, server_designated_connection_id,
       connection->clock(), connection->random_generator(),
-      compressed_certs_cache_, &crypto_negotiated_params_, &crypto_proof_,
+      compressed_certs_cache_, crypto_negotiated_params_, crypto_proof_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version()),
       chlo_packet_size_, std::move(done_cb));
 }

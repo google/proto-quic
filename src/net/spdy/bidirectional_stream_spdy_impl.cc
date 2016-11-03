@@ -4,6 +4,8 @@
 
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/logging.h"
@@ -34,6 +36,8 @@ BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
       negotiated_protocol_(kProtoUnknown),
       more_read_data_pending_(false),
       read_buffer_len_(0),
+      written_end_of_stream_(false),
+      write_pending_(false),
       stream_closed_(false),
       closed_stream_status_(ERR_FAILED),
       closed_stream_received_bytes_(0),
@@ -44,6 +48,7 @@ BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
 BidirectionalStreamSpdyImpl::~BidirectionalStreamSpdyImpl() {
   // Sends a RST to the remote if the stream is destroyed before it completes.
   ResetStream();
+  DCHECK(!write_pending_);
 }
 
 void BidirectionalStreamSpdyImpl::Start(
@@ -107,14 +112,20 @@ void BidirectionalStreamSpdyImpl::SendData(const scoped_refptr<IOBuffer>& data,
                                            int length,
                                            bool end_stream) {
   DCHECK(length > 0 || (length == 0 && end_stream));
+  DCHECK(!write_pending_);
 
-  if (!stream_) {
-    LOG(ERROR) << "Trying to send data after stream has been destroyed.";
+  if (written_end_of_stream_) {
+    LOG(ERROR) << "Writing after end of stream is written.";
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&BidirectionalStreamSpdyImpl::NotifyError,
                               weak_factory_.GetWeakPtr(), ERR_UNEXPECTED));
     return;
   }
+
+  write_pending_ = true;
+  written_end_of_stream_ = end_stream;
+  if (MaybeHandleStreamClosedInSendData())
+    return;
 
   DCHECK(!stream_closed_);
   stream_->SendData(data.get(), length,
@@ -126,14 +137,20 @@ void BidirectionalStreamSpdyImpl::SendvData(
     const std::vector<int>& lengths,
     bool end_stream) {
   DCHECK_EQ(buffers.size(), lengths.size());
+  DCHECK(!write_pending_);
 
-  if (!stream_) {
-    LOG(ERROR) << "Trying to send data after stream has been destroyed.";
+  if (written_end_of_stream_) {
+    LOG(ERROR) << "Writing after end of stream is written.";
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&BidirectionalStreamSpdyImpl::NotifyError,
                               weak_factory_.GetWeakPtr(), ERR_UNEXPECTED));
     return;
   }
+
+  write_pending_ = true;
+  written_end_of_stream_ = end_stream;
+  if (MaybeHandleStreamClosedInSendData())
+    return;
 
   DCHECK(!stream_closed_);
   int total_len = 0;
@@ -233,10 +250,11 @@ void BidirectionalStreamSpdyImpl::OnDataReceived(
 }
 
 void BidirectionalStreamSpdyImpl::OnDataSent() {
-  DCHECK(stream_);
-  DCHECK(!stream_closed_);
+  DCHECK(write_pending_);
 
   pending_combined_buffer_ = nullptr;
+  write_pending_ = false;
+
   if (delegate_)
     delegate_->OnDataSent();
 }
@@ -268,7 +286,13 @@ void BidirectionalStreamSpdyImpl::OnClose(int status) {
   // If user has not called ReadData (i.e |read_buffer_| is nullptr), this will
   // do nothing.
   timer_->Stop();
+
+  // |this| might get destroyed after calling into |delegate_| in
+  // DoBufferedRead().
+  auto weak_this = weak_factory_.GetWeakPtr();
   DoBufferedRead();
+  if (weak_this.get() && write_pending_)
+    OnDataSent();
 }
 
 int BidirectionalStreamSpdyImpl::SendRequestHeadersHelper() {
@@ -280,6 +304,7 @@ int BidirectionalStreamSpdyImpl::SendRequestHeadersHelper() {
 
   CreateSpdyHeadersFromHttpRequest(
       http_request_info, http_request_info.extra_headers, true, &headers);
+  written_end_of_stream_ = request_info_->end_stream_on_headers;
   return stream_->SendRequestHeaders(std::move(headers),
                                      request_info_->end_stream_on_headers
                                          ? NO_MORE_DATA_TO_SEND
@@ -304,6 +329,7 @@ void BidirectionalStreamSpdyImpl::OnStreamInitialized(int rv) {
 
 void BidirectionalStreamSpdyImpl::NotifyError(int rv) {
   ResetStream();
+  write_pending_ = false;
   if (delegate_) {
     BidirectionalStreamImpl::Delegate* delegate = delegate_;
     delegate_ = nullptr;
@@ -371,6 +397,24 @@ bool BidirectionalStreamSpdyImpl::ShouldWaitForMoreBufferedData() const {
   DCHECK_GT(read_buffer_len_, 0);
   return read_data_queue_.GetTotalSize() <
          static_cast<size_t>(read_buffer_len_);
+}
+
+bool BidirectionalStreamSpdyImpl::MaybeHandleStreamClosedInSendData() {
+  if (stream_)
+    return false;
+  // If |stream_| is closed without an error before client half closes,
+  // blackhole any pending write data. crbug.com/650438.
+  if (stream_closed_ && closed_stream_status_ == OK) {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(&BidirectionalStreamSpdyImpl::OnDataSent,
+                              weak_factory_.GetWeakPtr()));
+    return true;
+  }
+  LOG(ERROR) << "Trying to send data after stream has been destroyed.";
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, base::Bind(&BidirectionalStreamSpdyImpl::NotifyError,
+                            weak_factory_.GetWeakPtr(), ERR_UNEXPECTED));
+  return true;
 }
 
 }  // namespace net

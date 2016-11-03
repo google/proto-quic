@@ -10,6 +10,7 @@
 
 #include "base/files/file_path.h"
 #include "base/json/json_file_value_serializer.h"
+#include "base/strings/string_util.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -23,6 +24,12 @@ TestIdentifier::TestIdentifier(const TestIdentifier& other) = default;
 std::string FormatFullTestName(const std::string& test_case_name,
                                const std::string& test_name) {
   return test_case_name + "." + test_name;
+}
+
+std::string TestNameWithoutDisabledPrefix(const std::string& full_test_name) {
+  std::string test_name_no_disabled(full_test_name);
+  ReplaceSubstringsAfterOffset(&test_name_no_disabled, 0, "DISABLED_", "");
+  return test_name_no_disabled;
 }
 
 std::vector<TestIdentifier> GetCompiledInTests() {

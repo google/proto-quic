@@ -36,6 +36,8 @@ class NET_EXPORT_PRIVATE QuicCryptoStream
  public:
   explicit QuicCryptoStream(QuicSession* session);
 
+  ~QuicCryptoStream() override;
+
   // Returns the per-packet framing overhead associated with sending a
   // handshake message for |version|.
   static QuicByteCount CryptoMessageFramingOverhead(QuicVersion version);
@@ -79,7 +81,7 @@ class NET_EXPORT_PRIVATE QuicCryptoStream
   bool encryption_established_;
   bool handshake_confirmed_;
 
-  QuicCryptoNegotiatedParameters crypto_negotiated_params_;
+  scoped_refptr<QuicCryptoNegotiatedParameters> crypto_negotiated_params_;
 
  private:
   CryptoFramer crypto_framer_;

@@ -5,7 +5,6 @@
 #include "net/quic/core/reliable_quic_stream.h"
 
 #include "base/logging.h"
-#include "net/quic/core/iovector.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_flow_controller.h"
@@ -275,7 +274,12 @@ QuicConsumedData ReliableQuicStream::WritevData(
   }
 
   // How much data was provided.
-  size_t write_length = TotalIovecLength(iov, iov_count);
+  size_t write_length = 0;
+  if (iov != nullptr) {
+    for (int i = 0; i < iov_count; ++i) {
+      write_length += iov[i].iov_len;
+    }
+  }
 
   // A FIN with zero data payload should not be flow control blocked.
   bool fin_with_zero_data = (fin && write_length == 0);

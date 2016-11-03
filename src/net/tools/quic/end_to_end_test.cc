@@ -149,7 +149,7 @@ struct TestParams {
 };
 
 // Constructs various test permutations.
-vector<TestParams> GetTestParams() {
+std::vector<TestParams> GetTestParams() {
   // Divide the versions into buckets in which the intra-frame format
   // is compatible. When clients encounter QUIC version negotiation
   // they simply retransmit all packets using the new version's
@@ -182,7 +182,7 @@ vector<TestParams> GetTestParams() {
   // is used to prune the number of tests that are run.
   const int kMaxEnabledOptions = 6;
   int max_enabled_options = 0;
-  vector<TestParams> params;
+  std::vector<TestParams> params;
   for (bool server_uses_stateless_rejects_if_peer_supported : {true, false}) {
     for (bool client_supports_stateless_rejects : {true, false}) {
       for (const QuicTag congestion_control_tag : {kRENO, kQBIC}) {
@@ -1256,9 +1256,8 @@ TEST_P(EndToEndTest, DISABLED_MultipleTermination) {
 }
 
 TEST_P(EndToEndTest, Timeout) {
-  client_config_.SetIdleConnectionStateLifetime(
-      QuicTime::Delta::FromMicroseconds(500),
-      QuicTime::Delta::FromMicroseconds(500));
+  client_config_.SetIdleNetworkTimeout(QuicTime::Delta::FromMicroseconds(500),
+                                       QuicTime::Delta::FromMicroseconds(500));
   // Note: we do NOT ASSERT_TRUE: we may time out during initial handshake:
   // that's enough to validate timeout in this case.
   Initialize();
@@ -1380,7 +1379,8 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kBBR;
       break;
     case kQBIC:
-      expected_congestion_control_type = kCubic;
+      expected_congestion_control_type =
+          FLAGS_quic_default_enable_cubic_bytes ? kCubicBytes : kCubic;
       break;
     default:
       DLOG(FATAL) << "Unexpected congestion control tag";
@@ -1817,8 +1817,8 @@ TEST_P(EndToEndTest, FlowControlsSynced) {
   QuicSpdySession* const client_session = client_->client()->session();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  QuicSpdySession* server_session =
-      dispatcher->session_map().begin()->second.get();
+  auto server_session = static_cast<QuicSpdySession*>(
+      dispatcher->session_map().begin()->second.get());
 
   ExpectFlowControlsSynced(client_session->flow_controller(),
                            server_session->flow_controller());
@@ -2459,7 +2459,7 @@ TEST_P(EndToEndTest, EarlyResponseFinRecording) {
       QuicDispatcherPeer::session_map(dispatcher);
   QuicDispatcher::SessionMap::const_iterator it = map.begin();
   EXPECT_TRUE(it != map.end());
-  QuicServerSessionBase* server_session = it->second.get();
+  QuicSession* server_session = it->second.get();
 
   // The stream is not waiting for the arrival of the peer's final offset.
   EXPECT_EQ(

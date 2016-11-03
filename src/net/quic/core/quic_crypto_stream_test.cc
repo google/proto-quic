@@ -19,7 +19,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -34,10 +33,10 @@ class MockQuicCryptoStream : public QuicCryptoStream {
     messages_.push_back(message);
   }
 
-  vector<CryptoHandshakeMessage>* messages() { return &messages_; }
+  std::vector<CryptoHandshakeMessage>* messages() { return &messages_; }
 
  private:
-  vector<CryptoHandshakeMessage> messages_;
+  std::vector<CryptoHandshakeMessage> messages_;
 
   DISALLOW_COPY_AND_ASSIGN(MockQuicCryptoStream);
 };

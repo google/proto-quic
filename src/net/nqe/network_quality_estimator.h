@@ -434,14 +434,6 @@ class NET_EXPORT NetworkQualityEstimator
       kDefaultEffectiveConnectionTypeAlgorithm =
           EffectiveConnectionTypeAlgorithm::HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT;
 
-  // Minimum valid value of the variation parameter that holds RTT (in
-  // milliseconds) values.
-  static const int kMinimumRTTVariationParameterMsec = 1;
-
-  // Minimum valid value of the variation parameter that holds throughput (in
-  // kilobits per second) values.
-  static const int kMinimumThroughputVariationParameterKbps = 1;
-
   // Returns the RTT value to be used when the valid RTT is unavailable. Readers
   // should discard RTT if it is set to the value returned by |InvalidRTT()|.
   static const base::TimeDelta InvalidRTT();
@@ -469,15 +461,11 @@ class NET_EXPORT NetworkQualityEstimator
   void OnUpdatedRTTAvailable(SocketPerformanceWatcherFactory::Protocol protocol,
                              const base::TimeDelta& rtt);
 
-  // Obtains operating parameters from the field trial parameters.
-  void ObtainOperatingParams(
-      const std::map<std::string, std::string>& variation_params);
-
   // Obtains the model parameters for different effective connection types from
   // the field trial parameters. For each effective connection type, a model
   // (currently composed of a RTT threshold and a downlink throughput threshold)
   // is provided by the field trial.
-  void ObtainEffectiveConnectionTypeModelParams(
+  void ObtainOperatingParams(
       const std::map<std::string, std::string>& variation_params);
 
   // Adds the default median RTT and downstream throughput estimate for the
@@ -636,13 +624,7 @@ class NET_EXPORT NetworkQualityEstimator
   // estimator field trial parameters. The observations are indexed by
   // ConnectionType.
   nqe::internal::NetworkQuality
-      default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
-
-  // Default thresholds for different effective connection types. The default
-  // values are used if the thresholds are unavailable from the variation
-  // params.
-  nqe::internal::NetworkQuality default_effective_connection_type_thresholds_
-      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
+      default_observations_[NetworkChangeNotifier::CONNECTION_LAST];
 
   // Thresholds for different effective connection types obtained from field
   // trial variation params. These thresholds encode how different connection
@@ -730,7 +712,7 @@ class NET_EXPORT NetworkQualityEstimator
   // parameters. If set to true, GetEffectiveConnectionType() will always return
   // |forced_effective_connection_type_|.
   const bool forced_effective_connection_type_set_;
-  EffectiveConnectionType forced_effective_connection_type_;
+  const EffectiveConnectionType forced_effective_connection_type_;
 
   base::ThreadChecker thread_checker_;
 

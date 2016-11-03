@@ -181,6 +181,7 @@
       'Mac deterministic (dbg)': 'debug_bot',
       'Mojo ChromiumOS': 'chromeos_with_codecs_ozone_release_trybot',
       'Mojo Windows': 'release_bot_x86',
+      'Ozone Linux': 'release_bot_ozone_linux',
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
       'Site Isolation Win': 'release_trybot_x86',
@@ -282,10 +283,8 @@
       'Mac Builder': 'gpu_tests_release_bot',
       'Mac Builder (dbg)': 'debug_bot',
       'ios-device': 'ios',
-      'ios-device-gn': 'ios',
       'ios-simulator': 'ios',
       'ios-simulator-cronet': 'ios',
-      'ios-simulator-gn': 'ios',
       'ios-simulator-swarming': 'ios',
     },
 
@@ -313,6 +312,7 @@
 
     'chromium.perf': {
       'Android Builder': 'official_goma_minimal_symbols_android',
+      'Android Compile': 'official_goma_minimal_symbols_android',
       'Android arm64 Builder': 'official_goma_minimal_symbols_android_arm64',
       'Linux Builder': 'official_goma',
       'Mac Builder': 'official_goma',
@@ -576,10 +576,8 @@
 
     'tryserver.chromium.mac': {
       'ios-device': 'ios',
-      'ios-device-gn': 'ios',
       'ios-simulator': 'ios',
       'ios-simulator-cronet': 'ios',
-      'ios-simulator-gn': 'ios',
       'ios-simulator-swarming': 'ios',
       'mac_chromium_10.10_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_10.10_macviews': 'mac_views_browser_release_trybot',
@@ -1323,6 +1321,10 @@
       'official', 'x86',
     ],
 
+    'release_bot_ozone_linux': [
+      'release_bot', 'ozone_linux',
+    ],
+
     'release_afl_asan': [
       'release', 'afl', 'asan', 'chromeos_codecs', 'pdf_xfa', 'disable_nacl',
     ],
@@ -1725,6 +1727,12 @@
 
     'ozone': {
       'gn_args': 'use_ozone=true',
+    },
+
+    'ozone_linux': {
+      'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
+                  'ozone_platform_x11=true enable_package_mash_services=true '
+                  'use_ash=false'),
     },
 
     'pdf_xfa': {

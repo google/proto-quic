@@ -1106,7 +1106,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   TestConnection connection_;
   QuicPacketCreator* creator_;
   QuicPacketGenerator* generator_;
-  QuicSentPacketManagerInterface* manager_;
+  QuicSentPacketManager* manager_;
   StrictMock<MockQuicConnectionVisitor> visitor_;
 
   QuicStreamFrame frame1_;
@@ -2143,6 +2143,34 @@ TEST_P(QuicConnectionTest, DoNotRetransmitForResetStreamOnRTO) {
   EXPECT_EQ(stream_id, writer_->rst_stream_frames().front().stream_id);
 }
 
+// Ensure that if the only data in flight is non-retransmittable, the
+// retransmission alarm is not set.
+TEST_P(QuicConnectionTest, CancelRetransmissionAlarmAfterResetStream) {
+  FLAGS_quic_more_conservative_retransmission_alarm = true;
+  QuicStreamId stream_id = 2;
+  QuicPacketNumber last_data_packet;
+  SendStreamDataToPeer(stream_id, "foo", 0, !kFin, &last_data_packet);
+
+  // Cancel the stream.
+  const QuicPacketNumber rst_packet = last_data_packet + 1;
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, rst_packet, _, _)).Times(1);
+  connection_.SendRstStream(stream_id, QUIC_ERROR_PROCESSING_STREAM, 14);
+
+  // Ack the RST_STREAM frame (since it's retransmittable), but not the data
+  // packet, which is no longer retransmittable since the stream was cancelled.
+  QuicAckFrame nack_stream_data = InitAckFrame(rst_packet);
+  NackPacket(last_data_packet, &nack_stream_data);
+  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
+  EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
+  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(0);
+  ProcessAckPacket(&nack_stream_data);
+
+  // Ensure that the data is still in flight, but the retransmission alarm is no
+  // longer set.
+  EXPECT_GT(QuicSentPacketManagerPeer::GetBytesInFlight(manager_), 0u);
+  EXPECT_FALSE(connection_.GetRetransmissionAlarm()->IsSet());
+}
+
 TEST_P(QuicConnectionTest, RetransmitForQuicRstStreamNoErrorOnRTO) {
   connection_.SetMaxTailLossProbes(kDefaultPathId, 0);
 
@@ -2363,7 +2391,8 @@ TEST_P(QuicConnectionTest, RetransmitWriteBlockedAckedOriginalThenSent) {
   writer_->SetWritable();
   connection_.OnCanWrite();
   // There is now a pending packet, but with no retransmittable frames.
-  EXPECT_TRUE(connection_.GetRetransmissionAlarm()->IsSet());
+  EXPECT_EQ(FLAGS_quic_more_conservative_retransmission_alarm,
+            !connection_.GetRetransmissionAlarm()->IsSet());
   EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_,
                                                             ack.path_id, 2));
 }
@@ -3185,7 +3214,6 @@ TEST_P(QuicConnectionTest, MtuDiscoveryWriterLimited) {
 // Tests whether MTU discovery works when the writer returns an error despite
 // advertising higher packet length.
 TEST_P(QuicConnectionTest, MtuDiscoveryWriterFailed) {
-  FLAGS_graceful_emsgsize_on_mtu_probe = true;
   EXPECT_TRUE(connection_.connected());
 
   const QuicByteCount mtu_limit = kMtuDiscoveryTargetPacketSizeHigh - 1;
@@ -3388,7 +3416,7 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
       kInitialStreamFlowControlWindowForTest);
   client_config.SetInitialSessionFlowControlWindowToSend(
       kInitialSessionFlowControlWindowForTest);
-  client_config.SetIdleConnectionStateLifetime(
+  client_config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(kDefaultIdleTimeoutSecs),
       QuicTime::Delta::FromSeconds(kDefaultIdleTimeoutSecs));
   client_config.ToHandshakeMessage(&msg);

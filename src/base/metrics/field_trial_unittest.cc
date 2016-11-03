@@ -1142,11 +1142,16 @@ TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
   base::FieldTrialList::CreateFieldTrial("Trial1", "Group1");
   base::FilePath test_file_path = base::FilePath(FILE_PATH_LITERAL("Program"));
   base::CommandLine cmd_line = base::CommandLine(test_file_path);
+  const char field_trial_handle[] = "test-field-trial-handle";
 
-  base::FieldTrialList::CopyFieldTrialStateToFlags("field-trial-handle",
+  base::FieldTrialList::CopyFieldTrialStateToFlags(field_trial_handle,
                                                    &cmd_line);
-
+#if defined(OS_WIN)
+  EXPECT_TRUE(cmd_line.HasSwitch(field_trial_handle) ||
+              cmd_line.HasSwitch(switches::kForceFieldTrials));
+#else
   EXPECT_TRUE(cmd_line.HasSwitch(switches::kForceFieldTrials));
+#endif
 }
 
 TEST(FieldTrialListTest, InstantiateAllocator) {

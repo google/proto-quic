@@ -18,6 +18,7 @@
 #include "base/logging.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/test/gtest_util.h"
 #include "base/test/launcher/test_launcher.h"
 #include "base/values.h"
 
@@ -28,12 +29,6 @@ namespace {
 // The default output file for XML output.
 const FilePath::CharType kDefaultOutputFile[] = FILE_PATH_LITERAL(
     "test_detail.xml");
-
-std::string TestNameWithoutDisabledPrefix(const std::string& test_name) {
-  std::string test_name_no_disabled(test_name);
-  ReplaceSubstringsAfterOffset(&test_name_no_disabled, 0, "DISABLED_", "");
-  return test_name_no_disabled;
-}
 
 // Converts the given epoch time in milliseconds to a date string in the ISO
 // 8601 format, without the timezone information.
@@ -235,8 +230,11 @@ void TestResultsTracker::AddDisabledTest(const std::string& test_name) {
 void TestResultsTracker::AddTestResult(const TestResult& result) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  // Record disabled test names without DISABLED_ prefix so that they are easy
+  // to compare with regular test names, e.g. before or after disabling.
   per_iteration_data_[iteration_].results[
-      result.full_name].test_results.push_back(result);
+      TestNameWithoutDisabledPrefix(result.full_name)].test_results.push_back(
+          result);
 }
 
 void TestResultsTracker::PrintSummaryOfCurrentIteration() const {

@@ -38,6 +38,9 @@ enum class MemoryState {
   SUSPENDED = 2,
 };
 
+// Returns a string representation of MemoryState.
+BASE_EXPORT const char* MemoryStateToString(MemoryState state);
+
 // This is an interface for components which can respond to memory status
 // changes. An initial state is NORMAL. See MemoryCoordinatorClientRegistry for
 // threading guarantees and ownership management.

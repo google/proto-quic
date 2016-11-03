@@ -281,7 +281,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       const IPAddress& server_ip,
       QuicVersion version,
       const QuicClock* clock,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const;
 
   // ProcessClientHello processes |client_hello| and decides whether to accept
@@ -327,8 +327,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       const QuicClock* clock,
       QuicRandom* rand,
       QuicCompressedCertsCache* compressed_certs_cache,
-      QuicCryptoNegotiatedParameters* params,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoNegotiatedParameters> params,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       QuicByteCount total_framing_overhead,
       QuicByteCount chlo_packet_size,
       std::unique_ptr<ProcessClientHelloResultCallback> done_cb) const;
@@ -550,7 +550,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicVersion version,
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       scoped_refptr<ValidateClientHelloResultCallback::Result>
           client_hello_state,
       std::unique_ptr<ValidateClientHelloResultCallback> done_cb) const;
@@ -571,7 +571,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicVersion version,
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       std::unique_ptr<ProofSource::Details> proof_source_details,
       bool get_proof_failed,
       scoped_refptr<ValidateClientHelloResultCallback::Result>
@@ -597,8 +597,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       const QuicClock* clock,
       QuicRandom* rand,
       QuicCompressedCertsCache* compressed_certs_cache,
-      QuicCryptoNegotiatedParameters* params,
-      QuicCryptoProof* crypto_proof,
+      scoped_refptr<QuicCryptoNegotiatedParameters> params,
+      scoped_refptr<QuicCryptoProof> crypto_proof,
       QuicByteCount total_framing_overhead,
       QuicByteCount chlo_packet_size,
       const scoped_refptr<Config>& requested_config,
@@ -616,7 +616,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
                       QuicConnectionId server_designated_connection_id,
                       QuicRandom* rand,
                       QuicCompressedCertsCache* compressed_certs_cache,
-                      QuicCryptoNegotiatedParameters* params,
+                      scoped_refptr<QuicCryptoNegotiatedParameters> params,
                       const QuicCryptoProof& crypto_proof,
                       QuicByteCount total_framing_overhead,
                       QuicByteCount chlo_packet_size,
@@ -846,9 +846,9 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerConfig);
 };
 
-struct NET_EXPORT_PRIVATE QuicCryptoProof {
+struct NET_EXPORT_PRIVATE QuicCryptoProof
+    : public base::RefCounted<QuicCryptoProof> {
   QuicCryptoProof();
-  ~QuicCryptoProof();
 
   std::string signature;
   scoped_refptr<ProofSource::Chain> chain;
@@ -857,6 +857,10 @@ struct NET_EXPORT_PRIVATE QuicCryptoProof {
   // request).
   scoped_refptr<QuicCryptoServerConfig::Config> config;
   std::string primary_scid;
+
+ private:
+  friend class base::RefCounted<QuicCryptoProof>;
+  virtual ~QuicCryptoProof();
 };
 
 }  // namespace net

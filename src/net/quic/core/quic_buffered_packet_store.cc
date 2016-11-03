@@ -9,8 +9,6 @@
 #include "base/stl_util.h"
 #include "net/quic/core/quic_bug_tracker.h"
 
-using std::list;
-
 namespace net {
 
 typedef QuicBufferedPacketStore::BufferedPacket BufferedPacket;
@@ -145,9 +143,9 @@ bool QuicBufferedPacketStore::HasChlosBuffered() const {
   return !connections_with_chlo_.empty();
 }
 
-list<BufferedPacket> QuicBufferedPacketStore::DeliverPackets(
+std::list<BufferedPacket> QuicBufferedPacketStore::DeliverPackets(
     QuicConnectionId connection_id) {
-  list<BufferedPacket> packets_to_deliver;
+  std::list<BufferedPacket> packets_to_deliver;
   auto it = undecryptable_packets_.find(connection_id);
   if (it != undecryptable_packets_.end()) {
     packets_to_deliver = std::move(it->second.buffered_packets);
@@ -201,16 +199,17 @@ bool QuicBufferedPacketStore::ShouldBufferPacket(bool is_chlo) {
   return is_store_full || reach_non_chlo_limit;
 }
 
-list<BufferedPacket> QuicBufferedPacketStore::DeliverPacketsForNextConnection(
+std::list<BufferedPacket>
+QuicBufferedPacketStore::DeliverPacketsForNextConnection(
     QuicConnectionId* connection_id) {
   if (connections_with_chlo_.empty()) {
     // Returns empty list if no CHLO has been buffered.
-    return list<BufferedPacket>();
+    return std::list<BufferedPacket>();
   }
   *connection_id = connections_with_chlo_.front().first;
   connections_with_chlo_.erase(connections_with_chlo_.begin());
 
-  list<BufferedPacket> packets = DeliverPackets(*connection_id);
+  std::list<BufferedPacket> packets = DeliverPackets(*connection_id);
   DCHECK(!packets.empty()) << "Try to deliver connectons without CHLO";
   return packets;
 }

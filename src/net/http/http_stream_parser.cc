@@ -1231,7 +1231,7 @@ void HttpStreamParser::ValidateStatusLine(const std::string& status_line) {
 
 bool HttpStreamParser::SendRequestBuffersEmpty() {
   return request_headers_ == nullptr && request_body_send_buf_ == nullptr &&
-         request_body_send_buf_ == nullptr;
+         request_body_read_buf_ == nullptr;
 }
 
 }  // namespace net

@@ -22,7 +22,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
-using std::vector;
 
 using testing::_;
 
@@ -119,8 +118,7 @@ TEST_F(QuicCryptoClientStreamTest, NegotiatedParameters) {
   CompleteCryptoHandshake();
 
   const QuicConfig* config = session_->config();
-  EXPECT_EQ(kMaximumIdleTimeoutSecs,
-            config->IdleConnectionStateLifetime().ToSeconds());
+  EXPECT_EQ(kMaximumIdleTimeoutSecs, config->IdleNetworkTimeout().ToSeconds());
   EXPECT_EQ(kDefaultMaxStreamsPerConnection, config->MaxStreamsPerConnection());
 
   const QuicCryptoNegotiatedParameters& crypto_params(
@@ -171,7 +169,7 @@ TEST_F(QuicCryptoClientStreamTest, InvalidCachedServerConfig) {
   QuicCryptoClientConfig::CachedState* state =
       crypto_config_.LookupOrCreate(server_id_);
 
-  vector<string> certs = state->certs();
+  std::vector<string> certs = state->certs();
   string cert_sct = state->cert_sct();
   string signature = state->signature();
   string chlo_hash = state->chlo_hash();

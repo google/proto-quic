@@ -30,10 +30,9 @@ class NET_EXPORT_PRIVATE CryptoSecretBoxer {
   // GetKeySize returns the number of bytes in a key.
   static size_t GetKeySize();
 
-  // SetKeys sets a std::list of encryption keys. The first key in the std::list
-  // will be used by |Box|, but all supplied keys will be tried by |Unbox|, to
-  // handle key skew across the fleet. This must be called before |Box| or
-  // |Unbox|. Keys must be |GetKeySize()| bytes long.
+  // used by |Box|, but all supplied keys will be tried by |Unbox|, to handle
+  // key skew across the fleet. This must be called before |Box| or |Unbox|.
+  // Keys must be |GetKeySize()| bytes long.
   void SetKeys(const std::vector<std::string>& keys);
 
   // Box encrypts |plaintext| using a random nonce generated from |rand| and
@@ -53,7 +52,7 @@ class NET_EXPORT_PRIVATE CryptoSecretBoxer {
 
  private:
   mutable base::Lock lock_;
-  //  GUARDED_BY(lock_).
+  //  GUARDED_BY(lock_).mutable Mutex lock_;
   std::vector<std::string> keys_;
 
   DISALLOW_COPY_AND_ASSIGN(CryptoSecretBoxer);

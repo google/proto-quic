@@ -100,7 +100,7 @@ void QuicSimpleServerStream::PushResponse(
   DVLOG(1) << "Stream " << id() << ": Ready to receive server push response.";
 
   // Set as if stream decompresed the headers and received fin.
-  QuicSpdyStream::OnInitialHeadersComplete(/*fin=*/true, 0);
+  QuicSpdyStream::OnInitialHeadersComplete(/*fin=*/true, 0, QuicHeaderList());
 }
 
 void QuicSimpleServerStream::SendResponse() {

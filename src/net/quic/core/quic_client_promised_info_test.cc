@@ -64,8 +64,6 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
     headers_[":status"] = "200";
     headers_["content-length"] = "11";
 
-    headers_string_ = SpdyUtils::SerializeUncompressedHeaders(headers_);
-
     stream_.reset(new QuicSpdyClientStream(kClientDataStreamId1, &session_));
     stream_visitor_.reset(new StreamVisitor());
     stream_->set_visitor(stream_visitor_.get());
@@ -77,8 +75,6 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
     push_promise_[":scheme"] = "https";
 
     promise_url_ = SpdyUtils::GetUrlFromHeaderBlock(push_promise_);
-    serialized_push_promise_ =
-        SpdyUtils::SerializeUncompressedHeaders(push_promise_);
 
     client_request_ = push_promise_.Clone();
   }
@@ -118,9 +114,9 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
   };
 
   void ReceivePromise(QuicStreamId id) {
-    stream_->OnStreamHeaders(serialized_push_promise_);
-
-    stream_->OnPromiseHeadersComplete(id, serialized_push_promise_.size());
+    auto headers = AsHeaderList(push_promise_);
+    stream_->OnPromiseHeaderList(id, headers.uncompressed_header_bytes(),
+                                 headers);
   }
 
   MockQuicConnectionHelper helper_;
@@ -133,12 +129,10 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
   std::unique_ptr<StreamVisitor> stream_visitor_;
   std::unique_ptr<QuicSpdyClientStream> promised_stream_;
   SpdyHeaderBlock headers_;
-  string headers_string_;
   string body_;
   SpdyHeaderBlock push_promise_;
   QuicStreamId promise_id_;
   string promise_url_;
-  string serialized_push_promise_;
   SpdyHeaderBlock client_request_;
 };
 
@@ -174,8 +168,6 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseCleanupAlarm) {
 TEST_F(QuicClientPromisedInfoTest, PushPromiseInvalidMethod) {
   // Promise with an unsafe method
   push_promise_[":method"] = "PUT";
-  serialized_push_promise_ =
-      SpdyUtils::SerializeUncompressedHeaders(push_promise_);
 
   EXPECT_CALL(*connection_,
               SendRstStream(promise_id_, QUIC_INVALID_PROMISE_METHOD, 0));
@@ -189,8 +181,6 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseInvalidMethod) {
 TEST_F(QuicClientPromisedInfoTest, PushPromiseInvalidUrl) {
   // Remove required header field to make URL invalid
   push_promise_.erase(":authority");
-  serialized_push_promise_ =
-      SpdyUtils::SerializeUncompressedHeaders(push_promise_);
 
   EXPECT_CALL(*connection_,
               SendRstStream(promise_id_, QUIC_INVALID_PROMISE_URL, 0));
@@ -223,8 +213,9 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseMismatch) {
   // rendezvous for secondary validation to proceed.
   QuicSpdyClientStream* promise_stream = static_cast<QuicSpdyClientStream*>(
       session_.GetOrCreateStream(promise_id_));
-  promise_stream->OnStreamHeaders(headers_string_);
-  promise_stream->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  promise_stream->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                                     headers);
 
   PushPromiseDelegate delegate(/*match=*/false);
   EXPECT_CALL(*connection_,
@@ -251,8 +242,9 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseVaryWaits) {
   QuicSpdyClientStream* promise_stream = static_cast<QuicSpdyClientStream*>(
       session_.GetOrCreateStream(promise_id_));
   ASSERT_NE(promise_stream, nullptr);
-  promise_stream->OnStreamHeaders(headers_string_);
-  promise_stream->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  promise_stream->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                                     headers);
 
   // Promise is gone
   EXPECT_EQ(session_.GetPromisedById(promise_id_), nullptr);
@@ -269,8 +261,9 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseVaryNoWait) {
   ASSERT_NE(promise_stream, nullptr);
 
   // Send Response, should trigger promise validation and complete rendezvous
-  promise_stream->OnStreamHeaders(headers_string_);
-  promise_stream->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  promise_stream->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                                     headers);
 
   // Now initiate rendezvous.
   PushPromiseDelegate delegate(/*match=*/true);
@@ -321,8 +314,9 @@ TEST_F(QuicClientPromisedInfoTest, PushPromiseDataClosed) {
   ASSERT_NE(promise_stream, nullptr);
 
   // Send response, rendezvous will be able to finish synchronously.
-  promise_stream->OnStreamHeaders(headers_string_);
-  promise_stream->OnStreamHeadersComplete(false, headers_string_.size());
+  auto headers = AsHeaderList(headers_);
+  promise_stream->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                                     headers);
 
   EXPECT_CALL(session_, CloseStream(promise_id_));
   EXPECT_CALL(*connection_,

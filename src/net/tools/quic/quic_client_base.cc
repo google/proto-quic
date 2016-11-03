@@ -12,7 +12,6 @@
 using base::StringPiece;
 using base::StringToInt;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -236,7 +235,7 @@ void QuicClientBase::SendRequestAndWaitForResponse(
 }
 
 void QuicClientBase::SendRequestsAndWaitForResponse(
-    const vector<string>& url_list) {
+    const std::vector<string>& url_list) {
   for (size_t i = 0; i < url_list.size(); ++i) {
     SpdyHeaderBlock headers;
     if (!SpdyUtils::PopulateHeaderBlockFromUrl(url_list[i], &headers)) {
@@ -421,7 +420,7 @@ void QuicClientBase::ClearDataToResend() {
 void QuicClientBase::ResendSavedData() {
   // Calling Resend will re-enqueue the data, so swap out
   //  data_to_resend_on_connect_ before iterating.
-  vector<std::unique_ptr<QuicDataToResend>> old_data;
+  std::vector<std::unique_ptr<QuicDataToResend>> old_data;
   old_data.swap(data_to_resend_on_connect_);
   for (const auto& data : old_data) {
     data->Resend();

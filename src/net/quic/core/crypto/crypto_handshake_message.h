@@ -74,10 +74,11 @@ class NET_EXPORT_PRIVATE CryptoHandshakeMessage {
   void Erase(QuicTag tag);
 
   // GetTaglist finds an element with the given tag containing zero or more
-  // tags. If such a tag doesn't exist, it returns false. Otherwise it sets
-  // |out_tags| and |out_len| to point to the array of tags and returns true.
-  // The array points into the CryptoHandshakeMessage and is valid only for as
-  // long as the CryptoHandshakeMessage exists and is not modified.
+  // tags. If such a tag doesn't exist, it returns an error code. Otherwise it
+  // sets |out_tags| and |out_len| to point to the array of tags and returns
+  // QUIC_NO_ERROR.  The array points into the CryptoHandshakeMessage and is
+  // valid only for as long as the CryptoHandshakeMessage exists and is not
+  // modified.
   QuicErrorCode GetTaglist(QuicTag tag,
                            const QuicTag** out_tags,
                            size_t* out_len) const;

@@ -14,7 +14,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::list;
 using std::string;
 
 namespace net {
@@ -76,7 +75,7 @@ TEST_F(QuicBufferedPacketStoreTest, SimpleEnqueueAndDeliverPacket) {
   store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
                        false);
   EXPECT_TRUE(store_.HasBufferedPackets(connection_id));
-  list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
+  std::list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
   ASSERT_EQ(1u, queue.size());
   // Check content of the only packet in the queue.
   EXPECT_EQ(packet_content_, queue.front().packet->AsStringPiece());
@@ -95,7 +94,7 @@ TEST_F(QuicBufferedPacketStoreTest, DifferentPacketAddressOnOneConnection) {
                        false);
   store_.EnqueuePacket(connection_id, packet_, server_address_,
                        addr_with_new_port, false);
-  list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
+  std::list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
   ASSERT_EQ(2u, queue.size());
   // The address migration path should be preserved.
   EXPECT_EQ(client_address_, queue.front().client_address);
@@ -116,7 +115,7 @@ TEST_F(QuicBufferedPacketStoreTest,
   // Deliver packets in reversed order.
   for (QuicConnectionId connection_id = num_connections; connection_id > 0;
        --connection_id) {
-    list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
+    std::list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
     ASSERT_EQ(2u, queue.size());
   }
 }
@@ -175,7 +174,7 @@ TEST_F(QuicBufferedPacketStoreTest, ReachNonChloConnectionUpperLimit) {
   // Store only keeps early arrived packets upto |kNumConnections| connections.
   for (size_t connection_id = 1; connection_id <= kNumConnections;
        ++connection_id) {
-    list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
+    std::list<BufferedPacket> queue = store_.DeliverPackets(connection_id);
     if (connection_id <= (FLAGS_quic_limit_num_new_sessions_per_epoll_loop
                               ? kMaxConnectionsWithoutCHLO
                               : kDefaultMaxConnectionsInStore)) {
@@ -295,7 +294,7 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery1) {
 
   // Deliver packets on connection 2. And the queue for connection 2 should be
   // returned.
-  list<BufferedPacket> queue = store_.DeliverPackets(connection_id2);
+  std::list<BufferedPacket> queue = store_.DeliverPackets(connection_id2);
   ASSERT_EQ(1u, queue.size());
   // Packets in connection 2 should use another client address.
   EXPECT_EQ(another_client_address, queue.front().client_address);

@@ -337,6 +337,10 @@ void FieldTrial::SetGroupChoice(const std::string& group_name, int number) {
 }
 
 void FieldTrial::FinalizeGroupChoice() {
+  FinalizeGroupChoiceImpl(false);
+}
+
+void FieldTrial::FinalizeGroupChoiceImpl(bool is_locked) {
   if (group_ != kNotFinalized)
     return;
   accumulated_group_probability_ = divisor_;
@@ -347,7 +351,7 @@ void FieldTrial::FinalizeGroupChoice() {
 
   // Add the field trial to shared memory.
   if (kUseSharedMemoryForFieldTrials)
-    FieldTrialList::OnGroupFinalized(this);
+    FieldTrialList::OnGroupFinalized(is_locked, this);
 }
 
 bool FieldTrial::GetActiveGroup(ActiveGroup* active_group) const {
@@ -363,6 +367,16 @@ bool FieldTrial::GetState(State* field_trial_state) {
   if (!enable_field_trial_)
     return false;
   FinalizeGroupChoice();
+  field_trial_state->trial_name = trial_name_;
+  field_trial_state->group_name = group_name_;
+  field_trial_state->activated = group_reported_;
+  return true;
+}
+
+bool FieldTrial::GetStateWhileLocked(State* field_trial_state) {
+  if (!enable_field_trial_)
+    return false;
+  FinalizeGroupChoiceImpl(true);
   field_trial_state->trial_name = trial_name_;
   field_trial_state->group_name = group_name_;
   field_trial_state->activated = group_reported_;
@@ -549,7 +563,7 @@ void FieldTrialList::AllStatesToString(std::string* output) {
 
   for (const auto& registered : global_->registered_) {
     FieldTrial::State trial;
-    if (!registered.second->GetState(&trial))
+    if (!registered.second->GetStateWhileLocked(&trial))
       continue;
     DCHECK_EQ(std::string::npos,
               trial.trial_name.find(kPersistentStringSeparator));
@@ -684,6 +698,12 @@ void FieldTrialList::AppendFieldTrialHandleIfNeeded(
 void FieldTrialList::CopyFieldTrialStateToFlags(
     const char* field_trial_handle_switch,
     CommandLine* cmd_line) {
+  // TODO(lawrencewu): Ideally, having the global would be guaranteed. However,
+  // content browser tests currently don't create a FieldTrialList because they
+  // don't run ChromeBrowserMainParts code where it's done for Chrome.
+  if (!global_)
+    return;
+
 #if defined(OS_WIN)
   // Use shared memory to pass the state if the feature is enabled, otherwise
   // fallback to passing it via the command line as a string.
@@ -758,11 +778,15 @@ void FieldTrialList::RemoveObserver(Observer* observer) {
 }
 
 // static
-void FieldTrialList::OnGroupFinalized(FieldTrial* field_trial) {
+void FieldTrialList::OnGroupFinalized(bool is_locked, FieldTrial* field_trial) {
   if (!global_)
     return;
-  AutoLock auto_lock(global_->lock_);
-  AddToAllocatorWhileLocked(field_trial);
+  if (is_locked) {
+    AddToAllocatorWhileLocked(field_trial);
+  } else {
+    AutoLock auto_lock(global_->lock_);
+    AddToAllocatorWhileLocked(field_trial);
+  }
 }
 
 // static

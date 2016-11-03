@@ -12,7 +12,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -30,7 +29,7 @@ class QuicCompressedCertsCacheTest : public testing::Test {
 };
 
 TEST_F(QuicCompressedCertsCacheTest, CacheHit) {
-  vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
+  std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
   string common_certs = "common certs";
   string cached_certs = "cached certs";
@@ -45,7 +44,7 @@ TEST_F(QuicCompressedCertsCacheTest, CacheHit) {
 }
 
 TEST_F(QuicCompressedCertsCacheTest, CacheMiss) {
-  vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
+  std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
   string common_certs = "common certs";
   string cached_certs = "cached certs";
@@ -65,7 +64,7 @@ TEST_F(QuicCompressedCertsCacheTest, CacheMiss) {
 TEST_F(QuicCompressedCertsCacheTest, CacheMissDueToEviction) {
   // Test cache returns a miss when a queried uncompressed certs was cached but
   // then evicted.
-  vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
+  std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
 
   string common_certs = "common certs";

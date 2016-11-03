@@ -58,8 +58,8 @@ void MockCryptoClientStream::CryptoConnect() {
     case ZERO_RTT: {
       encryption_established_ = true;
       handshake_confirmed_ = false;
-      crypto_negotiated_params_.key_exchange = kC255;
-      crypto_negotiated_params_.aead = kAESG;
+      crypto_negotiated_params_->key_exchange = kC255;
+      crypto_negotiated_params_->aead = kAESG;
       if (proof_verify_details_) {
         reinterpret_cast<QuicClientSessionBase*>(session())
             ->OnProofVerifyDetailsAvailable(*proof_verify_details_);
@@ -77,8 +77,8 @@ void MockCryptoClientStream::CryptoConnect() {
     case CONFIRM_HANDSHAKE: {
       encryption_established_ = true;
       handshake_confirmed_ = true;
-      crypto_negotiated_params_.key_exchange = kC255;
-      crypto_negotiated_params_.aead = kAESG;
+      crypto_negotiated_params_->key_exchange = kC255;
+      crypto_negotiated_params_->aead = kAESG;
       if (proof_verify_details_) {
         reinterpret_cast<QuicClientSessionBase*>(session())
             ->OnProofVerifyDetailsAvailable(*proof_verify_details_);
@@ -121,7 +121,7 @@ void MockCryptoClientStream::SetConfigNegotiated() {
 #endif
   cgst.push_back(kQBIC);
   QuicConfig config(config_);
-  config.SetIdleConnectionStateLifetime(
+  config.SetIdleNetworkTimeout(
       QuicTime::Delta::FromSeconds(2 * kMaximumIdleTimeoutSecs),
       QuicTime::Delta::FromSeconds(kMaximumIdleTimeoutSecs));
   config.SetMaxStreamsPerConnection(kDefaultMaxStreamsPerConnection / 2,

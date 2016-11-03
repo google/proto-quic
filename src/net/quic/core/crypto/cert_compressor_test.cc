@@ -12,32 +12,31 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
 
 TEST(CertCompressor, EmptyChain) {
-  vector<string> chain;
+  std::vector<string> chain;
   const string compressed = CertCompressor::CompressChain(
       chain, StringPiece(), StringPiece(), nullptr);
   EXPECT_EQ("00", QuicUtils::HexEncode(compressed));
 
-  vector<string> chain2, cached_certs;
+  std::vector<string> chain2, cached_certs;
   ASSERT_TRUE(CertCompressor::DecompressChain(compressed, cached_certs, nullptr,
                                               &chain2));
   EXPECT_EQ(chain.size(), chain2.size());
 }
 
 TEST(CertCompressor, Compressed) {
-  vector<string> chain;
+  std::vector<string> chain;
   chain.push_back("testcert");
   const string compressed = CertCompressor::CompressChain(
       chain, StringPiece(), StringPiece(), nullptr);
   ASSERT_GE(compressed.size(), 2u);
   EXPECT_EQ("0100", QuicUtils::HexEncode(compressed.substr(0, 2)));
 
-  vector<string> chain2, cached_certs;
+  std::vector<string> chain2, cached_certs;
   ASSERT_TRUE(CertCompressor::DecompressChain(compressed, cached_certs, nullptr,
                                               &chain2));
   EXPECT_EQ(chain.size(), chain2.size());
@@ -45,7 +44,7 @@ TEST(CertCompressor, Compressed) {
 }
 
 TEST(CertCompressor, Common) {
-  vector<string> chain;
+  std::vector<string> chain;
   chain.push_back("testcert");
   static const uint64_t set_hash = 42;
   std::unique_ptr<CommonCertSets> common_sets(
@@ -61,7 +60,7 @@ TEST(CertCompressor, Common) {
       "00" /* end of list */,
       QuicUtils::HexEncode(compressed));
 
-  vector<string> chain2, cached_certs;
+  std::vector<string> chain2, cached_certs;
   ASSERT_TRUE(CertCompressor::DecompressChain(compressed, cached_certs,
                                               common_sets.get(), &chain2));
   EXPECT_EQ(chain.size(), chain2.size());
@@ -69,7 +68,7 @@ TEST(CertCompressor, Common) {
 }
 
 TEST(CertCompressor, Cached) {
-  vector<string> chain;
+  std::vector<string> chain;
   chain.push_back("testcert");
   uint64_t hash = QuicUtils::FNV1a_64_Hash(chain[0].data(), chain[0].size());
   StringPiece hash_bytes(reinterpret_cast<char*>(&hash), sizeof(hash));
@@ -80,7 +79,7 @@ TEST(CertCompressor, Cached) {
                 "00" /* end of list */,
             QuicUtils::HexEncode(compressed));
 
-  vector<string> cached_certs, chain2;
+  std::vector<string> cached_certs, chain2;
   cached_certs.push_back(chain[0]);
   ASSERT_TRUE(CertCompressor::DecompressChain(compressed, cached_certs, nullptr,
                                               &chain2));
@@ -89,7 +88,7 @@ TEST(CertCompressor, Cached) {
 }
 
 TEST(CertCompressor, BadInputs) {
-  vector<string> cached_certs, chain;
+  std::vector<string> cached_certs, chain;
 
   EXPECT_FALSE(CertCompressor::DecompressChain(
       QuicUtils::HexEncode("04") /* bad entry type */, cached_certs, nullptr,

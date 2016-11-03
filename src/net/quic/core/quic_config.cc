@@ -77,6 +77,11 @@ uint32_t QuicNegotiableUint32::GetUint32() const {
   return default_value_;
 }
 
+// Returns the maximum value negotiable.
+uint32_t QuicNegotiableUint32::GetMax() const {
+  return max_value_;
+}
+
 void QuicNegotiableUint32::ToHandshakeMessage(
     CryptoHandshakeMessage* out) const {
   if (negotiated()) {
@@ -406,7 +411,7 @@ QuicConfig::QuicConfig()
       max_idle_time_before_crypto_handshake_(QuicTime::Delta::Zero()),
       max_undecryptable_packets_(0),
       connection_options_(kCOPT, PRESENCE_OPTIONAL),
-      idle_connection_state_lifetime_seconds_(kICSL, PRESENCE_REQUIRED),
+      idle_network_timeout_seconds_(kICSL, PRESENCE_REQUIRED),
       silent_close_(kSCLS, PRESENCE_OPTIONAL),
       max_streams_per_connection_(kMSPC, PRESENCE_OPTIONAL),
       max_incoming_dynamic_streams_(kMIDS, PRESENCE_OPTIONAL),
@@ -472,17 +477,17 @@ bool QuicConfig::HasClientSentConnectionOption(QuicTag tag,
   return false;
 }
 
-void QuicConfig::SetIdleConnectionStateLifetime(
-    QuicTime::Delta max_idle_connection_state_lifetime,
-    QuicTime::Delta default_idle_conection_state_lifetime) {
-  idle_connection_state_lifetime_seconds_.set(
-      static_cast<uint32_t>(max_idle_connection_state_lifetime.ToSeconds()),
-      static_cast<uint32_t>(default_idle_conection_state_lifetime.ToSeconds()));
+void QuicConfig::SetIdleNetworkTimeout(
+    QuicTime::Delta max_idle_network_timeout,
+    QuicTime::Delta default_idle_network_timeout) {
+  idle_network_timeout_seconds_.set(
+      static_cast<uint32_t>(max_idle_network_timeout.ToSeconds()),
+      static_cast<uint32_t>(default_idle_network_timeout.ToSeconds()));
 }
 
-QuicTime::Delta QuicConfig::IdleConnectionStateLifetime() const {
+QuicTime::Delta QuicConfig::IdleNetworkTimeout() const {
   return QuicTime::Delta::FromSeconds(
-      idle_connection_state_lifetime_seconds_.GetUint32());
+      idle_network_timeout_seconds_.GetUint32());
 }
 
 // TODO(ianswett) Use this for silent close on mobile, or delete.
@@ -660,13 +665,13 @@ bool QuicConfig::negotiated() const {
   // TODO(ianswett): Add the negotiated parameters once and iterate over all
   // of them in negotiated, ToHandshakeMessage, ProcessClientHello, and
   // ProcessServerHello.
-  return idle_connection_state_lifetime_seconds_.negotiated() &&
+  return idle_network_timeout_seconds_.negotiated() &&
          max_streams_per_connection_.negotiated();
 }
 
 void QuicConfig::SetDefaults() {
-  idle_connection_state_lifetime_seconds_.set(kMaximumIdleTimeoutSecs,
-                                              kDefaultIdleTimeoutSecs);
+  idle_network_timeout_seconds_.set(kMaximumIdleTimeoutSecs,
+                                    kDefaultIdleTimeoutSecs);
   silent_close_.set(1, 0);
   SetMaxStreamsPerConnection(kDefaultMaxStreamsPerConnection,
                              kDefaultMaxStreamsPerConnection);
@@ -682,7 +687,7 @@ void QuicConfig::SetDefaults() {
 }
 
 void QuicConfig::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
-  idle_connection_state_lifetime_seconds_.ToHandshakeMessage(out);
+  idle_network_timeout_seconds_.ToHandshakeMessage(out);
   silent_close_.ToHandshakeMessage(out);
   max_streams_per_connection_.ToHandshakeMessage(out);
   max_incoming_dynamic_streams_.ToHandshakeMessage(out);
@@ -705,7 +710,7 @@ QuicErrorCode QuicConfig::ProcessPeerHello(
 
   QuicErrorCode error = QUIC_NO_ERROR;
   if (error == QUIC_NO_ERROR) {
-    error = idle_connection_state_lifetime_seconds_.ProcessPeerHello(
+    error = idle_network_timeout_seconds_.ProcessPeerHello(
         peer_hello, hello_type, error_details);
   }
   if (error == QUIC_NO_ERROR) {

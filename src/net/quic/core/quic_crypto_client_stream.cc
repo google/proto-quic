@@ -172,7 +172,7 @@ void QuicCryptoClientStream::HandleServerConfigUpdateMessage(
   QuicErrorCode error = crypto_config_->ProcessServerConfigUpdate(
       server_config_update, session()->connection()->clock()->WallNow(),
       session()->connection()->version(), cached->chlo_hash(), cached,
-      &crypto_negotiated_params_, &error_details);
+      crypto_negotiated_params_, &error_details);
 
   if (error != QUIC_NO_ERROR) {
     CloseConnectionWithDetails(
@@ -298,7 +298,7 @@ void QuicCryptoClientStream::DoSendCHLO(
     crypto_config_->FillInchoateClientHello(
         server_id_, session()->connection()->supported_versions().front(),
         cached, session()->connection()->random_generator(),
-        /* demand_x509_proof= */ true, &crypto_negotiated_params_, &out);
+        /* demand_x509_proof= */ true, crypto_negotiated_params_, &out);
     // Pad the inchoate client hello to fill up a packet.
     const QuicByteCount kFramingOverhead = 50;  // A rough estimate.
     const QuicByteCount max_packet_size =
@@ -328,10 +328,10 @@ void QuicCryptoClientStream::DoSendCHLO(
   // If the server nonce is empty, copy over the server nonce from a previous
   // SREJ, if there is one.
   if (FLAGS_enable_quic_stateless_reject_support &&
-      crypto_negotiated_params_.server_nonce.empty() &&
+      crypto_negotiated_params_->server_nonce.empty() &&
       cached->has_server_nonce()) {
-    crypto_negotiated_params_.server_nonce = cached->GetNextServerNonce();
-    DCHECK(!crypto_negotiated_params_.server_nonce.empty());
+    crypto_negotiated_params_->server_nonce = cached->GetNextServerNonce();
+    DCHECK(!crypto_negotiated_params_->server_nonce.empty());
   }
 
   string error_details;
@@ -341,7 +341,7 @@ void QuicCryptoClientStream::DoSendCHLO(
       session()->connection()->supported_versions().front(), cached,
       session()->connection()->clock()->WallNow(),
       session()->connection()->random_generator(), channel_id_key_.get(),
-      &crypto_negotiated_params_, &out, &error_details);
+      crypto_negotiated_params_, &out, &error_details);
   if (error != QUIC_NO_ERROR) {
     // Flush the cached config so that, if it's bad, the server has a
     // chance to send us another in the future.
@@ -360,13 +360,13 @@ void QuicCryptoClientStream::DoSendCHLO(
   // Be prepared to decrypt with the new server write key.
   session()->connection()->SetAlternativeDecrypter(
       ENCRYPTION_INITIAL,
-      crypto_negotiated_params_.initial_crypters.decrypter.release(),
+      crypto_negotiated_params_->initial_crypters.decrypter.release(),
       true /* latch once used */);
   // Send subsequent packets under encryption on the assumption that the
   // server will accept the handshake.
   session()->connection()->SetEncrypter(
       ENCRYPTION_INITIAL,
-      crypto_negotiated_params_.initial_crypters.encrypter.release());
+      crypto_negotiated_params_->initial_crypters.encrypter.release());
   session()->connection()->SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
 
   // TODO(ianswett): Merge ENCRYPTION_REESTABLISHED and
@@ -422,7 +422,7 @@ void QuicCryptoClientStream::DoReceiveREJ(
   QuicErrorCode error = crypto_config_->ProcessRejection(
       *in, session()->connection()->clock()->WallNow(),
       session()->connection()->version(), chlo_hash_, cached,
-      &crypto_negotiated_params_, &error_details);
+      crypto_negotiated_params_, &error_details);
 
   if (error != QUIC_NO_ERROR) {
     next_state_ = STATE_NONE;
@@ -600,7 +600,7 @@ void QuicCryptoClientStream::DoReceiveSHLO(
       *in, session()->connection()->connection_id(),
       session()->connection()->version(),
       session()->connection()->server_supported_versions(), cached,
-      &crypto_negotiated_params_, &error_details);
+      crypto_negotiated_params_, &error_details);
 
   if (error != QUIC_NO_ERROR) {
     CloseConnectionWithDetails(error, "Server hello invalid: " + error_details);
@@ -613,7 +613,7 @@ void QuicCryptoClientStream::DoReceiveSHLO(
   }
   session()->OnConfigNegotiated();
 
-  CrypterPair* crypters = &crypto_negotiated_params_.forward_secure_crypters;
+  CrypterPair* crypters = &crypto_negotiated_params_->forward_secure_crypters;
   // TODO(agl): we don't currently latch this decrypter because the idea
   // has been floated that the server shouldn't send packets encrypted
   // with the FORWARD_SECURE key until it receives a FORWARD_SECURE

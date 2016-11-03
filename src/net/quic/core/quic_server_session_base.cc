@@ -23,10 +23,9 @@ QuicServerSessionBase::QuicServerSessionBase(
     QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache)
-    : QuicSpdySession(connection, config),
+    : QuicSpdySession(connection, visitor, config),
       crypto_config_(crypto_config),
       compressed_certs_cache_(compressed_certs_cache),
-      visitor_(visitor),
       helper_(helper),
       bandwidth_resumption_enabled_(false),
       bandwidth_estimate_sent_to_client_(QuicBandwidth::Zero()),
@@ -95,13 +94,6 @@ void QuicServerSessionBase::OnConnectionClosed(QuicErrorCode error,
   if (crypto_stream_.get() != nullptr) {
     crypto_stream_->CancelOutstandingCallbacks();
   }
-  visitor_->OnConnectionClosed(connection()->connection_id(), error,
-                               error_details);
-}
-
-void QuicServerSessionBase::OnWriteBlocked() {
-  QuicSession::OnWriteBlocked();
-  visitor_->OnWriteBlocked(connection());
 }
 
 void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {

@@ -124,7 +124,11 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     }
   } else if (config.HasReceivedConnectionOptions() &&
              ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-    SetSendAlgorithm(kCubicBytes);
+    if (FLAGS_quic_default_enable_cubic_bytes) {
+      SetSendAlgorithm(kCubic);
+    } else {
+      SetSendAlgorithm(kCubicBytes);
+    }
   }
   using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests;
 
@@ -790,10 +794,14 @@ QuicTime::Delta QuicSentPacketManager::TimeUntilSend(QuicTime now,
 }
 
 const QuicTime QuicSentPacketManager::GetRetransmissionTime() const {
-  // Don't set the timer if there are no packets in flight or we've already
+  // Don't set the timer if there is nothing to retransmit or we've already
   // queued a tlp transmission and it hasn't been sent yet.
   if (!unacked_packets_.HasInFlightPackets() ||
       pending_timer_transmission_count_ > 0) {
+    return QuicTime::Zero();
+  }
+  if (FLAGS_quic_more_conservative_retransmission_alarm &&
+      !unacked_packets_.HasUnackedRetransmittableFrames()) {
     return QuicTime::Zero();
   }
   switch (GetRetransmissionMode()) {

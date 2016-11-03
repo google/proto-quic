@@ -11,9 +11,7 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::pair;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -109,7 +107,7 @@ void QuicCryptoServerConfigPeer::CheckConfigs(const char* server_config_id1,
   va_list ap;
   va_start(ap, server_config_id1);
 
-  vector<pair<ServerConfigID, bool>> expected;
+  std::vector<std::pair<ServerConfigID, bool>> expected;
   bool first = true;
   for (;;) {
     const char* server_config_id;
@@ -136,11 +134,11 @@ void QuicCryptoServerConfigPeer::CheckConfigs(const char* server_config_id1,
 
   ASSERT_EQ(expected.size(), server_config_->configs_.size()) << ConfigsDebug();
 
-  for (const pair<const ServerConfigID,
-                  scoped_refptr<QuicCryptoServerConfig::Config>>& i :
+  for (const std::pair<const ServerConfigID,
+                       scoped_refptr<QuicCryptoServerConfig::Config>>& i :
        server_config_->configs_) {
     bool found = false;
-    for (pair<ServerConfigID, bool>& j : expected) {
+    for (std::pair<ServerConfigID, bool>& j : expected) {
       if (i.first == j.first && i.second->is_primary == j.second) {
         found = true;
         j.first.clear();

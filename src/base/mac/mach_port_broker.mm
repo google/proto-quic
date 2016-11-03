@@ -154,12 +154,7 @@ void MachPortBroker::HandleRequest() {
   // Use the kernel audit information to make sure this message is from
   // a task that this process spawned. The kernel audit token contains the
   // unspoofable pid of the task that sent the message.
-  //
-  // TODO(rsesek): In the 10.7 SDK, there's audit_token_to_pid().
-  pid_t child_pid;
-  audit_token_to_au32(msg.trailer.msgh_audit,
-      NULL, NULL, NULL, NULL, NULL, &child_pid, NULL, NULL);
-
+  pid_t child_pid = audit_token_to_pid(msg.trailer.msgh_audit);
   mach_port_t child_task_port = msg.child_task_port.name;
 
   // Take the lock and update the broker information.
