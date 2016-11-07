@@ -394,11 +394,13 @@ class scoped_refptr {
   static void Release(T* ptr);
 };
 
+// static
 template <typename T>
 void scoped_refptr<T>::AddRef(T* ptr) {
   ptr->AddRef();
 }
 
+// static
 template <typename T>
 void scoped_refptr<T>::Release(T* ptr) {
   ptr->Release();

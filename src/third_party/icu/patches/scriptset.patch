@@ -1,0 +1,13 @@
+diff --git a/source/i18n/scriptset.cpp b/source/i18n/scriptset.cpp
+index 5a42535..ff853b8 100644
+--- a/source/i18n/scriptset.cpp
++++ b/source/i18n/scriptset.cpp
+@@ -258,7 +258,7 @@ void ScriptSet::setScriptExtensions(UChar32 codePoint, UErrorCode& status) {
+ 
+     while (TRUE) {
+         script_count = uscript_getScriptExtensions(
+-            codePoint, scripts.getAlias(), FIRST_GUESS_SCRIPT_CAPACITY, &internalStatus);
++            codePoint, scripts.getAlias(), scripts.getCapacity(), &internalStatus);
+         if (internalStatus == U_BUFFER_OVERFLOW_ERROR) {
+             // Need to allocate more space
+             if (scripts.resize(script_count) == NULL) {

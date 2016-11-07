@@ -4357,6 +4357,19 @@ func addVersionNegotiationTests() {
 		expectedVersion: VersionTLS12,
 	})
 
+	// Test that the maximum version is selected regardless of the
+	// client-sent order.
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "IgnoreClientVersionOrder",
+		config: Config{
+			Bugs: ProtocolBugs{
+				SendSupportedVersions: []uint16{VersionTLS12, tls13DraftVersion},
+			},
+		},
+		expectedVersion: VersionTLS13,
+	})
+
 	// Test for version tolerance.
 	testCases = append(testCases, testCase{
 		testType: serverTest,
@@ -4883,7 +4896,10 @@ func addExtensionTests() {
 			config: Config{
 				MaxVersion: ver.version,
 				Bugs: ProtocolBugs{
-					CorruptTicket: true,
+					FilterTicket: func(in []byte) ([]byte, error) {
+						in[len(in)-1] ^= 1
+						return in, nil
+					},
 				},
 			},
 			resumeSession:        true,
@@ -4921,7 +4937,10 @@ func addExtensionTests() {
 			config: Config{
 				MaxVersion: ver.version,
 				Bugs: ProtocolBugs{
-					CorruptTicket: true,
+					FilterTicket: func(in []byte) ([]byte, error) {
+						in[len(in)-1] ^= 1
+						return in, nil
+					},
 				},
 			},
 			resumeSession:        true,
@@ -5367,31 +5386,129 @@ func addResumptionVersionTests() {
 		}
 	}
 
-	// Sessions with disabled ciphers are not resumed.
+	// Make sure shim ticket mutations are functional.
 	testCases = append(testCases, testCase{
 		testType:      serverTest,
-		name:          "Resume-Server-CipherMismatch",
+		name:          "ShimTicketRewritable",
+		resumeSession: true,
+		config: Config{
+			MaxVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					in, err := SetShimTicketVersion(in, VersionTLS12)
+					if err != nil {
+						return nil, err
+					}
+					return SetShimTicketCipherSuite(in, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)
+				},
+			},
+		},
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+	})
+
+	// Resumptions are declined if the version does not match.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-DeclineCrossVersion",
 		resumeSession: true,
 		config: Config{
 			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketVersion(in, VersionTLS13)
+				},
+			},
 		},
-		flags:                []string{"-cipher", "AES128", "-resume-cipher", "AES256"},
-		shouldFail:           false,
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
 		expectResumeRejected: true,
 	})
 
 	testCases = append(testCases, testCase{
 		testType:      serverTest,
-		name:          "Resume-Server-CipherMismatch-TLS13",
+		name:          "Resume-Server-DeclineCrossVersion-TLS13",
 		resumeSession: true,
 		config: Config{
 			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketVersion(in, VersionTLS12)
+				},
+			},
 		},
-		flags:                []string{"-cipher", "AES128", "-resume-cipher", "AES256"},
-		shouldFail:           false,
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
 		expectResumeRejected: true,
 	})
 
+	// Resumptions are declined if the cipher is invalid or disabled.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-DeclineBadCipher",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketCipherSuite(in, TLS_AES_128_GCM_SHA256)
+				},
+			},
+		},
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+		expectResumeRejected: true,
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-DeclineBadCipher-2",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketCipherSuite(in, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384)
+				},
+			},
+		},
+		flags: []string{
+			"-cipher", "AES128",
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+		expectResumeRejected: true,
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-DeclineBadCipher-TLS13",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketCipherSuite(in, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)
+				},
+			},
+		},
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+		expectResumeRejected: true,
+	})
+
+	// Sessions may not be resumed at a different cipher.
 	testCases = append(testCases, testCase{
 		name:          "Resume-Client-CipherMismatch",
 		resumeSession: true,
@@ -6885,6 +7002,7 @@ func addExportKeyingMaterialTests() {
 			useExportContext:     true,
 		})
 	}
+
 	testCases = append(testCases, testCase{
 		name: "ExportKeyingMaterial-SSL3",
 		config: Config{
@@ -6896,6 +7014,47 @@ func addExportKeyingMaterialTests() {
 		useExportContext:     true,
 		shouldFail:           true,
 		expectedError:        "failed to export keying material",
+	})
+
+	// Exporters work during a False Start.
+	testCases = append(testCases, testCase{
+		name: "ExportKeyingMaterial-FalseStart",
+		config: Config{
+			MaxVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			NextProtos:   []string{"foo"},
+			Bugs: ProtocolBugs{
+				ExpectFalseStart: true,
+			},
+		},
+		flags: []string{
+			"-false-start",
+			"-advertise-alpn", "\x03foo",
+		},
+		shimWritesFirst:      true,
+		exportKeyingMaterial: 1024,
+		exportLabel:          "label",
+		exportContext:        "context",
+		useExportContext:     true,
+	})
+
+	// Exporters do not work in the middle of a renegotiation. Test this by
+	// triggering the exporter after every SSL_read call and configuring the
+	// shim to run asynchronously.
+	testCases = append(testCases, testCase{
+		name: "ExportKeyingMaterial-Renegotiate",
+		config: Config{
+			MaxVersion: VersionTLS12,
+		},
+		renegotiate: 1,
+		flags: []string{
+			"-async",
+			"-use-exporter-between-reads",
+			"-renegotiate-freely",
+			"-expect-total-renegotiations", "1",
+		},
+		shouldFail:    true,
+		expectedError: "failed to export keying material",
 	})
 }
 
@@ -8770,6 +8929,18 @@ func addTLS13HandshakeTests() {
 		expectedError: ":PSK_IDENTITY_NOT_FOUND:",
 	})
 
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "TLS13-ExtraPSKIdentity",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				ExtraPSKIdentity: true,
+			},
+		},
+		resumeSession: true,
+	})
+
 	// Test that unknown NewSessionTicket extensions are tolerated.
 	testCases = append(testCases, testCase{
 		name: "TLS13-CustomTicketExtension",
@@ -8778,6 +8949,58 @@ func addTLS13HandshakeTests() {
 			Bugs: ProtocolBugs{
 				CustomTicketExtension: "1234",
 			},
+		},
+	})
+}
+
+func addTLS13CipherPreferenceTests() {
+	// Test that client preference is honored if the shim has AES hardware
+	// and ChaCha20-Poly1305 is preferred otherwise.
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "TLS13-CipherPreference-Server-ChaCha20-AES",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			CipherSuites: []uint16{
+				TLS_CHACHA20_POLY1305_SHA256,
+				TLS_AES_128_GCM_SHA256,
+			},
+		},
+		flags: []string{
+			"-expect-cipher-aes", strconv.Itoa(int(TLS_CHACHA20_POLY1305_SHA256)),
+			"-expect-cipher-no-aes", strconv.Itoa(int(TLS_CHACHA20_POLY1305_SHA256)),
+		},
+	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "TLS13-CipherPreference-Server-AES-ChaCha20",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			CipherSuites: []uint16{
+				TLS_AES_128_GCM_SHA256,
+				TLS_CHACHA20_POLY1305_SHA256,
+			},
+		},
+		flags: []string{
+			"-expect-cipher-aes", strconv.Itoa(int(TLS_AES_128_GCM_SHA256)),
+			"-expect-cipher-no-aes", strconv.Itoa(int(TLS_CHACHA20_POLY1305_SHA256)),
+		},
+	})
+
+	// Test that the client orders ChaCha20-Poly1305 and AES-GCM based on
+	// whether it has AES hardware.
+	testCases = append(testCases, testCase{
+		name: "TLS13-CipherPreference-Client",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			// Use the client cipher order. (This is the default but
+			// is listed to be explicit.)
+			PreferServerCipherSuites: false,
+		},
+		flags: []string{
+			"-expect-cipher-aes", strconv.Itoa(int(TLS_AES_128_GCM_SHA256)),
+			"-expect-cipher-no-aes", strconv.Itoa(int(TLS_CHACHA20_POLY1305_SHA256)),
 		},
 	})
 }
@@ -8969,6 +9192,7 @@ func main() {
 	addWrongMessageTypeTests()
 	addTrailingMessageDataTests()
 	addTLS13HandshakeTests()
+	addTLS13CipherPreferenceTests()
 	addPeekTests()
 
 	var wg sync.WaitGroup

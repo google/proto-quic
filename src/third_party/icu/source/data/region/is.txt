@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/is.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 is{
     Countries{
         001{"Heimurinn"}
@@ -46,7 +40,6 @@ is{
         AI{"Angvilla"}
         AL{"Albanía"}
         AM{"Armenía"}
-        AN{"Hollensku Antillur"}
         AO{"Angóla"}
         AQ{"Suðurskautslandið"}
         AR{"Argentína"}
@@ -279,6 +272,7 @@ is{
         UA{"Úkraína"}
         UG{"Úganda"}
         UM{"Smáeyjar Bandaríkjanna"}
+        UN{"Sameinuðu þjóðirnar"}
         US{"Bandaríkin"}
         UY{"Úrúgvæ"}
         UZ{"Úsbekistan"}
@@ -301,6 +295,7 @@ is{
     }
     Countries%short{
         GB{"Bretland"}
+        UN{"Sameinuðu þjóðirnar"}
         US{"BNA"}
     }
     Countries%variant{
@@ -310,5 +305,5 @@ is{
         MK{"Makedónía (Fyrrverandi lýðveldi Júgóslavíu)"}
         TL{"Austur-Tímor"}
     }
-    Version{"2.1.19.17"}
+    Version{"2.1.29.65"}
 }

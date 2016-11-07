@@ -20,7 +20,6 @@
 namespace base {
 
 class SequencedTaskRunner;
-class Thread;
 
 // Helper for atomically writing a file to ensure that it won't be corrupted by
 // *application* crash during write (implemented as create, flush, rename).

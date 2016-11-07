@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/br.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 br{
     Countries{
         001{"Bed"}
@@ -46,7 +40,6 @@ br{
         AI{"Anguilla"}
         AL{"Albania"}
         AM{"Armenia"}
-        AN{"Antilhez Nederlandat"}
         AO{"Angola"}
         AQ{"Antarktika"}
         AR{"Arcʼhantina"}
@@ -311,5 +304,5 @@ br{
         MK{"Makedonia (RYKM)"}
         TL{"Timor ar Reter"}
     }
-    Version{"2.1.19.94"}
+    Version{"2.1.28.76"}
 }

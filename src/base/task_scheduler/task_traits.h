@@ -113,25 +113,11 @@ class BASE_EXPORT TaskTraits {
   TaskShutdownBehavior shutdown_behavior_;
 };
 
-// Describes how tasks are executed by a task runner.
-enum class ExecutionMode {
-  // Can execute multiple tasks at a time in any order.
-  PARALLEL,
-
-  // Executes one task at a time in posting order. The sequence’s priority is
-  // equivalent to the highest priority pending task in the sequence.
-  SEQUENCED,
-
-  // Executes one task at a time on a single thread in posting order.
-  SINGLE_THREADED,
-};
-
 // Returns string literals for the enums defined in this file. These methods
 // should only be used for tracing and debugging.
 BASE_EXPORT const char* TaskPriorityToString(TaskPriority task_priority);
 BASE_EXPORT const char* TaskShutdownBehaviorToString(
     TaskShutdownBehavior task_priority);
-BASE_EXPORT const char* ExecutionModeToString(ExecutionMode task_priority);
 
 // Stream operators so that the enums defined in this file can be used in
 // DCHECK and EXPECT statements.
@@ -140,8 +126,6 @@ BASE_EXPORT std::ostream& operator<<(std::ostream& os,
 BASE_EXPORT std::ostream& operator<<(
     std::ostream& os,
     const TaskShutdownBehavior& shutdown_behavior);
-BASE_EXPORT std::ostream& operator<<(std::ostream& os,
-                                     const ExecutionMode& execution_mode);
 
 }  // namespace base
 

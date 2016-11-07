@@ -16,7 +16,6 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/synchronization/atomic_flag.h"
-#include "base/task_runner.h"
 #include "base/task_scheduler/scheduler_worker_pool_impl.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/task_scheduler.h"
@@ -31,7 +30,6 @@ class SchedulerWorkerPoolParams;
 namespace internal {
 
 class DelayedTaskManager;
-class SchedulerServiceThread;
 class TaskTracker;
 
 // Default TaskScheduler implementation. This class is thread-safe.
@@ -56,8 +54,11 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
                           const TaskTraits& traits,
                           const Closure& task) override;
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits,
-      ExecutionMode execution_mode) override;
+      const TaskTraits& traits) override;
+  scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
+      const TaskTraits& traits) override;
+  scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
+      const TaskTraits& traits) override;
   std::vector<const HistogramBase*> GetHistograms() const override;
   void Shutdown() override;
   void FlushForTesting() override;

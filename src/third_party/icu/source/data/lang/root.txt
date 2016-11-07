@@ -1,16 +1,24 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/root.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 /**
  * ICU <specials> source: <path>/common/main/root.xml
  */
 root{
-    Version{"2.1.19.19"}
+    Version{"2.1.30.58"}
+    characterLabelPattern{
+        all{"{0} — all"}
+        category-list{"{0}: {1}"}
+        compatibility{"{0} — compatibility"}
+        enclosed{"{0} — enclosed"}
+        extended{"{0} — extended"}
+        historic{"{0} — historic"}
+        miscellaneous{"{0} — miscellaneous"}
+        other{"{0} — other"}
+        scripts{"scripts — {0}"}
+        strokes{
+            other{"{0} strokes"}
+        }
+    }
     codePatterns{
         language{"{0}"}
         script{"{0}"}

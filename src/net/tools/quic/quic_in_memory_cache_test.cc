@@ -12,11 +12,11 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
 #include "net/spdy/spdy_framer.h"
-#include "net/tools/balsa/balsa_headers.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/test_tools/quic_in_memory_cache_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using base::ContainsKey;
 using base::IntToString;
 using base::StringPiece;
 using net::SpdyHeaderBlock;
@@ -37,9 +37,11 @@ class QuicInMemoryCacheTest : public ::testing::Test {
 
   ~QuicInMemoryCacheTest() override { QuicInMemoryCachePeer::ResetForTests(); }
 
-  void CreateRequest(string host, string path, BalsaHeaders* headers) {
-    headers->SetRequestFirstlineFromStringPieces("GET", path, "HTTP/1.1");
-    headers->ReplaceOrAppendHeader("host", host);
+  void CreateRequest(string host, string path, SpdyHeaderBlock* headers) {
+    (*headers)[":method"] = "GET";
+    (*headers)[":path"] = path;
+    (*headers)[":authority"] = host;
+    (*headers)[":scheme"] = "https";
   }
 
   string CacheDirectory() {
@@ -64,12 +66,12 @@ TEST_F(QuicInMemoryCacheTest, AddSimpleResponseGetResponse) {
   QuicInMemoryCache* cache = QuicInMemoryCache::GetInstance();
   cache->AddSimpleResponse("www.google.com", "/", 200, response_body);
 
-  BalsaHeaders request_headers;
+  SpdyHeaderBlock request_headers;
   CreateRequest("www.google.com", "/", &request_headers);
   const QuicInMemoryCache::Response* response =
       cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
   EXPECT_EQ(response_body.size(), response->body().length());
 }
@@ -106,10 +108,9 @@ TEST_F(QuicInMemoryCacheTest, ReadsCacheDir) {
       QuicInMemoryCache::GetInstance()->GetResponse("quic.test.url",
                                                     "/index.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), "connection"));
-  EXPECT_EQ("close", response->headers().find("connection")->second);
+  ASSERT_FALSE(ContainsKey(response->headers(), "connection"));
   EXPECT_LT(0U, response->body().length());
 }
 
@@ -137,10 +138,9 @@ TEST_F(QuicInMemoryCacheTest, UsesOriginalUrl) {
       QuicInMemoryCache::GetInstance()->GetResponse("quic.test.url",
                                                     "/index.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), "connection"));
-  EXPECT_EQ("close", response->headers().find("connection")->second);
+  ASSERT_FALSE(ContainsKey(response->headers(), "connection"));
   EXPECT_LT(0U, response->body().length());
 }
 
@@ -164,20 +164,20 @@ TEST_F(QuicInMemoryCacheTest, DefaultResponse) {
   // Now we should get the default response for the original request.
   response = cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 
   // Now add a set response for / and make sure it is returned
   cache->AddSimpleResponse("www.google.com", "/", 302, "");
   response = cache->GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("302", response->headers().find(":status")->second);
 
   // We should get the default response for other requests.
   response = cache->GetResponse("www.google.com", "/asd");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 }
 
@@ -249,7 +249,7 @@ TEST_F(QuicInMemoryCacheTest, GetServerPushResourcesAndPushResponses) {
     const QuicInMemoryCache::Response* response =
         cache->GetResponse(host, path);
     ASSERT_TRUE(response);
-    ASSERT_TRUE(base::ContainsKey(response->headers(), ":status"));
+    ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
     EXPECT_EQ(push_response_status[i++],
               response->headers().find(":status")->second);
     EXPECT_EQ(push_resource.body, response->body());

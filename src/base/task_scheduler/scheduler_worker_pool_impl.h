@@ -20,7 +20,6 @@
 #include "base/strings/string_piece.h"
 #include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/condition_variable.h"
-#include "base/task_runner.h"
 #include "base/task_scheduler/priority_queue.h"
 #include "base/task_scheduler/scheduler_lock.h"
 #include "base/task_scheduler/scheduler_worker.h"
@@ -83,8 +82,11 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   // SchedulerWorkerPool:
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits,
-      ExecutionMode execution_mode) override;
+      const TaskTraits& traits) override;
+  scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
+      const TaskTraits& traits) override;
+  scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
+      const TaskTraits& traits) override;
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence,
                          const SequenceSortKey& sequence_sort_key) override;
   bool PostTaskWithSequence(std::unique_ptr<Task> task,

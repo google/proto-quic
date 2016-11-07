@@ -9,6 +9,8 @@
 #include "base/callback_forward.h"
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
+#include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
 
@@ -32,18 +34,17 @@ namespace base {
 //         Bind(...));
 //
 // To post tasks that must run in sequence:
-//     scoped_refptr<TaskRunner> task_runner = CreateTaskRunnerWithTraits(
-//         TaskTraits(), ExecutionMode::SEQUENCED);
+//     scoped_refptr<SequencedTaskRunner> task_runner =
+//         CreateSequencedTaskRunnerWithTraits(TaskTraits());
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //
 // To post file I/O tasks that must run in sequence and can be skipped on
 // shutdown:
-//     scoped_refptr<TaskRunner> task_runner =
-//         CreateTaskRunnerWithTraits(
+//     scoped_refptr<SequencedTaskRunner> task_runner =
+//         CreateSequencedTaskRunnerWithTraits(
 //             TaskTraits().WithFileIO().WithShutdownBehavior(
-//                 TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
-//             ExecutionMode::SEQUENCED);
+//                 TaskShutdownBehavior::SKIP_ON_SHUTDOWN));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //
@@ -85,11 +86,28 @@ BASE_EXPORT void PostTaskWithTraitsAndReply(
     const Closure& task,
     const Closure& reply);
 
-// Returns a TaskRunner whose PostTask invocations will result in scheduling
-// tasks using |traits| which will be executed according to |execution_mode|.
+// Returns a TaskRunner whose PostTask invocations result in scheduling tasks
+// using |traits|. Tasks may run in any order and in parallel.
 BASE_EXPORT scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-    TaskTraits traits,
-    ExecutionMode execution_mode);
+    const TaskTraits& traits);
+
+// Returns a SequencedTaskRunner whose PostTask invocations result in scheduling
+// tasks using |traits|. Tasks run one at a time in posting order.
+BASE_EXPORT scoped_refptr<SequencedTaskRunner>
+CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits);
+
+// Returns a SingleThreadTaskRunner whose PostTask invocations result in
+// scheduling tasks using |traits|. Tasks run on a single thread in posting
+// order.
+//
+// If all you need is to make sure that tasks don't run concurrently (e.g.
+// because they access a data structure which is not thread-safe), use
+// CreateSequencedTaskRunnerWithTraits(). Only use this if you rely on a thread-
+// affine API (it might be safer to assume thread-affinity when dealing with
+// under-documented third-party APIs, e.g. other OS') or share data across tasks
+// using thread-local storage.
+BASE_EXPORT scoped_refptr<SingleThreadTaskRunner>
+CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits);
 
 }  // namespace base
 

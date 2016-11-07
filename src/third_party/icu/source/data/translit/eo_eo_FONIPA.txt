@@ -1,16 +1,13 @@
-﻿# ***************************************************************************
-# *
-# *  Copyright (C) 2004-2015, International Business Machines
-# *  Corporation; Unicode, Inc.; and others.  All Rights Reserved.
-# *
-# ***************************************************************************
+﻿# © 2016 and later: Unicode, Inc. and others.
+# License & terms of use: http://www.unicode.org/copyright.html#License
+#
 # File: eo_eo_FONIPA.txt
-# Generated from CLDR 
+# Generated from CLDR
 #
 
+# https://en.wikipedia.org/wiki/Esperanto_phonology
 ::NFC;
 ::Lower;
-
 [\-\'’] → ;  # eg. vorto-provizo, famili’
 aj → ai\u032F;
 aŭ → au\u032F;
@@ -47,10 +44,10 @@ r → r;
 s → s;
 t → t;
 uj → ui\u032F;
-ŭ → v;  # eg. ŭa!
+ŭ → w;  # eg. ŭa!
 ú → u;
 u → u;
 v → v;
 z → z;
-
 ::NFC;
+

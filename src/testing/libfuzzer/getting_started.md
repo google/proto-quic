@@ -14,6 +14,11 @@ This document will walk you through:
 
 Use `use_libfuzzer` GN argument together with sanitizer to generate build files:
 
+*Notice*: current implementation also supports `use_afl` argument, but it is
+recommended to use libFuzzer for development. Running libFuzzer locally doesn't
+require any special configuration and quickly gives meaningful output for speed,
+coverage and other parameters.
+
 ```bash
 # With address sanitizer
 gn gen out/libfuzzer '--args=use_libfuzzer=true is_asan=true is_debug=false enable_nacl=false' --check

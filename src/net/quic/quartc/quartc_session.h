@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_QUARTC_QUARTC_SESSION_H_
 #define NET_QUIC_QUARTC_QUARTC_SESSION_H_
 
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_crypto_stream.h"

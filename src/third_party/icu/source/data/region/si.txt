@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/si.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 si{
     Countries{
         001{"ලෝකය"}
@@ -46,7 +40,6 @@ si{
         AI{"ඇන්ගුයිලාව"}
         AL{"ඇල්බේනියාව"}
         AM{"ආර්මේනියාව"}
-        AN{"නෙදර්ලන්ත ඇන්ටිලීසිය"}
         AO{"ඇන්ගෝලාව"}
         AQ{"ඇන්ටාක්ටිකාව"}
         AR{"ආර්ජෙන්ටිනාව"}
@@ -182,7 +175,7 @@ si{
         LV{"ලැට්වියාව"}
         LY{"ලිබියාව"}
         MA{"මොරොක්කෝව"}
-        MC{"මොනැකෝව"}
+        MC{"මොනාකෝව"}
         MD{"මොල්ඩෝවාව"}
         ME{"මොන්ටෙනීග්‍රෝ"}
         MF{"ශාන්ත මාර්ටින්"}
@@ -279,6 +272,7 @@ si{
         UA{"යුක්රේනය"}
         UG{"උගන්ඩාව"}
         UM{"එක්සත් ජනපද ඈත දූපත්"}
+        UN{"එක්සත් ජාතීන්"}
         US{"එක්සත් ජනපදය"}
         UY{"උරුගුවේ"}
         UZ{"උස්බෙකිස්ථානය"}
@@ -301,15 +295,17 @@ si{
     }
     Countries%short{
         GB{"එ.රා"}
+        UN{"එක්සත් ජාතීන්"}
         US{"එ.ජ"}
     }
     Countries%variant{
         CD{"කොංගෝව"}
         CG{"කොංගෝ (ජනරජය)"}
         CI{"අයිවරි කෝස්ට්"}
+        CZ{"චෙක්"}
         FK{"ෆෝක්ලන්ත දූපත් (අයිලස් මල්වියනාස්)"}
         MK{"මැසිඩෝනියාව (FYROM)"}
         TL{"නැගෙනහිර ටිමෝරය"}
     }
-    Version{"2.1.20.4"}
+    Version{"2.1.28.79"}
 }

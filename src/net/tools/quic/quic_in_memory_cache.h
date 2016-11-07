@@ -99,9 +99,8 @@ class QuicInMemoryCache {
     explicit ResourceFile(const base::FilePath& file_name);
     virtual ~ResourceFile();
 
-    // abstract: implementation details are chromium and internal
-    // version specific.
-    virtual void Read() = 0;
+    void Read();
+
     void SetHostPathFromBase(base::StringPiece base);
 
     base::StringPiece host() { return host_; }

@@ -8,8 +8,10 @@
 #include <utility>
 
 #include "base/bind.h"
-#include "base/logging.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
+#include "base/single_thread_task_runner.h"
+#include "base/task_runner.h"
 #include "base/task_scheduler/scheduler_worker_pool.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/task.h"
@@ -28,21 +30,32 @@ class MockSchedulerWorkerPool : public SchedulerWorkerPool {
  public:
   // SchedulerWorkerPool:
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits,
-      ExecutionMode execution_mode) override {
-    NOTREACHED();
+      const TaskTraits& traits) override {
+    ADD_FAILURE() << "Call to unimplemented method.";
+    return nullptr;
+  }
+
+  scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
+      const TaskTraits& traits) override {
+    ADD_FAILURE() << "Call to unimplemented method.";
+    return nullptr;
+  }
+
+  scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
+      const TaskTraits& traits) override {
+    ADD_FAILURE() << "Call to unimplemented method.";
     return nullptr;
   }
 
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence,
                          const SequenceSortKey& sequence_sort_key) override {
-    NOTREACHED();
+    ADD_FAILURE() << "Call to unimplemented method.";
   }
 
   bool PostTaskWithSequence(std::unique_ptr<Task> task,
                             scoped_refptr<Sequence> sequence,
                             SchedulerWorker* worker) override {
-    NOTREACHED();
+    ADD_FAILURE() << "Call to unimplemented method.";
     return true;
   }
 

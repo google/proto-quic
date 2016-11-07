@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/mer.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 mer{
     Countries{
         AD{"Andora"}
@@ -15,7 +9,6 @@ mer{
         AI{"Anguilla"}
         AL{"Alubania"}
         AM{"Armenia"}
-        AN{"Antili cia Holandi"}
         AO{"Angola"}
         AR{"Ajentina"}
         AS{"Samoa ya Amerika"}
@@ -234,5 +227,5 @@ mer{
         ZM{"Zambia"}
         ZW{"Zimbabwe"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.40"}
 }

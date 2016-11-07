@@ -19,7 +19,6 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/scoped_policy.h"
-#include "base/sequenced_task_runner.h"
 #include "base/synchronization/lock.h"
 #include "crypto/mac_security_services_lock.h"
 #include "crypto/openssl_util.h"

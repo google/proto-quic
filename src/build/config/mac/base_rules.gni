@@ -93,36 +93,62 @@ template("info_plist") {
     _output_name = invoker.output_name
   }
 
-  action(target_name) {
-    script = "//build/config/mac/gen_plist.py"
-    sources = invoker.plist_templates
-    outputs = [
-      _output_name,
-    ]
-    extra_args = []
-    if (defined(invoker.extra_substitutions)) {
-      foreach(substitution, invoker.extra_substitutions) {
-        extra_args += [ "-s=$substitution" ]
-      }
-    }
-    response_file_contents =
-        extra_args + [
-          "-s=BUILD_MACHINE_OS_BUILD=$machine_os_build",
-          "-s=EXECUTABLE_NAME=$executable_name",
-          "-s=GCC_VERSION=com.apple.compilers.llvm.clang.1_0",
-          "-s=PRODUCT_NAME=$executable_name",
-          "-s=XCODE_BUILD=$xcode_build",
-          "-s=XCODE_VERSION=$xcode_version",
-          "-o=" + rebase_path(_output_name, root_build_dir),
-          "-f=" + invoker.format,
-        ] + rebase_path(sources, root_build_dir)
-    args = [ "@{{response_file_name}}" ]
+  _merged_name = get_path_info(_output_name, "dir") + "/" +
+                 get_path_info(_output_name, "name") + "_merged" +
+                 get_path_info(_output_name, "extension")
+
+  action(target_name + "_merge_templates") {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "testonly",
+                           ])
+
+    script = "//build/config/mac/plist_util.py"
+    sources = invoker.plist_templates
+    outputs = [
+      _merged_name,
+    ]
+    args = [
+             "merge",
+             "-f=" + invoker.format,
+             "-o=" + rebase_path(_merged_name, root_build_dir),
+           ] + rebase_path(sources, root_build_dir)
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
                              "visibility",
                            ])
+    script = "//build/config/mac/plist_util.py"
+    sources = [
+      _merged_name,
+    ]
+    outputs = [
+      _output_name,
+    ]
+    args = [ "substitute" ]
+    if (defined(invoker.extra_substitutions)) {
+      foreach(substitution, invoker.extra_substitutions) {
+        args += [ "-s=$substitution" ]
+      }
+    }
+    args += [
+      "-s=BUILD_MACHINE_OS_BUILD=$machine_os_build",
+      "-s=EXECUTABLE_NAME=$executable_name",
+      "-s=GCC_VERSION=com.apple.compilers.llvm.clang.1_0",
+      "-s=PRODUCT_NAME=$executable_name",
+      "-s=XCODE_BUILD=$xcode_build",
+      "-s=XCODE_VERSION=$xcode_version",
+      "-o=" + rebase_path(_output_name, root_build_dir),
+      "-t=" + rebase_path(_merged_name, root_build_dir),
+      "-f=" + invoker.format,
+    ]
+    deps = [
+      ":" + target_name + "_merge_templates",
+    ]
   }
 }
 

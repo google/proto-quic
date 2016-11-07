@@ -47,7 +47,8 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     // This is required as SequencedWorkerPool previously blindly CoInitialized
     // all of its threads.
     // TODO: Get rid of this broad COM scope and force tasks that care about a
-    // CoInitialized environment to request one (via an upcoming ExecutionMode).
+    // CoInitialized environment to request one (via an upcoming execution
+    // mode).
     win::ScopedCOMInitializer com_initializer;
 #endif
 

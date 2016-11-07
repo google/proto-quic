@@ -33,7 +33,6 @@ struct PendingTask;
 
 class FilePath;
 class Lock;
-class MemoryMappedFile;
 class PlatformThreadHandle;
 class Process;
 class WaitableEvent;

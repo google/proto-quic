@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/fi.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 fi{
     Countries{
         001{"maailma"}
@@ -46,7 +40,6 @@ fi{
         AI{"Anguilla"}
         AL{"Albania"}
         AM{"Armenia"}
-        AN{"Alankomaiden Antillit"}
         AO{"Angola"}
         AQ{"Antarktis"}
         AR{"Argentiina"}
@@ -252,7 +245,7 @@ fi{
         SM{"San Marino"}
         SN{"Senegal"}
         SO{"Somalia"}
-        SR{"Surinam"}
+        SR{"Suriname"}
         SS{"Etelä-Sudan"}
         ST{"São Tomé ja Príncipe"}
         SV{"El Salvador"}
@@ -279,6 +272,7 @@ fi{
         UA{"Ukraina"}
         UG{"Uganda"}
         UM{"Yhdysvaltain erillissaaret"}
+        UN{"Yhdistyneet kansakunnat"}
         US{"Yhdysvallat"}
         UY{"Uruguay"}
         UZ{"Uzbekistan"}
@@ -301,15 +295,17 @@ fi{
     }
     Countries%short{
         GB{"Britannia"}
+        UN{"YK"}
         US{"USA"}
     }
     Countries%variant{
         CD{"Kongo-Kinshasa"}
         CG{"Kongo-Brazzaville"}
         CI{"Côte d’Ivoire"}
+        CZ{"Tšekinmaa"}
         FK{"Falklandinsaaret (Malvinassaaret)"}
         MK{"EJT Makedonia"}
         TL{"Timor-Leste"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.29.88"}
 }

@@ -9,6 +9,8 @@
 
 #include "base/base_export.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
+#include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/task.h"
@@ -25,11 +27,23 @@ class BASE_EXPORT SchedulerWorkerPool {
  public:
   virtual ~SchedulerWorkerPool() = default;
 
-  // Returns a TaskRunner whose PostTask invocations will result in scheduling
-  // Tasks with |traits| and |execution_mode| in this SchedulerWorkerPool.
+  // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
+  // in this SchedulerWorkerPool using |traits|. Tasks may run in any order and
+  // in parallel.
   virtual scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits,
-      ExecutionMode execution_mode) = 0;
+      const TaskTraits& traits) = 0;
+
+  // Returns a SequencedTaskRunner whose PostTask invocations result in
+  // scheduling tasks in this SchedulerWorkerPool using |traits|. Tasks run one
+  // at a time in posting order.
+  virtual scoped_refptr<SequencedTaskRunner>
+  CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits) = 0;
+
+  // Returns a SingleThreadTaskRunner whose PostTask invocations result in
+  // scheduling tasks in this SchedulerWorkerPool using |traits|. Tasks run on a
+  // single thread in posting order.
+  virtual scoped_refptr<SingleThreadTaskRunner>
+  CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits) = 0;
 
   // Inserts |sequence| with |sequence_sort_key| into a queue of Sequences that
   // can be processed by any worker owned by this SchedulerWorkerPool. Must only

@@ -345,8 +345,9 @@ bool HttpUtil::IsSafeHeader(const std::string& name) {
   if (base::StartsWith(lower_name, "proxy-", base::CompareCase::SENSITIVE) ||
       base::StartsWith(lower_name, "sec-", base::CompareCase::SENSITIVE))
     return false;
-  for (size_t i = 0; i < arraysize(kForbiddenHeaderFields); ++i) {
-    if (lower_name == kForbiddenHeaderFields[i])
+
+  for (const char* field : kForbiddenHeaderFields) {
+    if (lower_name == field)
       return false;
   }
   return true;
@@ -414,10 +415,12 @@ bool HttpUtil::IsNonCoalescingHeader(std::string::const_iterator name_begin,
     // one.
     "strict-transport-security"
   };
-  for (size_t i = 0; i < arraysize(kNonCoalescingHeaders); ++i) {
+
+  for (const char* header : kNonCoalescingHeaders) {
     if (base::LowerCaseEqualsASCII(base::StringPiece(name_begin, name_end),
-                                   kNonCoalescingHeaders[i]))
+                                   header)) {
       return true;
+    }
   }
   return false;
 }

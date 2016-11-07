@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // GENERATED FROM THE SCHEMA DEFINITION AND DESCRIPTION IN
-//   fieldtrial_testing_config_schema.json
+//   field_trial_testing_config_schema.json
 //   test_config.json
 // DO NOT EDIT.
 

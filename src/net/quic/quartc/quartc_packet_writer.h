@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_QUARTC_QUARTC_PACKET_WRITER_H_
 #define NET_QUIC_QUARTC_QUARTC_PACKET_WRITER_H_
 
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 

@@ -1243,16 +1243,26 @@ if (is_win) {
     common_optimize_on_ldflags += [ "/OPT:ICF" ]  # Redundant COMDAT folding.
   }
   if (is_official_build) {
-    common_optimize_on_ldflags += [
-      "/OPT:REF",  # Remove unreferenced data.
-      "/LTCG",  # Link-time code generation.
-
-      # Set the number of LTCG code-gen threads to eight. The default is four.
-      # This gives a 5-10% link speedup.
-      "/cgthreads:8",
-    ]
+    common_optimize_on_ldflags += [ "/OPT:REF" ]  # Remove unreferenced data.
+    if (!use_lld) {
+      common_optimize_on_ldflags += [
+        # Set the number of LTCG code-gen threads to eight. The default is four.
+        # This gives a 5-10% link speedup.
+        "/cgthreads:8",
+      ]
+      if (use_incremental_wpo) {
+        # Incremental Link-time code generation.
+        common_optimize_on_ldflags += [ "/LTCG:INCREMENTAL" ]
+      } else {
+        common_optimize_on_ldflags += [ "/LTCG" ]  # Link-time code generation.
+      }
+    }
     if (full_wpo_on_official) {
-      arflags = [ "/LTCG" ]
+      if (use_incremental_wpo) {
+        arflags = [ "/LTCG:INCREMENTAL" ]
+      } else {
+        arflags = [ "/LTCG" ]
+      }
     }
   }
 } else {
@@ -1396,17 +1406,20 @@ config("optimize_max") {
       # build also specifies /Ot, /Oi, and /GF, but these are implied by /O2.
       cflags = [ "/O2" ] + common_optimize_on_cflags
 
-      # TODO(thakis): Remove is_clang here, https://crbug.com/598772
-      if (is_official_build && !is_clang) {
-        cflags += [
-          "/GL",  # Whole program optimization.
+      if (is_official_build) {
+        if (!is_clang) {
+          cflags += [
+            "/GL",  # Whole program optimization.
 
-          # Disable Warning 4702 ("Unreachable code") for the WPO/PGO builds.
-          # Probably anything that this would catch that wouldn't be caught in a
-          # normal build isn't going to actually be a bug, so the incremental
-          # value of C4702 for PGO builds is likely very small.
-          "/wd4702",
-        ]
+            # Disable Warning 4702 ("Unreachable code") for the WPO/PGO builds.
+            # Probably anything that this would catch that wouldn't be caught
+            # in a normal build isn't going to actually be a bug, so the
+            # incremental value of C4702 for PGO builds is likely very small.
+            "/wd4702",
+          ]
+        } else if (is_clang && use_lld) {
+          cflags += [ "-flto" ]  # Link-time optimization (whole program optimization).
+        }
       }
     } else if (optimize_for_fuzzing) {
       cflags = [ "-O1" ] + common_optimize_on_cflags

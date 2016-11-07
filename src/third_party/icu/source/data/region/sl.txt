@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/sl.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 sl{
     Countries{
         001{"Svet"}
@@ -46,7 +40,6 @@ sl{
         AI{"Angvila"}
         AL{"Albanija"}
         AM{"Armenija"}
-        AN{"Nizozemski Antili"}
         AO{"Angola"}
         AQ{"Antarktika"}
         AR{"Argentina"}
@@ -260,14 +253,14 @@ sl{
         SY{"Sirija"}
         SZ{"Svazi"}
         TA{"Tristan da Cunha"}
-        TC{"Otočji Turks in Caicos"}
+        TC{"Otoki Turks in Caicos"}
         TD{"Čad"}
         TF{"Francosko južno ozemlje"}
         TG{"Togo"}
         TH{"Tajska"}
         TJ{"Tadžikistan"}
         TK{"Tokelau"}
-        TL{"Vzhodni Timor"}
+        TL{"Timor-Leste"}
         TM{"Turkmenistan"}
         TN{"Tunizija"}
         TO{"Tonga"}
@@ -278,7 +271,8 @@ sl{
         TZ{"Tanzanija"}
         UA{"Ukrajina"}
         UG{"Uganda"}
-        UM{"Druga ameriška ozemlja v Tihem oceanu"}
+        UM{"Stranski zunanji otoki Združenih držav"}
+        UN{"Združeni narodi"}
         US{"Združene države Amerike"}
         UY{"Urugvaj"}
         UZ{"Uzbekistan"}
@@ -301,6 +295,7 @@ sl{
     }
     Countries%short{
         GB{"ZK"}
+        UN{"Združeni narodi"}
         US{"ZDA"}
     }
     Countries%variant{
@@ -309,6 +304,7 @@ sl{
         CI{"Côte d’Ivoire"}
         FK{"Falklandski otoki (Malvini)"}
         MK{"Makedonija (FYROM)"}
+        TL{"Vzhodni Timor"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.28.79"}
 }

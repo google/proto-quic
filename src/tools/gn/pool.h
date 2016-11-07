@@ -15,7 +15,7 @@
 // generated ninja build. Pools are referenced by toolchains.
 class Pool : public Item {
  public:
-  Pool(const Settings* settings, const Label& label);
+  using Item::Item;
   ~Pool() override;
 
   Pool(const Pool&) = delete;

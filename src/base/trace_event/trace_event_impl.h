@@ -28,10 +28,6 @@
 #include "build/build_config.h"
 
 namespace base {
-
-class WaitableEvent;
-class MessageLoop;
-
 namespace trace_event {
 
 typedef base::Callback<bool(const char* arg_name)> ArgumentNameFilterPredicate;

@@ -331,7 +331,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 1200,
+          "hard_timeout": 1800,
           "output_links": [
             {
               "link": [
@@ -1638,7 +1638,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 1200,
+          "hard_timeout": 1800,
           "output_links": [
             {
               "link": [
@@ -2941,6 +2941,26 @@
         "test": "components_browsertests"
       },
       {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_components_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "components_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "components_unittests"
+      },
+      {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_components_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -3043,6 +3063,16 @@
         "test": "extensions_browsertests"
       },
       {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_extensions_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "extensions_browsertests"
+      },
+      {
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -3103,6 +3133,16 @@
         "test": "input_device_unittests"
       },
       {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "interactive_ui_tests"
+      },
+      {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_interactive_ui_tests",
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -3542,6 +3582,32 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "components_browsertests"
+      },
+      {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_components_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "components_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "components_unittests"
+      },
+      {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_components_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "components_unittests"
       },
       {
@@ -3641,6 +3707,16 @@
         "test": "extensions_browsertests"
       },
       {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_extensions_browsertests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "extensions_browsertests"
+      },
+      {
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -3689,6 +3765,17 @@
         "test": "gpu_unittests"
       },
       {
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 3
+        },
+        "test": "interactive_ui_tests"
+      },
+      {
+        "args": [
+          "--enable-browser-side-navigation"
+        ],
+        "name": "browser_side_navigation_interactive_ui_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 3

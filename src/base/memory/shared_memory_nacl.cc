@@ -17,13 +17,6 @@
 
 namespace base {
 
-SharedMemoryCreateOptions::SharedMemoryCreateOptions()
-    : name_deprecated(nullptr),
-      open_existing_deprecated(false),
-      size(0),
-      executable(false),
-      share_read_only(false) {}
-
 SharedMemory::SharedMemory()
     : mapped_file_(-1),
       mapped_size_(0),

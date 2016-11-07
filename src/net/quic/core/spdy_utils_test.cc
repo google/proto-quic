@@ -362,6 +362,15 @@ TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrl) {
   EXPECT_EQ("/index.html", headers[":path"].as_string());
 }
 
+TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlWithNoPath) {
+  string url = "https://www.google.com";
+  SpdyHeaderBlock headers;
+  EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
+  EXPECT_EQ("https", headers[":scheme"].as_string());
+  EXPECT_EQ("www.google.com", headers[":authority"].as_string());
+  EXPECT_EQ("/", headers[":path"].as_string());
+}
+
 TEST(SpdyUtilsTest, PopulateHeaderBlockFromUrlFails) {
   SpdyHeaderBlock headers;
   EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/", &headers));

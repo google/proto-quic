@@ -13,7 +13,7 @@
 
 // Fuzzer for GzipSourceStream.
 //
-// |data| is used to create a FuzzedSocket.
+// |data| is used to create a FuzzedSourceStream.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   net::TestCompletionCallback callback;
   base::FuzzedDataProvider data_provider(data, size);

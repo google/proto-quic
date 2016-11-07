@@ -302,6 +302,7 @@ Still reading?
     <ignore regexp="android_webview/test/shell/res/raw/resource_file.html"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_icon.png"/>
     <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
+    <ignore regexp="blimp/client/app/android/java/res/drawable/dotted_line.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_menu.png"/>
     <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_reload.png"/>
     <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/textbox.9.png"/>
@@ -310,6 +311,7 @@ Still reading?
     <ignore regexp="blimp/client/app/android/java/res/layout/debug_stats_overlay.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/layout/text_input_popup.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/layout/toolbar_popup_item.xml"/>
+    <ignore regexp="blimp/client/app/android/java/res/layout/web_input_bottom_panel.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/mipmap-hdpi/app_icon.png"/>
     <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml"/>
     <ignore regexp="blimp/client/app/android/java/res/values/colors.xml"/>

@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/da.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 da{
-    Version{"2.1.19.44"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h.mm"}
         hms{"h.mm.ss"}
@@ -48,7 +42,7 @@ da{
                 other{"{0} radianer"}
             }
             revolution{
-                dnam{"omdrejning"}
+                dnam{"omdrejninger"}
                 one{"{0} omdrejning"}
                 other{"{0} omdrejninger"}
             }
@@ -85,6 +79,7 @@ da{
                 dnam{"kvadratkilometer"}
                 one{"{0} kvadratkilometer"}
                 other{"{0} kvadratkilometer"}
+                per{"{0} pr. kvadratkilometer"}
             }
             square-meter{
                 dnam{"kvadratmeter"}
@@ -96,15 +91,38 @@ da{
                 dnam{"kvadrat-engelske mil"}
                 one{"{0} kvadrat-engelsk mil"}
                 other{"{0} kvadrat-engelske mil"}
+                per{"{0} pr. kvadrat-engelske mil"}
             }
             square-yard{
                 dnam{"kvadrat-engelske yard"}
-                one{"{0} kvadrat engelske yard"}
-                other{"{0} kvadrat engelske yard"}
+                one{"{0} kvadrat-engelsk yard"}
+                other{"{0} kvadrat-engelske yard"}
             }
         }
         compound{
             per{"{0} pr. {1}"}
+        }
+        concentr{
+            karat{
+                dnam{"karat"}
+                one{"{0} karat"}
+                other{"{0} karat"}
+            }
+            milligram-per-deciliter{
+                dnam{"milligram pr. deciliter"}
+                one{"{0} milligram pr. deciliter"}
+                other{"{0} milligram pr. deciliter"}
+            }
+            millimole-per-liter{
+                dnam{"millimol pr. liter"}
+                one{"{0} millimol pr. liter"}
+                other{"{0} millimol pr. liter"}
+            }
+            part-per-million{
+                dnam{"parts per million"}
+                one{"{0} parts per million"}
+                other{"{0} parts per million"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -121,6 +139,11 @@ da{
                 dnam{"mil pr. gallon"}
                 one{"mil pr. gallon"}
                 other{"{0} mil pr. gallon"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mil pr. engelsk gallon"}
+                one{"{0} mil pr. engelsk gallon"}
+                other{"{0} mil pr. engelsk gallon"}
             }
         }
         coordinate{
@@ -274,7 +297,7 @@ da{
                 other{"{0} kalorier"}
             }
             foodcalorie{
-                dnam{"Kalorier"}
+                dnam{"kalorier"}
                 one{"{0} kalorie"}
                 other{"{0} kalorier"}
             }
@@ -378,7 +401,7 @@ da{
                 other{"{0} engelske mil"}
             }
             mile-scandinavian{
-                dnam{"svensk mil"}
+                dnam{"svenske mil"}
                 one{"{0} svensk mil"}
                 other{"{0} svenske mil"}
             }
@@ -531,15 +554,8 @@ da{
             }
             pound-per-square-inch{
                 dnam{"pounds pr. kvadrattomme"}
-                one{"{0} pounds pr. kvadrattomme"}
+                one{"{0} pound pr. kvadrattomme"}
                 other{"{0} pounds pr. kvadrattommer"}
-            }
-        }
-        proportion{
-            karat{
-                dnam{"karat"}
-                one{"{0} karat"}
-                other{"{0} karat"}
             }
         }
         speed{
@@ -554,7 +570,7 @@ da{
                 other{"{0} knob"}
             }
             meter-per-second{
-                dnam{"meter per sekund"}
+                dnam{"meter pr. sekund"}
                 one{"{0} meter i sekundet"}
                 other{"{0} meter i sekundet"}
             }
@@ -640,7 +656,7 @@ da{
                 other{"{0} cups"}
             }
             cup-metric{
-                dnam{"metrisk kop"}
+                dnam{"metriske kopper"}
                 one{"{0} metrisk kop"}
                 other{"{0} metriske kopper"}
             }
@@ -659,6 +675,12 @@ da{
                 one{"{0} gallon"}
                 other{"{0} gallons"}
                 per{"{0}/gal"}
+            }
+            gallon-imperial{
+                dnam{"engelske gallons"}
+                one{"{0} engelsk gallon"}
+                other{"{0} engelske gallons"}
+                per{"{0}/engelsk gallon"}
             }
             hectoliter{
                 dnam{"hektoliter"}
@@ -687,7 +709,7 @@ da{
                 other{"{0} pints"}
             }
             pint-metric{
-                dnam{"metrisk pint"}
+                dnam{"metriske pints"}
                 one{"{0} metrisk pint"}
                 other{"{0} metriske pints"}
             }
@@ -697,12 +719,12 @@ da{
                 other{"{0} engelske quarts"}
             }
             tablespoon{
-                dnam{"spiseske"}
+                dnam{"spiseskeer"}
                 one{"{0} spiseske"}
                 other{"{0} spiseskeer"}
             }
             teaspoon{
-                dnam{"teske"}
+                dnam{"teskeer"}
                 one{"{0} teske"}
                 other{"{0} teskeer"}
             }
@@ -992,9 +1014,9 @@ da{
                 other{"{0} radian"}
             }
             revolution{
-                dnam{"omdrejning"}
-                one{"{0} omdrejning"}
-                other{"{0} omdrejninger"}
+                dnam{"omdr."}
+                one{"{0} omdr."}
+                other{"{0} omdr."}
             }
         }
         area{
@@ -1029,6 +1051,7 @@ da{
                 dnam{"km²"}
                 one{"{0} km²"}
                 other{"{0} km²"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"m²"}
@@ -1040,6 +1063,7 @@ da{
                 dnam{"mi²"}
                 one{"{0} mi²"}
                 other{"{0} mi²"}
+                per{"{0}/mi²"}
             }
             square-yard{
                 dnam{"yd²"}
@@ -1049,6 +1073,28 @@ da{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"karat"}
+                one{"{0} kt"}
+                other{"{0} kt"}
+            }
+            milligram-per-deciliter{
+                dnam{"mg/dl"}
+                one{"{0} mg/dl"}
+                other{"{0} mg/dl"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/l"}
+                one{"{0} mmol/l"}
+                other{"{0} mmol/l"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -1065,6 +1111,11 @@ da{
                 dnam{"mpg"}
                 one{"{0} mpg"}
                 other{"{0} mpg"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mil/eng. gal"}
+                one{"{0} eng. mpg"}
+                other{"{0} eng. mpg"}
             }
         }
         coordinate{
@@ -1218,9 +1269,9 @@ da{
                 other{"{0} cal"}
             }
             foodcalorie{
-                dnam{"Cal"}
-                one{"{0} Cal"}
-                other{"{0} Cal"}
+                dnam{"cal"}
+                one{"{0} cal"}
+                other{"{0} cal"}
             }
             joule{
                 dnam{"joule"}
@@ -1479,13 +1530,6 @@ da{
                 other{"{0} psi"}
             }
         }
-        proportion{
-            karat{
-                dnam{"karat"}
-                one{"{0} kt"}
-                other{"{0} kt"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/t"}
@@ -1603,6 +1647,12 @@ da{
                 one{"{0} gal"}
                 other{"{0} gal"}
                 per{"{0}/gal"}
+            }
+            gallon-imperial{
+                dnam{"eng. gal"}
+                one{"{0} eng. gal"}
+                other{"{0} eng. gal"}
+                per{"{0} eng. gal"}
             }
             hectoliter{
                 dnam{"hl"}

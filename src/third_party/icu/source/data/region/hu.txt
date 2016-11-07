@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/hu.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 hu{
     Countries{
         001{"Világ"}
@@ -46,7 +40,6 @@ hu{
         AI{"Anguilla"}
         AL{"Albánia"}
         AM{"Örményország"}
-        AN{"Holland Antillák"}
         AO{"Angola"}
         AQ{"Antarktisz"}
         AR{"Argentína"}
@@ -75,10 +68,10 @@ hu{
         BT{"Bhután"}
         BV{"Bouvet-sziget"}
         BW{"Botswana"}
-        BY{"Fehéroroszország"}
+        BY{"Belarusz"}
         BZ{"Belize"}
         CA{"Kanada"}
-        CC{"Kókusz-szigetek"}
+        CC{"Kókusz (Keeling)-szigetek"}
         CD{"Kongó - Kinshasa"}
         CF{"Közép-afrikai Köztársaság"}
         CG{"Kongó - Brazzaville"}
@@ -172,7 +165,7 @@ hu{
         KZ{"Kazahsztán"}
         LA{"Laosz"}
         LB{"Libanon"}
-        LC{"Santa Lucia"}
+        LC{"Saint Lucia"}
         LI{"Liechtenstein"}
         LK{"Srí Lanka"}
         LR{"Libéria"}
@@ -224,7 +217,7 @@ hu{
         PH{"Fülöp-szigetek"}
         PK{"Pakisztán"}
         PL{"Lengyelország"}
-        PM{"Saint Pierre és Miquelon"}
+        PM{"Saint-Pierre és Miquelon"}
         PN{"Pitcairn-szigetek"}
         PR{"Puerto Rico"}
         PS{"Palesztina"}
@@ -233,7 +226,7 @@ hu{
         PY{"Paraguay"}
         QA{"Katar"}
         QO{"Külső-Óceánia"}
-        RE{"Reunion"}
+        RE{"Réunion"}
         RO{"Románia"}
         RS{"Szerbia"}
         RU{"Oroszország"}
@@ -246,7 +239,7 @@ hu{
         SG{"Szingapúr"}
         SH{"Szent Ilona"}
         SI{"Szlovénia"}
-        SJ{"Spitzbergák és Jan Mayen-szigetek"}
+        SJ{"Svalbard és Jan Mayen"}
         SK{"Szlovákia"}
         SL{"Sierra Leone"}
         SM{"San Marino"}
@@ -278,7 +271,8 @@ hu{
         TZ{"Tanzánia"}
         UA{"Ukrajna"}
         UG{"Uganda"}
-        UM{"Amerikai Csendes-óceáni Szigetek"}
+        UM{"Az Amerikai Egyesült Államok lakatlan külbirtokai"}
+        UN{"ENSZ"}
         US{"Egyesült Államok"}
         UY{"Uruguay"}
         UZ{"Üzbegisztán"}
@@ -289,7 +283,7 @@ hu{
         VI{"Amerikai Virgin-szigetek"}
         VN{"Vietnam"}
         VU{"Vanuatu"}
-        WF{"Wallis- és Futuna-szigetek"}
+        WF{"Wallis és Futuna"}
         WS{"Szamoa"}
         XK{"Koszovó"}
         YE{"Jemen"}
@@ -301,6 +295,7 @@ hu{
     }
     Countries%short{
         GB{"UK"}
+        UN{"ENSZ"}
         US{"USA"}
     }
     Countries%variant{
@@ -309,5 +304,5 @@ hu{
         FK{"Falkland-szigetek (Malvin-szigetek)"}
         MK{"Macedónia (MVJK)"}
     }
-    Version{"2.1.19.17"}
+    Version{"2.1.28.79"}
 }

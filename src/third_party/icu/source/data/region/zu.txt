@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/zu.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 zu{
     Countries{
         001{"umhlaba"}
@@ -42,11 +36,10 @@ zu{
         AD{"i-Andorra"}
         AE{"i-United Arab Emirates"}
         AF{"i-Afghanistan"}
-        AG{"i-Antigua and Barbuda"}
+        AG{"i-Antigua ne-Barbuda"}
         AI{"i-Anguilla"}
         AL{"i-Albania"}
         AM{"i-Armenia"}
-        AN{"i-Netherlands Antilles"}
         AO{"i-Angola"}
         AQ{"i-Antarctica"}
         AR{"i-Argentina"}
@@ -227,7 +220,7 @@ zu{
         PM{"i-Saint Pierre kanye ne-Miquelon"}
         PN{"i-Pitcairn Islands"}
         PR{"i-Puerto Rico"}
-        PS{"i-Phalestine"}
+        PS{"i-Palestine"}
         PT{"i-Portugal"}
         PW{"i-Palau"}
         PY{"i-Paraguay"}
@@ -244,7 +237,7 @@ zu{
         SD{"i-Sudan"}
         SE{"i-Sweden"}
         SG{"i-Singapore"}
-        SH{"i-Saint Helena"}
+        SH{"i-St. Helena"}
         SI{"i-Slovenia"}
         SJ{"i-Svalbard ne-Jan Mayen"}
         SK{"i-Slovakia"}
@@ -260,7 +253,7 @@ zu{
         SY{"i-Syria"}
         SZ{"i-Swaziland"}
         TA{"i-Tristan da Cunha"}
-        TC{"i-Turks and Caicos Islands"}
+        TC{"i-Turks ne-Caicos Islands"}
         TD{"i-Chad"}
         TF{"i-French Southern Territories"}
         TG{"i-Togo"}
@@ -279,6 +272,7 @@ zu{
         UA{"i-Ukraine"}
         UG{"i-Uganda"}
         UM{"i-U.S. Minor Outlying Islands"}
+        UN{"I-United Nations"}
         US{"i-United States"}
         UY{"i-Uruguay"}
         UZ{"i-Uzbekistan"}
@@ -301,15 +295,17 @@ zu{
     }
     Countries%short{
         GB{"i-U.K."}
+        UN{"ifulegi"}
         US{"i-U.S"}
     }
     Countries%variant{
         CD{"i-Congo (DRC)"}
         CG{"i-Congo (Republic)"}
         CI{"i-Ivory Coast"}
+        CZ{"i-Czechia"}
         FK{"i-Falkland Islands (Islas Malvinas)"}
         MK{"i-Macedonia (FYROM)"}
         TL{"i-East Timor"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.29.22"}
 }

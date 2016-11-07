@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/lt.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 lt{
     Countries{
         001{"pasaulis"}
@@ -46,7 +40,6 @@ lt{
         AI{"Angilija"}
         AL{"Albanija"}
         AM{"Armėnija"}
-        AN{"Olandijos Antilai"}
         AO{"Angola"}
         AQ{"Antarktida"}
         AR{"Argentina"}
@@ -120,7 +113,7 @@ lt{
         FO{"Farerų Salos"}
         FR{"Prancūzija"}
         GA{"Gabonas"}
-        GB{"Didžioji Britanija"}
+        GB{"Jungtinė Karalystė"}
         GD{"Grenada"}
         GE{"Gruzija"}
         GF{"Prancūzijos Gviana"}
@@ -172,7 +165,7 @@ lt{
         KZ{"Kazachstanas"}
         LA{"Laosas"}
         LB{"Libanas"}
-        LC{"Šventoji Liucija"}
+        LC{"Sent Lusija"}
         LI{"Lichtenšteinas"}
         LK{"Šri Lanka"}
         LR{"Liberija"}
@@ -219,13 +212,13 @@ lt{
         OM{"Omanas"}
         PA{"Panama"}
         PE{"Peru"}
-        PF{"Prancūzų Polinezija"}
+        PF{"Prancūzijos Polinezija"}
         PG{"Papua Naujoji Gvinėja"}
         PH{"Filipinai"}
         PK{"Pakistanas"}
         PL{"Lenkija"}
         PM{"Sen Pjeras ir Mikelonas"}
-        PN{"Pitkernas"}
+        PN{"Pitkerno salos"}
         PR{"Puerto Rikas"}
         PS{"Palestina"}
         PT{"Portugalija"}
@@ -279,6 +272,7 @@ lt{
         UA{"Ukraina"}
         UG{"Uganda"}
         UM{"Jungtinių Valstijų Mažosios Tolimosios Salos"}
+        UN{"Jungtinės Tautos"}
         US{"Jungtinės Valstijos"}
         UY{"Urugvajus"}
         UZ{"Uzbekistanas"}
@@ -289,7 +283,7 @@ lt{
         VI{"Jungtinių Valstijų Mergelių Salos"}
         VN{"Vietnamas"}
         VU{"Vanuatu"}
-        WF{"Volisas ir Futuna"}
+        WF{"Volisas ir Futūna"}
         WS{"Samoa"}
         XK{"Kosovas"}
         YE{"Jemenas"}
@@ -300,7 +294,8 @@ lt{
         ZZ{"nežinoma sritis"}
     }
     Countries%short{
-        GB{"Didžioji Britanija"}
+        GB{"JK"}
+        UN{"JT"}
         US{"JAV"}
     }
     Countries%variant{
@@ -310,5 +305,5 @@ lt{
         FK{"Folklando (Malvinų) Salos"}
         MK{"Makedonijos Respublika"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.28.79"}
 }

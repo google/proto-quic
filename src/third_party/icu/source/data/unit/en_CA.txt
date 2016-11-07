@@ -1,15 +1,21 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/en_CA.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 en_CA{
     %%Parent{"en_001"}
-    Version{"2.1.19.79"}
+    Version{"2.1.29.54"}
     unitsNarrow{
+        concentr{
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                one{"{0}mg/dL"}
+                other{"{0}mg/dL"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/L"}
+                one{"{0}mmol/L"}
+                other{"{0}mmol/L"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"L/100km"}
@@ -56,6 +62,17 @@ en_CA{
         }
     }
     unitsShort{
+        concentr{
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                one{"{0} mg/dL"}
+                other{"{0} mg/dL"}
+            }
+            millimole-per-liter{
+                one{"{0} mmol/L"}
+                other{"{0} mmol/L"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"L/100 km"}
@@ -86,6 +103,7 @@ en_CA{
             liter{
                 one{"{0} L"}
                 other{"{0} L"}
+                per{"{0}/L"}
             }
             megaliter{
                 dnam{"ML"}

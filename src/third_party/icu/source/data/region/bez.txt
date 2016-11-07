@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/bez.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 bez{
     Countries{
         AD{"Huandola"}
@@ -15,7 +9,6 @@ bez{
         AI{"Huanguila"}
         AL{"Hualbania"}
         AM{"Huamenia"}
-        AN{"Huantili dza Huuholanzi"}
         AO{"Huangola"}
         AR{"Huajendina"}
         AS{"Husamoa ya Humalekani"}
@@ -234,5 +227,5 @@ bez{
         ZM{"Huzambia"}
         ZW{"Huzimbabwe"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.40"}
 }

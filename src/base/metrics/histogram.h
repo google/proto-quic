@@ -92,7 +92,6 @@ class BooleanHistogram;
 class CustomHistogram;
 class Histogram;
 class LinearHistogram;
-class PersistentMemoryAllocator;
 class Pickle;
 class PickleIterator;
 class SampleVector;

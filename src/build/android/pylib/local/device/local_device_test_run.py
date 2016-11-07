@@ -17,6 +17,11 @@ from pylib.base import test_collection
 from pylib.local.device import local_device_environment
 
 
+_SIGTERM_TEST_LOG = (
+  '  Suite execution terminated, probably due to swarming timeout.\n'
+  '  Your test may not have run.')
+
+
 def IncrementalInstall(device, apk_helper, installer_script):
   """Performs an incremental install.
 
@@ -113,6 +118,14 @@ class LocalDeviceTestRun(test_run.TestRun):
             else:
               self._env.parallel_devices.pMap(
                   run_tests_on_device, tests, try_results).pGet(None)
+          except TestsTerminated:
+            for unknown_result in try_results.GetUnknown():
+              try_results.AddResult(
+                  base_test_result.BaseTestResult(
+                      unknown_result.GetName(),
+                      base_test_result.ResultType.TIMEOUT,
+                      log=_SIGTERM_TEST_LOG))
+            raise
           finally:
             results.append(try_results)
 

@@ -33,6 +33,7 @@ class DummyProofSource : public net::ProofSource {
                 const std::string& server_config,
                 net::QuicVersion quic_version,
                 base::StringPiece chlo_hash,
+                const net::QuicTagVector& connection_options,
                 scoped_refptr<net::ProofSource::Chain>* out_chain,
                 std::string* out_signature,
                 std::string* out_leaf_cert_sct) override {
@@ -49,6 +50,7 @@ class DummyProofSource : public net::ProofSource {
                 const std::string& server_config,
                 net::QuicVersion quic_version,
                 base::StringPiece chlo_hash,
+                const net::QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override {}
 };
 

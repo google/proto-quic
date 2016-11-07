@@ -109,6 +109,7 @@ class NET_EXPORT_PRIVATE ProofSource {
                         const std::string& server_config,
                         QuicVersion quic_version,
                         base::StringPiece chlo_hash,
+                        const QuicTagVector& connection_options,
                         scoped_refptr<Chain>* out_chain,
                         std::string* out_signature,
                         std::string* out_leaf_cert_sct) = 0;
@@ -122,6 +123,7 @@ class NET_EXPORT_PRIVATE ProofSource {
                         const std::string& server_config,
                         QuicVersion quic_version,
                         base::StringPiece chlo_hash,
+                        const QuicTagVector& connection_options,
                         std::unique_ptr<Callback> callback) = 0;
 };
 

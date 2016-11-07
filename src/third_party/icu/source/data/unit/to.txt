@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/to.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 to{
-    Version{"2.1.19.14"}
+    Version{"2.1.27.98"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -87,6 +81,24 @@ to{
         compound{
             per{"{0} ʻi he {1}"}
         }
+        concentr{
+            karat{
+                dnam{"kalati"}
+                other{"kalati ʻe {0}"}
+            }
+            milligram-per-deciliter{
+                dnam{"milikalami he tesilita"}
+                other{"milikalami ʻe {0} he tesilita"}
+            }
+            millimole-per-liter{
+                dnam{"milimole he lita"}
+                other{"milimole ʻe {0} he lita"}
+            }
+            part-per-million{
+                dnam{"konga he miliona"}
+                other{"konga ʻe {0} he miliona"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"lita he kilomita ʻe 100"}
@@ -99,6 +111,10 @@ to{
             mile-per-gallon{
                 dnam{"maile he kālani"}
                 other{"maile ʻe {0} he kālani"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"maile he kālani fakaʻemipaea"}
+                other{"maile ʻe {0} he kālani fakaʻemipaea"}
             }
         }
         digital{
@@ -423,12 +439,6 @@ to{
                 other{"pāuni he ʻinisi sikuea ʻe {0}"}
             }
         }
-        proportion{
-            karat{
-                dnam{"kalati"}
-                other{"kalati ʻe {0}"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"kilomita he houa"}
@@ -513,6 +523,11 @@ to{
             gallon{
                 dnam{"kālani"}
                 other{"kālani ʻe {0}"}
+            }
+            gallon-imperial{
+                dnam{"kālani fakaʻemipaea"}
+                other{"kālani fakaʻemipaea ʻe {0}"}
+                per{"{0} ki he kālani fakaʻemipaea"}
             }
             hectoliter{
                 dnam{"hēkitolita"}
@@ -622,6 +637,12 @@ to{
         compound{
             per{"{0}/{1}"}
         }
+        concentr{
+            karat{
+                dnam{"kt"}
+                other{"{0} kt"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"l/100km"}
@@ -634,6 +655,9 @@ to{
             mile-per-gallon{
                 dnam{"mi/kā"}
                 other{"{0} mi/kā"}
+            }
+            mile-per-gallon-imperial{
+                other{"{0}m/kāʻe"}
             }
         }
         digital{
@@ -958,12 +982,6 @@ to{
                 other{"{0} pā/in²"}
             }
         }
-        proportion{
-            karat{
-                dnam{"kt"}
-                other{"{0} kt"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/h"}
@@ -1157,6 +1175,24 @@ to{
         compound{
             per{"{0}/{1}"}
         }
+        concentr{
+            karat{
+                dnam{"kt"}
+                other{"kt ʻe {0}"}
+            }
+            milligram-per-deciliter{
+                dnam{"mk/tl"}
+                other{"mk ʻe {0}/tl"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/l"}
+                other{"mmol ʻe {0}/l"}
+            }
+            part-per-million{
+                dnam{"khm"}
+                other{"khm ʻe {0}"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"l/100km"}
@@ -1169,6 +1205,10 @@ to{
             mile-per-gallon{
                 dnam{"mi/kā"}
                 other{"mi ʻe {0}/kā"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mi/kāʻem"}
+                other{"mi ʻe {0}/kāʻem"}
             }
         }
         digital{
@@ -1493,12 +1533,6 @@ to{
                 other{"pā/in² ʻe {0}"}
             }
         }
-        proportion{
-            karat{
-                dnam{"kt"}
-                other{"kt ʻe {0}"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/h"}
@@ -1583,6 +1617,11 @@ to{
             gallon{
                 dnam{"kā"}
                 other{"kā ʻe {0}"}
+            }
+            gallon-imperial{
+                dnam{"kāʻem"}
+                other{"kāʻem ʻe {0}"}
+                per{"{0} / kāʻem"}
             }
             hectoliter{
                 dnam{"hl"}

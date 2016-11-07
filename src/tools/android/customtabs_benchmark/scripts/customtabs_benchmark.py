@@ -87,6 +87,9 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
       <first_contentful_paint>
     or None on error.
   """
+  if not device.HasRoot():
+    device.EnableRoot()
+
   with device_setup.FlagReplacer(device, _COMMAND_LINE_PATH, chrome_args):
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',
@@ -102,8 +105,6 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
     device.ForceStop(_CHROME_PACKAGE)
     device.ForceStop(_TEST_APP_PACKAGE_NAME)
 
-    if not device.HasRoot():
-      device.EnableRoot()
     ResetChromeLocalState(device)
 
     if cold:
@@ -116,6 +117,8 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
       match = logcat_monitor.WaitFor(result_line_re, timeout=20)
     except device_errors.CommandTimeoutError as _:
       logging.warning('Timeout waiting for the result line')
+    logcat_monitor.Stop()
+    logcat_monitor.Close()
     return match.group(1) if match is not None else None
 
 
@@ -144,7 +147,7 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
         config = configs[random.randint(0, len(configs) - 1)]
         chrome_args = _CHROME_ARGS + wpr_attributes.chrome_args
         if config['speculation_mode'] == 'no_state_prefetch':
-          chrome_args.append('--prerender=' + config['speculation_mode'])
+          chrome_args.append('--prerender=prefetch')
         result = RunOnce(device, config['url'], config['warmup'],
                          config['speculation_mode'],
                          config['delay_to_may_launch_url'],

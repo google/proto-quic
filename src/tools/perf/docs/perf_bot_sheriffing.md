@@ -7,9 +7,9 @@ waterfall up and running, and triaging performance test failures and flakes.
 
 ## Key Responsibilities
 
-*   [Handle Device and Bot Failures](#botfailures)
-*   [Handle Test Failures](#testfailures)
-*   [Follow up on failures](#followup)
+*   [Handle Device and Bot Failures](#Handle-Device-and-Bot-Failures)
+*   [Handle Test Failures](#Handle-Test-Failures)
+*   [Follow up on failures](#Follow-up-on-failures)
 
 ## Understanding the Waterfall State
 

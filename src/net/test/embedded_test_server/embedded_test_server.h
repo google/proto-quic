@@ -205,7 +205,7 @@ class EmbeddedTestServer {
 
   // The most general purpose method. Any request processing can be added using
   // this method. Takes ownership of the object. The |callback| is called
-  // on UI thread.
+  // on the server's IO thread.
   void RegisterRequestHandler(const HandleRequestCallback& callback);
 
   // Adds request monitors. The |callback| is called before any handlers are

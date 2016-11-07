@@ -150,11 +150,11 @@ TEST_P(ProofTest, DISABLED_Verify) {
   IPAddress server_ip;
 
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               first_chlo_hash, &first_chain, &first_signature,
-                               &first_cert_sct));
+                               first_chlo_hash, QuicTagVector(), &first_chain,
+                               &first_signature, &first_cert_sct));
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               second_chlo_hash, &chain, &signature,
-                               &cert_sct));
+                               second_chlo_hash, QuicTagVector(), &chain,
+                               &signature, &cert_sct));
 
   // Check that the proof source is caching correctly:
   ASSERT_EQ(first_chain->certs, chain->certs);
@@ -199,8 +199,9 @@ TEST_P(ProofTest, VerifySourceAsync) {
   string expected_signature;
   string expected_leaf_cert_sct;
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               first_chlo_hash, &expected_chain,
-                               &expected_signature, &expected_leaf_cert_sct));
+                               first_chlo_hash, QuicTagVector(),
+                               &expected_chain, &expected_signature,
+                               &expected_leaf_cert_sct));
 
   // Call asynchronous version and compare results
   bool called = false;
@@ -211,7 +212,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
   std::unique_ptr<ProofSource::Callback> cb(
       new TestCallback(&called, &ok, &chain, &signature, &leaf_cert_sct));
   source->GetProof(server_ip, hostname, server_config, quic_version,
-                   first_chlo_hash, std::move(cb));
+                   first_chlo_hash, QuicTagVector(), std::move(cb));
   // TODO(gredner): whan GetProof really invokes the callback asynchronously,
   // figure out what to do here.
   ASSERT_TRUE(called);
@@ -231,7 +232,8 @@ TEST_P(ProofTest, UseAfterFree) {
   IPAddress server_ip;
 
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, GetParam(),
-                               chlo_hash, &chain, &signature, &cert_sct));
+                               chlo_hash, QuicTagVector(), &chain, &signature,
+                               &cert_sct));
 
   // Make sure we can safely access results after deleting where they came from.
   EXPECT_FALSE(chain->HasOneRef());

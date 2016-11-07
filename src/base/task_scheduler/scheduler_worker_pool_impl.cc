@@ -19,6 +19,7 @@
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
+#include "base/task_runner.h"
 #include "base/task_scheduler/delayed_task_manager.h"
 #include "base/task_scheduler/task_tracker.h"
 #include "base/threading/platform_thread.h"
@@ -341,33 +342,29 @@ void SchedulerWorkerPoolImpl::DisallowWorkerDetachmentForTesting() {
 }
 
 scoped_refptr<TaskRunner> SchedulerWorkerPoolImpl::CreateTaskRunnerWithTraits(
-    const TaskTraits& traits,
-    ExecutionMode execution_mode) {
-  switch (execution_mode) {
-    case ExecutionMode::PARALLEL:
-      return make_scoped_refptr(new SchedulerParallelTaskRunner(traits, this));
+    const TaskTraits& traits) {
+  return make_scoped_refptr(new SchedulerParallelTaskRunner(traits, this));
+}
 
-    case ExecutionMode::SEQUENCED:
-      return make_scoped_refptr(new SchedulerSequencedTaskRunner(traits, this));
+scoped_refptr<SequencedTaskRunner>
+SchedulerWorkerPoolImpl::CreateSequencedTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return make_scoped_refptr(new SchedulerSequencedTaskRunner(traits, this));
+}
 
-    case ExecutionMode::SINGLE_THREADED: {
-      // TODO(fdoray): Find a way to take load into account when assigning a
-      // SchedulerWorker to a SingleThreadTaskRunner. Also, this code
-      // assumes that all SchedulerWorkers are alive. Eventually, we might
-      // decide to tear down threads that haven't run tasks for a long time.
-      size_t worker_index;
-      {
-        AutoSchedulerLock auto_lock(next_worker_index_lock_);
-        worker_index = next_worker_index_;
-        next_worker_index_ = (next_worker_index_ + 1) % workers_.size();
-      }
-      return make_scoped_refptr(new SchedulerSingleThreadTaskRunner(
-          traits, this, workers_[worker_index].get()));
-    }
+scoped_refptr<SingleThreadTaskRunner>
+SchedulerWorkerPoolImpl::CreateSingleThreadTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  // TODO(fdoray): Find a way to take load into account when assigning a
+  // SchedulerWorker to a SingleThreadTaskRunner.
+  size_t worker_index;
+  {
+    AutoSchedulerLock auto_lock(next_worker_index_lock_);
+    worker_index = next_worker_index_;
+    next_worker_index_ = (next_worker_index_ + 1) % workers_.size();
   }
-
-  NOTREACHED();
-  return nullptr;
+  return make_scoped_refptr(new SchedulerSingleThreadTaskRunner(
+      traits, this, workers_[worker_index].get()));
 }
 
 void SchedulerWorkerPoolImpl::ReEnqueueSequence(

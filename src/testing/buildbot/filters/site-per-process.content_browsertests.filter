@@ -1,2 +1,5 @@
 # crbug.com/417518: Get tests working with --site-per-process
 -NavigationControllerBrowserTest.ReloadOriginalRequest
+
+# crbug.com/647249: Implement Drag-and-Drop for OOPIF, WebView+OOPIF
+-DragAndDropBrowserTest.DropTextFromOutside

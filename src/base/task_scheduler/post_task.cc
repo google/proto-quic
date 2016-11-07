@@ -52,11 +52,20 @@ void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
   PostTaskAndReplyTaskRunner(traits).PostTaskAndReply(from_here, task, reply);
 }
 
-scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-    TaskTraits traits,
-    ExecutionMode execution_mode) {
-  return TaskScheduler::GetInstance()->CreateTaskRunnerWithTraits(
-      traits, execution_mode);
+scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(const TaskTraits& traits) {
+  return TaskScheduler::GetInstance()->CreateTaskRunnerWithTraits(traits);
+}
+
+scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return TaskScheduler::GetInstance()->CreateSequencedTaskRunnerWithTraits(
+      traits);
+}
+
+scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return TaskScheduler::GetInstance()->CreateSingleThreadTaskRunnerWithTraits(
+      traits);
 }
 
 }  // namespace base

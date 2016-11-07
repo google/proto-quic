@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/sw.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 sw{
-    Version{"2.1.19.14"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -85,6 +79,7 @@ sw{
                 dnam{"kilomita za mraba"}
                 one{"kilomita {0} ya mraba"}
                 other{"kilomita {0} za mraba"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"mita za mraba"}
@@ -96,6 +91,7 @@ sw{
                 dnam{"maili za mraba"}
                 one{"maili {0} ya mraba"}
                 other{"maili {0} za mraba"}
+                per{"{0} kwa kila maili mraba"}
             }
             square-yard{
                 dnam{"yadi za mraba"}
@@ -105,6 +101,28 @@ sw{
         }
         compound{
             per{"{0} kwa kila {1}"}
+        }
+        concentr{
+            karat{
+                dnam{"karati"}
+                one{"karati {0}"}
+                other{"karati {0}"}
+            }
+            milligram-per-deciliter{
+                dnam{"miligramu kwa kila desilita"}
+                one{"miligramu kwa kila desilita"}
+                other{"miligramu {0} kwa kila desilita"}
+            }
+            millimole-per-liter{
+                dnam{"milimoli kwa kila lita"}
+                one{"milimoli {0} kwa kila lita"}
+                other{"milimoli {0} kwa kila lita"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -122,12 +140,17 @@ sw{
                 one{"maili {0} kwa kila galoni"}
                 other{"maili {0} kwa kila galoni"}
             }
+            mile-per-gallon-imperial{
+                dnam{"maili kwa kila galoni la Uingereza"}
+                one{"maili {0} kwa kila galoni la Uingereza"}
+                other{"maili {0} kwa kila galoni la Uingereza"}
+            }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0} Mashariki"}
+            north{"{0} Kaskazini"}
+            south{"{0} Kusini"}
+            west{"{0} Magharibi"}
         }
         digital{
             bit{
@@ -378,8 +401,8 @@ sw{
                 other{"maili {0}"}
             }
             mile-scandinavian{
-                dnam{"smi"}
-                one{"{0} smi"}
+                dnam{"maili ya skandinavia"}
+                one{"maili ya skandinavia"}
                 other{"{0} smi"}
             }
             millimeter{
@@ -398,9 +421,9 @@ sw{
                 other{"maili {0} za kibaharia"}
             }
             parsec{
-                dnam{"parsecs"}
-                one{"parsec {0}"}
-                other{"parsecs {0}"}
+                dnam{"kila sekunde"}
+                one{"{0} kila sekunde"}
+                other{"{0} kila sekunde"}
             }
             picometer{
                 dnam{"pikomita"}
@@ -535,13 +558,6 @@ sw{
                 other{"pauni {0} kwa kila inchi mraba"}
             }
         }
-        proportion{
-            karat{
-                dnam{"karati"}
-                one{"karati {0}"}
-                other{"karati {0}"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"kilomita kwa saa"}
@@ -566,9 +582,9 @@ sw{
         }
         temperature{
             celsius{
-                dnam{"nyuzi za selisiasi"}
-                one{"nyuzi ya selisiasi {0}"}
-                other{"nyuzi za selisiasi {0}"}
+                dnam{"nyuzi"}
+                one{"nyuzi {0}"}
+                other{"nyuzi {0}"}
             }
             fahrenheit{
                 dnam{"nyuzi za farenheiti"}
@@ -659,6 +675,12 @@ sw{
                 one{"galoni {0}"}
                 other{"galoni {0}"}
                 per{"{0} kwa kila galoni"}
+            }
+            gallon-imperial{
+                dnam{"Imp. gal"}
+                one{"{0} gal Imp."}
+                other{"{0} gal Imp."}
+                per{"{0}/gal Imp."}
             }
             hectoliter{
                 dnam{"hektolita"}
@@ -766,10 +788,10 @@ sw{
             }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0} Mashariki"}
+            north{"{0} Kaskazini"}
+            south{"{0} Kusini"}
+            west{"{0} Magharibi"}
         }
         duration{
             day{
@@ -931,7 +953,7 @@ sw{
         }
         temperature{
             celsius{
-                dnam{"nyuzi za selisiasi"}
+                dnam{"°C"}
                 one{"{0}°C"}
                 other{"{0}°C"}
             }
@@ -1028,6 +1050,7 @@ sw{
                 dnam{"kilomita za mraba"}
                 one{"km² {0}"}
                 other{"km² {0}"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"mita za mraba"}
@@ -1039,6 +1062,7 @@ sw{
                 dnam{"maili za mraba"}
                 one{"maili {0} ya mraba"}
                 other{"maili {0} za mraba"}
+                per{"{0}/mi²"}
             }
             square-yard{
                 dnam{"yadi za mraba"}
@@ -1049,11 +1073,33 @@ sw{
         compound{
             per{"{0}/{1}"}
         }
+        concentr{
+            karat{
+                dnam{"karati"}
+                one{"karati {0}"}
+                other{"karati {0}"}
+            }
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                one{"{0} mg/dL"}
+                other{"{0} mg/dL"}
+            }
+            millimole-per-liter{
+                dnam{"milimoli kwa kila lita"}
+                one{"mmol {0}/lita"}
+                other{"mmol {0}/L"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"lita kwa kilomita 100"}
                 one{"lita {0} kwa kilomita 100"}
-                other{"lita {0} kwa kilomita 100"}
+                other{"lita {0}/km100"}
             }
             liter-per-kilometer{
                 dnam{"lita kwa kila kilomita"}
@@ -1062,15 +1108,20 @@ sw{
             }
             mile-per-gallon{
                 dnam{"maili kwa kila galoni"}
-                one{"maili {0} kwa kila galoni"}
-                other{"maili {0} kwa kila galoni"}
+                one{"{0} mpg"}
+                other{"{0} mpg"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mpg Imp."}
+                one{"{0} mpg Imp."}
+                other{"{0} mpg Imp."}
             }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0} Mashariki"}
+            north{"{0} Kaskazini"}
+            south{"{0} Kusini"}
+            west{"{0} Magharibi"}
         }
         digital{
             bit{
@@ -1212,9 +1263,9 @@ sw{
         }
         energy{
             calorie{
-                dnam{"cal"}
+                dnam{"kalori"}
                 one{"kalori {0}"}
-                other{"{0} cal"}
+                other{"kalori {0}"}
             }
             foodcalorie{
                 dnam{"kalori"}
@@ -1341,7 +1392,7 @@ sw{
                 other{"maili {0} za kibaharia"}
             }
             parsec{
-                dnam{"parsecs"}
+                dnam{"kila sekunde"}
                 one{"{0} pc"}
                 other{"{0} pc"}
             }
@@ -1478,13 +1529,6 @@ sw{
                 other{"psi {0}"}
             }
         }
-        proportion{
-            karat{
-                dnam{"karati"}
-                one{"karati {0}"}
-                other{"karati {0}"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"kilomita kwa saa"}
@@ -1509,7 +1553,7 @@ sw{
         }
         temperature{
             celsius{
-                dnam{"nyuzi za selisiasi"}
+                dnam{"nyuzi"}
                 one{"{0}°C"}
                 other{"{0}°C"}
             }
@@ -1602,6 +1646,12 @@ sw{
                 one{"galoni {0}"}
                 other{"galoni {0}"}
                 per{"{0}/gal"}
+            }
+            gallon-imperial{
+                dnam{"Imp. gal"}
+                one{"{0} gal Imp."}
+                other{"{0} gal Imp."}
+                per{"{0}/gal Imp."}
             }
             hectoliter{
                 dnam{"hektolita"}

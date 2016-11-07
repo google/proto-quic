@@ -6,7 +6,8 @@ import("//build/config/android/config.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 
-# Chromium linker crashes on component builds on Android 4.4. See b/11379966
+# Chromium linker doesn't reliably support loading multiple libraries;
+# disable for component builds, see crbug.com/657093.
 # Chromium linker causes instrumentation to return incorrect results.
 chromium_linker_supported =
     !is_component_build && !enable_profiling && !use_order_profiling && !is_asan

@@ -296,8 +296,6 @@ ThreadLogsManager::~ThreadLogsManager() {
     flush_thread_.swap(flush_thread);
   }
   flush_thread.reset();  // Joins the flush thread.
-
-  base::STLDeleteContainerPointers(logs_.begin(), logs_.end());
 }
 
 void ThreadLogsManager::AddLog(std::unique_ptr<ThreadLog> new_log) {
@@ -306,7 +304,7 @@ void ThreadLogsManager::AddLog(std::unique_ptr<ThreadLog> new_log) {
   if (logs_.empty())
     StartInternalFlushThread_Locked();
 
-  logs_.push_back(new_log.release());
+  logs_.push_back(std::move(new_log));
 }
 
 void ThreadLogsManager::StartInternalFlushThread_Locked() {
@@ -345,7 +343,8 @@ void ThreadLogsManager::FlushAllLogsOnFlushThread() {
     std::vector<ThreadLog*> thread_logs_copy;
     {
       base::AutoLock auto_lock(lock_);
-      thread_logs_copy = logs_;
+      for (const auto& log : logs_)
+        thread_logs_copy.push_back(log.get());
     }
 
     // Move the logs' data before flushing them so that the mutexes are not

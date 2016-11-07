@@ -23,7 +23,6 @@
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
 #include "net/tools/quic/quic_simple_server_session.h"
-#include "net/tools/quic/spdy_balsa_utils.h"
 #include "net/tools/quic/test_tools/quic_in_memory_cache_peer.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"

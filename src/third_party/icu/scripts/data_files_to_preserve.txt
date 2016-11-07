@@ -17,14 +17,10 @@ sprep/spreplocal.mk
 brkitr/khmerdict.txt
 brkitr/word_ja.txt
 locales/an.txt
-locales/ast.txt
-locales/ckb.txt
 locales/ku.txt
 locales/tg.txt
 locales/wa.txt
 lang/an.txt
-lang/ast.txt
-lang/ckb.txt
 lang/ku.txt
 lang/tg.txt
 lang/wa.txt

@@ -38,8 +38,6 @@
 #include "base/threading/platform_thread.h"
 #include "base/tracked_objects.h"
 
-class Task;
-
 namespace base {
 
 class BASE_EXPORT PosixDynamicThreadPool

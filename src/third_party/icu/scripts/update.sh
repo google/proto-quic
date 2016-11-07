@@ -22,22 +22,25 @@ svn ls "${repo}" > /dev/null 2>&1  || \
     { echo "${repo} does not exist." >&2; exit 2; }
 
 echo "Cleaning up source/ ..."
-for file in source license.html readme.html APIChangeReport.html
+for file in source LICENSE license.html readme.html APIChangeReport.html
 do
   rm -rf "${treeroot}/${file}"
 done
 
 echo "Download ${version} from the upstream repository ..."
-for file in source license.html readme.html APIChangeReport.html
+for file in source LICENSE license.html readme.html APIChangeReport.html
 do
   svn export --native-eol LF "${repo}/${file}" "${treeroot}/${file}"
 done
 
 echo "deleting directories we don't care about ..."
-for d in layout layoutex data/xml
+for d in layoutex data/xml test allinone
 do
   rm -rf "${treeroot}/source/${d}"
 done
+
+echo "deleting Visual Studio build files ..."
+find "${treeroot}/source" -name *vcxp* -o -name *sln | xargs rm
 
 echo "restoring local data and configuration files ..."
 while read line
@@ -46,8 +49,9 @@ do
   git checkout -- "${treeroot}/source/data/"${line}
 done < "${treeroot}/scripts/data_files_to_preserve.txt"
 
-echo "Patching configure to work without source/layout(ex) directories ..."
-sed -i.orig -e '/^ac_config_files=/ s:\ layout\(ex\)\{0,1\}/Makefile::g' \
+echo "Patching configure to work without source/{layoutex,test}  ..."
+sed -i.orig -e '/^ac_config_files=/ s:\ layoutex/Makefile::g' \
+  -e '/^ac_config_files=/ s: test/.* samples/M: samples/M:' \
   "${treeroot}/source/configure"
 rm -f "${treeroot}/source/configure.orig"
 

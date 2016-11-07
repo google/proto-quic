@@ -159,7 +159,7 @@ void QuicSession::OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) {
     return;
   }
   ReliableQuicStream* stream = GetOrCreateStream(stream_id);
-  if (stream) {
+  if (stream != nullptr) {
     stream->OnWindowUpdateFrame(frame);
   }
 }
@@ -631,7 +631,8 @@ bool QuicSession::MaybeIncreaseLargestPeerStreamId(
   size_t new_num_available_streams =
       GetNumAvailableStreams() + additional_available_streams;
   if (new_num_available_streams > MaxAvailableStreams()) {
-    DVLOG(1) << "Failed to create a new incoming stream with id:" << stream_id
+    DVLOG(1) << ENDPOINT
+             << "Failed to create a new incoming stream with id:" << stream_id
              << ".  There are already " << GetNumAvailableStreams()
              << " streams available, which would become "
              << new_num_available_streams << ", which exceeds the limit "

@@ -31,7 +31,6 @@ enum evhttp_connection_error {
 };
 
 struct evbuffer;
-struct addrinfo;
 struct evhttp_request;
 
 /* A stupid connection object - maybe make this a bufferevent later */

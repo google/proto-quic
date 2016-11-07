@@ -251,7 +251,9 @@ bool SpdyUtils::PopulateHeaderBlockFromUrl(const string url,
   size_t start = pos + 3;
   pos = url.find("/", start);
   if (pos == string::npos) {
-    return false;
+    (*headers)[":authority"] = url.substr(start);
+    (*headers)[":path"] = "/";
+    return true;
   }
   (*headers)[":authority"] = url.substr(start, pos - start);
   (*headers)[":path"] = url.substr(pos);

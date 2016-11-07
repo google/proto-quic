@@ -68,10 +68,6 @@ do
   sed -n -r -i \
     '1, /^'${lang}'\{$/p
      /^    "%%ALIAS"\{/p
-     /^    AuxExemplarCharacters\{.*\}$/p
-     /^    AuxExemplarCharacters\{$/, /^    \}$/p
-     /^    ExemplarCharacters\{.*\}$/p
-     /^    ExemplarCharacters\{$/, /^    \}$/p
      /^    (LocaleScript|layout)\{$/, /^    \}$/p
      /^    Version\{.*$/p
      /^\}$/p' ${target}

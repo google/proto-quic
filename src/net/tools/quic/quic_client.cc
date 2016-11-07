@@ -26,7 +26,6 @@
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_socket_utils.h"
-#include "net/tools/quic/spdy_balsa_utils.h"
 
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40

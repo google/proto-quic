@@ -1,8 +1,8 @@
 diff --git a/source/common/ucnv_bld.cpp b/source/common/ucnv_bld.cpp
-index 3c6b0e3..77fd0e6 100644
+index 078f293..a8c41cc 100644
 --- a/source/common/ucnv_bld.cpp
 +++ b/source/common/ucnv_bld.cpp
-@@ -65,11 +65,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
+@@ -67,11 +67,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
  
      &_Latin1Data,
      &_UTF8Data, &_UTF16BEData, &_UTF16LEData,
@@ -14,7 +14,7 @@ index 3c6b0e3..77fd0e6 100644
      NULL,
  
  #if UCONFIG_NO_LEGACY_CONVERSION
-@@ -103,7 +99,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
+@@ -105,7 +101,7 @@ converterData[UCNV_NUMBER_OF_SUPPORTED_CONVERTER_TYPES]={
  
      &_ASCIIData,
  #if UCONFIG_ONLY_HTML_CONVERSION
@@ -23,7 +23,7 @@ index 3c6b0e3..77fd0e6 100644
  #else
      &_UTF7Data, &_Bocu1Data, &_UTF16Data, &_UTF32Data, &_CESU8Data, &_IMAPData,
  #endif
-@@ -168,7 +164,6 @@ static struct {
+@@ -170,7 +166,6 @@ static struct {
    { "utf16oppositeendian", UCNV_UTF16_BigEndian},
    { "utf16platformendian", UCNV_UTF16_LittleEndian },
  #endif
@@ -31,7 +31,7 @@ index 3c6b0e3..77fd0e6 100644
    { "utf32", UCNV_UTF32 },
    { "utf32be", UCNV_UTF32_BigEndian },
    { "utf32le", UCNV_UTF32_LittleEndian },
-@@ -179,7 +174,6 @@ static struct {
+@@ -181,7 +176,6 @@ static struct {
    { "utf32oppositeendian", UCNV_UTF32_BigEndian },
    { "utf32platformendian", UCNV_UTF32_LittleEndian },
  #endif
@@ -40,10 +40,10 @@ index 3c6b0e3..77fd0e6 100644
    { "utf7", UCNV_UTF7 },
  #endif
 diff --git a/source/common/ucnv_u32.c b/source/common/ucnv_u32.c
-index b6804ca..9bee9a4 100644
+index b0a0fe2..5a4d6fc 100644
 --- a/source/common/ucnv_u32.c
 +++ b/source/common/ucnv_u32.c
-@@ -16,7 +16,7 @@
+@@ -18,7 +18,7 @@
  
  #include "unicode/utypes.h"
  

@@ -15,6 +15,7 @@ import org.chromium.base.Log;
 import org.chromium.base.TraceEvent;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.annotations.MainDex;
 import org.chromium.base.metrics.RecordHistogram;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +37,7 @@ import javax.annotation.Nullable;
  * the native counterpart to this class.
  */
 @JNINamespace("base::android")
+@MainDex
 public class LibraryLoader {
     private static final String TAG = "LibraryLoader";
 

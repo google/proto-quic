@@ -7,6 +7,7 @@ from telemetry import story
 from telemetry.page import page as page_module
 
 
+WEBRTC_TEST_PAGES_URL = 'https://test.webrtc.org/manual/'
 WEBRTC_GITHUB_SAMPLES_URL = 'https://webrtc.github.io/samples/src/content/'
 MEDIARECORDER_GITHUB_URL = 'https://rawgit.com/cricdecyan/mediarecorder/master/'
 
@@ -153,6 +154,25 @@ class Page8(WebrtcPage):
       action_runner.Wait(10)
 
 
+class Page9(WebrtcPage):
+  """Why: Sets up several peerconnections in the same page."""
+
+  def __init__(self, page_set):
+    super(Page9, self).__init__(
+        url= WEBRTC_TEST_PAGES_URL + 'multiple-peerconnections/',
+        name='multiple_peerconnections',
+        page_set=page_set)
+
+  def RunPageInteractions(self, action_runner):
+    with action_runner.CreateInteraction('Action_Create_PeerConnection',
+                                         repeatable=False):
+      # Set the number of peer connections to create to 15.
+      action_runner.ExecuteJavaScript(
+          'document.getElementById("peer-connections-input").value=15')
+      action_runner.ClickElement('button[id="start-test-button"]')
+      action_runner.Wait(45)
+
+
 class WebrtcGetusermediaPageSet(story.StorySet):
   """WebRTC tests for local getUserMedia: video capture and playback."""
 
@@ -162,6 +182,17 @@ class WebrtcGetusermediaPageSet(story.StorySet):
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
     self.AddStory(Page1(self))
+
+
+class WebrtcStresstestPageSet(story.StorySet):
+  """WebRTC stress-testing with multiple peer connections."""
+
+  def __init__(self):
+    super(WebrtcStresstestPageSet, self).__init__(
+        archive_data_file='data/webrtc_stresstest_cases.json',
+        cloud_storage_bucket=story.PUBLIC_BUCKET)
+
+    self.AddStory(Page9(self))
 
 
 class WebrtcPeerconnectionPageSet(story.StorySet):

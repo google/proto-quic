@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_clock.h"
 

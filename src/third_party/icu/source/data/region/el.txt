@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/el.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 el{
     Countries{
         001{"Κόσμος"}
@@ -46,7 +40,6 @@ el{
         AI{"Ανγκουίλα"}
         AL{"Αλβανία"}
         AM{"Αρμενία"}
-        AN{"Ολλανδικές Αντίλλες"}
         AO{"Ανγκόλα"}
         AQ{"Ανταρκτική"}
         AR{"Αργεντινή"}
@@ -279,6 +272,7 @@ el{
         UA{"Ουκρανία"}
         UG{"Ουγκάντα"}
         UM{"Απομακρυσμένες Νησίδες ΗΠΑ"}
+        UN{"Ηνωμένα Έθνη"}
         US{"Ηνωμένες Πολιτείες"}
         UY{"Ουρουγουάη"}
         UZ{"Ουζμπεκιστάν"}
@@ -301,14 +295,16 @@ el{
     }
     Countries%short{
         GB{"ΗΒ"}
+        UN{"ΟΗΕ"}
         US{"ΗΠΑ"}
     }
     Countries%variant{
         CD{"Κονγκό"}
         CG{"Κονγκό (Δημοκρατία)"}
+        CZ{"Τσεχία"}
         FK{"Νήσοι Φόκλαντ (Νήσοι Μαλβίνας)"}
         MK{"Πρώην Γιουγκοσλαβική Δημοκρατία της Μακεδονίας (ΠΓΔΜ)"}
         TL{"Ανατολικό Τιμόρ"}
     }
-    Version{"2.1.19.94"}
+    Version{"2.1.28.79"}
 }

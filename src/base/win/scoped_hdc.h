@@ -7,6 +7,7 @@
 
 #include <windows.h>
 
+#include "base/debug/gdi_debug_util_win.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/win/scoped_handle.h"
@@ -28,7 +29,8 @@ class ScopedGetDC {
       // If GetDC(NULL) returns NULL, something really bad has happened, like
       // GDI handle exhaustion.  In this case Chrome is going to behave badly no
       // matter what, so we may as well just force a crash now.
-      CHECK(hdc_);
+      if (!hdc_)
+        base::debug::CollectGDIUsageAndDie();
     }
   }
 

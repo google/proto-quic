@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/or.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 or{
     Countries{
         001{"ବିଶ୍ବ"}
@@ -45,7 +39,6 @@ or{
         AI{"ଆଙ୍ଗୁଇଲ୍ଲା"}
         AL{"ଆଲବାନିଆ"}
         AM{"ଆର୍ମେନିଆ"}
-        AN{"ନେଦରଲ୍ୟାଣ୍ଡସ୍ ଆଣ୍ଟିଲିଜ୍"}
         AO{"ଆଙ୍ଗୋଲା"}
         AQ{"ଆର୍ଣ୍ଟକଟିକା"}
         AR{"ଆର୍ଜେଣ୍ଟିନା"}
@@ -288,5 +281,5 @@ or{
         ZW{"ଜିମ୍ବାୱେ"}
         ZZ{"ଅଜଣା କିମ୍ବା ଅବୈଧ ପ୍ରଦେଶ"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.78"}
 }

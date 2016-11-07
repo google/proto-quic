@@ -48,7 +48,6 @@
 #endif
 #elif defined(_WIN32)
 #define OS_WIN 1
-#define TOOLKIT_VIEWS 1
 #elif defined(__FreeBSD__)
 #define OS_FREEBSD 1
 #elif defined(__NetBSD__)

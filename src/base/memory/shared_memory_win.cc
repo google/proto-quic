@@ -131,13 +131,6 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
 
 namespace base {
 
-SharedMemoryCreateOptions::SharedMemoryCreateOptions()
-    : name_deprecated(nullptr),
-      open_existing_deprecated(false),
-      size(0),
-      executable(false),
-      share_read_only(false) {}
-
 SharedMemory::SharedMemory()
     : external_section_(false),
       mapped_size_(0),

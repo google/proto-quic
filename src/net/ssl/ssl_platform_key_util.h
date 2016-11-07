@@ -8,12 +8,9 @@
 #include <stddef.h>
 
 #include "base/memory/ref_counted.h"
+#include "base/single_thread_task_runner.h"
 #include "net/base/net_export.h"
 #include "net/ssl/ssl_private_key.h"
-
-namespace base {
-class SingleThreadTaskRunner;
-}
 
 namespace net {
 

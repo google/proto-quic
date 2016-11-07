@@ -24,8 +24,6 @@
 
 namespace base {
 
-class Pickle;
-
 // SharedMemoryHandle is a platform specific type which represents
 // the underlying OS handle to a shared memory segment.
 #if defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))

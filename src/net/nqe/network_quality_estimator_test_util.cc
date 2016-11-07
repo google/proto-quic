@@ -46,9 +46,9 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
   // Set up the embedded test server.
   embedded_test_server_.ServeFilesFromDirectory(
       base::FilePath(FILE_PATH_LITERAL("net/data/url_request_unittest")));
-  EXPECT_TRUE(embedded_test_server_.Start());
   embedded_test_server_.RegisterRequestHandler(base::Bind(
       &TestNetworkQualityEstimator::HandleRequest, base::Unretained(this)));
+  EXPECT_TRUE(embedded_test_server_.Start());
 }
 
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(

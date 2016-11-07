@@ -58,6 +58,6 @@ struct QuartcFactoryConfig {
 NET_EXPORT_PRIVATE std::unique_ptr<QuartcFactoryInterface> CreateQuartcFactory(
     const QuartcFactoryConfig& factory_config);
 
-}  // namepace net
+}  // namespace net
 
 #endif  // NET_QUIC_QUARTC_QUARTC_FACTORY_INTERFACE_H_

@@ -1,12 +1,11 @@
-﻿# ***************************************************************************
-# *
-# *  Copyright (C) 2004-2015, International Business Machines
-# *  Corporation; Unicode, Inc.; and others.  All Rights Reserved.
-# *
-# ***************************************************************************
-# File: Kannada_InterIndic.txt
-# Generated from CLDR 
+﻿# © 2016 and later: Unicode, Inc. and others.
+# License & terms of use: http://www.unicode.org/copyright.html#License
 #
+# File: Kannada_InterIndic.txt
+# Generated from CLDR
+#
+
+# Kannada-InterIndic
 \u0CC6ೕ→\uE047;        # VOWEL SIGN EE
 \u0CC6\u0CCDೖ→\uE048\uE04D;        # VOWEL SIGN AI
 \u0CC6ೖ→\uE048;        # VOWEL SIGN AI
@@ -90,3 +89,5 @@
 ೭→\uE06D;              # DIGIT SEVEN
 ೮→\uE06E;              # DIGIT EIGHT
 ೯→\uE06F;              # DIGIT NINE
+# eof
+

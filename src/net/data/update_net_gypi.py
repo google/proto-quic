@@ -19,6 +19,7 @@ DATA_SOURCES_PATH_FOR_VARIABLES = {
     "net/data/cert_issuer_source_aia_unittest",
     "net/data/cert_issuer_source_static_unittest",
     "net/data/certificate_policies_unittest",
+    "net/data/filter_unittests",
     "net/data/name_constraints_unittest",
     "net/data/parse_certificate_unittest",
     "net/data/parse_ocsp_unittest",

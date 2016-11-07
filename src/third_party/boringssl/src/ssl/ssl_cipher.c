@@ -738,9 +738,6 @@ static const CIPHER_ALIAS kCipherAliases[] = {
     {"TLSv1", ~SSL_kCECPQ1, ~0u, ~SSL_eNULL, ~0u, SSL3_VERSION},
     {"TLSv1.2", ~SSL_kCECPQ1, ~0u, ~SSL_eNULL, ~0u, TLS1_2_VERSION},
 
-    /* AEAD-only ciphers for TLS 1.3. */
-    {"GENERIC", SSL_kGENERIC, SSL_aGENERIC, ~0u, ~0u, 0},
-
     /* Legacy strength classes. */
     {"HIGH", ~SSL_kCECPQ1, ~0u, ~SSL_eNULL, ~0u, 0},
     {"FIPS", ~SSL_kCECPQ1, ~0u, ~SSL_eNULL, ~0u, 0},
@@ -759,10 +756,6 @@ static int ssl_cipher_id_cmp(const void *in_a, const void *in_b) {
   } else {
     return 0;
   }
-}
-
-static int ssl_cipher_ptr_id_cmp(const SSL_CIPHER **a, const SSL_CIPHER **b) {
-  return ssl_cipher_id_cmp(*a, *b);
 }
 
 const SSL_CIPHER *SSL_get_cipher_by_value(uint16_t value) {
@@ -943,7 +936,9 @@ static void ssl_cipher_collect_ciphers(const SSL_PROTOCOL_METHOD *ssl_method,
   size_t co_list_num = 0;
   for (size_t i = 0; i < kCiphersLen; i++) {
     const SSL_CIPHER *cipher = &kCiphers[i];
-    if (ssl_method->supports_cipher(cipher)) {
+    if (ssl_method->supports_cipher(cipher) &&
+        /* TLS 1.3 ciphers do not participate in this mechanism. */
+        cipher->algorithm_mkey != SSL_kGENERIC) {
       co_list[co_list_num].cipher = cipher;
       co_list[co_list_num].next = NULL;
       co_list[co_list_num].prev = NULL;
@@ -1357,11 +1352,8 @@ static int ssl_cipher_process_rulestr(const SSL_PROTOCOL_METHOD *ssl_method,
 STACK_OF(SSL_CIPHER) *
 ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
                        struct ssl_cipher_preference_list_st **out_cipher_list,
-                       STACK_OF(SSL_CIPHER) **out_cipher_list_by_id,
                        const char *rule_str) {
-  int ok;
-  STACK_OF(SSL_CIPHER) *cipherstack = NULL, *tmp_cipher_list = NULL;
-  const char *rule_p;
+  STACK_OF(SSL_CIPHER) *cipherstack = NULL;
   CIPHER_ORDER *co_list = NULL, *head = NULL, *tail = NULL, *curr;
   uint8_t *in_group_flags = NULL;
   unsigned int num_in_group_flags = 0;
@@ -1386,11 +1378,8 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   /* Now arrange all ciphers by preference:
    * TODO(davidben): Compute this order once and copy it. */
 
-  /* Everything else being equal, prefer TLS 1.3 ciphers then ECDHE_ECDSA then
-   * ECDHE_RSA over other key exchange mechanisms */
-
-  ssl_cipher_apply_rule(0, SSL_kGENERIC, SSL_aGENERIC, ~0u, ~0u, 0, CIPHER_ADD,
-                        -1, 0, &head, &tail);
+  /* Everything else being equal, prefer ECDHE_ECDSA and ECDHE_RSA over other
+   * key exchange mechanisms */
   ssl_cipher_apply_rule(0, SSL_kECDHE, SSL_aECDSA, ~0u, ~0u, 0, CIPHER_ADD, -1,
                         0, &head, &tail);
   ssl_cipher_apply_rule(0, SSL_kECDHE, ~0u, ~0u, ~0u, 0, CIPHER_ADD, -1, 0,
@@ -1445,22 +1434,20 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
 
   /* If the rule_string begins with DEFAULT, apply the default rule before
    * using the (possibly available) additional rules. */
-  ok = 1;
-  rule_p = rule_str;
+  const char *rule_p = rule_str;
   if (strncmp(rule_str, "DEFAULT", 7) == 0) {
-    ok = ssl_cipher_process_rulestr(ssl_method, SSL_DEFAULT_CIPHER_LIST, &head,
-                                    &tail);
+    if (!ssl_cipher_process_rulestr(ssl_method, SSL_DEFAULT_CIPHER_LIST, &head,
+                                    &tail)) {
+      goto err;
+    }
     rule_p += 7;
     if (*rule_p == ':') {
       rule_p++;
     }
   }
 
-  if (ok && strlen(rule_p) > 0) {
-    ok = ssl_cipher_process_rulestr(ssl_method, rule_p, &head, &tail);
-  }
-
-  if (!ok) {
+  if (*rule_p != '\0' &&
+      !ssl_cipher_process_rulestr(ssl_method, rule_p, &head, &tail)) {
     goto err;
   }
 
@@ -1489,10 +1476,6 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   OPENSSL_free(co_list); /* Not needed any longer */
   co_list = NULL;
 
-  tmp_cipher_list = sk_SSL_CIPHER_dup(cipherstack);
-  if (tmp_cipher_list == NULL) {
-    goto err;
-  }
   pref_list = OPENSSL_malloc(sizeof(struct ssl_cipher_preference_list_st));
   if (!pref_list) {
     goto err;
@@ -1511,26 +1494,12 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   *out_cipher_list = pref_list;
   pref_list = NULL;
 
-  if (out_cipher_list_by_id != NULL) {
-    sk_SSL_CIPHER_free(*out_cipher_list_by_id);
-    *out_cipher_list_by_id = tmp_cipher_list;
-    tmp_cipher_list = NULL;
-    (void) sk_SSL_CIPHER_set_cmp_func(*out_cipher_list_by_id,
-                                      ssl_cipher_ptr_id_cmp);
-
-    sk_SSL_CIPHER_sort(*out_cipher_list_by_id);
-  } else {
-    sk_SSL_CIPHER_free(tmp_cipher_list);
-    tmp_cipher_list = NULL;
-  }
-
   return cipherstack;
 
 err:
   OPENSSL_free(co_list);
   OPENSSL_free(in_group_flags);
   sk_SSL_CIPHER_free(cipherstack);
-  sk_SSL_CIPHER_free(tmp_cipher_list);
   if (pref_list) {
     OPENSSL_free(pref_list->in_group_flags);
   }

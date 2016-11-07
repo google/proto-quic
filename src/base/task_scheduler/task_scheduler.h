@@ -11,6 +11,8 @@
 #include "base/base_export.h"
 #include "base/callback_forward.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
+#include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
 
@@ -43,11 +45,21 @@ class BASE_EXPORT TaskScheduler {
                                   const TaskTraits& traits,
                                   const Closure& task) = 0;
 
-  // Returns a TaskRunner whose PostTask invocations will result in scheduling
-  // Tasks with |traits| which will be executed according to |execution_mode|.
+  // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
+  // using |traits|. Tasks may run in any order and in parallel.
   virtual scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits,
-      ExecutionMode execution_mode) = 0;
+      const TaskTraits& traits) = 0;
+
+  // Returns a SequencedTaskRunner whose PostTask invocations result in
+  // scheduling tasks using |traits|. Tasks run one at a time in posting order.
+  virtual scoped_refptr<SequencedTaskRunner>
+  CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits) = 0;
+
+  // Returns a SingleThreadTaskRunner whose PostTask invocations result in
+  // scheduling tasks using |traits|. Tasks run on a single thread in posting
+  // order.
+  virtual scoped_refptr<SingleThreadTaskRunner>
+  CreateSingleThreadTaskRunnerWithTraits(const TaskTraits& traits) = 0;
 
   // Returns a vector of all histograms available in this task scheduler.
   virtual std::vector<const HistogramBase*> GetHistograms() const = 0;

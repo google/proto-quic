@@ -31,11 +31,12 @@ class QuicCryptoServerStream::ProcessClientHelloCallback
       const scoped_refptr<ValidateClientHelloResultCallback::Result>& result)
       : stream_(stream), result_(result) {}
 
-  void Run(
-      QuicErrorCode error,
-      const string& error_details,
-      std::unique_ptr<CryptoHandshakeMessage> message,
-      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+  void Run(QuicErrorCode error,
+           const string& error_details,
+           std::unique_ptr<CryptoHandshakeMessage> message,
+           std::unique_ptr<DiversificationNonce> diversification_nonce,
+           std::unique_ptr<net::ProofSource::Details> proof_source_details)
+      override {
     if (stream_ == nullptr) {
       return;
     }
@@ -49,7 +50,7 @@ class QuicCryptoServerStream::ProcessClientHelloCallback
 
     stream_->FinishProcessingHandshakeMessageAfterProcessClientHello(
         *result_, error, error_details, std::move(message),
-        std::move(diversification_nonce));
+        std::move(diversification_nonce), std::move(proof_source_details));
   }
 
   void Cancel() { stream_ = nullptr; }
@@ -190,7 +191,8 @@ void QuicCryptoServerStream::
         QuicErrorCode error,
         const string& error_details,
         std::unique_ptr<CryptoHandshakeMessage> reply,
-        std::unique_ptr<DiversificationNonce> diversification_nonce) {
+        std::unique_ptr<DiversificationNonce> diversification_nonce,
+        std::unique_ptr<ProofSource::Details> proof_source_details) {
   const CryptoHandshakeMessage& message = result.client_hello;
   if (error != QUIC_NO_ERROR) {
     CloseConnectionWithDetails(error, error_details);
@@ -290,6 +292,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
     std::unique_ptr<SendServerConfigUpdateCallback> cb(
         new SendServerConfigUpdateCallback(this));
     send_server_config_update_cb_ = cb.get();
+
     crypto_config_->BuildServerConfigUpdateMessage(
         session()->connection()->version(), chlo_hash_,
         previous_source_address_tokens_,
@@ -297,7 +300,11 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
         session()->connection()->peer_address().address(),
         session()->connection()->clock(),
         session()->connection()->random_generator(), compressed_certs_cache_,
-        *crypto_negotiated_params_, cached_network_params, std::move(cb));
+        *crypto_negotiated_params_, cached_network_params,
+        (session()->config()->HasReceivedConnectionOptions()
+             ? session()->config()->ReceivedConnectionOptions()
+             : QuicTagVector()),
+        std::move(cb));
     return;
   }
 
@@ -310,6 +317,9 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
           session()->connection()->clock(),
           session()->connection()->random_generator(), compressed_certs_cache_,
           *crypto_negotiated_params_, cached_network_params,
+          (session()->config()->HasReceivedConnectionOptions()
+               ? session()->config()->ReceivedConnectionOptions()
+               : QuicTagVector()),
           &server_config_update_message)) {
     DVLOG(1) << "Server: Failed to build server config update (SCUP)!";
     return;
@@ -438,7 +448,8 @@ void QuicCryptoServerStream::ProcessClientHello(
   string error_details;
   if (!helper_->CanAcceptClientHello(
           message, session()->connection()->self_address(), &error_details)) {
-    done_cb->Run(QUIC_HANDSHAKE_FAILED, error_details, nullptr, nullptr);
+    done_cb->Run(QUIC_HANDSHAKE_FAILED, error_details, nullptr, nullptr,
+                 nullptr);
     return;
   }
 

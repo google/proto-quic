@@ -89,8 +89,10 @@ class BASE_EXPORT Value {
   virtual bool GetAsString(string16* out_value) const;
   virtual bool GetAsString(const StringValue** out_value) const;
   virtual bool GetAsBinary(const BinaryValue** out_value) const;
+  // ListValue::From is the equivalent for std::unique_ptr conversions.
   virtual bool GetAsList(ListValue** out_value);
   virtual bool GetAsList(const ListValue** out_value) const;
+  // DictionaryValue::From is the equivalent for std::unique_ptr conversions.
   virtual bool GetAsDictionary(DictionaryValue** out_value);
   virtual bool GetAsDictionary(const DictionaryValue** out_value) const;
   // Note: Do not add more types. See the file-level comment above for why.

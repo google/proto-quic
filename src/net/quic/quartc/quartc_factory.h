@@ -7,6 +7,7 @@
 
 #include "base/at_exit.h"
 #include "base/message_loop/message_loop.h"
+#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_connection.h"
@@ -62,6 +63,6 @@ class NET_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
   std::unique_ptr<base::AtExitManager> at_exit_manager_;
 };
 
-}  // namepapce net
+}  // namespace net
 
 #endif  // NET_QUIC_QUARTC_QUARTC_FACTORY_H_

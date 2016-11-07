@@ -121,11 +121,11 @@ class NET_EXPORT_PRIVATE ProcessClientHelloResultCallback {
  public:
   ProcessClientHelloResultCallback();
   virtual ~ProcessClientHelloResultCallback();
-  virtual void Run(
-      QuicErrorCode error,
-      const std::string& error_details,
-      std::unique_ptr<CryptoHandshakeMessage> message,
-      std::unique_ptr<DiversificationNonce> diversification_nonce) = 0;
+  virtual void Run(QuicErrorCode error,
+                   const std::string& error_details,
+                   std::unique_ptr<CryptoHandshakeMessage> message,
+                   std::unique_ptr<DiversificationNonce> diversification_nonce,
+                   std::unique_ptr<ProofSource::Details> details) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ProcessClientHelloResultCallback);
@@ -352,6 +352,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicCompressedCertsCache* compressed_certs_cache,
       const QuicCryptoNegotiatedParameters& params,
       const CachedNetworkParameters* cached_network_params,
+      const QuicTagVector& connection_options,
       CryptoHandshakeMessage* out) const;
 
   // BuildServerConfigUpdateMessage invokes |cb| with a SCUP message containing
@@ -375,6 +376,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicCompressedCertsCache* compressed_certs_cache,
       const QuicCryptoNegotiatedParameters& params,
       const CachedNetworkParameters* cached_network_params,
+      const QuicTagVector& connection_options,
       std::unique_ptr<BuildServerConfigUpdateMessageResultCallback> cb) const;
 
   // SetEphemeralKeySource installs an object that can cache ephemeral keys for
@@ -586,6 +588,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // Portion of ProcessClientHello which executes after GetProof.
   void ProcessClientHelloAfterGetProof(
       bool found_error,
+      std::unique_ptr<ProofSource::Details> proof_source_details,
       const ValidateClientHelloResultCallback::Result& validate_chlo_result,
       bool reject_only,
       QuicConnectionId connection_id,

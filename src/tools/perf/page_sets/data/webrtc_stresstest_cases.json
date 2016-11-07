@@ -1,0 +1,8 @@
+{
+    "archives": {
+        "webrtc_stresstest_cases_000.wpr": [
+            "multiple_peerconnections"
+        ]
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+}

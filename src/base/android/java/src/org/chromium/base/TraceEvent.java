@@ -12,6 +12,7 @@ import android.util.Printer;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.annotations.MainDex;
 /**
  * Java mirror of Chrome trace event API. See base/trace_event/trace_event.h. Unlike the native
  * version, Java does not have stack objects, so a TRACE_EVENT() which does both TRACE_EVENT_BEGIN()
@@ -20,6 +21,7 @@ import org.chromium.base.annotations.JNINamespace;
  * @see EarlyTraceEvent for details.
  */
 @JNINamespace("base::android")
+@MainDex
 public class TraceEvent {
 
     private static volatile boolean sEnabled = false;

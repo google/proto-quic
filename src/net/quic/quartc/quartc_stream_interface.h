@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "net/base/net_export.h"
+
 namespace net {
 
 // Sends and receives data with a particular QUIC stream ID, reliably and
@@ -29,10 +31,11 @@ class NET_EXPORT_PRIVATE QuartcStreamInterface {
   virtual bool fin_sent() = 0;
 
   struct WriteParameters {
+    WriteParameters() : fin(false) {}
     // |fin| is set to be true when there is no more data need to be send
     // through a particular stream. The receiving side will used it to determine
     // if the sender finish sending data.
-    bool fin = false;
+    bool fin;
   };
 
   // Sends data reliably and in-order, buffering if necessary until Close() is

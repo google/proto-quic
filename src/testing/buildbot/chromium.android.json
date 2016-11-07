@@ -2872,26 +2872,26 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk",
-        "timeout_scale": 2
+        "timeout_scale": 4
       },
       {
         "override_compile_targets": [
           "blimp_test_apk"
         ],
         "test": "blimp_test_apk",
-        "timeout_scale": 2
+        "timeout_scale": 4
       },
       {
         "test": "chrome_public_test_apk",
-        "timeout_scale": 2
+        "timeout_scale": 4
       },
       {
         "test": "chrome_sync_shell_test_apk",
-        "timeout_scale": 2
+        "timeout_scale": 4
       },
       {
         "test": "content_shell_test_apk",
-        "timeout_scale": 2
+        "timeout_scale": 4
       }
     ]
   },

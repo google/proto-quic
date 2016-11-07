@@ -1,8 +1,8 @@
 diff --git a/source/data/Makefile.in b/source/data/Makefile.in
-index b1b3b36..88e3c35 100644
+index 31e7e1c..25eca2b 100644
 --- a/source/data/Makefile.in
 +++ b/source/data/Makefile.in
-@@ -246,7 +246,8 @@ package390: $(OUTTMPDIR)/icudata390.lst $(PKGDATA_LIST) ./icupkg.inc packagedata
+@@ -250,7 +250,8 @@ package390: $(OUTTMPDIR)/icudata390.lst $(PKGDATA_LIST) ./icupkg.inc packagedata
  #  2010-dec Removed pnames.icu.
  # These are now hardcoded in ICU4C and only loaded in ICU4J.
  #
@@ -12,7 +12,7 @@ index b1b3b36..88e3c35 100644
  DAT_FILES=$(DAT_FILES_SHORT:%=$(BUILDDIR)/%)
  
  ## BRK files
-@@ -277,7 +278,8 @@ CFU_FILES=$(BUILDDIR)/$(CFU_FILES_SHORT)
+@@ -281,7 +282,8 @@ CFU_FILES=$(BUILDDIR)/$(CFU_FILES_SHORT)
  -include $(UCMSRCDIR)/ucmfiles.mk
  -include $(UCMSRCDIR)/ucmebcdic.mk
  -include $(UCMSRCDIR)/ucmlocal.mk
@@ -22,7 +22,7 @@ index b1b3b36..88e3c35 100644
  UCM_FILES = $(ALL_UCM_SOURCE:%=$(SRCDATADIR)/%)
  CNV_FILES = $(ALL_UCM_SOURCE:%.ucm=$(BUILDDIR)/%.cnv)
  CNV_FILES_SHORT = $(ALL_UCM_SOURCE:%.ucm=%.cnv)
-@@ -351,7 +353,9 @@ TRANSLIT_SRC= $(TRANSLIT_SOURCE) $(TRANSLIT_ALIAS_SOURCE) $(TRANSLIT_SOURCE_LOCA
+@@ -355,7 +357,9 @@ TRANSLIT_SRC= $(TRANSLIT_SOURCE) $(TRANSLIT_ALIAS_SOURCE) $(TRANSLIT_SOURCE_LOCA
  TRANSLIT_SRC_FILES = $(TRANSLIT_SRC:%=$(TRANSLITSRCDIR)/%)
  INSTALLED_TRANSLIT_FILES = $(TRANSLIT_SOURCE:%.txt=%)  $(TRANSLIT_SOURCE_LOCAL:%.txt=%)
  endif
@@ -33,7 +33,7 @@ index b1b3b36..88e3c35 100644
  
  ## MISC files
  -include $(MISCSRCDIR)/miscfiles.mk
-@@ -529,7 +533,14 @@ $(BUILDDIR)/%.icu: $(SRCDATADIR)/in/%.icu
+@@ -533,7 +537,14 @@ $(BUILDDIR)/%.icu: $(SRCDATADIR)/in/%.icu
  $(BUILDDIR)/%.nrm: $(SRCDATADIR)/in/%.nrm
  	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $< $@
  

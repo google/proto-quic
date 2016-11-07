@@ -1943,6 +1943,7 @@ test("base_unittests") {
     "task_scheduler/task_unittest.cc",
     "task_scheduler/test_task_factory.cc",
     "task_scheduler/test_task_factory.h",
+    "task_scheduler/test_utils.h",
     "template_util_unittest.cc",
     "test/histogram_tester_unittest.cc",
     "test/test_pending_task_unittest.cc",
@@ -2288,6 +2289,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/LocaleUtils.java",
       "android/java/src/org/chromium/base/Log.java",
       "android/java/src/org/chromium/base/MemoryPressureListener.java",
+      "android/java/src/org/chromium/base/NonThreadSafe.java",
       "android/java/src/org/chromium/base/ObserverList.java",
       "android/java/src/org/chromium/base/PackageUtils.java",
       "android/java/src/org/chromium/base/PathService.java",
@@ -2409,6 +2411,7 @@ if (is_android) {
     java_files = [
       "android/junit/src/org/chromium/base/BaseChromiumApplicationTest.java",
       "android/junit/src/org/chromium/base/LogTest.java",
+      "android/junit/src/org/chromium/base/NonThreadSafeTest.java",
       "android/junit/src/org/chromium/base/PromiseTest.java",
       "android/junit/src/org/chromium/base/LocaleUtilsTest.java",
       "test/android/junit/src/org/chromium/base/test/util/DisableIfTest.java",

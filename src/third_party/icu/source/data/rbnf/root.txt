@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/rbnf/root.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 /**
  * ICU <specials> source: <path>/xml/rbnf/root.xml
  */
@@ -268,7 +262,7 @@ root{
             "2000000000000: <<\u137C>%%ethiopic-p2>;",
             "10000000000000000: \u137C>%%ethiopic-p3>;",
             "20000000000000000: <<\u137C>%%ethiopic-p3>;",
-            "1000000000000000000: =#,###0=;",
+            "1000000000000000000: =#,##0=;",
             "%georgian:",
             "-x: \u2212>>;",
             "x.x: =#,##0.00=;",
@@ -651,7 +645,8 @@ root{
         SpelloutRules{
             "%spellout-numbering-year:",
             "-x: \u2212>>;",
-            "0: =#,###0.#=;",
+            "x.x: =0.0=;",
+            "0: =0=;",
             "%spellout-numbering:",
             "-x: \u2212>>;",
             "0: =#,##0.#=;",
@@ -663,5 +658,5 @@ root{
             "0: =#,##0.#=.;",
         }
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.22"}
 }

@@ -20,11 +20,6 @@
         # We don't use ICU plugins and dyload is only necessary for them.
         # NaCl-related builds also fail looking for dlfcn.h when it's enabled.
         'U_ENABLE_DYLOAD=0',
-        # With exception disabled, MSVC emits C4577 warning on coming across
-        # 'noexcept'. See http://bugs.icu-project.org/trac/ticket/12406
-        # TODO(jshin): Remove this when updating to a newer version with this
-        # fixed.
-        'U_NOEXCEPT=',
       ],
     },
     'defines': [
@@ -481,9 +476,8 @@
             'headers_root_path': 'source/i18n',
             'header_filenames': [
               # This list can easily be updated using the command below:
-              # find source/i18n/unicode -iname '*.h' \
-              # -printf "              '%p',\n" | \
-              # sed -e 's|source/i18n/||' | sort -u
+              # ls source/i18n/unicode/*h | sort | \
+              # sed "s/^.*i18n\/\(.*\)$/              '\1',/"
               'unicode/alphaindex.h',
               'unicode/basictz.h',
               'unicode/calendar.h',
@@ -503,13 +497,11 @@
               'unicode/dtptngen.h',
               'unicode/dtrule.h',
               'unicode/fieldpos.h',
-              'unicode/filteredbrk.h',
               'unicode/fmtable.h',
               'unicode/format.h',
               'unicode/fpositer.h',
               'unicode/gender.h',
               'unicode/gregocal.h',
-              'unicode/locdspnm.h',
               'unicode/measfmt.h',
               'unicode/measunit.h',
               'unicode/measure.h',
@@ -523,7 +515,7 @@
               'unicode/regex.h',
               'unicode/region.h',
               'unicode/reldatefmt.h',
-              'unicode/scientificformathelper.h',
+              'unicode/scientificnumberformatter.h',
               'unicode/search.h',
               'unicode/selfmt.h',
               'unicode/simpletz.h',
@@ -544,14 +536,12 @@
               'unicode/ucoleitr.h',
               'unicode/ucol.h',
               'unicode/ucsdet.h',
-              'unicode/ucurr.h',
               'unicode/udateintervalformat.h',
               'unicode/udat.h',
               'unicode/udatpg.h',
-              'unicode/udisplaycontext.h',
+              'unicode/ufieldpositer.h',
               'unicode/uformattable.h',
               'unicode/ugender.h',
-              'unicode/uldnames.h',
               'unicode/ulocdata.h',
               'unicode/umsg.h',
               'unicode/unirepl.h',
@@ -560,6 +550,7 @@
               'unicode/upluralrules.h',
               'unicode/uregex.h',
               'unicode/uregion.h',
+              'unicode/ureldatefmt.h',
               'unicode/usearch.h',
               'unicode/uspoof.h',
               'unicode/utmscale.h',
@@ -581,9 +572,8 @@
             'headers_root_path': 'source/common',
             'header_filenames': [
               # This list can easily be updated using the command below:
-              # find source/common/unicode -iname '*.h' \
-              # -printf "              '%p',\n" | \
-              # sed -e 's|source/common/||' | sort -u
+              # ls source/common/unicode/*h | sort | \
+              # sed "s/^.*common\/\(.*\)$/              '\1',/"
               'unicode/appendable.h',
               'unicode/brkiter.h',
               'unicode/bytestream.h',
@@ -596,11 +586,13 @@
               'unicode/dtintrv.h',
               'unicode/enumset.h',
               'unicode/errorcode.h',
+              'unicode/filteredbrk.h',
               'unicode/icudataver.h',
               'unicode/icuplug.h',
               'unicode/idna.h',
               'unicode/listformatter.h',
               'unicode/localpointer.h',
+              'unicode/locdspnm.h',
               'unicode/locid.h',
               'unicode/messagepattern.h',
               'unicode/normalizer2.h',
@@ -614,12 +606,14 @@
               'unicode/rep.h',
               'unicode/resbund.h',
               'unicode/schriter.h',
+              'unicode/simpleformatter.h',
               'unicode/std_string.h',
               'unicode/strenum.h',
               'unicode/stringpiece.h',
               'unicode/stringtriebuilder.h',
               'unicode/symtable.h',
               'unicode/ubidi.h',
+              'unicode/ubiditransform.h',
               'unicode/ubrk.h',
               'unicode/ucasemap.h',
               'unicode/ucat.h',
@@ -633,10 +627,14 @@
               'unicode/ucnv.h',
               'unicode/ucnvsel.h',
               'unicode/uconfig.h',
+              'unicode/ucurr.h',
               'unicode/udata.h',
+              'unicode/udisplaycontext.h',
               'unicode/uenum.h',
               'unicode/uidna.h',
               'unicode/uiter.h',
+              'unicode/uldnames.h',
+              'unicode/ulistformatter.h',
               'unicode/uloc.h',
               'unicode/umachine.h',
               'unicode/umisc.h',

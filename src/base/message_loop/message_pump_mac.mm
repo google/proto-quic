@@ -4,7 +4,6 @@
 
 #import "base/message_loop/message_pump_mac.h"
 
-#include <dlfcn.h>
 #import <Foundation/Foundation.h>
 
 #include <limits>
@@ -71,33 +70,6 @@ const CFTimeInterval kCFTimeIntervalMax =
 // initialized.  Only accessed from the main thread.
 bool g_not_using_cr_app = false;
 #endif
-
-// Call through to CFRunLoopTimerSetTolerance(), which is only available on
-// OS X 10.9.
-void SetTimerTolerance(CFRunLoopTimerRef timer, CFTimeInterval tolerance) {
-  typedef void (*CFRunLoopTimerSetTolerancePtr)(CFRunLoopTimerRef timer,
-      CFTimeInterval tolerance);
-
-  static CFRunLoopTimerSetTolerancePtr settimertolerance_function_ptr;
-
-  static dispatch_once_t get_timer_tolerance_function_ptr_once;
-  dispatch_once(&get_timer_tolerance_function_ptr_once, ^{
-      NSBundle* bundle =[NSBundle
-        bundleWithPath:@"/System/Library/Frameworks/CoreFoundation.framework"];
-      const char* path = [[bundle executablePath] fileSystemRepresentation];
-      CHECK(path);
-      void* library_handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
-      CHECK(library_handle) << dlerror();
-      settimertolerance_function_ptr =
-          reinterpret_cast<CFRunLoopTimerSetTolerancePtr>(
-              dlsym(library_handle, "CFRunLoopTimerSetTolerance"));
-
-      dlclose(library_handle);
-  });
-
-  if (settimertolerance_function_ptr)
-    settimertolerance_function_ptr(timer, tolerance);
-}
 
 }  // namespace
 
@@ -273,9 +245,9 @@ void MessagePumpCFRunLoopBase::ScheduleDelayedWork(
   delayed_work_fire_time_ = CFAbsoluteTimeGetCurrent() + delta.InSecondsF();
   CFRunLoopTimerSetNextFireDate(delayed_work_timer_, delayed_work_fire_time_);
   if (timer_slack_ == TIMER_SLACK_MAXIMUM) {
-    SetTimerTolerance(delayed_work_timer_, delta.InSecondsF() * 0.5);
+    CFRunLoopTimerSetTolerance(delayed_work_timer_, delta.InSecondsF() * 0.5);
   } else {
-    SetTimerTolerance(delayed_work_timer_, 0);
+    CFRunLoopTimerSetTolerance(delayed_work_timer_, 0);
   }
 }
 

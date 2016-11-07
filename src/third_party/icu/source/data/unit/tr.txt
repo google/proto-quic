@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/tr.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 tr{
-    Version{"2.1.19.17"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -85,6 +79,7 @@ tr{
                 dnam{"kilometrekare"}
                 one{"{0} kilometrekare"}
                 other{"{0} kilometrekare"}
+                per{"{0}/kilometrekare"}
             }
             square-meter{
                 dnam{"metrekare"}
@@ -96,6 +91,7 @@ tr{
                 dnam{"mil kare"}
                 one{"{0} mil kare"}
                 other{"{0} mil kare"}
+                per{"{0}/mil kare"}
             }
             square-yard{
                 dnam{"yarda kare"}
@@ -105,6 +101,28 @@ tr{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"ayar"}
+                one{"{0} ayar"}
+                other{"{0} ayar"}
+            }
+            milligram-per-deciliter{
+                dnam{"miligram/desilitre"}
+                one{"{0} miligram/desilitre"}
+                other{"{0} miligram/desilitre"}
+            }
+            millimole-per-liter{
+                dnam{"milimol/litre"}
+                one{"{0} milimol/litre"}
+                other{"{0} milimol/litre"}
+            }
+            part-per-million{
+                dnam{"parça/milyon"}
+                one{"{0} parça/milyon"}
+                other{"{0} parça/milyon"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -121,6 +139,11 @@ tr{
                 dnam{"mil/galon"}
                 one{"{0} mil/galon"}
                 other{"{0} mil/galon"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mil/İng. galonu"}
+                one{"{0} mil/İng. galonu"}
+                other{"{0} mil/İng. galonu"}
             }
         }
         coordinate{
@@ -550,13 +573,6 @@ tr{
                 other{"{0} libre/inç kare"}
             }
         }
-        proportion{
-            karat{
-                dnam{"ayar"}
-                one{"{0} ayar"}
-                other{"{0} ayar"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"kilometre/saat"}
@@ -680,6 +696,12 @@ tr{
                 other{"{0} galon"}
                 per{"{0}/galon"}
             }
+            gallon-imperial{
+                dnam{"İng. galonu"}
+                one{"{0} İng. galonu"}
+                other{"{0} İng. galonu"}
+                per{"{0}/İng. galonu"}
+            }
             hectoliter{
                 dnam{"hektolitre"}
                 one{"{0} hektolitre"}
@@ -797,6 +819,12 @@ tr{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                one{"{0} ayar"}
+                other{"{0} ayar"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -1156,12 +1184,6 @@ tr{
                 other{"{0} lb/in²"}
             }
         }
-        proportion{
-            karat{
-                one{"{0} ayar"}
-                other{"{0} ayar"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/sa"}
@@ -1300,14 +1322,14 @@ tr{
         }
         angle{
             arc-minute{
-                dnam{"dakika"}
-                one{"{0} dk."}
-                other{"{0} dk."}
+                dnam{"açısal dk."}
+                one{"{0} açısal dk."}
+                other{"{0} açısal dk."}
             }
             arc-second{
-                dnam{"saniye"}
-                one{"{0} sn."}
-                other{"{0} sn."}
+                dnam{"açısal sn."}
+                one{"{0} açısal sn."}
+                other{"{0} açısal sn."}
             }
             degree{
                 dnam{"derece"}
@@ -1357,6 +1379,7 @@ tr{
                 dnam{"km²"}
                 one{"{0} km²"}
                 other{"{0} km²"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"m²"}
@@ -1368,6 +1391,7 @@ tr{
                 dnam{"mi²"}
                 one{"{0} mi²"}
                 other{"{0} mi²"}
+                per{"{0}/mi²"}
             }
             square-yard{
                 dnam{"yd²"}
@@ -1377,6 +1401,28 @@ tr{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"ayar"}
+                one{"{0} ayar"}
+                other{"{0} ayar"}
+            }
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                one{"{0} mg/dL"}
+                other{"{0} mg/dL"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/L"}
+                one{"{0} mmol/L"}
+                other{"{0} mmol/L"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -1393,6 +1439,11 @@ tr{
                 dnam{"mil/galon"}
                 one{"{0} mpg"}
                 other{"{0} mpg"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mil/İng. gal"}
+                one{"{0} mil/İng. gal"}
+                other{"{0} mil/İng. gal"}
             }
         }
         coordinate{
@@ -1822,13 +1873,6 @@ tr{
                 other{"{0} lb/in²"}
             }
         }
-        proportion{
-            karat{
-                dnam{"ayar"}
-                one{"{0} ayar"}
-                other{"{0} ayar"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/sa"}
@@ -1951,6 +1995,12 @@ tr{
                 one{"{0} galon"}
                 other{"{0} galon"}
                 per{"{0}/gal"}
+            }
+            gallon-imperial{
+                dnam{"İng. gal"}
+                one{"{0} İng. gal"}
+                other{"{0} İng. gal"}
+                per{"{0}/İng. gal"}
             }
             hectoliter{
                 dnam{"hl"}

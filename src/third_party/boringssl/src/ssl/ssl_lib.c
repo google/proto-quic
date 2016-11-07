@@ -276,7 +276,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
   }
 
   ssl_create_cipher_list(ret->method, &ret->cipher_list,
-                         &ret->cipher_list_by_id, SSL_DEFAULT_CIPHER_LIST);
+                         SSL_DEFAULT_CIPHER_LIST);
   if (ret->cipher_list == NULL ||
       sk_SSL_CIPHER_num(ret->cipher_list->ciphers) <= 0) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_LIBRARY_HAS_NO_CIPHERS);
@@ -348,7 +348,6 @@ void SSL_CTX_free(SSL_CTX *ctx) {
   lh_SSL_SESSION_free(ctx->sessions);
   X509_STORE_free(ctx->cert_store);
   ssl_cipher_preference_list_free(ctx->cipher_list);
-  sk_SSL_CIPHER_free(ctx->cipher_list_by_id);
   ssl_cipher_preference_list_free(ctx->cipher_list_tls10);
   ssl_cipher_preference_list_free(ctx->cipher_list_tls11);
   ssl_cert_free(ctx->cert);
@@ -500,7 +499,6 @@ void SSL_free(SSL *ssl) {
 
   /* add extra stuff */
   ssl_cipher_preference_list_free(ssl->cipher_list);
-  sk_SSL_CIPHER_free(ssl->cipher_list_by_id);
 
   SSL_SESSION_free(ssl->session);
 
@@ -1564,41 +1562,13 @@ STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
     return NULL;
   }
 
-  if (ssl->cipher_list != NULL) {
-    return ssl->cipher_list->ciphers;
-  }
-
-  if (ssl->version >= TLS1_1_VERSION && ssl->ctx->cipher_list_tls11 != NULL) {
-    return ssl->ctx->cipher_list_tls11->ciphers;
-  }
-
-  if (ssl->version >= TLS1_VERSION && ssl->ctx->cipher_list_tls10 != NULL) {
-    return ssl->ctx->cipher_list_tls10->ciphers;
-  }
-
-  if (ssl->ctx->cipher_list != NULL) {
-    return ssl->ctx->cipher_list->ciphers;
-  }
-
-  return NULL;
-}
-
-/* return a STACK of the ciphers available for the SSL and in order of
- * algorithm id */
-STACK_OF(SSL_CIPHER) *ssl_get_ciphers_by_id(SSL *ssl) {
-  if (ssl == NULL) {
+  const struct ssl_cipher_preference_list_st *prefs =
+      ssl_get_cipher_preferences(ssl);
+  if (prefs == NULL) {
     return NULL;
   }
 
-  if (ssl->cipher_list_by_id != NULL) {
-    return ssl->cipher_list_by_id;
-  }
-
-  if (ssl->ctx->cipher_list_by_id != NULL) {
-    return ssl->ctx->cipher_list_by_id;
-  }
-
-  return NULL;
+  return prefs->ciphers;
 }
 
 const char *SSL_get_cipher_list(const SSL *ssl, int n) {
@@ -1623,8 +1593,8 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
 }
 
 int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list = ssl_create_cipher_list(
-      ctx->method, &ctx->cipher_list, &ctx->cipher_list_by_id, str);
+  STACK_OF(SSL_CIPHER) *cipher_list =
+      ssl_create_cipher_list(ctx->method, &ctx->cipher_list, str);
   if (cipher_list == NULL) {
     return 0;
   }
@@ -1639,8 +1609,8 @@ int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str) {
 }
 
 int SSL_CTX_set_cipher_list_tls10(SSL_CTX *ctx, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list = ssl_create_cipher_list(
-      ctx->method, &ctx->cipher_list_tls10, NULL, str);
+  STACK_OF(SSL_CIPHER) *cipher_list =
+      ssl_create_cipher_list(ctx->method, &ctx->cipher_list_tls10, str);
   if (cipher_list == NULL) {
     return 0;
   }
@@ -1655,8 +1625,8 @@ int SSL_CTX_set_cipher_list_tls10(SSL_CTX *ctx, const char *str) {
 }
 
 int SSL_CTX_set_cipher_list_tls11(SSL_CTX *ctx, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list = ssl_create_cipher_list(
-      ctx->method, &ctx->cipher_list_tls11, NULL, str);
+  STACK_OF(SSL_CIPHER) *cipher_list =
+      ssl_create_cipher_list(ctx->method, &ctx->cipher_list_tls11, str);
   if (cipher_list == NULL) {
     return 0;
   }
@@ -1671,8 +1641,8 @@ int SSL_CTX_set_cipher_list_tls11(SSL_CTX *ctx, const char *str) {
 }
 
 int SSL_set_cipher_list(SSL *ssl, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list = ssl_create_cipher_list(
-      ssl->ctx->method, &ssl->cipher_list, &ssl->cipher_list_by_id, str);
+  STACK_OF(SSL_CIPHER) *cipher_list =
+      ssl_create_cipher_list(ssl->ctx->method, &ssl->cipher_list, str);
   if (cipher_list == NULL) {
     return 0;
   }

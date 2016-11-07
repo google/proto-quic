@@ -158,8 +158,8 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   {
     std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-    for (size_t i = 0; i < arraysize(kCertStatusFlags); i++)
-      dict->SetInteger(kCertStatusFlags[i].name, kCertStatusFlags[i].constant);
+    for (const auto& flag : kCertStatusFlags)
+      dict->SetInteger(flag.name, flag.constant);
 
     constants_dict->Set("certStatusFlag", std::move(dict));
   }
@@ -169,8 +169,8 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   {
     std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-    for (size_t i = 0; i < arraysize(kLoadFlags); i++)
-      dict->SetInteger(kLoadFlags[i].name, kLoadFlags[i].constant);
+    for (const auto& flag : kLoadFlags)
+      dict->SetInteger(flag.name, flag.constant);
 
     constants_dict->Set("loadFlag", std::move(dict));
   }
@@ -180,8 +180,8 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   {
     std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-    for (size_t i = 0; i < arraysize(kLoadStateTable); i++)
-      dict->SetInteger(kLoadStateTable[i].name, kLoadStateTable[i].constant);
+    for (const auto& state : kLoadStateTable)
+      dict->SetInteger(state.name, state.constant);
 
     constants_dict->Set("loadState", std::move(dict));
   }
@@ -200,8 +200,8 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   {
     std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-    for (size_t i = 0; i < arraysize(kNetErrors); i++)
-      dict->SetInteger(ErrorToShortString(kNetErrors[i]), kNetErrors[i]);
+    for (const auto& error : kNetErrors)
+      dict->SetInteger(ErrorToShortString(error), error);
 
     constants_dict->Set("netError", std::move(dict));
   }
@@ -240,8 +240,8 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   {
     std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
 
-    for (size_t i = 0; i < arraysize(kSdchProblems); i++)
-      dict->SetInteger(kSdchProblems[i].name, kSdchProblems[i].constant);
+    for (const auto& problem : kSdchProblems)
+      dict->SetInteger(problem.name, problem.constant);
 
     constants_dict->Set("sdchProblemCode", std::move(dict));
   }

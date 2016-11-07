@@ -857,10 +857,15 @@ class MetaBuildWrapper(object):
             isolate_map[target].get('label_type') == 'group'):
         # For script targets, the build target is usually a group,
         # for which gn generates the runtime_deps next to the stamp file
-        # for the label, which lives under the obj/ directory.
+        # for the label, which lives under the obj/ directory, but it may
+        # also be an executable.
         label = isolate_map[target]['label']
         runtime_deps_targets = [
             'obj/%s.stamp.runtime_deps' % label.replace(':', '/')]
+        if self.platform == 'win32':
+          runtime_deps_targets += [ target + '.exe.runtime_deps' ]
+        else:
+          runtime_deps_targets += [ target + '.runtime_deps' ]
       elif self.platform == 'win32':
         runtime_deps_targets = [target + '.exe.runtime_deps']
       else:

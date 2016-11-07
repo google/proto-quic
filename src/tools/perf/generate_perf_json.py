@@ -383,7 +383,8 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
       # Always say this is true regardless of whether the tester
       # supports swarming. It doesn't hurt.
       'can_use_on_swarming_builders': True,
-      'expiration': 14400,
+      'expiration': 21600,
+      'hard_timeout': 7200,
       'dimension_sets': swarming_dimensions
     }
 
@@ -417,7 +418,7 @@ def generate_script_tests(master, tester_name, shard):
       script_tests.append(script)
   return script_tests
 
-def generate_telemetry_tests(tester_config, benchmarks):
+def generate_telemetry_tests(tester_config, benchmarks, benchmark_sharding_map):
   isolated_scripts = []
   # First determine the browser that you need based on the tester
   browser_name = ''
@@ -434,8 +435,14 @@ def generate_telemetry_tests(tester_config, benchmarks):
     # For each set of dimensions it is only triggered on one of the devices
     swarming_dimensions = []
     for dimension in tester_config['swarming_dimensions']:
-      device_affinity = bot_utils.GetDeviceAffinity(
-          len(dimension['device_ids']), benchmark.Name())
+      num_shards = len(dimension['device_ids'])
+      sharding_map = benchmark_sharding_map.get(str(num_shards), None)
+      if not sharding_map:
+        raise Exception('Invalid number of shards, generate new sharding map')
+      device_affinity = sharding_map.get(benchmark.Name(), None)
+      if device_affinity is None:
+        raise Exception('Device affinity for benchmark %s not found'
+          % benchmark.Name())
 
       device_id = dimension['device_ids'][device_affinity]
       # Id is unique within the swarming pool so it is the only needed
@@ -500,16 +507,73 @@ def current_benchmarks(use_whitelist):
   return sorted(all_benchmarks, key=lambda b: b.Name())
 
 
+# Returns a sorted list of (benchmark, avg_runtime) pairs for every
+# benchmark in the all_benchmarks list where avg_runtime is in seconds.  Also
+# returns a list of benchmarks whose run time have not been seen before
+def get_sorted_benchmark_list_by_time(all_benchmarks):
+  runtime_list = []
+  benchmark_avgs = {}
+  new_benchmarks = []
+  # Load in the avg times as calculated on Nov 1st, 2016
+  with open('desktop_benchmark_avg_times.json') as f:
+    benchmark_avgs = json.load(f)
+
+  for benchmark in all_benchmarks:
+    benchmark_avg_time = benchmark_avgs.get(benchmark.Name(), None)
+    if benchmark_avg_time is None:
+      # Assume that this is a new benchmark that was added after 11/1/16 when
+      # we generated the benchmarks. Use the old affinity algorith after
+      # we have given the rest the same distribution, add it to the
+      # new benchmarks list.
+      print ('Warning: Benchmark %s was not seen in times generated on Nov1 '
+        '2016, defaulting to old device affinity algorithm' % benchmark.Name())
+      new_benchmarks.append(benchmark)
+    else:
+      # Need to multiple the seconds by 2 since we will be generating two tests
+      # for each benchmark to be run on the same shard for the reference build
+      runtime_list.append((benchmark, benchmark_avg_time * 2.0))
+
+  # Return a reverse sorted list by runtime
+  runtime_list.sort(key=lambda tup: tup[1], reverse=True)
+  return runtime_list, new_benchmarks
+
+
+# Returns a map of benchmark name to shard it is on.
+def shard_benchmarks(num_shards, all_benchmarks):
+  benchmark_to_shard_dict = {}
+  shard_execution_times = [0] * num_shards
+  sorted_benchmark_list, new_benchmarks = get_sorted_benchmark_list_by_time(
+    all_benchmarks)
+  # Iterate over in reverse order and add them to the current smallest bucket.
+  for benchmark in sorted_benchmark_list:
+    # Find current smallest bucket
+    min_index = shard_execution_times.index(min(shard_execution_times))
+    benchmark_to_shard_dict[benchmark[0].Name()] = min_index
+    shard_execution_times[min_index] += benchmark[1]
+  # For all the benchmarks that didn't have avg run times, use the default
+  # device affinity algorithm
+  for benchmark in new_benchmarks:
+     device_affinity = bot_utils.GetDeviceAffinity(num_shards, benchmark.Name())
+     benchmark_to_shard_dict[benchmark.Name()] = device_affinity
+  return benchmark_to_shard_dict
+
+
 def generate_all_tests(waterfall, use_whitelist):
   tests = {}
   for builder in waterfall['builders']:
     tests[builder] = {}
   all_benchmarks = current_benchmarks(use_whitelist)
+  # Get benchmark sharding according to common sharding configurations
+  # Currently we only have bots sharded 5 directions and 1 direction
+  benchmark_sharding_map = {}
+  benchmark_sharding_map['5'] = shard_benchmarks(5, all_benchmarks)
+  benchmark_sharding_map['1'] = shard_benchmarks(1, all_benchmarks)
 
   for name, config in waterfall['testers'].iteritems():
     if config.get('swarming', False):
       # Right now we are only generating benchmarks for the fyi waterfall
-      isolated_scripts = generate_telemetry_tests(config, all_benchmarks)
+      isolated_scripts = generate_telemetry_tests(
+          config, all_benchmarks, benchmark_sharding_map)
       tests[name] = {
         'isolated_scripts': sorted(isolated_scripts, key=lambda x: x['name'])
       }
@@ -548,5 +612,5 @@ def main():
   generate_all_tests(waterfall, False)
   return 0
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   sys.exit(main())

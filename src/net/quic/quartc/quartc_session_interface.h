@@ -7,7 +7,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 
+#include "net/base/net_export.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {

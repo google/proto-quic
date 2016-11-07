@@ -330,7 +330,8 @@ class FullChloGenerator {
         QuicErrorCode error,
         const string& error_details,
         std::unique_ptr<CryptoHandshakeMessage> message,
-        std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+        std::unique_ptr<DiversificationNonce> diversification_nonce,
+        std::unique_ptr<ProofSource::Details> proof_source_details) override {
       generator_->ProcessClientHelloDone(std::move(message));
     }
 
@@ -401,7 +402,7 @@ int CryptoTestUtils::HandshakeWithFakeServer(
       QuicCompressedCertsCache::kQuicCompressedCertsCacheSize);
   SetupCryptoServerConfigForTest(server_conn->clock(),
                                  server_conn->random_generator(),
-                                 server_quic_config, &crypto_config, options);
+                                 &crypto_config, options);
 
   TestQuicSpdyServerSession server_session(server_conn, *server_quic_config,
                                            &crypto_config,
@@ -479,7 +480,6 @@ int CryptoTestUtils::HandshakeWithFakeClient(
 void CryptoTestUtils::SetupCryptoServerConfigForTest(
     const QuicClock* clock,
     QuicRandom* rand,
-    QuicConfig* config,
     QuicCryptoServerConfig* crypto_config,
     const FakeServerOptions& fake_options) {
   QuicCryptoServerConfig::ConfigOptions options;
@@ -572,7 +572,7 @@ uint64_t CryptoTestUtils::LeafCertHashForTesting() {
   std::unique_ptr<ProofSource> proof_source(
       CryptoTestUtils::ProofSourceForTesting());
   if (!proof_source->GetProof(server_ip, "", "", AllSupportedVersions().front(),
-                              "", &chain, &sig, &cert_sct) ||
+                              "", QuicTagVector(), &chain, &sig, &cert_sct) ||
       chain->certs.empty()) {
     DCHECK(false) << "Proof generation failed";
     return 0;

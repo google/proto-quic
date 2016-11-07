@@ -14,7 +14,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/sequenced_task_runner.h"
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_capi_types.h"
 #include "crypto/wincrypt_shim.h"

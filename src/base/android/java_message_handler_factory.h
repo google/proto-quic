@@ -11,6 +11,7 @@
 namespace base {
 
 class MessagePumpForUI;
+class WaitableEvent;
 
 namespace android {
 

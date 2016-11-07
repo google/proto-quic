@@ -29,6 +29,8 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
   def _NavigateToItem(self, action_runner, index):
     item_selector = 'document.querySelectorAll("%s")[%d]' % (
         self.ITEM_SELECTOR, index)
+    # Only scrolls if element is not currently in viewport.
+    action_runner.ScrollPageToElement(element_function=item_selector)
     self._ClickLink(action_runner, item_selector)
 
   def _ClickLink(self, action_runner, element_function):
@@ -277,6 +279,8 @@ class YouTubeMobileStory(_MediaBrowsingStory):
   ITEM_SELECTOR_INDEX = 3
 
 
+# Failing during CQ runs. crbug.com/661775
+@decorators.Disabled('linux', 'win')
 class YouTubeDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:youtube'
   URL = 'https://www.youtube.com/watch?v=QGfhS1hfTWw&autoplay=false'
@@ -315,23 +319,21 @@ class TumblrDesktopStory(_MediaBrowsingStory):
   URL = 'https://tumblr.com/search/gifs'
   ITEM_SELECTOR = '.photo'
   IS_SINGLE_PAGE_APP = True
-  ITEMS_TO_VISIT = 2  # Increase when crbug.com/651909 is implemented.
-  ITEM_VIEW_TIME_IN_SECONDS = 5
+  ITEMS_TO_VISIT = 8
   INCREMENT_INDEX_AFTER_EACH_ITEM = True
-  SUPPORTED_PLATFORMS = platforms.NO_PLATFORMS  # crbug.com/651909.
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
   def _ViewMediaItem(self, action_runner, index):
     super(TumblrDesktopStory, self)._ViewMediaItem(action_runner, index)
     action_runner.MouseClick(selector='#tumblr_lightbox_center_image')
-
+    action_runner.Wait(1)  # To make browsing more realistic.
 
 class PinterestDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:pinterest'
   URL = 'https://pinterest.com'
   ITEM_SELECTOR = '.pinImageDim'
   IS_SINGLE_PAGE_APP = True
-  ITEMS_TO_VISIT = 5  # Increase when crbug.com/651909 is implemented.
-  ITEM_VIEW_TIME_IN_SECONDS = 5
+  ITEMS_TO_VISIT = 8
   INCREMENT_INDEX_AFTER_EACH_ITEM = True
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 

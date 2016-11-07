@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/fil.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 fil{
     Countries{
         001{"Mundo"}
@@ -46,7 +40,6 @@ fil{
         AI{"Anguilla"}
         AL{"Albania"}
         AM{"Armenia"}
-        AN{"Netherlands Antilles"}
         AO{"Angola"}
         AQ{"Antarctica"}
         AR{"Argentina"}
@@ -144,7 +137,7 @@ fil{
         HR{"Croatia"}
         HT{"Haiti"}
         HU{"Hungary"}
-        IC{"Canary Island"}
+        IC{"Canary Islands"}
         ID{"Indonesia"}
         IE{"Ireland"}
         IL{"Israel"}
@@ -279,6 +272,7 @@ fil{
         UA{"Ukraine"}
         UG{"Uganda"}
         UM{"U.S. Outlying Islands"}
+        UN{"Nagkakaisang Bansa"}
         US{"Estados Unidos"}
         UY{"Uruguay"}
         UZ{"Uzbekistan"}
@@ -301,15 +295,17 @@ fil{
     }
     Countries%short{
         GB{"U.K."}
+        UN{"UN"}
         US{"U.S."}
     }
     Countries%variant{
         CD{"Congo (DRC)"}
         CG{"Congo (Republika)"}
         CI{"Ivory Coast"}
+        CZ{"Czechia"}
         FK{"Falkland Islands (Islas Malvinas)"}
         MK{"Macedonia (FYROM)"}
         TL{"East Timor"}
     }
-    Version{"2.1.19.94"}
+    Version{"2.1.28.79"}
 }

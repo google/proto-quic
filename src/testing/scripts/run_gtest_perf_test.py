@@ -29,6 +29,18 @@ import traceback
 
 import common
 
+
+def GetChromiumSrcDir():
+  return os.path.abspath(
+      os.path.join(os.path.abspath(__file__), '..', '..', '..'))
+
+def GetPerfDir():
+  return os.path.join(GetChromiumSrcDir(), 'tools', 'perf')
+# Add src/tools/perf where generate_legacy_perf_dashboard_json.py lives
+sys.path.append(GetPerfDir())
+
+import generate_legacy_perf_dashboard_json
+
 # Add src/testing/ into sys.path for importing xvfb.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import xvfb
@@ -78,24 +90,28 @@ def main():
         executable = '.\%s.exe' % executable
       else:
         executable = './%s' % executable
+      with common.temporary_file() as tempfile_path:
+        valid = (common.run_command_with_output([executable],
+            env=env, stdoutfile=tempfile_path) == 0)
 
-      rc = common.run_command_with_output([executable] + [
-        '--write-abbreviated-json-results-to', args.isolated_script_test_output,
-      ], env=env, stdoutfile=args.isolated_script_test_chartjson_output)
-
-      # Now get the correct json format from the stdout to write to the
-      # perf results file
+        # Now get the correct json format from the stdout to write to the
+        # perf results file
+        results_processor = (
+            generate_legacy_perf_dashboard_json.LegacyResultsProcessor())
+        charts = results_processor.GenerateJsonResults(tempfile_path)
+        # Write the returned encoded json to a the charts output file
+        with open(args.isolated_script_test_chartjson_output, 'w') as f:
+          f.write(charts)
     except Exception:
       traceback.print_exc()
       valid = False
 
-    if not valid:
-      failures = ['(entire test suite)']
-      with open(args.isolated_script_test_output, 'w') as fp:
-        json.dump({
-            'valid': valid,
-            'failures': failures,
-        }, fp)
+    failures = [] if valid else ['(entire test suite)']
+    with open(args.isolated_script_test_output, 'w') as fp:
+      json.dump({
+          'valid': valid,
+          'failures': failures,
+      }, fp)
 
     return rc
 

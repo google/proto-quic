@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/da.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 da{
     Countries{
         001{"Verden"}
@@ -46,7 +40,6 @@ da{
         AI{"Anguilla"}
         AL{"Albanien"}
         AM{"Armenien"}
-        AN{"Hollandske Antiller"}
         AO{"Angola"}
         AQ{"Antarktis"}
         AR{"Argentina"}
@@ -69,7 +62,7 @@ da{
         BM{"Bermuda"}
         BN{"Brunei"}
         BO{"Bolivia"}
-        BQ{"De Nederlandske Antiller"}
+        BQ{"De tidligere Nederlandske Antiller"}
         BR{"Brasilien"}
         BS{"Bahamas"}
         BT{"Bhutan"}
@@ -133,7 +126,7 @@ da{
         GP{"Guadeloupe"}
         GQ{"Ækvatorialguinea"}
         GR{"Grækenland"}
-        GS{"South Georgia og South Sandwich Islands"}
+        GS{"South Georgia og De Sydlige Sandwichøer"}
         GT{"Guatemala"}
         GU{"Guam"}
         GW{"Guinea-Bissau"}
@@ -210,7 +203,7 @@ da{
         NF{"Norfolk Island"}
         NG{"Nigeria"}
         NI{"Nicaragua"}
-        NL{"Nederlandene"}
+        NL{"Holland"}
         NO{"Norge"}
         NP{"Nepal"}
         NR{"Nauru"}
@@ -279,6 +272,7 @@ da{
         UA{"Ukraine"}
         UG{"Uganda"}
         UM{"Amerikanske oversøiske øer"}
+        UN{"Forenede Nationer"}
         US{"USA"}
         UY{"Uruguay"}
         UZ{"Usbekistan"}
@@ -301,14 +295,15 @@ da{
     }
     Countries%short{
         GB{"UK"}
+        UN{"FN"}
         US{"USA"}
     }
     Countries%variant{
-        CD{"Den Demokratiske Republik Congo"}
+        CD{"Den Demokratiske Republik Congo (DRC)"}
         CG{"Republikken Congo"}
         FK{"Falklandsøerne (Islas Malvinas)"}
         MK{"Den tidligere jugoslaviske republik Makedonien"}
         TL{"Østtimor"}
     }
-    Version{"2.1.19.44"}
+    Version{"2.1.28.79"}
 }

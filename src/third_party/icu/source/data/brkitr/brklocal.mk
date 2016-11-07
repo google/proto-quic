@@ -1,5 +1,5 @@
-# *   Copyright (C) 1998-2014, International Business Machines
-# *   Corporation and others.  All Rights Reserved.
+# © 2016 and later: Unicode, Inc. and others.
+# License & terms of use: http://www.unicode.org/copyright.html#License
 BRK_RES_CLDR_VERSION = %version%
 # A list of txt's to build
 # Note:
@@ -41,6 +41,7 @@ BRK_DICT_SOURCE = burmesedict.txt cjdict.txt khmerdict.txt laodict.txt\
 # List of break iterator files (brk).
 BRK_SOURCE = char.txt line.txt\
  line_normal.txt line_normal_cj.txt line_normal_fi.txt\
+ line_loose_cj.txt\
  sent.txt sent_el.txt title.txt word.txt
 
 

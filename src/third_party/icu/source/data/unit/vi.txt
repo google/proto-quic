@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/vi.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 vi{
-    Version{"2.1.19.17"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -72,6 +66,7 @@ vi{
             square-kilometer{
                 dnam{"kilômét vuông"}
                 other{"{0} kilômét vuông"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"mét vuông"}
@@ -81,6 +76,7 @@ vi{
             square-mile{
                 dnam{"dặm vuông"}
                 other{"{0} dặm vuông"}
+                per{"{0}/mi²"}
             }
             square-yard{
                 dnam{"yard vuông"}
@@ -89,6 +85,24 @@ vi{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"karat"}
+                other{"{0} karat"}
+            }
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                other{"{0} mg/dL"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/L"}
+                other{"{0} mmol/L"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -103,12 +117,16 @@ vi{
                 dnam{"dặm/gallon"}
                 other{"{0} dặm/gallon"}
             }
+            mile-per-gallon-imperial{
+                dnam{"mpg Imp."}
+                other{"{0} mpg Imp."}
+            }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0}Đ"}
+            north{"{0}B"}
+            south{"{0}N"}
+            west{"{0}T"}
         }
         digital{
             bit{
@@ -376,8 +394,8 @@ vi{
                 other{"{0} miligam"}
             }
             ounce{
-                dnam{"ao-xơ"}
-                other{"{0} ao-xơ"}
+                dnam{"oz"}
+                other{"{0} oz"}
                 per{"{0}/oz"}
             }
             ounce-troy{
@@ -440,12 +458,6 @@ vi{
             pound-per-square-inch{
                 dnam{"psi"}
                 other{"{0} psi"}
-            }
-        }
-        proportion{
-            karat{
-                dnam{"karat"}
-                other{"{0} karat"}
             }
         }
         speed{
@@ -544,6 +556,11 @@ vi{
                 other{"{0} gallon"}
                 per{"{0}/gal"}
             }
+            gallon-imperial{
+                dnam{"gallon Anh"}
+                other{"{0} gallon Anh"}
+                per{"{0}/gal Anh"}
+            }
             hectoliter{
                 dnam{"hectolit"}
                 other{"{0} hectolit"}
@@ -630,10 +647,10 @@ vi{
             }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0}Đ"}
+            north{"{0}B"}
+            south{"{0}N"}
+            west{"{0}T"}
         }
         duration{
             day{
@@ -836,6 +853,7 @@ vi{
             square-kilometer{
                 dnam{"km²"}
                 other{"{0} km²"}
+                per{"{0}/km²"}
             }
             square-meter{
                 dnam{"m²"}
@@ -845,6 +863,7 @@ vi{
             square-mile{
                 dnam{"mi²"}
                 other{"{0} mi²"}
+                per{"{0}/mi²"}
             }
             square-yard{
                 dnam{"yd²"}
@@ -853,6 +872,24 @@ vi{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"kt"}
+                other{"{0} kt"}
+            }
+            milligram-per-deciliter{
+                dnam{"mg/dL"}
+                other{"{0} mg/dL"}
+            }
+            millimole-per-liter{
+                dnam{"mmol/L"}
+                other{"{0} mmol/L"}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -867,12 +904,16 @@ vi{
                 dnam{"mpg"}
                 other{"{0} mpg"}
             }
+            mile-per-gallon-imperial{
+                dnam{"mpg Imp."}
+                other{"{0} mpg Imp."}
+            }
         }
         coordinate{
-            east{"{0}E"}
-            north{"{0}N"}
-            south{"{0}S"}
-            west{"{0}W"}
+            east{"{0}Đ"}
+            north{"{0}B"}
+            south{"{0}N"}
+            west{"{0}T"}
         }
         digital{
             bit{
@@ -1206,12 +1247,6 @@ vi{
                 other{"{0} psi"}
             }
         }
-        proportion{
-            karat{
-                dnam{"kt"}
-                other{"{0} kt"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"km/h"}
@@ -1307,6 +1342,11 @@ vi{
                 dnam{"gal"}
                 other{"{0} gal"}
                 per{"{0}/gal"}
+            }
+            gallon-imperial{
+                dnam{"gal Anh"}
+                other{"{0} gal Anh"}
+                per{"{0}/gal Anh"}
             }
             hectoliter{
                 dnam{"hL"}

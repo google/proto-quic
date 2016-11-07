@@ -339,7 +339,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
     CryptoTestUtils::FakeServerOptions options;
     CryptoTestUtils::SetupCryptoServerConfigForTest(
         server_connection_->clock(), server_connection_->random_generator(),
-        server_session_->config(), &server_crypto_config_, options);
+        &server_crypto_config_, options);
     FLAGS_enable_quic_stateless_reject_support = true;
   }
 

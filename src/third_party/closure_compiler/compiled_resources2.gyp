@@ -15,6 +15,7 @@
       'type': 'none',
       'dependencies': [
         '<(DEPTH)/chrome/browser/resources/chromeos/braille_ime/compiled_resources2.gyp:*',
+        '<(DEPTH)/chrome/browser/resources/chromeos/login/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/chromeos/network_ui/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/chromeos/quick_unlock/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/extensions/compiled_resources2.gyp:*',

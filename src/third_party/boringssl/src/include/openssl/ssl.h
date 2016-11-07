@@ -1306,7 +1306,12 @@ OPENSSL_EXPORT int SSL_CIPHER_get_bits(const SSL_CIPHER *cipher,
  *   [ECDHE-ECDSA-CHACHA20-POLY1305|ECDHE-ECDSA-AES128-GCM-SHA256]
  *
  * Once an equal-preference group is used, future directives must be
- * opcode-less. */
+ * opcode-less.
+ *
+ * TLS 1.3 ciphers do not participate in this mechanism and instead have a
+ * built-in preference order. Functions to set cipher lists do not affect TLS
+ * 1.3, and functions to query the cipher list do not include TLS 1.3
+ * ciphers. */
 
 /* SSL_DEFAULT_CIPHER_LIST is the default cipher suite configuration. It is
  * substituted when a cipher string starts with 'DEFAULT'. */
@@ -2389,7 +2394,10 @@ OPENSSL_EXPORT int SSL_set_alpn_protos(SSL *ssl, const uint8_t *protos,
  * |*out_len| to the selected protocol and return |SSL_TLSEXT_ERR_OK| on
  * success. It does not pass ownership of the buffer. Otherwise, it should
  * return |SSL_TLSEXT_ERR_NOACK|. Other |SSL_TLSEXT_ERR_*| values are
- * unimplemented and will be treated as |SSL_TLSEXT_ERR_NOACK|. */
+ * unimplemented and will be treated as |SSL_TLSEXT_ERR_NOACK|.
+ *
+ * The cipher suite is selected before negotiating ALPN. The callback may use
+ * |SSL_get_pending_cipher| to query the cipher suite. */
 OPENSSL_EXPORT void SSL_CTX_set_alpn_select_cb(
     SSL_CTX *ctx, int (*cb)(SSL *ssl, const uint8_t **out, uint8_t *out_len,
                             const uint8_t *in, unsigned in_len, void *arg),
@@ -3779,8 +3787,6 @@ struct ssl_ctx_st {
   uint16_t min_version;
 
   struct ssl_cipher_preference_list_st *cipher_list;
-  /* same as above but sorted for lookup */
-  STACK_OF(SSL_CIPHER) *cipher_list_by_id;
 
   /* cipher_list_tls10 is the list of ciphers when TLS 1.0 or greater is in
    * use. This only applies to server connections as, for clients, the version
@@ -4082,7 +4088,6 @@ struct ssl_st {
 
   /* crypto */
   struct ssl_cipher_preference_list_st *cipher_list;
-  STACK_OF(SSL_CIPHER) *cipher_list_by_id;
 
   /* session info */
 

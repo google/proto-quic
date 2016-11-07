@@ -1,14 +1,8 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/icu-locale-deprecates.xml & build.xml
-// *
-// ***************************************************************************
-/**
- * generated alias target
- */
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ro_MD{
-    ___{""}
+    Countries{
+        MM{"Myanmar"}
+    }
+    Version{"2.1.27.99"}
 }

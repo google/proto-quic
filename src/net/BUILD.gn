@@ -663,31 +663,6 @@ static_library("test_support") {
   }
 }
 
-source_set("balsa") {
-  sources = [
-    "tools/balsa/balsa_enums.h",
-    "tools/balsa/balsa_frame.cc",
-    "tools/balsa/balsa_frame.h",
-    "tools/balsa/balsa_headers.cc",
-    "tools/balsa/balsa_headers.h",
-    "tools/balsa/balsa_headers_token_utils.cc",
-    "tools/balsa/balsa_headers_token_utils.h",
-    "tools/balsa/balsa_visitor_interface.h",
-    "tools/balsa/http_message_constants.cc",
-    "tools/balsa/http_message_constants.h",
-    "tools/balsa/noop_balsa_visitor.h",
-    "tools/balsa/simple_buffer.cc",
-    "tools/balsa/simple_buffer.h",
-    "tools/balsa/string_piece_utils.h",
-    "tools/quic/spdy_balsa_utils.cc",
-    "tools/quic/spdy_balsa_utils.h",
-  ]
-  deps = [
-    ":net",
-    "//base",
-    "//url",
-  ]
-}
 
 if (use_v8_in_net) {
   component("net_with_v8") {
@@ -1075,7 +1050,7 @@ if (is_linux) {
       "tools/quic/quic_socket_utils.h",
     ]
     deps = [
-      ":balsa",
+#      ":balsa",
       ":epoll_server",
       ":net",
       ":simple_quic_tools",
@@ -1092,7 +1067,7 @@ if (is_linux) {
       "tools/quic/quic_client_bin.cc",
     ]
     deps = [
-      ":balsa",
+#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1108,7 +1083,7 @@ if (is_linux) {
       "tools/quic/quic_server_bin.cc",
     ]
     deps = [
-      ":balsa",
+#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1204,7 +1179,7 @@ source_set("simple_quic_tools") {
     "tools/quic/synchronous_host_resolver.h",
   ]
   deps = [
-    ":balsa",
+#    ":balsa",
     ":net",
     "//base",
     "//base/third_party/dynamic_annotations",
