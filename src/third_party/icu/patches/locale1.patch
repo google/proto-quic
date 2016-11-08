@@ -1,5 +1,5 @@
 diff --git a/source/data/locales/ko.txt b/source/data/locales/ko.txt
-index 46426a5..cf1af5b 100644
+index 8619a8e..8b4a3e8 100644
 --- a/source/data/locales/ko.txt
 +++ b/source/data/locales/ko.txt
 @@ -1328,7 +1328,7 @@ ko{
@@ -21,34 +21,34 @@ index 46426a5..cf1af5b 100644
                  }
                  yMd{
 diff --git a/source/data/zone/ko.txt b/source/data/zone/ko.txt
-index 10d79bc..4b1d6c6 100644
+index ab59f70..0da4bf2 100644
 --- a/source/data/zone/ko.txt
 +++ b/source/data/zone/ko.txt
-@@ -1300,24 +1300,24 @@ ko{
+@@ -1312,24 +1312,24 @@ ko{
              ls{"아마존 표준시"}
          }
          "meta:America_Central"{
 -            ld{"미 중부 하계 표준시"}
 -            lg{"미 중부 시간"}
 -            ls{"미 중부 표준시"}
-+            ld{"묵미 중부 하계 표준시"}
-+            lg{"묵미 중부 시간"}
-+            ls{"묵미 중부 표준시"}
++            ld{"북미 중부 하계 표준시"}
++            lg{"북미 중부 시간"}
++            ls{"북미 중부 표준시"}
          }
          "meta:America_Eastern"{
 -            ld{"미 동부 하계 표준시"}
 -            lg{"미 동부 시간"}
 -            ls{"미 동부 표준시"}
-+            ld{"묵미 동부 하계 표준시"}
-+            lg{"묵미 동부 시간"}
-+            ls{"묵미 동부 표준시"}
++            ld{"북미 동부 하계 표준시"}
++            lg{"북미 동부 시간"}
++            ls{"북미 동부 표준시"}
          }
          "meta:America_Mountain"{
 -            ld{"미 산지 하계 표준시"}
 -            lg{"미 산지 시간"}
 -            ls{"미 산악 표준시"}
-+            ld{"묵미 로키 산맥 하계 표준시"}
-+            lg{"묵미 로키 산맥 시간"}
++            ld{"북미 로키 산맥 하계 표준시"}
++            lg{"북미 로키 산맥 시간"}
 +            ls{"북미 로키 산맥 표준시"}
          }
          "meta:America_Pacific"{
@@ -56,12 +56,12 @@ index 10d79bc..4b1d6c6 100644
 -            lg{"미 태평양 시간"}
 -            ls{"미 태평양 표준시"}
 +            ld{"북미 태평양 하계 표준시"}
-+            lg{"묵미 태평양 시간"}
-+            ls{"묵미 태평양 표준시"}
++            lg{"북미 태평양 시간"}
++            ls{"북미 태평양 표준시"}
          }
          "meta:Anadyr"{
-             ld{"아나디리 서머 타임"}
-@@ -1360,29 +1360,29 @@ ko{
+             ld{"아나디리 하계 표준시"}
+@@ -1372,29 +1372,29 @@ ko{
              ls{"아르메니아 표준시"}
          }
          "meta:Atlantic"{
@@ -106,12 +106,3 @@ index 10d79bc..4b1d6c6 100644
          }
          "meta:Azerbaijan"{
              ld{"아제르바이잔 하계 표준시"}
-@@ -1496,7 +1496,7 @@ ko{
-             ls{"극동 유럽 표준시"}
-         }
-         "meta:Europe_Western"{
--            ld{"서유럽 서머 타임"}
-+            ld{"서유럽 하계 표준시"}
-             lg{"서유럽 시간"}
-             ls{"서유럽 표준시"}
-         }

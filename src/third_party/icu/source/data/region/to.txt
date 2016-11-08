@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/to.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 to{
     Countries{
         001{"Māmani"}
@@ -46,7 +40,6 @@ to{
         AI{"Anikuila"}
         AL{"ʻAlipania"}
         AM{"ʻĀmenia"}
-        AN{"Anitila fakahōlani"}
         AO{"ʻAngikola"}
         AQ{"ʻAnitātika"}
         AR{"ʻAsenitina"}
@@ -226,7 +219,7 @@ to{
         PL{"Polani"}
         PM{"Sā Piea mo Mikeloni"}
         PN{"ʻOtumotu Pitikeni"}
-        PR{"Pueto Liko"}
+        PR{"Puēto Liko"}
         PS{"Palesitaine"}
         PT{"Potukali"}
         PW{"Palau"}
@@ -259,7 +252,7 @@ to{
         SX{"Sā Mātini (fakahōlani)"}
         SY{"Sīlia"}
         SZ{"Suasilani"}
-        TA{"Tulisiteni ta Kunuha"}
+        TA{"Tulisitani ta Kunuha"}
         TC{"ʻOtumotu Tuki mo Kaikosi"}
         TD{"Sāti"}
         TF{"Potu fonua tonga fakafalanisē"}
@@ -306,7 +299,8 @@ to{
     Countries%variant{
         CD{"Kongo (LTK)"}
         CG{"Kongo (Lipapilika)"}
+        CZ{"Sēkia"}
         MK{"Masetōnia (FYROM)"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.98"}
 }

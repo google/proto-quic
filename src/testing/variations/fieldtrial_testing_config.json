@@ -11,6 +11,24 @@
             ]
         }
     ],
+    "AndroidSpellChecker": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled_NonLowEnd",
+                    "enable_features": [
+                        "AndroidSpellCheckerNonLowEnd"
+                    ],
+                    "disable_features": [
+                        "AndroidSpellChecker"
+                    ]
+                }
+            ]
+        }
+    ],
     "AsyncDNS": [
         {
             "platforms": [
@@ -213,6 +231,10 @@
                         "ForegroundFileIO": "8;32;0.3;0;30000",
                         "RedirectSequencedWorkerPools": "true"
                     }
+                },
+                {
+                    "name": "DisableViaFlag",
+                    "forcing_flag": "disable-browser-task-scheduler"
                 }
             ]
         }

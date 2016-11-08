@@ -174,7 +174,7 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "interactive_ui_tests"
       },
@@ -367,12 +367,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         }
-      }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
       }
     ]
   },
@@ -719,12 +713,6 @@
           "can_use_on_swarming_builders": true
         }
       }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
-      }
     ]
   },
   "Mac10.9 Tests": {
@@ -1059,12 +1047,6 @@
           "can_use_on_swarming_builders": true
         }
       }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
-      }
     ]
   },
   "Mac10.9 Tests (dbg)": {
@@ -1398,12 +1380,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         }
-      }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
       }
     ]
   }

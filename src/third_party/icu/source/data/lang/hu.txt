@@ -1,19 +1,13 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/hu.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 hu{
     Keys{
         calendar{"Naptár"}
+        cf{"Pénznemformátum"}
         colAlternate{"Szimbólumokat figyelmen kívül hagyó rendezés"}
         colBackwards{"Ékezetek fordított rendezése"}
         colCaseFirst{"Rendezés nagy- vagy kisbetűk szerint"}
         colCaseLevel{"Kisbetű-nagybetű érzékeny rendezés"}
-        colHiraganaQuaternary{"Kanák szerinti rendezés"}
         colNormalization{"Normalizált rendezés"}
         colNumeric{"Numerikus rendezés"}
         colStrength{"Rendezés erőssége"}
@@ -25,7 +19,6 @@ hu{
         numbers{"Számok"}
         timezone{"Időzóna"}
         va{"Földrajzi helyvariáns"}
-        variableTop{"Rendezés szimbólumok szerint"}
         x{"Privát használatra"}
     }
     Languages{
@@ -51,7 +44,7 @@ hu{
         ar{"arab"}
         ar_001{"modern szabányos arab"}
         arc{"arámi"}
-        arn{"araucani"}
+        arn{"mapucse"}
         arp{"arapaho"}
         arw{"aravak"}
         as{"asszámi"}
@@ -67,7 +60,7 @@ hu{
         bas{"basza"}
         bax{"bamun"}
         bbj{"gomala"}
-        be{"belorusz"}
+        be{"belarusz"}
         bej{"bedzsa"}
         bem{"bemba"}
         bez{"bena"}
@@ -81,7 +74,7 @@ hu{
         bkm{"kom"}
         bla{"siksika"}
         bm{"bambara"}
-        bn{"bengáli"}
+        bn{"bangla"}
         bo{"tibeti"}
         br{"breton"}
         bra{"braj"}
@@ -99,7 +92,7 @@ hu{
         cay{"kajuga"}
         cch{"atszam"}
         ce{"csecsen"}
-        ceb{"cebui"}
+        ceb{"szebuano"}
         cgg{"kiga"}
         ch{"csamoró"}
         chb{"csibcsa"}
@@ -111,11 +104,12 @@ hu{
         chp{"csipevé"}
         chr{"cseroki"}
         chy{"csejen"}
-        ckb{"szoráni kurd"}
+        ckb{"közép-ázsiai kurd"}
         co{"korzikai"}
         cop{"kopt"}
         cr{"krí"}
         crh{"krími tatár"}
+        crs{"szeszelva kreol francia"}
         cs{"cseh"}
         csb{"kasub"}
         cu{"egyházi szláv"}
@@ -134,13 +128,13 @@ hu{
         din{"dinka"}
         dje{"zarma"}
         doi{"dogri"}
-        dsb{"alsó szorb"}
+        dsb{"alsó-szorb"}
         dua{"duala"}
         dum{"közép holland"}
         dv{"divehi"}
         dyo{"jola-fonyi"}
         dyu{"diula"}
-        dz{"butáni"}
+        dz{"dzsonga"}
         dzg{"dazaga"}
         ebu{"embu"}
         ee{"eve"}
@@ -180,16 +174,17 @@ hu{
         frr{"északi fríz"}
         frs{"keleti fríz"}
         fur{"friuli"}
-        fy{"fríz"}
+        fy{"nyugati fríz"}
         ga{"ír"}
         gaa{"ga"}
         gag{"gagauz"}
+        gan{"gan kínai"}
         gay{"gajo"}
         gba{"gbaja"}
-        gd{"skót gael"}
+        gd{"skóciai kelta"}
         gez{"geez"}
         gil{"ikiribati"}
-        gl{"galíciai"}
+        gl{"gallego"}
         gmh{"közép felső német"}
         gn{"guarani"}
         goh{"ófelső német"}
@@ -199,29 +194,31 @@ hu{
         grb{"grebó"}
         grc{"ógörög"}
         gsw{"svájci német"}
-        gu{"gudzsarati"}
+        gu{"gudzsaráti"}
         guz{"guszii"}
         gv{"man-szigeti"}
         gwi{"gvicsin"}
         ha{"hausza"}
         hai{"haida"}
+        hak{"hakka kínai"}
         haw{"hawaii"}
         he{"héber"}
         hi{"hindi"}
-        hil{"hiligajnon"}
+        hil{"ilokano"}
         hit{"hittite"}
         hmn{"hmong"}
         ho{"hiri motu"}
         hr{"horvát"}
-        hsb{"felső szorb"}
-        ht{"haiti"}
+        hsb{"felső-szorb"}
+        hsn{"xiang kínai"}
+        ht{"haiti kreol"}
         hu{"magyar"}
         hup{"hupa"}
         hy{"örmény"}
         hz{"herero"}
         ia{"interlingva"}
         iba{"iban"}
-        ibb{"ibibió"}
+        ibb{"ibibio"}
         id{"indonéz"}
         ie{"interlingue"}
         ig{"igbó"}
@@ -263,7 +260,7 @@ hu{
         kkj{"kakó"}
         kl{"grönlandi"}
         kln{"kalendzsin"}
-        km{"kambodzsai"}
+        km{"khmer"}
         kmb{"kimbundu"}
         kn{"kannada"}
         ko{"koreai"}
@@ -275,7 +272,7 @@ hu{
         krc{"karacsáj-balkár"}
         krl{"karelai"}
         kru{"kuruh"}
-        ks{"kásmíri"}
+        ks{"kasmíri"}
         ksb{"sambala"}
         ksf{"bafia"}
         ksh{"kölsch"}
@@ -296,7 +293,7 @@ hu{
         li{"limburgi"}
         lkt{"lakota"}
         ln{"lingala"}
-        lo{"laoszi"}
+        lo{"lao"}
         lol{"mongó"}
         loz{"lozi"}
         lrc{"északi luri"}
@@ -322,7 +319,7 @@ hu{
         men{"mende"}
         mer{"meru"}
         mfe{"mauritiusi kreol"}
-        mg{"málgas"}
+        mg{"malgas"}
         mga{"közép ír"}
         mgh{"makua-metó"}
         mgo{"meta’"}
@@ -337,22 +334,23 @@ hu{
         mni{"manipuri"}
         moh{"mohawk"}
         mos{"moszi"}
-        mr{"marathi"}
+        mr{"maráthi"}
         ms{"maláj"}
         mt{"máltai"}
         mua{"mundang"}
         mul{"többszörös nyelvek"}
         mus{"krík"}
         mwl{"mirandéz"}
-        mwr{"marvari"}
+        mwr{"márvári"}
         my{"burmai"}
         mye{"myene"}
         myv{"erzjány"}
         mzn{"mázanderáni"}
         na{"naurui"}
+        nan{"min nan kínai"}
         nap{"nápolyi"}
         naq{"nama"}
-        nb{"norvég bokmal"}
+        nb{"norvég (bokmál)"}
         nd{"északi ndebele"}
         nds{"alsónémet"}
         nds_NL{"alsószász"}
@@ -360,30 +358,30 @@ hu{
         new{"nevari"}
         ng{"ndonga"}
         nia{"nias"}
-        niu{"niui"}
+        niu{"niuei"}
         nl{"holland"}
         nl_BE{"flamand"}
         nmg{"ngumba"}
-        nn{"norvég nynorsk"}
+        nn{"norvég (nynrosk)"}
         nnh{"ngiemboon"}
         no{"norvég"}
         nog{"nogaj"}
         non{"óskandináv"}
         nqo{"n’kó"}
         nr{"déli ndebele"}
-        nso{"északi szotó"}
+        nso{"északi szeszotó"}
         nus{"nuer"}
         nv{"navahó"}
         nwc{"klasszikus newari"}
-        ny{"nyanja"}
+        ny{"nyandzsa"}
         nym{"nyamvézi"}
         nyn{"nyankole"}
         nyo{"nyoró"}
         nzi{"nzima"}
         oc{"okszitán"}
         oj{"ojibva"}
-        om{"oromói"}
-        or{"orija"}
+        om{"oromo"}
+        or{"odia"}
         os{"oszét"}
         osa{"osage"}
         ota{"ottomán török"}
@@ -391,13 +389,15 @@ hu{
         pag{"pangaszinan"}
         pal{"pahlavi"}
         pam{"pampangan"}
-        pap{"papiamentó"}
+        pap{"papiamento"}
         pau{"palaui"}
+        pcm{"nigériai pidgin"}
         peo{"óperzsa"}
         phn{"főniciai"}
         pi{"pali"}
         pl{"lengyel"}
         pon{"pohnpei"}
+        prg{"porosz"}
         pro{"óprovánszi"}
         ps{"pastu"}
         pt{"portugál"}
@@ -408,7 +408,7 @@ hu{
         raj{"radzsasztáni"}
         rap{"rapanui"}
         rar{"rarotongai"}
-        rm{"réto-román"}
+        rm{"rétoromán"}
         rn{"kirundi"}
         ro{"román"}
         ro_MD{"moldvai"}
@@ -417,11 +417,11 @@ hu{
         root{"ősi"}
         ru{"orosz"}
         rup{"aromán"}
-        rw{"kiruanda"}
+        rw{"kinyarvanda"}
         rwk{"rwo"}
         sa{"szanszkrit"}
         sad{"szandave"}
-        sah{"jakut"}
+        sah{"szaha"}
         sam{"szamaritánus arámi"}
         saq{"szamburu"}
         sas{"sasak"}
@@ -450,12 +450,12 @@ hu{
         sl{"szlovén"}
         sm{"szamoai"}
         sma{"déli számi"}
-        smj{"lule számi"}
-        smn{"inar sami"}
-        sms{"koltta lapp"}
+        smj{"lulei számi"}
+        smn{"inari számi"}
+        sms{"kolta számi"}
         sn{"sona"}
         snk{"szoninke"}
-        so{"szomáliai"}
+        so{"szomáli"}
         sog{"sogdien"}
         sq{"albán"}
         sr{"szerb"}
@@ -463,17 +463,17 @@ hu{
         srr{"szerer"}
         ss{"sziszuati"}
         ssy{"szahó"}
-        st{"szeszotó"}
+        st{"déli szeszotó"}
         su{"szundanéz"}
         suk{"szukuma"}
         sus{"szuszu"}
         sux{"sumér"}
         sv{"svéd"}
         sw{"szuahéli"}
+        sw_CD{"kongói szuahéli"}
         swb{"comorei"}
-        swc{"kongói szuahéli"}
         syc{"klasszikus szír"}
-        syr{"szíriai"}
+        syr{"szír"}
         ta{"tamil"}
         te{"telugu"}
         tem{"temne"}
@@ -482,7 +482,7 @@ hu{
         tet{"tetum"}
         tg{"tadzsik"}
         th{"thai"}
-        ti{"tigrinja"}
+        ti{"tigrinya"}
         tig{"tigré"}
         tiv{"tiv"}
         tk{"türkmén"}
@@ -492,8 +492,8 @@ hu{
         tli{"tlingit"}
         tmh{"tamasek"}
         tn{"szecsuáni"}
-        to{"tonga"}
-        tog{"nyasa tonga"}
+        to{"tongai"}
+        tog{"nyugati nyasza"}
         tpi{"tok pisin"}
         tr{"török"}
         trv{"tarokó"}
@@ -506,7 +506,7 @@ hu{
         twq{"szavák"}
         ty{"tahiti"}
         tyv{"tuvai"}
-        tzm{"közép-marokkói tamazigt"}
+        tzm{"közép-atlaszi tamazigt"}
         udm{"udmurt"}
         ug{"ujgur"}
         uga{"ugariti"}
@@ -528,8 +528,9 @@ hu{
         was{"vasó"}
         wbp{"warlpiri"}
         wo{"volof"}
+        wuu{"wu kínai"}
         xal{"kalmük"}
-        xh{"hosza"}
+        xh{"xhosza"}
         xog{"szoga"}
         yao{"jaó"}
         yap{"japi"}
@@ -592,6 +593,7 @@ hu{
         Grek{"Görög"}
         Gujr{"Gudzsaráti"}
         Guru{"Gurmuki"}
+        Hanb{"Hanb"}
         Hang{"Hangul"}
         Hani{"Han"}
         Hano{"Hanunoo"}
@@ -604,6 +606,7 @@ hu{
         Hung{"Ómagyar"}
         Inds{"Indus"}
         Ital{"Régi olasz"}
+        Jamo{"Jamo"}
         Java{"Jávai"}
         Jpan{"Japán"}
         Kali{"Kajah li"}
@@ -682,6 +685,7 @@ hu{
         Yiii{"Ji"}
         Zinh{"Származtatott"}
         Zmth{"Matematikai jelrendszer"}
+        Zsye{"Emoji"}
         Zsym{"Szimbólum"}
         Zxxx{"Íratlan nyelvek kódja"}
         Zyyy{"Meghatározatlan"}
@@ -712,6 +716,10 @@ hu{
             persian{"Perzsa naptár"}
             roc{"Kínai köztársasági naptár"}
         }
+        cf{
+            account{"Könyvelési pénznemformátum"}
+            standard{"Normál pénznemformátum"}
+        }
         colAlternate{
             non-ignorable{"Szimbólumok rendezése"}
             shifted{"Rendezés szimbólumok figyelmen kívül hagyásával"}
@@ -728,10 +736,6 @@ hu{
         colCaseLevel{
             no{"Kis- és nagybetűket meg nem különböztető rendezés"}
             yes{"Rendezés kisbetű-nagybetű szerint"}
-        }
-        colHiraganaQuaternary{
-            no{"Kanák rendezése külön"}
-            yes{"Kanák megkülönböztető rendezése"}
         }
         colNormalization{
             no{"Rendezés normalizálás nélkül"}
@@ -764,6 +768,11 @@ hu{
             traditional{"Hagyományos"}
             unihan{"Szótővonás rendezési sorrend"}
         }
+        d0{
+            fwidth{"Teljes szélesség"}
+            hwidth{"Fél szélesség"}
+            npinyin{"Szám"}
+        }
         hc{
             h11{"12 órás rendszer (0–11)"}
             h12{"12 órás rendszer (0–12)"}
@@ -774,6 +783,10 @@ hu{
             loose{"Tág stílusú sortörés"}
             normal{"Normál stílusú sortörés"}
             strict{"Szűk stílusú sortörés"}
+        }
+        m0{
+            bgn{"BGN"}
+            ungegn{"UNGEGN"}
         }
         ms{
             metric{"Méterrendszer"}
@@ -881,7 +894,22 @@ hu{
         VALLADER{"Vallader"}
         WADEGILE{"Wade-Giles átírás"}
     }
-    Version{"2.1.19.17"}
+    Version{"2.1.28.79"}
+    characterLabelPattern{
+        all{"{0} — Összes"}
+        category-list{"{0}: {1}"}
+        compatibility{"{0} — Kompatibilitás"}
+        enclosed{"{0} — Zárt"}
+        extended{"{0} — Kibővített"}
+        historic{"{0} — Történelmi"}
+        miscellaneous{"{0} — Vegyes"}
+        other{"{0} — Egyéb"}
+        scripts{"Kézírások — {0}"}
+        strokes{
+            one{"{0} vonás"}
+            other{"{0} vonás"}
+        }
+    }
     codePatterns{
         language{"Nyelv: {0}"}
         script{"Írásrendszer: {0}"}

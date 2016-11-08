@@ -1,17 +1,11 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/rbnf/se.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 se{
     RBNFRules{
         SpelloutRules{
             "%spellout-numbering-year:",
             "-x: eret >>;",
-            "x.x: =#,###0.#=;",
+            "x.x: =0.0=;",
             "0: =%spellout-numbering=;",
             "1100/100: <<\u00AD\u010Duo\u0111i[\u00AD>>];",
             "10000: =%spellout-numbering=;",
@@ -42,5 +36,5 @@ se{
             "1000000000000000000: =#,##0=;",
         }
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.22"}
 }

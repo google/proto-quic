@@ -894,11 +894,6 @@
         },
         "test": "vr_shell_unittests"
       }
-    ],
-    "instrumentation_tests": [
-      {
-        "test": "chrome_public_test_apk"
-      }
     ]
   },
   "Blimp Android Client": {
@@ -3084,18 +3079,6 @@
         "swarming": {
           "can_use_on_swarming_builders": false
         },
-        "test": "blink_platform_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "browser_tests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
         "test": "cacheinvalidation_unittests"
       },
       {
@@ -3187,12 +3170,6 @@
           "can_use_on_swarming_builders": false
         },
         "test": "jingle_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "media_blink_unittests"
       },
       {
         "swarming": {
@@ -4356,6 +4333,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "content_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "crypto_unittests"
       },
       {
@@ -4375,6 +4358,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "extensions_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "extensions_unittests"
       },
       {
         "swarming": {
@@ -4405,6 +4394,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "gpu_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ipc_tests"
       },
       {
         "swarming": {
@@ -4482,7 +4477,19 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "unit_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "url_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "views_unittests"
       },
       {
         "swarming": {
@@ -11749,7 +11756,7 @@
     "gtest_tests": [
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11758,7 +11765,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11767,8 +11774,8 @@
       },
       {
         "args": [
-          "--isolate-extensions",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/isolate-extensions.browser_tests.filter"
+          "--site-per-process",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/site-per-process.browser_tests.filter"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11777,7 +11784,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11786,7 +11793,7 @@
       },
       {
         "args": [
-          "--isolate-sites-for-testing=*.is"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11795,8 +11802,8 @@
       },
       {
         "args": [
-          "--isolate-sites-for-testing=*.is",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/isolate-extensions.content_browsertests.filter"
+          "--site-per-process",
+          "--test-launcher-filter-file=../../testing/buildbot/filters/site-per-process.content_browsertests.filter"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11805,7 +11812,7 @@
       },
       {
         "args": [
-          "--isolate-sites-for-testing=chrome-extension://*"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11814,7 +11821,7 @@
       },
       {
         "args": [
-          "--isolate-sites-for-testing=chrome-extension://*"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11823,7 +11830,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11832,7 +11839,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11841,7 +11848,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11850,7 +11857,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -11859,7 +11866,7 @@
       },
       {
         "args": [
-          "--isolate-extensions"
+          "--site-per-process"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -12455,6 +12462,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "content_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "crypto_unittests"
       },
       {
@@ -12546,6 +12559,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "interactive_ui_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "ipc_tests"
       },
       {
         "swarming": {

@@ -34,31 +34,29 @@ class FilePath;
 
 // Options for creating a shared memory object.
 struct BASE_EXPORT SharedMemoryCreateOptions {
-  SharedMemoryCreateOptions();
-
 #if !(defined(OS_MACOSX) && !defined(OS_IOS))
   // DEPRECATED (crbug.com/345734):
   // If NULL, the object is anonymous.  This pointer is owned by the caller
   // and must live through the call to Create().
-  const std::string* name_deprecated;
+  const std::string* name_deprecated = nullptr;
 
   // DEPRECATED (crbug.com/345734):
   // If true, and the shared memory already exists, Create() will open the
   // existing shared memory and ignore the size parameter.  If false,
   // shared memory must not exist.  This flag is meaningless unless
   // name_deprecated is non-NULL.
-  bool open_existing_deprecated;
+  bool open_existing_deprecated = false;
 #endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
 
   // Size of the shared memory object to be created.
   // When opening an existing object, this has no effect.
-  size_t size;
+  size_t size = 0;
 
   // If true, mappings might need to be made executable later.
-  bool executable;
+  bool executable = false;
 
   // If true, the file can be shared read-only to a process.
-  bool share_read_only;
+  bool share_read_only = false;
 };
 
 // Platform abstraction for shared memory.  Provides a C++ wrapper

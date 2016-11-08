@@ -16,11 +16,11 @@ def ListIdentities():
     '-v',
     '-p',
     'codesigning',
-  ]).strip()
+  ])
 
 
 def FindValidIdentity():
-  lines = ListIdentities().splitlines()
+  lines = list(map(str.strip, ListIdentities().splitlines()))
   # Look for something like "2) XYZ "iPhone Developer: Name (ABC)""
   exp = re.compile('[0-9]+\) ([A-F0-9]+) "([^"]*)"')
   for line in lines:

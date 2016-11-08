@@ -1342,10 +1342,6 @@ static int ext_npn_parse_clienthello(SSL *ssl, uint8_t *out_alert,
 
   if (contents == NULL ||
       ssl->s3->initial_handshake_complete ||
-      /* If the ALPN extension is seen before NPN, ignore it. (If ALPN is seen
-       * afterwards, parsing the ALPN extension will clear
-       * |next_proto_neg_seen|. */
-      ssl->s3->alpn_selected != NULL ||
       ssl->ctx->next_protos_advertised_cb == NULL ||
       SSL_is_dtls(ssl)) {
     return 1;
@@ -1545,14 +1541,14 @@ static int ext_alpn_parse_serverhello(SSL *ssl, uint8_t *out_alert,
   return 1;
 }
 
-static int ext_alpn_parse_clienthello(SSL *ssl, uint8_t *out_alert,
-                                      CBS *contents) {
-  if (contents == NULL) {
-    return 1;
-  }
-
+int ssl_negotiate_alpn(SSL *ssl, uint8_t *out_alert,
+                       const struct ssl_early_callback_ctx *client_hello) {
+  CBS contents;
   if (ssl->ctx->alpn_select_cb == NULL ||
-      ssl->s3->initial_handshake_complete) {
+      !ssl_early_callback_get_extension(
+          client_hello, &contents,
+          TLSEXT_TYPE_application_layer_protocol_negotiation)) {
+    /* Ignore ALPN if not configured or no extension was supplied. */
     return 1;
   }
 
@@ -1560,9 +1556,11 @@ static int ext_alpn_parse_clienthello(SSL *ssl, uint8_t *out_alert,
   ssl->s3->hs->next_proto_neg_seen = 0;
 
   CBS protocol_name_list;
-  if (!CBS_get_u16_length_prefixed(contents, &protocol_name_list) ||
-      CBS_len(contents) != 0 ||
+  if (!CBS_get_u16_length_prefixed(&contents, &protocol_name_list) ||
+      CBS_len(&contents) != 0 ||
       CBS_len(&protocol_name_list) < 2) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
+    *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
 
@@ -1574,6 +1572,8 @@ static int ext_alpn_parse_clienthello(SSL *ssl, uint8_t *out_alert,
     if (!CBS_get_u8_length_prefixed(&protocol_name_list_copy, &protocol_name) ||
         /* Empty protocol names are forbidden. */
         CBS_len(&protocol_name) == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
+      *out_alert = SSL_AD_DECODE_ERROR;
       return 0;
     }
   }
@@ -1839,26 +1839,6 @@ static int ext_srtp_add_serverhello(SSL *ssl, CBB *out) {
  *
  * https://tools.ietf.org/html/rfc4492#section-5.1.2 */
 
-static int ssl_any_ec_cipher_suites_enabled(const SSL *ssl) {
-  if (ssl->version < TLS1_VERSION && !SSL_is_dtls(ssl)) {
-    return 0;
-  }
-
-  const STACK_OF(SSL_CIPHER) *cipher_stack = SSL_get_ciphers(ssl);
-
-  for (size_t i = 0; i < sk_SSL_CIPHER_num(cipher_stack); i++) {
-    const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(cipher_stack, i);
-
-    const uint32_t alg_k = cipher->algorithm_mkey;
-    const uint32_t alg_a = cipher->algorithm_auth;
-    if ((alg_k & SSL_kECDHE) || (alg_a & SSL_aECDSA)) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
 static int ext_ec_point_add_extension(SSL *ssl, CBB *out) {
   CBB contents, formats;
   if (!CBB_add_u16(out, TLSEXT_TYPE_ec_point_formats) ||
@@ -1873,7 +1853,13 @@ static int ext_ec_point_add_extension(SSL *ssl, CBB *out) {
 }
 
 static int ext_ec_point_add_clienthello(SSL *ssl, CBB *out) {
-  if (!ssl_any_ec_cipher_suites_enabled(ssl)) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
+    return 0;
+  }
+
+  /* The point format extension is unneccessary in TLS 1.3. */
+  if (min_version >= TLS1_3_VERSION) {
     return 1;
   }
 
@@ -1996,7 +1982,7 @@ int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
       !CBS_get_u8_length_prefixed(&identity, &ke_modes) ||
       !CBS_get_u8_length_prefixed(&identity, &auth_modes) ||
       !CBS_get_u16_length_prefixed(&identity, &ticket) ||
-      CBS_len(&identity) != 0) {
+      CBS_len(contents) != 0) {
     *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
@@ -2322,10 +2308,6 @@ static int ext_cookie_add_clienthello(SSL *ssl, CBB *out) {
  * https://tools.ietf.org/html/draft-ietf-tls-tls13-16#section-4.2.4 */
 
 static int ext_supported_groups_add_clienthello(SSL *ssl, CBB *out) {
-  if (!ssl_any_ec_cipher_suites_enabled(ssl)) {
-    return 1;
-  }
-
   CBB contents, groups_bytes;
   if (!CBB_add_u16(out, TLSEXT_TYPE_supported_groups) ||
       !CBB_add_u16_length_prefixed(out, &contents) ||
@@ -2479,7 +2461,8 @@ static const struct tls_extension kExtensions[] = {
     ext_alpn_init,
     ext_alpn_add_clienthello,
     ext_alpn_parse_serverhello,
-    ext_alpn_parse_clienthello,
+    /* ALPN is negotiated late in |ssl_negotiate_alpn|. */
+    ignore_parse_clienthello,
     ext_alpn_add_serverhello,
   },
   {

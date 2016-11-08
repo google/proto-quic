@@ -21,7 +21,6 @@ namespace base {
 
 class Flag;
 class AsyncWaiter;
-class AsyncCallbackTask;
 class WaitableEvent;
 
 // This class provides a way to wait on a WaitableEvent asynchronously.

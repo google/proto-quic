@@ -32,6 +32,10 @@ def GetSystemHealthBenchmarksToSmokeTest():
 
 
 _DISABLED_TESTS = frozenset({
+  # crbug.com/662003
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:social:twitter',  # pylint: disable=line-too-long
+  # crbug.com/662021
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:news:flipboard',  # pylint: disable=line-too-long
   # crbug.com/629123
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:hackernews',  # pylint: disable=line-too-long
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:nytimes',  # pylint: disable=line-too-long
@@ -112,7 +116,7 @@ def _GenerateSmokeTestCase(benchmark_class, story_to_smoke_test):
 def GenerateBenchmarkOptions(benchmark_class):
   # Set the benchmark's default arguments.
   options = options_for_unittests.GetCopy()
-  options.output_format = 'none'
+  options.output_formats = ['none']
   parser = options.CreateParser()
 
   # TODO(nednguyen): probably this logic of setting up the benchmark options

@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/fr.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 fr{
     Countries{
         001{"Monde"}
@@ -46,7 +40,6 @@ fr{
         AI{"Anguilla"}
         AL{"Albanie"}
         AM{"Arménie"}
-        AN{"Antilles néerlandaises"}
         AO{"Angola"}
         AQ{"Antarctique"}
         AR{"Argentine"}
@@ -279,6 +272,7 @@ fr{
         UA{"Ukraine"}
         UG{"Ouganda"}
         UM{"Îles mineures éloignées des États-Unis"}
+        UN{"Nations Unies"}
         US{"États-Unis"}
         UY{"Uruguay"}
         UZ{"Ouzbékistan"}
@@ -301,14 +295,16 @@ fr{
     }
     Countries%short{
         GB{"R.-U."}
+        UN{"NU"}
         US{"É.-U."}
     }
     Countries%variant{
         CD{"Congo (RDC)"}
         CG{"République du Congo"}
+        CZ{"Tchéquie"}
         FK{"Îles Falkland"}
         MK{"Macédoine (ARYM)"}
         TL{"Timor-Oriental"}
     }
-    Version{"2.1.20.4"}
+    Version{"2.1.28.79"}
 }

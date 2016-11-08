@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/ro.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ro{
     Countries{
         001{"Lume"}
@@ -46,7 +40,6 @@ ro{
         AI{"Anguilla"}
         AL{"Albania"}
         AM{"Armenia"}
-        AN{"Antilele Olandeze"}
         AO{"Angola"}
         AQ{"Antarctica"}
         AR{"Argentina"}
@@ -188,7 +181,7 @@ ro{
         MF{"Sfântul Martin"}
         MG{"Madagascar"}
         MH{"Insulele Marshall"}
-        MK{"Macedonia"}
+        MK{"Republica Macedonia"}
         ML{"Mali"}
         MM{"Myanmar (Birmania)"}
         MN{"Mongolia"}
@@ -254,7 +247,7 @@ ro{
         SO{"Somalia"}
         SR{"Suriname"}
         SS{"Sudanul de Sud"}
-        ST{"Sao Tome și Principe"}
+        ST{"Sao Tomé și Príncipe"}
         SV{"El Salvador"}
         SX{"Sint-Maarten"}
         SY{"Siria"}
@@ -279,6 +272,7 @@ ro{
         UA{"Ucraina"}
         UG{"Uganda"}
         UM{"Insulele Îndepărtate ale S.U.A."}
+        UN{"Națiunile Unite"}
         US{"Statele Unite ale Americii"}
         UY{"Uruguay"}
         UZ{"Uzbekistan"}
@@ -286,7 +280,7 @@ ro{
         VC{"Saint Vincent și Grenadinele"}
         VE{"Venezuela"}
         VG{"Insulele Virgine Britanice"}
-        VI{"Insulele Virgine S.U.A."}
+        VI{"Insulele Virgine Americane"}
         VN{"Vietnam"}
         VU{"Vanuatu"}
         WF{"Wallis și Futuna"}
@@ -301,14 +295,16 @@ ro{
     }
     Countries%short{
         GB{"Regatul Unit"}
+        UN{"NU"}
         US{"S.U.A."}
     }
     Countries%variant{
         CD{"Congo (Republica Democrată Congo)"}
         CG{"Congo (Republica)"}
         CI{"Coasta de Fildeș"}
+        CZ{"Cehia"}
         FK{"Insulele Falkland (Insulele Malvine)"}
-        MK{"Macedonia (FRIM)"}
+        MK{"Republica Macedonia (FRIM)"}
     }
-    Version{"2.1.19.17"}
+    Version{"2.1.28.79"}
 }

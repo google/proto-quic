@@ -1,17 +1,12 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/fa_AF.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 fa_AF{
     Countries{
         AD{"اندورا"}
         AG{"انتیگوا و باربودا"}
         AL{"البانیا"}
         AO{"انگولا"}
+        AQ{"انترکتیکا"}
         AR{"ارجنتاین"}
         AU{"آسترالیا"}
         BA{"بوسنیا و هرزه‌گوینا"}
@@ -38,6 +33,7 @@ fa_AF{
         FI{"فنلند"}
         FM{"میکرونزیا"}
         GD{"گرینادا"}
+        GH{"گانا"}
         GN{"گینیا"}
         GQ{"گینیا استوایی"}
         GT{"گواتیمالا"}
@@ -67,6 +63,7 @@ fa_AF{
         MX{"مکسیکو"}
         MY{"مالیزیا"}
         MZ{"موزمبیق"}
+        NE{"نایجر"}
         NG{"نیجریا"}
         NI{"نیکاراگوا"}
         NL{"هالند"}
@@ -91,9 +88,12 @@ fa_AF{
         SV{"السلوادور"}
         TJ{"تاجکستان"}
         UA{"اکراین"}
+        UG{"یوگاندا"}
         UY{"یوروگوای"}
+        VC{"سنت وینسنت و گرنادین‌ها"}
         VE{"ونزویلا"}
+        XK{"کوسوا"}
         ZW{"زیمبابوی"}
     }
-    Version{"2.1.19.77"}
+    Version{"2.1.29.44"}
 }

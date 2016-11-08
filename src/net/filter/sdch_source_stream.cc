@@ -134,6 +134,8 @@ int SdchSourceStream::FilterData(IOBuffer* output_buffer,
         break;
       }
       case STATE_OUTPUT_REPLACE: {
+        // Drains the entire input since the replacement will be returned.
+        input_data_size = 0;
         int flushed = FlushBufferedOutput(output_buffer->data() + bytes_out,
                                           output_buffer_size - bytes_out,
                                           buffered_output_);

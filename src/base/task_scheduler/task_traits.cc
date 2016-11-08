@@ -65,19 +65,6 @@ const char* TaskShutdownBehaviorToString(
   return "";
 }
 
-const char* ExecutionModeToString(ExecutionMode execution_mode) {
-  switch (execution_mode) {
-    case ExecutionMode::PARALLEL:
-      return "PARALLEL";
-    case ExecutionMode::SEQUENCED:
-      return "SEQUENCED";
-    case ExecutionMode::SINGLE_THREADED:
-      return "SINGLE_THREADED";
-  }
-  NOTREACHED();
-  return "";
-}
-
 std::ostream& operator<<(std::ostream& os, const TaskPriority& task_priority) {
   os << TaskPriorityToString(task_priority);
   return os;
@@ -86,12 +73,6 @@ std::ostream& operator<<(std::ostream& os, const TaskPriority& task_priority) {
 std::ostream& operator<<(std::ostream& os,
                          const TaskShutdownBehavior& shutdown_behavior) {
   os << TaskShutdownBehaviorToString(shutdown_behavior);
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os,
-                         const ExecutionMode& execution_mode) {
-  os << ExecutionModeToString(execution_mode);
   return os;
 }
 

@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/kln.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 kln{
     Countries{
         AD{"Emetab Andorra"}
@@ -15,7 +9,6 @@ kln{
         AI{"Emetab Anguilla"}
         AL{"Emetab Albania"}
         AM{"Emetab Armenia"}
-        AN{"Emetab Antile nebo Holand"}
         AO{"Emetab Angola"}
         AR{"Emetab Argentina"}
         AS{"Emetab American Samoa"}
@@ -234,5 +227,5 @@ kln{
         ZM{"Emetab Zambia"}
         ZW{"Emetab Zimbabwe"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.40"}
 }

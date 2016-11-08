@@ -107,8 +107,10 @@
         "system_health_desktop_032.wpr": [
             "play:media:pandora"
         ],
-        "system_health_desktop_033.wpr": [
-            "browse:media:pinterest",
+        "system_health_desktop_035.wpr": [
+            "browse:media:pinterest"
+        ],
+        "system_health_desktop_036.wpr": [
             "browse:media:tumblr"
         ]
     },

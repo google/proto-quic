@@ -23,11 +23,14 @@
 
 #include <openssl/base64.h>
 #include <openssl/bio.h>
+#include <openssl/cipher.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/hmac.h>
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
+#include <openssl/rand.h>
 #include <openssl/x509.h>
 
 #include "internal.h"
@@ -269,7 +272,6 @@ static const char *kMustNotIncludeNull[] = {
   "SSLv3",
   "TLSv1",
   "TLSv1.2",
-  "GENERIC",
 };
 
 static const char *kMustNotIncludeCECPQ1[] = {
@@ -294,7 +296,6 @@ static const char *kMustNotIncludeCECPQ1[] = {
   "AES256",
   "AESGCM",
   "CHACHA20",
-  "GENERIC",
 };
 
 static const CurveTest kCurveTests[] = {
@@ -1974,6 +1975,41 @@ static bool ExpectSessionReused(SSL_CTX *client_ctx, SSL_CTX *server_ctx,
   return true;
 }
 
+static bssl::UniquePtr<SSL_SESSION> ExpectSessionRenewed(SSL_CTX *client_ctx,
+                                                         SSL_CTX *server_ctx,
+                                                         SSL_SESSION *session) {
+  g_last_session = nullptr;
+  SSL_CTX_sess_set_new_cb(client_ctx, SaveLastSession);
+
+  bssl::UniquePtr<SSL> client, server;
+  if (!ConnectClientAndServer(&client, &server, client_ctx,
+                              server_ctx, session)) {
+    fprintf(stderr, "Failed to connect client and server.\n");
+    return nullptr;
+  }
+
+  if (SSL_session_reused(client.get()) != SSL_session_reused(server.get())) {
+    fprintf(stderr, "Client and server were inconsistent.\n");
+    return nullptr;
+  }
+
+  if (!SSL_session_reused(client.get())) {
+    fprintf(stderr, "Session was not reused.\n");
+    return nullptr;
+  }
+
+  // Run the read loop to account for post-handshake tickets in TLS 1.3.
+  SSL_read(client.get(), nullptr, 0);
+
+  SSL_CTX_sess_set_new_cb(client_ctx, nullptr);
+
+  if (!g_last_session) {
+    fprintf(stderr, "Client did not receive a renewed session.\n");
+    return nullptr;
+  }
+  return std::move(g_last_session);
+}
+
 static bool TestSessionIDContext() {
   bssl::UniquePtr<X509> cert = GetTestCertificate();
   bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
@@ -2039,6 +2075,28 @@ static void CurrentTimeCallback(const SSL *ssl, timeval *out_clock) {
   *out_clock = g_current_time;
 }
 
+static int RenewTicketCallback(SSL *ssl, uint8_t *key_name, uint8_t *iv,
+                               EVP_CIPHER_CTX *ctx, HMAC_CTX *hmac_ctx,
+                               int encrypt) {
+  static const uint8_t kZeros[16] = {0};
+
+  if (encrypt) {
+    memcpy(key_name, kZeros, sizeof(kZeros));
+    RAND_bytes(iv, 16);
+  } else if (memcmp(key_name, kZeros, 16) != 0) {
+    return 0;
+  }
+
+  if (!HMAC_Init_ex(hmac_ctx, kZeros, sizeof(kZeros), EVP_sha256(), NULL) ||
+      !EVP_CipherInit_ex(ctx, EVP_aes_128_cbc(), NULL, kZeros, iv, encrypt)) {
+    return -1;
+  }
+
+  // Returning two from the callback in decrypt mode renews the
+  // session in TLS 1.2 and below.
+  return encrypt ? 1 : 2;
+}
+
 static bool TestSessionTimeout() {
   bssl::UniquePtr<X509> cert = GetTestCertificate();
   bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
@@ -2047,58 +2105,114 @@ static bool TestSessionTimeout() {
   }
 
   for (uint16_t version : kTLSVersions) {
-    static const int kStartTime = 1000;
-    g_current_time.tv_sec = kStartTime;
+    for (bool server_test : std::vector<bool>{false, true}) {
+      static const int kStartTime = 1000;
+      g_current_time.tv_sec = kStartTime;
 
-    bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
-    bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
-    if (!server_ctx || !client_ctx ||
-        !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-        !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-        !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-        !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-        !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-        !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
-      return false;
-    }
+      bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
+      bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+      if (!server_ctx || !client_ctx ||
+          !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
+          !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
+          !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
+          !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
+          !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
+          !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
+        return false;
+      }
 
-    SSL_CTX_set_session_cache_mode(client_ctx.get(), SSL_SESS_CACHE_BOTH);
+      SSL_CTX_set_session_cache_mode(client_ctx.get(), SSL_SESS_CACHE_BOTH);
+      SSL_CTX_set_session_cache_mode(server_ctx.get(), SSL_SESS_CACHE_BOTH);
 
-    SSL_CTX_set_session_cache_mode(server_ctx.get(), SSL_SESS_CACHE_BOTH);
-    SSL_CTX_set_current_time_cb(server_ctx.get(), CurrentTimeCallback);
+      // Both client and server must enforce session timeouts.
+      if (server_test) {
+        SSL_CTX_set_current_time_cb(server_ctx.get(), CurrentTimeCallback);
+      } else {
+        SSL_CTX_set_current_time_cb(client_ctx.get(), CurrentTimeCallback);
+      }
 
-    bssl::UniquePtr<SSL_SESSION> session =
-        CreateClientSession(client_ctx.get(), server_ctx.get());
-    if (!session) {
-      fprintf(stderr, "Error getting session (version = %04x).\n", version);
-      return false;
-    }
+      // Configure a ticket callback which renews tickets.
+      SSL_CTX_set_tlsext_ticket_key_cb(server_ctx.get(), RenewTicketCallback);
 
-    // Advance the clock just behind the timeout.
-    g_current_time.tv_sec += SSL_DEFAULT_SESSION_TIMEOUT;
+      bssl::UniquePtr<SSL_SESSION> session =
+          CreateClientSession(client_ctx.get(), server_ctx.get());
+      if (!session) {
+        fprintf(stderr, "Error getting session (version = %04x).\n", version);
+        return false;
+      }
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             true /* expect session reused */)) {
-      fprintf(stderr, "Error resuming session (version = %04x).\n", version);
-      return false;
-    }
+      // Advance the clock just behind the timeout.
+      g_current_time.tv_sec += SSL_DEFAULT_SESSION_TIMEOUT;
 
-    // Advance the clock one more second.
-    g_current_time.tv_sec++;
+      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
+                               session.get(),
+                               true /* expect session reused */)) {
+        fprintf(stderr, "Error resuming session (version = %04x).\n", version);
+        return false;
+      }
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             false /* expect session not reused */)) {
-      fprintf(stderr, "Error resuming session (version = %04x).\n", version);
-      return false;
-    }
+      // Advance the clock one more second.
+      g_current_time.tv_sec++;
 
-    // Rewind the clock to before the session was minted.
-    g_current_time.tv_sec = kStartTime - 1;
+      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
+                               session.get(),
+                               false /* expect session not reused */)) {
+        fprintf(stderr, "Error resuming session (version = %04x).\n", version);
+        return false;
+      }
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             false /* expect session not reused */)) {
-      fprintf(stderr, "Error resuming session (version = %04x).\n", version);
-      return false;
+      // Rewind the clock to before the session was minted.
+      g_current_time.tv_sec = kStartTime - 1;
+
+      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
+                               session.get(),
+                               false /* expect session not reused */)) {
+        fprintf(stderr, "Error resuming session (version = %04x).\n", version);
+        return false;
+      }
+
+      // SSL 3.0 cannot renew sessions.
+      if (version == SSL3_VERSION) {
+        continue;
+      }
+
+      // Renew the session 10 seconds before expiration.
+      g_current_time.tv_sec = kStartTime + SSL_DEFAULT_SESSION_TIMEOUT - 10;
+      bssl::UniquePtr<SSL_SESSION> new_session = ExpectSessionRenewed(
+          client_ctx.get(), server_ctx.get(), session.get());
+      if (!new_session) {
+        fprintf(stderr, "Error renewing session (version = %04x).\n", version);
+        return false;
+      }
+
+      // This new session is not the same object as before.
+      if (session.get() == new_session.get()) {
+        fprintf(stderr, "New and old sessions alias (version = %04x).\n",
+                version);
+        return false;
+      }
+
+      // The new session is usable just before the old expiration.
+      g_current_time.tv_sec = kStartTime + SSL_DEFAULT_SESSION_TIMEOUT - 1;
+      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
+                               new_session.get(),
+                               true /* expect session reused */)) {
+        fprintf(stderr, "Error resuming renewed session (version = %04x).\n",
+                version);
+        return false;
+      }
+
+      // Renewal does not extend the lifetime, so it is not usable beyond the
+      // old expiration.
+      g_current_time.tv_sec = kStartTime + SSL_DEFAULT_SESSION_TIMEOUT + 1;
+      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
+                               new_session.get(),
+                               false /* expect session not reused */)) {
+        fprintf(stderr,
+                "Renewed session's lifetime is too long (version = %04x).\n",
+                version);
+        return false;
+      }
     }
   }
 
@@ -2337,6 +2451,67 @@ static bool TestVersions() {
   return true;
 }
 
+// Tests that that |SSL_get_pending_cipher| is available during the ALPN
+// selection callback.
+static bool TestALPNCipherAvailable() {
+  static const uint8_t kALPNProtos[] = {0x03, 'f', 'o', 'o'};
+
+  bssl::UniquePtr<X509> cert = GetTestCertificate();
+  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
+  if (!cert || !key) {
+    return false;
+  }
+
+  for (uint16_t version : kTLSVersions) {
+    // SSL 3.0 lacks extensions.
+    if (version == SSL3_VERSION) {
+      continue;
+    }
+
+    bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+    if (!ctx ||
+        !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
+        !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
+        !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
+        !SSL_CTX_set_max_proto_version(ctx.get(), version) ||
+        SSL_CTX_set_alpn_protos(ctx.get(), kALPNProtos, sizeof(kALPNProtos)) !=
+            0) {
+      return false;
+    }
+
+    // The ALPN callback does not fail the handshake on error, so have the
+    // callback write a boolean.
+    std::pair<uint16_t, bool> callback_state(version, false);
+    SSL_CTX_set_alpn_select_cb(
+        ctx.get(),
+        [](SSL *ssl, const uint8_t **out, uint8_t *out_len, const uint8_t *in,
+           unsigned in_len, void *arg) -> int {
+          auto state = reinterpret_cast<std::pair<uint16_t, bool>*>(arg);
+          if (SSL_get_pending_cipher(ssl) != nullptr &&
+              SSL_version(ssl) == state->first) {
+            state->second = true;
+          }
+          return SSL_TLSEXT_ERR_NOACK;
+        },
+        &callback_state);
+
+    bssl::UniquePtr<SSL> client, server;
+    if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
+                                nullptr /* no session */)) {
+      return false;
+    }
+
+    if (!callback_state.second) {
+      fprintf(stderr,
+              "%x: The pending cipher was not known in the ALPN callback.\n",
+              version);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int main() {
   CRYPTO_library_init();
 
@@ -2374,7 +2549,8 @@ int main() {
       !TestSNICallback() ||
       !TestEarlyCallbackVersionSwitch() ||
       !TestSetVersion() ||
-      !TestVersions()) {
+      !TestVersions() ||
+      !TestALPNCipherAvailable()) {
     ERR_print_errors_fp(stderr);
     return 1;
   }

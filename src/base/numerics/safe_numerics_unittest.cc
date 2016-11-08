@@ -120,6 +120,8 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(1) % 1);
   CheckedNumeric<Dst> checked_dst = 1;
   TEST_EXPECTED_VALUE(0, checked_dst %= 1);
+  // Test that div by 0 is avoided but returns invalid result.
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) % 0);
 }
 
 // Unsigned integer arithmetic.
@@ -155,6 +157,8 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(1) % 1);
   CheckedNumeric<Dst> checked_dst = 1;
   TEST_EXPECTED_VALUE(0, checked_dst %= 1);
+  // Test that div by 0 is avoided but returns invalid result.
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) % 0);
 }
 
 // Floating point arithmetic.

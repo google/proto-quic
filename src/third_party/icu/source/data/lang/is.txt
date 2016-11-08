@@ -1,19 +1,13 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/is.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 is{
     Keys{
         calendar{"Dagatal"}
+        cf{"Gjaldmiðilssnið"}
         colAlternate{"Röðun óháð táknum"}
         colBackwards{"Röðun með viðsnúnum áherslum"}
         colCaseFirst{"Röðun eftir hástöfum/lágstöfum"}
         colCaseLevel{"Stafrétt röðun"}
-        colHiraganaQuaternary{"Kana-röðun"}
         colNormalization{"Stöðluð röðun"}
         colNumeric{"Talnaröðun"}
         colStrength{"Röðunarstyrkur"}
@@ -25,10 +19,10 @@ is{
         numbers{"Tölur"}
         timezone{"Tímabelti"}
         va{"Landsstaðalsafbrigði"}
-        variableTop{"Raða sem táknum"}
         x{"Einkanotkun"}
     }
     Languages{
+        aa{"afár"}
         ab{"abkasíska"}
         ace{"akkíska"}
         ach{"acoli"}
@@ -38,12 +32,15 @@ is{
         af{"afríkanska"}
         afh{"afríhílí"}
         agq{"aghem"}
+        ain{"aínu (Japan)"}
         ak{"akan"}
         akk{"akkadíska"}
         ale{"aleúska"}
+        alt{"suðuraltaíska"}
         am{"amharíska"}
         an{"aragonska"}
         ang{"fornenska"}
+        anp{"angíka"}
         ar{"arabíska"}
         ar_001{"stöðluð nútímaarabíska"}
         arc{"arameíska"}
@@ -61,6 +58,7 @@ is{
         bal{"balúkí"}
         ban{"balíska"}
         bas{"basa"}
+        bax{"bamun"}
         be{"hvítrússneska"}
         bej{"beja"}
         bem{"bemba"}
@@ -79,12 +77,15 @@ is{
         bra{"braí"}
         brx{"bódó"}
         bs{"bosníska"}
+        bss{"bakossi"}
         bua{"búríat"}
         bug{"búgíska"}
         byn{"blín"}
         ca{"katalónska"}
         cad{"kaddó"}
         car{"karíbamál"}
+        cay{"kajúga"}
+        cch{"atsam"}
         ce{"tsjetsjenska"}
         ceb{"kebúanó"}
         cgg{"kíga"}
@@ -103,6 +104,7 @@ is{
         cop{"koptíska"}
         cr{"krí"}
         crh{"krímtyrkneska"}
+        crs{"Seselwa kreólsk franska"}
         cs{"tékkneska"}
         csb{"kasúbíska"}
         cu{"kirkjuslavneska"}
@@ -128,6 +130,7 @@ is{
         dyo{"jola-fonyi"}
         dyu{"djúla"}
         dz{"dsongka"}
+        dzg{"dazaga"}
         ebu{"embu"}
         ee{"ewe"}
         efi{"efík"}
@@ -207,6 +210,7 @@ is{
         hz{"hereró"}
         ia{"alþjóðatunga"}
         iba{"íban"}
+        ibb{"ibibio"}
         id{"indónesíska"}
         ie{"interlingve"}
         ig{"ígbó"}
@@ -229,11 +233,14 @@ is{
         kaa{"karakalpak"}
         kab{"kabíle"}
         kac{"kasín"}
+        kaj{"jju"}
         kam{"kamba"}
         kaw{"kaví"}
         kbd{"kabardíska"}
+        kcg{"tyap"}
         kde{"makonde"}
         kea{"grænhöfðeyska"}
+        kfo{"koro"}
         kg{"kongóska"}
         kha{"kasí"}
         kho{"kotaska"}
@@ -241,6 +248,7 @@ is{
         ki{"kíkújú"}
         kj{"kúanjama"}
         kk{"kasakska"}
+        kkj{"kako"}
         kl{"grænlenska"}
         kln{"kalenjin"}
         km{"kmer"}
@@ -253,10 +261,12 @@ is{
         kpe{"kpelle"}
         kr{"kanúrí"}
         krc{"karasaíbalkar"}
+        krl{"karélska"}
         kru{"kúrúk"}
         ks{"kasmírska"}
         ksb{"sjambala"}
         ksf{"bafía"}
+        ksh{"kölníska"}
         ku{"kúrdíska"}
         kum{"kúmík"}
         kut{"kútenaí"}
@@ -319,6 +329,7 @@ is{
         mua{"mundang"}
         mul{"margvísleg mál"}
         mus{"krík"}
+        mwl{"mirandesíska"}
         mwr{"marvarí"}
         my{"burmneska"}
         myv{"ersja"}
@@ -339,6 +350,7 @@ is{
         nl_BE{"flæmska"}
         nmg{"kwasio"}
         nn{"nýnorska"}
+        nnh{"ngiemboon"}
         no{"norska"}
         nog{"nógaí"}
         non{"norræna"}
@@ -347,6 +359,7 @@ is{
         nso{"norðursótó"}
         nus{"núer"}
         nv{"navahó"}
+        nwc{"klassísk nevaríska"}
         ny{"njanja; sísjeva; sjeva"}
         nym{"njamvesí"}
         nyn{"nyankole"}
@@ -365,11 +378,13 @@ is{
         pam{"pampanga"}
         pap{"papíamentó"}
         pau{"paláska"}
+        pcm{"nígerískt pidgin"}
         peo{"fornpersneska"}
         phn{"fönikíska"}
         pi{"palí"}
         pl{"pólska"}
         pon{"ponpeiska"}
+        prg{"prússneska"}
         pro{"fornpróvensalska"}
         ps{"pastú"}
         pt{"portúgalska"}
@@ -388,6 +403,7 @@ is{
         rom{"romaní"}
         root{"rót"}
         ru{"rússneska"}
+        rup{"arúmenska"}
         rw{"kínjarvanda"}
         rwk{"rúa"}
         sa{"sanskrít"}
@@ -397,6 +413,7 @@ is{
         saq{"sambúrú"}
         sas{"sasak"}
         sat{"santalí"}
+        sba{"ngambay"}
         sbp{"sangú"}
         sc{"sardínska"}
         scn{"sikileyska"}
@@ -427,8 +444,10 @@ is{
         sog{"sogdíen"}
         sq{"albanska"}
         sr{"serbneska"}
+        srn{"sranan tongo"}
         srr{"serer"}
         ss{"svatí"}
+        ssy{"saho"}
         st{"suðursótó"}
         su{"súndanska"}
         suk{"súkúma"}
@@ -436,7 +455,8 @@ is{
         sux{"súmerska"}
         sv{"sænska"}
         sw{"svahílí"}
-        swc{"Kongó-svahílí"}
+        sw_CD{"Kongó-svahílí"}
+        swb{"shimaoríska"}
         syc{"klassísk sýrlenska"}
         syr{"sýrlenska"}
         ta{"tamílska"}
@@ -461,6 +481,7 @@ is{
         tog{"tongverska (nyasa)"}
         tpi{"tokpisin"}
         tr{"tyrkneska"}
+        trv{"tarókó"}
         ts{"tsonga"}
         tsi{"tsimsíska"}
         tt{"tatarska"}
@@ -482,9 +503,11 @@ is{
         vai{"vaí"}
         ve{"venda"}
         vi{"víetnamska"}
+        vo{"volapyk"}
         vot{"votíska"}
         vun{"vunjó"}
         wa{"vallónska"}
+        wae{"valser"}
         wal{"valamó"}
         war{"varaí"}
         was{"vasjó"}
@@ -495,8 +518,11 @@ is{
         xog{"sóga"}
         yao{"jaó"}
         yap{"japíska"}
+        yav{"yangben"}
+        ybb{"yemba"}
         yi{"jiddíska"}
         yo{"jórúba"}
+        yue{"kantoneska"}
         za{"súang"}
         zap{"sapótek"}
         zbl{"blisstákn"}
@@ -508,6 +534,7 @@ is{
         zu{"súlú"}
         zun{"súní"}
         zxx{"ekkert tungumálaefni"}
+        zza{"zázáíska"}
     }
     Languages%short{
         az{"aserska"}
@@ -527,6 +554,7 @@ is{
         Grek{"grískt"}
         Gujr{"gújaratí"}
         Guru{"gurmukhi"}
+        Hanb{"hanb"}
         Hang{"hangul"}
         Hani{"kínverskt"}
         Hans{"einfaldað"}
@@ -534,6 +562,7 @@ is{
         Hebr{"hebreskt"}
         Hira{"hiragana"}
         Hrkt{"katakana eða hiragana"}
+        Jamo{"jamo"}
         Jpan{"japanskt"}
         Kana{"katakana"}
         Khmr{"kmer"}
@@ -551,6 +580,8 @@ is{
         Thaa{"thaana"}
         Thai{"taílenskt"}
         Tibt{"tíbeskt"}
+        Zmth{"stærðfræðitákn"}
+        Zsye{"emoji-tákn"}
         Zsym{"tákn"}
         Zxxx{"óskrifað"}
         Zyyy{"almennt"}
@@ -581,6 +612,10 @@ is{
             persian{"Persneskt dagatal"}
             roc{"Minguo dagatal"}
         }
+        cf{
+            account{"Bókhaldsgjaldmiðill"}
+            standard{"Staðlað gjaldmiðilssnið"}
+        }
         colAlternate{
             non-ignorable{"Raða táknum"}
             shifted{"Raða óháð táknum"}
@@ -597,10 +632,6 @@ is{
         colCaseLevel{
             no{"Raða óháð hástöfum og lágstöfum"}
             yes{"Raða stafrétt"}
-        }
-        colHiraganaQuaternary{
-            no{"Raða Kana sér"}
-            yes{"Raða Kana öðruvísi"}
         }
         colNormalization{
             no{"Raða án stöðlunar"}
@@ -633,6 +664,11 @@ is{
             traditional{"Hefðbundin"}
             unihan{"Röðun eftir grunnstrikum"}
         }
+        d0{
+            fwidth{"Full breidd"}
+            hwidth{"Hálf breidd"}
+            npinyin{"Tölulegur"}
+        }
         hc{
             h11{"12 tíma kerfi (0–11)"}
             h12{"12 tíma kerfi (1–12)"}
@@ -643,6 +679,10 @@ is{
             loose{"Laus línuskipting"}
             normal{"Venjuleg línuskipting"}
             strict{"Ströng línuskipting"}
+        }
+        m0{
+            bgn{"BGN"}
+            ungegn{"UNGEGN"}
         }
         ms{
             metric{"Metrakerfi"}
@@ -692,7 +732,22 @@ is{
             vaii{"Vai-tölustafir"}
         }
     }
-    Version{"2.1.19.17"}
+    Version{"2.1.29.65"}
+    characterLabelPattern{
+        all{"{0} — allt"}
+        category-list{"{0}: {1}"}
+        compatibility{"{0} — samhæfi"}
+        enclosed{"{0} — lokað"}
+        extended{"{0} — aukið"}
+        historic{"{0} — sögulegt"}
+        miscellaneous{"{0} — ýmislegt"}
+        other{"{0} — annað"}
+        scripts{"letur — {0}"}
+        strokes{
+            one{"{0} slög"}
+            other{"{0} slög"}
+        }
+    }
     codePatterns{
         language{"tungumál: {0}"}
         script{"leturgerð: {0}"}

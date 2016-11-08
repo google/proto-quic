@@ -69,6 +69,7 @@ var ProfileInfo;
  *   devicePath: (string|undefined),
  *   isParentDevice: (boolean|undefined),
  *   isReadOnly: boolean,
+ *   isReadOnlyRemovableDevice: boolean,
  *   hasMedia: boolean,
  *   configurable: boolean,
  *   watchable: boolean,

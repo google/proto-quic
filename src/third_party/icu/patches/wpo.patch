@@ -1,8 +1,8 @@
 diff --git a/source/common/ucmndata.h b/source/common/ucmndata.h
-index 36163c5..413a2f8 100644
+index 9e87fad..206ddbf 100644
 --- a/source/common/ucmndata.h
 +++ b/source/common/ucmndata.h
-@@ -44,6 +44,20 @@ typedef struct  {
+@@ -46,6 +46,20 @@ typedef struct  {
  } DataHeader;
  
  typedef struct {
@@ -24,7 +24,7 @@ index 36163c5..413a2f8 100644
      uint32_t dataOffset;
  } UDataOffsetTOCEntry;
 diff --git a/source/common/udata.cpp b/source/common/udata.cpp
-index d32023b..80bea06 100644
+index ec72a0c..9460746 100644
 --- a/source/common/udata.cpp
 +++ b/source/common/udata.cpp
 @@ -624,7 +624,7 @@ U_NAMESPACE_END
@@ -55,10 +55,10 @@ index d32023b..80bea06 100644
              Mutex lock;
              return gCommonICUDataArray[commonDataIndex];
 diff --git a/source/stubdata/stubdata.c b/source/stubdata/stubdata.c
-index 69a5876..1426497 100644
+index 6493ac4..ba644b2 100644
 --- a/source/stubdata/stubdata.c
 +++ b/source/stubdata/stubdata.c
-@@ -20,45 +20,34 @@
+@@ -22,45 +22,34 @@
  #include "unicode/utypes.h"
  #include "unicode/udata.h"
  #include "unicode/uversion.h"

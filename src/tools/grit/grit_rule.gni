@@ -259,18 +259,6 @@ if (enable_plugins) {
     "enable_plugins",
   ]
 }
-if (enable_basic_printing || enable_print_preview) {
-  grit_defines += [
-    "-D",
-    "enable_printing",
-  ]
-  if (enable_print_preview) {
-    grit_defines += [
-      "-D",
-      "enable_print_preview",
-    ]
-  }
-}
 if (enable_themes) {
   grit_defines += [
     "-D",

@@ -285,7 +285,7 @@
       'ios-device': 'ios',
       'ios-simulator': 'ios',
       'ios-simulator-cronet': 'ios',
-      'ios-simulator-swarming': 'ios',
+      'ios-simulator-xcode-clang': 'ios',
     },
 
     'chromium.memory': {
@@ -578,7 +578,7 @@
       'ios-device': 'ios',
       'ios-simulator': 'ios',
       'ios-simulator-cronet': 'ios',
-      'ios-simulator-swarming': 'ios',
+      'ios-simulator-xcode-clang': 'ios',
       'mac_chromium_10.10_rel_ng': 'gpu_tests_release_trybot',
       'mac_chromium_10.10_macviews': 'mac_views_browser_release_trybot',
       'mac_chromium_archive_rel_ng': 'release_bot_mac_strip',
@@ -803,7 +803,7 @@
     ],
 
     'android_debug_static_bot_vr_shell': [
-      'android', 'debug_shared_bot', 'vr_shell',
+      'android', 'debug_static_bot', 'vr_shell',
     ],
 
     'android_debug_static_minimal_symbols_mipsel': [
@@ -1322,7 +1322,7 @@
     ],
 
     'release_bot_ozone_linux': [
-      'release_bot', 'ozone_linux',
+      'release_bot', 'ozone', 'ozone_linux',
     ],
 
     'release_afl_asan': [
@@ -1583,10 +1583,6 @@
       'mixins': ['debug', 'static', 'goma'],
     },
 
-    'debug_shared_bot': {
-      'mixins': ['debug', 'shared', 'minimal_symbols', 'goma'],
-    },
-
     'debug_static_bot': {
       'mixins': ['debug', 'static', 'minimal_symbols', 'goma'],
     },
@@ -1731,8 +1727,8 @@
 
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
-                  'ozone_platform_x11=true enable_package_mash_services=true '
-                  'use_ash=false'),
+                  'ozone_platform_x11=true ozone_platform_gbm=true '
+                  'enable_package_mash_services=true use_ash=false'),
     },
 
     'pdf_xfa': {

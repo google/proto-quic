@@ -128,9 +128,9 @@ class ScopedPtrHashMap {
   inline void clear() {
     auto it = data_.begin();
     while (it != data_.end()) {
-      // NOTE: Like STLDeleteContainerPointers, deleting behind the iterator.
-      // Deleting the value does not always invalidate the iterator, but it may
-      // do so if the key is a pointer into the value object.
+      // NOTE: Deleting behind the iterator. Deleting the value does not always
+      // invalidate the iterator, but it may do so if the key is a pointer into
+      // the value object.
       auto temp = it;
       ++it;
       // Let ScopedPtr decide how to delete.

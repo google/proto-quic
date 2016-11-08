@@ -59,8 +59,7 @@ QuicCryptoClientConfig::QuicCryptoClientConfig(
   SetDefaults();
 }
 
-QuicCryptoClientConfig::~QuicCryptoClientConfig() {
-}
+QuicCryptoClientConfig::~QuicCryptoClientConfig() {}
 
 QuicCryptoClientConfig::CachedState::CachedState()
     : server_config_valid_(false),

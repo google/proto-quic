@@ -102,7 +102,7 @@ struct LeakyLazyInstanceTraits {
 };
 
 // Our AtomicWord doubles as a spinlock, where a value of
-// kBeingCreatedMarker means the spinlock is being held for creation.
+// kLazyInstanceStateCreating means the spinlock is being held for creation.
 static const subtle::AtomicWord kLazyInstanceStateCreating = 1;
 
 // Check if instance needs to be created. If so return true otherwise

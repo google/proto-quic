@@ -50,6 +50,18 @@ class WebrtcDataChannel(_Webrtc):
     return 'webrtc.datachannel'
 
 
+class WebrtcStressTest(perf_benchmark.PerfBenchmark):
+  """Measures WebRtc CPU and GPU usage with multiple peer connections."""
+  page_set = page_sets.WebrtcStresstestPageSet
+
+  @classmethod
+  def Name(cls):
+    return 'webrtc.stress'
+
+  def CreatePageTest(self, options):
+    return webrtc.WebRTC(use_webrtc_stats=False)
+
+
 # WebrtcRendering must be a PerfBenchmark, and not a _Webrtc, because it is a
 # timeline-based.
 # Disabled on reference builds because they crash and don't support tab

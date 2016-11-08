@@ -13,9 +13,9 @@
 
 #include "base/base_export.h"
 #include "base/callback_forward.h"
+#include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
 
@@ -25,11 +25,9 @@ class Location;
 
 namespace base {
 
-class SingleThreadTaskRunner;
+class SequencedTaskRunner;
 
 template <class T> class DeleteHelper;
-
-class SequencedTaskRunner;
 
 // A worker thread pool that enforces ordering between sets of tasks. It also
 // allows you to specify what should happen to your tasks on shutdown.
@@ -232,7 +230,7 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // delay are posted with SKIP_ON_SHUTDOWN behavior and tasks with zero delay
   // are posted with BLOCK_SHUTDOWN behavior.
   scoped_refptr<SequencedTaskRunner> GetSequencedTaskRunner(
-      SequenceToken token);
+      SequenceToken token) WARN_UNUSED_RESULT;
 
   // Returns a SequencedTaskRunner wrapper which posts to this
   // SequencedWorkerPool using the given sequence token. Tasks with nonzero
@@ -240,14 +238,14 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // are posted with the given shutdown behavior.
   scoped_refptr<SequencedTaskRunner> GetSequencedTaskRunnerWithShutdownBehavior(
       SequenceToken token,
-      WorkerShutdown shutdown_behavior);
+      WorkerShutdown shutdown_behavior) WARN_UNUSED_RESULT;
 
   // Returns a TaskRunner wrapper which posts to this SequencedWorkerPool using
   // the given shutdown behavior. Tasks with nonzero delay are posted with
   // SKIP_ON_SHUTDOWN behavior and tasks with zero delay are posted with the
   // given shutdown behavior.
   scoped_refptr<TaskRunner> GetTaskRunnerWithShutdownBehavior(
-      WorkerShutdown shutdown_behavior);
+      WorkerShutdown shutdown_behavior) WARN_UNUSED_RESULT;
 
   // Posts the given task for execution in the worker pool. Tasks posted with
   // this function will execute in an unspecified order on a background thread.
@@ -398,7 +396,7 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // sequence_token.
   bool IsRunningSequenceOnCurrentThread(SequenceToken sequence_token) const;
 
-  const scoped_refptr<SingleThreadTaskRunner> constructor_task_runner_;
+  const scoped_refptr<SequencedTaskRunner> constructor_task_runner_;
 
   // Avoid pulling in too many headers by putting (almost) everything
   // into |inner_|.

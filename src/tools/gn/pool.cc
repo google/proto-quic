@@ -8,9 +8,6 @@
 
 #include "base/logging.h"
 
-Pool::Pool(const Settings* settings, const Label& label)
-    : Item(settings, label) {}
-
 Pool::~Pool() {}
 
 Pool* Pool::AsPool() {

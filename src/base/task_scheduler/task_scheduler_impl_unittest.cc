@@ -34,11 +34,11 @@ namespace {
 
 struct TraitsExecutionModePair {
   TraitsExecutionModePair(const TaskTraits& traits,
-                          ExecutionMode execution_mode)
+                          test::ExecutionMode execution_mode)
       : traits(traits), execution_mode(execution_mode) {}
 
   TaskTraits traits;
-  ExecutionMode execution_mode;
+  test::ExecutionMode execution_mode;
 };
 
 #if DCHECK_IS_ON()
@@ -88,16 +88,34 @@ void VerifyTaskEnvironementAndSignalEvent(const TaskTraits& traits,
   event->Signal();
 }
 
+scoped_refptr<TaskRunner> CreateTaskRunnerWithTraitsAndExecutionMode(
+    TaskScheduler* scheduler,
+    const TaskTraits& traits,
+    test::ExecutionMode execution_mode) {
+  switch (execution_mode) {
+    case test::ExecutionMode::PARALLEL:
+      return scheduler->CreateTaskRunnerWithTraits(traits);
+    case test::ExecutionMode::SEQUENCED:
+      return scheduler->CreateSequencedTaskRunnerWithTraits(traits);
+    case test::ExecutionMode::SINGLE_THREADED:
+      return scheduler->CreateSingleThreadTaskRunnerWithTraits(traits);
+  }
+  ADD_FAILURE() << "Unknown ExecutionMode";
+  return nullptr;
+}
+
 class ThreadPostingTasks : public SimpleThread {
  public:
   // Creates a thread that posts Tasks to |scheduler| with |traits| and
   // |execution_mode|.
   ThreadPostingTasks(TaskSchedulerImpl* scheduler,
                      const TaskTraits& traits,
-                     ExecutionMode execution_mode)
+                     test::ExecutionMode execution_mode)
       : SimpleThread("ThreadPostingTasks"),
         traits_(traits),
-        factory_(scheduler->CreateTaskRunnerWithTraits(traits, execution_mode),
+        factory_(CreateTaskRunnerWithTraitsAndExecutionMode(scheduler,
+                                                            traits,
+                                                            execution_mode),
                  execution_mode) {}
 
   void WaitForAllTasksToRun() { factory_.WaitForAllTasksToRun(); }
@@ -124,11 +142,11 @@ class ThreadPostingTasks : public SimpleThread {
 std::vector<TraitsExecutionModePair> GetTraitsExecutionModePairs() {
   std::vector<TraitsExecutionModePair> params;
 
-  const ExecutionMode execution_modes[] = {ExecutionMode::PARALLEL,
-                                           ExecutionMode::SEQUENCED,
-                                           ExecutionMode::SINGLE_THREADED};
+  const test::ExecutionMode execution_modes[] = {
+      test::ExecutionMode::PARALLEL, test::ExecutionMode::SEQUENCED,
+      test::ExecutionMode::SINGLE_THREADED};
 
-  for (ExecutionMode execution_mode : execution_modes) {
+  for (test::ExecutionMode execution_mode : execution_modes) {
     for (size_t priority_index = static_cast<size_t>(TaskPriority::LOWEST);
          priority_index <= static_cast<size_t>(TaskPriority::HIGHEST);
          ++priority_index) {
@@ -219,8 +237,8 @@ TEST_P(TaskSchedulerImplTest, PostTaskWithTraits) {
 // and respect the characteristics of their ExecutionMode.
 TEST_P(TaskSchedulerImplTest, PostTasksViaTaskRunner) {
   test::TestTaskFactory factory(
-      scheduler_->CreateTaskRunnerWithTraits(GetParam().traits,
-                                             GetParam().execution_mode),
+      CreateTaskRunnerWithTraitsAndExecutionMode(
+          scheduler_.get(), GetParam().traits, GetParam().execution_mode),
       GetParam().execution_mode);
   EXPECT_FALSE(factory.task_runner()->RunsTasksOnCurrentThread());
 

@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/fy.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 fy{
     Countries{
         001{"Wrâld"}
@@ -46,7 +40,6 @@ fy{
         AI{"Anguilla"}
         AL{"Albanië"}
         AM{"Armenië"}
-        AN{"Nederlânske Antillen"}
         AO{"Angola"}
         AQ{"Antarctica"}
         AR{"Argentinië"}
@@ -309,5 +302,5 @@ fy{
         FK{"Falklâneilannen (Islas Malvinas)"}
         MK{"Macedonië (FYROM)"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.29.44"}
 }

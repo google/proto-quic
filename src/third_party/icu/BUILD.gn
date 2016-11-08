@@ -31,11 +31,6 @@ config("icu_config") {
     # We don't use ICU plugins and dyload is only necessary for them.
     # NaCl-related builds also fail looking for dlfcn.h when it's enabled.
     "U_ENABLE_DYLOAD=0",
-
-    # With exception disabled, MSVC emits C4577 warning on coming across
-    # 'noexcept'. See http://bugs.icu-project.org/trac/ticket/12406
-    # TODO(jshin): Remove this when updating to a newer version with this fixed.
-    "U_NOEXCEPT=",
   ]
 
   if (!is_component_build) {
@@ -79,6 +74,8 @@ config("icu_code") {
       "/wd4068",  # Unknown pragmas.
       "/wd4267",  # Conversion from size_t on 64-bits.
       "/wd4996",  # Deprecated functions.
+      # http://bugs.icu-project.org/trac/ticket/12821
+      "/wd4333",  # Right shift by too large amount.
     ]
   } else if (is_linux || is_android) {
     cflags += [
@@ -218,6 +215,8 @@ component("icui18n") {
     "source/i18n/dangical.cpp",
     "source/i18n/dangical.h",
     "source/i18n/datefmt.cpp",
+    "source/i18n/dayperiodrules.cpp",
+    "source/i18n/dayperiodrules.h",
     "source/i18n/dcfmtimp.h",
     "source/i18n/dcfmtsym.cpp",
     "source/i18n/decContext.c",
@@ -246,6 +245,7 @@ component("icui18n") {
     "source/i18n/digitlst.cpp",
     "source/i18n/digitlst.h",
     "source/i18n/dtfmtsym.cpp",
+    "source/i18n/dt_impl.h",
     "source/i18n/dtitvfmt.cpp",
     "source/i18n/dtitv_impl.h",
     "source/i18n/dtitvinf.cpp",
@@ -271,8 +271,6 @@ component("icui18n") {
     "source/i18n/gregoimp.h",
     "source/i18n/hebrwcal.cpp",
     "source/i18n/hebrwcal.h",
-    "source/i18n/identifier_info.cpp",
-    "source/i18n/identifier_info.h",
     "source/i18n/indiancal.cpp",
     "source/i18n/indiancal.h",
     "source/i18n/inputext.cpp",
@@ -281,7 +279,6 @@ component("icui18n") {
     "source/i18n/islamcal.h",
     "source/i18n/japancal.cpp",
     "source/i18n/japancal.h",
-    "source/i18n/locdspnm.cpp",
     "source/i18n/measfmt.cpp",
     "source/i18n/measunit.cpp",
     "source/i18n/measure.cpp",
@@ -410,8 +407,6 @@ component("icui18n") {
     "source/i18n/ucol_res.cpp",
     "source/i18n/ucol_sit.cpp",
     "source/i18n/ucsdet.cpp",
-    "source/i18n/ucurr.cpp",
-    "source/i18n/ucurrimp.h",
     "source/i18n/udat.cpp",
     "source/i18n/udateintervalformat.cpp",
     "source/i18n/udatpg.cpp",
@@ -438,8 +433,6 @@ component("icui18n") {
     "source/i18n/uspoof.cpp",
     "source/i18n/uspoof_impl.cpp",
     "source/i18n/uspoof_impl.h",
-    "source/i18n/uspoof_wsconf.cpp",
-    "source/i18n/uspoof_wsconf.h",
     "source/i18n/usrchimp.h",
     "source/i18n/utf16collationiterator.cpp",
     "source/i18n/utf16collationiterator.h",
@@ -493,7 +486,6 @@ component("icui18n") {
     "source/i18n/unicode/fpositer.h",
     "source/i18n/unicode/gender.h",
     "source/i18n/unicode/gregocal.h",
-    "source/i18n/unicode/locdspnm.h",
     "source/i18n/unicode/measfmt.h",
     "source/i18n/unicode/measunit.h",
     "source/i18n/unicode/measure.h",
@@ -528,15 +520,12 @@ component("icui18n") {
     "source/i18n/unicode/ucoleitr.h",
     "source/i18n/unicode/ucol.h",
     "source/i18n/unicode/ucsdet.h",
-    "source/i18n/unicode/ucurr.h",
     "source/i18n/unicode/udateintervalformat.h",
     "source/i18n/unicode/udat.h",
     "source/i18n/unicode/udatpg.h",
-    "source/i18n/unicode/udisplaycontext.h",
     "source/i18n/unicode/ufieldpositer.h",
     "source/i18n/unicode/uformattable.h",
     "source/i18n/unicode/ugender.h",
-    "source/i18n/unicode/uldnames.h",
     "source/i18n/unicode/ulocdata.h",
     "source/i18n/unicode/umsg.h",
     "source/i18n/unicode/unirepl.h",
@@ -545,6 +534,7 @@ component("icui18n") {
     "source/i18n/unicode/upluralrules.h",
     "source/i18n/unicode/uregex.h",
     "source/i18n/unicode/uregion.h",
+    "source/i18n/unicode/ureldatefmt.h",
     "source/i18n/unicode/usearch.h",
     "source/i18n/unicode/uspoof.h",
     "source/i18n/unicode/utmscale.h",
@@ -600,6 +590,8 @@ component("icuuc") {
     "source/common/cmemory.c",
     "source/common/cmemory.h",
     "source/common/cpputils.h",
+    "source/common/cstr.cpp",
+    "source/common/cstr.h",
     "source/common/cstring.c",
     "source/common/cstring.h",
     "source/common/cwchar.c",
@@ -623,6 +615,7 @@ component("icuuc") {
     "source/common/locbased.cpp",
     "source/common/locbased.h",
     "source/common/locdispnames.cpp",
+    "source/common/locdspnm.cpp",
     "source/common/locid.cpp",
     "source/common/loclikely.cpp",
     "source/common/locmap.c",
@@ -688,8 +681,7 @@ component("icuuc") {
     "source/common/servslkf.cpp",
     "source/common/sharedobject.cpp",
     "source/common/sharedobject.h",
-    "source/common/simplepatternformatter.cpp",
-    "source/common/simplepatternformatter.h",
+    "source/common/simpleformatter.cpp",
     "source/common/sprpimpl.h",
     "source/common/stringpiece.cpp",
     "source/common/stringtriebuilder.cpp",
@@ -702,6 +694,7 @@ component("icuuc") {
     "source/common/ubidi_props.c",
     "source/common/ubidi_props_data.h",
     "source/common/ubidi_props.h",
+    "source/common/ubiditransform.c",
     "source/common/ubidiwrt.c",
     "source/common/ubrk.cpp",
     "source/common/ubrkimpl.h",
@@ -755,6 +748,8 @@ component("icuuc") {
     "source/common/ucol_data.h",
     "source/common/ucol_swp.cpp",
     "source/common/ucol_swp.h",
+    "source/common/ucurr.cpp",
+    "source/common/ucurrimp.h",
     "source/common/udata.cpp",
     "source/common/udatamem.c",
     "source/common/udatamem.h",
@@ -813,8 +808,6 @@ component("icuuc") {
     "source/common/uresdata.h",
     "source/common/uresimp.h",
     "source/common/ureslocs.h",
-    "source/common/uresource.cpp",
-    "source/common/uresource.h",
     "source/common/usc_impl.c",
     "source/common/usc_impl.h",
     "source/common/uscript.c",
@@ -864,6 +857,7 @@ component("icuuc") {
     "source/common/wintz.c",
     "source/common/wintz.h",
   ]
+
   # ls  source/common/unicode/*h | sort | sed 's/^\(.*\)$/    "\1",/'
   public = [
     "source/common/unicode/appendable.h",
@@ -884,6 +878,7 @@ component("icuuc") {
     "source/common/unicode/idna.h",
     "source/common/unicode/listformatter.h",
     "source/common/unicode/localpointer.h",
+    "source/common/unicode/locdspnm.h",
     "source/common/unicode/locid.h",
     "source/common/unicode/messagepattern.h",
     "source/common/unicode/normalizer2.h",
@@ -897,12 +892,14 @@ component("icuuc") {
     "source/common/unicode/rep.h",
     "source/common/unicode/resbund.h",
     "source/common/unicode/schriter.h",
+    "source/common/unicode/simpleformatter.h",
     "source/common/unicode/std_string.h",
     "source/common/unicode/strenum.h",
     "source/common/unicode/stringpiece.h",
     "source/common/unicode/stringtriebuilder.h",
     "source/common/unicode/symtable.h",
     "source/common/unicode/ubidi.h",
+    "source/common/unicode/ubiditransform.h",
     "source/common/unicode/ubrk.h",
     "source/common/unicode/ucasemap.h",
     "source/common/unicode/ucat.h",
@@ -916,10 +913,13 @@ component("icuuc") {
     "source/common/unicode/ucnv.h",
     "source/common/unicode/ucnvsel.h",
     "source/common/unicode/uconfig.h",
+    "source/common/unicode/ucurr.h",
     "source/common/unicode/udata.h",
+    "source/common/unicode/udisplaycontext.h",
     "source/common/unicode/uenum.h",
     "source/common/unicode/uidna.h",
     "source/common/unicode/uiter.h",
+    "source/common/unicode/uldnames.h",
     "source/common/unicode/ulistformatter.h",
     "source/common/unicode/uloc.h",
     "source/common/unicode/umachine.h",

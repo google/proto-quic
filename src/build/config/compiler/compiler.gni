@@ -48,6 +48,10 @@ declare_args() {
   #
   # TODO(sebmarchand): Add support for the PGU (update) phase.
   chrome_pgo_phase = 0
+
+  # Whether or not we should turn on incremental WPO. Only affects the VS
+  # Windows build.
+  use_incremental_wpo = false
 }
 
 declare_args() {

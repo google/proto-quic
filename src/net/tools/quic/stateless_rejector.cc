@@ -103,11 +103,12 @@ class StatelessRejector::ProcessClientHelloCallback
       std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb)
       : rejector_(std::move(rejector)), done_cb_(std::move(done_cb)) {}
 
-  void Run(
-      QuicErrorCode error,
-      const std::string& error_details,
-      std::unique_ptr<CryptoHandshakeMessage> message,
-      std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+  void Run(QuicErrorCode error,
+           const std::string& error_details,
+           std::unique_ptr<CryptoHandshakeMessage> message,
+           std::unique_ptr<DiversificationNonce> diversification_nonce,
+           std::unique_ptr<ProofSource::Details> /* proof_source_details */)
+      override {
     StatelessRejector* rejector_ptr = rejector_.get();
     rejector_ptr->ProcessClientHelloDone(
         error, error_details, std::move(message), std::move(rejector_),

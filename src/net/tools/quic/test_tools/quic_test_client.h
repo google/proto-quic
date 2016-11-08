@@ -19,7 +19,6 @@
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/tools/balsa/balsa_frame.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -129,8 +128,21 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // set the response_listener on the client().
   void SendRequestsAndWaitForResponses(
       const std::vector<std::string>& url_list);
-  ssize_t SendMessage(const HTTPMessage& message);
-  std::string SendCustomSynchronousRequest(const HTTPMessage& message);
+  // Sends a request containing |headers| and |body| and returns the number of
+  // bytes sent (the size of the serialized request headers and body).
+  ssize_t SendMessage(const SpdyHeaderBlock& headers, base::StringPiece body);
+  // Sends a request containing |headers| and |body| with the fin bit set to
+  // |fin| and returns the number of bytes sent (the size of the serialized
+  // request headers and body).
+  ssize_t SendMessage(const SpdyHeaderBlock& headers,
+                      base::StringPiece body,
+                      bool fin);
+  // Sends a request containing |headers| and |body|, waits for the response,
+  // and returns the response body.
+  std::string SendCustomSynchronousRequest(const SpdyHeaderBlock& headers,
+                                           const std::string& body);
+  // Sends a GET request for |uri|, waits for the response, and returns the
+  // response body.
   std::string SendSynchronousRequest(const std::string& uri);
   void Connect();
   void ResetConnection();
@@ -141,9 +153,8 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   ssize_t Send(const void* buffer, size_t size);
   bool response_complete() const;
   bool response_headers_complete() const;
-  const BalsaHeaders* response_headers() const;
+  const SpdyHeaderBlock* response_headers() const;
   int64_t response_size() const;
-  int response_header_size() const;
   int64_t response_body_size() const;
   size_t bytes_read() const;
   size_t bytes_written() const;
@@ -207,8 +218,8 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // Calls GetOrCreateStream(), sends the request on the stream, and
   // stores the request in case it needs to be resent.  If |headers| is
   // null, only the body will be sent on the stream.
-  ssize_t GetOrCreateStreamAndSendRequest(const BalsaHeaders* headers,
-                                          StringPiece body,
+  ssize_t GetOrCreateStreamAndSendRequest(const SpdyHeaderBlock* headers,
+                                          base::StringPiece body,
                                           bool fin,
                                           QuicAckListenerInterface* delegate);
 
@@ -285,8 +296,11 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
     QuicAckListenerInterface* delegate_;
   };
 
-  // Given a uri, creates a simple HTTPMessage request message for testing.
-  static void FillInRequest(const std::string& uri, HTTPMessage* message);
+  // Given |uri|, populates the fields in |headers| for a simple GET
+  // request. If |uri| is a relative URL, the QuicServerId will be
+  // use to specify the authority.
+  bool PopulateHeaderBlockFromUrl(const std::string& uri,
+                                  SpdyHeaderBlock* headers);
 
   bool HaveActiveStream();
 
@@ -298,7 +312,7 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
 
   bool response_complete_;
   bool response_headers_complete_;
-  mutable BalsaHeaders response_headers_;
+  mutable SpdyHeaderBlock response_headers_;
 
   // Parsed response trailers (if present), copied from the stream in OnClose.
   SpdyHeaderBlock response_trailers_;
@@ -309,8 +323,6 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // prefer bytes_read() and bytes_written() member functions.
   uint64_t bytes_read_;
   uint64_t bytes_written_;
-  // The number of uncompressed HTTP header bytes received.
-  int response_header_size_;
   // The number of HTTP body bytes received.
   int64_t response_body_size_;
   // True if we tried to connect already since the last call to Disconnect().

@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/sv.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 sv{
     Countries{
         001{"världen"}
@@ -46,7 +40,6 @@ sv{
         AI{"Anguilla"}
         AL{"Albanien"}
         AM{"Armenien"}
-        AN{"Nederländska Antillerna"}
         AO{"Angola"}
         AQ{"Antarktis"}
         AR{"Argentina"}
@@ -185,7 +178,7 @@ sv{
         MC{"Monaco"}
         MD{"Moldavien"}
         ME{"Montenegro"}
-        MF{"S:t Martin"}
+        MF{"Saint-Martin"}
         MG{"Madagaskar"}
         MH{"Marshallöarna"}
         MK{"Makedonien"}
@@ -279,6 +272,7 @@ sv{
         UA{"Ukraina"}
         UG{"Uganda"}
         UM{"USA:s yttre öar"}
+        UN{"Förenta Nationerna"}
         US{"USA"}
         UY{"Uruguay"}
         UZ{"Uzbekistan"}
@@ -301,13 +295,13 @@ sv{
     }
     Countries%short{
         GB{"Storbritannien"}
+        UN{"FN"}
         US{"USA"}
     }
     Countries%variant{
         CD{"Demokratiska republiken Kongo"}
         CG{"Republiken Kongo"}
-        FK{"Falklandsöarna (Malvinerna)"}
         MK{"f.d. jugoslaviska republiken Makedonien"}
     }
-    Version{"2.1.19.94"}
+    Version{"2.1.30.7"}
 }

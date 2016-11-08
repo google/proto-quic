@@ -114,7 +114,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     options.token_binding_params = QuicTagVector{kTB10};
     CryptoTestUtils::SetupCryptoServerConfigForTest(
         server_connection_->clock(), server_connection_->random_generator(),
-        server_session_->config(), &server_crypto_config_, options);
+        &server_crypto_config_, options);
   }
 
   QuicCryptoServerStream* server_stream() {
@@ -583,6 +583,7 @@ class FailingProofSource : public ProofSource {
                 const string& server_config,
                 QuicVersion quic_version,
                 StringPiece chlo_hash,
+                const QuicTagVector& connection_options,
                 scoped_refptr<ProofSource::Chain>* out_chain,
                 string* out_signature,
                 string* out_leaf_cert_sct) override {
@@ -594,6 +595,7 @@ class FailingProofSource : public ProofSource {
                 const string& server_config,
                 QuicVersion quic_version,
                 StringPiece chlo_hash,
+                const QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override {
     callback->Run(false, nullptr, "", "", nullptr);
   }

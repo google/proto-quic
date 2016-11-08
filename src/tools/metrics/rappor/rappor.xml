@@ -4,7 +4,6 @@ Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 -->
 
-<rappor-configuration>
 <!--
 This file is used to generate a comprehensive list of Chrome rappor metrics
 along with a detailed description for each histogram. See the design doc at
@@ -12,13 +11,14 @@ http://www.chromium.org/developers/design-documents/rappor
 for a description of rappor metrics.
 -->
 
-<noise-levels>
+<rappor-configuration>
 <!--
 Noise levels that rappor metrics can be collected with.  This list should be
 kept in sync with NoiseLevel definitions in
 components/rappor/rappor_parameters.h.
 -->
 
+<noise-levels>
 <noise-level name="NO_NOISE">
   <summary>
     Adds no noise at all. Only use this for non-sensitive fields, and only for
@@ -49,13 +49,13 @@ components/rappor/rappor_parameters.h.
 
 </noise-levels>
 
-<rappor-parameter-types>
 <!--
 Parameters that rappor metrics can be collected with.  This list should be
 kept in sync with parameter type definitions in
 components/rappor/rappor_parameters.h.
 -->
 
+<rappor-parameter-types>
 <rappor-parameters name="COARSE_RAPPOR_TYPE">
   <summary>
     Stricter parameters for metrics collected from a broader population.
@@ -127,9 +127,9 @@ components/rappor/rappor_parameters.h.
 
 </rappor-parameter-types>
 
-<rappor-metrics>
 <!-- Rappor metric definitions -->
 
+<rappor-metrics>
 <rappor-metric name="Android.ExternalNavigationNotChosen"
     type="UMA_RAPPOR_TYPE">
   <owner>mariakhomenko@chromium.org</owner>
@@ -1067,12 +1067,12 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
-<rappor-metric name="Media.OriginUrl.MSE.VideoCodec.h264" type="ETLD_PLUS_ONE">
 <!--
 We record all codecs (see list in GetCodecName() in video_codecs.cc). But for
 now we are only interested in H264, VP8 and VP9.
 -->
 
+<rappor-metric name="Media.OriginUrl.MSE.VideoCodec.h264" type="ETLD_PLUS_ONE">
   <owner>xhwang@chromium.org</owner>
   <summary>
     The domain and registry of the URL that loads an HTML5 media player using
@@ -1112,12 +1112,12 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
-<rappor-metric name="Media.OriginUrl.SRC.VideoCodec.h264" type="ETLD_PLUS_ONE">
 <!--
 We record all codecs (see list in GetCodecName() in video_codecs.cc). But for
 now we are only interested in H264, VP8 and VP9.
 -->
 
+<rappor-metric name="Media.OriginUrl.SRC.VideoCodec.h264" type="ETLD_PLUS_ONE">
   <owner>xhwang@chromium.org</owner>
   <summary>
     The domain and registry of the URL that loads an HTML5 media player using

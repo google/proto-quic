@@ -1,14 +1,22 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/icu-locale-deprecates.xml & build.xml
-// *
-// ***************************************************************************
-/**
- * generated alias target
- */
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 sr_Latn_BA{
-    ___{""}
+    Languages{
+        arn{"mapudungun"}
+        be{"bjeloruski"}
+        bm{"bamanankan"}
+        bn{"bangla"}
+        gsw{"švajcarski nemački"}
+        ht{"haićanski kreolski"}
+        lo{"laoški"}
+        moh{"mohok"}
+        nqo{"n’ko"}
+        shi{"južni šilha"}
+        si{"sinhalski"}
+        tzm{"centralnoatlaski tamašek"}
+        xh{"isikosa"}
+        zgh{"standardni marokanski tamašek"}
+        zu{"isizulu"}
+    }
+    Version{"2.1.29.33"}
 }

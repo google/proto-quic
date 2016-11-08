@@ -12,7 +12,6 @@
 #import <Foundation/Foundation.h>
 #else  // __OBJC__
 class NSBundle;
-class NSString;
 #endif  // __OBJC__
 
 namespace base {

@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/ksf.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ksf{
     Countries{
         AD{"andɔrǝ"}
@@ -15,7 +9,6 @@ ksf{
         AI{"angiya"}
         AL{"albaní"}
         AM{"armɛní"}
-        AN{"antíyǝ nɛlandé"}
         AO{"angóla"}
         AR{"arjǝntín"}
         AS{"samɔa a amɛrika"}
@@ -234,5 +227,5 @@ ksf{
         ZM{"zambí"}
         ZW{"zimbabwɛ́"}
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.40"}
 }

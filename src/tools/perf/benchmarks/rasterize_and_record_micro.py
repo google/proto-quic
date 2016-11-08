@@ -72,7 +72,7 @@ class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
     return 'rasterize_and_record_micro.key_mobile_sites'
 
 
-@benchmark.Disabled('mac', 'win', 'android') # http://crbug.com/610424
+@benchmark.Disabled('all') # http://crbug.com/610424
 class RasterizeAndRecordMicroKeySilkCases(_RasterizeAndRecordMicro):
   """Measures rasterize and record performance on the silk sites.
 

@@ -13,7 +13,6 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
-#include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -24,63 +23,6 @@ using base::StringPiece;
 using std::string;
 
 namespace net {
-
-namespace {
-
-class ResourceFileImpl : public net::QuicInMemoryCache::ResourceFile {
- public:
-  explicit ResourceFileImpl(const base::FilePath& file_name)
-      : ResourceFile(file_name) {}
-
-  void Read() override {
-    base::ReadFileToString(FilePath(file_name_), &file_contents_);
-
-    int file_len = static_cast<int>(file_contents_.length());
-    int headers_end =
-        HttpUtil::LocateEndOfHeaders(file_contents_.data(), file_len);
-    if (headers_end < 1) {
-      LOG(DFATAL) << "Headers invalid or empty, ignoring: "
-                  << file_name_.value();
-      return;
-    }
-    http_headers_ = new HttpResponseHeaders(
-        HttpUtil::AssembleRawHeaders(file_contents_.data(), headers_end));
-
-    if (http_headers_->GetNormalizedHeader("X-Original-Url", &url_)) {
-      x_original_url_ = StringPiece(url_);
-      HandleXOriginalUrl();
-    }
-
-    // X-Push-URL header is a relatively quick way to support sever push
-    // in the toy server.  A production server should use link=preload
-    // stuff as described in https://w3c.github.io/preload/.
-    StringPiece x_push_url("X-Push-Url");
-    if (http_headers_->HasHeader(x_push_url)) {
-      size_t iter = 0;
-      std::unique_ptr<string> push_url(new string());
-      while (
-          http_headers_->EnumerateHeader(&iter, x_push_url, push_url.get())) {
-        push_urls_.push_back(StringPiece(*push_url));
-        push_url_values_.push_back(std::move(push_url));
-        push_url.reset(new string());
-      }
-    }
-
-    body_ = StringPiece(file_contents_.data() + headers_end,
-                        file_contents_.size() - headers_end);
-
-    CreateSpdyHeadersFromHttpResponse(*http_headers_, &spdy_headers_);
-  }
-
- private:
-  scoped_refptr<HttpResponseHeaders> http_headers_;
-  string url_;
-  std::list<std::unique_ptr<string>> push_url_values_;
-
-  DISALLOW_COPY_AND_ASSIGN(ResourceFileImpl);
-};
-
-}  // namespace
 
 QuicInMemoryCache::ServerPushInfo::ServerPushInfo(GURL request_url,
                                                   SpdyHeaderBlock headers,
@@ -100,6 +42,84 @@ QuicInMemoryCache::ServerPushInfo::ServerPushInfo(const ServerPushInfo& other)
 QuicInMemoryCache::Response::Response() : response_type_(REGULAR_RESPONSE) {}
 
 QuicInMemoryCache::Response::~Response() {}
+
+void QuicInMemoryCache::ResourceFile::Read() {
+  base::ReadFileToString(FilePath(file_name_), &file_contents_);
+
+  // First read the headers.
+  size_t start = 0;
+  while (start < file_contents_.length()) {
+    size_t pos = file_contents_.find("\n", start);
+    if (pos == string::npos) {
+      LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                  << file_name_.value();
+      return;
+    }
+    size_t len = pos - start;
+    // Support both dos and unix line endings for convenience.
+    if (file_contents_[pos - 1] == '\r') {
+      len -= 1;
+    }
+    StringPiece line(file_contents_.data() + start, len);
+    start = pos + 1;
+    // Headers end with an empty line.
+    if (line.empty()) {
+      break;
+    }
+    // Extract the status from the HTTP first line.
+    if (line.substr(0, 4) == "HTTP") {
+      pos = line.find(" ");
+      if (pos == string::npos) {
+        LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                    << file_name_.value();
+        return;
+      }
+      spdy_headers_[":status"] = line.substr(pos + 1, 3);
+      continue;
+    }
+    // Headers are "key: value".
+    pos = line.find(": ");
+    if (pos == string::npos) {
+      LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                  << file_name_.value();
+      return;
+    }
+    spdy_headers_.AppendValueOrAddHeader(
+        base::ToLowerASCII(line.substr(0, pos)), line.substr(pos + 2));
+  }
+
+  // The connection header is prohibited in HTTP/2.
+  spdy_headers_.erase("connection");
+
+  // Override the URL with the X-Original-Url header, if present.
+  auto it = spdy_headers_.find("x-original-url");
+  if (it != spdy_headers_.end()) {
+    x_original_url_ = it->second;
+    HandleXOriginalUrl();
+  }
+
+  // X-Push-URL header is a relatively quick way to support sever push
+  // in the toy server.  A production server should use link=preload
+  // stuff as described in https://w3c.github.io/preload/.
+  it = spdy_headers_.find("x-push-url");
+  if (it != spdy_headers_.end()) {
+    StringPiece push_urls = it->second;
+    size_t start = 0;
+    while (start < push_urls.length()) {
+      size_t pos = push_urls.find('\0', start);
+      if (pos == string::npos) {
+        push_urls_.push_back(
+            StringPiece(push_urls.data() + start, push_urls.length() - start));
+        break;
+      }
+      push_urls_.push_back(StringPiece(push_urls.data() + start, pos));
+      start += pos + 1;
+    }
+  }
+
+  body_ =
+      StringPiece(file_contents_.data() + start, file_contents_.size() - start);
+}
 
 QuicInMemoryCache::ResourceFile::ResourceFile(const base::FilePath& file_name)
     : file_name_(file_name), file_name_string_(file_name.AsUTF8Unsafe()) {}
@@ -234,8 +254,7 @@ void QuicInMemoryCache::InitializeFromDirectory(const string& cache_directory) {
       continue;
     }
 
-    std::unique_ptr<ResourceFile> resource_file(
-        new ResourceFileImpl(file_iter));
+    std::unique_ptr<ResourceFile> resource_file(new ResourceFile(file_iter));
 
     // Tease apart filename into host and path.
     StringPiece base(resource_file->file_name());

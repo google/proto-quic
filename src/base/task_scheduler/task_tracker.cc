@@ -25,11 +25,15 @@ namespace internal {
 
 namespace {
 
+constexpr char kParallelExecutionMode[] = "parallel";
+constexpr char kSequencedExecutionMode[] = "sequenced";
+constexpr char kSingleThreadExecutionMode[] = "single thread";
+
 // An immutable copy of a scheduler task's info required by tracing.
 class TaskTracingInfo : public trace_event::ConvertableToTraceFormat {
  public:
   TaskTracingInfo(const TaskTraits& task_traits,
-                  ExecutionMode execution_mode,
+                  const char* execution_mode,
                   const SequenceToken& sequence_token)
       : task_traits_(task_traits),
         execution_mode_(execution_mode),
@@ -40,7 +44,7 @@ class TaskTracingInfo : public trace_event::ConvertableToTraceFormat {
 
  private:
   const TaskTraits task_traits_;
-  const ExecutionMode execution_mode_;
+  const char* const execution_mode_;
   const SequenceToken sequence_token_;
 
   DISALLOW_COPY_AND_ASSIGN(TaskTracingInfo);
@@ -51,9 +55,8 @@ void TaskTracingInfo::AppendAsTraceFormat(std::string* out) const {
 
   dict.SetString("task_priority",
                  base::TaskPriorityToString(task_traits_.priority()));
-  dict.SetString("execution_mode",
-                 base::ExecutionModeToString(execution_mode_));
-  if (execution_mode_ != ExecutionMode::PARALLEL)
+  dict.SetString("execution_mode", execution_mode_);
+  if (execution_mode_ != kParallelExecutionMode)
     dict.SetInteger("sequence_token", sequence_token_.ToInternalValue());
 
   std::string tmp;
@@ -243,11 +246,11 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
 
       TRACE_TASK_EXECUTION(kRunFunctionName, *task);
 
-      const ExecutionMode execution_mode =
+      const char* const execution_mode =
           task->single_thread_task_runner_ref
-              ? ExecutionMode::SINGLE_THREADED
-              : (task->sequenced_task_runner_ref ? ExecutionMode::SEQUENCED
-                                                 : ExecutionMode::PARALLEL);
+              ? kSingleThreadExecutionMode
+              : (task->sequenced_task_runner_ref ? kSequencedExecutionMode
+                                                 : kParallelExecutionMode);
       // TODO(gab): In a better world this would be tacked on as an extra arg
       // to the trace event generated above. This is not possible however until
       // http://crbug.com/652692 is resolved.

@@ -24,7 +24,6 @@ namespace base {
 
 class PersistentHistogramAllocator;
 class PersistentSampleMapRecords;
-class PersistentSparseHistogramDataManager;
 
 // The logic here is similar to that of SampleMap but with different data
 // structures. Changes here likely need to be duplicated there.

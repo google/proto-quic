@@ -214,15 +214,15 @@ TEST(URLUtilTest, DecodeURLEscapeSequences) {
     RawCanonOutputT<base::char16> output;
     DecodeURLEscapeSequences(input, strlen(input), &output);
     EXPECT_EQ(decode_cases[i].output,
-              test_utils::ConvertUTF16ToUTF8(base::string16(output.data(),
-                                                            output.length())));
+              base::UTF16ToUTF8(base::string16(output.data(),
+                                               output.length())));
   }
 
   // Our decode should decode %00
   const char zero_input[] = "%00";
   RawCanonOutputT<base::char16> zero_output;
   DecodeURLEscapeSequences(zero_input, strlen(zero_input), &zero_output);
-  EXPECT_NE("%00", test_utils::ConvertUTF16ToUTF8(
+  EXPECT_NE("%00", base::UTF16ToUTF8(
       base::string16(zero_output.data(), zero_output.length())));
 
   // Test the error behavior for invalid UTF-8.

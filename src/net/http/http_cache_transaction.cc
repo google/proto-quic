@@ -1218,13 +1218,11 @@ int HttpCache::Transaction::DoCacheReadResponseComplete(int result) {
     return OK;
   }
 
-  if ((response_.unused_since_prefetch &&
-       !(request_->load_flags & LOAD_PREFETCH)) ||
-      (!response_.unused_since_prefetch &&
-       (request_->load_flags & LOAD_PREFETCH))) {
-    // Either this is the first use of an entry since it was prefetched or
-    // this is a prefetch. The value of response.unused_since_prefetch is valid
-    // for this transaction but the bit needs to be flipped in storage.
+  if (response_.unused_since_prefetch !=
+      !!(request_->load_flags & LOAD_PREFETCH)) {
+    // Either this is the first use of an entry since it was prefetched XOR
+    // this is a prefetch. The value of response.unused_since_prefetch is
+    // valid for this transaction but the bit needs to be flipped in storage.
     next_state_ = STATE_TOGGLE_UNUSED_SINCE_PREFETCH;
     return OK;
   }

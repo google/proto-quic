@@ -26,6 +26,7 @@ namespace base {
 
 template <typename Type>
 struct DefaultSingletonTraits;
+class MessageLoop;
 class RefCountedString;
 
 namespace trace_event {

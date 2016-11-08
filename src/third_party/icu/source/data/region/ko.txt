@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/ko.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ko{
     Countries{
         001{"세계"}
@@ -46,7 +40,6 @@ ko{
         AI{"앵귈라"}
         AL{"알바니아"}
         AM{"아르메니아"}
-        AN{"네덜란드령 안틸레스"}
         AO{"앙골라"}
         AQ{"남극 대륙"}
         AR{"아르헨티나"}
@@ -81,7 +74,7 @@ ko{
         CC{"코코스 제도"}
         CD{"콩고-킨샤사"}
         CF{"중앙 아프리카 공화국"}
-        CG{"콩고"}
+        CG{"콩고-브라자빌"}
         CH{"스위스"}
         CI{"코트디부아르"}
         CK{"쿡 제도"}
@@ -165,7 +158,7 @@ ko{
         KI{"키리바시"}
         KM{"코모로"}
         KN{"세인트키츠 네비스"}
-        KP{"조선민주주의인민공화국"}
+        KP{"북한"}
         KR{"대한민국"}
         KW{"쿠웨이트"}
         KY{"케이맨 제도"}
@@ -279,6 +272,7 @@ ko{
         UA{"우크라이나"}
         UG{"우간다"}
         UM{"미국령 해외 제도"}
+        UN{"유엔"}
         US{"미국"}
         UY{"우루과이"}
         UZ{"우즈베키스탄"}
@@ -301,6 +295,7 @@ ko{
     }
     Countries%short{
         GB{"영국"}
+        UN{"유엔"}
         US{"미국"}
     }
     Countries%variant{
@@ -310,5 +305,5 @@ ko{
         FK{"포클랜드 제도(말비나스 군도)"}
         MK{"마케도니아(FYROM)"}
     }
-    Version{"2.1.19.94"}
+    Version{"2.1.29.22"}
 }

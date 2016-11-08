@@ -9,8 +9,6 @@
 #include "base/callback_forward.h"
 #include "base/memory/ref_counted.h"
 
-class Task;
-
 namespace tracked_objects {
 class Location;
 }  // namespace tracked_objects

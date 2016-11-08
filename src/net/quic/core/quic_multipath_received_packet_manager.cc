@@ -16,8 +16,7 @@ QuicMultipathReceivedPacketManager::QuicMultipathReceivedPacketManager(
       base::MakeUnique<QuicReceivedPacketManager>(stats);
 }
 
-QuicMultipathReceivedPacketManager::~QuicMultipathReceivedPacketManager() {
-}
+QuicMultipathReceivedPacketManager::~QuicMultipathReceivedPacketManager() {}
 
 void QuicMultipathReceivedPacketManager::OnPathCreated(
     QuicPathId path_id,

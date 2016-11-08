@@ -16,12 +16,10 @@
 #include "base/synchronization/lock.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
+#include "base/task_scheduler/test_utils.h"
 #include "base/threading/thread_checker_impl.h"
 
 namespace base {
-
-class WaitableEvent;
-
 namespace internal {
 namespace test {
 

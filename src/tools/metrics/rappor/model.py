@@ -348,11 +348,11 @@ def UpdateXML(original_xml):
   Returns:
     A pretty-printed xml string, or None if the config contains errors.
   """
-  comments, config = RAPPOR_XML_TYPE.Parse(original_xml)
+  config = RAPPOR_XML_TYPE.Parse(original_xml)
 
   if _HasErrors(config):
     return None
 
   _Cleanup(config)
 
-  return RAPPOR_XML_TYPE.PrettyPrint(comments, config)
+  return RAPPOR_XML_TYPE.PrettyPrint(config)

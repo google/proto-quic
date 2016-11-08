@@ -71,25 +71,6 @@ config("feature_flags") {
   if (enable_pdf) {
     defines += [ "ENABLE_PDF=1" ]
   }
-  if (enable_basic_printing || enable_print_preview) {
-    # Convenience define for ENABLE_BASIC_PRINTING || ENABLE_PRINT_PREVIEW.
-    defines += [ "ENABLE_PRINTING=1" ]
-    if (enable_basic_printing) {
-      # Enable basic printing support and UI.
-      defines += [ "ENABLE_BASIC_PRINTING=1" ]
-    }
-    if (enable_print_preview) {
-      # Enable printing with print preview.
-      # Can be defined without ENABLE_BASIC_PRINTING.
-      defines += [ "ENABLE_PRINT_PREVIEW=1" ]
-    }
-    if ((enable_basic_printing && is_win) || enable_print_preview) {
-      # Windows basic printing or print preview requires pdf enabled.
-      assert(enable_pdf,
-             "Windows basic printing or print preview needs pdf: " +
-                 "set enable_pdf=true.")
-    }
-  }
   if (enable_spellcheck) {
     defines += [ "ENABLE_SPELLCHECK=1" ]
   }
@@ -189,14 +170,8 @@ config("feature_flags") {
   if (enable_themes) {
     defines += [ "ENABLE_THEMES=1" ]
   }
-  if (enable_session_service) {
-    defines += [ "ENABLE_SESSION_SERVICE=1" ]
-  }
   if (enable_rlz) {
     defines += [ "ENABLE_RLZ" ]
-  }
-  if (enable_supervised_users) {
-    defines += [ "ENABLE_SUPERVISED_USERS=1" ]
   }
   if (enable_image_loader_extension) {
     defines += [ "IMAGE_LOADER_EXTENSION=1" ]

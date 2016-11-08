@@ -40,6 +40,7 @@ OPENSSL_MSVC_PRAGMA(comment(lib, "Ws2_32.lib"))
 #include <inttypes.h>
 #include <string.h>
 
+#include <openssl/aead.h>
 #include <openssl/bio.h>
 #include <openssl/buf.h>
 #include <openssl/bytestring.h>
@@ -365,7 +366,7 @@ static bool GetCertificate(SSL *ssl, bssl::UniquePtr<X509> *out_x509,
     }
   }
   if (!config->ocsp_response.empty() &&
-      !SSL_CTX_set_ocsp_response(ssl->ctx,
+      !SSL_CTX_set_ocsp_response(SSL_get_SSL_CTX(ssl),
                                  (const uint8_t *)config->ocsp_response.data(),
                                  config->ocsp_response.size())) {
     return false;
@@ -989,6 +990,12 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     SSL_CTX_set_tlsext_servername_callback(ssl_ctx.get(), ServerNameCallback);
   }
 
+  if (!config->ticket_key.empty() &&
+      !SSL_CTX_set_tlsext_ticket_keys(ssl_ctx.get(), config->ticket_key.data(),
+                                      config->ticket_key.size())) {
+    return nullptr;
+  }
+
   return ssl_ctx;
 }
 
@@ -1071,6 +1078,16 @@ static int DoRead(SSL *ssl, uint8_t *out, size_t max_out) {
                                  : SSL_read(ssl, out, max_out);
     if (config->async) {
       AsyncBioEnforceWriteQuota(test_state->async_bio, true);
+    }
+
+    // Run the exporter after each read. This is to test that the exporter fails
+    // during a renegotiation.
+    if (config->use_exporter_between_reads) {
+      uint8_t buf;
+      if (!SSL_export_keying_material(ssl, &buf, 1, NULL, 0, NULL, 0, 0)) {
+        fprintf(stderr, "failed to export keying material\n");
+        return -1;
+      }
     }
   } while (config->async && RetryAsync(ssl, ret));
 
@@ -1304,6 +1321,25 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     }
   }
 
+  uint16_t cipher_id =
+      static_cast<uint16_t>(SSL_CIPHER_get_id(SSL_get_current_cipher(ssl)));
+  if (config->expect_cipher_aes != 0 &&
+      EVP_has_aes_hardware() &&
+      static_cast<uint16_t>(config->expect_cipher_aes) != cipher_id) {
+    fprintf(stderr, "Cipher ID was %04x, wanted %04x (has AES hardware)\n",
+            cipher_id, static_cast<uint16_t>(config->expect_cipher_aes));
+    return false;
+  }
+
+  if (config->expect_cipher_no_aes != 0 &&
+      !EVP_has_aes_hardware() &&
+      static_cast<uint16_t>(config->expect_cipher_no_aes) != cipher_id) {
+    fprintf(stderr, "Cipher ID was %04x, wanted %04x (no AES hardware)\n",
+            cipher_id, static_cast<uint16_t>(config->expect_cipher_no_aes));
+    return false;
+  }
+
+
   if (!config->psk.empty()) {
     if (SSL_get_peer_cert_chain(ssl) != nullptr) {
       fprintf(stderr, "Received peer certificate on a PSK cipher.\n");
@@ -1474,11 +1510,6 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
   }
   if (config->max_cert_list > 0) {
     SSL_set_max_cert_list(ssl.get(), config->max_cert_list);
-  }
-  if (is_resume &&
-      !config->resume_cipher.empty() &&
-      !SSL_set_cipher_list(ssl.get(), config->resume_cipher.c_str())) {
-    return false;
   }
 
   int sock = Connect(config->port);

@@ -90,9 +90,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   void SaveCookiesAndNotifyHeadersComplete(int result);
   void FetchResponseCookies(std::vector<std::string>* cookies);
 
-  // Processes a Backoff header, if one exists.
-  void ProcessBackoffHeader();
-
   // Processes the Strict-Transport-Security header, if one exists.
   void ProcessStrictTransportSecurityHeader();
 

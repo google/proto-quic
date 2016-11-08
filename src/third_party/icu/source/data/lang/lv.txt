@@ -1,23 +1,17 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/lv.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 lv{
     Keys{
         calendar{"Kalendārs"}
+        cf{"valūtas formāts"}
         colAlternate{"Kārtošana, ignorējot simbolus"}
         colBackwards{"Diakritisko zīmju kārtošana apgrieztā secībā"}
         colCaseFirst{"Lielo/mazo burtu kārtošana"}
         colCaseLevel{"Reģistrjutīgo rakstzīmju kārtošana"}
-        colHiraganaQuaternary{"Kana rakstzīmju kārtošana"}
         colNormalization{"Normalizētā kārtošana"}
         colNumeric{"Kārtošana skaitliskā secībā"}
         colStrength{"Kārtošanas pakāpe"}
-        collation{"Kārtošanas secība"}
+        collation{"kārtošanas secība"}
         currency{"Valūta"}
         hc{"Stundu formāts (12 vai 24)"}
         lb{"Rindiņas pārtraukuma stils"}
@@ -25,7 +19,6 @@ lv{
         numbers{"Cipari"}
         timezone{"Laika josla"}
         va{"Lokalizācijas variants"}
-        variableTop{"Kārtot kā simbolus"}
         x{"Personīgai lietošanai"}
     }
     Languages{
@@ -112,11 +105,12 @@ lv{
         chp{"čipevaianu"}
         chr{"čiroku"}
         chy{"šejenu"}
-        ckb{"kurdu (Sorani)"}
+        ckb{"centrālkurdu"}
         co{"korsikāņu"}
         cop{"koptu"}
         cr{"krī"}
         crh{"Krimas tatāru"}
+        crs{"kreolu franču"}
         cs{"čehu"}
         csb{"kašubu"}
         cu{"baznīcslāvu"}
@@ -394,11 +388,13 @@ lv{
         pam{"pampanganu"}
         pap{"papjamento"}
         pau{"palaviešu"}
+        pcm{"pidžins"}
         peo{"senpersu"}
         phn{"feniķiešu"}
         pi{"pāli"}
         pl{"poļu"}
         pon{"ponapiešu"}
+        prg{"prūšu"}
         pro{"senprovansiešu"}
         ps{"puštu"}
         pt{"portugāļu"}
@@ -423,7 +419,7 @@ lv{
         sa{"sanskrits"}
         sad{"sandavu"}
         sah{"jakutu"}
-        sam{"samārijas aramiešu"}
+        sam{"Samārijas aramiešu"}
         saq{"samburu"}
         sas{"sasaku"}
         sat{"santalu"}
@@ -441,7 +437,7 @@ lv{
         ses{"koiraboro senni"}
         sg{"sango"}
         sga{"senīru"}
-        sh{"serbu-horvātu"}
+        sh{"serbu–horvātu"}
         shi{"šilhu"}
         shn{"šanu"}
         shu{"Čadas arābu"}
@@ -465,14 +461,14 @@ lv{
         ss{"svatu"}
         ssy{"saho"}
         st{"dienvidsotu"}
-        su{"sundaniešu"}
+        su{"zundu"}
         suk{"sukumu"}
         sus{"susu"}
         sux{"šumeru"}
         sv{"zviedru"}
         sw{"svahili"}
+        sw_CD{"Kongo svahili"}
         swb{"komoru"}
-        swc{"Kongo svahili"}
         syc{"klasiskā sīriešu"}
         syr{"sīriešu"}
         ta{"tamilu"}
@@ -494,7 +490,7 @@ lv{
         tmh{"tuaregu"}
         tn{"cvanu"}
         to{"tongiešu"}
-        tog{"njasas tongu"}
+        tog{"Njasas tongu"}
         tpi{"tokpisins"}
         tr{"turku"}
         trv{"taroko"}
@@ -579,20 +575,22 @@ lv{
         Grek{"grieķu"}
         Gujr{"gudžaratu"}
         Guru{"pandžabu"}
+        Hanb{"ķīniešu hanb"}
         Hang{"hangila"}
         Hani{"ķīniešu"}
-        Hans{"ķīniešu vienkāršotā"}
-        Hant{"ķīniešu tradicionālā"}
+        Hans{"vienkāršotā"}
+        Hant{"tradicionālā"}
         Hebr{"ivrits"}
         Hira{"hiragana"}
         Hrkt{"katakana vai hiragana"}
         Hung{"senungāru"}
         Ital{"vecitāļu"}
+        Jamo{"džamo"}
         Java{"javiešu"}
         Jpan{"japāņu"}
         Kana{"katakana"}
         Khmr{"khmeru"}
-        Knda{"kannaru"}
+        Knda{"kannadu"}
         Kore{"korejiešu"}
         Laoo{"laosiešu"}
         Latn{"latīņu"}
@@ -627,6 +625,7 @@ lv{
         Yiii{"ji"}
         Zinh{"mantotā"}
         Zmth{"matemātiskais pieraksts"}
+        Zsye{"emocijzīmes"}
         Zsym{"simboli"}
         Zxxx{"bez rakstības"}
         Zyyy{"vispārējā"}
@@ -657,6 +656,10 @@ lv{
             persian{"persiešu kalendārs"}
             roc{"Ķīnas Republikas kalendārs"}
         }
+        cf{
+            account{"uzskaites valūtas formāts"}
+            standard{"standarta valūtas formāts"}
+        }
         colAlternate{
             non-ignorable{"Kārtot simbolus"}
             shifted{"Kārtot, ignorējot simbolus"}
@@ -673,10 +676,6 @@ lv{
         colCaseLevel{
             no{"Kārtot reģistrnejutīgas rakstzīmes"}
             yes{"Kārtot reģistrjutīgās rakstzīmes"}
-        }
-        colHiraganaQuaternary{
-            no{"Kārtot kana rakstzīmes atsevišķi"}
-            yes{"Kārtot kana rakstzīmes, norādot atšķirības"}
         }
         colNormalization{
             no{"Kārtot bez normalizēšanas"}
@@ -702,18 +701,23 @@ lv{
         collation{
             big5han{"tradicionālās ķīniešu valodas kārtošanas secība - Big5"}
             dictionary{"Vārdnīcas kārtošanas secība"}
-            ducet{"Noklusējuma unikoda kārtošanas secība"}
+            ducet{"noklusējuma unikoda kārtošanas secība"}
             gb2312han{"vienkāršotās ķīniešu valodas kārtošanas secība - GB2312"}
             phonebook{"tālruņu grāmatas kārtošanas secība"}
             phonetic{"Fonētiskā kārtošanas secība"}
             pinyin{"piņjiņa kārtošanas secība"}
             reformed{"Reformētā kārtošanas secība"}
-            search{"Vispārīga meklēšana"}
+            search{"vispārīga meklēšana"}
             searchjl{"Meklēt pēc Hangul sākuma līdzskaņa"}
-            standard{"Standarta kārtošanas secība"}
+            standard{"standarta kārtošanas secība"}
             stroke{"Stroke kārtošanas secība"}
             traditional{"tradicionālā kārtošanas secība"}
             unihan{"Radikālā kārtošanas secība pēc vilkumu skaita"}
+        }
+        d0{
+            fwidth{"Pilna platuma"}
+            hwidth{"Pusplatuma"}
+            npinyin{"Ciparu"}
         }
         hc{
             h11{"12 stundu sistēma (0–11)"}
@@ -725,6 +729,10 @@ lv{
             loose{"Brīvais rindiņas pārtraukuma stils"}
             normal{"Parastais rindiņas pārtraukuma stils"}
             strict{"Stingrais rindiņas pārtraukuma stils"}
+        }
+        m0{
+            bgn{"BGN"}
+            ungegn{"UNGEGN"}
         }
         ms{
             metric{"metriskā sistēma"}
@@ -795,7 +803,23 @@ lv{
         VALENCIA{"valensiešu"}
         WADEGILE{"Veida-Džailza romanizācija"}
     }
-    Version{"2.1.19.19"}
+    Version{"2.1.28.79"}
+    characterLabelPattern{
+        all{"{0} — visas"}
+        category-list{"{0}: {1}"}
+        compatibility{"{0} — saderība"}
+        enclosed{"{0} — noslēgtās"}
+        extended{"{0} — paplašinātās"}
+        historic{"{0} — vēsturiskās"}
+        miscellaneous{"{0} — dažādi"}
+        other{"{0} — citas"}
+        scripts{"rakstības — {0}"}
+        strokes{
+            one{"{0} vilkums"}
+            other{"{0} vilkumi"}
+            zero{"{0} vilkumi"}
+        }
+    }
     codePatterns{
         language{"Valoda: {0}"}
         script{"Rakstība: {0}"}

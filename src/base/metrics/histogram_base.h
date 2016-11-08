@@ -21,7 +21,6 @@
 
 namespace base {
 
-class BucketRanges;
 class DictionaryValue;
 class HistogramBase;
 class HistogramSamples;

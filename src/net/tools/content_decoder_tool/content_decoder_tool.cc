@@ -2,82 +2,113 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
+#include "net/tools/content_decoder_tool/content_decoder_tool.h"
 
-#include "base/command_line.h"
+#include <memory>
+#include <utility>
+
+#include "base/logging.h"
+#include "base/memory/ptr_util.h"
+#include "base/strings/string_util.h"
 #include "net/base/io_buffer.h"
-#include "net/filter/filter.h"
-#include "net/filter/mock_filter_context.h"
+#include "net/base/test_completion_callback.h"
+#include "net/filter/brotli_source_stream.h"
+#include "net/filter/gzip_source_stream.h"
+#include "net/filter/source_stream.h"
 
-using net::Filter;
+namespace net {
 
 namespace {
 
-// Print the command line help.
-void PrintHelp(const char* command_line_name) {
-  std::cout << command_line_name << " content_encoding [content_encoding]..."
-            << std::endl
-            << std::endl;
-  std::cout << "Decodes the stdin into the stdout using an content_encoding "
-            << "list given in arguments. This list is expected to be the "
-            << "Content-Encoding HTTP response header's value split by ','."
-            << std::endl;
-}
+const int kBufferLen = 4096;
+
+const char kDeflate[] = "deflate";
+const char kGZip[] = "gzip";
+const char kXGZip[] = "x-gzip";
+const char kBrotli[] = "br";
+
+class StdinSourceStream : public SourceStream {
+ public:
+  explicit StdinSourceStream(std::istream* input_stream)
+      : SourceStream(SourceStream::TYPE_NONE), input_stream_(input_stream) {}
+  ~StdinSourceStream() override {}
+
+  // SourceStream implementation.
+  int Read(IOBuffer* dest_buffer,
+           int buffer_size,
+           const CompletionCallback& callback) override {
+    if (input_stream_->eof())
+      return OK;
+    if (input_stream_) {
+      input_stream_->read(dest_buffer->data(), buffer_size);
+      int bytes = input_stream_->gcount();
+      return bytes;
+    }
+    return ERR_FAILED;
+  }
+
+  std::string Description() const override { return ""; }
+
+ private:
+  std::istream* input_stream_;
+
+  DISALLOW_COPY_AND_ASSIGN(StdinSourceStream);
+};
 
 }  // namespace
 
-int main(int argc, char* argv[]) {
-  base::CommandLine::Init(argc, argv);
-  const base::CommandLine& command_line =
-      *base::CommandLine::ForCurrentProcess();
-
-  std::vector<std::string> content_encodings = command_line.GetArgs();
-  if (content_encodings.size() == 0) {
-    PrintHelp(argv[0]);
-    return 1;
-  }
-
-  std::vector<Filter::FilterType> filter_types;
-  for (const auto& content_encoding : content_encodings) {
-    Filter::FilterType filter_type =
-        Filter::ConvertEncodingToType(content_encoding);
-    if (filter_type == Filter::FILTER_TYPE_UNSUPPORTED) {
-      std::cerr << "Unsupported decoder '" << content_encoding << "'."
-                << std::endl;
-      return 1;
+// static
+bool ContentDecoderToolProcessInput(std::vector<std::string> content_encodings,
+                                    std::istream* input_stream,
+                                    std::ostream* output_stream) {
+  std::unique_ptr<SourceStream> upstream(
+      base::WrapUnique(new StdinSourceStream(input_stream)));
+  for (std::vector<std::string>::const_reverse_iterator riter =
+           content_encodings.rbegin();
+       riter != content_encodings.rend(); ++riter) {
+    std::string content_encoding = *riter;
+    std::unique_ptr<SourceStream> downstream = nullptr;
+    if (base::LowerCaseEqualsASCII(content_encoding, kBrotli)) {
+      downstream = CreateBrotliSourceStream(std::move(upstream));
+    } else if (base::LowerCaseEqualsASCII(content_encoding, kDeflate)) {
+      downstream = GzipSourceStream::Create(std::move(upstream),
+                                            SourceStream::TYPE_DEFLATE);
+    } else if (base::LowerCaseEqualsASCII(content_encoding, kGZip) ||
+               base::LowerCaseEqualsASCII(content_encoding, kXGZip)) {
+      downstream = GzipSourceStream::Create(std::move(upstream),
+                                            SourceStream::TYPE_GZIP);
+    } else {
+      LOG(ERROR) << "Unsupported decoder '" << content_encoding << "'.";
+      return false;
     }
-    filter_types.push_back(filter_type);
-  }
-
-  net::MockFilterContext filter_context;
-  std::unique_ptr<Filter> filter(Filter::Factory(filter_types, filter_context));
-  if (!filter) {
-    std::cerr << "Couldn't create the decoder." << std::endl;
-    return 1;
-  }
-
-  net::IOBuffer* pre_filter_buf = filter->stream_buffer();
-  int pre_filter_buf_len = filter->stream_buffer_size();
-  while (std::cin) {
-    std::cin.read(pre_filter_buf->data(), pre_filter_buf_len);
-    int pre_filter_data_len = std::cin.gcount();
-    filter->FlushStreamBuffer(pre_filter_data_len);
-
-    while (true) {
-      const int kPostFilterBufLen = 4096;
-      char post_filter_buf[kPostFilterBufLen];
-      int post_filter_data_len = kPostFilterBufLen;
-      Filter::FilterStatus filter_status =
-          filter->ReadData(post_filter_buf, &post_filter_data_len);
-      std::cout.write(post_filter_buf, post_filter_data_len);
-      if (filter_status == Filter::FILTER_ERROR) {
-        std::cerr << "Couldn't decode stdin." << std::endl;
-        return 1;
-      } else if (filter_status != Filter::FILTER_OK) {
-        break;
-      }
+    if (downstream == nullptr) {
+      LOG(ERROR) << "Couldn't create the decoder.";
+      return false;
     }
+    upstream = std::move(downstream);
   }
+  if (!upstream) {
+    LOG(ERROR) << "Couldn't create the decoder.";
+    return false;
+  }
+  scoped_refptr<IOBuffer> read_buffer = new IOBufferWithSize(kBufferLen);
+  while (true) {
+    TestCompletionCallback callback;
+    int bytes_read =
+        upstream->Read(read_buffer.get(), kBufferLen, callback.callback());
+    if (bytes_read == ERR_IO_PENDING)
+      bytes_read = callback.WaitForResult();
 
-  return 0;
+    if (bytes_read < 0) {
+      LOG(ERROR) << "Couldn't decode stdin.";
+      return false;
+    }
+    output_stream->write(read_buffer->data(), bytes_read);
+    // If EOF is read, break out the while loop.
+    if (bytes_read == 0)
+      break;
+  }
+  return true;
 }
+
+}  // namespace net

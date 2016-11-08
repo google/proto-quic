@@ -52,10 +52,22 @@ void TaskSchedulerImpl::PostTaskWithTraits(
 }
 
 scoped_refptr<TaskRunner> TaskSchedulerImpl::CreateTaskRunnerWithTraits(
-    const TaskTraits& traits,
-    ExecutionMode execution_mode) {
-  return GetWorkerPoolForTraits(traits)->CreateTaskRunnerWithTraits(
-      traits, execution_mode);
+    const TaskTraits& traits) {
+  return GetWorkerPoolForTraits(traits)->CreateTaskRunnerWithTraits(traits);
+}
+
+scoped_refptr<SequencedTaskRunner>
+TaskSchedulerImpl::CreateSequencedTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return GetWorkerPoolForTraits(traits)->CreateSequencedTaskRunnerWithTraits(
+      traits);
+}
+
+scoped_refptr<SingleThreadTaskRunner>
+TaskSchedulerImpl::CreateSingleThreadTaskRunnerWithTraits(
+    const TaskTraits& traits) {
+  return GetWorkerPoolForTraits(traits)->CreateSingleThreadTaskRunnerWithTraits(
+      traits);
 }
 
 std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {

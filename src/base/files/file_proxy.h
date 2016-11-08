@@ -15,10 +15,6 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 
-namespace tracked_objects {
-class Location;
-};
-
 namespace base {
 
 class TaskRunner;

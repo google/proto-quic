@@ -156,7 +156,7 @@ class ThreadLogsManager {
   // Protects the state below.
   base::Lock lock_;
   std::unique_ptr<Thread> flush_thread_;
-  std::vector<ThreadLog*> logs_;
+  std::vector<std::unique_ptr<ThreadLog>> logs_;
 
   DISALLOW_COPY_AND_ASSIGN(ThreadLogsManager);
 };

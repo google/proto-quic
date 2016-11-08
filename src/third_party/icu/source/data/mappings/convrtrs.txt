@@ -414,6 +414,7 @@ shift_jis-html
     Shift_JIS { MIME* HTML* }
     csshiftjis
     ms_kanji
+    ms932
     shift-jis
     sjis
     windows-31j

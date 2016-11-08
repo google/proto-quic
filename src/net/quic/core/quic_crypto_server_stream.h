@@ -189,7 +189,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
       QuicErrorCode error,
       const std::string& error_details,
       std::unique_ptr<CryptoHandshakeMessage> reply,
-      std::unique_ptr<DiversificationNonce> diversification_nonce);
+      std::unique_ptr<DiversificationNonce> diversification_nonce,
+      std::unique_ptr<ProofSource::Details> proof_source_details);
 
   // Invoked by SendServerConfigUpdateCallback::RunImpl once the proof has been
   // received.  |ok| indicates whether or not the proof was successfully

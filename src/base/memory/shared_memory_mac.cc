@@ -69,11 +69,6 @@ bool MakeMachSharedMemoryHandleReadOnly(SharedMemoryHandle* new_handle,
 
 }  // namespace
 
-SharedMemoryCreateOptions::SharedMemoryCreateOptions()
-    : size(0),
-      executable(false),
-      share_read_only(false) {}
-
 SharedMemory::SharedMemory()
     : mapped_size_(0), memory_(NULL), read_only_(false), requested_size_(0) {}
 

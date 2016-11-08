@@ -9,11 +9,13 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.annotations.MainDex;
 
 /**
  * This class provides Android application context related utility methods.
  */
 @JNINamespace("base::android")
+@MainDex
 public class ContextUtils {
     private static final String TAG = "ContextUtils";
     private static Context sApplicationContext;

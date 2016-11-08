@@ -103,7 +103,6 @@ const QuicTag k5RTO = TAG('5', 'R', 'T', 'O');   // Close connection on 5 RTOs
 const QuicTag kCTIM = TAG('C', 'T', 'I', 'M');   // Client timestamp in seconds
                                                  // since UNIX epoch.
 const QuicTag kDHDT = TAG('D', 'H', 'D', 'T');   // Disable HPACK dynamic table.
-const QuicTag kIPFS = TAG('I', 'P', 'F', 'S');   // No Immediate Forward Secrecy
 const QuicTag kCONH = TAG('C', 'O', 'N', 'H');   // Conservative Handshake
                                                  // Retransmissions.
 const QuicTag kLFAK = TAG('L', 'F', 'A', 'K');   // Don't invoke FACK on the
@@ -206,8 +205,6 @@ const QuicTag kPAD  = TAG('P', 'A', 'D', '\0');  // Padding
 // Server push tags
 const QuicTag kSPSH = TAG('S', 'P', 'S', 'H');  // Support server push.
 
-// Sent by clients with the fix to crbug/566156
-const QuicTag kFIXD = TAG('F', 'I', 'X', 'D');   // Client hello
 // clang-format on
 
 // These tags have a special form so that they appear either at the beginning

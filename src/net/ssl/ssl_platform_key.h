@@ -7,13 +7,8 @@
 
 #include <memory>
 
-#include "base/lazy_instance.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
-
-namespace base {
-class SequencedTaskRunner;
-}
 
 namespace net {
 

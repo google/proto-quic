@@ -26,8 +26,6 @@
 #include "base/metrics/histogram_base.h"
 #include "base/strings/string_piece.h"
 
-class SubprocessMetricsProviderTest;
-
 namespace base {
 
 class BucketRanges;

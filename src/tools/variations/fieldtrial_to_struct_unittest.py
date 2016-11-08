@@ -208,8 +208,8 @@ class FieldTrialToStruct(unittest.TestCase):
     self.assertEqual(expected, result)
 
   def test_FieldTrialToStructMain(self):
-    schema = (
-        '../../chrome/common/variations/fieldtrial_testing_config_schema.json')
+    schema = ('../../components/variations/field_trial_config/'
+                  'field_trial_testing_config_schema.json')
     test_output_filename = 'test_output'
     fieldtrial_to_struct.main([
       '--schema=' + schema,

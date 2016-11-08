@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/hi.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 hi{
-    Version{"2.1.19.47"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -85,6 +79,7 @@ hi{
                 dnam{"वर्ग किलोमीटर"}
                 one{"{0} वर्ग किलोमीटर"}
                 other{"{0} वर्ग किलोमीटर"}
+                per{"{0} प्रति वर्ग किलोमीटर"}
             }
             square-meter{
                 dnam{"वर्ग मीटर"}
@@ -96,6 +91,7 @@ hi{
                 dnam{"वर्ग मील"}
                 one{"{0} वर्ग मील"}
                 other{"{0} वर्ग मील"}
+                per{"{0}/वर्ग मील"}
             }
             square-yard{
                 dnam{"वर्ग यार्ड"}
@@ -105,6 +101,27 @@ hi{
         }
         compound{
             per{"{0} प्रति {1}"}
+        }
+        concentr{
+            karat{
+                dnam{"कैरट"}
+                one{"{0} कैरट"}
+                other{"{0} कैरट"}
+            }
+            milligram-per-deciliter{
+                dnam{"मिलिग्राम प्रति डेसीलीटर"}
+                one{"{0} मिलिग्राम प्रति डेसीलीटर"}
+                other{"{0} मिलिग्राम प्रति डेसीलीटर"}
+            }
+            millimole-per-liter{
+                dnam{"मिलीमोल प्रति लीटर"}
+                one{"{0} मिलीमोल प्रति लीटर"}
+                other{"{0} मिलीमोल प्रति लीटर"}
+            }
+            part-per-million{
+                one{"{0} ppm"}
+                other{"{0} हिस्सा प्रति दस लाख"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -121,6 +138,11 @@ hi{
                 dnam{"मील प्रति गैलन"}
                 one{"{0} मील प्रति गैलन"}
                 other{"{0} मील प्रति गैलन"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mpg Imp."}
+                one{"{0} mpg Imp."}
+                other{"{0} mpg Imp."}
             }
         }
         coordinate{
@@ -535,13 +557,6 @@ hi{
                 other{"{0} पाउंड प्रति वर्ग इंच"}
             }
         }
-        proportion{
-            karat{
-                dnam{"कैरट"}
-                one{"{0} कैरट"}
-                other{"{0} कैरट"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"किलोमीटर प्रति घंटा"}
@@ -659,6 +674,12 @@ hi{
                 one{"{0} गैलन"}
                 other{"{0} गैलन"}
                 per{"{0}/गैलन"}
+            }
+            gallon-imperial{
+                dnam{"इम्पीरियल गैलन"}
+                one{"{0} इम्पीरियल गैलन"}
+                other{"{0} इम्पीरियल गैलन"}
+                per{"{0}/इम्पीरियल गैलन"}
             }
             hectoliter{
                 dnam{"हैक्टोलीटर"}
@@ -1022,6 +1043,7 @@ hi{
                 dnam{"वर्ग कि.मी."}
                 one{"{0} वर्ग कि.मी."}
                 other{"{0} वर्ग कि.मी."}
+                per{"{0}/वर्ग कि.मी."}
             }
             square-meter{
                 dnam{"वर्ग मीटर"}
@@ -1033,6 +1055,7 @@ hi{
                 dnam{"वर्ग मील"}
                 one{"{0} वर्ग मील"}
                 other{"{0} वर्ग मील"}
+                per{"{0}/मील²"}
             }
             square-yard{
                 dnam{"व. या."}
@@ -1042,6 +1065,28 @@ hi{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                dnam{"कैरट"}
+                one{"{0} kt"}
+                other{"{0} kt"}
+            }
+            milligram-per-deciliter{
+                dnam{"मि.ग्रा./डे.ली."}
+                one{"{0} मि.ग्रा./डे.ली."}
+                other{"{0} मि.ग्रा./डे.ली."}
+            }
+            millimole-per-liter{
+                dnam{"मिलीमोल/लीटर"}
+                one{"{0} मिलीमोल/ली."}
+                other{"{0} मिलीमोल/ली."}
+            }
+            part-per-million{
+                dnam{"ppm"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -1058,6 +1103,11 @@ hi{
                 dnam{"मील/गैलन"}
                 one{"{0} mpg"}
                 other{"{0} mpg"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"mpg Imp."}
+                one{"{0} mpg Imp."}
+                other{"{0} mpg Imp."}
             }
         }
         coordinate{
@@ -1472,13 +1522,6 @@ hi{
                 other{"{0} psi"}
             }
         }
-        proportion{
-            karat{
-                dnam{"कैरट"}
-                one{"{0} kt"}
-                other{"{0} kt"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"कि.मी./घं."}
@@ -1596,6 +1639,12 @@ hi{
                 one{"{0} गैलन"}
                 other{"{0} गैलन"}
                 per{"{0}/गैलन"}
+            }
+            gallon-imperial{
+                dnam{"इम्पी. गैलन"}
+                one{"{0} इम्पी. गैलन"}
+                other{"{0} इम्पी. गैलन"}
+                per{"{0}/इम्पी. गैलन"}
             }
             hectoliter{
                 dnam{"है.ली."}

@@ -1,19 +1,13 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/ja.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ja{
     Keys{
         calendar{"暦法"}
+        cf{"通貨フォーマット"}
         colAlternate{"記号を無視した並べ替え"}
         colBackwards{"アクセント（逆方向）による並べ替え"}
         colCaseFirst{"大文字順/小文字順による並べ替え"}
         colCaseLevel{"大文字小文字を区別した並べ替え"}
-        colHiraganaQuaternary{"仮名による並べ替え"}
         colNormalization{"正規化による並べ替え"}
         colNumeric{"数値による並べ替え"}
         colStrength{"強度による並べ替え"}
@@ -25,7 +19,6 @@ ja{
         numbers{"数値書式"}
         timezone{"タイムゾーン"}
         va{"ロケールのバリアント"}
-        variableTop{"記号として並べ替え"}
         x{"私用"}
     }
     Languages{
@@ -54,7 +47,7 @@ ja{
         ar{"アラビア語"}
         ar_001{"現代標準アラビア語"}
         arc{"アラム語"}
-        arn{"アラウカン語"}
+        arn{"マプチェ語"}
         aro{"アラオナ語"}
         arp{"アラパホー語"}
         arq{"アルジェリア・アラビア語"}
@@ -134,6 +127,7 @@ ja{
         cps{"カピス語"}
         cr{"クリー語"}
         crh{"クリミア・タタール語"}
+        crs{"セーシェル・クレオール語"}
         cs{"チェコ語"}
         csb{"カシューブ語"}
         cu{"教会スラブ語"}
@@ -151,7 +145,7 @@ ja{
         din{"ディンカ語"}
         dje{"ザルマ語"}
         doi{"ドーグリー語"}
-        dsb{"低ソルビア語"}
+        dsb{"低地ソルブ語"}
         dtp{"中央ドゥスン語"}
         dua{"ドゥアラ語"}
         dum{"中世オランダ語"}
@@ -185,7 +179,7 @@ ja{
         fa{"ペルシア語"}
         fan{"ファング語"}
         fat{"ファンティー語"}
-        ff{"フラニ語"}
+        ff{"フラ語"}
         fi{"フィンランド語"}
         fil{"フィリピノ語"}
         fit{"トルネダール・フィンランド語"}
@@ -241,11 +235,11 @@ ja{
         hmn{"フモン語"}
         ho{"ヒリモツ語"}
         hr{"クロアチア語"}
-        hsb{"上ソルビア語"}
+        hsb{"高地ソルブ語"}
         hsn{"湘語"}
         ht{"ハイチ語"}
         hu{"ハンガリー語"}
-        hup{"アタパスカ語"}
+        hup{"フパ語"}
         hy{"アルメニア語"}
         hz{"ヘレロ語"}
         ia{"インターリングア"}
@@ -308,7 +302,7 @@ ja{
         kos{"コスラエ語"}
         kpe{"クペレ語"}
         kr{"カヌリ語"}
-        krc{"カラチャイ語"}
+        krc{"カラチャイ・バルカル語"}
         kri{"クリオ語"}
         krj{"キナライア語"}
         krl{"カレリア語"}
@@ -392,7 +386,7 @@ ja{
         mwl{"ミランダ語"}
         mwr{"マールワーリー語"}
         mwv{"メンタワイ語"}
-        my{"ビルマ語"}
+        my{"ミャンマー語"}
         mye{"ミエネ語"}
         myv{"エルジャ語"}
         mzn{"マーザンダラーン語"}
@@ -443,6 +437,7 @@ ja{
         pap{"パピアメント語"}
         pau{"パラオ語"}
         pcd{"ピカルディ語"}
+        pcm{"ナイジェリア・ピジン語"}
         pdc{"ペンシルベニア・ドイツ語"}
         pdt{"メノナイト低地ドイツ語"}
         peo{"古代ペルシア語"}
@@ -478,11 +473,11 @@ ja{
         rue{"ルシン語"}
         rug{"ロヴィアナ語"}
         rup{"アルーマニア語"}
-        rw{"ルワンダ語"}
+        rw{"キニアルワンダ語"}
         rwk{"ルワ語"}
         sa{"サンスクリット語"}
         sad{"サンダウェ語"}
-        sah{"ヤクート語"}
+        sah{"サハ語"}
         sam{"サマリア・アラム語"}
         saq{"サンブル語"}
         sas{"ササク語"}
@@ -503,8 +498,8 @@ ja{
         sel{"セリクプ語"}
         ses{"コイラボロ・センニ語"}
         sg{"サンゴ語"}
-        sga{"古期アイルランド語"}
-        sgs{"サモギティア語)"}
+        sga{"古アイルランド語"}
+        sgs{"サモギティア語"}
         sh{"セルボ・クロアチア語"}
         shi{"タシルハイト語"}
         shn{"シャン語"}
@@ -538,8 +533,8 @@ ja{
         sux{"シュメール語"}
         sv{"スウェーデン語"}
         sw{"スワヒリ語"}
+        sw_CD{"コンゴ・スワヒリ語"}
         swb{"コモロ語"}
-        swc{"コンゴ・スワヒリ語"}
         syc{"古典シリア語"}
         syr{"シリア語"}
         szl{"シレジア語"}
@@ -626,7 +621,7 @@ ja{
         zbl{"ブリスシンボル"}
         zea{"ゼーラント語"}
         zen{"ゼナガ語"}
-        zgh{"タマージク語(モロッコ公用語)"}
+        zgh{"標準モロッコ タマジクト語"}
         zh{"中国語"}
         zh_Hans{"簡体中国語"}
         zh_Hant{"繁体中国語"}
@@ -688,6 +683,7 @@ ja{
         Grek{"ギリシャ文字"}
         Gujr{"グジャラート文字"}
         Guru{"グルムキー文字"}
+        Hanb{"漢語注音字母"}
         Hang{"ハングル"}
         Hani{"漢字"}
         Hano{"ハヌノオ文字"}
@@ -701,6 +697,7 @@ ja{
         Hung{"古代ハンガリー文字"}
         Inds{"インダス文字"}
         Ital{"古イタリア文字"}
+        Jamo{"字母"}
         Java{"ジャワ文字"}
         Jpan{"日本語の文字"}
         Jurc{"女真文字"}
@@ -805,6 +802,7 @@ ja{
         Yiii{"イ文字"}
         Zinh{"基底文字の種別を継承する結合文字"}
         Zmth{"数学記号"}
+        Zsye{"絵文字"}
         Zsym{"記号文字"}
         Zxxx{"非表記"}
         Zyyy{"共通文字"}
@@ -819,7 +817,7 @@ ja{
     }
     Types{
         calendar{
-            buddhist{"タイ仏教暦"}
+            buddhist{"仏暦"}
             chinese{"中国暦"}
             coptic{"コプト暦"}
             dangi{"ダンギ暦"}
@@ -838,6 +836,10 @@ ja{
             persian{"ペルシア暦"}
             roc{"中華民国暦"}
         }
+        cf{
+            account{"会計通貨フォーマット"}
+            standard{"標準通貨フォーマット"}
+        }
         colAlternate{
             non-ignorable{"記号で並べ替え"}
             shifted{"記号を無視して並べ替え"}
@@ -854,10 +856,6 @@ ja{
         colCaseLevel{
             no{"大文字小文字を区別しないで並べ替え"}
             yes{"大文字小文字を区別して並べ替え"}
-        }
-        colHiraganaQuaternary{
-            no{"仮名を区別しないで並べ替え"}
-            yes{"仮名を区別して並べ替え"}
         }
         colNormalization{
             no{"正規化しないで並べ替え"}
@@ -892,6 +890,11 @@ ja{
             unihan{"部首順"}
             zhuyin{"注音順"}
         }
+        d0{
+            fwidth{"全角"}
+            hwidth{"半角"}
+            npinyin{"数字"}
+        }
         hc{
             h11{"12時間制(0〜11)"}
             h12{"12時間制(1〜12)"}
@@ -902,6 +905,10 @@ ja{
             loose{"禁則処理(弱)"}
             normal{"禁則処理(標準)"}
             strict{"禁則処理(強)"}
+        }
+        m0{
+            bgn{"BGN"}
+            ungegn{"UNGEGN"}
         }
         ms{
             metric{"メートル法"}
@@ -1037,7 +1044,21 @@ ja{
         VALLADER{"ヴァラダー"}
         WADEGILE{"ウェード式ローマ字表記法"}
     }
-    Version{"2.1.19.89"}
+    Version{"2.1.28.79"}
+    characterLabelPattern{
+        all{"{0} — すべて"}
+        category-list{"{0}: {1}"}
+        compatibility{"{0} — 互換文字"}
+        enclosed{"{0} — 囲み"}
+        extended{"{0} — 拡張"}
+        historic{"{0} — 古代文字"}
+        miscellaneous{"{0} — 雑多"}
+        other{"{0} — その他"}
+        scripts{"文字 — {0}"}
+        strokes{
+            other{"{0} 画"}
+        }
+    }
     codePatterns{
         language{"言語: {0}"}
         script{"文字: {0}"}

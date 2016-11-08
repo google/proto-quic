@@ -35,6 +35,7 @@ class FakeProofSource : public ProofSource {
                 const std::string& server_config,
                 QuicVersion quic_version,
                 base::StringPiece chlo_hash,
+                const QuicTagVector& connection_options,
                 scoped_refptr<ProofSource::Chain>* out_chain,
                 std::string* out_signature,
                 std::string* out_leaf_cert_sct) override;
@@ -43,6 +44,7 @@ class FakeProofSource : public ProofSource {
                 const std::string& server_config,
                 QuicVersion quic_version,
                 base::StringPiece chlo_hash,
+                const QuicTagVector& connection_options,
                 std::unique_ptr<ProofSource::Callback> callback) override;
 
   // Get the number of callbacks which are pending
@@ -62,6 +64,7 @@ class FakeProofSource : public ProofSource {
            std::string server_config,
            QuicVersion quic_version,
            std::string chlo_hash,
+           const QuicTagVector& connection_options,
            std::unique_ptr<ProofSource::Callback> callback);
     ~Params();
     Params(Params&& other);
@@ -72,6 +75,7 @@ class FakeProofSource : public ProofSource {
     std::string server_config;
     QuicVersion quic_version;
     std::string chlo_hash;
+    QuicTagVector connection_options;
     std::unique_ptr<ProofSource::Callback> callback;
   };
 

@@ -19,6 +19,7 @@
 
 namespace base {
 
+class BucketRanges;
 class FilePath;
 class PersistentSampleMapRecords;
 class PersistentSparseHistogramDataManager;

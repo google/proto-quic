@@ -661,9 +661,9 @@ type ProtocolBugs struct {
 	// TLS 1.2 and 1.3 extensions.
 	SendBothTickets bool
 
-	// CorruptTicket causes a client to corrupt a session ticket before
-	// sending it in a resume handshake.
-	CorruptTicket bool
+	// FilterTicket, if not nil, causes the client to modify a session
+	// ticket before sending it in a resume handshake.
+	FilterTicket func([]byte) ([]byte, error)
 
 	// OversizedSessionId causes the session id that is sent with a ticket
 	// resumption attempt to be too large (33 bytes).
@@ -1051,6 +1051,10 @@ type ProtocolBugs struct {
 	// SelectPSKIdentityOnResume, if non-zero, causes the server to select
 	// the specified PSK identity index rather than the actual value.
 	SelectPSKIdentityOnResume uint16
+
+	// ExtraPSKIdentity, if true, causes the client to send an extra PSK
+	// identity.
+	ExtraPSKIdentity bool
 
 	// OmitServerHelloSignatureAlgorithms, if true, causes the server to omit the
 	// signature_algorithms extension in the ServerHello.

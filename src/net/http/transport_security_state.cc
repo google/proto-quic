@@ -392,7 +392,6 @@ class HuffmanDecoder {
 // data.
 struct PreloadResult {
   uint32_t pinset_id;
-  uint32_t domain_id;
   // hostname_offset contains the number of bytes from the start of the given
   // hostname where the name of the matching entry starts.
   size_t hostname_offset;
@@ -524,8 +523,12 @@ bool DecodeHSTSPreloadRaw(const std::string& search_hostname,
         tmp.pkp_include_subdomains = tmp.sts_include_subdomains;
 
         if (tmp.has_pins) {
+          // TODO(estark): This can be removed once the preload list
+          // format no longer includes |domain_id|.
+          // https://crbug.com/661206
+          uint32_t unused_domain_id;
           if (!reader.Read(4, &tmp.pinset_id) ||
-              !reader.Read(9, &tmp.domain_id) ||
+              !reader.Read(9, &unused_domain_id) ||
               (!tmp.sts_include_subdomains &&
                !reader.Next(&tmp.pkp_include_subdomains))) {
             return false;
@@ -778,10 +781,6 @@ TransportSecurityState::PKPStatus TransportSecurityState::CheckPublicKeyPins(
   if (!is_issued_by_known_root)
     return pin_validity;
 
-  if (pin_validity == PKPStatus::VIOLATED) {
-    LOG(ERROR) << *pinning_failure_log;
-    ReportUMAOnPinFailure(host_port_pair.host());
-  }
   UMA_HISTOGRAM_BOOLEAN("Net.PublicKeyPinSuccess",
                         pin_validity == PKPStatus::OK);
   return pin_validity;
@@ -1351,20 +1350,6 @@ void TransportSecurityState::ProcessExpectCTHeader(
 
   expect_ct_reporter_->OnExpectCTFailed(host_port_pair, state.report_uri,
                                         ssl_info);
-}
-
-// static
-void TransportSecurityState::ReportUMAOnPinFailure(const std::string& host) {
-  PreloadResult result;
-  if (!DecodeHSTSPreload(host, &result) ||
-      !result.has_pins) {
-    return;
-  }
-
-  DCHECK(result.domain_id != DOMAIN_NOT_PINNED);
-
-  UMA_HISTOGRAM_SPARSE_SLOWLY(
-      "Net.PublicKeyPinFailureDomain", result.domain_id);
 }
 
 // static

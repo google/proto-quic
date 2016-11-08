@@ -291,7 +291,8 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         QuicErrorCode error,
         const string& error_details,
         std::unique_ptr<CryptoHandshakeMessage> message,
-        std::unique_ptr<DiversificationNonce> diversification_nonce) override {
+        std::unique_ptr<DiversificationNonce> diversification_nonce,
+        std::unique_ptr<ProofSource::Details> proof_source_details) override {
       if (should_succeed_) {
         ASSERT_EQ(error, QUIC_NO_ERROR) << "Message failed with error "
                                         << error_details << ": "

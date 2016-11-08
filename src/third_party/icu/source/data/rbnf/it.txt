@@ -1,11 +1,5 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/rbnf/it.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 it{
     RBNFRules{
         OrdinalRules{
@@ -26,7 +20,7 @@ it{
             "%%lenient-parse:",
             "&[last primary ignorable ] << ' ' << ',' << '-' << '\u00AD';",
             "%spellout-numbering-year:",
-            "x.x: =#,###0.#=;",
+            "x.x: =0.0=;",
             "0: =%spellout-numbering=;",
             "%spellout-numbering:",
             "-x: meno >>;",
@@ -209,7 +203,7 @@ it{
             "%spellout-ordinal-masculine:",
             "-x: meno >>;",
             "x.x: =#,##0.#=;",
-            "0: zero;",
+            "0: zeresimo;",
             "1: primo;",
             "2: secondo;",
             "3: terzo;",
@@ -302,7 +296,7 @@ it{
             "%spellout-ordinal-feminine:",
             "-x: meno >>;",
             "x.x: =#,##0.#=;",
-            "0: zero;",
+            "0: zeresima;",
             "1: prima;",
             "2: seconda;",
             "3: terza;",
@@ -394,5 +388,5 @@ it{
             "10: o\u00AD=%spellout-ordinal-feminine=;",
         }
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.22"}
 }

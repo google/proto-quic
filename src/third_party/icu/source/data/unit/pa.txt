@@ -1,13 +1,7 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/main/pa.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 pa{
-    Version{"2.1.20.4"}
+    Version{"2.1.28.79"}
     durationUnits{
         hm{"h:mm"}
         hms{"h:mm:ss"}
@@ -85,6 +79,7 @@ pa{
                 dnam{"ਵਰਗ ਕਿਲੋਮੀਟਰ"}
                 one{"{0} ਵਰਗ ਕਿਲੋਮੀਟਰ"}
                 other{"{0} ਵਰਗ ਕਿਲੋਮੀਟਰ"}
+                per{"{0} ਪ੍ਰਤੀ ਵਰਗ ਕਿਲੋਮੀਟਰ"}
             }
             square-meter{
                 dnam{"ਵਰਗ ਮੀਟਰ"}
@@ -96,6 +91,7 @@ pa{
                 dnam{"ਵਰਗ ਮੀਲ"}
                 one{"{0} ਵਰਗ ਮੀਲ"}
                 other{"{0} ਵਰਗ ਮੀਲ"}
+                per{"{0} ਪ੍ਰਤੀ ਵਰਗ ਮੀਲ"}
             }
             square-yard{
                 dnam{"ਵਰਗ ਗਜ਼"}
@@ -105,6 +101,28 @@ pa{
         }
         compound{
             per{"{0} ਪ੍ਰਤੀ {1}"}
+        }
+        concentr{
+            karat{
+                dnam{"ਕੇਰਟ"}
+                one{"{0} ਕੇਰਟ"}
+                other{"{0} ਕੇਰਟ"}
+            }
+            milligram-per-deciliter{
+                dnam{"ਮਿਲੀਗ੍ਰਾਮ ਪ੍ਰਤੀ ਡੈਸੀਲਿਟਰ"}
+                one{"{0} ਮਿਲੀਗ੍ਰਾਮ ਪ੍ਰਤੀ ਡੈਸੀਲਿਟਰ"}
+                other{"{0} ਮਿਲੀਗ੍ਰਾਮ ਪ੍ਰਤੀ ਡੈਸੀਲਿਟਰ"}
+            }
+            millimole-per-liter{
+                dnam{"ਮਿਲੀਮੋਲ ਪ੍ਰਤੀ ਲਿਟਰ"}
+                one{"{0} ਮਿਲੀਮੋਲ ਪ੍ਰਤੀ ਲਿਟਰ"}
+                other{"{0} ਮਿਲੀਮੋਲ ਪ੍ਰਤੀ ਲਿਟਰ"}
+            }
+            part-per-million{
+                dnam{"ਹਿੱਸੇ ਪ੍ਰਤੀ ਮਿਲੀਅਨ"}
+                one{"{0} ਹਿੱਸਾ ਪ੍ਰਤੀ ਮਿਲੀਅਨ"}
+                other{"{0} ਹਿੱਸੇ ਪ੍ਰਤੀ ਮਿਲੀਅਨ"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -121,6 +139,11 @@ pa{
                 dnam{"ਮੀਲ ਪ੍ਰਤੀ ਗੈਲਨ"}
                 one{"{0} ਮੀਲ ਪ੍ਰਤੀ ਗੈਲਨ"}
                 other{"{0} ਮੀਲ ਪ੍ਰਤੀ ਗੈਲਨ"}
+            }
+            mile-per-gallon-imperial{
+                dnam{"ਮੀਲ ਪ੍ਰਤੀ ਇੰਪ. ਗੈਲਨ"}
+                one{"{0} ਮੀਲ ਪ੍ਰਤੀ ਇੰਪ. ਗੈਲਨ"}
+                other{"{0} ਮੀਲ ਪ੍ਰਤੀ ਇੰਪ. ਗੈਲਨ"}
             }
         }
         coordinate{
@@ -176,9 +199,9 @@ pa{
                 other{"{0} ਟੇਰਾਬਿਟ"}
             }
             terabyte{
-                dnam{"ਟੇਰਾਬਾਇਟ"}
-                one{"{0} ਟੇਰਾਬਾਇਟ"}
-                other{"{0} ਟੇਰਾਬਾਇਟ"}
+                dnam{"ਟੈਰਾਬਾਇਟ"}
+                one{"{0} ਟੈਰਾਬਾਇਟ"}
+                other{"{0} ਟੈਰਾਬਾਇਟ"}
             }
         }
         duration{
@@ -550,13 +573,6 @@ pa{
                 other{"{0} ਪੌਂਡ ਪ੍ਰਤੀ ਵਰਗ ਇੰਚ"}
             }
         }
-        proportion{
-            karat{
-                dnam{"ਕੇਰਟ"}
-                one{"{0} ਕੇਰਟ"}
-                other{"{0} ਕੇਰਟ"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"ਕਿਲੋਮੀਟਰ ਪ੍ਰਤੀ ਘੰਟਾ"}
@@ -680,6 +696,12 @@ pa{
                 other{"{0} ਗੈਲਨ"}
                 per{"{0} ਪ੍ਰਤੀ ਗੈਲਨ"}
             }
+            gallon-imperial{
+                dnam{"ਇੰਪ. ਗੈਲਨ"}
+                one{"{0} ਇੰਪ. ਗੈਲਨ"}
+                other{"{0} ਇੰਪ. ਗੈਲਨ"}
+                per{"{0} ਪ੍ਰਤੀ ਇੰਪ. ਗੈਲਨ"}
+            }
             hectoliter{
                 dnam{"ਹੈਕਟੋਲਿਟਰ"}
                 one{"{0} ਹੈਕਟੋਲਿਟਰ"}
@@ -797,6 +819,12 @@ pa{
         }
         compound{
             per{"{0}/{1}"}
+        }
+        concentr{
+            karat{
+                one{"{0} ਕੇਰਟ"}
+                other{"{0} ਕੇਰਟ"}
+            }
         }
         consumption{
             liter-per-100kilometers{
@@ -1140,12 +1168,6 @@ pa{
                 other{"{0} ਪੌਂ.ਵ.ਇੰਚ"}
             }
         }
-        proportion{
-            karat{
-                one{"{0} ਕੇਰਟ"}
-                other{"{0} ਕੇਰਟ"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"ਕਿ.ਮੀ./ਘੰਟਾ"}
@@ -1333,6 +1355,7 @@ pa{
                 dnam{"ਕਿਮੀ²"}
                 one{"{0} ਕਿਮੀ²"}
                 other{"{0} ਕਿਮੀ²"}
+                per{"{0}/ਕਿਮੀ²"}
             }
             square-meter{
                 dnam{"ਮੀਟਰ²"}
@@ -1344,6 +1367,7 @@ pa{
                 dnam{"ਵਰਗ ਮੀਲ"}
                 one{"{0} ਵ. ਮੀਲ"}
                 other{"{0} ਵ. ਮੀਲ"}
+                per{"{0}/ਮੀਲ²"}
             }
             square-yard{
                 dnam{"ਗਜ਼²"}
@@ -1354,11 +1378,33 @@ pa{
         compound{
             per{"{0}/{1}"}
         }
+        concentr{
+            karat{
+                dnam{"ਕੇਰਟ"}
+                one{"{0} ਕੇਰਟ"}
+                other{"{0} ਕੇਰਟ"}
+            }
+            milligram-per-deciliter{
+                dnam{"ਮਿ.ਗ੍ਰਾ./ਡੈ.ਲਿ."}
+                one{"{0}ਮਿਗ੍ਰਾ/ਡੈ.ਲਿ"}
+                other{"{0}ਮਿਗ੍ਰਾ/ਡੈ.ਲਿ"}
+            }
+            millimole-per-liter{
+                dnam{"ਮਿਲੀਮੋਲ/ਲਿਟਰ"}
+                one{"{0} ਮਿ.ਮੋ./ਲਿ."}
+                other{"{0} ਮਿ.ਮੋ./ਲਿ."}
+            }
+            part-per-million{
+                dnam{"ਹਿੱਸੇ/ਮਿਲੀਅਨ"}
+                one{"{0} ppm"}
+                other{"{0} ppm"}
+            }
+        }
         consumption{
             liter-per-100kilometers{
                 dnam{"ਲਿ./100ਕਿ.ਮੀ."}
-                one{"{0} ਲਿ./100 ਕਿ.ਮੀ."}
-                other{"{0} ਲਿ./100 ਕਿ.ਮੀ."}
+                one{"{0}ਲਿ/100 ਕਿਮੀ"}
+                other{"{0}ਲਿ/100 ਕਿਮੀ"}
             }
             liter-per-kilometer{
                 dnam{"ਲਿਟਰ/ਕਿ.ਮੀ."}
@@ -1369,6 +1415,11 @@ pa{
                 dnam{"ਮੀਲ/ਗੈਲਨ"}
                 one{"{0} ਮੀ.ਪ੍ਰ.ਗੈ."}
                 other{"{0} ਮੀ.ਪ੍ਰ.ਗੈ."}
+            }
+            mile-per-gallon-imperial{
+                dnam{"ਮੀਲ/ਗੈਲਨ ਇੰਪ."}
+                one{"{0} mpg ਇੰਪ."}
+                other{"{0} mpg ਇੰਪ."}
             }
         }
         coordinate{
@@ -1424,7 +1475,7 @@ pa{
                 other{"{0} Tb"}
             }
             terabyte{
-                dnam{"ਟੇਰਾਬਾਇਟ"}
+                dnam{"ਟੈਰਾਬਾਇਟ"}
                 one{"{0} TB"}
                 other{"{0} TB"}
             }
@@ -1798,13 +1849,6 @@ pa{
                 other{"{0} ਪੌਂ.ਵ.ਇੰਚ"}
             }
         }
-        proportion{
-            karat{
-                dnam{"ਕੇਰਟ"}
-                one{"{0} ਕੇਰਟ"}
-                other{"{0} ਕੇਰਟ"}
-            }
-        }
         speed{
             kilometer-per-hour{
                 dnam{"ਕਿ.ਮੀ./ਘੰਟਾ"}
@@ -1927,6 +1971,12 @@ pa{
                 one{"{0} ਗੈਲਨ"}
                 other{"{0} ਗੈਲਨ"}
                 per{"{0}/ਗੈਲਨ"}
+            }
+            gallon-imperial{
+                dnam{"ਇੰਪ. ਗੈਲਨ"}
+                one{"{0} ਗੈਲਨ ਇੰਪ."}
+                other{"{0} ਗੈਲਨ ਇੰਪ."}
+                per{"{0}/ਗੈਲਨ ਇੰਪ."}
             }
             hectoliter{
                 dnam{"ਹੈ.ਲਿ."}

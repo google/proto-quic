@@ -30,6 +30,7 @@
 #include "base/task_scheduler/sequence_sort_key.h"
 #include "base/task_scheduler/task_tracker.h"
 #include "base/task_scheduler/test_task_factory.h"
+#include "base/task_scheduler/test_utils.h"
 #include "base/test/gtest_util.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/test/test_timeouts.h"
@@ -60,7 +61,7 @@ constexpr TimeDelta kExtraTimeToWaitForDetach =
 using IORestriction = SchedulerWorkerPoolParams::IORestriction;
 
 class TaskSchedulerWorkerPoolImplTest
-    : public testing::TestWithParam<ExecutionMode> {
+    : public testing::TestWithParam<test::ExecutionMode> {
  protected:
   TaskSchedulerWorkerPoolImplTest()
       : service_thread_("TaskSchedulerServiceThread") {}
@@ -110,6 +111,21 @@ class TaskSchedulerWorkerPoolImplTest
   DISALLOW_COPY_AND_ASSIGN(TaskSchedulerWorkerPoolImplTest);
 };
 
+scoped_refptr<TaskRunner> CreateTaskRunnerWithExecutionMode(
+    SchedulerWorkerPoolImpl* worker_pool,
+    test::ExecutionMode execution_mode) {
+  switch (execution_mode) {
+    case test::ExecutionMode::PARALLEL:
+      return worker_pool->CreateTaskRunnerWithTraits(TaskTraits());
+    case test::ExecutionMode::SEQUENCED:
+      return worker_pool->CreateSequencedTaskRunnerWithTraits(TaskTraits());
+    case test::ExecutionMode::SINGLE_THREADED:
+      return worker_pool->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
+  }
+  ADD_FAILURE() << "Unknown ExecutionMode";
+  return nullptr;
+}
+
 using PostNestedTask = test::TestTaskFactory::PostNestedTask;
 
 class ThreadPostingTasks : public SimpleThread {
@@ -125,15 +141,14 @@ class ThreadPostingTasks : public SimpleThread {
   // |worker_pool| are idle before posting a new task. If |post_nested_task| is
   // YES, each task posted by this thread posts another task when it runs.
   ThreadPostingTasks(SchedulerWorkerPoolImpl* worker_pool,
-                     ExecutionMode execution_mode,
+                     test::ExecutionMode execution_mode,
                      WaitBeforePostTask wait_before_post_task,
                      PostNestedTask post_nested_task)
       : SimpleThread("ThreadPostingTasks"),
         worker_pool_(worker_pool),
         wait_before_post_task_(wait_before_post_task),
         post_nested_task_(post_nested_task),
-        factory_(worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(),
-                                                          execution_mode),
+        factory_(CreateTaskRunnerWithExecutionMode(worker_pool, execution_mode),
                  execution_mode) {
     DCHECK(worker_pool_);
   }
@@ -245,7 +260,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostTasksWithOneAvailableWorker) {
   std::vector<std::unique_ptr<test::TestTaskFactory>> blocked_task_factories;
   for (size_t i = 0; i < (kNumWorkersInWorkerPool - 1); ++i) {
     blocked_task_factories.push_back(MakeUnique<test::TestTaskFactory>(
-        worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam()),
+        CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()),
         GetParam()));
     EXPECT_TRUE(blocked_task_factories.back()->PostTask(
         PostNestedTask::NO, Bind(&WaitableEvent::Wait, Unretained(&event))));
@@ -255,7 +270,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostTasksWithOneAvailableWorker) {
   // Post |kNumTasksPostedPerThread| tasks that should all run despite the fact
   // that only one worker in |worker_pool_| isn't busy.
   test::TestTaskFactory short_task_factory(
-      worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam()),
+      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()),
       GetParam());
   for (size_t i = 0; i < kNumTasksPostedPerThread; ++i)
     EXPECT_TRUE(short_task_factory.PostTask(PostNestedTask::NO, Closure()));
@@ -279,7 +294,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, Saturate) {
   std::vector<std::unique_ptr<test::TestTaskFactory>> factories;
   for (size_t i = 0; i < kNumWorkersInWorkerPool; ++i) {
     factories.push_back(MakeUnique<test::TestTaskFactory>(
-        worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam()),
+        CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()),
         GetParam()));
     EXPECT_TRUE(factories.back()->PostTask(
         PostNestedTask::NO, Bind(&WaitableEvent::Wait, Unretained(&event))));
@@ -297,7 +312,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, Saturate) {
 // Verify that a Task can't be posted after shutdown.
 TEST_P(TaskSchedulerWorkerPoolImplTest, PostTaskAfterShutdown) {
   auto task_runner =
-      worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam());
+      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam());
   task_tracker_.Shutdown();
   EXPECT_FALSE(task_runner->PostTask(FROM_HERE, Bind(&ShouldNotRunCallback)));
 }
@@ -309,7 +324,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostDelayedTask) {
   // Post a task with a short delay.
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
-  EXPECT_TRUE(worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam())
+  EXPECT_TRUE(CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam())
                   ->PostDelayedTask(FROM_HERE, Bind(&WaitableEvent::Signal,
                                                     Unretained(&task_ran)),
                                     TestTimeouts::tiny_timeout()));
@@ -329,10 +344,9 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostDelayedTask) {
 // returns false when called from a task that isn't part of the sequence.
 TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
   scoped_refptr<TaskRunner> task_runner(
-      worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(), GetParam()));
-  scoped_refptr<TaskRunner> sequenced_task_runner(
-      worker_pool_->CreateTaskRunnerWithTraits(TaskTraits(),
-                                               ExecutionMode::SEQUENCED));
+      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()));
+  scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
+      worker_pool_->CreateSequencedTaskRunnerWithTraits(TaskTraits()));
 
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
@@ -352,13 +366,14 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
 
 INSTANTIATE_TEST_CASE_P(Parallel,
                         TaskSchedulerWorkerPoolImplTest,
-                        ::testing::Values(ExecutionMode::PARALLEL));
+                        ::testing::Values(test::ExecutionMode::PARALLEL));
 INSTANTIATE_TEST_CASE_P(Sequenced,
                         TaskSchedulerWorkerPoolImplTest,
-                        ::testing::Values(ExecutionMode::SEQUENCED));
-INSTANTIATE_TEST_CASE_P(SingleThreaded,
-                        TaskSchedulerWorkerPoolImplTest,
-                        ::testing::Values(ExecutionMode::SINGLE_THREADED));
+                        ::testing::Values(test::ExecutionMode::SEQUENCED));
+INSTANTIATE_TEST_CASE_P(
+    SingleThreaded,
+    TaskSchedulerWorkerPoolImplTest,
+    ::testing::Values(test::ExecutionMode::SINGLE_THREADED));
 
 namespace {
 
@@ -407,7 +422,7 @@ TEST_P(TaskSchedulerWorkerPoolImplIORestrictionTest, IORestriction) {
 
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
-  worker_pool->CreateTaskRunnerWithTraits(TaskTraits(), ExecutionMode::PARALLEL)
+  worker_pool->CreateTaskRunnerWithTraits(TaskTraits())
       ->PostTask(FROM_HERE, Bind(&ExpectIORestriction, GetParam(), &task_ran));
   task_ran.Wait();
 
@@ -452,10 +467,9 @@ class TaskSchedulerWorkerPoolSingleThreadedTest
 // Verify that thread resources for a single thread remain.
 TEST_F(TaskSchedulerWorkerPoolSingleThreadedTest, SingleThreadTask) {
   auto single_thread_task_runner =
-      worker_pool_->CreateTaskRunnerWithTraits(
-          TaskTraits().
-              WithShutdownBehavior(TaskShutdownBehavior::BLOCK_SHUTDOWN),
-          ExecutionMode::SINGLE_THREADED);
+      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(
+          TaskTraits().WithShutdownBehavior(
+              TaskShutdownBehavior::BLOCK_SHUTDOWN));
   single_thread_task_runner->PostTask(
       FROM_HERE,
       Bind(&TaskSchedulerWorkerPoolSingleThreadedTest::InitializeThreadChecker,
@@ -527,10 +541,9 @@ TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckDetachedThreads) {
   // Saturate the threads and mark each thread with a magic TLS value.
   std::vector<std::unique_ptr<test::TestTaskFactory>> factories;
   for (size_t i = 0; i < kNumWorkersInWorkerPool; ++i) {
-    factories.push_back(WrapUnique(new test::TestTaskFactory(
-        worker_pool_->CreateTaskRunnerWithTraits(
-            TaskTraits(), ExecutionMode::PARALLEL),
-        ExecutionMode::PARALLEL)));
+    factories.push_back(MakeUnique<test::TestTaskFactory>(
+        worker_pool_->CreateTaskRunnerWithTraits(TaskTraits()),
+        test::ExecutionMode::PARALLEL));
     ASSERT_TRUE(factories.back()->PostTask(
         PostNestedTask::NO,
         Bind(&TaskSchedulerWorkerPoolCheckTlsReuse::SetTlsValueAndWait,
@@ -600,8 +613,8 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaits) {
   WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                       WaitableEvent::InitialState::NOT_SIGNALED);
   InitializeWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
-  auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(
-      TaskTraits(), ExecutionMode::SEQUENCED);
+  auto task_runner =
+      worker_pool_->CreateSequencedTaskRunnerWithTraits(TaskTraits());
 
   // Post a task.
   task_runner->PostTask(FROM_HERE,
@@ -644,8 +657,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
   WaitableEvent tasks_can_exit_event(WaitableEvent::ResetPolicy::MANUAL,
                                      WaitableEvent::InitialState::NOT_SIGNALED);
   InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
-  auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(
-      TaskTraits(), ExecutionMode::PARALLEL);
+  auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(TaskTraits());
 
   // Post tasks to saturate the pool.
   std::vector<std::unique_ptr<WaitableEvent>> task_started_events;
@@ -721,10 +733,10 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
   InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
 
   // This test assumes that the TaskRunners aren't assigned to the same worker.
-  auto task_runner = worker_pool_->CreateTaskRunnerWithTraits(
-      TaskTraits(), ExecutionMode::SINGLE_THREADED);
-  auto other_task_runner = worker_pool_->CreateTaskRunnerWithTraits(
-      TaskTraits(), ExecutionMode::SINGLE_THREADED);
+  auto task_runner =
+      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
+  auto other_task_runner =
+      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
 
   // Post 3 tasks and wait until they run.
   PlatformThreadId thread_id;

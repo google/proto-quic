@@ -21,11 +21,6 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 
-namespace testing {
-class TestCase;
-class TestInfo;
-}
-
 namespace base {
 
 class CommandLine;

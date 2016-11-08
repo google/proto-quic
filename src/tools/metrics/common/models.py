@@ -23,7 +23,7 @@ import pretty_print_xml
 COMMENT_KEY = ('comment',)
 
 
-def GetComments(node):
+def GetCommentsForNode(node):
   """Extracts comments in the current node.
 
   Args:
@@ -32,19 +32,39 @@ def GetComments(node):
   Returns:
     A list of comment DOM nodes.
   """
-  return [node for node in node.childNodes
-          if node.nodeType == minidom.Node.COMMENT_NODE]
+  comments = []
+  node = node.previousSibling
+  while node:
+    if node.nodeType == minidom.Node.COMMENT_NODE:
+      comments.append(node.data)
+    elif node.nodeType != minidom.Node.TEXT_NODE:
+      break
+    node = node.previousSibling
+  return comments[::-1]
 
 
-def PutComments(node, comments):
+def PutCommentsInNode(doc, node, comments):
   """Appends comments to the DOM node.
 
   Args:
+    doc: The document to create a comment in.
     node: The DOM node to write comments to.
-    comments: A list of comment DOM nodes.
+    comments: A list of comments.
   """
   for comment in comments:
-    node.appendChild(comment)
+    node.appendChild(doc.createComment(comment))
+
+
+def GetChildrenByTag(node, tag):
+  """Get all children of a particular tag type.
+
+  Args:
+    node: The DOM node to write comments to.
+    tag: The tag of the nodes to collect.
+  Returns:
+    A list of DOM nodes.
+  """
+  return [child for child in node.childNodes if child.nodeName == tag]
 
 
 class NodeType(object):
@@ -90,6 +110,30 @@ class NodeType(object):
     Returns:
       An XML node encoding the object.
     """
+
+  def GetComments(self, obj):
+    """Gets comments for the object being encoded.
+
+    Args:
+      obj: The object to be encoded into the XML.
+
+    Returns:
+      A list of comment nodes for the object.
+    """
+    del obj  # Used in ObjectNodeType implementation
+    # The base NodeType does not store comments
+    return []
+
+  def MarshallIntoNode(self, doc, node, obj):
+    """Marshalls the object and appends it to a node, with comments.
+
+    Args:
+      doc: A document create an XML node in.
+      node: An XML node to marshall the object into.
+      obj: The object to be encoded into the XML.
+    """
+    PutCommentsInNode(doc, node, self.GetComments(obj))
+    node.appendChild(self.Marshall(doc, obj))
 
   def GetAttributes(self):
     """Gets a sorted list of attributes that this node can have.
@@ -212,19 +256,20 @@ class ObjectNodeType(NodeType):
     """
     obj = {}
 
-    obj[COMMENT_KEY] = GetComments(node)
+    obj[COMMENT_KEY] = GetCommentsForNode(node)
 
     for attr, attr_type in self.attributes:
       if node.hasAttribute(attr):
         obj[attr] = attr_type(node.getAttribute(attr))
 
     if self.text_attribute and node.firstChild:
-      obj[self.text_attribute] = node.firstChild.nodeValue.strip()
+      obj[self.text_attribute] = node.firstChild.nodeValue
 
     for child in self.children:
-      nodes = node.getElementsByTagName(child.node_type.tag)
+      nodes = GetChildrenByTag(node, child.node_type.tag)
       if child.multiple:
-        obj[child.attr] = [child.node_type.Unmarshall(n) for n in nodes]
+        obj[child.attr] = [
+            child.node_type.Unmarshall(n) for n in nodes]
       elif nodes:
         obj[child.attr] = child.node_type.Unmarshall(nodes[0])
     return obj
@@ -244,18 +289,27 @@ class ObjectNodeType(NodeType):
       if attr in obj:
         node.setAttribute(attr, str(obj[attr]))
 
-    PutComments(node, obj[COMMENT_KEY])
-
     if self.text_attribute and self.text_attribute in obj:
       node.appendChild(doc.createTextNode(obj[self.text_attribute]))
 
     for child in self.children:
       if child.multiple:
         for child_obj in obj[child.attr]:
-          node.appendChild(child.node_type.Marshall(doc, child_obj))
+          child.node_type.MarshallIntoNode(doc, node, child_obj)
       elif child.attr in obj:
-        node.appendChild(child.node_type.Marshall(doc, obj[child.attr]))
+        child.node_type.MarshallIntoNode(doc, node, obj[child.attr])
     return node
+
+  def GetComments(self, obj):
+    """Gets comments for the object being encoded.
+
+    Args:
+      obj: The object to be encoded into the XML.
+
+    Returns:
+      A list of comment nodes for the object.
+    """
+    return obj[COMMENT_KEY]
 
   def GetAttributes(self):
     """Gets a sorted list of attributes that this node can have.
@@ -295,13 +349,12 @@ class DocumentType(object):
       input_file: The content of an XML file, as a string.
 
     Returns:
-      A list of the file level comment nodes, an object representing the
-      unmarshalled content of the document's root node.
+      An object representing the unmarshalled content of the document's root
+      node.
     """
     tree = minidom.parseString(input_file)
-    comments = GetComments(tree)
-    return comments, self.root_type.Unmarshall(
-        tree.getElementsByTagName(self.root_type.tag)[0])
+    root = tree.getElementsByTagName(self.root_type.tag)[0]
+    return self.root_type.Unmarshall(root)
 
   def GetPrintStyle(self):
     """Gets an XmlStyle object for pretty printing a document of this type.
@@ -318,30 +371,26 @@ class DocumentType(object):
         tags_that_allow_single_line=[t for t in types if types[t].single_line],
         tags_alphabetization_rules={})
 
-  def ToXML(self, comments, obj):
+  def _ToXML(self, obj):
     """Converts an object into an XML document.
 
     Args:
-      comments: A list of file level comment nodes to include.
       obj: An object to serialize to XML.
 
     Returns:
       An XML minidom Document object.
     """
     doc = minidom.Document()
-    for comment in comments:
-      doc.appendChild(comment)
-    doc.appendChild(self.root_type.Marshall(doc, obj))
+    self.root_type.MarshallIntoNode(doc, doc, obj)
     return doc
 
-  def PrettyPrint(self, comments, obj):
+  def PrettyPrint(self, obj):
     """Converts an object into pretty-printed XML as a string.
 
     Args:
-      comments: A list of file level comment nodes to include.
       obj: An object to serialize to XML.
 
     Returns:
       A string containing pretty printed XML.
     """
-    return self.GetPrintStyle().PrettyPrintNode(self.ToXML(comments, obj))
+    return self.GetPrintStyle().PrettyPrintNode(self._ToXML(obj))

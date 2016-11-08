@@ -1,21 +1,15 @@
-﻿// ***************************************************************************
-// *
-// * Copyright (C) 2015 International Business Machines
-// * Corporation and others. All Rights Reserved.
-// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
-// * Source File: <path>/common/rbnf/ja.xml
-// *
-// ***************************************************************************
+﻿// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html#License
 ja{
     RBNFRules{
         OrdinalRules{
             "%digits-ordinal:",
-            "-x: \u7B2C\u2212>#,###0>;",
-            "0: \u7B2C=#,###0=;",
+            "-x: \u7B2C\u2212>#,##0>;",
+            "0: \u7B2C=#,##0=;",
         }
         SpelloutRules{
             "%spellout-numbering-year:",
-            "x.x: =#,###0.#=;",
+            "x.x: =0.0=;",
             "0: =%spellout-numbering=;",
             "1: \u5143;",
             "2: =%spellout-numbering=;",
@@ -49,7 +43,7 @@ ja{
             "100000000: <<\u5104[>>];",
             "1000000000000: <<\u5146[>>];",
             "10000000000000000: <<\u4EAC[>>];",
-            "1000000000000000000: =#,###0=;",
+            "1000000000000000000: =#,##0=;",
             "%spellout-cardinal:",
             "-x: \u30DE\u30A4\u30CA\u30B9>>;",
             "x.x: <<\u30FB>>>;",
@@ -73,11 +67,11 @@ ja{
             "100000000: <<\u5104[>>];",
             "1000000000000: <<\u5146[>>];",
             "10000000000000000: <<\u4EAC[>>];",
-            "1000000000000000000: =#,###0=;",
+            "1000000000000000000: =#,##0=;",
             "%spellout-ordinal:",
-            "x.x: =#,###0.#=;",
+            "x.x: =#,##0.#=;",
             "0: \u7B2C=%spellout-numbering=;",
         }
     }
-    Version{"2.1.19.14"}
+    Version{"2.1.27.22"}
 }

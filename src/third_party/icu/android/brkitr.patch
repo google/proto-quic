@@ -1,8 +1,8 @@
 diff --git a/source/data/brkitr/brklocal.mk b/source/data/brkitr/brklocal.mk
-index cb5226a..39202f1 100644
+index b5eca75..2a75a9e 100644
 --- a/source/data/brkitr/brklocal.mk
 +++ b/source/data/brkitr/brklocal.mk
-@@ -34,14 +34,14 @@ BRK_RES_ALIAS_SOURCE = $(BRK_RES_SYNTHETIC_ALIAS)
+@@ -34,7 +34,7 @@ BRK_RES_ALIAS_SOURCE = $(BRK_RES_SYNTHETIC_ALIAS)
  
  
  # List of dictionary files (dict).
@@ -11,30 +11,31 @@ index cb5226a..39202f1 100644
   thaidict.txt
  
  
- # List of break iterator files (brk).
+@@ -42,7 +42,7 @@ BRK_DICT_SOURCE = burmesedict.txt cjdict.txt khmerdict.txt laodict.txt\
  BRK_SOURCE = char.txt line.txt\
   line_normal.txt line_normal_cj.txt line_normal_fi.txt\
+  line_loose_cj.txt\
 - sent.txt sent_el.txt title.txt word.txt
 + sent.txt sent_el.txt title.txt word.txt word_ja.txt
  
  
  # Ordinary resources
 diff --git a/source/data/brkitr/ja.txt b/source/data/brkitr/ja.txt
-index f9f986e..cd07526 100644
+index 2e9a1c8..cb732a7 100644
 --- a/source/data/brkitr/ja.txt
 +++ b/source/data/brkitr/ja.txt
-@@ -13,5 +13,6 @@ ja{
-         line_loose:process(dependency){"line_normal_cj.brk"}
+@@ -7,5 +7,6 @@ ja{
+         line_loose:process(dependency){"line_loose_cj.brk"}
          line_normal:process(dependency){"line_normal_cj.brk"}
          line_strict:process(dependency){"line.brk"}
 +        word:process(dependency){"word_ja.brk"}
      }
  }
 diff --git a/source/data/brkitr/root.txt b/source/data/brkitr/root.txt
-index 77ddd14..2e275a1 100644
+index 1a1ad8a..c790282 100644
 --- a/source/data/brkitr/root.txt
 +++ b/source/data/brkitr/root.txt
-@@ -19,9 +19,6 @@ root{
+@@ -13,9 +13,6 @@ root{
          word:process(dependency){"word.brk"}
      }
      dictionaries{
@@ -44,11 +45,11 @@ index 77ddd14..2e275a1 100644
          Khmr:process(dependency){"khmerdict.dict"}
          Laoo:process(dependency){"laodict.dict"}
          Mymr:process(dependency){"burmesedict.dict"}
-diff --git a/source/data/brkitr/word.txt b/source/data/brkitr/word.txt
-index f89a2fe..9603957 100644
---- a/source/data/brkitr/word.txt
-+++ b/source/data/brkitr/word.txt
-@@ -54,11 +54,9 @@ $Control        = [\p{Grapheme_Cluster_Break = Control}];
+diff --git a/source/data/brkitr/rules/word.txt b/source/data/brkitr/rules/word.txt
+index 9c93dd5..eb150ea 100644
+--- a/source/data/brkitr/rules/word.txt
++++ b/source/data/brkitr/rules/word.txt
+@@ -71,11 +71,9 @@ $Control        = [\p{Grapheme_Cluster_Break = Control}];
  $HangulSyllable = [\uac00-\ud7a3];
  $ComplexContext = [:LineBreak = Complex_Context:];
  $KanaKanji      = [$Han $Hiragana $Katakana];
@@ -62,9 +63,9 @@ index f89a2fe..9603957 100644
  
  
  #
-@@ -160,11 +158,6 @@ $ExtendNumLetEx  $KatakanaEx     {400};    #  (13b)
- 
- $Regional_IndicatorEx $Regional_IndicatorEx;
+@@ -194,11 +192,6 @@ $ExtendNumLetEx  $KatakanaEx     {400};    #  (13b)
+ #
+ ^$Regional_IndicatorEx $Regional_IndicatorEx;
  
 -# special handling for CJK characters: chain for later dictionary segmentation
 -$HangulSyllable $HangulSyllable {200};
@@ -74,14 +75,14 @@ index f89a2fe..9603957 100644
  ## -------------------------------------------------
  
  !!reverse;
-@@ -231,10 +224,6 @@ $BackExtendNumLetEx ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $B
- 
- $BackRegional_IndicatorEx $BackRegional_IndicatorEx;
+@@ -265,10 +258,6 @@ $BackKatakanaEx $BackKatakanaEx;
+ $BackExtendNumLetEx ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackKatakanaEx | $BackExtendNumLetEx);
+ ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackKatakanaEx) $BackExtendNumLetEx; 
  
 -# special handling for CJK characters: chain for later dictionary segmentation
 -$HangulSyllable $HangulSyllable;
 -$KanaKanji $KanaKanji; #different rule status if both kanji and kana found
 -
- ## -------------------------------------------------
+ # rule 14
  
- !!safe_reverse;
+ $E_Modifier ($Format | $Extend | $ZWJ)* ($E_Base | $EBG);

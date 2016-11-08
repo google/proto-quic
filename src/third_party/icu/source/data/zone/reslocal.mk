@@ -1,5 +1,5 @@
-# *   Copyright (C) 1998-2010, International Business Machines
-# *   Corporation and others.  All Rights Reserved.
+# © 2016 and later: Unicode, Inc. and others.
+# License & terms of use: http://www.unicode.org/copyright.html#License
 ZONE_CLDR_VERSION = %version%
 # A list of txt's to build
 # The downstream packager may not need this file at all if their package is not

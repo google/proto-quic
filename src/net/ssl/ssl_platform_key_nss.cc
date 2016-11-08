@@ -12,7 +12,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/sequenced_task_runner.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/client_key_store.h"

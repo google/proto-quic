@@ -77,14 +77,16 @@ bool ProofSourceChromium::Initialize(const base::FilePath& cert_path,
   return true;
 }
 
-bool ProofSourceChromium::GetProof(const IPAddress& server_ip,
-                                   const string& hostname,
-                                   const string& server_config,
-                                   QuicVersion quic_version,
-                                   base::StringPiece chlo_hash,
-                                   scoped_refptr<ProofSource::Chain>* out_chain,
-                                   string* out_signature,
-                                   string* out_leaf_cert_sct) {
+bool ProofSourceChromium::GetProof(
+    const IPAddress& server_ip,
+    const string& hostname,
+    const string& server_config,
+    QuicVersion quic_version,
+    base::StringPiece chlo_hash,
+    const QuicTagVector& /* connection_options */,
+    scoped_refptr<ProofSource::Chain>* out_chain,
+    string* out_signature,
+    string* out_leaf_cert_sct) {
   DCHECK(private_key_.get()) << " this: " << this;
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
@@ -137,14 +139,16 @@ void ProofSourceChromium::GetProof(const IPAddress& server_ip,
                                    const std::string& server_config,
                                    QuicVersion quic_version,
                                    base::StringPiece chlo_hash,
+                                   const QuicTagVector& connection_options,
                                    std::unique_ptr<Callback> callback) {
   // As a transitional implementation, just call the synchronous version of
   // GetProof, then invoke the callback with the results and destroy it.
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
   string leaf_cert_sct;
-  const bool ok = GetProof(server_ip, hostname, server_config, quic_version,
-                           chlo_hash, &chain, &signature, &leaf_cert_sct);
+  const bool ok =
+      GetProof(server_ip, hostname, server_config, quic_version, chlo_hash,
+               connection_options, &chain, &signature, &leaf_cert_sct);
   callback->Run(ok, chain, signature, leaf_cert_sct, nullptr /* details */);
 }
 

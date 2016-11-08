@@ -107,7 +107,7 @@ class PowerGpuRasterizationTypical10Mobile(perf_benchmark.PerfBenchmark):
 class PowerTop10(perf_benchmark.PerfBenchmark):
   """Top 10 quiescent power test."""
   test = power.QuiescentPower
-  page_set = page_sets.Top10PageSet
+  page_set = page_sets.Top10QuiescentPageSet
 
   def SetExtraBrowserOptions(self, options):
     options.full_performance_mode = False
@@ -122,7 +122,7 @@ class PowerGpuRasterizationTop10(perf_benchmark.PerfBenchmark):
   """Top 10 quiescent power test with GPU rasterization enabled."""
   tag = 'gpu_rasterization'
   test = power.QuiescentPower
-  page_set = page_sets.Top10PageSet
+  page_set = page_sets.Top10QuiescentPageSet
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
