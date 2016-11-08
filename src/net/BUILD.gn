@@ -1050,7 +1050,6 @@ if (is_linux) {
       "tools/quic/quic_socket_utils.h",
     ]
     deps = [
-#      ":balsa",
       ":epoll_server",
       ":net",
       ":simple_quic_tools",
@@ -1067,7 +1066,6 @@ if (is_linux) {
       "tools/quic/quic_client_bin.cc",
     ]
     deps = [
-#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1083,7 +1081,6 @@ if (is_linux) {
       "tools/quic/quic_server_bin.cc",
     ]
     deps = [
-#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1179,7 +1176,6 @@ source_set("simple_quic_tools") {
     "tools/quic/synchronous_host_resolver.h",
   ]
   deps = [
-#    ":balsa",
     ":net",
     "//base",
     "//base/third_party/dynamic_annotations",
@@ -1305,7 +1301,6 @@ test("net_unittests") {
   defines = []
 
   deps = [
-#    ":balsa",
     ":extras",
     ":net",
     ":simple_quic_tools",
